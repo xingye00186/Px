@@ -1,0 +1,15 @@
+name: calculator
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  # C++ 桥接层
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php

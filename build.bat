@@ -1,0 +1,383 @@
+@echo off
+setlocal enabledelayedexpansion
+:: ============================================================================
+::  build.bat - Non-interactive Build Script
+::
+::  Usage:
+::    build.bat ^<app-name^> [--run]
+::    build.bat calculator
+::    build.bat calculator --run
+::
+::  Exit codes:
+::    0: All success
+::    1: Parameter error or pre-check failed
+::    2: SFC compile failed
+::    3: AOT compile failed
+::    4: Package failed
+::    5: Runtime crash (--run mode)
+:: ============================================================================
+
+:: --------------------------------------------------------------------------
+:: Parameter check
+:: --------------------------------------------------------------------------
+if "%~1"=="" (
+    echo Usage: build.bat ^<app-name^> [--run]
+    echo Example: build.bat calculator
+    echo           build.bat calculator --run
+    exit /b 1
+)
+set "APP_NAME=%~1"
+set "RUN_AFTER=0"
+if "%~2"=="--run" set "RUN_AFTER=1"
+
+:: --------------------------------------------------------------------------
+:: Path calculation (all relative to %~dp0)
+:: --------------------------------------------------------------------------
+
+:: Framework root (directory where this file is located)
+for %%a in ("%~dp0.") do set "FRAMEWORK_ROOT=%%~fa"
+:: Apps directory
+set "APPS_DIR=%FRAMEWORK_ROOT%\apps"
+
+:: --------------------------------------------------------------------------
+:: Read swoole_compiler path from config.yml
+:: --------------------------------------------------------------------------
+
+:: Default path
+set "COMPILER_DIR="
+
+:: Read swoole_compiler path from config.yml
+set "SWOOLE_COMPILER_PATH="
+for /f "tokens=2" %%a in ('findstr /c:"swoole_compiler:" "%FRAMEWORK_ROOT%\config.yml"') do set "SWOOLE_COMPILER_PATH=%%a"
+
+:: Trim leading space (from delims=: token extraction)
+if defined SWOOLE_COMPILER_PATH (
+    for %%a in (!SWOOLE_COMPILER_PATH!) do set "SWOOLE_COMPILER_PATH=%%~a"
+)
+
+:: Parse path: support absolute and relative
+if not defined SWOOLE_COMPILER_PATH (
+    echo [ERROR] swoole_compiler path not found in config.yml
+    exit /b 1
+)
+
+:: Check if absolute path (contains colon like C:\)
+echo !SWOOLE_COMPILER_PATH! | findstr /c:":" >nul 2>&1
+if !errorlevel! equ 0 (
+    set "COMPILER_DIR=!SWOOLE_COMPILER_PATH!"
+) else (
+    :: Relative path, based on framework root
+    set "COMPILER_DIR=!FRAMEWORK_ROOT!\!SWOOLE_COMPILER_PATH!"
+)
+
+if not exist "%COMPILER_DIR%\" (
+    echo [ERROR] swoole_compiler directory not found: %COMPILER_DIR%
+    echo   Please check path in config.yml
+    exit /b 1
+)
+
+:: Compiler paths
+set "PHP_CLI=%COMPILER_DIR%\php.exe"
+set "SWOOLE_COMPILER=%COMPILER_DIR%\swoole_compiler.exe"
+set "DLL_PHP=%COMPILER_DIR%\php8ts.dll"
+set "DLL_PHPX=%COMPILER_DIR%\phpx.dll"
+
+:: Set environment variable for PHP scripts (used by vendor/autoload.php)
+set "SWOOLE_COMPILER_ROOT=%COMPILER_DIR%"
+
+:: vcvarsall - system path, change here if needed
+set "VCVARSALL=C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat"
+
+:: --------------------------------------------------------------------------
+:: App directory check
+:: --------------------------------------------------------------------------
+set "APP_DIR=%APPS_DIR%\%APP_NAME%"
+
+if not exist "%APP_DIR%\" (
+    echo [ERROR] App directory not found: %APP_DIR%
+    exit /b 1
+)
+if not exist "%APP_DIR%\project.yml" (
+    echo [ERROR] project.yml not found: %APP_DIR%\project.yml
+    exit /b 1
+)
+
+:: --------------------------------------------------------------------------
+:: Pre-checks
+:: --------------------------------------------------------------------------
+echo.
+echo ========================================
+echo   Non-interactive Build
+echo   App: %APP_NAME%
+echo   Framework: %FRAMEWORK_ROOT%
+echo   Compiler: %COMPILER_DIR%
+echo ========================================
+echo.
+
+if not exist "%PHP_CLI%" (
+    echo [ERROR] PHP CLI not found: %PHP_CLI%
+    exit /b 1
+)
+if not exist "%SWOOLE_COMPILER%" (
+    echo [ERROR] Swoole Compiler not found: %SWOOLE_COMPILER%
+    exit /b 1
+)
+
+:: --------------------------------------------------------------------------
+:: Parse app config
+:: --------------------------------------------------------------------------
+
+:: Check for .vue files
+set "HAS_VUE=0"
+if exist "%APP_DIR%\*.vue" set "HAS_VUE=1"
+for /r "%APP_DIR%" %%f in (*.vue) do set "HAS_VUE=1" 2>nul
+
+:: Read name from project.yml for exe name
+set "EXE_NAME=%APP_NAME%"
+for /f "tokens=2 delims=: " %%a in ('findstr /r "^name:" "%APP_DIR%\project.yml" 2^>nul') do (
+    set "EXE_NAME=%%~a"
+)
+set "OUTPUT_EXE=%EXE_NAME%.exe"
+
+:: Get .vue filename (for SFC step)
+set "VUE_FILE="
+for %%f in ("%APP_DIR%\*.vue") do set "VUE_FILE=%%~nxf"
+
+:: Get .vue basename
+set "VUE_BASE="
+if not "%VUE_FILE%"=="" (
+    for %%f in ("%VUE_FILE%") do set "VUE_BASE=%%~nf"
+)
+if "%VUE_BASE%"=="" set "VUE_BASE=%EXE_NAME%"
+
+echo [CONFIG] EXE: %OUTPUT_EXE%
+if "%HAS_VUE%"=="1" echo [CONFIG] SFC: %VUE_FILE% -^> gen\%VUE_BASE%Component.php + gen\ComponentFactory.php
+echo.
+
+:: ====================================================================
+:: Step 0: MSVC compile environment
+:: ====================================================================
+echo ========================================
+echo   Step 0: MSVC compile environment
+echo ========================================
+echo.
+
+if exist "%VCVARSALL%" (
+    echo [INIT] Calling vcvarsall.bat x64...
+    call "%VCVARSALL%" x64 >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo   [WARN] MSVC environment init failed
+    ) else (
+        where cl >nul 2>&1 && echo   [OK] cl.exe available || echo   [WARN] cl.exe not in PATH
+    )
+) else (
+    echo   [WARN] vcvarsall.bat not found: %VCVARSALL%
+    echo   If AOT build fails, run from Developer Command Prompt for VS
+)
+
+where cl >nul 2>&1
+if !errorlevel! neq 0 (
+    echo [ERROR] cl.exe not in PATH
+    echo.
+    echo   Please resolve by:
+    echo     1. Run from 'Developer Command Prompt for VS'
+    echo     2. Check VCVARSALL path: %VCVARSALL%
+    echo.
+    exit /b 1
+)
+echo   [OK] cl.exe available
+echo.
+
+:: ====================================================================
+:: Step 0.5: AOT static check
+:: ====================================================================
+echo ========================================
+echo   Step 0.5: AOT static check
+echo ========================================
+echo.
+
+cd /d "%FRAMEWORK_ROOT%"
+"%PHP_CLI%" framework\aot-checker.php --project "%APP_DIR%" --skip direct_cpp_call
+set "CHECK_EXIT=!errorlevel!"
+if !CHECK_EXIT! neq 0 (
+    echo.
+    echo [ERROR] AOT Checker found issues, aborting build
+    echo   Please fix errors and retry
+    exit /b 1
+)
+echo   [OK] AOT static check passed
+echo.
+
+:: ====================================================================
+:: Step 1: SFC compile (only if .vue files exist)
+:: ====================================================================
+if "%HAS_VUE%"=="0" goto :skip_sfc
+
+echo ========================================
+echo   Step 1: SFC compile ^(Vue -^> .gen.php^)
+echo ========================================
+echo   Input: %VUE_FILE%
+echo   Output: gen\%VUE_BASE%.gen.php
+echo           gen\%VUE_BASE%Layout_gen.php
+echo.
+
+cd /d "%FRAMEWORK_ROOT%"
+"%PHP_CLI%" sfc-compiler.php "apps\%APP_NAME%\%VUE_FILE%"
+set "SFC_EXIT=!errorlevel!"
+if !SFC_EXIT! neq 0 (
+    echo.
+    echo [ERROR] SFC compile failed, exit code: !SFC_EXIT!
+    exit /b 2
+)
+
+:: Verify output files
+cd /d "%APP_DIR%"
+if not exist "gen\%VUE_BASE%Component.php" (
+    echo [WARN] SFC output missing: gen\%VUE_BASE%Component.php
+)
+if not exist "gen\ComponentFactory.php" (
+    echo [WARN] SFC output missing: gen\ComponentFactory.php
+)
+
+echo   [OK] SFC compile succeeded
+echo.
+goto :step2
+
+:skip_sfc
+echo ========================================
+echo   Step 1: SFC compile - skipped ^(no .vue file^)
+echo ========================================
+echo.
+
+:: ====================================================================
+:: Step 2: AOT compile
+:: ====================================================================
+:step2
+echo ========================================
+echo   Step 2: AOT compile ^(PHP -^> exe^)
+echo ========================================
+echo   Config: apps\%APP_NAME%\project.yml
+echo   Output: %FRAMEWORK_ROOT%\%OUTPUT_EXE%
+echo.
+
+:: Verify cl.exe still available
+where cl >nul 2>&1
+if !errorlevel! neq 0 (
+    echo [ERROR] cl.exe lost after SFC, cannot continue AOT
+    echo   Please run from Developer Command Prompt for VS
+    exit /b 3
+)
+
+:: Ensure php8embed.lib is in compiler root (swoole_compiler only searches its own directory)
+if not exist "%COMPILER_DIR%\php8embed.lib" (
+    if exist "%COMPILER_DIR%\SDK\lib\php8embed.lib" (
+        copy /Y "%COMPILER_DIR%\SDK\lib\php8embed.lib" "%COMPILER_DIR%\" >nul
+        echo   [Info] Copied php8embed.lib to compiler dir
+    ) else if exist "%COMPILER_DIR%\lib\php8embed.lib" (
+        copy /Y "%COMPILER_DIR%\lib\php8embed.lib" "%COMPILER_DIR%\" >nul
+        echo   [Info] Copied php8embed.lib to compiler dir
+    ) else if exist "%COMPILER_DIR%\lib\lib\php8embed.lib" (
+        copy /Y "%COMPILER_DIR%\lib\lib\php8embed.lib" "%COMPILER_DIR%\" >nul
+        echo   [Info] Copied php8embed.lib to compiler dir
+    ) else (
+        echo [ERROR] php8embed.lib not found
+        echo   Please place php8embed.lib in: %COMPILER_DIR%\
+        exit /b 3
+    )
+)
+
+cd /d "%FRAMEWORK_ROOT%"
+set "SWOOLE_COMPILER_ROOT=%COMPILER_DIR%"
+"%SWOOLE_COMPILER%" "apps\%APP_NAME%\project.yml" -f
+set "AOT_EXIT=!errorlevel!
+if !AOT_EXIT! neq 0 (
+    echo.
+    echo [ERROR] AOT compile failed, exit code: !AOT_EXIT!
+    echo.
+    echo   Common causes:
+    echo     1. MSVC [cl.exe] not found
+    echo        == Run from Developer Command Prompt for VS
+    echo     2. Top-level stray code [require_once, include]
+    echo        == All code must be in functions or classes
+    echo     3. Variable used before defined
+    echo        == Ensure all variables have initial values
+    echo     4. Variable type changed [int to string]
+    echo     5. Filename with special chars [only a-zA-Z0-9_]
+    echo.
+    exit /b 3
+)
+
+:: Verify output exe
+if not exist "%FRAMEWORK_ROOT%\%OUTPUT_EXE%" (
+    echo [ERROR] AOT succeeded but exe not found: %FRAMEWORK_ROOT%\%OUTPUT_EXE%
+    echo   Please check name field in project.yml: "%EXE_NAME%"
+    exit /b 3
+)
+
+echo   [OK] AOT compile succeeded ^(%OUTPUT_EXE%^)
+echo.
+
+:: ====================================================================
+:: Step 3: Package
+:: ====================================================================
+echo ========================================
+echo   Step 3: Package ^(exe + DLLs -^> bin/^)
+echo ========================================
+echo.
+
+set "DIST_DIR=%APP_DIR%\bin"
+if not exist "%DIST_DIR%\" mkdir "%DIST_DIR%" 2>nul
+
+echo   Copying %OUTPUT_EXE% ...
+copy /y "%FRAMEWORK_ROOT%\%OUTPUT_EXE%" "%DIST_DIR%\" >nul
+if !errorlevel! neq 0 (
+    echo [ERROR] Copy %OUTPUT_EXE% failed
+    exit /b 4
+)
+
+echo   Copying php8ts.dll ...
+copy /y "%DLL_PHP%" "%DIST_DIR%\" >nul
+if !errorlevel! neq 0 (
+    echo [ERROR] Copy php8ts.dll failed
+    exit /b 4
+)
+
+echo   Copying phpx.dll ...
+copy /y "%DLL_PHPX%" "%DIST_DIR%\" >nul
+if !errorlevel! neq 0 (
+    echo [ERROR] Copy phpx.dll failed
+    exit /b 4
+)
+
+echo.
+echo   Package contents:
+echo   ----------------------------------------
+for %%f in ("%DIST_DIR%\*") do echo     %%~nxf   %%~zf bytes
+echo   ----------------------------------------
+echo.
+
+:: ====================================================================
+:: Run (optional)
+:: ====================================================================
+if "%RUN_AFTER%"=="1" (
+    echo ========================================
+    echo   Running %OUTPUT_EXE%...
+    echo ========================================
+    echo.
+    "%DIST_DIR%\%OUTPUT_EXE%"
+    set "RUN_EXIT=!errorlevel!"
+    if !RUN_EXIT! neq 0 (
+        echo.
+        echo [ERROR] Runtime crash, exit code: !RUN_EXIT!
+        exit /b 5
+    )
+)
+
+echo ========================================
+echo   Build succeeded^!
+echo ========================================
+echo.
+echo   Output dir: %DIST_DIR%\
+echo   Run: %DIST_DIR%\%OUTPUT_EXE%
+echo ========================================
+exit /b 0

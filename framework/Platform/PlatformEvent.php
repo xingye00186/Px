@@ -1,0 +1,90 @@
+<?php
+
+namespace Px\Platform;
+
+abstract class PlatformEvent
+{
+    public string $type;
+    public int $timestamp;
+
+    public function __construct(string $type)
+    {
+        $this->type      = $type;
+        $this->timestamp = time();
+    }
+}
+
+class MouseEvent extends PlatformEvent
+{
+    public string $action;
+    public int $x;
+    public int $y;
+    public int $button;
+    public int $delta;
+
+    public function __construct(string $action, int $x, int $y, int $button = 0, int $delta = 0)
+    {
+        parent::__construct('mouse');
+        $this->action = $action;
+        $this->x      = $x;
+        $this->y      = $y;
+        $this->button = $button;
+        $this->delta  = $delta;
+    }
+}
+
+class KeyboardEvent extends PlatformEvent
+{
+    public string $action;
+    public int $keyCode;
+    public string $char;
+
+    public function __construct(string $action, int $keyCode, string $char = '')
+    {
+        parent::__construct('keyboard');
+        $this->action  = $action;
+        $this->keyCode = $keyCode;
+        $this->char    = $char;
+    }
+}
+
+class WindowEvent extends PlatformEvent
+{
+    public string $action;
+    public int $width  = 0;
+    public int $height = 0;
+
+    public function __construct(string $action, int $width = 0, int $height = 0)
+    {
+        parent::__construct('window');
+        $this->action = $action;
+        $this->width  = $width;
+        $this->height = $height;
+    }
+}
+
+class TimerEvent extends PlatformEvent
+{
+    public int $timerId;
+
+    public function __construct(int $timerId)
+    {
+        parent::__construct('timer');
+        $this->timerId = $timerId;
+    }
+}
+
+class IoEvent extends PlatformEvent
+{
+    public string $ioType;
+    public string $path;
+    public mixed $data;
+
+    public function __construct(string $ioType, string $path, mixed $data = null)
+    {
+        parent::__construct('io');
+        $this->ioType = $ioType;
+        $this->path   = $path;
+        $this->data   = $data;
+    }
+}

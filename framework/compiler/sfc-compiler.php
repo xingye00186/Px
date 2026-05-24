@@ -1,0 +1,1293 @@
+<?php
+
+use Px\Rendering\VNode;
+use Px\Rendering\CssMappings;
+
+/**
+ * SFC Compiler v7 — VNode-based Single File Component compiler for AOT desktop apps
+ *
+ * Usage: php framework/sfc-compiler.php apps/calculator/App.vue [--dump-ast]
+ *
+ * Architecture (v7):
+ *   1. Block Extraction:     template / script / style from .vue
+ *   2. Style Parsing:        CSS class → GDI properties (via CssMappings)
+ *   3. Template Parsing:     recursive descent → VNode tree (via TemplateParser)
+ *   4. Component Resolution: resolve <child-comp> refs, flatten into VNode tree
+ *   5. Code Generation:      generate render() with VNode::h(), dispatchClick() with match
+ *   6. AOT Validation:       check generated code before write
+ *
+ * v7 变更:
+ *   - 全链路 VNode 架构 (parser 产出 VNode, render() 返回 VNode)
+ *   - 废弃 getLayout()/getBindValue()/evalCondition()
+ *   - dispatchClick() 使用 match 表达式 (PHP 8.4)
+ *   - v-for 生成 foreach 循环 (运行时，不再编译期展开 100 个槽)
+ */
+
+// ---- Load compiler modules ----
+$compilerDir = __DIR__;
+$frameworkDir = dirname(__DIR__);
+require_once $frameworkDir . '/Rendering/VNode.php';
+require_once $frameworkDir . '/Rendering/CssMappings.php';
+require_once $compilerDir . '/template-parser.php';
+require_once $compilerDir . '/aot-validator.php';
+require_once $compilerDir . '/script-analyzer.php';
+require_once $compilerDir . '/component-registry.php';
+
+// ============================================================
+// Helper — build component registry
+// ============================================================
+function loadComponentRegistry(string $vueFile): ComponentRegistry
+{
+    $registry = new ComponentRegistry();
+    $appDir = dirname(realpath($vueFile));
+    $componentsDir = $appDir . DIRECTORY_SEPARATOR . 'components';
+
+    if (!is_dir($componentsDir)) {
+        return $registry;
+    }
+
+    $files = glob($componentsDir . DIRECTORY_SEPARATOR . '*.vue');
+    $config = [];
+    foreach ($files as $file) {
+        $baseName = pathinfo($file, PATHINFO_FILENAME);
+        $tagName = strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $baseName));
+        $tagName = strtolower($tagName);
+        if ($tagName === '') continue;
+        $relativePath = 'components' . DIRECTORY_SEPARATOR . basename($file);
+        $config[$tagName] = $relativePath;
+    }
+
+    if (count($config) > 0) {
+        $warnings = $registry->load($config, $appDir);
+        foreach ($warnings as $w) {
+            echo "  [WARN] ComponentRegistry: $w\n";
+        }
+    }
+
+    return $registry;
+}
+
+// ============================================================
+// Helper — component tag → class name
+// ============================================================
+function componentTagToComponentName(string $tag): string
+{
+    $tag = preg_replace('/Component$/i', '', $tag);
+    $parts = explode('-', $tag);
+    $result = '';
+    foreach ($parts as $part) {
+        $result .= ucfirst($part);
+    }
+    return $result . 'Component';
+}
+
+// ============================================================
+// Helper — var_export with short array syntax
+// ============================================================
+function varExportShort(array $data): string
+{
+    $export = var_export($data, true);
+    $export = preg_replace('/array\s*\(/', '[', $export);
+    $export = preg_replace('/\)(,?)$/m', ']$1', $export);
+    return $export;
+}
+
+// ============================================================
+// VNode Tree → PHP Code Generation Helpers
+// ============================================================
+
+/**
+ * Collect all @click handlers from a VNode tree.
+ *
+ * @param VNode $node Current node
+ * @param array &$handlers OUT: ['handler' => ['hasArg' => bool, 'arg' => $expr|null], ...]
+ */
+function collectClickHandlers(VNode $node, array &$handlers): void
+{
+    if ($node->props !== null) {
+        if (isset($node->props['@click'])) {
+            $handler = $node->props['@click'];
+            $argExpr = $node->props['click-arg'] ?? null;
+            if (!isset($handlers[$handler])) {
+                $handlers[$handler] = ['hasArg' => ($argExpr !== null), 'arg' => $argExpr];
+            } elseif ($argExpr !== null) {
+                $handlers[$handler]['hasArg'] = true;
+                if ($handlers[$handler]['arg'] === null) {
+                    $handlers[$handler]['arg'] = $argExpr;
+                }
+            }
+        }
+    }
+
+    if ($node->children instanceof VNode) {
+        collectClickHandlers($node->children, $handlers);
+    } elseif (is_array($node->children)) {
+        foreach ($node->children as $child) {
+            if ($child instanceof VNode) {
+                collectClickHandlers($child, $handlers);
+            }
+        }
+    }
+}
+
+/**
+ * Collect all keyboard event handlers from a VNode tree.
+ *
+ * @param VNode $node Current node
+ * @param array &$handlers OUT: handler name => true
+ */
+function collectKeyHandlers(VNode $node, array &$handlers): void
+{
+    if ($node->props !== null) {
+        foreach (['@keyup', '@keydown', '@enter'] as $evt) {
+            if (isset($node->props[$evt])) {
+                $handler = $node->props[$evt];
+                $handlers[$handler] = true;
+            }
+        }
+    }
+
+    if ($node->children instanceof VNode) {
+        collectKeyHandlers($node->children, $handlers);
+    } elseif (is_array($node->children)) {
+        foreach ($node->children as $child) {
+            if ($child instanceof VNode) {
+                collectKeyHandlers($child, $handlers);
+            }
+        }
+    }
+}
+
+/**
+ * Collect all dynamic bind keys from a VNode tree.
+ */
+function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
+{
+    // Don't recurse into v-for templates (their bind keys are local to the loop)
+    if ($node->type === 'template' && isset($node->props['v-for'])) {
+        return;
+    }
+
+    if ($node->props !== null) {
+        // :bind="prop" → bind key 'prop'
+        if (isset($node->props[':bind'])) {
+            $bindKeys[$node->props[':bind']] = true;
+        }
+        // bind="prop" (plain, set by remapChildBindProps / text interpolation)
+        if (isset($node->props['bind'])) {
+            $bindKeys[$node->props['bind']] = true;
+        }
+        // v-if="prop"
+        if (isset($node->props['v-if'])) {
+            $bindKeys[$node->props['v-if']] = true;
+        }
+        // v-model="prop"
+        if (isset($node->props['v-model'])) {
+            $bindKeys[$node->props['v-model']] = true;
+        }
+        // :scroll-top="prop"
+        if (isset($node->props[':scroll-top'])) {
+            $bindKeys[$node->props[':scroll-top']] = true;
+        }
+        // :items or items
+        if (isset($node->props['items'])) {
+            // items attribute may be a dynamic bind expression
+            $bindKeys[$node->props['items']] = true;
+        }
+        if (isset($node->props[':items'])) {
+            $bindKeys[$node->props[':items']] = true;
+        }
+    }
+
+    if ($node->children instanceof VNode) {
+        collectVNodeBindKeys($node->children, $bindKeys);
+    } elseif (is_array($node->children)) {
+        foreach ($node->children as $child) {
+            if ($child instanceof VNode) {
+                collectVNodeBindKeys($child, $bindKeys);
+            }
+        }
+    }
+}
+
+/**
+ * Collect v-for templates from a VNode tree.
+ *
+ * @return array ['render_0' => ['source'=>'todoItems', 'item'=>'item', 'children'=>VNode[]], ...]
+ */
+function collectVForLoops(VNode $node, array &$loops, int &$counter): void
+{
+    if ($node->type === 'template' && isset($node->props['v-for'])) {
+        $name = 'render_' . $counter;
+        $node->vForHelper = $name;  // Store helper name for generateVNodeExpr
+        $counter++;
+
+        $vFor = $node->props['v-for'];
+        $itemVar = '';
+        $sourceExpr = '';
+
+        // Parse "item in items" or "(item, index) in items"
+        if (preg_match('/^\s*(?:\((\w+)(?:,\s*\w+)?\s*)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
+            $itemVar = $m[1];
+            $sourceExpr = $m[2];
+        } elseif (preg_match('/^\s*(\w+)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
+            // Simple form: "item in items" (no parentheses)
+            $itemVar = $m[1];
+            $sourceExpr = $m[2];
+        }
+
+        $loops[$name] = [
+            'source' => $sourceExpr,
+            'item' => $itemVar,
+            'children' => $node->children,
+        ];
+        return; // Don't recurse into v-for children
+    }
+
+    if ($node->children instanceof VNode) {
+        collectVForLoops($node->children, $loops, $counter);
+    } elseif (is_array($node->children)) {
+        foreach ($node->children as $child) {
+            if ($child instanceof VNode) {
+                collectVForLoops($child, $loops, $counter);
+            }
+        }
+    }
+}
+
+/**
+ * Convert VNode props array → PHP array literal string.
+ * Skips internal props (starting with __).
+ */
+function propsToPhpArray(array $props): string
+{
+    $filtered = [];
+    foreach ($props as $k => $v) {
+        if (str_starts_with($k, '__')) continue;
+        $filtered[$k] = $v;
+    }
+
+    if (count($filtered) === 0) return '[]';
+
+    $str = varExportShort($filtered);
+
+    // Fix numeric values: 'width:400px' (from var_export string) is OK
+    return $str;
+}
+
+/**
+ * Generate a PHP expression for a single VNode as VNode::h() call.
+ *
+ * @param VNode $node The VNode
+ * @param array $loopInfo If inside a v-for: ['item'=>'item', 'source'=>'todoItems']
+ * @param int $indent Indentation level
+ * @return string PHP code
+ */
+function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0): string
+{
+    $ind = str_repeat('        ', max($indent, 0));
+
+    // Handle template with v-for → replace with render_N() helper call
+    if ($node->type === 'template' && isset($node->vForHelper)) {
+        return "\$this->{$node->vForHelper}()";
+    }
+
+    // Handle #text nodes within v-for context
+    if ($node->type === '#text') {
+        if (isset($node->props['bind'])) {
+            $expr = $node->props['bind'];
+            // If inside v-for, map item property access
+            if ($loopInfo !== null && str_starts_with($expr, $loopInfo['item'] . '.')) {
+                $propName = substr($expr, strlen($loopInfo['item']) + 1);
+                return "\${$loopInfo['item']}['{$propName}']";
+            }
+            return "\$this->{$expr}";
+        }
+        if (isset($node->props['parts'])) {
+            // Mixed text + bind — generate concatenation
+            $concatParts = [];
+            foreach ($node->props['parts'] as $part) {
+                if ($part['type'] === 'text') {
+                    $concatParts[] = "'" . addslashes($part['value']) . "'";
+                } else {
+                    $concatParts[] = "\$this->{$part['expr']}";
+                }
+            }
+            return implode(' . ', $concatParts);
+        }
+        // Plain text
+        return var_export($node->children, true);
+    }
+
+    // Element node
+    $tag = $node->type;
+
+    // Map old PUI tags to HTML (handled by parser, but double-check)
+    // Already done in parser - type should be 'div','span','button','input'
+
+    // Props
+    $propsStr = [];
+    if ($node->props !== null) {
+        foreach ($node->props as $k => $v) {
+            if (str_starts_with($k, '__')) continue;
+            // Map v-for expressions to PHP foreach variables
+            if ($loopInfo !== null) {
+                if ($k === ':bind' || $k === 'bind' || $k === 'v-model') {
+                    if (str_starts_with($v, $loopInfo['item'] . '.')) {
+                        $propName = substr($v, strlen($loopInfo['item']) + 1);
+                        $v = "\${$loopInfo['item']}['{$propName}']";
+                    } else {
+                        $v = "\$this->{$v}";
+                    }
+                } elseif ($k === 'click-arg') {
+                    if (str_starts_with($v, $loopInfo['item'] . '.')) {
+                        $propName = substr($v, strlen($loopInfo['item']) + 1);
+                        $v = "\${$loopInfo['item']}['{$propName}']";
+                    } else {
+                        $v = var_export($v, true);
+                    }
+                }
+            }
+            // Generate prop entry: handle PHP expressions (starting with $) as raw
+            if (is_string($v) && strlen($v) > 0 && $v[0] === '$') {
+                $propsStr[] = var_export($k, true) . '=>' . $v;
+            } else {
+                $propsStr[] = var_export($k, true) . '=>' . var_export($v, true);
+            }
+        }
+    }
+
+    // Children
+    $childrenExpr = 'null';
+    if (is_string($node->children)) {
+        // Check if text contains {{ }} interpolation
+        if (isset($node->props['bind'])) {
+            $bindExpr = $node->props['bind'];
+            // Inside v-for, map to $item['prop']
+            if ($loopInfo !== null && str_starts_with($bindExpr, $loopInfo['item'] . '.')) {
+                $propName = substr($bindExpr, strlen($loopInfo['item']) + 1);
+                $childrenExpr = "\${$loopInfo['item']}['{$propName}']";
+            } else {
+                $childrenExpr = "\$this->{$bindExpr}";
+            }
+        } elseif (preg_match('/^\{\{\s*(\w+)\s*\}\}$/', $node->children, $m)) {
+            // Text interpolation {{ varName }} → $this->varName
+            $childrenExpr = "\$this->{$m[1]}";
+        } else {
+            $childrenExpr = var_export($node->children, true);
+        }
+    } elseif (is_array($node->children)) {
+        if (count($node->children) === 0) {
+            $childrenExpr = 'null';
+        } else {
+            // Check if any child has v-if — switch to closure-based builder (Vue 3 style)
+            $hasVIf = false;
+            foreach ($node->children as $child) {
+                if ($child instanceof VNode && isset($child->props['v-if'])) {
+                    $hasVIf = true;
+                    break;
+                }
+            }
+
+            if (!$hasVIf) {
+                // Original: inline array (no v-if children)
+                $childExprs = [];
+                foreach ($node->children as $child) {
+                    if ($child instanceof VNode) {
+                        $childExprs[] = generateVNodeExpr($child, $loopInfo, $indent + 1);
+                    }
+                }
+                if (count($childExprs) === 1) {
+                    $childrenExpr = $childExprs[0];
+                } else {
+                    $childrenExpr = "[\n{$ind}            " . implode(",\n{$ind}            ", $childExprs) . ",\n{$ind}        ]";
+                }
+            } else {
+                // Closure-based builder: v-if evaluated at render() time
+                // Groups consecutive same-condition children under single if block
+                $stmts = [];
+                $stmts[] = "\$c = [];";
+                $childCount = count($node->children);
+
+                for ($i = 0; $i < $childCount; $i++) {
+                    $child = $node->children[$i];
+                    if (!$child instanceof VNode) continue;
+
+                    $cvif = $child->props['v-if'] ?? '';
+                    if ($cvif !== '') {
+                        // Save and strip v-if from props (handled at compile time now)
+                        $savedVIf = $child->props['v-if'];
+                        unset($child->props['v-if']);
+                        $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 2);
+                        $child->props['v-if'] = $savedVIf; // restore
+
+                        // Group consecutive children with same v-if condition
+                        $stmts[] = "{$ind}    if (\$this->{$cvif}) {";
+                        $stmts[] = "{$ind}        \$c[] = {$childExpr};";
+
+                        $i++;
+                        while ($i < $childCount) {
+                            $nextChild = $node->children[$i];
+                            if (!$nextChild instanceof VNode) break;
+                            $nextVIf = $nextChild->props['v-if'] ?? '';
+                            if ($nextVIf !== $cvif) break;
+
+                            unset($nextChild->props['v-if']);
+                            $nextExpr = generateVNodeExpr($nextChild, $loopInfo, $indent + 2);
+                            $nextChild->props['v-if'] = $nextVIf; // restore
+                            $stmts[] = "{$ind}        \$c[] = {$nextExpr};";
+                            $i++;
+                        }
+                        $i--; // compensate for outer loop increment
+                        $stmts[] = "{$ind}    }";
+                    } else {
+                        $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1);
+                        $stmts[] = "{$ind}    \$c[] = {$childExpr};";
+                    }
+                }
+                $stmts[] = "{$ind}    return \$c;";
+
+                // Wrap as immediately-invoked closure → single expression
+                $childrenExpr = "(function() {\n" . implode("\n", $stmts) . "\n{$ind}    })()";
+            }
+        }
+    }
+
+    $propsOut = '[' . implode(',', $propsStr) . ']';
+    if ($childrenExpr === 'null') {
+        return "VNode::h('{$tag}', {$propsOut})";
+    }
+    return "VNode::h('{$tag}', {$propsOut}, {$childrenExpr})";
+}
+
+/**
+ * Generate dispatchClick() method body using match (PHP 8.4).
+ */
+function generateDispatchClick(array $handlers): string
+{
+    if (count($handlers) === 0) {
+        return "        // No event handlers defined";
+    }
+
+    $cases = [];
+    foreach ($handlers as $handler => $info) {
+        if ($info['hasArg'] && $info['arg'] !== null) {
+            $cases[] = "            case '{$handler}': \$this->{$handler}(\$arg); break;";
+        } else {
+            $cases[] = "            case '{$handler}': \$this->{$handler}(); break;";
+        }
+    }
+    $cases[] = "            default: break;";
+
+    $caseStr = implode("\n", $cases);
+    return "        switch (\$handler) {\n{$caseStr}\n        }";
+}
+
+/**
+ * Generate dispatchKey() method body for keyboard events.
+ * Sends full keyboard event data: action (up/down/char), keyCode, char.
+ */
+function generateDispatchKey(array $handlers): string
+{
+    if (count($handlers) === 0) {
+        return "        // No keyboard handlers defined";
+    }
+
+    $cases = [];
+    foreach ($handlers as $handler => $_) {
+        $cases[] = "            case '{$handler}': \$this->{$handler}(\$action, \$keyCode, \$char); break;";
+    }
+    $cases[] = "            default: break;";
+
+    $caseStr = implode("\n", $cases);
+    return "        switch (\$handler) {\n{$caseStr}\n        }";
+}
+
+/**
+ * Generate setBindValue() method body using switch (AOT-compatible).
+ */
+function generateSetBindValue(array $bindKeys): string
+{
+    $binds = array_keys($bindKeys);
+    if (count($binds) === 0) {
+        return "        // No bind keys defined";
+    }
+
+    $cases = [];
+    foreach ($binds as $key) {
+        if ($key === '') continue;
+        $cases[] = "            case '{$key}': \$this->{$key} = \$value; break;";
+    }
+    if (count($cases) === 0) {
+        return "        // No bind keys defined";
+    }
+
+    $cases[] = "            default: break;";
+    $caseStr = implode("\n", $cases);
+    return "        switch (\$bindKey) {\n{$caseStr}\n        }";
+}
+
+/**
+ * Generate getBindValue() — reads a bound property value.
+ * Used by VNodeRenderer for v-model / :bind text content.
+ */
+function generateGetBindValue(array $bindKeys): string
+{
+    $binds = array_keys($bindKeys);
+    if (count($binds) === 0) {
+        return "        return '';";
+    }
+
+    $cases = [];
+    foreach ($binds as $key) {
+        if ($key === '') continue;
+        $cases[] = "            case '{$key}': return (string) \$this->{$key};";
+    }
+    if (count($cases) === 0) {
+        return "        return '';";
+    }
+
+    $cases[] = "            default: return '';";
+    $caseStr = implode("\n", $cases);
+    return "        switch (\$bindKey) {\n{$caseStr}\n        }";
+}
+
+/**
+ * Generate v-for helper methods (render_N).
+ */
+function generateVForHelpers(array $loops): string
+{
+    if (count($loops) === 0) return '';
+
+    $out = '';
+    foreach ($loops as $name => $info) {
+        $source = $info['source'];
+        $item = $info['item'];
+        $children = $info['children'];
+
+        if ($source === '' || $item === '') continue;
+
+        $loopInfo = ['source' => $source, 'item' => $item];
+
+        $childExprs = [];
+        foreach ($children as $child) {
+            if ($child instanceof VNode) {
+                $childExprs[] = generateVNodeExpr($child, $loopInfo, 2);
+            }
+        }
+
+        if (count($childExprs) === 0) continue;
+
+        $childBlock = implode(",\n                ", $childExprs);
+
+        $out .= <<<PHP
+
+    /**
+     * v-for render helper: {$item} in {$source}
+     * @return VNode[]
+     */
+    private function {$name}(): array
+    {
+        \$children = [];
+        foreach (\$this->{$source} as \${$item}) {
+            \$children[] = {$childBlock};
+        }
+        return \$children;
+    }
+PHP;
+    }
+
+    return $out;
+}
+
+/**
+ * Check if a VNode tree contains any v-for template.
+ */
+function hasVForLoops(VNode $node): bool
+{
+    if ($node->type === 'template' && ($node->props['v-for'] ?? '') !== '') {
+        return true;
+    }
+    if (is_array($node->children)) {
+        foreach ($node->children as $child) {
+            if ($child instanceof VNode && hasVForLoops($child)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// ============================================================
+// Component Resolution for VNode trees
+// ============================================================
+
+/**
+ * Resolve component references in a VNode tree.
+ * Replaces component ref VNodes with their flattened children.
+ *
+ * @param VNode $root Root VNode (mutated in-place)
+ * @param array &$classStyles CSS class styles (mutated in-place)
+ * @return array ['warnings'=>string[], 'children'=>array]
+ */
+function resolveComponentRefs(VNode $root, array &$classStyles): array
+{
+    $warnings = [];
+    $childComponents = [];
+
+    resolveComponentRefsRecursive($root, $classStyles, $warnings, $childComponents);
+
+    return ['warnings' => $warnings, 'children' => $childComponents];
+}
+
+/**
+ * Recursively resolve component references in a VNode tree.
+ * Replaces component ref VNodes with their flattened children at any depth.
+ */
+function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &$warnings, array &$childComponents): void
+{
+    if (!is_array($node->children)) return;
+
+    $resolvedChildren = [];
+
+    foreach ($node->children as $child) {
+        if (!$child instanceof VNode) {
+            $resolvedChildren[] = $child;
+            continue;
+        }
+
+        // Check for component ref (has __componentFile prop)
+        $compFile = $child->props['__componentFile'] ?? '';
+        if ($compFile === '') {
+            // Not a component ref — recurse into its children
+            resolveComponentRefsRecursive($child, $classStyles, $warnings, $childComponents);
+            $resolvedChildren[] = $child;
+            continue;
+        }
+
+        $tagName = $child->type;
+
+        $childSource = @file_get_contents($compFile);
+        if ($childSource === false) {
+            $warnings[] = "Cannot read component file: {$compFile}";
+            $resolvedChildren[] = $child;
+            continue;
+        }
+
+        // Extract child template and styles
+        $childTemplate = '';
+        $childStyles = '';
+        if (preg_match('#<template(?![^>]*v-for)[^>]*>(.*)</template>#s', $childSource, $m)) {
+            $childTemplate = $m[1];
+        }
+        if (preg_match('#<style[^>]*>(.*?)</style>#s', $childSource, $m)) {
+            $childStyles = $m[1];
+        }
+
+        if ($childTemplate === '') {
+            $warnings[] = "Component <{$tagName}> has no <template> block";
+            $resolvedChildren[] = $child;
+            continue;
+        }
+
+        // Parse child styles
+        $childStyleWarnings = [];
+        $childClassStyles = \Px\Rendering\CssMappings::parseStyleBlock($childStyles, $childStyleWarnings);
+        foreach ($childClassStyles as $cls => $style) {
+            if (!isset($classStyles[$cls])) {
+                $classStyles[$cls] = $style;
+            }
+        }
+        foreach ($childStyleWarnings as $w) {
+            $warnings[] = "Component <{$tagName}> CSS: $w";
+        }
+
+        // Parse child template
+        $childParser = new TemplateParser();
+        $childRoot = $childParser->parse($childTemplate);
+
+        // Apply offset from component props (parse style to get left/top)
+        $offsetX = 0;
+        $offsetY = 0;
+        if (isset($child->props['style'])) {
+            $childInline = \Px\Rendering\CssMappings::parseInlineStyle($child->props['style']);
+            $offsetX = (int)($childInline['left'] ?? 0);
+            $offsetY = (int)($childInline['top'] ?? 0);
+        }
+
+        // Collect dynamic bind props from component ref
+        $bindProps = [];
+        foreach ($child->props as $k => $v) {
+            if (strlen($k) > 0 && $k[0] === ':') {
+                $propName = substr($k, 1);
+                $bindProps[$propName] = $v;
+            }
+        }
+
+        // Remap bind props in child VNodes to parent's bind keys
+        if (count($bindProps) > 0) {
+            remapChildBindProps($childRoot, $bindProps);
+        }
+
+        // Apply offset to child root's children and add to resolved
+        foreach ($childRoot->children as $gc) {
+            if ($gc instanceof VNode && $gc->props !== null) {
+                if (isset($gc->props['style'])) {
+                    // Parse and adjust existing style
+                    $style = \Px\Rendering\CssMappings::parseInlineStyle($gc->props['style']);
+                    // Always apply offset: add to existing left/top, or create them from offset
+                    $style['left'] = ($style['left'] ?? 0) + $offsetX;
+                    $style['top'] = ($style['top'] ?? 0) + $offsetY;
+                    // Rebuild style string with proper px suffixes
+                    $parts = [];
+                    // Properties that use pixel values (need 'px' suffix)
+                    $pixelKeys = [
+                        'width', 'height', 'left', 'top', 'right', 'bottom',
+                        'gap', 'fontSize', 'borderRadius', 'padding', 'margin',
+                        'gridColumnGap', 'gridRowGap',
+                    ];
+                    foreach ($style as $k => $v) {
+                        if (in_array($k, $pixelKeys, true) && $v > 0) {
+                            $parts[] = "{$k}:{$v}px";
+                        } elseif ($k === 'left' || $k === 'top') {
+                            // Position always needs px (even when 0, for offset)
+                            $parts[] = "{$k}:{$v}px";
+                        } else {
+                            $parts[] = "{$k}:{$v}";
+                        }
+                    }
+                    if (count($parts) > 0) $gc->props['style'] = implode(';', $parts);
+                }
+                // Transfer v-if from parent component
+                $parentVIf = $child->props['v-if'] ?? '';
+                if ($parentVIf !== '' && !isset($gc->props['v-if'])) {
+                    $gc->props['v-if'] = $parentVIf;
+                }
+                // Transfer group_id
+                $gc->groupId = $tagName;
+            }
+            $resolvedChildren[] = $gc;
+        }
+
+        // Collect child component info for ComponentFactory
+        $childComponentName = componentTagToComponentName($tagName);
+        $childComponents[] = [
+            'tagName' => $tagName,
+            'componentClass' => $childComponentName,
+            'offsetX' => $offsetX,
+            'offsetY' => $offsetY,
+            'bindProps' => $bindProps,
+        ];
+    }
+
+    $node->children = $resolvedChildren;
+}
+
+/**
+ * Recursively remap :bind / v-model props in a VNode tree.
+ * When a parent passes :propName="parentKey" to a child,
+ * the child's :bind=propName must be remapped to :bind=parentKey.
+ */
+function remapChildBindProps(VNode $node, array $bindProps): void
+{
+    if ($node->props !== null) {
+        // Check :bind
+        $bind = $node->props[':bind'] ?? $node->props['bind'] ?? '';
+        if ($bind !== '' && isset($bindProps[$bind])) {
+            $node->props[':bind'] = $bindProps[$bind];
+            unset($node->props['bind']);
+        }
+        // Check v-model
+        $vModel = $node->props['v-model'] ?? '';
+        if ($vModel !== '' && isset($bindProps[$vModel])) {
+            $node->props['v-model'] = $bindProps[$vModel];
+        }
+        // Check :value (used in child component refs)
+        $valueBind = $node->props[':value'] ?? '';
+        if ($valueBind !== '' && isset($bindProps[$valueBind])) {
+            $node->props[':value'] = $bindProps[$valueBind];
+        }
+    }
+
+    // Handle text interpolation: {{ childVar }} → bind prop
+    if (is_string($node->children) && preg_match('/^\{\{\s*(\w+)\s*\}\}$/', $node->children, $m)) {
+        $childVar = $m[1];
+        if (isset($bindProps[$childVar])) {
+            if ($node->props === null) $node->props = [];
+            $node->props['bind'] = $bindProps[$childVar];
+            // Clear children (generateVNodeExpr will use bind prop)
+            $node->children = '';
+        }
+    }
+
+    if (is_array($node->children)) {
+        foreach ($node->children as $child) {
+            if ($child instanceof VNode) {
+                remapChildBindProps($child, $bindProps);
+            }
+        }
+    }
+}
+
+// ============================================================
+// Phase 1 — Pre-compile child components
+// ============================================================
+function compileChildComponents(ComponentRegistry $registry, string $outDir): void
+{
+    $allComponents = $registry->all();
+    if (count($allComponents) === 0) return;
+
+    echo "\n--- Phase 1: Compiling child components ---\n";
+
+    foreach ($allComponents as $tagName => $vuePath) {
+        if (!file_exists($vuePath)) {
+            echo "  [SKIP] $tagName: source file not found\n";
+            continue;
+        }
+
+        $baseName = pathinfo($vuePath, PATHINFO_FILENAME);
+        $className = componentTagToComponentName($tagName);
+
+        echo "  Compiling: $vuePath\n";
+
+        $source = file_get_contents($vuePath);
+
+        // Extract blocks
+        $template = '';
+        $styles = '';
+        if (preg_match('#<template(?![^>]*v-for)[^>]*>(.*)</template>#s', $source, $m)) {
+            $template = $m[1];
+        }
+        if (preg_match('#<style[^>]*>(.*?)</style>#s', $source, $m)) {
+            $styles = $m[1];
+        }
+
+        // Parse styles
+        $styleWarnings = [];
+        $classStyles = \Px\Rendering\CssMappings::parseStyleBlock($styles, $styleWarnings);
+
+        // Parse template → VNode tree
+        $parser = new TemplateParser($registry);
+        $root = $parser->parse($template);
+
+        // Collect handlers and bind keys from VNode tree
+        $clickHandlers = [];
+        $keyHandlers = [];
+        $bindKeys = [];
+        collectClickHandlers($root, $clickHandlers);
+        collectKeyHandlers($root, $keyHandlers);
+        collectVNodeBindKeys($root, $bindKeys);
+
+        // Collect v-for loops
+        $loops = [];
+        $loopCtr = 0;
+        collectVForLoops($root, $loops, $loopCtr);
+
+        // Generate render() body
+        $renderExpr = generateVNodeExpr($root, null, 1);
+
+        // Generate dispatch methods using switch (AOT-compatible)
+        $dispatchClick = generateDispatchClick($clickHandlers);
+        $dispatchKey = generateDispatchKey($keyHandlers);
+        $setBindValue = generateSetBindValue($bindKeys);
+        $getBindValue = generateGetBindValue($bindKeys);
+
+        // v-for helpers
+        $vForHelpers = generateVForHelpers($loops);
+
+        // Dynamic property declarations
+        $dynamicPropsDeclaration = '';
+        foreach ($bindKeys as $key => $_) {
+            if ($key !== '') $dynamicPropsDeclaration .= "    public string \$$key = '';\n";
+        }
+
+        $classContent = <<<PHP
+<?php
+
+/**
+ * AUTO-GENERATED by SFC Compiler v7 — DO NOT EDIT
+ * Source: $baseName.vue
+ */
+
+use Px\ReactiveComponent;
+use Px\Rendering\VNode;
+
+class {$className} extends ReactiveComponent
+{
+$dynamicPropsDeclaration
+
+    public function render(): VNode
+    {
+        return {$renderExpr};
+    }
+
+    public function dispatchClick(string \$handler, ?string \$arg = null): void
+    {
+{$dispatchClick}
+    }
+
+    public function dispatchKey(string \$handler, string \$action, int \$keyCode, string \$char): void
+    {
+{$dispatchKey}
+    }
+
+    public function setBindValue(string \$bindKey, string \$value): void
+    {
+{$setBindValue}
+    }
+
+    public function getBindValue(string \$bindKey): string
+    {
+{$getBindValue}
+    }
+{$vForHelpers}
+
+    public function __construct(?string \$componentId = null)
+    {
+        parent::__construct(\$componentId ?? '{$baseName}');
+    }
+}
+PHP;
+
+        $classPath = $outDir . DIRECTORY_SEPARATOR . $className . '.php';
+        $validator = new AotValidator();
+        $classOk = $validator->validate($classContent, $classPath);
+
+        if ($classOk) {
+            file_put_contents($classPath, $classContent);
+            echo "  Generated:  $classPath (" . strlen($classContent) . " bytes)\n";
+        } else {
+            echo "  [ERROR] $className: AOT validation failed\n";
+        }
+    }
+
+    echo "--- Phase 1 complete ---\n\n";
+}
+
+// ============================================================
+// CLI Main — only runs when this file is the entry point
+// ============================================================
+if ((isset($argv) && realpath($argv[0]) === realpath(__FILE__)) || defined('SFC_CLI_ENTRY')) {
+if ($argc < 2) {
+    echo "Usage: php framework/sfc-compiler.php <path/to/component.vue> [--dump-ast]\n";
+    exit(1);
+}
+
+$vueFile = $argv[1];
+$dumpAst = in_array('--dump-ast', $argv, true);
+
+if (!file_exists($vueFile)) {
+    echo "Error: File not found: $vueFile\n";
+    exit(1);
+}
+
+$source = file_get_contents($vueFile);
+
+// Load registry
+$componentRegistry = loadComponentRegistry($vueFile);
+$componentNames = array_keys($componentRegistry->all());
+$appDir = dirname(realpath($vueFile));
+$outDir = $appDir . DIRECTORY_SEPARATOR . 'gen';
+if (!is_dir($outDir)) {
+    mkdir($outDir, 0755, true);
+}
+
+$baseName = pathinfo($vueFile, PATHINFO_FILENAME);
+$isRootComponent = (strtolower($baseName) === 'app' || strtolower($baseName) === 'appcomponent');
+
+if (count($componentNames) > 0) {
+    echo "SFC Compiler v7: $vueFile (components: " . implode(', ', $componentNames) . ")\n";
+} else {
+    echo "SFC Compiler v7: $vueFile\n";
+}
+
+// Phase 1: Pre-compile child components
+if ($isRootComponent) {
+    compileChildComponents($componentRegistry, $outDir);
+}
+
+// Step 1: Extract blocks
+$template = '';
+$script = '';
+$styles = '';
+$blockErrors = [];
+
+if (preg_match('#<template(?![^>]*v-for)[^>]*>(.*)</template>#s', $source, $m)) {
+    $template = $m[1];
+} else {
+    $blockErrors[] = "No <template> block found in $vueFile";
+}
+
+if (preg_match('#<script[^>]*lang=["\']php["\'][^>]*>(.*?)</script>#s', $source, $m)) {
+    $script = trim($m[1]);
+} else {
+    $blockErrors[] = "No <script lang=\"php\"> block found in $vueFile";
+}
+
+if (preg_match('#<style[^>]*>(.*?)</style>#s', $source, $m)) {
+    $styles = $m[1];
+}
+
+if (count($blockErrors) > 0) {
+    foreach ($blockErrors as $err) {
+        echo "Error: $err\n";
+    }
+    exit(1);
+}
+
+echo "  Template: " . strlen($template) . " bytes\n";
+echo "  Script:   " . strlen($script) . " bytes\n";
+echo "  Style:    " . strlen($styles) . " bytes\n";
+
+// Step 2: Parse styles
+$styleWarnings = [];
+$classStyles = \Px\Rendering\CssMappings::parseStyleBlock($styles, $styleWarnings);
+echo "  Classes:  " . count($classStyles) . " parsed\n";
+
+foreach ($styleWarnings as $w) {
+    echo "  [WARN] CSS: $w\n";
+}
+
+// Step 3: Parse template → VNode tree
+$parser = new TemplateParser($componentRegistry);
+$root = $parser->parse($template);
+$parseErrors = $parser->getErrors();
+
+if (count($parseErrors) > 0) {
+    echo "\n=== Template Parse Errors (" . count($parseErrors) . ") ===\n";
+    foreach ($parseErrors as $err) {
+        echo "  $err\n";
+    }
+    echo "========================================\n\n";
+}
+
+if ($dumpAst) {
+    echo "\n=== VNode Tree ===\n";
+    echo $parser->dumpVNode($root);
+    echo "\n=== End VNode Tree ===\n\n";
+}
+
+// Step 4: Resolve component references
+$resolveResult = resolveComponentRefs($root, $classStyles);
+$componentWarnings = $resolveResult['warnings'];
+$childComponentInfo = $resolveResult['children'];
+
+if (count($componentWarnings) > 0) {
+    echo "\n=== Component Resolution Warnings (" . count($componentWarnings) . ") ===\n";
+    foreach ($componentWarnings as $w) {
+        echo "  [WARN] $w\n";
+    }
+    echo "===================================================\n\n";
+}
+
+// Step 5: Collect data and generate code
+$clickHandlers = [];
+$keyHandlers = [];
+$bindKeys = [];
+$loops = [];
+$loopCtr = 0;
+
+collectClickHandlers($root, $clickHandlers);
+collectKeyHandlers($root, $keyHandlers);
+collectVNodeBindKeys($root, $bindKeys);
+collectVForLoops($root, $loops, $loopCtr);
+
+echo "  Handlers: " . (count($clickHandlers) + count($keyHandlers)) . "\n";
+echo "  BindKeys: " . count($bindKeys) . "\n";
+echo "  V-For Loops: " . count($loops) . "\n";
+
+// Generate render() expression
+$renderExpr = generateVNodeExpr($root, null, 1);
+
+// Generate dispatch methods
+$dispatchClickBody = generateDispatchClick($clickHandlers);
+$dispatchKeyBody = generateDispatchKey($keyHandlers);
+
+// Generate setBindValue
+$setBindValueBody = generateSetBindValue($bindKeys);
+
+// Generate getBindValue (reads bound property values for VNodeRenderer)
+$getBindValueBody = generateGetBindValue($bindKeys);
+
+// Generate v-for helpers
+$vForHelpers = generateVForHelpers($loops);
+
+// Script analysis
+$analyzer = new ScriptAnalyzer();
+$classBody = $analyzer->injectDirty($script);
+
+// Component class name
+$componentClassName = $baseName . 'Component';
+
+// Dynamic property declarations (for bind keys that are not in script)
+$dynamicPropsDeclaration = '';
+foreach ($bindKeys as $key => $_) {
+    if ($key !== '' && !str_contains($classBody, "\${$key}")) {
+        $dynamicPropsDeclaration .= "    public string \$$key = '';\n";
+    }
+}
+
+// Build components export (for v-if dynamic component management)
+$componentsExport = '[]';
+if (count($childComponentInfo) > 0) {
+    $componentItems = [];
+    foreach ($childComponentInfo as $child) {
+        $item = [
+            'type' => $child['componentClass'],
+            'key' => $child['tagName'],
+            'props' => ['x' => $child['offsetX'], 'y' => $child['offsetY']],
+        ];
+        if (count($child['bindProps']) > 0) {
+            $item['bindProps'] = $child['bindProps'];
+        }
+        $componentItems[] = $item;
+    }
+    $componentsExport = varExportShort($componentItems);
+}
+
+// Build class styles export (for runtime LayoutResolver)
+$classStylesExport = '[]';
+if (count($classStyles) > 0) {
+    $classStylesExport = varExportShort($classStyles);
+}
+
+// Generate class
+$classContent = <<<PHP
+<?php
+
+/**
+ * AUTO-GENERATED by SFC Compiler v7 — DO NOT EDIT
+ * Source: $baseName.vue
+ */
+
+use Px\ReactiveComponent;
+use Px\Rendering\VNode;
+
+class {$componentClassName} extends ReactiveComponent
+{
+{$classBody}
+{$dynamicPropsDeclaration}
+    /**
+     * 渲染组件，返回 VNode 树
+     */
+    public function render(): VNode
+    {
+        return {$renderExpr};
+    }
+
+    /**
+     * 事件分发 (PHP 8.4 match 表达式)
+     */
+    public function dispatchClick(string \$handler, ?string \$arg = null): void
+    {
+{$dispatchClickBody}
+    }
+
+    /**
+     * 键盘事件分发
+     */
+    public function dispatchKey(string \$handler, string \$action, int \$keyCode, string \$char): void
+    {
+{$dispatchKeyBody}
+    }
+
+    /**
+     * 动态绑定值设置
+     */
+    public function setBindValue(string \$bindKey, string \$value): void
+    {
+{$setBindValueBody}
+    }
+
+    /**
+     * 读取绑定值 (AOT-compatible switch)
+     */
+    public function getBindValue(string \$bindKey): string
+    {
+{$getBindValueBody}
+    }
+{$vForHelpers}
+
+    /**
+     * 返回 CSS class styles (从 <style> 块编译)
+     * 供运行时 LayoutResolver 使用
+     */
+    public function getClassStyles(): array
+    {
+        return {$classStylesExport};
+    }
+
+    public function onMount(): void
+    {
+    }
+
+    public function onUnmount(): void
+    {
+    }
+
+    public function __construct(?string \$componentId = null)
+    {
+        parent::__construct(\$componentId ?? '{$baseName}');
+    }
+}
+PHP;
+
+// Step 6: AOT Validation
+$validator = new AotValidator();
+$classPath = $outDir . DIRECTORY_SEPARATOR . $componentClassName . '.php';
+$classOk = $validator->validate($classContent, $classPath);
+
+echo "\n" . $validator->report();
+
+if (!$classOk) {
+    echo "\nAOT validation FAILED. Generated file NOT written.\n";
+    echo "Fix the issues above and re-run the compiler.\n";
+    exit(1);
+}
+
+file_put_contents($classPath, $classContent);
+echo "  Generated:  $classPath (" . strlen($classContent) . " bytes)\n";
+
+// Component Factory
+$genDir = $appDir . DIRECTORY_SEPARATOR . 'gen';
+$allComponentClasses = [];
+$allComponentClasses[$componentClassName] = true;
+
+if (is_dir($genDir)) {
+    $files = glob($genDir . '/*Component.php');
+    foreach ($files as $file) {
+        $fileName = basename($file, '.php');
+        if ($fileName !== $componentClassName) {
+            $allComponentClasses[$fileName] = true;
+        }
+    }
+}
+
+$factoryContent = "<?php\n\n";
+$factoryContent .= "/**\n * ComponentFactory - 组件工厂类 (v7)\n";
+$factoryContent .= " * 由 SFC 编译器自动生成，使用 switch-case 创建组件实例。\n */\n";
+$factoryContent .= "use Px\\Interfaces\\ComponentInterface;\n\n";
+$factoryContent .= "class ComponentFactory\n{\n";
+$factoryContent .= "    public static function create(string \$className, array \$props = []): ComponentInterface\n";
+$factoryContent .= "    {\n";
+$factoryContent .= "        switch (\$className) {\n";
+
+foreach (array_keys($allComponentClasses) as $className) {
+    $factoryContent .= "            case '$className':\n";
+    $factoryContent .= "                \$comp = any(new $className());\n";
+    $factoryContent .= "                if (method_exists(\$comp, 'setProps')) { \$comp->setProps(\$props); }\n";
+    $factoryContent .= "                break;\n";
+}
+
+$factoryContent .= "            default:\n";
+$factoryContent .= "                throw new \\RuntimeException(\"Component not found: \$className\");\n";
+$factoryContent .= "        }\n";
+$factoryContent .= "        return \$comp;\n";
+$factoryContent .= "    }\n";
+$factoryContent .= "}\n";
+
+$factoryPath = $outDir . DIRECTORY_SEPARATOR . 'ComponentFactory.php';
+file_put_contents($factoryPath, $factoryContent);
+echo "  Generated:  $factoryPath (" . strlen($factoryContent) . " bytes)\n";
+} // end CLI entry guard
+echo "\nDone.\n";

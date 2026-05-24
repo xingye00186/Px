@@ -1,0 +1,22 @@
+# VueCalc v6 M4 Test Application Configuration
+#
+# 功能: Flex 布局引擎、TextBox 组件、v-model 双向绑定
+#
+# AOT 编译:
+# swoole_compiler.exe apps/test/project.yml -f
+
+name: test
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  # C++ 桥接层
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php

@@ -1,0 +1,12 @@
+gen/
+bin/
+build/
+vendor/
+*.obj
+*.exe
+*.dll
+swoole_compiler*
+nul
+*.ilk
+*.pdb
+.idea/
