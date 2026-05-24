@@ -13,6 +13,7 @@ use Px\Rendering\VNode;
  *  - 响应式属性 + dirty 标记
  *  - 异步更新队列（via Scheduler closure）
  *  - 自动解绑监听（via ReactionBus）
+ *  - $emit() 子→父事件通信（对标 Vue 3）
  *
  * AOT：闭包调用合法，默认值传递。
  */
@@ -131,6 +132,46 @@ abstract class ReactiveComponent extends BaseComponent
             $this->listenerIds = array_values($this->listenerIds);
         }
         $this->bus->off($listenerId);
+    }
+
+    // ── 组件通信 ─────────────────────────────────
+
+    /**
+     * 向父组件发送事件（对标 Vue 3 $emit）。
+     *
+     * 通过 ReactionBus 通道 'component:{eventName}' 发送。
+     * 父组件通过 subscribe() 监听同通道接收。
+     *
+     * 示例:
+     *   // 子组件
+     *   $this->emit('itemSelected', ['id' => 5]);
+     *
+     *   // 父组件
+     *   $child->on('itemSelected', function($payload) { ... });
+     *
+     * @param string $eventName 事件名
+     * @param mixed  $payload   事件载荷
+     */
+    protected function emit(string $eventName, mixed $payload = null): void
+    {
+        $channel = 'component:' . $this->id . ':' . $eventName;
+        $this->bus->emitAsync($channel, $payload);
+    }
+
+    /**
+     * 监听子组件事件（对标 Vue 3 v-on）。
+     *
+     * 子组件 emit('itemSelected', ...) 后触发。
+     * 在 unmount 时自动解绑。
+     *
+     * @param ReactiveComponent $child     子组件实例
+     * @param string            $eventName 事件名
+     * @param callable          $callback  回调
+     */
+    protected function on(ReactiveComponent $child, string $eventName, callable $callback): void
+    {
+        $channel = 'component:' . $child->getId() . ':' . $eventName;
+        $this->subscribe($channel, $callback);
     }
 
     /**

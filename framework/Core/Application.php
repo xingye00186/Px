@@ -16,6 +16,12 @@ use Px\ReactiveComponent;
  * 事件循环：
  *   平台事件 → 命中测试 → 组件方法 → 微任务 → 渲染 → 宏任务
  *
+ * 组件事件路由（对标 Vue 3 / Flutter hitTest 链）：
+ *   1. VNode.groupId 标识所属组件
+ *   2. Application 维护 componentByGroupId 注册表
+ *   3. hitTest 找到 VNode → 查表找到组件 → 调用 dispatchClick/dispatchKey
+ *   4. 组件通过 $emit() 向父组件发送事件（经由 ReactionBus）
+ *
  * 编译时常量（main.php 定义）：
  *   APP_PLATFORM  WINDOW_WIDTH  WINDOW_HEIGHT  WINDOW_TITLE
  */
@@ -31,6 +37,9 @@ class Application
     private ?VNode $activeVNodeTree = null;
     private bool $renderRequested = false;
     private bool $running = true;
+
+    /** @var array<string, ReactiveComponent> VNode.groupId → Component instance */
+    private array $componentByGroupId = [];
 
     private static ?self $instance = null;
 
@@ -61,7 +70,7 @@ class Application
             $this->renderRequested = true;
         });
 
-        // 内部监听器：平台鼠标事件 → 命中测试
+        // 内部监听器：平台鼠标事件 → 命中测试 → 组件路由
         $this->bus->on('platform:mouse', function ($event) {
             if ($event === null || $event->action !== 'down' || $this->activeVNodeTree === null) {
                 return;
@@ -70,11 +79,12 @@ class Application
             if ($btn !== null && isset($btn->props['@click'])) {
                 $handler = $btn->props['@click'];
                 $arg = $btn->props['click-arg'] ?? null;
-                $this->rootComponent->dispatchClick($handler, $arg);
+                $target = $this->resolveComponent($btn);
+                $target->dispatchClick($handler, $arg);
             }
         });
 
-        // 内部监听器：平台键盘事件 → 焦点 input 元素
+        // 内部监听器：平台键盘事件 → 焦点 input → 组件路由
         $this->bus->on('platform:keyboard', function ($event) {
             if ($event === null || $this->activeVNodeTree === null) {
                 return;
@@ -83,24 +93,53 @@ class Application
             if ($input === null) {
                 return;
             }
+            $target = $this->resolveComponent($input);
             $action = $event->action;
             if ($action === 'down') {
                 $handler = $input->props['@keydown'] ?? null;
                 if ($handler !== null) {
-                    $this->rootComponent->dispatchKey($handler, $action, $event->keyCode, $event->char);
+                    $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
                 }
             } elseif ($action === 'up') {
                 $handler = $input->props['@keyup'] ?? null;
                 if ($handler !== null) {
-                    $this->rootComponent->dispatchKey($handler, $action, $event->keyCode, $event->char);
+                    $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
                 }
             } elseif ($action === 'char') {
                 $handler = $input->props['@enter'] ?? null;
                 if ($handler !== null && $event->keyCode === 13) {
-                    $this->rootComponent->dispatchKey($handler, $action, $event->keyCode, $event->char);
+                    $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
                 }
             }
         });
+    }
+
+    // ── 组件注册表 ─────────────────────────────
+
+    /**
+     * 注册组件实例，按 groupId 索引。
+     * 根组件自动注册为 'app'；子组件用其 tagName 注册。
+     */
+    public function registerComponent(string $groupId, ReactiveComponent $component): void
+    {
+        $this->componentByGroupId[$groupId] = $component;
+    }
+
+    /**
+     * 注销组件实例。
+     */
+    public function unregisterComponent(string $groupId): void
+    {
+        unset($this->componentByGroupId[$groupId]);
+    }
+
+    /**
+     * 根据 VNode 的 groupId 查找目标组件。
+     * 找不到时回退到根组件（兼容全量内联架构）。
+     */
+    private function resolveComponent(VNode $node): ReactiveComponent
+    {
+        return $this->componentByGroupId[$node->groupId] ?? $this->rootComponent;
     }
 
     public function getPlatform(): Platform   { return $this->platform; }
@@ -124,6 +163,8 @@ class Application
         $this->rootComponent = $root;
         $this->rootComponent->setScheduler($this->scheduler);
         $this->rootComponent->setBus($this->bus);
+        // 注册根组件
+        $this->registerComponent('app', $root);
         $this->initRenderer();
         $this->rootComponent->mount();
         return $this;
@@ -198,14 +239,15 @@ class Application
     /**
      * 命中测试：找到鼠标坐标命中的最顶层可交互元素。
      *
-     * 设计原则（对标 CSS）：
-     *   1. 反向遍历子节点 —— 后渲染的 DOM 在视觉上层，应先命中
+     * 设计原则（对标 CSS / Flutter）：
+     *   1. 反向遍历子节点 —— 后渲染的在视觉上层，应优先命中
      *   2. Layer 感知 —— z-index 创建的层叠上下文控制命中优先级
+     *   3. 返回命中的 VNode，调用方通过 groupId 路由到对应组件
      *
      * 注意：v-if 已在编译期处理，false 分支不会出现在 VNode 树中。
      *
-     * @param int  $x    鼠标 X 坐标
-     * @param int  $y    鼠标 Y 坐标
+     * @param int   $x    鼠标 X 坐标
+     * @param int   $y    鼠标 Y 坐标
      * @param VNode $node 当前 VNode
      * @return VNode|null 命中的最顶层交互元素，无则 null
      */
@@ -217,7 +259,7 @@ class Application
             $found = $this->hitTest($x, $y, $children);
             if ($found !== null) return $found;
         } elseif (is_array($children)) {
-            // 反向: 数组末尾元素渲染在最上层
+            // 反向: 数组末尾元素渲染在最上层（对标 CSS painting order）
             for ($i = count($children) - 1; $i >= 0; $i--) {
                 $child = $children[$i];
                 if ($child instanceof VNode) {
@@ -240,8 +282,7 @@ class Application
     }
 
     /**
-     * Find the first input element in the VNode tree that has keyboard handlers.
-     * Used to route keyboard events to the focused input.
+     * 查找 VNode 树中第一个有键盘处理器的 input 元素。
      */
     private function findFocusedInput(VNode $node): ?VNode
     {

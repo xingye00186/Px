@@ -93,6 +93,18 @@ class LayoutResolver
             $node->layer = $zIndex;
         }
 
+        // Check for scroll container — must be BEFORE layout resolution
+        // so resolveBlockLayout can access $node->isScrollContainer for auto-stack
+        $overflow = $merged['overflow'] ?? $merged['overflowY'] ?? 'visible';
+        $isScrollContainer = ($overflow === 'auto' || $overflow === 'scroll') ||
+            ($node->props[':scroll-top'] ?? '') !== '' ||
+            $node->isScrollContainer;
+
+        if ($isScrollContainer) {
+            $node->isScrollContainer = true;
+            $this->scrollContainers[] = $node;
+        }
+
         // Determine display mode
         $display = $merged['display'] ?? ($node->isRoot() ? 'block' : 'block');
         $position = $merged['position'] ?? 'static';
@@ -107,17 +119,6 @@ class LayoutResolver
             default: // block, scroll-container, etc.
                 $this->resolveBlockLayout($node, $parentX, $parentY, $parent, $position);
                 break;
-        }
-
-        // Check for scroll container
-        $overflow = $merged['overflow'] ?? $merged['overflowY'] ?? 'visible';
-        $isScrollContainer = ($overflow === 'auto' || $overflow === 'scroll') ||
-            ($node->props[':scroll-top'] ?? '') !== '' ||
-            $node->isScrollContainer;
-
-        if ($isScrollContainer) {
-            $node->isScrollContainer = true;
-            $this->scrollContainers[] = $node;
         }
     }
 
@@ -212,11 +213,35 @@ class LayoutResolver
                                 $child->w = $containerW;
                                 $child->computedStyle['width'] = $containerW;
                             }
-                            // Auto-position: stack vertically
+                            // Auto-position: stack vertically, shift all descendants
+                            $dy = $stackY - $child->y;
                             $child->y = $stackY;
+                            if ($dy !== 0) {
+                                $this->shiftDescendantsY($child, $dy);
+                            }
                             $stackY += $child->h;
                         }
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * Recursively shift Y coordinate of a node and all its descendants.
+     * Used after auto-stack repositions a parent to keep grandchildren aligned.
+     */
+    private function shiftDescendantsY(VNode $node, int $dy): void
+    {
+        $children = $node->children;
+        if ($children instanceof VNode) {
+            $children->y += $dy;
+            $this->shiftDescendantsY($children, $dy);
+        } elseif (is_array($children)) {
+            foreach ($children as $child) {
+                if ($child instanceof VNode) {
+                    $child->y += $dy;
+                    $this->shiftDescendantsY($child, $dy);
                 }
             }
         }

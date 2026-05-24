@@ -11,10 +11,12 @@ use Px\ReactiveComponent;
  *   1. Walk: 收集所有需要绘制的元素 (按 layer 分组)
  *   2. Draw: 按 layer 顺序调用 ctx->drawElement()
  *
- * 元素分解策略:
- *   复杂类型 (textbox, scroll-container) 在 vnodeToElement 中
- *   分解为原生图元 (rect, text). GdiRenderContext::drawElement
- *   只需处理 rect / text / button 三种 primitive.
+ * 设计原则:
+ *   每个 VNode 生成一个元素描述。复杂类型 (button, input,
+ *   scroll-container) 由 GdiRenderContext::drawElement 内部
+ *   多次调用 GDI 原语完成绘制 — 不在此层分解为多个兄弟图元。
+ *
+ *   命中测试完全基于 VNode 树，不依赖元素列表。
  */
 class VNodeRenderer
 {
@@ -54,17 +56,14 @@ class VNodeRenderer
     private function collectElements(VNode $node, array &$elementsByLayer, int &$maxLayer): void
     {
         if (!$node->isRoot()) {
-            // v-if handled at compile time — false branches never in tree
-            $elements = $this->vnodeToElement($node);
-            foreach ($elements as $el) {
-                if ($el !== null) {
-                    $layer = $node->layer;
-                    if ($layer > $maxLayer) $maxLayer = $layer;
-                    if (!isset($elementsByLayer[$layer])) {
-                        $elementsByLayer[$layer] = [];
-                    }
-                    $elementsByLayer[$layer][] = $el;
+            $el = $this->vnodeToElement($node);
+            if ($el !== null) {
+                $layer = $node->layer;
+                if ($layer > $maxLayer) $maxLayer = $layer;
+                if (!isset($elementsByLayer[$layer])) {
+                    $elementsByLayer[$layer] = [];
                 }
+                $elementsByLayer[$layer][] = $el;
             }
         }
 
@@ -97,15 +96,14 @@ class VNodeRenderer
     }
 
     /**
-     * Convert a VNode to one or more primitive draw elements.
+     * Convert a VNode to a single draw element descriptor.
      *
-     * Complex types (textbox, scroll-container) are decomposed here
-     * into native primitives (rect, text) — GdiRenderContext only
-     * handles rect / text / button at drawElement().
+     * Complex types carry all data needed for GdiRenderContext
+     * to make multiple GDI calls internally.
      *
-     * @return array<int, array>  zero or more element descriptors
+     * @return ?array  element descriptor, or null if invisible
      */
-    private function vnodeToElement(VNode $node): array
+    private function vnodeToElement(VNode $node): ?array
     {
         $style = $node->computedStyle;
         $x = $node->x;
@@ -119,8 +117,8 @@ class VNodeRenderer
             $y = $y - $scrollCtx['scrollTop'];
             $containerY = $scrollCtx['y'];
             $containerH = $scrollCtx['h'];
-            if ($y + $h <= $containerY || $y >= $containerY + $containerH) {
-                return [];
+            if ($y + $h < $containerY || $y >= $containerY + $containerH) {
+                return null;
             }
         }
 
@@ -142,26 +140,27 @@ class VNodeRenderer
     }
 
     // ──────────────────────────────────────────────
-    //  Primitive element builders
-    //  Each returns array<int, array> (0 for invisible)
+    //  Element builders — each returns ?array
+    //  null → invisible (nothing to draw)
+    //  array → one element descriptor per VNode
     // ──────────────────────────────────────────────
 
-    private function makeDivElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): array
+    private function makeDivElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         if ($node->isScrollContainer) {
             return $this->makeScrollContainerElement($node, $style, $x, $y, $w, $h, $layer);
         }
         $bg = $style['bg'] ?? ($style['background'] ?? 0);
         if ($bg === 0 && !($style['borderWidth'] ?? false)) {
-            return [];
+            return null;
         }
-        return [[
+        return [
             'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'color' => $bg, 'layer' => $layer, 'group_id' => $node->groupId,
-        ]];
+            'color' => $bg, 'layer' => $layer,
+        ];
     }
 
-    private function makeSpanElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): array
+    private function makeSpanElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $fontSize = $style['fontSize'] ?? 16;
         $color    = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
@@ -180,7 +179,7 @@ class VNodeRenderer
         if ($vModel !== '' && method_exists($this->component, 'getBindValue')) {
             $text = $this->component->getBindValue($vModel);
         }
-        if ($text === '') return [];
+        if ($text === '') return null;
 
         $containerW = (int)($node->props['container-w'] ?? $w);
         $containerH = (int)($node->props['container-h'] ?? $h);
@@ -200,15 +199,15 @@ class VNodeRenderer
             }
         }
 
-        return [[
+        return [
             'type' => 'text', 'text' => $text,
             'x' => $x, 'y' => $y,
             'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
-            'align' => $align, 'layer' => $layer, 'group_id' => $node->groupId,
-        ]];
+            'align' => $align, 'layer' => $layer,
+        ];
     }
 
-    private function makeButtonElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): array
+    private function makeButtonElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $bg     = $style['bg'] ?? 0x4488CC;
         $fg     = $style['fg'] ?? 0xFFFFFF;
@@ -242,27 +241,22 @@ class VNodeRenderer
         $labelX = $x + (int)(($w - $labelLen * $labelCharW) / 2);
         $labelY = $y + (int)(($h - $labelFontSize) / 2);
 
-        return [[
+        return [
             'type' => 'button', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'bg' => $bg, 'fg' => $fg, 'border' => $border,
             'label' => $label, 'labelX' => $labelX, 'labelY' => $labelY,
-            'labelFontSize' => $labelFontSize, 'layer' => $layer, 'group_id' => $node->groupId,
-        ]];
+            'labelFontSize' => $labelFontSize, 'layer' => $layer,
+        ];
     }
 
-    // ──────────────────────────────────────────────
-    //  Composite element builders  (decomposed → primitives)
-    // ──────────────────────────────────────────────
-
     /**
-     * Decompose &lt;input&gt; → [ rect (bg), text (value) ].
+     * Input element — 由 drawElement 内部绘制背景和文本。
      */
-    private function makeInputElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): array
+    private function makeInputElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
     {
-        $bg     = $style['bg'] ?? 0x1E1E1E;
-        $fg     = $style['fg'] ?? 0xFFFFFF;
+        $bg       = $style['bg'] ?? 0x1E1E1E;
+        $fg       = $style['fg'] ?? 0xFFFFFF;
         $fontSize = $style['fontSize'] ?? 16;
-        $align  = $node->props['align'] ?? 'left';
 
         $bindKey = $node->props['v-model'] ?? '';
         $text = '';
@@ -270,41 +264,23 @@ class VNodeRenderer
             $text = $this->component->getBindValue($bindKey);
         }
 
-        $elements = [];
-
-        // Background rect
-        $elements[] = [
-            'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'color' => $bg, 'layer' => $layer, 'group_id' => $node->groupId,
+        return [
+            'type' => 'input',
+            'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+            'bg' => $bg, 'color' => $fg, 'fontSize' => $fontSize,
+            'text' => $text, 'layer' => $layer,
         ];
-
-        // Text value
-        if ($text !== '') {
-            $padX = 6;
-            $padY = (int)(($h - $fontSize) / 2);
-            $elements[] = [
-                'type' => 'text', 'text' => $text,
-                'x' => $x + $padX, 'y' => $y + $padY,
-                'fontSize' => $fontSize, 'color' => $fg, 'bold' => 0,
-                'align' => $align, 'layer' => $layer, 'group_id' => $node->groupId,
-            ];
-        }
-
-        return $elements;
     }
 
     /**
-     * Decompose scroll-container → [ rect (bg), rect (track), rect (thumb) ].
+     * Scroll container — 由 drawElement 内部绘制背景和滚动条。
      *
-     * Children are already collected separately by collectElements();
-     * scroll-offset clipping happens there via scrollCtxStack.
+     * 子节点已由 collectElements() 单独收集；
+     * scrollCtxStack 在此提供裁切偏移。
      */
-    private function makeScrollContainerElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): array
+    private function makeScrollContainerElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $bg = $style['bg'] ?? 0x2D2D2D;
-        $sbW = 12;
-        $sbBg = 0x4A4A4A;
-        $sbThumb = 0x888888;
 
         $contentH = $node->contentHeight;
         if ($contentH === 0) {
@@ -323,37 +299,13 @@ class VNodeRenderer
             }
         }
 
-        $elements = [];
-
-        // Background
-        $elements[] = [
-            'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'color' => $bg, 'layer' => $layer, 'group_id' => $node->groupId,
+        return [
+            'type' => 'scroll-container',
+            'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+            'bg' => $bg,
+            'contentHeight' => $contentH,
+            'scrollTop' => $node->scrollTop,
+            'layer' => $layer,
         ];
-
-        // Scrollbar — only when content overflows
-        if ($contentH > $h) {
-            $sbX = $x + $w - $sbW;
-
-            // Track
-            $elements[] = [
-                'type' => 'rect', 'x' => $sbX, 'y' => $y, 'w' => $sbW, 'h' => $h,
-                'color' => $sbBg, 'layer' => $layer, 'group_id' => $node->groupId,
-            ];
-
-            // Thumb (proportional)
-            $ratio = min($h / max($contentH, 1), 1.0);
-            $thumbH = max((int)($h * $ratio), 20);
-            $maxScroll = max($contentH - $h, 0);
-            $scrollRatio = $maxScroll > 0 ? $node->scrollTop / $maxScroll : 0.0;
-            $thumbY = $y + (int)(($h - $thumbH) * $scrollRatio);
-
-            $elements[] = [
-                'type' => 'rect', 'x' => $sbX + 2, 'y' => $thumbY, 'w' => $sbW - 4, 'h' => $thumbH,
-                'color' => $sbThumb, 'layer' => $layer, 'group_id' => $node->groupId,
-            ];
-        }
-
-        return $elements;
     }
 }
