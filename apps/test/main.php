@@ -14,7 +14,8 @@ use Px\Core\Application;
  * AOT 编译由此文件开始。project.yml sources 引用此文件。
  */
 
-
+const WINDOW_WIDTH  = 400;
+const WINDOW_HEIGHT = 500;
 
 const APP_PLATFORM = 'win32';
 

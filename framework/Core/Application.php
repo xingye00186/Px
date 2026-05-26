@@ -39,6 +39,9 @@ class Application
     /** @var array<string, ReactiveComponent> VNode.groupId → Component instance */
     private array $componentByGroupId = [];
 
+    /** @var array<string, ReactiveComponent> componentClass → instance (singleton per class) */
+    private array $componentInstances = [];
+
     private static ?self $instance = null;
 
     public static function getInstance(): self
@@ -180,6 +183,99 @@ class Application
     {
         // 惰性重建: dirty 时才调 render(), 否则返回缓存 (Vue 3 风格)
         $this->activeVNodeTree = $this->rootComponent->getVNodeTree();
+        $this->expandComponentTree($this->activeVNodeTree);
+    }
+
+    /**
+     * 递归展开组件占位节点（#component），替换为子组件的 VNode 树。
+     */
+    private function expandComponentTree(VNode $node): void
+    {
+        $children = $node->children;
+
+        if ($children instanceof VNode) {
+            $children = objval($children, VNode::class);
+            if ($children->isComponent()) {
+                $this->expandComponentNode($children);
+            }
+            // After expansion (or not), recurse into child's subtree
+            if ($children->children instanceof VNode || is_array($children->children)) {
+                $this->expandComponentTree($children);
+            }
+        } elseif (is_array($children)) {
+            foreach ($children as $child) {
+                if (!$child instanceof VNode) continue;
+                $child = objval($child, VNode::class);
+
+                if ($child->isComponent()) {
+                    $this->expandComponentNode($child);
+                }
+
+                // Recurse into children (component nodes need this after children replaced)
+                if ($child->children instanceof VNode || is_array($child->children)) {
+                    $this->expandComponentTree($child);
+                }
+            }
+        }
+    }
+
+    /**
+     * 展开单个组件占位节点。
+     */
+    private function expandComponentNode(VNode $node): void
+    {
+        $className = $node->componentClass;
+        if ($className === null) return;
+
+        // 获取或创建组件实例
+        if (!isset($this->componentInstances[$className])) {
+            $instance = \ComponentFactory::create($className);
+            $instance->setScheduler($this->scheduler);
+            $instance->setRenderCallback($this->handleRenderRequest(...));
+            $instance->setParent($this->rootComponent);
+            $instance->mount();
+            $this->registerComponent($className, $instance);
+            $this->componentInstances[$className] = $instance;
+        }
+        $instance = $this->componentInstances[$className];
+
+        // 传递 props：父组件的 bind key → 子组件的属性
+        if ($node->componentProps !== null && $this->rootComponent !== null) {
+            foreach ($node->componentProps as $childKey => $parentExpr) {
+                $parentValue = $this->rootComponent->getBindValue($parentExpr);
+                $instance->setBindValue($childKey, $parentValue);
+            }
+        }
+
+        // 展开子树（利用子组件 vnodeCache）
+        $childRoot = $instance->getVNodeTree();
+        $node->w = $childRoot->w;
+        $node->h = $childRoot->h;
+        $node->componentInstance = $instance;
+        $node->children = $childRoot;
+
+        // 设置 groupId 用于事件路由
+        $this->setGroupIdRecursive($childRoot, $className);
+
+        // 递归：子组件树可能也包含组件占位节点
+        $this->expandComponentTree($childRoot);
+    }
+
+    /**
+     * 递归设置 VNode 树中所有节点的 groupId。
+     */
+    private function setGroupIdRecursive(VNode $node, string $groupId): void
+    {
+        $node->groupId = $groupId;
+        if ($node->children instanceof VNode) {
+            $this->setGroupIdRecursive($node->children, $groupId);
+        } elseif (is_array($node->children)) {
+            foreach ($node->children as $child) {
+                if ($child instanceof VNode) {
+                    $this->setGroupIdRecursive($child, $groupId);
+                }
+            }
+        }
     }
 
     private function render(): void

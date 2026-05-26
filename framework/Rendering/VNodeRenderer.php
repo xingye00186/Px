@@ -26,6 +26,9 @@ class VNodeRenderer
     /** @var array Scroll context for offsetting children */
     private array $scrollCtxStack = [];
 
+    /** @var array<ReactiveComponent> Stack for correct bind value context */
+    private array $componentStack = [];
+
     public function __construct(ReactiveComponent $component, RenderContext $render_ctx)
     {
         $this->component = $component;
@@ -55,7 +58,14 @@ class VNodeRenderer
 
     private function collectElements(VNode $node, array &$elementsByLayer, int &$maxLayer): void
     {
-        if (!$node->isRoot()) {
+        // Push component context when entering a component boundary
+        $pushedComponent = false;
+        if ($node->isComponent() && $node->componentInstance !== null) {
+            $this->componentStack[] = $node->componentInstance;
+            $pushedComponent = true;
+        }
+
+        if (!$node->isRoot() && !$node->isComponent()) {
             $el = $this->vnodeToElement($node);
             if ($el !== null) {
                 $layer = $node->layer;
@@ -93,6 +103,21 @@ class VNodeRenderer
         if ($wasScrollPush) {
             array_pop($this->scrollCtxStack);
         }
+
+        // Pop component context when leaving a component boundary
+        if ($pushedComponent) {
+            array_pop($this->componentStack);
+        }
+    }
+
+    /**
+     * 获取当前活跃的组件实例（用于解析 bind 值）。
+     * 如果当前在子组件边界内，返回子组件实例；否则返回根组件。
+     */
+    private function currentComponent(): ReactiveComponent
+    {
+        $n = count($this->componentStack);
+        return $n > 0 ? $this->componentStack[$n - 1] : $this->component;
     }
 
     /**
@@ -172,12 +197,12 @@ class VNodeRenderer
             $text = $node->children;
         }
         $bindKey = $node->props[':bind'] ?? '';
-        if ($bindKey !== '' && method_exists($this->component, 'getBindValue')) {
-            $text = $this->component->getBindValue($bindKey);
+        if ($bindKey !== '') {
+            $text = $this->currentComponent()->getBindValue($bindKey);
         }
         $vModel = $node->props['v-model'] ?? '';
-        if ($vModel !== '' && method_exists($this->component, 'getBindValue')) {
-            $text = $this->component->getBindValue($vModel);
+        if ($vModel !== '') {
+            $text = $this->currentComponent()->getBindValue($vModel);
         }
         if ($text === '') return null;
 
@@ -222,14 +247,14 @@ class VNodeRenderer
                     $label = $node->children->children;
                 }
                 $spanBind = $node->children->props[':bind'] ?? $node->children->props['bind'] ?? '';
-                if ($spanBind !== '' && method_exists($this->component, 'getBindValue')) {
-                    $label = $this->component->getBindValue($spanBind);
+                if ($spanBind !== '') {
+                    $label = $this->currentComponent()->getBindValue($spanBind);
                 }
             }
         }
         $bindKey = $node->props[':bind'] ?? '';
-        if ($bindKey !== '' && method_exists($this->component, 'getBindValue')) {
-            $label = $this->component->getBindValue($bindKey);
+        if ($bindKey !== '') {
+            $label = $this->currentComponent()->getBindValue($bindKey);
         }
         if ($label === '' && isset($node->props['@click'])) {
             $label = $node->props['label'] ?? '';
@@ -260,8 +285,8 @@ class VNodeRenderer
 
         $bindKey = $node->props['v-model'] ?? '';
         $text = '';
-        if ($bindKey !== '' && method_exists($this->component, 'getBindValue')) {
-            $text = $this->component->getBindValue($bindKey);
+        if ($bindKey !== '') {
+            $text = $this->currentComponent()->getBindValue($bindKey);
         }
 
         return [

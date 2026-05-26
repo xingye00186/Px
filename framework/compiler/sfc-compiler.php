@@ -119,6 +119,9 @@ function collectClickHandlers(VNode $node, array &$handlers): void
         }
     }
 
+    // Component placeholder — children are not known at compile time, skip recursion
+    if ($node->isComponent) return;
+
     if ($node->children instanceof VNode) {
         collectClickHandlers($node->children, $handlers);
     } elseif (is_array($node->children)) {
@@ -165,6 +168,17 @@ function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
 {
     // Don't recurse into v-for templates (their bind keys are local to the loop)
     if ($node->type === 'template' && isset($node->props['v-for'])) {
+        return;
+    }
+
+    // Component placeholder: collect bind keys from componentProps values (parent scope)
+    if ($node->isComponent && $node->componentProps !== null) {
+        foreach ($node->componentProps as $parentExpr) {
+            if (is_string($parentExpr) && $parentExpr !== '') {
+                $bindKeys[$parentExpr] = true;
+            }
+        }
+        // Children are not known at compile time — skip recursion
         return;
     }
 
@@ -244,6 +258,9 @@ function collectVForLoops(VNode $node, array &$loops, int &$counter): void
         return; // Don't recurse into v-for children
     }
 
+    // Component placeholder — skip recursion
+    if ($node->isComponent) return;
+
     if ($node->children instanceof VNode) {
         collectVForLoops($node->children, $loops, $counter);
     } elseif (is_array($node->children)) {
@@ -273,6 +290,27 @@ function propsToPhpArray(array $props): string
 
     // Fix numeric values: 'width:400px' (from var_export string) is OK
     return $str;
+}
+
+/**
+ * Generate PHP array expression for componentProps binding map.
+ *
+ * Input:  ['childProp' => 'parentExpr', ...]
+ * Output: "['childProp'=>'parentExpr', ...]"
+ *
+ * @param array $componentProps ['childKey'=>'parentExpr', ...]
+ * @return string PHP array literal
+ */
+function generateComponentPropsExpr(array $componentProps): string
+{
+    if (count($componentProps) === 0) {
+        return '[]';
+    }
+    $entries = [];
+    foreach ($componentProps as $childKey => $parentExpr) {
+        $entries[] = var_export($childKey, true) . '=>' . var_export($parentExpr, true);
+    }
+    return '[' . implode(',', $entries) . ']';
 }
 
 /**
@@ -317,6 +355,25 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
         }
         // Plain text
         return var_export($node->children, true);
+    }
+
+    // Handle #component placeholder — VNode::hComponent() call
+    if ($node->isComponent) {
+        $propsStr = [];
+        if ($node->props !== null) {
+            foreach ($node->props as $k => $v) {
+                if (str_starts_with($k, '__')) continue;
+                if ($k === 'v-if') continue; // handled by closure builder
+                if (is_string($v) && strlen($v) > 0 && $v[0] === '$') {
+                    $propsStr[] = var_export($k, true) . '=>' . $v;
+                } else {
+                    $propsStr[] = var_export($k, true) . '=>' . var_export($v, true);
+                }
+            }
+        }
+        $propsOut = '[' . implode(',', $propsStr) . ']';
+        $compPropsOut = generateComponentPropsExpr($node->componentProps ?? []);
+        return "VNode::hComponent('{$node->componentClass}', {$propsOut}, {$compPropsOut})";
     }
 
     // Element node
@@ -466,7 +523,7 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
 function generateDispatchClick(array $handlers): string
 {
     if (count($handlers) === 0) {
-        return "        // No event handlers defined";
+        return "        // No event handlers defined — bubbling to parent\n        if (\$this->parent !== null) {\n            \$this->parent->dispatchClick(\$handler, \$arg);\n        }";
     }
 
     $cases = [];
@@ -477,7 +534,7 @@ function generateDispatchClick(array $handlers): string
             $cases[] = "            case '{$handler}': \$this->{$handler}(); break;";
         }
     }
-    $cases[] = "            default: break;";
+    $cases[] = "            default:\n                // Bubble to parent component\n                if (\$this->parent !== null) {\n                    \$this->parent->dispatchClick(\$handler, \$arg);\n                }\n                break;";
 
     $caseStr = implode("\n", $cases);
     return "        switch (\$handler) {\n{$caseStr}\n        }";
@@ -490,14 +547,14 @@ function generateDispatchClick(array $handlers): string
 function generateDispatchKey(array $handlers): string
 {
     if (count($handlers) === 0) {
-        return "        // No keyboard handlers defined";
+        return "        // No keyboard handlers defined — bubbling to parent\n        if (\$this->parent !== null) {\n            \$this->parent->dispatchKey(\$handler, \$action, \$keyCode, \$char);\n        }";
     }
 
     $cases = [];
     foreach ($handlers as $handler => $_) {
         $cases[] = "            case '{$handler}': \$this->{$handler}(\$action, \$keyCode, \$char); break;";
     }
-    $cases[] = "            default: break;";
+    $cases[] = "            default:\n                // Bubble to parent component\n                if (\$this->parent !== null) {\n                    \$this->parent->dispatchKey(\$handler, \$action, \$keyCode, \$char);\n                }\n                break;";
 
     $caseStr = implode("\n", $cases);
     return "        switch (\$handler) {\n{$caseStr}\n        }";
@@ -516,7 +573,7 @@ function generateSetBindValue(array $bindKeys): string
     $cases = [];
     foreach ($binds as $key) {
         if ($key === '') continue;
-        $cases[] = "            case '{$key}': \$this->{$key} = \$value; break;";
+        $cases[] = "            case '{$key}': if (\$this->{$key} !== \$value) { \$this->{$key} = \$value; \$this->markDirty(); } break;";
     }
     if (count($cases) === 0) {
         return "        // No bind keys defined";
@@ -674,23 +731,13 @@ function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &
             continue;
         }
 
-        // Extract child template and styles
-        $childTemplate = '';
+        // Extract child styles only (template is NOT parsed for inlining — handled at runtime)
         $childStyles = '';
-        if (preg_match('#<template(?![^>]*v-for)[^>]*>(.*)</template>#s', $childSource, $m)) {
-            $childTemplate = $m[1];
-        }
         if (preg_match('#<style[^>]*>(.*?)</style>#s', $childSource, $m)) {
             $childStyles = $m[1];
         }
 
-        if ($childTemplate === '') {
-            $warnings[] = "Component <{$tagName}> has no <template> block";
-            $resolvedChildren[] = $child;
-            continue;
-        }
-
-        // Parse child styles
+        // Parse child styles and merge CSS classes into parent scope
         $childStyleWarnings = [];
         $childClassStyles = \Px\Rendering\CssMappings::parseStyleBlock($childStyles, $childStyleWarnings);
         foreach ($childClassStyles as $cls => $style) {
@@ -702,20 +749,14 @@ function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &
             $warnings[] = "Component <{$tagName}> CSS: $w";
         }
 
-        // Parse child template
-        $childParser = new TemplateParser();
-        $childRoot = $childParser->parse($childTemplate);
-
-        // Apply offset from component props (parse style to get left/top)
-        $offsetX = 0;
-        $offsetY = 0;
-        if (isset($child->props['style'])) {
-            $childInline = \Px\Rendering\CssMappings::parseInlineStyle($child->props['style']);
-            $offsetX = (int)($childInline['left'] ?? 0);
-            $offsetY = (int)($childInline['top'] ?? 0);
+        // Parse child template to find text interpolations for auto-binding
+        // e.g., {{ dialogTitle }} — if parent has `dialogTitle`, auto-bind it
+        $childTemplate = '';
+        if (preg_match('#<template(?![^>]*v-for)[^>]*>(.*?)</template>#s', $childSource, $m)) {
+            $childTemplate = $m[1];
         }
 
-        // Collect dynamic bind props from component ref
+        // Collect dynamic bind props from component ref (e.g., :value="display")
         $bindProps = [];
         foreach ($child->props as $k => $v) {
             if (strlen($k) > 0 && $k[0] === ':') {
@@ -724,59 +765,65 @@ function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &
             }
         }
 
-        // Remap bind props in child VNodes to parent's bind keys
-        if (count($bindProps) > 0) {
-            remapChildBindProps($childRoot, $bindProps);
+        // Auto-bind interpolated variables from child template
+        if ($childTemplate !== '') {
+            if (preg_match_all('/{{\s*(\w+)\s*}}/', $childTemplate, $tplMatches)) {
+                foreach ($tplMatches[1] as $varName) {
+                    if (!isset($bindProps[$varName])) {
+                        $bindProps[$varName] = $varName;
+                    }
+                }
+            }
         }
 
-        // Apply offset to child root's children and add to resolved
-        foreach ($childRoot->children as $gc) {
-            if ($gc instanceof VNode && $gc->props !== null) {
-                if (isset($gc->props['style'])) {
-                    // Parse and adjust existing style
-                    $style = \Px\Rendering\CssMappings::parseInlineStyle($gc->props['style']);
-                    // Always apply offset: add to existing left/top, or create them from offset
-                    $style['left'] = ($style['left'] ?? 0) + $offsetX;
-                    $style['top'] = ($style['top'] ?? 0) + $offsetY;
-                    // Rebuild style string with proper px suffixes
-                    $parts = [];
-                    // Properties that use pixel values (need 'px' suffix)
-                    $pixelKeys = [
-                        'width', 'height', 'left', 'top', 'right', 'bottom',
-                        'gap', 'fontSize', 'borderRadius', 'padding', 'margin',
-                        'gridColumnGap', 'gridRowGap',
-                    ];
-                    foreach ($style as $k => $v) {
-                        if (in_array($k, $pixelKeys, true) && $v > 0) {
-                            $parts[] = "{$k}:{$v}px";
-                        } elseif ($k === 'left' || $k === 'top') {
-                            // Position always needs px (even when 0, for offset)
-                            $parts[] = "{$k}:{$v}px";
-                        } else {
-                            $parts[] = "{$k}:{$v}";
-                        }
-                    }
-                    if (count($parts) > 0) $gc->props['style'] = implode(';', $parts);
+        // Extract child click handlers from template for parent dispatch merging
+        // e.g., @click="reset" → ['reset' => null], @click="handleButton('7')" → ['handleButton' => '7']
+        $childClickHandlers = [];
+        $childKeyHandlers = [];
+        if ($childTemplate !== '') {
+            if (preg_match_all('/@click\s*=\s*"(\w+)(?:\s*\(\s*([^)]*)\s*\))?\s*"/', $childTemplate, $clickMatches)) {
+                foreach ($clickMatches[1] as $i => $h) {
+                    $arg = $clickMatches[2][$i] ?? '';
+                    $childClickHandlers[$h] = ($arg !== '') ? $arg : null;
                 }
-                // Transfer v-if from parent component
-                $parentVIf = $child->props['v-if'] ?? '';
-                if ($parentVIf !== '' && !isset($gc->props['v-if'])) {
-                    $gc->props['v-if'] = $parentVIf;
-                }
-                // Transfer group_id
-                $gc->groupId = $tagName;
             }
-            $resolvedChildren[] = $gc;
+            foreach (['@keyup', '@keydown', '@enter'] as $evt) {
+                if (preg_match_all('/' . preg_quote($evt) . '\s*=\s*"(\w+)"/', $childTemplate, $km)) {
+                    foreach ($km[1] as $h) {
+                        $childKeyHandlers[$h] = true;
+                    }
+                }
+            }
         }
+
+        // Convert child VNode to #component placeholder
+        $childComponentName = componentTagToComponentName($tagName);
+        $child->type = '#component';
+        $child->isComponent = true;
+        $child->componentClass = $childComponentName;
+        $child->componentProps = count($bindProps) > 0 ? $bindProps : null;
+
+        // Remove internal props that are not relevant at runtime
+        unset($child->props['__componentFile']);
+        // Remove bind props (they're now in componentProps)
+        foreach ($bindProps as $propName => $_) {
+            unset($child->props[':' . $propName]);
+        }
+
+        // Children are null (placeholder — expanded at runtime)
+        $child->children = null;
+
+        $resolvedChildren[] = $child;
 
         // Collect child component info for ComponentFactory
-        $childComponentName = componentTagToComponentName($tagName);
         $childComponents[] = [
             'tagName' => $tagName,
             'componentClass' => $childComponentName,
-            'offsetX' => $offsetX,
-            'offsetY' => $offsetY,
+            'offsetX' => 0,
+            'offsetY' => 0,
             'bindProps' => $bindProps,
+            'clickHandlers' => $childClickHandlers,
+            'keyHandlers' => $childKeyHandlers,
         ];
     }
 
@@ -854,13 +901,20 @@ function compileChildComponents(ComponentRegistry $registry, string $outDir): vo
 
         // Extract blocks
         $template = '';
+        $script = '';
         $styles = '';
         if (preg_match('#<template(?![^>]*v-for)[^>]*>(.*)</template>#s', $source, $m)) {
             $template = $m[1];
         }
+        if (preg_match('#<script[^>]*lang=["\']php["\'][^>]*>(.*?)</script>#s', $source, $m)) {
+            $script = trim($m[1]);
+        }
         if (preg_match('#<style[^>]*>(.*?)</style>#s', $source, $m)) {
             $styles = $m[1];
         }
+
+        // If no script block, all events bubble to parent (no handler-specific cases)
+        $hasScript = (strlen($script) > 0);
 
         // Parse styles
         $styleWarnings = [];
@@ -874,8 +928,11 @@ function compileChildComponents(ComponentRegistry $registry, string $outDir): vo
         $clickHandlers = [];
         $keyHandlers = [];
         $bindKeys = [];
-        collectClickHandlers($root, $clickHandlers);
-        collectKeyHandlers($root, $keyHandlers);
+        // Only generate handler-specific cases if the component has its own script methods
+        if ($hasScript) {
+            collectClickHandlers($root, $clickHandlers);
+            collectKeyHandlers($root, $keyHandlers);
+        }
         collectVNodeBindKeys($root, $bindKeys);
 
         // Collect v-for loops
@@ -1091,6 +1148,24 @@ collectClickHandlers($root, $clickHandlers);
 collectKeyHandlers($root, $keyHandlers);
 collectVNodeBindKeys($root, $bindKeys);
 collectVForLoops($root, $loops, $loopCtr);
+
+// Merge child component handlers into parent dispatch (for event bubbling)
+foreach ($childComponentInfo as $child) {
+    foreach ($child['clickHandlers'] ?? [] as $handler => $argExpr) {
+        $hasArg = ($argExpr !== null);
+        if (!isset($clickHandlers[$handler])) {
+            $clickHandlers[$handler] = ['hasArg' => $hasArg, 'arg' => $argExpr];
+        } elseif ($hasArg) {
+            $clickHandlers[$handler]['hasArg'] = true;
+            if ($clickHandlers[$handler]['arg'] === null) {
+                $clickHandlers[$handler]['arg'] = $argExpr;
+            }
+        }
+    }
+    foreach ($child['keyHandlers'] ?? [] as $handler => $_) {
+        $keyHandlers[$handler] = true;
+    }
+}
 
 echo "  Handlers: " . (count($clickHandlers) + count($keyHandlers)) . "\n";
 echo "  BindKeys: " . count($bindKeys) . "\n";

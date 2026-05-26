@@ -2,8 +2,9 @@
 
 use Px\Core\Application;
 
-const APP_PLATFORM = 'win32';
-
+const APP_PLATFORM  = 'win32';
+const WINDOW_WIDTH  = 400;
+const WINDOW_HEIGHT = 500;
 const WINDOW_TITLE  = 'v-for List Test App';
 
 function main(): int

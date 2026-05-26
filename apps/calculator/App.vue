@@ -1,5 +1,5 @@
 <template>
-  <div id="app" style="width:328px;height:420px" title="VueCalc">
+  <div style="width:328px;height:420px" title="VueCalc">
     <!-- 应用背景 -->
     <div style="left:0px;top:0px;width:328px;height:420px" class="app-bg"></div>
 

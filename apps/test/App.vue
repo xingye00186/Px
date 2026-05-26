@@ -1,5 +1,5 @@
 <template>
-  <div id="app" style="left:0px;top:0px;width:640px;height:480px" title="VueCalc v6 M4 Test">
+  <div style="left:0px;top:0px;width:640px;height:480px" title="VueCalc v6 M4 Test">
     <div style="left:0px;top:0px;width:640px;height:480px" class="main-bg"></div>
 
     <!-- 顶部工具栏 (Flex布局) -->

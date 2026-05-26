@@ -1,5 +1,5 @@
 <template>
-  <div id="app" style="width:328px;height:420px;z-index:1">
+  <div style="width:328px;height:420px;z-index:1">
     <!-- 半透明覆盖层 (modal overlay) -->
     <div style="left:0px;top:0px;width:328px;height:420px" class="dialog-overlay" @click="toggleAboutDialog"></div>
 

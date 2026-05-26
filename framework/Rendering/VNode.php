@@ -71,6 +71,20 @@ class VNode
     /** 滚动内容总高度 (px) */
     public int $contentHeight = 0;
 
+    // ===== 组件占位字段 =====
+
+    /** 是否为组件占位节点 (#component 类型) */
+    public bool $isComponent = false;
+
+    /** 组件类名: 'NumPadComponent' */
+    public ?string $componentClass = null;
+
+    /** 运行时的子组件实例 */
+    public ?\Px\ReactiveComponent $componentInstance = null;
+
+    /** bind 映射: ['childProp' => 'parentExpr']，运行时由 Application 展开 */
+    public ?array $componentProps = null;
+
     // ===== 构造器 =====
 
     /**
@@ -115,6 +129,28 @@ class VNode
     public static function hKey(string $type, ?array $props, $children, string $key): VNode
     {
         return new VNode($type, $props, $children, $key);
+    }
+
+    /**
+     * hComponent('NumPadComponent', { style: '...' }, { value: 'display' })
+     *
+     * 创建组件占位节点。编译器生成此节点用于运行时展开。
+     *
+     * @param string $componentClass  组件类名
+     * @param array|null $props       常规 HTML 属性 (style, class, v-if 等)
+     * @param array|null $componentProps bind 映射: ['childProp' => 'parentExpr']
+     * @return VNode
+     */
+    public static function hComponent(
+        string $componentClass,
+        ?array $props = null,
+        ?array $componentProps = null
+    ): VNode {
+        $node = new VNode('#component', $props, null);
+        $node->isComponent = true;
+        $node->componentClass = $componentClass;
+        $node->componentProps = $componentProps;
+        return $node;
     }
 
     // ===== 属性读取辅助 =====
@@ -180,7 +216,13 @@ class VNode
     /** 是否为 HTML 元素节点 */
     public function isElement(): bool
     {
-        return !$this->isText() && !$this->isRoot();
+        return !$this->isText() && !$this->isRoot() && !$this->isComponent();
+    }
+
+    /** 是否为组件占位节点 */
+    public function isComponent(): bool
+    {
+        return $this->type === '#component';
     }
 
     /** 子节点是否为文本 (对 GDI 渲染: text 类型) */

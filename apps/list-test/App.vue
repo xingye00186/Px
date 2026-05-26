@@ -1,5 +1,5 @@
 <template>
-  <div id="app" style="left:0px;top:0px;width:400px;height:500px" title="v-for List Test">
+  <div style="left:0px;top:0px;width:400px;height:500px" title="v-for List Test">
     <div style="left:0px;top:0px;width:400px;height:500px" class="main-bg"></div>
 
     <!-- List header -->

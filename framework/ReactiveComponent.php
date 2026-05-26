@@ -234,10 +234,8 @@ abstract class ReactiveComponent extends BaseComponent
     public function onBeforeUpdate(): void {}
     public function onUpdated(): void {}
 
-    abstract public function onMount(): void;
+    public function onMount(): void {}
     abstract public function render(): VNode;
-    abstract public function dispatchClick(string $handler, ?string $arg = null): void;
-    abstract public function dispatchKey(string $handler, string $action, int $keyCode, string $char): void;
     abstract public function setBindValue(string $bindKey, string $value): void;
     abstract public function getBindValue(string $bindKey): string;
 }

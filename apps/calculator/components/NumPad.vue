@@ -1,5 +1,5 @@
 <template>
-  <div id="app" style="width:328px;height:340px">
+  <div style="width:328px;height:340px">
     <!-- 按钮网格 4x5 — 使用 CSS Grid 布局 -->
     <div style="display:grid;grid-template-columns:repeat(4,80px);grid-template-rows:repeat(5,60px);left:0px;top:0px;gap:2px">
       <button style="grid-row:1;grid-column:1" class="btn-func" @click="reset">C</button>
