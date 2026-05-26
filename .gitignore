@@ -10,3 +10,4 @@ nul
 *.ilk
 *.pdb
 .idea/
+config.yml
