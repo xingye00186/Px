@@ -66,52 +66,63 @@ class Application
         $this->layoutResolver = new LayoutResolver();
 
         // 内部监听器：渲染请求
-        $this->bus->on('render:request', function () {
-            $this->renderRequested = true;
-        });
+        $this->bus->on('render:request', $this->handleRenderRequest(...));
 
         // 内部监听器：平台鼠标事件 → 命中测试 → 组件路由
-        $this->bus->on('platform:mouse', function ($event) {
-            if ($event === null || $event->action !== 'down' || $this->activeVNodeTree === null) {
-                return;
-            }
-            $btn = $this->hitTest($event->x, $event->y, $this->activeVNodeTree);
-            if ($btn !== null && isset($btn->props['@click'])) {
-                $handler = $btn->props['@click'];
-                $arg = $btn->props['click-arg'] ?? null;
-                $target = $this->resolveComponent($btn);
-                $target->dispatchClick($handler, $arg);
-            }
-        });
+        $this->bus->on('platform:mouse', $this->handleMouseEvent(...));
 
         // 内部监听器：平台键盘事件 → 焦点 input → 组件路由
-        $this->bus->on('platform:keyboard', function ($event) {
-            if ($event === null || $this->activeVNodeTree === null) {
-                return;
+        $this->bus->on('platform:keyboard', $this->handleKeyboardEvent(...));
+    }
+
+    // ── 平台事件处理器 ─────────────────────────
+
+    private function handleRenderRequest(): void
+    {
+        $this->renderRequested = true;
+    }
+
+    private function handleMouseEvent($event): void
+    {
+        if ($event === null || $event->action !== 'down' || $this->activeVNodeTree === null) {
+            return;
+        }
+        $btn = $this->hitTest($event->x, $event->y, $this->activeVNodeTree);
+        if ($btn !== null && isset($btn->props['@click'])) {
+            $handler = $btn->props['@click'];
+            $arg = $btn->props['click-arg'] ?? null;
+            $target = $this->resolveComponent($btn);
+            $target->dispatchClick($handler, $arg);
+        }
+    }
+
+    private function handleKeyboardEvent($event): void
+    {
+        if ($event === null || $this->activeVNodeTree === null) {
+            return;
+        }
+        $input = $this->findFocusedInput($this->activeVNodeTree);
+        if ($input === null) {
+            return;
+        }
+        $target = $this->resolveComponent($input);
+        $action = $event->action;
+        if ($action === 'down') {
+            $handler = $input->props['@keydown'] ?? null;
+            if ($handler !== null) {
+                $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
             }
-            $input = $this->findFocusedInput($this->activeVNodeTree);
-            if ($input === null) {
-                return;
+        } elseif ($action === 'up') {
+            $handler = $input->props['@keyup'] ?? null;
+            if ($handler !== null) {
+                $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
             }
-            $target = $this->resolveComponent($input);
-            $action = $event->action;
-            if ($action === 'down') {
-                $handler = $input->props['@keydown'] ?? null;
-                if ($handler !== null) {
-                    $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
-                }
-            } elseif ($action === 'up') {
-                $handler = $input->props['@keyup'] ?? null;
-                if ($handler !== null) {
-                    $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
-                }
-            } elseif ($action === 'char') {
-                $handler = $input->props['@enter'] ?? null;
-                if ($handler !== null && $event->keyCode === 13) {
-                    $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
-                }
+        } elseif ($action === 'char') {
+            $handler = $input->props['@enter'] ?? null;
+            if ($handler !== null && $event->keyCode === 13) {
+                $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
             }
-        });
+        }
     }
 
     // ── 组件注册表 ─────────────────────────────
