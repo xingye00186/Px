@@ -42,6 +42,11 @@ class Application
     /** @var array<string, ReactiveComponent> componentClass → instance (singleton per class) */
     private array $componentInstances = [];
 
+    // ── Scroll interaction state ──────────────
+    private ?VNode $scrollDragTarget = null;
+    private int $scrollDragStartY = 0;
+    private int $scrollDragStartScrollTop = 0;
+
     private static ?self $instance = null;
 
     public static function getInstance(): self
@@ -74,15 +79,48 @@ class Application
 
     private function handleMouseEvent($event): void
     {
-        if ($event === null || $event->action !== 'down' || $this->activeVNodeTree === null) {
+        if ($event === null || $this->activeVNodeTree === null) {
             return;
         }
-        $btn = $this->hitTest($event->x, $event->y, $this->activeVNodeTree);
-        if ($btn !== null && isset($btn->props['@click'])) {
-            $handler = $btn->props['@click'];
-            $arg = $btn->props['click-arg'] ?? null;
-            $target = $this->resolveComponent($btn);
-            $target->dispatchClick($handler, $arg);
+
+        // ── 鼠标滚轮：驱动滚动容器 ────────────
+        if ($event->action === 'wheel') {
+            $this->handleScrollWheel($event);
+            return;
+        }
+
+        // ── 鼠标拖动：滚动条拖拽 ──────────────
+        if ($event->action === 'move') {
+            if ($this->scrollDragTarget !== null) {
+                $this->handleScrollbarDrag($event->y);
+            }
+            return;
+        }
+
+        // ── 鼠标释放：结束拖拽，持久化滚动位置 ──
+        if ($event->action === 'up') {
+            if ($this->scrollDragTarget !== null) {
+                $this->applyScrollTop($this->scrollDragTarget, $this->scrollDragTarget->scrollTop, true);
+                $this->scrollDragTarget = null;
+            }
+            return;
+        }
+
+        // ── 鼠标按下：优先检测滚动条，其次 @click ──
+        if ($event->action === 'down') {
+            $sbResult = $this->hitTestScrollbar($event->x, $event->y, $this->activeVNodeTree);
+            if ($sbResult !== null) {
+                $this->handleScrollbarDown($sbResult['scrollNode'], $sbResult['type'], $event->y);
+                return;
+            }
+
+            $btn = $this->hitTest($event->x, $event->y, $this->activeVNodeTree);
+            if ($btn !== null && isset($btn->props['@click'])) {
+                $handler = $btn->props['@click'];
+                $arg = $btn->props['click-arg'] ?? null;
+                $target = $this->resolveComponent($btn);
+                $target->dispatchClick($handler, $arg);
+            }
         }
     }
 
@@ -184,6 +222,8 @@ class Application
         // 惰性重建: dirty 时才调 render(), 否则返回缓存 (Vue 3 风格)
         $this->activeVNodeTree = $this->rootComponent->getVNodeTree();
         $this->expandComponentTree($this->activeVNodeTree);
+        // 将组件的 bind 值写入 VNode (如 :scroll-top → scrollTop)
+        $this->resolveVNodeBindings($this->activeVNodeTree);
     }
 
     /**
@@ -276,6 +316,213 @@ class Application
                 }
             }
         }
+    }
+
+    // ── 滚动系统 ──────────────────────────────
+
+    /**
+     * 将组件 bind 值同步到 VNode 属性（如 :scroll-top → scrollTop）。
+     * 在每次重建 VNode 树后、layout 之前调用。
+     */
+    private function resolveVNodeBindings(VNode $node): void
+    {
+        // :scroll-top bind → VNode::scrollTop
+        $scrollBindKey = $node->props[':scroll-top'] ?? '';
+        if ($scrollBindKey !== '') {
+            $component = $this->componentByGroupId[$node->groupId] ?? $this->rootComponent;
+            $node->scrollTop = (int) $component->getBindValue($scrollBindKey);
+        }
+
+        $children = $node->children;
+        if ($children instanceof VNode) {
+            $this->resolveVNodeBindings($children);
+        } elseif (is_array($children)) {
+            foreach ($children as $child) {
+                if ($child instanceof VNode) {
+                    $this->resolveVNodeBindings($child);
+                }
+            }
+        }
+    }
+
+    /**
+     * 鼠标滚轮事件 — 更新最近祖先滚动容器的 scrollTop。
+     */
+    private function handleScrollWheel($event): void
+    {
+        $scrollNode = $this->findScrollContainerAt($event->x, $event->y, $this->activeVNodeTree);
+        if ($scrollNode === null) return;
+
+        $delta = $event->delta ?? 0;
+        // Windows: 120 = one notch, scale down for smooth scroll
+        $scrollAmount = (int)($delta / 40);
+
+        $contentH = $scrollNode->contentHeight;
+        $containerH = $scrollNode->h;
+        $maxScroll = max($contentH - $containerH, 0);
+        if ($maxScroll <= 0) return;
+
+        $newScrollTop = max(0, min($maxScroll, $scrollNode->scrollTop - $scrollAmount));
+        if ($newScrollTop !== $scrollNode->scrollTop) {
+            $this->applyScrollTop($scrollNode, $newScrollTop, true);
+        }
+    }
+
+    /**
+     * 查找鼠标坐标下的滚动容器（最深层的子孙优先）。
+     */
+    private function findScrollContainerAt(int $x, int $y, VNode $node): ?VNode
+    {
+        $children = $node->children;
+        if ($children instanceof VNode) {
+            $found = $this->findScrollContainerAt($x, $y, $children);
+            if ($found !== null) return $found;
+        } elseif (is_array($children)) {
+            for ($i = count($children) - 1; $i >= 0; $i--) {
+                $child = $children[$i];
+                if ($child instanceof VNode) {
+                    $child = objval($child, VNode::class);
+                    $found = $this->findScrollContainerAt($x, $y, $child);
+                    if ($found !== null) return $found;
+                }
+            }
+        }
+
+        if ($node->isScrollContainer
+            && $x >= $node->x && $x <= $node->x + $node->w
+            && $y >= $node->y && $y <= $node->y + $node->h) {
+            return $node;
+        }
+        return null;
+    }
+
+    /**
+     * 滚动条命中测试。
+     * 返回 ['scrollNode' => VNode, 'type' => 'thumb'|'track'] 或 null。
+     */
+    private function hitTestScrollbar(int $x, int $y, VNode $node): ?array
+    {
+        $children = $node->children;
+        if ($children instanceof VNode) {
+            $result = $this->hitTestScrollbar($x, $y, $children);
+            if ($result !== null) return $result;
+        } elseif (is_array($children)) {
+            for ($i = count($children) - 1; $i >= 0; $i--) {
+                $child = $children[$i];
+                if ($child instanceof VNode) {
+                    $child = objval($child, VNode::class);
+                    $result = $this->hitTestScrollbar($x, $y, $child);
+                    if ($result !== null) return $result;
+                }
+            }
+        }
+
+        if (!$node->isScrollContainer) return null;
+        $contentH = $node->contentHeight;
+        if ($contentH <= $node->h) return null;
+
+        $sbW = 12;
+        $sbX = $node->x + $node->w - $sbW;
+
+        if ($x >= $sbX && $x <= $sbX + $sbW
+            && $y >= $node->y && $y <= $node->y + $node->h) {
+            $ratio = min($node->h / max($contentH, 1), 1.0);
+            $thumbH = max((int)($node->h * $ratio), 20);
+            $maxScroll = max($contentH - $node->h, 0);
+            $scrollRatio = $maxScroll > 0 ? $node->scrollTop / $maxScroll : 0.0;
+            $thumbY = $node->y + (int)(($node->h - $thumbH) * $scrollRatio);
+
+            if ($y >= $thumbY && $y <= $thumbY + $thumbH) {
+                return ['scrollNode' => $node, 'type' => 'thumb'];
+            }
+            return ['scrollNode' => $node, 'type' => 'track'];
+        }
+
+        return null;
+    }
+
+    /**
+     * 滚动条点击处理：轨道 = 跳转，滑块 = 开始拖拽。
+     */
+    private function handleScrollbarDown(VNode $scrollNode, string $type, int $mouseY): void
+    {
+        $contentH = $scrollNode->contentHeight;
+        $containerH = $scrollNode->h;
+        $maxScroll = max($contentH - $containerH, 0);
+        if ($maxScroll <= 0) return;
+
+        $ratio = min($containerH / max($contentH, 1), 1.0);
+        $thumbH = max((int)($containerH * $ratio), 20);
+        $trackH = $containerH - $thumbH;
+
+        if ($type === 'track') {
+            $clickOffset = $mouseY - $scrollNode->y - (int)($thumbH / 2);
+            $newScrollTop = (int)($maxScroll * $clickOffset / max($trackH, 1));
+            $newScrollTop = max(0, min($maxScroll, $newScrollTop));
+            $this->applyScrollTop($scrollNode, $newScrollTop, true);
+        } elseif ($type === 'thumb') {
+            $this->scrollDragTarget = $scrollNode;
+            $this->scrollDragStartY = $mouseY;
+            $this->scrollDragStartScrollTop = $scrollNode->scrollTop;
+        }
+    }
+
+    /**
+     * 滚动条拖拽 — 实时更新 scrollTop（不持久化到组件，避免频繁重建树）。
+     */
+    private function handleScrollbarDrag(int $mouseY): void
+    {
+        $node = $this->scrollDragTarget;
+        if ($node === null) return;
+
+        $contentH = $node->contentHeight;
+        $containerH = $node->h;
+        $maxScroll = max($contentH - $containerH, 0);
+        if ($maxScroll <= 0) return;
+
+        $ratio = min($containerH / max($contentH, 1), 1.0);
+        $thumbH = max((int)($containerH * $ratio), 20);
+        $trackH = $containerH - $thumbH;
+
+        $dy = $mouseY - $this->scrollDragStartY;
+        $scrollDy = (int)($maxScroll * $dy / max($trackH, 1));
+        $newScrollTop = max(0, min($maxScroll, $this->scrollDragStartScrollTop + $scrollDy));
+
+        if ($newScrollTop !== $node->scrollTop) {
+            $this->applyScrollTop($node, $newScrollTop, false);
+        }
+    }
+
+    /**
+     * 应用 scrollTop 到 VNode，可选持久化到组件 bind 值。
+     *
+     * persist=true:  持久化到组件 + 请求重建树（滚轮、轨道点击、拖拽结束）
+     * persist=false: 仅修改 VNode + 直接重绘（拖拽过程中，避免整树重建）
+     */
+    private function applyScrollTop(VNode $node, int $newScrollTop, bool $persist): void
+    {
+        $node->scrollTop = $newScrollTop;
+
+        if ($persist) {
+            $bindKey = $node->props[':scroll-top'] ?? '';
+            if ($bindKey !== '') {
+                $target = $this->resolveComponent($node);
+                $target->setBindValue($bindKey, (string) $newScrollTop);
+            }
+            $this->requestRender();
+        } else {
+            // 拖拽中：跳过组件更新，直接在现有树上重绘
+            $this->directRender($this->activeVNodeTree);
+        }
+    }
+
+    /**
+     * 直接渲染（跳过 VNode 树重建），用于拖拽滚动等高频操作。
+     */
+    private function directRender(VNode $tree): void
+    {
+        $this->layoutResolver->resolve($tree);
+        $this->renderer->render($tree);
     }
 
     private function render(): void

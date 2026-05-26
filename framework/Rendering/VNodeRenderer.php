@@ -139,7 +139,7 @@ class VNodeRenderer
 
         if (count($this->scrollCtxStack) > 0) {
             $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];
-            $y = $y - $scrollCtx['scrollTop'];
+            // LayoutResolver 已将 scrollTop 计入子节点位置，此处仅做裁切
             $containerY = $scrollCtx['y'];
             $containerH = $scrollCtx['h'];
             if ($y + $h < $containerY || $y >= $containerY + $containerH) {

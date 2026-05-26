@@ -222,6 +222,28 @@ class LayoutResolver
                             $stackY += $child->h;
                         }
                     }
+                    // Store total content height for scrollbar calculations
+                    $node->contentHeight = $stackY - $childOffsetY;
+
+                    // ── Clamp scrollTop when content shrinks ────
+                    // If items were deleted / content became shorter,
+                    // scrollTop may exceed the new maxScroll. Clamp
+                    // and shift children down to correct position.
+                    $maxScroll = max($node->contentHeight - $node->h, 0);
+                    if ($node->scrollTop > $maxScroll) {
+                        $oldScrollTop = $node->scrollTop;
+                        $node->scrollTop = $maxScroll;
+                        $shiftDown = $oldScrollTop - $node->scrollTop;
+                        if ($shiftDown > 0) {
+                            foreach ($node->children as $child) {
+                                if ($child instanceof VNode) {
+                                    $child = objval($child, VNode::class);
+                                    $child->y += $shiftDown;
+                                    $this->shiftDescendantsY($child, $shiftDown);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
