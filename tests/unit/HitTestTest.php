@@ -47,13 +47,7 @@ function createTestApp(): Application
     $app = $refl->newInstanceWithoutConstructor();
 
     // 注入最小必要依赖
-    $bus = new \Px\Core\ReactionBus();
-    $scheduler = new \Px\Core\Scheduler($bus);
-
-    // 通过反射设置私有属性
-    $busProp = $refl->getProperty('bus');
-    $busProp->setAccessible(true);
-    $busProp->setValue($app, $bus);
+    $scheduler = new \Px\Core\Scheduler();
 
     $schedProp = $refl->getProperty('scheduler');
     $schedProp->setAccessible(true);

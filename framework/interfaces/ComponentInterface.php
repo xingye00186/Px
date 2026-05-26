@@ -3,7 +3,6 @@
 namespace Px\Interfaces;
 
 use Px\Core\Scheduler;
-use Px\Core\ReactionBus;
 
 interface ComponentInterface
 {
@@ -12,7 +11,6 @@ interface ComponentInterface
     public function getChildren(): array;
     public function getProps(): array;
     public function setScheduler(Scheduler $scheduler): void;
-    public function setBus(ReactionBus $bus): void;
     public function onMount(): void;
     public function onUnmount(): void;
 }

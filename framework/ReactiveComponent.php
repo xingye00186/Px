@@ -4,16 +4,15 @@ namespace Px;
 
 use Px\Interfaces\ComponentInterface;
 use Px\Core\Scheduler;
-use Px\Core\ReactionBus;
 use Px\Rendering\VNode;
 
 /**
  * ReactiveComponent — 响应式组件基类
  *
  *  - 响应式属性 + dirty 标记
- *  - 异步更新队列（via Scheduler closure）
- *  - 自动解绑监听（via ReactionBus）
+ *  - 异步更新队列（via Scheduler microtask）
  *  - $emit() 子→父事件通信（对标 Vue 3）
+ *  - unmount 自动清理事件处理器
  *
  * AOT：闭包调用合法，默认值传递。
  */
@@ -25,8 +24,16 @@ abstract class ReactiveComponent extends BaseComponent
     protected bool $isMounted = false;
     protected bool $isUpdating = false;
 
-    /** @var array<int> ReactionBus 监听器 ID 列表（unmount 时自动解绑） */
+    /** @var callable|null 渲染请求回调（由 Application 注入） */
+    private $renderCallback = null;
+
+    /** @var array<string, array<int, callable>> eventName => [handlerId => callback] */
+    private array $eventHandlers = [];
+
+    /** @var array<array{child: ReactiveComponent, handlerId: int}> 注册在子组件上的处理器引用 */
     protected array $listenerIds = [];
+
+    private int $nextHandlerId = 1;
 
     /**
      * VNode 树缓存 — Vue 3 风格惰性重建：
@@ -35,6 +42,14 @@ abstract class ReactiveComponent extends BaseComponent
      *  - getVNodeTree() 仅在 dirty 时调用 render()
      */
     protected ?VNode $vnodeCache = null;
+
+    /**
+     * Application 注入渲染请求回调。
+     */
+    public function setRenderCallback(callable $callback): void
+    {
+        $this->renderCallback = $callback;
+    }
 
     /**
      * 标记脏状态，触发异步更新。
@@ -78,8 +93,10 @@ abstract class ReactiveComponent extends BaseComponent
             $this->onBeforeUpdate();
         }
 
-        // 请求 Application 重渲染
-        $this->bus->emit('render:request', null);
+        // 通过注入的回调请求 Application 重渲染
+        if ($this->renderCallback !== null) {
+            ($this->renderCallback)();
+        }
 
         $this->dirty = true;
 
@@ -111,27 +128,35 @@ abstract class ReactiveComponent extends BaseComponent
         return $this->vnodeCache;
     }
 
+    // ── 事件处理器注册（内部） ──────────────────
+
     /**
-     * 订阅事件（unmount 时自动解绑）
+     * 注册事件处理器（由 on() 在子组件上调用），返回处理器 ID。
      */
-    protected function subscribe(string $eventType, callable $callback, int $priority = 0): int
+    private function registerHandler(string $eventName, callable $callback): int
     {
-        $id = $this->bus->on($eventType, $callback, $priority);
-        $this->listenerIds[] = $id;
+        $id = $this->nextHandlerId++;
+        if (!isset($this->eventHandlers[$eventName])) {
+            $this->eventHandlers[$eventName] = [];
+        }
+        $this->eventHandlers[$eventName][$id] = $callback;
         return $id;
     }
 
     /**
-     * 取消订阅
+     * 移除事件处理器。
      */
-    protected function unsubscribe(int $listenerId): void
+    private function removeHandler(int $id): void
     {
-        $idx = array_search($listenerId, $this->listenerIds, true);
-        if ($idx !== false) {
-            unset($this->listenerIds[$idx]);
-            $this->listenerIds = array_values($this->listenerIds);
+        foreach ($this->eventHandlers as $eventName => $handlers) {
+            if (isset($handlers[$id])) {
+                unset($this->eventHandlers[$eventName][$id]);
+                if (empty($this->eventHandlers[$eventName])) {
+                    unset($this->eventHandlers[$eventName]);
+                }
+                return;
+            }
         }
-        $this->bus->off($listenerId);
     }
 
     // ── 组件通信 ─────────────────────────────────
@@ -139,8 +164,7 @@ abstract class ReactiveComponent extends BaseComponent
     /**
      * 向父组件发送事件（对标 Vue 3 $emit）。
      *
-     * 通过 ReactionBus 通道 'component:{eventName}' 发送。
-     * 父组件通过 subscribe() 监听同通道接收。
+     * 直接调用注册在当前组件上的事件处理器。
      *
      * 示例:
      *   // 子组件
@@ -154,14 +178,18 @@ abstract class ReactiveComponent extends BaseComponent
      */
     protected function emit(string $eventName, mixed $payload = null): void
     {
-        $channel = 'component:' . $this->id . ':' . $eventName;
-        $this->bus->emitAsync($channel, $payload);
+        if (!isset($this->eventHandlers[$eventName])) {
+            return;
+        }
+        foreach ($this->eventHandlers[$eventName] as $callback) {
+            $callback($payload);
+        }
     }
 
     /**
      * 监听子组件事件（对标 Vue 3 v-on）。
      *
-     * 子组件 emit('itemSelected', ...) 后触发。
+     * 子组件 emit('itemSelected', ...) 后触发回调。
      * 在 unmount 时自动解绑。
      *
      * @param ReactiveComponent $child     子组件实例
@@ -170,8 +198,8 @@ abstract class ReactiveComponent extends BaseComponent
      */
     protected function on(ReactiveComponent $child, string $eventName, callable $callback): void
     {
-        $channel = 'component:' . $child->getId() . ':' . $eventName;
-        $this->subscribe($channel, $callback);
+        $id = $child->registerHandler($eventName, $callback);
+        $this->listenerIds[] = ['child' => $child, 'handlerId' => $id];
     }
 
     /**
@@ -191,10 +219,14 @@ abstract class ReactiveComponent extends BaseComponent
         $this->onUnmount();
         $this->isMounted = false;
 
-        foreach ($this->listenerIds as $id) {
-            $this->bus->off($id);
+        // 移除注册在子组件上的事件处理器
+        foreach ($this->listenerIds as $entry) {
+            $entry['child']->removeHandler($entry['handlerId']);
         }
         $this->listenerIds = [];
+
+        // 清空自身事件处理器
+        $this->eventHandlers = [];
     }
 
     public function onUnmount(): void {}

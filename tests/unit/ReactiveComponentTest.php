@@ -38,10 +38,10 @@ class _TestComponent extends \Px\ReactiveComponent
     }
 
     /** 手动注入依赖 (避开 Application::mount 完整流程) */
-    public function injectDeps(\Px\Core\Scheduler $scheduler, \Px\Core\ReactionBus $bus): void
+    public function injectDeps(\Px\Core\Scheduler $scheduler, callable $renderCallback): void
     {
         $this->scheduler = $scheduler;
-        $this->bus = $bus;
+        $this->setRenderCallback($renderCallback);
     }
 
     public function render(): VNode
@@ -134,19 +134,17 @@ test('markDirty() 将 dirty 设为 true', function () {
 });
 
 test('performUpdate() 触发渲染请求', function () {
-    $bus = new \Px\Core\ReactionBus();
-    $scheduler = new \Px\Core\Scheduler($bus);
-    $comp = new _TestComponent();
-    $comp->injectDeps($scheduler, $bus);
-
+    $scheduler = new \Px\Core\Scheduler();
     $renderRequested = false;
-    $bus->on('render:request', function () use (&$renderRequested) {
+
+    $comp = new _TestComponent();
+    $comp->injectDeps($scheduler, function () use (&$renderRequested) {
         $renderRequested = true;
     });
 
     $comp->performUpdate();
 
-    assert_true($renderRequested, 'performUpdate() 应触发 render:request 事件');
+    assert_true($renderRequested, 'performUpdate() 应触发渲染请求回调');
     assert_true($comp->dirty, 'performUpdate() 后 dirty 应为 true');
 });
 

@@ -12,7 +12,7 @@ use Px\ReactiveComponent;
 /**
  * Application — AOT 框架入口
  *
- * 持有：Platform、ReactionBus、Scheduler
+ * 持有：Platform、Scheduler
  * 事件循环：
  *   平台事件 → 命中测试 → 组件方法 → 微任务 → 渲染 → 宏任务
  *
@@ -20,7 +20,6 @@ use Px\ReactiveComponent;
  *   1. VNode.groupId 标识所属组件
  *   2. Application 维护 componentByGroupId 注册表
  *   3. hitTest 找到 VNode → 查表找到组件 → 调用 dispatchClick/dispatchKey
- *   4. 组件通过 $emit() 向父组件发送事件（经由 ReactionBus）
  *
  * 编译时常量（main.php 定义）：
  *   APP_PLATFORM  WINDOW_WIDTH  WINDOW_HEIGHT  WINDOW_TITLE
@@ -28,7 +27,6 @@ use Px\ReactiveComponent;
 class Application
 {
     private Platform $platform;
-    private ReactionBus $bus;
     private Scheduler $scheduler;
     private VNodeRenderer $renderer;
     private LayoutResolver $layoutResolver;
@@ -51,28 +49,17 @@ class Application
     public static function create(): self
     {
         $platform = PlatformFactory::create(APP_PLATFORM);
-        $bus = new ReactionBus();
         $scheduler = new Scheduler();
-        $app = new self($platform, $bus, $scheduler);
+        $app = new self($platform, $scheduler);
         self::$instance = $app;
         return $app;
     }
 
-    public function __construct(Platform $platform, ReactionBus $bus, Scheduler $scheduler)
+    public function __construct(Platform $platform, Scheduler $scheduler)
     {
         $this->platform  = $platform;
-        $this->bus       = $bus;
         $this->scheduler = $scheduler;
         $this->layoutResolver = new LayoutResolver();
-
-        // 内部监听器：渲染请求
-        $this->bus->on('render:request', $this->handleRenderRequest(...));
-
-        // 内部监听器：平台鼠标事件 → 命中测试 → 组件路由
-        $this->bus->on('platform:mouse', $this->handleMouseEvent(...));
-
-        // 内部监听器：平台键盘事件 → 焦点 input → 组件路由
-        $this->bus->on('platform:keyboard', $this->handleKeyboardEvent(...));
     }
 
     // ── 平台事件处理器 ─────────────────────────
@@ -154,7 +141,6 @@ class Application
     }
 
     public function getPlatform(): Platform   { return $this->platform; }
-    public function getBus(): ReactionBus     { return $this->bus; }
     public function getScheduler(): Scheduler { return $this->scheduler; }
 
     private function initRenderer(): void
@@ -173,7 +159,8 @@ class Application
     {
         $this->rootComponent = $root;
         $this->rootComponent->setScheduler($this->scheduler);
-        $this->rootComponent->setBus($this->bus);
+        // 注入渲染请求回调，替代原来的 render:request 事件
+        $this->rootComponent->setRenderCallback($this->handleRenderRequest(...));
         // 注册根组件
         $this->registerComponent('app', $root);
         $this->initRenderer();
@@ -181,9 +168,12 @@ class Application
         return $this;
     }
 
+    /**
+     * 异步请求渲染（通过微任务延迟）。
+     */
     public function requestRender(): void
     {
-        $this->bus->emitAsync('render:request', null);
+        $this->scheduler->addMicrotask($this->handleRenderRequest(...));
     }
 
     private function rebuildVNodeTree(): void
@@ -195,10 +185,8 @@ class Application
     private function render(): void
     {
         $this->rebuildVNodeTree();
-        $this->bus->emit('render:before', null);
         $this->layoutResolver->resolve($this->activeVNodeTree);
         $this->renderer->render($this->activeVNodeTree);
-        $this->bus->emit('render:after', null);
     }
 
     private function doFirstRender(): void
@@ -209,7 +197,6 @@ class Application
             $this->renderRequested = false;
             $this->render();
         }
-        $this->bus->emit('app:first_render_complete', null);
     }
 
     /**
@@ -218,12 +205,15 @@ class Application
     public function run(): void
     {
         $this->doFirstRender();
-        $this->bus->emit('app:before_run', null);
 
         while ($this->running) {
             $rawEvents = $this->platform->pollEvents();
             foreach ($rawEvents as $ev) {
-                $this->bus->emit('platform:' . $ev->type, $ev);
+                if ($ev->type === 'mouse') {
+                    $this->handleMouseEvent($ev);
+                } elseif ($ev->type === 'keyboard') {
+                    $this->handleKeyboardEvent($ev);
+                }
             }
 
             $this->scheduler->flushMicrotasks();
@@ -243,7 +233,6 @@ class Application
                 $this->running = false;
             }
         }
-        $this->bus->emit('app:will_quit', null);
         $this->platform->shutdown();
     }
 

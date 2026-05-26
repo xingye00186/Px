@@ -4,7 +4,6 @@ namespace Px;
 
 use Px\Interfaces\ComponentInterface;
 use Px\Core\Scheduler;
-use Px\Core\ReactionBus;
 
 abstract class BaseComponent implements ComponentInterface
 {
@@ -13,7 +12,6 @@ abstract class BaseComponent implements ComponentInterface
     protected array $children = [];
     protected array $props = [];
     protected ?Scheduler $scheduler = null;
-    protected ?ReactionBus $bus = null;
 
     public function __construct(string $id = '')
     {
@@ -53,11 +51,6 @@ abstract class BaseComponent implements ComponentInterface
     public function setScheduler(Scheduler $scheduler): void
     {
         $this->scheduler = $scheduler;
-    }
-
-    public function setBus(ReactionBus $bus): void
-    {
-        $this->bus = $bus;
     }
 
     public function addChild(ComponentInterface $child, array $props = []): void

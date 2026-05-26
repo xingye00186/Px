@@ -7,7 +7,7 @@
  * that modify reactive component properties.
  *
  * markDirty() triggers the full update pipeline:
- *   scheduleUpdate() → microtask → performUpdate() → emit('render:request')
+ *   scheduleUpdate() → microtask → performUpdate() → render callback
  * This ensures state changes actually trigger re-renders.
  *
  * v6 M4: Returns ONLY class body (properties + methods, without class declaration).

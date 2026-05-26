@@ -44,7 +44,7 @@
  * - 首次调用 getVNodeTree() 触发 render()
  * - 二次调用返回缓存 (不调用 render())
  * - markDirty() 清除缓存，下次调用重建
- * - performUpdate() 触发 render:request 事件
+ * - performUpdate() 触发渲染请求回调
  * 
  * ### 2. HitTestTest — 命中测试
  * 
