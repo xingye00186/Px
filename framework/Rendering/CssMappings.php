@@ -68,6 +68,27 @@ class CssMappings
             'parser'  => 'Px\\Rendering\\CssMappings::parseTextAlign',
             'default' => 'left',
         ],
+        // ---- v8 UI extensions ----
+        'border' => [
+            'key'     => 'border',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
+            'default' => '',
+        ],
+        'box-shadow' => [
+            'key'     => 'boxShadow',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'default' => '',
+        ],
+        'cursor' => [
+            'key'     => 'cursor',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'default' => 'default',
+        ],
+        'opacity' => [
+            'key'     => 'opacity',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseOpacity',
+            'default' => 1.0,
+        ],
     ];
 
     /**
@@ -101,6 +122,7 @@ class CssMappings
         'grid-row-gap'         => ['key' => 'gridRowGap',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
         'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
+        'flex'                 => ['key' => 'flex',           'parser' => 'Px\\Rendering\\CssMappings::parseFlex',  'default' => ''],
     ];
 
     // ============================================================
@@ -150,11 +172,36 @@ class CssMappings
     // ============================================================
 
     /**
-     * Parse "#RRGGBB" / "#RGB" → BGR integer
+     * Parse CSS color value → BGR integer
+     *
+     * Supports:
+     *   - "#RRGGBB" / "#RGB" (hex colors)
+     *   - rgb(r, g, b) / rgba(r, g, b, a)
+     *   - linear-gradient(...) → extract first color stop
      */
     public static function parseHexColor(string $value): int
     {
-        return self::hexToBgr(trim($value));
+        $value = trim($value);
+
+        // Handle linear-gradient: extract first color stop
+        if (str_starts_with($value, 'linear-gradient')) {
+            // Extract first color stop: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+            if (preg_match('/#[0-9a-fA-F]{3,6}|rgb\s*\([^)]+\)/', $value, $m)) {
+                return self::parseHexColor($m[0]);
+            }
+            return 0;
+        }
+
+        // Handle rgb/rgba: rgb(255, 255, 255)
+        if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i', $value, $m)) {
+            $r = (int)$m[1];
+            $g = (int)$m[2];
+            $b = (int)$m[3];
+            return ($b << 16) | ($g << 8) | $r;
+        }
+
+        // Handle hex color
+        return self::hexToBgr($value);
     }
 
     /**
@@ -163,6 +210,19 @@ class CssMappings
     public static function parsePixels(string $value): int
     {
         return (int) preg_replace('/[^0-9]/', '', $value);
+    }
+
+    /**
+     * Parse "1" / "1.5" / "0" → flex grow value as string (e.g., "1", "2")
+     */
+    public static function parseFlex(string $value): string
+    {
+        $value = trim($value);
+        // Extract numeric part
+        if (preg_match('/^(\d+(?:\.\d+)?)/', $value, $m)) {
+            return $m[1];
+        }
+        return $value;
     }
 
     /**
@@ -190,6 +250,26 @@ class CssMappings
     }
 
     /**
+     * Parse "1px solid #d9d9d9" → border string (v8)
+     */
+    public static function parseBorder(string $value): string
+    {
+        return trim(strtolower($value));
+    }
+
+    /**
+     * Parse "0.5" or "50%" → float 0.0-1.0 (v8)
+     */
+    public static function parseOpacity(string $value): float
+    {
+        $v = trim($value);
+        if (str_ends_with($v, '%')) {
+            return ((float)substr($v, 0, -1)) / 100.0;
+        }
+        return min(1.0, max(0.0, (float)$v));
+    }
+
+    /**
      * Parse identity: return the trimmed value as-is
      * Used for display, flex-direction, overflow, position 等关键字属性
      */
@@ -207,8 +287,11 @@ class CssMappings
         switch ($parser) {
             case 'Px\\Rendering\\CssMappings::parseHexColor':   return self::parseHexColor($value);
             case 'Px\\Rendering\\CssMappings::parsePixels':     return self::parsePixels($value);
+            case 'Px\\Rendering\\CssMappings::parseFlex':      return self::parseFlex($value);
             case 'Px\\Rendering\\CssMappings::parseFontWeight': return self::parseFontWeight($value);
             case 'Px\\Rendering\\CssMappings::parseTextAlign':  return self::parseTextAlign($value);
+            case 'Px\\Rendering\\CssMappings::parseBorder':     return self::parseBorder($value);
+            case 'Px\\Rendering\\CssMappings::parseOpacity':   return self::parseOpacity($value);
             case 'Px\\Rendering\\CssMappings::parseIdent':      return self::parseIdent($value);
             default:                             return $value;
         }

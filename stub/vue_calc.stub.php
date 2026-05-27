@@ -57,3 +57,5 @@ function vue_draw_button(int $hdc, int $x, int $y, int $w, int $h, int $bgColor,
 function vue_measure_text_width(int $hdc, string $text, int $fontSize): int {}
 function vue_push_clip(int $hdc, int $x, int $y, int $w, int $h): void {}
 function vue_pop_clip(int $hdc): void {}
+
+// ---- Scrollbar Hit Test ----

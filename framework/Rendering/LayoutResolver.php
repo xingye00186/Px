@@ -64,11 +64,16 @@ class LayoutResolver
         // Parse inline style
         $inlineStyle = $node->getInlineStyle();
 
-        // Merge with CSS class styles
+        // Merge with CSS class styles (support multiple classes: 'btn btn-primary')
         $class = $node->getClass();
         $classStyle = [];
-        if ($class !== '' && isset($this->classStyles[$class])) {
-            $classStyle = $this->classStyles[$class];
+        if ($class !== '') {
+            $classes = preg_split('/\s+/', trim($class));
+            foreach ($classes as $cls) {
+                if ($cls !== '' && isset($this->classStyles[$cls])) {
+                    $classStyle = array_merge($classStyle, $this->classStyles[$cls]);
+                }
+            }
         }
 
         // Merge: class style + inline style (inline overrides)
@@ -108,7 +113,7 @@ class LayoutResolver
         }
 
         // Determine display mode
-        $display = $merged['display'] ?? ($node->isRoot() ? 'block' : 'block');
+        $display = $merged['display'] ?? 'block';
         $position = $merged['position'] ?? 'static';
 
         switch ($display) {
@@ -144,6 +149,12 @@ class LayoutResolver
         $bottom = $style['bottom'] ?? null;
         $width  = $style['width'] ?? 0;
         $height = $style['height'] ?? 0;
+
+        // Handle flex:1 / flex:2 etc. → fill parent's remaining space
+        $flex = $style['flex'] ?? '';
+        if ($flex !== '' && $parent !== null && $parent->w > 0 && $width === 0) {
+            $width = $parent->w - $left;
+        }
 
         // Apply parent offset
         $node->x = $left + $parentX;
@@ -351,13 +362,34 @@ class LayoutResolver
         $node->w = $width;
         $node->h = $height;
 
+        // If width/height is 0 (e.g., from "100%"), use parent dimensions
+        if ($width === 0 && $parent !== null && $parent->w > 0) {
+            $width = $parent->w - $left;
+            $node->w = $width;
+        }
+        if ($height === 0 && $parent !== null && $parent->h > 0) {
+            $height = $parent->h - $top;
+            $node->h = $height;
+        }
+
+        // Handle flex:1 / flex:2 etc. → implicit width from parent for flex items
+        $flex = $style['flex'] ?? '';
+        if ($flex !== '' && $parent !== null) {
+            // flex: 1 means "grow to fill remaining space"
+            // Container should have explicit width, this item fills remaining
+            if ($width === 0 && $parent->w > 0) {
+                // Calculate remaining space after other flex children
+                $node->w = $parent->w - $left;
+            }
+        }
+
         $direction = $style['flexDirection'] ?? 'row';
         $gap       = $style['gap'] ?? 0;
         $justify   = $style['justifyContent'] ?? 'flex-start';
         $align     = $style['alignItems'] ?? 'stretch';
         $wrap      = $style['flexWrap'] ?? 'nowrap';
 
-        // Collect child dimensions
+        // Collect children and resolve their styles FIRST
         $children = [];
         if ($node->children instanceof VNode) {
             $this->resolveNode($node->children, $node->x, $node->y, $node);
@@ -371,13 +403,67 @@ class LayoutResolver
             }
         }
 
+        // ── Calculate flex item widths for flex:1 / flex:2 ──
+        // Count flex grow items and fixed-size items
+        $flexGrowItems = [];
+        $fixedTotalMain = 0;
+        $hasFlexGrow = false;
+
+        foreach ($children as $ch) {
+            $ch = objval($ch, VNode::class);
+            $childStyle = $ch->computedStyle;
+            $childFlex = $childStyle['flex'] ?? '';
+
+            if ($childFlex !== '') {
+                $flexGrowItems[] = $ch;
+                $hasFlexGrow = true;
+            } else {
+                $childW = $ch->w;
+                $childH = $ch->h;
+                if ($direction === 'row' || $direction === 'row-reverse') {
+                    $fixedTotalMain += $childW;
+                } else {
+                    $fixedTotalMain += $childH;
+                }
+            }
+        }
+
+        // Distribute remaining space to flex grow items
+        if ($hasFlexGrow) {
+            $isRow = ($direction === 'row' || $direction === 'row-reverse');
+            $containerMain = $isRow ? $width : $height;
+            $gapTotal = $gap * (count($children) - 1);
+            $remainingSpace = max($containerMain - $fixedTotalMain - $gapTotal, 0);
+
+            // Total flex-grow values
+            $totalFlexGrow = 0;
+            foreach ($flexGrowItems as $ch) {
+                $childStyle = $ch->computedStyle;
+                $flexVal = (float)($childStyle['flex'] ?? '1');
+                $totalFlexGrow += $flexVal;
+            }
+
+            // Distribute proportionally
+            foreach ($flexGrowItems as $ch) {
+                $childStyle = $ch->computedStyle;
+                $flexVal = (float)($childStyle['flex'] ?? '1');
+                if ($isRow) {
+                    $ch->w = (int)(($flexVal / max($totalFlexGrow, 1)) * $remainingSpace);
+                    $ch->computedStyle['width'] = $ch->w;
+                } else {
+                    $ch->h = (int)(($flexVal / max($totalFlexGrow, 1)) * $remainingSpace);
+                    $ch->computedStyle['height'] = $ch->h;
+                }
+            }
+        }
+
         if (count($children) === 0) return;
 
         // Calculate flex layout
         $isRow = ($direction === 'row' || $direction === 'row-reverse');
         $reversed = ($direction === 'row-reverse' || $direction === 'column-reverse');
 
-        // Total children size along main axis
+        // Total children size along main axis (uses updated widths)
         $totalMain = 0;
         $maxCross = 0;
         foreach ($children as $ch) {
@@ -434,6 +520,23 @@ class LayoutResolver
                 $ch->x = $node->x + (int)$currentMain;
             } else {
                 $ch->y = $node->y + (int)$currentMain;
+            }
+
+            // Cross axis: align-items stretch defaults to container size
+            if ($align === 'stretch') {
+                if ($isRow) {
+                    // Row: stretch height to container
+                    if ($ch->h === 0) {
+                        $ch->h = $containerCross;
+                        $ch->computedStyle['height'] = $containerCross;
+                    }
+                } else {
+                    // Column: stretch width to container
+                    if ($ch->w === 0) {
+                        $ch->w = $containerCross;
+                        $ch->computedStyle['width'] = $containerCross;
+                    }
+                }
             }
 
             // Cross axis alignment
