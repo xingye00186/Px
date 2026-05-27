@@ -389,6 +389,46 @@ D:\swoole_compiler\php.exe -l framework/Core/Application.php
 D:\swoole_compiler\php.exe framework/aot-checker.php --project apps/list-test --skip direct_cpp_call
 ```
 
+### 7.4 闭包使用限制
+
+**问题**：`v-for` 循环内使用闭包（如条件 class）时，AOT 编译会丢失闭包外部变量的作用域，导致 `$ch` 等循环变量无法访问。
+
+**错误示例**：
+```php
+// ❌ 错误：AOT 中闭包无法访问 $ch
+$children[] = VNode::h('div', [...], (function() {
+    $c = [];
+    $c[] = VNode::h('span', [..., 'bind'=>$ch['name']], $ch['name']);
+    return $c;
+})());
+```
+
+**正确做法**：不使用闭包，直接在循环中构建 VNode：
+```php
+// ✅ 正确：循环变量直接在 foreach 中使用
+foreach ($this->items as $item) {
+    $children[] = VNode::h('div', [...], $item['name']);
+}
+```
+
+**条件渲染的替代方案**：
+- 不使用 `v-if` / `v-else`，改用**两个独立的 `v-for`** 遍历不同数据源
+- 在组件中提供分离的方法返回不同类型的数据
+
+```php
+// ✅ 在 script 中提供分离的数据方法
+public function getUserMessages(): array { /* 过滤 user 类型 */ }
+public function getSystemMessages(): array { /* 过滤 system 类型 */ }
+
+// ✅ 在 template 中独立遍历
+<template v-for="msg in userMessages" :key="'u-' . msg.id">
+  <!-- 用户消息 -->
+</template>
+<template v-for="msg in systemMessages" :key="'s-' . msg.id">
+  <!-- 系统消息 -->
+</template>
+```
+
 ---
 
 ## 八、构建流程
@@ -444,6 +484,38 @@ vcvarsall: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\
 ```
 
 > **提示**：绝大多数情况下**无需配置**，自动搜索即可覆盖 VS 2017/2019/2022 的所有版本。只有在自动搜索失败或需要指定特定版本时才需要手动配置。
+
+### 8.5 config.yml 配置文件
+
+`config.yml` 是构建系统的核心配置文件，必须位于项目根目录。首次使用时可从模板复制：
+
+```bash
+cp config.example.yml config.yml
+```
+
+**配置项说明**：
+
+| 配置项 | 说明 | 示例 |
+|--------|------|------|
+| `swoole_compiler` | Swoole Compiler 工具链目录 | `F:\work\swoole_compiler` |
+| `vcvarsall` | MSVC 环境初始化脚本（可选） | `C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat` |
+
+**配置示例**：
+
+```yaml
+# Swoole Compiler 路径（必需）
+swoole_compiler: F:\work\swoole_compiler
+
+# MSVC 路径（可选，通常自动检测即可）
+# vcvarsall: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat
+```
+
+**常见问题**：
+
+| 错误信息 | 原因 | 解决 |
+|----------|------|------|
+| `swoole_compiler path not found in config.yml` | config.yml 不存在或路径错误 | 从 `config.example.yml` 复制并修改路径 |
+| `swoole_compiler directory not found` | 路径指向的目录不存在 | 检查并修正 `swoole_compiler` 配置 |
 
 ---
 
@@ -540,7 +612,57 @@ public function handleAction(string $id): void {
 两种写法均会被编译器提取为独立的 render 辅助方法，`{{ item.text }}` 等循环变量会被正
 确处理为局部变量而非组件级 bind key。
 
-### 9.5 使用子组件
+### 9.5 使用 v-if / v-else-if / v-else
+
+支持 Vue 3 风格的条件渲染链：
+
+```html
+<div v-if="status === 'A'" style="background:#4CAF50">
+  <span>Status A</span>
+</div>
+<div v-else-if="status === 'B'" style="background:#FFC107">
+  <span>Status B</span>
+</div>
+<div v-else style="background:#F44336">
+  <span>Status C</span>
+</div>
+```
+
+**注意**：
+- `v-else-if` 和 `v-else` 必须紧跟在 `v-if` 之后，中间不能有其他非条件元素
+- 编译器使用 `ExpressionParser` 解析条件表达式，支持三元表达式、比较运算、逻辑运算
+
+### 9.6 使用 :class 动态类绑定
+
+支持三元表达式动态绑定 CSS 类：
+
+```html
+<div :class="isActive ? 'active' : 'inactive'">
+  Content
+</div>
+```
+
+编译为：
+```php
+['class' => $this->isActive ? 'active' : 'inactive']
+```
+
+### 9.7 使用 v-show 条件显示/隐藏
+
+通过 `visibility:hidden` 控制元素可见性：
+
+```html
+<div v-show="isVisible" style="background:#2196F3">
+  Toggle Me
+</div>
+```
+
+编译为：
+```php
+['style' => ($this->isVisible) ? '...' : '...;visibility:hidden']
+```
+
+### 9.8 使用子组件
 
 1. 创建子组件 `.vue` 文件
 2. 在父组件模板中引用：
