@@ -280,13 +280,15 @@ class VNodeRenderer
         if ($node->isScrollContainer) {
             return $this->makeScrollContainerElement($node, $style, $x, $y, $w, $h, $layer);
         }
-        $bg = $style['bg'] ?? ($style['background'] ?? 0);
-        if ($bg === 0 && !($style['borderWidth'] ?? false)) {
+        $bg = $style['bg'] ?? null;
+        $hasBorder = ($style['borderWidth'] ?? 0) > 0;
+        if ($bg === null && !$hasBorder) {
             return null;
         }
+        $drawColor = ($bg !== null) ? $bg : 0;
         return [
             'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'color' => $bg, 'layer' => $layer,
+            'color' => $drawColor, 'layer' => $layer,
         ];
     }
 
@@ -339,6 +341,13 @@ class VNodeRenderer
 
     private function makeButtonElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
     {
+        // Button must have valid dimensions
+        if ($w <= 0 || $h <= 0) {
+            // Auto-size: minimum 80x32 for buttons without explicit dimensions
+            $w = $w <= 0 ? 80 : $w;
+            $h = $h <= 0 ? 32 : $h;
+        }
+
         $bg     = $style['bg'] ?? 0x4488CC;
         $fg     = $style['fg'] ?? 0xFFFFFF;
         $border = $style['border'] ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0);

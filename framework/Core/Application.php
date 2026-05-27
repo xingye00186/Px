@@ -70,6 +70,7 @@ class Application
             function () { $this->directRender($this->activeVNodeTree); },
             $this->resolveComponent(...)
         );
+        $this->renderer = new VNodeRenderer();
     }
 
     // ── 平台事件处理器 ─────────────────────────
@@ -190,12 +191,6 @@ class Application
     {
         $render_ctx = $this->platform->init(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT);
         $this->renderer = new VNodeRenderer($this->rootComponent, $render_ctx);
-
-        // 加载编译期提取的 CSS class styles 到 LayoutResolver
-        if (method_exists($this->rootComponent, 'getClassStyles')) {
-            $classStyles = $this->rootComponent->getClassStyles();
-            $this->layoutResolver->setClassStyles($classStyles);
-        }
     }
 
     public function mount(ReactiveComponent $root): self
@@ -206,6 +201,13 @@ class Application
         $this->rootComponent->setRenderCallback($this->handleRenderRequest(...));
         // 注册根组件
         $this->registerComponent('app', $root);
+
+        // 加载编译期提取的 CSS class styles 到 LayoutResolver
+        if (method_exists($this->rootComponent, 'getClassStyles')) {
+            $classStyles = $this->rootComponent->getClassStyles();
+            $this->layoutResolver->setClassStyles($classStyles);
+        }
+
         $this->initRenderer();
         $this->rootComponent->mount();
         return $this;
