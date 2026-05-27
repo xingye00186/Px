@@ -83,8 +83,24 @@ class VNodeRenderer
                 'x' => $node->x, 'y' => $node->y,
                 'w' => $node->w, 'h' => $node->h,
                 'scrollTop' => $node->scrollTop,
+                'scrollLeft' => $node->scrollLeft,
+                'overflowX' => $node->computedStyle['overflowX'] ?? $node->computedStyle['overflow'] ?? 'visible',
+                'overflowY' => $node->computedStyle['overflowY'] ?? $node->computedStyle['overflow'] ?? 'visible',
+                'layer' => $node->layer,
             ];
             $wasScrollPush = true;
+
+            // Emit clip-push so children are clipped to the container bounds
+            $layer = $node->layer;
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            if (!isset($elementsByLayer[$layer])) {
+                $elementsByLayer[$layer] = [];
+            }
+            $elementsByLayer[$layer][] = [
+                'type' => 'clip-push',
+                'x' => $node->x, 'y' => $node->y, 'w' => $node->w, 'h' => $node->h,
+                'layer' => $layer,
+            ];
         }
 
         if ($node->type !== 'button') {
@@ -101,12 +117,69 @@ class VNodeRenderer
         }
 
         if ($wasScrollPush) {
-            array_pop($this->scrollCtxStack);
+            $scrollCtx = array_pop($this->scrollCtxStack);
+
+            // Emit clip-pop after children
+            $layer = $scrollCtx['layer'];
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            if (!isset($elementsByLayer[$layer])) {
+                $elementsByLayer[$layer] = [];
+            }
+            $elementsByLayer[$layer][] = [
+                'type' => 'clip-pop',
+                'layer' => $layer,
+            ];
+
+            // Emit scrollbar elements AFTER children + clip-pop so they draw on top
+            $this->emitScrollbarElements($node, $scrollCtx, $elementsByLayer, $maxLayer);
         }
 
         // Pop component context when leaving a component boundary
         if ($pushedComponent) {
             array_pop($this->componentStack);
+        }
+    }
+
+    /**
+     * Emit scrollbar elements for a scroll container, after its children.
+     * This ensures scrollbars are drawn on top of child elements.
+     */
+    private function emitScrollbarElements(VNode $node, array $scrollCtx, array &$elementsByLayer, int &$maxLayer): void
+    {
+        $layer = $scrollCtx['layer'];
+
+        // ── 竖滚动条 ──
+        $contentH = $node->contentHeight;
+        if ($contentH > $node->h) {
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            if (!isset($elementsByLayer[$layer])) {
+                $elementsByLayer[$layer] = [];
+            }
+            $elementsByLayer[$layer][] = [
+                'type' => 'scrollbar-v',
+                'x' => $node->x, 'y' => $node->y,
+                'w' => $node->w, 'h' => $node->h,
+                'contentHeight' => $contentH,
+                'scrollTop' => $node->scrollTop,
+                'layer' => $layer,
+            ];
+        }
+
+        // ── 横滚动条 ──
+        $contentW = $node->contentWidth;
+        if ($contentW > $node->w) {
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            if (!isset($elementsByLayer[$layer])) {
+                $elementsByLayer[$layer] = [];
+            }
+            $elementsByLayer[$layer][] = [
+                'type' => 'scrollbar-h',
+                'x' => $node->x, 'y' => $node->y,
+                'w' => $node->w, 'h' => $node->h,
+                'contentWidth' => $contentW,
+                'scrollLeft' => $node->scrollLeft,
+                'layer' => $layer,
+            ];
         }
     }
 
@@ -139,11 +212,43 @@ class VNodeRenderer
 
         if (count($this->scrollCtxStack) > 0) {
             $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];
-            // LayoutResolver 已将 scrollTop 计入子节点位置，此处仅做裁切
+            // LayoutResolver 已将 scrollTop/scrollLeft 计入子节点位置，此处做裁切 + 坐标裁剪
+
+            $containerX = $scrollCtx['x'];
             $containerY = $scrollCtx['y'];
+            $containerW = $scrollCtx['w'];
             $containerH = $scrollCtx['h'];
-            if ($y + $h < $containerY || $y >= $containerY + $containerH) {
-                return null;
+            $overflowX = $scrollCtx['overflowX'];
+            $overflowY = $scrollCtx['overflowY'];
+
+            // Y-axis: cull if completely outside, clip if partially outside
+            if ($overflowY !== 'visible') {
+                if ($y + $h < $containerY || $y >= $containerY + $containerH) {
+                    return null; // completely outside — skip
+                }
+                // Clip top — element starts above container
+                if ($y < $containerY) {
+                    $h -= ($containerY - $y);
+                    $y = $containerY;
+                }
+                // Clip bottom — element ends below container
+                if ($y + $h > $containerY + $containerH) {
+                    $h = ($containerY + $containerH) - $y;
+                }
+            }
+
+            // X-axis: cull if completely outside, clip if partially outside
+            if ($overflowX !== 'visible') {
+                if ($x + $w < $containerX || $x >= $containerX + $containerW) {
+                    return null; // completely outside — skip
+                }
+                if ($x < $containerX) {
+                    $w -= ($containerX - $x);
+                    $x = $containerX;
+                }
+                if ($x + $w > $containerX + $containerW) {
+                    $w = ($containerX + $containerW) - $x;
+                }
             }
         }
 
@@ -329,7 +434,9 @@ class VNodeRenderer
             'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'bg' => $bg,
             'contentHeight' => $contentH,
+            'contentWidth' => $node->contentWidth,
             'scrollTop' => $node->scrollTop,
+            'scrollLeft' => $node->scrollLeft,
             'layer' => $layer,
         ];
     }

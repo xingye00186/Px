@@ -113,7 +113,11 @@ class CssMappings
      */
     public static function hexToBgr(string $hex): int
     {
+        // Strip 0x / 0X prefix (C-style hex literal) and # prefix (CSS)
         $hex = ltrim($hex, '#');
+        if (str_starts_with($hex, '0x') || str_starts_with($hex, '0X')) {
+            $hex = substr($hex, 2);
+        }
 
         // Support shorthand: #RGB → #RRGGBB
         if (strlen($hex) === 3) {

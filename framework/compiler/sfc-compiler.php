@@ -166,8 +166,8 @@ function collectKeyHandlers(VNode $node, array &$handlers): void
  */
 function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
 {
-    // Don't recurse into v-for templates (their bind keys are local to the loop)
-    if ($node->type === 'template' && isset($node->props['v-for'])) {
+    // Don't recurse into v-for elements (their bind keys are local to the loop)
+    if (isset($node->props['v-for'])) {
         return;
     }
 
@@ -203,6 +203,10 @@ function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
         if (isset($node->props[':scroll-top'])) {
             $bindKeys[$node->props[':scroll-top']] = true;
         }
+        // :scroll-left="prop"
+        if (isset($node->props[':scroll-left'])) {
+            $bindKeys[$node->props[':scroll-left']] = true;
+        }
         // :items or items
         if (isset($node->props['items'])) {
             // items attribute may be a dynamic bind expression
@@ -231,7 +235,8 @@ function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
  */
 function collectVForLoops(VNode $node, array &$loops, int &$counter): void
 {
-    if ($node->type === 'template' && isset($node->props['v-for'])) {
+    // Vue 3 style: v-for on any element (template, div, span, etc.)
+    if (isset($node->props['v-for'])) {
         $name = 'render_' . $counter;
         $node->vForHelper = $name;  // Store helper name for generateVNodeExpr
         $counter++;
@@ -245,16 +250,31 @@ function collectVForLoops(VNode $node, array &$loops, int &$counter): void
             $itemVar = $m[1];
             $sourceExpr = $m[2];
         } elseif (preg_match('/^\s*(\w+)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
-            // Simple form: "item in items" (no parentheses)
             $itemVar = $m[1];
             $sourceExpr = $m[2];
         }
 
-        $loops[$name] = [
-            'source' => $sourceExpr,
-            'item' => $itemVar,
-            'children' => $node->children,
+        $isTemplate = ($node->type === 'template');
+
+        $entry = [
+            'source'    => $sourceExpr,
+            'item'      => $itemVar,
+            'children'  => $node->children,
+            'isTemplate' => $isTemplate,
         ];
+
+        // For element v-for (non-template), store element info for wrapper generation
+        if (!$isTemplate) {
+            $entry['elementType'] = $node->type;
+            // Copy props, stripping v-for/:key (these are loop metadata, not element props)
+            $elementProps = $node->props ?? [];
+            unset($elementProps['v-for']);
+            unset($elementProps[':key']);
+            unset($elementProps['v-for-key']); // alternate key format
+            $entry['elementProps'] = $elementProps;
+        }
+
+        $loops[$name] = $entry;
         return; // Don't recurse into v-for children
     }
 
@@ -325,8 +345,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
 {
     $ind = str_repeat('        ', max($indent, 0));
 
-    // Handle template with v-for → replace with render_N() helper call
-    if ($node->type === 'template' && isset($node->vForHelper)) {
+    // Handle element with v-for → replace with render_N() helper call
+    if (isset($node->vForHelper)) {
         return "\$this->{$node->vForHelper}()";
     }
 
@@ -457,7 +477,20 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 if (count($childExprs) === 1) {
                     $childrenExpr = $childExprs[0];
                 } else {
-                    $childrenExpr = "[\n{$ind}            " . implode(",\n{$ind}            ", $childExprs) . ",\n{$ind}        ]";
+                    // Spread v-for helpers (...) inside array literal — they return VNode[]
+                    $spreadExprs = [];
+                    $childIdx = 0;
+                    foreach ($node->children as $child) {
+                        if ($child instanceof VNode) {
+                            $expr = $childExprs[$childIdx];
+                            if (isset($child->vForHelper)) {
+                                $expr = '...' . $expr;
+                            }
+                            $spreadExprs[] = $expr;
+                            $childIdx++;
+                        }
+                    }
+                    $childrenExpr = "[\n{$ind}            " . implode(",\n{$ind}            ", $spreadExprs) . ",\n{$ind}        ]";
                 }
             } else {
                 // Closure-based builder: v-if evaluated at render() time
@@ -480,7 +513,11 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
 
                         // Group consecutive children with same v-if condition
                         $stmts[] = "{$ind}    if (\$this->{$cvif}) {";
-                        $stmts[] = "{$ind}        \$c[] = {$childExpr};";
+                        if (isset($child->vForHelper)) {
+                            $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
+                        } else {
+                            $stmts[] = "{$ind}        \$c[] = {$childExpr};";
+                        }
 
                         $i++;
                         while ($i < $childCount) {
@@ -492,14 +529,22 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                             unset($nextChild->props['v-if']);
                             $nextExpr = generateVNodeExpr($nextChild, $loopInfo, $indent + 2);
                             $nextChild->props['v-if'] = $nextVIf; // restore
-                            $stmts[] = "{$ind}        \$c[] = {$nextExpr};";
+                            if (isset($nextChild->vForHelper)) {
+                                $stmts[] = "{$ind}        array_push(\$c, ...{$nextExpr});";
+                            } else {
+                                $stmts[] = "{$ind}        \$c[] = {$nextExpr};";
+                            }
                             $i++;
                         }
                         $i--; // compensate for outer loop increment
                         $stmts[] = "{$ind}    }";
                     } else {
                         $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1);
-                        $stmts[] = "{$ind}    \$c[] = {$childExpr};";
+                        if (isset($child->vForHelper)) {
+                            $stmts[] = "{$ind}    array_push(\$c, ...{$childExpr});";
+                        } else {
+                            $stmts[] = "{$ind}    \$c[] = {$childExpr};";
+                        }
                     }
                 }
                 $stmts[] = "{$ind}    return \$c;";
@@ -610,7 +655,50 @@ function generateGetBindValue(array $bindKeys): string
 }
 
 /**
+ * Generate a PHP array expression for element props within a v-for loop.
+ * Mirrors the prop-mapping logic of generateVNodeExpr() but returns just the array string.
+ */
+function generateLoopItemPropsExpr(array $props, ?array $loopInfo): string
+{
+    $parts = [];
+    foreach ($props as $k => $v) {
+        if (str_starts_with($k, '__')) continue;
+        // Map v-for expressions to PHP foreach variables
+        if ($loopInfo !== null) {
+            if ($k === ':bind' || $k === 'bind' || $k === 'v-model') {
+                if (str_starts_with($v, $loopInfo['item'] . '.')) {
+                    $propName = substr($v, strlen($loopInfo['item']) + 1);
+                    $v = "\${$loopInfo['item']}['{$propName}']";
+                } else {
+                    $v = "\$this->{$v}";
+                }
+            } elseif ($k === 'click-arg') {
+                if (str_starts_with($v, $loopInfo['item'] . '.')) {
+                    $propName = substr($v, strlen($loopInfo['item']) + 1);
+                    $v = "\${$loopInfo['item']}['{$propName}']";
+                } else {
+                    $v = var_export($v, true);
+                }
+            }
+        }
+        // Handle PHP expressions (starting with $) as raw
+        if (is_string($v) && strlen($v) > 0 && $v[0] === '$') {
+            $parts[] = var_export($k, true) . '=>' . $v;
+        } else {
+            $parts[] = var_export($k, true) . '=>' . var_export($v, true);
+        }
+    }
+    return '[' . implode(',', $parts) . ']';
+}
+
+/**
  * Generate v-for helper methods (render_N).
+ *
+ * Template v-for (<template v-for="item in items">):
+ *   Only children repeat — template is transparent.
+ *
+ * Element v-for (<div v-for="item in items">) — Vue 3 style:
+ *   The element itself repeats with its children.
  */
 function generateVForHelpers(array $loops): string
 {
@@ -621,6 +709,7 @@ function generateVForHelpers(array $loops): string
         $source = $info['source'];
         $item = $info['item'];
         $children = $info['children'];
+        $isTemplate = $info['isTemplate'] ?? true;
 
         if ($source === '' || $item === '') continue;
 
@@ -633,11 +722,12 @@ function generateVForHelpers(array $loops): string
             }
         }
 
-        if (count($childExprs) === 0) continue;
+        if ($isTemplate) {
+            // === Template v-for: children repeat directly ===
+            if (count($childExprs) === 0) continue;
+            $childBlock = implode(",\n                ", $childExprs);
 
-        $childBlock = implode(",\n                ", $childExprs);
-
-        $out .= <<<PHP
+            $out .= <<<PHP
 
     /**
      * v-for render helper: {$item} in {$source}
@@ -652,18 +742,50 @@ function generateVForHelpers(array $loops): string
         return \$children;
     }
 PHP;
+        } else {
+            // === Element v-for (Vue 3 style): element repeats ===
+            $elementType = $info['elementType'] ?? 'div';
+            $elementProps = $info['elementProps'] ?? [];
+            $propsExpr = generateLoopItemPropsExpr($elementProps, $loopInfo);
+
+            if (count($childExprs) > 0) {
+                $childBlock = "[\n                    " . implode(",\n                    ", $childExprs) . "\n                ]";
+                $innerExpr = "VNode::h('{$elementType}', {$propsExpr}, {$childBlock})";
+            } else {
+                $innerExpr = "VNode::h('{$elementType}', {$propsExpr})";
+            }
+
+            $out .= <<<PHP
+
+    /**
+     * v-for render helper: {$item} in {$source}
+     * @return VNode[]
+     */
+    private function {$name}(): array
+    {
+        \$children = [];
+        foreach (\$this->{$source} as \${$item}) {
+            \$children[] = {$innerExpr};
+        }
+        return \$children;
+    }
+PHP;
+        }
     }
 
     return $out;
 }
 
 /**
- * Check if a VNode tree contains any v-for template.
+ * Check if a VNode tree contains any v-for loop.
  */
 function hasVForLoops(VNode $node): bool
 {
-    if ($node->type === 'template' && ($node->props['v-for'] ?? '') !== '') {
+    if (($node->props['v-for'] ?? '') !== '') {
         return true;
+    }
+    if ($node->children instanceof VNode) {
+        return hasVForLoops($node->children);
     }
     if (is_array($node->children)) {
         foreach ($node->children as $child) {
@@ -1227,6 +1349,10 @@ if (count($classStyles) > 0) {
 }
 
 // Generate class
+$defaultConstruct = '';
+if (!str_contains($classBody, 'function __construct')) {
+    $defaultConstruct = "    public function __construct(?string \$componentId = null)\n    {\n        parent::__construct(\$componentId ?? '{$baseName}');\n    }\n";
+}
 $classContent = <<<PHP
 <?php
 
@@ -1299,12 +1425,7 @@ class {$componentClassName} extends ReactiveComponent
     public function onUnmount(): void
     {
     }
-
-    public function __construct(?string \$componentId = null)
-    {
-        parent::__construct(\$componentId ?? '{$baseName}');
-    }
-}
+{$defaultConstruct}}
 PHP;
 
 // Step 6: AOT Validation

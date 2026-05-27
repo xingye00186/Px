@@ -76,11 +76,23 @@ Array php_vue_peek_message() {
     MSG msg;
     ZeroMemory(&msg, sizeof(msg));
     if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+        Int lParam = (Int)msg.lParam;
+
+        // WM_MOUSEWHEEL lParam is screen coords; convert to client coords
+        // so findScrollContainerAt can compare against VNode client coordinates
+        if (msg.message == WM_MOUSEWHEEL) {
+            POINT pt;
+            pt.x = (short)(msg.lParam & 0xFFFF);
+            pt.y = (short)((msg.lParam >> 16) & 0xFFFF);
+            ScreenToClient(msg.hwnd, &pt);
+            lParam = (Int)(LPARAM)(((DWORD)(pt.y) << 16) | (DWORD)(pt.x & 0xFFFF));
+        }
+
         Array result;
         result.append((Int)msg.hwnd);
         result.append((Int)msg.message);
         result.append((Int)msg.wParam);
-        result.append((Int)msg.lParam);
+        result.append(lParam);
         TranslateMessage(&msg);
         DispatchMessage(&msg);
         return result;
@@ -136,9 +148,15 @@ void php_vue_draw_text(Int hdc, Int x, Int y, String text, Int fontSize, Int rgb
     HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
         bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Microsoft YaHei");
     HFONT oldFont = (HFONT)SelectObject((HDC)hdc, hFont);
-    TextOutA((HDC)hdc, (int)x, (int)y, text.data(), (int)strlen(text.data()));
+    // Convert UTF-8 to UTF-16 for Unicode text rendering (supports CJK)
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, NULL, 0);
+    if (wlen > 0) {
+        std::wstring wtext(wlen, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, &wtext[0], wlen);
+        TextOutW((HDC)hdc, (int)x, (int)y, wtext.c_str(), (wlen > 1) ? (wlen - 1) : 0);
+    }
     SelectObject((HDC)hdc, oldFont);
     DeleteObject(hFont);
 }
@@ -148,13 +166,31 @@ Int php_vue_measure_text_width(Int hdc, String text, Int fontSize) {
     HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
         FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Microsoft YaHei");
     HFONT oldFont = (HFONT)SelectObject((HDC)hdc, hFont);
     SIZE sz = {0, 0};
-    GetTextExtentPoint32A((HDC)hdc, text.data(), (int)strlen(text.data()), &sz);
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, NULL, 0);
+    if (wlen > 0) {
+        std::wstring wtext(wlen, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, &wtext[0], wlen);
+        GetTextExtentPoint32W((HDC)hdc, wtext.c_str(), (wlen > 1) ? (wlen - 1) : 0, &sz);
+    }
     SelectObject((HDC)hdc, oldFont);
     DeleteObject(hFont);
     return (Int)sz.cx;
+}
+
+// Push clip rectangle - saves DC state and sets clip region
+void php_vue_push_clip(Int hdc, Int x, Int y, Int w, Int h) {
+    SaveDC((HDC)hdc);
+    HRGN clipRgn = CreateRectRgn((int)x, (int)y, (int)(x + w), (int)(y + h));
+    SelectClipRgn((HDC)hdc, clipRgn);
+    DeleteObject(clipRgn);
+}
+
+// Pop clip rectangle - restores DC state (removes clip)
+void php_vue_pop_clip(Int hdc) {
+    RestoreDC((HDC)hdc, -1);
 }
 
 // 绘制按钮(填充+边框)

@@ -64,7 +64,9 @@ class Win32Platform implements Platform
                 if ($delta >= 32768) {
                     $delta -= 65536;
                 }
-                $events[] = new MouseEvent($action, $x, $y, 0, $delta);
+                // 从 wParam LOWORD 提取修饰键（MK_SHIFT = 0x0004）
+                $shiftDown = (($wParam & 0xFFFF) & 0x0004) !== 0;
+                $events[] = new MouseEvent($action, $x, $y, 0, $delta, $shiftDown);
             } elseif ($cat === 'keyboard') {
                 $char    = ($msgType === WinMsg::WM_CHAR)
                     ? chr($wParam & 0xFF) : '';

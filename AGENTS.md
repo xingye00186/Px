@@ -16,7 +16,8 @@ Px 是一个 **PHP → 原生 exe** 的桌面 GUI 框架，模板语法对标 **
 d:/Px/
 ├── framework/              核心框架（只读，所有应用共享）
 │   ├── Core/
-│   │   ├── Application.php     事件循环、组件注册、VNode 树展开、滚动系统
+│   │   ├── Application.php     事件循环、组件注册、VNode 树展开、bind 解析
+│   │   ├── ScrollManager.php   滚动服务（状态管理、拖拽、滚轮、水平滚动）
 │   │   └── Scheduler.php       微任务/宏任务调度
 │   ├── Rendering/
 │   │   ├── VNode.php           虚拟 DOM 节点（布局字段 + 滚动字段 + 组件占位字段）
@@ -157,8 +158,10 @@ string $groupId = 'app';      // 事件路由 key
 
 // —— 滚动容器 ——
 bool $isScrollContainer;
-int  $scrollTop;
-int  $contentHeight;
+int  $scrollTop;               // 垂直滚动偏移 (px)
+int  $contentHeight;           // 可滚动内容总高度 (px)
+int  $scrollLeft;              // 水平滚动偏移 (px)
+int  $contentWidth;            // 可滚动内容总宽度 (px)
 
 // —— 组件占位 ——
 bool $isComponent;
@@ -278,50 +281,80 @@ public function dispatchClick(string $handler, ?string $arg = null): void {
 
 ## 六、滚动系统
 
-### 6.1 使容器可滚动
+### 6.1 职责架构
+
+```
+滚动事件 → Application::handleMouseEvent (路由)
+         → ScrollManager (状态管理 + 逻辑)
+              ├─ handleScrollWheel()      滚轮
+              ├─ hitTestScrollbar()       命中测试（垂直条 + 水平条）
+              ├─ handleScrollbarDown()    拖拽开始
+              ├─ handleScrollbarDrag()    拖拽中
+              ├─ handleMouseUp()          拖拽释放
+              ├─ applyScrollTop()         垂直滚动
+              └─ applyScrollLeft()        水平滚动
+```
+
+> 滚动状态（target、start 坐标、start scroll 位置、isHorizontal）全部在 ScrollManager 中。
+> Application 只负责将事件路由给 ScrollManager，不再直接持有滚动状态。
+
+### 6.2 使容器可滚动
 
 在 `.vue` 模板中：
 ```html
-<div style="overflow:auto;left:10px;top:50px;width:380px;height:400px"
+<!-- 仅垂直滚动 -->
+<div style="overflow-y:auto;left:10px;top:50px;width:380px;height:400px"
      :scroll-top="scrollTop">
   <template v-for="item in items" :key="item.id">
     <div @click="deleteItem(item.id)">{{ item.text }}</div>
   </template>
 </div>
+
+<!-- 横向+纵向滚动（overflow:auto 同时启用两轴） -->
+<div style="overflow:auto;left:10px;top:50px;width:390px;height:570px"
+     :scroll-top="scrollTop"
+     :scroll-left="scrollLeft">
+  <!-- 子元素宽度超过容器宽度时出现水平滚动条 -->
+  <div style="left:0;top:0;width:800px;height:36px">宽内容</div>
+</div>
 ```
 
 组件中：
 ```php
-public string $scrollTop = "0";   // 必须声明
+public string $scrollTop = "0";   // 垂直滚动位置
+public string $scrollLeft = "0";  // 水平滚动位置（仅横向容器需要）
 ```
 
-### 6.2 滚动交互流程
+**横向滚动交互**：`Shift + 滚轮` 触发横向滚动。水平滚动条位于容器底部 12px 区域。
+
+### 6.3 滚动交互流程
 
 ```
-滚轮 → findScrollContainerAt(最深容器) → handleScrollWheel
-     → applyScrollTop(scrollTop + delta, persist=true)
-     → setBindValue('scrollTop', value) → markDirty → requestRender
+滚轮 → ScrollManager::handleScrollWheel (含 Shift 键检测 → 横向)
+     → applyScrollTop / applyScrollLeft (persist=true)
+     → setBindValue → markDirty → requestRender
 
-轨道点击 → hitTestScrollbar → handleScrollbarDown(type='track')
-       → applyScrollTop(jumped_value, persist=true)
+轨道点击 → ScrollManager::hitTestScrollbar (返回 {scrollNode, type, isHorizontal})
+       → handleScrollbarDown → applyScroll*(jumped_value, persist=true)
 
 滑块拖拽 → hitTestScrollbar → handleScrollbarDown(type='thumb')
-       → handleScrollbarDrag (高频) → applyScrollTop(persist=false) → directRender
-       → 鼠标释放 → applyScrollTop(persist=true) → requestRender
+       → handleScrollbarDrag (高频) → applyScroll*(persist=false) → directRender
+       → 鼠标释放 → applyScroll*(persist=true) → requestRender
 ```
 
-### 6.3 核心机制
+### 6.4 核心机制
 
-1. **Bind 同步**：`resolveVNodeBindings` 在每次 rebuild 时将组件 `scrollTop` 值写入 `VNode.scrollTop`
-2. **布局偏移**：LayoutResolver 用 `childOffsetY = node.y - scrollTop` 定位子节点
-3. **自动 clamp**：auto-stack 后若 `scrollTop > maxScroll`，LayoutResolver 自动修正并重定位子节点
+1. **Bind 同步**：`resolveVNodeBindings` 在每次 rebuild 时将组件 `scrollTop`/`scrollLeft` 值写入 `VNode`
+2. **布局偏移**：LayoutResolver 用 `childOffsetY = node.y - scrollTop` 和 `childOffsetX = node.x - scrollLeft` 定位子节点
+3. **自动 clamp**：auto-stack 后若 `scrollTop > maxScroll` 或 `scrollLeft > maxScrollX`，LayoutResolver 自动修正并重定位子节点
 4. **拖拽优化**：拖拽过程中走 `directRender`，跳过 VNode 树重建
+5. **横向滚动检测**：`overflow-x:auto` / `overflow-x:scroll` 或 `overflow:auto` 继承两轴
 
-### 6.4 多滚动容器注意事项
+### 6.5 多滚动容器注意事项
 
 - 滚轮事件找**鼠标下方最深的**滚动容器
 - 滚动条拖拽一次**只能操作一个**容器
-- `scrollDragTarget` 是 VNode 引用，拖拽过程中**不要**触发树重建
+- 拖拽状态由 ScrollManager 持有，拖拽过程中**不要**触发树重建
 
 ---
 
@@ -462,6 +495,10 @@ public function handleAction(string $id): void {
 
 ### 9.4 使用 v-for
 
+支持 **Vue 3 风格**：`v-for` 可以写在 `<template>` 或任意 HTML 元素（`<div>`、`<span>` 等）上。
+
+**`<template v-for>`** — 仅重复子节点，不产生额外包装元素：
+
 ```html
 <template v-for="item in items" :key="item.id">
   <div @click="handleClick(item.id)">
@@ -469,6 +506,17 @@ public function handleAction(string $id): void {
   </div>
 </template>
 ```
+
+**元素 v-for**（Vue 3 风格） — 元素本身参与循环：
+
+```html
+<div v-for="item in items" :key="item.id" @click="handleClick(item.id)">
+  <span>{{ item.text }}</span>
+</div>
+```
+
+两种写法均会被编译器提取为独立的 render 辅助方法，`{{ item.text }}` 等循环变量会被正
+确处理为局部变量而非组件级 bind key。
 
 ### 9.5 使用子组件
 
@@ -491,9 +539,11 @@ public function handleAction(string $id): void {
 
 ## 十、已知问题与设计债务
 
-### 10.1 SOLID 违反：Application 持有 scrollDragTarget
+### 10.1 SOLID 违反：Application 持有 scrollDragTarget — ✅ 已解决
 
-`scrollDragTarget`、`scrollDragStartY`、`scrollDragStartScrollTop` 直接定义在 Application 上，违反单一职责原则。建议抽取 `ScrollManager` 服务。
+> `ScrollManager` 服务已抽取（`framework/Core/ScrollManager.php`）。Application 仅负责事件路由，
+> 所有滚动状态（drag target、drag start 坐标、drag start scroll 位置）和逻辑（滚轮、拖拽、clamp）
+> 归属 ScrollManager。横向滚动状态同样由 ScrollManager 统一管理。
 
 ### 10.2 多滚动容器限制
 
@@ -511,7 +561,6 @@ LayoutResolver clamp 后，组件的 bind 值（如 scrollTop）保持旧值。�
 
 - 键盘滚动（PgUp/PgDn/Home/End/Arrow）
 - 编程式滚动到指定 item
-- 水平滚动
 - 窗口 resize 时的动态重布局（当前需要手动触发渲染）
 - 文字输入时 IME 支持
 

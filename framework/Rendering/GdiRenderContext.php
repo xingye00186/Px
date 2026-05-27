@@ -108,9 +108,13 @@ class GdiRenderContext extends RenderContext
                 $x = $el['x'] ?? 0; $y = $el['y'] ?? 0;
                 $w = $el['w'] ?? 0; $h = $el['h'] ?? 0;
                 $bg = $el['bg'] ?? 0x2D2D2D;
-                // 背景
+                // Only draw background; scrollbars drawn in scrollbar-v/scrollbar-h after children
                 $this->fillRect($x, $y, $w, $h, $bg);
-                // 滚动条 (仅内容溢出时绘制)
+                break;
+
+            case 'scrollbar-v':
+                $x = $el['x'] ?? 0; $y = $el['y'] ?? 0;
+                $w = $el['w'] ?? 0; $h = $el['h'] ?? 0;
                 $contentH = $el['contentHeight'] ?? 0;
                 if ($contentH > $h) {
                     $scrollTop = $el['scrollTop'] ?? 0;
@@ -118,7 +122,7 @@ class GdiRenderContext extends RenderContext
                     $sbX = $x + $w - $sbW;
                     // 轨道
                     $this->fillRect($sbX, $y, $sbW, $h, 0x4A4A4A);
-                    // 滑块 (比例位置)
+                    // 滑块
                     $ratio = min($h / max($contentH, 1), 1.0);
                     $thumbH = max((int)($h * $ratio), 20);
                     $maxScroll = max($contentH - $h, 0);
@@ -126,6 +130,36 @@ class GdiRenderContext extends RenderContext
                     $thumbY = $y + (int)(($h - $thumbH) * $scrollRatio);
                     $this->fillRect($sbX + 2, $thumbY, $sbW - 4, $thumbH, 0x888888);
                 }
+                break;
+
+            case 'scrollbar-h':
+                $x = $el['x'] ?? 0; $y = $el['y'] ?? 0;
+                $w = $el['w'] ?? 0; $h = $el['h'] ?? 0;
+                $contentW = $el['contentWidth'] ?? 0;
+                if ($contentW > $w) {
+                    $scrollLeft = $el['scrollLeft'] ?? 0;
+                    $sbH = 12;
+                    $sbY = $y + $h - $sbH;
+                    // 轨道
+                    $this->fillRect($x, $sbY, $w, $sbH, 0x4A4A4A);
+                    // 滑块
+                    $ratioH = min($w / max($contentW, 1), 1.0);
+                    $thumbW = max((int)($w * $ratioH), 20);
+                    $maxScrollX = max($contentW - $w, 0);
+                    $scrollRatioX = $maxScrollX > 0 ? $scrollLeft / $maxScrollX : 0.0;
+                    $thumbX = $x + (int)(($w - $thumbW) * $scrollRatioX);
+                    $this->fillRect($thumbX, $sbY + 2, $thumbW, $sbH - 4, 0x888888);
+                }
+                break;
+
+            case 'clip-push':
+                vue_push_clip($this->hdc,
+                    $el['x'] ?? 0, $el['y'] ?? 0,
+                    $el['w'] ?? 0, $el['h'] ?? 0);
+                break;
+
+            case 'clip-pop':
+                vue_pop_clip($this->hdc);
                 break;
 
             // ── 新增图元类型 ──────────────────

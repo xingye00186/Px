@@ -71,6 +71,12 @@ class VNode
     /** 滚动内容总高度 (px) */
     public int $contentHeight = 0;
 
+    /** 横向滚动位置 (px) */
+    public int $scrollLeft = 0;
+
+    /** 滚动内容总宽度 (px) */
+    public int $contentWidth = 0;
+
     // ===== 组件占位字段 =====
 
     /** 是否为组件占位节点 (#component 类型) */

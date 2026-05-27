@@ -95,14 +95,16 @@ class LayoutResolver
 
         // Check for scroll container — must be BEFORE layout resolution
         // so resolveBlockLayout can access $node->isScrollContainer for auto-stack
-        $overflow = $merged['overflow'] ?? $merged['overflowY'] ?? 'visible';
-        $isScrollContainer = ($overflow === 'auto' || $overflow === 'scroll') ||
+        $overflowX = $merged['overflowX'] ?? $merged['overflow'] ?? 'visible';
+        $overflowY = $merged['overflowY'] ?? $merged['overflow'] ?? 'visible';
+        $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll') ||
+            ($node->props[':scroll-left'] ?? '') !== '';
+        $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll') ||
             ($node->props[':scroll-top'] ?? '') !== '' ||
             $node->isScrollContainer;
 
-        if ($isScrollContainer) {
+        if ($hasHScroll || $hasVScroll) {
             $node->isScrollContainer = true;
-            $this->scrollContainers[] = $node;
         }
 
         // Determine display mode
@@ -165,10 +167,10 @@ class LayoutResolver
         // Scroll container special handling
         $isScroll = $node->isScrollContainer;
         $scrollTop = 0;
+        $scrollLeft = 0;
         if ($isScroll) {
-            $scrollTopBind = $node->props[':scroll-top'] ?? $node->props['scroll-top'] ?? '';
-            // scrollTop is set by Application at runtime
             $scrollTop = $node->scrollTop;
+            $scrollLeft = $node->scrollLeft;
         }
 
         // Resolve children
@@ -176,6 +178,7 @@ class LayoutResolver
         $childOffsetY = $node->y;
         if ($isScroll) {
             $childOffsetY -= $scrollTop;
+            $childOffsetX -= $scrollLeft;
         }
 
         if ($node->children instanceof VNode) {
@@ -222,24 +225,66 @@ class LayoutResolver
                             $stackY += $child->h;
                         }
                     }
-                    // Store total content height for scrollbar calculations
-                    $node->contentHeight = $stackY - $childOffsetY;
+                }
 
-                    // ── Clamp scrollTop when content shrinks ────
-                    // If items were deleted / content became shorter,
-                    // scrollTop may exceed the new maxScroll. Clamp
-                    // and shift children down to correct position.
-                    $maxScroll = max($node->contentHeight - $node->h, 0);
-                    if ($node->scrollTop > $maxScroll) {
-                        $oldScrollTop = $node->scrollTop;
-                        $node->scrollTop = $maxScroll;
-                        $shiftDown = $oldScrollTop - $node->scrollTop;
-                        if ($shiftDown > 0) {
+                // ── Calculate contentHeight (always, not just for autoStack) ────
+                $maxBottom = $childOffsetY;
+                foreach ($node->children as $child) {
+                    if ($child instanceof VNode) {
+                        $bottom = $child->y + $child->h;
+                        if ($bottom > $maxBottom) $maxBottom = $bottom;
+                    }
+                }
+                $node->contentHeight = $maxBottom - $childOffsetY;
+
+                // ── Clamp scrollTop when content shrinks ────
+                // If items were deleted / content became shorter,
+                // scrollTop may exceed the new maxScroll. Clamp
+                // and shift children down to correct position.
+                $maxScroll = max($node->contentHeight - $node->h, 0);
+                if ($node->scrollTop > $maxScroll) {
+                    $oldScrollTop = $node->scrollTop;
+                    $node->scrollTop = $maxScroll;
+                    $shiftDown = $oldScrollTop - $node->scrollTop;
+                    if ($shiftDown > 0) {
+                        foreach ($node->children as $child) {
+                            if ($child instanceof VNode) {
+                                $child = objval($child, VNode::class);
+                                $child->y += $shiftDown;
+                                $this->shiftDescendantsY($child, $shiftDown);
+                            }
+                        }
+                    }
+                }
+
+                // ── Content width for horizontal scroll ────
+                $overflowX = $node->computedStyle['overflowX'] ?? $node->computedStyle['overflow'] ?? 'visible';
+                $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll') ||
+                    ($node->props[':scroll-left'] ?? '') !== '';
+                if ($hasHScroll) {
+                    // Use raw style values (independent of scroll offset) for content width
+                    $maxRight = 0;
+                    foreach ($node->children as $child) {
+                        if ($child instanceof VNode) {
+                            $cLeft = $child->computedStyle['left'] ?? 0;
+                            $cWidth = $child->computedStyle['width'] ?? $child->w;
+                            $right = $cLeft + $cWidth;
+                            if ($right > $maxRight) $maxRight = $right;
+                        }
+                    }
+                    $node->contentWidth = max($maxRight, $node->w);
+
+                    // Clamp scrollLeft when content shrinks
+                    $maxScrollX = max($node->contentWidth - $node->w, 0);
+                    if ($node->scrollLeft > $maxScrollX) {
+                        $oldScrollLeft = $node->scrollLeft;
+                        $node->scrollLeft = $maxScrollX;
+                        $shiftRight = $oldScrollLeft - $node->scrollLeft;
+                        if ($shiftRight > 0) {
                             foreach ($node->children as $child) {
                                 if ($child instanceof VNode) {
-                                    $child = objval($child, VNode::class);
-                                    $child->y += $shiftDown;
-                                    $this->shiftDescendantsY($child, $shiftDown);
+                                    $child->x += $shiftRight;
+                                    $this->shiftDescendantsX($child, $shiftRight);
                                 }
                             }
                         }
@@ -264,6 +309,25 @@ class LayoutResolver
                 if ($child instanceof VNode) {
                     $child->y += $dy;
                     $this->shiftDescendantsY($child, $dy);
+                }
+            }
+        }
+    }
+
+    /**
+     * Recursively shift X coordinate of a node and all its descendants.
+     */
+    private function shiftDescendantsX(VNode $node, int $dx): void
+    {
+        $children = $node->children;
+        if ($children instanceof VNode) {
+            $children->x += $dx;
+            $this->shiftDescendantsX($children, $dx);
+        } elseif (is_array($children)) {
+            foreach ($children as $child) {
+                if ($child instanceof VNode) {
+                    $child->x += $dx;
+                    $this->shiftDescendantsX($child, $dx);
                 }
             }
         }

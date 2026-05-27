@@ -22,7 +22,9 @@ class MouseEvent extends PlatformEvent
     public int $button;
     public int $delta;
 
-    public function __construct(string $action, int $x, int $y, int $button = 0, int $delta = 0)
+    public bool $shiftDown;
+
+    public function __construct(string $action, int $x, int $y, int $button = 0, int $delta = 0, bool $shiftDown = false)
     {
         parent::__construct('mouse');
         $this->action = $action;
@@ -30,6 +32,7 @@ class MouseEvent extends PlatformEvent
         $this->y      = $y;
         $this->button = $button;
         $this->delta  = $delta;
+        $this->shiftDown = $shiftDown;
     }
 }
 
