@@ -276,7 +276,7 @@ function collectVForLoops(VNode $node, array &$loops, int &$counter): void
         $sourceExpr = '';
 
         // Parse "item in items" or "(item, index) in items"
-        if (preg_match('/^\s*(?:\((\w+)(?:,\s*\w+)?\s*)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
+        if (preg_match('/^\s*\((\w+)(?:,\s*\w+)?\)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
             $itemVar = $m[1];
             $sourceExpr = $m[2];
         } elseif (preg_match('/^\s*(\w+)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
@@ -384,7 +384,7 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
     if ($node->type === '#text') {
         if (isset($node->props['bind'])) {
             $expr = $node->props['bind'];
-            // If inside v-for, map item property access
+            // If inside v-for, map item.property to $item['property']
             if ($loopInfo !== null && str_starts_with($expr, $loopInfo['item'] . '.')) {
                 $propName = substr($expr, strlen($loopInfo['item']) + 1);
                 return "\${$loopInfo['item']}['{$propName}']";
@@ -398,7 +398,14 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 if ($part['type'] === 'text') {
                     $concatParts[] = "'" . addslashes($part['value']) . "'";
                 } else {
-                    $concatParts[] = "\$this->{$part['expr']}";
+                    $expr = $part['expr'];
+                    // Inside v-for, map item.property to $item['property']
+                    if ($loopInfo !== null && str_starts_with($expr, $loopInfo['item'] . '.')) {
+                        $propName = substr($expr, strlen($loopInfo['item']) + 1);
+                        $concatParts[] = "\${$loopInfo['item']}['{$propName}']";
+                    } else {
+                        $concatParts[] = "\$this->{$expr}";
+                    }
                 }
             }
             return implode(' . ', $concatParts);

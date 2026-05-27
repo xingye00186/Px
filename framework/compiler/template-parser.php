@@ -470,6 +470,35 @@ class TemplateParser
             'h1', 'h2', 'h3', 'h4', 'h5', 'h6'
                       => $this->parseGenericElement($tok, $tagName),
 
+            // ===== Extended HTML elements (v8) =====
+            'label'     => $this->parseGenericElement($tok, 'label'),
+            'textarea'  => $this->parseGenericElement($tok, 'textarea'),
+            'select'    => $this->parseGenericElement($tok, 'select'),
+            'option'    => $this->parseGenericElement($tok, 'option'),
+            'header'    => $this->parseGenericElement($tok, 'header'),
+            'footer'    => $this->parseGenericElement($tok, 'footer'),
+            'nav'       => $this->parseGenericElement($tok, 'nav'),
+            'main'      => $this->parseGenericElement($tok, 'main'),
+            'section'   => $this->parseGenericElement($tok, 'section'),
+            'aside'     => $this->parseGenericElement($tok, 'aside'),
+            'table'     => $this->parseGenericElement($tok, 'table'),
+            'thead'     => $this->parseGenericElement($tok, 'thead'),
+            'tbody'     => $this->parseGenericElement($tok, 'tbody'),
+            'tr'        => $this->parseGenericElement($tok, 'tr'),
+            'th'        => $this->parseGenericElement($tok, 'th'),
+            'td'        => $this->parseGenericElement($tok, 'td'),
+            'a'         => $this->parseGenericElement($tok, 'a'),
+            'img'       => $this->parseGenericElement($tok, 'img'),
+            'br'        => $this->parseGenericElement($tok, 'br'),
+            'hr'        => $this->parseGenericElement($tok, 'hr'),
+            'ul'        => $this->parseGenericElement($tok, 'ul'),
+            'ol'        => $this->parseGenericElement($tok, 'ol'),
+            'li'        => $this->parseGenericElement($tok, 'li'),
+            'strong'    => $this->parseGenericElement($tok, 'strong'),
+            'em'        => $this->parseGenericElement($tok, 'em'),
+            'code'      => $this->parseGenericElement($tok, 'code'),
+            'pre'       => $this->parseGenericElement($tok, 'pre'),
+
             // ===== Layout containers → div with style =====
             'grid'             => $this->parseGridAsDiv($tok),
             'flex'             => $this->parseFlexAsDiv($tok),
@@ -905,13 +934,14 @@ class TemplateParser
 
     /**
      * Unknown tag or component reference.
+     * v8: Treat unknown tags as generic HTML elements (for flexibility).
      */
     private function parseUnknownOrComponent(Token $tok, string $tagName): VNode
     {
         $attrs = $this->parseAttrs($tok->content);
         $isSelfClosing = ($tok->type === TOK_TAG_SELF);
 
-        // Check component registry
+        // Check component registry first
         if ($this->componentRegistry !== null) {
             $compFile = $this->componentRegistry->resolve($tagName);
             if ($compFile !== null) {
@@ -919,8 +949,8 @@ class TemplateParser
             }
         }
 
-        $this->error("Unknown element <{$tagName}> — not a standard HTML/PUI element or registered component", $tok->line);
-
+        // Unknown tag — treat as generic HTML element (not an error)
+        // This allows users to use any HTML element without pre-registration
         if ($isSelfClosing) {
             $this->advance();
             return VNode::h($tagName, $this->convertElementAttrs($attrs, $tok->line, $tagName));
@@ -1164,11 +1194,16 @@ class TemplateParser
             return $attrs;
         }
 
-        // Match attr="value" or attr='value'
-        if (preg_match_all('#([a-zA-Z@:-][a-zA-Z0-9@:_-]*)(?:\s*=\s*"([^"]*)"|\s*=\s*\'([^\']*)\')?#', $attrStr, $m, PREG_SET_ORDER)) {
+        // Match attr="value" or attr='value' (attribute names start with letter, @, or :)
+        // v8 fix: exclude modifiers like .self, .capture, .stop from being treated as separate attrs
+        if (preg_match_all('#([a-zA-Z@:][a-zA-Z0-9@:_.-]*)(?:\s*=\s*"([^"]*)"|\s*=\s*\'([^\']*)\')?#', $attrStr, $m, PREG_SET_ORDER)) {
             foreach ($m as $a) {
-                $key   = $a[1];
+                $key = $a[1];
                 $value = $a[2] ?? ($a[3] ?? '');
+                // Skip if key starts with . (modifier, not a separate attribute)
+                if (str_starts_with($key, '.')) {
+                    continue;
+                }
                 $attrs[$key] = $value;
             }
         }

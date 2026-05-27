@@ -95,13 +95,7 @@ class ComparisonExpression extends ExpressionType
             return 'null';
         }
 
-        // Property access (e.g., item.id)
-        if (str_contains($operand, '.')) {
-            $parts = explode('.', $operand, 2);
-            return '$this->' . $parts[0] . "['" . $parts[1] . "']";
-        }
-
-        // Variable reference
+        // Variable reference (uses mapVariable which handles v-for context)
         return $this->mapVariable($operand, $loopInfo);
     }
 
