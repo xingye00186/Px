@@ -2,25 +2,29 @@
 
 use Px\Rendering\VNode;
 use Px\Rendering\CssMappings;
+use Px\Compiler\Expression\ExpressionParser;
+use Px\Compiler\Directive\IfElseChain;
 
 /**
- * SFC Compiler v7 — VNode-based Single File Component compiler for AOT desktop apps
+ * SFC Compiler v8 — VNode-based Single File Component compiler for AOT desktop apps
  *
- * Usage: php framework/sfc-compiler.php apps/calculator/App.vue [--dump-ast]
+ * Usage: php framework/compiler/sfc-compiler.php apps/calculator/App.vue [--dump-ast]
  *
- * Architecture (v7):
+ * Architecture (v8):
  *   1. Block Extraction:     template / script / style from .vue
  *   2. Style Parsing:        CSS class → GDI properties (via CssMappings)
  *   3. Template Parsing:     recursive descent → VNode tree (via TemplateParser)
  *   4. Component Resolution: resolve <child-comp> refs, flatten into VNode tree
  *   5. Code Generation:      generate render() with VNode::h(), dispatchClick() with match
  *   6. AOT Validation:       check generated code before write
+ *   7. Expression Parser:    parse ternary, comparison, logical expressions (v8)
+ *   8. If-Else Chain:         support v-if/v-else-if/v-else (v8)
  *
- * v7 变更:
- *   - 全链路 VNode 架构 (parser 产出 VNode, render() 返回 VNode)
- *   - 废弃 getLayout()/getBindValue()/evalCondition()
- *   - dispatchClick() 使用 match 表达式 (PHP 8.4)
- *   - v-for 生成 foreach 循环 (运行时，不再编译期展开 100 个槽)
+ * v8 新增:
+ *   - ExpressionParser: 支持三元运算符、比较运算符、逻辑运算符
+ *   - IfElseChain: 支持 v-if/v-else-if/v-else 链
+ *   - :class 指令: 动态 class 绑定
+ *   - v-show 指令: 条件可见性
  */
 
 // ---- Load compiler modules ----
@@ -32,6 +36,16 @@ require_once $compilerDir . '/template-parser.php';
 require_once $compilerDir . '/aot-validator.php';
 require_once $compilerDir . '/script-analyzer.php';
 require_once $compilerDir . '/component-registry.php';
+
+// ---- Load expression and directive modules (v8) ----
+require_once $compilerDir . '/expression/ExpressionParserInterface.php';
+require_once $compilerDir . '/expression/ExpressionTypeInterface.php';
+require_once $compilerDir . '/expression/ExpressionType.php';
+require_once $compilerDir . '/expression/TernaryExpression.php';
+require_once $compilerDir . '/expression/ComparisonExpression.php';
+require_once $compilerDir . '/expression/LogicalExpression.php';
+require_once $compilerDir . '/expression/ExpressionParser.php';
+require_once $compilerDir . '/directive/IfElseChain.php';
 
 // ============================================================
 // Helper — build component registry
@@ -191,13 +205,30 @@ function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
         if (isset($node->props['bind'])) {
             $bindKeys[$node->props['bind']] = true;
         }
-        // v-if="prop"
+        // v-if="prop" - only extract simple variable names, not expressions
         if (isset($node->props['v-if'])) {
-            $bindKeys[$node->props['v-if']] = true;
+            $vif = $node->props['v-if'];
+            if (preg_match('/^([a-zA-Z_][a-zA-Z0-9_]*)$/', $vif)) {
+                $bindKeys[$vif] = true;
+            }
+        }
+        // v-else-if="prop" (v8)
+        if (isset($node->props['v-else-if'])) {
+            $vif = $node->props['v-else-if'];
+            if (preg_match('/^([a-zA-Z_][a-zA-Z0-9_]*)$/', $vif)) {
+                $bindKeys[$vif] = true;
+            }
         }
         // v-model="prop"
         if (isset($node->props['v-model'])) {
             $bindKeys[$node->props['v-model']] = true;
+        }
+        // v-show="prop" (v8) - only simple variable names
+        if (isset($node->props['v-show'])) {
+            $vshow = $node->props['v-show'];
+            if (preg_match('/^([a-zA-Z_][a-zA-Z0-9_]*)$/', $vshow)) {
+                $bindKeys[$vshow] = true;
+            }
         }
         // :scroll-top="prop"
         if (isset($node->props[':scroll-top'])) {
@@ -209,12 +240,13 @@ function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
         }
         // :items or items
         if (isset($node->props['items'])) {
-            // items attribute may be a dynamic bind expression
             $bindKeys[$node->props['items']] = true;
         }
         if (isset($node->props[':items'])) {
             $bindKeys[$node->props[':items']] = true;
         }
+        // NOTE: :class and :style are NOT added to bindKeys
+        // They are handled by ExpressionParser at code generation time
     }
 
     if ($node->children instanceof VNode) {
@@ -404,9 +436,33 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
 
     // Props
     $propsStr = [];
+
+    // Create ExpressionParser for :class and condition expressions
+    $exprParser = new ExpressionParser();
+
     if ($node->props !== null) {
         foreach ($node->props as $k => $v) {
             if (str_starts_with($k, '__')) continue;
+
+            // Handle :class directive (v8: dynamic class binding)
+            if ($k === ':class') {
+                $parsedClass = $exprParser->parse($v, $loopInfo);
+                $propsStr[] = var_export('class', true) . '=>' . $parsedClass;
+                continue;
+            }
+
+            // Handle v-show directive (v8: conditional visibility)
+            // Must handle BEFORE iterating to avoid duplicate 'style' key
+            if ($k === 'v-show') {
+                $showCond = $exprParser->parse($v, $loopInfo);
+                $origStyle = $node->props['style'] ?? '';
+                // Store for later addition after props loop
+                $node->__vShowCond = $showCond;
+                $node->__vShowOrigStyle = $origStyle;
+                // Skip style here - will be added later with visibility condition
+                continue;
+            }
+
             // Map v-for expressions to PHP foreach variables
             if ($loopInfo !== null) {
                 if ($k === ':bind' || $k === 'bind' || $k === 'v-model') {
@@ -457,17 +513,21 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
         if (count($node->children) === 0) {
             $childrenExpr = 'null';
         } else {
-            // Check if any child has v-if — switch to closure-based builder (Vue 3 style)
-            $hasVIf = false;
+            // Check if any child has v-if/v-else-if/v-else — use IfElseChain for v8
+            $hasConditional = false;
             foreach ($node->children as $child) {
-                if ($child instanceof VNode && isset($child->props['v-if'])) {
-                    $hasVIf = true;
-                    break;
+                if ($child instanceof VNode) {
+                    if (isset($child->props['v-if']) ||
+                        isset($child->props['v-else-if']) ||
+                        isset($child->props['v-else'])) {
+                        $hasConditional = true;
+                        break;
+                    }
                 }
             }
 
-            if (!$hasVIf) {
-                // Original: inline array (no v-if children)
+            if (!$hasConditional) {
+                // No conditional children at all - use original inline array
                 $childExprs = [];
                 foreach ($node->children as $child) {
                     if ($child instanceof VNode) {
@@ -477,7 +537,6 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 if (count($childExprs) === 1) {
                     $childrenExpr = $childExprs[0];
                 } else {
-                    // Spread v-for helpers (...) inside array literal — they return VNode[]
                     $spreadExprs = [];
                     $childIdx = 0;
                     foreach ($node->children as $child) {
@@ -493,66 +552,193 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     $childrenExpr = "[\n{$ind}            " . implode(",\n{$ind}            ", $spreadExprs) . ",\n{$ind}        ]";
                 }
             } else {
-                // Closure-based builder: v-if evaluated at render() time
-                // Groups consecutive same-condition children under single if block
-                $stmts = [];
-                $stmts[] = "\$c = [];";
-                $childCount = count($node->children);
-
-                for ($i = 0; $i < $childCount; $i++) {
-                    $child = $node->children[$i];
-                    if (!$child instanceof VNode) continue;
-
-                    $cvif = $child->props['v-if'] ?? '';
-                    if ($cvif !== '') {
-                        // Save and strip v-if from props (handled at compile time now)
-                        $savedVIf = $child->props['v-if'];
-                        unset($child->props['v-if']);
-                        $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 2);
-                        $child->props['v-if'] = $savedVIf; // restore
-
-                        // Group consecutive children with same v-if condition
-                        $stmts[] = "{$ind}    if (\$this->{$cvif}) {";
-                        if (isset($child->vForHelper)) {
-                            $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
-                        } else {
-                            $stmts[] = "{$ind}        \$c[] = {$childExpr};";
-                        }
-
-                        $i++;
-                        while ($i < $childCount) {
-                            $nextChild = $node->children[$i];
-                            if (!$nextChild instanceof VNode) break;
-                            $nextVIf = $nextChild->props['v-if'] ?? '';
-                            if ($nextVIf !== $cvif) break;
-
-                            unset($nextChild->props['v-if']);
-                            $nextExpr = generateVNodeExpr($nextChild, $loopInfo, $indent + 2);
-                            $nextChild->props['v-if'] = $nextVIf; // restore
-                            if (isset($nextChild->vForHelper)) {
-                                $stmts[] = "{$ind}        array_push(\$c, ...{$nextExpr});";
-                            } else {
-                                $stmts[] = "{$ind}        \$c[] = {$nextExpr};";
-                            }
-                            $i++;
-                        }
-                        $i--; // compensate for outer loop increment
-                        $stmts[] = "{$ind}    }";
-                    } else {
-                        $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1);
-                        if (isset($child->vForHelper)) {
-                            $stmts[] = "{$ind}    array_push(\$c, ...{$childExpr});";
-                        } else {
-                            $stmts[] = "{$ind}    \$c[] = {$childExpr};";
+                // Has conditional children - find first conditional child
+                $firstConditionalChild = null;
+                foreach ($node->children as $child) {
+                    if ($child instanceof VNode) {
+                        if (isset($child->props['v-if']) ||
+                            isset($child->props['v-else-if']) ||
+                            isset($child->props['v-else'])) {
+                            $firstConditionalChild = $child;
+                            break;
                         }
                     }
                 }
-                $stmts[] = "{$ind}    return \$c;";
+                $firstIsConditional = ($firstConditionalChild !== null);
 
-                // Wrap as immediately-invoked closure → single expression
-                $childrenExpr = "(function() {\n" . implode("\n", $stmts) . "\n{$ind}    })()";
+                if (!$firstIsConditional) {
+                    // First child is NOT conditional: use original inline array approach
+                    $childExprs = [];
+                    foreach ($node->children as $child) {
+                        if ($child instanceof VNode) {
+                            $childExprs[] = generateVNodeExpr($child, $loopInfo, $indent + 1);
+                        }
+                    }
+                    if (count($childExprs) === 1) {
+                        $childrenExpr = $childExprs[0];
+                    } else {
+                        $spreadExprs = [];
+                        $childIdx = 0;
+                        foreach ($node->children as $child) {
+                            if ($child instanceof VNode) {
+                                $expr = $childExprs[$childIdx];
+                                if (isset($child->vForHelper)) {
+                                    $expr = '...' . $expr;
+                                }
+                                $spreadExprs[] = $expr;
+                                $childIdx++;
+                            }
+                        }
+                        $childrenExpr = "[\n{$ind}            " . implode(",\n{$ind}            ", $spreadExprs) . ",\n{$ind}        ]";
+                    }
+                } else {
+                    // First child IS conditional: use IfElseChain builder
+                    // v8: IfElseChain-based builder for v-if/v-else-if/v-else support
+                    // Uses ExpressionParser for condition expressions
+                    static $ifElseExprParser = null;
+                    if ($ifElseExprParser === null) {
+                        $ifElseExprParser = new ExpressionParser();
+                    }
+
+                    $stmts = [];
+                    $stmts[] = "\$c = [];";
+                    $childCount = count($node->children);
+                    $i = 0;
+                    $chainStarted = false;   // Have we started an if-else chain?
+                    $inConditionalBlock = false;  // Are we currently inside a conditional branch?
+                    $chainClosed = false;   // Has the chain ended (past v-else)?
+
+                    while ($i < $childCount) {
+                        $child = $node->children[$i];
+                        if (!$child instanceof VNode) {
+                            $i++;
+                            continue;
+                        }
+
+                        $vIf = $child->props['v-if'] ?? null;
+                        $vElseIf = $child->props['v-else-if'] ?? null;
+                        $vElse = $child->props['v-else'] ?? null;
+
+                        // Determine branch type and condition
+                        $branchType = null;
+                        $condition = null;
+
+                        if ($vIf !== null) {
+                            $branchType = 'if';
+                            $condition = $vIf;
+                        } elseif ($vElseIf !== null) {
+                            $branchType = 'else-if';
+                            $condition = $vElseIf;
+                        } elseif ($vElse !== null) {
+                            $branchType = 'else';
+                            $condition = null;
+                        }
+
+                        if ($branchType !== null) {
+                            // This is a conditional child
+                            $chainStarted = true;
+                            $isElseBranch = ($branchType === 'else');
+                            $isElseIfBranch = ($branchType === 'else-if');
+                            $chainClosed = $isElseBranch;
+                            // We're inside a conditional block if it's else/else-if,
+                            // OR if it's a regular v-if (to capture following non-conditional children)
+                            $inConditionalBlock = $isElseBranch || $isElseIfBranch || ($branchType === 'if');
+
+                            // Generate branch header
+                            if ($branchType === 'if') {
+                                $parsedCond = $ifElseExprParser->parse($condition, $loopInfo);
+                                $stmts[] = "{$ind}    if ({$parsedCond}) {";
+                            } elseif ($branchType === 'else-if') {
+                                $parsedCond = $ifElseExprParser->parse($condition, $loopInfo);
+                                $stmts[] = "{$ind}    } elseif ({$parsedCond}) {";
+                            } else {
+                                // v-else: close the previous branch, start else
+                                $stmts[] = "{$ind}    } else {";
+                            }
+
+                            // Generate child node code (strip v-if/v-else-if/v-else props)
+                            $savedProps = [];
+                            foreach (['v-if', 'v-else-if', 'v-else'] as $propKey) {
+                                if (isset($child->props[$propKey])) {
+                                    $savedProps[$propKey] = $child->props[$propKey];
+                                    unset($child->props[$propKey]);
+                                }
+                            }
+
+                            // Child content is inside the if block at indent+1
+                            $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1);
+
+                            // Restore props
+                            foreach ($savedProps as $propKey => $propVal) {
+                                $child->props[$propKey] = $propVal;
+                            }
+
+                            // VNode statement: inside the if block at indent+1
+                            if (isset($child->vForHelper)) {
+                                $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
+                            } else {
+                                $stmts[] = "{$ind}        \$c[] = {$childExpr};";
+                            }
+                        } else {
+                            // Non-conditional child
+                            if ($inConditionalBlock) {
+                                // Inside an if/else-if/else branch - add inside the block
+                                $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1);
+                                if (isset($child->vForHelper)) {
+                                    $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
+                                } else {
+                                    $stmts[] = "{$ind}        \$c[] = {$childExpr};";
+                                }
+                            } else {
+                                // Outside any conditional block - add at top level (siblings to if-else chain)
+                                $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1);
+                                if (isset($child->vForHelper)) {
+                                    $stmts[] = "{$ind}    array_push(\$c, ...{$childExpr});";
+                                } else {
+                                    $stmts[] = "{$ind}    \$c[] = {$childExpr};";
+                                }
+                            }
+                        }
+                        $i++;
+                    }
+                    // Close the if-else chain if we started one
+                    if ($chainStarted) {
+                        // Calculate nesting depth by counting "levels" of nested conditionals
+                        // Sequential siblings (v-if → v-else-if → v-else) have depth 1
+                        // Nested conditionals have depth 2+
+                        $nestingDepth = 0;
+                        $prevWasConditional = false;
+                        for ($j = 0; $j < $childCount; $j++) {
+                            $c = $node->children[$j];
+                            if ($c instanceof VNode) {
+                                $isCond = isset($c->props['v-if']) || isset($c->props['v-else-if']) || isset($c->props['v-else']);
+                                if ($isCond) {
+                                    if (!$prevWasConditional) {
+                                        // Start of a new conditional block
+                                        $nestingDepth++;
+                                    }
+                                }
+                                $prevWasConditional = $isCond;
+                            }
+                        }
+                        // Generate closing braces: first at indent+1, subsequent at indent+2
+                        for ($d = 0; $d < $nestingDepth; $d++) {
+                            $closeIndent = ($d === 0) ? "{$ind}    " : "{$ind}        ";
+                            $stmts[] = "{$closeIndent}}";
+                        }
+                    }
+                    $stmts[] = "{$ind}    return \$c;";
+
+                    // Wrap as immediately-invoked closure → single expression
+                    $childrenExpr = "(function() {\n" . implode("\n", $stmts) . "\n{$ind}    })()";
+                }
             }
         }
+    }
+
+    // Handle v-show after props loop: add conditional style once
+    if (isset($node->__vShowCond)) {
+        $propsStr[] = var_export('style', true) . "=>({$node->__vShowCond}) ? '{$node->__vShowOrigStyle}' : '{$node->__vShowOrigStyle};visibility:hidden'";
     }
 
     $propsOut = '[' . implode(',', $propsStr) . ']';
