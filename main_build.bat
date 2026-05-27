@@ -78,8 +78,23 @@ set "DLL_PHPX=%COMPILER_DIR%\phpx.dll"
 :: Set environment variable for PHP scripts (used by vendor/autoload.php)
 set "SWOOLE_COMPILER_ROOT=%COMPILER_DIR%"
 
-:: vcvarsall - system path, change here if needed
-set "VCVARSALL=C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat"
+:: vcvarsall - auto-detect with config.yml override
+:: Priority: 1) cl.exe in PATH  2) config.yml vcvarsall key  3) auto-search VS directory
+set "VCVARSALL="
+
+:: 1) From config.yml (explicit override)
+for /f "tokens=1,* delims=:" %%a in ('findstr /r "^vcvarsall:" "%FRAMEWORK_ROOT%\config.yml" 2^>nul') do (
+    for /f "tokens=*" %%c in ("%%b") do set "VCVARSALL=%%~c"
+)
+
+:: 2) Auto-search Visual Studio directory (2017 / 2019 / 2022)
+if not defined VCVARSALL (
+    for /f "delims=" %%f in ('dir /s /b "C:\Program Files\Microsoft Visual Studio\vcvarsall.bat" 2^>nul') do (
+        set "VCVARSALL=%%f"
+        goto :vcvarsall_done
+    )
+)
+:vcvarsall_done
 
 :: --------------------------------------------------------------------------
 :: Entry point
@@ -111,23 +126,29 @@ if not exist "%APPS_DIR%\" (
     echo [ERROR] apps directory not found: %APPS_DIR%
     goto :error
 )
-if not exist "%VCVARSALL%" (
-    echo [WARN] vcvarsall.bat not found: %VCVARSALL%
+if not defined VCVARSALL (
+    echo [WARN] vcvarsall.bat not found in config.yml or auto-search
     echo   If AOT build fails, run from Developer Command Prompt for VS
     echo.
 )
 
 :: ---- MSVC environment (one-time) ----
 echo [INIT] MSVC compile environment...
-if exist "%VCVARSALL%" (
-    call "%VCVARSALL%" x64 >nul 2>&1
-    if %errorlevel% neq 0 (
-        echo   [WARN] MSVC environment init failed
+if defined VCVARSALL (
+    if exist "!VCVARSALL!" (
+        echo   Calling vcvarsall.bat x64...
+        echo   Path: !VCVARSALL!
+        call "!VCVARSALL!" x64 >nul 2>&1
+        if !errorlevel! neq 0 (
+            echo   [WARN] MSVC environment init failed
+        ) else (
+            where cl >nul 2>&1 && echo   [OK] cl.exe available || echo   [WARN] cl.exe not in PATH
+        )
     ) else (
-        where cl >nul 2>&1 && echo   [OK] cl.exe available || echo   [WARN] cl.exe not in PATH
+        echo   [WARN] vcvarsall.bat not found at configured path
     )
 ) else (
-    echo   [SKIP] vcvarsall.bat not configured
+    echo   [SKIP] vcvarsall.bat not found in config.yml or auto-search
 )
 echo.
 
@@ -234,9 +255,10 @@ where cl >nul 2>&1
 if !errorlevel! neq 0 (
     echo [ERROR] cl.exe not in PATH
     echo.
-    echo   Please resolve by:
+    echo   To resolve:
     echo     1. Run from 'Developer Command Prompt for VS'
-    echo     2. Check VCVARSALL path: %VCVARSALL%
+    echo     2. Or set path in config.yml: vcvarsall: C:\path\to\vcvarsall.bat
+    echo     3. Ensure Visual Studio 2017/2019/2022 is installed
     echo.
     goto :choose
 )
@@ -319,7 +341,7 @@ echo.
 where cl >nul 2>&1
 if !errorlevel! neq 0 (
     echo [ERROR] cl.exe lost after SFC, cannot continue AOT
-    echo   Please run from Developer Command Prompt for VS
+    echo   Run from Developer Command Prompt for VS, or set vcvarsall in config.yml
     goto :choose
 )
 
@@ -352,6 +374,7 @@ if !AOT_EXIT! neq 0 (
     echo   Common causes:
     echo     1. MSVC [cl.exe] not found
     echo        == Run from Developer Command Prompt for VS
+    echo        == Or set in config.yml: vcvarsall: C:\path\to\vcvarsall.bat
     echo     2. Top-level stray code [require_once, include]
     echo        == All code must be in functions or classes
     echo     3. Variable used before defined

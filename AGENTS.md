@@ -423,6 +423,28 @@ Step 3:   打包 (exe + php8ts.dll + phpx.dll → bin/)
 | Step 2 Swoole 编译器报错 | 先用手动 `php -l` 检查 PHP 语法 |
 | 系统 `php -l` 报语法错 | 用 `D:\swoole_compiler\php.exe` 而非系统 PATH 中的 PHP |
 
+### 8.4 多机器 vcvarsall 路径配置
+
+`build.bat` 的 Step 0 需要找到 `vcvarsall.bat` 来初始化 MSVC 编译环境。不同机器上 Visual Studio 安装路径可能不同（如 VS 2017/2019/2022、Community/Professional/Enterprise），框架采用**三级优先级自动检测**：
+
+| 优先级 | 来源 | 说明 |
+|--------|------|------|
+| 1 | 当前 PATH | 如果 `cl.exe` 已在 PATH 中（如手动打开 VS Dev Cmd），直接跳过 vcvarsall |
+| 2 | `config.yml` | 在项目根目录 `config.yml` 中配置 `vcvarsall` 键，显式指定路径 |
+| 3 | 自动搜索 | 递归搜索 `C:\Program Files\Microsoft Visual Studio\` 下所有 `vcvarsall.bat`，取第一个 |
+
+**配置示例**（`config.yml`）：
+
+```yaml
+# 家目录电脑 VS 2022 Community
+vcvarsall: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat
+
+# 笔记本 VS 2019 Professional（注释掉不需要的行）
+# vcvarsall: C:\Program Files\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat
+```
+
+> **提示**：绝大多数情况下**无需配置**，自动搜索即可覆盖 VS 2017/2019/2022 的所有版本。只有在自动搜索失败或需要指定特定版本时才需要手动配置。
+
 ---
 
 ## 九、常见开发任务
