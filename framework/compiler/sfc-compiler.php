@@ -3,7 +3,6 @@
 use Px\Rendering\VNode;
 use Px\Rendering\CssMappings;
 use Px\Compiler\Expression\ExpressionParser;
-use Px\Compiler\Directive\IfElseChain;
 
 /**
  * SFC Compiler v8 — VNode-based Single File Component compiler for AOT desktop apps
@@ -18,7 +17,7 @@ use Px\Compiler\Directive\IfElseChain;
  *   5. Code Generation:      generate render() with VNode::h(), dispatchClick() with match
  *   6. AOT Validation:       check generated code before write
  *   7. Expression Parser:    parse ternary, comparison, logical expressions (v8)
- *   8. If-Else Chain:         support v-if/v-else-if/v-else (v8)
+ *   8. If-Else Chain:       support v-if/v-else-if/v-else (v8)
  *
  * v8 新增:
  *   - ExpressionParser: 支持三元运算符、比较运算符、逻辑运算符
@@ -45,7 +44,6 @@ require_once $compilerDir . '/expression/TernaryExpression.php';
 require_once $compilerDir . '/expression/ComparisonExpression.php';
 require_once $compilerDir . '/expression/LogicalExpression.php';
 require_once $compilerDir . '/expression/ExpressionParser.php';
-require_once $compilerDir . '/directive/IfElseChain.php';
 
 // ============================================================
 // Helper — build component registry
