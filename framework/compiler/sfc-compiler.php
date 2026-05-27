@@ -637,12 +637,53 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                             $chainStarted = true;
                             $isElseBranch = ($branchType === 'else');
                             $isElseIfBranch = ($branchType === 'else-if');
-                            $chainClosed = $isElseBranch;
-                            // Only v-else-if/v-else should track we're inside a conditional block
-                            // v-if does NOT set inConditionalBlock - it just starts the chain
-                            $inConditionalBlock = $isElseBranch || $isElseIfBranch;
 
-                            // Generate branch header
+                            // For v-if without following else-if/else:
+                            // Generate if block with its child, then close it
+                            if ($branchType === 'if') {
+                                // Look ahead: is the next child v-else-if or v-else?
+                                $hasFollowingConditional = false;
+                                for ($j = $i + 1; $j < $childCount; $j++) {
+                                    $nextChild = $node->children[$j];
+                                    if ($nextChild instanceof VNode && (
+                                        isset($nextChild->props['v-else-if']) ||
+                                        isset($nextChild->props['v-else'])
+                                    )) {
+                                        $hasFollowingConditional = true;
+                                        break;
+                                    }
+                                }
+                                if (!$hasFollowingConditional) {
+                                    // No else-if/else following:
+                                    // Generate if {...} with child inside, then close
+                                    $parsedCond = $ifElseExprParser->parse($condition, $loopInfo);
+                                    $stmts[] = "{$ind}    if ({$parsedCond}) {";
+
+                                    // Generate child node code (strip v-if prop)
+                                    $savedProps = [];
+                                    foreach (['v-if', 'v-else-if', 'v-else'] as $propKey) {
+                                        if (isset($child->props[$propKey])) {
+                                            $savedProps[$propKey] = $child->props[$propKey];
+                                            unset($child->props[$propKey]);
+                                        }
+                                    }
+                                    $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1);
+                                    foreach ($savedProps as $propKey => $propVal) {
+                                        $child->props[$propKey] = $propVal;
+                                    }
+
+                                    if (isset($child->vForHelper)) {
+                                        $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
+                                    } else {
+                                        $stmts[] = "{$ind}        \$c[] = {$childExpr};";
+                                    }
+                                    $stmts[] = "{$ind}    }";
+                                    $i++;
+                                    continue;
+                                }
+                            }
+
+                            // Generate branch header (for v-if with else-if/else, or else-if/else)
                             if ($branchType === 'if') {
                                 $parsedCond = $ifElseExprParser->parse($condition, $loopInfo);
                                 $stmts[] = "{$ind}    if ({$parsedCond}) {";
@@ -654,6 +695,9 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                 $stmts[] = "{$ind}    } else {";
                             }
 
+                            // Mark that we're inside a conditional block (else-if/else only)
+                            $inConditionalBlock = $isElseBranch || $isElseIfBranch;
+
                             // Generate child node code (strip v-if/v-else-if/v-else props)
                             $savedProps = [];
                             foreach (['v-if', 'v-else-if', 'v-else'] as $propKey) {
@@ -662,11 +706,7 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                     unset($child->props[$propKey]);
                                 }
                             }
-
-                            // Child content is inside the if block at indent+1
                             $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1);
-
-                            // Restore props
                             foreach ($savedProps as $propKey => $propVal) {
                                 $child->props[$propKey] = $propVal;
                             }
@@ -704,17 +744,42 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                         // Calculate nesting depth by counting "levels" of nested conditionals
                         // Sequential siblings (v-if → v-else-if → v-else) have depth 1
                         // Nested conditionals have depth 2+
+                        // NOTE: Standalone v-ifs (no following else-if/else) are already
+                        // closed in the standalone case block, so don't count them here
                         $nestingDepth = 0;
                         $prevWasConditional = false;
+                        $prevWasStandaloneIf = false;
                         for ($j = 0; $j < $childCount; $j++) {
                             $c = $node->children[$j];
                             if ($c instanceof VNode) {
-                                $isCond = isset($c->props['v-if']) || isset($c->props['v-else-if']) || isset($c->props['v-else']);
+                                $isIf = isset($c->props['v-if']);
+                                $isElseIf = isset($c->props['v-else-if']);
+                                $isElse = isset($c->props['v-else']);
+                                $isCond = $isIf || $isElseIf || $isElse;
                                 if ($isCond) {
-                                    if (!$prevWasConditional) {
-                                        // Start of a new conditional block
+                                    // Check if this is a standalone v-if (no following else-if/else)
+                                    $isStandaloneIf = false;
+                                    if ($isIf) {
+                                        $hasFollowing = false;
+                                        for ($k = $j + 1; $k < $childCount; $k++) {
+                                            $next = $node->children[$k];
+                                            if ($next instanceof VNode && (
+                                                isset($next->props['v-else-if']) ||
+                                                isset($next->props['v-else'])
+                                            )) {
+                                                $hasFollowing = true;
+                                                break;
+                                            }
+                                        }
+                                        $isStandaloneIf = !$hasFollowing;
+                                    }
+                                    // Count as new nesting level only if:
+                                    // - It's not a standalone v-if (already closed), OR
+                                    // - The previous was a standalone if (it's a new chain)
+                                    if (!$isStandaloneIf && !($prevWasConditional && $prevWasStandaloneIf)) {
                                         $nestingDepth++;
                                     }
+                                    $prevWasStandaloneIf = $isStandaloneIf;
                                 }
                                 $prevWasConditional = $isCond;
                             }
