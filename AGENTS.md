@@ -679,6 +679,127 @@ public function handleAction(string $id): void {
 - **检查渲染元素**：在 `collectElements` 中打印 `$elementsByLayer`
 - **formatted 输出**：在 `Application::render()` 中调用 `var_dump` 输出 activeVNodeTree
 
+### 9.7 AI 自动截图测试
+
+在进行 UI 渲染测试时，可以使用 PowerShell 脚本自动截图验证布局效果。
+
+**截图脚本模板**（保存到 `apps/<app-name>/test_screen.ps1`）：
+
+```powershell
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$exePath = "f:/work/Px/apps/<app-name>/bin/<app-name>.exe"
+$screenPath = "f:/work/Px/apps/<app-name>/screenshot.png"
+
+$proc = Start-Process $exePath -PassThru
+Start-Sleep 3
+
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public class WND {
+    [DllImport("user32.dll")]
+    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+    [DllImport("user32.dll")]
+    public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+    [DllImport("user32.dll")]
+    public static extern int GetWindowTextLength(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT {
+        public int Left, Top, Right, Bottom;
+    }
+}
+"@
+
+$targetHwnd = [IntPtr]::Zero
+$targetPID = $proc.Id
+
+$callback = {
+    param([IntPtr]$hWnd, [IntPtr]$lParam)
+    $winPid = 0
+    [WND]::GetWindowThreadProcessId($hWnd, [ref]$winPid) | Out-Null
+    if ($winPid -eq $targetPID) {
+        if ([WND]::IsWindowVisible($hWnd)) {
+            $len = [WND]::GetWindowTextLength($hWnd)
+            if ($len -gt 0) {
+                $sb = New-Object System.Text.StringBuilder($len + 1)
+                [WND]::GetWindowText($hWnd, $sb, $sb.Capacity) | Out-Null
+                $title = $sb.ToString()
+                if ($title -ne "") {
+                    $script:targetHwnd = $hWnd
+                    return $false
+                }
+            }
+        }
+    }
+    return $true
+}
+
+[WND]::EnumWindows($callback, [IntPtr]::Zero) | Out-Null
+
+if ($targetHwnd -ne [IntPtr]::Zero) {
+    [WND]::ShowWindow($targetHwnd, 1) | Out-Null
+    Start-Sleep -Milliseconds 800
+    [WND]::SetForegroundWindow($targetHwnd) | Out-Null
+    Start-Sleep -Milliseconds 500
+
+    $rect = New-Object WND+RECT
+    [WND]::GetWindowRect($targetHwnd, [ref]$rect) | Out-Null
+
+    $w = $rect.Right - $rect.Left
+    $h = $rect.Bottom - $rect.Top
+    if ($w -gt 10 -and $h -gt 10) {
+        $bmp = New-Object System.Drawing.Bitmap($w, $h)
+        $graphics = [System.Drawing.Graphics]::FromImage($bmp)
+        $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, (New-Object System.Drawing.Size($w, $h)))
+        $bmp.Save($screenPath)
+        $graphics.Dispose()
+        $bmp.Dispose()
+        Write-Host "Screenshot saved: ${w}x${h} at ($($rect.Left), $($rect.Top))"
+    }
+} else {
+    Write-Host "Window not found"
+}
+
+if (-not $proc.HasExited) {
+    Stop-Process $proc.Id -Force -ErrorAction SilentlyContinue
+}
+```
+
+**使用流程**：
+
+1. 修改 `.vue` 文件测试布局
+2. 运行构建：
+   ```bash
+   cd f:/work/Px
+   Remove-Item 'apps/<app-name>/gen/*.php' -Force  # 清理旧生成文件
+   .\build.bat <app-name>
+   ```
+3. 运行截图脚本：
+   ```bash
+   powershell -ExecutionPolicy Bypass -File "f:/work/Px/apps/<app-name>/test_screen.ps1"
+   ```
+4. 查看 `screenshot.png` 验证渲染结果
+
+**注意事项**：
+
+- 截图前需确保 `gen/` 目录被清理，否则可能使用旧代码
+- 每个应用目录应只保留一个 `.vue` 文件（按字母顺序编译）
+- 窗口定位使用 `EnumWindows` 匹配进程 PID，避免捕获错误窗口
+
 ---
 
 ## 十、已知问题与设计债务
