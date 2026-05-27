@@ -638,9 +638,9 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                             $isElseBranch = ($branchType === 'else');
                             $isElseIfBranch = ($branchType === 'else-if');
                             $chainClosed = $isElseBranch;
-                            // We're inside a conditional block if it's else/else-if,
-                            // OR if it's a regular v-if (to capture following non-conditional children)
-                            $inConditionalBlock = $isElseBranch || $isElseIfBranch || ($branchType === 'if');
+                            // Only v-else-if/v-else should track we're inside a conditional block
+                            // v-if does NOT set inConditionalBlock - it just starts the chain
+                            $inConditionalBlock = $isElseBranch || $isElseIfBranch;
 
                             // Generate branch header
                             if ($branchType === 'if') {
