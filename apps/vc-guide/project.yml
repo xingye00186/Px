@@ -1,0 +1,20 @@
+name: vc-guide
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php
+  - ./components
+  - ./screenshots
+component-libraries:
+  - path: ../../library/vc-ui
+    prefix: vc
+    mode: auto-register
