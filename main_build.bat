@@ -227,6 +227,8 @@ set "EXE_NAME=%APP_NAME%"
 for /f "tokens=2 delims=: " %%a in ('findstr /r "^name:" "%APP_DIR%\project.yml" 2^>nul') do (
     set "EXE_NAME=%%~a"
 )
+:: Swoole Compiler converts hyphens to underscores in output filename
+set "EXE_NAME=!EXE_NAME:-=_!"
 set "OUTPUT_EXE=%EXE_NAME%.exe"
 
 :: Get .vue filename (for SFC step)
