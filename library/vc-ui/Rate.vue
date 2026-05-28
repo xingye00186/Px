@@ -25,7 +25,7 @@
     public string $rateText = '';
 
     /** 星级文案 */
-    public string $texts = '["terrible","poor","fair","good","excellent"]';
+    public array $texts = ['terrible', 'poor', 'fair', 'good', 'excellent'];
 
     /**
      * 选择星级
@@ -33,9 +33,8 @@
     public function selectStar(int $idx): void
     {
         $this->modelValue = (string)$idx;
-        $texts = json_decode($this->texts, true);
-        if (is_array($texts) && isset($texts[$idx - 1])) {
-            $this->rateText = $texts[$idx - 1];
+        if (isset($this->texts[$idx - 1])) {
+            $this->rateText = $this->texts[$idx - 1];
         }
     }
 

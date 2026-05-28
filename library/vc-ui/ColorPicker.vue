@@ -32,7 +32,7 @@
     public string $isOpen = '';
 
     /** 预定义颜色列表 */
-    public string $presetColorsJson = '["#FFFFFF","#F2F2F2","#D8D8D8","#BFBFBF","#999999","#666666","#333333","#000000","#FF0000","#FF7F00","#FFFF00","#00FF00","#00FFFF","#0000FF","#8B00FF","#FF00FF","#FFF0F5","#F0FFF0","#F0F8FF","#FAF0E6"]';
+    public array $presetColors = ['#FFFFFF','#F2F2F2','#D8D8D8','#BFBFBF','#999999','#666666','#333333','#000000','#FF0000','#FF7F00','#FFFF00','#00FF00','#00FFFF','#0000FF','#8B00FF','#FF00FF','#FFF0F5','#F0FFF0','#F0F8FF','#FAF0E6'];
 
     /**
      * 切换展开
@@ -44,6 +44,7 @@
         } else {
             $this->isOpen = '1';
         }
+        $this->markDirty();
     }
 
     /**
@@ -53,6 +54,7 @@
     {
         $this->modelValue = $hex;
         $this->isOpen = '';
+        $this->markDirty();
     }
 
     /**
@@ -60,8 +62,7 @@
      */
     public function getPresetColors(): array
     {
-        $colors = json_decode($this->presetColorsJson, true);
-        if (!is_array($colors)) return [];
+        $colors = $this->presetColors;
         $result = [];
         $col = 0;
         $row = 0;
