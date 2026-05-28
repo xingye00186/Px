@@ -209,7 +209,7 @@ function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
     // Component placeholder: collect bind keys from componentProps values (parent scope)
     if ($node->isComponent && $node->componentProps !== null) {
         foreach ($node->componentProps as $parentExpr) {
-            if (is_string($parentExpr) && $parentExpr !== '') {
+            if (is_string($parentExpr) && $parentExpr !== '' && !is_numeric($parentExpr)) {
                 $bindKeys[$parentExpr] = true;
             }
         }
@@ -220,11 +220,13 @@ function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
     if ($node->props !== null) {
         // :bind="prop" → bind key 'prop'
         if (isset($node->props[':bind'])) {
-            $bindKeys[$node->props[':bind']] = true;
+            $key = $node->props[':bind'];
+            if (!is_numeric($key)) $bindKeys[$key] = true;
         }
         // bind="prop" (plain, set by remapChildBindProps / text interpolation)
         if (isset($node->props['bind'])) {
-            $bindKeys[$node->props['bind']] = true;
+            $key = $node->props['bind'];
+            if (!is_numeric($key)) $bindKeys[$key] = true;
         }
         // v-if="prop" - only extract simple variable names, not expressions
         if (isset($node->props['v-if'])) {
@@ -253,18 +255,22 @@ function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
         }
         // :scroll-top="prop"
         if (isset($node->props[':scroll-top'])) {
-            $bindKeys[$node->props[':scroll-top']] = true;
+            $key = $node->props[':scroll-top'];
+            if (!is_numeric($key)) $bindKeys[$key] = true;
         }
         // :scroll-left="prop"
         if (isset($node->props[':scroll-left'])) {
-            $bindKeys[$node->props[':scroll-left']] = true;
+            $key = $node->props[':scroll-left'];
+            if (!is_numeric($key)) $bindKeys[$key] = true;
         }
         // :items or items
         if (isset($node->props['items'])) {
-            $bindKeys[$node->props['items']] = true;
+            $key = $node->props['items'];
+            if (!is_numeric($key)) $bindKeys[$key] = true;
         }
         if (isset($node->props[':items'])) {
-            $bindKeys[$node->props[':items']] = true;
+            $key = $node->props[':items'];
+            if (!is_numeric($key)) $bindKeys[$key] = true;
         }
         // NOTE: :class and :style are NOT added to bindKeys
         // They are handled by ExpressionParser at code generation time
@@ -465,7 +471,18 @@ function generateComponentPropsExpr(array $componentProps): string
     }
     $entries = [];
     foreach ($componentProps as $childKey => $parentExpr) {
-        $entries[] = var_export($childKey, true) . '=>' . var_export($parentExpr, true);
+        // Static string values (not variable references) - mark with 'static:' prefix
+        // This tells runtime to use value directly instead of looking up from parent
+        if (is_string($parentExpr) && substr($parentExpr, 0, 7) === 'static:') {
+            // Already prefixed with 'static:' - KEEP it in generated code
+            // Runtime will extract the value using substr($expr, 7)
+            $entries[] = var_export($childKey, true) . "=>'" . addslashes($parentExpr) . "'";
+        } elseif (is_string($parentExpr) && !preg_match('/^\$|\{\{.*\}}$/', $parentExpr)) {
+            // Static string value - add 'static:' prefix
+            $entries[] = var_export($childKey, true) . "=>'static:" . addslashes($parentExpr) . "'";
+        } else {
+            $entries[] = var_export($childKey, true) . '=>' . var_export($parentExpr, true);
+        }
     }
     return '[' . implode(',', $entries) . ']';
 }
@@ -581,11 +598,22 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
             // Map v-for expressions to PHP foreach variables
             if ($loopInfo !== null) {
                 if ($k === ':bind' || $k === 'bind' || $k === 'v-model') {
+                    // Check if this is an interpolation result (e.g., $item['label'])
+                    // These should NOT generate bind props - the text content IS the value
+                    if (preg_match('/^\$[a-zA-Z_][a-zA-Z0-9_]*\'\[\'?[a-zA-Z_]/', $v)) {
+                        // Skip bind prop - children will use this interpolation directly
+                        continue;
+                    }
                     if (str_starts_with($v, $loopInfo['item'] . '.')) {
-                        $propName = substr($v, strlen($loopInfo['item']) + 1);
-                        $v = "\${$loopInfo['item']}['{$propName}']";
-                    } else {
+                        // Same pattern - skip bind prop
+                        continue;
+                    } elseif (preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $v)) {
+                        // Valid property name: generate $this->property
                         $v = "\$this->{$v}";
+                    } else {
+                        // Invalid property name (e.g., Chinese text from interpolation)
+                        // Don't generate a bind prop at all - just keep as plain value
+                        continue;
                     }
                 } elseif ($k === 'click-arg') {
                     if (str_starts_with($v, $loopInfo['item'] . '.')) {
@@ -611,12 +639,26 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
         // Check if text contains {{ }} interpolation
         if (isset($node->props['bind'])) {
             $bindExpr = $node->props['bind'];
-            // Inside v-for, map to $item['prop']
+            // Inside v-for, check if this is an interpolation pattern like 'item.label'
+            // This represents the interpolated VALUE, not a bind key
             if ($loopInfo !== null && str_starts_with($bindExpr, $loopInfo['item'] . '.')) {
+                // Pattern like 'item.label' - this is interpolation, use directly
                 $propName = substr($bindExpr, strlen($loopInfo['item']) + 1);
                 $childrenExpr = "\${$loopInfo['item']}['{$propName}']";
-            } else {
+                // Don't generate bind prop - children already has the value
+                unset($node->props['bind']);
+            } elseif (preg_match('/^\$[a-zA-Z_][a-zA-Z0-9_]*\'\[\'?[a-zA-Z_]/', $bindExpr)) {
+                // Pattern like $item['label'] - this is the interpolation VALUE
+                $childrenExpr = $bindExpr;
+                unset($node->props['bind']);
+            } elseif (preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $bindExpr)) {
+                // Valid property name: generate $this->property
                 $childrenExpr = "\$this->{$bindExpr}";
+            } else {
+                // Invalid property name (e.g., Chinese text or complex expression)
+                // Use as plain text
+                $childrenExpr = var_export($node->children, true);
+                unset($node->props['bind']);
             }
         } elseif (preg_match('/^\{\{\s*(\w+)\s*\}\}$/', $node->children, $m)) {
             // Text interpolation {{ varName }} → $this->varName
@@ -986,11 +1028,14 @@ function generateSetBindValue(array $bindKeys, array $arrayBindKeys = []): strin
     $cases = [];
     foreach ($binds as $key) {
         if ($key === '') continue;
+        if (is_numeric($key)) continue; // Skip numeric keys - can't be PHP variable names
+        // Validate key is a valid PHP variable name
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $key)) continue;
         if (isset($arrayBindKeys[$key])) {
             // Array-typed property: json_decode before compare/assign
-            $cases[] = "            case '{$key}': \$decoded = json_decode(\$value, true); if (is_array(\$decoded) && \$this->{$key} !== \$decoded) { \$this->{$key} = \$decoded; \$this->markDirty(); } break;";
+            $cases[] = "            case '" . addslashes($key) . "': \$decoded = json_decode(\$value, true); if (is_array(\$decoded) && \$this->{$key} !== \$decoded) { \$this->{$key} = \$decoded; \$this->markDirty(); } break;";
         } else {
-            $cases[] = "            case '{$key}': if (\$this->{$key} !== \$value) { \$this->{$key} = \$value; \$this->markDirty(); } break;";
+            $cases[] = "            case '" . addslashes($key) . "': if (\$this->{$key} !== \$value) { \$this->{$key} = \$value; \$this->markDirty(); } break;";
         }
     }
     if (count($cases) === 0) {
@@ -1018,11 +1063,14 @@ function generateGetBindValue(array $bindKeys, array $arrayBindKeys = []): strin
     $cases = [];
     foreach ($binds as $key) {
         if ($key === '') continue;
+        if (is_numeric($key)) continue; // Skip numeric keys - can't be PHP variable names
+        // Validate key is a valid PHP variable name
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $key)) continue;
         if (isset($arrayBindKeys[$key])) {
             // Array-typed property: json_encode before returning
-            $cases[] = "            case '{$key}': return json_encode(\$this->{$key});";
+            $cases[] = "            case '" . addslashes($key) . "': return json_encode(\$this->{$key});";
         } else {
-            $cases[] = "            case '{$key}': return (string) \$this->{$key};";
+            $cases[] = "            case '" . addslashes($key) . "': return (string) \$this->{$key};";
         }
     }
     if (count($cases) === 0) {
@@ -1351,9 +1399,17 @@ function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &
         // Collect dynamic bind props from component ref (e.g., :value="display")
         $bindProps = [];
         foreach ($child->props as $k => $v) {
+            // Skip internal props
+            if ($k === '__componentFile') {
+                continue;
+            }
             if (strlen($k) > 0 && $k[0] === ':') {
                 $propName = substr($k, 1);
                 $bindProps[$propName] = $v;
+            } elseif ($k !== 'style' && $k !== '@click' && !str_starts_with($k, '@') && !str_starts_with($k, ':')) {
+                // Static props (not directives) - these are string literals passed to component
+                // Mark with 'static:' prefix so runtime knows to use value directly
+                $bindProps[$k] = 'static:' . $v;
             }
         }
 
@@ -1404,7 +1460,10 @@ function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &
 
         $child->componentProps = count($bindProps) > 0 ? $bindProps : null;
 
-        // Remove internal props that are not relevant at runtime
+        // Remove internal props from componentProps that are not relevant at runtime
+        if ($child->componentProps !== null) {
+            unset($child->componentProps['__componentFile']);
+        }
         unset($child->props['__componentFile']);
         // Remove bind props (they're now in componentProps)
         foreach ($bindProps as $propName => $_) {
@@ -1554,6 +1613,12 @@ function compileOneComponent(
     $styleWarnings = [];
     $classStyles = \Px\Rendering\CssMappings::parseStyleBlock($styles, $styleWarnings);
 
+    // Build class styles export (for runtime LayoutResolver)
+    $classStylesExport = '[]';
+    if (count($classStyles) > 0) {
+        $classStylesExport = varExportShort($classStyles);
+    }
+
     // Parse template → VNode tree
     $parser = new TemplateParser($registry);
     $root = $parser->parse($template);
@@ -1602,10 +1667,15 @@ function compileOneComponent(
     $dynamicPropsDeclaration = '';
     foreach ($bindKeys as $key => $_) {
         if ($key === '') continue;
+        if (is_numeric($key)) continue; // Skip numeric keys
         if (preg_match('/public\s+\w+\s+\$' . preg_quote($key, '/') . '\s*[=;]/', $script)) {
             continue;
         }
-        $dynamicPropsDeclaration .= "    public string \$$key = '';\n";
+        // Validate key is a valid PHP variable name
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $key)) {
+            continue; // Skip invalid variable names
+        }
+        $dynamicPropsDeclaration .= "    public string \${$key} = '';\n";
     }
 
     $classContent = <<<PHP
@@ -1649,6 +1719,14 @@ class {$className} extends ReactiveComponent
 {$getBindValue}
     }
 {$vForHelpers}
+
+    /**
+     * 返回 CSS class styles (从 <style> 块编译)
+     */
+    public function getClassStyles(): array
+    {
+        return {$classStylesExport};
+    }
 
     public function __construct(?string \$componentId = null)
     {
@@ -2108,7 +2186,11 @@ $componentClassName = $baseName . 'Component';
 $dynamicPropsDeclaration = '';
 foreach ($bindKeys as $key => $_) {
     if ($key !== '' && !str_contains($classBody, "\${$key}")) {
-        $dynamicPropsDeclaration .= "    public string \$$key = '';\n";
+        // Skip numeric keys - they can't be valid PHP variable names
+        if (is_numeric($key)) continue;
+        // Validate key is a valid PHP variable name
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $key)) continue;
+        $dynamicPropsDeclaration .= "    public string \${$key} = '';\n";
     }
 }
 
