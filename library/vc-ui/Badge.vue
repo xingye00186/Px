@@ -3,7 +3,7 @@
     <!-- 红点模式 -->
     <div v-if="isDot === '1'" style="right:-4px;top:-4px;width:8px;height:8px" class="badge-dot"></div>
     <!-- 数字模式 -->
-    <div v-else style="right:-8px;top:-6px;min-width:18px;height:18px" class="badge-num">{{ displayValue }}</div>
+    <div v-if="isDot !== '1'" style="right:-8px;top:-6px;min-width:18px;height:18px" class="badge-num">{{ displayValue }}</div>
   </div>
 </template>
 

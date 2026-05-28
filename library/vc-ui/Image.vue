@@ -5,7 +5,7 @@
       <div style="left:0px;top:0px;width:300px;height:200px" class="image-inner" :style="'background-image:url(' + src + ')'"></div>
     </div>
     <!-- 占位 -->
-    <div v-else style="left:0px;top:0px;width:300px;height:200px" class="image-placeholder">
+    <div v-if="src === ''" style="left:0px;top:0px;width:300px;height:200px" class="image-placeholder">
       <span style="left:0px;top:80px;width:300px;height:40px;font-size:14px;color:#C0C4CC;text-align:center">{{ placeholder }}</span>
     </div>
     <!-- 加载失败 -->
