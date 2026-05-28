@@ -1,0 +1,20 @@
+name: vc_test
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php
+
+# VC-UI Component Library
+component-libraries:
+  - path: ../../library/vc-ui
+    prefix: vc
+    mode: auto-register
