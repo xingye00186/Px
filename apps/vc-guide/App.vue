@@ -195,13 +195,13 @@
           <vc-paragraph style="width:700px;margin-top:12px" text="Advanced form components provide more complex input selection features." />
 
           <vc-title style="width:700px;height:24px;margin-top:16px" text="DatePicker" />
-          <vc-datepicker style="width:240px;height:36px;margin-top:12px" :modelValue="demoDate" @change="onDemoDate" />
+          <vc-date-picker style="width:240px;height:36px;margin-top:12px" :modelValue="demoDate" @change="onDemoDate" />
 
           <vc-title style="width:700px;height:24px;margin-top:16px" text="Rate" />
           <vc-rate style="margin-top:12px" :modelValue="demoRate" count="5" @change="onDemoRate" />
 
           <vc-title style="width:700px;height:24px;margin-top:16px" text="ColorPicker" />
-          <vc-colorpicker style="width:100px;height:36px;margin-top:12px" :modelValue="demoColor" @change="onDemoColor" />
+          <vc-color-picker style="width:100px;height:36px;margin-top:12px" :modelValue="demoColor" @change="onDemoColor" />
           <div style="left:0px;top:8px;width:60px;height:30px" :style="'background:' . demoColor" class="color-swatch"></div>
         </div>
 
@@ -339,29 +339,29 @@
     public string $guideMsgTp = 'success';
 
     // 表格列定义
-    public string $tableCols = '[{\"key\":\"name\",\"label\":\"Name\"},{\"key\":\"type\",\"label\":\"Type\"},{\"key\":\"desc\",\"label\":\"Description\"}]';
+    public array $tableCols = [["key"=>"name","label"=>"Name"],["key"=>"type","label"=>"Type"],["key"=>"desc","label"=>"Description"]];
     public string $curPage = '1';
     public string $pgSize = '10';
 
     // Button 文档数据
-    public string $buttonPropsData = '[{\"name\":\"text\",\"type\":\"string\",\"desc\":\"Button Text\"},{\"name\":\"type\",\"type\":\"string\",\"desc\":\"Button Type\"}]';
-    public string $buttonEventsData = '[{\"name\":\"click\",\"type\":\"handler\",\"desc\":\"Click Event\"}]';
+    public array $buttonPropsData = [["name"=>"text","type"=>"string","desc"=>"Button Text"],["name"=>"type","type"=>"string","desc"=>"Button Type"]];
+    public array $buttonEventsData = [["name"=>"click","type"=>"handler","desc"=>"Click Event"]];
 
     // Table 示例数据
-    public string $tableDemoData = '[{\"name\":\"Alice\",\"age\":28,\"status\":\"active\"},{\"name\":\"Bob\",\"age\":35,\"status\":\"active\"},{\"name\":\"Carol\",\"age\":42,\"status\":\"inactive\"}]';
+    public array $tableDemoData = [["name"=>"Alice","age"=>28,"status"=>"active"],["name"=>"Bob","age"=>35,"status"=>"active"],["name"=>"Carol","age"=>42,"status"=>"inactive"]];
 
     // Select 选项
-    public string $selectOptsDemo = '[{\"label\":\"Option 1\",\"value\":\"1\"},{\"label\":\"Option 2\",\"value\":\"2\"},{\"label\":\"Option 3\",\"value\":\"3\"}]';
+    public array $selectOptsDemo = [["label"=>"Option 1","value"=>"1"],["label"=>"Option 2","value"=>"2"],["label"=>"Option 3","value"=>"3"]];
 
     // Tree 示例数据
-    public string $treeDemoData = '[{\"label\":\"Root\",\"value\":\"root\",\"children\":[{\"label\":\"Node 1\",\"value\":\"n1\"},{\"label\":\"Node 2\",\"value\":\"n2\",\"children\":[{\"label\":\"Node 2.1\",\"value\":\"n21\"}]}]}]';
+    public array $treeDemoData = [["label"=>"Root","value"=>"root","children"=>[["label"=>"Node 1","value"=>"n1"],["label"=>"Node 2","value"=>"n2","children"=>[["label"=>"Node 2.1","value"=>"n21"]]]]]];
     public string $showCheck = '1';
 
     // Carousel 示例数据
-    public string $carouselDemoData = '[{\"text\":\"Slide 1\",\"bg\":\"#409EFF\"},{\"text\":\"Slide 2\",\"bg\":\"#67C23A\"},{\"text\":\"Slide 3\",\"bg\":\"#F56C6C\"}]';
+    public array $carouselDemoData = [["text"=>"Slide 1","bg"=>"#409EFF"],["text"=>"Slide 2","bg"=>"#67C23A"],["text"=>"Slide 3","bg"=>"#F56C6C"]];
 
     // Transfer 示例数据
-    public string $transferDemoData = '[{\"label\":\"Option 1\",\"value\":\"1\"},{\"label\":\"Option 2\",\"value\":\"2\"},{\"label\":\"Option 3\",\"value\":\"3\"},{\"label\":\"Option 4\",\"value\":\"4\"}]';
+    public array $transferDemoData = [["label"=>"Option 1","value"=>"1"],["label"=>"Option 2","value"=>"2"],["label"=>"Option 3","value"=>"3"],["label"=>"Option 4","value"=>"4"]];
 
     // 导航分类
     public array $categories = [
@@ -413,6 +413,7 @@
                 $this->categories[$idx]['expanded'] = ($cat['expanded'] === '1') ? '0' : '1';
             }
         }
+        $this->markDirty();
     }
 
     /**
