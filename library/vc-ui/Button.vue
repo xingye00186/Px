@@ -1,5 +1,5 @@
 <template>
-  <div class="btn-default" @click="handleClickBtn">{{ text }}</div>
+  <div :class="getButtonClass()" @click="handleClickBtn">{{ text }}</div>
 </template>
 
 <script lang="php">
@@ -25,8 +25,74 @@
     public function handleClickBtn(): void
     {
     }
+
+    /**
+     * 根据 type 属性返回对应的 CSS class
+     */
+    public function getButtonClass(): string {
+        if ($this->plain === 'true') {
+            return match ($this->type) {
+                'primary' => 'btn-default',
+                'success' => 'btn-default',
+                'warning' => 'btn-default',
+                'danger' => 'btn-default',
+                'info' => 'btn-default',
+                default => 'btn-default',
+            };
+        }
+        return match ($this->type) {
+            'primary' => 'btn-primary',
+            'success' => 'btn-success',
+            'warning' => 'btn-warning',
+            'danger' => 'btn-danger',
+            'info' => 'btn-info',
+            default => 'btn-default',
+        };
+    }
 </script>
 
 <style>
-.btn-default { background: #409EFF; color: #FFFFFF; font-size: 14px; }
+.btn-default {
+  background: #FFFFFF;
+  color: #606266;
+  border: 1px solid #DCDFE6;
+  width: 80px;
+  height: 32px;
+  font-size: 14px;
+}
+.btn-primary {
+  background: #409EFF;
+  color: #FFFFFF;
+  width: 80px;
+  height: 32px;
+  font-size: 14px;
+}
+.btn-success {
+  background: #67C23A;
+  color: #FFFFFF;
+  width: 80px;
+  height: 32px;
+  font-size: 14px;
+}
+.btn-warning {
+  background: #E6A23C;
+  color: #FFFFFF;
+  width: 80px;
+  height: 32px;
+  font-size: 14px;
+}
+.btn-danger {
+  background: #F56C6C;
+  color: #FFFFFF;
+  width: 80px;
+  height: 32px;
+  font-size: 14px;
+}
+.btn-info {
+  background: #909399;
+  color: #FFFFFF;
+  width: 80px;
+  height: 32px;
+  font-size: 14px;
+}
 </style>

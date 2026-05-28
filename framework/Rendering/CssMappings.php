@@ -47,6 +47,17 @@ class CssMappings
             'parser'  => 'Px\\Rendering\\CssMappings::parseFontWeight',
             'default' => 0,
         ],
+        // ---- Layout properties (width/height for CSS class styles) ----
+        'width' => [
+            'key'     => 'width',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'height' => [
+            'key'     => 'height',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
         // ---- Extensions for future GDI/Direct2D support ----
         'border-radius' => [
             'key'     => 'borderRadius',
@@ -335,12 +346,27 @@ class CssMappings
             if ($map !== null) {
                 $style[$map['key']] = self::dispatchParser($map['parser'], $value);
             } else {
-                // Unknown properties are kept as raw strings
-                $style[$propName] = $value;
+                // Convert kebab-case to camelCase for unknown properties
+                $camelCase = self::kebabToCamelCase($propName);
+                $style[$camelCase] = $value;
             }
         }
 
         return $style;
+    }
+
+    /**
+     * Convert kebab-case to camelCase
+     * e.g., "align-items" -> "alignItems"
+     */
+    private static function kebabToCamelCase(string $str): string
+    {
+        $parts = explode('-', $str);
+        $result = array_shift($parts);
+        foreach ($parts as $part) {
+            $result .= ucfirst($part);
+        }
+        return $result;
     }
 
     /**

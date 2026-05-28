@@ -265,41 +265,60 @@ class Application
 
     /**
      * 展开单个组件占位节点。
+     * 
+     * Vue 3 语义：每个 #component VNode 创建独立的组件实例，
+     * 而不是按类名共享。这样每个 <vc-button text="Primary"> 和 
+     * <vc-button text="Success"> 都有自己独立的实例和状态。
      */
     private function expandComponentNode(VNode $node): void
     {
         $className = $node->componentClass;
         if ($className === null) return;
 
-        // 获取或创建组件实例
-        if (!isset($this->componentInstances[$className])) {
-            $instance = \ComponentFactory::create($className);
-            $instance->setScheduler($this->scheduler);
-            $instance->setRenderCallback($this->handleRenderRequest(...));
-            $instance->setParent($this->rootComponent);
-            $instance->mount();
-            $this->registerComponent($className, $instance);
-            $this->componentInstances[$className] = $instance;
-        }
-        $instance = $this->componentInstances[$className];
+        // 为每个 VNode 节点创建独立的组件实例（Vue 3 语义）
+        // 不再按 className 缓存，避免同一组件类型的多个使用共享实例
+        $instance = \ComponentFactory::create($className);
+        $instance->setScheduler($this->scheduler);
+        $instance->setRenderCallback($this->handleRenderRequest(...));
+        $instance->setParent($this->rootComponent);
+        $instance->mount();
+        
+        // 注册到事件路由系统（用于 hitTest 定位）
+        $instanceId = $instance->getId();
+        $this->registerComponent($instanceId, $instance);
 
         // 传递 props：父组件的 bind key → 子组件的属性
         if ($node->componentProps !== null && $this->rootComponent !== null) {
             foreach ($node->componentProps as $childKey => $parentExpr) {
-                $parentValue = $this->rootComponent->getBindValue($parentExpr);
-                $instance->setBindValue($childKey, $parentValue);
+                // Check if parentExpr is a static value (starts with 'static:') or a bind key
+                if (is_string($parentExpr) && substr($parentExpr, 0, 7) === 'static:') {
+                    // Direct prop value from parent template
+                    $staticValue = substr($parentExpr, 7);
+                    $instance->setBindValue($childKey, $staticValue);
+                } else {
+                    // Bind expression - get value from parent component
+                    $parentValue = $this->rootComponent->getBindValue($parentExpr);
+                    $instance->setBindValue($childKey, $parentValue);
+                }
             }
         }
 
-        // 展开子树（利用子组件 vnodeCache）
-        $childRoot = $instance->getVNodeTree();
-        $node->w = $childRoot->w;
-        $node->h = $childRoot->h;
+        // 展开子树（强制重建，因为 props 可能改变了组件状态）
+        // 直接调用 render() 而非 getVNodeTree()，确保获取最新树
+        $childRoot = $instance->render();
+
         $node->componentInstance = $instance;
         $node->children = $childRoot;
 
-        // 设置 groupId 用于事件路由
-        $this->setGroupIdRecursive($childRoot, $className);
+        // 合并子组件的 CSS class styles 到 LayoutResolver
+        if (method_exists($instance, 'getClassStyles')) {
+            $childStyles = $instance->getClassStyles();
+            $merged = array_merge($this->layoutResolver->getClassStyles(), $childStyles);
+            $this->layoutResolver->setClassStyles($merged);
+        }
+
+        // 设置 groupId 用于事件路由（使用 instanceId 而非 className）
+        $this->setGroupIdRecursive($childRoot, $instanceId);
 
         // 递归：子组件树可能也包含组件占位节点
         $this->expandComponentTree($childRoot);
@@ -367,9 +386,16 @@ class Application
 
     private function render(): void
     {
+        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " APP_RENDER: start, tree=" . ($this->activeVNodeTree !== null ? 'exists' : 'null') . PHP_EOL, FILE_APPEND);
         $this->rebuildVNodeTree();
+        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " APP_RENDER: after rebuild, tree=" . ($this->activeVNodeTree !== null ? 'exists' : 'null') . PHP_EOL, FILE_APPEND);
+        // Expand components BEFORE layout so child dimensions are computed
+        $this->expandComponentTree($this->activeVNodeTree);
+        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " APP_RENDER: after expand" . PHP_EOL, FILE_APPEND);
         $this->layoutResolver->resolve($this->activeVNodeTree);
+        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " APP_RENDER: after layout" . PHP_EOL, FILE_APPEND);
         $this->renderer->render($this->activeVNodeTree);
+        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " APP_RENDER: done" . PHP_EOL, FILE_APPEND);
     }
 
     private function doFirstRender(): void

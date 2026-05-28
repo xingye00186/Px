@@ -39,6 +39,14 @@ class LayoutResolver
     }
 
     /**
+     * Get CSS class styles.
+     */
+    public function getClassStyles(): array
+    {
+        return $this->classStyles;
+    }
+
+    /**
      * Resolve layout for the entire VNode tree.
      *
      * @param VNode $root Root VNode (mutated in-place)
