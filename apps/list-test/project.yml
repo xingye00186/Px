@@ -3,6 +3,9 @@ mode: bin
 no-console: false
 platform: win32
 entry: main.php
+cxx-flags:
+  - utf-8
+
 sources:
   - main.php
   - ./gen
