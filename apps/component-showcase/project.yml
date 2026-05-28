@@ -1,0 +1,35 @@
+name: component-showcase
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+cxx-flags:
+  - utf-8
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php
+component-libraries:
+  - path: ../../library/vc-ui
+    prefix: vc
+    mode: auto-register
+forced-components:
+  - vc-button
+  - vc-input
+  - vc-switch
+  - vc-slider
+  - vc-tag
+  - vc-badge
+  - vc-progress
+  - vc-icon
+  - vc-row
+  - vc-col
+  - vc-card
+  - vc-select
+  - vc-modal
+  - vc-table
