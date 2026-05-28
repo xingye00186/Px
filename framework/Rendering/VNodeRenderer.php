@@ -42,9 +42,14 @@ class VNodeRenderer
     {
         $this->render_ctx->beginFrame();
 
+        // Debug: log render start
+        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " RENDER: root type={$root->type}, children=" . gettype($root->children) . PHP_EOL, FILE_APPEND);
+
         $elementsByLayer = [];
         $maxLayer = 0;
         $this->collectElements($root, $elementsByLayer, $maxLayer);
+
+        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " RENDER: collected, maxLayer=$maxLayer, layers=" . json_encode(array_keys($elementsByLayer)) . PHP_EOL, FILE_APPEND);
 
         for ($l = 0; $l <= $maxLayer; $l++) {
             $layerElements = $elementsByLayer[$l] ?? [];
@@ -58,6 +63,12 @@ class VNodeRenderer
 
     private function collectElements(VNode $node, array &$elementsByLayer, int &$maxLayer): void
     {
+        // Debug: log collect start
+        $isImportant = in_array($node->type, ['div', 'button', 'span', '#root']);
+        if ($isImportant) {
+            file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " COLLECT: type={$node->type}, isRoot={$node->isRoot()}, isComponent={$node->isComponent()}, isScroll={$node->isScrollContainer}, class=" . ($node->props['class'] ?? 'none') . ", x={$node->x}, y={$node->y}, w={$node->w}, h={$node->h}" . PHP_EOL, FILE_APPEND);
+        }
+
         // Push component context when entering a component boundary
         $pushedComponent = false;
         if ($node->isComponent() && $node->componentInstance !== null) {
@@ -67,13 +78,29 @@ class VNodeRenderer
 
         if (!$node->isRoot() && !$node->isComponent()) {
             $el = $this->vnodeToElement($node);
+            // Debug: log element result
+            if ($isImportant) {
+                file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " ELEMENT: type={$node->type}, el=" . ($el === null ? 'null' : json_encode($el['type'] ?? 'unknown')) . PHP_EOL, FILE_APPEND);
+            }
             if ($el !== null) {
                 $layer = $node->layer;
                 if ($layer > $maxLayer) $maxLayer = $layer;
                 if (!isset($elementsByLayer[$layer])) {
                     $elementsByLayer[$layer] = [];
                 }
-                $elementsByLayer[$layer][] = $el;
+                // Handle group type: expand children into their own layers
+                if (($el['type'] ?? '') === 'group' && isset($el['elements'])) {
+                    foreach ($el['elements'] as $childEl) {
+                        $childLayer = $childEl['layer'] ?? $layer;
+                        if ($childLayer > $maxLayer) $maxLayer = $childLayer;
+                        if (!isset($elementsByLayer[$childLayer])) {
+                            $elementsByLayer[$childLayer] = [];
+                        }
+                        $elementsByLayer[$childLayer][] = $childEl;
+                    }
+                } else {
+                    $elementsByLayer[$layer][] = $el;
+                }
             }
         }
 
@@ -280,12 +307,61 @@ class VNodeRenderer
         if ($node->isScrollContainer) {
             return $this->makeScrollContainerElement($node, $style, $x, $y, $w, $h, $layer);
         }
+        // Workaround: if w/h is 0, try to get reasonable defaults
+        if ($w <= 0) $w = 80;
+        if ($h <= 0) $h = 32;
+
         $bg = $style['bg'] ?? null;
         $hasBorder = ($style['borderWidth'] ?? 0) > 0;
-        if ($bg === null && !$hasBorder) {
+        $hasBg = $bg !== null;
+
+        // Check for string children (text content)
+        $hasTextChild = is_string($node->children) && $node->children !== '';
+        // Debug: log div with btn class
+        $isBtnDiv = strpos($node->props['class'] ?? '', 'btn-default') !== false;
+        if ($isBtnDiv) {
+            file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " DIV: class={$node->props['class']}, bg=$bg, hasText=$hasTextChild, children=" . json_encode($node->children) . ", x=$x, y=$y, w=$w, h=$h, isScroll=" . ($node->isScrollContainer ? 1 : 0) . PHP_EOL, FILE_APPEND);
+        }
+        if ($bg === null && !$hasBorder && !$hasTextChild) {
             return null;
         }
+
         $drawColor = ($bg !== null) ? $bg : 0;
+
+        // If has text content, render text element
+        if ($hasTextChild) {
+            $fontSize = $style['fontSize'] ?? 14;
+            $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
+            $bold = $style['bold'] ?? 0;
+            $align = $node->props['align'] ?? ($style['textAlign'] ?? 'center');
+
+            $text = $node->children;
+            $textWidth = strlen($text) * (int)($fontSize * 0.6);
+
+            // Center text horizontally and vertically
+            $textX = $x + (int)(($w - $textWidth) / 2);
+            if ($textX < $x + 4) $textX = $x + 4;
+            $textY = $y + (int)(($h - $fontSize) / 2);
+
+            // If has background, return both rect and text as elements
+            if ($hasBg || $hasBorder) {
+                return [
+                    'type' => 'group', 'layer' => $layer,
+                    'elements' => [
+                        ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'layer' => $layer],
+                        ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
+                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer + 1],
+                    ],
+                ];
+            }
+
+            // Text only, no background
+            return [
+                'type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
+                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer,
+            ];
+        }
+
         return [
             'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'color' => $drawColor, 'layer' => $layer,
@@ -311,6 +387,12 @@ class VNodeRenderer
         if ($vModel !== '') {
             $text = $this->currentComponent()->getBindValue($vModel);
         }
+
+        // Debug: log text content
+        if ($text !== '' && strpos($node->props['style'] ?? '', 'btn-default') !== false) {
+            file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " TEXT: text='$text', x=$x, y=$y, w=$w, h=$h, color=$color" . PHP_EOL, FILE_APPEND);
+        }
+
         if ($text === '') return null;
 
         $containerW = (int)($node->props['container-w'] ?? $w);

@@ -75,9 +75,13 @@ class ComparisonExpression extends ExpressionType
             return "''";
         }
 
-        // String literal
-        if (preg_match('/^["\'](.*)["\']\s*$/', $operand, $m)) {
-            return "'" . addslashes($m[1]) . "'";
+        // String literal: must be enclosed in matching quotes, with NO operators after
+        if (preg_match('/^(["\'])(.*)(\1)$/', $operand, $m)) {
+            // $m[1]=quote, $m[2]=content, $m[3]=same quote
+            // Verify no operators exist in the captured content
+            if (!preg_match('/[=!<>]=?|&&|\|\|/', $m[2])) {
+                return "'" . addslashes($m[2]) . "'";
+            }
         }
 
         // Numeric literal

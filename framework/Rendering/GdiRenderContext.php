@@ -62,6 +62,16 @@ class GdiRenderContext extends RenderContext
                 break;
 
             // ── 复合类型 (多次 GDI 调用) ──────
+            case 'group':
+                // Process each child element in the group
+                if (isset($el['elements']) && is_array($el['elements'])) {
+                    foreach ($el['elements'] as $childEl) {
+                        $this->drawElement($childEl);
+                    }
+                }
+                break;
+
+            // ── 复合类型 (多次 GDI 调用) ──────
             case 'button':
                 $this->drawButton(
                     $el['x'] ?? 0, $el['y'] ?? 0,

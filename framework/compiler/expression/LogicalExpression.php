@@ -54,6 +54,10 @@ class LogicalExpression extends ExpressionType
      *   "!isHidden" -> "!$this->isHidden"
      *   "item && item.active" -> "$item['item'] && $item['active']"
      */
+    /**
+     * Parse expression containing &&, || operators.
+     * Handles ALL operators in one pass to avoid double-parenthesization.
+     */
     public function parse(string $expression, ?array $loopInfo = null): string
     {
         $expression = trim($expression);
@@ -64,51 +68,49 @@ class LogicalExpression extends ExpressionType
             return '!' . $this->parseOperand($operand, $loopInfo);
         }
 
-        // Handle null coalescing first (has lowest precedence)
+        // Handle null coalescing
         if (str_contains($expression, '??')) {
             return $this->parseBinary($expression, '??', $loopInfo);
         }
 
-        // Handle && and || (parse carefully due to precedence)
-        $parts = $this->splitByOperator($expression);
+        // Split by ALL logical operators at once
+        $operators = ['&&', '||'];
+        $parts = $this->splitByAllOperators($expression, $operators);
 
         if (count($parts) === 1) {
             // No operator found
             return $this->parseOperand($expression, $loopInfo);
         }
 
-        $result = [];
-        foreach ($parts as $i => $part) {
-            $part = trim($part);
-
-            // Skip empty parts
-            if ($part === '') {
-                continue;
-            }
-
-            // Check for nested expressions
-            $ternary = new TernaryExpression();
-            $comparison = new ComparisonExpression();
-
-            if ($ternary->matches($part)) {
-                $result[] = '(' . $ternary->parse($part, $loopInfo) . ')';
-            } elseif ($comparison->matches($part)) {
-                $result[] = '(' . $comparison->parse($part, $loopInfo) . ')';
-            } else {
-                $result[] = $this->parseOperand($part, $loopInfo);
+        // Extract operators in order
+        $ops = [];
+        $search = $expression;
+        foreach ($operators as $op) {
+            while (($pos = strpos($search, $op)) !== false) {
+                $ops[] = $op;
+                $search = substr($search, $pos + strlen($op));
             }
         }
 
-        // Reconstruct with operators
+        // Parse each part and interleave with operators
+        $comparison = new ComparisonExpression();
+        $ternary = new TernaryExpression();
         $output = '';
-        $opCount = 0;
-        $ops = $this->extractOperators($expression);
 
-        foreach ($result as $i => $r) {
-            $output .= $r;
+        foreach ($parts as $i => $part) {
+            $part = trim($part);
+            if ($part === '') {
+                $output .= 'true';
+            } elseif ($ternary->matches($part)) {
+                $output .= '(' . $ternary->parse($part, $loopInfo) . ')';
+            } elseif ($comparison->matches($part)) {
+                $output .= '(' . $comparison->parse($part, $loopInfo) . ')';
+            } else {
+                $output .= '(' . $this->parseOperand($part, $loopInfo) . ')';
+            }
+
             if ($i < count($ops)) {
-                $output .= ' ' . $ops[$opCount] . ' ';
-                $opCount++;
+                $output .= ' ' . $ops[$i] . ' ';
             }
         }
 
@@ -125,9 +127,13 @@ class LogicalExpression extends ExpressionType
             return 'true';
         }
 
-        // String literal
-        if (preg_match('/^["\'](.*)["\']\s*$/', $operand, $m)) {
-            return "'" . addslashes($m[1]) . "'";
+        // String literal: must be enclosed in matching quotes, with NO operators after
+        if (preg_match('/^(["\'])(.*)(\1)$/', $operand, $m)) {
+            // $m[1]=quote, $m[2]=content, $m[3]=same quote
+            // Verify no operators exist in the captured content
+            if (!preg_match('/[=!<>]=?|&&|\|\|/', $m[2])) {
+                return "'" . addslashes($m[2]) . "'";
+            }
         }
 
         // Numeric literal
@@ -226,5 +232,55 @@ class LogicalExpression extends ExpressionType
         }
 
         return $operators;
+    }
+
+    /**
+     * Split expression by any of the given operators (in order of appearance).
+     * Respects quote nesting to avoid splitting inside strings.
+     */
+    private function splitByAllOperators(string $expression, array $operators): array
+    {
+        $parts = [];
+        $current = '';
+        $inQuote = false;
+        $quoteChar = '';
+        $len = strlen($expression);
+
+        for ($i = 0; $i < $len; $i++) {
+            $c = $expression[$i];
+
+            // Handle quote state
+            if (!$inQuote && ($c === '"' || $c === "'")) {
+                $inQuote = true;
+                $quoteChar = $c;
+                $current .= $c;
+            } elseif ($inQuote && $c === $quoteChar && ($i === 0 || $expression[$i - 1] !== '\\')) {
+                $inQuote = false;
+                $current .= $c;
+            } elseif ($inQuote) {
+                $current .= $c;
+            } else {
+                // Check for operator match at current position
+                $matched = false;
+                foreach ($operators as $op) {
+                    if (substr($expression, $i, strlen($op)) === $op) {
+                        $parts[] = $current;
+                        $current = '';
+                        $i += strlen($op) - 1;
+                        $matched = true;
+                        break;
+                    }
+                }
+                if (!$matched) {
+                    $current .= $c;
+                }
+            }
+        }
+
+        if ($current !== '') {
+            $parts[] = $current;
+        }
+
+        return $parts;
     }
 }

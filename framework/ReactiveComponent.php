@@ -57,6 +57,7 @@ abstract class ReactiveComponent extends BaseComponent
      */
     protected function markDirty(): void
     {
+        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " markDirty: vnodeCache=null, pendingUpdate=" . ($this->hasPendingUpdate ? 1 : 0) . PHP_EOL, FILE_APPEND);
         $this->vnodeCache = null;
         $this->scheduleUpdate();
     }
