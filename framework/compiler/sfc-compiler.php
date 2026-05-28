@@ -45,6 +45,29 @@ require_once $compilerDir . '/expression/ComparisonExpression.php';
 require_once $compilerDir . '/expression/LogicalExpression.php';
 require_once $compilerDir . '/expression/ExpressionParser.php';
 
+// ---- Native HTML tags whitelist (v9: on-demand compilation) ----
+// Components using these tag names are NOT compiled as custom components.
+const NATIVE_HTML_TAGS = [
+    'div', 'span', 'button', 'input', 'p',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'a', 'img', 'ul', 'ol', 'li',
+    'table', 'tr', 'td', 'th', 'thead', 'tbody',
+    'form', 'label', 'textarea', 'select', 'option',
+    'br', 'hr', 'strong', 'em', 'code', 'pre',
+    'header', 'footer', 'nav', 'main', 'section', 'aside',
+    'template'
+];
+
+// ============================================================
+// Helper — extract custom component tags from template text
+// ============================================================
+function extractCustomTags(string $template): array
+{
+    preg_match_all('/<([a-z][a-z0-9-]*)/i', $template, $matches);
+    $tags = array_map('strtolower', $matches[1]);
+    return array_values(array_unique(array_diff($tags, NATIVE_HTML_TAGS)));
+}
+
 // ============================================================
 // Helper — build component registry
 // ============================================================
@@ -1455,110 +1478,141 @@ function remapChildBindProps(VNode $node, array $bindProps): void
 }
 
 // ============================================================
-// Phase 1 — Pre-compile child components
+// Dependency Cache — .dep-cache.json
 // ============================================================
-function compileChildComponents(ComponentRegistry $registry, string $outDir): void
+function loadDepCache(string $genDir): ?array
 {
-    $allComponents = $registry->all();
-    if (count($allComponents) === 0) return;
+    $cachePath = $genDir . DIRECTORY_SEPARATOR . '.dep-cache.json';
+    if (!file_exists($cachePath)) {
+        return null;
+    }
+    $content = file_get_contents($cachePath);
+    if ($content === false) {
+        return null;
+    }
+    $data = json_decode($content, true);
+    if (!is_array($data) || !isset($data['compiled']) || !isset($data['mtimes'])) {
+        return null;
+    }
+    return $data;
+}
 
-    echo "\n--- Phase 1: Compiling child components ---\n";
+function saveDepCache(string $genDir, array $compiledSet): void
+{
+    $mtimes = [];
+    foreach ($compiledSet as $filePath) {
+        if (is_string($filePath) && file_exists($filePath)) {
+            $mtimes[$filePath] = @filemtime($filePath) ?: 0;
+        }
+    }
+    $cacheData = [
+        'compiled' => $compiledSet,
+        'mtimes' => $mtimes,
+    ];
+    $cachePath = $genDir . DIRECTORY_SEPARATOR . '.dep-cache.json';
+    $json = json_encode($cacheData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    file_put_contents($cachePath, $json);
+}
 
-    foreach ($allComponents as $tagName => $vuePath) {
-        if (!file_exists($vuePath)) {
-            echo "  [SKIP] $tagName: source file not found\n";
+// ============================================================
+// Compile a single .vue file to Component PHP class
+// (v9: extracted from compileChildComponents for on-demand BFS)
+// ============================================================
+function compileOneComponent(
+    string $vueFile,
+    string $className,
+    string $outDir,
+    ComponentRegistry $registry
+): bool {
+    if (!file_exists($vueFile)) {
+        echo "  [SKIP] $className: source file not found\n";
+        return false;
+    }
+
+    $baseName = pathinfo($vueFile, PATHINFO_FILENAME);
+    echo "  Compiling: $vueFile\n";
+
+    $source = file_get_contents($vueFile);
+
+    // Extract blocks
+    $template = '';
+    $script = '';
+    $styles = '';
+    if (preg_match('#<template(?![^>]*v-for)[^>]*>(.*)</template>#s', $source, $m)) {
+        $template = $m[1];
+    }
+    if (preg_match('#<script[^>]*lang=["\']php["\'][^>]*>(.*?)</script>#s', $source, $m)) {
+        $script = trim($m[1]);
+    }
+    if (preg_match('#<style[^>]*>(.*?)</style>#s', $source, $m)) {
+        $styles = $m[1];
+    }
+
+    $hasScript = (strlen($script) > 0);
+
+    // Parse styles
+    $styleWarnings = [];
+    $classStyles = \Px\Rendering\CssMappings::parseStyleBlock($styles, $styleWarnings);
+
+    // Parse template → VNode tree
+    $parser = new TemplateParser($registry);
+    $root = $parser->parse($template);
+
+    // Collect handlers and bind keys from VNode tree
+    $clickHandlers = [];
+    $keyHandlers = [];
+    $bindKeys = [];
+    if ($hasScript) {
+        collectClickHandlers($root, $clickHandlers);
+        collectKeyHandlers($root, $keyHandlers);
+    }
+    collectVNodeBindKeys($root, $bindKeys);
+
+    // Collect v-for loops
+    $loops = [];
+    $loopCtr = 0;
+    collectVForLoops($root, $loops, $loopCtr);
+
+    // Generate render() body
+    $renderExpr = generateVNodeExpr($root, null, 1);
+
+    // Generate dispatch methods
+    $dispatchClick = generateDispatchClick($clickHandlers);
+    $dispatchKey = generateDispatchKey($keyHandlers);
+
+    // Extract array-typed properties from script
+    $arrayBindKeys = [];
+    if (preg_match_all('/public\s+array\s+\$(\w+)/', $script, $arrayProps)) {
+        foreach ($arrayProps[1] as $propName) {
+            $arrayBindKeys[$propName] = true;
+        }
+    }
+
+    $setBindValue = generateSetBindValue($bindKeys, $arrayBindKeys);
+    $getBindValue = generateGetBindValue($bindKeys, $arrayBindKeys);
+
+    // v-for helpers
+    $vForHelpers = generateVForHelpers($loops);
+
+    // Script analysis
+    $analyzer = new ScriptAnalyzer();
+    $classBody = $analyzer->injectDirty($script);
+
+    // Dynamic property declarations
+    $dynamicPropsDeclaration = '';
+    foreach ($bindKeys as $key => $_) {
+        if ($key === '') continue;
+        if (preg_match('/public\s+\w+\s+\$' . preg_quote($key, '/') . '\s*[=;]/', $script)) {
             continue;
         }
+        $dynamicPropsDeclaration .= "    public string \$$key = '';\n";
+    }
 
-        $baseName = pathinfo($vuePath, PATHINFO_FILENAME);
-        $className = componentTagToComponentName($tagName);
-
-        echo "  Compiling: $vuePath\n";
-
-        $source = file_get_contents($vuePath);
-
-        // Extract blocks
-        $template = '';
-        $script = '';
-        $styles = '';
-        if (preg_match('#<template(?![^>]*v-for)[^>]*>(.*)</template>#s', $source, $m)) {
-            $template = $m[1];
-        }
-        if (preg_match('#<script[^>]*lang=["\']php["\'][^>]*>(.*?)</script>#s', $source, $m)) {
-            $script = trim($m[1]);
-        }
-        if (preg_match('#<style[^>]*>(.*?)</style>#s', $source, $m)) {
-            $styles = $m[1];
-        }
-
-        // If no script block, all events bubble to parent (no handler-specific cases)
-        $hasScript = (strlen($script) > 0);
-
-        // Parse styles
-        $styleWarnings = [];
-        $classStyles = \Px\Rendering\CssMappings::parseStyleBlock($styles, $styleWarnings);
-
-        // Parse template → VNode tree
-        $parser = new TemplateParser($registry);
-        $root = $parser->parse($template);
-
-        // Collect handlers and bind keys from VNode tree
-        $clickHandlers = [];
-        $keyHandlers = [];
-        $bindKeys = [];
-        // Only generate handler-specific cases if the component has its own script methods
-        if ($hasScript) {
-            collectClickHandlers($root, $clickHandlers);
-            collectKeyHandlers($root, $keyHandlers);
-        }
-        collectVNodeBindKeys($root, $bindKeys);
-
-        // Collect v-for loops
-        $loops = [];
-        $loopCtr = 0;
-        collectVForLoops($root, $loops, $loopCtr);
-
-        // Generate render() body
-        $renderExpr = generateVNodeExpr($root, null, 1);
-
-        // Generate dispatch methods using switch (AOT-compatible)
-        $dispatchClick = generateDispatchClick($clickHandlers);
-        $dispatchKey = generateDispatchKey($keyHandlers);
-
-        // Extract array-typed properties from script for bind generation
-        $arrayBindKeys = [];
-        if (preg_match_all('/public\s+array\s+\$(\w+)/', $script, $arrayProps)) {
-            foreach ($arrayProps[1] as $propName) {
-                $arrayBindKeys[$propName] = true;
-            }
-        }
-
-        $setBindValue = generateSetBindValue($bindKeys, $arrayBindKeys);
-        $getBindValue = generateGetBindValue($bindKeys, $arrayBindKeys);
-
-        // v-for helpers
-        $vForHelpers = generateVForHelpers($loops);
-
-        // Script analysis (inject markDirty into methods that modify properties)
-        $analyzer = new ScriptAnalyzer();
-        $classBody = $analyzer->injectDirty($script);
-
-        // Dynamic property declarations (skip props already declared in script)
-        $dynamicPropsDeclaration = '';
-        foreach ($bindKeys as $key => $_) {
-            if ($key === '') continue;
-            // Skip if property already exists in script
-            if (preg_match('/public\s+\w+\s+\$' . preg_quote($key, '/') . '\s*[=;]/', $script)) {
-                continue;
-            }
-            $dynamicPropsDeclaration .= "    public string \$$key = '';\n";
-        }
-
-        $classContent = <<<PHP
+    $classContent = <<<PHP
 <?php
 
 /**
- * AUTO-GENERATED by SFC Compiler v7 — DO NOT EDIT
+ * AUTO-GENERATED by SFC Compiler v9 — DO NOT EDIT
  * Source: $baseName.vue
  */
 
@@ -1603,20 +1657,51 @@ class {$className} extends ReactiveComponent
 }
 PHP;
 
-        $classPath = $outDir . DIRECTORY_SEPARATOR . $className . '.php';
-        $validator = new AotValidator();
-        $classOk = $validator->validate($classContent, $classPath);
+    $classPath = $outDir . DIRECTORY_SEPARATOR . $className . '.php';
+    $validator = new AotValidator();
+    $classOk = $validator->validate($classContent, $classPath);
 
-        if ($classOk) {
-            file_put_contents($classPath, $classContent);
-            echo "  Generated:  $classPath (" . strlen($classContent) . " bytes)\n";
-        } else {
-            echo "  [ERROR] $className: AOT validation failed\n";
+    if ($classOk) {
+        file_put_contents($classPath, $classContent);
+        echo "  Generated:  $classPath (" . strlen($classContent) . " bytes)\n";
+        return true;
+    } else {
+        echo "  [ERROR] $className: AOT validation failed\n";
+        return false;
+    }
+}
+
+// ============================================================
+// Collect custom component dependencies from a .vue template
+// (v9: BFS-driven on-demand compilation)
+// ============================================================
+function collectDependencies(
+    string $vueFile,
+    array &$compiledSet,
+    \SplQueue &$queue,
+    ComponentRegistry $registry
+): void {
+    $source = file_get_contents($vueFile);
+    if (!preg_match('#<template(?![^>]*v-for)[^>]*>(.*)</template>#s', $source, $m)) {
+        return;
+    }
+    $template = $m[1];
+    $tags = extractCustomTags($template);
+    foreach ($tags as $tag) {
+        $depFile = $registry->resolve($tag);
+        if ($depFile === null) {
+            continue; // Not a registered component (HTML tag or unknown)
+        }
+        $className = componentTagToComponentName($tag);
+        if (!isset($compiledSet[$className])) {
+            $compiledSet[$className] = $depFile;
+            $queue->enqueue(['tag' => $tag, 'file' => $depFile]);
         }
     }
-
-    echo "--- Phase 1 complete ---\n\n";
 }
+
+// (compileChildComponents removed in v9 — replaced by BFS on-demand compilation)
+// See Phase 1 section in CLI Main for the new implementation.
 
 // ============================================================
 // Helper — load project.yml config (minimal YAML parser)
@@ -1644,9 +1729,9 @@ function parseProjectYamlLines(array $lines): array
     $config = [];
     $currentKey = null;
     $currentList = null;
-    $currentListItem = null;
     $inComponentLibraries = false;
     $inMappings = false;
+    $inForcedComponents = false;
     $libraries = [];
     $currentLib = null;
 
@@ -1664,23 +1749,48 @@ function parseProjectYamlLines(array $lines): array
             $value = trim($m[2]);
 
             if ($value === '') {
-                // Start of a list or object
+                // Flush pending library before switching to a new top-level key
+                if ($inComponentLibraries && $currentLib !== null) {
+                    $libraries[] = $currentLib;
+                    $currentLib = null;
+                }
+                // Flush previous list before starting a new one.
+                // This prevents PHP reference aliasing (all lists sharing the same array).
+                if ($currentList !== null && $currentKey !== null) {
+                    $config[$currentKey] = $currentList;
+                }
                 $currentKey = $key;
                 if ($key === 'component-libraries') {
                     $inComponentLibraries = true;
+                    $inForcedComponents = false;
                     $libraries = [];
+                } elseif ($key === 'forced-components') {
+                    $inForcedComponents = true;
+                    $inComponentLibraries = false;
+                } else {
+                    $inComponentLibraries = false;
+                    $inForcedComponents = false;
                 }
+                // unset breaks the reference binding so $config[$key] retains its own array
+                unset($currentList);
                 $currentList = [];
                 $config[$key] = &$currentList;
             } else {
+                // Non-list top-level key with a value (e.g., name: vc-guide)
+                // Flush any active list before storing scalar.
+                if ($currentList !== null && $currentKey !== null) {
+                    $config[$currentKey] = $currentList;
+                    $currentList = null;
+                }
+                $inComponentLibraries = false;
+                $inForcedComponents = false;
                 $config[$key] = $value;
                 $currentKey = null;
-                $currentList = null;
             }
             continue;
         }
 
-        // List item: - value
+        // List item: - value (at indent 2 AND starts with '- ', i.e., "  - item")
         if ($indent === 2 && $trimmed[0] === '-' && isset($trimmed[1]) && $trimmed[1] === ' ') {
             $itemValue = trim(substr($trimmed, 2));
 
@@ -1699,7 +1809,11 @@ function parseProjectYamlLines(array $lines): array
                         }
                     }
                 }
-            } else if ($currentList !== null) {
+            } elseif ($inForcedComponents) {
+                // forced-components list items
+                $currentList[] = $itemValue;
+            } elseif ($currentList !== null) {
+                // sources, ignore, etc.
                 $currentList[] = $itemValue;
             }
             continue;
@@ -1730,7 +1844,8 @@ function parseProjectYamlLines(array $lines): array
         $libraries[] = $currentLib;
     }
 
-    if ($inComponentLibraries) {
+    // Always write component-libraries when we collected any (semantically equivalent to $inComponentLibraries check)
+    if (!empty($libraries)) {
         $config['component-libraries'] = $libraries;
     }
 
@@ -1781,14 +1896,73 @@ $baseName = pathinfo($vueFile, PATHINFO_FILENAME);
 $isRootComponent = (strtolower($baseName) === 'app' || strtolower($baseName) === 'appcomponent');
 
 if (count($componentNames) > 0) {
-    echo "SFC Compiler v8: $vueFile (components: " . implode(', ', $componentNames) . ")\n";
+    echo "SFC Compiler v9: $vueFile (registry: " . count($componentNames) . " components)\n";
 } else {
-    echo "SFC Compiler v8: $vueFile\n";
+    echo "SFC Compiler v9: $vueFile\n";
 }
 
-// Phase 1: Pre-compile child components
+// Phase 1: On-demand BFS child component compilation (v9)
+$compiledSet = [];
+$queue = new \SplQueue();
 if ($isRootComponent) {
-    compileChildComponents($componentRegistry, $outDir);
+    echo "\n--- Phase 1: Compiling child components (on-demand) ---\n";
+
+    $forcedComponents = $projectConfig['forced-components'] ?? [];
+    $cache = loadDepCache($outDir);
+    $totalRegistered = count($componentRegistry->all());
+
+    // Collect root template tags + forced components
+    $rootTags = extractCustomTags($source);
+    $allInitialTags = array_unique(array_merge($rootTags, $forcedComponents));
+
+    // Enqueue initial components (cache-aware)
+    foreach ($allInitialTags as $tag) {
+        $depFile = $componentRegistry->resolve($tag);
+        if ($depFile === null) continue;
+        $depClass = componentTagToComponentName($tag);
+        if (isset($compiledSet[$depClass])) continue;
+
+        // Cache hit check
+        $cached = false;
+        if ($cache !== null && isset($cache['compiled'][$depClass])) {
+            $cachedMtime = $cache['mtimes'][$depFile] ?? -1;
+            $currentMtime = @filemtime($depFile);
+            $phpPath = $outDir . DIRECTORY_SEPARATOR . $depClass . '.php';
+            if ($currentMtime !== false && $cachedMtime === $currentMtime && file_exists($phpPath)) {
+                $compiledSet[$depClass] = $depFile;
+                $cached = true;
+                echo "  [CACHE] $tag ($depClass)\n";
+            }
+        }
+        if (!$cached) {
+            $compiledSet[$depClass] = $depFile;
+            $queue->enqueue(['tag' => $tag, 'file' => $depFile]);
+        }
+    }
+
+    // BFS loop
+    $compiledCount = 0;
+    while (!$queue->isEmpty()) {
+        $item = $queue->dequeue();
+        $file = $item['file'];
+        $tag = $item['tag'];
+        $className = componentTagToComponentName($tag);
+
+        $ok = compileOneComponent($file, $className, $outDir, $componentRegistry);
+        if ($ok) {
+            $compiledCount++;
+        }
+
+        // Discover sub-dependencies
+        collectDependencies($file, $compiledSet, $queue, $componentRegistry);
+    }
+
+    $totalCompiled = $compiledCount + count($compiledSet);
+    echo "  Compiled {$totalCompiled} components (out of {$totalRegistered} available)\n";
+    echo "--- Phase 1 complete ---\n\n";
+
+    // Save cache
+    saveDepCache($outDir, $compiledSet);
 }
 
 // Step 1: Extract blocks
@@ -2058,24 +2232,22 @@ if (!$classOk) {
 file_put_contents($classPath, $classContent);
 echo "  Generated:  $classPath (" . strlen($classContent) . " bytes)\n";
 
-// Component Factory
+// Component Factory — v9: only include actually-used components
 $genDir = $appDir . DIRECTORY_SEPARATOR . 'gen';
 $allComponentClasses = [];
 $allComponentClasses[$componentClassName] = true;
 
-if (is_dir($genDir)) {
-    $files = glob($genDir . '/*Component.php');
-    foreach ($files as $file) {
-        $fileName = basename($file, '.php');
-        if ($fileName !== $componentClassName) {
-            $allComponentClasses[$fileName] = true;
-        }
+// Add entries from compiledSet (on-demand BFS result)
+if (!empty($compiledSet)) {
+    foreach (array_keys($compiledSet) as $className) {
+        $allComponentClasses[$className] = true;
     }
 }
 
 $factoryContent = "<?php\n\n";
-$factoryContent .= "/**\n * ComponentFactory - 组件工厂类 (v7)\n";
-$factoryContent .= " * 由 SFC 编译器自动生成，使用 switch-case 创建组件实例。\n */\n";
+$factoryContent .= "/**\n * ComponentFactory - 组件工厂类 (v9)\n";
+$factoryContent .= " * 由 SFC 编译器自动生成，使用 switch-case 创建组件实例。\n";
+$factoryContent .= " * v9: 仅包含实际使用的组件（按需编译）。\n */\n";
 $factoryContent .= "use Px\\Interfaces\\ComponentInterface;\n\n";
 $factoryContent .= "class ComponentFactory\n{\n";
 $factoryContent .= "    public static function create(string \$className, array \$props = []): ComponentInterface\n";
