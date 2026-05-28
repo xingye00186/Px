@@ -1065,6 +1065,48 @@ function hasVForLoops(VNode $node): bool
  * @param array &$classStyles CSS class styles (mutated in-place)
  * @return array ['warnings'=>string[], 'children'=>array]
  */
+/**
+ * Extract text content from component children for slot support.
+ * Returns a string value if children is a plain text node, null otherwise.
+ * This enables library components to receive default slot content as a 'text' bind prop.
+ *
+ * @param mixed $children  VNode children (string, VNode, array, or null)
+ * @return string|null  Extracted text or null if children is complex
+ */
+function extractSlotText(mixed $children): ?string
+{
+    // Plain text string (e.g., #text node content)
+    if (is_string($children)) {
+        // Strip {{ }} interpolation markers — bind system handles them separately
+        $text = trim($children);
+        if ($text === '') return null;
+        return $text;
+    }
+
+    // Single VNode — check if it's a #text node
+    if ($children instanceof VNode && $children->type === '#text') {
+        $text = trim((string)$children->children);
+        if ($text === '') return null;
+        return $text;
+    }
+
+    // Array with single #text child
+    if (is_array($children) && count($children) === 1) {
+        $first = $children[0] ?? null;
+        if ($first instanceof VNode && $first->type === '#text') {
+            $text = trim((string)$first->children);
+            if ($text === '') return null;
+            return $text;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Resolve component references in VNode tree.
+ * Converts component ref VNodes to #component placeholders.
+ */
 function resolveComponentRefs(VNode $root, array &$classStyles): array
 {
     $warnings = [];
@@ -1179,6 +1221,13 @@ function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &
         $child->type = '#component';
         $child->isComponent = true;
         $child->componentClass = $childComponentName;
+
+        // Slot support: extract text children as 'text' bind prop
+        $slotText = extractSlotText($child->children);
+        if ($slotText !== null && !isset($bindProps['text'])) {
+            $bindProps['text'] = $slotText;
+        }
+
         $child->componentProps = count($bindProps) > 0 ? $bindProps : null;
 
         // Remove internal props that are not relevant at runtime
@@ -1400,6 +1449,125 @@ PHP;
 }
 
 // ============================================================
+// Helper — load project.yml config (minimal YAML parser)
+// ============================================================
+function loadProjectConfig(string $appDir): array
+{
+    $ymlPath = $appDir . DIRECTORY_SEPARATOR . 'project.yml';
+    if (!file_exists($ymlPath)) {
+        return [];
+    }
+
+    $lines = file($ymlPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if ($lines === false) return [];
+
+    return parseProjectYamlLines($lines);
+}
+
+/**
+ * Minimal YAML parser for project.yml.
+ * Only extracts top-level keys and list items.
+ * Does NOT handle nested objects deeply — only enough for component-libraries config.
+ */
+function parseProjectYamlLines(array $lines): array
+{
+    $config = [];
+    $currentKey = null;
+    $currentList = null;
+    $currentListItem = null;
+    $inComponentLibraries = false;
+    $inMappings = false;
+    $libraries = [];
+    $currentLib = null;
+
+    foreach ($lines as $line) {
+        // Skip comments and empty lines
+        $trimmed = ltrim($line);
+        if ($trimmed === '' || $trimmed[0] === '#') continue;
+
+        // Count leading spaces for indentation
+        $indent = strlen($line) - strlen($trimmed);
+
+        // Top-level key: value
+        if ($indent === 0 && preg_match('/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)$/', $trimmed, $m)) {
+            $key = $m[1];
+            $value = trim($m[2]);
+
+            if ($value === '') {
+                // Start of a list or object
+                $currentKey = $key;
+                if ($key === 'component-libraries') {
+                    $inComponentLibraries = true;
+                    $libraries = [];
+                }
+                $currentList = [];
+                $config[$key] = &$currentList;
+            } else {
+                $config[$key] = $value;
+                $currentKey = null;
+                $currentList = null;
+            }
+            continue;
+        }
+
+        // List item: - value
+        if ($indent === 2 && $trimmed[0] === '-' && isset($trimmed[1]) && $trimmed[1] === ' ') {
+            $itemValue = trim(substr($trimmed, 2));
+
+            if ($inComponentLibraries) {
+                if ($itemValue === '' || preg_match('/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)$/', $itemValue)) {
+                    // New library entry object
+                    if ($currentLib !== null) {
+                        $libraries[] = $currentLib;
+                    }
+                    $currentLib = [];
+                    $inMappings = false;
+                    if ($itemValue !== '') {
+                        // Key: value on same line as dash
+                        if (preg_match('/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)$/', $itemValue, $m2)) {
+                            $currentLib[$m2[1]] = trim($m2[2]);
+                        }
+                    }
+                }
+            } else if ($currentList !== null) {
+                $currentList[] = $itemValue;
+            }
+            continue;
+        }
+
+        // Indented key: value (inside an object)
+        if ($indent >= 4 && $currentLib !== null && $inComponentLibraries) {
+            if (preg_match('/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)$/', $trimmed, $m)) {
+                $subKey = $m[1];
+                $subValue = trim($m[2]);
+
+                if ($subKey === 'mappings') {
+                    $inMappings = true;
+                    $currentLib['mappings'] = [];
+                } elseif ($inMappings && $subValue !== '') {
+                    // mappings key: value
+                    $currentLib['mappings'][$subKey] = $subValue;
+                } else {
+                    $currentLib[$subKey] = $subValue;
+                }
+            }
+            continue;
+        }
+    }
+
+    // Finalize last library entry
+    if ($currentLib !== null) {
+        $libraries[] = $currentLib;
+    }
+
+    if ($inComponentLibraries) {
+        $config['component-libraries'] = $libraries;
+    }
+
+    return $config;
+}
+
+// ============================================================
 // CLI Main — only runs when this file is the entry point
 // ============================================================
 if ((isset($argv) && realpath($argv[0]) === realpath(__FILE__)) || defined('SFC_CLI_ENTRY')) {
@@ -1418,22 +1586,34 @@ if (!file_exists($vueFile)) {
 
 $source = file_get_contents($vueFile);
 
-// Load registry
+// Load user component registry (components/ directory)
 $componentRegistry = loadComponentRegistry($vueFile);
-$componentNames = array_keys($componentRegistry->all());
 $appDir = dirname(realpath($vueFile));
 $outDir = $appDir . DIRECTORY_SEPARATOR . 'gen';
 if (!is_dir($outDir)) {
     mkdir($outDir, 0755, true);
 }
 
+// Load library components from project.yml
+$projectConfig = loadProjectConfig($appDir);
+if (!empty($projectConfig['component-libraries'])) {
+    $libWarnings = $componentRegistry->loadLibraries(
+        $projectConfig['component-libraries'],
+        $appDir
+    );
+    foreach ($libWarnings as $w) {
+        echo "  [WARN] Library: $w\n";
+    }
+}
+
+$componentNames = array_keys($componentRegistry->all());
 $baseName = pathinfo($vueFile, PATHINFO_FILENAME);
 $isRootComponent = (strtolower($baseName) === 'app' || strtolower($baseName) === 'appcomponent');
 
 if (count($componentNames) > 0) {
-    echo "SFC Compiler v7: $vueFile (components: " . implode(', ', $componentNames) . ")\n";
+    echo "SFC Compiler v8: $vueFile (components: " . implode(', ', $componentNames) . ")\n";
 } else {
-    echo "SFC Compiler v7: $vueFile\n";
+    echo "SFC Compiler v8: $vueFile\n";
 }
 
 // Phase 1: Pre-compile child components

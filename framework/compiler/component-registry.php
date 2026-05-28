@@ -1,13 +1,15 @@
 <?php
 /**
- * Component Registry for VueCalc SFC Compiler (v5 M2)
+ * Component Registry for SFC Compiler v8
  * 
  * Resolves custom HTML tag names to their .vue source files.
- * Loaded from the app's project.yml components section.
+ * Supports user components (components/ directory) and external libraries
+ * configured via project.yml component-libraries.
  * 
  * Usage:
  *   $registry = new ComponentRegistry();
- *   $registry->load(['my-panel' => './components/MyPanel.vue'], $baseDir);
+ *   $registry->register('my-panel', './components/MyPanel.vue', 'user');
+ *   $registry->loadLibraries([...], $projectDir);
  *   $file = $registry->resolve('my-panel'); // → absolute path or null
  */
 
@@ -16,12 +18,69 @@ class ComponentRegistry
     /** @var array<string, string> tagName → absolute .vue file path */
     private array $components = [];
 
+    /** @var array<string, string> tagName → source identifier ('user' | 'library:path') */
+    private array $sources = [];
+
     /**
-     * Load component mappings from a config array.
+     * Register a single component with conflict detection.
+     * 
+     * Priority rules:
+     *   - User components (source='user') always override library components
+     *   - Library components: later-registered overrides earlier, emits warning
+     *
+     * @param string $tagName   e.g., 'vc-button'
+     * @param string $filePath  Absolute or relative path to .vue file
+     * @param string $source    Source identifier: 'user' or 'library:<libPath>'
+     * @return string|null  Warning message if conflict detected, null otherwise
+     */
+    public function register(string $tagName, string $filePath, string $source): ?string
+    {
+        // Normalize path
+        $absolutePath = realpath($filePath) ?: $filePath;
+
+        if (!file_exists($absolutePath)) {
+            return "Component '$tagName' source not found: $absolutePath";
+        }
+
+        // Check for conflicts
+        if (isset($this->components[$tagName])) {
+            $existingSource = $this->sources[$tagName] ?? 'unknown';
+
+            // User component always wins — warn if overriding library
+            if ($source === 'user') {
+                if ($existingSource !== 'user') {
+                    $this->components[$tagName] = $absolutePath;
+                    $this->sources[$tagName] = $source;
+                    return "User component '$tagName' overrides library component from '$existingSource'";
+                }
+                // User vs user — duplicate in components/ dir (same source), skip
+                return null;
+            }
+
+            // Library component — only override if user hasn't registered
+            if ($existingSource === 'user') {
+                return "Library component '$tagName' from '$source' ignored — user component takes priority";
+            }
+
+            // Library vs library — later overrides earlier
+            $this->components[$tagName] = $absolutePath;
+            $this->sources[$tagName] = $source;
+            return "Tag '$tagName' from '$source' overrides existing from '$existingSource'";
+        }
+
+        // No conflict — register
+        $this->components[$tagName] = $absolutePath;
+        $this->sources[$tagName] = $source;
+        return null;
+    }
+
+    /**
+     * Load component mappings from a config array (legacy API, kept for backward compat).
+     * Now delegates to register() with source='user'.
      * 
      * @param array  $config   e.g. ['my-panel' => './components/MyPanel.vue']
      * @param string $baseDir  Base directory for resolving relative paths
-     * @return string[]  Warnings for missing files
+     * @return string[]  Warnings for missing files or conflicts
      */
     public function load(array $config, string $baseDir): array
     {
@@ -29,15 +88,110 @@ class ComponentRegistry
         foreach ($config as $tagName => $relativePath) {
             $absolutePath = $baseDir . DIRECTORY_SEPARATOR
                 . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
-            // Normalize path (resolve . and .. segments)
-            $absolutePath = realpath($absolutePath) ?: $absolutePath;
-            if (file_exists($absolutePath)) {
-                $this->components[$tagName] = $absolutePath;
-            } else {
-                $warnings[] = "Component '$tagName' source not found: $absolutePath";
+            $warn = $this->register($tagName, $absolutePath, 'user');
+            if ($warn !== null) {
+                $warnings[] = $warn;
             }
         }
         return $warnings;
+    }
+
+    /**
+     * Load component libraries from project.yml configuration.
+     *
+     * @param array  $librariesConfig  Array of library config entries from project.yml
+     * @param string $projectDir       Project root directory for resolving relative paths
+     * @return string[]  Warnings
+     */
+    public function loadLibraries(array $librariesConfig, string $projectDir): array
+    {
+        $warnings = [];
+
+        foreach ($librariesConfig as $libConfig) {
+            $libPath = $libConfig['path'] ?? '';
+            if ($libPath === '') {
+                $warnings[] = "Library entry missing 'path' — skipping";
+                continue;
+            }
+
+            // Resolve relative path against project directory
+            $absoluteLibPath = realpath($projectDir . DIRECTORY_SEPARATOR
+                . str_replace('/', DIRECTORY_SEPARATOR, $libPath));
+
+            if ($absoluteLibPath === false || !is_dir($absoluteLibPath)) {
+                $warnings[] = "Library directory not found: $libPath";
+                continue;
+            }
+
+            $prefix = $libConfig['prefix'] ?? '';
+            $mode = $libConfig['mode'] ?? 'auto-register';
+            $source = 'library:' . $libPath;
+
+            if ($mode === 'mappings') {
+                // Manual mappings mode
+                $mappings = $libConfig['mappings'] ?? [];
+                if (!is_array($mappings)) {
+                    $warnings[] = "Library '$libPath': 'mappings' must be an array — skipping";
+                    continue;
+                }
+                foreach ($mappings as $tagSuffix => $fileName) {
+                    $tagName = $prefix !== '' ? $prefix . '-' . $tagSuffix : $tagSuffix;
+                    $filePath = $absoluteLibPath . DIRECTORY_SEPARATOR . $fileName;
+                    $warn = $this->register($tagName, $filePath, $source);
+                    if ($warn !== null) {
+                        $warnings[] = $warn;
+                    }
+                }
+            } else {
+                // Auto-register mode: recursively scan for .vue files
+                $this->scanLibraryDir($absoluteLibPath, $prefix, $source, $warnings);
+            }
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * Recursively scan a library directory for .vue files and register them.
+     * Converts PascalCase filenames to kebab-case tag names with optional prefix.
+     *
+     * @param string   $dir       Absolute path to library directory
+     * @param string   $prefix    Tag prefix (e.g., 'vc')
+     * @param string   $source    Source identifier for conflict detection
+     * @param string[] &$warnings Output warnings array
+     */
+    private function scanLibraryDir(string $dir, string $prefix, string $source, array &$warnings): void
+    {
+        $items = scandir($dir);
+        if ($items === false) return;
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') continue;
+
+            $fullPath = $dir . DIRECTORY_SEPARATOR . $item;
+
+            if (is_dir($fullPath)) {
+                $this->scanLibraryDir($fullPath, $prefix, $source, $warnings);
+                continue;
+            }
+
+            if (strtolower(pathinfo($item, PATHINFO_EXTENSION)) !== 'vue') continue;
+
+            $baseName = pathinfo($item, PATHINFO_FILENAME);
+            // Convert PascalCase to kebab-case: Button → button, MyComponent → my-component
+            $kebabName = strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $baseName));
+            $kebabName = strtolower($kebabName);
+
+            if ($kebabName === '') continue;
+
+            // Apply prefix: 'vc' + 'button' → 'vc-button'
+            $tagName = $prefix !== '' ? $prefix . '-' . $kebabName : $kebabName;
+
+            $warn = $this->register($tagName, $fullPath, $source);
+            if ($warn !== null) {
+                $warnings[] = $warn;
+            }
+        }
     }
 
     /**
