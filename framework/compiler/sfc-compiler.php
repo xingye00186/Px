@@ -950,8 +950,10 @@ function generateDispatchKey(array $handlers): string
 
 /**
  * Generate setBindValue() method body using switch (AOT-compatible).
+ * @param array $bindKeys Map of bind key → true
+ * @param array $arrayBindKeys Map of bind key → true for array-typed properties
  */
-function generateSetBindValue(array $bindKeys): string
+function generateSetBindValue(array $bindKeys, array $arrayBindKeys = []): string
 {
     $binds = array_keys($bindKeys);
     if (count($binds) === 0) {
@@ -961,7 +963,12 @@ function generateSetBindValue(array $bindKeys): string
     $cases = [];
     foreach ($binds as $key) {
         if ($key === '') continue;
-        $cases[] = "            case '{$key}': if (\$this->{$key} !== \$value) { \$this->{$key} = \$value; \$this->markDirty(); } break;";
+        if (isset($arrayBindKeys[$key])) {
+            // Array-typed property: json_decode before compare/assign
+            $cases[] = "            case '{$key}': \$decoded = json_decode(\$value, true); if (is_array(\$decoded) && \$this->{$key} !== \$decoded) { \$this->{$key} = \$decoded; \$this->markDirty(); } break;";
+        } else {
+            $cases[] = "            case '{$key}': if (\$this->{$key} !== \$value) { \$this->{$key} = \$value; \$this->markDirty(); } break;";
+        }
     }
     if (count($cases) === 0) {
         return "        // No bind keys defined";
@@ -975,8 +982,10 @@ function generateSetBindValue(array $bindKeys): string
 /**
  * Generate getBindValue() — reads a bound property value.
  * Used by VNodeRenderer for v-model / :bind text content.
+ * @param array $bindKeys Map of bind key → true
+ * @param array $arrayBindKeys Map of bind key → true for array-typed properties
  */
-function generateGetBindValue(array $bindKeys): string
+function generateGetBindValue(array $bindKeys, array $arrayBindKeys = []): string
 {
     $binds = array_keys($bindKeys);
     if (count($binds) === 0) {
@@ -986,7 +995,12 @@ function generateGetBindValue(array $bindKeys): string
     $cases = [];
     foreach ($binds as $key) {
         if ($key === '') continue;
-        $cases[] = "            case '{$key}': return (string) \$this->{$key};";
+        if (isset($arrayBindKeys[$key])) {
+            // Array-typed property: json_encode before returning
+            $cases[] = "            case '{$key}': return json_encode(\$this->{$key});";
+        } else {
+            $cases[] = "            case '{$key}': return (string) \$this->{$key};";
+        }
     }
     if (count($cases) === 0) {
         return "        return '';";
@@ -1321,10 +1335,12 @@ function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &
         }
 
         // Auto-bind interpolated variables from child template
+        // Skip variables already set as static props (no ':' prefix) — those
+        // are already passed directly and would be overwritten by the bind system.
         if ($childTemplate !== '') {
             if (preg_match_all('/{{\s*(\w+)\s*}}/', $childTemplate, $tplMatches)) {
                 foreach ($tplMatches[1] as $varName) {
-                    if (!isset($bindProps[$varName])) {
+                    if (!isset($bindProps[$varName]) && !isset($child->props[$varName])) {
                         $bindProps[$varName] = $varName;
                     }
                 }
@@ -1508,16 +1524,34 @@ function compileChildComponents(ComponentRegistry $registry, string $outDir): vo
         // Generate dispatch methods using switch (AOT-compatible)
         $dispatchClick = generateDispatchClick($clickHandlers);
         $dispatchKey = generateDispatchKey($keyHandlers);
-        $setBindValue = generateSetBindValue($bindKeys);
-        $getBindValue = generateGetBindValue($bindKeys);
+
+        // Extract array-typed properties from script for bind generation
+        $arrayBindKeys = [];
+        if (preg_match_all('/public\s+array\s+\$(\w+)/', $script, $arrayProps)) {
+            foreach ($arrayProps[1] as $propName) {
+                $arrayBindKeys[$propName] = true;
+            }
+        }
+
+        $setBindValue = generateSetBindValue($bindKeys, $arrayBindKeys);
+        $getBindValue = generateGetBindValue($bindKeys, $arrayBindKeys);
 
         // v-for helpers
         $vForHelpers = generateVForHelpers($loops);
 
-        // Dynamic property declarations
+        // Script analysis (inject markDirty into methods that modify properties)
+        $analyzer = new ScriptAnalyzer();
+        $classBody = $analyzer->injectDirty($script);
+
+        // Dynamic property declarations (skip props already declared in script)
         $dynamicPropsDeclaration = '';
         foreach ($bindKeys as $key => $_) {
-            if ($key !== '') $dynamicPropsDeclaration .= "    public string \$$key = '';\n";
+            if ($key === '') continue;
+            // Skip if property already exists in script
+            if (preg_match('/public\s+\w+\s+\$' . preg_quote($key, '/') . '\s*[=;]/', $script)) {
+                continue;
+            }
+            $dynamicPropsDeclaration .= "    public string \$$key = '';\n";
         }
 
         $classContent = <<<PHP
@@ -1533,7 +1567,8 @@ use Px\Rendering\VNode;
 
 class {$className} extends ReactiveComponent
 {
-$dynamicPropsDeclaration
+{$classBody}
+{$dynamicPropsDeclaration}
 
     public function render(): VNode
     {
@@ -1871,18 +1906,26 @@ $renderExpr = generateVNodeExpr($root, null, 1);
 $dispatchClickBody = generateDispatchClick($clickHandlers);
 $dispatchKeyBody = generateDispatchKey($keyHandlers);
 
-// Generate setBindValue
-$setBindValueBody = generateSetBindValue($bindKeys);
+// Script analysis (must run BEFORE bind generation to detect array-typed properties)
+$analyzer = new ScriptAnalyzer();
+$classBody = $analyzer->injectDirty($script);
 
-// Generate getBindValue (reads bound property values for VNodeRenderer)
-$getBindValueBody = generateGetBindValue($bindKeys);
+// Extract array-typed property names from script for bind code generation
+$arrayBindKeys = [];
+if (preg_match_all('/public\s+array\s+\$(\w+)/', $classBody, $arrayProps)) {
+    foreach ($arrayProps[1] as $propName) {
+        $arrayBindKeys[$propName] = true;
+    }
+}
+
+// Generate setBindValue (with array-type awareness)
+$setBindValueBody = generateSetBindValue($bindKeys, $arrayBindKeys);
+
+// Generate getBindValue (with array-type awareness)
+$getBindValueBody = generateGetBindValue($bindKeys, $arrayBindKeys);
 
 // Generate v-for helpers
 $vForHelpers = generateVForHelpers($loops);
-
-// Script analysis
-$analyzer = new ScriptAnalyzer();
-$classBody = $analyzer->injectDirty($script);
 
 // Component class name
 $componentClassName = $baseName . 'Component';
