@@ -13,7 +13,7 @@
             <span style="right:12px;top:8px;font-size:10px;color:#C0C4CC">{{ cat.expanded ? '-' : '+' }}</span>
           </div>
           <div v-if="cat.expanded === '1'" style="left:0px;top:0px;width:220px;height:auto" class="cat-items">
-            <div v-for="item in cat.items" :key="item.id" :style="'left:0px;top:0px;width:220px;height:28px'" :class="item.cls" @click="selectItem(cat.id, item.id)">
+            <div v-for="item in cat.items" :key="item.id" :style="'left:0px;top:0px;width:220px;height:28px'" :class="item.cls" @click="selectItem(item.id)">
               <span style="left:24px;top:4px;font-size:12px" :class="item.cls2">{{ item.name }}</span>
             </div>
           </div>
@@ -68,7 +68,7 @@
           <vc-title style="width:700px;height:32px" text="Button 按钮" />
           <vc-paragraph style="width:700px;margin-top:8px" text="按钮用于触发操作。支持多种类型和状态。" />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="示例" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Demo" />
           <div style="left:0px;top:8px;width:700px;height:60px" class="demo-area">
             <vc-button style="left:16px;top:16px" text="Default" @click="onBtnDemo" />
             <vc-button style="left:106px;top:16px" text="Primary" @click="onBtnDemo" />
@@ -77,26 +77,26 @@
             <vc-button style="left:376px;top:16px" text="Danger" @click="onBtnDemo" />
           </div>
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="属性" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Props" />
           <vc-table style="width:700px" :data="buttonPropsData" :columns="tableCols" :currentPage="curPage" :pageSize="pgSize" />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="事件" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Events" />
           <vc-table style="width:700px" :data="buttonEventsData" :columns="tableCols" :currentPage="curPage" :pageSize="pgSize" />
         </div>
 
-        <!-- P1 介绍 -->
+        <!-- P1 Introduction -->
         <div v-if="currentSection === 'p1-intro'" style="left:0px;top:0px;width:740px;padding:20px" class="doc-section">
-          <vc-title style="width:700px;height:32px" text="P1 — 布局组件介绍" />
-          <vc-paragraph style="width:700px;margin-top:12px" text="布局组件用于构建页面的基本框架结构，包括容器、栅格、卡片等。" />
+          <vc-title style="width:700px;height:32px" text="P1 — Layout Components" />
+          <vc-paragraph style="width:700px;margin-top:12px" text="Layout components are used to build the basic framework structure of pages." />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="栅格系统" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Grid System" />
           <vc-row style="width:700px;height:40px;margin-top:12px" text="">
             <vc-col style="left:0px;top:0px" :span="8"><div class="col-demo">col-8</div></vc-col>
             <vc-col style="left:0px;top:0px" :span="8"><div class="col-demo">col-8</div></vc-col>
             <vc-col style="left:0px;top:0px" :span="8"><div class="col-demo">col-8</div></vc-col>
           </vc-row>
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="卡片示例" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Card Demo" />
           <vc-row style="width:700px;margin-top:12px" text="">
             <vc-col style="left:0px;top:0px" :span="6"><vc-card style="height:100px" header="Card 1" text="Always shadow" shadow="always" /></vc-col>
             <vc-col style="left:0px;top:0px" :span="6"><vc-card style="height:100px" header="Card 2" text="Hover shadow" shadow="hover" /></vc-col>
@@ -104,23 +104,23 @@
           </vc-row>
         </div>
 
-        <!-- P1 Card 详情 -->
+        <!-- P1 Card Details -->
         <div v-if="currentSection === 'p1-card'" style="left:0px;top:0px;width:740px;padding:20px" class="doc-section">
-          <vc-title style="width:700px;height:32px" text="Card 卡片" />
-          <vc-paragraph style="width:700px;margin-top:8px" text="卡片用于展示内容区块，支持阴影效果和头部定制。" />
+          <vc-title style="width:700px;height:32px" text="Card Component" />
+          <vc-paragraph style="width:700px;margin-top:8px" text="Cards are used to display content blocks with shadow effects." />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="示例" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Demo" />
           <vc-card style="width:300px;margin-top:12px" header="Card Header" text="This is card content area. You can put any content here." shadow="always" />
         </div>
 
-        <!-- P2 介绍 -->
+        <!-- P2 Introduction -->
         <div v-if="currentSection === 'p2-intro'" style="left:0px;top:0px;width:740px;padding:20px" class="doc-section">
-          <vc-title style="width:700px;height:32px" text="P2 — 表单组件介绍" />
-          <vc-paragraph style="width:700px;margin-top:12px" text="表单组件用于收集用户输入，支持 v-model 双向绑定。" />
+          <vc-title style="width:700px;height:32px" text="P2 — Form Components" />
+          <vc-paragraph style="width:700px;margin-top:12px" text="Form components are used to collect user input." />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="输入组件示例" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Input Demo" />
           <vc-input style="width:300px;margin-top:12px" :modelValue="demoInput" placeholder="Enter text..." @input="onDemoInput" />
-          <vc-paragraph style="width:700px;margin-top:8px" :text="'当前输入: ' . demoInput" />
+          <vc-paragraph style="width:700px;margin-top:8px" :text="demoInput" />
 
           <vc-row style="width:700px;margin-top:16px" text="">
             <vc-col style="left:0px;top:0px" :span="6">
@@ -142,90 +142,90 @@
           </vc-row>
         </div>
 
-        <!-- P2 Input 详情 -->
+        <!-- P2 Input Details -->
         <div v-if="currentSection === 'p2-input'" style="left:0px;top:0px;width:740px;padding:20px" class="doc-section">
-          <vc-title style="width:700px;height:32px" text="Input 输入框" />
-          <vc-paragraph style="width:700px;margin-top:8px" text="输入框用于收集用户文本输入。" />
+          <vc-title style="width:700px;height:32px" text="Input Component" />
+          <vc-paragraph style="width:700px;margin-top:8px" text="Input is used to collect user text input." />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="基础用法" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Basic Usage" />
           <vc-input style="width:300px;margin-top:12px" :modelValue="demoInput" placeholder="Please enter..." @input="onDemoInput" />
         </div>
 
-        <!-- P3 介绍 -->
+        <!-- P3 Introduction -->
         <div v-if="currentSection === 'p3-intro'" style="left:0px;top:0px;width:740px;padding:20px" class="doc-section">
-          <vc-title style="width:700px;height:32px" text="P3 — 浮层与反馈组件" />
-          <vc-paragraph style="width:700px;margin-top:12px" text="浮层组件用于展示模态内容、通知、提示等。" />
+          <vc-title style="width:700px;height:32px" text="P3 — Feedback Components" />
+          <vc-paragraph style="width:700px;margin-top:12px" text="Feedback components are used to display modal content, notifications, and hints." />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="Modal 对话框" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Modal Dialog" />
           <vc-button style="width:120px;height:36px" text="Open Modal" @click="onShowModal" />
           <vc-modal v-if="showGuideModal === '1'" style="left:0px;top:0px" :visible="showGuideModal" title="Modal Title" text="This is a modal dialog." width="380" height="200" />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="Drawer 抽屉" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Drawer" />
           <vc-button style="width:120px;height:36px" text="Open Drawer" @click="onShowDrawer" />
           <vc-drawer v-if="showGuideDrawer === '1'" style="left:0px;top:0px" :visible="showGuideDrawer" title="Drawer" text="Drawer content from guide." width="280" placement="right" />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="消息提示" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Message" />
           <vc-button style="width:80px;height:32px" text="Success" @click="onGuideMsg('success')" />
           <vc-button style="left:90px;top:0px;width:80px;height:32px" text="Error" @click="onGuideMsg('error')" />
           <vc-button style="left:180px;top:0px;width:80px;height:32px" text="Warning" @click="onGuideMsg('warning')" />
           <vc-message v-if="guideMsgTxt !== ''" style="left:270px;top:0px" :text="guideMsgTxt" :type="guideMsgTp" />
         </div>
 
-        <!-- P4 介绍 -->
+        <!-- P4 Introduction -->
         <div v-if="currentSection === 'p4-intro'" style="left:0px;top:0px;width:740px;padding:20px" class="doc-section">
-          <vc-title style="width:700px;height:32px" text="P4 — 数据展示组件" />
-          <vc-paragraph style="width:700px;margin-top:12px" text="数据展示组件用于呈现结构化数据和状态信息。" />
+          <vc-title style="width:700px;height:32px" text="P4 — Data Display Components" />
+          <vc-paragraph style="width:700px;margin-top:12px" text="Data display components are used to present structured data." />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="Table 表格" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Table" />
           <vc-table style="width:700px;margin-top:12px" :data="tableDemoData" :columns="tableCols" :currentPage="curPage" :pageSize="pgSize" />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="Tag 标签" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Tag" />
           <vc-tag style="margin-top:12px" text="Primary" type="primary" />
           <vc-tag style="left:80px;top:0px" text="Success" type="success" />
           <vc-tag style="left:160px;top:0px" text="Warning" type="warning" />
           <vc-tag style="left:240px;top:0px" text="Danger" type="danger" />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="Progress 进度条" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Progress" />
           <vc-progress style="width:300px;margin-top:12px" :percentage="demoProgress" />
         </div>
 
-        <!-- P5 介绍 -->
+        <!-- P5 Introduction -->
         <div v-if="currentSection === 'p5-intro'" style="left:0px;top:0px;width:740px;padding:20px" class="doc-section">
-          <vc-title style="width:700px;height:32px" text="P5 — 高级表单组件" />
-          <vc-paragraph style="width:700px;margin-top:12px" text="高级表单组件提供更复杂的输入选择功能。" />
+          <vc-title style="width:700px;height:32px" text="P5 — Advanced Form Components" />
+          <vc-paragraph style="width:700px;margin-top:12px" text="Advanced form components provide more complex input selection features." />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="DatePicker 日期选择" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="DatePicker" />
           <vc-datepicker style="width:240px;height:36px;margin-top:12px" :modelValue="demoDate" @change="onDemoDate" />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="Rate 星级评分" />
-          <vc-rate style="margin-top:12px" :modelValue="demoRate" :count="5" @change="onDemoRate" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Rate" />
+          <vc-rate style="margin-top:12px" :modelValue="demoRate" count="5" @change="onDemoRate" />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="ColorPicker 颜色选择" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="ColorPicker" />
           <vc-colorpicker style="width:100px;height:36px;margin-top:12px" :modelValue="demoColor" @change="onDemoColor" />
           <div style="left:0px;top:8px;width:60px;height:30px" :style="'background:' . demoColor" class="color-swatch"></div>
         </div>
 
-        <!-- P6 介绍 -->
+        <!-- P6 Introduction -->
         <div v-if="currentSection === 'p6-intro'" style="left:0px;top:0px;width:740px;padding:20px" class="doc-section">
-          <vc-title style="width:700px;height:32px" text="P6 — 复杂与扩展组件" />
-          <vc-paragraph style="width:700px;margin-top:12px" text="复杂组件提供高级交互功能。" />
+          <vc-title style="width:700px;height:32px" text="P6 — Complex Components" />
+          <vc-paragraph style="width:700px;margin-top:12px" text="Complex components provide advanced interaction features." />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="Tree 树形控件" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Tree" />
           <vc-tree style="width:280px;margin-top:12px" :data="treeDemoData" :showCheckbox="showCheck" />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="Carousel 轮播图" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Carousel" />
           <vc-carousel style="width:400px;height:180px;margin-top:12px" :data="carouselDemoData" />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="Transfer 穿梭框" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="Transfer" />
           <vc-transfer style="width:400px;height:180px;margin-top:12px" :data="transferDemoData" />
         </div>
 
-        <!-- 快速参考 -->
+        <!-- Quick Reference -->
         <div v-if="currentSection === 'quickstart'" style="left:0px;top:0px;width:740px;padding:20px" class="doc-section">
-          <vc-title style="width:700px;height:32px" text="快速开始" />
-          <vc-paragraph style="width:700px;margin-top:12px" text="在 project.yml 中配置组件库路径，即可使用所有组件。" />
+          <vc-title style="width:700px;height:32px" text="Quick Start" />
+          <vc-paragraph style="width:700px;margin-top:12px" text="Configure component library path in project.yml to use all components." />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="1. 配置 project.yml" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="1. Configure project.yml" />
           <div style="left:0px;top:8px;width:700px;height:80px;background:#1E1E1E;padding:12px" class="code-block">
             <vc-paragraph style="font-size:13px;color:#D4D4D4;font-family:Consolas" text="component-libraries:" />
             <vc-paragraph style="font-size:13px;color:#D4D4D4;font-family:Consolas" text="  - path: ../../library/vc-ui" />
@@ -246,12 +246,12 @@
           </div>
         </div>
 
-        <!-- 组件索引 -->
+        <!-- Component Index -->
         <div v-if="currentSection === 'index'" style="left:0px;top:0px;width:740px;padding:20px" class="doc-section">
-          <vc-title style="width:700px;height:32px" text="组件索引" />
-          <vc-paragraph style="width:700px;margin-top:8px" text="共 59 个组件，分为 7 个阶段。" />
+          <vc-title style="width:700px;height:32px" text="Component Index" />
+          <vc-paragraph style="width:700px;margin-top:8px" text="Total 59 components, divided into 7 phases." />
 
-          <vc-title style="width:700px;height:24px;margin-top:16px" text="P0 基础组件 (8)" />
+          <vc-title style="width:700px;height:24px;margin-top:16px" text="P0 Basic Components (8)" />
           <vc-tag style="margin-top:8px" text="Button" type="primary" />
           <vc-tag style="left:8px;top:0px" text="Icon" type="primary" />
           <vc-tag style="left:60px;top:0px" text="Link" type="primary" />
@@ -319,7 +319,7 @@
 
     // 当前选中
     public string $currentSection = 'quickstart';
-    public string $currentTitle = '快速开始';
+    public string $currentTitle = 'Quick Start';
 
     // Demo 状态
     public string $demoInput = '';
@@ -339,138 +339,100 @@
     public string $guideMsgTp = 'success';
 
     // 表格列定义
-    public string $tableCols = '[{"key":"name","label":"名称"},{"key":"type","label":"类型"},{"key":"desc","label":"说明"}]';
+    public string $tableCols = '[{\"key\":\"name\",\"label\":\"Name\"},{\"key\":\"type\",\"label\":\"Type\"},{\"key\":\"desc\",\"label\":\"Description\"}]';
     public string $curPage = '1';
     public string $pgSize = '10';
 
     // Button 文档数据
-    public string $buttonPropsData = '[{"name":"text","type":"string","desc":"按钮文字"},{"name":"type","type":"string","desc":"按钮类型"}]';
-    public string $buttonEventsData = '[{"name":"click","type":"handler","desc":"点击事件"}]';
+    public string $buttonPropsData = '[{\"name\":\"text\",\"type\":\"string\",\"desc\":\"Button Text\"},{\"name\":\"type\",\"type\":\"string\",\"desc\":\"Button Type\"}]';
+    public string $buttonEventsData = '[{\"name\":\"click\",\"type\":\"handler\",\"desc\":\"Click Event\"}]';
 
     // Table 示例数据
-    public string $tableDemoData = '[{"name":"Alice","age":28,"status":"active"},{"name":"Bob","age":35,"status":"active"},{"name":"Carol","age":42,"status":"inactive"}]';
+    public string $tableDemoData = '[{\"name\":\"Alice\",\"age\":28,\"status\":\"active\"},{\"name\":\"Bob\",\"age\":35,\"status\":\"active\"},{\"name\":\"Carol\",\"age\":42,\"status\":\"inactive\"}]';
 
     // Select 选项
-    public string $selectOptsDemo = '[{"label":"Option 1","value":"1"},{"label":"Option 2","value":"2"},{"label":"Option 3","value":"3"}]';
+    public string $selectOptsDemo = '[{\"label\":\"Option 1\",\"value\":\"1\"},{\"label\":\"Option 2\",\"value\":\"2\"},{\"label\":\"Option 3\",\"value\":\"3\"}]';
 
     // Tree 示例数据
-    public string $treeDemoData = '[{"label":"Root","value":"root","children":[{"label":"Node 1","value":"n1"},{"label":"Node 2","value":"n2","children":[{"label":"Node 2.1","value":"n21"}]}]}]';
+    public string $treeDemoData = '[{\"label\":\"Root\",\"value\":\"root\",\"children\":[{\"label\":\"Node 1\",\"value\":\"n1\"},{\"label\":\"Node 2\",\"value\":\"n2\",\"children\":[{\"label\":\"Node 2.1\",\"value\":\"n21\"}]}]}]';
     public string $showCheck = '1';
 
     // Carousel 示例数据
-    public string $carouselDemoData = '[{"text":"Slide 1","bg":"#409EFF"},{"text":"Slide 2","bg":"#67C23A"},{"text":"Slide 3","bg":"#F56C6C"}]';
+    public string $carouselDemoData = '[{\"text\":\"Slide 1\",\"bg\":\"#409EFF\"},{\"text\":\"Slide 2\",\"bg\":\"#67C23A\"},{\"text\":\"Slide 3\",\"bg\":\"#F56C6C\"}]';
 
     // Transfer 示例数据
-    public string $transferDemoData = '[{"label":"Option 1","value":"1"},{"label":"Option 2","value":"2"},{"label":"Option 3","value":"3"},{"label":"Option 4","value":"4"}]';
+    public string $transferDemoData = '[{\"label\":\"Option 1\",\"value\":\"1\"},{\"label\":\"Option 2\",\"value\":\"2\"},{\"label\":\"Option 3\",\"value\":\"3\"},{\"label\":\"Option 4\",\"value\":\"4\"}]';
 
     // 导航分类
-    public string $categories = '[
-      {
-        "id":"getting-started",
-        "name":"开始使用",
-        "expanded":"1",
-        "items":[
-          {"id":"quickstart","name":"快速开始","cls":"nav-item nav-item-active","cls2":"nav-item-text-active"},
-          {"id":"index","name":"组件索引","cls":"nav-item","cls2":"nav-item-text"}
-        ]
-      },
-      {
-        "id":"p0",
-        "name":"P0 基础组件",
-        "expanded":"1",
-        "items":[
-          {"id":"p0-intro","name":"介绍","cls":"nav-item","cls2":"nav-item-text"},
-          {"id":"p0-button","name":"Button","cls":"nav-item","cls2":"nav-item-text"}
-        ]
-      },
-      {
-        "id":"p1",
-        "name":"P1 布局组件",
-        "expanded":"1",
-        "items":[
-          {"id":"p1-intro","name":"介绍","cls":"nav-item","cls2":"nav-item-text"},
-          {"id":"p1-card","name":"Card","cls":"nav-item","cls2":"nav-item-text"}
-        ]
-      },
-      {
-        "id":"p2",
-        "name":"P2 表单组件",
-        "expanded":"1",
-        "items":[
-          {"id":"p2-intro","name":"介绍","cls":"nav-item","cls2":"nav-item-text"},
-          {"id":"p2-input","name":"Input","cls":"nav-item","cls2":"nav-item-text"}
-        ]
-      },
-      {
-        "id":"p3",
-        "name":"P3 浮层组件",
-        "expanded":"1",
-        "items":[
-          {"id":"p3-intro","name":"介绍","cls":"nav-item","cls2":"nav-item-text"}
-        ]
-      },
-      {
-        "id":"p4",
-        "name":"P4 数据展示",
-        "expanded":"1",
-        "items":[
-          {"id":"p4-intro","name":"介绍","cls":"nav-item","cls2":"nav-item-text"}
-        ]
-      },
-      {
-        "id":"p5",
-        "name":"P5 高级表单",
-        "expanded":"1",
-        "items":[
-          {"id":"p5-intro","name":"介绍","cls":"nav-item","cls2":"nav-item-text"}
-        ]
-      },
-      {
-        "id":"p6",
-        "name":"P6 复杂组件",
-        "expanded":"1",
-        "items":[
-          {"id":"p6-intro","name":"介绍","cls":"nav-item","cls2":"nav-item-text"}
-        ]
-      }
-    ]';
+    public array $categories = [
+        ['id' => 'getting-started', 'name' => 'Getting Started', 'expanded' => '1',
+         'items' => [
+            ['id' => 'quickstart', 'name' => 'Quick Start', 'cls' => 'nav-item nav-item-active', 'cls2' => 'nav-item-text-active'],
+            ['id' => 'index', 'name' => 'Component Index', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+         ]],
+        ['id' => 'p0', 'name' => 'P0 Basic Components', 'expanded' => '1',
+         'items' => [
+            ['id' => 'p0-intro', 'name' => 'Introduction', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+            ['id' => 'p0-button', 'name' => 'Button', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+         ]],
+        ['id' => 'p1', 'name' => 'P1 Layout Components', 'expanded' => '1',
+         'items' => [
+            ['id' => 'p1-intro', 'name' => 'Introduction', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+            ['id' => 'p1-card', 'name' => 'Card', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+         ]],
+        ['id' => 'p2', 'name' => 'P2 Form Components', 'expanded' => '1',
+         'items' => [
+            ['id' => 'p2-intro', 'name' => 'Introduction', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+            ['id' => 'p2-input', 'name' => 'Input', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+         ]],
+        ['id' => 'p3', 'name' => 'P3 Feedback Components', 'expanded' => '1',
+         'items' => [
+            ['id' => 'p3-intro', 'name' => 'Introduction', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+         ]],
+        ['id' => 'p4', 'name' => 'P4 Data Display', 'expanded' => '1',
+         'items' => [
+            ['id' => 'p4-intro', 'name' => 'Introduction', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+         ]],
+        ['id' => 'p5', 'name' => 'P5 Advanced Forms', 'expanded' => '1',
+         'items' => [
+            ['id' => 'p5-intro', 'name' => 'Introduction', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+         ]],
+        ['id' => 'p6', 'name' => 'P6 Complex Components', 'expanded' => '1',
+         'items' => [
+            ['id' => 'p6-intro', 'name' => 'Introduction', 'cls' => 'nav-item', 'cls2' => 'nav-item-text'],
+         ]],
+    ];
 
     /**
      * 切换分类展开
      */
     public function toggleCat(string $catId): void
     {
-        $cats = json_decode($this->categories, true);
-        if (!is_array($cats)) return;
-        foreach ($cats as &$cat) {
+        foreach ($this->categories as $idx => $cat) {
             if ($cat['id'] === $catId) {
-                $cat['expanded'] = ($cat['expanded'] === '1') ? '0' : '1';
+                $this->categories[$idx]['expanded'] = ($cat['expanded'] === '1') ? '0' : '1';
             }
         }
-        $this->categories = json_encode($cats);
     }
 
     /**
      * 选择导航项
      */
-    public function selectItem(string $catId, string $itemId): void
+    public function selectItem(string $itemId): void
     {
         $this->currentSection = $itemId;
-        $cats = json_decode($this->categories, true);
-        if (!is_array($cats)) return;
-        foreach ($cats as &$cat) {
-            foreach ($cat['items'] as &$item) {
+        foreach ($this->categories as $catIdx => $cat) {
+            foreach ($cat['items'] as $itemIdx => $item) {
                 if ($item['id'] === $itemId) {
-                    $item['cls'] = 'nav-item nav-item-active';
-                    $item['cls2'] = 'nav-item-text-active';
+                    $this->categories[$catIdx]['items'][$itemIdx]['cls'] = 'nav-item nav-item-active';
+                    $this->categories[$catIdx]['items'][$itemIdx]['cls2'] = 'nav-item-text-active';
                     $this->currentTitle = $item['name'];
                 } else {
-                    $item['cls'] = 'nav-item';
-                    $item['cls2'] = 'nav-item-text';
+                    $this->categories[$catIdx]['items'][$itemIdx]['cls'] = 'nav-item';
+                    $this->categories[$catIdx]['items'][$itemIdx]['cls2'] = 'nav-item-text';
                 }
             }
         }
-        $this->categories = json_encode($cats);
     }
 
     // Demo handlers
