@@ -25,8 +25,8 @@
     /** 选中值 (v-model, JSON 数组) */
     public string $modelValue = '';
 
-    /** 选项数据 (JSON 树形结构) */
-    public string $options = '[{"label":"Province","value":"p","children":[{"label":"City","value":"c","children":[{"label":"District","value":"d"}]}]}]';
+    /** 选项数据 (树形结构) */
+    public array $options = [["label"=>"Province","value"=>"p","children"=>[["label"=>"City","value"=>"c","children"=>[["label"=>"District","value"=>"d"]]]]]];
 
     /** 占位符 */
     public string $placeholder = 'Please select...';
@@ -95,7 +95,7 @@
         if (!is_array($vals) || count($vals) === 0) {
             return $this->placeholder;
         }
-        $opts = json_decode($this->options, true);
+        $opts = $this->options;
         $labels = [];
         $current = $opts;
         foreach ($vals as $v) {
@@ -120,8 +120,7 @@
      */
     public function getLevel0Options(): array
     {
-        $opts = json_decode($this->options, true);
-        if (!is_array($opts)) return [];
+        $opts = $this->options;
         $result = [];
         foreach ($opts as $item) {
             $v = $item['value'] ?? '';
@@ -136,8 +135,7 @@
      */
     public function getLevel1Options(): array
     {
-        $opts = json_decode($this->options, true);
-        if (!is_array($opts)) return [];
+        $opts = $this->options;
         $result = [];
         foreach ($opts as $item) {
             if (($item['value'] ?? '') === $this->selectedL0) {
@@ -160,8 +158,7 @@
      */
     public function getLevel2Options(): array
     {
-        $opts = json_decode($this->options, true);
-        if (!is_array($opts)) return [];
+        $opts = $this->options;
         $result = [];
         foreach ($opts as $item) {
             if (($item['value'] ?? '') === $this->selectedL0) {

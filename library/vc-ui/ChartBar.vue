@@ -22,11 +22,11 @@
 
 <script lang="php">
 
-    /** 数据 (JSON 数组) */
-    public string $data = '[30,45,60,35,80,55,40]';
+    /** 数据 (数组) */
+    public array $data = [30,45,60,35,80,55,40];
 
-    /** X 轴标签 (JSON 数组) */
-    public string $xLabels = '["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]';
+    /** X 轴标签 (数组) */
+    public array $xLabels = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
     /** Y 轴最大值 */
     public string $maxValue = '100';
@@ -48,8 +48,7 @@
      */
     public function getBars(): array
     {
-        $vals = json_decode($this->data, true);
-        if (!is_array($vals)) return [];
+        $vals = $this->data;
         $max = (float)$this->maxValue;
         $min = (float)$this->minValue;
         $count = count($vals);

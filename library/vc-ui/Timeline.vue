@@ -13,8 +13,8 @@
 
 <script lang="php">
 
-    /** 时间线数据 (JSON) */
-    public string $data = '[{"timestamp":"2025-01-01","content":"Event 1"},{"timestamp":"2025-01-15","content":"Event 2"}]';
+    /** 时间线数据 */
+    public array $data = [["timestamp"=>"2025-01-01","content"=>"Event 1"],["timestamp"=>"2025-01-15","content"=>"Event 2"]];
 
     /** 是否使用圆点 */
     public string $dot = '1';
@@ -27,8 +27,7 @@
      */
     public function getItems(): array
     {
-        $decoded = json_decode($this->data, true);
-        if (!is_array($decoded)) return [];
+        $decoded = $this->data;
         $result = [];
         foreach ($decoded as $item) {
             $cls = 'timeline-dot';

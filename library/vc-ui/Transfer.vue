@@ -34,8 +34,8 @@
 
 <script lang="php">
 
-    /** 可选数据 (JSON) */
-    public string $data = '[{"label":"Option 1","value":"1"},{"label":"Option 2","value":"2"},{"label":"Option 3","value":"3"},{"label":"Option 4","value":"4"}]';
+    /** 可选数据 */
+    public array $data = [["label"=>"Option 1","value"=>"1"],["label"=>"Option 2","value"=>"2"],["label"=>"Option 3","value"=>"3"],["label"=>"Option 4","value"=>"4"]];
 
     /** 选中值 (v-model, JSON 数组) */
     public string $modelValue = '[]';
@@ -76,8 +76,7 @@
      */
     public function addAll(): void
     {
-        $allData = json_decode($this->data, true);
-        if (!is_array($allData)) return;
+        $allData = $this->data;
         $vals = array_column($allData, 'value');
         $this->modelValue = json_encode(array_values(array_unique($vals)));
     }
@@ -95,9 +94,8 @@
      */
     public function getLeftItems(): array
     {
-        $allData = json_decode($this->data, true);
+        $allData = $this->data;
         $vals = json_decode($this->modelValue, true);
-        if (!is_array($allData)) return [];
         if (!is_array($vals)) $vals = [];
         $result = [];
         foreach ($allData as $item) {
@@ -113,9 +111,9 @@
      */
     public function getRightItems(): array
     {
-        $allData = json_decode($this->data, true);
+        $allData = $this->data;
         $vals = json_decode($this->modelValue, true);
-        if (!is_array($allData) || !is_array($vals)) return [];
+        if (!is_array($vals)) return [];
         $result = [];
         foreach ($allData as $item) {
             if (in_array($item['value'] ?? '', $vals)) {

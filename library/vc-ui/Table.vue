@@ -16,10 +16,10 @@
 <script lang="php">
 
     /** 表格数据 */
-    public string $data = '[]';
+    public array $data = [];
 
     /** 列配置 */
-    public string $columns = '[]';
+    public array $columns = [];
 
     /** 当前页 */
     public string $currentPage = '1';
@@ -32,8 +32,7 @@
      */
     public function getColList(): array
     {
-        $cols = json_decode($this->columns, true);
-        if (!is_array($cols)) return [];
+        $cols = $this->columns;
         $result = [];
         foreach ($cols as $col) {
             $result[] = [
@@ -50,8 +49,7 @@
      */
     public function getRowList(): array
     {
-        $rows = json_decode($this->data, true);
-        if (!is_array($rows)) return [];
+        $rows = $this->data;
         $page = max(1, (int)$this->currentPage);
         $size = max(1, (int)$this->pageSize);
         $offset = ($page - 1) * $size;

@@ -23,11 +23,11 @@
 
 <script lang="php">
 
-    /** 数据 (JSON 数组) */
-    public string $data = '[120,200,150,80,70,110,130]';
+    /** 数据 (数组) */
+    public array $data = [120,200,150,80,70,110,130];
 
-    /** X 轴标签 (JSON 数组) */
-    public string $xLabels = '["Jan","Feb","Mar","Apr","May","Jun","Jul"]';
+    /** X 轴标签 (数组) */
+    public array $xLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul"];
 
     /** Y 轴最大值 */
     public string $maxValue = '300';
@@ -46,8 +46,7 @@
      */
     public function getDataPoints(): array
     {
-        $vals = json_decode($this->data, true);
-        if (!is_array($vals)) return [];
+        $vals = $this->data;
         $max = (float)$this->maxValue;
         $min = (float)$this->minValue;
         $count = count($vals);

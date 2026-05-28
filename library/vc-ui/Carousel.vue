@@ -21,8 +21,8 @@
 
 <script lang="php">
 
-    /** 轮播数据 (JSON) */
-    public string $data = '[{"text":"Slide 1","bg":"#409EFF"},{"text":"Slide 2","bg":"#67C23A"},{"text":"Slide 3","bg":"#F56C6C"}]';
+    /** 轮播数据 */
+    public array $data = [["text"=>"Slide 1","bg"=>"#409EFF"],["text"=>"Slide 2","bg"=>"#67C23A"],["text"=>"Slide 3","bg"=>"#F56C6C"]];
 
     /** 是否自动播放 */
     public string $autoplay = '1';
@@ -38,7 +38,7 @@
      */
     public function prev(): void
     {
-        $cnt = count(json_decode($this->data, true) ?? []);
+        $cnt = count($this->data);
         if ($cnt <= 1) return;
         $idx = (int)$this->currentIndex;
         $this->currentIndex = (string)(($idx - 1 + $cnt) % $cnt);
@@ -49,7 +49,7 @@
      */
     public function next(): void
     {
-        $cnt = count(json_decode($this->data, true) ?? []);
+        $cnt = count($this->data);
         if ($cnt <= 1) return;
         $idx = (int)$this->currentIndex;
         $this->currentIndex = (string)(($idx + 1) % $cnt);
@@ -60,7 +60,7 @@
      */
     public function goTo(int $idx): void
     {
-        $cnt = count(json_decode($this->data, true) ?? []);
+        $cnt = count($this->data);
         if ($idx >= 0 && $idx < $cnt) {
             $this->currentIndex = (string)$idx;
         }
@@ -71,8 +71,7 @@
      */
     public function getSlides(): array
     {
-        $decoded = json_decode($this->data, true);
-        return is_array($decoded) ? $decoded : [];
+        return $this->data;
     }
 
     /**
@@ -80,7 +79,7 @@
      */
     public function getSlideCount(): int
     {
-        return count(json_decode($this->data, true) ?? []);
+        return count($this->data);
     }
 </script>
 

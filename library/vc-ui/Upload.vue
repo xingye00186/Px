@@ -6,7 +6,7 @@
       <span style="left:130px;top:44px;width:40px;height:16px;font-size:12px;color:#409EFF;text-align:center">Browse</span>
     </div>
     <!-- 文件列表 -->
-    <div v-if="fileListJson !== ''" style="left:0px;top:88px;width:300px;height:120px" class="file-list">
+    <div v-if="count(fileListJson) > 0" style="left:0px;top:88px;width:300px;height:120px" class="file-list">
       <div v-for="f in fileList" :key="f.name" style="left:0px;top:0px;width:300px;height:28px" class="file-item">
         <span style="left:8px;top:4px;width:220px;height:20px;font-size:12px;color:#606266">{{ f.name }}</span>
         <span style="right:40px;top:4px;width:40px;height:20px;font-size:12px;color:#67C23A">{{ f.status }}</span>
@@ -40,8 +40,8 @@
     /** 是否可拖拽上传 */
     public string $drag = '';
 
-    /** 文件列表 JSON */
-    public string $fileListJson = '';
+    /** 文件列表 */
+    public array $fileListJson = [];
 
     /** 提示文字 */
     public string $tipText = 'Max 10MB per file';
@@ -52,11 +52,10 @@
     public function openFileDialog(): void
     {
         // 原生对话框由平台层调用，这里用模拟文件列表演示
-        $mockFiles = [
+        $this->fileListJson = [
             ['name' => 'document.pdf', 'status' => 'ready'],
             ['name' => 'image.png', 'status' => 'ready']
         ];
-        $this->fileListJson = json_encode($mockFiles);
     }
 
     /**
@@ -64,15 +63,14 @@
      */
     public function removeFile(string $name): void
     {
-        $list = json_decode($this->fileListJson, true);
-        if (!is_array($list)) return;
+        $list = $this->fileListJson;
         $newList = [];
         foreach ($list as $f) {
             if (($f['name'] ?? '') !== $name) {
                 $newList[] = $f;
             }
         }
-        $this->fileListJson = json_encode($newList);
+        $this->fileListJson = $newList;
     }
 
     /**
@@ -80,8 +78,7 @@
      */
     public function getFileList(): array
     {
-        $decoded = json_decode($this->fileListJson, true);
-        return is_array($decoded) ? $decoded : [];
+        return $this->fileListJson;
     }
 </script>
 

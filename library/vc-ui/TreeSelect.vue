@@ -24,8 +24,8 @@
     /** 选中值 (v-model) */
     public string $modelValue = '';
 
-    /** 树形数据 (JSON) */
-    public string $data = '[{"label":"Root","value":"root","children":[{"label":"Child 1","value":"c1"},{"label":"Child 2","value":"c2"}]}]';
+    /** 树形数据 */
+    public array $data = [["label"=>"Root","value"=>"root","children"=>[["label"=>"Child 1","value"=>"c1"],["label"=>"Child 2","value"=>"c2"]]]];
 
     /** 占位符 */
     public string $placeholder = 'Select...';
@@ -79,7 +79,7 @@
         if ($this->modelValue === '') {
             return $this->placeholder;
         }
-        $treeData = json_decode($this->data, true);
+        $treeData = $this->data;
         return $this->findLabel($treeData, $this->modelValue) ?: $this->placeholder;
     }
 
@@ -105,8 +105,7 @@
      */
     public function getTreeNodes(): array
     {
-        $treeData = json_decode($this->data, true);
-        if (!is_array($treeData)) return [];
+        $treeData = $this->data;
         return $this->flattenTree($treeData, 0);
     }
 

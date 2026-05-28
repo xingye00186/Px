@@ -12,8 +12,8 @@
 
 <script lang="php">
 
-    /** 树形数据 (JSON) */
-    public string $data = '[{"label":"Root","value":"root","children":[{"label":"Node 1","value":"n1"},{"label":"Node 2","value":"n2"}]}]';
+    /** 树形数据 */
+    public array $data = [["label"=>"Root","value"=>"root","children"=>[["label"=>"Node 1","value"=>"n1"],["label"=>"Node 2","value"=>"n2"]]]];
 
     /** 是否显示复选框 */
     public string $showCheckbox = '';
@@ -76,8 +76,7 @@
      */
     public function getFlattenedNodes(): array
     {
-        $treeData = json_decode($this->data, true);
-        if (!is_array($treeData)) return [];
+        $treeData = $this->data;
         $expandedKeys = $this->parseKeys($this->expandedKeys);
         return $this->flattenRecursive($treeData, 0, 0, $expandedKeys);
     }

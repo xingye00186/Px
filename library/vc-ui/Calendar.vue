@@ -29,7 +29,7 @@
     public string $editable = '1';
 
     /** 星期标题 */
-    public string $weekDays = '["Su","Mo","Tu","We","Th","Fr","Sa"]';
+    public array $weekDays = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
     /** 当前查看年份 */
     public string $currentYear = '2025';

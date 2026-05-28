@@ -13,8 +13,8 @@
     /** 每项高度 */
     public string $itemHeight = '16';
 
-    /** 每项宽度数组 (JSON) */
-    public string $widthArrJson = '[100,80,60,100,70]';
+    /** 每项宽度数组 */
+    public array $widthArrJson = [100, 80, 60, 100, 70];
 
     /**
      * 获取骨架项数量
@@ -32,9 +32,7 @@
      */
     public function getWidthArr(): array
     {
-        $arr = json_decode($this->widthArrJson, true);
-        if (!is_array($arr)) return [100, 80, 60, 100, 70];
-        return $arr;
+        return $this->widthArrJson;
     }
 </script>
 

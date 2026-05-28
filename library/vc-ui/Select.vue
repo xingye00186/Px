@@ -15,8 +15,8 @@
     /** 选中值 (v-model) */
     public string $modelValue = '';
 
-    /** 选项列表 (JSON 字符串) */
-    public string $options = '[{"label":"Option 1","value":"1"},{"label":"Option 2","value":"2"}]';
+    /** 选项列表 */
+    public array $options = [["label"=>"Option 1","value"=>"1"],["label"=>"Option 2","value"=>"2"]];
 
     /** 占位符 */
     public string $placeholder = 'Please select...';
@@ -53,8 +53,7 @@
      */
     public function getDisplayText(): string
     {
-        $opts = json_decode($this->options, true);
-        if (!is_array($opts)) return $this->placeholder;
+        $opts = $this->options;
         foreach ($opts as $opt) {
             if (($opt['value'] ?? '') === $this->modelValue) {
                 return $opt['label'] ?? '';

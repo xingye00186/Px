@@ -58,7 +58,7 @@
     public string $currentMonth = '1';
 
     /** 星期标题 */
-    public string $weekDays = '["Su","Mo","Tu","We","Th","Fr","Sa"]';
+    public array $weekDays = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
     /**
      * 切换日历
