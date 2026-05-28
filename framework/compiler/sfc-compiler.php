@@ -305,7 +305,11 @@ function collectVForLoops(VNode $node, array &$loops, int &$counter): void
         }
 
         $loops[$name] = $entry;
-        return; // Don't recurse into v-for children
+
+        // Recursively extract nested v-fors from children, tracking parent loop variable
+        findNestedVForLoops($node->children, $loops, $counter, $itemVar);
+
+        return;
     }
 
     // Component placeholder — skip recursion
@@ -320,6 +324,86 @@ function collectVForLoops(VNode $node, array &$loops, int &$counter): void
             }
         }
     }
+}
+
+/**
+ * Recursively find v-for nodes within a parent v-for's children.
+ * Extracted inner v-fors become independent helpers that take the parent
+ * loop variable as a parameter (avoiding closures for AOT compatibility).
+ */
+function findNestedVForLoops(mixed $children, array &$loops, int &$counter, string $parentItemVar): void
+{
+    if ($children === null) return;
+
+    if ($children instanceof VNode) {
+        findNestedVForLoopsInNode($children, $loops, $counter, $parentItemVar);
+    } elseif (is_array($children)) {
+        foreach ($children as $child) {
+            if ($child instanceof VNode) {
+                findNestedVForLoopsInNode($child, $loops, $counter, $parentItemVar);
+            }
+        }
+    }
+}
+
+/**
+ * Extract a nested v-for node, tracking the parent loop variable dependency.
+ */
+function findNestedVForLoopsInNode(VNode $node, array &$loops, int &$counter, string $parentItemVar): void
+{
+    if (isset($node->props['v-for'])) {
+        $name = 'render_' . $counter;
+        $node->vForHelper = $name;
+        $node->vForParentItem = $parentItemVar;
+        $counter++;
+
+        $vFor = $node->props['v-for'];
+        $itemVar = '';
+        $sourceExpr = '';
+
+        if (preg_match('/^\s*\((\w+)(?:,\s*\w+)?\)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
+            $itemVar = $m[1];
+            $sourceExpr = $m[2];
+        } elseif (preg_match('/^\s*(\w+)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
+            $itemVar = $m[1];
+            $sourceExpr = $m[2];
+        }
+
+        $isTemplate = ($node->type === 'template');
+
+        // Transform source: "cat.items" → "items" (the key accessed on the parent variable)
+        $parentPrefix = $parentItemVar . '.';
+        if (str_starts_with($sourceExpr, $parentPrefix)) {
+            $innerSource = substr($sourceExpr, strlen($parentPrefix));
+        } else {
+            $innerSource = $sourceExpr;
+        }
+
+        $entry = [
+            'source'       => $sourceExpr,
+            'item'         => $itemVar,
+            'children'     => $node->children,
+            'isTemplate'   => $isTemplate,
+            'parentItem'   => $parentItemVar,
+            'innerSource'  => $innerSource,
+        ];
+
+        if (!$isTemplate) {
+            $entry['elementType'] = $node->type;
+            $elementProps = $node->props ?? [];
+            unset($elementProps['v-for']);
+            unset($elementProps[':key']);
+            unset($elementProps['v-for-key']);
+            $entry['elementProps'] = $elementProps;
+        }
+
+        $loops[$name] = $entry;
+        return; // Don't recurse further into this nested v-for
+    }
+
+    if ($node->isComponent) return;
+
+    findNestedVForLoops($node->children, $loops, $counter, $parentItemVar);
 }
 
 /**
@@ -377,6 +461,9 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
 
     // Handle element with v-for → replace with render_N() helper call
     if (isset($node->vForHelper)) {
+        if (isset($node->vForParentItem)) {
+            return "\$this->{$node->vForHelper}(\${$node->vForParentItem})";
+        }
         return "\$this->{$node->vForHelper}()";
     }
 
@@ -966,6 +1053,8 @@ function generateVForHelpers(array $loops): string
         $item = $info['item'];
         $children = $info['children'];
         $isTemplate = $info['isTemplate'] ?? true;
+        $parentItem = $info['parentItem'] ?? null;
+        $innerSource = $info['innerSource'] ?? $source;
 
         if ($source === '' || $item === '') continue;
 
@@ -978,12 +1067,39 @@ function generateVForHelpers(array $loops): string
             }
         }
 
+        // Determine the iteration expression
+        if ($parentItem !== null) {
+            // Nested v-for: iterate on $parentVar['innerSource'] (passed as parameter)
+            $iterExpr = "\${$parentItem}['{$innerSource}']";
+            $paramDecl = "array \${$parentItem}";
+        } else {
+            $iterExpr = "\$this->{$source}";
+            $paramDecl = '';
+        }
+
         if ($isTemplate) {
             // === Template v-for: children repeat directly ===
             if (count($childExprs) === 0) continue;
             $childBlock = implode(",\n                ", $childExprs);
 
-            $out .= <<<PHP
+            if ($parentItem !== null) {
+                $out .= <<<PHP
+
+    /**
+     * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
+     * @return VNode[]
+     */
+    private function {$name}({$paramDecl}): array
+    {
+        \$children = [];
+        foreach ({$iterExpr} as \${$item}) {
+            \$children[] = {$childBlock};
+        }
+        return \$children;
+    }
+PHP;
+            } else {
+                $out .= <<<PHP
 
     /**
      * v-for render helper: {$item} in {$source}
@@ -992,12 +1108,13 @@ function generateVForHelpers(array $loops): string
     private function {$name}(): array
     {
         \$children = [];
-        foreach (\$this->{$source} as \${$item}) {
+        foreach ({$iterExpr} as \${$item}) {
             \$children[] = {$childBlock};
         }
         return \$children;
     }
 PHP;
+            }
         } else {
             // === Element v-for (Vue 3 style): element repeats ===
             $elementType = $info['elementType'] ?? 'div';
@@ -1011,7 +1128,24 @@ PHP;
                 $innerExpr = "VNode::h('{$elementType}', {$propsExpr})";
             }
 
-            $out .= <<<PHP
+            if ($parentItem !== null) {
+                $out .= <<<PHP
+
+    /**
+     * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
+     * @return VNode[]
+     */
+    private function {$name}({$paramDecl}): array
+    {
+        \$children = [];
+        foreach ({$iterExpr} as \${$item}) {
+            \$children[] = {$innerExpr};
+        }
+        return \$children;
+    }
+PHP;
+            } else {
+                $out .= <<<PHP
 
     /**
      * v-for render helper: {$item} in {$source}
@@ -1020,12 +1154,13 @@ PHP;
     private function {$name}(): array
     {
         \$children = [];
-        foreach (\$this->{$source} as \${$item}) {
+        foreach ({$iterExpr} as \${$item}) {
             \$children[] = {$innerExpr};
         }
         return \$children;
     }
 PHP;
+            }
         }
     }
 
