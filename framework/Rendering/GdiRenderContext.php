@@ -44,11 +44,29 @@ class GdiRenderContext extends RenderContext
         switch ($type) {
             // ── 原生图元 ──────────────────────
             case 'rect':
-                $this->fillRect(
-                    $el['x'] ?? 0, $el['y'] ?? 0,
-                    $el['w'] ?? 0, $el['h'] ?? 0,
-                    $el['color'] ?? 0
-                );
+                $radius = $el['borderRadius'] ?? 0;
+                $opacity = $el['opacity'] ?? 1.0;
+                $color = $el['color'] ?? 0;
+                if ($radius > 0 && $opacity >= 1.0) {
+                    vue_draw_round_rect(
+                        $this->hdc,
+                        $el['x'] ?? 0, $el['y'] ?? 0,
+                        $el['w'] ?? 0, $el['h'] ?? 0,
+                        $radius, $color
+                    );
+                } elseif ($opacity < 1.0) {
+                    vue_alpha_fill_rect(
+                        $this->hdc,
+                        $el['x'] ?? 0, $el['y'] ?? 0,
+                        $el['w'] ?? 0, $el['h'] ?? 0,
+                        $color, $opacity
+                    );
+                } else {
+                    $this->fillRect(
+                        $el['x'] ?? 0, $el['y'] ?? 0,
+                        $el['w'] ?? 0, $el['h'] ?? 0, $color
+                    );
+                }
                 break;
 
             case 'text':
@@ -73,12 +91,30 @@ class GdiRenderContext extends RenderContext
 
             // ── 复合类型 (多次 GDI 调用) ──────
             case 'button':
-                $this->drawButton(
-                    $el['x'] ?? 0, $el['y'] ?? 0,
-                    $el['w'] ?? 0, $el['h'] ?? 0,
-                    $el['bg'] ?? 0x4488CC,
-                    $el['border'] ?? 0
-                );
+                $radius = $el['borderRadius'] ?? 0;
+                $opacity = $el['opacity'] ?? 1.0;
+                $bg = $el['bg'] ?? 0x4488CC;
+                if ($opacity < 1.0) {
+                    vue_alpha_fill_rect(
+                        $this->hdc,
+                        $el['x'] ?? 0, $el['y'] ?? 0,
+                        $el['w'] ?? 0, $el['h'] ?? 0,
+                        $bg, $opacity
+                    );
+                } elseif ($radius > 0) {
+                    vue_draw_round_rect(
+                        $this->hdc,
+                        $el['x'] ?? 0, $el['y'] ?? 0,
+                        $el['w'] ?? 0, $el['h'] ?? 0,
+                        $radius, $bg
+                    );
+                } else {
+                    $this->drawButton(
+                        $el['x'] ?? 0, $el['y'] ?? 0,
+                        $el['w'] ?? 0, $el['h'] ?? 0,
+                        $bg, $el['border'] ?? 0
+                    );
+                }
                 if (!empty($el['label'])) {
                     $this->drawText(
                         $el['labelX'] ?? 0,
@@ -93,11 +129,22 @@ class GdiRenderContext extends RenderContext
 
             case 'input':
                 // 背景
-                $this->fillRect(
-                    $el['x'] ?? 0, $el['y'] ?? 0,
-                    $el['w'] ?? 0, $el['h'] ?? 0,
-                    $el['bg'] ?? 0x1E1E1E
-                );
+                $radius = $el['borderRadius'] ?? 0;
+                if ($radius > 0) {
+                    vue_draw_round_rect(
+                        $this->hdc,
+                        $el['x'] ?? 0, $el['y'] ?? 0,
+                        $el['w'] ?? 0, $el['h'] ?? 0,
+                        $radius,
+                        $el['bg'] ?? 0x1E1E1E
+                    );
+                } else {
+                    $this->fillRect(
+                        $el['x'] ?? 0, $el['y'] ?? 0,
+                        $el['w'] ?? 0, $el['h'] ?? 0,
+                        $el['bg'] ?? 0x1E1E1E
+                    );
+                }
                 // 文本值
                 if (!empty($el['text'])) {
                     $fontSize = $el['fontSize'] ?? 16;
@@ -118,8 +165,15 @@ class GdiRenderContext extends RenderContext
                 $x = $el['x'] ?? 0; $y = $el['y'] ?? 0;
                 $w = $el['w'] ?? 0; $h = $el['h'] ?? 0;
                 $bg = $el['bg'] ?? 0x2D2D2D;
-                // Only draw background; scrollbars drawn in scrollbar-v/scrollbar-h after children
-                $this->fillRect($x, $y, $w, $h, $bg);
+                $radius = $el['borderRadius'] ?? 0;
+                $opacity = $el['opacity'] ?? 1.0;
+                if ($opacity < 1.0) {
+                    vue_alpha_fill_rect($this->hdc, $x, $y, $w, $h, $bg, $opacity);
+                } elseif ($radius > 0) {
+                    vue_draw_round_rect($this->hdc, $x, $y, $w, $h, $radius, $bg);
+                } else {
+                    $this->fillRect($x, $y, $w, $h, $bg);
+                }
                 break;
 
             case 'scrollbar-v':

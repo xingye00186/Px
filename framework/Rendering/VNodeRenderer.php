@@ -307,6 +307,8 @@ class VNodeRenderer
         }
 
         $drawColor = ($bg !== null) ? $bg : 0;
+        $borderRadius = $style['borderRadius'] ?? 0;
+        $opacity = $style['opacity'] ?? 1.0;
 
         // If has text content, render text element
         if ($hasTextChild) {
@@ -328,7 +330,7 @@ class VNodeRenderer
                 return [
                     'type' => 'group', 'layer' => $layer,
                     'elements' => [
-                        ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'layer' => $layer],
+                        ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer],
                         ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
                          'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer + 1],
                     ],
@@ -344,7 +346,7 @@ class VNodeRenderer
 
         return [
             'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'color' => $drawColor, 'layer' => $layer,
+            'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
         ];
     }
 
@@ -408,6 +410,8 @@ class VNodeRenderer
         $bg     = $style['bg'] ?? 0x4488CC;
         $fg     = $style['fg'] ?? 0xFFFFFF;
         $border = $style['border'] ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0);
+        $borderRadius = $style['borderRadius'] ?? 0;
+        $opacity = $style['opacity'] ?? 1.0;
 
         $label = '';
         if (is_string($node->children)) {
@@ -439,9 +443,9 @@ class VNodeRenderer
 
         return [
             'type' => 'button', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'bg' => $bg, 'fg' => $fg, 'border' => $border,
+            'bg' => $bg, 'fg' => $fg, 'border' => $border, 'borderRadius' => $borderRadius,
             'label' => $label, 'labelX' => $labelX, 'labelY' => $labelY,
-            'labelFontSize' => $labelFontSize, 'layer' => $layer,
+            'labelFontSize' => $labelFontSize, 'opacity' => $opacity, 'layer' => $layer,
         ];
     }
 
@@ -453,6 +457,8 @@ class VNodeRenderer
         $bg       = $style['bg'] ?? 0x1E1E1E;
         $fg       = $style['fg'] ?? 0xFFFFFF;
         $fontSize = $style['fontSize'] ?? 16;
+        $borderRadius = $style['borderRadius'] ?? 0;
+        $opacity = $style['opacity'] ?? 1.0;
 
         $bindKey = $node->props['v-model'] ?? '';
         $text = '';
@@ -464,7 +470,7 @@ class VNodeRenderer
             'type' => 'input',
             'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'bg' => $bg, 'color' => $fg, 'fontSize' => $fontSize,
-            'text' => $text, 'layer' => $layer,
+            'text' => $text, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
         ];
     }
 
@@ -477,6 +483,8 @@ class VNodeRenderer
     private function makeScrollContainerElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $bg = $style['bg'] ?? 0x2D2D2D;
+        $borderRadius = $style['borderRadius'] ?? 0;
+        $opacity = $style['opacity'] ?? 1.0;
 
         $contentH = $node->contentHeight;
         if ($contentH === 0) {
@@ -498,11 +506,12 @@ class VNodeRenderer
         return [
             'type' => 'scroll-container',
             'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'bg' => $bg,
+            'bg' => $bg, 'borderRadius' => $borderRadius,
             'contentHeight' => $contentH,
             'contentWidth' => $node->contentWidth,
             'scrollTop' => $node->scrollTop,
             'scrollLeft' => $node->scrollLeft,
+            'opacity' => $opacity,
             'layer' => $layer,
         ];
     }
