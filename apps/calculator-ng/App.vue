@@ -419,7 +419,7 @@
         $this->acLabel = 'C';
     }
 
-    public function applyX3(): void
+    public function x3(): void
     {
         if ($this->display === 'Error') return;
         $val = (float)$this->display;
@@ -442,7 +442,7 @@
         $this->acLabel = 'C';
     }
 
-    public function applyInv(): void
+    public function inv(): void
     {
         if ($this->display === 'Error') return;
         $val = (float)$this->display;
@@ -454,7 +454,7 @@
         $this->acLabel = 'C';
     }
 
-    public function applyPi(): void
+    public function pi(): void
     {
         $this->display = '3.141592653589793';
         $this->expression = 'π';
@@ -474,13 +474,21 @@
 
     public function openParen(): void
     {
-        $this->expression = $this->display . ' (';
+        if ($this->expression === '') {
+            $this->expression = $this->display . ' (';
+        } else {
+            $this->expression .= ' (';
+        }
         $this->acLabel = 'C';
     }
 
     public function closeParen(): void
     {
-        $this->expression = $this->display . ' )';
+        if ($this->expression === '') {
+            $this->expression = $this->display . ' )';
+        } else {
+            $this->expression .= ' )';
+        }
         $this->acLabel = 'C';
     }
 
