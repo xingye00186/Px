@@ -1625,6 +1625,20 @@ function compileOneComponent(
     if ($hasScript) {
         collectClickHandlers($root, $clickHandlers);
         collectKeyHandlers($root, $keyHandlers);
+
+        // Filter handlers: only keep those that have corresponding methods in the script.
+        // Handlers without matching methods will fall through to the default case
+        // and bubble to the parent component.
+        foreach ($clickHandlers as $handler => $info) {
+            if (!preg_match('/\bfunction\s+' . preg_quote($handler, '/') . '\s*\(/', $script)) {
+                unset($clickHandlers[$handler]);
+            }
+        }
+        foreach ($keyHandlers as $handler => $_) {
+            if (!preg_match('/\bfunction\s+' . preg_quote($handler, '/') . '\s*\(/', $script)) {
+                unset($keyHandlers[$handler]);
+            }
+        }
     }
     collectVNodeBindKeys($root, $bindKeys);
 

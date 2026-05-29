@@ -173,18 +173,54 @@ class ScriptAnalyzer
                 $braceDepth += ($opens - $closes);
 
                 if ($braceDepth > 0) {
-                    // Found it — split header from body
+                    // Multi-line: opening brace found, body continues on subsequent lines
                     $bracePos = strrpos($line, '{');
                     $headerPart = substr($line, 0, $bracePos + 1);
                     $bodyPart   = substr($line, $bracePos + 1);
 
-                    // Replace last header line with header-only part
                     $headerLines[count($headerLines) - 1] = $headerPart;
                     if (trim($bodyPart) !== '') {
                         $buffer[] = $bodyPart;
                     }
                     $state = 'body';
                     $inHeader = false;
+                } elseif ($opens > 0) {
+                    // Single-line: both { and } on the same line (e.g. public function foo(): void {})
+                    // Process immediately without transitioning to body state
+                    $bracePos = strrpos($line, '{');
+                    $headerPart = substr($line, 0, $bracePos + 1);
+                    $bodyPart   = substr($line, $bracePos + 1);
+
+                    $headerLines[count($headerLines) - 1] = $headerPart;
+
+                    $buffer = [];
+                    if (trim($bodyPart) !== '') {
+                        $buffer[] = $bodyPart;
+                    }
+
+                    $methodBody = implode("\n", $buffer);
+                    $methodBody = $this->processMethodBody($methodName, $methodBody);
+
+                    // Output: header (already includes '{') + processed body inline
+                    $originalLine = $line;
+                    if ($methodBody !== '' && $methodBody !== '}') {
+                        // Body has real content (not just closing brace)
+                        $output[] = $headerPart;
+                        $output[] = $methodBody;
+                        // Closing brace
+                        preg_match('/^(\s*)/', $line, $m);
+                        $closeIndent = $m[1] ?? '';
+                        $output[] = $closeIndent . '}';
+                    } else {
+                        // Empty body — output original line as-is
+                        $output[] = $originalLine;
+                    }
+
+                    // Reset state
+                    $state    = 'outside';
+                    $buffer   = [];
+                    $headerLines = [];
+                    $methodName = '';
                 }
             } elseif ($state === 'body') {
                 // Inside method body — track braces
