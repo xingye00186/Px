@@ -377,6 +377,32 @@ echo   ----------------------------------------
 echo.
 
 :: ====================================================================
+:: Step 4: Cleanup generated files in framework root
+:: ====================================================================
+echo ========================================
+echo   Step 4: Cleanup framework root
+echo ========================================
+echo.
+
+echo   Cleaning .exe files ...
+for %%f in ("%FRAMEWORK_ROOT%\*.exe") do del /f /q "%%f" 2>nul
+
+echo   Cleaning .pdb files ...
+for %%f in ("%FRAMEWORK_ROOT%\*.pdb") do del /f /q "%%f" 2>nul
+
+echo   Cleaning .ilk files ...
+for %%f in ("%FRAMEWORK_ROOT%\*.ilk") do del /f /q "%%f" 2>nul
+
+echo   Cleaning MSVC .pdb files ...
+for %%f in ("%FRAMEWORK_ROOT%\vc*.pdb") do del /f /q "%%f" 2>nul
+
+echo   Cleaning temp files ...
+if exist "%FRAMEWORK_ROOT%\nul" del /f /q "%FRAMEWORK_ROOT%\nul" 2>nul
+
+echo   [OK] Cleanup completed
+echo.
+
+:: ====================================================================
 :: Run (optional)
 :: ====================================================================
 if "%RUN_AFTER%"=="1" (
