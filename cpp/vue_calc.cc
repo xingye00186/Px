@@ -151,7 +151,7 @@ void php_vue_draw_round_rect(Int hdc, Int x, Int y, Int w, Int h, Int radius, In
 }
 
 // Fill rectangle with alpha (opacity) — uses 32-bit DIB + AlphaBlend
-void php_vue_alpha_fill_rect(Int hdc, Int x, Int y, Int w, Int h, Int bgrColor, Double opacity) {
+void php_vue_alpha_fill_rect(Int hdc, Int x, Int y, Int w, Int h, Int bgrColor, double opacity) {
     if (w <= 0 || h <= 0) return;
     int alpha = (int)(opacity * 255.0);
     if (alpha >= 255) {
