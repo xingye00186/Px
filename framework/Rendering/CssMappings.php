@@ -64,6 +64,46 @@ class CssMappings
             'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
             'default' => 0,
         ],
+        'padding-top' => [
+            'key'     => 'paddingTop',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'padding-right' => [
+            'key'     => 'paddingRight',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'padding-bottom' => [
+            'key'     => 'paddingBottom',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'padding-left' => [
+            'key'     => 'paddingLeft',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'margin-top' => [
+            'key'     => 'marginTop',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'margin-right' => [
+            'key'     => 'marginRight',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'margin-bottom' => [
+            'key'     => 'marginBottom',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'margin-left' => [
+            'key'     => 'marginLeft',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
         'padding' => [
             'key'     => 'padding',
             'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
@@ -134,6 +174,15 @@ class CssMappings
         'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
         'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
         'flex'                 => ['key' => 'flex',           'parser' => 'Px\\Rendering\\CssMappings::parseFlex',  'default' => ''],
+        // ---- padding / margin 四方向 ----
+        'padding-top'    => ['key' => 'paddingTop',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'padding-right'  => ['key' => 'paddingRight',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'padding-bottom' => ['key' => 'paddingBottom', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'padding-left'   => ['key' => 'paddingLeft',   'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'margin-top'     => ['key' => 'marginTop',     'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'margin-right'   => ['key' => 'marginRight',   'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'margin-bottom'  => ['key' => 'marginBottom',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'margin-left'    => ['key' => 'marginLeft',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
     ];
 
     // ============================================================
@@ -335,13 +384,18 @@ class CssMappings
             return $style;
         }
 
-        // Merge both PROPERTY_MAP and INLINE_PROPERTY_MAP for lookup
-        $lookup = array_merge(self::PROPERTY_MAP, self::INLINE_PROPERTY_MAP);
-
+        // First pass: collect raw declarations
+        $raw = [];
         foreach ($m as $decl) {
-            $propName = strtolower(trim($decl[1]));
-            $value    = trim($decl[2]);
+            $raw[strtolower(trim($decl[1]))] = trim($decl[2]);
+        }
 
+        // Expand shorthand padding/margin to individual direction properties
+        $raw = self::expandBoxShorthand($raw);
+
+        // Second pass: parse through lookup map
+        $lookup = array_merge(self::PROPERTY_MAP, self::INLINE_PROPERTY_MAP);
+        foreach ($raw as $propName => $value) {
             $map = $lookup[$propName] ?? null;
             if ($map !== null) {
                 $style[$map['key']] = self::dispatchParser($map['parser'], $value);
@@ -353,6 +407,43 @@ class CssMappings
         }
 
         return $style;
+    }
+
+    /**
+     * Expand CSS shorthand padding/margin into individual direction properties.
+     *
+     * Input "padding: 10px" → padding-top, padding-right, padding-bottom, padding-left = 10
+     * Input "margin: 10px 20px" → margin-top=margin-bottom=10, margin-left=margin-right=20
+     * Input "padding: 1px 2px 3px" → top=1, left/right=2, bottom=3
+     * Input "margin: 1px 2px 3px 4px" → top=1, right=2, bottom=3, left=4
+     */
+    private static function expandBoxShorthand(array $raw): array
+    {
+        foreach (['padding', 'margin'] as $prop) {
+            if (!isset($raw[$prop])) continue;
+
+            $parts = preg_split('/\s+/', trim($raw[$prop]));
+            $nums = [];
+            foreach ($parts as $p) {
+                $nums[] = (int) preg_replace('/[^0-9]/', '', $p);
+            }
+            $count = count($nums);
+            if ($count === 0) continue;
+
+            $top    = $nums[0];
+            $right  = $nums[1] ?? $top;
+            $bottom = $nums[2] ?? $top;
+            $left   = $nums[3] ?? $right;
+
+            $raw[$prop . '-top']    = $top . 'px';
+            $raw[$prop . '-right']  = $right . 'px';
+            $raw[$prop . '-bottom'] = $bottom . 'px';
+            $raw[$prop . '-left']   = $left . 'px';
+
+            // Keep original shorthand for backward compat
+            $raw[$prop] = $top . 'px';
+        }
+        return $raw;
     }
 
     /**
