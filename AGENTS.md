@@ -50,7 +50,10 @@ d:/Px/
 ├── stub/                   PHP stub 文件（C++ 原生函数声明）
 ├── cpp/                    C++ 桥接层实现
 ├── docs/                   设计文档
-├── tests/                  单元测试（PHPUnit 风格）
+├── tests/                  单元测试（PHPUnit 风格 + 截图测试）
+│   ├── unit/               单元测试
+│   ├── screenshot/         截图自动化测试（PowerShell）
+│   └── run_all_tests.php   统一测试运行器
 ├── build.bat               非交互构建脚本
 ├── sfc-compiler.php        编译器入口（框架根目录）
 ├── config.yml              编译器路径配置
@@ -859,22 +862,111 @@ LayoutResolver clamp 后，组件的 bind 值（如 scrollTop）保持旧值。�
 
 ## 十二、测试
 
+Px 框架使用**三层测试策略**：
+1. **单元测试**（PHP）— dispatchClick 模拟点击 + 组件树语义验证
+2. **状态快照测试**（PHP）— 文字版"截图"，将组件状态序列化为可读文本
+3. **截图测试**（PowerShell）— 启动真实 exe 抓取窗口截图，用于视觉回归
+
+### 测试设计原则
+
+| 原则 | 说明 |
+|------|------|
+| **不依赖外部服务** | 所有测试在内存中运行，无文件/网络/数据库依赖 |
+| **dispatchClick 驱动** | 模拟用户点击，直接调用组件 handler 方法 |
+| **状态断言 + 快照** | 既校验具体属性值，也 dump 完整状态用于调试 |
+| **组件树语义对标 Vue 3** | 测试 parent 链、事件冒泡、VNode 缓存、patchComponentTree |
+| **AOT polyfill** | bootstrap.php 提供 `objval()`、`any()` 等 AOT 函数 polyfill |
+
 ### 运行测试
 
 ```bash
-cd tests/unit
-D:\swoole_compiler\php.exe bootstrap.php
+# 运行全部单元测试（推荐）
+D:\swoole_compiler\php.exe tests/run_all_tests.php
+
+# 运行单个测试文件
+D:\swoole_compiler\php.exe tests/unit/CalculatorAppTest.php
+D:\swoole_compiler\php.exe tests/unit/ComponentTreeTest.php
+D:\swoole_compiler\php.exe tests/unit/ReactiveComponentTest.php
+D:\swoole_compiler\php.exe tests/unit/HitTestTest.php
+D:\swoole_compiler\php.exe tests/unit/LayoutResolverTest.php
+D:\swoole_compiler\php.exe tests/unit/VNodeRendererTest.php
+D:\swoole_compiler\php.exe tests/unit/SfcCompilerVIfTest.php
+D:\swoole_compiler\php.exe tests/unit/PlatformTest.php
 ```
 
 ### 测试文件
 
-| 文件 | 覆盖范围 |
-|------|---------|
-| `ReactiveComponentTest.php` | dirty 标记、VNode 缓存、组件更新 |
-| `HitTestTest.php` | 命中测试、事件路由 |
-| `LayoutResolverTest.php` | block/flex/grid/scroll 布局 |
-| `VNodeRendererTest.php` | 元素收集、layer 分组、clip |
-| `SfcCompilerVIfTest.php` | v-if 编译期优化 |
+| 文件 | 覆盖范围 | 用例数 |
+|------|---------|--------|
+| `CalculatorAppTest.php` | 计算器全部 16 类操作 + 状态快照 + 边界情况 | 100 |
+| `ComponentTreeTest.php` | 组件 parent 链、事件冒泡、实例独立、生命周期、VNode 缓存、hComponent 工厂、patchComponentTree | 22 |
+| `ReactiveComponentTest.php` | dirty 标记、VNode 缓存、组件更新 | 9 |
+| `HitTestTest.php` | 命中测试、事件路由 | 10 |
+| `LayoutResolverTest.php` | block/flex/grid/scroll 布局 | 14 |
+| `VNodeRendererTest.php` | 元素收集、layer 分组、clip | 14 |
+| `SfcCompilerVIfTest.php` | v-if 编译期优化 | 9 |
+| `PlatformTest.php` | Platform 接口 SOLID/DIP 合规 | 10 |
+
+### CalculatorAppTest 测试清单
+
+覆盖以下 18 类场景（100 个测试用例）：
+
+| # | 类别 | 用例数 | 说明 |
+|---|------|--------|------|
+| 1 | Digit Input | 7 | 初始显示、数字输入、去除前导零、运算符后新输入 |
+| 2 | Decimal Input | 4 | 小数点输入、防重复、运算符后新输入 |
+| 3 | Clear/Reset | 2 | C 清除输入、AC 完全重置 |
+| 4 | Backspace | 4 | 删除末位、归零、newInput 保护、删除小数点 |
+| 5 | Toggle Sign | 3 | 正负切换、零值保护 |
+| 6 | Percentage | 2 | 50%→0.5、200%→2 |
+| 7 | Basic Arithmetic | 6 | ±×÷、除以零 Error、空操作符 |
+| 8 | Operator Chaining | 3 | 链式计算、运算符覆盖、混合运算 |
+| 9 | Scientific Functions | 14 | sin/cos/tan/log/ln/x²/x³/√/inv/π/e + Error 分支 |
+| 10 | Memory Functions | 6 | MS/MR/MC/M+/M−/空记忆 |
+| 11 | Parentheses | 4 | openParen/closeParen 显示 |
+| 12 | History | 5 | 历史记录生成、切换面板、清除、加载 |
+| 13 | Error Recovery | 3 | Error 后数字/C/= 恢复 |
+| 14-16 | Routing | 26 | ScientificPad/BasicPad/HistoryPanel 冒泡路由 |
+| 17 | State Snapshot | 3 | 视觉化状态跟踪：完整会话、Error→恢复、括号表达式 |
+| 18 | Edge Cases | 8 | 超大数字、运算符链、重复等号、带符号运算、连续清除等 |
+
+### ComponentTreeTest 测试清单
+
+覆盖 7 类 Vue 3 组件语义（22 个测试用例）：
+
+| # | 类别 | 说明 |
+|---|------|------|
+| 1 | Parent Chain | setParent/getParent、addChild 双向绑定、孤立组件 |
+| 2 | Event Bubbling | dispatchClick 沿 parent 冒泡、stop 消费、null parent、dispatchKey |
+| 3 | Instance Identity | 同类型不同实例、唯一 ID |
+| 4 | Lifecycle | mount/unmount、重复 mount |
+| 5 | VNode Caching | 首次 render()、缓存复用、dirty 重建、markDirty 清缓存 |
+| 6 | VNode Factory | hComponent 占位、componentProps 映射、groupId 递归 |
+| 7 | Patch Component Tree | 普通节点 groupId、#component 展开、实例复用（同 class+同位置） |
+
+### 截图测试
+
+提供 PowerShell 脚本用于视觉回归：
+
+```powershell
+# 直接截图（使用已有 exe）
+powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps1
+
+# 先构建再截图
+powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps1 -BuildFirst $true
+```
+
+截图保存在 `tests/screenshot/output/<timestamp>/`，并自动生成 HTML 报告。
+
+### 测试最佳实践（经验总结）
+
+1. **dispatchClick 是首选测试方式** — 直接调用组件 handler，不依赖布局坐标和渲染管道，速度快、结果确定
+2. **测试 helper 函数化** — `createApp()`、`runCalculation()`、`assertDisplay()`、`captureState()` 等 helper 提高可读性和可维护性
+3. **避免过度模拟** — 测试真实组件行为比 mock 更有价值。只在需要隔离时才用 test double
+4. **状态快照 vs 具体断言** — 关键路径用具体断言（`assertDisplay('42')`），调试用状态快照（`captureState()`）
+5. **Application 私有方法通过反射测试** — `newInstanceWithoutApp()` + `ReflectionMethod` 访问 private 方法
+6. **先修复测试再提交** — 失败的测试比没有测试更糟。每次修改后运行全部测试确保回归
+7. **组件树测试验证框架语义** — ComponentTreeTest 验证框架层面的 Vue 3 语义对齐，不依赖具体应用
 
 ---
 

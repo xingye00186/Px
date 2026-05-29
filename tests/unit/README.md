@@ -8,14 +8,20 @@
  * ```
  * tests/
  * ├── unit/                              # 单元测试 (本文档所在目录)
- * │   ├── bootstrap.php                  # 测试基础设施 (autoload + 断言函数)
+ * │   ├── bootstrap.php                  # 测试基础设施 (autoload + 断言函数 + AOT polyfill)
+ * │   ├── CalculatorAppTest.php          # 计算器点击模拟测试 (100 用例)
+ * │   ├── ComponentTreeTest.php          # 组件树语义测试 (Vue 3 parent/event/cache/patch)
  * │   ├── ReactiveComponentTest.php      # VNode 缓存与 Dirty 追踪
  * │   ├── HitTestTest.php               # 命中测试 (反向遍历点击检测)
  * │   ├── LayoutResolverTest.php         # CSS 布局引擎 (layer/zIndex/flex/grid)
  * │   ├── VNodeRendererTest.php          # VNode 渲染器 (元素收集/按layer分组)
  * │   ├── SfcCompilerVIfTest.php         # 编译期 v-if 优化
+ * │   ├── ExpressionParserTest.php       # 表达式解析
  * │   ├── PlatformTest.php              # Platform 接口 (SOLID/DIP)
  * │   └── README.md                      # 本文档
+ * ├── screenshot/                        # 截图自动化测试 (PowerShell)
+ * │   └── run_screenshot_test.ps1
+ * ├── run_all_tests.php                  # 统一测试运行器 (子进程驱动)
  * ├── sfc-compiler-test.php              # SFC 编译器集成测试 (已有)
  * ├── parser-robustness-test.php         # 模板解析器鲁棒性测试 (已有)
  * └── verify-layout.php                  # 布局验证测试 (已有)
@@ -24,16 +30,18 @@
  * ## 快速开始
  * 
  * ```bash
- * # 运行全部单元测试
+ * # 运行全部单元测试（推荐）
+ * D:\swoole_compiler\php.exe tests/run_all_tests.php
+ * 
+ * # 运行单个测试文件
+ * php tests/unit/CalculatorAppTest.php
+ * php tests/unit/ComponentTreeTest.php
  * php tests/unit/ReactiveComponentTest.php
  * php tests/unit/HitTestTest.php
  * php tests/unit/LayoutResolverTest.php
  * php tests/unit/VNodeRendererTest.php
  * php tests/unit/SfcCompilerVIfTest.php
  * php tests/unit/PlatformTest.php
- * 
- * # Windows 下批量运行
- * for %f in (tests\unit\*Test.php) do @php %f
  * ```
  * 
  * ## 测试覆盖
