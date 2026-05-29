@@ -127,7 +127,7 @@ class CssMappings
         ],
         'box-shadow' => [
             'key'     => 'boxShadow',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseBoxShadow',
             'default' => '',
         ],
         'cursor' => [
@@ -315,6 +315,31 @@ class CssMappings
     public static function parseBorder(string $value): string
     {
         return trim(strtolower($value));
+    }
+
+    /**
+     * Parse "h-offset v-offset [blur] [spread] [color]" into structured string.
+     * Returns "h|v|blur|spread|color" for downstream use.
+     */
+    public static function parseBoxShadow(string $value): string
+    {
+        $v = trim($value);
+        if ($v === '' || $v === 'none') return '';
+        $parts = preg_split('/[\s]+/', $v);
+        $numParts = [];
+        $color = '#000000';
+        foreach ($parts as $p) {
+            if (preg_match('/^#/', $p) || preg_match('/^[a-zA-Z]+$/', $p)) {
+                $color = $p;
+            } else {
+                $numParts[] = (int)$p;
+            }
+        }
+        $h = $numParts[0] ?? 0;
+        $vOff = $numParts[1] ?? 0;
+        $blur = $numParts[2] ?? 0;
+        $spread = $numParts[3] ?? 0;
+        return $h . '|' . $vOff . '|' . $blur . '|' . $spread . '|' . $color;
     }
 
     /**
@@ -582,4 +607,5 @@ class CssMappings
         $b = $rgb & 0xFF;
         return ($b << 16) | ($g << 8) | $r;
     }
+}   }
 }
