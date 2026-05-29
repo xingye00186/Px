@@ -125,6 +125,16 @@ class CssMappings
             'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
             'default' => '',
         ],
+        'border-width' => [
+            'key'     => 'borderWidth',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'border-color' => [
+            'key'     => 'borderColor',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'default' => 0,
+        ],
         'box-shadow' => [
             'key'     => 'boxShadow',
             'parser'  => 'Px\\Rendering\\CssMappings::parseBoxShadow',
@@ -183,6 +193,8 @@ class CssMappings
         'margin-right'   => ['key' => 'marginRight',   'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'margin-bottom'  => ['key' => 'marginBottom',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'margin-left'    => ['key' => 'marginLeft',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'border-width'   => ['key' => 'borderWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'border-color'   => ['key' => 'borderColor',  'parser' => 'Px\\Rendering\\CssMappings::parseHexColor', 'default' => 0],
     ];
 
     // ============================================================
@@ -314,7 +326,19 @@ class CssMappings
      */
     public static function parseBorder(string $value): string
     {
-        return trim(strtolower($value));
+        $v = trim($value);
+        if ($v === '' || $v === 'none') return '';
+        $parts = preg_split('/\s+/', $v);
+        $width = 0;
+        $color = '#000000';
+        foreach ($parts as $p) {
+            if (preg_match('/^\d+/', $p)) {
+                $width = (int)$p;
+            } elseif (preg_match('/^#/', $p)) {
+                $color = $p;
+            }
+        }
+        return $width . '|' . self::hexToBgr($color);
     }
 
     /**
@@ -429,6 +453,13 @@ class CssMappings
                 $camelCase = self::kebabToCamelCase($propName);
                 $style[$camelCase] = $value;
             }
+        }
+
+        // Parse border shorthand into individual properties
+        if (isset($style['border']) && $style['border'] !== '') {
+            $parts = explode('|', $style['border']);
+            $style['borderWidth'] = (int)($parts[0] ?? 0);
+            $style['borderColor'] = (int)($parts[1] ?? 0);
         }
 
         return $style;
@@ -571,6 +602,13 @@ class CssMappings
                 $warnings[] = "CSS class '$className': no background or color property (will render as transparent)";
             }
 
+            // Parse border shorthand into individual properties
+            if (isset($props['border']) && $props['border'] !== '') {
+                $parts = explode('|', $props['border']);
+                $props['borderWidth'] = (int)($parts[0] ?? 0);
+                $props['borderColor'] = (int)($parts[1] ?? 0);
+            }
+
             $classStyles[$className] = $props;
         }
 
@@ -607,5 +645,4 @@ class CssMappings
         $b = $rgb & 0xFF;
         return ($b << 16) | ($g << 8) | $r;
     }
-}   }
 }
