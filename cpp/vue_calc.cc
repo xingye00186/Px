@@ -8,6 +8,7 @@
 
 #include <phpx.h>
 #include <windows.h>
+#pragma comment(lib, "msimg32.lib")
 #include <cstdio>
 
 using namespace php;
