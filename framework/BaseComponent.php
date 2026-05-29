@@ -23,6 +23,11 @@ abstract class BaseComponent implements ComponentInterface
         return $this->id;
     }
 
+    public function setId(string $id): void
+    {
+        $this->id = $id;
+    }
+
     public function getParent(): ?ComponentInterface
     {
         return $this->parent;
