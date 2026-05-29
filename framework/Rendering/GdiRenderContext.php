@@ -79,6 +79,19 @@ class GdiRenderContext extends RenderContext
                         $el['w'] ?? 0, $el['h'] ?? 0, $color
                     );
                 }
+                // Draw border outline (skip when rounded corners)
+                $borderWidth = $el['borderWidth'] ?? 0;
+                $borderColor = $el['borderColor'] ?? 0;
+                if ($borderWidth > 0 && $radius === 0) {
+                    $bx = $el['x'] ?? 0;
+                    $by = $el['y'] ?? 0;
+                    $bw = $el['w'] ?? 0;
+                    $bh = $el['h'] ?? 0;
+                    $this->fillRect($bx, $by, $bw, $borderWidth, $borderColor);
+                    $this->fillRect($bx, $by + $bh - $borderWidth, $bw, $borderWidth, $borderColor);
+                    $this->fillRect($bx, $by, $borderWidth, $bh, $borderColor);
+                    $this->fillRect($bx + $bw - $borderWidth, $by, $borderWidth, $bh, $borderColor);
+                }
                 break;
 
             case 'text':

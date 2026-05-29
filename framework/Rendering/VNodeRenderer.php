@@ -317,6 +317,8 @@ class VNodeRenderer
             $shadowY = (int)($parts[1] ?? 0);
             $shadowColor = CssMappings::hexToBgr($parts[4] ?? '#000000');
         }
+        $borderWidth = $style['borderWidth'] ?? 0;
+        $borderColor = $style['borderColor'] ?? 0;
 
         // If has text content, render text element
         if ($hasTextChild) {
@@ -338,7 +340,7 @@ class VNodeRenderer
                 return [
                     'type' => 'group', 'layer' => $layer,
                     'elements' => [
-                        ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor],
+                        ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor],
                         ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
                          'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer + 1],
                     ],
@@ -356,6 +358,7 @@ class VNodeRenderer
             'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
             'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
+            'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
         ];
     }
 
@@ -418,7 +421,8 @@ class VNodeRenderer
 
         $bg     = $style['bg'] ?? 0x4488CC;
         $fg     = $style['fg'] ?? 0xFFFFFF;
-        $border = $style['border'] ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0);
+        $borderWidth = $style['borderWidth'] ?? 0;
+        $borderColor = $style['borderColor'] ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0);
         $borderRadius = $style['borderRadius'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
         $boxShadow = $style['boxShadow'] ?? '';
@@ -460,7 +464,7 @@ class VNodeRenderer
 
         return [
             'type' => 'button', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'bg' => $bg, 'fg' => $fg, 'border' => $border, 'borderRadius' => $borderRadius,
+            'bg' => $bg, 'fg' => $fg, 'border' => $borderColor, 'borderWidth' => $borderWidth, 'borderRadius' => $borderRadius,
             'label' => $label, 'labelX' => $labelX, 'labelY' => $labelY,
             'labelFontSize' => $labelFontSize, 'opacity' => $opacity, 'layer' => $layer,
             'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
