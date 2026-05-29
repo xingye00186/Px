@@ -41,13 +41,10 @@ class StyleResolver
         $merged = $theme->getComponentStyle($componentType);
 
         // 2. 编译后 class styles — 从 ThemeProvider 的注册表中查找
-        //    遍历所有已注册组件的 class styles，匹配当前使用的 classNames
-        //    注意：这会遍历所有注册的组件，找到匹配的 class
-        //    在 AOT 编译下，classStyleRegistry 是静态数组，查找效率足够
         $allRegistered = ThemeProvider::getAllClassStyles();
         foreach ($classNames as $className) {
             if ($className === '') continue;
-            foreach ($allRegistered as $componentStyles) {
+            foreach ($allRegistered as $compName => $componentStyles) {
                 if (isset($componentStyles[$className])) {
                     foreach ($componentStyles[$className] as $k => $v) {
                         $merged[$k] = $v;
@@ -59,7 +56,7 @@ class StyleResolver
         // 3. 主题 ComponentTheme 中的 class 样式（主题级覆盖）
         foreach ($classNames as $className) {
             if ($className === '') continue;
-            $classStyle = $theme->getComponentStyle($className);
+            $classStyle = $theme->componentTheme->get($className);
             if ($classStyle !== []) {
                 foreach ($classStyle as $k => $v) {
                     $merged[$k] = $v;
