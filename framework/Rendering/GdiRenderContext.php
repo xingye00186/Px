@@ -44,6 +44,18 @@ class GdiRenderContext extends RenderContext
         switch ($type) {
             // ── 原生图元 ──────────────────────
             case 'rect':
+                $shadowX = $el['shadowX'] ?? 0;
+                $shadowY = $el['shadowY'] ?? 0;
+                $shadowColor = $el['shadowColor'] ?? 0;
+                if ($shadowX !== 0 || $shadowY !== 0) {
+                    vue_alpha_fill_rect(
+                        $this->hdc,
+                        ($el['x'] ?? 0) + $shadowX,
+                        ($el['y'] ?? 0) + $shadowY,
+                        $el['w'] ?? 0, $el['h'] ?? 0,
+                        $shadowColor, 0.5
+                    );
+                }
                 $radius = $el['borderRadius'] ?? 0;
                 $opacity = $el['opacity'] ?? 1.0;
                 $color = $el['color'] ?? 0;
@@ -91,6 +103,18 @@ class GdiRenderContext extends RenderContext
 
             // ── 复合类型 (多次 GDI 调用) ──────
             case 'button':
+                $shadowX = $el['shadowX'] ?? 0;
+                $shadowY = $el['shadowY'] ?? 0;
+                $shadowColor = $el['shadowColor'] ?? 0;
+                if ($shadowX !== 0 || $shadowY !== 0) {
+                    vue_alpha_fill_rect(
+                        $this->hdc,
+                        ($el['x'] ?? 0) + $shadowX,
+                        ($el['y'] ?? 0) + $shadowY,
+                        $el['w'] ?? 0, $el['h'] ?? 0,
+                        $shadowColor, 0.5
+                    );
+                }
                 $radius = $el['borderRadius'] ?? 0;
                 $opacity = $el['opacity'] ?? 1.0;
                 $bg = $el['bg'] ?? 0x4488CC;
