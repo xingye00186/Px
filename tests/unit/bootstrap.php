@@ -17,6 +17,17 @@ if (!function_exists('objval')) {
     }
 }
 
+if (!function_exists('any')) {
+    /**
+     * Swoole AOT 类型标注函数。
+     * 在 AOT 编译中，any() 标记动态类型以便编译器推导；
+     * 在原生 PHP 中，直接返回对象即可。
+     */
+    function any($object) {
+        return $object;
+    }
+}
+
 // ---- PHP 8.0 函数 polyfill (测试环境 PHP 7.4) ----
 if (!function_exists('str_contains')) {
     function str_contains(string $haystack, string $needle): bool {
@@ -59,6 +70,14 @@ require_once $frameworkDir . '/Core/Application.php';
 // ---- 编译器 (按需加载) ----
 require_once $frameworkDir . '/compiler/template-parser.php';
 require_once $frameworkDir . '/compiler/component-registry.php';
+
+// ---- Styling (测试环境加载最小依赖) ----
+// Application::expandComponentNode 需要 ThemeProvider 注册 class styles
+require_once $frameworkDir . '/Styling/Theme/ColorScheme.php';
+require_once $frameworkDir . '/Styling/Theme/TextTheme.php';
+require_once $frameworkDir . '/Styling/Theme/ComponentTheme.php';
+require_once $frameworkDir . '/Styling/Theme/ThemeData.php';
+require_once $frameworkDir . '/Styling/Provider/ThemeProvider.php';
 
 // ---- 全局计数器 ----
 $GLOBALS['_test_passed'] = 0;
