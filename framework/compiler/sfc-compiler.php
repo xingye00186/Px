@@ -1377,14 +1377,9 @@ function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &
             $childStyles = $m[1];
         }
 
-        // Parse child styles and merge CSS classes into parent scope
+        // Validate child styles (warnings only, no longer merge into parent scope)
         $childStyleWarnings = [];
-        $childClassStyles = \Px\Rendering\CssMappings::parseStyleBlock($childStyles, $childStyleWarnings);
-        foreach ($childClassStyles as $cls => $style) {
-            if (!isset($classStyles[$cls])) {
-                $classStyles[$cls] = $style;
-            }
-        }
+        \Px\Rendering\CssMappings::parseStyleBlock($childStyles, $childStyleWarnings);
         foreach ($childStyleWarnings as $w) {
             $warnings[] = "Component <{$tagName}> CSS: $w";
         }
@@ -1721,7 +1716,8 @@ class {$className} extends ReactiveComponent
 {$vForHelpers}
 
     /**
-     * 返回 CSS class styles (从 <style> 块编译)
+     * 返回编译后的 CSS class styles（从 <style> 块编译）。
+     * 由 ThemeProvider::registerClassStyles() 在 mount 时读取并注册。
      */
     public function getClassStyles(): array
     {
@@ -2280,8 +2276,8 @@ class {$componentClassName} extends ReactiveComponent
 {$vForHelpers}
 
     /**
-     * 返回 CSS class styles (从 <style> 块编译)
-     * 供运行时 LayoutResolver 使用
+     * 返回编译后的 CSS class styles（从 <style> 块编译）。
+     * 由 ThemeProvider::registerClassStyles() 在 mount 时读取并注册。
      */
     public function getClassStyles(): array
     {

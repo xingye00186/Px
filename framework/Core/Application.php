@@ -8,6 +8,9 @@ use Px\Rendering\VNode;
 use Px\Rendering\VNodeRenderer;
 use Px\Rendering\LayoutResolver;
 use Px\ReactiveComponent;
+use Px\Styling\Theme\ThemeData;
+use Px\Styling\Provider\ThemeProvider;
+use Px\Styling\Adapter\PlatformAdapter;
 
 /**
  * Application — AOT 框架入口
@@ -202,13 +205,22 @@ class Application
         // 注册根组件
         $this->registerComponent('app', $root);
 
-        // 加载编译期提取的 CSS class styles 到 LayoutResolver
+        $this->initRenderer();
+
+        // 初始化主题系统
+        $baseTheme = ThemeData::light();
+        $platformStyling = PlatformAdapter::create(APP_PLATFORM, $baseTheme);
+        $finalTheme = $platformStyling->apply($baseTheme);
+        ThemeProvider::inject($finalTheme);
+
+        // 注册根组件的编译后 class styles
         if (method_exists($this->rootComponent, 'getClassStyles')) {
-            $classStyles = $this->rootComponent->getClassStyles();
-            $this->layoutResolver->setClassStyles($classStyles);
+            ThemeProvider::registerClassStyles(
+                get_class($this->rootComponent),
+                $this->rootComponent->getClassStyles()
+            );
         }
 
-        $this->initRenderer();
         $this->rootComponent->mount();
         return $this;
     }
@@ -310,11 +322,12 @@ class Application
         $node->componentInstance = $instance;
         $node->children = $childRoot;
 
-        // 合并子组件的 CSS class styles 到 LayoutResolver
+        // 注册子组件的编译后 class styles（独立注册，不合并到根组件）
         if (method_exists($instance, 'getClassStyles')) {
-            $childStyles = $instance->getClassStyles();
-            $merged = array_merge($this->layoutResolver->getClassStyles(), $childStyles);
-            $this->layoutResolver->setClassStyles($merged);
+            ThemeProvider::registerClassStyles(
+                get_class($instance),
+                $instance->getClassStyles()
+            );
         }
 
         // 设置 groupId 用于事件路由（使用 instanceId 而非 className）

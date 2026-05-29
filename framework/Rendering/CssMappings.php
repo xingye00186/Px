@@ -474,4 +474,21 @@ class CssMappings
         $style = $classStyles[$className] ?? [];
         return array_merge($style, $overrides);
     }
+
+    /**
+     * RGB → BGR 格式转换。
+     *
+     * GDI COLORREF 使用 BGR 字节序，而主题系统（ColorScheme）存储 RGB 格式。
+     * 例如：0xRRGGBB → 0xBBGGRR。
+     *
+     * @param int $rgb RGB 格式颜色值
+     * @return int BGR 格式颜色值
+     */
+    public static function rgbToBgr(int $rgb): int
+    {
+        $r = ($rgb >> 16) & 0xFF;
+        $g = ($rgb >> 8) & 0xFF;
+        $b = $rgb & 0xFF;
+        return ($b << 16) | ($g << 8) | $r;
+    }
 }

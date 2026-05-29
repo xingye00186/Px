@@ -2,48 +2,29 @@
 
 namespace Px\Rendering;
 
+use Px\Styling\Resolver\StyleResolver;
+
 /**
  * LayoutResolver — 运行时 CSS 布局引擎
  *
  * 遍历 VNode 树，根据 CSS 样式计算每个节点的 x/y/w/h 位置。
  * 支持四种布局模式: block (absolute), flex, grid, scroll。
  *
- * PHP 8.4: 使用 match 表达式分发布局模式。
- *
  * 流程:
  *   1. 遍历 VNode 树 (DFS)
- *   2. 解析 inline style → computedStyle
+ *   2. 解析 inline style → 通过 StyleResolver 合并主题/class/inline → computedStyle
  *   3. 根据 display 属性选择布局算法
  *   4. 设置 VNode.x, VNode.y, VNode.w, VNode.h
+ *
+ * 样式解析由 StyleResolver 负责，LayoutResolver 不再持有 classStyles。
  */
 class LayoutResolver
 {
-    /** CSS class → style properties map */
-    private array $classStyles;
-
     /** Scroll containers tracked for scroll handling */
     private array $scrollContainers = [];
 
-    public function __construct(array $classStyles = [])
+    public function __construct()
     {
-        $this->classStyles = $classStyles;
-    }
-
-    /**
-     * Set CSS class styles at runtime.
-     * Called by Application after component mount.
-     */
-    public function setClassStyles(array $classStyles): void
-    {
-        $this->classStyles = $classStyles;
-    }
-
-    /**
-     * Get CSS class styles.
-     */
-    public function getClassStyles(): array
-    {
-        return $this->classStyles;
     }
 
     /**
@@ -72,23 +53,25 @@ class LayoutResolver
         // Parse inline style
         $inlineStyle = $node->getInlineStyle();
 
-        // Merge with CSS class styles (support multiple classes: 'btn btn-primary')
+        // Resolve CSS class names
+        $classNames = [];
         $class = $node->getClass();
-        $classStyle = [];
         if ($class !== '') {
-            $classes = preg_split('/\s+/', trim($class));
-            foreach ($classes as $cls) {
-                if ($cls !== '' && isset($this->classStyles[$cls])) {
-                    $classStyle = array_merge($classStyle, $this->classStyles[$cls]);
-                }
-            }
+            $classNames = preg_split('/\s+/', trim($class));
         }
 
-        // Merge: class style + inline style (inline overrides)
-        $merged = $classStyle;
-        foreach ($inlineStyle as $k => $v) {
-            $merged[$k] = $v;
-        }
+        // Collect explicit props (from parent flex/grid layout)
+        $explicitProps = [];
+        if ($node->w > 0) $explicitProps['width'] = $node->w;
+        if ($node->h > 0) $explicitProps['height'] = $node->h;
+
+        // Use StyleResolver to merge: theme defaults < compiled class styles < theme class < inline < explicit
+        $merged = StyleResolver::resolve(
+            $node->type,
+            $inlineStyle,
+            $classNames,
+            $explicitProps
+        );
 
         $node->computedStyle = $merged;
 
