@@ -141,6 +141,81 @@ void php_vue_fill_rect(Int hdc, Int x, Int y, Int w, Int h, Int rgbColor) {
     DeleteObject(brush);
 }
 
+// Draw rounded rectangle (filled) — for border-radius
+void php_vue_draw_round_rect(Int hdc, Int x, Int y, Int w, Int h, Int radius, Int rgbColor) {
+    HRGN hrgn = CreateRoundRectRgn((int)x, (int)y, (int)(x + w), (int)(y + h), (int)radius * 2, (int)radius * 2);
+    HBRUSH brush = CreateSolidBrush((COLORREF)rgbColor);
+    FillRgn((HDC)hdc, hrgn, brush);
+    DeleteObject(brush);
+    DeleteObject(hrgn);
+}
+
+// Fill rectangle with alpha (opacity) — uses 32-bit DIB + AlphaBlend
+void php_vue_alpha_fill_rect(Int hdc, Int x, Int y, Int w, Int h, Int bgrColor, Double opacity) {
+    if (w <= 0 || h <= 0) return;
+    int alpha = (int)(opacity * 255.0);
+    if (alpha >= 255) {
+        // Fully opaque: fall back to regular fill
+        HBRUSH brush = CreateSolidBrush((COLORREF)bgrColor);
+        RECT r = {(int)x, (int)y, (int)(x + w), (int)(y + h)};
+        FillRect((HDC)hdc, &r, brush);
+        DeleteObject(brush);
+        return;
+    }
+    if (alpha <= 0) return; // fully transparent: skip
+
+    // Extract B,G,R from COLORREF (BGR format)
+    int blue  = bgrColor & 0xFF;
+    int green = (bgrColor >> 8) & 0xFF;
+    int red   = (bgrColor >> 16) & 0xFF;
+
+    // Create 32-bit top-down DIB section
+    BITMAPINFO bmi;
+    ZeroMemory(&bmi, sizeof(bmi));
+    bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth       = (int)w;
+    bmi.bmiHeader.biHeight      = -(int)h;  // negative = top-down
+    bmi.bmiHeader.biPlanes      = 1;
+    bmi.bmiHeader.biBitCount    = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    void* bits = NULL;
+    HBITMAP hBitmap = CreateDIBSection((HDC)hdc, &bmi, DIB_RGB_COLORS, &bits, NULL, 0);
+    if (!hBitmap || !bits) {
+        if (hBitmap) DeleteObject(hBitmap);
+        return;
+    }
+
+    HDC memDC = CreateCompatibleDC((HDC)hdc);
+    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);
+
+    // Fill with pre-multiplied alpha (BGRA format in DIB)
+    unsigned char* p = (unsigned char*)bits;
+    int total = w * h;
+    for (int i = 0; i < total; i++) {
+        p[0] = (unsigned char)(blue  * alpha / 255);  // B
+        p[1] = (unsigned char)(green * alpha / 255);  // G
+        p[2] = (unsigned char)(red   * alpha / 255);  // R
+        p[3] = (unsigned char)alpha;                   // A
+        p += 4;
+    }
+
+    // AlphaBlend to target DC
+    BLENDFUNCTION blend;
+    blend.BlendOp             = AC_SRC_OVER;
+    blend.BlendFlags          = 0;
+    blend.SourceConstantAlpha = 255;  // per-pixel alpha already pre-multiplied
+    blend.AlphaFormat         = AC_SRC_ALPHA;
+
+    AlphaBlend((HDC)hdc, (int)x, (int)y, (int)w, (int)h,
+               memDC, 0, 0, (int)w, (int)h, blend);
+
+    // Cleanup
+    SelectObject(memDC, oldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(memDC);
+}
+
 // 绘制文本
 void php_vue_draw_text(Int hdc, Int x, Int y, String text, Int fontSize, Int rgbColor, Int bold) {
     SetTextColor((HDC)hdc, (COLORREF)rgbColor);

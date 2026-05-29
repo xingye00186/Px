@@ -52,6 +52,8 @@ function vue_peek_message(): array {}
 function vue_begin_paint(int $hWnd): int {}
 function vue_end_paint(int $hWnd, int $hdc): void {}
 function vue_fill_rect(int $hdc, int $x, int $y, int $w, int $h, int $rgb): void {}
+function vue_alpha_fill_rect(int $hdc, int $x, int $y, int $w, int $h, int $color, float $opacity): void {}
+function vue_draw_round_rect(int $hdc, int $x, int $y, int $w, int $h, int $radius, int $color): void {}
 function vue_draw_text(int $hdc, int $x, int $y, string $text, int $fontSize, int $rgb, int $bold): void {}
 function vue_draw_button(int $hdc, int $x, int $y, int $w, int $h, int $bgColor, int $borderColor): void {}
 function vue_measure_text_width(int $hdc, string $text, int $fontSize): int {}
