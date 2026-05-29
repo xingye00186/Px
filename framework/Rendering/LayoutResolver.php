@@ -163,6 +163,12 @@ class LayoutResolver
             }
         }
 
+        // Apply child's own margin
+        $marginLeft = $style['marginLeft'] ?? $style['margin'] ?? 0;
+        $marginTop = $style['marginTop'] ?? $style['margin'] ?? 0;
+        $node->x += $marginLeft;
+        $node->y += $marginTop;
+
         $node->w = $width;
         $node->h = $height;
 
@@ -176,8 +182,13 @@ class LayoutResolver
         }
 
         // Resolve children
-        $childOffsetX = $node->x;
-        $childOffsetY = $node->y;
+        $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
+        $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
+        $paddingBottom = $style['paddingBottom'] ?? $style['padding'] ?? 0;
+        $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+
+        $childOffsetX = $node->x + $paddingLeft;
+        $childOffsetY = $node->y + $paddingTop;
         if ($isScroll) {
             $childOffsetY -= $scrollTop;
             $childOffsetX -= $scrollLeft;
@@ -195,8 +206,8 @@ class LayoutResolver
             // Auto-stack: for scroll containers, position children vertically
             // and auto-fill width when no explicit left/top/width is set
             if ($isScroll) {
-                $stackY = $childOffsetY;  // accounts for scroll offset
-                $containerW = max($node->w - 14, 0); // reserve scrollbar area
+                $stackY = $childOffsetY;  // accounts for scroll offset + padding
+                $containerW = max($node->w - 14 - $paddingLeft - $paddingRight, 0);
                 $autoStack = true;
 
                 // Only auto-stack if NO child has explicit top/bottom
@@ -213,18 +224,23 @@ class LayoutResolver
                 if ($autoStack) {
                     foreach ($node->children as $child) {
                         if ($child instanceof VNode) {
+                            $child = objval($child, VNode::class);
+                            $childStyle = $child->computedStyle;
+                            $mTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+                            $mBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
+
                             // Auto-width: inherit from container
                             if (!array_key_exists('width', $child->computedStyle) || $child->w === 0) {
                                 $child->w = $containerW;
                                 $child->computedStyle['width'] = $containerW;
                             }
-                            // Auto-position: stack vertically, shift all descendants
-                            $dy = $stackY - $child->y;
-                            $child->y = $stackY;
+                            // Auto-position: stack vertically with margin, shift all descendants
+                            $dy = ($stackY + $mTop) - $child->y;
+                            $child->y = $stackY + $mTop;
                             if ($dy !== 0) {
                                 $this->shiftDescendantsY($child, $dy);
                             }
-                            $stackY += $child->h;
+                            $stackY += $child->h + $mBottom;
                         }
                     }
                 }
@@ -380,15 +396,21 @@ class LayoutResolver
         $align     = $style['alignItems'] ?? 'stretch';
         $wrap      = $style['flexWrap'] ?? 'nowrap';
 
+        // ── Padding ──
+        $paddingTop    = $style['paddingTop'] ?? $style['padding'] ?? 0;
+        $paddingRight  = $style['paddingRight'] ?? $style['padding'] ?? 0;
+        $paddingBottom = $style['paddingBottom'] ?? $style['padding'] ?? 0;
+        $paddingLeft   = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+
         // Collect children and resolve their styles FIRST
         $children = [];
         if ($node->children instanceof VNode) {
-            $this->resolveNode($node->children, $node->x, $node->y, $node);
+            $this->resolveNode($node->children, $node->x + $paddingLeft, $node->y + $paddingTop, $node);
             $children[] = $node->children;
         } elseif (is_array($node->children)) {
             foreach ($node->children as $child) {
                 if ($child instanceof VNode) {
-                    $this->resolveNode($child, $node->x, $node->y, $node);
+                    $this->resolveNode($child, $node->x + $paddingLeft, $node->y + $paddingTop, $node);
                     $children[] = $child;
                 }
             }
@@ -404,17 +426,27 @@ class LayoutResolver
             $ch = objval($ch, VNode::class);
             $childStyle = $ch->computedStyle;
             $childFlex = $childStyle['flex'] ?? '';
+            $childMarginLeft = $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
+            $childMarginRight = $childStyle['marginRight'] ?? $childStyle['margin'] ?? 0;
+            $childMarginTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+            $childMarginBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
 
             if ($childFlex !== '') {
                 $flexGrowItems[] = $ch;
                 $hasFlexGrow = true;
+                // Margins of flex items also consume space
+                if ($direction === 'row' || $direction === 'row-reverse') {
+                    $fixedTotalMain += $childMarginLeft + $childMarginRight;
+                } else {
+                    $fixedTotalMain += $childMarginTop + $childMarginBottom;
+                }
             } else {
                 $childW = $ch->w;
                 $childH = $ch->h;
                 if ($direction === 'row' || $direction === 'row-reverse') {
-                    $fixedTotalMain += $childW;
+                    $fixedTotalMain += $childW + $childMarginLeft + $childMarginRight;
                 } else {
-                    $fixedTotalMain += $childH;
+                    $fixedTotalMain += $childH + $childMarginTop + $childMarginBottom;
                 }
             }
         }
@@ -422,7 +454,7 @@ class LayoutResolver
         // Distribute remaining space to flex grow items
         if ($hasFlexGrow) {
             $isRow = ($direction === 'row' || $direction === 'row-reverse');
-            $containerMain = $isRow ? $width : $height;
+            $containerMain = $isRow ? ($width - $paddingLeft - $paddingRight) : ($height - $paddingTop - $paddingBottom);
             $gapTotal = $gap * (count($children) - 1);
             $remainingSpace = max($containerMain - $fixedTotalMain - $gapTotal, 0);
 
@@ -459,21 +491,26 @@ class LayoutResolver
         $maxCross = 0;
         foreach ($children as $ch) {
             $ch = objval($ch, VNode::class);
+            $childStyle = $ch->computedStyle;
             $childW = $ch->w;
             $childH = $ch->h;
+            $childMarginLeft = $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
+            $childMarginRight = $childStyle['marginRight'] ?? $childStyle['margin'] ?? 0;
+            $childMarginTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+            $childMarginBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
             if ($isRow) {
-                $totalMain += $childW;
+                $totalMain += $childW + $childMarginLeft + $childMarginRight;
                 $maxCross = max($maxCross, $childH);
             } else {
-                $totalMain += $childH;
+                $totalMain += $childH + $childMarginTop + $childMarginBottom;
                 $maxCross = max($maxCross, $childW);
             }
         }
         $totalMain += $gap * (count($children) - 1);
 
-        // Container main size
-        $containerMain = $isRow ? $width : $height;
-        $containerCross = $isRow ? $height : $width;
+        // Container content area (subtract padding)
+        $containerMain = $isRow ? ($width - $paddingLeft - $paddingRight) : ($height - $paddingTop - $paddingBottom);
+        $containerCross = $isRow ? ($height - $paddingTop - $paddingBottom) : ($width - $paddingLeft - $paddingRight);
 
         // Justify-content
         $mainStart = match ($justify) {
@@ -505,12 +542,17 @@ class LayoutResolver
 
         foreach ($indices as $i) {
             $ch = objval($children[$i], VNode::class);
+            $childStyle = $ch->computedStyle;
+            $childMarginLeft = $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
+            $childMarginRight = $childStyle['marginRight'] ?? $childStyle['margin'] ?? 0;
+            $childMarginTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+            $childMarginBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
 
-            // Main axis position
+            // Main axis position (inside padding + margin offset)
             if ($isRow) {
-                $ch->x = $node->x + (int)$currentMain;
+                $ch->x = $node->x + $paddingLeft + (int)$currentMain + $childMarginLeft;
             } else {
-                $ch->y = $node->y + (int)$currentMain;
+                $ch->y = $node->y + $paddingTop + (int)$currentMain + $childMarginTop;
             }
 
             // Cross axis: align-items stretch defaults to container size
@@ -530,7 +572,7 @@ class LayoutResolver
                 }
             }
 
-            // Cross axis alignment
+            // Cross axis alignment (inside padding)
             $crossSize = $isRow ? $ch->h : $ch->w;
             $crossOffset = match ($align) {
                 'center'     => (int)(($containerCross - $crossSize) / 2),
@@ -541,14 +583,19 @@ class LayoutResolver
             };
 
             if ($isRow) {
-                $ch->y = $node->y + $crossOffset;
+                $ch->y = $node->y + $paddingTop + $crossOffset;
             } else {
-                $ch->x = $node->x + $crossOffset;
+                $ch->x = $node->x + $paddingLeft + $crossOffset;
             }
 
             // Advance main position
             $chMainSize = $isRow ? $ch->w : $ch->h;
             $currentMain += $chMainSize + $gap + $spaceBetween;
+            if ($isRow) {
+                $currentMain += $childMarginLeft + $childMarginRight;
+            } else {
+                $currentMain += $childMarginTop + $childMarginBottom;
+            }
         }
     }
 
