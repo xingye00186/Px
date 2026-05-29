@@ -215,9 +215,10 @@ class Application
 
         // 注册根组件的编译后 class styles
         if (method_exists($this->rootComponent, 'getClassStyles')) {
+            $rootCs = $this->rootComponent->getClassStyles();
             ThemeProvider::registerClassStyles(
                 get_class($this->rootComponent),
-                $this->rootComponent->getClassStyles()
+                $rootCs
             );
         }
 
@@ -315,20 +316,21 @@ class Application
             }
         }
 
+        // 注册子组件的编译后 class styles（必须在 render() 之前注册）
+        if (method_exists($instance, 'getClassStyles')) {
+            $cs = $instance->getClassStyles();
+            ThemeProvider::registerClassStyles(
+                get_class($instance),
+                $cs
+            );
+        }
+
         // 展开子树（强制重建，因为 props 可能改变了组件状态）
         // 直接调用 render() 而非 getVNodeTree()，确保获取最新树
         $childRoot = $instance->render();
 
         $node->componentInstance = $instance;
         $node->children = $childRoot;
-
-        // 注册子组件的编译后 class styles（独立注册，不合并到根组件）
-        if (method_exists($instance, 'getClassStyles')) {
-            ThemeProvider::registerClassStyles(
-                get_class($instance),
-                $instance->getClassStyles()
-            );
-        }
 
         // 设置 groupId 用于事件路由（使用 instanceId 而非 className）
         $this->setGroupIdRecursive($childRoot, $instanceId);
@@ -399,16 +401,11 @@ class Application
 
     private function render(): void
     {
-        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " APP_RENDER: start, tree=" . ($this->activeVNodeTree !== null ? 'exists' : 'null') . PHP_EOL, FILE_APPEND);
         $this->rebuildVNodeTree();
-        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " APP_RENDER: after rebuild, tree=" . ($this->activeVNodeTree !== null ? 'exists' : 'null') . PHP_EOL, FILE_APPEND);
         // Expand components BEFORE layout so child dimensions are computed
         $this->expandComponentTree($this->activeVNodeTree);
-        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " APP_RENDER: after expand" . PHP_EOL, FILE_APPEND);
         $this->layoutResolver->resolve($this->activeVNodeTree);
-        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " APP_RENDER: after layout" . PHP_EOL, FILE_APPEND);
         $this->renderer->render($this->activeVNodeTree);
-        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " APP_RENDER: done" . PHP_EOL, FILE_APPEND);
     }
 
     private function doFirstRender(): void

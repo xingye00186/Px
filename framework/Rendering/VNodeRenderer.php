@@ -42,14 +42,9 @@ class VNodeRenderer
     {
         $this->render_ctx->beginFrame();
 
-        // Debug: log render start
-        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " RENDER: root type={$root->type}, children=" . gettype($root->children) . PHP_EOL, FILE_APPEND);
-
         $elementsByLayer = [];
         $maxLayer = 0;
         $this->collectElements($root, $elementsByLayer, $maxLayer);
-
-        file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " RENDER: collected, maxLayer=$maxLayer, layers=" . json_encode(array_keys($elementsByLayer)) . PHP_EOL, FILE_APPEND);
 
         for ($l = 0; $l <= $maxLayer; $l++) {
             $layerElements = $elementsByLayer[$l] ?? [];
@@ -63,12 +58,6 @@ class VNodeRenderer
 
     private function collectElements(VNode $node, array &$elementsByLayer, int &$maxLayer): void
     {
-        // Debug: log collect start
-        $isImportant = in_array($node->type, ['div', 'button', 'span', '#root']);
-        if ($isImportant) {
-            file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " COLLECT: type={$node->type}, isRoot={$node->isRoot()}, isComponent={$node->isComponent()}, isScroll={$node->isScrollContainer}, class=" . ($node->props['class'] ?? 'none') . ", x={$node->x}, y={$node->y}, w={$node->w}, h={$node->h}" . PHP_EOL, FILE_APPEND);
-        }
-
         // Push component context when entering a component boundary
         $pushedComponent = false;
         if ($node->isComponent() && $node->componentInstance !== null) {
@@ -78,10 +67,6 @@ class VNodeRenderer
 
         if (!$node->isRoot() && !$node->isComponent()) {
             $el = $this->vnodeToElement($node);
-            // Debug: log element result
-            if ($isImportant) {
-                file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " ELEMENT: type={$node->type}, el=" . ($el === null ? 'null' : json_encode($el['type'] ?? 'unknown')) . PHP_EOL, FILE_APPEND);
-            }
             if ($el !== null) {
                 $layer = $node->layer;
                 if ($layer > $maxLayer) $maxLayer = $layer;
@@ -317,11 +302,6 @@ class VNodeRenderer
 
         // Check for string children (text content)
         $hasTextChild = is_string($node->children) && $node->children !== '';
-        // Debug: log div with btn class
-        $isBtnDiv = strpos($node->props['class'] ?? '', 'btn-default') !== false;
-        if ($isBtnDiv) {
-            file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " DIV: class={$node->props['class']}, bg=$bg, hasText=$hasTextChild, children=" . json_encode($node->children) . ", x=$x, y=$y, w=$w, h=$h, isScroll=" . ($node->isScrollContainer ? 1 : 0) . PHP_EOL, FILE_APPEND);
-        }
         if ($bg === null && !$hasBorder && !$hasTextChild) {
             return null;
         }
@@ -386,11 +366,6 @@ class VNodeRenderer
         $vModel = $node->props['v-model'] ?? '';
         if ($vModel !== '') {
             $text = $this->currentComponent()->getBindValue($vModel);
-        }
-
-        // Debug: log text content
-        if ($text !== '' && strpos($node->props['style'] ?? '', 'btn-default') !== false) {
-            file_put_contents('f:/work/Px/debug_log.txt', date('H:i:s') . " TEXT: text='$text', x=$x, y=$y, w=$w, h=$h, color=$color" . PHP_EOL, FILE_APPEND);
         }
 
         if ($text === '') return null;
