@@ -471,16 +471,16 @@ function generateComponentPropsExpr(array $componentProps): string
     }
     $entries = [];
     foreach ($componentProps as $childKey => $parentExpr) {
-        // Static string values (not variable references) - mark with 'static:' prefix
-        // This tells runtime to use value directly instead of looking up from parent
+        // Static string values are already prefixed with 'static:' by the caller.
+        // Bind expression keys (e.g. 'display' from :value="display") pass through
+        // without prefix, so at runtime expandComponentNode resolves them via
+        // getBindValue() on the parent component.
         if (is_string($parentExpr) && substr($parentExpr, 0, 7) === 'static:') {
             // Already prefixed with 'static:' - KEEP it in generated code
             // Runtime will extract the value using substr($expr, 7)
             $entries[] = var_export($childKey, true) . "=>'" . addslashes($parentExpr) . "'";
-        } elseif (is_string($parentExpr) && !preg_match('/^\$|\{\{.*\}}$/', $parentExpr)) {
-            // Static string value - add 'static:' prefix
-            $entries[] = var_export($childKey, true) . "=>'static:" . addslashes($parentExpr) . "'";
         } else {
+            // Dynamic expression or variable reference - pass through as-is
             $entries[] = var_export($childKey, true) . '=>' . var_export($parentExpr, true);
         }
     }
