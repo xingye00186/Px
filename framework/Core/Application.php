@@ -42,8 +42,8 @@ class Application
     /** @var array<string, ReactiveComponent> VNode.groupId → Component instance */
     private array $componentByGroupId = [];
 
-    /** @var array<string, ReactiveComponent> componentClass → instance (singleton per class) */
-    private array $componentInstances = [];
+    private int $nextComponentId = 1;
+    private bool $isRendering = false;
 
     private ScrollManager $scrollManager;
 
@@ -236,81 +236,76 @@ class Application
 
     private function rebuildVNodeTree(): void
     {
-        // 惰性重建: dirty 时才调 render(), 否则返回缓存 (Vue 3 风格)
+        if ($this->isRendering) {
+            return; // 防止重入
+        }
+        $this->isRendering = true;
+
+        // 保存旧树和旧注册表
+        $oldTree = $this->activeVNodeTree;
+        $oldRegistry = $this->componentByGroupId;
+
+        // 清空注册表
+        $this->componentByGroupId = [];
+        $this->registerComponent('app', $this->rootComponent);
+
+        // 渲染新树
         $this->activeVNodeTree = $this->rootComponent->getVNodeTree();
-        $this->expandComponentTree($this->activeVNodeTree);
+
+        // Patch：传递旧树用于匹配
+        $this->patchComponentTree(
+            $this->activeVNodeTree,
+            $this->rootComponent,
+            $oldTree
+        );
+
         // 将组件的 bind 值写入 VNode (如 :scroll-top → scrollTop)
         $this->resolveVNodeBindings($this->activeVNodeTree);
-    }
 
-    /**
-     * 递归展开组件占位节点（#component），替换为子组件的 VNode 树。
-     */
-    private function expandComponentTree(VNode $node): void
-    {
-        $children = $node->children;
-
-        if ($children instanceof VNode) {
-            $children = objval($children, VNode::class);
-            if ($children->isComponent()) {
-                $this->expandComponentNode($children);
-            }
-            // After expansion (or not), recurse into child's subtree
-            if ($children->children instanceof VNode || is_array($children->children)) {
-                $this->expandComponentTree($children);
-            }
-        } elseif (is_array($children)) {
-            foreach ($children as $child) {
-                if (!$child instanceof VNode) continue;
-                $child = objval($child, VNode::class);
-
-                if ($child->isComponent()) {
-                    $this->expandComponentNode($child);
-                }
-
-                // Recurse into children (component nodes need this after children replaced)
-                if ($child->children instanceof VNode || is_array($child->children)) {
-                    $this->expandComponentTree($child);
-                }
+        // 卸载不再存在的旧实例
+        foreach ($oldRegistry as $id => $instance) {
+            if ($id !== 'app' && !isset($this->componentByGroupId[$id])) {
+                $instance->unmount();
             }
         }
+
+        $this->isRendering = false;
     }
 
     /**
      * 展开单个组件占位节点。
      * 
      * Vue 3 语义：每个 #component VNode 创建独立的组件实例，
-     * 而不是按类名共享。这样每个 <vc-button text="Primary"> 和 
-     * <vc-button text="Success"> 都有自己独立的实例和状态。
+     * 而不是按类名共享。
+     *
+     * @param VNode $node   #component 占位节点
+     * @param ReactiveComponent $owner  父组件（即拥有此占位的组件）
      */
-    private function expandComponentNode(VNode $node): void
+    private function expandComponentNode(VNode $node, ReactiveComponent $owner): void
     {
         $className = $node->componentClass;
         if ($className === null) return;
 
         // 为每个 VNode 节点创建独立的组件实例（Vue 3 语义）
-        // 不再按 className 缓存，避免同一组件类型的多个使用共享实例
         $instance = \ComponentFactory::create($className);
         $instance->setScheduler($this->scheduler);
         $instance->setRenderCallback($this->handleRenderRequest(...));
-        $instance->setParent($this->rootComponent);
+        $instance->setParent($owner);
         $instance->mount();
-        
-        // 注册到事件路由系统（用于 hitTest 定位）
-        $instanceId = $instance->getId();
+
+        // 使用计数器生成唯一实例 ID
+        $instanceId = $node->componentClass . '_' . $this->nextComponentId++;
+        $instance->setId($instanceId);
         $this->registerComponent($instanceId, $instance);
 
         // 传递 props：父组件的 bind key → 子组件的属性
-        if ($node->componentProps !== null && $this->rootComponent !== null) {
+        if ($node->componentProps !== null && $owner !== null) {
             foreach ($node->componentProps as $childKey => $parentExpr) {
-                // Check if parentExpr is a static value (starts with 'static:') or a bind key
                 if (is_string($parentExpr) && substr($parentExpr, 0, 7) === 'static:') {
-                    // Direct prop value from parent template
                     $staticValue = substr($parentExpr, 7);
                     $instance->setBindValue($childKey, $staticValue);
                 } else {
-                    // Bind expression - get value from parent component
-                    $parentValue = $this->rootComponent->getBindValue($parentExpr);
+                    $parentValue = $owner->getBindValue($parentExpr);
                     $instance->setBindValue($childKey, $parentValue);
                 }
             }
@@ -326,17 +321,16 @@ class Application
         }
 
         // 展开子树（强制重建，因为 props 可能改变了组件状态）
-        // 直接调用 render() 而非 getVNodeTree()，确保获取最新树
         $childRoot = $instance->render();
 
         $node->componentInstance = $instance;
         $node->children = $childRoot;
 
-        // 设置 groupId 用于事件路由（使用 instanceId 而非 className）
+        // 设置 groupId 用于事件路由
         $this->setGroupIdRecursive($childRoot, $instanceId);
 
-        // 递归：子组件树可能也包含组件占位节点
-        $this->expandComponentTree($childRoot);
+        // 递归处理子组件树中的 #component 节点
+        $this->patchComponentTree($node->children, $instance, null);
     }
 
     /**
@@ -354,6 +348,127 @@ class Application
                 }
             }
         }
+    }
+
+    /**
+     * 遍历子树，处理所有 #component 节点。
+     *
+     * @param VNode            $newNode  新树当前节点
+     * @param ReactiveComponent $owner   当前子树的拥有者组件
+     * @param VNode|null       $oldNode  旧树对应节点（用于匹配）
+     */
+    private function patchComponentTree(
+        VNode $newNode,
+        ReactiveComponent $owner,
+        ?VNode $oldNode = null
+    ): void {
+        // ── 非 #component 节点：确保 groupId 归属于正确的组件 ──
+        if (!$newNode->isComponent()) {
+            $newNode->groupId = $owner->getId();
+        }
+
+        // ── #component 节点：匹配或创建 ──
+        if ($newNode->isComponent()) {
+            $this->matchComponentNode($newNode, $owner, $oldNode);
+            return;
+        }
+
+        // ── 普通节点：位置并行走访子节点 ──
+        $oldChildren = $oldNode !== null
+            ? $this->vnodeChildrenToArray($oldNode->children)
+            : [];
+        $newChildren = $this->vnodeChildrenToArray($newNode->children);
+
+        $count = min(count($oldChildren), count($newChildren));
+        for ($i = 0; $i < $count; $i++) {
+            $this->patchComponentTree(
+                $newChildren[$i],
+                $owner,
+                $oldChildren[$i]
+            );
+        }
+
+        // 新树多出的子节点
+        for ($i = $count; $i < count($newChildren); $i++) {
+            $this->patchComponentTree($newChildren[$i], $owner, null);
+        }
+    }
+
+    /**
+     * 匹配单个 #component 节点。
+     * 优先级：① 新节点已有实例（缓存）→ 复用
+     *         ② 旧节点匹配（同 componentClass + 同 key）→ 转移实例
+     *         ③ 均不满足 → 创建新实例
+     */
+    private function matchComponentNode(
+        VNode $newNode,
+        ReactiveComponent $owner,
+        ?VNode $oldNode = null
+    ): void {
+        $instance = null;
+
+        // 优先级 1：新节点已有实例（来自父组件缓存树）
+        if ($newNode->componentInstance !== null) {
+            $instance = $newNode->componentInstance;
+        }
+        // 优先级 2：从旧树匹配（父组件 dirty，新树无实例）
+        elseif ($oldNode !== null && $oldNode->isComponent()) {
+            $sameClass = $oldNode->componentClass === $newNode->componentClass;
+            $sameKey   = ($oldNode->key ?? '') === ($newNode->key ?? '');
+            if ($sameClass && $sameKey) {
+                $instance = $oldNode->componentInstance;
+            }
+        }
+
+        if ($instance !== null) {
+            // ── 复用实例 ──
+            $instance->setParent($owner);
+
+            // 同步 props
+            if ($newNode->componentProps !== null) {
+                foreach ($newNode->componentProps as $childKey => $parentExpr) {
+                    if (is_string($parentExpr) && substr($parentExpr, 0, 7) === 'static:') {
+                        $instance->setBindValue($childKey, substr($parentExpr, 7));
+                    } else {
+                        $instance->setBindValue($childKey, $owner->getBindValue($parentExpr));
+                    }
+                }
+            }
+
+            // 获取子树（解析 dirty 状态）
+            $newNode->componentInstance = $instance;
+            $newNode->children = $instance->getVNodeTree();
+
+            // 注册事件路由
+            $this->setGroupIdRecursive($newNode->children, $instance->getId());
+            $this->registerComponent($instance->getId(), $instance);
+
+            // 递归处理子树的 #component 节点
+            $this->patchComponentTree(
+                $newNode->children,
+                $instance,
+                $oldNode !== null ? $oldNode->children : null
+            );
+        } else {
+            // ── 创建新实例 ──
+            if ($oldNode !== null && $oldNode->componentInstance !== null) {
+                $oldNode->componentInstance->unmount();
+            }
+            $this->expandComponentNode($newNode, $owner);
+        }
+    }
+
+    /**
+     * 将 VNode 的 children 统一为数组，用于位置并行走访。
+     */
+    private function vnodeChildrenToArray(mixed $children): array
+    {
+        if ($children === null) return [];
+        if ($children instanceof VNode) return [$children];
+        if (is_array($children)) {
+            return array_values(array_filter($children, fn($c) => $c instanceof VNode));
+        }
+        return [];
     }
 
     // ── 滚动系统 ──────────────────────────────
@@ -402,8 +517,6 @@ class Application
     private function render(): void
     {
         $this->rebuildVNodeTree();
-        // Expand components BEFORE layout so child dimensions are computed
-        $this->expandComponentTree($this->activeVNodeTree);
         $this->layoutResolver->resolve($this->activeVNodeTree);
         $this->renderer->render($this->activeVNodeTree);
     }
