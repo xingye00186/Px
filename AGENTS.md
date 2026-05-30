@@ -892,6 +892,9 @@ D:\swoole_compiler\php.exe tests/unit/LayoutResolverTest.php
 D:\swoole_compiler\php.exe tests/unit/VNodeRendererTest.php
 D:\swoole_compiler\php.exe tests/unit/SfcCompilerVIfTest.php
 D:\swoole_compiler\php.exe tests/unit/PlatformTest.php
+
+# 运行内存压力测试（多帧累积检测）
+D:\swoole_compiler\php.exe tests/unit/MemoryStressTest.php
 ```
 
 ### 测试文件
@@ -906,6 +909,7 @@ D:\swoole_compiler\php.exe tests/unit/PlatformTest.php
 | `VNodeRendererTest.php` | 元素收集、layer 分组、clip | 14 |
 | `SfcCompilerVIfTest.php` | v-if 编译期优化 | 9 |
 | `PlatformTest.php` | Platform 接口 SOLID/DIP 合规 | 10 |
+| `MemoryStressTest.php` | 内存增长检测（9 模块 28+ 场景） | 28+ |
 
 ### CalculatorAppTest 测试清单
 

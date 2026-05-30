@@ -51,6 +51,8 @@ require_once $frameworkDir . '/interfaces/ComponentInterface.php';
 // ---- 核心渲染 ----
 require_once $frameworkDir . '/Rendering/CssMappings.php';
 require_once $frameworkDir . '/Rendering/VNode.php';
+require_once $frameworkDir . '/Rendering/RenderNode.php';
+require_once $frameworkDir . '/Rendering/RenderTreeManager.php';
 require_once $frameworkDir . '/Rendering/LayoutResolver.php';
 require_once $frameworkDir . '/Rendering/RenderContext.php';
 require_once $frameworkDir . '/Rendering/VNodeRenderer.php';

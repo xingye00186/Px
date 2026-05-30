@@ -2,14 +2,15 @@
 
 namespace Px\Core;
 
-use Px\Rendering\VNode;
+use Px\Rendering\RenderNode;
 use Px\ReactiveComponent;
 
 /**
- * ScrollManager — 滚动交互服务
+ * ScrollManager — 滚动交互服务（RenderNode 版）
  *
  * 从 Application 抽取所有滚动状态和逻辑，修复 SOLID 违反。
  * 支持多滚动视口独立操作、横向滚动（Shift+滚轮）。
+ * 所有树操作基于 RenderNode（非 VNode），属性通过 sourceVNode 访问。
  *
  * 通过回调注入与 Application 通信，避免循环依赖。
  */
@@ -18,14 +19,14 @@ class ScrollManager
     /** @var callable 触发延迟重渲染 */
     private $requestRender;
 
-    /** @var callable 跳过树重建直接重绘（无参数，内部使用完整树） */
+    /** @var callable 跳过树重建直接重绘 */
     private $directRender;
 
-    /** @var callable 查组件表 */
+    /** @var callable 查组件表（接受 VNode，使用 groupId） */
     private $resolveComponent;
 
     // ── 拖拽状态 ──────────────────────────
-    private ?VNode $scrollDragTarget = null;
+    private ?RenderNode $scrollDragTarget = null;
     private int $scrollDragStartX = 0;
     private int $scrollDragStartY = 0;
     private int $scrollDragStartScrollPos = 0;
@@ -46,10 +47,11 @@ class ScrollManager
     /**
      * 鼠标滚轮事件 — 更新最近祖先滚动容器的 scroll 位置。
      * Shift 按下时走横向滚动，否则走竖向滚动。
+     * $root 为 RenderNode 树的根节点。
      */
-    public function handleScrollWheel($event, VNode $tree): void
+    public function handleScrollWheel($event, RenderNode $root): void
     {
-        $scrollNode = $this->findScrollContainerAt($event->x, $event->y, $tree);
+        $scrollNode = $this->findScrollContainerAt($event->x, $event->y, $root);
         if ($scrollNode === null) return;
 
         $delta = $event->delta ?? 0;
@@ -84,22 +86,15 @@ class ScrollManager
 
     /**
      * 查找鼠标坐标下的滚动容器（最深层的子孙优先）。
+     * RenderNode.children 始终是数组，简化遍历逻辑。
      */
-    public function findScrollContainerAt(int $x, int $y, VNode $node): ?VNode
+    public function findScrollContainerAt(int $x, int $y, RenderNode $node): ?RenderNode
     {
-        $children = $node->children;
-        if ($children instanceof VNode) {
-            $found = $this->findScrollContainerAt($x, $y, $children);
+        // 反向遍历子节点（后渲染优先）
+        for ($i = count($node->children) - 1; $i >= 0; $i--) {
+            $child = $node->children[$i];
+            $found = $this->findScrollContainerAt($x, $y, $child);
             if ($found !== null) return $found;
-        } elseif (is_array($children)) {
-            for ($i = count($children) - 1; $i >= 0; $i--) {
-                $child = $children[$i];
-                if ($child instanceof VNode) {
-                    $child = objval($child, VNode::class);
-                    $found = $this->findScrollContainerAt($x, $y, $child);
-                    if ($found !== null) return $found;
-                }
-            }
         }
 
         if ($node->isScrollContainer
@@ -114,24 +109,16 @@ class ScrollManager
 
     /**
      * 滚动条命中测试。
-     * 返回 ['scrollNode' => VNode, 'type' => 'thumb'|'track', 'isHorizontal' => bool] 或 null。
+     * 返回 ['scrollNode' => RenderNode, 'type' => 'thumb'|'track', 'isHorizontal' => bool] 或 null。
      * 先查右侧竖滚动条，再查底部横滚动条。
      */
-    public function hitTestScrollbar(int $x, int $y, VNode $node): ?array
+    public function hitTestScrollbar(int $x, int $y, RenderNode $node): ?array
     {
-        $children = $node->children;
-        if ($children instanceof VNode) {
-            $result = $this->hitTestScrollbar($x, $y, $children);
+        // 反向遍历子节点
+        for ($i = count($node->children) - 1; $i >= 0; $i--) {
+            $child = $node->children[$i];
+            $result = $this->hitTestScrollbar($x, $y, $child);
             if ($result !== null) return $result;
-        } elseif (is_array($children)) {
-            for ($i = count($children) - 1; $i >= 0; $i--) {
-                $child = $children[$i];
-                if ($child instanceof VNode) {
-                    $child = objval($child, VNode::class);
-                    $result = $this->hitTestScrollbar($x, $y, $child);
-                    if ($result !== null) return $result;
-                }
-            }
         }
 
         if (!$node->isScrollContainer) return null;
@@ -186,7 +173,7 @@ class ScrollManager
     /**
      * 滚动条点击处理：轨道 = 跳转，滑块 = 开始拖拽。
      */
-    public function handleScrollbarDown(VNode $scrollNode, string $type, int $mouseX, int $mouseY, bool $isHorizontal): void
+    public function handleScrollbarDown(RenderNode $scrollNode, string $type, int $mouseX, int $mouseY, bool $isHorizontal): void
     {
         if ($isHorizontal) {
             $contentW = $scrollNode->contentWidth;
@@ -302,19 +289,24 @@ class ScrollManager
     // ── 滚动位置应用 ───────────────────────────
 
     /**
-     * 应用 scrollTop 到 VNode，可选持久化到组件 bind 值。
+     * 应用 scrollTop 到 RenderNode，可选持久化到组件 bind 值。
      *
      * persist=true:  持久化到组件 + 请求重建树（滚轮、轨道点击、拖拽结束）
-     * persist=false: 仅修改 VNode + 直接重绘（拖拽过程中）
+     * persist=false: 仅修改 RenderNode + 直接重绘（拖拽过程中）
+     *
+     * bind 键读取自 sourceVNode->props（VNode 上的 :scroll-top 属性）。
      */
-    public function applyScrollTop(VNode $node, int $newScrollTop, bool $persist): void
+    public function applyScrollTop(RenderNode $node, int $newScrollTop, bool $persist): void
     {
         $node->scrollTop = $newScrollTop;
 
         if ($persist) {
-            $bindKey = $node->props[':scroll-top'] ?? '';
+            $bindKey = '';
+            if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+                $bindKey = $node->sourceVNode->props[':scroll-top'] ?? '';
+            }
             if ($bindKey !== '') {
-                $target = ($this->resolveComponent)($node);
+                $target = ($this->resolveComponent)($node->sourceVNode);
                 $target->setBindValue($bindKey, (string) $newScrollTop);
             }
             ($this->requestRender)();
@@ -324,22 +316,25 @@ class ScrollManager
     }
 
     /**
-     * 应用 scrollLeft 到 VNode，可选持久化到组件 bind 值。
+     * 应用 scrollLeft 到 RenderNode，可选持久化到组件 bind 值。
      * 镜像 applyScrollTop，操作横向滚动。
      */
-    public function applyScrollLeft(VNode $node, int $newScrollLeft, bool $persist): void
+    public function applyScrollLeft(RenderNode $node, int $newScrollLeft, bool $persist): void
     {
         $node->scrollLeft = $newScrollLeft;
 
         if ($persist) {
-            $bindKey = $node->props[':scroll-left'] ?? '';
+            $bindKey = '';
+            if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+                $bindKey = $node->sourceVNode->props[':scroll-left'] ?? '';
+            }
             if ($bindKey !== '') {
-                $target = ($this->resolveComponent)($node);
+                $target = ($this->resolveComponent)($node->sourceVNode);
                 $target->setBindValue($bindKey, (string) $newScrollLeft);
             }
             ($this->requestRender)();
         } else {
-            ($this->directRender)($node);
+            ($this->directRender)();
         }
     }
 }

@@ -5,23 +5,31 @@ namespace Px\Rendering;
 use Px\ReactiveComponent;
 
 /**
- * VNodeRenderer — VNode 树遍历渲染器
+ * VNodeRenderer — RenderNode 树遍历渲染器
  *
  * 两阶段渲染:
  *   1. Walk: 收集所有需要绘制的元素 (按 layer 分组)
  *   2. Draw: 按 layer 顺序调用 ctx->drawElement()
  *
  * 设计原则:
- *   每个 VNode 生成一个元素描述。复杂类型 (button, input,
+ *   每个 RenderNode 生成一个元素描述。复杂类型 (button, input,
  *   scroll-container) 由 GdiRenderContext::drawElement 内部
  *   多次调用 GDI 原语完成绘制 — 不在此层分解为多个兄弟图元。
  *
- *   命中测试完全基于 VNode 树，不依赖元素列表。
+ *   命中测试基于 RenderNode 树（由 RenderTreeManager 提供），
+ *   不依赖元素列表。
+ *
+ * 增量绘制:
+ *   使用 $currentPaintFrame 帧号 + RenderNode::needsPaint/markPainted
+ *   判断节点是否需要重新生成元素描述。
  */
 class VNodeRenderer
 {
     private ReactiveComponent $component;
     private RenderContext $render_ctx;
+
+    /** @var int 当前绘制帧号，递增以避免全量重置 */
+    private int $currentPaintFrame = 0;
 
     /** @var array Scroll context for offsetting children */
     private array $scrollCtxStack = [];
@@ -36,11 +44,19 @@ class VNodeRenderer
     }
 
     /**
-     * 渲染 VNode 树
+     * 渲染 RenderNode 树
      */
-    public function render(VNode $root): void
+    public function render(RenderNode $root): void
     {
         $this->render_ctx->beginFrame();
+
+        // 帧号溢出保护
+        if ($this->currentPaintFrame === PHP_INT_MAX) {
+            $this->currentPaintFrame = 1;
+            $this->resetAllPaintFlags($root);
+        } else {
+            $this->currentPaintFrame++;
+        }
 
         $elementsByLayer = [];
         $maxLayer = 0;
@@ -56,39 +72,52 @@ class VNodeRenderer
         $this->render_ctx->endFrame();
     }
 
-    private function collectElements(VNode $node, array &$elementsByLayer, int &$maxLayer): void
+    /**
+     * 递归收集需要绘制的元素。
+     * 使用 needsPaint + markPainted 实现增量绘制。
+     */
+    private function collectElements(RenderNode $node, array &$elementsByLayer, int &$maxLayer): void
     {
-        // Push component context when entering a component boundary
-        $pushedComponent = false;
-        if ($node->isComponent() && $node->componentInstance !== null) {
-            $this->componentStack[] = $node->componentInstance;
-            $pushedComponent = true;
+        // 增量绘制：如果节点不需要绘制，跳过但继续处理子节点
+        if (!$node->needsPaint($this->currentPaintFrame)) {
+            foreach ($node->children as $child) {
+                $this->collectElements($child, $elementsByLayer, $maxLayer);
+            }
+            return;
         }
 
-        if (!$node->isRoot() && !$node->isComponent()) {
-            $el = $this->vnodeToElement($node);
-            if ($el !== null) {
-                $layer = $node->layer;
-                if ($layer > $maxLayer) $maxLayer = $layer;
-                if (!isset($elementsByLayer[$layer])) {
-                    $elementsByLayer[$layer] = [];
-                }
-                // Handle group type: expand children into their own layers
-                if (($el['type'] ?? '') === 'group' && isset($el['elements'])) {
-                    foreach ($el['elements'] as $childEl) {
-                        $childLayer = $childEl['layer'] ?? $layer;
-                        if ($childLayer > $maxLayer) $maxLayer = $childLayer;
-                        if (!isset($elementsByLayer[$childLayer])) {
-                            $elementsByLayer[$childLayer] = [];
-                        }
-                        $elementsByLayer[$childLayer][] = $childEl;
+        // #root 不产生渲染元素，直接处理子节点
+        if ($node->type === '#root') {
+            foreach ($node->children as $child) {
+                $this->collectElements($child, $elementsByLayer, $maxLayer);
+            }
+            return;
+        }
+
+        // 普通元素节点：生成元素描述
+        $el = $this->renderNodeToElement($node);
+        if ($el !== null) {
+            $layer = $node->layer;
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            if (!isset($elementsByLayer[$layer])) {
+                $elementsByLayer[$layer] = [];
+            }
+            // Handle group type: expand children into their own layers
+            if (($el['type'] ?? '') === 'group' && isset($el['elements'])) {
+                foreach ($el['elements'] as $childEl) {
+                    $childLayer = $childEl['layer'] ?? $layer;
+                    if ($childLayer > $maxLayer) $maxLayer = $childLayer;
+                    if (!isset($elementsByLayer[$childLayer])) {
+                        $elementsByLayer[$childLayer] = [];
                     }
-                } else {
-                    $elementsByLayer[$layer][] = $el;
+                    $elementsByLayer[$childLayer][] = $childEl;
                 }
+            } else {
+                $elementsByLayer[$layer][] = $el;
             }
         }
 
+        // 滚动容器处理（裁切 + 滚动条）
         $wasScrollPush = false;
         if ($node->isScrollContainer) {
             $this->scrollCtxStack[] = [
@@ -96,13 +125,12 @@ class VNodeRenderer
                 'w' => $node->w, 'h' => $node->h,
                 'scrollTop' => $node->scrollTop,
                 'scrollLeft' => $node->scrollLeft,
-                'overflowX' => $node->computedStyle['overflowX'] ?? $node->computedStyle['overflow'] ?? 'visible',
-                'overflowY' => $node->computedStyle['overflowY'] ?? $node->computedStyle['overflow'] ?? 'visible',
+                'overflowX' => $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible',
+                'overflowY' => $node->style['overflowY'] ?? $node->style['overflow'] ?? 'visible',
                 'layer' => $node->layer,
             ];
             $wasScrollPush = true;
 
-            // Emit clip-push so children are clipped to the container bounds
             $layer = $node->layer;
             if ($layer > $maxLayer) $maxLayer = $layer;
             if (!isset($elementsByLayer[$layer])) {
@@ -115,23 +143,16 @@ class VNodeRenderer
             ];
         }
 
+        // 递归处理子节点（button 类型不展开，由 GDI 层绘制）
         if ($node->type !== 'button') {
-            if ($node->children instanceof VNode) {
-                $this->collectElements($node->children, $elementsByLayer, $maxLayer);
-            } elseif (is_array($node->children)) {
-                foreach ($node->children as $child) {
-                    if ($child instanceof VNode) {
-                        $child = objval($child, VNode::class);
-                        $this->collectElements($child, $elementsByLayer, $maxLayer);
-                    }
-                }
+            foreach ($node->children as $child) {
+                $this->collectElements($child, $elementsByLayer, $maxLayer);
             }
         }
 
         if ($wasScrollPush) {
             $scrollCtx = array_pop($this->scrollCtxStack);
 
-            // Emit clip-pop after children
             $layer = $scrollCtx['layer'];
             if ($layer > $maxLayer) $maxLayer = $layer;
             if (!isset($elementsByLayer[$layer])) {
@@ -142,21 +163,18 @@ class VNodeRenderer
                 'layer' => $layer,
             ];
 
-            // Emit scrollbar elements AFTER children + clip-pop so they draw on top
+            // 在子元素 + clip-pop 之后绘制滚动条（确保在顶层）
             $this->emitScrollbarElements($node, $scrollCtx, $elementsByLayer, $maxLayer);
         }
 
-        // Pop component context when leaving a component boundary
-        if ($pushedComponent) {
-            array_pop($this->componentStack);
-        }
+        // 标记节点为已绘制
+        $node->markPainted($this->currentPaintFrame);
     }
 
     /**
      * Emit scrollbar elements for a scroll container, after its children.
-     * This ensures scrollbars are drawn on top of child elements.
      */
-    private function emitScrollbarElements(VNode $node, array $scrollCtx, array &$elementsByLayer, int &$maxLayer): void
+    private function emitScrollbarElements(RenderNode $node, array $scrollCtx, array &$elementsByLayer, int &$maxLayer): void
     {
         $layer = $scrollCtx['layer'];
 
@@ -197,7 +215,7 @@ class VNodeRenderer
 
     /**
      * 获取当前活跃的组件实例（用于解析 bind 值）。
-     * 如果当前在子组件边界内，返回子组件实例；否则返回根组件。
+     * RenderNode 树无 #component 节点，故始终返回根组件。
      */
     private function currentComponent(): ReactiveComponent
     {
@@ -206,26 +224,22 @@ class VNodeRenderer
     }
 
     /**
-     * Convert a VNode to a single draw element descriptor.
+     * Convert a RenderNode to a single draw element descriptor.
      *
-     * Complex types carry all data needed for GdiRenderContext
-     * to make multiple GDI calls internally.
-     *
-     * @return ?array  element descriptor, or null if invisible
+     * @return ?array element descriptor, or null if invisible
      */
-    private function vnodeToElement(VNode $node): ?array
+    private function renderNodeToElement(RenderNode $node): ?array
     {
-        $style = $node->computedStyle;
+        $style = $node->style;
         $x = $node->x;
         $y = $node->y;
         $w = $node->w;
         $h = $node->h;
         $layer = $node->layer;
 
+        // 滚动裁切
         if (count($this->scrollCtxStack) > 0) {
             $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];
-            // LayoutResolver 已将 scrollTop/scrollLeft 计入子节点位置，此处做裁切 + 坐标裁剪
-
             $containerX = $scrollCtx['x'];
             $containerY = $scrollCtx['y'];
             $containerW = $scrollCtx['w'];
@@ -236,23 +250,21 @@ class VNodeRenderer
             // Y-axis: cull if completely outside, clip if partially outside
             if ($overflowY !== 'visible') {
                 if ($y + $h < $containerY || $y >= $containerY + $containerH) {
-                    return null; // completely outside — skip
+                    return null;
                 }
-                // Clip top — element starts above container
                 if ($y < $containerY) {
                     $h -= ($containerY - $y);
                     $y = $containerY;
                 }
-                // Clip bottom — element ends below container
                 if ($y + $h > $containerY + $containerH) {
                     $h = ($containerY + $containerH) - $y;
                 }
             }
 
-            // X-axis: cull if completely outside, clip if partially outside
+            // X-axis
             if ($overflowX !== 'visible') {
                 if ($x + $w < $containerX || $x >= $containerX + $containerW) {
-                    return null; // completely outside — skip
+                    return null;
                 }
                 if ($x < $containerX) {
                     $w -= ($containerX - $x);
@@ -264,10 +276,16 @@ class VNodeRenderer
             }
         }
 
+        // 通过 sourceVNode 访问 props（bind 值、事件处理器等）
+        $props = [];
+        if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+            $props = $node->sourceVNode->props;
+        }
+
         switch ($node->type) {
-            case 'button':  return $this->makeButtonElement($node, $style, $x, $y, $w, $h, $layer);
-            case 'input':   return $this->makeInputElement($node, $style, $x, $y, $w, $h, $layer);
-            case 'span':    return $this->makeSpanElement($node, $style, $x, $y, $w, $h, $layer);
+            case 'button':  return $this->makeButtonElement($node, $style, $props, $x, $y, $w, $h, $layer);
+            case 'input':   return $this->makeInputElement($node, $style, $props, $x, $y, $w, $h, $layer);
+            case 'span':    return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'p':
             case 'h1':
             case 'h2':
@@ -275,24 +293,22 @@ class VNodeRenderer
             case 'h4':
             case 'h5':
             case 'h6':
-                            return $this->makeSpanElement($node, $style, $x, $y, $w, $h, $layer);
+                            return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'div':
-            default:        return $this->makeDivElement($node, $style, $x, $y, $w, $h, $layer);
+            default:        return $this->makeDivElement($node, $style, $props, $x, $y, $w, $h, $layer);
         }
     }
 
     // ──────────────────────────────────────────────
     //  Element builders — each returns ?array
     //  null → invisible (nothing to draw)
-    //  array → one element descriptor per VNode
     // ──────────────────────────────────────────────
 
-    private function makeDivElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeDivElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         if ($node->isScrollContainer) {
             return $this->makeScrollContainerElement($node, $style, $x, $y, $w, $h, $layer);
         }
-        // Workaround: if w/h is 0, try to get reasonable defaults
         if ($w <= 0) $w = 80;
         if ($h <= 0) $h = 32;
 
@@ -300,8 +316,8 @@ class VNodeRenderer
         $hasBorder = ($style['borderWidth'] ?? 0) > 0;
         $hasBg = $bg !== null;
 
-        // Check for string children (text content)
-        $hasTextChild = is_string($node->children) && $node->children !== '';
+        // Check for content (text or children)
+        $hasTextChild = is_string($node->content) && $node->content !== '';
         if ($bg === null && !$hasBorder && !$hasTextChild) {
             return null;
         }
@@ -320,22 +336,19 @@ class VNodeRenderer
         $borderWidth = $style['borderWidth'] ?? 0;
         $borderColor = $style['borderColor'] ?? 0;
 
-        // If has text content, render text element
         if ($hasTextChild) {
             $fontSize = $style['fontSize'] ?? 14;
             $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
             $bold = $style['bold'] ?? 0;
-            $align = $node->props['align'] ?? ($style['textAlign'] ?? 'center');
+            $align = $props['align'] ?? ($style['textAlign'] ?? 'center');
 
-            $text = $node->children;
+            $text = $node->content;
             $textWidth = strlen($text) * (int)($fontSize * 0.6);
 
-            // Center text horizontally and vertically
             $textX = $x + (int)(($w - $textWidth) / 2);
             if ($textX < $x + 4) $textX = $x + 4;
             $textY = $y + (int)(($h - $fontSize) / 2);
 
-            // If has background, return both rect and text as elements
             if ($hasBg || $hasBorder) {
                 return [
                     'type' => 'group', 'layer' => $layer,
@@ -347,7 +360,6 @@ class VNodeRenderer
                 ];
             }
 
-            // Text only, no background
             return [
                 'type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
                 'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer,
@@ -362,31 +374,31 @@ class VNodeRenderer
         ];
     }
 
-    private function makeSpanElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeSpanElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $fontSize = $style['fontSize'] ?? 16;
         $color    = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
         $bold     = $style['bold'] ?? 0;
-        $align    = $node->props['align'] ?? ($style['textAlign'] ?? 'left');
+        $align    = $props['align'] ?? ($style['textAlign'] ?? 'left');
         $text = '';
 
-        if (is_string($node->children)) {
-            $text = $node->children;
+        if (is_string($node->content)) {
+            $text = $node->content;
         }
-        $bindKey = $node->props[':bind'] ?? '';
+        $bindKey = $props[':bind'] ?? '';
         if ($bindKey !== '') {
             $text = $this->currentComponent()->getBindValue($bindKey);
         }
-        $vModel = $node->props['v-model'] ?? '';
+        $vModel = $props['v-model'] ?? '';
         if ($vModel !== '') {
             $text = $this->currentComponent()->getBindValue($vModel);
         }
 
         if ($text === '') return null;
 
-        $containerW = (int)($node->props['container-w'] ?? $w);
-        $containerH = (int)($node->props['container-h'] ?? $h);
-        $containerX = (int)($node->props['container-x'] ?? $x);
+        $containerW = (int)($props['container-w'] ?? $w);
+        $containerH = (int)($props['container-h'] ?? $h);
+        $containerX = (int)($props['container-x'] ?? $x);
 
         if ($align === 'right' || $align === 'center') {
             $textWidth = strlen($text) * (int)($fontSize * 0.6);
@@ -410,11 +422,9 @@ class VNodeRenderer
         ];
     }
 
-    private function makeButtonElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeButtonElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
-        // Button must have valid dimensions
         if ($w <= 0 || $h <= 0) {
-            // Auto-size: minimum 80x32 for buttons without explicit dimensions
             $w = $w <= 0 ? 80 : $w;
             $h = $h <= 0 ? 32 : $h;
         }
@@ -435,25 +445,15 @@ class VNodeRenderer
         }
 
         $label = '';
-        if (is_string($node->children)) {
-            $label = $node->children;
-        } elseif ($node->children instanceof VNode) {
-            if ($node->children->type === 'span' || $node->children->type === '#text') {
-                if (is_string($node->children->children)) {
-                    $label = $node->children->children;
-                }
-                $spanBind = $node->children->props[':bind'] ?? $node->children->props['bind'] ?? '';
-                if ($spanBind !== '') {
-                    $label = $this->currentComponent()->getBindValue($spanBind);
-                }
-            }
+        if (is_string($node->content)) {
+            $label = $node->content;
         }
-        $bindKey = $node->props[':bind'] ?? '';
+        $bindKey = $props[':bind'] ?? '';
         if ($bindKey !== '') {
             $label = $this->currentComponent()->getBindValue($bindKey);
         }
-        if ($label === '' && isset($node->props['@click'])) {
-            $label = $node->props['label'] ?? '';
+        if ($label === '' && isset($props['@click'])) {
+            $label = $props['label'] ?? '';
         }
 
         $labelFontSize = 22;
@@ -471,10 +471,7 @@ class VNodeRenderer
         ];
     }
 
-    /**
-     * Input element — 由 drawElement 内部绘制背景和文本。
-     */
-    private function makeInputElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeInputElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $bg       = $style['bg'] ?? 0x1E1E1E;
         $fg       = $style['fg'] ?? 0xFFFFFF;
@@ -482,7 +479,7 @@ class VNodeRenderer
         $borderRadius = $style['borderRadius'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
 
-        $bindKey = $node->props['v-model'] ?? '';
+        $bindKey = $props['v-model'] ?? '';
         $text = '';
         if ($bindKey !== '') {
             $text = $this->currentComponent()->getBindValue($bindKey);
@@ -496,13 +493,7 @@ class VNodeRenderer
         ];
     }
 
-    /**
-     * Scroll container — 由 drawElement 内部绘制背景和滚动条。
-     *
-     * 子节点已由 collectElements() 单独收集；
-     * scrollCtxStack 在此提供裁切偏移。
-     */
-    private function makeScrollContainerElement(VNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeScrollContainerElement(RenderNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $bg = $style['bg'] ?? 0x2D2D2D;
         $borderRadius = $style['borderRadius'] ?? 0;
@@ -510,18 +501,9 @@ class VNodeRenderer
 
         $contentH = $node->contentHeight;
         if ($contentH === 0) {
-            $childList = [];
-            if ($node->children instanceof VNode) {
-                $childList = [$node->children];
-            } elseif (is_array($node->children)) {
-                $childList = $node->children;
-            }
-            foreach ($childList as $child) {
-                if ($child instanceof VNode) {
-                    $child = objval($child, VNode::class);
-                    $itemH = (int)($child->props['item-height'] ?? 0);
-                    $contentH += max($child->h, $itemH);
-                }
+            foreach ($node->children as $child) {
+                $itemH = (int)($child->style['height'] ?? 0);
+                $contentH += max($child->h, $itemH);
             }
         }
 
@@ -536,5 +518,17 @@ class VNodeRenderer
             'opacity' => $opacity,
             'layer' => $layer,
         ];
+    }
+
+    /**
+     * 帧号溢出时重置所有节点的绘制标记。
+     */
+    private function resetAllPaintFlags(RenderNode $node): void
+    {
+        $node->lastPaintFrame = 0;
+        $node->layoutDirty = true;
+        foreach ($node->children as $child) {
+            $this->resetAllPaintFlags($child);
+        }
     }
 }

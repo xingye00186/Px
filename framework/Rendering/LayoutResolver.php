@@ -2,121 +2,133 @@
 
 namespace Px\Rendering;
 
-use Px\Styling\Resolver\StyleResolver;
-
 /**
- * LayoutResolver — 运行时 CSS 布局引擎
+ * LayoutResolver — 运行时 CSS 布局引擎（RenderNode 版）
  *
- * 遍历 VNode 树，根据 CSS 样式计算每个节点的 x/y/w/h 位置。
+ * 遍历 RenderNode 树，根据 style 属性计算每个节点的 x/y/w/h 位置。
  * 支持四种布局模式: block (absolute), flex, grid, scroll。
  *
- * 流程:
- *   1. 遍历 VNode 树 (DFS)
- *   2. 解析 inline style → 通过 StyleResolver 合并主题/class/inline → computedStyle
- *   3. 根据 display 属性选择布局算法
- *   4. 设置 VNode.x, VNode.y, VNode.w, VNode.h
- *
- * 样式解析由 StyleResolver 负责，LayoutResolver 不再持有 classStyles。
+ * 与旧版 VNode 版的关键区别：
+ *   1. 接受 RenderNode 而非 VNode（style 已预计算，无需调用 StyleResolver）
+ *   2. 实现脏标记检查：layoutDirty=false 时跳过完整布局，仅传递父坐标（含 margin）
+ *   3. 集成快速滚动路径：scrollTop 变化时仅平移子节点，不改变容器本身 y
+ *   4. 子节点遍历简化（RenderNode.children 始终为数组）
  */
 class LayoutResolver
 {
-    /** Scroll containers tracked for scroll handling */
-    private array $scrollContainers = [];
-
     public function __construct()
     {
     }
 
     /**
-     * Resolve layout for the entire VNode tree.
+     * Resolve layout for the entire RenderNode tree.
      *
-     * @param VNode $root Root VNode (mutated in-place)
-     * @return array List of scroll containers: ['scrollContainers' => VNode[]]
+     * @param RenderNode $root Root RenderNode (mutated in-place)
+     * @return array List of scroll containers: ['scrollContainers' => RenderNode[]]
      */
-    public function resolve(VNode $root): array
+    public function resolve(RenderNode $root): array
     {
-        $this->scrollContainers = [];
-        $this->resolveNode($root, 0, 0, null);
-        return ['scrollContainers' => $this->scrollContainers];
+        $scrollContainers = [];
+        $this->resolveNode($root, 0, 0, null, $scrollContainers);
+        return ['scrollContainers' => $scrollContainers];
     }
 
     /**
      * Recursively resolve layout for a single node and its children.
      *
-     * @param VNode $node Current node
+     * @param RenderNode $node Current node
      * @param int $parentX Accumulated parent X offset
      * @param int $parentY Accumulated parent Y offset
-     * @param VNode|null $parent Parent VNode
+     * @param RenderNode|null $parent Parent RenderNode
+     * @param array &$scrollContainers Accumulator for scroll container nodes
      */
-    private function resolveNode(VNode $node, int $parentX, int $parentY, ?VNode $parent): void
-    {
-        // Parse inline style
-        $inlineStyle = $node->getInlineStyle();
+    private function resolveNode(
+        RenderNode $node,
+        int $parentX,
+        int $parentY,
+        ?RenderNode $parent,
+        array &$scrollContainers
+    ): void {
+        if ($node->layoutDirty) {
+            // ── 脏路径：完整布局计算 ──
+            $style = $node->style;
 
-        // Resolve CSS class names
-        $classNames = [];
-        $class = $node->getClass();
-        if ($class !== '') {
-            $classNames = preg_split('/\s+/', trim($class));
-        }
+            // Inherit parent's layer (CSS stacking context)
+            if ($parent !== null && $parent->layer > 0) {
+                $node->layer = $parent->layer;
+            }
 
-        // Collect explicit props (from parent flex/grid layout)
-        $explicitProps = [];
-        if ($node->w > 0) $explicitProps['width'] = $node->w;
-        if ($node->h > 0) $explicitProps['height'] = $node->h;
+            // Apply own z-index → RenderNode layer
+            $zIndex = (int)($style['zIndex'] ?? $style['zindex'] ?? 0);
+            if ($zIndex > $node->layer) {
+                $node->layer = $zIndex;
+            }
 
-        // Use StyleResolver to merge: theme defaults < compiled class styles < theme class < inline < explicit
-        $merged = StyleResolver::resolve(
-            $node->type,
-            $inlineStyle,
-            $classNames,
-            $explicitProps
-        );
+            // Check for scroll container
+            $overflowX = $style['overflowX'] ?? $style['overflow'] ?? 'visible';
+            $overflowY = $style['overflowY'] ?? $style['overflow'] ?? 'visible';
+            $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
+            $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
 
-        $node->computedStyle = $merged;
+            if ($hasHScroll || $hasVScroll) {
+                $node->isScrollContainer = true;
+            }
 
-        // Inherit parent's layer (CSS stacking context)
-        // Children without own z-index stay at the parent's layer level,
-        // ensuring they render above elements behind the parent.
-        if ($parent !== null && $parent->layer > 0) {
-            $node->layer = $parent->layer;
-        }
+            // Determine display mode
+            $display = $style['display'] ?? 'block';
+            $position = $style['position'] ?? 'static';
 
-        // Apply own z-index → VNode layer (higher layer = rendered on top, blocks lower-layer clicks)
-        // Supports both 'zIndex' (compile-time mapped key) and 'zindex' (re-parsed from generated code)
-        $zIndex = (int)($merged['zIndex'] ?? $merged['zindex'] ?? 0);
-        if ($zIndex > $node->layer) {
-            $node->layer = $zIndex;
-        }
+            switch ($display) {
+                case 'flex':
+                    $this->resolveFlexLayout($node, $parentX, $parentY, $parent, $scrollContainers);
+                    break;
+                case 'grid':
+                    $this->resolveGridLayout($node, $parentX, $parentY, $parent, $scrollContainers);
+                    break;
+                default: // block, scroll-container, etc.
+                    $this->resolveBlockLayout($node, $parentX, $parentY, $parent, $position, $scrollContainers);
+                    break;
+            }
 
-        // Check for scroll container — must be BEFORE layout resolution
-        // so resolveBlockLayout can access $node->isScrollContainer for auto-stack
-        $overflowX = $merged['overflowX'] ?? $merged['overflow'] ?? 'visible';
-        $overflowY = $merged['overflowY'] ?? $merged['overflow'] ?? 'visible';
-        $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll') ||
-            ($node->props[':scroll-left'] ?? '') !== '';
-        $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll') ||
-            ($node->props[':scroll-top'] ?? '') !== '' ||
-            $node->isScrollContainer;
+            // Track scroll containers
+            if ($node->isScrollContainer) {
+                $scrollContainers[] = $node;
+                $node->lastScrollTop = $node->scrollTop;
+            }
 
-        if ($hasHScroll || $hasVScroll) {
-            $node->isScrollContainer = true;
-        }
+            $node->layoutDirty = false;
+        } else {
+            // ── 洁净路径：仅传递父坐标（含自身 margin） ──
+            $style = $node->style;
+            $marginLeft = $style['marginLeft'] ?? $style['margin'] ?? 0;
+            $marginTop = $style['marginTop'] ?? $style['margin'] ?? 0;
+            $node->x = ($style['left'] ?? 0) + $parentX + $marginLeft;
+            $node->y = ($style['top'] ?? 0) + $parentY + $marginTop;
 
-        // Determine display mode
-        $display = $merged['display'] ?? 'block';
-        $position = $merged['position'] ?? 'static';
+            // ── 快速滚动路径 ──
+            // 仅滚动容器且 scrollTop 发生变化时执行
+            if ($node->isScrollContainer && $node->scrollTop !== $node->lastScrollTop) {
+                $deltaY = $node->lastScrollTop - $node->scrollTop;
+                foreach ($node->children as $child) {
+                    $this->shiftChildrenY($child, $deltaY, true);
+                }
+                $node->lastScrollTop = $node->scrollTop;
+            }
 
-        switch ($display) {
-            case 'flex':
-                $this->resolveFlexLayout($node, $parentX, $parentY, $parent);
-                break;
-            case 'grid':
-                $this->resolveGridLayout($node, $parentX, $parentY, $parent);
-                break;
-            default: // block, scroll-container, etc.
-                $this->resolveBlockLayout($node, $parentX, $parentY, $parent, $position);
-                break;
+            // ── 子节点递归处理 ──
+            $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+            $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
+
+            $childOffsetX = $node->x + $paddingLeft;
+            $childOffsetY = $node->y + $paddingTop;
+            if ($node->isScrollContainer) {
+                $childOffsetY -= $node->scrollTop;
+                $childOffsetX -= $node->scrollLeft;
+            }
+
+            foreach ($node->children as $child) {
+                $this->resolveNode($child, $childOffsetX, $childOffsetY, $node, $scrollContainers);
+            }
         }
     }
 
@@ -125,13 +137,14 @@ class LayoutResolver
      * Children are positioned relative to the parent.
      */
     private function resolveBlockLayout(
-        VNode $node,
+        RenderNode $node,
         int $parentX,
         int $parentY,
-        ?VNode $parent,
-        string $position
+        ?RenderNode $parent,
+        string $position,
+        array &$scrollContainers
     ): void {
-        $style = $node->computedStyle;
+        $style = $node->style;
 
         // Read position from style
         $left = $style['left'] ?? 0;
@@ -194,158 +207,96 @@ class LayoutResolver
             $childOffsetX -= $scrollLeft;
         }
 
-        if ($node->children instanceof VNode) {
-            $this->resolveNode($node->children, $childOffsetX, $childOffsetY, $node);
-        } elseif (is_array($node->children)) {
+        // Children are always RenderNode[] array
+        foreach ($node->children as $child) {
+            $this->resolveNode($child, $childOffsetX, $childOffsetY, $node, $scrollContainers);
+        }
+
+        // Auto-stack: for scroll containers, position children vertically
+        // and auto-fill width when no explicit left/top/width is set
+        if ($isScroll) {
+            $stackY = $childOffsetY;  // accounts for scroll offset + padding
+            $containerW = max($node->w - 14 - $paddingLeft - $paddingRight, 0);
+            $autoStack = true;
+
+            // Only auto-stack if NO child has explicit top/bottom
             foreach ($node->children as $child) {
-                if ($child instanceof VNode) {
-                    $this->resolveNode($child, $childOffsetX, $childOffsetY, $node);
+                $cs = $child->style;
+                if (array_key_exists('top', $cs) || array_key_exists('bottom', $cs)) {
+                    $autoStack = false;
+                    break;
                 }
             }
 
-            // Auto-stack: for scroll containers, position children vertically
-            // and auto-fill width when no explicit left/top/width is set
-            if ($isScroll) {
-                $stackY = $childOffsetY;  // accounts for scroll offset + padding
-                $containerW = max($node->w - 14 - $paddingLeft - $paddingRight, 0);
-                $autoStack = true;
-
-                // Only auto-stack if NO child has explicit top/bottom
+            if ($autoStack) {
                 foreach ($node->children as $child) {
-                    if ($child instanceof VNode) {
-                        $cs = $child->computedStyle;
-                        if (array_key_exists('top', $cs) || array_key_exists('bottom', $cs)) {
-                            $autoStack = false;
-                            break;
-                        }
-                    }
-                }
+                    $childStyle = $child->style;
+                    $mTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+                    $mBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
 
-                if ($autoStack) {
+                    // Auto-width: inherit from container
+                    if (!array_key_exists('width', $child->style) || $child->w === 0) {
+                        $child->w = $containerW;
+                        $child->style['width'] = $containerW;
+                    }
+                    // Auto-position: stack vertically with margin, shift all descendants
+                    $dy = ($stackY + $mTop) - $child->y;
+                    $child->y = $stackY + $mTop;
+                    if ($dy !== 0) {
+                        $this->shiftDescendantsY($child, $dy);
+                    }
+                    $stackY += $child->h + $mBottom;
+                }
+            }
+
+            // ── Calculate contentHeight (always, not just for autoStack) ────
+            $maxBottom = $childOffsetY;
+            foreach ($node->children as $child) {
+                $bottom = $child->y + $child->h;
+                if ($bottom > $maxBottom) $maxBottom = $bottom;
+            }
+            $node->contentHeight = $maxBottom - $childOffsetY;
+
+            // ── Clamp scrollTop when content shrinks ────
+            $maxScroll = max($node->contentHeight - $node->h, 0);
+            if ($node->scrollTop > $maxScroll) {
+                $oldScrollTop = $node->scrollTop;
+                $node->scrollTop = $maxScroll;
+                $shiftDown = $oldScrollTop - $node->scrollTop;
+                if ($shiftDown > 0) {
                     foreach ($node->children as $child) {
-                        if ($child instanceof VNode) {
-                            $child = objval($child, VNode::class);
-                            $childStyle = $child->computedStyle;
-                            $mTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
-                            $mBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
-
-                            // Auto-width: inherit from container
-                            if (!array_key_exists('width', $child->computedStyle) || $child->w === 0) {
-                                $child->w = $containerW;
-                                $child->computedStyle['width'] = $containerW;
-                            }
-                            // Auto-position: stack vertically with margin, shift all descendants
-                            $dy = ($stackY + $mTop) - $child->y;
-                            $child->y = $stackY + $mTop;
-                            if ($dy !== 0) {
-                                $this->shiftDescendantsY($child, $dy);
-                            }
-                            $stackY += $child->h + $mBottom;
-                        }
+                        $child->y += $shiftDown;
+                        $this->shiftDescendantsY($child, $shiftDown);
                     }
                 }
+            }
 
-                // ── Calculate contentHeight (always, not just for autoStack) ────
-                $maxBottom = $childOffsetY;
+            // ── Content width for horizontal scroll ────
+            $overflowX = $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible';
+            $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
+            if ($hasHScroll) {
+                // Use raw style values (independent of scroll offset) for content width
+                $maxRight = 0;
                 foreach ($node->children as $child) {
-                    if ($child instanceof VNode) {
-                        $bottom = $child->y + $child->h;
-                        if ($bottom > $maxBottom) $maxBottom = $bottom;
-                    }
+                    $cLeft = $child->style['left'] ?? 0;
+                    $cWidth = $child->style['width'] ?? $child->w;
+                    $right = $cLeft + $cWidth;
+                    if ($right > $maxRight) $maxRight = $right;
                 }
-                $node->contentHeight = $maxBottom - $childOffsetY;
+                $node->contentWidth = max($maxRight, $node->w);
 
-                // ── Clamp scrollTop when content shrinks ────
-                // If items were deleted / content became shorter,
-                // scrollTop may exceed the new maxScroll. Clamp
-                // and shift children down to correct position.
-                $maxScroll = max($node->contentHeight - $node->h, 0);
-                if ($node->scrollTop > $maxScroll) {
-                    $oldScrollTop = $node->scrollTop;
-                    $node->scrollTop = $maxScroll;
-                    $shiftDown = $oldScrollTop - $node->scrollTop;
-                    if ($shiftDown > 0) {
+                // Clamp scrollLeft when content shrinks
+                $maxScrollX = max($node->contentWidth - $node->w, 0);
+                if ($node->scrollLeft > $maxScrollX) {
+                    $oldScrollLeft = $node->scrollLeft;
+                    $node->scrollLeft = $maxScrollX;
+                    $shiftRight = $oldScrollLeft - $node->scrollLeft;
+                    if ($shiftRight > 0) {
                         foreach ($node->children as $child) {
-                            if ($child instanceof VNode) {
-                                $child = objval($child, VNode::class);
-                                $child->y += $shiftDown;
-                                $this->shiftDescendantsY($child, $shiftDown);
-                            }
+                            $child->x += $shiftRight;
+                            $this->shiftDescendantsX($child, $shiftRight);
                         }
                     }
-                }
-
-                // ── Content width for horizontal scroll ────
-                $overflowX = $node->computedStyle['overflowX'] ?? $node->computedStyle['overflow'] ?? 'visible';
-                $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll') ||
-                    ($node->props[':scroll-left'] ?? '') !== '';
-                if ($hasHScroll) {
-                    // Use raw style values (independent of scroll offset) for content width
-                    $maxRight = 0;
-                    foreach ($node->children as $child) {
-                        if ($child instanceof VNode) {
-                            $cLeft = $child->computedStyle['left'] ?? 0;
-                            $cWidth = $child->computedStyle['width'] ?? $child->w;
-                            $right = $cLeft + $cWidth;
-                            if ($right > $maxRight) $maxRight = $right;
-                        }
-                    }
-                    $node->contentWidth = max($maxRight, $node->w);
-
-                    // Clamp scrollLeft when content shrinks
-                    $maxScrollX = max($node->contentWidth - $node->w, 0);
-                    if ($node->scrollLeft > $maxScrollX) {
-                        $oldScrollLeft = $node->scrollLeft;
-                        $node->scrollLeft = $maxScrollX;
-                        $shiftRight = $oldScrollLeft - $node->scrollLeft;
-                        if ($shiftRight > 0) {
-                            foreach ($node->children as $child) {
-                                if ($child instanceof VNode) {
-                                    $child->x += $shiftRight;
-                                    $this->shiftDescendantsX($child, $shiftRight);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Recursively shift Y coordinate of a node and all its descendants.
-     * Used after auto-stack repositions a parent to keep grandchildren aligned.
-     */
-    private function shiftDescendantsY(VNode $node, int $dy): void
-    {
-        $children = $node->children;
-        if ($children instanceof VNode) {
-            $children->y += $dy;
-            $this->shiftDescendantsY($children, $dy);
-        } elseif (is_array($children)) {
-            foreach ($children as $child) {
-                if ($child instanceof VNode) {
-                    $child->y += $dy;
-                    $this->shiftDescendantsY($child, $dy);
-                }
-            }
-        }
-    }
-
-    /**
-     * Recursively shift X coordinate of a node and all its descendants.
-     */
-    private function shiftDescendantsX(VNode $node, int $dx): void
-    {
-        $children = $node->children;
-        if ($children instanceof VNode) {
-            $children->x += $dx;
-            $this->shiftDescendantsX($children, $dx);
-        } elseif (is_array($children)) {
-            foreach ($children as $child) {
-                if ($child instanceof VNode) {
-                    $child->x += $dx;
-                    $this->shiftDescendantsX($child, $dx);
                 }
             }
         }
@@ -354,9 +305,14 @@ class LayoutResolver
     /**
      * Flex layout: compute child positions using flex algorithm.
      */
-    private function resolveFlexLayout(VNode $node, int $parentX, int $parentY, ?VNode $parent): void
-    {
-        $style = $node->computedStyle;
+    private function resolveFlexLayout(
+        RenderNode $node,
+        int $parentX,
+        int $parentY,
+        ?RenderNode $parent,
+        array &$scrollContainers
+    ): void {
+        $style = $node->style;
 
         // Container position
         $left   = $style['left'] ?? 0;
@@ -369,7 +325,7 @@ class LayoutResolver
         $node->w = $width;
         $node->h = $height;
 
-        // If width/height is 0 (e.g., from "100%"), use parent dimensions
+        // If width/height is 0, use parent dimensions
         if ($width === 0 && $parent !== null && $parent->w > 0) {
             $width = $parent->w - $left;
             $node->w = $width;
@@ -382,10 +338,7 @@ class LayoutResolver
         // Handle flex:1 / flex:2 etc. → implicit width from parent for flex items
         $flex = $style['flex'] ?? '';
         if ($flex !== '' && $parent !== null) {
-            // flex: 1 means "grow to fill remaining space"
-            // Container should have explicit width, this item fills remaining
             if ($width === 0 && $parent->w > 0) {
-                // Calculate remaining space after other flex children
                 $node->w = $parent->w - $left;
             }
         }
@@ -404,27 +357,18 @@ class LayoutResolver
 
         // Collect children and resolve their styles FIRST
         $children = [];
-        if ($node->children instanceof VNode) {
-            $this->resolveNode($node->children, $node->x + $paddingLeft, $node->y + $paddingTop, $node);
-            $children[] = $node->children;
-        } elseif (is_array($node->children)) {
-            foreach ($node->children as $child) {
-                if ($child instanceof VNode) {
-                    $this->resolveNode($child, $node->x + $paddingLeft, $node->y + $paddingTop, $node);
-                    $children[] = $child;
-                }
-            }
+        foreach ($node->children as $child) {
+            $this->resolveNode($child, $node->x + $paddingLeft, $node->y + $paddingTop, $node, $scrollContainers);
+            $children[] = $child;
         }
 
         // ── Calculate flex item widths for flex:1 / flex:2 ──
-        // Count flex grow items and fixed-size items
         $flexGrowItems = [];
         $fixedTotalMain = 0;
         $hasFlexGrow = false;
 
         foreach ($children as $ch) {
-            $ch = objval($ch, VNode::class);
-            $childStyle = $ch->computedStyle;
+            $childStyle = $ch->style;
             $childFlex = $childStyle['flex'] ?? '';
             $childMarginLeft = $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
             $childMarginRight = $childStyle['marginRight'] ?? $childStyle['margin'] ?? 0;
@@ -434,7 +378,6 @@ class LayoutResolver
             if ($childFlex !== '') {
                 $flexGrowItems[] = $ch;
                 $hasFlexGrow = true;
-                // Margins of flex items also consume space
                 if ($direction === 'row' || $direction === 'row-reverse') {
                     $fixedTotalMain += $childMarginLeft + $childMarginRight;
                 } else {
@@ -458,24 +401,20 @@ class LayoutResolver
             $gapTotal = $gap * (count($children) - 1);
             $remainingSpace = max($containerMain - $fixedTotalMain - $gapTotal, 0);
 
-            // Total flex-grow values
             $totalFlexGrow = 0;
             foreach ($flexGrowItems as $ch) {
-                $childStyle = $ch->computedStyle;
-                $flexVal = (float)($childStyle['flex'] ?? '1');
+                $flexVal = (float)($ch->style['flex'] ?? '1');
                 $totalFlexGrow += $flexVal;
             }
 
-            // Distribute proportionally
             foreach ($flexGrowItems as $ch) {
-                $childStyle = $ch->computedStyle;
-                $flexVal = (float)($childStyle['flex'] ?? '1');
+                $flexVal = (float)($ch->style['flex'] ?? '1');
                 if ($isRow) {
                     $ch->w = (int)(($flexVal / max($totalFlexGrow, 1)) * $remainingSpace);
-                    $ch->computedStyle['width'] = $ch->w;
+                    $ch->style['width'] = $ch->w;
                 } else {
                     $ch->h = (int)(($flexVal / max($totalFlexGrow, 1)) * $remainingSpace);
-                    $ch->computedStyle['height'] = $ch->h;
+                    $ch->style['height'] = $ch->h;
                 }
             }
         }
@@ -486,12 +425,11 @@ class LayoutResolver
         $isRow = ($direction === 'row' || $direction === 'row-reverse');
         $reversed = ($direction === 'row-reverse' || $direction === 'column-reverse');
 
-        // Total children size along main axis (uses updated widths)
+        // Total children size along main axis
         $totalMain = 0;
         $maxCross = 0;
         foreach ($children as $ch) {
-            $ch = objval($ch, VNode::class);
-            $childStyle = $ch->computedStyle;
+            $childStyle = $ch->style;
             $childW = $ch->w;
             $childH = $ch->h;
             $childMarginLeft = $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
@@ -508,7 +446,6 @@ class LayoutResolver
         }
         $totalMain += $gap * (count($children) - 1);
 
-        // Container content area (subtract padding)
         $containerMain = $isRow ? ($width - $paddingLeft - $paddingRight) : ($height - $paddingTop - $paddingBottom);
         $containerCross = $isRow ? ($height - $paddingTop - $paddingBottom) : ($width - $paddingLeft - $paddingRight);
 
@@ -519,7 +456,7 @@ class LayoutResolver
             'space-between' => 0,
             'space-around'  => 0,
             'space-evenly'  => 0,
-            default         => 0, // flex-start
+            default         => 0,
         };
 
         $spaceBetween = 0;
@@ -541,8 +478,8 @@ class LayoutResolver
         }
 
         foreach ($indices as $i) {
-            $ch = objval($children[$i], VNode::class);
-            $childStyle = $ch->computedStyle;
+            $ch = $children[$i];
+            $childStyle = $ch->style;
             $childMarginLeft = $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
             $childMarginRight = $childStyle['marginRight'] ?? $childStyle['margin'] ?? 0;
             $childMarginTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
@@ -558,16 +495,14 @@ class LayoutResolver
             // Cross axis: align-items stretch defaults to container size
             if ($align === 'stretch') {
                 if ($isRow) {
-                    // Row: stretch height to container
                     if ($ch->h === 0) {
                         $ch->h = $containerCross;
-                        $ch->computedStyle['height'] = $containerCross;
+                        $ch->style['height'] = $containerCross;
                     }
                 } else {
-                    // Column: stretch width to container
                     if ($ch->w === 0) {
                         $ch->w = $containerCross;
-                        $ch->computedStyle['width'] = $containerCross;
+                        $ch->style['width'] = $containerCross;
                     }
                 }
             }
@@ -602,9 +537,14 @@ class LayoutResolver
     /**
      * Grid layout: position children in a CSS grid.
      */
-    private function resolveGridLayout(VNode $node, int $parentX, int $parentY, ?VNode $parent): void
-    {
-        $style = $node->computedStyle;
+    private function resolveGridLayout(
+        RenderNode $node,
+        int $parentX,
+        int $parentY,
+        ?RenderNode $parent,
+        array &$scrollContainers
+    ): void {
+        $style = $node->style;
 
         $left   = $style['left'] ?? 0;
         $top    = $style['top'] ?? 0;
@@ -633,33 +573,25 @@ class LayoutResolver
 
         // Collect children and resolve their styles
         $children = [];
-        if ($node->children instanceof VNode) {
-            $this->resolveNode($node->children, $node->x, $node->y, $node);
-            $children[] = $node->children;
-        } elseif (is_array($node->children)) {
-            foreach ($node->children as $child) {
-                if ($child instanceof VNode) {
-                    $this->resolveNode($child, $node->x, $node->y, $node);
-                    $children[] = $child;
-                }
-            }
+        foreach ($node->children as $child) {
+            $this->resolveNode($child, $node->x, $node->y, $node, $scrollContainers);
+            $children[] = $child;
         }
 
         // Position children in grid
         $col = 0;
         $row = 0;
         foreach ($children as $ch) {
-            $ch = objval($ch, VNode::class);
-            // Use explicit grid-column/grid-row from inline style (CSS 1-based)
-            $childStyle = $ch->computedStyle;
+            // Use explicit grid-column/grid-row from style (CSS 1-based)
+            $childStyle = $ch->style;
             $explicitCol = $childStyle['gridColumn'] ?? null;
             $explicitRow = $childStyle['gridRow'] ?? null;
 
             if ($explicitCol !== null && $explicitCol !== '') {
-                $col = (int)$explicitCol - 1; // CSS 1-based → internal 0-based
+                $col = (int)$explicitCol - 1;
             }
             if ($explicitRow !== null && $explicitRow !== '') {
-                $row = (int)$explicitRow - 1; // CSS 1-based → internal 0-based
+                $row = (int)$explicitRow - 1;
             }
 
             $ch->x = $node->x + $col * $cellW + $colGap;
@@ -672,6 +604,51 @@ class LayoutResolver
                 $col = 0;
                 $row++;
             }
+        }
+    }
+
+    // ── 递归平移方法（用于 auto-stack / clamp） ──
+
+    /**
+     * Recursively shift Y coordinate of a node and all its descendants.
+     */
+    private function shiftDescendantsY(RenderNode $node, int $dy): void
+    {
+        $node->y += $dy;
+        foreach ($node->children as $child) {
+            $child->y += $dy;
+            $this->shiftDescendantsY($child, $dy);
+        }
+    }
+
+    /**
+     * Recursively shift X coordinate of a node and all its descendants.
+     */
+    private function shiftDescendantsX(RenderNode $node, int $dx): void
+    {
+        $node->x += $dx;
+        foreach ($node->children as $child) {
+            $child->x += $dx;
+            $this->shiftDescendantsX($child, $dx);
+        }
+    }
+
+    // ── 快速滚动路径平移方法 ──
+
+    /**
+     * Recursively shift Y coordinate of a node and its descendants.
+     * Used by the fast scroll path.
+     *
+     * @param bool $skipAbsolute If true, skip children with position:absolute
+     */
+    private function shiftChildrenY(RenderNode $node, int $deltaY, bool $skipAbsolute = false): void
+    {
+        $node->y += $deltaY;
+        foreach ($node->children as $child) {
+            if ($skipAbsolute && ($child->style['position'] ?? '') === 'absolute') {
+                continue;
+            }
+            $this->shiftChildrenY($child, $deltaY, $skipAbsolute);
         }
     }
 }

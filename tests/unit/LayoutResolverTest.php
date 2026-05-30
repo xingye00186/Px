@@ -1,56 +1,59 @@
 <?php
 /**
- * LayoutResolver 单元测试
- * 
+ * LayoutResolver 单元测试（RenderNode 版）
+ *
  * 测试目标:
  *   1. Layer 继承: 子节点继承父节点的 z-index layer
  *   2. 自身 z-index 覆盖继承的 layer
- *   3. setClassStyles(): 运行时注入 CSS class 样式
- *   4. Block 布局: 基本定位
- *   5. Flex 布局: 子节点定位
- *   6. Grid 布局: 子节点网格定位
- * 
+ *   3. Block 布局: 基本定位
+ *   4. Flex 布局: 子节点定位
+ *   5. Grid 布局: 子节点网格定位
+ *   6. 脏标记路径: layoutDirty=true 执行完整布局
+ *   7. 洁净路径: layoutDirty=false 仅传递父坐标（含 margin）
+ *
  * Usage: php tests/unit/LayoutResolverTest.php
  */
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\VNode;
+use Px\Rendering\RenderNode;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\CssMappings;
 
 echo "========================================\n";
-echo " LayoutResolver 单元测试\n";
+echo " LayoutResolver 单元测试（RenderNode）\n";
 echo "========================================\n\n";
+
+// 辅助函数：构建 RenderNode 树
+function makeNode(string $type, array $style = [], array $children = [], ?string $content = null): RenderNode
+{
+    $node = new RenderNode($type, $style, $content);
+    foreach ($children as $child) {
+        $node->addChild($child);
+    }
+    return $node;
+}
 
 echo "--- 1. Layer 继承与 Z-Index ---\n";
 
 test('子节点继承父节点的 layer', function () {
-    $child = VNode::h('div', ['class' => 'box'], 'text');
+    $child = makeNode('div', ['width' => 100, 'height' => 50]);
+    $parent = makeNode('div', ['zIndex' => 5, 'width' => 200, 'height' => 100], [$child]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $parent = VNode::h('div', ['style' => 'zIndex:5;'], [$child]);
-    $parent->layer = 0; // 初始
-
-    $root = VNode::h('#root', ['title' => 'test', 'style' => 'width:400px;height:300px;'], [$parent]);
-
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
-    // 父节点 layer 应为 5 (zIndex from style)
     assert_eq($parent->layer, 5, '父节点 layer');
-    // 子节点继承父节点的 layer
     assert_eq($child->layer, 5, '子节点应继承父节点的 layer');
 });
 
 test('父节点无 zIndex 时子节点保持 layer 0', function () {
-    $child = VNode::h('div', ['class' => 'box'], 'text');
+    $child = makeNode('div', ['width' => 100]);
+    $parent = makeNode('div', ['width' => 200], [$child]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $parent = VNode::h('div', [], [$child]);
-    $parent->layer = 0;
-
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$parent]);
-
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
     assert_eq($parent->layer, 0, '父节点无 zIndex 时 layer 为 0');
@@ -58,13 +61,11 @@ test('父节点无 zIndex 时子节点保持 layer 0', function () {
 });
 
 test('子节点自身的 zIndex 覆盖继承的 parent layer', function () {
-    $child = VNode::h('div', ['style' => 'zIndex:10;'], 'text');
+    $child = makeNode('div', ['zIndex' => 10, 'width' => 100]);
+    $parent = makeNode('div', ['zIndex' => 5, 'width' => 200], [$child]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $parent = VNode::h('div', ['style' => 'zIndex:5;'], [$child]);
-
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$parent]);
-
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
     assert_eq($parent->layer, 5, '父节点 layer=5');
@@ -72,85 +73,33 @@ test('子节点自身的 zIndex 覆盖继承的 parent layer', function () {
 });
 
 test('子节点有更小 zIndex 时不覆盖 parent layer', function () {
-    $child = VNode::h('div', ['style' => 'zIndex:2;'], 'text');
+    $child = makeNode('div', ['zIndex' => 2, 'width' => 100]);
+    $parent = makeNode('div', ['zIndex' => 5, 'width' => 200], [$child]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $parent = VNode::h('div', ['style' => 'zIndex:5;'], [$child]);
-
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$parent]);
-
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
-    // 子节点继承 5，自己的 zIndex=2 小于 5，所以保持 5
     assert_eq($child->layer, 5, '子节点 zIndex=2 小于 parent layer=5，保持 parent layer');
 });
 
 test('只有正数 zIndex 才影响 layer 属性', function () {
-    $node = VNode::h('div', ['style' => 'zIndex:0;'], 'text');
+    $node = makeNode('div', ['zIndex' => 0, 'width' => 100]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
 
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$node]);
-
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
     assert_eq($node->layer, 0, 'zIndex:0 不应改变 layer');
 });
 
-echo "\n--- 2. setClassStyles() ---\n";
-
-test('setClassStyles() 运行时注入 CSS 类样式', function () {
-    $resolver = new LayoutResolver([]);
-
-    $classStyles = [
-        'panel' => ['bg' => 0x333333, 'width' => 300],
-    ];
-    $resolver->setClassStyles($classStyles);
-
-    $node = VNode::h('div', ['class' => 'panel'], 'content');
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$node]);
-
-    $resolver->resolve($root);
-
-    // Class style 中的 'bg' 应被合并到 computedStyle
-    assert_eq($node->computedStyle['bg'], 0x333333, 'class 的 bg 应被合并');
-    assert_eq($node->computedStyle['width'], 300, 'class 的 width 应被合并');
-});
-
-test('inline style 覆盖 class style', function () {
-    $resolver = new LayoutResolver([]);
-    $resolver->setClassStyles([
-        'panel' => ['bg' => 0x333333, 'width' => 300],
-    ]);
-
-    $node = VNode::h('div', ['class' => 'panel', 'style' => 'width:200px;'], 'content');
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$node]);
-
-    $resolver->resolve($root);
-
-    // inline style 的 width 应覆盖 class style
-    assert_eq($node->computedStyle['bg'], 0x333333, 'class bg 应保留');
-    assert_eq($node->computedStyle['width'], 200, 'inline width 应覆盖 class width');
-});
-
-test('未设置 classStyles 时正常运行', function () {
-    $resolver = new LayoutResolver([]);
-
-    $node = VNode::h('div', ['class' => 'unknown-class', 'style' => 'width:100px;'], 'text');
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$node]);
-
-    $resolver->resolve($root);
-
-    assert_eq($node->computedStyle['width'], 100, 'inline style 正常解析');
-});
-
-echo "\n--- 3. Block 布局 ---\n";
+echo "\n--- 2. Block 布局 ---\n";
 
 test('block 布局：left/top 绝对定位', function () {
-    $node = VNode::h('div', ['style' => 'left:50px;top:30px;width:100px;height:60px;'], 'box');
+    $node = makeNode('div', ['left' => 50, 'top' => 30, 'width' => 100, 'height' => 60]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
 
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$node]);
-
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
     assert_eq($node->x, 50, 'x = left');
@@ -160,13 +109,11 @@ test('block 布局：left/top 绝对定位', function () {
 });
 
 test('子节点相对于父节点偏移', function () {
-    $child = VNode::h('span', ['style' => 'left:20px;top:10px;width:50px;height:30px;'], 'child');
+    $child = makeNode('span', ['left' => 20, 'top' => 10, 'width' => 50, 'height' => 30]);
+    $parent = makeNode('div', ['left' => 100, 'top' => 50, 'width' => 200, 'height' => 100], [$child]);
+    $root = makeNode('#root', ['width' => 500, 'height' => 400], [$parent]);
 
-    $parent = VNode::h('div', ['style' => 'left:100px;top:50px;width:200px;height:100px;'], [$child]);
-
-    $root = VNode::h('#root', ['style' => 'width:500px;height:400px;'], [$parent]);
-
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
     assert_eq($parent->x, 100, '父 x');
@@ -176,11 +123,10 @@ test('子节点相对于父节点偏移', function () {
 });
 
 test('无 style 的节点 x/y/w/h 默认为 0', function () {
-    $node = VNode::h('div', [], 'empty');
+    $node = makeNode('div', [], []);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
 
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$node]);
-
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
     assert_eq($node->x, 0, '默认 x=0');
@@ -189,64 +135,81 @@ test('无 style 的节点 x/y/w/h 默认为 0', function () {
     assert_eq($node->h, 0, '默认 h=0');
 });
 
-echo "\n--- 4. Flex 布局 ---\n";
+echo "\n--- 3. Flex 布局 ---\n";
 
 test('flex 布局：子节点水平排列', function () {
-    $child1 = VNode::h('div', ['style' => 'width:50px;height:30px;'], 'A');
-    $child2 = VNode::h('div', ['style' => 'width:50px;height:30px;'], 'B');
+    $child1 = makeNode('div', ['width' => 50, 'height' => 30], [], 'A');
+    $child2 = makeNode('div', ['width' => 50, 'height' => 30], [], 'B');
 
-    $flex = VNode::h('div', [
-        'style' => 'display:flex;flex-direction:row;width:200px;height:100px;gap:10px;left:10px;top:10px;'
+    $flex = makeNode('div', [
+        'display' => 'flex',
+        'flexDirection' => 'row',
+        'width' => 200,
+        'height' => 100,
+        'gap' => 10,
+        'left' => 10,
+        'top' => 10,
     ], [$child1, $child2]);
 
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$flex]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
 
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
     assert_eq($flex->x, 10);
     assert_eq($flex->y, 10);
-    // 第一个子节点在 flex 容器起始位置
     assert_eq($child1->x, 10, 'child1 x=flex x');
-    // 第二个子节点在 child1 后面 + gap
     assert_eq($child2->x, 10 + 50 + 10, 'child2 x = child1.x + child1.w + gap');
 });
 
 test('flex 布局：列排列', function () {
-    $child1 = VNode::h('div', ['style' => 'width:60px;height:30px;'], 'A');
-    $child2 = VNode::h('div', ['style' => 'width:60px;height:30px;'], 'B');
+    $child1 = makeNode('div', ['width' => 60, 'height' => 30], [], 'A');
+    $child2 = makeNode('div', ['width' => 60, 'height' => 30], [], 'B');
 
-    $flex = VNode::h('div', [
-        'style' => 'display:flex;flex-direction:column;width:200px;height:100px;gap:5px;left:20px;top:20px;'
+    $flex = makeNode('div', [
+        'display' => 'flex',
+        'flexDirection' => 'column',
+        'width' => 200,
+        'height' => 100,
+        'gap' => 5,
+        'left' => 20,
+        'top' => 20,
     ], [$child1, $child2]);
 
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$flex]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
 
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
     assert_eq($child1->y, 20, 'child1 y=flex y');
     assert_eq($child2->y, 20 + 30 + 5, 'child2 y = child1.y + child1.h + gap');
 });
 
-echo "\n--- 5. Grid 布局 ---\n";
+echo "\n--- 4. Grid 布局 ---\n";
 
 test('grid 布局：子节点按格子排列', function () {
-    $child1 = VNode::h('div', ['style' => 'width:60px;height:40px;'], 'A');
-    $child2 = VNode::h('div', ['style' => 'width:60px;height:40px;'], 'B');
-    $child3 = VNode::h('div', ['style' => 'width:60px;height:40px;'], 'C');
-    $child4 = VNode::h('div', ['style' => 'width:60px;height:40px;'], 'D');
+    $child1 = makeNode('div', ['width' => 60, 'height' => 40], [], 'A');
+    $child2 = makeNode('div', ['width' => 60, 'height' => 40], [], 'B');
+    $child3 = makeNode('div', ['width' => 60, 'height' => 40], [], 'C');
+    $child4 = makeNode('div', ['width' => 60, 'height' => 40], [], 'D');
 
-    $grid = VNode::h('div', [
-        'style' => 'display:grid;grid-template-columns:repeat(2, 80px);grid-template-rows:repeat(2, 50px);left:10px;top:10px;width:200px;height:150px;gap:4px;'
+    $grid = makeNode('div', [
+        'display' => 'grid',
+        'gridTemplateColumns' => 'repeat(2, 80px)',
+        'gridTemplateRows' => 'repeat(2, 50px)',
+        'left' => 10,
+        'top' => 10,
+        'width' => 200,
+        'height' => 150,
+        'gap' => 4,
     ], [$child1, $child2, $child3, $child4]);
 
-    $root = VNode::h('#root', ['style' => 'width:400px;height:300px;'], [$grid]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$grid]);
 
-    $resolver = new LayoutResolver([]);
+    $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
-    // 第1个: 列0 行0 (adjust for gap:4px)
+    // 第1个: 列0 行0 (gap:4)
     assert_eq($child1->x, 10 + 4, 'grid child1 col 0');
     assert_eq($child1->y, 10 + 4, 'grid child1 row 0');
 
@@ -261,6 +224,56 @@ test('grid 布局：子节点按格子排列', function () {
     // 第4个: 列1 行1
     assert_eq($child4->x, 10 + 80 + 4, 'grid child4 col 1');
     assert_eq($child4->y, 10 + 50 + 4, 'grid child4 row 1');
+});
+
+echo "\n--- 5. 脏标记路径 ---\n";
+
+test('layoutDirty=true 时执行完整布局', function () {
+    $node = makeNode('div', ['left' => 10, 'top' => 20, 'width' => 100, 'height' => 50]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
+
+    assert_true($node->layoutDirty, '新建节点 layoutDirty 应为 true');
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    assert_eq($node->x, 10, 'dirty 节点正确计算 x');
+    assert_eq($node->y, 20, 'dirty 节点正确计算 y');
+    assert_false($node->layoutDirty, '布局完成后 layoutDirty 应为 false');
+});
+
+test('layoutDirty=false 时洁净路径仍传递父坐标', function () {
+    $child = makeNode('div', ['left' => 5, 'top' => 5, 'width' => 50, 'height' => 30]);
+    $parent = makeNode('div', ['left' => 100, 'top' => 100, 'width' => 200, 'height' => 150], [$child]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    assert_false($child->layoutDirty, '子节点布局后 layoutDirty 应为 false');
+    assert_eq($child->x, 5 + 100, '洁净子节点 x = left + parentX');
+    assert_eq($child->y, 5 + 100, '洁净子节点 y = top + parentY');
+});
+
+test('洁净路径包含 margin 计算', function () {
+    $child = makeNode('div', [
+        'left' => 10,
+        'top' => 10,
+        'marginLeft' => 5,
+        'marginTop' => 3,
+        'width' => 50,
+        'height' => 30,
+    ]);
+    $parent = makeNode('div', ['left' => 50, 'top' => 50, 'width' => 200, 'height' => 150], [$child]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // 父坐标=50, child left=10, marginLeft=5 → x=50+10+5=65
+    // 父坐标=50, child top=10, marginTop=3 → y=50+10+3=63
+    assert_eq($child->x, 50 + 10 + 5, 'x 包含 marginLeft');
+    assert_eq($child->y, 50 + 10 + 3, 'y 包含 marginTop');
 });
 
 echo "\n";

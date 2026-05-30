@@ -42,16 +42,8 @@ class VNodeDevTools
         $result = [
             'type' => $node->type,
             'key' => $node->key,
-            'coords' => [
-                'x' => $node->x,
-                'y' => $node->y,
-                'w' => $node->w,
-                'h' => $node->h,
-            ],
-            'layer' => $node->layer,
             'groupId' => $node->groupId,
             'isComponent' => $node->isComponent,
-            'isScrollContainer' => $node->isScrollContainer,
         ];
 
         // Props (排除大型数据)
@@ -65,21 +57,6 @@ class VNodeDevTools
                 }
             }
             $result['props'] = $props;
-        }
-
-        // Computed style
-        if (!empty($node->computedStyle)) {
-            $result['style'] = $node->computedStyle;
-        }
-
-        // Scroll state
-        if ($node->isScrollContainer) {
-            $result['scroll'] = [
-                'scrollTop' => $node->scrollTop,
-                'scrollLeft' => $node->scrollLeft,
-                'contentHeight' => $node->contentHeight ?? 0,
-                'contentWidth' => $node->contentWidth ?? 0,
-            ];
         }
 
         // Component info
@@ -116,9 +93,7 @@ class VNodeDevTools
         $stats = [
             'total' => 0,
             'byType' => [],
-            'byLayer' => [],
             'components' => 0,
-            'scrollContainers' => 0,
             'withText' => 0,
         ];
 
@@ -131,13 +106,9 @@ class VNodeDevTools
     {
         $stats['total']++;
         $stats['byType'][$node->type] = ($stats['byType'][$node->type] ?? 0) + 1;
-        $stats['byLayer'][$node->layer] = ($stats['byLayer'][$node->layer] ?? 0) + 1;
 
         if ($node->isComponent) {
             $stats['components']++;
-        }
-        if ($node->isScrollContainer) {
-            $stats['scrollContainers']++;
         }
         if (is_string($node->children) && trim($node->children) !== '') {
             $stats['withText']++;
@@ -238,14 +209,10 @@ class VNodeDevTools
         $extra = '';
 
         if ($verbose) {
-            $extra = sprintf(" [%d,%d,%dx%d] layer=%d",
-                $node->x, $node->y, $node->w, $node->h, $node->layer);
+            $extra = sprintf(" [groupId=%s]", $node->groupId);
         }
 
         $text = is_string($node->children) ? " \"{$node->children}\"" : '';
-        if ($node->isScrollContainer) {
-            $text .= sprintf(" [scroll:%d,%d]", $node->scrollTop, $node->scrollLeft ?? 0);
-        }
 
         echo $indent . $node->type . $extra . $text . "\n";
 
@@ -310,7 +277,9 @@ class VNodeDevTools
      */
     public function findScrollContainers(VNode $root): array
     {
-        return $this->findNodes($root, fn($n) => $n->isScrollContainer);
+        // RenderNode 持有 isScrollContainer，VNode 不再有此属性。
+        // 使用 RenderTreeManager::findScrollContainerAt 替代。
+        return [];
     }
 
     /**
@@ -321,10 +290,9 @@ class VNodeDevTools
         $spans = (new self())->findSpanNodes($root);
         echo "\n=== SPAN NODES ===\n";
         foreach ($spans as $i => $span) {
-            echo sprintf("#%d: type=%s, coords=[%d,%d,%dx%d], children=\"%s\"\n",
+            echo sprintf("#%d: type=%s, children=\"%s\"\n",
                 $i,
                 $span->type,
-                $span->x, $span->y, $span->w, $span->h,
                 is_string($span->children) ? $span->children : '(not string)'
             );
             if ($span->props !== null) {

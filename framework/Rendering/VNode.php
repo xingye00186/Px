@@ -37,45 +37,8 @@ class VNode
     /** v-for 场景的 key (用于 diff/diffChildren) */
     public ?string $key;
 
-    // ===== 布局字段 (LayoutResolver 计算) =====
-
-    /** 计算后的 X 坐标 (绝对值) */
-    public int $x = 0;
-
-    /** 计算后的 Y 坐标 (绝对值) */
-    public int $y = 0;
-
-    /** 计算后的宽度 */
-    public int $w = 0;
-
-    /** 计算后的高度 */
-    public int $h = 0;
-
-    /** 计算后的 CSS 样式 (从 props['style'] 解析 + 默认值) */
-    public array $computedStyle = [];
-
-    // ===== 运行时渲染字段 =====
-
-    /** z-order 层级 (0 = base, 1+ = overlay) */
-    public int $layer = 0;
-
     /** 组件组 ID (默认 'app') */
     public string $groupId = 'app';
-
-    /** 是否为滚动容器 */
-    public bool $isScrollContainer = false;
-
-    /** 当前滚动位置 (px) */
-    public int $scrollTop = 0;
-
-    /** 滚动内容总高度 (px) */
-    public int $contentHeight = 0;
-
-    /** 横向滚动位置 (px) */
-    public int $scrollLeft = 0;
-
-    /** 滚动内容总宽度 (px) */
-    public int $contentWidth = 0;
 
     // ===== 组件占位字段 =====
 
