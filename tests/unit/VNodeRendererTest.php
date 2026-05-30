@@ -4,7 +4,7 @@
  *
  * 测试目标:
  *   1. 元素按 layer 分组
- *   2. 不同类型元素收集正确
+ *   2. 不同类型元素收集正确（含 button 边框状态）
  *   3. 复杂类型 (input, scroll-container) 返回单元素描述
  *   4. render() 完整流程
  *   5. 增量绘制（paintDirty 帧号机制）
@@ -149,6 +149,27 @@ test('button 类型生成 button 元素', function () {
     assert_eq($el['type'], 'button', '元素类型应为 button');
     assert_eq($el['bg'], 0x323232, 'button bg 应为 0x323232');
     assert_eq($el['fg'], 0xFFFFFF, 'button fg 应为 0xFFFFFF');
+    // 未设 border CSS 时，border 和 borderWidth 应为 0
+    assert_eq($el['border'] ?? -1, 0, 'button border 应为 0（无边框CSS时）');
+    assert_eq($el['borderWidth'] ?? -1, 0, 'button borderWidth 应为 0（无边框CSS时）');
+});
+
+test('button 有显式 border CSS 时生成正确边框值', function () {
+    $btn = rn('button', ['bg' => 0x323232, 'fg' => 0xFFFFFF, 'borderWidth' => 2, 'borderColor' => 0xFF0000]);
+    $btn->x = 0; $btn->y = 0; $btn->w = 100; $btn->h = 40; $btn->layer = 0;
+    $btn->sourceVNode = new VNode('button', ['@click' => 'clickMe']);
+
+    $root = rn('#root', [], [$btn]);
+    $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 100;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $el = $result['elements'][0][0] ?? null;
+    assert_not_null($el, '应收集到 button 元素');
+    assert_eq($el['type'], 'button', '元素类型应为 button');
+    assert_eq($el['borderWidth'], 2, 'borderWidth 应为 2');
+    assert_eq($el['border'], 0xFF0000, 'border 颜色应为 0xFF0000');
 });
 
 test('span 类型生成 text 元素', function () {
@@ -330,6 +351,44 @@ test('渲染顺序遵循 layer 递增', function () {
     assert_eq($ctx->drawnElements[0]['color'], 0x111111, '第1个应为 layer 0');
     assert_eq($ctx->drawnElements[1]['color'], 0x222222, '第2个应为 layer 1');
     assert_eq($ctx->drawnElements[2]['color'], 0x333333, '第3个应为 layer 2');
+});
+
+test('button 无边框CSS时 render 元素不含边框', function () {
+    $btn = rn('button', ['bg' => 0x323232, 'fg' => 0xFFFFFF]);
+    $btn->x = 0; $btn->y = 0; $btn->w = 100; $btn->h = 40; $btn->layer = 0;
+    $btn->sourceVNode = new VNode('button', ['@click' => 'test']);
+
+    $root = rn('#root', [], [$btn]);
+    $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 100;
+
+    $ctx = new _MockRenderContext();
+    $renderer = new VNodeRenderer(new _MockComponent(), $ctx);
+    $renderer->render($root);
+
+    assert_eq(count($ctx->drawnElements), 1, '应绘制 1 个元素');
+    $el = $ctx->drawnElements[0];
+    assert_eq($el['type'], 'button', '元素类型应为 button');
+    assert_eq($el['border'] ?? -1, 0, '未设边框CSS时 border 应为 0');
+    assert_eq($el['borderWidth'] ?? -1, 0, '未设边框CSS时 borderWidth 应为 0');
+});
+
+test('button 有边框CSS时 render 元素携带 borderWidth', function () {
+    $btn = rn('button', ['bg' => 0x323232, 'fg' => 0xFFFFFF, 'borderWidth' => 2, 'borderColor' => 0xFF0000]);
+    $btn->x = 0; $btn->y = 0; $btn->w = 100; $btn->h = 40; $btn->layer = 0;
+    $btn->sourceVNode = new VNode('button', ['@click' => 'test']);
+
+    $root = rn('#root', [], [$btn]);
+    $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 100;
+
+    $ctx = new _MockRenderContext();
+    $renderer = new VNodeRenderer(new _MockComponent(), $ctx);
+    $renderer->render($root);
+
+    assert_eq(count($ctx->drawnElements), 1, '应绘制 1 个元素');
+    $el = $ctx->drawnElements[0];
+    assert_eq($el['type'], 'button', '元素类型应为 button');
+    assert_eq($el['borderWidth'], 2, 'borderWidth 应为 2');
+    assert_eq($el['border'], 0xFF0000, 'border 颜色应为 0xFF0000');
 });
 
 // ================================================================

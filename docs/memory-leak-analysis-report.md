@@ -27,6 +27,8 @@
 | VNode 类型变化（div→span） | RN type 更新，子节点从 VNode 重建 ✅ |
 | VNode 文本子节点（string children） | RN content 设置，children 清零 ✅ |
 | VNode key 变化 | RN key 更新，同一 RN 对象复用 ✅ |
+| button 无边框 CSS 时：borderWidth=0 → 不绘制边框 ✅ | `makeButtonElement` 默认 `borderColor=0`，`GdiRenderContext` 走 `fillRect` 路径 |
+| button 有显式 border CSS 时：borderWidth>0 → 正确绘制边框 ✅ | `makeButtonElement` 使用 CSS 指定的 `borderColor`，`GdiRenderContext` 走 `drawButton` 路径 |
 
 **结论**：子节点累积 bug 已修复，对象生命周期决策正确。
 

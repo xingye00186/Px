@@ -455,11 +455,15 @@ class CssMappings
             }
         }
 
-        // Parse border shorthand into individual properties
+        // Parse border shorthand into individual properties (only if not already explicitly set)
         if (isset($style['border']) && $style['border'] !== '') {
             $parts = explode('|', $style['border']);
-            $style['borderWidth'] = (int)($parts[0] ?? 0);
-            $style['borderColor'] = (int)($parts[1] ?? 0);
+            if (!isset($style['borderWidth'])) {
+                $style['borderWidth'] = (int)($parts[0] ?? 0);
+            }
+            if (!isset($style['borderColor'])) {
+                $style['borderColor'] = (int)($parts[1] ?? 0);
+            }
         }
 
         return $style;
@@ -602,11 +606,15 @@ class CssMappings
                 $warnings[] = "CSS class '$className': no background or color property (will render as transparent)";
             }
 
-            // Parse border shorthand into individual properties
+            // Parse border shorthand into individual properties (only if not already explicitly set)
             if (isset($props['border']) && $props['border'] !== '') {
                 $parts = explode('|', $props['border']);
-                $props['borderWidth'] = (int)($parts[0] ?? 0);
-                $props['borderColor'] = (int)($parts[1] ?? 0);
+                if (!isset($props['borderWidth'])) {
+                    $props['borderWidth'] = (int)($parts[0] ?? 0);
+                }
+                if (!isset($props['borderColor'])) {
+                    $props['borderColor'] = (int)($parts[1] ?? 0);
+                }
             }
 
             $classStyles[$className] = $props;

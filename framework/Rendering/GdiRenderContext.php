@@ -146,11 +146,20 @@ class GdiRenderContext extends RenderContext
                         $radius, $bg
                     );
                 } else {
-                    $this->drawButton(
-                        $el['x'] ?? 0, $el['y'] ?? 0,
-                        $el['w'] ?? 0, $el['h'] ?? 0,
-                        $bg, $el['border'] ?? 0
-                    );
+                    $borderWidth = $el['borderWidth'] ?? 0;
+                    if ($borderWidth > 0) {
+                        $this->drawButton(
+                            $el['x'] ?? 0, $el['y'] ?? 0,
+                            $el['w'] ?? 0, $el['h'] ?? 0,
+                            $bg, $el['border'] ?? 0
+                        );
+                    } else {
+                        $this->fillRect(
+                            $el['x'] ?? 0, $el['y'] ?? 0,
+                            $el['w'] ?? 0, $el['h'] ?? 0,
+                            $bg
+                        );
+                    }
                 }
                 if (!empty($el['label'])) {
                     $this->drawText(
