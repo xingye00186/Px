@@ -379,15 +379,28 @@ class Application
             return;
         }
 
-        // 合并定位到目标元素的 style
-        $appendStyle = '';
+        // 合并定位到目标元素的 style（替换已有的 left/top，保证幂等性）
+        $existingStyle = $target->props['style'] ?? '';
+        // 移除已有的 left: 和 top: 声明（不区分大小写，可能带 px 后缀）
+        $existingStyle = preg_replace(
+            '/\b(left|top)\s*:\s*\d+\s*px\s*;?\s*/i',
+            '',
+            $existingStyle
+        );
+        // 也移除不带 px 后缀的（兼容其他来源）
+        $existingStyle = preg_replace(
+            '/\b(left|top)\s*:\s*\d+\s*;?\s*/i',
+            '',
+            $existingStyle
+        );
+
         if ($left !== null) {
-            $appendStyle .= "left:{$left};";
+            $existingStyle .= "left:{$left};";
         }
         if ($top !== null) {
-            $appendStyle .= "top:{$top};";
+            $existingStyle .= "top:{$top};";
         }
-        $target->props['style'] = ($target->props['style'] ?? '') . $appendStyle;
+        $target->props['style'] = $existingStyle;
     }
 
     private function setGroupIdRecursive(VNode $node, string $groupId): void
@@ -469,6 +482,14 @@ class Application
 
             $newNode->componentInstance = $instance;
             $newNode->children = $instance->getVNodeTree();
+
+            // 将 #component 占位符的 left/top 定位传递到子组件根元素 VNode 的 style
+            // 每次更新都调用 transferComponentPositioning，保证幂等性
+            // 解决子组件 markDirty 后重新 render() 时新 VNode 树丢失定位的问题
+            $placeholderStyle = $newNode->props['style'] ?? '';
+            if ($placeholderStyle !== '') {
+                $this->transferComponentPositioning($placeholderStyle, $newNode->children);
+            }
 
             $this->setGroupIdRecursive($newNode->children, $instance->getId());
             $this->registerComponent($instance->getId(), $instance);
