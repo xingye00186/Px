@@ -105,6 +105,10 @@
         } elseif ($this->display === '0' && $digit !== '.') {
             $this->display = $digit;
         } else {
+            // 限制输入长度为 15 位（与 formatNumber 截断长度一致）
+            if (strlen($this->display) >= 15) {
+                return;
+            }
             $this->display .= $digit;
         }
         if ($this->acLabel === 'AC') {
@@ -124,6 +128,9 @@
             $this->newInput = false;
             $this->hasDecimal = true;
         } elseif (!$this->hasDecimal) {
+            if (strlen($this->display) >= 15) {
+                return;
+            }
             $this->display .= '.';
             $this->hasDecimal = true;
         }
