@@ -1,0 +1,119 @@
+{
+    "timestamp": "2026-05-30 14:37:27",
+    "iteration": 2,
+    "violations": [
+        "itemRects count 4 != itemCount 5",
+        "itemTexts count 4 != itemCount 5"
+    ],
+    "snapshot": {
+        "listTitle": "Todo List (v6)",
+        "addBtnText": "Add Item",
+        "scrollTop": "0",
+        "itemCount": 5,
+        "rectCount": 5,
+        "textCount": 5,
+        "buttonCount": 1,
+        "totalCount": 15,
+        "clipPushCount": 1,
+        "scrollbarVCount": 1,
+        "addButton": {
+            "x": 150,
+            "y": 460,
+            "w": 100,
+            "h": 30,
+            "label": "",
+            "labelFontSize": 22,
+            "bg": 13404228,
+            "fg": 16777215,
+            "layer": 0
+        },
+        "bgRect": {
+            "x": 0,
+            "y": 0,
+            "w": 400,
+            "h": 500,
+            "color": 2960685,
+            "layer": 0
+        },
+        "headerText": {
+            "text": "Todo List (v6)",
+            "x": 10,
+            "y": 10,
+            "fontSize": 18
+        },
+        "clipPush": {
+            "x": 10,
+            "y": 50,
+            "w": 380,
+            "h": 400
+        },
+        "itemRects": [
+            {
+                "x": 10,
+                "y": 50,
+                "w": 366,
+                "h": 50,
+                "color": 4079166,
+                "layer": 0
+            },
+            {
+                "x": 10,
+                "y": 150,
+                "w": 366,
+                "h": 50,
+                "color": 4079166,
+                "layer": 0
+            },
+            {
+                "x": 10,
+                "y": 250,
+                "w": 366,
+                "h": 50,
+                "color": 4079166,
+                "layer": 0
+            },
+            {
+                "x": 10,
+                "y": 350,
+                "w": 366,
+                "h": 50,
+                "color": 4079166,
+                "layer": 0
+            }
+        ],
+        "itemTexts": [
+            {
+                "text": "Task 1",
+                "x": 10,
+                "y": 50,
+                "fontSize": 16
+            },
+            {
+                "text": "Task 2",
+                "x": 10,
+                "y": 150,
+                "fontSize": 16
+            },
+            {
+                "text": "Task 3",
+                "x": 10,
+                "y": 250,
+                "fontSize": 16
+            },
+            {
+                "text": "Task #4",
+                "x": 10,
+                "y": 350,
+                "fontSize": 16
+            }
+        ],
+        "scrollbarV": {
+            "x": 10,
+            "y": 50,
+            "w": 380,
+            "h": 400,
+            "contentHeight": 450,
+            "scrollTop": 0
+        }
+    }
+}
