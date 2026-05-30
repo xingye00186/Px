@@ -653,4 +653,50 @@ class CssMappings
         $b = $rgb & 0xFF;
         return ($b << 16) | ($g << 8) | $r;
     }
+
+    /**
+     * 将 CSS 样式字符串解析为键值对数组。
+     * 输入: "background:#2C2C2E;color:#FFF;left:10px"
+     * 输出: ['background' => '#2C2C2E', 'color' => '#FFF', 'left' => '10px']
+     *
+     * AOT 安全：仅使用字符串操作和数组遍历。
+     */
+    public static function parseStyleStringToArray(string $style): array
+    {
+        $result = [];
+        $pairs = explode(';', $style);
+        foreach ($pairs as $pair) {
+            $pair = trim($pair);
+            if ($pair === '') continue;
+            $colonPos = strpos($pair, ':');
+            if ($colonPos === false) continue;
+            $prop = trim(substr($pair, 0, $colonPos));
+            $value = trim(substr($pair, $colonPos + 1));
+            if ($prop !== '') {
+                $result[$prop] = $value;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * 将键值对数组序列化为 CSS 样式字符串。
+     * 输入: ['background' => '#2C2C2E', 'left' => '11px']
+     * 输出: "background:#2C2C2E;left:11px;"
+     * 输入: []
+     * 输出: ""
+     *
+     * AOT 安全：仅使用字符串操作和数组遍历。
+     */
+    public static function buildStyleStringFromArray(array $style): string
+    {
+        if (empty($style)) {
+            return '';
+        }
+        $parts = [];
+        foreach ($style as $prop => $value) {
+            $parts[] = "{$prop}:{$value}";
+        }
+        return implode(';', $parts) . ';';
+    }
 }

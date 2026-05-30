@@ -102,8 +102,13 @@ class LayoutResolver
             $style = $node->style;
             $marginLeft = $style['marginLeft'] ?? $style['margin'] ?? 0;
             $marginTop = $style['marginTop'] ?? $style['margin'] ?? 0;
-            $node->x = ($style['left'] ?? 0) + $parentX + $marginLeft;
-            $node->y = ($style['top'] ?? 0) + $parentY + $marginTop;
+            // 仅当节点有显式定位时才重算 x/y（否则保留 auto-stack 或快速滚动路径设定的位置）
+            if (array_key_exists('left', $style)) {
+                $node->x = $style['left'] + $parentX + $marginLeft;
+            }
+            if (array_key_exists('top', $style)) {
+                $node->y = $style['top'] + $parentY + $marginTop;
+            }
 
             // ── 快速滚动路径 ──
             // 仅滚动容器且 scrollTop 发生变化时执行
@@ -182,8 +187,8 @@ class LayoutResolver
         $node->x += $marginLeft;
         $node->y += $marginTop;
 
-        $node->w = $width;
-        $node->h = $height;
+        $node->w = max(0, (int)$width);
+        $node->h = max(0, (int)$height);
 
         // Scroll container special handling
         $isScroll = $node->isScrollContainer;
@@ -236,7 +241,7 @@ class LayoutResolver
 
                     // Auto-width: inherit from container
                     if (!array_key_exists('width', $child->style) || $child->w === 0) {
-                        $child->w = $containerW;
+                        $child->w = max(0, (int)$containerW);
                         $child->style['width'] = $containerW;
                     }
                     // Auto-position: stack vertically with margin, shift all descendants
@@ -322,24 +327,24 @@ class LayoutResolver
 
         $node->x = $left + $parentX;
         $node->y = $top + $parentY;
-        $node->w = $width;
-        $node->h = $height;
+        $node->w = max(0, (int)$width);
+        $node->h = max(0, (int)$height);
 
         // If width/height is 0, use parent dimensions
         if ($width === 0 && $parent !== null && $parent->w > 0) {
             $width = $parent->w - $left;
-            $node->w = $width;
+            $node->w = max(0, (int)$width);
         }
         if ($height === 0 && $parent !== null && $parent->h > 0) {
             $height = $parent->h - $top;
-            $node->h = $height;
+            $node->h = max(0, (int)$height);
         }
 
         // Handle flex:1 / flex:2 etc. → implicit width from parent for flex items
         $flex = $style['flex'] ?? '';
         if ($flex !== '' && $parent !== null) {
             if ($width === 0 && $parent->w > 0) {
-                $node->w = $parent->w - $left;
+                $node->w = max(0, (int)($parent->w - $left));
             }
         }
 
@@ -410,10 +415,10 @@ class LayoutResolver
             foreach ($flexGrowItems as $ch) {
                 $flexVal = (float)($ch->style['flex'] ?? '1');
                 if ($isRow) {
-                    $ch->w = (int)(($flexVal / max($totalFlexGrow, 1)) * $remainingSpace);
+                    $ch->w = max(0, (int)(($flexVal / max($totalFlexGrow, 1)) * $remainingSpace));
                     $ch->style['width'] = $ch->w;
                 } else {
-                    $ch->h = (int)(($flexVal / max($totalFlexGrow, 1)) * $remainingSpace);
+                    $ch->h = max(0, (int)(($flexVal / max($totalFlexGrow, 1)) * $remainingSpace));
                     $ch->style['height'] = $ch->h;
                 }
             }
@@ -496,13 +501,13 @@ class LayoutResolver
             if ($align === 'stretch') {
                 if ($isRow) {
                     if ($ch->h === 0) {
-                        $ch->h = $containerCross;
-                        $ch->style['height'] = $containerCross;
+                        $ch->h = max(0, (int)$containerCross);
+                        $ch->style['height'] = $ch->h;
                     }
                 } else {
                     if ($ch->w === 0) {
-                        $ch->w = $containerCross;
-                        $ch->style['width'] = $containerCross;
+                        $ch->w = max(0, (int)$containerCross);
+                        $ch->style['width'] = $ch->w;
                     }
                 }
             }
@@ -553,8 +558,8 @@ class LayoutResolver
 
         $node->x = $left + $parentX;
         $node->y = $top + $parentY;
-        $node->w = $width;
-        $node->h = $height;
+        $node->w = max(0, (int)$width);
+        $node->h = max(0, (int)$height);
 
         // Parse grid template
         $gridCols = $style['gridTemplateColumns'] ?? '';
@@ -596,8 +601,8 @@ class LayoutResolver
 
             $ch->x = $node->x + $col * $cellW + $colGap;
             $ch->y = $node->y + $row * $cellH + $rowGap;
-            $ch->w = $cellW - $colGap * 2;
-            $ch->h = $cellH - $rowGap * 2;
+            $ch->w = max(0, (int)($cellW - $colGap * 2));
+            $ch->h = max(0, (int)($cellH - $rowGap * 2));
 
             $col++;
             if ($col >= $cols) {

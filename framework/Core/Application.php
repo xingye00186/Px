@@ -8,6 +8,7 @@ use Px\Rendering\VNode;
 use Px\Rendering\RenderNode;
 use Px\Rendering\VNodeRenderer;
 use Px\Rendering\LayoutResolver;
+use Px\Rendering\CssMappings;
 use Px\Rendering\RenderTreeManager;
 use Px\ReactiveComponent;
 use Px\Styling\Theme\ThemeData;
@@ -305,7 +306,10 @@ class Application
             );
         }
 
-        $childRoot = $instance->render();
+        // 必须使用 getVNodeTree() 而非 render()，确保结果缓存到 vnodeCache。
+        // 否则后续 updateFromVNode() 调用 $instance->getVNodeTree() 时会再次执行 render()，
+        // 返回一个未经过 transferComponentPositioning 修改的新 VNode 树，导致 left/top 定位丢失。
+        $childRoot = $instance->getVNodeTree();
 
         $node->componentInstance = $instance;
         $node->children = $childRoot;
@@ -379,28 +383,15 @@ class Application
             return;
         }
 
-        // 合并定位到目标元素的 style（替换已有的 left/top，保证幂等性）
+        // 将现有 style 解析为数组 → 结构化合并 → 序列化回字符串
         $existingStyle = $target->props['style'] ?? '';
-        // 移除已有的 left: 和 top: 声明（不区分大小写，可能带 px 后缀）
-        $existingStyle = preg_replace(
-            '/\b(left|top)\s*:\s*\d+\s*px\s*;?\s*/i',
-            '',
-            $existingStyle
-        );
-        // 也移除不带 px 后缀的（兼容其他来源）
-        $existingStyle = preg_replace(
-            '/\b(left|top)\s*:\s*\d+\s*;?\s*/i',
-            '',
-            $existingStyle
-        );
-
-        if ($left !== null) {
-            $existingStyle .= "left:{$left};";
-        }
-        if ($top !== null) {
-            $existingStyle .= "top:{$top};";
-        }
-        $target->props['style'] = $existingStyle;
+        $styleArray = CssMappings::parseStyleStringToArray($existingStyle);
+        // 移除已有的 left/top（保证幂等性）
+        unset($styleArray['left'], $styleArray['top']);
+        // 写入新的定位值（带 px 单位，与原始解析值格式一致）
+        if ($left !== null) { $styleArray['left'] = $left . 'px'; }
+        if ($top !== null) { $styleArray['top'] = $top . 'px'; }
+        $target->props['style'] = CssMappings::buildStyleStringFromArray($styleArray);
     }
 
     private function setGroupIdRecursive(VNode $node, string $groupId): void
