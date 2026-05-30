@@ -565,6 +565,227 @@ test('组件定位在重用实例后保留（即使组件 markDirty 重新 rende
         '第二次 patch 后根元素应保留 top:524，实际: ' . $style2);
 });
 
+test('expandComponentNode 后 getVNodeTree 返回定位后的树（vnodeCache 一致性）', function () {
+    $app = newInstanceWithoutApp();
+
+    $appDir = realpath(__DIR__ . '/../../apps/calculator-ng');
+    require_once $appDir . '/gen/ComponentFactory.php';
+    require_once $appDir . '/gen/HistoryPanelComponent.php';
+
+    $owner = new _BubbleTrackerComponent('owner');
+    $owner->setId('ownerId');
+    $owner->arrowText = '>';
+
+    $patchMethod = new \ReflectionMethod(Application::class, 'patchComponentTree');
+    $patchMethod->setAccessible(true);
+
+    // 第一次 patch（首次渲染，触发 expandComponentNode）
+    $root = VNode::h('#root', ['style' => 'width:340px;height:660px'], [
+        VNode::hComponent('HistoryPanelComponent', ['style' => 'left:11px;top:524px'], ['arrow' => 'arrowText']),
+    ]);
+    $root->groupId = 'app';
+
+    $patchMethod->invoke($app, $root, $owner, null);
+
+    // 获取组件实例
+    $childNode = $root->children[0] ?? null;
+    $instance = $childNode->componentInstance ?? null;
+    assert_not_null($instance, 'expandComponentNode 应创建组件实例');
+
+    // ── 断言 1（修复验证）：expandComponentNode 后，
+    //    getVNodeTree 应返回含 left/top 定位的树
+    //    （即 expandComponentNode 必须使用 getVNodeTree 而非 render，
+    //      确保修改同步到 vnodeCache，而非创建新树）
+    $childRoot = $instance->getVNodeTree();
+    $rootElement = $childRoot;
+    while ($rootElement !== null && $rootElement->type === '#root') {
+        if (is_array($rootElement->children)) {
+            $rootElement = $rootElement->children[0] ?? null;
+        } elseif ($rootElement->children instanceof VNode) {
+            $rootElement = $rootElement->children;
+        } else {
+            break;
+        }
+    }
+    assert_not_null($rootElement, '应有根元素');
+    $style = $rootElement->props['style'] ?? '';
+    assert(strpos($style, 'left:11') !== false,
+        'getVNodeTree 应返回含 left:11 的树，实际: ' . $style);
+    assert(strpos($style, 'top:524') !== false,
+        'getVNodeTree 应返回含 top:524 的树，实际: ' . $style);
+
+    // ── 断言 2（缓存验证）：连续调用 getVNodeTree 返回同一对象
+    $childRoot2 = $instance->getVNodeTree();
+    assert_same($childRoot2, $childRoot,
+        '二次 getVNodeTree 应返回同一对象（vnodeCache 命中）');
+});
+
+test('expandComponentNode + updateFromVNode 完整管线保留 RenderNode 定位', function () {
+    $app = newInstanceWithoutApp();
+
+    // ── 阶段 1：expandComponentNode 展开组件 ──
+    $appDir = realpath(__DIR__ . '/../../apps/calculator-ng');
+    require_once $appDir . '/gen/ComponentFactory.php';
+    require_once $appDir . '/gen/HistoryPanelComponent.php';
+
+    $owner = new _BubbleTrackerComponent('owner');
+    $owner->setId('ownerId');
+    $owner->arrowText = '>';
+
+    $patchMethod = new \ReflectionMethod(Application::class, 'patchComponentTree');
+    $patchMethod->setAccessible(true);
+
+    $root = VNode::h('#root', ['style' => 'width:340px;height:660px'], [
+        VNode::hComponent('HistoryPanelComponent', ['style' => 'left:11px;top:524px'], ['arrow' => 'arrowText']),
+    ]);
+    $root->groupId = 'app';
+
+    $patchMethod->invoke($app, $root, $owner, null);
+
+    // 注册组件实例到 componentByGroupId（updateFromVNode 需要此映射）
+    $childNode = $root->children[0] ?? null;
+    $instance = $childNode->componentInstance ?? null;
+    assert_not_null($instance, 'expandComponentNode 应创建组件实例');
+    $regProp = (new \ReflectionClass(Application::class))->getProperty('componentByGroupId');
+    $regProp->setAccessible(true);
+    $registry = $regProp->getValue($app);
+    $registry[$instance->getId()] = $instance;
+    $regProp->setValue($app, $registry);
+
+    // 创建根组件引用
+    $rootCompForRT = new _TestRootComponent();
+    $rootCompForRT->setId('ownerId');
+
+    // ── 阶段 2：updateFromVNode 转换 VNode → RenderNode ──
+    $rm = new \Px\Rendering\RenderTreeManager();
+    $renderNode = $rm->updateFromVNode(
+        $root,
+        null,
+        $rootCompForRT,
+        $registry
+    );
+
+    // #root → 容器 div → #component → HistoryPanel 子树的 container div
+    // updateFromVNode 遇到 #component 会 delegate 到 $instance->getVNodeTree()
+    // 由于 getVNodeTree 应返回定位后的树，子 container div 的 left/top 应被正确解析
+    assert_not_null($renderNode, 'updateFromVNode 应返回 RenderNode');
+
+    // 找到 HistoryPanel 的 container div RenderNode
+    // 树结构：div(#root的孩子,容器) > div(HistoryPanel container)
+    // 注意：#component 节点在 updateFromVNode 中被委派，HistoryPanel 的
+    // #root 被跳过，其子 container div 直接作为父 div 的 RenderNode 子节点
+    $historyPanelRoot = $rm->findRenderNodeByGroupId($instance->getId());
+    assert_true(count($historyPanelRoot) >= 1, '应找到 HistoryPanel 的 RenderNode');
+
+    // 找到 container div（样式含 left/top 的那个）
+    $containerRN = null;
+    foreach ($historyPanelRoot as $rn) {
+        if (isset($rn->style['left']) && isset($rn->style['top'])) {
+            $containerRN = $rn;
+            break;
+        }
+    }
+    assert_not_null($containerRN,
+        '应在 RenderNode 中找到含 left/top 的节点');
+    assert($containerRN->style['left'] === 11,
+        'RenderNode style.left 应为 11，实际: ' . ($containerRN->style['left'] ?? 'unset'));
+    assert($containerRN->style['top'] === 524,
+        'RenderNode style.top 应为 524，实际: ' . ($containerRN->style['top'] ?? 'unset'));
+});
+
+test('多次 re-render 后定位值不退化', function () {
+    $app = newInstanceWithoutApp();
+
+    // 加载真实组件（与现有测试一致）
+    $appDir = realpath(__DIR__ . '/../../apps/calculator-ng');
+    require_once $appDir . '/gen/ComponentFactory.php';
+    require_once $appDir . '/gen/HistoryPanelComponent.php';
+
+    $owner = new _BubbleTrackerComponent('owner');
+    $owner->setId('ownerId');
+    $owner->arrowText = '>';
+
+    $patchMethod = new \ReflectionMethod(Application::class, 'patchComponentTree');
+    $patchMethod->setAccessible(true);
+
+    $iterations = 5;   // 多次 re-render 暴露样式字符串退化
+    $prevRoot = null;
+    $instance = null;
+
+    for ($i = 0; $i < $iterations; $i++) {
+        // 每次创建新的 VNode 树（模拟真实 re-render）
+        $root = VNode::h('#root', ['style' => 'width:340px;height:660px'], [
+            VNode::hComponent(
+                'HistoryPanelComponent',
+                ['style' => 'left:11px;top:524px'],
+                ['arrow' => 'arrowText']
+            ),
+        ]);
+        $root->groupId = 'app';
+
+        // 切换 arrowText 使组件进入 dirty 状态（模拟实际业务操作）
+        $owner->arrowText = ($i % 2 === 0) ? '>' : 'v';
+
+        // patchComponentTree: 传入旧树 oldNode=$prevRoot 启用实例复用
+        $patchMethod->invoke($app, $root, $owner, $prevRoot);
+
+        // 验证实例复用
+        $childNode = $root->children[0] ?? null;
+        assert_not_null($childNode, "第 {$i} 次应有子节点");
+        if ($i === 0) {
+            $instance = $childNode->componentInstance;
+            assert_not_null($instance, "第 {$i} 次应创建实例");
+        } else {
+            assert_same($instance, $childNode->componentInstance,
+                "第 {$i} 次应复用实例");
+        }
+
+        // 展开 #root → 找到子组件根元素
+        $childRoot = $instance->getVNodeTree();
+        $rootElement = $childRoot;
+        while ($rootElement !== null && $rootElement->type === '#root') {
+            $children = $rootElement->children;
+            if ($children instanceof VNode) {
+                $rootElement = $children;
+            } elseif (is_array($children)) {
+                $next = null;
+                foreach ($children as $child) {
+                    if ($child instanceof VNode && $child->type !== '#text') {
+                        $next = $child;
+                        break;
+                    }
+                }
+                $rootElement = $next;
+            } else {
+                break;
+            }
+        }
+        assert_not_null($rootElement, "第 {$i} 次应有根元素");
+
+        $style = $rootElement->props['style'] ?? '';
+
+        // ── 断言 1：left:11 存在 ──
+        assert(strpos($style, 'left:11') !== false,
+            "第 {$i} 次 re-render 后应包含 left:11，实际: {$style}");
+
+        // ── 断言 2：top:524 存在 ──
+        assert(strpos($style, 'top:524') !== false,
+            "第 {$i} 次 re-render 后应包含 top:524，实际: {$style}");
+
+        // ── 断言 3（关键）：left: 在整个 style 中只出现一次 ──
+        $leftPropCount = substr_count($style, 'left:');
+        assert($leftPropCount === 1,
+            "第 {$i} 次 re-render 后 left: 应恰好出现 1 次（实际 {$leftPropCount} 次），style={$style}");
+
+        // ── 断言 4（关键）：top: 在整个 style 中只出现一次 ──
+        $topPropCount = substr_count($style, 'top:');
+        assert($topPropCount === 1,
+            "第 {$i} 次 re-render 后 top: 应恰好出现 1 次（实际 {$topPropCount} 次），style={$style}");
+
+        $prevRoot = $root;
+    }
+});
+
 
 // ============================================================
 // Helper

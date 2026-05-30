@@ -652,6 +652,111 @@ $resetProp = new \ReflectionProperty(ThemeProvider::class, 'classStyleRegistry')
 $resetProp->setAccessible(true);
 $resetProp->setValue(null, []);
 
+// =============================================
+// 10. Component Positioning
+// =============================================
+echo "═══ 10. Component Positioning ═══\n\n";
+
+echo "--- 10a. transferComponentPositioning 多帧不退化 ---\n";
+$app10 = newInstanceWithoutAppForStress();
+$transferMethod = new \ReflectionMethod(Application::class, 'transferComponentPositioning');
+$transferMethod->setAccessible(true);
+
+$iterations = 20;
+
+for ($i = 0; $i < $iterations; $i++) {
+    // 每次创建全新 VNode 树（模拟每次 re-render 的新根元素）
+    $root = VNode::h('#root', ['style' => 'width:340px;height:660px'], [
+        VNode::h('div', ['style' => 'background:#2C2C2E;color:#FFF'], 'content'),
+    ]);
+
+    $transferMethod->invoke($app10, 'left:11px;top:524px', $root);
+
+    // 找到第一个可渲染元素（模拟 transferComponentPositioning 内部逻辑）
+    $target = $root;
+    while ($target !== null && $target->type === '#root') {
+        $children = $target->children;
+        if ($children instanceof VNode) {
+            $target = $children;
+        } elseif (is_array($children)) {
+            $next = null;
+            foreach ($children as $c) {
+                if ($c instanceof VNode && $c->type !== '#text') {
+                    $next = $c;
+                    break;
+                }
+            }
+            $target = $next;
+        } else {
+            $target = null;
+        }
+    }
+
+    assert_not_null($target, "第 {$i} 次应有目标元素");
+    $style = $target->props['style'] ?? '';
+
+    // left/top 值必须存在
+    assert(strpos($style, 'left:11') !== false,
+        "第 {$i} 次应包含 left:11，实际: {$style}");
+    assert(strpos($style, 'top:524') !== false,
+        "第 {$i} 次应包含 top:524，实际: {$style}");
+
+    // 关键：left:/top: 恰好出现 1 次（不退化）
+    $leftCount = substr_count($style, 'left:');
+    assert($leftCount === 1,
+        "第 {$i} 次 left: 应恰好 1 次（实际 {$leftCount}），style={$style}");
+    $topCount = substr_count($style, 'top:');
+    assert($topCount === 1,
+        "第 {$i} 次 top: 应恰好 1 次（实际 {$topCount}），style={$style}");
+}
+echo "  [PASS] {$iterations} 次 transferComponentPositioning 后定位无退化\n";
+
+echo "--- 10b. 目标元素已有 left/top 时正确替换（幂等性）---\n";
+$app10b = newInstanceWithoutAppForStress();
+
+// 模拟多次 re-render 后 style 中已残留旧定位值
+$root = VNode::h('#root', ['style' => 'width:340px;height:660px'], [
+    VNode::h('div', ['style' => 'background:#2C2C2E;color:#FFF;left:100px;top:200px'], 'content'),
+]);
+
+$transferMethod->invoke($app10b, 'left:11px;top:524px', $root);
+
+$target = $root;
+while ($target !== null && $target->type === '#root') {
+    $children = $target->children;
+    if ($children instanceof VNode) {
+        $target = $children;
+    } elseif (is_array($children)) {
+        $next = null;
+        foreach ($children as $c) {
+            if ($c instanceof VNode && $c->type !== '#text') {
+                $next = $c;
+                break;
+            }
+        }
+        $target = $next;
+    } else {
+        $target = null;
+    }
+}
+
+$style = $target->props['style'] ?? '';
+// 新值存在
+assert(strpos($style, 'left:11') !== false, "应包含 left:11，实际: {$style}");
+assert(strpos($style, 'top:524') !== false, "应包含 top:524，实际: {$style}");
+// 旧值被清除
+assert(strpos($style, 'left:100') === false, "不应包含旧 left:100，实际: {$style}");
+assert(strpos($style, 'top:200') === false, "不应包含旧 top:200，实际: {$style}");
+// 无重复
+assert(substr_count($style, 'left:') === 1, "left: 应恰好 1 次，style={$style}");
+assert(substr_count($style, 'top:') === 1, "top: 应恰好 1 次，style={$style}");
+echo "  [PASS] 旧 left/top 被正确替换为新值，无退化\n";
+
+
+echo "\n============================================\n";
+echo " 测试完成\n";
+echo "============================================\n";
+
 
 // ═══════════════════════════════════════════
 // Helper: 创建无平台依赖的 Application 实例

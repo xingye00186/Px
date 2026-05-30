@@ -153,6 +153,43 @@ test('新输入后 . 显示 0.', function () {
     assertDisplay($app, '0.');
 });
 
+test('display 满 15 位时 inputDecimal 不生效', function () {
+    $app = createApp();
+    // 输入 15 个 3
+    for ($i = 0; $i < 15; $i++) {
+        $app->dispatchClick('inputDigit', '3');
+    }
+    assert_eq(strlen($app->display), 15, 'display 应为 15 位');
+    assert_eq($app->display, '333333333333333', 'display 内容正确');
+
+    // 尝试加小数点 —— 不应生效
+    $app->dispatchClick('inputDecimal');
+    assert_eq($app->display, '333333333333333', '满 15 位时 inputDecimal 不应改变 display');
+    assert_eq($app->hasDecimal, false, 'hasDecimal 仍应为 false');
+
+    // 继续输入数字也不应生效（inputDigit 同样被限制）
+    $app->dispatchClick('inputDigit', '9');
+    assert_eq($app->display, '333333333333333', '满 15 位时 inputDigit 也不生效');
+});
+
+test('display 14 位时 inputDecimal 正常工作', function () {
+    $app = createApp();
+    // 输入 13 个 3（留 1 位给小数点 + 1 位给小数数字）
+    for ($i = 0; $i < 13; $i++) {
+        $app->dispatchClick('inputDigit', '3');
+    }
+    assert_eq(strlen($app->display), 13, 'display 应为 13 位');
+
+    // 加小数点
+    $app->dispatchClick('inputDecimal');
+    assert_eq($app->display, '3333333333333.', 'display 应变为 13 位 + 小数点');
+    assert_eq($app->hasDecimal, true, 'hasDecimal 应为 true');
+
+    // 小数点后仍可继续输入（13 + '.' + '5' = 15，不超限）
+    $app->dispatchClick('inputDigit', '5');
+    assert_eq($app->display, '3333333333333.5', '小数点后可继续输入');
+});
+
 // ============================================================
 // 3. Clear / Reset
 // ============================================================
@@ -998,13 +1035,177 @@ test('视觉化状态追踪: 带括号的表达式', function () {
 // ============================================================
 echo "\n--- 18. Edge Cases (边界情况) ---\n";
 
-test('超大数字输入', function () {
+test('超大数字输入不超过 15 位', function () {
     $app = createApp();
-    $digits = '1234567890';
-    foreach (str_split($digits) as $d) {
-        $app->dispatchClick('inputDigit', $d);
+    // 输入 100 个 9
+    for ($i = 0; $i < 100; $i++) {
+        $app->dispatchClick('inputDigit', '9');
     }
-    assertDisplay($app, '1234567890');
+    // display 不应无限增长，应被截断在 15 位
+    assert_eq(strlen($app->display), 15, 'display 长度应为 15');
+    assert_eq($app->display, '999999999999999', 'display 应为 15 个 9');
+    // acLabel 应为 C（不是 AC）
+    assert_eq($app->acLabel, 'C', 'acLabel 应为 C');
+    // 其他状态不应被破坏
+    assert_eq($app->newInput, false, 'newInput 应为 false');
+    assert_eq($app->hasDecimal, false, 'hasDecimal 应为 false');
+});
+
+test('大量连续点击后 display 不溢出（1000 次）', function () {
+    $app = createApp();
+    // 模拟疯狂点击 9
+    for ($i = 0; $i < 1000; $i++) {
+        $app->dispatchClick('inputDigit', '9');
+    }
+    // display 被限制在 15 位
+    assert_eq(strlen($app->display), 15, '1000 次点击后 display 长度应为 15');
+    assert_eq($app->display, '999999999999999', 'display 应为 15 个 9');
+
+    // 核心状态不受影响
+    assert_eq($app->newInput, false, 'newInput 应为 false');
+    assert_eq($app->hasDecimal, false, 'hasDecimal 应为 false');
+    assert_eq($app->operand1, '', 'operand1 应为空');
+    assert_eq($app->operator, '', 'operator 应为空');
+    assert_eq($app->expression, '', 'expression 应为空');
+    assert_eq($app->memory, '', 'memory 应为空');
+    assert_eq($app->hasMemory, false, 'hasMemory 应为 false');
+    assert_eq($app->acLabel, 'C', 'acLabel 应为 C');
+
+    // 验证仍可正常进行运算
+    $app->dispatchClick('inputOperator', '+');
+    $app->dispatchClick('inputDigit', '1');
+    $app->dispatchClick('calculate');
+    // formatNumber 截断到 15 位：100000000000000(0) → 100000000000000
+    assert_eq($app->display, '100000000000000', '999999999999999 + 1 应正常计算');
+});
+
+test('多轮连续点击 + clear 无状态泄漏', function () {
+    $app = createApp();
+
+    for ($round = 0; $round < 10; $round++) {
+        // 每轮疯狂点击 100 次
+        for ($i = 0; $i < 100; $i++) {
+            $app->dispatchClick('inputDigit', '9');
+        }
+        assert_eq(strlen($app->display), 15, "第 {$round} 轮点击后 display 长度应为 15");
+
+        // 混合操作
+        $app->dispatchClick('inputOperator', '+');
+        $app->dispatchClick('inputDigit', '1');
+        $app->dispatchClick('calculate');
+
+        // 计算完成后 display 应为结果（非巨量字符串）
+        assert(strlen($app->display) <= 20,
+            "第 {$round} 轮计算后 display 不应溢出，长度={strlen($app->display)}");
+
+        // 完全清除
+        $app->dispatchClick('clear'); // C
+        $app->dispatchClick('clear'); // AC
+        assert_eq($app->display, '0', "第 {$round} 轮清除后 display 应为 0");
+        assert_eq($app->acLabel, 'AC', "第 {$round} 轮清除后 acLabel 应为 AC");
+        assert_eq($app->operand1, '', "第 {$round} 轮清除后 operand1 应为空");
+        assert_eq($app->operator, '', "第 {$round} 轮清除后 operator 应为空");
+    }
+});
+
+test('大量点击后 backspace 逐位删除直至归零', function () {
+    $app = createApp();
+
+    // 疯狂点击
+    for ($i = 0; $i < 200; $i++) {
+        $app->dispatchClick('inputDigit', '9');
+    }
+    assert_eq(strlen($app->display), 15, '点击后 display 长度应为 15');
+
+    // 逐步删除
+    for ($i = 14; $i >= 0; $i--) {
+        $app->dispatchClick('backspace');
+        if ($i > 0) {
+            assert_eq(strlen($app->display), $i,
+                "backspace 后长度应为 {$i}，实际=" . strlen($app->display));
+        }
+    }
+    // 删除到最后应为 0
+    assert_eq($app->display, '0', '逐位删除后 display 应为 0');
+    assert_eq($app->newInput, true, '归零后 newInput 应为 true');
+
+    // 归零后仍可正常输入
+    $app->dispatchClick('inputDigit', '4');
+    $app->dispatchClick('inputDigit', '2');
+    assert_eq($app->display, '42', '归零后可正常输入 42');
+});
+
+test('大量点击 + 小数点 + 连续运算无异常', function () {
+    $app = createApp();
+
+    // 输入长数字
+    for ($i = 0; $i < 100; $i++) {
+        $app->dispatchClick('inputDigit', '3');
+    }
+    assert_eq(strlen($app->display), 15, 'display 长度应为 15');
+
+    // 加小数点
+    $app->dispatchClick('inputDecimal');
+    assert_eq($app->display, '333333333333333.', '小数点后应有小数点在末尾');
+
+    for ($i = 0; $i < 50; $i++) {
+        $app->dispatchClick('inputDigit', '7');
+    }
+    // 小数点后也应该限制长度
+    assert(strlen($app->display) <= 16,
+        '含小数点 display 不应过长，长度=' . strlen($app->display));
+
+    // 连续运算
+    $app->dispatchClick('toggleSign');
+    assert_true(str_starts_with($app->display, '-'), 'toggleSign 后 display 以 - 开头');
+
+    $app->dispatchClick('clear'); // C
+    $app->dispatchClick('clear'); // AC
+    assert_eq($app->display, '0', '清除后 display 为 0');
+
+    // toggleSign 在 0 时无效
+    $app->dispatchClick('toggleSign');
+    assert_eq($app->display, '0', '0 时 toggleSign 无效');
+
+    // 正常运算
+    runCalculation($app, '100', '+', '200');
+    assert_eq($app->display, '300', '100+200 应为 300');
+});
+
+test('大量点击 + 运算符链无状态损坏', function () {
+    $app = createApp();
+
+    // 疯狂点击
+    for ($i = 0; $i < 500; $i++) {
+        $app->dispatchClick('inputDigit', '9');
+    }
+
+    // 链式运算
+    $app->dispatchClick('inputOperator', '+');
+    $app->dispatchClick('inputDigit', '1');
+    $app->dispatchClick('calculate');
+    $result1 = $app->display;
+    assert(strlen($result1) <= 20,
+        '计算结果不应溢出，长度=' . strlen($result1));
+
+    // 连续运算符覆盖
+    $app->dispatchClick('inputOperator', '×');
+    $app->dispatchClick('inputOperator', '−');
+    assert_eq($app->operator, '−', '运算符应被覆盖为 −');
+
+    $app->dispatchClick('inputDigit', '5');
+    $app->dispatchClick('calculate');
+
+    // 再次疯狂点击
+    for ($i = 0; $i < 300; $i++) {
+        $app->dispatchClick('inputDigit', '8');
+    }
+    assert_eq(strlen($app->display), 15, '二轮疯狂点击后 display 仍为 15 位');
+
+    // percent 在长数字上应正常工作
+    $app->dispatchClick('percent');
+    assert(strlen($app->display) <= 20, 'percent 后 display 不应溢出');
+    assert($app->newInput === true, 'percent 后 newInput 应为 true');
 });
 
 test('连续运算符: 3 + + 5 = 8', function () {
