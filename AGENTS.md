@@ -890,7 +890,9 @@ D:\swoole_compiler\php.exe tests/unit/ReactiveComponentTest.php
 D:\swoole_compiler\php.exe tests/unit/HitTestTest.php
 D:\swoole_compiler\php.exe tests/unit/LayoutResolverTest.php
 D:\swoole_compiler\php.exe tests/unit/VNodeRendererTest.php
+D:\swoole_compiler\php.exe tests/unit/SfcCompilerPartsTest.php
 D:\swoole_compiler\php.exe tests/unit/SfcCompilerVIfTest.php
+D:\swoole_compiler\php.exe tests/unit/CssMappingsBorderTest.php
 D:\swoole_compiler\php.exe tests/unit/PlatformTest.php
 
 # 运行内存压力测试（多帧累积检测）
@@ -902,12 +904,14 @@ D:\swoole_compiler\php.exe tests/unit/MemoryStressTest.php
 | 文件 | 覆盖范围 | 用例数 |
 |------|---------|--------|
 | `CalculatorAppTest.php` | 计算器全部 16 类操作 + 状态快照 + 边界情况 | 100 |
-| `ComponentTreeTest.php` | 组件 parent 链、事件冒泡、实例独立、生命周期、VNode 缓存、hComponent 工厂、patchComponentTree | 22 |
+| `ComponentTreeTest.php` | 组件 parent 链、事件冒泡、实例独立、生命周期、VNode 缓存、hComponent 工厂、patchComponentTree、组件定位保留 | 23 |
 | `ReactiveComponentTest.php` | dirty 标记、VNode 缓存、组件更新 | 9 |
 | `HitTestTest.php` | 命中测试、事件路由 | 10 |
 | `LayoutResolverTest.php` | block/flex/grid/scroll 布局 | 14 |
-| `VNodeRendererTest.php` | 元素收集、layer 分组、clip | 14 |
-| `SfcCompilerVIfTest.php` | v-if 编译期优化 | 9 |
+| `VNodeRendererTest.php` | 元素收集、layer 分组、clip、button 边框渲染、render 完整流程 | 16 |
+| `SfcCompilerPartsTest.php` | 编译器 parts 元数据：collectVNodeBindKeys 提取、generateVNodeExpr 代码生成 | 8 |
+| `SfcCompilerVIfTest.php` | v-if 编译期优化（含连续相同条件合并） | 9 |
+| `CssMappingsBorderTest.php` | border 简写/独立属性解析、parseInlineStyle/parseStyleBlock 边框处理、hexToBgr/borderColor 辅助函数 | 14 |
 | `PlatformTest.php` | Platform 接口 SOLID/DIP 合规 | 10 |
 | `MemoryStressTest.php` | 内存增长检测（9 模块 28+ 场景） | 28+ |
 
@@ -936,7 +940,7 @@ D:\swoole_compiler\php.exe tests/unit/MemoryStressTest.php
 
 ### ComponentTreeTest 测试清单
 
-覆盖 7 类 Vue 3 组件语义（22 个测试用例）：
+覆盖 8 类 Vue 3 组件语义（23 个测试用例）：
 
 | # | 类别 | 说明 |
 |---|------|------|
@@ -947,6 +951,7 @@ D:\swoole_compiler\php.exe tests/unit/MemoryStressTest.php
 | 5 | VNode Caching | 首次 render()、缓存复用、dirty 重建、markDirty 清缓存 |
 | 6 | VNode Factory | hComponent 占位、componentProps 映射、groupId 递归 |
 | 7 | Patch Component Tree | 普通节点 groupId、#component 展开、实例复用（同 class+同位置） |
+| 8 | Component Positioning | matchComponentNode 实例重用后 transferComponentPositioning 保留定位 |
 
 ### 截图测试
 
