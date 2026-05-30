@@ -228,6 +228,14 @@ function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
             $key = $node->props['bind'];
             if (!is_numeric($key)) $bindKeys[$key] = true;
         }
+        // parts metadata from mixed text+bind interpolation (e.g., "{{ arrow }} History")
+        if (isset($node->props['parts'])) {
+            foreach ($node->props['parts'] as $part) {
+                if ($part['type'] === 'bind' && isset($part['expr']) && !is_numeric($part['expr'])) {
+                    $bindKeys[$part['expr']] = true;
+                }
+            }
+        }
         // v-if="prop" - only extract simple variable names, not expressions
         if (isset($node->props['v-if'])) {
             $vif = $node->props['v-if'];
@@ -660,6 +668,23 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 $childrenExpr = var_export($node->children, true);
                 unset($node->props['bind']);
             }
+        } elseif (isset($node->props['parts'])) {
+            // Mixed text+bind content from {{ }} interpolation (e.g., "{{ arrow }} History")
+            $concatParts = [];
+            foreach ($node->props['parts'] as $part) {
+                if ($part['type'] === 'text') {
+                    $concatParts[] = "'" . addslashes($part['value']) . "'";
+                } else {
+                    $expr = $part['expr'];
+                    if ($loopInfo !== null && str_starts_with($expr, $loopInfo['item'] . '.')) {
+                        $propName = substr($expr, strlen($loopInfo['item']) + 1);
+                        $concatParts[] = "\${$loopInfo['item']}['{$propName}']";
+                    } else {
+                        $concatParts[] = "\$this->{$expr}";
+                    }
+                }
+            }
+            $childrenExpr = implode(' . ', $concatParts);
         } elseif (preg_match('/^\{\{\s*(\w+)\s*\}\}$/', $node->children, $m)) {
             // Text interpolation {{ varName }} → $this->varName
             $childrenExpr = "\$this->{$m[1]}";
@@ -814,30 +839,50 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                 }
                                 if (!$hasFollowingConditional) {
                                     // No else-if/else following:
-                                    // Generate if {...} with child inside, then close
+                                    // Collect consecutive children with the same v-if condition
+                                    // and merge them into one if block
                                     $parsedCond = $ifElseExprParser->parse($condition, $loopInfo);
-                                    $stmts[] = "{$ind}    if ({$parsedCond}) {";
 
-                                    // Generate child node code (strip v-if prop)
-                                    $savedProps = [];
-                                    foreach (['v-if', 'v-else-if', 'v-else'] as $propKey) {
-                                        if (isset($child->props[$propKey])) {
-                                            $savedProps[$propKey] = $child->props[$propKey];
-                                            unset($child->props[$propKey]);
+                                    // Look ahead for consecutive same-condition v-if children
+                                    $sameIfChildren = [$child];
+                                    for ($j = $i + 1; $j < $childCount; $j++) {
+                                        $next = $node->children[$j];
+                                        if ($next instanceof VNode && isset($next->props['v-if'])) {
+                                            $nextCond = $ifElseExprParser->parse($next->props['v-if'], $loopInfo);
+                                            if ($nextCond === $parsedCond) {
+                                                $sameIfChildren[] = $next;
+                                            } else {
+                                                break;
+                                            }
+                                        } else {
+                                            break;
                                         }
                                     }
-                                    $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1);
-                                    foreach ($savedProps as $propKey => $propVal) {
-                                        $child->props[$propKey] = $propVal;
-                                    }
 
-                                    if (isset($child->vForHelper)) {
-                                        $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
-                                    } else {
-                                        $stmts[] = "{$ind}        \$c[] = {$childExpr};";
+                                    // Generate single if block containing all merged children
+                                    $stmts[] = "{$ind}    if ({$parsedCond}) {";
+                                    foreach ($sameIfChildren as $sameIfChild) {
+                                        // Generate child node code (strip v-if prop)
+                                        $savedProps = [];
+                                        foreach (['v-if', 'v-else-if', 'v-else'] as $propKey) {
+                                            if (isset($sameIfChild->props[$propKey])) {
+                                                $savedProps[$propKey] = $sameIfChild->props[$propKey];
+                                                unset($sameIfChild->props[$propKey]);
+                                            }
+                                        }
+                                        $childExpr = generateVNodeExpr($sameIfChild, $loopInfo, $indent + 1);
+                                        foreach ($savedProps as $propKey => $propVal) {
+                                            $sameIfChild->props[$propKey] = $propVal;
+                                        }
+
+                                        if (isset($sameIfChild->vForHelper)) {
+                                            $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
+                                        } else {
+                                            $stmts[] = "{$ind}        \$c[] = {$childExpr};";
+                                        }
                                     }
                                     $stmts[] = "{$ind}    }";
-                                    $i++;
+                                    $i += count($sameIfChildren);
                                     continue;
                                 }
                             }
