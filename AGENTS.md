@@ -118,7 +118,7 @@ Application::handleMouseEvent / handleKeyboardEvent
          │   └─ clamp scrollTop + 子节点重定位
          │
          └─ VNodeRenderer::render
-             ├─ collectElements（按 layer 分组）
+             ├─ collectElements（按 layer 分组，scroll/overflow:hidden 生成 clip-push/clip-pop）
              └─ GdiRenderContext::drawElement（逐 element 调用 GDI 原语）
 ```
 
@@ -131,7 +131,7 @@ Application::handleMouseEvent / handleKeyboardEvent
 │ Component         声明状态 + 绑定键            不参与坐标 │
 │ Application       事件路由 + bind 解析         不参与布局 │
 │ LayoutResolver    所有坐标计算                 不参与渲染 │
-│ VNodeRenderer     收集元素 + clip 裁切         不修改坐标 │
+│ VNodeRenderer     收集元素 + clip 裁切（scroll + overflow:hidden） 不修改坐标 │
 │ GdiRenderContext  GDI 调用                    不参与布局 │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -451,7 +451,7 @@ build.bat list-test --run
 ```
 Step 0:   MSVC 环境 (vcvarsall.bat x64)
 Step 0.5: AOT 静态检查 → 检查禁止模式
-Step 1:   SFC 编译 (.vue → gen/*.php)
+Step 1:   SFC 编译（编译根组件 App.vue，自动 BFS 发现并编译所有子组件到 gen/*.php）
 Step 2:   AOT 编译 (PHP → C++ → link → .exe)
 Step 3:   打包 (exe + php8ts.dll + phpx.dll → bin/)
 ```
@@ -465,6 +465,7 @@ Step 3:   打包 (exe + php8ts.dll + phpx.dll → bin/)
 | AOT Checker 报错 | 检查代码是否使用了禁止模式 |
 | Step 2 Swoole 编译器报错 | 先用手动 `php -l` 检查 PHP 语法 |
 | 系统 `php -l` 报语法错 | 用 `D:\swoole_compiler\php.exe` 而非系统 PATH 中的 PHP |
+| 编译子组件 .vue 后 gen/ 未更新到正确位置 | 必须编译根组件 App.vue，子组件不会被单独编译到 apps/<name>/gen/ |
 
 ### 8.4 多机器 vcvarsall 路径配置
 
@@ -675,7 +676,18 @@ public function handleAction(string $id): void {
 3. SFC 编译器自动发现、编译、生成占位 VNode
 4. Application 在运行时展开
 
-### 9.6 调试技巧
+### 9.9 重新编译 SFC（修改 .vue 后）
+
+修改 `.vue` 文件后，必须重新编译才能生效。关键规则：
+
+- **编译根组件 App.vue**（而非子组件），编译器会 BFS 发现所有有变更的子组件并自动重新编译
+- 输出目录由 .vue 文件路径决定：`dirname($vueFile) + '/gen/'`
+  - 编译 `apps/<name>/App.vue` → 输出到 `apps/<name>/gen/`（正确位置）
+  - 编译 `apps/<name>/components/MyComp.vue` → 输出到 `apps/<name>/components/gen/`（错误位置）
+- 命令：`php sfc-compiler.php apps/<name>/App.vue`
+- **禁止手动编辑 `gen/*.php` 文件**（会被编译器覆盖）
+
+### 9.10 调试技巧
 
 - **检查 VNode 树**：在 `render()` 返回前 `var_dump` VNode 结构（需在开发环境 PHP 而非 AOT 中运行）
 - **检查布局**：查看 `LayoutResolver::resolve()` 返回的 `scrollContainers` 列表
@@ -895,6 +907,9 @@ D:\swoole_compiler\php.exe tests/unit/SfcCompilerVIfTest.php
 D:\swoole_compiler\php.exe tests/unit/CssMappingsBorderTest.php
 D:\swoole_compiler\php.exe tests/unit/PlatformTest.php
 
+# 运行完整渲染管道测试（快照差异分析）
+D:\swoole_compiler\php.exe tests/unit/RenderingPipelineTest.php
+
 # 运行内存压力测试（多帧累积检测）
 D:\swoole_compiler\php.exe tests/unit/MemoryStressTest.php
 ```
@@ -903,26 +918,29 @@ D:\swoole_compiler\php.exe tests/unit/MemoryStressTest.php
 
 | 文件 | 覆盖范围 | 用例数 |
 |------|---------|--------|
-| `CalculatorAppTest.php` | 计算器全部 16 类操作 + 状态快照 + 边界情况 | 100 |
-| `ComponentTreeTest.php` | 组件 parent 链、事件冒泡、实例独立、生命周期、VNode 缓存、hComponent 工厂、patchComponentTree、组件定位保留 | 23 |
+| `CalculatorAppTest.php` | 计算器全部 18 类操作 + 状态快照 + 边界情况 | 107 |
+| `ComponentTreeTest.php` | 组件 parent 链、事件冒泡、实例独立、生命周期、VNode 缓存、hComponent 工厂、patchComponentTree、组件定位保留 | 26 |
 | `ReactiveComponentTest.php` | dirty 标记、VNode 缓存、组件更新 | 9 |
 | `HitTestTest.php` | 命中测试、事件路由 | 10 |
 | `LayoutResolverTest.php` | block/flex/grid/scroll 布局 | 14 |
-| `VNodeRendererTest.php` | 元素收集、layer 分组、clip、button 边框渲染、render 完整流程 | 16 |
+| `VNodeRendererTest.php` | 元素收集、layer 分组、clip（scroll + overflow:hidden）、button 边框渲染、render 完整流程 | 20 |
 | `SfcCompilerPartsTest.php` | 编译器 parts 元数据：collectVNodeBindKeys 提取、generateVNodeExpr 代码生成 | 8 |
 | `SfcCompilerVIfTest.php` | v-if 编译期优化（含连续相同条件合并） | 9 |
 | `CssMappingsBorderTest.php` | border 简写/独立属性解析、parseInlineStyle/parseStyleBlock 边框处理、hexToBgr/borderColor 辅助函数 | 14 |
 | `PlatformTest.php` | Platform 接口 SOLID/DIP 合规 | 10 |
 | `MemoryStressTest.php` | 内存增长检测（9 模块 28+ 场景） | 28+ |
+| `RenderingPipelineTest.php` | 完整渲染管道快照差异分析（100 次循环点击 + 5 类规则校验 + 异常存档） | 5 |
+| `ListTestPipelineTest.php` | list-test 渲染管道测试（30 次点击 + 增长规则 + clip 有效性 + 滚动拖动） | 8 |
+| `GdiRenderContextTest.php` | GDI 渲染上下文直接测试（clip 栈 + drawText 截断 + 参数守卫） | 15 |
 
 ### CalculatorAppTest 测试清单
 
-覆盖以下 18 类场景（100 个测试用例）：
+覆盖以下 18 类场景（107 个测试用例）：
 
 | # | 类别 | 用例数 | 说明 |
 |---|------|--------|------|
 | 1 | Digit Input | 7 | 初始显示、数字输入、去除前导零、运算符后新输入 |
-| 2 | Decimal Input | 4 | 小数点输入、防重复、运算符后新输入 |
+| 2 | Decimal Input | 6 | 小数点输入、防重复、运算符后新输入、15 位限制（2 个） |
 | 3 | Clear/Reset | 2 | C 清除输入、AC 完全重置 |
 | 4 | Backspace | 4 | 删除末位、归零、newInput 保护、删除小数点 |
 | 5 | Toggle Sign | 3 | 正负切换、零值保护 |
@@ -936,11 +954,11 @@ D:\swoole_compiler\php.exe tests/unit/MemoryStressTest.php
 | 13 | Error Recovery | 3 | Error 后数字/C/= 恢复 |
 | 14-16 | Routing | 26 | ScientificPad/BasicPad/HistoryPanel 冒泡路由 |
 | 17 | State Snapshot | 3 | 视觉化状态跟踪：完整会话、Error→恢复、括号表达式 |
-| 18 | Edge Cases | 8 | 超大数字、运算符链、重复等号、带符号运算、连续清除等 |
+| 18 | Edge Cases | 13 | 超大数字、运算符链、重复等号、带符号运算、连续清除、多轮压力测试等 |
 
 ### ComponentTreeTest 测试清单
 
-覆盖 8 类 Vue 3 组件语义（23 个测试用例）：
+覆盖 8 类 Vue 3 组件语义（26 个测试用例）：
 
 | # | 类别 | 说明 |
 |---|------|------|
@@ -976,6 +994,16 @@ powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps
 5. **Application 私有方法通过反射测试** — `newInstanceWithoutApp()` + `ReflectionMethod` 访问 private 方法
 6. **先修复测试再提交** — 失败的测试比没有测试更糟。每次修改后运行全部测试确保回归
 7. **组件树测试验证框架语义** — ComponentTreeTest 验证框架层面的 Vue 3 语义对齐，不依赖具体应用
+8. **Mock 渲染上下文暴露 GDI 不可测漏洞** — `_MockRenderContext` 只记录 `drawElement()` 调用，不执行真实 GDI。Bug 发生在 GDI 实现层（clip 边界绘制累积损坏 HDC 状态），纯元素层 Mock 无法捕获。补偿策略：
+   - Mock 需模拟 clip 栈追踪 + 文本截断（`applyClipTruncation()` 与 `GdiRenderContext::drawText()` 逻辑一致）
+   - 流水线测试必须包含 clip 溢出规则（Rule E：任何溢出 ≥1px 即告警）
+   - GDI 层行为必须通过 `GdiRenderContextTest.php` 直接验证（stub GDI C++ 函数记录调用参数）
+9. **clip-aware drawText 是所有 text 输出路径的必选守卫** — 任何新增的 GDI text 调用点都必须经过 `drawText()`（含 clip 截断），禁止直接调 `vue_draw_text()`
+10. **新应用接入时必须添加对应的流水线测试** — 至少包含：N 次循环点击稳定性测试 + A/B/C 规则（不变/条件/约束） + clip 有效性规则
+11. **粗体文本字符宽度是常规体的 1.35 倍** — `drawText()` 截断逻辑必须区分 `$bold` 参数。粗体 36px 实际宽度 ~28px/char，而 `fontSize * 0.6` 只给出 21px/char。未区分粗体会导致截断后仍然溢出
+12. **测试必须覆盖完整的用户操作链** — 仅测试"一直按 1"不够，必须包含"大量操作 → 清除/重置 → 验证 UI 完整性"的端到端场景。每个新管道测试都应包含 clear-after-corruption 验证
+13. **按钮标签提取测试** — 使用 `<button><span :bind="label">{{ label }}</span></button>` 模板时，`makeButtonElement()` 必须提取到标签。管道测试中 `ltCheckButtonLabel()` 应断言 label 非空，不再标记为"known bug"
+14. **滚动拖动测试必须验证 auto-stacked 位置** — 仅测试"添加 item 后布局正确"不够。必须模拟滚动拖动（直接设置 scrollTop + directRender），验证 auto-stacked items 的 y 坐标保持严格递增不折叠。洁净路径中 `style` 无显式 `top` 的节点不应被重算 y
 
 ---
 
@@ -984,6 +1012,17 @@ powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps
 1. **PHP 语法**：`D:\swoole_compiler\php.exe -l <file>`
 2. **AOT 兼容**：无 `->$var`、无动态调用
 3. **布局职责**：LayoutResolver 管位置，VNodeRenderer 管裁切，互不越界
-4. **Bind 同步**：新增 bind 属性后在组件中声明 `public string`，编译器自动生成 get/set
-5. **事件冒泡**：子组件 dispatchClick 的 default 分支调用 `parent::dispatchClick`
-6. **构建验证**：`build.bat <app-name>` 全流程通过
+4. **负宽高防御**：LayoutResolver 中所有 `$node->w`/`$node->h` 赋值用 `max(0, (int)$val)`
+5. **GDI 调用保护**：GdiRenderContext 中所有 GDI 调用前检查 `$w > 0 && $h > 0`
+6. **drawText clip 截断**：所有 text 绘制必须经过 `drawText()`（含 `clipStack` 追踪 + 粗体感知溢出截断），禁止直接调 `vue_draw_text()`。新增 text 输出路径时必须同步添加截断逻辑。截断公式：`charWidth = (int)(fontSize * 0.6 * ($bold ? 1.35 : 1.0))`，并保留 4px 安全余量
+7. **clip 栈平衡**：clip-push/clip-pop 必须成对出现，每帧结束时 clip 栈应为空。`GdiRenderContextTest` 中已有 `clip stack push and pop balanced` 测试
+8. **Mock clip 追踪**：修改 `_MockRenderContext`/`_LTMockRenderContext` 时必须同步添加 clip 栈追踪 + `applyClipTruncation()`（含粗体因子和 4px 安全余量），确保 mock 的可见行为接近真实 GDI
+9. **overflow:hidden 裁切**：需要裁切子内容的容器必须设置 `overflow:hidden`，VNodeRenderer 会为其生成 clip-push/clip-pop
+10. **数值输入限制**：所有数值输入方法（inputDigit、inputDecimal 等）必须有 15 字符长度限制
+11. **Bind 同步**：新增 bind 属性后在组件中声明 `public string`，编译器自动生成 get/set
+12. **事件冒泡**：子组件 dispatchClick 的 default 分支调用 `parent::dispatchClick`
+13. **SFC 编译**：仅编译根组件 App.vue，不直接编译子组件 .vue；不手动编辑 gen/*.php
+14. **构建验证**：`build.bat <app-name>` 全流程通过
+15. **测试完整闭环**：新增管道测试必须覆盖完整的用户操作链（不限于一直按同一按钮），包括：大量操作后 → 清除/重置 → 验证所有 UI 元素完整的端到端场景
+16. **按钮标签提取**：`makeButtonElement()` 必须遍历子 RenderNode 提取标签（`<button><span :bind="x">{{ x }}</span></button>`），仅检查 `node->content`(string) 和 `props[':bind']` 不够，还要检查子节点的 content 和 bind 引用
+17. **LayoutResolver 洁净路径保留 auto-stack 位置**：洁净路径（`layoutDirty=false`）中，只有显式 `top`/`left` 定位的节点才重算 x/y。auto-stacked 子节点应保留脏路径设定的位置，仅由快速滚动路径（`shiftChildrenY`）平移。修改 `resolveNode()` 中 `$node->x = ($style['left'] ?? 0) + $parentX` 这类无条件赋值时必须改用 `array_key_exists` 保护
