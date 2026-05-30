@@ -21,6 +21,9 @@ class GdiRenderContext extends RenderContext
     private int $hWnd;
     private int $hdc = 0;
 
+    /** @var array 当前激活的 clip 区域栈，每个元素 ['x'=>, 'y'=>, 'w'=>, 'h'=>] */
+    private array $clipStack = [];
+
     public function __construct(int $hWnd)
     {
         $this->hWnd = $hWnd;
@@ -44,6 +47,7 @@ class GdiRenderContext extends RenderContext
         switch ($type) {
             // ── 原生图元 ──────────────────────
             case 'rect':
+                if (($el['w'] ?? 0) <= 0 || ($el['h'] ?? 0) <= 0) return;
                 $shadowX = $el['shadowX'] ?? 0;
                 $shadowY = $el['shadowY'] ?? 0;
                 $shadowColor = $el['shadowColor'] ?? 0;
@@ -95,8 +99,12 @@ class GdiRenderContext extends RenderContext
                 break;
 
             case 'text':
+                $tx = $el['x'] ?? 0;
+                $ty = $el['y'] ?? 0;
+                // 防御：负坐标或超出窗口边界的文本会损坏 GDI 状态
+                if ($tx < 0 || $ty < 0) break;
                 $this->drawText(
-                    $el['x'] ?? 0, $el['y'] ?? 0,
+                    $tx, $ty,
                     $el['text'] ?? '',
                     $el['fontSize'] ?? 16,
                     $el['color'] ?? 0xFFFFFF,
@@ -116,6 +124,7 @@ class GdiRenderContext extends RenderContext
 
             // ── 复合类型 (多次 GDI 调用) ──────
             case 'button':
+                if (($el['w'] ?? 0) <= 0 || ($el['h'] ?? 0) <= 0) return;
                 $shadowX = $el['shadowX'] ?? 0;
                 $shadowY = $el['shadowY'] ?? 0;
                 $shadowColor = $el['shadowColor'] ?? 0;
@@ -174,6 +183,7 @@ class GdiRenderContext extends RenderContext
                 break;
 
             case 'input':
+                if (($el['w'] ?? 0) <= 0 || ($el['h'] ?? 0) <= 0) return;
                 // 背景
                 $radius = $el['borderRadius'] ?? 0;
                 if ($radius > 0) {
@@ -210,6 +220,7 @@ class GdiRenderContext extends RenderContext
             case 'scroll-container':
                 $x = $el['x'] ?? 0; $y = $el['y'] ?? 0;
                 $w = $el['w'] ?? 0; $h = $el['h'] ?? 0;
+                if ($w <= 0 || $h <= 0) return;
                 $bg = $el['bg'] ?? 0x2D2D2D;
                 $radius = $el['borderRadius'] ?? 0;
                 $opacity = $el['opacity'] ?? 1.0;
@@ -225,6 +236,7 @@ class GdiRenderContext extends RenderContext
             case 'scrollbar-v':
                 $x = $el['x'] ?? 0; $y = $el['y'] ?? 0;
                 $w = $el['w'] ?? 0; $h = $el['h'] ?? 0;
+                if ($w <= 0 || $h <= 0) return;
                 $contentH = $el['contentHeight'] ?? 0;
                 if ($contentH > $h) {
                     $scrollTop = $el['scrollTop'] ?? 0;
@@ -245,6 +257,7 @@ class GdiRenderContext extends RenderContext
             case 'scrollbar-h':
                 $x = $el['x'] ?? 0; $y = $el['y'] ?? 0;
                 $w = $el['w'] ?? 0; $h = $el['h'] ?? 0;
+                if ($w <= 0 || $h <= 0) return;
                 $contentW = $el['contentWidth'] ?? 0;
                 if ($contentW > $w) {
                     $scrollLeft = $el['scrollLeft'] ?? 0;
@@ -263,17 +276,26 @@ class GdiRenderContext extends RenderContext
                 break;
 
             case 'clip-push':
+                if (($el['w'] ?? 0) <= 0 || ($el['h'] ?? 0) <= 0) return;
+                $this->clipStack[] = [
+                    'x' => $el['x'] ?? 0,
+                    'y' => $el['y'] ?? 0,
+                    'w' => $el['w'] ?? 0,
+                    'h' => $el['h'] ?? 0,
+                ];
                 vue_push_clip($this->hdc,
                     $el['x'] ?? 0, $el['y'] ?? 0,
                     $el['w'] ?? 0, $el['h'] ?? 0);
                 break;
 
             case 'clip-pop':
+                array_pop($this->clipStack);
                 vue_pop_clip($this->hdc);
                 break;
 
             // ── 新增图元类型 ──────────────────
             case 'line-h':
+                if (($el['w'] ?? 0) <= 0) return;
                 $this->fillRect(
                     $el['x'] ?? 0, $el['y'] ?? 0,
                     $el['w'] ?? 0, max($el['thickness'] ?? 1, 1),
@@ -282,6 +304,7 @@ class GdiRenderContext extends RenderContext
                 break;
 
             case 'line-v':
+                if (($el['h'] ?? 0) <= 0) return;
                 $this->fillRect(
                     $el['x'] ?? 0, $el['y'] ?? 0,
                     max($el['thickness'] ?? 1, 1), $el['h'] ?? 0,
@@ -292,6 +315,7 @@ class GdiRenderContext extends RenderContext
             case 'progress':
                 $x = $el['x'] ?? 0; $y = $el['y'] ?? 0;
                 $w = $el['w'] ?? 0; $h = $el['h'] ?? 0;
+                if ($w <= 0 || $h <= 0) return;
                 // 轨道
                 $this->fillRect($x, $y, $w, $h, $el['trackColor'] ?? 0x333333);
                 // 填充进度
@@ -325,6 +349,37 @@ class GdiRenderContext extends RenderContext
 
     public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold): void
     {
+        if ($x < 0 || $y < 0) return;
+        if (strlen($text) === 0) return;
+        if ($fontSize <= 0) return;
+
+        // 检查文本是否超出当前 clip 区域 — 防止 GDI 在 clip 边界处
+        // 反复调用 TextOutW/DrawTextW 累积损坏 HDC 状态（全黑屏问题）
+        $clip = ($this->clipStack !== []) ? $this->clipStack[count($this->clipStack) - 1] : null;
+        if ($clip !== null) {
+            $clipRight = $clip['x'] + $clip['w'];
+            // 粗体字符比常规体宽约 40%，需乘以粗体因子
+            $boldFactor = $bold ? 1.4 : 1.0;
+            $charWidth = (int)($fontSize * 0.62 * $boldFactor);
+            if ($charWidth < 1) $charWidth = 1;
+            $textLen = strlen($text);
+            $textWidth = $textLen * $charWidth;
+            $textRight = $x + $textWidth;
+
+            // 8px 安全余量：吸收字体渲染引擎的亚像素溢出，防止累积 HDC 损坏
+            // 从 6px 增加到 8px 以应对不同 Windows 版本/DPI 下的字体渲染差异
+            $effectiveClipRight = $clipRight - 8;
+
+            // 如果文本右边缘超出 clip 右边界（含安全余量），截断到可见范围
+            if ($textRight > $effectiveClipRight) {
+                $maxChars = max(0, (int)(($effectiveClipRight - $x) / $charWidth));
+                if ($maxChars <= 0) return; // 完全不可见，跳过绘制
+                if ($maxChars < $textLen) {
+                    $text = substr($text, 0, $maxChars);
+                }
+            }
+        }
+
         vue_draw_text($this->hdc, $x, $y, $text, $fontSize, $color, $bold);
     }
 

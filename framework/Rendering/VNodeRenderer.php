@@ -117,9 +117,12 @@ class VNodeRenderer
             }
         }
 
-        // 滚动容器处理（裁切 + 滚动条）
-        $wasScrollPush = false;
-        if ($node->isScrollContainer) {
+        // ── 裁切区域处理（clip-push / clip-pop）──
+        // 滚动容器（overflow:auto/scroll）和 overflow:hidden 都需要裁切
+        $pushedClip = false;
+        $isScrollNode = $node->isScrollContainer;
+
+        if ($isScrollNode) {
             $this->scrollCtxStack[] = [
                 'x' => $node->x, 'y' => $node->y,
                 'w' => $node->w, 'h' => $node->h,
@@ -129,8 +132,17 @@ class VNodeRenderer
                 'overflowY' => $node->style['overflowY'] ?? $node->style['overflow'] ?? 'visible',
                 'layer' => $node->layer,
             ];
-            $wasScrollPush = true;
+            $pushedClip = true;
+        } else {
+            // 非滚动容器：overflow:hidden 也需要裁切子元素
+            $noX = $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible';
+            $noY = $node->style['overflowY'] ?? $node->style['overflow'] ?? 'visible';
+            if ($noX === 'hidden' || $noY === 'hidden') {
+                $pushedClip = true;
+            }
+        }
 
+        if ($pushedClip) {
             $layer = $node->layer;
             if ($layer > $maxLayer) $maxLayer = $layer;
             if (!isset($elementsByLayer[$layer])) {
@@ -150,10 +162,12 @@ class VNodeRenderer
             }
         }
 
-        if ($wasScrollPush) {
-            $scrollCtx = array_pop($this->scrollCtxStack);
+        if ($pushedClip) {
+            if ($isScrollNode) {
+                array_pop($this->scrollCtxStack);
+            }
 
-            $layer = $scrollCtx['layer'];
+            $layer = $node->layer;
             if ($layer > $maxLayer) $maxLayer = $layer;
             if (!isset($elementsByLayer[$layer])) {
                 $elementsByLayer[$layer] = [];
@@ -163,8 +177,11 @@ class VNodeRenderer
                 'layer' => $layer,
             ];
 
-            // 在子元素 + clip-pop 之后绘制滚动条（确保在顶层）
-            $this->emitScrollbarElements($node, $scrollCtx, $elementsByLayer, $maxLayer);
+            // 滚动容器还需在 clip-pop 之后绘制滚动条（确保在顶层）
+            if ($isScrollNode) {
+                $scrollCtx = ['layer' => $node->layer];
+                $this->emitScrollbarElements($node, $scrollCtx, $elementsByLayer, $maxLayer);
+            }
         }
 
         // 标记节点为已绘制
@@ -401,7 +418,8 @@ class VNodeRenderer
         $containerX = (int)($props['container-x'] ?? $x);
 
         if ($align === 'right' || $align === 'center') {
-            $textWidth = strlen($text) * (int)($fontSize * 0.6);
+            $boldFactor = $bold ? 1.4 : 1.0;
+            $textWidth = strlen($text) * (int)($fontSize * 0.62 * $boldFactor);
             if ($align === 'right') {
                 $x = $containerX + $containerW - 12 - $textWidth;
                 if ($x < $containerX + 4) $x = $containerX + 4;
@@ -457,6 +475,27 @@ class VNodeRenderer
         }
         if ($label === '' && isset($props['@click'])) {
             $label = $props['label'] ?? '';
+        }
+
+        // 若标签仍为空，遍历子 RenderNode 提取文本（处理 <button><span :bind="x">{{ x }}</span></button> 模式）
+        if ($label === '') {
+            foreach ($node->children as $child) {
+                if (is_string($child->content) && $child->content !== '') {
+                    $label = $child->content;
+                    break;
+                }
+                // 检查子节点的 bind 引用
+                if ($child->sourceVNode !== null && $child->sourceVNode->props !== null) {
+                    $childBindKey = $child->sourceVNode->props[':bind'] ?? $child->sourceVNode->props['bind'] ?? '';
+                    if ($childBindKey !== '') {
+                        $childLabel = $this->currentComponent()->getBindValue($childBindKey);
+                        if ($childLabel !== '') {
+                            $label = $childLabel;
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         $labelFontSize = 22;

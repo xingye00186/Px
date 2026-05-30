@@ -446,6 +446,221 @@ test('needsPaint 控制节点是否生成元素', function () {
     assert_true($c1->needsPaint(6), 'lastPaintFrame=5 < currentFrame=6 → needsPaint（帧号递增）');
 });
 
+// ================================================================
+echo "\n--- 6. overflow:hidden → Clip-Push / Clip-Pop ---\n";
+
+test('overflow:hidden 生成 clip-push/clip-pop', function () {
+    $parent = rn('div', ['bg' => 0x333333, 'overflow' => 'hidden']);
+    $parent->x = 0; $parent->y = 0; $parent->w = 100; $parent->h = 100; $parent->layer = 0;
+    $parent->sourceVNode = new VNode('div');
+
+    $root = rn('#root', [], [$parent]);
+    $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $layer0 = $result['elements'][0] ?? [];
+
+    $foundClipPush = false;
+    $foundClipPop = false;
+    foreach ($layer0 as $el) {
+        if ($el['type'] === 'clip-push') {
+            $foundClipPush = true;
+            assert_eq($el['x'], 0, 'clip-push x 应为父容器 x');
+            assert_eq($el['y'], 0, 'clip-push y 应为父容器 y');
+            assert_eq($el['w'], 100, 'clip-push w 应为父容器 w');
+            assert_eq($el['h'], 100, 'clip-push h 应为父容器 h');
+        }
+        if ($el['type'] === 'clip-pop') {
+            $foundClipPop = true;
+        }
+    }
+
+    assert_true($foundClipPush, 'overflow:hidden 应生成 clip-push');
+    assert_true($foundClipPop, 'overflow:hidden 应生成 clip-pop');
+});
+
+test('overflow:hidden clip-push 在子元素之前且 clip-pop 在子元素之后', function () {
+    $parent = rn('div', ['bg' => 0x333333, 'overflow' => 'hidden']);
+    $parent->x = 0; $parent->y = 0; $parent->w = 100; $parent->h = 100; $parent->layer = 0;
+    $parent->sourceVNode = new VNode('div');
+
+    $child = rn('div', ['bg' => 0x555555]);
+    $child->x = 50; $child->y = 50; $child->w = 50; $child->h = 50; $child->layer = 0;
+    $child->sourceVNode = new VNode('div');
+    $parent->addChild($child);
+
+    $root = rn('#root', [], [$parent]);
+    $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $layer0 = $result['elements'][0] ?? [];
+
+    $clipPushIdx = null;
+    $clipPopIdx = null;
+    $childIdx = null;
+    foreach ($layer0 as $i => $el) {
+        if ($el['type'] === 'clip-push') $clipPushIdx = $i;
+        if ($el['type'] === 'clip-pop') $clipPopIdx = $i;
+        if ($el['type'] === 'rect' && ($el['color'] ?? 0) === 0x555555) $childIdx = $i;
+    }
+
+    assert_not_null($clipPushIdx, '应有 clip-push');
+    assert_not_null($clipPopIdx, '应有 clip-pop');
+
+    if ($childIdx !== null) {
+        assert_true($clipPushIdx < $childIdx, 'clip-push 应在子 rect 之前');
+        assert_true($clipPopIdx > $childIdx, 'clip-pop 应在子 rect 之后');
+    }
+});
+
+test('overflow:visible 不触发 clip-push/clip-pop', function () {
+    $parent = rn('div', ['bg' => 0x333333]); // 默认 overflow:visible
+    $parent->x = 0; $parent->y = 0; $parent->w = 100; $parent->h = 100; $parent->layer = 0;
+    $parent->sourceVNode = new VNode('div');
+
+    $root = rn('#root', [], [$parent]);
+    $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $layer0 = $result['elements'][0] ?? [];
+    foreach ($layer0 as $el) {
+        if ($el['type'] === 'clip-push' || $el['type'] === 'clip-pop') {
+            assert(false, 'overflow:visible 不应生成 clip-push 或 clip-pop');
+        }
+    }
+});
+
+test('scroll-container 场景中 overflow:hidden 不额外生成 clip-push/clip-pop', function () {
+    // scrollContainer 已生成 clip-push/clip-pop，overflow:hidden 不应重复生成
+    $scroll = rn('div', ['bg' => 0x2D2D2D, 'overflow' => 'hidden']);
+    $scroll->x = 0; $scroll->y = 0; $scroll->w = 300; $scroll->h = 200; $scroll->layer = 0;
+    $scroll->isScrollContainer = true;
+    $scroll->contentHeight = 500;
+    $scroll->scrollTop = 50;
+    $scroll->sourceVNode = new VNode('div');
+
+    $root = rn('#root', [], [$scroll]);
+    $root->x = 0; $root->y = 0; $root->w = 400; $root->h = 300;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $layer0 = $result['elements'][0] ?? [];
+
+    $clipPushCount = 0;
+    $clipPopCount = 0;
+    $scrollContainerCount = 0;
+    foreach ($layer0 as $el) {
+        if ($el['type'] === 'clip-push') $clipPushCount++;
+        if ($el['type'] === 'clip-pop') $clipPopCount++;
+        if ($el['type'] === 'scroll-container') $scrollContainerCount++;
+    }
+
+    // scrollContainer 本应生成 1 组 clip-push/clip-pop
+    assert_eq($clipPushCount, 1, 'scroll-container 应恰好生成 1 个 clip-push');
+    assert_eq($clipPopCount, 1, 'scroll-container 应恰好生成 1 个 clip-pop');
+});
+
+// ================================================================
+echo "\n--- 7. 嵌套 overflow:hidden 边界 ---\n";
+
+test('嵌套 overflow:hidden 父子各自生成 clip-push/clip-pop', function () {
+    $child = rn('div', ['bg' => 0x555555, 'overflow' => 'hidden']);
+    $child->x = 10; $child->y = 10; $child->w = 50; $child->h = 50; $child->layer = 0;
+    $child->sourceVNode = new VNode('div');
+
+    $parent = rn('div', ['bg' => 0x333333, 'overflow' => 'hidden']);
+    $parent->x = 0; $parent->y = 0; $parent->w = 100; $parent->h = 100; $parent->layer = 0;
+    $parent->sourceVNode = new VNode('div');
+    $parent->addChild($child);
+
+    $root = rn('#root', [], [$parent]);
+    $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $layer0 = $result['elements'][0] ?? [];
+
+    $clipPushCount = 0;
+    $clipPopCount = 0;
+    foreach ($layer0 as $el) {
+        if ($el['type'] === 'clip-push') $clipPushCount++;
+        if ($el['type'] === 'clip-pop') $clipPopCount++;
+    }
+
+    // parent + child = 2 pairs
+    assert_eq($clipPushCount, 2, '父子两个 overflow:hidden 应生成 2 个 clip-push');
+    assert_eq($clipPopCount, 2, '父子两个 overflow:hidden 应生成 2 个 clip-pop');
+
+    // Verify the outer clip-push matches parent, inner matches child
+    $outerClipIdx = null;
+    $innerClipIdx = null;
+    foreach ($layer0 as $i => $el) {
+        if ($el['type'] === 'clip-push' && $el['w'] === 100) $outerClipIdx = $i;
+        if ($el['type'] === 'clip-push' && $el['w'] === 50) $innerClipIdx = $i;
+    }
+    assert_not_null($outerClipIdx, 'outer clip-push 应存在');
+    assert_not_null($innerClipIdx, 'inner clip-push 应存在');
+    assert_true($outerClipIdx < $innerClipIdx, 'outer clip-push 应在 inner clip-push 之前');
+});
+
+test('多个兄弟 overflow:hidden 各自独立生成 clip-push/clip-pop', function () {
+    $child1 = rn('div', ['bg' => 0x444444, 'overflow' => 'hidden']);
+    $child1->x = 10; $child1->y = 10; $child1->w = 60; $child1->h = 60; $child1->layer = 0;
+    $child1->sourceVNode = new VNode('div');
+
+    $child2 = rn('div', ['bg' => 0x666666, 'overflow' => 'hidden']);
+    $child2->x = 80; $child2->y = 10; $child2->w = 60; $child2->h = 60; $child2->layer = 0;
+    $child2->sourceVNode = new VNode('div');
+
+    $parent = rn('div', ['bg' => 0x333333]);
+    $parent->x = 0; $parent->y = 0; $parent->w = 200; $parent->h = 100; $parent->layer = 0;
+    $parent->sourceVNode = new VNode('div');
+    $parent->addChild($child1);
+    $parent->addChild($child2);
+
+    $root = rn('#root', [], [$parent]);
+    $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $layer0 = $result['elements'][0] ?? [];
+
+    $clipPushCount = 0;
+    $clipPopCount = 0;
+    foreach ($layer0 as $el) {
+        if ($el['type'] === 'clip-push') $clipPushCount++;
+        if ($el['type'] === 'clip-pop') $clipPopCount++;
+    }
+
+    // 两个兄弟各自 overflow:hidden
+    assert_eq($clipPushCount, 2, '两个兄弟 overflow:hidden 应各生成 clip-push');
+    assert_eq($clipPopCount, 2, '两个兄弟 overflow:hidden 应各生成 clip-pop');
+
+    // Verify order: child1's push, child1's pop, child2's push, child2's pop
+    $push1Idx = null; $push2Idx = null;
+    $pop1Idx = null; $pop2Idx = null;
+    foreach ($layer0 as $i => $el) {
+        if ($el['type'] === 'clip-push' && $el['w'] === 60 && $el['x'] === 10) $push1Idx = $i;
+        if ($el['type'] === 'clip-push' && $el['w'] === 60 && $el['x'] === 80) $push2Idx = $i;
+        if ($el['type'] === 'clip-pop') {
+            if ($pop1Idx === null) $pop1Idx = $i;
+            else $pop2Idx = $i;
+        }
+    }
+    assert_true($push1Idx < $pop1Idx, 'child1 clip-push 应在 child1 clip-pop 之前');
+    assert_true($pop1Idx < $push2Idx, 'child1 clip-pop 应在 child2 clip-push 之前');
+    assert_true($push2Idx < $pop2Idx, 'child2 clip-push 应在 child2 clip-pop 之前');
+});
+
 echo "\n";
 $exitCode = print_summary();
 exit($exitCode);
