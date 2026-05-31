@@ -233,12 +233,22 @@ void php_vue_alpha_fill_rect(Int hdc, Int x, Int y, Int w, Int h, Int bgrColor, 
 
 // 绘制文本
 void php_vue_draw_text(Int hdc, Int x, Int y, String text, Int fontSize, Int rgbColor, Int bold) {
+    // 防御：防止空文本或空字体导致 CreateFont 失败
+    if (text.length() == 0) return;
+    if ((int)fontSize <= 0) return;
+
+    // 获取当前裁剪区域，避免 TextOutW 在裁剪边界外渲染（累积损坏 HDC）
+    RECT clipRect;
+    if (GetClipBox((HDC)hdc, &clipRect) == NULLREGION) return; // 完全裁剪，跳过
+    if (clipRect.right > 0 && (int)x >= clipRect.right) return; // 完全在裁剪区域右侧
+
     SetTextColor((HDC)hdc, (COLORREF)rgbColor);
     SetBkMode((HDC)hdc, TRANSPARENT);
     HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
         bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Microsoft YaHei");
+    if (hFont == NULL) return;
     HFONT oldFont = (HFONT)SelectObject((HDC)hdc, hFont);
     // Convert UTF-8 to UTF-16 for Unicode text rendering (supports CJK)
     int wlen = MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, NULL, 0);

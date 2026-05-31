@@ -366,9 +366,10 @@ class GdiRenderContext extends RenderContext
             $textWidth = $textLen * $charWidth;
             $textRight = $x + $textWidth;
 
-            // 8px 安全余量：吸收字体渲染引擎的亚像素溢出，防止累积 HDC 损坏
-            // 从 6px 增加到 8px 以应对不同 Windows 版本/DPI 下的字体渲染差异
-            $effectiveClipRight = $clipRight - 8;
+            // 12px 安全余量：吸收字体渲染引擎的亚像素溢出，防止累积 HDC 损坏
+            // 从 8px 增加到 12px：粗体 36px 文本在 318px 容器内最多 10 字符，
+            // 余量不足会导致 TextOutW 在 clip 边界反复调用时损坏 GDI 状态（全黑屏）
+            $effectiveClipRight = $clipRight - 12;
 
             // 如果文本右边缘超出 clip 右边界（含安全余量），截断到可见范围
             if ($textRight > $effectiveClipRight) {
