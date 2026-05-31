@@ -1,0 +1,19 @@
+name: design-guide
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+sources:
+  - main.php
+  - ./gen
+  - ../../framework/Core
+  - ../../framework/Platform
+  - ../../framework/Rendering
+  - ../../framework/BaseComponent.php
+  - ../../framework/ReactiveComponent.php
+  - ../../framework/interfaces
+  - ../../stub
+# Note: Animation and Styling modules excluded - design-guide doesn't use them
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php
