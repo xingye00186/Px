@@ -38,4 +38,12 @@ interface Platform
      * @return PlatformEvent[]
      */
     public function pollEvents(): array;
+
+    /**
+     * 设置动画定时器回调。
+     *
+     * @param callable $callback 每帧触发的回调函数
+     * @param int $intervalMs 帧间隔（毫秒），默认约 16ms ≈ 60fps
+     */
+    public function setAnimationTimer(callable $callback, int $intervalMs = 16): void;
 }

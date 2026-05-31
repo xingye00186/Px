@@ -8,6 +8,10 @@ use Px\Rendering\GdiRenderContext;
 class Win32Platform implements Platform
 {
     private int $hwnd = 0;
+    private int $animationTimerId = 0;
+    /** @var callable|null */
+    private $animationCallback = null;
+    private bool $animationTimerSet = false;
 
     private array $eventMap = [
         WinMsg::WM_LBUTTONDOWN => ['mouse', 'down'],
@@ -30,6 +34,12 @@ class Win32Platform implements Platform
 
     public function shutdown(): void
     {
+        // 停止动画定时器
+        if ($this->animationTimerSet && $this->hwnd !== 0) {
+            vue_kill_timer($this->hwnd, $this->animationTimerId);
+            $this->animationTimerSet = false;
+            $this->animationTimerId = 0;
+        }
         // Window is destroyed by the native layer on quit
         $this->hwnd = 0;
     }
@@ -37,6 +47,22 @@ class Win32Platform implements Platform
     public function shouldClose(): bool
     {
         return vue_quit_requested();
+    }
+
+    public function setAnimationTimer(callable $callback, int $intervalMs = 16): void
+    {
+        // 停止旧的定时器
+        if ($this->animationTimerSet && $this->hwnd !== 0) {
+            vue_kill_timer($this->hwnd, $this->animationTimerId);
+            $this->animationTimerSet = false;
+        }
+
+        $this->animationCallback = $callback;
+
+        if ($this->hwnd !== 0) {
+            $this->animationTimerId = vue_set_timer($this->hwnd, $intervalMs);
+            $this->animationTimerSet = ($this->animationTimerId > 0);
+        }
     }
 
     /** @return PlatformEvent[] */
@@ -51,6 +77,15 @@ class Win32Platform implements Platform
         $msgType = $msg[1] ?? 0;
         $wParam  = $msg[2] ?? 0;
         $lParam  = $msg[3] ?? 0;
+
+        // 处理定时器消息（动画帧驱动）
+        if ($msgType === WinMsg::WM_TIMER) {
+            $timerId = (int)$wParam;
+            if ($timerId === $this->animationTimerId && $this->animationCallback !== null) {
+                ($this->animationCallback)();
+            }
+            return $events;
+        }
 
         if (isset($this->eventMap[$msgType])) {
             $cat    = $this->eventMap[$msgType][0];
