@@ -2140,6 +2140,15 @@ foreach ($styleWarnings as $w) {
     echo "  [WARN] CSS: $w\n";
 }
 
+// Step 2.5: Parse @keyframes
+$keyframesFound = [];
+if (preg_match_all('/@keyframes\s+([a-zA-Z0-9_-]+)/', $styles, $kfMatches)) {
+    $keyframesFound = $kfMatches[1];
+}
+if (count($keyframesFound) > 0) {
+    echo "  Keyframes: " . implode(', ', $keyframesFound) . "\n";
+}
+
 // Step 3: Parse template → VNode tree
 $parser = new TemplateParser($componentRegistry);
 $root = $parser->parse($template);
