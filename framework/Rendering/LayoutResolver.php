@@ -51,7 +51,21 @@ class LayoutResolver
     ): void {
         if ($node->layoutDirty) {
             // ── 脏路径：完整布局计算 ──
+            // 统一入口：在 style 解析处合并 animatedStyle
+            // animatedStyle 优先级高于 style，但不污染原始 style
             $style = $node->style;
+            if ($node->isAnimating && !empty($node->animatedStyle)) {
+                // 深度拷贝：避免修改原始 $node->style
+                $effectiveStyle = [];
+                foreach ($style as $k => $v) {
+                    $effectiveStyle[$k] = $v;
+                }
+                foreach ($node->animatedStyle as $k => $v) {
+                    $effectiveStyle[$k] = $v;
+                }
+            } else {
+                $effectiveStyle = $style;
+            }
 
             // Inherit parent's layer (CSS stacking context)
             if ($parent !== null && $parent->layer > 0) {
@@ -59,14 +73,14 @@ class LayoutResolver
             }
 
             // Apply own z-index → RenderNode layer
-            $zIndex = (int)($style['zIndex'] ?? $style['zindex'] ?? 0);
+            $zIndex = (int)($effectiveStyle['zIndex'] ?? $effectiveStyle['zindex'] ?? 0);
             if ($zIndex > $node->layer) {
                 $node->layer = $zIndex;
             }
 
             // Check for scroll container
-            $overflowX = $style['overflowX'] ?? $style['overflow'] ?? 'visible';
-            $overflowY = $style['overflowY'] ?? $style['overflow'] ?? 'visible';
+            $overflowX = $effectiveStyle['overflowX'] ?? $effectiveStyle['overflow'] ?? 'visible';
+            $overflowY = $effectiveStyle['overflowY'] ?? $effectiveStyle['overflow'] ?? 'visible';
             $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
             $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
 
@@ -75,18 +89,18 @@ class LayoutResolver
             }
 
             // Determine display mode
-            $display = $style['display'] ?? 'block';
-            $position = $style['position'] ?? 'static';
+            $display = $effectiveStyle['display'] ?? 'block';
+            $position = $effectiveStyle['position'] ?? 'static';
 
             switch ($display) {
                 case 'flex':
-                    $this->resolveFlexLayout($node, $parentX, $parentY, $parent, $scrollContainers);
+                    $this->resolveFlexLayout($node, $parentX, $parentY, $parent, $scrollContainers, $effectiveStyle);
                     break;
                 case 'grid':
-                    $this->resolveGridLayout($node, $parentX, $parentY, $parent, $scrollContainers);
+                    $this->resolveGridLayout($node, $parentX, $parentY, $parent, $scrollContainers, $effectiveStyle);
                     break;
                 default: // block, scroll-container, etc.
-                    $this->resolveBlockLayout($node, $parentX, $parentY, $parent, $position, $scrollContainers);
+                    $this->resolveBlockLayout($node, $parentX, $parentY, $parent, $position, $scrollContainers, $effectiveStyle);
                     break;
             }
 
@@ -147,10 +161,9 @@ class LayoutResolver
         int $parentY,
         ?RenderNode $parent,
         string $position,
-        array &$scrollContainers
+        array &$scrollContainers,
+        array $style
     ): void {
-        $style = $node->style;
-
         // Read position from style
         $left = $style['left'] ?? 0;
         $top  = $style['top'] ?? 0;
@@ -186,6 +199,12 @@ class LayoutResolver
         $marginTop = $style['marginTop'] ?? $style['margin'] ?? 0;
         $node->x += $marginLeft;
         $node->y += $marginTop;
+
+        // Apply translate from animatedStyle (AnimationManager writes to animatedStyle)
+        $translateX = $style['translateX'] ?? 0;
+        $translateY = $style['translateY'] ?? 0;
+        $node->x += $translateX;
+        $node->y += $translateY;
 
         $node->w = max(0, (int)$width);
         $node->h = max(0, (int)$height);
@@ -315,10 +334,9 @@ class LayoutResolver
         int $parentX,
         int $parentY,
         ?RenderNode $parent,
-        array &$scrollContainers
+        array &$scrollContainers,
+        array $style
     ): void {
-        $style = $node->style;
-
         // Container position
         $left   = $style['left'] ?? 0;
         $top    = $style['top'] ?? 0;
@@ -327,6 +345,13 @@ class LayoutResolver
 
         $node->x = $left + $parentX;
         $node->y = $top + $parentY;
+
+        // Apply translate from animatedStyle
+        $translateX = $style['translateX'] ?? 0;
+        $translateY = $style['translateY'] ?? 0;
+        $node->x += $translateX;
+        $node->y += $translateY;
+
         $node->w = max(0, (int)$width);
         $node->h = max(0, (int)$height);
 
@@ -547,10 +572,9 @@ class LayoutResolver
         int $parentX,
         int $parentY,
         ?RenderNode $parent,
-        array &$scrollContainers
+        array &$scrollContainers,
+        array $style
     ): void {
-        $style = $node->style;
-
         $left   = $style['left'] ?? 0;
         $top    = $style['top'] ?? 0;
         $width  = $style['width'] ?? 0;
@@ -558,6 +582,13 @@ class LayoutResolver
 
         $node->x = $left + $parentX;
         $node->y = $top + $parentY;
+
+        // Apply translate from animatedStyle
+        $translateX = $style['translateX'] ?? 0;
+        $translateY = $style['translateY'] ?? 0;
+        $node->x += $translateX;
+        $node->y += $translateY;
+
         $node->w = max(0, (int)$width);
         $node->h = max(0, (int)$height);
 
