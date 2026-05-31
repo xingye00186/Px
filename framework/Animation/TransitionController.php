@@ -25,7 +25,7 @@ class TransitionController
     public const STATE_LEFT = 'left';
 
     /** @var string 当前状态 */
-    public string $state = self::STATE_IDLE;
+    public string $state = 'idle';
 
     /** @var RenderNode|null 关联的 RenderNode */
     public ?RenderNode $node = null;
