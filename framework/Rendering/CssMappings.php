@@ -699,4 +699,220 @@ class CssMappings
         }
         return implode(';', $parts) . ';';
     }
+
+    // ============================================================
+    // Animation & Transition parsing
+    // ============================================================
+
+    /**
+     * 解析 CSS transition 属性。
+     *
+     * 格式: property duration timing-function delay
+     * 示例: "all 300ms ease-in-out"
+     *       "background-color 200ms linear, transform 300ms ease"
+     *
+     * @param string $value CSS transition 值
+     * @return array 每个属性的解析结果
+     *   [
+     *     ['property' => 'all', 'duration' => 300, 'timing' => 'ease', 'delay' => 0],
+     *     ...
+     *   ]
+     */
+    public static function parseTransition(string $value): array
+    {
+        $result = [];
+        $value = trim($value);
+
+        if ($value === '' || $value === 'none') {
+            return $result;
+        }
+
+        // 按逗号分割多个 transition
+        $transitions = preg_split('/\s*,\s*/', $value);
+        foreach ($transitions as $transition) {
+            $transition = trim($transition);
+            if ($transition === '') continue;
+
+            // 解析各部分
+            $parts = preg_split('/\s+/', $transition);
+            $parsed = [
+                'property' => 'all',
+                'duration' => 300,
+                'timing'   => 'ease',
+                'delay'    => 0,
+            ];
+
+            foreach ($parts as $i => $part) {
+                // 检测是时间值（秒或毫秒）
+                if (preg_match('/^(\d+(?:\.\d+)?)(m?s)$/', $part, $m)) {
+                    $time = (float)$m[1];
+                    if ($m[2] === 's') {
+                        $time *= 1000; // 秒转毫秒
+                    }
+                    if ($parsed['duration'] === 300 && $i < 3) {
+                        $parsed['duration'] = (int)$time;
+                    } else {
+                        $parsed['delay'] = (int)$time;
+                    }
+                } elseif (stripos($part, 'ms') !== false || stripos($part, 's') !== false) {
+                    // 已在上面处理
+                } elseif (in_array(strtolower($part), ['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out'])) {
+                    $parsed['timing'] = strtolower($part);
+                } elseif ($part !== 'cubic-bezier' && strpos($part, '(') === false) {
+                    // 排除函数名，保留属性名
+                    $parsed['property'] = strtolower($part);
+                }
+            }
+
+            $result[] = $parsed;
+        }
+
+        return $result;
+    }
+
+    /**
+     * 解析 CSS animation 属性。
+     *
+     * 格式: name duration timing-function delay count direction fill-mode play-state
+     * 示例: "fadeIn 300ms ease-in-out"
+     *
+     * @param string $value CSS animation 值
+     * @return array 解析结果
+     */
+    public static function parseAnimation(string $value): array
+    {
+        $value = trim($value);
+
+        if ($value === '' || $value === 'none') {
+            return [
+                'name'     => '',
+                'duration' => 0,
+                'timing'   => 'ease',
+                'delay'    => 0,
+                'count'    => 1,
+                'direction' => 'normal',
+                'fillMode'  => 'none',
+                'playState' => 'running',
+            ];
+        }
+
+        $parts = preg_split('/\s+/', $value);
+        $parsed = [
+            'name'      => '',
+            'duration'  => 0,
+            'timing'    => 'ease',
+            'delay'     => 0,
+            'count'     => 1,
+            'direction' => 'normal',
+            'fillMode'  => 'none',
+            'playState'  => 'running',
+        ];
+
+        foreach ($parts as $part) {
+            // 时间值
+            if (preg_match('/^(\d+(?:\.\d+)?)(m?s)$/', $part, $m)) {
+                $time = (float)$m[1];
+                if ($m[2] === 's') {
+                    $time *= 1000;
+                }
+                if ($parsed['duration'] === 0) {
+                    $parsed['duration'] = (int)$time;
+                } else {
+                    $parsed['delay'] = (int)$time;
+                }
+            }
+            // 缓动函数
+            elseif (in_array(strtolower($part), ['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out'])) {
+                $parsed['timing'] = strtolower($part);
+            }
+            // 循环次数
+            elseif ($part === 'infinite') {
+                $parsed['count'] = -1; // -1 表示无限
+            } elseif (ctype_digit($part)) {
+                $parsed['count'] = (int)$part;
+            }
+            // 方向
+            elseif (in_array(strtolower($part), ['normal', 'reverse', 'alternate', 'alternate-reverse'])) {
+                $parsed['direction'] = strtolower($part);
+            }
+            // 填充模式
+            elseif (in_array(strtolower($part), ['none', 'forwards', 'backwards', 'both'])) {
+                $parsed['fillMode'] = strtolower($part);
+            }
+            // 播放状态
+            elseif (in_array(strtolower($part), ['running', 'paused'])) {
+                $parsed['playState'] = strtolower($part);
+            }
+            // 动画名称
+            else {
+                $parsed['name'] = $part;
+            }
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * 解析 CSS transform 属性。
+     *
+     * 格式: translateX(X) translateY(Y)
+     * 示例: "translateX(10px) translateY(-20px)"
+     *       "translate(10px, -20px)"
+     *
+     * @param string $value CSS transform 值
+     * @return array ['translateX' => int, 'translateY' => int]
+     */
+    public static function parseTransform(string $value): array
+    {
+        $result = ['translateX' => 0, 'translateY' => 0];
+        $value = trim($value);
+
+        if ($value === '') {
+            return $result;
+        }
+
+        // 解析 translate(X, Y) 简写形式
+        if (preg_match('/translate\s*\(\s*([^,)]+)\s*(?:,\s*([^,)]+))?\s*\)/i', $value, $m)) {
+            $result['translateX'] = self::parsePixels($m[1]);
+            if (isset($m[2]) && $m[2] !== '') {
+                $result['translateY'] = self::parsePixels($m[2]);
+            }
+            return $result;
+        }
+
+        // 解析 translateX(X)
+        if (preg_match('/translateX\s*\(\s*([^)]+)\s*\)/i', $value, $m)) {
+            $result['translateX'] = self::parsePixels($m[1]);
+        }
+
+        // 解析 translateY(Y)
+        if (preg_match('/translateY\s*\(\s*([^)]+)\s*\)/i', $value, $m)) {
+            $result['translateY'] = self::parsePixels($m[1]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * 序列化 transform 数组为 CSS 字符串。
+     *
+     * @param array $transform ['translateX' => int, 'translateY' => int]
+     * @return string CSS transform 值
+     */
+    public static function buildTransformString(array $transform): string
+    {
+        $parts = [];
+        $translateX = $transform['translateX'] ?? 0;
+        $translateY = $transform['translateY'] ?? 0;
+
+        if ($translateX !== 0 || $translateY !== 0) {
+            if ($translateY !== 0) {
+                $parts[] = "translate({$translateX}px, {$translateY}px)";
+            } else {
+                $parts[] = "translateX({$translateX}px)";
+            }
+        }
+
+        return implode(' ', $parts);
+    }
 }
