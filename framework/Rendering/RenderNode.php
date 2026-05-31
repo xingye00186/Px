@@ -44,6 +44,33 @@ class RenderNode
     /** 上次渲染时的 scrollTop，用于快速滚动路径比较 */
     public int $lastScrollTop = 0;
 
+    // ── 动画专用字段 ────────────────────────────────────────
+
+    /**
+     * 动画叠加样式（优先级高于 style）。
+     * 由 AnimationManager 每帧更新，动画结束后由 LayoutResolver 合并。
+     * 使用对象池管理，null 表示无动画。
+     */
+    public ?array $animatedStyle = null;
+
+    /**
+     * 是否正在动画中。
+     * 由 AnimationManager 设置，用于 LayoutResolver 检测。
+     */
+    public bool $isAnimating = false;
+
+    /**
+     * 上次布局完成时的 X 坐标（用于 FLIP 算法）。
+     * 仅在 onUpdated 回调中更新，动画过程中保持不变。
+     */
+    public int $lastX = 0;
+
+    /**
+     * 上次布局完成时的 Y 坐标（用于 FLIP 算法）。
+     * 仅在 onUpdated 回调中更新，动画过程中保持不变。
+     */
+    public int $lastY = 0;
+
     // ── 脏标记（用于增量更新）──────────────────────────────
 
     /** true → LayoutResolver 需重新计算此节点布局 */
