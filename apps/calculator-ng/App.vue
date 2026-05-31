@@ -552,6 +552,7 @@
             $this->reset();
         } else {
             $this->display = '0';
+            $this->expression = '';
             $this->hasDecimal = false;
             $this->newInput = true;
             $this->acLabel = 'AC';
