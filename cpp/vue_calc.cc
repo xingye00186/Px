@@ -19,6 +19,17 @@ using namespace php;
 
 static bool g_quitRequested = false;
 
+// 定时器回调映射表（支持多个定时器）
+static std::map<HWND, void(*)()> g_timerCallbacks;
+
+// 定时器回调函数（由 SetTimer 调用）
+void CALLBACK TimerCallback(HWND hwnd, UINT msg, UINT_PTR idEvent, DWORD time) {
+    auto it = g_timerCallbacks.find(hwnd);
+    if (it != g_timerCallbacks.end()) {
+        it->second();
+    }
+}
+
 LRESULT CALLBACK VueCalcWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_CLOSE:
@@ -28,6 +39,9 @@ LRESULT CALLBACK VueCalcWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         case WM_DESTROY:
             g_quitRequested = true;
             PostQuitMessage(0);
+            return 0;
+        case WM_TIMER:
+            // 由 TimerCallback 处理，此处不处理
             return 0;
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
@@ -284,4 +298,38 @@ void php_vue_draw_button(Int hdc, Int x, Int y, Int w, Int h, Int bgColor, Int b
     SelectObject((HDC)hdc, oldBrush);
     SelectObject((HDC)hdc, oldPen);
     DeleteObject(pen);
+}
+
+// ============================================================
+// Win32 Timer (Animation Frame Driver)
+// ============================================================
+
+// 设置定时器，返回定时器ID（>0成功，0失败）
+Int php_vue_set_timer(Int hWnd, Int intervalMs) {
+    HWND hwnd = (HWND)(Int)hWnd;
+    UINT_PTR id = SetTimer(hwnd, NULL, (UINT)intervalMs, TimerCallback);
+    return (Int)id;
+}
+
+// 停止定时器
+void php_vue_kill_timer(Int hWnd, Int timerId) {
+    HWND hwnd = (HWND)(Int)hWnd;
+    KillTimer(hwnd, (UINT_PTR)timerId);
+}
+
+// ============================================================
+// PHP Function Bindings (phpx extension)
+// ============================================================
+
+PHPX_FUNCTION(vue_set_timer) {
+    Int hWnd = argv[0].toInt();
+    Int intervalMs = argv[1].toInt();
+    Int result = php_vue_set_timer(hWnd, intervalMs);
+    RETURN (Int)result;
+}
+
+PHPX_FUNCTION(vue_kill_timer) {
+    Int hWnd = argv[0].toInt();
+    Int timerId = argv[1].toInt();
+    php_vue_kill_timer(hWnd, timerId);
 }

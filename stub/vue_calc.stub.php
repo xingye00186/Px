@@ -40,6 +40,8 @@ class WinMsg
     // ShowWindow commands
     public const SW_SHOW = 1;
     public const SW_HIDE = 0;
+    // 定时器消息
+    public const WM_TIMER = 0x0113;
 }
 
 // ---- 窗口管理 ----
@@ -61,3 +63,16 @@ function vue_push_clip(int $hdc, int $x, int $y, int $w, int $h): void {}
 function vue_pop_clip(int $hdc): void {}
 
 // ---- Scrollbar Hit Test ----
+function vue_hit_test_scrollbar(int $hwnd, int $x, int $y): array {}
+
+// ---- Animation Timer ----
+/**
+ * 设置 Win32 定时器，用于驱动帧动画循环。
+ *
+ * @param int $hwnd    窗口句柄
+ * @param int $intervalMs 定时器间隔（毫秒），约 16ms ≈ 60fps
+ * @return int 定时器 ID（>0 表示成功，0 表示失败）
+ */
+function vue_set_timer(int $hwnd, int $intervalMs): int {}
+
+function vue_kill_timer(int $hwnd, int $timerId): void {}
