@@ -3,17 +3,15 @@ mode: bin
 no-console: false
 platform: win32
 entry: main.php
+cxx-flags:
+  - /utf-8
 sources:
   - main.php
   - ./gen
-  - ../../framework/Core
-  - ../../framework/Platform
-  - ../../framework/Rendering
-  - ../../framework/BaseComponent.php
-  - ../../framework/ReactiveComponent.php
-  - ../../framework/interfaces
+  - ../../framework
   - ../../stub
-# Note: Animation and Styling modules excluded - design-guide doesn't use them
+  - ../../cpp
 ignore:
   - ../../framework/compiler
   - ../../framework/aot-checker.php
+  - ../../framework/Animation

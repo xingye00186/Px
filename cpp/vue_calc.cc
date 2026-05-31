@@ -283,6 +283,14 @@ void php_vue_pop_clip(Int hdc) {
     RestoreDC((HDC)hdc, -1);
 }
 
+// Hit test for scrollbar (returns array with scroll info)
+Array php_vue_hit_test_scrollbar(Int hwnd, Int x, Int y) {
+    Array result;
+    // Basic implementation - scrollbar hit test would be implemented here
+    // For now, return empty result indicating no scrollbar hit
+    return result;
+}
+
 // 绘制按钮(填充+边框)
 void php_vue_draw_button(Int hdc, Int x, Int y, Int w, Int h, Int bgColor, Int borderColor) {
     // 填充背景
@@ -315,21 +323,4 @@ Int php_vue_set_timer(Int hWnd, Int intervalMs) {
 void php_vue_kill_timer(Int hWnd, Int timerId) {
     HWND hwnd = (HWND)(Int)hWnd;
     KillTimer(hwnd, (UINT_PTR)timerId);
-}
-
-// ============================================================
-// PHP Function Bindings (phpx extension)
-// ============================================================
-
-PHPX_FUNCTION(vue_set_timer) {
-    Int hWnd = argv[0].toInt();
-    Int intervalMs = argv[1].toInt();
-    Int result = php_vue_set_timer(hWnd, intervalMs);
-    RETURN (Int)result;
-}
-
-PHPX_FUNCTION(vue_kill_timer) {
-    Int hWnd = argv[0].toInt();
-    Int timerId = argv[1].toInt();
-    php_vue_kill_timer(hWnd, timerId);
 }
