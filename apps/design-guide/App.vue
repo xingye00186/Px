@@ -1,37 +1,47 @@
 <template>
-  <div style="width:420px;height:720px;background:#1C1C1E">
+  <div style="width:420px;height:720px;background:#0F0F11">
     <!-- Header -->
-    <div style="left:0px;top:0px;width:420px;height:100px;text-align:center">
-      <h1 style="left:0px;top:20px;width:420px;font-size:24px;font-weight:600;color:#FFFFFF">Px Design Guide</h1>
-      <p style="left:0px;top:56px;width:420px;font-size:14px;color:#6B7280">Modern Design System Components</p>
+    <div style="left:0px;top:0px;width:420px;height:48px;display:flex;align-items:center;background:#16161A;border-bottom:1px solid #2A2A2E">
+      <span style="margin-left:16px;font-size:16px;font-weight:600;color:#FFFFFF">Px Design Guide</span>
     </div>
 
-    <!-- Tab Navigation -->
-    <div style="left:0px;top:100px;width:420px;height:48px;display:flex;flex-direction:row;gap:4px;padding:0 16px;box-sizing:border-box">
-      <div style="flex:1" :class="activeTab === 'colors' ? 'tab-active' : ''" @click="setTab" click-arg="colors">
-        <span>Colors</span>
+    <!-- Tab Bar -->
+    <div style="left:0px;top:48px;width:420px;height:36px;display:flex;flex-direction:row;background:#1A1A1E;border-bottom:1px solid #2A2A2E">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center" :class="activeTab === 'overview' ? 'tab-active' : ''" @click="switchTab" click-arg="overview">
+        <span style="font-size:11px;color:#D1D5DB">概览</span>
       </div>
-      <div style="flex:1" :class="activeTab === 'typography' ? 'tab-active' : ''" @click="setTab" click-arg="typography">
-        <span>Type</span>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center" :class="activeTab === 'colors' ? 'tab-active' : ''" @click="switchTab" click-arg="colors">
+        <span style="font-size:11px;color:#D1D5DB">色彩</span>
       </div>
-      <div style="flex:1" :class="activeTab === 'buttons' ? 'tab-active' : ''" @click="setTab" click-arg="buttons">
-        <span>Buttons</span>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center" :class="activeTab === 'typography' ? 'tab-active' : ''" @click="switchTab" click-arg="typography">
+        <span style="font-size:11px;color:#D1D5DB">字体</span>
       </div>
-      <div style="flex:1" :class="activeTab === 'cards' ? 'tab-active' : ''" @click="setTab" click-arg="cards">
-        <span>Cards</span>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center" :class="activeTab === 'components' ? 'tab-active' : ''" @click="switchTab" click-arg="components">
+        <span style="font-size:11px;color:#D1D5DB">组件</span>
       </div>
-      <div style="flex:1" :class="activeTab === 'layout' ? 'tab-active' : ''" @click="setTab" click-arg="layout">
-        <span>Layout</span>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center" :class="activeTab === 'layout' ? 'tab-active' : ''" @click="switchTab" click-arg="layout">
+        <span style="font-size:11px;color:#D1D5DB">布局</span>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center" :class="activeTab === 'scrolling' ? 'tab-active' : ''" @click="switchTab" click-arg="scrolling">
+        <span style="font-size:11px;color:#D1D5DB">滚动</span>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center" :class="activeTab === 'animation' ? 'tab-active' : ''" @click="switchTab" click-arg="animation">
+        <span style="font-size:11px;color:#D1D5DB">动画</span>
       </div>
     </div>
 
     <!-- Content Area -->
-    <div style="left:0px;top:148px;width:420px;height:572px;overflow-y:auto">
-      <color-palette v-if="activeTab === 'colors'" style="left:0px;top:0px" />
-      <typography-showcase v-if="activeTab === 'typography'" style="left:0px;top:0px" />
-      <button-showcase v-if="activeTab === 'buttons'" style="left:0px;top:0px" />
-      <card-showcase v-if="activeTab === 'cards'" style="left:0px;top:0px" />
-      <layout-demo v-if="activeTab === 'layout'" style="left:0px;top:0px" />
+    <div style="left:0px;top:84px;width:420px;height:636px;overflow-y:auto">
+      <overview v-if="activeTab === 'overview'" />
+      <color-palette v-if="activeTab === 'colors'" />
+      <typography-showcase v-if="activeTab === 'typography'" />
+      <div v-if="activeTab === 'components'" style="left:0px;top:0px;width:420px;display:flex;flex-direction:column;gap:0px">
+        <button-showcase />
+        <card-showcase />
+      </div>
+      <layout-demo v-if="activeTab === 'layout'" />
+      <scroll-showcase v-if="activeTab === 'scrolling'" />
+      <animation-showcase v-if="activeTab === 'animation'" />
     </div>
   </div>
 </template>
@@ -39,19 +49,26 @@
 <script lang="php">
 class AppComponent extends ReactiveComponent
 {
-    public string $activeTab = 'colors';
+    public string $activeTab = 'overview';
 
-    public function setTab(string $tab): void
+    public string $counter = '';
+    public string $item = '';
+    public string $scrollTop = '';
+
+    public function switchTab(string $tab): void
     {
         $this->activeTab = $tab;
-        $this->dirty = true;
+        $this->markDirty();
     }
 }
 </script>
 
 <style>
 .tab-active {
-  color: #6366F1;
+  background: #2A2A3E;
   border-bottom: 2px solid #6366F1;
+}
+.tab-active span {
+  color: #FFFFFF !important;
 }
 </style>

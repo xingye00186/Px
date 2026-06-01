@@ -1,58 +1,104 @@
 <template>
-  <div style="left:0px;top:0px;width:420px">
+  <div style="left:0px;top:0px;width:420px;display:flex;flex-direction:column;gap:0px">
+
     <!-- Flex Center -->
-    <div style="left:16px;top:16px;width:388px">
-      <div style="left:0px;top:0px;width:388px;font-size:14px;font-weight:600;color:#FFFFFF">Flex Center</div>
-      <div style="left:0px;top:32px;width:388px;height:80px;background:#282840;border-radius:12px;padding:24px;display:flex;align-items:center;justify-content:center">
-        <div style="width:120px;height:48px;background:#6366F1;border-radius:8px;display:flex;align-items:center;justify-content:center">
-          <span style="color:#FFFFFF;font-size:14px;font-weight:500">Centered</span>
+    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+      <div style="font-size:13px;font-weight:600;color:#FFFFFF">Flex Center</div>
+      <div style="margin-top:8px;height:64px;background:#1F1F23;border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <div style="width:100px;height:36px;background:#6366F1;border-radius:6px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#FFFFFF;font-size:12px;font-weight:500">Centered</span>
         </div>
       </div>
     </div>
 
     <!-- Flex Space Between -->
-    <div style="left:16px;top:152px;width:388px">
-      <div style="left:0px;top:0px;width:388px;font-size:14px;font-weight:600;color:#FFFFFF">Flex Space Between</div>
-      <div style="left:0px;top:32px;width:388px;height:80px;background:#282840;border-radius:12px;padding:24px;display:flex;align-items:center">
-        <span style="font-size:14px;font-weight:500;color:#FFFFFF">Left</span>
+    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+      <div style="font-size:13px;font-weight:600;color:#FFFFFF">Flex Space Between</div>
+      <div style="margin-top:8px;height:48px;background:#1F1F23;border-radius:8px;padding:0 16px;display:flex;align-items:center">
+        <span style="font-size:12px;font-weight:500;color:#FFFFFF">Left</span>
         <div style="flex:1"></div>
-        <span style="font-size:14px;font-weight:500;color:#FFFFFF">Right</span>
+        <span style="font-size:12px;font-weight:500;color:#FFFFFF">Right</span>
       </div>
     </div>
 
-    <!-- Grid Layout -->
-    <div style="left:16px;top:288px;width:388px">
-      <div style="left:0px;top:0px;width:388px;font-size:14px;font-weight:600;color:#FFFFFF">Grid 3 Columns</div>
-      <div style="left:0px;top:32px;width:388px;background:#282840;border-radius:12px;padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-        <div style="background:#374151;border-radius:8px;padding:16px;text-align:center;color:#FFFFFF;font-size:12px">Item 1</div>
-        <div style="background:#374151;border-radius:8px;padding:16px;text-align:center;color:#FFFFFF;font-size:12px">Item 2</div>
-        <div style="background:#374151;border-radius:8px;padding:16px;text-align:center;color:#FFFFFF;font-size:12px">Item 3</div>
-        <div style="background:#374151;border-radius:8px;padding:16px;text-align:center;color:#FFFFFF;font-size:12px">Item 4</div>
-        <div style="background:#374151;border-radius:8px;padding:16px;text-align:center;color:#FFFFFF;font-size:12px">Item 5</div>
-        <div style="background:#374151;border-radius:8px;padding:16px;text-align:center;color:#FFFFFF;font-size:12px">Item 6</div>
+    <!-- Flex Row with Gap -->
+    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+      <div style="font-size:13px;font-weight:600;color:#FFFFFF">Flex Row Gap</div>
+      <div style="margin-top:8px;background:#1F1F23;border-radius:8px;padding:12px;display:flex;flex-direction:row;gap:8px">
+        <div style="flex:1;background:#374151;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#D1D5DB;font-size:11px">A</span>
+        </div>
+        <div style="flex:2;background:#374151;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#D1D5DB;font-size:11px">B (flex:2)</span>
+        </div>
+        <div style="flex:1;background:#374151;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#D1D5DB;font-size:11px">C</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid 3 Columns -->
+    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+      <div style="font-size:13px;font-weight:600;color:#FFFFFF">Grid 3 Columns</div>
+      <div style="margin-top:8px;background:#1F1F23;border-radius:8px;padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div style="background:#374151;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#D1D5DB;font-size:10px">1</span>
+        </div>
+        <div style="background:#374151;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#D1D5DB;font-size:10px">2</span>
+        </div>
+        <div style="background:#374151;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#D1D5DB;font-size:10px">3</span>
+        </div>
+        <div style="background:#374151;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#D1D5DB;font-size:10px">4</span>
+        </div>
+        <div style="background:#374151;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#D1D5DB;font-size:10px">5</span>
+        </div>
+        <div style="background:#374151;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="color:#D1D5DB;font-size:10px">6</span>
+        </div>
       </div>
     </div>
 
     <!-- Stack Vertical -->
-    <div style="left:16px;top:440px;width:388px">
-      <div style="left:0px;top:0px;width:388px;font-size:14px;font-weight:600;color:#FFFFFF">Stack Vertical</div>
-      <div style="left:0px;top:32px;width:388px;background:#282840;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px">
-        <div style="background:#374151;border-radius:6px;padding:12px 16px;color:#FFFFFF;font-size:14px">Item 1</div>
-        <div style="background:#374151;border-radius:6px;padding:12px 16px;color:#FFFFFF;font-size:14px">Item 2</div>
-        <div style="background:#374151;border-radius:6px;padding:12px 16px;color:#FFFFFF;font-size:14px">Item 3</div>
+    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+      <div style="font-size:13px;font-weight:600;color:#FFFFFF">Stack Vertical (flex column)</div>
+      <div style="margin-top:8px;background:#1F1F23;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px">
+        <div style="background:#374151;border-radius:4px;padding:8px 12px">
+          <span style="color:#D1D5DB;font-size:12px">Row 1</span>
+        </div>
+        <div style="background:#374151;border-radius:4px;padding:8px 12px">
+          <span style="color:#D1D5DB;font-size:12px">Row 2</span>
+        </div>
+        <div style="background:#374151;border-radius:4px;padding:8px 12px">
+          <span style="color:#D1D5DB;font-size:12px">Row 3</span>
+        </div>
       </div>
     </div>
 
     <!-- Gap Demo -->
-    <div style="left:16px;top:576px;width:388px">
-      <div style="left:0px;top:0px;width:388px;font-size:14px;font-weight:600;color:#FFFFFF">Gap 16px</div>
-      <div style="left:0px;top:32px;width:388px;background:#282840;border-radius:12px;padding:16px;display:flex;flex-direction:row;gap:16px;flex-wrap:wrap">
-        <div style="background:#374151;border-radius:6px;padding:8px 16px;color:#9CA3AF;font-size:12px">8px</div>
-        <div style="background:#374151;border-radius:6px;padding:8px 16px;color:#9CA3AF;font-size:12px">16px</div>
-        <div style="background:#374151;border-radius:6px;padding:8px 16px;color:#9CA3AF;font-size:12px">24px</div>
-        <div style="background:#374151;border-radius:6px;padding:8px 16px;color:#9CA3AF;font-size:12px">32px</div>
+    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+      <div style="font-size:13px;font-weight:600;color:#FFFFFF">Gap Demo</div>
+      <div style="margin-top:8px;background:#1F1F23;border-radius:8px;padding:12px;display:flex;flex-direction:row;gap:12px;flex-wrap:wrap">
+        <div style="background:#374151;border-radius:4px;padding:6px 12px">
+          <span style="color:#9CA3AF;font-size:10px">8px</span>
+        </div>
+        <div style="background:#374151;border-radius:4px;padding:6px 12px">
+          <span style="color:#9CA3AF;font-size:10px">16px</span>
+        </div>
+        <div style="background:#374151;border-radius:4px;padding:6px 12px">
+          <span style="color:#9CA3AF;font-size:10px">24px</span>
+        </div>
+        <div style="background:#374151;border-radius:4px;padding:6px 12px">
+          <span style="color:#9CA3AF;font-size:10px">32px</span>
+        </div>
       </div>
     </div>
+
+    <!-- Spacer -->
+    <div style="height:16px"></div>
   </div>
 </template>
 

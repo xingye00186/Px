@@ -1,61 +1,77 @@
 <template>
-  <div style="left:0px;top:0px;width:420px">
+  <div style="left:0px;top:0px;width:420px;display:flex;flex-direction:column;gap:0px">
+
     <!-- Display -->
-    <div style="left:16px;top:16px;width:388px;display:flex;flex-direction:row;gap:16px;padding-bottom:12px;border-bottom:1px solid #333336">
-      <span style="width:72px;font-size:11px;color:#6B7280">Display</span>
-      <span style="font-size:32px;font-weight:600;color:#FFFFFF">The quick brown fox</span>
+    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px;padding-bottom:12px;border-bottom:1px solid #2A2A2E">
+      <div style="display:flex;flex-direction:row;gap:12px;align-items:center">
+        <span style="width:60px;font-size:10px;color:#6B7280">Display</span>
+        <span style="font-size:28px;font-weight:600;color:#FFFFFF">The quick brown fox</span>
+      </div>
     </div>
 
     <!-- Headline -->
-    <div style="left:16px;top:72px;width:388px;display:flex;flex-direction:row;gap:16px;padding-bottom:12px;border-bottom:1px solid #333336">
-      <span style="width:72px;font-size:11px;color:#6B7280">Headline</span>
-      <span style="font-size:24px;font-weight:600;color:#FFFFFF">The quick brown fox</span>
+    <div style="left:16px;top:0px;width:388px;margin:12px 16px 0 16px;padding-bottom:12px;border-bottom:1px solid #2A2A2E">
+      <div style="display:flex;flex-direction:row;gap:12px;align-items:center">
+        <span style="width:60px;font-size:10px;color:#6B7280">Headline</span>
+        <span style="font-size:22px;font-weight:600;color:#FFFFFF">The quick brown fox</span>
+      </div>
     </div>
 
     <!-- Title -->
-    <div style="left:16px;top:128px;width:388px;display:flex;flex-direction:row;gap:16px;padding-bottom:12px;border-bottom:1px solid #333336">
-      <span style="width:72px;font-size:11px;color:#6B7280">Title</span>
-      <span style="font-size:18px;font-weight:500;color:#D1D5DB">The quick brown fox</span>
+    <div style="left:16px;top:0px;width:388px;margin:12px 16px 0 16px;padding-bottom:12px;border-bottom:1px solid #2A2A2E">
+      <div style="display:flex;flex-direction:row;gap:12px;align-items:center">
+        <span style="width:60px;font-size:10px;color:#6B7280">Title</span>
+        <span style="font-size:16px;font-weight:500;color:#D1D5DB">The quick brown fox</span>
+      </div>
     </div>
 
     <!-- Body -->
-    <div style="left:16px;top:184px;width:388px;display:flex;flex-direction:row;gap:16px;padding-bottom:12px;border-bottom:1px solid #333336">
-      <span style="width:72px;font-size:11px;color:#6B7280">Body</span>
-      <span style="font-size:14px;font-weight:400;color:#D1D5DB">The quick brown fox jumps over</span>
+    <div style="left:16px;top:0px;width:388px;margin:12px 16px 0 16px;padding-bottom:12px;border-bottom:1px solid #2A2A2E">
+      <div style="display:flex;flex-direction:row;gap:12px;align-items:center">
+        <span style="width:60px;font-size:10px;color:#6B7280">Body</span>
+        <span style="font-size:13px;font-weight:400;color:#D1D5DB">The quick brown fox jumps over the lazy dog</span>
+      </div>
     </div>
 
     <!-- Label -->
-    <div style="left:16px;top:240px;width:388px;display:flex;flex-direction:row;gap:16px;padding-bottom:12px;border-bottom:1px solid #333336">
-      <span style="width:72px;font-size:11px;color:#6B7280">Label</span>
-      <span style="font-size:12px;font-weight:500;color:#FFFFFF;letter-spacing:0.5px">THE QUICK BROWN FOX</span>
+    <div style="left:16px;top:0px;width:388px;margin:12px 16px 0 16px;padding-bottom:12px;border-bottom:1px solid #2A2A2E">
+      <div style="display:flex;flex-direction:row;gap:12px;align-items:center">
+        <span style="width:60px;font-size:10px;color:#6B7280">Label</span>
+        <span style="font-size:11px;font-weight:500;color:#FFFFFF">THE QUICK BROWN FOX JUMPS</span>
+      </div>
     </div>
 
     <!-- Caption -->
-    <div style="left:16px;top:296px;width:388px;display:flex;flex-direction:row;gap:16px;padding-bottom:12px;border-bottom:1px solid #333336">
-      <span style="width:72px;font-size:11px;color:#6B7280">Caption</span>
-      <span style="font-size:11px;font-weight:400;color:#9CA3AF">The quick brown fox jumps over</span>
+    <div style="left:16px;top:0px;width:388px;margin:12px 16px 0 16px;padding-bottom:12px;border-bottom:1px solid #2A2A2E">
+      <div style="display:flex;flex-direction:row;gap:12px;align-items:center">
+        <span style="width:60px;font-size:10px;color:#6B7280">Caption</span>
+        <span style="font-size:10px;font-weight:400;color:#9CA3AF">The quick brown fox jumps over</span>
+      </div>
     </div>
 
-    <!-- Weight Grid -->
-    <div style="left:16px;top:352px;width:388px">
-      <div style="left:0px;top:0px;width:388px;font-size:14px;font-weight:600;color:#FFFFFF">Font Weight</div>
-      <div style="left:0px;top:32px;display:flex;flex-direction:row;gap:12px">
-        <div style="flex:1;background:#282840;border-radius:8px;padding:12px">
-          <span style="font-size:14px;font-weight:400;color:#FFFFFF">Regular 400</span>
+    <!-- Font Weight -->
+    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+      <div style="font-size:13px;font-weight:600;color:#FFFFFF">Font Weight</div>
+      <div style="margin-top:8px;display:flex;flex-direction:row;gap:8px">
+        <div style="flex:1;background:#1F1F23;border-radius:8px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="font-size:13px;font-weight:400;color:#FFFFFF">Regular</span>
         </div>
-        <div style="flex:1;background:#282840;border-radius:8px;padding:12px">
-          <span style="font-size:14px;font-weight:500;color:#FFFFFF">Medium 500</span>
+        <div style="flex:1;background:#1F1F23;border-radius:8px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="font-size:13px;font-weight:500;color:#FFFFFF">Medium</span>
         </div>
       </div>
-      <div style="left:0px;top:56px;display:flex;flex-direction:row;gap:12px">
-        <div style="flex:1;background:#282840;border-radius:8px;padding:12px">
-          <span style="font-size:14px;font-weight:600;color:#FFFFFF">Semibold 600</span>
+      <div style="margin-top:6px;display:flex;flex-direction:row;gap:8px">
+        <div style="flex:1;background:#1F1F23;border-radius:8px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="font-size:13px;font-weight:600;color:#FFFFFF">Semibold</span>
         </div>
-        <div style="flex:1;background:#282840;border-radius:8px;padding:12px">
-          <span style="font-size:14px;font-weight:700;color:#FFFFFF">Bold 700</span>
+        <div style="flex:1;background:#1F1F23;border-radius:8px;padding:10px;display:flex;align-items:center;justify-content:center">
+          <span style="font-size:13px;font-weight:700;color:#FFFFFF">Bold</span>
         </div>
       </div>
     </div>
+
+    <!-- Spacer -->
+    <div style="height:16px"></div>
   </div>
 </template>
 
