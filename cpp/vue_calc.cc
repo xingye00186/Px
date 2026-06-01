@@ -231,16 +231,17 @@ void php_vue_alpha_fill_rect(Int hdc, Int x, Int y, Int w, Int h, Int bgrColor, 
     DeleteDC(memDC);
 }
 
-// 绘制文本
+// 绘制文本 — 用 GetTextExtentPoint32W 精确测量后自动截断。
+// 这是唯一正确的文本截断位置，因为只有这里能访问 GDI 实际字体度量。
 void php_vue_draw_text(Int hdc, Int x, Int y, String text, Int fontSize, Int rgbColor, Int bold) {
-    // 防御：防止空文本或空字体导致 CreateFont 失败
     if (text.length() == 0) return;
     if ((int)fontSize <= 0) return;
 
-    // 获取当前裁剪区域，避免 TextOutW 在裁剪边界外渲染（累积损坏 HDC）
+    // 获取裁剪区域以检测文本是否溢出
     RECT clipRect;
-    if (GetClipBox((HDC)hdc, &clipRect) == NULLREGION) return; // 完全裁剪，跳过
-    if (clipRect.right > 0 && (int)x >= clipRect.right) return; // 完全在裁剪区域右侧
+    int clipType = GetClipBox((HDC)hdc, &clipRect);
+    if (clipType == NULLREGION) return;
+    bool hasClip = (clipType == SIMPLEREGION || clipType == COMPLEXREGION);
 
     SetTextColor((HDC)hdc, (COLORREF)rgbColor);
     SetBkMode((HDC)hdc, TRANSPARENT);
@@ -250,12 +251,27 @@ void php_vue_draw_text(Int hdc, Int x, Int y, String text, Int fontSize, Int rgb
         DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Microsoft YaHei");
     if (hFont == NULL) return;
     HFONT oldFont = (HFONT)SelectObject((HDC)hdc, hFont);
+
     // Convert UTF-8 to UTF-16 for Unicode text rendering (supports CJK)
     int wlen = MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, NULL, 0);
     if (wlen > 0) {
         std::wstring wtext(wlen, L'\0');
         MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, &wtext[0], wlen);
-        TextOutW((HDC)hdc, (int)x, (int)y, wtext.c_str(), (wlen > 1) ? (wlen - 1) : 0);
+        int charsToDraw = (wlen > 1) ? (wlen - 1) : 0; // exclude null terminator
+
+        if (hasClip && clipRect.right > 0) {
+            // 精确测量文本宽度，逐步截断直到适合裁剪区域
+            SIZE sz = {0, 0};
+            GetTextExtentPoint32W((HDC)hdc, wtext.c_str(), charsToDraw, &sz);
+            while (charsToDraw > 0 && (int)x + sz.cx > clipRect.right) {
+                charsToDraw--;
+                GetTextExtentPoint32W((HDC)hdc, wtext.c_str(), charsToDraw, &sz);
+            }
+        }
+
+        if (charsToDraw > 0) {
+            TextOutW((HDC)hdc, (int)x, (int)y, wtext.c_str(), charsToDraw);
+        }
     }
     SelectObject((HDC)hdc, oldFont);
     DeleteObject(hFont);

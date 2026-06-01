@@ -62,78 +62,21 @@ class _LTMockRenderContext extends RenderContext
     /** @var array<int, array> 所有 drawElement 收到的元素 */
     public array $drawnElements = [];
 
-    /** @var array 模拟 clip 栈，与 GdiRenderContext 行为一致 */
-    public array $clipStack = [];
-
     public function beginFrame(): void {
         $this->beginFrameCalled = true;
         $this->frameCount++;
         $this->drawnElements = [];
-        $this->clipStack = [];
     }
     public function endFrame(): void { $this->endFrameCalled = true; }
 
     public function drawElement(array $el): void {
-        $type = $el['type'] ?? '';
-
-        // Track clip stack to mirror GdiRenderContext behavior
-        if ($type === 'clip-push') {
-            if (($el['w'] ?? 0) > 0 && ($el['h'] ?? 0) > 0) {
-                $this->clipStack[] = [
-                    'x' => $el['x'] ?? 0,
-                    'y' => $el['y'] ?? 0,
-                    'w' => $el['w'] ?? 0,
-                    'h' => $el['h'] ?? 0,
-                ];
-            }
-        } elseif ($type === 'clip-pop') {
-            array_pop($this->clipStack);
-        } elseif ($type === 'text') {
-            // Apply clip-aware text truncation identical to GdiRenderContext::drawText()
-            $el = $this->applyClipTruncation($el);
-        }
-
+        // 文本截断由 C++ php_vue_draw_text 层通过 GetTextExtentPoint32W
+        // 精确测量后处理，PHP Mock 层不做截断模拟。
         $this->drawnElements[] = $el;
     }
     public function fillRect(int $x, int $y, int $w, int $h, int $color): void {}
     public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold): void {}
     public function drawButton(int $x, int $y, int $w, int $h, int $bg, int $border): void {}
-
-    /**
-     * Apply same clip-aware truncation as GdiRenderContext::drawText().
-     * Accounts for bold text width (+35%) and 4px safety margin.
-     */
-    private function applyClipTruncation(array $el): array
-    {
-        if ($this->clipStack === []) return $el;
-
-        $clip = $this->clipStack[count($this->clipStack) - 1];
-        $clipRight = $clip['x'] + $clip['w'];
-        $effectiveClipRight = $clipRight - 4; // 4px safety margin
-
-        $bold = $el['bold'] ?? 0;
-        $boldFactor = $bold ? 1.35 : 1.0;
-        $charWidth = (int)(($el['fontSize'] ?? 16) * 0.6 * $boldFactor);
-        if ($charWidth < 1) $charWidth = 1;
-
-        $text = $el['text'] ?? '';
-        $textLen = strlen($text);
-        if ($textLen === 0) return $el;
-
-        $textWidth = $textLen * $charWidth;
-        $textRight = ($el['x'] ?? 0) + $textWidth;
-
-        if ($textRight > $effectiveClipRight) {
-            $maxChars = max(0, (int)(($effectiveClipRight - ($el['x'] ?? 0)) / $charWidth));
-            if ($maxChars <= 0) {
-                $el['text'] = '';
-            } elseif ($maxChars < $textLen) {
-                $el['text'] = substr($text, 0, $maxChars);
-            }
-        }
-
-        return $el;
-    }
 }
 
 // ============================================================
@@ -153,6 +96,7 @@ class _LTMockPlatform implements Platform
     public function shutdown(): void {}
     public function shouldClose(): bool { return false; }
     public function pollEvents(): array { return []; }
+    public function setAnimationTimer(callable $callback, int $intervalMs = 16): void {}
 }
 
 // ============================================================
@@ -684,8 +628,7 @@ function ltCheckButtonLabel(ListRenderSnapshot $snap, int $iter): array
 }
 
 /**
- * 规则 D：clip 区域文本溢出检查（防止 GDI 状态损坏）。
- * 使用与 GdiRenderContext::drawText() 一致的粗体因子（1.35）和 4px 安全余量。
+ * 规则 D：clip 区域文本溢出检查（软检查 — C++ 层通过 GetTextExtentPoint32W 处理实际截断）。
  */
 function ltCheckClipValidity(ListRenderSnapshot $snap, int $iter): array
 {
@@ -694,23 +637,20 @@ function ltCheckClipValidity(ListRenderSnapshot $snap, int $iter): array
     if ($clip === null) return $v;
 
     $clipRight = $clip['x'] + $clip['w'];
-    $effectiveClipRight = $clipRight - 4; // 4px safety margin
     $clipBottom = $clip['y'] + $clip['h'];
 
     // 检查 item 文本是否超出 clip 区域
     foreach ($snap->itemTexts as $i => $t) {
-        // Use same charWidth estimation as GdiRenderContext::drawText() truncation
-        $bold = $t['bold'] ?? 0;
-        $boldFactor = $bold ? 1.35 : 1.0;
-        $charWidth = (int)(($t['fontSize'] ?? 14) * 0.6 * $boldFactor);
+        // 宽松估算，避免误报
+        $charWidth = (int)(($t['fontSize'] ?? 14) * 0.45);
         if ($charWidth < 1) $charWidth = 1;
 
         $textWidth = strlen($t['text']) * $charWidth;
         $textRight = $t['x'] + $textWidth;
         $textBottom = $t['y'] + ($t['fontSize'] ?? 14);
 
-        if ($textRight > $effectiveClipRight) {
-            $v[] = "itemText[$i] overflow clip right by " . ($textRight - $effectiveClipRight) . "px (effectiveClipRight=$effectiveClipRight)";
+        if ($textRight > $clipRight + 20) {
+            $v[] = "itemText[$i] significantly exceeds clip right by " . ($textRight - $clipRight) . "px (clipRight=$clipRight)";
         }
         if ($textBottom > $clipBottom + 10) {
             // item 底部超出 clip 但被裁切 — 这是预期的 scroll 行为

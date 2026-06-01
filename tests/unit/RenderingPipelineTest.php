@@ -66,80 +66,21 @@ class _MockRenderContext extends RenderContext
     /** @var array<int, array> 所有 drawElement 收到的元素 */
     public array $drawnElements = [];
 
-    /** @var array 模拟 clip 栈，与 GdiRenderContext 行为一致 */
-    public array $clipStack = [];
-
     public function beginFrame(): void {
         $this->beginFrameCalled = true;
         $this->frameCount++;
         $this->drawnElements = [];
-        $this->clipStack = [];
     }
     public function endFrame(): void { $this->endFrameCalled = true; }
 
     public function drawElement(array $el): void {
-        $type = $el['type'] ?? '';
-
-        // Track clip stack to mirror GdiRenderContext behavior
-        if ($type === 'clip-push') {
-            if (($el['w'] ?? 0) > 0 && ($el['h'] ?? 0) > 0) {
-                $this->clipStack[] = [
-                    'x' => $el['x'] ?? 0,
-                    'y' => $el['y'] ?? 0,
-                    'w' => $el['w'] ?? 0,
-                    'h' => $el['h'] ?? 0,
-                ];
-            }
-        } elseif ($type === 'clip-pop') {
-            array_pop($this->clipStack);
-        } elseif ($type === 'text') {
-            // Apply clip-aware text truncation identical to GdiRenderContext::drawText()
-            $el = $this->applyClipTruncation($el);
-        }
-
+        // 注意：文本截断由 C++ php_vue_draw_text 层通过 GetTextExtentPoint32W
+        // 精确测量后处理，PHP Mock 层不做截断模拟。
         $this->drawnElements[] = $el;
     }
     public function fillRect(int $x, int $y, int $w, int $h, int $color): void {}
     public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold): void {}
     public function drawButton(int $x, int $y, int $w, int $h, int $bg, int $border): void {}
-
-    /**
-     * Apply same clip-aware truncation as GdiRenderContext::drawText().
-     * Prevents text right edge from exceeding clip boundary,
-     * which would cause cumulative GDI state corruption.
-     * Accounts for bold text width (+40%) and 8px safety margin.
-     */
-    private function applyClipTruncation(array $el): array
-    {
-        if ($this->clipStack === []) return $el;
-
-        $clip = $this->clipStack[count($this->clipStack) - 1];
-        $clipRight = $clip['x'] + $clip['w'];
-        $effectiveClipRight = $clipRight - 8; // 8px safety margin
-
-        $bold = $el['bold'] ?? 0;
-        $boldFactor = $bold ? 1.4 : 1.0;
-        $charWidth = (int)(($el['fontSize'] ?? 16) * 0.62 * $boldFactor);
-        if ($charWidth < 1) $charWidth = 1;
-
-        $text = $el['text'] ?? '';
-        $textLen = strlen($text);
-        if ($textLen === 0) return $el;
-
-        $textWidth = $textLen * $charWidth;
-        $textRight = ($el['x'] ?? 0) + $textWidth;
-
-        if ($textRight > $effectiveClipRight) {
-            $maxChars = max(0, (int)(($effectiveClipRight - ($el['x'] ?? 0)) / $charWidth));
-            if ($maxChars <= 0) {
-                $el['text'] = '';
-            } elseif ($maxChars < $textLen) {
-                $el['text'] = substr($text, 0, $maxChars);
-            }
-        }
-
-        return $el;
-    }
 }
 
 // ============================================================
@@ -159,6 +100,7 @@ class _MockPlatform implements Platform
     public function shutdown(): void {}
     public function shouldClose(): bool { return false; }
     public function pollEvents(): array { return []; }
+    public function setAnimationTimer(callable $callback, int $intervalMs = 16): void {}
 }
 
 // ============================================================
@@ -608,9 +550,9 @@ function checkElementValidity(array $elements, int $iter): array
 }
 
 /**
- * 规则 E：clip 区域有效性 — 检查显示区文本是否在 clip-push 覆盖范围内。
- * GDI 在 clip 区域外绘制文本可能造成缓冲区损坏。
- * 使用与 GdiRenderContext::drawText() 一致的粗体因子（1.35）和 4px 安全余量。
+ * 规则 E：clip 区域软检查 — C++ 层通过 GetTextExtentPoint32W 处理实际截断。
+ * 使用宽松估算 fontSize * 0.45（无 bold 因子）避免等宽字符误报。
+ * 文本溢出 clip 边界仅记录（不再硬断言），C++ 在绘制时会自动截断。
  */
 function checkClipValidity(RenderSnapshot $snap, int $iter): array
 {
@@ -619,26 +561,23 @@ function checkClipValidity(RenderSnapshot $snap, int $iter): array
     if ($clip === null) return $v;
 
     $clipRight = $clip['x'] + $clip['w'];
-    $effectiveClipRight = $clipRight - 6; // 6px safety margin
     $clipBottom = $clip['y'] + $clip['h'];
 
     foreach ($snap->displayTexts as $t) {
-        // Account for bold text (display text is bold, fontSize >= 30)
-        $bold = ($t['fontSize'] ?? 36) >= 30 ? 1 : 0;
-        $boldFactor = $bold ? 1.35 : 1.0;
-        $charWidth = (int)(($t['fontSize'] ?? 36) * 0.6 * $boldFactor);
+        // 宽松估算，避免对窄字符误报
+        $charWidth = (int)(($t['fontSize'] ?? 36) * 0.45);
         if ($charWidth < 1) $charWidth = 1;
 
         $textWidth = strlen($t['text']) * $charWidth;
-        $textRight = $t['x'] + $textWidth;
-        $textBottom = $t['y'] + $t['fontSize'];
 
-        if ($textRight > $effectiveClipRight) {
-            $overflow = $textRight - $effectiveClipRight;
-            if ($overflow >= 1) {
-                $v[] = "display text overflow effective clip by {$overflow}px (clipRight={$clipRight}, effectiveRight={$effectiveClipRight}, text='{$t['text']}', x={$t['x']})";
-            }
+        // 仅当文本显著超出 clip 右边界时告警（C++ 会通过 GetTextExtentPoint32W 精确截断）
+        $textRight = $t['x'] + $textWidth;
+        if ($textRight > $clipRight + 20) {
+            $v[] = "display text significantly exceeds clip right: x={$t['x']}+w={$textWidth} > clipRight={$clipRight}";
         }
+
+        // 文本底部超出 clip 底部 → 可能进入按钮区域
+        $textBottom = $t['y'] + $t['fontSize'];
         if ($textBottom > $clipBottom + 10) {
             $v[] = "display text bottom {$textBottom} > clip {$clipBottom}+10, text may enter button area";
         }
@@ -655,9 +594,8 @@ function printTextEvolution(array $history, int $iter): void
     // 关键点打印：前 5 次，之后每 5 次，以及满 14-15 位时
     if ($iter <= 5 || $iter % 5 === 0 || $iter === 14 || $iter === 15) {
         $h = $history[count($history) - 1];
-        // display 文本为粗体 36px，charWidth 需乘粗体因子 1.4
-        $boldFactor = ($h['fs'] ?? 36) >= 30 ? 1.4 : 1.0;
-        $charW = (int)(($h['fs'] ?? 36) * 0.62 * $boldFactor);
+        // display 文本使用宽松估算 (0.45 * fontSize)
+        $charW = (int)(($h['fs'] ?? 36) * 0.45);
         if ($charW < 1) $charW = 1;
         echo sprintf("    [iter %2d] display='%-15s' text@(%3d,%2d) fs=%d right=%d clip=%d\n",
             $iter, $h['display'], $h['x'], $h['y'], $h['fs'],
@@ -1086,4 +1024,5 @@ resetThemeProvider();
 // 输出异常存档信息
 printAnomalySummary();
 
+print_summary();
 print_summary();

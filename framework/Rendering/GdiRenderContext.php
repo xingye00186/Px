@@ -353,34 +353,8 @@ class GdiRenderContext extends RenderContext
         if (strlen($text) === 0) return;
         if ($fontSize <= 0) return;
 
-        // 检查文本是否超出当前 clip 区域 — 防止 GDI 在 clip 边界处
-        // 反复调用 TextOutW/DrawTextW 累积损坏 HDC 状态（全黑屏问题）
-        $clip = ($this->clipStack !== []) ? $this->clipStack[count($this->clipStack) - 1] : null;
-        if ($clip !== null) {
-            $clipRight = $clip['x'] + $clip['w'];
-            // 粗体字符比常规体宽约 40%，需乘以粗体因子
-            $boldFactor = $bold ? 1.4 : 1.0;
-            $charWidth = (int)($fontSize * 0.62 * $boldFactor);
-            if ($charWidth < 1) $charWidth = 1;
-            $textLen = strlen($text);
-            $textWidth = $textLen * $charWidth;
-            $textRight = $x + $textWidth;
-
-            // 12px 安全余量：吸收字体渲染引擎的亚像素溢出，防止累积 HDC 损坏
-            // 从 8px 增加到 12px：粗体 36px 文本在 318px 容器内最多 10 字符，
-            // 余量不足会导致 TextOutW 在 clip 边界反复调用时损坏 GDI 状态（全黑屏）
-            $effectiveClipRight = $clipRight - 12;
-
-            // 如果文本右边缘超出 clip 右边界（含安全余量），截断到可见范围
-            if ($textRight > $effectiveClipRight) {
-                $maxChars = max(0, (int)(($effectiveClipRight - $x) / $charWidth));
-                if ($maxChars <= 0) return; // 完全不可见，跳过绘制
-                if ($maxChars < $textLen) {
-                    $text = substr($text, 0, $maxChars);
-                }
-            }
-        }
-
+        // 文本截断由 C++ php_vue_draw_text 层通过 GetTextExtentPoint32W
+        // 精确测量后自动处理，PHP 层不做估算。
         vue_draw_text($this->hdc, $x, $y, $text, $fontSize, $color, $bold);
     }
 

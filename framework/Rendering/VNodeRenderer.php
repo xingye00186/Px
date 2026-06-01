@@ -418,8 +418,8 @@ class VNodeRenderer
         $containerX = (int)($props['container-x'] ?? $x);
 
         if ($align === 'right' || $align === 'center') {
-            $boldFactor = $bold ? 1.4 : 1.0;
-            $textWidth = strlen($text) * (int)($fontSize * 0.62 * $boldFactor);
+            $boldFactor = $bold ? 1.35 : 1.0;
+            $textWidth = strlen($text) * (int)($fontSize * 0.6 * $boldFactor);
             if ($align === 'right') {
                 $x = $containerX + $containerW - 12 - $textWidth;
                 if ($x < $containerX + 4) $x = $containerX + 4;

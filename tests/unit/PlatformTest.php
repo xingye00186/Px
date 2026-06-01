@@ -69,6 +69,8 @@ class _MockPlatform implements Platform
     {
         return $this->events;
     }
+
+    public function setAnimationTimer(callable $callback, int $intervalMs = 16): void {}
 }
 
 echo "--- 1. Platform 接口契约 ---\n";
