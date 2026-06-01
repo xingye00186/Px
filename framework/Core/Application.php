@@ -534,12 +534,17 @@ class Application
     {
         $this->rebuildVNodeTree();
 
-        // VNode → RenderNode 转换 + bind 值同步（复用已有 RenderNode）
+        // getRootRenderNodes() = 顶层 #root 所有旧子节点，作为 candidates 传递给 #root handler
+        $oldRootChildren = $this->renderTreeManager->getRootRenderNodes();
+        $candidates = !empty($oldRootChildren) ? $oldRootChildren : null;
+
+        // VNode → RenderNode 转换 + bind 值同步（type+key 匹配复用）
         $rootRenderNode = $this->renderTreeManager->updateFromVNode(
             $this->activeVNodeTree,
             null,
             $this->rootComponent,
-            $this->componentByGroupId
+            $this->componentByGroupId,
+            $candidates
         );
         if ($rootRenderNode === null) return;
 

@@ -10,22 +10,22 @@ use Px\Styling\Provider\ThemeProvider;
  *
  * 职责：
  *   1. 将 VNode 树转换为 RenderNode 树
- *   2. 通过 spl_object_hash 映射实现 RenderNode 复用
- *   3. 维护 groupId → RenderNode[] 映射
+ *   2. 通过 type+key 匹配实现 RenderNode 跨帧复用
+ *   3. 维护 groupId → RenderNode[] 和 VNode → RenderNode 映射
  *   4. 在 RenderNode 树上执行命中测试和滚动容器查找
  *
  * 核心原则：
  *   - 不预先计算任何坐标，所有偏移统一由 LayoutResolver 在布局阶段处理
- *   - 使用 spl_object_hash 作为映射键，无需修改编译器
- *   - 对象哈希在 VNode 生命周期内稳定（组件实例不变时）
+ *   - 使用 type+key 显式匹配，替代旧的 spl_object_hash 隐式匹配
  *   - 正常渲染循环中不清空映射（仅全量重置时调用 clear()）
+ *   - 未匹配/未引用的旧 RenderNode 树通过 destroyRenderNodeTree 清理
  */
 class RenderTreeManager
 {
     private ?RenderNode $rootRenderNode = null;
 
-    /** @var array<string, RenderNode> spl_object_hash(VNode) => RenderNode */
-    private array $vnodeToRenderNodeMap = [];
+    /** @var RenderNode[] 顶层 #root 的所有直接子节点（用于跨帧 candidates 传递） */
+    private array $rootRenderNodes = [];
 
     /** @var array<string, VNode> spl_object_hash(RenderNode) => VNode */
     private array $renderNodeToVNodeMap = [];
@@ -33,11 +33,20 @@ class RenderTreeManager
     /** @var array<string, RenderNode[]> groupId => RenderNode[] */
     private array $groupIdToRenderNodeMap = [];
 
+    /** @var array<string, RenderNode> spl_object_hash(VNode) => RenderNode（快速查找，每帧重建） */
+    private array $vnodeToRenderNodeMap = [];
+
     // ── 基础方法 ──────────────────────────
 
     public function getRootRenderNode(): ?RenderNode
     {
         return $this->rootRenderNode;
+    }
+
+    /** @return RenderNode[] */
+    public function getRootRenderNodes(): array
+    {
+        return $this->rootRenderNodes;
     }
 
     /**
@@ -47,20 +56,36 @@ class RenderTreeManager
     public function clear(): void
     {
         $this->rootRenderNode = null;
-        $this->vnodeToRenderNodeMap = [];
+        $this->rootRenderNodes = [];
         $this->renderNodeToVNodeMap = [];
         $this->groupIdToRenderNodeMap = [];
+        $this->vnodeToRenderNodeMap = [];
     }
 
     // ── 查找方法 ──────────────────────────
 
     /**
      * 根据 VNode 查找对应的 RenderNode。
+     * 优先使用 vnodeToRenderNodeMap 快速查找，失败时回退到树遍历。
      */
     public function findRenderNodeBySourceVNode(VNode $vnode): ?RenderNode
     {
         $hash = spl_object_hash($vnode);
-        return $this->vnodeToRenderNodeMap[$hash] ?? null;
+        if (isset($this->vnodeToRenderNodeMap[$hash])) {
+            return $this->vnodeToRenderNodeMap[$hash];
+        }
+        if ($this->rootRenderNode === null) return null;
+        return $this->findRNByVNodeRecursive($vnode, $this->rootRenderNode);
+    }
+
+    private function findRNByVNodeRecursive(VNode $vnode, RenderNode $node): ?RenderNode
+    {
+        if ($node->sourceVNode === $vnode) return $node;
+        foreach ($node->children as $child) {
+            $found = $this->findRNByVNodeRecursive($vnode, $child);
+            if ($found !== null) return $found;
+        }
+        return null;
     }
 
     /**
@@ -81,6 +106,90 @@ class RenderTreeManager
         return $nodes[0] ?? null;
     }
 
+    // ── 匹配与清理方法 ─────────────────────
+
+    /**
+     * 在新 VNode 和旧 RenderNode 候选池之间匹配。
+     *
+     * 匹配规则：
+     *   1. $vnode->key !== null → 遍历 candidates 找 key + type 匹配
+     *   2. $vnode->key === null → 按 $index 逐位匹配（type 相同且 key 为 null）
+     *
+     * @param VNode $vnode 新 VNode
+     * @param array $candidates 旧 RenderNode 候选列表
+     * @param int $index 在父级子节点中的位置（用于位置匹配）
+     * @return RenderNode|null 匹配的旧 RenderNode，或 null
+     */
+    private function findMatchingRenderNode(VNode $vnode, array $candidates, int $index): ?RenderNode
+    {
+        $key = $vnode->key;
+
+        if ($key !== null) {
+            // key 匹配
+            foreach ($candidates as $candidate) {
+                if ($candidate->key === $key && $candidate->type === $vnode->type) {
+                    return $candidate;
+                }
+            }
+            return null;
+        }
+
+        // 位置匹配（静态节点）
+        if (isset($candidates[$index])) {
+            $candidate = $candidates[$index];
+            if ($candidate->key === null && $candidate->type === $vnode->type) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 比较两个 VNode 的布局相关属性是否相等。
+     *
+     * 用于叶子节点（无 VNode 子节点）的洁净路径判断：
+     *   - type, key
+     *   - props['style'], props['class']
+     *   - props[':scroll-top'], props[':scroll-left']
+     *
+     * 注意：非叶子节点即使在 type+key+props 一致的情况下也必须走脏路径，
+     * 因为父节点的 auto-stack、contentHeight 等依赖子节点全量重算。
+     *
+     * @return bool true=布局相关属性完全一致，可走洁净路径
+     */
+    private function areVNodesEqual(VNode $a, VNode $b): bool
+    {
+        if ($a->type !== $b->type) return false;
+        if ($a->key !== $b->key) return false;
+        if (($a->props['style'] ?? '') !== ($b->props['style'] ?? '')) return false;
+        if (($a->props['class'] ?? '') !== ($b->props['class'] ?? '')) return false;
+        if (($a->props[':scroll-top'] ?? '') !== ($b->props[':scroll-top'] ?? '')) return false;
+        if (($a->props[':scroll-left'] ?? '') !== ($b->props[':scroll-left'] ?? '')) return false;
+        return true;
+    }
+
+    /**
+     * 递归销毁 RenderNode 子树。
+     *
+     * 清理：
+     *   - 从 renderNodeToVNodeMap 移除当前节点及其子孙的映射
+     *   - 递归销毁子节点
+     *   - 清空 children 数组
+     */
+    private function destroyRenderNodeTree(RenderNode $rn): void
+    {
+        // 从反向映射中移除
+        unset($this->renderNodeToVNodeMap[spl_object_hash($rn)]);
+
+        // 递归销毁子节点
+        foreach ($rn->children as $child) {
+            $this->destroyRenderNodeTree($child);
+        }
+
+        $rn->children = [];
+    }
+
     // ── VNode → RenderNode 转换 ──────────
 
     /**
@@ -98,16 +207,20 @@ class RenderTreeManager
      * @param RenderNode|null $parent 父 RenderNode
      * @param ReactiveComponent $root 根组件（用于 bind 回退）
      * @param array<string, ReactiveComponent> $componentByGroupId 组件注册表
+     * @param array|null $candidates 上一帧该位置旧 RenderNode 候选列表
+     *        普通元素：[$selfOld]，用于自我匹配后提取旧 children 匹配子节点
+     *        #root：旧子节点列表（因为 #root 无 RenderNode）
+     *        #component：透传
      * @return RenderNode|null 转换后的 RenderNode
      */
     public function updateFromVNode(
         VNode $vnode,
         ?RenderNode $parent,
         ReactiveComponent $root,
-        array $componentByGroupId
+        array $componentByGroupId,
+        ?array $candidates = null
     ): ?RenderNode {
-        // 组件占位节点：递归处理子组件树
-        // #component 的定位已在 expandComponentNode 中写入子组件根元素 style
+        // 组件占位节点：递归处理子组件树，$candidates 透传
         if ($vnode->isComponent()) {
             $instance = $vnode->componentInstance;
             if ($instance === null) {
@@ -117,67 +230,112 @@ class RenderTreeManager
                 $instance->getVNodeTree(),
                 $parent,
                 $root,
-                $componentByGroupId
+                $componentByGroupId,
+                $candidates
             );
         }
 
-        // #root 节点不产生渲染元素，递归处理 children
-        // 重要：$parent 必须透传给子节点，否则组件展开后的子树会脱离 RenderNode 树
+        // #root 节点不产生渲染元素，$candidates 在此层含义 = 旧子节点列表
         if ($vnode->type === '#root') {
             $result = null;
             $children = $this->vnodeChildrenToArray($vnode->children);
-            foreach ($children as $child) {
-                $childRenderNode = $this->updateFromVNode(
-                    $child, $parent, $root, $componentByGroupId
+
+            // 顶层 #root：重置每帧映射（vnodeToRenderNodeMap 和 groupIdToRenderNodeMap 每帧重建）
+            if ($parent === null) {
+                $this->rootRenderNodes = [];
+                $this->vnodeToRenderNodeMap = [];
+                $this->groupIdToRenderNodeMap = [];
+            }
+
+            // 跟踪 candidates 中被匹配的旧子节点，用于清理
+            $consumedCandidates = [];
+
+            foreach ($children as $i => $child) {
+                $matchedOld = ($candidates !== null)
+                    ? $this->findMatchingRenderNode($child, $candidates, $i)
+                    : null;
+
+                if ($matchedOld !== null) {
+                    $consumedCandidates[] = $matchedOld;
+                }
+
+                $childCandidates = $matchedOld !== null ? [$matchedOld] : null;
+
+                $childRN = $this->updateFromVNode(
+                    $child, $parent, $root, $componentByGroupId, $childCandidates
                 );
-                if ($childRenderNode !== null) {
+                if ($childRN !== null) {
                     if ($parent === null) {
-                        $this->rootRenderNode = $childRenderNode;
+                        $this->rootRenderNode = $childRN;
+                        $this->rootRenderNodes[] = $childRN;
                     }
-                    $result = $childRenderNode;
+                    $result = $childRN;
                 }
             }
+
+            // 清理未被复用的旧 #root 子节点
+            if ($candidates !== null) {
+                foreach ($candidates as $oldRN) {
+                    if (!in_array($oldRN, $consumedCandidates, true)) {
+                        $this->destroyRenderNodeTree($oldRN);
+                    }
+                }
+            }
+
             return $result;
         }
 
         // 普通元素节点
-        $hash = spl_object_hash($vnode);
+        $resolvedStyle = $this->resolveNodeStyle($vnode);
         $renderNode = null;
 
-        // 解析样式（CSS class + inline），不进行任何坐标计算
-        $resolvedStyle = $this->resolveNodeStyle($vnode);
-
-        if (isset($this->vnodeToRenderNodeMap[$hash])) {
-            // ── 复用现有 RenderNode ──
-            $renderNode = $this->vnodeToRenderNodeMap[$hash];
-
-            // 类型变化时清除子节点（如 div→span 语义变化）
-            // key 变化或不变时不清除（子节点由每帧全量重建处理）
-            if ($renderNode->type !== $vnode->type) {
-                $renderNode->type = $vnode->type;
-                $renderNode->key = $vnode->key;
-                $renderNode->clearChildren();
-            } elseif ($renderNode->key !== $vnode->key) {
-                $renderNode->key = $vnode->key;
+        // 从 candidates 匹配旧 RenderNode
+        if ($candidates !== null) {
+            $matched = $this->findMatchingRenderNode($vnode, $candidates, 0);
+            if ($matched !== null) {
+                $renderNode = $matched;
             }
+        }
 
-            // 更新样式、dirty 标记、sourceVNode 引用
-            $renderNode->style = $resolvedStyle;
+        if ($renderNode === null) {
+            // ── 新建 RenderNode ──
+            $renderNode = new RenderNode($vnode->type, $resolvedStyle, null, $vnode->key);
+            $renderNode->sourceVNode = $vnode;
+            $renderNode->groupId = $vnode->groupId;
             $renderNode->layoutDirty = true;
+            $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] = $vnode;
+        } else {
+            // ── 复用 RenderNode ──
+            $renderNode->style = $resolvedStyle;
             $renderNode->lastPaintFrame = 0;
             $renderNode->sourceVNode = $vnode;
             $renderNode->groupId = $vnode->groupId;
-        } else {
-            // ── 新建 RenderNode ──
-            $renderNode = new RenderNode(
-                $vnode->type,
-                $resolvedStyle,
-                null,
-                $vnode->key
-            );
-            $renderNode->sourceVNode = $vnode;
-            $renderNode->groupId = $vnode->groupId;
-            $this->vnodeToRenderNodeMap[$hash] = $renderNode;
+
+            // 叶子节点洁净路径：
+            //   叶子节点（无 VNode 子节点）+ 显式 top（禁用 auto-stack）+ 布局属性一致
+            //   → 标记 layoutDirty=false，LayoutResolver 跳过位置重算
+            //   否则 → layoutDirty=true，全量重算位置
+            $oldVNode = $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] ?? null;
+            $vnodeChildren = is_array($vnode->children)
+                ? $this->vnodeChildrenToArray($vnode->children)
+                : [];
+            $isLeaf = count($vnodeChildren) === 0;
+            $hasExplicitTop = array_key_exists('top', $resolvedStyle);
+            if ($isLeaf && $hasExplicitTop && $oldVNode !== null && $this->areVNodesEqual($vnode, $oldVNode)) {
+                $renderNode->layoutDirty = false;
+            } else {
+                $renderNode->layoutDirty = true;
+            }
+
+            // 类型变化时重建子节点
+            if ($renderNode->type !== $vnode->type) {
+                $renderNode->type = $vnode->type;
+                $renderNode->key = $vnode->key;
+                $this->destroyRenderNodeTree($renderNode);
+            } elseif ($renderNode->key !== $vnode->key) {
+                $renderNode->key = $vnode->key;
+            }
+            // 始终更新 renderNodeToVNodeMap，下一帧需要从映射获取 oldVNode 进行洁净路径判断
             $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] = $vnode;
         }
 
@@ -212,40 +370,65 @@ class RenderTreeManager
             $parent->children[] = $renderNode;
         }
 
-        // ── 处理子节点（key-aware + 每帧全量重建防累积） ──
+        // ── 处理子节点（key-aware + consumed 跟踪防重复匹配） ──
+        $oldChildren = $renderNode->children;
+        $renderNode->clearChildren();
+
         if (is_string($vnode->children)) {
             $renderNode->content = $vnode->children;
-            $renderNode->clearChildren();
         } else {
             $childVNodes = $this->vnodeChildrenToArray($vnode->children);
-            $oldChildren = $renderNode->children;
-            $renderNode->children = [];
+            $consumed = [];
 
-            // 构建 key → 旧 RenderNode 映射，清理旧的 spl_object_hash 映射条目
-            $oldByKey = [];
-            foreach ($oldChildren as $oldRN) {
-                if ($oldRN->key !== null && $oldRN->sourceVNode !== null) {
-                    $oldByKey[$oldRN->key] = $oldRN;
-                    unset($this->vnodeToRenderNodeMap[spl_object_hash($oldRN->sourceVNode)]);
+            foreach ($childVNodes as $i => $childVNode) {
+                $matchedOld = null;
+                $matchedIdx = null;
+                $key = $childVNode->key;
+
+                if ($key !== null) {
+                    // key 匹配：遍历 oldChildren 找 key + type 匹配
+                    foreach ($oldChildren as $pos => $oldRN) {
+                        if (!in_array($pos, $consumed, true)
+                            && $oldRN->key === $key
+                            && $oldRN->type === $childVNode->type) {
+                            $matchedOld = $oldRN;
+                            $matchedIdx = $pos;
+                            break;
+                        }
+                    }
+                } elseif (isset($oldChildren[$i]) && !in_array($i, $consumed, true)) {
+                    // 位置匹配（静态节点）
+                    $oldRN = $oldChildren[$i];
+                    if ($oldRN->key === null && $oldRN->type === $childVNode->type) {
+                        $matchedOld = $oldRN;
+                        $matchedIdx = $i;
+                    }
                 }
+
+                if ($matchedIdx !== null) {
+                    $consumed[] = $matchedIdx;
+                }
+
+                $childCandidates = $matchedOld !== null ? [$matchedOld] : null;
+
+                $childRN = $this->updateFromVNode(
+                    $childVNode, $renderNode, $root, $componentByGroupId, $childCandidates
+                );
+                // 子节点已在其自身的 updateFromVNode 中通过
+                // $parent->children[] = $renderNode 添加到父级，
+                // 此处不需要重复添加
             }
 
-            foreach ($childVNodes as $childVNode) {
-                $key = $childVNode->key;
-                $hash = spl_object_hash($childVNode);
-
-                // Key-based reuse: 将新 VNode hash 指向旧 RenderNode
-                if ($key !== null && isset($oldByKey[$key]) && !isset($this->vnodeToRenderNodeMap[$hash])) {
-                    $oldRN = $oldByKey[$key];
-                    $this->vnodeToRenderNodeMap[$hash] = $oldRN;
-                    $this->renderNodeToVNodeMap[spl_object_hash($oldRN)] = $childVNode;
+            // 清理未被复用的旧子节点树
+            foreach ($oldChildren as $pos => $oldRN) {
+                if (!in_array($pos, $consumed, true)) {
+                    $this->destroyRenderNodeTree($oldRN);
                 }
-
-                $this->updateFromVNode(
-                    $childVNode, $renderNode, $root, $componentByGroupId
-                );
             }
         }
+
+        // 注册到 VNode → RenderNode 快速查找映射（每帧重建，在 #root handler 中清理）
+        $this->vnodeToRenderNodeMap[spl_object_hash($vnode)] = $renderNode;
 
         return $renderNode;
     }

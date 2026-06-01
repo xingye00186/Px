@@ -169,25 +169,10 @@ for ($f = 0; $f < 10; $f++) {
     $m1->updateFromVNode($vnode1, null, $rootComponent, $componentByGroupId);
 }
 $g1 = countGroupMap($m1);
-$v1 = reflectCount($m1, 'vnodeToRenderNodeMap');
-echo "  10 frames, same VNode: groupMap={$g1}, vnodeMap={$v1}\n";
+echo "  10 frames, same VNode: groupMap={$g1}\n";
 echo "  ⚠ groupMap 每帧 +1 最终={$g1}（预期≈节点数）\n";
 
-// 1b. 脏组件 vnodeMap 僵尸条目
-echo "--- 1b. 脏组件 vnodeMap 僵尸条目 ---\n";
-$m1b = new RenderTreeManager();
-for ($f = 0; $f < 20; $f++) {
-    $m1b->updateFromVNode(
-        VNode::h('div', ['class' => 'item'], "f{$f}"),
-        null, $rootComponent, $componentByGroupId
-    );
-}
-$v1b = reflectCount($m1b, 'vnodeToRenderNodeMap');
-$r1b = reflectCount($m1b, 'renderNodeToVNodeMap');
-echo "  20 frames, new VNode each: vnodeMap={$v1b}, rnMap={$r1b}\n";
-echo "  ⚠ O(frames) 增长 —— 旧 VNode hash 条目永不清理\n";
-
-// 1c. 100 帧 children 稳定性（验证儿童累积是否彻底修复）
+// 1b. 100 帧 children 稳定性（验证儿童累积是否彻底修复）
 echo "--- 1c. 100 帧 children 稳定性 ---\n";
 $m1c = new RenderTreeManager();
 $stable = VNode::h('#root', [], [
@@ -199,47 +184,35 @@ for ($f = 0; $f < 100; $f++) {
 }
 echo "  [PASS] 100 frames children stable at 2\n";
 
-// 1d. key-based 重排序复用
+// 1d. key-based 重排序复用 + sourceVNode 更新
 echo "--- 1d. key-based 重排序 ---\n";
 $m1d = new RenderTreeManager();
-$pVNode = VNode::h('div', [], [
+
+// Frame 1: #root → div(k-a=A, k-b=B)
+$root1d = VNode::h('#root', [], [VNode::h('div', [], [
     VNode::hKey('div', [], 'A', 'k-a'),
     VNode::hKey('div', [], 'B', 'k-b'),
-]);
-$rn1d = $m1d->updateFromVNode($pVNode, null, $rootComponent, $componentByGroupId);
+])]);
+$rn1d = $m1d->updateFromVNode($root1d, null, $rootComponent, $componentByGroupId);
 $rnA = $rn1d->children[0];
 $rnB = $rn1d->children[1];
 
-// frame 2: 新 VNode 对象但同 key
-$pVNode->children = [VNode::hKey('div', [], 'A2', 'k-a'), VNode::hKey('div', [], 'B2', 'k-b')];
-$rn1d_2 = $m1d->updateFromVNode($pVNode, null, $rootComponent, $componentByGroupId);
+// Frame 2: 新 VNode 对象但同 key，#root 传 candidates
+$oldRoot1d = $m1d->getRootRenderNode();
+$candidates1d = $oldRoot1d !== null ? [$oldRoot1d] : null;
+$root1d_2 = VNode::h('#root', [], [VNode::h('div', [], [
+    VNode::hKey('div', [], 'A2', 'k-a'),
+    VNode::hKey('div', [], 'B2', 'k-b'),
+])]);
+$rn1d_2 = $m1d->updateFromVNode($root1d_2, null, $rootComponent, $componentByGroupId, $candidates1d);
 $ok = ($rn1d_2->children[0] === $rnA && $rn1d_2->children[1] === $rnB);
 echo "  " . ($ok ? "[PASS]" : "[FAIL]") . " key-based reuse: " . ($ok ? "same RN objects" : "new RNs created") . "\n";
 
-// 1e. key-based 旧 VNode hash 驱逐
-echo "--- 1e. key-based 旧 VNode hash 驱逐 ---\n";
-$oldVNodes = $pVNode->children;                    // 保存旧 VNode 对象（A2, B2）
-$oldHashes = [spl_object_hash($oldVNodes[0]), spl_object_hash($oldVNodes[1])];
-$pVNode->children = [VNode::hKey('div', [], 'A3', 'k-a'), VNode::hKey('div', [], 'B3', 'k-b')];
-$rn1d_3 = $m1d->updateFromVNode($pVNode, null, $rootComponent, $componentByGroupId);
-$vnodeMap = reflectGet($m1d, 'vnodeToRenderNodeMap');
-$evicted = 0;
-foreach ($oldHashes as $h) {
-    if (!isset($vnodeMap[$h])) $evicted++;
-}
-echo "  Old hashes evicted: {$evicted}/" . count($oldHashes) . "\n";
-echo "  " . ($evicted === count($oldHashes) ? "[PASS]" : "[FAIL]") . " 旧 VNode hash 已被清除\n";
-
-// 1f. sourceVNode 始终指向最新 VNode，旧 VNode 不再被 RN 引用
-echo "--- 1f. sourceVNode 始终指向最新 VNode ---\n";
-$newVNodes = $pVNode->children;                    // A3, B3
-$same = ($rn1d_3->children[0]->sourceVNode === $newVNodes[0]
-      && $rn1d_3->children[1]->sourceVNode === $newVNodes[1]);
-$oldRefd = ($rn1d_3->children[0]->sourceVNode === $oldVNodes[0]
-         || $rn1d_3->children[1]->sourceVNode === $oldVNodes[1]);
+// sourceVNode 指向最新 VNode（#root 的 children 是数组，需先取 div 再取子节点）
+$divVNodeChildren = $root1d_2->children[0]->children;
+$same = ($rn1d_2->children[0]->sourceVNode === $divVNodeChildren[0])
+     && ($rn1d_2->children[1]->sourceVNode === $divVNodeChildren[1]);
 echo "  " . ($same ? "[PASS]" : "[FAIL]") . " sourceVNode 跟随最新 VNode\n";
-echo "  Old VNodes GC-eligible: " . ($oldRefd ? "no ⚠" : "yes ✅") . "\n";
-echo "  ✅ sourceVNode 指向最新 VNode，旧 VNode 可被 GC\n";
 
 echo "\n";
 

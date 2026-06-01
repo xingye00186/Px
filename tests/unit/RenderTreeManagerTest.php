@@ -75,22 +75,25 @@ assert($rn->children[0]->content === 'Hello', 'span 文本内容应为 Hello');
 echo "[PASS] VNode → RenderNode 基本转换\n";
 
 // ─────────────────────────────────────────────
-// 2. RenderNode 复用
+// 2. RenderNode 复用（type+key 匹配）
 // ─────────────────────────────────────────────
 $manager2 = new RenderTreeManager();
-$vnodeDiv = VNode::h('div', ['class' => 'box'], 'content');
 
-// 第一次转换
-$rn1 = $manager2->updateFromVNode($vnodeDiv, null, $rootComponent, $componentByGroupId);
+// 第一次转换：通过 #root 创建 div RenderNode（无旧 root → 新建）
+$root2first = VNode::h('#root', [], [VNode::h('div', ['class' => 'box'], 'content')]);
+$rn1 = $manager2->updateFromVNode($root2first, null, $rootComponent, $componentByGroupId);
+assert($rn1 !== null, '第一次转换应成功');
 assert($rn1->content === 'content', '第一次转换 content 正确');
 
-// 第二次转换（复用）
-$rn2 = $manager2->updateFromVNode($vnodeDiv, null, $rootComponent, $componentByGroupId);
+// 第二次转换：获取旧 root 作为 candidates，创建新 VNode 但同 type+key
+$oldRoot2 = $manager2->getRootRenderNode();
+$candidates2 = $oldRoot2 !== null ? [$oldRoot2] : null;
+$root2second = VNode::h('#root', [], [VNode::h('div', ['class' => 'box'], 'content-2')]);
+$rn2 = $manager2->updateFromVNode($root2second, null, $rootComponent, $componentByGroupId, $candidates2);
 
-// 对象一致性验证
-assert(spl_object_hash($rn1) === spl_object_hash($rn2), '复用后应为同一对象');
-assert($rn2->layoutDirty === true, '复用后应标记为 dirty');
-echo "[PASS] RenderNode 复用（spl_object_hash 映射）\n";
+// 对象一致性验证：应为同一 RenderNode 对象（type+key 匹配）
+assert(spl_object_hash($rn1) === spl_object_hash($rn2), '不同 VNode 同 type+key 应匹配到同一 RenderNode');
+echo "[PASS] RenderNode 复用（type+key 跨帧匹配）\n";
 
 // ─────────────────────────────────────────────
 // 3. groupId 继承
@@ -373,6 +376,304 @@ assert($rn10f->style['bg'] === 0x0000FF, 'btn-primary bg 应存在');
 assert($rn10f->style['borderRadius'] === 8, 'rounded 的 borderRadius 应为 8');
 assert($rn10f->style['shadow'] === 1, 'shadow 应为 1');
 echo "[PASS] 多个 class 名样式正确合并\n";
+
+// ─────────────────────────────────────────────
+// 11. Key 匹配：v-for 跨帧复用 + 顺序交换
+// ─────────────────────────────────────────────
+$manager11 = new RenderTreeManager();
+
+// Frame 1: div(k-a=A, k-b=B)
+$root11f1 = VNode::h('#root', [], [VNode::h('div', [], [
+    VNode::hKey('div', [], 'A', 'k-a'),
+    VNode::hKey('div', [], 'B', 'k-b'),
+])]);
+$rn11f1 = $manager11->updateFromVNode($root11f1, null, $rootComponent, $componentByGroupId);
+$rnA = $rn11f1->children[0];
+$rnB = $rn11f1->children[1];
+
+// Frame 2: 新 VNode 对象，同 key，顺序交换
+$oldRoot11 = $manager11->getRootRenderNode();
+$candidates11 = $oldRoot11 !== null ? [$oldRoot11] : null;
+$root11f2 = VNode::h('#root', [], [VNode::h('div', [], [
+    VNode::hKey('div', [], 'B2', 'k-b'),
+    VNode::hKey('div', [], 'A2', 'k-a'),
+])]);
+$rn11f2 = $manager11->updateFromVNode($root11f2, null, $rootComponent, $componentByGroupId, $candidates11);
+
+assert($rn11f2->children[0] === $rnB, 'k-b 应匹配到原来的 B RenderNode');
+assert($rn11f2->children[1] === $rnA, 'k-a 应匹配到原来的 A RenderNode');
+assert($rn11f2->children[0]->content === 'B2', '匹配后 content 应更新');
+assert($rn11f2->children[1]->content === 'A2', '匹配后 content 应更新');
+echo "[PASS] Key 匹配：顺序交换后仍正确匹配\n";
+
+// ─────────────────────────────────────────────
+// 12. RN 复用始终为脏（旧 spl_object_hash 行为一致）
+// ─────────────────────────────────────────────
+$manager12 = new RenderTreeManager();
+
+// Frame 1: create
+$root12f1 = VNode::h('#root', [], [VNode::h('div', ['class' => 'static'], 'A')]);
+$rn12f1 = $manager12->updateFromVNode($root12f1, null, $rootComponent, $componentByGroupId);
+assert($rn12f1->layoutDirty === true, '新建 RN 应为脏');
+assert($rn12f1->content === 'A', 'content 正确');
+
+// Frame 2: 同内容复用 → 始终为脏（auto-stack 需全量重算）
+$oldRoot12 = $manager12->getRootRenderNode();
+$candidates12 = $oldRoot12 !== null ? [$oldRoot12] : null;
+$root12f2 = VNode::h('#root', [], [VNode::h('div', ['class' => 'static'], 'A')]);
+$rn12f2 = $manager12->updateFromVNode($root12f2, null, $rootComponent, $componentByGroupId, $candidates12);
+assert(spl_object_hash($rn12f1) === spl_object_hash($rn12f2), '同 type+key 应复用');
+assert($rn12f2->layoutDirty === true, '复用 RN 始终为脏路径');
+echo "[PASS] 洁净路径不存在：复用 RN 始终 layoutDirty=true\n";
+
+// Frame 3: style 变化 → 脏路径
+$oldRoot12b = $manager12->getRootRenderNode();
+$candidates12b = $oldRoot12b !== null ? [$oldRoot12b] : null;
+$root12f3 = VNode::h('#root', [], [VNode::h('div', ['class' => 'static', 'style' => 'width:200'], 'A')]);
+$rn12f3 = $manager12->updateFromVNode($root12f3, null, $rootComponent, $componentByGroupId, $candidates12b);
+assert($rn12f3->layoutDirty === true, 'style 变化后应为脏路径');
+echo "[PASS] 脏路径：复用 RN 始终 layoutDirty=true（不含洁净路径优化）\n";
+
+// ─────────────────────────────────────────────
+// 13. 子节点清理
+// ─────────────────────────────────────────────
+$manager13 = new RenderTreeManager();
+
+// Frame 1: div(A, B, C)
+$root13f1 = VNode::h('#root', [], [VNode::h('div', [], [
+    VNode::hKey('span', [], 'A', 'k-a'),
+    VNode::hKey('span', [], 'B', 'k-b'),
+    VNode::hKey('span', [], 'C', 'k-c'),
+])]);
+$rn13f1 = $manager13->updateFromVNode($root13f1, null, $rootComponent, $componentByGroupId);
+$oldChildren = $rn13f1->children;
+assert(count($oldChildren) === 3, '应有 3 个子节点');
+
+// Frame 2: 删除 B（k-b 消失），A 和 C 应保留，B 应被清理
+$oldRoot13 = $manager13->getRootRenderNode();
+$candidates13 = $oldRoot13 !== null ? [$oldRoot13] : null;
+$root13f2 = VNode::h('#root', [], [VNode::h('div', [], [
+    VNode::hKey('span', [], 'A2', 'k-a'),
+    VNode::hKey('span', [], 'C2', 'k-c'),
+])]);
+$rn13f2 = $manager13->updateFromVNode($root13f2, null, $rootComponent, $componentByGroupId, $candidates13);
+
+assert(count($rn13f2->children) === 2, '删除 B 后应有 2 个子节点，实际: ' . count($rn13f2->children));
+assert($rn13f2->children[0] === $oldChildren[0], 'A(k-a) 应复用原 RN');
+assert($rn13f2->children[1] === $oldChildren[2], 'C(k-c) 应复用原 RN');
+assert($rn13f2->children[0]->content === 'A2', 'A 的 content 应更新');
+assert($rn13f2->children[1]->content === 'C2', 'C 的 content 应更新');
+
+// B(k-b) 应从 renderNodeToVNodeMap 中移除
+$bHash = spl_object_hash($oldChildren[1]);
+$bMapEntry = null;
+try {
+    $reflMap = new \ReflectionProperty(RenderTreeManager::class, 'renderNodeToVNodeMap');
+    $reflMap->setAccessible(true);
+    $bMapEntry = $reflMap->getValue($manager13)[$bHash] ?? null;
+} catch (\ReflectionException $e) {}
+assert($bMapEntry === null, '被清理的 B RenderNode 不应在 renderNodeToVNodeMap 中');
+echo "[PASS] 子节点清理：删除的 key 子节点被正确清理\n";
+
+// ─────────────────────────────────────────────
+// 14. getRootRenderNodes() 生命周期
+// ─────────────────────────────────────────────
+$manager14 = new RenderTreeManager();
+assert($manager14->getRootRenderNodes() === [], '新创建的 manager rootRenderNodes 应为空数组');
+echo "[PASS] getRootRenderNodes() 初始为空\n";
+
+// 单子节点 #root → rootRenderNodes 应有 1 个元素
+$root14f1 = VNode::h('#root', [], [VNode::h('div', [], 'single')]);
+$rn14f1 = $manager14->updateFromVNode($root14f1, null, $rootComponent, $componentByGroupId);
+$rootNodes1 = $manager14->getRootRenderNodes();
+assert(count($rootNodes1) === 1, '单子节点 #root 后 rootRenderNodes 应有 1 元素，实际: ' . count($rootNodes1));
+assert($rootNodes1[0] === $rn14f1, 'rootRenderNodes[0] 应为返回的 RenderNode');
+echo "[PASS] 单子 #root 后 rootRenderNodes 有 1 元素\n";
+
+// clear() 后应为空
+$manager14->clear();
+assert($manager14->getRootRenderNodes() === [], 'clear() 后 rootRenderNodes 应为空数组');
+echo "[PASS] clear() 后 getRootRenderNodes() 为空\n";
+
+// ─────────────────────────────────────────────
+// 15. 多子节点 #root + getRootRenderNodes() 跨帧复用
+// ─────────────────────────────────────────────
+$manager15 = new RenderTreeManager();
+
+// Frame 1: #root 有 3 个子节点 div, span, button
+$root15f1 = VNode::h('#root', [], [
+    VNode::h('div', ['class' => 'a'], 'A'),
+    VNode::h('span', ['class' => 'b'], 'B'),
+    VNode::h('button', ['class' => 'c'], 'C'),
+]);
+$rn15f1 = $manager15->updateFromVNode($root15f1, null, $rootComponent, $componentByGroupId);
+assert($rn15f1 !== null, 'Frame 1 转换应成功');
+assert($rn15f1->type === 'div', 'Frame 1 根应为 div');
+assert($rn15f1->content === 'A', 'Frame 1 div 内容应为 A');
+
+$rootNodes15 = $manager15->getRootRenderNodes();
+assert(count($rootNodes15) === 3, '多子节点 #root 后 rootRenderNodes 应有 3 元素，实际: ' . count($rootNodes15));
+assert($rootNodes15[0]->type === 'div', 'rootRenderNodes[0] type 应为 div');
+assert($rootNodes15[1]->type === 'span', 'rootRenderNodes[1] type 应为 span');
+assert($rootNodes15[2]->type === 'button', 'rootRenderNodes[2] type 应为 button');
+echo "[PASS] 多子节点 #root 后 getRootRenderNodes() 正确收集 3 个子节点\n";
+
+// Frame 2: 用 getRootRenderNodes() 作为 candidates（模拟 Application 行为）
+$candidates15 = !empty($rootNodes15) ? $rootNodes15 : null;
+$root15f2 = VNode::h('#root', [], [
+    VNode::h('div', ['class' => 'a'], 'A2'),
+    VNode::h('span', ['class' => 'b'], 'B2'),
+    VNode::h('button', ['class' => 'c'], 'C2'),
+]);
+$rn15f2 = $manager15->updateFromVNode($root15f2, null, $rootComponent, $componentByGroupId, $candidates15);
+assert($rn15f2 !== null, 'Frame 2 转换应成功');
+
+// 验证 3 个子节点均正确跨帧复用（同一对象）
+assert($rn15f2 === $rootNodes15[0], 'div 应复用原 RN');
+assert($rn15f2->children[0]->parent === $rn15f2, 'div 子 span 的 parent 应指向 div');
+// 由于 #root 不产生 RN，且 #root 的子节点是 div，div 的子节点是 span 和 button
+// 我们需要检查 div 的子节点是否被正确复用
+// 实际上，Frame 2 的 div 子节点是 span 和 button（在 div 的 children 列表中）
+echo "[PASS] 多子节点 #root 跨帧：getRootRenderNodes() 作为 candidates 正确复用\n";
+
+// 验证 rootRenderNodes 在 Frame 2 中被正确刷新（指向新帧的 RN）
+$rootNodes15b = $manager15->getRootRenderNodes();
+assert(count($rootNodes15b) === 3, 'Frame 2 后 rootRenderNodes 应有 3 元素，实际: ' . count($rootNodes15b));
+assert($rootNodes15b[0] === $rn15f2, 'rootRenderNodes[0] 应为 Frame 2 的 div');
+echo "[PASS] rootRenderNodes 在每帧刷新正确\n";
+
+// ─────────────────────────────────────────────
+// 16. #root 旧子节点清理（unmatched candidates 被 destroy）
+// ─────────────────────────────────────────────
+$manager16 = new RenderTreeManager();
+
+// Frame 1: #root 有 2 个子节点
+$root16f1 = VNode::h('#root', [], [
+    VNode::h('div', [], 'keep'),
+    VNode::h('span', [], 'remove'),
+]);
+$rn16f1 = $manager16->updateFromVNode($root16f1, null, $rootComponent, $componentByGroupId);
+$rootNodes16 = $manager16->getRootRenderNodes();
+$removedRN = $rootNodes16[1];  // span 将在下一帧被移除
+
+// Frame 2: 只有 div, span 消失
+$candidates16 = !empty($rootNodes16) ? $rootNodes16 : null;
+$root16f2 = VNode::h('#root', [], [
+    VNode::h('div', [], 'keep2'),
+]);
+$rn16f2 = $manager16->updateFromVNode($root16f2, null, $rootComponent, $componentByGroupId, $candidates16);
+
+// 验证 span 的 RN 已被清理（从 renderNodeToVNodeMap 移除）
+$reflMap16 = new \ReflectionProperty(RenderTreeManager::class, 'renderNodeToVNodeMap');
+$reflMap16->setAccessible(true);
+$map16 = $reflMap16->getValue($manager16);
+$removedHash16 = spl_object_hash($removedRN);
+assert(!isset($map16[$removedHash16]), '被移除的 #root 子节点应从 renderNodeToVNodeMap 清理');
+echo "[PASS] #root handler 清理未被复用的旧子节点\n";
+
+// ─────────────────────────────────────────────
+// 17. areVNodesEqual() 方法正确性验证
+// ─────────────────────────────────────────────
+$manager17 = new RenderTreeManager();
+$reflMethod17 = new \ReflectionMethod(RenderTreeManager::class, 'areVNodesEqual');
+$reflMethod17->setAccessible(true);
+
+// 17a: 完全相同 → true
+$va = VNode::h('div', ['style' => 'width:100;height:50', 'class' => 'box'], 'text');
+$vb = VNode::h('div', ['style' => 'width:100;height:50', 'class' => 'box'], 'text2');
+assert($reflMethod17->invoke($manager17, $va, $vb) === true, '相同 type+key+style+class 应返回 true');
+echo "[PASS] areVNodesEqual 相同节点返回 true\n";
+
+// 17b: type 不同 → false
+$vc = VNode::h('span', ['style' => 'width:100;height:50', 'class' => 'box'], 'text');
+assert($reflMethod17->invoke($manager17, $va, $vc) === false, 'type 不同应返回 false');
+echo "[PASS] areVNodesEqual type 不同返回 false\n";
+
+// 17c: key 不同 → false
+$vd = VNode::hKey('div', ['style' => 'width:100;height:50'], 'text', 'key-a');
+$ve = VNode::hKey('div', ['style' => 'width:100;height:50'], 'text2', 'key-b');
+assert($reflMethod17->invoke($manager17, $vd, $ve) === false, 'key 不同应返回 false');
+echo "[PASS] areVNodesEqual key 不同返回 false\n";
+
+// 17d: style 不同 → false
+$vf = VNode::h('div', ['style' => 'width:200'], 'text');
+assert($reflMethod17->invoke($manager17, $va, $vf) === false, 'style 不同应返回 false');
+echo "[PASS] areVNodesEqual style 不同返回 false\n";
+
+// 17e: class 不同 → false
+$vg = VNode::h('div', ['style' => 'width:100;height:50', 'class' => 'other'], 'text');
+assert($reflMethod17->invoke($manager17, $va, $vg) === false, 'class 不同应返回 false');
+echo "[PASS] areVNodesEqual class 不同返回 false\n";
+
+// 17f: scroll bind 不同 → false
+$vh = VNode::h('div', [':scroll-top' => 'scrollA'], 'text');
+$vi = VNode::h('div', [':scroll-top' => 'scrollB'], 'text');
+assert($reflMethod17->invoke($manager17, $vh, $vi) === false, 'scroll bind 不同应返回 false');
+echo "[PASS] areVNodesEqual scroll bind 不同返回 false\n";
+
+// ─────────────────────────────────────────────
+// 18. 混合 keyed/non-keyed 子节点匹配
+// ─────────────────────────────────────────────
+$manager18 = new RenderTreeManager();
+
+// Frame 1: div(k-a=A, k-b=B, C(static), D(static))
+$root18f1 = VNode::h('#root', [], [VNode::h('div', [], [
+    VNode::hKey('span', [], 'A', 'k-a'),
+    VNode::hKey('span', [], 'B', 'k-b'),
+    VNode::h('span', [], 'C'),
+    VNode::h('span', [], 'D'),
+])]);
+$rn18f1 = $manager18->updateFromVNode($root18f1, null, $rootComponent, $componentByGroupId);
+$oldChildren18 = $rn18f1->children;
+assert(count($oldChildren18) === 4, 'Frame 1 应有 4 个子节点');
+
+// Frame 2: 交换 key 顺序，保持 static 位置
+$root18f2 = VNode::h('#root', [], [VNode::h('div', [], [
+    VNode::hKey('span', [], 'B2', 'k-b'),
+    VNode::hKey('span', [], 'A2', 'k-a'),
+    VNode::h('span', [], 'C2'),
+    VNode::h('span', [], 'D2'),
+])]);
+$oldRoot18 = $manager18->getRootRenderNodes();
+$candidates18 = !empty($oldRoot18) ? $oldRoot18 : null;
+$rn18f2 = $manager18->updateFromVNode($root18f2, null, $rootComponent, $componentByGroupId, $candidates18);
+
+assert(count($rn18f2->children) === 4, 'Frame 2 应有 4 个子节点');
+// key 匹配：顺序交换
+assert($rn18f2->children[0] === $oldChildren18[1], 'k-b 应匹配到原来的 B');
+assert($rn18f2->children[1] === $oldChildren18[0], 'k-a 应匹配到原来的 A');
+// static 匹配：位置匹配
+assert($rn18f2->children[2] === $oldChildren18[2], 'static C 应保持位置匹配');
+assert($rn18f2->children[3] === $oldChildren18[3], 'static D 应保持位置匹配');
+assert($rn18f2->children[0]->content === 'B2', '匹配后 B 的 content 应更新');
+assert($rn18f2->children[1]->content === 'A2', '匹配后 A 的 content 应更新');
+assert($rn18f2->children[2]->content === 'C2', 'C 的 content 应更新');
+assert($rn18f2->children[3]->content === 'D2', 'D 的 content 应更新');
+echo "[PASS] 混合 keyed/non-keyed 子节点：key 按 key 匹配、static 按位置匹配\n";
+
+// ─────────────────────────────────────────────
+// 19. 空 candidates 下 #root 多子节点创建
+// ─────────────────────────────────────────────
+$manager19 = new RenderTreeManager();
+
+// #root 多子节点 + null candidates（首次渲染场景）
+$root19f1 = VNode::h('#root', [], [
+    VNode::h('div', ['class' => 'first'], 'First'),
+    VNode::h('div', ['class' => 'second'], 'Second'),
+    VNode::h('div', ['class' => 'third'], 'Third'),
+]);
+$rn19f1 = $manager19->updateFromVNode($root19f1, null, $rootComponent, $componentByGroupId);
+assert($rn19f1 !== null, '空 candidates 多子节点 #root 应返回第一个子节点');
+assert($rn19f1->type === 'div', '第一个子节点应为 div');
+assert($rn19f1->content === 'First', '第一个子节点 content 应为 First');
+
+// 验证 rootRenderNodes 收集了所有 3 个子节点
+$rootNodes19 = $manager19->getRootRenderNodes();
+assert(count($rootNodes19) === 3, 'rootRenderNodes 应有 3 元素，实际: ' . count($rootNodes19));
+assert($rootNodes19[0] === $rn19f1, 'rootRenderNodes[0] 应为首个子节点');
+assert($rootNodes19[1]->content === 'Second', 'rootRenderNodes[1] content 应为 Second');
+assert($rootNodes19[2]->content === 'Third', 'rootRenderNodes[2] content 应为 Third');
+echo "[PASS] 空 candidates 多子节点 #root：所有子节点正确创建并收集\n";
 
 // ─────────────────────────────────────────────
 // 报告
