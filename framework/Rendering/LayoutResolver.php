@@ -516,6 +516,8 @@ class LayoutResolver
             $childMarginBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
 
             // Main axis position (inside padding + margin offset)
+            $oldX = $ch->x;
+            $oldY = $ch->y;
             if ($isRow) {
                 $ch->x = $node->x + $paddingLeft + (int)$currentMain + $childMarginLeft;
             } else {
@@ -551,6 +553,24 @@ class LayoutResolver
                 $ch->y = $node->y + $paddingTop + $crossOffset;
             } else {
                 $ch->x = $node->x + $paddingLeft + $crossOffset;
+            }
+
+
+            // Shift descendants if position changed from initial resolve
+            // Note: We shift only true descendants (not $ch itself) because
+            // flex already set $ch->x/$ch->y. shiftDescendantsY/X modify
+            // the passed node itself, so we pass each child of $ch directly.
+            $dx = $ch->x - $oldX;
+            $dy = $ch->y - $oldY;
+            if ($dy !== 0) {
+                foreach ($ch->children as $grandchild) {
+                    $this->shiftDescendantsY($grandchild, $dy);
+                }
+            }
+            if ($dx !== 0) {
+                foreach ($ch->children as $grandchild) {
+                    $this->shiftDescendantsX($grandchild, $dx);
+                }
             }
 
             // Advance main position
