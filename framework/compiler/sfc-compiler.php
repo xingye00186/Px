@@ -524,6 +524,10 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 $propName = substr($expr, strlen($loopInfo['item']) + 1);
                 return "\${$loopInfo['item']}['{$propName}']";
             }
+            // Handle bare loop variable reference e.g. {{ item }}
+            if ($loopInfo !== null && $expr === $loopInfo['item']) {
+                return "\${$loopInfo['item']}";
+            }
             return "\$this->{$expr}";
         }
         if (isset($node->props['parts'])) {
@@ -538,6 +542,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     if ($loopInfo !== null && str_starts_with($expr, $loopInfo['item'] . '.')) {
                         $propName = substr($expr, strlen($loopInfo['item']) + 1);
                         $concatParts[] = "\${$loopInfo['item']}['{$propName}']";
+                    } elseif ($loopInfo !== null && $expr === $loopInfo['item']) {
+                        $concatParts[] = "\${$loopInfo['item']}";
                     } else {
                         $concatParts[] = "\$this->{$expr}";
                     }
@@ -615,6 +621,9 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     if (str_starts_with($v, $loopInfo['item'] . '.')) {
                         // Same pattern - skip bind prop
                         continue;
+                    } elseif ($v === $loopInfo['item']) {
+                        // Bare loop variable reference - skip bind prop
+                        continue;
                     } elseif (preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $v)) {
                         // Valid property name: generate $this->property
                         $v = "\$this->{$v}";
@@ -627,6 +636,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     if (str_starts_with($v, $loopInfo['item'] . '.')) {
                         $propName = substr($v, strlen($loopInfo['item']) + 1);
                         $v = "\${$loopInfo['item']}['{$propName}']";
+                    } elseif ($v === $loopInfo['item']) {
+                        $v = "\${$loopInfo['item']}";
                     } else {
                         $v = var_export($v, true);
                     }
@@ -679,6 +690,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     if ($loopInfo !== null && str_starts_with($expr, $loopInfo['item'] . '.')) {
                         $propName = substr($expr, strlen($loopInfo['item']) + 1);
                         $concatParts[] = "\${$loopInfo['item']}['{$propName}']";
+                    } elseif ($loopInfo !== null && $expr === $loopInfo['item']) {
+                        $concatParts[] = "\${$loopInfo['item']}";
                     } else {
                         $concatParts[] = "\$this->{$expr}";
                     }
@@ -883,6 +896,7 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                     }
                                     $stmts[] = "{$ind}    }";
                                     $i += count($sameIfChildren);
+                                    $chainStarted = false;
                                     continue;
                                 }
                             }
@@ -943,56 +957,10 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                         }
                         $i++;
                     }
-                    // Close the if-else chain if we started one
+                    // Close the if-else chain - always exactly 1 closing brace
+                    // regardless of how many elseif/else branches exist
                     if ($chainStarted) {
-                        // Calculate nesting depth by counting "levels" of nested conditionals
-                        // Sequential siblings (v-if → v-else-if → v-else) have depth 1
-                        // Nested conditionals have depth 2+
-                        // NOTE: Standalone v-ifs (no following else-if/else) are already
-                        // closed in the standalone case block, so don't count them here
-                        $nestingDepth = 0;
-                        $prevWasConditional = false;
-                        $prevWasStandaloneIf = false;
-                        for ($j = 0; $j < $childCount; $j++) {
-                            $c = $node->children[$j];
-                            if ($c instanceof VNode) {
-                                $isIf = isset($c->props['v-if']);
-                                $isElseIf = isset($c->props['v-else-if']);
-                                $isElse = isset($c->props['v-else']);
-                                $isCond = $isIf || $isElseIf || $isElse;
-                                if ($isCond) {
-                                    // Check if this is a standalone v-if (no following else-if/else)
-                                    $isStandaloneIf = false;
-                                    if ($isIf) {
-                                        $hasFollowing = false;
-                                        for ($k = $j + 1; $k < $childCount; $k++) {
-                                            $next = $node->children[$k];
-                                            if ($next instanceof VNode && (
-                                                isset($next->props['v-else-if']) ||
-                                                isset($next->props['v-else'])
-                                            )) {
-                                                $hasFollowing = true;
-                                                break;
-                                            }
-                                        }
-                                        $isStandaloneIf = !$hasFollowing;
-                                    }
-                                    // Count as new nesting level only if:
-                                    // - It's not a standalone v-if (already closed), OR
-                                    // - The previous was a standalone if (it's a new chain)
-                                    if (!$isStandaloneIf && !($prevWasConditional && $prevWasStandaloneIf)) {
-                                        $nestingDepth++;
-                                    }
-                                    $prevWasStandaloneIf = $isStandaloneIf;
-                                }
-                                $prevWasConditional = $isCond;
-                            }
-                        }
-                        // Generate closing braces: first at indent+1, subsequent at indent+2
-                        for ($d = 0; $d < $nestingDepth; $d++) {
-                            $closeIndent = ($d === 0) ? "{$ind}    " : "{$ind}        ";
-                            $stmts[] = "{$closeIndent}}";
-                        }
+                        $stmts[] = "{$ind}    }";
                     }
                     $stmts[] = "{$ind}    return \$c;";
 
@@ -1142,6 +1110,8 @@ function generateLoopItemPropsExpr(array $props, ?array $loopInfo): string
                 if (str_starts_with($v, $loopInfo['item'] . '.')) {
                     $propName = substr($v, strlen($loopInfo['item']) + 1);
                     $v = "\${$loopInfo['item']}['{$propName}']";
+                } elseif ($v === $loopInfo['item']) {
+                    $v = "\${$loopInfo['item']}";
                 } else {
                     $v = "\$this->{$v}";
                 }
@@ -1149,6 +1119,8 @@ function generateLoopItemPropsExpr(array $props, ?array $loopInfo): string
                 if (str_starts_with($v, $loopInfo['item'] . '.')) {
                     $propName = substr($v, strlen($loopInfo['item']) + 1);
                     $v = "\${$loopInfo['item']}['{$propName}']";
+                } elseif ($v === $loopInfo['item']) {
+                    $v = "\${$loopInfo['item']}";
                 } else {
                     $v = var_export($v, true);
                 }
