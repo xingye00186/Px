@@ -626,108 +626,102 @@ $resetProp->setAccessible(true);
 $resetProp->setValue(null, []);
 
 // =============================================
-// 10. Component Positioning
+// 10. Component Positioning (layoutOffset)
 // =============================================
 echo "═══ 10. Component Positioning ═══\n\n";
 
-echo "--- 10a. transferComponentPositioning 多帧不退化 ---\n";
-$app10 = newInstanceWithoutAppForStress();
-$transferMethod = new \ReflectionMethod(Application::class, 'transferComponentPositioning');
-$transferMethod->setAccessible(true);
+// 辅助组件：有可渲染根元素的子组件
+class _PosTestComp extends ReactiveComponent {
+    public function render(): VNode {
+        return VNode::h('#root', [], VNode::h('div', ['style' => 'width:100;height:50'], 'content'));
+    }
+    public function setBindValue(string $k, string $v): void {}
+    public function getBindValue(string $k): string { return ''; }
+    public function dispatchClick(string $h, ?string $a = null): void {}
+}
+
+// 辅助组件：根元素自身带有 left/top 的子组件（用于测试覆盖语义）
+class _PosOverrideComp extends ReactiveComponent {
+    public function render(): VNode {
+        return VNode::h('#root', [],
+            VNode::h('div', ['style' => 'width:100;height:50;left:100px;top:200px'], 'content'));
+    }
+    public function setBindValue(string $k, string $v): void {}
+    public function getBindValue(string $k): string { return ''; }
+    public function dispatchClick(string $h, ?string $a = null): void {}
+}
+
+echo "--- 10a. layoutOffset → updateFromVNode 多帧不退化 ---\n";
+$rootComp10 = new _StressComponent();
+$rootComp10->mount();
+
+$posComp10 = new _PosTestComp();
+$posComp10->mount();
 
 $iterations = 20;
 
 for ($i = 0; $i < $iterations; $i++) {
-    // 每次创建全新 VNode 树（模拟每次 re-render 的新根元素）
-    $root = VNode::h('#root', ['style' => 'width:340px;height:660px'], [
-        VNode::h('div', ['style' => 'background:#2C2C2E;color:#FFF'], 'content'),
+    $manager = new RenderTreeManager();
+
+    $compVNode = VNode::hComponent('_PosTestComp', ['style' => 'left:11px;top:524px'], []);
+    $compVNode->componentInstance = $posComp10;
+    $compVNode->children = $posComp10->getVNodeTree();
+    $compVNode->children->groupId = 'test';
+    $compVNode->layoutOffset = ['left' => 11, 'top' => 524];
+
+    $parentVNode = VNode::h('#root', [], [
+        VNode::h('div', ['style' => 'width:400;height:600'], [
+            $compVNode,
+        ]),
     ]);
 
-    $transferMethod->invoke($app10, 'left:11px;top:524px', $root);
+    $rn = $manager->updateFromVNode($parentVNode, null, $rootComp10, []);
+    assert_not_null($rn, "第 {$i} 次转换应成功");
 
-    // 找到第一个可渲染元素（模拟 transferComponentPositioning 内部逻辑）
-    $target = $root;
-    while ($target !== null && $target->type === '#root') {
-        $children = $target->children;
-        if ($children instanceof VNode) {
-            $target = $children;
-        } elseif (is_array($children)) {
-            $next = null;
-            foreach ($children as $c) {
-                if ($c instanceof VNode && $c->type !== '#text') {
-                    $next = $c;
-                    break;
-                }
-            }
-            $target = $next;
-        } else {
-            $target = null;
-        }
-    }
-
-    assert_not_null($target, "第 {$i} 次应有目标元素");
-    $style = $target->props['style'] ?? '';
-
-    // left/top 值必须存在
-    assert(strpos($style, 'left:11') !== false,
-        "第 {$i} 次应包含 left:11，实际: {$style}");
-    assert(strpos($style, 'top:524') !== false,
-        "第 {$i} 次应包含 top:524，实际: {$style}");
-
-    // 关键：left:/top: 恰好出现 1 次（不退化）
-    $leftCount = substr_count($style, 'left:');
-    assert($leftCount === 1,
-        "第 {$i} 次 left: 应恰好 1 次（实际 {$leftCount}），style={$style}");
-    $topCount = substr_count($style, 'top:');
-    assert($topCount === 1,
-        "第 {$i} 次 top: 应恰好 1 次（实际 {$topCount}），style={$style}");
+    // 找到子组件 RenderNode（作为容器 div 的子节点，无 #component 包装器）
+    $childRN = $rn->children[0] ?? null;
+    assert_not_null($childRN, "第 {$i} 次应有子 RenderNode");
+    assert(isset($childRN->style['left']),
+        "第 {$i} 次应包含 left");
+    assert($childRN->style['left'] === 11,
+        "第 {$i} 次 left 应为 11，实际: " . ($childRN->style['left'] ?? 'unset'));
+    assert(isset($childRN->style['top']),
+        "第 {$i} 次应包含 top");
+    assert($childRN->style['top'] === 524,
+        "第 {$i} 次 top 应为 524，实际: " . ($childRN->style['top'] ?? 'unset'));
 }
-echo "  [PASS] {$iterations} 次 transferComponentPositioning 后定位无退化\n";
+echo "  [PASS] {$iterations} 次 layoutOffset → updateFromVNode 后定位无退化\n";
 
-echo "--- 10b. 目标元素已有 left/top 时正确替换（幂等性）---\n";
-$app10b = newInstanceWithoutAppForStress();
+echo "--- 10b. layoutOffset 覆盖子组件自身的 left/top ---\n";
+$posComp10b = new _PosOverrideComp();
+$posComp10b->mount();
 
-// 模拟多次 re-render 后 style 中已残留旧定位值
-$root = VNode::h('#root', ['style' => 'width:340px;height:660px'], [
-    VNode::h('div', ['style' => 'background:#2C2C2E;color:#FFF;left:100px;top:200px'], 'content'),
+$compVNode10b = VNode::hComponent('_PosOverrideComp', ['style' => 'left:11px;top:524px'], []);
+$compVNode10b->componentInstance = $posComp10b;
+$compVNode10b->children = $posComp10b->getVNodeTree();
+$compVNode10b->children->groupId = 'test';
+
+// layoutOffset 模拟父组件的定位声明，应覆盖子组件自身的 left:100 / top:200
+$compVNode10b->layoutOffset = ['left' => 11, 'top' => 524];
+
+$parentVNode10b = VNode::h('#root', [], [
+    VNode::h('div', ['style' => 'width:400;height:600'], [
+        $compVNode10b,
+    ]),
 ]);
 
-$transferMethod->invoke($app10b, 'left:11px;top:524px', $root);
-
-$target = $root;
-while ($target !== null && $target->type === '#root') {
-    $children = $target->children;
-    if ($children instanceof VNode) {
-        $target = $children;
-    } elseif (is_array($children)) {
-        $next = null;
-        foreach ($children as $c) {
-            if ($c instanceof VNode && $c->type !== '#text') {
-                $next = $c;
-                break;
-            }
-        }
-        $target = $next;
-    } else {
-        $target = null;
-    }
-}
-
-$style = $target->props['style'] ?? '';
-// 新值存在
-assert(strpos($style, 'left:11') !== false, "应包含 left:11，实际: {$style}");
-assert(strpos($style, 'top:524') !== false, "应包含 top:524，实际: {$style}");
-// 旧值被清除
-assert(strpos($style, 'left:100') === false, "不应包含旧 left:100，实际: {$style}");
-assert(strpos($style, 'top:200') === false, "不应包含旧 top:200，实际: {$style}");
-// 无重复
-assert(substr_count($style, 'left:') === 1, "left: 应恰好 1 次，style={$style}");
-assert(substr_count($style, 'top:') === 1, "top: 应恰好 1 次，style={$style}");
-echo "  [PASS] 旧 left/top 被正确替换为新值，无退化\n";
+$rn10b = (new RenderTreeManager())->updateFromVNode($parentVNode10b, null, $rootComp10, []);
+$childRN10b = $rn10b->children[0] ?? null;
+assert_not_null($childRN10b, '应有子 RenderNode');
+assert($childRN10b->style['left'] === 11,
+    'layoutOffset 应覆盖自身 left: 100 → 11，实际: ' . ($childRN10b->style['left'] ?? 'unset'));
+assert($childRN10b->style['top'] === 524,
+    'layoutOffset 应覆盖自身 top: 200 → 524，实际: ' . ($childRN10b->style['top'] ?? 'unset'));
+echo "  [PASS] layoutOffset 正确覆盖子组件自身的 left/top\n";
 
 
 echo "\n============================================\n";
-echo " 测试完成\n";
+echo " 测试完成 — 全部通过 ✓\n";
 echo "============================================\n";
 
 

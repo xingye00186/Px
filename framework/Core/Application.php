@@ -308,17 +308,17 @@ class Application
 
         // 必须使用 getVNodeTree() 而非 render()，确保结果缓存到 vnodeCache。
         // 否则后续 updateFromVNode() 调用 $instance->getVNodeTree() 时会再次执行 render()，
-        // 返回一个未经过 transferComponentPositioning 修改的新 VNode 树，导致 left/top 定位丢失。
+        // 返回一个新 VNode 树，此时 layoutOffset 已设置在占位节点上，定位由 RenderTreeManager 处理。
         $childRoot = $instance->getVNodeTree();
 
         $node->componentInstance = $instance;
         $node->children = $childRoot;
 
-        // 将 #component 占位符的 style(left/top) 传递到子组件根元素 VNode 的 style
-        // 这样 RenderTreeManager 无需做任何坐标计算，LayoutResolver 统一处理
+        // 不再修改子 VNode 的 style，改为将定位偏移存入 layoutOffset，
+        // RenderTreeManager::updateFromVNode 在 #component 处理中应用到 RenderNode
         $placeholderStyle = $node->props['style'] ?? '';
         if ($placeholderStyle !== '') {
-            $this->transferComponentPositioning($placeholderStyle, $childRoot);
+            $node->layoutOffset = $this->parsePlaceholderPositioning($placeholderStyle);
         }
 
         $this->setGroupIdRecursive($childRoot, $instanceId);
@@ -327,21 +327,13 @@ class Application
     }
 
     /**
-     * 将 #component 占位符的 left/top 定位传递到子组件根元素 VNode 的 style。
+     * 从 #component 占位符的 style 字符串中解析 left/top 定位值。
+     * 替代已删除的 transferComponentPositioning()，结果存入 VNode::$layoutOffset。
      *
-     * #component 是语义透明的占位符，不产生 RenderNode。其 style(left/top)
-     * 表示子组件应出现的位置，需要写入子组件根元素的 style，以便 LayoutResolver
-     * 在布局阶段统一处理。
-     *
-     * AOT 安全：仅使用字符串操作和数组遍历。
+     * @return array{left?:int, top?:int}|null
      */
-    private function transferComponentPositioning(string $placeholderStyle, VNode $componentRoot): void
+    private function parsePlaceholderPositioning(string $placeholderStyle): ?array
     {
-        if ($placeholderStyle === '') {
-            return;
-        }
-
-        // 解析 left/top 值
         $left = null;
         $top = null;
         $pairs = explode(';', $placeholderStyle);
@@ -354,44 +346,11 @@ class Application
                 $top = (int) trim(substr($pair, 4));
             }
         }
-
-        if ($left === null && $top === null) {
-            return;
-        }
-
-        // 遍历 #root 链找到第一个可渲染元素（跳过 #root、#text 等非渲染节点）
-        $target = $componentRoot;
-        while ($target !== null && $target->type === '#root') {
-            $children = $target->children;
-            if ($children instanceof VNode) {
-                $target = $children;
-            } elseif (is_array($children)) {
-                $next = null;
-                foreach ($children as $child) {
-                    if ($child instanceof VNode && $child->type !== '#text') {
-                        $next = $child;
-                        break;
-                    }
-                }
-                $target = $next;
-            } else {
-                $target = null;
-            }
-        }
-
-        if ($target === null || $target === $componentRoot) {
-            return;
-        }
-
-        // 将现有 style 解析为数组 → 结构化合并 → 序列化回字符串
-        $existingStyle = $target->props['style'] ?? '';
-        $styleArray = CssMappings::parseStyleStringToArray($existingStyle);
-        // 移除已有的 left/top（保证幂等性）
-        unset($styleArray['left'], $styleArray['top']);
-        // 写入新的定位值（带 px 单位，与原始解析值格式一致）
-        if ($left !== null) { $styleArray['left'] = $left . 'px'; }
-        if ($top !== null) { $styleArray['top'] = $top . 'px'; }
-        $target->props['style'] = CssMappings::buildStyleStringFromArray($styleArray);
+        if ($left === null && $top === null) return null;
+        $result = [];
+        if ($left !== null) $result['left'] = $left;
+        if ($top !== null) $result['top'] = $top;
+        return $result;
     }
 
     private function setGroupIdRecursive(VNode $node, string $groupId): void
@@ -474,12 +433,11 @@ class Application
             $newNode->componentInstance = $instance;
             $newNode->children = $instance->getVNodeTree();
 
-            // 将 #component 占位符的 left/top 定位传递到子组件根元素 VNode 的 style
-            // 每次更新都调用 transferComponentPositioning，保证幂等性
-            // 解决子组件 markDirty 后重新 render() 时新 VNode 树丢失定位的问题
+            // 将 #component 占位符的 left/top 定位存入 layoutOffset，
+            // RenderTreeManager::updateFromVNode 在 #component 处理时应用到 RenderNode
             $placeholderStyle = $newNode->props['style'] ?? '';
             if ($placeholderStyle !== '') {
-                $this->transferComponentPositioning($placeholderStyle, $newNode->children);
+                $newNode->layoutOffset = $this->parsePlaceholderPositioning($placeholderStyle);
             }
 
             $this->setGroupIdRecursive($newNode->children, $instance->getId());

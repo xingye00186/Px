@@ -266,9 +266,9 @@ assert($rn9b->type === 'div', '应为 div');
 assert(count($rn9b->children) === 1, '空组件被跳过，应有 1 个子节点');
 echo "[PASS] 无 componentInstance 的组件占位被正确跳过\n";
 
-// 9.3 组件定位：模拟 Application::expandComponentNode 的行为，
-//    #component 的 style(left/top) 应在展开阶段写入子组件根元素的 style，
-//    RenderTreeManager 无需偏移参数，仅负责样式传递，LayoutResolver 统一处理坐标
+// 9.3 组件定位：验证 layoutOffset 机制，
+//    #component 的 style(left/top) 解析后存入 layoutOffset，
+//    RenderTreeManager 在 #component 处理时应用到 RenderNode
 $manager9c = new RenderTreeManager();
 $posComp = new ChildCompForTreeTest();
 $posComp->mount();
@@ -278,11 +278,9 @@ $posCompVNode->componentInstance = $posComp;
 $posCompVNode->children = $posComp->getVNodeTree();
 $posCompVNode->children->groupId = 'child';
 
-// 模拟 expandComponentNode 的定位传递：
-// 将 #component 占位符的 left/top 写入子组件根元素（span）的 style
-$rootElement = $posCompVNode->children->children;
-assert($rootElement instanceof VNode, '子组件根元素应为 VNode');
-$rootElement->props['style'] = 'left:10;top:20;';
+// 验证 layoutOffset 机制：不再修改子 VNode 的 style，
+// 改为在 #component VNode 上设置 layoutOffset
+$posCompVNode->layoutOffset = ['left' => 10, 'top' => 20];
 
 $parentVNode9c = VNode::h('#root', [], [
     VNode::h('div', ['id' => 'container', 'style' => 'width:400;height:600'], [
@@ -304,7 +302,7 @@ assert(isset($childSpan->style['top']), '组件根元素 style 应包含 top');
 assert($childSpan->style['top'] === 20, 'top 应为 20，实际: ' . ($childSpan->style['top'] ?? 'unset'));
 assert($childSpan->content === 'comp-content', '组件根元素应有正确内容');
 assert($childSpan->parent === $rn9c, '组件根元素的 parent 应直接指向容器 div');
-echo "[PASS] 组件定位：expandComponentNode 已将 left/top 写入组件根元素 style，RenderTreeManager 无需偏移计算\n";
+echo "[PASS] 组件定位：layoutOffset 机制从 #component 传递到 RenderNode，无包装器\n";
 
 // ─────────────────────────────────────────────
 // 10. CSS class 样式合并

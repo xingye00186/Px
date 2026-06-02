@@ -502,30 +502,20 @@ test('组件定位在重用实例后保留（即使组件 markDirty 重新 rende
     $patchMethod->setAccessible(true);
     $patchMethod->invoke($app, $root1, $owner, null);
 
-    // 获取第一次的组件实例和其根元素样式
+    // 获取第一次的组件实例和其定位偏移
     $childNode = $root1->children[0] ?? null;
     assert_not_null($childNode, '应有子节点');
+    assert($childNode->isComponent(), '子节点应为 #component 占位符');
     $instance = $childNode->componentInstance ?? null;
     assert_not_null($instance, '第一次 patch 应创建实例');
 
-    // 展开 #root → 找到子组件根元素
-    $childRoot = $instance->getVNodeTree();
-    $rootElement = $childRoot;
-    while ($rootElement !== null && $rootElement->type === '#root') {
-        if (is_array($rootElement->children)) {
-            $rootElement = $rootElement->children[0] ?? null;
-        } elseif ($rootElement->children instanceof VNode) {
-            $rootElement = $rootElement->children;
-        } else {
-            break;
-        }
-    }
-    assert_not_null($rootElement, '应有根元素');
-    $style = $rootElement->props['style'] ?? '';
-    assert(strpos($style, 'left:11;') !== false || strpos($style, 'left:11px;') !== false,
-        '第一次 patch 后根元素应包含 left:11，实际: ' . $style);
-    assert(strpos($style, 'top:524;') !== false || strpos($style, 'top:524px;') !== false,
-        '第一次 patch 后根元素应包含 top:524，实际: ' . $style);
+    // 验证 layoutOffset 被设置（替代旧的 transferComponentPositioning）
+    assert_not_null($childNode->layoutOffset,
+        '第一次 patch 后 #component 应有 layoutOffset');
+    assert($childNode->layoutOffset['left'] === 11,
+        'layoutOffset.left 应为 11，实际: ' . ($childNode->layoutOffset['left'] ?? 'unset'));
+    assert($childNode->layoutOffset['top'] === 524,
+        'layoutOffset.top 应为 524，实际: ' . ($childNode->layoutOffset['top'] ?? 'unset'));
 
     // 第二次 patch：模拟 toggleHistory → arrowText changes
     // 先更新 owner 的 arrowText 值
@@ -545,24 +535,17 @@ test('组件定位在重用实例后保留（即使组件 markDirty 重新 rende
     $secondInstance = $childNode2->componentInstance ?? null;
     assert_same($instance, $secondInstance, '第二次 patch 应复用实例');
 
-    // 验证定位仍然保留
-    $childRoot2 = $instance->getVNodeTree();
-    $rootElement2 = $childRoot2;
-    while ($rootElement2 !== null && $rootElement2->type === '#root') {
-        if (is_array($rootElement2->children)) {
-            $rootElement2 = $rootElement2->children[0] ?? null;
-        } elseif ($rootElement2->children instanceof VNode) {
-            $rootElement2 = $rootElement2->children;
-        } else {
-            break;
-        }
-    }
-    assert_not_null($rootElement2, '第二次应有根元素');
-    $style2 = $rootElement2->props['style'] ?? '';
-    assert(strpos($style2, 'left:11;') !== false || strpos($style2, 'left:11px;') !== false,
-        '第二次 patch 后根元素应保留 left:11，实际: ' . $style2);
-    assert(strpos($style2, 'top:524;') !== false || strpos($style2, 'top:524px;') !== false,
-        '第二次 patch 后根元素应保留 top:524，实际: ' . $style2);
+    // 验证定位仍然保留（通过 layoutOffset）
+    $childNode2 = $root2->children[0] ?? null;
+    $secondInstance = $childNode2->componentInstance ?? null;
+    assert_same($instance, $secondInstance, '第二次 patch 应复用实例');
+
+    assert_not_null($childNode2->layoutOffset,
+        '第二次 patch 后 #component 应有 layoutOffset');
+    assert($childNode2->layoutOffset['left'] === 11,
+        '第二次 patch 后 layoutOffset.left 应仍为 11，实际: ' . ($childNode2->layoutOffset['left'] ?? 'unset'));
+    assert($childNode2->layoutOffset['top'] === 524,
+        '第二次 patch 后 layoutOffset.top 应仍为 524，实际: ' . ($childNode2->layoutOffset['top'] ?? 'unset'));
 });
 
 test('expandComponentNode 后 getVNodeTree 返回定位后的树（vnodeCache 一致性）', function () {
@@ -593,28 +576,23 @@ test('expandComponentNode 后 getVNodeTree 返回定位后的树（vnodeCache �
     assert_not_null($instance, 'expandComponentNode 应创建组件实例');
 
     // ── 断言 1（修复验证）：expandComponentNode 后，
-    //    getVNodeTree 应返回含 left/top 定位的树
-    //    （即 expandComponentNode 必须使用 getVNodeTree 而非 render，
-    //      确保修改同步到 vnodeCache，而非创建新树）
-    $childRoot = $instance->getVNodeTree();
-    $rootElement = $childRoot;
-    while ($rootElement !== null && $rootElement->type === '#root') {
-        if (is_array($rootElement->children)) {
-            $rootElement = $rootElement->children[0] ?? null;
-        } elseif ($rootElement->children instanceof VNode) {
-            $rootElement = $rootElement->children;
-        } else {
-            break;
-        }
-    }
-    assert_not_null($rootElement, '应有根元素');
-    $style = $rootElement->props['style'] ?? '';
-    assert(strpos($style, 'left:11') !== false,
-        'getVNodeTree 应返回含 left:11 的树，实际: ' . $style);
-    assert(strpos($style, 'top:524') !== false,
-        'getVNodeTree 应返回含 top:524 的树，实际: ' . $style);
+    //    #component VNode 的 layoutOffset 应被正确设置
+    //    （替代旧的 transferComponentPositioning 写入子 VNode style）
+    $childNode = $root->children[0] ?? null;
+    assert_not_null($childNode, '应有 #component 节点');
+    assert($childNode->isComponent(), '子节点应为组件占位符');
+    assert_not_null($childNode->layoutOffset,
+        '#component 应有 layoutOffset');
+    assert($childNode->layoutOffset['left'] === 11,
+        'layoutOffset.left 应为 11，实际: ' . ($childNode->layoutOffset['left'] ?? 'unset'));
+    assert($childNode->layoutOffset['top'] === 524,
+        'layoutOffset.top 应为 524，实际: ' . ($childNode->layoutOffset['top'] ?? 'unset'));
 
-    // ── 断言 2（缓存验证）：连续调用 getVNodeTree 返回同一对象
+    // ── 断言 2（vnodeCache 一致性）：expandComponentNode 使用 getVNodeTree
+    //    而非 render()，确保结果被缓存。layoutOffset 不修改 VNode 树，
+    //    getVNodeTree 返回的原始树与 layoutOffset 分离。
+    //    验证：连续调用 getVNodeTree 返回同一对象
+    $childRoot = $instance->getVNodeTree();
     $childRoot2 = $instance->getVNodeTree();
     assert_same($childRoot2, $childRoot,
         '二次 getVNodeTree 应返回同一对象（vnodeCache 命中）');

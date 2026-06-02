@@ -54,6 +54,18 @@ class VNode
     /** bind 映射: ['childProp' => 'parentExpr']，运行时由 Application 展开 */
     public ?array $componentProps = null;
 
+    /**
+     * 父组件传递的定位偏移（仅 #component 节点使用）。
+     * 由 Application::expandComponentNode / matchComponentNode 设置，
+     * RenderTreeManager::updateFromVNode 消费。
+     * 存放 left/top 像素值，如 ['left' => 11, 'top' => 260]。
+     * 替代 transferComponentPositioning() 对子 VNode props['style'] 的直接修改，
+     * 使 VNode 保持不可变。
+     *
+     * @var array{left?:int, top?:int}|null
+     */
+    public ?array $layoutOffset = null;
+
     // ===== 构造器 =====
 
     /**

@@ -221,18 +221,47 @@ class RenderTreeManager
         ?array $candidates = null
     ): ?RenderNode {
         // 组件占位节点：递归处理子组件树，$candidates 透传
+        // 同时将父组件的 layoutOffset 应用到子组件第一个可渲染元素上
         if ($vnode->isComponent()) {
             $instance = $vnode->componentInstance;
             if ($instance === null) {
                 return null;
             }
-            return $this->updateFromVNode(
+
+            // 记录展开前的子节点数，用于定位第一个新增的子 RenderNode
+            $beforeCount = $parent !== null ? count($parent->children) : 0;
+
+            $childRN = $this->updateFromVNode(
                 $instance->getVNodeTree(),
                 $parent,
                 $root,
                 $componentByGroupId,
                 $candidates
             );
+
+            // 应用 layoutOffset 到子组件第一个可渲染 RenderNode
+            // 父组件对子组件的定位声明具有最高优先级（Vue 3 模板语义），
+            // 直接覆盖子组件自身的 left/top
+            if ($childRN !== null && $vnode->layoutOffset !== null) {
+                $firstChild = $childRN;
+                // 对于多根组件，找到第一个新增的 RenderNode
+                if ($parent !== null && $beforeCount < count($parent->children)) {
+                    $newChildren = array_slice($parent->children, $beforeCount);
+                    if (count($newChildren) > 0) {
+                        $firstChild = $newChildren[0];
+                    }
+                }
+                $offset = $vnode->layoutOffset;
+                if (isset($offset['left'])) {
+                    $firstChild->style['left'] = $offset['left'];
+                }
+                if (isset($offset['top'])) {
+                    $firstChild->style['top'] = $offset['top'];
+                }
+                $firstChild->layoutDirty = true;
+            }
+
+            return $childRN;
         }
 
         // #root 节点不产生渲染元素，$candidates 在此层含义 = 旧子节点列表
