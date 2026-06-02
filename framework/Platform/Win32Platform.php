@@ -10,7 +10,7 @@ class Win32Platform implements Platform
     private int $hwnd = 0;
     private int $animationTimerId = 0;
     /** @var callable|null */
-    private $animationCallback = null;
+    private ?\Closure $animationCallback = null;
     private bool $animationTimerSet = false;
 
     private array $eventMap = [

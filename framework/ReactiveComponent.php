@@ -2,6 +2,8 @@
 
 namespace Px;
 
+use native_types;
+
 use Px\Interfaces\ComponentInterface;
 use Px\Core\Scheduler;
 use Px\Rendering\VNode;
@@ -25,7 +27,7 @@ abstract class ReactiveComponent extends BaseComponent
     protected bool $isUpdating = false;
 
     /** @var callable|null 渲染请求回调（由 Application 注入） */
-    private $renderCallback = null;
+    private ?\Closure $renderCallback = null;
 
     /** @var array<string, array<int, callable>> eventName => [handlerId => callback] */
     private array $eventHandlers = [];

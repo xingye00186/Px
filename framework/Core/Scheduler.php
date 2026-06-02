@@ -2,6 +2,8 @@
 
 namespace Px\Core;
 
+use native_types;
+
 /**
  * Scheduler — 微任务/宏任务调度器
  *
@@ -48,7 +50,7 @@ class Scheduler
     {
         while (count($this->microtasks) > 0) {
             $task = objval(array_shift($this->microtasks), \Closure::class);
-            $task();
+            ($task)();
         }
     }
 
@@ -58,7 +60,7 @@ class Scheduler
             return false;
         }
         $task = objval(array_shift($this->macrotasks), \Closure::class);
-        $task();
+        ($task)();
         return true;
     }
 
