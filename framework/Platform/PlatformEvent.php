@@ -2,6 +2,8 @@
 
 namespace Px\Platform;
 
+use native_types;
+
 abstract class PlatformEvent
 {
     public string $type;

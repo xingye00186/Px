@@ -2,6 +2,8 @@
 
 namespace Px\Rendering;
 
+use native_types;
+
 /**
  * VNode — Vue 3 兼容的虚拟 DOM 节点
  *
