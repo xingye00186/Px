@@ -2,6 +2,8 @@
 
 namespace Px\Rendering;
 
+use native_types;
+
 use Px\ReactiveComponent;
 
 /**
@@ -48,6 +50,7 @@ class VNodeRenderer
      */
     public function render(RenderNode $root): void
     {
+        \PerfCounter::start('render_collect');
         $this->render_ctx->beginFrame();
 
         // 帧号溢出保护
@@ -70,6 +73,7 @@ class VNodeRenderer
         }
 
         $this->render_ctx->endFrame();
+        \PerfCounter::end('render_collect');
     }
 
     /**

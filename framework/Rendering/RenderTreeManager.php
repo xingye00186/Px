@@ -2,6 +2,8 @@
 
 namespace Px\Rendering;
 
+use native_types;
+
 use Px\ReactiveComponent;
 use Px\Styling\Provider\ThemeProvider;
 
@@ -220,246 +222,226 @@ class RenderTreeManager
         array $componentByGroupId,
         ?array $candidates = null
     ): ?RenderNode {
-        // 组件占位节点：递归处理子组件树，$candidates 透传
-        // 同时将父组件的 layoutOffset 应用到子组件第一个可渲染元素上
-        if ($vnode->isComponent()) {
-            $instance = $vnode->componentInstance;
-            if ($instance === null) {
-                return null;
-            }
-
-            // 记录展开前的子节点数，用于定位第一个新增的子 RenderNode
-            $beforeCount = $parent !== null ? count($parent->children) : 0;
-
-            $childRN = $this->updateFromVNode(
-                $instance->getVNodeTree(),
-                $parent,
-                $root,
-                $componentByGroupId,
-                $candidates
-            );
-
-            // 应用 layoutOffset 到子组件第一个可渲染 RenderNode
-            // 父组件对子组件的定位声明具有最高优先级（Vue 3 模板语义），
-            // 直接覆盖子组件自身的 left/top
-            if ($childRN !== null && $vnode->layoutOffset !== null) {
-                $firstChild = $childRN;
-                // 对于多根组件，找到第一个新增的 RenderNode
-                if ($parent !== null && $beforeCount < count($parent->children)) {
-                    $newChildren = array_slice($parent->children, $beforeCount);
-                    if (count($newChildren) > 0) {
-                        $firstChild = $newChildren[0];
-                    }
-                }
-                $offset = $vnode->layoutOffset;
-                if (isset($offset['left'])) {
-                    $firstChild->style['left'] = $offset['left'];
-                }
-                if (isset($offset['top'])) {
-                    $firstChild->style['top'] = $offset['top'];
-                }
-                $firstChild->layoutDirty = true;
-            }
-
-            return $childRN;
-        }
-
-        // #root 节点不产生渲染元素，$candidates 在此层含义 = 旧子节点列表
-        if ($vnode->type === '#root') {
-            $result = null;
-            $children = $this->vnodeChildrenToArray($vnode->children);
-
-            // 顶层 #root：重置每帧映射（vnodeToRenderNodeMap 和 groupIdToRenderNodeMap 每帧重建）
-            if ($parent === null) {
-                $this->rootRenderNodes = [];
-                $this->vnodeToRenderNodeMap = [];
-                $this->groupIdToRenderNodeMap = [];
-            }
-
-            // 跟踪 candidates 中被匹配的旧子节点，用于清理
-            $consumedCandidates = [];
-
-            foreach ($children as $i => $child) {
-                $matchedOld = ($candidates !== null)
-                    ? $this->findMatchingRenderNode($child, $candidates, $i)
-                    : null;
-
-                if ($matchedOld !== null) {
-                    $consumedCandidates[] = $matchedOld;
+        \PerfCounter::start('tree_convert');
+        try {
+            // 组件占位节点：递归处理子组件树，$candidates 透传
+            // 同时将父组件的 layoutOffset 应用到子组件第一个可渲染元素上
+            if ($vnode->isComponent()) {
+                $instance = $vnode->componentInstance;
+                if ($instance === null) {
+                    return null;
                 }
 
-                $childCandidates = $matchedOld !== null ? [$matchedOld] : null;
+                // 记录展开前的子节点数，用于定位第一个新增的子 RenderNode
+                $beforeCount = $parent !== null ? count($parent->children) : 0;
 
                 $childRN = $this->updateFromVNode(
-                    $child, $parent, $root, $componentByGroupId, $childCandidates
+                    $instance->getVNodeTree(),
+                    $parent,
+                    $root,
+                    $componentByGroupId,
+                    $candidates
                 );
-                if ($childRN !== null) {
-                    if ($parent === null) {
-                        $this->rootRenderNode = $childRN;
-                        $this->rootRenderNodes[] = $childRN;
+
+                // 应用 layoutOffset 到子组件第一个可渲染 RenderNode
+                if ($childRN !== null && $vnode->layoutOffset !== null) {
+                    $firstChild = $childRN;
+                    if ($parent !== null && $beforeCount < count($parent->children)) {
+                        $newChildren = array_slice($parent->children, $beforeCount);
+                        if (count($newChildren) > 0) {
+                            $firstChild = $newChildren[0];
+                        }
                     }
-                    $result = $childRN;
+                    $offset = $vnode->layoutOffset;
+                    if (isset($offset['left'])) {
+                        $firstChild->style['left'] = $offset['left'];
+                    }
+                    if (isset($offset['top'])) {
+                        $firstChild->style['top'] = $offset['top'];
+                    }
+                    $firstChild->layoutDirty = true;
+                }
+
+                return $childRN;
+            }
+
+            // #root 节点
+            if ($vnode->type === '#root') {
+                $result = null;
+                $children = $this->vnodeChildrenToArray($vnode->children);
+
+                if ($parent === null) {
+                    $this->rootRenderNodes = [];
+                    $this->vnodeToRenderNodeMap = [];
+                    $this->groupIdToRenderNodeMap = [];
+                }
+
+                $consumedCandidates = [];
+
+                foreach ($children as $i => $child) {
+                    $matchedOld = ($candidates !== null)
+                        ? $this->findMatchingRenderNode($child, $candidates, $i)
+                        : null;
+
+                    if ($matchedOld !== null) {
+                        $consumedCandidates[] = $matchedOld;
+                    }
+
+                    $childCandidates = $matchedOld !== null ? [$matchedOld] : null;
+
+                    $childRN = $this->updateFromVNode(
+                        $child, $parent, $root, $componentByGroupId, $childCandidates
+                    );
+                    if ($childRN !== null) {
+                        if ($parent === null) {
+                            $this->rootRenderNode = $childRN;
+                            $this->rootRenderNodes[] = $childRN;
+                        }
+                        $result = $childRN;
+                    }
+                }
+
+                if ($candidates !== null) {
+                    foreach ($candidates as $oldRN) {
+                        if (!in_array($oldRN, $consumedCandidates, true)) {
+                            $this->destroyRenderNodeTree($oldRN);
+                        }
+                    }
+                }
+
+                return $result;
+            }
+
+            // 普通元素节点
+            $resolvedStyle = $this->resolveNodeStyle($vnode);
+            $renderNode = null;
+
+            if ($candidates !== null) {
+                $matched = $this->findMatchingRenderNode($vnode, $candidates, 0);
+                if ($matched !== null) {
+                    $renderNode = $matched;
                 }
             }
 
-            // 清理未被复用的旧 #root 子节点
-            if ($candidates !== null) {
-                foreach ($candidates as $oldRN) {
-                    if (!in_array($oldRN, $consumedCandidates, true)) {
+            if ($renderNode === null) {
+                $renderNode = new RenderNode($vnode->type, $resolvedStyle, null, $vnode->key);
+                $renderNode->sourceVNode = $vnode;
+                $renderNode->groupId = $vnode->groupId;
+                $renderNode->layoutDirty = true;
+                $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] = $vnode;
+            } else {
+                $renderNode->style = $resolvedStyle;
+                $renderNode->lastPaintFrame = 0;
+                $renderNode->sourceVNode = $vnode;
+                $renderNode->groupId = $vnode->groupId;
+
+                $oldVNode = $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] ?? null;
+                $vnodeChildren = is_array($vnode->children)
+                    ? $this->vnodeChildrenToArray($vnode->children)
+                    : [];
+                $isLeaf = count($vnodeChildren) === 0;
+                $hasExplicitTop = array_key_exists('top', $resolvedStyle);
+                if ($isLeaf && $hasExplicitTop && $oldVNode !== null && $this->areVNodesEqual($vnode, $oldVNode)) {
+                    $renderNode->layoutDirty = false;
+                } else {
+                    $renderNode->layoutDirty = true;
+                }
+
+                if ($renderNode->type !== $vnode->type) {
+                    $renderNode->type = $vnode->type;
+                    $renderNode->key = $vnode->key;
+                    $this->destroyRenderNodeTree($renderNode);
+                } elseif ($renderNode->key !== $vnode->key) {
+                    $renderNode->key = $vnode->key;
+                }
+                $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] = $vnode;
+            }
+
+            // ── 同步 scroll bind 值
+            $component = $componentByGroupId[$vnode->groupId] ?? $root;
+            $scrollBindKey = $vnode->props[':scroll-top'] ?? '';
+            if ($scrollBindKey !== '') {
+                $renderNode->scrollTop = (int) $component->getBindValue($scrollBindKey);
+            }
+            $scrollLeftBindKey = $vnode->props[':scroll-left'] ?? '';
+            if ($scrollLeftBindKey !== '') {
+                $renderNode->scrollLeft = (int) $component->getBindValue($scrollLeftBindKey);
+            }
+
+            if ($renderNode->groupId === null) {
+                if ($parent !== null && $parent->groupId !== null) {
+                    $renderNode->groupId = $parent->groupId;
+                    trigger_error('VNode groupId not set, inheriting from parent', E_USER_WARNING);
+                } else {
+                    $renderNode->groupId = 'app';
+                }
+            }
+
+            if ($renderNode->groupId !== null) {
+                $this->groupIdToRenderNodeMap[$renderNode->groupId][] = $renderNode;
+            }
+
+            $renderNode->parent = $parent;
+            if ($parent !== null) {
+                $parent->children[] = $renderNode;
+            }
+
+            $oldChildren = $renderNode->children;
+            $renderNode->clearChildren();
+
+            if (is_string($vnode->children)) {
+                $renderNode->content = $vnode->children;
+            } else {
+                $childVNodes = $this->vnodeChildrenToArray($vnode->children);
+                $consumed = [];
+
+                foreach ($childVNodes as $i => $childVNode) {
+                    $matchedOld = null;
+                    $matchedIdx = null;
+                    $key = $childVNode->key;
+
+                    if ($key !== null) {
+                        foreach ($oldChildren as $pos => $oldRN) {
+                            if (!in_array($pos, $consumed, true)
+                                && $oldRN->key === $key
+                                && $oldRN->type === $childVNode->type) {
+                                $matchedOld = $oldRN;
+                                $matchedIdx = $pos;
+                                break;
+                            }
+                        }
+                    } elseif (isset($oldChildren[$i]) && !in_array($i, $consumed, true)) {
+                        $oldRN = $oldChildren[$i];
+                        if ($oldRN->key === null && $oldRN->type === $childVNode->type) {
+                            $matchedOld = $oldRN;
+                            $matchedIdx = $i;
+                        }
+                    }
+
+                    if ($matchedIdx !== null) {
+                        $consumed[] = $matchedIdx;
+                    }
+
+                    $childCandidates = $matchedOld !== null ? [$matchedOld] : null;
+
+                    $childRN = $this->updateFromVNode(
+                        $childVNode, $renderNode, $root, $componentByGroupId, $childCandidates
+                    );
+                }
+
+                foreach ($oldChildren as $pos => $oldRN) {
+                    if (!in_array($pos, $consumed, true)) {
                         $this->destroyRenderNodeTree($oldRN);
                     }
                 }
             }
 
-            return $result;
+            $this->vnodeToRenderNodeMap[spl_object_hash($vnode)] = $renderNode;
+
+            return $renderNode;
+        } finally {
+            \PerfCounter::end('tree_convert');
         }
-
-        // 普通元素节点
-        $resolvedStyle = $this->resolveNodeStyle($vnode);
-        $renderNode = null;
-
-        // 从 candidates 匹配旧 RenderNode
-        if ($candidates !== null) {
-            $matched = $this->findMatchingRenderNode($vnode, $candidates, 0);
-            if ($matched !== null) {
-                $renderNode = $matched;
-            }
-        }
-
-        if ($renderNode === null) {
-            // ── 新建 RenderNode ──
-            $renderNode = new RenderNode($vnode->type, $resolvedStyle, null, $vnode->key);
-            $renderNode->sourceVNode = $vnode;
-            $renderNode->groupId = $vnode->groupId;
-            $renderNode->layoutDirty = true;
-            $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] = $vnode;
-        } else {
-            // ── 复用 RenderNode ──
-            $renderNode->style = $resolvedStyle;
-            $renderNode->lastPaintFrame = 0;
-            $renderNode->sourceVNode = $vnode;
-            $renderNode->groupId = $vnode->groupId;
-
-            // 叶子节点洁净路径：
-            //   叶子节点（无 VNode 子节点）+ 显式 top（禁用 auto-stack）+ 布局属性一致
-            //   → 标记 layoutDirty=false，LayoutResolver 跳过位置重算
-            //   否则 → layoutDirty=true，全量重算位置
-            $oldVNode = $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] ?? null;
-            $vnodeChildren = is_array($vnode->children)
-                ? $this->vnodeChildrenToArray($vnode->children)
-                : [];
-            $isLeaf = count($vnodeChildren) === 0;
-            $hasExplicitTop = array_key_exists('top', $resolvedStyle);
-            if ($isLeaf && $hasExplicitTop && $oldVNode !== null && $this->areVNodesEqual($vnode, $oldVNode)) {
-                $renderNode->layoutDirty = false;
-            } else {
-                $renderNode->layoutDirty = true;
-            }
-
-            // 类型变化时重建子节点
-            if ($renderNode->type !== $vnode->type) {
-                $renderNode->type = $vnode->type;
-                $renderNode->key = $vnode->key;
-                $this->destroyRenderNodeTree($renderNode);
-            } elseif ($renderNode->key !== $vnode->key) {
-                $renderNode->key = $vnode->key;
-            }
-            // 始终更新 renderNodeToVNodeMap，下一帧需要从映射获取 oldVNode 进行洁净路径判断
-            $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] = $vnode;
-        }
-
-        // ── 同步 scroll bind 值到 RenderNode ──
-        $component = $componentByGroupId[$vnode->groupId] ?? $root;
-        $scrollBindKey = $vnode->props[':scroll-top'] ?? '';
-        if ($scrollBindKey !== '') {
-            $renderNode->scrollTop = (int) $component->getBindValue($scrollBindKey);
-        }
-        $scrollLeftBindKey = $vnode->props[':scroll-left'] ?? '';
-        if ($scrollLeftBindKey !== '') {
-            $renderNode->scrollLeft = (int) $component->getBindValue($scrollLeftBindKey);
-        }
-
-        // ── groupId 防御性检查 ──
-        if ($renderNode->groupId === null) {
-            if ($parent !== null && $parent->groupId !== null) {
-                $renderNode->groupId = $parent->groupId;
-                trigger_error('VNode groupId not set, inheriting from parent', E_USER_WARNING);
-            } else {
-                $renderNode->groupId = 'app';
-            }
-        }
-
-        // 注册到 groupId 映射
-        if ($renderNode->groupId !== null) {
-            $this->groupIdToRenderNodeMap[$renderNode->groupId][] = $renderNode;
-        }
-
-        $renderNode->parent = $parent;
-        if ($parent !== null) {
-            $parent->children[] = $renderNode;
-        }
-
-        // ── 处理子节点（key-aware + consumed 跟踪防重复匹配） ──
-        $oldChildren = $renderNode->children;
-        $renderNode->clearChildren();
-
-        if (is_string($vnode->children)) {
-            $renderNode->content = $vnode->children;
-        } else {
-            $childVNodes = $this->vnodeChildrenToArray($vnode->children);
-            $consumed = [];
-
-            foreach ($childVNodes as $i => $childVNode) {
-                $matchedOld = null;
-                $matchedIdx = null;
-                $key = $childVNode->key;
-
-                if ($key !== null) {
-                    // key 匹配：遍历 oldChildren 找 key + type 匹配
-                    foreach ($oldChildren as $pos => $oldRN) {
-                        if (!in_array($pos, $consumed, true)
-                            && $oldRN->key === $key
-                            && $oldRN->type === $childVNode->type) {
-                            $matchedOld = $oldRN;
-                            $matchedIdx = $pos;
-                            break;
-                        }
-                    }
-                } elseif (isset($oldChildren[$i]) && !in_array($i, $consumed, true)) {
-                    // 位置匹配（静态节点）
-                    $oldRN = $oldChildren[$i];
-                    if ($oldRN->key === null && $oldRN->type === $childVNode->type) {
-                        $matchedOld = $oldRN;
-                        $matchedIdx = $i;
-                    }
-                }
-
-                if ($matchedIdx !== null) {
-                    $consumed[] = $matchedIdx;
-                }
-
-                $childCandidates = $matchedOld !== null ? [$matchedOld] : null;
-
-                $childRN = $this->updateFromVNode(
-                    $childVNode, $renderNode, $root, $componentByGroupId, $childCandidates
-                );
-                // 子节点已在其自身的 updateFromVNode 中通过
-                // $parent->children[] = $renderNode 添加到父级，
-                // 此处不需要重复添加
-            }
-
-            // 清理未被复用的旧子节点树
-            foreach ($oldChildren as $pos => $oldRN) {
-                if (!in_array($pos, $consumed, true)) {
-                    $this->destroyRenderNodeTree($oldRN);
-                }
-            }
-        }
-
-        // 注册到 VNode → RenderNode 快速查找映射（每帧重建，在 #root handler 中清理）
-        $this->vnodeToRenderNodeMap[spl_object_hash($vnode)] = $renderNode;
-
-        return $renderNode;
     }
 
     // ── 命中测试 ──────────────────────────

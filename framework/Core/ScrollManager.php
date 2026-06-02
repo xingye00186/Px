@@ -2,6 +2,8 @@
 
 namespace Px\Core;
 
+use native_types;
+
 use Px\Rendering\RenderNode;
 use Px\ReactiveComponent;
 
@@ -17,13 +19,13 @@ use Px\ReactiveComponent;
 class ScrollManager
 {
     /** @var callable 触发延迟重渲染 */
-    private $requestRender;
+    private ?\Closure $requestRender = null;
 
     /** @var callable 跳过树重建直接重绘 */
-    private $directRender;
+    private ?\Closure $directRender = null;
 
     /** @var callable 查组件表（接受 VNode，使用 groupId） */
-    private $resolveComponent;
+    private ?\Closure $resolveComponent = null;
 
     // ── 拖拽状态 ──────────────────────────
     private ?RenderNode $scrollDragTarget = null;
@@ -51,34 +53,39 @@ class ScrollManager
      */
     public function handleScrollWheel($event, RenderNode $root): void
     {
-        $scrollNode = $this->findScrollContainerAt($event->x, $event->y, $root);
-        if ($scrollNode === null) return;
+        PerfCounter::start('scroll_process');
+        try {
+            $scrollNode = $this->findScrollContainerAt($event->x, $event->y, $root);
+            if ($scrollNode === null) return;
 
-        $delta = $event->delta ?? 0;
-        $scrollAmount = (int)($delta / 40);
+            $delta = $event->delta ?? 0;
+            $scrollAmount = (int)($delta / 40);
 
-        if ($event->shiftDown ?? false) {
-            // 横向滚动
-            $contentW = $scrollNode->contentWidth;
-            $containerW = $scrollNode->w;
-            $maxScroll = max($contentW - $containerW, 0);
-            if ($maxScroll <= 0) return;
+            if ($event->shiftDown ?? false) {
+                // 横向滚动
+                $contentW = $scrollNode->contentWidth;
+                $containerW = $scrollNode->w;
+                $maxScroll = max($contentW - $containerW, 0);
+                if ($maxScroll <= 0) return;
 
-            $newScrollLeft = max(0, min($maxScroll, $scrollNode->scrollLeft - $scrollAmount));
-            if ($newScrollLeft !== $scrollNode->scrollLeft) {
-                $this->applyScrollLeft($scrollNode, $newScrollLeft, true);
+                $newScrollLeft = max(0, min($maxScroll, $scrollNode->scrollLeft - $scrollAmount));
+                if ($newScrollLeft !== $scrollNode->scrollLeft) {
+                    $this->applyScrollLeft($scrollNode, $newScrollLeft, true);
+                }
+            } else {
+                // 竖向滚动
+                $contentH = $scrollNode->contentHeight;
+                $containerH = $scrollNode->h;
+                $maxScroll = max($contentH - $containerH, 0);
+                if ($maxScroll <= 0) return;
+
+                $newScrollTop = max(0, min($maxScroll, $scrollNode->scrollTop - $scrollAmount));
+                if ($newScrollTop !== $scrollNode->scrollTop) {
+                    $this->applyScrollTop($scrollNode, $newScrollTop, true);
+                }
             }
-        } else {
-            // 竖向滚动
-            $contentH = $scrollNode->contentHeight;
-            $containerH = $scrollNode->h;
-            $maxScroll = max($contentH - $containerH, 0);
-            if ($maxScroll <= 0) return;
-
-            $newScrollTop = max(0, min($maxScroll, $scrollNode->scrollTop - $scrollAmount));
-            if ($newScrollTop !== $scrollNode->scrollTop) {
-                $this->applyScrollTop($scrollNode, $newScrollTop, true);
-            }
+        } finally {
+            PerfCounter::end('scroll_process');
         }
     }
 

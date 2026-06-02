@@ -69,6 +69,9 @@ require_once $frameworkDir . '/Platform/PlatformEvent.php';
 // ---- Application ----
 require_once $frameworkDir . '/Core/Application.php';
 
+// ---- 性能计数器（AOT 适配） ----
+require_once $frameworkDir . '/Core/PerfCounter.php';
+
 // ---- 编译器 (按需加载) ----
 require_once $frameworkDir . '/compiler/template-parser.php';
 require_once $frameworkDir . '/compiler/component-registry.php';
