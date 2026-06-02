@@ -1,0 +1,18 @@
+name: video-platform
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+cxx-flags:
+  - /utf-8
+  - /wd4267
+sources:
+  - main.php
+  - ./gen
+  - ./src
+  - ../../framework
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php
