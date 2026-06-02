@@ -487,6 +487,44 @@ $this->primary = (int)($colors['primary'] ?? 0x1976D2);
 
 **全库扫描**：已通过 Python 脚本对所有 11 个 `use native_types` 文件进行扫描，确认无更多危险模式。涉及文件：`ScrollManager.php`(max/min)、`VNodeRenderer.php`(数组重新赋值)、`ColorScheme.php`(类属性数组赋值)。
 
+### 7.6 `use native_types` 下方法内数组属性赋值无效
+
+**根因**：文件声明了 `use native_types` 时，在方法（如 `onMount()`、`initData()`）中对已声明为 `public array` / `private array` 的属性做 `$this->prop = [...]` 赋值，AOT 编译器生成的 C++ 代码**不会真正将数据写入属性**——运行时该属性保持初始空值 `[]`。
+
+**错误信号**：没有编译错误，但运行时属性数据为空（`foreach` 迭代 0 次）。常见于将数据初始化放入类似 `initData()` 方法的设计模式。
+
+**错误示例**：
+```php
+// ❌ 错误：AOT 编译后 $this->sidebarItems 保持空数组
+public array $sidebarItems = [];
+
+public function onMount(): void {
+    parent::onMount();
+    $this->initData();
+}
+
+private function initData(): void {
+    // 此赋值在 AOT 下无效
+    $this->sidebarItems = [
+        ['id' => 's1', 'title' => '视频1'],
+        ['id' => 's2', 'title' => '视频2'],
+    ];
+}
+```
+
+**正确做法**：数组数据**必须在属性声明处内联初始化**：
+```php
+// ✅ 正确：在声明处直接赋值
+public array $sidebarItems = [
+    ['id' => 's1', 'title' => '视频1'],
+    ['id' => 's2', 'title' => '视频2'],
+];
+```
+
+**影响范围**：`public array` 和 `private array` 均受影响。`string` / `int` 类型属性的方法内赋值不受此限制。
+
+**如何检测**：`aot-checker.php` 暂未覆盖此模式。可搜索 `use native_types` 文件中所有 `$this->xxx = [` 模式（方法内数组属性赋值）进行人工审核。
+
 ---
 
 ## 八、构建流程
