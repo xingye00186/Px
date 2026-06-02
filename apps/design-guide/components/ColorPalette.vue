@@ -1,8 +1,8 @@
 <template>
-  <div style="left:0px;top:0px;width:420px;display:flex;flex-direction:column;gap:0px">
+  <div style="left:0px;top:0px;width:1920px;display:flex;flex-direction:column;gap:0px">
 
     <!-- Primary Colors -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:110px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">Primary</div>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:8px">
         <div style="flex:1;display:flex;flex-direction:column;align-items:center">
@@ -24,7 +24,7 @@
     </div>
 
     <!-- Semantic Colors -->
-    <div style="left:16px;top:0px;width:388px;margin:20px 16px 0 16px">
+    <div style="margin:20px 16px 0 16px;height:110px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">Semantic</div>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:8px">
         <div style="flex:1;display:flex;flex-direction:column;align-items:center">
@@ -51,7 +51,7 @@
     </div>
 
     <!-- Neutral Colors -->
-    <div style="left:16px;top:0px;width:388px;margin:20px 16px 0 16px">
+    <div style="margin:20px 16px 0 16px;height:130px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">Neutral</div>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:6px;flex-wrap:wrap">
         <div style="width:56px;display:flex;flex-direction:column;align-items:center">

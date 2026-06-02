@@ -1,5 +1,5 @@
 <template>
-  <div style="left:0px;top:0px;width:420px;height:610px;display:flex;flex-direction:column;gap:4px;background:#0F0F11">
+  <div style="left:0px;top:0px;width:1920px;height:970px;display:flex;flex-direction:column;gap:4px;background:#0F0F11">
     <!-- Welcome -->
     <div style="left:0px;top:0px;width:420px;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1A1A2E">
       <span style="font-size:22px;font-weight:600;color:#FFFFFF">Px Framework</span>
@@ -12,7 +12,7 @@
     </div>
 
     <!-- Stats Overview -->
-    <div style="left:0px;top:0px;width:420px;height:56px;display:flex;flex-direction:row;background:#16161A">
+    <div style="left:0px;top:0px;width:1920px;height:56px;display:flex;flex-direction:row;background:#16161A">
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
         <span style="font-size:20px;font-weight:700;color:#6366F1">7</span>
         <span style="margin-top:2px;font-size:10px;color:#6B7280">布局类型</span>
@@ -35,7 +35,7 @@
     </div>
 
     <!-- Section 1: v-show & @click -->
-    <div style="left:10px;top:0px;width:400px;display:flex;flex-direction:column;background:#16161A;border-radius:6px;padding:10px">
+    <div style="margin:0 10px;height:85px;display:flex;flex-direction:column;background:#16161A;border-radius:6px;padding:10px">
       <span style="font-size:13px;font-weight:600;color:#FFFFFF">v-show 与事件交互</span>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:8px;align-items:center">
         <button style="padding:6px 14px;background:#6366F1;color:#FFFFFF;border:none;border-radius:6px;font-size:11px;font-weight:500" @click="toggleDetail" click-arg="">切换详情</button>
@@ -44,18 +44,18 @@
     </div>
 
     <!-- Section 2: :class -->
-    <div style="left:10px;top:0px;width:400px;display:flex;flex-direction:column;background:#16161A;border-radius:6px;padding:10px">
+    <div style="margin:0 10px;height:85px;display:flex;flex-direction:column;background:#16161A;border-radius:6px;padding:10px">
       <span style="font-size:13px;font-weight:600;color:#FFFFFF">:class 动态绑定</span>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:8px;align-items:center">
         <button style="padding:6px 14px;background:#374151;color:#FFFFFF;border:none;border-radius:6px;font-size:11px;font-weight:500" @click="toggleActive" click-arg="">切换状态</button>
         <div :class="isActive ? 'badge-active' : 'badge-inactive'" style="padding:4px 12px;border-radius:12px;font-size:11px;font-weight:500">
-          {{ isActive ? 'Active' : 'Inactive' }}
+          {{ badgeText }}
         </div>
       </div>
     </div>
 
     <!-- Section 3: :bind -->
-    <div style="left:10px;top:0px;width:400px;display:flex;flex-direction:column;background:#16161A;border-radius:6px;padding:10px">
+    <div style="margin:0 10px;height:105px;display:flex;flex-direction:column;background:#16161A;border-radius:6px;padding:10px">
       <span style="font-size:13px;font-weight:600;color:#FFFFFF">:bind 双向绑定</span>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:8px;align-items:center">
         <button style="padding:6px 14px;background:#6366F1;color:#FFFFFF;border:none;border-radius:6px;font-size:11px;font-weight:500" @click="increment" click-arg="">+1</button>
@@ -66,7 +66,7 @@
     </div>
 
     <!-- Section 4: v-for -->
-    <div style="left:10px;top:0px;width:400px;display:flex;flex-direction:column;background:#16161A;border-radius:6px;padding:10px">
+    <div style="margin:0 10px;height:85px;display:flex;flex-direction:column;background:#16161A;border-radius:6px;padding:10px">
       <span style="font-size:13px;font-weight:600;color:#FFFFFF">v-for 列表渲染</span>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:4px;flex-wrap:wrap">
         <template v-for="item in techStack" :key="item">
@@ -82,31 +82,29 @@ class OverviewComponent extends ReactiveComponent
 {
     public bool $showDetail = false;
     public bool $isActive = false;
-    public int $counter = 0;
+    public string $badgeText = 'Inactive';
+    public string $counter = '0';
     public array $techStack = ['PHP 8.x', 'Win32 GDI', 'Vue 3 SFC', 'AOT 编译', 'CSS Flex', 'CSS Grid', 'v-for/v-if', '动画系统', '滚动容器', '事件冒泡'];
 
     public function toggleDetail(string $arg): void
     {
         $this->showDetail = !$this->showDetail;
-        $this->markDirty();
     }
 
     public function toggleActive(string $arg): void
     {
         $this->isActive = !$this->isActive;
-        $this->markDirty();
+        $this->badgeText = $this->isActive ? 'Active' : 'Inactive';
     }
 
     public function increment(string $arg): void
     {
-        $this->counter++;
-        $this->markDirty();
+        $this->counter = (string)((int)$this->counter + 1);
     }
 
     public function decrement(string $arg): void
     {
-        $this->counter--;
-        $this->markDirty();
+        $this->counter = (string)((int)$this->counter - 1);
     }
 }
 </script>

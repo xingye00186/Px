@@ -1,8 +1,8 @@
 <template>
-  <div style="left:0px;top:0px;width:420px;display:flex;flex-direction:column;gap:0px">
+  <div style="left:0px;top:0px;width:1920px;display:flex;flex-direction:column;gap:0px">
 
     <!-- Primary Buttons -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:70px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">Primary</div>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:6px;flex-wrap:wrap">
         <button style="padding:8px 16px;background:#6366F1;color:#FFFFFF;border:none;border-radius:6px;font-size:12px;font-weight:500">Default</button>
@@ -13,7 +13,7 @@
     </div>
 
     <!-- Secondary Buttons -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:70px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">Secondary</div>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:6px;flex-wrap:wrap">
         <button style="padding:8px 16px;background:#374151;color:#FFFFFF;border:none;border-radius:6px;font-size:12px;font-weight:500">Default</button>
@@ -24,7 +24,7 @@
     </div>
 
     <!-- Outline Buttons -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:70px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">Outline</div>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:6px;flex-wrap:wrap">
         <button style="padding:8px 16px;background:transparent;color:#6366F1;border:2px solid #6366F1;border-radius:6px;font-size:12px;font-weight:500">Default</button>
@@ -35,7 +35,7 @@
     </div>
 
     <!-- Danger Button -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:70px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">Danger</div>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:6px">
         <button style="padding:8px 16px;background:#EF4444;color:#FFFFFF;border:none;border-radius:6px;font-size:12px;font-weight:500">Delete</button>
@@ -44,7 +44,7 @@
     </div>
 
     <!-- Button Sizes -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:70px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">Sizes</div>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:8px;align-items:center">
         <button style="padding:4px 10px;background:#6366F1;color:#FFFFFF;border:none;border-radius:4px;font-size:10px;font-weight:500">Small</button>
@@ -54,7 +54,7 @@
     </div>
 
     <!-- Icon Buttons -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:70px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">Icon Buttons</div>
       <div style="margin-top:8px;display:flex;flex-direction:row;gap:8px;align-items:center">
         <button style="width:36px;height:36px;background:#6366F1;color:#FFFFFF;border:none;border-radius:50%;font-size:18px">+</button>

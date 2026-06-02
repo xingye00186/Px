@@ -1,12 +1,12 @@
 <template>
-  <div style="width:420px;height:720px;background:#0F0F11">
+  <div style="width:1920px;height:1080px;background:#0F0F11">
     <!-- Header -->
     <div style="left:0px;top:0px;width:420px;height:48px;display:flex;align-items:center;background:#16161A;border-bottom:1px solid #2A2A2E">
       <span style="margin-left:16px;font-size:16px;font-weight:600;color:#FFFFFF">Px Design Guide</span>
     </div>
 
     <!-- Tab Bar -->
-    <div style="left:0px;top:48px;width:420px;height:36px;display:flex;flex-direction:row;background:#1A1A1E;border-bottom:1px solid #2A2A2E">
+    <div style="left:0px;top:48px;width:1920px;height:36px;display:flex;flex-direction:row;background:#1A1A1E;border-bottom:1px solid #2A2A2E">
       <div style="flex:1;display:flex;align-items:center;justify-content:center" :class="activeTab === 'overview' ? 'tab-active' : ''" @click="switchTab" click-arg="overview">
         <span style="font-size:11px;color:#D1D5DB">概览</span>
       </div>
@@ -31,11 +31,11 @@
     </div>
 
     <!-- Content Area -->
-    <div style="left:0px;top:84px;width:420px;height:636px;overflow-y:auto">
+    <div style="left:0px;top:84px;width:1920px;height:996px;overflow-y:auto" :scroll-top="scrollTop">
       <overview v-if="activeTab === 'overview'" />
       <color-palette v-if="activeTab === 'colors'" />
       <typography-showcase v-if="activeTab === 'typography'" />
-      <div v-if="activeTab === 'components'" style="left:0px;top:0px;width:420px;display:flex;flex-direction:column;gap:0px">
+      <div v-if="activeTab === 'components'" style="left:0px;top:0px;width:1920px;display:flex;flex-direction:column;gap:0px">
         <button-showcase />
         <card-showcase />
       </div>

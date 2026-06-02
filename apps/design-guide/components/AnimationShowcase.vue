@@ -1,8 +1,8 @@
 <template>
-  <div style="left:0px;top:0px;width:420px;display:flex;flex-direction:column;gap:0px">
+  <div style="left:0px;top:0px;width:1920px;display:flex;flex-direction:column;gap:0px">
 
     <!-- CSS transition demo -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:110px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">过渡动画 (transition)</div>
       <div style="margin-top:8px;padding:12px;background:#1F1F23;border-radius:8px;display:flex;flex-direction:row;gap:8px;align-items:center">
         <button style="padding:6px 14px;background:#6366F1;color:#FFFFFF;border:none;border-radius:6px;font-size:11px;font-weight:500" @click="toggleAnim" click-arg="">切换动画</button>
@@ -14,7 +14,7 @@
     </div>
 
     <!-- Background color transition -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:110px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">颜色过渡 (color transition)</div>
       <div style="margin-top:8px;padding:12px;background:#1F1F23;border-radius:8px;display:flex;flex-direction:row;gap:8px;align-items:center">
         <button style="padding:6px 14px;color:#FFFFFF;border:none;border-radius:6px;font-size:11px;font-weight:500" @click="toggleColor" click-arg="" :class="colorState === 'blue' ? 'btn-blue' : 'btn-green'">切换颜色</button>
@@ -26,7 +26,7 @@
     </div>
 
     <!-- Animation property demo -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:130px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">关键帧动画 (@keyframes)</div>
       <div style="margin-top:8px;padding:12px;background:#1F1F23;border-radius:8px;display:flex;flex-direction:row;gap:12px;align-items:center">
         <div class="spin-box" style="width:50px;height:50px;background:#6366F1;border-radius:8px;display:flex;align-items:center;justify-content:center">
@@ -43,7 +43,7 @@
     </div>
 
     <!-- Easing functions -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:150px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">缓动函数 (Easing Functions)</div>
       <div style="margin-top:8px;padding:12px;background:#1F1F23;border-radius:8px">
         <div style="display:flex;flex-direction:row;gap:6px;flex-wrap:wrap">
@@ -61,7 +61,7 @@
     </div>
 
     <!-- v-if / v-show animation context -->
-    <div style="left:16px;top:0px;width:388px;margin:16px 16px 0 16px">
+    <div style="margin:16px 16px 0 16px;height:100px;width:1888px">
       <div style="font-size:13px;font-weight:600;color:#FFFFFF">条件渲染动画</div>
       <div style="margin-top:8px;padding:12px;background:#1F1F23;border-radius:8px">
         <div style="display:flex;flex-direction:row;gap:8px;align-items:center">
@@ -72,7 +72,7 @@
     </div>
 
     <!-- Framework animation system info -->
-    <div style="left:16px;top:0px;width:388px;margin:12px 16px 0 16px">
+    <div style="margin:12px 16px 0 16px;height:80px;width:1888px">
       <div style="padding:10px;background:#1F1F23;border-radius:6px">
         <span style="font-size:11px;color:#9CA3AF">
           Px 框架动画系统支持：Transition 组件、TransitionGroup 组件（含 FLIP 算法）、
