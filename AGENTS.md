@@ -432,6 +432,61 @@ public function getSystemMessages(): array { /* 过滤 system 类型 */ }
 </template>
 ```
 
+### 7.5 `use native_types` 下的 C2440 类型转换错误
+
+**根因**：文件声明了 `use native_types`（AOT 模式），但以下操作始终返回 `php::Variant` 类型，赋值给已声明为 `php::Int` 的变量/属性时，AOT 编译器无法隐式转换：
+
+| 操作 | 返回值 | 触发条件 |
+|------|--------|---------|
+| `$arr['key']` 数组元素访问 | `php::Variant` | 赋给 `int` 属性或已类型化的局部变量 |
+| `$arr['key'] ?? default` 包含数组访问的 ?? | `php::Variant` | 同上 |
+| `max(...)` / `min(...)` | `php::Variant` | 同上 |
+
+**错误信号**：
+```
+D:\Px/build/...cc(error): error C2440: '=': cannot convert from 'php::Var' to 'php::Int'
+```
+
+**三种变体及修复**：
+
+**变体 A — max/min 返回 Variant**
+```php
+// ❌ 错误：max() 返回 php::Variant，目标变量已类型化为 php::Int
+$newScrollTop = max(0, min($max, $x));
+
+// ✅ 正确：外层加 (int) 转型
+$newScrollTop = (int)max(0, min($max, $x));
+```
+
+**变体 B — 先 int 字面量初始化，后数组访问重新赋值**
+```php
+// ❌ 错误：$borderColor 被 =0 初始化为 php::Int
+//           又被 $style['borderColor'] ?? ... 赋值为 php::Variant
+$borderColor = 0;
+if (...) {
+    $borderColor = $style['borderColor'] ?? ...;
+}
+
+// ✅ 正确：外层加 (int) 转型
+$borderColor = 0;
+if (...) {
+    $borderColor = (int)($style['borderColor'] ?? ...);
+}
+```
+
+**变体 C — 类属性声明为 `int`，从数组赋值**
+```php
+public int $primary;  // 声明为 php::Int
+
+// ❌ 错误：$colors['primary'] ?? 0x1976D2 返回 php::Variant
+$this->primary = $colors['primary'] ?? 0x1976D2;
+
+// ✅ 正确：外层加 (int) 转型
+$this->primary = (int)($colors['primary'] ?? 0x1976D2);
+```
+
+**全库扫描**：已通过 Python 脚本对所有 11 个 `use native_types` 文件进行扫描，确认无更多危险模式。涉及文件：`ScrollManager.php`(max/min)、`VNodeRenderer.php`(数组重新赋值)、`ColorScheme.php`(类属性数组赋值)。
+
 ---
 
 ## 八、构建流程
@@ -466,6 +521,8 @@ Step 3:   打包 (exe + php8ts.dll + phpx.dll → bin/)
 | Step 2 Swoole 编译器报错 | 先用手动 `php -l` 检查 PHP 语法 |
 | 系统 `php -l` 报语法错 | 用 `D:\swoole_compiler\php.exe` 而非系统 PATH 中的 PHP |
 | 编译子组件 .vue 后 gen/ 未更新到正确位置 | 必须编译根组件 App.vue，子组件不会被单独编译到 apps/<name>/gen/ |
+| `C2440: cannot convert from 'php::Var' to 'php::Int'` | `use native_types` 文件中的 `int` 变量从数组访问/max/min 赋值时，外层加 `(int)` 转型（详见 7.5） |
+| `Call to a member function toString() on string` | SFC 编译器生成 `$this->prop->toString()`，但 PHP CLI 中 string 是原生类型。重新运行 `php sfc-compiler.php` 重新编译，新版编译器生成 `(string)$this->prop` |
 
 ### 8.4 多机器 vcvarsall 路径配置
 
