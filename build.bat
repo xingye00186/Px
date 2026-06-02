@@ -261,6 +261,28 @@ if not exist "gen\ComponentFactory.php" (
 
 echo   [OK] SFC compile succeeded
 echo.
+
+:: ====================================================================
+:: Step 1.5: AOT check generated code
+:: ====================================================================
+echo ========================================
+echo   Step 1.5: AOT check generated code
+echo ========================================
+echo.
+
+cd /d "%FRAMEWORK_ROOT%"
+if exist "%APP_DIR%\gen" (
+    "%PHP_CLI%" framework\aot-checker.php "%APP_DIR%\gen" --skip direct_cpp_call
+    set "GEN_CHECK_EXIT=!errorlevel!"
+    if !GEN_CHECK_EXIT! neq 0 (
+        echo [ERROR] AOT Checker found issues in generated code, aborting build
+        exit /b 2
+    )
+    echo   [OK] AOT check on generated code passed
+) else (
+    echo   [SKIP] No gen/ directory found
+)
+echo.
 goto :step2
 
 :skip_sfc
