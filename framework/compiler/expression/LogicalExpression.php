@@ -106,7 +106,7 @@ class LogicalExpression extends ExpressionType
             } elseif ($comparison->matches($part)) {
                 $output .= '(' . $comparison->parse($part, $loopInfo) . ')';
             } else {
-                $output .= '(' . $this->parseOperand($part, $loopInfo) . ')';
+                $output .= $this->parseOperand($part, $loopInfo);
             }
 
             if ($i < count($ops)) {

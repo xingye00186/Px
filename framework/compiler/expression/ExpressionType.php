@@ -115,7 +115,7 @@ abstract class ExpressionType implements ExpressionTypeInterface
         $rest = trim(substr($expression, $splitPos + 1));
 
         // Find the colon, handling nested ternary
-        $depth = 0;
+        $depth = 1; // we are already inside the outer ternary
         $colonPos = -1;
 
         for ($i = 0; $i < strlen($rest); $i++) {
@@ -124,9 +124,14 @@ abstract class ExpressionType implements ExpressionTypeInterface
                 $depth++;
             } elseif ($c === ')' || $c === ']' || $c === '}') {
                 $depth--;
-            } elseif ($c === ':' && $depth === 0) {
-                $colonPos = $i;
-                break;
+            } elseif ($c === '?' && $depth > 0) {
+                $depth++; // nested ternary
+            } elseif ($c === ':' && $depth > 0) {
+                $depth--;
+                if ($depth === 0) {
+                    $colonPos = $i;
+                    break;
+                }
             }
         }
 

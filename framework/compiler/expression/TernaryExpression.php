@@ -79,7 +79,7 @@ class TernaryExpression extends ExpressionType
         // Check for nested ternary
         $ternary = new TernaryExpression();
         if ($ternary->matches($value)) {
-            return $ternary->parse($value, $loopInfo);
+            return '(' . $ternary->parse($value, $loopInfo) . ')';
         }
 
         // Check for logical operators

@@ -15,6 +15,9 @@ require_once __DIR__ . '/../../framework/compiler/expression/ExpressionParser.ph
 
 use Px\Compiler\Expression\ExpressionParser;
 
+$GLOBALS['_test_passed'] = 0;
+$GLOBALS['_test_failed'] = 0;
+
 function test($name, $actual, $expected) {
     $passed = ($actual === $expected);
     $status = $passed ? '✓' : '✗';
@@ -22,6 +25,9 @@ function test($name, $actual, $expected) {
     if (!$passed) {
         echo "  Expected: {$expected}\n";
         echo "  Actual:   {$actual}\n";
+        $GLOBALS['_test_failed']++;
+    } else {
+        $GLOBALS['_test_passed']++;
     }
     return $passed;
 }
@@ -91,3 +97,8 @@ $result = $parser->parse("a ? b ? 'x' : 'y' : 'z'");
 test('Nested ternary', $result, "\$this->a ? (\$this->b ? 'x' : 'y') : 'z'");
 
 echo "\n=== All tests completed ===\n";
+
+$total = $GLOBALS['_test_passed'] + $GLOBALS['_test_failed'];
+echo "Results: {$GLOBALS['_test_passed']}/{$total} passed\n";
+
+exit($GLOBALS['_test_failed'] > 0 ? 1 : 0);
