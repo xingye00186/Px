@@ -600,7 +600,7 @@ class LayoutResolver
                         $newSize = max(0, $mainSize - $reduction);
 
                         // 应用 min-width/min-height 约束
-                        $minVal = $isRow ? ($ch->style['minWidth'] ?? 0) : ($ch->style['minHeight'] ?? 0);
+                        $minVal = $isRow ? (int)($ch->style['minWidth'] ?? 0) : (int)($ch->style['minHeight'] ?? 0);
                         if ($minVal > 0 && $newSize < $minVal) {
                             $newSize = $minVal;
                         }
@@ -894,8 +894,8 @@ class LayoutResolver
      */
     private function applyMinMax(array $style, int $size, bool $isWidth): int
     {
-        $min = $isWidth ? ($style['minWidth'] ?? 0) : ($style['minHeight'] ?? 0);
-        $max = $isWidth ? ($style['maxWidth'] ?? 0) : ($style['maxHeight'] ?? 0);
+        $min = $isWidth ? (int)($style['minWidth'] ?? 0) : (int)($style['minHeight'] ?? 0);
+        $max = $isWidth ? (int)($style['maxWidth'] ?? 0) : (int)($style['maxHeight'] ?? 0);
 
         // CSS 规范: 如果 min > max，max 被忽略
         if ($min > 0 && $max > 0 && $min > $max) {
@@ -903,10 +903,10 @@ class LayoutResolver
         }
 
         if ($min > 0 && $size < $min) {
-            $size = $min;
+            $size = (int)$min;
         }
         if ($max > 0 && $size > $max) {
-            $size = $max;
+            $size = (int)$max;
         }
         return max(0, $size);
     }

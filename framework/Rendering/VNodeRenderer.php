@@ -271,7 +271,7 @@ class VNodeRenderer
                 }
                 if ($y < $containerY) {
                     $h -= ($containerY - $y);
-                    $y = $containerY;
+                    $y = (int)$containerY;
                 }
                 if ($y + $h > $containerY + $containerH) {
                     $h = ($containerY + $containerH) - $y;
@@ -285,7 +285,7 @@ class VNodeRenderer
                 }
                 if ($x < $containerX) {
                     $w -= ($containerX - $x);
-                    $x = $containerX;
+                    $x = (int)$containerX;
                 }
                 if ($x + $w > $containerX + $containerW) {
                     $w = ($containerX + $containerW) - $x;
@@ -425,7 +425,7 @@ class VNodeRenderer
                 if ($x < $containerX + 4) $x = $containerX + 4;
             } else {
                 $x = $containerX + (int)(($containerW - $textWidth) / 2);
-                if ($x < $containerX) $x = $containerX;
+                if ($x < $containerX) $x = (int)$containerX;
             }
             if ($containerH > $fontSize * 2) {
                 $y = $y + (int)(($containerH - $fontSize) / 2);
