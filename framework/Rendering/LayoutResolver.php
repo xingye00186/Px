@@ -538,8 +538,8 @@ class LayoutResolver
             $remainingSpace = max($containerMain - $fixedTotalMain - $gapTotal, 0);
 
             $totalFlexGrow = 0;
-            foreach ($flexItemData as $data) {
-                $totalFlexGrow += $data['grow'];
+            foreach ($flexItemData as $entry) {
+                $totalFlexGrow += $entry['grow'];
             }
             $totalFlexGrow = max($totalFlexGrow, 1);
 
