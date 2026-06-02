@@ -2,6 +2,8 @@
 
 namespace Px\Rendering;
 
+use native_types;
+
 /**
  * GdiRenderContext — Win32 GDI 绘制上下文
  *

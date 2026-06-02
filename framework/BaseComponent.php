@@ -2,6 +2,8 @@
 
 namespace Px;
 
+use native_types;
+
 use Px\Interfaces\ComponentInterface;
 use Px\Core\Scheduler;
 

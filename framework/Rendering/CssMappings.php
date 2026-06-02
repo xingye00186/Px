@@ -2,6 +2,8 @@
 
 namespace Px\Rendering;
 
+use native_types;
+
 /**
  * CSS → GDI Mapping Table
  * 

@@ -2,6 +2,8 @@
 
 namespace Px\Rendering;
 
+use native_types;
+
 /**
  * RenderNode — 渲染专用节点
  *
