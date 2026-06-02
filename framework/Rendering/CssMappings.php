@@ -183,7 +183,19 @@ class CssMappings
         'grid-row-gap'         => ['key' => 'gridRowGap',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
         'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
-        'flex'                 => ['key' => 'flex',           'parser' => 'Px\\Rendering\\CssMappings::parseFlex',  'default' => ''],
+        'flex'                 => ['key' => 'flex',           'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
+        // ---- min/max 尺寸约束 ----
+        'min-width'  => ['key' => 'minWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'max-width'  => ['key' => 'maxWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'min-height' => ['key' => 'minHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'max-height' => ['key' => 'maxHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        // ---- flex 扩展 ----
+        'order'        => ['key' => 'order',        'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'flex-basis'   => ['key' => 'flexBasis',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
+        'flex-shrink'  => ['key' => 'flexShrink',   'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 1],
+        // ---- 单项对齐 ----
+        'align-self'   => ['key' => 'alignSelf',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
+        'justify-self' => ['key' => 'justifySelf', 'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
         // ---- padding / margin 四方向 ----
         'padding-top'    => ['key' => 'paddingTop',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'padding-right'  => ['key' => 'paddingRight',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
@@ -295,6 +307,34 @@ class CssMappings
             return $m[1];
         }
         return $value;
+    }
+
+    /**
+     * Parse flex shorthand value into structured array.
+     *
+     * Format: "grow shrink basis"
+     * Examples:
+     *   "1"         → ['grow'=>1.0, 'shrink'=>1.0, 'basis'=>0]
+     *   "1 0 auto"  → ['grow'=>1.0, 'shrink'=>0.0, 'basis'=>0]
+     *   "2 0 100px" → ['grow'=>2.0, 'shrink'=>0.0, 'basis'=>100]
+     *   ""          → ['grow'=>0.0, 'shrink'=>1.0, 'basis'=>0]
+     */
+    public static function parseFlexValue(string $flex): array
+    {
+        $parts = preg_split('/\s+/', trim($flex));
+        $result = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 0];
+
+        if (count($parts) >= 1 && $parts[0] !== '') {
+            $result['grow'] = (float)$parts[0];
+        }
+        if (count($parts) >= 2 && $parts[1] !== '') {
+            $result['shrink'] = (float)$parts[1];
+        }
+        if (count($parts) >= 3 && $parts[2] !== '' && strtolower($parts[2]) !== 'auto') {
+            $result['basis'] = (int) preg_replace('/[^0-9]/', '', $parts[2]);
+        }
+
+        return $result;
     }
 
     /**
@@ -441,6 +481,20 @@ class CssMappings
 
         // Expand shorthand padding/margin to individual direction properties
         $raw = self::expandBoxShorthand($raw);
+
+        // Pre-detect percentage values for layout properties.
+        // Store as "widthPercent" (float, e.g. 50.0 for "50%") alongside the
+        // regular pixel key. LayoutResolver checks *Percent first.
+        $pctMap = [
+            'width' => 'widthPercent', 'height' => 'heightPercent',
+            'min-width' => 'minWidthPercent', 'max-width' => 'maxWidthPercent',
+            'min-height' => 'minHeightPercent', 'max-height' => 'maxHeightPercent',
+        ];
+        foreach ($pctMap as $cssProp => $styleKey) {
+            if (isset($raw[$cssProp]) && str_ends_with(trim($raw[$cssProp]), '%')) {
+                $style[$styleKey] = (float) substr(trim($raw[$cssProp]), 0, -1);
+            }
+        }
 
         // Second pass: parse through lookup map
         $lookup = array_merge(self::PROPERTY_MAP, self::INLINE_PROPERTY_MAP);

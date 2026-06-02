@@ -1026,3 +1026,57 @@ powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps
 15. **测试完整闭环**：新增管道测试必须覆盖完整的用户操作链（不限于一直按同一按钮），包括：大量操作后 → 清除/重置 → 验证所有 UI 元素完整的端到端场景
 16. **按钮标签提取**：`makeButtonElement()` 必须遍历子 RenderNode 提取标签（`<button><span :bind="x">{{ x }}</span></button>`），仅检查 `node->content`(string) 和 `props[':bind']` 不够，还要检查子节点的 content 和 bind 引用
 17. **LayoutResolver 洁净路径保留 auto-stack 位置**：洁净路径（`layoutDirty=false`）中，只有显式 `top`/`left` 定位的节点才重算 x/y。auto-stacked 子节点应保留脏路径设定的位置，仅由快速滚动路径（`shiftChildrenY`）平移。修改 `resolveNode()` 中 `$node->x = ($style['left'] ?? 0) + $parentX` 这类无条件赋值时必须改用 `array_key_exists` 保护
+
+---
+
+## 十四、新增 CSS 布局属性（LayoutResolver v2）
+
+以下 CSS 布局属性已在 LayoutResolver 中实现支持：
+
+### 尺寸约束
+| 属性 | 说明 | 默认值 |
+|------|------|--------|
+| `min-width` | 最小宽度 (px) | 0 |
+| `max-width` | 最大宽度 (px) | 0 |
+| `min-height` | 最小高度 (px) | 0 |
+| `max-height` | 最大高度 (px) | 0 |
+
+CSS 规范：当 `min > max` 时，`max` 被忽略。
+
+### 百分比尺寸
+| 属性 | 说明 |
+|------|------|
+| `width: 50%` | 相对于父容器 content width |
+| `height: 50%` | 相对于父容器 content height |
+
+百分比在尺寸解析**之后**、min/max 约束**之前**应用。百分比也在 flex 和 grid 容器上生效。
+
+### position:relative
+- 在 auto-stack 中，`position:relative` 的子节点**不禁止** auto-stack
+- `top` 在 auto-stacked 位置基础上做额外偏移，不影响兄弟节点定位
+- `left` 通过 resolveBlockLayout 的 relative 路径正确处理
+
+### Flex 扩展
+| 属性 | 说明 | 默认值 |
+|------|------|--------|
+| `order` | 排列顺序（冒泡排序，稳定） | 0 |
+| `flex-basis` | 初始主轴尺寸 (`auto` 回退到 `width`/`height`) | `auto` |
+| `flex-shrink` | 收缩因子 | 1 |
+| `align-self` | 单项交叉轴对齐 (`auto`/`flex-start`/`flex-end`/`center`/`stretch`) | `auto` |
+
+### Flex-shrink 算法
+```
+overflow = totalMain - containerMain  (当 overflow > 0)
+totalShrinkWeight = Σ(item.mainSize × item.shrink)
+item.mainSize -= overflow × (item.mainSize × item.shrink) / totalShrinkWeight
+min-width/min-height 约束在收缩后应用
+```
+
+### Grid 扩展
+| 属性 | 说明 | 默认值 |
+|------|------|--------|
+| `align-self` | 垂直方向对齐 (`stretch`/`center`/`start`/`end`) | `stretch`(auto) |
+| `justify-self` | 水平方向对齐 (`stretch`/`center`/`start`/`end`) | `stretch`(auto) |
+
+### 内联样式百分数预检测
+`CssMappings::parseInlineStyle()` 在解析时自动检测 `width`、`height`、`min-width`、`max-width`、`min-height`、`max-height` 的百分比值，存入 `*Percent` 键（如 `widthPercent`），LayoutResolver 在父容器尺寸已知时据此解析实际像素值。
