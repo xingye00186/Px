@@ -29,18 +29,18 @@
 - **效果**：
   - 参数和返回值类型明确 → 函数调用可优化为 Native Call（直接 C++ 函数调用），绕过 `zend_call_function`。
   - 对象属性类型明确 → 属性读写转换为结构体偏移量的直接内存访问，等同于 C struct。
-- **避免**：使用 `Nullable` 或 `UnionType` → 会退化为 `any`，失去优化机会。若必须使用，请配合 `objval()` 接续类型。
+- **避免**：使用 `Nullable` 或 `UnionType` → 会退化为 `any`，失去优化机会。若必须使用，请配合 `toObject()` 或 `to*()` 接续类型。
 
 ## 四、类型接续：从 `any` 恢复具体类型
 
 当从数组、动态函数返回值等获得 `mixed` 变量时，编译器丢失类型信息。使用以下方法重建类型，使后续调用变为 Native Call：
 
-- **对象**：`objval($obj, ClassName::class)` → 编译器得知具体类，方法调用转为静态 C++ 函数调用。
+- **对象**：`$obj->toObject(ClassName::class)` → 编译器得知具体类，方法调用转为静态 C++ 函数调用。
 - **Stream**：`stream_cast($stream)` → 重建为 `php::Stream`，后续 `read`/`write` 等调用变为直接 C 函数。
 - **基础类型**：使用 `(int)`、`intval()` 等转换，或 `toInt()`/`toString()` 等关键词方法。
 - **示例**：
   ```php
-  $user = objval($array['user'], User::class);
+  $user = $array['user']->toObject(User::class);
   $user->getName();   // Native Call，无 ZendVM
   ```
 
@@ -120,7 +120,7 @@
 | 优化措施 | 效果 | 是否避免 ZendVM |
 |---------|------|----------------|
 | `use native_types` | 消除 zval 装箱 | 是（原生整数运算） |
-| 类型标注 + `objval` | Native Call | 是 |
+| 类型标注 + `toObject()` | Native Call | 是 |
 | 使用 `to*` 关键词 | 编译期转换 | 是 |
 | Std 容器 | 零开销 C++ 容器 | 是 |
 | 避免动态特性 | 防止回退 ZendVM | 是 |

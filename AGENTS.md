@@ -378,7 +378,7 @@ public string $scrollLeft = "0";  // 水平滚动位置（仅横向容器需要�
 
 | 模式 | 说明 |
 |------|------|
-| `objval($x, ClassName::class)` | AOT 显式类型标注，**必须使用** |
+| `$x->toObject(ClassName::class)` | AOT 显式类型标注，**必须使用** |
 | `ComponentFactory::create($className)` | 允许字符串类名作为工厂参数 |
 | `match` 表达式 | 仅 swoole_compiler 自带的 PHP 8.x 支持 |
 
@@ -887,7 +887,7 @@ Px 框架使用**三层测试策略**：
 | **dispatchClick 驱动** | 模拟用户点击，直接调用组件 handler 方法 |
 | **状态断言 + 快照** | 既校验具体属性值，也 dump 完整状态用于调试 |
 | **组件树语义对标 Vue 3** | 测试 parent 链、事件冒泡、VNode 缓存、patchComponentTree |
-| **AOT polyfill** | bootstrap.php 提供 `objval()`、`any()` 等 AOT 函数 polyfill |
+| **AOT polyfill** | bootstrap.php 提供 `toObject()`、`any()` 等 AOT 函数 polyfill |
 
 ### 运行测试
 
