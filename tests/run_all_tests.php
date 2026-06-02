@@ -49,7 +49,7 @@ foreach ($testFiles as $file) {
         $passed = (int)$m[1];
         $total = (int)$m[2];
         $failed = $total - $passed;
-    } elseif (preg_match('/All tests passed/', $output)) {
+    } elseif (preg_match('/(全部通过|All tests passed)/', $output)) {
         // 某些测试没有 Results 行
         $passed = '?';
     }
@@ -68,8 +68,10 @@ foreach ($testFiles as $file) {
         echo $line . "\n";
     }
 
-    $totalPassed += $passed;
-    $totalFailed += $failed;
+    if ($passed !== '?') {
+        $totalPassed += $passed;
+        $totalFailed += $failed;
+    }
 
     if ($failed > 0) {
         echo "  → {$passed}/{$total} passed, {$failed} FAILED\n\n";

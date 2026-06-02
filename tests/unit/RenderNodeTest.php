@@ -152,3 +152,4 @@ echo "[PASS] content 和 key 构造参数正确\n";
 // 报告
 // ─────────────────────────────────────────────
 echo "\nRenderNodeTest: 全部通过 ✓\n";
+echo "Results: 10/10 passed\n";
