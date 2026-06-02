@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Px\Styling\Theme;
 
+use native_types;
+
 /**
  * 主题唯一数据源，包含颜色、字体、组件样式。
  *

@@ -143,6 +143,11 @@ class AotChecker
         'aot-validator.php',
     ];
 
+    /** 排除的目录（跨文件检查专用 — 不检查这些目录下的引用） */
+    private array $excludedRefDirs = [
+        'vendor', 'compiler', 'build', 'node_modules', '.git',
+    ];
+
     /** 排除的目录 */
     private array $excludedDirs = [
         'compiler',
@@ -207,7 +212,8 @@ class AotChecker
                 echo "  aot_variable_function, aot_extract, aot_yield, aot_eval_include,\n";
                 echo "  aot_magic_methods, aot_null_byte, aot_call_user_func,\n";
                 echo "  hwnd_in_app, hwnd_in_renderer, hdc_in_renderer,\n";
-                echo "  hdc_param_in_methods, direct_cpp_call\n";
+                echo "  hdc_param_in_methods, direct_cpp_call,\n";
+                echo "  native_types_chain (跨文件 use native_types 链式推导检查)\n";
                 return 0;
             } elseif ($arg[0] !== '-') {
                 $path = $arg;
@@ -230,10 +236,13 @@ class AotChecker
                 $files = $checker->scanDirectory($path);
         }
 
-        // 扫描文件
+        // 扫描文件（逐文件正则检查）
         foreach ($files as $file) {
             $checker->checkFile($file);
         }
+
+        // 跨文件检查：use native_types 链式推导兼容性
+        $checker->checkNativeTypesChain($files);
 
         // 输出结果
         $checker->report();
@@ -492,6 +501,109 @@ class AotChecker
         // 移除 heredoc/nowdoc
         $code = preg_replace('/<<<[A-Z]+\s*\$?\w*\s*[\s\S]*?^[A-Z]+;$/m', '', $code) ?? $code;
         return $code;
+    }
+
+    /**
+     * 检查 use native_types 链式推导兼容性
+     *
+     * 当一个类声明了 'use native_types' 但引用的类没有时，
+     * AOT 编译器对该引用的属性/方法调用返回 php::Variant，
+     * 无法赋值给原生类型变量，导致 C2440 编译错误。
+     *
+     * 本方法通过跨文件分析 use 导入关系发现此类不匹配。
+     */
+    public function checkNativeTypesChain(array $files): void
+    {
+        // Step 1: 构建 class FQN → file path 映射
+        $classToFile = [];
+        $fileHasNative = [];
+
+        foreach ($files as $file) {
+            $content = file_get_contents($file);
+            if ($content === false) {
+                continue;
+            }
+            $stripped = $this->stripComments($content);
+
+            // 检查是否有 use native_types
+            $hasNative = preg_match('/\buse\s+native_types\s*;/', $stripped) === 1;
+            $fileHasNative[$file] = $hasNative;
+
+            // 提取命名空间和类名
+            $ns = '';
+            if (preg_match('/namespace\s+([\w\\\\]+)\s*;/', $stripped, $m)) {
+                $ns = $m[1];
+            }
+            if (preg_match('/\b(?:abstract\s+|final\s+)?class\s+(\w+)/', $stripped, $cm)) {
+                $fqn = ($ns !== '' ? $ns . '\\' : '') . $cm[1];
+                $classToFile[$fqn] = $file;
+            }
+        }
+
+        if (empty($classToFile)) {
+            return;
+        }
+
+        // Step 2: 检查每个 native_types 文件的 use 导入
+        foreach ($files as $file) {
+            if (!($fileHasNative[$file] ?? false)) {
+                continue;
+            }
+
+            $content = file_get_contents($file);
+            if ($content === false) {
+                continue;
+            }
+            $stripped = $this->stripComments($content);
+
+            // 获取当前文件的命名空间
+            $ns = '';
+            if (preg_match('/namespace\s+([\w\\\\]+)\s*;/', $stripped, $m)) {
+                $ns = $m[1];
+            }
+
+            // 获取文件相对路径用于排除判断
+            $fileRel = str_replace('\\', '/', $file);
+
+            // 解析 use 导入语句
+            preg_match_all('/\buse\s+([\w\\\\]+)(?:\s+as\s+\w+)?\s*;/', $stripped, $useMatches);
+
+            foreach ($useMatches[1] as $importFqn) {
+                $importFqn = ltrim($importFqn, '\\');
+
+                // 跳过非项目的类
+                if (!isset($classToFile[$importFqn])) {
+                    continue;
+                }
+
+                $targetFile = $classToFile[$importFqn];
+
+                // 跳过被排除的引用目标目录
+                $targetRel = str_replace('\\', '/', $targetFile);
+                $skip = false;
+                foreach ($this->excludedRefDirs as $excludedDir) {
+                    if (strpos($targetRel, '/' . $excludedDir . '/') !== false) {
+                        $skip = true;
+                        break;
+                    }
+                }
+                if ($skip) {
+                    continue;
+                }
+
+                if (!($fileHasNative[$targetFile] ?? false)) {
+                    $targetShortName = substr(strrchr($importFqn, '\\') ?: '', 1) ?: $importFqn;
+                    $this->warnings[] = [
+                        'file' => $file,
+                        'line' => 0,
+                        'rule' => 'native_types_chain',
+                        'code' => "use $importFqn",
+                        'context' => "imported class '$targetShortName' lacks use native_types",
+                        'message' => "AOT: '$file' uses native_types, but imported class '$targetShortName' ($importFqn) does not. Accessing its properties will return php::Variant, causing C2440 errors. Add 'use native_types;' to " . basename(dirname($targetFile)) . '/' . basename($targetFile),
+                    ];
+                }
+            }
+        }
     }
 
     /**

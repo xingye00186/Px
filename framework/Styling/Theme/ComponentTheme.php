@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Px\Styling\Theme;
 
+use native_types;
+
 /**
  * 存储每个组件类型或 CSS 类名的默认样式。
  *

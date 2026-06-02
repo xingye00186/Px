@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Px\Styling\Provider;
 
+use native_types;
+
 use Px\Styling\Theme\ThemeData;
 
 /**
