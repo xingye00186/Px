@@ -5,6 +5,7 @@ platform: win32
 entry: main.php
 cxx-flags:
   - /utf-8
+  - /wd4267
 
 sources:
   - main.php
