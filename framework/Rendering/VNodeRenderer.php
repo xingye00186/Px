@@ -456,7 +456,7 @@ class VNodeRenderer
         $borderWidth = $style['borderWidth'] ?? 0;
         $borderColor = 0;
         if ($borderWidth > 0) {
-            $borderColor = $style['borderColor'] ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0);
+            $borderColor = (int)($style['borderColor'] ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0));
         }
         $borderRadius = $style['borderRadius'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;

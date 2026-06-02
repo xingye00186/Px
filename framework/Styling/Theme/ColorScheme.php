@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Px\Styling\Theme;
 
+use native_types;
+
 /**
  * 颜色令牌集合，遵循 Material Design 颜色系统。
  *
@@ -38,26 +40,26 @@ class ColorScheme
     public function __construct(array $colors = [])
     {
         // Material Design 3 浅色主题默认值
-        $this->primary            = $colors['primary']            ?? 0x1976D2;
-        $this->onPrimary          = $colors['onPrimary']          ?? 0xFFFFFF;
-        $this->primaryContainer   = $colors['primaryContainer']   ?? 0xE3F2FD;
-        $this->onPrimaryContainer = $colors['onPrimaryContainer'] ?? 0x0D47A1;
-        $this->secondary          = $colors['secondary']          ?? 0x9C27B0;
-        $this->onSecondary        = $colors['onSecondary']        ?? 0xFFFFFF;
-        $this->secondaryContainer = $colors['secondaryContainer'] ?? 0xF3E5F5;
-        $this->onSecondaryContainer = $colors['onSecondaryContainer'] ?? 0x6A1B9A;
-        $this->tertiary           = $colors['tertiary']           ?? 0x00897B;
-        $this->onTertiary         = $colors['onTertiary']         ?? 0xFFFFFF;
-        $this->background         = $colors['background']         ?? 0xF5F5F5;
-        $this->onBackground       = $colors['onBackground']       ?? 0x000000;
-        $this->surface            = $colors['surface']            ?? 0xFFFFFF;
-        $this->onSurface          = $colors['onSurface']          ?? 0x000000;
-        $this->surfaceVariant     = $colors['surfaceVariant']     ?? 0xE7E0EC;
-        $this->onSurfaceVariant   = $colors['onSurfaceVariant']   ?? 0x49454F;
-        $this->error              = $colors['error']              ?? 0xB00020;
-        $this->onError            = $colors['onError']            ?? 0xFFFFFF;
-        $this->outline            = $colors['outline']            ?? 0x79747E;
-        $this->shadow             = $colors['shadow']             ?? 0x000000;
+        $this->primary            = (int)($colors['primary']            ?? 0x1976D2);
+        $this->onPrimary          = (int)($colors['onPrimary']          ?? 0xFFFFFF);
+        $this->primaryContainer   = (int)($colors['primaryContainer']   ?? 0xE3F2FD);
+        $this->onPrimaryContainer = (int)($colors['onPrimaryContainer'] ?? 0x0D47A1);
+        $this->secondary          = (int)($colors['secondary']          ?? 0x9C27B0);
+        $this->onSecondary        = (int)($colors['onSecondary']        ?? 0xFFFFFF);
+        $this->secondaryContainer = (int)($colors['secondaryContainer'] ?? 0xF3E5F5);
+        $this->onSecondaryContainer = (int)($colors['onSecondaryContainer'] ?? 0x6A1B9A);
+        $this->tertiary           = (int)($colors['tertiary']           ?? 0x00897B);
+        $this->onTertiary         = (int)($colors['onTertiary']         ?? 0xFFFFFF);
+        $this->background         = (int)($colors['background']         ?? 0xF5F5F5);
+        $this->onBackground       = (int)($colors['onBackground']       ?? 0x000000);
+        $this->surface            = (int)($colors['surface']            ?? 0xFFFFFF);
+        $this->onSurface          = (int)($colors['onSurface']          ?? 0x000000);
+        $this->surfaceVariant     = (int)($colors['surfaceVariant']     ?? 0xE7E0EC);
+        $this->onSurfaceVariant   = (int)($colors['onSurfaceVariant']   ?? 0x49454F);
+        $this->error              = (int)($colors['error']              ?? 0xB00020);
+        $this->onError            = (int)($colors['onError']            ?? 0xFFFFFF);
+        $this->outline            = (int)($colors['outline']            ?? 0x79747E);
+        $this->shadow             = (int)($colors['shadow']             ?? 0x000000);
     }
 
     public static function light(): self

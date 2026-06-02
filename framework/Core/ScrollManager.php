@@ -195,7 +195,7 @@ class ScrollManager
             if ($type === 'track') {
                 $clickOffset = $mouseX - $scrollNode->x - (int)($thumbW / 2);
                 $newScrollLeft = (int)($maxScroll * $clickOffset / max($trackW, 1));
-                $newScrollLeft = max(0, min($maxScroll, $newScrollLeft));
+                $newScrollLeft = (int)max(0, min($maxScroll, $newScrollLeft));
                 $this->applyScrollLeft($scrollNode, $newScrollLeft, true);
             } elseif ($type === 'thumb') {
                 $this->scrollDragTarget = $scrollNode;
@@ -217,7 +217,7 @@ class ScrollManager
             if ($type === 'track') {
                 $clickOffset = $mouseY - $scrollNode->y - (int)($thumbH / 2);
                 $newScrollTop = (int)($maxScroll * $clickOffset / max($trackH, 1));
-                $newScrollTop = max(0, min($maxScroll, $newScrollTop));
+                $newScrollTop = (int)max(0, min($maxScroll, $newScrollTop));
                 $this->applyScrollTop($scrollNode, $newScrollTop, true);
             } elseif ($type === 'thumb') {
                 $this->scrollDragTarget = $scrollNode;

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Px\Styling\Theme;
 
+use native_types;
+
 /**
  * 字体令牌，定义各级别字号。
  * 所有值以 px 为单位，int 类型。
@@ -30,21 +32,21 @@ class TextTheme
      */
     public function __construct(array $values = [])
     {
-        $this->displayLarge  = $values['displayLarge']  ?? 57;
-        $this->displayMedium = $values['displayMedium'] ?? 45;
-        $this->displaySmall  = $values['displaySmall']  ?? 36;
-        $this->headlineLarge = $values['headlineLarge'] ?? 32;
-        $this->headlineMedium = $values['headlineMedium'] ?? 28;
-        $this->headlineSmall = $values['headlineSmall'] ?? 24;
-        $this->titleLarge    = $values['titleLarge']    ?? 22;
-        $this->titleMedium   = $values['titleMedium']   ?? 16;
-        $this->titleSmall    = $values['titleSmall']    ?? 14;
-        $this->bodyLarge     = $values['bodyLarge']     ?? 16;
-        $this->bodyMedium    = $values['bodyMedium']    ?? 14;
-        $this->bodySmall     = $values['bodySmall']     ?? 12;
-        $this->labelLarge    = $values['labelLarge']    ?? 14;
-        $this->labelMedium   = $values['labelMedium']   ?? 12;
-        $this->labelSmall    = $values['labelSmall']    ?? 11;
+        $this->displayLarge  = (int)($values['displayLarge']  ?? 57);
+        $this->displayMedium = (int)($values['displayMedium'] ?? 45);
+        $this->displaySmall  = (int)($values['displaySmall']  ?? 36);
+        $this->headlineLarge = (int)($values['headlineLarge'] ?? 32);
+        $this->headlineMedium = (int)($values['headlineMedium'] ?? 28);
+        $this->headlineSmall = (int)($values['headlineSmall'] ?? 24);
+        $this->titleLarge    = (int)($values['titleLarge']    ?? 22);
+        $this->titleMedium   = (int)($values['titleMedium']   ?? 16);
+        $this->titleSmall    = (int)($values['titleSmall']    ?? 14);
+        $this->bodyLarge     = (int)($values['bodyLarge']     ?? 16);
+        $this->bodyMedium    = (int)($values['bodyMedium']    ?? 14);
+        $this->bodySmall     = (int)($values['bodySmall']     ?? 12);
+        $this->labelLarge    = (int)($values['labelLarge']    ?? 14);
+        $this->labelMedium   = (int)($values['labelMedium']   ?? 12);
+        $this->labelSmall    = (int)($values['labelSmall']    ?? 11);
     }
 
     public static function default(): self
