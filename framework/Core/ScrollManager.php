@@ -6,6 +6,7 @@ use native_types;
 
 use Px\Rendering\RenderNode;
 use Px\ReactiveComponent;
+use PerfCounter;
 
 /**
  * ScrollManager — 滚动交互服务（RenderNode 版）
@@ -53,15 +54,16 @@ class ScrollManager
      */
     public function handleScrollWheel($event, RenderNode $root): void
     {
+        if ($root === null) return;
         PerfCounter::start('scroll_process');
         try {
-            $scrollNode = $this->findScrollContainerAt($event->x, $event->y, $root);
+            $scrollNode = $this->findScrollContainerAt($event->getX(), $event->getY(), $root);
             if ($scrollNode === null) return;
 
-            $delta = $event->delta ?? 0;
+            $delta = $event->getDelta();
             $scrollAmount = (int)($delta / 40);
 
-            if ($event->shiftDown ?? false) {
+            if ($event->isShiftDown()) {
                 // 横向滚动
                 $contentW = $scrollNode->contentWidth;
                 $containerW = $scrollNode->w;
@@ -100,6 +102,7 @@ class ScrollManager
         // 反向遍历子节点（后渲染优先）
         for ($i = count($node->children) - 1; $i >= 0; $i--) {
             $child = $node->children[$i];
+            if ($child === null) continue;
             $found = $this->findScrollContainerAt($x, $y, $child);
             if ($found !== null) return $found;
         }

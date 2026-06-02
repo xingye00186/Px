@@ -36,6 +36,14 @@ class MouseEvent extends PlatformEvent
         $this->delta  = $delta;
         $this->shiftDown = $shiftDown;
     }
+
+    // AOT getter：方法内 $this 编译器知道确切类型，生成直接 C++ struct 成员访问
+    public function getAction(): string { return $this->action; }
+    public function getX(): int { return $this->x; }
+    public function getY(): int { return $this->y; }
+    public function getButton(): int { return $this->button; }
+    public function getDelta(): int { return $this->delta; }
+    public function isShiftDown(): bool { return $this->shiftDown; }
 }
 
 class KeyboardEvent extends PlatformEvent
@@ -51,6 +59,11 @@ class KeyboardEvent extends PlatformEvent
         $this->keyCode = $keyCode;
         $this->char    = $char;
     }
+
+    // AOT getter
+    public function getAction(): string { return $this->action; }
+    public function getKeyCode(): int { return $this->keyCode; }
+    public function getChar(): string { return $this->char; }
 }
 
 class WindowEvent extends PlatformEvent

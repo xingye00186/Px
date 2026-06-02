@@ -2,7 +2,12 @@
 
 namespace Px\Core;
 
+use native_types;
+
 use Px\Platform\Platform;
+use Px\Platform\PlatformEvent;
+use Px\Platform\MouseEvent;
+use Px\Platform\KeyboardEvent;
 use Px\Platform\PlatformFactory;
 use Px\Rendering\VNode;
 use Px\Rendering\RenderNode;
@@ -73,8 +78,7 @@ class Application
         $this->scrollManager = new ScrollManager(
             $this->requestRender(...),
             function () { $this->directRender(); },
-            $this->resolveComponent(...),
-            $this->renderTreeManager
+            $this->resolveComponent(...)
         );
         // VNodeRenderer 依赖 RenderContext，在 initRenderer() 中初始化
     }
@@ -86,45 +90,45 @@ class Application
         $this->renderRequested = true;
     }
 
-    private function handleMouseEvent($event): void
+    private function handleMouseEvent(MouseEvent $event): void
     {
-        if ($event === null || $this->activeVNodeTree === null) {
+        if ($this->activeVNodeTree === null) {
             return;
         }
 
         // ── 鼠标滚轮：驱动滚动容器 ────────────
-        if ($event->action === 'wheel') {
+        if ($event->getAction() === 'wheel') {
             $this->scrollManager->handleScrollWheel($event, $this->renderTreeManager->getRootRenderNode());
             return;
         }
 
         // ── 鼠标拖动：滚动条拖拽 ──────────────
-        if ($event->action === 'move') {
-            $this->scrollManager->handleScrollbarDrag($event->x, $event->y);
+        if ($event->getAction() === 'move') {
+            $this->scrollManager->handleScrollbarDrag($event->getX(), $event->getY());
             return;
         }
 
         // ── 鼠标释放：结束拖拽，持久化滚动位置 ──
-        if ($event->action === 'up') {
+        if ($event->getAction() === 'up') {
             $this->scrollManager->handleMouseUp();
             return;
         }
 
         // ── 鼠标按下：优先检测滚动条，其次 @click ──
-        if ($event->action === 'down') {
-            $sbResult = $this->scrollManager->hitTestScrollbar($event->x, $event->y, $this->renderTreeManager->getRootRenderNode());
+        if ($event->getAction() === 'down') {
+            $sbResult = $this->scrollManager->hitTestScrollbar($event->getX(), $event->getY(), $this->renderTreeManager->getRootRenderNode());
             if ($sbResult !== null) {
                 $this->scrollManager->handleScrollbarDown(
                     $sbResult['scrollNode'],
                     $sbResult['type'],
-                    $event->x, $event->y,
+                    $event->getX(), $event->getY(),
                     $sbResult['isHorizontal']
                 );
                 return;
             }
 
             // hitTest 返回 RenderNode，通过 sourceVNode 访问 props
-            $renderNode = $this->renderTreeManager->hitTest($event->x, $event->y);
+            $renderNode = $this->renderTreeManager->hitTest($event->getX(), $event->getY());
             if ($renderNode !== null) {
                 $sourceVNode = $renderNode->sourceVNode;
                 if ($sourceVNode !== null && isset($sourceVNode->props['@click'])) {
@@ -137,31 +141,32 @@ class Application
         }
     }
 
-    private function handleKeyboardEvent($event): void
+    private function handleKeyboardEvent(KeyboardEvent $event): void
     {
-        if ($event === null || $this->activeVNodeTree === null) {
+        if ($this->activeVNodeTree === null) {
             return;
         }
+
         $input = $this->findFocusedInput($this->activeVNodeTree);
         if ($input === null) {
             return;
         }
         $target = $this->resolveComponent($input);
-        $action = $event->action;
+        $action = $event->getAction();
         if ($action === 'down') {
             $handler = $input->props['@keydown'] ?? null;
             if ($handler !== null) {
-                $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
+                $target->dispatchKey($handler, $action, $event->getKeyCode(), $event->getChar());
             }
         } elseif ($action === 'up') {
             $handler = $input->props['@keyup'] ?? null;
             if ($handler !== null) {
-                $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
+                $target->dispatchKey($handler, $action, $event->getKeyCode(), $event->getChar());
             }
         } elseif ($action === 'char') {
             $handler = $input->props['@enter'] ?? null;
-            if ($handler !== null && $event->keyCode === 13) {
-                $target->dispatchKey($handler, $action, $event->keyCode, $event->char);
+            if ($handler !== null && $event->getKeyCode() === 13) {
+                $target->dispatchKey($handler, $action, $event->getKeyCode(), $event->getChar());
             }
         }
     }
@@ -227,6 +232,16 @@ class Application
         }
 
         $this->rootComponent->mount();
+        
+        // 设置动画/定时渲染定时器（1 秒间隔，用于 carousel 等定时功能）
+        $this->platform->setAnimationTimer(function () {
+            // 通知根组件时钟滴答
+            if ($this->rootComponent !== null && method_exists($this->rootComponent, 'onTimerTick')) {
+                $this->rootComponent->onTimerTick();
+            }
+            $this->requestRender();
+        }, 1000);
+
         return $this;
     }
 
@@ -386,7 +401,7 @@ class Application
             : [];
         $newChildren = $this->vnodeChildrenToArray($newNode->children);
 
-        $count = min(count($oldChildren), count($newChildren));
+        $count = (int)min(count($oldChildren), count($newChildren));
         for ($i = 0; $i < $count; $i++) {
             $this->patchComponentTree(
                 $newChildren[$i],
@@ -532,9 +547,9 @@ class Application
         while ($this->running) {
             $rawEvents = $this->platform->pollEvents();
             foreach ($rawEvents as $ev) {
-                if ($ev->type === 'mouse') {
+                if ($ev instanceof MouseEvent) {
                     $this->handleMouseEvent($ev);
-                } elseif ($ev->type === 'keyboard') {
+                } elseif ($ev instanceof KeyboardEvent) {
                     $this->handleKeyboardEvent($ev);
                 }
             }

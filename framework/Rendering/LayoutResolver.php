@@ -390,31 +390,43 @@ class LayoutResolver
         $node->w = max(0, (int)$width);
         $node->h = max(0, (int)$height);
 
-        // If width/height is 0, use parent dimensions
-        if ($width === 0 && $parent !== null && $parent->w > 0) {
-            $width = $parent->w - $left;
-            $node->w = max(0, (int)$width);
-        }
-        if ($height === 0 && $parent !== null && $parent->h > 0) {
-            $height = $parent->h - $top;
-            $node->h = max(0, (int)$height);
-        }
+        // ── 方向检测（在父级填充前，以区分主/交叉轴）──
+        $direction = $style['flexDirection'] ?? 'row';
+        $isRow = ($direction === 'row' || $direction === 'row-reverse');
 
-        // Handle flex:1 / flex:2 etc. → implicit width from parent for flex items
-        $flex = $style['flex'] ?? '';
-        if ($flex !== '' && $parent !== null) {
-            if ($width === 0 && $parent->w > 0) {
-                $node->w = max(0, (int)($parent->w - $left));
+        // Only fill cross axis dimension from parent (not main axis)
+        // Flex column: cross axis = width, fill it
+        // Flex row: cross axis = height, fill it
+        if ($isRow) {
+            // Row: cross axis = height
+            if ($height === 0 && $parent !== null && $parent->h > 0) {
+                $height = $parent->h - $top;
+                $node->h = max(0, (int)$height);
+            }
+        } else {
+            // Column: cross axis = width
+            if ($width === 0 && $parent !== null && $parent->w > 0) {
+                $width = $parent->w - $left;
+                $node->w = max(0, (int)$width);
             }
         }
 
-        $direction = $style['flexDirection'] ?? 'row';
+        // Handle flex:1 / flex:2 etc. → initial hint for flex-grow distribution
+        $flex = $style['flex'] ?? '';
+        if ($flex !== '' && $parent !== null) {
+            if ($isRow && $width === 0 && $parent->w > 0) {
+                $node->w = max(0, (int)($parent->w - $left));
+            }
+            if (!$isRow && $height === 0 && $parent->h > 0) {
+                $node->h = max(0, (int)($parent->h - $top));
+            }
+        }
+
         $gap       = $style['gap'] ?? 0;
         $justify   = $style['justifyContent'] ?? 'flex-start';
         $align     = $style['alignItems'] ?? 'stretch';
         $wrap      = $style['flexWrap'] ?? 'nowrap';
 
-        $isRow = ($direction === 'row' || $direction === 'row-reverse');
         $reversed = ($direction === 'row-reverse' || $direction === 'column-reverse');
 
         // ── Padding ──
@@ -423,8 +435,8 @@ class LayoutResolver
         $paddingBottom = $style['paddingBottom'] ?? $style['padding'] ?? 0;
         $paddingLeft   = $style['paddingLeft'] ?? $style['padding'] ?? 0;
 
-        $containerMain = $isRow ? ($width - $paddingLeft - $paddingRight) : ($height - $paddingTop - $paddingBottom);
-        $containerCross = $isRow ? ($height - $paddingTop - $paddingBottom) : ($width - $paddingLeft - $paddingRight);
+        $containerMain = max(0, $isRow ? ($width - $paddingLeft - $paddingRight) : ($height - $paddingTop - $paddingBottom));
+        $containerCross = max(0, $isRow ? ($height - $paddingTop - $paddingBottom) : ($width - $paddingLeft - $paddingRight));
 
         // ── Step 1: Collect children and resolve ──
         $children = [];
@@ -718,6 +730,21 @@ class LayoutResolver
                 $ch->y = $node->y + $paddingTop + $crossOffset;
             } else {
                 $ch->x = $node->x + $paddingLeft + $crossOffset;
+            }
+
+            // ── 交叉轴 margin：marginLeft/marginRight(column) 或 marginTop/marginBottom(row) ──
+            if ($isRow) {
+                $ch->y += $childMarginTop;
+                if ($effectiveAlign === 'stretch' && $ch->h === 0) {
+                    $stretchedH = max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
+                    if ($stretchedH > 0) $ch->h = $stretchedH;
+                }
+            } else {
+                $ch->x += $childMarginLeft;
+                if ($effectiveAlign === 'stretch' && $ch->w === 0) {
+                    $stretchedW = max(0, (int)($containerCross - $childMarginLeft - $childMarginRight));
+                    if ($stretchedW > 0) $ch->w = $stretchedW;
+                }
             }
 
             // Shift descendants if position changed from initial resolve
