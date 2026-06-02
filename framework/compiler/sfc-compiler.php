@@ -1083,7 +1083,10 @@ function generateGetBindValue(array $bindKeys, array $arrayBindKeys = []): strin
             // Array-typed property: json_encode before returning
             $cases[] = "            case '" . addslashes($key) . "': return json_encode(\$this->{$key});";
         } else {
-            $cases[] = "            case '" . addslashes($key) . "': return \$this->{$key}->toString();";
+            // No cast needed: $this->{$key} is string in both AOT and PHP CLI
+            // AOT: php::String property, return type :string is php::String
+            // PHP CLI: native string, return type :string is native string
+            $cases[] = "            case '" . addslashes($key) . "': return \$this->{$key};";
         }
     }
     if (count($cases) === 0) {
