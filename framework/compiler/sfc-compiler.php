@@ -1551,12 +1551,52 @@ function remapChildBindProps(VNode $node, array $bindProps): void
 // ============================================================
 // Dependency Cache — .dep-cache.json
 // ============================================================
+
+/**
+ * Get all framework files that the SFC compiler depends on.
+ * When any of these files changes, the compiled output may be stale
+ * and all components must be recompiled.
+ */
+function getFrameworkFiles(): array
+{
+    $compilerDir = __DIR__;
+    $frameworkDir = dirname(__DIR__);
+    return [
+        __FILE__,
+        $frameworkDir . '/Rendering/VNode.php',
+        $frameworkDir . '/Rendering/CssMappings.php',
+        $compilerDir . '/template-parser.php',
+        $compilerDir . '/aot-validator.php',
+        $compilerDir . '/script-analyzer.php',
+        $compilerDir . '/component-registry.php',
+        $compilerDir . '/expression/ExpressionParserInterface.php',
+        $compilerDir . '/expression/ExpressionTypeInterface.php',
+        $compilerDir . '/expression/ExpressionType.php',
+        $compilerDir . '/expression/TernaryExpression.php',
+        $compilerDir . '/expression/ComparisonExpression.php',
+        $compilerDir . '/expression/LogicalExpression.php',
+        $compilerDir . '/expression/ExpressionParser.php',
+    ];
+}
+
 function loadDepCache(string $genDir): ?array
 {
     $cachePath = $genDir . DIRECTORY_SEPARATOR . '.dep-cache.json';
     if (!file_exists($cachePath)) {
         return null;
     }
+
+    // Check if any framework file is newer than the cache file itself.
+    // If so, the compiler (or its dependencies) has changed since the
+    // cache was written — invalidate everything to force recompilation.
+    $cacheMtime = @filemtime($cachePath) ?: 0;
+    foreach (getFrameworkFiles() as $fwFile) {
+        if (file_exists($fwFile) && (@filemtime($fwFile) ?: 0) > $cacheMtime) {
+            echo "  [CACHE] Framework file changed: " . basename($fwFile) . ", invalidating dep-cache\n";
+            return null;
+        }
+    }
+
     $content = file_get_contents($cachePath);
     if ($content === false) {
         return null;
