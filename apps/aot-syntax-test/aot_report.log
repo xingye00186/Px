@@ -1,0 +1,279 @@
++----------------------------------------------------------------------+
+|            AOT 语法综合测试报告                                       |
+|            Swoole Compiler AOT Compilation Test Report               |
++----------------------------------------------------------------------+
+
+=== 测试环境 ===
+  模式: use native_types
+  编译器: Swoole Compiler (AOT)
+  PHP: 8.x (swoole_compiler 内置)
+  日期: 2026-06-02 14:35:33
+
+=== 汇总 ===
+  总用例: 174
+  通过:   174
+  失败:   0
+  通过率: 100%
+  所有测试用例通过
+
+=== 详细结果 ===
+
+--- G1: 原生类型声明与推断 ---
+  [PASS] int字面量推断 42: 42
+  [PASS] float字面量 3.14159: 3.14159
+  [PASS] bool true: true
+  [PASS] bool false: false
+  [PASS] string字面量: "hello world"
+  [PASS] 类型化函数参数: "score: 10"
+  [PASS] 类型化返回值: 42
+  [PASS] int 最大值: 9223372036854775807
+
+--- G2: 算术与运算符 ---
+  [PASS] 加法 10+20: 30
+  [PASS] 减法 50-17: 33
+  [PASS] 乘法 7*8: 56
+  [PASS] 除法 100/3: 33
+  [PASS] 取模 100%3: 1
+  [PASS] 一元负号 -42: -42
+  [PASS] += 复合赋值: 15
+  [PASS] -= 复合赋值: 12
+  [PASS] *= 复合赋值: 36
+  [PASS] /= 复合赋值: 9
+  [PASS] %= 复合赋值: 4
+  [PASS] 后置++: 1
+  [PASS] 前置++: 2
+  [PASS] 后置--: 1
+  [PASS] 前置--: 0
+  [PASS] == 相等: true
+  [PASS] != 不等: true
+  [PASS] < 小于: true
+  [PASS] > 大于: true
+  [PASS] <= 小于等于: true
+  [PASS] >= 大于等于: true
+  [PASS] <=> a<b 返回-1: -1
+  [PASS] <=> a==b 返回0: 0
+  [PASS] <=> a>b 返回1: 1
+  [PASS] 按位与 0xF & 0x3: 3
+  [PASS] 按位或 0x1 | 0x4: 5
+  [PASS] 按位异或 0xF ^ 0x3: 12
+  [PASS] 左移 1<<3: 8
+  [PASS] 右移 16>>2: 4
+  [PASS] && 逻辑与: true
+  [PASS] || 逻辑或: true
+  [PASS] ! 逻辑非: true
+  [PASS] 三元运算符: "bigger"
+  [PASS] ?? 有值场景: 42
+  [PASS] 字符串连接 .: "Hello World"
+  [PASS] .= 复合连接: "Count: 42"
+
+--- G3: 控制流 ---
+  [PASS] if/elseif/else 链: "B"
+  [PASS] for 循环 1+...+10: 55
+  [PASS] foreach 求和: 150
+  [PASS] foreach 带 key 遍历: 6
+  [PASS] while 循环 (100 除到 1): 6
+  [PASS] match 表达式: "two"
+  [PASS] 嵌套 if: 15
+  [PASS] && 短路: false && true: false
+  [PASS] && 非短路: true && true: true
+  [PASS] || 短路: true || false: true
+  [PASS] || 非短路: false || true: true
+
+--- G4: 类型转换 ---
+  [PASS] intval(3.14): 3
+  [PASS] intval('42'): 42
+  [PASS] intval(true): 1
+  [PASS] intval(false): 0
+  [PASS] floatval(42): 42
+  [PASS] floatval('42'): 42
+  [PASS] boolval(1): true
+  [PASS] boolval(0): false
+  [PASS] boolval('hello'): true
+  [PASS] boolval(''): false
+  [PASS] strval(42): "42"
+  [PASS] strval(3.14): "3.14"
+  [PASS] strval(true): "1"
+  [PASS] 链式: string->int: 42
+  [PASS] 链式: int->string: "42"
+
+--- G5: 属性访问模式 ---
+  [PASS] 直接 $ev->x: 42
+  [PASS] 直接 $ev->y: 100
+  [PASS] 直接 $ev->action: "click"
+  [PASS] 直接 $ev->value: 3.14
+  [PASS] 直接 $ev->active: true
+  [PASS] getter getX(): 42
+  [PASS] getter getY(): 100
+  [PASS] getter getAction(): "click"
+  [PASS] getter getValue(): 3.14
+  [PASS] getter isActive(): true
+  [PASS] 链式 withX(50)->x: 50
+  [PASS] 链式 withY(80)->y: 80
+  [PASS] 继承类 $child->x: 7
+  [PASS] 继承类 $child->extra: "extra_field"
+  [PASS] 继承类 getExtra(): "extra_field"
+  [PASS] 继承类父类 getX(): 7
+
+--- G6: 类型窄化与属性访问 ---
+  [PASS] instanceof 后 $ev->x: 15
+  [PASS] instanceof 后 $ev->y: 25
+  [PASS] instanceof 后 $ev->action: "move"
+  [PASS] instanceof 后 getX(): 15
+  [PASS] instanceof 后 getAction(): "move"
+  [PASS] 类型化参数 ->x: 30
+  [PASS] 类型化参数 ->y: 40
+  [PASS] 类型化参数 ->action: "param"
+  [PASS] objval 后 ->x: 55
+  [PASS] objval 后 ->y: 66
+  [PASS] objval 后 ->action: "objval"
+  [PASS] 数组->foreach->instanceof->->x: 10
+
+--- G7: BigInt 大整数 ---
+  [PASS] std::bigInt 构造(字符串): "9223372036854775807"
+  [PASS] BigInt + Int: "150"
+  [PASS] BigInt - Int: "70"
+  [PASS] BigInt * Int: "500"
+  [PASS] BigInt / Int (整数除法): "33"
+  [PASS] BigInt % Int: "10"
+  [PASS] BigInt + 50: "150"
+  [PASS] BigInt - 30: "70"
+  [PASS] BigInt * 3: "300"
+  [PASS] BigInt / 7: "14"
+  [PASS] BigInt < 比较: true
+  [PASS] BigInt > 比较: true
+  [PASS] BigInt == 相等: true
+  [PASS] BigInt != 不等: true
+  [PASS] BigInt <= 小于等于: true
+  [PASS] BigInt <=> 返回 -1: -1
+  [PASS] BigInt 一元负号: "-100"
+  [PASS] BigInt 5e18+2e18: "7000000000000000000"
+  [PASS] BigInt (42+8)*3-15/5: "147"
+  [PASS] BigInt ** 10 (2^10): "1024"
+  [PASS] BigInt 10! = 3628800: "3628800"
+  [PASS] BigInt 20! (19+位): "2432902008176640000"
+
+--- G8: Decimal 高精度十进制 ---
+  [PASS] std::decimal 构造: true
+  [PASS] std::decimal(int) 构造: "42"
+  [PASS] 0.1 + 0.2 == 0.3 (Decimal): true
+  [PASS] Decimal + Int: true
+  [PASS] Decimal + 10.01: true
+  [PASS] Decimal < 比较: true
+  [PASS] Decimal == 比较: true
+  [PASS] Decimal 50.25+25.25: true
+  [PASS] Decimal 50.25-10.00: true
+  [PASS] Decimal 20+5==25: true
+  [PASS] Decimal (string)整数值: "456"
+
+--- G9: BigFloat 高精度浮点 ---
+  [PASS] std::bigFloat 构造(字符串): true
+  [PASS] std::bigFloat(string) 构造: true
+  [PASS] BigFloat + Int: true
+  [PASS] BigFloat + BigFloat: true
+  [PASS] BigFloat * 2: true
+  [PASS] BigFloat 100+50: "150"
+  [PASS] BigFloat 100-30: "70"
+  [PASS] BigFloat > 比较: true
+  [PASS] BigFloat < 比较: true
+  [PASS] BigFloat == 比较: true
+  [PASS] BigFloat 一元负号: true
+  [PASS] BigFloat 10+5==15: true
+  [PASS] BigFloat 10-3==7: true
+  [PASS] BigFloat (string)整数值: "99"
+
+--- G10: 类型丢弃与接续 (any/objval/toObject) ---
+  [INFO] any() 类型丢弃: 编译通过
+  [PASS] objval 接续 ->x: 77
+  [PASS] objval 接续 ->y: 88
+  [PASS] objval 接续 ->action: "recovered"
+  [PASS] 数组元素 (int) 转换: 42
+  [PASS] 数组元素 (float) 转换: 42
+
+--- G11: C2440 边界场景 ---
+  [PASS] (int)max(10,20): 20
+  [PASS] (int)min(100,50): 50
+  [PASS] clamp: max(0,min(100,150)): 100
+  [PASS] clamp: max(0,min(100,-5)): 0
+  [PASS] 数组元素转int (C2440变体B): 16711680
+  [PASS] 混合运算含max(): 40
+
+--- G12: 数组与字符串操作 ---
+  [PASS] 数组创建 [1,2,3,4,5] 长度: 5
+  [PASS] 数组索引 $arr[0]: 1
+  [PASS] 数组索引 $arr[4]: 5
+  [PASS] 数组修改 $arr[2]=99: 99
+  [PASS] 关联数组 key 'name': "test"
+  [PASS] 关联数组 key 'value': 42
+  [PASS] 二维数组 [0][0]: 1
+  [PASS] 二维数组 [1][1]: 4
+  [PASS] strlen('hello'): 5
+  [PASS] substr('hello',0,2): "he"
+  [PASS] strtoupper('hello'): "HELLO"
+  [PASS] strtolower('HELLO'): "hello"
+  [PASS] strpos('hello','l'): 2
+  [PASS] 数组 push $arr2[3]: 4
+  [PASS] count([1,2,3]): 3
+
+--- G13: match 表达式综合 ---
+  [PASS] match (整数): "three"
+  [PASS] match default 分支: "other"
+  [PASS] match 字符串: 1
+
+=== 测试分组说明 ===
+  G1:  原生类型声明与推断 (Native Types)
+  G2:  算术与运算符 (Arithmetic & Operators)
+  G3:  控制流 (Control Flow)
+  G4:  类型转换 (Type Casting & Conversion)
+  G5:  属性访问模式 (Property Access)
+  G6:  类型窄化与属性访问 (Type Narrowing)
+  G7:  BigInt 大整数 (BigInt)
+  G8:  Decimal 高精度十进制 (Decimal)
+  G9:  BigFloat 高精度浮点 (BigFloat)
+  G10: 类型丢弃与接续 (Type Discard)
+  G11: C2440 边界场景 (Edge Cases)
+  G12: 数组与字符串操作 (Arrays & Strings)
+  G13: match 表达式 (Match Expression)
+
+=== 已在文档中确认但不可包含在测试中的编译期限制 ===
+  (以下语法在 AOT 编译器中会报编译错误，不能包含在同一个源文件中)
+
+  1. BigInt++ / BigInt--
+     原因: Big* 类型不可变 (immutable)，不支持自增自减
+     替代: += 1 / -= 1
+
+  2. BigInt + Decimal 跨类型运算
+     原因: 编译器阻止可能导致精度损失的隐式混合
+     解决: 显式转换 (如通过 toString 中转)
+
+  3. BigInt + BigFloat 跨类型运算
+     原因: 同上
+
+  4. Float -> BigInt 直接转换
+     原因: Float 无法精确提升为 BigInt
+     替代: std::bigInt("3")
+
+  5. unset() 原生类型变量
+     原因: 原生类型变量是 C++ 栈上值类型
+
+  6. 动态属性 (obj->dynProp)
+     原因: AOT 无法静态推导
+
+  7. eval / create_function / compact / extract
+     原因: 完全不可编译
+
+  8. BigFloat %% (取模不支持)
+     原因: BigFloat 不支持取模
+
+  9. Decimal ** (幂运算不支持)
+     原因: Decimal 不支持幂运算
+
+  10. void 方法链式调用
+      原因: 编译期安全检查，防止 void 表达式调用方法
+
+=== 总结 ===
+  测试时间: 2026-06-02 14:35:33
+  通过/总数: 174/174
+  失败: 0
+  测试分组: 13组
+  结论: AOT 编译器在本次测试的所有语法特性上表现正常。
++----------------------------------------------------------------------+
