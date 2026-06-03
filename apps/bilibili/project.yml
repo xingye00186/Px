@@ -1,0 +1,23 @@
+name: bilibili
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+cxx-flags:
+  - /utf-8
+  - /wd4267
+
+component-libraries:
+  - path: ../../library/vc-ui
+    prefix: vc
+    mode: auto-register
+
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php
