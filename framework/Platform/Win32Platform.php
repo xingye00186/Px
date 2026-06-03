@@ -4,6 +4,7 @@ namespace Px\Platform;
 
 use Px\Rendering\RenderContext;
 use Px\Rendering\GdiRenderContext;
+use Px\Rendering\SkiaRenderContext;
 
 class Win32Platform implements Platform
 {
@@ -29,6 +30,10 @@ class Win32Platform implements Platform
     {
         $this->hwnd = vue_window_create($title, $width, $height);
         vue_window_show($this->hwnd, WinMsg::SW_SHOW);
+        // APP_RENDERER='skia' 则用 Skia 路径，默认 GDI（零侵入）
+        if (defined('APP_RENDERER') && APP_RENDERER === 'skia') {
+            return new SkiaRenderContext($this->hwnd, $width, $height);
+        }
         return new GdiRenderContext($this->hwnd);
     }
 

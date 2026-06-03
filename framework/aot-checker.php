@@ -137,6 +137,7 @@ class AotChecker
     /** 排除的文件（平台封装层，直接调用 C++ 函数是合法的） */
     private array $excludedFiles = [
         'GdiRenderContext.php',
+        'SkiaRenderContext.php',
         'Win32Platform.php',
         'vue_calc.cc',
         'aot-checker.php',

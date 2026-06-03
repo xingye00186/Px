@@ -2,6 +2,8 @@
 
 namespace Px\Rendering;
 
+use native_types;
+
 abstract class RenderContext
 {
     abstract public function beginFrame(): void;
