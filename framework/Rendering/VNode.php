@@ -57,6 +57,14 @@ class VNode
     public ?array $componentProps = null;
 
     /**
+     * 预计算组件属性值（仅 v-for 循环使用）。
+     * 由 v-for render helper 在循环体内直接赋值，
+     * expandComponentNode 优先使用此值，绕开 bind key 查找。
+     * @var array<string, string>|null
+     */
+    public ?array $componentPropValues = null;
+
+    /**
      * 父组件传递的定位偏移（仅 #component 节点使用）。
      * 由 Application::expandComponentNode / matchComponentNode 设置，
      * RenderTreeManager::updateFromVNode 消费。

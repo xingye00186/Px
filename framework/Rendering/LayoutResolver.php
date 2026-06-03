@@ -104,6 +104,66 @@ class LayoutResolver
                     break;
             }
 
+            // ── Scroll container post-processing for flex/grid display modes ──
+            // (block layout handles this internally in resolveBlockLayout)
+            if ($node->isScrollContainer && ($display === 'flex' || $display === 'grid')) {
+                $padT = $effectiveStyle['paddingTop'] ?? $effectiveStyle['padding'] ?? 0;
+                $padL = $effectiveStyle['paddingLeft'] ?? $effectiveStyle['padding'] ?? 0;
+                $padR = $effectiveStyle['paddingRight'] ?? $effectiveStyle['padding'] ?? 0;
+                $padB = $effectiveStyle['paddingBottom'] ?? $effectiveStyle['padding'] ?? 0;
+
+                $childBaseY = $node->y + $padT - $node->scrollTop;
+
+                // Calculate contentHeight: max bottom edge of all children
+                $maxBottom = $childBaseY;
+                foreach ($node->children as $child) {
+                    $bottom = $child->y + $child->h;
+                    if ($bottom > $maxBottom) $maxBottom = $bottom;
+                }
+                $node->contentHeight = max(0, $maxBottom - $childBaseY);
+
+                // Clamp scrollTop when content shrinks
+                $maxScroll = max($node->contentHeight - $node->h, 0);
+                if ($node->scrollTop > $maxScroll) {
+                    $oldScrollTop = $node->scrollTop;
+                    $node->scrollTop = $maxScroll;
+                    $shiftDown = $oldScrollTop - $node->scrollTop;
+                    if ($shiftDown > 0) {
+                        foreach ($node->children as $child) {
+                            $child->y += $shiftDown;
+                            $this->shiftDescendantsY($child, $shiftDown);
+                        }
+                    }
+                }
+
+                // ContentWidth for horizontal scroll
+                $overflowX = $effectiveStyle['overflowX'] ?? $effectiveStyle['overflow'] ?? 'visible';
+                $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
+                if ($hasHScroll) {
+                    $maxRight = 0;
+                    foreach ($node->children as $child) {
+                        $cLeft = $child->style['left'] ?? 0;
+                        $cWidth = $child->style['width'] ?? $child->w;
+                        $right = $cLeft + $cWidth;
+                        if ($right > $maxRight) $maxRight = $right;
+                    }
+                    $node->contentWidth = max($maxRight, $node->w);
+
+                    $maxScrollX = max($node->contentWidth - $node->w, 0);
+                    if ($node->scrollLeft > $maxScrollX) {
+                        $oldScrollLeft = $node->scrollLeft;
+                        $node->scrollLeft = $maxScrollX;
+                        $shiftRight = $oldScrollLeft - $node->scrollLeft;
+                        if ($shiftRight > 0) {
+                            foreach ($node->children as $child) {
+                                $child->x += $shiftRight;
+                                $this->shiftDescendantsX($child, $shiftRight);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Track scroll containers
             if ($node->isScrollContainer) {
                 $scrollContainers[] = $node;
@@ -194,14 +254,22 @@ class LayoutResolver
         }
 
         // Handle right/bottom as alternatives
+        // For position:absolute, apply right/bottom even when width/height is 0
+        $isAbsolute = ($position === 'absolute');
         if ($right !== null && $parent !== null) {
             if ($width > 0) {
                 $node->x = $parent->w - $width - $right + $parentX;
+            } elseif ($isAbsolute) {
+                // position:absolute with no explicit width — anchor from right edge
+                $node->x = $parent->w - $right + $parentX;
             }
         }
         if ($bottom !== null && $parent !== null) {
             if ($height > 0) {
                 $node->y = $parent->h - $height - $bottom + $parentY;
+            } elseif ($isAbsolute) {
+                // position:absolute with no explicit height — anchor from bottom edge
+                $node->y = $parent->h - $bottom + $parentY;
             }
         }
 
@@ -394,19 +462,27 @@ class LayoutResolver
         $direction = $style['flexDirection'] ?? 'row';
         $isRow = ($direction === 'row' || $direction === 'row-reverse');
 
+        // Cross-axis fill — account for parent padding
+        $parentPadL = ($parent !== null) ? ($parent->style['paddingLeft'] ?? $parent->style['padding'] ?? 0) : 0;
+        $parentPadR = ($parent !== null) ? ($parent->style['paddingRight'] ?? $parent->style['padding'] ?? 0) : 0;
+        $parentPadT = ($parent !== null) ? ($parent->style['paddingTop'] ?? $parent->style['padding'] ?? 0) : 0;
+        $parentPadB = ($parent !== null) ? ($parent->style['paddingBottom'] ?? $parent->style['padding'] ?? 0) : 0;
+
         // Only fill cross axis dimension from parent (not main axis)
         // Flex column: cross axis = width, fill it
         // Flex row: cross axis = height, fill it
         if ($isRow) {
-            // Row: cross axis = height
+            // Row: cross axis = height — subtract parent vertical padding
             if ($height === 0 && $parent !== null && $parent->h > 0) {
-                $height = $parent->h - $top;
+                $availH = $parent->h - $parentPadT - $parentPadB;
+                $height = max(0, $availH - $top);
                 $node->h = max(0, (int)$height);
             }
         } else {
-            // Column: cross axis = width
+            // Column: cross axis = width — subtract parent horizontal padding
             if ($width === 0 && $parent !== null && $parent->w > 0) {
-                $width = $parent->w - $left;
+                $availW = $parent->w - $parentPadL - $parentPadR;
+                $width = max(0, $availW - $left);
                 $node->w = max(0, (int)$width);
             }
         }
@@ -415,10 +491,12 @@ class LayoutResolver
         $flex = $style['flex'] ?? '';
         if ($flex !== '' && $parent !== null) {
             if ($isRow && $width === 0 && $parent->w > 0) {
-                $node->w = max(0, (int)($parent->w - $left));
+                $availW = $parent->w - $parentPadL - $parentPadR;
+                $node->w = max(0, (int)($availW - $left));
             }
             if (!$isRow && $height === 0 && $parent->h > 0) {
-                $node->h = max(0, (int)($parent->h - $top));
+                $availH = $parent->h - $parentPadT - $parentPadB;
+                $node->h = max(0, (int)($availH - $top));
             }
         }
 
@@ -439,13 +517,31 @@ class LayoutResolver
         $containerCross = max(0, $isRow ? ($height - $paddingTop - $paddingBottom) : ($width - $paddingLeft - $paddingRight));
 
         // ── Step 1: Collect children and resolve ──
-        $children = [];
-        foreach ($node->children as $child) {
-            $this->resolveNode($child, $node->x + $paddingLeft, $node->y + $paddingTop, $node, $scrollContainers);
-            $children[] = $child;
+        // Apply scroll offset to child parent coordinates for scroll containers
+        $scrollOffsetX = 0;
+        $scrollOffsetY = 0;
+        if ($node->isScrollContainer) {
+            $scrollOffsetX = $node->scrollLeft;
+            $scrollOffsetY = $node->scrollTop;
         }
 
-        if (count($children) === 0) return;
+        $children = [];
+        foreach ($node->children as $child) {
+            $childPosition = $child->style['position'] ?? 'static';
+            $this->resolveNode($child, $node->x + $paddingLeft - $scrollOffsetX, $node->y + $paddingTop - $scrollOffsetY, $node, $scrollContainers);
+            // position:absolute children are removed from flex flow but positioned relative to container
+            if ($childPosition !== 'absolute') {
+                $children[] = $child;
+            }
+        }
+
+        if (count($children) === 0) {
+            // Still need to finalize scroll container contentHeight if applicable
+            if ($node->isScrollContainer) {
+                $node->contentHeight = 0;
+            }
+            return;
+        }
 
         // ── Step 2: Order sort (AOT 兼容的冒泡排序，稳定排序) ──
         $n = count($children);
@@ -462,11 +558,7 @@ class LayoutResolver
         }
 
         // ── Step 3: 收集 flex item 元数据 (grow/shrink/basis) ──
-        // flexItemData[i] = ['grow'=>float, 'shrink'=>float, 'basis'=>int, 'isFlexGrow'=>bool]
         $flexItemData = [];
-        $hasFlexGrow = false;
-
-        // 先确定 initial main size（考虑 flex-basis）
         foreach ($children as $ch) {
             $data = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => -1, 'isFlexGrow' => false];
             $flexRaw = $ch->style['flex'] ?? '';
@@ -476,23 +568,375 @@ class LayoutResolver
                 $data['shrink'] = $fv['shrink'];
                 $data['basis'] = $fv['basis'];
             } else {
-                // 单独属性
                 $data['grow'] = (float)($ch->style['flexGrow'] ?? 0);
                 $data['shrink'] = (float)($ch->style['flexShrink'] ?? 1);
             }
             if ($data['grow'] > 0) {
                 $data['isFlexGrow'] = true;
-                $hasFlexGrow = true;
             }
             $flexItemData[] = $data;
         }
 
-        // ── Step 4: 应用 flex-basis 到 initial main size ──
+        // ── Step 3.5: Flex-wrap 按行分割 ──
+        $isWrapping = ($wrap === 'wrap');
+        $lines = [$children];
+        if ($isWrapping) {
+            $lines = [];
+            $currentLine = [];
+            $currentLineMain = 0;
+            foreach ($children as $idx => $ch) {
+                $chMain = $isRow ? $ch->w : $ch->h;
+                // Include margins in size calculation
+                $cs = $ch->style;
+                $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
+                $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
+                $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
+                $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
+                $chSizeWithMargin = $chMain + ($isRow ? $mL + $mR : $mT + $mB);
+
+                // If item alone exceeds container, it goes on its own line
+                $needsNewLine = !empty($currentLine) && ($currentLineMain + $chSizeWithMargin + $gap > $containerMain);
+                if ($needsNewLine) {
+                    $lines[] = $currentLine;
+                    $currentLine = [];
+                    $currentLineMain = 0;
+                }
+                $currentLine[] = $ch;
+                $currentLineMain += $chSizeWithMargin + (count($currentLine) > 1 ? $gap : 0);
+            }
+            if (!empty($currentLine)) {
+                $lines[] = $currentLine;
+            }
+        }
+
+        // ── Per-line flex layout ──
+        $accumulatedCrossOffset = 0;
+        foreach ($lines as $lineChildren) {
+            $lineContainerMain = $containerMain;
+            $lineCount = count($lineChildren);
+            if ($lineCount === 0) continue;
+
+            // Build per-line flexItemData
+            $lineFlexData = [];
+            $lineHasFlexGrow = false;
+            foreach ($lineChildren as $ch) {
+                foreach ($flexItemData as $origData) {
+                    // Match by tracking index offset — simpler: rebuild
+                }
+            }
+            // Rebuild flex data for this line
+            $lineFlexData = [];
+            $lineHasFlexGrow = false;
+            foreach ($lineChildren as $ch) {
+                $data = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => -1, 'isFlexGrow' => false];
+                $flexRaw = $ch->style['flex'] ?? '';
+                if ($flexRaw !== '') {
+                    $fv = CssMappings::parseFlexValue($flexRaw);
+                    $data['grow'] = $fv['grow'];
+                    $data['shrink'] = $fv['shrink'];
+                    $data['basis'] = $fv['basis'];
+                } else {
+                    $data['grow'] = (float)($ch->style['flexGrow'] ?? 0);
+                    $data['shrink'] = (float)($ch->style['flexShrink'] ?? 1);
+                }
+                if ($data['grow'] > 0) {
+                    $data['isFlexGrow'] = true;
+                    $lineHasFlexGrow = true;
+                }
+                $lineFlexData[] = $data;
+            }
+
+            // ── Step 4: Apply flex-basis ──
+            $this->applyFlexBasis($lineChildren, $lineFlexData, $isRow);
+
+            // ── Step 5: Flex-grow ──
+            if ($lineHasFlexGrow) {
+                $fixedTotalMain = 0;
+                foreach ($lineChildren as $idx => $ch) {
+                    $data = $lineFlexData[$idx];
+                    $cs = $ch->style;
+                    $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
+                    $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
+                    $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
+                    $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
+                    if ($data['isFlexGrow']) {
+                        $fixedTotalMain += $isRow ? $mL + $mR : $mT + $mB;
+                    } else {
+                        $sz = $isRow ? $ch->w : $ch->h;
+                        $fixedTotalMain += $sz + ($isRow ? $mL + $mR : $mT + $mB);
+                    }
+                }
+                $gapTotal = $gap * ($lineCount - 1);
+                $remainingSpace = max($lineContainerMain - $fixedTotalMain - $gapTotal, 0);
+                $totalFlexGrow = 0;
+                foreach ($lineFlexData as $entry) {
+                    $totalFlexGrow += $entry['grow'];
+                }
+                $totalFlexGrow = max($totalFlexGrow, 1);
+                foreach ($lineChildren as $idx => $ch) {
+                    $data = $lineFlexData[$idx];
+                    if ($data['isFlexGrow']) {
+                        $allocated = (int)(($data['grow'] / $totalFlexGrow) * $remainingSpace);
+                        if ($isRow) {
+                            $ch->w = max(0, $allocated);
+                        } else {
+                            $ch->h = max(0, $allocated);
+                        }
+                    }
+                }
+            }
+
+            // ── Step 6: Calculate line totalMain ──
+            $lineTotalMain = 0;
+            $lineMaxCross = 0;
+            foreach ($lineChildren as $ch) {
+                $cs = $ch->style;
+                $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
+                $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
+                $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
+                $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
+                if ($isRow) {
+                    $lineTotalMain += $ch->w + $mL + $mR;
+                    $lineMaxCross = max($lineMaxCross, $ch->h);
+                } else {
+                    $lineTotalMain += $ch->h + $mT + $mB;
+                    $lineMaxCross = max($lineMaxCross, $ch->w);
+                }
+            }
+            $lineTotalMain += $gap * ($lineCount - 1);
+
+            // ── Step 7: Flex-shrink ──
+            if ($lineTotalMain > $lineContainerMain) {
+                $overflow = $lineTotalMain - $lineContainerMain;
+                $totalShrinkWeight = 0;
+                foreach ($lineChildren as $idx => $ch) {
+                    $data = $lineFlexData[$idx];
+                    if ($data['shrink'] > 0) {
+                        $mainSize = $isRow ? $ch->w : $ch->h;
+                        $totalShrinkWeight += $mainSize * $data['shrink'];
+                    }
+                }
+                if ($totalShrinkWeight > 0) {
+                    foreach ($lineChildren as $idx => $ch) {
+                        $data = $lineFlexData[$idx];
+                        if ($data['shrink'] > 0) {
+                            $mainSize = $isRow ? $ch->w : $ch->h;
+                            $reduction = (int)($overflow * ($mainSize * $data['shrink']) / $totalShrinkWeight);
+                            $newSize = max(0, $mainSize - $reduction);
+                            $minVal = $isRow ? (int)($ch->style['minWidth'] ?? 0) : (int)($ch->style['minHeight'] ?? 0);
+                            if ($minVal > 0 && $newSize < $minVal) {
+                                $newSize = $minVal;
+                            }
+                            if ($isRow) {
+                                $ch->w = $newSize;
+                            } else {
+                                $ch->h = $newSize;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Step 8: Min/max constraints ──
+            foreach ($lineChildren as $ch) {
+                $ch->w = max(0, (int)$this->applyMinMax($ch->style, $ch->w, true));
+                $ch->h = max(0, (int)$this->applyMinMax($ch->style, $ch->h, false));
+            }
+
+            // ── Step 9: Recalculate totalMain after shrink ──
+            $lineTotalMain = 0;
+            $lineMaxCross = 0;
+            foreach ($lineChildren as $ch) {
+                $cs = $ch->style;
+                $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
+                $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
+                $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
+                $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
+                if ($isRow) {
+                    $lineTotalMain += $ch->w + $mL + $mR;
+                    $lineMaxCross = max($lineMaxCross, $ch->h);
+                } else {
+                    $lineTotalMain += $ch->h + $mT + $mB;
+                    $lineMaxCross = max($lineMaxCross, $ch->w);
+                }
+            }
+            $lineTotalMain += $gap * ($lineCount - 1);
+
+            // ── Step 10: Justify-content for this line ──
+            $mainStart = match ($justify) {
+                'center'        => ($lineContainerMain - $lineTotalMain) / 2,
+                'flex-end'      => $lineContainerMain - $lineTotalMain,
+                'space-between' => 0,
+                'space-around'  => 0,
+                'space-evenly'  => 0,
+                default         => 0,
+            };
+            $spaceBetween = 0;
+            if ($justify === 'space-between' && $lineCount > 1) {
+                $spaceBetween = ($lineContainerMain - $lineTotalMain) / ($lineCount - 1);
+            } elseif ($justify === 'space-around' && $lineCount > 0) {
+                $spaceBetween = ($lineContainerMain - $lineTotalMain) / $lineCount;
+                $mainStart = $spaceBetween / 2;
+            } elseif ($justify === 'space-evenly' && $lineCount > 0) {
+                $spaceBetween = ($lineContainerMain - $lineTotalMain) / ($lineCount + 1);
+                $mainStart = $spaceBetween;
+            }
+
+            // ── Step 11: Position children in this line ──
+            $currentMain = $mainStart;
+            $indices = range(0, $lineCount - 1);
+            if ($reversed) {
+                $indices = array_reverse($indices);
+            }
+
+            // This line's cross-axis position
+            $lineCrossBase = $accumulatedCrossOffset;
+
+            foreach ($indices as $i) {
+                $ch = $lineChildren[$i];
+                $childStyle = $ch->style;
+                $childMarginLeft = $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
+                $childMarginRight = $childStyle['marginRight'] ?? $childStyle['margin'] ?? 0;
+                $childMarginTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+                $childMarginBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
+
+                // Main axis position
+                $oldX = $ch->x;
+                $oldY = $ch->y;
+                if ($isRow) {
+                    $ch->x = $node->x + $paddingLeft + (int)$currentMain + $childMarginLeft;
+                } else {
+                    $ch->y = $node->y + $paddingTop + (int)$currentMain + $childMarginTop;
+                }
+
+                // Cross axis alignment (use line cross offset instead of full containerCross)
+                $effectiveAlign = $childStyle['alignSelf'] ?? 'auto';
+                if ($effectiveAlign === 'auto') {
+                    $effectiveAlign = $align;
+                }
+
+                if ($isWrapping) {
+                    // In wrapping mode, cross axis is per-line
+                    if ($effectiveAlign === 'stretch') {
+                        if ($isRow) {
+                            if ($ch->h === 0) $ch->h = max(0, $lineMaxCross);
+                            $ch->y = $node->y + $paddingTop + $lineCrossBase + $childMarginTop;
+                        } else {
+                            if ($ch->w === 0) $ch->w = max(0, $lineMaxCross);
+                            $ch->x = $node->x + $paddingLeft + $lineCrossBase + $childMarginLeft;
+                        }
+                    } else {
+                        $crossSize = $isRow ? $ch->h : $ch->w;
+                        $crossOffset = match ($effectiveAlign) {
+                            'center' => (int)(($lineMaxCross - $crossSize) / 2),
+                            'flex-end' => $lineMaxCross - $crossSize,
+                            default => 0,
+                        };
+                        if ($isRow) {
+                            $ch->y = $node->y + $paddingTop + $lineCrossBase + $crossOffset + $childMarginTop;
+                        } else {
+                            $ch->x = $node->x + $paddingLeft + $lineCrossBase + $crossOffset + $childMarginLeft;
+                        }
+                    }
+                } else {
+                    // Non-wrapping: original behavior with full containerCross
+                    if ($effectiveAlign === 'stretch') {
+                        if ($isRow) {
+                            if ($ch->h === 0) $ch->h = max(0, (int)$containerCross);
+                        } else {
+                            if ($ch->w === 0) $ch->w = max(0, (int)$containerCross);
+                        }
+                    }
+                    $crossSize = $isRow ? $ch->h : $ch->w;
+                    $crossOffset = match ($effectiveAlign) {
+                        'center' => (int)(($containerCross - $crossSize) / 2),
+                        'flex-end' => $containerCross - $crossSize,
+                        'stretch' => 0,
+                        default => 0,
+                    };
+                    if ($isRow) {
+                        $ch->y = $node->y + $paddingTop + $crossOffset;
+                    } else {
+                        $ch->x = $node->x + $paddingLeft + $crossOffset;
+                    }
+                }
+
+                // Cross axis margin
+                if ($isRow) {
+                    $ch->y += $childMarginTop;
+                    if ($effectiveAlign === 'stretch' && $ch->h === 0 && !$isWrapping) {
+                        $stretchedH = max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
+                        if ($stretchedH > 0) $ch->h = $stretchedH;
+                    }
+                } else {
+                    $ch->x += $childMarginLeft;
+                    if ($effectiveAlign === 'stretch' && $ch->w === 0 && !$isWrapping) {
+                        $stretchedW = max(0, (int)($containerCross - $childMarginLeft - $childMarginRight));
+                        if ($stretchedW > 0) $ch->w = $stretchedW;
+                    }
+                }
+
+                // Shift descendants if position changed
+                $dx = $ch->x - $oldX;
+                $dy = $ch->y - $oldY;
+                if ($dy !== 0) {
+                    foreach ($ch->children as $grandchild) {
+                        $this->shiftDescendantsY($grandchild, $dy);
+                    }
+                }
+                if ($dx !== 0) {
+                    foreach ($ch->children as $grandchild) {
+                        $this->shiftDescendantsX($grandchild, $dx);
+                    }
+                }
+
+                // Advance main position
+                $chMainSize = $isRow ? $ch->w : $ch->h;
+                $currentMain += $chMainSize + $gap + $spaceBetween;
+                if ($isRow) {
+                    $currentMain += $childMarginLeft + $childMarginRight;
+                } else {
+                    $currentMain += $childMarginTop + $childMarginBottom;
+                }
+            }
+
+            // ── Two-pass: re-resolve internal children of flex-grow items ──
+            // After flex-grow (Step 5), flex items' main-axis size may have changed.
+            // Their internal children were laid out in Step 1 using preliminary sizes.
+            // This re-resolves grandchildren with the flex-grow item's final size.
+            foreach ($lineChildren as $idxTp => $chTp) {
+                $dataTp = $lineFlexData[$idxTp];
+                if ($dataTp['isFlexGrow'] && count($chTp->children) > 0) {
+                    $chPadLtp = $chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0;
+                    $chPadTtp = $chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0;
+                    $gcOffsetX = $chTp->x + $chPadLtp;
+                    $gcOffsetY = $chTp->y + $chPadTtp;
+                    // Account for scroll offset if the flex item is a scroll container
+                    if ($chTp->isScrollContainer) {
+                        $gcOffsetX -= $chTp->scrollLeft;
+                        $gcOffsetY -= $chTp->scrollTop;
+                    }
+                    foreach ($chTp->children as $grandchild) {
+                        $grandchild->layoutDirty = true;
+                        $this->resolveNode($grandchild, $gcOffsetX, $gcOffsetY, $chTp, $scrollContainers);
+                    }
+                }
+            }
+
+            // Advance cross axis offset for next wrapping line
+            $accumulatedCrossOffset += $lineMaxCross + $gap;
+        }
+    }
+
+    /**
+     * Apply flex-basis to children in a flex line.
+     */
+    private function applyFlexBasis(array $children, array $flexItemData, bool $isRow): void
+    {
         foreach ($children as $idx => $ch) {
             $data = $flexItemData[$idx];
             $basis = $data['basis'];
             if ($basis >= 0) {
-                // flex shorthand 提供了明确的 basis 值
                 if ($basis > 0) {
                     if ($isRow) {
                         $ch->w = max(0, $basis);
@@ -500,9 +944,7 @@ class LayoutResolver
                         $ch->h = max(0, $basis);
                     }
                 }
-                // basis == 0 → content-based sizing (暂用当前 w/h)
             } else {
-                // 无 flex shorthand basis, 检查独立 flex-basis 属性
                 $flexBasis = $ch->style['flexBasis'] ?? 'auto';
                 if ($flexBasis !== 'auto') {
                     $basisVal = (int)$flexBasis;
@@ -514,260 +956,6 @@ class LayoutResolver
                         }
                     }
                 }
-                // 'auto' → 保持当前 width/height 值
-            }
-        }
-
-        // ── Step 5: Flex-grow 分配 ──
-        if ($hasFlexGrow) {
-            // 计算固定尺寸项的总 main size
-            $fixedTotalMain = 0;
-            foreach ($children as $idx => $ch) {
-                $data = $flexItemData[$idx];
-                $cs = $ch->style;
-                $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
-                $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
-                $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
-                $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
-
-                if ($data['isFlexGrow']) {
-                    if ($isRow) {
-                        $fixedTotalMain += $mL + $mR;
-                    } else {
-                        $fixedTotalMain += $mT + $mB;
-                    }
-                } else {
-                    $sz = $isRow ? $ch->w : $ch->h;
-                    if ($isRow) {
-                        $fixedTotalMain += $sz + $mL + $mR;
-                    } else {
-                        $fixedTotalMain += $sz + $mT + $mB;
-                    }
-                }
-            }
-
-            $gapTotal = $gap * (count($children) - 1);
-            $remainingSpace = max($containerMain - $fixedTotalMain - $gapTotal, 0);
-
-            $totalFlexGrow = 0;
-            foreach ($flexItemData as $entry) {
-                $totalFlexGrow += $entry['grow'];
-            }
-            $totalFlexGrow = max($totalFlexGrow, 1);
-
-            foreach ($children as $idx => $ch) {
-                $data = $flexItemData[$idx];
-                if ($data['isFlexGrow']) {
-                    $allocated = (int)(($data['grow'] / $totalFlexGrow) * $remainingSpace);
-                    if ($isRow) {
-                        $ch->w = max(0, $allocated);
-                        $ch->style['width'] = $ch->w;
-                    } else {
-                        $ch->h = max(0, $allocated);
-                        $ch->style['height'] = $ch->h;
-                    }
-                }
-            }
-        }
-
-        // ── Step 6: 计算初始 totalMain ──
-        $totalMain = 0;
-        $maxCross = 0;
-        foreach ($children as $ch) {
-            $cs = $ch->style;
-            $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
-            $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
-            $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
-            $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
-            if ($isRow) {
-                $totalMain += $ch->w + $mL + $mR;
-                $maxCross = max($maxCross, $ch->h);
-            } else {
-                $totalMain += $ch->h + $mT + $mB;
-                $maxCross = max($maxCross, $ch->w);
-            }
-        }
-        $totalMain += $gap * (count($children) - 1);
-
-        // ── Step 7: Flex-shrink (溢出收缩) ──
-        if ($totalMain > $containerMain) {
-            $overflow = $totalMain - $containerMain;
-
-            // 计算总收缩权重: Σ(item.mainSize * item.shrink)
-            $totalShrinkWeight = 0;
-            foreach ($children as $idx => $ch) {
-                $data = $flexItemData[$idx];
-                if ($data['shrink'] > 0) {
-                    $mainSize = $isRow ? $ch->w : $ch->h;
-                    $totalShrinkWeight += $mainSize * $data['shrink'];
-                }
-            }
-
-            if ($totalShrinkWeight > 0) {
-                foreach ($children as $idx => $ch) {
-                    $data = $flexItemData[$idx];
-                    if ($data['shrink'] > 0) {
-                        $mainSize = $isRow ? $ch->w : $ch->h;
-                        $reduction = (int)($overflow * ($mainSize * $data['shrink']) / $totalShrinkWeight);
-                        $newSize = max(0, $mainSize - $reduction);
-
-                        // 应用 min-width/min-height 约束
-                        $minVal = $isRow ? (int)($ch->style['minWidth'] ?? 0) : (int)($ch->style['minHeight'] ?? 0);
-                        if ($minVal > 0 && $newSize < $minVal) {
-                            $newSize = $minVal;
-                        }
-
-                        if ($isRow) {
-                            $ch->w = $newSize;
-                        } else {
-                            $ch->h = $newSize;
-                        }
-                    }
-                }
-            }
-        }
-
-        // ── Step 8: 对每个 flex item 应用 min/max 约束 ──
-        foreach ($children as $ch) {
-            $ch->w = max(0, (int)$this->applyMinMax($ch->style, $ch->w, true));
-            $ch->h = max(0, (int)$this->applyMinMax($ch->style, $ch->h, false));
-        }
-
-        // ── Step 9: 重新计算总尺寸（收缩后尺寸已变） ──
-        $totalMain = 0;
-        $maxCross = 0;
-        foreach ($children as $ch) {
-            $cs = $ch->style;
-            $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
-            $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
-            $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
-            $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
-            if ($isRow) {
-                $totalMain += $ch->w + $mL + $mR;
-                $maxCross = max($maxCross, $ch->h);
-            } else {
-                $totalMain += $ch->h + $mT + $mB;
-                $maxCross = max($maxCross, $ch->w);
-            }
-        }
-        $totalMain += $gap * (count($children) - 1);
-
-        // ── Step 10: Justify-content ──
-        $mainStart = match ($justify) {
-            'center'        => ($containerMain - $totalMain) / 2,
-            'flex-end'      => $containerMain - $totalMain,
-            'space-between' => 0,
-            'space-around'  => 0,
-            'space-evenly'  => 0,
-            default         => 0,
-        };
-
-        $spaceBetween = 0;
-        if ($justify === 'space-between' && count($children) > 1) {
-            $spaceBetween = ($containerMain - $totalMain) / (count($children) - 1);
-        } elseif ($justify === 'space-around' && count($children) > 0) {
-            $spaceBetween = ($containerMain - $totalMain) / count($children);
-            $mainStart = $spaceBetween / 2;
-        } elseif ($justify === 'space-evenly' && count($children) > 0) {
-            $spaceBetween = ($containerMain - $totalMain) / (count($children) + 1);
-            $mainStart = $spaceBetween;
-        }
-
-        // ── Step 11: Position children ──
-        $currentMain = $mainStart;
-        $indices = range(0, count($children) - 1);
-        if ($reversed) {
-            $indices = array_reverse($indices);
-        }
-
-        foreach ($indices as $i) {
-            $ch = $children[$i];
-            $childStyle = $ch->style;
-            $childMarginLeft = $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
-            $childMarginRight = $childStyle['marginRight'] ?? $childStyle['margin'] ?? 0;
-            $childMarginTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
-            $childMarginBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
-
-            // Main axis position (inside padding + margin offset)
-            $oldX = $ch->x;
-            $oldY = $ch->y;
-            if ($isRow) {
-                $ch->x = $node->x + $paddingLeft + (int)$currentMain + $childMarginLeft;
-            } else {
-                $ch->y = $node->y + $paddingTop + (int)$currentMain + $childMarginTop;
-            }
-
-            // ── align-self 覆盖 align-items ──
-            $effectiveAlign = $childStyle['alignSelf'] ?? 'auto';
-            if ($effectiveAlign === 'auto') {
-                $effectiveAlign = $align;
-            }
-
-            // Cross axis: stretch defaults to container size
-            if ($effectiveAlign === 'stretch') {
-                if ($isRow) {
-                    if ($ch->h === 0) {
-                        $ch->h = max(0, (int)$containerCross);
-                    }
-                } else {
-                    if ($ch->w === 0) {
-                        $ch->w = max(0, (int)$containerCross);
-                    }
-                }
-            }
-
-            // Cross axis alignment
-            $crossSize = $isRow ? $ch->h : $ch->w;
-            $crossOffset = match ($effectiveAlign) {
-                'center'     => (int)(($containerCross - $crossSize) / 2),
-                'flex-end'   => $containerCross - $crossSize,
-                'stretch'    => 0,
-                'flex-start' => 0,
-                default      => 0,
-            };
-
-            if ($isRow) {
-                $ch->y = $node->y + $paddingTop + $crossOffset;
-            } else {
-                $ch->x = $node->x + $paddingLeft + $crossOffset;
-            }
-
-            // ── 交叉轴 margin：marginLeft/marginRight(column) 或 marginTop/marginBottom(row) ──
-            if ($isRow) {
-                $ch->y += $childMarginTop;
-                if ($effectiveAlign === 'stretch' && $ch->h === 0) {
-                    $stretchedH = max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
-                    if ($stretchedH > 0) $ch->h = $stretchedH;
-                }
-            } else {
-                $ch->x += $childMarginLeft;
-                if ($effectiveAlign === 'stretch' && $ch->w === 0) {
-                    $stretchedW = max(0, (int)($containerCross - $childMarginLeft - $childMarginRight));
-                    if ($stretchedW > 0) $ch->w = $stretchedW;
-                }
-            }
-
-            // Shift descendants if position changed from initial resolve
-            $dx = $ch->x - $oldX;
-            $dy = $ch->y - $oldY;
-            if ($dy !== 0) {
-                foreach ($ch->children as $grandchild) {
-                    $this->shiftDescendantsY($grandchild, $dy);
-                }
-            }
-            if ($dx !== 0) {
-                foreach ($ch->children as $grandchild) {
-                    $this->shiftDescendantsX($grandchild, $dx);
-                }
-            }
-
-            // Advance main position
-            $chMainSize = $isRow ? $ch->w : $ch->h;
-            $currentMain += $chMainSize + $gap + $spaceBetween;
-            if ($isRow) {
-                $currentMain += $childMarginLeft + $childMarginRight;
-            } else {
-                $currentMain += $childMarginTop + $childMarginBottom;
             }
         }
     }
@@ -816,11 +1004,23 @@ class LayoutResolver
 
         $cols = $colSpec['count'] ?? 4;
         $cellW = $colSpec['size'] ?? 80;
-        $rows = $rowSpec['count'] ?? 5;
-        $cellH = $rowSpec['size'] ?? 60;
 
+        // Gap values (must be defined before 1fr calculation)
         $colGap = $style['gridColumnGap'] ?? $style['gap'] ?? 0;
         $rowGap = $style['gridRowGap'] ?? $style['gap'] ?? 0;
+
+        // 1fr 支持：根据容器宽度按比例分配
+        if (($colSpec['unit'] ?? '') === 'fr' && $node->w > 0) {
+            $totalGaps = $colGap * ($cols - 1);
+            $cellW = max(0, (int)(($node->w - $totalGaps) / $cols));
+        }
+        $rows = $rowSpec['count'] ?? 5;
+        $cellH = $rowSpec['size'] ?? 60;
+        // 1fr 支持（行高）
+        if (($rowSpec['unit'] ?? '') === 'fr' && $node->h > 0) {
+            $totalGaps = $rowGap * ($rows - 1);
+            $cellH = max(0, (int)(($node->h - $totalGaps) / $rows));
+        }
 
         // Collect children and resolve their styles
         $children = [];

@@ -306,6 +306,7 @@ class VNodeRenderer
         switch ($node->type) {
             case 'button':  return $this->makeButtonElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'input':   return $this->makeInputElement($node, $style, $props, $x, $y, $w, $h, $layer);
+            case 'img':     return $this->makeImgElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'span':    return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'p':
             case 'h1':
@@ -417,9 +418,29 @@ class VNodeRenderer
 
         if ($text === '') return null;
 
-        $containerW = (int)($props['container-w'] ?? $w);
-        $containerH = (int)($props['container-h'] ?? $h);
+        // container-w/h may be percentage strings like "100%" → fall back to actual node size
+        $rawContainerW = $props['container-w'] ?? null;
+        $containerW = $w;
+        if ($rawContainerW !== null && !str_contains($rawContainerW, '%')) {
+            $containerW = (int)$rawContainerW;
+        }
+        $rawContainerH = $props['container-h'] ?? null;
+        $containerH = $h;
+        if ($rawContainerH !== null && !str_contains($rawContainerH, '%')) {
+            $containerH = (int)$rawContainerH;
+        }
         $containerX = (int)($props['container-x'] ?? $x);
+
+        // ── text-overflow: ellipsis 文本截断 ──
+        $textOverflow = $style['textOverflow'] ?? 'clip';
+        if ($textOverflow === 'ellipsis' && $containerW > 0) {
+            $boldFactor = $bold ? 1.35 : 1.0;
+            $charWidth = (int)($fontSize * 0.6 * $boldFactor);
+            $maxChars = max(1, (int)(($containerW - 4) / max($charWidth, 1)));
+            if (strlen($text) > $maxChars) {
+                $text = substr($text, 0, max(0, $maxChars - 1)) . '…';
+            }
+        }
 
         if ($align === 'right' || $align === 'center') {
             $boldFactor = $bold ? 1.35 : 1.0;
@@ -514,6 +535,19 @@ class VNodeRenderer
             'label' => $label, 'labelX' => $labelX, 'labelY' => $labelY,
             'labelFontSize' => $labelFontSize, 'opacity' => $opacity, 'layer' => $layer,
             'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
+        ];
+    }
+
+    private function makeImgElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    {
+        if ($w <= 0) $w = 100;
+        if ($h <= 0) $h = 100;
+        $bg = $style['bg'] ?? 0xCCCCCC;
+        $borderRadius = $style['borderRadius'] ?? 0;
+        $opacity = $style['opacity'] ?? 1.0;
+        return [
+            'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+            'color' => $bg, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
         ];
     }
 
