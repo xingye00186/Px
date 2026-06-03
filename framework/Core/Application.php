@@ -98,7 +98,10 @@ class Application
 
         // ── 鼠标滚轮：驱动滚动容器 ────────────
         if ($event->getAction() === 'wheel') {
-            $this->scrollManager->handleScrollWheel($event, $this->renderTreeManager->getRootRenderNode());
+            $rootNode = $this->renderTreeManager->getRootRenderNode();
+            if ($rootNode !== null) {
+                $this->scrollManager->handleScrollWheel($event, $rootNode);
+            }
             return;
         }
 
@@ -116,15 +119,18 @@ class Application
 
         // ── 鼠标按下：优先检测滚动条，其次 @click ──
         if ($event->getAction() === 'down') {
-            $sbResult = $this->scrollManager->hitTestScrollbar($event->getX(), $event->getY(), $this->renderTreeManager->getRootRenderNode());
-            if ($sbResult !== null) {
-                $this->scrollManager->handleScrollbarDown(
-                    $sbResult['scrollNode'],
-                    $sbResult['type'],
-                    $event->getX(), $event->getY(),
-                    $sbResult['isHorizontal']
-                );
-                return;
+            $rootNode = $this->renderTreeManager->getRootRenderNode();
+            if ($rootNode !== null) {
+                $sbResult = $this->scrollManager->hitTestScrollbar($event->getX(), $event->getY(), $rootNode);
+                if ($sbResult !== null) {
+                    $this->scrollManager->handleScrollbarDown(
+                        $sbResult['scrollNode'],
+                        $sbResult['type'],
+                        $event->getX(), $event->getY(),
+                        $sbResult['isHorizontal']
+                    );
+                    return;
+                }
             }
 
             // hitTest 返回 RenderNode，通过 sourceVNode 访问 props
@@ -301,7 +307,12 @@ class Application
         $instance->setId($instanceId);
         $this->registerComponent($instanceId, $instance);
 
-        if ($node->componentProps !== null && $owner !== null) {
+        if ($node->componentPropValues !== null) {
+            // V-for loop: pre-computed direct values, skip bind key lookup
+            foreach ($node->componentPropValues as $childKey => $value) {
+                $instance->setBindValue($childKey, $value);
+            }
+        } elseif ($node->componentProps !== null && $owner !== null) {
             foreach ($node->componentProps as $childKey => $parentExpr) {
                 if (is_string($parentExpr) && substr($parentExpr, 0, 7) === 'static:') {
                     $staticValue = substr($parentExpr, 7);

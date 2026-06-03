@@ -501,16 +501,16 @@ void php_sk_draw_button(Int x, Int y, Int w, Int h, Int bgColor, Int borderColor
 // Task 3.6 — 阶段三新增：窗口尺寸变更时重建 SkCanvas + SkBitmap
 // 监听 WM_SIZE 时调用
 // ============================================================
-#ifdef USE_SKIA
 void php_sk_resize_context(Int width, Int height) {
     if ((int)width <= 0 || (int)height <= 0) return;
+    g_skW = (int)width;
+    g_skH = (int)height;
+#ifdef USE_SKIA
     if (g_skCanvas
         && g_skSkBitmap.width()  == (int)width
         && g_skSkBitmap.height() == (int)height) {
         return;  // 尺寸未变，跳过重建
     }
-    g_skW = (int)width;
-    g_skH = (int)height;
     g_skCanvas.reset();
     g_skSkBitmap.reset();
     g_skSkBitmap.allocN32Pixels(g_skW, g_skH);
@@ -521,5 +521,5 @@ void php_sk_resize_context(Int width, Int height) {
     if (g_skCanvas) {
         g_skCanvas->clear(SK_ColorWHITE);
     }
-}
 #endif
+}

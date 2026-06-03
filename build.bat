@@ -330,6 +330,10 @@ if not exist "%COMPILER_DIR%\php8embed.lib" (
 
 cd /d "%FRAMEWORK_ROOT%"
 set "SWOOLE_COMPILER_ROOT=%COMPILER_DIR%"
+
+:: Add SDK/lib to LIB path (v1054+ needs libmpdec.lib from SDK)
+set "LIB=%COMPILER_DIR%\SDK\lib;%LIB%"
+
 "%SWOOLE_COMPILER%" "apps\%APP_NAME%\project.yml" -f
 set "AOT_EXIT=!errorlevel!
 if !AOT_EXIT! neq 0 (

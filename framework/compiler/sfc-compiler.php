@@ -142,7 +142,7 @@ function collectClickHandlers(VNode $node, array &$handlers): void
     if ($node->props !== null) {
         if (isset($node->props['@click'])) {
             $handler = $node->props['@click'];
-            $argExpr = $node->props['click-arg'] ?? null;
+            $argExpr = $node->props[':click-arg'] ?? $node->props['click-arg'] ?? null;
             if (!isset($handlers[$handler])) {
                 $handlers[$handler] = ['hasArg' => ($argExpr !== null), 'arg' => $argExpr];
             } elseif ($argExpr !== null) {
@@ -313,11 +313,14 @@ function collectVForLoops(VNode $node, array &$loops, int &$counter): void
         $sourceExpr = '';
 
         // Parse "item in items" or "(item, index) in items"
-        if (preg_match('/^\s*\((\w+)(?:,\s*\w+)?\)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
+        $indexVar = '';
+        if (preg_match('/^\s*\((\w+)(?:,\s*(\w+))?\)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
             $itemVar = $m[1];
-            $sourceExpr = $m[2];
+            $indexVar = $m[2] ?? '';
+            $sourceExpr = $m[3];
         } elseif (preg_match('/^\s*(\w+)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
             $itemVar = $m[1];
+            $indexVar = '';
             $sourceExpr = $m[2];
         }
 
@@ -326,6 +329,7 @@ function collectVForLoops(VNode $node, array &$loops, int &$counter): void
         $entry = [
             'source'    => $sourceExpr,
             'item'      => $itemVar,
+            'index'     => $indexVar,
             'children'  => $node->children,
             'isTemplate' => $isTemplate,
         ];
@@ -333,6 +337,24 @@ function collectVForLoops(VNode $node, array &$loops, int &$counter): void
         // For element v-for (non-template), store element info for wrapper generation
         if (!$isTemplate) {
             $entry['elementType'] = $node->type;
+            // Component v-for: store additional info for VNode::hComponent() generation
+            if ($node->isComponent) {
+                $entry['isComponent'] = true;
+                $entry['componentClass'] = $node->componentClass;
+                // Extract binding props that reference the loop variable (e.g., v.coverBg)
+                $bindings = [];
+                if ($node->componentProps !== null && $itemVar !== '') {
+                    foreach ($node->componentProps as $propKey => $expr) {
+                        if (is_string($expr) && str_starts_with($expr, $itemVar . '.')) {
+                            $fieldName = substr($expr, strlen($itemVar) + 1);
+                            // Convert hyphenated key to camelCase for PHP setBindValue
+                            $camelKey = hyphenToCamel($propKey);
+                            $bindings[$camelKey] = $fieldName;
+                        }
+                    }
+                }
+                $entry['componentBindings'] = $bindings;
+            }
             // Copy props, stripping v-for/:key (these are loop metadata, not element props)
             $elementProps = $node->props ?? [];
             unset($elementProps['v-for']);
@@ -398,11 +420,13 @@ function findNestedVForLoopsInNode(VNode $node, array &$loops, int &$counter, st
         $itemVar = '';
         $sourceExpr = '';
 
-        if (preg_match('/^\s*\((\w+)(?:,\s*\w+)?\)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
+        if (preg_match('/^\s*\((\w+)(?:,\s*(\w+))?\)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
             $itemVar = $m[1];
-            $sourceExpr = $m[2];
+            $indexVar = $m[2] ?? '';
+            $sourceExpr = $m[3];
         } elseif (preg_match('/^\s*(\w+)\s+in\s+(\S+)\s*$/', $vFor, $m)) {
             $itemVar = $m[1];
+            $indexVar = '';
             $sourceExpr = $m[2];
         }
 
@@ -419,6 +443,7 @@ function findNestedVForLoopsInNode(VNode $node, array &$loops, int &$counter, st
         $entry = [
             'source'       => $sourceExpr,
             'item'         => $itemVar,
+            'index'        => $indexVar,
             'children'     => $node->children,
             'isTemplate'   => $isTemplate,
             'parentItem'   => $parentItemVar,
@@ -427,6 +452,22 @@ function findNestedVForLoopsInNode(VNode $node, array &$loops, int &$counter, st
 
         if (!$isTemplate) {
             $entry['elementType'] = $node->type;
+            // Component v-for: store additional info for VNode::hComponent() generation
+            if ($node->isComponent) {
+                $entry['isComponent'] = true;
+                $entry['componentClass'] = $node->componentClass;
+                $bindings = [];
+                if ($node->componentProps !== null && $itemVar !== '') {
+                    foreach ($node->componentProps as $propKey => $expr) {
+                        if (is_string($expr) && str_starts_with($expr, $itemVar . '.')) {
+                            $fieldName = substr($expr, strlen($itemVar) + 1);
+                            $camelKey = hyphenToCamel($propKey);
+                            $bindings[$camelKey] = $fieldName;
+                        }
+                    }
+                }
+                $entry['componentBindings'] = $bindings;
+            }
             $elementProps = $node->props ?? [];
             unset($elementProps['v-for']);
             unset($elementProps[':key']);
@@ -496,6 +537,109 @@ function generateComponentPropsExpr(array $componentProps): string
 }
 
 /**
+ * Resolve PHP expression identifiers for template expressions (e.g. :style, click-arg).
+ * Converts bare variable names to PHP \$this-> or \$item[] / \$idx references.
+ *
+ * - item.property → \$item['property'] (v-for loop item)
+ * - idx → \$idx (v-for index variable)
+ * - coverBg → \$this->coverBg (component property)
+ * - String literals and PHP keywords preserved as-is
+ */
+function resolveStyleExpr(string $expr, ?array $loopInfo): string
+{
+    if ($loopInfo !== null) {
+        $item = $loopInfo['item'] ?? '';
+        // 1. Handle item.property → \$item['property']
+        if ($item !== '') {
+            $expr = preg_replace('/\b(' . preg_quote($item, '/') . ')\.(\w+)\b/', '\$' . $item . "['\$2']", $expr);
+        }
+        // 2. Handle index variable → \$idx
+        $index = $loopInfo['index'] ?? '';
+        if ($index !== '') {
+            $expr = preg_replace('/\b' . preg_quote($index, '/') . '\b/', '\$' . $index, $expr);
+        }
+    }
+
+    // 3. Char-walker: replace remaining bare identifiers with \$this->prefix
+    // Handles: 'text' . coverBg . 'more' → 'text' . \$this->coverBg . 'more'
+    $result = '';
+    $len = strlen($expr);
+    $inSingle = false;
+    $inDouble = false;
+    $i = 0;
+
+    while ($i < $len) {
+        $ch = $expr[$i];
+
+        // Track quote state
+        if ($ch === "'" && !$inDouble) {
+            $inSingle = !$inSingle;
+            $result .= $ch;
+            $i++;
+            continue;
+        }
+        if ($ch === '"' && !$inSingle) {
+            $inDouble = !$inDouble;
+            $result .= $ch;
+            $i++;
+            continue;
+        }
+
+        if (!$inSingle && !$inDouble) {
+            // Skip PHP variable names (starts with $)
+            if ($ch === '$') {
+                $result .= $ch;
+                $i++;
+                while ($i < $len && preg_match('/\w/', $expr[$i])) {
+                    $result .= $expr[$i];
+                    $i++;
+                }
+                continue;
+            }
+
+            // Check for -> object access
+            if ($ch === '-' && $i + 1 < $len && $expr[$i + 1] === '>') {
+                $result .= '->';
+                $i += 2;
+                continue;
+            }
+
+            // Check for :: static access
+            if ($ch === ':' && $i + 1 < $len && $expr[$i + 1] === ':') {
+                $result .= '::';
+                $i += 2;
+                continue;
+            }
+
+            // Check for bare identifier (word character)
+            if (preg_match('/[a-zA-Z_]/', $ch)) {
+                $word = '';
+                $start = $i;
+                while ($i < $len && preg_match('/\w/', $expr[$i])) {
+                    $word .= $expr[$i];
+                    $i++;
+                }
+
+                // Skip PHP keywords and magic values
+                if (in_array(strtolower($word), ['true', 'false', 'null', 'isset', 'empty', 'unset', 'die', 'exit', 'echo', 'print', 'return', 'if', 'else', 'elseif', 'for', 'foreach', 'while', 'do', 'switch', 'case', 'break', 'continue', 'default', 'function', 'class', 'interface', 'trait', 'namespace', 'use', 'new', 'clone', 'var', 'public', 'private', 'protected', 'static', 'const', 'self', 'parent', 'abstract', 'final', 'readonly', 'match', 'fn', 'throw', 'try', 'catch', 'finally', 'yield', 'from', 'include', 'require', 'include_once', 'require_once', 'and', 'or', 'xor', 'int', 'float', 'string', 'bool', 'array', 'object', 'void', 'mixed', 'never'], true)) {
+                    $result .= $word;
+                    continue;
+                }
+
+                // Regular identifier → $this->identifier
+                $result .= '$this->' . $word;
+                continue;
+            }
+        }
+
+        $result .= $ch;
+        $i++;
+    }
+
+    return $result;
+}
+
+/**
  * Generate a PHP expression for a single VNode as VNode::h() call.
  *
  * @param VNode $node The VNode
@@ -544,6 +688,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                         $concatParts[] = "\${$loopInfo['item']}['{$propName}']";
                     } elseif ($loopInfo !== null && $expr === $loopInfo['item']) {
                         $concatParts[] = "\${$loopInfo['item']}";
+                    } elseif ($loopInfo !== null && !empty($loopInfo['index']) && $expr === $loopInfo['index']) {
+                        $concatParts[] = "\${$loopInfo['index']}";
                     } else {
                         $concatParts[] = "\$this->{$expr}";
                     }
@@ -597,6 +743,13 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 continue;
             }
 
+            // Handle :style directive: resolve bare identifiers in expression
+            if ($k === ':style') {
+                $resolvedStyle = resolveStyleExpr($v, $loopInfo);
+                $propsStr[] = var_export(':style', true) . '=>' . $resolvedStyle;
+                continue;
+            }
+
             // Handle v-show directive (v8: conditional visibility)
             // Must handle BEFORE iterating to avoid duplicate 'style' key
             if ($k === 'v-show') {
@@ -624,6 +777,9 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     } elseif ($v === $loopInfo['item']) {
                         // Bare loop variable reference - skip bind prop
                         continue;
+                    } elseif (!empty($loopInfo['index']) && $v === $loopInfo['index']) {
+                        // Bare loop index variable reference - skip bind prop
+                        continue;
                     } elseif (preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $v)) {
                         // Valid property name: generate $this->property
                         $v = "\$this->{$v}";
@@ -632,15 +788,24 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                         // Don't generate a bind prop at all - just keep as plain value
                         continue;
                     }
-                } elseif ($k === 'click-arg') {
+                } elseif ($k === ':click-arg') {
                     if (str_starts_with($v, $loopInfo['item'] . '.')) {
                         $propName = substr($v, strlen($loopInfo['item']) + 1);
-                        $v = "\${$loopInfo['item']}['{$propName}']";
+                        $propsStr[] = var_export('click-arg', true) . "=>\${$loopInfo['item']}['{$propName}']";
                     } elseif ($v === $loopInfo['item']) {
-                        $v = "\${$loopInfo['item']}";
+                        $propsStr[] = var_export('click-arg', true) . "=>\${$loopInfo['item']}";
+                    } elseif (!empty($loopInfo['index']) && $v === $loopInfo['index']) {
+                        // Bare index variable: resolve and cast to string
+                        $resolved = resolveStyleExpr($v, $loopInfo);
+                        $propsStr[] = var_export('click-arg', true) . '=>(string)(' . $resolved . ')';
+                    } elseif (!empty($loopInfo['index']) && str_contains($v, $loopInfo['index'])) {
+                        // Expression containing index: resolve and cast to string
+                        $resolved = resolveStyleExpr($v, $loopInfo);
+                        $propsStr[] = var_export('click-arg', true) . '=>(string)(' . $resolved . ')';
                     } else {
-                        $v = var_export($v, true);
+                        $propsStr[] = var_export('click-arg', true) . '=>' . var_export($v, true);
                     }
+                    continue;
                 }
             }
             // Generate prop entry: handle PHP expressions (starting with $) as raw
@@ -670,6 +835,14 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 // Pattern like $item['label'] - this is the interpolation VALUE
                 $childrenExpr = $bindExpr;
                 unset($node->props['bind']);
+            } elseif ($loopInfo !== null && $bindExpr === $loopInfo['item']) {
+                // Simple loop variable reference (e.g., {{ item }})
+                $childrenExpr = "\${$loopInfo['item']}";
+                unset($node->props['bind']);
+            } elseif ($loopInfo !== null && !empty($loopInfo['index']) && $bindExpr === $loopInfo['index']) {
+                // Simple loop index reference (e.g., {{ idx }})
+                $childrenExpr = "\${$loopInfo['index']}";
+                unset($node->props['bind']);
             } elseif (preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $bindExpr)) {
                 // Valid property name: generate $this->property
                 $childrenExpr = "\$this->{$bindExpr}";
@@ -692,6 +865,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                         $concatParts[] = "\${$loopInfo['item']}['{$propName}']";
                     } elseif ($loopInfo !== null && $expr === $loopInfo['item']) {
                         $concatParts[] = "\${$loopInfo['item']}";
+                    } elseif ($loopInfo !== null && !empty($loopInfo['index']) && $expr === $loopInfo['index']) {
+                        $concatParts[] = "\${$loopInfo['index']}";
                     } else {
                         $concatParts[] = "\$this->{$expr}";
                     }
@@ -699,8 +874,15 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
             }
             $childrenExpr = implode(' . ', $concatParts);
         } elseif (preg_match('/^\{\{\s*(\w+)\s*\}\}$/', $node->children, $m)) {
-            // Text interpolation {{ varName }} → $this->varName
-            $childrenExpr = "\$this->{$m[1]}";
+            // Text interpolation {{ varName }}
+            $varName = $m[1];
+            if ($loopInfo !== null && $varName === $loopInfo['item']) {
+                $childrenExpr = "\${$loopInfo['item']}";
+            } elseif ($loopInfo !== null && !empty($loopInfo['index']) && $varName === $loopInfo['index']) {
+                $childrenExpr = "\${$loopInfo['index']}";
+            } else {
+                $childrenExpr = "\$this->{$varName}";
+            }
         } else {
             $childrenExpr = var_export($node->children, true);
         }
@@ -1099,6 +1281,14 @@ function generateGetBindValue(array $bindKeys, array $arrayBindKeys = []): strin
 }
 
 /**
+ * 将连字符命名转换为驼峰命名 (cover-bg → coverBg)
+ */
+function hyphenToCamel(string $str): string
+{
+    return lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $str))));
+}
+
+/**
  * Generate a PHP array expression for element props within a v-for loop.
  * Mirrors the prop-mapping logic of generateVNodeExpr() but returns just the array string.
  */
@@ -1107,6 +1297,14 @@ function generateLoopItemPropsExpr(array $props, ?array $loopInfo): string
     $parts = [];
     foreach ($props as $k => $v) {
         if (str_starts_with($k, '__')) continue;
+
+        // Handle :style directive: resolve bare identifiers in expression
+        if ($k === ':style') {
+            $resolvedStyle = resolveStyleExpr($v, $loopInfo);
+            $parts[] = var_export(':style', true) . '=>' . $resolvedStyle;
+            continue;
+        }
+
         // Map v-for expressions to PHP foreach variables
         if ($loopInfo !== null) {
             if ($k === ':bind' || $k === 'bind' || $k === 'v-model') {
@@ -1115,22 +1313,33 @@ function generateLoopItemPropsExpr(array $props, ?array $loopInfo): string
                     $v = "\${$loopInfo['item']}['{$propName}']";
                 } elseif ($v === $loopInfo['item']) {
                     $v = "\${$loopInfo['item']}";
+                } elseif (!empty($loopInfo['index']) && $v === $loopInfo['index']) {
+                    $v = "\${$loopInfo['index']}";
                 } else {
                     $v = "\$this->{$v}";
                 }
-            } elseif ($k === 'click-arg') {
+            } elseif ($k === ':click-arg') {
                 if (str_starts_with($v, $loopInfo['item'] . '.')) {
                     $propName = substr($v, strlen($loopInfo['item']) + 1);
                     $v = "\${$loopInfo['item']}['{$propName}']";
                 } elseif ($v === $loopInfo['item']) {
                     $v = "\${$loopInfo['item']}";
+                } elseif (!empty($loopInfo['index']) && $v === $loopInfo['index']) {
+                    // Bare index variable: resolve and cast to string
+                    $v = '(string)(' . resolveStyleExpr($v, $loopInfo) . ')';
+                } elseif (!empty($loopInfo['index']) && str_contains($v, $loopInfo['index'])) {
+                    // Expression containing index: resolve and cast to string
+                    $v = '(string)(' . resolveStyleExpr($v, $loopInfo) . ')';
                 } else {
                     $v = var_export($v, true);
                 }
             }
         }
-        // Handle PHP expressions (starting with $) as raw
+        // Handle PHP expressions (starting with $ or () as raw
         if (is_string($v) && strlen($v) > 0 && $v[0] === '$') {
+            $parts[] = var_export($k, true) . '=>' . $v;
+        } elseif (is_string($v) && strlen($v) > 0 && $v[0] === '(') {
+            // Expression wrapped in () like (string)($idx) - output as raw
             $parts[] = var_export($k, true) . '=>' . $v;
         } else {
             $parts[] = var_export($k, true) . '=>' . var_export($v, true);
@@ -1156,14 +1365,22 @@ function generateVForHelpers(array $loops): string
     foreach ($loops as $name => $info) {
         $source = $info['source'];
         $item = $info['item'];
-        $children = $info['children'];
+        $index = $info['index'] ?? '';
+        $children = $info['children'] ?? [];
         $isTemplate = $info['isTemplate'] ?? true;
         $parentItem = $info['parentItem'] ?? null;
         $innerSource = $info['innerSource'] ?? $source;
 
         if ($source === '' || $item === '') continue;
 
-        $loopInfo = ['source' => $source, 'item' => $item];
+        $loopInfo = ['source' => $source, 'item' => $item, 'index' => $index];
+
+        // Build foreach expression with optional index
+        if ($index !== '') {
+            $foreachAs = "\${$index} => \${$item}";
+        } else {
+            $foreachAs = "\${$item}";
+        }
 
         $childExprs = [];
         foreach ($children as $child) {
@@ -1197,7 +1414,7 @@ function generateVForHelpers(array $loops): string
     private function {$name}({$paramDecl}): array
     {
         \$children = [];
-        foreach ({$iterExpr} as \${$item}) {
+        foreach ({$iterExpr} as {$foreachAs}) {
             \$children[] = {$childBlock};
         }
         return \$children;
@@ -1213,7 +1430,7 @@ PHP;
     private function {$name}(): array
     {
         \$children = [];
-        foreach ({$iterExpr} as \${$item}) {
+        foreach ({$iterExpr} as {$foreachAs}) {
             \$children[] = {$childBlock};
         }
         return \$children;
@@ -1226,15 +1443,18 @@ PHP;
             $elementProps = $info['elementProps'] ?? [];
             $propsExpr = generateLoopItemPropsExpr($elementProps, $loopInfo);
 
-            if (count($childExprs) > 0) {
-                $childBlock = "[\n                    " . implode(",\n                    ", $childExprs) . "\n                ]";
-                $innerExpr = "VNode::h('{$elementType}', {$propsExpr}, {$childBlock})";
-            } else {
-                $innerExpr = "VNode::h('{$elementType}', {$propsExpr})";
-            }
+            // Component v-for: use VNode::hComponent() with direct prop values
+            if ($info['isComponent'] ?? false) {
+                $componentClass = $info['componentClass'] ?? '';
+                $bindings = $info['componentBindings'] ?? [];
+                $bindingParts = [];
+                foreach ($bindings as $propKey => $fieldName) {
+                    $bindingParts[] = var_export($propKey, true) . '=>$' . $item . "['" . addslashes($fieldName) . "']";
+                }
+                $bindingExpr = '[' . implode(',', $bindingParts) . ']';
 
-            if ($parentItem !== null) {
-                $out .= <<<PHP
+                if ($parentItem !== null) {
+                    $out .= <<<PHP
 
     /**
      * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
@@ -1243,14 +1463,16 @@ PHP;
     private function {$name}({$paramDecl}): array
     {
         \$children = [];
-        foreach ({$iterExpr} as \${$item}) {
-            \$children[] = {$innerExpr};
+        foreach ({$iterExpr} as {$foreachAs}) {
+            \$_comp = VNode::hComponent('{$componentClass}', {$propsExpr}, []);
+            \$_comp->componentPropValues = {$bindingExpr};
+            \$children[] = \$_comp;
         }
         return \$children;
     }
 PHP;
-            } else {
-                $out .= <<<PHP
+                } else {
+                    $out .= <<<PHP
 
     /**
      * v-for render helper: {$item} in {$source}
@@ -1259,12 +1481,57 @@ PHP;
     private function {$name}(): array
     {
         \$children = [];
-        foreach ({$iterExpr} as \${$item}) {
+        foreach ({$iterExpr} as {$foreachAs}) {
+            \$_comp = VNode::hComponent('{$componentClass}', {$propsExpr}, []);
+            \$_comp->componentPropValues = {$bindingExpr};
+            \$children[] = \$_comp;
+        }
+        return \$children;
+    }
+PHP;
+                }
+            } else {
+                // Regular element v-for
+                if (count($childExprs) > 0) {
+                    $childBlock = "[\n                    " . implode(",\n                    ", $childExprs) . "\n                ]";
+                    $innerExpr = "VNode::h('{$elementType}', {$propsExpr}, {$childBlock})";
+                } else {
+                    $innerExpr = "VNode::h('{$elementType}', {$propsExpr})";
+                }
+
+                if ($parentItem !== null) {
+                    $out .= <<<PHP
+
+    /**
+     * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
+     * @return VNode[]
+     */
+    private function {$name}({$paramDecl}): array
+    {
+        \$children = [];
+        foreach ({$iterExpr} as {$foreachAs}) {
             \$children[] = {$innerExpr};
         }
         return \$children;
     }
 PHP;
+                } else {
+                    $out .= <<<PHP
+
+    /**
+     * v-for render helper: {$item} in {$source}
+     * @return VNode[]
+     */
+    private function {$name}(): array
+    {
+        \$children = [];
+        foreach ({$iterExpr} as {$foreachAs}) {
+            \$children[] = {$innerExpr};
+        }
+        return \$children;
+    }
+PHP;
+                }
             }
         }
     }
@@ -1702,6 +1969,11 @@ function compileOneComponent(
     }
     collectVNodeBindKeys($root, $bindKeys);
 
+    // Resolve component refs so v-for collection can detect component nodes
+    $vForWarnings = [];
+    $vForChildComponents = [];
+    resolveComponentRefsRecursive($root, $classStyles, $vForWarnings, $vForChildComponents);
+
     // Collect v-for loops
     $loops = [];
     $loopCtr = 0;
@@ -2087,6 +2359,9 @@ if ($isRootComponent) {
         if (!$cached) {
             $compiledSet[$depClass] = $depFile;
             $queue->enqueue(['tag' => $tag, 'file' => $depFile]);
+        } else {
+            // Even when cached, still enqueue for sub-dependency discovery
+            $queue->enqueue(['tag' => $tag, 'file' => $depFile, 'cacheOnly' => true]);
         }
     }
 
@@ -2098,9 +2373,12 @@ if ($isRootComponent) {
         $tag = $item['tag'];
         $className = componentTagToComponentName($tag);
 
-        $ok = compileOneComponent($file, $className, $outDir, $componentRegistry);
-        if ($ok) {
-            $compiledCount++;
+        // cacheOnly: skip compilation but still discover sub-dependencies
+        if (empty($item['cacheOnly'])) {
+            $ok = compileOneComponent($file, $className, $outDir, $componentRegistry);
+            if ($ok) {
+                $compiledCount++;
+            }
         }
 
         // Discover sub-dependencies
