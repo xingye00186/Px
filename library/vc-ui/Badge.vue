@@ -1,9 +1,9 @@
 <template>
-  <div style="width:auto;height:auto;position:relative">
+  <div style="width:auto;height:auto;position:relative;display:inline-flex">
     <!-- 红点模式 -->
-    <div v-if="isDot === '1'" style="right:-4px;top:-4px;width:8px;height:8px" class="badge-dot"></div>
+    <div v-if="isDot === '1'" :class="'badge-dot badge-pos-' . posCls"></div>
     <!-- 数字模式 -->
-    <div v-if="isDot !== '1'" style="right:-8px;top:-6px;min-width:18px;height:18px" class="badge-num">{{ displayValue }}</div>
+    <div v-if="isDot !== '1'" :class="'badge-num badge-pos-' . posCls" :style="'min-width:18px;height:18px'">{{ displayValue }}</div>
   </div>
 </template>
 
@@ -20,6 +20,22 @@
 
     /** 是否隐藏 */
     public string $hidden = '';
+
+    /** 位置: top-right / top-left / bottom-right / bottom-left */
+    public string $position = 'top-right';
+
+    /**
+     * 获取位置 CSS class 后缀
+     */
+    public function getPosCls(): string
+    {
+        return match ($this->position) {
+            'top-left' => 'tl',
+            'bottom-right' => 'br',
+            'bottom-left' => 'bl',
+            default => 'tr',
+        };
+    }
 
     /**
      * 获取显示值
@@ -44,6 +60,10 @@
 </script>
 
 <style>
-.badge-dot { background: #F56C6C; border-radius: 50%; }
-.badge-num { background: #F56C6C; color: #FFFFFF; font-size: 11px; border-radius: 8px; text-align: center; }
+.badge-dot { background: #F56C6C; border-radius: 50%; width: 8px; height: 8px; position: absolute; }
+.badge-num { background: #F56C6C; color: #FFFFFF; font-size: 11px; border-radius: 8px; text-align: center; line-height: 18px; padding: 0 4px; position: absolute; }
+.badge-pos-tr { right: -8px; top: -6px; }
+.badge-pos-tl { left: -8px; top: -6px; }
+.badge-pos-br { right: -8px; bottom: -6px; }
+.badge-pos-bl { left: -8px; bottom: -6px; }
 </style>
