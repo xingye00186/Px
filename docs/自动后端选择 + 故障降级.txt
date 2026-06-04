@@ -1,0 +1,422 @@
+ Px 框架设计一套**自动后端选择 + 故障降级**方案。
+
+## 整体架构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 RuntimeBackendSelector                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ Environment  │─>│   Backend    │─>│   Failure    │          │
+│  │   Probe      │  │   Ranking    │  │   Detection  │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+│         │                  │                  │                 │
+│         v                  v                  v                 │
+│  ┌──────────────────────────────────────────────────────┐     │
+│  │  Candidate Backends (priority sorted)                 │     │
+│  │  ① Skia-Graphite-Dawn (D3D12)   pri=100              │     │
+│  │  ② Skia-Ganesh-D3D11            pri=90               │     │
+│  │  ③ Skia-Ganesh-WGL              pri=80               │     │
+│  │  ④ Skia-CPU (current)           pri=60               │     │
+│  │  ⑤ GDI Direct2D                pri=50               │     │
+│  │  ⑥ GDI Legacy (GdiRenderContext) pri=10              │     │
+│  └──────────────────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            v
+                    IRenderBackend 实例
+                            │
+                            v
+                  VNodeRenderer（无感知）
+```
+
+## 实施步骤
+
+### Step 1: 定义 `IRenderBackend` 抽象 + Capability 接口
+
+新建 [framework/Rendering/Backend/IRenderBackend.php](file:///D:/Px/framework/Rendering/Backend/IRenderBackend.php)：
+
+```php
+<?php
+namespace Px\Rendering\Backend;
+
+use Px\Rendering\RenderContext;
+
+interface IRenderBackend
+{
+    /** 后端唯一名称（用于日志/诊断） */
+    public function getName(): string;
+
+    /** 优先级：数值越大越优先 */
+    public static function getPriority(): int;
+
+    /** 运行时探测：检查当前进程是否支持 */
+    public function probe(): BackendCapability;
+
+    /** 初始化（hwnd, w, h）— 失败抛 BackendInitException */
+    public function initialize(int $hwnd, int $w, int $h): void;
+
+    /** 拿到具体 RenderContext */
+    public function getContext(): RenderContext;
+
+    /** 关闭/释放资源 */
+    public function shutdown(): void;
+}
+```
+
+新建 `BackendCapability.php`：
+
+```php
+<?php
+namespace Px\Rendering\Backend;
+
+class BackendCapability
+{
+    public function __construct(
+        public readonly bool $available,
+        public readonly string $reason = '',     // 不可用时的原因
+        public readonly array $details = [],     // 探测详情（feature level 等）
+    ) {}
+}
+```
+
+### Step 2: 实现 6 个后端
+
+```
+framework/Rendering/Backend/
+├── IRenderBackend.php
+├── BackendCapability.php
+├── SkiaGraphiteDawnBackend.php       ← 阶段四：Graphite + Dawn
+├── SkiaGaneshD3D11Backend.php        ← 阶段四：ganesh/D3D11
+├── SkiaGaneshWGLBackend.php          ← 阶段四：ganesh/WGL
+├── SkiaCpuBackend.php                ← 阶段三（当前 SkiaRenderContext 改造）
+├── GdiDirect2DBackend.php            ← 阶段五：可选 Direct2D
+└── GdiLegacyBackend.php              ← 阶段一/二（GdiRenderContext 改造）
+```
+
+**SkiaCpuBackend.php** 示例（基于现有 SkiaRenderContext）：
+
+```php
+class SkiaCpuBackend implements IRenderBackend
+{
+    public static function getPriority(): int { return 60; }
+    public function getName(): string { return 'skia-cpu'; }
+
+    public function probe(): BackendCapability
+    {
+        // 检测 sk_create_window_context 是否链接进来
+        if (!function_exists('sk_create_window_context')) {
+            return new BackendCapability(false, 'sk_* symbols not linked (USE_SKIA=0?)');
+        }
+        return new BackendCapability(true, details: [
+            'cpu_cores' => self::detectCpuCores(),
+            'has_avx2' => self::detectAvx2(),
+        ]);
+    }
+
+    public function initialize(int $hwnd, int $w, int $h): void
+    {
+        $this->ctx = new SkiaRenderContext($hwnd, $w, $h);
+    }
+
+    public function getContext(): RenderContext { return $this->ctx; }
+
+    public function shutdown(): void { $this->ctx = null; }
+}
+```
+
+**SkiaGaneshD3D11Backend.php**（阶段四）：
+
+```php
+class SkiaGaneshD3D11Backend implements IRenderBackend
+{
+    public static function getPriority(): int { return 90; }
+    public function getName(): string { return 'skia-d3d11'; }
+
+    public function probe(): BackendCapability
+    {
+        // 1. 链接检测
+        if (!function_exists('sk_d3d11_init')) {
+            return new BackendCapability(false, 'D3D11 backend not compiled in');
+        }
+        // 2. C++ 端探测（C++ 内部调用 D3D11CreateDevice）
+        $result = sk_d3d11_probe();
+        if (!$result['ok']) {
+            return new BackendCapability(false, $result['reason'], $result);
+        }
+        return new BackendCapability(true, details: $result);
+    }
+
+    public function initialize(int $hwnd, int $w, int $h): void
+    {
+        // C++ 端创建 ID3D11Device + SwapChain
+        sk_d3d11_init($hwnd, $w, $h);
+        $this->ctx = new SkiaRenderContext($hwnd, $w, $h);
+    }
+    // ...
+}
+```
+
+### Step 3: 后端注册表 + 选择器
+
+新建 [framework/Rendering/Backend/BackendRegistry.php](file:///D:/Px/framework/Rendering/Backend/BackendRegistry.php)：
+
+```php
+class BackendRegistry
+{
+    /** @var string[] 全量候选类名（按优先级从高到低硬编码） */
+    private const CANDIDATES = [
+        SkiaGraphiteDawnBackend::class,   // 100
+        SkiaGaneshD3D11Backend::class,    // 90
+        SkiaGaneshWGLBackend::class,      // 80
+        SkiaCpuBackend::class,            // 60
+        GdiDirect2DBackend::class,        // 50
+        GdiLegacyBackend::class,          // 10
+    ];
+
+    /** 用户强制覆盖（CLI 参数 / 环境变量） */
+    public static function getForcedBackend(): ?string
+    {
+        // PX_RENDERER=d3d11 强制
+        $env = getenv('PX_RENDERER');
+        if ($env && in_array($env, ['skia-cpu', 'skia-d3d11', 'skia-wgl', 'dawn', 'd2d', 'gdi'])) {
+            return $env;
+        }
+        return null;
+    }
+}
+```
+
+新建 `RuntimeBackendSelector.php`（核心选择器）：
+
+```php
+class RuntimeBackendSelector
+{
+    private ?IRenderBackend $current = null;
+    /** @var IRenderBackend[] 已尝试的失败后端 */
+    private array $attempted = [];
+
+    public function select(int $hwnd, int $w, int $h): IRenderBackend
+    {
+        $candidates = $this->collectCandidates();
+
+        foreach ($candidates as $cls) {
+            /** @var IRenderBackend $backend */
+            $backend = new $cls();
+
+            $cap = $backend->probe();
+            if (!$cap->available) {
+                trigger_error("Backend {$backend->getName()} unavailable: {$cap->reason}", E_USER_NOTICE);
+                continue;
+            }
+
+            try {
+                $backend->initialize($hwnd, $w, $h);
+                $this->current = $backend;
+                trigger_error("Selected backend: {$backend->getName()}", E_USER_NOTICE);
+                return $backend;
+            } catch (BackendInitException $e) {
+                trigger_error("Backend {$backend->getName()} init failed: {$e->getMessage()}", E_USER_WARNING);
+                $this->attempted[] = $backend;
+                continue;
+            }
+        }
+
+        throw new \RuntimeException('No render backend available after all attempts');
+    }
+
+    private function collectCandidates(): array
+    {
+        $forced = BackendRegistry::getForcedBackend();
+        $all = BackendRegistry::CANDIDATES;
+
+        if ($forced) {
+            $filtered = array_filter($all, fn($c) => $c::getName() === $forced);
+            if (empty($filtered)) {
+                throw new \RuntimeException("Forced backend '{$forced}' not found");
+            }
+            return $filtered;
+        }
+
+        // 按优先级排序（高到低）
+        usort($all, fn($a, $b) => $b::getPriority() <=> $a::getPriority());
+        return $all;
+    }
+}
+```
+
+### Step 4: 运行时降级（**关键** — 防止后端中途挂掉）
+
+新建 `ResilientRenderContext.php`（代理）：
+
+```php
+class ResilientRenderContext extends RenderContext
+{
+    private RenderContext $delegate;
+    private RuntimeBackendSelector $selector;
+    private int $hwnd;
+    private array $failures = [];   // 后端名 → 失败次数
+    private int $threshold = 3;     // 同一后端连续失败 N 次才降级
+
+    public function __construct(RuntimeBackendSelector $sel, RenderContext $delegate, int $hwnd)
+    {
+        $this->selector = $sel;
+        $this->delegate = $delegate;
+        $this->hwnd = $hwnd;
+    }
+
+    public function beginFrame(): void
+    {
+        $this->safeCall(__FUNCTION__, func_get_args());
+    }
+
+    public function drawElement(array $el): void
+    {
+        $this->safeCall(__FUNCTION__, func_get_args());
+    }
+    // ... 其他方法同理 ...
+
+    private function safeCall(string $method, array $args): void
+    {
+        $name = $this->delegate::class;
+        try {
+            $this->delegate->$method(...$args);
+            $this->failures[$name] = 0;  // 重置
+        } catch (RenderBackendFailedException $e) {
+            $this->failures[$name] = ($this->failures[$name] ?? 0) + 1;
+            if ($this->failures[$name] >= $this->threshold) {
+                trigger_error("Backend {$name} failed {$this->threshold}x, downgrading", E_USER_WARNING);
+                $this->downgrade($e);
+                // 重试当前调用
+                $this->delegate->$method(...$args);
+            }
+        }
+    }
+
+    private function downgrade(\Throwable $cause): void
+    {
+        // 关闭当前后端
+        $this->selector->markFailed($this->delegate);
+        // 选下一个
+        $next = $this->selector->selectNext($this->hwnd, $this->w, $this->h);
+        $this->delegate = $next->getContext();
+        trigger_error("Downgraded to {$next->getName()}", E_USER_NOTICE);
+    }
+}
+```
+
+### Step 5: 接入 [Application::initRenderer](file:///D:/Px/framework/Core/Application.php#L211)
+
+```php
+private function initRenderer(): void
+{
+    [$w, $h] = $this->platform->getWindowSize();
+    $hwnd    = $this->platform->getHwnd();
+
+    // 旧代码：
+    // $this->renderContext = $this->platform->init($title, $w, $h);
+    //
+    // 新代码：
+    $selector = new RuntimeBackendSelector();
+    $backend  = $selector->select($hwnd, $w, $h);
+    $this->renderContext = new ResilientRenderContext(
+        $selector,
+        $backend->getContext(),
+        $hwnd
+    );
+    $this->selectedBackendName = $backend->getName();
+}
+```
+
+## 探测维度清单
+
+每个后端需要探测的项：
+
+| 探测项 | 探测方法 | 涉及文件 |
+|--------|----------|----------|
+| **符号链接** | `function_exists('sk_d3d11_init')` | AOT 编译产物 |
+| **D3D11 设备** | `D3D11CreateDevice` 返回 S_OK？ | `D3D11.dll` |
+| **D3D12 设备** | `D3D12CreateDevice` + `D3D12_FEATURE_LEVEL` | `D3D12.dll` |
+| **Dawn** | `skgpu::graphite::DawnBackendContext` 创建成功 | `dxcompiler.dll` |
+| **OpenGL** | `wglCreateContext` + `wglMakeCurrent` | `opengl32.dll` |
+| **Skia 字体** | `skEnsureFont` 成功（typeface 非 null） | `cpp/fonts/*.ttf` |
+| **CPU 特性** | `__cpuid` 检测 AVX2 / SSE4.2 | CPUID |
+| **OS 版本** | `GetVersionEx` / `RtlGetVersion` | kernel32.dll |
+| **窗口属性** | `GetClientRect` + `GetDC` + `GetDeviceCaps` | user32.dll |
+| **驱动版本** | `IDXGIAdapter::GetDesc` | dxgi.dll |
+
+## 用户可调控制
+
+**优先级 1：编译时常量**（项目根 `config.yml`）
+```yaml
+# 强制使用特定后端（留空 = 自动选择）
+render_backend: skia-cpu
+
+# 启动时探测日志输出
+render_probe_verbose: true
+```
+
+**优先级 2：环境变量**
+```powershell
+# 强制 D3D11 后端
+$env:PX_RENDERER = "skia-d3d11"
+.\skia_poc.exe
+
+# 查看探测详情
+$env:PX_RENDERER_VERBOSE = "1"
+.\skia_poc.exe
+```
+
+**优先级 3：命令行参数**
+```powershell
+.\skia_poc.exe --renderer=skia-d3d11 --probe-verbose
+```
+
+**优先级 4：运行时降级**（最高 — 用户无法控制）
+- 后端连续失败 3 次 → 自动切到下一档
+
+## 启动时诊断输出
+
+```
+[Px] Renderer probe:
+  [OK ] skia-dawn-d3d12    pri=100  D3D12_FL_12_2, Dawn 0.4.0
+  [SKIP] skia-d3d11        pri=90   D3D11_FL_11_0
+  [SKIP] skia-wgl          pri=80   no WGL context
+  [OK ] skia-cpu           pri=60   8 cores, AVX2, NotoSansSC loaded
+  [SKIP] gdi-d2d           pri=50   d2d1.dll missing
+  [OK ] gdi-legacy         pri=10   always available
+
+[Px] Selected: skia-cpu (priority 60)
+[Px] Resilient context active: 3 failures → downgrade
+```
+
+## 关键文件清单
+
+| 文件 | 角色 |
+|------|------|
+| `framework/Rendering/RenderContext.php` | 抽象基类（**保持不变**） |
+| `framework/Rendering/Backend/IRenderBackend.php` | 新增：后端接口 |
+| `framework/Rendering/Backend/BackendCapability.php` | 新增：探测结果 |
+| `framework/Rendering/Backend/Skia*Backend.php` | 新增：4 个 Skia 后端 |
+| `framework/Rendering/Backend/Gdi*Backend.php` | 新增：2 个 GDI 后端 |
+| `framework/Rendering/Backend/BackendRegistry.php` | 新增：候选列表 + 强制覆盖 |
+| `framework/Rendering/Backend/RuntimeBackendSelector.php` | 新增：选择 + 降级 |
+| `framework/Rendering/Backend/ResilientRenderContext.php` | 新增：透明代理 + 失败降级 |
+| `framework/Core/Application.php` | 修改 initRenderer（line 211） |
+| `cpp/skia_render.cc` | 增加 `sk_d3d11_*` / `sk_wgl_*` 原生函数（阶段四） |
+
+## 实施优先级建议
+
+1. **现在就能做（无 C++ 改动）**：
+   - `IRenderBackend` + `RuntimeBackendSelector` 抽象层
+   - 把现有 `SkiaRenderContext` / `GdiRenderContext` 包成后端
+   - 接入 `initRenderer`，实现"按常量切换 + 启动时探测日志"
+
+2. **阶段四（C++ 改动）**：
+   - 在 `skia_render.cc` 增加 `sk_d3d11_init` / `sk_d3d11_probe` 等函数
+   - 实现 `SkiaGaneshD3D11Backend`
+   - 实现 `ResilientRenderContext` 失败降级
+
+3. **阶段五**：
+   - Graphite + Dawn 后端（最高性能，但维护成本高）
+
+这样 Px 就能在 D3D12 / D3D11 / WGL / CPU / GDI 五个渲染路径间**自动选择** + **故障降级**，保证任何 Windows 机器上都有可用的渲染方案。

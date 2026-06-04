@@ -1,0 +1,124 @@
+## 实现 RenderNode 快照导出功能（调试模式）
+
+### 背景
+在 PX 框架（PHP AOT 桌面应用框架）中，渲染流程为：
+- `Application` 持有 `RenderTreeManager` 和 `LayoutResolver`。
+- `RenderTreeManager::updateFromVNode()` 生成 `RenderNode` 树（包含样式 `style` 数组）。
+- `LayoutResolver::resolve()` 计算每个 `RenderNode` 的最终坐标 `x, y, w, h`。
+- `VNodeRenderer::render()` 遍历 `RenderNode` 树并调用 `RenderContext` 绘制。
+
+为了验证布局和样式计算的正确性，需要在调试模式下导出完整的 `RenderNode` 树结构为 JSON 快照，与预期黄金数据对比，快速定位布局/样式错误。
+
+### 任务
+请在 `Application` 类中增加一个调试模式，当启用时（通过环境变量或常量），在 `render()` 方法执行完布局解析后，但不执行 `VNodeRenderer::render` 之前，将 `RenderNode` 树导出为 JSON 文件。
+
+### 具体要求
+
+1. **启用方式**
+   - 支持通过常量 `RENDER_SNAPSHOT` 启用：`define('RENDER_SNAPSHOT', true);`
+   - 同时支持通过环境变量 `PX_RENDER_SNAPSHOT=1` 启用（优先级高）。
+   - 当启用时，导出快照；否则什么都不做。
+
+2. **快照内容**
+   - 递归遍历 `RenderNode` 树，每个节点应包含：
+     - `type` (string)
+     - `x`, `y`, `w`, `h` (int)
+     - `style` (array) — 过滤掉动态/瞬态字段，只保留最终用于渲染的静态样式（如 `bg`, `fg`, `fontSize`, `bold`, `borderRadius`, `opacity`, `display`, `flexDirection`, `justifyContent`, `alignItems`, `gap`, `position`, `left`, `top`, `width`, `height`, `margin`, `padding`, `overflow` 等）。
+     - `children` (array，递归)
+   - 可选包含 `key` (string|null) 和 `isScrollContainer` (bool)，以及 `scrollTop`/`scrollLeft`（仅在测试滚动时，否则排除）。
+   - 排除字段：`layoutDirty`, `lastPaintFrame`, `parent`, `sourceVNode`, `animatedStyle`, `isAnimating`, `groupId`, `content`（文本内容已在子节点中体现）等。
+
+3. **导出位置**
+   - 快照文件保存路径：由常量 `SNAPSHOT_DIR` 或环境变量 `PX_SNAPSHOT_DIR` 指定，默认为 `getcwd() . '/snapshots'`。
+   - 文件名：`snapshot_{timestamp}_{uniqid}.json`，或通过常量 `SNAPSHOT_NAME` 指定固定文件名（用于对比测试）。
+
+4. **实现位置**
+   - 主要逻辑写在 `Application` 类的一个新方法 `exportRenderNodeSnapshot(RenderNode $node): array` 和 `saveSnapshot(RenderNode $root)`。
+   - 在 `Application::render()` 方法中，在 `$this->layoutResolver->resolve($rootRenderNode);` 之后、`$this->renderer->render($rootRenderNode);` 之前调用 `saveSnapshot`。
+
+5. **样式过滤**
+   - 创建一个白名单数组 `$styleKeys`，只导出这些键：
+     ```php
+     $styleKeys = ['bg', 'fg', 'color', 'fontSize', 'bold', 'borderRadius', 'borderWidth', 'borderColor',
+                   'opacity', 'display', 'flexDirection', 'justifyContent', 'alignItems', 'gap', 'flexWrap',
+                   'position', 'left', 'top', 'right', 'bottom', 'width', 'height', 'minWidth', 'maxWidth',
+                   'minHeight', 'maxHeight', 'margin', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft',
+                   'padding', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+                   'overflow', 'overflowX', 'overflowY', 'zIndex', 'gridTemplateColumns', 'gridTemplateRows',
+                   'gridColumnGap', 'gridRowGap', 'gridColumn', 'gridRow', 'alignSelf', 'justifySelf'];
+     ```
+   - 对于 `scrollTop`/`scrollLeft`，仅在节点 `isScrollContainer` 为 true 时导出。
+
+6. **性能考虑**
+   - 仅在调试模式下执行，生产环境无开销。
+   - 使用 `json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)`。
+
+### 代码示例（参考）
+
+```php
+// 在 Application 类中添加
+private function shouldTakeSnapshot(): bool {
+    if (defined('RENDER_SNAPSHOT') && RENDER_SNAPSHOT) return true;
+    if (getenv('PX_RENDER_SNAPSHOT') !== false) return true;
+    return false;
+}
+
+private function exportRenderNodeSnapshot(RenderNode $node): array {
+    $data = [
+        'type' => $node->type,
+        'x' => $node->x,
+        'y' => $node->y,
+        'w' => $node->w,
+        'h' => $node->h,
+    ];
+    // 过滤样式
+    $filteredStyle = [];
+    foreach ($this->getStyleWhitelist() as $key) {
+        if (array_key_exists($key, $node->style)) {
+            $filteredStyle[$key] = $node->style[$key];
+        }
+    }
+    if (!empty($filteredStyle)) {
+        $data['style'] = $filteredStyle;
+    }
+    if ($node->key !== null) {
+        $data['key'] = $node->key;
+    }
+    if ($node->isScrollContainer) {
+        $data['isScrollContainer'] = true;
+        $data['scrollTop'] = $node->scrollTop;
+        $data['scrollLeft'] = $node->scrollLeft;
+    }
+    if (!empty($node->children)) {
+        $data['children'] = [];
+        foreach ($node->children as $child) {
+            $data['children'][] = $this->exportRenderNodeSnapshot($child);
+        }
+    }
+    return $data;
+}
+
+private function saveSnapshot(RenderNode $root): void {
+    if (!$this->shouldTakeSnapshot()) return;
+    $dir = defined('SNAPSHOT_DIR') ? SNAPSHOT_DIR : (getenv('PX_SNAPSHOT_DIR') ?: getcwd() . '/snapshots');
+    if (!is_dir($dir)) mkdir($dir, 0777, true);
+    $filename = defined('SNAPSHOT_NAME') ? SNAPSHOT_NAME : 'snapshot_' . date('Ymd_His') . '_' . uniqid() . '.json';
+    $path = $dir . DIRECTORY_SEPARATOR . $filename;
+    $data = $this->exportRenderNodeSnapshot($root);
+    file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+}
+```
+
+### 输出要求
+请提供完整的 PHP 代码补丁，包括：
+1. 在 `Application` 类中添加以上方法。
+2. 修改 `Application::render()` 方法，在适当位置调用 `saveSnapshot`。
+3. 可能需要添加 `use` 语句（如 `use Px\Rendering\RenderNode;`）。
+4. 提供一个使用示例：如何在 `main.php` 中通过常量启用快照导出。
+
+### 注意事项
+- 代码必须兼容 PHP 8.4+ 和 Swoole AOT 环境。
+- 不能使用闭包或动态函数调用（`call_user_func`）。
+- 保持与现有 `Application` 类中其他方法的一致性（如已经存在的 `directRender` 等）。
+
+请根据以上要求生成代码。

@@ -1,0 +1,11 @@
+﻿const fs = require('fs');
+const c = fs.readFileSync('D:/Px/docs/Px 框架 Vue 3 与 CSS 模板语义对齐 — 大型重构方案.md', 'utf8');
+const lines = c.split('\n');
+console.log('LINE 20 raw bytes:');
+const l20 = lines[19];
+console.log(JSON.stringify(l20));
+console.log('LENGTH:', l20.length);
+console.log('---');
+console.log('LINE 22 raw bytes:');
+const l22 = lines[21];
+console.log(JSON.stringify(l22));
