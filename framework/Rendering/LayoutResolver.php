@@ -282,10 +282,76 @@ class LayoutResolver
             $this->finalizeScrollContainer($node, $style, $childOffsetY, $paddingLeft, $paddingRight, $scrollContainers);
         }
 
+        // ── Task C: Normal Flow auto-stack for block containers ──
+        $display = $style['display'] ?? 'block';
+        if (!$isAbsolute && $display === 'block' && !$node->isScrollContainer) {
+            // Static/relative children in block containers auto-stack vertically (CSS normal flow).
+            // Scroll containers have their own auto-stack in finalizeScrollContainer.
+            $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
+            $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+            $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
+
+            // Check if any normal-flow child uses explicit positioning (top/bottom + static)
+            // Absolute/fixed children don't participate in normal flow and are skipped.
+            $hasExplicitPos = false;
+            foreach ($node->children as $child) {
+                $cs = $child->style;
+                $childPosition = $cs['position'] ?? 'static';
+                if ($childPosition !== 'relative' && $childPosition !== 'absolute' && $childPosition !== 'fixed'
+                    && (array_key_exists('top', $cs) || array_key_exists('bottom', $cs))) {
+                    $hasExplicitPos = true;
+                    break;
+                }
+            }
+
+            if (!$hasExplicitPos && count($node->children) > 0) {
+                $stackY = $node->y + $paddingTop;
+                $containerW = max($node->w - $paddingLeft - $paddingRight, 0);
+
+                foreach ($node->children as $child) {
+                    $childStyle = $child->style;
+                    $childPosition = $childStyle['position'] ?? 'static';
+
+                    // Skip absolute/fixed children — they don't participate in normal flow
+                    if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                        continue;
+                    }
+
+                    $mTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+                    $mBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
+
+                    // Auto-width: inherit from container padding area
+                    if (!array_key_exists('width', $child->style) || $child->w === 0) {
+                        $child->w = max(0, (int)$containerW);
+                        $child->style['width'] = $containerW;
+                    }
+                    $child->w = max(0, (int)$this->applyMinMax($childStyle, $child->w, true));
+
+                    // Stack vertically with margin
+                    $oldY = $child->y;
+                    $child->y = $stackY + $mTop;
+
+                    // position:relative 额外偏移（不推进 stack）
+                    if ($childPosition === 'relative') {
+                        $child->y += ($childStyle['top'] ?? 0);
+                    }
+
+                    // Shift descendants
+                    $dy = $child->y - $oldY;
+                    if ($dy !== 0) {
+                        foreach ($child->children as $grandchild) {
+                            $this->shiftDescendantsY($grandchild, $dy);
+                        }
+                    }
+
+                    $stackY += $child->h + $mBottom;
+                }
+            }
+        }
+
         // ── Auto-width/height for block containers (CSS content-based sizing) ──
         $hasExplicitWidth = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         $hasExplicitHeight = array_key_exists('height', $style) || array_key_exists('heightPercent', $style);
-        $display = $style['display'] ?? 'block';
 
         if (!$hasExplicitWidth && $display === 'block') {
             $maxRight = 0;
@@ -408,6 +474,9 @@ class LayoutResolver
 
         $marginLeft = $style['marginLeft'] ?? $style['margin'] ?? 0;
         $marginTop = $style['marginTop'] ?? $style['margin'] ?? 0;
+        // Guard: margin:auto resolved later in resolveMarginAuto; treat as 0 here
+        if ($marginLeft === 'auto') $marginLeft = 0;
+        if ($marginTop === 'auto') $marginTop = 0;
         $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
         $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
         $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
