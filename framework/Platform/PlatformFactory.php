@@ -2,6 +2,8 @@
 
 namespace Px\Platform;
 
+use native_types;
+
 class PlatformFactory
 {
     public static function create(string $type): Platform
