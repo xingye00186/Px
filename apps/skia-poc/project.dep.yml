@@ -10,31 +10,31 @@ cxx-flags:
   # /MT 强制静态 CRT 链接，匹配 Skia 预编译包（否则 LNK2038 RuntimeLibrary 不匹配）
   - /MT
   - /DUSE_SKIA
-  - /I"D:/Px/cpp/skia"
+  - /I"cpp/skia"
   - /DGR_GL_FUNCTION_TYPE=__stdcall
 ld-flags:
-  # 阶段三：Skia 静态库（按链接依赖顺序，依赖者在前；绝对路径避免相对解析歧义）
-  - D:/Px/cpp/skia/out/Release-x64/skia.lib
-  - D:/Px/cpp/skia/out/Release-x64/skunicode_icu.lib
-  - D:/Px/cpp/skia/out/Release-x64/icu.lib
-  - D:/Px/cpp/skia/out/Release-x64/skcms.lib
-  - D:/Px/cpp/skia/out/Release-x64/expat.lib
-  - D:/Px/cpp/skia/out/Release-x64/freetype2.lib
-  - D:/Px/cpp/skia/out/Release-x64/harfbuzz.lib
-  - D:/Px/cpp/skia/out/Release-x64/libpng.lib
-  - D:/Px/cpp/skia/out/Release-x64/zlib.lib
-  - D:/Px/cpp/skia/out/Release-x64/libjpeg.lib
-  - D:/Px/cpp/skia/out/Release-x64/libwebp.lib
-  - D:/Px/cpp/skia/out/Release-x64/sksg.lib
-  - D:/Px/cpp/skia/out/Release-x64/skshaper.lib
-  - D:/Px/cpp/skia/out/Release-x64/skresources.lib
-  - D:/Px/cpp/skia/out/Release-x64/skparagraph.lib
-  - D:/Px/cpp/skia/out/Release-x64/skunicode_core.lib
-  - D:/Px/cpp/skia/out/Release-x64/skottie.lib
-  - D:/Px/cpp/skia/out/Release-x64/svg.lib
-  - D:/Px/cpp/skia/out/Release-x64/wuffs.lib
-  - D:/Px/cpp/skia/out/Release-x64/bentleyottmann.lib
-  - D:/Px/cpp/skia/out/Release-x64/jsonreader.lib
+  # 阶段三：Skia 静态库（按链接依赖顺序，依赖者在前）
+  - cpp/skia/out/Release-x64/skia.lib
+  - cpp/skia/out/Release-x64/skunicode_icu.lib
+  - cpp/skia/out/Release-x64/icu.lib
+  - cpp/skia/out/Release-x64/skcms.lib
+  - cpp/skia/out/Release-x64/expat.lib
+  - cpp/skia/out/Release-x64/freetype2.lib
+  - cpp/skia/out/Release-x64/harfbuzz.lib
+  - cpp/skia/out/Release-x64/libpng.lib
+  - cpp/skia/out/Release-x64/zlib.lib
+  - cpp/skia/out/Release-x64/libjpeg.lib
+  - cpp/skia/out/Release-x64/libwebp.lib
+  - cpp/skia/out/Release-x64/sksg.lib
+  - cpp/skia/out/Release-x64/skshaper.lib
+  - cpp/skia/out/Release-x64/skresources.lib
+  - cpp/skia/out/Release-x64/skparagraph.lib
+  - cpp/skia/out/Release-x64/skunicode_core.lib
+  - cpp/skia/out/Release-x64/skottie.lib
+  - cpp/skia/out/Release-x64/svg.lib
+  - cpp/skia/out/Release-x64/wuffs.lib
+  - cpp/skia/out/Release-x64/bentleyottmann.lib
+  - cpp/skia/out/Release-x64/jsonreader.lib
   # Windows 系统库
   - d3d12.lib
   - dxgi.lib

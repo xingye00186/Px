@@ -79,16 +79,12 @@ $output = [];
 $inSources = false;
 $hasReplacedSources = false;
 
-// 检测一个行是否是顶层的 YAML key（顶格 + 以 ':' 结尾，且不是 sources: 自身）
 function isTopLevelKey(string $line): bool {
     $trimmed = ltrim($line);
-    // 空行或注释不是 key
     if (trim($line) === '' || str_starts_with(trim($line), '#')) {
         return false;
     }
-    // 顶格且包含 ':'
     if ($trimmed === $line && str_contains($line, ':')) {
-        // 排除行首缩进，只判断顶格行
         return true;
     }
     return false;
@@ -103,11 +99,10 @@ foreach ($lines as $line) {
         $hasReplacedSources = true;
         $output[] = "sources:\n";
 
-        // 写入 dep.json 中的文件列表
+        // 写入 dep.json 中的相对路径文件列表
         foreach ($phpFiles as $relPath) {
             $output[] = "  - $relPath\n";
         }
-        // 同步写入 cxx_files（C++ 源文件）— swoole-compiler 需要在 sources 中识别才能编译和链接
         foreach ($cxxFiles as $relPath) {
             $output[] = "  - $relPath\n";
         }
@@ -116,12 +111,9 @@ foreach ($lines as $line) {
 
     // 如果在 sources 节内
     if ($inSources) {
-        // 检测是否退出 sources 节：遇到新的顶格 key 或空行后遇到顶格 key
         if (isTopLevelKey($line) || (trim($line) === '' && $hasReplacedSources)) {
             $inSources = false;
-            // 回退让当前行被正常处理（fall through）
         } else {
-            // 跳过 sources 节原有的内容行
             continue;
         }
     }

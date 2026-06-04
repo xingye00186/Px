@@ -145,10 +145,10 @@ class DependencyVisitor extends NodeVisitorAbstract
     /** @var array<string, true> 收集到的类 FQN */
     private array $classes = [];
 
-    /** @var array<string, true> C++ 文件绝对路径 */
+    /** @var array<string, true> C++ 文件（key 为项目相对路径） */
     private array $cxxFiles = [];
 
-    /** @var array<string, true> stub 文件绝对路径 */
+    /** @var array<string, true> stub 文件（key 为项目相对路径） */
     private array $stubFiles = [];
 
     public function __construct(ClassToPathResolver $resolver, string $projectRoot)
@@ -225,10 +225,10 @@ class DependencyVisitor extends NodeVisitorAbstract
             foreach ($mapping as $prefix => $entry) {
                 if (str_starts_with($funcName, $prefix)) {
                     foreach ($entry['cxx'] as $rel) {
-                        $this->cxxFiles[$this->projectRoot . '/' . $rel] = true;
+                        $this->cxxFiles[$rel] = true;
                     }
                     foreach ($entry['stub'] as $rel) {
-                        $this->stubFiles[$this->projectRoot . '/' . $rel] = true;
+                        $this->stubFiles[$rel] = true;
                     }
                     break;
                 }
@@ -334,16 +334,17 @@ function analyzeFile(
         }
     }
 
-    // 收集 C++ 文件
-    foreach ($visitor->getCxxFiles() as $c) {
-        $allCxxFiles[$c] = true;
+    // 收集 C++ 文件（visit 返回项目相对路径，转为绝对用于去重和缓存）
+    foreach ($visitor->getCxxFiles() as $relCxx) {
+        $allCxxFiles[$projectRoot . '/' . $relCxx] = true;
     }
 
     // stub 文件加入 PHP 文件列表
-    foreach ($visitor->getStubFiles() as $s) {
-        if (!isset($visited[$s])) {
-            $allPhpFiles[$s] = true;
-            $visited[$s] = true;
+    foreach ($visitor->getStubFiles() as $relStub) {
+        $absStub = $projectRoot . '/' . $relStub;
+        if (!isset($visited[$absStub])) {
+            $allPhpFiles[$absStub] = true;
+            $visited[$absStub] = true;
         }
     }
 }
@@ -506,6 +507,8 @@ if (empty($GLOBALS['_TEST_MODE'])) {
                 }
                 $cxxRel[] = $rel;
             }
+
+            // 缓存也需要绝对路径（用于 filemtime 校验）
 
             $result = [
                 'php_files_relative' => $phpRel,
