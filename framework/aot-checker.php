@@ -132,6 +132,14 @@ class AotChecker
             'pattern' => '/vue_(window_create|window_show|begin_paint|end_paint|fill_rect|draw_text|draw_button|peek_message|quit_requested)\s*\(/',
             'message' => '业务代码不应直接调用 vue_* C++ 函数，应通过 GdiRenderContext',
         ],
+
+        // ========== CSS 语义规则（仅警告） ==========
+
+        'left_without_position' => [
+            'severity' => 'WARNING',
+            'pattern' => '/\'(left|top|right|bottom)\'\s*=>/',
+            'message' => 'CSS: left/top/right/bottom 建议伴随 position:absolute（已自动注入，此处仅提醒）',
+        ],
     ];
 
     /** 排除的文件（平台封装层，直接调用 C++ 函数是合法的） */
