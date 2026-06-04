@@ -9,6 +9,8 @@ use Px\Platform\PlatformEvent;
 use Px\Platform\MouseEvent;
 use Px\Platform\KeyboardEvent;
 use Px\Platform\PlatformFactory;
+use Px\Rendering\Backend\ResilientRenderContext;
+use Px\Rendering\Backend\RuntimeBackendSelector;
 use Px\Rendering\VNode;
 use Px\Rendering\RenderNode;
 use Px\Rendering\VNodeRenderer;
@@ -208,10 +210,35 @@ class Application
     public function getScheduler(): Scheduler { return $this->scheduler; }
     public function getRenderTreeManager(): RenderTreeManager { return $this->renderTreeManager; }
 
+    private ?string $selectedBackendName = null;
+
+    public function getSelectedBackendName(): ?string
+    {
+        return $this->selectedBackendName;
+    }
+
     private function initRenderer(): void
     {
-        $render_ctx = $this->platform->init(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT);
-        $this->renderer = new VNodeRenderer($this->rootComponent, $render_ctx);
+        $w = WINDOW_WIDTH;
+        $h = WINDOW_HEIGHT;
+
+        // Stage 1: 让 platform 创建窗口 + 默认 RenderContext
+        // —— platform->init() 的返回值会创建默认的 SkiaRenderContext/GdiRenderContext
+        // —— 但我们随后会用 RuntimeBackendSelector 重新选择最优后端
+        // —— 旧 RenderContext 会被 PHP GC 释放
+        $defaultCtx = $this->platform->init(WINDOW_TITLE, $w, $h);
+        unset($defaultCtx);  // 显式释放默认 RC，让 RuntimeBackendSelector 创建最优后端
+
+        // Stage 2: 用 RuntimeBackendSelector 探测 + 选择最优后端
+        $hwnd = $this->platform->getHwnd();
+        $selector  = new RuntimeBackendSelector();
+        $backend   = $selector->select($hwnd, $w, $h);
+        $this->selectedBackendName = $backend->getName();
+
+        // Stage 3: 包一层 ResilientRenderContext 支持运行时降级
+        $renderCtx = new ResilientRenderContext($selector, $backend->getContext(), $hwnd, $w, $h);
+
+        $this->renderer = new VNodeRenderer($this->rootComponent, $renderCtx);
     }
 
     public function mount(ReactiveComponent $root): self

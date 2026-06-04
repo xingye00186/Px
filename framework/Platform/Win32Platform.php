@@ -37,6 +37,11 @@ class Win32Platform implements Platform
         return new GdiRenderContext($this->hwnd);
     }
 
+    public function getHwnd(): int
+    {
+        return $this->hwnd;
+    }
+
     public function shutdown(): void
     {
         // 停止动画定时器

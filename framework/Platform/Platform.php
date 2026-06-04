@@ -23,6 +23,12 @@ interface Platform
     public function init(string $title, int $width, int $height): RenderContext;
 
     /**
+     * 获取当前窗口句柄（在 init 之后调用有效）
+     * 主要供 RuntimeBackendSelector 等需要直接访问窗口的子系统使用。
+     */
+    public function getHwnd(): int;
+
+    /**
      * 关闭平台：销毁窗口、释放资源。
      */
     public function shutdown(): void;
