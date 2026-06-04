@@ -381,9 +381,22 @@ class RenderTreeManager
                 $this->groupIdToRenderNodeMap[$renderNode->groupId][] = $renderNode;
             }
 
+            $oldParent = $renderNode->parent;
             $renderNode->parent = $parent;
             if ($parent !== null) {
                 $parent->children[] = $renderNode;
+            }
+
+            // Positioning ancestor 缓存失效：parent 变化时递归标记所有后代
+            if ($oldParent !== $parent) {
+                $invalidateStack = [$renderNode];
+                while (count($invalidateStack) > 0) {
+                    $n = array_pop($invalidateStack);
+                    $n->positioningAncestorValid = false;
+                    foreach ($n->children as $c) {
+                        $invalidateStack[] = $c;
+                    }
+                }
             }
 
             $oldChildren = $renderNode->children;

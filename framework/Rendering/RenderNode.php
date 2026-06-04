@@ -84,6 +84,21 @@ class RenderNode
     // ── 树关系 ──────────────────────────────────────────
 
     public ?RenderNode $parent = null;
+
+    /**
+     * 定位祖先（position != static 的最近祖先）。
+     * 为 position:absolute/fixed 提供 containing block 参考系。
+     * 由 LayoutResolver.resolvePositioningAncestor() 按需计算并缓存。
+     */
+    public ?RenderNode $positioningAncestor = null;
+
+    /**
+     * positioningAncestor 缓存是否有效。
+     * false 时将在下次布局时重新计算。
+     * 在 RenderTreeManager.updateFromVNode 中 parent 变化时递归失效。
+     */
+    public bool $positioningAncestorValid = false;
+
     /** 来源 VNode（用于 bind 值同步 / 事件路由访问 props） */
     public ?VNode $sourceVNode = null;
 

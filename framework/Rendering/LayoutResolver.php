@@ -2,6 +2,8 @@
 
 namespace Px\Rendering;
 
+use native_types;
+
 /**
  * LayoutResolver — 运行时 CSS 布局引擎（RenderNode 版）
  *
@@ -117,7 +119,7 @@ class LayoutResolver
                 // Calculate contentHeight: max bottom edge of all children
                 $maxBottom = $childBaseY;
                 foreach ($node->children as $child) {
-                    $bottom = $child->y + $child->h;
+                    $bottom = (int)($child->y + $child->h);
                     if ($bottom > $maxBottom) $maxBottom = $bottom;
                 }
                 $node->contentHeight = max(0, $maxBottom - $childBaseY);
@@ -144,7 +146,7 @@ class LayoutResolver
                     foreach ($node->children as $child) {
                         $cLeft = $child->style['left'] ?? 0;
                         $cWidth = $child->style['width'] ?? $child->w;
-                        $right = $cLeft + $cWidth;
+                        $right = (int)($cLeft + $cWidth);
                         if ($right > $maxRight) $maxRight = $right;
                     }
                     $node->contentWidth = max($maxRight, $node->w);
@@ -212,8 +214,12 @@ class LayoutResolver
     }
 
     /**
-     * Block layout: absolute or static positioning.
-     * Children are positioned relative to the parent.
+     * Block layout dispatcher.
+     *
+     * 统一尺寸解析（百分比 + min/max），然后根据 position 分发到:
+     * - resolveNormalFlow（static/relative）
+     * - resolveAbsolutePositioning（absolute/fixed）
+     * 最后处理 scroll container post-processing + auto-width/height。
      */
     private function resolveBlockLayout(
         RenderNode $node,
@@ -230,196 +236,224 @@ class LayoutResolver
         $right = $style['right'] ?? null;
         $bottom = $style['bottom'] ?? null;
 
+        // ── 自动注入 position:absolute（向后兼容）──
+        // 检测 left/top/right/bottom 出现但无 position → 自动注入
+        // 同时写入 node->style 以便子节点在定位祖先查找时能识别此节点
+        if ($position === 'static') {
+            $hasLTRB = array_key_exists('left', $style)
+                || array_key_exists('top', $style)
+                || array_key_exists('right', $style)
+                || array_key_exists('bottom', $style);
+            if ($hasLTRB) {
+                $position = 'absolute';
+                $node->style['position'] = 'absolute';
+            }
+        }
+
         // ── 百分比尺寸解析 ──
         $parentW = ($parent !== null) ? $parent->w : 0;
         $parentH = ($parent !== null) ? $parent->h : 0;
         $width  = $this->resolvePercent($style, 'width', 'widthPercent', $parentW);
         $height = $this->resolvePercent($style, 'height', 'heightPercent', $parentH);
 
-        // Handle flex:1 / flex:2 etc. → fill parent's remaining space
-        $flex = $style['flex'] ?? '';
-        if ($flex !== '' && $parent !== null && $parent->w > 0 && $width === 0) {
-            $width = $parent->w - $left;
-        }
+        // flex:1 已移至 flex 布局专用路径 (Task D)
 
-        // ── position:relative 与 static/absolute 分离 ──
-        // relative: left/top 是相对父节点的偏移量
-        // static/absolute: left/top 是绝对定位
-        if ($position === 'relative') {
-            $node->x = $parentX + $left;
-            $node->y = $parentY + $top;
+        // ── 应用 min/max 约束到尺寸（在子节点递归之前，确保 parent->w/h 立即可用）──
+        $node->w = max(0, (int)$this->applyMinMax($style, $width, true));
+        $node->h = max(0, (int)$this->applyMinMax($style, $height, false));
+
+        // ── 根据 position 分发 ──
+        // B.4: position:fixed v1 退化为 absolute（同分支）
+        $isAbsolute = ($position === 'absolute' || $position === 'fixed');
+
+        if ($isAbsolute) {
+            $this->resolveAbsolutePositioning($node, $parent, $style, $left, $top, $right, $bottom, $width, $height, $scrollContainers);
         } else {
-            $node->x = $left + $parentX;
-            $node->y = $top + $parentY;
+            // static / relative
+            $this->resolveNormalFlow($node, $parentX, $parentY, $parent, $position, $style, $left, $top, $scrollContainers);
         }
 
-        // Handle right/bottom as alternatives
-        // For position:absolute, apply right/bottom even when width/height is 0
-        $isAbsolute = ($position === 'absolute');
-        if ($right !== null && $parent !== null) {
-            if ($width > 0) {
-                $node->x = $parent->w - $width - $right + $parentX;
-            } elseif ($isAbsolute) {
-                // position:absolute with no explicit width — anchor from right edge
-                $node->x = $parent->w - $right + $parentX;
-            }
+        // ── Scroll container post-processing ──
+        if ($node->isScrollContainer) {
+            $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
+            $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
+            $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+            $childOffsetY = $node->y + $paddingTop - $node->scrollTop;
+            $this->finalizeScrollContainer($node, $style, $childOffsetY, $paddingLeft, $paddingRight, $scrollContainers);
         }
-        if ($bottom !== null && $parent !== null) {
-            if ($height > 0) {
-                $node->y = $parent->h - $height - $bottom + $parentY;
-            } elseif ($isAbsolute) {
-                // position:absolute with no explicit height — anchor from bottom edge
-                $node->y = $parent->h - $bottom + $parentY;
+
+        // ── Auto-width/height for block containers (CSS content-based sizing) ──
+        $hasExplicitWidth = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
+        $hasExplicitHeight = array_key_exists('height', $style) || array_key_exists('heightPercent', $style);
+        $display = $style['display'] ?? 'block';
+
+        if (!$hasExplicitWidth && $display === 'block') {
+            $maxRight = 0;
+            foreach ($node->children as $child) {
+                $childRight = (int)($child->x + $child->w);
+                if ($childRight > $maxRight) $maxRight = $childRight;
+            }
+            $computedW = max(0, $maxRight - $node->x);
+            if ($computedW > $node->w) {
+                $node->w = max(0, (int)$this->applyMinMax($style, $computedW, true));
+                $padL = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+                $padR = $style['paddingRight'] ?? $style['padding'] ?? 0;
+                $contentW = $node->w - $padL - $padR;
+                if ($contentW > 0) {
+                    foreach ($node->children as $child) {
+                        $cs = $child->style;
+                        if (!array_key_exists('width', $cs)) {
+                            $child->w = max(0, $contentW);
+                            $child->w = max(0, (int)$this->applyMinMax($cs, $child->w, true));
+                        }
+                    }
+                }
             }
         }
 
-        // Apply child's own margin
+        if (!$hasExplicitHeight && $display === 'block') {
+            $maxBottom = 0;
+            foreach ($node->children as $child) {
+                $childBottom = (int)($child->y + $child->h);
+                if ($childBottom > $maxBottom) $maxBottom = $childBottom;
+            }
+            $computedH = max(0, $maxBottom - $node->y);
+            if ($computedH > $node->h) {
+                $node->h = max(0, (int)$this->applyMinMax($style, $computedH, false));
+            }
+        }
+    }
+
+    /**
+     * Normal flow positioning (static/relative).
+     *
+     * static: 完全忽略 left/top/right/bottom，不推进 stack。
+     * relative: left/top 作为附加偏移量（不影响兄弟节点的 stack 位置）。
+     */
+    private function resolveNormalFlow(
+        RenderNode $node,
+        int $parentX,
+        int $parentY,
+        ?RenderNode $parent,
+        string $position,
+        array $style,
+        int $left,
+        int $top,
+        array &$scrollContainers
+    ): void {
         $marginLeft = $style['marginLeft'] ?? $style['margin'] ?? 0;
         $marginTop = $style['marginTop'] ?? $style['margin'] ?? 0;
-        $node->x += $marginLeft;
-        $node->y += $marginTop;
+        $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+        $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
 
-        // Apply translate from animatedStyle (AnimationManager writes to animatedStyle)
+        // Base position = parent content area
+        $node->x = $parentX + $marginLeft;
+        $node->y = $parentY + $marginTop;
+
+        // relative: left/top 作为额外偏移（不改变 stack 推进位置）
+        if ($position === 'relative') {
+            $node->x += $left;
+            $node->y += $top;
+        }
+        // static: left/top/right/bottom 完全忽略
+
+        // Apply translate from animatedStyle
         $translateX = $style['translateX'] ?? 0;
         $translateY = $style['translateY'] ?? 0;
         $node->x += $translateX;
         $node->y += $translateY;
 
-        // ── 应用 min/max 约束 ──
-        $node->w = max(0, (int)$this->applyMinMax($style, $width, true));
-        $node->h = max(0, (int)$this->applyMinMax($style, $height, false));
-
-        // Scroll container special handling
+        // Resolve children recursively
         $isScroll = $node->isScrollContainer;
-        $scrollTop = 0;
-        $scrollLeft = 0;
-        if ($isScroll) {
-            $scrollTop = $node->scrollTop;
-            $scrollLeft = $node->scrollLeft;
-        }
-
-        // Resolve children
-        $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
-        $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
-        $paddingBottom = $style['paddingBottom'] ?? $style['padding'] ?? 0;
-        $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
-
         $childOffsetX = $node->x + $paddingLeft;
         $childOffsetY = $node->y + $paddingTop;
         if ($isScroll) {
-            $childOffsetY -= $scrollTop;
-            $childOffsetX -= $scrollLeft;
+            $childOffsetX -= $node->scrollLeft;
+            $childOffsetY -= $node->scrollTop;
         }
-
-        // Children are always RenderNode[] array
         foreach ($node->children as $child) {
             $this->resolveNode($child, $childOffsetX, $childOffsetY, $node, $scrollContainers);
         }
+    }
 
-        // Auto-stack: for scroll containers, position children vertically
-        // and auto-fill width when no explicit left/top/width is set
+    /**
+     * Absolute/fixed positioning.
+     *
+     * 使用 positioningAncestor（position != static 的最近祖先）作为参考系。
+     * left/top 相对定位祖先的 padding box 偏移。
+     * right/bottom 替代（当 left/top 未设时）。
+     * position:fixed v1 退化为 absolute（TODO v2: viewport 参考系）。
+     */
+    private function resolveAbsolutePositioning(
+        RenderNode $node,
+        ?RenderNode $parent,
+        array $style,
+        int $left,
+        int $top,
+        ?int $right,
+        ?int $bottom,
+        int $width,
+        int $height,
+        array &$scrollContainers
+    ): void {
+        // 查找并缓存定位祖先
+        $this->resolvePositioningAncestor($node);
+        $ancestor = $node->positioningAncestor;
+
+        // 参考系：定位祖先的 padding box，退化时用 (0,0)
+        $ancestorX = ($ancestor !== null) ? $ancestor->x : 0;
+        $ancestorY = ($ancestor !== null) ? $ancestor->y : 0;
+        $ancestorW = ($ancestor !== null) ? $ancestor->w : 0;
+        $ancestorH = ($ancestor !== null) ? $ancestor->h : 0;
+
+        $marginLeft = $style['marginLeft'] ?? $style['margin'] ?? 0;
+        $marginTop = $style['marginTop'] ?? $style['margin'] ?? 0;
+        $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+        $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
+        $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
+
+        // left/top 相对定位祖先偏移
+        $node->x = $ancestorX + $left + $marginLeft;
+        $node->y = $ancestorY + $top + $marginTop;
+
+        // right/bottom 替代（当 width/height 已设时用尺寸推算，否则仅锚定边缘）
+        if ($right !== null && $ancestor !== null) {
+            if ($width > 0) {
+                $node->x = $ancestorX + $ancestorW - $width - $right;
+            } else {
+                // No explicit width — anchor from right edge
+                $node->x = $ancestorX + $ancestorW - $right;
+            }
+        }
+        if ($bottom !== null && $ancestor !== null) {
+            if ($height > 0) {
+                $node->y = $ancestorY + $ancestorH - $height - $bottom;
+            } else {
+                // No explicit height — anchor from bottom edge
+                $node->y = $ancestorY + $ancestorH - $bottom;
+            }
+        }
+
+        // ── margin:auto 水平居中（相对定位祖先） ──
+        $parentContentW = ($ancestor !== null) ? max(0, $ancestorW - $paddingLeft - $paddingRight) : 0;
+        $this->resolveMarginAuto($node, $style, $parentContentW);
+
+        // Apply translate from animatedStyle
+        $translateX = $style['translateX'] ?? 0;
+        $translateY = $style['translateY'] ?? 0;
+        $node->x += $translateX;
+        $node->y += $translateY;
+
+        // Resolve children recursively
+        $isScroll = $node->isScrollContainer;
+        $childOffsetX = $node->x + $paddingLeft;
+        $childOffsetY = $node->y + $paddingTop;
         if ($isScroll) {
-            $stackY = $childOffsetY;  // accounts for scroll offset + padding
-            $containerW = max($node->w - 14 - $paddingLeft - $paddingRight, 0);
-            $autoStack = true;
-
-            // Only auto-stack if NO child has explicit top/bottom
-            // EXCEPTION: position:relative children with top/left only add offset, not position
-            foreach ($node->children as $child) {
-                $cs = $child->style;
-                $childPos = $cs['position'] ?? 'static';
-                if ($childPos !== 'relative' && (array_key_exists('top', $cs) || array_key_exists('bottom', $cs))) {
-                    $autoStack = false;
-                    break;
-                }
-            }
-
-            if ($autoStack) {
-                foreach ($node->children as $child) {
-                    $childStyle = $child->style;
-                    $mTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
-                    $mBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
-
-                    // Auto-width: inherit from container
-                    if (!array_key_exists('width', $child->style) || $child->w === 0) {
-                        $child->w = max(0, (int)$containerW);
-                        $child->style['width'] = $containerW;
-                    }
-                    // Apply min/max to child width
-                    $child->w = max(0, (int)$this->applyMinMax($childStyle, $child->w, true));
-
-                    // Auto-position: stack vertically with margin
-                    $oldY = $child->y;
-                    $child->y = $stackY + $mTop;
-
-                    // position:relative 额外偏移 — 只对 y 生效
-                    // 注: x 已在 resolveBlockLayout 中通过 relative 公式正确处理
-                    $relTop = $childStyle['top'] ?? 0;
-                    if (($childStyle['position'] ?? 'static') === 'relative' && $relTop !== 0) {
-                        $child->y += $relTop;
-                    }
-
-                    // 仅平移子节点的后代（child 本身已在上方被正确设置位置）
-                    $dy = $child->y - $oldY;
-                    if ($dy !== 0) {
-                        foreach ($child->children as $grandchild) {
-                            $this->shiftDescendantsY($grandchild, $dy);
-                        }
-                    }
-                    $stackY += $child->h + $mBottom;
-                }
-            }
-
-            // ── Calculate contentHeight (always, not just for autoStack) ────
-            $maxBottom = $childOffsetY;
-            foreach ($node->children as $child) {
-                $bottom = $child->y + $child->h;
-                if ($bottom > $maxBottom) $maxBottom = $bottom;
-            }
-            $node->contentHeight = $maxBottom - $childOffsetY;
-
-            // ── Clamp scrollTop when content shrinks ────
-            $maxScroll = max($node->contentHeight - $node->h, 0);
-            if ($node->scrollTop > $maxScroll) {
-                $oldScrollTop = $node->scrollTop;
-                $node->scrollTop = $maxScroll;
-                $shiftDown = $oldScrollTop - $node->scrollTop;
-                if ($shiftDown > 0) {
-                    foreach ($node->children as $child) {
-                        $child->y += $shiftDown;
-                        $this->shiftDescendantsY($child, $shiftDown);
-                    }
-                }
-            }
-
-            // ── Content width for horizontal scroll ────
-            $overflowX = $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible';
-            $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
-            if ($hasHScroll) {
-                // Use raw style values (independent of scroll offset) for content width
-                $maxRight = 0;
-                foreach ($node->children as $child) {
-                    $cLeft = $child->style['left'] ?? 0;
-                    $cWidth = $child->style['width'] ?? $child->w;
-                    $right = $cLeft + $cWidth;
-                    if ($right > $maxRight) $maxRight = $right;
-                }
-                $node->contentWidth = max($maxRight, $node->w);
-
-                // Clamp scrollLeft when content shrinks
-                $maxScrollX = max($node->contentWidth - $node->w, 0);
-                if ($node->scrollLeft > $maxScrollX) {
-                    $oldScrollLeft = $node->scrollLeft;
-                    $node->scrollLeft = $maxScrollX;
-                    $shiftRight = $oldScrollLeft - $node->scrollLeft;
-                    if ($shiftRight > 0) {
-                        foreach ($node->children as $child) {
-                            $child->x += $shiftRight;
-                            $this->shiftDescendantsX($child, $shiftRight);
-                        }
-                    }
-                }
-            }
+            $childOffsetX -= $node->scrollLeft;
+            $childOffsetY -= $node->scrollTop;
+        }
+        foreach ($node->children as $child) {
+            $this->resolveNode($child, $childOffsetX, $childOffsetY, $node, $scrollContainers);
         }
     }
 
@@ -672,7 +706,7 @@ class LayoutResolver
                 foreach ($lineFlexData as $entry) {
                     $totalFlexGrow += $entry['grow'];
                 }
-                $totalFlexGrow = max($totalFlexGrow, 1);
+                $totalFlexGrow = (int)max($totalFlexGrow, 1);
                 foreach ($lineChildren as $idx => $ch) {
                     $data = $lineFlexData[$idx];
                     if ($data['isFlexGrow']) {
@@ -697,10 +731,10 @@ class LayoutResolver
                 $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
                 if ($isRow) {
                     $lineTotalMain += $ch->w + $mL + $mR;
-                    $lineMaxCross = max($lineMaxCross, $ch->h);
+                    $lineMaxCross = (int)max($lineMaxCross, $ch->h);
                 } else {
                     $lineTotalMain += $ch->h + $mT + $mB;
-                    $lineMaxCross = max($lineMaxCross, $ch->w);
+                    $lineMaxCross = (int)max($lineMaxCross, $ch->w);
                 }
             }
             $lineTotalMain += $gap * ($lineCount - 1);
@@ -754,10 +788,10 @@ class LayoutResolver
                 $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
                 if ($isRow) {
                     $lineTotalMain += $ch->w + $mL + $mR;
-                    $lineMaxCross = max($lineMaxCross, $ch->h);
+                    $lineMaxCross = (int)max($lineMaxCross, $ch->h);
                 } else {
                     $lineTotalMain += $ch->h + $mT + $mB;
-                    $lineMaxCross = max($lineMaxCross, $ch->w);
+                    $lineMaxCross = (int)max($lineMaxCross, $ch->w);
                 }
             }
             $lineTotalMain += $gap * ($lineCount - 1);
@@ -792,7 +826,8 @@ class LayoutResolver
             // This line's cross-axis position
             $lineCrossBase = $accumulatedCrossOffset;
 
-            foreach ($indices as $i) {
+            foreach ($indices as $idx) {
+                $i = (int)$idx;
                 $ch = $lineChildren[$i];
                 $childStyle = $ch->style;
                 $childMarginLeft = $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
@@ -1152,6 +1187,66 @@ class LayoutResolver
         return $style[$key] ?? 0;
     }
 
+    /**
+     * 查找并缓存节点的定位祖先（position != static 的最近祖先）。
+     *
+     * 为 position:absolute/fixed 提供 containing block 参考系。
+     * 如果缓存有效（positioningAncestorValid === true）则跳过。
+     * 从 parent 链向上遍历，找第一个 position !== static 的祖先。
+     * 找不到时 positioningAncestor = null（退化为根节点 (0,0) 参考系）。
+     *
+     * AOT 兼容: 纯属性访问 + while 循环，符合 native_types。
+     */
+    private function resolvePositioningAncestor(RenderNode $node): void
+    {
+        if ($node->positioningAncestorValid) {
+            return;
+        }
+
+        $ancestor = $node->parent;
+        while ($ancestor !== null) {
+            $pos = $ancestor->style['position'] ?? 'static';
+            if ($pos !== 'static') {
+                $node->positioningAncestor = $ancestor;
+                $node->positioningAncestorValid = true;
+                return;
+            }
+            $ancestor = $ancestor->parent;
+        }
+
+        // 找不到定位祖先 → 退化为 null（根节点 (0,0) 参考系）
+        $node->positioningAncestor = null;
+        $node->positioningAncestorValid = true;
+    }
+
+    /**
+     * 解析 margin:auto 水平居中。
+     * CSS 规范: margin-left:auto + margin-right:auto 在固定宽度子节点上水平居中。
+     * 算法: 剩余空间 = (父 content width - 子 width) / 2，各分一半。
+     * 垂直方向 v1 不实现。
+     * AOT 兼容: 纯算术操作，符合 native_types。
+     */
+    private function resolveMarginAuto(RenderNode $node, array $style, int $parentContentW): void
+    {
+        $marginLeft = $style['marginLeft'] ?? null;
+        $marginRight = $style['marginRight'] ?? null;
+        $margin = $style['margin'] ?? null;
+
+        $isMarginLeftAuto = ($marginLeft === 'auto');
+        $isMarginRightAuto = ($marginRight === 'auto');
+        // Handle margin:auto shorthand
+        if ($margin === 'auto') {
+            $isMarginLeftAuto = true;
+            $isMarginRightAuto = true;
+        }
+
+        if ($isMarginLeftAuto && $isMarginRightAuto && $node->w > 0 && $parentContentW > $node->w) {
+            $remaining = $parentContentW - $node->w;
+            $half = (int)($remaining / 2);
+            $node->x += $half;
+        }
+    }
+
     // ── 递归平移方法（用于 auto-stack / clamp） ──
 
     /**
@@ -1194,6 +1289,122 @@ class LayoutResolver
                 continue;
             }
             $this->shiftChildrenY($child, $deltaY, $skipAbsolute);
+        }
+    }
+
+    /**
+     * Scroll container post-processing: auto-stack + contentHeight + scroll clamps.
+     *
+     * Extracted from resolveBlockLayout to keep method focused.
+     * Preserves all original scroll container behaviors.
+     */
+    private function finalizeScrollContainer(
+        RenderNode $node,
+        array $style,
+        int $childOffsetY,
+        int $paddingLeft,
+        int $paddingRight,
+        array &$scrollContainers
+    ): void {
+        // ── Auto-stack: for scroll containers, position children vertically ──
+        $stackY = $childOffsetY;
+        $containerW = max($node->w - 14 - $paddingLeft - $paddingRight, 0);
+        $autoStack = true;
+
+        // Only auto-stack if NO child has explicit top/bottom
+        // EXCEPTION: position:relative children with top/left only add offset, not position
+        foreach ($node->children as $child) {
+            $cs = $child->style;
+            $childPos = $cs['position'] ?? 'static';
+            if ($childPos !== 'relative' && (array_key_exists('top', $cs) || array_key_exists('bottom', $cs))) {
+                $autoStack = false;
+                break;
+            }
+        }
+
+        if ($autoStack) {
+            foreach ($node->children as $child) {
+                $childStyle = $child->style;
+                $mTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+                $mBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
+
+                // Auto-width: inherit from container
+                if (!array_key_exists('width', $child->style) || $child->w === 0) {
+                    $child->w = max(0, (int)$containerW);
+                    $child->style['width'] = $containerW;
+                }
+                // Apply min/max to child width
+                $child->w = max(0, (int)$this->applyMinMax($childStyle, $child->w, true));
+
+                // Auto-position: stack vertically with margin
+                $oldY = $child->y;
+                $child->y = $stackY + $mTop;
+
+                // position:relative 额外偏移 — 只对 y 生效
+                $relTop = $childStyle['top'] ?? 0;
+                if (($childStyle['position'] ?? 'static') === 'relative' && $relTop !== 0) {
+                    $child->y += $relTop;
+                }
+
+                // 仅平移子节点的后代（child 本身已在上方被正确设置位置）
+                $dy = $child->y - $oldY;
+                if ($dy !== 0) {
+                    foreach ($child->children as $grandchild) {
+                        $this->shiftDescendantsY($grandchild, $dy);
+                    }
+                }
+                $stackY += $child->h + $mBottom;
+            }
+        }
+
+        // ── Calculate contentHeight (always, not just for autoStack) ────
+        $maxBottom = $childOffsetY;
+        foreach ($node->children as $child) {
+            $bottom = (int)($child->y + $child->h);
+            if ($bottom > $maxBottom) $maxBottom = $bottom;
+        }
+        $node->contentHeight = $maxBottom - $childOffsetY;
+
+        // ── Clamp scrollTop when content shrinks ────
+        $maxScroll = max($node->contentHeight - $node->h, 0);
+        if ($node->scrollTop > $maxScroll) {
+            $oldScrollTop = $node->scrollTop;
+            $node->scrollTop = $maxScroll;
+            $shiftDown = $oldScrollTop - $node->scrollTop;
+            if ($shiftDown > 0) {
+                foreach ($node->children as $child) {
+                    $child->y += $shiftDown;
+                    $this->shiftDescendantsY($child, $shiftDown);
+                }
+            }
+        }
+
+        // ── Content width for horizontal scroll ────
+        $overflowX = $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible';
+        $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
+        if ($hasHScroll) {
+            $maxRight = 0;
+            foreach ($node->children as $child) {
+                $cLeft = $child->style['left'] ?? 0;
+                $cWidth = $child->style['width'] ?? $child->w;
+                $right = (int)($cLeft + $cWidth);
+                if ($right > $maxRight) $maxRight = $right;
+            }
+            $node->contentWidth = max($maxRight, $node->w);
+
+            // Clamp scrollLeft when content shrinks
+            $maxScrollX = max($node->contentWidth - $node->w, 0);
+            if ($node->scrollLeft > $maxScrollX) {
+                $oldScrollLeft = $node->scrollLeft;
+                $node->scrollLeft = $maxScrollX;
+                $shiftRight = $oldScrollLeft - $node->scrollLeft;
+                if ($shiftRight > 0) {
+                    foreach ($node->children as $child) {
+                        $child->x += $shiftRight;
+                        $this->shiftDescendantsX($child, $shiftRight);
+                    }
+                }
+            }
         }
     }
 }
