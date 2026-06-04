@@ -523,6 +523,17 @@ class CssMappings
             }
         }
 
+        // ── 自动注入 position:absolute ──
+        // 检测 left/top/right/bottom 出现但无 position → 自动注入（向后兼容）
+        $hasPosition = array_key_exists('position', $raw);
+        $hasLTRB = array_key_exists('left', $style)
+            || array_key_exists('top', $style)
+            || array_key_exists('right', $style)
+            || array_key_exists('bottom', $style);
+        if (!$hasPosition && $hasLTRB) {
+            $style['position'] = 'absolute';
+        }
+
         return $style;
     }
 
