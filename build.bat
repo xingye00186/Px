@@ -169,6 +169,17 @@ if "%VUE_BASE%"=="" set "VUE_BASE=%EXE_NAME%"
 
 echo [CONFIG] EXE: %OUTPUT_EXE%
 if "%HAS_VUE%"=="1" echo [CONFIG] SFC: %VUE_FILE% -^> gen\%VUE_BASE%Component.php + gen\ComponentFactory.php
+
+:: Debug: read from project.yml (priority), fallback to config.yml
+set "DEBUG_FLAG="
+for /f "tokens=2 delims=: " %%a in ('findstr /r /b "debug:" "%APP_DIR%\project.yml" 2^>nul') do (
+    if /i "%%a"=="true" set "DEBUG_FLAG=--debug"
+)
+if not defined DEBUG_FLAG (
+    for /f "tokens=2 delims=: " %%a in ('findstr /r /b "debug:" "%FRAMEWORK_ROOT%\config.yml" 2^>nul') do (
+        if /i "%%a"=="true" set "DEBUG_FLAG=--debug"
+    )
+)
 echo.
 
 :: ====================================================================
@@ -283,13 +294,54 @@ if exist "%APP_DIR%\gen" (
     echo   [SKIP] No gen/ directory found
 )
 echo.
-goto :step2
+goto :dep_analysis
 
 :skip_sfc
 echo ========================================
 echo   Step 1: SFC compile - skipped ^(no .vue file^)
 echo ========================================
 echo.
+goto :dep_analysis
+
+:: ====================================================================
+:: Step 1.5.5: Dependency Analysis
+:: ====================================================================
+:dep_analysis
+echo ========================================
+echo   Step 1.5.5: Dependency analysis
+echo ========================================
+echo.
+
+cd /d "%FRAMEWORK_ROOT%"
+
+if not exist "tools\dependency-analyzer.php" (
+    echo   [SKIP] dependency-analyzer.php not found
+    echo.
+    goto :step2
+)
+
+"%PHP_CLI%" tools\dependency-analyzer.php --app=%APP_NAME%
+if !errorlevel! neq 0 (
+    echo   [WARN] Dependency analysis failed, using full sources
+    echo.
+    goto :step2
+)
+
+"%PHP_CLI%" tools\generate-dep-project.php --app=%APP_NAME%
+if !errorlevel! neq 0 (
+    echo   [WARN] dep project generation failed, using full sources
+    echo.
+    goto :step2
+)
+
+if exist "%APP_DIR%\project.dep.yml" (
+    echo   [OK] Using project.dep.yml
+    set "DEP_PROJECT=apps\%APP_NAME%\project.dep.yml"
+) else (
+    set "DEP_PROJECT=apps\%APP_NAME%\project.yml"
+)
+echo.
+goto :step2
 
 :: ====================================================================
 :: Step 2: AOT compile
@@ -334,7 +386,11 @@ set "SWOOLE_COMPILER_ROOT=%COMPILER_DIR%"
 :: Add SDK/lib to LIB path (v1054+ needs libmpdec.lib from SDK)
 set "LIB=%COMPILER_DIR%\SDK\lib;%LIB%"
 
-"%SWOOLE_COMPILER%" "apps\%APP_NAME%\project.yml" -f
+if defined DEP_PROJECT (
+    "%SWOOLE_COMPILER%" "!DEP_PROJECT!" %DEBUG_FLAG% -f
+) else (
+    "%SWOOLE_COMPILER%" "apps\%APP_NAME%\project.yml" %DEBUG_FLAG% -f
+)
 set "AOT_EXIT=!errorlevel!
 if !AOT_EXIT! neq 0 (
     echo.
