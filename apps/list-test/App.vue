@@ -1,25 +1,25 @@
 <template>
-  <div style="left:0px;top:0px;width:400px;height:500px" title="v-for List Test">
-    <div style="left:0px;top:0px;width:400px;height:500px" class="main-bg"></div>
-
+  <div style="width:400px;height:500px;background:#1A1A2E;display:flex;flex-direction:column" title="v-for List Test">
     <!-- Title -->
-    <span style="left:14px;top:14px;font-size:18px;color:#FFFFFF;font-weight:bold">{{ listTitle }}</span>
+    <span style="padding:14px 0 0 14px;font-size:18px;color:#FFFFFF;font-weight:bold">{{ listTitle }}</span>
 
     <!-- Scroll container with v-for list items -->
-    <div style="overflow:auto;left:10px;top:46px;width:380px;height:400px" :scroll-top="scrollTop">
+    <div style="overflow:auto;margin:14px 10px 0 10px;flex:1" :scroll-top="scrollTop">
       <template v-for="item in todoItems" :key="item.id">
         <div class="item-bg"
-             style="height:48px;margin-bottom:4px"
+             style="height:48px;margin-bottom:4px;padding-left:14px;display:flex;align-items:center"
              @click="deleteItem(item.id)">
-          <span style="left:14px;font-size:14px;color:#EAEAEA">{{ item.text }}</span>
+          <span style="font-size:14px;color:#EAEAEA">{{ item.text }}</span>
         </div>
       </template>
     </div>
 
     <!-- Add button -->
-    <button style="left:125px;top:458px;width:150px;height:32px" class="add-btn" @click="addItem">
-      <span>{{ addBtnText }}</span>
-    </button>
+    <div style="display:flex;justify-content:center;padding:5px 0">
+      <button style="width:150px;height:32px" class="add-btn" @click="addItem">
+        <span>{{ addBtnText }}</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -57,7 +57,6 @@ class AppComponent extends ReactiveComponent
 </script>
 
 <style>
-.main-bg { background: #1A1A2E; }
 .item-bg { background: #282840; color: #EAEAEA; }
 .add-btn { background: #4A90D9; }
 </style>

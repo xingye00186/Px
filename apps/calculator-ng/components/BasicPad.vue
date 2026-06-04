@@ -1,5 +1,5 @@
 <template>
-  <div style="left:0px;top:0px;width:318px;height:260px;display:grid;grid-template-columns:repeat(4,78px);grid-template-rows:repeat(5,50px);gap:2px">
+  <div style="width:318px;height:260px;display:grid;grid-template-columns:repeat(4,78px);grid-template-rows:repeat(5,50px);gap:2px">
     <!-- Row 1: AC +/- % ÷ -->
     <button style="grid-row:1;grid-column:1" class="btn-func btn-ac" @click="reset">{{ acLabel }}</button>
     <button style="grid-row:1;grid-column:2" class="btn-func" @click="toggleSign">+/−</button>

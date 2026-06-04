@@ -1,7 +1,7 @@
 <template>
-  <div style="width:100%;height:auto;display:flex;flex-direction:column;gap:0px;background:#FFFFFF">
+  <div style="width:100%;height:auto;display:flex;flex-direction:column;gap:0;background:#FFFFFF">
     <!-- 轮播主体 -->
-    <div style="width:100%;height:180px;background:transparent;display:flex;flex-direction:column;gap:0px">
+    <div style="width:100%;height:180px;background:transparent;display:flex;flex-direction:column;gap:0">
       <!-- 图片区 -->
       <div style="width:100%;height:160px;border-radius:8px;position:relative;overflow:hidden" :style="'background:' . currentSlide . ';background-size:cover;background-position:center'">
         <!-- 标题 -->

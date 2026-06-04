@@ -1,5 +1,5 @@
 <template>
-  <div style="width:100%;height:auto;display:flex;flex-direction:column;gap:0px;background:#FFFFFF">
+  <div style="width:100%;height:auto;display:flex;flex-direction:column;gap:0;background:#FFFFFF">
     <!-- 标题栏 -->
     <div style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;height:36px;margin-bottom:8px">
       <div style="display:flex;flex-direction:row;align-items:center;gap:8px">

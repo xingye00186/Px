@@ -1,5 +1,5 @@
 <template>
-  <div style="left:0px;top:0px;width:1920px;display:flex;flex-direction:column;gap:0px">
+  <div style="width:1920px;display:flex;flex-direction:column;gap:0">
 
     <!-- Display -->
     <div style="margin:16px 16px 0 16px;height:50px;width:1888px;padding-bottom:12px;border-bottom:1px solid #2A2A2E">

@@ -1,7 +1,7 @@
 <template>
-  <div style="left:0px;top:0px;width:1920px;height:970px;display:flex;flex-direction:column;gap:4px;background:#0F0F11">
+  <div style="width:1920px;height:970px;display:flex;flex-direction:column;gap:4px;background:#0F0F11">
     <!-- Welcome -->
-    <div style="left:0px;top:0px;width:420px;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1A1A2E">
+    <div style="width:420px;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1A1A2E">
       <span style="font-size:22px;font-weight:600;color:#FFFFFF">Px Framework</span>
       <span style="margin-top:8px;font-size:12px;color:#9CA3AF">PHP &rarr; Native Desktop GUI Framework</span>
       <div style="margin-top:10px;display:flex;flex-direction:row;gap:8px">
@@ -12,7 +12,7 @@
     </div>
 
     <!-- Stats Overview -->
-    <div style="left:0px;top:0px;width:1920px;height:56px;display:flex;flex-direction:row;background:#16161A">
+    <div style="width:1920px;height:56px;display:flex;flex-direction:row;background:#16161A">
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
         <span style="font-size:20px;font-weight:700;color:#6366F1">7</span>
         <span style="margin-top:2px;font-size:10px;color:#6B7280">布局类型</span>

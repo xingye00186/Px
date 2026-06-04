@@ -1,5 +1,5 @@
 <template>
-  <div style="left:0px;top:56px;width:1440px;height:40px;background:#FFFFFF;display:flex;flex-direction:row;align-items:center;padding:0 24px;border-bottom:1px solid #E3E5E7;overflow-x:auto;gap:0px">
+  <div style="width:1440px;height:40px;background:#FFFFFF;display:flex;flex-direction:row;align-items:center;padding:0 24px;border-bottom:1px solid #E3E5E7;overflow-x:auto;gap:0">
     <div v-for="(cat, idx) in categories" :key="idx"
          style="height:38px;padding:0 16px;display:flex;align-items:center;cursor:pointer;white-space:nowrap;flex-shrink:0"
          :style="idx === activeIndex ? 'border-bottom:2px solid #FB7299' : ''"

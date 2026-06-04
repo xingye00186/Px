@@ -1,20 +1,20 @@
 <template>
-  <div style="width:340px;height:660px;background:#1C1C1E">
+  <div style="width:340px;height:660px;background:#1C1C1E;display:flex;flex-direction:column">
     <!-- Display -->
-    <calculator-display style="left:11px;top:0px" :display="display" :expression="expression" :hasMemory="hasMemory" />
+    <calculator-display style="margin-left:11px;flex-shrink:0" :display="display" :expression="expression" :hasMemory="hasMemory" />
     <!-- Memory Bar -->
-    <memory-bar style="left:11px;top:104px" />
+    <memory-bar style="margin-left:11px;flex-shrink:0" />
     <!-- Scientific Pad -->
-    <scientific-pad style="left:11px;top:144px" />
+    <scientific-pad style="margin-left:11px;flex-shrink:0" />
     <!-- Basic Pad -->
-    <basic-pad style="left:11px;top:260px" :acLabel="acLabel" />
+    <basic-pad style="margin-left:11px;flex-shrink:0" :acLabel="acLabel" />
     <!-- History header -->
-    <history-panel style="left:11px;top:524px" :arrow="arrowText" />
+    <history-panel style="margin-left:11px;flex-shrink:0" :arrow="arrowText" />
     <!-- History list -->
-    <div v-if="showHistory" style="left:11px;top:558px;width:318px;background:#2C2C2E">
+    <div v-if="showHistory" style="margin-left:11px;flex:1;background:#2C2C2E">
       <template v-for="item in historyItems" :key="item.id">
-        <div style="width:318px;height:24px;cursor:pointer" @click="loadHistoryItem" click-arg="item.id">
-          <span style="left:8px;top:2px;font-size:12px;color:#FFFFFF">{{ item.text }}</span>
+        <div style="height:24px;cursor:pointer;display:flex;align-items:center;padding-left:8px" @click="loadHistoryItem" click-arg="item.id">
+          <span style="font-size:12px;color:#FFFFFF">{{ item.text }}</span>
         </div>
       </template>
     </div>

@@ -1,5 +1,5 @@
 <template>
-  <div style="left:0px;top:0px;width:1440px;height:56px;background:#FFFFFF;display:flex;flex-direction:row;align-items:center;padding:0 24px;border-bottom:1px solid #E3E5E7">
+  <div style="width:1440px;height:56px;background:#FFFFFF;display:flex;flex-direction:row;align-items:center;padding:0 24px;border-bottom:1px solid #E3E5E7">
     <!-- Logo -->
     <div style="display:flex;align-items:center;gap:8px;margin-right:40px">
       <div style="width:32px;height:32px;background:#FB7299;border-radius:6px;display:flex;align-items:center;justify-content:center">

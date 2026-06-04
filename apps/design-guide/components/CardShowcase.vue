@@ -1,5 +1,5 @@
 <template>
-  <div style="left:0px;top:0px;width:1920px;display:flex;flex-direction:column;gap:0px">
+  <div style="width:1920px;display:flex;flex-direction:column;gap:0">
 
     <!-- Section Title -->
     <div style="margin:16px 16px 0 16px;height:30px;width:1888px;padding-bottom:8px;border-bottom:1px solid #2A2A2E">
