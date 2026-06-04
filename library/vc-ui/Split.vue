@@ -1,8 +1,8 @@
 <template>
-  <div class="split-default">
-    <div style="left:0px;top:0px" class="split-pane-left">{{ leftContent }}</div>
-    <div style="left:0px;top:0px" class="split-divider"></div>
-    <div style="left:0px;top:0px" class="split-pane-right">{{ rightContent }}</div>
+  <div style="position:relative" class="split-default">
+    <div class="split-pane-left">{{ leftContent }}</div>
+    <div class="split-divider"></div>
+    <div class="split-pane-right">{{ rightContent }}</div>
   </div>
 </template>
 

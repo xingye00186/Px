@@ -7,7 +7,7 @@
     <!-- 下一页 -->
     <span style="width:32px;height:32px" class="page-btn" @click="onNext">›</span>
     <!-- 总数 -->
-    <span style="left:0px;top:0px;font-size:14px;color:#606266" class="page-total">Total: {{ total }}</span>
+    <span style="font-size:14px;color:#606266" class="page-total">Total: {{ total }}</span>
   </div>
 </template>
 

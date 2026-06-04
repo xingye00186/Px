@@ -1,14 +1,14 @@
 <template>
-  <div style="width:260px;height:36px" class="slider-input-wrapper">
-    <div style="left:0px;top:0px;width:260px;height:36px" class="slider-row">
+  <div style="position:relative;width:260px;height:36px" class="slider-input-wrapper">
+    <div style="position:absolute;left:0px;top:0px;width:260px;height:36px" class="slider-row">
       <!-- 滑块 -->
-      <div style="left:0px;top:16px;width:180px;height:4px" class="slider-track">
-        <div :style="'left:0px;top:0px;width:' + sliderPercent + ';height:100%'" class="slider-fill"></div>
-        <span :style="'left:' + sliderPercent + ';top:8px'" class="slider-thumb">{{ modelValue }}</span>
+      <div style="position:absolute;left:0px;top:16px;width:180px;height:4px" class="slider-track">
+        <div :style="'position:absolute;left:0px;top:0px;width:' + sliderPercent + ';height:100%'" class="slider-fill"></div>
+        <span :style="'position:absolute;left:' + sliderPercent + ';top:8px'" class="slider-thumb">{{ modelValue }}</span>
       </div>
       <!-- 数字输入框 -->
-      <div style="left:190px;top:0px;width:70px;height:36px" class="slider-input-box">
-        <input style="left:0px;top:0px;width:70px;height:36px;font-size:14px;color:#606266;background:#FFFFFF;border:1px solid #DCDFE6;text-align:center" type="text" :value="modelValue" @change="onInputChange" />
+      <div style="position:absolute;left:190px;top:0px;width:70px;height:36px" class="slider-input-box">
+        <input style="position:absolute;left:0px;top:0px;width:70px;height:36px;font-size:14px;color:#606266;background:#FFFFFF;border:1px solid #DCDFE6;text-align:center" type="text" :value="modelValue" @change="onInputChange" />
       </div>
     </div>
   </div>

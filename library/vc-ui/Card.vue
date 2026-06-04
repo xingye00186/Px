@@ -1,18 +1,18 @@
 <template>
   <div :style="'width:' . width . 'px;height:auto'" :class="cardClass">
     <!-- 封面区域 -->
-    <div v-if="cover !== ''" style="left:0px;top:0px;width:100%;height:140px" class="card-cover" :style="'background:' . coverBg">
+    <div v-if="cover !== ''" style="width:100%;height:140px" class="card-cover" :style="'background:' . coverBg">
     </div>
     <!-- 标题 -->
-    <div v-if="header !== ''" style="left:0px;top:0px;width:100%;height:auto" class="card-header">
+    <div v-if="header !== ''" style="width:100%;height:auto" class="card-header">
       <span style="font-size:14px;font-weight:bold;color:#303133">{{ header }}</span>
     </div>
     <!-- 内容 -->
-    <div v-if="body !== ''" style="left:0px;top:0px;width:100%;height:auto" class="card-body">
+    <div v-if="body !== ''" style="width:100%;height:auto" class="card-body">
       <span style="font-size:13px;color:#606266">{{ body }}</span>
     </div>
     <!-- 底部元数据 -->
-    <div v-if="meta !== ''" style="left:0px;top:0px;width:100%;height:auto" class="card-meta">
+    <div v-if="meta !== ''" style="width:100%;height:auto" class="card-meta">
       <span style="font-size:12px;color:#9499A0">{{ meta }}</span>
     </div>
   </div>

@@ -1,15 +1,15 @@
 <template>
-  <div style="width:100%;height:auto;min-height:100px" class="infinite-scroll-wrapper">
-    <div style="left:0px;top:0px;width:100%;height:auto" class="scroll-content">
+  <div style="position:relative;width:100%;height:auto;min-height:100px" class="infinite-scroll-wrapper">
+    <div style="position:absolute;left:0px;top:0px;width:100%;height:auto" class="scroll-content">
       <slot></slot>
     </div>
     <!-- 加载中提示 -->
-    <div v-if="loading === '1'" style="left:0px;top:0px;width:100%;height:32px" class="loading-tip">
-      <span style="left:0px;top:8px;width:100%;height:16px;font-size:12px;color:#909399;text-align:center">Loading more...</span>
+    <div v-if="loading === '1'" style="position:absolute;left:0px;top:0px;width:100%;height:32px" class="loading-tip">
+      <span style="position:absolute;left:0px;top:8px;width:100%;height:16px;font-size:12px;color:#909399;text-align:center">Loading more...</span>
     </div>
     <!-- 没有更多提示 -->
-    <div v-if="hasMore === '0'" style="left:0px;top:0px;width:100%;height:32px" class="no-more-tip">
-      <span style="left:0px;top:8px;width:100%;height:16px;font-size:12px;color:#C0C4CC;text-align:center">No more data</span>
+    <div v-if="hasMore === '0'" style="position:absolute;left:0px;top:0px;width:100%;height:32px" class="no-more-tip">
+      <span style="position:absolute;left:0px;top:8px;width:100%;height:16px;font-size:12px;color:#C0C4CC;text-align:center">No more data</span>
     </div>
   </div>
 </template>

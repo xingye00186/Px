@@ -1,20 +1,20 @@
 <template>
-  <div style="width:300px;height:auto;min-height:200px" class="image-wrapper">
+  <div style="width:300px;height:auto;min-height:200px;position:relative" class="image-wrapper">
     <!-- 图片 -->
-    <div v-if="src !== ''" style="left:0px;top:0px;width:300px;height:200px" class="image-container" :class="previewCls">
-      <div style="left:0px;top:0px;width:300px;height:200px" class="image-inner" :style="'background-image:url(' + src + ')'"></div>
+    <div v-if="src !== ''" style="left:0px;top:0px;width:300px;height:200px;position:absolute" class="image-container" :class="previewCls">
+      <div style="left:0px;top:0px;width:300px;height:200px;position:absolute" class="image-inner" :style="'background-image:url(' + src + ')'"></div>
     </div>
     <!-- 占位 -->
-    <div v-if="src === ''" style="left:0px;top:0px;width:300px;height:200px" class="image-placeholder">
-      <span style="left:0px;top:80px;width:300px;height:40px;font-size:14px;color:#C0C4CC;text-align:center">{{ placeholder }}</span>
+    <div v-if="src === ''" style="left:0px;top:0px;width:300px;height:200px;position:absolute" class="image-placeholder">
+      <span style="left:0px;top:80px;width:300px;height:40px;font-size:14px;color:#C0C4CC;text-align:center;position:absolute">{{ placeholder }}</span>
     </div>
     <!-- 加载失败 -->
-    <div v-if="hasError === '1'" style="left:0px;top:0px;width:300px;height:200px" class="image-error">
-      <span style="left:0px;top:80px;width:300px;height:40px;font-size:14px;color:#F56C6C;text-align:center">Load failed</span>
+    <div v-if="hasError === '1'" style="left:0px;top:0px;width:300px;height:200px;position:absolute" class="image-error">
+      <span style="left:0px;top:80px;width:300px;height:40px;font-size:14px;color:#F56C6C;text-align:center;position:absolute">Load failed</span>
     </div>
     <!-- 预览遮罩 -->
-    <div v-if="preview === '1'" style="left:0px;top:0px;width:300px;height:200px" class="image-preview-overlay" @click="onPreviewClick">
-      <span style="left:0px;top:80px;width:300px;height:40px;font-size:14px;color:#FFFFFF;text-align:center">Click to preview</span>
+    <div v-if="preview === '1'" style="left:0px;top:0px;width:300px;height:200px;position:absolute" class="image-preview-overlay" @click="onPreviewClick">
+      <span style="left:0px;top:80px;width:300px;height:40px;font-size:14px;color:#FFFFFF;text-align:center;position:absolute">Click to preview</span>
     </div>
   </div>
 </template>

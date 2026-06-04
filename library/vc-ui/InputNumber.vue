@@ -1,8 +1,8 @@
 <template>
-  <div style="width:160px;height:36px">
-    <span style="left:0px;top:0px;width:36px;height:36px" class="num-btn" @click="decrease">−</span>
-    <span style="left:36px;top:0px;width:88px;height:36px" class="num-value">{{ displayValue }}</span>
-    <span style="left:124px;top:0px;width:36px;height:36px" class="num-btn" @click="increase">+</span>
+  <div style="width:160px;height:36px;position:relative">
+    <span style="left:0px;top:0px;width:36px;height:36px;position:absolute" class="num-btn" @click="decrease">−</span>
+    <span style="left:36px;top:0px;width:88px;height:36px;position:absolute" class="num-value">{{ displayValue }}</span>
+    <span style="left:124px;top:0px;width:36px;height:36px;position:absolute" class="num-btn" @click="increase">+</span>
   </div>
 </template>
 

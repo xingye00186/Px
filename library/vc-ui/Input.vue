@@ -1,6 +1,6 @@
 <template>
-  <div style="left:0px;top:0px;width:100%;height:auto;position:relative;">
-    <div style="left:0px;top:0px;width:100%;height:36px;background:#F5F7FA;border:1px solid #DCDFE6;border-radius:4px;display:flex;align-items:center">
+  <div style="width:100%;height:auto;position:relative;">
+    <div style="width:100%;height:36px;background:#F5F7FA;border:1px solid #DCDFE6;border-radius:4px;display:flex;align-items:center">
       <span v-if="prefixIcon !== ''" style="margin-left:8px;margin-right:4px;font-size:14px;color:#C0C4CC">{{ prefixIconChar }}</span>
       <span v-if="modelValue !== ''" style="font-size:14px;color:#606266;flex:1">{{ modelValue }}</span>
       <span v-if="modelValue === '' && placeholder !== ''" style="font-size:14px;color:#C0C4CC;flex:1">{{ placeholder }}</span>

@@ -1,7 +1,7 @@
 <template>
-  <div style="width:200px;height:80px" class="empty-box">
-    <div style="left:50%;top:20px;width:40px;height:40px;margin-left:-20px" class="empty-icon">□</div>
-    <div style="left:0px;top:68px;width:100%;text-align:center;font-size:14px" class="empty-text">{{ displayText }}</div>
+  <div style="width:200px;height:80px;position:relative" class="empty-box">
+    <div style="left:50%;top:20px;width:40px;height:40px;margin-left:-20px;position:absolute" class="empty-icon">□</div>
+    <div style="margin-top:8px;text-align:center;font-size:14px" class="empty-text">{{ displayText }}</div>
   </div>
 </template>
 

@@ -1,13 +1,13 @@
 <template>
-  <div style="width:240px;height:auto;min-height:36px" class="treeselect-wrapper">
-    <div style="left:0px;top:0px;width:240px;height:36px" class="treeselect-trigger" @click="toggleOpen">
-      <span style="left:12px;top:8px;width:200px;height:20px;font-size:14px" class="treeselect-value">{{ displayText }}</span>
-      <span style="right:8px;top:10px;width:16px;height:16px" class="treeselect-arrow">▼</span>
+  <div style="width:240px;height:auto;min-height:36px;position:relative" class="treeselect-wrapper">
+    <div style="position:absolute;left:0;top:0;width:240px;height:36px" class="treeselect-trigger" @click="toggleOpen">
+      <span style="position:absolute;left:12px;top:8px;width:200px;height:20px;font-size:14px" class="treeselect-value">{{ displayText }}</span>
+      <span style="position:absolute;right:8px;top:10px;width:16px;height:16px" class="treeselect-arrow">▼</span>
     </div>
-    <div v-if="isOpen === '1'" style="left:0px;top:36px;width:240px;height:200px" class="treeselect-panel">
-      <div style="left:0px;top:0px;width:240px;height:32px" class="panel-search">
-        <span style="left:8px;top:8px;width:80px;height:16px;font-size:12px;color:#909399">Search:</span>
-        <span style="left:60px;top:8px;width:172px;height:16px;font-size:12px;color:#409EFF">@click="filterTree"</span>
+    <div v-if="isOpen === '1'" style="position:absolute;left:0;top:36px;width:240px;height:200px" class="treeselect-panel">
+      <div style="position:absolute;left:0;top:0;width:240px;height:32px" class="panel-search">
+        <span style="position:absolute;left:8px;top:8px;width:80px;height:16px;font-size:12px;color:#909399">Search:</span>
+        <span style="position:absolute;left:60px;top:8px;width:172px;height:16px;font-size:12px;color:#409EFF">@click="filterTree"</span>
       </div>
       <div style="left:0px;top:32px;width:240px;height:168px" class="tree-nodes">
         <div v-for="node in treeNodes" :key="node.key" style="left:0px;top:0px;width:240px;height:28px" :class="node.cls" @click="selectNode(node)">

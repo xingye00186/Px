@@ -1,21 +1,21 @@
 <template>
-  <div style="width:400px;height:240px" class="carousel-wrapper">
+  <div style="width:400px;height:240px;position:relative" class="carousel-wrapper">
     <!-- 图片区域 -->
-    <div style="left:0px;top:0px;width:400px;height:200px" class="carousel-slides">
-      <div v-for="(slide, idx) in slides" :key="idx" v-if="idx === currentIndex" style="left:0px;top:0px;width:400px;height:200px" class="carousel-slide">
-        <div style="left:0px;top:0px;width:400px;height:200px" class="slide-bg" :style="'background:' + slide.bg"></div>
-        <span style="left:0px;top:80px;width:400px;height:40px;font-size:24px;font-weight:bold;color:#FFFFFF;text-align:center">{{ slide.text }}</span>
+    <div style="left:0px;top:0px;width:400px;height:200px;position:absolute" class="carousel-slides">
+      <div v-for="(slide, idx) in slides" :key="idx" v-if="idx === currentIndex" style="left:0px;top:0px;width:400px;height:200px;position:absolute" class="carousel-slide">
+        <div style="left:0px;top:0px;width:400px;height:200px;position:absolute" class="slide-bg" :style="'background:' + slide.bg"></div>
+        <span style="left:0px;top:80px;width:400px;height:40px;font-size:24px;font-weight:bold;color:#FFFFFF;text-align:center;position:absolute">{{ slide.text }}</span>
       </div>
     </div>
     <!-- 指示器 -->
-    <div style="left:0px;top:200px;width:340px;height:20px" class="carousel-indicators">
+    <div style="left:0px;top:200px;width:340px;height:20px;position:absolute" class="carousel-indicators">
       <span v-for="(slide, idx) in slides" :key="idx" :style="'left:' + (idx * 20 + 4) + 'px;top:8px;width:12px;height:4px'" :class="idx === currentIndex ? 'indicator-active' : 'indicator'" @click="goTo(idx)"></span>
     </div>
     <!-- 箭头 -->
-    <span style="left:8px;top:80px;width:32px;height:40px;font-size:20px;color:#FFFFFF;background:rgba(0,0,0,0.3);text-align:center;line-height:40px" class="arrow-left" @click="prev">&lt;</span>
-    <span style="right:8px;top:80px;width:32px;height:40px;font-size:20px;color:#FFFFFF;background:rgba(0,0,0,0.3);text-align:center;line-height:40px" class="arrow-right" @click="next">&gt;</span>
+    <span style="left:8px;top:80px;width:32px;height:40px;font-size:20px;color:#FFFFFF;background:rgba(0,0,0,0.3);text-align:center;line-height:40px;position:absolute" class="arrow-left" @click="prev">&lt;</span>
+    <span style="right:8px;top:80px;width:32px;height:40px;font-size:20px;color:#FFFFFF;background:rgba(0,0,0,0.3);text-align:center;line-height:40px;position:absolute" class="arrow-right" @click="next">&gt;</span>
     <!-- 自动播放控制 -->
-    <span style="right:60px;top:200px;width:40px;height:20px;font-size:10px;color:#909399;background:transparent">{{ currentIndex + 1 }}/{{ slideCount }}</span>
+    <span style="right:60px;top:200px;width:40px;height:20px;font-size:10px;color:#909399;background:transparent;position:absolute">{{ currentIndex + 1 }}/{{ slideCount }}</span>
   </div>
 </template>
 

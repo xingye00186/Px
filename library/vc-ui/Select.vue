@@ -1,11 +1,11 @@
 <template>
-  <div style="width:200px;height:36px" class="select-wrapper">
-    <div style="left:0px;top:0px;width:200px;height:36px" class="select-trigger" @click="toggleOpen">
-      <span style="left:12px;top:8px;width:160px;height:20px;font-size:14px" class="select-value">{{ displayText }}</span>
-      <span style="right:8px;top:12px;width:12px;height:12px" class="select-arrow">▼</span>
+  <div style="width:200px;height:36px;position:relative" class="select-wrapper">
+    <div style="left:0px;top:0px;width:200px;height:36px;position:absolute" class="select-trigger" @click="toggleOpen">
+      <span style="left:12px;top:8px;width:160px;height:20px;font-size:14px;position:absolute" class="select-value">{{ displayText }}</span>
+      <span style="right:8px;top:12px;width:12px;height:12px;position:absolute" class="select-arrow">▼</span>
     </div>
-    <div v-if="isOpen === '1'" style="left:0px;top:36px;width:200px;height:150px" class="select-dropdown">
-      <div v-for="opt in optionList" :key="opt.value" style="left:0px;top:0px;width:100%;height:30px" class="select-option" @click="selectOpt(opt.value)">{{ opt.label }}</div>
+    <div v-if="isOpen === '1'" style="left:0px;top:36px;width:200px;height:150px;position:absolute" class="select-dropdown">
+      <div v-for="opt in optionList" :key="opt.value" style="left:0px;top:0px;width:100%;height:30px;position:absolute" class="select-option" @click="selectOpt(opt.value)">{{ opt.label }}</div>
     </div>
   </div>
 </template>

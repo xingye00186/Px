@@ -1,21 +1,21 @@
 <template>
-  <div style="width:400px;height:280px" class="chart-bar-wrapper">
-    <div style="left:0px;top:0px;width:400px;height:280px" class="chart-bg"></div>
+  <div style="width:400px;height:280px;position:relative" class="chart-bar-wrapper">
+    <div style="left:0px;top:0px;width:400px;height:280px;position:absolute" class="chart-bg"></div>
     <!-- Y 轴标签 -->
-    <div style="left:0px;top:0px;width:40px;height:220px" class="chart-yaxis">
-      <span v-for="(label, idx) in yLabels" :key="idx" :style="'left:0px;top:' + (idx * 44) + 'px;width:40px;height:16px;font-size:10px;color:#606266;text-align:right'">{{ label }}</span>
+    <div style="left:0px;top:0px;width:40px;height:220px;position:absolute" class="chart-yaxis">
+      <span v-for="(label, idx) in yLabels" :key="idx" :style="'left:0px;top:' + (idx * 44) + 'px;width:40px;height:16px;font-size:10px;color:#606266;text-align:right;position:absolute'">{{ label }}</span>
     </div>
     <!-- X 轴标签 -->
-    <div style="left:40px;top:220px;width:360px;height:20px" class="chart-xaxis">
-      <span v-for="(label, idx) in xLabels" :key="idx" :style="'left:' + (idx * 72 + 24) + 'px;top:0px;width:72px;height:20px;font-size:10px;color:#606266;text-align:center'">{{ label }}</span>
+    <div style="left:40px;top:220px;width:360px;height:20px;position:absolute" class="chart-xaxis">
+      <span v-for="(label, idx) in xLabels" :key="idx" :style="'left:' + (idx * 72 + 24) + 'px;top:0px;width:72px;height:20px;font-size:10px;color:#606266;text-align:center;position:absolute'">{{ label }}</span>
     </div>
     <!-- 柱状图绘制区 -->
-    <div style="left:40px;top:0px;width:360px;height:220px" class="chart-plot">
-      <div v-for="(bar, idx) in bars" :key="idx" :style="'left:' + bar.x + 'px;top:' + bar.y + 'px;width:' + bar.w + 'px;height:' + bar.h + 'px'" :class="bar.cls"></div>
+    <div style="left:40px;top:0px;width:360px;height:220px;position:absolute" class="chart-plot">
+      <div v-for="(bar, idx) in bars" :key="idx" :style="'left:' + bar.x + 'px;top:' + bar.y + 'px;width:' + bar.w + 'px;height:' + bar.h + 'px;position:absolute'" :class="bar.cls"></div>
     </div>
     <!-- 图例 -->
-    <div style="left:40px;top:240px;width:360px;height:20px" class="chart-legend">
-      <span style="left:0px;top:2px;width:60px;height:16px;font-size:10px;color:#606266">{{ legend }}</span>
+    <div style="left:40px;top:240px;width:360px;height:20px;position:absolute" class="chart-legend">
+      <span style="left:0px;top:2px;width:60px;height:16px;font-size:10px;color:#606266;position:absolute">{{ legend }}</span>
     </div>
   </div>
 </template>

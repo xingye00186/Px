@@ -1,31 +1,31 @@
 <template>
   <div style="width:480px;height:240px" class="transfer-wrapper">
     <!-- 源列表 -->
-    <div style="left:0px;top:0px;width:200px;height:240px" class="transfer-panel">
-      <div style="left:0px;top:0px;width:200px;height:32px" class="panel-header">
-        <span style="left:12px;top:8px;width:160px;height:16px;font-size:14px;font-weight:bold;color:#303133">{{ leftTitle }}</span>
+    <div style="width:200px;height:240px" class="transfer-panel">
+      <div style="width:200px;height:32px;display:flex;align-items:center;padding-left:12px" class="panel-header">
+        <span style="font-size:14px;font-weight:bold;color:#303133">{{ leftTitle }}</span>
       </div>
-      <div style="left:0px;top:32px;width:200px;height:208px" class="panel-list">
-        <div v-for="item in leftItems" :key="item.value" style="left:0px;top:0px;width:200px;height:32px" class="panel-item" @click="moveToRight(item)">
-          <span style="left:8px;top:6px;width:16px;height:20px;font-size:12px;color:#C0C4CC">{{ item.checked ? '☑' : '☐' }}</span>
-          <span style="left:32px;top:6px;width:160px;height:20px;font-size:13px;color:#606266">{{ item.label }}</span>
+      <div style="width:200px;height:208px" class="panel-list">
+        <div v-for="item in leftItems" :key="item.value" style="width:200px;height:32px;display:flex;align-items:center" class="panel-item" @click="moveToRight(item)">
+          <span style="margin-left:8px;width:16px;font-size:12px;color:#C0C4CC">{{ item.checked ? '☑' : '☐' }}</span>
+          <span style="margin-left:8px;font-size:13px;color:#606266">{{ item.label }}</span>
         </div>
       </div>
     </div>
     <!-- 操作按钮 -->
-    <div style="left:200px;top:0px;width:80px;height:240px" class="transfer-buttons">
-      <div style="left:20px;top:90px;width:40px;height:28px" class="btn-add" @click="addAll">→</div>
-      <div style="left:20px;top:124px;width:40px;height:28px" class="btn-remove" @click="removeAll">←</div>
+    <div style="width:80px;height:240px" class="transfer-buttons">
+      <div style="width:40px;height:28px;margin:0 auto" class="btn-add" @click="addAll">→</div>
+      <div style="width:40px;height:28px;margin:4px auto 0" class="btn-remove" @click="removeAll">←</div>
     </div>
     <!-- 目标列表 -->
-    <div style="left:280px;top:0px;width:200px;height:240px" class="transfer-panel">
-      <div style="left:0px;top:0px;width:200px;height:32px" class="panel-header">
-        <span style="left:12px;top:8px;width:160px;height:16px;font-size:14px;font-weight:bold;color:#303133">{{ rightTitle }}</span>
+    <div style="width:200px;height:240px" class="transfer-panel">
+      <div style="width:200px;height:32px;display:flex;align-items:center;padding-left:12px" class="panel-header">
+        <span style="font-size:14px;font-weight:bold;color:#303133">{{ rightTitle }}</span>
       </div>
-      <div style="left:0px;top:32px;width:200px;height:208px" class="panel-list">
-        <div v-for="item in rightItems" :key="item.value" style="left:0px;top:0px;width:200px;height:32px" class="panel-item" @click="moveToLeft(item)">
-          <span style="left:8px;top:6px;width:16px;height:20px;font-size:12px;color:#C0C4CC">☐</span>
-          <span style="left:32px;top:6px;width:160px;height:20px;font-size:13px;color:#606266">{{ item.label }}</span>
+      <div style="width:200px;height:208px" class="panel-list">
+        <div v-for="item in rightItems" :key="item.value" style="width:200px;height:32px;display:flex;align-items:center" class="panel-item" @click="moveToLeft(item)">
+          <span style="margin-left:8px;width:16px;font-size:12px;color:#C0C4CC">☐</span>
+          <span style="margin-left:8px;font-size:13px;color:#606266">{{ item.label }}</span>
         </div>
       </div>
     </div>

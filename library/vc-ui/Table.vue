@@ -1,12 +1,12 @@
 <template>
-  <div style="width:100%;height:100%">
+  <div style="position:relative;width:100%;height:100%">
     <!-- 表头 -->
-    <div style="left:0px;top:0px;width:100%;height:36px" class="table-header">
+    <div style="position:absolute;left:0px;top:0px;width:100%;height:36px" class="table-header">
       <div v-for="col in colList" :key="col.prop" :style="'width:' . $col['width'] . 'px;height:36px'" class="th-cell">{{ col.label }}</div>
     </div>
     <!-- 表体 -->
-    <div style="left:0px;top:36px;width:100%;height:calc(100%-36px)" class="table-body">
-      <div v-for="(row, idx) in rowList" :key="idx" :style="'left:0px;top:' . ($idx * 36) . 'px;width:100%;height:36px'" class="tr-row">
+    <div style="position:absolute;left:0px;top:36px;width:100%;height:calc(100% - 36px)" class="table-body">
+      <div v-for="(row, idx) in rowList" :key="idx" :style="'position:absolute;left:0px;top:' . ($idx * 36) . 'px;width:100%;height:36px'" class="tr-row">
         <div v-for="col in colList" :key="col.prop" :style="'width:' . $col['width'] . 'px;height:36px'" class="td-cell">{{ getCell(row, col.prop) }}</div>
       </div>
     </div>

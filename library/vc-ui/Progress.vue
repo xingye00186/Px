@@ -1,12 +1,12 @@
 <template>
-  <div style="width:200px;height:20px">
+  <div style="position:relative;width:200px;height:20px">
     <!-- 轨道背景 -->
-    <div style="left:0px;top:8px;width:200px;height:4px" class="progress-track">
+    <div style="width:200px;height:4px;margin-top:8px" class="progress-track">
       <!-- 填充 -->
       <div :style="'width:' . $fillPercent . '%;height:100%'" :class="fillClass"></div>
     </div>
     <!-- 百分比文字 -->
-    <span style="left:210px;top:2px;font-size:14px" :class="textClass">{{ pct }}%</span>
+    <span style="margin-left:10px;font-size:14px" :class="textClass">{{ pct }}%</span>
   </div>
 </template>
 

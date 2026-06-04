@@ -1,6 +1,6 @@
 <template>
-  <div style="width:44px;height:22px" :class="switchClass" @click="toggleSwitch">
-    <span style="left:2px;top:2px;width:18px;height:18px" class="switch-thumb"></span>
+  <div style="position:relative;width:44px;height:22px" :class="switchClass" @click="toggleSwitch">
+    <span style="position:absolute;left:2px;top:2px;width:18px;height:18px" class="switch-thumb"></span>
   </div>
 </template>
 

@@ -1,9 +1,9 @@
 <template>
-  <div style="width:auto;height:36px" class="rate-wrapper">
-    <div style="left:0px;top:0px;width:auto;height:36px" class="rate-stars">
-      <span v-for="i in starCount" :key="i" :style="'left:' + ((i-1)*24) + 'px;top:6px;width:24px;height:24px;font-size:24px'" :class="getStarClass(i)" @click="selectStar(i)">★</span>
+  <div style="width:auto;height:36px;position:relative" class="rate-wrapper">
+    <div style="left:0px;top:0px;width:auto;height:36px;position:absolute" class="rate-stars">
+      <span v-for="i in starCount" :key="i" :style="'left:' + ((i-1)*24) + 'px;top:6px;width:24px;height:24px;font-size:24px;position:absolute'" :class="getStarClass(i)" @click="selectStar(i)">★</span>
     </div>
-    <span v-if="showText === '1'" style="left:0px;top:30px;width:200px;height:16px;font-size:12px;color:#606266" class="rate-text">{{ rateText }}</span>
+    <span v-if="showText === '1'" style="left:0px;top:30px;width:200px;height:16px;font-size:12px;color:#606266;position:absolute" class="rate-text">{{ rateText }}</span>
   </div>
 </template>
 

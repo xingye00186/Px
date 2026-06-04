@@ -1,21 +1,21 @@
 <template>
-  <div style="width:300px;height:auto;min-height:80px" class="upload-wrapper">
+  <div style="position:relative;width:300px;height:auto;min-height:80px" class="upload-wrapper">
     <!-- 触发区 -->
-    <div style="left:0px;top:0px;width:300px;height:80px" class="upload-trigger" @click="openFileDialog">
-      <span style="left:12px;top:20px;width:276px;height:20px;font-size:14px;color:#909399;text-align:center">Click to select files</span>
-      <span style="left:130px;top:44px;width:40px;height:16px;font-size:12px;color:#409EFF;text-align:center">Browse</span>
+    <div style="position:absolute;left:0px;top:0px;width:300px;height:80px" class="upload-trigger" @click="openFileDialog">
+      <span style="position:absolute;left:12px;top:20px;width:276px;height:20px;font-size:14px;color:#909399;text-align:center">Click to select files</span>
+      <span style="position:absolute;left:130px;top:44px;width:40px;height:16px;font-size:12px;color:#409EFF;text-align:center">Browse</span>
     </div>
     <!-- 文件列表 -->
-    <div v-if="count(fileListJson) > 0" style="left:0px;top:88px;width:300px;height:120px" class="file-list">
-      <div v-for="f in fileList" :key="f.name" style="left:0px;top:0px;width:300px;height:28px" class="file-item">
-        <span style="left:8px;top:4px;width:220px;height:20px;font-size:12px;color:#606266">{{ f.name }}</span>
-        <span style="right:40px;top:4px;width:40px;height:20px;font-size:12px;color:#67C23A">{{ f.status }}</span>
-        <span style="right:8px;top:4px;width:24px;height:20px;font-size:12px;color:#F56C6C" @click="removeFile(f.name)">✕</span>
+    <div v-if="count(fileListJson) > 0" style="position:absolute;left:0px;top:88px;width:300px;height:120px" class="file-list">
+      <div v-for="f in fileList" :key="f.name" style="position:absolute;left:0px;top:0px;width:300px;height:28px" class="file-item">
+        <span style="position:absolute;left:8px;top:4px;width:220px;height:20px;font-size:12px;color:#606266">{{ f.name }}</span>
+        <span style="position:absolute;right:40px;top:4px;width:40px;height:20px;font-size:12px;color:#67C23A">{{ f.status }}</span>
+        <span style="position:absolute;right:8px;top:4px;width:24px;height:20px;font-size:12px;color:#F56C6C" @click="removeFile(f.name)">✕</span>
       </div>
     </div>
     <!-- 提示 -->
-    <div style="left:0px;top:208px;width:300px;height:20px" class="upload-tip">
-      <span style="left:8px;top:2px;font-size:12px;color:#909399">{{ tipText }}</span>
+    <div style="position:absolute;left:0px;top:208px;width:300px;height:20px" class="upload-tip">
+      <span style="position:absolute;left:8px;top:2px;font-size:12px;color:#909399">{{ tipText }}</span>
     </div>
   </div>
 </template>

@@ -1,5 +1,5 @@
 <template>
-  <div style="left:0px;top:0px;display:flex" :style="spaceStyle" class="space-container">
+  <div style="display:flex" :style="spaceStyle" class="space-container">
   </div>
 </template>
 

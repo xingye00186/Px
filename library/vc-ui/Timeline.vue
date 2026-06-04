@@ -1,11 +1,11 @@
 <template>
-  <div style="width:300px;height:auto;min-height:200px" class="timeline-wrapper">
+  <div style="position:relative;width:300px;height:auto;min-height:200px" class="timeline-wrapper">
     <div style="left:20px;top:0px;width:4px;height:100%" class="timeline-line"></div>
-    <div v-for="(item, idx) in items" :key="idx" style="left:0px;top:0px;width:300px;height:60px" class="timeline-item">
-      <div :style="'left:12px;top:' + (idx * 60 + 16) + 'px;width:12px;height:12px;border-radius:50%;'" :class="item.cls"></div>
-      <div :style="'left:36px;top:' + (idx * 60) + 'px;width:264px;height:60px'" class="timeline-content">
-        <span style="left:0px;top:4px;width:264px;height:20px;font-size:14px;font-weight:bold;color:#303133">{{ item.timestamp }}</span>
-        <span style="left:0px;top:28px;width:264px;height:28px;font-size:13px;color:#606266">{{ item.content }}</span>
+    <div v-for="(item, idx) in items" :key="idx" style="position:absolute;left:0px;top:0px;width:300px;height:60px" class="timeline-item">
+      <div :style="'position:absolute;left:12px;top:' + (idx * 60 + 16) + 'px;width:12px;height:12px;border-radius:50%;'" :class="item.cls"></div>
+      <div :style="'position:absolute;left:36px;top:' + (idx * 60) + 'px;width:264px;height:60px'" class="timeline-content">
+        <span style="position:absolute;left:0px;top:4px;width:264px;height:20px;font-size:14px;font-weight:bold;color:#303133">{{ item.timestamp }}</span>
+        <span style="position:absolute;left:0px;top:28px;width:264px;height:28px;font-size:13px;color:#606266">{{ item.content }}</span>
       </div>
     </div>
   </div>

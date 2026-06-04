@@ -1,32 +1,32 @@
 <template>
-  <div style="width:200px;height:36px" class="timepicker-wrapper">
-    <div style="left:0px;top:0px;width:200px;height:36px" class="timepicker-trigger" @click="toggleOpen">
-      <span style="left:12px;top:8px;width:160px;height:20px;font-size:14px" class="timepicker-value">{{ displayText }}</span>
-      <span style="right:8px;top:10px;width:16px;height:16px" class="timepicker-icon">🕐</span>
+  <div style="position:relative;width:200px;height:36px" class="timepicker-wrapper">
+    <div style="position:absolute;left:0px;top:0px;width:200px;height:36px" class="timepicker-trigger" @click="toggleOpen">
+      <span style="position:absolute;left:12px;top:8px;width:160px;height:20px;font-size:14px" class="timepicker-value">{{ displayText }}</span>
+      <span style="position:absolute;right:8px;top:10px;width:16px;height:16px" class="timepicker-icon">🕐</span>
     </div>
-    <div v-if="isOpen === '1'" style="left:0px;top:40px;width:200px;height:180px" class="timepicker-panel">
-      <div style="left:0px;top:0px;width:200px;height:36px" class="panel-header">
-        <span style="left:12px;top:8px;width:60px;height:20px;font-size:14px;color:#303133">Select Time</span>
-        <span style="right:12px;top:8px;width:40px;height:20px;font-size:12px;color:#409EFF" @click="confirmTime">OK</span>
+    <div v-if="isOpen === '1'" style="position:absolute;left:0px;top:40px;width:200px;height:180px" class="timepicker-panel">
+      <div style="position:absolute;left:0px;top:0px;width:200px;height:36px" class="panel-header">
+        <span style="position:absolute;left:12px;top:8px;width:60px;height:20px;font-size:14px;color:#303133">Select Time</span>
+        <span style="position:absolute;right:12px;top:8px;width:40px;height:20px;font-size:12px;color:#409EFF" @click="confirmTime">OK</span>
       </div>
-      <div style="left:0px;top:36px;width:200px;height:48px" class="time-input-row">
-        <div style="left:16px;top:8px;width:48px;height:32px" class="time-input-box">
-          <span style="left:4px;top:6px;width:40px;height:20px;font-size:16px;font-weight:bold;color:#303133;text-align:center">{{ hourStr }}</span>
+      <div style="position:absolute;left:0px;top:36px;width:200px;height:48px" class="time-input-row">
+        <div style="position:absolute;left:16px;top:8px;width:48px;height:32px" class="time-input-box">
+          <span style="position:absolute;left:4px;top:6px;width:40px;height:20px;font-size:16px;font-weight:bold;color:#303133;text-align:center">{{ hourStr }}</span>
         </div>
-        <span style="left:68px;top:6px;width:12px;height:20px;font-size:16px;color:#303133;text-align:center">:</span>
-        <div style="left:84px;top:8px;width:48px;height:32px" class="time-input-box">
-          <span style="left:4px;top:6px;width:40px;height:20px;font-size:16px;font-weight:bold;color:#303133;text-align:center">{{ minuteStr }}</span>
+        <span style="position:absolute;left:68px;top:6px;width:12px;height:20px;font-size:16px;color:#303133;text-align:center">:</span>
+        <div style="position:absolute;left:84px;top:8px;width:48px;height:32px" class="time-input-box">
+          <span style="position:absolute;left:4px;top:6px;width:40px;height:20px;font-size:16px;font-weight:bold;color:#303133;text-align:center">{{ minuteStr }}</span>
         </div>
-        <span style="left:136px;top:6px;width:12px;height:20px;font-size:16px;color:#303133;text-align:center">:</span>
-        <div style="left:152px;top:8px;width:32px;height:32px" class="time-input-box">
-          <span style="left:2px;top:6px;width:28px;height:20px;font-size:16px;font-weight:bold;color:#303133;text-align:center">{{ secondStr }}</span>
+        <span style="position:absolute;left:136px;top:6px;width:12px;height:20px;font-size:16px;color:#303133;text-align:center">:</span>
+        <div style="position:absolute;left:152px;top:8px;width:32px;height:32px" class="time-input-box">
+          <span style="position:absolute;left:2px;top:6px;width:28px;height:20px;font-size:16px;font-weight:bold;color:#303133;text-align:center">{{ secondStr }}</span>
         </div>
       </div>
-      <div style="left:0px;top:84px;width:200px;height:96px" class="time-scroll">
-        <span style="left:4px;top:4px;width:192px;height:20px;font-size:12px;color:#909399">Hours 0-23 | Minutes 0-59</span>
-        <div style="left:4px;top:24px;width:192px;height:20px;font-size:14px;color:#409EFF">+1 hour → @click="incHour"</div>
-        <div style="left:4px;top:44px;width:192px;height:20px;font-size:14px;color:#409EFF">+1 min → @click="incMinute"</div>
-        <div style="left:4px;top:64px;width:192px;height:20px;font-size:14px;color:#409EFF">+1 sec → @click="incSecond"</div>
+      <div style="position:absolute;left:0px;top:84px;width:200px;height:96px" class="time-scroll">
+        <span style="position:absolute;left:4px;top:4px;width:192px;height:20px;font-size:12px;color:#909399">Hours 0-23 | Minutes 0-59</span>
+        <div style="position:absolute;left:4px;top:24px;width:192px;height:20px;font-size:14px;color:#409EFF">+1 hour → @click="incHour"</div>
+        <div style="position:absolute;left:4px;top:44px;width:192px;height:20px;font-size:14px;color:#409EFF">+1 min → @click="incMinute"</div>
+        <div style="position:absolute;left:4px;top:64px;width:192px;height:20px;font-size:14px;color:#409EFF">+1 sec → @click="incSecond"</div>
       </div>
     </div>
   </div>

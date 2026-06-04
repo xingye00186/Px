@@ -1,8 +1,8 @@
 <template>
-  <div style="width:320px;height:120px" class="notif-box">
-    <div style="left:16px;top:16px;font-size:16px;font-weight:bold" class="notif-title">{{ title }}</div>
-    <div style="left:16px;top:48px;font-size:14px" class="notif-content">{{ text }}</div>
-    <span style="right:16px;bottom:12px;width:60px;height:24px" class="notif-close" @click="closeNotif">Close</span>
+  <div style="width:320px;height:120px;position:relative" class="notif-box">
+    <div style="left:16px;top:16px;font-size:16px;font-weight:bold;position:absolute" class="notif-title">{{ title }}</div>
+    <div style="left:16px;top:48px;font-size:14px;position:absolute" class="notif-content">{{ text }}</div>
+    <span style="right:16px;bottom:12px;width:60px;height:24px;position:absolute" class="notif-close" @click="closeNotif">Close</span>
   </div>
 </template>
 

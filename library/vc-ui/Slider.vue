@@ -1,8 +1,8 @@
 <template>
-  <div style="width:200px;height:36px" class="slider-wrapper">
-    <div style="left:0px;top:16px;width:200px;height:4px" class="slider-track">
-      <div style="left:0px;top:0px" :style="'width:' . $modelValue . '%;height:100%'" class="slider-fill"></div>
-      <span style="left:0px;top:8px" class="slider-thumb">{{ sliderPercent }}</span>
+  <div style="width:200px;height:36px;position:relative" class="slider-wrapper">
+    <div style="left:0px;top:16px;width:200px;height:4px;position:absolute" class="slider-track">
+      <div style="left:0px;top:0px;position:absolute" :style="'width:' . $modelValue . '%;height:100%'" class="slider-fill"></div>
+      <span style="left:0px;top:8px;position:absolute" class="slider-thumb">{{ sliderPercent }}</span>
     </div>
   </div>
 </template>

@@ -1,15 +1,15 @@
 <template>
-  <div>
+  <div style="position:relative;width:100%;height:100%">
     <!-- 模态遮罩层 -->
     <div v-if="visible !== '' && visible !== '0'" style="width:100%;height:100%;background:rgba(0,0,0,0.5)" class="modal-mask" @click="onMaskClick"></div>
     <!-- 模态框体 -->
-    <div v-if="visible !== '' && visible !== '0'" style="left:50%;top:50%;width:400px;height:240px" :style="'width:' . $width . 'px;height:' . $height . 'px'" class="modal-dialog">
-      <div style="left:0px;top:0px;width:100%;height:40px" class="modal-header">
-        <span style="left:16px;top:8px;font-size:16px;font-weight:bold" :bind="displayTitle">{{ displayTitle }}</span>
-        <span style="right:16px;top:8px;width:20px;height:20px;font-size:16px" class="modal-close" @click="closeModal">✕</span>
+    <div v-if="visible !== '' && visible !== '0'" style="position:absolute;left:50%;top:50%;width:400px;height:240px" :style="'width:' . $width . 'px;height:' . $height . 'px'" class="modal-dialog">
+      <div style="position:absolute;left:0px;top:0px;width:100%;height:40px" class="modal-header">
+        <span style="position:absolute;left:16px;top:8px;font-size:16px;font-weight:bold" :bind="displayTitle">{{ displayTitle }}</span>
+        <span style="position:absolute;right:16px;top:8px;width:20px;height:20px;font-size:16px" class="modal-close" @click="closeModal">✕</span>
       </div>
-      <div style="left:0px;top:40px;width:100%;height:calc(100%-80px)" class="modal-body">{{ text }}</div>
-      <div style="left:0px;bottom:0px;width:100%;height:40px" class="modal-footer">{{ footerSlot }}</div>
+      <div style="position:absolute;left:0px;top:40px;width:100%;height:calc(100% - 80px)" class="modal-body">{{ text }}</div>
+      <div style="position:absolute;left:0px;bottom:0px;width:100%;height:40px" class="modal-footer">{{ footerSlot }}</div>
     </div>
   </div>
 </template>

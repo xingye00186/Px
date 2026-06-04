@@ -1,7 +1,7 @@
 <template>
-  <div style="width:auto;height:24px" :class="tagClass">
-    <span style="left:8px;top:4px;font-size:12px" :bind="displayText">{{ displayText }}</span>
-    <span v-if="showClose === '1'" style="right:4px;top:4px;width:14px;height:14px" class="tag-close" @click="onClose">✕</span>
+  <div style="position:relative;width:auto;height:24px" :class="tagClass">
+    <span style="position:absolute;left:8px;top:4px;font-size:12px" :bind="displayText">{{ displayText }}</span>
+    <span v-if="showClose === '1'" style="position:absolute;right:4px;top:4px;width:14px;height:14px" class="tag-close" @click="onClose">✕</span>
   </div>
 </template>
 

@@ -1,5 +1,5 @@
 <template>
-  <div style="left:0px;top:0px;width:100%;height:auto;display:flex;flex-direction:row;flex-wrap:wrap" :style="rowStyle" class="row-wrapper">
+  <div style="width:100%;height:auto;display:flex;flex-direction:row;flex-wrap:wrap" :style="rowStyle" class="row-wrapper">
     <span v-if="text !== ''" style="font-size:14px;color:#606266">{{ text }}</span>
   </div>
 </template>

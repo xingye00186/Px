@@ -1,31 +1,31 @@
 <template>
-  <div style="width:240px;height:36px" class="datepicker-wrapper">
+  <div style="position:relative;width:240px;height:36px" class="datepicker-wrapper">
     <!-- 输入框 + 图标 -->
-    <div style="left:0px;top:0px;width:240px;height:36px" class="datepicker-trigger" @click="toggleOpen">
-      <span style="left:12px;top:8px;width:200px;height:20px;font-size:14px" class="datepicker-value">{{ displayText }}</span>
-      <span style="right:8px;top:10px;width:16px;height:16px" class="datepicker-icon">📅</span>
+    <div style="position:absolute;left:0;top:0;width:240px;height:36px" class="datepicker-trigger" @click="toggleOpen">
+      <span style="position:absolute;left:12px;top:8px;width:200px;height:20px;font-size:14px" class="datepicker-value">{{ displayText }}</span>
+      <span style="position:absolute;right:8px;top:10px;width:16px;height:16px" class="datepicker-icon">📅</span>
     </div>
     <!-- 日历浮层 -->
-    <div v-if="isOpen === '1'" style="left:0px;top:40px;width:294px;height:280px" class="datepicker-panel">
+    <div v-if="isOpen === '1'" style="position:absolute;left:0;top:40px;width:294px;height:280px" class="datepicker-panel">
       <!-- 月份导航 -->
-      <div style="left:0px;top:0px;width:294px;height:36px" class="panel-header">
-        <span style="left:12px;top:8px;width:60px;height:20px" class="panel-nav" @click="prevMonth">&lt;</span>
-        <span style="left:80px;top:8px;width:134px;height:20px;font-size:14px;font-weight:bold;color:#303133">{{ currentYear }}-{{ currentMonthStr }}</span>
-        <span style="left:222px;top:8px;width:60px;height:20px" class="panel-nav" @click="nextMonth">&gt;</span>
+      <div style="position:absolute;left:0;top:0;width:294px;height:36px" class="panel-header">
+        <span style="position:absolute;left:12px;top:8px;width:60px;height:20px" class="panel-nav" @click="prevMonth">&lt;</span>
+        <span style="position:absolute;left:80px;top:8px;width:134px;height:20px;font-size:14px;font-weight:bold;color:#303133">{{ currentYear }}-{{ currentMonthStr }}</span>
+        <span style="position:absolute;left:222px;top:8px;width:60px;height:20px" class="panel-nav" @click="nextMonth">&gt;</span>
       </div>
       <!-- 星期头 -->
-      <div style="left:0px;top:36px;width:294px;height:24px" class="week-header">
+      <div style="position:absolute;left:0;top:36px;width:294px;height:24px" class="week-header">
         <span v-for="d in weekDays" :key="d" style="width:42px;height:24px;font-size:12px;color:#909399" class="week-day">{{ d }}</span>
       </div>
       <!-- 日期网格 -->
-      <div style="left:0px;top:60px;width:294px;height:180px" class="date-grid">
+      <div style="position:absolute;left:0;top:60px;width:294px;height:180px" class="date-grid">
         <span v-for="cell in calendarCells" :key="cell.key" :style="'width:42px;height:30px;left:' + cell.x + 'px;top:' + cell.y + 'px'" :class="cell.cls" @click="selectDate(cell.day)">{{ cell.day }}</span>
       </div>
       <!-- 快捷选项 -->
-      <div style="left:0px;top:240px;width:294px;height:36px" class="shortcuts">
-        <span style="left:12px;top:8px;width:60px;height:20px;font-size:12px;color:#409EFF" @click="selectToday">Today</span>
-        <span style="left:82px;top:8px;width:60px;height:20px;font-size:12px;color:#409EFF" @click="clearDate">Clear</span>
-        <span style="left:152px;top:8px;width:60px;height:20px;font-size:12px;color:#409EFF" @click="selectWeek">Week</span>
+      <div style="position:absolute;left:0;top:240px;width:294px;height:36px" class="shortcuts">
+        <span style="position:absolute;left:12px;top:8px;width:60px;height:20px;font-size:12px;color:#409EFF" @click="selectToday">Today</span>
+        <span style="position:absolute;left:82px;top:8px;width:60px;height:20px;font-size:12px;color:#409EFF" @click="clearDate">Clear</span>
+        <span style="position:absolute;left:152px;top:8px;width:60px;height:20px;font-size:12px;color:#409EFF" @click="selectWeek">Week</span>
       </div>
     </div>
   </div>

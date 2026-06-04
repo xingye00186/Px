@@ -1,22 +1,22 @@
 <template>
-  <div style="width:240px;height:36px" class="colorpicker-wrapper">
-    <div style="left:0px;top:0px;width:240px;height:36px" class="colorpicker-trigger" @click="toggleOpen">
-      <div style="left:8px;top:6px;width:24px;height:24px" class="color-swatch" :style="'background:' + modelValue"></div>
-      <span style="left:40px;top:8px;width:180px;height:20px;font-size:14px" class="colorpicker-value">{{ modelValue }}</span>
-      <span style="right:8px;top:10px;width:16px;height:16px" class="colorpicker-arrow">▼</span>
+  <div style="position:relative;width:240px;height:36px" class="colorpicker-wrapper">
+    <div style="position:absolute;left:0px;top:0px;width:240px;height:36px" class="colorpicker-trigger" @click="toggleOpen">
+      <div style="position:absolute;left:8px;top:6px;width:24px;height:24px" class="color-swatch" :style="'background:' + modelValue"></div>
+      <span style="position:absolute;left:40px;top:8px;width:180px;height:20px;font-size:14px" class="colorpicker-value">{{ modelValue }}</span>
+      <span style="position:absolute;right:8px;top:10px;width:16px;height:16px" class="colorpicker-arrow">▼</span>
     </div>
-    <div v-if="isOpen === '1'" style="left:0px;top:40px;width:240px;height:220px" class="colorpicker-panel">
+    <div v-if="isOpen === '1'" style="position:absolute;left:0px;top:40px;width:240px;height:220px" class="colorpicker-panel">
       <!-- 预定义色块 -->
-      <div style="left:0px;top:0px;width:240px;height:160px" class="color-grid">
-        <div v-for="c in presetColors" :key="c.hex" style="left:0px;top:0px;width:40px;height:30px" :style="'background:' + c.hex + ';left:' + c.x + 'px;top:' + c.y + 'px'" class="color-preset" @click="selectColor(c.hex)"></div>
+      <div style="position:absolute;left:0px;top:0px;width:240px;height:160px" class="color-grid">
+        <div v-for="c in presetColors" :key="c.hex" style="position:absolute;left:0px;top:0px;width:40px;height:30px" :style="'background:' + c.hex + ';left:' + c.x + 'px;top:' + c.y + 'px'" class="color-preset" @click="selectColor(c.hex)"></div>
       </div>
       <!-- 当前颜色 -->
-      <div style="left:0px;top:160px;width:240px;height:60px" class="color-preview">
-        <div style="left:12px;top:12px;width:60px;height:36px" class="preview-swatch" :style="'background:' + modelValue"></div>
-        <span style="left:80px;top:16px;width:140px;height:16px;font-size:12px;color:#606266">{{ modelValue }}</span>
-        <div style="left:12px;top:36px;width:216px;height:20px" class="preview-hex">
-          <span style="left:0px;top:2px;width:80px;height:16px;font-size:12px;color:#909399">HEX:</span>
-          <span style="left:40px;top:2px;width:176px;height:16px;font-size:12px;color:#303133">{{ modelValue }}</span>
+      <div style="position:absolute;left:0px;top:160px;width:240px;height:60px" class="color-preview">
+        <div style="position:absolute;left:12px;top:12px;width:60px;height:36px" class="preview-swatch" :style="'background:' + modelValue"></div>
+        <span style="position:absolute;left:80px;top:16px;width:140px;height:16px;font-size:12px;color:#606266">{{ modelValue }}</span>
+        <div style="position:absolute;left:12px;top:36px;width:216px;height:20px" class="preview-hex">
+          <span style="position:absolute;left:0px;top:2px;width:80px;height:16px;font-size:12px;color:#909399">HEX:</span>
+          <span style="position:absolute;left:40px;top:2px;width:176px;height:16px;font-size:12px;color:#303133">{{ modelValue }}</span>
         </div>
       </div>
     </div>

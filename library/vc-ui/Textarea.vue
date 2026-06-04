@@ -1,6 +1,6 @@
 <template>
   <div style="width:200px;height:80px">
-    <textarea style="left:0px;top:0px;width:200px;height:80px" :class="textareaClass" :placeholder="placeholder" :maxlength="maxlength"></textarea>
+    <textarea style="width:200px;height:80px" :class="textareaClass" :placeholder="placeholder" :maxlength="maxlength"></textarea>
   </div>
 </template>
 

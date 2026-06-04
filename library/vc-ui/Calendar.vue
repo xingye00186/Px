@@ -1,18 +1,18 @@
 <template>
-  <div style="width:340px;height:320px" class="calendar-wrapper">
+  <div style="position:relative;width:340px;height:320px" class="calendar-wrapper">
     <!-- 头部导航 -->
-    <div style="left:0px;top:0px;width:340px;height:40px" class="cal-header">
-      <span style="left:12px;top:10px;width:60px;height:20px;font-size:14px;color:#409EFF" @click="prevMonth">&lt; Prev</span>
-      <span style="left:80px;top:10px;width:180px;height:20px;font-size:16px;font-weight:bold;color:#303133;text-align:center">{{ currentYear }}-{{ currentMonthStr }}</span>
-      <span style="right:60px;top:10px;width:60px;height:20px;font-size:14px;color:#409EFF" @click="nextMonth">Next &gt;</span>
-      <span style="right:12px;top:10px;width:40px;height:20px;font-size:12px;color:#67C23A" @click="goToday">Today</span>
+    <div style="position:absolute;left:0;top:0;width:340px;height:40px" class="cal-header">
+      <span style="position:absolute;left:12px;top:10px;width:60px;height:20px;font-size:14px;color:#409EFF" @click="prevMonth">&lt; Prev</span>
+      <span style="position:absolute;left:80px;top:10px;width:180px;height:20px;font-size:16px;font-weight:bold;color:#303133;text-align:center">{{ currentYear }}-{{ currentMonthStr }}</span>
+      <span style="position:absolute;right:60px;top:10px;width:60px;height:20px;font-size:14px;color:#409EFF" @click="nextMonth">Next &gt;</span>
+      <span style="position:absolute;right:12px;top:10px;width:40px;height:20px;font-size:12px;color:#67C23A" @click="goToday">Today</span>
     </div>
     <!-- 星期标题 -->
-    <div style="left:0px;top:40px;width:340px;height:28px" class="cal-weekdays">
+    <div style="position:absolute;left:0;top:40px;width:340px;height:28px" class="cal-weekdays">
       <span v-for="d in weekDays" :key="d" style="width:48.57px;height:28px;font-size:12px;color:#909399" class="weekday">{{ d }}</span>
     </div>
     <!-- 日期网格 -->
-    <div style="left:0px;top:68px;width:340px;height:252px" class="cal-grid">
+    <div style="position:absolute;left:0;top:68px;width:340px;height:252px" class="cal-grid">
       <div v-for="cell in calendarCells" :key="cell.key" :style="'left:' + (cell.col * 48.57) + 'px;top:' + (cell.row * 36) + 'px;width:48.57px;height:36px'" :class="cell.cls" @click="selectDay(cell.day)">
         <span style="left:4px;top:8px;width:40px;height:20px;font-size:14px;text-align:center">{{ cell.day }}</span>
       </div>
