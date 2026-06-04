@@ -690,8 +690,10 @@ esolvePercent, pplyMinMax | 验证 |
 
 ---
 
-> **文档版本**: v1.0  
+> **文档版本**: v1.1  
 > **最后更新**: 2026-06-04  
 > **审阅者**: Px 架构组  
-> **关联代码**: LayoutResolver.php (1200 行), CssMappings.php (975 行), RenderNode.php (181 行)  
-> **关联测试**: framework/aot-checker.php (702 行)
+> **实现状态**: ✅ Tasks A/B/C/D/E 核心功能已完成；aot-checker lint 规则已添加；LayoutResolverTest 58 用例已提交  
+> **待完成**: box-sizing border-box 统一支持；截图回归基线（F.2）；边界测试补充（负 margin、box-sizing）
+> **关联代码**: LayoutResolver.php (1480 行), CssMappings.php (986 行), RenderNode.php (197 行), RenderTreeManager.php (605 行)  
+> **关联测试**: framework/aot-checker.php (710 行), tests/unit/LayoutResolverTest.php (886 行)
