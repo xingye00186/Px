@@ -1,0 +1,7 @@
+name: aot-property-test
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+sources:
+  - ./main.php
