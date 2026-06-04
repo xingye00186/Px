@@ -45,25 +45,6 @@
 #include "include/ports/SkFontMgr_directory.h"   // SkFontMgr_New_Custom_Directory
 #include <cstdio>
 
-// ============================================================
-// Skia 预编译包 MSVC 工具链不匹配 风险对策
-// 现状：aseprite/Skia m148 用 MSVC 17.10+ 编译，引入了 8 个内部 STL 助手符号
-//       （__std_min_element_f 等）。我们 swoolec 项目用 MSVC 14.x，这些符号未公开。
-// 对策：stub 8 个函数让链接通过。Skia 运行时若进入这些代码路径会返回 0（行为退化为
-//       min/max/find 返回空集合），但 spike 验证目标是「链接通过 + 启动不崩」，
-//       渲染路径走 if-else 提前返回避免调用未实现的 STL helpers。
-//       后续可重编译 Skia（VS 17.10+）或升 MSVC 消除本 placeholder。
-// ============================================================
-extern "C" {
-    void __std_min_element_f() {}
-    void __std_max_element_f() {}
-    void __std_minmax_element_f() {}
-    void __std_max_element_2() {}
-    void __std_max_element_1() {}
-    void __std_find_trivial_1() {}
-    void __std_find_trivial_8() {}
-    void __std_search_1() {}
-}
 #endif
 
 using namespace php;
@@ -417,9 +398,9 @@ void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity)
 
 // 绘制文本（阶段三：用 SkFontMgr_New_Custom_Directory 加载 Noto Sans SC 后 drawString）
 void php_sk_draw_text(Int x, Int y, String text, Int fontSize, Int rgb, Int bold) {
+#ifdef USE_SKIA
     fprintf(stderr, "[SK] draw_text x=%d y=%d text='%s' fontSize=%d rgb=0x%X bold=%d canvas=%p\n",
         (int)x, (int)y, text.data() ? text.data() : "(null)", (int)fontSize, (unsigned int)(Int)rgb, (int)bold, g_skCanvas.get());
-#ifdef USE_SKIA
     if (!g_skCanvas) return;
     if (text.length() == 0) return;
     if (!skEnsureFont()) return;  // 字体未加载 → 静默跳过
