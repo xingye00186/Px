@@ -1,0 +1,441 @@
+## AOT 编译依赖收集：基于 PHP AST 的自动依赖分析（不含 Vue SFC 分析）
+
+### 1. 设计原则
+
+- **只分析 PHP 文件**：SFC 编译器已将所有 `.vue` 文件预先编译成标准的 PHP 类文件（位于 `gen/` 目录）。依赖分析器将这些 `.php` 文件视作普通 PHP 类处理，无需特殊逻辑。
+- **从入口 `main.php` 开始递归**：收集所有 `use`、类实例化、静态调用、函数调用、继承、接口实现等产生的依赖。
+- **同时提取 C++ 函数调用**：识别 PHP 代码中调用的 `vue_*`、`sk_*` 等函数，反查其对应的 `.cc` 源文件，确保链接时包含正确的 C++ 翻译单元。
+- **输出格式**：生成两个列表：
+  - 实际需要编译的 PHP 文件路径（供 AOT 编译器 `sources` 使用）
+  - 实际需要编译的 C++ 文件路径（同样加入 `sources`）
+
+---
+
+### 2. 整体架构
+
+```
+入口 main.php
+    │
+    └── PHP AST 分析 (nikic/php-parser)
+            │
+            ├── 收集类名（new、static call、extends、implements、use、trait）
+            │         │
+            │         └── 通过类名 → 文件路径解析器（PSR-4 或框架映射）
+            │                   │
+            │                   └── 递归分析新文件
+            │
+            ├── 收集函数调用（函数名匹配 vue_* / sk_* / php_* 前缀）
+            │         │
+            │         └── 通过映射表 → 对应的 .cc 文件路径
+            │
+            └── 输出 PHP 文件列表 + C++ 文件列表
+```
+
+---
+
+### 3. 核心实现
+
+#### 3.1 使用 PHP-Parser
+
+安装：
+```bash
+composer require nikic/php-parser
+```
+
+#### 3.2 依赖访问者类
+
+```php
+use PhpParser\Node;
+use PhpParser\NodeVisitorAbstract;
+use PhpParser\Node\Stmt\Use_;
+use PhpParser\Node\Expr\New_;
+use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Expr\FuncCall;
+use PhpParser\Node\Stmt\Class_;
+use PhpParser\Node\Stmt\TraitUse;
+use PhpParser\Node\Name;
+
+class DependencyVisitor extends NodeVisitorAbstract
+{
+    private string $currentFile;
+    private array $collectedClasses = [];   // 类名 => 文件路径（已解析）
+    private array $collectedFunctions = []; // 函数名数组
+    private array $namespaceStack = [];
+    private ClassToPathResolver $resolver;
+
+    public function __construct(string $currentFile, ClassToPathResolver $resolver)
+    {
+        $this->currentFile = $currentFile;
+        $this->resolver = $resolver;
+    }
+
+    public function enterNode(Node $node)
+    {
+        // 命名空间
+        if ($node instanceof Node\Stmt\Namespace_) {
+            $ns = $node->name ? $node->name->toString() : '';
+            $this->namespaceStack[] = $ns;
+            return;
+        }
+
+        // use 语句
+        if ($node instanceof Use_) {
+            foreach ($node->uses as $use) {
+                $fqn = $use->name->toString();
+                $this->addClassDependency($fqn);
+            }
+            return;
+        }
+
+        // new ClassName
+        if ($node instanceof New_ && $node->class instanceof Name) {
+            $className = $this->resolveName($node->class);
+            $this->addClassDependency($className);
+            return;
+        }
+
+        // ClassName::method()
+        if ($node instanceof StaticCall && $node->class instanceof Name) {
+            $className = $this->resolveName($node->class);
+            $this->addClassDependency($className);
+            return;
+        }
+
+        // 函数调用（包括 C++ 函数）
+        if ($node instanceof FuncCall && $node->name instanceof Name) {
+            $funcName = $node->name->toString();
+            $this->collectedFunctions[] = $funcName;
+            return;
+        }
+
+        // 继承
+        if ($node instanceof Class_ && $node->extends !== null) {
+            $parent = $this->resolveName($node->extends);
+            $this->addClassDependency($parent);
+            return;
+        }
+
+        // 接口实现
+        if ($node instanceof Class_ && !empty($node->implements)) {
+            foreach ($node->implements as $impl) {
+                $interface = $this->resolveName($impl);
+                $this->addClassDependency($interface);
+            }
+            return;
+        }
+
+        // Trait 使用
+        if ($node instanceof TraitUse) {
+            foreach ($node->traits as $trait) {
+                $traitName = $this->resolveName($trait);
+                $this->addClassDependency($traitName);
+            }
+            return;
+        }
+    }
+
+    private function resolveName(Name $name): string
+    {
+        $nameStr = $name->toString();
+        if ($name->isFullyQualified()) {
+            return $nameStr;
+        }
+        // 根据当前命名空间解析相对名称（简化版，可完善）
+        if (!empty($this->namespaceStack)) {
+            $currentNs = end($this->namespaceStack);
+            if ($currentNs !== '') {
+                return $currentNs . '\\' . $nameStr;
+            }
+        }
+        return $nameStr;
+    }
+
+    private function addClassDependency(string $className)
+    {
+        if (isset($this->collectedClasses[$className])) {
+            return;
+        }
+        $path = $this->resolver->classToPath($className);
+        if ($path !== null) {
+            $this->collectedClasses[$className] = $path;
+        }
+    }
+
+    public function getCollectedClasses(): array
+    {
+        return $this->collectedClasses;
+    }
+
+    public function getCollectedFunctions(): array
+    {
+        return $this->collectedFunctions;
+    }
+}
+```
+
+#### 3.3 类名到文件路径解析器（ClassToPathResolver）
+
+框架已知所有命名空间前缀与目录的映射：
+
+| 命名空间前缀 | 目录 |
+|--------------|------|
+| `Px\` | `framework/` |
+| `Px\Rendering\` | `framework/Rendering/` |
+| `Px\Platform\` | `framework/Platform/` |
+| `Px\Animation\` | `framework/Animation/` |
+| `Px\Styling\` | `framework/Styling/` |
+| `Px\Compiler\Expression\` | `framework/compiler/expression/` |
+| (无命名空间) | `apps/{app}/gen/`（SFC 生成的组件类） |
+
+实现方法：
+- 使用 Composer 的 `ClassLoader` 的 `findFile` 方法（如果项目使用 Composer 自动加载）。
+- 或者自定义函数：先尝试在 `gen/` 目录查找（根据类名 + `Component` 后缀），再根据 PSR-4 映射查找。
+
+简化实现（适合 PX 框架结构）：
+```php
+class ClassToPathResolver {
+    private array $prefixDirs = [
+        'Px\\' => __DIR__ . '/../../framework/src/php/',
+        // 其他前缀...
+    ];
+    private string $genDir;
+
+    public function __construct(string $appGenDir) {
+        $this->genDir = $appGenDir;
+    }
+
+    public function classToPath(string $className): ?string {
+        // 1. 检查是否是以 Component 结尾的 SFC 组件类
+        if (str_ends_with($className, 'Component')) {
+            $path = $this->genDir . '/' . $className . '.php';
+            if (file_exists($path)) return $path;
+        }
+
+        // 2. 根据命名空间前缀映射
+        foreach ($this->prefixDirs as $prefix => $dir) {
+            if (str_starts_with($className, $prefix)) {
+                $relative = substr($className, strlen($prefix));
+                $file = $dir . str_replace('\\', '/', $relative) . '.php';
+                if (file_exists($file)) return $file;
+            }
+        }
+
+        // 3. 未找到，返回 null（可能是 PHP 内置类或外部库，忽略）
+        return null;
+    }
+}
+```
+
+#### 3.4 C++ 函数到源文件的映射
+
+```php
+$cxxFunctionToSource = [
+    'vue_' => ['cpp/vue_calc.cc'],
+    'sk_'  => ['cpp/skia_render.cc'],
+    // 可扩展：用户自定义 C++ 函数映射，需手动配置
+];
+
+function mapFunctionsToCxxFiles(array $functions, array $mapping): array {
+    $files = [];
+    foreach ($functions as $func) {
+        foreach ($mapping as $prefix => $srcFiles) {
+            if (str_starts_with($func, $prefix)) {
+                $files = array_merge($files, $srcFiles);
+                break;
+            }
+        }
+    }
+    return array_unique($files);
+}
+```
+
+---
+
+### 4. 依赖分析器 CLI 工具
+
+`tools/dependency-analyzer.php`
+
+```php
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use PhpParser\ParserFactory;
+use PhpParser\NodeTraverser;
+
+// 解析命令行参数
+$options = getopt('', ['entry:', 'output:', 'app-dir:', 'gen-dir:']);
+if (!isset($options['entry']) || !isset($options['app-dir'])) {
+    echo "Usage: php dependency-analyzer.php --entry=main.php --app-dir=apps/calculator --gen-dir=apps/calculator/gen [--output=dep.json]\n";
+    exit(1);
+}
+
+$entryFile = realpath($options['entry']);
+$appDir = realpath($options['app-dir']);
+$genDir = realpath($options['gen-dir'] ?? $appDir . '/gen');
+$outputFile = $options['output'] ?? 'dep.json';
+
+// 初始化解析器
+$parser = (new ParserFactory())->create(ParserFactory::PREFER_PHP7);
+$resolver = new ClassToPathResolver($genDir);
+
+$visitedFiles = [];
+$allPhpFiles = [];
+$allFunctions = [];
+
+function analyzeFile(string $file, $parser, $resolver, &$visited, &$allPhpFiles, &$allFunctions) {
+    if (isset($visited[$file])) return;
+    $visited[$file] = true;
+    $allPhpFiles[] = $file;
+
+    $code = file_get_contents($file);
+    if ($code === false) return;
+    $ast = $parser->parse($code);
+    if ($ast === null) return;
+
+    $visitor = new DependencyVisitor($file, $resolver);
+    $traverser = new NodeTraverser();
+    $traverser->addVisitor($visitor);
+    $traverser->traverse($ast);
+
+    // 收集新发现的类文件
+    foreach ($visitor->getCollectedClasses() as $classPath) {
+        if (!isset($visited[$classPath]) && file_exists($classPath)) {
+            analyzeFile($classPath, $parser, $resolver, $visited, $allPhpFiles, $allFunctions);
+        }
+    }
+    // 收集函数调用
+    $allFunctions = array_merge($allFunctions, $visitor->getCollectedFunctions());
+}
+
+// 开始分析入口
+analyzeFile($entryFile, $parser, $resolver, $visitedFiles, $allPhpFiles, $allFunctions);
+
+// 映射 C++ 文件
+$cxxMapping = [
+    'vue_' => ['cpp/vue_calc.cc'],
+    'sk_'  => ['cpp/skia_render.cc'],
+];
+$cxxFiles = mapFunctionsToCxxFiles($allFunctions, $cxxMapping);
+
+// 去重
+$allPhpFiles = array_values(array_unique($allPhpFiles));
+$cxxFiles = array_values(array_unique($cxxFiles));
+
+// 输出结果
+$result = [
+    'php_files' => $allPhpFiles,
+    'cxx_files' => $cxxFiles,
+];
+file_put_contents($outputFile, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+echo "Dependencies written to $outputFile\n";
+echo "PHP files: " . count($allPhpFiles) . "\n";
+echo "C++ files: " . count($cxxFiles) . "\n";
+```
+
+---
+
+### 5. 集成到构建流程
+
+#### 5.1 修改 `project.yml` 动态包含源文件列表
+
+AOT 编译器支持从文件读取 `sources` 列表吗？假设支持类似 `- @sources.list` 的语法（或者通过环境变量传递）。若编译器不支持，可在构建脚本中：
+
+1. 运行依赖分析，生成 `sources.txt`（每行一个文件路径）。
+2. 读取原 `project.yml`，替换 `sources` 段的内容。
+3. 调用 AOT 编译器。
+
+示例构建脚本 `build.bat` 片段：
+
+```batch
+set APP_DIR=apps\calculator
+set GEN_DIR=%APP_DIR%\gen
+
+echo Running dependency analyzer...
+php tools\dependency-analyzer.php --entry=%APP_DIR%\main.php --app-dir=%APP_DIR% --gen-dir=%GEN_DIR% --output=dep.json
+
+if %errorlevel% neq 0 exit /b 1
+
+:: 提取 PHP 文件列表（转换为相对路径）
+php -r "$d=json_decode(file_get_contents('dep.json'),1); file_put_contents('sources.txt', implode(\"\n\", array_map(function($f){return '../../'.substr($f,strlen(getcwd())+1);}, $d['php_files'])).\"\n\".implode(\"\n\", $d['cxx_files']));"
+
+:: 调用编译器（假设支持 --sources-file）
+swoole-aot --input=%APP_DIR%\main.php --sources-file=sources.txt --output=bin\app.exe
+```
+
+---
+
+### 6. 局限性与应对策略
+
+| 问题 | 解决方案 |
+|------|----------|
+| 动态类名（`new $class`） | 无法静态分析，要求用户将可能用到的类加入白名单（`forced-components` 或额外配置）。 |
+| 动态函数调用（`$func()`） | AOT 框架已禁止，分析时可忽略或发出警告。 |
+| 反射（`ReflectionClass::newInstance`） | 极少使用，同样需用户手动声明依赖。 |
+| 匿名函数（Closure）中调用的外部类 | AST 能分析到，因为函数体仍会被解析。 |
+| 通过字符串形式调用的类方法（`"ClassName::method"`） | 无法分析，但此类代码极少，可要求用户避免。 |
+| C++ 函数间接调用（函数指针） | 不考虑，假设所有 `vue_*` / `sk_*` 都是直接调用。 |
+| 多应用共享同一个 `gen/` 目录 | 每个应用独立运行依赖分析，各自生成 `sources.txt`。 |
+
+---
+
+### 7. 实施计划
+
+| 阶段 | 任务 | 工时 |
+|------|------|------|
+| 1 | 引入 `nikic/php-parser`，实现 `DependencyVisitor` 类 | 2h |
+| 2 | 实现 `ClassToPathResolver`（支持框架命名空间映射和 `gen/` 目录） | 1h |
+| 3 | 实现 CLI 工具 `dependency-analyzer.php` | 2h |
+| 4 | 测试：对 `calculator-ng` 运行分析，对比手动列出的源文件，验证完整性 | 2h |
+| 5 | 修改构建脚本，集成依赖分析，实现动态 `sources` 生成 | 2h |
+| 6 | 编写文档，说明如何为新项目启用自动依赖分析 | 1h |
+
+**总工时约 10 小时**，可在一个工作日内完成。
+
+---
+
+### 8. 总结
+
+通过 PHP AST 静态分析，可以精确地找出项目实际使用的 PHP 类和 C++ 函数，从而动态生成 `sources` 列表，避免编译未使用的文件。该方案完全兼容 Swoole AOT 环境，且无需单独处理 Vue SFC（因为预编译后已变成普通 PHP 类）。实施后能显著减少编译时间，减小二进制体积，并提高大型项目的构建效率。
+
+---
+
+### 9. 实际实现差异（相对于本文设计）
+
+实际部署的 `tools/dependency-analyzer.php` 与本文初步设计有若干差异：
+
+| 方面 | 本文设计 | 实际实现 |
+|------|---------|---------|
+| CLI 接口 | `--entry=main.php --app-dir=...` | `--app=<app-name>`（自动定位入口和目录） |
+| 名称解析 | 手动维护 `$namespaceStack` | 使用 `NameResolver` 自动 FQN 化 all `Name` 节点 |
+| 类型提示跟踪 | 仅 `Node\Name` | 同时支持 `NullableType`、`UnionType`、`IntersectionType` |
+| 多类文件 | 未考虑 | 通过 `classOverrides` 映射表处理（如 `PlatformEvent.php` 6 个类） |
+| 缓存 | 无 | 基于文件 mtime 的 `dep.cache.json` 缓存机制 |
+| 输出格式 | `php_files` / `cxx_files` | `php_files_relative`（相对路径）+ `cxx_files` |
+| 构建集成 | 脚本替换 sources 节 | `generate-dep-project.php` 生成 `project.dep.yml`，build.bat Step 1.5.5 |
+| Debug 支持 | 未涉及 | `project.yml`/`config.yml` 中 `debug: true` → 自动传 `--debug` |
+| 嵌套 v-for 闭包 | 未涉及 | 已知限制（AOT 编译器丢失循环变量作用域），通过分离数据方法规避 |
+
+#### 9.1 构建流程中的位置
+
+```
+Step 1:   SFC 编译 (.vue → gen/*.php)
+Step 1.5: AOT 检查生成代码 (framework/aot-checker.php gen/)
+Step 1.5.5: 依赖分析 ← 在此处
+            tools/dependency-analyzer.php → dep.json
+            tools/generate-dep-project.php → project.dep.yml
+Step 2:   AOT 编译（若 project.dep.yml 存在则使用精确文件列表）
+```
+
+#### 9.2 文件清单
+
+| 文件 | 作用 |
+|------|------|
+| `tools/dependency-analyzer.php` | 核心分析器 |
+| `tools/generate-dep-project.php` | project.dep.yml 生成器 |
+| `tools/composer.json` | 独立依赖管理 |
+| `apps/{app}/dep.json` | 分析结果（JSON） |
+| `apps/{app}/dep.cache.json` | mtime 缓存 |
+| `apps/{app}/project.dep.yml` | 精确依赖配置（供 AOT 编译） |
