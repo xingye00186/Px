@@ -15,6 +15,5 @@ config.yml
 
 # Skia 字体资源（运行时从 .zip 解压；体积大不入 git）
 Noto_Sans_SC.zip
-cpp/fonts/
 
 tests/screenshot/output/*.png
