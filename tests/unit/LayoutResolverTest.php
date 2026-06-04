@@ -122,16 +122,18 @@ test('子节点相对于父节点偏移', function () {
     assert_eq($child->y, 10 + 50, '子 y = 父 y + child top');
 });
 
-test('无 style 的节点 x/y/w/h 默认为 0', function () {
+test('无 style 节点 auto-stack 撑满父容器', function () {
     $node = makeNode('div', [], []);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
 
     $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
+    // CSS normal flow: width:auto block 子节点撑满父容器 content 宽度
+    // 父容器 #root w=400, 子节点无 padding → contentW = 400
     assert_eq($node->x, 0, '默认 x=0');
-    assert_eq($node->y, 0, '默认 y=0');
-    assert_eq($node->w, 0, '默认 w=0');
+    assert_eq($node->y, 0, '默认 y=0（auto-stack 第一项）');
+    assert_eq($node->w, 400, 'auto-stack: width=父容器 content width');
     assert_eq($node->h, 0, '默认 h=0');
 });
 
@@ -700,6 +702,183 @@ test('grid 单元格 gap 保留对齐空间', function () {
     // center → child.x = cellX + (60-30)/2 = 10 + 15 = 25
     assert_eq($child->x, 25, 'gap 保留: center 在单元格内居中');
 });
+
+echo "\n--- 14. Normal Flow Auto-stack ---\n";
+
+test('auto-stack 多个 static 子节点', function () {
+    $c1 = makeNode('div', ['height' => 30], [], 'A');
+    $c2 = makeNode('div', ['height' => 50], [], 'B');
+    $c3 = makeNode('div', ['height' => 20], [], 'C');
+    $parent = makeNode('div', ['width' => 200, 'height' => 200], [$c1, $c2, $c3]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 400], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    assert_eq($c1->x, 0, 'c1 x=0');
+    assert_eq($c1->y, 0, 'c1 y=0');
+    assert_eq($c1->w, 200, 'c1 auto-width=父容器 content width');
+    assert_eq($c2->y, 30, 'c2 y=30=c1.h');
+    assert_eq($c3->y, 80, 'c3 y=80=c1.h+c2.h');
+});
+
+test('auto-stack with margin', function () {
+    $c1 = makeNode('div', ['height' => 20, 'marginBottom' => 10], [], 'A');
+    $c2 = makeNode('div', ['height' => 30, 'marginTop' => 5], [], 'B');
+    $parent = makeNode('div', ['width' => 200], [$c1, $c2]);
+    $root = makeNode('#root', ['width' => 400], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    assert_eq($c1->y, 0, 'c1 y=0');
+    // stackY = 0 + c1(20+10) = 30, c2.y = stackY(30) + mt(5) = 35
+    assert_eq($c2->y, 35, 'c2 y=20(c1)+10(c1.mb)+5(c2.mt)=35');
+});
+
+test('auto-stack 被 explicit top 禁用', function () {
+    $c1 = makeNode('div', ['top' => 50, 'height' => 20], [], 'A');
+    $c2 = makeNode('div', ['height' => 30], [], 'B');
+    $parent = makeNode('div', ['width' => 200], [$c1, $c2]);
+    $root = makeNode('#root', ['width' => 400], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // c1 has explicit top → E.1 auto-inject as absolute → skip auto-stack
+    // c2 is static but auto-stack disabled by c1's explicit positioning\n    assert_eq($c1->y, 50, 'c1 absolute with top=50');
+});
+
+test('auto-stack relative child 偏移不影响后续', function () {
+    $c1 = makeNode('div', ['position' => 'relative', 'top' => 5, 'height' => 30], [], 'A');
+    $c2 = makeNode('div', ['height' => 20], [], 'B');
+    $parent = makeNode('div', ['width' => 200], [$c1, $c2]);
+    $root = makeNode('#root', ['width' => 400], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // c1 y=0 (static) + 5 (relative offset) = 5
+    // c2 y=30 (c1 normal flow height, NOT c1.y+height)
+    assert_eq($c1->y, 5, 'c1 relative offset=5');
+    assert_eq($c2->y, 30, 'c2 y=30 relative 偏移不影响 stack');
+});
+
+
+echo "\n--- 15. Positioning Ancestor ---\n";
+
+test('position:absolute 找最近定位祖先', function () {
+    $abs = makeNode('div', ['position' => 'absolute', 'left' => 10, 'top' => 20, 'width' => 50, 'height' => 30], [], 'abs');
+    $rel = makeNode('div', ['position' => 'relative', 'left' => 100, 'top' => 100, 'width' => 200, 'height' => 200], [$abs]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 400], [$rel]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // abs 找非 static 祖先 = rel (position:relative)
+    // rel = root 子节点, auto-stack → rel.x=0, rel.y=0
+    // rel has left:100, top:100 → rel.x=0+100=100, rel.y=0+100=100
+    // abs.x = rel.x + left = 100 + 10 = 110
+    // abs.y = rel.y + top = 100 + 20 = 120
+    assert_eq($rel->x, 100, 'rel x = 0 + relative偏移 left=100');
+    // absolute positioned relative to rel's position
+    assert_eq($abs->x, 110, 'abs x=rel.x+left=100+10=110');
+    assert_eq($abs->y, 120, 'abs y=rel.y+top=100+20=120');
+});
+
+test('position:absolute 无定位祖先退化到 (0,0)', function () {
+    $abs = makeNode('div', ['position' => 'absolute', 'left' => 30, 'top' => 40, 'width' => 50, 'height' => 30], [], 'abs');
+    $root = makeNode('#root', ['width' => 400, 'height' => 400], [$abs]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // root 是 static（默认）→ 不被视为定位祖先
+    // 退化到 (0,0) → abs.x = 30, abs.y = 40
+    assert_eq($abs->x, 30, '退化到 (0,0) + left=30');
+    assert_eq($abs->y, 40, '退化到 (0,0) + top=40');
+});
+
+
+echo "\n--- 16. Margin Auto ---\n";
+
+test('margin:auto with position:absolute 水平居中', function () {
+    $child = makeNode('div', ['position' => 'absolute', 'width' => 100, 'height' => 50, 'margin' => 'auto'], [], 'A');
+    $parent = makeNode('div', ['position' => 'relative', 'width' => 300, 'height' => 100], [$child]);
+    $root = makeNode('#root', ['width' => 400], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // parent w=300, child w=100, margin auto → (300-100)/2 = 100 each
+    assert_eq($child->x, 100, 'margin:auto 居中：x=(300-100)/2=100');
+});
+
+
+echo "\n--- 17. Absolute Positioning with right/bottom ---\n";
+
+test('position:absolute with right 锚定右边缘', function () {
+    $abs = makeNode('div', ['position' => 'absolute', 'right' => 10, 'width' => 80, 'height' => 30], [], 'abs');
+    $rel = makeNode('div', ['position' => 'relative', 'width' => 300, 'height' => 200], [$abs]);
+    $root = makeNode('#root', ['width' => 400], [$rel]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // abs.right=10, width=80, rel.w=300 → abs.x = rel.x + 300 - 80 - 10 = rel.x + 210
+    // rel is auto-stacked in root → rel.x=0
+    assert_eq($abs->x, 210, 'right:10 width:80 → x=300-80-10=210');
+});
+
+test('position:absolute with bottom 锚定底边缘', function () {
+    $abs = makeNode('div', ['position' => 'absolute', 'bottom' => 15, 'height' => 40], [], 'abs');
+    $rel = makeNode('div', ['position' => 'relative', 'width' => 200, 'height' => 150], [$abs]);
+    $root = makeNode('#root', ['width' => 400], [$rel]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // abs.bottom=15, height=40, rel.h=150 → abs.y = rel.y + 150 - 40 - 15 = 0 + 95
+    assert_eq($abs->y, 95, 'bottom:15 height:40 → y=150-40-15=95');
+});
+
+
+echo "\n--- 18. Scroll Container ---\n";
+
+test('scroll container contentHeight', function () {
+    $c1 = makeNode('div', ['height' => 30], [], 'A');
+    $c2 = makeNode('div', ['height' => 50], [], 'B');
+    $scroll = makeNode('div', [
+        'overflow' => 'auto',
+        'left' => 0, 'top' => 0, 'width' => 200, 'height' => 100,
+    ], [$c1, $c2]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 400], [$scroll]);
+
+    $resolver = new LayoutResolver();
+    $result = $resolver->resolve($root);
+    $sc = $result['scrollContainers'][0];
+
+    assert_eq($sc->contentHeight, 80, 'contentHeight = 30+50 = 80');
+    assert_eq(count($result['scrollContainers']), 1, '1 scroll container');
+});
+
+test('scroll container scrollTop clamp', function () {
+    $c1 = makeNode('div', ['height' => 30], [], 'A');
+    $c2 = makeNode('div', ['height' => 50], [], 'B');
+    $scroll = makeNode('div', [
+        'overflow' => 'auto',
+        'left' => 0, 'top' => 0, 'width' => 200, 'height' => 100,
+    ], [$c1, $c2]);
+    $scroll->scrollTop = 50; // 超出 maxScroll
+    $root = makeNode('#root', ['width' => 400, 'height' => 400], [$scroll]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // contentHeight=80, container=100, maxScroll = 0 (content doesn't exceed container)\n    // Actually 80 < 100, so maxScroll=0, scrollTop clamped to 0
+    assert_eq($scroll->scrollTop, 0, 'scrollTop clamped to 0 when content < container');
+});
+
 
 echo "\n";
 $exitCode = print_summary();
