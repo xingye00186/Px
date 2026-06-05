@@ -391,7 +391,7 @@ if defined DEP_PROJECT (
 ) else (
     "%SWOOLE_COMPILER%" "apps\%APP_NAME%\project.yml" %DEBUG_FLAG% -f
 )
-set "AOT_EXIT=!errorlevel!
+set "AOT_EXIT=!errorlevel!"
 if !AOT_EXIT! neq 0 (
     echo.
     echo [ERROR] AOT compile failed, exit code: !AOT_EXIT!
