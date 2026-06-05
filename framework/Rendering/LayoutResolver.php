@@ -554,43 +554,12 @@ class LayoutResolver
         $direction = $style['flexDirection'] ?? 'row';
         $isRow = ($direction === 'row' || $direction === 'row-reverse');
 
-        // Cross-axis fill — account for parent padding
-        $parentPadL = ($parent !== null) ? ($parent->style['paddingLeft'] ?? $parent->style['padding'] ?? 0) : 0;
-        $parentPadR = ($parent !== null) ? ($parent->style['paddingRight'] ?? $parent->style['padding'] ?? 0) : 0;
-        $parentPadT = ($parent !== null) ? ($parent->style['paddingTop'] ?? $parent->style['padding'] ?? 0) : 0;
-        $parentPadB = ($parent !== null) ? ($parent->style['paddingBottom'] ?? $parent->style['padding'] ?? 0) : 0;
-
-        // Only fill cross axis dimension from parent (not main axis)
-        // Flex column: cross axis = width, fill it
-        // Flex row: cross axis = height, fill it
-        if ($isRow) {
-            // Row: cross axis = height — subtract parent vertical padding
-            if ($height === 0 && $parent !== null && $parent->h > 0) {
-                $availH = $parent->h - $parentPadT - $parentPadB;
-                $height = max(0, $availH - $top);
-                $node->h = max(0, (int)$height);
-            }
-        } else {
-            // Column: cross axis = width — subtract parent horizontal padding
-            if ($width === 0 && $parent !== null && $parent->w > 0) {
-                $availW = $parent->w - $parentPadL - $parentPadR;
-                $width = max(0, $availW - $left);
-                $node->w = max(0, (int)$width);
-            }
-        }
-
-        // Handle flex:1 / flex:2 etc. → initial hint for flex-grow distribution
-        $flex = $style['flex'] ?? '';
-        if ($flex !== '' && $parent !== null) {
-            if ($isRow && $width === 0 && $parent->w > 0) {
-                $availW = $parent->w - $parentPadL - $parentPadR;
-                $node->w = max(0, (int)($availW - $left));
-            }
-            if (!$isRow && $height === 0 && $parent->h > 0) {
-                $availH = $parent->h - $parentPadT - $parentPadB;
-                $node->h = max(0, (int)($availH - $top));
-            }
-        }
+        // Note: Cross-axis fill is handled by the parent's align-items: stretch
+        // in Steps 10-11 below. Do NOT fill cross-axis from parent here, as this
+        // incorrectly sets the container's dimension when it's a flex item whose
+        // cross-axis direction differs from the parent's.
+        // Example: a row flex-container child of a column flex-container should
+        // NOT have its height filled from parent height — only width should stretch.
 
         $gap       = $style['gap'] ?? 0;
         $justify   = $style['justifyContent'] ?? 'flex-start';
@@ -720,7 +689,7 @@ class LayoutResolver
             $lineFlexData = [];
             $lineHasFlexGrow = false;
             foreach ($lineChildren as $ch) {
-                $data = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => -1, 'isFlexGrow' => false];
+                $data = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => -1, 'isFlexGrow' => false, 'hasExplicitCrossSize' => false, 'crossAxisSized' => false];
                 $flexRaw = $ch->style['flex'] ?? '';
                 if ($flexRaw !== '') {
                     $fv = CssMappings::parseFlexValue($flexRaw);
@@ -735,6 +704,9 @@ class LayoutResolver
                     $data['isFlexGrow'] = true;
                     $lineHasFlexGrow = true;
                 }
+                $data['hasExplicitCrossSize'] = $isRow
+                    ? array_key_exists('height', $ch->style)
+                    : array_key_exists('width', $ch->style);
                 $lineFlexData[] = $data;
             }
 
@@ -912,10 +884,24 @@ class LayoutResolver
                     // In wrapping mode, cross axis is per-line
                     if ($effectiveAlign === 'stretch') {
                         if ($isRow) {
-                            if ($ch->h === 0) $ch->h = max(0, $lineMaxCross);
+                            if (!$lineFlexData[$i]['hasExplicitCrossSize']) {
+                                $crossBefore = $ch->h;
+                                $stretchedH = max(0, (int)($lineMaxCross - $childMarginTop - $childMarginBottom));
+                                if ($stretchedH > 0) {
+                                    $ch->h = $stretchedH;
+                                    $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
+                                }
+                            }
                             $ch->y = $node->y + $paddingTop + $lineCrossBase + $childMarginTop;
                         } else {
-                            if ($ch->w === 0) $ch->w = max(0, $lineMaxCross);
+                            if (!$lineFlexData[$i]['hasExplicitCrossSize']) {
+                                $crossBefore = $ch->w;
+                                $stretchedW = max(0, (int)($lineMaxCross - $childMarginLeft - $childMarginRight));
+                                if ($stretchedW > 0) {
+                                    $ch->w = $stretchedW;
+                                    $lineFlexData[$i]['crossAxisSized'] = ($ch->w !== $crossBefore);
+                                }
+                            }
                             $ch->x = $node->x + $paddingLeft + $lineCrossBase + $childMarginLeft;
                         }
                     } else {
@@ -932,12 +918,22 @@ class LayoutResolver
                         }
                     }
                 } else {
-                    // Non-wrapping: original behavior with full containerCross
+                    // Non-wrapping: full containerCross with margin adjustment
                     if ($effectiveAlign === 'stretch') {
-                        if ($isRow) {
-                            if ($ch->h === 0) $ch->h = max(0, (int)$containerCross);
-                        } else {
-                            if ($ch->w === 0) $ch->w = max(0, (int)$containerCross);
+                        if ($isRow && !$lineFlexData[$i]['hasExplicitCrossSize']) {
+                            $crossBefore = $ch->h;
+                            $stretchedH = max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
+                            if ($stretchedH > 0) {
+                                $ch->h = $stretchedH;
+                                $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
+                            }
+                        } elseif (!$isRow && !$lineFlexData[$i]['hasExplicitCrossSize']) {
+                            $crossBefore = $ch->w;
+                            $stretchedW = max(0, (int)($containerCross - $childMarginLeft - $childMarginRight));
+                            if ($stretchedW > 0) {
+                                $ch->w = $stretchedW;
+                                $lineFlexData[$i]['crossAxisSized'] = ($ch->w !== $crossBefore);
+                            }
                         }
                     }
                     $crossSize = $isRow ? $ch->h : $ch->w;
@@ -957,16 +953,8 @@ class LayoutResolver
                 // Cross axis margin
                 if ($isRow) {
                     $ch->y += $childMarginTop;
-                    if ($effectiveAlign === 'stretch' && $ch->h === 0 && !$isWrapping) {
-                        $stretchedH = max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
-                        if ($stretchedH > 0) $ch->h = $stretchedH;
-                    }
                 } else {
                     $ch->x += $childMarginLeft;
-                    if ($effectiveAlign === 'stretch' && $ch->w === 0 && !$isWrapping) {
-                        $stretchedW = max(0, (int)($containerCross - $childMarginLeft - $childMarginRight));
-                        if ($stretchedW > 0) $ch->w = $stretchedW;
-                    }
                 }
 
                 // Shift descendants if position changed
@@ -993,13 +981,15 @@ class LayoutResolver
                 }
             }
 
-            // ── Two-pass: re-resolve internal children of flex-grow items ──
-            // After flex-grow (Step 5), flex items' main-axis size may have changed.
-            // Their internal children were laid out in Step 1 using preliminary sizes.
-            // This re-resolves grandchildren with the flex-grow item's final size.
+            // ── Two-pass: re-resolve internal children of sized items ──
+            // After flex-grow (Step 5) or cross-axis stretch (Step 11), flex items'
+            // main-axis or cross-axis size may have changed. Their internal children
+            // were laid out in Step 1 using preliminary sizes.
+            // This re-resolves grandchildren with the flex item's final size.
             foreach ($lineChildren as $idxTp => $chTp) {
                 $dataTp = $lineFlexData[$idxTp];
-                if ($dataTp['isFlexGrow'] && count($chTp->children) > 0) {
+                $needsTwoPass = $dataTp['isFlexGrow'] || $dataTp['crossAxisSized'];
+                if ($needsTwoPass && count($chTp->children) > 0) {
                     $chPadLtp = $chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0;
                     $chPadTtp = $chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0;
                     $gcOffsetX = $chTp->x + $chPadLtp;
@@ -1013,6 +1003,16 @@ class LayoutResolver
                         $grandchild->layoutDirty = true;
                         $this->resolveNode($grandchild, $gcOffsetX, $gcOffsetY, $chTp, $scrollContainers);
                     }
+                }
+                // Re-finalize scroll containers after child re-resolution:
+                // the two-pass above re-resolves grandchildren but doesn't re-run
+                // auto-stack, so items would all be at the same y position.
+                if ($needsTwoPass && $chTp->isScrollContainer) {
+                    $padTsp = $chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0;
+                    $padLsp = $chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0;
+                    $padRsp = $chTp->style['paddingRight'] ?? $chTp->style['padding'] ?? 0;
+                    $coffY = $chTp->y + $padTsp - $chTp->scrollTop;
+                    $this->finalizeScrollContainer($chTp, $chTp->style, $coffY, $padLsp, $padRsp, $scrollContainers);
                 }
             }
 
@@ -1387,7 +1387,7 @@ class LayoutResolver
     ): void {
         // ── Auto-stack: for scroll containers, position children vertically ──
         $stackY = $childOffsetY;
-        $containerW = max($node->w - 14 - $paddingLeft - $paddingRight, 0);
+        $containerW = max($node->w - $paddingLeft - $paddingRight, 0);
         $autoStack = true;
 
         if ($autoStack) {
