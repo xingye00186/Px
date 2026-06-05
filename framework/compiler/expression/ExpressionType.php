@@ -60,6 +60,12 @@ abstract class ExpressionType implements ExpressionTypeInterface
             }
         }
 
+        // Handle string concatenation (e.g., "'prefix-' . var")
+        $concat = new ConcatenationExpression();
+        if ($concat->matches($var)) {
+            return $concat->parse($var, $loopInfo);
+        }
+
         // Handle property access (e.g., "item.name")
         if (str_contains($var, '.')) {
             $parts = explode('.', $var, 2);

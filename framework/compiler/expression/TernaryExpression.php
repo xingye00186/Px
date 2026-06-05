@@ -106,6 +106,12 @@ class TernaryExpression extends ExpressionType
             return 'false';
         }
 
+        // String concatenation (e.g., "'prefix-' . var")
+        $concat = new ConcatenationExpression();
+        if ($concat->matches($value)) {
+            return $concat->parse($value, $loopInfo);
+        }
+
         // Property access
         if (str_contains($value, '.')) {
             $parts = explode('.', $value, 2);

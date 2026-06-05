@@ -111,6 +111,12 @@ class ExpressionParser implements ExpressionParserInterface
             }
         }
 
+        // String concatenation (e.g., "'prefix-' . var")
+        $concat = new ConcatenationExpression();
+        if ($concat->matches($var)) {
+            return $concat->parse($var, $loopInfo);
+        }
+
         // Property access
         if (str_contains($var, '.')) {
             $parts = explode('.', $var, 2);
