@@ -1,8 +1,8 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$exePath = 'f:/work/Px/apps/design-guide/bin/design_guide.exe'
-$outputDir = 'f:/work/Px/apps/design-guide/screenshots'
+$exePath = 'd:/Px/apps/design-guide/bin/design_guide.exe'
+$outputDir = 'd:/Px/apps/design-guide/screenshots'
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 
 Get-Process design_guide -ErrorAction SilentlyContinue | Stop-Process -Force
