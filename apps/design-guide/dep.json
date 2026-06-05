@@ -13,6 +13,7 @@
         "./main.php",
         "../../framework/BaseComponent.php",
         "../../framework/Core/Application.php",
+        "../../framework/Core/Config.php",
         "../../framework/Core/PerfCounter.php",
         "../../framework/Core/Scheduler.php",
         "../../framework/Core/ScrollManager.php",
@@ -59,6 +60,7 @@
         "../../stub/vue_calc.stub.php"
     ],
     "cxx_files": [
+        "../../cpp/skia_dinkumware_stubs.cc",
         "../../cpp/skia_render.cc",
         "../../cpp/vue_calc.cc"
     ]

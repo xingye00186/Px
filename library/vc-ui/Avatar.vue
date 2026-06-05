@@ -1,5 +1,5 @@
 <template>
-  <div :style="'width:' . $sz . 'px;height:' . $sz . 'px;cursor:pointer'" :class="avatarClass" @click="handleClick">
+  <div :style="'width:' . size . 'px;height:' . size . 'px;cursor:pointer'" :class="avatarClass" @click="handleClick">
     <span v-if="icon !== ''" style="font-size:20px;text-align:center;line-height:1" :bind="icon">{{ icon }}</span>
     <span v-if="src !== ''" style="font-size:16px;text-align:center;line-height:1" :bind="fallback">{{ fallback }}</span>
     <span v-if="icon === '' && src === ''" style="font-size:16px;text-align:center;line-height:1;color:#FFFFFF" :bind="defaultText">{{ defaultText }}</span>

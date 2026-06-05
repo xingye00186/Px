@@ -61,6 +61,7 @@ sources:
   - ../../framework/interfaces/ComponentInterface.php
   - ../../stub/skia.stub.php
   - ../../stub/vue_calc.stub.php
+  - ../../cpp/skia_dinkumware_stubs.cc
   - ../../cpp/skia_render.cc
   - ../../cpp/vue_calc.cc
 ignore:
