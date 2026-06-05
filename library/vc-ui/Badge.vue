@@ -5,9 +5,9 @@
       <slot />
     </div>
     <!-- 红点模式 -->
-    <div v-if="getIsDot === '1'" :class="badgeDotClass"></div>
+    <div v-if="dot !== '' && dot !== '0'" :class="'badge-dot badge-pos-' . getPosCls()"></div>
     <!-- 数字模式 -->
-    <div v-if="getIsDot !== '1'" :class="badgeNumClass" :style="'min-width:18px;height:18px'">{{ displayValue }}</div>
+    <div v-if="dot === '' || dot === '0'" :class="'badge-num badge-pos-' . getPosCls()" :style="'min-width:18px;height:18px'">{{ getDisplayValue() }}</div>
   </div>
 </template>
 
@@ -52,30 +52,6 @@
         if ($mx <= 0) $mx = 99;
         if ($v > $mx) return (string)$mx . '+';
         return (string)$v;
-    }
-
-    /**
-     * 获取完整 dot class 字符串
-     */
-    public function getBadgeDotClass(): string
-    {
-        return 'badge-dot badge-pos-' . $this->getPosCls();
-    }
-
-    /**
-     * 获取完整 num class 字符串
-     */
-    public function getBadgeNumClass(): string
-    {
-        return 'badge-num badge-pos-' . $this->getPosCls();
-    }
-
-    /**
-     * 是否红点
-     */
-    public function getGetIsDot(): string
-    {
-        return ($this->dot !== '' && $this->dot !== '0') ? '1' : '';
     }
 </script>
 

@@ -60,18 +60,22 @@
 
     /**
      * 键盘按键处理
+     *
+     * @param string $action 键盘动作 (down/up/char)
+     * @param int $keyCode 键码
+     * @param string $char 字符
      */
-    public function onKeyDown(string $key): void
+    public function onKeyDown(string $action, int $keyCode, string $char): void
     {
-        if (strlen($key) === 1) {
+        if (strlen($char) === 1) {
             // 普通字符：追加到 modelValue
-            $this->modelValue = $this->modelValue . $key;
+            $this->modelValue = $this->modelValue . $char;
             $this->emit('input', $this->modelValue);
             $this->markDirty();
-        } elseif ($key === "\r" || $key === "\n") {
+        } elseif ($char === "\r" || $char === "\n") {
             // Enter 键：回传当前值
             $this->emit('enter', $this->modelValue);
-        } elseif ($key === "\x08" || $key === "\x7F") {
+        } elseif ($char === "\x08" || $char === "\x7F") {
             // Backspace：删除最后一个字符
             $this->modelValue = mb_substr($this->modelValue, 0, -1);
             $this->emit('input', $this->modelValue);
