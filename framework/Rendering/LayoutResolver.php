@@ -18,6 +18,8 @@ use native_types;
  */
 class LayoutResolver
 {
+    private ?RenderNode $rootNode = null;
+
     public function __construct()
     {
     }
@@ -30,6 +32,7 @@ class LayoutResolver
      */
     public function resolve(RenderNode $root): array
     {
+        $this->rootNode = $root;
         $scrollContainers = [];
         $this->resolveNode($root, 0, 0, null, $scrollContainers);
         return ['scrollContainers' => $scrollContainers];
@@ -236,20 +239,6 @@ class LayoutResolver
         $right = $style['right'] ?? null;
         $bottom = $style['bottom'] ?? null;
 
-        // ── 自动注入 position:absolute（向后兼容）──
-        // 检测 left/top/right/bottom 出现但无 position → 自动注入
-        // 同时写入 node->style 以便子节点在定位祖先查找时能识别此节点
-        if ($position === 'static') {
-            $hasLTRB = array_key_exists('left', $style)
-                || array_key_exists('top', $style)
-                || array_key_exists('right', $style)
-                || array_key_exists('bottom', $style);
-            if ($hasLTRB) {
-                $position = 'absolute';
-                $node->style['position'] = 'absolute';
-            }
-        }
-
         // ── 百分比尺寸解析 ──
         $parentW = ($parent !== null) ? $parent->w : 0;
         $parentH = ($parent !== null) ? $parent->h : 0;
@@ -291,20 +280,7 @@ class LayoutResolver
             $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
             $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
 
-            // Check if any normal-flow child uses explicit positioning (top/bottom + static)
-            // Absolute/fixed children don't participate in normal flow and are skipped.
-            $hasExplicitPos = false;
-            foreach ($node->children as $child) {
-                $cs = $child->style;
-                $childPosition = $cs['position'] ?? 'static';
-                if ($childPosition !== 'relative' && $childPosition !== 'absolute' && $childPosition !== 'fixed'
-                    && (array_key_exists('top', $cs) || array_key_exists('bottom', $cs))) {
-                    $hasExplicitPos = true;
-                    break;
-                }
-            }
-
-            if (!$hasExplicitPos && count($node->children) > 0) {
+            if (count($node->children) > 0) {
                 $stackY = $node->y + $paddingTop;
                 $containerW = max($node->w - $paddingLeft - $paddingRight, 0);
 
@@ -320,8 +296,9 @@ class LayoutResolver
                     $mTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
                     $mBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
 
-                    // Auto-width: inherit from container padding area
-                    if (!array_key_exists('width', $child->style) || $child->w === 0) {
+            // Auto-width: inherit from container padding area (skip if percentage width)
+                    $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
+                    if (!$hasExplicitWidth || $child->w === 0) {
                         $child->w = max(0, (int)$containerW);
                         $child->style['width'] = $containerW;
                     }
@@ -462,9 +439,19 @@ class LayoutResolver
         int $height,
         array &$scrollContainers
     ): void {
-        // 查找并缓存定位祖先
-        $this->resolvePositioningAncestor($node);
-        $ancestor = $node->positioningAncestor;
+        // 判断定位模式：fixed vs absolute
+        $pos = $style['position'] ?? 'absolute';
+        $isFixed = ($pos === 'fixed');
+
+        if ($isFixed && $this->rootNode !== null) {
+            // position:fixed — 使用根节点（视口）作为参考系
+            // fixed 元素相对于视口定位，与滚动无关
+            $ancestor = $this->rootNode;
+        } else {
+            // position:absolute — 查找并缓存定位祖先
+            $this->resolvePositioningAncestor($node);
+            $ancestor = $node->positioningAncestor;
+        }
 
         // 参考系：定位祖先的 padding box，退化时用 (0,0)
         $ancestorX = ($ancestor !== null) ? $ancestor->x : 0;
@@ -503,9 +490,11 @@ class LayoutResolver
             }
         }
 
-        // ── margin:auto 水平居中（相对定位祖先） ──
+        // ── margin:auto 水平 + 垂直居中 ──
         $parentContentW = ($ancestor !== null) ? max(0, $ancestorW - $paddingLeft - $paddingRight) : 0;
-        $this->resolveMarginAuto($node, $style, $parentContentW);
+        $paddingBottom = $style['paddingBottom'] ?? $style['padding'] ?? 0;
+        $parentContentH = ($ancestor !== null) ? max(0, $ancestorH - $paddingTop - $paddingBottom) : 0;
+        $this->resolveMarginAuto($node, $style, $parentContentW, $parentContentH);
 
         // Apply translate from animatedStyle
         $translateX = $style['translateX'] ?? 0;
@@ -1289,13 +1278,14 @@ class LayoutResolver
     }
 
     /**
-     * 解析 margin:auto 水平居中。
-     * CSS 规范: margin-left:auto + margin-right:auto 在固定宽度子节点上水平居中。
-     * 算法: 剩余空间 = (父 content width - 子 width) / 2，各分一半。
-     * 垂直方向 v1 不实现。
+     * 解析 margin:auto 水平居中及垂直居中。
+     * CSS 规范 10.6.2: margin-top/bottom:auto 在 normal flow 中使用值 0。
+     * CSS 规范 10.6.4: 绝对定位元素 top+bottom+height 非 auto 时，
+     *                 auto margin 吸收剩余空间均分（垂直居中）。
+     * 算法: 剩余空间 = (父 content size - 子 size) / 2，各分一半。
      * AOT 兼容: 纯算术操作，符合 native_types。
      */
-    private function resolveMarginAuto(RenderNode $node, array $style, int $parentContentW): void
+    private function resolveMarginAuto(RenderNode $node, array $style, int $parentContentW, int $parentContentH = 0): void
     {
         $marginLeft = $style['marginLeft'] ?? null;
         $marginRight = $style['marginRight'] ?? null;
@@ -1314,6 +1304,26 @@ class LayoutResolver
             $half = (int)($remaining / 2);
             $node->x += $half;
         }
+
+        // ── 垂直方向：绝对定位元素的 margin-top:auto + margin-bottom:auto 垂直居中 ──
+        // 仅当元素有显式高度且父 content 高度大于子高度时生效
+        // Normal flow 中 margin-top:auto 和 margin-bottom:auto 使用值 0（CSS 2.2 §10.6.2）
+        $marginTop = $style['marginTop'] ?? null;
+        $marginBottom = $style['marginBottom'] ?? null;
+
+        $isMarginTopAuto = ($marginTop === 'auto');
+        $isMarginBottomAuto = ($marginBottom === 'auto');
+        if ($margin === 'auto') {
+            $isMarginTopAuto = true;
+            $isMarginBottomAuto = true;
+        }
+
+        if ($isMarginTopAuto && $isMarginBottomAuto && $node->h > 0 && $parentContentH > $node->h) {
+            $remaining = $parentContentH - $node->h;
+            $half = (int)($remaining / 2);
+            $node->y += $half;
+        }
+
     }
 
     // ── 递归平移方法（用于 auto-stack / clamp） ──
@@ -1380,25 +1390,19 @@ class LayoutResolver
         $containerW = max($node->w - 14 - $paddingLeft - $paddingRight, 0);
         $autoStack = true;
 
-        // Only auto-stack if NO child has explicit top/bottom
-        // EXCEPTION: position:relative children with top/left only add offset, not position
-        foreach ($node->children as $child) {
-            $cs = $child->style;
-            $childPos = $cs['position'] ?? 'static';
-            if ($childPos !== 'relative' && (array_key_exists('top', $cs) || array_key_exists('bottom', $cs))) {
-                $autoStack = false;
-                break;
-            }
-        }
-
         if ($autoStack) {
             foreach ($node->children as $child) {
                 $childStyle = $child->style;
+                $childPosition = $childStyle['position'] ?? 'static';
+                if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                    continue;
+                }
                 $mTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
                 $mBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
 
-                // Auto-width: inherit from container
-                if (!array_key_exists('width', $child->style) || $child->w === 0) {
+                // Auto-width: inherit from container (skip if percentage width)
+                $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
+                if (!$hasExplicitWidth || $child->w === 0) {
                     $child->w = max(0, (int)$containerW);
                     $child->style['width'] = $containerW;
                 }

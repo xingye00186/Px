@@ -96,7 +96,7 @@ test('只有正数 zIndex 才影响 layer 属性', function () {
 echo "\n--- 2. Block 布局 ---\n";
 
 test('block 布局：left/top 绝对定位', function () {
-    $node = makeNode('div', ['left' => 50, 'top' => 30, 'width' => 100, 'height' => 60]);
+    $node = makeNode('div', ['position' => 'absolute', 'left' => 50, 'top' => 30, 'width' => 100, 'height' => 60]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
 
     $resolver = new LayoutResolver();
@@ -109,8 +109,8 @@ test('block 布局：left/top 绝对定位', function () {
 });
 
 test('子节点相对于父节点偏移', function () {
-    $child = makeNode('span', ['left' => 20, 'top' => 10, 'width' => 50, 'height' => 30]);
-    $parent = makeNode('div', ['left' => 100, 'top' => 50, 'width' => 200, 'height' => 100], [$child]);
+    $child = makeNode('span', ['position' => 'absolute', 'left' => 20, 'top' => 10, 'width' => 50, 'height' => 30]);
+    $parent = makeNode('div', ['position' => 'relative', 'left' => 100, 'top' => 50, 'width' => 200, 'height' => 100], [$child]);
     $root = makeNode('#root', ['width' => 500, 'height' => 400], [$parent]);
 
     $resolver = new LayoutResolver();
@@ -146,6 +146,7 @@ test('flex 布局：子节点水平排列', function () {
     $flex = makeNode('div', [
         'display' => 'flex',
         'flexDirection' => 'row',
+        'position' => 'relative',
         'width' => 200,
         'height' => 100,
         'gap' => 10,
@@ -171,6 +172,7 @@ test('flex 布局：列排列', function () {
     $flex = makeNode('div', [
         'display' => 'flex',
         'flexDirection' => 'column',
+        'position' => 'relative',
         'width' => 200,
         'height' => 100,
         'gap' => 5,
@@ -199,6 +201,7 @@ test('grid 布局：子节点按格子排列', function () {
         'display' => 'grid',
         'gridTemplateColumns' => 'repeat(2, 80px)',
         'gridTemplateRows' => 'repeat(2, 50px)',
+        'position' => 'relative',
         'left' => 10,
         'top' => 10,
         'width' => 200,
@@ -231,7 +234,7 @@ test('grid 布局：子节点按格子排列', function () {
 echo "\n--- 5. 脏标记路径 ---\n";
 
 test('layoutDirty=true 时执行完整布局', function () {
-    $node = makeNode('div', ['left' => 10, 'top' => 20, 'width' => 100, 'height' => 50]);
+    $node = makeNode('div', ['position' => 'absolute', 'left' => 10, 'top' => 20, 'width' => 100, 'height' => 50]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
 
     assert_true($node->layoutDirty, '新建节点 layoutDirty 应为 true');
@@ -245,8 +248,8 @@ test('layoutDirty=true 时执行完整布局', function () {
 });
 
 test('layoutDirty=false 时洁净路径仍传递父坐标', function () {
-    $child = makeNode('div', ['left' => 5, 'top' => 5, 'width' => 50, 'height' => 30]);
-    $parent = makeNode('div', ['left' => 100, 'top' => 100, 'width' => 200, 'height' => 150], [$child]);
+    $child = makeNode('div', ['position' => 'absolute', 'left' => 5, 'top' => 5, 'width' => 50, 'height' => 30]);
+    $parent = makeNode('div', ['position' => 'relative', 'left' => 100, 'top' => 100, 'width' => 200, 'height' => 150], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
     $resolver = new LayoutResolver();
@@ -259,6 +262,7 @@ test('layoutDirty=false 时洁净路径仍传递父坐标', function () {
 
 test('洁净路径包含 margin 计算', function () {
     $child = makeNode('div', [
+        'position' => 'absolute',
         'left' => 10,
         'top' => 10,
         'marginLeft' => 5,
@@ -266,7 +270,7 @@ test('洁净路径包含 margin 计算', function () {
         'width' => 50,
         'height' => 30,
     ]);
-    $parent = makeNode('div', ['left' => 50, 'top' => 50, 'width' => 200, 'height' => 150], [$child]);
+    $parent = makeNode('div', ['position' => 'relative', 'left' => 50, 'top' => 50, 'width' => 200, 'height' => 150], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
     $resolver = new LayoutResolver();
@@ -410,19 +414,38 @@ test('position:relative + left 偏移不影响兄弟节点', function () {
     // child2 的位置不受 child1 left 影响
 });
 
-test('普通 static top 仍禁止 auto-stack（向后兼容）', function () {
-    $child1 = makeNode('div', ['width' => 100, 'height' => 30, 'top' => 20], [], 'A');
-    $child2 = makeNode('div', ['width' => 100, 'height' => 30], [], 'B');
-    $container = makeNode('div', [
-        'overflow' => 'auto', 'left' => 0, 'top' => 0, 'width' => 200, 'height' => 200,
-    ], [$child1, $child2]);
-    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$container]);
+
+
+test('position:fixed 相对视口定位（不受滚动影响）', function () {
+    $child = makeNode('div', ['position' => 'fixed', 'left' => 30, 'top' => 40, 'width' => 100, 'height' => 50], [], 'A');
+    $scroll = makeNode('div', [
+        'overflow' => 'auto', 'scrollTop' => 50,
+        'left' => 0, 'top' => 0, 'width' => 400, 'height' => 300,
+    ], [$child]);
+    $root = makeNode('#root', ['width' => 500, 'height' => 400], [$scroll]);
+
     $resolver = new LayoutResolver();
     $resolver->resolve($root);
-    // static top=20 → auto-stack 被禁止, child1 使用绝对定位
-    assert_eq($child1->y, 20, 'static top=20 时 auto-stack 被禁止, child1 y=20');
-    // child2 没有 top, 但 auto-stack 已关闭 → y=0 (初始 resolveNode 的 childOffsetY 位置)
+
+    // fixed 元素相对视口（根节点）定位，不受父滚动影响
+    assert_eq($child->x, 30, 'position:fixed x=30 相对视口');
+    assert_eq($child->y, 40, 'position:fixed y=40 相对视口（不受 scrollTop=50 影响）');
 });
+
+test('margin:auto with position:absolute 垂直居中', function () {
+    $child = makeNode('div', ['position' => 'absolute', 'width' => 100, 'height' => 50, 'margin' => 'auto'], [], 'A');
+    $parent = makeNode('div', ['position' => 'relative', 'width' => 300, 'height' => 200], [$child]);
+    $root = makeNode('#root', ['width' => 400], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // 水平居中：(300-100)/2 = 100
+    // 垂直居中：(200-50)/2 = 75
+    assert_eq($child->x, 100, 'margin:auto 水平居中：x=(300-100)/2=100');
+    assert_eq($child->y, 75, 'margin:auto 垂直居中：y=(200-50)/2=75');
+});
+
 
 echo "\n--- 9. Flex order 排序 ---\n";
 

@@ -138,7 +138,7 @@ class AotChecker
         'left_without_position' => [
             'severity' => 'WARNING',
             'pattern' => '/\'(left|top|right|bottom)\'\s*=>/',
-            'message' => 'CSS: left/top/right/bottom 建议伴随 position:absolute（已自动注入，此处仅提醒）',
+            'message' => 'CSS: left/top/right/bottom 在 static 定位下无效，请显式添加 position:absolute',
         ],
     ];
 
@@ -457,6 +457,11 @@ class AotChecker
 
             // 对于 direct_cpp_call 规则，排除 GdiRenderContext
             if ($ruleId === 'direct_cpp_call' && $filename === 'GdiRenderContext.php') {
+                continue;
+            }
+
+            // 对于 left_without_position 规则，排除 CssMappings（lookup 表包含 left/top/right/bottom 键）
+            if ($ruleId === 'left_without_position' && $filename === 'CssMappings.php') {
                 continue;
             }
 
