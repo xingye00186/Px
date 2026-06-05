@@ -451,6 +451,20 @@ if !errorlevel! neq 0 (
     exit /b 4
 )
 
+:: Copy fonts if present (Skia backend needs Noto Sans SC)
+if exist "%FRAMEWORK_ROOT%\cpp\fonts\*.ttf" (
+    if not exist "%DIST_DIR%\fonts\" mkdir "%DIST_DIR%\fonts\"
+    echo   Copying fonts ...
+    copy /y "%FRAMEWORK_ROOT%\cpp\fonts\*.ttf" "%DIST_DIR%\fonts\" >nul
+    if !errorlevel! neq 0 (
+        echo   [WARN] Font copy failed
+    ) else (
+        for %%f in ("%FRAMEWORK_ROOT%\cpp\fonts\*.ttf") do (
+            echo     fonts\%%~nxf
+        )
+    )
+)
+
 echo.
 echo   Package contents:
 echo   ----------------------------------------

@@ -89,23 +89,34 @@ static inline SkColor rgbToSkColor(Int rgb) {
 }
 
 // 初始化字体（阶段三：走 SkFontMgr_New_Custom_Directory 扫描 fonts 目录 + FreeType 渲染）
+// 字体路径使用相对路径，支持两种运行场景：
+//   - cpp/fonts/  : 开发时从项目根目录运行
+//   - fonts/      : 打包后从 bin/ 目录运行
 static bool skEnsureFont() {
     if (g_skFontInited && g_skTypeface) {
         return true;  // 已加载，复用
     }
     g_skFontInited = true;
 
-    // 首选：扫描 D:/Px/cpp/fonts 目录（可一次性加载 Noto Sans SC 9 个字重）
-    g_skFontMgr = SkFontMgr_New_Custom_Directory("D:/Px/cpp/fonts");
-    if (!g_skFontMgr) {
-        return false;
+    const char* searchDirs[] = {"cpp/fonts", "fonts"};
+    const char* fontName     = "NotoSansSC-Regular.ttf";
+
+    for (int i = 0; i < 2; i++) {
+        g_skFontMgr = SkFontMgr_New_Custom_Directory(searchDirs[i]);
+        if (!g_skFontMgr) continue;
+        std::string fullPath = std::string(searchDirs[i]) + "/" + fontName;
+        g_skTypeface = g_skFontMgr->makeFromFile(fullPath.c_str());
+        if (g_skTypeface) break;
     }
-    // 从指定路径加载 Regular 字重
-    g_skTypeface = g_skFontMgr->makeFromFile("D:/Px/cpp/fonts/NotoSansSC-Regular.ttf");
+
     if (!g_skTypeface) {
         // Fallback：尝试标准系统字体
-        g_skTypeface = g_skFontMgr->makeFromFile("C:/Windows/Fonts/msyh.ttc");
+        g_skFontMgr = SkFontMgr_New_Custom_Directory("cpp/fonts");
+        if (g_skFontMgr) {
+            g_skTypeface = g_skFontMgr->makeFromFile("C:/Windows/Fonts/msyh.ttc");
+        }
     }
+
     if (!g_skTypeface) {
         return false;
     }
