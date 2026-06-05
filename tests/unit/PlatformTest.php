@@ -70,6 +70,8 @@ class _MockPlatform implements Platform
         return $this->events;
     }
 
+    public function getHwnd(): int { return 0; }
+
     public function setAnimationTimer(callable $callback, int $intervalMs = 16): void {}
 }
 
@@ -157,24 +159,10 @@ test('Application 通过 Platform 接口使用平台 (不持有 hwnd)', function
     // hwnd 完全封装在 Platform 实现内部
 });
 
-test('Platform 不暴露平台句柄 (hwnd)', function () {
-    // Platform 接口不包含任何 getHwnd() 方法
+test('Platform 应提供 getHwnd 方法 (RuntimeBackendSelector 需要)', function () {
+    // getHwnd() 是 Platform 接口的一部分，供 RuntimeBackendSelector 等子系统使用
     $refl = new \ReflectionClass(Platform::class);
-    $methods = $refl->getMethods();
-
-    $methodNames = [];
-    foreach ($methods as $m) {
-        $methodNames[] = $m->getName();
-    }
-
-    // 不应该有 getHwnd, getWindow, getHandle 等方法
-    foreach ($methodNames as $name) {
-        $lower = strtolower($name);
-        assert_true(
-            strpos($lower, 'hwnd') === false && strpos($lower, 'handle') === false,
-            "Platform 接口不应包含 hwnd/handle 方法: {$name}"
-        );
-    }
+    assert_true($refl->hasMethod('getHwnd'), 'Platform 接口应包含 getHwnd()');
 });
 
 echo "\n";

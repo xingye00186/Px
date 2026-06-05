@@ -98,6 +98,7 @@ class _MockPlatform implements Platform
         return $this->renderContext;
     }
     public function shutdown(): void {}
+    public function getHwnd(): int { return 0; }
     public function shouldClose(): bool { return false; }
     public function pollEvents(): array { return []; }
     public function setAnimationTimer(callable $callback, int $intervalMs = 16): void {}
