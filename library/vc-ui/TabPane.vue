@@ -1,6 +1,6 @@
 <template>
   <div v-if="isActive" style="width:100%;height:auto" class="tab-pane-content">
-    <span style="font-size:14px;color:#606266">{{ label }}</span>
+    <slot />
   </div>
 </template>
 

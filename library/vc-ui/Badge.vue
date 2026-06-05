@@ -1,9 +1,13 @@
 <template>
-  <div style="width:auto;height:auto;position:relative;display:inline-flex">
+  <div style="width:auto;height:auto;position:relative;display:inline-flex;align-items:center">
+    <!-- 子内容插槽 -->
+    <div style="display:inline-flex">
+      <slot />
+    </div>
     <!-- 红点模式 -->
-    <div v-if="isDot === '1'" :class="'badge-dot badge-pos-' . posCls"></div>
+    <div v-if="getIsDot === '1'" :class="badgeDotClass"></div>
     <!-- 数字模式 -->
-    <div v-if="isDot !== '1'" :class="'badge-num badge-pos-' . posCls" :style="'min-width:18px;height:18px'">{{ displayValue }}</div>
+    <div v-if="getIsDot !== '1'" :class="badgeNumClass" :style="'min-width:18px;height:18px'">{{ displayValue }}</div>
   </div>
 </template>
 
@@ -51,9 +55,25 @@
     }
 
     /**
+     * 获取完整 dot class 字符串
+     */
+    public function getBadgeDotClass(): string
+    {
+        return 'badge-dot badge-pos-' . $this->getPosCls();
+    }
+
+    /**
+     * 获取完整 num class 字符串
+     */
+    public function getBadgeNumClass(): string
+    {
+        return 'badge-num badge-pos-' . $this->getPosCls();
+    }
+
+    /**
      * 是否红点
      */
-    public function getIsDot(): string
+    public function getGetIsDot(): string
     {
         return ($this->dot !== '' && $this->dot !== '0') ? '1' : '';
     }

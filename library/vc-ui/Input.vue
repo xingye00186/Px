@@ -1,5 +1,5 @@
 <template>
-  <div style="width:100%;height:auto;position:relative;">
+  <div style="width:100%;height:auto;position:relative;" tabindex="0" @keydown="onKeyDown">
     <div style="width:100%;height:36px;background:#F5F7FA;border:1px solid #DCDFE6;border-radius:4px;display:flex;align-items:center">
       <span v-if="prefixIcon !== ''" style="margin-left:8px;margin-right:4px;font-size:14px;color:#C0C4CC">{{ prefixIconChar }}</span>
       <span v-if="modelValue !== ''" style="font-size:14px;color:#606266;flex:1">{{ modelValue }}</span>
@@ -56,6 +56,27 @@
             'arrow-down' => '▼', 'arrow-up' => '▲',
         ];
         return $map[$this->suffixIcon] ?? $this->suffixIcon;
+    }
+
+    /**
+     * 键盘按键处理
+     */
+    public function onKeyDown(string $key): void
+    {
+        if (strlen($key) === 1) {
+            // 普通字符：追加到 modelValue
+            $this->modelValue = $this->modelValue . $key;
+            $this->emit('input', $this->modelValue);
+            $this->markDirty();
+        } elseif ($key === "\r" || $key === "\n") {
+            // Enter 键：回传当前值
+            $this->emit('enter', $this->modelValue);
+        } elseif ($key === "\x08" || $key === "\x7F") {
+            // Backspace：删除最后一个字符
+            $this->modelValue = mb_substr($this->modelValue, 0, -1);
+            $this->emit('input', $this->modelValue);
+            $this->markDirty();
+        }
     }
 </script>
 

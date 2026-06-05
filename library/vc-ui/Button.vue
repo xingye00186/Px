@@ -34,6 +34,9 @@
     /** 自定义高度 (px) */
     public string $height = '';
 
+    /** 自定义背景色（覆盖 type 默认色） */
+    public string $bg = '';
+
     /**
      * 获取按钮样式覆盖
      */
@@ -46,6 +49,9 @@
         if ($h > 0) $styles[] = 'height:' . $h . 'px';
         if ($this->round !== '' && $this->round !== '0') {
             $styles[] = 'border-radius:20px';
+        }
+        if ($this->bg !== '') {
+            $styles[] = 'background:' . $this->bg;
         }
         return implode(';', $styles);
     }

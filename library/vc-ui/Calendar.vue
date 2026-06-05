@@ -13,8 +13,8 @@
     </div>
     <!-- 日期网格 -->
     <div style="position:absolute;left:0;top:68px;width:340px;height:252px" class="cal-grid">
-      <div v-for="cell in calendarCells" :key="cell.key" :style="'left:' + (cell.col * 48.57) + 'px;top:' + (cell.row * 36) + 'px;width:48.57px;height:36px'" :class="cell.cls" @click="selectDay(cell.day)">
-        <span style="left:4px;top:8px;width:40px;height:20px;font-size:14px;text-align:center">{{ cell.day }}</span>
+      <div v-for="cell in calendarCells" :key="cell.key" :style="'position:absolute;left:' + (cell.col * 48.57) + 'px;top:' + (cell.row * 36) + 'px;width:48.57px;height:36px'" :class="cell.cls" @click="selectDay(cell.day)">
+        <span style="position:absolute;left:4px;top:8px;width:40px;height:20px;font-size:14px;text-align:center">{{ cell.day }}</span>
       </div>
     </div>
   </div>

@@ -1,10 +1,10 @@
 <template>
   <div style="width:280px;height:auto;min-height:200px" class="tree-wrapper">
-    <div style="left:0px;top:0px;width:280px;height:200px" class="tree-nodes">
-      <div v-for="node in flattenedNodes" :key="node.key" :style="'left:' + (node.depth * 20) + 'px;top:' + (node.index * 28) + 'px;width:' + (280 - node.depth * 20) + 'px;height:28px'" :class="node.cls" @click="onNodeClick(node)">
-        <span v-if="node.hasChildren" style="left:0px;top:4px;width:16px;height:20px;font-size:12px;color:#C0C4CC">{{ node.expanded ? '-' : '+' }}</span>
-        <span v-if="showCheckbox === '1'" :style="'left:' + (node.depth > 0 ? 20 : 0) + 'px;top:4px;width:16px;height:20px;font-size:12px;color:#409EFF'" @click.stop="onCheck(node)">☑</span>
-        <span :style="'left:' + ((node.depth > 0 ? 20 : 0) + 20) + 'px;top:4px;width:200px;height:20px;font-size:13px'">{{ node.label }}</span>
+    <div style="position:relative;width:280px;height:200px" class="tree-nodes">
+      <div v-for="node in flattenedNodes" :key="node.key" :style="'position:absolute;left:' + (node.depth * 20) + 'px;top:' + (node.index * 28) + 'px;width:' + (280 - node.depth * 20) + 'px;height:28px'" :class="node.cls" @click="onNodeClick(node)">
+        <span v-if="node.hasChildren" style="position:absolute;left:0;top:4px;width:16px;height:20px;font-size:12px;color:#C0C4CC">{{ node.expanded ? '-' : '+' }}</span>
+        <span v-if="showCheckbox === '1'" :style="'position:absolute;left:' + (node.depth > 0 ? 20 : 0) + 'px;top:4px;width:16px;height:20px;font-size:12px;color:#409EFF'" @click.stop="onCheck(node)">☑</span>
+        <span :style="'position:absolute;left:' + ((node.depth > 0 ? 20 : 0) + 20) + 'px;top:4px;width:200px;height:20px;font-size:13px'">{{ node.label }}</span>
       </div>
     </div>
   </div>

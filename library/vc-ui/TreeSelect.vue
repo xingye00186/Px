@@ -9,10 +9,10 @@
         <span style="position:absolute;left:8px;top:8px;width:80px;height:16px;font-size:12px;color:#909399">Search:</span>
         <span style="position:absolute;left:60px;top:8px;width:172px;height:16px;font-size:12px;color:#409EFF">@click="filterTree"</span>
       </div>
-      <div style="left:0px;top:32px;width:240px;height:168px" class="tree-nodes">
-        <div v-for="node in treeNodes" :key="node.key" style="left:0px;top:0px;width:240px;height:28px" :class="node.cls" @click="selectNode(node)">
-          <span v-if="node.hasChildren" style="left:4px;top:4px;width:12px;height:16px;font-size:10px;color:#C0C4CC">{{ node.expanded ? '-' : '+' }}</span>
-          <span style="left:20px;top:4px;width:200px;height:20px;font-size:13px">{{ node.label }}</span>
+      <div style="position:absolute;left:0;top:32px;width:240px;height:168px" class="tree-nodes">
+        <div v-for="node in treeNodes" :key="node.key" style="position:absolute;left:0;top:0;width:240px;height:28px" :class="node.cls" @click="selectNode(node)">
+          <span v-if="node.hasChildren" style="position:absolute;left:4px;top:4px;width:12px;height:16px;font-size:10px;color:#C0C4CC">{{ node.expanded ? '-' : '+' }}</span>
+          <span style="position:absolute;left:20px;top:4px;width:200px;height:20px;font-size:13px">{{ node.label }}</span>
         </div>
       </div>
     </div>

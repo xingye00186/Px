@@ -5,14 +5,14 @@
       <span style="position:absolute;right:8px;top:10px;width:16px;height:16px" class="cascader-arrow">▼</span>
     </div>
     <div v-if="isOpen === '1'" style="position:absolute;left:0;top:36px;width:400px;height:auto;min-height:40px" class="cascader-panel">
-      <div style="left:0px;top:0px;width:400px;height:200px" class="cascader-menus">
-        <div style="left:0px;top:0px;width:120px;height:200px" class="cascader-menu">
+      <div style="position:relative;left:0;top:0;width:400px;height:200px" class="cascader-menus">
+        <div style="position:absolute;left:0;top:0;width:120px;height:200px" class="cascader-menu">
           <div v-for="opt in level0Options" :key="opt.value" style="width:120px;height:32px" :class="opt.cls" @click="selectL0(opt)">{{ opt.label }}</div>
         </div>
-        <div v-if="selectedL0 !== ''" style="left:120px;top:0px;width:120px;height:200px" class="cascader-menu">
+        <div v-if="selectedL0 !== ''" style="position:absolute;left:120px;top:0;width:120px;height:200px" class="cascader-menu">
           <div v-for="opt in level1Options" :key="opt.value" style="width:120px;height:32px" :class="opt.cls" @click="selectL1(opt)">{{ opt.label }}</div>
         </div>
-        <div v-if="selectedL1 !== ''" style="left:240px;top:0px;width:160px;height:200px" class="cascader-menu">
+        <div v-if="selectedL1 !== ''" style="position:absolute;left:240px;top:0;width:160px;height:200px" class="cascader-menu">
           <div v-for="opt in level2Options" :key="opt.value" style="width:160px;height:32px" :class="opt.cls" @click="selectL2(opt)">{{ opt.label }}</div>
         </div>
       </div>
