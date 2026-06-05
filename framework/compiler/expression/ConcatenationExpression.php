@@ -15,11 +15,16 @@ namespace Px\Compiler\Expression;
 class ConcatenationExpression extends ExpressionType
 {
     /**
-     * Check if this expression contains string concatenation (`.` outside quotes)
+     * Check if this expression contains string concatenation (`.` outside quotes).
+     *
+     * Requires at least one quoted string operand to distinguish from
+     * property access patterns like "item.name" in v-for context.
      */
     public function matches(string $expression): bool
     {
-        return $this->containsConcatOperator($expression);
+        // Must have at least one string literal to be concatenation
+        // Otherwise, `.` is property access (e.g., "item.name")
+        return $this->hasQuotedString($expression) && $this->containsConcatOperator($expression);
     }
 
     /**
@@ -140,6 +145,14 @@ class ConcatenationExpression extends ExpressionType
         }
 
         return $parts;
+    }
+
+    /**
+     * Check if expression has a quoted string literal.
+     */
+    private function hasQuotedString(string $expression): bool
+    {
+        return preg_match('/["\']/', $expression) === 1;
     }
 
     /**

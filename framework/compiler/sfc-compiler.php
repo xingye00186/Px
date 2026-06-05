@@ -44,6 +44,7 @@ require_once $compilerDir . '/expression/TernaryExpression.php';
 require_once $compilerDir . '/expression/ComparisonExpression.php';
 require_once $compilerDir . '/expression/LogicalExpression.php';
 require_once $compilerDir . '/expression/ExpressionParser.php';
+require_once $compilerDir . '/expression/ConcatenationExpression.php';
 
 // ---- Native HTML tags whitelist (v9: on-demand compilation) ----
 // Components using these tag names are NOT compiled as custom components.
