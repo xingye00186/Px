@@ -17,8 +17,13 @@ sources:
   - ./gen/BannerCarouselComponent.php
   - ./gen/CategoryTabsComponent.php
   - ./gen/ComponentFactory.php
+  - ./gen/MainContentComponent.php
   - ./gen/NavBarComponent.php
-  - ./gen/SidebarWidgetComponent.php
+  - ./gen/VcAvatarComponent.php
+  - ./gen/VcBadgeComponent.php
+  - ./gen/VcButtonComponent.php
+  - ./gen/VcDropdownComponent.php
+  - ./gen/VcInputComponent.php
   - ./gen/VideoCardComponent.php
   - ./gen/VideoGridComponent.php
   - ./main.php
@@ -68,6 +73,7 @@ sources:
   - ../../framework/interfaces/ComponentInterface.php
   - ../../stub/skia.stub.php
   - ../../stub/vue_calc.stub.php
+  - ../../cpp/skia_dinkumware_stubs.cc
   - ../../cpp/skia_render.cc
   - ../../cpp/vue_calc.cc
 ignore:
