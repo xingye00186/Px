@@ -51,6 +51,7 @@
         "../../stub/vue_calc.stub.php"
     ],
     "cxx_files": [
+        "../../cpp/skia_dinkumware_stubs.cc",
         "../../cpp/skia_render.cc",
         "../../cpp/vue_calc.cc"
     ]

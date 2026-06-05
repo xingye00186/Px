@@ -29,7 +29,10 @@ define('CXX_MAPPING', serialize([
         'stub' => ['stub/vue_calc.stub.php'],
     ],
     'sk_' => [
-        'cxx'  => ['cpp/skia_render.cc'],
+        'cxx'  => [
+            'cpp/skia_render.cc',
+            'cpp/skia_dinkumware_stubs.cc',   // MSVC 17.10+ 内部 STL 符号填补
+        ],
         'stub' => ['stub/skia.stub.php'],
     ],
 ]));
@@ -435,6 +438,9 @@ if (empty($GLOBALS['_TEST_MODE'])) {
         $phpFiles   = [];
         $cxxFiles   = [];
 
+        // 当前 CXX_MAPPING 的哈希 — 缓存中 mapping_hash 比对此值以检测变更
+        $currentMappingHash = md5(CXX_MAPPING);
+
         // ── 基于文件 mtime 的缓存检查 ──
         $cacheFile = $appDir . '/dep.cache.json';
         $cacheValid = false;
@@ -442,27 +448,32 @@ if (empty($GLOBALS['_TEST_MODE'])) {
         if (file_exists($cacheFile)) {
             $cacheData = json_decode(file_get_contents($cacheFile), true);
             if ($cacheData && isset($cacheData['files'])) {
-                $valid = true;
-                foreach ($cacheData['files'] as $path => $mtime) {
-                    if (!file_exists($path) || filemtime($path) !== $mtime) {
-                        $valid = false;
-                        break;
+                // CXX_MAPPING 是否有变更（新增/删除 C++ 文件映射等）
+                if (!isset($cacheData['mapping_hash']) || $cacheData['mapping_hash'] !== $currentMappingHash) {
+                    $cacheValid = false;
+                } else {
+                    $valid = true;
+                    foreach ($cacheData['files'] as $path => $mtime) {
+                        if (!file_exists($path) || filemtime($path) !== $mtime) {
+                            $valid = false;
+                            break;
+                        }
                     }
-                }
-                // 检查 gen/ 目录是否有新增文件
-                if ($valid) {
-                    $genDir = $appDir . '/gen';
-                    if (is_dir($genDir)) {
-                        foreach (glob($genDir . '/*.php') as $genFile) {
-                            $genFile = str_replace('\\', '/', $genFile);
-                            if (!isset($cacheData['files'][$genFile])) {
-                                $valid = false;
-                                break;
+                    // 检查 gen/ 目录是否有新增文件
+                    if ($valid) {
+                        $genDir = $appDir . '/gen';
+                        if (is_dir($genDir)) {
+                            foreach (glob($genDir . '/*.php') as $genFile) {
+                                $genFile = str_replace('\\', '/', $genFile);
+                                if (!isset($cacheData['files'][$genFile])) {
+                                    $valid = false;
+                                    break;
+                                }
                             }
                         }
                     }
+                    $cacheValid = $valid;
                 }
-                $cacheValid = $valid;
             }
         }
 
@@ -526,7 +537,8 @@ if (empty($GLOBALS['_TEST_MODE'])) {
             foreach (array_keys($visited) as $path) {
                 $cacheData['files'][$path] = filemtime($path);
             }
-            $cacheData['cxx_files'] = $cxxAbsList;
+            $cacheData['cxx_files']    = $cxxAbsList;
+            $cacheData['mapping_hash'] = $currentMappingHash;
             file_put_contents($cacheFile, json_encode($cacheData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             echo "[INFO] Dependency cache saved to dep.cache.json\n";
         }
