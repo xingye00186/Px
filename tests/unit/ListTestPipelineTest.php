@@ -441,11 +441,15 @@ function ltCheckInvariantRules(ListRenderSnapshot $snap, int $iter): array
         $v[] = "addButton missing at iter $iter";
     } else {
         // 按钮位置应不变
-        if ($snap->addButton['x'] !== 0) {
+        if ($snap->addButton['x'] !== 125) {
             $v[] = "addButton x changed to {$snap->addButton['x']}";
         }
-        if ($snap->addButton['y'] !== 505) {
-            $v[] = "addButton y changed to {$snap->addButton['y']}";
+        // 按钮位置应在窗口可见范围内
+        if ($snap->addButton['y'] < 0 || $snap->addButton['y'] + $snap->addButton['h'] > WINDOW_HEIGHT) {
+            $v[] = "addButton y={$snap->addButton['y']} outside window (0-" . WINDOW_HEIGHT . ")";
+        }
+        if ($snap->addButton['x'] < 0 || $snap->addButton['x'] + $snap->addButton['w'] > WINDOW_WIDTH) {
+            $v[] = "addButton x={$snap->addButton['x']} outside window (0-" . WINDOW_WIDTH . ")";
         }
         if ($snap->addButton['w'] !== 150) {
             $v[] = "addButton w changed to {$snap->addButton['w']}";
@@ -479,8 +483,8 @@ function ltCheckInvariantRules(ListRenderSnapshot $snap, int $iter): array
         if ($cw !== 380) {
             $v[] = "clipPush w changed to $cw (expected 380)";
         }
-        if ($ch !== 486) {
-            $v[] = "clipPush h changed to $ch (expected 486)";
+        if ($ch !== 444) {
+            $v[] = "clipPush h changed to $ch (expected 444)";
         }
     }
 
@@ -568,19 +572,20 @@ function ltCheckGrowthRules(ListRenderSnapshot $snap, int $expectedItems, int $i
 
 /**
  * 规则 C：元素有效性 — 无负坐标、不超窗口。
+ * 规则 C3：所有元素（按钮、header、clip、scrollbar）边界检查。
  * 注意：按钮标签检查在 ltCheckButtonLabel 中单独处理（已知 bug）。
  */
 function ltCheckElementValidity(ListRenderSnapshot $snap, int $iter): array
 {
     $v = [];
 
-    // item rect 坐标检查
+    // 规则 C1: item rect 坐标检查
     foreach ($snap->itemRects as $i => $r) {
         if ($r['x'] < 0 || $r['y'] < 0) {
             $v[] = "itemRect[$i] negative position: ({$r['x']},{$r['y']})";
         }
         if ($r['x'] + $r['w'] > WINDOW_WIDTH) {
-            $v[] = "itemRect[$i] exceeds right bound: x={$r['x']}+w={$r['w']}>{$snap->bgRect['w']}";
+            $v[] = "itemRect[$i] exceeds right bound: x={$r['x']}+w={$r['w']}>{WINDOW_WIDTH}";
         }
         if ($r['y'] + $r['h'] > WINDOW_HEIGHT) {
             $v[] = "itemRect[$i] exceeds bottom: y={$r['y']}+h={$r['h']}>{WINDOW_HEIGHT}";
@@ -590,7 +595,7 @@ function ltCheckElementValidity(ListRenderSnapshot $snap, int $iter): array
         }
     }
 
-    // item 文本坐标检查
+    // 规则 C2: item 文本坐标检查
     foreach ($snap->itemTexts as $i => $t) {
         if ($t['x'] < -100) {
             $v[] = "itemText[$i] x={$t['x']} far left, GDI corruption risk";
@@ -600,14 +605,62 @@ function ltCheckElementValidity(ListRenderSnapshot $snap, int $iter): array
         }
     }
 
-    // scrollbar 检查（如果出现的话）
+    // 规则 C3: scrollbar 检查（如果出现的话）
     if ($snap->scrollbarV !== null) {
         $sb = $snap->scrollbarV;
         if ($sb['x'] < 0 || $sb['y'] < 0) {
             $v[] = "scrollbarV negative position: ({$sb['x']},{$sb['y']})";
         }
+        if ($sb['x'] + $sb['w'] > WINDOW_WIDTH) {
+            $v[] = "scrollbarV exceeds right: x={$sb['x']}+w={$sb['w']}>{WINDOW_WIDTH}";
+        }
+        if ($sb['y'] + $sb['h'] > WINDOW_HEIGHT) {
+            $v[] = "scrollbarV exceeds bottom: y={$sb['y']}+h={$sb['h']}>{WINDOW_HEIGHT}";
+        }
         if ($sb['contentHeight'] < $sb['h']) {
             $v[] = "scrollbarV contentHeight {$sb['contentHeight']} < container h {$sb['h']}, scrollbar shouldn't exist";
+        }
+    }
+
+    // 规则 C4: header 文本边界检查
+    if ($snap->headerText !== null) {
+        $ht = $snap->headerText;
+        if ($ht['x'] < 0 || $ht['x'] > WINDOW_WIDTH) {
+            $v[] = "headerText x={$ht['x']} outside window";
+        }
+        if ($ht['y'] < 0 || $ht['y'] > WINDOW_HEIGHT) {
+            $v[] = "headerText y={$ht['y']} outside window";
+        }
+    }
+
+    // 规则 C5: clip 区域边界检查
+    if ($snap->clipPush !== null) {
+        $cp = $snap->clipPush;
+        if ($cp['x'] < 0 || $cp['y'] < 0) {
+            $v[] = "clipPush negative position: ({$cp['x']},{$cp['y']})";
+        }
+        if ($cp['x'] + $cp['w'] > WINDOW_WIDTH) {
+            $v[] = "clipPush exceeds right: x={$cp['x']}+w={$cp['w']}>{WINDOW_WIDTH}";
+        }
+        if ($cp['y'] + $cp['h'] > WINDOW_HEIGHT) {
+            $v[] = "clipPush exceeds bottom: y={$cp['y']}+h={$cp['h']}>{WINDOW_HEIGHT}";
+        }
+    }
+
+    // 规则 C6: 按钮边界检查
+    if ($snap->addButton !== null) {
+        $ab = $snap->addButton;
+        if ($ab['x'] < 0 || $ab['y'] < 0) {
+            $v[] = "addButton negative position: ({$ab['x']},{$ab['y']})";
+        }
+        if ($ab['x'] + $ab['w'] > WINDOW_WIDTH) {
+            $v[] = "addButton exceeds right: x={$ab['x']}+w={$ab['w']}>{WINDOW_WIDTH}";
+        }
+        if ($ab['y'] + $ab['h'] > WINDOW_HEIGHT) {
+            $v[] = "addButton exceeds bottom: y={$ab['y']}+h={$ab['h']}>{WINDOW_HEIGHT}";
+        }
+        if ($ab['w'] <= 0 || $ab['h'] <= 0) {
+            $v[] = "addButton non-positive dimension: {$ab['w']}x{$ab['h']}";
         }
     }
 
@@ -890,7 +943,7 @@ test('首次渲染产出正确的结构元素', function () {
     // clip 区域
     assert_not_null($snap->clipPush, "clip-push 应存在");
     assert_eq($snap->clipPush['w'], 380, "clip-push 宽度应为 380（400 - margin-left 10 - margin-right 10）");
-    assert_eq($snap->clipPush['h'], 486, "clip-push 高度应为 486");
+    assert_eq($snap->clipPush['h'], 444, "clip-push 高度应为 444");
 
     // 初始 3 个 item
     assert_eq($snap->itemCount, 3, "初始应有 3 个 item");

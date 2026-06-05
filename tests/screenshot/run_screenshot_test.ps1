@@ -36,7 +36,7 @@ param(
 )
 
 # ---- 配置 ----
-$ProjectRoot = "f:/work/Px"
+$ProjectRoot = "d:/Px"
 $AppName = "calculator-ng"
 $ExePath = "$ProjectRoot/apps/$AppName/bin/calculator_ng.exe"
 $BuildScript = "$ProjectRoot/build.bat"

@@ -63,7 +63,7 @@ if ($foundHwnd -ne [IntPtr]::Zero) {
     $w = $rect.Right - $rect.Left
     $h = $rect.Bottom - $rect.Top
     
-    $outputPath = "f:/work/Px/tests/screenshot/output/bilibili_app_initial.png"
+    $outputPath = "d:/Px/tests/screenshot/output/bilibili_app_initial.png"
     New-Item -ItemType Directory -Force -Path (Split-Path $outputPath) | Out-Null
     
     $bmp = New-Object System.Drawing.Bitmap($w, $h)

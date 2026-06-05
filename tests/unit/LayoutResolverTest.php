@@ -903,6 +903,220 @@ test('scroll container scrollTop clamp', function () {
 });
 
 
+
+
+echo "\n--- 19. Flex Auto-sizing (Cross-axis) ---\n";
+
+test('row flex 容器 auto-height 从子元素计算（含显式 width）', function () {
+    $child = makeNode('div', ['width' => 150, 'height' => 32], [], 'button');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row',
+        'width' => 400,
+        'justifyContent' => 'center',
+        'paddingTop' => 5, 'paddingBottom' => 5,
+        'left' => 0, 'top' => 0,
+    ], [$child]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 500], [$flex]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // flex 容器应 auto-height = child.h(32) + padding(5+5) = 42
+    assert_eq($flex->h, 42, 'row flex auto-height from child + padding');
+    // 子元素应被 justify-content:center 居中
+    assert_eq($child->x, 125, 'child centered in 400px: (400-150)/2=125');
+});
+
+test('row flex 容器 auto-height 多个子元素取最大值', function () {
+    $c1 = makeNode('div', ['width' => 50, 'height' => 30], [], 'A');
+    $c2 = makeNode('div', ['width' => 50, 'height' => 40], [], 'B');
+    $c3 = makeNode('div', ['width' => 50, 'height' => 20], [], 'C');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row',
+        'width' => 200,
+        'gap' => 10, 'left' => 0, 'top' => 0,
+        'paddingTop' => 5, 'paddingBottom' => 5,
+    ], [$c1, $c2, $c3]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 500], [$flex]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // auto-height = max(c1.h,c2.h,c3.h) + padding = 40 + 5 + 5 = 50
+    assert_eq($flex->h, 50, 'row flex auto-height = max child height + padding');
+});
+
+test('column flex 容器 auto-width 从子元素计算（含显式 height，flex parent）', function () {
+    $c1 = makeNode('div', ['width' => 80, 'height' => 30], [], 'A');
+    $c2 = makeNode('div', ['width' => 120, 'height' => 30], [], 'B');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'column',
+        'height' => 200,
+        'gap' => 5, 'left' => 0, 'top' => 0,
+        'paddingLeft' => 10, 'paddingRight' => 10,
+    ], [$c1, $c2]);
+    // 用 flex parent 避免 block auto-stack 覆盖 auto-width
+    $parent = makeNode('div', ['display'=>'flex', 'width'=>400, 'height'=>300, 'left'=>0, 'top'=>0], [$flex]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 500], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // auto-width = max(c1.w,c2.w) + padding = 120 + 10 + 10 = 140
+    assert_eq($flex->w, 140, 'column flex auto-width = max child width + padding');
+});
+
+test('column flex 容器 auto-height 从子元素计算（主轴，含显式 width，abs parent）', function () {
+    $c1 = makeNode('div', ['width' => 50, 'height' => 20], [], 'A');
+    $c2 = makeNode('div', ['width' => 50, 'height' => 30], [], 'B');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'column',
+        'width' => 200,
+        'gap' => 8, 'left' => 0, 'top' => 0,
+    ], [$c1, $c2]);
+    // 用绝对定位父容器避免任何父级干扰
+    $parent = makeNode('div', ['position'=>'absolute', 'left'=>0, 'top'=>0, 'width'=>400, 'height'=>300], [$flex]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 500], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // auto-height = c1.h(20) + gap(8) + c2.h(30) = 58
+    assert_eq($flex->h, 58, 'column flex auto-height from children + gap');
+});
+
+
+echo "\n--- 20. Flex justify-content ---\n";
+
+test('justify-content:center 居中子元素', function () {
+    $c1 = makeNode('div', ['width' => 60, 'height' => 20], [], 'A');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'justifyContent' => 'center',
+        'width' => 200, 'height' => 50, 'left' => 0, 'top' => 0,
+    ], [$c1]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // center: (200-60)/2 = 70
+    assert_eq($c1->x, 70, 'justify-content:center → x=70');
+});
+
+test('justify-content:flex-end 子元素靠右', function () {
+    $c1 = makeNode('div', ['width' => 50, 'height' => 20], [], 'A');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'justifyContent' => 'flex-end',
+        'width' => 200, 'height' => 50, 'left' => 0, 'top' => 0,
+    ], [$c1]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // flex-end: 200-50 = 150
+    assert_eq($c1->x, 150, 'justify-content:flex-end → x=150');
+});
+
+test('justify-content:space-between 均匀分布', function () {
+    $c1 = makeNode('div', ['width' => 40, 'height' => 20], [], 'A');
+    $c2 = makeNode('div', ['width' => 40, 'height' => 20], [], 'B');
+    $c3 = makeNode('div', ['width' => 40, 'height' => 20], [], 'C');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'justifyContent' => 'space-between',
+        'width' => 300, 'height' => 50, 'left' => 0, 'top' => 0,
+    ], [$c1, $c2, $c3]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // 3 items * 40 = 120, container=300, remaining=180, gap=180/(3-1)=90
+    assert_eq($c1->x, 0, 'space-between c1 x=0');
+    assert_eq($c2->x, 40 + 90, 'space-between c2 x=130');
+    assert_eq($c3->x, 40 + 40 + 90 + 90, 'space-between c3 x=260');
+});
+
+
+echo "\n--- 21. Flex:1 与两步扫描 ---\n";
+
+test('flex:1 分配剩余空间', function () {
+    $c1 = makeNode('div', ['width' => 50, 'height' => 30], [], 'fixed');
+    $c2 = makeNode('div', ['flex' => '1', 'height' => 30], [], 'grow');
+    $flex = makeNode('div', [
+        'display' => 'flex',
+        'width' => 200, 'height' => 50, 'left' => 0, 'top' => 0,
+        'gap' => 10,
+    ], [$c1, $c2]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // c1=50 fixed, gap=10, container=200 → c2 = 200-50-10 = 140
+    assert_eq($c1->w, 50, 'fixed child w=50');
+    assert_eq($c2->w, 140, 'flex:1 child gets remaining 140px');
+});
+
+test('flex:1 + justify-content:center 两步扫描渲染', function () {
+    $btn = makeNode('div', ['width' => 150, 'height' => 32], [], 'button');
+    $wrapper = makeNode('div', [
+        'display' => 'flex', 'justifyContent' => 'center',
+        'paddingTop' => 5, 'paddingBottom' => 5,
+        'width' => 400,
+        'left' => 0, 'top' => 0,
+    ], [$btn]);
+
+    $scroll = makeNode('div', [
+        'overflow' => 'auto',
+        'flex' => '1',
+        'left' => 0, 'top' => 0, 'width' => 400, 'height' => 200,
+    ], []);
+
+    $rootFlex = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'column',
+        'left' => 0, 'top' => 0, 'width' => 400, 'height' => 500,
+    ], [$wrapper, $scroll]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 500], [$rootFlex]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // wrapper auto-height = 32 + 10 = 42
+    assert_eq($wrapper->h, 42, 'wrapper auto-height from button + padding');
+    // scroll flex:1 fills remaining: root.h(500) - wrapper.h(42) = 458
+    assert_eq($scroll->h, 458, 'scroll flex:1 fills remaining height');
+    // button centered in wrapper width (400px)
+    assert_eq($btn->x, 125, 'button justify-content:center → x=125');
+    // button y in wrapper
+    assert_eq($btn->y, 5, 'button y = wrapper paddingTop = 5');
+});
+
+test('两步扫描中嵌套 flex 容器 stretch + justify-content 正确', function () {
+    $inner = makeNode('div', ['width' => 80, 'height' => 24], [], 'inner');
+    // flexWrapper 无显式 cross-size：stretch 改变高度后触发两步扫描
+    $flexWrapper = makeNode('div', [
+        'display' => 'flex', 'justifyContent' => 'center',
+        'alignItems' => 'center',
+        'left' => 0, 'top' => 0,
+    ], [$inner]);
+
+    $outerFlex = makeNode('div', [
+        'display' => 'flex', 'alignItems' => 'stretch',
+        'width' => 400, 'height' => 200, 'left' => 0, 'top' => 0,
+    ], [$flexWrapper]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 300], [$outerFlex]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // flexWrapper hasExplicitCrossSize=false (no height) -> stretched to 200
+    assert_eq($flexWrapper->h, 200, 'flex wrapper stretched to 200 by align-items:stretch');
+    // 两步扫描后 inner 应被 align-items:center 居中 → y=(200-24)/2=88
+    assert_eq($inner->y, 88, 'inner centered by align-items:center → y=88');
+});
+
+
 echo "\n";
 $exitCode = print_summary();
 exit($exitCode);

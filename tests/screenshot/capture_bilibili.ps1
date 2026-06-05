@@ -1,5 +1,5 @@
 param(
-    [string]$OutputDir = "f:/work/Px/tests/screenshot/output/bilibili_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+    [string]$OutputDir = "d:/Px/tests/screenshot/output/bilibili_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
 )
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -82,7 +82,7 @@ Write-Host "=== Bilibili 截图采集 ===" -ForegroundColor Cyan
 Get-Process bilibili -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep 1
 
-$exePath = "f:/work/Px/apps/bilibili/bin/bilibili.exe"
+$exePath = "d:/Px/apps/bilibili/bin/bilibili.exe"
 $proc = Start-Process $exePath -PassThru
 Start-Sleep 2
 
