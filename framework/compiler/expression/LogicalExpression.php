@@ -155,6 +155,12 @@ class LogicalExpression extends ExpressionType
             return $logical->parse($operand, $loopInfo);
         }
 
+        // String concatenation (e.g., "'prefix-' . var")
+        $concat = new ConcatenationExpression();
+        if ($concat->matches($operand)) {
+            return $concat->parse($operand, $loopInfo);
+        }
+
         // Property access
         if (str_contains($operand, '.')) {
             $parts = explode('.', $operand, 2);
