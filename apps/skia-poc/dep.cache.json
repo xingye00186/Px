@@ -1,7 +1,7 @@
 {
     "files": {
         "D:/Px/apps/skia-poc/main.php": 1780466410,
-        "D:/Px/apps/skia-poc/gen/AppComponent.php": 1780651678,
+        "D:/Px/apps/skia-poc/gen/AppComponent.php": 1780652824,
         "D:/Px/framework/ReactiveComponent.php": 1780387224,
         "D:/Px/framework/BaseComponent.php": 1780386065,
         "D:/Px/framework/interfaces/ComponentInterface.php": 1779771802,
@@ -48,7 +48,7 @@
         "D:/Px/framework/Styling/Adapter/Win32Styling.php": 1780645529,
         "D:/Px/framework/Styling/Adapter/MacOSStyling.php": 1780645529,
         "D:/Px/framework/Styling/Adapter/LinuxStyling.php": 1780645529,
-        "D:/Px/apps/skia-poc/gen/ComponentFactory.php": 1780651678
+        "D:/Px/apps/skia-poc/gen/ComponentFactory.php": 1780652824
     },
     "cxx_files": [
         "D:/Px/cpp/skia_dinkumware_stubs.cc",

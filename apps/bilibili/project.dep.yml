@@ -20,7 +20,6 @@ sources:
   - ./gen/MainContentComponent.php
   - ./gen/NavBarComponent.php
   - ./gen/VcAvatarComponent.php
-  - ./gen/VcBadgeComponent.php
   - ./gen/VcButtonComponent.php
   - ./gen/VcDropdownComponent.php
   - ./gen/VcInputComponent.php
