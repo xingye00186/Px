@@ -18,3 +18,11 @@ config.yml
 Noto_Sans_SC.zip
 
 tests/screenshot/output/*.png
+
+# Debug 输出目录
+debug/
+
+# Docs 临时文件
+docs/_*.js
+docs/_*.md
+docs/_*.py
