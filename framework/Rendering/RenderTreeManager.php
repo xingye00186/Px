@@ -402,8 +402,9 @@ class RenderTreeManager
             $oldChildren = $renderNode->children;
             $renderNode->clearChildren();
 
-            if (is_string($vnode->children)) {
-                $renderNode->content = $vnode->children;
+            // AOT 兼容: php::Variant 在 use native_types 模式下 is_string() 可能返回 false
+            if ($vnode->children !== null && !($vnode->children instanceof VNode) && !is_array($vnode->children)) {
+                $renderNode->content = (string)$vnode->children;
             } else {
                 $childVNodes = $this->vnodeChildrenToArray($vnode->children);
                 $consumed = [];

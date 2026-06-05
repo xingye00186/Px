@@ -27,6 +27,7 @@ class ExpressionParser implements ExpressionParserInterface
         $this->handlers[] = new TernaryExpression();        // Most specific: ? :
         $this->handlers[] = new LogicalExpression();      // &&, ||, !
         $this->handlers[] = new ComparisonExpression();   // ===, !==, >, <, etc.
+        $this->handlers[] = new ConcatenationExpression(); // . (string concat)
     }
 
     /**
@@ -65,6 +66,7 @@ class ExpressionParser implements ExpressionParserInterface
             'ternary' => '? :',
             'logical' => '&&, ||, !, ??',
             'comparison' => '===, !==, ==, !=, >, <, >=, <=',
+            'concatenation' => '.',
         ];
     }
 

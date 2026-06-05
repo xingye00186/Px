@@ -90,6 +90,8 @@ class VNodeRenderer
             return;
         }
 
+        file_put_contents('D:\\Px\\_debug_out.txt', "collectElements: type={$node->type} needsPaint=true x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);
+
         // #root 不产生渲染元素，直接处理子节点
         if ($node->type === '#root') {
             foreach ($node->children as $child) {
@@ -304,10 +306,14 @@ class VNodeRenderer
         }
 
         switch ($node->type) {
-            case 'button':  return $this->makeButtonElement($node, $style, $props, $x, $y, $w, $h, $layer);
+            case 'button':
+                file_put_contents('D:\\Px\\_debug_out.txt', "renderNodeToElement: type=button x={$x} y={$y} w={$w} h={$h}\n", FILE_APPEND);
+                return $this->makeButtonElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'input':   return $this->makeInputElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'img':     return $this->makeImgElement($node, $style, $props, $x, $y, $w, $h, $layer);
-            case 'span':    return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
+            case 'span':
+                file_put_contents('D:\\Px\\_debug_out.txt', "renderNodeToElement: type=span x={$x} y={$y} w={$w} h={$h} content_null=" . (int)($node->content===null) . "\n", FILE_APPEND);
+                return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'p':
             case 'h1':
             case 'h2':
@@ -328,6 +334,7 @@ class VNodeRenderer
 
     private function makeDivElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
+        $cursor = $style['cursor'] ?? '';
         if ($node->isScrollContainer) {
             return $this->makeScrollContainerElement($node, $style, $x, $y, $w, $h, $layer);
         }
@@ -373,18 +380,18 @@ class VNodeRenderer
 
             if ($hasBg || $hasBorder) {
                 return [
-                    'type' => 'group', 'layer' => $layer,
+                    'type' => 'group', 'layer' => $layer, 'cursor' => $cursor,
                     'elements' => [
-                        ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor],
+                        ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'cursor' => $cursor],
                         ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
-                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer + 1],
+                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor],
                     ],
                 ];
             }
 
             return [
                 'type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
-                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer,
+                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer, 'cursor' => $cursor,
             ];
         }
 
@@ -392,7 +399,7 @@ class VNodeRenderer
             'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
             'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
-            'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
+            'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'cursor' => $cursor,
         ];
     }
 
@@ -404,10 +411,11 @@ class VNodeRenderer
         $align    = $props['align'] ?? ($style['textAlign'] ?? 'left');
         $text = '';
 
-        if (is_string($node->content)) {
-            $text = $node->content;
+        // AOT 兼容: php::Variant 在 use native_types 模式下 is_string() 可能返回 false
+        if ($node->content !== null) {
+            $text = (string)$node->content;
         }
-        $bindKey = $props[':bind'] ?? '';
+        $bindKey = $props[':bind'] ?? $props['bind'] ?? '';
         if ($bindKey !== '') {
             $text = $this->currentComponent()->getBindValue($bindKey);
         }
@@ -415,6 +423,8 @@ class VNodeRenderer
         if ($vModel !== '') {
             $text = $this->currentComponent()->getBindValue($vModel);
         }
+
+        file_put_contents('D:\\Px\\_debug_out.txt', "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);
 
         if ($text === '') return null;
 
@@ -431,14 +441,32 @@ class VNodeRenderer
         }
         $containerX = (int)($props['container-x'] ?? $x);
 
-        // ── text-overflow: ellipsis 文本截断 ──
+        // ── text-overflow: ellipsis 文本截断（含多行支持 -webkit-line-clamp）──
         $textOverflow = $style['textOverflow'] ?? 'clip';
         if ($textOverflow === 'ellipsis' && $containerW > 0) {
             $boldFactor = $bold ? 1.35 : 1.0;
             $charWidth = (int)($fontSize * 0.6 * $boldFactor);
-            $maxChars = max(1, (int)(($containerW - 4) / max($charWidth, 1)));
-            if (strlen($text) > $maxChars) {
-                $text = substr($text, 0, max(0, $maxChars - 1)) . '…';
+            $maxCharsPerLine = max(1, (int)(($containerW - 4) / max($charWidth, 1)));
+
+            // 查询 -webkit-line-clamp 多行截断
+            $lineClamp = (int)($style['webkitLineClamp'] ?? 0);
+            if ($lineClamp > 0) {
+                // 多行模式：按行数截断
+                $lineHeight = (int)($style['lineHeight'] ?? 0);
+                if ($lineHeight <= 0) {
+                    $lineHeight = (int)($fontSize * 1.4);
+                }
+                $maxLines = $lineClamp;
+                $maxTotalChars = $maxCharsPerLine * $maxLines;
+                if (strlen($text) > $maxTotalChars) {
+                    // 最后一行添加…
+                    $text = substr($text, 0, max(0, $maxTotalChars - 1)) . '…';
+                }
+            } else {
+                // 单行模式（原有逻辑）
+                if (strlen($text) > $maxCharsPerLine) {
+                    $text = substr($text, 0, max(0, $maxCharsPerLine - 1)) . '…';
+                }
             }
         }
 
@@ -467,6 +495,7 @@ class VNodeRenderer
 
     private function makeButtonElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
+        $cursor = $style['cursor'] ?? '';
         if ($w <= 0 || $h <= 0) {
             $w = $w <= 0 ? 80 : $w;
             $h = $h <= 0 ? 32 : $h;
@@ -491,10 +520,11 @@ class VNodeRenderer
         }
 
         $label = '';
-        if (is_string($node->content)) {
-            $label = $node->content;
+        // AOT 兼容: php::Variant 在 use native_types 模式下 is_string() 可能返回 false
+        if ($node->content !== null) {
+            $label = (string)$node->content;
         }
-        $bindKey = $props[':bind'] ?? '';
+        $bindKey = $props[':bind'] ?? $props['bind'] ?? '';
         if ($bindKey !== '') {
             $label = $this->currentComponent()->getBindValue($bindKey);
         }
@@ -505,8 +535,8 @@ class VNodeRenderer
         // 若标签仍为空，遍历子 RenderNode 提取文本（处理 <button><span :bind="x">{{ x }}</span></button> 模式）
         if ($label === '') {
             foreach ($node->children as $child) {
-                if (is_string($child->content) && $child->content !== '') {
-                    $label = $child->content;
+                if ($child->content !== null && (string)$child->content !== '') {
+                    $label = (string)$child->content;
                     break;
                 }
                 // 检查子节点的 bind 引用
@@ -534,7 +564,7 @@ class VNodeRenderer
             'bg' => $bg, 'fg' => $fg, 'border' => $borderColor, 'borderWidth' => $borderWidth, 'borderRadius' => $borderRadius,
             'label' => $label, 'labelX' => $labelX, 'labelY' => $labelY,
             'labelFontSize' => $labelFontSize, 'opacity' => $opacity, 'layer' => $layer,
-            'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
+            'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'cursor' => $cursor,
         ];
     }
 

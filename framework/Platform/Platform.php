@@ -52,4 +52,11 @@ interface Platform
      * @param int $intervalMs 帧间隔（毫秒），默认约 16ms ≈ 60fps
      */
     public function setAnimationTimer(callable $callback, int $intervalMs = 16): void;
+
+    /**
+     * 设置鼠标光标样式。
+     *
+     * @param string $cursor 光标类型：'' 默认箭头, 'pointer' 手型
+     */
+    public function setCursor(string $cursor): void;
 }

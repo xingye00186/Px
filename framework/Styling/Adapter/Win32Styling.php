@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Px\Styling\Adapter;
 
+use native_types;
+
 use Px\Styling\Theme\ComponentTheme;
 use Px\Styling\Theme\ThemeData;
 

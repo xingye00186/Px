@@ -600,6 +600,22 @@ class CssMappings
             return ['repeat' => true, 'count' => (int)$m[1], 'size' => ($unit === 'fr' || $unit === '%') ? $size : (int)$size, 'unit' => $unit];
         }
 
+        // match auto-fill/auto-fit repeat: repeat(auto-fill, minmax(MIN, MAX)) or repeat(auto-fit, minmax(MIN, MAX))
+        if (preg_match('/^repeat\(\s*(auto-fill|auto-fit)\s*,\s*minmax\(\s*(\d+(?:\.\d+)?)(px|%|)\s*,\s*(\d+(?:\.\d+)?)(px|fr|%|)\s*\)\s*\)$/i', $val, $m)) {
+            $mode = strtolower($m[1]);
+            $min = (float)$m[2];
+            $minUnit = strtolower($m[3] ?? '');
+            $max = $m[4];
+            $maxTrack = strtolower($m[5] ?? '');
+            return [
+                'repeat' => $mode,
+                'min' => ($minUnit === '%' || $minUnit === '') ? (int)$min : (int)$min,
+                'minUnit' => $minUnit,
+                'max' => (float)$max,
+                'maxTrack' => $maxTrack,
+            ];
+        }
+
         // match complex repeat: repeat(N, minmax(...)) or repeat(N, calc(...))
         if (preg_match('/^repeat\(\s*(\d+)\s*,\s*(.+)\)$/i', $val, $m)) {
             return ['repeat' => true, 'count' => (int)$m[1], 'track' => trim($m[2])];

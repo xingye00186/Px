@@ -2,6 +2,8 @@
 
 namespace Px\Rendering\Backend;
 
+use native_types;
+
 /**
  * RenderBackendFailedException — 渲染后端运行时失败
  *

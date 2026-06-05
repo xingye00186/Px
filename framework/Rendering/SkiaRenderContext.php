@@ -118,6 +118,8 @@ class SkiaRenderContext extends RenderContext
             case 'text':
                 $tx = $el['x'] ?? 0;
                 $ty = $el['y'] ?? 0;
+                $tt = $el['text'] ?? '';
+                fprintf(STDERR, "[SK] drawElement TEXT text='%s' x=%d y=%d fontSize=%d\n", $tt, $tx, $ty, $el['fontSize'] ?? 16);
                 if ($tx < 0 || $ty < 0) break;
                 $this->drawText(
                     $tx, $ty,

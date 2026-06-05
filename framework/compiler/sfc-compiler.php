@@ -788,7 +788,7 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                         // Don't generate a bind prop at all - just keep as plain value
                         continue;
                     }
-                } elseif ($k === ':click-arg') {
+                } elseif ($k === ':click-arg' || $k === 'click-arg') {
                     if (str_starts_with($v, $loopInfo['item'] . '.')) {
                         $propName = substr($v, strlen($loopInfo['item']) + 1);
                         $propsStr[] = var_export('click-arg', true) . "=>\${$loopInfo['item']}['{$propName}']";
@@ -1318,7 +1318,7 @@ function generateLoopItemPropsExpr(array $props, ?array $loopInfo): string
                 } else {
                     $v = "\$this->{$v}";
                 }
-            } elseif ($k === ':click-arg') {
+            } elseif ($k === ':click-arg' || $k === 'click-arg') {
                 if (str_starts_with($v, $loopInfo['item'] . '.')) {
                     $propName = substr($v, strlen($loopInfo['item']) + 1);
                     $v = "\${$loopInfo['item']}['{$propName}']";

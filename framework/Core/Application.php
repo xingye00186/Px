@@ -47,6 +47,9 @@ class Application
     private bool $renderRequested = false;
     private bool $running = true;
 
+    /** 当前鼠标光标类型：'' 默认, 'pointer' 手型 */
+    private string $currentCursor = '';
+
     /** @var array<string, ReactiveComponent> VNode.groupId → Component instance */
     private array $componentByGroupId = [];
 
@@ -107,9 +110,26 @@ class Application
             return;
         }
 
-        // ── 鼠标拖动：滚动条拖拽 ──────────────
+        // ── 鼠标拖动：滚动条拖拽 + 光标 hover ──
         if ($event->getAction() === 'move') {
+            // 先处理滚动条拖拽
             $this->scrollManager->handleScrollbarDrag($event->getX(), $event->getY());
+
+            // 然后检查光标状态（仅当不在拖拽状态时）
+            if (!$this->scrollManager->isDragging()) {
+                $hoverNode = $this->renderTreeManager->hitTest($event->getX(), $event->getY());
+                $newCursor = '';
+                if ($hoverNode !== null) {
+                    $cursorStyle = $hoverNode->style['cursor'] ?? '';
+                    if ($cursorStyle === 'pointer' || $cursorStyle === 'hand') {
+                        $newCursor = 'pointer';
+                    }
+                }
+                if ($newCursor !== $this->currentCursor) {
+                    $this->currentCursor = $newCursor;
+                    $this->platform->setCursor($newCursor);
+                }
+            }
             return;
         }
 

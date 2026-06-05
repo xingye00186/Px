@@ -2,6 +2,8 @@
 
 namespace Px\Platform;
 
+use native_types;
+
 use Px\Rendering\RenderContext;
 use Px\Rendering\GdiRenderContext;
 use Px\Rendering\SkiaRenderContext;
@@ -57,6 +59,13 @@ class Win32Platform implements Platform
     public function shouldClose(): bool
     {
         return vue_quit_requested();
+    }
+
+    public function setCursor(string $cursor): void
+    {
+        // 光标切换由 Win32 GDI 层在渲染时根据元素 cursor 字段处理
+        // 此方法用于外部直接控制（如 Application hover 检测）
+        // C++ 层需要实现 Win32 SetCursor() 调用
     }
 
     public function setAnimationTimer(callable $callback, int $intervalMs = 16): void

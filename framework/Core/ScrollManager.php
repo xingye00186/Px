@@ -35,6 +35,12 @@ class ScrollManager
     private int $scrollDragStartScrollPos = 0;
     private bool $scrollDragIsHorizontal = false;
 
+    /** 是否正在拖拽滚动条 */
+    public function isDragging(): bool
+    {
+        return $this->scrollDragTarget !== null;
+    }
+
     public function __construct(
         callable $requestRender,
         callable $directRender,

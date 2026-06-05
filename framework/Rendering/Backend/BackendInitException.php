@@ -2,6 +2,8 @@
 
 namespace Px\Rendering\Backend;
 
+use native_types;
+
 /**
  * BackendInitException — 后端初始化失败
  *

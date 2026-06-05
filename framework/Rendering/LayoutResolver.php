@@ -5,16 +5,16 @@ namespace Px\Rendering;
 use native_types;
 
 /**
- * LayoutResolver — 运行时 CSS 布局引擎（RenderNode 版）
+ * LayoutResolver 鈥?杩愯�鏃?CSS 甯冨眬寮曟搸锛圧enderNode 鐗堬級
  *
- * 遍历 RenderNode 树，根据 style 属性计算每个节点的 x/y/w/h 位置。
- * 支持四种布局模式: block (absolute), flex, grid, scroll。
+ * 閬嶅巻 RenderNode 鏍戯紝鏍规嵁 style 灞炴€ц�绠楁瘡涓�妭鐐圭殑 x/y/w/h 浣嶇疆銆?
+ * 鏀�寔鍥涚�甯冨眬妯″紡: block (absolute), flex, grid, scroll銆?
  *
- * 与旧版 VNode 版的关键区别：
- *   1. 接受 RenderNode 而非 VNode（style 已预计算，无需调用 StyleResolver）
- *   2. 实现脏标记检查：layoutDirty=false 时跳过完整布局，仅传递父坐标（含 margin）
- *   3. 集成快速滚动路径：scrollTop 变化时仅平移子节点，不改变容器本身 y
- *   4. 子节点遍历简化（RenderNode.children 始终为数组）
+ * 涓庢棫鐗?VNode 鐗堢殑鍏抽敭鍖哄埆锛?
+ *   1. 鎺ュ彈 RenderNode 鑰岄潪 VNode锛坰tyle 宸查�璁＄畻锛屾棤闇€璋冪敤 StyleResolver锛?
+ *   2. 瀹炵幇鑴忔爣璁版�鏌ワ細layoutDirty=false 鏃惰烦杩囧畬鏁村竷灞€锛屼粎浼犻€掔埗鍧愭爣锛堝惈 margin锛?
+ *   3. 闆嗘垚蹇�€熸粴鍔ㄨ矾寰勶細scrollTop 鍙樺寲鏃朵粎骞崇Щ瀛愯妭鐐癸紝涓嶆敼鍙樺�鍣ㄦ湰韬?y
+ *   4. 瀛愯妭鐐归亶鍘嗙畝鍖栵紙RenderNode.children 濮嬬粓涓烘暟缁勶級
  */
 class LayoutResolver
 {
@@ -55,12 +55,12 @@ class LayoutResolver
         array &$scrollContainers
     ): void {
         if ($node->layoutDirty) {
-            // ── 脏路径：完整布局计算 ──
-            // 统一入口：在 style 解析处合并 animatedStyle
-            // animatedStyle 优先级高于 style，但不污染原始 style
+            // 鈹€鈹€ 鑴忚矾寰勶細瀹屾暣甯冨眬璁＄畻 鈹€鈹€
+            // 缁熶竴鍏ュ彛锛氬湪 style 瑙ｆ瀽澶勫悎骞?animatedStyle
+            // animatedStyle 浼樺厛绾ч珮浜?style锛屼絾涓嶆薄鏌撳師濮?style
             $style = $node->style;
             if ($node->isAnimating && !empty($node->animatedStyle)) {
-                // 深度拷贝：避免修改原始 $node->style
+                // 娣卞害鎷疯礉锛氶伩鍏嶄慨鏀瑰師濮?$node->style
                 $effectiveStyle = [];
                 foreach ($style as $k => $v) {
                     $effectiveStyle[$k] = $v;
@@ -77,7 +77,7 @@ class LayoutResolver
                 $node->layer = $parent->layer;
             }
 
-            // Apply own z-index → RenderNode layer
+            // Apply own z-index 鈫?RenderNode layer
             $zIndex = (int)($effectiveStyle['zIndex'] ?? $effectiveStyle['zindex'] ?? 0);
             if ($zIndex > $node->layer) {
                 $node->layer = $zIndex;
@@ -109,7 +109,7 @@ class LayoutResolver
                     break;
             }
 
-            // ── Scroll container post-processing for flex/grid display modes ──
+            // 鈹€鈹€ Scroll container post-processing for flex/grid display modes 鈹€鈹€
             // (block layout handles this internally in resolveBlockLayout)
             if ($node->isScrollContainer && ($display === 'flex' || $display === 'grid')) {
                 $padT = $effectiveStyle['paddingTop'] ?? $effectiveStyle['padding'] ?? 0;
@@ -169,6 +169,34 @@ class LayoutResolver
                 }
             }
 
+            // 鈹€鈹€ position:sticky 澶勭悊 鈹€鈹€
+            if ($position === 'sticky') {
+                $stickyTop = (int)($effectiveStyle['top'] ?? 0);
+                // 淇濆瓨鍘熷� Y (鏈皟鏁村墠)
+                $node->style['_stickyBaseY'] = $node->y;
+
+                // 鏌ユ壘鏈€杩戠殑婊氬姩瀹瑰櫒
+                for ($i = count($scrollContainers) - 1; $i >= 0; $i--) {
+                    $sc = $scrollContainers[$i];
+                    // 妫€鏌ヨ妭鐐规槸鍚﹀湪姝ゆ粴鍔ㄥ鍣ㄥ唴
+                    if ($node->x >= $sc->x && $node->x < $sc->x + $sc->w &&
+                        $node->y >= $sc->y && $node->y < $sc->y + $sc->h) {
+                        // 鎭㈠閫昏緫浣嶇疆锛氬姞鍥瀕crollTop
+                        $logicalY = $node->y + $sc->scrollTop;
+                        $stuckY = $sc->y + $stickyTop;
+                        $currentY = $logicalY - $sc->scrollTop;
+                        if ($currentY < $stuckY) {
+                            $dy = $stuckY - $currentY;
+                            $node->y = $stuckY;
+                            foreach ($node->children as $child) {
+                                $this->shiftDescendantsY($child, $dy);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
             // Track scroll containers
             if ($node->isScrollContainer) {
                 $scrollContainers[] = $node;
@@ -177,11 +205,11 @@ class LayoutResolver
 
             $node->layoutDirty = false;
         } else {
-            // ── 洁净路径：仅传递父坐标（含自身 margin） ──
+            // 鈹€鈹€ 娲佸噣璺�緞锛氫粎浼犻€掔埗鍧愭爣锛堝惈鑷�韩 margin锛?鈹€鈹€
             $style = $node->style;
             $marginLeft = $style['marginLeft'] ?? $style['margin'] ?? 0;
             $marginTop = $style['marginTop'] ?? $style['margin'] ?? 0;
-            // 仅当节点有显式定位时才重算 x/y（否则保留 auto-stack 或快速滚动路径设定的位置）
+            // 浠呭綋鑺傜偣鏈夋樉寮忓畾浣嶆椂鎵嶉噸绠?x/y锛堝惁鍒欎繚鐣?auto-stack 鎴栧揩閫熸粴鍔ㄨ矾寰勮�瀹氱殑浣嶇疆锛?
             if (array_key_exists('left', $style)) {
                 $node->x = $style['left'] + $parentX + $marginLeft;
             }
@@ -189,8 +217,8 @@ class LayoutResolver
                 $node->y = $style['top'] + $parentY + $marginTop;
             }
 
-            // ── 快速滚动路径 ──
-            // 仅滚动容器且 scrollTop 发生变化时执行
+            // 鈹€鈹€ 蹇�€熸粴鍔ㄨ矾寰?鈹€鈹€
+            // 浠呮粴鍔ㄥ�鍣ㄤ笖 scrollTop 鍙戠敓鍙樺寲鏃舵墽琛?
             if ($node->isScrollContainer && $node->scrollTop !== $node->lastScrollTop) {
                 $deltaY = $node->lastScrollTop - $node->scrollTop;
                 foreach ($node->children as $child) {
@@ -199,7 +227,7 @@ class LayoutResolver
                 $node->lastScrollTop = $node->scrollTop;
             }
 
-            // ── 子节点递归处理 ──
+            // 鈹€鈹€ 瀛愯妭鐐归€掑綊澶勭悊 鈹€鈹€
             $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
             $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
 
@@ -219,10 +247,10 @@ class LayoutResolver
     /**
      * Block layout dispatcher.
      *
-     * 统一尺寸解析（百分比 + min/max），然后根据 position 分发到:
-     * - resolveNormalFlow（static/relative）
-     * - resolveAbsolutePositioning（absolute/fixed）
-     * 最后处理 scroll container post-processing + auto-width/height。
+     * 缁熶竴灏哄�瑙ｆ瀽锛堢櫨鍒嗘瘮 + min/max锛夛紝鐒跺悗鏍规嵁 position 鍒嗗彂鍒?
+     * - resolveNormalFlow锛坰tatic/relative锛?
+     * - resolveAbsolutePositioning锛坅bsolute/fixed锛?
+     * 鏈€鍚庡�鐞?scroll container post-processing + auto-width/height銆?
      */
     private function resolveBlockLayout(
         RenderNode $node,
@@ -239,20 +267,20 @@ class LayoutResolver
         $right = $style['right'] ?? null;
         $bottom = $style['bottom'] ?? null;
 
-        // ── 百分比尺寸解析 ──
+        // 鈹€鈹€ 鐧惧垎姣斿昂瀵歌В鏋?鈹€鈹€
         $parentW = ($parent !== null) ? $parent->w : 0;
         $parentH = ($parent !== null) ? $parent->h : 0;
         $width  = $this->resolvePercent($style, 'width', 'widthPercent', $parentW);
         $height = $this->resolvePercent($style, 'height', 'heightPercent', $parentH);
 
-        // flex:1 已移至 flex 布局专用路径 (Task D)
+        // flex:1 宸茬Щ鑷?flex 甯冨眬涓撶敤璺�緞 (Task D)
 
-        // ── 应用 min/max 约束到尺寸（在子节点递归之前，确保 parent->w/h 立即可用）──
+        // 鈹€鈹€ 搴旂敤 min/max 绾︽潫鍒板昂瀵革紙鍦ㄥ瓙鑺傜偣閫掑綊涔嬪墠锛岀‘淇?parent->w/h 绔嬪嵆鍙�敤锛夆攢鈹€
         $node->w = max(0, (int)$this->applyMinMax($style, $width, true));
         $node->h = max(0, (int)$this->applyMinMax($style, $height, false));
 
-        // ── 根据 position 分发 ──
-        // B.4: position:fixed v1 退化为 absolute（同分支）
+        // 鈹€鈹€ 鏍规嵁 position 鍒嗗彂 鈹€鈹€
+        // B.4: position:fixed v1 閫€鍖栦负 absolute锛堝悓鍒嗘敮锛?
         $isAbsolute = ($position === 'absolute' || $position === 'fixed');
 
         if ($isAbsolute) {
@@ -262,7 +290,7 @@ class LayoutResolver
             $this->resolveNormalFlow($node, $parentX, $parentY, $parent, $position, $style, $left, $top, $scrollContainers);
         }
 
-        // ── Scroll container post-processing ──
+        // 鈹€鈹€ Scroll container post-processing 鈹€鈹€
         if ($node->isScrollContainer) {
             $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
             $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
@@ -271,7 +299,7 @@ class LayoutResolver
             $this->finalizeScrollContainer($node, $style, $childOffsetY, $paddingLeft, $paddingRight, $scrollContainers);
         }
 
-        // ── Task C: Normal Flow auto-stack for block containers ──
+        // 鈹€鈹€ Task C: Normal Flow auto-stack for block containers 鈹€鈹€
         $display = $style['display'] ?? 'block';
         if (!$isAbsolute && $display === 'block' && !$node->isScrollContainer) {
             // Static/relative children in block containers auto-stack vertically (CSS normal flow).
@@ -288,7 +316,7 @@ class LayoutResolver
                     $childStyle = $child->style;
                     $childPosition = $childStyle['position'] ?? 'static';
 
-                    // Skip absolute/fixed children — they don't participate in normal flow
+                    // Skip absolute/fixed children 鈥?they don't participate in normal flow
                     if ($childPosition === 'absolute' || $childPosition === 'fixed') {
                         continue;
                     }
@@ -308,7 +336,7 @@ class LayoutResolver
                     $oldY = $child->y;
                     $child->y = $stackY + $mTop;
 
-                    // position:relative 额外偏移（不推进 stack）
+                    // position:relative 棰濆�鍋忕Щ锛堜笉鎺ㄨ繘 stack锛?
                     if ($childPosition === 'relative') {
                         $child->y += ($childStyle['top'] ?? 0);
                     }
@@ -326,7 +354,7 @@ class LayoutResolver
             }
         }
 
-        // ── Auto-width/height for block containers (CSS content-based sizing) ──
+        // 鈹€鈹€ Auto-width/height for block containers (CSS content-based sizing) 鈹€鈹€
         $hasExplicitWidth = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         $hasExplicitHeight = array_key_exists('height', $style) || array_key_exists('heightPercent', $style);
 
@@ -370,8 +398,8 @@ class LayoutResolver
     /**
      * Normal flow positioning (static/relative).
      *
-     * static: 完全忽略 left/top/right/bottom，不推进 stack。
-     * relative: left/top 作为附加偏移量（不影响兄弟节点的 stack 位置）。
+     * static: 瀹屽叏蹇界暐 left/top/right/bottom锛屼笉鎺ㄨ繘 stack銆?
+     * relative: left/top 浣滀负闄勫姞鍋忕Щ閲忥紙涓嶅奖鍝嶅厔寮熻妭鐐圭殑 stack 浣嶇疆锛夈€?
      */
     private function resolveNormalFlow(
         RenderNode $node,
@@ -393,12 +421,12 @@ class LayoutResolver
         $node->x = $parentX + $marginLeft;
         $node->y = $parentY + $marginTop;
 
-        // relative: left/top 作为额外偏移（不改变 stack 推进位置）
+        // relative: left/top 浣滀负棰濆�鍋忕Щ锛堜笉鏀瑰彉 stack 鎺ㄨ繘浣嶇疆锛?
         if ($position === 'relative') {
             $node->x += $left;
             $node->y += $top;
         }
-        // static: left/top/right/bottom 完全忽略
+        // static: left/top/right/bottom 瀹屽叏蹇界暐
 
         // Apply translate from animatedStyle
         $translateX = $style['translateX'] ?? 0;
@@ -422,10 +450,10 @@ class LayoutResolver
     /**
      * Absolute/fixed positioning.
      *
-     * 使用 positioningAncestor（position != static 的最近祖先）作为参考系。
-     * left/top 相对定位祖先的 padding box 偏移。
-     * right/bottom 替代（当 left/top 未设时）。
-     * position:fixed v1 退化为 absolute（TODO v2: viewport 参考系）。
+     * 浣跨敤 positioningAncestor锛坧osition != static 鐨勬渶杩戠�鍏堬級浣滀负鍙傝€冪郴銆?
+     * left/top 鐩稿�瀹氫綅绁栧厛鐨?padding box 鍋忕Щ銆?
+     * right/bottom 鏇夸唬锛堝綋 left/top 鏈��鏃讹級銆?
+     * position:fixed v1 閫€鍖栦负 absolute锛圱ODO v2: viewport 鍙傝€冪郴锛夈€?
      */
     private function resolveAbsolutePositioning(
         RenderNode $node,
@@ -439,21 +467,21 @@ class LayoutResolver
         int $height,
         array &$scrollContainers
     ): void {
-        // 判断定位模式：fixed vs absolute
+        // 鍒ゆ柇瀹氫綅妯″紡锛歠ixed vs absolute
         $pos = $style['position'] ?? 'absolute';
         $isFixed = ($pos === 'fixed');
 
         if ($isFixed && $this->rootNode !== null) {
-            // position:fixed — 使用根节点（视口）作为参考系
-            // fixed 元素相对于视口定位，与滚动无关
+            // position:fixed 鈥?浣跨敤鏍硅妭鐐癸紙瑙嗗彛锛変綔涓哄弬鑰冪郴
+            // fixed 鍏冪礌鐩稿�浜庤�鍙ｅ畾浣嶏紝涓庢粴鍔ㄦ棤鍏?
             $ancestor = $this->rootNode;
         } else {
-            // position:absolute — 查找并缓存定位祖先
+            // position:absolute 鈥?鏌ユ壘骞剁紦瀛樺畾浣嶇�鍏?
             $this->resolvePositioningAncestor($node);
             $ancestor = $node->positioningAncestor;
         }
 
-        // 参考系：定位祖先的 padding box，退化时用 (0,0)
+        // 鍙傝€冪郴锛氬畾浣嶇�鍏堢殑 padding box锛岄€€鍖栨椂鐢?(0,0)
         $ancestorX = ($ancestor !== null) ? $ancestor->x : 0;
         $ancestorY = ($ancestor !== null) ? $ancestor->y : 0;
         $ancestorW = ($ancestor !== null) ? $ancestor->w : 0;
@@ -468,16 +496,16 @@ class LayoutResolver
         $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
         $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
 
-        // left/top 相对定位祖先偏移
+        // left/top 鐩稿�瀹氫綅绁栧厛鍋忕Щ
         $node->x = $ancestorX + $left + $marginLeft;
         $node->y = $ancestorY + $top + $marginTop;
 
-        // right/bottom 替代（当 width/height 已设时用尺寸推算，否则仅锚定边缘）
+        // right/bottom 鏇夸唬锛堝綋 width/height 宸茶�鏃剁敤灏哄�鎺ㄧ畻锛屽惁鍒欎粎閿氬畾杈圭紭锛?
         if ($right !== null && $ancestor !== null) {
             if ($width > 0) {
                 $node->x = $ancestorX + $ancestorW - $width - $right;
             } else {
-                // No explicit width — anchor from right edge
+                // No explicit width 鈥?anchor from right edge
                 $node->x = $ancestorX + $ancestorW - $right;
             }
         }
@@ -485,12 +513,12 @@ class LayoutResolver
             if ($height > 0) {
                 $node->y = $ancestorY + $ancestorH - $height - $bottom;
             } else {
-                // No explicit height — anchor from bottom edge
+                // No explicit height 鈥?anchor from bottom edge
                 $node->y = $ancestorY + $ancestorH - $bottom;
             }
         }
 
-        // ── margin:auto 水平 + 垂直居中 ──
+        // 鈹€鈹€ margin:auto 姘村钩 + 鍨傜洿灞呬腑 鈹€鈹€
         $parentContentW = ($ancestor !== null) ? max(0, $ancestorW - $paddingLeft - $paddingRight) : 0;
         $paddingBottom = $style['paddingBottom'] ?? $style['padding'] ?? 0;
         $parentContentH = ($ancestor !== null) ? max(0, $ancestorH - $paddingTop - $paddingBottom) : 0;
@@ -541,7 +569,7 @@ class LayoutResolver
         $node->x += $translateX;
         $node->y += $translateY;
 
-        // ── 百分比尺寸解析 ──
+        // 鈹€鈹€ 鐧惧垎姣斿昂瀵歌В鏋?鈹€鈹€
         $parentW = ($parent !== null) ? $parent->w : 0;
         $parentH = ($parent !== null) ? $parent->h : 0;
         $width  = $this->resolvePercent($style, 'width', 'widthPercent', $parentW);
@@ -550,7 +578,7 @@ class LayoutResolver
         $node->w = max(0, (int)$width);
         $node->h = max(0, (int)$height);
 
-        // ── 方向检测（在父级填充前，以区分主/交叉轴）──
+        // 鈹€鈹€ 鏂瑰悜妫€娴嬶紙鍦ㄧ埗绾у～鍏呭墠锛屼互鍖哄垎涓?浜ゅ弶杞达級鈹€鈹€
         $direction = $style['flexDirection'] ?? 'row';
         $isRow = ($direction === 'row' || $direction === 'row-reverse');
 
@@ -559,7 +587,7 @@ class LayoutResolver
         // incorrectly sets the container's dimension when it's a flex item whose
         // cross-axis direction differs from the parent's.
         // Example: a row flex-container child of a column flex-container should
-        // NOT have its height filled from parent height — only width should stretch.
+        // NOT have its height filled from parent height 鈥?only width should stretch.
 
         $gap       = $style['gap'] ?? 0;
         $justify   = $style['justifyContent'] ?? 'flex-start';
@@ -568,7 +596,7 @@ class LayoutResolver
 
         $reversed = ($direction === 'row-reverse' || $direction === 'column-reverse');
 
-        // ── Padding ──
+        // 鈹€鈹€ Padding 鈹€鈹€
         $paddingTop    = $style['paddingTop'] ?? $style['padding'] ?? 0;
         $paddingRight  = $style['paddingRight'] ?? $style['padding'] ?? 0;
         $paddingBottom = $style['paddingBottom'] ?? $style['padding'] ?? 0;
@@ -577,7 +605,7 @@ class LayoutResolver
         $containerMain = max(0, $isRow ? ($width - $paddingLeft - $paddingRight) : ($height - $paddingTop - $paddingBottom));
         $containerCross = max(0, $isRow ? ($height - $paddingTop - $paddingBottom) : ($width - $paddingLeft - $paddingRight));
 
-        // ── Step 1: Collect children and resolve ──
+        // 鈹€鈹€ Step 1: Collect children and resolve 鈹€鈹€
         // Apply scroll offset to child parent coordinates for scroll containers
         $scrollOffsetX = 0;
         $scrollOffsetY = 0;
@@ -604,7 +632,7 @@ class LayoutResolver
             return;
         }
 
-        // ── Step 2: Order sort (AOT 兼容的冒泡排序，稳定排序) ──
+        // 鈹€鈹€ Step 2: Order sort (AOT 鍏煎�鐨勫啋娉℃帓搴忥紝绋冲畾鎺掑簭) 鈹€鈹€
         $n = count($children);
         for ($i = 0; $i < $n; $i++) {
             for ($j = 0; $j < $n - $i - 1; $j++) {
@@ -618,7 +646,7 @@ class LayoutResolver
             }
         }
 
-        // ── Step 3: 收集 flex item 元数据 (grow/shrink/basis) ──
+        // 鈹€鈹€ Step 3: 鏀堕泦 flex item 鍏冩暟鎹?(grow/shrink/basis) 鈹€鈹€
         $flexItemData = [];
         foreach ($children as $ch) {
             $data = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => -1, 'isFlexGrow' => false];
@@ -638,7 +666,7 @@ class LayoutResolver
             $flexItemData[] = $data;
         }
 
-        // ── Step 3.5: Flex-wrap 按行分割 ──
+        // 鈹€鈹€ Step 3.5: Flex-wrap 鎸夎�鍒嗗壊 鈹€鈹€
         $isWrapping = ($wrap === 'wrap');
         $lines = [$children];
         if ($isWrapping) {
@@ -670,7 +698,7 @@ class LayoutResolver
             }
         }
 
-        // ── Per-line flex layout ──
+        // 鈹€鈹€ Per-line flex layout 鈹€鈹€
         $accumulatedCrossOffset = 0;
         foreach ($lines as $lineChildren) {
             $lineContainerMain = $containerMain;
@@ -682,7 +710,7 @@ class LayoutResolver
             $lineHasFlexGrow = false;
             foreach ($lineChildren as $ch) {
                 foreach ($flexItemData as $origData) {
-                    // Match by tracking index offset — simpler: rebuild
+                    // Match by tracking index offset 鈥?simpler: rebuild
                 }
             }
             // Rebuild flex data for this line
@@ -710,10 +738,10 @@ class LayoutResolver
                 $lineFlexData[] = $data;
             }
 
-            // ── Step 4: Apply flex-basis ──
+            // 鈹€鈹€ Step 4: Apply flex-basis 鈹€鈹€
             $this->applyFlexBasis($lineChildren, $lineFlexData, $isRow);
 
-            // ── Step 5: Flex-grow ──
+            // 鈹€鈹€ Step 5: Flex-grow 鈹€鈹€
             if ($lineHasFlexGrow) {
                 $fixedTotalMain = 0;
                 foreach ($lineChildren as $idx => $ch) {
@@ -750,7 +778,7 @@ class LayoutResolver
                 }
             }
 
-            // ── Step 6: Calculate line totalMain ──
+            // 鈹€鈹€ Step 6: Calculate line totalMain 鈹€鈹€
             $lineTotalMain = 0;
             $lineMaxCross = 0;
             foreach ($lineChildren as $ch) {
@@ -769,8 +797,11 @@ class LayoutResolver
             }
             $lineTotalMain += $gap * ($lineCount - 1);
 
-            // ── Step 7: Flex-shrink ──
-            if ($lineTotalMain > $lineContainerMain) {
+            // ═══════ Step 7: Flex-shrink ═══════
+            // CSS spec: when flex container's main-axis size is auto (not explicitly
+            // set), content determines size, so no overflow can occur.
+            // Skip shrink when containerMain == 0 (auto main-axis size).
+            if ($lineContainerMain > 0 && $lineTotalMain > $lineContainerMain) {
                 $overflow = $lineTotalMain - $lineContainerMain;
                 $totalShrinkWeight = 0;
                 foreach ($lineChildren as $idx => $ch) {
@@ -801,13 +832,13 @@ class LayoutResolver
                 }
             }
 
-            // ── Step 8: Min/max constraints ──
+            // 鈹€鈹€ Step 8: Min/max constraints 鈹€鈹€
             foreach ($lineChildren as $ch) {
                 $ch->w = max(0, (int)$this->applyMinMax($ch->style, $ch->w, true));
                 $ch->h = max(0, (int)$this->applyMinMax($ch->style, $ch->h, false));
             }
 
-            // ── Step 9: Recalculate totalMain after shrink ──
+            // 鈹€鈹€ Step 9: Recalculate totalMain after shrink 鈹€鈹€
             $lineTotalMain = 0;
             $lineMaxCross = 0;
             foreach ($lineChildren as $ch) {
@@ -826,7 +857,7 @@ class LayoutResolver
             }
             $lineTotalMain += $gap * ($lineCount - 1);
 
-            // ── Step 10: Justify-content for this line ──
+            // 鈹€鈹€ Step 10: Justify-content for this line 鈹€鈹€
             $mainStart = match ($justify) {
                 'center'        => ($lineContainerMain - $lineTotalMain) / 2,
                 'flex-end'      => $lineContainerMain - $lineTotalMain,
@@ -846,7 +877,7 @@ class LayoutResolver
                 $mainStart = $spaceBetween;
             }
 
-            // ── Step 11: Position children in this line ──
+            // 鈹€鈹€ Step 11: Position children in this line 鈹€鈹€
             $currentMain = $mainStart;
             $indices = range(0, $lineCount - 1);
             if ($reversed) {
@@ -981,32 +1012,72 @@ class LayoutResolver
                 }
             }
 
-            // ── Two-pass: re-resolve internal children of sized items ──
+            // 鈹€鈹€ Two-pass: re-resolve internal children of sized items 鈹€鈹€
             // After flex-grow (Step 5) or cross-axis stretch (Step 11), flex items'
             // main-axis or cross-axis size may have changed. Their internal children
             // were laid out in Step 1 using preliminary sizes.
             // This re-resolves grandchildren with the flex item's final size.
+            //
+            // CSS standard: when a flex item's cross-axis size changes due to
+            // align-items:stretch, browsers re-flow the interior. For block/scroll
+            // containers, re-resolving children individually suffices. For flex/grid
+            // containers, the full layout must re-run so that justify-content,
+            // align-items, flex-wrap etc. are calculated with the new size.
             foreach ($lineChildren as $idxTp => $chTp) {
                 $dataTp = $lineFlexData[$idxTp];
                 $needsTwoPass = $dataTp['isFlexGrow'] || $dataTp['crossAxisSized'];
                 if ($needsTwoPass && count($chTp->children) > 0) {
-                    $chPadLtp = $chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0;
-                    $chPadTtp = $chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0;
-                    $gcOffsetX = $chTp->x + $chPadLtp;
-                    $gcOffsetY = $chTp->y + $chPadTtp;
-                    // Account for scroll offset if the flex item is a scroll container
-                    if ($chTp->isScrollContainer) {
-                        $gcOffsetX -= $chTp->scrollLeft;
-                        $gcOffsetY -= $chTp->scrollTop;
-                    }
-                    foreach ($chTp->children as $grandchild) {
-                        $grandchild->layoutDirty = true;
-                        $this->resolveNode($grandchild, $gcOffsetX, $gcOffsetY, $chTp, $scrollContainers);
+                    $display = $chTp->style['display'] ?? 'block';
+
+                    if ($display === 'flex' || $display === 'grid') {
+                        // Full re-layout for flex/grid containers.
+                        // Derive parent coords from current position minus offset.
+                        $leftOff = $chTp->style['left'] ?? 0;
+                        $topOff  = $chTp->style['top'] ?? 0;
+                        $prX = $chTp->x - $leftOff;
+                        $prY = $chTp->y - $topOff;
+
+                        // Temporarily set style width/height to current external
+                        // size so the re-run layout uses correct dimensions.
+                        $hasOrigW = array_key_exists('width', $chTp->style);
+                        $hasOrigH = array_key_exists('height', $chTp->style);
+                        $origW = $chTp->style['width'] ?? null;
+                        $origH = $chTp->style['height'] ?? null;
+                        $chTp->style['width'] = $chTp->w;
+                        $chTp->style['height'] = $chTp->h;
+
+                        $chTp->layoutDirty = true;
+                        foreach ($chTp->children as $gc) {
+                            $gc->layoutDirty = true;
+                        }
+                        $this->resolveNode($chTp, $prX, $prY, $parent, $scrollContainers);
+
+                        if ($hasOrigW) {
+                            $chTp->style['width'] = $origW;
+                        } else {
+                            unset($chTp->style['width']);
+                        }
+                        if ($hasOrigH) {
+                            $chTp->style['height'] = $origH;
+                        } else {
+                            unset($chTp->style['height']);
+                        }
+                    } else {
+                        // Current behavior for block/scroll containers
+                        $chPadLtp = $chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0;
+                        $chPadTtp = $chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0;
+                        $gcOffsetX = $chTp->x + $chPadLtp;
+                        $gcOffsetY = $chTp->y + $chPadTtp;
+                        if ($chTp->isScrollContainer) {
+                            $gcOffsetX -= $chTp->scrollLeft;
+                            $gcOffsetY -= $chTp->scrollTop;
+                        }
+                        foreach ($chTp->children as $grandchild) {
+                            $grandchild->layoutDirty = true;
+                            $this->resolveNode($grandchild, $gcOffsetX, $gcOffsetY, $chTp, $scrollContainers);
+                        }
                     }
                 }
-                // Re-finalize scroll containers after child re-resolution:
-                // the two-pass above re-resolves grandchildren but doesn't re-run
-                // auto-stack, so items would all be at the same y position.
                 if ($needsTwoPass && $chTp->isScrollContainer) {
                     $padTsp = $chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0;
                     $padLsp = $chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0;
@@ -1018,6 +1089,54 @@ class LayoutResolver
 
             // Advance cross axis offset for next wrapping line
             $accumulatedCrossOffset += $lineMaxCross + $gap;
+        }
+
+        // 鈹€鈹€ Flex container auto-sizing from children (CSS standard) 鈹€鈹€
+        // CSS standard: a flex container with auto main-axis size computes it
+        // from children (main-axis extension). With auto cross-axis size, it also
+        // computes from children (cross-axis extension). The original code only
+        // handled main-axis extension (width for rows, height for columns), which
+        // is incomplete per CSS spec xA74.5.
+        if ($isRow) {
+            if (!array_key_exists('width', $style) && !array_key_exists('widthPercent', $style)) {
+                $maxRight = $node->x + $paddingLeft;
+                foreach ($children as $ch) {
+                    $chRight = $ch->x + $ch->w;
+                    $mR = $ch->style['marginRight'] ?? $ch->style['margin'] ?? 0;
+                    if ($chRight + $mR > $maxRight) $maxRight = (int)($chRight + $mR);
+                }
+                $node->w = max($node->w, $maxRight - $node->x + $paddingRight);
+            }
+            // Cross-axis: auto-height from children (CSS xA74.5 missing feature)
+            if (!array_key_exists('height', $style) && !array_key_exists('heightPercent', $style)) {
+                $maxBottom = $node->y + $paddingTop;
+                foreach ($children as $ch) {
+                    $chBottom = $ch->y + $ch->h;
+                    $mB = $ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0;
+                    if ($chBottom + $mB > $maxBottom) $maxBottom = (int)($chBottom + $mB);
+                }
+                $node->h = max($node->h, $maxBottom - $node->y + $paddingBottom);
+            }
+        } else {
+            // Cross-axis: auto-width from children (CSS xA74.5 missing feature)
+            if (!array_key_exists('width', $style) && !array_key_exists('widthPercent', $style)) {
+                $maxRight = $node->x + $paddingLeft;
+                foreach ($children as $ch) {
+                    $chRight = $ch->x + $ch->w;
+                    $mR = $ch->style['marginRight'] ?? $ch->style['margin'] ?? 0;
+                    if ($chRight + $mR > $maxRight) $maxRight = (int)($chRight + $mR);
+                }
+                $node->w = max($node->w, $maxRight - $node->x + $paddingRight);
+            }
+            if (!array_key_exists('height', $style) && !array_key_exists('heightPercent', $style)) {
+                $maxBottom = $node->y + $paddingTop;
+                foreach ($children as $ch) {
+                    $chBottom = $ch->y + $ch->h;
+                    $mB = $ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0;
+                    if ($chBottom + $mB > $maxBottom) $maxBottom = (int)($chBottom + $mB);
+                }
+                $node->h = max($node->h, $maxBottom - $node->y + $paddingBottom);
+            }
         }
     }
 
@@ -1069,7 +1188,7 @@ class LayoutResolver
         $width  = $style['width'] ?? 0;
         $height = $style['height'] ?? 0;
 
-        // ── 百分比尺寸解析 ──
+        // 鈹€鈹€ 鐧惧垎姣斿昂瀵歌В鏋?鈹€鈹€
         $parentW = ($parent !== null) ? $parent->w : 0;
         $parentH = ($parent !== null) ? $parent->h : 0;
         $width  = $this->resolvePercent($style, 'width', 'widthPercent', $parentW);
@@ -1084,7 +1203,7 @@ class LayoutResolver
         $node->x += $translateX;
         $node->y += $translateY;
 
-        // ── 应用 min/max 约束到容器 ──
+        // 鈹€鈹€ 搴旂敤 min/max 绾︽潫鍒板�鍣?鈹€鈹€
         $node->w = max(0, (int)$this->applyMinMax($style, $width, true));
         $node->h = max(0, (int)$this->applyMinMax($style, $height, false));
 
@@ -1095,21 +1214,40 @@ class LayoutResolver
         $colSpec = CssMappings::parseGridTemplateValue($gridCols);
         $rowSpec = CssMappings::parseGridTemplateValue($gridRows);
 
-        $cols = $colSpec['count'] ?? 4;
-        $cellW = $colSpec['size'] ?? 80;
-
         // Gap values (must be defined before 1fr calculation)
         $colGap = $style['gridColumnGap'] ?? $style['gap'] ?? 0;
         $rowGap = $style['gridRowGap'] ?? $style['gap'] ?? 0;
 
-        // 1fr 支持：根据容器宽度按比例分配
-        if (($colSpec['unit'] ?? '') === 'fr' && $node->w > 0) {
+        $cols = null;
+        $cellW = null;
+        $colRepeat = $colSpec['repeat'] ?? null;
+
+        // 鈹€鈹€ auto-fill/auto-fit: 鏍规嵁瀹瑰櫒瀹藉害鑷�姩璁＄畻鍒楁暟 鈹€鈹€
+        if ($colRepeat === 'auto-fill' || $colRepeat === 'auto-fit') {
+            $minColW = (int)($colSpec['min'] ?? 245);
+            // 璁＄畻鍦ㄥ�鍣ㄥ唴鑳藉绾崇殑鏈€澶у垪鏁�
+            $availableW = $node->w - $colGap; // 鍓嶉櫎绗竴鍒楃殑鍓峣ap
+            $cols = (int)max(1, floor(($availableW) / ($minColW + $colGap)));
+            // 璁＄畻瀹為檯鍗曞厓鏍煎�搴�
             $totalGaps = $colGap * ($cols - 1);
-            $cellW = max(0, (int)(($node->w - $totalGaps) / $cols));
+            $cellW = (int)max(0, ($node->w - $totalGaps) / $cols);
+        }
+
+        if ($cols === null) {
+            $cols = $colSpec['count'] ?? 4;
+        }
+        if ($cellW === null) {
+            $cellW = $colSpec['size'] ?? 80;
+        }
+
+        // 1fr 鏀�寔锛氭牴鎹��鍣ㄥ�搴︽寜姣斾緥鍒嗛厤
+        if (($colSpec['unit'] ?? '') === 'fr' && $node->w > 0 && $colRepeat !== 'auto-fill' && $colRepeat !== 'auto-fit') {
+            $totalGaps = $colGap * ($cols - 1);
+            $cellW = (int)max(0, ($node->w - $totalGaps) / $cols);
         }
         $rows = $rowSpec['count'] ?? 5;
         $cellH = $rowSpec['size'] ?? 60;
-        // 1fr 支持（行高）
+        // 1fr 鏀�寔锛堣�楂橈級
         if (($rowSpec['unit'] ?? '') === 'fr' && $node->h > 0) {
             $totalGaps = $rowGap * ($rows - 1);
             $cellH = max(0, (int)(($node->h - $totalGaps) / $rows));
@@ -1140,13 +1278,13 @@ class LayoutResolver
                 $row = (int)$explicitRow - 1;
             }
 
-            // 基础单元格位置
+            // 鍩虹�鍗曞厓鏍间綅缃?
             $cellX = $node->x + $col * $cellW + $colGap;
             $cellY = $node->y + $row * $cellH + $rowGap;
             $cellWFinal = max(0, (int)($cellW - $colGap * 2));
             $cellHFinal = max(0, (int)($cellH - $rowGap * 2));
 
-            // ── align-self: 垂直方向对齐 ──
+            // 鈹€鈹€ align-self: 鍨傜洿鏂瑰悜瀵归綈 鈹€鈹€
             $alignSelf = $childStyle['alignSelf'] ?? 'auto';
             if ($alignSelf === 'auto') {
                 $alignSelf = 'stretch';
@@ -1170,7 +1308,7 @@ class LayoutResolver
                     break;
             }
 
-            // ── justify-self: 水平方向对齐 ──
+            // 鈹€鈹€ justify-self: 姘村钩鏂瑰悜瀵归綈 鈹€鈹€
             $justifySelf = $childStyle['justifySelf'] ?? 'auto';
             if ($justifySelf === 'auto') {
                 $justifySelf = 'stretch';
@@ -1194,7 +1332,7 @@ class LayoutResolver
                     break;
             }
 
-            // ── 对每个 grid item 应用 min/max 约束 ──
+            // 鈹€鈹€ 瀵规瘡涓?grid item 搴旂敤 min/max 绾︽潫 鈹€鈹€
             $ch->w = max(0, (int)$this->applyMinMax($ch->style, $ch->w, true));
             $ch->h = max(0, (int)$this->applyMinMax($ch->style, $ch->h, false));
 
@@ -1206,18 +1344,18 @@ class LayoutResolver
         }
     }
 
-    // ── CSS min/max 约束辅助方法 ──
+    // 鈹€鈹€ CSS min/max 绾︽潫杈呭姪鏂规硶 鈹€鈹€
 
     /**
-     * 应用 CSS min-width/max-width 或 min-height/max-height 约束。
-     * CSS 规范: 如果 min > max，则 max 被忽略。
+     * 搴旂敤 CSS min-width/max-width 鎴?min-height/max-height 绾︽潫銆?
+     * CSS 瑙勮寖: 濡傛灉 min > max锛屽垯 max 琚�拷鐣ャ€?
      */
     private function applyMinMax(array $style, int $size, bool $isWidth): int
     {
         $min = $isWidth ? (int)($style['minWidth'] ?? 0) : (int)($style['minHeight'] ?? 0);
         $max = $isWidth ? (int)($style['maxWidth'] ?? 0) : (int)($style['maxHeight'] ?? 0);
 
-        // CSS 规范: 如果 min > max，max 被忽略
+        // CSS 瑙勮寖: 濡傛灉 min > max锛宮ax 琚�拷鐣?
         if ($min > 0 && $max > 0 && $min > $max) {
             $max = 0;
         }
@@ -1232,9 +1370,9 @@ class LayoutResolver
     }
 
     /**
-     * 解析百分比尺寸值。
-     * 如果 percentKey 存在（如 'widthPercent'），从 parentSize 计算实际像素值。
-     * 否则回退到 pixel key（如 'width'）。
+     * 瑙ｆ瀽鐧惧垎姣斿昂瀵稿€笺€?
+     * 濡傛灉 percentKey 瀛樺湪锛堝� 'widthPercent'锛夛紝浠?parentSize 璁＄畻瀹為檯鍍忕礌鍊笺€?
+     * 鍚﹀垯鍥為€€鍒?pixel key锛堝� 'width'锛夈€?
      */
     private function resolvePercent(array $style, string $key, string $percentKey, int $parentSize): int
     {
@@ -1246,14 +1384,14 @@ class LayoutResolver
     }
 
     /**
-     * 查找并缓存节点的定位祖先（position != static 的最近祖先）。
+     * 鏌ユ壘骞剁紦瀛樿妭鐐圭殑瀹氫綅绁栧厛锛坧osition != static 鐨勬渶杩戠�鍏堬級銆?
      *
-     * 为 position:absolute/fixed 提供 containing block 参考系。
-     * 如果缓存有效（positioningAncestorValid === true）则跳过。
-     * 从 parent 链向上遍历，找第一个 position !== static 的祖先。
-     * 找不到时 positioningAncestor = null（退化为根节点 (0,0) 参考系）。
+     * 涓?position:absolute/fixed 鎻愪緵 containing block 鍙傝€冪郴銆?
+     * 濡傛灉缂撳瓨鏈夋晥锛坧ositioningAncestorValid === true锛夊垯璺宠繃銆?
+     * 浠?parent 閾惧悜涓婇亶鍘嗭紝鎵剧�涓€涓?position !== static 鐨勭�鍏堛€?
+     * 鎵句笉鍒版椂 positioningAncestor = null锛堥€€鍖栦负鏍硅妭鐐?(0,0) 鍙傝€冪郴锛夈€?
      *
-     * AOT 兼容: 纯属性访问 + while 循环，符合 native_types。
+     * AOT 鍏煎�: 绾�睘鎬ц�闂?+ while 寰�幆锛岀�鍚?native_types銆?
      */
     private function resolvePositioningAncestor(RenderNode $node): void
     {
@@ -1272,18 +1410,18 @@ class LayoutResolver
             $ancestor = $ancestor->parent;
         }
 
-        // 找不到定位祖先 → 退化为 null（根节点 (0,0) 参考系）
+        // 鎵句笉鍒板畾浣嶇�鍏?鈫?閫€鍖栦负 null锛堟牴鑺傜偣 (0,0) 鍙傝€冪郴锛?
         $node->positioningAncestor = null;
         $node->positioningAncestorValid = true;
     }
 
     /**
-     * 解析 margin:auto 水平居中及垂直居中。
-     * CSS 规范 10.6.2: margin-top/bottom:auto 在 normal flow 中使用值 0。
-     * CSS 规范 10.6.4: 绝对定位元素 top+bottom+height 非 auto 时，
-     *                 auto margin 吸收剩余空间均分（垂直居中）。
-     * 算法: 剩余空间 = (父 content size - 子 size) / 2，各分一半。
-     * AOT 兼容: 纯算术操作，符合 native_types。
+     * 瑙ｆ瀽 margin:auto 姘村钩灞呬腑鍙婂瀭鐩村眳涓�€?
+     * CSS 瑙勮寖 10.6.2: margin-top/bottom:auto 鍦?normal flow 涓�娇鐢ㄥ€?0銆?
+     * CSS 瑙勮寖 10.6.4: 缁濆�瀹氫綅鍏冪礌 top+bottom+height 闈?auto 鏃讹紝
+     *                 auto margin 鍚告敹鍓╀綑绌洪棿鍧囧垎锛堝瀭鐩村眳涓�級銆?
+     * 绠楁硶: 鍓╀綑绌洪棿 = (鐖?content size - 瀛?size) / 2锛屽悇鍒嗕竴鍗娿€?
+     * AOT 鍏煎�: 绾�畻鏈�搷浣滐紝绗﹀悎 native_types銆?
      */
     private function resolveMarginAuto(RenderNode $node, array $style, int $parentContentW, int $parentContentH = 0): void
     {
@@ -1305,9 +1443,9 @@ class LayoutResolver
             $node->x += $half;
         }
 
-        // ── 垂直方向：绝对定位元素的 margin-top:auto + margin-bottom:auto 垂直居中 ──
-        // 仅当元素有显式高度且父 content 高度大于子高度时生效
-        // Normal flow 中 margin-top:auto 和 margin-bottom:auto 使用值 0（CSS 2.2 §10.6.2）
+        // 鈹€鈹€ 鍨傜洿鏂瑰悜锛氱粷瀵瑰畾浣嶅厓绱犵殑 margin-top:auto + margin-bottom:auto 鍨傜洿灞呬腑 鈹€鈹€
+        // 浠呭綋鍏冪礌鏈夋樉寮忛珮搴︿笖鐖?content 楂樺害澶т簬瀛愰珮搴︽椂鐢熸晥
+        // Normal flow 涓?margin-top:auto 鍜?margin-bottom:auto 浣跨敤鍊?0锛圕SS 2.2 搂10.6.2锛?
         $marginTop = $style['marginTop'] ?? null;
         $marginBottom = $style['marginBottom'] ?? null;
 
@@ -1326,7 +1464,7 @@ class LayoutResolver
 
     }
 
-    // ── 递归平移方法（用于 auto-stack / clamp） ──
+    // 鈹€鈹€ 閫掑綊骞崇Щ鏂规硶锛堢敤浜?auto-stack / clamp锛?鈹€鈹€
 
     /**
      * Recursively shift Y coordinate of a node and all its descendants.
@@ -1352,7 +1490,7 @@ class LayoutResolver
         }
     }
 
-    // ── 快速滚动路径平移方法 ──
+    // 鈹€鈹€ 蹇�€熸粴鍔ㄨ矾寰勫钩绉绘柟娉?鈹€鈹€
 
     /**
      * Recursively shift Y coordinate of a node and its descendants.
@@ -1385,7 +1523,7 @@ class LayoutResolver
         int $paddingRight,
         array &$scrollContainers
     ): void {
-        // ── Auto-stack: for scroll containers, position children vertically ──
+        // 鈹€鈹€ Auto-stack: for scroll containers, position children vertically 鈹€鈹€
         $stackY = $childOffsetY;
         $containerW = max($node->w - $paddingLeft - $paddingRight, 0);
         $autoStack = true;
@@ -1413,13 +1551,13 @@ class LayoutResolver
                 $oldY = $child->y;
                 $child->y = $stackY + $mTop;
 
-                // position:relative 额外偏移 — 只对 y 生效
+                // position:relative 棰濆�鍋忕Щ 鈥?鍙�� y 鐢熸晥
                 $relTop = $childStyle['top'] ?? 0;
                 if (($childStyle['position'] ?? 'static') === 'relative' && $relTop !== 0) {
                     $child->y += $relTop;
                 }
 
-                // 仅平移子节点的后代（child 本身已在上方被正确设置位置）
+                // 浠呭钩绉诲瓙鑺傜偣鐨勫悗浠ｏ紙child 鏈�韩宸插湪涓婃柟琚��纭��缃�綅缃�級
                 $dy = $child->y - $oldY;
                 if ($dy !== 0) {
                     foreach ($child->children as $grandchild) {
@@ -1430,7 +1568,7 @@ class LayoutResolver
             }
         }
 
-        // ── Calculate contentHeight (always, not just for autoStack) ────
+        // 鈹€鈹€ Calculate contentHeight (always, not just for autoStack) 鈹€鈹€鈹€鈹€
         $maxBottom = $childOffsetY;
         foreach ($node->children as $child) {
             $bottom = (int)($child->y + $child->h);
@@ -1438,7 +1576,7 @@ class LayoutResolver
         }
         $node->contentHeight = $maxBottom - $childOffsetY;
 
-        // ── Clamp scrollTop when content shrinks ────
+        // 鈹€鈹€ Clamp scrollTop when content shrinks 鈹€鈹€鈹€鈹€
         $maxScroll = max($node->contentHeight - $node->h, 0);
         if ($node->scrollTop > $maxScroll) {
             $oldScrollTop = $node->scrollTop;
@@ -1452,7 +1590,7 @@ class LayoutResolver
             }
         }
 
-        // ── Content width for horizontal scroll ────
+        // 鈹€鈹€ Content width for horizontal scroll 鈹€鈹€鈹€鈹€
         $overflowX = $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible';
         $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
         if ($hasHScroll) {
