@@ -209,8 +209,10 @@ class CssMappings
         'margin-right'   => ['key' => 'marginRight',   'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'margin-bottom'  => ['key' => 'marginBottom',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'margin-left'    => ['key' => 'marginLeft',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'border-width'   => ['key' => 'borderWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'border-color'   => ['key' => 'borderColor',  'parser' => 'Px\\Rendering\\CssMappings::parseHexColor', 'default' => 0],
+        'border-width'   => ['key' => 'borderWidth',  'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+        'border-color'   => ['key' => 'borderColor',  'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0],
+        'border-radius'  => ['key' => 'borderRadius',  'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+        'object-fit'     => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
     ];
 
     // ============================================================

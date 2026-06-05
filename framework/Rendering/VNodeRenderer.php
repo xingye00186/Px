@@ -570,15 +570,80 @@ class VNodeRenderer
 
     private function makeImgElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
-        if ($w <= 0) $w = 100;
-        if ($h <= 0) $h = 100;
+        // CSS 标准 §10.3.2: <img> 是替换元素，宽度由布局层决定
+        // 如果 w/h 为 0，无法渲染，但若有 alt 文本可降级显示
+        $noSize = ($w <= 0 || $h <= 0);
+
+        // 背景色：CSS background 属性（CssMappings 已映射为 style['bg']）
         $bg = $style['bg'] ?? 0xCCCCCC;
         $borderRadius = $style['borderRadius'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
-        return [
+
+        // box-shadow
+        $boxShadow = $style['boxShadow'] ?? '';
+        $shadowX = 0; $shadowY = 0; $shadowColor = 0;
+        if ($boxShadow !== '') {
+            $parts = explode('|', $boxShadow);
+            $shadowX = (int)($parts[0] ?? 0);
+            $shadowY = (int)($parts[1] ?? 0);
+            $shadowColor = CssMappings::hexToBgr($parts[4] ?? '#000000');
+        }
+
+        // border
+        $borderWidth = $style['borderWidth'] ?? 0;
+        $borderColor = $style['borderColor'] ?? 0;
+
+        // object-fit: CSS Images §4.5 控制替换内容如何适应容器
+        // 目前 fill 拉伸填充；contain/cover 待后续支持真实图像
+        $objectFit = $style['objectFit'] ?? 'fill';
+
+        // alt 属性：图片加载失败时的回退文本（HTML 标准）
+        $alt = $props['alt'] ?? '';
+
+        // ── 尺寸为 0 时降级显示 ──
+        if ($noSize) {
+            if ($alt !== '') {
+                // 降级为 broken image 图标 + alt 文本（类似浏览器行为）
+                $fontSize = $style['fontSize'] ?? 14;
+                $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
+                return [
+                    'type' => 'text', 'text' => '🖼 ' . $alt,
+                    'x' => $x, 'y' => $y,
+                    'fontSize' => $fontSize, 'color' => $textColor, 'bold' => 1,
+                    'align' => 'left', 'layer' => $layer,
+                ];
+            }
+            return null; // 无尺寸无 alt → 不可见
+        }
+
+        // ── 渲染为占位矩形（用背景色模拟图像）──
+        $elements = [];
+        $elements[] = [
             'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'color' => $bg, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
+            'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
+            'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
         ];
+
+        // 若有 alt 文本，在图片上叠加显示
+        if ($alt !== '') {
+            $fontSize = $style['fontSize'] ?? 14;
+            $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
+            $altX = $x + 4;
+            $altY = $y + (int)(($h - $fontSize) / 2);
+            if ($altY < $y) $altY = $y;
+            $elements[] = [
+                'type' => 'text', 'text' => $alt,
+                'x' => $altX, 'y' => $altY,
+                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => 0,
+                'align' => 'left', 'layer' => $layer + 1,
+            ];
+        }
+
+        if (count($elements) === 1) {
+            return $elements[0];
+        }
+        return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
     }
 
     private function makeInputElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array

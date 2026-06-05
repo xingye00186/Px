@@ -99,6 +99,7 @@ class LayoutResolver
 
             switch ($display) {
                 case 'flex':
+                case 'inline-flex':
                     $this->resolveFlexLayout($node, $parentX, $parentY, $parent, $scrollContainers, $effectiveStyle);
                     break;
                 case 'grid':
@@ -111,7 +112,7 @@ class LayoutResolver
 
             // 鈹€鈹€ Scroll container post-processing for flex/grid display modes 鈹€鈹€
             // (block layout handles this internally in resolveBlockLayout)
-            if ($node->isScrollContainer && ($display === 'flex' || $display === 'grid')) {
+            if ($node->isScrollContainer && ($display === 'flex' || $display === 'inline-flex' || $display === 'grid')) {
                 $padT = $effectiveStyle['paddingTop'] ?? $effectiveStyle['padding'] ?? 0;
                 $padL = $effectiveStyle['paddingLeft'] ?? $effectiveStyle['padding'] ?? 0;
                 $padR = $effectiveStyle['paddingRight'] ?? $effectiveStyle['padding'] ?? 0;
@@ -1147,49 +1148,57 @@ class LayoutResolver
 
         // 鈹€鈹€ Flex container auto-sizing from children (CSS standard) 鈹€鈹€
         // CSS standard: a flex container with auto main-axis size computes it
-        // from children (main-axis extension). With auto cross-axis size, it also
-        // computes from children (cross-axis extension). The original code only
-        // handled main-axis extension (width for rows, height for columns), which
-        // is incomplete per CSS spec xA74.5.
+        // from children. With auto cross-axis size, it also computes from children.
+        //
+        // CRITICAL: array_key_exists('height', $style) returns TRUE when
+        // height:auto is set, which caused auto-height to be SKIPPED. We must
+        // explicitly check that the value is not 'auto' or empty.
+        $hasExplicitW = array_key_exists('width', $style) && $style['width'] !== 'auto' && $style['width'] !== '';
+        $hasExplicitH = array_key_exists('height', $style) && $style['height'] !== 'auto' && $style['height'] !== '';
+        $hasWPct = array_key_exists('widthPercent', $style);
+        $hasHPct = array_key_exists('heightPercent', $style);
+
         if ($isRow) {
-            if (!array_key_exists('width', $style) && !array_key_exists('widthPercent', $style)) {
+            // Main-axis: auto-width from children
+            if (!$hasExplicitW && !$hasWPct) {
                 $maxRight = $node->x + $paddingLeft;
                 foreach ($children as $ch) {
                     $chRight = $ch->x + $ch->w;
                     $mR = $ch->style['marginRight'] ?? $ch->style['margin'] ?? 0;
                     if ($chRight + $mR > $maxRight) $maxRight = (int)($chRight + $mR);
                 }
-                $node->w = max($node->w, $maxRight - $node->x + $paddingRight);
+                $node->w = (int)max($node->w, $maxRight - $node->x + $paddingRight);
             }
-            // Cross-axis: auto-height from children (CSS xA74.5 missing feature)
-            if (!array_key_exists('height', $style) && !array_key_exists('heightPercent', $style)) {
+            // Cross-axis: auto-height from children
+            if (!$hasExplicitH && !$hasHPct) {
                 $maxBottom = $node->y + $paddingTop;
                 foreach ($children as $ch) {
                     $chBottom = $ch->y + $ch->h;
                     $mB = $ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0;
                     if ($chBottom + $mB > $maxBottom) $maxBottom = (int)($chBottom + $mB);
                 }
-                $node->h = max($node->h, $maxBottom - $node->y + $paddingBottom);
+                $node->h = (int)max($node->h, $maxBottom - $node->y + $paddingBottom);
             }
         } else {
-            // Cross-axis: auto-width from children (CSS xA74.5 missing feature)
-            if (!array_key_exists('width', $style) && !array_key_exists('widthPercent', $style)) {
+            // Cross-axis: auto-width from children
+            if (!$hasExplicitW && !$hasWPct) {
                 $maxRight = $node->x + $paddingLeft;
                 foreach ($children as $ch) {
                     $chRight = $ch->x + $ch->w;
                     $mR = $ch->style['marginRight'] ?? $ch->style['margin'] ?? 0;
                     if ($chRight + $mR > $maxRight) $maxRight = (int)($chRight + $mR);
                 }
-                $node->w = max($node->w, $maxRight - $node->x + $paddingRight);
+                $node->w = (int)max($node->w, $maxRight - $node->x + $paddingRight);
             }
-            if (!array_key_exists('height', $style) && !array_key_exists('heightPercent', $style)) {
+            // Main-axis: auto-height from children
+            if (!$hasExplicitH && !$hasHPct) {
                 $maxBottom = $node->y + $paddingTop;
                 foreach ($children as $ch) {
                     $chBottom = $ch->y + $ch->h;
                     $mB = $ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0;
                     if ($chBottom + $mB > $maxBottom) $maxBottom = (int)($chBottom + $mB);
                 }
-                $node->h = max($node->h, $maxBottom - $node->y + $paddingBottom);
+                $node->h = (int)max($node->h, $maxBottom - $node->y + $paddingBottom);
             }
         }
     }
@@ -1247,6 +1256,13 @@ class LayoutResolver
         $parentH = ($parent !== null) ? $parent->h : 0;
         $width  = $this->resolvePercent($style, 'width', 'widthPercent', $parentW);
         $height = $this->resolvePercent($style, 'height', 'heightPercent', $parentH);
+
+        // CSS Grid Level 1: block-level grid container with auto width fills containing block
+        $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
+        if (!$hasExplicitW && $width === 0 && $parent !== null) {
+            $width = $parent->w;
+        }
+        // Note: height:auto for grid containers is content-based (computed below)
 
         $node->x = $left + $parentX;
         $node->y = $top + $parentY;
@@ -1396,6 +1412,26 @@ class LayoutResolver
                 $row++;
             }
         }
+
+        // 鈹€鈹€ 鑷�姩璁＄畻楂樺害锛堟牸瀛愬鍣ㄦ棤鏄炬椿 height 鏃朵粠瀛愯妭鐐瑰唴瀹硅绠楋級鈹€鈹€
+        // CSS Grid spec: auto-height grid container computes height from content.
+        // Note: avoid max() returning php::Variant (C2440 in native_types)
+        $hasExplicitH = array_key_exists('height', $style) && $style['height'] !== 'auto' && $style['height'] !== '';
+        $hasHPct = array_key_exists('heightPercent', $style);
+        if (!$hasExplicitH && !$hasHPct) {
+            $maxBottom = (int)$node->y;
+            foreach ($children as $ch) {
+                $chBottom = (int)($ch->y + $ch->h);
+                if ($chBottom > $maxBottom) $maxBottom = $chBottom;
+            }
+            $contentH = (int)($maxBottom - $node->y);
+            if ($contentH > $node->h) {
+                $computedH = (int)$this->applyMinMax($style, $contentH, false);
+                if ($computedH > $node->h) {
+                    $node->h = $computedH;
+                }
+            }
+        }
     }
 
     // 鈹€鈹€ CSS min/max 绾︽潫杈呭姪鏂规硶 鈹€鈹€
@@ -1434,7 +1470,11 @@ class LayoutResolver
         if ($pct !== null && $parentSize > 0) {
             return (int)($parentSize * $pct / 100.0);
         }
-        return $style[$key] ?? 0;
+        $raw = $style[$key] ?? null;
+        if ($raw === null || $raw === 'auto' || $raw === '' || is_string($raw)) {
+            return 0;
+        }
+        return (int)$raw;
     }
 
     /**
@@ -1509,8 +1549,11 @@ class LayoutResolver
     private function shiftDescendantsY(RenderNode $node, int $dy): void
     {
         $node->y += $dy;
+        // CRITICAL: Do NOT shift $child->y here AND in the recursive call.
+        // The recursive call shiftDescendantsY($child, $dy) already increments
+        // the child's y on its first line ($node->y += $dy). Shifting here
+        // would DOUBLE the offset for the child (the "CategoryTabs y-doubling" bug).
         foreach ($node->children as $child) {
-            $child->y += $dy;
             $this->shiftDescendantsY($child, $dy);
         }
     }
@@ -1521,8 +1564,8 @@ class LayoutResolver
     private function shiftDescendantsX(RenderNode $node, int $dx): void
     {
         $node->x += $dx;
+        // Same fix as shiftDescendantsY: recursive call already shifts children.
         foreach ($node->children as $child) {
-            $child->x += $dx;
             $this->shiftDescendantsX($child, $dx);
         }
     }
