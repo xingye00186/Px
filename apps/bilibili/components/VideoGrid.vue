@@ -12,8 +12,8 @@
       </div>
     </div>
 
-    <!-- 视频网格: auto-fill, minmax(245px, 1fr) -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(245px, 1fr));gap:12px">
+    <!-- 视频网格: 4列 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));gap:16px">
       <video-card v-for="(v, idx) in videoList" :key="idx"
         :cover-bg="v.coverBg"
         :title="v.title"
@@ -25,9 +25,9 @@
         :date="v.date" />
     </div>
 
-    <!-- 浮动换一换按钮 -->
-    <div style="position:fixed;right:24px;top:50%;width:40px;height:80px;background:#FFFFFF;border:1px solid #E3E5E7;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;z-index:100" @click="refreshVideos">
-      <span style="font-size:16px;color:#FB7299">🔄</span>
+    <!-- 换一换按钮（相对于容器定位） -->
+    <div style="position:absolute;right:0;top:50px;width:44px;height:90px;background:#FFFFFF;border:1px solid #E3E5E7;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;z-index:10" @click="refreshVideos">
+      <div style="font-size:18px;color:#FB7299;transform:rotate(0deg)">↻</div>
       <span style="font-size:11px;color:#FB7299;font-weight:500">换一换</span>
     </div>
   </div>
@@ -35,24 +35,24 @@
 
 <script lang="php">
 
-    /** 视频数据 */
+    /** 视频数据（匹配参考图：16条） */
     public array $allVideos = [
-        ['title'=>'【4K】绝美自然风光纪录片：探索未知世界','coverBg'=>'#FB7299','duration'=>'13:28','playCount'=>'125.6万','likeCount'=>'1.2万','upName'=>'探索频道','upAvatar'=>'#FB7299','date'=>'3天前'],
-        ['title'=>'2024年度最佳游戏混剪，每一帧都是壁纸级别画质','coverBg'=>'#409EFF','duration'=>'08:45','playCount'=>'89.3万','likeCount'=>'8562','upName'=>'游戏达人','upAvatar'=>'#409EFF','date'=>'5天前'],
-        ['title'=>'零基础学Python：30天从入门到实战项目精通','coverBg'=>'#67C23A','duration'=>'25:10','playCount'=>'67.8万','likeCount'=>'5421','upName'=>'编程导师','upAvatar'=>'#67C23A','date'=>'1周前'],
-        ['title'=>'【独家专访】明星访谈：新电影背后的故事','coverBg'=>'#E6A23C','duration'=>'18:30','playCount'=>'203.4万','likeCount'=>'2.8万','upName'=>'娱乐周刊','upAvatar'=>'#E6A23C','date'=>'2天前'],
-        ['title'=>'超简单！家庭版秘制红烧肉做法，一学就会','coverBg'=>'#F56C6C','duration'=>'06:15','playCount'=>'45.2万','likeCount'=>'3210','upName'=>'美食厨房','upAvatar'=>'#F56C6C','date'=>'4天前'],
-        ['title'=>'全球顶尖DJ电音串烧 - 夜店必听神曲合集','coverBg'=>'#909399','duration'=>'35:00','playCount'=>'78.9万','likeCount'=>'6543','upName'=>'电音集结号','upAvatar'=>'#909399','date'=>'6天前'],
-        ['title'=>'历史悬案：消失的古城文明之谜解密','coverBg'=>'#FB7299','duration'=>'15:40','playCount'=>'34.5万','likeCount'=>'2876','upName'=>'历史探秘','upAvatar'=>'#FB7299','date'=>'1周前'],
-        ['title'=>'健身达人教你7天快速练出马甲线','coverBg'=>'#409EFF','duration'=>'10:20','playCount'=>'92.1万','likeCount'=>'1.1万','upName'=>'健身教练','upAvatar'=>'#409EFF','date'=>'3天前'],
-        ['title'=>'【4K HDR】城市夜景延时摄影合集震撼发布','coverBg'=>'#67C23A','duration'=>'05:30','playCount'=>'156.7万','likeCount'=>'9321','upName'=>'摄影大师','upAvatar'=>'#67C23A','date'=>'2天前'],
-        ['title'=>'搞笑动物合集：看完保证笑到肚子疼','coverBg'=>'#E6A23C','duration'=>'12:00','playCount'=>'312.5万','likeCount'=>'4.5万','upName'=>'萌宠乐园','upAvatar'=>'#E6A23C','date'=>'1天前'],
-        ['title'=>'深度解析：人工智能如何改变未来生活','coverBg'=>'#F56C6C','duration'=>'20:15','playCount'=>'56.3万','likeCount'=>'7210','upName'=>'科技前沿','upAvatar'=>'#F56C6C','date'=>'5天前'],
-        ['title'=>'日语零基础教学：五十音图速记法大全','coverBg'=>'#909399','duration'=>'30:00','playCount'=>'28.7万','likeCount'=>'1987','upName'=>'语言教室','upAvatar'=>'#909399','date'=>'1周前'],
-        ['title'=>'Vlog｜一个人的周末旅行日记，说走就走','coverBg'=>'#FB7299','duration'=>'08:50','playCount'=>'67.2万','likeCount'=>'5432','upName'=>'旅行博主','upAvatar'=>'#FB7299','date'=>'4天前'],
-        ['title'=>'专业评测：2024最值得买的10款手机推荐','coverBg'=>'#409EFF','duration'=>'14:35','playCount'=>'89.6万','likeCount'=>'1.5万','upName'=>'数码评测','upAvatar'=>'#409EFF','date'=>'3天前'],
-        ['title'=>'经典电影解读：教父三部曲深度分析报告','coverBg'=>'#67C23A','duration'=>'40:00','playCount'=>'45.8万','likeCount'=>'6789','upName'=>'影评人','upAvatar'=>'#67C23A','date'=>'6天前'],
-        ['title'=>'街舞大赛精彩集锦：燃爆全场观众欢呼','coverBg'=>'#E6A23C','duration'=>'07:20','playCount'=>'123.4万','likeCount'=>'2.1万','upName'=>'舞蹈天地','upAvatar'=>'#E6A23C','date'=>'2天前'],
+        ['title'=>'家有这样的女仆！还哪有心情干别的事啊？','coverBg'=>'#E8A87C','duration'=>'11:13','playCount'=>'44.9万','likeCount'=>'2100','upName'=>'动漫达人','upAvatar'=>'#E8A87C','date'=>'3小时前'],
+        ['title'=>'广西的森林为什么看着像指纹？','coverBg'=>'#41B3A3','duration'=>'21:37','playCount'=>'80.8万','likeCount'=>'2387','upName'=>'地理探索','upAvatar'=>'#41B3A3','date'=>'昨天'],
+        ['title'=>'【硬核拆解】球王C罗夺冠赛季，用真实数据打假打黑罗黑视频','coverBg'=>'#C38D9E','duration'=>'15:27','playCount'=>'3.0万','likeCount'=>'156','upName'=>'足球数据帝','upAvatar'=>'#C38D9E','date'=>'2天前'],
+        ['title'=>'别只盯着提示词和demo了，真正落地的AI Agent，得从工程化开始','coverBg'=>'#85DCB','duration'=>'08:15','playCount'=>'101.3万','likeCount'=>'416','upName'=>'AI工程师','upAvatar'=>'#85DCB','date'=>'昨天'],
+        ['title'=>'实测：蛇类天生会解死结','coverBg'=>'#F97F51','duration'=>'10:05','playCount'=>'209.9万','likeCount'=>'4883','upName'=>'动物世界','upAvatar'=>'#F97F51','date'=>'4小时前'],
+        ['title'=>'可回收火箭浪潮下，商业航天普通人怎么投资？','coverBg'=>'#1B9CFC','duration'=>'12:30','playCount'=>'14.1万','likeCount'=>'97','upName'=>'航天科普','upAvatar'=>'#1B9CFC','date'=>'05-14'],
+        ['title'=>'龟之巴尬！姆巴佩公式延续，阿尔特塔阻击失败…','coverBg'=>'#D980FA','duration'=>'16:20','playCount'=>'65.0万','likeCount'=>'1576','upName'=>'足球解说员','upAvatar'=>'#D980FA','date'=>'05-31'],
+        ['title'=>'【郝哥穿越】不要把瓜卖给他！','coverBg'=>'#F8EFBA','duration'=>'06:44','playCount'=>'171.0万','likeCount'=>'1985','upName'=>'郝哥剧场','upAvatar'=>'#F8EFBA','date'=>'06-01'],
+        ['title'=>'DCS F-16C 狙击手先进瞄准吊舱 A N/AAQ-33 多目标指定投弹','coverBg'=>'#55E6C1','duration'=>'14:23','playCount'=>'2282','likeCount'=>'1','upName'=>'飞行模拟','upAvatar'=>'#55E6C1','date'=>'3天前'],
+        ['title'=>'我挑战在中国被偷手机（7次）','coverBg'=>'#FF6B6B','duration'=>'24:06','playCount'=>'97.1万','likeCount'=>'8658','upName'=>'冒险者小明','upAvatar'=>'#FF6B6B','date'=>'昨天'],
+        ['title'=>'从养虾到养马？程序员的"跟风"与AI的"进化"','coverBg'=>'#5F27CD','duration'=>'09:45','playCount'=>'13.5万','likeCount'=>'44','upName'=>'科技观察','upAvatar'=>'#5F27CD','date'=>'05-12'],
+        ['title'=>'把一只凶猛大水蛭丢进润滑油游泳！会发生什么事？','coverBg'=>'#01A3A4','duration'=>'03:15','playCount'=>'41.4万','likeCount'=>'401','upName'=>'硬核测试','upAvatar'=>'#01A3A4','date'=>'05-19'],
+        ['title'=>'EVA 新世纪福音战士 经典回顾','coverBg'=>'#B33771','duration'=>'22:10','playCount'=>'964.9万','likeCount'=>'2.5万','upName'=>'动画档案馆','upAvatar'=>'#B33771','date'=>'05-08'],
+        ['title'=>'【真实球王路】22年阿根廷vs克罗地亚！','coverBg'=>'#3B3B98','duration'=>'18:45','playCount'=>'1.3万','likeCount'=>'245','upName'=>'真实球迷汇','upAvatar'=>'#3B3B98','date'=>'直播中'],
+        ['title'=>'水蛭 vs 润滑油 终极对决','coverBg'=>'#78E08F','duration'=>'03:20','playCount'=>'41.4万','likeCount'=>'401','upName'=>'自然纪录','upAvatar'=>'#78E08F','date'=>'05-19'],
+        ['title'=>'让大家感受下 大厂Agent工程师的学习强度','coverBg'=>'#E77F67','duration'=>'10:30','playCount'=>'13.5万','likeCount'=>'44','upName'=>'程序人生','upAvatar'=>'#E77F67','date'=>'05-12'],
     ];
 
     /** 当前显示的视频列表 */
@@ -61,13 +61,10 @@
     /** 旋转偏移量 */
     public string $offset = '0';
 
-    /** 初始化视频列表 */
-    public function getVideoList(): array
+    /** mount 时初始化视频列表 */
+    public function onMount(): void
     {
-        if (empty($this->videoList)) {
-            $this->videoList = $this->allVideos;
-        }
-        return $this->videoList;
+        $this->videoList = $this->allVideos;
     }
 
     /** 换一换：旋转视频列表 */

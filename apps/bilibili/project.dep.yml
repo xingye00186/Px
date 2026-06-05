@@ -19,6 +19,7 @@ sources:
   - ./gen/ComponentFactory.php
   - ./gen/MainContentComponent.php
   - ./gen/NavBarComponent.php
+  - ./gen/SidebarWidgetComponent.php
   - ./gen/VcAvatarComponent.php
   - ./gen/VcButtonComponent.php
   - ./gen/VcDropdownComponent.php
@@ -28,6 +29,7 @@ sources:
   - ./main.php
   - ../../framework/BaseComponent.php
   - ../../framework/Core/Application.php
+  - ../../framework/Core/Config.php
   - ../../framework/Core/PerfCounter.php
   - ../../framework/Core/Scheduler.php
   - ../../framework/Core/ScrollManager.php

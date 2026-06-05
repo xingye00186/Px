@@ -4,8 +4,8 @@
     <div style="height:36px;display:flex;flex-direction:row;align-items:center;padding:0 24px;overflow-x:auto;gap:0">
       <div v-for="(cat, idx) in row1" :key="'r1_'+idx"
            style="height:34px;padding:0 14px;display:flex;align-items:center;cursor:pointer;white-space:nowrap;flex-shrink:0"
-           @click="switchCategory" :click-arg="'r1_' + idx">
-        <span style="font-size:14px" :style="getItemColor('r1_' + idx)">{{ cat.label }}</span>
+           @click="switchCategory" :click-arg="'r1_' . idx">
+        <span style="font-size:14px" :style="getItemColor('r1_' . idx)">{{ cat.label }}</span>
         <span v-if="cat.more !== ''" style="font-size:10px;color:#9499A0;margin-left:2px">▾</span>
       </div>
     </div>
@@ -13,9 +13,18 @@
     <div style="height:36px;display:flex;flex-direction:row;align-items:center;padding:0 24px;overflow-x:auto;gap:0;border-top:1px solid #F1F2F3">
       <div v-for="(cat, idx) in row2" :key="'r2_'+idx"
            style="height:34px;padding:0 14px;display:flex;align-items:center;cursor:pointer;white-space:nowrap;flex-shrink:0"
-           @click="switchCategory" :click-arg="'r2_' + idx">
-        <span style="font-size:14px" :style="getItemColor('r2_' + idx)">{{ cat.label }}</span>
+           @click="switchCategory" :click-arg="'r2_' . idx">
+        <span style="font-size:14px" :style="getItemColor('r2_' . idx)">{{ cat.label }}</span>
         <span v-if="cat.more !== ''" style="font-size:10px;color:#9499A0;margin-left:2px">▾</span>
+      </div>
+      <!-- 右侧快捷链接 -->
+      <div style="display:flex;flex-direction:row;align-items:center;gap:12px;margin-left:auto;padding-left:16px;border-left:1px solid #E3E5E7;height:20px">
+        <span style="font-size:13px;color:#61666D;cursor:pointer">专栏</span>
+        <span style="font-size:13px;color:#61666D;cursor:pointer">活动</span>
+        <span style="font-size:13px;color:#61666D;cursor:pointer">社区中心</span>
+        <span style="font-size:13px;color:#FB7299;font-weight:500;cursor:pointer">直播</span>
+        <span style="font-size:13px;color:#61666D;cursor:pointer">课堂</span>
+        <span style="font-size:13px;color:#61666D;cursor:pointer">新歌热榜</span>
       </div>
     </div>
     <!-- 选中下划线 -->
