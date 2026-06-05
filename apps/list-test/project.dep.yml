@@ -22,6 +22,19 @@ sources:
   - ../../framework/Platform/Win32Platform.php
   - ../../framework/Platform/WinMsg.php
   - ../../framework/ReactiveComponent.php
+  - ../../framework/Rendering/Backend/BackendCapability.php
+  - ../../framework/Rendering/Backend/BackendInitException.php
+  - ../../framework/Rendering/Backend/BackendRegistry.php
+  - ../../framework/Rendering/Backend/GdiDirect2DBackend.php
+  - ../../framework/Rendering/Backend/GdiLegacyBackend.php
+  - ../../framework/Rendering/Backend/IRenderBackend.php
+  - ../../framework/Rendering/Backend/RenderBackendFailedException.php
+  - ../../framework/Rendering/Backend/ResilientRenderContext.php
+  - ../../framework/Rendering/Backend/RuntimeBackendSelector.php
+  - ../../framework/Rendering/Backend/SkiaCpuBackend.php
+  - ../../framework/Rendering/Backend/SkiaGaneshD3D11Backend.php
+  - ../../framework/Rendering/Backend/SkiaGaneshWGLBackend.php
+  - ../../framework/Rendering/Backend/SkiaGraphiteDawnBackend.php
   - ../../framework/Rendering/CssMappings.php
   - ../../framework/Rendering/GdiRenderContext.php
   - ../../framework/Rendering/LayoutResolver.php

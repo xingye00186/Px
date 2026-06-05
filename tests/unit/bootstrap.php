@@ -84,6 +84,21 @@ require_once $frameworkDir . '/Styling/Theme/ComponentTheme.php';
 require_once $frameworkDir . '/Styling/Theme/ThemeData.php';
 require_once $frameworkDir . '/Styling/Provider/ThemeProvider.php';
 
+// ---- Rendering Backend (RuntimeBackendSelector 依赖) ----
+require_once $frameworkDir . '/Rendering/Backend/BackendCapability.php';
+require_once $frameworkDir . '/Rendering/Backend/BackendInitException.php';
+require_once $frameworkDir . '/Rendering/Backend/IRenderBackend.php';
+require_once $frameworkDir . '/Rendering/Backend/BackendRegistry.php';
+require_once $frameworkDir . '/Rendering/Backend/RenderBackendFailedException.php';
+require_once $frameworkDir . '/Rendering/Backend/GdiLegacyBackend.php';
+require_once $frameworkDir . '/Rendering/Backend/GdiDirect2DBackend.php';
+require_once $frameworkDir . '/Rendering/Backend/SkiaCpuBackend.php';
+require_once $frameworkDir . '/Rendering/Backend/SkiaGaneshD3D11Backend.php';
+require_once $frameworkDir . '/Rendering/Backend/SkiaGaneshWGLBackend.php';
+require_once $frameworkDir . '/Rendering/Backend/SkiaGraphiteDawnBackend.php';
+require_once $frameworkDir . '/Rendering/Backend/RuntimeBackendSelector.php';
+require_once $frameworkDir . '/Rendering/Backend/ResilientRenderContext.php';
+
 // ---- 全局计数器 ----
 $GLOBALS['_test_passed'] = 0;
 $GLOBALS['_test_failed'] = 0;

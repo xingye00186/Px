@@ -222,11 +222,15 @@ class Application
         $w = WINDOW_WIDTH;
         $h = WINDOW_HEIGHT;
 
-        // Stage 1: 让 platform 创建窗口 + 默认 RenderContext
-        // —— platform->init() 的返回值会创建默认的 SkiaRenderContext/GdiRenderContext
-        // —— 但我们随后会用 RuntimeBackendSelector 重新选择最优后端
-        // —— 旧 RenderContext 会被 PHP GC 释放
+        // Stage 1: 让 platform 创建窗口 + 默认 RenderContext（测试环境直接使用此 context）
         $defaultCtx = $this->platform->init(WINDOW_TITLE, $w, $h);
+
+        // 检查 C++ 绑定是否可用：无 vue_begin_paint 说明是测试环境（PHP-only），跳过后端选择
+        if (!function_exists('vue_begin_paint')) {
+            $this->renderer = new VNodeRenderer($this->rootComponent, $defaultCtx);
+            return;
+        }
+
         unset($defaultCtx);  // 显式释放默认 RC，让 RuntimeBackendSelector 创建最优后端
 
         // Stage 2: 用 RuntimeBackendSelector 探测 + 选择最优后端
