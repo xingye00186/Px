@@ -25,6 +25,10 @@
 
 #ifdef USE_SKIA
 
+// MSVC 17.10+ (VS 2022 17.10+, _MSC_VER >= 1939) 的 CRT 已内置 __std_* 函数，
+// stubs 会导致重复定义。仅在旧版 MSVC 下提供。
+#if !defined(_MSC_VER) || _MSC_VER < 1939
+
 #include <cstddef>
 #include <cstring>
 #include <cstdint>
@@ -145,4 +149,5 @@ void* __std_search_1(const void* _First1, const void* _Last1,
 
 #pragma warning(pop)
 
+#endif // _MSC_VER < 1939
 #endif // USE_SKIA
