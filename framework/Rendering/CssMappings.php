@@ -194,8 +194,9 @@ class CssMappings
         'max-height' => ['key' => 'maxHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         // ---- flex 扩展 ----
         'order'        => ['key' => 'order',        'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'flex-basis'   => ['key' => 'flexBasis',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
-        'flex-shrink'  => ['key' => 'flexShrink',   'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 1],
+        'flex-grow'    => ['key' => 'flexGrow',    'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+        'flex-basis'   => ['key' => 'flexBasis',    'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'auto'],
+        'flex-shrink'  => ['key' => 'flexShrink',   'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 1],
         // ---- 单项对齐 ----
         'align-self'   => ['key' => 'alignSelf',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
         'justify-self' => ['key' => 'justifySelf', 'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
@@ -313,18 +314,46 @@ class CssMappings
     }
 
     /**
-     * Parse flex shorthand value into structured array.
+     * Parse flex shorthand value into structured array per CSS spec.
      *
-     * Format: "grow shrink basis"
+     * CSS flex shorthand (https://www.w3.org/TR/css-flexbox-1/#flex-shorthand):
+     *   auto    → flex: 1 1 auto
+     *   initial → flex: 0 1 auto
+     *   none    → flex: 0 0 auto
+     *   <num>        → flex-grow: <num>, flex-shrink: 1, flex-basis: 0
+     *   <num> <num>  → flex-grow + flex-shrink, flex-basis: 0
+     *   <num> <num> <basis>  → all three
+     *
      * Examples:
      *   "1"         → ['grow'=>1.0, 'shrink'=>1.0, 'basis'=>0]
-     *   "1 0 auto"  → ['grow'=>1.0, 'shrink'=>0.0, 'basis'=>0]
+     *   "auto"      → ['grow'=>1.0, 'shrink'=>1.0, 'basis'=>'auto']
+     *   "none"      → ['grow'=>0.0, 'shrink'=>0.0, 'basis'=>'auto']
+     *   "initial"   → ['grow'=>0.0, 'shrink'=>1.0, 'basis'=>'auto']
+     *   "1 0 auto"  → ['grow'=>1.0, 'shrink'=>0.0, 'basis'=>'auto']
      *   "2 0 100px" → ['grow'=>2.0, 'shrink'=>0.0, 'basis'=>100]
      *   ""          → ['grow'=>0.0, 'shrink'=>1.0, 'basis'=>0]
      */
     public static function parseFlexValue(string $flex): array
     {
-        $parts = preg_split('/\s+/', trim($flex));
+        $flex = trim($flex);
+        if ($flex === '') {
+            return ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 0];
+        }
+
+        // CSS keyword values: auto, none, initial, content
+        $lower = strtolower($flex);
+        if ($lower === 'auto') {
+            return ['grow' => 1.0, 'shrink' => 1.0, 'basis' => 'auto'];
+        }
+        if ($lower === 'none') {
+            return ['grow' => 0.0, 'shrink' => 0.0, 'basis' => 'auto'];
+        }
+        if ($lower === 'initial' || $lower === 'content') {
+            return ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 'auto'];
+        }
+
+        // Multi-value form: "grow shrink basis"
+        $parts = preg_split('/\s+/', $flex);
         $result = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 0];
 
         if (count($parts) >= 1 && $parts[0] !== '') {
@@ -333,8 +362,13 @@ class CssMappings
         if (count($parts) >= 2 && $parts[1] !== '') {
             $result['shrink'] = (float)$parts[1];
         }
-        if (count($parts) >= 3 && $parts[2] !== '' && strtolower($parts[2]) !== 'auto') {
-            $result['basis'] = (int) preg_replace('/[^0-9]/', '', $parts[2]);
+        if (count($parts) >= 3 && $parts[2] !== '') {
+            $v = strtolower(trim($parts[2]));
+            if ($v === 'auto' || $v === 'content') {
+                $result['basis'] = $v;
+            } else {
+                $result['basis'] = (int) preg_replace('/[^0-9]/', '', $parts[2]);
+            }
         }
 
         return $result;
@@ -482,6 +516,29 @@ class CssMappings
             $raw[strtolower(trim($decl[1]))] = trim($decl[2]);
         }
 
+        // Pre-scan for 'auto' margin values (before expandBoxShorthand converts them to '0px')
+        // Store as bool flags: marginLeftAuto, marginRightAuto, marginTopAuto, marginBottomAuto
+        $marginAutoFlags = [];
+        foreach (['margin-left', 'margin-right', 'margin-top', 'margin-bottom'] as $mp) {
+            if (isset($raw[$mp]) && strtolower(trim($raw[$mp])) === 'auto') {
+                $flagKey = lcfirst(str_replace('-', '', ucwords($mp, '-'))) . 'Auto';
+                $marginAutoFlags[$flagKey] = true;
+            }
+        }
+        if (isset($raw['margin'])) {
+            $parts = preg_split('/\s+/', trim($raw['margin']));
+            $count = count($parts);
+            for ($i = 0; $i < $count && $i < 4; $i++) {
+                if (strtolower(trim($parts[$i])) === 'auto') {
+                    $dirMap = ['marginTopAuto', 'marginRightAuto', 'marginBottomAuto', 'marginLeftAuto'];
+                    $marginAutoFlags[$dirMap[$i]] = true;
+                    if ($count === 2 && $i === 0) $marginAutoFlags[$dirMap[2]] = true;
+                    if ($count === 2 && $i === 1) $marginAutoFlags[$dirMap[3]] = true;
+                    if ($count === 3 && $i === 1) $marginAutoFlags[$dirMap[3]] = true;
+                }
+            }
+        }
+
         // Expand shorthand padding/margin to individual direction properties
         $raw = self::expandBoxShorthand($raw);
 
@@ -509,6 +566,25 @@ class CssMappings
                 // Convert kebab-case to camelCase for unknown properties
                 $camelCase = self::kebabToCamelCase($propName);
                 $style[$camelCase] = $value;
+            }
+        }
+
+        // Merge auto margin flags (preserved from pre-scan)
+        foreach ($marginAutoFlags as $key => $val) {
+            $style[$key] = $val;
+        }
+
+        // Expand flex shorthand into flex-grow/flex-shrink/flex-basis
+        if (isset($raw['flex']) && $raw['flex'] !== '') {
+            $flexParsed = self::parseFlexValue($raw['flex']);
+            if (!isset($style['flexGrow'])) {
+                $style['flexGrow'] = $flexParsed['grow'];
+            }
+            if (!isset($style['flexShrink'])) {
+                $style['flexShrink'] = $flexParsed['shrink'];
+            }
+            if (!isset($style['flexBasis'])) {
+                $style['flexBasis'] = $flexParsed['basis'];
             }
         }
 

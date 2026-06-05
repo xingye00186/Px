@@ -21,6 +21,7 @@ use Px\ReactiveComponent;
 use Px\Styling\Theme\ThemeData;
 use Px\Styling\Provider\ThemeProvider;
 use Px\Styling\Adapter\PlatformAdapter;
+use Px\Core\Config;
 
 /**
  * Application — AOT 框架入口（RenderNode 版）
@@ -55,6 +56,15 @@ class Application
 
     private int $nextComponentId = 1;
     private bool $isRendering = false;
+
+    // ── 调试快照 ──
+    /** @var array 事件环形缓冲区（最近 N 个平台事件） */
+    private array $eventRingBuffer = [];
+    private int $eventBufferSize = 5;
+    private int $eventBufferIndex = 0;
+    private int $frameCounter = 0;
+    /** @var bool 主动请求 snapshot 标记（仅在用户交互后设置） */
+    private bool $snapshotRequested = false;
 
     private ScrollManager $scrollManager;
 
@@ -101,11 +111,15 @@ class Application
             return;
         }
 
+        $action = $event->getAction();
+        $this->recordEvent('mouse:' . $action, $event->getX(), $event->getY());
+
         // ── 鼠标滚轮：驱动滚动容器 ────────────
         if ($event->getAction() === 'wheel') {
             $rootNode = $this->renderTreeManager->getRootRenderNode();
             if ($rootNode !== null) {
                 $this->scrollManager->handleScrollWheel($event, $rootNode);
+                $this->snapshotRequested = true;
             }
             return;
         }
@@ -136,6 +150,7 @@ class Application
         // ── 鼠标释放：结束拖拽，持久化滚动位置 ──
         if ($event->getAction() === 'up') {
             $this->scrollManager->handleMouseUp();
+            $this->snapshotRequested = true;
             return;
         }
 
@@ -164,6 +179,7 @@ class Application
                     $arg = $sourceVNode->props['click-arg'] ?? null;
                     $target = $this->resolveComponent($sourceVNode);
                     $target->dispatchClick($handler, $arg);
+                    $this->snapshotRequested = true;
                 }
             }
         }
@@ -175,6 +191,8 @@ class Application
             return;
         }
 
+        $this->recordEvent('keyb:' . $event->getAction(), -1, -1, $event->getChar());
+
         $input = $this->findFocusedInput($this->activeVNodeTree);
         if ($input === null) {
             return;
@@ -185,16 +203,19 @@ class Application
             $handler = $input->props['@keydown'] ?? null;
             if ($handler !== null) {
                 $target->dispatchKey($handler, $action, $event->getKeyCode(), $event->getChar());
+                $this->snapshotRequested = true;
             }
         } elseif ($action === 'up') {
             $handler = $input->props['@keyup'] ?? null;
             if ($handler !== null) {
                 $target->dispatchKey($handler, $action, $event->getKeyCode(), $event->getChar());
+                $this->snapshotRequested = true;
             }
         } elseif ($action === 'char') {
             $handler = $input->props['@enter'] ?? null;
             if ($handler !== null && $event->getKeyCode() === 13) {
                 $target->dispatchKey($handler, $action, $event->getKeyCode(), $event->getChar());
+                $this->snapshotRequested = true;
             }
         }
     }
@@ -265,12 +286,17 @@ class Application
         $this->renderer = new VNodeRenderer($this->rootComponent, $renderCtx);
     }
 
-    public function mount(ReactiveComponent $root): self
+    public function mount(ReactiveComponent $root, string $appDir = ''): self
     {
         $this->rootComponent = $root;
         $this->rootComponent->setScheduler($this->scheduler);
         $this->rootComponent->setRenderCallback($this->handleRenderRequest(...));
         $this->registerComponent('app', $root);
+
+        // 初始化调试配置（从 px_debug.yml）
+        if ($appDir !== '') {
+            Config::init($appDir);
+        }
 
         $this->initRenderer();
 
@@ -291,12 +317,13 @@ class Application
         $this->rootComponent->mount();
         
         // 设置动画/定时渲染定时器（1 秒间隔，用于 carousel 等定时功能）
+        // 优化：仅当根组件定义了 onTimerTick 时才触发 requestRender，
+        // 避免静态页面空转渲染浪费 CPU（快照分析显示 49 帧完全相同）
         $this->platform->setAnimationTimer(function () {
-            // 通知根组件时钟滴答
             if ($this->rootComponent !== null && method_exists($this->rootComponent, 'onTimerTick')) {
                 $this->rootComponent->onTimerTick();
+                $this->requestRender();
             }
-            $this->requestRender();
         }, 1000);
 
         return $this;
@@ -567,6 +594,7 @@ class Application
      */
     private function render(): void
     {
+        $this->frameCounter++;
         $this->rebuildVNodeTree();
 
         // getRootRenderNodes() = 顶层 #root 所有旧子节点，作为 candidates 传递给 #root handler
@@ -586,8 +614,51 @@ class Application
         // LayoutResolver 处理 RenderNode（利用 layoutDirty 增量）
         $this->layoutResolver->resolve($rootRenderNode);
 
+        // ── 调试快照：仅在显式请求时输出 ──
+        if (Config::get('snapshot_enabled', false) && $this->snapshotRequested) {
+            $this->snapshotRequested = false;
+            $snapshot = $this->renderTreeManager->dumpRenderTree(
+                $rootRenderNode,
+                $this->frameCounter,
+                $this->eventRingBuffer
+            );
+            $this->outputSnapshot($snapshot);
+        }
+
         // VNodeRenderer 处理 RenderNode（利用 paintDirty 增量）
         $this->renderer->render($rootRenderNode);
+    }
+
+    /**
+     * 输出调试快照到 stdout 和 {APP_DIR}/debug/_snapshot.log。
+     * 文件超过 maxSize 时自动轮转（保留 maxBackups 个备份）。
+     */
+    private function outputSnapshot(string $snapshot): void
+    {
+        $appDir = Config::getAppDir();
+        if ($appDir === '') return;
+
+        $debugDir = $appDir . '/debug';
+        @mkdir($debugDir, 0777, true);
+        $file = $debugDir . '/_snapshot.log';
+
+        // ── 文件轮转：超过阈值时 shift 备份 ──
+        $maxSize = Config::get('snapshot_max_size_mb', 5) * 1024 * 1024;
+        if (file_exists($file) && filesize($file) > $maxSize) {
+            $maxBackups = Config::get('snapshot_max_backups', 5);
+            $oldest = $debugDir . "/_snapshot.{$maxBackups}.log";
+            if (file_exists($oldest)) @unlink($oldest);
+            for ($i = $maxBackups - 1; $i >= 1; $i--) {
+                $from = $debugDir . "/_snapshot.{$i}.log";
+                if (file_exists($from)) {
+                    @rename($from, $debugDir . "/_snapshot." . ($i + 1) . ".log");
+                }
+            }
+            @rename($file, $debugDir . '/_snapshot.1.log');
+        }
+
+        file_put_contents($file, $snapshot . "\n\n", FILE_APPEND);
+        echo $snapshot . "\n";
     }
 
     private function doFirstRender(): void
@@ -605,6 +676,17 @@ class Application
     public function run(): void
     {
         $this->doFirstRender();
+
+        // ── 初始挂载快照（组件树已完全展开稳定）──
+        if (Config::get('snapshot_enabled', false)) {
+            $rootNode = $this->renderTreeManager->getRootRenderNode();
+            if ($rootNode !== null) {
+                $snapshot = $this->renderTreeManager->dumpRenderTree(
+                    $rootNode, $this->frameCounter, $this->eventRingBuffer
+                );
+                $this->outputSnapshot($snapshot);
+            }
+        }
 
         while ($this->running) {
             $rawEvents = $this->platform->pollEvents();
@@ -637,6 +719,23 @@ class Application
     }
 
     // ── 键盘事件辅助 ──────────────────────────
+
+    /**
+     * 记录平台事件到环形缓冲区（调试快照用）。
+     */
+    private function recordEvent(string $eventType, int $x = -1, int $y = -1, string $detail = ''): void
+    {
+        $ev = [
+            'frame' => $this->frameCounter,
+            'type'  => $eventType,
+            'time'  => time(),
+            'x'     => $x,
+            'y'     => $y,
+            'detail' => $detail,
+        ];
+        $this->eventRingBuffer[$this->eventBufferIndex] = $ev;
+        $this->eventBufferIndex = ($this->eventBufferIndex + 1) % $this->eventBufferSize;
+    }
 
     /**
      * 查找 VNode 树中第一个有键盘处理器的 input 元素。

@@ -308,11 +308,20 @@ class TemplateParser
                 $this->error('<app> missing required attribute: height (or h)', $openTok->line);
             }
         } else {
-            // HTML root: extract width/height from style or attributes
+            // HTML root: ONLY extract explicit pixel values from inline style
+            $width = 0;
+            $height = 0;
             $styleStr = $rawAttrs['style'] ?? '';
-            $inlineStyle = $styleStr !== '' ? \Px\Rendering\CssMappings::parseInlineStyle($styleStr) : [];
-            $width  = (int)($rawAttrs['width'] ?? $rawAttrs['w'] ?? (int)($inlineStyle['width'] ?? 336));
-            $height = (int)($rawAttrs['height'] ?? $rawAttrs['h'] ?? (int)($inlineStyle['height'] ?? 430));
+            if ($styleStr !== '') {
+                if (preg_match('/\bwidth\s*:\s*(\d+)\s*px\b/i', $styleStr, $m)) {
+                    $width = (int)$m[1];
+                }
+                if (preg_match('/\bheight\s*:\s*(\d+)\s*px\b/i', $styleStr, $m)) {
+                    $height = (int)$m[1];
+                }
+            }
+            if ($width === 0) $width = (int)($rawAttrs['width'] ?? $rawAttrs['w'] ?? 0);
+            if ($height === 0) $height = (int)($rawAttrs['height'] ?? $rawAttrs['h'] ?? 0);
             $title  = $rawAttrs['title'] ?? 'Untitled';
         }
 
@@ -328,11 +337,14 @@ class TemplateParser
             }
         }
         $rootProps['title'] = $title;
-        $rootProps['style'] = "width:{$width}px;height:{$height}px";
+        $styleParts = [];
+        if ($width > 0) $styleParts[] = "width:{$width}px";
+        if ($height > 0) $styleParts[] = "height:{$height}px";
+        $rootProps['style'] = implode(';', $styleParts);
 
         $root = VNode::h('#root', $rootProps, []);
-        $root->w = $width;
-        $root->h = $height;
+        $root->w = $width ?: 0;
+        $root->h = $height ?: 0;
 
         if ($isLegacyApp) {
             // <app>: children go directly into #root

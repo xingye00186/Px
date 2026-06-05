@@ -24,6 +24,96 @@ use Px\Styling\Provider\ThemeProvider;
  */
 class RenderTreeManager
 {
+
+/**
+     * 递归生成 RenderNode 树的调试快照文本。
+     * AOT 安全：无引用传参，无 mb_ 函数，纯字符串拼接。
+     */
+    public function dumpRenderTree(?RenderNode $node, int $frame, array $events): string
+    {
+        if ($node === null) {
+            return "";
+        }
+
+        $output = "";
+
+        // header: frame number + event summary
+        $output .= "Frame #";
+        $output .= (string)$frame;
+        $eventCount = count($events);
+        $output .= " events=";
+        $output .= (string)$eventCount;
+        $output .= "\n";
+
+        // dump tree from root
+        $output .= $this->dumpNode($node, "");
+
+        return $output;
+    }
+
+    /**
+     * 递归输出单个 RenderNode 及其子树。
+     */
+    private function dumpNode(?RenderNode $node, string $prefix): string
+    {
+        if ($node === null) {
+            return "";
+        }
+
+        $output = "";
+
+        // type + key
+        $output .= $prefix;
+        $output .= $node->type;
+        if ($node->key !== null) {
+            $output .= "[" . $node->key . "]";
+        }
+        $output .= " (";
+        $output .= (string)$node->x;
+        $output .= ",";
+        $output .= (string)$node->y;
+        $output .= " ";
+        $output .= (string)$node->w;
+        $output .= "x";
+        $output .= (string)$node->h;
+        $output .= ")";
+
+        // scroll info
+        if ($node->isScrollContainer) {
+            $output .= " scrollY=";
+            $output .= (string)$node->scrollTop;
+            $output .= " scrollX=";
+            $output .= (string)$node->scrollLeft;
+        }
+
+        // content / text
+        if ($node->content !== null && $node->content !== "") {
+            $content = $node->content;
+            if (strlen($content) > 40) {
+                $content = substr($content, 0, 40) . "...";
+            }
+            $output .= ' text="';
+            $output .= $content;
+            $output .= '"';
+        }
+
+        // groupId
+        if ($node->groupId !== null) {
+            $output .= " gid=";
+            $output .= $node->groupId;
+        }
+
+        $output .= "\n";
+
+        // children
+        $childPrefix = $prefix . "  ";
+        foreach ($node->children as $child) {
+            $output .= $this->dumpNode($child, $childPrefix);
+        }
+
+        return $output;
+    }
+
     private ?RenderNode $rootRenderNode = null;
 
     /** @var RenderNode[] 顶层 #root 的所有直接子节点（用于跨帧 candidates 传递） */

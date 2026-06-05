@@ -332,6 +332,13 @@ class LayoutResolver
                     }
                     $child->w = max(0, (int)$this->applyMinMax($childStyle, $child->w, true));
 
+                    // Resolve auto margins for horizontal centering/right-alignment (CSS 2.2 §10.3.3)
+                    $childML = $childStyle['marginLeftAuto'] ?? false;
+                    $childMR = $childStyle['marginRightAuto'] ?? false;
+                    if ($childML || $childMR) {
+                        $this->resolveMarginAuto($child, $childStyle, $containerW, 0);
+                    }
+
                     // Stack vertically with margin
                     $oldY = $child->y;
                     $child->y = $stackY + $mTop;
@@ -382,7 +389,10 @@ class LayoutResolver
             }
         }
 
-        if (!$hasExplicitHeight && $display === 'block') {
+        $overflowY = $style['overflowY'] ?? $style['overflow'] ?? 'visible';
+        $isAutoHeight = (!$hasExplicitHeight) || 
+            ($hasExplicitHeight && $node->h === 0 && $overflowY !== 'hidden' && $overflowY !== 'scroll');
+        if ($isAutoHeight && $display === 'block') {
             $maxBottom = 0;
             foreach ($node->children as $child) {
                 $childBottom = (int)($child->y + $child->h);
@@ -857,6 +867,48 @@ class LayoutResolver
             }
             $lineTotalMain += $gap * ($lineCount - 1);
 
+            // 鈹€鈹€ Step 9.5: Resolve auto margins in main axis (CSS Flexbox §8.1) 鈹€鈹€
+            // Auto margins absorb positive free space BEFORE justify-content.
+            $hasAutoMainMargin = false;
+            $autoMarginCount = 0;
+            foreach ($lineChildren as $ch) {
+                $cs = $ch->style;
+                $mL = $cs['marginLeftAuto'] ?? false;
+                $mR = $cs['marginRightAuto'] ?? false;
+                if ($mL || $mR) $hasAutoMainMargin = true;
+                if ($mL) $autoMarginCount++;
+                if ($mR) $autoMarginCount++;
+            }
+            $resolvedAutoMargins = null;
+            if ($hasAutoMainMargin) {
+                $remainingForAuto = $lineContainerMain - $lineTotalMain;
+                if ($remainingForAuto > 0 && $autoMarginCount > 0) {
+                    $spacePerAuto = (int)($remainingForAuto / $autoMarginCount);
+                    $resolvedAutoMargins = [];
+                    foreach ($lineChildren as $idx => $ch) {
+                        $cs = $ch->style;
+                        $resolvedAutoMargins[$idx] = [
+                            'left'  => ($cs['marginLeftAuto'] ?? false) ? $spacePerAuto : 0,
+                            'right' => ($cs['marginRightAuto'] ?? false) ? $spacePerAuto : 0,
+                        ];
+                    }
+                    // Recalculate lineTotalMain with resolved auto margins
+                    $lineTotalMain = 0;
+                    foreach ($lineChildren as $idx => $ch) {
+                        $mL = $resolvedAutoMargins[$idx]['left'];
+                        $mR = $resolvedAutoMargins[$idx]['right'];
+                        $mT = $ch->style['marginTop'] ?? $ch->style['margin'] ?? 0;
+                        $mB = $ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0;
+                        if ($isRow) {
+                            $lineTotalMain += $ch->w + $mL + $mR;
+                        } else {
+                            $lineTotalMain += $ch->h + $mT + $mB;
+                        }
+                    }
+                    $lineTotalMain += $gap * ($lineCount - 1);
+                }
+            }
+
             // 鈹€鈹€ Step 10: Justify-content for this line 鈹€鈹€
             $mainStart = match ($justify) {
                 'center'        => ($lineContainerMain - $lineTotalMain) / 2,
@@ -891,8 +943,10 @@ class LayoutResolver
                 $i = (int)$idx;
                 $ch = $lineChildren[$i];
                 $childStyle = $ch->style;
-                $childMarginLeft = $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
-                $childMarginRight = $childStyle['marginRight'] ?? $childStyle['margin'] ?? 0;
+                $childMarginLeft = ($resolvedAutoMargins !== null && isset($resolvedAutoMargins[$i]['left']) ? $resolvedAutoMargins[$i]['left'] : null)
+                    ?? $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
+                $childMarginRight = ($resolvedAutoMargins !== null && isset($resolvedAutoMargins[$i]['right']) ? $resolvedAutoMargins[$i]['right'] : null)
+                    ?? $childStyle['marginRight'] ?? $childStyle['margin'] ?? 0;
                 $childMarginTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
                 $childMarginBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
 
@@ -1425,46 +1479,29 @@ class LayoutResolver
      */
     private function resolveMarginAuto(RenderNode $node, array $style, int $parentContentW, int $parentContentH = 0): void
     {
-        $marginLeft = $style['marginLeft'] ?? null;
-        $marginRight = $style['marginRight'] ?? null;
-        $margin = $style['margin'] ?? null;
-
-        $isMarginLeftAuto = ($marginLeft === 'auto');
-        $isMarginRightAuto = ($marginRight === 'auto');
-        // Handle margin:auto shorthand
-        if ($margin === 'auto') {
-            $isMarginLeftAuto = true;
-            $isMarginRightAuto = true;
-        }
+        $isMarginLeftAuto = $style['marginLeftAuto'] ?? false;
+        $isMarginRightAuto = $style['marginRightAuto'] ?? false;
 
         if ($isMarginLeftAuto && $isMarginRightAuto && $node->w > 0 && $parentContentW > $node->w) {
             $remaining = $parentContentW - $node->w;
             $half = (int)($remaining / 2);
             $node->x += $half;
+        } elseif ($isMarginLeftAuto && !$isMarginRightAuto && $parentContentW > $node->w) {
+            $remaining = $parentContentW - $node->w;
+            $node->x += $remaining;
         }
 
-        // 鈹€鈹€ 鍨傜洿鏂瑰悜锛氱粷瀵瑰畾浣嶅厓绱犵殑 margin-top:auto + margin-bottom:auto 鍨傜洿灞呬腑 鈹€鈹€
-        // 浠呭綋鍏冪礌鏈夋樉寮忛珮搴︿笖鐖?content 楂樺害澶т簬瀛愰珮搴︽椂鐢熸晥
-        // Normal flow 涓?margin-top:auto 鍜?margin-bottom:auto 浣跨敤鍊?0锛圕SS 2.2 搂10.6.2锛?
-        $marginTop = $style['marginTop'] ?? null;
-        $marginBottom = $style['marginBottom'] ?? null;
-
-        $isMarginTopAuto = ($marginTop === 'auto');
-        $isMarginBottomAuto = ($marginBottom === 'auto');
-        if ($margin === 'auto') {
-            $isMarginTopAuto = true;
-            $isMarginBottomAuto = true;
-        }
-
+        // Vertical auto margins: only when both auto (centering)
+        $isMarginTopAuto = $style['marginTopAuto'] ?? false;
+        $isMarginBottomAuto = $style['marginBottomAuto'] ?? false;
         if ($isMarginTopAuto && $isMarginBottomAuto && $node->h > 0 && $parentContentH > $node->h) {
             $remaining = $parentContentH - $node->h;
             $half = (int)($remaining / 2);
             $node->y += $half;
         }
-
     }
-
-    // 鈹€鈹€ 閫掑綊骞崇Щ鏂规硶锛堢敤浜?auto-stack / clamp锛?鈹€鈹€
+    
+    // 鈹€鈹€ 閫掑綊骞崇Щ鏂规硶锛堢敤浜? auto-stack / clamp锛?鈹€鈹€
 
     /**
      * Recursively shift Y coordinate of a node and all its descendants.
