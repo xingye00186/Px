@@ -29,10 +29,15 @@
     <!-- 右侧操作区 -->
     <div style="display:flex;flex-direction:row;align-items:center;gap:12px;margin-left:auto">
       <span style="font-size:13px;color:#FB7299;font-weight:500;cursor:pointer">大会员</span>
-      <!-- 消息 -->
-      <div style="position:relative;display:inline-flex;align-items:center">
-        <span style="font-size:13px;color:#61666D;cursor:pointer">消息</span>
+      <!-- 通知铃铛 -->
+      <div style="position:relative;display:inline-flex;align-items:center;cursor:pointer">
+        <span style="font-size:16px;color:#61666D">🔔</span>
         <div style="position:absolute;right:-10px;top:-4px;min-width:16px;height:16px;background:#F56C6C;color:#FFFFFF;font-size:10px;border-radius:8px;text-align:center;line-height:16px;padding:0 4px">4</div>
+      </div>
+      <!-- 私信 -->
+      <div style="position:relative;display:inline-flex;align-items:center;cursor:pointer">
+        <span style="font-size:16px;color:#61666D">✉</span>
+        <div style="position:absolute;right:-10px;top:-4px;min-width:16px;height:16px;background:#F56C6C;color:#FFFFFF;font-size:10px;border-radius:8px;text-align:center;line-height:16px;padding:0 4px">19</div>
       </div>
       <span style="font-size:13px;color:#61666D;cursor:pointer">动态</span>
       <span style="font-size:13px;color:#61666D;cursor:pointer">收藏</span>

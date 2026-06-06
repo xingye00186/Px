@@ -27,7 +27,7 @@
 
     <!-- 换一换按钮（相对于容器定位） -->
     <div style="position:absolute;right:0;top:50px;width:44px;height:90px;background:#FFFFFF;border:1px solid #E3E5E7;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;z-index:10" @click="refreshVideos">
-      <div style="font-size:18px;color:#FB7299;transform:rotate(0deg)">↻</div>
+      <div style="font-size:18px;color:#FB7299">↻</div>
       <span style="font-size:11px;color:#FB7299;font-weight:500">换一换</span>
     </div>
   </div>
@@ -53,6 +53,10 @@
         ['title'=>'【真实球王路】22年阿根廷vs克罗地亚！','coverBg'=>'#3B3B98','duration'=>'18:45','playCount'=>'1.3万','likeCount'=>'245','upName'=>'真实球迷汇','upAvatar'=>'#3B3B98','date'=>'直播中'],
         ['title'=>'水蛭 vs 润滑油 终极对决','coverBg'=>'#78E08F','duration'=>'03:20','playCount'=>'41.4万','likeCount'=>'401','upName'=>'自然纪录','upAvatar'=>'#78E08F','date'=>'05-19'],
         ['title'=>'让大家感受下 大厂Agent工程师的学习强度','coverBg'=>'#E77F67','duration'=>'10:30','playCount'=>'13.5万','likeCount'=>'44','upName'=>'程序人生','upAvatar'=>'#E77F67','date'=>'05-12'],
+        ['title'=>'雨林秘境：探秘亚马逊未被记录的生物','coverBg'=>'#2ECC71','duration'=>'19:42','playCount'=>'32.6万','likeCount'=>'1872','upName'=>'自然探索','upAvatar'=>'#2ECC71','date'=>'06-03'],
+        ['title'=>'从零实现Web框架：手写HTTP服务器','coverBg'=>'#3498DB','duration'=>'28:15','playCount'=>'18.3万','likeCount'=>'2156','upName'=>'编程大师','upAvatar'=>'#3498DB','date'=>'06-02'],
+        ['title'=>'【4K】东京夜景散步 沉浸式体验','coverBg'=>'#9B59B6','duration'=>'35:00','playCount'=>'156.7万','likeCount'=>'3.2万','upName'=>'行走的镜头','upAvatar'=>'#9B59B6','date'=>'06-01'],
+        ['title'=>'为什么说量子计算不会取代经典计算机？','coverBg'=>'#1ABC9C','duration'=>'14:08','playCount'=>'67.2万','likeCount'=>'5431','upName'=>'科学声音','upAvatar'=>'#1ABC9C','date'=>'05-30'],
     ];
 
     /** 当前显示的视频列表 */

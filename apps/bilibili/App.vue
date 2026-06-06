@@ -8,6 +8,9 @@
 
     <!-- 主内容区 -->
     <main-content />
+
+    <!-- 浮动按钮 -->
+    <floating-button />
   </div>
 </template>
 

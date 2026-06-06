@@ -1,7 +1,7 @@
 <template>
   <div style="width:100%;height:auto;display:flex;flex-direction:column;gap:6px;cursor:pointer;background:#FFFFFF;border-radius:6px;overflow:hidden">
     <!-- 封面区 -->
-    <div style="width:100%;height:140px;border-radius:6px;background-size:cover;background-position:center;position:relative" :style="'background:' . coverBg">
+    <div style="width:100%;height:140px;border-radius:6px;position:relative" :style="'background:' . coverBg">
       <!-- 时长标 -->
       <div style="position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,0.7);border-radius:4px;padding:2px 6px">
         <span style="font-size:12px;color:#FFFFFF">{{ duration }}</span>
@@ -9,7 +9,7 @@
     </div>
     <!-- 标题（最多2行） -->
     <div style="width:100%;overflow:hidden">
-      <span style="font-size:14px;color:#18191C;font-weight:500;text-overflow:ellipsis;-webkit-line-clamp:2;line-height:20px" container-w="100%">{{ title }}</span>
+      <span style="font-size:14px;color:#18191C;font-weight:500;text-overflow:ellipsis;-webkit-line-clamp:2;overflow:hidden;line-height:20px" container-w="100%">{{ title }}</span>
     </div>
     <!-- 播放量 + 点赞数 -->
     <div style="display:flex;flex-direction:row;align-items:center;gap:12px">
