@@ -45,6 +45,7 @@ sources:
   - ../../framework/Rendering/Backend/SkiaGraphiteDawnBackend.php
   - ../../framework/Rendering/CssMappings.php
   - ../../framework/Rendering/GdiRenderContext.php
+  - ../../framework/Rendering/ImageManager.php
   - ../../framework/Rendering/LayoutResolver.php
   - ../../framework/Rendering/RenderContext.php
   - ../../framework/Rendering/RenderNode.php
