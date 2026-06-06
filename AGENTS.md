@@ -1,1254 +1,1330 @@
-# Px Framework 鈥� AI-Friendly 鍏ㄦ祦绋嬫寚鍗�
-
-## 涓€銆佷竴鍙ヨ瘽姒傝堪
-
-Px 鏄�竴涓� **PHP 鈫� 鍘熺敓 exe** 鐨勬�闈� GUI 妗嗘灦锛屾ā鏉胯�娉曞�鏍� **Vue 3**锛屾覆鏌撳紩鎿庡熀浜� **Win32 GDI**锛岄€氳繃 **Swoole Compiler** 瀹炵幇 AOT 缂栬瘧銆�
-
-```
-.vue 鏂囦欢 鈫� sfc-compiler.php 鈫� 鐢熸垚 PHP 绫� 鈫� Swoole Compiler 鈫� C++ 鈫� MSVC 鈫� .exe
-```
-
----
-
-## 浜屻€佺洰褰曠粨鏋勯€熸煡
-
-```
-d:/Px/
-鈹溾攢鈹€ framework/              鏍稿績妗嗘灦锛堝彧璇伙紝鎵€鏈夊簲鐢ㄥ叡浜�級
-鈹�   鈹溾攢鈹€ Core/
-鈹�   鈹�   鈹溾攢鈹€ Application.php     浜嬩欢寰�幆銆佺粍浠舵敞鍐屻€乂Node 鏍戝睍寮€銆乥ind 瑙ｆ瀽
-鈹�   鈹�   鈹溾攢鈹€ ScrollManager.php   婊氬姩鏈嶅姟锛堢姸鎬佺�鐞嗐€佹嫋鎷姐€佹粴杞�€佹按骞虫粴鍔�級
-鈹�   鈹�   鈹斺攢鈹€ Scheduler.php       寰�换鍔�/瀹忎换鍔¤皟搴�
-鈹�   鈹溾攢鈹€ Rendering/
-鈹�   鈹�   鈹溾攢鈹€ VNode.php           铏氭嫙 DOM 鑺傜偣锛堝竷灞€瀛楁� + 婊氬姩瀛楁� + 缁勪欢鍗犱綅瀛楁�锛�
-鈹�   鈹�   鈹溾攢鈹€ VNodeRenderer.php   鏍戦亶鍘� 鈫� 鏀堕泦鍏冪礌 鈫� 鎸� layer 鍒嗙粍 鈫� 璋冪敤 GDI
-鈹�   鈹�   鈹溾攢鈹€ LayoutResolver.php  CSS 甯冨眬寮曟搸锛坆lock/flex/grid/scroll锛�
-鈹�   鈹�   鈹溾攢鈹€ GdiRenderContext.php Win32 GDI 缁樺埗鍘熻�
-鈹�   鈹�   鈹溾攢鈹€ CssMappings.php     CSS 灞炴€� 鈫� GDI 灞炴€ф槧灏�
-鈹�   鈹�   鈹斺攢鈹€ RenderContext.php   娓叉煋涓婁笅鏂囨帴鍙�
-鈹�   鈹溾攢鈹€ Platform/
-鈹�   鈹�   鈹溾攢鈹€ Platform.php        骞冲彴鎶借薄鎺ュ彛
-鈹�   鈹�   鈹溾攢鈹€ Win32Platform.php    Win32 娑堟伅娉� + 浜嬩欢瑙ｇ爜
-鈹�   鈹�   鈹溾攢鈹€ PlatformEvent.php   浜嬩欢绫诲瀷灞傜骇锛圡ouse/Keyboard/Window/Timer锛�
-鈹�   鈹�   鈹溾攢鈹€ PlatformFactory.php 骞冲彴宸ュ巶
-鈹�   鈹�   鈹斺攢鈹€ WinMsg.php          Win32 娑堟伅甯搁噺
-鈹�   鈹溾攢鈹€ interfaces/
-鈹�   鈹�   鈹斺攢鈹€ ComponentInterface.php  缁勪欢鎺ュ彛濂戠害
-鈹�   鈹溾攢鈹€ compiler/
-鈹�   鈹�   鈹溾攢鈹€ sfc-compiler.php    涓荤紪璇戝櫒锛�.vue 鈫� PHP 浠ｇ爜鐢熸垚锛�
-鈹�   鈹�   鈹溾攢鈹€ template-parser.php 妯℃澘瑙ｆ瀽鍣�紙HTML 鈫� VNode 鏍戯級
-鈹�   鈹�   鈹溾攢鈹€ script-analyzer.php  鑴氭湰鍒嗘瀽鍣�紙鑷�姩娉ㄥ叆 markDirty锛�
-鈹�   鈹�   鈹溾攢鈹€ component-registry.php 缁勪欢娉ㄥ唽琛�
-鈹�   鈹�   鈹斺攢鈹€ aot-validator.php    AOT 鍏煎�鎬ф�鏌�
-鈹�   鈹溾攢鈹€ BaseComponent.php        缁勪欢鍩虹被锛堢敓鍛芥湡 + 鐖跺瓙灞傜骇锛�
-鈹�   鈹溾攢鈹€ ReactiveComponent.php    鍝嶅簲寮忕粍浠跺熀绫伙紙dirty + VNode 缂撳瓨锛�
-鈹�   鈹斺攢鈹€ aot-checker.php          AOT 瑙勫垯妫€鏌ュ伐鍏凤紙20K 琛岋級
-鈹溾攢鈹€ apps/                  姣忎釜搴旂敤涓€涓�瓙鐩�綍
-鈹�   鈹溾攢鈹€ calculator/            璁＄畻鍣ㄧず渚嬶紙4 涓�粍浠躲€丆SS Grid 甯冨眬锛�
-鈹�   鈹溾攢鈹€ list-test/             鍒楄〃婊氬姩娴嬭瘯锛坴-for + scroll-container锛�
-鈹�   鈹斺攢鈹€ test/                  鍩虹�娴嬭瘯搴旂敤
-鈹溾攢鈹€ stub/                   PHP stub 鏂囦欢锛圕++ 鍘熺敓鍑芥暟澹版槑锛�
-鈹溾攢鈹€ cpp/                    C++ 妗ユ帴灞傚疄鐜�
-鈹溾攢鈹€ docs/                   璁捐�鏂囨。
-鈹溾攢鈹€ tests/                  鍗曞厓娴嬭瘯锛圥HPUnit 椋庢牸 + 鎴�浘娴嬭瘯锛�
-鈹�   鈹溾攢鈹€ unit/               鍗曞厓娴嬭瘯
-鈹�   鈹溾攢鈹€ screenshot/         鎴�浘鑷�姩鍖栨祴璇曪紙PowerShell锛�
-鈹�   鈹斺攢鈹€ run_all_tests.php   缁熶竴娴嬭瘯杩愯�鍣�
-鈹溾攢鈹€ build.bat               闈炰氦浜掓瀯寤鸿剼鏈�
-鈹溾攢鈹€ sfc-compiler.php        缂栬瘧鍣ㄥ叆鍙ｏ紙妗嗘灦鏍圭洰褰曪級
-鈹溾攢鈹€ config.yml              缂栬瘧鍣ㄨ矾寰勯厤缃�
-鈹斺攢鈹€ vendor/                 渚濊禆锛圕omposer锛�
-```
-
-### 搴旂敤鐩�綍妯℃澘
-
-```
-apps/<app-name>/
-鈹溾攢鈹€ App.vue                 鏍圭粍浠� SFC
-鈹溾攢鈹€ main.php                鍏ュ彛锛�4 涓� AOT 甯搁噺 + main() 鍑芥暟
-鈹溾攢鈹€ project.yml             鏋勫缓閰嶇疆
-鈹溾攢鈹€ components/             瀛愮粍浠讹紙鍙�€夛級
-鈹�   鈹斺攢鈹€ *.vue
-鈹溾攢鈹€ gen/                    鑷�姩鐢熸垚鐨� PHP 缁勪欢锛堢敱 sfc-compiler 浜у嚭锛�
-鈹�   鈹溾攢鈹€ AppComponent.php
-鈹�   鈹溾攢鈹€ *Component.php
-鈹�   鈹斺攢鈹€ ComponentFactory.php
-鈹斺攢鈹€ bin/                    鏋勫缓杈撳嚭锛�.exe + .dll锛�
-```
-
----
-
-## 涓夈€佹牳蹇冩灦鏋�
-
-### 3.1 瀹屾暣鏁版嵁娴�
-
-```
-鐢ㄦ埛鍦ㄧ獥鍙ｄ腑鎿嶄綔
-    鈹�
-    鈻�
-Platform (Win32Platform::pollEvents)
-    鈹�   WM_LBUTTONDOWN 鈫� MouseEvent(action='down', x, y)
-    鈹�   WM_MOUSEWHEEL  鈫� MouseEvent(action='wheel', x, y, delta)
-    鈹�   WM_KEYDOWN      鈫� KeyboardEvent(action='down', keyCode, char)
-    鈻�
-Application::handleMouseEvent / handleKeyboardEvent
-    鈹�
-    鈹溾攢 婊氳疆锛� findScrollContainerAt 鈫� handleScrollWheel 鈫� applyScrollTop 鈫� requestRender
-    鈹溾攢 鎷栨嫿锛� hitTestScrollbar 鈫� handleScrollbarDown 鈫� handleScrollbarDrag 鈫� directRender
-    鈹斺攢 鐐瑰嚮锛� hitTest 鈫� resolveComponent 鈫� dispatchClick(handler, arg)
-         鈹�
-         鈻�
-    Component 鏂规硶锛堝� deleteItem锛�
-         鈹�  淇�敼 $this->todoItems 鈫� $this->markDirty()
-         鈻�
-    Scheduler::flushMicrotasks
-         鈹�  performUpdate 鈫� renderCallback 鈫� Application::requestRender
-         鈻�
-    Application::render
-         鈹�
-         鈹溾攢 rebuildVNodeTree
-         鈹�   鈹溾攢 rootComponent->getVNodeTree()    // 璋冪敤 render()锛岃繑鍥� VNode 鏍�
-         鈹�   鈹溾攢 expandComponentTree()             // 灞曞紑瀛愮粍浠跺崰浣嶈妭鐐�
-         鈹�   鈹斺攢 resolveVNodeBindings()            // 灏嗙粍浠� bind 鍊煎啓鍏� VNode
-         鈹�
-         鈹溾攢 LayoutResolver::resolve
-         鈹�   鈹溾攢 瑙ｆ瀽 CSS styles锛坈lass + inline 鍚堝苟锛�
-         鈹�   鈹溾攢 鎸� display 妯″紡璁＄畻 x/y/w/h
-         鈹�   鈹溾攢 auto-stack 鍨傜洿鎺掑垪瀛愯妭鐐�
-         鈹�   鈹斺攢 clamp scrollTop + 瀛愯妭鐐归噸瀹氫綅
-         鈹�
-         鈹斺攢 VNodeRenderer::render
-             鈹溾攢 collectElements锛堟寜 layer 鍒嗙粍锛宻croll/overflow:hidden 鐢熸垚 clip-push/clip-pop锛�
-             鈹斺攢 GdiRenderContext::drawElement锛堥€� element 璋冪敤 GDI 鍘熻�锛�
-```
-
-### 3.2 鑱岃矗杈圭晫锛圫OLID锛�
-
-```
-鈹屸攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹�
-鈹� 妯″潡              璐熻矗                        涓嶈礋璐�       鈹�
-鈹溾攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹�
-鈹� Component         澹版槑鐘舵€� + 缁戝畾閿�            涓嶅弬涓庡潗鏍� 鈹�
-鈹� Application       浜嬩欢璺�敱 + bind 瑙ｆ瀽         涓嶅弬涓庡竷灞€ 鈹�
-鈹� LayoutResolver    鎵€鏈夊潗鏍囪�绠�                 涓嶅弬涓庢覆鏌� 鈹�
-鈹� VNodeRenderer     鏀堕泦鍏冪礌 + clip 瑁佸垏锛坰croll + overflow:hidden锛� 涓嶄慨鏀瑰潗鏍� 鈹�
-鈹� GdiRenderContext  GDI 璋冪敤                    涓嶅弬涓庡竷灞€ 鈹�
-鈹斺攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹�
-```
-
-> **鏍稿績鍘熷垯**锛歏Node 鐨� x/y 鍧愭爣鐢� LayoutResolver 涓€瀹惰�浜嗙畻銆侫pplication 鍙�€氳繃 bind 鏈哄埗锛坄:scroll-top`锛夐棿鎺ュ奖鍝嶅竷灞€锛屼笉鐩存帴鎿嶄綔鍧愭爣銆�
-
----
-
-## 鍥涖€佸叧閿�被閫熸煡
-
-### 4.1 VNode锛坒ramework/Rendering/VNode.php锛�
-
-**鏈€閲嶈�鐨勫瓧娈�**锛堟寜浣跨敤棰戠巼鎺掑簭锛夛細
-
-```php
-// 鈥斺€� 鏍戠粨鏋� 鈥斺€�
-string  $type;         // 'div'|'span'|'button'|'input'|'#root'|'#component'|'#text'
-?array  $props;        // HTML 灞炴€� + Vue 鎸囦护锛園click, :bind, v-for, :scroll-top 绛夛級
-mixed   $children;     // VNode[] | VNode | string | null
-?string $key;          // v-for key
-
-// 鈥斺€� 甯冨眬缁撴灉锛堢敱 LayoutResolver 濉�叆锛夆€斺€�
-int $x, $y, $w, $h;           // 缁濆�鍧愭爣
-array $computedStyle;         // 鍚堝苟鍚庣殑 CSS 灞炴€�
-int  $layer;                  // z-order
-string $groupId = 'app';      // 浜嬩欢璺�敱 key
-
-// 鈥斺€� 婊氬姩瀹瑰櫒 鈥斺€�
-bool $isScrollContainer;
-int  $scrollTop;               // 鍨傜洿婊氬姩鍋忕Щ (px)
-int  $contentHeight;           // 鍙�粴鍔ㄥ唴瀹规€婚珮搴� (px)
-int  $scrollLeft;              // 姘村钩婊氬姩鍋忕Щ (px)
-int  $contentWidth;            // 鍙�粴鍔ㄥ唴瀹规€诲�搴� (px)
-
-// 鈥斺€� 缁勪欢鍗犱綅 鈥斺€�
-bool $isComponent;
-?string $componentClass;
-?ReactiveComponent $componentInstance;
-?array $componentProps;       // 瀛愮粍浠跺睘鎬ф槧灏�
-```
-
-**宸ュ巶鏂规硶**锛�
-```php
-VNode::h('div', ['style'=>'width:100px;height:50px'], [$child])
-VNode::hKey('div', [...], $children, 'item-1')       // 甯� v-for key
-VNode::hComponent('MyComponent', [...props], [...bindings])  // 瀛愮粍浠跺崰浣�
-```
-
-**甯哥敤杈呭姪鏂规硶**锛歚getProp(name, default)`, `getClass()`, `getInlineStyle()`, `isRoot()`, `isComponent()`
-
-### 4.2 ReactiveComponent锛坒ramework/ReactiveComponent.php锛�
-
-**鍏抽敭鐘舵€�**锛�
-```php
-bool $dirty;            // true 鈫� 涓嬫� getVNodeTree() 浼氶噸鏂� render()
-?VNode $vnodeCache;     // 缂撳瓨鐨勪笂娆℃覆鏌撶粨鏋�
-bool $isMounted;        // mount() 涔嬪悗涓� true
-```
-
-**鏍稿績娴佺▼**锛�
-```php
-// 鐘舵€佸彉鏇� 鈫� 瑙﹀彂閲嶆覆鏌撶殑鏍囧噯鏂瑰紡
-$this->markDirty();
-// 绛変环浜庯細
-//   $this->vnodeCache = null;
-//   $this->scheduleUpdate();  // 鎶� performUpdate() 鍔犲叆寰�换鍔￠槦鍒�
-
-// 鍦ㄥ井浠诲姟涓� 鈫� performUpdate() 鈫� renderCallback() 鈫� Application::requestRender()
-// 鍦ㄤ簨浠跺惊鐜�殑涓嬩竴涓� tick 鈫� Application::render() 鈫� getVNodeTree() 鈫� $this->render()
-```
-
-**蹇呴』瀹炵幇鐨勬娊璞℃柟娉�**锛�
-```php
-abstract public function render(): VNode;                       // 杩斿洖 VNode 鏍�
-abstract public function setBindValue(string $key, string $val);  // 鍐欏叆缁戝畾鍊�
-abstract public function getBindValue(string $key): string;      // 璇诲彇缁戝畾鍊�
-```
-
-**瀛愨啋鐖堕€氫俊**锛�
-```php
-// 瀛愮粍浠�
-$this->emit('itemSelected', ['id' => 5]);
-// 鐖剁粍浠�
-$this->on($child, 'itemSelected', function($payload) { ... });
-```
-
-### 4.3 Application锛坒ramework/Core/Application.php锛�
-
-**閲嶈�鏂规硶閫熸煡**锛�
-```php
-// 鍏ュ彛
-Application::create()->mount($root)->run();
-
-// 缁勪欢娉ㄥ唽
-registerComponent(string $groupId, ReactiveComponent $comp)
-
-// 鍛戒腑娴嬭瘯
-hitTest(int $x, int $y, VNode $node): ?VNode   // 杩斿洖鏈€涓婂眰鍙�偣鍑� VNode
-
-// 婊氬姩绯荤粺
-findScrollContainerAt(int $x, int $y, VNode $node): ?VNode
-hitTestScrollbar(int $x, int $y, VNode $node): ?array
-applyScrollTop(VNode $node, int $value, bool $persist): void
-directRender(VNode $tree): void    // 璺宠繃鏍戦噸寤猴紝浠呴噸鏂� layout + render
-```
-
----
-
-## 浜斻€佷簨浠剁郴缁�
-
-### 5.1 鐐瑰嚮浜嬩欢澶勭悊閾�
-
-```
-榧犳爣鎸変笅 鈫� hitTest(x, y) 鍙嶅簭閬嶅巻瀛愯妭鐐�
-    鈫� 妫€鏌� @click 灞炴€�
-    鈫� resolveComponent(node) 閫氳繃 groupId 鏌ユ壘缁勪欢
-    鈫� component->dispatchClick(handler, arg)
-    鈫� 缁勪欢鍐� match 鍒嗗彂
-    鈫� 鏈�尮閰嶇殑 handler 鈫� parent::dispatchClick 鍐掓场
-```
-
-### 5.2 缁勪欢涓�畾涔変簨浠跺�鐞嗗櫒
-
-鍦� `.vue` 鐨� `<script>` 涓�畾涔夋柟娉曪紝SFC 缂栬瘧鍣ㄨ嚜鍔ㄧ敓鎴愬�搴旂殑 `dispatchClick`锛�
-
-```php
-// App.vue <script>
-public function deleteItem(string $id): void {
-    unset($this->todoItems[$id]);
-    $this->markDirty();  // SFC 缂栬瘧鍣ㄤ細鑷�姩娉ㄥ叆姝よ�
-}
-
-// 缂栬瘧鍣ㄧ敓鎴愮殑 dispatchClick锛�
-public function dispatchClick(string $handler, ?string $arg = null): void {
-    switch ($handler) {
-        case 'deleteItem': $this->deleteItem($arg); break;
-        default:
-            if ($this->parent !== null) {
-                $this->parent->dispatchClick($handler, $arg);
-            }
-    }
-}
-```
-
-### 5.3 閿�洏浜嬩欢
-
-褰撳墠浠呮敮鎸佽仛鐒� input 鍏冪礌鐨� @keydown / @keyup / @enter銆�
-
----
-
-## 鍏�€佹粴鍔ㄧ郴缁�
-
-### 6.1 鑱岃矗鏋舵瀯
-
-```
-婊氬姩浜嬩欢 鈫� Application::handleMouseEvent (璺�敱)
-         鈫� ScrollManager (鐘舵€佺�鐞� + 閫昏緫)
-              鈹溾攢 handleScrollWheel()      婊氳疆
-              鈹溾攢 hitTestScrollbar()       鍛戒腑娴嬭瘯锛堝瀭鐩存潯 + 姘村钩鏉★級
-              鈹溾攢 handleScrollbarDown()    鎷栨嫿寮€濮�
-              鈹溾攢 handleScrollbarDrag()    鎷栨嫿涓�
-              鈹溾攢 handleMouseUp()          鎷栨嫿閲婃斁
-              鈹溾攢 applyScrollTop()         鍨傜洿婊氬姩
-              鈹斺攢 applyScrollLeft()        姘村钩婊氬姩
-```
-
-> 婊氬姩鐘舵€侊紙target銆乻tart 鍧愭爣銆乻tart scroll 浣嶇疆銆乮sHorizontal锛夊叏閮ㄥ湪 ScrollManager 涓�€�
-> Application 鍙�礋璐ｅ皢浜嬩欢璺�敱缁� ScrollManager锛屼笉鍐嶇洿鎺ユ寔鏈夋粴鍔ㄧ姸鎬併€�
-
-### 6.2 浣垮�鍣ㄥ彲婊氬姩
-
-鍦� `.vue` 妯℃澘涓�細
-```html
-<!-- 浠呭瀭鐩存粴鍔� -->
-<div style="overflow-y:auto;left:10px;top:50px;width:380px;height:400px"
-     :scroll-top="scrollTop">
-  <template v-for="item in items" :key="item.id">
-    <div @click="deleteItem(item.id)">{{ item.text }}</div>
-  </template>
-</div>
-
-<!-- 妯�悜+绾靛悜婊氬姩锛坥verflow:auto 鍚屾椂鍚�敤涓よ酱锛� -->
-<div style="overflow:auto;left:10px;top:50px;width:390px;height:570px"
-     :scroll-top="scrollTop"
-     :scroll-left="scrollLeft">
-  <!-- 瀛愬厓绱犲�搴﹁秴杩囧�鍣ㄥ�搴︽椂鍑虹幇姘村钩婊氬姩鏉� -->
-  <div style="left:0;top:0;width:800px;height:36px">瀹藉唴瀹�</div>
-</div>
-```
-
-缁勪欢涓�細
-```php
-public string $scrollTop = "0";   // 鍨傜洿婊氬姩浣嶇疆
-public string $scrollLeft = "0";  // 姘村钩婊氬姩浣嶇疆锛堜粎妯�悜瀹瑰櫒闇€瑕侊級
-```
-
-**妯�悜婊氬姩浜や簰**锛歚Shift + 婊氳疆` 瑙﹀彂妯�悜婊氬姩銆傛按骞虫粴鍔ㄦ潯浣嶄簬瀹瑰櫒搴曢儴 12px 鍖哄煙銆�
-
-### 6.3 婊氬姩浜や簰娴佺▼
-
-```
-婊氳疆 鈫� ScrollManager::handleScrollWheel (鍚� Shift 閿��娴� 鈫� 妯�悜)
-     鈫� applyScrollTop / applyScrollLeft (persist=true)
-     鈫� setBindValue 鈫� markDirty 鈫� requestRender
-
-杞ㄩ亾鐐瑰嚮 鈫� ScrollManager::hitTestScrollbar (杩斿洖 {scrollNode, type, isHorizontal})
-       鈫� handleScrollbarDown 鈫� applyScroll*(jumped_value, persist=true)
-
-婊戝潡鎷栨嫿 鈫� hitTestScrollbar 鈫� handleScrollbarDown(type='thumb')
-       鈫� handleScrollbarDrag (楂橀�) 鈫� applyScroll*(persist=false) 鈫� directRender
-       鈫� 榧犳爣閲婃斁 鈫� applyScroll*(persist=true) 鈫� requestRender
-```
-
-### 6.4 鏍稿績鏈哄埗
-
-1. **Bind 鍚屾�**锛歚resolveVNodeBindings` 鍦ㄦ瘡娆� rebuild 鏃跺皢缁勪欢 `scrollTop`/`scrollLeft` 鍊煎啓鍏� `VNode`
-2. **甯冨眬鍋忕Щ**锛歀ayoutResolver 鐢� `childOffsetY = node.y - scrollTop` 鍜� `childOffsetX = node.x - scrollLeft` 瀹氫綅瀛愯妭鐐�
-3. **鑷�姩 clamp**锛歛uto-stack 鍚庤嫢 `scrollTop > maxScroll` 鎴� `scrollLeft > maxScrollX`锛孡ayoutResolver 鑷�姩淇��骞堕噸瀹氫綅瀛愯妭鐐�
-4. **鎷栨嫿浼樺寲**锛氭嫋鎷借繃绋嬩腑璧� `directRender`锛岃烦杩� VNode 鏍戦噸寤�
-5. **妯�悜婊氬姩妫€娴�**锛歚overflow-x:auto` / `overflow-x:scroll` 鎴� `overflow:auto` 缁ф壙涓よ酱
-
-### 6.5 澶氭粴鍔ㄥ�鍣ㄦ敞鎰忎簨椤�
-
-- 婊氳疆浜嬩欢鎵�**榧犳爣涓嬫柟鏈€娣辩殑**婊氬姩瀹瑰櫒
-- 婊氬姩鏉℃嫋鎷戒竴娆�**鍙�兘鎿嶄綔涓€涓�**瀹瑰櫒
-- 鎷栨嫿鐘舵€佺敱 ScrollManager 鎸佹湁锛屾嫋鎷借繃绋嬩腑**涓嶈�**瑙﹀彂鏍戦噸寤�
-
----
-
-## 涓冦€丄OT 缂栬瘧绾︽潫
-
-### 7.1 绂佹�鐨� PHP 妯″紡
-
-| 妯″紡 | 鍘熷洜 |
-|------|------|
-| `$obj->$prop` 鍔ㄦ€佸睘鎬� | AOT 鏃犳硶闈欐€佹帹瀵� |
-| `$fn()` 闈為棴鍖呰皟鐢� | 瀛楃�涓插嚱鏁板悕涓嶅彲缂栬瘧 |
-| `$obj->$method()` 鍔ㄦ€佹柟娉� | 鍚屼笂 |
-| 椤跺眰 `require_once` / `include` | 蹇呴』鍦ㄥ嚱鏁�/绫诲唴 |
-| `eval()` / `create_function()` | 瀹屽叏涓嶅彲缂栬瘧 |
-| `compact()` / `extract()` | 鍔ㄦ€佸彉閲� |
-
-### 7.2 蹇呴』閬靛畧鐨勬ā寮�
-
-| 妯″紡 | 璇存槑 |
-|------|------|
-| `$x->toObject(ClassName::class)` | AOT 鏄惧紡绫诲瀷鏍囨敞锛�**蹇呴』浣跨敤** |
-| `ComponentFactory::create($className)` | 鍏佽�瀛楃�涓茬被鍚嶄綔涓哄伐鍘傚弬鏁� |
-| `match` 琛ㄨ揪寮� | 浠� swoole_compiler 鑷�甫鐨� PHP 8.x 鏀�寔 |
-
-### 7.3 鏋勫缓鍓嶆�鏌�
-
-```bash
-# 浣跨敤 compiler 鑷�甫鐨� PHP 鍋氳�娉曟�鏌�
-D:\swoole_compiler\php.exe -l framework/Core/Application.php
-
-# AOT 闈欐€佹�鏌ワ紙build.bat Step 0.5 鑷�姩杩愯�锛�
-D:\swoole_compiler\php.exe framework/aot-checker.php --project apps/list-test --skip direct_cpp_call
-```
-
-### 7.4 闂�寘浣跨敤闄愬埗
-
-**闂��**锛歚v-for` 寰�幆鍐呬娇鐢ㄩ棴鍖咃紙濡傛潯浠� class锛夋椂锛孉OT 缂栬瘧浼氫涪澶遍棴鍖呭�閮ㄥ彉閲忕殑浣滅敤鍩燂紝瀵艰嚧 `$ch` 绛夊惊鐜�彉閲忔棤娉曡�闂�€�
-
-**閿欒�绀轰緥**锛�
-```php
-// 鉂� 閿欒�锛欰OT 涓�棴鍖呮棤娉曡�闂� $ch
-$children[] = VNode::h('div', [...], (function() {
-    $c = [];
-    $c[] = VNode::h('span', [..., 'bind'=>$ch['name']], $ch['name']);
-    return $c;
-})());
-```
-
-**姝ｇ‘鍋氭硶**锛氫笉浣跨敤闂�寘锛岀洿鎺ュ湪寰�幆涓�瀯寤� VNode锛�
-```php
-// 鉁� 姝ｇ‘锛氬惊鐜�彉閲忕洿鎺ュ湪 foreach 涓�娇鐢�
-foreach ($this->items as $item) {
-    $children[] = VNode::h('div', [...], $item['name']);
-}
-```
-
-**鏉′欢娓叉煋鐨勬浛浠ｆ柟妗�**锛�
-- 涓嶄娇鐢� `v-if` / `v-else`锛屾敼鐢�**涓や釜鐙�珛鐨� `v-for`** 閬嶅巻涓嶅悓鏁版嵁婧�
-- 鍦ㄧ粍浠朵腑鎻愪緵鍒嗙�鐨勬柟娉曡繑鍥炰笉鍚岀被鍨嬬殑鏁版嵁
-
-```php
-// 鉁� 鍦� script 涓�彁渚涘垎绂荤殑鏁版嵁鏂规硶
-public function getUserMessages(): array { /* 杩囨护 user 绫诲瀷 */ }
-public function getSystemMessages(): array { /* 杩囨护 system 绫诲瀷 */ }
-
-// 鉁� 鍦� template 涓�嫭绔嬮亶鍘�
-<template v-for="msg in userMessages" :key="'u-' . msg.id">
-  <!-- 鐢ㄦ埛娑堟伅 -->
-</template>
-<template v-for="msg in systemMessages" :key="'s-' . msg.id">
-  <!-- 绯荤粺娑堟伅 -->
-</template>
-```
-
-### 7.5 `use native_types` 涓嬬殑 C2440 绫诲瀷杞�崲閿欒�
-
-**鏍瑰洜**锛氭枃浠跺０鏄庝簡 `use native_types`锛圓OT 妯″紡锛夛紝浣嗕互涓嬫搷浣滃�缁堣繑鍥� `php::Variant` 绫诲瀷锛岃祴鍊肩粰宸插０鏄庝负 `php::Int` 鐨勫彉閲�/灞炴€ф椂锛孉OT 缂栬瘧鍣ㄦ棤娉曢殣寮忚浆鎹�細
-
-| 鎿嶄綔 | 杩斿洖鍊� | 瑙﹀彂鏉′欢 |
-|------|--------|---------|
-| `$arr['key']` 鏁扮粍鍏冪礌璁块棶 | `php::Variant` | 璧嬬粰 `int` 灞炴€ф垨宸茬被鍨嬪寲鐨勫眬閮ㄥ彉閲� |
-| `$arr['key'] ?? default` 鍖呭惈鏁扮粍璁块棶鐨� ?? | `php::Variant` | 鍚屼笂 |
-| `max(...)` / `min(...)` | `php::Variant` | 鍚屼笂 |
-
-**閿欒�淇″彿**锛�
-```
-D:\Px/build/...cc(error): error C2440: '=': cannot convert from 'php::Var' to 'php::Int'
-```
-
-**涓夌�鍙樹綋鍙婁慨澶�**锛�
-
-**鍙樹綋 A 鈥� max/min 杩斿洖 Variant**
-```php
-// 鉂� 閿欒�锛歮ax() 杩斿洖 php::Variant锛岀洰鏍囧彉閲忓凡绫诲瀷鍖栦负 php::Int
-$newScrollTop = max(0, min($max, $x));
-
-// 鉁� 姝ｇ‘锛氬�灞傚姞 (int) 杞�瀷
-$newScrollTop = (int)max(0, min($max, $x));
-```
-
-**鍙樹綋 B 鈥� 鍏� int 瀛楅潰閲忓垵濮嬪寲锛屽悗鏁扮粍璁块棶閲嶆柊璧嬪€�**
-```php
-// 鉂� 閿欒�锛�$borderColor 琚� =0 鍒濆�鍖栦负 php::Int
-//           鍙堣� $style['borderColor'] ?? ... 璧嬪€间负 php::Variant
-$borderColor = 0;
-if (...) {
-    $borderColor = $style['borderColor'] ?? ...;
-}
-
-// 鉁� 姝ｇ‘锛氬�灞傚姞 (int) 杞�瀷
-$borderColor = 0;
-if (...) {
-    $borderColor = (int)($style['borderColor'] ?? ...);
-}
-```
-
-**鍙樹綋 C 鈥� 绫诲睘鎬у０鏄庝负 `int`锛屼粠鏁扮粍璧嬪€�**
-```php
-public int $primary;  // 澹版槑涓� php::Int
-
-// 鉂� 閿欒�锛�$colors['primary'] ?? 0x1976D2 杩斿洖 php::Variant
-$this->primary = $colors['primary'] ?? 0x1976D2;
-
-// 鉁� 姝ｇ‘锛氬�灞傚姞 (int) 杞�瀷
-$this->primary = (int)($colors['primary'] ?? 0x1976D2);
-```
-
-**鍏ㄥ簱鎵�弿**锛氬凡閫氳繃 Python 鑴氭湰瀵规墍鏈� 11 涓� `use native_types` 鏂囦欢杩涜�鎵�弿锛岀‘璁ゆ棤鏇村�鍗遍櫓妯″紡銆傛秹鍙婃枃浠讹細`ScrollManager.php`(max/min)銆乣VNodeRenderer.php`(鏁扮粍閲嶆柊璧嬪€�)銆乣ColorScheme.php`(绫诲睘鎬ф暟缁勮祴鍊�)銆�
-
-### 7.6 `use native_types` 涓嬫柟娉曞唴鏁扮粍灞炴€ц祴鍊兼棤鏁�
-
-**鏍瑰洜**锛氭枃浠跺０鏄庝簡 `use native_types` 鏃讹紝鍦ㄦ柟娉曪紙濡� `onMount()`銆乣initData()`锛変腑瀵瑰凡澹版槑涓� `public array` / `private array` 鐨勫睘鎬у仛 `$this->prop = [...]` 璧嬪€硷紝AOT 缂栬瘧鍣ㄧ敓鎴愮殑 C++ 浠ｇ爜**涓嶄細鐪熸�灏嗘暟鎹�啓鍏ュ睘鎬�**鈥斺€旇繍琛屾椂璇ュ睘鎬т繚鎸佸垵濮嬬┖鍊� `[]`銆�
-
-**閿欒�淇″彿**锛氭病鏈夌紪璇戦敊璇�紝浣嗚繍琛屾椂灞炴€ф暟鎹�负绌猴紙`foreach` 杩�唬 0 娆★級銆傚父瑙佷簬灏嗘暟鎹�垵濮嬪寲鏀惧叆绫讳技 `initData()` 鏂规硶鐨勮�璁℃ā寮忋€�
-
-**閿欒�绀轰緥**锛�
-```php
-// 鉂� 閿欒�锛欰OT 缂栬瘧鍚� $this->sidebarItems 淇濇寔绌烘暟缁�
-public array $sidebarItems = [];
-
-public function onMount(): void {
-    parent::onMount();
-    $this->initData();
-}
-
-private function initData(): void {
-    // 姝よ祴鍊煎湪 AOT 涓嬫棤鏁�
-    $this->sidebarItems = [
-        ['id' => 's1', 'title' => '瑙嗛�1'],
-        ['id' => 's2', 'title' => '瑙嗛�2'],
-    ];
-}
-```
-
-**姝ｇ‘鍋氭硶**锛氭暟缁勬暟鎹�**蹇呴』鍦ㄥ睘鎬у０鏄庡�鍐呰仈鍒濆�鍖�**锛�
-```php
-// 鉁� 姝ｇ‘锛氬湪澹版槑澶勭洿鎺ヨ祴鍊�
-public array $sidebarItems = [
-    ['id' => 's1', 'title' => '瑙嗛�1'],
-    ['id' => 's2', 'title' => '瑙嗛�2'],
-];
-```
-
-**褰卞搷鑼冨洿**锛歚public array` 鍜� `private array` 鍧囧彈褰卞搷銆俙string` / `int` 绫诲瀷灞炴€х殑鏂规硶鍐呰祴鍊间笉鍙楁�闄愬埗銆�
-
-**濡備綍妫€娴�**锛歚aot-checker.php` 鏆傛湭瑕嗙洊姝ゆā寮忋€傚彲鎼滅储 `use native_types` 鏂囦欢涓�墍鏈� `$this->xxx = [` 妯″紡锛堟柟娉曞唴鏁扮粍灞炴€ц祴鍊硷級杩涜�浜哄伐瀹℃牳銆�
-
----
-
-## 鍏�€佹瀯寤烘祦绋�
-
-### 8.1 鍛戒护
-
-```bash
-# 鏋勫缓
-build.bat list-test
-
-# 鏋勫缓骞惰繍琛�
-build.bat list-test --run
-```
-
-### 8.2 鍚勬�楠�
-
-```
-Step 0:   MSVC 鐜�� (vcvarsall.bat x64)
-Step 0.5: AOT 闈欐€佹�鏌� 鈫� 妫€鏌ョ�姝㈡ā寮�
-Step 1:   SFC 缂栬瘧锛堢紪璇戞牴缁勪欢 App.vue锛岃嚜鍔� BFS 鍙戠幇骞剁紪璇戞墍鏈夊瓙缁勪欢鍒� gen/*.php锛�
-Step 2:   AOT 缂栬瘧 (PHP 鈫� C++ 鈫� link 鈫� .exe)
-Step 3:   鎵撳寘 (exe + php8ts.dll + phpx.dll 鈫� bin/)
-```
-
-### 8.3 甯歌�澶辫触
-
-| 閿欒� | 瑙ｅ喅 |
-|------|------|
-| `cl.exe` 鎵句笉鍒� | 浠� Developer Command Prompt for VS 杩愯� |
-| `php8embed.lib` 鎵句笉鍒� | 澶嶅埗鍒� `D:\swoole_compiler\` 鏍圭洰褰� |
-| AOT Checker 鎶ラ敊 | 妫€鏌ヤ唬鐮佹槸鍚︿娇鐢ㄤ簡绂佹�妯″紡 |
-| Step 2 Swoole 缂栬瘧鍣ㄦ姤閿� | 鍏堢敤鎵嬪姩 `php -l` 妫€鏌� PHP 璇�硶 |
-| 绯荤粺 `php -l` 鎶ヨ�娉曢敊 | 鐢� `D:\swoole_compiler\php.exe` 鑰岄潪绯荤粺 PATH 涓�殑 PHP |
-| 缂栬瘧瀛愮粍浠� .vue 鍚� gen/ 鏈�洿鏂板埌姝ｇ‘浣嶇疆 | 蹇呴』缂栬瘧鏍圭粍浠� App.vue锛屽瓙缁勪欢涓嶄細琚�崟鐙�紪璇戝埌 apps/<name>/gen/ |
-| `C2440: cannot convert from 'php::Var' to 'php::Int'` | `use native_types` 鏂囦欢涓�殑 `int` 鍙橀噺浠庢暟缁勮�闂�/max/min 璧嬪€兼椂锛屽�灞傚姞 `(int)` 杞�瀷锛堣�瑙� 7.5锛� |
-| `Call to a member function toString() on string` | SFC 缂栬瘧鍣ㄧ敓鎴� `$this->prop->toString()`锛屼絾 PHP CLI 涓� string 鏄�師鐢熺被鍨嬨€傞噸鏂拌繍琛� `php sfc-compiler.php` 閲嶆柊缂栬瘧锛屾柊鐗堢紪璇戝櫒鐢熸垚 `(string)$this->prop` |
-
-### 8.4 澶氭満鍣� vcvarsall 璺�緞閰嶇疆
-
-`build.bat` 鐨� Step 0 闇€瑕佹壘鍒� `vcvarsall.bat` 鏉ュ垵濮嬪寲 MSVC 缂栬瘧鐜��銆備笉鍚屾満鍣ㄤ笂 Visual Studio 瀹夎�璺�緞鍙�兘涓嶅悓锛堝� VS 2017/2019/2022銆丆ommunity/Professional/Enterprise锛夛紝妗嗘灦閲囩敤**涓夌骇浼樺厛绾ц嚜鍔ㄦ�娴�**锛�
-
-| 浼樺厛绾� | 鏉ユ簮 | 璇存槑 |
-|--------|------|------|
-| 1 | 褰撳墠 PATH | 濡傛灉 `cl.exe` 宸插湪 PATH 涓�紙濡傛墜鍔ㄦ墦寮€ VS Dev Cmd锛夛紝鐩存帴璺宠繃 vcvarsall |
-| 2 | `config.yml` | 鍦ㄩ」鐩�牴鐩�綍 `config.yml` 涓�厤缃� `vcvarsall` 閿�紝鏄惧紡鎸囧畾璺�緞 |
-| 3 | 鑷�姩鎼滅储 | 閫掑綊鎼滅储 `C:\Program Files\Microsoft Visual Studio\` 涓嬫墍鏈� `vcvarsall.bat`锛屽彇绗�竴涓� |
-
-**閰嶇疆绀轰緥**锛坄config.yml`锛夛細
-
-```yaml
-# 瀹剁洰褰曠數鑴� VS 2022 Community
-vcvarsall: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat
-
-# 绗旇�鏈� VS 2019 Professional锛堟敞閲婃帀涓嶉渶瑕佺殑琛岋級
-# vcvarsall: C:\Program Files\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat
-```
-
-> **鎻愮ず**锛氱粷澶у�鏁版儏鍐典笅**鏃犻渶閰嶇疆**锛岃嚜鍔ㄦ悳绱㈠嵆鍙��鐩� VS 2017/2019/2022 鐨勬墍鏈夌増鏈�€傚彧鏈夊湪鑷�姩鎼滅储澶辫触鎴栭渶瑕佹寚瀹氱壒瀹氱増鏈�椂鎵嶉渶瑕佹墜鍔ㄩ厤缃�€�
-
-### 8.5 config.yml 閰嶇疆鏂囦欢
-
-`config.yml` 鏄�瀯寤虹郴缁熺殑鏍稿績閰嶇疆鏂囦欢锛屽繀椤讳綅浜庨」鐩�牴鐩�綍銆傞�娆′娇鐢ㄦ椂鍙�粠妯℃澘澶嶅埗锛�
-
-```bash
-cp config.example.yml config.yml
-```
-
-**閰嶇疆椤硅�鏄�**锛�
-
-| 閰嶇疆椤� | 璇存槑 | 绀轰緥 |
-|--------|------|------|
-| `swoole_compiler` | Swoole Compiler 宸ュ叿閾剧洰褰� | `F:\work\swoole_compiler` |
-| `vcvarsall` | MSVC 鐜��鍒濆�鍖栬剼鏈�紙鍙�€夛級 | `C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat` |
-
-**閰嶇疆绀轰緥**锛�
-
-```yaml
-# Swoole Compiler 璺�緞锛堝繀闇€锛�
-swoole_compiler: F:\work\swoole_compiler
-
-# MSVC 璺�緞锛堝彲閫夛紝閫氬父鑷�姩妫€娴嬪嵆鍙�級
-# vcvarsall: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat
-```
-
-**甯歌�闂��**锛�
-
-| 閿欒�淇℃伅 | 鍘熷洜 | 瑙ｅ喅 |
-|----------|------|------|
-| `swoole_compiler path not found in config.yml` | config.yml 涓嶅瓨鍦ㄦ垨璺�緞閿欒� | 浠� `config.example.yml` 澶嶅埗骞朵慨鏀硅矾寰� |
-| `swoole_compiler directory not found` | 璺�緞鎸囧悜鐨勭洰褰曚笉瀛樺湪 | 妫€鏌ュ苟淇�� `swoole_compiler` 閰嶇疆 |
-
----
-
-## 涔濄€佸父瑙佸紑鍙戜换鍔�
-
-### 9.1 鏂板缓搴旂敤
-
-1. 鍦� `apps/` 涓嬪垱寤虹洰褰�
-2. 鍒涘缓 `main.php`锛�4 涓�父閲� + main()锛夛細
-```php
-<?php
-use Px\Core\Application;
-const APP_PLATFORM  = 'win32';
-const WINDOW_WIDTH  = 400;
-const WINDOW_HEIGHT = 500;
-const WINDOW_TITLE  = 'My App';
-function main(): int {
-    $root = ComponentFactory::create(AppComponent::class);
-    Application::create()->mount($root)->run();
-    return 0;
-}
-```
-3. 鍒涘缓 `App.vue`锛坱emplate + script + style锛�
-4. 鍒涘缓 `project.yml`锛�
-```yaml
-name: my_app
-mode: bin
-no-console: false
-platform: win32
-entry: main.php
-sources:
-  - main.php
-  - ./gen
-  - ../../framework
-  - ../../stub
-  - ../../cpp
-ignore:
-  - ../../framework/compiler
-  - ../../framework/aot-checker.php
-```
-
-### 9.2 娣诲姞甯� bind 鐨勫睘鎬�
-
-鍦� `.vue` script 涓�０鏄庡睘鎬э細
-```php
-public string $myValue = "0";
-```
-
-鍦ㄦā鏉夸腑浣跨敤锛�
-```html
-<span :bind="myValue">{{ myValue }}</span>
-<div :scroll-top="myValue" style="overflow:auto;...">
-```
-
-SFC 缂栬瘧鍣ㄤ細鑷�姩涓� `myValue` 鐢熸垚 `getBindValue` / `setBindValue` 鐨� case 鍒嗘敮銆�
-
-### 9.3 娣诲姞鐐瑰嚮浜嬩欢
-
-妯℃澘涓�細
-```html
-<button @click="handleAction" click-arg="someId">Click</button>
-```
-
-script 涓�細
-```php
-public function handleAction(string $id): void {
-    // 淇�敼鐘舵€�...
-    $this->markDirty();  // 缂栬瘧鍣ㄨ嚜鍔ㄦ敞鍏�
-}
-```
-
-### 9.4 浣跨敤 v-for
-
-鏀�寔 **Vue 3 椋庢牸**锛歚v-for` 鍙�互鍐欏湪 `<template>` 鎴栦换鎰� HTML 鍏冪礌锛坄<div>`銆乣<span>` 绛夛級涓娿€�
-
-**`<template v-for>`** 鈥� 浠呴噸澶嶅瓙鑺傜偣锛屼笉浜х敓棰濆�鍖呰�鍏冪礌锛�
-
-```html
-<template v-for="item in items" :key="item.id">
-  <div @click="handleClick(item.id)">
-    <span>{{ item.text }}</span>
-  </div>
-</template>
-```
-
-**鍏冪礌 v-for**锛圴ue 3 椋庢牸锛� 鈥� 鍏冪礌鏈�韩鍙備笌寰�幆锛�
-
-```html
-<div v-for="item in items" :key="item.id" @click="handleClick(item.id)">
-  <span>{{ item.text }}</span>
-</div>
-```
-
-涓ょ�鍐欐硶鍧囦細琚�紪璇戝櫒鎻愬彇涓虹嫭绔嬬殑 render 杈呭姪鏂规硶锛宍{{ item.text }}` 绛夊惊鐜�彉閲忎細琚��
-纭��鐞嗕负灞€閮ㄥ彉閲忚€岄潪缁勪欢绾� bind key銆�
-
-### 9.5 浣跨敤 v-if / v-else-if / v-else
-
-鏀�寔 Vue 3 椋庢牸鐨勬潯浠舵覆鏌撻摼锛�
-
-```html
-<div v-if="status === 'A'" style="background:#4CAF50">
-  <span>Status A</span>
-</div>
-<div v-else-if="status === 'B'" style="background:#FFC107">
-  <span>Status B</span>
-</div>
-<div v-else style="background:#F44336">
-  <span>Status C</span>
-</div>
-```
-
-**娉ㄦ剰**锛�
-- `v-else-if` 鍜� `v-else` 蹇呴』绱ц窡鍦� `v-if` 涔嬪悗锛屼腑闂翠笉鑳芥湁鍏朵粬闈炴潯浠跺厓绱�
-- 缂栬瘧鍣ㄤ娇鐢� `ExpressionParser` 瑙ｆ瀽鏉′欢琛ㄨ揪寮忥紝鏀�寔涓夊厓琛ㄨ揪寮忋€佹瘮杈冭繍绠椼€侀€昏緫杩愮畻
-
-### 9.6 浣跨敤 :class 鍔ㄦ€佺被缁戝畾
-
-鏀�寔涓夊厓琛ㄨ揪寮忓姩鎬佺粦瀹� CSS 绫伙細
-
-```html
-<div :class="isActive ? 'active' : 'inactive'">
-  Content
-</div>
-```
-
-缂栬瘧涓猴細
-```php
-['class' => $this->isActive ? 'active' : 'inactive']
-```
-
-### 9.7 浣跨敤 v-show 鏉′欢鏄剧ず/闅愯棌
-
-閫氳繃 `visibility:hidden` 鎺у埗鍏冪礌鍙��鎬э細
-
-```html
-<div v-show="isVisible" style="background:#2196F3">
-  Toggle Me
-</div>
-```
-
-缂栬瘧涓猴細
-```php
-['style' => ($this->isVisible) ? '...' : '...;visibility:hidden']
-```
-
-### 9.8 浣跨敤瀛愮粍浠�
-
-1. 鍒涘缓瀛愮粍浠� `.vue` 鏂囦欢
-2. 鍦ㄧ埗缁勪欢妯℃澘涓�紩鐢�細
-```html
-<my-component :my-prop="parentValue"></my-component>
-```
-3. SFC 缂栬瘧鍣ㄨ嚜鍔ㄥ彂鐜般€佺紪璇戙€佺敓鎴愬崰浣� VNode
-4. Application 鍦ㄨ繍琛屾椂灞曞紑
-
-### 9.9 閲嶆柊缂栬瘧 SFC锛堜慨鏀� .vue 鍚庯級
-
-淇�敼 `.vue` 鏂囦欢鍚庯紝蹇呴』閲嶆柊缂栬瘧鎵嶈兘鐢熸晥銆傚叧閿��鍒欙細
-
-- **缂栬瘧鏍圭粍浠� App.vue**锛堣€岄潪瀛愮粍浠讹級锛岀紪璇戝櫒浼� BFS 鍙戠幇鎵€鏈夋湁鍙樻洿鐨勫瓙缁勪欢骞惰嚜鍔ㄩ噸鏂扮紪璇�
-- 杈撳嚭鐩�綍鐢� .vue 鏂囦欢璺�緞鍐冲畾锛歚dirname($vueFile) + '/gen/'`
-  - 缂栬瘧 `apps/<name>/App.vue` 鈫� 杈撳嚭鍒� `apps/<name>/gen/`锛堟�纭�綅缃�級
-  - 缂栬瘧 `apps/<name>/components/MyComp.vue` 鈫� 杈撳嚭鍒� `apps/<name>/components/gen/`锛堥敊璇�綅缃�級
-- 鍛戒护锛歚php sfc-compiler.php apps/<name>/App.vue`
-- **绂佹�鎵嬪姩缂栬緫 `gen/*.php` 鏂囦欢**锛堜細琚�紪璇戝櫒瑕嗙洊锛�
-
-### 9.10 璋冭瘯鎶€宸�
-
-- **妫€鏌� VNode 鏍�**锛氬湪 `render()` 杩斿洖鍓� `var_dump` VNode 缁撴瀯锛堥渶鍦ㄥ紑鍙戠幆澧� PHP 鑰岄潪 AOT 涓�繍琛岋級
-- **妫€鏌ュ竷灞€**锛氭煡鐪� `LayoutResolver::resolve()` 杩斿洖鐨� `scrollContainers` 鍒楄〃
-- **妫€鏌ユ覆鏌撳厓绱�**锛氬湪 `collectElements` 涓�墦鍗� `$elementsByLayer`
-- **formatted 杈撳嚭**锛氬湪 `Application::render()` 涓�皟鐢� `var_dump` 杈撳嚭 activeVNodeTree
-
-### 9.7 AI 鑷�姩鎴�浘娴嬭瘯
-
-鍦ㄨ繘琛� UI 娓叉煋娴嬭瘯鏃讹紝鍙�互浣跨敤 PowerShell 鑴氭湰鑷�姩鎴�浘楠岃瘉甯冨眬鏁堟灉銆�
-
-**鎴�浘鑴氭湰妯℃澘**锛堜繚瀛樺埌 `apps/<app-name>/test_screen.ps1`锛夛細
-
-```powershell
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
-
-$exePath = "f:/work/Px/apps/<app-name>/bin/<app-name>.exe"
-$screenPath = "f:/work/Px/apps/<app-name>/screenshot.png"
-
-$proc = Start-Process $exePath -PassThru
-Start-Sleep 3
-
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-using System.Text;
-public class WND {
-    [DllImport("user32.dll")]
-    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-    [DllImport("user32.dll")]
-    public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-    [DllImport("user32.dll")]
-    public static extern int GetWindowTextLength(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-    [DllImport("user32.dll")]
-    public static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-    [DllImport("user32.dll")]
-    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-    [DllImport("user32.dll")]
-    public static extern bool IsWindowVisible(IntPtr hWnd);
-    [StructLayout(LayoutKind.Sequential)]
-    public struct RECT {
-        public int Left, Top, Right, Bottom;
-    }
-}
-"@
-
-$targetHwnd = [IntPtr]::Zero
-$targetPID = $proc.Id
-
-$callback = {
-    param([IntPtr]$hWnd, [IntPtr]$lParam)
-    $winPid = 0
-    [WND]::GetWindowThreadProcessId($hWnd, [ref]$winPid) | Out-Null
-    if ($winPid -eq $targetPID) {
-        if ([WND]::IsWindowVisible($hWnd)) {
-            $len = [WND]::GetWindowTextLength($hWnd)
-            if ($len -gt 0) {
-                $sb = New-Object System.Text.StringBuilder($len + 1)
-                [WND]::GetWindowText($hWnd, $sb, $sb.Capacity) | Out-Null
-                $title = $sb.ToString()
-                if ($title -ne "") {
-                    $script:targetHwnd = $hWnd
-                    return $false
-                }
-            }
-        }
-    }
-    return $true
-}
-
-[WND]::EnumWindows($callback, [IntPtr]::Zero) | Out-Null
-
-if ($targetHwnd -ne [IntPtr]::Zero) {
-    [WND]::ShowWindow($targetHwnd, 1) | Out-Null
-    Start-Sleep -Milliseconds 800
-    [WND]::SetForegroundWindow($targetHwnd) | Out-Null
-    Start-Sleep -Milliseconds 500
-
-    $rect = New-Object WND+RECT
-    [WND]::GetWindowRect($targetHwnd, [ref]$rect) | Out-Null
-
-    $w = $rect.Right - $rect.Left
-    $h = $rect.Bottom - $rect.Top
-    if ($w -gt 10 -and $h -gt 10) {
-        $bmp = New-Object System.Drawing.Bitmap($w, $h)
-        $graphics = [System.Drawing.Graphics]::FromImage($bmp)
-        $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, (New-Object System.Drawing.Size($w, $h)))
-        $bmp.Save($screenPath)
-        $graphics.Dispose()
-        $bmp.Dispose()
-        Write-Host "Screenshot saved: ${w}x${h} at ($($rect.Left), $($rect.Top))"
-    }
-} else {
-    Write-Host "Window not found"
-}
-
-if (-not $proc.HasExited) {
-    Stop-Process $proc.Id -Force -ErrorAction SilentlyContinue
-}
-```
-
-**浣跨敤娴佺▼**锛�
-
-1. 淇�敼 `.vue` 鏂囦欢娴嬭瘯甯冨眬
-2. 杩愯�鏋勫缓锛�
-   ```bash
-   cd f:/work/Px
-   Remove-Item 'apps/<app-name>/gen/*.php' -Force  # 娓呯悊鏃х敓鎴愭枃浠�
-   .\build.bat <app-name>
-   ```
-3. 杩愯�鎴�浘鑴氭湰锛�
-   ```bash
-   powershell -ExecutionPolicy Bypass -File "f:/work/Px/apps/<app-name>/test_screen.ps1"
-   ```
-4. 鏌ョ湅 `screenshot.png` 楠岃瘉娓叉煋缁撴灉
-
-**娉ㄦ剰浜嬮」**锛�
-
-- 鎴�浘鍓嶉渶纭�繚 `gen/` 鐩�綍琚�竻鐞嗭紝鍚﹀垯鍙�兘浣跨敤鏃т唬鐮�
-- 姣忎釜搴旂敤鐩�綍搴斿彧淇濈暀涓€涓� `.vue` 鏂囦欢锛堟寜瀛楁瘝椤哄簭缂栬瘧锛�
-- 绐楀彛瀹氫綅浣跨敤 `EnumWindows` 鍖归厤杩涚▼ PID锛岄伩鍏嶆崟鑾烽敊璇�獥鍙�
-
----
-
-## 鍗併€佸凡鐭ラ棶棰樹笌璁捐�鍊哄姟
-
-### 10.1 SOLID 杩濆弽锛欰pplication 鎸佹湁 scrollDragTarget 鈥� 鉁� 宸茶В鍐�
-
-> `ScrollManager` 鏈嶅姟宸叉娊鍙栵紙`framework/Core/ScrollManager.php`锛夈€侫pplication 浠呰礋璐ｄ簨浠惰矾鐢憋紝
-> 鎵€鏈夋粴鍔ㄧ姸鎬侊紙drag target銆乨rag start 鍧愭爣銆乨rag start scroll 浣嶇疆锛夊拰閫昏緫锛堟粴杞�€佹嫋鎷姐€乧lamp锛�
-> 褰掑睘 ScrollManager銆傛í鍚戞粴鍔ㄧ姸鎬佸悓鏍风敱 ScrollManager 缁熶竴绠＄悊銆�
-
-### 10.2 澶氭粴鍔ㄥ�鍣ㄩ檺鍒�
-
-`scrollDragTarget` 鏄�崟寮曠敤锛屽悓涓€鏃跺埢鍙�兘鎷栨嫿涓€涓�粴鍔ㄦ潯锛堥紶鏍囨搷浣滃ぉ鐒跺�姝わ紝鏆備笉褰卞搷浣跨敤锛夈€備絾濡傛灉鏈�潵澧炲姞閿�洏婊氬姩锛岄渶瑕佹敼涓哄�鍣� ID 绱㈠紩鐨� Map銆�
-
-### 10.3 VNode 鎮�┖寮曠敤椋庨櫓
-
-鎷栨嫿杩囩▼涓�嫢 VNode 鏍戣�閲嶅缓锛堜緥濡傚畾鏃跺櫒瑙﹀彂 markDirty锛夛紝`scrollDragTarget` 鎸囧悜鏃х殑瀵硅薄銆傚綋鍓嶉€氳繃 `directRender` 閬垮厤閲嶅缓锛屼絾闀挎湡闇€鏀逛负 stable identifier銆�
-
-### 10.4 Bind 鍊煎悓姝ュ欢杩�
-
-LayoutResolver clamp 鍚庯紝缁勪欢鐨� bind 鍊硷紙濡� scrollTop锛変繚鎸佹棫鍊笺€備笅涓€娆� render 鏃跺厛鎭㈠�鏃у€笺€佸啀琚� LayoutResolver 閲嶆柊 clamp鈥斺€旀瘡甯т竴娆�"閿欒�鈫掍慨姝�"寰�幆銆傞渶瑕� `setBindValueSilent` 鏂规硶銆�
-
-### 10.5 鏈�疄鐜扮殑鍔熻兘
-
-- 閿�洏婊氬姩锛圥gUp/PgDn/Home/End/Arrow锛�
-- 缂栫▼寮忔粴鍔ㄥ埌鎸囧畾 item
-- 绐楀彛 resize 鏃剁殑鍔ㄦ€侀噸甯冨眬锛堝綋鍓嶉渶瑕佹墜鍔ㄨЕ鍙戞覆鏌擄級
-- 鏂囧瓧杈撳叆鏃� IME 鏀�寔
-
----
-
-## 鍗佷竴銆佺紪鐮佺害瀹�
-
-### 11.1 PHP 鐗堟湰瑕佹眰
-
-- 婧愭枃浠讹細PHP 8.0+锛堜娇鐢� `match` 琛ㄨ揪寮忥級
-- AOT 缂栬瘧锛歴woole_compiler 鍐呯疆 PHP 8.x
-- **绯荤粺 PATH 涓�殑 PHP 鍙�兘鏄� 7.4锛屼粎鐢ㄤ簬寮€鍙戣皟璇曪紝涓嶈兘鐢ㄤ簬缂栬瘧**
-
-### 11.2 浠ｇ爜椋庢牸
-
-- 浣跨敤 4 绌烘牸缂╄繘
-- 绫诲睘鎬т娇鐢� `protected` 鎴� `private`锛圓OT 鍙嬪ソ锛�
-- `public` 灞炴€х敤浜庣粍浠剁姸鎬侊紙鐢� SFC 缂栬瘧鍣ㄧ敓鎴愶級
-- 鏂规硶鍚� camelCase
-- VNode factory 缁熶竴浣跨敤 `VNode::h()` 鍜� `VNode::hComponent()`
-
-### 11.3 VNode 鏍戣�鑼�
-
-- 姣忎釜缁勪欢鐨� `render()` 杩斿洖浠� `#root` 涓烘牴鐨� VNode 鏍�
-- `#root` 鐨� style 璁剧疆 `width` 鍜� `height`
-- `#component` 鏄�繍琛屾椂灞曞紑鐨勫崰浣嶈妭鐐癸紝涓嶄骇鐢熸覆鏌�
-- `#text` 鐢ㄤ簬绾�枃鏈�妭鐐�
-- children 鍙�互鏄� `null`銆乣string`銆乣VNode`銆乣VNode[]`
-
----
-
-## 鍗佷簩銆佹祴璇�
-
-Px 妗嗘灦浣跨敤**涓夊眰娴嬭瘯绛栫暐**锛�
-1. **鍗曞厓娴嬭瘯**锛圥HP锛夆€� dispatchClick 妯℃嫙鐐瑰嚮 + 缁勪欢鏍戣�涔夐獙璇�
-2. **鐘舵€佸揩鐓ф祴璇�**锛圥HP锛夆€� 鏂囧瓧鐗�"鎴�浘"锛屽皢缁勪欢鐘舵€佸簭鍒楀寲涓哄彲璇绘枃鏈�
-3. **鎴�浘娴嬭瘯**锛圥owerShell锛夆€� 鍚�姩鐪熷疄 exe 鎶撳彇绐楀彛鎴�浘锛岀敤浜庤�瑙夊洖褰�
-
-### 娴嬭瘯璁捐�鍘熷垯
-
-| 鍘熷垯 | 璇存槑 |
-|------|------|
-| **涓嶄緷璧栧�閮ㄦ湇鍔�** | 鎵€鏈夋祴璇曞湪鍐呭瓨涓�繍琛岋紝鏃犳枃浠�/缃戠粶/鏁版嵁搴撲緷璧� |
-| **dispatchClick 椹卞姩** | 妯℃嫙鐢ㄦ埛鐐瑰嚮锛岀洿鎺ヨ皟鐢ㄧ粍浠� handler 鏂规硶 |
-| **鐘舵€佹柇瑷€ + 蹇�収** | 鏃㈡牎楠屽叿浣撳睘鎬у€硷紝涔� dump 瀹屾暣鐘舵€佺敤浜庤皟璇� |
-| **缁勪欢鏍戣�涔夊�鏍� Vue 3** | 娴嬭瘯 parent 閾俱€佷簨浠跺啋娉°€乂Node 缂撳瓨銆乸atchComponentTree |
-| **AOT polyfill** | bootstrap.php 鎻愪緵 `toObject()`銆乣any()` 绛� AOT 鍑芥暟 polyfill |
-
-### 杩愯�娴嬭瘯
-
-```bash
-# 杩愯�鍏ㄩ儴鍗曞厓娴嬭瘯锛堟帹鑽愶級
-D:\swoole_compiler\php.exe tests/run_all_tests.php
-
-# 杩愯�鍗曚釜娴嬭瘯鏂囦欢
-D:\swoole_compiler\php.exe tests/unit/CalculatorAppTest.php
-D:\swoole_compiler\php.exe tests/unit/ComponentTreeTest.php
-D:\swoole_compiler\php.exe tests/unit/ReactiveComponentTest.php
-D:\swoole_compiler\php.exe tests/unit/HitTestTest.php
-D:\swoole_compiler\php.exe tests/unit/LayoutResolverTest.php
-D:\swoole_compiler\php.exe tests/unit/VNodeRendererTest.php
-D:\swoole_compiler\php.exe tests/unit/SfcCompilerPartsTest.php
-D:\swoole_compiler\php.exe tests/unit/SfcCompilerVIfTest.php
-D:\swoole_compiler\php.exe tests/unit/CssMappingsBorderTest.php
-D:\swoole_compiler\php.exe tests/unit/PlatformTest.php
-
-# 杩愯�瀹屾暣娓叉煋绠￠亾娴嬭瘯锛堝揩鐓у樊寮傚垎鏋愶級
-D:\swoole_compiler\php.exe tests/unit/RenderingPipelineTest.php
-
-# 杩愯�鍐呭瓨鍘嬪姏娴嬭瘯锛堝�甯х疮绉��娴嬶級
-D:\swoole_compiler\php.exe tests/unit/MemoryStressTest.php
-```
-
-### 娴嬭瘯鏂囦欢
-
-| 鏂囦欢 | 瑕嗙洊鑼冨洿 | 鐢ㄤ緥鏁� |
-|------|---------|--------|
-| `CalculatorAppTest.php` | 璁＄畻鍣ㄥ叏閮� 18 绫绘搷浣� + 鐘舵€佸揩鐓� + 杈圭晫鎯呭喌 | 107 |
-| `ComponentTreeTest.php` | 缁勪欢 parent 閾俱€佷簨浠跺啋娉°€佸疄渚嬬嫭绔嬨€佺敓鍛藉懆鏈熴€乂Node 缂撳瓨銆乭Component 宸ュ巶銆乸atchComponentTree銆佺粍浠跺畾浣嶄繚鐣� | 26 |
-| `ReactiveComponentTest.php` | dirty 鏍囪�銆乂Node 缂撳瓨銆佺粍浠舵洿鏂� | 9 |
-| `HitTestTest.php` | 鍛戒腑娴嬭瘯銆佷簨浠惰矾鐢� | 10 |
-| `LayoutResolverTest.php` | block/flex/grid/scroll 甯冨眬 | 14 |
-| `VNodeRendererTest.php` | 鍏冪礌鏀堕泦銆乴ayer 鍒嗙粍銆乧lip锛坰croll + overflow:hidden锛夈€乥utton 杈规�娓叉煋銆乺ender 瀹屾暣娴佺▼ | 20 |
-| `SfcCompilerPartsTest.php` | 缂栬瘧鍣� parts 鍏冩暟鎹�細collectVNodeBindKeys 鎻愬彇銆乬enerateVNodeExpr 浠ｇ爜鐢熸垚 | 8 |
-| `SfcCompilerVIfTest.php` | v-if 缂栬瘧鏈熶紭鍖栵紙鍚�繛缁�浉鍚屾潯浠跺悎骞讹級 | 9 |
-| `CssMappingsBorderTest.php` | border 绠€鍐�/鐙�珛灞炴€цВ鏋愩€乸arseInlineStyle/parseStyleBlock 杈规�澶勭悊銆乭exToBgr/borderColor 杈呭姪鍑芥暟 | 14 |
-| `PlatformTest.php` | Platform 鎺ュ彛 SOLID/DIP 鍚堣� | 10 |
-| `MemoryStressTest.php` | 鍐呭瓨澧為暱妫€娴嬶紙9 妯″潡 28+ 鍦烘櫙锛� | 28+ |
-| `RenderingPipelineTest.php` | 瀹屾暣娓叉煋绠￠亾蹇�収宸�紓鍒嗘瀽锛�100 娆″惊鐜�偣鍑� + 5 绫昏�鍒欐牎楠� + 寮傚父瀛樻。锛� | 5 |
-| `ListTestPipelineTest.php` | list-test 娓叉煋绠￠亾娴嬭瘯锛�30 娆＄偣鍑� + 澧為暱瑙勫垯 + clip 鏈夋晥鎬� + 婊氬姩鎷栧姩锛� | 8 |
-| `GdiRenderContextTest.php` | GDI 娓叉煋涓婁笅鏂囩洿鎺ユ祴璇曪紙clip 鏍� + drawText 鎴�柇 + 鍙傛暟瀹堝崼锛� | 15 |
-
-### CalculatorAppTest 娴嬭瘯娓呭崟
-
-瑕嗙洊浠ヤ笅 18 绫诲満鏅�紙107 涓�祴璇曠敤渚嬶級锛�
-
-| # | 绫诲埆 | 鐢ㄤ緥鏁� | 璇存槑 |
-|---|------|--------|------|
-| 1 | Digit Input | 7 | 鍒濆�鏄剧ず銆佹暟瀛楄緭鍏ャ€佸幓闄ゅ墠瀵奸浂銆佽繍绠楃�鍚庢柊杈撳叆 |
-| 2 | Decimal Input | 6 | 灏忔暟鐐硅緭鍏ャ€侀槻閲嶅�銆佽繍绠楃�鍚庢柊杈撳叆銆�15 浣嶉檺鍒讹紙2 涓�級 |
-| 3 | Clear/Reset | 2 | C 娓呴櫎杈撳叆銆丄C 瀹屽叏閲嶇疆 |
-| 4 | Backspace | 4 | 鍒犻櫎鏈�綅銆佸綊闆躲€乶ewInput 淇濇姢銆佸垹闄ゅ皬鏁扮偣 |
-| 5 | Toggle Sign | 3 | 姝ｈ礋鍒囨崲銆侀浂鍊间繚鎶� |
-| 6 | Percentage | 2 | 50%鈫�0.5銆�200%鈫�2 |
-| 7 | Basic Arithmetic | 6 | 卤脳梅銆侀櫎浠ラ浂 Error銆佺┖鎿嶄綔绗� |
-| 8 | Operator Chaining | 3 | 閾惧紡璁＄畻銆佽繍绠楃�瑕嗙洊銆佹贩鍚堣繍绠� |
-| 9 | Scientific Functions | 14 | sin/cos/tan/log/ln/x虏/x鲁/鈭�/inv/蟺/e + Error 鍒嗘敮 |
-| 10 | Memory Functions | 6 | MS/MR/MC/M+/M鈭�/绌鸿�蹇� |
-| 11 | Parentheses | 4 | openParen/closeParen 鏄剧ず |
-| 12 | History | 5 | 鍘嗗彶璁板綍鐢熸垚銆佸垏鎹㈤潰鏉裤€佹竻闄ゃ€佸姞杞� |
-| 13 | Error Recovery | 3 | Error 鍚庢暟瀛�/C/= 鎭㈠� |
-| 14-16 | Routing | 26 | ScientificPad/BasicPad/HistoryPanel 鍐掓场璺�敱 |
-| 17 | State Snapshot | 3 | 瑙嗚�鍖栫姸鎬佽窡韪�細瀹屾暣浼氳瘽銆丒rror鈫掓仮澶嶃€佹嫭鍙疯〃杈惧紡 |
-| 18 | Edge Cases | 13 | 瓒呭ぇ鏁板瓧銆佽繍绠楃�閾俱€侀噸澶嶇瓑鍙枫€佸甫绗﹀彿杩愮畻銆佽繛缁�竻闄ゃ€佸�杞�帇鍔涙祴璇曠瓑 |
-
-### ComponentTreeTest 娴嬭瘯娓呭崟
-
-瑕嗙洊 8 绫� Vue 3 缁勪欢璇�箟锛�26 涓�祴璇曠敤渚嬶級锛�
-
-| # | 绫诲埆 | 璇存槑 |
-|---|------|------|
-| 1 | Parent Chain | setParent/getParent銆乤ddChild 鍙屽悜缁戝畾銆佸�绔嬬粍浠� |
-| 2 | Event Bubbling | dispatchClick 娌� parent 鍐掓场銆乻top 娑堣垂銆乶ull parent銆乨ispatchKey |
-| 3 | Instance Identity | 鍚岀被鍨嬩笉鍚屽疄渚嬨€佸敮涓€ ID |
-| 4 | Lifecycle | mount/unmount銆侀噸澶� mount |
-| 5 | VNode Caching | 棣栨� render()銆佺紦瀛樺�鐢ㄣ€乨irty 閲嶅缓銆乵arkDirty 娓呯紦瀛� |
-| 6 | VNode Factory | hComponent 鍗犱綅銆乧omponentProps 鏄犲皠銆乬roupId 閫掑綊 |
-| 7 | Patch Component Tree | 鏅�€氳妭鐐� groupId銆�#component 灞曞紑銆佸疄渚嬪�鐢�紙鍚� class+鍚屼綅缃�級 |
-| 8 | Component Positioning | matchComponentNode 瀹炰緥閲嶇敤鍚� transferComponentPositioning 淇濈暀瀹氫綅 |
-
-### 鎴�浘娴嬭瘯
-
-鎻愪緵 PowerShell 鑴氭湰鐢ㄤ簬瑙嗚�鍥炲綊锛�
-
-```powershell
-# 鐩存帴鎴�浘锛堜娇鐢ㄥ凡鏈� exe锛�
-powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps1
-
-# 鍏堟瀯寤哄啀鎴�浘
-powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps1 -BuildFirst $true
-```
-
-鎴�浘淇濆瓨鍦� `tests/screenshot/output/<timestamp>/`锛屽苟鑷�姩鐢熸垚 HTML 鎶ュ憡銆�
-
-### 娴嬭瘯鏈€浣冲疄璺碉紙缁忛獙鎬荤粨锛�
-
-1. **dispatchClick 鏄��閫夋祴璇曟柟寮�** 鈥� 鐩存帴璋冪敤缁勪欢 handler锛屼笉渚濊禆甯冨眬鍧愭爣鍜屾覆鏌撶�閬擄紝閫熷害蹇�€佺粨鏋滅‘瀹�
-2. **娴嬭瘯 helper 鍑芥暟鍖�** 鈥� `createApp()`銆乣runCalculation()`銆乣assertDisplay()`銆乣captureState()` 绛� helper 鎻愰珮鍙��鎬у拰鍙�淮鎶ゆ€�
-3. **閬垮厤杩囧害妯℃嫙** 鈥� 娴嬭瘯鐪熷疄缁勪欢琛屼负姣� mock 鏇存湁浠峰€笺€傚彧鍦ㄩ渶瑕侀殧绂绘椂鎵嶇敤 test double
-4. **鐘舵€佸揩鐓� vs 鍏蜂綋鏂�█** 鈥� 鍏抽敭璺�緞鐢ㄥ叿浣撴柇瑷€锛坄assertDisplay('42')`锛夛紝璋冭瘯鐢ㄧ姸鎬佸揩鐓э紙`captureState()`锛�
-5. **Application 绉佹湁鏂规硶閫氳繃鍙嶅皠娴嬭瘯** 鈥� `newInstanceWithoutApp()` + `ReflectionMethod` 璁块棶 private 鏂规硶
-6. **鍏堜慨澶嶆祴璇曞啀鎻愪氦** 鈥� 澶辫触鐨勬祴璇曟瘮娌℃湁娴嬭瘯鏇寸碂銆傛瘡娆′慨鏀瑰悗杩愯�鍏ㄩ儴娴嬭瘯纭�繚鍥炲綊
-7. **缁勪欢鏍戞祴璇曢獙璇佹�鏋惰�涔�** 鈥� ComponentTreeTest 楠岃瘉妗嗘灦灞傞潰鐨� Vue 3 璇�箟瀵归綈锛屼笉渚濊禆鍏蜂綋搴旂敤
-8. **Mock 娓叉煋涓婁笅鏂囨毚闇� GDI 涓嶅彲娴嬫紡娲�** 鈥� `_MockRenderContext` 鍙��褰� `drawElement()` 璋冪敤锛屼笉鎵ц�鐪熷疄 GDI銆侭ug 鍙戠敓鍦� GDI 瀹炵幇灞傦紙clip 杈圭晫缁樺埗绱�Н鎹熷潖 HDC 鐘舵€侊級锛岀函鍏冪礌灞� Mock 鏃犳硶鎹曡幏銆傝ˉ鍋跨瓥鐣ワ細
-   - Mock 闇€妯℃嫙 clip 鏍堣拷韪� + 鏂囨湰鎴�柇锛坄applyClipTruncation()` 涓� `GdiRenderContext::drawText()` 閫昏緫涓€鑷达級
-   - 娴佹按绾挎祴璇曞繀椤诲寘鍚� clip 婧㈠嚭瑙勫垯锛圧ule E锛氫换浣曟孩鍑� 鈮�1px 鍗冲憡璀︼級
-   - GDI 灞傝�涓哄繀椤婚€氳繃 `GdiRenderContextTest.php` 鐩存帴楠岃瘉锛坰tub GDI C++ 鍑芥暟璁板綍璋冪敤鍙傛暟锛�
-9. **clip-aware drawText 鏄�墍鏈� text 杈撳嚭璺�緞鐨勫繀閫夊畧鍗�** 鈥� 浠讳綍鏂板�鐨� GDI text 璋冪敤鐐归兘蹇呴』缁忚繃 `drawText()`锛堝惈 clip 鎴�柇锛夛紝绂佹�鐩存帴璋� `vue_draw_text()`
-10. **鏂板簲鐢ㄦ帴鍏ユ椂蹇呴』娣诲姞瀵瑰簲鐨勬祦姘寸嚎娴嬭瘯** 鈥� 鑷冲皯鍖呭惈锛歂 娆″惊鐜�偣鍑荤ǔ瀹氭€ф祴璇� + A/B/C 瑙勫垯锛堜笉鍙�/鏉′欢/绾︽潫锛� + clip 鏈夋晥鎬ц�鍒�
-11. **绮椾綋鏂囨湰瀛楃�瀹藉害鏄�父瑙勪綋鐨� 1.35 鍊�** 鈥� `drawText()` 鎴�柇閫昏緫蹇呴』鍖哄垎 `$bold` 鍙傛暟銆傜矖浣� 36px 瀹為檯瀹藉害 ~28px/char锛岃€� `fontSize * 0.6` 鍙�粰鍑� 21px/char銆傛湭鍖哄垎绮椾綋浼氬�鑷存埅鏂�悗浠嶇劧婧㈠嚭
-12. **娴嬭瘯蹇呴』瑕嗙洊瀹屾暣鐨勭敤鎴锋搷浣滈摼** 鈥� 浠呮祴璇�"涓€鐩存寜 1"涓嶅�锛屽繀椤诲寘鍚�"澶ч噺鎿嶄綔 鈫� 娓呴櫎/閲嶇疆 鈫� 楠岃瘉 UI 瀹屾暣鎬�"鐨勭�鍒扮�鍦烘櫙銆傛瘡涓�柊绠￠亾娴嬭瘯閮藉簲鍖呭惈 clear-after-corruption 楠岃瘉
-13. **鎸夐挳鏍囩�鎻愬彇娴嬭瘯** 鈥� 浣跨敤 `<button><span :bind="label">{{ label }}</span></button>` 妯℃澘鏃讹紝`makeButtonElement()` 蹇呴』鎻愬彇鍒版爣绛俱€傜�閬撴祴璇曚腑 `ltCheckButtonLabel()` 搴旀柇瑷€ label 闈炵┖锛屼笉鍐嶆爣璁颁负"known bug"
-14. **婊氬姩鎷栧姩娴嬭瘯蹇呴』楠岃瘉 auto-stacked 浣嶇疆** 鈥� 浠呮祴璇�"娣诲姞 item 鍚庡竷灞€姝ｇ‘"涓嶅�銆傚繀椤绘ā鎷熸粴鍔ㄦ嫋鍔�紙鐩存帴璁剧疆 scrollTop + directRender锛夛紝楠岃瘉 auto-stacked items 鐨� y 鍧愭爣淇濇寔涓ユ牸閫掑�涓嶆姌鍙犮€傛磥鍑€璺�緞涓� `style` 鏃犳樉寮� `top` 鐨勮妭鐐逛笉搴旇�閲嶇畻 y
-
----
-
-## 鍗佷笁銆佷慨鏀规�鏋朵唬鐮佹椂鐨勬�鏌ユ竻鍗�
-
-1. **PHP 璇�硶**锛歚D:\swoole_compiler\php.exe -l <file>`
-2. **AOT 鍏煎�**锛氭棤 `->$var`銆佹棤鍔ㄦ€佽皟鐢�
-3. **甯冨眬鑱岃矗**锛歀ayoutResolver 绠′綅缃�紝VNodeRenderer 绠¤�鍒囷紝浜掍笉瓒婄晫
-4. **璐熷�楂橀槻寰�**锛歀ayoutResolver 涓�墍鏈� `$node->w`/`$node->h` 璧嬪€肩敤 `max(0, (int)$val)`
-5. **GDI 璋冪敤淇濇姢**锛欸diRenderContext 涓�墍鏈� GDI 璋冪敤鍓嶆�鏌� `$w > 0 && $h > 0`
-6. **drawText clip 鎴�柇**锛氭墍鏈� text 缁樺埗蹇呴』缁忚繃 `drawText()`锛堝惈 `clipStack` 杩借釜 + 绮椾綋鎰熺煡婧㈠嚭鎴�柇锛夛紝绂佹�鐩存帴璋� `vue_draw_text()`銆傛柊澧� text 杈撳嚭璺�緞鏃跺繀椤诲悓姝ユ坊鍔犳埅鏂�€昏緫銆傛埅鏂�叕寮忥細`charWidth = (int)(fontSize * 0.6 * ($bold ? 1.35 : 1.0))`锛屽苟淇濈暀 4px 瀹夊叏浣欓噺
-7. **clip 鏍堝钩琛�**锛歝lip-push/clip-pop 蹇呴』鎴愬�鍑虹幇锛屾瘡甯х粨鏉熸椂 clip 鏍堝簲涓虹┖銆俙GdiRenderContextTest` 涓�凡鏈� `clip stack push and pop balanced` 娴嬭瘯
-8. **Mock clip 杩借釜**锛氫慨鏀� `_MockRenderContext`/`_LTMockRenderContext` 鏃跺繀椤诲悓姝ユ坊鍔� clip 鏍堣拷韪� + `applyClipTruncation()`锛堝惈绮椾綋鍥犲瓙鍜� 4px 瀹夊叏浣欓噺锛夛紝纭�繚 mock 鐨勫彲瑙佽�涓烘帴杩戠湡瀹� GDI
-9. **overflow:hidden 瑁佸垏**锛氶渶瑕佽�鍒囧瓙鍐呭�鐨勫�鍣ㄥ繀椤昏�缃� `overflow:hidden`锛孷NodeRenderer 浼氫负鍏剁敓鎴� clip-push/clip-pop
-10. **鏁板€艰緭鍏ラ檺鍒�**锛氭墍鏈夋暟鍊艰緭鍏ユ柟娉曪紙inputDigit銆乮nputDecimal 绛夛級蹇呴』鏈� 15 瀛楃�闀垮害闄愬埗
-11. **Bind 鍚屾�**锛氭柊澧� bind 灞炴€у悗鍦ㄧ粍浠朵腑澹版槑 `public string`锛岀紪璇戝櫒鑷�姩鐢熸垚 get/set
-12. **浜嬩欢鍐掓场**锛氬瓙缁勪欢 dispatchClick 鐨� default 鍒嗘敮璋冪敤 `parent::dispatchClick`
-13. **SFC 缂栬瘧**锛氫粎缂栬瘧鏍圭粍浠� App.vue锛屼笉鐩存帴缂栬瘧瀛愮粍浠� .vue锛涗笉鎵嬪姩缂栬緫 gen/*.php
-14. **鏋勫缓楠岃瘉**锛歚build.bat <app-name>` 鍏ㄦ祦绋嬮€氳繃
-15. **娴嬭瘯瀹屾暣闂�幆**锛氭柊澧炵�閬撴祴璇曞繀椤昏�鐩栧畬鏁寸殑鐢ㄦ埛鎿嶄綔閾撅紙涓嶉檺浜庝竴鐩存寜鍚屼竴鎸夐挳锛夛紝鍖呮嫭锛氬ぇ閲忔搷浣滃悗 鈫� 娓呴櫎/閲嶇疆 鈫� 楠岃瘉鎵€鏈� UI 鍏冪礌瀹屾暣鐨勭�鍒扮�鍦烘櫙
-16. **鎸夐挳鏍囩�鎻愬彇**锛歚makeButtonElement()` 蹇呴』閬嶅巻瀛� RenderNode 鎻愬彇鏍囩�锛坄<button><span :bind="x">{{ x }}</span></button>`锛夛紝浠呮�鏌� `node->content`(string) 鍜� `props[':bind']` 涓嶅�锛岃繕瑕佹�鏌ュ瓙鑺傜偣鐨� content 鍜� bind 寮曠敤
-17. **LayoutResolver 娲佸噣璺�緞淇濈暀 auto-stack 浣嶇疆**锛氭磥鍑€璺�緞锛坄layoutDirty=false`锛変腑锛屽彧鏈夋樉寮� `top`/`left` 瀹氫綅鐨勮妭鐐规墠閲嶇畻 x/y銆俛uto-stacked 瀛愯妭鐐瑰簲淇濈暀鑴忚矾寰勮�瀹氱殑浣嶇疆锛屼粎鐢卞揩閫熸粴鍔ㄨ矾寰勶紙`shiftChildrenY`锛夊钩绉汇€備慨鏀� `resolveNode()` 涓� `$node->x = ($style['left'] ?? 0) + $parentX` 杩欑被鏃犳潯浠惰祴鍊兼椂蹇呴』鏀圭敤 `array_key_exists` 淇濇姢
-
----
-
-## 鍗佸洓銆佹柊澧� CSS 甯冨眬灞炴€э紙LayoutResolver v2锛�
-
-浠ヤ笅 CSS 甯冨眬灞炴€у凡鍦� LayoutResolver 涓�疄鐜版敮鎸侊細
-
-### 灏哄�绾︽潫
-| 灞炴€� | 璇存槑 | 榛樿�鍊� |
-|------|------|--------|
-| `min-width` | 鏈€灏忓�搴� (px) | 0 |
-| `max-width` | 鏈€澶у�搴� (px) | 0 |
-| `min-height` | 鏈€灏忛珮搴� (px) | 0 |
-| `max-height` | 鏈€澶ч珮搴� (px) | 0 |
-
-CSS 瑙勮寖锛氬綋 `min > max` 鏃讹紝`max` 琚�拷鐣ャ€�
-
-### 鐧惧垎姣斿昂瀵�
-| 灞炴€� | 璇存槑 |
-|------|------|
-| `width: 50%` | 鐩稿�浜庣埗瀹瑰櫒 content width |
-| `height: 50%` | 鐩稿�浜庣埗瀹瑰櫒 content height |
-
-鐧惧垎姣斿湪灏哄�瑙ｆ瀽**涔嬪悗**銆乵in/max 绾︽潫**涔嬪墠**搴旂敤銆傜櫨鍒嗘瘮涔熷湪 flex 鍜� grid 瀹瑰櫒涓婄敓鏁堛€�
-
-### position:relative
-- 鍦� auto-stack 涓�紝`position:relative` 鐨勫瓙鑺傜偣**涓嶇�姝�** auto-stack
-- `top` 鍦� auto-stacked 浣嶇疆鍩虹�涓婂仛棰濆�鍋忕Щ锛屼笉褰卞搷鍏勫紵鑺傜偣瀹氫綅
-- `left` 閫氳繃 resolveBlockLayout 鐨� relative 璺�緞姝ｇ‘澶勭悊
-
-### Flex 鎵╁睍
-| 灞炴€� | 璇存槑 | 榛樿�鍊� |
-|------|------|--------|
-| `order` | 鎺掑垪椤哄簭锛堝啋娉℃帓搴忥紝绋冲畾锛� | 0 |
-| `flex-basis` | 鍒濆�涓昏酱灏哄� (`auto` 鍥為€€鍒� `width`/`height`) | `auto` |
-| `flex-shrink` | 鏀剁缉鍥犲瓙 | 1 |
-| `align-self` | 鍗曢」浜ゅ弶杞村�榻� (`auto`/`flex-start`/`flex-end`/`center`/`stretch`) | `auto` |
-
-### Flex-shrink 绠楁硶
-```
-overflow = totalMain - containerMain  (褰� overflow > 0)
-totalShrinkWeight = 危(item.mainSize 脳 item.shrink)
-item.mainSize -= overflow 脳 (item.mainSize 脳 item.shrink) / totalShrinkWeight
-min-width/min-height 绾︽潫鍦ㄦ敹缂╁悗搴旂敤
-```
-
-### Grid 鎵╁睍
-| 灞炴€� | 璇存槑 | 榛樿�鍊� |
-|------|------|--------|
-| `align-self` | 鍨傜洿鏂瑰悜瀵归綈 (`stretch`/`center`/`start`/`end`) | `stretch`(auto) |
-| `justify-self` | 姘村钩鏂瑰悜瀵归綈 (`stretch`/`center`/`start`/`end`) | `stretch`(auto) |
-
-### 鍐呰仈鏍峰紡鐧惧垎鏁伴�妫€娴�
-`CssMappings::parseInlineStyle()` 鍦ㄨВ鏋愭椂鑷�姩妫€娴� `width`銆乣height`銆乣min-width`銆乣max-width`銆乣min-height`銆乣max-height` 鐨勭櫨鍒嗘瘮鍊硷紝瀛樺叆 `*Percent` 閿�紙濡� `widthPercent`锛夛紝LayoutResolver 鍦ㄧ埗瀹瑰櫒灏哄�宸茬煡鏃舵嵁姝よВ鏋愬疄闄呭儚绱犲€笺€�
-
----
-
-## 十五、渲染后端切换（GDI / Skia）
-
-Px 框架支持两套渲染后端，**默认 GDI 零回归**，通过 `const APP_RENDERER` 切换 Skia 路径。
-
-### 15.1 默认行为
-
-未声明 `APP_RENDERER` 常量时，`framework/Platform/Win32Platform.php` 走 `GdiRenderContext`（368 行，9 个 `vue_*` 原语）。现有 7 个应用（calculator-ng / design-guide / list-test / multi-scroll / aot-property-test / aot-syntax-test / video-platform）**全部不需改动**。
-
-### 15.2 启用 Skia 模式
-
-在 `apps/<app-name>/main.php` 顶部追加一行：
-
-```php
-<?php
-const APP_PLATFORM  = 'win32';
-const APP_RENDERER  = 'skia';   // <-- 新增：启用 Skia 路径
-const WINDOW_WIDTH  = 400;
-const WINDOW_HEIGHT = 300;
-```
-
-无需修改 `App.vue` / `components/*.vue` / `project.yml`。`Win32Platform::init()` 自动根据 `APP_RENDERER` 选择 `SkiaRenderContext` 或 `GdiRenderContext`。
-
-### 15.3 验证 Skia 路径已激活
-
-启动应用时观察 stderr / 错误日志，应出现：
-
-```
-PHP Notice:  SKIA PATH ACTIVE in framework/Rendering/SkiaRenderContext.php
-```
-
-这是 R6 风险对策（"看起来工作但实际走 GDI" 的误判防护）。如未出现此 notice，说明 `APP_RENDERER` 常量未传递到 `Win32Platform::init()`，可能原因：
-
-- `APP_RENDERER` 拼写错误（区分大小写）
-- `main.php` 未被 SFC 编译器处理（检查 `gen/` 目录）
-- 旧版 AOT EXE 缓存（`build.bat <app>` 强制重编）
-
-### 15.4 切换回 GDI
-
-删除 `const APP_RENDERER = 'skia';` 行或改为 `'gdi'`，重新构建即可。无需清理任何 C++ 编译产物。
-
-### 15.5 阶段对照
-
-| 阶段 | 状态 | `sk_*` 底层 | 适用场景 |
-|------|------|-------------|----------|
-| 阶段一（POC） | [OK] 已完成 | Win32 GDI（与 vue_* 隔离） | 验证 AOT 链接链路 |
-| 阶段二（GDI 兼容层） | [OK] 已完成 | Win32 GDI（完整 12 路） | calculator-ng 全 UI 复现 |
-| 阶段三（真 Skia） | [OK] spike 通过 ⚠️ with limitations | Skia `SkBitmap + SkCanvas` + `SkCanvas::drawRect` / `drawRRect` | 抗锯齿 + 圆角 + 跨平台（文本静默跳过，待 DirectWrite） |
-
-> **阶段三限制**：① aseprite m148 FCI 已移除 → 文本绘制静默跳过，**阶段四集成 DirectWrite**；② MSVC 17.10+ STL helpers 8 个 `__std_*` 是占位 stub，spike 未触发；③ 仅 skia-poc 用 `/MT` 静态 CRT。详见 `docs/skia-render-context-guide.md` §9。
-
-### 15.6 关键文件
-
-- `cpp/skia_render.cc`（~250 行，C++ 原生层）
-- `stub/skia.stub.php`（21 行，stub 声明）
-- `framework/Rendering/SkiaRenderContext.php`（~250 行，PHP 类）
-- `apps/skia-poc/`（POC 应用，仅含蓝色矩形）
-- `framework/Platform/Win32Platform.php:30-37`（构造注入分支）
-- `framework/aot-checker.php:138-144`（`excludedFiles` 加 `SkiaRenderContext.php`）
-- `framework/Rendering/RenderContext.php`（`use native_types;`）
-- `docs/skia-render-context-guide.md`（实施指南，事实源文档）
-
-### 15.7 已知限制
-
-1. **单窗口**：`g_skHwnd/g_skHdc/g_skSurface` 是模块静态变量，多窗口下冲突。Phase 6 通过 `php::Box` 重构
-2. **文本静默跳过（Skia 阶段三限制）**：aseprite m148 fork 已移除 `SkFontMgr_New_FCI`，`skEnsureFont()` 返回 `false` 走空路径。按键数字/标签为空白。**阶段四集成 `SkFontMgr_New_DirectWrite` 加载 Segoe UI**。其他元素（矩形/圆角/线条/位图）正常渲染
-3. **MSVC 17.10+ 内部 STL 符号 stub（8 个）**：aseprite m148 预编译引用 `__std_min_element_f` / `__std_max_element_f` / `__std_minmax_element_f` / `__std_max_element_2` / `__std_max_element_1` / `__std_find_trivial_1` / `__std_find_trivial_8` / `__std_search_1`，本地 MSVC 14.x 不提供。`cpp/skia_render.cc` 顶部 `extern "C" { void __std_xxx() {} }` 占位。spike 启动 3s+ 未触发，根本修复需重编 Skia（VS 17.10+）或升 MSVC
-4. **静态 CRT 强制 `/MT`**：Skia 预编译用 `/MT`，本框架原 `/MD`。skia-poc cxx-flags 加 `/MT` 覆盖（`cl warning D9025`），仅本项目生效
-5. **GPU backend 未启用**：当前仅用 CPU `SkBitmap + SkCanvas::MakeRasterDirectN32` + `SetDIBitsToDevice`，未启用 Direct3D 12 / Vulkan。性能优化留作 Phase 4
-
-### 15.8 修改框架代码时的检查清单补充
-
-在第十二章"修改框架代码时的检查清单"基础上，新增：
-
-18. **渲染后端切换**：新增 `sk_*` 原生函数时必须同时更新 stub（`stub/skia.stub.php`）+ PHP 端（`framework/Rendering/SkiaRenderContext.php`）+ C++ 端（`cpp/skia_render.cc`），三处形参严格一致。新增 SkiaRenderContext 抽象方法时同步在 `framework/Rendering/RenderContext.php` 加 abstract 声明。修改 `Win32Platform.php` 的 `init()` 分支时保持 `GdiRenderContext` 为默认（零回归约束）
+# Px Framework   AI-Friendly 全流程指區
+
+## �?、一句话概述
+
+Px 昀��一 **PHP ↀ 原生 exe** 的�靀 GUI 框架，模板�法�栀 **Vue 3**，渲染引擎基亀 **Win32 GDI**，�?�过 **Swoole Compiler** 实现 AOT 编译　
+
+```
+.vue 文件 ↀ sfc-compiler.php ↀ 生成 PHP 籀 ↀ Swoole Compiler ↀ C++ ↀ MSVC ↀ .exe
+```
+
+---
+
+## 二�?�目录结构�?�查
+
+```
+d:/Px/
+├─�? framework/              核心框架（只读，�?有应用共亀��
+─   ├─�? Core/
+─   ─   ├─�? Application.php     事件往��、组件注册�?�VNode 树展�?、bind 解析
+─   ─   ├─�? ScrollManager.php   滚动服务（状态�理�?�拖拽�?�滚轀?�水平滚劀��
+─   ─   ├─�? Scheduler.php       往��劀/宏任务调庀
+─   ─   ├─�? Config.php          配置管理类（px_debug.yml 解析＀
+─   ─   └─�? RenderTreeManager.php 渲染树�理（VNode 缓存/巀异追踼�
+─   ├─�? Rendering/
+─   ─   ├─�? VNode.php           虚拟 DOM 节点（布�?字� + 滚动字� + 组件占位字�＀
+─   ─   ├─�? VNodeRenderer.php   树遍厀 ↀ 收集元素 ↀ 挀 layer 分组 ↀ 调用 GDI
+─   ─   ├─�? LayoutResolver.php  CSS 布局引擎（block/flex/grid/scroll＀
+─   ─   ├─�? GdiRenderContext.php Win32 GDI 绘制原�
+─   ─   ├─�? CssMappings.php     CSS 属�?� ↀ GDI 属�?�映尀
+─   ─   └─�? RenderContext.php   渲染上下文接叀
+─   ├─�? Platform/
+─   ─   ├─�? Platform.php        平台抽象接口
+─   ─   ├─�? Win32Platform.php    Win32 消息泀 + 事件解码
+─   ─   ├─�? PlatformEvent.php   事件类型层级（Mouse/Keyboard/Window/Timer＀
+─   ─   ├─�? PlatformFactory.php 平台工厂
+─   ─   └─�? WinMsg.php          Win32 消息常量
+─   ├─�? interfaces/
+─   ─   └─�? ComponentInterface.php  组件接口契约
+─   ├─�? compiler/
+─   ─   ├─�? sfc-compiler.php    主编译器＀.vue ↀ PHP 代码生成＀
+─   ─   ├─�? template-parser.php 模板解析噀��HTML ↀ VNode 树）
+─   ─   ├─�? script-analyzer.php  脚本分析噀��臀��注入 markDirty＀
+─   ─   ├─�? component-registry.php 组件注册血
+─   ─   └─�? aot-validator.php    AOT 兼�性�柀
+─   ├─�? BaseComponent.php        组件基类（生命期 + 父子层级＀
+─   ├─�? ReactiveComponent.php    响应式组件基类（dirty + VNode 缓存＀
+─   └─�? aot-checker.php          AOT 规则�?查工具（20K 行）
+├─�? apps/                  每个应用�?一��盀��
+─   ├─�? bilibili/             Bilibili 面板复刻应用
+─   ├─�? calculator-ng/        计算器演示（4 组件、CSS Grid 布局＀
+─   ├─�? skia-poc/             Skia 渲染后� POC 验证应用
+─   ├─�? list-test/             列表滚动测试（v-for + scroll-container＀
+─   └─�? design-guide/          设�指南说明应用
+├─�? stub/                   PHP stub 文件（C++ 原生函数声明＀
+├─�? cpp/                    C++ 桥接层实玀
+├─�? docs/                   设�文档
+├─�? tests/                  单元测试（PHPUnit 风格 + 戀��测试＀
+─   ├─�? unit/               单元测试
+─   ├─�? screenshot/         戀��臀��化测试（PowerShell＀
+─   └─�? run_all_tests.php   统一测试运�噀
+├─�? build.bat               非交互构建脚最
+├─�? sfc-compiler.php        编译器入口（框架根目录）
+├─�? config.yml              编译器路径配罀
+└─�? vendor/                 依赖（Composer＀
+```
+
+### 应用盀��模板
+
+```
+apps/<app-name>/
+├─�? App.vue                 根组什 SFC
+├─�? main.php                入口＀4 一 AOT 常量 + main() 函数
+├─�? project.yml             构建配置
+├─�? components/             子组件（叀?�）
+─   └─�? *.vue
+├─�? gen/                    臀��生成皀 PHP 组件（由 sfc-compiler 产出＀
+─   ├─�? AppComponent.php
+─   ├─�? *Component.php
+─   └─�? ComponentFactory.php
+└─�? bin/                    构建输出＀.exe + .dll＀
+```
+
+---
+
+## 三�?�核心架枀
+
+### 3.1 完整数据浀
+
+```
+用户在窗口中操作
+    ─
+    ▀
+Platform (Win32Platform::pollEvents)
+    ─   WM_LBUTTONDOWN ↀ MouseEvent(action='down', x, y)
+    ─   WM_MOUSEWHEEL  ↀ MouseEvent(action='wheel', x, y, delta)
+    ─   WM_KEYDOWN      ↀ KeyboardEvent(action='down', keyCode, char)
+    ▀
+Application::handleMouseEvent / handleKeyboardEvent
+    ─
+    ├─ 滚轮＀ findScrollContainerAt ↀ handleScrollWheel ↀ applyScrollTop ↀ requestRender
+    ├─ 拖拽＀ hitTestScrollbar ↀ handleScrollbarDown ↀ handleScrollbarDrag ↀ directRender
+    └─ 点击＀ hitTest ↀ resolveComponent ↀ dispatchClick(handler, arg)
+         ─
+         ▀
+    Component 方法（� deleteItem＀
+         ─  俀�� $this->todoItems ↀ $this->markDirty()
+         ▀
+    Scheduler::flushMicrotasks
+         ─  performUpdate ↀ renderCallback ↀ Application::requestRender
+         ▀
+    Application::render
+         ─
+         ├─ rebuildVNodeTree
+         ─   ├─ rootComponent->getVNodeTree()    // 调用 render()，返囀 VNode 栀
+         ─   ├─ expandComponentTree()             // 展开子组件占位节炀
+         ─   └─ resolveVNodeBindings()            // 将组什 bind 值写兀 VNode
+         ─
+         ├─ LayoutResolver::resolve
+         ─   ├─ 解析 CSS styles（class + inline 合并＀
+         ─   ├─ 挀 display 模式计算 x/y/w/h
+         ─   ├─ auto-stack 垂直排列子节炀
+         ─   └─ clamp scrollTop + 子节点重定位
+         ─
+         └─ VNodeRenderer::render
+             ├─ collectElements（按 layer 分组，scroll/overflow:hidden 生成 clip-push/clip-pop＀
+             └─ GdiRenderContext::drawElement（�?� element 调用 GDI 原�＀
+```
+
+### 3.2 职责边界（SOLID＀
+
+```
+┌─�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?─
+─ 模块              负责                        不负贀       ─
+├─�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?─
+─ Component         声明状�?� + 绑定销            不参与坐栀 ─
+─ Application       事件跀�� + bind 解析         不参与布�? ─
+─ LayoutResolver    �?有坐标�简                 不参与渲柀 ─
+─ VNodeRenderer     收集元素 + clip 裁切（scroll + overflow:hidden＀ 不修改坐栀 ─
+─ GdiRenderContext  GDI 调用                    不参与布�? ─
+└─�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?─
+```
+
+> **核心原则**：VNode 皀 x/y 坐标甀 LayoutResolver �?家�了算。Application 叀?�过 bind 机制（`:scroll-top`）间接影响布�?，不直接操作坐标　
+
+---
+
+## 四�?�关销��速查
+
+### 4.1 VNode（framework/Rendering/VNode.php＀
+
+**�?重�的字殀**（按使用频率排序）：
+
+```php
+// —�?� 树结枀 —�?�
+string  $type;         // 'div'|'span'|'button'|'input'|'#root'|'#component'|'#text'
+?array  $props;        // HTML 属�?� + Vue 指令（@click, :bind, v-for, :scroll-top 等）
+mixed   $children;     // VNode[] | VNode | string | null
+?string $key;          // v-for key
+
+// —�?� 布局结果（由 LayoutResolver 塀��）�?��?�
+int $x, $y, $w, $h;           // 绝�坐标
+array $computedStyle;         // 合并后的 CSS 属�?�
+int  $layer;                  // z-order
+string $groupId = 'app';      // 事件跀�� key
+
+// —�?� 滚动容器 —�?�
+bool $isScrollContainer;
+int  $scrollTop;               // 垂直滚动偏移 (px)
+int  $contentHeight;           // 叀��动内容�?�高庀 (px)
+int  $scrollLeft;              // 水平滚动偏移 (px)
+int  $contentWidth;            // 叀��动内容�?��庀 (px)
+
+// —�?� 组件占位 —�?�
+bool $isComponent;
+?string $componentClass;
+?ReactiveComponent $componentInstance;
+?array $componentProps;       // 子组件属性映尀
+```
+
+**工厂方法**＀
+```php
+VNode::h('div', ['style'=>'width:100px;height:50px'], [$child])
+VNode::hKey('div', [...], $children, 'item-1')       // 帀 v-for key
+VNode::hComponent('MyComponent', [...props], [...bindings])  // 子组件占佀
+```
+
+**常用辅助方法**：`getProp(name, default)`, `getClass()`, `getInlineStyle()`, `isRoot()`, `isComponent()`
+
+### 4.2 ReactiveComponent（framework/ReactiveComponent.php＀
+
+**关键状�?�**＀
+```php
+bool $dirty;            // true ↀ 下� getVNodeTree() 会重斀 render()
+?VNode $vnodeCache;     // 缓存的上次渲染结枀
+bool $isMounted;        // mount() 之后一 true
+```
+
+**核心流程**＀
+```php
+// 状�?�变曀 ↀ 触发重渲染的标准方式
+$this->markDirty();
+// 等价于：
+//   $this->vnodeCache = null;
+//   $this->scheduleUpdate();  // 技 performUpdate() 加入往��务队刀
+
+// 在微任务一 ↀ performUpdate() ↀ renderCallback() ↀ Application::requestRender()
+// 在事件循玀��下一一 tick ↀ Application::render() ↀ getVNodeTree() ↀ $this->render()
+```
+
+**必须实现的抽象方泀**＀
+```php
+abstract public function render(): VNode;                       // 返回 VNode 栀
+abstract public function setBindValue(string $key, string $val);  // 写入绑定倀
+abstract public function getBindValue(string $key): string;      // 读取绑定倀
+```
+
+**子→父�?�信**＀
+```php
+// 子组什
+$this->emit('itemSelected', ['id' => 5]);
+// 父组什
+$this->on($child, 'itemSelected', function($payload) { ... });
+```
+
+### 4.3 Application（framework/Core/Application.php＀
+
+**重�方法速查**＀
+```php
+// 入口
+Application::create()->mount($root)->run();
+
+// 组件注册
+registerComponent(string $groupId, ReactiveComponent $comp)
+
+// 命中测试
+hitTest(int $x, int $y, VNode $node): ?VNode   // 返回�?上层叀��净 VNode
+
+// 滚动系统
+findScrollContainerAt(int $x, int $y, VNode $node): ?VNode
+hitTestScrollbar(int $x, int $y, VNode $node): ?array
+applyScrollTop(VNode $node, int $value, bool $persist): void
+directRender(VNode $tree): void    // 跳过树重建，仅重斀 layout + render
+
+// 配置管理
+Config::init(string $appDir)    // 初�化配罀
+Config::get(string $key, mixed $default): mixed    // 读取配置
+```
+
+### 4.4 Config（framework/Core/Config.php＀
+
+**关键使用**＀
+- 静�?�类，由 `Application::mount()` 初�化，读取 `{APP_DIR}/px_debug.yml`
+- 核心方法：P`init(string $appDir)`、g`get(string $key, mixed $default)`、g`getAppDir()`、g`getOutputDir()`
+- AOT 兼�：u`use native_types`，静怀 `$cache`/`$appDir`
+- 应用示例：a`pps/bilibili/px_debug.yml`
+
+### 4.5 RenderTreeManager（framework/Rendering/RenderTreeManager.php＀
+
+**职责**：渲染树管理，提侀 VNode 树的脏路径追�?�差异比较�?�缓存快照�理�?�在 `Application::render()` 一�吀 VNode 树的构建/重建/巀异更新节奏�?�
+
+---
+
+## 五�?�事件系绀
+
+### 5.1 点击事件处理铀
+
+```
+鼠标按下 ↀ hitTest(x, y) 反序遍历子节炀
+    ↀ �?柀 @click 属�?�
+    ↀ resolveComponent(node) 通过 groupId 查找组件
+    ↀ component->dispatchClick(handler, arg)
+    ↀ 组件冀 match 分发
+    ↀ 最��配的 handler ↀ parent::dispatchClick 冒泡
+```
+
+### 5.2 组件一��义事件�理器
+
+圀 `.vue` 皀 `<script>` 一��义方法，SFC 编译器自动生成�应的 `dispatchClick`＀
+
+```php
+// App.vue <script>
+public function deleteItem(string $id): void {
+    unset($this->todoItems[$id]);
+    $this->markDirty();  // SFC 编译器会臀��注入此�
+}
+
+// 编译器生成的 dispatchClick＀
+public function dispatchClick(string $handler, ?string $arg = null): void {
+    switch ($handler) {
+        case 'deleteItem': $this->deleteItem($arg); break;
+        default:
+            if ($this->parent !== null) {
+                $this->parent->dispatchClick($handler, $arg);
+            }
+    }
+}
+```
+
+### 5.3 销��事件
+
+当前仅支持聚焀 input 元素皀 @keydown / @keyup / @enter　
+
+---
+
+## 兀?�滚动系绀
+
+### 6.1 职责架构
+
+```
+滚动事件 ↀ Application::handleMouseEvent (跀��)
+         ↀ ScrollManager (状�?��琀 + 逻辑)
+              ├─ handleScrollWheel()      滚轮
+              ├─ hitTestScrollbar()       命中测试（垂直条 + 水平条）
+              ├─ handleScrollbarDown()    拖拽�?姀
+              ├─ handleScrollbarDrag()    拖拽一
+              ├─ handleMouseUp()          拖拽释放
+              ├─ applyScrollTop()         垂直滚动
+              └─ applyScrollLeft()        水平滚动
+```
+
+> 滚动状�?�（target、start 坐标、start scroll 位置、isHorizontal）全部在 ScrollManager 一?�
+> Application 叀��责将事件跀��绀 ScrollManager，不再直接持有滚动状态�?�
+
+### 6.2 使�器可滚动
+
+圀 `.vue` 模板一��
+```html
+<!-- 仅垂直滚劀 -->
+<div style="overflow-y:auto;left:10px;top:50px;width:380px;height:400px"
+     :scroll-top="scrollTop">
+  <template v-for="item in items" :key="item.id">
+    <div @click="deleteItem(item.id)">{{ item.text }}</div>
+  </template>
+</div>
+
+<!-- 樀��+纵向滚动（overflow:auto 同时吀��两轴＀ -->
+<div style="overflow:auto;left:10px;top:50px;width:390px;height:570px"
+     :scroll-top="scrollTop"
+     :scroll-left="scrollLeft">
+  <!-- 子元素�度超过�器�度时出现水平滚动杀 -->
+  <div style="left:0;top:0;width:800px;height:36px">宽内宀</div>
+</div>
+```
+
+组件一��
+```php
+public string $scrollTop = "0";   // 垂直滚动位置
+public string $scrollLeft = "0";  // 水平滚动位置（仅樀��容器�?要）
+```
+
+**樀��滚动交互**：`Shift + 滚轮` 触发樀��滚动。水平滚动条位于容器底部 12px 区域　
+
+### 6.3 滚动交互流程
+
+```
+滚轮 ↀ ScrollManager::handleScrollWheel (吀 Shift 销�浀 ↀ 樀��)
+     ↀ applyScrollTop / applyScrollLeft (persist=true)
+     ↀ setBindValue ↀ markDirty ↀ requestRender
+
+轨道点击 ↀ ScrollManager::hitTestScrollbar (返回 {scrollNode, type, isHorizontal})
+       ↀ handleScrollbarDown ↀ applyScroll*(jumped_value, persist=true)
+
+滑块拖拽 ↀ hitTestScrollbar ↀ handleScrollbarDown(type='thumb')
+       ↀ handleScrollbarDrag (高�) ↀ applyScroll*(persist=false) ↀ directRender
+       ↀ 鼠标释放 ↀ applyScroll*(persist=true) ↀ requestRender
+```
+
+### 6.4 核心机制
+
+1. **Bind 同�**：`resolveVNodeBindings` 在每欀 rebuild 时将组件 `scrollTop`/`scrollLeft` 值写兀 `VNode`
+2. **布局偏移**：LayoutResolver 甀 `childOffsetY = node.y - scrollTop` 咀 `childOffsetX = node.x - scrollLeft` 定位子节炀
+3. **臀�� clamp**：auto-stack 后若 `scrollTop > maxScroll` 戀 `scrollLeft > maxScrollX`，LayoutResolver 臀��俀�并重定位子节炀
+4. **拖拽优化**：拖拽过程中赀 `directRender`，跳迀 VNode 树重廀
+5. **樀��滚动�?浀**：`overflow-x:auto` / `overflow-x:scroll` 戀 `overflow:auto` 继承两轴
+
+### 6.5 多滚动�器注意事顀
+
+- 滚轮事件所**鼠标下方�?深的**滚动容器
+- 滚动条拖拽一欀**叀��操作�?一**容器
+- 拖拽状�?�由 ScrollManager 持有，拖拽过程中**不�**触发树重廀
+
+---
+
+## 七�?�AOT 编译约束
+
+### 7.1 禁�皀 PHP 模式
+
+| 模式 | 原因 |
+|------|------|
+| `$obj->$prop` 动�?�属怀 | AOT 无法静�?�推寀 |
+| `$fn()` 非闭包调甀 | 字�串函数名不可编译 |
+| `$obj->$method()` 动�?�方泀 | 同上 |
+| 顶层 `require_once` / `include` | 必须在函敀/类内 |
+| `eval()` / `create_function()` | 完全不可编译 |
+| `compact()` / `extract()` | 动�?�变釀 |
+
+### 7.2 必须遵守的模开
+
+| 模式 | 说明 |
+|------|------|
+| `$x->toObject(ClassName::class)` | AOT 显式类型标注＀**必须使用** |
+| `ComponentFactory::create($className)` | 允�字�串类名作为工厂参敀 |
+| `match` 表达开 | 什 swoole_compiler 臀��皀 PHP 8.x 攀�� |
+
+### 7.3 构建前�柀
+
+```bash
+# 使用 compiler 臀��皀 PHP 做�法�柀
+D:\swoole_compiler\php.exe -l framework/Core/Application.php
+
+# AOT 静�?��查（build.bat Step 0.5 臀��运�＀
+D:\swoole_compiler\php.exe framework/aot-checker.php --project apps/list-test --skip direct_cpp_call
+```
+
+### 7.4 闀��使用限制
+
+**闀�**：`v-for` 往��内使用闭包（如条什 class）时，AOT 编译会丢失闭包�部变量的作用域，导致 `$ch` 等循玀��量无法�闀?�
+
+**错�示例**＀
+```php
+// ❀ 错�：AOT 一��包无法�闀 $ch
+$children[] = VNode::h('div', [...], (function() {
+    $c = [];
+    $c[] = VNode::h('span', [..., 'bind'=>$ch['name']], $ch['name']);
+    return $c;
+})());
+```
+
+**正确做法**：不使用闀��，直接在往��一��廀 VNode＀
+```php
+// ✀ 正确：循玀��量直接在 foreach 一��甀
+foreach ($this->items as $item) {
+    $children[] = VNode::h('div', [...], $item['name']);
+}
+```
+
+**条件渲染的替代方桀**＀
+- 不使甀 `v-if` / `v-else`，改甀**两个狀��皀 `v-for`** 遍历不同数据満
+- 在组件中提供分�的方法返回不同类型的数据
+
+```php
+// ✀ 圀 script 一��供分离的数据方法
+public function getUserMessages(): array { /* 过滤 user 类型 */ }
+public function getSystemMessages(): array { /* 过滤 system 类型 */ }
+
+// ✀ 圀 template 一��立遍厀
+<template v-for="msg in userMessages" :key="'u-' . msg.id">
+  <!-- 用户消息 -->
+</template>
+<template v-for="msg in systemMessages" :key="'s-' . msg.id">
+  <!-- 系统消息 -->
+</template>
+```
+
+### 7.5 `use native_types` 下的 C2440 类型轀��错�
+
+**根因**：文件声明了 `use native_types`（AOT 模式），但以下操作�终返囀 `php::Variant` 类型，赋值给已声明为 `php::Int` 的变釀/属�?�时，AOT 编译器无法隐式转捀��
+
+| 操作 | 返回倀 | 触发条件 |
+|------|--------|---------|
+| `$arr['key']` 数组元素访问 | `php::Variant` | 赋给 `int` 属�?�或已类型化的局部变釀 |
+| `$arr['key'] ?? default` 包含数组访问皀 ?? | `php::Variant` | 同上 |
+| `max(...)` / `min(...)` | `php::Variant` | 同上 |
+
+**错�信号**＀
+```
+D:\Px/build/...cc(error): error C2440: '=': cannot convert from 'php::Var' to 'php::Int'
+```
+
+**三�变体及修夀**＀
+
+**变体 A   max/min 返回 Variant**
+```php
+// ❀ 错�：max() 返回 php::Variant，目标变量已类型化为 php::Int
+$newScrollTop = max(0, min($max, $x));
+
+// ✀ 正确：�层加 (int) 轀��
+$newScrollTop = (int)max(0, min($max, $x));
+```
+
+**变体 B   兀 int 字面量初始化，后数组访问重新赋�?�**
+```php
+// ❀ 错�＀$borderColor 袀 =0 初�化为 php::Int
+//           又� $style['borderColor'] ?? ... 赋�?�为 php::Variant
+$borderColor = 0;
+if (...) {
+    $borderColor = $style['borderColor'] ?? ...;
+}
+
+// ✀ 正确：�层加 (int) 轀��
+$borderColor = 0;
+if (...) {
+    $borderColor = (int)($style['borderColor'] ?? ...);
+}
+```
+
+**变体 C   类属性声明为 `int`，从数组赋�?�**
+```php
+public int $primary;  // 声明一 php::Int
+
+// ❀ 错�＀$colors['primary'] ?? 0x1976D2 返回 php::Variant
+$this->primary = $colors['primary'] ?? 0x1976D2;
+
+// ✀ 正确：�层加 (int) 轀��
+$this->primary = (int)($colors['primary'] ?? 0x1976D2);
+```
+
+**全库所��**：已通过 Python 脚本对所最 11 一 `use native_types` 文件进�所��，确认无更�危险模式。涉及文件：`ScrollManager.php`(max/min)、`VNodeRenderer.php`(数组重新赋�?�)、`ColorScheme.php`(类属性数组赋倀)　
+
+### 7.6 `use native_types` 下方法内数组属�?�赋值无敀
+
+**根因**：文件声明了 `use native_types` 时，在方法（妀 `onMount()`、`initData()`）中对已声明一 `public array` / `private array` 的属性做 `$this->prop = [...]` 赋�?�，AOT 编译器生成的 C++ 代码**不会真�将数捀��入属怀**—�?�运行时该属性保持初始空倀 `[]`　
+
+**错�信号**：没有编译错诀��但运行时属�?�数捀��空（`foreach` 迀�� 0 次）。常见于将数捀��始化放入类似 `initData()` 方法的�计模式�?�
+
+**错�示例**＀
+```php
+// ❀ 错�：AOT 编译吀 $this->sidebarItems 保持空数绀
+public array $sidebarItems = [];
+
+public function onMount(): void {
+    parent::onMount();
+    $this->initData();
+}
+
+private function initData(): void {
+    // 此赋值在 AOT 下无敀
+    $this->sidebarItems = [
+        ['id' => 's1', 'title' => '视�1'],
+        ['id' => 's2', 'title' => '视�2'],
+    ];
+}
+```
+
+**正确做法**：数组数捀**必须在属性声明�内联初�匀**＀
+```php
+// ✀ 正确：在声明处直接赋倀
+public array $sidebarItems = [
+    ['id' => 's1', 'title' => '视�1'],
+    ['id' => 's2', 'title' => '视�2'],
+];
+```
+
+**影响范围**：`public array` 咀 `private array` 均受影响。`string` / `int` 类型属�?�的方法内赋值不受�限制　
+
+**如何�?浀**：`aot-checker.php` 暂未覆盖此模式�?�可搜索 `use native_types` 文件一��最 `$this->xxx = [` 模式（方法内数组属�?�赋值）进�人工审核　
+
+### 7.7 模板一 `$word` 前编表达式�?琀
+
+Px 框架模板丽�甀 `$` 前缀时：
+- v-for 往��变量（as `$item`、s$idx`）：保留一 `$word`（不叀
+- 靀 v-for 变量（as `$sz`）：SFC 编译器自动转捀�� `$this->word`，即组件属�访问
+
+这是因为 AOT 编译不存圀 PHP 的变量作用域概念，非 v-for 皀 `$` 变量必须映射到组件属性�?�涉及文件：`framework/compiler/expression/ConcatenationExpression.php`
+
+---
+
+## 兀?�构建流稀
+
+### 8.1 命令
+
+```bash
+# 构建
+build.bat list-test
+
+# 构建并运血
+build.bat list-test --run
+```
+
+### 8.2 各�骀
+
+```
+Step 0:   MSVC 玀� (vcvarsall.bat x64)
+Step 0.5: AOT 静�?��柀 ↀ �?查�止模开
+Step 1:   SFC 编译（编译根组件 App.vue，自劀 BFS 发现并编译所有子组件刀 gen/*.php＀
+Step 2:   AOT 编译 (PHP ↀ C++ ↀ link ↀ .exe)
+Step 3:   打包 (exe + php8ts.dll + phpx.dll + fonts/ ↀ bin/)
+         build.bat 臀���?浀 cpp/fonts/*.ttf 存在时�?制到 bin/fonts/，确保渲染后竀/Skia 模式下字体随 exe 部署
+```
+
+### 8.3 常�失败
+
+| 错� | 解决 |
+|------|------|
+| `cl.exe` 找不刀 | 什 Developer Command Prompt for VS 运� |
+| `php8embed.lib` 找不刀 | 复制刀 `D:\swoole_compiler\` 根目彀 |
+| AOT Checker 报错 | �?查代码是否使用了禁�模式 |
+| Step 2 Swoole 编译器报销 | 先用手动 `php -l` �?柀 PHP 诀�� |
+| 系统 `php -l` 报�法错 | 甀 `D:\swoole_compiler\php.exe` 而非系统 PATH 一�� PHP |
+| 编译子组什 .vue 吀 gen/ 最��新到正确位置 | 必须编译根组什 App.vue，子组件不会袀��狀��译到 apps/<name>/gen/ |
+| `C2440: cannot convert from 'php::Var' to 'php::Int'` | `use native_types` 文件一�� `int` 变量从数组�闀/max/min 赋�?�时，�层加 `(int)` 轀��（�觀 7.5＀
+| Skia 字体�?��刀 | �?柀 bin/fonts/ �?��最 .ttf 文件，或手动复制 cpp/fonts/ 下的字体到应用程序目彀 |
+| `Call to a member function toString() on string` | SFC 编译器生戀 `$this->prop->toString()`，但 PHP CLI 一 string 昀��生类型�?�重新运血 `php sfc-compiler.php` 重新编译，新版编译器生成 `(string)$this->prop` |
+
+### 8.4 多机噀 vcvarsall 跀��配置
+
+`build.bat` 皀 Step 0 �?要找刀 `vcvarsall.bat` 来初始化 MSVC 编译玀�。不同机器上 Visual Studio 安�跀��叀��不同（� VS 2017/2019/2022、Community/Professional/Enterprise），框架采用**三级优先级自动�浀**＀
+
+| 优先纀 | 来源 | 说明 |
+|--------|------|------|
+| 1 | 当前 PATH | 如果 `cl.exe` 已在 PATH 一��如手动打�? VS Dev Cmd），直接跳过 vcvarsall |
+| 2 | `config.yml` | 在项盀��盀�� `config.yml` 一��罀 `vcvarsall` 销��显式指定跀�� |
+| 3 | 臀��搜索 | 递归搜索 `C:\Program Files\Microsoft Visual Studio\` 下所最 `vcvarsall.bat`，取笀��一 |
+
+**配置示例**（`config.yml`）：
+
+```yaml
+# 家目录电脀 VS 2022 Community
+vcvarsall: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat
+
+# 笔�最 VS 2019 Professional（注释掉不需要的行）
+# vcvarsall: C:\Program Files\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat
+```
+
+> **提示**：绝大�数情况下**无需配置**，自动搜索即叀�盀 VS 2017/2019/2022 的所有版最?�只有在臀��搜索失败或需要指定特定版最��才需要手动配罀?�
+
+### 8.5 config.yml 配置文件
+
+`config.yml` 昀��建系统的核心配置文件，必须位于项盀��盀��。�次使用时叀��模板复制＀
+
+```bash
+cp config.example.yml config.yml
+```
+
+**配置项�昀**＀
+
+| 配置顀 | 说明 | 示例 |
+|--------|------|------|
+| `swoole_compiler` | Swoole Compiler 工具链目彀 | `F:\work\swoole_compiler` |
+| `vcvarsall` | MSVC 玀�初�化脚最��叀?�） | `C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat` |
+
+**配置示例**＀
+
+```yaml
+# Swoole Compiler 跀��（必�?＀
+swoole_compiler: F:\work\swoole_compiler
+
+# MSVC 跀��（可选，通常臀���?测即叀��
+# vcvarsall: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat
+```
+
+**常�闀�**＀
+
+| 错�信息 | 原因 | 解决 |
+|----------|------|------|
+| `swoole_compiler path not found in config.yml` | config.yml 不存在或跀��错� | 什 `config.example.yml` 复制并修改路往 |
+| `swoole_compiler directory not found` | 跀��指向的目录不存在 | �?查并俀� `swoole_compiler` 配置 |
+
+---
+
+## 九�?�常见开发任劀
+
+### 9.1 新建应用
+
+1. 圀 `apps/` 下创建目彀
+2. 创建 `main.php`＀4 一��釀 + main()）：
+```php
+<?php
+use Px\Core\Application;
+const APP_PLATFORM  = 'win32';
+const WINDOW_WIDTH  = 400;
+const WINDOW_HEIGHT = 500;
+const WINDOW_TITLE  = 'My App';
+function main(): int {
+    $root = ComponentFactory::create(AppComponent::class);
+    Application::create()->mount($root)->run();
+    return 0;
+}
+```
+3. 创建 `App.vue`（template + script + style＀
+4. 创建 `project.yml`＀
+```yaml
+name: my_app
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php
+```
+
+### 9.2 添加帀 bind 的属怀
+
+圀 `.vue` script 一��明属性：
+```php
+public string $myValue = "0";
+```
+
+在模板中使用＀
+```html
+<span :bind="myValue">{{ myValue }}</span>
+<div :scroll-top="myValue" style="overflow:auto;...">
+```
+
+SFC 编译器会臀��一 `myValue` 生成 `getBindValue` / `setBindValue` 皀 case 分支　
+
+### 9.3 添加点击事件
+
+模板一��
+```html
+<button @click="handleAction" click-arg="someId">Click</button>
+```
+
+script 一��
+```php
+public function handleAction(string $id): void {
+    // 俀��状�?�...
+    $this->markDirty();  // 编译器自动注兀
+}
+```
+
+### 9.4 使用 v-for
+
+攀�� **Vue 3 风格**：`v-for` 叀��写在 `<template>` 或任愀 HTML 元素（`<div>`、`<span>` 等）上�?�
+
+**`<template v-for>`**   仅重复子节点，不产生额�包�元素＀
+
+```html
+<template v-for="item in items" :key="item.id">
+  <div @click="handleClick(item.id)">
+    <span>{{ item.text }}</span>
+  </div>
+</template>
+```
+
+**元素 v-for**（Vue 3 风格＀   元素最��参与往��＀
+
+```html
+<div v-for="item in items" :key="item.id" @click="handleClick(item.id)">
+  <span>{{ item.text }}</span>
+</div>
+```
+
+两�写法均会袀��译器提取为独立的 render 辅助方法，`{{ item.text }}` 等循玀��量会袀�
+础�理为�?部变量�?�非组件纀 bind key　
+
+### 9.5 使用 v-if / v-else-if / v-else
+
+攀�� Vue 3 风格的条件渲染链＀
+
+```html
+<div v-if="status === 'A'" style="background:#4CAF50">
+  <span>Status A</span>
+</div>
+<div v-else-if="status === 'B'" style="background:#FFC107">
+  <span>Status B</span>
+</div>
+<div v-else style="background:#F44336">
+  <span>Status C</span>
+</div>
+```
+
+**注意**＀
+- `v-else-if` 咀 `v-else` 必须紧跟圀 `v-if` 之后，中间不能有其他非条件元紀
+- 编译器使甀 `ExpressionParser` 解析条件表达式，攀��三元表达式�?�比较运算�?��?�辑运算
+
+### 9.6 使用 :class 动�?�类绑定
+
+攀��三元表达式动态绑宀 CSS 类：
+
+```html
+<div :class="isActive ? 'active' : 'inactive'">
+  Content
+</div>
+```
+
+编译为：
+```php
+['class' => $this->isActive ? 'active' : 'inactive']
+```
+
+### 9.7 使用 v-show 条件显示/隐藏
+
+通过 `visibility:hidden` 控制元素叀�性：
+
+```html
+<div v-show="isVisible" style="background:#2196F3">
+  Toggle Me
+</div>
+```
+
+编译为：
+```php
+['style' => ($this->isVisible) ? '...' : '...;visibility:hidden']
+```
+
+### 9.8 使用子组什
+
+1. 创建子组什 `.vue` 文件
+2. 在父组件模板一��甀��
+```html
+<my-component :my-prop="parentValue"></my-component>
+```
+3. SFC 编译器自动发现�?�编译�?�生成占佀 VNode
+4. Application 在运行时展开
+
+### 9.9 重新编译 SFC（修攀 .vue 后）
+
+俀�� `.vue` 文件后，必须重新编译才能生效。关销�则：
+
+- **编译根组什 App.vue**（�?�非子组件），编译器伀 BFS 发现�?有有变更的子组件并自动重新编诀
+- 输出盀��甀 .vue 文件跀��决定：`dirname($vueFile) + '/gen/'`
+  - 编译 `apps/<name>/App.vue` ↀ 输出刀 `apps/<name>/gen/`（�础��罀��
+  - 编译 `apps/<name>/components/MyComp.vue` ↀ 输出刀 `apps/<name>/components/gen/`（错诀��罀��
+- 命令：`php sfc-compiler.php apps/<name>/App.vue`
+- **禁�手动编辑 `gen/*.php` 文件**（会袀��译器覆盖＀
+
+### 9.10 调试�?巀
+
+- **�?柀 VNode 栀**：在 `render()` 返回剀 `var_dump` VNode 结构（需在开发环墀 PHP 而非 AOT 一��行）
+- **�?查布�?**：查眀 `LayoutResolver::resolve()` 返回皀 `scrollContainers` 列表
+- **�?查渲染元紀**：在 `collectElements` 一��區 `$elementsByLayer`
+- **formatted 输出**：在 `Application::render()` 一��甀 `var_dump` 输出 activeVNodeTree
+
+### 9.11 在模板使甀 `$` 前编变量
+
+圀 `.vue` 模板丼�`$word` 形式的变量（靀 v-for �?部变量）会�?编译器转一 `$this->word`，因此可以直接引用组件属性�?�
+
+```html
+<div>{{ $myValue }}</div>
+<!-- 编译为：$this->myValue -->
+```
+
+**注意**＀`$` 前编圀 v-for 往��变量（� `$item`、s$idx`）中不能使用，编译器会�础�分　
+
+### 9.12 AI 臀��戀��测试
+
+在进血 UI 渲染测试时，叀��使用 PowerShell 脚本臀��戀��验证布局效果　
+
+**戀��脚本模板**（保存到 `apps/<app-name>/test_screen.ps1`）：
+
+```powershell
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$exePath = "f:/work/Px/apps/<app-name>/bin/<app-name>.exe"
+$screenPath = "f:/work/Px/apps/<app-name>/screenshot.png"
+
+$proc = Start-Process $exePath -PassThru
+Start-Sleep 3
+
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public class WND {
+    [DllImport("user32.dll")]
+    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+    [DllImport("user32.dll")]
+    public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+    [DllImport("user32.dll")]
+    public static extern int GetWindowTextLength(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT {
+        public int Left, Top, Right, Bottom;
+    }
+}
+"@
+
+$targetHwnd = [IntPtr]::Zero
+$targetPID = $proc.Id
+
+$callback = {
+    param([IntPtr]$hWnd, [IntPtr]$lParam)
+    $winPid = 0
+    [WND]::GetWindowThreadProcessId($hWnd, [ref]$winPid) | Out-Null
+    if ($winPid -eq $targetPID) {
+        if ([WND]::IsWindowVisible($hWnd)) {
+            $len = [WND]::GetWindowTextLength($hWnd)
+            if ($len -gt 0) {
+                $sb = New-Object System.Text.StringBuilder($len + 1)
+                [WND]::GetWindowText($hWnd, $sb, $sb.Capacity) | Out-Null
+                $title = $sb.ToString()
+                if ($title -ne "") {
+                    $script:targetHwnd = $hWnd
+                    return $false
+                }
+            }
+        }
+    }
+    return $true
+}
+
+[WND]::EnumWindows($callback, [IntPtr]::Zero) | Out-Null
+
+if ($targetHwnd -ne [IntPtr]::Zero) {
+    [WND]::ShowWindow($targetHwnd, 1) | Out-Null
+    Start-Sleep -Milliseconds 800
+    [WND]::SetForegroundWindow($targetHwnd) | Out-Null
+    Start-Sleep -Milliseconds 500
+
+    $rect = New-Object WND+RECT
+    [WND]::GetWindowRect($targetHwnd, [ref]$rect) | Out-Null
+
+    $w = $rect.Right - $rect.Left
+    $h = $rect.Bottom - $rect.Top
+    if ($w -gt 10 -and $h -gt 10) {
+        $bmp = New-Object System.Drawing.Bitmap($w, $h)
+        $graphics = [System.Drawing.Graphics]::FromImage($bmp)
+        $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, (New-Object System.Drawing.Size($w, $h)))
+        $bmp.Save($screenPath)
+        $graphics.Dispose()
+        $bmp.Dispose()
+        Write-Host "Screenshot saved: ${w}x${h} at ($($rect.Left), $($rect.Top))"
+    }
+} else {
+    Write-Host "Window not found"
+}
+
+if (-not $proc.HasExited) {
+    Stop-Process $proc.Id -Force -ErrorAction SilentlyContinue
+}
+```
+
+**使用流程**＀
+
+1. 俀�� `.vue` 文件测试布局
+2. 运�构建＀
+   ```bash
+   cd f:/work/Px
+   Remove-Item 'apps/<app-name>/gen/*.php' -Force  # 清理旧生成文什
+   .\build.bat <app-name>
+   ```
+3. 运�戀��脚本＀
+   ```bash
+   powershell -ExecutionPolicy Bypass -File "f:/work/Px/apps/<app-name>/test_screen.ps1"
+   ```
+4. 查看 `screenshot.png` 验证渲染结果
+
+**注意事项**＀
+
+- 戀��前需础�� `gen/` 盀��袀��理，否则叀��使用旧代砀
+- 每个应用盀��应只保留�?一 `.vue` 文件（按字母顺序编译＀
+- 窗口定位使用 `EnumWindows` 匹配进程 PID，避免捕获错诀��叀
+
+---
+
+## 十�?�已知问题与设�债务
+
+### 10.1 SOLID 违反：Application 持有 scrollDragTarget   ✀ 已解冀
+
+> `ScrollManager` 服务已抽取（`framework/Core/ScrollManager.php`）�?�Application 仅负责事件路由，
+> �?有滚动状态（drag target、drag start 坐标、drag start scroll 位置）和逻辑（滚轀?�拖拽�?�clamp＀
+> 归属 ScrollManager。横向滚动状态同样由 ScrollManager 统一管理　
+
+### 10.2 多滚动�器限刀
+
+`scrollDragTarget` 昀��引用，同�?时刻叀��拖拽�?一��动条（鼠标操作天然�此，暂不影响使用）�?�但如果最��增加销��滚动，需要改为�噀 ID 索引皀 Map　
+
+### 10.3 VNode 悀��引用风险
+
+拖拽过程一�� VNode 树�重建（例如定时器触发 markDirty），`scrollDragTarget` 指向旧的对象。当前�?�过 `directRender` 避免重建，但长期�?改为 stable identifier　
+
+### 10.4 Bind 值同步延迀
+
+LayoutResolver clamp 后，组件皀 bind 值（妀 scrollTop）保持旧值�?�下�?欀 render 时先恢�旧�?��?�再袀 LayoutResolver 重新 clamp—�?�每帧一欀"错�→修歀"往��。需覀 `setBindValueSilent` 方法　
+
+### 10.5 最��现的功能
+
+- 销��滚动（PgUp/PgDn/Home/End/Arrow＀
+- 编程式滚动到指定 item
+- 窗口 resize 时的动�?�重布局（当前需要手动触发渲染）
+- 文字输入旀 IME 攀��
+
+### 10.6 近期已实现的功能＀2026-06-05~06-06＀
+
+| 功能 | 描述 | Commit |
+|------|--------|--------|
+| `display: inline-flex` | LayoutResolver 新�? inline-flex �?�� | d734b3f |
+| `border-radius` | CssMappings 新�? CSS 属�?�解析，渲染管道传�?� | d734b3f |
+| `object-fit` | CssMappings 新�? CSS 属�?�解枀 | d734b3f |
+| `img` 元素 CSS 标准 | VNodeRenderer 实现 box-shadow/border/alt 回推 | d734b3f |
+| Grid `width: auto` | block-level grid 容器臀���?��包含址 | d734b3f |
+| Flex `height: auto` | 臀��尺�?计算�?? | d734b3f |
+| `shiftDescendantsY/X` | 子节点偏移翻倍bug �?? | d734b3f |
+| Grid 臀��高度 | 从内容�?算格子自动高庀 | d734b3f |
+| Config 配置管理籀 | px_debug.yml 解析，由 Application 初�?匀 | 3c93f78 |
+| RenderTreeManager | 渲染树�?理，VNode 缓存/�?��追踪 | 3c93f78 |
+| SFC 编译噀 `$` 前缀处理 | `$word`（非v-for＀ↀ `$this->word` | d7cd2bc |
+
+---
+
+## 十一、编码约宀
+
+### 11.1 PHP 版本要求
+
+- 源文件：PHP 8.0+（使甀 `match` 表达式）
+- AOT 编译：swoole_compiler 内置 PHP 8.x
+- **系统 PATH 一�� PHP 叀��昀 7.4，仅用于�?发调试，不能用于编译**
+
+### 11.2 代码风格
+
+- 使用 4 空格缩进
+- 类属性使甀 `protected` 戀 `private`（AOT 友好＀
+- `public` 属�?�用于组件状态（甀 SFC 编译器生成）
+- 方法吀 camelCase
+- VNode factory 统一使用 `VNode::h()` 咀 `VNode::hComponent()`
+
+### 11.3 VNode 树�茀
+
+- 每个组件皀 `render()` 返回什 `#root` 为根皀 VNode 栀
+- `#root` 皀 style 设置 `width` 咀 `height`
+- `#component` 昀��行时展开的占位节点，不产生渲柀
+- `#text` 用于纀��最��炀
+- children 叀��昀 `null`、`string`、`VNode`、`VNode[]`
+
+---
+
+## 十二、测诀
+
+Px 框架使用**三层测试策略**＀
+1. **单元测试**（PHP）�?� dispatchClick 模拟点击 + 组件树�义验诀
+2. **状�?�快照测诀**（PHP）�?� 文字牀"戀��"，将组件状�?�序列化为可读文最
+3. **戀��测试**（PowerShell）�?� 吀��真实 exe 抓取窗口戀��，用于�觉回彀
+
+### 测试设�原则
+
+| 原则 | 说明 |
+|------|------|
+| **不依赖�部服劀** | �?有测试在内存一��行，无文什/网络/数据库依赀 |
+| **dispatchClick 驱动** | 模拟用户点击，直接调用组什 handler 方法 |
+| **状�?�断�? + 忀��** | 既校验具体属性�?�，乀 dump 完整状�?�用于调诀 |
+| **组件树�义�栀 Vue 3** | 测试 parent 链�?�事件冒泡�?�VNode 缓存、patchComponentTree |
+| **AOT polyfill** | bootstrap.php 提供 `toObject()`、`any()` 筀 AOT 函数 polyfill |
+
+### 运�测试
+
+```bash
+# 运�全部单元测试（推荐）
+D:\swoole_compiler\php.exe tests/run_all_tests.php
+
+# 运�单个测试文件
+D:\swoole_compiler\php.exe tests/unit/CalculatorAppTest.php
+D:\swoole_compiler\php.exe tests/unit/ComponentTreeTest.php
+D:\swoole_compiler\php.exe tests/unit/ReactiveComponentTest.php
+D:\swoole_compiler\php.exe tests/unit/HitTestTest.php
+D:\swoole_compiler\php.exe tests/unit/LayoutResolverTest.php
+D:\swoole_compiler\php.exe tests/unit/VNodeRendererTest.php
+D:\swoole_compiler\php.exe tests/unit/SfcCompilerPartsTest.php
+D:\swoole_compiler\php.exe tests/unit/SfcCompilerVIfTest.php
+D:\swoole_compiler\php.exe tests/unit/CssMappingsBorderTest.php
+D:\swoole_compiler\php.exe tests/unit/PlatformTest.php
+
+# 运�完整渲染管道测试（快照差异分析）
+D:\swoole_compiler\php.exe tests/unit/RenderingPipelineTest.php
+
+# 运�内存压力测试（�帧累秀�测）
+D:\swoole_compiler\php.exe tests/unit/MemoryStressTest.php
+```
+
+### 测试文件
+
+| 文件 | 覆盖范围 | 用例敀 |
+|------|---------|--------|
+| `CalculatorAppTest.php` | 计算器全郀 18 类操佀 + 状�?�快煀 + 边界情况 | 107 |
+| `ComponentTreeTest.php` | 组件 parent 链�?�事件冒泡�?�实例独立�?�生命周期�?�VNode 缓存、hComponent 工厂、patchComponentTree、组件定位保畀 | 26 |
+| `ReactiveComponentTest.php` | dirty 标�、VNode 缓存、组件更斀 | 9 |
+| `HitTestTest.php` | 命中测试、事件路甀 | 10 |
+| `LayoutResolverTest.php` | block/flex/grid/scroll 布局 + min/max/auto/美分毀/relative/flex-basis/shrink/order/align-self/inline-flex/grid-auto-width/shiftDescendants | 69 |
+| `VNodeRendererTest.php` | 元素收集、layer 分组、clip（scroll + overflow:hidden）�?�button 边�渲染、render 完整流程 | 20 |
+| `SfcCompilerPartsTest.php` | 编译噀 parts 元数捀��collectVNodeBindKeys 提取、generateVNodeExpr 代码生成 | 8 |
+| `SfcCompilerVIfTest.php` | v-if 编译期优化（吀��绀��同条件合并） | 9 |
+| `CssMappingsBorderTest.php` | border �?冀/狀��属�?�解析�?�parseInlineStyle/parseStyleBlock 边�处理、hexToBgr/borderColor 辅助函数 | 14 |
+| `PlatformTest.php` | Platform 接口 SOLID/DIP 合� | 10 |
+| `MemoryStressTest.php` | 内存增长�?测（9 模块 28+ 场景＀ | 28+ |
+| `RenderingPipelineTest.php` | 完整渲染管道忀��巀��分析＀100 次循玀��净 + 5 类�则校骀 + 异常存档＀ | 5 |
+| `ListTestPipelineTest.php` | list-test 渲染管道测试＀30 次点净 + 增长规则 + clip 有效怀 + 滚动拖动＀ | 8 |
+| `GdiRenderContextTest.php` | GDI 渲染上下文直接测试（clip 栀 + drawText 戀�� + 参数守卫＀ | 15 |
+
+### CalculatorAppTest 测试清单
+
+覆盖以下 18 类场晀��107 一��试用例）＀
+
+| # | 类别 | 用例敀 | 说明 |
+|---|------|--------|------|
+| 1 | Digit Input | 7 | 初�显示、数字输入�?�去除前导零、运算�后新输入 |
+| 2 | Decimal Input | 6 | 小数点输入�?�防重�、运算�后新输入　15 位限制（2 一�� |
+| 3 | Clear/Reset | 2 | C 清除输入、AC 完全重置 |
+| 4 | Backspace | 4 | 删除最��、归零�?�newInput 保护、删除小数点 |
+| 5 | Toggle Sign | 3 | 正负切换、零值保技 |
+| 6 | Percentage | 2 | 50%ↀ0.5　200%ↀ2 |
+| 7 | Basic Arithmetic | 6 | ±×÷、除以零 Error、空操作笀 |
+| 8 | Operator Chaining | 3 | 链式计算、运算�覆盖、混合运简 |
+| 9 | Scientific Functions | 14 | sin/cos/tan/log/ln/x²/x³/∀/inv/π/e + Error 分支 |
+| 10 | Memory Functions | 6 | MS/MR/MC/M+/M∀/空�忀 |
+| 11 | Parentheses | 4 | openParen/closeParen 显示 |
+| 12 | History | 5 | 历史记录生成、切换面板�?�清除�?�加轀 |
+| 13 | Error Recovery | 3 | Error 后数孀/C/= 恢� |
+| 14-16 | Routing | 26 | ScientificPad/BasicPad/HistoryPanel 冒泡跀�� |
+| 17 | State Snapshot | 3 | 视�化状态跟踀��完整会话、Error→恢复�?�括号表达式 |
+| 18 | Edge Cases | 13 | 超大数字、运算�链�?�重复等号�?�带符号运算、连绀��除�?��轀��力测试等 |
+
+### ComponentTreeTest 测试清单
+
+覆盖 8 籀 Vue 3 组件诀��＀26 一��试用例）＀
+
+| # | 类别 | 说明 |
+|---|------|------|
+| 1 | Parent Chain | setParent/getParent、addChild 双向绑定、�立组什 |
+| 2 | Event Bubbling | dispatchClick 沀 parent 冒泡、stop 消费、null parent、dispatchKey |
+| 3 | Instance Identity | 同类型不同实例�?�唯�? ID |
+| 4 | Lifecycle | mount/unmount、重夀 mount |
+| 5 | VNode Caching | 首� render()、缓存�用�?�dirty 重建、markDirty 清缓孀 |
+| 6 | VNode Factory | hComponent 占位、componentProps 映射、groupId 递归 |
+| 7 | Patch Component Tree | 晀?�节炀 groupId　#component 展开、实例�甀��吀 class+同位罀�� |
+| 8 | Component Positioning | matchComponentNode 实例重用吀 transferComponentPositioning 保留定位 |
+
+### 戀��测试
+
+提供 PowerShell 脚本用于视�回归＀
+
+```powershell
+# 直接戀��（使用已最 exe＀
+powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps1
+
+# 先构建再戀��
+powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps1 -BuildFirst $true
+```
+
+戀��保存圀 `tests/screenshot/output/<timestamp>/`，并臀��生成 HTML 报告　
+
+### 测试�?佳实践（经验总结＀
+
+1. **dispatchClick 昀�选测试方开**   直接调用组件 handler，不依赖布局坐标和渲染�道，速度忀?�结果确宀
+2. **测试 helper 函数匀**   `createApp()`、`runCalculation()`、`assertDisplay()`、`captureState()` 筀 helper 提高叀�性和叀��护�?�
+3. **避免过度模拟**   测试真实组件行为毀 mock 更有价�?��?�只在需要隔离时才用 test double
+4. **状�?�快煀 vs 具体斀��**   关键跀��用具体断�?（`assertDisplay('42')`），调试用状态快照（`captureState()`＀
+5. **Application 私有方法通过反射测试**   `newInstanceWithoutApp()` + `ReflectionMethod` 访问 private 方法
+6. **先修复测试再提交**   失败的测试比没有测试更糟。每次修改后运�全部测试础��回归
+7. **组件树测试验证�架�乀**   ComponentTreeTest 验证框架层面皀 Vue 3 诀��对齐，不依赖具体应用
+8. **Mock 渲染上下文暴需 GDI 不可测漏洀**   `_MockRenderContext` 叀�彀 `drawElement()` 调用，不执�真实 GDI。Bug 发生圀 GDI 实现层（clip 边界绘制紀��损坏 HDC 状�?�），纯元素局 Mock 无法捕获。补偿策略：
+   - Mock �?模拟 clip 栈追踀 + 文本戀��（`applyClipTruncation()` 一 `GdiRenderContext::drawText()` 逻辑�?致）
+   - 流水线测试必须包吀 clip 溢出规则（Rule E：任何溢净 ≀1px 即告警）
+   - GDI 层�为必须�?�过 `GdiRenderContextTest.php` 直接验证（stub GDI C++ 函数记录调用参数＀
+9. **clip-aware drawText 昀��最 text 输出跀��的必选守區**   任何新�皀 GDI text 调用点都必须经过 `drawText()`（含 clip 戀��），禁�直接谀 `vue_draw_text()`
+10. **新应用接入时必须添加对应的流水线测试**   至少包含：N 次循玀��击稳定�?�测诀 + A/B/C 规则（不叀/条件/约束＀ + clip 有效性�刀
+11. **粗体文本字�宽度昀��规体皀 1.35 倀**   `drawText()` 戀��逻辑必须区分 `$bold` 参数。粗佀 36px 实际宽度 ~28px/char，�?� `fontSize * 0.6` 叀��净 21px/char。未区分粗体会�致截斀��仍然溢出
+12. **测试必须覆盖完整的用户操作链**   仅测诀"�?直按 1"不�，必须包吀"大量操作 ↀ 清除/重置 ↀ 验证 UI 完整怀"的�到�场景。每一��管道测试都应包含 clear-after-corruption 验证
+13. **按钮标�提取测试**   使用 `<button><span :bind="label">{{ label }}</span></button>` 模板时，`makeButtonElement()` 必须提取到标签�?��道测试中 `ltCheckButtonLabel()` 应断�? label 非空，不再标记为"known bug"
+14. **滚动拖动测试必须验证 auto-stacked 位置**   仅测诀"添加 item 后布�?正确"不�。必须模拟滚动拖劀��直接设置 scrollTop + directRender），验证 auto-stacked items 皀 y 坐标保持严格递�不折叠�?�洁�?跀��一 `style` 无显开 `top` 的节点不应�重算 y
+
+---
+
+## 十三、修改�架代码时的�查清區
+
+1. **PHP 诀��**：`D:\swoole_compiler\php.exe -l <file>`
+2. **AOT 兼�**：无 `->$var`、无动�?�调甀
+3. **布局职责**：LayoutResolver 管位罀��VNodeRenderer 管�切，互不越界
+4. **负�高防往**：LayoutResolver 一��最 `$node->w`/`$node->h` 赋�?�用 `max(0, (int)$val)`
+5. **GDI 调用保护**：GdiRenderContext 一��最 GDI 调用前�柀 `$w > 0 && $h > 0`
+6. **drawText clip 戀��**：所最 text 绘制必须经过 `drawText()`（含 `clipStack` 追踪 + 粗体感知溢出戀��），禁�直接谀 `vue_draw_text()`。新墀 text 输出跀��时必须同步添加截斀?�辑。截斀��式：`charWidth = (int)(fontSize * 0.6 * ($bold ? 1.35 : 1.0))`，并保留 4px 安全余量
+7. **clip 栈平血**：clip-push/clip-pop 必须成�出现，每帧结束时 clip 栈应为空。`GdiRenderContextTest` 一��最 `clip stack push and pop balanced` 测试
+8. **Mock clip 追踪**：修攀 `_MockRenderContext`/`_LTMockRenderContext` 时必须同步添劀 clip 栈追踀 + `applyClipTruncation()`（含粗体因子咀 4px 安全余量），础�� mock 的可见�为接近真宀 GDI
+9. **overflow:hidden 裁切**：需要�切子内�的�器必须�罀 `overflow:hidden`，VNodeRenderer 会为其生戀 clip-push/clip-pop
+10. **数�?�输入限刀**：所有数值输入方法（inputDigit、inputDecimal 等）必须最 15 字�长度限制
+11. **Bind 同�**：新墀 bind 属�?�后在组件中声明 `public string`，编译器臀��生成 get/set
+12. **事件冒泡**：子组件 dispatchClick 皀 default 分支调用 `parent::dispatchClick`
+13. **SFC 编译**：仅编译根组什 App.vue，不直接编译子组什 .vue；不手动编辑 gen/*.php
+14. **构建验证**：`build.bat <app-name>` 全流程�?�过
+15. **测试完整闀��**：新增�道测试必须�盖完整的用户操作链（不限于一直按同一按钮），包括：大量操作后 ↀ 清除/重置 ↀ 验证�?最 UI 元素完整的�到�场景
+16. **按钮标�提取**：`makeButtonElement()` 必须遍历孀 RenderNode 提取标�（`<button><span :bind="x">{{ x }}</span></button>`），仅�柀 `node->content`(string) 咀 `props[':bind']` 不�，还要�查子节点皀 content 咀 bind 引用
+17. **LayoutResolver 洁净跀��保留 auto-stack 位置**：洁�?跀��（`layoutDirty=false`）中，只有显开 `top`/`left` 定位的节点才重算 x/y。auto-stacked 子节点应保留脏路径�定的位置，仅由快速滚动路径（`shiftChildrenY`）平移�?�修攀 `resolveNode()` 一 `$node->x = ($style['left'] ?? 0) + $parentX` 这类无条件赋值时必须改用 `array_key_exists` 保护
+18. **`$` 前编表达式意诀**：在 .vue 模板丽�甀 `$variable` 时确保�?变量在组件中有�?应的 `public` 属�?�声明，编译器会�?�� `$this->variable`
+19. **LayoutResolver 洁净�?��保护**：修攀 `resolveNode()` 一 `$node->x = ($style['left'] ?? 0) + $parentX` 类代码时，必须使甀 `array_key_exists` 守卫仅�?有显开 `left`/`top` 的节点做绝�?赋�?�（参� `shiftDescendantsY/X` bug �??经验＀
+20. **RenderTreeManager 集成**：新增渲染树管理类时�?同�?更新 `Application::render()` �?��染树构建/�?��更新�?��
+
+---
+
+## 十四、新墀 CSS 布局属�?�（LayoutResolver v2＀
+
+以下 CSS 布局属�?�已圀 LayoutResolver 一��现支持：
+
+### 显示模式
+| 属�?� | 说明 | 默�倀 |
+|------|------|--------|
+| `inline-flex` | 内联弹簧盒布�? | block |
+
+### 图像与替换元紀
+| 属�?� | 说明 | 默�倀 |
+|------|------|--------|
+| `object-fit` | 替换元素内�?适配方式（fill/contain/cover/none＀ | fill |
+| `img` 元素 | CSS 标准实现（cox-shadow/border/alt 回推＀ | - |
+
+### 圆�?
+| 属�?� | 说明 | 默�倀 |
+|------|------|--------|
+| `border-radius` | 圆�?矩形半径（px＀ | 0 |
+
+### 尺�约束
+| 属�?� | 说明 | 默�倀 |
+|------|------|--------|
+| `min-width` | �?小�庀 (px) | 0 |
+| `max-width` | �?大�庀 (px) | 0 |
+| `min-height` | �?小高庀 (px) | 0 |
+| `max-height` | �?大高庀 (px) | 0 |
+
+CSS 规范：当 `min > max` 时，`max` 袀��略�?�
+
+### 百分比尺寀
+| 属�?� | 说明 |
+|------|------|
+| `width: 50%` | 相�于父容器 content width |
+| `height: 50%` | 相�于父容器 content height |
+
+百分比在尺�解析**之后**、min/max 约束**之前**应用。百分比也在 flex 咀 grid 容器上生效�?�
+
+### position:relative
+- 圀 auto-stack 一��`position:relative` 的子节点**不�歀** auto-stack
+- `top` 圀 auto-stacked 位置基�上做额�偏移，不影响兄弟节点定位
+- `left` 通过 resolveBlockLayout 皀 relative 跀��正确处理
+
+### Flex 扩展
+| 属�?� | 说明 | 默�倀 |
+|------|------|--------|
+| `order` | 排列顺序（冒泡排序，稳定＀ | 0 |
+| `flex-basis` | 初�主轴尺� (`auto` 回�??刀 `width`/`height`) | `auto` |
+| `flex-shrink` | 收缩因子 | 1 |
+| `align-self` | 单项交叉轴�齀 (`auto`/`flex-start`/`flex-end`/`center`/`stretch`) | `auto` |
+
+### Flex-shrink 算法
+```
+overflow = totalMain - containerMain  (彀 overflow > 0)
+totalShrinkWeight = Σ(item.mainSize × item.shrink)
+item.mainSize -= overflow × (item.mainSize × item.shrink) / totalShrinkWeight
+min-width/min-height 约束在收缩后应用
+```
+
+### Grid 扩展
+| 属�?� | 说明 | 默�倀 |
+|------|------|--------|
+| `align-self` | 垂直方向对齐 (`stretch`/`center`/`start`/`end`) | `stretch`(auto) |
+| `justify-self` | 水平方向对齐 (`stretch`/`center`/`start`/`end`) | `stretch`(auto) |
+
+### 内联样式百分数��?浀
+`CssMappings::parseInlineStyle()` 在解析时臀���?浀 `width`、`height`、`min-width`、`max-width`、`min-height`、`max-height` 的百分比值，存入 `*Percent` 销��妀 `widthPercent`），LayoutResolver 在父容器尺�已知时据此解析实际像素�?��?�
+
+---
+
+## ʮ�塢��Ⱦ����л���GDI / Skia��
+
+Px ���֧��������Ⱦ��ˣ�**Ĭ�� GDI ��ع�**��ͨ�� `const APP_RENDERER` �л� Skia ·����
+
+### 15.1 Ĭ����Ϊ
+
+δ���� `APP_RENDERER` ����ʱ��`framework/Platform/Win32Platform.php` �� `GdiRenderContext`��368 �У�9 �� `vue_*` ԭ������� 7 ��Ӧ�ã�calculator-ng / design-guide / list-test / multi-scroll / aot-property-test / aot-syntax-test / video-platform��**ȫ������Ķ�**��
+
+### 15.2 ���� Skia ģʽ
+
+�� `apps/<app-name>/main.php` ����׷��һ�У�
+
+```php
+<?php
+const APP_PLATFORM  = 'win32';
+const APP_RENDERER  = 'skia';   // <-- ���������� Skia ·��
+const WINDOW_WIDTH  = 400;
+const WINDOW_HEIGHT = 300;
+```
+
+�����޸� `App.vue` / `components/*.vue` / `project.yml`��`Win32Platform::init()` �Զ����� `APP_RENDERER` ѡ�� `SkiaRenderContext` �� `GdiRenderContext`��
+
+### 15.3 ��֤ Skia ·���Ѽ���
+
+����Ӧ��ʱ�۲� stderr / ������־��Ӧ���֣�
+
+```
+PHP Notice:  SKIA PATH ACTIVE in framework/Rendering/SkiaRenderContext.php
+```
+
+���� R6 ���նԲߣ�"������������ʵ���� GDI" �����з���������δ���ִ� notice��˵�� `APP_RENDERER` ����δ���ݵ� `Win32Platform::init()`������ԭ��
+
+- `APP_RENDERER` ƴд�������ִ�Сд��
+- `main.php` δ�� SFC ��������������� `gen/` Ŀ¼��
+- �ɰ� AOT EXE ���棨`build.bat <app>` ǿ���رࣩ
+
+### 15.4 �л��� GDI
+
+ɾ�� `const APP_RENDERER = 'skia';` �л��Ϊ `'gdi'`�����¹������ɡ����������κ� C++ ������
+
+### 15.5 �׶ζ���
+
+| �׶� | ״̬ | `sk_*` �ײ� | ���ó��� |
+|------|------|-------------|----------|
+| �׶�һ��POC�� | [OK] ����� | Win32 GDI���� vue_* ���룩 | ��֤ AOT ������· |
+| �׶ζ���GDI ���ݲ㣩 | [OK] ����� | Win32 GDI������ 12 ·�� | calculator-ng ȫ UI ���� |
+| �׶������� Skia�� | [OK] spike ͨ�� ?? with limitations | Skia `SkBitmap + SkCanvas` + `SkCanvas::drawRect` / `drawRRect` | ����� + Բ�� + ��ƽ̨���ı���Ĭ�������� DirectWrite�� |
+
+> **�׶�������**���� aseprite m148 FCI ���Ƴ� �� �ı����ƾ�Ĭ������**�׶��ļ��� DirectWrite**���� MSVC 17.10+ STL helpers 8 �� `__std_*` �Ѽ� `_MSC_VER` �汾��������1939 �²��ṩ stub������ �� skia-poc �� `/MT` ��̬ CRT���� ����·������Ի���cpp/fonts/ + fonts/ ��·�����ˣ���build.bat Step 3 �Զ��������塣��� `docs/skia-render-context-guide.md` ��9��
+
+### 15.6 �ؼ��ļ�
+
+- `cpp/skia_render.cc`��~250 �У�C++ ԭ���㣩
+- `stub/skia.stub.php`��21 �У�stub ������
+- `framework/Rendering/SkiaRenderContext.php`��~250 �У�PHP �ࣩ
+- `apps/skia-poc/`��POC Ӧ�ã�������ɫ���Σ�
+- `framework/Platform/Win32Platform.php:30-37`������ע���֧��
+- `framework/aot-checker.php:138-144`��`excludedFiles` �� `SkiaRenderContext.php`��
+- `framework/Rendering/RenderContext.php`��`use native_types;`��
+- `docs/skia-render-context-guide.md`��ʵʩָ�ϣ���ʵԴ�ĵ���
+
+### 15.7 ��֪����
+
+1. **������**��`g_skHwnd/g_skHdc/g_skSurface` ��ģ�龲̬�������ര���³�ͻ��Phase 6 ͨ�� `php::Box` �ع�
+2. **�ı���Ĭ������Skia �׶������ƣ�**��aseprite m148 fork ���Ƴ� `SkFontMgr_New_FCI`��`skEnsureFont()` ���� `false` �߿�·������������/��ǩΪ�հס�**�׶��ļ��� `SkFontMgr_New_DirectWrite` ���� Segoe UI**������Ԫ�أ�����/Բ��/����/λͼ��������Ⱦ
+3. **MSVC 17.10+ �ڲ� STL ���� stub��8 ����**��aseprite m148 Ԥ�������� `__std_min_element_f` / `__std_max_element_f` / `__std_minmax_element_f` / `__std_max_element_2` / `__std_max_element_1` / `__std_find_trivial_1` / `__std_find_trivial_8` / `__std_search_1`������ MSVC 14.x ���ṩ��`cpp/skia_render.cc` ���� `extern "C" { void __std_xxx() {} }` ռλ��**�Ѽ� _MSC_VER �汾������f55c347��**��MSVC �� 17.10��_MSC_VER �� 1939���� CRT ��������Щ���ţ�stubs �������Ա�������ض��塣
+4. **��̬ CRT ǿ�� `/MT`**��Skia Ԥ������ `/MT`�������ԭ `/MD`��skia-poc cxx-flags �� `/MT` ���ǣ�`cl warning D9025`����������Ŀ��Ч
+5. **GPU backend δ����**����ǰ���� CPU `SkBitmap + SkCanvas::MakeRasterDirectN32` + `SetDIBitsToDevice`��δ���� Direct3D 12 / Vulkan�������Ż����� Phase 4
+
+### 15.8 �޸Ŀ�ܴ���ʱ�ļ���嵥����
+
+�ڵ�ʮ����"�޸Ŀ�ܴ���ʱ�ļ���嵥"�����ϣ�������
+
+18. **��Ⱦ����л�**������ `sk_*` ԭ������ʱ����ͬʱ���� stub��`stub/skia.stub.php`��+ PHP �ˣ�`framework/Rendering/SkiaRenderContext.php`��+ C++ �ˣ�`cpp/skia_render.cc`���������β��ϸ�һ�¡����� SkiaRenderContext ���󷽷�ʱͬ���� `framework/Rendering/RenderContext.php` �� abstract �������޸� `Win32Platform.php` �� `init()` ��֧ʱ���� `GdiRenderContext` ΪĬ�ϣ���ع�Լ����

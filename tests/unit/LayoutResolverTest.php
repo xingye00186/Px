@@ -1117,6 +1117,107 @@ test('两步扫描中嵌套 flex 容器 stretch + justify-content 正确', funct
 });
 
 
+echo "--- 22. Flex Auto-width 修复 ---\n";
+
+test('Flex 容器 auto-width 填充父容器宽度 (CSS Flexbox §4.1)', function () {
+    $c1 = makeNode('div', ['width' => 80, 'height' => 30], [], 'A');
+    $c2 = makeNode('div', ['width' => 120, 'height' => 30], [], 'B');
+    $flex = makeNode('div', [
+        'display' => 'flex',
+        'left' => 0, 'top' => 0,
+        'gap' => 10,
+        'paddingLeft' => 10, 'paddingRight' => 10,
+    ], [$c1, $c2]);
+    // block-level flex container: parent is a block container
+    $container = makeNode('div', ['width' => 400, 'height' => 300, 'left' => 0, 'top' => 0], [$flex]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 500], [$container]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // auto-width = parent.w = 400
+    assert_eq($flex->w, 400, 'block-level flex container auto-width = parent width');
+});
+
+test('Flex 容器 height:auto 基于内容而非填充父高度 (CSS Flexbox §9.4)', function () {
+    $c1 = makeNode('div', ['width' => 200, 'height' => 30], [], 'A');
+    $c2 = makeNode('div', ['width' => 200, 'height' => 50], [], 'B');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row',
+        'left' => 0, 'top' => 0,
+        'gap' => 8,
+        'paddingTop' => 5, 'paddingBottom' => 5,
+    ], [$c1, $c2]);
+    $container = makeNode('div', ['width' => 400, 'height' => 300, 'left' => 0, 'top' => 0], [$flex]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 500], [$container]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // row flex: height is cross-axis, content-based = max child h + padding = 50 + 5 + 5 = 60
+    assert_eq($flex->w, 400, 'block-level flex container auto-width = parent width');
+    assert_eq($flex->h, 60, 'row flex auto-height = max child height + padding');
+});
+
+test('Block auto-stack 后 grid 子项内部子节点正确定位 (CSS §9.4.1)', function () {
+    $gc1 = makeNode('div', ['width' => 100, 'height' => 50], [], 'GCA');
+    $gc2 = makeNode('div', ['width' => 150, 'height' => 50], [], 'GCB');
+    $grid = makeNode('div', [
+        'display' => 'grid',
+        'gridTemplateColumns' => 'repeat(2, 1fr)',
+        'left' => 0, 'top' => 0,
+    ], [$gc1, $gc2]);
+    $childA = makeNode('div', ['width' => 80, 'height' => 60], [], 'SA');
+    $parent = makeNode('div', ['width' => 400, 'height' => 500, 'left' => 0, 'top' => 0], [$grid, $childA]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 600], [$parent]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // grid gets auto-width from auto-stack: w = containerW = 400
+    assert_eq($grid->w, 400, 'grid auto-width from auto-stack = container width');
+    // grid cells: with gridTemplateColumns repeat(2, 1fr), each cell = 400/2
+    assert_eq($gc1->w, 200, 'grid cell 1 width after auto-stack re-resolve (400/2)');
+    assert_eq($gc2->w, 200, 'grid cell 2 width after auto-stack re-resolve (400/2)');
+    // grid children are next to each other (first row)
+    assert_eq($gc1->y, 0, 'grid cell 1 y = 0');
+    assert_eq($gc2->y, 0, 'grid cell 2 y = 0');
+    // childA is stacked below grid container
+    assert($childA->y >= $grid->h, 'childA is below grid after auto-stack');
+});
+
+test('嵌套 flex→flex→grid 两层 auto-width 传递', function () {
+    $gc = makeNode('div', ['width' => 60, 'height' => 40], [], 'GC');
+    $innerGrid = makeNode('div', [
+        'display' => 'grid',
+        'gridTemplateColumns' => '1fr 1fr',
+        'left' => 0, 'top' => 0,
+    ], [$gc]);
+    $midFlex = makeNode('div', [
+        'display' => 'flex',
+        'left' => 0, 'top' => 0,
+    ], [$innerGrid]);
+    $outerFlex = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'column',
+        'left' => 0, 'top' => 0,
+        'width' => 400, 'height' => 300,
+    ], [$midFlex]);
+    $root = makeNode('#root', ['width' => 400, 'height' => 500], [$outerFlex]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // midFlex is a flex item in a column flex parent -> no auto-width fill from parent
+    // Its width is content-based (from innerGrid children)
+    // innerGrid is a flex item in midFlex -> no auto-width fill
+    // gc gets width from gridTemplateColumns 1fr
+    // So midFlex->w should be content-based, about 60 * 2 = 120 (fr size depends on container)
+    assert($midFlex->w > 0, 'midFlex width should be > 0 (content-based as flex item)');
+    assert($midFlex->w <= 400, 'midFlex width should not exceed outer container');
+    assert($innerGrid->w > 0, 'innerGrid should have positive width');
+});
+
+
 echo "\n";
 $exitCode = print_summary();
 exit($exitCode);
