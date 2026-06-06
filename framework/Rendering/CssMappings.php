@@ -34,6 +34,16 @@ class CssMappings
             'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
             'default' => 0,
         ],
+        'background-size' => [
+            'key'     => 'backgroundSize',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'default' => '',
+        ],
+        'background-position' => [
+            'key'     => 'backgroundPosition',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'default' => '',
+        ],
         'color' => [
             'key'     => 'fg',
             'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
@@ -184,7 +194,8 @@ class CssMappings
         'overflow-x'       => ['key' => 'overflowX',        'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
         'overflow-y'       => ['key' => 'overflowY',        'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
         'text-overflow'    => ['key' => 'textOverflow',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'clip'],
-        'flex-direction'   => ['key' => 'flexDirection',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'row'],
+        'white-space'      => ['key' => 'whiteSpace',       'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
+        'flex-direction'   => ['key' => 'flexDirection',    'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'row'],
         'flex-wrap'        => ['key' => 'flexWrap',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'nowrap'],
         'justify-content'  => ['key' => 'justifyContent',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'flex-start'],
         'align-items'      => ['key' => 'alignItems',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'stretch'],
@@ -208,6 +219,7 @@ class CssMappings
         'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
         'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
         'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
+        'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
     ];
 
     /**
@@ -273,6 +285,10 @@ class CssMappings
         'border-right'   => ['key' => 'borderRight',  'parser' => 'Px\Rendering\CssMappings::parseBorder', 'default' => ''],
         'border-radius'  => ['key' => 'borderRadius',  'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
         'object-fit'     => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
+        'white-space'    => ['key' => 'whiteSpace',    'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
+        'background-size' => ['key' => 'backgroundSize', 'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => ''],
+        'background-position' => ['key' => 'backgroundPosition', 'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => ''],
+        'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
     ];
 
     // ============================================================
@@ -543,6 +559,22 @@ class CssMappings
     }
 
     /**
+     * Parse `url("path/to/image.png")` → extract the image path
+     * Matches CSS background-image property: background-image: url("...")
+     * Supports both single/double quotes and unquoted URLs.
+     */
+    public static function parseBackgroundImage(string $value): string
+    {
+        $v = trim($value);
+        // Match url("...") with single quotes, double quotes, or unquoted
+        if (preg_match('/^url\(\s*["\']?([^"\'\)]+)["\']?\s*\)$/', $v, $m)) {
+            return trim($m[1]);
+        }
+        // If it doesn't look like a CSS url(), just return the raw value
+        return $v;
+    }
+
+    /**
      * AOT-compatible parser dispatcher.
      * Replaces call_user_func() which is not supported by AOT.
      */
@@ -556,7 +588,8 @@ class CssMappings
             case 'Px\\Rendering\\CssMappings::parseTextAlign':  return self::parseTextAlign($value);
             case 'Px\\Rendering\\CssMappings::parseBorder':     return self::parseBorder($value);
             case 'Px\\Rendering\\CssMappings::parseOpacity':   return self::parseOpacity($value);
-            case 'Px\\Rendering\\CssMappings::parseIdent':      return self::parseIdent($value);
+            case 'Px\Rendering\CssMappings::parseIdent':      return self::parseIdent($value);
+            case 'Px\Rendering\CssMappings::parseBackgroundImage': return self::parseBackgroundImage($value);
             default:                             return $value;
         }
     }

@@ -341,6 +341,13 @@ class GdiRenderContext extends RenderContext
                     );
                 }
                 break;
+
+            // ── 图片 ──────────────────────
+            case 'image':
+                $handle = $el['handle'] ?? 0;
+                if ($handle === 0 || ($el['w'] ?? 0) <= 0 || ($el['h'] ?? 0) <= 0) break;
+                vue_draw_image($this->hdc, $handle, $el['x'] ?? 0, $el['y'] ?? 0, $el['w'] ?? 0, $el['h'] ?? 0);
+                break;
         }
     }
 

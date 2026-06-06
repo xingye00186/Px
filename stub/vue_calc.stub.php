@@ -76,3 +76,8 @@ function vue_hit_test_scrollbar(int $hwnd, int $x, int $y): array {}
 function vue_set_timer(int $hwnd, int $intervalMs): int {}
 
 function vue_kill_timer(int $hwnd, int $timerId): void {}
+
+// ---- GDI+ 图片加载 ----
+function vue_load_image(string $path): int {}
+function vue_draw_image(int $hdc, int $handle, int $x, int $y, int $w, int $h): void {}
+function vue_free_image(int $handle): void {}

@@ -16,6 +16,7 @@ use Px\Rendering\RenderNode;
 use Px\Rendering\VNodeRenderer;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\CssMappings;
+use Px\Rendering\ImageManager;
 use Px\Rendering\RenderTreeManager;
 use Px\ReactiveComponent;
 use Px\Styling\Theme\ThemeData;
@@ -292,6 +293,11 @@ class Application
         $this->rootComponent->setScheduler($this->scheduler);
         $this->rootComponent->setRenderCallback($this->handleRenderRequest(...));
         $this->registerComponent('app', $root);
+
+        // 初始化图片管理器（必须早于任何图片加载）
+        if ($appDir !== '') {
+            ImageManager::setAppRoot($appDir);
+        }
 
         // 初始化调试配置（从 px_debug.yml）
         if ($appDir !== '') {
@@ -715,6 +721,9 @@ class Application
                 $this->running = false;
             }
         }
+        // 释放所有图片资源
+        ImageManager::freeAll();
+
         $this->platform->shutdown();
     }
 

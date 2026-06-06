@@ -345,9 +345,16 @@ class VNodeRenderer
         $hasBorder = ($style['borderWidth'] ?? 0) > 0;
         $hasBg = $bg !== null;
 
+        // ── background-image 支持 ──
+        $bgImage = $style['backgroundImage'] ?? '';
+        $bgImageHandle = 0;
+        if ($bgImage !== '' && $w > 0 && $h > 0) {
+            $bgImageHandle = ImageManager::loadImage($bgImage);
+        }
+
         // Check for content (text or children)
         $hasTextChild = is_string($node->content) && $node->content !== '';
-        if ($bg === null && !$hasBorder && !$hasTextChild) {
+        if ($bg === null && !$hasBorder && !$hasTextChild && $bgImageHandle === 0) {
             return null;
         }
 
@@ -365,6 +372,17 @@ class VNodeRenderer
         $borderWidth = $style['borderWidth'] ?? 0;
         $borderColor = $style['borderColor'] ?? 0;
 
+        // ── background-image 图片层（如果有）──
+        $bgImageEl = null;
+        if ($bgImageHandle !== 0) {
+            $bgImageEl = [
+                'type' => 'image',
+                'handle' => $bgImageHandle,
+                'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+                'layer' => $layer,
+            ];
+        }
+
         if ($hasTextChild) {
             $fontSize = $style['fontSize'] ?? 14;
             $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
@@ -378,28 +396,48 @@ class VNodeRenderer
             if ($textX < $x + 4) $textX = $x + 4;
             $textY = $y + (int)(($h - $fontSize) / 2);
 
+            $elements = [];
             if ($hasBg || $hasBorder) {
-                return [
-                    'type' => 'group', 'layer' => $layer, 'cursor' => $cursor,
-                    'elements' => [
-                        ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'cursor' => $cursor],
-                        ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
-                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor],
-                    ],
-                ];
+                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'cursor' => $cursor];
             }
+            if ($bgImageEl !== null) {
+                $elements[] = $bgImageEl;
+            }
+            $elements[] = ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
+                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor];
 
+            if (count($elements) === 1) {
+                return $elements[0];
+            }
             return [
-                'type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
-                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer, 'cursor' => $cursor,
+                'type' => 'group', 'layer' => $layer, 'cursor' => $cursor,
+                'elements' => $elements,
             ];
         }
 
+        // 无文本：返回 rect + 可选的 background-image
+        $elements = [];
+        if ($hasBg || $hasBorder) {
+            $elements[] = [
+                'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+                'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
+                'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
+                'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'cursor' => $cursor,
+            ];
+        }
+        if ($bgImageEl !== null) {
+            $elements[] = $bgImageEl;
+        }
+
+        if (count($elements) === 0) {
+            return null;
+        }
+        if (count($elements) === 1) {
+            return $elements[0];
+        }
         return [
-            'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
-            'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
-            'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'cursor' => $cursor,
+            'type' => 'group', 'layer' => $layer, 'cursor' => $cursor,
+            'elements' => $elements,
         ];
     }
 
@@ -428,11 +466,17 @@ class VNodeRenderer
 
         if ($text === '') return null;
 
-        // container-w/h may be percentage strings like "100%" → fall back to actual node size
+        // container-w/h 百分比值 → 从父容器 ScrollContext 解析实际宽度
         $rawContainerW = $props['container-w'] ?? null;
         $containerW = $w;
-        if ($rawContainerW !== null && !str_contains($rawContainerW, '%')) {
-            $containerW = (int)$rawContainerW;
+        if ($rawContainerW !== null) {
+            if (!str_contains($rawContainerW, '%')) {
+                $containerW = (int)$rawContainerW;
+            } elseif (count($this->scrollCtxStack) > 0) {
+                $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];
+                $pct = (float)str_replace('%', '', $rawContainerW) / 100.0;
+                $containerW = (int)($scrollCtx['w'] * $pct);
+            }
         }
         $rawContainerH = $props['container-h'] ?? null;
         $containerH = $h;
@@ -441,38 +485,160 @@ class VNodeRenderer
         }
         $containerX = (int)($props['container-x'] ?? $x);
 
-        // ── text-overflow: ellipsis 文本截断（含多行支持 -webkit-line-clamp）──
+        // 文本测量函数（优先使用 C++ 精确测量，退化使用估算）
+        $measureTextWidth = function(string $str) use ($fontSize, $bold): int {
+            static $hasNative = null;
+            if ($hasNative === null) $hasNative = function_exists('\\sk_measure_text_width');
+            if ($hasNative) {
+                return (int)\sk_measure_text_width($str, $fontSize, $bold);
+            }
+            $boldFactor = $bold ? 1.35 : 1.0;
+            $charW = (int)($fontSize * 0.6 * $boldFactor);
+            $cjkW = (int)($fontSize * $boldFactor);
+            $len = strlen($str);
+            $total = 0;
+            for ($i = 0; $i < $len;) {
+                $b = ord($str[$i]);
+                if ($b < 0x80) {
+                    // ASCII
+                    $total += $charW;
+                    $i++;
+                } elseif ($b < 0xC0) {
+                    $i++;
+                } elseif ($b < 0xE0) {
+                    $total += $cjkW;
+                    $i += 2;
+                } elseif ($b < 0xF0) {
+                    $total += $cjkW;
+                    $i += 3;
+                } else {
+                    $total += $cjkW;
+                    $i += 4;
+                }
+            }
+            return $total;
+        };
+
+        // ── text-overflow: ellipsis 文本截断（含多行 -webkit-line-clamp）──
         $textOverflow = $style['textOverflow'] ?? 'clip';
         if ($textOverflow === 'ellipsis' && $containerW > 0) {
-            $boldFactor = $bold ? 1.35 : 1.0;
-            $charWidth = (int)($fontSize * 0.6 * $boldFactor);
-            $maxCharsPerLine = max(1, (int)(($containerW - 4) / max($charWidth, 1)));
+            // 查询 -webkit-line-clamp（kebabToCamelCase 生成大写 W → WebkitLineClamp）
+            $lineClamp = (int)($style['WebkitLineClamp'] ?? $style['webkitLineClamp'] ?? 0);
+            $availWidth = $containerW - 4; // 4px 内边距
 
-            // 查询 -webkit-line-clamp 多行截断
-            $lineClamp = (int)($style['webkitLineClamp'] ?? 0);
             if ($lineClamp > 0) {
-                // 多行模式：按行数截断
+                // ── 多行模式：精确行拆分 ──
                 $lineHeight = (int)($style['lineHeight'] ?? 0);
                 if ($lineHeight <= 0) {
                     $lineHeight = (int)($fontSize * 1.4);
                 }
-                $maxLines = $lineClamp;
-                $maxTotalChars = $maxCharsPerLine * $maxLines;
-                if (strlen($text) > $maxTotalChars) {
-                    // 最后一行添加…
-                    $text = substr($text, 0, max(0, $maxTotalChars - 1)) . '…';
+
+                // 逐字符拆分行
+                $lines = [];
+                $currentLine = '';
+                $len = strlen($text);
+                for ($i = 0; $i < $len;) {
+                    $charLen = 1;
+                    $b = ord($text[$i]);
+                    if ($b >= 0xF0) $charLen = 4;
+                    elseif ($b >= 0xE0) $charLen = 3;
+                    elseif ($b >= 0xC0) $charLen = 2;
+                    $chunk = substr($text, $i, $charLen);
+                    $candidate = $currentLine . $chunk;
+                    if ($measureTextWidth($candidate) > $availWidth && $currentLine !== '') {
+                        $lines[] = $currentLine;
+                        if (count($lines) >= $lineClamp) break;
+                        $currentLine = $chunk;
+                    } else {
+                        $currentLine = $candidate;
+                    }
+                    $i += $charLen;
+                }
+                if ($currentLine !== '') {
+                    $lines[] = $currentLine;
+                }
+
+                if (count($lines) > $lineClamp) {
+                    // 裁剪行数
+                    $lines = array_slice($lines, 0, $lineClamp);
+                    // 最后一行加… 并裁剪直到带…能放下
+                    $lastIdx = count($lines) - 1;
+                    $lastLine = $lines[$lastIdx];
+                    $len2 = strlen($lastLine);
+                    for ($j = $len2; $j > 0;) {
+                        $b = ord($lastLine[$j - 1]);
+                        $charLen = 1;
+                        if ($b >= 0xF0) { $j -= 4; $charLen = 4; }
+                        elseif ($b >= 0xE0) { $j -= 3; $charLen = 3; }
+                        elseif ($b >= 0xC0) { $j -= 2; $charLen = 2; }
+                        else { $j--; $charLen = 1; }
+                        $trimmed = substr($lastLine, 0, $j) . '…';
+                        if ($measureTextWidth($trimmed) <= $availWidth) {
+                            $lastLine = $trimmed;
+                            break;
+                        }
+                    }
+                    if ($j <= 0) $lastLine = '…';
+                    $lines[$lastIdx] = $lastLine;
+                }
+
+                if (count($lines) > 1) {
+                    // 多行 → 返回 group
+                    $elements = [];
+                    $lineIdx = 0;
+                    foreach ($lines as $seg) {
+                        $lineY = $y + $lineIdx * $lineHeight;
+                        $segX = $x;
+                        if ($align === 'right' || $align === 'center') {
+                            $segW = $measureTextWidth($seg);
+                            if ($align === 'right') {
+                                $segX = $containerX + $containerW - 12 - $segW;
+                                if ($segX < $containerX + 4) $segX = $containerX + 4;
+                            } else {
+                                $segX = $containerX + (int)(($containerW - $segW) / 2);
+                                if ($segX < $containerX) $segX = (int)$containerX;
+                            }
+                        }
+                        $elements[] = [
+                            'type' => 'text', 'text' => $seg,
+                            'x' => $segX, 'y' => $lineY,
+                            'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
+                            'align' => 'left', 'layer' => $layer,
+                        ];
+                        $lineIdx++;
+                    }
+                    return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
+                }
+
+                // 只有一行 → 走单行逻辑
+                if (count($lines) === 1) {
+                    $text = $lines[0];
                 }
             } else {
-                // 单行模式（原有逻辑）
-                if (strlen($text) > $maxCharsPerLine) {
-                    $text = substr($text, 0, max(0, $maxCharsPerLine - 1)) . '…';
+                // 单行模式
+                if ($measureTextWidth($text) > $availWidth) {
+                    // 逐字符裁剪直到带…能放下
+                    $len = strlen($text);
+                    for ($j = $len; $j > 0;) {
+                        $b = ord($text[$j - 1]);
+                        $charLen = 1;
+                        if ($b >= 0xF0) { $j -= 4; $charLen = 4; }
+                        elseif ($b >= 0xE0) { $j -= 3; $charLen = 3; }
+                        elseif ($b >= 0xC0) { $j -= 2; $charLen = 2; }
+                        else { $j--; $charLen = 1; }
+                        $trimmed = substr($text, 0, $j) . '…';
+                        if ($measureTextWidth($trimmed) <= $availWidth) {
+                            $text = $trimmed;
+                            break;
+                        }
+                    }
+                    if ($j <= 0) $text = '…';
                 }
             }
         }
 
         if ($align === 'right' || $align === 'center') {
-            $boldFactor = $bold ? 1.35 : 1.0;
-            $textWidth = strlen($text) * (int)($fontSize * 0.6 * $boldFactor);
+            $textWidth = $measureTextWidth($text);
             if ($align === 'right') {
                 $x = $containerX + $containerW - 12 - $textWidth;
                 if ($x < $containerX + 4) $x = $containerX + 4;
@@ -571,8 +737,14 @@ class VNodeRenderer
     private function makeImgElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         // CSS 标准 §10.3.2: <img> 是替换元素，宽度由布局层决定
-        // 如果 w/h 为 0，无法渲染，但若有 alt 文本可降级显示
         $noSize = ($w <= 0 || $h <= 0);
+
+        // ── 尝试加载真实图片 ──
+        $src = $props['src'] ?? $props[':src'] ?? '';
+        $imageHandle = 0;
+        if ($src !== '' && !$noSize) {
+            $imageHandle = ImageManager::loadImage($src);
+        }
 
         // 背景色：CSS background 属性（CssMappings 已映射为 style['bg']）
         $bg = $style['bg'] ?? 0xCCCCCC;
@@ -594,7 +766,6 @@ class VNodeRenderer
         $borderColor = $style['borderColor'] ?? 0;
 
         // object-fit: CSS Images §4.5 控制替换内容如何适应容器
-        // 目前 fill 拉伸填充；contain/cover 待后续支持真实图像
         $objectFit = $style['objectFit'] ?? 'fill';
 
         // alt 属性：图片加载失败时的回退文本（HTML 标准）
@@ -603,7 +774,6 @@ class VNodeRenderer
         // ── 尺寸为 0 时降级显示 ──
         if ($noSize) {
             if ($alt !== '') {
-                // 降级为 broken image 图标 + alt 文本（类似浏览器行为）
                 $fontSize = $style['fontSize'] ?? 14;
                 $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
                 return [
@@ -613,17 +783,37 @@ class VNodeRenderer
                     'align' => 'left', 'layer' => $layer,
                 ];
             }
-            return null; // 无尺寸无 alt → 不可见
+            return null;
         }
 
-        // ── 渲染为占位矩形（用背景色模拟图像）──
         $elements = [];
-        $elements[] = [
-            'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'color' => $bg, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
-            'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
-            'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
-        ];
+
+        // ── 真实图片 ──
+        if ($imageHandle !== 0) {
+            // 有圆角时用 clip-push/clip-pop 裁切图片
+            if ($borderRadius > 0) {
+                $elements[] = ['type' => 'clip-push', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'layer' => $layer];
+                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+                    'color' => 0xFFFFFF, 'borderRadius' => $borderRadius, 'layer' => $layer];
+            }
+            $elements[] = [
+                'type' => 'image',
+                'handle' => $imageHandle,
+                'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+                'layer' => $layer,
+            ];
+            if ($borderRadius > 0) {
+                $elements[] = ['type' => 'clip-pop', 'layer' => $layer];
+            }
+        } else {
+            // ── 降级为占位矩形（用背景色模拟图像）──
+            $elements[] = [
+                'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+                'color' => $bg, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
+                'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
+                'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
+            ];
+        }
 
         // 若有 alt 文本，在图片上叠加显示
         if ($alt !== '') {

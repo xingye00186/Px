@@ -11,6 +11,13 @@
 #pragma comment(lib, "msimg32.lib")
 #include <cstdio>
 
+// GDI+ 图片加载
+// 注意：Windows SDK 10.0.26100.0 要求先包含 COM 头文件再包含 gdiplus.h
+#include <objidl.h>    // IStream
+#include <propidl.h>   // PROPID
+#include <gdiplus.h>
+#pragma comment(lib, "gdiplus.lib")
+
 using namespace php;
 
 // ============================================================
@@ -18,6 +25,10 @@ using namespace php;
 // ============================================================
 
 static bool g_quitRequested = false;
+
+// GDI+ 初始化状态
+static ULONG_PTR g_vueGdiplusToken = 0;
+static bool      g_vueGdiplusInited = false;
 
 // 定时器回调映射表（支持多个定时器）
 static std::map<HWND, void(*)()> g_timerCallbacks;
@@ -50,6 +61,14 @@ LRESULT CALLBACK VueCalcWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 // 创建窗口, 返回 hWnd
 Int php_vue_window_create(String title, Int width, Int height) {
     SetConsoleOutputCP(65001);
+
+    // GDI+ 初始化（图片加载需要）
+    if (!g_vueGdiplusInited) {
+        Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+        Gdiplus::GdiplusStartup(&g_vueGdiplusToken, &gdiplusStartupInput, NULL);
+        g_vueGdiplusInited = true;
+        fprintf(stderr, "[VUE] GDI+ initialized\n");
+    }
 
     WNDCLASS wc;
     ZeroMemory(&wc, sizeof(wc));
@@ -349,4 +368,48 @@ Int php_vue_set_timer(Int hWnd, Int intervalMs) {
 void php_vue_kill_timer(Int hWnd, Int timerId) {
     HWND hwnd = (HWND)(Int)hWnd;
     KillTimer(hwnd, (UINT_PTR)timerId);
+}
+
+// ============================================================
+// GDI+ 图片加载
+// ============================================================
+
+// 加载图片文件（返回 Gdiplus::Image* 伪装为 Int）
+Int php_vue_load_image(String path) {
+    if (path.length() == 0) return 0;
+
+    // UTF-8 → WCHAR
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, path.data(), -1, NULL, 0);
+    if (wlen <= 0) return 0;
+    std::wstring wpath(wlen, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, path.data(), -1, &wpath[0], wlen);
+
+    Gdiplus::Image* img = Gdiplus::Image::FromFile(wpath.c_str());
+    if (!img || img->GetLastStatus() != Gdiplus::Ok) {
+        fprintf(stderr, "[VUE] load_image FAIL: '%s'\n", path.data());
+        delete img;
+        return 0;
+    }
+    fprintf(stderr, "[VUE] load_image OK '%s' -> %p\n", path.data(), (void*)img);
+    return (Int)img;
+}
+
+// 绘制图片到指定矩形（需要 HDC）
+void php_vue_draw_image(Int hdc, Int handle, Int x, Int y, Int w, Int h) {
+    if (handle == 0) return;
+    if ((int)w <= 0 || (int)h <= 0) return;
+    if (hdc == 0) return;
+
+    Gdiplus::Image* image = reinterpret_cast<Gdiplus::Image*>((int)handle);
+    if (!image) return;
+    Gdiplus::Graphics gfx((HDC)(Int)hdc);
+    gfx.DrawImage(image, (int)x, (int)y, (int)w, (int)h);
+}
+
+// 释放图片
+void php_vue_free_image(Int handle) {
+    if (handle == 0) return;
+    Gdiplus::Image* image = reinterpret_cast<Gdiplus::Image*>((int)handle);
+    delete image;
+    fprintf(stderr, "[VUE] free_image %p\n", (void*)image);
 }

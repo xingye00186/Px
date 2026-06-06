@@ -28,4 +28,10 @@ function sk_push_clip(int $x, int $y, int $w, int $h): void {}
 function sk_pop_clip(): void {}
 
 // ---- 阶段三：窗口尺寸变更（WM_SIZE 监听，重建 SkSurface） ----
+function sk_measure_text_width(string $text, int $fontSize, int $bold): int {}
 function sk_resize_context(int $width, int $height): void {}
+
+// ---- 图片加载（双路径：USE_SKIA → SkImage, 非USE_SKIA → GDI+） ----
+function sk_load_image(string $path): int {}
+function sk_draw_image(int $handle, int $x, int $y, int $w, int $h): void {}
+function sk_free_image(int $handle): void {}
