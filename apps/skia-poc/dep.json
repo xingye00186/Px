@@ -59,9 +59,9 @@
     "cache": {
         "files_mtime": {
             "apps/skia-poc/main.php": 1780466410,
-            "apps/skia-poc/gen/AppComponent.php": 1780652824,
+            "apps/skia-poc/gen/AppComponent.php": 1780719724,
             "framework/ReactiveComponent.php": 1780387224,
-            "framework/BaseComponent.php": 1780386065,
+            "framework/BaseComponent.php": 1780386066,
             "framework/interfaces/ComponentInterface.php": 1779771802,
             "framework/Core/Scheduler.php": 1780389303,
             "framework/Rendering/VNode.php": 1780533323,
@@ -107,7 +107,7 @@
             "framework/Styling/Adapter/Win32Styling.php": 1780645529,
             "framework/Styling/Adapter/MacOSStyling.php": 1780645529,
             "framework/Styling/Adapter/LinuxStyling.php": 1780645529,
-            "apps/skia-poc/gen/ComponentFactory.php": 1780652824
+            "apps/skia-poc/gen/ComponentFactory.php": 1780719724
         },
         "mapping_hash": "5c3b52d4bc300445c3f995b2b7671650"
     }
