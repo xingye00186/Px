@@ -12,6 +12,7 @@ require_once __DIR__ . '/../../framework/compiler/expression/TernaryExpression.p
 require_once __DIR__ . '/../../framework/compiler/expression/ComparisonExpression.php';
 require_once __DIR__ . '/../../framework/compiler/expression/LogicalExpression.php';
 require_once __DIR__ . '/../../framework/compiler/expression/ExpressionParser.php';
+require_once __DIR__ . '/../../framework/compiler/expression/ConcatenationExpression.php';
 
 use Px\Compiler\Expression\ExpressionParser;
 
