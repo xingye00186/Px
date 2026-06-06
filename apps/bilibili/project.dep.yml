@@ -19,7 +19,6 @@ sources:
   - ./gen/ComponentFactory.php
   - ./gen/MainContentComponent.php
   - ./gen/NavBarComponent.php
-  - ./gen/SidebarWidgetComponent.php
   - ./gen/VcAvatarComponent.php
   - ./gen/VcButtonComponent.php
   - ./gen/VcDropdownComponent.php
