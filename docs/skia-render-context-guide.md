@@ -385,8 +385,10 @@ public function __construct(int $hWnd, int $width, int $height) {
 1. **单窗口**：阶段一/二/三都仅支持单窗口。`g_skHwnd/g_skHdc/g_skSurface` 是模块静态变量，多窗口下冲突。Phase 6 通过 `php::Box` 重构 SkSurface 跨函数传递。
 2. **沙箱无 desktop session**：当前开发环境无法 EXE 启动验证，运行时验证需用户在真实 Windows 桌面中跑。
 3. **字体（Skia 阶段三限制）**：aseprite m148 fork 已移除 `SkFontMgr_New_FCI`，阶段三文本绘制静默跳过（按钮数字/标签为空白）。阶段四需集成 `SkFontMgr_New_DirectWrite` 加载系统字体（Segoe UI）。其他阶段三元素（矩形/圆角/线条/位图）不受影响。
+   - **字体路径已优化（26362da）**：`skEnsureFont()` 从硬编码 `D:/Px/cpp/fonts/` 改为多路径回退：`cpp/fonts/`（项目根运行）和 `fonts/`（bin/ 部署）；`build.bat` Step 3 新增自动检测并复制 `cpp/fonts/*.ttf → bin/fonts/`。
 4. **GPU backend 未启用**：当前 Skia 仅用 CPU `SkBitmap + SkCanvas::MakeRasterDirectN32` + `SetDIBitsToDevice` 软件路径，未启用 Direct3D 12 / Vulkan。性能优化留作 Phase 4。
 5. **MSVC 17.10+ 内部 STL 符号 stub（8 个）**：aseprite m148 预编译用 MSVC 17.10+ 编译，引用了 8 个内部 STL helpers（`__std_min_element_f` / `__std_max_element_f` / `__std_minmax_element_f` / `__std_max_element_2` / `__std_max_element_1` / `__std_find_trivial_1` / `__std_find_trivial_8` / `__std_search_1`），本地 MSVC 14.x 工具链不提供。当前用 `extern "C" { void __std_xxx() {} }` 占位 stub（`cpp/skia_render.cc` 顶部）— spike 阶段未触发（EXE 启动 3s+ 不崩），但 Skia runtime 真实进入 min/max/find 路径时会有未定义行为。根本修复路径见 §10 路线图。
+   - **已添加 _MSC_VER 版本守卫（f55c347）**：`cpp/skia_dinkumware_stubs.cc` 包裹 `#if !defined(_MSC_VER) || _MSC_VER < 1939` / `#endif`，MSVC ≥ 17.10（_MSC_VER ≥ 1939）的 CRT 已内置 `__std_min_element_f` 等算法函数，stubs 不再编译，避免与 `libcpmt.lib` 重复定义。
 6. **静态 CRT 强制 `/MT`**：Skia 预编译用 `/MT`（静态 CRT），本框架原 `/MD`（动态 CRT）。当前 skia-poc 的 cxx-flags 加 `/MT` 强制覆盖（`cl warning D9025: overriding '/MD' with '/MT'`），仅本项目生效。其他应用仍 `/MD` 不受影响（未链 Skia）。
 
 ---
@@ -433,6 +435,7 @@ public function __construct(int $hWnd, int $width, int $height) {
 - [ ] 圆角矩形边缘目视无锯齿（10x 放大截图对比 GDI 路径，需用户桌面验证）
 - [ ] 文本笔画平滑（尤其小字号 12px，需 DirectWrite 集成后验证）
 - [ ] 截图保存到 `d:/Px/apps/skia-poc/screenshots/skia-rounded.png`（需用户桌面验证）
+- [ ] 字体文件验证：`build.bat` 打包后 `bin/fonts/` 目录应包含 `*.ttf` 字体文件（26362da 自动复制）
 
 ### 11.4 回归验证（现有应用零影响）
 
@@ -466,3 +469,5 @@ public function __construct(int $hWnd, int $width, int $height) {
 | 2026-06-03 | 4.1 | 本文档完成 |
 | 2026-06-03 | 4.2 | 草稿归档（无源文件，跳过） |
 | 2026-06-03 | 4.3 | AGENTS.md 追加"渲染后端切换"小节 |
+| 2026-06-05 | 3.x | 字体路径相对化（26362da）：`skEnsureFont()` 从 `D:/Px/cpp/fonts/` 改为多路径回退 `cpp/fonts/` + `fonts/`；`build.bat` Step 3 新增自动复制字体 |
+| 2026-06-05 | 3.x | MSVC 版本守卫（f55c347）：`skia_dinkumware_stubs.cc` 加 `#if _MSC_VER < 1939`，避免新版 CRT 符号重定义 |
