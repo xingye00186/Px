@@ -1,14 +1,14 @@
 #!/usr/bin/env php
 <?php
 /**
- * generate-dep-project.php — 生成精确的 project.dep.yml
+ * generate-project.php — 生成精确的 project.dep.yml
  *
  * 读取原始 project.yml + dep.json，将 sources 节替换为精确的文件列表，
  * 输出 project.dep.yml 供 AOT 编译器使用。
  *
  * Usage:
- *   php tools/generate-dep-project.php --app=calculator-ng
- *   php tools/generate-dep-project.php --app=D:/Px/apps/calculator-ng
+ *   php tools/dependency/generate-project.php --app=calculator-ng
+ *   php tools/dependency/generate-project.php --app=D:/Px/apps/calculator-ng
  */
 
 // ─── CLI 参数解析 ───
@@ -23,11 +23,11 @@ for ($i = 1; $i < $argc; $i++) {
 
 $appInput = $opts['app'] ?? null;
 if (!$appInput) {
-    fwrite(STDERR, "Usage: php generate-dep-project.php --app=<app-name-or-path>\n");
+    fwrite(STDERR, "Usage: php tools/dependency/generate-project.php --app=<app-name-or-path>\n");
     exit(1);
 }
 
-$projectRoot = str_replace('\\', '/', realpath(__DIR__ . '/..'));
+$projectRoot = str_replace('\\', '/', realpath(__DIR__ . '/../..'));
 
 // 定位 app 目录
 if (preg_match('#[/\\\\]#', $appInput)) {
@@ -52,7 +52,7 @@ if (!file_exists($projectYml)) {
 }
 if (!file_exists($depJson)) {
     fwrite(STDERR, "[ERROR] dep.json not found: $depJson\n");
-    fwrite(STDERR, "  Run dependency-analyzer.php first.\n");
+    fwrite(STDERR, "  Run php tools/dependency/analyzer.php first.\n");
     exit(1);
 }
 

@@ -9,11 +9,11 @@
  * 依赖：nikic/php-parser ^5.0（通过 tools/vendor/ 独立加载）
  *
  * Usage:
- *   php tools/dependency-analyzer.php --app=calculator-ng
- *   php tools/dependency-analyzer.php --app=D:/Px/apps/calculator-ng
+ *   php tools/dependency/analyzer.php --app=calculator-ng
+ *   php tools/dependency/analyzer.php --app=D:/Px/apps/calculator-ng
  */
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 use PhpParser\Node;
 use PhpParser\NodeTraverser;
@@ -397,12 +397,12 @@ if (empty($GLOBALS['_TEST_MODE'])) {
 
         $appInput = $opts['app'] ?? null;
         if (!$appInput) {
-            fwrite(STDERR, "Usage: php dependency-analyzer.php --app=<app-name-or-path>\n");
+            fwrite(STDERR, "Usage: php tools/dependency/analyzer.php --app=<app-name-or-path>\n");
             $RC = 1;
             goto end;
         }
 
-        $projectRoot = str_replace('\\', '/', realpath(__DIR__ . '/..'));
+        $projectRoot = str_replace('\\', '/', realpath(__DIR__ . '/../..'));
 
         // 定位 app 目录
         if (preg_match('#[/\\\\]#', $appInput)) {
@@ -442,19 +442,22 @@ if (empty($GLOBALS['_TEST_MODE'])) {
         $currentMappingHash = md5(CXX_MAPPING);
 
         // ── 基于文件 mtime 的缓存检查 ──
-        $cacheFile = $appDir . '/dep.cache.json';
+        // 缓存元数据已嵌入 dep.json 的 cache 节，不再使用独立 dep.cache.json
         $cacheValid = false;
 
-        if (file_exists($cacheFile)) {
-            $cacheData = json_decode(file_get_contents($cacheFile), true);
-            if ($cacheData && isset($cacheData['files'])) {
+        if (file_exists($outputFile)) {
+            $depData = json_decode(file_get_contents($outputFile), true);
+            if ($depData && isset($depData['cache']['files_mtime'])) {
+                $cacheMeta = $depData['cache'];
                 // CXX_MAPPING 是否有变更（新增/删除 C++ 文件映射等）
-                if (!isset($cacheData['mapping_hash']) || $cacheData['mapping_hash'] !== $currentMappingHash) {
+                if (!isset($cacheMeta['mapping_hash']) || $cacheMeta['mapping_hash'] !== $currentMappingHash) {
                     $cacheValid = false;
                 } else {
                     $valid = true;
-                    foreach ($cacheData['files'] as $path => $mtime) {
-                        if (!file_exists($path) || filemtime($path) !== $mtime) {
+                    $rootPrefix = $projectRoot . '/';
+                    foreach ($cacheMeta['files_mtime'] as $relPath => $mtime) {
+                        $absPath = $projectRoot . '/' . $relPath;
+                        if (!file_exists($absPath) || filemtime($absPath) !== $mtime) {
                             $valid = false;
                             break;
                         }
@@ -465,7 +468,8 @@ if (empty($GLOBALS['_TEST_MODE'])) {
                         if (is_dir($genDir)) {
                             foreach (glob($genDir . '/*.php') as $genFile) {
                                 $genFile = str_replace('\\', '/', $genFile);
-                                if (!isset($cacheData['files'][$genFile])) {
+                                $relGen = substr($genFile, strlen($rootPrefix));
+                                if (!isset($cacheMeta['files_mtime'][$relGen])) {
                                     $valid = false;
                                     break;
                                 }
@@ -519,11 +523,21 @@ if (empty($GLOBALS['_TEST_MODE'])) {
                 $cxxRel[] = $rel;
             }
 
-            // 缓存也需要绝对路径（用于 filemtime 校验）
+            // 计算缓存：项目根相对路径（无 ../../） → mtime
+            $rootPrefix = $projectRoot . '/';
+            $cacheFilesMtime = [];
+            foreach (array_keys($visited) as $absPath) {
+                $relPath = substr($absPath, strlen($rootPrefix));
+                $cacheFilesMtime[$relPath] = filemtime($absPath);
+            }
 
             $result = [
                 'php_files_relative' => $phpRel,
                 'cxx_files'          => $cxxRel,
+                'cache' => [
+                    'files_mtime'  => $cacheFilesMtime,
+                    'mapping_hash' => $currentMappingHash,
+                ],
             ];
 
             file_put_contents($outputFile, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -531,16 +545,6 @@ if (empty($GLOBALS['_TEST_MODE'])) {
             echo "[OK] Dependencies written to $outputFile\n";
             echo "     PHP files: " . count($phpRel) . "\n";
             echo "     C++ files: " . count($cxxRel) . "\n";
-
-            // 保存缓存
-            $cacheData = ['files' => []];
-            foreach (array_keys($visited) as $path) {
-                $cacheData['files'][$path] = filemtime($path);
-            }
-            $cacheData['cxx_files']    = $cxxAbsList;
-            $cacheData['mapping_hash'] = $currentMappingHash;
-            file_put_contents($cacheFile, json_encode($cacheData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-            echo "[INFO] Dependency cache saved to dep.cache.json\n";
         }
 
     } catch (\Throwable $e) {

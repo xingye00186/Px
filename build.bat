@@ -314,20 +314,20 @@ echo.
 
 cd /d "%FRAMEWORK_ROOT%"
 
-if not exist "tools\dependency-analyzer.php" (
+if not exist "tools\dependency\analyzer.php" (
     echo   [SKIP] dependency-analyzer.php not found
     echo.
     goto :step2
 )
 
-"%PHP_CLI%" tools\dependency-analyzer.php --app=%APP_NAME%
+"%PHP_CLI%" tools\dependency\analyzer.php --app=%APP_NAME%
 if !errorlevel! neq 0 (
     echo   [WARN] Dependency analysis failed, using full sources
     echo.
     goto :step2
 )
 
-"%PHP_CLI%" tools\generate-dep-project.php --app=%APP_NAME%
+"%PHP_CLI%" tools\dependency\generate-project.php --app=%APP_NAME%
 if !errorlevel! neq 0 (
     echo   [WARN] dep project generation failed, using full sources
     echo.
