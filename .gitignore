@@ -19,6 +19,10 @@ Noto_Sans_SC.zip
 
 tests/screenshot/output/*.png
 
+# 测试产物目录
+tests/anomaly/
+tests/screenshot/output/
+
 # Debug 输出目录
 debug/
 

@@ -1123,6 +1123,115 @@ test('连续拖动滚动条后所有可见 item 保持正确间距', function ()
 });
 
 // ============================================================
+// 测试 6：诊断 — 拖到底部释放后列表漂移
+// ============================================================
+
+test('诊断_拖到底部释放后scrollContainer状态对比', function () {
+    $ctx = ltCreateTestApp();
+    $app = $ctx['app'];
+    $component = $ctx['component'];
+    $context = $ctx['context'];
+
+    // 1. 添加大量 item
+    $btnNode = ltFindClickableNode($app, 'addItem');
+    for ($i = 0; $i < 20; $i++) {
+        ltClickAndRender($app, $btnNode);
+    }
+    assert_eq(count($component->todoItems), 23, "应有 23 个 item");
+
+    // 2. 获取滚动容器初始状态
+    $rtm = ltGetRenderTreeManager($app);
+    $root = $rtm->getRootRenderNode();
+    assert_not_null($root);
+    $scrollContainer = ltFindScrollContainer($root);
+    assert_not_null($scrollContainer);
+    assert_true($scrollContainer->isScrollContainer);
+
+    $maxScroll = max($scrollContainer->contentHeight - $scrollContainer->h, 0);
+    echo "  [初始] scrollTop={$scrollContainer->scrollTop} lastScrollTop={$scrollContainer->lastScrollTop} "
+        . "contentHeight={$scrollContainer->contentHeight} h={$scrollContainer->h} maxScroll={$maxScroll}\n";
+
+    // 3. 模拟拖到底部（directRender 路径）
+    $scrollContainer->scrollTop = $maxScroll;
+    ltInvokeDirectRender($app);
+
+    // 4. 捕获拖到底部后的快照 + 树
+    $snapDrag = ltCaptureSnapshot($component, $context);
+    $rtm2 = ltGetRenderTreeManager($app);
+    $root2 = $rtm2->getRootRenderNode();
+    $sc2 = ltFindScrollContainer($root2);
+    $dragTree = $rtm2->dumpRenderTree($root2, 1, [], 'verbose');
+
+    echo "  [拖到底部] scrollTop={$sc2->scrollTop} lastScrollTop={$sc2->lastScrollTop} "
+        . "contentHeight={$sc2->contentHeight} h={$sc2->h} "
+        . "maxScroll=" . max($sc2->contentHeight - $sc2->h, 0) . "\n";
+    echo "  [拖到底部] 可见 items: " . count($snapDrag->itemTexts) . "\n";
+    foreach ($snapDrag->itemTexts as $idx => $t) {
+        echo "    drag-item[$idx] y={$t['y']} text='{$t['text']}'\n";
+    }
+    echo "  [拖到底部 渲染树]:\n$dragTree\n";
+
+    // 5. 模拟释放（persist + requestRender = 完整重建）
+    // 模拟 ScrollManager::applyScrollTop 的 persist=true 行为
+    $sc2->scrollTop = $maxScroll;
+    // 持久化到组件
+    $refl = new ReflectionClass($component);
+    $propScrollTop = $refl->getProperty('scrollTop');
+    $propScrollTop->setAccessible(true);
+    $propScrollTop->setValue($component, (string)$maxScroll);
+    // 全量渲染
+    ltInvokeRender($app);
+
+    // 6. 捕获释放后的快照 + 树
+    $snapRelease = ltCaptureSnapshot($component, $context);
+    $rtm3 = ltGetRenderTreeManager($app);
+    $root3 = $rtm3->getRootRenderNode();
+    $sc3 = ltFindScrollContainer($root3);
+    $releaseTree = $rtm3->dumpRenderTree($root3, 2, [], 'verbose');
+
+    echo "  [释放后] scrollTop={$sc3->scrollTop} lastScrollTop={$sc3->lastScrollTop} "
+        . "contentHeight={$sc3->contentHeight} h={$sc3->h} "
+        . "maxScroll=" . max($sc3->contentHeight - $sc3->h, 0) . "\n";
+    echo "  [释放后] 可见 items: " . count($snapRelease->itemTexts) . "\n";
+    foreach ($snapRelease->itemTexts as $idx => $t) {
+        echo "    release-item[$idx] y={$t['y']} text='{$t['text']}'\n";
+    }
+    echo "  [释放后 渲染树]:\n$releaseTree\n";
+
+    // 7. 对比：scrollTop 应一致
+    assert_eq($sc3->scrollTop, $sc2->scrollTop,
+        "scrollTop 在释放后应保持不变: drag={$sc2->scrollTop} release={$sc3->scrollTop}");
+
+    // 8. 对比：contentHeight 应一致
+    assert_eq($sc3->contentHeight, $sc2->contentHeight,
+        "contentHeight 应一致: drag={$sc2->contentHeight} release={$sc3->contentHeight}");
+
+    // 9. 对比：item 位置应一致
+    assert_eq(count($snapRelease->itemTexts), count($snapDrag->itemTexts),
+        "可见 item 数量应一致: drag=" . count($snapDrag->itemTexts)
+        . " release=" . count($snapRelease->itemTexts));
+
+    for ($i = 0; $i < count($snapDrag->itemTexts); $i++) {
+        $dragY = $snapDrag->itemTexts[$i]['y'];
+        $releaseY = $snapRelease->itemTexts[$i]['y'];
+        $diff = $releaseY - $dragY;
+        assert_eq(
+            $releaseY, $dragY,
+            "item[$i] 释放后 y 坐标应保持不变（无漂移），diff=$diff"
+        );
+    }
+
+    // 10. 对比：渲染树结构指纹应一致（排除 item 文本内容）
+    if ($snapDrag->structuralFingerprint !== $snapRelease->structuralFingerprint) {
+        echo "  [警告] 结构指纹不一致！\n";
+        echo "  drag 指纹: {$snapDrag->structuralFingerprint}\n";
+        echo "  release 指纹: {$snapRelease->structuralFingerprint}\n";
+    }
+
+    echo "  ✅ 拖到底部+释放后 scrollTop/contentHeight/item 位置全部一致\n";
+});
+
+// ============================================================
 // 汇总
 // ============================================================
 

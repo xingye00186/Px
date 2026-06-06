@@ -1,0 +1,136 @@
+=== Test: grid 四列等宽 (1fr 1fr 1fr 1fr) ===
+Frame #1 events=0 detail=normal
+div (0,0 800x100) [dsp=grid]
+  div (0,0 194x80) text="A"
+  div (202,0 194x80) text="B"
+  div (404,0 194x80) text="C"
+  div (606,0 194x80) text="D"
+
+---
+
+=== Test: grid auto-fill minmax(300px,1fr) ===
+Frame #1 events=0 detail=normal
+div (0,0 1392x296) [dsp=grid]
+  div (0,0 336x140) text="Card 1"
+  div (352,0 336x140) text="Card 2"
+  div (704,0 336x140) text="Card 3"
+  div (1056,0 336x140) text="Card 4"
+  div (0,156 336x140) text="Card 5"
+
+---
+
+=== Test: grid auto-fill 列宽和数量验证 ===
+Frame #1 events=0 detail=normal
+div (0,0 672x60) [dsp=grid]
+  div (0,0 328x60) text="Item 1"
+  div (344,0 328x60) text="Item 2"
+
+---
+
+=== Test: grid cell 内 width=100% 应为 cell 宽而非容器宽 ===
+Frame #1 events=0 detail=normal
+div (0,0 632x100) [dsp=grid]
+  div (0,0 300x100) [dsp=flex]
+    div (0,0 300x50) text="inner"
+  div (316,0 300x100) text="Card 2"
+
+---
+
+=== Test: grid 显式列宽 100px 200px 100px ===
+Frame #1 events=0 detail=normal
+div (0,0 400x80) [dsp=grid]
+  div (0,0 100x60) text="A"
+  div (100,0 200x60) text="B"
+  div (300,0 100x60) text="C"
+
+---
+
+=== Test: grid 混合单位 1fr 200px 1fr ===
+Frame #1 events=0 detail=normal
+div (0,0 800x80) [dsp=grid]
+  div (0,0 292x60) text="Left"
+  div (300,0 200x60) text="Center"
+  div (508,0 292x60) text="Right"
+
+---
+
+=== Test: grid 容器 padding 影响子项位置 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100) [dsp=grid]
+  div (0,0 196x60) text="Left"
+  div (204,0 196x60) text="Right"
+
+---
+
+=== Test: grid gap 32px 大间距 ===
+Frame #1 events=0 detail=normal
+div (0,0 432x80) [dsp=grid]
+  div (0,0 200x60) text="A"
+  div (232,0 200x60) text="B"
+
+---
+
+=== Test: grid-template-rows 固定行高 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200) [dsp=grid]
+  div (0,0 196x60) text="Tall"
+  div (204,0 196x60) text="Tall2"
+  div (0,68 196x60) text="Short"
+  div (204,68 196x60) text="Short2"
+
+---
+
+=== Test: grid auto-flow 隐式行高 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x128) [dsp=grid]
+  div (0,0 194x60) text="A"
+  div (202,0 194x60) text="B"
+  div (404,0 194x60) text="C"
+  div (0,68 194x60) text="D"
+  div (202,68 194x60) text="E"
+
+---
+
+=== Test: grid item 内部 flex column ===
+Frame #1 events=0 detail=normal
+div (0,0 400x0) [dsp=grid]
+  div (0,0 196x80) [dsp=flex]
+    div (0,0 196x40) text="Top"
+    div (0,40 196x30) text="Bottom"
+  div (204,0 196x80) text="Side"
+
+---
+
+=== Test: grid cell 内 width=50% ===
+Frame #1 events=0 detail=normal
+div (0,0 632x60) [dsp=grid]
+  div (0,0 300x60) text="Half"
+  div (316,0 300x60) text="Full"
+
+---
+
+=== Test: column-gap row-gap 分别设置 ===
+Frame #1 events=0 detail=normal
+div (0,0 500x288) [dsp=grid]
+  div (0,0 54x60) text="A"
+  div (222,0 54x60) text="B"
+  div (444,0 54x60) text="C"
+  div (0,228 54x60) text="D"
+
+---
+
+=== Test: grid 单列 1fr ===
+Frame #1 events=0 detail=normal
+div (0,0 600x0) [dsp=grid]
+  div (0,0 600x60) text="Row 1"
+  div (0,68 600x60) text="Row 2"
+  div (0,136 600x60) text="Row 3"
+
+---
+
+=== Test: grid 子项文本自动宽度 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x0) [dsp=grid]
+  div (0,0 0x60) text="Short"
+  div (8,0 0x60) text="Medium text here"
+  div (16,0 0x60) text="Longer text content here"

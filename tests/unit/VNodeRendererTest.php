@@ -661,6 +661,160 @@ test('多个兄弟 overflow:hidden 各自独立生成 clip-push/clip-pop', funct
     assert_true($push2Idx < $pop2Idx, 'child2 clip-push 应在 child2 clip-pop 之前');
 });
 
+// ================================================================
+echo "--- 8. text-overflow: ellipsis / -webkit-line-clamp ---\n";
+
+test('单行 text-overflow:ellipsis 超出容器宽度时追加…', function () {
+    // 固定 container-w 数值，span 文本过长
+    $span = rn('span', [
+        'fontSize' => 16, 'fg' => 0xFFFFFF, 'bold' => 0,
+        'textOverflow' => 'ellipsis',
+    ]);
+    $span->content = 'This is a very long text that should definitely exceed the container width';
+    $span->x = 0; $span->y = 0; $span->w = 100; $span->h = 30; $span->layer = 0;
+    $span->sourceVNode = new VNode('span', ['container-w' => '80']);
+
+    $root = rn('#root', [], [$span]);
+    $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $el = $result['elements'][0][0] ?? null;
+    assert_not_null($el, '应收集到 text 元素');
+    assert_eq($el['type'], 'text', '元素类型应为 text');
+    // 文本应以 … 结尾
+    assert_true(str_ends_with($el['text'], '…'), '超出容器时文本应以 … 结尾');
+});
+
+test('单行 text-overflow:ellipsis 文本可正常放入时不截断', function () {
+    $span = rn('span', [
+        'fontSize' => 16, 'fg' => 0xFFFFFF, 'bold' => 0,
+        'textOverflow' => 'ellipsis',
+    ]);
+    $span->content = 'Short';
+    $span->x = 0; $span->y = 0; $span->w = 100; $span->h = 30; $span->layer = 0;
+    $span->sourceVNode = new VNode('span', ['container-w' => '200']);
+
+    $root = rn('#root', [], [$span]);
+    $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $el = $result['elements'][0][0] ?? null;
+    assert_not_null($el, '应收集到 text 元素');
+    assert_eq($el['text'], 'Short', '短文本不应被截断');
+});
+
+test('-webkit-line-clamp:2 超长文本拆分为两行', function () {
+    $span = rn('span', [
+        'fontSize' => 16, 'fg' => 0xFFFFFF, 'bold' => 0,
+        'textOverflow' => 'ellipsis',
+        'WebkitLineClamp' => '2',
+        'lineHeight' => 22,
+    ]);
+    $span->content = 'This is a very long text that should be split into at least three lines by the line clamp algorithm implemented in the renderer';
+    $span->x = 0; $span->y = 0; $span->w = 100; $span->h = 60; $span->layer = 0;
+    $span->sourceVNode = new VNode('span', ['container-w' => '120']);
+
+    $root = rn('#root', [], [$span]);
+    $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $layer0 = $result['elements'][0] ?? [];
+    // group 被 collectElements 展开为普通 text 元素 → layer0 中应有多个 text
+    $textElements = array_values(array_filter($layer0, fn($el) => $el['type'] === 'text'));
+    $textCount = count($textElements);
+    assert_true($textCount >= 2, "line-clamp:2 应生成至少 2 个 text 元素，实际 $textCount");
+
+    // 最后一行末尾应包含 …
+    $lastText = end($textElements);
+    assert_true(str_ends_with($lastText['text'], '…'), '末行文本应以 … 结尾');
+
+    // 检查 Y 坐标递进
+    $firstY = $textElements[0]['y'];
+    $secondY = $textElements[1]['y'];
+    assert_true($secondY > $firstY, '第二行 Y 坐标应大于第一行');
+});
+
+test('-webkit-line-clamp:2 + CJK 中文文本正确换行', function () {
+    $span = rn('span', [
+        'fontSize' => 16, 'fg' => 0x18191C, 'bold' => 0,
+        'textOverflow' => 'ellipsis',
+        'WebkitLineClamp' => '2',
+        'lineHeight' => 22,
+    ]);
+    // 一段较长的中文文本
+    $span->content = '这是一个很长的中文视频标题，它需要被正确拆分成多行显示，最后加上省略号';
+    $span->x = 0; $span->y = 0; $span->w = 100; $span->h = 60; $span->layer = 0;
+    $span->sourceVNode = new VNode('span', ['container-w' => '140']);
+
+    $root = rn('#root', [], [$span]);
+    $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $layer0 = $result['elements'][0] ?? [];
+    // group 被展开，直接查 text 元素
+    $textElements = array_values(array_filter($layer0, fn($el) => $el['type'] === 'text'));
+    $textCount = count($textElements);
+    assert_true($textCount >= 2, "line-clamp:2 中文应生成至少 2 个 text 元素，实际 $textCount");
+
+    // 最后一行带 …
+    $lastText = end($textElements);
+    assert_true(str_ends_with($lastText['text'], '…'), '中文末尾应有…');
+});
+
+test('-webkit-line-clamp:2 短文本不超过两行时不截断', function () {
+    $span = rn('span', [
+        'fontSize' => 16, 'fg' => 0xFFFFFF, 'bold' => 0,
+        'textOverflow' => 'ellipsis',
+        'WebkitLineClamp' => '2',
+        'lineHeight' => 22,
+    ]);
+    $span->content = 'Short title';
+    $span->x = 0; $span->y = 0; $span->w = 100; $span->h = 60; $span->layer = 0;
+    $span->sourceVNode = new VNode('span', ['container-w' => '300']);
+
+    $root = rn('#root', [], [$span]);
+    $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $el = $result['elements'][0][0] ?? null;
+    assert_not_null($el, '应收集到 text 元素');
+    assert_eq($el['type'], 'text', '短文本应返回 text 而非 group');
+    assert_eq($el['text'], 'Short title', '短文本不应被截断');
+});
+
+test('无 ellipsis 时 line-clamp 不生效（正常渲染）', function () {
+    $span = rn('span', [
+        'fontSize' => 16, 'fg' => 0xFFFFFF, 'bold' => 0,
+        'WebkitLineClamp' => '2',
+    ]);
+    $span->content = 'No ellipsis so line-clamp should not trigger';
+    $span->x = 0; $span->y = 0; $span->w = 100; $span->h = 30; $span->layer = 0;
+    $span->sourceVNode = new VNode('span', ['container-w' => '80']);
+
+    $root = rn('#root', [], [$span]);
+    $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
+
+    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $result = invokeCollectElements($renderer, $root);
+
+    $el = $result['elements'][0][0] ?? null;
+    assert_not_null($el, '应收集到 text 元素');
+    assert_eq($el['type'], 'text', '无 ellipsis 时返回 text');
+    // 文本应该完整（line-clamp 只在 textOverflow=ellipsis 时生效）
+    assert_contains($el['text'], 'line-clamp', '无 ellipsis 时 line-clamp 不应截断文本');
+});
+
+// ================================================================
 echo "\n";
 $exitCode = print_summary();
 exit($exitCode);
