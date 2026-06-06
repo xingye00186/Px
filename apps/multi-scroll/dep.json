@@ -1,5 +1,7 @@
 {
     "php_files_relative": [
+        "./gen/AppComponent.php",
+        "./gen/ComponentFactory.php",
         "./main.php",
         "../../framework/BaseComponent.php",
         "../../framework/Core/Application.php",
@@ -57,20 +59,21 @@
     "cache": {
         "files_mtime": {
             "apps/multi-scroll/main.php": 1779849245,
+            "apps/multi-scroll/gen/AppComponent.php": 1780737508,
+            "framework/ReactiveComponent.php": 1780387224,
+            "framework/BaseComponent.php": 1780386066,
+            "framework/interfaces/ComponentInterface.php": 1779771802,
+            "framework/Core/Scheduler.php": 1780389303,
+            "framework/Rendering/VNode.php": 1780533323,
+            "framework/Rendering/CssMappings.php": 1780731505,
             "framework/Core/Application.php": 1780706295,
             "framework/Platform/Platform.php": 1780650328,
             "framework/Rendering/RenderContext.php": 1780466389,
-            "framework/Core/Scheduler.php": 1780389303,
             "framework/Rendering/VNodeRenderer.php": 1780706295,
-            "framework/ReactiveComponent.php": 1780387224,
-            "framework/BaseComponent.php": 1780386065,
-            "framework/interfaces/ComponentInterface.php": 1779771802,
-            "framework/Rendering/VNode.php": 1780533323,
-            "framework/Rendering/CssMappings.php": 1780706295,
             "framework/Rendering/RenderNode.php": 1780620676,
             "framework/Core/PerfCounter.php": 1780620676,
-            "framework/Rendering/LayoutResolver.php": 1780714599,
-            "framework/Rendering/RenderTreeManager.php": 1780706295,
+            "framework/Rendering/LayoutResolver.php": 1780732191,
+            "framework/Rendering/RenderTreeManager.php": 1780724437,
             "framework/Styling/Provider/ThemeProvider.php": 1780393764,
             "framework/Styling/Theme/ThemeData.php": 1780393808,
             "framework/Styling/Theme/ColorScheme.php": 1780395504,
@@ -103,7 +106,8 @@
             "framework/Styling/Adapter/PlatformStyling.php": 1780645528,
             "framework/Styling/Adapter/Win32Styling.php": 1780645529,
             "framework/Styling/Adapter/MacOSStyling.php": 1780645529,
-            "framework/Styling/Adapter/LinuxStyling.php": 1780645529
+            "framework/Styling/Adapter/LinuxStyling.php": 1780645529,
+            "apps/multi-scroll/gen/ComponentFactory.php": 1780737508
         },
         "mapping_hash": "5c3b52d4bc300445c3f995b2b7671650"
     }

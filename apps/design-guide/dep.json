@@ -67,7 +67,7 @@
     "cache": {
         "files_mtime": {
             "apps/design-guide/main.php": 1780458081,
-            "apps/design-guide/gen/AppComponent.php": 1780734308,
+            "apps/design-guide/gen/AppComponent.php": 1780736917,
             "framework/ReactiveComponent.php": 1780387224,
             "framework/BaseComponent.php": 1780386066,
             "framework/interfaces/ComponentInterface.php": 1779771802,
@@ -119,7 +119,7 @@
             "apps/design-guide/gen/ButtonShowcaseComponent.php": 1780734308,
             "apps/design-guide/gen/CardShowcaseComponent.php": 1780734308,
             "apps/design-guide/gen/ColorPaletteComponent.php": 1780734308,
-            "apps/design-guide/gen/ComponentFactory.php": 1780734308,
+            "apps/design-guide/gen/ComponentFactory.php": 1780736917,
             "apps/design-guide/gen/OverviewComponent.php": 1780734308,
             "apps/design-guide/gen/TypographyShowcaseComponent.php": 1780734308,
             "apps/design-guide/gen/LayoutDemoComponent.php": 1780734308,
