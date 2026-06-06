@@ -68,7 +68,7 @@
     "cache": {
         "files_mtime": {
             "apps/design-guide/main.php": 1780413976,
-            "apps/design-guide/gen/AppComponent.php": 1780758896,
+            "apps/design-guide/gen/AppComponent.php": 1780761288,
             "framework/ReactiveComponent.php": 1780401524,
             "framework/BaseComponent.php": 1780401524,
             "framework/interfaces/ComponentInterface.php": 1779880616,
@@ -83,7 +83,7 @@
             "framework/Core/PerfCounter.php": 1780583971,
             "framework/Rendering/ImageManager.php": 1780746971,
             "stub/skia.stub.php": 1780746936,
-            "framework/Rendering/LayoutResolver.php": 1780758087,
+            "framework/Rendering/LayoutResolver.php": 1780760790,
             "framework/Rendering/RenderTreeManager.php": 1780741908,
             "framework/Styling/Provider/ThemeProvider.php": 1780401524,
             "framework/Styling/Theme/ThemeData.php": 1780401524,
@@ -121,7 +121,7 @@
             "apps/design-guide/gen/ButtonShowcaseComponent.php": 1780751811,
             "apps/design-guide/gen/CardShowcaseComponent.php": 1780751811,
             "apps/design-guide/gen/ColorPaletteComponent.php": 1780751811,
-            "apps/design-guide/gen/ComponentFactory.php": 1780758896,
+            "apps/design-guide/gen/ComponentFactory.php": 1780761288,
             "apps/design-guide/gen/OverviewComponent.php": 1780751811,
             "apps/design-guide/gen/TypographyShowcaseComponent.php": 1780751811,
             "apps/design-guide/gen/LayoutDemoComponent.php": 1780751811,
