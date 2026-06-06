@@ -15,15 +15,19 @@ namespace Px\Compiler\Expression;
 class ConcatenationExpression extends ExpressionType
 {
     /**
-     * Check if this expression contains string concatenation (`.` outside quotes).
+     * Check if this expression contains string concatenation (`.` or `+` outside quotes).
      *
      * Requires at least one quoted string operand to distinguish from
-     * property access patterns like "item.name" in v-for context.
+     * property access patterns like "item.name" in v-for context,
+     * and from numeric addition (e.g., "a + b") where no string is present.
+     *
+     * Vue 3 JS compatibility: both `+` and `.` are accepted for concatenation.
      */
     public function matches(string $expression): bool
     {
         // Must have at least one string literal to be concatenation
-        // Otherwise, `.` is property access (e.g., "item.name")
+        // Otherwise, `.` is property access (e.g., "item.name"),
+        // and `+` is numeric addition (e.g., "a + b")
         return $this->hasQuotedString($expression) && $this->containsConcatOperator($expression);
     }
 
@@ -34,6 +38,8 @@ class ConcatenationExpression extends ExpressionType
      *   "'badge-dot badge-pos-' . posCls"  → "'badge-dot badge-pos-' . $this->getPosCls()"
      *   "'count: ' . count"                → "'count: ' . $this->count"
      *   "prefix . '-' . suffix"            → "$this->prefix . '-' . $this->suffix"
+     *   "'left:' + idx + 'px'"            → "'left:' . $this->idx . 'px'"  (Vue 3 JS compat)
+     *   "'r1_' + idx"                     → "'r1_' . $this->idx"           (Vue 3 JS compat)
      */
     public function parse(string $expression, ?array $loopInfo = null): string
     {
@@ -100,7 +106,10 @@ class ConcatenationExpression extends ExpressionType
     }
 
     /**
-     * Split expression by `.` operator outside of quoted strings.
+     * Split expression by `.` or `+` operator outside of quoted strings.
+     * Tracks parenthesis/bracket depth to distinguish string concatenation
+     * (depth 0) from arithmetic addition (depth > 0, e.g., "(idx * 44 + 16)").
+     *
      * Returns array of expression parts.
      */
     private function splitByConcat(string $expression): array
@@ -109,6 +118,7 @@ class ConcatenationExpression extends ExpressionType
         $current = '';
         $inQuote = false;
         $quoteChar = '';
+        $depth = 0;
         $len = strlen($expression);
 
         for ($i = 0; $i < $len; $i++) {
@@ -129,8 +139,14 @@ class ConcatenationExpression extends ExpressionType
                 }
             } elseif ($inQuote) {
                 $current .= $c;
-            } elseif ($c === '.') {
-                // Dot outside quotes = concatenation operator
+            } elseif ($c === '(' || $c === '[') {
+                $depth++;
+                $current .= $c;
+            } elseif ($c === ')' || $c === ']') {
+                $depth--;
+                $current .= $c;
+            } elseif (($c === '.' || $c === '+') && $depth === 0) {
+                // . or + outside quotes and at depth 0 = string concatenation
                 if (trim($current) !== '') {
                     $parts[] = $current;
                 }
@@ -156,12 +172,15 @@ class ConcatenationExpression extends ExpressionType
     }
 
     /**
-     * Check if expression has `.` operator outside of quoted strings.
+     * Check if expression has `.` or `+` operator outside of quoted strings.
+     * When `+` is at depth 0 (outside parens), it's string concatenation;
+     * at depth > 0, it's arithmetic addition and should not trigger matching.
      */
     private function containsConcatOperator(string $expression): bool
     {
         $inQuote = false;
         $quoteChar = '';
+        $depth = 0;
         $len = strlen($expression);
 
         for ($i = 0; $i < $len; $i++) {
@@ -172,7 +191,11 @@ class ConcatenationExpression extends ExpressionType
                 $quoteChar = $c;
             } elseif ($inQuote && $c === $quoteChar) {
                 $inQuote = false;
-            } elseif (!$inQuote && $c === '.') {
+            } elseif (!$inQuote && ($c === '(' || $c === '[')) {
+                $depth++;
+            } elseif (!$inQuote && ($c === ')' || $c === ']')) {
+                $depth--;
+            } elseif (!$inQuote && ($c === '.' || ($c === '+' && $depth === 0))) {
                 return true;
             }
         }

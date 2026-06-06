@@ -561,12 +561,15 @@ function resolveStyleExpr(string $expr, ?array $loopInfo): string
         }
     }
 
-    // 3. Char-walker: replace remaining bare identifiers with \$this->prefix
-    // Handles: 'text' . coverBg . 'more' → 'text' . \$this->coverBg . 'more'
+    // 3. Char-walker: replace remaining bare identifiers with $this->prefix
+    // Also converts JS `+` (string concat) to PHP `.` at depth 0 (outside parens).
+    // Handles: 'text' . coverBg . 'more' → 'text' . $this->coverBg . 'more'
+    //          'left:' + (idx * 44) + 'px' → 'left:' . ($this->idx * 44) . 'px' (Vue 3 compat)
     $result = '';
     $len = strlen($expr);
     $inSingle = false;
     $inDouble = false;
+    $depth = 0;
     $i = 0;
 
     while ($i < $len) {
@@ -587,6 +590,28 @@ function resolveStyleExpr(string $expr, ?array $loopInfo): string
         }
 
         if (!$inSingle && !$inDouble) {
+            // Track paren/bracket depth for + → . conversion
+            if ($ch === '(' || $ch === '[') {
+                $depth++;
+                $result .= $ch;
+                $i++;
+                continue;
+            }
+            if ($ch === ')' || $ch === ']') {
+                $depth--;
+                $result .= $ch;
+                $i++;
+                continue;
+            }
+
+            // Convert JS `+` to PHP `.` at depth 0 (string concatenation)
+            // Inside parens (depth > 0), `+` is arithmetic addition.
+            if ($ch === '+' && $depth === 0) {
+                $result .= '.';
+                $i++;
+                continue;
+            }
+
             // Skip PHP variable names (starts with $)
             if ($ch === '$') {
                 $result .= $ch;
@@ -2716,4 +2741,3 @@ $factoryPath = $outDir . DIRECTORY_SEPARATOR . 'ComponentFactory.php';
 file_put_contents($factoryPath, $factoryContent);
 echo "  Generated:  $factoryPath (" . strlen($factoryContent) . " bytes)\n";
 } // end CLI entry guard
-echo "\nDone.\n";
