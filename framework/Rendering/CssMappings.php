@@ -127,6 +127,26 @@ class CssMappings
             'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
             'default' => '',
         ],
+        'border-bottom' => [
+            'key'     => 'borderBottom',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
+            'default' => '',
+        ],
+        'border-top' => [
+            'key'     => 'borderTop',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
+            'default' => '',
+        ],
+        'border-left' => [
+            'key'     => 'borderLeft',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
+            'default' => '',
+        ],
+        'border-right' => [
+            'key'     => 'borderRight',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
+            'default' => '',
+        ],
         'border-width' => [
             'key'     => 'borderWidth',
             'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
@@ -152,6 +172,42 @@ class CssMappings
             'parser'  => 'Px\\Rendering\\CssMappings::parseOpacity',
             'default' => 1.0,
         ],
+        // ---- Layout/positioning properties (also in INLINE_PROPERTY_MAP for <style> block support) ----
+        'left'             => ['key' => 'left',             'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'top'              => ['key' => 'top',              'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'right'            => ['key' => 'right',            'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'bottom'           => ['key' => 'bottom',           'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'display'          => ['key' => 'display',          'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'block'],
+        'position'         => ['key' => 'position',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'static'],
+        'z-index'          => ['key' => 'zIndex',           'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'overflow'         => ['key' => 'overflow',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
+        'overflow-x'       => ['key' => 'overflowX',        'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
+        'overflow-y'       => ['key' => 'overflowY',        'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
+        'text-overflow'    => ['key' => 'textOverflow',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'clip'],
+        'flex-direction'   => ['key' => 'flexDirection',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'row'],
+        'flex-wrap'        => ['key' => 'flexWrap',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'nowrap'],
+        'justify-content'  => ['key' => 'justifyContent',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'flex-start'],
+        'align-items'      => ['key' => 'alignItems',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'stretch'],
+        'align-content'    => ['key' => 'alignContent',     'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'stretch'],
+        'gap'              => ['key' => 'gap',              'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'flex'             => ['key' => 'flex',              'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
+        'flex-grow'        => ['key' => 'flexGrow',    'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+        'flex-basis'       => ['key' => 'flexBasis',    'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'auto'],
+        'flex-shrink'      => ['key' => 'flexShrink',   'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 1],
+        'order'            => ['key' => 'order',        'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'align-self'       => ['key' => 'alignSelf',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
+        'justify-self'     => ['key' => 'justifySelf', 'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
+        'min-width'        => ['key' => 'minWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'max-width'        => ['key' => 'maxWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'min-height'       => ['key' => 'minHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'max-height'       => ['key' => 'maxHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'grid-template-columns' => ['key' => 'gridTemplateColumns', 'parser' => 'Px\\Rendering\\CssMappings::parseIdent', 'default' => ''],
+        'grid-template-rows'    => ['key' => 'gridTemplateRows',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent', 'default' => ''],
+        'grid-column-gap'      => ['key' => 'gridColumnGap', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'grid-row-gap'         => ['key' => 'gridRowGap',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
+        'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
+        'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
     ];
 
     /**
@@ -211,6 +267,10 @@ class CssMappings
         'margin-left'    => ['key' => 'marginLeft',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'border-width'   => ['key' => 'borderWidth',  'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
         'border-color'   => ['key' => 'borderColor',  'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0],
+        'border-bottom'  => ['key' => 'borderBottom', 'parser' => 'Px\Rendering\CssMappings::parseBorder', 'default' => ''],
+        'border-top'     => ['key' => 'borderTop',    'parser' => 'Px\Rendering\CssMappings::parseBorder', 'default' => ''],
+        'border-left'    => ['key' => 'borderLeft',   'parser' => 'Px\Rendering\CssMappings::parseBorder', 'default' => ''],
+        'border-right'   => ['key' => 'borderRight',  'parser' => 'Px\Rendering\CssMappings::parseBorder', 'default' => ''],
         'border-radius'  => ['key' => 'borderRadius',  'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
         'object-fit'     => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
     ];
@@ -276,7 +336,7 @@ class CssMappings
         // Handle linear-gradient: extract first color stop
         if (str_starts_with($value, 'linear-gradient')) {
             // Extract first color stop: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
-            if (preg_match('/#[0-9a-fA-F]{3,6}|rgb\s*\([^)]+\)/', $value, $m)) {
+            if (preg_match('/#[0-9a-fA-F]{3,8}|rgba?\s*\([^)]+\)/', $value, $m)) {
                 return self::parseHexColor($m[0]);
             }
             return 0;
@@ -299,7 +359,7 @@ class CssMappings
      */
     public static function parsePixels(string $value): int
     {
-        return (int) preg_replace('/[^0-9]/', '', $value);
+        return (int) preg_replace('/[^-0-9]/', '', $value);
     }
 
     /**
@@ -428,16 +488,32 @@ class CssMappings
     {
         $v = trim($value);
         if ($v === '' || $v === 'none') return '';
-        $parts = preg_split('/[\s]+/', $v);
-        $numParts = [];
+
+        // 先提取颜色值（rgba/rgb/hex），避免空格干扰 split
         $color = '#000000';
-        foreach ($parts as $p) {
-            if (preg_match('/^#/', $p) || preg_match('/^[a-zA-Z]+$/', $p)) {
-                $color = $p;
-            } else {
-                $numParts[] = (int)$p;
+        $numericStr = $v;
+
+        if (preg_match('/rgba?\s*\([^)]+\)/i', $v, $m)) {
+            // 提取 rgba/rgb 颜色分量
+            if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i', $m[0], $cm)) {
+                $r = (int)$cm[1]; $g = (int)$cm[2]; $b = (int)$cm[3];
+                $color = sprintf('#%02X%02X%02X', $r, $g, $b);
             }
+            // 移除颜色部分（处理多阴影逗号连接的情况）
+            $numericStr = trim(preg_replace('/' . preg_quote(explode('(', $m[0])[0], '/') . '\([^)]+\)\s*,?\s*/', '', $v));
+        } elseif (preg_match('/#([0-9a-fA-F]{3,8})\b/', $v, $m)) {
+            $color = $m[0];
+            $numericStr = trim(str_replace($m[0], '', $v));
         }
+
+        // 按空白分割剩余数值
+        $parts = preg_split('/\s+/', $numericStr);
+        $numParts = [];
+        foreach ($parts as $p) {
+            if (trim($p) === '') continue;
+            $numParts[] = (int)$p;
+        }
+
         $h = $numParts[0] ?? 0;
         $vOff = $numParts[1] ?? 0;
         $blur = $numParts[2] ?? 0;
@@ -530,13 +606,21 @@ class CssMappings
         if (isset($raw['margin'])) {
             $parts = preg_split('/\s+/', trim($raw['margin']));
             $count = count($parts);
-            for ($i = 0; $i < $count && $i < 4; $i++) {
-                if (strtolower(trim($parts[$i])) === 'auto') {
-                    $dirMap = ['marginTopAuto', 'marginRightAuto', 'marginBottomAuto', 'marginLeftAuto'];
-                    $marginAutoFlags[$dirMap[$i]] = true;
-                    if ($count === 2 && $i === 0) $marginAutoFlags[$dirMap[2]] = true;
-                    if ($count === 2 && $i === 1) $marginAutoFlags[$dirMap[3]] = true;
-                    if ($count === 3 && $i === 1) $marginAutoFlags[$dirMap[3]] = true;
+            if ($count === 1 && strtolower(trim($parts[0])) === 'auto') {
+                // Single 'auto' value: all four margins are auto
+                $marginAutoFlags['marginTopAuto'] = true;
+                $marginAutoFlags['marginRightAuto'] = true;
+                $marginAutoFlags['marginBottomAuto'] = true;
+                $marginAutoFlags['marginLeftAuto'] = true;
+            } else {
+                for ($i = 0; $i < $count && $i < 4; $i++) {
+                    if (strtolower(trim($parts[$i])) === 'auto') {
+                        $dirMap = ['marginTopAuto', 'marginRightAuto', 'marginBottomAuto', 'marginLeftAuto'];
+                        $marginAutoFlags[$dirMap[$i]] = true;
+                        if ($count === 2 && $i === 0) $marginAutoFlags[$dirMap[2]] = true;
+                        if ($count === 2 && $i === 1) $marginAutoFlags[$dirMap[3]] = true;
+                        if ($count === 3 && $i === 1) $marginAutoFlags[$dirMap[3]] = true;
+                    }
                 }
             }
         }
@@ -591,13 +675,16 @@ class CssMappings
         }
 
         // Parse border shorthand into individual properties (only if not already explicitly set)
-        if (isset($style['border']) && $style['border'] !== '') {
-            $parts = explode('|', $style['border']);
-            if (!isset($style['borderWidth'])) {
-                $style['borderWidth'] = (int)($parts[0] ?? 0);
-            }
-            if (!isset($style['borderColor'])) {
-                $style['borderColor'] = (int)($parts[1] ?? 0);
+        // Directional borders (更具体) 优先于通用 border 处理
+        foreach (['borderBottom', 'borderTop', 'borderLeft', 'borderRight', 'border'] as $borderProp) {
+            if (isset($style[$borderProp]) && $style[$borderProp] !== '') {
+                $parts = explode('|', $style[$borderProp]);
+                if (!isset($style['borderWidth'])) {
+                    $style['borderWidth'] = (int)($parts[0] ?? 0);
+                }
+                if (!isset($style['borderColor'])) {
+                    $style['borderColor'] = (int)($parts[1] ?? 0);
+                }
             }
         }
 
@@ -620,7 +707,7 @@ class CssMappings
             $parts = preg_split('/\s+/', trim($raw[$prop]));
             $nums = [];
             foreach ($parts as $p) {
-                $nums[] = (int) preg_replace('/[^0-9]/', '', $p);
+                $nums[] = (int) preg_replace('/[^-0-9]/', '', $p);
             }
             $count = count($nums);
             if ($count === 0) continue;
@@ -758,13 +845,16 @@ class CssMappings
             }
 
             // Parse border shorthand into individual properties (only if not already explicitly set)
-            if (isset($props['border']) && $props['border'] !== '') {
-                $parts = explode('|', $props['border']);
-                if (!isset($props['borderWidth'])) {
-                    $props['borderWidth'] = (int)($parts[0] ?? 0);
-                }
-                if (!isset($props['borderColor'])) {
-                    $props['borderColor'] = (int)($parts[1] ?? 0);
+            // Directional borders (更具体) 优先于通用 border 处理
+            foreach (['borderBottom', 'borderTop', 'borderLeft', 'borderRight', 'border'] as $borderProp) {
+                if (isset($props[$borderProp]) && $props[$borderProp] !== '') {
+                    $parts = explode('|', $props[$borderProp]);
+                    if (!isset($props['borderWidth'])) {
+                        $props['borderWidth'] = (int)($parts[0] ?? 0);
+                    }
+                    if (!isset($props['borderColor'])) {
+                        $props['borderColor'] = (int)($parts[1] ?? 0);
+                    }
                 }
             }
 
@@ -1015,11 +1105,16 @@ class CssMappings
      */
     public static function parseTransform(string $value): array
     {
-        $result = ['translateX' => 0, 'translateY' => 0];
+        $result = ['translateX' => 0, 'translateY' => 0, 'rotate' => 0];
         $value = trim($value);
 
         if ($value === '') {
             return $result;
+        }
+
+        // 解析 rotate(deg) 形式
+        if (preg_match('/rotate\s*\(\s*([\d.-]+)\s*deg\s*\)/i', $value, $m)) {
+            $result['rotate'] = (int)$m[1];
         }
 
         // 解析 translate(X, Y) 简写形式

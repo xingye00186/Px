@@ -29,7 +29,7 @@ class RenderTreeManager
      * 递归生成 RenderNode 树的调试快照文本。
      * AOT 安全：无引用传参，无 mb_ 函数，纯字符串拼接。
      */
-    public function dumpRenderTree(?RenderNode $node, int $frame, array $events): string
+    public function dumpRenderTree(?RenderNode $node, int $frame, array $events, string $detail = 'normal'): string
     {
         if ($node === null) {
             return "";
@@ -43,18 +43,22 @@ class RenderTreeManager
         $eventCount = count($events);
         $output .= " events=";
         $output .= (string)$eventCount;
+        $output .= " detail=";
+        $output .= $detail;
         $output .= "\n";
 
         // dump tree from root
-        $output .= $this->dumpNode($node, "");
+        $output .= $this->dumpNode($node, "", $detail);
 
         return $output;
     }
 
     /**
      * 递归输出单个 RenderNode 及其子树。
+     *
+     * @param string $detail 'minimal' | 'normal' | 'verbose'
      */
-    private function dumpNode(?RenderNode $node, string $prefix): string
+    private function dumpNode(?RenderNode $node, string $prefix, string $detail = 'normal'): string
     {
         if ($node === null) {
             return "";
@@ -62,7 +66,7 @@ class RenderTreeManager
 
         $output = "";
 
-        // type + key
+        // ── 基本信息（所有级别共有） ──
         $output .= $prefix;
         $output .= $node->type;
         if ($node->key !== null) {
@@ -78,12 +82,72 @@ class RenderTreeManager
         $output .= (string)$node->h;
         $output .= ")";
 
-        // scroll info
+        // ── scroll info（所有级别） ──
         if ($node->isScrollContainer) {
-            $output .= " scrollY=";
+            $output .= " scroll";
+            if ($detail !== 'minimal') {
+                $output .= " ch=";
+                $output .= (string)$node->contentHeight;
+                $output .= " cw=";
+                $output .= (string)$node->contentWidth;
+                $output .= " maxScroll=";
+                $output .= (string)max($node->contentHeight - $node->h, 0);
+            }
+            $output .= " st=";
             $output .= (string)$node->scrollTop;
-            $output .= " scrollX=";
+            $output .= " sl=";
             $output .= (string)$node->scrollLeft;
+        }
+
+        // ── normal/verbose 级别附加信息 ──
+        if ($detail !== 'minimal') {
+            $style = $node->style;
+            // display + position + overflow
+            $display = $style['display'] ?? '';
+            $position = $style['position'] ?? '';
+            if ($display !== '' || $position !== '') {
+                $output .= " [";
+                if ($display !== '') {
+                    $output .= "dsp=";
+                    $output .= $display;
+                }
+                if ($position !== '') {
+                    if ($display !== '') $output .= " ";
+                    $output .= "pos=";
+                    $output .= $position;
+                }
+                $output .= "]";
+            }
+
+            // border info
+            $bw = $style['borderWidth'] ?? 0;
+            if ($bw > 0) {
+                $output .= " bw=";
+                $output .= (string)$bw;
+            }
+
+            // overflow
+            $overflow = $style['overflow'] ?? $style['overflowX'] ?? '';
+            if ($overflow !== '' && $overflow !== 'visible') {
+                $output .= " ov=";
+                $output .= $overflow;
+            }
+
+            // flex grow/shrink
+            $fg = $style['flexGrow'] ?? $style['flex'] ?? '';
+            if ($fg !== '' && $fg !== 0) {
+                $output .= " fg=";
+                $output .= (string)$fg;
+            }
+        }
+
+        // ── verbose 级别：完整 style 和脏标记 ──
+        if ($detail === 'verbose') {
+            if ($node->layoutDirty) {
+                $output .= " DIRTY";
+            }
+            $output .= " layer=";
+            $output .= (string)$node->layer;
         }
 
         // content / text
@@ -97,8 +161,8 @@ class RenderTreeManager
             $output .= '"';
         }
 
-        // groupId
-        if ($node->groupId !== null) {
+        // groupId（verbose 级别才输出）
+        if ($node->groupId !== null && $detail === 'verbose') {
             $output .= " gid=";
             $output .= $node->groupId;
         }
@@ -108,7 +172,7 @@ class RenderTreeManager
         // children
         $childPrefix = $prefix . "  ";
         foreach ($node->children as $child) {
-            $output .= $this->dumpNode($child, $childPrefix);
+            $output .= $this->dumpNode($child, $childPrefix, $detail);
         }
 
         return $output;
@@ -255,6 +319,7 @@ class RenderTreeManager
         if ($a->type !== $b->type) return false;
         if ($a->key !== $b->key) return false;
         if (($a->props['style'] ?? '') !== ($b->props['style'] ?? '')) return false;
+        if (($a->props[':style'] ?? '') !== ($b->props[':style'] ?? '')) return false;
         if (($a->props['class'] ?? '') !== ($b->props['class'] ?? '')) return false;
         if (($a->props[':scroll-top'] ?? '') !== ($b->props[':scroll-top'] ?? '')) return false;
         if (($a->props[':scroll-left'] ?? '') !== ($b->props[':scroll-left'] ?? '')) return false;
@@ -621,16 +686,30 @@ class RenderTreeManager
     // ── 辅助方法 ──────────────────────────
 
     /**
-     * 从 VNode.props['style'] 解析内联样式。
-     * VNode 不再持有 computedStyle，改为在转换时实时解析。
+     * 从 VNode.props 解析内联样式。
+     * 支持 style（静态）和 :style（动态绑定）同时存在时合并，
+     * :style 覆盖 style，符合 Vue 3 模板语义。
      */
     private function parseVNodeStyle(VNode $vnode): array
     {
-        $styleStr = $vnode->props['style'] ?? '';
-        if ($styleStr === '') {
-            return [];
+        $result = [];
+
+        // 1. 解析静态 style
+        $staticStyle = $vnode->props['style'] ?? '';
+        if ($staticStyle !== '') {
+            $result = CssMappings::parseInlineStyle($staticStyle);
         }
-        return CssMappings::parseInlineStyle($styleStr);
+
+        // 2. 解析动态 :style 绑定，覆盖静态 style
+        $dynamicStyle = $vnode->props[':style'] ?? '';
+        if ($dynamicStyle !== '') {
+            $dynamicParsed = CssMappings::parseInlineStyle($dynamicStyle);
+            foreach ($dynamicParsed as $k => $v) {
+                $result[$k] = $v;
+            }
+        }
+
+        return $result;
     }
 
     /**

@@ -548,92 +548,50 @@ class LayoutResolver
 
                 if ($hasHScroll) {
 
-
-
                     $maxRight = 0;
-
-
 
                     foreach ($node->children as $child) {
 
-
-
                         $cLeft = $child->style['left'] ?? 0;
-
-
 
                         $cWidth = $child->style['width'] ?? $child->w;
 
-
-
                         $right = (int)($cLeft + $cWidth);
-
-
 
                         if ($right > $maxRight) $maxRight = $right;
 
-
-
                     }
-
-
 
                     $node->contentWidth = max($maxRight, $node->w);
 
 
-
-
-
-
-
                     $maxScrollX = max($node->contentWidth - $node->w, 0);
-
-
 
                     if ($node->scrollLeft > $maxScrollX) {
 
-
-
                         $oldScrollLeft = $node->scrollLeft;
-
-
 
                         $node->scrollLeft = $maxScrollX;
 
-
-
                         $shiftRight = $oldScrollLeft - $node->scrollLeft;
-
-
 
                         if ($shiftRight > 0) {
 
-
-
                             foreach ($node->children as $child) {
-
-
 
                                 $child->x += $shiftRight;
 
-
-
                                 $this->shiftDescendantsX($child, $shiftRight);
-
-
 
                             }
 
-
-
                         }
-
-
 
                     }
 
-
-
+                } else {
+                    // No horizontal scroll — content width equals container width
+                    $node->contentWidth = $node->w;
                 }
 
 
@@ -2012,25 +1970,14 @@ class LayoutResolver
         // right/bottom 替代（当 width/height 已设时用尺寸推算，否则仅锚定边缘）
         if ($right !== null && $ancestor !== null) {
 
-
-
             if ($width > 0) {
-
-
 
                 $node->x = $ancestorX + $ancestorW - $width - $right;
 
-
-
             } else {
 
-
-
-                // No explicit width — anchor from right edge
-
-                $node->x = $ancestorX + $ancestorW - $right;
-
-
+                // No explicit width — use element's actual width from layout
+                $node->x = $ancestorX + $ancestorW - $node->w - $right;
 
             }
 
@@ -2042,25 +1989,14 @@ class LayoutResolver
 
         if ($bottom !== null && $ancestor !== null) {
 
-
-
             if ($height > 0) {
-
-
 
                 $node->y = $ancestorY + $ancestorH - $height - $bottom;
 
-
-
             } else {
 
-
-
-                // No explicit height — anchor from bottom edge
-
-                $node->y = $ancestorY + $ancestorH - $bottom;
-
-
+                // No explicit height — use element's actual height from layout
+                $node->y = $ancestorY + $ancestorH - $node->h - $bottom;
 
             }
 
@@ -2721,6 +2657,13 @@ class LayoutResolver
 
 
 
+                // 捕获独立的 flex-basis 属性（仅数值，'auto' 由默认 -1 处理）
+                if (isset($ch->style['flexBasis']) && $ch->style['flexBasis'] !== 'auto') {
+                    $data['basis'] = (int)$ch->style['flexBasis'];
+                }
+
+
+
             }
 
 
@@ -2983,6 +2926,13 @@ class LayoutResolver
 
 
                     $data['shrink'] = (float)($ch->style['flexShrink'] ?? 1);
+
+
+
+                    // 捕获独立的 flex-basis 属性（仅数值，'auto' 由默认 -1 处理）
+                    if (isset($ch->style['flexBasis']) && $ch->style['flexBasis'] !== 'auto') {
+                        $data['basis'] = (int)$ch->style['flexBasis'];
+                    }
 
 
 
@@ -3302,7 +3252,15 @@ class LayoutResolver
 
 
 
-                        $totalShrinkWeight += $mainSize * $data['shrink'];
+                        // CSS §9.7: shrink weight = flex-basis × flex-shrink
+                        $shrinkBasis = $mainSize;
+                        if ($data['basis'] >= 0) {
+                            $shrinkBasis = (int)$data['basis'];
+                        }
+
+
+
+                        $totalShrinkWeight += $shrinkBasis * $data['shrink'];
 
 
 
@@ -3334,7 +3292,15 @@ class LayoutResolver
 
 
 
-                            $reduction = (int)($overflow * ($mainSize * $data['shrink']) / $totalShrinkWeight);
+                            // CSS §9.7: shrink reduction = overflow × (basis × shrink) / totalWeight
+                            $shrinkBasis = $mainSize;
+                            if ($data['basis'] >= 0) {
+                                $shrinkBasis = (int)$data['basis'];
+                            }
+
+
+
+                            $reduction = (int)($overflow * ($shrinkBasis * $data['shrink']) / $totalShrinkWeight);
 
 
 
@@ -3386,6 +3352,25 @@ class LayoutResolver
 
 
 
+                } else {
+                    // totalShrinkWeight == 0: CSS spec §9.7 says distribute equally
+                    $equalShare = $lineCount > 0 ? (int)($overflow / $lineCount) : 0;
+                    foreach ($lineChildren as $idx => $ch) {
+                        $data = $lineFlexData[$idx];
+                        if ($data['shrink'] > 0) {
+                            $mainSize = $isRow ? $ch->w : $ch->h;
+                            $newSize = max(0, $mainSize - $equalShare);
+                            $minVal = $isRow ? (int)($ch->style['minWidth'] ?? 0) : (int)($ch->style['minHeight'] ?? 0);
+                            if ($minVal > 0 && $newSize < $minVal) {
+                                $newSize = $minVal;
+                            }
+                            if ($isRow) {
+                                $ch->w = $newSize;
+                            } else {
+                                $ch->h = $newSize;
+                            }
+                        }
+                    }
                 }
 
 
@@ -5183,9 +5168,8 @@ class LayoutResolver
 
 
 
-            // 计算可用宽度：容器宽度减去列间距
-            $availableW = $node->w - $colGap; // 当前可用宽度 = 容器宽度 - 列间距
-            $cols = (int)max(1, floor(($availableW) / ($minColW + $colGap)));
+            // CSS Grid 规范 §7.1: cols = floor((availableW + gap) / (min + gap))
+            $cols = (int)max(1, floor(($node->w + $colGap) / ($minColW + $colGap)));
 
 
 
@@ -5380,20 +5364,20 @@ class LayoutResolver
 
 
 
-            // 计算网格单元位置
-            $cellX = $node->x + $col * $cellW + $colGap;
+            // 计算网格单元位置（gap 只在列之间，不在最左侧）
+            $cellX = $node->x + $col * ($cellW + $colGap);
 
 
 
-            $cellY = $node->y + $row * $cellH + $rowGap;
+            $cellY = $node->y + $row * ($cellH + $rowGap);
 
 
 
-            $cellWFinal = max(0, (int)($cellW - $colGap * 2));
+            $cellWFinal = max(0, (int)$cellW);
 
 
 
-            $cellHFinal = max(0, (int)($cellH - $rowGap * 2));
+            $cellHFinal = max(0, (int)$cellH);
 
 
 
@@ -5989,11 +5973,14 @@ class LayoutResolver
 
 
 
-        $isMarginLeftAuto = $style['marginLeftAuto'] ?? false;
+        // Fallback: if raw 'margin'=>'auto' is set but flags aren't parsed (direct style array), treat all as auto
+        $marginIsAuto = ($style['margin'] ?? '') === 'auto';
+
+        $isMarginLeftAuto = $style['marginLeftAuto'] ?? $marginIsAuto;
 
 
 
-        $isMarginRightAuto = $style['marginRightAuto'] ?? false;
+        $isMarginRightAuto = $style['marginRightAuto'] ?? $marginIsAuto;
 
 
 
@@ -6041,11 +6028,11 @@ class LayoutResolver
 
 
 
-        $isMarginTopAuto = $style['marginTopAuto'] ?? false;
+        $isMarginTopAuto = $style['marginTopAuto'] ?? $marginIsAuto;
 
 
 
-        $isMarginBottomAuto = $style['marginBottomAuto'] ?? false;
+        $isMarginBottomAuto = $style['marginBottomAuto'] ?? $marginIsAuto;
 
 
 
@@ -6513,13 +6500,10 @@ class LayoutResolver
 
 
 
-        $node->contentHeight = $maxBottom - $childOffsetY;
-
-
-
-
-
-
+        // ── contentHeight: total scrollable content height (CSS scrollHeight) ──
+        // Must account for paddingTop: scrollHeight = children height + vertical padding.
+        // Using (node.y - scrollTop) instead of childOffsetY ensures padding is included.
+        $node->contentHeight = $maxBottom - ($node->y - $node->scrollTop);
 
         // ── Clamp scrollTop when content shrinks ────
 
@@ -6529,43 +6513,22 @@ class LayoutResolver
 
         if ($node->scrollTop > $maxScroll) {
 
-
-
             $oldScrollTop = $node->scrollTop;
-
-
 
             $node->scrollTop = $maxScroll;
 
-
-
             $shiftDown = $oldScrollTop - $node->scrollTop;
-
-
 
             if ($shiftDown > 0) {
 
-
-
                 foreach ($node->children as $child) {
-
-
-
-                    $child->y += $shiftDown;
-
-
-
+                    // shiftDescendantsY adds $dy to the node AND all its descendants.
+                    // Do NOT also do $child->y += $shiftDown here (would double-apply).
                     $this->shiftDescendantsY($child, $shiftDown);
-
-
 
                 }
 
-
-
             }
-
-
 
         }
 
@@ -6611,18 +6574,9 @@ class LayoutResolver
 
                 if ($right > $maxRight) $maxRight = $right;
 
-
-
             }
 
-
-
             $node->contentWidth = max($maxRight, $node->w);
-
-
-
-
-
 
 
             // Clamp scrollLeft when content shrinks
@@ -6654,13 +6608,8 @@ class LayoutResolver
 
 
                     foreach ($node->children as $child) {
-
-
-
-                        $child->x += $shiftRight;
-
-
-
+                        // shiftDescendantsX adds $dx to the node AND all its descendants.
+                        // Do NOT also do $child->x += $shiftRight here (double-apply).
                         $this->shiftDescendantsX($child, $shiftRight);
 
 
@@ -6677,6 +6626,9 @@ class LayoutResolver
 
 
 
+        } else {
+            // No horizontal scroll — content width equals container width
+            $node->contentWidth = $node->w;
         }
 
 
