@@ -102,6 +102,7 @@ class _MockPlatform implements Platform
     public function shouldClose(): bool { return false; }
     public function pollEvents(): array { return []; }
     public function setAnimationTimer(callable $callback, int $intervalMs = 16): void {}
+    public function setCursor(string $cursor): void {}
 }
 
 // ============================================================

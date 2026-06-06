@@ -58,6 +58,7 @@ require_once $frameworkDir . '/Rendering/RenderContext.php';
 require_once $frameworkDir . '/Rendering/VNodeRenderer.php';
 
 // ---- 核心运行时 ----
+require_once $frameworkDir . '/Core/Config.php';
 require_once $frameworkDir . '/Core/Scheduler.php';
 require_once $frameworkDir . '/BaseComponent.php';
 require_once $frameworkDir . '/ReactiveComponent.php';

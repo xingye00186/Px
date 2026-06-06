@@ -98,6 +98,7 @@ class _LTMockPlatform implements Platform
     public function pollEvents(): array { return []; }
     public function getHwnd(): int { return 0; }
     public function setAnimationTimer(callable $callback, int $intervalMs = 16): void {}
+    public function setCursor(string $cursor): void {}
 }
 
 // ============================================================

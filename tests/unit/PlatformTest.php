@@ -73,6 +73,7 @@ class _MockPlatform implements Platform
     public function getHwnd(): int { return 0; }
 
     public function setAnimationTimer(callable $callback, int $intervalMs = 16): void {}
+    public function setCursor(string $cursor): void {}
 }
 
 echo "--- 1. Platform 接口契约 ---\n";

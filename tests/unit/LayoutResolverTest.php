@@ -215,15 +215,15 @@ test('grid 布局：子节点按格子排列', function () {
     $resolver->resolve($root);
 
     // 第1个: 列0 行0 (gap:4)
-    assert_eq($child1->x, 10 + 4, 'grid child1 col 0');
-    assert_eq($child1->y, 10 + 4, 'grid child1 row 0');
+    assert_eq($child1->x, 10, 'grid child1 col 0 (no leading gap)');
+    assert_eq($child1->y, 10, 'grid child1 row 0 (no leading gap)');
 
     // 第2个: 列1 行0
     assert_eq($child2->x, 10 + 80 + 4, 'grid child2 col 1');
-    assert_eq($child2->y, 10 + 4, 'grid child2 row 0');
+    assert_eq($child2->y, 10, 'grid child2 row 0 (no leading gap)');
 
     // 第3个: 列0 行1
-    assert_eq($child3->x, 10 + 4, 'grid child3 col 0');
+    assert_eq($child3->x, 10, 'grid child3 col 0 (no leading gap)');
     assert_eq($child3->y, 10 + 50 + 4, 'grid child3 row 1');
 
     // 第4个: 列1 行1
@@ -542,12 +542,11 @@ test('flex-shrink 按比例分配（flex 简写）', function () {
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
     $resolver = new LayoutResolver();
     $resolver->resolve($root);
-    // 总 160, 容器 120, 溢出 40
-    // c1 权重=80*2=160, c2 权重=80*1=80, 总=240
-    // c1 缩: (int)(40*160/240) = 26, c1=80-26=54
-    // c2 缩: (int)(40*80/240) = 13, c2=80-13=67
-    assert_eq($c1->w, 54, 'shrink=2 收缩更多 (54)');
-    assert_eq($c2->w, 67, 'shrink=1 收缩较少 (67)');
+    // flex:0 2/0 1 均设 basis=0, totalShrinkWeight=0
+    // CSS §9.7: 总权重为 0 时均分溢出空间
+    // 各缩: 40/2 = 20, c1=80-20=60, c2=80-20=60
+    assert_eq($c1->w, 60, 'shrink=2 均分缩 (60)');
+    assert_eq($c2->w, 60, 'shrink=1 均分缩 (60)');
 });
 
 test('flex-shrink + min-width 约束', function () {
