@@ -143,3 +143,23 @@ div (0,0 400x50) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 400x100) [dsp=flex]
   div (10,10 80x50) text="Item"
+
+---
+
+=== Test: flex row gap + padding 组合 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x80) [dsp=flex]
+  div (12,12 80x40) text="A"
+  div (108,12 80x40) text="B"
+  div (204,12 80x40) text="C"
+
+---
+
+=== Test: flex column 内 flex:1 高度填充跨嵌套 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x200) [dsp=flex]
+  div (0,0 300x40) text="Header"
+  div (0,40 300x130) [dsp=flex] fg=1
+    div (0,40 300x30) text="SubHeader"
+    div (0,70 300x100) fg=1 text="Fill"
+  div (0,170 300x30) text="Footer"

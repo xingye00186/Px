@@ -188,6 +188,31 @@ $tests['grid 子项文本自动宽度'] = function() {
     );
 };
 
+// ── Test 16: 百分比列宽 50% 50% ──
+$tests['grid 百分比列宽 50% 50%'] = function() {
+    return run_minimal_pipeline(
+        VNode::h('div', ['style' => 'display:grid;grid-template-columns:50% 50%;width:600px;height:80px;gap:8px'], [
+            VNode::h('div', ['style' => 'height:60px'], 'Left'),
+            VNode::h('div', ['style' => 'height:60px'], 'Right'),
+        ])
+    );
+};
+
+// ── Test 17: Grid cell 内 flex column 子项 stretch 填充高度 ──
+$tests['grid cell 内 flex column 高度填充'] = function() {
+    return run_minimal_pipeline(
+        VNode::h('div', ['style' => 'display:grid;grid-template-columns:1fr 1fr;width:600px;height:200px;gap:8px'], [
+            VNode::h('div', ['style' => 'display:flex;flex-direction:column'], [
+                VNode::h('div', ['style' => 'height:30px;background:red'], 'Header'),
+                VNode::h('div', ['style' => 'flex:1;background:green'], 'Fill'),
+            ]),
+            VNode::h('div', ['style' => 'display:flex;flex-direction:column;justify-content:center;align-items:center'], [
+                VNode::h('div', ['style' => ''], 'Centered'),
+            ]),
+        ])
+    );
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-03-Grid.snap';
 run_css_tests('Level 3 - Grid 基础', $snapFile, $tests);
 

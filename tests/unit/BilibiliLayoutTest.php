@@ -312,6 +312,150 @@ test('刷新交互后布局稳定', function () {
     }
 });
 
+echo "\n--- 3. \u{7279}\u{5b9a} CSS \u{7279}\u{6027}\u{9a8c}\u{8bc1} ---\n";
+
+test('NavBar margin-left:auto \u{53f3}\u{4fa7}\u{533a}\u{57df}\u{88ab}\u{63a8}\u{5230}\u{53f3}\u{7aef}', function () {
+    $navbar = new RenderNode('div', [
+        'width' => 1440, 'height' => 56,
+        'display' => 'flex', 'alignItems' => 'center',
+        'paddingLeft' => 24, 'paddingRight' => 24,
+        'left' => 0, 'top' => 0,
+    ], null);
+
+    // \u{5de6}\u{4fa7}\u{533a}\u{57df} (logo + \u{5bfc}\u{822a})
+    $leftSect = new RenderNode('div', [
+        'width' => 200,
+        'display' => 'flex', 'alignItems' => 'center',
+        'left' => 0, 'top' => 0,
+    ], null);
+    $navbar->addChild($leftSect);
+
+    // \u{53f3}\u{4fa7}\u{533a}\u{57df}\uff0c margin-left:auto \u{5f80}\u{53f3}\u{63a8}
+    $rightSect = new RenderNode('div', [
+        'width' => 300,
+        'display' => 'flex', 'alignItems' => 'center',
+        'marginLeftAuto' => true,
+        'left' => 0, 'top' => 0,
+    ], null);
+    $navbar->addChild($rightSect);
+
+    $root = new RenderNode('div', [
+        'width' => 1440, 'height' => 900,
+        'display' => 'flex', 'flexDirection' => 'column',
+        'left' => 0, 'top' => 0,
+    ], null);
+    $root->addChild($navbar);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // \u{5de6}\u{4fa7}\u{533a}\u{57df}\u{5e94}\u{5728}\u{5de6}\u{4fa7}\uff0c x=24 (paddingLeft)
+    // \u{53f3}\u{4fa7}\u{533a}\u{57df}\u{5e94}\u{88ab} margin-left:auto \u{63a8}\u{5230}\u{53f3}\u{4fa7}\n    assert_eq($leftSect->x, 24, 'leftSect x = 24 (paddingLeft)');
+    assert_eq($leftSect->w, 200, 'leftSect width = 200');
+    assert($rightSect->x > 1000, 'rightSect should be pushed right by auto margin (x > 1000), got x=' . $rightSect->x);
+    assert($rightSect->x + $rightSect->w <= 1440 - 24, 'rightSect should not exceed right padding');
+});
+
+test('CategoryTabs overflow-x:auto \u{5bbd}\u{5ea6}\u{4e0d}\u{88ab}\u{6491}\u{5927}', function () {
+    $root = new RenderNode('div', [
+        'width' => 800, 'height' => 600,
+        'display' => 'flex', 'flexDirection' => 'column',
+        'left' => 0, 'top' => 0,
+    ], null);
+
+    $tabs = new RenderNode('div', [
+        'width' => 800, 'height' => 36,
+        'display' => 'flex', 'alignItems' => 'center',
+        'overflowX' => 'auto',
+        'paddingLeft' => 24, 'paddingRight' => 24,
+        'left' => 0, 'top' => 0,
+    ], null);
+
+    // 15 \u{4e2a}\u{6807}\u{7b7e}\uff0c\u{6bcf}\u{4e2a} 70px + flex-shrink:0 = 1050px \u{603b}\u{5bbd}\uff0c\u{8d85}\u{51fa} 800px \u{5bb9}\u{5668}
+    for ($i = 0; $i < 15; $i++) {
+        $tabs->addChild(new RenderNode('div', [
+            'width' => 70, 'height' => 34, 'flexShrink' => 0,
+            'left' => 0, 'top' => 0,
+        ], null));
+    }
+
+    $root->addChild($tabs);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // \u{5bb9}\u{5668}\u{5bbd}\u{5ea6}\u{5e94}\u{88ab}\u{7ea6}\u{675f}\u{4e3a} 800\uff0c\u{4e0d}\u{4f1a}\u{56e0}\u{5b50}\u{5143}\u{7d20}\u{8d85}\u{51fa}\u{800c}\u{6269}\u{5f20}
+    assert_eq($tabs->w, 800, 'Tabs container width should be 800, not expanded');
+    // \u{5e94}\u{8be5}\u{88ab}\u{6807}\u{8bb0}\u{4e3a} scroll container
+    assert($tabs->isScrollContainer, 'Tabs should be a scroll container');
+    // contentWidth > container width
+    assert($tabs->contentWidth > 800, 'Content width should exceed 800, got ' . $tabs->contentWidth);
+});
+
+test('VideoGrid grid auto-fill \u{5728} 1392px \u{4e0b}\u{4e3a} 4 \u{5217}', function () {
+    $grid = new RenderNode('div', [
+        'display' => 'grid',
+        'gridTemplateColumns' => 'repeat(auto-fill, minmax(300px, 1fr))',
+        'gap' => 16,
+        'width' => 1392,
+        'left' => 0, 'top' => 0,
+    ], null);
+
+    // 8 \u{4e2a}\u{89c6}\u{9891}\u{5361}\u{7247}
+    for ($i = 1; $i <= 8; $i++) {
+        $card = new RenderNode('div', [
+            'display' => 'flex', 'flexDirection' => 'column',
+            'gap' => 6,
+            'height' => 250,
+            'left' => 0, 'top' => 0,
+        ], null);
+        $card->addChild(new RenderNode('div', ['height' => 140, 'left' => 0, 'top' => 0], null));
+        $card->addChild(new RenderNode('span', ['left' => 0, 'top' => 0], 'Video ' . $i));
+        $grid->addChild($card);
+    }
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($grid);
+
+    // 1392px width, minmax(300px,1fr), gap:16 → 4 columns of ~336px each
+    // 4 * 336 + 3 * 16 = 1344 + 48 = 1392
+    assert($grid->children[0]->w > 0, 'First card width > 0');
+    // First 4 cards should be in first row (y=0) with width >= 300
+    for ($i = 0; $i < 4; $i++) {
+        assert($grid->children[$i]->w >= 300, 'Card ' . ($i+1) . ' width >= 300, got ' . $grid->children[$i]->w);
+        assert_eq($grid->children[$i]->y, 0, 'Card ' . ($i+1) . ' y = 0 (first row)');
+    }
+    // 5th card should be in second row
+    assert($grid->children[4]->y > 0, '5th card should be in second row (y > 0), got y=' . $grid->children[4]->y);
+    // 4 columns: 1st card x ≈ 0, 2nd card x > 1st, etc.
+    for ($i = 1; $i < 4; $i++) {
+        assert($grid->children[$i]->x > $grid->children[$i-1]->x,
+            'Card ' . ($i+1) . ' x > Card ' . $i . ' x');
+    }
+});
+
+test('FloatingButton position:absolute \u{5b9a}\u{4f4d}\u{5230}\u{53f3}\u{4e0b}\u{89d2}', function () {
+    $root = new RenderNode('div', [
+        'width' => 1440, 'height' => 900,
+        'position' => 'relative',
+        'left' => 0, 'top' => 0,
+    ], null);
+
+    $fb = new RenderNode('div', [
+        'position' => 'absolute',
+        'right' => 40, 'bottom' => 40,
+        'width' => 52, 'height' => 104,
+    ], null);
+    $root->addChild($fb);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // Expected: x = 1440 - 52 - 40 = 1348, y = 900 - 104 - 40 = 756
+    assert_eq($fb->x, 1348, 'FloatingButton x = 1348 (right:40, width:52), got ' . $fb->x);
+    assert_eq($fb->y, 756, 'FloatingButton y = 756 (bottom:40, height:104), got ' . $fb->y);
+});
+
 echo "\n";
 $exitCode = print_summary();
 exit($exitCode);

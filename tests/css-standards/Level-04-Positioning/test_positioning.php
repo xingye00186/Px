@@ -124,6 +124,15 @@ $tests['多级 relative 嵌套 absolute 深度'] = function() {
     );
 };
 
+// ── Test 13: overflow:hidden + border-radius 子元素裁切 ──
+$tests['overflow:hidden + border-radius 裁切子元素'] = function() {
+    return run_minimal_pipeline(
+        VNode::h('div', ['style' => 'overflow:hidden;border-radius:8px;left:0;top:0;width:200px;height:100px'], [
+            VNode::h('div', ['style' => 'left:0;top:0;width:400px;height:200px'], 'Overflowing content'),
+        ])
+    );
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-04-Positioning.snap';
 run_css_tests('Level 4 - 复合定位', $snapFile, $tests);
 

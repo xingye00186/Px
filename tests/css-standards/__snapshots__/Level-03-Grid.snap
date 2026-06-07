@@ -134,3 +134,22 @@ div (0,0 600x0) [dsp=grid]
   div (0,0 0x60) text="Short"
   div (8,0 0x60) text="Medium text here"
   div (16,0 0x60) text="Longer text content here"
+
+---
+
+=== Test: grid 百分比列宽 50% 50% ===
+Frame #1 events=0 detail=normal
+div (0,0 600x80) [dsp=grid]
+  div (0,0 300x60) text="Left"
+  div (308,0 300x60) text="Right"
+
+---
+
+=== Test: grid cell 内 flex column 高度填充 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x200) [dsp=grid]
+  div (0,0 296x60) [dsp=flex]
+    div (0,0 296x30) text="Header"
+    div (0,30 296x30) fg=1 text="Fill"
+  div (304,0 296x60) [dsp=flex]
+    div (304,30 296x0) text="Centered"

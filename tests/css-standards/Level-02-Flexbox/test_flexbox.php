@@ -184,7 +184,7 @@ $tests['flex item 显式固定宽度'] = function() {
     );
 };
 
-// ── Test 17: flex 内 auto margin ──
+// ── Test 17: auto margin ──
 $tests['auto margin-left 在 flex 中右推'] = function() {
     return run_minimal_pipeline(
         VNode::h('div', ['style' => 'display:flex;flex-direction:row;width:400px;height:50px'], [
@@ -199,6 +199,31 @@ $tests['flex 容器 padding 影响子项位置'] = function() {
     return run_minimal_pipeline(
         VNode::h('div', ['style' => 'display:flex;flex-direction:row;width:400px;height:100px;padding:10px'], [
             VNode::h('div', ['style' => 'width:80px;height:50px'], 'Item'),
+        ])
+    );
+};
+
+// ── Test 19: flex row gap + padding 混合 ──
+$tests['flex row gap + padding 组合'] = function() {
+    return run_minimal_pipeline(
+        VNode::h('div', ['style' => 'display:flex;flex-direction:row;gap:16px;padding:12px;width:400px;height:80px'], [
+            VNode::h('div', ['style' => 'width:80px;height:40px'], 'A'),
+            VNode::h('div', ['style' => 'width:80px;height:40px'], 'B'),
+            VNode::h('div', ['style' => 'width:80px;height:40px'], 'C'),
+        ])
+    );
+};
+
+// ── Test 20: flex column 内 flex:1 高度填充跨嵌套 ──
+$tests['flex column 内 flex:1 高度填充跨嵌套'] = function() {
+    return run_minimal_pipeline(
+        VNode::h('div', ['style' => 'display:flex;flex-direction:column;width:300px;height:200px'], [
+            VNode::h('div', ['style' => 'height:40px;flex-shrink:0'], 'Header'),
+            VNode::h('div', ['style' => 'display:flex;flex-direction:column;flex:1'], [
+                VNode::h('div', ['style' => 'height:30px;flex-shrink:0'], 'SubHeader'),
+                VNode::h('div', ['style' => 'flex:1;background:green'], 'Fill'),
+            ]),
+            VNode::h('div', ['style' => 'height:30px;flex-shrink:0'], 'Footer'),
         ])
     );
 };

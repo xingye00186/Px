@@ -16,6 +16,7 @@ $tests = [
     'GridLayoutTest',
     'ScrollLayoutTest',
     'ComboLayoutTest',
+    'TextMeasureTest',
 ];
 
 $totalPass = 0;

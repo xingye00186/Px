@@ -140,6 +140,18 @@ $tests['overflow auto 内容较少无滚动'] = function() {
     );
 };
 
+// ── Test 13: flex row + overflow-x:auto 不扩展容器宽度 ──
+$tests['flex row overflow-x auto 不撑大容器'] = function() {
+    return run_minimal_pipeline(
+        VNode::h('div', ['style' => 'display:flex;flex-direction:row;overflow-x:auto;width:300px;height:50px;gap:8px;:scroll-left="0"'], [
+            VNode::h('div', ['style' => 'flex-shrink:0;width:120px;height:30px'], 'Tab 1'),
+            VNode::h('div', ['style' => 'flex-shrink:0;width:120px;height:30px'], 'Tab 2'),
+            VNode::h('div', ['style' => 'flex-shrink:0;width:120px;height:30px'], 'Tab 3'),
+            VNode::h('div', ['style' => 'flex-shrink:0;width:120px;height:30px'], 'Tab 4'),
+        ])
+    );
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-05-Overflow.snap';
 run_css_tests('Level 5 - 溢出与滚动', $snapFile, $tests);
 
