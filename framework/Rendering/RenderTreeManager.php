@@ -4,6 +4,7 @@ namespace Px\Rendering;
 
 use native_types;
 
+use Px\Core\Config;
 use Px\ReactiveComponent;
 use Px\Styling\Provider\ThemeProvider;
 
@@ -336,6 +337,13 @@ class RenderTreeManager
      */
     private function destroyRenderNodeTree(RenderNode $rn): void
     {
+        if (Config::get('diag_enabled', false)) {
+            $style = $rn->style;
+            $dsp = $style['display'] ?? '';
+            error_log('[DIAG] DESTROY: type=' . $rn->type . ' dsp=' . $dsp
+                . ' children=' . count($rn->children));
+        }
+
         // 从反向映射中移除
         unset($this->renderNodeToVNodeMap[spl_object_hash($rn)]);
 
@@ -384,6 +392,9 @@ class RenderTreeManager
             if ($vnode->isComponent()) {
                 $instance = $vnode->componentInstance;
                 if ($instance === null) {
+                    if (Config::get('diag_enabled', false)) {
+                        error_log('[DIAG] RTM: #component(' . $vnode->componentClass . ') SKIPPED - instance=null');
+                    }
                     return null;
                 }
 
@@ -557,6 +568,14 @@ class RenderTreeManager
             $oldChildren = $renderNode->children;
             $renderNode->clearChildren();
 
+            $isGrid = Config::get('diag_enabled', false)
+                && ($resolvedStyle['display'] ?? '') === 'grid';
+            if ($isGrid) {
+                error_log('[DIAG] RTM grid BEFORE: renderNode=' . spl_object_hash($renderNode)
+                    . ' oldChildren=' . count($oldChildren)
+                    . ' newVNodeChildren=' . count($this->vnodeChildrenToArray($vnode->children)));
+            }
+
             // AOT 兼容: php::Variant 在 use native_types 模式下 is_string() 可能返回 false
             if ($vnode->children !== null && !($vnode->children instanceof VNode) && !is_array($vnode->children)) {
                 $renderNode->content = (string)$vnode->children;
@@ -602,6 +621,13 @@ class RenderTreeManager
                     if (!in_array($pos, $consumed, true)) {
                         $this->destroyRenderNodeTree($oldRN);
                     }
+                }
+
+                if ($isGrid) {
+                    error_log('[DIAG] RTM grid AFTER: renderNode=' . spl_object_hash($renderNode)
+                        . ' children=' . count($renderNode->children)
+                        . ' consumed=' . count($consumed)
+                        . ' destroyed=' . (count($oldChildren) - count($consumed)));
                 }
             }
 

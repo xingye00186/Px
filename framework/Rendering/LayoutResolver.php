@@ -708,6 +708,13 @@ class LayoutResolver
             if ($measured > 0) {
                 $node->w = min($measured, max(0, (int)$this->applyMinMax($style, $measured, true)));
             }
+            // Text height = line-height if no explicit height
+            if (!array_key_exists('height', $style) && !array_key_exists('heightPercent', $style)) {
+                $lineH = (int)($fs * 1.35);
+                if ($node->h === 0 || $node->h < $lineH) {
+                    $node->h = $lineH;
+                }
+            }
         }
 
 
@@ -840,6 +847,13 @@ class LayoutResolver
                         $measured = $this->measureTextWidth($child->content, $fs, $bd);
                         if ($measured > 0) {
                             $child->w = min($measured, max(0, (int)$this->applyMinMax($childStyle, $measured, true)));
+                        }
+                        // Text height = line-height if no explicit height
+                        if (!array_key_exists('height', $childStyle)) {
+                            $lineH = (int)($fs * 1.35);
+                            if ($child->h === 0 || $child->h < $lineH) {
+                                $child->h = $lineH;
+                            }
                         }
                     } else {
                         $child->w = max(0, (int)$this->applyMinMax($childStyle, $child->w, true));
@@ -3554,6 +3568,7 @@ class LayoutResolver
                         if ($isRow) {
 
 
+                            // Row: text width = measured content width
                             if ($ch->w === 0 || $ch->w < $measured) {
 
 
@@ -3566,10 +3581,14 @@ class LayoutResolver
                         } else {
 
 
-                            if ($ch->h === 0 || $ch->h < $measured) {
+                            // Column: text height = line-height (based on font size)
+                            $lineH = (int)($fs * 1.35);
 
 
-                                $ch->h = $measured;
+                            if ($ch->h === 0 || $ch->h < $lineH) {
+
+
+                                $ch->h = $lineH;
 
 
                             }

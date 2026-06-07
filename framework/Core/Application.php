@@ -358,6 +358,13 @@ class Application
 
         $this->activeVNodeTree = $this->rootComponent->getVNodeTree();
 
+        if (Config::get('diag_enabled', false)) {
+            $isSame = $oldTree !== null && $this->activeVNodeTree === $oldTree;
+            error_log("[DIAG] rebuildVNodeTree: sameTree=" . ($isSame ? 'YES' : 'NO')
+                . " oldReg=" . count($oldRegistry)
+                . " newReg=" . count($this->componentByGroupId));
+        }
+
         $this->patchComponentTree(
             $this->activeVNodeTree,
             $this->rootComponent,
@@ -372,6 +379,51 @@ class Application
         }
 
         $this->isRendering = false;
+
+        // ── VNode 级 grid 子节点诊断 ──
+        if (Config::get('diag_enabled', false)) {
+            $this->diagGridChildrenInVNode($this->activeVNodeTree);
+        }
+    }
+
+    /**
+     * 递归遍历 VNode 树，找到 display:grid 的节点并记录 children 数量
+     */
+    private function diagGridChildrenInVNode(VNode $node): void
+    {
+        if ($node->isComponent()) {
+            // #component 节点：检查其展开后的 children
+            if ($node->children !== null) {
+                $this->diagGridChildrenInVNodeChildren($node->children);
+            }
+            return;
+        }
+        $style = $node->props['style'] ?? '';
+        if (str_contains($style, 'display:grid') || str_contains($style, 'display: grid')) {
+            $childCnt = 0;
+            if ($node->children instanceof VNode) {
+                $childCnt = 1;
+            } elseif (is_array($node->children)) {
+                $childCnt = count($node->children);
+            }
+            error_log('[DIAG] VNODE grid: children=' . $childCnt
+                . ' style="' . $style . '"');
+        }
+        // 递归子节点
+        $this->diagGridChildrenInVNodeChildren($node->children);
+    }
+
+    private function diagGridChildrenInVNodeChildren(mixed $children): void
+    {
+        if ($children instanceof VNode) {
+            $this->diagGridChildrenInVNode($children);
+        } elseif (is_array($children)) {
+            foreach ($children as $child) {
+                if ($child instanceof VNode) {
+                    $this->diagGridChildrenInVNode($child);
+                }
+            }
+        }
     }
 
     // ── 展开组件 ──────────────────────────────
@@ -390,6 +442,19 @@ class Application
         $instanceId = $node->componentClass . '_' . $this->nextComponentId++;
         $instance->setId($instanceId);
         $this->registerComponent($instanceId, $instance);
+
+        if (Config::get('diag_enabled', false)) {
+            error_log("[DIAG] expandComponentNode: class={$className} id={$instanceId}"
+                . " owner=" . get_class($owner)
+                . " hasPropVals=" . ($node->componentPropValues !== null ? 'YES' : 'NO'));
+        }
+
+        // ── VideoGridComponent 诊断：检查 mount 后的数据状态 ──
+        if (Config::get('diag_enabled', false) && $className === 'VideoGridComponent') {
+            $allVCnt = (int)(property_exists($instance, 'allVideos') ? count($instance->allVideos) : -1);
+            $vlCnt = (int)(property_exists($instance, 'videoList') ? count($instance->videoList) : -1);
+            error_log('[DIAG] VGRID after mount: allVideos=' . $allVCnt . ' videoList=' . $vlCnt);
+        }
 
         if ($node->componentPropValues !== null) {
             // V-for loop: pre-computed direct values, skip bind key lookup
@@ -527,6 +592,15 @@ class Application
             }
         }
 
+        if (Config::get('diag_enabled', false)) {
+            $path = $instance !== null ? 'REUSE' : 'EXPAND';
+            $newInstState = $newNode->componentInstance !== null ? 'SET' : 'NULL';
+            $oldInstState = ($oldNode !== null && $oldNode->componentInstance !== null) ? 'SET' : 'NULL';
+            error_log("[DIAG] matchComponentNode: class={$newNode->componentClass}"
+                . " path={$path} newInst={$newInstState} oldInst={$oldInstState}"
+                . " sameObj=" . ($newNode === $oldNode ? 'YES' : 'NO'));
+        }
+
         if ($instance !== null) {
             $instance->setParent($owner);
 
@@ -539,6 +613,15 @@ class Application
                     }
                 }
             }
+
+            // ── 方案 A：VNode 树身份修复 ──
+            // 当 oldNode === newNode（根 VNode 树缓存命中，同一对象）时，
+            // 必须在替换 children 之前保存旧 children 引用，
+            // 否则 $oldNode->children 会被 $newNode->children = getVNodeTree() 覆盖，
+            // 导致递归 patchComponentTree 的 oldNode->children 和 newNode->children 指向同一个新树，
+            // 所有子 #component 节点的 $oldNode === $newNode → componentInstance 全为 null → 全部走 EXPAND。
+            // 保存旧 children 可以保证子组件的匹配走正常的 REUSE 路径。
+            $oldChildren = ($oldNode !== null) ? $oldNode->children : null;
 
             $newNode->componentInstance = $instance;
             $newNode->children = $instance->getVNodeTree();
@@ -556,7 +639,7 @@ class Application
             $this->patchComponentTree(
                 $newNode->children,
                 $instance,
-                $oldNode !== null ? $oldNode->children : null
+                $oldChildren   // 使用保存的旧 children，避免 $newNode === $oldNode 时的覆盖问题
             );
         } else {
             if ($oldNode !== null && $oldNode->componentInstance !== null) {
@@ -670,11 +753,46 @@ class Application
     private function doFirstRender(): void
     {
         $this->render();
+
+        if (Config::get('diag_enabled', false)) {
+            $rootRN = $this->renderTreeManager->getRootRenderNode();
+            $gridRN = $rootRN !== null ? $this->findGridRenderNode($rootRN) : null;
+            error_log('[DIAG] doFirstRender: Frame1 done'
+                . ' gridRN=' . ($gridRN !== null ? 'FOUND' : 'NF')
+                . ' gridChildren=' . ($gridRN !== null ? count($gridRN->children) : -1));
+        }
+
         $this->scheduler->flushMicrotasks();
+
+        if (Config::get('diag_enabled', false)) {
+            error_log('[DIAG] doFirstRender: after flush renderRequested=' . ($this->renderRequested ? 'yes' : 'no'));
+        }
+
         if ($this->renderRequested) {
             $this->renderRequested = false;
             $this->render();
+
+            if (Config::get('diag_enabled', false)) {
+                $rootRN = $this->renderTreeManager->getRootRenderNode();
+                $gridRN = $rootRN !== null ? $this->findGridRenderNode($rootRN) : null;
+                error_log('[DIAG] doFirstRender: Frame2 done'
+                    . ' gridRN=' . ($gridRN !== null ? 'FOUND' : 'NF')
+                    . ' gridChildren=' . ($gridRN !== null ? count($gridRN->children) : -1));
+            }
         }
+    }
+
+    private function findGridRenderNode(RenderNode $node): ?RenderNode
+    {
+        $style = $node->style;
+        if (($style['display'] ?? '') === 'grid') {
+            return $node;
+        }
+        foreach ($node->children as $child) {
+            $found = $this->findGridRenderNode($child);
+            if ($found !== null) return $found;
+        }
+        return null;
     }
 
     // ── 事件循环 ──────────────────────────────
