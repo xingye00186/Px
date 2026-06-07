@@ -1217,6 +1217,171 @@ test('嵌套 flex→flex→grid 两层 auto-width 传递', function () {
 });
 
 
+
+// =============================================================
+// Task 5.1: CSS 标准支持 — 新增测试
+// =============================================================
+
+echo "\n--- 8. Text node auto-height ---\n";
+
+describe('Text node auto-height', function () {
+
+    test('div 类型文本节点在 block 布局中获得正确高度', function () {
+        $child = makeNode('div', ['fontSize' => 16], [], 'Hello World');
+        $parent = makeNode('div', ['width' => 400], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        assert_true($child->h > 0, 'div text node should have height');
+        assert_eq($child->h, (int)(16 * 1.35), 'div text height = line-height');
+    });
+
+    test('flex column 中文本 div 子节点撑开父容器高度', function () {
+        $child = makeNode('div', ['fontSize' => 16], [], 'Hello');
+        $parent = makeNode('div', [
+            'display' => 'flex', 'flexDirection' => 'column',
+            'width' => 400,
+        ], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        assert_true($child->h > 0, 'text div in flex column should have height');
+        assert_eq($child->h, (int)(16 * 1.35), 'text height = line-height');
+    });
+
+    test('flex-wrap 中文本内容子节点宽度测量正确', function () {
+        $child = makeNode('div', ['fontSize' => 14], [], 'Short');
+        $parent = makeNode('div', [
+            'display' => 'flex', 'flexWrap' => 'wrap',
+            'width' => 400,
+        ], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        assert_true($child->w > 0, 'text child should have positive width');
+        assert_true($child->w < 400, 'text child width should be < parent (content-sized)');
+    });
+
+    test('text/span 类型节点继续正常工作（回归预防）', function () {
+        $textChild = makeNode('text', ['fontSize' => 14], [], 'text');
+        $spanChild = makeNode('span', ['fontSize' => 14], [], 'span');
+        $parent = makeNode('div', ['width' => 400], [$textChild, $spanChild]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        assert_eq($textChild->h, (int)(14 * 1.35), 'text type still gets height');
+        assert_eq($spanChild->h, (int)(14 * 1.35), 'span type still gets height');
+    });
+
+    test('含显式 height 的节点不受影响', function () {
+        $child = makeNode('div', ['fontSize' => 16, 'height' => 100], [], 'Hello');
+        $parent = makeNode('div', ['width' => 400], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        assert_eq($child->h, 100, 'explicit height should be preserved');
+    });
+
+});
+
+echo "\n--- 9. box-sizing: border-box ---\n";
+
+describe('box-sizing: border-box', function () {
+
+    test('border-box borderWidth 影响 block 子节点填充宽度', function () {
+        $child = makeNode('div', []);
+        $parent = makeNode('div', [
+            'boxSizing' => 'border-box',
+            'width' => 200,
+            'borderWidth' => 5,
+            'height' => 100,
+        ], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        // content width = 200 - 0 - 0 - 5*2 = 190
+        assert_eq($child->w, 190, 'border-box border reduces child fill width');
+    });
+
+    test('border-box padding 影响 block 子节点填充宽度', function () {
+        $child = makeNode('div', []);
+        $parent = makeNode('div', [
+            'boxSizing' => 'border-box',
+            'width' => 200,
+            'padding' => 20,
+            'height' => 100,
+        ], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        // content width = 200 - 20 - 20 - 0 = 160
+        assert_eq($child->w, 160, 'border-box padding reduces child fill width');
+    });
+
+    test('border-box borderWidth + padding 共同影响', function () {
+        $child = makeNode('div', []);
+        $parent = makeNode('div', [
+            'boxSizing' => 'border-box',
+            'width' => 200,
+            'padding' => 10,
+            'borderWidth' => 3,
+            'height' => 100,
+        ], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        // content width = 200 - 10 - 10 - 3*2 = 174
+        assert_eq($child->w, 174, 'border-box padding+border reduces child fill width');
+    });
+
+    test('content-box（默认）borderWidth 不影响子节点填充宽度', function () {
+        $child = makeNode('div', []);
+        $parent = makeNode('div', [
+            'width' => 200,
+            'borderWidth' => 5,
+            'height' => 100,
+        ], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        // content-box: content width = 200 - 0 - 0 = 200
+        assert_eq($child->w, 200, 'content-box border does not reduce child fill width');
+    });
+
+});
+
+echo "\n--- 10. line-height ---\n";
+
+describe('line-height', function () {
+
+    test('自定义 line-height 像素值影响文本节点高度', function () {
+        $child = makeNode('div', ['fontSize' => 16, 'lineHeight' => '30px'], [], 'Hello');
+        $parent = makeNode('div', ['width' => 400], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        assert_eq($child->h, 30, 'line-height:30px should set height to 30');
+    });
+
+    test('无 line-height 时保持默认 fontSize*1.35 行为', function () {
+        $child = makeNode('div', ['fontSize' => 16], [], 'Hello');
+        $parent = makeNode('div', ['width' => 400], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        assert_eq($child->h, (int)(16 * 1.35), 'default line-height = fontSize * 1.35');
+    });
+
+    test('line-height 数值倍数正确解析', function () {
+        $child = makeNode('div', ['fontSize' => 16, 'lineHeight' => 1.5], [], 'Hello');
+        $parent = makeNode('div', ['width' => 400], [$child]);
+        $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
+        $resolver = new LayoutResolver();
+        $resolver->resolve($root);
+        assert_eq($child->h, (int)(16 * 1.5), 'line-height:1.5 should set height to 24');
+    });
+
+});
 echo "\n";
 $exitCode = print_summary();
 exit($exitCode);
