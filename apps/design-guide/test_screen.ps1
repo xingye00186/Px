@@ -1,8 +1,10 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$exePath = "f:/work/Px/apps/design-guide/bin/design_guide.exe"
-$screenPath = "f:/work/Px/apps/design-guide/screenshot.png"
+$exePath = 'f:/work/Px/apps/design-guide/bin/design_guide.exe'
+$screenDir = 'f:/work/Px/apps/design-guide/screenshots'
+New-Item -ItemType Directory -Force -Path $screenDir | Out-Null
+$screenPath = Join-Path $screenDir 'screenshot.png'
 
 # Kill any existing instances first
 Get-Process design_guide -ErrorAction SilentlyContinue | Stop-Process -Force

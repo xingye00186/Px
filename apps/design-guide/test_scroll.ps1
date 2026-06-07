@@ -17,7 +17,10 @@ public class Win32 {
 }
 '@
 
-$exe = "f:/work/Px/apps/design-guide/bin/design_guide.exe"
+$exe = 'f:/work/Px/apps/design-guide/bin/design_guide.exe'
+
+# Wait for window
+Start-Sleep 2
 
 # Start with stderr going to a file instead of ReadToEnd (which blocks)
 $logFile = [System.IO.Path]::GetTempFileName()

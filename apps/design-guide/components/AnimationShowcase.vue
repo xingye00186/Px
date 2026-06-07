@@ -1,89 +1,117 @@
 <template>
-  <div style="width:1920px;display:flex;flex-direction:column;gap:0">
+  <div style="width:1920px;height:1000px;display:flex;flex-direction:column;background:#0B0B0E">
 
-    <!-- CSS transition demo -->
-    <div style="margin:16px 16px 0 16px;height:110px;width:1888px">
-      <div style="font-size:13px;font-weight:600;color:#FFFFFF">过渡动画 (transition)</div>
-      <div style="margin-top:8px;padding:12px;background:#1F1F23;border-radius:8px;display:flex;flex-direction:row;gap:8px;align-items:center">
-        <button style="padding:6px 14px;background:#6366F1;color:#FFFFFF;border:none;border-radius:6px;font-size:11px;font-weight:500" @click="toggleAnim" click-arg="">切换动画</button>
-        <div :class="animVisible ? 'anim-box-visible' : 'anim-box-hidden'" style="width:60px;height:60px;border-radius:8px;display:flex;align-items:center;justify-content:center">
-          <span style="font-size:20px;color:#FFFFFF">{{ animVisible ? '😊' : '😴' }}</span>
-        </div>
-      </div>
-      <div style="margin-top:6px;font-size:10px;color:#6B7280">点击按钮切换显示状态（opacity + translateX 过渡）</div>
+    <!-- Page Header -->
+    <div style="padding:20px 24px 12px 24px;border-bottom:1px solid #1E1E24">
+      <span style="font-size:16px;font-weight:600;color:#FFFFFF">动画系统</span>
+      <span style="margin-left:10px;font-size:10px;color:#52525B">Animation — Transition · @keyframes · Easing · FLIP</span>
     </div>
 
-    <!-- Background color transition -->
-    <div style="margin:16px 16px 0 16px;height:110px;width:1888px">
-      <div style="font-size:13px;font-weight:600;color:#FFFFFF">颜色过渡 (color transition)</div>
-      <div style="margin-top:8px;padding:12px;background:#1F1F23;border-radius:8px;display:flex;flex-direction:row;gap:8px;align-items:center">
-        <button style="padding:6px 14px;color:#FFFFFF;border:none;border-radius:6px;font-size:11px;font-weight:500" @click="toggleColor" click-arg="" :class="colorState === 'blue' ? 'btn-blue' : 'btn-green'">切换颜色</button>
-        <div :class="colorState === 'blue' ? 'color-box-blue' : 'color-box-green'" style="width:60px;height:60px;border-radius:8px;display:flex;align-items:center;justify-content:center">
-          <span style="font-size:11px;font-weight:500;color:#FFFFFF">{{ colorState === 'blue' ? 'BLUE' : 'GREEN' }}</span>
+    <div style="display:flex;flex-direction:column;gap:0;padding:16px 24px">
+
+      <!-- Row 1: Transition + Color Transition -->
+      <div style="display:flex;flex-direction:row;gap:8px">
+
+        <!-- Transition Demo -->
+        <div style="flex:1;background:#121215;border:1px solid #1E1E24;border-radius:8px;padding:14px 18px">
+          <span style="font-size:11px;font-weight:600;color:#FFFFFF">过渡动画</span>
+          <span style="margin-left:8px;font-size:9px;color:#52525B">transition opacity + transform</span>
+          <div style="margin-top:10px;padding:12px;background:#18181B;border-radius:8px;display:flex;flex-direction:row;gap:10px;align-items:center">
+            <button style="padding:6px 14px;background:#6366F1;color:#FFFFFF;border:none;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer" @click="toggleAnim" click-arg="">切换</button>
+            <div style="width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;transition:all 0.35s ease" :class="animVisible ? 'anim-box-show' : 'anim-box-hide'">
+              <span style="font-size:22px">{{ animVisible ? '😊' : '😴' }}</span>
+            </div>
+          </div>
+          <span style="margin-top:6px;font-size:9px;color:#52525B">点击按钮切换 — opacity + translateX 过渡</span>
+        </div>
+
+        <!-- Color Transition -->
+        <div style="flex:1;background:#121215;border:1px solid #1E1E24;border-radius:8px;padding:14px 18px">
+          <span style="font-size:11px;font-weight:600;color:#FFFFFF">颜色过渡</span>
+          <span style="margin-left:8px;font-size:9px;color:#52525B">背景色 transition 0.3s ease</span>
+          <div style="margin-top:10px;padding:12px;background:#18181B;border-radius:8px;display:flex;flex-direction:row;gap:10px;align-items:center">
+            <button style="padding:6px 14px;border:none;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;transition:all 0.3s ease" :class="colorIdx === 0 ? 'cb-indigo' : (colorIdx === 1 ? 'cb-emerald' : 'cb-rose')" @click="cycleColor" click-arg="">
+              {{ colorIdx === 0 ? 'Indigo' : (colorIdx === 1 ? 'Emerald' : 'Rose') }}
+            </button>
+            <div style="width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;transition:all 0.3s ease" :class="colorIdx === 0 ? 'cb-bg-indigo' : (colorIdx === 1 ? 'cb-bg-emerald' : 'cb-bg-rose')">
+              <span style="font-size:10px;font-weight:600;color:#FFFFFF">{{ colorIdx === 0 ? 'INDIGO' : (colorIdx === 1 ? 'EMERALD' : 'ROSE') }}</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div style="margin-top:6px;font-size:10px;color:#6B7280">点击在蓝色/绿色之间过渡</div>
-    </div>
 
-    <!-- Animation property demo -->
-    <div style="margin:16px 16px 0 16px;height:130px;width:1888px">
-      <div style="font-size:13px;font-weight:600;color:#FFFFFF">关键帧动画 (@keyframes)</div>
-      <div style="margin-top:8px;padding:12px;background:#1F1F23;border-radius:8px;display:flex;flex-direction:row;gap:12px;align-items:center">
-        <div class="spin-box" style="width:50px;height:50px;background:#6366F1;border-radius:8px;display:flex;align-items:center;justify-content:center">
-          <span style="font-size:18px;color:#FFFFFF">&#x21bb;</span>
-        </div>
-        <div class="pulse-box" style="width:50px;height:50px;background:#10B981;border-radius:25px;display:flex;align-items:center;justify-content:center">
-          <span style="font-size:12px;font-weight:600;color:#FFFFFF">Pulse</span>
-        </div>
-        <div class="bounce-box" style="width:50px;height:50px;background:#F59E0B;border-radius:8px;display:flex;align-items:center;justify-content:center">
-          <span style="font-size:18px;color:#FFFFFF">&#x2191;</span>
-        </div>
-      </div>
-      <div style="margin-top:6px;font-size:10px;color:#6B7280">@keyframes 动画：旋转 / 脉冲 / 弹跳</div>
-    </div>
-
-    <!-- Easing functions -->
-    <div style="margin:16px 16px 0 16px;height:150px;width:1888px">
-      <div style="font-size:13px;font-weight:600;color:#FFFFFF">缓动函数 (Easing Functions)</div>
-      <div style="margin-top:8px;padding:12px;background:#1F1F23;border-radius:8px">
-        <div style="display:flex;flex-direction:row;gap:6px;flex-wrap:wrap">
-          <div style="padding:4px 10px;background:#2A2A3E;border-radius:4px;font-size:10px;color:#D1D5DB">linear</div>
-          <div style="padding:4px 10px;background:#2A2A3E;border-radius:4px;font-size:10px;color:#D1D5DB">ease</div>
-          <div style="padding:4px 10px;background:#2A2A3E;border-radius:4px;font-size:10px;color:#D1D5DB">ease-in</div>
-          <div style="padding:4px 10px;background:#2A2A3E;border-radius:4px;font-size:10px;color:#D1D5DB">ease-out</div>
-          <div style="padding:4px 10px;background:#2A2A3E;border-radius:4px;font-size:10px;color:#D1D5DB">ease-in-out</div>
-          <div style="padding:4px 10px;background:#2A2A3E;border-radius:4px;font-size:10px;color:#D1D5DB">ease-in-cubic</div>
-          <div style="padding:4px 10px;background:#2A2A3E;border-radius:4px;font-size:10px;color:#D1D5DB">ease-out-cubic</div>
-          <div style="padding:4px 10px;background:#2A2A3E;border-radius:4px;font-size:10px;color:#D1D5DB">ease-in-back</div>
-          <div style="padding:4px 10px;background:#2A2A3E;border-radius:4px;font-size:10px;color:#D1D5DB">ease-out-back</div>
+      <!-- Row 2: @keyframes Animations -->
+      <div style="margin-top:8px;background:#121215;border:1px solid #1E1E24;border-radius:8px;padding:14px 18px">
+        <span style="font-size:11px;font-weight:600;color:#FFFFFF">关键帧动画 @keyframes</span>
+        <span style="margin-left:8px;font-size:9px;color:#52525B">旋转 · 脉冲 · 弹跳 · 呼吸 · 摇摆</span>
+        <div style="margin-top:10px;padding:12px;background:#18181B;border-radius:8px;display:flex;flex-direction:row;gap:16px;align-items:center">
+          <div class="kf-spin" style="width:48px;height:48px;background:#6366F1;border-radius:10px;display:flex;align-items:center;justify-content:center">
+            <span style="font-size:16px;color:#FFFFFF">↻</span>
+          </div>
+          <div class="kf-pulse" style="width:48px;height:48px;background:#10B981;border-radius:24px;display:flex;align-items:center;justify-content:center">
+            <span style="font-size:10px;font-weight:700;color:#FFFFFF">P</span>
+          </div>
+          <div class="kf-bounce" style="width:48px;height:48px;background:#F59E0B;border-radius:10px;display:flex;align-items:center;justify-content:center">
+            <span style="font-size:16px;color:#FFFFFF">↑</span>
+          </div>
+          <div class="kf-breath" style="width:48px;height:48px;background:#3B82F6;border-radius:10px;display:flex;align-items:center;justify-content:center">
+            <span style="font-size:10px;font-weight:700;color:#FFFFFF">B</span>
+          </div>
+          <div class="kf-shake" style="width:48px;height:48px;background:#EC4899;border-radius:10px;display:flex;align-items:center;justify-content:center">
+            <span style="font-size:16px;color:#FFFFFF">~</span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- v-if / v-show animation context -->
-    <div style="margin:16px 16px 0 16px;height:100px;width:1888px">
-      <div style="font-size:13px;font-weight:600;color:#FFFFFF">条件渲染动画</div>
-      <div style="margin-top:8px;padding:12px;background:#1F1F23;border-radius:8px">
-        <div style="display:flex;flex-direction:row;gap:8px;align-items:center">
-          <button style="padding:6px 14px;background:#6366F1;color:#FFFFFF;border:none;border-radius:6px;font-size:11px;font-weight:500" @click="toggleExtra" click-arg="">切换额外内容</button>
-          <div v-show="showExtra" class="extra-box" style="padding:8px 16px;background:#374151;border-radius:6px;font-size:11px;color:#D1D5DB">额外内容 v-show</div>
+      <!-- Row 3: Easing Functions -->
+      <div style="margin-top:8px;background:#121215;border:1px solid #1E1E24;border-radius:8px;padding:14px 18px">
+        <span style="font-size:11px;font-weight:600;color:#FFFFFF">缓动函数 Easing</span>
+        <span style="margin-left:8px;font-size:9px;color:#52525B">22 种内置缓动函数</span>
+        <div style="margin-top:10px;padding:12px;background:#18181B;border-radius:8px">
+          <div style="display:flex;flex-direction:row;gap:6px;flex-wrap:wrap">
+            <div style="padding:4px 10px;background:#1E1F2E;border:1px solid #2A2B3E;border-radius:4px;font-size:9px;color:#A5B4FC">linear</div>
+            <div style="padding:4px 10px;background:#1E1F2E;border:1px solid #2A2B3E;border-radius:4px;font-size:9px;color:#A5B4FC">ease</div>
+            <div style="padding:4px 10px;background:#1E1F2E;border:1px solid #2A2B3E;border-radius:4px;font-size:9px;color:#A5B4FC">ease-in</div>
+            <div style="padding:4px 10px;background:#1E1F2E;border:1px solid #2A2B3E;border-radius:4px;font-size:9px;color:#A5B4FC">ease-out</div>
+            <div style="padding:4px 10px;background:#1E1F2E;border:1px solid #2A2B3E;border-radius:4px;font-size:9px;color:#A5B4FC">ease-in-out</div>
+            <div style="padding:4px 10px;background:#053321;border:1px solid #065F46;border-radius:4px;font-size:9px;color:#6EE7B7">ease-in-cubic</div>
+            <div style="padding:4px 10px;background:#053321;border:1px solid #065F46;border-radius:4px;font-size:9px;color:#6EE7B7">ease-out-cubic</div>
+            <div style="padding:4px 10px;background:#451A03;border:1px solid #78350F;border-radius:4px;font-size:9px;color:#FCD34D">ease-in-back</div>
+            <div style="padding:4px 10px;background:#451A03;border:1px solid #78350F;border-radius:4px;font-size:9px;color:#FCD34D">ease-out-back</div>
+            <div style="padding:4px 10px;background:#1E1F2E;border:1px solid #2A2B3E;border-radius:4px;font-size:9px;color:#A5B4FC">ease-in-quad</div>
+            <div style="padding:4px 10px;background:#1E1F2E;border:1px solid #2A2B3E;border-radius:4px;font-size:9px;color:#A5B4FC">ease-out-quad</div>
+            <div style="padding:4px 10px;background:#450A0A;border:1px solid #7F1D1D;border-radius:4px;font-size:9px;color:#FCA5A5">ease-in-quart</div>
+            <div style="padding:4px 10px;background:#450A0A;border:1px solid #7F1D1D;border-radius:4px;font-size:9px;color:#FCA5A5">ease-out-quart</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Framework animation system info -->
-    <div style="margin:12px 16px 0 16px;height:80px;width:1888px">
-      <div style="padding:10px;background:#1F1F23;border-radius:6px">
-        <span style="font-size:11px;color:#9CA3AF">
-          Px 框架动画系统支持：Transition 组件、TransitionGroup 组件（含 FLIP 算法）、
-          22 种缓动函数、@keyframes 关键帧动画、样式插值（opacity/color/transform）、
-          AnimationManager 动画管理器、对象池优化。通过 Platform::setAnimationTimer 驱动。
-        </span>
+      <!-- Row 4: v-show Animation -->
+      <div style="margin-top:8px;background:#121215;border:1px solid #1E1E24;border-radius:8px;padding:14px 18px">
+        <span style="font-size:11px;font-weight:600;color:#FFFFFF">条件渲染动画</span>
+        <span style="margin-left:8px;font-size:9px;color:#52525B">v-show + CSS transition 配合</span>
+        <div style="margin-top:10px;padding:12px;background:#18181B;border-radius:8px;display:flex;flex-direction:row;gap:10px;align-items:center">
+          <button style="padding:6px 14px;background:#6366F1;color:#FFFFFF;border:none;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer" @click="toggleExtra" click-arg="">切换额外内容</button>
+          <div v-show="showExtra" style="padding:8px 16px;background:#1E1F2E;border:1px solid #6366F1;border-radius:6px;font-size:11px;color:#A5B4FC;transition:all 0.3s ease">✨ 额外内容 v-show 切换</div>
+        </div>
       </div>
-    </div>
 
-    <!-- Spacer -->
-    <div style="height:16px"></div>
+      <!-- Framework Animation Info -->
+      <div style="margin-top:8px;background:#121215;border:1px solid #1E1E24;border-radius:8px;padding:14px 18px">
+        <span style="font-size:11px;font-weight:600;color:#FFFFFF">框架动画能力</span>
+        <div style="margin-top:6px;padding:10px;background:#18181B;border-radius:6px">
+          <span style="font-size:10px;color:#A1A1AA;line-height:1.6">
+            Px 动画系统支持：Transition 组件（enter/leave 过渡动画）、TransitionGroup 组件（含 FLIP 算法）、
+            22 种内置缓动函数（linear, ease, cubic-bezier 等）、@keyframes 关键帧动画解析与插值、
+            样式插值（opacity / backgroundColor / color / transform translateX/Y）、
+            AnimationManager 动画管理器（对象池 + MAX_ANIMATIONS 上限）、Platform::setAnimationTimer 帧驱动。
+          </span>
+        </div>
+      </div>
+
+      <!-- Spacer -->
+      <div style="height:24px"></div>
+    </div>
   </div>
 </template>
 
@@ -91,7 +119,7 @@
 class AnimationShowcaseComponent extends ReactiveComponent
 {
     public bool $animVisible = true;
-    public string $colorState = 'blue';
+    public int $colorIdx = 0;
     public bool $showExtra = false;
 
     public function toggleAnim(string $arg): void
@@ -100,9 +128,9 @@ class AnimationShowcaseComponent extends ReactiveComponent
         $this->markDirty();
     }
 
-    public function toggleColor(string $arg): void
+    public function cycleColor(string $arg): void
     {
-        $this->colorState = $this->colorState === 'blue' ? 'green' : 'blue';
+        $this->colorIdx = ($this->colorIdx + 1) % 3;
         $this->markDirty();
     }
 
@@ -115,62 +143,54 @@ class AnimationShowcaseComponent extends ReactiveComponent
 </script>
 
 <style>
-/* Transition classes for the smiley box */
-.anim-box-visible {
+/* Transition demo */
+.anim-box-show {
   background: #6366F1;
-  transition: all 0.3s ease;
 }
-.anim-box-hidden {
-  background: #374151;
-  opacity: 0.3;
-  transform: translateX(-20px);
-  transition: all 0.3s ease;
+.anim-box-hide {
+  background: #27272A;
+  opacity: 0.4;
+  transform: translateX(-16px);
 }
 
-/* Background color transition */
-.btn-blue {
-  background: #3B82F6;
-}
-.btn-green {
-  background: #10B981;
-}
-.color-box-blue {
-  background: #3B82F6;
-  transition: background 0.3s ease;
-}
-.color-box-green {
-  background: #10B981;
-  transition: background 0.3s ease;
-}
+/* Color transition */
+.cb-indigo { background: #6366F1; color: #FFFFFF; }
+.cb-emerald { background: #10B981; color: #FFFFFF; }
+.cb-rose { background: #F43F5E; color: #FFFFFF; }
+.cb-bg-indigo { background: #6366F1; }
+.cb-bg-emerald { background: #10B981; }
+.cb-bg-rose { background: #F43F5E; }
 
 /* @keyframes animations */
-@keyframes spin {
+@keyframes kf-spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
-.spin-box {
-  animation: spin 2s linear infinite;
-}
+.kf-spin { animation: kf-spin 2s linear infinite; }
 
-@keyframes pulse {
+@keyframes kf-pulse {
   0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.8; }
+  50% { transform: scale(1.12); opacity: 0.8; }
   100% { transform: scale(1); opacity: 1; }
 }
-.pulse-box {
-  animation: pulse 1.5s ease-in-out infinite;
-}
+.kf-pulse { animation: kf-pulse 1.5s ease-in-out infinite; }
 
-@keyframes bounce {
+@keyframes kf-bounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  50% { transform: translateY(-12px); }
 }
-.bounce-box {
-  animation: bounce 0.8s ease infinite;
-}
+.kf-bounce { animation: kf-bounce 0.8s ease infinite; }
 
-/* Extra box with transition */
-.extra-box {
-  transition: all 0.3s ease;
+@keyframes kf-breath {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
+.kf-breath { animation: kf-breath 2s ease-in-out infinite; }
+
+@keyframes kf-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.kf-shake { animation: kf-shake 0.6s ease infinite; }
 </style>
