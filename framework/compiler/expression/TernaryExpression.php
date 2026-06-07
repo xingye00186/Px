@@ -31,6 +31,10 @@ class TernaryExpression extends ExpressionType
      */
     public function parse(string $expression, ?array $loopInfo = null): string
     {
+        // Strip outer balanced parentheses (e.g., "(a ? b : c)" → "a ? b : c")
+        // This handles nested ternary expressions wrapped in parens by the outer handler.
+        $expression = $this->stripOuterParens(trim($expression));
+
         $parts = $this->splitTernary($expression);
 
         $condition = $this->parseCondition($parts['condition'], $loopInfo);
@@ -38,6 +42,32 @@ class TernaryExpression extends ExpressionType
         $falsy = $this->parseValue($parts['falsy'], $loopInfo);
 
         return $condition . ' ? ' . $truthy . ' : ' . $falsy;
+    }
+
+    /**
+     * Strip outer balanced parentheses from an expression.
+     * Handles multiple levels: ((a ? b : c)) → (a ? b : c) → a ? b : c
+     */
+    private function stripOuterParens(string $expr): string
+    {
+        while (strlen($expr) > 2 && $expr[0] === '(' && $expr[-1] === ')') {
+            $depth = 0;
+            $balanced = true;
+            for ($i = 0; $i < strlen($expr); $i++) {
+                if ($expr[$i] === '(') $depth++;
+                elseif ($expr[$i] === ')') $depth--;
+                if ($depth === 0 && $i < strlen($expr) - 1) {
+                    $balanced = false;
+                    break;
+                }
+            }
+            if ($balanced && $depth === 0) {
+                $expr = trim(substr($expr, 1, -1));
+            } else {
+                break;
+            }
+        }
+        return $expr;
     }
 
     /**

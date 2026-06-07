@@ -325,7 +325,7 @@ class ScriptAnalyzer
     private function methodModifiesProperties(string $body): bool
     {
         foreach ($this->propertyNames as $prop) {
-            $pattern = '/\$this->' . preg_quote($prop, '/') . '\s*(?:\[\]\s*=|(?:\=|\.=))/';
+            $pattern = '/\$this->' . preg_quote($prop, '/') . '\s*(?:\[\]\s*=|(?:\=|\.=)|\+\+|--)/';
             if (preg_match($pattern, $body)) {
                 return true;
             }

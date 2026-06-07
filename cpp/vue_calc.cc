@@ -10,6 +10,8 @@
 #include <windows.h>
 #pragma comment(lib, "msimg32.lib")
 #include <cstdio>
+#include <io.h>
+#include <fcntl.h>
 
 // GDI+ 图片加载
 // 注意：Windows SDK 10.0.26100.0 要求先包含 COM 头文件再包含 gdiplus.h
@@ -19,6 +21,31 @@
 #pragma comment(lib, "gdiplus.lib")
 
 using namespace php;
+
+// ============================================================
+// Early console window hide (CONSOLE subsystem)
+// Hides the console window via C-level CRT init (.CRT$XIU),
+// which runs even before C++ static constructors (.CRT$XCU).
+// php_embed_init() still has valid std handles (console is
+// still attached to the process, just not visible).
+//
+// IMPORTANT: Must use a regular C function (not a C++ lambda)
+// because .CRT$XIU is processed during CRT static init phase,
+// before C++ dynamic init. Lambda initialization only happens
+// during C++ dynamic init, so the function pointer would still
+// be NULL when CRT calls it, causing a crash.
+// ============================================================
+#pragma section(".CRT$XIU", long, read)
+
+static int __cdecl EarlyConsoleHider() {
+    HWND hConsole = GetConsoleWindow();
+    if (hConsole != NULL) {
+        ShowWindow(hConsole, SW_HIDE);
+    }
+    return 0;
+}
+
+__declspec(allocate(".CRT$XIU")) static int (*_pEarlyConsoleHider)() = EarlyConsoleHider;
 
 // ============================================================
 // Win32 Window & Message
@@ -98,6 +125,14 @@ Int php_vue_window_create(String title, Int width, Int height) {
 // Show window
 void php_vue_window_show(Int hWnd, Int cmdShow) {
     ShowWindow((HWND)hWnd, (int)cmdShow);
+}
+
+// Hide console window (keep SUBSYSTEM:CONSOLE for PHP init, hide after startup)
+void php_vue_hide_console() {
+    HWND hConsole = GetConsoleWindow();
+    if (hConsole != NULL) {
+        ShowWindow(hConsole, SW_HIDE);
+    }
 }
 
 // 检查是否请求退出

@@ -47,6 +47,7 @@ class WinMsg
 // ---- 窗口管理 ----
 function vue_window_create(string $title, int $width, int $height): int {}
 function vue_window_show(int $hWnd, int $cmdShow): void {}
+function vue_hide_console(): void {}
 function vue_quit_requested(): bool {}
 function vue_peek_message(): array {}
 

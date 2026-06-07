@@ -2030,6 +2030,17 @@ function compileOneComponent(
     $analyzer = new ScriptAnalyzer();
     $classBody = $analyzer->injectDirty($script);
 
+    // Extract int property names and wrap assignments for AOT compatibility
+    // This prevents C2440 errors in the AOT compiler when assigning Variant to Int
+    // (e.g., $this->count++; $this->val = min(...); $this->num = $arr['key'])
+    $intPropNames = [];
+    if (preg_match_all('/public\\s+int\\s+\$(\\w+)/', $classBody, $intMatches)) {
+        $intPropNames = $intMatches[1];
+    }
+    if (!empty($intPropNames)) {
+        $classBody = wrapIntAssignments($classBody, $intPropNames);
+    }
+
     // Dynamic property declarations
     $dynamicPropsDeclaration = '';
     foreach ($bindKeys as $key => $_) {
@@ -2300,6 +2311,64 @@ function parseProjectYamlLines(array $lines): array
     return $config;
 }
 
+/**
+ * Transform int property assignments to be AOT-safe by adding explicit (int) casts.
+ *
+ * Prevents C2440 errors from the AOT compiler when:
+ * - int property uses ++/-- (compiler generates Variant-returning arithmetic)
+ * - min()/max() returns assigned to int property
+ * - Array access result assigned to int property
+ *
+ * This is a GENERIC transformation that applies to ALL int-typed properties.
+ *
+ * @param string $classBody The PHP class body (after injectDirty)
+ * @param array $intProps List of int-typed property names
+ * @return string Transformed class body
+ */
+function wrapIntAssignments(string $classBody, array $intProps): string
+{
+    foreach ($intProps as $prop) {
+        $escapedProp = preg_quote($prop, '/');
+
+        // $this->prop++ -> $this->prop = (int)$this->prop + 1
+        $classBody = preg_replace(
+            '/\$this->' . $escapedProp . '\s*\+\+\s*;/',
+            '$this->' . $prop . ' = (int)$this->' . $prop . ' + 1;',
+            $classBody
+        );
+
+        // $this->prop-- -> $this->prop = (int)$this->prop - 1
+        $classBody = preg_replace(
+            '/\$this->' . $escapedProp . '\s*--\s*;/',
+            '$this->' . $prop . ' = (int)$this->' . $prop . ' - 1;',
+            $classBody
+        );
+
+        // $this->prop = expr (simple assignment, NOT ==/===/.=/+=/-=) -> $this->prop = (int)(expr)
+        $classBody = preg_replace_callback(
+            '/(\$this->' . $escapedProp . ')\s*=\s*([^;]+);/',
+            function(array $m) use ($prop): string {
+                $rhs = trim($m[2]);
+                // Skip if already wrapped with (int)
+                if (str_starts_with($rhs, '(int)')) {
+                    return $m[0];
+                }
+                // Skip comparison operators (==, ===)
+                if (str_starts_with($rhs, '=')) {
+                    return $m[0];
+                }
+                // Skip compound assignment operators (.=, +=, -=, etc.)
+                if (preg_match('/^[.\+\-\*\/%&|^]/', $rhs)) {
+                    return $m[0];
+                }
+                return $m[1] . ' = (int)(' . $rhs . ');';
+            },
+            $classBody
+        );
+    }
+    return $classBody;
+}
+
 // ============================================================
 // CLI Main — only runs when this file is the entry point
 // ============================================================
@@ -2547,6 +2616,15 @@ $dispatchKeyBody = generateDispatchKey($keyHandlers);
 $analyzer = new ScriptAnalyzer();
 $classBody = $analyzer->injectDirty($script);
 
+// Extract int property names and wrap assignments for AOT compatibility
+$intPropNames = [];
+if (preg_match_all('/public\\s+int\\s+\$(\\w+)/', $classBody, $intMatches)) {
+    $intPropNames = $intMatches[1];
+}
+if (!empty($intPropNames)) {
+    $classBody = wrapIntAssignments($classBody, $intPropNames);
+}
+
 // Extract array-typed property names from script for bind code generation
 $arrayBindKeys = [];
 if (preg_match_all('/public\s+array\s+\$(\w+)/', $classBody, $arrayProps)) {
@@ -2740,4 +2818,6 @@ $factoryContent .= "}\n";
 $factoryPath = $outDir . DIRECTORY_SEPARATOR . 'ComponentFactory.php';
 file_put_contents($factoryPath, $factoryContent);
 echo "  Generated:  $factoryPath (" . strlen($factoryContent) . " bytes)\n";
+
 } // end CLI entry guard
+
