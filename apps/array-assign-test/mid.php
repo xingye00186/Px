@@ -2,12 +2,13 @@
 
 use native_types;
 
-abstract class Mid extends BaseAbstract {
+/** @abstract 子类需覆盖 onMount */
+class Mid {
     public function mount(): void {
         $this->onMount();
     }
 
     public function onMount(): void {
-        // concrete 空实现 — Direct Call Optimization 的触发条件
+        // concrete 空 — Direct Call Optimization 的触发条件
     }
 }

@@ -4,6 +4,5 @@ no-console: false
 platform: win32
 entry: main.php
 sources:
-  - ./base_abstract.php
   - ./mid.php
   - ./main.php
