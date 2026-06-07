@@ -23,9 +23,18 @@ tests/screenshot/output/*.png
 tests/anomaly/
 tests/screenshot/output/
 
+# CC 标准测试产物
+tests/css-standards/**/error.txt
+tests/css-standards/**/stderr.txt
+tests/css-standards/**/lint_result.txt
+tests/css-standards/**/debug_*.php
+
 # 依赖分析自动生成文件
 dep.json
 project.dep.yml
+
+# Debug 输出文件
+debug_layout.txt
 
 # Debug 输出目录
 debug/
