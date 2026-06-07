@@ -89,9 +89,8 @@ class VNodeRenderer
             }
             return;
         }
-
-        file_put_contents('D:\\Px\\_debug_out.txt', "collectElements: type={$node->type} needsPaint=true x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);
-
+        // debug: 
+        // collectElements trace removed
         // #root 不产生渲染元素，直接处理子节点
         if ($node->type === '#root') {
             foreach ($node->children as $child) {
@@ -307,12 +306,10 @@ class VNodeRenderer
 
         switch ($node->type) {
             case 'button':
-                file_put_contents('D:\\Px\\_debug_out.txt', "renderNodeToElement: type=button x={$x} y={$y} w={$w} h={$h}\n", FILE_APPEND);
                 return $this->makeButtonElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'input':   return $this->makeInputElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'img':     return $this->makeImgElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'span':
-                file_put_contents('D:\\Px\\_debug_out.txt', "renderNodeToElement: type=span x={$x} y={$y} w={$w} h={$h} content_null=" . (int)($node->content===null) . "\n", FILE_APPEND);
                 return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'p':
             case 'h1':

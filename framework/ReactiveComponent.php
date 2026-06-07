@@ -176,7 +176,7 @@ abstract class ReactiveComponent extends BaseComponent
      *   $child->on('itemSelected', function($payload) { ... });
      *
      * @param string $eventName 事件名
-     * @param mixed  $payload   事件载荷
+     * @param mixed $payload 事件载荷
      */
     protected function emit(string $eventName, mixed $payload = null): void
     {
@@ -194,9 +194,9 @@ abstract class ReactiveComponent extends BaseComponent
      * 子组件 emit('itemSelected', ...) 后触发回调。
      * 在 unmount 时自动解绑。
      *
-     * @param ReactiveComponent $child     子组件实例
-     * @param string            $eventName 事件名
-     * @param callable          $callback  回调
+     * @param ReactiveComponent $child 子组件实例
+     * @param string $eventName 事件名
+     * @param callable $callback 回调
      */
     protected function on(ReactiveComponent $child, string $eventName, callable $callback): void
     {
@@ -231,13 +231,25 @@ abstract class ReactiveComponent extends BaseComponent
         $this->eventHandlers = [];
     }
 
-    abstract public function onUnmount(): void;
+    public function onUnmount(): void
+    {
+    }
 
-    public function onBeforeUpdate(): void {}
-    public function onUpdated(): void {}
+    public function onBeforeUpdate(): void
+    {
+    }
 
-    abstract public function onMount(): void;
+    public function onUpdated(): void
+    {
+    }
+
+    public function onMount(): void
+    {
+    }
+
     abstract public function render(): VNode;
+
     abstract public function setBindValue(string $bindKey, string $value): void;
+
     abstract public function getBindValue(string $bindKey): string;
 }
