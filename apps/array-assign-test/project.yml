@@ -4,4 +4,9 @@ no-console: false
 platform: win32
 entry: main.php
 sources:
+  - ../../framework/BaseComponent.php
+  - ../../framework/interfaces/ComponentInterface.php
+  - ../../framework/Core/Scheduler.php
+  - ../../framework/Rendering/VNode.php
+  - ../../framework/ReactiveComponent.php
   - ./main.php

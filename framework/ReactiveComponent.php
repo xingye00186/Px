@@ -231,12 +231,12 @@ abstract class ReactiveComponent extends BaseComponent
         $this->eventHandlers = [];
     }
 
-    public function onUnmount(): void {}
+    abstract public function onUnmount(): void;
 
     public function onBeforeUpdate(): void {}
     public function onUpdated(): void {}
 
-    public function onMount(): void {}
+    abstract public function onMount(): void;
     abstract public function render(): VNode;
     abstract public function setBindValue(string $bindKey, string $value): void;
     abstract public function getBindValue(string $bindKey): string;
