@@ -1,0 +1,51 @@
+=== Test: display:none 不渲染 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x120)
+  div (0,0 200x40) text="Visible"
+  div (0,40 200x40) [dsp=none] text="Hidden"
+  div (0,80 200x40) text="After"
+
+---
+
+=== Test: visibility:hidden 隐藏但占位 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x120)
+  div (0,0 300x40) text="Item 1"
+  div (0,40 300x40) text="Hidden but space"
+  div (0,80 300x40) text="Item 3"
+
+---
+
+=== Test: display:inline 行内并排 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x54)
+  span (0,0 32x18) [dsp=inline] text="Red "
+  span (0,18 40x18) [dsp=inline] text="Blue "
+  span (0,36 40x18) [dsp=inline] text="Green"
+
+---
+
+=== Test: display:inline-block 行内块布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x190)
+  div (0,0 100x60) [dsp=inline-block] text="A"
+  div (0,60 100x80) [dsp=inline-block] text="B"
+  div (0,140 100x50) [dsp=inline-block] text="C"
+
+---
+
+=== Test: display:none 在 flex row 中 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50) [dsp=flex]
+  div (0,0 80x30) text="A"
+  div (80,0 200x30) [dsp=none] text="Hidden"
+  div (280,0 80x30) text="C"
+
+---
+
+=== Test: visibility:visible 子项覆盖父 hidden ===
+Frame #1 events=0 detail=normal
+div (0,0 300x60)
+  div (0,0 300x60)
+    div (0,0 300x30) text="Hidden parent"
+    div (0,30 300x30) text="Visible child"

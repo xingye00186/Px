@@ -5,7 +5,7 @@ div (0,0 964x192) [dsp=grid]
     div (0,0 310x140) text="Cover"
     div (0,140 310x52) [dsp=flex]
       div (8,148 36x36)
-      div (52,148 250x0) fg=1 text="Title text"
+      div (52,148 250x18) fg=1 text="Title text"
 
 ---
 
@@ -13,11 +13,11 @@ div (0,0 964x192) [dsp=grid]
 Frame #1 events=0 detail=normal
 div (0,0 1440x56) [dsp=flex] bw=1
   div (24,16 24x24)
-  div (64,28 1272x0) [dsp=flex] fg=1
-    div (64,28 300x0) text="Bilibili"
-    div (388,28 300x0) text="推荐"
-    div (712,28 300x0) text="热门"
-    div (1036,28 300x0) text="关注"
+  div (64,17 1272x21) [dsp=flex] fg=1
+    div (64,17 72x21) text="Bilibili"
+    div (160,17 28x21) text="推荐"
+    div (212,17 28x21) text="热门"
+    div (264,17 28x21) text="关注"
   div (1336,12 80x32)
 
 ---
@@ -31,11 +31,11 @@ div (700,400 48x48) [pos=fixed] text="Top"
 === Test: CategoryTabs 可滚动标签栏 ===
 Frame #1 events=0 detail=normal
 div (0,0 1440x44) scroll ch=36 cw=1440 maxScroll=0 st=0 sl=0 [dsp=flex] ov=auto
-  div (16,8 1408x28) text="推荐"
-  div (1436,8 1408x28) text="热门"
-  div (2856,8 1408x28) text="游戏"
-  div (4276,8 1408x28) text="科技"
-  div (5696,8 1408x28) text="生活"
+  div (16,8 26x28) text="推荐"
+  div (54,8 26x28) text="热门"
+  div (92,8 26x28) text="游戏"
+  div (130,8 26x28) text="科技"
+  div (168,8 26x28) text="生活"
 
 ---
 
@@ -43,27 +43,27 @@ div (0,0 1440x44) scroll ch=36 cw=1440 maxScroll=0 st=0 sl=0 [dsp=flex] ov=auto
 Frame #1 events=0 detail=normal
 div (0,0 300x0) [dsp=flex] ov=hidden
   div (0,0 300x168)
-  div (0,168 300x20) [dsp=flex]
-    div (8,176 284x0) text="视频标题最多两行"
-    div (8,180 284x0) [dsp=flex]
-      div (8,180 0x0) [dsp=flex] text="UP主名称"
-      div (16,180 134x0) text="·"
-      div (158,180 134x0) text="1.2万"
+  div (0,168 300x49) [dsp=flex]
+    div (8,176 284x20) text="视频标题最多两行"
+    div (8,200 284x9) [dsp=flex]
+      div (8,200 58x0) [dsp=flex] text="UP主名称"
+      div (74,191 14x18) text="·"
+      div (96,191 38x18) text="1.2万"
 
 ---
 
 === Test: 视频网格 3列 auto-fill 混合布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 964x140) [dsp=grid]
-  div (0,0 310x140) [dsp=flex]
+div (0,0 964x158) [dsp=grid]
+  div (0,0 310x158) [dsp=flex]
     div (0,0 310x140) text="Cover"
-    div (0,140 310x0) text="Video 1"
-  div (326,0 310x140) [dsp=flex]
+    div (0,140 310x18) text="Video 1"
+  div (326,0 310x158) [dsp=flex]
     div (326,0 310x140) text="Cover"
-    div (326,140 310x0) text="Video 2"
-  div (652,0 310x140) [dsp=flex]
+    div (326,140 310x18) text="Video 2"
+  div (652,0 310x158) [dsp=flex]
     div (652,0 310x140) text="Cover"
-    div (652,140 310x0) text="Video 3"
+    div (652,140 310x18) text="Video 3"
 
 ---
 
@@ -72,12 +72,12 @@ Frame #1 events=0 detail=normal
 div (0,0 1440x900) [dsp=flex]
   div (0,0 1440x56) [dsp=flex]
     div (24,16 24x24)
-    div (48,28 1368x0) [dsp=flex] fg=1
-      div (48,28 672x0) text="Bilibili"
-      div (744,28 672x0) text="推荐"
-  div (0,56 1440x44) scroll ch=0 cw=1440 maxScroll=0 st=0 sl=0 [dsp=flex] ov=auto
-    div (16,56 1408x0) text="推荐"
-    div (1436,56 1408x0) text="热门"
+    div (48,19 1368x18) [dsp=flex] fg=1
+      div (48,19 64x18) text="Bilibili"
+      div (136,19 28x18) text="推荐"
+  div (0,56 1440x44) scroll ch=31 cw=1440 maxScroll=0 st=0 sl=0 [dsp=flex] ov=auto
+    div (16,69 28x18) text="推荐"
+    div (56,69 28x18) text="热门"
   div (0,100 1440x800) scroll ch=216 cw=1440 maxScroll=0 st=0 sl=0 fg=1
     div (16,116 1408x200) text="Content Area"
   div (700,400 48x48) [pos=fixed]
@@ -88,13 +88,13 @@ div (0,0 1440x900) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 964x0) [dsp=flex]
   div (0,0 964x200) text="Banner"
-  div (0,216 964x140) [dsp=grid]
-    div (0,216 310x140) [dsp=flex]
+  div (0,216 964x158) [dsp=grid]
+    div (0,216 310x158) [dsp=flex]
       div (0,216 310x140) text="Cover"
-      div (0,356 310x0) text="Title"
-    div (326,216 310x140) [dsp=flex]
+      div (0,356 310x18) text="Title"
+    div (326,216 310x158) [dsp=flex]
       div (326,216 310x140) text="Cover"
-      div (326,356 310x0) text="Title"
+      div (326,356 310x18) text="Title"
 
 ---
 

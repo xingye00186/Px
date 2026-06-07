@@ -1,0 +1,77 @@
+=== Test: position:sticky top:0 粘性定位 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x600) scroll ch=850 cw=400 maxScroll=250 st=0 sl=0
+  div (0,0 400x200) text="Scroll 1"
+  div (0,200 400x50) [pos=sticky] text="Sticky"
+  div (0,250 400x600) text="Scroll 2"
+
+---
+
+=== Test: position:sticky bottom:0 底部粘性 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x500) scroll ch=450 cw=400 maxScroll=0 st=0 sl=0
+  div (0,0 400x400) text="Large space"
+  div (0,400 400x50) [pos=sticky] text="Sticky Bottom"
+
+---
+
+=== Test: position:absolute 居中 通过 margin:auto ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200) [pos=relative]
+  div (375,180 150x80) [pos=absolute] text="Center"
+
+---
+
+=== Test: z-index:2 覆盖 z-index:1 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x150) [pos=relative]
+  div (20,20 150x80) [pos=absolute] text="Layer 1"
+  div (60,50 150x80) [pos=absolute] text="Layer 2"
+
+---
+
+=== Test: z-index:-1 在背景层之后 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x150) [pos=relative]
+  div (30,30 100x80) [pos=absolute] text="Normal"
+  div (80,60 100x80) [pos=absolute] text="Behind"
+
+---
+
+=== Test: z-index 多层栈 (1, 5, 10) 顺序 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200) [pos=relative]
+  div (10,10 120x80) [pos=absolute] text="z1"
+  div (40,40 120x80) [pos=absolute] text="z5"
+  div (70,70 120x80) [pos=absolute] text="z10"
+
+---
+
+=== Test: position:fixed 相对于视口 ===
+Frame #1 events=0 detail=normal
+div (0,0 1440x1200)
+  div (50,50 200x100) [pos=fixed] text="Fixed Bar"
+  div (0,0 1440x1000) text="Content area"
+
+---
+
+=== Test: position:relative left:20 top:10 偏移 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x130)
+  div (0,0 300x40) text="Normal"
+  div (20,50 300x50) [pos=relative] text="Relative"
+  div (0,90 300x40) text="After"
+
+---
+
+=== Test: position:absolute 四方向拉伸填满父容器 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200) [pos=relative]
+  div (380,162 0x18) [pos=absolute] text="Stretch"
+
+---
+
+=== Test: position:absolute left:0 right:0 margin:auto 水平居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 500x100) [pos=relative]
+  div (450,0 200x60) [pos=absolute] text="Auto Center"

@@ -38,6 +38,8 @@ use Px\Rendering\VNode;
  * 从 VNode 运行最小渲染管线，返回 dumpRenderTree 结果。
  * 这是测试的核心：不依赖 App 目录、ComponentFactory、px_debug.yml。
  */
+// 注：assert_contains() 由 test-framework.php 提供（通过 bootstrap.php 引入）
+
 function run_minimal_pipeline(VNode $vnode, int $width = 1440, int $height = 900): string
 {
     $appDir = __DIR__ . '/../../apps/bilibili';

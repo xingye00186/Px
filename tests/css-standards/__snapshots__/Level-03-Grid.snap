@@ -152,4 +152,4 @@ div (0,0 600x200) [dsp=grid]
     div (0,0 296x30) text="Header"
     div (0,30 296x30) fg=1 text="Fill"
   div (304,0 296x60) [dsp=flex]
-    div (304,30 296x0) text="Centered"
+    div (304,21 296x18) text="Centered"

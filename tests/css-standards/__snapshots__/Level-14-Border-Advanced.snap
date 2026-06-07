@@ -1,0 +1,45 @@
+=== Test: border-top 顶部边框 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x80) bw=2 text="Top border"
+
+---
+
+=== Test: border-bottom 底部边框 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x80) bw=3 text="Bottom border"
+
+---
+
+=== Test: border-left 左边框 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x80) bw=4 text="Left border"
+
+---
+
+=== Test: border-right 右边框 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x80) bw=5 text="Right border"
+
+---
+
+=== Test: 四方向不同颜色边框组合 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) bw=4 text="Multi border"
+
+---
+
+=== Test: border + border-radius 圆角边框 ===
+Frame #1 events=0 detail=normal
+div (0,0 150x80) bw=2 text="Round border"
+
+---
+
+=== Test: border:0 无边框 ===
+Frame #1 events=0 detail=normal
+div (0,0 100x50) text="No border"
+
+---
+
+=== Test: border-width 独立设置 6px ===
+Frame #1 events=0 detail=normal
+div (0,0 100x50) bw=6 text="Border width"
