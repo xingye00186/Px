@@ -3,7 +3,9 @@
 use native_types;
 
 class Child extends Mid {
-    // 子类覆盖 — 如果虚派发正确，此处会执行
+    public array $src = [1, 2, 3];
+    public array $dst = [];
+
     public function onMount(): void {
         $this->dst = $this->src;
     }
