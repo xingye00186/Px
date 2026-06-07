@@ -11,9 +11,8 @@ class Base {
         $this->onMount();
     }
 
-    public function onMount(): void {
-        $this->dst = $this->src;
-    }
+    // 模拟 ReactiveComponent::onMount() — 空实现，什么都不做
+    public function onMount(): void {}
 }
 
 class Child extends Base {
