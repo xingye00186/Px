@@ -70,6 +70,11 @@ class CssMappings
             'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
             'default' => 0,
         ],
+        'box-sizing' => [
+            'key'     => 'boxSizing',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'default' => 'content-box',
+        ],
         // ---- Extensions for future GDI/Direct2D support ----
         'border-radius' => [
             'key'     => 'borderRadius',
@@ -207,8 +212,9 @@ class CssMappings
         'flex-shrink'      => ['key' => 'flexShrink',   'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 1],
         'order'            => ['key' => 'order',        'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'align-self'       => ['key' => 'alignSelf',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
-        'justify-self'     => ['key' => 'justifySelf', 'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
-        'min-width'        => ['key' => 'minWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'justify-self'     => ['key' => 'justifySelf', 'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'auto'],
+        'justify-items'    => ['key' => 'justifyItems', 'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
+        'min-width'        => ['key' => 'minWidth',  'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
         'max-width'        => ['key' => 'maxWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'min-height'       => ['key' => 'minHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'max-height'       => ['key' => 'maxHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
@@ -267,7 +273,8 @@ class CssMappings
         'flex-shrink'  => ['key' => 'flexShrink',   'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 1],
         // ---- 单项对齐 ----
         'align-self'   => ['key' => 'alignSelf',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
-        'justify-self' => ['key' => 'justifySelf', 'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
+        'justify-self' => ['key' => 'justifySelf', 'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'auto'],
+        'justify-items' => ['key' => 'justifyItems', 'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
         // ---- padding / margin 四方向 ----
         'padding-top'    => ['key' => 'paddingTop',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'padding-right'  => ['key' => 'paddingRight',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
@@ -670,8 +677,18 @@ class CssMappings
             'min-height' => 'minHeightPercent', 'max-height' => 'maxHeightPercent',
         ];
         foreach ($pctMap as $cssProp => $styleKey) {
-            if (isset($raw[$cssProp]) && str_ends_with(trim($raw[$cssProp]), '%')) {
-                $style[$styleKey] = (float) substr(trim($raw[$cssProp]), 0, -1);
+            if (isset($raw[$cssProp])) {
+                $val = trim($raw[$cssProp]);
+                // Standalone percentage: 50%
+                if (str_ends_with($val, '%')) {
+                    $style[$styleKey] = (float) substr($val, 0, -1);
+                }
+                // calc() expression with percentage + pixel offset: calc(100% - 40px)
+                elseif (preg_match('/^calc\s*\(\s*(\d+(?:\.\d+)?)%\s*([+\-])\s*(\d+(?:\.\d+)?)px\s*\)$/i', $val, $m)) {
+                    $style[$styleKey] = (float) $m[1];
+                    $calcOffsetKey = str_replace('Percent', 'CalcOffset', $styleKey);
+                    $style[$calcOffsetKey] = (int)($m[2] === '-' ? -$m[3] : $m[3]);
+                }
             }
         }
 
@@ -689,9 +706,10 @@ class CssMappings
         }
 
         // Merge auto margin flags (preserved from pre-scan)
-        foreach ($marginAutoFlags as $key => $val) {
-            $style[$key] = $val;
-        }
+        if (isset($marginAutoFlags['marginTopAuto']))  $style['marginTopAuto']  = true;
+        if (isset($marginAutoFlags['marginRightAuto'])) $style['marginRightAuto'] = true;
+        if (isset($marginAutoFlags['marginBottomAuto'])) $style['marginBottomAuto'] = true;
+        if (isset($marginAutoFlags['marginLeftAuto']))  $style['marginLeftAuto']  = true;
 
         // Expand flex shorthand into flex-grow/flex-shrink/flex-basis
         if (isset($raw['flex']) && $raw['flex'] !== '') {

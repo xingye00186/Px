@@ -38,6 +38,69 @@ class LayoutResolver
 
 
     /**
+     * Compute the content area width considering box-sizing and border.
+     *
+     * border-box: content width = totalW - paddingLeft - paddingRight - borderWidth*2
+     * content-box: content width = totalW - paddingLeft - paddingRight (current default)
+     */
+    private function computeContentWidth(array $style, int $totalW): int
+    {
+        $boxSizing = $style['boxSizing'] ?? 'content-box';
+        $padL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
+        $padR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
+        $contentW = max(0, $totalW - $padL - $padR);
+        if ($boxSizing === 'border-box') {
+            $bw = (int)($style['borderWidth'] ?? 0);
+            $contentW = max(0, $contentW - $bw * 2);
+        }
+        return $contentW;
+    }
+
+
+    /**
+     * Compute the content area height considering box-sizing and border.
+     */
+    private function computeContentHeight(array $style, int $totalH): int
+    {
+        $boxSizing = $style['boxSizing'] ?? 'content-box';
+        $padT = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+        $padB = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
+        $contentH = max(0, $totalH - $padT - $padB);
+        if ($boxSizing === 'border-box') {
+            $bw = (int)($style['borderWidth'] ?? 0);
+            $contentH = max(0, $contentH - $bw * 2);
+        }
+        return $contentH;
+    }
+
+
+    /**
+     * Resolve line-height from style.
+     *
+     * CSS line-height can be:
+     *   - unitless number (e.g., 1.5): multiplier × font-size
+     *   - pixel value (e.g., 20px): fixed line height in pixels
+     *   - 'normal' or unset: fallback to font-size × 1.35
+     */
+    private function resolveLineHeight(array $style, int $fontSize): int
+    {
+        $lh = $style['lineHeight'] ?? 'normal';
+        if ($lh === 'normal' || $lh === '') {
+            return (int)($fontSize * 1.35);
+        }
+        // String ending in 'px' — extract pixel value
+        if (is_string($lh) && str_ends_with($lh, 'px')) {
+            return (int)substr($lh, 0, -2);
+        }
+        // Unitless numeric multiplier — multiply by font-size
+        if (is_numeric($lh)) {
+            return (int)((float)$lh * $fontSize);
+        }
+        return (int)($fontSize * 1.35);
+    }
+
+
+    /**
      * Resolve layout for the entire RenderNode tree.
      *
      * @param RenderNode $root Root RenderNode (mutated in-place)
@@ -667,15 +730,21 @@ class LayoutResolver
         // CSS: percentage width resolves against content width
         // absolute/fixed: containing block is padding box (parent->w includes padding)
         // static/relative: containing block is content area (w minus padding)
-        $parentW_raw = ($parent !== null) ? $parent->w : 0;
-        $parentH = ($parent !== null) ? $parent->h : 0;
+        // When parent is null (top-level element under #root), use window viewport as containing block
+        $parentW_raw = ($parent !== null) ? $parent->w : (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0);
+        $parentH = ($parent !== null) ? $parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
         $isAbsForW = ($position === 'absolute' || $position === 'fixed');
         if ($parent !== null && !$isAbsForW) {
             $padL = (int)($parent->style['paddingLeft'] ?? $parent->style['padding'] ?? 0);
             $padR = (int)($parent->style['paddingRight'] ?? $parent->style['padding'] ?? 0);
-            $parentW = (int)max(0, $parentW_raw - $padL - $padR);
+            $parentW = $this->computeContentWidth($parent->style, $parentW_raw);
         } else {
             $parentW = (int)$parentW_raw;
+        }
+
+        if ($node->type !== '#root' && array_key_exists('width', $style)) {
+            file_put_contents('F:\\work\\Px\\debug_layout.txt', sprintf("STYLE_DUMP: type=%s width=%s widthPercent=%s widthCalcOffset=%s parentW=%d\n", $node->type, var_export($style['width'] ?? 'NULL', true), var_export($style['widthPercent'] ?? 'NULL', true), var_export($style['widthCalcOffset'] ?? 'NULL', true), $parentW), FILE_APPEND);
+            file_put_contents('F:\\work\\Px\\debug_layout.txt', sprintf("STYLE_DUMP_ORDER: type=%s\n", $node->type), FILE_APPEND);
         }
 
         $width = $this->resolvePercent($style, 'width', 'widthPercent', $parentW);
@@ -700,17 +769,21 @@ class LayoutResolver
         }
 
 
-        // -- Text/span nodes: measure text width instead of filling parent --
-        if (($node->type === 'text' || $node->type === 'span') && $node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
+        // -- Nodes with text content: measure text width instead of filling parent --
+        if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
             $fs = (int)($style['fontSize'] ?? 14);
             $bd = ($style['fontWeight'] ?? 'normal') === 'bold' || ($style['fontWeight'] ?? 'normal') === '700';
             $measured = $this->measureTextWidth($node->content, $fs, $bd);
             if ($measured > 0) {
-                $node->w = min($measured, max(0, (int)$this->applyMinMax($style, $measured, true)));
+                // Text-measured width: only for text/span types (block layout width is auto-filled)
+                // Flex items get their text-measured width in applyFlexBasis
+                if ($node->type === 'text' || $node->type === 'span') {
+                    $node->w = min($measured, max(0, (int)$this->applyMinMax($style, $measured, true)));
+                }
             }
             // Text height = line-height if no explicit height
             if (!array_key_exists('height', $style) && !array_key_exists('heightPercent', $style)) {
-                $lineH = (int)($fs * 1.35);
+                $lineH = $this->resolveLineHeight($style, $fs);
                 if ($node->h === 0 || $node->h < $lineH) {
                     $node->h = $lineH;
                 }
@@ -793,7 +866,7 @@ class LayoutResolver
                 $stackY = $node->y + $paddingTop;
 
 
-                $containerW = max($node->w - $paddingLeft - $paddingRight, 0);
+                $containerW = $this->computeContentWidth($node->style, $node->w);
 
 
                 foreach ($node->children as $child) {
@@ -840,17 +913,21 @@ class LayoutResolver
                     }
 
 
-                    // -- Text/span children: measure text width --
-                    if (($child->type === 'text' || $child->type === 'span') && $child->content !== null && is_string($child->content) && strlen($child->content) > 0) {
+                    // -- Children with text content: measure text width (only for content-sized children) --
+                    if ($child->content !== null && is_string($child->content) && strlen($child->content) > 0) {
                         $fs = (int)($childStyle['fontSize'] ?? 14);
                         $bd = ($childStyle['fontWeight'] ?? 'normal') === 'bold' || ($childStyle['fontWeight'] ?? 'normal') === '700';
                         $measured = $this->measureTextWidth($child->content, $fs, $bd);
                         if ($measured > 0) {
-                            $child->w = min($measured, max(0, (int)$this->applyMinMax($childStyle, $measured, true)));
+                            // Block auto-stack children fill parent width — text-measured width only for span/text
+                            // Flex items get text-measured width in applyFlexBasis via explicit width check
+                            if ($child->type === 'text' || $child->type === 'span') {
+                                $child->w = min($measured, max(0, (int)$this->applyMinMax($childStyle, $measured, true)));
+                            }
                         }
                         // Text height = line-height if no explicit height
                         if (!array_key_exists('height', $childStyle)) {
-                            $lineH = (int)($fs * 1.35);
+                            $lineH = $this->resolveLineHeight($childStyle, $fs);
                             if ($child->h === 0 || $child->h < $lineH) {
                                 $child->h = $lineH;
                             }
@@ -1002,7 +1079,7 @@ class LayoutResolver
                 $padR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
 
 
-                $contentW = $node->w - $padL - $padR;
+                $contentW = $this->computeContentWidth($style, $node->w);
 
 
                 if ($contentW > 0) {
@@ -1648,10 +1725,10 @@ class LayoutResolver
         $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
 
 
-        $containerMain = max(0, $isRow ? ($width - $paddingLeft - $paddingRight) : ($height - $paddingTop - $paddingBottom));
+        $containerMain = max(0, $isRow ? $this->computeContentWidth($style, $width) : $this->computeContentHeight($style, $height));
 
 
-        $containerCross = max(0, $isRow ? ($height - $paddingTop - $paddingBottom) : ($width - $paddingLeft - $paddingRight));
+        $containerCross = max(0, $isRow ? $this->computeContentHeight($style, $height) : $this->computeContentWidth($style, $width));
 
 
         // ── Step 1: Collect children and resolve ──
@@ -3550,7 +3627,7 @@ class LayoutResolver
                 $chText = $ch->content ?? '';
 
 
-                if ((($ch->type === 'text' || $ch->type === 'span') && is_string($chText) && strlen($chText) > 0)) {
+                if ((is_string($chText) && strlen($chText) > 0)) {
 
 
                     $fs = (int)($ch->style['fontSize'] ?? 14);
@@ -3569,12 +3646,12 @@ class LayoutResolver
 
 
                             // Row: text width = measured content width
-                            if ($ch->w === 0 || $ch->w < $measured) {
-
-
+                            // Content-sized child (no explicit width, no flex-grow): always use text-measured
+                            $hasFlexW = array_key_exists('width', $ch->style);
+                            if (!$hasFlexW && !$data['isFlexGrow']) {
                                 $ch->w = $measured;
-
-
+                            } elseif ($ch->w === 0 || $ch->w < $measured) {
+                                $ch->w = $measured;
                             }
 
 
@@ -3582,7 +3659,7 @@ class LayoutResolver
 
 
                             // Column: text height = line-height (based on font size)
-                            $lineH = (int)($fs * 1.35);
+                            $lineH = $this->resolveLineHeight($ch->style, $fs);
 
 
                             if ($ch->h === 0 || $ch->h < $lineH) {
@@ -3911,13 +3988,34 @@ class LayoutResolver
             $childStyle = $ch->style;
 
             // Use explicit grid-column/grid-row from style (CSS 1-based)
+            // Support: span N, M / N, simple integer
             $explicitCol = $childStyle['gridColumn'] ?? null;
             $explicitRow = $childStyle['gridRow'] ?? null;
+            $colSpan = 1;
             if ($explicitCol !== null && $explicitCol !== '') {
-                $col = (int)$explicitCol - 1;
+                if (preg_match('/^span\s+(\d+)$/i', $explicitCol, $m)) {
+                    $colSpan = (int)max(1, $m[1]);
+                } elseif (preg_match('/^(\-?\d+)\s*\/\s*(\-?\d+)$/', $explicitCol, $m)) {
+                    $startCol = (int)$m[1] - 1;
+                    $endCol = (int)$m[2] - 1;
+                    $col = (int)max(0, $startCol);
+                    if ($endCol < 0 && $cols !== null) {
+                        $colSpan = (int)max(1, $cols - $startCol);
+                    } else {
+                        $colSpan = (int)max(1, $endCol - $startCol + 1);
+                    }
+                } else {
+                    $col = (int)$explicitCol - 1;
+                }
             }
             if ($explicitRow !== null && $explicitRow !== '') {
                 $row = (int)$explicitRow - 1;
+            }
+
+            // Auto-placement: if item with span doesn't fit current row, wrap to next row first
+            if ($colSpan > 1 && $cols !== null && $col + $colSpan > $cols) {
+                $col = 0;
+                $row++;
             }
 
             // 计算网格单元水平位置
@@ -3931,17 +4029,63 @@ class LayoutResolver
             }
             $cellY = $node->y + $row * ($cellH + $rowGap);
 
-            if ($explicitColWidths !== null && isset($explicitColWidths[$col])) {
-                $cellWFinal = (int)max(0, (int)$explicitColWidths[$col]);
+            // ── 跨列宽度计算 (grid-column span N / M / N) ──
+            if ($colSpan > 1) {
+                if ($explicitColWidths !== null) {
+                    $cellWFinal = 0;
+                    $maxCi = min($col + $colSpan, $cols);
+                    for ($ci = $col; $ci < $maxCi; $ci++) {
+                        $cellWFinal += (int)max(0, (int)($explicitColWidths[$ci] ?? $cellW));
+                        if ($ci < $maxCi - 1) {
+                            $cellWFinal += $colGap;
+                        }
+                    }
+                } else {
+                    $cellWFinal = (int)max(0, (int)($cellW * $colSpan + ($colSpan - 1) * $colGap));
+                }
             } else {
-                $cellWFinal = (int)max(0, (int)$cellW);
+                if ($explicitColWidths !== null && isset($explicitColWidths[$col])) {
+                    $cellWFinal = (int)max(0, (int)$explicitColWidths[$col]);
+                } else {
+                    $cellWFinal = (int)max(0, (int)$cellW);
+                }
             }
             $cellHFinal = (int)max(0, (int)$cellH);
 
             // ── Pass 1 只设宽度，不设高度 ──
-            // justify-self: stretch (default) → 水平撑满
-            $ch->x = $cellX;
-            $ch->w = $cellWFinal;
+            // justify-self / justify-items: 控制 grid item 水平对齐
+            $explicitW = $ch->w;
+            $justifySelf = $childStyle['justifySelf'] ?? 'auto';
+            if ($justifySelf === 'auto') {
+                $justifySelf = $style['justifyItems'] ?? 'normal';
+            }
+            // Grid items: normal = stretch
+            if ($justifySelf === 'normal' || $justifySelf === 'stretch' || $justifySelf === 'auto') {
+                $ch->x = $cellX;
+                $ch->w = $cellWFinal;
+            } elseif ($justifySelf === 'center') {
+                if ($explicitW > 0 && $explicitW < $cellWFinal) {
+                    $ch->x = $cellX + (int)(($cellWFinal - $explicitW) / 2);
+                    $ch->w = $explicitW;
+                } else {
+                    $ch->x = $cellX;
+                    $ch->w = $cellWFinal;
+                }
+            } elseif ($justifySelf === 'end' || $justifySelf === 'flex-end') {
+                if ($explicitW > 0 && $explicitW < $cellWFinal) {
+                    $ch->x = $cellX + $cellWFinal - $explicitW;
+                    $ch->w = $explicitW;
+                } else {
+                    $ch->x = $cellX;
+                    $ch->w = $cellWFinal;
+                }
+            } else {
+                // start / flex-start / other: keep explicit width
+                if ($explicitW > 0 && $explicitW < $cellWFinal) {
+                    $ch->w = $explicitW;
+                }
+                $ch->x = $cellX;
+            }
             // align-self: 仅定位置 y，不强制高度
             $ch->y = $cellY;
             // NOTE: 不设置 $ch->h，保留 resolveNode 后的自然高度
@@ -3966,7 +4110,7 @@ class LayoutResolver
             $rowContentHeights[$row] = max($rowContentHeights[$row] ?? 0, $actualContentH);
             $itemRowMap[$idx] = $row;
 
-            $col++;
+            $col += $colSpan;
             if ($col >= $cols) {
                 $col = 0;
                 $row++;
@@ -4139,7 +4283,17 @@ class LayoutResolver
         if ($pct !== null && $parentSize > 0) {
 
 
-            return (int)($parentSize * $pct / 100.0);
+            $result = (int)($parentSize * $pct / 100.0);
+
+
+            // Apply calc offset (e.g., calc(100% - 40px) stores -40 in widthCalcOffset)
+            $calcOffsetKey = str_replace('Percent', 'CalcOffset', $percentKey);
+            $calcOffset = $style[$calcOffsetKey] ?? 0;
+            if ($calcOffset !== 0) {
+                $result += (int)$calcOffset;
+            }
+            file_put_contents('F:\\work\\Px\\debug_layout.txt', sprintf("resolvePercent: key=%s pct=%s parentSize=%d calcOffset=%d result=%d TIMESTAMP=%d\n", $key, $pct, $parentSize, $calcOffset, $result, microtime(true) * 1000000), FILE_APPEND);
+            return max(0, $result);
 
 
         }
@@ -4464,7 +4618,7 @@ class LayoutResolver
         $stackY = $childOffsetY;
 
 
-        $containerW = max($node->w - $paddingLeft - $paddingRight, 0);
+        $containerW = $this->computeContentWidth($style, $node->w);
 
 
         $autoStack = true;
