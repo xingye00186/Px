@@ -105,7 +105,9 @@ class ClassToPathResolver
         // 2. Px\ 单级命名空间（ReactiveComponent, BaseComponent 等）
         if (str_starts_with($fqn, 'Px\\') && substr_count($fqn, '\\') === 1) {
             $short = substr($fqn, 3);
-            return $this->normalize($this->frameworkDir . '/' . $short . '.php');
+            $path = $this->normalize($this->frameworkDir . '/' . $short . '.php');
+            if ($path !== null) return $path;
+            // 文件不存在时继续到回退 #6（如 MockComp.php 中定义了 Px\MockReactiveComp）
         }
 
         // 3. 无命名空间的组件类（gen/*.php）
@@ -122,6 +124,24 @@ class ClassToPathResolver
         if (!str_contains($fqn, '\\')) {
             $candidate = $this->normalize($this->frameworkDir . '/Core/' . $fqn . '.php');
             if ($candidate !== null) return $candidate;
+        }
+
+        // 6. 回退：扫描应用目录（含 gen/）中所有 PHP 文件，查找类定义
+        //    支持多类文件（如 MockComp.php 同时定义 MockBaseComp 和 MockReactiveComp）
+        //    同时支持 namespace 声明（FQN='Px\MockReactiveComp' 匹配 'class MockReactiveComp'）
+        $shortName = substr($fqn, strrpos($fqn, '\\') !== false ? strrpos($fqn, '\\') + 1 : 0);
+        foreach ([$this->appDir, $this->appDir . '/gen'] as $scanDir) {
+            if (!is_dir($scanDir)) continue;
+            foreach (glob($scanDir . '/*.php') as $appPhpFile) {
+                $appPhpFile = str_replace('\\', '/', $appPhpFile);
+                $content = @file_get_contents($appPhpFile);
+                if ($content === false) continue;
+                // 先尝试匹配 FQN（无 namespace 的类），再尝试匹配短类名
+                if (preg_match('/\\bclass\\s+' . preg_quote($fqn, '/') . '\\b/s', $content) ||
+                    preg_match('/\\bclass\\s+' . preg_quote($shortName, '/') . '\\b/s', $content)) {
+                    return $appPhpFile;
+                }
+            }
         }
 
         return null; // 未知类，跳过

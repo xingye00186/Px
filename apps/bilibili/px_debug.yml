@@ -4,3 +4,4 @@ snapshot_max_events: 5
 snapshot_detail: normal
 snapshot_max_size_mb: 5
 snapshot_max_backups: 5
+diag_enabled: true

@@ -23,6 +23,10 @@ tests/screenshot/output/*.png
 tests/anomaly/
 tests/screenshot/output/
 
+# 依赖分析自动生成文件
+dep.json
+project.dep.yml
+
 # Debug 输出目录
 debug/
 

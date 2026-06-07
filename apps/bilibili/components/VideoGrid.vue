@@ -59,13 +59,13 @@
         ['title'=>'为什么说量子计算不会取代经典计算机？','coverBg'=>'#1ABC9C','duration'=>'14:08','playCount'=>'67.2万','likeCount'=>'5431','upName'=>'科学声音','upAvatar'=>'#1ABC9C','date'=>'05-30'],
     ];
 
-    /** 当前显示的视频列表 */
+    /** 当前显示的视频列表（在 onMount 中从 allVideos 赋值） */
     public array $videoList = [];
 
     /** 旋转偏移量 */
     public string $offset = '0';
 
-    /** mount 时初始化视频列表 */
+    /** mount 时从 allVideos 初始化 videoList */
     public function onMount(): void
     {
         $this->videoList = $this->allVideos;

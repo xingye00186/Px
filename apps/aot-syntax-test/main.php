@@ -502,7 +502,7 @@ function group5_property_access(): string
     $events7 = [new PropTest(55, 66, "objval_repair")];
     foreach ($events7 as $e7) {
         if ($e7 instanceof PropTest) {
-            $typed7 = objval($e7, PropTest::class);
+            $typed7 = $e7->toObject(PropTest::class);
             $s .= assertIntEq("修复2: objval恢复->int", (int)$typed7->x, 55);
             $s .= assertStrEq("修复2: objval恢复->string", $typed7->action, "objval_repair");
         }
@@ -521,7 +521,7 @@ function group5_property_access(): string
     // 1=直接属性 2=objval 3=类型参数 4=getter
     $ev9 = new PropTest(99, 111, "compare");
     $s .= assertIntEq("修复1: 直接->int", (int)$ev9->x, 99);
-    $ev9t = objval($ev9, PropTest::class);
+    $ev9t = $ev9->toObject(PropTest::class);
     $s .= assertIntEq("修复2: objval->int", (int)$ev9t->x, 99);
     $r9 = readViaTypedParam($ev9);
     $s .= assertIntEq("修复3: 类型参数->int", (int)$r9[0], 99);
@@ -568,7 +568,7 @@ function group6_type_narrowing(): string
 
     // T6-04: objval 类型标注 + 属性访问
     $ev4 = new PropTest(55, 66, "objval");
-    $ev4typed = objval($ev4, PropTest::class);
+    $ev4typed = $ev4->toObject(PropTest::class);
     $s .= assertIntEq("objval 后 ->x", $ev4typed->x, 55);
     $s .= assertIntEq("objval 后 ->y", $ev4typed->y, 66);
     $s .= assertStrEq("objval 后 ->action", $ev4typed->action, "objval");
@@ -839,13 +839,13 @@ function group10_type_discard(): string
     $s .= "  [INFO] T10-03: any() 三元运算类型丢弃 — 编译通过\n";
 
     // ———————————————————————————————————————————
-    // 进阶篇：objval() 类型接续
+    // 进阶篇：toObject() 类型接续
     // ———————————————————————————————————————————
 
     // T10-04: objval() 从数组 → foreach → 类型恢复（已有，保留）
     $items = [new PropTest(77, 88, "recovered")];
     foreach ($items as $raw) {
-        $typed = objval($raw, PropTest::class);
+        $typed = $raw->toObject(PropTest::class);
         $s .= assertIntEq("T10-04: objval 数组->type->int", $typed->x, 77);
         $s .= assertIntEq("T10-04: objval 数组->type->int y", $typed->y, 88);
         $s .= assertStrEq("T10-04: objval 数组->type->string", $typed->action, "recovered");
@@ -859,14 +859,14 @@ function group10_type_discard(): string
         $raw5 = any(new PropTest(333, 444, "other"));
     }
     // 此时 $raw5 类型已丢失 (Variant)，用 objval 恢复
-    $typed5 = objval($raw5, PropTest::class);
+    $typed5 = $raw5->toObject(PropTest::class);
     $s .= assertIntEq("T10-05: any()->objval->x", $typed5->x, 111);
     $s .= assertStrEq("T10-05: any()->objval->action", $typed5->action, "any_objval");
 
     // T10-06: objval() 从函数返回 object 后恢复
     $obj6 = createAsTestObject();
     if ($obj6 instanceof PropTest) {
-        $typed6 = objval($obj6, PropTest::class);
+        $typed6 = $obj6->toObject(PropTest::class);
         $s .= assertIntEq("T10-06: objval object返回->x", $typed6->x, 30);
         $s .= assertStrEq("T10-06: objval object返回->action", $typed6->action, "move");
     }
@@ -876,13 +876,13 @@ function group10_type_discard(): string
     $raw7 = any($r7 > 3
         ? new PropTest(50, 60, "chain_getter")
         : new PropTest(70, 80, "fallback"));
-    $typed7 = objval($raw7, PropTest::class);
+    $typed7 = $raw7->toObject(PropTest::class);
     $s .= assertIntEq("T10-07: any->objval->getX()", $typed7->getX(), 50);
     $s .= assertStrEq("T10-07: any->objval->getAction()", $typed7->getAction(), "chain_getter");
 
     // T10-08: objval() 调用后修改属性 + 再次读取
     $raw8 = new PropTest(200, 300, "mutate");
-    $typed8 = objval($raw8, PropTest::class);
+    $typed8 = $raw8->toObject(PropTest::class);
     $typed8->x = 999;
     $s .= assertIntEq("T10-08: objval 修改属性->x", $typed8->x, 999);
     $s .= assertIntEq("T10-08: objval 修改后->y(不变)", $typed8->y, 300);
@@ -893,18 +893,18 @@ function group10_type_discard(): string
 
     // T10-09: 多层数组 → objval → 属性读取 (类 Scheduler 模式)
     $tasks = [new PropTest(11, 22, "task1"), new PropTest(33, 44, "task2")];
-    $firstTask = objval($tasks[0], PropTest::class);
+    $firstTask = $tasks[0]->toObject(PropTest::class);
     $s .= assertIntEq("T10-09: 数组索引->objval->x", $firstTask->x, 11);
     $s .= assertStrEq("T10-09: 数组索引->objval->action", $firstTask->action, "task1");
 
-    // T10-10: 数组中使用 objval(\Closure::class) 恢复闭包（Scheduler 模式）
+    // T10-10: 数组中使用 ->toObject(\Closure::class) 恢复闭包（Scheduler 模式）
     $callbacks = [
         function (): int { return 42; },
         function (): int { return 100; }
     ];
-    $fn10 = objval($callbacks[1], \Closure::class);
+    $fn10 = $callbacks[1]->toObject(\Closure::class);
     $result10 = $fn10();
-    $s .= assertIntEq("T10-10: objval(Closure) 调用", $result10, 100);
+    $s .= assertIntEq("T10-10: toObject(Closure) 调用", $result10, 100);
 
     // ———————————————————————————————————————————
     // 边界篇：数组元素类型转换
@@ -1076,6 +1076,117 @@ function group14_closures(): string
 }
 
 // ================================================================
+// GROUP 15 — 大数组字面量测试 (Large Array Literals)
+// ================================================================
+
+/**
+ * 测试类：20项大数组作为属性默认值 + 5项小数组作为对照
+ * 用于验证 AOT 编译器对类属性中大型数组字面量的处理
+ */
+class LargeArrayTest
+{
+    public array $largeList = [
+        ['id' => 1, 'title' => 'Item 01', 'type' => 'A', 'order' => 1, 'tag' => 'test'],
+        ['id' => 2, 'title' => 'Item 02', 'type' => 'B', 'order' => 2, 'tag' => 'demo'],
+        ['id' => 3, 'title' => 'Item 03', 'type' => 'A', 'order' => 3, 'tag' => 'test'],
+        ['id' => 4, 'title' => 'Item 04', 'type' => 'B', 'order' => 4, 'tag' => 'demo'],
+        ['id' => 5, 'title' => 'Item 05', 'type' => 'A', 'order' => 5, 'tag' => 'test'],
+        ['id' => 6, 'title' => 'Item 06', 'type' => 'B', 'order' => 6, 'tag' => 'demo'],
+        ['id' => 7, 'title' => 'Item 07', 'type' => 'A', 'order' => 7, 'tag' => 'test'],
+        ['id' => 8, 'title' => 'Item 08', 'type' => 'B', 'order' => 8, 'tag' => 'demo'],
+        ['id' => 9, 'title' => 'Item 09', 'type' => 'A', 'order' => 9, 'tag' => 'test'],
+        ['id' => 10, 'title' => 'Item 10', 'type' => 'B', 'order' => 10, 'tag' => 'demo'],
+        ['id' => 11, 'title' => 'Item 11', 'type' => 'A', 'order' => 11, 'tag' => 'test'],
+        ['id' => 12, 'title' => 'Item 12', 'type' => 'B', 'order' => 12, 'tag' => 'demo'],
+        ['id' => 13, 'title' => 'Item 13', 'type' => 'A', 'order' => 13, 'tag' => 'test'],
+        ['id' => 14, 'title' => 'Item 14', 'type' => 'B', 'order' => 14, 'tag' => 'demo'],
+        ['id' => 15, 'title' => 'Item 15', 'type' => 'A', 'order' => 15, 'tag' => 'test'],
+        ['id' => 16, 'title' => 'Item 16', 'type' => 'B', 'order' => 16, 'tag' => 'demo'],
+        ['id' => 17, 'title' => 'Item 17', 'type' => 'A', 'order' => 17, 'tag' => 'test'],
+        ['id' => 18, 'title' => 'Item 18', 'type' => 'B', 'order' => 18, 'tag' => 'demo'],
+        ['id' => 19, 'title' => 'Item 19', 'type' => 'A', 'order' => 19, 'tag' => 'test'],
+        ['id' => 20, 'title' => 'Item 20', 'type' => 'B', 'order' => 20, 'tag' => 'demo'],
+    ];
+
+    public array $smallList = [
+        ['id' => 1, 'title' => 'Sml A'],
+        ['id' => 2, 'title' => 'Sml B'],
+        ['id' => 3, 'title' => 'Sml C'],
+        ['id' => 4, 'title' => 'Sml D'],
+        ['id' => 5, 'title' => 'Sml E'],
+    ];
+}
+
+/**
+ * 测试类：方法体内数组赋值（已知 AOT bug 验证）
+ */
+class MethodArrayAssignTest
+{
+    public array $items = [];
+
+    public function init(): void
+    {
+        $this->items = [
+            ['id' => 1, 'name' => 'from_method'],
+            ['id' => 2, 'name' => 'from_method'],
+            ['id' => 3, 'name' => 'from_method'],
+        ];
+    }
+}
+
+/**
+ * 测试类：属性到属性数组赋值
+ * 注：简单场景下此模式在 AOT 中正常工作。
+ * 但在 SFC 生成的 ReactiveComponent + mount 生命周期的复杂上下文中，
+ * 属性间数组赋值 $this->prop = $this->otherProp 可能不生效（如 bilibili VideoGrid bug）。
+ */
+class PropToPropAssignTest
+{
+    public array $source = [
+        ['id' => 1, 'val' => 'src_A'],
+        ['id' => 2, 'val' => 'src_B'],
+        ['id' => 3, 'val' => 'src_C'],
+    ];
+
+    public array $target = [];
+
+    public function copyFromSource(): void
+    {
+        $this->target = $this->source;
+    }
+}
+
+function group15_large_arrays(): string
+{
+    $s = "";
+    $s .= "\n--- G15: 大数组字面量测试 (Large Array Literals) ---\n";
+
+    // T15-01: 5项小数组属性默认值（对照基准）
+    $obj = any(new LargeArrayTest());
+    $s .= assertIntEq("小数组(5项)属性默认值 count", count($obj->smallList), 5);
+    $s .= assertIntEq("小数组索引访问 $obj->smallList[0]['id']", (int)$obj->smallList[0]['id'], 1);
+
+    // T15-02: 20项大数组属性默认值（验证 AOT 编译问题）
+    $s .= assertIntEq("大数组(20项)属性默认值 count", count($obj->largeList), 20);
+    $s .= assertIntEq("大数组索引访问 $obj->largeList[0]['id']", (int)$obj->largeList[0]['id'], 1);
+    $s .= assertIntEq("大数组索引访问 $obj->largeList[19]['id']", (int)$obj->largeList[19]['id'], 20);
+    $s .= assertStrEq("大数组索引访问 $obj->largeList[5]['title']", (string)$obj->largeList[5]['title'], "Item 06");
+
+    // T15-03: 方法体内数组赋值
+    $obj2 = any(new MethodArrayAssignTest());
+    $obj2->init();
+    $s .= assertIntEq("方法体内数组赋值 count", count($obj2->items), 3);
+
+    // T15-04: 属性到属性数组赋值（简单场景通过，复杂场景可能失败）
+    $obj3 = any(new PropToPropAssignTest());
+    $s .= assertIntEq("属性到属性数组赋值 BEFORE count", count($obj3->target), 0);
+    $obj3->copyFromSource();
+    $s .= assertIntEq("属性到属性数组赋值 AFTER count", count($obj3->target), 3);
+
+    return $s;
+}
+
+// ================================================================
 // 完整报告生成
 // ================================================================
 
@@ -1083,7 +1194,7 @@ function buildReport(string $group1, string $group2, string $group3,
                      string $group4, string $group5, string $group6,
                      string $group7, string $group8, string $group9,
                      string $group10, string $group11, string $group12,
-                     string $group13, string $group14): string
+                     string $group13, string $group14, string $group15): string
 {
     $report = "";
     $report .= "+----------------------------------------------------------------------+\n";
@@ -1132,6 +1243,7 @@ function buildReport(string $group1, string $group2, string $group3,
     $report .= $group12;
     $report .= $group13;
     $report .= $group14;
+    $report .= $group15;
 
     // 测试分组说明
     $report .= "\n";
@@ -1150,6 +1262,7 @@ function buildReport(string $group1, string $group2, string $group3,
     $report .= "  G12: 数组与字符串操作 (Arrays & Strings)\n";
     $report .= "  G13: match 表达式 (Match Expression)\n";
     $report .= "  G14: 闭包边界测试 (Closure Boundaries)\n";
+    $report .= "  G15: 大数组字面量测试 (Large Array Literals)\n";
     $report .= "\n";
 
     // 编译限制说明
@@ -1258,11 +1371,12 @@ function main(): int
     $g12 = group12_arrays_strings();
     $g13 = group13_match();
     $g14 = group14_closures();
+    $g15 = group15_large_arrays();
 
     // 生成报告
     $report = buildReport(
         $g1, $g2, $g3, $g4, $g5, $g6,
-        $g7, $g8, $g9, $g10, $g11, $g12, $g13, $g14
+        $g7, $g8, $g9, $g10, $g11, $g12, $g13, $g14, $g15
     );
 
     echo $report;
