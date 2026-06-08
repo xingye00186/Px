@@ -155,21 +155,40 @@ test('box-shadow:多阴影语法 第一个阴影被正确提取', function () {
     assert_contains($result, '0|2|8|', 'first shadow h=0, v=2, blur=8');
 });
 
+// ── rgba alpha → opacity 注入 ──
+test('rgba() alpha 被注入为 opacity', function () {
+    $result = CssMappings::parseInlineStyle('background:rgba(251,114,153,0.4)');
+    assert_eq($result['opacity'] ?? 1.0, 0.4, 'opacity injected from rgba alpha');
+    // #FB7299 in BGR = (0x99 << 16) | (0x72 << 8) | 0xFB = 10056443
+    assert_eq($result['bg'] ?? 0, 0x9972FB, 'BGR color correct');
+});
+
+test('显式 opacity:0.8 优先于 rgba() alpha', function () {
+    $result = CssMappings::parseInlineStyle('background:rgba(251,114,153,0.4);opacity:0.8');
+    assert_eq($result['opacity'] ?? 1.0, 0.8, 'explicit opacity takes priority');
+});
+
+test('rgba(0,0,0,0.06) 带空格的 alpha 注入为 opacity=0.06', function () {
+    $result = CssMappings::parseInlineStyle('background:rgba(0, 0, 0, 0.06)');
+    assert_eq($result['opacity'] ?? 1.0, 0.06, 'opacity = 0.06 with spaces');
+});
+
 // =============================================================
-// 6. Transform（当前 parseTransform 仅支持 translate）
+// 6. Transform
 // =============================================================
 echo "\n--- 6. Transform ---\n";
 
-test('transform:rotate(0deg) 当前返回默认值（尚未实现）', function () {
-    $result = CssMappings::parseTransform('rotate(0deg)');
-    assert_eq($result['translateX'], 0, 'rotate gives default translateX = 0');
-    assert_eq($result['translateY'], 0, 'rotate gives default translateY = 0');
+test('transform:rotate(45deg) 通过 parseInlineStyle 产出 rotate=45', function () {
+    $result = CssMappings::parseInlineStyle('transform:rotate(45deg)');
+    assert_eq($result['transform']['translateX'], 0, 'translateX = 0');
+    assert_eq($result['transform']['translateY'], 0, 'translateY = 0');
+    assert_eq($result['transform']['rotate'], 45, 'rotate = 45');
 });
 
 test('transform:translate(10px, 20px) 现有功能不受影响', function () {
-    $result = CssMappings::parseTransform('translate(10px, 20px)');
-    assert_eq($result['translateX'], 10, 'translateX = 10');
-    assert_eq($result['translateY'], 20, 'translateY = 20');
+    $result = CssMappings::parseInlineStyle('transform:translate(10px, 20px)');
+    assert_eq($result['transform']['translateX'], 10, 'translateX = 10');
+    assert_eq($result['transform']['translateY'], 20, 'translateY = 20');
 });
 
 // =============================================================
@@ -209,6 +228,68 @@ test('overflow:auto 产出 overflow=auto', function () {
 test('z-index:10 产出 zIndex=10', function () {
     $result = CssMappings::parseInlineStyle('z-index:10');
     assert_eq($result['zIndex'] ?? '', '10', 'zIndex = 10');
+});
+
+// =============================================================
+// 9. Background 简写展开
+// =============================================================
+echo "\n--- 9. Background 简写展开 ---\n";
+
+test('background:url("img.png") 提取 backgroundImage', function () {
+    $result = CssMappings::parseInlineStyle('background:url("img.png")');
+    assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage = img.png');
+    assert_eq($result['bg'] ?? 0, 0, 'bg = 0 (transparent default)');
+});
+
+test('background:url("img.png") no-repeat center/cover 提取 image+position+size', function () {
+    $result = CssMappings::parseInlineStyle('background:url("img.png") no-repeat center/cover');
+    assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
+    assert_eq($result['backgroundPosition'] ?? '', 'center', 'backgroundPosition = center');
+    assert_eq($result['backgroundSize'] ?? '', 'cover', 'backgroundSize = cover');
+    assert_eq($result['bg'] ?? 0, 0, 'bg = 0 (no color specified)');
+});
+
+test('background:#FB7299 url("img.png") center/cover no-repeat 全简写', function () {
+    $result = CssMappings::parseInlineStyle('background:#FB7299 url("img.png") center/cover no-repeat');
+    // #FB7299: R=251, G=114, B=153 → BGR = (153<<16)|(114<<8)|251 = 0x9972FB
+    assert_eq($result['bg'] ?? 0, 0x9972FB, 'bg color parsed correctly');
+    assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
+    assert_eq($result['backgroundPosition'] ?? '', 'center', 'backgroundPosition = center');
+    assert_eq($result['backgroundSize'] ?? '', 'cover', 'backgroundSize = cover');
+});
+
+test('background:rgba(251,114,153,0.4) url("img.png") 含 rgba 颜色', function () {
+    $result = CssMappings::parseInlineStyle('background:rgba(251,114,153,0.4) url("img.png")');
+    assert_eq($result['bg'] ?? 0, 0x9972FB, 'rgba bg color parsed');
+    assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
+    assert_eq($result['opacity'] ?? 1.0, 0.4, 'rgba alpha injected as opacity');
+});
+
+test('background:url("img.png") #FB7299 颜色在 url 之后', function () {
+    $result = CssMappings::parseInlineStyle('background:url("img.png") #FB7299');
+    assert_eq($result['bg'] ?? 0, 0x9972FB, 'bg color parsed when after image');
+    assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
+});
+
+test('background 简写不覆盖显式 background-image', function () {
+    $result = CssMappings::parseInlineStyle('background-image:url("explicit.png");background:#FB7299 url("shorthand.png")');
+    // 显式 background-image 应保留，简写中的 image 不覆盖
+    assert_eq($result['backgroundImage'] ?? '', 'explicit.png', 'explicit background-image preserved');
+    assert_eq($result['bg'] ?? 0, 0x9972FB, 'bg from shorthand still parsed');
+});
+
+test('background:#FB7299 单一颜色不受简写展开影响', function () {
+    $result = CssMappings::parseInlineStyle('background:#FB7299');
+    assert_eq($result['bg'] ?? 0, 0x9972FB, 'single hex color unchanged');
+    assert_false(isset($result['backgroundImage']), 'no backgroundImage injected');
+});
+
+test('background:rgba(0,0,0,0.06) url("img.png") left bottom/auto 组合', function () {
+    $result = CssMappings::parseInlineStyle('background:rgba(0,0,0,0.06) url("img.png") left bottom/auto');
+    assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
+    assert_eq($result['backgroundPosition'] ?? '', 'left bottom', 'backgroundPosition = left bottom');
+    assert_eq($result['backgroundSize'] ?? '', 'auto', 'backgroundSize = auto');
+    assert_eq($result['opacity'] ?? 1.0, 0.06, 'rgba alpha = 0.06');
 });
 
 // =============================================================

@@ -111,6 +111,24 @@ $tests['background + border-radius 组合'] = function() {
     return $result;
 };
 
+// ── Test 11: rgba background with alpha ──
+$tests['rgba(251,114,153,0.4) 半透明背景'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'left:10px;top:10px;width:100px;height:50px;background:rgba(251,114,153,0.4)'], 'RGBA')
+    );
+    assert_contains($result, 'div (0,0 100x50)', 'rgba background layout unchanged');
+    return $result;
+};
+
+// ── Test 12: background 简写展开 — 颜色 + position/size ──
+$tests['background 简写 #3366FF + center/cover'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'left:0;top:0;width:100px;height:50px;background:#3366FF center/cover'], 'shorthand')
+    );
+    assert_contains($result, 'div (0,0 100x50)', 'shorthand layout 100x50');
+    return $result;
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-08-Visual-Effects.snap';
 run_css_tests('Level 8 - Visual Effects', $snapFile, $tests);
 

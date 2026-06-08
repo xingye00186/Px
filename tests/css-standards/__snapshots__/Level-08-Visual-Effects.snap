@@ -55,3 +55,15 @@ div (0,0 200x100) text="Cover"
 === Test: background + border-radius 组合 ===
 Frame #1 events=0 detail=normal
 div (0,0 120x60) text="Blue rounded"
+
+---
+
+=== Test: rgba(251,114,153,0.4) 半透明背景 ===
+Frame #1 events=0 detail=normal
+div (0,0 100x50) text="RGBA"
+
+---
+
+=== Test: background 简写 #3366FF + center/cover ===
+Frame #1 events=0 detail=normal
+div (0,0 100x50) text="shorthand"
