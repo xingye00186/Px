@@ -226,6 +226,7 @@ class CssMappings
         'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
         'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
         'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
+        'transform'            => ['key' => 'transform',       'parser' => 'Px\Rendering\CssMappings::parseTransform', 'default' => ''],
     ];
 
     /**
@@ -296,6 +297,7 @@ class CssMappings
         'background-size' => ['key' => 'backgroundSize', 'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => ''],
         'background-position' => ['key' => 'backgroundPosition', 'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => ''],
         'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
+        'transform'            => ['key' => 'transform',       'parser' => 'Px\Rendering\CssMappings::parseTransform', 'default' => ''],
     ];
 
     // ============================================================
@@ -597,6 +599,7 @@ class CssMappings
             case 'Px\\Rendering\\CssMappings::parseOpacity':   return self::parseOpacity($value);
             case 'Px\Rendering\CssMappings::parseIdent':      return self::parseIdent($value);
             case 'Px\Rendering\CssMappings::parseBackgroundImage': return self::parseBackgroundImage($value);
+            case 'Px\Rendering\CssMappings::parseTransform': return self::parseTransform($value);
             default:                             return $value;
         }
     }
@@ -667,6 +670,9 @@ class CssMappings
 
         // Expand shorthand padding/margin to individual direction properties
         $raw = self::expandBoxShorthand($raw);
+
+        // Expand background shorthand into individual sub-properties
+        $raw = self::expandBackgroundShorthand($raw);
 
         // Pre-detect percentage values for layout properties.
         // Store as "widthPercent" (float, e.g. 50.0 for "50%") alongside the
@@ -739,6 +745,19 @@ class CssMappings
             }
         }
 
+        // Extract rgba alpha channel as opacity (only if opacity not explicitly set)
+        if (!isset($style['opacity'])) {
+            foreach ($raw as $rawValue) {
+                if (preg_match('/rgba\s*\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)/i', $rawValue, $m)) {
+                    $alpha = (float)$m[1];
+                    if ($alpha >= 0.0 && $alpha < 1.0) {
+                        $style['opacity'] = $alpha;
+                    }
+                    break;
+                }
+            }
+        }
+
         return $style;
     }
 
@@ -776,6 +795,133 @@ class CssMappings
             // Keep original shorthand for backward compat
             $raw[$prop] = $top . 'px';
         }
+        return $raw;
+    }
+
+    /**
+     * Parse CSS background shorthand into individual sub-properties.
+     *
+     * CSS background shorthand syntax:
+     *   [bg-color] [bg-image] [bg-position]/[bg-size] [bg-repeat] [bg-attachment] [bg-origin] [bg-clip]
+     *
+     * This method extracts sub-properties by detecting distinctive patterns:
+     *   1. Color first (hex, rgb/rgba, linear-gradient)
+     *   2. Image (url(...))
+     *   3. Position/Size (".../size" pattern)
+     *   4. Repeat keywords (no-repeat, repeat-x, etc.)
+     *   5. Attachment keywords (scroll, fixed, local)
+     *   6. Remainder → position (if /size was extracted) or empty
+     *
+     * Only expands multi-value shorthands containing url() or /
+     * (position/size delimiter). Single color values pass through unchanged.
+     *
+     * Examples:
+     *   "#FB7299"                                    → unchanged (single color)
+     *   "url('bg.png')"                              → image only
+     *   "url('bg.png') center/cover no-repeat"       → image + position + size
+     *   "#FB7299 url('bg.png') center/cover no-repeat" → full shorthand
+     *   "rgba(251,114,153,0.4) url('bg.png')"         → rgba color + image
+     *
+     * @param array $raw Raw style declarations
+     * @return array Updated raw declarations with expanded sub-properties
+     */
+    private static function expandBackgroundShorthand(array $raw): array
+    {
+        if (!isset($raw['background']) || $raw['background'] === '') {
+            return $raw;
+        }
+
+        $value = trim($raw['background']);
+
+        // Single color value (hex, rgb/rgba, gradient, transparent, none) → no expansion
+        if (preg_match('/^#[\da-fA-F]{3,8}$/', $value) ||
+            preg_match('/^rgba?\s*\([^)]*\)$/i', trim($value)) ||
+            preg_match('/^linear-gradient\s*\([^)]*\)$/i', trim($value)) ||
+            strtolower($value) === 'transparent' ||
+            strtolower($value) === 'none') {
+            return $raw;
+        }
+
+        // No url() and no position/size delimiter → not a multi-value shorthand
+        if (!preg_match('/url\s*\(/i', $value) && !str_contains($value, '/')) {
+            return $raw;
+        }
+
+        // Parse the multi-value shorthand
+        $rest = $value;
+        $bgColor = '';
+        $bgImage = '';
+        $bgPosition = '';
+        $bgSize = '';
+
+        // 1. Extract color (distinctive formats)
+        if (preg_match('/#[\da-fA-F]{3,8}\b/', $rest, $m)) {
+            $bgColor = $m[0];
+            $rest = trim(str_replace($m[0], '', $rest));
+        }
+        if (preg_match('/rgba?\s*\([^)]*\)/i', $rest, $m)) {
+            $bgColor = $m[0];
+            $rest = trim(str_replace($m[0], '', $rest));
+        }
+        if (preg_match('/linear-gradient\s*\([^)]*\)/i', $rest, $m)) {
+            $bgColor = $m[0];
+            $rest = trim(str_replace($m[0], '', $rest));
+        }
+
+        // 2. Extract image: url(...)
+        if (preg_match('/url\s*\(\s*["\']?([^"\'\)]+)["\']?\s*\)/i', $rest, $m)) {
+            $bgImage = trim($m[1]);
+            $rest = trim(str_replace($m[0], '', $rest));
+        }
+
+        // 3. Extract position/size pair: ".../size"
+        if (preg_match('#/\s*(\S+)#', $rest, $m)) {
+            $bgSize = trim($m[1]);
+            $rest = trim(str_replace($m[0], '', $rest));
+        }
+
+        // 4. Extract repeat keywords
+        foreach (['repeat-x', 'repeat-y', 'no-repeat', 'repeat', 'space', 'round'] as $kw) {
+            if (stripos($rest, $kw) !== false) {
+                $rest = trim(str_ireplace($kw, '', $rest));
+                break;
+            }
+        }
+
+        // 5. Extract attachment keywords
+        foreach (['scroll', 'fixed', 'local'] as $kw) {
+            if (stripos($rest, $kw) !== false) {
+                $rest = trim(str_ireplace($kw, '', $rest));
+                break;
+            }
+        }
+
+        // 6. Remaining rest is position (if /size was extracted)
+        $rest = trim(preg_replace('/\s+/', ' ', $rest));
+        if ($bgSize !== '' && $rest !== '') {
+            $bgPosition = $rest;
+            $rest = '';
+        }
+
+        // Set sub-properties only if not already explicitly specified
+        if ($bgImage !== '' && !isset($raw['background-image'])) {
+            $raw['background-image'] = 'url("' . $bgImage . '")';
+        }
+        if ($bgPosition !== '' && !isset($raw['background-position'])) {
+            $raw['background-position'] = $bgPosition;
+        }
+        if ($bgSize !== '' && !isset($raw['background-size'])) {
+            $raw['background-size'] = $bgSize;
+        }
+
+        // Update background to color-only value for PROPERTY_MAP parsing
+        if ($bgColor !== '') {
+            $raw['background'] = $bgColor;
+        } else {
+            // No color specified → transparent (parseHexColor returns 0)
+            $raw['background'] = 'transparent';
+        }
+
         return $raw;
     }
 
