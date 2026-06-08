@@ -59,7 +59,7 @@ class InstrumentedRenderTreeManager extends \Px\Rendering\RenderTreeManager
         \Px\ReactiveComponent $root,
         array $componentByGroupId,
         ?array $candidates = null,
-        string $currentGroupId
+        string $currentGroupId = 'app'
     ): ?RenderNode {
         // 对 #component 节点，检查 instance 状态
         if ($vnode->isComponent()) {

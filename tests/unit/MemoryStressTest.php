@@ -471,50 +471,6 @@ echo "  ⚠ 注册表永不清零 —— 动态组件场景持续增长\n";
 echo "\n";
 
 // =============================================
-// 8. BaseComponent 父子链
-// =============================================
-echo "═══ 8. BaseComponent 父子链 ═══\n\n";
-
-echo "--- 8a. unmount 后 parent/children 引用 ---\n";
-$p8 = new _StressComponent();
-$c8 = new _StressComponent();
-$p8->addChild($c8);
-
-$hasChildBefore = isset($p8->getChildren()[$c8->getId()]);
-$parentBefore = $c8->getParent() !== null;
-echo "  Before unmount: parent set=" . ($parentBefore ? "yes" : "no") . ", child in parent=" . ($hasChildBefore ? "yes" : "no") . "\n";
-
-$c8->unmount();
-$hasChildAfter = isset($p8->getChildren()[$c8->getId()]);
-$parentAfter = $c8->getParent() !== null;
-echo "  After child unmount: parent set=" . ($parentAfter ? "yes ⚠" : "no ✅") . ", child in parent=" . ($hasChildAfter ? "yes ⚠" : "no ✅") . "\n";
-echo "  ⚠ unmount() 不清理 parent 引用，也不从父组件的 children 中移除\n";
-
-echo "--- 8b. 累积泄漏：反复 addChild → unmount ---\n";
-$p8b = new _StressComponent();
-for ($i = 0; $i < 10; $i++) {
-    $c = new _StressComponent();
-    $c->setId("child_{$i}");
-    $p8b->addChild($c);
-    $c->unmount();
-}
-$childCount = count($p8b->getChildren());
-echo "  10 addChild+unmount cycles: parent children={$childCount}\n";
-echo "  " . ($childCount === 10 ? "[WARN] unmount 不清理 children，需手动 removeChild" : "[OK] children 被清理") . "\n";
-
-// 演示正确的清理路径
-echo "--- 8c. 正确清理路径：removeChild ---\n";
-$p8c = new _StressComponent();
-$c8c = new _StressComponent();
-$p8c->addChild($c8c);
-$p8c->removeChild($c8c->getId());
-$afterRemove = isset($p8c->getChildren()[$c8c->getId()]);
-echo "  After removeChild: child in parent=" . ($afterRemove ? "yes ⚠" : "no ✅") . "\n";
-echo "  ✅ removeChild 同时调用 onUnmount 并从 children 移除\n";
-
-echo "\n";
-
-// =============================================
 // 9. 对象生命周期合理性（复用/丢弃/重建决策验证）
 // =============================================
 echo "═══ 9. 对象生命周期合理性 ═══\n\n";
