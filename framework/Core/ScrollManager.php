@@ -26,7 +26,7 @@ class ScrollManager
     private ?\Closure $directRender = null;
 
     /** @var callable 查组件表（接受 VNode，使用 groupId） */
-    private ?\Closure $resolveComponent = null;
+    private ?\Closure $resolveComponentByGroupId = null;
 
     // ── 拖拽状态 ──────────────────────────
     private ?RenderNode $scrollDragTarget = null;
@@ -44,11 +44,11 @@ class ScrollManager
     public function __construct(
         callable $requestRender,
         callable $directRender,
-        callable $resolveComponent
+        callable $resolveComponentByGroupId
     ) {
         $this->requestRender = $requestRender;
         $this->directRender = $directRender;
-        $this->resolveComponent = $resolveComponent;
+        $this->resolveComponentByGroupId = $resolveComponentByGroupId;
     }
 
     // ── 滚轮事件 ─────────────────────────────
@@ -322,7 +322,7 @@ class ScrollManager
                 $bindKey = $node->sourceVNode->props[':scroll-top'] ?? '';
             }
             if ($bindKey !== '') {
-                $target = ($this->resolveComponent)($node->sourceVNode);
+                $target = ($this->resolveComponentByGroupId)($node->groupId);
                 $target->setBindValue($bindKey, (string) $newScrollTop);
             }
             ($this->requestRender)();
@@ -345,7 +345,7 @@ class ScrollManager
                 $bindKey = $node->sourceVNode->props[':scroll-left'] ?? '';
             }
             if ($bindKey !== '') {
-                $target = ($this->resolveComponent)($node->sourceVNode);
+                $target = ($this->resolveComponentByGroupId)($node->groupId);
                 $target->setBindValue($bindKey, (string) $newScrollLeft);
             }
             ($this->requestRender)();

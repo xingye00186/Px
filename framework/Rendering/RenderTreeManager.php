@@ -376,6 +376,9 @@ class RenderTreeManager
      *        普通元素：[$selfOld]，用于自我匹配后提取旧 children 匹配子节点
      *        #root：旧子节点列表（因为 #root 无 RenderNode）
      *        #component：透传
+     * @param string $currentGroupId 当前组件的 groupId
+     *        由 #component handler 传入组件实例 ID，#root handler 传入 'app'。
+     *        所有子节点继承此 groupId，不再从 VNode.groupId 读取。
      * @return RenderNode|null 转换后的 RenderNode
      */
     public function updateFromVNode(
@@ -383,7 +386,8 @@ class RenderTreeManager
         ?RenderNode $parent,
         ReactiveComponent $root,
         array $componentByGroupId,
-        ?array $candidates = null
+        ?array $candidates = null,
+        string $currentGroupId
     ): ?RenderNode {
         \PerfCounter::start('tree_convert');
         try {
@@ -401,31 +405,49 @@ class RenderTreeManager
                 // 记录展开前的子节点数，用于定位第一个新增的子 RenderNode
                 $beforeCount = $parent !== null ? count($parent->children) : 0;
 
+                // 从组件实例获取 groupId，传递给子 VNode 树
+                // （替代已废弃的 setGroupIdRecursive 对 VNode.groupId 的写入）
+                $childGroupId = $instance->getId();
+
                 $childRN = $this->updateFromVNode(
                     $instance->getVNodeTree(),
                     $parent,
                     $root,
                     $componentByGroupId,
-                    $candidates
+                    $candidates,
+                    $childGroupId
                 );
 
-                // 应用 layoutOffset 到子组件第一个可渲染 RenderNode
-                if ($childRN !== null && $vnode->layoutOffset !== null) {
-                    $firstChild = $childRN;
-                    if ($parent !== null && $beforeCount < count($parent->children)) {
-                        $newChildren = array_slice($parent->children, $beforeCount);
-                        if (count($newChildren) > 0) {
-                            $firstChild = $newChildren[0];
+                // 从 #component 节点的 props['style'] 解析 left/top 定位
+                // （替代已废弃的 VNode::$layoutOffset，保持 VNode 不可变）
+                $placeholderStyle = $vnode->props['style'] ?? '';
+                if ($placeholderStyle !== '') {
+                    $offset = [];
+                    $pairs = explode(';', $placeholderStyle);
+                    foreach ($pairs as $pair) {
+                        $pair = trim($pair);
+                        $lower = strtolower($pair);
+                        if (str_starts_with($lower, 'left:')) {
+                            $offset['left'] = (int) trim(substr($pair, 5));
+                        } elseif (str_starts_with($lower, 'top:')) {
+                            $offset['top'] = (int) trim(substr($pair, 4));
                         }
                     }
-                    $offset = $vnode->layoutOffset;
-                    if (isset($offset['left'])) {
-                        $firstChild->style['left'] = $offset['left'];
+                    if (count($offset) > 0) {
+                        if ($parent !== null && $beforeCount < count($parent->children)) {
+                            $newChildren = array_slice($parent->children, $beforeCount);
+                            if (count($newChildren) > 0) {
+                                $firstChild = $newChildren[0];
+                                if (isset($offset['left'])) {
+                                    $firstChild->style['left'] = $offset['left'];
+                                }
+                                if (isset($offset['top'])) {
+                                    $firstChild->style['top'] = $offset['top'];
+                                }
+                                $firstChild->layoutDirty = true;
+                            }
+                        }
                     }
-                    if (isset($offset['top'])) {
-                        $firstChild->style['top'] = $offset['top'];
-                    }
-                    $firstChild->layoutDirty = true;
                 }
 
                 return $childRN;
@@ -445,6 +467,7 @@ class RenderTreeManager
                 $consumedCandidates = [];
 
                 foreach ($children as $i => $child) {
+
                     $matchedOld = ($candidates !== null)
                         ? $this->findMatchingRenderNode($child, $candidates, $i)
                         : null;
@@ -456,7 +479,8 @@ class RenderTreeManager
                     $childCandidates = $matchedOld !== null ? [$matchedOld] : null;
 
                     $childRN = $this->updateFromVNode(
-                        $child, $parent, $root, $componentByGroupId, $childCandidates
+                        $child, $parent, $root, $componentByGroupId, $childCandidates,
+                        $currentGroupId
                     );
                     if ($childRN !== null) {
                         if ($parent === null) {
@@ -489,17 +513,19 @@ class RenderTreeManager
                 }
             }
 
+            $groupId = $currentGroupId;
+
             if ($renderNode === null) {
                 $renderNode = new RenderNode($vnode->type, $resolvedStyle, null, $vnode->key);
                 $renderNode->sourceVNode = $vnode;
-                $renderNode->groupId = $vnode->groupId;
+                $renderNode->groupId = $groupId;
                 $renderNode->layoutDirty = true;
                 $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] = $vnode;
             } else {
                 $renderNode->style = $resolvedStyle;
                 $renderNode->lastPaintFrame = 0;
                 $renderNode->sourceVNode = $vnode;
-                $renderNode->groupId = $vnode->groupId;
+                $renderNode->groupId = $groupId;
 
                 $oldVNode = $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] ?? null;
                 $vnodeChildren = is_array($vnode->children)
@@ -524,7 +550,7 @@ class RenderTreeManager
             }
 
             // ── 同步 scroll bind 值
-            $component = $componentByGroupId[$vnode->groupId] ?? $root;
+            $component = $componentByGroupId[$groupId] ?? $root;
             $scrollBindKey = $vnode->props[':scroll-top'] ?? '';
             if ($scrollBindKey !== '') {
                 $renderNode->scrollTop = (int) $component->getBindValue($scrollBindKey);
@@ -613,7 +639,8 @@ class RenderTreeManager
                     $childCandidates = $matchedOld !== null ? [$matchedOld] : null;
 
                     $childRN = $this->updateFromVNode(
-                        $childVNode, $renderNode, $root, $componentByGroupId, $childCandidates
+                        $childVNode, $renderNode, $root, $componentByGroupId, $childCandidates,
+                        $currentGroupId
                     );
                 }
 

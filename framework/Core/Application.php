@@ -94,7 +94,7 @@ class Application
         $this->scrollManager = new ScrollManager(
             $this->requestRender(...),
             function () { $this->directRender(); },
-            $this->resolveComponent(...)
+            $this->resolveComponentByGroupId(...)
         );
         // VNodeRenderer 依赖 RenderContext，在 initRenderer() 中初始化
     }
@@ -172,13 +172,14 @@ class Application
             }
 
             // hitTest 返回 RenderNode，通过 sourceVNode 访问 props
+            // groupId 直接使用 RenderNode.groupId（由 updateFromVNode 设置，不再读取 VNode.groupId）
             $renderNode = $this->renderTreeManager->hitTest($event->getX(), $event->getY());
             if ($renderNode !== null) {
                 $sourceVNode = $renderNode->sourceVNode;
                 if ($sourceVNode !== null && isset($sourceVNode->props['@click'])) {
                     $handler = $sourceVNode->props['@click'];
                     $arg = $sourceVNode->props['click-arg'] ?? null;
-                    $target = $this->resolveComponent($sourceVNode);
+                    $target = $this->resolveComponentByGroupId($renderNode->groupId);
                     $target->dispatchClick($handler, $arg);
                     $this->snapshotRequested = true;
                 }
@@ -198,7 +199,10 @@ class Application
         if ($input === null) {
             return;
         }
-        $target = $this->resolveComponent($input);
+        // 通过 RenderNode 获取 groupId（替代已废弃的 VNode.groupId 读取）
+        $inputRN = $this->renderTreeManager->findRenderNodeBySourceVNode($input);
+        if ($inputRN === null) return;
+        $target = $this->resolveComponentByGroupId($inputRN->groupId);
         $action = $event->getAction();
         if ($action === 'down') {
             $handler = $input->props['@keydown'] ?? null;
@@ -240,12 +244,12 @@ class Application
     }
 
     /**
-     * 根据 VNode 的 groupId 查找目标组件。
+     * 根据 groupId 查找目标组件。
      * 找不到时回退到根组件。
      */
-    public function resolveComponent(VNode $node): ReactiveComponent
+    public function resolveComponentByGroupId(string $groupId): ReactiveComponent
     {
-        return $this->componentByGroupId[$node->groupId] ?? $this->rootComponent;
+        return $this->componentByGroupId[$groupId] ?? $this->rootComponent;
     }
 
     public function getPlatform(): Platform   { return $this->platform; }
@@ -428,10 +432,10 @@ class Application
 
     // ── 展开组件 ──────────────────────────────
 
-    private function expandComponentNode(VNode $node, ReactiveComponent $owner): void
+    private function expandComponentNode(VNode $node, ReactiveComponent $owner): VNode
     {
         $className = $node->componentClass;
-        if ($className === null) return;
+        if ($className === null) return $node;
 
         $instance = \ComponentFactory::create($className);
         $instance->setScheduler($this->scheduler);
@@ -486,74 +490,25 @@ class Application
         // 返回一个新 VNode 树，此时 layoutOffset 已设置在占位节点上，定位由 RenderTreeManager 处理。
         $childRoot = $instance->getVNodeTree();
 
-        $node->componentInstance = $instance;
-        $node->children = $childRoot;
+        // ── B2 不可变性：克隆 VNode 再设置 children/componentInstance ──
+        // 避免修改 getVNodeTree() 缓存的原始 VNode
+        $expanded = clone $node;
+        $expanded->componentInstance = $instance;
+        $expanded->children = $childRoot;
 
-        // 不再修改子 VNode 的 style，改为将定位偏移存入 layoutOffset，
-        // RenderTreeManager::updateFromVNode 在 #component 处理中应用到 RenderNode
-        $placeholderStyle = $node->props['style'] ?? '';
-        if ($placeholderStyle !== '') {
-            $node->layoutOffset = $this->parsePlaceholderPositioning($placeholderStyle);
-        }
+        $this->patchComponentTree($expanded->children, $instance, null);
 
-        $this->setGroupIdRecursive($childRoot, $instanceId);
-
-        $this->patchComponentTree($node->children, $instance, null);
-    }
-
-    /**
-     * 从 #component 占位符的 style 字符串中解析 left/top 定位值。
-     * 替代已删除的 transferComponentPositioning()，结果存入 VNode::$layoutOffset。
-     *
-     * @return array{left?:int, top?:int}|null
-     */
-    private function parsePlaceholderPositioning(string $placeholderStyle): ?array
-    {
-        $left = null;
-        $top = null;
-        $pairs = explode(';', $placeholderStyle);
-        foreach ($pairs as $pair) {
-            $pair = trim($pair);
-            $lower = strtolower($pair);
-            if (str_starts_with($lower, 'left:')) {
-                $left = (int) trim(substr($pair, 5));
-            } elseif (str_starts_with($lower, 'top:')) {
-                $top = (int) trim(substr($pair, 4));
-            }
-        }
-        if ($left === null && $top === null) return null;
-        $result = [];
-        if ($left !== null) $result['left'] = $left;
-        if ($top !== null) $result['top'] = $top;
-        return $result;
-    }
-
-    private function setGroupIdRecursive(VNode $node, string $groupId): void
-    {
-        $node->groupId = $groupId;
-        if ($node->children instanceof VNode) {
-            $this->setGroupIdRecursive($node->children, $groupId);
-        } elseif (is_array($node->children)) {
-            foreach ($node->children as $child) {
-                if ($child instanceof VNode) {
-                    $this->setGroupIdRecursive($child, $groupId);
-                }
-            }
-        }
+        return $expanded;
     }
 
     private function patchComponentTree(
         VNode $newNode,
         ReactiveComponent $owner,
         ?VNode $oldNode = null
-    ): void {
-        if (!$newNode->isComponent()) {
-            $newNode->groupId = $owner->getId();
-        }
-
+    ): ?VNode {
         if ($newNode->isComponent()) {
-            $this->matchComponentNode($newNode, $owner, $oldNode);
-            return;
+            // B2 不可变性：matchComponentNode 返回克隆后的节点
+            return $this->matchComponentNode($newNode, $owner, $oldNode);
         }
 
         $oldChildren = $oldNode !== null
@@ -563,15 +518,36 @@ class Application
 
         $count = (int)min(count($oldChildren), count($newChildren));
         for ($i = 0; $i < $count; $i++) {
-            $this->patchComponentTree(
+            $replacement = $this->patchComponentTree(
                 $newChildren[$i],
                 $owner,
                 $oldChildren[$i]
             );
+            if ($replacement !== null && $replacement !== $newChildren[$i] && is_array($newNode->children)) {
+                $this->replaceVNodeInArray($newNode->children, $newChildren[$i], $replacement);
+            }
         }
 
         for ($i = $count; $i < count($newChildren); $i++) {
-            $this->patchComponentTree($newChildren[$i], $owner, null);
+            $replacement = $this->patchComponentTree($newChildren[$i], $owner, null);
+            if ($replacement !== null && $replacement !== $newChildren[$i] && is_array($newNode->children)) {
+                $this->replaceVNodeInArray($newNode->children, $newChildren[$i], $replacement);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Replace a VNode in an array by identity comparison.
+     */
+    private function replaceVNodeInArray(array &$arr, VNode $original, VNode $replacement): void
+    {
+        foreach ($arr as $k => $v) {
+            if ($v === $original) {
+                $arr[$k] = $replacement;
+                return;
+            }
         }
     }
 
@@ -579,7 +555,7 @@ class Application
         VNode $newNode,
         ReactiveComponent $owner,
         ?VNode $oldNode = null
-    ): void {
+    ): VNode {
         $instance = null;
 
         if ($newNode->componentInstance !== null) {
@@ -623,30 +599,29 @@ class Application
             // 保存旧 children 可以保证子组件的匹配走正常的 REUSE 路径。
             $oldChildren = ($oldNode !== null) ? $oldNode->children : null;
 
-            $newNode->componentInstance = $instance;
-            $newNode->children = $instance->getVNodeTree();
+            // ── B2 不可变性：克隆 VNode 再设置 children/componentInstance ──
+            $matched = clone $newNode;
+            $matched->componentInstance = $instance;
+            $matched->children = $instance->getVNodeTree();
 
-            // 将 #component 占位符的 left/top 定位存入 layoutOffset，
-            // RenderTreeManager::updateFromVNode 在 #component 处理时应用到 RenderNode
-            $placeholderStyle = $newNode->props['style'] ?? '';
-            if ($placeholderStyle !== '') {
-                $newNode->layoutOffset = $this->parsePlaceholderPositioning($placeholderStyle);
-            }
-
-            $this->setGroupIdRecursive($newNode->children, $instance->getId());
             $this->registerComponent($instance->getId(), $instance);
 
             $this->patchComponentTree(
-                $newNode->children,
+                $matched->children,
                 $instance,
-                $oldChildren   // 使用保存的旧 children，避免 $newNode === $oldNode 时的覆盖问题
+                $oldChildren
             );
+
+            return $matched;
         } else {
             if ($oldNode !== null && $oldNode->componentInstance !== null) {
                 $oldNode->componentInstance->unmount();
             }
-            $this->expandComponentNode($newNode, $owner);
+            return $this->expandComponentNode($newNode, $owner);
         }
+
+        // 当 oldNode !== null 但未命中 reuse 路径时返回 original
+        return $newNode;
     }
 
     private function vnodeChildrenToArray(mixed $children): array
@@ -691,12 +666,14 @@ class Application
         $candidates = !empty($oldRootChildren) ? $oldRootChildren : null;
 
         // VNode → RenderNode 转换 + bind 值同步（type+key 匹配复用）
+        // 传递 'app' 作为根组件的 groupId（VNode.groupId 不再写入，依赖参数传播）
         $rootRenderNode = $this->renderTreeManager->updateFromVNode(
             $this->activeVNodeTree,
             null,
             $this->rootComponent,
             $this->componentByGroupId,
-            $candidates
+            $candidates,
+            'app'
         );
         if ($rootRenderNode === null) return;
 
