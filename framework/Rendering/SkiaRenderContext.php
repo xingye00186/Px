@@ -251,15 +251,22 @@ class SkiaRenderContext extends RenderContext
                 $contentH = $el['contentHeight'] ?? 0;
                 if ($contentH > $h) {
                     $scrollTop = $el['scrollTop'] ?? 0;
-                    $sbW = 12;
+                    $sbW = $el['sbWidth'] ?? 12;
+                    $trackColor = $el['trackColor'] ?? 0x4A4A4A;
+                    $thumbColor = $el['thumbColor'] ?? 0x888888;
+                    $sbRadius = $el['sbRadius'] ?? 0;
                     $sbX = $x + $w - $sbW;
-                    $this->fillRect($sbX, $y, $sbW, $h, 0x4A4A4A);
+                    $this->fillRect($sbX, $y, $sbW, $h, $trackColor);
                     $ratio = min($h / max($contentH, 1), 1.0);
                     $thumbH = max((int)($h * $ratio), 20);
                     $maxScroll = max($contentH - $h, 0);
                     $scrollRatio = $maxScroll > 0 ? $scrollTop / $maxScroll : 0.0;
                     $thumbY = $y + (int)(($h - $thumbH) * $scrollRatio);
-                    $this->fillRect($sbX + 2, $thumbY, $sbW - 4, $thumbH, 0x888888);
+                    if ($sbRadius > 0) {
+                        sk_draw_round_rect($sbX + 2, $thumbY, $sbW - 4, $thumbH, $sbRadius, $thumbColor);
+                    } else {
+                        $this->fillRect($sbX + 2, $thumbY, $sbW - 4, $thumbH, $thumbColor);
+                    }
                 }
                 break;
 
@@ -270,15 +277,22 @@ class SkiaRenderContext extends RenderContext
                 $contentW = $el['contentWidth'] ?? 0;
                 if ($contentW > $w) {
                     $scrollLeft = $el['scrollLeft'] ?? 0;
-                    $sbH = 12;
+                    $sbH = $el['sbWidth'] ?? 12;
+                    $trackColor = $el['trackColor'] ?? 0x4A4A4A;
+                    $thumbColor = $el['thumbColor'] ?? 0x888888;
+                    $sbRadius = $el['sbRadius'] ?? 0;
                     $sbY = $y + $h - $sbH;
-                    $this->fillRect($x, $sbY, $w, $sbH, 0x4A4A4A);
+                    $this->fillRect($x, $sbY, $w, $sbH, $trackColor);
                     $ratioH = min($w / max($contentW, 1), 1.0);
                     $thumbW = max((int)($w * $ratioH), 20);
                     $maxScrollX = max($contentW - $w, 0);
                     $scrollRatioX = $maxScrollX > 0 ? $scrollLeft / $maxScrollX : 0.0;
                     $thumbX = $x + (int)(($w - $thumbW) * $scrollRatioX);
-                    $this->fillRect($thumbX, $sbY + 2, $thumbW, $sbH - 4, 0x888888);
+                    if ($sbRadius > 0) {
+                        sk_draw_round_rect($thumbX, $sbY + 2, $thumbW, $sbH - 4, $sbRadius, $thumbColor);
+                    } else {
+                        $this->fillRect($thumbX, $sbY + 2, $thumbW, $sbH - 4, $thumbColor);
+                    }
                 }
                 break;
 
