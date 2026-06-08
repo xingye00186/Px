@@ -11,7 +11,6 @@ abstract class BaseComponent implements ComponentInterface
 {
     protected string $id = '';
     protected ?ComponentInterface $parent = null;
-    protected array $children = [];
     protected array $props = [];
     protected ?Scheduler $scheduler = null;
 
@@ -35,11 +34,6 @@ abstract class BaseComponent implements ComponentInterface
         return $this->parent;
     }
 
-    public function getChildren(): array
-    {
-        return $this->children;
-    }
-
     public function getProps(): array
     {
         return $this->props;
@@ -58,25 +52,6 @@ abstract class BaseComponent implements ComponentInterface
     public function setScheduler(Scheduler $scheduler): void
     {
         $this->scheduler = $scheduler;
-    }
-
-    public function addChild(ComponentInterface $child, array $props = []): void
-    {
-        $childId = $child->getId();
-        $this->children[$childId] = $child;
-        $child->setParent($this);
-        if (count($props) > 0) {
-            $child->setProps($props);
-        }
-    }
-
-    public function removeChild(string $childId): void
-    {
-        if (isset($this->children[$childId])) {
-            $child = objval($this->children[$childId], ComponentInterface::class);
-            $child->onUnmount();
-            unset($this->children[$childId]);
-        }
     }
 
     abstract public function onMount(): void;
