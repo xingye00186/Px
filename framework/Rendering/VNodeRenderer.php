@@ -79,13 +79,32 @@ class VNodeRenderer
     /**
      * 递归收集需要绘制的元素。
      * 使用 needsPaint + markPainted 实现增量绘制。
+     *
+     * @param RenderNode $node 当前节点
+     * @param array &$elementsByLayer 按 layer 分组的元素
+     * @param int &$maxLayer 最大 layer
+     * @param int $accumOffsetX 祖先级累计滚动偏移 X（A1 重构：不在布局层改坐标）
+     * @param int $accumOffsetY 祖先级累计滚动偏移 Y
      */
-    private function collectElements(RenderNode $node, array &$elementsByLayer, int &$maxLayer): void
+    private function collectElements(RenderNode $node, array &$elementsByLayer, int &$maxLayer, int $accumOffsetX = 0, int $accumOffsetY = 0): void
     {
+        // ── A1 重构: 设置节点的滚动偏移（用于 renderNodeToElement）──
+        // position:fixed 元素不受任何祖先滚动影响
+        $isFixed = ($node->style['position'] ?? '') === 'fixed';
+        $node->scrollOffsetX = $isFixed ? 0 : $accumOffsetX;
+        $node->scrollOffsetY = $isFixed ? 0 : $accumOffsetY;
+
         // 增量绘制：如果节点不需要绘制，跳过但继续处理子节点
         if (!$node->needsPaint($this->currentPaintFrame)) {
+            // 但子节点仍需传递正确的累计偏移
+            $childOffsetX = $isFixed ? 0 : $accumOffsetX;
+            $childOffsetY = $isFixed ? 0 : $accumOffsetY;
+            if (!$isFixed && $node->isScrollContainer) {
+                $childOffsetX -= $node->scrollLeft;
+                $childOffsetY -= $node->scrollTop;
+            }
             foreach ($node->children as $child) {
-                $this->collectElements($child, $elementsByLayer, $maxLayer);
+                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
             }
             return;
         }
@@ -93,8 +112,14 @@ class VNodeRenderer
         // collectElements trace removed
         // #root 不产生渲染元素，直接处理子节点
         if ($node->type === '#root') {
+            $childOffsetX = $isFixed ? 0 : $accumOffsetX;
+            $childOffsetY = $isFixed ? 0 : $accumOffsetY;
+            if (!$isFixed && $node->isScrollContainer) {
+                $childOffsetX -= $node->scrollLeft;
+                $childOffsetY -= $node->scrollTop;
+            }
             foreach ($node->children as $child) {
-                $this->collectElements($child, $elementsByLayer, $maxLayer);
+                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
             }
             return;
         }
@@ -160,10 +185,19 @@ class VNodeRenderer
             ];
         }
 
+        // ── 计算子节点的累计滚动偏移 ──
+        // 当前节点的 scroll 偏移对子节点生效
+        $childOffsetX = $isFixed ? 0 : $accumOffsetX;
+        $childOffsetY = $isFixed ? 0 : $accumOffsetY;
+        if (!$isFixed && $node->isScrollContainer) {
+            $childOffsetX -= $node->scrollLeft;
+            $childOffsetY -= $node->scrollTop;
+        }
+
         // 递归处理子节点（button 类型不展开，由 GDI 层绘制）
         if ($node->type !== 'button') {
             foreach ($node->children as $child) {
-                $this->collectElements($child, $elementsByLayer, $maxLayer);
+                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
             }
         }
 
@@ -253,14 +287,17 @@ class VNodeRenderer
     private function renderNodeToElement(RenderNode $node): ?array
     {
         $style = $node->style;
-        $x = $node->x;
-        $y = $node->y;
+        // A1 重构: 布局坐标 + 绘制时滚动偏移（不在布局层修改坐标）
+        $x = $node->x + $node->scrollOffsetX;
+        $y = $node->y + $node->scrollOffsetY;
         $w = $node->w;
         $h = $node->h;
         $layer = $node->layer;
 
-        // 滚动裁切
+        // 滚动裁切（position:fixed 元素不受祖先滚动容器影响）
         if (count($this->scrollCtxStack) > 0) {
+            $isFixed = ($node->style['position'] ?? '') === 'fixed';
+            if (!$isFixed) {
             $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];
             $containerX = $scrollCtx['x'];
             $containerY = $scrollCtx['y'];
@@ -296,7 +333,8 @@ class VNodeRenderer
                     $w = ($containerX + $containerW) - $x;
                 }
             }
-        }
+            }  // end if (!$isFixed)
+        }  // end if (count($this->scrollCtxStack) > 0)
 
         // 通过 sourceVNode 访问 props（bind 值、事件处理器等）
         $props = [];

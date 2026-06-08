@@ -681,6 +681,15 @@ class CssMappings
             'width' => 'widthPercent', 'height' => 'heightPercent',
             'min-width' => 'minWidthPercent', 'max-width' => 'maxWidthPercent',
             'min-height' => 'minHeightPercent', 'max-height' => 'maxHeightPercent',
+            // CSS Box Model §7: margin/padding 百分比基于包含块宽度
+            'margin-top' => 'marginTopPercent',
+            'margin-right' => 'marginRightPercent',
+            'margin-bottom' => 'marginBottomPercent',
+            'margin-left' => 'marginLeftPercent',
+            'padding-top' => 'paddingTopPercent',
+            'padding-right' => 'paddingRightPercent',
+            'padding-bottom' => 'paddingBottomPercent',
+            'padding-left' => 'paddingLeftPercent',
         ];
         foreach ($pctMap as $cssProp => $styleKey) {
             if (isset($raw[$cssProp])) {
