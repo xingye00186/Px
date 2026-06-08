@@ -187,9 +187,6 @@ class RenderTreeManager
     /** @var array<string, RenderNode[]> groupId => RenderNode[] */
     private array $groupIdToRenderNodeMap = [];
 
-    /** @var array<string, RenderNode> spl_object_hash(VNode) => RenderNode（快速查找，每帧重建） */
-    private array $vnodeToRenderNodeMap = [];
-
     // ── 基础方法 ──────────────────────────
 
     public function getRootRenderNode(): ?RenderNode
@@ -212,21 +209,15 @@ class RenderTreeManager
         $this->rootRenderNode = null;
         $this->rootRenderNodes = [];
         $this->groupIdToRenderNodeMap = [];
-        $this->vnodeToRenderNodeMap = [];
     }
 
     // ── 查找方法 ──────────────────────────
 
     /**
-     * 根据 VNode 查找对应的 RenderNode。
-     * 优先使用 vnodeToRenderNodeMap 快速查找，失败时回退到树遍历。
+     * 根据 VNode 查找对应的 RenderNode（通过树遍历）。
      */
     public function findRenderNodeBySourceVNode(VNode $vnode): ?RenderNode
     {
-        $hash = spl_object_hash($vnode);
-        if (isset($this->vnodeToRenderNodeMap[$hash])) {
-            return $this->vnodeToRenderNodeMap[$hash];
-        }
         if ($this->rootRenderNode === null) return null;
         return $this->findRNByVNodeRecursive($vnode, $this->rootRenderNode);
     }
@@ -453,7 +444,6 @@ class RenderTreeManager
 
                 if ($parent === null) {
                     $this->rootRenderNodes = [];
-                    $this->vnodeToRenderNodeMap = [];
                     $this->groupIdToRenderNodeMap = [];
                 }
 
@@ -648,8 +638,6 @@ class RenderTreeManager
                         . ' destroyed=' . (count($oldChildren) - count($consumed)));
                 }
             }
-
-            $this->vnodeToRenderNodeMap[spl_object_hash($vnode)] = $renderNode;
 
             return $renderNode;
         } finally {

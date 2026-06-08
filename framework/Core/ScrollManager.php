@@ -139,10 +139,13 @@ class ScrollManager
 
         if (!$node->isScrollContainer) return null;
 
-        // ── 竖滚动条（右侧，12px宽）──
+        // 从节点 style 读取可配置的滚动条宽度
+        $sbWidth = $node->style['scrollbarWidth'] ?? 12;
+
+        // ── 竖滚动条（右侧）──
         $contentH = $node->contentHeight;
         if ($contentH > $node->h) {
-            $sbW = 12;
+            $sbW = $sbWidth;
             $sbX = $node->x + $node->w - $sbW;
 
             if ($x >= $sbX && $x <= $sbX + $sbW
@@ -160,10 +163,10 @@ class ScrollManager
             }
         }
 
-        // ── 横滚动条（底部，12px高）──
+        // ── 横滚动条（底部）──
         $contentW = $node->contentWidth;
         if ($contentW > $node->w) {
-            $sbH = 12;
+            $sbH = $sbWidth;
             $sbY = $node->y + $node->h - $sbH;
 
             if ($y >= $sbY && $y <= $sbY + $sbH

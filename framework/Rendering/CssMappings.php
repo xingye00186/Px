@@ -300,6 +300,11 @@ class CssMappings
         'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
         'transform'            => ['key' => 'transform',       'parser' => 'Px\Rendering\CssMappings::parseTransform', 'default' => ''],
         'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => ''],
+        // ---- 滚动条样式 ----
+        'scrollbar-width'        => ['key' => 'scrollbarWidth',      'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 12],
+        'scrollbar-track-color'  => ['key' => 'scrollbarTrackColor', 'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0x4A4A4A],
+        'scrollbar-thumb-color'  => ['key' => 'scrollbarThumbColor', 'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0x888888],
+        'scrollbar-border-radius'=> ['key' => 'scrollbarBorderRadius','parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
     ];
 
     // ============================================================

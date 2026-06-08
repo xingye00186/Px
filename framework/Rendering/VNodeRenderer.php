@@ -233,6 +233,10 @@ class VNodeRenderer
     private function emitScrollbarElements(RenderNode $node, array $scrollCtx, array &$elementsByLayer, int &$maxLayer): void
     {
         $layer = $scrollCtx['layer'];
+        $sbWidth = $node->style['scrollbarWidth'] ?? 12;
+        $trackColor = $node->style['scrollbarTrackColor'] ?? 0x4A4A4A;
+        $thumbColor = $node->style['scrollbarThumbColor'] ?? 0x888888;
+        $sbRadius = $node->style['scrollbarBorderRadius'] ?? 0;
 
         // ── 竖滚动条 ──
         $contentH = $node->contentHeight;
@@ -248,6 +252,10 @@ class VNodeRenderer
                 'contentHeight' => $contentH,
                 'scrollTop' => $node->scrollTop,
                 'layer' => $layer,
+                'sbWidth' => $sbWidth,
+                'trackColor' => $trackColor,
+                'thumbColor' => $thumbColor,
+                'sbRadius' => $sbRadius,
             ];
         }
 
@@ -265,6 +273,10 @@ class VNodeRenderer
                 'contentWidth' => $contentW,
                 'scrollLeft' => $node->scrollLeft,
                 'layer' => $layer,
+                'sbWidth' => $sbWidth,
+                'trackColor' => $trackColor,
+                'thumbColor' => $thumbColor,
+                'sbRadius' => $sbRadius,
             ];
         }
     }
