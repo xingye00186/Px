@@ -63,6 +63,9 @@ function vue_measure_text_width(int $hdc, string $text, int $fontSize): int {}
 function vue_push_clip(int $hdc, int $x, int $y, int $w, int $h): void {}
 function vue_pop_clip(int $hdc): void {}
 
+// ---- 字体管理 ----
+function vue_set_default_font(string $fontFamily): void {}
+
 // ---- Scrollbar Hit Test ----
 function vue_hit_test_scrollbar(int $hwnd, int $x, int $y): array {}
 

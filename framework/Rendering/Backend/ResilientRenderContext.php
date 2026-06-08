@@ -73,9 +73,9 @@ class ResilientRenderContext extends RenderContext
         $this->safeCall('fillRect', [$x, $y, $w, $h, $color]);
     }
 
-    public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold): void
+    public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold, string $fontFamily = ''): void
     {
-        $this->safeCall('drawText', [$x, $y, $text, $fontSize, $color, $bold]);
+        $this->safeCall('drawText', [$x, $y, $text, $fontSize, $color, $bold, $fontFamily]);
     }
 
     public function drawButton(int $x, int $y, int $w, int $h, int $bg, int $border): void
@@ -108,7 +108,7 @@ class ResilientRenderContext extends RenderContext
                     $this->delegate->fillRect($args[0], $args[1], $args[2], $args[3], $args[4]);
                     break;
                 case 'drawText':
-                    $this->delegate->drawText($args[0], $args[1], $args[2], $args[3], $args[4], $args[5]);
+                    $this->delegate->drawText($args[0], $args[1], $args[2], $args[3], $args[4], $args[5], $args[6] ?? '');
                     break;
                 case 'drawButton':
                     $this->delegate->drawButton($args[0], $args[1], $args[2], $args[3], $args[4], $args[5]);

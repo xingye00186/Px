@@ -27,6 +27,9 @@ function sk_draw_button(int $x, int $y, int $w, int $h, int $bgColor, int $borde
 function sk_push_clip(int $x, int $y, int $w, int $h): void {}
 function sk_pop_clip(): void {}
 
+// ---- 字体管理 ----
+function sk_set_default_font(string $fontFamily): void {}
+
 // ---- 阶段三：窗口尺寸变更（WM_SIZE 监听，重建 SkSurface） ----
 function sk_measure_text_width(string $text, int $fontSize, int $bold): int {}
 function sk_resize_context(int $width, int $height): void {}

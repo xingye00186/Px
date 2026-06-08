@@ -29,7 +29,7 @@ class _PlatformMockRenderContext extends RenderContext
     public function endFrame(): void {}
     public function drawElement(array $element): void {}
     public function fillRect(int $x, int $y, int $w, int $h, int $color): void {}
-    public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold): void {}
+    public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold, string $fontFamily = ''): void {}
     public function drawButton(int $x, int $y, int $w, int $h, int $bg, int $border): void {}
 }
 

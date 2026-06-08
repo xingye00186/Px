@@ -126,7 +126,8 @@ class SkiaRenderContext extends RenderContext
                     $el['text'] ?? '',
                     $el['fontSize'] ?? 16,
                     $el['color'] ?? 0xFFFFFF,
-                    $el['bold'] ?? 0
+                    $el['bold'] ?? 0,
+                    $el['fontFamily'] ?? ''
                 );
                 break;
 
@@ -357,11 +358,17 @@ class SkiaRenderContext extends RenderContext
         sk_fill_rect($x, $y, $w, $h, $color);
     }
 
-    public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold): void
+    public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold, string $fontFamily = ''): void
     {
         if ($x < 0 || $y < 0) return;
         if (strlen($text) === 0) return;
         if ($fontSize <= 0) return;
+
+        // 如有 fontFamily 指定且 C++ 端支持，传递到 C++ 层
+        if ($fontFamily !== '' && function_exists('sk_set_default_font')) {
+            sk_set_default_font($fontFamily);
+        }
+
         // 文本截断由 C++ php_sk_draw_text 层通过 GetTextExtentPoint32W 精确处理
         sk_draw_text($x, $y, $text, $fontSize, $color, $bold);
     }

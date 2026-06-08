@@ -439,7 +439,9 @@ class VNodeRenderer
                 $elements[] = $bgImageEl;
             }
             $elements[] = ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
-                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold, 'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor];
+                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold,
+                'fontFamily' => $style['fontFamily'] ?? '',
+                'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor];
 
             if (count($elements) === 1) {
                 return $elements[0];

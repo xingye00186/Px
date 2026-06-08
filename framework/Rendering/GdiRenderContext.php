@@ -110,7 +110,8 @@ class GdiRenderContext extends RenderContext
                     $el['text'] ?? '',
                     $el['fontSize'] ?? 16,
                     $el['color'] ?? 0xFFFFFF,
-                    $el['bold'] ?? 0
+                    $el['bold'] ?? 0,
+                    $el['fontFamily'] ?? ''
                 );
                 break;
 
@@ -356,11 +357,16 @@ class GdiRenderContext extends RenderContext
         vue_fill_rect($this->hdc, $x, $y, $w, $h, $color);
     }
 
-    public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold): void
+    public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold, string $fontFamily = ''): void
     {
         if ($x < 0 || $y < 0) return;
         if (strlen($text) === 0) return;
         if ($fontSize <= 0) return;
+
+        // 如有 fontFamily 指定且 C++ 端支持，传递到 C++ 层
+        if ($fontFamily !== '' && function_exists('vue_set_default_font')) {
+            vue_set_default_font($fontFamily);
+        }
 
         // 文本截断由 C++ php_vue_draw_text 层通过 GetTextExtentPoint32W
         // 精确测量后自动处理，PHP 层不做估算。

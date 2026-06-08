@@ -73,6 +73,18 @@ static int  g_skH = 0;
 static ULONG_PTR g_skGdiplusToken = 0;
 static bool      g_skGdiplusInited = false;
 
+// 默认字体名（可通过 sk_set_default_font 修改）
+// GDI 路径：CreateFont 参数；Skia 路径：skEnsureFont 优先查找
+static std::string g_skDefaultFont = "Microsoft YaHei";
+
+// 设置默认字体名（C++ 编译后生效）
+void php_sk_set_default_font(String fontFamily) {
+    if (fontFamily.length() > 0) {
+        g_skDefaultFont = std::string(fontFamily.data(), fontFamily.length());
+        fprintf(stderr, "[SK] set_default_font '%s'\n", g_skDefaultFont.c_str());
+    }
+}
+
 #ifdef USE_SKIA
 // 阶段三：Skia 离屏位图 + canvas
 static SkBitmap  g_skSkBitmap;             // 后端像素缓冲
@@ -468,7 +480,7 @@ void php_sk_draw_text(Int x, Int y, String text, Int fontSize, Int rgb, Int bold
     HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
         (Int)bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Microsoft YaHei");
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, g_skDefaultFont.c_str());
     if (hFont == NULL) return;
     HFONT oldFont = (HFONT)SelectObject(g_skHdc, hFont);
 
@@ -511,7 +523,7 @@ Int php_sk_measure_text_width(String text, Int fontSize, Int bold) {
     HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
         (Int)bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Microsoft YaHei");
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, g_skDefaultFont.c_str());
     if (!hFont) { ReleaseDC(NULL, hdc); return 0; }
     HFONT oldFont = (HFONT)SelectObject(hdc, hFont);
     int wlen = MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, NULL, 0);

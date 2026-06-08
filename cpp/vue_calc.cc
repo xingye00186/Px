@@ -57,6 +57,17 @@ static bool g_quitRequested = false;
 static ULONG_PTR g_vueGdiplusToken = 0;
 static bool      g_vueGdiplusInited = false;
 
+// 默认字体名（可通过 vue_set_default_font 修改）
+static std::string g_vueDefaultFont = "Microsoft YaHei";
+
+// 设置默认字体（C++ 编译后生效，GDI TextOutW 自带 OS 字体链接回退）
+void php_vue_set_default_font(String fontFamily) {
+    if (fontFamily.length() > 0) {
+        g_vueDefaultFont = std::string(fontFamily.data(), fontFamily.length());
+        fprintf(stderr, "[VUE] set_default_font '%s'\n", g_vueDefaultFont.c_str());
+    }
+}
+
 // 定时器回调映射表（支持多个定时器）
 static std::map<HWND, void(*)()> g_timerCallbacks;
 
@@ -302,7 +313,7 @@ void php_vue_draw_text(Int hdc, Int x, Int y, String text, Int fontSize, Int rgb
     HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
         bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Microsoft YaHei");
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, g_vueDefaultFont.c_str());
     if (hFont == NULL) return;
     HFONT oldFont = (HFONT)SelectObject((HDC)hdc, hFont);
 
@@ -336,7 +347,7 @@ Int php_vue_measure_text_width(Int hdc, String text, Int fontSize) {
     HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
         FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Microsoft YaHei");
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, g_vueDefaultFont.c_str());
     HFONT oldFont = (HFONT)SelectObject((HDC)hdc, hFont);
     SIZE sz = {0, 0};
     int wlen = MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, NULL, 0);
