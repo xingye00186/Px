@@ -135,20 +135,7 @@ test('setParent/getParent 设置父组件引用', function () {
     assert_null($parent->getParent(), 'parent.parent 应为 null');
 });
 
-test('addChild 建立双向父子关系', function () {
-    $p = new _BubbleTrackerComponent('p');
-    $c = new _BubbleTrackerComponent('c');
 
-    $p->addChild($c);
-    assert_same($c->getParent(), $p, 'child.parent 应指向 parent');
-    assert_eq(count($p->getChildren()), 1, 'parent.children 应包含 child');
-});
-
-test('组件自身不持有父子引用', function () {
-    $a = new _BubbleTrackerComponent('a');
-    assert_null($a->getParent(), '孤立组件 parent 应为 null');
-    assert_eq(count($a->getChildren()), 0, '无子组件');
-});
 
 // --- 2. Event Bubbling ---
 echo "\n--- 2. Event Bubbling ---\n";

@@ -66,6 +66,7 @@ function buildBilibiliTree(): RenderNode
     // ── MainContent (flex:1, padding 16px 24px, auto height) ──
     $mainContent = new RenderNode('div', [
         'display' => 'flex', 'flexDirection' => 'column',
+        'flex' => '1',
         'paddingLeft' => 24, 'paddingRight' => 24,
         'paddingTop' => 16,
         'left' => 0, 'top' => 0,

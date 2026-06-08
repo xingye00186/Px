@@ -65,6 +65,7 @@ require_once $frameworkDir . '/Rendering/LayoutResolver.php';
 require_once $frameworkDir . '/Rendering/Layout/PercentResolver.php';
 require_once $frameworkDir . '/Rendering/Layout/ScrollHelper.php';
 require_once $frameworkDir . '/Rendering/Layout/AbsolutePositioning.php';
+require_once $frameworkDir . '/Rendering/Layout/LayoutStrategyInterface.php';
 require_once $frameworkDir . '/Rendering/Layout/BlockLayoutStrategy.php';
 require_once $frameworkDir . '/Rendering/Layout/FlexLayoutStrategy.php';
 require_once $frameworkDir . '/Rendering/Layout/GridLayoutStrategy.php';
@@ -77,6 +78,7 @@ require_once $frameworkDir . '/Rendering/TextOverflowProcessor.php';
 require_once $frameworkDir . '/Core/Config.php';
 require_once $frameworkDir . '/Core/Scheduler.php';
 require_once $frameworkDir . '/BaseComponent.php';
+require_once $frameworkDir . '/interfaces/ReactiveComponentInterface.php';
 require_once $frameworkDir . '/ReactiveComponent.php';
 
 // ---- 平台 ----

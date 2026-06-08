@@ -313,7 +313,8 @@ echo "═══ 4. ScrollManager ═══\n\n";
 echo "--- 4a. 拖拽状态置空 ---\n";
 $sm = new ScrollManager(
     function(){}, function(){},
-    function($v) { return $rootComponent; }
+    function($v) { return $rootComponent; },
+    function() { return null; }
 );
 // 模拟完整拖拽周期
 for ($drag = 0; $drag < 10; $drag++) {
@@ -336,7 +337,8 @@ echo "  " . ($target === null ? "[PASS]" : "[FAIL]") . " 拖拽结束后 target 
 echo "--- 4b. 拖拽状态残留（未调 handleMouseUp）---\n";
 $sm2 = new ScrollManager(
     function(){}, function(){},
-    function($v) { return $rootComponent; }
+    function($v) { return $rootComponent; },
+    function() { return null; }
 );
 for ($drag = 0; $drag < 10; $drag++) {
     $dummy = new RenderNode('div');

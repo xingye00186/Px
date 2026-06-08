@@ -56,7 +56,7 @@ test('overflow:hidden 不创建滚动容器', function () {
 // ============================================================
 echo "\n--- Group 2: scrollTop 偏移 ---\n";
 
-test('scrollTop 偏移子节点位置', function () {
+test('scrollTop 不偏移子节点布局坐标（A1 重构：偏移在 VNodeRenderer 绘制层处理）', function () {
     $content = makeNode('div', ['width' => 200, 'height' => 600], [], 'content');
     $scroll = makeNode('div', [
         'width' => 200, 'height' => 300,
@@ -67,8 +67,11 @@ test('scrollTop 偏移子节点位置', function () {
     $scroll->scrollTop = 50;
     runResolver($root);
 
-    // content is shifted up by scrollTop
-    assert_eq($content->y, -50, 'content y=-50 (shifted up by scrollTop=50)');
+    // A1 重构: 布局坐标不再包含 scrollTop 偏移
+    // scrollTop 偏移由 VNodeRenderer 在绘制层叠加
+    assert_eq($content->y, 0, 'content y=0 (布局坐标不包含 scrollTop 偏移)');
+    assert_eq($scroll->scrollTop, 50, 'scrollTop 保持 50');
+    assert_true($scroll->contentHeight >= 600, 'contentHeight >= 600');
 });
 
 test('scrollTop 不超出 maxScroll', function () {

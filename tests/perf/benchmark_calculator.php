@@ -36,10 +36,18 @@ $frameworkDir = dirname(__DIR__, 2) . '/framework';
 $appDir       = dirname(__DIR__, 2) . '/apps/calculator-ng';
 
 require_once $frameworkDir . '/interfaces/ComponentInterface.php';
+require_once $frameworkDir . '/interfaces/ReactiveComponentInterface.php';
 require_once $frameworkDir . '/Rendering/CssMappings.php';
 require_once $frameworkDir . '/Rendering/VNode.php';
 require_once $frameworkDir . '/Rendering/RenderNode.php';
 require_once $frameworkDir . '/Rendering/RenderTreeManager.php';
+require_once $frameworkDir . '/Rendering/Layout/PercentResolver.php';
+require_once $frameworkDir . '/Rendering/Layout/ScrollHelper.php';
+require_once $frameworkDir . '/Rendering/Layout/AbsolutePositioning.php';
+require_once $frameworkDir . '/Rendering/Layout/LayoutStrategyInterface.php';
+require_once $frameworkDir . '/Rendering/Layout/BlockLayoutStrategy.php';
+require_once $frameworkDir . '/Rendering/Layout/FlexLayoutStrategy.php';
+require_once $frameworkDir . '/Rendering/Layout/GridLayoutStrategy.php';
 require_once $frameworkDir . '/Rendering/LayoutResolver.php';
 require_once $frameworkDir . '/Rendering/RenderContext.php';
 require_once $frameworkDir . '/Rendering/VNodeRenderer.php';
@@ -225,8 +233,8 @@ echo "  500 次创建/销毁: {$elapsed} ms\n";
 
 // ── 收集 PerfCounter 快照（如有启用） ────────────────────
 $perfSnapshot = [];
-if (\PerfCounter::isEnabled()) {
-    $perfSnapshot = \PerfCounter::snapshot();
+if (\Px\Core\PerfCounter::isEnabled()) {
+    $perfSnapshot = \Px\Core\PerfCounter::snapshot();
 }
 
 // ── 输出 JSON 结果 ──────────────────────────────────────
@@ -253,7 +261,7 @@ $outputData = [
 if (!empty($perfSnapshot)) {
     $outputData['perf_counters'] = $perfSnapshot;
     echo "\n--- PerfCounter 快照 ---\n";
-    echo \PerfCounter::formatSnapshot($perfSnapshot);
+    echo \Px\Core\PerfCounter::formatSnapshot($perfSnapshot);
 }
 
 file_put_contents(

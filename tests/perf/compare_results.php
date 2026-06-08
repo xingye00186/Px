@@ -163,11 +163,11 @@ echo str_repeat('-', 100) . "\n";
 if ($baseline['data']['perf_counters'] ?? null) {
     echo "\n--- PerfCounter 内嵌性能数据 ---\n";
     echo "基准线 PerfCounter:\n";
-    echo PerfCounter::formatSnapshot($baseline['data']['perf_counters']);
+    echo \Px\Core\PerfCounter::formatSnapshot($baseline['data']['perf_counters']);
 
     if ($optimizedData && ($optimizedData['data']['perf_counters'] ?? null)) {
         echo "\n优化后 PerfCounter:\n";
-        echo PerfCounter::formatSnapshot($optimizedData['data']['perf_counters']);
+        echo \Px\Core\PerfCounter::formatSnapshot($optimizedData['data']['perf_counters']);
     }
 }
 
