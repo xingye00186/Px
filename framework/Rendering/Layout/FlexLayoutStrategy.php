@@ -4,6 +4,7 @@ namespace Px\Rendering\Layout;
 
 use native_types;
 
+use Px\Core\Config;
 use Px\Rendering\CssMappings;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
@@ -179,7 +180,7 @@ class FlexLayoutStrategy
         foreach ($node->children as $child) {
             $childPosition = $child->style['position'] ?? 'static';
 
-            $this->resolver->resolveNode($child, $node->x + $paddingLeft - $scrollOffsetX, $node->y + $paddingTop - $scrollOffsetY, $node, $scrollContainers);
+            $this->resolver->resolveNode($child, $node->x + $paddingLeft - $scrollOffsetX, $node->y + $paddingTop - $scrollOffsetY, $node, refval($scrollContainers));
 
             // position:absolute/fixed children are removed from flex flow
             if ($childPosition !== 'absolute' && $childPosition !== 'fixed') {
@@ -868,7 +869,9 @@ class FlexLayoutStrategy
 
                 // Debug: two-pass condition
                 if ($chTp->isScrollContainer) {
-                    file_put_contents('d:\Px\_debug_out.txt', sprintf("DBG_TWO_PASS: ch=%s y=%d h=%d isFlexGrow=%d crossAxisSized=%d hasExplW=%d needsTP=%d\n", $chTp->type, $chTp->y, $chTp->h, (int)$dataTp['isFlexGrow'], (int)$dataTp['crossAxisSized'], (int)$dataTp['hasExplicitCrossSize'], (int)$needsTwoPass), FILE_APPEND);
+                    if (Config::get('diag_enabled', false)) {
+                        file_put_contents('d:\Px\_debug_out.txt', sprintf("DBG_TWO_PASS: ch=%s y=%d h=%d isFlexGrow=%d crossAxisSized=%d hasExplW=%d needsTP=%d\n", $chTp->type, $chTp->y, $chTp->h, (int)$dataTp['isFlexGrow'], (int)$dataTp['crossAxisSized'], (int)$dataTp['hasExplicitCrossSize'], (int)$needsTwoPass), FILE_APPEND);
+                    }
                 }
 
                 if ($needsTwoPass && count($chTp->children) > 0) {
@@ -895,7 +898,7 @@ class FlexLayoutStrategy
                             $gc->layoutDirty = true;
                         }
 
-                        $this->resolver->resolveNode($chTp, $prX, $prY, $parent, $scrollContainers);
+                        $this->resolver->resolveNode($chTp, $prX, $prY, $parent, refval($scrollContainers));
 
                         if ($hasOrigW) {
                             $chTp->style['width'] = $origW;
@@ -922,7 +925,7 @@ class FlexLayoutStrategy
 
                         foreach ($chTp->children as $grandchild) {
                             $grandchild->layoutDirty = true;
-                            $this->resolver->resolveNode($grandchild, $gcOffsetX, $gcOffsetY, $chTp, $scrollContainers);
+                            $this->resolver->resolveNode($grandchild, $gcOffsetX, $gcOffsetY, $chTp, refval($scrollContainers));
                         }
                     }
                 }
@@ -933,7 +936,7 @@ class FlexLayoutStrategy
                     $padRsp = (int)($chTp->style['paddingRight'] ?? $chTp->style['padding'] ?? 0);
                     $coffY = $chTp->y + $padTsp - $chTp->scrollTop;
 
-                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $chTp->style, $coffY, $padLsp, $padRsp, $scrollContainers);
+                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $chTp->style, $coffY, $padLsp, $padRsp, refval($scrollContainers));
                 }
             }
 

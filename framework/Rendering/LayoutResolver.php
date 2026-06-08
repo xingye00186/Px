@@ -6,6 +6,7 @@ namespace Px\Rendering;
 
 use native_types;
 
+use Px\Core\Config;
 use Px\Rendering\Layout\AbsolutePositioning;
 use Px\Rendering\Layout\BlockLayoutStrategy;
 use Px\Rendering\Layout\FlexLayoutStrategy;
@@ -100,11 +101,13 @@ class LayoutResolver
         $scrollContainers = [];
 
 
-        $this->resolveNode($root, 0, 0, null, $scrollContainers);
+        $this->resolveNode($root, 0, 0, null, refval($scrollContainers));
 
 
-        // Debug: final span dimensions after full layout
-        $this->debugCheckSpanDims($root);
+        // Debug: final span dimensions after full layout (guarded by diag_enabled)
+        if (Config::get('diag_enabled', false)) {
+            $this->debugCheckSpanDims($root);
+        }
 
 
         return ['scrollContainers' => $scrollContainers];
@@ -269,7 +272,7 @@ class LayoutResolver
                 case 'inline-flex':
 
 
-                    $this->flexStrategy->resolveFlexLayout($node, $parentX, $parentY, $parent, $scrollContainers, $effectiveStyle);
+                    $this->flexStrategy->resolveFlexLayout($node, $parentX, $parentY, $parent, refval($scrollContainers), $effectiveStyle);
 
 
                     break;
@@ -278,7 +281,7 @@ class LayoutResolver
                 case 'grid':
 
 
-                    $this->gridStrategy->resolveGridLayout($node, $parentX, $parentY, $parent, $scrollContainers, $effectiveStyle);
+                    $this->gridStrategy->resolveGridLayout($node, $parentX, $parentY, $parent, refval($scrollContainers), $effectiveStyle);
 
 
                     break;
@@ -287,7 +290,7 @@ class LayoutResolver
                 default: // block, scroll-container, etc.
 
 
-                    $this->blockStrategy->resolveBlockLayout($node, $parentX, $parentY, $parent, $position, $scrollContainers, $effectiveStyle);
+                    $this->blockStrategy->resolveBlockLayout($node, $parentX, $parentY, $parent, $position, refval($scrollContainers), $effectiveStyle);
 
 
                     break;
@@ -555,7 +558,7 @@ class LayoutResolver
                         $node->layoutDirty = true;
 
 
-                        $this->resolveNode($node, $parentX, $parentY, $parent, $scrollContainers);
+                        $this->resolveNode($node, $parentX, $parentY, $parent, refval($scrollContainers));
 
 
                         return;
@@ -585,7 +588,7 @@ class LayoutResolver
             foreach ($node->children as $child) {
 
 
-                $this->resolveNode($child, $childOffsetX, $childOffsetY, $node, $scrollContainers);
+                $this->resolveNode($child, $childOffsetX, $childOffsetY, $node, refval($scrollContainers));
 
 
             }

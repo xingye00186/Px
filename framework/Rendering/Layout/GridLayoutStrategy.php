@@ -208,7 +208,7 @@ class GridLayoutStrategy
         $children = [];
 
         foreach ($node->children as $child) {
-            $this->resolver->resolveNode($child, $node->x, $node->y, $node, $scrollContainers);
+            $this->resolver->resolveNode($child, $node->x, $node->y, $node, refval($scrollContainers));
 
             $children[] = $child;
         }
@@ -338,7 +338,7 @@ class GridLayoutStrategy
             // 高度不应用 min/max——等调整后得到自然内容高度
 
             // 调整子节点（重解析 flex/grid 的百分比尺寸）
-            $this->adjustGridItemChildren($ch, $scrollContainers);
+            $this->adjustGridItemChildren($ch, refval($scrollContainers));
 
             // 计算 grid item 的实际内容高度：从子节点的 bottom 边推算
             $actualContentH = $ch->h;
@@ -414,7 +414,7 @@ class GridLayoutStrategy
 
             // 如果高度变化了（stretch），需要重新调整子节点
             if ($alignSelf === 'stretch') {
-                $this->adjustGridItemChildren($ch, $scrollContainers);
+                $this->adjustGridItemChildren($ch, refval($scrollContainers));
                 // 恢复 grid cell 决定的位置和宽度（adjustGridItemChildren 内部会 restore）
                 $ch->y = $newCellY;
                 $ch->h = $actualRowH;
@@ -478,7 +478,7 @@ class GridLayoutStrategy
                 $gridItem,
                 $savedX, $savedY,
                 $gridItem,
-                $scrollContainers,
+                refval($scrollContainers),
                 $gridItem->style
             );
 
@@ -524,7 +524,7 @@ class GridLayoutStrategy
                 $gridItem,
                 $savedX, $savedY,
                 $gridItem,
-                $scrollContainers,
+                refval($scrollContainers),
                 $gridItem->style
             );
 
@@ -551,7 +551,7 @@ class GridLayoutStrategy
         // Block 显示: 逐个重新解析子节点
         foreach ($gridItem->children as $child) {
             ScrollHelper::markSubtreeDirty($child);
-            $this->resolver->resolveNode($child, $gridItem->x, $gridItem->y, $gridItem, $scrollContainers);
+            $this->resolver->resolveNode($child, $gridItem->x, $gridItem->y, $gridItem, refval($scrollContainers));
         }
     }
 }

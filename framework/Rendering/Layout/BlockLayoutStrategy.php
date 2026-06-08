@@ -4,6 +4,7 @@ namespace Px\Rendering\Layout;
 
 use native_types;
 
+use Px\Core\Config;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
 
@@ -74,7 +75,7 @@ class BlockLayoutStrategy
         $height = PercentResolver::resolvePercent($style, 'height', 'heightPercent', $parentH);
 
         // Debug: log span dimensions before min/max
-        if ($node->type === 'span' && $node->content !== null) {
+        if ($node->type === 'span' && $node->content !== null && Config::get('diag_enabled', false)) {
             file_put_contents('d:\Px\_debug_out.txt', sprintf("DBG_SPAN_ENTER: content='%s' parentY=%d parentH=%d w=%d h=%d height=%d parent->h=%d\n", $node->content, $parentY, $parentH, $node->w, $node->h, $height, ($parent !== null) ? $parent->h : -1), FILE_APPEND);
         }
 
@@ -90,7 +91,7 @@ class BlockLayoutStrategy
         $node->h = (int)max(0, (int)PercentResolver::applyMinMax($style, $height, false));
 
         // Debug: span h after min/max constraint
-        if ($node->type === 'span' && $node->content !== null) {
+        if ($node->type === 'span' && $node->content !== null && Config::get('diag_enabled', false)) {
             file_put_contents('d:\Px\_debug_out.txt', sprintf("DBG_SPAN_MINMAX: content='%s' p->h=%d bef=%d af=%d ht=%d\n", $node->content, ($parent !== null) ? $parent->h : -1, $dbg_span_h_before, $node->h, $height), FILE_APPEND);
         }
 
@@ -117,7 +118,7 @@ class BlockLayoutStrategy
             // Text height = line-height if no explicit height
             if (!array_key_exists('height', $style) && !array_key_exists('heightPercent', $style)) {
                 $lineH = PercentResolver::resolveLineHeight($style, $fs);
-                if ($node->type === 'span' && $node->content !== null) {
+                if ($node->type === 'span' && $node->content !== null && Config::get('diag_enabled', false)) {
                     file_put_contents('d:\Px\_debug_out.txt', sprintf("DBG_SPAN_AUTOH: content='%s' h=%d lineH=%d -> new_h=%d\n", $node->content, $node->h, $lineH, ($node->h === 0 || $node->h < $lineH) ? $lineH : $node->h), FILE_APPEND);
                 }
                 if ($node->h === 0 || $node->h < $lineH) {
@@ -133,11 +134,11 @@ class BlockLayoutStrategy
 
 
         if ($isAbsolute) {
-            $this->resolver->getAbsolutePositioning()->resolveAbsolutePositioning($node, $parent, $style, $left, $top, $right, $bottom, $width, $height, $scrollContainers);
+            $this->resolver->getAbsolutePositioning()->resolveAbsolutePositioning($node, $parent, $style, $left, $top, $right, $bottom, $width, $height, refval($scrollContainers));
 
         } else {
             // static / relative
-            $this->resolveNormalFlow($node, $parentX, $parentY, $parent, $position, $style, $left, $top, $scrollContainers);
+            $this->resolveNormalFlow($node, $parentX, $parentY, $parent, $position, $style, $left, $top, refval($scrollContainers));
         }
 
 
@@ -153,7 +154,7 @@ class BlockLayoutStrategy
             // A1 重构: childOffsetY 不再减 scrollTop，偏移由 VNodeRenderer 在绘制层处理
             $childOffsetY = $node->y + $paddingTop;
 
-            $this->finalizeScrollContainer($node, $style, $childOffsetY, $paddingLeft, $paddingRight, $scrollContainers);
+            $this->finalizeScrollContainer($node, $style, $childOffsetY, $paddingLeft, $paddingRight, refval($scrollContainers));
         }
 
 
@@ -242,7 +243,7 @@ class BlockLayoutStrategy
                                 $gc->layoutDirty = true;
                             }
 
-                            $this->resolver->resolveNode($child, $node->x + $paddingLeft, $stackY, $node, $scrollContainers);
+                            $this->resolver->resolveNode($child, $node->x + $paddingLeft, $stackY, $node, refval($scrollContainers));
                         }
                     }
 
@@ -409,7 +410,7 @@ class BlockLayoutStrategy
         $childOffsetY = $node->y + $paddingTop;
 
         foreach ($node->children as $child) {
-            $this->resolver->resolveNode($child, $childOffsetX, $childOffsetY, $node, $scrollContainers);
+            $this->resolver->resolveNode($child, $childOffsetX, $childOffsetY, $node, refval($scrollContainers));
         }
     }
 
@@ -431,7 +432,9 @@ class BlockLayoutStrategy
         // ── Auto-stack: for scroll containers, position children vertically ──
 
         $stackY = $childOffsetY;
-        file_put_contents('d:\\Px\\_debug_out.txt', sprintf("DBG_FINALIZE_SCROLL: node=%s y=%d h=%d scrollTop=%d childOffsetY=%d children=%d\n", $node->type, $node->y, $node->h, $node->scrollTop, $childOffsetY, count($node->children)), FILE_APPEND);
+        if (Config::get('diag_enabled', false)) {
+            file_put_contents('d:\Px\_debug_out.txt', sprintf("DBG_FINALIZE_SCROLL: node=%s y=%d h=%d scrollTop=%d childOffsetY=%d children=%d\n", $node->type, $node->y, $node->h, $node->scrollTop, $childOffsetY, count($node->children)), FILE_APPEND);
+        }
 
         $containerW = PercentResolver::computeContentWidth($style, $node->w);
 

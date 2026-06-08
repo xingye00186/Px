@@ -143,7 +143,7 @@ class AbsolutePositioning
         $childOffsetY = $node->y + $paddingTop;
 
         foreach ($node->children as $child) {
-            $this->resolver->resolveNode($child, $childOffsetX, $childOffsetY, $node, $scrollContainers);
+            $this->resolver->resolveNode($child, $childOffsetX, $childOffsetY, $node, refval($scrollContainers));
         }
     }
 
