@@ -316,7 +316,8 @@ $rootRN = $rtm->updateFromVNode(
     null,
     $rootComponent,
     $app->componentByGroupId,
-    $candidates
+    $candidates,
+    'app'
 );
 echo "  rootRN: " . ($rootRN !== null ? 'OK' : 'NULL') . "\n";
 echo "  grid children in RN tree:\n";
@@ -369,7 +370,8 @@ $rootRN2 = $rtm2->updateFromVNode(
     null,
     $rootComponent,
     $app->componentByGroupId,
-    null
+    null,
+    'app'
 );
 echo "  rootRN2: " . ($rootRN2 !== null ? 'OK' : 'NULL') . "\n";
 echo "  grid children in RN tree (Frame 2):\n";

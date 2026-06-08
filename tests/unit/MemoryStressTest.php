@@ -166,7 +166,7 @@ echo "--- 1a. groupIdToRenderNodeMap 跨帧累积 ---\n";
 $m1 = new RenderTreeManager();
 $vnode1 = VNode::h('#root', [], [VNode::h('div', ['class' => 'box'], 'x')]);
 for ($f = 0; $f < 10; $f++) {
-    $m1->updateFromVNode($vnode1, null, $rootComponent, $componentByGroupId);
+    $m1->updateFromVNode($vnode1, null, $rootComponent, $componentByGroupId, null, 'app');
 }
 $g1 = countGroupMap($m1);
 echo "  10 frames, same VNode: groupMap={$g1}\n";
@@ -179,7 +179,7 @@ $stable = VNode::h('#root', [], [
     VNode::h('div', [], [VNode::h('span', [], 'A'), VNode::h('button', [], 'B')]),
 ]);
 for ($f = 0; $f < 100; $f++) {
-    $rn = $m1c->updateFromVNode($stable, null, $rootComponent, $componentByGroupId);
+    $rn = $m1c->updateFromVNode($stable, null, $rootComponent, $componentByGroupId, null, 'app');
     assert(count($rn->children) === 2, "Frame ".($f+1)." children should be 2");
 }
 echo "  [PASS] 100 frames children stable at 2\n";
@@ -193,7 +193,7 @@ $root1d = VNode::h('#root', [], [VNode::h('div', [], [
     VNode::hKey('div', [], 'A', 'k-a'),
     VNode::hKey('div', [], 'B', 'k-b'),
 ])]);
-$rn1d = $m1d->updateFromVNode($root1d, null, $rootComponent, $componentByGroupId);
+$rn1d = $m1d->updateFromVNode($root1d, null, $rootComponent, $componentByGroupId, null, 'app');
 $rnA = $rn1d->children[0];
 $rnB = $rn1d->children[1];
 
@@ -204,7 +204,7 @@ $root1d_2 = VNode::h('#root', [], [VNode::h('div', [], [
     VNode::hKey('div', [], 'A2', 'k-a'),
     VNode::hKey('div', [], 'B2', 'k-b'),
 ])]);
-$rn1d_2 = $m1d->updateFromVNode($root1d_2, null, $rootComponent, $componentByGroupId, $candidates1d);
+$rn1d_2 = $m1d->updateFromVNode($root1d_2, null, $rootComponent, $componentByGroupId, $candidates1d, 'app');
 $ok = ($rn1d_2->children[0] === $rnA && $rn1d_2->children[1] === $rnB);
 echo "  " . ($ok ? "[PASS]" : "[FAIL]") . " key-based reuse: " . ($ok ? "same RN objects" : "new RNs created") . "\n";
 
@@ -523,12 +523,12 @@ echo "═══ 9. 对象生命周期合理性 ═══\n\n";
 echo "--- 9a. VNode 类型变化 → RN 类型更新 + 子节点重建（不累积）---\n";
 $m9a = new RenderTreeManager();
 $vn9a = VNode::h('div', [], [VNode::h('span', [], 'child')]);
-$rn9a = $m9a->updateFromVNode($vn9a, null, $rootComponent, $componentByGroupId);
+$rn9a = $m9a->updateFromVNode($vn9a, null, $rootComponent, $componentByGroupId, null, 'app');
 echo "  Frame1: type={$rn9a->type}, children=" . count($rn9a->children) . "\n";
 
 // Frame 2: type change, children rebuilt from VNode (not 0, not accumulated)
 $vn9a->type = 'span';
-$rn9a_2 = $m9a->updateFromVNode($vn9a, null, $rootComponent, $componentByGroupId);
+$rn9a_2 = $m9a->updateFromVNode($vn9a, null, $rootComponent, $componentByGroupId, null, 'app');
 echo "  Frame2: type={$rn9a_2->type}, children=" . count($rn9a_2->children) . "\n";
 echo "  " . ($rn9a_2->type === 'span' ? "[PASS]" : "[FAIL]") . " type→span\n";
 echo "  " . (count($rn9a_2->children) === 1 ? "[PASS]" : "[FAIL]") . " children rebuilt from VNode (1)\n";
@@ -536,7 +536,7 @@ echo "  " . (count($rn9a_2->children) === 1 ? "[PASS]" : "[FAIL]") . " children 
 // Frame 3: text children → content set, children cleared
 $vn9a->type = 'div';
 $vn9a->children = 'text';
-$rn9a_3 = $m9a->updateFromVNode($vn9a, null, $rootComponent, $componentByGroupId);
+$rn9a_3 = $m9a->updateFromVNode($vn9a, null, $rootComponent, $componentByGroupId, null, 'app');
 $textOk = $rn9a_3->type === 'div' && $rn9a_3->content === 'text' && count($rn9a_3->children) === 0;
 echo "  Frame3: type={$rn9a_3->type}, content={$rn9a_3->content}, children=" . count($rn9a_3->children) . "\n";
 echo "  " . ($textOk ? "[PASS]" : "[FAIL]") . " text children → content set, children=0\n";
@@ -546,11 +546,11 @@ echo "  Same RN object: " . ($rn9a_3 === $rn9a ? "yes ✅" : "no ⚠") . "\n";
 echo "--- 9b. VNode key 变化 → RN key 更新（儿童不清除）---\n";
 $m9b = new RenderTreeManager();
 $vn9b = VNode::hKey('div', [], 'BODY', 'old-k');
-$rn9b = $m9b->updateFromVNode($vn9b, null, $rootComponent, $componentByGroupId);
+$rn9b = $m9b->updateFromVNode($vn9b, null, $rootComponent, $componentByGroupId, null, 'app');
 echo "  Frame1: key={$rn9b->key}\n";
 
 $vn9b->key = 'new-k';
-$rn9b_2 = $m9b->updateFromVNode($vn9b, null, $rootComponent, $componentByGroupId);
+$rn9b_2 = $m9b->updateFromVNode($vn9b, null, $rootComponent, $componentByGroupId, null, 'app');
 echo "  Frame2: key={$rn9b_2->key}\n";
 echo "  " . ($rn9b_2->key === 'new-k' ? "[PASS]" : "[FAIL]") . " key→new-k\n";
 echo "  Same RN object: " . ($rn9b_2 === $rn9b ? "yes ✅" : "no ⚠") . "\n";
@@ -568,20 +568,19 @@ $comp9c->dirty = false;
 
 $vn9c = VNode::hComponent('TestComp', [], []);
 $vn9c->componentInstance = $comp9c;
-$rn9c = $m9c->updateFromVNode($vn9c, null, $rootComponent, $componentByGroupId);
+$rn9c = $m9c->updateFromVNode($vn9c, null, $rootComponent, $componentByGroupId, null, 'app');
 $delegated = ($rn9c !== null && $rn9c->type === 'div' && $rn9c->content === 'hello');
 echo "  " . ($delegated ? "[PASS]" : "[FAIL]") . " #component 展开到子树的 type=div, content=hello\n";
 
 // 9d. groupId 独立传播
-echo "--- 9d. groupId 独立传播 —— 每个 VNode 的 groupId 独立写入对应 RN ---\n";
+echo "--- 9d. groupId 参数传播 —— 所有 RenderNode 接收来自参数的 groupId ---\n";
 $m9d = new RenderTreeManager();
 $parentVn9d = VNode::h('div', [], [VNode::h('span', [], 'x')]);
-$parentVn9d->groupId = 'parent-group';
-$parentVn9d->children[0]->groupId = 'child-group';
-$rn9d = $m9d->updateFromVNode($parentVn9d, null, $rootComponent, $componentByGroupId);
+
+$rn9d = $m9d->updateFromVNode($parentVn9d, null, $rootComponent, $componentByGroupId, null, 'app');
 echo "  Parent RN groupId={$rn9d->groupId}, Child RN groupId={$rn9d->children[0]->groupId}\n";
-echo "  " . ($rn9d->groupId === 'parent-group' && $rn9d->children[0]->groupId === 'child-group'
-    ? "[PASS]" : "[FAIL]") . " groupId 独立传播，不互相覆盖\n";
+echo "  " . ($rn9d->groupId === 'app' && $rn9d->children[0]->groupId === 'app'
+    ? "[PASS]" : "[FAIL]") . " groupId 统一为 app（通过参数传入）\n";
 
 // 9e. 多帧重建后 RN 树结构完整性
 echo "--- 9e. 多帧重建后 RN 树结构完整性 ---\n";
@@ -595,7 +594,7 @@ $foot9e = VNode::h('div', ['class' => 'foot'], 'Footer');
 $root9e = VNode::h('div', ['class' => 'container'], [$head9e, $list9e, $foot9e]);
 
 for ($f = 0; $f < 10; $f++) {
-    $rn9e = $m9e->updateFromVNode($root9e, null, $rootComponent, $componentByGroupId);
+    $rn9e = $m9e->updateFromVNode($root9e, null, $rootComponent, $componentByGroupId, null, 'app');
 }
 // 验证树结构: 3 个子节点，类型正确
 $valid = ($rn9e !== null
@@ -675,7 +674,7 @@ for ($i = 0; $i < $iterations; $i++) {
         ]),
     ]);
 
-    $rn = $manager->updateFromVNode($parentVNode, null, $rootComp10, []);
+    $rn = $manager->updateFromVNode($parentVNode, null, $rootComp10, [], null, 'app');
     assert_not_null($rn, "第 {$i} 次转换应成功");
 
     // 找到子组件 RenderNode（作为容器 div 的子节点，无 #component 包装器）
@@ -710,7 +709,7 @@ $parentVNode10b = VNode::h('#root', [], [
     ]),
 ]);
 
-$rn10b = (new RenderTreeManager())->updateFromVNode($parentVNode10b, null, $rootComp10, []);
+$rn10b = (new RenderTreeManager())->updateFromVNode($parentVNode10b, null, $rootComp10, [], null, 'app');
 $childRN10b = $rn10b->children[0] ?? null;
 assert_not_null($childRN10b, '应有子 RenderNode');
 assert($childRN10b->style['left'] === 11,

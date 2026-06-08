@@ -58,7 +58,8 @@ class InstrumentedRenderTreeManager extends \Px\Rendering\RenderTreeManager
         ?RenderNode $parent,
         \Px\ReactiveComponent $root,
         array $componentByGroupId,
-        ?array $candidates = null
+        ?array $candidates = null,
+        string $currentGroupId
     ): ?RenderNode {
         // 对 #component 节点，检查 instance 状态
         if ($vnode->isComponent()) {
@@ -68,7 +69,7 @@ class InstrumentedRenderTreeManager extends \Px\Rendering\RenderTreeManager
             }
         }
         
-        $result = parent::updateFromVNode($vnode, $parent, $root, $componentByGroupId, $candidates);
+        $result = parent::updateFromVNode($vnode, $parent, $root, $componentByGroupId, $candidates, $currentGroupId);
         
         // 对普通 div 节点，检查是否是 grid
         if (!$vnode->isComponent() && $vnode->type !== '#root') {

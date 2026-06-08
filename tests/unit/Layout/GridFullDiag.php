@@ -185,7 +185,7 @@ if ($gridDiv !== null) {
 // ══════════════════════════════════════════════════
 echo "\n--- Step 4: 帧1 — updateFromVNode() ---\n";
 $rtm = new RenderTreeManager();
-$rootRN = $rtm->updateFromVNode($tree1, null, $grid, ['app' => $grid], null);
+$rootRN = $rtm->updateFromVNode($tree1, null, $grid, ['app' => $grid], null, 'app');
 
 echo "  rootRN: " . ($rootRN !== null ? 'OK' : 'NULL') . "\n";
 if ($rootRN !== null) {
@@ -277,7 +277,7 @@ echo "  instance检查: " . count($results2) . " 个 #component, " .
 // ══════════════════════════════════════════════════
 echo "\n--- Step 7: 帧2 — updateFromVNode() ---\n";
 $rtm2 = new RenderTreeManager();
-$rootRN2 = $rtm2->updateFromVNode($tree2, null, $grid, ['app' => $grid], null);
+$rootRN2 = $rtm2->updateFromVNode($tree2, null, $grid, ['app' => $grid], null, 'app');
 
 echo "  rootRN2: " . ($rootRN2 !== null ? 'OK' : 'NULL') . "\n";
 if ($rootRN2 !== null) {

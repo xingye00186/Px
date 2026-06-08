@@ -64,7 +64,7 @@ $vnode = VNode::h('#root', [], [
     ]),
 ]);
 
-$rn = $manager->updateFromVNode($vnode, null, $rootComponent, $componentByGroupId);
+$rn = $manager->updateFromVNode($vnode, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn !== null, '转换后应返回 RenderNode');
 assert($rn->type === 'div', '根 RenderNode 应为 div');
 assert($rn->type === 'div', '跳过 #root 后 type 应为 div');
@@ -81,7 +81,7 @@ $manager2 = new RenderTreeManager();
 
 // 第一次转换：通过 #root 创建 div RenderNode（无旧 root → 新建）
 $root2first = VNode::h('#root', [], [VNode::h('div', ['class' => 'box'], 'content')]);
-$rn1 = $manager2->updateFromVNode($root2first, null, $rootComponent, $componentByGroupId);
+$rn1 = $manager2->updateFromVNode($root2first, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn1 !== null, '第一次转换应成功');
 assert($rn1->content === 'content', '第一次转换 content 正确');
 
@@ -89,26 +89,25 @@ assert($rn1->content === 'content', '第一次转换 content 正确');
 $oldRoot2 = $manager2->getRootRenderNode();
 $candidates2 = $oldRoot2 !== null ? [$oldRoot2] : null;
 $root2second = VNode::h('#root', [], [VNode::h('div', ['class' => 'box'], 'content-2')]);
-$rn2 = $manager2->updateFromVNode($root2second, null, $rootComponent, $componentByGroupId, $candidates2);
+$rn2 = $manager2->updateFromVNode($root2second, null, $rootComponent, $componentByGroupId, $candidates2, 'app');
 
 // 对象一致性验证：应为同一 RenderNode 对象（type+key 匹配）
 assert(spl_object_hash($rn1) === spl_object_hash($rn2), '不同 VNode 同 type+key 应匹配到同一 RenderNode');
 echo "[PASS] RenderNode 复用（type+key 跨帧匹配）\n";
 
 // ─────────────────────────────────────────────
-// 3. groupId 继承
+// 3. groupId 参数传播（不再从 VNode.groupId 读取）
 // ─────────────────────────────────────────────
 $manager3 = new RenderTreeManager();
 $vnodeWithGroupId = VNode::h('div', ['class' => 'box'], null);
-$vnodeWithGroupId->groupId = 'mygroup';
 
 $child1 = VNode::h('span', [], 'text');
 $vnodeWithGroupId->children = [$child1];
 
-$rn3 = $manager3->updateFromVNode($vnodeWithGroupId, null, $rootComponent, $componentByGroupId);
-assert($rn3->groupId === 'mygroup', 'groupId 应从 VNode 复制');
-assert($rn3->children[0]->groupId === 'mygroup', '子节点 groupId 应与父节点一致');
-echo "[PASS] groupId 从 sourceVNode 复制\n";
+$rn3 = $manager3->updateFromVNode($vnodeWithGroupId, null, $rootComponent, $componentByGroupId, null, 'app');
+assert($rn3->groupId === 'app', 'groupId 应为 app（通过参数传入）');
+assert($rn3->children[0]->groupId === 'app', '子节点 groupId 应与父节点一致');
+echo "[PASS] groupId 参数传播\n";
 
 // ─────────────────────────────────────────────
 // 4. #root 节点跳过
@@ -118,7 +117,7 @@ $vnodeRoot = VNode::h('#root', [], [
     VNode::h('div', ['class' => 'child1'], 'A'),
 ]);
 
-$rn4 = $manager4->updateFromVNode($vnodeRoot, null, $rootComponent, $componentByGroupId);
+$rn4 = $manager4->updateFromVNode($vnodeRoot, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn4 !== null, '#root 下应能提取到子节点');
 assert($rn4->type === 'div', '跳过了 #root，直接拿到 div');
 echo "[PASS] #root 节点被跳过，直接返回子节点\n";
@@ -128,7 +127,7 @@ echo "[PASS] #root 节点被跳过，直接返回子节点\n";
 // ─────────────────────────────────────────────
 $manager5 = new RenderTreeManager();
 $vnode5 = VNode::h('div', [], 'test');
-$manager5->updateFromVNode($vnode5, null, $rootComponent, $componentByGroupId);
+$manager5->updateFromVNode($vnode5, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($manager5->getRootRenderNode() !== null, '转换后 rootRenderNode 不应为 null');
 
 $manager5->clear();
@@ -144,7 +143,7 @@ $btnVNode = VNode::h('button', ['@click' => 'test', 'style' => 'left:10;top:10;w
 $rootVNode = VNode::h('#root', [], [$btnVNode]);
 
 // 手动设置布局结果到 RenderNode
-$rn6 = $manager6->updateFromVNode($rootVNode, null, $rootComponent, $componentByGroupId);
+$rn6 = $manager6->updateFromVNode($rootVNode, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn6 !== null, '转换应成功');
 $rn6->x = 10;
 $rn6->y = 10;
@@ -166,7 +165,7 @@ $scrollVNode->isScrollContainer = true;
 
 $rootVNode7 = VNode::h('#root', [], [$scrollVNode]);
 
-$rn7 = $manager7->updateFromVNode($rootVNode7, null, $rootComponent, $componentByGroupId);
+$rn7 = $manager7->updateFromVNode($rootVNode7, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn7 !== null, '转换应成功');
 $rn7->x = 0;
 $rn7->y = 0;
@@ -188,7 +187,7 @@ $vnode8->groupId = 'testGroup';
 
 $rootVNode8 = VNode::h('#root', [], [$vnode8]);
 
-$rn8 = $manager8->updateFromVNode($rootVNode8, null, $rootComponent, $componentByGroupId);
+$rn8 = $manager8->updateFromVNode($rootVNode8, null, $rootComponent, $componentByGroupId, null, 'app');
 
 // findRenderNodeBySourceVNode
 $found = $manager8->findRenderNodeBySourceVNode($vnode8);
@@ -236,7 +235,7 @@ $parentVNode = VNode::h('#root', [], [
     ]),
 ]);
 
-$rn9 = $manager9->updateFromVNode($parentVNode, null, $rootComponent, $componentByGroupId);
+$rn9 = $manager9->updateFromVNode($parentVNode, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn9 !== null, '转换应成功');
 assert($rn9->type === 'div', '根应为 div');
 // div 应有 3 个孩子: span(before), component span, span(after)
@@ -260,7 +259,7 @@ $parentVNode9b = VNode::h('#root', [], [
     ]),
 ]);
 
-$rn9b = $manager9b->updateFromVNode($parentVNode9b, null, $rootComponent, $componentByGroupId);
+$rn9b = $manager9b->updateFromVNode($parentVNode9b, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn9b !== null, '转换应成功');
 assert($rn9b->type === 'div', '应为 div');
 assert(count($rn9b->children) === 1, '空组件被跳过，应有 1 个子节点');
@@ -288,7 +287,7 @@ $parentVNode9c = VNode::h('#root', [], [
     ]),
 ]);
 
-$rn9c = $manager9c->updateFromVNode($parentVNode9c, null, $rootComponent, $componentByGroupId);
+$rn9c = $manager9c->updateFromVNode($parentVNode9c, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn9c !== null, '转换应成功');
 assert($rn9c->type === 'div', '根应为 div');
 assert(count($rn9c->children) === 1, '容器应有 1 个子节点');
@@ -319,7 +318,7 @@ $manager10 = new RenderTreeManager();
 
 // 10.1 class 样式正确合并
 $vnode10a = VNode::h('button', ['class' => 'btn-primary'], 'Submit');
-$rn10a = $manager10->updateFromVNode($vnode10a, null, $rootComponent, $componentByGroupId);
+$rn10a = $manager10->updateFromVNode($vnode10a, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn10a !== null, '转换应成功');
 assert($rn10a->style['bg'] === 0x0000FF, 'btn-primary 的 bg 应为 0x0000FF, 实际: ' . ($rn10a->style['bg'] ?? 'unset'));
 assert($rn10a->style['fg'] === 0xFFFFFF, 'btn-primary 的 fg 应为 0xFFFFFF');
@@ -329,7 +328,7 @@ echo "[PASS] CSS class 样式正确合并到 RenderNode.style\n";
 
 // 10.2 inline 样式覆盖 class 样式
 $vnode10b = VNode::h('button', ['class' => 'btn-primary', 'style' => 'width:120;height:50'], 'Submit');
-$rn10b = $manager10->updateFromVNode($vnode10b, null, $rootComponent, $componentByGroupId);
+$rn10b = $manager10->updateFromVNode($vnode10b, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn10b !== null, '转换应成功');
 assert($rn10b->style['bg'] === 0x0000FF, 'class bg 应保留: ' . ($rn10b->style['bg'] ?? 'unset'));
 assert($rn10b->style['width'] === 120, 'inline width 应覆盖 class width');
@@ -338,7 +337,7 @@ echo "[PASS] inline 样式正确覆盖 class 样式\n";
 
 // 10.3 仅 inline 样式（无 class）
 $vnode10c = VNode::h('div', ['style' => 'left:10;top:20;width:100'], 'Content');
-$rn10c = $manager10->updateFromVNode($vnode10c, null, $rootComponent, $componentByGroupId);
+$rn10c = $manager10->updateFromVNode($vnode10c, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn10c !== null, '转换应成功');
 assert($rn10c->style['left'] === 10, 'left 应为 10');
 assert($rn10c->style['top'] === 20, 'top 应为 20');
@@ -348,7 +347,7 @@ echo "[PASS] 仅 inline 样式（无 class）正常工作\n";
 
 // 10.4 无样式时返回空数组
 $vnode10d = VNode::h('span', [], 'Text');
-$rn10d = $manager10->updateFromVNode($vnode10d, null, $rootComponent, $componentByGroupId);
+$rn10d = $manager10->updateFromVNode($vnode10d, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn10d !== null, '转换应成功');
 assert(is_array($rn10d->style), 'style 应为数组');
 assert(count($rn10d->style) === 0, '无样式时 style 应为空数组');
@@ -356,7 +355,7 @@ echo "[PASS] 无样式时 RenderNode.style 为空数组\n";
 
 // 10.5 跨组件 class 搜索（class 是全局的）
 $vnode10e = VNode::h('button', ['class' => 'btn-danger'], 'Delete');
-$rn10e = $manager10->updateFromVNode($vnode10e, null, $rootComponent, $componentByGroupId);
+$rn10e = $manager10->updateFromVNode($vnode10e, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn10e !== null, '转换应成功');
 assert($rn10e->style['bg'] === 0x0000FF, 'btn-danger 的 bg 应被正确查找（跨组件）');
 assert($rn10e->style['fg'] === 0xFFFFFF, 'btn-danger 的 fg 应被正确查找（跨组件）');
@@ -368,7 +367,7 @@ ThemeProvider::registerClassStyles('TestComponentC', [
     'shadow' => ['shadow' => 1],
 ]);
 $vnode10f = VNode::h('div', ['class' => 'btn-primary rounded shadow'], 'Styled');
-$rn10f = $manager10->updateFromVNode($vnode10f, null, $rootComponent, $componentByGroupId);
+$rn10f = $manager10->updateFromVNode($vnode10f, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn10f !== null, '转换应成功');
 assert($rn10f->style['bg'] === 0x0000FF, 'btn-primary bg 应存在');
 assert($rn10f->style['borderRadius'] === 8, 'rounded 的 borderRadius 应为 8');
@@ -385,7 +384,7 @@ $root11f1 = VNode::h('#root', [], [VNode::h('div', [], [
     VNode::hKey('div', [], 'A', 'k-a'),
     VNode::hKey('div', [], 'B', 'k-b'),
 ])]);
-$rn11f1 = $manager11->updateFromVNode($root11f1, null, $rootComponent, $componentByGroupId);
+$rn11f1 = $manager11->updateFromVNode($root11f1, null, $rootComponent, $componentByGroupId, null, 'app');
 $rnA = $rn11f1->children[0];
 $rnB = $rn11f1->children[1];
 
@@ -396,7 +395,7 @@ $root11f2 = VNode::h('#root', [], [VNode::h('div', [], [
     VNode::hKey('div', [], 'B2', 'k-b'),
     VNode::hKey('div', [], 'A2', 'k-a'),
 ])]);
-$rn11f2 = $manager11->updateFromVNode($root11f2, null, $rootComponent, $componentByGroupId, $candidates11);
+$rn11f2 = $manager11->updateFromVNode($root11f2, null, $rootComponent, $componentByGroupId, $candidates11, 'app');
 
 assert($rn11f2->children[0] === $rnB, 'k-b 应匹配到原来的 B RenderNode');
 assert($rn11f2->children[1] === $rnA, 'k-a 应匹配到原来的 A RenderNode');
@@ -411,7 +410,7 @@ $manager12 = new RenderTreeManager();
 
 // Frame 1: create
 $root12f1 = VNode::h('#root', [], [VNode::h('div', ['class' => 'static'], 'A')]);
-$rn12f1 = $manager12->updateFromVNode($root12f1, null, $rootComponent, $componentByGroupId);
+$rn12f1 = $manager12->updateFromVNode($root12f1, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn12f1->layoutDirty === true, '新建 RN 应为脏');
 assert($rn12f1->content === 'A', 'content 正确');
 
@@ -419,7 +418,7 @@ assert($rn12f1->content === 'A', 'content 正确');
 $oldRoot12 = $manager12->getRootRenderNode();
 $candidates12 = $oldRoot12 !== null ? [$oldRoot12] : null;
 $root12f2 = VNode::h('#root', [], [VNode::h('div', ['class' => 'static'], 'A')]);
-$rn12f2 = $manager12->updateFromVNode($root12f2, null, $rootComponent, $componentByGroupId, $candidates12);
+$rn12f2 = $manager12->updateFromVNode($root12f2, null, $rootComponent, $componentByGroupId, $candidates12, 'app');
 assert(spl_object_hash($rn12f1) === spl_object_hash($rn12f2), '同 type+key 应复用');
 assert($rn12f2->layoutDirty === true, '复用 RN 始终为脏路径');
 echo "[PASS] 洁净路径不存在：复用 RN 始终 layoutDirty=true\n";
@@ -428,7 +427,7 @@ echo "[PASS] 洁净路径不存在：复用 RN 始终 layoutDirty=true\n";
 $oldRoot12b = $manager12->getRootRenderNode();
 $candidates12b = $oldRoot12b !== null ? [$oldRoot12b] : null;
 $root12f3 = VNode::h('#root', [], [VNode::h('div', ['class' => 'static', 'style' => 'width:200'], 'A')]);
-$rn12f3 = $manager12->updateFromVNode($root12f3, null, $rootComponent, $componentByGroupId, $candidates12b);
+$rn12f3 = $manager12->updateFromVNode($root12f3, null, $rootComponent, $componentByGroupId, $candidates12b, 'app');
 assert($rn12f3->layoutDirty === true, 'style 变化后应为脏路径');
 echo "[PASS] 脏路径：复用 RN 始终 layoutDirty=true（不含洁净路径优化）\n";
 
@@ -443,7 +442,7 @@ $root13f1 = VNode::h('#root', [], [VNode::h('div', [], [
     VNode::hKey('span', [], 'B', 'k-b'),
     VNode::hKey('span', [], 'C', 'k-c'),
 ])]);
-$rn13f1 = $manager13->updateFromVNode($root13f1, null, $rootComponent, $componentByGroupId);
+$rn13f1 = $manager13->updateFromVNode($root13f1, null, $rootComponent, $componentByGroupId, null, 'app');
 $oldChildren = $rn13f1->children;
 assert(count($oldChildren) === 3, '应有 3 个子节点');
 
@@ -454,7 +453,7 @@ $root13f2 = VNode::h('#root', [], [VNode::h('div', [], [
     VNode::hKey('span', [], 'A2', 'k-a'),
     VNode::hKey('span', [], 'C2', 'k-c'),
 ])]);
-$rn13f2 = $manager13->updateFromVNode($root13f2, null, $rootComponent, $componentByGroupId, $candidates13);
+$rn13f2 = $manager13->updateFromVNode($root13f2, null, $rootComponent, $componentByGroupId, $candidates13, 'app');
 
 assert(count($rn13f2->children) === 2, '删除 B 后应有 2 个子节点，实际: ' . count($rn13f2->children));
 assert($rn13f2->children[0] === $oldChildren[0], 'A(k-a) 应复用原 RN');
@@ -482,7 +481,7 @@ echo "[PASS] getRootRenderNodes() 初始为空\n";
 
 // 单子节点 #root → rootRenderNodes 应有 1 个元素
 $root14f1 = VNode::h('#root', [], [VNode::h('div', [], 'single')]);
-$rn14f1 = $manager14->updateFromVNode($root14f1, null, $rootComponent, $componentByGroupId);
+$rn14f1 = $manager14->updateFromVNode($root14f1, null, $rootComponent, $componentByGroupId, null, 'app');
 $rootNodes1 = $manager14->getRootRenderNodes();
 assert(count($rootNodes1) === 1, '单子节点 #root 后 rootRenderNodes 应有 1 元素，实际: ' . count($rootNodes1));
 assert($rootNodes1[0] === $rn14f1, 'rootRenderNodes[0] 应为返回的 RenderNode');
@@ -504,7 +503,7 @@ $root15f1 = VNode::h('#root', [], [
     VNode::h('span', ['class' => 'b'], 'B'),
     VNode::h('button', ['class' => 'c'], 'C'),
 ]);
-$rn15f1 = $manager15->updateFromVNode($root15f1, null, $rootComponent, $componentByGroupId);
+$rn15f1 = $manager15->updateFromVNode($root15f1, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn15f1 !== null, 'Frame 1 转换应成功');
 assert($rn15f1->type === 'div', 'Frame 1 根应为 div');
 assert($rn15f1->content === 'A', 'Frame 1 div 内容应为 A');
@@ -523,7 +522,7 @@ $root15f2 = VNode::h('#root', [], [
     VNode::h('span', ['class' => 'b'], 'B2'),
     VNode::h('button', ['class' => 'c'], 'C2'),
 ]);
-$rn15f2 = $manager15->updateFromVNode($root15f2, null, $rootComponent, $componentByGroupId, $candidates15);
+$rn15f2 = $manager15->updateFromVNode($root15f2, null, $rootComponent, $componentByGroupId, $candidates15, 'app');
 assert($rn15f2 !== null, 'Frame 2 转换应成功');
 
 // 验证 3 个子节点均正确跨帧复用（同一对象）
@@ -550,7 +549,7 @@ $root16f1 = VNode::h('#root', [], [
     VNode::h('div', [], 'keep'),
     VNode::h('span', [], 'remove'),
 ]);
-$rn16f1 = $manager16->updateFromVNode($root16f1, null, $rootComponent, $componentByGroupId);
+$rn16f1 = $manager16->updateFromVNode($root16f1, null, $rootComponent, $componentByGroupId, null, 'app');
 $rootNodes16 = $manager16->getRootRenderNodes();
 $removedRN = $rootNodes16[1];  // span 将在下一帧被移除
 
@@ -559,7 +558,7 @@ $candidates16 = !empty($rootNodes16) ? $rootNodes16 : null;
 $root16f2 = VNode::h('#root', [], [
     VNode::h('div', [], 'keep2'),
 ]);
-$rn16f2 = $manager16->updateFromVNode($root16f2, null, $rootComponent, $componentByGroupId, $candidates16);
+$rn16f2 = $manager16->updateFromVNode($root16f2, null, $rootComponent, $componentByGroupId, $candidates16, 'app');
 
 // 验证 span 的 RN 已被清理（从 renderNodeToVNodeMap 移除）
 $reflMap16 = new \ReflectionProperty(RenderTreeManager::class, 'renderNodeToVNodeMap');
@@ -621,7 +620,7 @@ $root18f1 = VNode::h('#root', [], [VNode::h('div', [], [
     VNode::h('span', [], 'C'),
     VNode::h('span', [], 'D'),
 ])]);
-$rn18f1 = $manager18->updateFromVNode($root18f1, null, $rootComponent, $componentByGroupId);
+$rn18f1 = $manager18->updateFromVNode($root18f1, null, $rootComponent, $componentByGroupId, null, 'app');
 $oldChildren18 = $rn18f1->children;
 assert(count($oldChildren18) === 4, 'Frame 1 应有 4 个子节点');
 
@@ -634,7 +633,7 @@ $root18f2 = VNode::h('#root', [], [VNode::h('div', [], [
 ])]);
 $oldRoot18 = $manager18->getRootRenderNodes();
 $candidates18 = !empty($oldRoot18) ? $oldRoot18 : null;
-$rn18f2 = $manager18->updateFromVNode($root18f2, null, $rootComponent, $componentByGroupId, $candidates18);
+$rn18f2 = $manager18->updateFromVNode($root18f2, null, $rootComponent, $componentByGroupId, $candidates18, 'app');
 
 assert(count($rn18f2->children) === 4, 'Frame 2 应有 4 个子节点');
 // key 匹配：顺序交换
@@ -660,7 +659,7 @@ $root19f1 = VNode::h('#root', [], [
     VNode::h('div', ['class' => 'second'], 'Second'),
     VNode::h('div', ['class' => 'third'], 'Third'),
 ]);
-$rn19f1 = $manager19->updateFromVNode($root19f1, null, $rootComponent, $componentByGroupId);
+$rn19f1 = $manager19->updateFromVNode($root19f1, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn19f1 !== null, '空 candidates 多子节点 #root 应返回第一个子节点');
 assert($rn19f1->type === 'div', '第一个子节点应为 div');
 assert($rn19f1->content === 'First', '第一个子节点 content 应为 First');

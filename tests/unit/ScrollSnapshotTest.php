@@ -152,11 +152,12 @@ test('scrollTop 偏移：内容溢出时子节点上移', function () {
     $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
+    // A1 重构: 布局坐标不再包含 scrollTop 偏移，偏移在 VNodeRenderer 绘制层叠加
     // scrollTop=30, maxScroll=140-100=40, 30≤40 → 不clamp
-    // childOffsetY = scroll.y(0) + 0 - 30 = -30
-    // auto-stack: c1.y = -30, c2.y = -30+40=10
-    assert_eq($c1->y, -30, 'c1.y = -30 (scrollTop 上移)');
-    assert_eq($c2->y, 10, 'c2.y = c1.y + c1.h = 10');
+    // childOffsetY = scroll.y(0) + 0 = 0
+    // auto-stack: c1.y = 0, c2.y = 0+40=40
+    assert_eq($c1->y, 0, 'c1.y = 0 (A1: scrollOffset 在绘制层)');
+    assert_eq($c2->y, 40, 'c2.y = c1.y + c1.h = 40');
     assert_eq($scroll->scrollTop, 30, 'scrollTop 保持 30（未 clamp）');
     assert_eq($scroll->contentHeight, 140, 'contentHeight = 40+100');
 });
@@ -175,7 +176,8 @@ test('scrollTop clamp：内容不溢出时 clamp 到 0', function () {
     $resolver->resolve($root);
 
     assert_eq($scroll->scrollTop, 0, 'scrollTop clamped to 0');
-    assert_eq($c1->y, 0, 'c1.y = 0 (scrollTop clamped)');
+    // A1 重构: 布局坐标不包含 scrollOffset，clamp 不影响 child.y
+    assert_eq($c1->y, 0, 'c1.y = 0 (布局坐标不变)');
 });
 
 test('scrollTop clamp：超出 maxScroll 但仍有溢出', function () {
@@ -191,8 +193,9 @@ test('scrollTop clamp：超出 maxScroll 但仍有溢出', function () {
     $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
+    // A1 重构: scrollTop clamp 后，子节点布局坐标不变
     assert_eq($scroll->scrollTop, 50, 'scrollTop clamped to maxScroll=50');
-    assert_eq($c1->y, -50, 'c1.y = -50 (clamped scrollTop=50)');
+    assert_eq($c1->y, 0, 'c1.y = 0 (布局坐标不变)');
 });
 
 // ============================================================
@@ -239,9 +242,10 @@ test('padding + scrollTop 叠加（内容溢出）', function () {
     $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
-    // childOffsetY = 0 + 10 - 20 = -10
+    // A1 重构: 布局坐标不包含 scrollTop 偏移
+    // childOffsetY = 0 + 10 = 10 (no scroll subtraction)
     // maxScroll = contentH(130) - h(100) = 30 > 20 → 不clamp
-    assert_eq($c1->y, -10, 'paddingTop=10, scrollTop=20 → c1.y=-10');
+    assert_eq($c1->y, 10, 'paddingTop=10 → c1.y=10 (布局坐标)');
     assert_eq($scroll->scrollTop, 20, 'scrollTop 未 clamp');
 });
 
@@ -280,7 +284,8 @@ test('横向滚动: scrollLeft 偏移', function () {
     $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
-    assert_eq($wideChild->x, -100, 'scrollLeft=100 → child.x=-100');
+    // A1 重构: 布局坐标不包含 scrollLeft 偏移
+    assert_eq($wideChild->x, 0, 'scrollLeft=100 → child.x=0 (A1: 布局坐标不变)');
 });
 
 // ============================================================
@@ -515,7 +520,8 @@ test('scrollTop 后子节点 y 为负值（内容溢出时）', function () {
     $resolver = new LayoutResolver();
     $resolver->resolve($root);
 
-    assert_true($item->y < 0, 'scroll 后子节点 y 应为负: ' . $item->y);
+    // A1 重构: 子节点 y 不再为负（布局坐标不变，偏移在绘制层）
+    assert_eq($item->y, 0, 'A1: 布局坐标不变, scrollOffset 在绘制层应用: ' . $item->y);
 
     $rtm = new RenderTreeManager();
     $snapshot = $rtm->dumpRenderTree($root, 99, [], 'normal');
