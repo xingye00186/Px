@@ -1303,8 +1303,53 @@ LayoutResolver clamp 后，组件的 bind 值（如 scrollTop）保持旧值。�
 | ScrollManager RenderNode 化 | 所有滚动操作基于 RenderNode 而非 VNode | - |
 | ResilientRenderContext | 故障降级代理（连续失败 N 次自动切换） | - |
 | RuntimeBackendSelector | 运行时后端选择器（probe+fallback+强制覆盖） | - |
+| flex-shrink 整数除零无限循环保护 | 剩余溢出量按比例分配后所有收缩值四舍五入为 0 时 while 循环立即终止 | 2026-06-08 |
 
----
+### 10.7 Flex-shrink 迭代收缩整数截断无限循环
+
+**根因**：`FlexLayoutStrategy::resolveFlexLayout()` 的 flex-shrink 迭代分布循环中，
+`$reduction = (int)($remainingOverflow * $item['shrinkWeight'] / $totalSw)` 对所有活跃项都产生 0 时，
+
+#### 2026-06-08 全框架循环审计
+
+对 framework/ 下所有 while/for 循环进行系统性审计，检查整数截断无限循环风险，结果如下：
+
+| 文件 | 循环类型 | 风险 | 状态 |
+|------|---------|------|------|
+| `FlexLayoutStrategy.php:513` | while 迭代收缩 | **高风险**：`(int)` 截断导致 0 进度 | **已修复**（`$distributedInPass <= 0` 保护） |
+| `Scheduler.php:51` | while 微任务队列 | 低风险：无循环入队逻辑 | 无需修改 |
+| `AbsolutePositioning.php:168` | while 祖先链遍历 | 安全：有限树遍历 | 无需修改 |
+| `RenderTreeManager.php:567` | while 失效栈 | 安全：有限树遍历 | 无需修改 |
+| `RenderNode.php:158` | while 脏标记栈 | 安全：有限树遍历 | 无需修改 |
+| `LayoutResolver.php:424` | for 滚动容器 | 安全：有限数组遍历 | 无需修改 |
+| `ScrollManager.php:114` | for 子节点反向遍历 | 安全：有限数组遍历 | 无需修改 |
+| `FlexLayoutStrategy.php:215-216` | for 冒泡排序 | 安全：`n` 有限 | 无需修改 |
+| `BlockLayoutStrategy.php` | foreach 子节点 | 安全：无 while/int 截断 | 无需修改 |
+| `GridLayoutStrategy.php` | for/foreach | 安全：单遍无迭代收敛 | 无需修改 |
+| Animation 模块 | for/foreach | 安全：有限迭代 | 无需修改 |
+| 编译器 while(true) | 字符串遍历 | 安全：有明确退出条件 | 无需修改 |
+
+**结论**：唯一被确认的整数截断卡死风险是 flex-shrink 循环，已在 Group 10-11 中通过 10 个专用测试覆盖。
+
+测试文件：`tests/unit/Layout/FlexLayoutTest.php`（Groups 10-11）
+
+`$distributedInPass = 0`，`$remainingOverflow -= 0` 永不变，导致无限循环（进程存活、无布局进展、白屏未响应）。
+
+**触发条件**：剩余溢出量很小的 flex 布局，多个子项有相近的 shrink 权重。例如 3 个子项各宽 100px、
+container 宽 298px（溢出 2px），每个子项 reduction = (int)(2×100/300) = 0。
+
+**修复**：在 `$remainingOverflow -= $distributedInPass;` 后添加：
+```php
+if ($distributedInPass <= 0) break;
+```
+
+**排查路径**：
+1. 通过 DIAG_RENDER:5/6 确认布局卡死在 `LayoutResolver::resolve()` 中
+2. 排除无限递归（resolveDepth < 500，depth 保护未触发）
+3. 发现布局活动日志（RSN_BEGIN）在约 700 行后停止，但进程保持存活
+4. 检查所有 while/for 循环寻找"每次迭代无进度"的模式
+
+**教训**：所有用整数除法的迭代收敛算法都必须加 `if ($progress <= 0) break;` 防护。
 
 ## 十一、编码约定
 
@@ -1652,6 +1697,11 @@ item.mainSize -= overflow × (item.mainSize × item.shrink) / totalShrinkWeight
 min-width/min-height 约束在收缩后应用（min-width 优先于 shrink）
 ```
 
+> **无限循环防护**：当 `(int)(remainingOverflow × shrinkWeight / totalSw)` 对所有活跃项都产生 0 时，
+> 循环立即终止（`if ($distributedInPass <= 0) break`）。这在剩余溢出量很小且分配比例均匀时发生，
+> 属于 CSS flex-shrink 规范中"分布式迭代收敛"的整数除零边界情况。
+> 见 [FlexLayoutStrategy.php](framework/Rendering/Layout/FlexLayoutStrategy.php) lines 560-562
+
 ### Grid 布局
 | 属性 | 说明 | 默认值 |
 |------|------|--------|
@@ -1866,3 +1916,4 @@ safeCall(method, args):
 21. **新增 sk_* 原生函数**：需同时更新 stub（`stub/skia.stub.php`）+ PHP 层 + C++ 层，三端保持一致
 22. **修改 RenderContext 抽象方法**：同步更新所有后端 RenderContext 实现
 23. **新增后端**：实现 `IRenderBackend` → 注册到 `BackendRegistry::CANDIDATES` → 处理 `PX_RENDERER` 映射
+24. **迭代分布循环必须有无进度保护**：所有 while/for 循环中，如果每次迭代都做 `(int)` 截断计算然后累积到 `$progress`，必须在循环末尾检查 `if ($progress <= 0) break;`。典型场景：flex-shrink 比例收缩（`FlexLayoutStrategy.php`）、Grid 行/列分布、以及其他"逐渐逼近目标值"的迭代算法。整数除法截断可能导致无限循环。
