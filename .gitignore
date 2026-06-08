@@ -43,3 +43,4 @@ debug/
 docs/_*.js
 docs/_*.md
 docs/_*.py
+test_debug/
