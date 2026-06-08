@@ -571,11 +571,11 @@ test('flex-shrink + min-width 约束', function () {
     $resolver = new LayoutResolver();
     $resolver->resolve($root2);
     // 总 200, 容器 100, 溢出 100
-    // 各缩 50
+    // 各缩 50 → c3 触及 minWidth=70, 剩余 20 重新分配给 c4
     // c3: 100-50=50 < minWidth=70 → 保持 70
-    // c4: 100-50=50
+    // c4: 100-50=50, 再缩 20 → 30 (CSS §9.7 重新分配)
     assert_eq($c3->w, 70, 'minWidth=70 阻止 c3 收缩到 50 以下');
-    assert_eq($c4->w, 50, 'c4 从 100 收缩到 50');
+    assert_eq($c4->w, 30, 'c4 重新分配剩余溢出, 从 100 收缩到 30');
 });
 
 echo "\n--- 12. Align-self (Flex) ---\n";

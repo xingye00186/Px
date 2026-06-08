@@ -442,17 +442,22 @@ class FlexLayoutStrategy
 
             $lineTotalMain += $gap * ($lineCount - 1);
 
-            // ── Step 7: Flex-shrink ──
+            // ── Step 7: Flex-shrink with min-width redistribution ──
 
-            // CSS spec: when flex container's main-axis size is auto (not explicitly
-            // set), content determines size, so no overflow can occur.
+            // CSS spec §9.7: shrink items proportionally, clamp at min-width,
+            // redistribute remaining overflow to other non-clamped items.
 
-            // Skip shrink when containerMain == 0 (auto main-axis size).
+            // Skip when containerMain == 0 (auto main-axis size) or no overflow.
 
             if ($lineContainerMain > 0 && $lineTotalMain > $lineContainerMain) {
-                $overflow = $lineTotalMain - $lineContainerMain;
+                $remainingOverflow = $lineTotalMain - $lineContainerMain;
 
-                $totalShrinkWeight = 0;
+                // ── Build active item list with shrink weights ──
+
+                // shrinkSizes[idx] tracks final size for ALL shrink items
+                $shrinkSizes = [];
+
+                $activeItems = [];
 
                 foreach ($lineChildren as $idx => $ch) {
                     $data = $lineFlexData[$idx];
@@ -460,64 +465,119 @@ class FlexLayoutStrategy
                     if ($data['shrink'] > 0) {
                         $mainSize = $isRow ? $ch->w : $ch->h;
 
+                        $shrinkSizes[$idx] = $mainSize;
+
                         // CSS §9.7: shrink weight = flex-basis × flex-shrink
                         $shrinkBasis = $mainSize;
                         if ($data['basis'] >= 0) {
                             $shrinkBasis = (int)$data['basis'];
                         }
 
-                        $totalShrinkWeight += $shrinkBasis * $data['shrink'];
+                        $activeItems[] = [
+                            'idx' => $idx,
+                            'shrinkWeight' => $shrinkBasis * $data['shrink'],
+                            'minVal' => $isRow ? (int)($ch->style['minWidth'] ?? 0) : (int)($ch->style['minHeight'] ?? 0),
+                        ];
                     }
                 }
 
-                if ($totalShrinkWeight > 0) {
-                    foreach ($lineChildren as $idx => $ch) {
-                        $data = $lineFlexData[$idx];
+                // ── Proportional shrink with min-width redistribution ──
+                // CSS §9.7: if an item hits min-width, it stops shrinking
+                // and remaining overflow is redistributed to other active items.
 
-                        if ($data['shrink'] > 0) {
-                            $mainSize = $isRow ? $ch->w : $ch->h;
+                // If all shrink weights are 0 (e.g. all flex-basis:0),
+                // fall back to equal distribution per old behavior.
+                $hasWeight = false;
+                foreach ($activeItems as $item) {
+                    if ($item['shrinkWeight'] > 0) {
+                        $hasWeight = true;
+                        break;
+                    }
+                }
 
-                            // CSS §9.7: shrink reduction = overflow × (basis × shrink) / totalWeight
-                            $shrinkBasis = $mainSize;
-                            if ($data['basis'] >= 0) {
-                                $shrinkBasis = (int)$data['basis'];
+                if ($hasWeight) {
+                    // Iterative proportional distribution with clamping
+                    while ($remainingOverflow > 0 && !empty($activeItems)) {
+                        $totalSw = 0;
+
+                        foreach ($activeItems as $item) {
+                            $totalSw += $item['shrinkWeight'];
+                        }
+
+                        if ($totalSw <= 0) break;
+
+                        $distributedInPass = 0;
+
+                        $newActive = [];
+
+                        foreach ($activeItems as $item) {
+                            $idx = $item['idx'];
+
+                            $currentSize = $shrinkSizes[$idx];
+
+                            $reduction = (int)($remainingOverflow * $item['shrinkWeight'] / $totalSw);
+
+                            $newSize = $currentSize - $reduction;
+
+                            if ($newSize < 0) {
+                                $newSize = 0;
                             }
 
-                            $reduction = (int)($overflow * ($shrinkBasis * $data['shrink']) / $totalShrinkWeight);
+                            $clamped = false;
 
-                            $newSize = max(0, $mainSize - $reduction);
+                            if ($item['minVal'] > 0 && $newSize < $item['minVal']) {
+                                $newSize = $item['minVal'];
 
-                            $minVal = $isRow ? (int)($ch->style['minWidth'] ?? 0) : (int)($ch->style['minHeight'] ?? 0);
-
-                            if ($minVal > 0 && $newSize < $minVal) {
-                                $newSize = $minVal;
+                                $clamped = true;
                             }
 
-                            if ($isRow) {
-                                $ch->w = $newSize;
-                            } else {
-                                $ch->h = $newSize;
+                            $actualReduction = $currentSize - $newSize;
+
+                            $distributedInPass += $actualReduction;
+
+                            $shrinkSizes[$idx] = $newSize;
+
+                            if (!$clamped) {
+                                $newActive[] = $item;
                             }
                         }
+
+                        $remainingOverflow -= $distributedInPass;
+
+                        $activeItems = $newActive;
                     }
                 } else {
-                    // totalShrinkWeight == 0: CSS spec §9.7 says distribute equally
-                    $equalShare = $lineCount > 0 ? (int)($overflow / $lineCount) : 0;
-                    foreach ($lineChildren as $idx => $ch) {
-                        $data = $lineFlexData[$idx];
-                        if ($data['shrink'] > 0) {
-                            $mainSize = $isRow ? $ch->w : $ch->h;
-                            $newSize = max(0, $mainSize - $equalShare);
-                            $minVal = $isRow ? (int)($ch->style['minWidth'] ?? 0) : (int)($ch->style['minHeight'] ?? 0);
-                            if ($minVal > 0 && $newSize < $minVal) {
-                                $newSize = $minVal;
-                            }
-                            if ($isRow) {
-                                $ch->w = $newSize;
-                            } else {
-                                $ch->h = $newSize;
+                    // All shrink weights are 0: equal distribution
+                    $equalShare = count($shrinkSizes) > 0 ? (int)($remainingOverflow / count($shrinkSizes)) : 0;
+
+                    foreach ($shrinkSizes as $idx => $size) {
+                        $newSize = $size - $equalShare;
+
+                        if ($newSize < 0) {
+                            $newSize = 0;
+                        }
+
+                        // Apply min-width clamp
+                        foreach ($activeItems as $item) {
+                            if ($item['idx'] === $idx && $item['minVal'] > 0 && $newSize < $item['minVal']) {
+                                $newSize = $item['minVal'];
+                                break;
                             }
                         }
+
+                        $shrinkSizes[$idx] = $newSize;
+                    }
+                }
+
+                // ── Write back final sizes for all shrink items ──
+
+                foreach ($shrinkSizes as $idx => $size) {
+                    $ch = $lineChildren[$idx];
+
+                    if ($isRow) {
+                        $ch->w = $size;
+                    } else {
+                        $ch->h = $size;
                     }
                 }
             }
