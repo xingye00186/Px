@@ -44,6 +44,12 @@ class LayoutResolver
     private FlexLayoutStrategy $flexStrategy;
     private GridLayoutStrategy $gridStrategy;
 
+    /** @var array<string, array> Per-scroll-container sticky stack (vertical) */
+    private array $stickyStack = [];
+
+    /** @var array<string, array> Per-scroll-container sticky stack (horizontal) */
+    private array $stickyStackX = [];
+
 
     public function __construct()
     {
@@ -393,87 +399,87 @@ class LayoutResolver
             }
 
 
-            // ── position:sticky 处理 ──
+            // ── position:sticky 处理（CSS §4.3 堆叠 + A1 visual 坐标对齐）──
             if ($position === 'sticky') {
-
 
                 $stickyTop = (int)($effectiveStyle['top'] ?? 0);
 
-
-                // ?????? Y (???????)
+                // Save base Y for stacking calculations
                 $node->style['_stickyBaseY'] = $node->y;
 
-
-                // ????????????????
+                // Find nearest scroll container that contains this node
                 for ($i = count($scrollContainers) - 1; $i >= 0; $i--) {
-
-
                     $sc = $scrollContainers[$i];
 
-
-                    // ?????????????????????
+                    // Check if node is within this scroll container's bounds
                     if ($node->x >= $sc->x && $node->x < $sc->x + $sc->w &&
-
-
                         $node->y >= $sc->y && $node->y < $sc->y + $sc->h) {
 
+                        $scKey = $sc->groupId . ':' . $i;
 
-                        // ── 脏路径：完整布局计算 ──
-                        $logicalY = $node->y + $sc->scrollTop;
+                        // ── Vertical sticky (top) with stacking ──
+                        $visualY = $node->y - $sc->scrollTop;
 
-
-                        $stuckY = $sc->y + $stickyTop;
-
-
-                        $currentY = $logicalY - $sc->scrollTop;
-
-
-                        if ($currentY < $stuckY) {
-
-
-                            $dy = $stuckY - $currentY;
-
-
-                            $node->y = $stuckY;
-
-
-                            foreach ($node->children as $child) {
-
-
-                                ScrollHelper::shiftDescendantsY($child, $dy);
-
-
-                            }
-
-
+                        if (!isset($this->stickyStack[$scKey])) {
+                            $this->stickyStack[$scKey] = [];
                         }
 
+                        // Adjust stuckY for previous sticky elements in this container
+                        $baseStuckY = $sc->y + $stickyTop;
+                        $adjustedStuckY = $baseStuckY;
+                        foreach ($this->stickyStack[$scKey] as $prev) {
+                            $adjustedStuckY = max($adjustedStuckY, $prev['stuckY'] + $prev['height']);
+                        }
 
-                        // 水平方向 sticky (left)
+                        if ($visualY < $adjustedStuckY) {
+                            // Element scrolls above sticky threshold → clamp
+                            $dy = $adjustedStuckY - $visualY;
+                            $node->y = $adjustedStuckY + $sc->scrollTop;
+
+                            // Shift descendants to maintain layout integrity
+                            foreach ($node->children as $child) {
+                                ScrollHelper::shiftDescendantsY($child, $dy);
+                            }
+
+                            // Register in sticky stack for subsequent elements
+                            $this->stickyStack[$scKey][] = [
+                                'stuckY' => $adjustedStuckY,
+                                'height' => $node->h,
+                            ];
+                        }
+
+                        // ── Horizontal sticky (left) with stacking ──
                         $stickyLeft = (int)($effectiveStyle['left'] ?? 0);
                         if ($stickyLeft !== 0) {
-                            $logicalX = $node->x + $sc->scrollLeft;
-                            $stuckX = $sc->x + $stickyLeft;
-                            $currentX = $logicalX - $sc->scrollLeft;
-                            if ($currentX < $stuckX) {
-                                $dx = $stuckX - $currentX;
-                                $node->x = $stuckX;
+                            $visualX = $node->x - $sc->scrollLeft;
+
+                            if (!isset($this->stickyStackX[$scKey])) {
+                                $this->stickyStackX[$scKey] = [];
+                            }
+
+                            $baseStuckX = $sc->x + $stickyLeft;
+                            $adjustedStuckX = $baseStuckX;
+                            foreach ($this->stickyStackX[$scKey] as $prev) {
+                                $adjustedStuckX = max($adjustedStuckX, $prev['stuckX'] + $prev['width']);
+                            }
+
+                            if ($visualX < $adjustedStuckX) {
+                                $dx = $adjustedStuckX - $visualX;
+                                $node->x = $adjustedStuckX + $sc->scrollLeft;
                                 foreach ($node->children as $child) {
                                     ScrollHelper::shiftDescendantsX($child, $dx);
                                 }
+
+                                $this->stickyStackX[$scKey][] = [
+                                    'stuckX' => $adjustedStuckX,
+                                    'width' => $node->w,
+                                ];
                             }
                         }
 
-
                         break;
-
-
                     }
-
-
                 }
-
-
             }
 
 
