@@ -597,16 +597,16 @@ class CssMappings
     private static function dispatchParser(string $parser, string $value): mixed
     {
         switch ($parser) {
-            case 'Px\\Rendering\\CssMappings::parseHexColor':   return self::parseHexColor($value);
-            case 'Px\\Rendering\\CssMappings::parsePixels':     return self::parsePixels($value);
-            case 'Px\\Rendering\\CssMappings::parseFlex':      return self::parseFlex($value);
-            case 'Px\\Rendering\\CssMappings::parseFontWeight': return self::parseFontWeight($value);
-            case 'Px\\Rendering\\CssMappings::parseTextAlign':  return self::parseTextAlign($value);
-            case 'Px\\Rendering\\CssMappings::parseBorder':     return self::parseBorder($value);
-            case 'Px\\Rendering\\CssMappings::parseOpacity':   return self::parseOpacity($value);
-            case 'Px\Rendering\CssMappings::parseIdent':      return self::parseIdent($value);
-            case 'Px\Rendering\CssMappings::parseBackgroundImage': return self::parseBackgroundImage($value);
-            case 'Px\Rendering\CssMappings::parseTransform': return self::parseTransform($value);
+            case 'Px\\Rendering\\CssMappings::parseHexColor':   return CssValueParser::parseHexColor($value);
+            case 'Px\\Rendering\\CssMappings::parsePixels':     return CssValueParser::parsePixels($value);
+            case 'Px\\Rendering\\CssMappings::parseFlex':      return CssValueParser::parseFlex($value);
+            case 'Px\\Rendering\\CssMappings::parseFontWeight': return CssValueParser::parseFontWeight($value);
+            case 'Px\\Rendering\\CssMappings::parseTextAlign':  return CssValueParser::parseTextAlign($value);
+            case 'Px\\Rendering\\CssMappings::parseBorder':     return CssValueParser::parseBorder($value);
+            case 'Px\\Rendering\\CssMappings::parseOpacity':   return CssValueParser::parseOpacity($value);
+            case 'Px\Rendering\CssMappings::parseIdent':      return CssValueParser::parseIdent($value);
+            case 'Px\Rendering\CssMappings::parseBackgroundImage': return CssValueParser::parseBackgroundImage($value);
+            case 'Px\Rendering\CssMappings::parseTransform': return CssValueParser::parseTransform($value);
             default:                             return $value;
         }
     }
