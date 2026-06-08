@@ -461,15 +461,9 @@ assert($rn13f2->children[1] === $oldChildren[2], 'C(k-c) 应复用原 RN');
 assert($rn13f2->children[0]->content === 'A2', 'A 的 content 应更新');
 assert($rn13f2->children[1]->content === 'C2', 'C 的 content 应更新');
 
-// B(k-b) 应从 renderNodeToVNodeMap 中移除
-$bHash = spl_object_hash($oldChildren[1]);
-$bMapEntry = null;
-try {
-    $reflMap = new \ReflectionProperty(RenderTreeManager::class, 'renderNodeToVNodeMap');
-    $reflMap->setAccessible(true);
-    $bMapEntry = $reflMap->getValue($manager13)[$bHash] ?? null;
-} catch (\ReflectionException $e) {}
-assert($bMapEntry === null, '被清理的 B RenderNode 不应在 renderNodeToVNodeMap 中');
+// B(k-b) 应被正确销毁（不再挂接到任何父节点）
+assert($oldChildren[1]->parent === null, '被清理的 B RenderNode 的 parent 应为 null');
+assert($oldChildren[1]->children === [], '被清理的 B RenderNode 的子节点列表应为空');
 echo "[PASS] 子节点清理：删除的 key 子节点被正确清理\n";
 
 // ─────────────────────────────────────────────
@@ -560,12 +554,9 @@ $root16f2 = VNode::h('#root', [], [
 ]);
 $rn16f2 = $manager16->updateFromVNode($root16f2, null, $rootComponent, $componentByGroupId, $candidates16, 'app');
 
-// 验证 span 的 RN 已被清理（从 renderNodeToVNodeMap 移除）
-$reflMap16 = new \ReflectionProperty(RenderTreeManager::class, 'renderNodeToVNodeMap');
-$reflMap16->setAccessible(true);
-$map16 = $reflMap16->getValue($manager16);
-$removedHash16 = spl_object_hash($removedRN);
-assert(!isset($map16[$removedHash16]), '被移除的 #root 子节点应从 renderNodeToVNodeMap 清理');
+// 验证 span 的 RN 已被正确销毁（不再作为任何节点的子节点）
+assert($removedRN->parent === null, '被移除的 #root 子节点的 parent 应为 null');
+assert($removedRN->children === [], '被移除的 #root 子节点的 children 应为空');
 echo "[PASS] #root handler 清理未被复用的旧子节点\n";
 
 // ─────────────────────────────────────────────

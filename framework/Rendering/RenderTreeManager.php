@@ -184,9 +184,6 @@ class RenderTreeManager
     /** @var RenderNode[] 顶层 #root 的所有直接子节点（用于跨帧 candidates 传递） */
     private array $rootRenderNodes = [];
 
-    /** @var array<string, VNode> spl_object_hash(RenderNode) => VNode */
-    private array $renderNodeToVNodeMap = [];
-
     /** @var array<string, RenderNode[]> groupId => RenderNode[] */
     private array $groupIdToRenderNodeMap = [];
 
@@ -214,7 +211,6 @@ class RenderTreeManager
     {
         $this->rootRenderNode = null;
         $this->rootRenderNodes = [];
-        $this->renderNodeToVNodeMap = [];
         $this->groupIdToRenderNodeMap = [];
         $this->vnodeToRenderNodeMap = [];
     }
@@ -343,9 +339,6 @@ class RenderTreeManager
             error_log('[DIAG] DESTROY: type=' . $rn->type . ' dsp=' . $dsp
                 . ' children=' . count($rn->children));
         }
-
-        // 从反向映射中移除
-        unset($this->renderNodeToVNodeMap[spl_object_hash($rn)]);
 
         // 递归销毁子节点
         foreach ($rn->children as $child) {
@@ -520,14 +513,13 @@ class RenderTreeManager
                 $renderNode->sourceVNode = $vnode;
                 $renderNode->groupId = $groupId;
                 $renderNode->layoutDirty = true;
-                $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] = $vnode;
             } else {
+                $oldVNode = $renderNode->sourceVNode;
                 $renderNode->style = $resolvedStyle;
                 $renderNode->lastPaintFrame = 0;
                 $renderNode->sourceVNode = $vnode;
                 $renderNode->groupId = $groupId;
 
-                $oldVNode = $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] ?? null;
                 $vnodeChildren = is_array($vnode->children)
                     ? $this->vnodeChildrenToArray($vnode->children)
                     : [];
@@ -546,7 +538,6 @@ class RenderTreeManager
                 } elseif ($renderNode->key !== $vnode->key) {
                     $renderNode->key = $vnode->key;
                 }
-                $this->renderNodeToVNodeMap[spl_object_hash($renderNode)] = $vnode;
             }
 
             // ── 同步 scroll bind 值
