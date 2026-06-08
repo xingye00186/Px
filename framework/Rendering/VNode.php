@@ -172,6 +172,8 @@ class VNode
 
     /**
      * 从 props['style'] 解析 inline style 为键值对数组
+     *
+     * @deprecated 不再使用，所有样式解析通过 CssMappings::parseInlineStyle 直接调用
      */
     public function getInlineStyle(): array
     {
@@ -184,6 +186,8 @@ class VNode
 
     /**
      * 获取事件处理器名 (从 props['@event'])
+     *
+     * @deprecated 不再使用，事件通过 props['@click'] 直接访问
      */
     public function getEventHandler(string $event): string
     {
@@ -204,7 +208,10 @@ class VNode
         return $this->type === '#root';
     }
 
-    /** 是否为 HTML 元素节点 */
+    /** 是否为 HTML 元素节点
+     *
+     * @deprecated 不再使用
+     */
     public function isElement(): bool
     {
         return !$this->isText() && !$this->isRoot() && !$this->isComponent();
@@ -238,5 +245,24 @@ class VNode
             return count($this->children);
         }
         return 0;
+    }
+
+    // ── 静态工具方法 ──────────────────────────
+
+    /**
+     * 将 VNode children 统一为 VNode 数组。
+     * 消除重复实现（Application + RenderTreeManager 各自维护了一份）。
+     *
+     * @param mixed $children VNode->children 值
+     * @return VNode[]
+     */
+    public static function childrenToArray(mixed $children): array
+    {
+        if ($children === null) return [];
+        if ($children instanceof VNode) return [$children];
+        if (is_array($children)) {
+            return array_values(array_filter($children, fn($c) => $c instanceof VNode));
+        }
+        return [];
     }
 }

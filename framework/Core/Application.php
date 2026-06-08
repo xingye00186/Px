@@ -512,9 +512,9 @@ class Application
         }
 
         $oldChildren = $oldNode !== null
-            ? $this->vnodeChildrenToArray($oldNode->children)
+            ? VNode::childrenToArray($oldNode->children)
             : [];
-        $newChildren = $this->vnodeChildrenToArray($newNode->children);
+        $newChildren = VNode::childrenToArray($newNode->children);
 
         $count = (int)min(count($oldChildren), count($newChildren));
         for ($i = 0; $i < $count; $i++) {
@@ -624,15 +624,7 @@ class Application
         return $newNode;
     }
 
-    private function vnodeChildrenToArray(mixed $children): array
-    {
-        if ($children === null) return [];
-        if ($children instanceof VNode) return [$children];
-        if (is_array($children)) {
-            return array_values(array_filter($children, fn($c) => $c instanceof VNode));
-        }
-        return [];
-    }
+
 
     // ── 渲染系统 ──────────────────────────────
 
@@ -829,6 +821,8 @@ class Application
      */
     private function recordEvent(string $eventType, int $x = -1, int $y = -1, string $detail = ''): void
     {
+        if (!Config::get('snapshot_enabled', false)) return;
+
         $ev = [
             'frame' => $this->frameCounter,
             'type'  => $eventType,

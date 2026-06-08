@@ -440,7 +440,7 @@ class RenderTreeManager
             // #root 节点
             if ($vnode->type === '#root') {
                 $result = null;
-                $children = $this->vnodeChildrenToArray($vnode->children);
+                $children = VNode::childrenToArray($vnode->children);
 
                 if ($parent === null) {
                     $this->rootRenderNodes = [];
@@ -511,7 +511,7 @@ class RenderTreeManager
                 $renderNode->groupId = $groupId;
 
                 $vnodeChildren = is_array($vnode->children)
-                    ? $this->vnodeChildrenToArray($vnode->children)
+                    ? VNode::childrenToArray($vnode->children)
                     : [];
                 $isLeaf = count($vnodeChildren) === 0;
                 $hasExplicitTop = array_key_exists('top', $resolvedStyle);
@@ -580,14 +580,14 @@ class RenderTreeManager
             if ($isGrid) {
                 error_log('[DIAG] RTM grid BEFORE: renderNode=' . spl_object_hash($renderNode)
                     . ' oldChildren=' . count($oldChildren)
-                    . ' newVNodeChildren=' . count($this->vnodeChildrenToArray($vnode->children)));
+                    . ' newVNodeChildren=' . count(VNode::childrenToArray($vnode->children)));
             }
 
             // AOT 兼容: php::Variant 在 use native_types 模式下 is_string() 可能返回 false
             if ($vnode->children !== null && !($vnode->children instanceof VNode) && !is_array($vnode->children)) {
                 $renderNode->content = (string)$vnode->children;
             } else {
-                $childVNodes = $this->vnodeChildrenToArray($vnode->children);
+                $childVNodes = VNode::childrenToArray($vnode->children);
                 $consumed = [];
 
                 foreach ($childVNodes as $i => $childVNode) {
@@ -833,16 +833,5 @@ class RenderTreeManager
         return $merged;
     }
 
-    /**
-     * 将 VNode children 统一为 VNode 数组。
-     */
-    private function vnodeChildrenToArray(mixed $children): array
-    {
-        if ($children === null) return [];
-        if ($children instanceof VNode) return [$children];
-        if (is_array($children)) {
-            return array_values(array_filter($children, fn($c) => $c instanceof VNode));
-        }
-        return [];
-    }
+
 }
