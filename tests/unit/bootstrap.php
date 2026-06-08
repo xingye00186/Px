@@ -28,6 +28,13 @@ if (!function_exists('any')) {
     }
 }
 
+if (!function_exists('refval')) {
+    /**
+     * AOT refval() polyfill: 在动态调用中将值传递修改为引用传递。
+     */
+    function &refval(&$var) { return $var; }
+}
+
 // ---- PHP 8.0 函数 polyfill (测试环境 PHP 7.4) ----
 if (!function_exists('str_contains')) {
     function str_contains(string $haystack, string $needle): bool {
@@ -50,6 +57,7 @@ require_once $frameworkDir . '/interfaces/ComponentInterface.php';
 
 // ---- 核心渲染 ----
 require_once $frameworkDir . '/Rendering/CssMappings.php';
+require_once $frameworkDir . '/Rendering/CssValueParser.php';
 require_once $frameworkDir . '/Rendering/VNode.php';
 require_once $frameworkDir . '/Rendering/RenderNode.php';
 require_once $frameworkDir . '/Rendering/RenderTreeManager.php';
@@ -62,6 +70,8 @@ require_once $frameworkDir . '/Rendering/Layout/FlexLayoutStrategy.php';
 require_once $frameworkDir . '/Rendering/Layout/GridLayoutStrategy.php';
 require_once $frameworkDir . '/Rendering/RenderContext.php';
 require_once $frameworkDir . '/Rendering/VNodeRenderer.php';
+require_once $frameworkDir . '/Rendering/ScrollbarEmitter.php';
+require_once $frameworkDir . '/Rendering/TextOverflowProcessor.php';
 
 // ---- 核心运行时 ----
 require_once $frameworkDir . '/Core/Config.php';

@@ -3,8 +3,8 @@
 use Px\Core\Application;
 
 const APP_PLATFORM  = 'win32';
-const WINDOW_WIDTH  = 1920;
-const WINDOW_HEIGHT = 1080;
+const WINDOW_WIDTH  = 1080;
+const WINDOW_HEIGHT = 720;
 const WINDOW_TITLE  = 'Px Design Guide';
 
 function main(): int
