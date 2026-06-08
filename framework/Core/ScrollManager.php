@@ -5,8 +5,9 @@ namespace Px\Core;
 use native_types;
 
 use Px\Rendering\RenderNode;
+use Px\Interfaces\ReactiveComponentInterface;
 use Px\ReactiveComponent;
-use PerfCounter;
+use Px\Core\PerfCounter;
 
 /**
  * ScrollManager — 滚动交互服务（RenderNode 版）
@@ -27,6 +28,9 @@ class ScrollManager
 
     /** @var callable 查组件表（接受 VNode，使用 groupId） */
     private ?\Closure $resolveComponentByGroupId = null;
+    
+    /** @var callable 查找鼠标坐标下的滚动容器 */
+    private ?\Closure $findScrollContainer = null;
 
     // ── 拖拽状态 ──────────────────────────
     private ?RenderNode $scrollDragTarget = null;
@@ -44,11 +48,13 @@ class ScrollManager
     public function __construct(
         callable $requestRender,
         callable $directRender,
-        callable $resolveComponentByGroupId
+        callable $resolveComponentByGroupId,
+        callable $findScrollContainer
     ) {
         $this->requestRender = $requestRender;
         $this->directRender = $directRender;
         $this->resolveComponentByGroupId = $resolveComponentByGroupId;
+        $this->findScrollContainer = $findScrollContainer;
     }
 
     // ── 滚轮事件 ─────────────────────────────
@@ -56,14 +62,12 @@ class ScrollManager
     /**
      * 鼠标滚轮事件 — 更新最近祖先滚动容器的 scroll 位置。
      * Shift 按下时走横向滚动，否则走竖向滚动。
-     * $root 为 RenderNode 树的根节点。
      */
-    public function handleScrollWheel($event, RenderNode $root): void
+    public function handleScrollWheel($event): void
     {
-        if ($root === null) return;
         PerfCounter::start('scroll_process');
         try {
-            $scrollNode = $this->findScrollContainerAt($event->getX(), $event->getY(), $root);
+            $scrollNode = ($this->findScrollContainer)($event->getX(), $event->getY());
             if ($scrollNode === null) return;
 
             $delta = $event->getDelta();
@@ -95,30 +99,6 @@ class ScrollManager
         } finally {
             PerfCounter::end('scroll_process');
         }
-    }
-
-    // ── 容器查找 ─────────────────────────────
-
-    /**
-     * 查找鼠标坐标下的滚动容器（最深层的子孙优先）。
-     * RenderNode.children 始终是数组，简化遍历逻辑。
-     */
-    public function findScrollContainerAt(int $x, int $y, RenderNode $node): ?RenderNode
-    {
-        // 反向遍历子节点（后渲染优先）
-        for ($i = count($node->children) - 1; $i >= 0; $i--) {
-            $child = $node->children[$i];
-            if ($child === null) continue;
-            $found = $this->findScrollContainerAt($x, $y, $child);
-            if ($found !== null) return $found;
-        }
-
-        if ($node->isScrollContainer
-            && $x >= $node->x && $x <= $node->x + $node->w
-            && $y >= $node->y && $y <= $node->y + $node->h) {
-            return $node;
-        }
-        return null;
     }
 
     // ── 滚动条命中测试 ────────────────────────

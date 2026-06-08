@@ -22,8 +22,19 @@ use Px\Rendering\RenderNode;
  * - order 排序
  * - 两阶段子项重解析（flex-grow/cross-axis stretch 后的内部 re-layout）
  */
-class FlexLayoutStrategy
+class FlexLayoutStrategy implements LayoutStrategyInterface
 {
+    public function resolve(
+        RenderNode  $node,
+        int         $parentX,
+        int         $parentY,
+        ?RenderNode $parent,
+        array       &$scrollContainers,
+        array       $style
+    ): void
+    {
+        $this->resolveFlexLayout($node, $parentX, $parentY, $parent, $scrollContainers, $style);
+    }
     private LayoutResolver $resolver;
 
     public function __construct(LayoutResolver $resolver)
@@ -43,6 +54,7 @@ class FlexLayoutStrategy
         array       $style
     ): void
     {
+        error_log('[DIAG_FLEX] enter resolveFlexLayout type=' . $node->type . ' w=' . ((int)($style['width'] ?? 0)) . ' h=' . ((int)($style['height'] ?? 0)));
         // Container position
 
         $left = (int)($style['left'] ?? 0);
@@ -193,7 +205,7 @@ class FlexLayoutStrategy
             if ($node->isScrollContainer) {
                 $node->contentHeight = 0;
             }
-
+            error_log('[DIAG_FLEX_EC] early_return type=' . $node->type . ' h=' . $node->h);
             return;
         }
 
@@ -545,6 +557,10 @@ class FlexLayoutStrategy
 
                         $remainingOverflow -= $distributedInPass;
 
+                        // Prevent infinite loop: if all reductions round to 0 (int math),
+                        // no progress is made and loop would never exit.
+                        if ($distributedInPass <= 0) break;
+
                         $activeItems = $newActive;
                     }
                 } else {
@@ -869,9 +885,7 @@ class FlexLayoutStrategy
 
                 // Debug: two-pass condition
                 if ($chTp->isScrollContainer) {
-                    if (Config::get('diag_enabled', false)) {
-                        file_put_contents('d:\Px\_debug_out.txt', sprintf("DBG_TWO_PASS: ch=%s y=%d h=%d isFlexGrow=%d crossAxisSized=%d hasExplW=%d needsTP=%d\n", $chTp->type, $chTp->y, $chTp->h, (int)$dataTp['isFlexGrow'], (int)$dataTp['crossAxisSized'], (int)$dataTp['hasExplicitCrossSize'], (int)$needsTwoPass), FILE_APPEND);
-                    }
+                    // removed file_put_contents debug log
                 }
 
                 if ($needsTwoPass && count($chTp->children) > 0) {
@@ -1029,6 +1043,9 @@ class FlexLayoutStrategy
                 $node->h = (int)max($node->h, $maxBottom - $node->y + $paddingBottom);
             }
         }
+        // Trace children heights for root container
+        error_log('[DIAG_FLEX_H] exit type=' . $node->type . ' w=' . $node->w . ' h=' . $node->h . ' explicitH=' . ((array_key_exists('height', $style) ? $style['height'] : 'none')));
+        error_log('[DIAG_FLEX] exit resolveFlexLayout type=' . $node->type);
     }
 
 

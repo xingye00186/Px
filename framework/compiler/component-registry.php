@@ -77,7 +77,9 @@ class ComponentRegistry
     /**
      * Load component mappings from a config array (legacy API, kept for backward compat).
      * Now delegates to register() with source='user'.
-     * 
+     *
+     * @deprecated 直接使用 register() 逐项注册组件，或使用 loadLibraries() 加载库组件。
+     *             此方法保留仅为兼容旧调用方。
      * @param array  $config   e.g. ['my-panel' => './components/MyPanel.vue']
      * @param string $baseDir  Base directory for resolving relative paths
      * @return string[]  Warnings for missing files or conflicts

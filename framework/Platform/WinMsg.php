@@ -16,6 +16,7 @@ class WinMsg
     public const WM_KEYUP       = 0x0101;
     public const WM_CHAR        = 0x0102;
     public const WM_SIZE        = 0x0005;
+    public const WM_PAINT       = 0x000F;
     public const WM_CLOSE       = 0x0010;
 
     // Window Show State

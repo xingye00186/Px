@@ -51,7 +51,7 @@ class VNode
     public ?string $componentClass = null;
 
     /** 运行时的子组件实例 */
-    public ?\Px\ReactiveComponent $componentInstance = null;
+    public ?\Px\Interfaces\ReactiveComponentInterface $componentInstance = null;
 
     /** bind 映射: ['childProp' => 'parentExpr']，运行时由 Application 展开 */
     public ?array $componentProps = null;
@@ -170,30 +170,6 @@ class VNode
         return $this->props['class'] ?? '';
     }
 
-    /**
-     * 从 props['style'] 解析 inline style 为键值对数组
-     *
-     * @deprecated 不再使用，所有样式解析通过 CssMappings::parseInlineStyle 直接调用
-     */
-    public function getInlineStyle(): array
-    {
-        $styleStr = $this->props['style'] ?? '';
-        if ($styleStr === '') {
-            return [];
-        }
-        return CssMappings::parseInlineStyle($styleStr);
-    }
-
-    /**
-     * 获取事件处理器名 (从 props['@event'])
-     *
-     * @deprecated 不再使用，事件通过 props['@click'] 直接访问
-     */
-    public function getEventHandler(string $event): string
-    {
-        return $this->props['@' . $event] ?? '';
-    }
-
     // ===== 类型检查辅助 =====
 
     /** 是否为文本节点 */
@@ -206,15 +182,6 @@ class VNode
     public function isRoot(): bool
     {
         return $this->type === '#root';
-    }
-
-    /** 是否为 HTML 元素节点
-     *
-     * @deprecated 不再使用
-     */
-    public function isElement(): bool
-    {
-        return !$this->isText() && !$this->isRoot() && !$this->isComponent();
     }
 
     /** 是否为组件占位节点 */

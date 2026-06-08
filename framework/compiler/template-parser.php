@@ -23,7 +23,6 @@ use Px\Rendering\CssMappings;
  *   <flex>      → VNode('div', ['style'=>'display:flex;...'])
  *   <scroll-container> → VNode('div', ['style'=>'overflow:auto;...'])
  *   <template>  → VNode('template', ['v-for'=>'...'])
- *   <list-item> → 废弃, 由 v-for 处理
  *   <component> → VNode(tagName, props, children)
  *
  * PHP 8.4: 使用 match 表达式分发标签类型。
@@ -519,8 +518,7 @@ class TemplateParser
             // ===== Template / v-for =====
             'template' => $this->parseTemplateNode($tok),
 
-            // ===== Legacy elements (warn but still parse) =====
-            'list-item' => $this->parseListItemAsDiv($tok),
+            // ===== Root element =====
             'app'       => $this->parseRoot($tok),
 
             // ===== Unknown / component tags =====
@@ -905,43 +903,6 @@ class TemplateParser
         $children = $this->parseChildrenUntil('template');
 
         return VNode::h('template', $props, $children);
-    }
-
-    /**
-     * Legacy <list-item> → emit warning, convert to div-like VNode
-     */
-    private function parseListItemAsDiv(Token $tok): VNode
-    {
-        $attrs = $this->parseAttrs($tok->content);
-        $this->advance();
-
-        $this->error('<list-item> is deprecated — use v-for with <div> instead', $tok->line);
-
-        $x = (int)($attrs['x'] ?? 10);
-        $y = (int)($attrs['y'] ?? 50);
-        $w = (int)($attrs['w'] ?? 380);
-        $itemsExpr = $attrs['items'] ?? $attrs[':items'] ?? '';
-        $itemHeight = (int)($attrs['item-height'] ?? $attrs[':item-height'] ?? 40);
-        $class = $attrs['class'] ?? 'list-item';
-        $textBind = $attrs['text-bind'] ?? $attrs[':text-bind'] ?? '';
-        $clickHandler = $attrs['@click'] ?? '';
-        $clickArg = $attrs['click-arg'] ?? $attrs[':click-arg'] ?? '';
-
-        $styleParts = [];
-        $styleParts[] = "left:{$x}px";
-        $styleParts[] = "top:{$y}px";
-        $styleParts[] = "width:{$w}px";
-
-        $props = [];
-        $props['class'] = $class;
-        $props['style'] = implode(';', $styleParts);
-        if ($itemsExpr !== '') $props['items'] = $itemsExpr;
-        if ($itemHeight > 0) $props['item-height'] = (string)$itemHeight;
-        if ($textBind !== '') $props[':text-bind'] = $textBind;
-        if ($clickHandler !== '') $props['@click'] = $clickHandler;
-        if ($clickArg !== '') $props['click-arg'] = $clickArg;
-
-        return VNode::h('div', $props);
     }
 
     /**

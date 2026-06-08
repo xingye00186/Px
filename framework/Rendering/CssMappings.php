@@ -329,6 +329,9 @@ class CssMappings
         }
 
         if (strlen($hex) !== 6 || !ctype_xdigit($hex)) {
+            if (class_exists('Px\\Core\\Config') && \Px\Core\Config::get('diag_enabled', false)) {
+                error_log('[CssMappings] hexToBgr invalid color: ' . $hex);
+            }
             return 0; // Invalid color → black
         }
 
@@ -554,6 +557,22 @@ class CssMappings
     }
 
     /**
+     * Parse "h|v|blur|spread|color" box-shadow string to offset array.
+     * Extracted to eliminate 3x duplicate in VNodeRenderer.
+     *
+     * @return array{h:int, v:int, color:int}
+     */
+    public static function parseBoxShadowOffsets(string $boxShadow): array
+    {
+        $parts = explode('|', $boxShadow);
+        return [
+            'h'     => (int)($parts[0] ?? 0),
+            'v'     => (int)($parts[1] ?? 0),
+            'color' => self::hexToBgr($parts[4] ?? '#000000'),
+        ];
+    }
+
+    /**
      * Parse "0.5" or "50%" → float 0.0-1.0 (v8)
      */
     public static function parseOpacity(string $value): float
@@ -596,19 +615,22 @@ class CssMappings
      */
     private static function dispatchParser(string $parser, string $value): mixed
     {
-        switch ($parser) {
-            case 'Px\\Rendering\\CssMappings::parseHexColor':   return CssValueParser::parseHexColor($value);
-            case 'Px\\Rendering\\CssMappings::parsePixels':     return CssValueParser::parsePixels($value);
-            case 'Px\\Rendering\\CssMappings::parseFlex':      return CssValueParser::parseFlex($value);
-            case 'Px\\Rendering\\CssMappings::parseFontWeight': return CssValueParser::parseFontWeight($value);
-            case 'Px\\Rendering\\CssMappings::parseTextAlign':  return CssValueParser::parseTextAlign($value);
-            case 'Px\\Rendering\\CssMappings::parseBorder':     return CssValueParser::parseBorder($value);
-            case 'Px\\Rendering\\CssMappings::parseOpacity':   return CssValueParser::parseOpacity($value);
-            case 'Px\Rendering\CssMappings::parseIdent':      return CssValueParser::parseIdent($value);
-            case 'Px\Rendering\CssMappings::parseBackgroundImage': return CssValueParser::parseBackgroundImage($value);
-            case 'Px\Rendering\CssMappings::parseTransform': return CssValueParser::parseTransform($value);
-            default:                             return $value;
-        }
+        // 从 "Px\\Rendering\\CssMappings::parseHexColor" 提取方法名 parseHexColor
+        $method = substr($parser, (int)strrpos($parser, '::') + 2);
+        return match($method) {
+            'parseHexColor'        => CssValueParser::parseHexColor($value),
+            'parsePixels'          => CssValueParser::parsePixels($value),
+            'parseFlex'            => CssValueParser::parseFlex($value),
+            'parseFontWeight'      => CssValueParser::parseFontWeight($value),
+            'parseTextAlign'       => CssValueParser::parseTextAlign($value),
+            'parseBorder'          => CssValueParser::parseBorder($value),
+            'parseOpacity'         => CssValueParser::parseOpacity($value),
+            'parseIdent'           => CssValueParser::parseIdent($value),
+            'parseBackgroundImage' => CssValueParser::parseBackgroundImage($value),
+            'parseTransform'       => CssValueParser::parseTransform($value),
+            'parseBoxShadow'       => CssValueParser::parseBoxShadow($value),
+            default                => $value,
+        };
     }
 
     // ============================================================

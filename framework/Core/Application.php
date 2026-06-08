@@ -8,6 +8,7 @@ use Px\Platform\Platform;
 use Px\Platform\PlatformEvent;
 use Px\Platform\MouseEvent;
 use Px\Platform\KeyboardEvent;
+use Px\Platform\WindowEvent;
 use Px\Platform\PlatformFactory;
 use Px\Rendering\Backend\ResilientRenderContext;
 use Px\Rendering\Backend\RuntimeBackendSelector;
@@ -18,6 +19,7 @@ use Px\Rendering\LayoutResolver;
 use Px\Rendering\CssMappings;
 use Px\Rendering\ImageManager;
 use Px\Rendering\RenderTreeManager;
+use Px\Interfaces\ReactiveComponentInterface;
 use Px\ReactiveComponent;
 use Px\Styling\Theme\ThemeData;
 use Px\Styling\Provider\ThemeProvider;
@@ -44,7 +46,7 @@ class Application
     private LayoutResolver $layoutResolver;
     private RenderTreeManager $renderTreeManager;
 
-    private ?ReactiveComponent $rootComponent = null;
+    private ?ReactiveComponentInterface $rootComponent = null;
     private ?VNode $activeVNodeTree = null;
     private bool $renderRequested = false;
     private bool $running = true;
@@ -52,24 +54,18 @@ class Application
     /** 当前鼠标光标类型：'' 默认, 'pointer' 手型 */
     private string $currentCursor = '';
 
-    /** @var array<string, ReactiveComponent> VNode.groupId → Component instance */
+    /** @var array<string, ReactiveComponentInterface> VNode.groupId → Component instance */
     private array $componentByGroupId = [];
 
     private int $nextComponentId = 1;
     private bool $isRendering = false;
 
-    // ── 调试快照 ──
-    /** @var array 事件环形缓冲区（最近 N 个平台事件） */
-    private array $eventRingBuffer = [];
-    private int $eventBufferSize = 5;
-    private int $eventBufferIndex = 0;
-    private int $frameCounter = 0;
-    /** @var bool 主动请求 snapshot 标记（仅在用户交互后设置） */
-    private bool $snapshotRequested = false;
-
     private ScrollManager $scrollManager;
 
     private static ?self $instance = null;
+
+    /** 帧计数器，用于诊断输出 */
+    private int $debugFrameNumber = 0;
 
     public static function getInstance(): self
     {
@@ -85,16 +81,21 @@ class Application
         return $app;
     }
 
-    public function __construct(Platform $platform, Scheduler $scheduler)
-    {
+    public function __construct(
+        Platform $platform,
+        Scheduler $scheduler,
+        ?LayoutResolver $layoutResolver = null,
+        ?RenderTreeManager $renderTreeManager = null
+    ) {
         $this->platform  = $platform;
         $this->scheduler = $scheduler;
-        $this->layoutResolver = new LayoutResolver();
-        $this->renderTreeManager = new RenderTreeManager();
+        $this->layoutResolver = $layoutResolver ?? new LayoutResolver();
+        $this->renderTreeManager = $renderTreeManager ?? new RenderTreeManager();
         $this->scrollManager = new ScrollManager(
             $this->requestRender(...),
             function () { $this->directRender(); },
-            $this->resolveComponentByGroupId(...)
+            $this->resolveComponentByGroupId(...),
+            $this->renderTreeManager->findScrollContainerAt(...)
         );
         // VNodeRenderer 依赖 RenderContext，在 initRenderer() 中初始化
     }
@@ -113,15 +114,10 @@ class Application
         }
 
         $action = $event->getAction();
-        $this->recordEvent('mouse:' . $action, $event->getX(), $event->getY());
 
         // ── 鼠标滚轮：驱动滚动容器 ────────────
         if ($event->getAction() === 'wheel') {
-            $rootNode = $this->renderTreeManager->getRootRenderNode();
-            if ($rootNode !== null) {
-                $this->scrollManager->handleScrollWheel($event, $rootNode);
-                $this->snapshotRequested = true;
-            }
+            $this->scrollManager->handleScrollWheel($event);
             return;
         }
 
@@ -151,7 +147,6 @@ class Application
         // ── 鼠标释放：结束拖拽，持久化滚动位置 ──
         if ($event->getAction() === 'up') {
             $this->scrollManager->handleMouseUp();
-            $this->snapshotRequested = true;
             return;
         }
 
@@ -181,7 +176,6 @@ class Application
                     $arg = $sourceVNode->props['click-arg'] ?? null;
                     $target = $this->resolveComponentByGroupId($renderNode->groupId);
                     $target->dispatchClick($handler, $arg);
-                    $this->snapshotRequested = true;
                 }
             }
         }
@@ -192,8 +186,6 @@ class Application
         if ($this->activeVNodeTree === null) {
             return;
         }
-
-        $this->recordEvent('keyb:' . $event->getAction(), -1, -1, $event->getChar());
 
         $input = $this->findFocusedInput($this->activeVNodeTree);
         if ($input === null) {
@@ -208,19 +200,16 @@ class Application
             $handler = $input->props['@keydown'] ?? null;
             if ($handler !== null) {
                 $target->dispatchKey($handler, $action, $event->getKeyCode(), $event->getChar());
-                $this->snapshotRequested = true;
             }
         } elseif ($action === 'up') {
             $handler = $input->props['@keyup'] ?? null;
             if ($handler !== null) {
                 $target->dispatchKey($handler, $action, $event->getKeyCode(), $event->getChar());
-                $this->snapshotRequested = true;
             }
         } elseif ($action === 'char') {
             $handler = $input->props['@enter'] ?? null;
             if ($handler !== null && $event->getKeyCode() === 13) {
                 $target->dispatchKey($handler, $action, $event->getKeyCode(), $event->getChar());
-                $this->snapshotRequested = true;
             }
         }
     }
@@ -230,7 +219,7 @@ class Application
     /**
      * 注册组件实例，按 groupId 索引。
      */
-    public function registerComponent(string $groupId, ReactiveComponent $component): void
+    public function registerComponent(string $groupId, ReactiveComponentInterface $component): void
     {
         $this->componentByGroupId[$groupId] = $component;
     }
@@ -265,15 +254,17 @@ class Application
 
     private function initRenderer(): void
     {
-        $w = WINDOW_WIDTH;
-        $h = WINDOW_HEIGHT;
+        $w = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : Config::get('window_width', 1280);
+        $h = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : Config::get('window_height', 720);
 
         // Stage 1: 让 platform 创建窗口 + 默认 RenderContext（测试环境直接使用此 context）
-        $defaultCtx = $this->platform->init(WINDOW_TITLE, $w, $h);
+        $title = defined('WINDOW_TITLE') ? WINDOW_TITLE : Config::get('window_title', 'Px');
+        $defaultCtx = $this->platform->init($title, $w, $h);
 
         // 检查 C++ 绑定是否可用：无 vue_begin_paint 说明是测试环境（PHP-only），跳过后端选择
         if (!function_exists('vue_begin_paint')) {
             $this->renderer = new VNodeRenderer($this->rootComponent, $defaultCtx);
+            error_log('[DIAG] initRenderer: test mode (no vue_begin_paint), using defaultCtx');
             return;
         }
 
@@ -283,7 +274,13 @@ class Application
         $hwnd = $this->platform->getHwnd();
         $selector  = new RuntimeBackendSelector();
         $backend   = $selector->select($hwnd, $w, $h);
+        if ($backend === null) {
+            error_log('[Application] initRenderer: backend selection failed, using fallback');
+            $this->renderer = new VNodeRenderer($this->rootComponent, $defaultCtx);
+            return;
+        }
         $this->selectedBackendName = $backend->getName();
+        error_log('[DIAG] initRenderer: selected backend=' . $this->selectedBackendName);
 
         // Stage 3: 包一层 ResilientRenderContext 支持运行时降级
         $renderCtx = new ResilientRenderContext($selector, $backend->getContext(), $hwnd, $w, $h);
@@ -291,7 +288,7 @@ class Application
         $this->renderer = new VNodeRenderer($this->rootComponent, $renderCtx);
     }
 
-    public function mount(ReactiveComponent $root, string $appDir = ''): self
+    public function mount(ReactiveComponentInterface $root, string $appDir = ''): self
     {
         $this->rootComponent = $root;
         $this->rootComponent->setScheduler($this->scheduler);
@@ -383,56 +380,11 @@ class Application
         }
 
         $this->isRendering = false;
-
-        // ── VNode 级 grid 子节点诊断 ──
-        if (Config::get('diag_enabled', false)) {
-            $this->diagGridChildrenInVNode($this->activeVNodeTree);
-        }
-    }
-
-    /**
-     * 递归遍历 VNode 树，找到 display:grid 的节点并记录 children 数量
-     */
-    private function diagGridChildrenInVNode(VNode $node): void
-    {
-        if ($node->isComponent()) {
-            // #component 节点：检查其展开后的 children
-            if ($node->children !== null) {
-                $this->diagGridChildrenInVNodeChildren($node->children);
-            }
-            return;
-        }
-        $style = $node->props['style'] ?? '';
-        if (str_contains($style, 'display:grid') || str_contains($style, 'display: grid')) {
-            $childCnt = 0;
-            if ($node->children instanceof VNode) {
-                $childCnt = 1;
-            } elseif (is_array($node->children)) {
-                $childCnt = count($node->children);
-            }
-            error_log('[DIAG] VNODE grid: children=' . $childCnt
-                . ' style="' . $style . '"');
-        }
-        // 递归子节点
-        $this->diagGridChildrenInVNodeChildren($node->children);
-    }
-
-    private function diagGridChildrenInVNodeChildren(mixed $children): void
-    {
-        if ($children instanceof VNode) {
-            $this->diagGridChildrenInVNode($children);
-        } elseif (is_array($children)) {
-            foreach ($children as $child) {
-                if ($child instanceof VNode) {
-                    $this->diagGridChildrenInVNode($child);
-                }
-            }
-        }
     }
 
     // ── 展开组件 ──────────────────────────────
 
-    private function expandComponentNode(VNode $node, ReactiveComponent $owner): VNode
+    private function expandComponentNode(VNode $node, ReactiveComponentInterface $owner): VNode
     {
         $className = $node->componentClass;
         if ($className === null) return $node;
@@ -496,6 +448,25 @@ class Application
         $expanded->componentInstance = $instance;
         $expanded->children = $childRoot;
 
+        // 从 #component 节点的 style 中提取 left/top 作为 layoutOffset
+        $placeholderStyle = $node->props['style'] ?? '';
+        if ($placeholderStyle !== '') {
+            $offset = [];
+            $pairs = explode(';', $placeholderStyle);
+            foreach ($pairs as $pair) {
+                $pair = trim($pair);
+                $lower = strtolower($pair);
+                if (str_starts_with($lower, 'left:')) {
+                    $offset['left'] = (int)trim(substr($pair, 5));
+                } elseif (str_starts_with($lower, 'top:')) {
+                    $offset['top'] = (int)trim(substr($pair, 4));
+                }
+            }
+            if (count($offset) > 0) {
+                $expanded->layoutOffset = $offset;
+            }
+        }
+
         $this->patchComponentTree($expanded->children, $instance, null);
 
         return $expanded;
@@ -506,6 +477,9 @@ class Application
         ReactiveComponent $owner,
         ?VNode $oldNode = null
     ): ?VNode {
+        // 将当前节点 groupId 设为 owner 的组件 ID，用于组件实例路由
+        $newNode->groupId = $owner->getId();
+
         if ($newNode->isComponent()) {
             // B2 不可变性：matchComponentNode 返回克隆后的节点
             return $this->matchComponentNode($newNode, $owner, $oldNode);
@@ -604,6 +578,25 @@ class Application
             $matched->componentInstance = $instance;
             $matched->children = $instance->getVNodeTree();
 
+            // 从 #component 节点的 style 中提取 left/top 作为 layoutOffset
+            $placeholderStyle = $newNode->props['style'] ?? '';
+            if ($placeholderStyle !== '') {
+                $offset = [];
+                $pairs = explode(';', $placeholderStyle);
+                foreach ($pairs as $pair) {
+                    $pair = trim($pair);
+                    $lower = strtolower($pair);
+                    if (str_starts_with($lower, 'left:')) {
+                        $offset['left'] = (int)trim(substr($pair, 5));
+                    } elseif (str_starts_with($lower, 'top:')) {
+                        $offset['top'] = (int)trim(substr($pair, 4));
+                    }
+                }
+                if (count($offset) > 0) {
+                    $matched->layoutOffset = $offset;
+                }
+            }
+
             $this->registerComponent($instance->getId(), $instance);
 
             $this->patchComponentTree(
@@ -635,7 +628,16 @@ class Application
     public function directRender(): void
     {
         $root = $this->renderTreeManager->getRootRenderNode();
-        if ($root === null) return;
+        if ($root === null) {
+            if (Config::get('diag_enabled', false)) {
+                error_log("[DIAG] directRender: root is null - SKIP");
+            }
+            return;
+        }
+
+        if (Config::get('diag_enabled', false)) {
+            error_log("[DIAG] directRender: type={$root->type} children=" . count($root->children));
+        }
 
         $this->layoutResolver->resolve($root);
         $this->renderer->render($root);
@@ -650,13 +652,18 @@ class Application
      */
     private function render(): void
     {
-        $this->frameCounter++;
+        $this->debugFrameNumber++;
+        $frame = $this->debugFrameNumber;
+
+        error_log('[DIAG_RENDER:1] rebuildVNodeTree start');
         $this->rebuildVNodeTree();
+        error_log('[DIAG_RENDER:2] rebuildVNodeTree done');
 
         // getRootRenderNodes() = 顶层 #root 所有旧子节点，作为 candidates 传递给 #root handler
         $oldRootChildren = $this->renderTreeManager->getRootRenderNodes();
         $candidates = !empty($oldRootChildren) ? $oldRootChildren : null;
 
+        error_log('[DIAG_RENDER:3] updateFromVNode start, oldRootChildren=' . count($oldRootChildren));
         // VNode → RenderNode 转换 + bind 值同步（type+key 匹配复用）
         // 传递 'app' 作为根组件的 groupId（VNode.groupId 不再写入，依赖参数传播）
         $rootRenderNode = $this->renderTreeManager->updateFromVNode(
@@ -667,68 +674,62 @@ class Application
             $candidates,
             'app'
         );
-        if ($rootRenderNode === null) return;
-
-        // LayoutResolver 处理 RenderNode（利用 layoutDirty 增量）
-        $this->layoutResolver->resolve($rootRenderNode);
-
-        // ── 调试快照：仅在显式请求时输出 ──
-        if (Config::get('snapshot_enabled', false) && $this->snapshotRequested) {
-            $this->snapshotRequested = false;
-            $snapshot = $this->renderTreeManager->dumpRenderTree(
-                $rootRenderNode,
-                $this->frameCounter,
-                $this->eventRingBuffer
-            );
-            $this->outputSnapshot($snapshot);
+        error_log('[DIAG_RENDER:4] updateFromVNode done');
+        if ($rootRenderNode === null) {
+            error_log("[DIAG_RENDER] rootRenderNode is NULL - SKIP");
+            return;
         }
 
+        error_log('[DIAG_RENDER:5] LayoutResolver::resolve start');
+        // LayoutResolver 处理 RenderNode（利用 layoutDirty 增量）
+        $this->layoutResolver->resolve($rootRenderNode);
+        error_log('[DIAG_RENDER:6] LayoutResolver::resolve done');
+
+        error_log('[DIAG_RENDER:7] VNodeRenderer::render start');
         // VNodeRenderer 处理 RenderNode（利用 paintDirty 增量）
         $this->renderer->render($rootRenderNode);
+        error_log('[DIAG_RENDER:8] VNodeRenderer::render done');
     }
 
     /**
-     * 输出调试快照到 stdout 和 {APP_DIR}/debug/_snapshot.log。
-     * 文件超过 maxSize 时自动轮转（保留 maxBackups 个备份）。
+     * 输出 RenderNode 树的快照（仅 diag_enabled 时调用）
      */
-    private function outputSnapshot(string $snapshot): void
+    private function debugDumpRenderNode(RenderNode $node, string $prefix, int $frame): void
     {
-        $appDir = Config::getAppDir();
-        if ($appDir === '') return;
-
-        $debugDir = $appDir . '/debug';
-        @mkdir($debugDir, 0777, true);
-        $file = $debugDir . '/_snapshot.log';
-
-        // ── 文件轮转：超过阈值时 shift 备份 ──
-        $maxSize = Config::get('snapshot_max_size_mb', 5) * 1024 * 1024;
-        if (file_exists($file) && filesize($file) > $maxSize) {
-            $maxBackups = Config::get('snapshot_max_backups', 5);
-            $oldest = $debugDir . "/_snapshot.{$maxBackups}.log";
-            if (file_exists($oldest)) @unlink($oldest);
-            for ($i = $maxBackups - 1; $i >= 1; $i--) {
-                $from = $debugDir . "/_snapshot.{$i}.log";
-                if (file_exists($from)) {
-                    @rename($from, $debugDir . "/_snapshot." . ($i + 1) . ".log");
-                }
+        // #root 节点不产生元素，但需要展示子节点
+        if ($node->type === '#root') {
+            foreach ($node->children as $child) {
+                $this->debugDumpRenderNode($child, $prefix, $frame);
             }
-            @rename($file, $debugDir . '/_snapshot.1.log');
+            return;
         }
 
-        file_put_contents($file, $snapshot . "\n\n", FILE_APPEND);
-        echo $snapshot . "\n";
+        $scrollInfo = '';
+        if ($node->isScrollContainer) {
+            $scrollInfo = " scroll[st={$node->scrollTop} ch={$node->contentHeight}]";
+        }
+        $contentInfo = '';
+        if ($node->content !== null && $node->content !== '') {
+            $c = (string)$node->content;
+            if (strlen($c) > 30) $c = substr($c, 0, 30) . '...';
+            $contentInfo = " text='{$c}'";
+        }
+        error_log("[DIAG] Frame #{$prefix}{$node->type}({$node->x},{$node->y} {$node->w}x{$node->h}) layer={$node->layer} gid={$node->groupId}{$scrollInfo}{$contentInfo}");
+
+        foreach ($node->children as $child) {
+            $this->debugDumpRenderNode($child, $prefix . "  ", $frame);
+        }
     }
 
     private function doFirstRender(): void
     {
+        error_log('[DIAG] doFirstRender: Frame 1 start');
         $this->render();
+        error_log('[DIAG] doFirstRender: Frame 1 done');
 
         if (Config::get('diag_enabled', false)) {
             $rootRN = $this->renderTreeManager->getRootRenderNode();
-            $gridRN = $rootRN !== null ? $this->findGridRenderNode($rootRN) : null;
-            error_log('[DIAG] doFirstRender: Frame1 done'
-                . ' gridRN=' . ($gridRN !== null ? 'FOUND' : 'NF')
-                . ' gridChildren=' . ($gridRN !== null ? count($gridRN->children) : -1));
+            error_log('[DIAG] doFirstRender: Frame1 renderRequested=' . ($this->renderRequested ? 'yes' : 'no'));
         }
 
         $this->scheduler->flushMicrotasks();
@@ -739,29 +740,10 @@ class Application
 
         if ($this->renderRequested) {
             $this->renderRequested = false;
+            error_log('[DIAG] doFirstRender: Frame 2 start');
             $this->render();
-
-            if (Config::get('diag_enabled', false)) {
-                $rootRN = $this->renderTreeManager->getRootRenderNode();
-                $gridRN = $rootRN !== null ? $this->findGridRenderNode($rootRN) : null;
-                error_log('[DIAG] doFirstRender: Frame2 done'
-                    . ' gridRN=' . ($gridRN !== null ? 'FOUND' : 'NF')
-                    . ' gridChildren=' . ($gridRN !== null ? count($gridRN->children) : -1));
-            }
+            error_log('[DIAG] doFirstRender: Frame 2 done');
         }
-    }
-
-    private function findGridRenderNode(RenderNode $node): ?RenderNode
-    {
-        $style = $node->style;
-        if (($style['display'] ?? '') === 'grid') {
-            return $node;
-        }
-        foreach ($node->children as $child) {
-            $found = $this->findGridRenderNode($child);
-            if ($found !== null) return $found;
-        }
-        return null;
     }
 
     // ── 事件循环 ──────────────────────────────
@@ -770,42 +752,39 @@ class Application
     {
         $this->doFirstRender();
 
-        // ── 初始挂载快照（组件树已完全展开稳定）──
-        if (Config::get('snapshot_enabled', false)) {
-            $rootNode = $this->renderTreeManager->getRootRenderNode();
-            if ($rootNode !== null) {
-                $snapshot = $this->renderTreeManager->dumpRenderTree(
-                    $rootNode, $this->frameCounter, $this->eventRingBuffer
-                );
-                $this->outputSnapshot($snapshot);
-            }
-        }
-
         while ($this->running) {
-            $rawEvents = $this->platform->pollEvents();
-            foreach ($rawEvents as $ev) {
-                if ($ev instanceof MouseEvent) {
-                    $this->handleMouseEvent($ev);
-                } elseif ($ev instanceof KeyboardEvent) {
-                    $this->handleKeyboardEvent($ev);
+            try {
+                $rawEvents = $this->platform->pollEvents();
+                foreach ($rawEvents as $ev) {
+                    if ($ev instanceof MouseEvent) {
+                        $this->handleMouseEvent($ev);
+                    } elseif ($ev instanceof KeyboardEvent) {
+                        $this->handleKeyboardEvent($ev);
+                    } elseif ($ev instanceof WindowEvent && $ev->action === 'paint') {
+                        // WM_PAINT：窗口需要重绘，触发渲染
+                        error_log('[DIAG] WM_PAINT event received, triggering render');
+                        $this->requestRender();
+                    }
                 }
-            }
 
-            $this->scheduler->flushMicrotasks();
+                $this->scheduler->flushMicrotasks();
 
-            if ($this->renderRequested) {
-                $this->renderRequested = false;
-                $this->render();
-            }
+                if ($this->renderRequested) {
+                    $this->renderRequested = false;
+                    $this->render();
+                }
 
-            $hasMacro = $this->scheduler->runOneMacrotask();
+                $hasMacro = $this->scheduler->runOneMacrotask();
 
-            if (!$hasMacro && !$this->renderRequested && count($rawEvents) === 0) {
-                usleep(1000);
-            }
+                if (!$hasMacro && !$this->renderRequested && count($rawEvents) === 0) {
+                    usleep(1000);
+                }
 
-            if ($this->platform->shouldClose()) {
-                $this->running = false;
+                if ($this->platform->shouldClose()) {
+                    $this->running = false;
+                }
+            } catch (\Throwable $e) {
+                error_log('[Application] Uncaught exception in event loop: ' . $e->getMessage());
             }
         }
         // 释放所有图片资源
@@ -815,25 +794,6 @@ class Application
     }
 
     // ── 键盘事件辅助 ──────────────────────────
-
-    /**
-     * 记录平台事件到环形缓冲区（调试快照用）。
-     */
-    private function recordEvent(string $eventType, int $x = -1, int $y = -1, string $detail = ''): void
-    {
-        if (!Config::get('snapshot_enabled', false)) return;
-
-        $ev = [
-            'frame' => $this->frameCounter,
-            'type'  => $eventType,
-            'time'  => time(),
-            'x'     => $x,
-            'y'     => $y,
-            'detail' => $detail,
-        ];
-        $this->eventRingBuffer[$this->eventBufferIndex] = $ev;
-        $this->eventBufferIndex = ($this->eventBufferIndex + 1) % $this->eventBufferSize;
-    }
 
     /**
      * 查找 VNode 树中第一个有键盘处理器的 input 元素。

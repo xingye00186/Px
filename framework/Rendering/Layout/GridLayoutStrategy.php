@@ -19,8 +19,19 @@ use Px\Rendering\RenderNode;
  * - justify-items/justify-self/align-self
  * - Grid item 子节点百分比重解析（adjustGridItemChildren）
  */
-class GridLayoutStrategy
+class GridLayoutStrategy implements LayoutStrategyInterface
 {
+    public function resolve(
+        RenderNode  $node,
+        int         $parentX,
+        int         $parentY,
+        ?RenderNode $parent,
+        array       &$scrollContainers,
+        array       $style
+    ): void
+    {
+        $this->resolveGridLayout($node, $parentX, $parentY, $parent, $scrollContainers, $style);
+    }
     private LayoutResolver $resolver;
 
     public function __construct(LayoutResolver $resolver)

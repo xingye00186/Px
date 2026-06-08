@@ -5,6 +5,7 @@ namespace Px\Rendering;
 use native_types;
 
 use Px\Core\Config;
+use Px\Interfaces\ReactiveComponentInterface;
 use Px\ReactiveComponent;
 use Px\Styling\Provider\ThemeProvider;
 
@@ -368,12 +369,12 @@ class RenderTreeManager
     public function updateFromVNode(
         VNode $vnode,
         ?RenderNode $parent,
-        ReactiveComponent $root,
+        ReactiveComponentInterface $root,
         array $componentByGroupId,
         ?array $candidates = null,
         string $currentGroupId = 'app'
     ): ?RenderNode {
-        \PerfCounter::start('tree_convert');
+        \Px\Core\PerfCounter::start('tree_convert');
         try {
             // 组件占位节点：递归处理子组件树，$candidates 透传
             // 同时将父组件的 layoutOffset 应用到子组件第一个可渲染元素上
@@ -641,7 +642,7 @@ class RenderTreeManager
 
             return $renderNode;
         } finally {
-            \PerfCounter::end('tree_convert');
+            \Px\Core\PerfCounter::end('tree_convert');
         }
     }
 

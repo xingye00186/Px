@@ -56,6 +56,8 @@ interface Platform
     /**
      * 设置鼠标光标样式。
      *
+     * @deprecated 光标切换已由 Win32 GDI 渲染层根据元素的 cursor 属性自动处理。
+     *             此方法保留仅用于外部直接控制场景，目前为空实现。
      * @param string $cursor 光标类型：'' 默认箭头, 'pointer' 手型
      */
     public function setCursor(string $cursor): void;

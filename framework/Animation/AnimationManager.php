@@ -114,6 +114,9 @@ class AnimationManager
         string $easing = 'ease'
     ): void {
         if (count($this->animations) >= self::MAX_ANIMATIONS) {
+            if (class_exists('Px\\Core\\Config') && \Px\Core\Config::get('diag_enabled', false)) {
+                error_log('[AnimationManager] addTransition rejected: max animations reached');
+            }
             return; // 达到上限，忽略新动画
         }
 

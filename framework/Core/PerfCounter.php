@@ -1,6 +1,6 @@
 <?php
 
-use native_types;
+namespace Px\Core;
 
 /**
  * PerfCounter — 轻量级静态性能计数器

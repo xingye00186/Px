@@ -54,13 +54,19 @@ class AbsolutePositioning
         if ($isFixed) {
             // CSS Positioned Layout §3.2: fixed 的 containing block = viewport (0,0)
             // 不使用定位祖先：坐标相对于视口，不受任何祖先滚动影响
+            // 但 right/bottom 需要视口尺寸，从 rootNode 获取
             $ancestor = null;
+            $rootNode = $this->resolver->getRootNode();
+            $viewportW = ($rootNode !== null) ? $rootNode->w : (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0);
+            $viewportH = ($rootNode !== null) ? $rootNode->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
 
         } else {
             // position:absolute — 查找并缓存定位祖先
             $this->resolvePositioningAncestor($node);
 
             $ancestor = $node->positioningAncestor;
+            $viewportW = 0;
+            $viewportH = 0;
 
         }
 
@@ -72,8 +78,8 @@ class AbsolutePositioning
 
         $ancestorX = ($ancestor !== null) ? $ancestor->x + $ancestorPaddingLeft : 0;
         $ancestorY = ($ancestor !== null) ? $ancestor->y + $ancestorPaddingTop : 0;
-        $ancestorW = ($ancestor !== null) ? $ancestor->w : 0;
-        $ancestorH = ($ancestor !== null) ? $ancestor->h : 0;
+        $ancestorW = ($ancestor !== null) ? $ancestor->w : $viewportW;
+        $ancestorH = ($ancestor !== null) ? $ancestor->h : $viewportH;
 
         // CSS Box Model §7: margin/padding 百分比基于包含块宽度
         $marginLeftRaw = $style['marginLeft'] ?? $style['margin'] ?? null;
@@ -94,7 +100,8 @@ class AbsolutePositioning
         $node->y = $ancestorY + $top + $marginTop;
 
         // right/bottom 替代：相对于 padding box 的右边/下边（CSS Positioned Layout §3.1）
-        if ($right !== null && $ancestor !== null) {
+        // position:fixed 时 ancestor=null（视口参考系），使用 $viewportW/$viewportH
+        if ($right !== null && ($ancestor !== null || $isFixed)) {
             // 元素右边缘 = padding box 右边界 - right - paddingRight
             $rightEdge = $ancestorX + $ancestorW - $ancestorPaddingLeft - $ancestorPaddingRight - $right;
             if ($width > 0) {
@@ -105,7 +112,7 @@ class AbsolutePositioning
 
         }
 
-        if ($bottom !== null && $ancestor !== null) {
+        if ($bottom !== null && ($ancestor !== null || $isFixed)) {
             // 元素下边缘 = padding box 下边界 - bottom - paddingBottom
             $bottomEdge = $ancestorY + $ancestorH - $ancestorPaddingTop - $ancestorPaddingBottom - $bottom;
             if ($height > 0) {

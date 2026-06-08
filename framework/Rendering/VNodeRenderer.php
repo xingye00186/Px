@@ -5,6 +5,7 @@ namespace Px\Rendering;
 use native_types;
 
 use Px\Core\Config;
+use Px\Interfaces\ReactiveComponentInterface;
 use Px\ReactiveComponent;
 
 /**
@@ -28,7 +29,7 @@ use Px\ReactiveComponent;
  */
 class VNodeRenderer
 {
-    private ReactiveComponent $component;
+    private ReactiveComponentInterface $component;
     private RenderContext $render_ctx;
 
     /** @var int 当前绘制帧号，递增以避免全量重置 */
@@ -37,10 +38,10 @@ class VNodeRenderer
     /** @var array Scroll context for offsetting children */
     private array $scrollCtxStack = [];
 
-    /** @var array<ReactiveComponent> Stack for correct bind value context */
+    /** @var array<ReactiveComponentInterface> Stack for correct bind value context */
     private array $componentStack = [];
 
-    public function __construct(ReactiveComponent $component, RenderContext $render_ctx)
+    public function __construct(ReactiveComponentInterface $component, RenderContext $render_ctx)
     {
         $this->component = $component;
         $this->render_ctx = $render_ctx;
@@ -51,7 +52,7 @@ class VNodeRenderer
      */
     public function render(RenderNode $root): void
     {
-        \PerfCounter::start('render_collect');
+        \Px\Core\PerfCounter::start('render_collect');
         $this->render_ctx->beginFrame();
 
         // 帧号溢出保护
@@ -66,6 +67,14 @@ class VNodeRenderer
         $maxLayer = 0;
         $this->collectElements($root, $elementsByLayer, $maxLayer);
 
+        if (Config::get('diag_enabled', false)) {
+            $totalElements = 0;
+            for ($l = 0; $l <= $maxLayer; $l++) {
+                $totalElements += count($elementsByLayer[$l] ?? []);
+            }
+            error_log('[DIAG] VNodeRenderer: collected ' . $totalElements . ' elements across ' . ($maxLayer + 1) . ' layers');
+        }
+
         for ($l = 0; $l <= $maxLayer; $l++) {
             $layerElements = $elementsByLayer[$l] ?? [];
             foreach ($layerElements as $el) {
@@ -74,7 +83,7 @@ class VNodeRenderer
         }
 
         $this->render_ctx->endFrame();
-        \PerfCounter::end('render_collect');
+        \Px\Core\PerfCounter::end('render_collect');
     }
 
     /**
@@ -387,14 +396,8 @@ class VNodeRenderer
         $drawColor = ($bg !== null) ? $bg : 0;
         $borderRadius = $style['borderRadius'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
-        $boxShadow = $style['boxShadow'] ?? '';
-        $shadowX = 0; $shadowY = 0; $shadowColor = 0;
-        if ($boxShadow !== '') {
-            $parts = explode('|', $boxShadow);
-            $shadowX = (int)($parts[0] ?? 0);
-            $shadowY = (int)($parts[1] ?? 0);
-            $shadowColor = CssMappings::hexToBgr($parts[4] ?? '#000000');
-        }
+        $offsets = CssMappings::parseBoxShadowOffsets($style['boxShadow'] ?? '');
+        $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowColor = $offsets['color'];
         $borderWidth = $style['borderWidth'] ?? 0;
         $borderColor = $style['borderColor'] ?? 0;
 
@@ -490,8 +493,9 @@ class VNodeRenderer
             $text = $this->currentComponent()->getBindValue($vModel);
         }
 
-        if (Config::get('diag_enabled', false)) {
-            file_put_contents('d:\Px\_debug_out.txt', "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);
+        $diagLogPath = Config::get('diag_log_path', '');
+        if ($diagLogPath !== '') {
+            file_put_contents($diagLogPath, "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);
         }
 
         if ($text === '') return null;

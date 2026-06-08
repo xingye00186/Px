@@ -25,6 +25,7 @@ class Win32Platform implements Platform
         WinMsg::WM_KEYUP       => ['keyboard', 'up'],
         WinMsg::WM_CHAR        => ['keyboard', 'char'],
         WinMsg::WM_SIZE        => ['window', 'resize'],
+        WinMsg::WM_PAINT       => ['window', 'paint'],
         WinMsg::WM_CLOSE       => ['window', 'close'],
     ];
 
@@ -62,6 +63,9 @@ class Win32Platform implements Platform
         return vue_quit_requested();
     }
 
+    /**
+     * @deprecated 光标切换已由 Win32 GDI 渲染层自动处理，此方法保留仅为兼容。
+     */
     public function setCursor(string $cursor): void
     {
         // 光标切换由 Win32 GDI 层在渲染时根据元素 cursor 字段处理
@@ -130,6 +134,8 @@ class Win32Platform implements Platform
                 $width   = $lParam & 0xFFFF;
                 $height  = ($lParam >> 16) & 0xFFFF;
                 $events[] = new WindowEvent('resize', $width, $height);
+            } elseif ($cat === 'window' && $action === 'paint') {
+                $events[] = new WindowEvent('paint');
             } elseif ($action === 'close') {
                 $events[] = new WindowEvent('close');
             }

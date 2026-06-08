@@ -5,6 +5,7 @@ namespace Px;
 use native_types;
 
 use Px\Interfaces\ComponentInterface;
+use Px\Interfaces\ReactiveComponentInterface;
 use Px\Core\Scheduler;
 use Px\Rendering\VNode;
 
@@ -18,7 +19,7 @@ use Px\Rendering\VNode;
  *
  * AOT：闭包调用合法，默认值传递。
  */
-abstract class ReactiveComponent extends BaseComponent
+abstract class ReactiveComponent extends BaseComponent implements ComponentInterface, ReactiveComponentInterface
 {
     // AOT: 使用 protected 而非 private，确保子类 + objval() 闭包可访问
     protected bool $hasPendingUpdate = false;

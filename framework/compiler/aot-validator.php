@@ -17,6 +17,8 @@
  * v6 M2 更新: 扩展 Rule 3/4 以检测属性链中的动态访问 (如 $this->prop->$var)
  */
 
+namespace Px\Compiler;
+
 class AotValidator
 {
     /** @var string[] Collected warning messages */

@@ -42,7 +42,7 @@ class SkiaRenderContext extends RenderContext
         $this->height = $height;
         sk_create_window_context($hWnd, $width, $height);
         // R6 风险对策：明确标识 Skia 路径已激活（POC/阶段二验证期保留）
-        trigger_error('SKIA PATH ACTIVE', E_USER_NOTICE);
+        // Notice removed: no longer trigger E_USER_NOTICE on every backend init
     }
 
     public function __destruct()
@@ -119,7 +119,7 @@ class SkiaRenderContext extends RenderContext
                 $tx = $el['x'] ?? 0;
                 $ty = $el['y'] ?? 0;
                 $tt = $el['text'] ?? '';
-                fprintf(STDERR, "[SK] drawElement TEXT text='%s' x=%d y=%d fontSize=%d\n", $tt, $tx, $ty, $el['fontSize'] ?? 16);
+                // Debug fprintf(STDERR, "[SK] drawElement TEXT text='%s' x=%d y=%d fontSize=%d\n", ...) — removed for production
                 if ($tx < 0 || $ty < 0) break;
                 $this->drawText(
                     $tx, $ty,

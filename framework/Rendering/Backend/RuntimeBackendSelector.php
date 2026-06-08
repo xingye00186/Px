@@ -68,7 +68,7 @@ class RuntimeBackendSelector
             try {
                 $backend->initialize($hwnd, $w, $h);
                 $this->current = $backend;
-                trigger_error("[Px] Selected: {$name}", E_USER_NOTICE);
+                error_log("[Px] Selected: {$name}");
                 return $backend;
             } catch (BackendInitException $e) {
                 if ($verbose) {

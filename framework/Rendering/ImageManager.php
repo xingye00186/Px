@@ -44,11 +44,21 @@ class ImageManager
      */
     public static function loadImage(string $path): int
     {
-        if ($path === '') return 0;
+        if ($path === '') {
+            if (class_exists('Px\\Core\\Config') && \Px\Core\Config::get('diag_enabled', false)) {
+                error_log('[ImageManager] loadImage with empty path');
+            }
+            return 0;
+        }
 
         // 解析为绝对路径
         $absPath = self::resolvePath($path);
-        if ($absPath === '') return 0;
+        if ($absPath === '') {
+            if (class_exists('Px\\Core\\Config') && \Px\Core\Config::get('diag_enabled', false)) {
+                error_log('[ImageManager] resolvePath failed: ' . $path);
+            }
+            return 0;
+        }
 
         // 缓存命中
         if (isset(self::$cache[$absPath])) {
