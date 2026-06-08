@@ -1,0 +1,147 @@
+## 引入 VNode 不可变性
+> 前置说明：当前 Px 框架的渲染流程**并不依赖两棵 VNode 树的经典 Diff**，而是通过 **VNode → RenderNode 转换时与上一帧的 RenderNode 候选池匹配**来复用。引入 VNode 不可变性后，不需要改变这个核心匹配机制，只需要**消除所有对 VNode 对象的就地修改**，确保 VNode 从创建到销毁期间只读。这样未来如果需要实现双树 Diff，也具备了基础条件。
+
+---
+
+### 一、当前框架中破坏 VNode 不可变性的具体位置
+
+| 文件 | 函数 | 操作 | 影响 |
+|------|------|------|------|
+| `sfc-compiler.php` | `generateVNodeExpr()` 中的 `v-if/v-else-if/v-else` 处理 | 临时删除 `v-if` 等属性，生成代码后再恢复 | 编译时修改 VNode（虽然只在生成阶段），但多个生成器并发时可能冲突 |
+| `Application.php` | `expandComponentNode()` | 直接覆盖 `$node->children = $childRoot` | 丢失原始 children，无法还原 |
+| `Application.php` | `expandComponentNode()` | 直接设置 `$node->layoutOffset` | 运行时污染 VNode，应在 RenderNode 存储 |
+| `Application.php` | `matchComponentNode()` | 直接覆盖 `$node->children` 和 `$node->componentInstance` | 同上 |
+| `Application.php` | `setGroupIdRecursive()` | 递归修改 VNode 的 `groupId` | 遍历中修改 VNode |
+| `RenderTreeManager.php` | `updateFromVNode()` | 修改 `$renderNode->sourceVNode` 引用（不影响 VNode 本身，但建立了双向引用） | 可接受，不修改 VNode 内容 |
+| `template-parser.php` | `parseComponentRef()` 等 | 创建 VNode 时设置 `__componentFile` 等属性 | 创建时写入，不是运行时修改，可接受 |
+
+---
+
+### 二、必须改造的场景与方案
+
+#### 场景 1：编译时临时删除 v-if 属性（`sfc-compiler.php`）
+
+**当前代码**（简化）：
+```php
+if (isset($child->props['v-if'])) {
+    $savedProps['v-if'] = $child->props['v-if'];
+    unset($child->props['v-if']);        // 修改原 VNode
+    // ... 生成代码
+    $child->props['v-if'] = $savedProps['v-if']; // 恢复
+}
+```
+
+**改造方案**：使用 `clone` 创建临时副本，不影响原 VNode。
+```php
+if (isset($child->props['v-if'])) {
+    $tempNode = clone $child;
+    unset($tempNode->props['v-if']);
+    $code = generateVNodeExpr($tempNode, ...);
+    // 原 $child 保持不变
+}
+```
+
+**影响范围**：`generateVNodeExpr()` 中所有对 `v-if/v-else-if/v-else` 的处理，以及 `:key` 等临时处理。
+
+#### 场景 2：组件展开时覆盖 `children`（`Application::expandComponentNode()`）
+
+**当前代码**：
+```php
+$childRoot = $instance->getVNodeTree();
+$node->children = $childRoot;  // 直接覆盖，原始 children 丢失
+```
+
+**改造方案**：创建新的 VNode 节点，保留原始信息。
+```php
+// 创建新节点，类型仍为 #component
+$expandedNode = new VNode('#component', $node->props, $childRoot, $node->key);
+$expandedNode->isComponent = true;
+$expandedNode->componentClass = $node->componentClass;
+$expandedNode->componentProps = $node->componentProps;
+$expandedNode->originalChildren = $node->children; // 保留原始插槽内容
+// 然后需要在父节点的 children 数组中替换 $node 为 $expandedNode
+// 这需要父节点引用，可先在 expandComponentNode 返回新节点，由调用方替换
+```
+
+**影响范围**：`Application::expandComponentNode()` 和 `Application::matchComponentNode()` 中所有对 `$node->children` 的写入。
+
+#### 场景 3：运行时设置 `layoutOffset`（`Application::expandComponentNode()`）
+
+**当前代码**：
+```php
+$node->layoutOffset = $this->parsePlaceholderPositioning($placeholderStyle);
+```
+
+**改造方案**：`layoutOffset` 应属于 RenderNode，而非 VNode。在 `RenderTreeManager::updateFromVNode()` 中遇到 `#component` 节点时，从 VNode 的 props 中读取定位信息，存入 RenderNode。
+```php
+// Application 中不再设置 VNode->layoutOffset，而是保留在 props 中
+// 在 RenderTreeManager 中：
+if ($vnode->isComponent()) {
+    $renderNode = new RenderNode(...);
+    $style = $vnode->props['style'] ?? '';
+    $renderNode->layoutOffset = CssMappings::parsePlaceholderPositioning($style);
+}
+```
+
+#### 场景 4：递归设置 `groupId`（`Application::setGroupIdRecursive()`）
+
+**当前代码**：
+```php
+private function setGroupIdRecursive(VNode $node, string $groupId): void
+{
+    $node->groupId = $groupId;
+    // 递归设置子节点
+}
+```
+
+**问题**：运行时修改 VNode 的 `groupId`，破坏了不可变性。`groupId` 应该是组件实例的标识，不应存储在 VNode 上。
+
+**改造方案**：`groupId` 应在 RenderNode 中存储，VNode 不持有。渲染过程中需要知道节点所属组件时，通过 `RenderNode->sourceVNode` 向上追溯到组件实例，或通过 `RenderNode->groupId`（存储在 RenderNode 上）。
+
+**具体步骤**：
+- 删除 `VNode::$groupId` 字段。
+- 在 `RenderTreeManager::updateFromVNode()` 中，创建 RenderNode 时从组件实例获取 `groupId` 存入 RenderNode。
+- 删除 `setGroupIdRecursive()` 方法。
+
+---
+
+### 三、不需要改造的部分
+
+| 模块 | 原因 |
+|------|------|
+| `LayoutResolver` | 只读取 VNode 的 props（通过 `RenderNode->sourceVNode`），从不修改 VNode |
+| `VNodeRenderer` | 只读取，不修改 |
+| `collectVNodeBindKeys()` 等分析函数 | 只读遍历 |
+| `TemplateParser` | 创建 VNode 时一次性写入属性，不是运行时修改 |
+
+---
+
+### 四、改造后的收益
+
+1. **调试友好**：可以在渲染前后保存 VNode 树快照，对比差异，而不会被意外修改。
+2. **支持时间旅行**：保存历史 VNode 树即可实现撤销/重做功能。
+3. **简化 Diff 实现**：如果需要引入经典双树 Diff，可以直接比较新旧两棵 VNode 树，无需担心其中一棵被修改。
+4. **减少 Bug**：避免因 `v-if` 属性临时删除后恢复失败导致的编译错误。
+
+---
+
+### 五、改造风险评估与过渡方案
+
+| 风险 | 等级 | 缓解措施 |
+|------|------|----------|
+| 性能下降（克隆开销） | 低 | 克隆仅在编译时（`sfc-compiler`）和组件展开时（`Application`）发生，频率低 |
+| 替换节点时需更新父节点引用 | 中 | 在 `expandComponentNode` 中返回新节点，由调用方遍历父节点 children 替换；可封装 `replaceNode()` 辅助方法 |
+| `groupId` 迁移到 RenderNode 后事件路由受影响 | 中 | 事件路由使用 `RenderNode->groupId`，在命中测试时通过 RenderNode 获取，需确保 RenderNode 正确设置 |
+| 现有代码修改量大 | 高 | 分阶段实施：P0 先改 `sfc-compiler` 和 `expandComponentNode` 中的覆盖操作；P1 再迁移 `groupId` 和 `layoutOffset` |
+
+---
+
+### 六、总结
+
+**引入 VNode 不可变性后，现有 Diff 机制（基于旧 RenderNode 匹配）无需改变**，只需彻底消除对 VNode 对象的写入操作。改造核心是：
+1. 编译时用临时副本代替直接修改原 VNode。
+2. 组件展开时创建新 VNode 节点，不覆盖原节点。
+3. 将运行时状态（`groupId`, `layoutOffset`）迁移到 RenderNode 中。
+4. 确保所有 VNode 创建后不再有任何属性被修改。
+
+改造完成后，框架将为未来实现经典双树 Diff（如果需要）奠定基础，同时提升代码的可维护性和可调试性。

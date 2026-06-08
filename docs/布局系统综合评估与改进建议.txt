@@ -1,0 +1,229 @@
+## PHP AOT 桌面框架布局系统综合评估与改进建议
+> 本报告以 **CSS 标准规范**（CSS2.1 / CSS3 Flexbox / Grid / Position）和浏览器行为为基准，评估框架的布局系统及渲染后端的一致性，并提出可落地的改进方案。
+
+---
+
+## 一、核心设计缺陷与分类
+
+| 缺陷分类 | 描述 | 影响程度 | 根因类型 | 是否可修复 |
+|----------|------|----------|----------|------------|
+| **滚动机制** | 布局阶段直接修改子节点坐标（`shiftDescendantsY`），而非绘制时偏移 | **严重** | 底层设计错误 | ✅ 可修复（需重构） |
+| **绝对定位参考系** | `absolute` 未加上定位祖先的 `padding`，误用 border box | **高** | 实现细节 | ✅ 可修复 |
+| **`position: fixed` 退化** | 未实现视口定位，退化为 `absolute` | **高** | 设计缺失 | ✅ 可修复 |
+| **VNode 可变性破坏** | 运行时直接修改 VNode（删除 `v-if`、覆盖 `children`） | 中 | 工程实现 | ✅ 可修复 |
+| **LayoutResolver 过度耦合** | 2800+ 行单文件，block/flex/grid 交织 | 中 | 工程实现 | ✅ 可修复 |
+| **`sticky` 支持粗糙** | 仅简单上推，无堆叠/边界回退 | 中 | 设计/实现 | ✅ 可修复 |
+| **盒模型百分比错误** | `margin/padding` 百分比垂直方向误用包含块高度 | 中 | 实现细节 | ✅ 可修复 |
+| **Flex/Grid 细节偏差** | `gap+margin` 重复、`min-width` 收缩顺序、`auto-fill` 1fr 不生效 | 中 | 实现细节 | ✅ 可修复 |
+| **字体回退缺失** | 硬编码字体路径，无系统链 | 低 | 实现细节 | ✅ 可修复 |
+| **映射表冗余** | 双重哈希映射，效率低 | 低 | 工程实现 | ✅ 可修复 |
+| **事件命中测试简化** | 无 `pointer-events`、`transform` 支持，`z-index` 仅按树顺序 | 低 | 设计/实现 | ⚠️ 可选优化 |
+
+**根因分析**：
+- **底层设计问题**：滚动机制（在布局层修改坐标）是整个框架与浏览器行为的**根本性冲突**，必须重构。
+- **实现细节问题**：其余大部分缺陷（定位参考系、百分比、flex/grid 细节）属于局部逻辑错误，可通过修改代码修复。
+
+---
+
+## 二、渐进式改进方案（按优先级）
+
+### P0（必须修复）—— 保证核心行为正确
+
+#### 1. 重构滚动机制：布局坐标不变，绘制时偏移
+
+**目标**：停止在 `LayoutResolver` 中修改子节点坐标，改为在 `RenderNode` 上增加 `scrollOffset` 字段，`VNodeRenderer` 绘制时统一应用偏移。
+
+**关键修改位置**：
+- `LayoutResolver::finalizeScrollContainer()`：移除 `shiftDescendantsY` 调用。
+- `LayoutResolver::resolveNode()`：移除快速滚动路径中的 `shiftChildrenY`。
+- `RenderNode`：新增 `int $scrollOffsetX, $scrollOffsetY`，每次滚动时只更新这些值。
+- `VNodeRenderer::collectElements()`：在生成绘制元素时，遍历子节点时加上父滚动容器的 `scrollOffset`（累加）。
+
+**预期行为变化**：
+- 嵌套滚动容器正常工作（偏移不叠加）。
+- 动态内容高度变化后，无需重新调整已有偏移。
+- `position: sticky` 可基于正确的逻辑坐标实现。
+
+#### 2. 修正绝对定位参考系
+
+**目标**：绝对定位元素的 `left/top` 应相对于**最近非 static 祖先的 padding box 左上角**。
+
+**关键修改**：
+- `LayoutResolver::resolveAbsolutePositioning()`：计算 `$ancestorX` 和 `$ancestorY` 时，加上祖先的 `paddingLeft` 和 `paddingTop`。
+- 同时需要正确处理 `right/bottom` 的推算。
+
+**修改前**（错误）：
+```php
+$node->x = $ancestorX + $left + $marginLeft;
+```
+**修改后**（正确）：
+```php
+$ancestorPaddingLeft = $ancestor->style['paddingLeft'] ?? $ancestor->style['padding'] ?? 0;
+$ancestorPaddingTop  = $ancestor->style['paddingTop'] ?? $ancestor->style['padding'] ?? 0;
+$node->x = $ancestorX + $ancestorPaddingLeft + $left + $marginLeft;
+$node->y = $ancestorY + $ancestorPaddingTop + $top + $marginTop;
+```
+
+#### 3. 实现 `position: fixed`
+
+**目标**：`fixed` 元素相对于**视口**（根窗口）定位，滚动时保持固定。
+
+**实现方案**：
+- 在 `Application` 或 `LayoutResolver` 中维护一个根窗口的 `scrollX/scrollY`（始终为0，因为窗口本身不滚动）。
+- 识别 `position: fixed` 的元素，其包含块为根窗口（`x=0,y=0`），且不参与滚动偏移。
+- 注意：子元素如果是 `fixed`，其绝对定位参考系也是根窗口。
+
+**预期**：实现悬浮按钮、固定头部/底部等常见 UI。
+
+---
+
+### P1（高优先级）—— 提升代码可维护性与基础正确性
+
+#### 4. 拆分 LayoutResolver（策略模式）
+
+将 `LayoutResolver` 拆分为多个策略类，每个布局模式独立。
+
+```
+LayoutResolver (调度器)
+├── BlockLayoutStrategy
+├── FlexLayoutStrategy
+├── GridLayoutStrategy
+├── AbsolutePositioningStrategy (可选)
+└── ScrollContainerStrategy (可选)
+```
+
+**优点**：单文件变小，便于单元测试和独立优化。
+
+#### 5. 保证 VNode 不可变性
+
+- 所有运行时对 VNode 的修改改为**创建新的 VNode 副本**。
+- 在 `sfc-compiler.php` 中生成代码时，不应删除/修改原 VNode 属性，而应使用临时副本或标志位。
+- `Application::expandComponentNode()` 中修改 `$node->children` 和 `layoutOffset` 时，应深拷贝节点。
+
+#### 6. 修正盒模型百分比计算
+
+**CSS 规范**：`margin-top/bottom` 的百分比相对于**包含块的宽度**，`padding` 同理。
+
+**修改**：`LayoutResolver::resolvePercent()` 中，对于 `margin` 和 `padding`，无论方向如何，`$parentSize` 均应使用包含块的 **宽度** 而非高度。
+
+**代码位置**：`resolveBlockLayout()` 中调用 `applyMinMax` 之前。
+
+---
+
+### P2（中优先级）—— 完善 CSS 兼容性细节
+
+#### 7. Flex 细节修正
+
+- **`gap` 与 `margin` 不重复计算**：在计算 `lineTotalMain` 时，应先计算所有子项的 `margin` 和尺寸，再统一加上 `gap`。
+- **`flex-shrink` 与 `min-width` 的顺序**：应先根据 `flex-shrink` 分配收缩量，收缩后检查是否小于 `min-width`，若小于则将其设为 `min-width`，并**重新分配多收缩的部分**给其他项。
+
+#### 8. Grid 增强
+
+- **支持 `repeat(auto-fill, minmax(245px, 1fr))` 中 `1fr` 的动态扩展**：解析时识别 `1fr` 作为比例单位，在分配列宽时按剩余空间比例计算。
+- **实现 `grid-auto-flow: dense`**（可选，P2-P3）：通过回溯算法填充空隙。
+
+#### 9. Sticky 增强
+
+- 支持多个 sticky 元素堆叠：记录每个 sticky 元素的 `stuckY`，当多个 sticky 在同一容器时，后一个的基准 Y 要加上前一个的高度。
+- 支持水平方向 sticky（`left/right`）。
+
+#### 10. 字体回退链
+
+- 使用系统 API（Windows: `GetSystemFonts`，Linux: `fontconfig`）获取可用字体列表，设置多个 fallback。
+- 在 `skia_render.cc` 或 `vue_calc.cc` 中增加字体查找逻辑。
+
+---
+
+### P3（低优先级/可选）—— 优化与扩展
+
+- **简化映射表**：仅保留 `groupIdToRenderNodeMap`，通过 `sourceVNode` 反向查找。
+- **事件系统增强**：支持 `pointer-events: none`、`transform` 偏移的命中测试、基于 `layer` 的层叠顺序。
+- **滚动条样式化**：允许 CSS 自定义滚动条宽度、颜色、圆角。
+
+---
+
+## 三、CSS 兼容性路线图
+
+| 阶段 | 里程碑 | 开发人日 | 目标兼容性 |
+|------|--------|----------|------------|
+| **短期 (1-2周)** | 1. 重构滚动机制<br>2. 修正绝对定位参考系<br>3. 实现 `position: fixed` | 8-10 人日 | 基础定位、滚动行为符合 CSS 规范 |
+| **中期 (3-4周)** | 1. 拆分 LayoutResolver<br>2. VNode 不可变性<br>3. 盒模型百分比修正 | 12-15 人日 | 代码可维护，百分比布局正确 |
+| **长期 (6-8周)** | 1. Flex/Grid 细节完善<br>2. Sticky 增强<br>3. 字体回退<br>4. 事件命中测试增强 | 20-25 人日 | Flex/Grid 与浏览器行为接近 95% |
+| **可选扩展** | 滚动条样式、`grid-auto-flow: dense`、`transform` 支持 | 按需 | 高级特性，非 MVP 必需 |
+
+---
+
+## 四、AI 重构提示模板
+
+### 模板1：滚动机制重构
+
+```
+## 重构任务：滚动机制改为绘制时偏移
+### 当前问题
+- 位置：`LayoutResolver::finalizeScrollContainer()` 中调用 `shiftDescendantsY()`，在布局阶段直接修改子节点坐标。
+- 错误示例：嵌套滚动容器 `A`（外层）和 `B`（内层），滚动 `A` 时 `B` 内子节点坐标被修改，再滚动 `B` 时偏移叠加，导致位置错误。
+- 根本原因：违反 CSS 规范——滚动应只影响绘制偏移，不改变布局坐标。
+
+### 期望行为
+- 每个 RenderNode 存储逻辑坐标（相对于其父容器左上角）。
+- 滚动容器的子节点在渲染时临时加上 `-scrollTop` / `-scrollLeft` 偏移。
+- 嵌套滚动时偏移累加计算（每层偏移独立）。
+
+### 建议方案
+1. 删除 `LayoutResolver` 中所有 `shiftDescendantsY/X` 调用。
+2. 在 `RenderNode` 中增加 `scrollOffsetX`, `scrollOffsetY` 字段。
+3. 修改 `VNodeRenderer::collectElements()`：
+   - 遍历节点时维护当前滚动偏移栈（`$currentOffsetX, $currentOffsetY`）。
+   - 遇到滚动容器节点，将 `node->scrollLeft/Top` 加到偏移栈。
+   - 绘制子节点时，实际坐标 = `node->x + currentOffsetX`。
+4. 移除 `LayoutResolver` 中的快速滚动路径。
+
+### 验证测试用例
+输入以下 VNode 结构（简化为 CSS）：
+```html
+<div id="outer" style="height:200px; overflow:auto;">
+    <div id="inner" style="height:400px; overflow:auto;">
+        <div id="content" style="height:600px;"></div>
+    </div>
+</div>
+```
+滚动外层到 `scrollTop=100`，内层到 `scrollTop=200`。预期 `content` 的绘制 Y = `outer.y + inner.y - 100 - 200`，而 `content` 的布局 `y` 应保持相对于 `inner` 顶部的原始值（例如 0）。
+```
+
+### 模板2：绝对定位参考系修正
+
+```
+## 重构任务：修正绝对定位参考系（加上祖先 padding）
+### 当前问题
+- 位置：`LayoutResolver::resolveAbsolutePositioning()` 第 2550 行附近。
+- 错误示例：
+```html
+<div style="position: relative; padding: 20px; width: 200px; height: 200px;">
+    <div style="position: absolute; left: 0; top: 0;">文本</div>
+</div>
+```
+浏览器中 `文本` 位于 (20,20)，框架中位于 (0,0)。
+
+### 期望行为
+绝对定位元素的 `left/top` 相对于最近非 static 祖先的 **padding box 左上角**。
+
+### 建议方案
+在 `resolveAbsolutePositioning()` 中：
+1. 获取定位祖先 `$ancestor`。
+2. 计算祖先的 `paddingLeft` 和 `paddingTop`（从 `$ancestor->style` 中取）。
+3. 修改 `$node->x` 和 `$node->y` 的计算公式：
+```php
+$node->x = $ancestorX + $ancestorPaddingLeft + $left + $marginLeft;
+$node->y = $ancestorY + $ancestorPaddingTop + $top + $marginTop;
+```
+4. `right/bottom` 推算同理：
+```php
+if ($right !== null) {
+    $node->x = $ancestorX + $ancestorPaddingLeft + $ancestorW - $node->w - $right - $marginRight;
+}
+```
+
+### 验证测试用例
+使用上述 HTML，输出 `文本` 的坐标应为 `(20,20)`。同时测试 `right: 0` 场景：元素应紧贴祖先内容区右边界（`x = 祖先.x + 祖先.paddingLeft + 祖先内容宽 - 元素宽`）。
+```
+
