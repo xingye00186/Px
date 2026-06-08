@@ -226,9 +226,10 @@ class CssMappings
         'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
         'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
         'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
-        'transform'            => ['key' => 'transform',       'parser' => 'Px\Rendering\CssMappings::parseTransform', 'default' => ''],
+        'transform'            => ['key' => 'transform',       'parser' => 'Px\\Rendering\\CssMappings::parseTransform', 'default' => ''],
+        'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
     ];
-
+    
     /**
      * Inline style → 布局属性映射 (用于 parseInlineStyle)
      *
@@ -298,6 +299,7 @@ class CssMappings
         'background-position' => ['key' => 'backgroundPosition', 'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => ''],
         'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
         'transform'            => ['key' => 'transform',       'parser' => 'Px\Rendering\CssMappings::parseTransform', 'default' => ''],
+        'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => ''],
     ];
 
     // ============================================================

@@ -673,20 +673,41 @@ class RenderTreeManager
 
     private function hitTestRecursive(int $x, int $y, RenderNode $node): ?RenderNode
     {
-        // 反向遍历子节点（后渲染 = 视觉上层 = 优先命中）
-        for ($i = count($node->children) - 1; $i >= 0; $i--) {
-            $child = $node->children[$i];
-            $found = $this->hitTestRecursive($x, $y, $child);
-            if ($found !== null) {
-                return $found;
+        // pointer-events: none 的元素跳过命中测试
+        if (($node->style['pointerEvents'] ?? '') === 'none') {
+            return null;
+        }
+
+        // Layer-aware: 按 layer 递减遍历子节点（高 layer 优先命中）
+        $layerGroups = [];
+        foreach ($node->children as $i => $child) {
+            $layerGroups[$child->layer][] = $i;
+        }
+        krsort($layerGroups);
+        foreach ($layerGroups as $indices) {
+            for ($j = count($indices) - 1; $j >= 0; $j--) {
+                $child = $node->children[$indices[$j]];
+                $found = $this->hitTestRecursive($x, $y, $child);
+                if ($found !== null) {
+                    return $found;
+                }
             }
         }
 
-        // 检查自身是否可点击且在命中区域内
+        // Transform 偏移：对 transform: translate(X,Y) 调整命中测试区域
+        $hitOffX = 0;
+        $hitOffY = 0;
+        $xform = $node->style['transform'] ?? '';
+        if (is_array($xform)) {
+            $hitOffX = $xform['translateX'] ?? 0;
+            $hitOffY = $xform['translateY'] ?? 0;
+        }
+
+        // 检查自身是否可点击且在命中区域内（含 transform 偏移）
         if ($node->sourceVNode !== null
             && isset($node->sourceVNode->props['@click'])
-            && $x >= $node->x && $x <= $node->x + $node->w
-            && $y >= $node->y && $y <= $node->y + $node->h) {
+            && $x >= $node->x + $hitOffX && $x <= $node->x + $node->w + $hitOffX
+            && $y >= $node->y + $hitOffY && $y <= $node->y + $node->h + $hitOffY) {
             return $node;
         }
 
@@ -708,19 +729,40 @@ class RenderTreeManager
 
     private function findScrollContainerRecursive(int $x, int $y, RenderNode $node): ?RenderNode
     {
-        // 反向遍历子节点
-        for ($i = count($node->children) - 1; $i >= 0; $i--) {
-            $child = $node->children[$i];
-            $found = $this->findScrollContainerRecursive($x, $y, $child);
-            if ($found !== null) {
-                return $found;
+        // pointer-events: none 的元素不参与滚动容器查找
+        if (($node->style['pointerEvents'] ?? '') === 'none') {
+            return null;
+        }
+
+        // Layer-aware: 按 layer 递减遍历子节点
+        $layerGroups = [];
+        foreach ($node->children as $i => $child) {
+            $layerGroups[$child->layer][] = $i;
+        }
+        krsort($layerGroups);
+        foreach ($layerGroups as $indices) {
+            for ($j = count($indices) - 1; $j >= 0; $j--) {
+                $child = $node->children[$indices[$j]];
+                $found = $this->findScrollContainerRecursive($x, $y, $child);
+                if ($found !== null) {
+                    return $found;
+                }
             }
         }
 
-        // 检查自身是否为滚动容器且坐标命中
+        // Transform 偏移适配
+        $hitOffX = 0;
+        $hitOffY = 0;
+        $xform = $node->style['transform'] ?? '';
+        if (is_array($xform)) {
+            $hitOffX = $xform['translateX'] ?? 0;
+            $hitOffY = $xform['translateY'] ?? 0;
+        }
+
+        // 检查自身是否为滚动容器且坐标命中（含 transform 偏移）
         if ($node->isScrollContainer
-            && $x >= $node->x && $x <= $node->x + $node->w
-            && $y >= $node->y && $y <= $node->y + $node->h) {
+            && $x >= $node->x + $hitOffX && $x <= $node->x + $node->w + $hitOffX
+            && $y >= $node->y + $hitOffY && $y <= $node->y + $node->h + $hitOffY) {
             return $node;
         }
 

@@ -85331,3 +85331,17 @@ makeSpanElement: node.type=span content_is_null=0 text='test' bindKey='' x=0 y=0
 makeSpanElement: node.type=span content_is_null=0 text='test' bindKey='' x=0 y=0 w=0 h=0
 makeSpanElement: node.type=span content_is_null=0 text='test' bindKey='' x=0 y=0 w=0 h=0
 makeSpanElement: node.type=span content_is_null=0 text='test' bindKey='' x=0 y=0 w=0 h=0
+DBG_FINALIZE_SCROLL: node=div y=0 h=200 scrollTop=0 childOffsetY=0 children=2
+DBG_FINALIZE_SCROLL: node=div y=0 h=200 scrollTop=0 childOffsetY=0 children=2
+DBG_FINALIZE_SCROLL: node=div y=0 h=300 scrollTop=0 childOffsetY=0 children=1
+DBG_FINALIZE_SCROLL: node=div y=0 h=100 scrollTop=0 childOffsetY=0 children=2
+DBG_FINALIZE_SCROLL: node=div y=0 h=100 scrollTop=50 childOffsetY=0 children=2
+DBG_FINALIZE_SCROLL: node=div y=0 h=200 scrollTop=0 childOffsetY=0 children=0
+DBG_TWO_PASS: ch=div y=42 h=458 isFlexGrow=1 crossAxisSized=0 hasExplW=1 needsTP=1
+DBG_FINALIZE_SCROLL: node=div y=42 h=458 scrollTop=0 childOffsetY=42 children=0
+DBG_FINALIZE_SCROLL: node=div y=0 h=200 scrollTop=0 childOffsetY=0 children=0
+DBG_TWO_PASS: ch=div y=42 h=458 isFlexGrow=1 crossAxisSized=0 hasExplW=1 needsTP=1
+DBG_FINALIZE_SCROLL: node=div y=42 h=458 scrollTop=0 childOffsetY=42 children=0
+DBG_SPAN_ENTER: content='span' parentY=0 parentH=0 w=0 h=0 height=0 parent->h=0
+DBG_SPAN_MINMAX: content='span' p->h=0 bef=0 af=0 ht=0
+DBG_SPAN_AUTOH: content='span' h=0 lineH=18 -> new_h=18
