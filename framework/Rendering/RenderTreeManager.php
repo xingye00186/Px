@@ -371,7 +371,7 @@ class RenderTreeManager
         ReactiveComponent $root,
         array $componentByGroupId,
         ?array $candidates = null,
-        string $currentGroupId
+        string $currentGroupId = 'app'
     ): ?RenderNode {
         \PerfCounter::start('tree_convert');
         try {
@@ -687,8 +687,8 @@ class RenderTreeManager
         $hitOffY = 0;
         $xform = $node->style['transform'] ?? '';
         if (is_array($xform)) {
-            $hitOffX = $xform['translateX'] ?? 0;
-            $hitOffY = $xform['translateY'] ?? 0;
+            $hitOffX = (int)($xform['translateX'] ?? 0);
+            $hitOffY = (int)($xform['translateY'] ?? 0);
         }
 
         // 检查自身是否可点击且在命中区域内（含 transform 偏移）
@@ -743,8 +743,8 @@ class RenderTreeManager
         $hitOffY = 0;
         $xform = $node->style['transform'] ?? '';
         if (is_array($xform)) {
-            $hitOffX = $xform['translateX'] ?? 0;
-            $hitOffY = $xform['translateY'] ?? 0;
+            $hitOffX = (int)($xform['translateX'] ?? 0);
+            $hitOffY = (int)($xform['translateY'] ?? 0);
         }
 
         // 检查自身是否为滚动容器且坐标命中（含 transform 偏移）

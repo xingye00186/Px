@@ -304,16 +304,16 @@ class LayoutResolver
             if ($node->isScrollContainer && ($display === 'flex' || $display === 'inline-flex' || $display === 'grid')) {
 
 
-                $padT = $effectiveStyle['paddingTop'] ?? $effectiveStyle['padding'] ?? 0;
+                $padT = (int)($effectiveStyle['paddingTop'] ?? $effectiveStyle['padding'] ?? 0);
 
 
-                $padL = $effectiveStyle['paddingLeft'] ?? $effectiveStyle['padding'] ?? 0;
+                $padL = (int)($effectiveStyle['paddingLeft'] ?? $effectiveStyle['padding'] ?? 0);
 
 
-                $padR = $effectiveStyle['paddingRight'] ?? $effectiveStyle['padding'] ?? 0;
+                $padR = (int)($effectiveStyle['paddingRight'] ?? $effectiveStyle['padding'] ?? 0);
 
 
-                $padB = $effectiveStyle['paddingBottom'] ?? $effectiveStyle['padding'] ?? 0;
+                $padB = (int)($effectiveStyle['paddingBottom'] ?? $effectiveStyle['padding'] ?? 0);
 
 
                 $childBaseY = $node->y + $padT;
@@ -337,13 +337,13 @@ class LayoutResolver
                 }
 
 
-                $node->contentHeight = max(0, $maxBottom - $childBaseY);
+                $node->contentHeight = (int)max(0, $maxBottom - $childBaseY);
 
 
                 // Clamp scrollTop when content shrinks
 
 
-                $maxScroll = max($node->contentHeight - $node->h, 0);
+                $maxScroll = (int)max($node->contentHeight - $node->h, 0);
 
 
                 if ($node->scrollTop > $maxScroll) {
@@ -379,10 +379,10 @@ class LayoutResolver
                         if ($right > $maxRight) $maxRight = $right;
 
                     }
-                    $node->contentWidth = max($maxRight, $node->w);
+                    $node->contentWidth = (int)max($maxRight, $node->w);
 
 
-                    $maxScrollX = max($node->contentWidth - $node->w, 0);
+                    $maxScrollX = (int)max($node->contentWidth - $node->w, 0);
 
                     if ($node->scrollLeft > $maxScrollX) {
 
@@ -428,7 +428,7 @@ class LayoutResolver
                         $baseStuckY = $sc->y + $stickyTop;
                         $adjustedStuckY = $baseStuckY;
                         foreach ($this->stickyStack[$scKey] as $prev) {
-                            $adjustedStuckY = max($adjustedStuckY, $prev['stuckY'] + $prev['height']);
+                            $adjustedStuckY = (int)max($adjustedStuckY, $prev['stuckY'] + $prev['height']);
                         }
 
                         if ($visualY < $adjustedStuckY) {
@@ -460,7 +460,7 @@ class LayoutResolver
                             $baseStuckX = $sc->x + $stickyLeft;
                             $adjustedStuckX = $baseStuckX;
                             foreach ($this->stickyStackX[$scKey] as $prev) {
-                                $adjustedStuckX = max($adjustedStuckX, $prev['stuckX'] + $prev['width']);
+                                $adjustedStuckX = (int)max($adjustedStuckX, $prev['stuckX'] + $prev['width']);
                             }
 
                             if ($visualX < $adjustedStuckX) {
@@ -496,10 +496,10 @@ class LayoutResolver
             $style = $node->style;
 
 
-            $marginLeft = $style['marginLeft'] ?? $style['margin'] ?? 0;
+            $marginLeft = (int)($style['marginLeft'] ?? $style['margin'] ?? 0);
 
 
-            $marginTop = $style['marginTop'] ?? $style['margin'] ?? 0;
+            $marginTop = (int)($style['marginTop'] ?? $style['margin'] ?? 0);
 
 
             // For static flex/grid items, their positions are determined by the parent's
@@ -515,7 +515,7 @@ class LayoutResolver
                 if (array_key_exists('left', $style)) {
 
 
-                    $node->x = $style['left'] + $parentX + $marginLeft;
+                    $node->x = (int)($style['left'] + $parentX + $marginLeft);
 
 
                 }
@@ -524,7 +524,7 @@ class LayoutResolver
                 if (array_key_exists('top', $style)) {
 
 
-                    $node->y = $style['top'] + $parentY + $marginTop;
+                    $node->y = (int)($style['top'] + $parentY + $marginTop);
 
 
                 }
@@ -570,10 +570,10 @@ class LayoutResolver
             }
 
 
-            $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+            $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
 
-            $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
+            $paddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
 
 
             $childOffsetX = $node->x + $paddingLeft;

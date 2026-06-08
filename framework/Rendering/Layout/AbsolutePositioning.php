@@ -65,10 +65,10 @@ class AbsolutePositioning
         }
 
         // 参考系：定位祖先的 padding box（CSS Positioned Layout §3.1），退化时用 (0,0)
-        $ancestorPaddingLeft = ($ancestor !== null) ? ($ancestor->style['paddingLeft'] ?? $ancestor->style['padding'] ?? 0) : 0;
-        $ancestorPaddingTop = ($ancestor !== null) ? ($ancestor->style['paddingTop'] ?? $ancestor->style['padding'] ?? 0) : 0;
-        $ancestorPaddingRight = ($ancestor !== null) ? ($ancestor->style['paddingRight'] ?? $ancestor->style['padding'] ?? 0) : 0;
-        $ancestorPaddingBottom = ($ancestor !== null) ? ($ancestor->style['paddingBottom'] ?? $ancestor->style['padding'] ?? 0) : 0;
+        $ancestorPaddingLeft = ($ancestor !== null) ? (int)($ancestor->style['paddingLeft'] ?? $ancestor->style['padding'] ?? 0) : 0;
+        $ancestorPaddingTop = ($ancestor !== null) ? (int)($ancestor->style['paddingTop'] ?? $ancestor->style['padding'] ?? 0) : 0;
+        $ancestorPaddingRight = ($ancestor !== null) ? (int)($ancestor->style['paddingRight'] ?? $ancestor->style['padding'] ?? 0) : 0;
+        $ancestorPaddingBottom = ($ancestor !== null) ? (int)($ancestor->style['paddingBottom'] ?? $ancestor->style['padding'] ?? 0) : 0;
 
         $ancestorX = ($ancestor !== null) ? $ancestor->x + $ancestorPaddingLeft : 0;
         $ancestorY = ($ancestor !== null) ? $ancestor->y + $ancestorPaddingTop : 0;
@@ -77,16 +77,12 @@ class AbsolutePositioning
 
         // CSS Box Model §7: margin/padding 百分比基于包含块宽度
         $marginLeftRaw = $style['marginLeft'] ?? $style['margin'] ?? null;
-        $marginLeft = ($marginLeftRaw === 'auto') ? 'auto' : PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $ancestorW);
+        $marginLeft = ($marginLeftRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $ancestorW);
 
         $marginTopRaw = $style['marginTop'] ?? $style['margin'] ?? null;
-        $marginTop = ($marginTopRaw === 'auto') ? 'auto' : PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $ancestorW);
+        $marginTop = ($marginTopRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $ancestorW);
 
         // Guard: margin:auto resolved later in resolveMarginAuto; treat as 0 here
-
-        if ($marginLeft === 'auto') $marginLeft = 0;
-
-        if ($marginTop === 'auto') $marginTop = 0;
 
         $paddingLeft = PercentResolver::resolveMarginPaddingPercent($style, 'paddingLeft', 'paddingLeftPercent', $ancestorW);
         $paddingRight = PercentResolver::resolveMarginPaddingPercent($style, 'paddingRight', 'paddingRightPercent', $ancestorW);
@@ -122,19 +118,19 @@ class AbsolutePositioning
 
         // ── margin:auto 水平 + 垂直居中 ──
         // margin:auto 时的父内容区宽度 = padding box 宽度减去自身 padding
-        $parentContentW = ($ancestor !== null) ? max(0, $ancestorW - $ancestorPaddingLeft - $ancestorPaddingRight) : 0;
+        $parentContentW = ($ancestor !== null) ? (int)max(0, $ancestorW - $ancestorPaddingLeft - $ancestorPaddingRight) : 0;
 
         $paddingBottom = PercentResolver::resolveMarginPaddingPercent($style, 'paddingBottom', 'paddingBottomPercent', $ancestorW);
 
-        $parentContentH = ($ancestor !== null) ? max(0, $ancestorH - $paddingTop - $paddingBottom) : 0;
+        $parentContentH = ($ancestor !== null) ? (int)max(0, $ancestorH - $paddingTop - $paddingBottom) : 0;
 
         $this->resolveMarginAuto($node, $style, $parentContentW, $parentContentH);
 
         // Apply translate from animatedStyle
 
-        $translateX = $style['translateX'] ?? 0;
+        $translateX = (int)($style['translateX'] ?? 0);
 
-        $translateY = $style['translateY'] ?? 0;
+        $translateY = (int)($style['translateY'] ?? 0);
 
         $node->x += $translateX;
 

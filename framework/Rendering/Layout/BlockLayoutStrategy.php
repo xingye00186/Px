@@ -46,9 +46,9 @@ class BlockLayoutStrategy
     {
         // Read position from style
 
-        $left = $style['left'] ?? 0;
+        $left = (int)($style['left'] ?? 0);
 
-        $top = $style['top'] ?? 0;
+        $top = (int)($style['top'] ?? 0);
 
         $right = $style['right'] ?? null;
 
@@ -82,12 +82,12 @@ class BlockLayoutStrategy
 
 
         // ── 应用 min/max 约束到尺寸（在子节点递归之前，确保 parent->w/h 立即可用）──
-        $node->w = max(0, (int)PercentResolver::applyMinMax($style, $width, true));
+        $node->w = (int)max(0, (int)PercentResolver::applyMinMax($style, $width, true));
 
         // Debug: span h before min/max
         $dbg_span_h_before = $node->h;
 
-        $node->h = max(0, (int)PercentResolver::applyMinMax($style, $height, false));
+        $node->h = (int)max(0, (int)PercentResolver::applyMinMax($style, $height, false));
 
         // Debug: span h after min/max constraint
         if ($node->type === 'span' && $node->content !== null) {
@@ -98,7 +98,7 @@ class BlockLayoutStrategy
         // ── CSS 规范: 正常流块级元素未显式设置宽度时，应填充包含块内容宽度 ──
         $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         if (!$hasExplicitW && $width === 0 && !$isAbsForW && $parent !== null) {
-            $node->w = max(0, (int)PercentResolver::applyMinMax($style, $parentW, true));
+            $node->w = (int)max(0, (int)PercentResolver::applyMinMax($style, $parentW, true));
         }
 
 
@@ -111,7 +111,7 @@ class BlockLayoutStrategy
                 // Text-measured width: only for text/span types (block layout width is auto-filled)
                 // Flex items get their text-measured width in applyFlexBasis
                 if ($node->type === 'text' || $node->type === 'span') {
-                    $node->w = min($measured, max(0, (int)PercentResolver::applyMinMax($style, $measured, true)));
+                    $node->w = (int)min($measured, (int)max(0, (int)PercentResolver::applyMinMax($style, $measured, true)));
                 }
             }
             // Text height = line-height if no explicit height
@@ -144,11 +144,11 @@ class BlockLayoutStrategy
         // ── Scroll container post-processing for flex/grid display modes ──
 
         if ($node->isScrollContainer) {
-            $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
+            $paddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
 
-            $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
+            $paddingRight = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
 
-            $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+            $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
             // A1 重构: childOffsetY 不再减 scrollTop，偏移由 VNodeRenderer 在绘制层处理
             $childOffsetY = $node->y + $paddingTop;
@@ -168,11 +168,11 @@ class BlockLayoutStrategy
             // Scroll containers have their own auto-stack in finalizeScrollContainer.
 
 
-            $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
+            $paddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
 
-            $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+            $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
-            $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
+            $paddingRight = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
 
 
             if (count($node->children) > 0) {
@@ -191,9 +191,9 @@ class BlockLayoutStrategy
                         continue;
                     }
 
-                    $mTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+                    $mTop = (int)($childStyle['marginTop'] ?? $childStyle['margin'] ?? 0);
 
-                    $mBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
+                    $mBottom = (int)($childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0);
 
                     // Auto-width: inherit from container padding area (skip if percentage width)
 
@@ -305,7 +305,7 @@ class BlockLayoutStrategy
             $computedW = max(0, $maxRight - $node->x);
 
             if ($computedW > $node->w) {
-                $node->w = max(0, (int)PercentResolver::applyMinMax($style, $computedW, true));
+                $node->w = (int)max(0, (int)PercentResolver::applyMinMax($style, $computedW, true));
 
                 $padL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
@@ -318,9 +318,9 @@ class BlockLayoutStrategy
                         $cs = $child->style;
 
                         if (!array_key_exists('width', $cs)) {
-                            $child->w = max(0, $contentW);
+                            $child->w = (int)max(0, $contentW);
 
-                            $child->w = max(0, (int)PercentResolver::applyMinMax($cs, $child->w, true));
+                            $child->w = (int)max(0, (int)PercentResolver::applyMinMax($cs, $child->w, true));
                         }
                     }
                 }
@@ -345,7 +345,7 @@ class BlockLayoutStrategy
             $computedH = max(0, $maxBottom - $node->y);
 
             if ($computedH > $node->h) {
-                $node->h = max(0, (int)PercentResolver::applyMinMax($style, $computedH, false));
+                $node->h = (int)max(0, (int)PercentResolver::applyMinMax($style, $computedH, false));
             }
         }
     }
@@ -368,13 +368,13 @@ class BlockLayoutStrategy
         array       &$scrollContainers
     ): void
     {
-        $marginLeft = $style['marginLeft'] ?? $style['margin'] ?? 0;
+        $marginLeft = (int)($style['marginLeft'] ?? $style['margin'] ?? 0);
 
-        $marginTop = $style['marginTop'] ?? $style['margin'] ?? 0;
+        $marginTop = (int)($style['marginTop'] ?? $style['margin'] ?? 0);
 
-        $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+        $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
-        $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
+        $paddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
 
         // Base position = parent content area
 
@@ -394,9 +394,9 @@ class BlockLayoutStrategy
 
         // Apply translate from animatedStyle
 
-        $translateX = $style['translateX'] ?? 0;
+        $translateX = (int)($style['translateX'] ?? 0);
 
-        $translateY = $style['translateY'] ?? 0;
+        $translateY = (int)($style['translateY'] ?? 0);
 
         $node->x += $translateX;
 
@@ -447,9 +447,9 @@ class BlockLayoutStrategy
                     continue;
                 }
 
-                $mTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+                $mTop = (int)($childStyle['marginTop'] ?? $childStyle['margin'] ?? 0);
 
-                $mBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
+                $mBottom = (int)($childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0);
 
                 // Auto-width: inherit from container (skip if percentage width)
                 $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);

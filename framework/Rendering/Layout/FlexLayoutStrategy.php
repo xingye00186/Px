@@ -44,13 +44,13 @@ class FlexLayoutStrategy
     {
         // Container position
 
-        $left = $style['left'] ?? 0;
+        $left = (int)($style['left'] ?? 0);
 
-        $top = $style['top'] ?? 0;
+        $top = (int)($style['top'] ?? 0);
 
-        $width = $style['width'] ?? 0;
+        $width = (int)($style['width'] ?? 0);
 
-        $height = $style['height'] ?? 0;
+        $height = (int)($style['height'] ?? 0);
 
         $node->x = $left + $parentX;
 
@@ -58,9 +58,9 @@ class FlexLayoutStrategy
 
         // Apply translate from animatedStyle
 
-        $translateX = $style['translateX'] ?? 0;
+        $translateX = (int)($style['translateX'] ?? 0);
 
-        $translateY = $style['translateY'] ?? 0;
+        $translateY = (int)($style['translateY'] ?? 0);
 
         $node->x += $translateX;
 
@@ -77,9 +77,9 @@ class FlexLayoutStrategy
 
         $height = PercentResolver::resolvePercent($style, 'height', 'heightPercent', $parentH);
 
-        $node->w = max(0, (int)$width);
+        $node->w = (int)max(0, (int)$width);
 
-        $node->h = max(0, (int)$height);
+        $node->h = (int)max(0, (int)$height);
 
         // ── Scroll container post-processing for flex/grid display modes ──
 
@@ -91,9 +91,9 @@ class FlexLayoutStrategy
             $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
             if (!$hasExplicitW && $width === 0 && $parent !== null) {
-                $width = $parent->w;
+                $width = (int)($parent->w);
 
-                $node->w = max(0, (int)$width);
+                $node->w = (int)max(0, (int)$width);
             }
         } elseif ($parent !== null && $parentDisplay === 'flex') {
             // ── Scroll container post-processing for flex/grid display modes ──
@@ -111,15 +111,15 @@ class FlexLayoutStrategy
             $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
             if ($parentIsColumn && !$hasExplicitW && $width === 0) {
-                $parentPadL = $parent->style['paddingLeft'] ?? $parent->style['padding'] ?? 0;
+                $parentPadL = (int)($parent->style['paddingLeft'] ?? $parent->style['padding'] ?? 0);
 
-                $parentPadR = $parent->style['paddingRight'] ?? $parent->style['padding'] ?? 0;
+                $parentPadR = (int)($parent->style['paddingRight'] ?? $parent->style['padding'] ?? 0);
 
-                $parentContentW = max(0, $parent->w - $parentPadL - $parentPadR);
+                $parentContentW = (int)max(0, $parent->w - $parentPadL - $parentPadR);
 
                 $width = $parentContentW;
 
-                $node->w = max(0, (int)$width);
+                $node->w = (int)max(0, (int)$width);
             }
         }
 
@@ -136,7 +136,7 @@ class FlexLayoutStrategy
         // Example: a row flex-container child of a column flex-container should
         // NOT have its height filled from parent height — only width should stretch.
 
-        $gap = $style['gap'] ?? 0;
+        $gap = (int)($style['gap'] ?? 0);
 
         $justify = $style['justifyContent'] ?? 'flex-start';
 
@@ -148,13 +148,13 @@ class FlexLayoutStrategy
 
         // ── Padding ──
 
-        $paddingTop = $style['paddingTop'] ?? $style['padding'] ?? 0;
+        $paddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
 
-        $paddingRight = $style['paddingRight'] ?? $style['padding'] ?? 0;
+        $paddingRight = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
 
-        $paddingBottom = $style['paddingBottom'] ?? $style['padding'] ?? 0;
+        $paddingBottom = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
 
-        $paddingLeft = $style['paddingLeft'] ?? $style['padding'] ?? 0;
+        $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
         $containerMain = max(0, $isRow ? PercentResolver::computeContentWidth($style, $width) : PercentResolver::computeContentHeight($style, $height));
 
@@ -268,13 +268,13 @@ class FlexLayoutStrategy
 
                 $cs = $ch->style;
 
-                $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
+                $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
 
-                $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
+                $mR = (int)($cs['marginRight'] ?? $cs['margin'] ?? 0);
 
-                $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
+                $mT = (int)($cs['marginTop'] ?? $cs['margin'] ?? 0);
 
-                $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
+                $mB = (int)($cs['marginBottom'] ?? $cs['margin'] ?? 0);
 
                 $chSizeWithMargin = $chMain + ($isRow ? $mL + $mR : $mT + $mB);
 
@@ -368,13 +368,13 @@ class FlexLayoutStrategy
 
                     $cs = $ch->style;
 
-                    $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
+                    $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
 
-                    $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
+                    $mR = (int)($cs['marginRight'] ?? $cs['margin'] ?? 0);
 
-                    $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
+                    $mT = (int)($cs['marginTop'] ?? $cs['margin'] ?? 0);
 
-                    $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
+                    $mB = (int)($cs['marginBottom'] ?? $cs['margin'] ?? 0);
 
                     if ($data['isFlexGrow']) {
                         $fixedTotalMain += $isRow ? $mL + $mR : $mT + $mB;
@@ -404,9 +404,9 @@ class FlexLayoutStrategy
                         $allocated = (int)(($data['grow'] / $totalFlexGrow) * $remainingSpace);
 
                         if ($isRow) {
-                            $ch->w = max(0, $allocated);
+                            $ch->w = (int)max(0, $allocated);
                         } else {
-                            $ch->h = max(0, $allocated);
+                            $ch->h = (int)max(0, $allocated);
                         }
                     }
                 }
@@ -421,13 +421,13 @@ class FlexLayoutStrategy
             foreach ($lineChildren as $ch) {
                 $cs = $ch->style;
 
-                $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
+                $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
 
-                $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
+                $mR = (int)($cs['marginRight'] ?? $cs['margin'] ?? 0);
 
-                $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
+                $mT = (int)($cs['marginTop'] ?? $cs['margin'] ?? 0);
 
-                $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
+                $mB = (int)($cs['marginBottom'] ?? $cs['margin'] ?? 0);
 
                 if ($isRow) {
                     $lineTotalMain += $ch->w + $mL + $mR;
@@ -526,7 +526,7 @@ class FlexLayoutStrategy
                             $clamped = false;
 
                             if ($item['minVal'] > 0 && $newSize < $item['minVal']) {
-                                $newSize = $item['minVal'];
+                                $newSize = (int)($item['minVal']);
 
                                 $clamped = true;
                             }
@@ -551,7 +551,7 @@ class FlexLayoutStrategy
                     $equalShare = count($shrinkSizes) > 0 ? (int)($remainingOverflow / count($shrinkSizes)) : 0;
 
                     foreach ($shrinkSizes as $idx => $size) {
-                        $newSize = $size - $equalShare;
+                        $newSize = (int)($size - $equalShare);
 
                         if ($newSize < 0) {
                             $newSize = 0;
@@ -560,7 +560,7 @@ class FlexLayoutStrategy
                         // Apply min-width clamp
                         foreach ($activeItems as $item) {
                             if ($item['idx'] === $idx && $item['minVal'] > 0 && $newSize < $item['minVal']) {
-                                $newSize = $item['minVal'];
+                                $newSize = (int)($item['minVal']);
                                 break;
                             }
                         }
@@ -575,9 +575,9 @@ class FlexLayoutStrategy
                     $ch = $lineChildren[$idx];
 
                     if ($isRow) {
-                        $ch->w = $size;
+                        $ch->w = (int)$size;
                     } else {
-                        $ch->h = $size;
+                        $ch->h = (int)$size;
                     }
                 }
             }
@@ -585,9 +585,9 @@ class FlexLayoutStrategy
             // ── Step 8: Min/max constraints ──
 
             foreach ($lineChildren as $ch) {
-                $ch->w = max(0, (int)PercentResolver::applyMinMax($ch->style, $ch->w, true));
+                $ch->w = (int)max(0, (int)PercentResolver::applyMinMax($ch->style, $ch->w, true));
 
-                $ch->h = max(0, (int)PercentResolver::applyMinMax($ch->style, $ch->h, false));
+                $ch->h = (int)max(0, (int)PercentResolver::applyMinMax($ch->style, $ch->h, false));
             }
 
             // ── Step 9: Recalculate totalMain after shrink ──
@@ -599,13 +599,13 @@ class FlexLayoutStrategy
             foreach ($lineChildren as $ch) {
                 $cs = $ch->style;
 
-                $mL = $cs['marginLeft'] ?? $cs['margin'] ?? 0;
+                $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
 
-                $mR = $cs['marginRight'] ?? $cs['margin'] ?? 0;
+                $mR = (int)($cs['marginRight'] ?? $cs['margin'] ?? 0);
 
-                $mT = $cs['marginTop'] ?? $cs['margin'] ?? 0;
+                $mT = (int)($cs['marginTop'] ?? $cs['margin'] ?? 0);
 
-                $mB = $cs['marginBottom'] ?? $cs['margin'] ?? 0;
+                $mB = (int)($cs['marginBottom'] ?? $cs['margin'] ?? 0);
 
                 if ($isRow) {
                     $lineTotalMain += $ch->w + $mL + $mR;
@@ -631,9 +631,9 @@ class FlexLayoutStrategy
             foreach ($lineChildren as $ch) {
                 $cs = $ch->style;
 
-                $mL = $cs['marginLeftAuto'] ?? false;
+                $mL = (int)($cs['marginLeftAuto'] ?? false);
 
-                $mR = $cs['marginRightAuto'] ?? false;
+                $mR = (int)($cs['marginRightAuto'] ?? false);
 
                 if ($mL || $mR) $hasAutoMainMargin = true;
 
@@ -665,11 +665,11 @@ class FlexLayoutStrategy
                     $lineTotalMain = 0;
 
                     foreach ($lineChildren as $idx => $ch) {
-                        $mL = $resolvedAutoMargins[$idx]['left'];
-                        $mR = $resolvedAutoMargins[$idx]['right'];
+                        $mL = (int)($resolvedAutoMargins[$idx]['left']);
+                        $mR = (int)($resolvedAutoMargins[$idx]['right']);
 
-                        $mT = $ch->style['marginTop'] ?? $ch->style['margin'] ?? 0;
-                        $mB = $ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0;
+                        $mT = (int)($ch->style['marginTop'] ?? $ch->style['margin'] ?? 0);
+                        $mB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
 
                         if ($isRow) {
                             $lineTotalMain += $ch->w + $mL + $mR;
@@ -726,14 +726,14 @@ class FlexLayoutStrategy
                 $childStyle = $ch->style;
 
                 $childMarginLeft = ($resolvedAutoMargins !== null && isset($resolvedAutoMargins[$i]['left']) ? $resolvedAutoMargins[$i]['left'] : null)
-                    ?? $childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0;
+                    ?? (int)($childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0);
 
                 $childMarginRight = ($resolvedAutoMargins !== null && isset($resolvedAutoMargins[$i]['right']) ? $resolvedAutoMargins[$i]['right'] : null)
-                    ?? $childStyle['marginRight'] ?? $childStyle['margin'] ?? 0;
+                    ?? (int)($childStyle['marginRight'] ?? $childStyle['margin'] ?? 0);
 
-                $childMarginTop = $childStyle['marginTop'] ?? $childStyle['margin'] ?? 0;
+                $childMarginTop = (int)($childStyle['marginTop'] ?? $childStyle['margin'] ?? 0);
 
-                $childMarginBottom = $childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0;
+                $childMarginBottom = (int)($childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0);
 
                 // Main axis position
                 $oldX = $ch->x;
@@ -758,7 +758,7 @@ class FlexLayoutStrategy
                         if ($isRow) {
                             if (!$lineFlexData[$i]['hasExplicitCrossSize']) {
                                 $crossBefore = $ch->h;
-                                $stretchedH = max(0, (int)($lineMaxCross - $childMarginTop - $childMarginBottom));
+                                $stretchedH = (int)max(0, (int)($lineMaxCross - $childMarginTop - $childMarginBottom));
                                 if ($stretchedH > 0) {
                                     $ch->h = $stretchedH;
                                     $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
@@ -768,7 +768,7 @@ class FlexLayoutStrategy
                         } else {
                             if (!$lineFlexData[$i]['hasExplicitCrossSize']) {
                                 $crossBefore = $ch->w;
-                                $stretchedW = max(0, (int)($lineMaxCross - $childMarginLeft - $childMarginRight));
+                                $stretchedW = (int)max(0, (int)($lineMaxCross - $childMarginLeft - $childMarginRight));
                                 if ($stretchedW > 0) {
                                     $ch->w = $stretchedW;
                                     $lineFlexData[$i]['crossAxisSized'] = ($ch->w !== $crossBefore);
@@ -795,14 +795,14 @@ class FlexLayoutStrategy
                     if ($effectiveAlign === 'stretch') {
                         if ($isRow && !$lineFlexData[$i]['hasExplicitCrossSize']) {
                             $crossBefore = $ch->h;
-                            $stretchedH = max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
+                            $stretchedH = (int)max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
                             if ($stretchedH > 0) {
                                 $ch->h = $stretchedH;
                                 $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
                             }
                         } elseif (!$isRow && !$lineFlexData[$i]['hasExplicitCrossSize']) {
                             $crossBefore = $ch->w;
-                            $stretchedW = max(0, (int)($containerCross - $childMarginLeft - $childMarginRight));
+                            $stretchedW = (int)max(0, (int)($containerCross - $childMarginLeft - $childMarginRight));
                             if ($stretchedW > 0) {
                                 $ch->w = $stretchedW;
                                 $lineFlexData[$i]['crossAxisSized'] = ($ch->w !== $crossBefore);
@@ -910,8 +910,8 @@ class FlexLayoutStrategy
                         }
                     } else {
                         // Current behavior for block/scroll containers
-                        $chPadLtp = $chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0;
-                        $chPadTtp = $chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0;
+                        $chPadLtp = (int)($chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0);
+                        $chPadTtp = (int)($chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0);
                         $gcOffsetX = $chTp->x + $chPadLtp;
                         $gcOffsetY = $chTp->y + $chPadTtp;
 
@@ -928,9 +928,9 @@ class FlexLayoutStrategy
                 }
 
                 if ($needsTwoPass && $chTp->isScrollContainer) {
-                    $padTsp = $chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0;
-                    $padLsp = $chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0;
-                    $padRsp = $chTp->style['paddingRight'] ?? $chTp->style['padding'] ?? 0;
+                    $padTsp = (int)($chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0);
+                    $padLsp = (int)($chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0);
+                    $padRsp = (int)($chTp->style['paddingRight'] ?? $chTp->style['padding'] ?? 0);
                     $coffY = $chTp->y + $padTsp - $chTp->scrollTop;
 
                     $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $chTp->style, $coffY, $padLsp, $padRsp, $scrollContainers);
@@ -970,7 +970,7 @@ class FlexLayoutStrategy
                 foreach ($children as $ch) {
                     $chRight = $ch->x + $ch->w;
 
-                    $mR = $ch->style['marginRight'] ?? $ch->style['margin'] ?? 0;
+                    $mR = (int)($ch->style['marginRight'] ?? $ch->style['margin'] ?? 0);
 
                     if ($chRight + $mR > $maxRight) $maxRight = (int)($chRight + $mR);
                 }
@@ -986,7 +986,7 @@ class FlexLayoutStrategy
                 foreach ($children as $ch) {
                     $chBottom = $ch->y + $ch->h;
 
-                    $mB = $ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0;
+                    $mB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
 
                     if ($chBottom + $mB > $maxBottom) $maxBottom = (int)($chBottom + $mB);
                 }
@@ -1002,7 +1002,7 @@ class FlexLayoutStrategy
                 foreach ($children as $ch) {
                     $chRight = $ch->x + $ch->w;
 
-                    $mR = $ch->style['marginRight'] ?? $ch->style['margin'] ?? 0;
+                    $mR = (int)($ch->style['marginRight'] ?? $ch->style['margin'] ?? 0);
 
                     if ($chRight + $mR > $maxRight) $maxRight = (int)($chRight + $mR);
                 }
@@ -1018,7 +1018,7 @@ class FlexLayoutStrategy
                 foreach ($children as $ch) {
                     $chBottom = $ch->y + $ch->h;
 
-                    $mB = $ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0;
+                    $mB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
 
                     if ($chBottom + $mB > $maxBottom) $maxBottom = (int)($chBottom + $mB);
                 }
@@ -1042,9 +1042,9 @@ class FlexLayoutStrategy
             if ($basis >= 0) {
                 if ($basis > 0) {
                     if ($isRow) {
-                        $ch->w = max(0, $basis);
+                        $ch->w = (int)max(0, $basis);
                     } else {
-                        $ch->h = max(0, $basis);
+                        $ch->h = (int)max(0, $basis);
                     }
                 }
             } else {
@@ -1055,9 +1055,9 @@ class FlexLayoutStrategy
 
                     if ($basisVal > 0) {
                         if ($isRow) {
-                            $ch->w = max(0, $basisVal);
+                            $ch->w = (int)max(0, $basisVal);
                         } else {
-                            $ch->h = max(0, $basisVal);
+                            $ch->h = (int)max(0, $basisVal);
                         }
                     }
                 }

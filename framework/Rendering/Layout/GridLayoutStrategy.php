@@ -84,9 +84,9 @@ class GridLayoutStrategy
         $node->y += $translateY;
 
         // ── 应用 min/max 约束到尺寸（在子节点递归之前，确保 parent->w/h 立即可用）──
-        $node->w = max(0, (int)PercentResolver::applyMinMax($style, $width, true));
+        $node->w = (int)max(0, (int)PercentResolver::applyMinMax($style, $width, true));
 
-        $node->h = max(0, (int)PercentResolver::applyMinMax($style, $height, false));
+        $node->h = (int)max(0, (int)PercentResolver::applyMinMax($style, $height, false));
 
         // Parse grid template
 
@@ -100,9 +100,9 @@ class GridLayoutStrategy
 
         // Gap values (must be defined before 1fr calculation)
 
-        $colGap = $style['gridColumnGap'] ?? $style['gap'] ?? 0;
+        $colGap = (int)($style['gridColumnGap'] ?? $style['gap'] ?? 0);
 
-        $rowGap = $style['gridRowGap'] ?? $style['gap'] ?? 0;
+        $rowGap = (int)($style['gridRowGap'] ?? $style['gap'] ?? 0);
 
         $cols = null;
 
@@ -140,13 +140,13 @@ class GridLayoutStrategy
 
         $rows = $rowSpec['count'] ?? 5;
 
-        $cellH = $rowSpec['size'] ?? 60;
+        $cellH = (int)($rowSpec['size'] ?? 60);
 
         // 1fr 支持：根据容器宽度按比例分配
         if (($rowSpec['unit'] ?? '') === 'fr' && $node->h > 0) {
             $totalGaps = $rowGap * ($rows - 1);
 
-            $cellH = max(0, (int)(($node->h - $totalGaps) / $rows));
+            $cellH = (int)max(0, (int)(($node->h - $totalGaps) / $rows));
         }
 
         // ── Explicit grid columns (mixed px/%/fr) ──
@@ -334,7 +334,7 @@ class GridLayoutStrategy
             // NOTE: 不设置 $ch->h，保留 resolveNode 后的自然高度
 
             // min/max 约束（仅宽度）
-            $ch->w = max(0, (int)PercentResolver::applyMinMax($childStyle, $ch->w, true));
+            $ch->w = (int)max(0, (int)PercentResolver::applyMinMax($childStyle, $ch->w, true));
             // 高度不应用 min/max——等调整后得到自然内容高度
 
             // 调整子节点（重解析 flex/grid 的百分比尺寸）
@@ -396,7 +396,7 @@ class GridLayoutStrategy
                     break;
                 case 'end':
                 case 'flex-end':
-                    $ch->y = $newCellY + $actualRowH - $ch->h;
+                    $ch->y = (int)($newCellY + $actualRowH - $ch->h);
                     break;
                 case 'start':
                 case 'flex-start':

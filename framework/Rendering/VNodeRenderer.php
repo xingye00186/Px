@@ -917,7 +917,7 @@ class VNodeRenderer
         if ($contentH === 0) {
             foreach ($node->children as $child) {
                 $itemH = (int)($child->style['height'] ?? 0);
-                $contentH += max($child->h, $itemH);
+                $contentH += (int)max($child->h, $itemH);
             }
         }
 
