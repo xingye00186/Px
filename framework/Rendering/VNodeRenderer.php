@@ -4,6 +4,7 @@ namespace Px\Rendering;
 
 use native_types;
 
+use Px\Core\Config;
 use Px\ReactiveComponent;
 
 /**
@@ -219,7 +220,7 @@ class VNodeRenderer
             // 滚动容器还需在 clip-pop 之后绘制滚动条（确保在顶层）
             if ($isScrollNode) {
                 $scrollCtx = ['layer' => $node->layer];
-                $this->emitScrollbarElements($node, $scrollCtx, $elementsByLayer, $maxLayer);
+                ScrollbarEmitter::emit($node, $scrollCtx, $elementsByLayer, $maxLayer);
             }
         }
 
@@ -228,57 +229,35 @@ class VNodeRenderer
     }
 
     /**
-     * Emit scrollbar elements for a scroll container, after its children.
+     * 文本宽度测量（优先使用 C++ 精确测量，退化使用估算）。
      */
-    private function emitScrollbarElements(RenderNode $node, array $scrollCtx, array &$elementsByLayer, int &$maxLayer): void
+    private static function measureTextWidth(string $text, int $fontSize, bool $bold): int
     {
-        $layer = $scrollCtx['layer'];
-        $sbWidth = $node->style['scrollbarWidth'] ?? 12;
-        $trackColor = $node->style['scrollbarTrackColor'] ?? 0x4A4A4A;
-        $thumbColor = $node->style['scrollbarThumbColor'] ?? 0x888888;
-        $sbRadius = $node->style['scrollbarBorderRadius'] ?? 0;
-
-        // ── 竖滚动条 ──
-        $contentH = $node->contentHeight;
-        if ($contentH > $node->h) {
-            if ($layer > $maxLayer) $maxLayer = $layer;
-            if (!isset($elementsByLayer[$layer])) {
-                $elementsByLayer[$layer] = [];
-            }
-            $elementsByLayer[$layer][] = [
-                'type' => 'scrollbar-v',
-                'x' => $node->x, 'y' => $node->y,
-                'w' => $node->w, 'h' => $node->h,
-                'contentHeight' => $contentH,
-                'scrollTop' => $node->scrollTop,
-                'layer' => $layer,
-                'sbWidth' => $sbWidth,
-                'trackColor' => $trackColor,
-                'thumbColor' => $thumbColor,
-                'sbRadius' => $sbRadius,
-            ];
+        static $hasNative = null;
+        if ($hasNative === null) $hasNative = function_exists('\\sk_measure_text_width');
+        if ($hasNative) {
+            return (int)\sk_measure_text_width($text, $fontSize, $bold);
         }
-
-        // ── 横滚动条 ──
-        $contentW = $node->contentWidth;
-        if ($contentW > $node->w) {
-            if ($layer > $maxLayer) $maxLayer = $layer;
-            if (!isset($elementsByLayer[$layer])) {
-                $elementsByLayer[$layer] = [];
+        $boldFactor = $bold ? 1.35 : 1.0;
+        $charW = (int)($fontSize * 0.6 * $boldFactor);
+        $cjkW  = (int)($fontSize * $boldFactor);
+        $len   = strlen($text);
+        $total = 0;
+        for ($i = 0; $i < $len;) {
+            $b = ord($text[$i]);
+            if ($b < 0x80) {
+                $total += $charW; $i++;
+            } elseif ($b < 0xC0) {
+                $i++;
+            } elseif ($b < 0xE0) {
+                $total += $cjkW; $i += 2;
+            } elseif ($b < 0xF0) {
+                $total += $cjkW; $i += 3;
+            } else {
+                $total += $cjkW; $i += 4;
             }
-            $elementsByLayer[$layer][] = [
-                'type' => 'scrollbar-h',
-                'x' => $node->x, 'y' => $node->y,
-                'w' => $node->w, 'h' => $node->h,
-                'contentWidth' => $contentW,
-                'scrollLeft' => $node->scrollLeft,
-                'layer' => $layer,
-                'sbWidth' => $sbWidth,
-                'trackColor' => $trackColor,
-                'thumbColor' => $thumbColor,
-                'sbRadius' => $sbRadius,
-            ];
         }
+        return $total;
     }
 
     /**
@@ -511,7 +490,9 @@ class VNodeRenderer
             $text = $this->currentComponent()->getBindValue($vModel);
         }
 
-        file_put_contents('D:\\Px\\_debug_out.txt', "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);
+        if (Config::get('diag_enabled', false)) {
+            file_put_contents('d:\Px\_debug_out.txt', "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);
+        }
 
         if ($text === '') return null;
 
@@ -534,160 +515,41 @@ class VNodeRenderer
         }
         $containerX = (int)($props['container-x'] ?? $x);
 
-        // 文本测量函数（优先使用 C++ 精确测量，退化使用估算）
-        $measureTextWidth = function(string $str) use ($fontSize, $bold): int {
-            static $hasNative = null;
-            if ($hasNative === null) $hasNative = function_exists('\\sk_measure_text_width');
-            if ($hasNative) {
-                return (int)\sk_measure_text_width($str, $fontSize, $bold);
-            }
-            $boldFactor = $bold ? 1.35 : 1.0;
-            $charW = (int)($fontSize * 0.6 * $boldFactor);
-            $cjkW = (int)($fontSize * $boldFactor);
-            $len = strlen($str);
-            $total = 0;
-            for ($i = 0; $i < $len;) {
-                $b = ord($str[$i]);
-                if ($b < 0x80) {
-                    // ASCII
-                    $total += $charW;
-                    $i++;
-                } elseif ($b < 0xC0) {
-                    $i++;
-                } elseif ($b < 0xE0) {
-                    $total += $cjkW;
-                    $i += 2;
-                } elseif ($b < 0xF0) {
-                    $total += $cjkW;
-                    $i += 3;
-                } else {
-                    $total += $cjkW;
-                    $i += 4;
-                }
-            }
-            return $total;
-        };
-
-        // ── text-overflow: ellipsis 文本截断（含多行 -webkit-line-clamp）──
-        $textOverflow = $style['textOverflow'] ?? 'clip';
-        if ($textOverflow === 'ellipsis' && $containerW > 0) {
-            // 查询 -webkit-line-clamp（kebabToCamelCase 生成大写 W → WebkitLineClamp）
-            $lineClamp = (int)($style['WebkitLineClamp'] ?? $style['webkitLineClamp'] ?? 0);
-            $availWidth = $containerW - 4; // 4px 内边距
-
-            if ($lineClamp > 0) {
-                // ── 多行模式：精确行拆分 ──
-                $lineHeight = (int)($style['lineHeight'] ?? 0);
-                if ($lineHeight <= 0) {
-                    $lineHeight = (int)($fontSize * 1.4);
-                }
-
-                // 逐字符拆分行
-                $lines = [];
-                $currentLine = '';
-                $len = strlen($text);
-                for ($i = 0; $i < $len;) {
-                    $charLen = 1;
-                    $b = ord($text[$i]);
-                    if ($b >= 0xF0) $charLen = 4;
-                    elseif ($b >= 0xE0) $charLen = 3;
-                    elseif ($b >= 0xC0) $charLen = 2;
-                    $chunk = substr($text, $i, $charLen);
-                    $candidate = $currentLine . $chunk;
-                    if ($measureTextWidth($candidate) > $availWidth && $currentLine !== '') {
-                        $lines[] = $currentLine;
-                        if (count($lines) >= $lineClamp) break;
-                        $currentLine = $chunk;
+        // ── 文本溢出/省略处理（委派 TextOverflowProcessor）──
+        $overflowResult = TextOverflowProcessor::process($text, $containerW, $fontSize, $bold, $style);
+        $text = $overflowResult['text'];
+        
+        // 多行 clamp：构建 group 元素直接返回
+        if ($overflowResult['lines'] !== null && count($overflowResult['lines']) > 1) {
+            $elements = [];
+            $lineIdx = 0;
+            $lineHeight = $overflowResult['lineHeight'];
+            foreach ($overflowResult['lines'] as $seg) {
+                $lineY = $y + $lineIdx * $lineHeight;
+                $segX = $x;
+                if ($align === 'right' || $align === 'center') {
+                    $segW = self::measureTextWidth($seg, $fontSize, $bold);
+                    if ($align === 'right') {
+                        $segX = $containerX + $containerW - 12 - $segW;
+                        if ($segX < $containerX + 4) $segX = $containerX + 4;
                     } else {
-                        $currentLine = $candidate;
+                        $segX = $containerX + (int)(($containerW - $segW) / 2);
+                        if ($segX < $containerX) $segX = (int)$containerX;
                     }
-                    $i += $charLen;
                 }
-                if ($currentLine !== '') {
-                    $lines[] = $currentLine;
-                }
-
-                if (count($lines) > $lineClamp) {
-                    // 裁剪行数
-                    $lines = array_slice($lines, 0, $lineClamp);
-                    // 最后一行加… 并裁剪直到带…能放下
-                    $lastIdx = count($lines) - 1;
-                    $lastLine = $lines[$lastIdx];
-                    $len2 = strlen($lastLine);
-                    for ($j = $len2; $j > 0;) {
-                        $b = ord($lastLine[$j - 1]);
-                        $charLen = 1;
-                        if ($b >= 0xF0) { $j -= 4; $charLen = 4; }
-                        elseif ($b >= 0xE0) { $j -= 3; $charLen = 3; }
-                        elseif ($b >= 0xC0) { $j -= 2; $charLen = 2; }
-                        else { $j--; $charLen = 1; }
-                        $trimmed = substr($lastLine, 0, $j) . '…';
-                        if ($measureTextWidth($trimmed) <= $availWidth) {
-                            $lastLine = $trimmed;
-                            break;
-                        }
-                    }
-                    if ($j <= 0) $lastLine = '…';
-                    $lines[$lastIdx] = $lastLine;
-                }
-
-                if (count($lines) > 1) {
-                    // 多行 → 返回 group
-                    $elements = [];
-                    $lineIdx = 0;
-                    foreach ($lines as $seg) {
-                        $lineY = $y + $lineIdx * $lineHeight;
-                        $segX = $x;
-                        if ($align === 'right' || $align === 'center') {
-                            $segW = $measureTextWidth($seg);
-                            if ($align === 'right') {
-                                $segX = $containerX + $containerW - 12 - $segW;
-                                if ($segX < $containerX + 4) $segX = $containerX + 4;
-                            } else {
-                                $segX = $containerX + (int)(($containerW - $segW) / 2);
-                                if ($segX < $containerX) $segX = (int)$containerX;
-                            }
-                        }
-                        $elements[] = [
-                            'type' => 'text', 'text' => $seg,
-                            'x' => $segX, 'y' => $lineY,
-                            'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
-                            'align' => 'left', 'layer' => $layer,
-                        ];
-                        $lineIdx++;
-                    }
-                    return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
-                }
-
-                // 只有一行 → 走单行逻辑
-                if (count($lines) === 1) {
-                    $text = $lines[0];
-                }
-            } else {
-                // 单行模式
-                if ($measureTextWidth($text) > $availWidth) {
-                    // 逐字符裁剪直到带…能放下
-                    $len = strlen($text);
-                    for ($j = $len; $j > 0;) {
-                        $b = ord($text[$j - 1]);
-                        $charLen = 1;
-                        if ($b >= 0xF0) { $j -= 4; $charLen = 4; }
-                        elseif ($b >= 0xE0) { $j -= 3; $charLen = 3; }
-                        elseif ($b >= 0xC0) { $j -= 2; $charLen = 2; }
-                        else { $j--; $charLen = 1; }
-                        $trimmed = substr($text, 0, $j) . '…';
-                        if ($measureTextWidth($trimmed) <= $availWidth) {
-                            $text = $trimmed;
-                            break;
-                        }
-                    }
-                    if ($j <= 0) $text = '…';
-                }
+                $elements[] = [
+                    'type' => 'text', 'text' => $seg,
+                    'x' => $segX, 'y' => $lineY,
+                    'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
+                    'align' => 'left', 'layer' => $layer,
+                ];
+                $lineIdx++;
             }
+            return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
         }
-
+        
         if ($align === 'right' || $align === 'center') {
-            $textWidth = $measureTextWidth($text);
+            $textWidth = self::measureTextWidth($text, $fontSize, $bold);
             if ($align === 'right') {
                 $x = $containerX + $containerW - 12 - $textWidth;
                 if ($x < $containerX + 4) $x = $containerX + 4;
