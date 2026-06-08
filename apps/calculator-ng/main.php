@@ -9,6 +9,6 @@ const WINDOW_TITLE  = 'Calculator';
 function main(): int
 {
     $root = ComponentFactory::create(AppComponent::class);
-    Application::create()->mount($root)->run();
+    Application::create()->mount($root, __DIR__)->run();
     return 0;
 }
