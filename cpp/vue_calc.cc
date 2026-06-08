@@ -22,6 +22,17 @@
 
 using namespace php;
 
+// Skia WM_PAINT 处理函数（在 skia_render.cc 中实现）
+extern Int php_sk_handle_paint(Int hdc);
+
+// [VUE] trace macro — disable for production; enable by uncommenting the #define below
+// #define VUE_TRACE_ENABLED
+#ifdef VUE_TRACE_ENABLED
+#define VUE_TRACE(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define VUE_TRACE(...) ((void)0)
+#endif
+
 // ============================================================
 // Early console window hide (CONSOLE subsystem)
 // Hides the console window via C-level CRT init (.CRT$XIU),
@@ -64,7 +75,7 @@ static std::string g_vueDefaultFont = "Microsoft YaHei";
 void php_vue_set_default_font(String fontFamily) {
     if (fontFamily.length() > 0) {
         g_vueDefaultFont = std::string(fontFamily.data(), fontFamily.length());
-        fprintf(stderr, "[VUE] set_default_font '%s'\n", g_vueDefaultFont.c_str());
+        VUE_TRACE("[VUE] set_default_font '%s'\n", g_vueDefaultFont.c_str());
     }
 }
 
@@ -92,6 +103,16 @@ LRESULT CALLBACK VueCalcWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         case WM_TIMER:
             // 由 TimerCallback 处理，此处不处理
             return 0;
+        case WM_PAINT:
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
+            // Skia 路径：将缓存 SkBitmap blit 到屏幕
+            // 非 Skia 路径：空操作（BeginPaint/EndPaint 验证区域）
+            php_sk_handle_paint((Int)hdc);
+            EndPaint(hWnd, &ps);
+            return 0;
+        }
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
@@ -105,7 +126,7 @@ Int php_vue_window_create(String title, Int width, Int height) {
         Gdiplus::GdiplusStartupInput gdiplusStartupInput;
         Gdiplus::GdiplusStartup(&g_vueGdiplusToken, &gdiplusStartupInput, NULL);
         g_vueGdiplusInited = true;
-        fprintf(stderr, "[VUE] GDI+ initialized\n");
+        VUE_TRACE("[VUE] GDI+ initialized\n");
     }
 
     WNDCLASS wc;
@@ -432,11 +453,11 @@ Int php_vue_load_image(String path) {
 
     Gdiplus::Image* img = Gdiplus::Image::FromFile(wpath.c_str());
     if (!img || img->GetLastStatus() != Gdiplus::Ok) {
-        fprintf(stderr, "[VUE] load_image FAIL: '%s'\n", path.data());
+        VUE_TRACE("[VUE] load_image FAIL: '%s'\n", path.data());
         delete img;
         return 0;
     }
-    fprintf(stderr, "[VUE] load_image OK '%s' -> %p\n", path.data(), (void*)img);
+    VUE_TRACE("[VUE] load_image OK '%s' -> %p\n", path.data(), (void*)img);
     return (Int)img;
 }
 
@@ -457,5 +478,5 @@ void php_vue_free_image(Int handle) {
     if (handle == 0) return;
     Gdiplus::Image* image = reinterpret_cast<Gdiplus::Image*>((int)handle);
     delete image;
-    fprintf(stderr, "[VUE] free_image %p\n", (void*)image);
+    VUE_TRACE("[VUE] free_image %p\n", (void*)image);
 }

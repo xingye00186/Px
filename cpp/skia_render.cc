@@ -56,6 +56,14 @@
 
 #endif
 
+// [SK] trace macro — disable for production; enable by uncommenting the #define below
+// #define SK_TRACE_ENABLED
+#ifdef SK_TRACE_ENABLED
+#define SK_TRACE(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define SK_TRACE(...) ((void)0)
+#endif
+
 using namespace php;
 
 // ============================================================
@@ -81,7 +89,7 @@ static std::string g_skDefaultFont = "Microsoft YaHei";
 void php_sk_set_default_font(String fontFamily) {
     if (fontFamily.length() > 0) {
         g_skDefaultFont = std::string(fontFamily.data(), fontFamily.length());
-        fprintf(stderr, "[SK] set_default_font '%s'\n", g_skDefaultFont.c_str());
+        SK_TRACE("[SK] set_default_font '%s'\n", g_skDefaultFont.c_str());
     }
 }
 
@@ -197,14 +205,14 @@ Int php_sk_create_window_context(Int hWnd, Int width, Int height) {
     g_skHwnd = (HWND)(Int)hWnd;
     g_skW    = (int)width;
     g_skH    = (int)height;
-    fprintf(stderr, "[SK] create_window_context hwnd=%p w=%d h=%d\n", g_skHwnd, g_skW, g_skH);
+    SK_TRACE("[SK] create_window_context hwnd=%p w=%d h=%d\n", g_skHwnd, g_skW, g_skH);
 
     // GDI+ 初始化（图片加载需要）
     if (!g_skGdiplusInited) {
         Gdiplus::GdiplusStartupInput gdiplusStartupInput;
         Gdiplus::GdiplusStartup(&g_skGdiplusToken, &gdiplusStartupInput, NULL);
         g_skGdiplusInited = true;
-        fprintf(stderr, "[SK] GDI+ initialized\n");
+        SK_TRACE("[SK] GDI+ initialized\n");
     }
 
 #ifdef USE_SKIA
@@ -213,12 +221,12 @@ Int php_sk_create_window_context(Int hWnd, Int width, Int height) {
         g_skW, g_skH,
         (SkPMColor*)g_skSkBitmap.getPixels(),
         g_skSkBitmap.rowBytes());
-    fprintf(stderr, "[SK] canvas=%p\n", g_skCanvas.get());
+    SK_TRACE("[SK] canvas=%p\n", g_skCanvas.get());
     if (g_skCanvas) {
         g_skCanvas->clear(SK_ColorWHITE);
     }
     bool fontOk = skEnsureFont();
-    fprintf(stderr, "[SK] skEnsureFont=%d fontMgr=%p typeface=%p\n", fontOk, g_skFontMgr.get(), g_skTypeface.get());
+    SK_TRACE("[SK] skEnsureFont=%d fontMgr=%p typeface=%p\n", fontOk, g_skFontMgr.get(), g_skTypeface.get());
 #endif
     return (Int)1;
 }
@@ -236,14 +244,14 @@ void php_sk_destroy_context() {
     if (g_skGdiplusInited) {
         Gdiplus::GdiplusShutdown(g_skGdiplusToken);
         g_skGdiplusInited = false;
-        fprintf(stderr, "[SK] GDI+ shutdown\n");
+        SK_TRACE("[SK] GDI+ shutdown\n");
     }
 }
 
 // 开始一帧：GDI 创双缓冲 memDC（始终保留以兼容 end_frame BitBlt 流程）
 void php_sk_begin_frame() {
     if (!g_skHwnd) {
-        fprintf(stderr, "[SK] begin_frame SKIP (no hwnd)\n");
+        SK_TRACE("[SK] begin_frame SKIP (no hwnd)\n");
         return;
     }
     HDC screen = GetDC(g_skHwnd);
@@ -253,7 +261,7 @@ void php_sk_begin_frame() {
     g_skBitmap = CreateCompatibleBitmap(screen, rc.right, rc.bottom);
     SelectObject(g_skHdc, g_skBitmap);
     ReleaseDC(g_skHwnd, screen);
-    fprintf(stderr, "[SK] begin_frame rc=(%d,%d) hdc=%p bmp=%p\n", rc.right, rc.bottom, g_skHdc, g_skBitmap);
+    SK_TRACE("[SK] begin_frame rc=(%d,%d) hdc=%p bmp=%p\n", rc.right, rc.bottom, g_skHdc, g_skBitmap);
 
 #ifdef USE_SKIA
     if (g_skCanvas) {
@@ -267,26 +275,26 @@ void php_sk_begin_frame() {
 // 结束一帧：阶段三 Skia → GDI 中转 → BitBlt 到 screen
 void php_sk_end_frame() {
     if (!g_skHwnd || !g_skHdc) {
-        fprintf(stderr, "[SK] end_frame SKIP (hwnd=%p hdc=%p)\n", g_skHwnd, g_skHdc);
+        SK_TRACE("[SK] end_frame SKIP (hwnd=%p hdc=%p)\n", g_skHwnd, g_skHdc);
         return;
     }
     RECT rc;
     GetClientRect(g_skHwnd, &rc);
 #ifdef USE_SKIA
-    fprintf(stderr, "[SK] end_frame BEGIN rc=(%d,%d) hdc=%p canvas=%p\n", rc.right, rc.bottom, g_skHdc, g_skCanvas.get());
+    SK_TRACE("[SK] end_frame BEGIN rc=(%d,%d) hdc=%p canvas=%p\n", rc.right, rc.bottom, g_skHdc, g_skCanvas.get());
     if (g_skCanvas) {
         g_skCanvas->restore();
-        fprintf(stderr, "[SK] end_frame after restore\n");
+        SK_TRACE("[SK] end_frame after restore\n");
         skBlitToGdi();
-        fprintf(stderr, "[SK] end_frame after skBlitToGdi\n");
+        SK_TRACE("[SK] end_frame after skBlitToGdi\n");
     }
 #endif
 
     HDC screen = GetDC(g_skHwnd);
-    fprintf(stderr, "[SK] end_frame screen=%p\n", screen);
+    SK_TRACE("[SK] end_frame screen=%p\n", screen);
     if (screen) {
         BOOL ok = BitBlt(screen, 0, 0, rc.right, rc.bottom, g_skHdc, 0, 0, SRCCOPY);
-        fprintf(stderr, "[SK] end_frame BitBlt ok=%d\n", ok);
+        SK_TRACE("[SK] end_frame BitBlt ok=%d\n", ok);
         ReleaseDC(g_skHwnd, screen);
     }
     DeleteDC(g_skHdc);
@@ -295,7 +303,7 @@ void php_sk_end_frame() {
         g_skBitmap = NULL;
     }
     g_skHdc = NULL;
-    fprintf(stderr, "[SK] end_frame DONE\n");
+    SK_TRACE("[SK] end_frame DONE\n");
 }
 
 // 全窗口清屏
@@ -316,7 +324,7 @@ void php_sk_clear_window(Int rgb) {
 void php_sk_fill_rect(Int x, Int y, Int w, Int h, Int rgb) {
     static int fillRectCount = 0;
     if (++fillRectCount <= 20 || fillRectCount % 20 == 0) {
-        fprintf(stderr, "[SK] fill_rect #%d x=%d y=%d w=%d h=%d rgb=0x%X\n", fillRectCount, (int)x, (int)y, (int)w, (int)h, (unsigned)rgb);
+        SK_TRACE("[SK] fill_rect #%d x=%d y=%d w=%d h=%d rgb=0x%X\n", fillRectCount, (int)x, (int)y, (int)w, (int)h, (unsigned)rgb);
     }
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -450,7 +458,7 @@ void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity)
 // 绘制文本（阶段三：用 SkFontMgr_New_Custom_Directory 加载 Noto Sans SC 后 drawString）
 void php_sk_draw_text(Int x, Int y, String text, Int fontSize, Int rgb, Int bold) {
 #ifdef USE_SKIA
-    fprintf(stderr, "[SK] draw_text x=%d y=%d text='%s' fontSize=%d rgb=0x%X bold=%d canvas=%p\n",
+    SK_TRACE("[SK] draw_text x=%d y=%d text='%s' fontSize=%d rgb=0x%X bold=%d canvas=%p\n",
         (int)x, (int)y, text.data() ? text.data() : "(null)", (int)fontSize, (unsigned int)(Int)rgb, (int)bold, g_skCanvas.get());
     if (!g_skCanvas) return;
     if (text.length() == 0) return;
@@ -638,6 +646,41 @@ void php_sk_resize_context(Int width, Int height) {
 }
 
 // ============================================================
+// WM_PAINT 处理：将缓存 SkBitmap 内容 blit 到屏幕 DC
+// 修复最小化/恢复后白屏问题
+// ============================================================
+Int php_sk_handle_paint(Int hdc) {
+#ifdef USE_SKIA
+    if (!g_skSkBitmap.getPixels()) return 0;
+    int w = g_skSkBitmap.width();
+    int h = g_skSkBitmap.height();
+    if (w <= 0 || h <= 0) return 0;
+
+    size_t rowBytes = w * 4;
+    g_skPixelBuf.resize(rowBytes * h);
+
+    SkImageInfo info = SkImageInfo::Make(w, h, kBGRA_8888_SkColorType, kPremul_SkAlphaType);
+    g_skSkBitmap.readPixels(info, g_skPixelBuf.data(), rowBytes, 0, 0);
+
+    BITMAPINFO bmi;
+    ZeroMemory(&bmi, sizeof(bmi));
+    bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth       = w;
+    bmi.bmiHeader.biHeight      = -h;
+    bmi.bmiHeader.biPlanes      = 1;
+    bmi.bmiHeader.biBitCount    = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    SetDIBitsToDevice((HDC)hdc, 0, 0, w, h, 0, 0, 0, h,
+                      g_skPixelBuf.data(), &bmi, DIB_RGB_COLORS);
+    return 1;
+#else
+    (void)hdc;
+    return 0;
+#endif
+}
+
+// ============================================================
 // 图片加载（双路径：USE_SKIA → SkImage, 非USE_SKIA → GDI+）
 // ============================================================
 
@@ -652,12 +695,12 @@ Int php_sk_load_image(String path) {
     // 阶段三：Skia 原生图片解码
     sk_sp<SkData> data = SkData::MakeFromFileName(path.data());
     if (!data) {
-        fprintf(stderr, "[SK] load_image FAIL: cannot read '%s'\n", path.data());
+        SK_TRACE("[SK] load_image FAIL: cannot read '%s'\n", path.data());
         return 0;
     }
     sk_sp<SkImage> img = SkImages::DeferredFromEncodedData(std::move(data));
     if (!img) {
-        fprintf(stderr, "[SK] load_image FAIL: decode failed '%s'\n", path.data());
+        SK_TRACE("[SK] load_image FAIL: decode failed '%s'\n", path.data());
         return 0;
     }
     // release() → 调用方持有一份 ref，free 时 unref()
@@ -671,11 +714,11 @@ Int php_sk_load_image(String path) {
 
     Gdiplus::Image* img = Gdiplus::Image::FromFile(wpath.c_str());
     if (!img || img->GetLastStatus() != Gdiplus::Ok) {
-        fprintf(stderr, "[SK] load_image FAIL: GDI+ load failed '%s'\n", path.data());
+        SK_TRACE("[SK] load_image FAIL: GDI+ load failed '%s'\n", path.data());
         delete img;
         return 0;
     }
-    fprintf(stderr, "[SK] load_image OK '%s' -> %p\n", path.data(), (void*)img);
+    SK_TRACE("[SK] load_image OK '%s' -> %p\n", path.data(), (void*)img);
     return (Int)img;
 #endif
 }
@@ -713,10 +756,10 @@ void php_sk_free_image(Int handle) {
 #ifdef USE_SKIA
     SkImage* image = reinterpret_cast<SkImage*>((int)handle);
     image->unref();  // 释放 sk_sp::release() 转交的引用
-    fprintf(stderr, "[SK] free_image %p (SkImage)\n", (void*)image);
+    SK_TRACE("[SK] free_image %p (SkImage)\n", (void*)image);
 #else
     Gdiplus::Image* image = reinterpret_cast<Gdiplus::Image*>((int)handle);
     delete image;
-    fprintf(stderr, "[SK] free_image %p (GDI+ Image)\n", (void*)image);
+    SK_TRACE("[SK] free_image %p (GDI+ Image)\n", (void*)image);
 #endif
 }
