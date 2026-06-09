@@ -240,7 +240,7 @@ class LayoutResolver
 
                 foreach ($node->children as $child) {
 
-                    $bottom = (int)($child->y + $child->h);
+                    $bottom = (int)($child->y + $child->visualH);
 
                     if ($bottom > $maxBottom) {
                         $maxBottom = $bottom;
@@ -267,16 +267,13 @@ class LayoutResolver
                     foreach ($node->children as $child) {
 
                         $cLeft = $child->style['left'] ?? 0;
-
-                        $cWidth = $child->style['width'] ?? $child->w;
-
-                        $right = (int)($cLeft + $cWidth);
+                        $right = (int)($cLeft + $child->visualW);
 
                         if ($right > $maxRight) {
                             $maxRight = $right;
                         }
                     }
-                    $node->contentWidth = (int)max($maxRight, $node->w);
+                    $node->contentWidth = (int)max($maxRight, $node->visualW);
 
                     $maxScrollX = (int)max($node->contentWidth - $node->w, 0);
 
@@ -287,7 +284,7 @@ class LayoutResolver
 
                 } else {
                     // No horizontal scroll 鈥?content width equals container width
-                    $node->contentWidth = $node->w;
+                    $node->contentWidth = $node->visualW;
                 }
             }
 

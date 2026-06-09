@@ -165,7 +165,7 @@ class VNodeRenderer
         if ($isScrollNode) {
             $this->scrollCtxStack[] = [
                 'x' => $node->x, 'y' => $node->y,
-                'w' => $node->w, 'h' => $node->h,
+                'w' => $node->visualW, 'h' => $node->visualH,
                 'scrollTop' => $node->scrollTop,
                 'scrollLeft' => $node->scrollLeft,
                 'overflowX' => $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible',
@@ -190,7 +190,7 @@ class VNodeRenderer
             }
             $elementsByLayer[$layer][] = [
                 'type' => 'clip-push',
-                'x' => $node->x, 'y' => $node->y, 'w' => $node->w, 'h' => $node->h,
+                'x' => $node->x, 'y' => $node->y, 'w' => $node->visualW, 'h' => $node->visualH,
                 'layer' => $layer,
             ];
         }
@@ -290,8 +290,8 @@ class VNodeRenderer
         // A1 重构: 布局坐标 + 绘制时滚动偏移（不在布局层修改坐标）
         $x = $node->x + $node->renderOffsetX;
         $y = $node->y + $node->renderOffsetY;
-        $w = $node->w;
-        $h = $node->h;
+        $w = $node->visualW;
+        $h = $node->visualH;
         $layer = $node->layer;
 
         // 滚动裁切（position:fixed 元素不受祖先滚动容器影响）

@@ -377,7 +377,7 @@ class RenderTreeManager
         \Px\Core\PerfCounter::start('tree_convert');
         try {
             // 组件占位节点：递归处理子组件树，$candidates 透传
-            // 同时将父组件的 layoutOffset 应用到子组件第一个可渲染元素上
+            // Vue 3 标准：父组件 props['style'] 全部透传合并到子组件根元素
             if ($vnode->isComponent()) {
                 $instance = $vnode->componentInstance;
                 if ($instance === null) {
@@ -403,35 +403,18 @@ class RenderTreeManager
                     $childGroupId
                 );
 
-                // 从 #component 节点的 props['style'] 解析 left/top 定位
-                // （替代已废弃的 VNode::$layoutOffset，保持 VNode 不可变）
+                // Vue 3 标准：父组件 props['style'] 全部透传合并到子组件根元素
+                // 子组件自身 style 为基准，父组件 style 覆盖（CSS 标准层叠规则）
                 $placeholderStyle = $vnode->props['style'] ?? '';
-                if ($placeholderStyle !== '') {
-                    $offset = [];
-                    $pairs = explode(';', $placeholderStyle);
-                    foreach ($pairs as $pair) {
-                        $pair = trim($pair);
-                        $lower = strtolower($pair);
-                        if (str_starts_with($lower, 'left:')) {
-                            $offset['left'] = (int) trim(substr($pair, 5));
-                        } elseif (str_starts_with($lower, 'top:')) {
-                            $offset['top'] = (int) trim(substr($pair, 4));
+                if ($placeholderStyle !== '' && $parent !== null && $beforeCount < count($parent->children)) {
+                    $newChildren = array_slice($parent->children, $beforeCount);
+                    if (count($newChildren) > 0) {
+                        $firstChild = $newChildren[0];
+                        $parsedStyles = CssMappings::parseInlineStyle($placeholderStyle);
+                        foreach ($parsedStyles as $key => $value) {
+                            $firstChild->style[$key] = $value;
                         }
-                    }
-                    if (count($offset) > 0) {
-                        if ($parent !== null && $beforeCount < count($parent->children)) {
-                            $newChildren = array_slice($parent->children, $beforeCount);
-                            if (count($newChildren) > 0) {
-                                $firstChild = $newChildren[0];
-                                if (isset($offset['left'])) {
-                                    $firstChild->style['left'] = $offset['left'];
-                                }
-                                if (isset($offset['top'])) {
-                                    $firstChild->style['top'] = $offset['top'];
-                                }
-                                $firstChild->layoutDirty = true;
-                            }
-                        }
+                        $firstChild->layoutDirty = true;
                     }
                 }
 

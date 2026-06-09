@@ -19,10 +19,10 @@ use Px\Rendering\RenderNode;
 class LayoutContext
 {
     /** 父节点内容区左上角 x（已包含父 padding） */
-    public int $parentX;
+    public int $parentX = 0;
 
     /** 父节点内容区左上角 y（已包含父 padding） */
-    public int $parentY;
+    public int $parentY = 0;
 
     /** 父 RenderNode（根节点为 null） */
     public ?RenderNode $parent;

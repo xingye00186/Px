@@ -199,6 +199,40 @@ class PercentResolver
     }
 
     /**
+     * 计算视觉总宽度（border-box width）。
+     * content-box: visualW = w + padding + border
+     * border-box:  visualW = w（因为 w 已包含 padding+border）
+     */
+    public static function resolveVisualW(array $style, int $w): int
+    {
+        $boxSizing = $style['boxSizing'] ?? 'content-box';
+        if ($boxSizing === 'border-box') {
+            return max(0, $w);
+        }
+        $padL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
+        $padR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
+        $bw = (int)($style['borderWidth'] ?? 0);
+        return max(0, $w + $padL + $padR + $bw * 2);
+    }
+
+    /**
+     * 计算视觉总高度（border-box height）。
+     * content-box: visualH = h + padding + border
+     * border-box:  visualH = h（因为 h 已包含 padding+border）
+     */
+    public static function resolveVisualH(array $style, int $h): int
+    {
+        $boxSizing = $style['boxSizing'] ?? 'content-box';
+        if ($boxSizing === 'border-box') {
+            return max(0, $h);
+        }
+        $padT = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+        $padB = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
+        $bw = (int)($style['borderWidth'] ?? 0);
+        return max(0, $h + $padT + $padB + $bw * 2);
+    }
+
+    /**
      * 应用 CSS min-width/max-width 或 min-height/max-height 约束。
      * CSS 规范: 如果 min > max，则 max 被忽略。
      */

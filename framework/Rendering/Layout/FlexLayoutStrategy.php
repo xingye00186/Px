@@ -76,9 +76,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $node->y += $translateY;
 
         // CSS: flex item percentage width resolves against content width
-        $parentW = (int)(($ctx->parent !== null) ? max(0, $ctx->parent->w
-            - (int)($ctx->parent->style['paddingLeft'] ?? $ctx->parent->style['padding'] ?? 0)
-            - (int)($ctx->parent->style['paddingRight'] ?? $ctx->parent->style['padding'] ?? 0)) : 0);
+        $parentW = (int)(($ctx->parent !== null)
+            ? PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w)
+            : 0);
 
         $parentH = ($ctx->parent !== null) ? $ctx->parent->h : 0;
 
@@ -89,6 +89,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $node->w = (int)max(0, (int)$width);
 
         $node->h = (int)max(0, (int)$height);
+
+        $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+        $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
 
         // ── Scroll container post-processing for flex/grid display modes ──
 
@@ -120,15 +123,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
             if ($parentIsColumn && !$hasExplicitW && $width === 0) {
-                $parentPadL = (int)($ctx->parent->style['paddingLeft'] ?? $ctx->parent->style['padding'] ?? 0);
-
-                $parentPadR = (int)($ctx->parent->style['paddingRight'] ?? $ctx->parent->style['padding'] ?? 0);
-
-                $parentContentW = (int)max(0, $ctx->parent->w - $parentPadL - $parentPadR);
+                $parentContentW = PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w);
 
                 $width = $parentContentW;
 
                 $node->w = (int)max(0, (int)$width);
+
+                $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
             }
         }
 
@@ -272,7 +273,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $currentLineMain = 0;
 
             foreach ($children as $idx => $ch) {
-                $chMain = $isRow ? $ch->w : $ch->h;
+                $chMain = $isRow ? $ch->visualW : $ch->visualH;
 
                 // Include margins in size calculation
 
@@ -389,7 +390,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     if ($data['isFlexGrow']) {
                         $fixedTotalMain += $isRow ? $mL + $mR : $mT + $mB;
                     } else {
-                        $sz = $isRow ? $ch->w : $ch->h;
+                        $sz = $isRow ? $ch->visualW : $ch->visualH;
 
                         $fixedTotalMain += $sz + ($isRow ? $mL + $mR : $mT + $mB);
                     }
@@ -415,8 +416,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                         if ($isRow) {
                             $ch->w = (int)max(0, $allocated);
+                            $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
                         } else {
                             $ch->h = (int)max(0, $allocated);
+                            $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                         }
                     }
                 }
@@ -442,11 +445,11 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 if ($isRow) {
                     $lineTotalMain += $ch->w + $mL + $mR;
 
-                    $lineMaxCross = (int)max($lineMaxCross, $ch->h);
+                    $lineMaxCross = (int)max($lineMaxCross, $ch->visualH);
                 } else {
                     $lineTotalMain += $ch->h + $mT + $mB;
 
-                    $lineMaxCross = (int)max($lineMaxCross, $ch->w);
+                    $lineMaxCross = (int)max($lineMaxCross, $ch->visualW);
                 }
             }
 
@@ -590,8 +593,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                     if ($isRow) {
                         $ch->w = (int)$size;
+                        $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
                     } else {
                         $ch->h = (int)$size;
+                        $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                     }
                 }
             }
@@ -602,6 +607,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $ch->w = (int)max(0, (int)PercentResolver::resolveMinMax($ch->style, $ch->w, true));
 
                 $ch->h = (int)max(0, (int)PercentResolver::resolveMinMax($ch->style, $ch->h, false));
+
+                $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
+                $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
             }
 
             // ── Step 9: Recalculate totalMain after shrink ──
@@ -624,11 +632,11 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 if ($isRow) {
                     $lineTotalMain += $ch->w + $mL + $mR;
 
-                    $lineMaxCross = (int)max($lineMaxCross, $ch->h);
+                    $lineMaxCross = (int)max($lineMaxCross, $ch->visualH);
                 } else {
                     $lineTotalMain += $ch->h + $mT + $mB;
 
-                    $lineMaxCross = (int)max($lineMaxCross, $ch->w);
+                    $lineMaxCross = (int)max($lineMaxCross, $ch->visualW);
                 }
             }
 
@@ -686,9 +694,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         $mB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
 
                         if ($isRow) {
-                            $lineTotalMain += $ch->w + $mL + $mR;
+                            $lineTotalMain += $ch->visualW + $mL + $mR;
                         } else {
-                            $lineTotalMain += $ch->h + $mT + $mB;
+                            $lineTotalMain += $ch->visualH + $mT + $mB;
                         }
                     }
 
@@ -775,6 +783,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                                 $stretchedH = (int)max(0, (int)($lineMaxCross - $childMarginTop - $childMarginBottom));
                                 if ($stretchedH > 0) {
                                     $ch->h = $stretchedH;
+                                    $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                                     $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
                                 }
                             }
@@ -785,6 +794,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                                 $stretchedW = (int)max(0, (int)($lineMaxCross - $childMarginLeft - $childMarginRight));
                                 if ($stretchedW > 0) {
                                     $ch->w = $stretchedW;
+                                    $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
                                     $lineFlexData[$i]['crossAxisSized'] = ($ch->w !== $crossBefore);
                                 }
                             }
@@ -812,6 +822,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $stretchedH = (int)max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
                             if ($stretchedH > 0) {
                                 $ch->h = $stretchedH;
+                                $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                                 $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
                             }
                         } elseif (!$isRow && !$lineFlexData[$i]['hasExplicitCrossSize']) {
@@ -819,6 +830,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $stretchedW = (int)max(0, (int)($containerCross - $childMarginLeft - $childMarginRight));
                             if ($stretchedW > 0) {
                                 $ch->w = $stretchedW;
+                                $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
                                 $lineFlexData[$i]['crossAxisSized'] = ($ch->w !== $crossBefore);
                             }
                         }
@@ -863,7 +875,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 }
 
                 // Advance main position
-                $chMainSize = $isRow ? $ch->w : $ch->h;
+                $chMainSize = $isRow ? $ch->visualW : $ch->visualH;
                 $currentMain += $chMainSize + $gap + $spaceBetween;
 
                 if ($isRow) {
@@ -911,6 +923,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                         $chCtx = new LayoutContext($prX, $prY, $ctx->parent);
                         $this->resolver->resolveNode($chTp, $chCtx);
+
+                        $chTp->visualW = PercentResolver::resolveVisualW($chTp->style, $chTp->w);
+                        $chTp->visualH = PercentResolver::resolveVisualH($chTp->style, $chTp->h);
 
                         if ($hasOrigW) {
                             $chTp->style['width'] = $origW;
@@ -984,7 +999,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $maxRight = $node->x + $paddingLeft;
 
                 foreach ($children as $ch) {
-                    $chRight = $ch->x + $ch->w;
+                    $chRight = $ch->x + $ch->visualW;
 
                     $mR = (int)($ch->style['marginRight'] ?? $ch->style['margin'] ?? 0);
 
@@ -1000,7 +1015,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $maxBottom = $node->y + $paddingTop;
 
                 foreach ($children as $ch) {
-                    $chBottom = $ch->y + $ch->h;
+                    $chBottom = $ch->y + $ch->visualH;
 
                     $mB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
 
@@ -1016,7 +1031,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $maxRight = $node->x + $paddingLeft;
 
                 foreach ($children as $ch) {
-                    $chRight = $ch->x + $ch->w;
+                    $chRight = $ch->x + $ch->visualW;
 
                     $mR = (int)($ch->style['marginRight'] ?? $ch->style['margin'] ?? 0);
 
@@ -1032,7 +1047,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $maxBottom = $node->y + $paddingTop;
 
                 foreach ($children as $ch) {
-                    $chBottom = $ch->y + $ch->h;
+                    $chBottom = $ch->y + $ch->visualH;
 
                     $mB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
 
@@ -1044,6 +1059,11 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         }
         // Trace children heights for root container
         error_log('[DIAG_FLEX_H] exit type=' . $node->type . ' w=' . $node->w . ' h=' . $node->h . ' explicitH=' . ((array_key_exists('height', $style) ? $style['height'] : 'none')));
+
+        // Set container's own visualW/visualH
+        $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+        $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+
         error_log('[DIAG_FLEX] exit resolveFlexLayout type=' . $node->type);
     }
 
@@ -1062,8 +1082,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 if ($basis > 0) {
                     if ($isRow) {
                         $ch->w = (int)max(0, $basis);
+                        $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
                     } else {
                         $ch->h = (int)max(0, $basis);
+                        $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                     }
                 }
             } else {
@@ -1075,8 +1097,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     if ($basisVal > 0) {
                         if ($isRow) {
                             $ch->w = (int)max(0, $basisVal);
+                            $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
                         } else {
                             $ch->h = (int)max(0, $basisVal);
+                            $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                         }
                     }
                 }

@@ -439,7 +439,7 @@ class Application
 
         // 必须使用 getVNodeTree() 而非 render()，确保结果缓存到 vnodeCache。
         // 否则后续 updateFromVNode() 调用 $instance->getVNodeTree() 时会再次执行 render()，
-        // 返回一个新 VNode 树，此时 layoutOffset 已设置在占位节点上，定位由 RenderTreeManager 处理。
+        // 返回一个新 VNode 树，style 透传由 RenderTreeManager 处理。
         $childRoot = $instance->getVNodeTree();
 
         // ── B2 不可变性：克隆 VNode 再设置 children/componentInstance ──
@@ -448,24 +448,8 @@ class Application
         $expanded->componentInstance = $instance;
         $expanded->children = $childRoot;
 
-        // 从 #component 节点的 style 中提取 left/top 作为 layoutOffset
-        $placeholderStyle = $node->props['style'] ?? '';
-        if ($placeholderStyle !== '') {
-            $offset = [];
-            $pairs = explode(';', $placeholderStyle);
-            foreach ($pairs as $pair) {
-                $pair = trim($pair);
-                $lower = strtolower($pair);
-                if (str_starts_with($lower, 'left:')) {
-                    $offset['left'] = (int)trim(substr($pair, 5));
-                } elseif (str_starts_with($lower, 'top:')) {
-                    $offset['top'] = (int)trim(substr($pair, 4));
-                }
-            }
-            if (count($offset) > 0) {
-                $expanded->layoutOffset = $offset;
-            }
-        }
+        // Vue 3 标准：style 透传由 RenderTreeManager::updateFromVNode 处理
+        // （父组件 props['style'] 全部合并到子组件根元素 RenderNode）
 
         $this->patchComponentTree($expanded->children, $instance, null);
 
@@ -571,24 +555,7 @@ class Application
             $matched->componentInstance = $instance;
             $matched->children = $instance->getVNodeTree();
 
-            // 从 #component 节点的 style 中提取 left/top 作为 layoutOffset
-            $placeholderStyle = $newNode->props['style'] ?? '';
-            if ($placeholderStyle !== '') {
-                $offset = [];
-                $pairs = explode(';', $placeholderStyle);
-                foreach ($pairs as $pair) {
-                    $pair = trim($pair);
-                    $lower = strtolower($pair);
-                    if (str_starts_with($lower, 'left:')) {
-                        $offset['left'] = (int)trim(substr($pair, 5));
-                    } elseif (str_starts_with($lower, 'top:')) {
-                        $offset['top'] = (int)trim(substr($pair, 4));
-                    }
-                }
-                if (count($offset) > 0) {
-                    $matched->layoutOffset = $offset;
-                }
-            }
+            // Vue 3 标准：style 透传由 RenderTreeManager::updateFromVNode 处理
 
             $this->registerComponent($instance->getId(), $instance);
 

@@ -78,7 +78,11 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         $ancestorX = ($ancestor !== null) ? $ancestor->x + $ancestorPaddingLeft : 0;
         $ancestorY = ($ancestor !== null) ? $ancestor->y + $ancestorPaddingTop : 0;
-        $ancestorW = ($ancestor !== null) ? $ancestor->w : $viewportW;
+        // 使用定位祖先的 padding box 宽度（CSS Positioned Layout §3.1）
+        // 在新模型中 ancestor->w = CSS width, padding box = w + paddingLeft + paddingRight
+        $ancestorW = ($ancestor !== null)
+            ? $ancestor->w + $ancestorPaddingLeft + $ancestorPaddingRight
+            : $viewportW;
         $ancestorH = ($ancestor !== null) ? $ancestor->h : $viewportH;
 
         // 使用定位祖先尺寸解析百分比宽高（符合 CSS 规范）
@@ -144,7 +148,9 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         $paddingBottom = PercentResolver::resolveMarginPaddingPercent($style, 'paddingBottom', 'paddingBottomPercent', $ancestorContentW);
 
-        $parentContentH = ($ancestor !== null) ? (int)max(0, $ancestorH - $paddingTop - $paddingBottom) : 0;
+        $parentContentH = ($ancestor !== null)
+            ? PercentResolver::resolveContentHeight($ancestor->style, $ancestor->h)
+            : 0;
 
         $this->resolveMarginAuto($node, $style, $parentContentW, $parentContentH);
 
@@ -157,6 +163,10 @@ class AbsolutePositioning implements AbsoluteStrategy
         $node->x += $translateX;
 
         $node->y += $translateY;
+
+        // ── Set container's own visualW/visualH ──
+        $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+        $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
 
         // Resolve children recursively
 

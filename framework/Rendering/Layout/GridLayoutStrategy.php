@@ -56,9 +56,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $height = $style['height'] ?? 0;
 
         // CSS: grid item percentage width resolves against content width
-        $parentW = (int)(($ctx->parent !== null) ? max(0, $ctx->parent->w
-            - (int)($ctx->parent->style['paddingLeft'] ?? $ctx->parent->style['padding'] ?? 0)
-            - (int)($ctx->parent->style['paddingRight'] ?? $ctx->parent->style['padding'] ?? 0)) : 0);
+        $parentW = (int)(($ctx->parent !== null)
+            ? PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w)
+            : 0);
 
         $parentH = ($ctx->parent !== null) ? $ctx->parent->h : 0;
 
@@ -95,6 +95,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         $node->h = (int)max(0, (int)PercentResolver::resolveMinMax($style, $height, false));
 
+        $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+        $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+
         // Parse grid template
 
         $gridCols = $style['gridTemplateColumns'] ?? '';
@@ -121,13 +124,15 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         if ($colRepeat === 'auto-fill' || $colRepeat === 'auto-fit') {
             $minColW = (int)($colSpec['min'] ?? 245);
 
+            $gridContentW = PercentResolver::resolveContentWidth($style, $node->w);
+
             // CSS Grid 规范 §7.1: cols = floor((availableW + gap) / (min + gap))
-            $cols = (int)max(1, floor(($node->w + $colGap) / ($minColW + $colGap)));
+            $cols = (int)max(1, floor(($gridContentW + $colGap) / ($minColW + $colGap)));
 
             // ── 计算列宽与单元格数 ──
             $totalGaps = $colGap * ($cols - 1);
 
-            $cellW = (int)max(0, ($node->w - $totalGaps) / $cols);
+            $cellW = (int)max(0, ($gridContentW - $totalGaps) / $cols);
         }
 
         if ($cols === null) {
@@ -140,9 +145,10 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         // 1fr 支持：根据容器宽度按比例分配
         if (($colSpec['unit'] ?? '') === 'fr' && $node->w > 0 && $colRepeat !== 'auto-fill' && $colRepeat !== 'auto-fit') {
+            $gridContentW = PercentResolver::resolveContentWidth($style, $node->w);
             $totalGaps = $colGap * ($cols - 1);
 
-            $cellW = (int)max(0, ($node->w - $totalGaps) / $cols);
+            $cellW = (int)max(0, ($gridContentW - $totalGaps) / $cols);
         }
 
         $rows = $rowSpec['count'] ?? 5;
@@ -164,6 +170,8 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $totalFr = 0;
             $usedPx = 0;
 
+            $gridContentW = PercentResolver::resolveContentWidth($style, $node->w);
+
             // First pass: resolve fixed (px/%) widths, mark fr as null
             foreach ($sizes as $size) {
                 if (preg_match('/^(\d+(?:\.\d+)?)px$/i', $size, $m)) {
@@ -172,7 +180,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                     $usedPx += $w;
                 } elseif (preg_match('/^(\d+(?:\.\d+)?)%$/', $size, $m)) {
                     $pct = (int)$m[1];
-                    $pctW = (int)($node->w * $pct / 100);
+                    $pctW = (int)($gridContentW * $pct / 100);
                     $explicitColWidths[] = $pctW;
                     $usedPx += $pctW;
                 } elseif (preg_match('/^(\d+(?:\.\d+)?)fr$/i', $size, $m)) {
@@ -190,7 +198,8 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
             // Second pass: distribute remaining space to fr tracks
             if ($totalFr > 0) {
-                $remaining = $node->w - $usedPx - $colGap * (int)max(0, $cols - 1);
+                $gridContentW = PercentResolver::resolveContentWidth($style, $node->w);
+                $remaining = $gridContentW - $usedPx - $colGap * (int)max(0, $cols - 1);
                 $frUnit = (int)max(0, (int)($remaining / $totalFr));
                 foreach ($explicitColWidths as $i => $colW) {
                     if ($colW === null) {
@@ -343,6 +352,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
             // min/max 约束（仅宽度）
             $ch->w = (int)max(0, (int)PercentResolver::resolveMinMax($childStyle, $ch->w, true));
+            $ch->visualW = PercentResolver::resolveVisualW($childStyle, $ch->w);
             // 高度不应用 min/max——等调整后得到自然内容高度
 
             // 调整子节点（重解析 flex/grid 的百分比尺寸）
@@ -352,7 +362,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $actualContentH = $ch->h;
             if (!empty($ch->children)) {
                 foreach ($ch->children as $gc) {
-                    $gcBottomLocal = ($gc->y + $gc->h) - $cellY;
+                    $gcBottomLocal = ($gc->y + $gc->visualH) - $cellY;
                     if ($gcBottomLocal > $actualContentH) {
                         $actualContentH = $gcBottomLocal;
                     }
@@ -413,12 +423,15 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 default: // stretch
                     $ch->y = $newCellY;
                     $ch->h = $actualRowH;
+                    $ch->visualH = PercentResolver::resolveVisualH($childStyle, $ch->h);
                     break;
             }
 
             // min/max 约束
             $ch->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $ch->w, true));
             $ch->h = max(0, (int)PercentResolver::resolveMinMax($childStyle, $ch->h, false));
+            $ch->visualW = PercentResolver::resolveVisualW($childStyle, $ch->w);
+            $ch->visualH = PercentResolver::resolveVisualH($childStyle, $ch->h);
 
             // 如果高度变化了（stretch），需要重新调整子节点
             if ($alignSelf === 'stretch') {
@@ -426,6 +439,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 // 恢复 grid cell 决定的位置和宽度（adjustGridItemChildren 内部会 restore）
                 $ch->y = $newCellY;
                 $ch->h = $actualRowH;
+                $ch->visualH = PercentResolver::resolveVisualH($childStyle, $ch->h);
             }
         }
 
@@ -436,7 +450,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         if (!$hasExplicitH && !$hasHPct) {
             $maxBottom = (int)$node->y;
             foreach ($children as $ch) {
-                $chBottom = (int)($ch->y + $ch->h);
+                $chBottom = (int)($ch->y + $ch->visualH);
                 if ($chBottom > $maxBottom) $maxBottom = $chBottom;
             }
             $contentH = (int)($maxBottom - $node->y);
@@ -447,6 +461,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 }
             }
         }
+        // ── Set container's own visualW/visualH ──
+        $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+        $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
     }
 
     /**

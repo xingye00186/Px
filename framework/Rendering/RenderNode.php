@@ -34,6 +34,8 @@ class RenderNode
     public int $y = 0;
     public int $w = 0;
     public int $h = 0;
+    public int $visualW = 0;
+    public int $visualH = 0;
     public int $layer = 0;
 
     // ── 滚动容器专用字段 ─────────────────────────────────

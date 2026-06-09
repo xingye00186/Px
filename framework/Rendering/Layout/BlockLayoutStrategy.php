@@ -86,6 +86,9 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         $node->h = (int)max(0, (int)PercentResolver::resolveMinMax($style, $height, false));
 
+        $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+        $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+
 
 
 
@@ -93,6 +96,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         if (!$hasExplicitW && $width === 0 && $ctx->parent !== null) {
             $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $parentW, true));
+            $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
         }
 
 
@@ -106,6 +110,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 // Flex items get their text-measured width in applyFlexBasis
                 if ($node->type === 'text' || $node->type === 'span') {
                     $node->w = (int)min($measured, (int)max(0, (int)PercentResolver::resolveMinMax($style, $measured, true)));
+                    $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
                 }
             }
             // Text height = line-height if no explicit height
@@ -114,6 +119,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                 if ($node->h === 0 || $node->h < $lineH) {
                     $node->h = $lineH;
+                    $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
                 }
             }
         }
@@ -186,6 +192,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $child->w = max(0, (int)$containerW);
 
                         $child->style['width'] = $containerW;
+
+                        $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
                     }
 
                     // -- Children with text content: measure text width (only for content-sized children) --
@@ -198,6 +206,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             // Flex items get text-measured width in applyFlexBasis via explicit width check
                             if ($child->type === 'text' || $child->type === 'span') {
                                 $child->w = min($measured, max(0, (int)PercentResolver::resolveMinMax($childStyle, $measured, true)));
+                                $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
                             }
                         }
                         // Text height = line-height if no explicit height
@@ -205,10 +214,12 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             $lineH = PercentResolver::resolveLineHeight($childStyle, $fs);
                             if ($child->h === 0 || $child->h < $lineH) {
                                 $child->h = $lineH;
+                                $child->visualH = PercentResolver::resolveVisualH($childStyle, $child->h);
                             }
                         }
                     } else {
                         $child->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $child->w, true));
+                        $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
                     }
 
 
@@ -264,7 +275,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         }
                     }
 
-                    $stackY += $child->h + $mBottom;
+                    $stackY += $child->visualH + $mBottom;
                 }
             }
         }
@@ -281,7 +292,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $maxRight = 0;
 
             foreach ($node->children as $child) {
-                $childRight = (int)($child->x + $child->w);
+                $childRight = (int)($child->x + $child->visualW);
 
                 if ($childRight > $maxRight) $maxRight = $childRight;
             }
@@ -305,6 +316,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             $child->w = (int)max(0, $contentW);
 
                             $child->w = (int)max(0, (int)PercentResolver::resolveMinMax($cs, $child->w, true));
+
+                            $child->visualW = PercentResolver::resolveVisualW($cs, $child->w);
                         }
                     }
                 }
@@ -321,7 +334,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $maxBottom = 0;
 
             foreach ($node->children as $child) {
-                $childBottom = (int)($child->y + $child->h);
+                $childBottom = (int)($child->y + $child->visualH);
 
                 if ($childBottom > $maxBottom) $maxBottom = $childBottom;
             }
@@ -333,6 +346,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
         }
         error_log('[DIAG_BLOCK] exit resolveBlockLayout type=' . $node->type);
+
+        // Set container's own visualW/visualH
+        $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+        $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
     }
 
     /**
@@ -442,11 +459,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     $child->w = max(0, (int)$containerW);
 
                     $child->style['width'] = $containerW;
+
+                    $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
                 }
 
                 // Apply min/max to child width
 
                 $child->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $child->w, true));
+
+                $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
 
                 // Auto-position: stack vertically with margin
 
@@ -470,7 +491,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     }
                 }
 
-                $stackY += $child->h + $mBottom;
+                $stackY += $child->visualH + $mBottom;
             }
         }
 
@@ -479,7 +500,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $maxBottom = $childOffsetY;
 
         foreach ($node->children as $child) {
-            $bottom = (int)($child->y + $child->h);
+            $bottom = (int)($child->y + $child->visualH);
 
             if ($bottom > $maxBottom) $maxBottom = $bottom;
         }
@@ -510,7 +531,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             foreach ($node->children as $child) {
                 $cLeft = $child->style['left'] ?? 0;
 
-                $cWidth = $child->style['width'] ?? $child->w;
+                $cWidth = $child->style['width'] ?? $child->visualW;
 
                 $right = (int)($cLeft + $cWidth);
 
