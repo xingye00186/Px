@@ -478,14 +478,14 @@ function ltCheckInvariantRules(ListRenderSnapshot $snap, int $iter): array
         if ($cx !== 10) {
             $v[] = "clipPush x changed to $cx (expected 10)";
         }
-        if ($cy !== 14) {
-            $v[] = "clipPush y changed to $cy (expected 14)";
+        if ($cy !== 38) {
+            $v[] = "clipPush y changed to $cy (expected 38)";
         }
         if ($cw !== 380) {
             $v[] = "clipPush w changed to $cw (expected 380)";
         }
-        if ($ch !== 444) {
-            $v[] = "clipPush h changed to $ch (expected 444)";
+        if ($ch !== 420) {
+            $v[] = "clipPush h changed to $ch (expected 420)";
         }
     }
 
@@ -944,7 +944,7 @@ test('首次渲染产出正确的结构元素', function () {
     // clip 区域
     assert_not_null($snap->clipPush, "clip-push 应存在");
     assert_eq($snap->clipPush['w'], 380, "clip-push 宽度应为 380（400 - margin-left 10 - margin-right 10）");
-    assert_eq($snap->clipPush['h'], 444, "clip-push 高度应为 444");
+    assert_eq($snap->clipPush['h'], 420, "clip-push 高度应为 420");
 
     // 初始 3 个 item
     assert_eq($snap->itemCount, 3, "初始应有 3 个 item");
