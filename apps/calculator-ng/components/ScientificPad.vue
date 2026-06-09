@@ -1,5 +1,5 @@
 <template>
-  <div style="width:318px;height:112px;display:grid;grid-template-columns:repeat(5,62px);grid-template-rows:repeat(3,36px);gap:2px">
+  <div style="width:318px;height:112px;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(3,36px);gap:2px">
     <!-- Row 1: trig + log -->
     <button style="grid-row:1;grid-column:1" class="btn-func" @click="sin">sin</button>
     <button style="grid-row:1;grid-column:2" class="btn-func" @click="cos">cos</button>
