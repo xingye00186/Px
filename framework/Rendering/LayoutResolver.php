@@ -102,8 +102,6 @@ class LayoutResolver
 
 
     public function resolve(RenderNode $root): array
-
-
     {
 
 
@@ -138,14 +136,13 @@ class LayoutResolver
     /**
      * Recursively resolve layout for a single node and its children.
      *
-     * @param RenderNode    $node Current node
-     * @param LayoutContext $ctx  Layout context (parent coords, parent ref, scroll containers)
+     * @param RenderNode $node Current node
+     * @param LayoutContext $ctx Layout context (parent coords, parent ref, scroll containers)
      */
     public function resolveNode(
-        RenderNode    $node,
+        RenderNode $node,
         LayoutContext $ctx
-    ): void
-    {
+    ): void {
         $this->resolveDepth++;
         if ($this->resolveDepth > 500) {
             error_log('[DIAG_LAYOUT] INFINITE RECURSION? depth=' . $this->resolveDepth . ' type=' . $node->type . ' x=' . $node->x . ' y=' . $node->y . ' w=' . $node->w . ' h=' . $node->h . ' layoutDirty=' . ($node->layoutDirty ? '1' : '0'));
@@ -164,7 +161,7 @@ class LayoutResolver
             $style = $node->style;
 
 
-            if ($node->isAnimating && !empty($node->animatedStyle)) {
+            if ($node->isAnimating && ! empty($node->animatedStyle)) {
 
 
                 // 深度拷贝：避免修改原始 $node->style
@@ -257,7 +254,6 @@ class LayoutResolver
             $position = $effectiveStyle['position'] ?? 'static';
 
 
-
             switch ($display) {
 
 
@@ -289,8 +285,6 @@ class LayoutResolver
 
 
             }
-
-
 
 
             // 鈹€鈹€ Scroll container post-processing for flex/grid display modes 鈹€鈹€
@@ -328,7 +322,9 @@ class LayoutResolver
                     $bottom = (int)($child->y + $child->h);
 
 
-                    if ($bottom > $maxBottom) $maxBottom = $bottom;
+                    if ($bottom > $maxBottom) {
+                        $maxBottom = $bottom;
+                    }
 
 
                 }
@@ -373,7 +369,9 @@ class LayoutResolver
 
                         $right = (int)($cLeft + $cWidth);
 
-                        if ($right > $maxRight) $maxRight = $right;
+                        if ($right > $maxRight) {
+                            $maxRight = $right;
+                        }
 
                     }
                     $node->contentWidth = (int)max($maxRight, $node->w);
@@ -417,7 +415,7 @@ class LayoutResolver
                         // 鈹€鈹€ Vertical sticky (top) with stacking 鈹€鈹€
                         $visualY = $node->y - $sc->scrollTop;
 
-                        if (!isset($this->stickyStack[$scKey])) {
+                        if ( ! isset($this->stickyStack[$scKey])) {
                             $this->stickyStack[$scKey] = [];
                         }
 
@@ -450,7 +448,7 @@ class LayoutResolver
                         if ($stickyLeft !== 0) {
                             $visualX = $node->x - $sc->scrollLeft;
 
-                            if (!isset($this->stickyStackX[$scKey])) {
+                            if ( ! isset($this->stickyStackX[$scKey])) {
                                 $this->stickyStackX[$scKey] = [];
                             }
 
@@ -479,95 +477,56 @@ class LayoutResolver
                 }
             }
 
-
             // 鈹€鈹€ 娓呴櫎鑴忔爣璁帮細甯冨眬瀹屾垚鍚庢爣璁颁负娲佸噣 鈹€鈹€
             $node->layoutDirty = false;
 
-
         } else {
-
 
             // 鈹€鈹€ Clean path: not layoutDirty, just propagate parent coords 鈹€鈹€
 
-
             $style = $node->style;
 
-
             $cbWidth = $ctx->parent ? PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w) : 0;
-            $marginLeft = PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $cbWidth);
+            $marginLeft = PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent',
+                $cbWidth);
 
-
-            $marginTop = PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $cbWidth);
-
+            $marginTop = PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent',
+                $cbWidth);
 
             // For static flex/grid items, their positions are determined by the parent's
             // layout algorithm (flex/grid), not by 'left'/'top' style values.
 
-
             $cleanPos = $style['position'] ?? 'static';
 
-
             if ($cleanPos !== 'static') {
-
-
                 if (array_key_exists('left', $style)) {
-
-
                     $node->x = (int)($style['left'] + $ctx->parentX + $marginLeft);
-
-
                 }
-
 
                 if (array_key_exists('top', $style)) {
 
-
                     $node->y = (int)($style['top'] + $ctx->parentY + $marginTop);
-
-
                 }
-
-
             }
 
-
             // ──┬── 滚动偏移由 VNodeRenderer 在绘制层处理（A1 重构）──┬──
-
 
             // ──┬── 子节点脏标记处理 ──┬──
             // Flex/grid container with dirty children: re-run full layout
 
-
             $display = $style['display'] ?? 'block';
 
-
-            if (($display === 'flex' || $display === 'grid') && !empty($node->children)) {
-
+            if (($display === 'flex' || $display === 'grid') && ! empty($node->children)) {
 
                 foreach ($node->children as $ch) {
-
-
                     if ($ch->layoutDirty) {
-
-
                         $node->layoutDirty = true;
-
-
                         $this->resolveNode($node, $ctx);
-
-
                         $this->resolveDepth--;
 
-
                         return;
-
-
                     }
-
-
                 }
-
-
             }
 
 
@@ -583,21 +542,12 @@ class LayoutResolver
             $childOffsetY = $node->y + $paddingTop;
 
             foreach ($node->children as $child) {
-
-
                 $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node);
                 $this->resolveNode($child, $childCtx);
-
-
             }
-
-
         }
 
-
         $this->resolveDepth--;
-
-
     }
 
 

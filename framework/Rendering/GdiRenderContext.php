@@ -418,11 +418,11 @@ class GdiRenderContext extends RenderContext
 
         // Auto thickness: ~5% of font size, minimum 1px
         if ($thickness <= 0) {
-            $thickness = max(1, (int)($fontSize / 20));
+            $thickness = (int)max(1, (int)($fontSize / 20));
         }
 
         // Auto underline gap from bottom of text
-        $autoGap = max(1, (int)($fontSize / 12));
+        $autoGap = (int)max(1, (int)($fontSize / 12));
 
         $lineType = $decorationLine;
         $lines = explode(' ', $lineType);
@@ -465,26 +465,26 @@ class GdiRenderContext extends RenderContext
                 break;
 
             case 'double':
-                $gap = max(1, $thickness);
+                $gap = (int)max(1, $thickness);
                 $this->fillRect($x, $y, $w, $thickness, $color);
                 $this->fillRect($x, $y + $thickness + $gap, $w, $thickness, $color);
                 break;
 
             case 'dotted':
-                $dotLen = max($thickness, 2);
+                $dotLen = (int)max($thickness, 2);
                 $spacing = $dotLen * 3;
                 for ($dx = $x; $dx < $x + $w; $dx += $spacing) {
-                    $segW = min($dotLen, $x + $w - $dx);
+                    $segW = (int)min($dotLen, $x + $w - $dx);
                     if ($segW <= 0) break;
                     $this->fillRect($dx, $y, $segW, $thickness, $color);
                 }
                 break;
 
             case 'dashed':
-                $dashLen = max($thickness * 4, 4);
-                $gap = max($thickness * 2, 2);
+                $dashLen = (int)max($thickness * 4, 4);
+                $gap = (int)max($thickness * 2, 2);
                 for ($dx = $x; $dx < $x + $w; $dx += $dashLen + $gap) {
-                    $segW = min($dashLen, $x + $w - $dx);
+                    $segW = (int)min($dashLen, $x + $w - $dx);
                     if ($segW <= 0) break;
                     $this->fillRect($dx, $y, $segW, $thickness, $color);
                 }
@@ -492,11 +492,11 @@ class GdiRenderContext extends RenderContext
 
             case 'wavy':
                 // Visual approximation: alternating short segments with Y offset
-                $waveLen = max($thickness * 3, 6);
-                $amplitude = max(1, $thickness);
+                $waveLen = (int)max($thickness * 3, 6);
+                $amplitude = (int)max(1, $thickness);
                 $phase = 0;
                 for ($dx = $x; $dx < $x + $w; $dx += $waveLen) {
-                    $segW = min($waveLen, $x + $w - $dx);
+                    $segW = (int)min($waveLen, $x + $w - $dx);
                     if ($segW <= 0) break;
                     $waveY = $y + ($phase === 0 ? 0 : $amplitude);
                     $this->fillRect($dx, $waveY, $segW, $thickness, $color);
