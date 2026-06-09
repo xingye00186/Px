@@ -283,6 +283,45 @@ foreach ($it as $f) {
         }
     }
 
+    // ── 7. CP936 回环探测（仅对 UTF-8 含中文文件）──
+    // CP936 双重编码乱码的 UTF-8 校验和稀有单字检查均会漏过，
+    // 因为乱码字符是合法的 UTF-8 CJK 字（如"缁熶竴"代替"统一"）。
+    // 通过回环转换 + 字符级比较探测：统计 CJK→CJK 变更数。
+    // 若 CJK 字符在回环后被替换为不同的 CJK 字符，说明是语义乱码；
+    // 若仅 non-CJK 字符变化（emoji/特殊符号丢失），则忽略。
+    if ($fileIsUtf8 && empty($err)) {
+        if (preg_match('/[\x{4E00}-\x{9FFF}]/u', $c)) {
+            $cp936str = @mb_convert_encoding($c, 'CP936', 'UTF-8');
+            if ($cp936str !== false && $cp936str !== '') {
+                $back = @mb_convert_encoding($cp936str, 'UTF-8', 'CP936');
+                if ($back !== false && $back !== '' && $back !== $c) {
+                    // 字符级比较：只统计 CJK→CJK 的变更（乱码特征）
+                    $cjkToCjk = 0;
+                    $origChars = preg_split('//u', $c, -1, PREG_SPLIT_NO_EMPTY);
+                    $backChars = preg_split('//u', $back, -1, PREG_SPLIT_NO_EMPTY);
+                    $minLen = min(count($origChars), count($backChars));
+                    for ($i = 0; $i < $minLen; $i++) {
+                        if ($origChars[$i] !== $backChars[$i]) {
+                            $isCjk = preg_match('/[\x{4E00}-\x{9FFF}]/u', $origChars[$i]) === 1
+                                  && preg_match('/[\x{4E00}-\x{9FFF}]/u', $backChars[$i]) === 1;
+                            if ($isCjk) {
+                                $cjkToCjk++;
+                            }
+                        }
+                    }
+                    unset($origChars, $backChars);
+                    if ($cjkToCjk > 0) {
+                        $cjkBefore = preg_match_all('/[\x{4E00}-\x{9FFF}]/u', $c);
+                        $cjkAfter  = preg_match_all('/[\x{4E00}-\x{9FFF}]/u', $back);
+                        $beforeFfd = substr_count($c, "\xEF\xBF\xBD");
+                        $afterFfd  = substr_count($back, "\xEF\xBF\xBD");
+                        $err[] = "[WARN] CP936回环异常: CJK→CJK变更".$cjkToCjk."字({$cjkBefore}→{$cjkAfter}) U+FFFD({$beforeFfd}→{$afterFfd}) 建议手动检查或 php _scan_encoding.php --fix <file>";
+                    }
+                }
+            }
+        }
+    }
+
     if (!empty($err)) {
         $issues[] = [$rel, $err, $ffdCount ?? 0];
     }
