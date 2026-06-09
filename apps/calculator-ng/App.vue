@@ -5,12 +5,12 @@
     <!-- Memory Bar -->
     <memory-bar style="margin-left:11px;flex-shrink:0" />
     <!-- Scientific Pad -->
-    <scientific-pad style="margin-left:11px;flex-shrink:0" />
+    <scientific-pad style="margin-left:11px;margin-top:2px;flex-shrink:0" />
     <!-- Basic Pad -->
-    <basic-pad style="margin-left:11px;flex-shrink:0" :acLabel="acLabel" />
+    <basic-pad style="margin-left:11px;margin-top:2px;flex-shrink:0" :acLabel="acLabel" />
     <!-- History header -->
     <history-panel style="margin-left:11px;flex-shrink:0" :arrow="arrowText" />
-    <!-- History list -->
+    <!-- History list / spacer -->
     <div v-if="showHistory" style="margin-left:11px;flex:1;background:#2C2C2E">
       <template v-for="item in historyItems" :key="item.id">
         <div style="height:24px;cursor:pointer;display:flex;align-items:center;padding-left:8px" @click="loadHistoryItem" click-arg="item.id">
@@ -18,6 +18,7 @@
         </div>
       </template>
     </div>
+    <div v-else style="flex:1"></div>
   </div>
 </template>
 

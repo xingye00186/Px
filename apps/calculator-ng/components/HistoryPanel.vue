@@ -1,7 +1,7 @@
 <template>
-  <div style="width:318px;height:30px;background:#2C2C2E;position:relative">
-    <span style="position:absolute;left:8px;top:6px;font-size:13px;color:#8E8E93;cursor:pointer" @click="toggleHistory">{{ arrow }} History</span>
-    <span style="position:absolute;left:270px;top:6px;font-size:13px;color:#FF9F0A;cursor:pointer" @click="clearHistory">Clear</span>
+  <div style="width:318px;height:30px;background:#2C2C2E;display:flex;align-items:center;justify-content:space-between;box-sizing:border-box;padding:0 8px">
+    <span style="font-size:13px;color:#8E8E93;cursor:pointer" @click="toggleHistory">{{ arrow }} History</span>
+    <span style="font-size:13px;color:#FF9F0A;cursor:pointer" @click="clearHistory">Clear</span>
   </div>
 </template>
 
