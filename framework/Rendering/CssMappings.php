@@ -6,26 +6,26 @@ use native_types;
 
 /**
  * CSS → GDI Mapping Table
- * 
+ *
  * Defines which CSS properties are supported, how they map to GDI rendering
  * parameters, and what keys they produce in the layout output.
- * 
+ *
  * Usage:
  *   $mapped = CssMappings::parseStyleBlock($styleCss);
  *   // → ['app-bg' => ['bg'=>1973790], 'display-text' => ['fg'=>16777215, 'fontSize'=>32, 'bold'=>1], ...]
- * 
+ *
  * Extend $PROPERTY_MAP to add new CSS property support.
  */
 class CssMappings
 {
     /**
      * CSS property → [outputKey, parserFunction, default]
-     * 
+     *
      * Each entry maps a CSS property name to:
      *   - outputKey: the key in the generated layout array
      *   - parser: a callable that converts the CSS value string to the output type
      *   - default: fallback value if property is not specified
-     * 
+     *
      * Adding a new CSS property is as simple as adding one entry here.
      */
     const PROPERTY_MAP = [
@@ -187,7 +187,7 @@ class CssMappings
             'parser'  => 'Px\\Rendering\\CssMappings::parseOpacity',
             'default' => 1.0,
         ],
-        // ---- Layout/positioning properties (also in INLINE_PROPERTY_MAP for <style> block support) ----
+        // ---- Layout/positioning properties ----
         'left'             => ['key' => 'left',             'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'top'              => ['key' => 'top',              'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'right'            => ['key' => 'right',            'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
@@ -229,78 +229,15 @@ class CssMappings
         'transform'            => ['key' => 'transform',       'parser' => 'Px\\Rendering\\CssMappings::parseTransform', 'default' => ''],
         'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
     ];
-    
+
     /**
-     * Inline style → 布局属性映射 (用于 parseInlineStyle)
+     * Inline style → 布局属性映射（仅 PROPERTY_MAP 未覆盖的属性）
      *
-     * 这些属性不出现在 <style> 块中, 而是在元素的 style="..." 属性里。
-     * 解析后存入 VNode.computedStyle 数组。
+     * 布局/定位/弹性/网格属性在 PROPERTY_MAP 中已定义，此处只加补充项。
+     * parseInlineStyle() 通过 array_merge(PROPERTY_MAP, INLINE_PROPERTY_MAP) 合并使用。
      */
     const INLINE_PROPERTY_MAP = [
-        'width'            => ['key' => 'width',            'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'height'           => ['key' => 'height',           'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'left'             => ['key' => 'left',             'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'top'              => ['key' => 'top',              'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'right'            => ['key' => 'right',            'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'bottom'           => ['key' => 'bottom',           'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'display'          => ['key' => 'display',          'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'block'],
-        'flex-direction'   => ['key' => 'flexDirection',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'row'],
-        'flex-wrap'        => ['key' => 'flexWrap',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'nowrap'],
-        'justify-content'  => ['key' => 'justifyContent',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'flex-start'],
-        'align-items'      => ['key' => 'alignItems',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'stretch'],
-        'align-content'    => ['key' => 'alignContent',     'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'stretch'],
-        'gap'              => ['key' => 'gap',              'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'overflow'         => ['key' => 'overflow',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
-        'overflow-x'       => ['key' => 'overflowX',        'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
-        'overflow-y'       => ['key' => 'overflowY',        'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'visible'],
-        'text-overflow'    => ['key' => 'textOverflow',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'clip'],
-        'position'         => ['key' => 'position',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'static'],
-        'z-index'          => ['key' => 'zIndex',           'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'grid-template-columns' => ['key' => 'gridTemplateColumns', 'parser' => 'Px\\Rendering\\CssMappings::parseIdent', 'default' => ''],
-        'grid-template-rows'    => ['key' => 'gridTemplateRows',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent', 'default' => ''],
-        'grid-column-gap'      => ['key' => 'gridColumnGap', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'grid-row-gap'         => ['key' => 'gridRowGap',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
-        'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
-        'flex'                 => ['key' => 'flex',           'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
-        // ---- min/max 尺寸约束 ----
-        'min-width'  => ['key' => 'minWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'max-width'  => ['key' => 'maxWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'min-height' => ['key' => 'minHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'max-height' => ['key' => 'maxHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        // ---- flex 扩展 ----
-        'order'        => ['key' => 'order',        'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'flex-grow'    => ['key' => 'flexGrow',    'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
-        'flex-basis'   => ['key' => 'flexBasis',    'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'auto'],
-        'flex-shrink'  => ['key' => 'flexShrink',   'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 1],
-        // ---- 单项对齐 ----
-        'align-self'   => ['key' => 'alignSelf',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
-        'justify-self' => ['key' => 'justifySelf', 'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'auto'],
-        'justify-items' => ['key' => 'justifyItems', 'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        // ---- padding / margin 四方向 ----
-        'padding-top'    => ['key' => 'paddingTop',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'padding-right'  => ['key' => 'paddingRight',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'padding-bottom' => ['key' => 'paddingBottom', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'padding-left'   => ['key' => 'paddingLeft',   'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'margin-top'     => ['key' => 'marginTop',     'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'margin-right'   => ['key' => 'marginRight',   'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'margin-bottom'  => ['key' => 'marginBottom',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'margin-left'    => ['key' => 'marginLeft',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'border-width'   => ['key' => 'borderWidth',  'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
-        'border-color'   => ['key' => 'borderColor',  'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0],
-        'border-bottom'  => ['key' => 'borderBottom', 'parser' => 'Px\Rendering\CssMappings::parseBorder', 'default' => ''],
-        'border-top'     => ['key' => 'borderTop',    'parser' => 'Px\Rendering\CssMappings::parseBorder', 'default' => ''],
-        'border-left'    => ['key' => 'borderLeft',   'parser' => 'Px\Rendering\CssMappings::parseBorder', 'default' => ''],
-        'border-right'   => ['key' => 'borderRight',  'parser' => 'Px\Rendering\CssMappings::parseBorder', 'default' => ''],
-        'border-radius'  => ['key' => 'borderRadius',  'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
-        'object-fit'     => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
-        'white-space'    => ['key' => 'whiteSpace',    'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        'background-size' => ['key' => 'backgroundSize', 'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => ''],
-        'background-position' => ['key' => 'backgroundPosition', 'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => ''],
-        'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
-        'transform'            => ['key' => 'transform',       'parser' => 'Px\Rendering\CssMappings::parseTransform', 'default' => ''],
-        'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => ''],
-        // ---- 滚动条样式 ----
+        // ---- 滚动条样式 (PROPERTY_MAP 中未包含, 其余布局属性从 PROPERTY_MAP 合并) ----
         'scrollbar-width'        => ['key' => 'scrollbarWidth',      'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 12],
         'scrollbar-track-color'  => ['key' => 'scrollbarTrackColor', 'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0x4A4A4A],
         'scrollbar-thumb-color'  => ['key' => 'scrollbarThumbColor', 'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0x888888],
@@ -317,28 +254,7 @@ class CssMappings
      */
     public static function hexToBgr(string $hex): int
     {
-        // Strip 0x / 0X prefix (C-style hex literal) and # prefix (CSS)
-        $hex = ltrim($hex, '#');
-        if (str_starts_with($hex, '0x') || str_starts_with($hex, '0X')) {
-            $hex = substr($hex, 2);
-        }
-
-        // Support shorthand: #RGB → #RRGGBB
-        if (strlen($hex) === 3) {
-            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
-        }
-
-        if (strlen($hex) !== 6 || !ctype_xdigit($hex)) {
-            if (class_exists('Px\\Core\\Config') && \Px\Core\Config::get('diag_enabled', false)) {
-                error_log('[CssMappings] hexToBgr invalid color: ' . $hex);
-            }
-            return 0; // Invalid color → black
-        }
-
-        $r = hexdec(substr($hex, 0, 2));
-        $g = hexdec(substr($hex, 2, 2));
-        $b = hexdec(substr($hex, 4, 2));
-        return ($b << 16) | ($g << 8) | $r;
+        return CssValueParser::hexToBgr($hex);
     }
 
     /**
@@ -346,10 +262,7 @@ class CssMappings
      */
     public static function borderColor(int $bg, int $delta = 20): int
     {
-        $r = min(255, (($bg >> 16) & 0xFF) + $delta);
-        $g = min(255, (($bg >> 8)  & 0xFF) + $delta);
-        $b = min(255, ($bg         & 0xFF) + $delta);
-        return ($r << 16) | ($g << 8) | $b;
+        return CssValueParser::borderColor($bg, $delta);
     }
 
     // ============================================================
@@ -366,27 +279,7 @@ class CssMappings
      */
     public static function parseHexColor(string $value): int
     {
-        $value = trim($value);
-
-        // Handle linear-gradient: extract first color stop
-        if (str_starts_with($value, 'linear-gradient')) {
-            // Extract first color stop: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
-            if (preg_match('/#[0-9a-fA-F]{3,8}|rgba?\s*\([^)]+\)/', $value, $m)) {
-                return self::parseHexColor($m[0]);
-            }
-            return 0;
-        }
-
-        // Handle rgb/rgba: rgb(255, 255, 255)
-        if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i', $value, $m)) {
-            $r = (int)$m[1];
-            $g = (int)$m[2];
-            $b = (int)$m[3];
-            return ($b << 16) | ($g << 8) | $r;
-        }
-
-        // Handle hex color
-        return self::hexToBgr($value);
+        return CssValueParser::parseHexColor($value);
     }
 
     /**
@@ -394,7 +287,7 @@ class CssMappings
      */
     public static function parsePixels(string $value): int
     {
-        return (int) preg_replace('/[^-0-9]/', '', $value);
+        return CssValueParser::parsePixels($value);
     }
 
     /**
@@ -402,12 +295,7 @@ class CssMappings
      */
     public static function parseFlex(string $value): string
     {
-        $value = trim($value);
-        // Extract numeric part
-        if (preg_match('/^(\d+(?:\.\d+)?)/', $value, $m)) {
-            return $m[1];
-        }
-        return $value;
+        return CssValueParser::parseFlex($value);
     }
 
     /**
@@ -432,43 +320,7 @@ class CssMappings
      */
     public static function parseFlexValue(string $flex): array
     {
-        $flex = trim($flex);
-        if ($flex === '') {
-            return ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 0];
-        }
-
-        // CSS keyword values: auto, none, initial, content
-        $lower = strtolower($flex);
-        if ($lower === 'auto') {
-            return ['grow' => 1.0, 'shrink' => 1.0, 'basis' => 'auto'];
-        }
-        if ($lower === 'none') {
-            return ['grow' => 0.0, 'shrink' => 0.0, 'basis' => 'auto'];
-        }
-        if ($lower === 'initial' || $lower === 'content') {
-            return ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 'auto'];
-        }
-
-        // Multi-value form: "grow shrink basis"
-        $parts = preg_split('/\s+/', $flex);
-        $result = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 0];
-
-        if (count($parts) >= 1 && $parts[0] !== '') {
-            $result['grow'] = (float)$parts[0];
-        }
-        if (count($parts) >= 2 && $parts[1] !== '') {
-            $result['shrink'] = (float)$parts[1];
-        }
-        if (count($parts) >= 3 && $parts[2] !== '') {
-            $v = strtolower(trim($parts[2]));
-            if ($v === 'auto' || $v === 'content') {
-                $result['basis'] = $v;
-            } else {
-                $result['basis'] = (int) preg_replace('/[^0-9]/', '', $parts[2]);
-            }
-        }
-
-        return $result;
+        return CssValueParser::parseFlexValue($flex);
     }
 
     /**
@@ -476,11 +328,7 @@ class CssMappings
      */
     public static function parseFontWeight(string $value): int
     {
-        $v = trim(strtolower($value));
-        if ($v === 'bold' || (int)$v >= 600) {
-            return 1;
-        }
-        return 0;
+        return CssValueParser::parseFontWeight($value);
     }
 
     /**
@@ -488,11 +336,7 @@ class CssMappings
      */
     public static function parseTextAlign(string $value): string
     {
-        $v = trim(strtolower($value));
-        if (in_array($v, ['left', 'right', 'center'], true)) {
-            return $v;
-        }
-        return 'left';
+        return CssValueParser::parseTextAlign($value);
     }
 
     /**
@@ -500,19 +344,7 @@ class CssMappings
      */
     public static function parseBorder(string $value): string
     {
-        $v = trim($value);
-        if ($v === '' || $v === 'none') return '';
-        $parts = preg_split('/\s+/', $v);
-        $width = 0;
-        $color = '#000000';
-        foreach ($parts as $p) {
-            if (preg_match('/^\d+/', $p)) {
-                $width = (int)$p;
-            } elseif (preg_match('/^#/', $p)) {
-                $color = $p;
-            }
-        }
-        return $width . '|' . self::hexToBgr($color);
+        return CssValueParser::parseBorder($value);
     }
 
     /**
@@ -521,39 +353,7 @@ class CssMappings
      */
     public static function parseBoxShadow(string $value): string
     {
-        $v = trim($value);
-        if ($v === '' || $v === 'none') return '';
-
-        // 先提取颜色值（rgba/rgb/hex），避免空格干扰 split
-        $color = '#000000';
-        $numericStr = $v;
-
-        if (preg_match('/rgba?\s*\([^)]+\)/i', $v, $m)) {
-            // 提取 rgba/rgb 颜色分量
-            if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i', $m[0], $cm)) {
-                $r = (int)$cm[1]; $g = (int)$cm[2]; $b = (int)$cm[3];
-                $color = sprintf('#%02X%02X%02X', $r, $g, $b);
-            }
-            // 移除颜色部分（处理多阴影逗号连接的情况）
-            $numericStr = trim(preg_replace('/' . preg_quote(explode('(', $m[0])[0], '/') . '\([^)]+\)\s*,?\s*/', '', $v));
-        } elseif (preg_match('/#([0-9a-fA-F]{3,8})\b/', $v, $m)) {
-            $color = $m[0];
-            $numericStr = trim(str_replace($m[0], '', $v));
-        }
-
-        // 按空白分割剩余数值
-        $parts = preg_split('/\s+/', $numericStr);
-        $numParts = [];
-        foreach ($parts as $p) {
-            if (trim($p) === '') continue;
-            $numParts[] = (int)$p;
-        }
-
-        $h = $numParts[0] ?? 0;
-        $vOff = $numParts[1] ?? 0;
-        $blur = $numParts[2] ?? 0;
-        $spread = $numParts[3] ?? 0;
-        return $h . '|' . $vOff . '|' . $blur . '|' . $spread . '|' . $color;
+        return CssValueParser::parseBoxShadow($value);
     }
 
     /**
@@ -577,11 +377,7 @@ class CssMappings
      */
     public static function parseOpacity(string $value): float
     {
-        $v = trim($value);
-        if (str_ends_with($v, '%')) {
-            return ((float)substr($v, 0, -1)) / 100.0;
-        }
-        return min(1.0, max(0.0, (float)$v));
+        return CssValueParser::parseOpacity($value);
     }
 
     /**
@@ -590,7 +386,7 @@ class CssMappings
      */
     public static function parseIdent(string $value): string
     {
-        return trim(strtolower($value));
+        return CssValueParser::parseIdent($value);
     }
 
     /**
@@ -600,13 +396,7 @@ class CssMappings
      */
     public static function parseBackgroundImage(string $value): string
     {
-        $v = trim($value);
-        // Match url("...") with single quotes, double quotes, or unquoted
-        if (preg_match('/^url\(\s*["\']?([^"\'\)]+)["\']?\s*\)$/', $v, $m)) {
-            return trim($m[1]);
-        }
-        // If it doesn't look like a CSS url(), just return the raw value
-        return $v;
+        return CssValueParser::parseBackgroundImage($value);
     }
 
     /**
@@ -990,56 +780,7 @@ class CssMappings
      */
     public static function parseGridTemplateValue(string $val): array
     {
-        $val = trim($val);
-
-        // match "repeat(N, SIZE)" — SIZE can be px, fr, % or bare number
-        if (preg_match('/^repeat\(\s*(\d+)\s*,\s*(\d+(?:\.\d+)?)(px|fr|%|)\s*\)$/i', $val, $m)) {
-            $unit = strtolower($m[3] ?? '');
-            $size = (float)$m[2];
-            // Keep as float if 'fr', else convert to int for px
-            return ['repeat' => true, 'count' => (int)$m[1], 'size' => ($unit === 'fr' || $unit === '%') ? $size : (int)$size, 'unit' => $unit];
-        }
-
-        // match auto-fill/auto-fit repeat: repeat(auto-fill, minmax(MIN, MAX)) or repeat(auto-fit, minmax(MIN, MAX))
-        if (preg_match('/^repeat\(\s*(auto-fill|auto-fit)\s*,\s*minmax\(\s*(\d+(?:\.\d+)?)(px|%|)\s*,\s*(\d+(?:\.\d+)?)(px|fr|%|)\s*\)\s*\)$/i', $val, $m)) {
-            $mode = strtolower($m[1]);
-            $min = (float)$m[2];
-            $minUnit = strtolower($m[3] ?? '');
-            $max = $m[4];
-            $maxTrack = strtolower($m[5] ?? '');
-            return [
-                'repeat' => $mode,
-                'min' => ($minUnit === '%' || $minUnit === '') ? (int)$min : (int)$min,
-                'minUnit' => $minUnit,
-                'max' => (float)$max,
-                'maxTrack' => $maxTrack,
-            ];
-        }
-
-        // match complex repeat: repeat(N, minmax(...)) or repeat(N, calc(...))
-        if (preg_match('/^repeat\(\s*(\d+)\s*,\s*(.+)\)$/i', $val, $m)) {
-            return ['repeat' => true, 'count' => (int)$m[1], 'track' => trim($m[2])];
-        }
-
-        // match "auto"
-        if (strtolower($val) === 'auto') {
-            return ['type' => 'auto'];
-        }
-
-        // match "1fr 1fr 1fr 1fr" or "100px 1fr auto"
-        $parts = preg_split('/\s+/', $val);
-        $sizes = [];
-        foreach ($parts as $part) {
-            if ($part !== '') {
-                $sizes[] = $part;
-            }
-        }
-
-        if (count($sizes) > 0) {
-            return ['type' => 'explicit', 'sizes' => $sizes];
-        }
-
-        return ['type' => 'none'];
+        return CssValueParser::parseGridTemplateValue($val);
     }
 
     // ============================================================
@@ -1124,10 +865,7 @@ class CssMappings
      */
     public static function rgbToBgr(int $rgb): int
     {
-        $r = ($rgb >> 16) & 0xFF;
-        $g = ($rgb >> 8) & 0xFF;
-        $b = $rgb & 0xFF;
-        return ($b << 16) | ($g << 8) | $r;
+        return CssValueParser::rgbToBgr($rgb);
     }
 
     /**
@@ -1196,54 +934,7 @@ class CssMappings
      */
     public static function parseTransition(string $value): array
     {
-        $result = [];
-        $value = trim($value);
-
-        if ($value === '' || $value === 'none') {
-            return $result;
-        }
-
-        // 按逗号分割多个 transition
-        $transitions = preg_split('/\s*,\s*/', $value);
-        foreach ($transitions as $transition) {
-            $transition = trim($transition);
-            if ($transition === '') continue;
-
-            // 解析各部分
-            $parts = preg_split('/\s+/', $transition);
-            $parsed = [
-                'property' => 'all',
-                'duration' => 300,
-                'timing'   => 'ease',
-                'delay'    => 0,
-            ];
-
-            foreach ($parts as $i => $part) {
-                // 检测是时间值（秒或毫秒）
-                if (preg_match('/^(\d+(?:\.\d+)?)(m?s)$/', $part, $m)) {
-                    $time = (float)$m[1];
-                    if ($m[2] === 's') {
-                        $time *= 1000; // 秒转毫秒
-                    }
-                    if ($parsed['duration'] === 300 && $i < 3) {
-                        $parsed['duration'] = (int)$time;
-                    } else {
-                        $parsed['delay'] = (int)$time;
-                    }
-                } elseif (stripos($part, 'ms') !== false || stripos($part, 's') !== false) {
-                    // 已在上面处理
-                } elseif (in_array(strtolower($part), ['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out'])) {
-                    $parsed['timing'] = strtolower($part);
-                } elseif ($part !== 'cubic-bezier' && strpos($part, '(') === false) {
-                    // 排除函数名，保留属性名
-                    $parsed['property'] = strtolower($part);
-                }
-            }
-
-            $result[] = $parsed;
-        }
-
-        return $result;
+        return CssValueParser::parseTransition($value);
     }
 
     /**
@@ -1257,75 +948,7 @@ class CssMappings
      */
     public static function parseAnimation(string $value): array
     {
-        $value = trim($value);
-
-        if ($value === '' || $value === 'none') {
-            return [
-                'name'     => '',
-                'duration' => 0,
-                'timing'   => 'ease',
-                'delay'    => 0,
-                'count'    => 1,
-                'direction' => 'normal',
-                'fillMode'  => 'none',
-                'playState' => 'running',
-            ];
-        }
-
-        $parts = preg_split('/\s+/', $value);
-        $parsed = [
-            'name'      => '',
-            'duration'  => 0,
-            'timing'    => 'ease',
-            'delay'     => 0,
-            'count'     => 1,
-            'direction' => 'normal',
-            'fillMode'  => 'none',
-            'playState'  => 'running',
-        ];
-
-        foreach ($parts as $part) {
-            // 时间值
-            if (preg_match('/^(\d+(?:\.\d+)?)(m?s)$/', $part, $m)) {
-                $time = (float)$m[1];
-                if ($m[2] === 's') {
-                    $time *= 1000;
-                }
-                if ($parsed['duration'] === 0) {
-                    $parsed['duration'] = (int)$time;
-                } else {
-                    $parsed['delay'] = (int)$time;
-                }
-            }
-            // 缓动函数
-            elseif (in_array(strtolower($part), ['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out'])) {
-                $parsed['timing'] = strtolower($part);
-            }
-            // 循环次数
-            elseif ($part === 'infinite') {
-                $parsed['count'] = -1; // -1 表示无限
-            } elseif (ctype_digit($part)) {
-                $parsed['count'] = (int)$part;
-            }
-            // 方向
-            elseif (in_array(strtolower($part), ['normal', 'reverse', 'alternate', 'alternate-reverse'])) {
-                $parsed['direction'] = strtolower($part);
-            }
-            // 填充模式
-            elseif (in_array(strtolower($part), ['none', 'forwards', 'backwards', 'both'])) {
-                $parsed['fillMode'] = strtolower($part);
-            }
-            // 播放状态
-            elseif (in_array(strtolower($part), ['running', 'paused'])) {
-                $parsed['playState'] = strtolower($part);
-            }
-            // 动画名称
-            else {
-                $parsed['name'] = $part;
-            }
-        }
-
-        return $parsed;
+        return CssValueParser::parseAnimation($value);
     }
 
     /**
@@ -1340,38 +963,7 @@ class CssMappings
      */
     public static function parseTransform(string $value): array
     {
-        $result = ['translateX' => 0, 'translateY' => 0, 'rotate' => 0];
-        $value = trim($value);
-
-        if ($value === '') {
-            return $result;
-        }
-
-        // 解析 rotate(deg) 形式
-        if (preg_match('/rotate\s*\(\s*([\d.-]+)\s*deg\s*\)/i', $value, $m)) {
-            $result['rotate'] = (int)$m[1];
-        }
-
-        // 解析 translate(X, Y) 简写形式
-        if (preg_match('/translate\s*\(\s*([^,)]+)\s*(?:,\s*([^,)]+))?\s*\)/i', $value, $m)) {
-            $result['translateX'] = self::parsePixels($m[1]);
-            if (isset($m[2]) && $m[2] !== '') {
-                $result['translateY'] = self::parsePixels($m[2]);
-            }
-            return $result;
-        }
-
-        // 解析 translateX(X)
-        if (preg_match('/translateX\s*\(\s*([^)]+)\s*\)/i', $value, $m)) {
-            $result['translateX'] = self::parsePixels($m[1]);
-        }
-
-        // 解析 translateY(Y)
-        if (preg_match('/translateY\s*\(\s*([^)]+)\s*\)/i', $value, $m)) {
-            $result['translateY'] = self::parsePixels($m[1]);
-        }
-
-        return $result;
+        return CssValueParser::parseTransform($value);
     }
 
     /**
@@ -1382,18 +974,6 @@ class CssMappings
      */
     public static function buildTransformString(array $transform): string
     {
-        $parts = [];
-        $translateX = $transform['translateX'] ?? 0;
-        $translateY = $transform['translateY'] ?? 0;
-
-        if ($translateX !== 0 || $translateY !== 0) {
-            if ($translateY !== 0) {
-                $parts[] = "translate({$translateX}px, {$translateY}px)";
-            } else {
-                $parts[] = "translateX({$translateX}px)";
-            }
-        }
-
-        return implode(' ', $parts);
+        return CssValueParser::buildTransformString($transform);
     }
 }
