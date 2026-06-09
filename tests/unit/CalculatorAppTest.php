@@ -1292,6 +1292,115 @@ test('百分比运算后继续计算: 50% + 10 = 10.5', function () {
 });
 
 // ============================================================
+// 18. VNode 树结构测试（模板渲染快照）
+// ============================================================
+// ============================================================
+// 18. VNode 树结构测试（模板渲染快照）
+// ============================================================
+echo "\n--- 18. VNode Tree Snapshot ---\n";
+
+/**
+ * VNode children 可能是单个对象或数组，统一转为数组。
+ */
+function vnodeChildren($node): array
+{
+    if ($node->children instanceof \Px\Rendering\VNode) {
+        return [$node->children];
+    }
+    if (is_array($node->children)) {
+        return $node->children;
+    }
+    return [];
+}
+
+test('VNode树: 根节点类型和结构', function () {
+    $app = createApp();
+    $vnode = $app->render();
+    assert($vnode->type === '#root', "根节点应为 #root, 实际: {$vnode->type}");
+    
+    $rootChildren = vnodeChildren($vnode);
+    assert(count($rootChildren) >= 1, "#root 应有子节点");
+    
+    $div = $rootChildren[0];
+    assert($div->type === 'div', "#root 的第一个子节点应为 div, 实际: {$div->type}");
+    
+    $style = $div->getProp('style', '');
+    assert(str_contains($style, 'display:flex'), "div 应为 flex 容器");
+    assert(str_contains($style, 'flex-direction:column'), "flex 方向应为 column");
+    assert(!str_contains($style, 'padding-left'), "flex 容器不应有 padding 约束");
+    
+    echo "    [OK] 根 VNode 结构正确 (flex column)\n";
+});
+
+test('VNode树: 应包含5个子组件且顺序正确', function () {
+    $app = createApp();
+    $vnode = $app->render();
+    $flexChildren = vnodeChildren($vnode)[0];
+    $children = vnodeChildren($flexChildren);
+    
+    assert(count($children) >= 5, "flex 容器应至少5个子组件, 实际: " . count($children));
+    
+    $expectedClasses = [
+        'CalculatorDisplayComponent',
+        'MemoryBarComponent',
+        'ScientificPadComponent',
+        'BasicPadComponent',
+        'HistoryPanelComponent',
+    ];
+    
+    foreach ($expectedClasses as $i => $className) {
+        $child = $children[$i];
+        assert($child->isComponent(), "子节点[{$i}] 应为组件");
+        assert($child->componentClass === $className, "子节点[{$i}] 应为 {$className}, 实际: {$child->componentClass}");
+        echo "    [OK] 子节点[{$i}]: {$className}\n";
+    }
+});
+
+test('VNode树: 组件 style 应包含 margin-left', function () {
+    $app = createApp();
+    $vnode = $app->render();
+    $flexChildren = vnodeChildren($vnode)[0];
+    $children = vnodeChildren($flexChildren);
+    
+    for ($i = 0; $i < 5; $i++) {
+        $style = $children[$i]->getProp('style', '');
+        assert(str_contains($style, 'margin-left:11px'), "子节点[{$i}] 应包含 margin-left:11px, 实际: {$style}");
+    }
+    echo "    [OK] 所有子组件含 margin-left:11px\n";
+});
+
+test('VNode树: showHistory=false 时不渲染历史列表 div', function () {
+    $app = createApp();
+    $app->showHistory = false;
+    $vnode = $app->render();
+    $flexChildren = vnodeChildren($vnode)[0];
+    $children = vnodeChildren($flexChildren);
+    
+    assert(count($children) === 5, "showHistory=false 时应只有5个子节点, 实际: " . count($children));
+    echo "    [OK] showHistory=false → 5个子节点 (无历史列表)\n";
+});
+
+test('VNode树: showHistory=true 时渲染历史列表 div', function () {
+    $app = createApp();
+    $app->showHistory = true;
+    $app->historyItems = [['id'=>'1', 'text'=>'1 + 1 = 2', 'result'=>'2']];
+    $vnode = $app->render();
+    $flexChildren = vnodeChildren($vnode)[0];
+    $children = vnodeChildren($flexChildren);
+    
+    assert(count($children) === 6, "showHistory=true 时应为6个子节点, 实际: " . count($children));
+    
+    $historyDiv = $children[5];
+    assert($historyDiv->type === 'div', "第6个子节点应为 div, 实际: {$historyDiv->type}");
+    
+    $style = $historyDiv->getProp('style', '');
+    assert(str_contains($style, 'flex:1'), "历史列表 div 应有 flex:1, 实际: {$style}");
+    assert(str_contains($style, 'margin-left:11px'), "历史列表 div 应有 margin-left:11px, 实际: {$style}");
+    
+    echo "    [OK] showHistory=true → 生成第6个 div[flex:1;margin-left:11px]\n";
+});
+
+// ============================================================
 // Summary
 // ============================================================
 echo "\n";

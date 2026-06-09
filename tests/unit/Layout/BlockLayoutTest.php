@@ -106,8 +106,8 @@ test('width:100% 在父容器有 padding 时使用 content width', function () {
 
     runResolver($root);
 
-    // CSS: percentage of content width = 300 - 20 - 30 = 250
-    assert_eq($child->w, 250, 'child w=250 (100% of content width 250)');
+    // CSS content-box: content width = CSS width = 300 (padding added outside)
+    assert_eq($child->w, 300, 'child w=300 (100% of parent CSS width 300)');
 });
 
 test('height:auto 适应内容高度（无固定高度时）', function () {
@@ -151,9 +151,9 @@ test('padding 减少子节点可用宽度（auto-stack 时）', function () {
 
     runResolver($root);
 
-    // auto-stack 子节点无显式宽度时继承容器内容区宽度
-    // content width = 200 - 20 - 30 = 150
-    assert_eq($child->w, 150, 'child w=150 (parent content width w-padding)');
+    // CSS content-box: child fills parent's CSS width (content area) = 200
+    // padding is OUTSIDE the content area and does not reduce child width
+    assert_eq($child->w, 200, 'child w=200 (parent CSS width, padding does not reduce content area)');
 });
 
 // ============================================================

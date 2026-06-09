@@ -185,8 +185,8 @@ test('padding 影响 flex column 子节点可用宽度', function () {
 
     runResolver($root);
 
-    // content width = 500 - 20 - 20 = 460
-    assert_eq($child->w, 460, 'child w = content width = 460');
+    // CSS content-box standard: content width = CSS width = 500 (padding added outside)
+    assert_eq($child->w, 500, 'child w = content width = 500 (CSS content-box standard)');
 });
 
 // ============================================================
@@ -251,6 +251,84 @@ test('Bilibili 完整页面骨架精确坐标', function () {
     assert_eq($mainContent->y, 130, 'mainContent y=56+74=130');
     assert_eq($mainContent->w, 1440, 'mainContent w=1440');
     assert_eq($mainContent->h, 770, 'mainContent h=900-130=770');
+});
+
+// ============================================================
+// Group 7: visualW/visualH — 严格 CSS 盒模型
+// ============================================================
+echo "\n--- Group 7: visualW/visualH ---\n";
+
+test('content-box padding 使 visualW > w', function () {
+    $child = makeNode('div', ['width' => 50, 'height' => 30], [], 'child');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row',
+        'width' => 200, 'height' => 100,
+        'paddingLeft' => 20, 'paddingRight' => 20,
+        'paddingTop' => 10, 'paddingBottom' => 10,
+    ], [$child]);
+    $root = makeNode('div', ['width' => 400, 'height' => 300], [$flex]);
+
+    runResolver($root);
+
+    // 容器 content-box: visualW = 200 + 20 + 20 = 240, visualH = 100 + 10 + 10 = 120
+    assert_eq($flex->w, 200, 'flex w = 200 (CSS width)');
+    assert_eq($flex->visualW, 240, 'flex visualW = 200+20+20 = 240');
+    assert_eq($flex->h, 100, 'flex h = 100 (CSS height)');
+    assert_eq($flex->visualH, 120, 'flex visualH = 100+10+10 = 120');
+});
+
+test('border-box padding 使 visualW = w', function () {
+    $child = makeNode('div', ['width' => 50, 'height' => 30], [], 'child');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row',
+        'width' => 200, 'height' => 100,
+        'paddingLeft' => 20, 'paddingRight' => 20,
+        'paddingTop' => 10, 'paddingBottom' => 10,
+        'boxSizing' => 'border-box',
+    ], [$child]);
+    $root = makeNode('div', ['width' => 400, 'height' => 300], [$flex]);
+
+    runResolver($root);
+
+    // 容器 border-box: visualW = 200 (CSS width = border-box)
+    assert_eq($flex->w, 200, 'flex w = 200 (CSS width)');
+    assert_eq($flex->visualW, 200, 'flex visualW = w (border-box)');
+    assert_eq($flex->h, 100, 'flex h = 100 (CSS height)');
+    assert_eq($flex->visualH, 100, 'flex visualH = h (border-box)');
+});
+
+test('flex-wrap 使用 visualW 正确计算行总宽度', function () {
+    $c1 = makeNode('div', ['width' => 120, 'height' => 30], [], 'c1');
+    $c2 = makeNode('div', ['width' => 120, 'height' => 30], [], 'c2');
+    $flex = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row',
+        'flexWrap' => 'wrap',
+        'width' => 200, 'height' => 100,
+        'paddingLeft' => 10, 'paddingRight' => 10,
+    ], [$c1, $c2]);
+    $root = makeNode('div', ['width' => 400, 'height' => 300], [$flex]);
+
+    runResolver($root);
+
+    // 可用宽度 = 200 - 10 - 10 = 180，c1=120 < 180 → 第一行
+    // c2=120 > 剩余 60 → 换行
+    assert_eq($c1->x, 10, 'c1 x = paddingLeft = 10');
+    assert_eq($c2->y, 30, 'c2 y 换行在第二行');
+});
+
+test('block 子项 padding 影响父容器 stackY', function () {
+    $c1 = makeNode('div', ['width' => 100, 'height' => 40, 'paddingTop' => 5], [], 'c1');
+    $c2 = makeNode('div', ['width' => 100, 'height' => 30], [], 'c2');
+    $container = makeNode('div', [
+        'width' => 200,
+    ], [$c1, $c2]);
+    $root = makeNode('div', ['width' => 400, 'height' => 300], [$container]);
+
+    runResolver($root);
+
+    // c1 visualH = 40 + 5 = 45 (paddingTop)
+    // c2 y = c1.y + c1.visualH = 0 + 45 = 45
+    assert_eq($c2->y, 45, 'c2 y = c1.y + c1.visualH = 0 + 45 = 45');
 });
 
 // ============================================================

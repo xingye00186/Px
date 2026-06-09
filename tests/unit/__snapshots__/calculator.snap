@@ -1,0 +1,52 @@
+Frame #1 events=0 detail=normal
+div (0,0 340x660) [dsp=flex]
+  div (11,0 318x100) [pos=relative] ov=hidden
+    span (11,24 318x0) [pos=absolute]
+    span (11,54 318x0) [pos=absolute] text="0"
+  div (11,100 318x36) [dsp=grid]
+    button (11,100 62x36) text="MC"
+    button (75,100 62x36) text="MR"
+    button (139,100 62x36) text="M+"
+    button (203,100 62x36) text="M−"
+    button (267,100 62x36) text="MS"
+  div (11,138 318x112) [dsp=grid]
+    button (11,138 62x36) text="sin"
+    button (75,138 62x36) text="cos"
+    button (139,138 62x36) text="tan"
+    button (203,138 62x36) text="log"
+    button (267,138 62x36) text="ln"
+    button (11,176 62x36) text="x²"
+    button (75,176 62x36) text="x³"
+    button (139,176 62x36) text="√x"
+    button (203,176 62x36) text="1/x"
+    button (267,176 62x36) text="π"
+    button (11,214 62x36) text="e"
+    button (75,214 62x36) text="("
+    button (139,214 62x36) text=")"
+    button (203,214 62x36) text="⌫"
+    button (267,214 62x36) text="C"
+  div (11,252 318x260) [dsp=grid]
+    button (11,252 78x50) text="AC"
+    button (91,252 78x50) text="+/−"
+    button (171,252 78x50) text="%"
+    button (251,252 78x50) text="÷"
+    button (11,304 78x50) text="7"
+    button (91,304 78x50) text="8"
+    button (171,304 78x50) text="9"
+    button (251,304 78x50) text="×"
+    button (11,356 78x50) text="4"
+    button (91,356 78x50) text="5"
+    button (171,356 78x50) text="6"
+    button (251,356 78x50) text="−"
+    button (11,408 78x50) text="1"
+    button (91,408 78x50) text="2"
+    button (171,408 78x50) text="3"
+    button (251,408 78x50) text="+"
+    button (11,460 78x50) text="0"
+    button (91,460 78x50) text="."
+    button (171,460 78x50) text="="
+    button (251,460 78x50) text="☰"
+  div (11,512 318x30) [dsp=flex]
+    span (19,518 63x17) text="> History"
+    span (286,518 35x17) text="Clear"
+  div (0,542 340x118) fg=1
