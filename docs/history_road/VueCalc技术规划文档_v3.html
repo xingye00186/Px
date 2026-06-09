@@ -1,0 +1,2338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VueCalc v3 - 设计规划：路线图评估与改进方向</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --text: #e0e0e0;
+    --accent: #e94560;
+    --accent2: #ff9500;
+    --accent3: #007aff;
+    --code-bg: #0d1117;
+    --border: #2a2a4a;
+    --green: #4caf84;
+    --blue: #5b9bd5;
+    --yellow: #ffc107;
+    --purple: #a855f7;
+    --done: #22c55e;
+    --wip: #f59e0b;
+    --missing: #ef4444;
+    --phase1: #22c55e;
+    --phase2: #e94560;
+    --phase3: #007aff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .container { max-width: 1020px; margin:0 auto; padding:40px 24px; }
+
+  /* ===== Cover ===== */
+  .cover {
+    text-align:center; padding:80px 20px 60px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius:16px; margin-bottom:40px;
+    border:1px solid var(--border); position:relative;
+  }
+  .cover h1 { font-size:2.8em; color:#fff; margin-bottom:8px; }
+  .cover .subtitle { font-size:1.2em; color:var(--accent); margin-bottom:20px; }
+  .cover .meta { color:#888; font-size:0.9em; }
+  .version-badge {
+    position:absolute; top:16px; right:16px;
+    background:var(--purple); color:#fff; padding:6px 16px;
+    border-radius:20px; font-weight:bold; font-size:0.85em;
+  }
+
+  /* ===== Headings ===== */
+  h1 { font-size:2em; color:#fff; margin:48px 0 20px; border-left:4px solid var(--accent); padding-left:16px; }
+  h2 { font-size:1.5em; color:var(--accent2); margin:36px 0 16px; }
+  h3 { font-size:1.2em; color:var(--accent3); margin:24px 0 12px; }
+  h4 { font-size:1.05em; color:var(--purple); margin:20px 0 8px; }
+  p { margin:12px 0; }
+  ul, ol { margin:12px 0 12px 24px; }
+  li { margin:6px 0; }
+  pre { background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:16px 20px; overflow-x:auto; margin:16px 0; font-size:0.88em; line-height:1.6; }
+  code { font-family:"Cascadia Code","Fira Code","Consolas",monospace; font-size:0.92em; }
+  p code, li code { background:var(--surface2); padding:2px 6px; border-radius:4px; }
+
+  /* ===== Tables ===== */
+  table { width:100%; border-collapse:collapse; margin:20px 0; }
+  th { background:var(--surface2); padding:10px 14px; text-align:left; font-weight:600; }
+  td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:hover td { background:rgba(255,255,255,0.03); }
+
+  /* ===== Status indicators ===== */
+  .done { color:var(--done); font-weight:bold; }
+  .wip { color:var(--wip); font-weight:bold; }
+  .missing { color:var(--missing); font-weight:bold; }
+  .done-bg { background:rgba(34,197,94,0.12); }
+  .wip-bg { background:rgba(245,158,11,0.12); }
+  .missing-bg { background:rgba(239,68,68,0.12); }
+
+  /* ===== Phase evaluation cards ===== */
+  .phase-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:28px; margin:24px 0;
+  }
+  .phase-card .phase-header {
+    display:flex; align-items:center; gap:16px; margin-bottom:16px;
+  }
+  .phase-num {
+    width:56px; height:56px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.5em; font-weight:bold; color:#fff; flex-shrink:0;
+  }
+  .phase-num.done-num { background:var(--done); }
+  .phase-num.wip-num { background:var(--wip); }
+  .phase-num.missing-num { background:var(--missing); }
+  .phase-grade {
+    background:var(--code-bg); border-radius:8px;
+    padding:4px 12px; font-size:0.9em; font-weight:bold;
+  }
+
+  /* ===== Progress bars ===== */
+  .progress-bar {
+    height:8px; background:var(--border); border-radius:4px; margin:12px 0; overflow:hidden;
+  }
+  .progress-fill {
+    height:100%; border-radius:4px; transition:width 0.3s;
+  }
+  .progress-done { background:var(--done); }
+  .progress-wip { background:var(--wip); }
+
+  /* ===== Cards ===== */
+  .card {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin:20px 0;
+  }
+  .note {
+    background:var(--surface); border-left:4px solid var(--yellow);
+    padding:12px 20px; margin:16px 0; border-radius:0 8px 8px 0;
+  }
+  .warn {
+    background:var(--surface); border-left:4px solid var(--accent);
+    padding:12px 20px; margin:16px 0; border-radius:0 8px 8px 0;
+  }
+  .info {
+    background:var(--surface); border-left:4px solid var(--accent3);
+    padding:12px 20px; margin:16px 0; border-radius:0 8px 8px 0;
+  }
+  .success {
+    background:var(--surface); border-left:4px solid var(--done);
+    padding:12px 20px; margin:16px 0; border-radius:0 8px 8px 0;
+  }
+
+  /* ===== Dataflow ===== */
+  .dataflow {
+    display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+    gap:12px; margin:20px 0; padding:20px;
+    background:var(--code-bg); border-radius:12px; font-size:0.85em;
+  }
+  .df-node {
+    background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    padding:10px 16px; text-align:center; min-width:100px;
+  }
+  .df-arrow { font-size:1.4em; color:#666; }
+
+  /* ===== Phase grid ===== */
+  .phase-overview-grid {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+    gap:18px; margin:20px 0;
+  }
+  .phase-mini {
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:18px 20px;
+  }
+  .phase-mini h4 { margin:8px 0 4px 0; font-size:1em; }
+  .phase-mini .tag-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+  .tag {
+    font-size:0.75em; padding:2px 8px; border-radius:10px; font-weight:600;
+  }
+  .tag-done { background:rgba(34,197,94,0.2); color:var(--done); }
+  .tag-wip { background:rgba(245,158,11,0.2); color:var(--wip); }
+  .tag-missing { background:rgba(239,68,68,0.2); color:var(--missing); }
+  .tag-priority { background:rgba(168,85,247,0.2); color:var(--purple); }
+
+  /* ===== Roadmap timeline ===== */
+  .roadmap {
+    position:relative; padding-left:32px; margin:24px 0;
+  }
+  .roadmap::before {
+    content:''; position:absolute; left:15px; top:0; bottom:0;
+    width:3px; background:var(--border); border-radius:2px;
+  }
+  .roadmap-item {
+    position:relative; margin-bottom:32px; padding-left:8px;
+  }
+  .roadmap-dot {
+    position:absolute; left:-23px; top:4px;
+    width:14px; height:14px; border-radius:50%; border:2px solid var(--border);
+    background:var(--bg);
+  }
+  .roadmap-dot.done-dot { border-color:var(--done); background:var(--done); }
+  .roadmap-dot.wip-dot { border-color:var(--wip); background:var(--wip); }
+  .roadmap-dot.missing-dot { border-color:var(--missing); }
+  .roadmap-item .rm-content {
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:16px 20px;
+  }
+  .roadmap-item h4 { margin:0 0 4px 0; font-size:1.05em; }
+
+  @media (max-width:640px) {
+    .container { padding:16px; }
+    .cover h1 { font-size:1.8em; }
+    .phase-overview-grid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ===== 封面 ===== -->
+<div class="cover">
+  <div class="version-badge">v3.0 · 设计规划</div>
+  <h1>VueCalc v3</h1>
+  <div class="subtitle">设计规划：v2 路线图评估 · 现状诊断 · 改进方向</div>
+  <div class="meta">基于 v1 技术文档 8 阶段路线图，评估 v2 实现成果，规划 v3+ 演进方向</div>
+  <div class="meta" style="margin-top:8px">v2 基线: 11 文件编译 → <code>vue_calc.exe</code> (232KB) · SFC 管道已打通</div>
+</div>
+
+<div class="card" style="text-align:center">
+  <h3 style="margin-top:0; color:var(--purple)">📋 文档目的</h3>
+  <p>本文档作为 <strong>v3 及后续版本的设计蓝图</strong>，不做实现细节记录（详见 v1/v2 技术文档），
+  聚焦于三件事：</p>
+  <ol style="display:inline-block;text-align:left">
+    <li><strong>评估</strong>：v2 实现成果与 v1 原始 8 阶段路线图的对应关系</li>
+    <li><strong>诊断</strong>：更新「现状：缺什么？」与「可能的问题与改进方向」</li>
+    <li><strong>规划</strong>：基于 v2 实践经验，重新排序和细化实现路线图</li>
+  </ol>
+</div>
+
+<!-- ===== 第〇章：项目代码全景 ===== -->
+<h1>〇、项目代码全景 (v2 基线)</h1>
+
+<p>以下基于实际代码文件，建立 v3 规划的精确基线。所有行数/函数/常量均来自源码统计。</p>
+
+<h2>0.1 文件清单与角色</h2>
+
+<table>
+<tr><th>#</th><th>文件</th><th>行数</th><th>类型</th><th>角色</th><th>关键符号</th></tr>
+<tr>
+  <td>1</td>
+  <td><code>src/Calculator.vue</code></td>
+  <td>215</td>
+  <td>源文件</td>
+  <td>SFC 单文件组件：template(1-41) + script(45-58/属性+方法) + style(205-214)</td>
+  <td>6 属性, 7 方法, 8 CSS class</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>tools/sfc-compiler.php</code></td>
+  <td>303</td>
+  <td>编译器</td>
+  <td>4 步管道：块提取(L35-60) → 样式解析(L64-88) → 模板解析(L111-227) → 代码生成(L244-300)</td>
+  <td><code>hexToBgr()</code>, <code>borderColor()</code>, <code>parseAttrs()</code></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>main.php</code></td>
+  <td>291</td>
+  <td>源文件</td>
+  <td>入口 + 2 个运行时类：CalcRenderer(L26-133) + CalcApp(L139-259)</td>
+  <td><code>getBindValue()</code>, <code>dispatchClick()</code>, <code>handleClick()</code></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>src/Calculator.gen.php</code></td>
+  <td>174</td>
+  <td>生成</td>
+  <td>SFC 编译器输出：ReactiveComponent 子类（script 块内容副本 + 自动构造函数）</td>
+  <td><code>class Calculator extends ReactiveComponent</code></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>src/CalculatorLayout_gen.php</code></td>
+  <td>296</td>
+  <td>生成</td>
+  <td>SFC 编译器输出：布局数据函数 + 窗口常量</td>
+  <td><code>WINDOW_WIDTH/WINDOW_HEIGHT</code>, <code>getLayout()</code></td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>src/ReactiveComponent.php</code></td>
+  <td>34</td>
+  <td>源文件</td>
+  <td>基类：dirty 布尔 + ChangeQueue 静态持有 + initShared()</td>
+  <td><code>$dirty</code>, <code>$queue</code>, <code>initShared()</code></td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>src/ChangeQueue.php</code></td>
+  <td>56</td>
+  <td>源文件</td>
+  <td>环形缓冲变更队列（当前未活跃使用）</td>
+  <td><code>$buffer</code>, <code>$head</code>, <code>$tail</code>, <code>push()</code>, <code>pop()</code></td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>cpp-src/vue_calc.cc</code></td>
+  <td>157</td>
+  <td>源文件</td>
+  <td>C++ Win32 渲染层：9 个 PHP 可调用函数</td>
+  <td><code>php_vue_window_create</code> 等 9 个导出函数</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>php-src/vue_calc.stub.php</code></td>
+  <td>24</td>
+  <td>源文件</td>
+  <td>PHP→C++ 函数签名声明（桥接层）</td>
+  <td>9 个 <code>function vue_*</code> 声明</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>project.yml</code></td>
+  <td>10</td>
+  <td>配置</td>
+  <td>AOT 编译配置：bin 模式, 4 个源码目录</td>
+  <td><code>mode: bin</code>, <code>sources: [...]</code></td>
+</tr>
+<tr>
+  <td style="border-top:2px solid var(--accent2)"><strong>∑</strong></td>
+  <td style="border-top:2px solid var(--accent2)"><strong>总计 10 个源码文件</strong></td>
+  <td style="border-top:2px solid var(--accent2)"><strong>1,560</strong></td>
+  <td style="border-top:2px solid var(--accent2)">—</td>
+  <td style="border-top:2px solid var(--accent2)">编译生成 vue_calc.exe (~232KB, 11 编译单元)</td>
+  <td style="border-top:2px solid var(--accent2)">—</td>
+</tr>
+</table>
+
+<h2>0.2 数据流：从点击到像素的完整路径</h2>
+
+<pre><code>// 1. C++ 消息泵捕获 WM_LBUTTONDOWN (cpp-src/vue_calc.cc:70-84)
+php_vue_peek_message() → [hwnd, 0x0201, x, y]
+
+// 2. PHP 命中测试 (main.php:239-248)
+CalcApp.handleClick(56, 218) → 遍历 getLayout()['buttons'] 18个按钮
+
+// 3. 显式事件路由 (main.php:249-258, AOT安全)
+dispatchClick(['handler'=>'handleButton', 'arg'=>'7'])
+→ if ($handler === 'handleButton') { $this->calc->handleButton('7'); }
+
+// 4. 业务逻辑修改状态 (src/Calculator.gen.php, 从.vue script块复制)
+Calculator.handleButton('7') → inputDigit('7') → $this->display = '7'; $this->dirty = true;
+
+// 5. 主循环检测脏标记 (main.php:207-220)
+while ($dirty) { $renderer->render(); }
+
+// 6. 数据驱动渲染 (main.php:86-127)
+getLayout()['elements'] → 遍历4个元素 → vue_fill_rect/vue_draw_text (C++)
+getLayout()['buttons']  → 遍历18个按钮 → vue_draw_button (C++)
+
+// 7. C++ GDI 原语 (cpp-src/vue_calc.cc:120-156)
+php_vue_fill_rect()  → CreateSolidBrush + FillRect
+php_vue_draw_text()  → CreateFont + SetTextColor + TextOutA
+php_vue_draw_button() → CreateSolidBrush + CreatePen + Rectangle</code></pre>
+
+<h2>0.3 函数/方法全景</h2>
+
+<table>
+<tr><th>文件</th><th>符号</th><th>类型</th><th>行号</th><th>用途</th></tr>
+<tr><td rowspan="2">sfc-compiler.php</td><td><code>hexToBgr(string): int</code></td><td>函数</td><td>93-98</td><td>#RRGGBB → BGR int (COLORREF)</td></tr>
+<tr><td><code>borderColor(int): int</code></td><td>函数</td><td>103-108</td><td>背景色 → 边框色(通道+20)</td></tr>
+<tr><td rowspan="2">sfc-compiler.php</td><td><code>parseAttrs(string): array</code></td><td>函数</td><td>231-239</td><td>属性字符串 → 键值对数组</td></tr>
+<tr><td><code>主流程</code></td><td>脚本</td><td>35-300</td><td>块提取→样式→模板→生成 4 步管道</td></tr>
+<tr><td rowspan="3">main.php</td><td><code>CalcRenderer::getBindValue(string): string</code></td><td>方法</td><td>40-50</td><td>:bind 映射 → 组件属性值</td></tr>
+<tr><td><code>CalcRenderer::render(): void</code></td><td>方法</td><td>86-127</td><td>遍历 LAYOUT → GDI 绘制</td></tr>
+<tr><td><code>CalcApp::dispatchClick(array): void</code></td><td>方法</td><td>249-258</td><td>显式 handler→method 路由 (AOT)</td></tr>
+<tr><td rowspan="2">Calculator.vue</td><td><code>6 个属性</code></td><td>属性</td><td>45-58</td><td>display/expression/operand1/operator/newInput/hasDecimal</td></tr>
+<tr><td><code>7 个方法</code></td><td>方法</td><td>60-200</td><td>reset/inputDigit/inputDecimal/inputOperator/calculate/backspace/handleButton</td></tr>
+<tr><td>ReactiveComponent</td><td><code>$dirty</code>, <code>initShared()</code></td><td>属性+方法</td><td>14,26-29</td><td>脏标记 + 共享内存初始化</td></tr>
+<tr><td>ChangeQueue</td><td><code>push/pop/isEmpty</code></td><td>方法</td><td>23-55</td><td>变更环形缓冲（预留，未活跃使用）</td></tr>
+<tr><td rowspan="3">vue_calc.cc</td><td><code>php_vue_window_create</code></td><td>C++</td><td>36-57</td><td>创建 Win32 窗口（不可resize）</td></tr>
+<tr><td><code>php_vue_begin/end_paint</code></td><td>C++</td><td>91-117</td><td>双缓冲：内存DC→屏幕BitBlt</td></tr>
+<tr><td><code>php_vue_fill_rect/draw_text/draw_button</code></td><td>C++</td><td>120-156</td><td>3 个 GDI 绘制原语</td></tr>
+</table>
+
+<h2>0.4 AOT 兼容模式 vs 标准 PHP 模式对比</h2>
+
+<div class="card">
+<table>
+<tr><th>模式</th><th>属性声明</th><th>脏标记</th><th>事件路由</th><th>数据绑定</th></tr>
+<tr>
+  <td><strong>标准 PHP</strong></td>
+  <td><code>__get/__set</code> 魔术方法自动处理</td>
+  <td><code>__set</code> 中自动 <code>$this->dirty = true</code></td>
+  <td><code>$obj->$handler()</code> 动态调用</td>
+  <td><code>$obj->$bindKey</code> 动态访问</td>
+</tr>
+<tr>
+  <td><strong>AOT 兼容 (当前)</strong></td>
+  <td>显式 <code>public string $display</code></td>
+  <td>手动 <code>$this->dirty = true</code> (7 个方法中显式写入)</td>
+  <td>if/else 显式路由 (dispatchClick 4 个分支)</td>
+  <td>if/else 显式映射 (getBindValue 2 个分支)</td>
+</tr>
+</table>
+</div>
+
+<!-- ===== 第一章：总体评估 ===== -->
+<h1>一、v1 vs v2：路线图阶段执行评估</h1>
+
+<p>以下是 v2 实现相对于 v1 8 阶段路线图的完成度评估。注意 v1 写于 SFC 编译器构思阶段，
+v2 是首次 SFC 管道实战，很多假设得到验证，也暴露出新问题。</p>
+
+<!-- Phase 1 -->
+<div class="phase-card">
+  <div class="phase-header">
+    <div class="phase-num done-num">P1</div>
+    <div>
+      <h3 style="margin:0">Phase 1 · Template Parser · <span class="done">已实现 (60%)</span></h3>
+      <div style="font-size:0.85em;color:#888">v1 目标: 手写 PHP Template Parser —— 解析 .vue 的 &lt;template&gt; 块，输出 AST</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill progress-done" style="width:60%"></div></div>
+
+  <h4>已实现</h4>
+  <ul>
+    <li><span class="done">✅</span> 正则提取 <code>&lt;template&gt;</code> / <code>&lt;script lang="php"&gt;</code> / <code>&lt;style&gt;</code> 三个块</li>
+    <li><span class="done">✅</span> 支持 5 种自定义标签：<code>&lt;app&gt;</code> <code>&lt;rect&gt;</code> <code>&lt;text :bind&gt;</code> <code>&lt;grid&gt;</code> <code>&lt;btn @click&gt;</code></li>
+    <li><span class="done">✅</span> 属性名支持 <code>:bind</code> 和 <code>@click</code> 等 Vue 风格指令</li>
+  </ul>
+
+  <h4>仍未解决</h4>
+  <ul>
+    <li><span class="missing">❌</span> <strong>无 AST 输出</strong>：当前为直接正则匹配 → 数组，没有中间语法树表示。v1 目标「输出 AST」未达成</li>
+    <li><span class="missing">❌</span> <strong>无通用解析器</strong>：标签名硬编码在正则里（<code>app|rect|text|grid|btn</code>），不支持自定义标签扩展</li>
+    <li><span class="missing">❌</span> <strong>正则脆弱性</strong>：CSS <code>#RRGGBB</code> 与正则分隔符冲突、属性名字符类不完整，已在 v2 修复但表明正则方案不可靠</li>
+    <li><span class="missing">❌</span> <strong>无错误报告</strong>：解析失败时静默退出，没有行号/位置信息</li>
+  </ul>
+
+  <div class="note"><strong>v3 建议</strong>：在正则方案可用的前提下暂时维持现状。当需要支持更多标签类型或嵌套结构时，必须升级为递归下降 parser 并输出 AST。</div>
+</div>
+
+<!-- Phase 2 -->
+<div class="phase-card">
+  <div class="phase-header">
+    <div class="phase-num done-num">P2</div>
+    <div>
+      <h3 style="margin:0">Phase 2 · Style→GDI Mapper · <span class="done">已实现 (50%)</span></h3>
+      <div style="font-size:0.85em;color:#888">v1 目标: CSS 属性子集到 GDI 常量的字典</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill progress-done" style="width:50%"></div></div>
+
+  <h4>已实现</h4>
+  <ul>
+    <li><span class="done">✅</span> <code>hexToBgr()</code>：CSS <code>#RRGGBB</code> → Win32 COLORREF BGR 整数</li>
+    <li><span class="done">✅</span> <code>borderColor()</code>：自动推导较亮的边框色（每个通道 +20）</li>
+    <li><span class="done">✅</span> CSS class 名称到颜色属性的键值对映射</li>
+  </ul>
+
+  <h4>仍未解决</h4>
+  <ul>
+    <li><span class="missing">❌</span> <strong>仅映射颜色</strong>：<code>font-size</code> / <code>font-weight</code> 虽然在 CSS 中定义但在代码生成时硬编码处理，不是通用映射表</li>
+    <li><span class="missing">❌</span> <strong>无 opacity/alpha 支持</strong>：GDI 不支持 alpha 通道（v1 已指出）</li>
+    <li><span class="missing">❌</span> <strong>无 border-radius 映射</strong>：<code>RoundRect</code> API 存在但未使用</li>
+    <li><span class="missing">❌</span> <strong>无 spacing/padding 支持</strong>：当前全部是精确坐标，无 CSS Box Model</li>
+  </ul>
+
+  <div class="note"><strong>v3 建议</strong>：建立正式的 CSS→GDI 属性映射表（关联数组），而非分散在解析器中的 if/else。为 Direct2D 升级预留接口。</div>
+</div>
+
+<!-- Phase 3 -->
+<div class="phase-card">
+  <div class="phase-header">
+    <div class="phase-num done-num">P3</div>
+    <div>
+      <h3 style="margin:0">Phase 3 · Layout Engine · <span class="done">已实现 (55%)</span></h3>
+      <div style="font-size:0.85em;color:#888">v1 目标: 基于 AST + 映射表 → 生成坐标布局数据</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill progress-done" style="width:55%"></div></div>
+
+  <h4>已实现</h4>
+  <ul>
+    <li><span class="done">✅</span> Grid 布局：<code>cols</code> / <code>rows</code> / <code>cell-w</code> / <code>cell-h</code> / <code>margin</code> → 预计算像素坐标</li>
+    <li><span class="done">✅</span> 绝对定位矩形和文本元素</li>
+    <li><span class="done">✅</span> 所有坐标在编译期计算，运行时零开销</li>
+    <li><span class="done">✅</span> 这正是 v1 提出的「方案3：编译期计算好布局」—— 验证了可行性</li>
+  </ul>
+
+  <h4>仍未解决</h4>
+  <ul>
+    <li><span class="missing">❌</span> <strong>仅 Grid 布局</strong>：无 flex、无流式布局、无自动换行</li>
+    <li><span class="missing">❌</span> <strong>无 CSS Box Model</strong>：没有 margin/border/padding/content 四层盒子概念</li>
+    <li><span class="missing">❌</span> <strong>无响应式</strong>：窗口大小固定（328×420），不支持 resize</li>
+  </ul>
+
+  <div class="success"><strong>v2 验证成果</strong>：v1 中提出的三种布局方案，v2 实现了方案3（编译期预计算）并证明完全可行。这是 v2 最重要的架构验证之一。</div>
+</div>
+
+<!-- Phase 4 -->
+<div class="phase-card">
+  <div class="phase-header">
+    <div class="phase-num done-num">P4</div>
+    <div>
+      <h3 style="margin:0">Phase 4 · Code Generator · <span class="done">已实现 (65%)</span></h3>
+      <div style="font-size:0.85em;color:#888">v1 目标: AST + 布局数据 → 生成 PHP 子类（属性+方法） + 布局常量</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill progress-done" style="width:65%"></div></div>
+
+  <h4>已实现</h4>
+  <ul>
+    <li><span class="done">✅</span> <code>Calculator.gen.php</code>：ReactiveComponent 子类 + script 块内容 + 自动构造函数</li>
+    <li><span class="done">✅</span> <code>CalculatorLayout_gen.php</code>：<code>getLayout(): array</code> 函数 + 窗口常量</li>
+    <li><span class="done">✅</span> AOT 兼容输出：函数返回替代 const 数组、下划线替代文件名点号</li>
+  </ul>
+
+  <h4>仍未解决</h4>
+  <ul>
+    <li><span class="missing">❌</span> <strong>未自动插入 dirty 标记</strong>：v1 设想「方法末尾自动插入 <code>$this->dirty = true</code>」，当前仍由开发者手写</li>
+    <li><span class="missing">❌</span> <strong>模板和类分离</strong>：布局生成为独立文件（<code>_gen.php</code> + <code>Layout_gen.php</code>），而非像 v1 设想生成 C++ 头文件</li>
+    <li><span class="missing">❌</span> <strong>无属性自动声明</strong>：script 块中的属性原样复制，编译器未解析和增强</li>
+  </ul>
+</div>
+
+<!-- Phase 5 -->
+<div class="phase-card">
+  <div class="phase-header">
+    <div class="phase-num wip-num">P5</div>
+    <div>
+      <h3 style="margin:0">Phase 5 · v-model 指令解析 · <span class="wip">部分实现 (25%)</span></h3>
+      <div style="font-size:0.85em;color:#888">v1 目标: 自动生成属性声明、getter/setter、dirty 标记代码</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill progress-wip" style="width:25%"></div></div>
+
+  <h4>已实现</h4>
+  <ul>
+    <li><span class="done">✅</span> <code>:bind="prop"</code> 单向绑定：通过 <code>getBindValue()</code> 显式 if/else 映射</li>
+    <li><span class="done">✅</span> <code>@click="handler"</code> / <code>@click="handler('arg')"</code> 事件绑定</li>
+  </ul>
+
+  <h4>仍未解决</h4>
+  <ul>
+    <li><span class="missing">❌</span> <strong>无 v-model 双向绑定</strong>：没有在模板中声明「此文本既显示又修改」的能力</li>
+    <li><span class="missing">❌</span> <strong>无 v-if / v-for</strong>：条件和循环指令完全缺失</li>
+    <li><span class="missing">❌</span> <strong>无 getter/setter 生成</strong>：dirty 标记仍需手动</li>
+    <li><span class="missing">❌</span> <strong>getBindValue() 硬编码</strong>：每个新属性需要手动添加 if 分支</li>
+  </ul>
+
+  <div class="note"><strong>v3 建议</strong>：单向 <code>:bind</code> 可维持现有方案（显式 if/else 是 AOT 最可靠模式）。v-model 双向绑定是实现重点——需要编译器自动生成 setter 中的 <code>$this->dirty = true</code>。</div>
+</div>
+
+<!-- Phase 6 -->
+<div class="phase-card">
+  <div class="phase-header">
+    <div class="phase-num missing-num">P6</div>
+    <div>
+      <h3 style="margin:0">Phase 6 · 组件树支持 · <span class="missing">未开始 (0%)</span></h3>
+      <div style="font-size:0.85em;color:#888">v1 目标: 嵌套组件编译展开</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill progress-done" style="width:0%"></div></div>
+
+  <h4>当前状态</h4>
+  <ul>
+    <li>单组件应用：一个 App 包含一个 Calculator 组件 —— 无嵌套</li>
+    <li>组件关系在 main.php 中硬编码创建，而非从模板编译</li>
+  </ul>
+
+  <h4>需要实现</h4>
+  <ul>
+    <li>子组件标签解析（如 <code>&lt;my-component /&gt;</code>）</li>
+    <li>编译期组件注册表（组件名 → 类名映射）</li>
+    <li>子组件在构造函数中自动实例化（AOT 要求编译期确定类型）</li>
+    <li>props 传递机制（父组件数据 → 子组件）</li>
+  </ul>
+
+  <div class="warn"><strong>复杂度预警</strong>：组件树支持将显著增加编译器复杂度。v1 中提出的「编译期展开子组件为成员变量」方案在 AOT 约束下是正确的方向。</div>
+</div>
+
+<!-- Phase 7 -->
+<div class="phase-card">
+  <div class="phase-header">
+    <div class="phase-num missing-num">P7</div>
+    <div>
+      <h3 style="margin:0">Phase 7 · 增量渲染引擎 · <span class="missing">未开始 (0%)</span></h3>
+      <div style="font-size:0.85em;color:#888">v1 目标: 节点级 dirty 标记，区域重绘</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill progress-done" style="width:0%"></div></div>
+
+  <h4>当前状态</h4>
+  <ul>
+    <li>全局 <code>dirty</code> 标志 → 全量 GDI 重绘</li>
+    <li>对计算器（4 个元素 + 18 个按钮，328×420）性能足够</li>
+    <li>对复杂 UI 不可扩展</li>
+  </ul>
+
+  <h4>需要实现</h4>
+  <ul>
+    <li>节点级 dirty 标记：每个布局元素独立标记是否需重绘</li>
+    <li>依赖分析：v-model 变更 → 自动标记受影响节点</li>
+    <li>区域裁剪：仅重绘 dirty 节点的 bounding box</li>
+    <li>脏区合并：相邻 dirty 区域合并为一个大矩形避免过度绘制</li>
+  </ul>
+
+  <div class="info"><strong>优先级</strong>：此阶段仅在 UI 复杂度显著提升后才需要。当前计算器场景中，全量 GDI 重绘 22 个元素无明显性能问题。</div>
+</div>
+
+<!-- Phase 8 -->
+<div class="phase-card">
+  <div class="phase-header">
+    <div class="phase-num missing-num">P8</div>
+    <div>
+      <h3 style="margin:0">Phase 8 · 渲染层升级 GDI→Direct2D · <span class="missing">未开始 (0%)</span></h3>
+      <div style="font-size:0.85em;color:#888">v1 目标: 支持更丰富的视觉效果</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill progress-done" style="width:0%"></div></div>
+
+  <h4>升级收益</h4>
+  <ul>
+    <li>Alpha 通道 / 半透明</li>
+    <li>抗锯齿文本和形状</li>
+    <li>硬件加速（GPU 渲染）</li>
+    <li>更丰富的 CSS 映射（box-shadow / gradient / opacity）</li>
+  </ul>
+
+  <h4>升级代价</h4>
+  <ul>
+    <li>增加 <code>d2d1.dll</code> / <code>dwrite.dll</code> 依赖</li>
+    <li>需要重写 cpp-src 中的渲染代码</li>
+    <li>Direct2D API 比 GDI 复杂得多</li>
+    <li>exe 体积可能增加</li>
+  </ul>
+
+  <div class="warn"><strong>建议</strong>：此阶段应推迟到有明确的视觉效果需求时再启动。GDI 对当前计算器完全够用。若需要 Web 级视觉效果，考虑 Skia 而非 Direct2D（更成熟的跨平台方案）。</div>
+</div>
+
+<h2>1.9 各阶段对应代码位置（精确索引）</h2>
+
+<p>将每个 Phase 对应到具体文件和行号，为 v3 重构提供精确切入点：</p>
+
+<table>
+<tr><th>阶段</th><th>当前实现文件</th><th>关键行号</th><th>当前方式</th><th>v3 需改动</th></tr>
+<tr>
+  <td>P1 Template Parser</td>
+  <td><code>tools/sfc-compiler.php</code></td>
+  <td>L35-60 块提取<br>L111-227 模板解析<br>L231-239 parseAttrs()</td>
+  <td><code>preg_match_all</code> + 标签名硬编码 <code>app|rect|text|grid|btn</code></td>
+  <td>重写 L111-239 为递归下降<br>新增 <code>ast-nodes.php</code></td>
+</tr>
+<tr>
+  <td>P2 Style→GDI</td>
+  <td><code>tools/sfc-compiler.php</code></td>
+  <td>L64-88 样式<br>L93-98 hexToBgr()<br>L103-108 borderColor()</td>
+  <td><code>$classStyles</code> 数组仅 4 键 (bg/fg/fontSize/bold)</td>
+  <td>新增 <code>css-mappings.php</code><br>扩展样式输出键</td>
+</tr>
+<tr>
+  <td>P3 Layout Engine</td>
+  <td><code>tools/sfc-compiler.php</code></td>
+  <td>L140-180 app/rect<br>L182-227 grid/btn</td>
+  <td><code>bx = gridX + col*cellW + margin</code></td>
+  <td>扩展 L182-227 支持 flex<br>新增 Box Model 计算</td>
+</tr>
+<tr>
+  <td>P4 Code Generator</td>
+  <td><code>tools/sfc-compiler.php</code></td>
+  <td>L244-300 输出<br><code>Calculator.gen.php</code><br><code>CalculatorLayout_gen.php</code></td>
+  <td><code>file_put_contents</code> + <code>var_export</code> + script 原样复制</td>
+  <td>增强 L244-300 加 auto-dirty<br>新增 AOT 校验步骤</td>
+</tr>
+<tr>
+  <td>P5 v-model 指令</td>
+  <td><code>main.php</code> L40-50<br><code>.vue</code> L45-58</td>
+  <td>getBindValue 2 分支</td>
+  <td>显式 if/else，仅单向 :bind</td>
+  <td>编译器生成 setXxx()+dirty<br>新增 setBindValue()</td>
+</tr>
+<tr>
+  <td>P6 组件树</td>
+  <td>无 — 未实现</td>
+  <td>—</td>
+  <td>单组件内联</td>
+  <td>编译器新增子组件解析<br>生成嵌套实例化代码</td>
+</tr>
+<tr>
+  <td>P7 增量渲染</td>
+  <td><code>main.php</code> L86-127</td>
+  <td>render() 全量遍历</td>
+  <td>foreach elements + foreach buttons</td>
+  <td>新增 dirtyNodes 追踪<br>区域裁剪逻辑</td>
+</tr>
+<tr>
+  <td>P8 Direct2D</td>
+  <td><code>cpp-src/vue_calc.cc</code></td>
+  <td>全部 157 行</td>
+  <td>GDI: SolidBrush/FillRect/TextOutA</td>
+  <td>重写 cpp-src 为 D2D<br>更新 stub 签名</td>
+</tr>
+</table>
+
+<!-- ===== 第二章：路线图概览面板 ===== -->
+<h1>二、路线图阶段概览</h1>
+
+<div class="phase-overview-grid">
+
+  <div class="phase-mini done-bg">
+    <div class="tag-row">
+      <span class="tag tag-done">P1 已完成</span>
+      <span class="tag tag-priority">短期</span>
+    </div>
+    <h4>Template Parser</h4>
+    <p style="font-size:0.85em;color:#aaa">正则解析自定义标签，但无AST</p>
+    <div class="progress-bar"><div class="progress-fill progress-done" style="width:60%"></div></div>
+    <span style="font-size:0.75em;color:#888">60%</span>
+  </div>
+
+  <div class="phase-mini done-bg">
+    <div class="tag-row">
+      <span class="tag tag-done">P2 已完成</span>
+      <span class="tag tag-priority">短期</span>
+    </div>
+    <h4>Style→GDI Mapper</h4>
+    <p style="font-size:0.85em;color:#aaa">颜色映射基本覆盖，缺字体/间距</p>
+    <div class="progress-bar"><div class="progress-fill progress-done" style="width:50%"></div></div>
+    <span style="font-size:0.75em;color:#888">50%</span>
+  </div>
+
+  <div class="phase-mini done-bg">
+    <div class="tag-row">
+      <span class="tag tag-done">P3 已完成</span>
+      <span class="tag tag-priority">中期</span>
+    </div>
+    <h4>Layout Engine</h4>
+    <p style="font-size:0.85em;color:#aaa">Grid预计算验证可行，缺flex/box-model</p>
+    <div class="progress-bar"><div class="progress-fill progress-done" style="width:55%"></div></div>
+    <span style="font-size:0.75em;color:#888">55%</span>
+  </div>
+
+  <div class="phase-mini done-bg">
+    <div class="tag-row">
+      <span class="tag tag-done">P4 已完成</span>
+      <span class="tag tag-priority">中期</span>
+    </div>
+    <h4>Code Generator</h4>
+    <p style="font-size:0.85em;color:#aaa">.gen.php输出稳定，缺auto-dirty</p>
+    <div class="progress-bar"><div class="progress-fill progress-done" style="width:65%"></div></div>
+    <span style="font-size:0.75em;color:#888">65%</span>
+  </div>
+
+  <div class="phase-mini wip-bg">
+    <div class="tag-row">
+      <span class="tag tag-wip">P5 进行中</span>
+      <span class="tag tag-priority">长期</span>
+    </div>
+    <h4>v-model 指令</h4>
+    <p style="font-size:0.85em;color:#aaa">:bind单向已实现，缺v-model双向</p>
+    <div class="progress-bar"><div class="progress-fill progress-wip" style="width:25%"></div></div>
+    <span style="font-size:0.75em;color:#888">25%</span>
+  </div>
+
+  <div class="phase-mini missing-bg">
+    <div class="tag-row">
+      <span class="tag tag-missing">P6 未开始</span>
+      <span class="tag tag-priority">长期</span>
+    </div>
+    <h4>组件树</h4>
+    <p style="font-size:0.85em;color:#aaa">单组件应用，无嵌套需求</p>
+    <div class="progress-bar"><div class="progress-fill progress-done" style="width:0%"></div></div>
+    <span style="font-size:0.75em;color:#888">0%</span>
+  </div>
+
+  <div class="phase-mini missing-bg">
+    <div class="tag-row">
+      <span class="tag tag-missing">P7 未开始</span>
+      <span class="tag tag-priority">远期</span>
+    </div>
+    <h4>增量渲染</h4>
+    <p style="font-size:0.85em;color:#aaa">全量GDI重绘对计算器够用</p>
+    <div class="progress-bar"><div class="progress-fill progress-done" style="width:0%"></div></div>
+    <span style="font-size:0.75em;color:#888">0%</span>
+  </div>
+
+  <div class="phase-mini missing-bg">
+    <div class="tag-row">
+      <span class="tag tag-missing">P8 未开始</span>
+      <span class="tag tag-priority">远期</span>
+    </div>
+    <h4>Direct2D 升级</h4>
+    <p style="font-size:0.85em;color:#aaa">GDI对当前需求够用</p>
+    <div class="progress-bar"><div class="progress-fill progress-done" style="width:0%"></div></div>
+    <span style="font-size:0.75em;color:#888">0%</span>
+  </div>
+
+</div>
+
+<div class="card" style="text-align:center">
+  <h3 style="margin:0 0 16px 0; color:var(--accent2)">总体完成度</h3>
+  <div class="progress-bar" style="height:20px;max-width:500px;margin:0 auto 12px">
+    <div class="progress-fill progress-done" style="width:38%"></div>
+  </div>
+  <p style="font-size:0.9em;color:#888">8 个阶段中，4 个具备可用实现（P1-P4），1 个部分实现（P5），3 个未开始（P6-P8）<br>
+  全局加权完成度约 <strong style="color:var(--accent2)">38%</strong></p>
+</div>
+
+<!-- ===== 第三章：现状诊断 ===== -->
+<h1>三、现状：缺什么？(v3 更新)</h1>
+
+<p>对比 v1 §8.4 的「现状表」，v2 已实现 5 项之前缺失的能力。以下是更新后的现状诊断：</p>
+
+<h2>3.1 能力矩阵（v3）</h2>
+
+<table>
+<tr><th>#</th><th>组件</th><th>v1</th><th>v2</th><th>v3 评估与说明</th></tr>
+<tr>
+  <td>1</td>
+  <td><strong>SFC 块提取</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td>正则提取 template/script/style 三块，稳定可用。缺陷：无错误报告、正则脆弱</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><strong>Template 解析</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td>5 种自定义标签正则解析。缺陷：标签名硬编码、无 AST、不够通用</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><strong>Style → GDI 映射</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td>hexToBgr + borderColor 颜色转换。缺陷：仅映射颜色属性</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><strong>Layout Engine</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td>Grid 编译期预计算坐标。缺陷：仅 Grid、无 flex/CSS Box Model、无响应式</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><strong>Code Generator</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td>生成 .gen.php（类+布局）。缺陷：未自动插入 dirty、属性声明未增强</td>
+</tr>
+<tr style="border-top:2px solid var(--accent2)">
+  <td>6</td>
+  <td><strong>v-model 双向绑定</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="wip">🔄 部分</td>
+  <td>:bind 单向已实现。v-model 双向 + 自动 dirty 仍缺失。这是 v3 首要任务之一</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><strong>v-if / v-for</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="missing">❌ 缺失</td>
+  <td>条件渲染和列表循环指令完全未实现。需要 AST 支持</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><strong>组件树 (嵌套组件)</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="missing">❌ 缺失</td>
+  <td>单组件应用。需要编译期组件注册 + props 传递</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><strong>增量渲染</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="missing">❌ 缺失</td>
+  <td>全量 GDI 重绘。对当前场景够用，复杂 UI 需要节点 dirty + 区域裁剪</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><strong>Direct2D / 高级渲染</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="missing">❌ 缺失</td>
+  <td>GDI 足以覆盖当前需求。升级需重写渲染层</td>
+</tr>
+<tr style="border-top:2px solid var(--accent2)">
+  <td>11</td>
+  <td><strong>ReactiveComponent 基类</strong></td>
+  <td class="done">✅ 已有</td>
+  <td class="done">✅ 保持</td>
+  <td>dirty + ChangeQueue 基础架构稳定</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><strong>GDI 渲染原语</strong></td>
+  <td class="done">✅ 已有</td>
+  <td class="done">✅ 保持</td>
+  <td>窗口/双缓冲/文本/矩形/按钮，稳定可靠</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><strong>消息泵</strong></td>
+  <td class="done">✅ 已有</td>
+  <td class="done">✅ 保持</td>
+  <td>PeekMessage + DispatchMessage 循环</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><strong>AOT 编译链</strong></td>
+  <td class="done">✅ 已有</td>
+  <td class="done">✅ 保持</td>
+  <td>Swoole Compiler + MSVC → exe，已验证通过</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><strong>SFC 编译管道集成</strong></td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td>.vue → [sfc-compiler.php] → .gen.php → [AOT] → .exe<br>构建脚本已自动化（compile_vue_calc.bat）</td>
+</tr>
+</table>
+
+<h2>3.2 v1→v2 已补缺的关键项</h2>
+
+<div class="success">
+  <strong>v2 填补了 v1 中最大的 5 个缺口：</strong>
+  <ol>
+    <li><strong>SFC 块提取</strong>：正则分离 template / script / style</li>
+    <li><strong>Template 解析</strong>：5 种自定义标签 + 属性解析</li>
+    <li><strong>Style → GDI 颜色映射</strong>：#RRGGBB → BGR + 边框推导</li>
+    <li><strong>Grid 布局引擎</strong>：编译期预计算像素坐标，验证了 v1 方案3</li>
+    <li><strong>代码生成器</strong>：.gen.php 自动输出，打通了完整管道</li>
+  </ol>
+</div>
+
+<h2>3.3 技术债务清单 (精确到文件:行号)</h2>
+
+<p>以下基于实际代码审计结果，列出需要偿还的技术债务项：</p>
+
+<table>
+<tr><th>#</th><th>严重度</th><th>位置</th><th>问题</th><th>影响</th><th>修复方案</th></tr>
+<tr>
+  <td>D1</td>
+  <td class="wip">🟠 高</td>
+  <td><code>sfc-compiler.php:111-227</code></td>
+  <td>正则解析无 AST：标签名硬编码、无嵌套支持、无位置跟踪</td>
+  <td>阻止 v-if/v-for/嵌套组件实现</td>
+  <td>M1: 递归下降 parser + AST</td>
+</tr>
+<tr>
+  <td>D2</td>
+  <td class="wip">🟠 高</td>
+  <td><code>sfc-compiler.php:64-88</code></td>
+  <td>CSS 解析仅提取 4 属性：bg/color/fontSize/fontWeight</td>
+  <td>font-family/border-radius/padding 等被丢弃</td>
+  <td>M1: 建立完整映射表</td>
+</tr>
+<tr>
+  <td>D3</td>
+  <td class="wip">🟠 高</td>
+  <td><code>sfc-compiler.php:244-300</code></td>
+  <td>代码生成无 AOT 校验：输出可能潜藏约束违规</td>
+  <td>编译时 crash，错误难以诊断</td>
+  <td>M1: 新增 validateOutput() 函数</td>
+</tr>
+<tr>
+  <td>D4</td>
+  <td>🟡 中</td>
+  <td><code>main.php:40-50</code></td>
+  <td><code>getBindValue()</code> 硬编码 2 个分支 (expression/display)</td>
+  <td>每增一个 :bind 属性需手动改代码</td>
+  <td>M2: SFC 编译器自动生成映射表</td>
+</tr>
+<tr>
+  <td>D5</td>
+  <td>🟡 中</td>
+  <td><code>main.php:249-258</code></td>
+  <td><code>dispatchClick()</code> 硬编码 4 个 handler 分支</td>
+  <td>每增一个 @click handler 需手动改代码</td>
+  <td>M2: SFC 编译器自动生成路由表</td>
+</tr>
+<tr>
+  <td>D6</td>
+  <td>🟡 中</td>
+  <td><code>Calculator.vue:60-200</code></td>
+  <td>7 个方法中手动写 <code>$this->dirty = true</code></td>
+  <td>容易遗漏，导致 UI 不更新</td>
+  <td>M2: 编译器自动插入 dirty 标记</td>
+</tr>
+<tr>
+  <td>D7</td>
+  <td>🟡 中</td>
+  <td><code>sfc-compiler.php:113-114</code></td>
+  <td><code>&lt;app&gt;</code> 宽高缺失时默认值 (336×430) 而非报错</td>
+  <td>静默降级，难以发现配置错误</td>
+  <td>M1: 改为抛出明确错误信息</td>
+</tr>
+<tr>
+  <td>D8</td>
+  <td>🟢 低</td>
+  <td><code>cpp-src/vue_calc.cc:36-57</code></td>
+  <td>窗口创建无错误检查：CreateWindowEx 失败时 HWND 为 NULL</td>
+  <td>后续操作崩溃</td>
+  <td>远期: 增加错误处理</td>
+</tr>
+<tr>
+  <td>D9</td>
+  <td>🟢 低</td>
+  <td><code>ChangeQueue.php</code></td>
+  <td>整个类未被活跃使用（仅 initShared 创建实例）</td>
+  <td>死代码，增加维护负担</td>
+  <td>评估是否删除或与 dirty 系统集成</td>
+</tr>
+<tr>
+  <td>D10</td>
+  <td>🟢 低</td>
+  <td><code>sfc-compiler.php:93-98</code></td>
+  <td><code>hexToBgr()</code> 不接受简写格式 (<code>#FFF</code>)，无输入校验</td>
+  <td>违规输入静默产生错误颜色</td>
+  <td>M1: 增加校验 + 支持简写</td>
+</tr>
+</table>
+
+<div class="note"><strong>优先级说明</strong>：D1-D3 必须在 M1 解决（编译器健壮化）; D4-D6 在 M2 解决（响应式系统）; D7-D10 可逐步处理。</div>
+
+<!-- ===== 第四章：问题与改进方向 ===== -->
+<h1>四、可能的问题与改进方向 (v3 更新)</h1>
+
+<p>v1 §8.5 提出的 5 个问题在 v2 实践中得到了验证，同时暴露出新的问题。以下逐项更新。</p>
+
+<h2>4.1 AOT 编译器的约束 <span style="color:var(--done);font-size:0.8em">[v1提出，v2验证]</span></h2>
+
+<div class="warn">
+  <strong>v2 实战确认的 AOT 约束清单（更新版）：</strong>
+  <table>
+  <tr><th>约束</th><th>v1 预警</th><th>v2 验证结果</th></tr>
+  <tr>
+    <td>无 <code>__get/__set/__call</code></td>
+    <td>⚠ 预警</td>
+    <td class="done">✅ 确认：必须显式声明 public 属性 + 手动 dirty</td>
+  </tr>
+  <tr>
+    <td>无反射/eval</td>
+    <td>⚠ 预警</td>
+    <td class="done">✅ 确认：SFC 编译器必须作为预处理步骤，不经过 AOT</td>
+  </tr>
+  <tr>
+    <td>无变量属性访问 <code>$obj->$var</code></td>
+    <td>❓ 未知</td>
+    <td class="done">🔍 v2 发现：必须用显式 if/else 映射（见 getBindValue、dispatchClick）</td>
+  </tr>
+  <tr>
+    <td>无变量方法调用 <code>$obj->$method()</code></td>
+    <td>❓ 未知</td>
+    <td class="done">🔍 v2 发现：必须用显式 if/else 路由（见 dispatchClick）</td>
+  </tr>
+  <tr>
+    <td>文件名不含点号</td>
+    <td>❓ 新发现</td>
+    <td class="done">🔍 v2 发现：<code>Layout.gen.php</code> → 无效 C++ 函数名 → 编译 crash</td>
+  </tr>
+  <tr>
+    <td>const 不支持复杂嵌套数组</td>
+    <td>❓ 新发现</td>
+    <td class="done">🔍 v2 发现：<code>const LAYOUT = [...]</code> → 全局常量未注册</td>
+  </tr>
+  <tr>
+    <td>函数可用性不确定</td>
+    <td>⚠ 预警</td>
+    <td class="done">🔍 v2 发现：需避免 <code>str_contains()</code>（PHP8），改用 <code>strpos()</code></td>
+  </tr>
+  </table>
+</div>
+
+<div class="note"><strong>v3 改进方向</strong>：将 AOT 兼容性规则整理为 sfc-compiler 的代码生成约束文档（已部分整理在《构建编译流程参考.md》）。在 sfc-compiler.php 中增加输出校验步骤，自动检测是否违反了上述约束。</div>
+
+<h2>4.2 CSS → GDI 映射的局限性 <span style="color:var(--done);font-size:0.8em">[v1提出，v2部分确认]</span></h2>
+
+<p>v1 预测的局限性全部准确。v2 实现了最核心的颜色映射（hexToBgr），但其余 CSS 属性仍未被系统化处理。</p>
+
+<table>
+<tr><th>CSS 属性</th><th>v1 评估</th><th>v2 实现</th><th>v3 改进建议</th></tr>
+<tr>
+  <td><code>background</code> / <code>color</code></td>
+  <td>可映射</td>
+  <td class="done">✅ hexToBgr</td>
+  <td>已解决</td>
+</tr>
+<tr>
+  <td><code>font-size</code> / <code>font-weight</code></td>
+  <td>可映射</td>
+  <td class="wip">🔄 部分</td>
+  <td>建立 CSS→LOGFONT 映射表，而非在代码生成时硬编码</td>
+</tr>
+<tr>
+  <td><code>border</code> / <code>border-radius</code></td>
+  <td>有限</td>
+  <td class="wip">🔄 仅 borderColor</td>
+  <td>支持 <code>border-radius: Npx</code> → <code>RoundRect</code></td>
+</tr>
+<tr>
+  <td><code>opacity</code> / <code>rgba()</code></td>
+  <td>不可映射（GDI）</td>
+  <td class="missing">❌ 未实现</td>
+  <td>需 Direct2D 升级（P8）</td>
+</tr>
+<tr>
+  <td><code>box-shadow</code></td>
+  <td>需手动</td>
+  <td class="missing">❌ 未实现</td>
+  <td>需 Direct2D 升级（P8）</td>
+</tr>
+<tr>
+  <td><code>padding</code> / <code>margin</code></td>
+  <td>需实现</td>
+  <td class="missing">❌ 未实现</td>
+  <td>需 CSS Box Model 支持</td>
+</tr>
+</table>
+
+<h2>4.3 布局计算的精度 <span style="color:var(--done);font-size:0.8em">[v1提出，v2解决]</span></h2>
+
+<div class="success">
+  <strong>此问题已在 v2 解决</strong>。v1 提出的三种方案中，v2 选择了方案3（编译期预计算），并验证了完全可行：
+  <ul>
+    <li>Grid 布局：编译期根据 cols/rows/cell-w/cell-h/margin 预计算所有坐标</li>
+    <li>绝对定位：直接在模板中写 x/y/w/h</li>
+    <li>布局数据输出为 <code>getLayout(): array</code>，运行时零开销遍历</li>
+  </ul>
+  <p>对于更复杂的布局需求，仍保留方案2（集成 Yoga 等轻量布局库）和方案1（固定尺寸布局）作为后备选项。</p>
+</div>
+
+<h2>4.4 组件树的表达 <span style="color:var(--wip);font-size:0.8em">[v1提出，v2未涉及]</span></h2>
+
+<p>v2 维持了单组件模式。v1 提出的「编译期展开子组件为成员变量」方案在 AOT 约束下是正确的方向，但尚未实现。</p>
+
+<div class="info">
+  <strong>v3 细化方案：</strong>
+  <pre><code>// .vue 模板中声明子组件：
+&lt;calculator-header title="VueCalc" /&gt;
+
+// SFC 编译器展开为：
+class App extends ReactiveComponent {
+    private CalculatorHeader $calculatorHeader;  // 编译期确定类型
+
+    public function __construct() {
+        parent::__construct('App');
+        $this->calculatorHeader = new CalculatorHeader('VueCalc');
+    }
+}</code></pre>
+  <p>组件注册通过配置文件或注释声明：<code>// @component CalculatorHeader => src/Header.vue</code></p>
+</div>
+
+<h2>4.5 差异化重绘（增量渲染） <span style="color:var(--missing);font-size:0.8em">[v1提出，v2未涉及]</span></h2>
+
+<p>v2 维持全局 dirty → 全量重绘模式。对当前 22 个元素的简单 UI 这完全够用。当 UI 复杂度达到 50+ 元素时需要考虑增量渲染。</p>
+
+<div class="note"><strong>v3 优先级</strong>：此问题推迟到 P7 处理，不作为短期目标。</div>
+
+<h2>4.6 v2 实践发现的新问题</h2>
+
+<div class="warn">
+  <strong>以下 6 个问题在 v1 中未预见，在 v2 实践中暴露：</strong>
+</div>
+
+<h3>新问题 1：正则解析的不可靠性</h3>
+<p>v2 SFC 编译器完全基于正则表达式解析，导致两个实际 bug（CSS 颜色分隔符冲突、属性名不匹配）。正则方案对简单模板勉强可用，但缺乏错误恢复、无位置信息、嵌套受限。</p>
+<div class="info"><strong>改进方向</strong>：在需要支持嵌套标签、条件渲染、循环等高级特性时，升级为手写递归下降 parser。短期可维持正则 + 更多单元测试。</div>
+
+<h3>新问题 2：SFC 编译器无校验步骤</h3>
+<p>sfc-compiler.php 直接输出 .gen.php，不检验输出是否违反 AOT 约束。v2 中是通过「AOT 编译失败 → 回溯排查」的方式发现文件名点号和 const 数组问题的。</p>
+<div class="info"><strong>改进方向</strong>：在 sfc-compiler.php 输出前增加 AOT 兼容性校验步骤，自动检测：文件名点号、const 复杂数组、变量属性访问等已知约束。</div>
+
+<h3>新问题 3：模板语法非标准化</h3>
+<p>v2 的自定义标签（&lt;rect&gt;、&lt;btn&gt;、&lt;grid&gt;）是项目专用的。未来若要用同一个编译器处理不同类型的应用（计算器 vs 其他），需要某种方式来声明自定义标签映射。</p>
+<div class="info"><strong>改进方向</strong>：引入标签注册机制（配置文件或 .vue 中的注释声明），使 sfc-compiler 可配置化。</div>
+
+<h3>新问题 4：双文件输出架构问题</h3>
+<p>v2 生成两个文件（Calculator.gen.php + CalculatorLayout_gen.php）而非 v1 设想的「PHP 类 + C++ 头文件」。这导致布局数据通过 PHP 函数返回（运行时），而非编译进 C++ 结构体（零开销）。</p>
+<div class="info"><strong>改进方向</strong>：评估是否需要生成 C++ 头文件。当前 PHP 函数方式在性能上对简单 UI 无影响，但 <code>foreach(getLayout()['buttons'])</code> 的每次渲染遍历有微小的性能开销。</div>
+
+<h3>新问题 5：构建管道的环境脆弱性</h3>
+<p>v2 构建依赖：MSVC（vcvarsall.bat 初始化）、MSYS2 bash（<code>cmd //c</code> 而非 <code>cmd /c</code>）、PHP CLI 在 PATH 中。更换开发机器时需要重新配置。</p>
+<div class="info"><strong>改进方向</strong>：在 project.yml 中增加 prebuild hook 自动运行 sfc-compiler，或将 sfc-compiler 集成到 AOT 编译器的预处理步骤中。</div>
+
+<h3>新问题 6：AOT 调试困难</h3>
+<p>当 AOT 编译失败时，错误信息通常是 C++ 编译错误（如 <code>error C3927</code>），难以关联回原始 PHP 代码。v2 中通过经验排查（猜测是文件名点号导致无效 C++ 函数名）解决了问题。</p>
+<div class="info"><strong>改进方向</strong>：建立 PHP→C++ 错误映射知识库，或将常见错误模式记录在文档中（已部分在《构建编译流程参考.md》中整理）。</div>
+
+<h2>4.7 PHP↔C++ 桥接层完整分析 (基于 phpx.h)</h2>
+
+<div class="info">
+  <strong>基础框架</strong>：本项目使用 <strong>PHP-X</strong>（<code>phpx.h</code>，C++17 对 Zend Engine 8.1+ 的封装库）作为 PHP↔C++ 桥接层。位于 <code>F:\work\swoole_compiler\phpx\include\phpx.h</code> (48KB)。
+</div>
+
+<h3>4.7.1 当前使用的桥接模式</h3>
+
+<p>v2 实际使用了以下 3 种 PHP↔C++ 通信方式：</p>
+
+<table>
+<tr><th>方式</th><th>方向</th><th>当前用途</th><th>代码示例</th></tr>
+<tr>
+  <td><strong>参数传递</strong></td>
+  <td>PHP → C++</td>
+  <td>9 个 C++ 函数通过参数接收 PHP 值</td>
+  <td><code>vue_fill_rect($hdc, $x, $y, $w, $h, $rgb)</code><br>→ <code>php_vue_fill_rect(Int hdc, Int x, ...)</code></td>
+</tr>
+<tr>
+  <td><strong>返回值</strong></td>
+  <td>C++ → PHP</td>
+  <td>函数返回 <code>Int</code>/<code>Bool</code>/<code>Array</code> 给 PHP</td>
+  <td><code>vue_peek_message(): array</code><br>→ <code>Array result; result.set("hwnd", ...); return result;</code></td>
+</tr>
+<tr>
+  <td><strong>全局变量</strong></td>
+  <td>C++ 内部</td>
+  <td><code>g_quitRequested</code> 静态 bool 跨函数共享状态</td>
+  <td><code>static bool g_quitRequested = false;</code><br>→ PHP 通过 <code>vue_quit_requested()</code> 读取</td>
+</tr>
+</table>
+
+<h3>4.7.2 函数注册机制 (PHPX_FUNCTION)</h3>
+
+<p>当前 9 个 C++ 函数通过 <code>PHPX_FUNCTION</code> 宏注册，使 PHP 可直接调用：</p>
+
+<pre><code>// 注册宏展开 (phpx.h 提供)
+// PHPX_FUNCTION(vue_window_create) 展开为:
+//   1. 静态实例 phpx_function_vue_window_create 注册到全局 function_map
+//   2. PHP_FUNCTION(vue_window_create) {} → Zend Engine 入口
+//   3. Variant phpx_function_vue_window_create::impl(Args &args) → 实际实现
+
+// 类型自动转换 (phpx.h 提供):
+//   PHP String → C++ std::string (toString/toStdString/toCString)
+//   PHP Int    → C++ zend_long
+//   PHP Bool   → C++ bool
+//   PHP Array  → C++ Array (支持迭代器、键访问)
+//   返回值 C++ → PHP Variant (自动装箱)
+
+// 当前项目示例 (cpp-src/vue_calc.cc:120-125):
+PHPX_FUNCTION(vue_fill_rect)
+{
+    Int hdc = args[0].toInt();      // arg[0]: int $hdc
+    Int x   = args[1].toInt();      // arg[1]: int $x
+    Int y   = args[2].toInt();      // ...
+    Int w   = args[3].toInt();
+    Int h   = args[4].toInt();
+    Int rgb = args[5].toInt();      // arg[5]: int $rgb (BGR COLORREF)
+
+    HBRUSH brush = CreateSolidBrush(RGB((rgb>>16)&0xFF, (rgb>>8)&0xFF, rgb&0xFF));
+    RECT rect = {x, y, x + w, y + h};
+    FillRect((HDC)(INT_PTR)hdc, &rect, brush);
+    DeleteObject(brush);
+}</code></pre>
+
+<h3>4.7.3 phpx.h 完整类型系统</h3>
+
+<table>
+<tr><th>PHP 类型</th><th>phpx C++ 类型</th><th>本质</th><th>关键方法</th></tr>
+<tr><td><code>int</code></td><td><code>Int</code> (<code>zend_long</code>)</td><td>64位有符号整数</td><td><code>.toInt()</code></td></tr>
+<tr><td><code>float</code></td><td><code>Float</code> (<code>double</code>)</td><td>双精度浮点</td><td><code>.toFloat()</code></td></tr>
+<tr><td><code>bool</code></td><td><code>Bool</code></td><td>布尔值</td><td><code>.toBool()</code></td></tr>
+<tr><td><code>string</code></td><td><code>String</code> (继承 Variant)</td><td>带引用计数的字符串</td><td><code>.toStdString()</code>, <code>.toCString()</code>, <code>.length()</code>, <code>.trim()</code></td></tr>
+<tr><td><code>array</code></td><td><code>Array</code> (继承 Variant)</td><td>关联数组/HashTable</td><td><code>.set(key,val)</code>, <code>.get(key)</code>, <code>.count()</code>, <code>[key]</code>, 迭代器</td></tr>
+<tr><td><code>object</code></td><td><code>Object</code> (继承 Variant)</td><td>PHP 对象引用</td><td><code>.call(method)</code>, <code>.getProperty()</code>, <code>.setProperty()</code></td></tr>
+<tr><td>任何类型</td><td><code>Variant</code></td><td>万能容器</td><td><code>.isString()</code>, <code>.isArray()</code>, <code>.isInt()</code>, 类型检测 + 转换</td></tr>
+</table>
+
+<h3>4.7.4 未使用但可用的 phpx API 能力</h3>
+
+<p>以下 phpx.h 提供的机制在当前项目中<strong>完全未被使用</strong>，但对 v3 演进有关键价值：</p>
+
+<table>
+<tr><th>能力</th><th>phpx API</th><th>对 VueCalc 的潜在价值</th><th>使用场景</th></tr>
+<tr>
+  <td><strong>C++ 读写 PHP 全局变量</strong></td>
+  <td><code>global("name")</code> → 读取 <code>$GLOBALS['name']</code><br><code>initGlobal("name", var)</code> → 设置<br><code>unsetGlobal("name")</code> → 删除</td>
+  <td class="wip">🟠 高</td>
+  <td>替代当前 <code>g_quitRequested</code> C++ 静态变量，改用 PHP 全局变量。好处：PHP 代码可直接设置（无需新增 C++ 函数），调试更直观</td>
+</tr>
+<tr>
+  <td><strong>C++ 读写 PHP 静态属性</strong></td>
+  <td><code>getStaticProperty($class, $prop)</code><br><code>setStaticProperty($class, $prop, $val)</code></td>
+  <td class="wip">🟠 高</td>
+  <td>在 C++ 渲染层直接读取 <code>ReactiveComponent::$dirty</code>，无需通过 PHP 函数返回值轮询</td>
+</tr>
+<tr>
+  <td><strong>C++ 调用 PHP 函数</strong></td>
+  <td><code>call("php_function_name", args)</code><br><code>getFunction("name")</code> 获取函数指针</td>
+  <td>🟡 中</td>
+  <td>在 C++ 消息循环中直接调用 PHP 回调（如 <code>call('handleClick', {x, y})</code>），实现事件驱动的反向调用</td>
+</tr>
+<tr>
+  <td><strong>C++ 调用 PHP 对象方法</strong></td>
+  <td><code>$obj.call("methodName", args)</code><br><code>getMethod($ce, "name")</code></td>
+  <td>🟡 中</td>
+  <td>C++ 持有 PHP 对象引用 → 调用其 render/update 等方法。减少 PHP→C++ 往返</td>
+</tr>
+<tr>
+  <td><strong>C++ 执行 PHP 代码</strong></td>
+  <td><code>eval("php code string")</code><br><code>include("file.php")</code></td>
+  <td>🟢 低 (AOT 环境受限)</td>
+  <td>AOT 编译后 eval 可能不可用，需测试。可作调试/dev 模式用</td>
+</tr>
+<tr>
+  <td><strong>C++ 抛出 PHP 异常</strong></td>
+  <td><code>throwException($class, $msg, $code)</code><br><code>throwError("format", ...)</code></td>
+  <td>🟡 中</td>
+  <td>C++ 层检测到错误时抛 PHP 异常，改善错误报告</td>
+</tr>
+<tr>
+  <td><strong>资源包装 (Box)</strong></td>
+  <td><code>newResource("name", ptr)</code> 将 C++ 指针包装为 PHP resource</td>
+  <td>🟠 高</td>
+  <td>将 HWND/HDC 包装为 PHP resource 类型，替代当前 int 传递。类型安全 + 自动生命周期管理</td>
+</tr>
+</table>
+
+<h3>4.7.5 PHP↔C++ 数据共享方式对比</h3>
+
+<table>
+<tr><th>方式</th><th>方向</th><th>延迟</th><th>类型安全</th><th>v2 使用</th><th>推荐场景</th></tr>
+<tr>
+  <td>函数参数</td>
+  <td>PHP→C++</td>
+  <td>调用时传递</td>
+  <td>手动转换</td>
+  <td class="done">✅ 9处</td>
+  <td>一次性数据传递</td>
+</tr>
+<tr>
+  <td>函数返回值</td>
+  <td>C++→PHP</td>
+  <td>调用时返回</td>
+  <td>自动装箱</td>
+  <td class="done">✅ 3处</td>
+  <td>查询类调用</td>
+</tr>
+<tr>
+  <td>C++ 静态变量</td>
+  <td>C++ 内部</td>
+  <td>即时</td>
+  <td>C++ 原生</td>
+  <td class="done">✅ 1处 (g_quitRequested)</td>
+  <td>简单状态标志</td>
+</tr>
+<tr>
+  <td>PHP 全局变量<br><code>global()</code></td>
+  <td>双向</td>
+  <td>即时</td>
+  <td>Variant 转换</td>
+  <td class="missing">❌ 未使用</td>
+  <td><strong>推荐</strong>：跨语言共享状态</td>
+</tr>
+<tr>
+  <td>PHP 静态属性<br><code>getStaticProperty()</code></td>
+  <td>C++ 读/写 PHP</td>
+  <td>即时</td>
+  <td>Variant 转换</td>
+  <td class="missing">❌ 未使用</td>
+  <td><strong>推荐</strong>：读写 PHP 类级别的共享状态</td>
+</tr>
+<tr>
+  <td>PHP Resource<br><code>newResource()</code></td>
+  <td>C++→PHP</td>
+  <td>创建时</td>
+  <td>强类型</td>
+  <td class="missing">❌ 未使用</td>
+  <td><strong>推荐</strong>：HWND/HDC 等不透明句柄</td>
+</tr>
+</table>
+
+<div class="note">
+  <strong>v3 改进建议</strong>：
+  <ol>
+    <li>将 <code>g_quitRequested</code> 从 C++ 静态变量迁移到 PHP 全局变量 (<code>initGlobal("quit_requested", false)</code>)，简化 C++ 代码</li>
+    <li>将 HWND (窗口句柄) 和 HDC (设备上下文) 从 <code>int</code> 改为 <code>Resource</code> 类型，防止类型混淆 bug</li>
+    <li>评估是否需要在 C++ 渲染循环中直接读取 <code>ReactiveComponent::$dirty</code> (通过 getStaticProperty)，减少 PHP 侧轮询开销</li>
+  </ol>
+</div>
+
+<!-- ===== 第五章：更新后的实现路线图 ===== -->
+<h1>五、实现路线图 (v3 重新规划)</h1>
+
+<p>基于 v2 实践经验和以上评估，重新排列 8 个阶段的优先级。新方案将原来线性 8 阶段重组为<strong> 3 个里程碑 + 2 个远期目标</strong>，更聚焦于实用价值。</p>
+
+<h2>5.1 路线图总览</h2>
+
+<div class="roadmap">
+
+  <!-- M1 -->
+  <div class="roadmap-item">
+    <div class="roadmap-dot done-dot"></div>
+    <div class="rm-content">
+      <h4 style="color:var(--done)">里程碑 0 (已完成) · 基础管道打通</h4>
+      <p style="font-size:0.85em;color:#888">对应 v1 Phase 1-4 的核心子集</p>
+      <ul>
+        <li><span class="done">✅</span> SFC 块提取（正则分离 template/script/style）</li>
+        <li><span class="done">✅</span> 自定义标签解析（5 种 GDI 映射标签）</li>
+        <li><span class="done">✅</span> CSS → GDI 颜色映射（hexToBgr + borderColor）</li>
+        <li><span class="done">✅</span> Grid 编译期预计算坐标</li>
+        <li><span class="done">✅</span> .gen.php 代码生成（组件类 + getLayout()）</li>
+        <li><span class="done">✅</span> AOT 编译成功（232KB exe）</li>
+      </ul>
+      <p style="font-size:0.8em;color:#666">完成于 v2，构建脚本：<code>compile_vue_calc.bat</code></p>
+    </div>
+  </div>
+
+  <!-- M1 -->
+  <div class="roadmap-item">
+    <div class="roadmap-dot wip-dot"></div>
+    <div class="rm-content">
+      <h4 style="color:var(--wip)">里程碑 1 (v3 推荐) · SFC 编译器健壮化</h4>
+      <p style="font-size:0.85em;color:#888">夯实基础，不新增功能，提高可靠性</p>
+      <ol>
+        <li><strong>解析器升级</strong>：从纯正则升级为简单递归下降 parser，输出 AST 中间表示</li>
+        <li><strong>AOT 兼容性校验</strong>：编译器输出前自动检测 AOT 约束违规（文件名点号、const 数组等）</li>
+        <li><strong>错误报告</strong>：解析失败时输出行号和描述性错误信息</li>
+        <li><strong>CSS 映射表正式化</strong>：建立 <code>[css-prop => gdi-func]</code> 结构而非分散的 if/else</li>
+        <li><strong>单元测试覆盖</strong>：为 sfc-compiler.php 各步骤增加测试用例</li>
+      </ol>
+      <p style="font-size:0.8em;color:#888">预计涉及：重写 sfc-compiler.php 解析部分、新增 CSS 映射配置、编写测试脚本</p>
+    </div>
+  </div>
+
+  <!-- M2 -->
+  <div class="roadmap-item">
+    <div class="roadmap-dot wip-dot"></div>
+    <div class="rm-content">
+      <h4 style="color:var(--accent2)">里程碑 2 (v3 推荐) · 响应式系统完善</h4>
+      <p style="font-size:0.85em;color:#888">对应 v1 Phase 5</p>
+      <ol>
+        <li><strong>v-model 双向绑定</strong>：编译器自动生成 setter + dirty 标记</li>
+        <li><strong>v-if 条件渲染</strong>：编译期生成 if/else 分支代码</li>
+        <li><strong>v-for 列表渲染</strong>：编译期生成 foreach 循环 + 动态坐标偏移</li>
+        <li><strong>计算属性</strong>：computed 声明 → 自动生成 getter 方法</li>
+        <li><strong>自动 dirty 插入</strong>：所有修改 state 的方法末尾自动 <code>$this->dirty = true</code></li>
+      </ol>
+      <div class="note"><strong>AOT 约束注意事项</strong>：v-model 的 setter 必须生成显式方法（如 <code>setDisplay(string $value)</code>），不能用 <code>__set</code>。</div>
+    </div>
+  </div>
+
+  <!-- M3 -->
+  <div class="roadmap-item">
+    <div class="roadmap-dot missing-dot"></div>
+    <div class="rm-content">
+      <h4 style="color:var(--missing)">里程碑 3 (v3+ 可选) · 组件生态</h4>
+      <p style="font-size:0.85em;color:#888">对应 v1 Phase 6</p>
+      <ol>
+        <li><strong>嵌套组件编译</strong>：父 .vue 引用子组件 → 编译期展开为成员变量</li>
+        <li><strong>Props 传递</strong>：父组件数据 → 子组件属性的编译期绑定</li>
+        <li><strong>组件注册表</strong>：配置文件声明组件名 → 类名映射</li>
+        <li><strong>Slot 插槽</strong>：内容分发机制（编译期内联）</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 远期 -->
+  <div class="roadmap-item">
+    <div class="roadmap-dot missing-dot"></div>
+    <div class="rm-content">
+      <h4 style="color:var(--missing)">远期目标 4 · 性能与视觉</h4>
+      <p style="font-size:0.85em;color:#888">对应 v1 Phase 7 + 8</p>
+      <ul>
+        <li><strong>增量渲染</strong>：节点级 dirty 标记 + 区域裁剪重绘</li>
+        <li><strong>Direct2D 升级</strong>：alpha 通道、抗锯齿、硬件加速</li>
+        <li><strong>CSS Box Model</strong>：margin/border/padding/content + flex 布局</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 远期 -->
+  <div class="roadmap-item">
+    <div class="roadmap-dot missing-dot"></div>
+    <div class="rm-content">
+      <h4 style="color:var(--missing)">远期目标 5 · 工具链集成</h4>
+      <p style="font-size:0.85em;color:#888">降低构建环境门槛</p>
+      <ul>
+        <li><strong>project.yml 集成 SFC 步骤</strong>：AOT 编译器自动调用 sfc-compiler</li>
+        <li><strong>Dev Server</strong>：热重载开发模式（监听 .vue 变更 → 自动重编译 → 重启 exe）</li>
+        <li><strong>错误映射</strong>：PHP→C++ 编译错误自动关联回原始 .vue 行号</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<h2>5.2 优先级决策矩阵</h2>
+
+<table>
+<tr><th>阶段</th><th>价值</th><th>难度</th><th>风险</th><th>优先级</th></tr>
+<tr class="wip-bg">
+  <td><strong>M1: 编译器健壮化</strong></td>
+  <td>⭐⭐⭐⭐ 消除已知 bug 根源</td>
+  <td>⭐⭐⭐ AST parser</td>
+  <td>低</td>
+  <td><span class="wip">🔴 最高</span></td>
+</tr>
+<tr class="wip-bg">
+  <td><strong>M2: 响应式系统</strong></td>
+  <td>⭐⭐⭐⭐⭐ v-model 是核心能力</td>
+  <td>⭐⭐⭐⭐ setter/AST/代码生成联动</td>
+  <td>中</td>
+  <td><span class="wip">🟠 高</span></td>
+</tr>
+<tr>
+  <td><strong>M3: 组件生态</strong></td>
+  <td>⭐⭐⭐ 需复杂应用驱动</td>
+  <td>⭐⭐⭐⭐⭐ 组件注册/展开/props</td>
+  <td>高</td>
+  <td>🟡 中</td>
+</tr>
+<tr>
+  <td><strong>远期4: 性能视觉</strong></td>
+  <td>⭐⭐ 当前无需求</td>
+  <td>⭐⭐⭐⭐⭐ 重写渲染层</td>
+  <td>高</td>
+  <td>🟢 低</td>
+</tr>
+<tr>
+  <td><strong>远期5: 工具链</strong></td>
+  <td>⭐⭐⭐ 开发体验提升</td>
+  <td>⭐⭐ 脚本 + 集成</td>
+  <td>低</td>
+  <td>🟢 低</td>
+</tr>
+</table>
+
+<h2>5.3 M1 实施技术细节——编译器健壮化</h2>
+
+<p>M1 是 v3 最高优先级任务。以下基于当前代码结构给出具体实施方案：</p>
+
+<h3>5.3.1 需新建的文件</h3>
+
+<table>
+<tr><th>文件</th><th>类型</th><th>说明</th></tr>
+<tr>
+  <td><code>src/compiler/ast-nodes.php</code></td>
+  <td>新文件</td>
+  <td>AST 节点类定义：AppNode, RectNode, TextNode, GridNode, BtnNode, StyleNode</td>
+</tr>
+<tr>
+  <td><code>src/compiler/template-parser.php</code></td>
+  <td>新文件</td>
+  <td>递归下降 parser：从正则升级为 tokenize + parse 两阶段</td>
+</tr>
+<tr>
+  <td><code>src/compiler/css-mappings.php</code></td>
+  <td>新文件</td>
+  <td>CSS 属性→GDI 参数的正式映射表（关联数组）</td>
+</tr>
+<tr>
+  <td><code>src/compiler/aot-validator.php</code></td>
+  <td>新文件</td>
+  <td>输出前 AOT 兼容性校验：文件名、const、变量属性、变量方法</td>
+</tr>
+<tr>
+  <td><code>tests/sfc-compiler-test.php</code></td>
+  <td>新文件</td>
+  <td>单元测试：块提取、颜色转换、grid 坐标计算、生成输出</td>
+</tr>
+</table>
+
+<h3>5.3.2 需改动现有文件</h3>
+
+<table>
+<tr><th>文件</th><th>改动</th><th>说明</th></tr>
+<tr>
+  <td><code>tools/sfc-compiler.php</code></td>
+  <td>重写 L111-239</td>
+  <td>用 template-parser.php 的 AST 替换现有正则匹配。保留 L244-300 代码生成逻辑作为基础，增加 auto-dirty 插入</td>
+</tr>
+<tr>
+  <td><code>tools/sfc-compiler.php</code></td>
+  <td>重写 L35-60</td>
+  <td>块提取增加行号跟踪，解析失败时报告具体行号</td>
+</tr>
+<tr>
+  <td><code>tools/sfc-compiler.php</code></td>
+  <td>新增于 L240 前</td>
+  <td>调用 aot-validator.php 进行输出前检查</td>
+</tr>
+</table>
+
+<h3>5.3.3 AST 节点设计</h3>
+
+<pre><code>// src/compiler/ast-nodes.php
+class AppNode {
+    public string $title;
+    public int $width;
+    public int $height;
+    /** @var ElementNode[] */
+    public array $children = [];
+}
+
+abstract class ElementNode {
+    public int $line;  // 源文件行号（错误报告用）
+}
+
+class RectNode extends ElementNode {
+    public int $x, $y, $w, $h;
+    public string $class;
+}
+
+class TextNode extends ElementNode {
+    public ?int $x, $y;
+    public ?string $bind;       // :bind="prop"
+    public string $class;
+    public string $align;       // left|right
+    public ?int $containerW, $containerX;
+}
+
+class GridNode extends ElementNode {
+    public int $x, $y, $cols, $rows, $cellW, $cellH, $margin;
+    /** @var BtnNode[] */
+    public array $buttons = [];
+}
+
+class BtnNode extends ElementNode {
+    public int $row, $col;
+    public string $label;
+    public string $class;
+    public string $handler;     // @click="handler"
+    public ?string $arg;        // @click="handler('arg')"
+}</code></pre>
+
+<h3>5.3.4 AOT 校验器设计</h3>
+
+<pre><code>// src/compiler/aot-validator.php
+function validateAotCompatibility(string $code, string $filename): array {
+    $warnings = [];
+
+    // 规则1: 文件名不含点号（除了 .php 后缀）
+    if (substr_count(basename($filename), '.') > 1) {
+        $warnings[] = "AOT: 文件名含多余点号 '$filename'，将生成无效 C++ 函数名";
+    }
+
+    // 规则2: 无 const 复杂嵌套数组
+    if (preg_match('/const\s+\w+\s*=\s*\[/s', $code)) {
+        $warnings[] = "AOT: const 数组可能不被支持，改用 function 返回";
+    }
+
+    // 规则3: 无变量属性访问 $obj->$var
+    if (preg_match('/\$\w+->\$\w+/', $code)) {
+        $warnings[] = "AOT: 变量属性访问 (\$obj->\$var) 不被支持";
+    }
+
+    // 规则4: 无变量方法调用 $obj->$method()
+    if (preg_match('/\$\w+->\$\w+\s*\(/', $code)) {
+        $warnings[] = "AOT: 变量方法调用 (\$obj->\$method()) 不被支持";
+    }
+
+    return $warnings;
+}</code></pre>
+
+<h3>5.3.5 M1 里程碑验收标准</h3>
+
+<table>
+<tr><th>#</th><th>验收项</th><th>验证方法</th></tr>
+<tr>
+  <td>1</td>
+  <td>编译器解析 Calculator.vue 输出 AST 而非直接数组</td>
+  <td>运行 sfc-compiler --dump-ast 输出 AST JSON</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>模板语法错误时输出 "行号: 错误描述"</td>
+  <td>故意在 .vue 中写错标签，检查 stderr</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>生成的 .gen.php 不触发 AOT 校验警告</td>
+  <td>validateAotCompatibility() 返回空数组</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>CSS 映射表支持至少 8 个属性</td>
+  <td>检查 css-mappings.php 键数量</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>单元测试覆盖：hexToBgr / borderColor / grid坐标 / 代码生成</td>
+  <td>php tests/sfc-compiler-test.php 全部通过</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>编译产物 vue_calc.exe 功能与 v2 完全一致（回归）</td>
+  <td>手动测试：加减乘除、清零、退格</td>
+</tr>
+</table>
+
+<!-- ===== 第六章：架构演进 ===== -->
+<h1>六、架构演进展望</h1>
+
+<h2>6.1 当前架构 (v2 验证)</h2>
+
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--accent); min-width:110px">
+    <b>.vue SFC</b>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--purple); min-width:130px">
+    <b>sfc-compiler.php</b>
+    <div style="font-size:0.7em;color:#aaa">正则解析 → 代码生成</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--green); min-width:110px">
+    <b>.gen.php ×2</b>
+    <div style="font-size:0.7em;color:#aaa">类 + 布局数据</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--accent3); min-width:100px">
+    <b>AOT</b>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--accent2); min-width:90px">
+    <b>.exe</b>
+  </div>
+</div>
+
+<h2>6.2 目标架构 (M2 完成后)</h2>
+
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--accent); min-width:110px">
+    <b>.vue SFC</b>
+    <div style="font-size:0.7em;color:#aaa">template + script + style</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--purple); min-width:160px">
+    <b>sfc-compiler v3</b>
+    <div style="font-size:0.7em;color:#aaa">AST Parser → Layout →</div>
+    <div style="font-size:0.7em;color:#aaa">→ AOT校验 → Code Gen</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--green); min-width:120px">
+    <b>.gen.php ×2</b>
+    <div style="font-size:0.7em;color:#aaa">含 auto-dirty 的组件类</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--accent3); min-width:100px">
+    <b>AOT</b>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--accent2); min-width:90px">
+    <b>.exe</b>
+  </div>
+</div>
+
+<p style="text-align:center;color:#888;font-size:0.85em">关键变化：正则 → AST、增加 AOT 校验步骤、v-model 自动生成 setter+dirty</p>
+
+<h2>6.3 v2 已验证的关键设计决策</h2>
+
+<table>
+<tr><th>决策</th><th>方案</th><th>v2 验证</th><th>v3 建议</th></tr>
+<tr>
+  <td>响应式机制</td>
+  <td>显式属性 + 手动 dirty</td>
+  <td class="done">✅ AOT 兼容</td>
+  <td>维持。M2 可自动插入 dirty 但不改变模式</td>
+</tr>
+<tr>
+  <td>布局计算</td>
+  <td>编译期预计算</td>
+  <td class="done">✅ 零运行时开销</td>
+  <td>维持。这是 v2 最重要的架构验证</td>
+</tr>
+<tr>
+  <td>布局数据存储</td>
+  <td>function getLayout(): array</td>
+  <td class="done">✅ AOT 兼容</td>
+  <td>短期维持。远期可考虑生成 C++ 结构体以提升性能</td>
+</tr>
+<tr>
+  <td>事件路由</td>
+  <td>显式 if/else dispatch</td>
+  <td class="done">✅ AOT 兼容</td>
+  <td>维持。AOT 不支持变量方法调用</td>
+</tr>
+<tr>
+  <td>数据绑定</td>
+  <td>显式 if/else getBindValue</td>
+  <td class="done">✅ AOT 兼容</td>
+  <td>M2 可自动生成映射表，但仍保持显式模式</td>
+</tr>
+<tr>
+  <td>渲染引擎</td>
+  <td>GDI 全量重绘</td>
+  <td class="done">✅ 对计算器够用</td>
+  <td>短期维持。复杂 UI 需要增量渲染</td>
+</tr>
+<tr>
+  <td>构建管道</td>
+  <td>SFC → AOT 两步脚本</td>
+  <td class="done">✅ 已打通</td>
+  <td>远期集成到 project.yml prebuild</td>
+</tr>
+</table>
+
+<h2>6.4 构建环境精确参数</h2>
+
+<div class="warn">
+  <strong>以下为 v2 成功构建所用的精确环境。更换机器时用作参考：</strong>
+</div>
+
+<table>
+<tr><th>组件</th><th>路径/版本</th><th>说明</th></tr>
+<tr><td>项目根</td><td><code>F:\work\swoole_compiler</code></td><td>swoole_compiler.exe 和 compile_vue_calc.bat 在此</td></tr>
+<tr><td>项目目录</td><td><code>F:\work\swoole_compiler\examples\vue-calc</code></td><td>main.php + src/ + tools/ + cpp-src/</td></tr>
+<tr><td>MSVC</td><td>Visual Studio 2026 v18.5.2 Community<br><code>C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat</code></td><td>x64 原生工具链</td></tr>
+<tr><td>PHP CLI</td><td>系统 PATH 中可用，运行 sfc-compiler</td><td>需 PHP 7.4+，建议 PHP 8.x</td></tr>
+<tr><td>Shell</td><td>MSYS2 bash (Git for Windows 自带)<br>注意：<code>cmd //c</code> 而非 <code>cmd /c</code></td><td>MSYS2 会将 <code>/c</code> 误解为路径</td></tr>
+<tr><td>AOT 编译器</td><td><code>swoole_compiler.exe</code> (在项目根)</td><td><code>-f</code> 标志强制重编译</td></tr>
+<tr><td>输出</td><td><code>vue_calc.exe</code> ~232KB PE32+ x64</td><td>AOT 将项目名中的 <code>-</code> 转为 <code>_</code></td></tr>
+</table>
+
+<h3>完整构建命令序列</h3>
+<pre><code>:: compile_vue_calc.bat 实际内容 (18行)
+@echo off
+call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
+cd /d F:\work\swoole_compiler
+
+echo === Step 1: SFC Compiler (Vue → .gen.php) ===
+php examples\vue-calc\tools\sfc-compiler.php examples\vue-calc\src\Calculator.vue
+if %errorlevel% neq 0 exit /b %errorlevel%
+
+echo === Step 2: AOT Compilation (PHP → .exe) ===
+swoole_compiler.exe examples\vue-calc\project.yml -f
+if %errorlevel% neq 0 exit /b %errorlevel%
+
+:: 检查输出文件
+if exist examples\vue-calc\vue_calc.exe (echo BUILD OK) else (
+    if exist examples\vue-calc\vue-calc.exe (echo BUILD OK) else echo BUILD FAILED
+)</code></pre>
+
+<h2>6.5 M2 实施技术细节——响应式系统完善</h2>
+
+<p>M2 依赖 M1 的 AST 输出。以下是基于 M1 完成后的实施方案：</p>
+
+<h3>需新增的代码生成能力</h3>
+
+<table>
+<tr><th>功能</th><th>模板输入</th><th>生成代码</th><th>涉及文件改动</th></tr>
+<tr>
+  <td>v-model 双向</td>
+  <td><code>v-model:display="expr"</code></td>
+  <td><code>public function setDisplay(string $v): void { $this->display = $v; $this->dirty = true; }</code></td>
+  <td>sfc-compiler 代码生成段<br>main.php 增加 setBindValue()</td>
+</tr>
+<tr>
+  <td>v-if</td>
+  <td><code>&lt;rect v-if="showResult" .../&gt;</code></td>
+  <td><code>if ($this->component->showResult) { ... }</code></td>
+  <td>sfc-compiler 模板解析 + 代码生成</td>
+</tr>
+<tr>
+  <td>v-for</td>
+  <td><code>&lt;btn v-for="item in items" .../&gt;</code></td>
+  <td><code>foreach ($this->items as $i => $item) { /* 动态坐标 */ }</code></td>
+  <td>sfc-compiler 模板解析 + 布局引擎扩展</td>
+</tr>
+<tr>
+  <td>auto-dirty</td>
+  <td>（编译器自动分析）</td>
+  <td>任何修改 <code>$this->属性</code> 的方法末尾 <code>$this->dirty = true</code></td>
+  <td>sfc-compiler: AST 遍历 script 块识别赋值</td>
+</tr>
+<tr>
+  <td>computed</td>
+  <td><code>computed: { result() { return ... } }</code></td>
+  <td><code>public function getResultProp(): string { return ...; }</code></td>
+  <td>sfc-compiler 新增 computed 块解析</td>
+</tr>
+</table>
+
+<h3>auto-dirty 插入算法伪代码</h3>
+<pre><code>// 编译器在生成 Calculator.gen.php 时执行以下分析
+function needsDirtyInjection(string $methodBody): bool {
+    // 检测方法体中是否写入 $this-> 开头的属性
+    // 排除 $this->dirty 自身
+    if (preg_match('/\$this->(?!dirty\b)\w+\s*=/', $methodBody)) {
+        return true;
+    }
+    return false;
+}
+
+// 在检测到需要的方法末尾插入
+// BEFORE:                AFTER:
+// $this->display = '0';  $this->display = '0';
+// }                      $this->dirty = true;
+//                        }</code></pre>
+
+<h3>M2 验收标准</h3>
+<ol>
+  <li><code>Calculator.vue</code> 中删除所有手动 <code>$this->dirty = true</code>（7处），编译器自动插入</li>
+  <li>新增 v-model 指令：<code>&lt;text v-model:display="expr" /&gt;</code> 生效（输入后 display 文字自动更新）</li>
+  <li>新增 v-if 指令：条件不满足的元素不渲染</li>
+  <li>生成的 .gen.php 文件通过 AOT 校验器（0 警告）</li>
+  <li>编译产物 vue_calc.exe 功能与 v2 一致（回归测试通过）</li>
+</ol>
+
+<!-- ===== 第七章：v3 版本变更摘要 ===== -->
+<h1>七、v2 → v3 变更摘要</h1>
+
+<div class="card">
+  <h3 style="margin-top:0; color:var(--purple)">本文档 vs v1/v2</h3>
+  <table>
+  <tr><th>文档</th><th>性质</th><th>受众</th></tr>
+  <tr><td>v1 技术文档</td><td>架构设计 + 概念原型</td><td>设计者、新加入者</td></tr>
+  <tr><td>v2 技术文档</td><td>实现文档 + Vue 对比 + 编译器详解</td><td>开发者、维护者</td></tr>
+  <tr><td><strong>v3 设计规划 (本文档)</strong></td><td><strong>路线图评估 + 现状诊断 + 改进方向</strong></td><td><strong>决策者、架构师</strong></td></tr>
+  </table>
+</div>
+
+<h2>核心结论</h2>
+
+<ol>
+  <li><strong>v2 已将 SFC 管道完全打通</strong>：.vue → .gen.php → .exe 链路经过实战验证，10 个源文件（1,560 行代码）+ 2 个生成文件，编译为 232KB 原生 exe。构建脚本 <code>compile_vue_calc.bat</code> (18行) 自动化全流程。</li>
+  <li><strong>v1 路线图 Phase 1-4 核心子集已实现</strong>，但实现方式（正则解析，sfc-compiler.php L111-227）与 v1 设想（AST parser）有差距。这是健壮性的短板，也是 M1 要解决的首要问题。</li>
+  <li><strong>AOT 约束是设计核心驱动力</strong>：v2 实战确认了 7 条 AOT 约束规则（§4.1），其中 3 条是 v2 新发现（变量属性访问、变量方法调用、文件名点号、const 复杂数组）。这 7 条规则直接塑造了 main.php 的显式路由模式（getBindValue 2分支、dispatchClick 4分支）。</li>
+  <li><strong>10 项技术债务已识别</strong>（§3.3 D1-D10）：D1-D3 (高) 必须在 M1 解决，D4-D6 (中) 在 M2 解决，D7-D10 (低) 逐步处理。</li>
+  <li><strong>下一阶段重点</strong>：M1（编译器健壮化：正则→AST parser + 5 个新文件 + AOT 校验 + 6 项验收标准）+ M2（响应式系统完善：v-model 双向 + v-if/v-for + auto-dirty + 5 项验收标准）。</li>
+  <li><strong>组件树（P6）、增量渲染（P7）、Direct2D（P8）推迟到有明确需求时再启动</strong>，当前 GDI+单组件方案（22 个元素全量重绘，~60 FPS）对计算器类应用完全够用。</li>
+</ol>
+
+<h3>v3 文档增强项（本文档相对于原始 v3 的新增内容）</h3>
+
+<table>
+<tr><th>章节</th><th>新增内容</th><th>基于的实际代码</th></tr>
+<tr><td>§0 项目代码全景</td><td>文件清单(10文件)、数据流路径、函数全景表、AOT vs 标准PHP对比</td><td>全部 10 个源文件逐文件审计</td></tr>
+<tr><td>§1.9 阶段对应代码位置</td><td>每个 Phase → 精确文件:行号映射表</td><td>sfc-compiler.php/main.php/vue_calc.cc 行级分析</td></tr>
+<tr><td>§3.3 技术债务清单</td><td>D1-D10 带严重度/位置/修复方案的债务表</td><td>交叉引用 4 个源文件的具体行号</td></tr>
+<tr><td>§4.7 PHP↔C++ 桥接层</td><td>9 个函数的 stub↔C++ 对应表 + GDI 能力边界 + 双缓冲流程图</td><td>vue_calc.stub.php(24行) + vue_calc.cc(157行)</td></tr>
+<tr><td>§5.3 M1 实施细节</td><td>5 个新文件设计 + 2 个改动文件 + AST 节点类定义 + AOT 校验器伪代码 + 6 项验收标准</td><td>基于 sfc-compiler.php 现有结构推演</td></tr>
+<tr><td>§6.4 构建环境参数</td><td>6 个组件的精确路径/版本 + 完整构建命令序列</td><td>compile_vue_calc.bat + project.yml 实际配置</td></tr>
+<tr><td>§6.5 M2 实施细节</td><td>5 项代码生成能力表 + auto-dirty 插入算法伪代码 + 5 项验收标准</td><td>基于 Calculator.vue + main.php 现有模式推演</td></tr>
+<tr style="border-top:2px solid var(--accent2)"><td><strong>§8 运行时架构深度分析</strong></td><td><strong>CalcRenderer/CalcApp 逐方法分析、消息泵双循环、帧率性能剖析、AOT 设计模式目录(5项)、main.php M2 演进路线</strong></td><td><strong>main.php (291行) 完整代码 + CalculatorLayout_gen.php + Calculator.vue + ReactiveComponent.php</strong></td></tr>
+</table>
+
+<div class="success">
+  <strong>v2 最重要的成就</strong>：不是实现了某个具体功能，而是<strong>验证了「PHP SFC → AOT → 原生 exe」这条技术路线的完全可行性</strong>。从「理论上应该可以」变成了「实际跑通了」，并积累了 7 条 AOT 约束规则 + 4 个 SFC 编译器 bug 修复经验 + 10 项技术债务清单。本文档将所有经验系统化为可执行的行动计划，为 M1/M2 提供了精确的文件级、行号级实施方案。
+</div>
+
+
+<!-- ===== 第八章：运行时架构深度分析 ===== -->
+<h1>八、运行时架构深度分析 (基于 main.php)</h1>
+
+<p>本章聚焦 <code>main.php</code> (291行) 中的两个运行时类——<code>CalcRenderer</code> 与 <code>CalcApp</code>——从执行流程、AOT 兼容模式、性能特征三个维度进行分析。与编译器章节（§5/§6）不同，本章关注<strong>已编译应用的运行时行为</strong>和<strong>main.php 中硬编码模式的自动生成可行性</strong>。</p>
+
+<h2>8.1 运行时类协作与完整数据流</h2>
+
+<p>main.php 定义了两个类，加上 SFC 生成的 <code>Calculator</code> 和 <code>getLayout()</code>，构成完整的运行时架构：</p>
+
+<pre><code>// ================ 运行时类关系 ================
+//
+//   CalcApp (控制器)
+//   ├── $calc: Calculator          ← SFC 生成的 ReactiveComponent 子类
+//   ├── $hWnd: int                 ← C++ 窗口句柄
+//   └── $renderer: CalcRenderer    ← 数据驱动渲染器
+//              ├── $hWnd: int
+//              └── $component: Calculator
+//
+//   外部数据 (SFC 生成):
+//   ├── getLayout(): array         ← CalculatorLayout_gen.php 提供
+//   ├── WINDOW_WIDTH / HEIGHT      ← 编译期常量
+//   └── C++ 函数 (9个 vue_* )     ← vue_calc.stub.php 声明
+
+// ================ 点击→像素 完整数据流 ================
+
+// ① C++ 消息泵捕获 WM_LBUTTONDOWN (cpp-src/vue_calc.cc)
+php_vue_peek_message() → [hwnd, 0x0201, x, y]
+
+// ② PHP 解析消息 (main.php:186-198)
+$msgType == WM_LBUTTONDOWN
+→ $mx = $lParam & 0xFFFF;        // 低16位 = X坐标
+→ $my = ($lParam >> 16) & 0xFFFF; // 高16位 = Y坐标
+
+// ③ 命中测试 (main.php:230-241)
+CalcApp.handleClick($mx, $my)
+→ 遍历 getLayout()['buttons'] (18个按钮)
+→ 检测 $x ∈ [btn.x, btn.x+btn.w) && $y ∈ [btn.y, btn.y+btn.h)
+
+// ④ 显式事件分发 (main.php:243-258) ─── AOT 关键模式
+dispatchClick(['handler'=>'handleButton', 'arg'=>'7'])
+→ if ($handler === 'reset') { ... }
+  elseif ($handler === 'backspace') { ... }
+  elseif ($handler === 'calculate') { ... }
+  elseif ($handler === 'handleButton') { ... }
+
+// ⑤ 业务逻辑 (Calculator.vue → Calculator.gen.php)
+Calculator.handleButton('7')
+→ Calculator.inputDigit('7')
+→ $this->display = '7';
+→ $this->dirty = true;            // ← 手动脏标记 (M2 将自动插入)
+
+// ⑥ 主循环检测脏标记 (main.php:213-221)
+if ($this->calc->dirty) {
+    $this->renderer->render();
+    $this->calc->dirty = false;
+}
+
+// ⑦ 数据驱动渲染 (main.php:99-131)
+CalcRenderer.render()
+→ getLayout() 读取编译期生成的布局数据
+→ elements: 遍历4个元素 (rect×2 + text×2)
+→ buttons:  遍历18个按钮 (vue_draw_button + 标签居中)
+→ GDI 双缓冲绘制 → 屏幕</code></pre>
+
+<h2>8.2 CalcRenderer: 数据驱动的渲染桥接器</h2>
+
+<h3>8.2.1 构造函数: 依赖注入模式</h3>
+
+<pre><code>// main.php:26-35
+class CalcRenderer {
+    private int $hWnd;                    // C++ 窗口句柄 (int 传递)
+    private Calculator $component;         // 强类型依赖注入
+
+    public function __construct(int $hWnd, Calculator $component) {
+        $this->hWnd = $hWnd;
+        $this->component = $component;
+    }
+}</code></pre>
+
+<div class="info"><strong>AOT 设计要点</strong>：<code>$component</code> 声明为具体类型 <code>Calculator</code>，而非接口或基类引用。这是 AOT 约束下的最优实践——编译器在编译期即可确定所有属性访问的偏移量。</div>
+
+<h3>8.2.2 getBindValue(): 属性绑定瓶颈</h3>
+
+<pre><code>// main.php:38-47 — 当前仅 2 个分支
+private function getBindValue(string $bindKey): string
+{
+    if ($bindKey === 'expression') {
+        return $this->component->expression;
+    }
+    if ($bindKey === 'display') {
+        return $this->component->display;
+    }
+    return '';
+}</code></pre>
+
+<p>这是 <strong>D4 技术债务</strong>（§3.3）的核心位置。每增加一个 <code>:bind="prop"</code> 属性，开发者必须手动在此函数中添加 <code>if</code> 分支。M2 解决方案：SFC 编译器在生成布局代码时，同时生成完整的绑定映射表（编译期可知所有 <code>:bind</code> 目标）。</p>
+
+<div class="note"><strong>为何不能用 <code>$this->component->$bindKey</code></strong>？AOT 编译器不支持变量属性访问（§4.1 约束清单第 3 项）。所有属性访问必须在编译期确定——这正是显式 if/else 模式的根本原因。</div>
+
+<h3>8.2.3 renderTextElement(): 运行时智能排版</h3>
+
+<p>这个方法（L50-94）展示了两个编译器<strong>无法在编译期完成的</strong>运行时优化，必须在运行时处理：</p>
+
+<h4>动态字号缩减（L72-78）</h4>
+<pre><code>// 长数字自动缩小字号，防止溢出显示区域
+$textLen = strlen($text);
+if ($textLen > 12 && $fontSize > 24) {
+    $fontSize = 24;    // 32px → 24px
+}
+if ($textLen > 16 && $fontSize > 18) {
+    $fontSize = 18;    // 进一步缩小
+}</code></pre>
+
+<p>这是由于计算器的 <code>display</code> 值在编译期未知（取决于用户输入），因此无法预计算字号。v3 的字体大小策略相比 v2 增加了对极端长数字（>16 位）的处理。</p>
+
+<h4>右对齐坐标计算（L81-91）</h4>
+<pre><code>// 基于容器宽度和文本长度估算像素宽度，动态调整 X 坐标
+if ($align === 'right' && isset($el['containerW'])) {
+    $containerW = $el['containerW'];          // 320px 容器宽
+    $containerX = $el['containerX'] ?? 0;     // 4px 容器X偏移
+    $charWidth  = (int)($fontSize * 0.6);     // 估算(GDI 等宽近似)
+    $textWidth  = $textLen * $charWidth;
+    $rightEdge  = $containerX + $containerW;  // 右边缘 = 4 + 320 = 324
+    $x = $rightEdge - 12 - $textWidth;        // 留12px右边距
+    if ($x < $containerX + 4) {              // 最小值保护
+        $x = $containerX + 4;
+    }
+}</code></pre>
+
+<div class="info"><strong>精度说明</strong>：GDI <code>TextOutA</code> 使用系统默认字体，<code>fontSize*0.6</code> 是平均字符宽度的经验值。对于精确测量应使用 <code>GetTextExtentPoint32</code>。此近似值对计算器场景（等宽数字为主）足够准确。</div>
+
+<h3>8.2.4 render(): 双重遍历绘制循环</h3>
+
+<pre><code>// main.php:99-131 — 每帧执行
+public function render(): void
+{
+    $hdc = vue_begin_paint($this->hWnd);     // 获取内存DC
+    $layout = getLayout();                     // 读取编译期生成数据
+    $elements = $layout['elements'];           // 4个元素
+    $buttons  = $layout['buttons'];            // 18个按钮
+
+    // 第一遍: 渲染背景元素 (rect + text)
+    foreach ($elements as $el) {
+        if ($el['type'] === 'rect') {
+            vue_fill_rect($hdc, ...);          // C++ GDI调用
+        } elseif ($el['type'] === 'text') {
+            $this->renderTextElement($hdc, $el); // PHP端处理
+        }
+    }
+
+    // 第二遍: 渲染按钮 (背景+边框+居中文字)
+    foreach ($buttons as $btn) {
+        vue_draw_button($hdc, ...);            // C++: 背景+边框
+        // 标签居中计算 (PHP端)
+        $labelX = $btn['x'] + (int)(($btn['w'] - $labelLen * $labelCharW) / 2);
+        $labelY = $btn['y'] + (int)(($btn['h'] - $labelFontSize) / 2);
+        vue_draw_text($hdc, $labelX, $labelY, ...); // C++: 文字
+    }
+
+    vue_end_paint($this->hWnd, $hdc);          // BitBlt 到屏幕
+}</code></pre>
+
+<p><strong>每帧 GDI 调用统计</strong>：<code>vue_begin_paint</code> (1次) + <code>vue_fill_rect</code> (2次) + <code>vue_draw_text</code> (2+18=20次) + <code>vue_draw_button</code> (18次) + <code>vue_end_paint</code> (1次) = <strong>42 次跨 PHP↔C++ 调用</strong>。</p>
+
+<h2>8.3 CalcApp: 消息循环与事件分发</h2>
+
+<h3>8.3.1 窗口生命周期</h3>
+
+<pre><code>// main() 入口 → CalcApp 生命周期 (main.php:265-290)
+function main(): int {
+    ReactiveComponent::initShared(10240);  // 初始化共享内存
+    $calc = new Calculator('MainCalculator'); // 创建组件
+    $app = new CalcApp($calc);               // 创建控制器
+    if (!$app->initWindow()) return 1;       // 创建Win32窗口
+    $app->run();                              // 进入消息循环
+    return 0;                                 // 正常退出
+}</code></pre>
+
+<p><strong>initShared(10240)</strong> 分配 10KB 共享内存并创建 ChangeQueue 实例。当前 ChangeQueue (<code>src/ChangeQueue.php</code>, 56行环形缓冲) 未被活跃使用（D9 技术债务），仅通过 <code>initShared()</code> 创建了实例对象。</p>
+
+<h3>8.3.2 消息泵: 双循环架构</h3>
+
+<pre><code>// main.php:172-227 — 消息泵核心
+public function run(): void {
+    $this->renderer->render(); // 首帧
+    while ($running) {
+        // ===== 内循环: 排空待处理消息 =====
+        while (true) {
+            $msg = vue_peek_message();       // C++: PeekMessage + GetMessage
+            if (count($msg) == 0) break;     // 无消息 → 退出内循环
+
+            $msgType = $msg[1] ?? 0;         // msg[1] = UINT message
+            if ($msgType == WM_LBUTTONDOWN) {
+                // 解析鼠标坐标 (lParam 封包)
+                $lParam = $msg[3] ?? 0;      // msg[3] = LPARAM
+                $mx = $lParam & 0xFFFF;      // LOWORD
+                $my = ($lParam >> 16) & 0xFFFF; // HIWORD
+                $this->handleClick($mx, $my);
+            }
+            if ($msgType == WM_QUIT) {
+                $running = false;
+                break;
+            }
+        }
+
+        // ===== 外循环: 后备退出检查 =====
+        if (vue_quit_requested()) $running = false;
+
+        // ===== 脏标记驱动重绘 =====
+        if ($this->calc->dirty) {
+            $this->renderer->render();       // 仅在需要时重绘
+            $this->calc->dirty = false;      // 清除脏标记
+        }
+
+        usleep(16000); // ~60 FPS 帧率控制
+    }
+}</code></pre>
+
+<div class="warn"><strong>微妙点</strong>：<code>vue_quit_requested()</code> 不能替代 <code>WM_QUIT</code> 检查——两者互补。WM_QUIT 由窗口关闭消息触发（消息队列内），<code>vue_quit_requested()</code> 读取 C++ 静态变量 <code>g_quitRequested</code>（窗口销毁时设置）。外层 <code>if</code> 是后备机制，防止 WM_QUIT 因某种原因未被投递。</div>
+
+<h3>8.3.3 命中测试: 遍历按钮数组</h3>
+
+<pre><code>// main.php:230-241 — O(n) 线性命中测试
+private function handleClick(int $x, int $y): void {
+    $buttons = getLayout()['buttons'];      // 18个按钮
+    foreach ($buttons as $btn) {
+        if ($x >= $btn['x'] && $x < $btn['x'] + $btn['w'] &&
+            $y >= $btn['y'] && $y < $btn['y'] + $btn['h']) {
+            $this->dispatchClick($btn);     // 命中 → 分发
+            return;                          // 首次命中即停止
+        }
+    }
+}</code></pre>
+
+<p>18 个按钮的线性搜索在现代 CPU 上约 <strong>~100ns</strong>，完全无性能问题。若未来按钮数量增长到 100+ 可考虑空间哈希（grid cell 分桶），但当前方案简单可靠。</p>
+
+<h3>8.3.4 显式事件路由表</h3>
+
+<pre><code>// main.php:243-258 — D5 技术债务核心
+private function dispatchClick(array $btn): void {
+    $handler = $btn['handler'];             // 来自编译期 @click 解析
+    $arg     = $btn['arg'];
+
+    if ($handler === 'reset') {
+        $this->calc->reset();
+    } elseif ($handler === 'backspace') {
+        $this->calc->backspace();
+    } elseif ($handler === 'calculate') {
+        $this->calc->calculate();
+    } elseif ($handler === 'handleButton') {
+        $this->calc->handleButton($arg);    // ← 带参数的方法
+    }
+}</code></pre>
+
+<table>
+<tr><th>Handler</th><th>出现次数</th><th>被调方法</th><th>参数</th></tr>
+<tr><td><code>reset</code></td><td>1 (C 按钮)</td><td><code>Calculator::reset()</code></td><td>—</td></tr>
+<tr><td><code>backspace</code></td><td>1 (← 按钮)</td><td><code>Calculator::backspace()</code></td><td>—</td></tr>
+<tr><td><code>calculate</code></td><td>1 (= 按钮)</td><td><code>Calculator::calculate()</code></td><td>—</td></tr>
+<tr><td><code>handleButton</code></td><td>15 (数字+运算符)</td><td><code>Calculator::handleButton($arg)</code></td><td>'0'-'9', '+','-','*','/','.'</td></tr>
+</table>
+
+<div class="note"><strong>M2 自动生成策略</strong>：编译器已掌握所有 <code>@click</code> 信息（在模板解析阶段提取），可以直接生成 <code>dispatchClick()</code> 的全部 if/else 分支。生成的代码可放在 <code>Calculator.gen.php</code> 中作为一个 trait 或基类方法。</div>
+
+<h2>8.4 运行时性能剖析</h2>
+
+<h3>8.4.1 帧率控制</h3>
+
+<pre><code>usleep(16000);  // 16ms → 理论最高 ~62.5 FPS</code></pre>
+
+<p>实际帧率受以下因素影响：</p>
+<ul>
+  <li><strong>空闲帧</strong>（无用户操作）：约 60 FPS，每帧仅检测 <code>vue_peek_message</code> 和 <code>vue_quit_requested</code></li>
+  <li><strong>脏帧</strong>（状态变更后）：约 55-60 FPS，增加 42 次 PHP→C++ GDI 调用</li>
+  <li><strong>连续输入帧</strong>（快速点击）：每帧需额外执行 handleClick → dispatchClick → 业务逻辑</li>
+</ul>
+
+<h3>8.4.2 每帧操作开销估算</h3>
+
+<table>
+<tr><th>阶段</th><th>操作</th><th>PHP↔C++ 往返</th><th>估算开销</th></tr>
+<tr><td>消息检测（空闲）</td><td><code>vue_peek_message()</code> + <code>vue_quit_requested()</code></td><td>1-2 次</td><td>~10µs</td></tr>
+<tr><td>消息处理（有点击）</td><td>命中测试 (PHP端) + 业务逻辑 (PHP端)</td><td>0 次</td><td>~1µs</td></tr>
+<tr><td>脏帧渲染</td><td>42 次 GDI 调用 + 双缓冲 BitBlt</td><td>42 次</td><td>~200-500µs</td></tr>
+<tr><td>帧间等待</td><td><code>usleep(16000)</code></td><td>—</td><td>16,000µs</td></tr>
+</table>
+
+<p><strong>关键结论</strong>：GDI 渲染开销 (~500µs) 远小于帧间等待 (16ms)，约占总帧预算的 3%。这意味着即使将渲染元素数乘以 10 倍（220 个元素），仍能在 60 FPS 目标内完成。这也是 P7（增量渲染）被推迟到「远期」的根本原因。</p>
+
+<h3>8.4.3 PHP↔C++ 调用开销</h3>
+
+<p>每帧 42 次 PHP↔C++ 调用通过 phpx 的类型转换层（详见 §4.7）。每次调用涉及：PHP 参数 → Variant 转换 → C++ 执行 → 返回值 Variant 装箱。对于简单的 GDI 原语（FillRect, TextOut），转换开销占比约 60-70%，实际 GDI 调用仅 30-40%。</p>
+
+<div class="info"><strong>优化方向</strong>：如果未来渲染成为瓶颈，可将 <code>render()</code> 中多次 GDI 调用合并为单次 C++ 批量调用（传递整个 elements/buttons 数组），减少 PHP↔C++ 往返次数。但当前场景不需要。</div>
+
+<h2>8.5 运行时与生成代码的边界划分</h2>
+
+<p>当前 main.php 中包含了许多 <strong>原则上可以由编译器自动生成</strong>的代码。以下是 M2 完成后的目标边界：</p>
+
+<table>
+<tr><th>代码</th><th>当前位置</th><th>本质</th><th>M2 后位置</th></tr>
+<tr>
+  <td><code>getBindValue()</code> (2分支)</td>
+  <td>main.php:38-47</td>
+  <td>:bind 属性映射（编译期可知）</td>
+  <td class="wip">→ 编译器生成，放入 .gen.php</td>
+</tr>
+<tr>
+  <td><code>dispatchClick()</code> (4分支)</td>
+  <td>main.php:243-258</td>
+  <td>@click 方法路由（编译期可知）</td>
+  <td class="wip">→ 编译器生成，放入 .gen.php</td>
+</tr>
+<tr>
+  <td><code>render()</code> 双重遍历</td>
+  <td>main.php:99-131</td>
+  <td>遍历 LAYOUT 数据 → GDI 调用</td>
+  <td>保留在 main.php（通用逻辑）</td>
+</tr>
+<tr>
+  <td><code>renderTextElement()</code></td>
+  <td>main.php:50-94</td>
+  <td>运行时动态字号 + 对齐</td>
+  <td>保留在 main.php（运行时依赖）</td>
+</tr>
+<tr>
+  <td><code>handleClick()</code> 命中测试</td>
+  <td>main.php:230-241</td>
+  <td>遍历 buttons 数组</td>
+  <td>保留在 main.php（通用逻辑）</td>
+</tr>
+<tr>
+  <td><code>$this->dirty = true</code> (7处)</td>
+  <td>Calculator.vue:60-200</td>
+  <td>手动脏标记（编译器可分析）</td>
+  <td class="wip">→ 编译器自动插入</td>
+</tr>
+<tr>
+  <td>窗口创建 + 消息循环</td>
+  <td>main.php:152-227</td>
+  <td>平台相关胶水代码</td>
+  <td>保留在 main.php</td>
+</tr>
+</table>
+
+<div class="success"><strong>M2 完成后预期</strong>：main.php 将从 291 行缩减到 ~200 行（去除硬编码的 getBindValue/dispatchClick），Calculator.vue 从 215 行缩减到 ~200 行（去除手动 dirty）。新增的自动生成代码放置在 .gen.php 中，开发者无需手动维护。</div>
+
+<h2>8.6 AOT 兼容设计模式目录</h2>
+
+<p>以下 5 个模式从 main.php 实践中提炼，适用于所有 AOT 编译的 PHP 桌面应用：</p>
+
+<table>
+<tr><th>#</th><th>模式名</th><th>位置</th><th>应用场景</th><th>反模式 (AOT 不支持)</th></tr>
+<tr>
+  <td>1</td>
+  <td><strong>显式属性映射</strong></td>
+  <td><code>getBindValue()</code> (L38-47)</td>
+  <td>需要从字符串 key 访问对象属性</td>
+  <td><code>$obj->$key</code> (变量属性访问)</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><strong>显式方法路由</strong></td>
+  <td><code>dispatchClick()</code> (L243-258)</td>
+  <td>需要从字符串 name 调用对象方法</td>
+  <td><code>$obj->$method()</code> (变量方法调用)</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><strong>编译期数据分离</strong></td>
+  <td><code>getLayout()</code> (在 .gen.php)</td>
+  <td>UI 布局数据与运行时逻辑分离</td>
+  <td><code>const LAYOUT = [...]</code> (const 不支持复杂数组)</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><strong>手动脏标记传播</strong></td>
+  <td><code>$this->dirty = true</code> (7处)</td>
+  <td>状态变更后通知渲染层</td>
+  <td><code>__set()</code> 自动 dirty (魔术方法不可用)</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><strong>防御性 try/catch</strong></td>
+  <td><code>handleClick()</code> + <code>render()</code> 包裹</td>
+  <td>AOT 异常栈可能不完整，需要显式捕获</td>
+  <td>依赖框架全局异常处理器</td>
+</tr>
+</table>
+
+<div class="warn">
+  <strong>模式选择原则</strong>：当面临「写更多显式代码」vs「依赖 PHP 动态特性」的选择时，在 AOT 环境中<strong>总是选择前者</strong>。v2 的经验证明：显式 if/else 虽然冗长，但在 AOT 下 100% 可靠；而 <code>__get/__set/__call</code> 等魔术方法虽然在标准 PHP 中优雅，却在 AOT 中根本不可用。
+</div>
+
+<h2>8.7 main.php 的 M2 演进路线</h2>
+
+<p>基于以上分析，main.php 在 M2 的演进方向明确：</p>
+
+<ol>
+  <li><strong>getBindValue() 自动生成</strong>：SFC 编译器扫描模板中所有 <code>:bind="prop"</code> → 生成完整映射表（含类型声明）→ 放入 .gen.php → main.php 删除此方法</li>
+  <li><strong>dispatchClick() 自动生成</strong>：SFC 编译器扫描模板中所有 <code>@click="handler"</code> → 生成完整路由表 → 放入 .gen.php → main.php 删除该方法</li>
+  <li><strong>try/catch 保持不变</strong>：异常处理逻辑属于运行时关注点，不适合编译器生成</li>
+  <li><strong>render() 模式保留</strong>：双重遍历模式是通用渲染管道，保持不变。仅 <code>renderTextElement()</code> 中若出现 per-property 特殊处理，才需要编译器参与</li>
+  <li><strong>initShared() 评估</strong>：若 ChangeQueue 在 M2 仍未启用，考虑移除或降级为简单的 bool 标志</li>
+</ol>
+
+<div class="success">
+  <strong>M2 完成后 main.php 精简预期</strong>：从 291 行 (当前) → ~200 行 (M2 后)，减少的 ~90 行由编译器自动生成并放入 .gen.php。main.php 将退化为纯粹的「平台胶水层」——窗口创建、消息泵、渲染循环——而所有应用特定的绑定/路由逻辑均由编译器维护。
+</div>
+
+</div>
+</body>
+</html>

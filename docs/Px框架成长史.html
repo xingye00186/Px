@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Px 框架成长史 — 从一个破计算器到桌面 GUI 框架</title>
+<style>
+  :root {
+    --bg: #0a0a1a;
+    --surface: #12122a;
+    --surface2: #1a1a3e;
+    --card: #161638;
+    --text: #e0e0f0;
+    --dim: #8888aa;
+    --accent: #ff6b6b;
+    --accent2: #ffd93d;
+    --accent3: #6bcbff;
+    --green: #6fcf97;
+    --purple: #bb86fc;
+    --orange: #ffa94d;
+    --border: #2a2a5a;
+    --code-bg: #0d0d20;
+    --timeline-line: #3a3a6a;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI","Microsoft YaHei",sans-serif;
+    line-height: 1.9;
+    font-size: 15px;
+    overflow-x: hidden;
+  }
+  .container { max-width: 960px; margin:0 auto; padding:40px 24px 120px; }
+
+  /* ===== 封面 ===== */
+  .cover {
+    text-align:center; padding:100px 20px 80px;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 30%, #2a1a4a 60%, #0a0a1a 100%);
+    border-radius:20px; margin-bottom:48px;
+    border:1px solid var(--border);
+    position:relative; overflow:hidden;
+  }
+  .cover::before {
+    content:''; position:absolute; top:-50%; left:-50%;
+    width:200%; height:200%;
+    background: radial-gradient(circle at 30% 50%, rgba(255,107,107,0.06) 0%, transparent 50%),
+                radial-gradient(circle at 70% 30%, rgba(107,203,255,0.06) 0%, transparent 50%);
+    animation: aurora 12s ease-in-out infinite alternate;
+  }
+  @keyframes aurora {
+    0% { transform:translate(0,0) rotate(0deg); }
+    100% { transform:translate(30px,-20px) rotate(5deg); }
+  }
+  .cover h1 { font-size:3em; color:#fff; margin-bottom:12px; position:relative; letter-spacing:2px; }
+  .cover .subtitle { font-size:1.3em; color:var(--accent2); margin-bottom:8px; position:relative; }
+  .cover .meta { color:var(--dim); font-size:0.9em; position:relative; }
+  .cover .timeline-badge {
+    display:inline-block; margin-top:20px;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:30px; padding:8px 24px;
+    font-size:0.85em; color:var(--dim); position:relative;
+  }
+  .cover .timeline-badge strong { color:var(--accent3); }
+
+  /* ===== 章节标题 ===== */
+  .chapter {
+    font-size:1.6em; color:#fff; margin:64px 0 24px;
+    border-left:4px solid var(--accent); padding-left:16px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .chapter .phase-date {
+    font-size:0.6em; color:var(--dim); font-weight:400;
+    background:var(--surface); padding:2px 12px; border-radius:12px;
+  }
+  .chapter .emoji-badge { font-size:0.8em; }
+
+  /* ===== 时间线 ===== */
+  .timeline-section { position:relative; padding-left:32px; margin:32px 0; }
+  .timeline-section::before {
+    content:''; position:absolute; left:10px; top:8px; bottom:8px;
+    width:2px; background:var(--timeline-line);
+  }
+  .tl-item {
+    position:relative; margin:0 0 20px 0; padding:16px 20px;
+    background:var(--card); border-radius:10px;
+    border:1px solid var(--border);
+    transition:border-color 0.2s;
+  }
+  .tl-item:hover { border-color:var(--accent3); }
+  .tl-item::before {
+    content:''; position:absolute; left:-27px; top:22px;
+    width:10px; height:10px; border-radius:50%;
+    background:var(--accent3); border:2px solid var(--bg);
+  }
+  .tl-item .tl-date {
+    font-size:0.78em; color:var(--accent3);
+    font-family:"Cascadia Code","Consolas",monospace;
+    margin-bottom:4px;
+  }
+  .tl-item .tl-title {
+    font-size:1.05em; color:#fff; font-weight:600; margin-bottom:4px;
+  }
+  .tl-item .tl-desc { color:var(--dim); font-size:0.92em; }
+  .tl-item .tl-flash {
+    display:inline-block; margin-top:6px;
+    background:rgba(255,107,107,0.12); border:1px solid rgba(255,107,107,0.25);
+    border-radius:6px; padding:2px 10px;
+    font-size:0.82em; color:var(--accent);
+  }
+  .tl-item .tl-flash.green { background:rgba(111,207,151,0.12); border-color:rgba(111,207,151,0.25); color:var(--green); }
+  .tl-item .tl-flash.purple { background:rgba(187,134,252,0.12); border-color:rgba(187,134,252,0.25); color:var(--purple); }
+  .tl-item .tl-flash.orange { background:rgba(255,169,77,0.12); border-color:rgba(255,169,77,0.25); color:var(--orange); }
+
+  /* ===== 正文内容 ===== */
+  p { margin:16px 0; color:var(--text); }
+  .highlight { color:var(--accent2); font-weight:600; }
+  .code-inline {
+    background:var(--surface2); padding:2px 8px; border-radius:4px;
+    font-family:"Cascadia Code","Consolas",monospace; font-size:0.9em;
+    color:var(--accent3);
+  }
+  pre {
+    background:var(--code-bg); border:1px solid var(--border);
+    border-radius:10px; padding:18px 22px; overflow-x:auto;
+    margin:18px 0; font-size:0.85em; line-height:1.6;
+  }
+  code { font-family:"Cascadia Code","Consolas",monospace; }
+  p code, li code { background:var(--surface2); padding:2px 6px; border-radius:4px; color:var(--accent3); }
+
+  .flash-card {
+    background:linear-gradient(135deg, rgba(255,107,107,0.08), rgba(255,217,61,0.04));
+    border:1px solid rgba(255,107,107,0.2);
+    border-radius:12px; padding:20px 24px; margin:20px 0;
+  }
+  .flash-card .fc-title {
+    color:var(--accent); font-weight:600; font-size:0.95em; margin-bottom:6px;
+  }
+  .flash-card .fc-title .fc-emoji { margin-right:8px; }
+
+  .stats-row {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:12px; margin:20px 0;
+  }
+  .stat-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:10px; padding:16px; text-align:center;
+  }
+  .stat-card .num {
+    font-size:1.8em; font-weight:700;
+    background:linear-gradient(135deg,var(--accent3),var(--purple));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text;
+  }
+  .stat-card .label { font-size:0.8em; color:var(--dim); margin-top:4px; }
+
+  .footer-note {
+    text-align:center; margin-top:80px; padding:40px;
+    border-top:1px solid var(--border); color:var(--dim); font-size:0.85em;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ==================== 封面 ==================== -->
+<div class="cover">
+  <h1>⚡ Px 框架成长史</h1>
+  <div class="subtitle">从一个破计算器到桌面 GUI 框架的 17 天</div>
+  <div class="meta">2026.05.24 → 2026.06.09 · 约 200 次提交 · 59 个组件库 · 5 万行 PHP</div>
+  <div class="timeline-badge">
+    <strong>git log --reverse</strong> &nbsp;—&nbsp; 按下时间的播放键
+  </div>
+</div>
+
+<div style="max-width:700px;margin:0 auto 48px;text-align:center;color:var(--dim);font-size:0.95em;">
+  <p>这是一个关于 <strong style="color:var(--accent2);">PHP 编译成原生 EXE</strong> 的故事。
+  .vue 文件 → SFC 编译器 → PHP 代码 → Swoole Compiler → C++ → MSVC → .exe，
+  一套疯狂但可行的链路，在 17 天内从零长成了一个五脏俱全的桌面 GUI 框架。</p>
+  <p>下面按 <strong style="color:var(--accent3);">git 时间线</strong> 展开，每一个节点都是真实的 commit。</p>
+</div>
+
+<!-- ==================== 第一章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">🌱</span>
+  第一章 · 创世纪
+  <span class="phase-date">2026-05-24</span>
+</div>
+
+<p>故事的起点平凡到不值一提：一个叫做 <span class="code-inline">VueCalc</span> 的破计算器。</p>
+
+<p>2026 年 5 月 24 日，第一条 commit 诞生了：<span class="code-inline">1c24171</span>。没有 GitHub 仓库，没有设计文档，只有一个念头——<strong class="highlight">用 PHP 写桌面 GUI，然后编译成 exe</strong>。</p>
+
+<p>这是原型机时代的全部家当：</p>
+
+<ul>
+  <li>一个计算器：数字按钮 + 运算符 + 显示屏，GDI 硬画</li>
+  <li>Win32 消息循环：<span class="code-inline">while($running) { PeekMessage; if(dirty) render(); usleep(16000); }</span></li>
+  <li>脏标记模型：每次 state 变化设 <span class="code-inline">$this->dirty = true</span>，下一帧重绘全局</li>
+  <li>GDI 双缓冲：<span class="code-inline">CreateCompatibleDC</span> → 离屏绘制 → <span class="code-inline">BitBlt</span> 一次刷新</li>
+  <li>布局？硬编码！<span class="code-inline">$x = 10; $y = 80; $w = 60; $h = 50</span> 手写到每个按钮</li>
+</ul>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>闪光点：#1 AOT 的「禁术」发现</div>
+  <p>早期代码大量使用 <span class="code-inline">__get</span> / <span class="code-inline">__set</span> 魔术方法来做响应式绑定。直到撞上 Swoole Compiler AOT 的墙——<strong class="highlight">AOT 不支持魔术方法</strong>。这迫使框架转向显式的 dirty 标记 + 手动 setter/getter。回头看，这个限制反而让代码路径变得清晰可追踪，是一种「被迫的正确」。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">1c24171 · 2026-05-24 22:16</div>
+    <div class="tl-title">🎬 feat: PDU/Px PHP Swoole AOT & SFC 驱动的桌面应用框架</div>
+    <div class="tl-desc">第一条 commit，项目诞生。VueCalc 原型的全部代码——GDI 渲染、脏标记、硬编码布局。</div>
+    <div class="tl-flash green">初始 commit</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">b3782dd · 2026-05-24 22:51</div>
+    <div class="tl-title">🔧 refactor(Rendering): 优化 VNodeRenderer 中元素绘制的分解策略</div>
+    <div class="tl-desc">render 函数开始拆解——不再是一个巨大的 switch，开始有了分层意识。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">959a1b3 · 2026-05-24 23:50</div>
+    <div class="tl-title">🎨 feat(rendering): 优化 GDI 渲染上下文及元素渲染流程</div>
+    <div class="tl-desc">RenderContext 雏形出现，离屏 GDI 渲染管线初步成型。</div>
+  </div>
+</div>
+
+<!-- ==================== 第二章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">🔩</span>
+  第二章 · 框架的骨架
+  <span class="phase-date">2026-05-26</span>
+</div>
+
+<p>两天后，代码开始有了「框架」的样子。不是一堵密不透风的墙，而是一组可以拼装的零件。</p>
+
+<p>一个名叫 <span class="code-inline">Application</span> 的类扛起了大旗：事件路由、组件生命周期、bind 属性解析……所有之前散落在 <span class="code-inline">main.php</span> 里的逻辑开始归队。</p>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>闪光点：#2 移除 ReactionBus</div>
+  <p>最早存在一个叫 <span class="code-inline">ReactionBus</span> 的「响应式总线」，试图做自动依赖追踪。但在 AOT 编译器面前，这种运行时自省的黑魔法不堪一击（commit <span class="code-inline">069760e</span>：<em>移除 ReactionBus，简化为直接调用和回调注入</em>）。取而代之的是朴素的 dirty 标记 + 微任务调度——简单、可预测、AOT 友好。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">0d62411 · 2026-05-26 11:46</div>
+    <div class="tl-title">🔧 refactor(Core): 提取 Application 平台事件处理器闭包为具名方法</div>
+    <div class="tl-desc">事件处理器从闭包改造成方法——AOT 编译闭包是个坑，具名方法才是正道。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">069760e · 2026-05-26 13:34</div>
+    <div class="tl-title">🔧 refactor(Core): 移除 ReactionBus，简化为直接调用和回调注入</div>
+    <div class="tl-desc">告别黑魔法。从此响应式只有 dirty flag，没有依赖追踪。</div>
+    <div class="tl-flash">重要架构转折</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">96951a3 · 2026-05-26 18:15</div>
+    <div class="tl-title">🚀 feat: Vue 3 兼容的组件级 VNode 树缓存与模板规范</div>
+    <div class="tl-desc">VNode 树缓存机制诞生 —— <span class="code-inline">vnodeCache</span> 让纯组件跳过重复渲染。Vue 3 模板规范开始对齐。</div>
+    <div class="tl-flash purple">VNode 缓存诞生</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">e872d6a · 2026-05-26 19:09</div>
+    <div class="tl-title">🐛 fix: 实现完整滚动系统并修复 scroll-clamping bug</div>
+    <div class="tl-desc">第一个滚动实现，虽然 bug 很多（后来发现 scrollTop 被减了两次——LayoutResolver 减一次，VNodeRenderer 又减一次），但至少能滚了。</div>
+    <div class="tl-flash orange">滚动系统初登场</div>
+  </div>
+</div>
+
+<!-- ==================== 第三章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">⚙️</span>
+  第三章 · 编译器时代
+  <span class="phase-date">2026-05-27</span>
+</div>
+
+<p>框架活了，但生产力是零——写一个按钮要手写 <span class="code-inline">VNode::h()</span> 调 4 次，填 x/y/w/h，还要自己管 dirty。这不行。</p>
+
+<p><strong class="highlight">SFC 编译器</strong> 出现了。从此 <span class="code-inline">.vue</span> 文件不再是装饰品，而是真正的源代码入口。</p>
+
+<pre>&lt;template&gt;
+  &lt;div class="calculator"&gt;
+    &lt;div class="display"&gt;{{ displayText }}&lt;/div&gt;
+    &lt;div class="buttons"&gt;
+      &lt;button v-for="key in keys" @click="press(key)"&gt;{{ key }}&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;</pre>
+
+<p>上面的 HTML 模板经过 <span class="code-inline">sfc-compiler.php</span>，会生成一棵完整的 VNode 树 PHP 代码——自动推断 <span class="code-inline">render()</span>、<span class="code-inline">dispatchClick()</span>、<span class="code-inline">markDirty()</span> 注入——然后走 AOT 编译链变成原生 exe。</p>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>闪光点：#3 表达式解析器（SOLID 设计）</div>
+  <p>Vue 模板里到处是 <span class="code-inline">{{ item.name }}</span>、<span class="code-inline">:class="isActive ? 'on' : 'off'"</span>。这些表达式不能简单地字符串替换——需要真正的解析器。commit <span class="code-inline">57045f3</span> 引入 ExpressionParser 模块，使用 SOLID 接口分离，支持比较、连接、逻辑、三元四种表达式类型。这是框架第一个「正经」的编译前端模块。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">cc4f5ab · 2026-05-27 17:55</div>
+    <div class="tl-title">🚀 feat: 完整滚动系统重构 + 多滚动视口支持 + Bug 修复 + SFC 编译器增强</div>
+    <div class="tl-desc">滚动系统大改！从单滚动容器到多视口支持。ScrollManager 从 Application 中分离。</div>
+    <div class="tl-flash">ScrollManager 诞生</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">57045f3 · 2026-05-27 20:40</div>
+    <div class="tl-title">🚀 feat: 添加 ExpressionParser 模块 (SOLID 设计)</div>
+    <div class="tl-desc">模板表达式解析器 —— 三元、比较、逻辑、字符串连接全支持。</div>
+    <div class="tl-flash purple">SOLID 设计</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">24d37ab · 2026-05-27 20:40</div>
+    <div class="tl-title">🚀 feat: SFC 编译器支持 v-if/v-else-if/v-else、class、v-show</div>
+    <div class="tl-desc">条件渲染 + 动态 class + 显示控制——Vue 3 模板的核心特性落地。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">8237f0d · 2026-05-27 23:14</div>
+    <div class="tl-title">🐛 fix: 修复 flex 布局渲染</div>
+    <div class="tl-desc">flex 布局第一次能跑——虽然只有最基本的 justify-content，但方向对了。</div>
+  </div>
+</div>
+
+<!-- ==================== 第四章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">📦</span>
+  第四章 · 组件库大爆炸
+  <span class="phase-date">2026-05-28</span>
+</div>
+
+<p>一天之内，59 个组件拔地而起。这不是在吹牛——这是真实的 commit 记录。</p>
+
+<div class="stats-row">
+  <div class="stat-card"><div class="num">8</div><div class="label">P0 基础组件</div></div>
+  <div class="stat-card"><div class="num">9</div><div class="label">P1 布局组件</div></div>
+  <div class="stat-card"><div class="num">10</div><div class="label">P2 表单组件</div></div>
+  <div class="stat-card"><div class="num">7</div><div class="label">P3 浮层反馈</div></div>
+  <div class="stat-card"><div class="num">8</div><div class="label">P4 数据展示</div></div>
+  <div class="stat-card"><div class="num">8</div><div class="label">P5 高级表单</div></div>
+  <div class="stat-card"><div class="num">9</div><div class="label">P6 复杂扩展</div></div>
+</div>
+
+<p>外部组件注册系统 <span class="code-inline">ComponentRegistry</span> 与 <span class="code-inline">project.yml</span> 配置文件通信。从此应用可以声明依赖：</p>
+
+<pre># project.yml
+dependencies:
+  vc-ui:
+    path: ../../library/vc-ui
+    components:
+      - Button
+      - Input
+      - Card</pre>
+
+<p>编译器自动扫描依赖组件，生成 <span class="code-inline">ComponentFactory</span>。没有任何运行时反射——全是编译期静态解析。这就是 AOT 框架的生存之道。</p>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>闪光点：#4 「JSON 字符串 → PHP 数组」大迁移</div>
+  <p>早期为了绕过 AOT 的数组字面量限制，组件数据属性全用 JSON 字符串存，运行时再 <span class="code-inline">json_decode</span>。commit <span class="code-inline">062e2ca</span> 一次性重构 14 个组件，把 <span class="code-inline">data/weekDays/tableCols/selectOpts</span> 全改成原生 PHP 数组——发现 Swoole Compiler 新版已经支持数组字面量了。这是「用脚探路」的经典案例。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">02fb229 → c9de805 → … → bd61836 · 2026-05-28</div>
+    <div class="tl-title">📦 feat(vc-ui): P0-P6 组件库 (59 个组件)</div>
+    <div class="tl-desc">7 次连续提交，59 个 SFC 组件。从 Avatar 到 Upload，从 Button 到 TreeSelect。</div>
+    <div class="tl-flash purple">59 组件 / 一天</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">c0ebf27 · 2026-05-28 18:29</div>
+    <div class="tl-title">🐛 fix(compiler): 修复嵌套 v-for 变量作用域缺陷</div>
+    <div class="tl-desc">嵌套 <span class="code-inline">v-for</span> 的作用域泄露——一个经典的编译器 bug。外层变量被内层覆盖，修复后增加作用域链压栈。</div>
+    <div class="tl-flash orange">作用域链修复</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">062e2ca · 2026-05-28</div>
+    <div class="tl-title">🔧 refactor(vc-ui): 数据属性改为 array 类型 (14 个组件)</div>
+    <div class="tl-desc">JSON 字符串 → PHP 数组的大迁移，去掉所有 json_decode 调用。</div>
+    <div class="tl-flash green">AOT 兼容性改进</div>
+  </div>
+</div>
+
+<!-- ==================== 第五章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">🎨</span>
+  第五章 · CSS 盒模型的黎明
+  <span class="phase-date">2026-05-29</span>
+</div>
+
+<p>这一天的 commit 信息堪比 CSS 属性字典：<span class="code-inline">borderRadius</span>、<span class="code-inline">opacity</span>、<span class="code-inline">padding</span>、<span class="code-inline">margin</span>、<span class="code-inline">box-shadow</span>、<span class="code-inline">border</span>……</p>
+
+<p>之前的渲染是一张「硬纸板」——所有元素扁平排列，没有圆角、没有阴影、没有间距。现在终于开始像一个真正的 GUI 框架了。</p>
+
+<ul>
+  <li><span class="code-inline">vue_draw_round_rect</span> 和 <span class="code-inline">vue_alpha_fill_rect</span> 两个 C++ 原生函数加入战斗</li>
+  <li>CSS padding/margin 四方向缩写展开 + Block/Flex 布局支持</li>
+  <li><span class="code-inline">box-shadow</span> 从 CSS 解析到 GDI 阴影绘制全链路打通</li>
+  <li><span class="code-inline">border-width/border-color/border-style</span> 完整边框渲染管线</li>
+</ul>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>闪光点：#5 iOS 风格科学计算器（用来验证的能力）</div>
+  <p>commit <span class="code-inline">beb513b</span>：calculator-ng——一个完整的 iOS 风格科学计算器应用，支持三角函数、对数、括号运算。它不是 demo，而是盒模型/CSS 布局/GDI 渲染的集成验证。它证明了一件事：<strong class="highlight">PHP 写的 GUI 可以做到这个程度</strong>。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">96ab74f · 2026-05-29</div>
+    <div class="tl-title">🚀 feat: add vue_draw_round_rect and vue_alpha_fill_rect C++ native functions</div>
+    <div class="tl-desc">C++ 桥接层扩展——圆角矩形和半透明填充，GDI 渲染质的飞跃。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">1794aed · 2026-05-29</div>
+    <div class="tl-title">🚀 feat: add 4-direction padding/margin CSS properties and shorthand expansion</div>
+    <div class="tl-desc">padding/margin 缩写展开：<span class="code-inline">padding: 10px 20px</span> → 四个方向独立属性。</div>
+    <div class="tl-flash">盒模型基线</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">c064a64 · 2026-05-29</div>
+    <div class="tl-title">🚀 feat: add box-shadow support to element rendering pipeline</div>
+    <div class="tl-desc">box-shadow 全链路：CSS 解析 → 坐标计算 → GDI AlphaBlend 阴影绘制。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">beb513b · 2026-05-29</div>
+    <div class="tl-title">📱 feat: add calculator-ng iOS-style scientific calculator app</div>
+    <div class="tl-desc">iOS 风格科学计算器——验证盒模型/CSS 布局/GDI 渲染的完整能力。</div>
+    <div class="tl-flash orange">关键验证应用</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">ef1b934 · 2026-05-29</div>
+    <div class="tl-title">🔧 refactor: 引入运行时 patch 机制重构组件树管理</div>
+    <div class="tl-desc">运行时组件树 patch——VNode diff → 局部更新，替代全量重建。</div>
+    <div class="tl-flash purple">VNode diff 机制</div>
+  </div>
+</div>
+
+<!-- ==================== 第六章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">🧪</span>
+  第六章 · 测试觉醒
+  <span class="phase-date">2026-05-30</span>
+</div>
+
+<p>代码量上来了，bug 也多了。是时候做点正经测试了。</p>
+
+<p>commit <span class="code-inline">1bcfb9d</span> 引入统一测试运行器，<span class="code-inline">527908a</span> 带来 100 个计算器点击模拟测试——直接在 GDI 窗口上模拟鼠标点击，验证按键响应。然后是 22 个组件树语义测试，PowerShell 截图对比脚本……</p>
+
+<p>但真正的大事件是 <span class="code-inline">abbd926</span>——<strong class="highlight">RenderNode 全套架构轻量化重构</strong>。</p>
+
+<p>这个 commit 把「元素描述」和「布局结果」彻底分离：</p>
+
+<ul>
+  <li><span class="code-inline">VNode</span>：只描述「长什么样子」（type, props, children）</li>
+  <li><span class="code-inline">RenderNode</span>：只持有「布局在哪」（x, y, w, h, style 解析结果）</li>
+  <li><span class="code-inline">RenderTreeManager</span>：负责 VNode → RenderNode 的转换 + 跨帧复用</li>
+</ul>
+
+<p>这是框架架构的基石性决策——从此布局和渲染不再互相纠缠。</p>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">527908a · 2026-05-30</div>
+    <div class="tl-title">🧪 feat(tests): add calculator click simulation tests (100 cases)</div>
+    <div class="tl-desc">100 个计算器测试用例——模拟真实用户点击，验证按钮、括号、运算符逻辑。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">abbd926 · 2026-05-30</div>
+    <div class="tl-title">🔧 feat(render): 架构轻量化重构——RenderNode 全套</div>
+    <div class="tl-desc">VNode 与 RenderNode 分离！布局/渲染职责正式分家。</div>
+    <div class="tl-flash">里程碑式重构</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">b0716b7 · 2026-05-30</div>
+    <div class="tl-title">🐛 fix(component): 子组件定位在 matchComponentNode 重用路径中保留</div>
+    <div class="tl-desc">组件重用时定位丢失——RenderNode 缓存匹配路径下的经典 bug。</div>
+  </div>
+</div>
+
+<!-- ==================== 第七章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">🎭</span>
+  第七章 · 动画降临
+  <span class="phase-date">2026-05-31</span>
+</div>
+
+<p>框架有了骨架（布局）、有了肌肉（渲染），现在需要灵魂——<strong class="highlight">动画</strong>。</p>
+
+<p>这一天的 commit 群堪称「动画交響曲」：</p>
+
+<ul>
+  <li><span class="code-inline">b0c6824</span>：RenderNode 添加 <span class="code-inline">animatedStyle</span> 和 <span class="code-inline">isAnimating</span> 字段</li>
+  <li><span class="code-inline">99a59a2</span>：CssMappings 添加动画相关解析方法</li>
+  <li><span class="code-inline">6ab53f7</span>：LayoutResolver 合并 <span class="code-inline">animatedStyle</span> 到布局结果</li>
+  <li><span class="code-inline">e0d85a8</span>：Win32 定时器 API <span class="code-inline">vue_set_timer</span></li>
+  <li><span class="code-inline">3894e3e</span>：Platform 定时器接口实现</li>
+  <li><span class="code-inline">3894e3e</span>：<strong class="highlight">Vue 3 动画系统完整实现</strong> 🎉</li>
+</ul>
+
+<p>动画系统支持：</p>
+<ul>
+  <li><span class="code-inline">&lt;Transition&gt;</span> 组件——enter/leave 动画</li>
+  <li><span class="code-inline">&lt;TransitionGroup&gt;</span> 组件——列表增删动画</li>
+  <li><span class="code-inline">@keyframes</span> CSS 关键帧动画</li>
+  <li>缓动函数（ease, ease-in, ease-out, ease-in-out, linear 等）</li>
+  <li>插值器（颜色、数字、带单位值的平滑过渡）</li>
+  <li>FLIP 动画（First, Last, Invert, Play——位置变化动画）</li>
+</ul>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>闪光点：#6 GDI 防御性渲染</div>
+  <p>commit <span class="code-inline">17c800e</span>：GDI 渲染过程中发现 clip 栈溢出、drawText 越界等问题。解决方案是一整套<strong>防御性渲染</strong>——clip 栈追踪、文本截断保护、参数边界检查。在 GDI 这种古老而脆弱的 API 上，防御不是选择而是生存法则。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">17c800e · 2026-05-31</div>
+    <div class="tl-title">🛡️ feat(render): GDI 防御性渲染——clip 栈追踪 + drawText 截断 + 参数加强</div>
+    <div class="tl-desc">GDI 是脆弱的——不匹配的 SaveDC/RestoreDC 就会黑屏。防御性渲染上线。</div>
+    <div class="tl-flash orange">GDI 防御机制</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">3894e3e · 2026-05-31</div>
+    <div class="tl-title">🚀 feat(animation): Vue 3 动画系统完整实现</div>
+    <div class="tl-desc">Transition/TransitionGroup/@keyframes/缓动/插值/FLIP——全线打通。</div>
+    <div class="tl-flash">动画系统完工</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">a8b4e33 · 2026-05-31</div>
+    <div class="tl-title">🎨 feat(app): 添加 design-guide 现代化设计风格框架应用</div>
+    <div class="tl-desc">设计指南应用——展示框架能力的同时，也作为视觉回归测试。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">baa0b05 · 2026-05-31</div>
+    <div class="tl-title">🐛 fix(render): 防止 GDI TextOutW 在 clip 边界处累积损坏 HDC</div>
+    <div class="tl-desc">GDI 文本渲染在 clip 边界处损坏 HDC——一个查了两天的 GDI 暗坑。</div>
+  </div>
+</div>
+
+<!-- ==================== 第八章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">🔥</span>
+  第八章 · AOT native_types 的烈焰试炼
+  <span class="phase-date">2026-06-02</span>
+</div>
+
+<p>这是框架经历的最严峻的考验——<strong class="highlight">Swoole Compiler v1054 引入 <span class="code-inline">use native_types</span> 编译指令</strong>。</p>
+
+<p><span class="code-inline">native_types</span> 将 PHP 的类型化属性直接编译为 C++ 原生类型（<span class="code-inline">int</span> → <span class="code-inline">int32_t</span>，<span class="code-inline">string</span> → <span class="code-inline">std::string</span>），性能飞跃但兼容性地狱。</p>
+
+<p>从 commit <span class="code-inline">5139bc2</span>（<em>注入 use native_types 编译指令</em>）开始，一连串 AOT 兼容性修复排山倒海而来：</p>
+
+<ul>
+  <li>闭包类型声明改造（<span class="code-inline">0d7b305</span>）</li>
+  <li>平台事件和 VNode 添加 <span class="code-inline">use native_types</span>（<span class="code-inline">c38b8d0</span>）</li>
+  <li>C2440 类型转换修复——<span class="code-inline">php::Var → php::Int</span> 的显式转型（<span class="code-inline">6ec9473</span>）</li>
+  <li>跨文件 <span class="code-inline">native_types_chain</span> 连锁检查（<span class="code-inline">a319bbc</span>）</li>
+  <li>AOT/PHP CLI 双模式兼容的 <span class="code-inline">getBindValue()</span>（<span class="code-inline">28a6234</span>）</li>
+  <li>跨文件属性访问的 getter 方法（<span class="code-inline">f990628</span>）</li>
+</ul>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>闪光点：#7 C2440 与 native_types_chain</div>
+  <p>AOT 编译的经典错误 <span class="code-inline">C2440: 'initializing': cannot convert from 'php::Var' to 'int'</span>。根因是 <span class="code-inline">native_types</span> 下跨文件读到的属性类型是 <span class="code-inline">php::Var</span>（未标记 <span class="code-inline">native_types</span> 的编译单元），而非原生 <span class="code-inline">int</span>。解决方案是 <strong class="highlight">native_types_chain</strong>——从依赖树的叶子节点向上，逐文件确保链路上每个类都被标记。这是 AOT 框架特有的「类型传染病」问题。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">5139bc2 · 2026-06-02</div>
+    <div class="tl-title">🔥 aot: 注入 use native_types 编译指令</div>
+    <div class="tl-desc">开启 native_types——性能提升的承诺和兼容性噩梦的开始。</div>
+    <div class="tl-flash orange">native_types 时代</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">a319bbc · 2026-06-02</div>
+    <div class="tl-title">🔧 feat(aot-checker): add native_types_chain cross-file check + fix chain breaks</div>
+    <div class="tl-desc">aot-checker 增加跨文件 native_types 连锁检查——类型传染病追踪器。</div>
+    <div class="tl-flash">aot-checker 诞生</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">864ca8f · 2026-06-02</div>
+    <div class="tl-title">🔧 aot: 编译器生成代码 use native_types + toString() 绑定</div>
+    <div class="tl-desc">SFC 编译器生成的 PHP 代码自动注入 native_types——编译时全链路对齐。</div>
+  </div>
+</div>
+
+<!-- ==================== 第九章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">🎨</span>
+  第九章 · Skia 降临与后端革命
+  <span class="phase-date">2026-06-03 ~ 06-04</span>
+</div>
+
+<p>GDI 能做的事情有限——圆角矩形靠 AlphaBlend 拼凑，阴影靠模糊预处理，透明靠 BitBlt 奇技淫巧。<strong class="highlight">是时候请外援了</strong>。</p>
+
+<p>Skia——Google 的 2D 图形库，Chrome、Android、Flutter 的渲染引擎——被编译为 PHP 扩展。这不是「调用 Skia C++ API」，而是通过 C++ 桥接层将 Skia 的绘制能力暴露给 PHP/VNode 渲染管线。</p>
+
+<div class="stats-row">
+  <div class="stat-card"><div class="num">6</div><div class="label">后端候选</div></div>
+  <div class="stat-card"><div class="num">4</div><div class="label">Skia 变体</div></div>
+  <div class="stat-card"><div class="num">2</div><div class="label">GDI 变体</div></div>
+  <div class="stat-card"><div class="num">100</div><div class="label">最高优先级</div></div>
+</div>
+
+<p>更大的革新是 <strong class="highlight">渲染后端自动选择与故障降级系统</strong>：</p>
+
+<pre>SkiaGraphiteDawnBackend  (优先级 100)  ← 最高追求
+SkiaGaneshD3D11Backend   (优先级 90)
+SkiaGaneshWGLBackend     (优先级 80)
+SkiaCpuBackend           (优先级 60)   ← 当前稳定
+GdiDirect2DBackend       (优先级 50)
+GdiLegacyBackend         (优先级 10)   ← 永远可用</pre>
+
+<p><span class="code-inline">RuntimeBackendSelector</span> 按优先级依次 <span class="code-inline">probe()</span>，跳过不可用后端，第一个 <span class="code-inline">initialize()</span> 成功的就是选中的渲染引擎。外包装 <span class="code-inline">ResilientRenderContext</span>——连续 N 次绘制失败自动降级到下一个候选。</p>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>闪光点：#8 降级不是失败，是设计</div>
+  <p>大多数框架在渲染后端选择上采用「要么全有要么全无」的策略。Px 的设计是<strong class="highlight">渐进降级</strong>——Skia D3D11 崩了？退到 Skia CPU。Skia 加载失败？GDI 永远 standby。用户不会看到黑屏，只可能看到「渲染质量降低」的提示。这套设计来自 commit <span class="code-inline">196d3d3</span>，后来被经验文档记录为<strong>「降级不是失败，是设计」</strong>。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">0764164 · 2026-06-04</div>
+    <div class="tl-title">🔧 refactor(layout): flex-wrap/grid-1fr/两遍重算/scroll后处理/absolute定位修复</div>
+    <div class="tl-desc">布局引擎大升级——flex-wrap 支持、grid 1fr、双遍重算算法、absolute 定位全部修复。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">42a3661 · 2026-06-04</div>
+    <div class="tl-title">📱 feat(app): bilibili 页面复刻测试应用 + 截图自动化</div>
+    <div class="tl-desc">Bilibili 页面复刻——验证框架布局能力上限。截图自动对比上线。</div>
+    <div class="tl-flash">复杂页面验证</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">196d3d3 · 2026-06-04</div>
+    <div class="tl-title">🚀 feat: 渲染后端自动选择与故障降级机制</div>
+    <div class="tl-desc">6 个后端候选 + 自动探测 + 故障降级——渲染引擎的瑞士军刀。</div>
+    <div class="tl-flash">后端系统完成</div>
+  </div>
+</div>
+
+<!-- ==================== 第十章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">📐</span>
+  第十章 · CSS 语义对齐——大型重构
+  <span class="phase-date">2026-06-04 ~ 06-06</span>
+</div>
+
+<p>框架的布局引擎虽然能跑，但仔细对照 CSS 规范，发现到处都是「自创语义」：<span class="code-inline">position: absolute</span> 不剔除 normal flow、box-sizing 默认是 border-box 而非 content-box、margin 在 flex 容器中不正确……这些差异一旦积累，后续所有 UI 组件都会建立在错误的基础上。</p>
+
+<p>于是有了<strong class="highlight">CSS 语义对齐大型重构</strong>，涉及：</p>
+
+<ul>
+  <li>LayoutResolver 完全重构——策略模式拆分出 6 个策略类（<span class="code-inline">878a048</span>）</li>
+  <li>Box Model 基线——box-sizing/padding/margin/border 严格按 CSS 规范</li>
+  <li>Position 语义——static/relative/absolute/fixed/sticky 完整语义</li>
+  <li>6 个应用全部适配（<span class="code-inline">f70ab1a</span>）</li>
+  <li>59 个 vc-ui 组件全部适配（<span class="code-inline">3f677af</span>）</li>
+  <li><span class="code-inline">align-items:stretch</span> CSS 合规实现（<span class="code-inline">cc3f76b</span>）</li>
+  <li>58 个 CSS 规范测试用例（<span class="code-inline">4ce6dea</span>）</li>
+</ul>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>闪光点：#9 一个属性带来的蝴蝶效应</div>
+  <p>最早为了省事，CssMappings 会自动给所有 <span class="code-inline">left/top/right/bottom</span> 属性注入 <span class="code-inline">position:absolute</span>（commit <span class="code-inline">4544175</span>）。这个「想当然」的便利设施后来被证明是灾难性的——它让所有定位属性的语义都变了。commit <span class="code-inline">4d34aee</span> 移除了这个自动注入，回归 CSS 规范语义。一个「好心办坏事」的经典案例。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">0425694 · 2026-06-05</div>
+    <div class="tl-title">🔧 refactor: LayoutResolver 完整实现 Tasks A/B/C/D</div>
+    <div class="tl-desc">四组重构任务——Position 语义、Box Model 基线、Flex/Grid 规范对齐。</div>
+    <div class="tl-flash">大重构完成</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">4ce6dea · 2026-06-05</div>
+    <div class="tl-title">🧪 test: LayoutResolverTest 58 个 CSS 规范用例</div>
+    <div class="tl-desc">58 个测试用例覆盖 position/box-model/flex/grid——没有规范测试的重构是耍流氓。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">d734b3f · 2026-06-06</div>
+    <div class="tl-title">✅ feat: CSS 标准兼容性修复</div>
+    <div class="tl-desc">CSS 标准差异全面修复——box-sizing/margin-collapse/min-height 等。</div>
+  </div>
+</div>
+
+<!-- ==================== 第十一章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">⚡</span>
+  第十一章 · 打磨与基准
+  <span class="phase-date">2026-06-06 ~ 06-07</span>
+</div>
+
+<p>布局引擎稳定后，工作重心转向<strong class="highlight">基础设施打磨</strong>：</p>
+
+<ul>
+  <li>编码检查工具——修复 AGENTS.md 和 LayoutResolver.php 中的 UTF-8 乱码（<span class="code-inline">b6000f3</span>）</li>
+  <li>依赖分析工具迁移到 <span class="code-inline">tools/dependency/</span>（<span class="code-inline">8b2ef4a</span>）</li>
+  <li>SFC 编译器支持 Vue 3 JS <span class="code-inline">+</span> 字符串连接操作符（<span class="code-inline">ebd55fe</span>）</li>
+  <li>完整管线测试基础设施——从编译到渲染到截图（<span class="code-inline">787648d</span>）</li>
+  <li>测试框架增强——Jest 风格的描述/断言（<span class="code-inline">8d842a5</span>）</li>
+  <li>文本宽度测量——布局引擎支持根据文本宽度自适应（<span class="code-inline">427865d</span>）</li>
+  <li>Bilibili 页面组件视觉还原（<span class="code-inline">9d240aa</span>）</li>
+</ul>
+
+<p>同时，一个令人在意的 bug 浮出水面——<strong class="highlight">Swoole Compiler v1054 Direct Call Optimization 下的数组赋值 bug</strong>。一连串 commit 围剿这个 bug：</p>
+
+<ul>
+  <li><span class="code-inline">8ca417e</span>：创建 <span class="code-inline">array-assign-test</span> 复现测试</li>
+  <li><span class="code-inline">64a3a40</span>：<span class="code-inline">objval()</span> 类型延续测试</li>
+  <li><span class="code-inline">63e31d3</span> → <span class="code-inline">cc6b119</span> → <span class="code-inline">7f567bb</span> → <span class="code-inline">99c0756</span> → <span class="code-inline">e3b089a</span>：逐步缩减到最简 2 文件复现</li>
+</ul>
+
+<p>这个 bug 的意义不仅在于修复本身——它教会了团队<strong class="highlight">如何为 AOT 编译器做最小化 bug 复现</strong>。</p>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">ebd55fe · 2026-06-06</div>
+    <div class="tl-title">🐛 fix: SFC 编译器支持 Vue 3 JS '+' 字符串连接操作符</div>
+    <div class="tl-desc">模板表达式中的 <span class="code-inline">+</span> 在 PHP 中意为数组拼接——需要转成 <span class="code-inline">.</span> 字符串连接。</div>
+    <div class="tl-flash orange">语义差异修复</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">427865d · 2026-06-06</div>
+    <div class="tl-title">🚀 feat(layout): 布局引擎添加文本宽度测量支持</div>
+    <div class="tl-desc">布局不再硬编码宽度——根据文本实际渲染宽度自动计算。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">8ca417e · 2026-06-07</div>
+    <div class="tl-title">🔬 feat: add v1054 Direct Call Optimization array-assign reproduction test</div>
+    <div class="tl-desc">AOT 编译器 DCO 数组赋值 bug 的第一个复现测试。</div>
+    <div class="tl-flash">AOT bug 狩猎</div>
+  </div>
+</div>
+
+<!-- ==================== 第十二章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">🏗️</span>
+  第十二章 · 策略模式与架构深水区
+  <span class="phase-date">2026-06-08</span>
+</div>
+
+<p>代码量超过 5 万行后，维护成本开始指数上升。这一天是<strong class="highlight">架构治理</strong>的全面展开：</p>
+
+<p><strong class="highlight">LayoutResolver 策略模式拆分</strong>（<span class="code-inline">878a048</span>）：一个 2000+ 行的巨型 <span class="code-inline">switch</span> 被拆成 6 个独立策略类——<span class="code-inline">AbsolutePositioning</span>、<span class="code-inline">BlockLayoutStrategy</span>、<span class="code-inline">FlexLayoutStrategy</span>、<span class="code-inline">GridLayoutStrategy</span>、<span class="code-inline">PercentResolver</span>、<span class="code-inline">ScrollHelper</span>。</p>
+
+<p>其他重要进展：</p>
+<ul>
+  <li>box-sizing/line-height/文本裁剪/auto-height 支持（<span class="code-inline">ed4c49e</span>）</li>
+  <li>VNode 不可变性 + 滚动同步 + fixed 隔离（<span class="code-inline">65fd6e5</span>）</li>
+  <li>RenderTreeManager 冗余映射清理（<span class="code-inline">74ea170</span>、<span class="code-inline">e81afb5</span>）</li>
+  <li><span class="code-inline">pointer-events:none</span> + transform 命中测试（<span class="code-inline">0e4ad89</span>）</li>
+  <li>滚动条 CSS 样式定制（<span class="code-inline">6716471</span>）</li>
+  <li>字体回退链 + fontFamily 管道（<span class="code-inline">8d661df</span>）</li>
+</ul>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>闪光点：#10 技术债务清理计划</div>
+  <p>commit <span class="code-inline">1e6a0fb</span> 创建了<strong>技术债务清理计划</strong>，系统性地把重构任务编为 P1/P2/P3 优先级。这是框架从「野蛮生长」转向「精耕细作」的标志性时刻。核心原则：每次修改文件时，顺手修复 1-2 个代码异味，不让技术债务滚雪球。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">878a048 · 2026-06-08 13:38</div>
+    <div class="tl-title">🔧 refactor(Layout): 拆分 LayoutResolver 为策略模式，新增 6 个策略类</div>
+    <div class="tl-desc">2000+ 行巨型 switch 拆解——策略模式让布局引擎可测试、可扩展。</div>
+    <div class="tl-flash">策略模式重构</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">65fd6e5 · 2026-06-08 13:38</div>
+    <div class="tl-title">🚀 feat(Core): VNode 不可变性 + 滚动同步 + fixed 隔离</div>
+    <div class="tl-desc">VNode 不可变——跨帧重用不再担心意外修改。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">8d661df · 2026-06-08 14:15</div>
+    <div class="tl-title">🚀 feat(Render): 字体回退链 + fontFamily 管道</div>
+    <div class="tl-desc">CSS font-family 回退链——指定字体不存在时自动 fallback。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">acda039 · 2026-06-08 18:39</div>
+    <div class="tl-title">🔧 refactor(P1#13): consolidate childrenToArray into VNode static method</div>
+    <div class="tl-desc">技术债务清理计划的具体执行——将 childrenToArray 提取为 VNode 静态方法。</div>
+    <div class="tl-flash green">架构治理</div>
+  </div>
+</div>
+
+<!-- ==================== 第十三章 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">🔄</span>
+  第十三章 · 持续进化
+  <span class="phase-date">2026-06-09</span>
+</div>
+
+<p>故事来到今天。框架仍在以每天数十次 commit 的速度进化：</p>
+
+<ul>
+  <li><span class="code-inline">bd41e19</span>：框架核心系统全面重构</li>
+  <li><span class="code-inline">d8b3922</span>：C++ 桥接层渲染优化——原生函数更多、更快</li>
+  <li><span class="code-inline">eedff10</span>：<span class="code-inline">LayoutContext</span> 封装——布局上下文对象化，不再散落一堆全局状态</li>
+  <li><span class="code-inline">d85d5f1</span>：<span class="code-inline">CssMappings</span> 大幅精简——移除冗余属性映射</li>
+  <li><span class="code-inline">38c31dd</span>：消除 <span class="code-inline">refval</span> 模式——将 <span class="code-inline">scrollContainers</span> 提到 LayoutResolver 属性</li>
+  <li><span class="code-inline">2f5b61f</span>：CSS <span class="code-inline">text-decoration</span> 标准完整支持</li>
+  <li><span class="code-inline">f8a0ea5</span>：AOT 兼容性修复——switch 中的 <span class="code-inline">continue N</span>、<span class="code-inline">Variant → Int</span> 类型转换</li>
+</ul>
+
+<div class="flash-card">
+  <div class="fc-title"><span class="fc-emoji">💡</span>最后的闪光：#11 LayoutContext 封装——一个值对象的诞生</div>
+  <p>布局计算的上下文曾经是 6 个松散变量在函数间传递。commit <span class="code-inline">eedff10</span> 把它们封装成 <span class="code-inline">LayoutContext</span> 值对象——<span class="code-inline">parentX</span>、<span class="code-inline">parentY</span>、<span class="code-inline">parent</span>、<span class="code-inline">scrollOffset</span> 等全部打包。看似简单，但这让布局策略函数的签名从 <span class="code-inline">resolveNode($node, $px, $py, $scroll, ...)</span> 变成了 <span class="code-inline">resolveNode($node, $ctx)</span>——扩展性天差地别。有趣的是，<span class="code-inline">LayoutContext::$parentX</span> 初始化为 <span class="code-inline">0</span> 这个细节本身就是一个「血的教训」——在 <span class="code-inline">native_types</span> 下，未初始化的 <span class="code-inline">int</span> 属性是 <span class="code-inline">null</span>，<span class="code-inline">null + int</span> 就是 TypeError。</p>
+</div>
+
+<div class="timeline-section">
+  <div class="tl-item">
+    <div class="tl-date">bd41e19 · 2026-06-09 00:01</div>
+    <div class="tl-title">🔧 refactor: 框架核心系统全面重构</div>
+    <div class="tl-desc">核心模块重构——架构持续优化。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">eedff10 · 2026-06-09 14:04</div>
+    <div class="tl-title">🔧 refactor(layout): LayoutContext 封装 + 绝对定位策略分离 + PercentResolver/ScrollHelper 迁移</div>
+    <div class="tl-desc">LayoutContext 值对象诞生——布局上下文不再散落为全局变量。</div>
+    <div class="tl-flash">LayoutContext</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">2f5b61f · 2026-06-09 17:42</div>
+    <div class="tl-title">✅ feat: 实现 CSS text-decoration 标准完整支持</div>
+    <div class="tl-desc">text-decoration 全属性——underline/line-through/overline/style/color。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">38c31dd · 2026-06-09 18:10</div>
+    <div class="tl-title">🔧 refactor: 将 scrollContainers 提到 LayoutResolver 属性，消除 refval</div>
+    <div class="tl-desc">消除 refval 模式——AOT 编译器对通过引用传递的变量处理有坑。</div>
+    <div class="tl-flash orange">AOT 兼容性</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-date">9f8f928 · 2026-06-09 20:30</div>
+    <div class="tl-title">🧹 删除 debug 文件</div>
+    <div class="tl-desc">最近一次 commit——清理战场，准备下一阶段。</div>
+    <div class="tl-flash green">最新的脚印</div>
+  </div>
+</div>
+
+<!-- ==================== 尾声 ==================== -->
+<div class="chapter">
+  <span class="emoji-badge">🔮</span>
+  尾声 · 但故事还没结束
+</div>
+
+<p>从 5 月 24 日到 6 月 9 日，17 天，约 <strong class="highlight">200 次 commit</strong>，Px 从一个「能按的计算器」长成了一个五脏俱全的桌面 GUI 框架：</p>
+
+<div class="stats-row">
+  <div class="stat-card"><div class="num">17</div><div class="label">天</div></div>
+  <div class="stat-card"><div class="num">~200</div><div class="label">commits</div></div>
+  <div class="stat-card"><div class="num">59</div><div class="label">组件库</div></div>
+  <div class="stat-card"><div class="num">11</div><div class="label">应用</div></div>
+  <div class="stat-card"><div class="num">3</div><div class="label">渲染后端</div></div>
+  <div class="stat-card"><div class="num">6</div><div class="label">布局策略</div></div>
+</div>
+
+<p>回看这段旅程，有几个反复出现的主题：</p>
+
+<ol>
+  <li><strong class="highlight">AOT 不是选择，是宿命</strong>——从拒绝魔术方法到 native_types，每一次限制都推动了更清晰的设计</li>
+  <li><strong class="highlight">CSS 规范是最好的设计文档</strong>——当框架不确定怎么做时，CSS 规范给出了标准答案</li>
+  <li><strong class="highlight">架构治理永远不嫌早</strong>——5 万行时的策略模式拆分，比 10 万行时再做轻松 10 倍</li>
+  <li><strong class="highlight">降级不是失败，是设计</strong>——从 GDI 到 Skia 再到多后端自动降级，弹性是第一原则</li>
+  <li><strong class="highlight">做一个「好用可靠的」框架</strong>——不是理论上的完美，而是实际能跑、能编译、能交付</li>
+</ol>
+
+<p style="text-align:center;margin:48px 0;font-size:1.2em;color:var(--accent2);">
+  🚀 下一阶段：CSS 引擎完善 → 更多渲染后端 → 生态工具链
+</p>
+
+<p style="text-align:center;color:var(--dim);font-size:0.9em;">
+  本文基于 git 历史与框架设计文档编写，每一件事都真实发生在<br>
+  <span class="code-inline">f:/work/Px</span> · 2026 年春夏之交
+</p>
+
+<div class="footer-note">
+  Px Framework · PHP → C++ → MSVC → .exe<br>
+  <span style="font-size:0.85em;">从一个破计算器开始的故事</span>
+</div>
+
+</div>
+</body>
+</html>

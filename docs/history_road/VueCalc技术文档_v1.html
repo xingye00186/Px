@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VueCalc - 类Vue数据驱动桌面计算器 技术文档</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --text: #e0e0e0;
+    --accent: #e94560;
+    --accent2: #ff9500;
+    --accent3: #007aff;
+    --code-bg: #0d1117;
+    --border: #2a2a4a;
+    --green: #4caf84;
+    --blue: #5b9bd5;
+    --yellow: #ffc107;
+    --purple: #a855f7;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .container { max-width: 960px; margin:0 auto; padding:40px 24px; }
+
+  .cover {
+    text-align:center; padding:80px 20px 60px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius:16px; margin-bottom:40px;
+    border:1px solid var(--border);
+  }
+  .cover h1 { font-size:2.8em; color:#fff; margin-bottom:8px; }
+  .cover .subtitle { font-size:1.2em; color:var(--accent); margin-bottom:20px; }
+  .cover .meta { color:#888; font-size:0.9em; }
+
+  h1 { font-size:2em; color:#fff; margin:48px 0 20px; border-left:4px solid var(--accent); padding-left:16px; }
+  h2 { font-size:1.5em; color:var(--accent2); margin:36px 0 16px; }
+  h3 { font-size:1.2em; color:var(--accent3); margin:24px 0 12px; }
+
+  p { margin:12px 0; }
+  ul, ol { margin:12px 0 12px 24px; }
+  li { margin:6px 0; }
+
+  pre { background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:16px 20px; overflow-x:auto; margin:16px 0; font-size:0.88em; line-height:1.6; }
+  code { font-family:"Cascadia Code","Fira Code","Consolas",monospace; font-size:0.92em; }
+  p code, li code { background:var(--surface2); padding:2px 6px; border-radius:4px; }
+
+  table { width:100%; border-collapse:collapse; margin:20px 0; }
+  th { background:var(--surface2); padding:10px 14px; text-align:left; font-weight:600; }
+  td { padding:10px 14px; border-bottom:1px solid var(--border); }
+  tr:hover td { background:rgba(255,255,255,0.03); }
+
+  .flow-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin:20px 0;
+  }
+  .flow-card h3 { margin-top:0; }
+
+  .dataflow {
+    display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+    gap:12px; margin:20px 0; padding:20px;
+    background:var(--code-bg); border-radius:12px; font-size:0.85em;
+  }
+  .df-node {
+    background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    padding:10px 16px; text-align:center; min-width:100px;
+  }
+  .df-node.event { border-color:var(--accent); }
+  .df-node.data { border-color:var(--accent2); }
+  .df-node.render { border-color:var(--accent3); }
+  .df-arrow { font-size:1.4em; color:#666; }
+  .df-label { font-size:0.75em; color:#888; text-align:center; }
+
+  .coder-story {
+    background:linear-gradient(135deg, #1a1a1a, #2d1b2e);
+    border:2px solid #5b2d8e; border-radius:16px;
+    padding:32px; margin:30px 0;
+  }
+  .coder-story h2 { color:#c084fc; border:none; }
+  .story-block {
+    display:flex; gap:20px; margin:24px 0; align-items:flex-start;
+  }
+  .story-avatar {
+    width:60px; height:60px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:2em;
+  }
+  .story-bubble {
+    background:#2a1f3d; border-radius:16px; padding:16px 20px;
+    flex:1; position:relative;
+  }
+  .story-bubble::before {
+    content:''; position:absolute; left:-10px; top:20px;
+    width:0; height:0;
+    border-top:10px solid transparent;
+    border-bottom:10px solid transparent;
+    border-right:10px solid #2a1f3d;
+  }
+  .story-label { font-weight:bold; font-size:0.8em; margin-bottom:6px; }
+  .story-label.q { color:var(--accent); }
+  .story-label.a { color:var(--green); }
+  .story-narrator { color:#aaa; font-style:italic; margin:16px 0; text-align:center; }
+
+  .scene {
+    background:var(--code-bg); border:1px dashed var(--border); border-radius:12px;
+    padding:20px; margin:20px 0; text-align:center;
+  }
+  .scene-row { display:flex; align-items:center; justify-content:center; gap:16px; margin:12px 0; flex-wrap:wrap; }
+  .scene-box {
+    border:2px solid; border-radius:8px; padding:10px 14px; font-size:0.85em;
+    text-align:center; min-width:80px;
+  }
+
+  .step-num {
+    display:inline-flex; width:28px; height:28px; border-radius:50%;
+    background:var(--accent); color:#fff; align-items:center; justify-content:center;
+    font-weight:bold; font-size:0.85em; margin-right:8px; flex-shrink:0;
+  }
+
+  .note {
+    background:var(--surface); border-left:4px solid var(--yellow);
+    padding:12px 20px; margin:16px 0; border-radius:0 8px 8px 0;
+  }
+  .warn {
+    background:var(--surface); border-left:4px solid var(--accent);
+    padding:12px 20px; margin:16px 0; border-radius:0 8px 8px 0;
+  }
+
+  .compare-table td:first-child { color:var(--green); }
+  .compare-table td:nth-child(2) { color:var(--accent2); }
+  .compare-table th:nth-child(2) { color:var(--accent2); }
+  .compare-table th:nth-child(3) { color:var(--accent3); }
+
+  @media (max-width:640px) {
+    .container { padding:16px; }
+    .cover h1 { font-size:1.8em; }
+    .story-block { flex-direction:column; }
+    .story-bubble::before { display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ===== 封面 ===== -->
+<div class="cover">
+  <h1>VueCalc</h1>
+  <div class="subtitle">类 Vue 数据驱动的桌面计算器</div>
+  <div class="meta">Swoole AOT Compiler · PHP + C++ Hybrid · AOT-Compatible Reactive Architecture</div>
+  <div class="meta" style="margin-top:8px">编译产物: <code>vue_calc.exe</code> (~176KB) · Windows x64 Native GUI</div>
+</div>
+
+<!-- ===== 第一章 ===== -->
+<h1>一、项目概述</h1>
+
+<p>VueCalc 是一个基于 <strong>Swoole AOT 编译器</strong>编译的 Windows 桌面计算器应用。它采用 PHP/C++ 混合架构，实现了一套 <strong>类 Vue 的响应式数据驱动渲染模型</strong>（已针对 AOT 编译约束做了适配）。</p>
+
+<p><strong>核心思想</strong>：所有业务逻辑由 PHP 编写，C++ 仅提供最薄的 Win32 窗口/GDI 绘制原语层。UI 渲染完全由数据驱动——<code>UI = f(state)</code>。</p>
+
+<div class="note">
+  <strong>关键 AOT 约束</strong>：Swoole Compiler AOT 不支持 <code>__get</code>/<code>__set</code> 魔术方法。因此本实现采用<strong>直接属性声明 + 手动脏标记 (dirty flag)</strong> 模式，而非标准 PHP 的魔术方法代理模式。
+</div>
+
+<h2>架构分层</h2>
+
+<table>
+<tr><th>层级</th><th>实现语言</th><th>职责</th></tr>
+<tr><td>📐 业务逻辑层</td><td>PHP</td><td>Calculator 组件：四则运算、表达式管理、状态维护</td></tr>
+<tr><td>🔄 响应式框架层</td><td>PHP</td><td>ReactiveComponent 基类：dirty 标记 + ChangeQueue 变更队列</td></tr>
+<tr><td>🎨 渲染调度层</td><td>PHP</td><td>CalcApp 主循环 + CalcRenderer 数据驱动渲染</td></tr>
+<tr><td>🪟 窗口/GDI 层</td><td>C++ (Win32)</td><td>窗口管理、消息泵、双缓冲 GDI 绘制原语</td></tr>
+</table>
+
+<h2>文件结构</h2>
+
+<table>
+<tr><th>文件</th><th>职责</th></tr>
+<tr><td><code>main.php</code></td><td>入口函数 main() + CalcRenderer + CalcApp 主循环 + 布局常量</td></tr>
+<tr><td><code>src/Calculator.php</code></td><td>计算器组件：6个 public 属性 + 所有运算方法，每个方法手动设 dirty</td></tr>
+<tr><td><code>src/ReactiveComponent.php</code></td><td>基类：dirty 属性 + ChangeQueue + initShared</td></tr>
+<tr><td><code>src/ChangeQueue.php</code></td><td>环形缓冲变更队列（供将来扩展）</td></tr>
+<tr><td><code>src/ReactiveValue.php</code></td><td>响应式数据单元（当前架构中不再使用，保留供参考）</td></tr>
+<tr><td><code>php-src/vue_calc.stub.php</code></td><td>C++ 函数 PHP Stub 声明</td></tr>
+<tr><td><code>cpp-src/vue_calc.cc</code></td><td>Win32 窗口 + 消息泵 + GDI 双缓冲绘制</td></tr>
+<tr><td><code>project.yml</code></td><td>AOT 编译配置</td></tr>
+</table>
+
+<!-- ===== 第二章 ===== -->
+<h1>二、核心联动：事件 → 数据 → 渲染</h1>
+
+<p>整个应用围绕一条主线运转：</p>
+
+<div class="dataflow">
+  <div class="df-node event">
+    <div style="font-size:1.5em">🖱</div>
+    <div><b>事件层</b></div>
+    <div style="font-size:0.8em">Windows 消息泵</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node data">
+    <div style="font-size:1.5em">📊</div>
+    <div><b>数据层</b></div>
+    <div style="font-size:0.8em">直接属性赋值 + dirty</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node render">
+    <div style="font-size:1.5em">🎨</div>
+    <div><b>渲染层</b></div>
+    <div style="font-size:0.8em">GDI 双缓冲绘制</div>
+  </div>
+</div>
+
+<h2>2.1 事件层：Windows 消息 → 按钮路由</h2>
+
+<div class="flow-card">
+<h3>点击处理的完整调用链</h3>
+<pre><code>鼠标点击 WM_LBUTTONDOWN
+  │
+  ▼
+vue_peek_message()              // C++: PeekMessage() + DispatchMessage()
+  │  返回 [hWnd, msgType, wParam, lParam]
+  ▼
+CalcApp.handleClick(mx, my)     // main.php
+  │  像素坐标 → 行列计算 → 按钮标签
+  │  $col = intdiv($x, BTN_WIDTH)
+  │  $row = intdiv($by, BTN_HEIGHT)
+  │  $label = BUTTONS[$row][$col]
+  ▼
+Calculator.handleButton($label) // Calculator.php
+  ├── 'C'   → reset()
+  ├── '&lt;-'  → backspace()
+  ├── '='   → calculate()
+  ├── '+ - * /' → inputOperator()
+  ├── '.'   → inputDecimal()
+  └── '0-9' → inputDigit()</code></pre>
+</div>
+
+<h2>2.2 数据层：直接属性 + 手动脏标记（AOT 兼容模式）</h2>
+
+<p>Calculator 声明 6 个 <strong>public 属性</strong>作为响应式状态：</p>
+
+<pre><code>class Calculator extends ReactiveComponent
+{
+    public string $display = '0';      // 当前显示值
+    public string $expression = '';    // 表达式（右上角小字）
+    public string $operand1 = '';      // 第一个操作数
+    public string $operator = '';      // 当前运算符
+    public bool $newInput = true;      // 是否开始新输入
+    public bool $hasDecimal = false;   // 是否已输入小数点
+}</code></pre>
+
+<p>每个修改状态的方法<strong>末尾显式设置 <code>$this->dirty = true</code></strong>：</p>
+
+<pre><code>public function inputDigit(string $digit): void
+{
+    if ($this->newInput) {
+        $this->display = $digit;
+        $this->newInput = false;
+        $this->hasDecimal = false;
+    } else {
+        if ($this->display === '0' && $digit !== '.') {
+            $this->display = $digit;
+        } else {
+            $this->display .= $digit;   // 直接拼接，不依赖 __get
+        }
+    }
+    $this->dirty = true;                // ← AOT兼容：手动脏标记
+}</code></pre>
+
+<div class="warn">
+  <strong>为什么不用 __get/__set？</strong><br>
+  Swoole Compiler AOT 将 PHP 编译为 C++ 后，<code>__get</code>/<code>__set</code> 魔术方法不会被自动调用。例如 <code>$this->display .= $digit</code> 在标准 PHP 中会先触发 <code>__get</code> 读再 <code>__set</code> 写，但 AOT 编译后 <code>__get</code> 不被调用 → 返回 null → <code>null .= '5'</code> → TypeError 崩溃。
+</div>
+
+<h2>2.3 渲染层：脏标记驱动 → C++ GDI 绘制</h2>
+
+<pre><code>// CalcApp::run() 主循环 — main.php
+while ($running) {
+    // 1️⃣ 消费所有 Windows 消息
+    while (true) {
+        $msg = vue_peek_message();
+        if (count($msg) == 0) break;   // 队列空 → 退出内层
+        // ... 处理 WM_LBUTTONDOWN / WM_QUIT ...
+    }
+
+    // 2️⃣ 脏检查 → 仅在数据变化时重绘
+    if ($this->calc->dirty) {
+        $this->renderer->render();     // 数据驱动渲染
+        $this->calc->dirty = false;    // 清除标记
+    }
+
+    usleep(16000);  // ~60 FPS
+}</code></pre>
+
+<h3>CalcRenderer.render() 内部流程</h3>
+
+<pre><code>render()
+  │
+  ├─ vue_begin_paint(hWnd)          → C++: CreateCompatibleDC 双缓冲
+  │
+  ├─ 直接读取 Calculator 属性（无需 __get）
+  │   $display    = $this->component->display      // 如 "70"
+  │   $expression = $this->component->expression   // 如 "50 +"
+  │
+  ├─ vue_fill_rect(背景)            → C++: FillRect
+  ├─ vue_draw_text($expression)     → C++: TextOutA (自适应字号)
+  ├─ vue_draw_text($display)        → C++: TextOutA
+  │
+  ├─ 遍历 BUTTONS 数组绘制 20 个按钮 → 数据驱动布局
+  │   ├─ vue_draw_button(背景+边框)  → C++: FillRect + Rectangle
+  │   └─ vue_draw_text(按钮文字)    → C++: TextOutA
+  │
+  └─ vue_end_paint(hWnd, hdc)       → C++: BitBlt + 资源清理</code></pre>
+
+<!-- ===== 第三章 ===== -->
+<h1>三、完整数据流：按下 "7" 的全过程</h1>
+
+<div class="flow-card">
+<p>假设用户之前输入了 "50"，然后点击 <code>+</code>，接着点击 <code>7</code>：</p>
+
+<h3>阶段1：点击按钮 "7"</h3>
+<pre><code>WM_LBUTTONDOWN (x=56, y=280)
+  → CalcApp.handleClick(56, 280)
+    → col=0, row=1, label='7'
+      → Calculator.handleButton('7')
+        → Calculator.inputDigit('7')
+          → $this->display = '7'              ◀ 直接赋值（AOT兼容）
+          → $this->newInput = false
+          → $this->hasDecimal = false
+          → $this->dirty = true               ◀ 手动脏标记</code></pre>
+
+<h3>阶段2：下一帧渲染（~16ms后）</h3>
+<pre><code>主循环检测 dirty === true
+  → CalcRenderer.render()
+    → 读取 $calc->display → '7'
+    → 读取 $calc->expression → '50 +'
+    → vue_begin_paint()         // 创建双缓冲
+    → 绘制背景 #1e1e1e
+    → 绘制 "50 +"（16px, 灰色, 右上角）
+    → 绘制 "7"（32px, 白色, 右对齐）
+    → 遍历绘制20个按钮
+    → vue_end_paint()           // BitBlt 到屏幕
+    → dirty = false</code></pre>
+</div>
+
+<!-- ===== 第四章：码农翻身风格 ===== -->
+<div class="coder-story">
+<h1>四、🐴 码农翻身：老司机带你逛 VueCalc 城（AOT版）</h1>
+<p class="story-narrator">—— 用大白话拆解"经过 AOT 毒打后"这个框架到底怎么跑起来的</p>
+
+<div class="story-block">
+  <div class="story-avatar" style="background:#5b2d8e">🧑‍💻</div>
+  <div class="story-bubble">
+    <div class="story-label a">小白</div>
+    <p>大佬，VueCalc 跟 Vue.js 比，框架机制上有什么异同？我听说你们在 AOT 编译上踩了不少坑？</p>
+  </div>
+</div>
+
+<div class="story-block">
+  <div class="story-avatar" style="background:#1a5c2a">🧔</div>
+  <div class="story-bubble">
+    <div class="story-label q">老司机</div>
+    <p>好问题！先说相同点：都是<strong>数据驱动视图</strong>——UI = f(state)，数据变了界面自动更新。</p>
+    <p>但实现方式截然不同。Vue 靠 JS 的 <code>Proxy</code>（Vue3）或 <code>Object.defineProperty</code>（Vue2）在底层拦截数据读写，对开发者透明。而我们这个在 AOT 编译下，那些魔术方法<strong>全都不管用</strong>，得自己手动挂红旗。</p>
+    <p>来，我给你画张新版地图——</p>
+  </div>
+</div>
+
+<!-- 地图 -->
+<div class="scene">
+  <div style="font-size:1.1em; font-weight:bold; color:var(--accent2); margin-bottom:16px;">
+    🏙 VueCalc 城 v2.0（AOT兼容版）
+  </div>
+  <div class="scene-row">
+    <div class="scene-box" style="border-color:var(--accent); flex:1;">
+      <div style="font-size:2em">🖱</div>
+      <b>城门守卫</b><br>
+      <span style="font-size:0.8em;color:#aaa;">消息泵<br>vue_peek_message</span>
+    </div>
+    <div style="font-size:2em">→</div>
+    <div class="scene-box" style="border-color:var(--accent2); flex:1;">
+      <div style="font-size:2em">🧠</div>
+      <b>账房先生</b><br>
+      <span style="font-size:0.8em;color:#aaa;">Calculator<br>自己填表+挂红旗</span>
+    </div>
+    <div style="font-size:2em">→</div>
+    <div class="scene-box" style="border-color:var(--green); flex:1;">
+      <div style="font-size:2em">📋</div>
+      <b>台账本</b><br>
+      <span style="font-size:0.8em;color:#aaa;">Calculator 自己的<br>6个 public 属性</span>
+    </div>
+    <div style="font-size:2em">→</div>
+    <div class="scene-box" style="border-color:var(--accent3); flex:1;">
+      <div style="font-size:2em">🎨</div>
+      <b>画师</b><br>
+      <span style="font-size:0.8em;color:#aaa;">CalcRenderer<br>GDI 绘制</span>
+    </div>
+  </div>
+  <div class="scene-row">
+    <div class="scene-box" style="border-color:var(--purple); border-style:dashed;">
+      <div style="font-size:1.5em">🚦</div>
+      <b>监工</b><br>
+      <span style="font-size:0.8em;color:#aaa;">CalcApp::run()<br>每16ms巡逻，看红旗就画</span>
+    </div>
+  </div>
+</div>
+
+<div class="story-block">
+  <div class="story-avatar" style="background:#1a5c2a">🧔</div>
+  <div class="story-bubble">
+    <div class="story-label q">老司机</div>
+    <p>跟第一版最大的区别是：<strong>账房先生自己就是记事本</strong>——Calculator 类直接声明了那6个 <code>public</code> 属性，读和写都直接来，不经过任何中间人。每次改完数据，他<strong>自己</strong>往门口插一面红旗。</p>
+
+    <div class="scene" style="text-align:left;">
+      <div style="font-size:0.9em; color:var(--accent2); margin-bottom:8px;">📋 Calculator 的台账本：</div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 14px;">
+          <code>string $display = "0"</code>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 14px;">
+          <code>string $expression = ""</code>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 14px;">
+          <code>string $operand1 = ""</code>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 14px;">
+          <code>string $operator = ""</code>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 14px;">
+          <code>bool $newInput = true</code>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 14px;">
+          <code>bool $hasDecimal = false</code>
+        </div>
+      </div>
+    </div>
+
+    <p>以前（标准 PHP）依赖 <code>__set</code> 自动拦截，<code>__set</code> 里统一做三件事：存值、入队、插红旗。这套机制在普通 PHP 里完美运行，但 AOT 编译成 C++ 后，<code>__get</code> 不调了，<code>$this->display .= $digit</code> 读回来的是 null，当场崩溃。</p>
+    <p>现在每个修改数据的方法末尾都写 <code>$this->dirty = true</code>，虽然多了几行代码，但<strong>100% AOT 兼容</strong>。</p>
+  </div>
+</div>
+
+<div class="story-block">
+  <div class="story-avatar" style="background:#5b2d8e">🧑‍💻</div>
+  <div class="story-bubble">
+    <div class="story-label a">小白</div>
+    <p>那跟 Vue 比，这岂不是"手工档" vs "自动档"？Vue 对开发者完全透明，这里每个方法都要记得写 dirty = true……</p>
+  </div>
+</div>
+
+<div class="story-block">
+  <div class="story-avatar" style="background:#1a5c2a">🧔</div>
+  <div class="story-bubble">
+    <div class="story-label q">老司机</div>
+    <p>对！这就是<strong>工具链的差距</strong>。Vue 有完整的 SFC 编译器——你写的 <code>.vue</code> 单文件组件，webpack/vite 一编译，自动生成响应式代理、依赖收集、虚拟 DOM diff 全套。</p>
+    <p>我们现在的阶段是：<strong>框架手动挡</strong>。但别急，这正是下一章要聊的——怎么在这个基础上，做一个 <strong>.vue → PHP ReactiveComponent 的编译器</strong>，让开发者写 .vue 模板，编译器自动生成 dirty 标记代码。那就是"自动档"了！</p>
+  </div>
+</div>
+
+<!-- 一日游 -->
+<div class="story-block">
+  <div class="story-avatar" style="background:#5b2d8e">🧑‍💻</div>
+  <div class="story-bubble">
+    <div class="story-label a">小白</div>
+    <p>所以总结一下现在的数据流？</p>
+  </div>
+</div>
+
+<div class="story-block">
+  <div class="story-avatar" style="background:#1a5c2a">🧔</div>
+  <div class="story-bubble">
+    <div class="story-label q">老司机</div>
+    <p>AOT 兼容版的一日游：</p>
+    <div style="font-size:0.85em; line-height:2.2;">
+      <span class="step-num">1</span> 你点击按钮 "7"<br>
+      <span class="step-num">2</span> C++ 消息泵发出 <code>WM_LBUTTONDOWN(56,280)</code><br>
+      <span class="step-num">3</span> CalcApp 路由到 <code>Calculator.handleButton('7')</code><br>
+      <span class="step-num">4</span> 账房先生自己改台账：<code>$this->display = '7'</code><br>
+      <span class="step-num">5</span> 顺手插红旗：<code>$this->dirty = true</code> 🚩<br>
+      <span class="step-num">6</span> 监工巡逻看到红旗<br>
+      <span class="step-num">7</span> 监工叫画师："照台账重画！"<br>
+      <span class="step-num">8</span> 画师看台账：display=7, expression="50 +"<br>
+      <span class="step-num">9</span> 画师铺草稿纸(双缓冲)→画背景→画文字→画按钮→贴屏<br>
+      <span class="step-num">10</span> 监工拔掉红旗，眯16ms<br>
+      <span class="step-num">11</span> 屏幕显示 "7" ✨
+    </div>
+  </div>
+</div>
+
+</div><!-- .coder-story end -->
+
+<!-- ===== 第五章 ===== -->
+<h1>五、关键设计决策与 Bug 修复经验</h1>
+
+<table>
+<tr><th>决策 / 修复</th><th>原因</th></tr>
+<tr><td>属性必须在子类声明为 public</td><td>AOT 不支持 <code>__get/__set</code>，未声明属性读写不会触发魔术方法</td></tr>
+<tr><td>手动 dirty 标记</td><td>替代 <code>__set</code> 中的自动标记，确保 AOT 兼容</td></tr>
+<tr><td>脏标记而非每帧渲染</td><td>仅在数据变化时重绘，空闲时 CPU 几乎为零</td></tr>
+<tr><td>双缓冲 GDI</td><td>CreateCompatibleDC → 画完 → BitBlt，避免闪烁</td></tr>
+<tr><td>PHP 逻辑 + C++ 原语</td><td>业务代码保持 PHP 的灵活，C++ 仅负责 Win32 API 调用</td></tr>
+<tr><td>避免 <code>json_encode</code>/<code>json_decode</code></td><td>可能不在 AOT 运行时环境中</td></tr>
+<tr><td>避免 <code>str_contains()</code>（PHP 8.0）</td><td>改用 <code>strpos()</code>，确保 PHP 7+ 兼容</td></tr>
+<tr><td>内层消息循环 + 外层渲染</td><td>先清空消息队列，再一次性重绘（批量更新）</td></tr>
+</table>
+
+<div class="warn">
+  <strong>Bug 修复清单</strong><br>
+  <ol>
+    <li><code>any($value)</code> → 移除。不是 PHP 标准函数，运行时 fatal error</li>
+    <li><code>str_contains()</code> → <code>strpos()</code>。PHP 8.0 函数，AOT 可能不支持</li>
+    <li><code>__get/__set</code> → 直接属性。AOT 编译后魔术方法不被调用，<code>$this->display .= $digit</code> 读回 null 导致 TypeError</li>
+    <li>静态属性类型：<code>ChangeQueue $queue</code> → <code>?ChangeQueue $queue = null</code>，加空值检查</li>
+  </ol>
+</div>
+
+<!-- ===== 第六章 ===== -->
+<h1>六、编译与运行</h1>
+
+<h2>编译</h2>
+<pre><code># 环境：Visual Studio 2022+ (C++桌面开发) + Swoole Compiler Windows x64
+
+# compile_vue_calc.bat：
+@echo off
+call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
+cd /d F:\work\swoole_compiler
+swoole_compiler.exe examples\vue-calc\project.yml -f</code></pre>
+
+<h2>运行时依赖</h2>
+<ul>
+  <li><code>php8ts.dll</code> — PHP 运行时</li>
+  <li><code>phpx.dll</code> — PHPX 桥接库</li>
+</ul>
+
+<h2>输出</h2>
+<pre><code>vue_calc.exe   ~176 KB   PE32+ (x86-64)   Windows Native GUI</code></pre>
+
+<!-- ===== 第七章：Vue 对比 ===== -->
+<h1>七、Vue.js 与 VueCalc：框架机制和工具链异同</h1>
+
+<h2>7.1 总体对比</h2>
+
+<table class="compare-table">
+<tr><th>维度</th><th>Vue.js (Web)</th><th>VueCalc (AOT Desktop)</th></tr>
+<tr>
+  <td>核心理念</td>
+  <td>数据驱动视图 UI=f(state)</td>
+  <td>完全相同 UI=f(state)</td>
+</tr>
+<tr>
+  <td>响应式机制</td>
+  <td>Vue3: Proxy 拦截<br>Vue2: Object.defineProperty<br>对开发者<strong>完全透明</strong></td>
+  <td>直接属性 + 手动 <code>$this->dirty = true</code><br>对开发者<strong>显式但不自动化</strong></td>
+</tr>
+<tr>
+  <td>渲染引擎</td>
+  <td>Virtual DOM → diff → patch → 浏览器 DOM</td>
+  <td>无 VDOM，直接全量 GDI 重绘（简单 UI 够用）</td>
+</tr>
+<tr>
+  <td>模板语言</td>
+  <td><code>&lt;template&gt;</code> HTML + 指令 (v-if/v-for/v-model)</td>
+  <td>PHP 代码中硬编码布局（BUTTONS 常量 + 坐标计算）</td>
+</tr>
+<tr>
+  <td>SFC (.vue)</td>
+  <td>webpack/vite 的 vue-loader 编译</td>
+  <td>无（.vue 文件存在但不被解析）</td>
+</tr>
+<tr>
+  <td>样式系统</td>
+  <td>CSS + Scoped CSS + CSS Modules</td>
+  <td>C++ GDI 颜色常量（RGB BGR 格式）</td>
+</tr>
+<tr>
+  <td>数据绑定</td>
+  <td>双向：v-model<br>单向：{{ expression }}、v-bind</td>
+  <td>单向：render() 读取 state → 绘制<br>无自动双向绑定</td>
+</tr>
+<tr>
+  <td>组件树</td>
+  <td>嵌套组件 + props/emit/slots</td>
+  <td>单组件（可扩展为多组件）</td>
+</tr>
+<tr>
+  <td>编译产物</td>
+  <td>JS bundle → 浏览器执行</td>
+  <td>PHP → C++ → MSVC → Native exe</td>
+</tr>
+<tr>
+  <td>运行时</td>
+  <td>浏览器 JS 引擎</td>
+  <td>无解释器，机器码直接运行</td>
+</tr>
+</table>
+
+<h2>7.2 响应式实现：透明 vs 显式</h2>
+
+<div class="flow-card">
+<h3>Vue 3 的 Proxy 拦截（透明）</h3>
+<pre><code>// Vue 3 内部：data() 返回的对象的每个属性被 Proxy 包装
+const state = reactive({ display: '0' })
+state.display = '7'     // Proxy set 拦截 → 触发依赖更新 → 组件重渲染
+state.display += '5'    // Proxy get+set 拦截 → 自动追踪</code></pre>
+</div>
+
+<div class="flow-card">
+<h3>VueCalc 的手动标记（显式，AOT兼容）</h3>
+<pre><code>// Calculator 直接声明属性
+public string $display = '0';
+
+// 每个修改方法末尾手动标记
+public function inputDigit(string $digit): void {
+    $this->display = $digit;       // 直接赋值，无拦截
+    $this->dirty = true;           // 手动脏标记
+}
+// 渲染循环检测 dirty → render()</code></pre>
+</div>
+
+<h2>7.3 模板编译对比</h2>
+
+<table class="compare-table">
+<tr><th>阶段</th><th>Vue SFC 编译器</th><th>VueCalc 现状 vs 目标</th></tr>
+<tr>
+  <td>Parse</td>
+  <td><code>&lt;template&gt;</code> HTML → AST</td>
+  <td>现状：无解析器，布局硬编码<br>目标：PHP 编写的 HTML 模板解析器</td>
+</tr>
+<tr>
+  <td>Transform</td>
+  <td>指令转换 (v-if→条件渲染代码, v-for→循环, v-model→双向绑定)</td>
+  <td>目标：v-model → 属性读写代码生成<br>@click → C++ 消息绑定代码生成</td>
+</tr>
+<tr>
+  <td>Generate</td>
+  <td>生成 render() 函数 (h/createVNode 调用)</td>
+  <td>目标：生成 PHP ReactiveComponent 子类<br>+ C++ 布局数据结构</td>
+</tr>
+<tr>
+  <td>Style</td>
+  <td>CSS → scoped CSS (PostCSS)</td>
+  <td>目标：CSS 子集 → GDI 颜色/字体属性映射</td>
+</tr>
+</table>
+
+<h2>7.4 工具链对比</h2>
+
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--green)">
+    <b>Vue 工具链</b>
+    <div style="font-size:0.75em">.vue → vue-loader</div>
+    <div style="font-size:0.75em">→ webpack/vite</div>
+    <div style="font-size:0.75em">→ JS bundle</div>
+  </div>
+  <div style="font-size:1.5em">🆚</div>
+  <div class="df-node" style="border-color:var(--accent3)">
+    <b>VueCalc 目标工具链</b>
+    <div style="font-size:0.75em">.vue → PHP SFC Compiler</div>
+    <div style="font-size:0.75em">→ PHP ReactiveComponent</div>
+    <div style="font-size:0.75em">+ C++ layout → AOT → exe</div>
+  </div>
+</div>
+
+<!-- ===== 第八章：SFC 编译器设计路线图 ===== -->
+<h1>八、面向 AOT 的 .vue SFC 编译器设计路线图</h1>
+
+<p><strong>最终目标</strong>：让 PHP 替代 JS 实现数据与业务逻辑，C++ 渲染界面。开发者只需编写 .vue 单文件组件，由 PHP 编写的 SFC 编译器将其编译为 PHP ReactiveComponent 子类 + C++ 原生布局数据，再经 AOT 编译为 exe。</p>
+
+<h2>8.1 .vue SFC 设计格式</h2>
+
+<div class="flow-card">
+<h3>目标 .vue 文件格式</h3>
+<pre><code>&lt;template&gt;
+  &lt;view class="calculator"&gt;
+    &lt;display :value="display" /&gt;
+    &lt;expression :text="expression" /&gt;
+    &lt;button-grid :buttons="buttons" /&gt;
+  &lt;/view&gt;
+&lt;/template&gt;
+
+&lt;script lang="php"&gt;
+// 业务逻辑：纯 PHP
+class CalculatorLogic {
+    public static function inputDigit(string &$display, string $digit, bool &$newInput): void {
+        if ($newInput) { $display = $digit; $newInput = false; }
+        else { $display .= $digit; }
+    }
+}
+&lt;/script&gt;
+
+&lt;style&gt;
+.calculator { background: #1e1e1e; }
+.display { color: #ffffff; font-size: 32px; }
+.operator-btn { background: #ff9500; }
+&lt;/style&gt;</code></pre>
+</div>
+
+<h2>8.2 编译器架构</h2>
+
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--accent)">
+    <b>1. Template Parser</b>
+    <div style="font-size:0.75em">HTML-like → AST</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--accent2)">
+    <b>2. Layout Engine</b>
+    <div style="font-size:0.75em">AST node → 坐标+尺寸</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--green)">
+    <b>3. Style Mapper</b>
+    <div style="font-size:0.75em">CSS → GDI 属性</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--accent3)">
+    <b>4. Code Generator</b>
+    <div style="font-size:0.75em">生成 PHP + C++ 代码</div>
+  </div>
+</div>
+
+<h3>第1步：Template Parser（PHP 实现）</h3>
+<p>将 .vue 的 <code>&lt;template&gt;</code> 块解析为 AST：</p>
+<pre><code>// 输入
+&lt;button class="num-btn" v-model:click="handleDigit('7')"&gt;7&lt;/button&gt;
+
+// AST 输出
+{
+  type: 'element',
+  tag: 'button',
+  props: { class: 'num-btn', 'v-model:click': "handleDigit('7')" },
+  children: [{ type: 'text', value: '7' }]
+}</code></pre>
+
+<h3>第2步：Layout Engine</h3>
+<p>根据 AST 和布局约束（grid/flex）计算每个节点的坐标和尺寸：</p>
+<pre><code>// 输入：AST 节点 + 布局规则
+// 输出：布局数据
+{
+  id: 'btn_7',
+  x: 0, y: 140,           // 像素坐标
+  w: 80, h: 60,           // 像素尺寸
+  type: 'button',
+  label: '7',
+  style: { bg: 0x323232, fg: 0xFFFFFF, fontSize: 22 },
+  events: { click: "handleDigit('7')" }
+}</code></pre>
+
+<h3>第3步：Style Mapper（CSS → GDI）</h3>
+<table>
+<tr><th>CSS 属性</th><th>GDI 映射</th></tr>
+<tr><td><code>background: #ff9500</code></td><td><code>COLORREF 0x0095FF (BGR)</code></td></tr>
+<tr><td><code>color: #ffffff</code></td><td><code>SetTextColor + TextOutA</code></td></tr>
+<tr><td><code>font-size: 32px</code></td><td><code>CreateFont(32, ...)</code></td></tr>
+<tr><td><code>font-weight: bold</code></td><td><code>FW_BOLD</code></td></tr>
+<tr><td><code>border: 1px solid #xxx</code></td><td><code>CreatePen + Rectangle</code></td></tr>
+<tr><td><code>border-radius: Npx</code></td><td><code>RoundRect</code></td></tr>
+<tr><td><code>display: grid / flex</code></td><td>布局引擎计算坐标</td></tr>
+</table>
+
+<h3>第4步：Code Generator</h3>
+<p>生成两个文件：</p>
+
+<pre><code>// ======= 生成: src/CalculatorComponent.php =======
+class CalculatorComponent extends ReactiveComponent
+{
+    public string $display = '0';        // ← 自动声明
+    public string $expression = '';       // ← 自动声明
+    // ... v-model 绑定属性自动生成
+
+    public function handleDigit(string $digit): void {
+        CalculatorLogic::inputDigit($this->display, $digit, $this->newInput);
+        $this->dirty = true;              // ← 自动插入
+    }
+    // ... 事件处理函数自动生成
+}
+
+// ======= 生成: cpp-src/calculator_layout.h =======
+struct LayoutNode nodes[] = {
+    { 0, 140, 80, 60, BUTTON, "7", 0x323232, 0xFFFFFF },
+    { 80, 140, 80, 60, BUTTON, "8", 0x323232, 0xFFFFFF },
+    // ... 从模板布局自动生成
+};</code></pre>
+
+<h2>8.3 v-model 双向绑定设计</h2>
+
+<table>
+<tr><th>指令</th><th>编译结果</th></tr>
+<tr>
+  <td><code>v-model:display</code></td>
+  <td>
+    声明 <code>public string $display</code><br>
+    render() 中读取 <code>$this->display</code> 绘制<br>
+    input 事件中写入 <code>$this->display = ...</code>
+  </td>
+</tr>
+<tr>
+  <td><code>v-model:click="expr"</code></td>
+  <td>
+    生成 <code>handleXxx()</code> 方法调用 <code>expr</code><br>
+    方法末尾自动插入 <code>$this->dirty = true</code>
+  </td>
+</tr>
+</table>
+
+<h2>8.4 现状：缺什么？</h2>
+
+<table>
+<tr><th>组件</th><th>状态</th><th>说明</th></tr>
+<tr>
+  <td>Template Parser</td>
+  <td style="color:var(--accent)">❌ 缺失</td>
+  <td>需要 PHP 实现的 HTML-like 词法+语法解析器。可参考 PHP 内置 DOM 解析，或手写递归下降 parser</td>
+</tr>
+<tr>
+  <td>Layout Engine</td>
+  <td style="color:var(--accent)">❌ 缺失</td>
+  <td>需要 CSS Box Model（margin/border/padding）计算 + flex/grid 布局算法。挑战：GDI 没有布局引擎，坐标必须精确计算</td>
+</tr>
+<tr>
+  <td>Style → GDI Mapper</td>
+  <td style="color:var(--accent)">❌ 缺失</td>
+  <td>CSS 子集到 GDI 属性映射表。色彩空间需 BGR 转换</td>
+</tr>
+<tr>
+  <td>v-model 代码生成</td>
+  <td style="color:var(--accent)">❌ 缺失</td>
+  <td>指令解析 + PHP 属性声明 + 读取/写入代码自动生成</td>
+</tr>
+<tr>
+  <td>@event 处理</td>
+  <td style="color:var(--accent)">❌ 缺失</td>
+  <td>点击坐标 → 按钮路由代码自动生成（当前手动在 CalcApp 中硬编码）</td>
+</tr>
+<tr>
+  <td>ReactiveComponent 基类</td>
+  <td style="color:var(--green)">✅ 已有</td>
+  <td>dirty 标记 + 共享基础设施</td>
+</tr>
+<tr>
+  <td>GDI 渲染原语</td>
+  <td style="color:var(--green)">✅ 已有</td>
+  <td>C++ 层：窗口/双缓冲/文本/矩形/按钮/边框</td>
+</tr>
+<tr>
+  <td>消息泵</td>
+  <td style="color:var(--green)">✅ 已有</td>
+  <td>PeekMessage + DispatchMessage 循环</td>
+</tr>
+<tr>
+  <td>AOT 编译链</td>
+  <td style="color:var(--green)">✅ 已有</td>
+  <td>Swoole Compiler + MSVC → exe</td>
+</tr>
+</table>
+
+<h2>8.5 可能的问题与改进方向</h2>
+
+<h3>问题1：AOT 编译器的约束</h3>
+<div class="warn">
+  <ul>
+    <li><strong>无反射</strong>：不能依赖运行时类名字符串创建对象。布局必须是编译期确定的</li>
+    <li><strong>无 eval/include</strong>：SFC 编译器必须在<strong>编译前</strong>运行（作为 AOT 的预处理步骤），生成的 PHP 代码作为普通源文件参与 AOT 编译</li>
+    <li><strong>无魔术方法</strong>：<code>__get/__set/__call</code> 不可靠，代码生成器必须生成显式的属性声明和 dirty 标记</li>
+    <li><strong>函数可用性不确定</strong>：需测试哪些 PHP 标准函数在 AOT 运行时可用，SFC 编译器生成的代码只能用确认可用的函数</li>
+  </ul>
+</div>
+
+<h3>问题2：CSS → GDI 映射的局限性</h3>
+<p>GDI 不是浏览器渲染引擎。以下 CSS 特性无法直接映射：</p>
+<ul>
+  <li><code>opacity</code> / <code>rgba()</code> → GDI 不支持 alpha 通道（需用 GDI+ 或 Direct2D）</li>
+  <li><code>box-shadow</code> → 需手动绘制多层矩形</li>
+  <li><code>border-radius</code> → <code>RoundRect</code> 可用但效果有限</li>
+  <li><code>transform</code> / 动画 → 需要额外的数学计算和帧插值</li>
+  <li><code>flex</code> / <code>grid</code> → 需手动实现布局算法</li>
+</ul>
+
+<div class="note">
+  <strong>改进方向</strong>：将 C++ 渲染层从 GDI 升级为 <strong>Direct2D</strong> 或 <strong>Skia</strong>。Direct2D 支持硬件加速、alpha 通道、抗锯齿；Skia（Chrome/VSCode 同款）则提供完整的 2D 图形能力。但这会显著增加 exe 体积和依赖复杂度。
+</div>
+
+<h3>问题3：布局计算的精度</h3>
+<p>Web 浏览器有完整的布局引擎（Blink/WebKit），而桌面端需要自己计算像素坐标。改进方案：</p>
+<ol>
+  <li>使用固定尺寸布局（简单可靠，牺牲灵活性）</li>
+  <li>集成轻量布局库（如 Facebook Yoga，C 语言实现，可嵌入）</li>
+  <li>在编译期由 PHP SFC 编译器计算好布局，生成静态坐标数据</li>
+</ol>
+
+<h3>问题4：组件树的表达</h3>
+<p>Vue 的组件树是动态创建的。在 AOT 约束下，组件树必须在编译期确定。改进方案：</p>
+<pre><code>// 编译期展开的组件树
+class App extends ReactiveComponent {
+    // 子组件作为成员变量声明（编译期确定类型）
+    private HeaderComponent $header;
+    private ContentComponent $content;
+    private FooterComponent $footer;
+    
+    public function __construct() {
+        $this->header  = new HeaderComponent();
+        $this->content = new ContentComponent();
+        $this->footer  = new FooterComponent();
+    }
+}</code></pre>
+
+<h3>问题5：差异化重绘（增量渲染）</h3>
+<p>当前每次 dirty 都全量重绘整个界面。对于简单计算器够用，但对于复杂 UI 有性能问题。改进方案：</p>
+<ul>
+  <li>给每个布局节点标记 dirty，只重绘变化的区域</li>
+  <li>SFC 编译器自动分析模板依赖，生成精准的脏标记代码</li>
+  <li>例如：<code>v-model:display</code> 变化 → 只 markDirty('display_area')</li>
+</ul>
+
+<h2>8.6 实现路线图</h2>
+
+<ol>
+  <li><strong>Phase 1</strong>（短期）：手写 PHP Template Parser —— 解析 .vue 的 <code>&lt;template&gt;</code> 块，输出 AST</li>
+  <li><strong>Phase 2</strong>（短期）：Style → GDI 映射表 —— CSS 属性子集到 GDI 常量的字典</li>
+  <li><strong>Phase 3</strong>（中期）：Layout Engine —— 基于 AST + 映射表 → 生成坐标布局数据</li>
+  <li><strong>Phase 4</strong>（中期）：Code Generator —— AST + 布局数据 → 生成 PHP 子类（属性+方法） + C++ 头文件（布局常量）</li>
+  <li><strong>Phase 5</strong>（长期）：v-model 指令解析 —— 自动生成属性声明、getter/setter、dirty 标记代码</li>
+  <li><strong>Phase 6</strong>（长期）：组件树支持 —— 嵌套组件编译展开</li>
+  <li><strong>Phase 7</strong>（远期）：增量渲染引擎 —— 节点级 dirty 标记，区域重绘</li>
+  <li><strong>Phase 8</strong>（远期）：渲染层升级 —— GDI → Direct2D，支持更丰富的视觉效果</li>
+</ol>
+
+<h2>8.7 最终架构愿景</h2>
+
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--accent); min-width:140px">
+    <b>.vue SFC</b>
+    <div style="font-size:0.75em">&lt;template&gt; + &lt;script php&gt;</div>
+    <div style="font-size:0.75em">+ &lt;style&gt;</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--purple); min-width:140px">
+    <b>PHP SFC Compiler</b>
+    <div style="font-size:0.75em">Parse → Layout</div>
+    <div style="font-size:0.75em">→ Generate Code</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--green); min-width:140px">
+    <b>PHP Component</b>
+    <div style="font-size:0.75em">属性 + 方法</div>
+    <div style="font-size:0.75em">+ dirty 自动标记</div>
+  </div>
+  <div class="df-arrow">+</div>
+  <div class="df-node" style="border-color:var(--accent2); min-width:140px">
+    <b>C++ Layout</b>
+    <div style="font-size:0.75em">节点坐标 + 样式</div>
+  </div>
+</div>
+<div class="dataflow">
+  <div class="df-arrow" style="font-size:2em; margin-top:-10px">↓</div>
+</div>
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--accent3); min-width:280px">
+    <b>Swoole AOT Compiler</b>
+    <div style="font-size:0.75em">PHP → C++ → MSVC → Native exe</div>
+  </div>
+</div>
+<div class="dataflow">
+  <div class="df-arrow" style="font-size:2em; margin-top:-10px">↓</div>
+</div>
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--accent); min-width:280px; font-size:1.1em">
+    <b>🪟 Windows Desktop App (.exe)</b>
+    <div style="font-size:0.75em">PHP 业务逻辑 + C++ 原生 UI 渲染</div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VueCalc v2 - SFC 编译器管道 技术文档</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --text: #e0e0e0;
+    --accent: #e94560;
+    --accent2: #ff9500;
+    --accent3: #007aff;
+    --code-bg: #0d1117;
+    --border: #2a2a4a;
+    --green: #4caf84;
+    --blue: #5b9bd5;
+    --yellow: #ffc107;
+    --purple: #a855f7;
+    --done: #22c55e;
+    --wip: #f59e0b;
+    --missing: #ef4444;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .container { max-width: 960px; margin:0 auto; padding:40px 24px; }
+
+  .cover {
+    text-align:center; padding:80px 20px 60px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius:16px; margin-bottom:40px;
+    border:1px solid var(--border); position:relative;
+  }
+  .cover h1 { font-size:2.8em; color:#fff; margin-bottom:8px; }
+  .cover .subtitle { font-size:1.2em; color:var(--accent); margin-bottom:20px; }
+  .cover .meta { color:#888; font-size:0.9em; }
+  .version-badge {
+    position:absolute; top:16px; right:16px;
+    background:var(--accent); color:#fff; padding:6px 16px;
+    border-radius:20px; font-weight:bold; font-size:0.85em;
+  }
+  .version-change {
+    background:var(--surface); border:1px solid var(--accent2);
+    border-radius:8px; padding:16px 20px; margin:20px 0; font-size:0.9em;
+  }
+  .version-change h3 { color:var(--accent2); margin:0 0 8px 0; }
+  .version-change ul { margin:8px 0 0 20px; }
+
+  h1 { font-size:2em; color:#fff; margin:48px 0 20px; border-left:4px solid var(--accent); padding-left:16px; }
+  h2 { font-size:1.5em; color:var(--accent2); margin:36px 0 16px; }
+  h3 { font-size:1.2em; color:var(--accent3); margin:24px 0 12px; }
+
+  p { margin:12px 0; }
+  ul, ol { margin:12px 0 12px 24px; }
+  li { margin:6px 0; }
+
+  pre { background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:16px 20px; overflow-x:auto; margin:16px 0; font-size:0.88em; line-height:1.6; }
+  code { font-family:"Cascadia Code","Fira Code","Consolas",monospace; font-size:0.92em; }
+  p code, li code { background:var(--surface2); padding:2px 6px; border-radius:4px; }
+
+  table { width:100%; border-collapse:collapse; margin:20px 0; }
+  th { background:var(--surface2); padding:10px 14px; text-align:left; font-weight:600; }
+  td { padding:10px 14px; border-bottom:1px solid var(--border); }
+  tr:hover td { background:rgba(255,255,255,0.03); }
+
+  .flow-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin:20px 0;
+  }
+  .flow-card h3 { margin-top:0; }
+
+  .dataflow {
+    display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+    gap:12px; margin:20px 0; padding:20px;
+    background:var(--code-bg); border-radius:12px; font-size:0.85em;
+  }
+  .df-node {
+    background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    padding:10px 16px; text-align:center; min-width:100px;
+  }
+  .df-node.event { border-color:var(--accent); }
+  .df-node.data { border-color:var(--accent2); }
+  .df-node.render { border-color:var(--accent3); }
+  .df-arrow { font-size:1.4em; color:#666; }
+
+  .note {
+    background:var(--surface); border-left:4px solid var(--yellow);
+    padding:12px 20px; margin:16px 0; border-radius:0 8px 8px 0;
+  }
+  .warn {
+    background:var(--surface); border-left:4px solid var(--accent);
+    padding:12px 20px; margin:16px 0; border-radius:0 8px 8px 0;
+  }
+  .done { color:var(--done); font-weight:bold; }
+  .wip { color:var(--wip); font-weight:bold; }
+  .missing { color:var(--missing); font-weight:bold; }
+
+  .pipeline-box {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:16px; background:var(--code-bg); border-radius:12px;
+    margin:20px 0; font-size:0.85em;
+  }
+  .pipe-step {
+    background:var(--surface2); border-radius:8px; padding:12px 16px;
+    text-align:center; min-width:110px;
+  }
+  .pipe-arrow { font-size:1.6em; color:var(--accent); font-weight:bold; }
+
+  .status-ok { color:var(--done); }
+  .status-wip { color:var(--wip); }
+  .status-no { color:var(--missing); }
+
+  @media (max-width:640px) {
+    .container { padding:16px; }
+    .cover h1 { font-size:1.8em; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ===== 封面 ===== -->
+<div class="cover">
+  <div class="version-badge">v2.0</div>
+  <h1>VueCalc</h1>
+  <div class="subtitle">SFC 编译器管道 · 类 Vue 数据驱动的桌面计算器</div>
+  <div class="meta">Swoole AOT Compiler · PHP SFC Compiler · C++ GDI Rendering</div>
+  <div class="meta" style="margin-top:8px">编译产物: <code>vue_calc.exe</code> (~232KB) · Windows x64 Native GUI</div>
+</div>
+
+<div class="version-change">
+  <h3>v1.0 → v2.0 变更摘要</h3>
+  <ul>
+    <li><strong>SFC 编译器已实现</strong>：<code>tools/sfc-compiler.php</code> 解析 .vue → 生成 .gen.php（类+布局）</li>
+    <li><strong>布局数据生成</strong>：LAYOUT 从硬编码常量升级为 SFC 编译器自动生成</li>
+    <li><strong>构建管道</strong>：.vue → [sfc-compiler] → .gen.php → [AOT] → .exe</li>
+    <li><strong>自定义模板标签</strong>：<code>&lt;rect&gt;</code>、<code>&lt;text :bind="prop"&gt;</code>、<code>&lt;grid&gt;</code>、<code>&lt;btn @click="handler"&gt;</code></li>
+    <li><strong>CSS→GDI 颜色映射</strong>：<code>#RRGGBB</code> → BGR integer，自动推导边框色</li>
+    <li><strong>修复 4 个 SFC 编译器 bug</strong>：正则冲突、文本解析、文件名点号、const 数组兼容</li>
+  </ul>
+</div>
+
+<!-- ===== 第一章 ===== -->
+<h1>一、项目概述</h1>
+
+<p>VueCalc v2 实现了<a href="#ch9"><strong>完整 SFC 编译器管道</strong></a>：开发者编写 <code>.vue</code> 单文件组件 → PHP SFC 编译器将其编译为 PHP ReactiveComponent 子类 + 布局数据 → AOT 编译器生成原生 exe。</p>
+
+<p><strong>核心理念</strong>：PHP 替代 JS 实现数据与业务逻辑，C++ (GDI) 渲染界面。UI 渲染完全由数据驱动——<code>UI = f(state)</code>。</p>
+
+<div class="note">
+  <strong>关键 AOT 约束</strong>：Swoole Compiler AOT 不支持 <code>__get</code>/<code>__set</code> 魔术方法、反射、eval。因此采用<strong>直接属性声明 + 手动脏标记 (dirty flag)</strong> 模式。
+</div>
+
+<h2>构建管道</h2>
+
+<div class="pipeline-box">
+  <div class="pipe-step" style="border:2px solid var(--accent)">
+    <div style="font-size:1.5em">📄</div>
+    <b>Calculator.vue</b>
+    <div style="font-size:0.75em;color:#aaa">Template + Script + Style</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" style="border:2px solid var(--purple)">
+    <div style="font-size:1.5em">⚙</div>
+    <b>sfc-compiler.php</b>
+    <div style="font-size:0.75em;color:#aaa">PHP CLI 预处理</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" style="border:2px solid var(--accent2)">
+    <div style="font-size:1.5em">📦</div>
+    <b>.gen.php</b>
+    <div style="font-size:0.75em;color:#aaa">类 + 布局数据</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" style="border:2px solid var(--accent3)">
+    <div style="font-size:1.5em">🔨</div>
+    <b>AOT Compiler</b>
+    <div style="font-size:0.75em;color:#aaa">PHP → C++ → MSVC</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" style="border:2px solid var(--green)">
+    <div style="font-size:1.5em">🪟</div>
+    <b>vue_calc.exe</b>
+    <div style="font-size:0.75em;color:#aaa">Native x64 GUI</div>
+  </div>
+</div>
+
+<h2>文件结构 (v2)</h2>
+
+<table>
+<tr><th>文件</th><th>职责</th></tr>
+<tr><td><code>src/Calculator.vue</code></td><td>SFC 单文件组件：&lt;template&gt; + &lt;script lang="php"&gt; + &lt;style&gt;</td></tr>
+<tr><td><code>src/Calculator.gen.php</code></td><td>[SFC 生成] ReactiveComponent 子类</td></tr>
+<tr><td><code>src/CalculatorLayout_gen.php</code></td><td>[SFC 生成] 布局函数 getLayout() + 窗口常量</td></tr>
+<tr><td><code>tools/sfc-compiler.php</code></td><td>SFC 编译器：解析 .vue → 生成 .gen.php</td></tr>
+<tr><td><code>main.php</code></td><td>入口 + CalcRenderer + CalcApp —— 消费 LAYOUT 数据驱动渲染</td></tr>
+<tr><td><code>src/ReactiveComponent.php</code></td><td>基类：dirty 属性 + ChangeQueue</td></tr>
+<tr><td><code>src/ChangeQueue.php</code></td><td>环形缓冲变更队列（供将来扩展）</td></tr>
+<tr><td><code>php-src/vue_calc.stub.php</code></td><td>C++ 函数 PHP Stub 声明</td></tr>
+<tr><td><code>cpp-src/vue_calc.cc</code></td><td>Win32 窗口 + 消息泵 + GDI 双缓冲绘制</td></tr>
+<tr><td><code>project.yml</code></td><td>AOT 编译配置</td></tr>
+</table>
+
+<!-- ===== 第二章 ===== -->
+<h1>二、核心联动：事件 → 数据 → 渲染 (v2: 布局驱动)</h1>
+
+<div class="dataflow">
+  <div class="df-node event">
+    <div style="font-size:1.5em">🖱</div>
+    <div><b>事件层</b></div>
+    <div style="font-size:0.8em">Windows 消息泵</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node data">
+    <div style="font-size:1.5em">📊</div>
+    <div><b>数据层</b></div>
+    <div style="font-size:0.8em">直接属性赋值 + dirty</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node render">
+    <div style="font-size:1.5em">🎨</div>
+    <div><b>渲染层</b></div>
+    <div style="font-size:0.8em">getLayout() → GDI 绘制</div>
+  </div>
+</div>
+
+<h2>2.1 事件层 → v2: 像素碰撞检测</h2>
+
+<div class="flow-card">
+<h3>v1 vs v2 点击路由对比</h3>
+<pre><code>// v1: 行列计算（硬编码）
+$col = intdiv($x, BTN_WIDTH);
+$row = intdiv($by, BTN_HEIGHT);
+$label = BUTTONS[$row][$col];
+
+// v2: 像素碰撞检测（布局数据驱动）
+foreach (getLayout()['buttons'] as $btn) {
+    if ($x >= $btn['x'] && $x < $btn['x'] + $btn['w'] &&
+        $y >= $btn['y'] && $y < $btn['y'] + $btn['h']) {
+        dispatchClick($btn);  // handler + arg 从 LAYOUT 读取
+        return;
+    }
+}</code></pre>
+</div>
+
+<h2>2.2 渲染层 → v2: 遍历 LAYOUT 数据</h2>
+
+<pre><code>public function render(): void
+{
+    $hdc = vue_begin_paint($this->hWnd);
+    $layout = getLayout();
+
+    // 渲染元素（rect 背景 + text 文本）
+    foreach ($layout['elements'] as $el) {
+        if ($el['type'] === 'rect') {
+            vue_fill_rect($hdc, $el['x'], $el['y'], $el['w'], $el['h'], $el['color']);
+        } elseif ($el['type'] === 'text') {
+            // 读取组件属性 → 计算坐标 → 绘制
+            $text = $this->getBindValue($el['bind']);  // 如 'display'
+            $this->renderTextElement($hdc, $el, $text);
+        }
+    }
+
+    // 渲染按钮（背景 + 边框 + 居中文字）
+    foreach ($layout['buttons'] as $btn) {
+        vue_draw_button($hdc, $btn['x'], $btn['y'], $btn['w'], $btn['h'], $btn['bg'], $btn['border']);
+        // 居中绘制 label 文字...
+    }
+
+    vue_end_paint($this->hWnd, $hdc);
+}</code></pre>
+
+<!-- ===== 第三章：完整数据流 ===== -->
+<h1>三、完整数据流：按下 "7" 的全过程</h1>
+
+<div class="flow-card">
+<h3>阶段1：点击按钮 "7"</h3>
+<pre><code>WM_LBUTTONDOWN (x=56, y=280)
+  → CalcApp.handleClick(56, 280)
+    → 遍历 getLayout()['buttons'] 命中测试
+    → btn={label:'7', handler:'handleButton', arg:'7'}
+    → dispatchClick(btn)
+      → Calculator.handleButton('7')
+        → Calculator.inputDigit('7')
+          → $this->display = '7'
+          → $this->dirty = true</code></pre>
+
+<h3>阶段2：渲染 (~16ms 后)</h3>
+<pre><code>主循环检测 dirty === true
+  → CalcRenderer.render()
+    → getLayout() 读取布局数据
+    → 遍历 elements: 绘制背景 #1e1e1e、显示区 #2d2d2d
+    → 遍历 elements: 绘制 "50 +" (expression, 16px 灰)
+    → 遍历 elements: 绘制 "7" (display, 32px 白, 右对齐)
+    → 遍历 buttons: 18 个按钮（颜色从 CSS 映射）
+    → vue_end_paint() BitBlt 到屏幕</code></pre>
+</div>
+
+<!-- ===== 第四章：v1→v2 架构演进 ===== -->
+<h1>四、v1.0 → v2.0 架构演进</h1>
+
+<table>
+<tr><th>维度</th><th>v1.0</th><th>v2.0</th></tr>
+<tr>
+  <td>布局数据</td>
+  <td>硬编码 PHP 常量<br><code>const BUTTONS = [[...]]</code></td>
+  <td>SFC 编译器生成<br><code>function getLayout(): array</code></td>
+</tr>
+<tr>
+  <td>颜色管理</td>
+  <td><code>rgb(50,50,50)</code> 手动调用</td>
+  <td>CSS <code>#323232</code> → BGR int 自动转换</td>
+</tr>
+<tr>
+  <td>按钮坐标</td>
+  <td>运行时行列计算</td>
+  <td>编译期预计算，存入 LAYOUT</td>
+</tr>
+<tr>
+  <td>文本绑定</td>
+  <td><code>$calc->display</code> 直接访问</td>
+  <td><code>:bind="display"</code> → LAYOUT → getBindValue()</td>
+</tr>
+<tr>
+  <td>样式定义</td>
+  <td>分散在 render() 各处</td>
+  <td>集中 CSS <code>&lt;style&gt;</code> → classStyles 映射</td>
+</tr>
+<tr>
+  <td>开发模式</td>
+  <td>PHP 代码中写布局</td>
+  <td>.vue 单文件组件</td>
+</tr>
+</table>
+
+<!-- ===== 第五章：Bug 修复经验 ===== -->
+<h1>五、关键设计决策与 Bug 修复经验</h1>
+
+<table>
+<tr><th>决策 / 修复</th><th>版本</th><th>原因</th></tr>
+<tr><td>属性必须在子类声明为 public</td><td>v1</td><td>AOT 不支持 <code>__get/__set</code></td></tr>
+<tr><td>手动 dirty 标记</td><td>v1</td><td>替代 <code>__set</code> 中的自动标记</td></tr>
+<tr><td>双缓冲 GDI</td><td>v1</td><td>避免闪烁</td></tr>
+<tr><td>避免 <code>str_contains()</code></td><td>v1</td><td>改用 <code>strpos()</code>，PHP 7+ 兼容</td></tr>
+<tr><td>样式正则分隔符冲突</td><td class="done">v2 修复</td><td><code>#</code> 既是分隔符又是 CSS 颜色前缀 → 改用 <code>~</code></td></tr>
+<tr><td>文本元素未解析</td><td class="done">v2 修复</td><td>属性名字符类不含 <code>:</code> → <code>:bind</code> 不匹配</td></tr>
+<tr><td>文件名点号导致 C++ 编译错误</td><td class="done">v2 修复</td><td><code>Layout.gen.php</code> → <code>Layout_gen.php</code></td></tr>
+<tr><td>const 复杂数组 AOT 不支持</td><td class="done">v2 修复</td><td><code>const LAYOUT = [...]</code> → <code>function getLayout(): array</code></td></tr>
+</table>
+
+<div class="warn">
+  <strong>v2 SFC 编译器 Bug 修复清单</strong>
+  <ol>
+    <li><strong>正则冲突（#71,#74行）</strong>：<code>#background...#RRGGBB#</code> → 第二个 <code>#</code> 被当成分隔符结束。改用 <code>~</code> 分隔符。</li>
+    <li><strong>文本元素解析失败</strong>：<code>[a-z-]+</code> 不匹配 <code>:bind</code> 属性名中的冒号。改为 <code>[a-z:@-]+</code>。</li>
+    <li><strong>AOT 编译 crash</strong>：文件名 <code>CalculatorLayout.gen.php</code> 的点号生成无效 C++ 函数名 <code>register_CalculatorLayout.gen_symbols</code>。改为下划线命名。</li>
+    <li><strong>const 复杂数组</strong>：<code>var_export</code> 生成的嵌套数组不能作为 AOT 全局常量。改为 <code>function getLayout()</code> 返回数组。</li>
+  </ol>
+</div>
+
+<!-- ===== 第六章：编译与运行 ===== -->
+<h1>六、编译与运行 (v2: 两步管道)</h1>
+
+<h2>编译脚本</h2>
+<pre><code># compile_vue_calc.bat (v2)
+@echo off
+call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
+cd /d F:\work\swoole_compiler
+
+echo === Step 1: SFC Compiler (Vue → .gen.php) ===
+php examples\vue-calc\tools\sfc-compiler.php examples\vue-calc\src\Calculator.vue
+
+echo === Step 2: AOT Compilation (PHP → .exe) ===
+swoole_compiler.exe examples\vue-calc\project.yml -f</code></pre>
+
+<h2>运行时依赖</h2>
+<ul>
+  <li><code>php8ts.dll</code> — PHP 运行时</li>
+  <li><code>phpx.dll</code> — PHPX 桥接库</li>
+</ul>
+
+<h2>输出</h2>
+<pre><code>vue_calc.exe   ~232 KB   PE32+ (x86-64)   Windows Native GUI
+编译 11 个源文件 (.php → .cc → .obj → link → .exe)</code></pre>
+
+<!-- ===== 第七章：Vue 对比 ===== -->
+<h1>七、Vue.js 与 VueCalc：框架机制和工具链异同 (v2)</h1>
+
+<h2>7.1 总体对比</h2>
+
+<table>
+<tr><th>维度</th><th>Vue.js (Web)</th><th>VueCalc v2 (AOT Desktop)</th></tr>
+<tr>
+  <td>核心理念</td>
+  <td>数据驱动视图 UI=f(state)</td>
+  <td>完全相同 UI=f(state)</td>
+</tr>
+<tr>
+  <td>响应式机制</td>
+  <td>Vue3: Proxy 拦截（透明）</td>
+  <td>直接属性 + 手动 <code>dirty = true</code>（显式）</td>
+</tr>
+<tr>
+  <td>渲染引擎</td>
+  <td>Virtual DOM → diff → 浏览器 DOM</td>
+  <td>无 VDOM，全量 GDI 重绘</td>
+</tr>
+<tr>
+  <td>模板语言</td>
+  <td>HTML + 指令 (v-if/v-for/v-model)</td>
+  <td class="done">✅ 自定义标签：<code>&lt;app&gt;</code> <code>&lt;rect&gt;</code> <code>&lt;text :bind&gt;</code> <code>&lt;grid&gt;</code> <code>&lt;btn @click&gt;</code></td>
+</tr>
+<tr>
+  <td>SFC (.vue)</td>
+  <td>vue-loader/webpack 编译</td>
+  <td class="done">✅ <code>tools/sfc-compiler.php</code> 解析 → 生成 .gen.php</td>
+</tr>
+<tr>
+  <td>样式系统</td>
+  <td>CSS + Scoped CSS</td>
+  <td class="done">✅ CSS <code>#RRGGBB</code> → GDI BGR 整数映射</td>
+</tr>
+<tr>
+  <td>数据绑定</td>
+  <td>双向 v-model / 单向 v-bind</td>
+  <td class="wip">🔄 单向 <code>:bind="prop"</code>（v2 已实现）</td>
+</tr>
+<tr>
+  <td>事件处理</td>
+  <td>@click="handler"</td>
+  <td class="done">✅ <code>@click="handler"</code> / <code>@click="handler('arg')"</code></td>
+</tr>
+<tr>
+  <td>编译产物</td>
+  <td>JS bundle → 浏览器执行</td>
+  <td>PHP → C++ → MSVC → Native exe (232KB)</td>
+</tr>
+<tr>
+  <td>运行时</td>
+  <td>浏览器 JS 引擎</td>
+  <td>机器码，无解释器</td>
+</tr>
+</table>
+
+<h2>7.2 工具链对比 (v2 已实现)</h2>
+
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--green)">
+    <b>Vue 工具链</b>
+    <div style="font-size:0.75em">.vue → vue-loader → webpack/vite → JS</div>
+  </div>
+  <div style="font-size:1.5em">🆚</div>
+  <div class="df-node" style="border-color:var(--accent3)">
+    <b>VueCalc v2 工具链</b>
+    <div style="font-size:0.75em">.vue → sfc-compiler.php → .gen.php → AOT → exe</div>
+  </div>
+</div>
+
+<!-- ===== 第八章：SFC 编译器状态 ===== -->
+<h1>八、SFC 编译器实现状态 (v2)</h1>
+
+<h2>8.1 已实现 vs 路线图</h2>
+
+<table>
+<tr><th>组件</th><th>v1 状态</th><th>v2 状态</th><th>说明</th></tr>
+<tr>
+  <td>SFC 块提取</td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td><code>&lt;template&gt;</code> / <code>&lt;script lang="php"&gt;</code> / <code>&lt;style&gt;</code> 正则提取</td>
+</tr>
+<tr>
+  <td>CSS → GDI 映射</td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td><code>#RRGGBB</code> → hexToBgr() + borderColor() 自动推导</td>
+</tr>
+<tr>
+  <td>自定义模板解析</td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td><code>&lt;app&gt;</code> <code>&lt;rect&gt;</code> <code>&lt;text :bind&gt;</code> <code>&lt;grid&gt;</code> <code>&lt;btn @click&gt;</code></td>
+</tr>
+<tr>
+  <td>布局坐标预计算</td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td>grid 布局：行列 → 像素坐标（编译期）</td>
+</tr>
+<tr>
+  <td>代码生成</td>
+  <td class="missing">❌ 缺失</td>
+  <td class="done">✅ 已实现</td>
+  <td>PHP ReactiveComponent 子类 + getLayout() 函数</td>
+</tr>
+<tr>
+  <td>ReactiveComponent 基类</td>
+  <td class="done">✅ 已有</td>
+  <td class="done">✅ 保持</td>
+  <td>dirty 标记 + 共享基础设施</td>
+</tr>
+<tr>
+  <td>GDI 渲染原语</td>
+  <td class="done">✅ 已有</td>
+  <td class="done">✅ 保持</td>
+  <td>C++ 层：窗口/双缓冲/文本/矩形/按钮</td>
+</tr>
+<tr>
+  <td>消息泵</td>
+  <td class="done">✅ 已有</td>
+  <td class="done">✅ 保持</td>
+  <td>PeekMessage + DispatchMessage 循环</td>
+</tr>
+<tr>
+  <td>AOT 编译链</td>
+  <td class="done">✅ 已有</td>
+  <td class="done">✅ 保持</td>
+  <td>Swoole Compiler + MSVC → exe</td>
+</tr>
+</table>
+
+<h2>8.2 SFC 编译器四步管道</h2>
+
+<div class="pipeline-box">
+  <div class="pipe-step" style="border:2px solid var(--accent)">
+    <b>Step 1</b>
+    <div style="font-size:0.8em">Block Extraction</div>
+    <div style="font-size:0.7em;color:#aaa">正则提取 template/script/style</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" style="border:2px solid var(--accent2)">
+    <b>Step 2</b>
+    <div style="font-size:0.8em">Style Resolution</div>
+    <div style="font-size:0.7em;color:#aaa">CSS class → GDI BGR 颜色</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" style="border:2px solid var(--green)">
+    <b>Step 3</b>
+    <div style="font-size:0.8em">Template Parsing</div>
+    <div style="font-size:0.7em;color:#aaa">元素 +按钮坐标预计算</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" style="border:2px solid var(--accent3)">
+    <b>Step 4</b>
+    <div style="font-size:0.8em">Code Generation</div>
+    <div style="font-size:0.7em;color:#aaa">.gen.php 文件输出</div>
+  </div>
+</div>
+
+<h2>8.3 SFC 编译器关键实现细节</h2>
+
+<h3>CSS 颜色映射</h3>
+<pre><code>// CSS:  .btn-op { background: #ff9500; color: #ffffff; }
+// GDI:  BGR integer (Win32 COLORREF format)
+
+function hexToBgr(string $hex): int {
+    $r = hexdec(substr($hex, 0, 2));
+    $g = hexdec(substr($hex, 2, 2));
+    $b = hexdec(substr($hex, 4, 2));
+    return ($b << 16) | ($g << 8) | $r;  // 0x0095FF
+}
+
+function borderColor(int $bg): int {
+    // 每个通道 +20，自动推导边框色
+    $r = min(255, (($bg >> 16) & 0xFF) + 20);
+    $g = min(255, (($bg >> 8)  & 0xFF) + 20);
+    $b = min(255, ($bg         & 0xFF) + 20);
+    return ($r << 16) | ($g << 8) | $b;
+}</code></pre>
+
+<h3>Grid 布局编译期计算</h3>
+<pre><code>// .vue:  &lt;grid x="0" y="80" cols="4" rows="5" cell-w="80" cell-h="60" margin="2"&gt;
+//         &lt;btn row="0" col="0" label="C" class="btn-func" @click="reset" /&gt;
+
+// 编译期预计算：
+// bx = gridX + col * cellW + margin = 0 + 0*80 + 2 = 2
+// by = gridY + row * cellH + margin = 80 + 0*60 + 2 = 82
+// bw = cellW - margin*2 = 76
+// bh = cellH - margin*2 = 56
+
+// 输出到 CalculatorLayout_gen.php:
+// ['label' => 'C', 'x' => 2, 'y' => 82, 'w' => 76, 'h' => 56, ...]</code></pre>
+
+<h2>8.4 后续路线图</h2>
+
+<ol>
+  <li><strong class="wip">🔄 Phase 3</strong>：v-if/v-for 条件/循环指令解析</li>
+  <li><strong class="wip">🔄 Phase 4</strong>：嵌套组件树支持（组件编译展开）</li>
+  <li><strong class="missing">❌ Phase 5</strong>：增量渲染引擎（节点级 dirty 标记）</li>
+  <li><strong class="missing">❌ Phase 6</strong>：渲染层升级 GDI → Direct2D（alpha 通道、抗锯齿）</li>
+  <li><strong class="missing">❌ Phase 7</strong>：CSS Box Model（margin/border/padding + flex 布局）</li>
+</ol>
+
+<!-- ===== 第九章：SFC 编译器实现详解 ===== -->
+<h1 id="ch9">九、SFC 编译器实现详解（新增 v2）</h1>
+
+<h2>9.1 Calculator.vue 完整示例</h2>
+
+<div class="flow-card">
+<h3>.vue 单文件组件</h3>
+<pre><code>&lt;template&gt;
+  &lt;app title="VueCalc" width="328" height="420"&gt;
+    &lt;rect x="0" y="0" w="328" h="420" class="app-bg" /&gt;
+    &lt;rect x="4" y="4" w="320" h="72" class="display-bg" /&gt;
+    &lt;text x="10" y="10" :bind="expression" class="expr-text" align="left" /&gt;
+    &lt;text y="36" :bind="display" class="display-text" align="right"
+          container-w="320" container-x="4" /&gt;
+    &lt;grid x="0" y="80" cols="4" rows="5" cell-w="80" cell-h="60" margin="2"&gt;
+      &lt;btn row="0" col="0" label="C"  class="btn-func" @click="reset" /&gt;
+      &lt;btn row="0" col="2" label="/"  class="btn-op" @click="handleButton('/')" /&gt;
+      &lt;!-- ... 18 buttons ... --&gt;
+    &lt;/grid&gt;
+  &lt;/app&gt;
+&lt;/template&gt;
+
+&lt;script lang="php"&gt;
+    public string $display = '0';
+    public string $expression = '';
+    // ... 6 个 public 属性 + 所有方法（reset, inputDigit, calculate, ...） ...
+    // 注意：不需要 class 声明和构造函数 —— SFC 编译器自动生成
+&lt;/script&gt;
+
+&lt;style&gt;
+.app-bg      { background: #1e1e1e; }
+.display-bg  { background: #2d2d2d; }
+.display-text { font-size: 32px; color: #ffffff; font-weight: bold; }
+.btn-op      { background: #ff9500; color: #ffffff; }
+.btn-eq      { background: #007aff; color: #ffffff; }
+/* ... 8 个 CSS class ... */
+&lt;/style&gt;</code></pre>
+</div>
+
+<h2>9.2 生成的输出文件</h2>
+
+<h3>CalculatorLayout_gen.php（布局数据）</h3>
+<pre><code>// SFC 编译器自动生成 —— AOT 编译时作为普通源文件参与
+
+const WINDOW_WIDTH  = 328;
+const WINDOW_HEIGHT = 420;
+
+function getLayout(): array
+{
+    return [
+        'window_width'  => 328,
+        'window_height' => 420,
+        'elements'      => [
+            ['type'=>'rect', 'x'=>0, 'y'=>0, 'w'=>328, 'h'=>420, 'color'=>1973790],   // app-bg
+            ['type'=>'rect', 'x'=>4, 'y'=>4, 'w'=>320, 'h'=>72,  'color'=>2960685],   // display-bg
+            ['type'=>'text', 'bind'=>'expression', 'fontSize'=>16, 'color'=>9868950, ...],
+            ['type'=>'text', 'bind'=>'display',    'fontSize'=>32, 'bold'=>1, ...],
+        ],
+        'buttons'       => [
+            ['label'=>'C','x'=>2,'y'=>82,'bg'=>5263440,'handler'=>'reset',...],
+            ['label'=>'/','x'=>162,'y'=>82,'bg'=>38399,'handler'=>'handleButton','arg'=>'/',...],
+            // ... 18 个按钮，坐标/颜色/事件 全部预计算
+        ],
+    ];
+}</code></pre>
+
+<h3>Calculator.gen.php（组件类）</h3>
+<pre><code>// SFC 编译器自动生成
+use native_types;
+
+class Calculator extends ReactiveComponent
+{
+    // script 块内容直接插入
+    public string $display = '0';
+    public string $expression = '';
+    // ... 所有属性和方法 ...
+
+    public function __construct(string $componentId = 'Calculator')
+    {
+        parent::__construct($componentId);
+    }
+}</code></pre>
+
+<h2>9.3 AOT 兼容性注意事项</h2>
+
+<div class="warn">
+  <strong>SFC 编译器设计必须遵循的 AOT 约束：</strong>
+  <ul>
+    <li><strong>文件名不含点号</strong>：<code>Layout.gen.php</code> → <code>Layout_gen.php</code>（否则生成无效 C++ 函数名）</li>
+    <li><strong>不用 const 复杂数组</strong>：改为 <code>function getLayout(): array</code></li>
+    <li><strong>不用变量属性</strong>：<code>$obj->$variable</code> → 改为显式 if/else 映射</li>
+    <li><strong>不用变量方法调用</strong>：<code>$obj->$method()</code> → 改为显式 if/else 路由</li>
+    <li><strong>编译器运行在 AOT 之前</strong>：sfc-compiler.php 是标准 PHP CLI 脚本，不经过 AOT 编译</li>
+  </ul>
+</div>
+
+<h2>9.4 最终架构愿景</h2>
+
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--accent); min-width:140px">
+    <b>.vue SFC</b>
+    <div style="font-size:0.75em">&lt;template&gt; + &lt;script php&gt;</div>
+    <div style="font-size:0.75em">+ &lt;style&gt;</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--purple); min-width:140px">
+    <b>PHP SFC Compiler</b>
+    <div style="font-size:0.75em">Parse → Layout</div>
+    <div style="font-size:0.75em">→ Generate Code</div>
+  </div>
+  <div class="df-arrow">→</div>
+  <div class="df-node" style="border-color:var(--green); min-width:140px">
+    <b>PHP Component</b>
+    <div style="font-size:0.75em">属性 + 方法</div>
+    <div style="font-size:0.75em">+ dirty 手动标记</div>
+  </div>
+  <div class="df-arrow">+</div>
+  <div class="df-node" style="border-color:var(--accent2); min-width:140px">
+    <b>C++ Layout</b>
+    <div style="font-size:0.75em">节点坐标 + 样式</div>
+  </div>
+</div>
+<div class="dataflow">
+  <div class="df-arrow" style="font-size:2em; margin-top:-10px">↓</div>
+</div>
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--accent3); min-width:280px">
+    <b>Swoole AOT Compiler</b>
+    <div style="font-size:0.75em">PHP → C++ → MSVC → Native exe</div>
+  </div>
+</div>
+<div class="dataflow">
+  <div class="df-arrow" style="font-size:2em; margin-top:-10px">↓</div>
+</div>
+<div class="dataflow">
+  <div class="df-node" style="border-color:var(--accent); min-width:280px; font-size:1.1em">
+    <b>🪟 Windows Desktop App (.exe)</b>
+    <div style="font-size:0.75em">PHP 业务逻辑 + C++ GDI 原生 UI 渲染</div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
