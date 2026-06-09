@@ -221,8 +221,8 @@ test('padding 影响 childOffsetY 和 auto-width', function () {
     assert_eq($c1->y, 10, 'paddingTop=10 → c1.y=10');
     assert_eq($c2->y, 40, 'c2.y = 10+30 = 40');
 
-    // auto-width: containerW = scroll.w(200) - 20 - 0 = 180
-    assert_eq($c1->w, 180, 'auto-width=scroll.w-paddingLeft=180');
+    // auto-width: containerW = scroll.w(200) (content-box, width IS content width)
+    assert_eq($c1->w, 200, 'auto-width=scroll.w=200');
 
     // contentHeight = paddingTop(10) + children(80) = 90
     assert_eq($scroll->contentHeight, 90, 'contentHeight=padding+children');

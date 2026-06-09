@@ -303,6 +303,12 @@ test('刷新交互后布局稳定', function () {
         $id = spl_object_id($node);
         $before = $positionsBefore[$id];
         $msg = "Node {$node->type} position stable after refresh";
+        if ($node->h !== $before['h']) {
+            $sw = $node->style['width'] ?? 'none';
+            $sh = $node->style['height'] ?? 'auto';
+            $sd = $node->style['display'] ?? 'block';
+            echo "  [DEBUG DIFF] Node type={$node->type} id={$id} style=width:$sw height:$sh display:$sd" . " before.h={$before['h']} after.h={$node->h}\n";
+        }
         assert_eq($node->x, $before['x'], "$msg (x)");
         assert_eq($node->y, $before['y'], "$msg (y)");
         assert_eq($node->w, $before['w'], "$msg (w)");
