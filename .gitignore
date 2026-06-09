@@ -35,6 +35,10 @@ project.dep.yml
 
 # Debug 输出文件
 debug_layout.txt
+_debug_out.txt
+
+# Debug 脚本目录
+qoder/
 
 # Debug 输出目录
 debug/
