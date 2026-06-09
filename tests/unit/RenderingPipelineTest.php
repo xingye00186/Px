@@ -346,6 +346,7 @@ function captureSnapshot(AppComponent $component, _MockRenderContext $ctx): Rend
             $copy['text'] = ''; // 清空文本内容
             $copy['x'] = 0;     // 位置随文本内容变化（右对齐）
             $copy['y'] = 0;
+            $copy['textWidth'] = 0; // 文本宽度随内容变化
             $fingerprintElements[] = $copy;
         } else {
             $fingerprintElements[] = $el;

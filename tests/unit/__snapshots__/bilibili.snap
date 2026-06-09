@@ -15,15 +15,18 @@ div (0,0 1440x900) [dsp=flex]
         span (442,11 28x18) text="漫画"
         span (486,11 28x18) text="赛事"
         span (530,11 70x18) text="下载客户端"
-    div (680,28 367x0) fg=1
+    div (680,10 367x36) fg=1
+      div (680,10 367x36) [pos=relative]
+        div (680,10 367x36) [dsp=flex] bw=1
+          span (680,19 367x18) fg=1 text="搜索视频、UP主、分区..."
     div (1047,18 417x20) [dsp=flex]
       span (1047,10 39x17) text="大会员"
       div (1098,13 16x11) [dsp=inline-flex pos=relative]
         span (1098,3 16x21) text="🔔"
-        div (1092,9 16x16) [pos=absolute] text="4"
+        div (1108,9 0x16) [pos=absolute] text="4"
       div (1126,13 16x11) [dsp=inline-flex pos=relative]
         span (1126,3 16x21) text="✉"
-        div (1120,9 16x16) [pos=absolute] text="19"
+        div (1136,9 0x16) [pos=absolute] text="19"
       span (1154,10 26x17) text="动态"
       span (1192,10 26x17) text="收藏"
       span (1230,10 26x17) text="历史"
@@ -143,8 +146,8 @@ div (0,0 1440x900) [dsp=flex]
       div (24,189 1392x1109) [dsp=grid]
         div (24,189 336x209) [dsp=flex] ov=hidden
           div (24,189 336x140) [pos=relative]
-            div (354,323 41x18) [pos=absolute]
-              span (360,325 41x16) text="11:13"
+            div (354,323 0x0) [pos=absolute]
+              span (360,325 35x16) text="11:13"
           div (24,335 336x20) ov=hidden
             span (24,335 266x20) ov=hidden text="家有这样的女仆！还哪有心情�..."
           div (24,361 336x8) [dsp=flex]
@@ -158,8 +161,8 @@ div (0,0 1440x900) [dsp=flex]
             span (24,382 43x16) text="3小时前"
         div (376,189 336x209) [dsp=flex] ov=hidden
           div (376,189 336x140) [pos=relative]
-            div (706,323 41x18) [pos=absolute]
-              span (712,325 41x16) text="21:37"
+            div (706,323 0x0) [pos=absolute]
+              span (712,325 35x16) text="21:37"
           div (376,335 336x20) ov=hidden
             span (376,335 196x20) ov=hidden text="广西的森林为什么看着像指纹�..."
           div (376,361 336x8) [dsp=flex]
@@ -173,8 +176,8 @@ div (0,0 1440x900) [dsp=flex]
             span (376,382 24x16) text="昨天"
         div (728,189 336x209) [dsp=flex] ov=hidden
           div (728,189 336x140) [pos=relative]
-            div (1058,323 41x18) [pos=absolute]
-              span (1064,325 41x16) text="15:27"
+            div (1058,323 0x0) [pos=absolute]
+              span (1064,325 35x16) text="15:27"
           div (728,335 336x20) ov=hidden
             span (728,335 386x20) ov=hidden text="【硬核拆解】球王C罗夺冠赛季..."
           div (728,361 336x8) [dsp=flex]
@@ -188,8 +191,8 @@ div (0,0 1440x900) [dsp=flex]
             span (728,382 31x16) text="2天前"
         div (1080,189 336x209) [dsp=flex] ov=hidden
           div (1080,189 336x140) [pos=relative]
-            div (1410,323 41x18) [pos=absolute]
-              span (1416,325 41x16) text="08:15"
+            div (1410,323 0x0) [pos=absolute]
+              span (1416,325 35x16) text="08:15"
           div (1080,335 336x20) ov=hidden
             span (1080,335 418x20) ov=hidden text="别只盯着提示词和demo了，真正..."
           div (1080,361 336x8) [dsp=flex]
@@ -203,8 +206,8 @@ div (0,0 1440x900) [dsp=flex]
             span (1080,382 24x16) text="昨天"
         div (24,414 336x209) [dsp=flex] ov=hidden
           div (24,414 336x140) [pos=relative]
-            div (354,548 41x18) [pos=absolute]
-              span (360,550 41x16) text="10:05"
+            div (354,548 0x0) [pos=absolute]
+              span (360,550 35x16) text="10:05"
           div (24,560 336x20) ov=hidden
             span (24,560 154x20) ov=hidden text="实测：蛇类天生会解死结"
           div (24,586 336x8) [dsp=flex]
@@ -218,8 +221,8 @@ div (0,0 1440x900) [dsp=flex]
             span (24,607 43x16) text="4小时前"
         div (376,414 336x209) [dsp=flex] ov=hidden
           div (376,414 336x140) [pos=relative]
-            div (706,548 41x18) [pos=absolute]
-              span (712,550 41x16) text="12:30"
+            div (706,548 0x0) [pos=absolute]
+              span (712,550 35x16) text="12:30"
           div (376,560 336x20) ov=hidden
             span (376,560 294x20) ov=hidden text="可回收火箭浪潮下，商业航天�..."
           div (376,586 336x8) [dsp=flex]
@@ -233,8 +236,8 @@ div (0,0 1440x900) [dsp=flex]
             span (376,607 35x16) text="05-14"
         div (728,414 336x209) [dsp=flex] ov=hidden
           div (728,414 336x140) [pos=relative]
-            div (1058,548 41x18) [pos=absolute]
-              span (1064,550 41x16) text="16:20"
+            div (1058,548 0x0) [pos=absolute]
+              span (1064,550 35x16) text="16:20"
           div (728,560 336x20) ov=hidden
             span (728,560 308x20) ov=hidden text="龟之巴尬！姆巴佩公式延续，�..."
           div (728,586 336x8) [dsp=flex]
@@ -248,8 +251,8 @@ div (0,0 1440x900) [dsp=flex]
             span (728,607 35x16) text="05-31"
         div (1080,414 336x209) [dsp=flex] ov=hidden
           div (1080,414 336x140) [pos=relative]
-            div (1410,548 41x18) [pos=absolute]
-              span (1416,550 41x16) text="06:44"
+            div (1410,548 0x0) [pos=absolute]
+              span (1416,550 35x16) text="06:44"
           div (1080,560 336x20) ov=hidden
             span (1080,560 196x20) ov=hidden text="【郝哥穿越】不要把瓜卖给他�..."
           div (1080,586 336x8) [dsp=flex]
@@ -263,8 +266,8 @@ div (0,0 1440x900) [dsp=flex]
             span (1080,607 35x16) text="06-01"
         div (24,639 336x209) [dsp=flex] ov=hidden
           div (24,639 336x140) [pos=relative]
-            div (354,773 41x18) [pos=absolute]
-              span (360,775 41x16) text="14:23"
+            div (354,773 0x0) [pos=absolute]
+              span (360,775 35x16) text="14:23"
           div (24,785 336x20) ov=hidden
             span (24,785 400x20) ov=hidden text="DCS F-16C 狙击手先进瞄准吊舱 A ..."
           div (24,811 336x8) [dsp=flex]
@@ -278,8 +281,8 @@ div (0,0 1440x900) [dsp=flex]
             span (24,832 31x16) text="3天前"
         div (376,639 336x209) [dsp=flex] ov=hidden
           div (376,639 336x140) [pos=relative]
-            div (706,773 41x18) [pos=absolute]
-              span (712,775 41x16) text="24:06"
+            div (706,773 0x0) [pos=absolute]
+              span (712,775 35x16) text="24:06"
           div (376,785 336x20) ov=hidden
             span (376,785 190x20) ov=hidden text="我挑战在中国被偷手机（7次）"
           div (376,811 336x8) [dsp=flex]
@@ -293,8 +296,8 @@ div (0,0 1440x900) [dsp=flex]
             span (376,832 24x16) text="昨天"
         div (728,639 336x209) [dsp=flex] ov=hidden
           div (728,639 336x140) [pos=relative]
-            div (1058,773 41x18) [pos=absolute]
-              span (1064,775 41x16) text="09:45"
+            div (1058,773 0x0) [pos=absolute]
+              span (1064,775 35x16) text="09:45"
           div (728,785 336x20) ov=hidden
             span (728,785 286x20) ov=hidden text="从养虾到养马？程序员的"跟风..."
           div (728,811 336x8) [dsp=flex]
@@ -308,8 +311,8 @@ div (0,0 1440x900) [dsp=flex]
             span (728,832 35x16) text="05-12"
         div (1080,639 336x209) [dsp=flex] ov=hidden
           div (1080,639 336x140) [pos=relative]
-            div (1410,773 41x18) [pos=absolute]
-              span (1416,775 41x16) text="03:15"
+            div (1410,773 0x0) [pos=absolute]
+              span (1416,775 35x16) text="03:15"
           div (1080,785 336x20) ov=hidden
             span (1080,785 322x20) ov=hidden text="把一只凶猛大水蛭丢进润滑油�..."
           div (1080,811 336x8) [dsp=flex]
@@ -323,8 +326,8 @@ div (0,0 1440x900) [dsp=flex]
             span (1080,832 35x16) text="05-19"
         div (24,864 336x209) [dsp=flex] ov=hidden
           div (24,864 336x140) [pos=relative]
-            div (354,998 41x18) [pos=absolute]
-              span (360,1000 41x16) text="22:10"
+            div (354,998 0x0) [pos=absolute]
+              span (360,1000 35x16) text="22:10"
           div (24,1010 336x20) ov=hidden
             span (24,1010 194x20) ov=hidden text="EVA 新世纪福音战士 经典回顾"
           div (24,1036 336x8) [dsp=flex]
@@ -338,8 +341,8 @@ div (0,0 1440x900) [dsp=flex]
             span (24,1057 35x16) text="05-08"
         div (376,864 336x209) [dsp=flex] ov=hidden
           div (376,864 336x140) [pos=relative]
-            div (706,998 41x18) [pos=absolute]
-              span (712,1000 41x16) text="18:45"
+            div (706,998 0x0) [pos=absolute]
+              span (712,1000 35x16) text="18:45"
           div (376,1010 336x20) ov=hidden
             span (376,1010 256x20) ov=hidden text="【真实球王路】22年阿根廷vs克..."
           div (376,1036 336x8) [dsp=flex]
@@ -353,8 +356,8 @@ div (0,0 1440x900) [dsp=flex]
             span (376,1057 36x16) text="直播中"
         div (728,864 336x209) [dsp=flex] ov=hidden
           div (728,864 336x140) [pos=relative]
-            div (1058,998 41x18) [pos=absolute]
-              span (1064,1000 41x16) text="03:20"
+            div (1058,998 0x0) [pos=absolute]
+              span (1064,1000 35x16) text="03:20"
           div (728,1010 336x20) ov=hidden
             span (728,1010 166x20) ov=hidden text="水蛭 vs 润滑油 终极对决"
           div (728,1036 336x8) [dsp=flex]
@@ -368,8 +371,8 @@ div (0,0 1440x900) [dsp=flex]
             span (728,1057 35x16) text="05-19"
         div (1080,864 336x209) [dsp=flex] ov=hidden
           div (1080,864 336x140) [pos=relative]
-            div (1410,998 41x18) [pos=absolute]
-              span (1416,1000 41x16) text="10:30"
+            div (1410,998 0x0) [pos=absolute]
+              span (1416,1000 35x16) text="10:30"
           div (1080,1010 336x20) ov=hidden
             span (1080,1010 272x20) ov=hidden text="让大家感受下 大厂Agent工程师�..."
           div (1080,1036 336x8) [dsp=flex]
@@ -383,8 +386,8 @@ div (0,0 1440x900) [dsp=flex]
             span (1080,1057 35x16) text="05-12"
         div (24,1089 336x209) [dsp=flex] ov=hidden
           div (24,1089 336x140) [pos=relative]
-            div (354,1223 41x18) [pos=absolute]
-              span (360,1225 41x16) text="19:42"
+            div (354,1223 0x0) [pos=absolute]
+              span (360,1225 35x16) text="19:42"
           div (24,1235 336x20) ov=hidden
             span (24,1235 238x20) ov=hidden text="雨林秘境：探秘亚马逊未被记�..."
           div (24,1261 336x8) [dsp=flex]
@@ -398,8 +401,8 @@ div (0,0 1440x900) [dsp=flex]
             span (24,1282 35x16) text="06-03"
         div (376,1089 336x209) [dsp=flex] ov=hidden
           div (376,1089 336x140) [pos=relative]
-            div (706,1223 41x18) [pos=absolute]
-              span (712,1225 41x16) text="28:15"
+            div (706,1223 0x0) [pos=absolute]
+              span (712,1225 35x16) text="28:15"
           div (376,1235 336x20) ov=hidden
             span (376,1235 224x20) ov=hidden text="从零实现Web框架：手写HTTP服务..."
           div (376,1261 336x8) [dsp=flex]
@@ -413,8 +416,8 @@ div (0,0 1440x900) [dsp=flex]
             span (376,1282 35x16) text="06-02"
         div (728,1089 336x209) [dsp=flex] ov=hidden
           div (728,1089 336x140) [pos=relative]
-            div (1058,1223 41x18) [pos=absolute]
-              span (1064,1225 41x16) text="35:00"
+            div (1058,1223 0x0) [pos=absolute]
+              span (1064,1225 35x16) text="35:00"
           div (728,1235 336x20) ov=hidden
             span (728,1235 206x20) ov=hidden text="【4K】东京夜景散步 沉浸式体�..."
           div (728,1261 336x8) [dsp=flex]
@@ -428,8 +431,8 @@ div (0,0 1440x900) [dsp=flex]
             span (728,1282 35x16) text="06-01"
         div (1080,1089 336x209) [dsp=flex] ov=hidden
           div (1080,1089 336x140) [pos=relative]
-            div (1410,1223 41x18) [pos=absolute]
-              span (1416,1225 41x16) text="14:08"
+            div (1410,1223 0x0) [pos=absolute]
+              span (1416,1225 35x16) text="14:08"
           div (1080,1235 336x20) ov=hidden
             span (1080,1235 252x20) ov=hidden text="为什么说量子计算不会取代经�..."
           div (1080,1261 336x8) [dsp=flex]

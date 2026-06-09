@@ -85,6 +85,14 @@ class AbsolutePositioning implements AbsoluteStrategy
         $width = PercentResolver::resolvePercent($style, 'width', 'widthPercent', $ancestorW);
         $height = PercentResolver::resolvePercent($style, 'height', 'heightPercent', $ancestorH);
 
+        // Assign computed width/height to node (CSS 2.2 §10.3.7, §10.6.4)
+        if ($width > 0) {
+            $node->w = $width;
+        }
+        if ($height > 0) {
+            $node->h = $height;
+        }
+
         // CSS 2.2 §8.3, §8.4: margin/padding 百分比基于包含块 content box 宽度
         $ancestorContentW = ($ancestor !== null) ? PercentResolver::resolveContentWidth($ancestor->style, $ancestor->w) : $viewportW;
 
