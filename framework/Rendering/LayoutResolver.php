@@ -3,7 +3,6 @@
 
 namespace Px\Rendering;
 
-
 use native_types;
 
 use Px\Core\Config;
@@ -36,12 +35,8 @@ use Px\Rendering\Layout\LayoutContext;
  * 6. 洁净路径坐标传播
  */
 class LayoutResolver
-
-
 {
-
     private int $resolveDepth = 0;
-
     private ?RenderNode $rootNode = null;
 
     private AbsoluteStrategy $absolutePositioning;
@@ -103,26 +98,18 @@ class LayoutResolver
 
     public function resolve(RenderNode $root): array
     {
-
-
         $this->rootNode = $root;
-
-
         $this->scrollContainers = [];
-
 
         $ctx = new LayoutContext(0, 0, null);
         $this->resolveNode($root, $ctx);
-
 
         // Debug: final span dimensions after full layout (guarded by diag_enabled)
         if (Config::get('diag_enabled', false)) {
             $this->debugCheckSpanDims($root);
         }
 
-
         return ['scrollContainers' => $this->scrollContainers];
-
 
     }
 
@@ -131,7 +118,6 @@ class LayoutResolver
     {
         // Debug removed
     }
-
 
     /**
      * Recursively resolve layout for a single node and its children.
@@ -155,126 +141,73 @@ class LayoutResolver
 
         if ($node->layoutDirty) {
 
-
             // ──┬── 脏标记检查：进入完整布局计算 ──┬──
             // 统一入口：在 style 解析处合并 animatedStyle
             $style = $node->style;
 
-
             if ($node->isAnimating && ! empty($node->animatedStyle)) {
-
 
                 // 深度拷贝：避免修改原始 $node->style
                 $effectiveStyle = [];
 
-
                 foreach ($style as $k => $v) {
-
-
                     $effectiveStyle[$k] = $v;
-
-
                 }
-
 
                 foreach ($node->animatedStyle as $k => $v) {
-
-
                     $effectiveStyle[$k] = $v;
-
-
                 }
-
-
             } else {
-
-
                 $effectiveStyle = $style;
-
-
             }
-
 
             // Inherit parent's layer (CSS stacking context)
 
-
             if ($ctx->parent !== null && $ctx->parent->layer > 0) {
 
-
                 $node->layer = $ctx->parent->layer;
-
-
             }
-
 
             // Apply own z-index 鈫?RenderNode layer
 
             $zIndex = (int)($effectiveStyle['zIndex'] ?? $effectiveStyle['zindex'] ?? 0);
 
-
             if ($zIndex > $node->layer) {
-
 
                 $node->layer = $zIndex;
 
-
             }
-
 
             // Check for scroll container
 
-
             $overflowX = $effectiveStyle['overflowX'] ?? $effectiveStyle['overflow'] ?? 'visible';
-
 
             $overflowY = $effectiveStyle['overflowY'] ?? $effectiveStyle['overflow'] ?? 'visible';
 
-
             $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
-
 
             $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
 
-
             if ($hasHScroll || $hasVScroll) {
-
 
                 $node->isScrollContainer = true;
                 $this->scrollContainers[] = $node;
-
             }
-
 
             // Determine display mode
 
-
             $display = $effectiveStyle['display'] ?? 'block';
-
-
             $position = $effectiveStyle['position'] ?? 'static';
 
-
             switch ($display) {
-
-
                 case 'flex':
-
-
                 case 'inline-flex':
-
                     $this->flexStrategy->resolve($node, $ctx, $effectiveStyle);
-
                     break;
-
 
                 case 'grid':
-
-
                     $this->gridStrategy->resolve($node, $ctx, $effectiveStyle);
-
                     break;
-
-
                 default: // block, scroll-container, etc.
                     if ($position === 'absolute' || $position === 'fixed') {
                         $this->absolutePositioning->resolveAbsolutePositioning($node, $ctx, $effectiveStyle);
@@ -294,72 +227,42 @@ class LayoutResolver
 
             if ($node->isScrollContainer && ($display === 'flex' || $display === 'inline-flex' || $display === 'grid')) {
 
-
                 $padT = (int)($effectiveStyle['paddingTop'] ?? $effectiveStyle['padding'] ?? 0);
-
-
                 $padL = (int)($effectiveStyle['paddingLeft'] ?? $effectiveStyle['padding'] ?? 0);
-
-
                 $padR = (int)($effectiveStyle['paddingRight'] ?? $effectiveStyle['padding'] ?? 0);
-
-
                 $padB = (int)($effectiveStyle['paddingBottom'] ?? $effectiveStyle['padding'] ?? 0);
-
 
                 $childBaseY = $node->y + $padT;
 
-
                 // Calculate contentHeight: max bottom edge of all children
-
 
                 $maxBottom = $childBaseY;
 
-
                 foreach ($node->children as $child) {
 
-
                     $bottom = (int)($child->y + $child->h);
-
 
                     if ($bottom > $maxBottom) {
                         $maxBottom = $bottom;
                     }
-
-
                 }
-
 
                 $node->contentHeight = (int)max(0, $maxBottom - $childBaseY);
 
-
                 // Clamp scrollTop when content shrinks
-
 
                 $maxScroll = (int)max($node->contentHeight - $node->h, 0);
 
-
                 if ($node->scrollTop > $maxScroll) {
-
-
                     $node->scrollTop = $maxScroll;
-
-
                 }
 
-
                 // ContentWidth for horizontal scroll
-
-
                 $overflowX = $effectiveStyle['overflowX'] ?? $effectiveStyle['overflow'] ?? 'visible';
-
 
                 $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
 
-
                 if ($hasHScroll) {
-
-
                     $maxRight = 0;
                     foreach ($node->children as $child) {
 
@@ -372,25 +275,20 @@ class LayoutResolver
                         if ($right > $maxRight) {
                             $maxRight = $right;
                         }
-
                     }
                     $node->contentWidth = (int)max($maxRight, $node->w);
-
 
                     $maxScrollX = (int)max($node->contentWidth - $node->w, 0);
 
                     if ($node->scrollLeft > $maxScrollX) {
 
                         $node->scrollLeft = $maxScrollX;
-
                     }
 
                 } else {
                     // No horizontal scroll 鈥?content width equals container width
                     $node->contentWidth = $node->w;
                 }
-
-
             }
 
 
@@ -531,16 +429,9 @@ class LayoutResolver
 
 
             $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
-
-
             $paddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
-
-
             $childOffsetX = $node->x + $paddingLeft;
-
-
             $childOffsetY = $node->y + $paddingTop;
-
             foreach ($node->children as $child) {
                 $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node);
                 $this->resolveNode($child, $childCtx);
