@@ -405,16 +405,16 @@ class GdiRenderContext extends RenderContext
         $decorationLine = $el['decorationLine'] ?? 'none';
         if ($decorationLine === '' || $decorationLine === 'none') return;
 
-        $x = $el['x'] ?? 0;
-        $y = $el['y'] ?? 0;
-        $fontSize = $el['fontSize'] ?? 16;
-        $textWidth = $el['textWidth'] ?? 80;
+        $x = (int)($el['x'] ?? 0);
+        $y = (int)($el['y'] ?? 0);
+        $fontSize = (int)($el['fontSize'] ?? 16);
+        $textWidth = (int)($el['textWidth'] ?? 80);
         if ($textWidth <= 0) return;
 
-        $color = $el['decorationColor'] ?? ($el['color'] ?? 0xFFFFFF);
+        $color = (int)($el['decorationColor'] ?? ($el['color'] ?? 0xFFFFFF));
         $style = $el['decorationStyle'] ?? 'solid';
-        $thickness = $el['decorationThickness'] ?? 0;
-        $underlineOffset = $el['underlineOffset'] ?? 0;
+        $thickness = (int)($el['decorationThickness'] ?? 0);
+        $underlineOffset = (int)($el['underlineOffset'] ?? 0);
 
         // Auto thickness: ~5% of font size, minimum 1px
         if ($thickness <= 0) {
