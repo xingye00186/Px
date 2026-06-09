@@ -225,7 +225,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                                 $gc->layoutDirty = true;
                             }
 
-                            $childCtx = new LayoutContext($node->x + $paddingLeft, $stackY, $node, refval($ctx->scrollContainers));
+                            $childCtx = new LayoutContext($node->x + $paddingLeft, $stackY, $node);
                             $this->resolver->resolveNode($child, $childCtx);
                         }
                     }
@@ -392,7 +392,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $childOffsetY = $node->y + $paddingTop;
 
         foreach ($node->children as $child) {
-            $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node, refval($ctx->scrollContainers));
+            $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node);
             $this->resolver->resolveNode($child, $childCtx);
         }
     }

@@ -55,6 +55,9 @@ class LayoutResolver
     /** @var array<string, array> Per-scroll-container sticky stack (horizontal) */
     private array $stickyStackX = [];
 
+    /** 滚动容器收集数组（布局过程按需追加） */
+    private array $scrollContainers = [];
+
 
     public function __construct()
     {
@@ -107,10 +110,10 @@ class LayoutResolver
         $this->rootNode = $root;
 
 
-        $scrollContainers = [];
+        $this->scrollContainers = [];
 
 
-        $ctx = new LayoutContext(0, 0, null, refval($scrollContainers));
+        $ctx = new LayoutContext(0, 0, null);
         $this->resolveNode($root, $ctx);
 
 
@@ -120,7 +123,7 @@ class LayoutResolver
         }
 
 
-        return ['scrollContainers' => $scrollContainers];
+        return ['scrollContainers' => $this->scrollContainers];
 
 
     }
@@ -240,7 +243,7 @@ class LayoutResolver
 
 
                 $node->isScrollContainer = true;
-                $ctx->scrollContainers[] = $node;
+                $this->scrollContainers[] = $node;
 
             }
 
@@ -402,8 +405,8 @@ class LayoutResolver
                 $node->style['_stickyBaseY'] = $node->y;
 
                 // Find nearest scroll container that contains this node
-                for ($i = count($ctx->scrollContainers) - 1; $i >= 0; $i--) {
-                    $sc = $ctx->scrollContainers[$i];
+                for ($i = count($this->scrollContainers) - 1; $i >= 0; $i--) {
+                    $sc = $this->scrollContainers[$i];
 
                     // Check if node is within this scroll container's bounds
                     if ($node->x >= $sc->x && $node->x < $sc->x + $sc->w &&
@@ -579,11 +582,10 @@ class LayoutResolver
 
             $childOffsetY = $node->y + $paddingTop;
 
-
             foreach ($node->children as $child) {
 
 
-                $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node, refval($ctx->scrollContainers));
+                $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node);
                 $this->resolveNode($child, $childCtx);
 
 

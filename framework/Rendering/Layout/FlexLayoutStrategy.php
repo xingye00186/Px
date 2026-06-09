@@ -188,7 +188,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         foreach ($node->children as $child) {
             $childPosition = $child->style['position'] ?? 'static';
 
-            $childCtx = new LayoutContext($node->x + $paddingLeft - $scrollShiftX, $node->y + $paddingTop - $scrollShiftY, $node, refval($ctx->scrollContainers));
+            $childCtx = new LayoutContext($node->x + $paddingLeft - $scrollShiftX, $node->y + $paddingTop - $scrollShiftY, $node);
             $this->resolver->resolveNode($child, $childCtx);
 
             // position:absolute/fixed children are removed from flex flow
@@ -909,7 +909,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $gc->layoutDirty = true;
                         }
 
-                        $chCtx = new LayoutContext($prX, $prY, $ctx->parent, refval($ctx->scrollContainers));
+                        $chCtx = new LayoutContext($prX, $prY, $ctx->parent);
                         $this->resolver->resolveNode($chTp, $chCtx);
 
                         if ($hasOrigW) {
@@ -937,7 +937,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                         foreach ($chTp->children as $grandchild) {
                             $grandchild->layoutDirty = true;
-                            $gcCtx = new LayoutContext($gcOffsetX, $gcOffsetY, $chTp, refval($ctx->scrollContainers));
+                            $gcCtx = new LayoutContext($gcOffsetX, $gcOffsetY, $chTp);
                             $this->resolver->resolveNode($grandchild, $gcCtx);
                         }
                     }

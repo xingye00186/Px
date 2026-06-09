@@ -12,8 +12,9 @@ use Px\Rendering\RenderNode;
  * 封装布局算法所需的上下文信息，减少 LayoutStrategyInterface
  * 的参数数量，遵循接口隔离原则（ISP）。
  *
- * 包含：父节点坐标、父节点引用、滚动容器收集数组。
+ * 包含：父节点坐标、父节点引用。
  * 由 LayoutResolver 在每次 resolveNode 调用时创建并传递。
+ * scrollContainers 聚合由 LayoutResolver 自身维护，不在此传递。
  */
 class LayoutContext
 {
@@ -26,18 +27,13 @@ class LayoutContext
     /** 父 RenderNode（根节点为 null） */
     public ?RenderNode $parent;
 
-    /** 滚动容器引用收集数组（通过对象引用共享，按需追加） */
-    public array $scrollContainers = [];
-
     public function __construct(
         int         $parentX,
         int         $parentY,
-        ?RenderNode $parent,
-        array       &$scrollContainers
+        ?RenderNode $parent
     ) {
         $this->parentX = $parentX;
         $this->parentY = $parentY;
         $this->parent = $parent;
-        $this->scrollContainers = &$scrollContainers;
     }
 }

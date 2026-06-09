@@ -215,7 +215,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $children = [];
 
         foreach ($node->children as $child) {
-            $childCtx = new LayoutContext($node->x, $node->y, $node, refval($ctx->scrollContainers));
+            $childCtx = new LayoutContext($node->x, $node->y, $node);
             $this->resolver->resolveNode($child, $childCtx);
 
             $children[] = $child;
@@ -482,7 +482,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $gridItem->style['width'] = $savedW;
             $gridItem->style['height'] = $savedH;
 
-            $childCtx = new LayoutContext($savedX, $savedY, $gridItem, refval($ctx->scrollContainers));
+            $childCtx = new LayoutContext($savedX, $savedY, $gridItem);
 
             $this->resolver->getFlexStrategy()->resolveFlexLayout(
                 $gridItem,
@@ -528,7 +528,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $gridItem->style['width'] = $savedW;
             $gridItem->style['height'] = $savedH;
 
-            $childCtx2 = new LayoutContext($savedX, $savedY, $gridItem, refval($ctx->scrollContainers));
+            $childCtx2 = new LayoutContext($savedX, $savedY, $gridItem);
 
             $this->resolveGridLayout(
                 $gridItem,
@@ -559,7 +559,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         // Block 显示: 逐个重新解析子节点
         foreach ($gridItem->children as $child) {
             ScrollHelper::markSubtreeDirty($child);
-            $childCtx = new LayoutContext($gridItem->x, $gridItem->y, $gridItem, refval($ctx->scrollContainers));
+            $childCtx = new LayoutContext($gridItem->x, $gridItem->y, $gridItem);
             $this->resolver->resolveNode($child, $childCtx);
         }
     }

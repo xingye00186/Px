@@ -165,7 +165,7 @@ class AbsolutePositioning implements AbsoluteStrategy
         $childOffsetY = $node->y + $paddingTop;
 
         foreach ($node->children as $child) {
-            $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node, refval($ctx->scrollContainers));
+            $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node);
             $this->resolver->resolveNode($child, $childCtx);
         }
     }
