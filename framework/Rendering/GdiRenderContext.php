@@ -431,6 +431,7 @@ class GdiRenderContext extends RenderContext
             if ($line === 'none' || $line === 'blink' || $line === '') continue;
 
             $lineY = 0;
+            $validLineType = true;
             switch ($line) {
                 case 'underline':
                     $offset = $underlineOffset > 0 ? $underlineOffset : $autoGap;
@@ -443,10 +444,13 @@ class GdiRenderContext extends RenderContext
                     $lineY = $y + (int)($fontSize * 0.4);
                     break;
                 default:
-                    continue 2;
+                    $validLineType = false;
+                    break;
             }
 
-            $this->drawDecorationLine($x, $lineY, $textWidth, $thickness, $color, $style);
+            if ($validLineType) {
+                $this->drawDecorationLine($x, $lineY, $textWidth, $thickness, $color, $style);
+            }
         }
     }
 
