@@ -227,9 +227,16 @@ class CssMappings
         'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
         'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
         'transform'            => ['key' => 'transform',       'parser' => 'Px\\Rendering\\CssMappings::parseTransform', 'default' => ''],
-        'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
+        'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => ''],
+    
+        // ---- Text Decoration (CSS Text Decoration Module Level 3) ----
+        'text-decoration-line'      => ['key' => 'textDecorationLine',     'parser' => 'Px\Rendering\CssMappings::parseIdent',     'default' => 'none'],
+        'text-decoration-color'     => ['key' => 'textDecorationColor',    'parser' => 'Px\Rendering\CssMappings::parseHexColor',   'default' => 0xFFFFFF],
+        'text-decoration-style'     => ['key' => 'textDecorationStyle',    'parser' => 'Px\Rendering\CssMappings::parseIdent',     'default' => 'solid'],
+        'text-decoration-thickness' => ['key' => 'textDecorationThickness','parser' => 'Px\Rendering\CssMappings::parsePixels',    'default' => 0],
+        'text-underline-offset'     => ['key' => 'textUnderlineOffset',    'parser' => 'Px\Rendering\CssMappings::parsePixels',    'default' => 0],
     ];
-
+    
     /**
      * Inline style → 布局属性映射（仅 PROPERTY_MAP 未覆盖的属性）
      *
@@ -493,6 +500,9 @@ class CssMappings
         // Expand background shorthand into individual sub-properties
         $raw = self::expandBackgroundShorthand($raw);
 
+        // Expand text-decoration shorthand into individual sub-properties
+        $raw = self::expandTextDecorationShorthand($raw);
+
         // Pre-detect percentage values for layout properties.
         // Store as "widthPercent" (float, e.g. 50.0 for "50%") alongside the
         // regular pixel key. LayoutResolver checks *Percent first.
@@ -754,6 +764,92 @@ class CssMappings
     }
 
     /**
+     * Expand text-decoration shorthand into individual sub-properties.
+     *
+     * CSS text-decoration shorthand syntax (CSS Text Decoration Module Level 3):
+     *   text-decoration: <line> || <style> || <color> || <thickness>
+     *
+     * Examples:
+     *   "underline"                        → line=underline
+     *   "underline wavy red"               → line=underline, style=wavy, color=red
+     *   "underline overline"               → line=underline overline
+     *   "underline wavy #FF0000 2px"        → line=underline, style=wavy, color=#FF0000, thickness=2
+     *   "none"                             → line=none (no decoration)
+     *
+     * All four components can appear in any order. Multiple line keywords are
+     * space-separated (e.g., "underline overline line-through").
+     *
+     * @param array $raw Raw style declarations
+     * @return array Updated raw declarations with expanded sub-properties
+     */
+    private static function expandTextDecorationShorthand(array $raw): array
+    {
+        if (!isset($raw['text-decoration']) || $raw['text-decoration'] === '') {
+            return $raw;
+        }
+        $expanded = self::expandTextDecorationValue(trim($raw['text-decoration']));
+        foreach ($expanded as $key => $val) {
+            // Convert camelCase back to kebab-case for the raw CSS property array
+            $cssKey = strtolower(preg_replace('/([A-Z])/', '-$1', $key));
+            if (!isset($raw[$cssKey])) {
+                $raw[$cssKey] = $val;
+            }
+        }
+        return $raw;
+    }
+
+    /**
+     * Parse a text-decoration shorthand value into individual CSS declarations.
+     *
+     * @param string $value The raw shorthand value (e.g., "underline wavy red")
+     * @return array CSS property name => value pairs
+     */
+    private static function expandTextDecorationValue(string $value): array
+    {
+        $result = [];
+        $parts = preg_split('/\s+/', $value);
+
+        $lineParts = [];
+        $hasLine = false;
+
+        foreach ($parts as $part) {
+            if ($part === '') continue;
+            $lower = strtolower($part);
+
+            // Line keywords: underline, overline, line-through, none, blink
+            if (in_array($lower, ['underline', 'overline', 'line-through', 'none', 'blink'], true)) {
+                $lineParts[] = $lower;
+                $hasLine = true;
+                continue;
+            }
+
+            // Style keywords: solid, double, dotted, dashed, wavy
+            if (in_array($lower, ['solid', 'double', 'dotted', 'dashed', 'wavy'], true)) {
+                $result['textDecorationStyle'] = $lower;
+                continue;
+            }
+
+            // Color: hex or rgb/rgba
+            if (str_starts_with($part, '#') || preg_match('/^rgba?\s*\(/i', $part)) {
+                $result['textDecorationColor'] = $part;
+                continue;
+            }
+
+            // Thickness: numeric with optional px unit
+            if (preg_match('/^\d+(\.\d+)?(px)?$/', $part)) {
+                $result['textDecorationThickness'] = $part;
+                continue;
+            }
+        }
+
+        if ($hasLine) {
+            $result['textDecorationLine'] = implode(' ', $lineParts);
+        }
+
+        return $result;
+    }
+
+    /**
      * Convert kebab-case to camelCase
      * e.g., "align-items" -> "alignItems"
      */
@@ -830,6 +926,16 @@ class CssMappings
                     }
                     if (!isset($props['borderColor'])) {
                         $props['borderColor'] = (int)($parts[1] ?? 0);
+                    }
+                }
+            }
+
+            // Expand text-decoration shorthand in class body
+            if (preg_match('~text-decoration\s*:\s*([^;]+)~', $body, $tdMatch)) {
+                $expanded = self::expandTextDecorationValue(trim($tdMatch[1]));
+                foreach ($expanded as $tdKey => $tdVal) {
+                    if (!isset($props[$tdKey])) {
+                        $props[$tdKey] = $tdVal;
                     }
                 }
             }

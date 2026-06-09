@@ -435,7 +435,13 @@ class VNodeRenderer
             $elements[] = ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
                 'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold,
                 'fontFamily' => $style['fontFamily'] ?? '',
-                'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor];
+                'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
+                'decorationLine' => $style['textDecorationLine'] ?? 'none',
+                'decorationColor' => $style['textDecorationColor'] ?? $textColor,
+                'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
+                'decorationThickness' => $style['textDecorationThickness'] ?? 0,
+                'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
+                'textWidth' => self::measureTextWidth($text, $fontSize, (bool)$bold)];
 
             if (count($elements) === 1) {
                 return $elements[0];
@@ -546,7 +552,12 @@ class VNodeRenderer
                     'x' => $segX, 'y' => $lineY,
                     'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
                     'align' => 'left', 'layer' => $layer,
-                ];
+                    'decorationLine' => $style['textDecorationLine'] ?? 'none',
+                    'decorationColor' => $style['textDecorationColor'] ?? $color,
+                    'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
+                    'decorationThickness' => $style['textDecorationThickness'] ?? 0,
+                    'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
+                    'textWidth' => self::measureTextWidth($seg, $fontSize, (bool)$bold),];
                 $lineIdx++;
             }
             return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
@@ -571,7 +582,12 @@ class VNodeRenderer
             'x' => $x, 'y' => $y,
             'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
             'align' => $align, 'layer' => $layer,
-        ];
+            'decorationLine' => $style['textDecorationLine'] ?? 'none',
+            'decorationColor' => $style['textDecorationColor'] ?? $color,
+            'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
+            'decorationThickness' => $style['textDecorationThickness'] ?? 0,
+            'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
+            'textWidth' => self::measureTextWidth($text, $fontSize, (bool)$bold),];
     }
 
     private function makeButtonElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array

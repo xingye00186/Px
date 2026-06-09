@@ -113,6 +113,8 @@ class GdiRenderContext extends RenderContext
                     $el['bold'] ?? 0,
                     $el['fontFamily'] ?? ''
                 );
+                // 绘制 text-decoration 装饰线
+                $this->drawTextDecoration($el);
                 break;
 
             // ── 复合类型 (多次 GDI 调用) ──────
@@ -390,5 +392,113 @@ class GdiRenderContext extends RenderContext
     public function drawButton(int $x, int $y, int $w, int $h, int $bg, int $border): void
     {
         vue_draw_button($this->hdc, $x, $y, $w, $h, $bg, $border);
+    }
+
+    /**
+     * 绘制 text-decoration 装饰线（underline / overline / line-through）。
+     *
+     * 支持样式：solid, double, dotted, dashed, wavy。
+     * 多个 line 类型可组合（如 "underline overline"）。
+     */
+    private function drawTextDecoration(array $el): void
+    {
+        $decorationLine = $el['decorationLine'] ?? 'none';
+        if ($decorationLine === '' || $decorationLine === 'none') return;
+
+        $x = $el['x'] ?? 0;
+        $y = $el['y'] ?? 0;
+        $fontSize = $el['fontSize'] ?? 16;
+        $textWidth = $el['textWidth'] ?? 80;
+        if ($textWidth <= 0) return;
+
+        $color = $el['decorationColor'] ?? ($el['color'] ?? 0xFFFFFF);
+        $style = $el['decorationStyle'] ?? 'solid';
+        $thickness = $el['decorationThickness'] ?? 0;
+        $underlineOffset = $el['underlineOffset'] ?? 0;
+
+        // Auto thickness: ~5% of font size, minimum 1px
+        if ($thickness <= 0) {
+            $thickness = max(1, (int)($fontSize / 20));
+        }
+
+        // Auto underline gap from bottom of text
+        $autoGap = max(1, (int)($fontSize / 12));
+
+        $lineType = $decorationLine;
+        $lines = explode(' ', $lineType);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === 'none' || $line === 'blink' || $line === '') continue;
+
+            $lineY = 0;
+            switch ($line) {
+                case 'underline':
+                    $offset = $underlineOffset > 0 ? $underlineOffset : $autoGap;
+                    $lineY = $y + $fontSize + $offset;
+                    break;
+                case 'overline':
+                    $lineY = $y + 1;
+                    break;
+                case 'line-through':
+                    $lineY = $y + (int)($fontSize * 0.4);
+                    break;
+                default:
+                    continue 2;
+            }
+
+            $this->drawDecorationLine($x, $lineY, $textWidth, $thickness, $color, $style);
+        }
+    }
+
+    /**
+     * 根据样式绘制一条装饰线。
+     */
+    private function drawDecorationLine(int $x, int $y, int $w, int $thickness, int $color, string $style): void
+    {
+        switch ($style) {
+            case 'solid':
+                $this->fillRect($x, $y, $w, $thickness, $color);
+                break;
+
+            case 'double':
+                $gap = max(1, $thickness);
+                $this->fillRect($x, $y, $w, $thickness, $color);
+                $this->fillRect($x, $y + $thickness + $gap, $w, $thickness, $color);
+                break;
+
+            case 'dotted':
+                $dotLen = max($thickness, 2);
+                $spacing = $dotLen * 3;
+                for ($dx = $x; $dx < $x + $w; $dx += $spacing) {
+                    $segW = min($dotLen, $x + $w - $dx);
+                    if ($segW <= 0) break;
+                    $this->fillRect($dx, $y, $segW, $thickness, $color);
+                }
+                break;
+
+            case 'dashed':
+                $dashLen = max($thickness * 4, 4);
+                $gap = max($thickness * 2, 2);
+                for ($dx = $x; $dx < $x + $w; $dx += $dashLen + $gap) {
+                    $segW = min($dashLen, $x + $w - $dx);
+                    if ($segW <= 0) break;
+                    $this->fillRect($dx, $y, $segW, $thickness, $color);
+                }
+                break;
+
+            case 'wavy':
+                // Visual approximation: alternating short segments with Y offset
+                $waveLen = max($thickness * 3, 6);
+                $amplitude = max(1, $thickness);
+                $phase = 0;
+                for ($dx = $x; $dx < $x + $w; $dx += $waveLen) {
+                    $segW = min($waveLen, $x + $w - $dx);
+                    if ($segW <= 0) break;
+                    $waveY = $y + ($phase === 0 ? 0 : $amplitude);
+                    $this->fillRect($dx, $waveY, $segW, $thickness, $color);
+                    $phase = 1 - $phase;
+                }
+                break;
+        }
     }
 }
