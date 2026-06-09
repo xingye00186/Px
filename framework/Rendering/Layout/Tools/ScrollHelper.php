@@ -1,6 +1,6 @@
 <?php
 
-namespace Px\Rendering\Layout;
+namespace Px\Rendering\Layout\Tools;
 
 use native_types;
 

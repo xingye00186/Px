@@ -6,6 +6,7 @@ use native_types;
 
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
+use Px\Rendering\Layout\Tools\PercentResolver;
 
 /**
  * AbsolutePositioning — 绝对/固定定位布局
@@ -16,7 +17,7 @@ use Px\Rendering\RenderNode;
  *
  * 根据 CSS 规范实现绝对/fixed 定位、定位祖先查找、margin:auto 居中。
  */
-class AbsolutePositioning
+class AbsolutePositioning implements AbsoluteStrategy
 {
     private LayoutResolver $resolver;
 
@@ -34,18 +35,17 @@ class AbsolutePositioning
      * position:fixed v1 退化为 absolute（TODO v2: viewport 参考系）。
      */
     public function resolveAbsolutePositioning(
-        RenderNode  $node,
-        ?RenderNode $parent,
-        array       $style,
-        int         $left,
-        int         $top,
-        ?int        $right,
-        ?int        $bottom,
-        int         $width,
-        int         $height,
-        array       &$scrollContainers
+        RenderNode    $node,
+        LayoutContext $ctx,
+        array         $style
     ): void
     {
+        // 提取定位值
+        $left = (int)($style['left'] ?? 0);
+        $top = (int)($style['top'] ?? 0);
+        $right = $style['right'] ?? null;
+        $bottom = $style['bottom'] ?? null;
+
         // 判断定位模式：fixed vs absolute
         $pos = $style['position'] ?? 'absolute';
 
@@ -81,18 +81,25 @@ class AbsolutePositioning
         $ancestorW = ($ancestor !== null) ? $ancestor->w : $viewportW;
         $ancestorH = ($ancestor !== null) ? $ancestor->h : $viewportH;
 
+        // 使用定位祖先尺寸解析百分比宽高（符合 CSS 规范）
+        $width = PercentResolver::resolvePercent($style, 'width', 'widthPercent', $ancestorW);
+        $height = PercentResolver::resolvePercent($style, 'height', 'heightPercent', $ancestorH);
+
+        // CSS 2.2 §8.3, §8.4: margin/padding 百分比基于包含块 content box 宽度
+        $ancestorContentW = ($ancestor !== null) ? PercentResolver::resolveContentWidth($ancestor->style, $ancestor->w) : $viewportW;
+
         // CSS Box Model §7: margin/padding 百分比基于包含块宽度
         $marginLeftRaw = $style['marginLeft'] ?? $style['margin'] ?? null;
-        $marginLeft = ($marginLeftRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $ancestorW);
+        $marginLeft = ($marginLeftRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $ancestorContentW);
 
         $marginTopRaw = $style['marginTop'] ?? $style['margin'] ?? null;
-        $marginTop = ($marginTopRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $ancestorW);
+        $marginTop = ($marginTopRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $ancestorContentW);
 
         // Guard: margin:auto resolved later in resolveMarginAuto; treat as 0 here
 
-        $paddingLeft = PercentResolver::resolveMarginPaddingPercent($style, 'paddingLeft', 'paddingLeftPercent', $ancestorW);
-        $paddingRight = PercentResolver::resolveMarginPaddingPercent($style, 'paddingRight', 'paddingRightPercent', $ancestorW);
-        $paddingTop = PercentResolver::resolveMarginPaddingPercent($style, 'paddingTop', 'paddingTopPercent', $ancestorW);
+        $paddingLeft = PercentResolver::resolveMarginPaddingPercent($style, 'paddingLeft', 'paddingLeftPercent', $ancestorContentW);
+        $paddingRight = PercentResolver::resolveMarginPaddingPercent($style, 'paddingRight', 'paddingRightPercent', $ancestorContentW);
+        $paddingTop = PercentResolver::resolveMarginPaddingPercent($style, 'paddingTop', 'paddingTopPercent', $ancestorContentW);
 
         // relative: left/top 作为额外偏移（不改变 stack 推进位置）
         $node->x = $ancestorX + $left + $marginLeft;
@@ -124,10 +131,10 @@ class AbsolutePositioning
         }
 
         // ── margin:auto 水平 + 垂直居中 ──
-        // margin:auto 时的父内容区宽度 = padding box 宽度减去自身 padding
-        $parentContentW = ($ancestor !== null) ? (int)max(0, $ancestorW - $ancestorPaddingLeft - $ancestorPaddingRight) : 0;
+        // margin:auto 时的父内容区宽度 = content box 宽度
+        $parentContentW = ($ancestor !== null) ? max(0, $ancestorContentW) : 0;
 
-        $paddingBottom = PercentResolver::resolveMarginPaddingPercent($style, 'paddingBottom', 'paddingBottomPercent', $ancestorW);
+        $paddingBottom = PercentResolver::resolveMarginPaddingPercent($style, 'paddingBottom', 'paddingBottomPercent', $ancestorContentW);
 
         $parentContentH = ($ancestor !== null) ? (int)max(0, $ancestorH - $paddingTop - $paddingBottom) : 0;
 
@@ -150,7 +157,8 @@ class AbsolutePositioning
         $childOffsetY = $node->y + $paddingTop;
 
         foreach ($node->children as $child) {
-            $this->resolver->resolveNode($child, $childOffsetX, $childOffsetY, $node, refval($scrollContainers));
+            $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node, refval($ctx->scrollContainers));
+            $this->resolver->resolveNode($child, $childCtx);
         }
     }
 
@@ -209,14 +217,14 @@ class AbsolutePositioning
 
         $isMarginRightAuto = $style['marginRightAuto'] ?? $marginIsAuto;
 
-        if ($isMarginLeftAuto && $isMarginRightAuto && $node->w > 0 && $parentContentW > $node->w) {
+        if ($isMarginLeftAuto && $isMarginRightAuto && $node->w > 0 && $parentContentW > $node->w && $parentContentW > 0) {
             $remaining = $parentContentW - $node->w;
 
             $half = (int)($remaining / 2);
 
             $node->x += $half;
 
-        } elseif ($isMarginLeftAuto && !$isMarginRightAuto && $parentContentW > $node->w) {
+        } elseif ($isMarginLeftAuto && !$isMarginRightAuto && $parentContentW > $node->w && $parentContentW > 0) {
             $remaining = $parentContentW - $node->w;
 
             $node->x += $remaining;
@@ -229,7 +237,7 @@ class AbsolutePositioning
 
         $isMarginBottomAuto = $style['marginBottomAuto'] ?? $marginIsAuto;
 
-        if ($isMarginTopAuto && $isMarginBottomAuto && $node->h > 0 && $parentContentH > $node->h) {
+        if ($isMarginTopAuto && $isMarginBottomAuto && $node->h > 0 && $parentContentH > $node->h && $parentContentH > 0) {
             $remaining = $parentContentH - $node->h;
 
             $half = (int)($remaining / 2);

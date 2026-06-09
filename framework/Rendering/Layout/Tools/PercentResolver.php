@@ -1,6 +1,6 @@
 <?php
 
-namespace Px\Rendering\Layout;
+namespace Px\Rendering\Layout\Tools;
 
 use native_types;
 
@@ -17,36 +17,41 @@ class PercentResolver
     /**
      * Compute the content area width considering box-sizing and border.
      *
-     * border-box: content width = totalW - paddingLeft - paddingRight - borderWidth*2
-     * content-box: content width = totalW - paddingLeft - paddingRight (current default)
+     * CSS Box Model: $node->w represents the CSS 'width' property value.
+     *   content-box: CSS 'width' = content width, so totalW IS content width.
+     *   border-box:  CSS 'width' = border-box width, subtract padding+border to get content.
      */
-    public static function computeContentWidth(array $style, int $totalW): int
+    public static function resolveContentWidth(array $style, int $totalW): int
     {
         $boxSizing = $style['boxSizing'] ?? 'content-box';
-        $padL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
-        $padR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
-        $contentW = max(0, $totalW - $padL - $padR);
         if ($boxSizing === 'border-box') {
+            $padL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
+            $padR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
             $bw = (int)($style['borderWidth'] ?? 0);
-            $contentW = max(0, $contentW - $bw * 2);
+            return max(0, $totalW - $padL - $padR - $bw * 2);
         }
-        return $contentW;
+        // content-box: totalW ($node->w) = CSS 'width' which IS the content width
+        return max(0, $totalW);
     }
 
     /**
      * Compute the content area height considering box-sizing and border.
+     *
+     * CSS Box Model: $node->h represents the CSS 'height' property value.
+     *   content-box: CSS 'height' = content height, so totalH IS content height.
+     *   border-box:  CSS 'height' = border-box height, subtract padding+border to get content.
      */
-    public static function computeContentHeight(array $style, int $totalH): int
+    public static function resolveContentHeight(array $style, int $totalH): int
     {
         $boxSizing = $style['boxSizing'] ?? 'content-box';
-        $padT = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
-        $padB = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
-        $contentH = max(0, $totalH - $padT - $padB);
         if ($boxSizing === 'border-box') {
+            $padT = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+            $padB = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
             $bw = (int)($style['borderWidth'] ?? 0);
-            $contentH = max(0, $contentH - $bw * 2);
+            return max(0, $totalH - $padT - $padB - $bw * 2);
         }
-        return $contentH;
+        // content-box: totalH ($node->h) = CSS 'height' which IS the content height
+        return max(0, $totalH);
     }
 
     /**
@@ -85,7 +90,7 @@ class PercentResolver
      * @param bool $bold Whether text is bold (default false)
      * @return int Measured width in pixels
      */
-    public static function measureTextWidth(string $text, int $fontSize = 14, bool $bold = false): int
+    public static function resolveTextWidth(string $text, int $fontSize = 14, bool $bold = false): int
     {
         if (strlen($text) === 0) {
             return 0;
@@ -186,7 +191,7 @@ class PercentResolver
         if ($pct !== null && $containingBlockWidth > 0) {
             return (int)($containingBlockWidth * $pct / 100.0);
         }
-        $raw = $style[$key] ?? null;
+        $raw = $style[$key] ?? $style['margin'] ?? null;
         if ($raw === null || $raw === 'auto' || $raw === '') {
             return 0;
         }
@@ -197,7 +202,7 @@ class PercentResolver
      * 应用 CSS min-width/max-width 或 min-height/max-height 约束。
      * CSS 规范: 如果 min > max，则 max 被忽略。
      */
-    public static function applyMinMax(array $style, int $size, bool $isWidth): int
+    public static function resolveMinMax(array $style, int $size, bool $isWidth): int
     {
         $min = $isWidth ? (int)($style['minWidth'] ?? 0) : (int)($style['minHeight'] ?? 0);
 

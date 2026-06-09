@@ -8,30 +8,32 @@ use native_types;
 
 use Px\Core\Config;
 use Px\Rendering\Layout\AbsolutePositioning;
+use Px\Rendering\Layout\AbsoluteStrategy;
 use Px\Rendering\Layout\LayoutStrategyInterface;
 use Px\Rendering\Layout\BlockLayoutStrategy;
 use Px\Rendering\Layout\FlexLayoutStrategy;
 use Px\Rendering\Layout\GridLayoutStrategy;
-use Px\Rendering\Layout\PercentResolver;
-use Px\Rendering\Layout\ScrollHelper;
+use Px\Rendering\Layout\Tools\PercentResolver;
+use Px\Rendering\Layout\Tools\ScrollHelper;
+use Px\Rendering\Layout\LayoutContext;
 
 
 /**
- * LayoutResolver 鈥?杩愯�鏃?CSS 甯冨眬寮曟搸锛圧enderNode 鐗堬級
+ * LayoutResolver — 运行时 CSS 布局引擎（RenderNode 版）
  *
- * 閬嶅巻 RenderNode 鏍戯紝鏍规嵁 style 灞炴€ц�绠楁瘡涓�妭鐐圭殑 x/y/w/h 浣嶇疆銆?
- * 鑷?B1 閲嶆瀯鍚庝负璋冨害鍣�紝鎸?display 绫诲瀷鍒嗘淳鍒扮浉搴旂瓥鐣ョ被锛?
- * - display:flex/inline-flex 鈫?FlexLayoutStrategy
- * - display:grid 鈫?GridLayoutStrategy
- * - display:block 鍙婂叾浠?鈫?BlockLayoutStrategy
+ * 遍历 RenderNode 树，根据 style 属性计算每个节点的 x/y/w/h 位置。
+ * 自 B1 重构后为调度器，按 display 类型分派到相应策略类，
+ * - display:flex/inline-flex → FlexLayoutStrategy
+ * - display:grid → GridLayoutStrategy
+ * - display:block 及其他 → BlockLayoutStrategy
  *
- * resolveNode 淇濈暀涓烘牳蹇冭皟搴﹀叆鍙ｏ紝璐熻矗锛?
- * 1. 鑴忔爣璁版�鏌ヤ笌鍔ㄧ敾鏍峰紡鍚堝苟
- * 2. Layer 缁ф壙
- * 3. 婊氬姩瀹瑰櫒妫€娴?
- * 4. Flex/grid 婊氬姩瀹瑰櫒鍚庡�鐞?
- * 5. Sticky 瀹氫綅
- * 6. 娲佸噣璺�緞鍧愭爣浼犳挱
+ * resolveNode 保留为核心调度入口，负责：
+ * 1. 脏标记检查与动画样式合并
+ * 2. Layer 继承
+ * 3. 滚动容器检测
+ * 4. Flex/grid 滚动容器后处理
+ * 5. Sticky 定位
+ * 6. 洁净路径坐标传播
  */
 class LayoutResolver
 
@@ -42,7 +44,7 @@ class LayoutResolver
 
     private ?RenderNode $rootNode = null;
 
-    private AbsolutePositioning $absolutePositioning;
+    private AbsoluteStrategy $absolutePositioning;
     private LayoutStrategyInterface $blockStrategy;
     private LayoutStrategyInterface $flexStrategy;
     private LayoutStrategyInterface $gridStrategy;
@@ -62,7 +64,7 @@ class LayoutResolver
         $this->gridStrategy = new GridLayoutStrategy($this);
     }
 
-    public function getAbsolutePositioning(): AbsolutePositioning
+    public function getAbsolutePositioning(): AbsoluteStrategy
     {
         return $this->absolutePositioning;
     }
@@ -108,7 +110,8 @@ class LayoutResolver
         $scrollContainers = [];
 
 
-        $this->resolveNode($root, 0, 0, null, refval($scrollContainers));
+        $ctx = new LayoutContext(0, 0, null, refval($scrollContainers));
+        $this->resolveNode($root, $ctx);
 
 
         // Debug: final span dimensions after full layout (guarded by diag_enabled)
@@ -132,30 +135,12 @@ class LayoutResolver
     /**
      * Recursively resolve layout for a single node and its children.
      *
-     * @param RenderNode $node Current node
-     * @param int $parentX Accumulated parent X offset
-     * @param int $parentY Accumulated parent Y offset
-     * @param RenderNode|null $parent Parent RenderNode
-     * @param array &$scrollContainers Accumulator for scroll container nodes
+     * @param RenderNode    $node Current node
+     * @param LayoutContext $ctx  Layout context (parent coords, parent ref, scroll containers)
      */
     public function resolveNode(
-
-
-        RenderNode  $node,
-
-
-        int         $parentX,
-
-
-        int         $parentY,
-
-
-        ?RenderNode $parent,
-
-
-        array       &$scrollContainers
-
-
+        RenderNode    $node,
+        LayoutContext $ctx
     ): void
     {
         $this->resolveDepth++;
@@ -171,15 +156,15 @@ class LayoutResolver
         if ($node->layoutDirty) {
 
 
-            // 鈹€鈹€ 鑴忔爣璁版�鏌ワ細杩涘叆瀹屾暣甯冨眬璁＄畻 鈹€鈹€
-            // 缁熶竴鍏ュ彛锛氬湪 style 瑙ｆ瀽澶勫悎骞?animatedStyle
+            // ──┬── 脏标记检查：进入完整布局计算 ──┬──
+            // 统一入口：在 style 解析处合并 animatedStyle
             $style = $node->style;
 
 
             if ($node->isAnimating && !empty($node->animatedStyle)) {
 
 
-                // 娣卞害鎷疯礉锛氶伩鍏嶄慨鏀瑰師濮?$node->style
+                // 深度拷贝：避免修改原始 $node->style
                 $effectiveStyle = [];
 
 
@@ -213,10 +198,10 @@ class LayoutResolver
             // Inherit parent's layer (CSS stacking context)
 
 
-            if ($parent !== null && $parent->layer > 0) {
+            if ($ctx->parent !== null && $ctx->parent->layer > 0) {
 
 
-                $node->layer = $parent->layer;
+                $node->layer = $ctx->parent->layer;
 
 
             }
@@ -255,7 +240,7 @@ class LayoutResolver
 
 
                 $node->isScrollContainer = true;
-                $scrollContainers[] = $node;
+                $ctx->scrollContainers[] = $node;
 
             }
 
@@ -278,7 +263,7 @@ class LayoutResolver
 
                 case 'inline-flex':
 
-                    $this->flexStrategy->resolve($node, $parentX, $parentY, $parent, refval($scrollContainers), $effectiveStyle);
+                    $this->flexStrategy->resolve($node, $ctx, $effectiveStyle);
 
                     break;
 
@@ -286,15 +271,17 @@ class LayoutResolver
                 case 'grid':
 
 
-                    $this->gridStrategy->resolve($node, $parentX, $parentY, $parent, refval($scrollContainers), $effectiveStyle);
+                    $this->gridStrategy->resolve($node, $ctx, $effectiveStyle);
 
                     break;
 
 
                 default: // block, scroll-container, etc.
-
-                    $this->blockStrategy->resolve($node, $parentX, $parentY, $parent, refval($scrollContainers), $effectiveStyle);
-
+                    if ($position === 'absolute' || $position === 'fixed') {
+                        $this->absolutePositioning->resolveAbsolutePositioning($node, $ctx, $effectiveStyle);
+                    } else {
+                        $this->blockStrategy->resolve($node, $ctx, $effectiveStyle);
+                    }
                     break;
 
 
@@ -415,8 +402,8 @@ class LayoutResolver
                 $node->style['_stickyBaseY'] = $node->y;
 
                 // Find nearest scroll container that contains this node
-                for ($i = count($scrollContainers) - 1; $i >= 0; $i--) {
-                    $sc = $scrollContainers[$i];
+                for ($i = count($ctx->scrollContainers) - 1; $i >= 0; $i--) {
+                    $sc = $ctx->scrollContainers[$i];
 
                     // Check if node is within this scroll container's bounds
                     if ($node->x >= $sc->x && $node->x < $sc->x + $sc->w &&
@@ -503,10 +490,11 @@ class LayoutResolver
             $style = $node->style;
 
 
-            $marginLeft = (int)($style['marginLeft'] ?? $style['margin'] ?? 0);
+            $cbWidth = $ctx->parent ? PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w) : 0;
+            $marginLeft = PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $cbWidth);
 
 
-            $marginTop = (int)($style['marginTop'] ?? $style['margin'] ?? 0);
+            $marginTop = PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $cbWidth);
 
 
             // For static flex/grid items, their positions are determined by the parent's
@@ -522,7 +510,7 @@ class LayoutResolver
                 if (array_key_exists('left', $style)) {
 
 
-                    $node->x = (int)($style['left'] + $parentX + $marginLeft);
+                    $node->x = (int)($style['left'] + $ctx->parentX + $marginLeft);
 
 
                 }
@@ -531,7 +519,7 @@ class LayoutResolver
                 if (array_key_exists('top', $style)) {
 
 
-                    $node->y = (int)($style['top'] + $parentY + $marginTop);
+                    $node->y = (int)($style['top'] + $ctx->parentY + $marginTop);
 
 
                 }
@@ -540,10 +528,10 @@ class LayoutResolver
             }
 
 
-            // 鈹€鈹€ 婊氬姩鍋忕Щ鐢?VNodeRenderer 鍦ㄧ粯鍒跺眰澶勭悊锛圓1 閲嶆瀯锛夆攢鈹€
+            // ──┬── 滚动偏移由 VNodeRenderer 在绘制层处理（A1 重构）──┬──
 
 
-            // 鈹€鈹€ 瀛愯妭鐐硅剰鏍囪�澶勭悊 鈹€鈹€
+            // ──┬── 子节点脏标记处理 ──┬──
             // Flex/grid container with dirty children: re-run full layout
 
 
@@ -562,7 +550,7 @@ class LayoutResolver
                         $node->layoutDirty = true;
 
 
-                        $this->resolveNode($node, $parentX, $parentY, $parent, refval($scrollContainers));
+                        $this->resolveNode($node, $ctx);
 
 
                         $this->resolveDepth--;
@@ -595,7 +583,8 @@ class LayoutResolver
             foreach ($node->children as $child) {
 
 
-                $this->resolveNode($child, $childOffsetX, $childOffsetY, $node, refval($scrollContainers));
+                $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node, refval($ctx->scrollContainers));
+                $this->resolveNode($child, $childCtx);
 
 
             }

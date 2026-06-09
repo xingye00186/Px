@@ -7,6 +7,8 @@ use native_types;
 use Px\Rendering\CssMappings;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
+use Px\Rendering\Layout\Tools\PercentResolver;
+use Px\Rendering\Layout\Tools\ScrollHelper;
 
 /**
  * GridLayoutStrategy — CSS Grid 布局策略
@@ -22,15 +24,12 @@ use Px\Rendering\RenderNode;
 class GridLayoutStrategy implements LayoutStrategyInterface
 {
     public function resolve(
-        RenderNode  $node,
-        int         $parentX,
-        int         $parentY,
-        ?RenderNode $parent,
-        array       &$scrollContainers,
-        array       $style
+        RenderNode    $node,
+        LayoutContext $ctx,
+        array         $style
     ): void
     {
-        $this->resolveGridLayout($node, $parentX, $parentY, $parent, $scrollContainers, $style);
+        $this->resolveGridLayout($node, $ctx, $style);
     }
     private LayoutResolver $resolver;
 
@@ -43,12 +42,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
      * Grid layout: position children in a CSS grid.
      */
     public function resolveGridLayout(
-        RenderNode  $node,
-        int         $parentX,
-        int         $parentY,
-        ?RenderNode $parent,
-        array       &$scrollContainers,
-        array       $style
+        RenderNode    $node,
+        LayoutContext $ctx,
+        array         $style
     ): void
     {
         $left = $style['left'] ?? 0;
@@ -60,11 +56,11 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $height = $style['height'] ?? 0;
 
         // CSS: grid item percentage width resolves against content width
-        $parentW = (int)(($parent !== null) ? max(0, $parent->w
-            - (int)($parent->style['paddingLeft'] ?? $parent->style['padding'] ?? 0)
-            - (int)($parent->style['paddingRight'] ?? $parent->style['padding'] ?? 0)) : 0);
+        $parentW = (int)(($ctx->parent !== null) ? max(0, $ctx->parent->w
+            - (int)($ctx->parent->style['paddingLeft'] ?? $ctx->parent->style['padding'] ?? 0)
+            - (int)($ctx->parent->style['paddingRight'] ?? $ctx->parent->style['padding'] ?? 0)) : 0);
 
-        $parentH = ($parent !== null) ? $parent->h : 0;
+        $parentH = ($ctx->parent !== null) ? $ctx->parent->h : 0;
 
         $width = PercentResolver::resolvePercent($style, 'width', 'widthPercent', $parentW);
 
@@ -74,15 +70,15 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
-        if (!$hasExplicitW && $width === 0 && $parent !== null) {
-            $width = $parent->w;
+        if (!$hasExplicitW && $width === 0 && $ctx->parent !== null) {
+            $width = $ctx->parent->w;
         }
 
         // Note: height:auto for grid containers is content-based (computed below)
 
-        $node->x = $left + $parentX;
+        $node->x = $left + $ctx->parentX;
 
-        $node->y = $top + $parentY;
+        $node->y = $top + $ctx->parentY;
 
         // Apply translate from animatedStyle
 
@@ -95,9 +91,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $node->y += $translateY;
 
         // ── 应用 min/max 约束到尺寸（在子节点递归之前，确保 parent->w/h 立即可用）──
-        $node->w = (int)max(0, (int)PercentResolver::applyMinMax($style, $width, true));
+        $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $width, true));
 
-        $node->h = (int)max(0, (int)PercentResolver::applyMinMax($style, $height, false));
+        $node->h = (int)max(0, (int)PercentResolver::resolveMinMax($style, $height, false));
 
         // Parse grid template
 
@@ -219,7 +215,8 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $children = [];
 
         foreach ($node->children as $child) {
-            $this->resolver->resolveNode($child, $node->x, $node->y, $node, refval($scrollContainers));
+            $childCtx = new LayoutContext($node->x, $node->y, $node, refval($ctx->scrollContainers));
+            $this->resolver->resolveNode($child, $childCtx);
 
             $children[] = $child;
         }
@@ -345,11 +342,11 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             // NOTE: 不设置 $ch->h，保留 resolveNode 后的自然高度
 
             // min/max 约束（仅宽度）
-            $ch->w = (int)max(0, (int)PercentResolver::applyMinMax($childStyle, $ch->w, true));
+            $ch->w = (int)max(0, (int)PercentResolver::resolveMinMax($childStyle, $ch->w, true));
             // 高度不应用 min/max——等调整后得到自然内容高度
 
             // 调整子节点（重解析 flex/grid 的百分比尺寸）
-            $this->adjustGridItemChildren($ch, refval($scrollContainers));
+            $this->adjustGridItemChildren($ch, $ctx);
 
             // 计算 grid item 的实际内容高度：从子节点的 bottom 边推算
             $actualContentH = $ch->h;
@@ -420,12 +417,12 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             }
 
             // min/max 约束
-            $ch->w = max(0, (int)PercentResolver::applyMinMax($childStyle, $ch->w, true));
-            $ch->h = max(0, (int)PercentResolver::applyMinMax($childStyle, $ch->h, false));
+            $ch->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $ch->w, true));
+            $ch->h = max(0, (int)PercentResolver::resolveMinMax($childStyle, $ch->h, false));
 
             // 如果高度变化了（stretch），需要重新调整子节点
             if ($alignSelf === 'stretch') {
-                $this->adjustGridItemChildren($ch, refval($scrollContainers));
+                $this->adjustGridItemChildren($ch, $ctx);
                 // 恢复 grid cell 决定的位置和宽度（adjustGridItemChildren 内部会 restore）
                 $ch->y = $newCellY;
                 $ch->h = $actualRowH;
@@ -444,7 +441,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             }
             $contentH = (int)($maxBottom - $node->y);
             if ($contentH > $node->h) {
-                $computedH = (int)PercentResolver::applyMinMax($style, $contentH, false);
+                $computedH = (int)PercentResolver::resolveMinMax($style, $contentH, false);
                 if ($computedH > $node->h) {
                     $node->h = $computedH;
                 }
@@ -460,7 +457,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
      *
      * CSS 规范: 重新解析时需保持 grid item 自身的布局上下文。
      */
-    private function adjustGridItemChildren(RenderNode $gridItem, array &$scrollContainers): void
+    private function adjustGridItemChildren(RenderNode $gridItem, LayoutContext $ctx): void
     {
         if (empty($gridItem->children) || $gridItem->w <= 0) {
             return;
@@ -485,11 +482,11 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $gridItem->style['width'] = $savedW;
             $gridItem->style['height'] = $savedH;
 
+            $childCtx = new LayoutContext($savedX, $savedY, $gridItem, refval($ctx->scrollContainers));
+
             $this->resolver->getFlexStrategy()->resolveFlexLayout(
                 $gridItem,
-                $savedX, $savedY,
-                $gridItem,
-                refval($scrollContainers),
+                $childCtx,
                 $gridItem->style
             );
 
@@ -531,11 +528,11 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $gridItem->style['width'] = $savedW;
             $gridItem->style['height'] = $savedH;
 
+            $childCtx2 = new LayoutContext($savedX, $savedY, $gridItem, refval($ctx->scrollContainers));
+
             $this->resolveGridLayout(
                 $gridItem,
-                $savedX, $savedY,
-                $gridItem,
-                refval($scrollContainers),
+                $childCtx2,
                 $gridItem->style
             );
 
@@ -562,7 +559,8 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         // Block 显示: 逐个重新解析子节点
         foreach ($gridItem->children as $child) {
             ScrollHelper::markSubtreeDirty($child);
-            $this->resolver->resolveNode($child, $gridItem->x, $gridItem->y, $gridItem, refval($scrollContainers));
+            $childCtx = new LayoutContext($gridItem->x, $gridItem->y, $gridItem, refval($ctx->scrollContainers));
+            $this->resolver->resolveNode($child, $childCtx);
         }
     }
 }

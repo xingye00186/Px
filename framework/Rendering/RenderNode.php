@@ -46,13 +46,13 @@ class RenderNode
     /** 上次渲染时的 scrollTop，用于快速滚动路径比较 */
     public int $lastScrollTop = 0;
 
-    // ── 滚动偏移（由 VNodeRenderer 在绘制时叠加，布局阶段不变）──
+    // ── 绘制偏移（由 VNodeRenderer 在绘制时叠加，布局阶段不变）──
 
-    /** 当前累计的视口滚动偏移 X（用于绘制时的坐标调整） */
-    public int $scrollOffsetX = 0;
+    /** 当前累计的祖先滚动偏移 X（用于绘制时坐标调整，非自身 scrollLeft） */
+    public int $renderOffsetX = 0;
 
-    /** 当前累计的视口滚动偏移 Y（用于绘制时的坐标调整） */
-    public int $scrollOffsetY = 0;
+    /** 当前累计的祖先滚动偏移 Y（用于绘制时坐标调整，非自身 scrollTop） */
+    public int $renderOffsetY = 0;
 
     // ── 动画专用字段 ────────────────────────────────────────
 

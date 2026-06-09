@@ -488,42 +488,35 @@ class Application
         $oldChildren = $oldNode !== null
             ? VNode::childrenToArray($oldNode->children)
             : [];
-        $newChildren = VNode::childrenToArray($newNode->children);
 
-        $count = (int)min(count($oldChildren), count($newChildren));
-        for ($i = 0; $i < $count; $i++) {
-            $replacement = $this->patchComponentTree(
-                $newChildren[$i],
-                $owner,
-                $oldChildren[$i]
-            );
-            if ($replacement !== null && $replacement !== $newChildren[$i] && is_array($newNode->children)) {
-                $this->replaceVNodeInArray($newNode->children, $newChildren[$i], $replacement);
+        // 使用引用遍历直接修改原 children 数组，避免临时数组 + 线性查找
+        if (is_array($newNode->children)) {
+            $oldIdx = 0;
+            foreach ($newNode->children as &$child) {
+                if (!($child instanceof VNode)) {
+                    continue;
+                }
+                $oldMatch = $oldIdx < count($oldChildren) ? $oldChildren[$oldIdx] : null;
+                $replacement = $this->patchComponentTree($child, $owner, $oldMatch);
+                if ($replacement !== null && $replacement !== $child) {
+                    $child = $replacement;
+                }
+                $oldIdx++;
             }
-        }
-
-        for ($i = $count; $i < count($newChildren); $i++) {
-            $replacement = $this->patchComponentTree($newChildren[$i], $owner, null);
-            if ($replacement !== null && $replacement !== $newChildren[$i] && is_array($newNode->children)) {
-                $this->replaceVNodeInArray($newNode->children, $newChildren[$i], $replacement);
+            unset($child);
+        } elseif ($newNode->children instanceof VNode) {
+            // Single VNode child（非数组情况）
+            $oldMatch = !empty($oldChildren) ? $oldChildren[0] : null;
+            $replacement = $this->patchComponentTree($newNode->children, $owner, $oldMatch);
+            if ($replacement !== null && $replacement !== $newNode->children) {
+                $newNode->children = $replacement;
             }
         }
 
         return null;
     }
 
-    /**
-     * Replace a VNode in an array by identity comparison.
-     */
-    private function replaceVNodeInArray(array &$arr, VNode $original, VNode $replacement): void
-    {
-        foreach ($arr as $k => $v) {
-            if ($v === $original) {
-                $arr[$k] = $replacement;
-                return;
-            }
-        }
-    }
+
 
     private function matchComponentNode(
         VNode $newNode,

@@ -8,6 +8,8 @@ use Px\Core\Config;
 use Px\Rendering\CssMappings;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
+use Px\Rendering\Layout\Tools\PercentResolver;
+use Px\Rendering\Layout\Tools\ScrollHelper;
 
 /**
  * FlexLayoutStrategy — Flex 布局策略
@@ -25,15 +27,12 @@ use Px\Rendering\RenderNode;
 class FlexLayoutStrategy implements LayoutStrategyInterface
 {
     public function resolve(
-        RenderNode  $node,
-        int         $parentX,
-        int         $parentY,
-        ?RenderNode $parent,
-        array       &$scrollContainers,
-        array       $style
+        RenderNode    $node,
+        LayoutContext $ctx,
+        array         $style
     ): void
     {
-        $this->resolveFlexLayout($node, $parentX, $parentY, $parent, $scrollContainers, $style);
+        $this->resolveFlexLayout($node, $ctx, $style);
     }
     private LayoutResolver $resolver;
 
@@ -46,12 +45,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
      * Flex layout: compute child positions using flex algorithm.
      */
     public function resolveFlexLayout(
-        RenderNode  $node,
-        int         $parentX,
-        int         $parentY,
-        ?RenderNode $parent,
-        array       &$scrollContainers,
-        array       $style
+        RenderNode    $node,
+        LayoutContext $ctx,
+        array         $style
     ): void
     {
         error_log('[DIAG_FLEX] enter resolveFlexLayout type=' . $node->type . ' w=' . ((int)($style['width'] ?? 0)) . ' h=' . ((int)($style['height'] ?? 0)));
@@ -65,9 +61,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         $height = (int)($style['height'] ?? 0);
 
-        $node->x = $left + $parentX;
+        $node->x = $left + $ctx->parentX;
 
-        $node->y = $top + $parentY;
+        $node->y = $top + $ctx->parentY;
 
         // Apply translate from animatedStyle
 
@@ -80,11 +76,11 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $node->y += $translateY;
 
         // CSS: flex item percentage width resolves against content width
-        $parentW = (int)(($parent !== null) ? max(0, $parent->w
-            - (int)($parent->style['paddingLeft'] ?? $parent->style['padding'] ?? 0)
-            - (int)($parent->style['paddingRight'] ?? $parent->style['padding'] ?? 0)) : 0);
+        $parentW = (int)(($ctx->parent !== null) ? max(0, $ctx->parent->w
+            - (int)($ctx->parent->style['paddingLeft'] ?? $ctx->parent->style['padding'] ?? 0)
+            - (int)($ctx->parent->style['paddingRight'] ?? $ctx->parent->style['padding'] ?? 0)) : 0);
 
-        $parentH = ($parent !== null) ? $parent->h : 0;
+        $parentH = ($ctx->parent !== null) ? $ctx->parent->h : 0;
 
         $width = PercentResolver::resolvePercent($style, 'width', 'widthPercent', $parentW);
 
@@ -96,19 +92,19 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // ── Scroll container post-processing for flex/grid display modes ──
 
-        $parentDisplay = ($parent !== null) ? ($parent->style['display'] ?? '') : '';
+        $parentDisplay = ($ctx->parent !== null) ? ($ctx->parent->style['display'] ?? '') : '';
 
         $isFlexOrGridItem = ($parentDisplay === 'flex' || $parentDisplay === 'grid');
 
         if (!$isFlexOrGridItem) {
             $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
-            if (!$hasExplicitW && $width === 0 && $parent !== null) {
-                $width = (int)($parent->w);
+            if (!$hasExplicitW && $width === 0 && $ctx->parent !== null) {
+                $width = (int)($ctx->parent->w);
 
                 $node->w = (int)max(0, (int)$width);
             }
-        } elseif ($parent !== null && $parentDisplay === 'flex') {
+        } elseif ($ctx->parent !== null && $parentDisplay === 'flex') {
             // ── Scroll container post-processing for flex/grid display modes ──
 
             // cross-axis (width) size for correct first-pass internal layout.
@@ -117,18 +113,18 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             // their internal grid to compute 1 column with inflated height, which
             // then triggers flex-shrink and damages sibling items' explicit sizes.
 
-            $parentDirection = $parent->style['flexDirection'] ?? 'row';
+            $parentDirection = $ctx->parent->style['flexDirection'] ?? 'row';
 
             $parentIsColumn = ($parentDirection === 'column' || $parentDirection === 'column-reverse');
 
             $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
             if ($parentIsColumn && !$hasExplicitW && $width === 0) {
-                $parentPadL = (int)($parent->style['paddingLeft'] ?? $parent->style['padding'] ?? 0);
+                $parentPadL = (int)($ctx->parent->style['paddingLeft'] ?? $ctx->parent->style['padding'] ?? 0);
 
-                $parentPadR = (int)($parent->style['paddingRight'] ?? $parent->style['padding'] ?? 0);
+                $parentPadR = (int)($ctx->parent->style['paddingRight'] ?? $ctx->parent->style['padding'] ?? 0);
 
-                $parentContentW = (int)max(0, $parent->w - $parentPadL - $parentPadR);
+                $parentContentW = (int)max(0, $ctx->parent->w - $parentPadL - $parentPadR);
 
                 $width = $parentContentW;
 
@@ -169,22 +165,22 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
-        $containerMain = max(0, $isRow ? PercentResolver::computeContentWidth($style, $width) : PercentResolver::computeContentHeight($style, $height));
+        $containerMain = max(0, $isRow ? PercentResolver::resolveContentWidth($style, $width) : PercentResolver::resolveContentHeight($style, $height));
 
-        $containerCross = max(0, $isRow ? PercentResolver::computeContentHeight($style, $height) : PercentResolver::computeContentWidth($style, $width));
+        $containerCross = max(0, $isRow ? PercentResolver::resolveContentHeight($style, $height) : PercentResolver::resolveContentWidth($style, $width));
 
         // ── Step 1: Collect children and resolve ──
 
         // Apply scroll offset to child parent coordinates for scroll containers
 
-        $scrollOffsetX = 0;
+        $scrollShiftX = 0;
 
-        $scrollOffsetY = 0;
+        $scrollShiftY = 0;
 
         if ($node->isScrollContainer) {
-            $scrollOffsetX = $node->scrollLeft;
+            $scrollShiftX = $node->scrollLeft;
 
-            $scrollOffsetY = $node->scrollTop;
+            $scrollShiftY = $node->scrollTop;
         }
 
         $children = [];
@@ -192,7 +188,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         foreach ($node->children as $child) {
             $childPosition = $child->style['position'] ?? 'static';
 
-            $this->resolver->resolveNode($child, $node->x + $paddingLeft - $scrollOffsetX, $node->y + $paddingTop - $scrollOffsetY, $node, refval($scrollContainers));
+            $childCtx = new LayoutContext($node->x + $paddingLeft - $scrollShiftX, $node->y + $paddingTop - $scrollShiftY, $node, refval($ctx->scrollContainers));
+            $this->resolver->resolveNode($child, $childCtx);
 
             // position:absolute/fixed children are removed from flex flow
             if ($childPosition !== 'absolute' && $childPosition !== 'fixed') {
@@ -602,9 +599,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             // ── Step 8: Min/max constraints ──
 
             foreach ($lineChildren as $ch) {
-                $ch->w = (int)max(0, (int)PercentResolver::applyMinMax($ch->style, $ch->w, true));
+                $ch->w = (int)max(0, (int)PercentResolver::resolveMinMax($ch->style, $ch->w, true));
 
-                $ch->h = (int)max(0, (int)PercentResolver::applyMinMax($ch->style, $ch->h, false));
+                $ch->h = (int)max(0, (int)PercentResolver::resolveMinMax($ch->style, $ch->h, false));
             }
 
             // ── Step 9: Recalculate totalMain after shrink ──
@@ -912,7 +909,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $gc->layoutDirty = true;
                         }
 
-                        $this->resolver->resolveNode($chTp, $prX, $prY, $parent, refval($scrollContainers));
+                        $chCtx = new LayoutContext($prX, $prY, $ctx->parent, refval($ctx->scrollContainers));
+                        $this->resolver->resolveNode($chTp, $chCtx);
 
                         if ($hasOrigW) {
                             $chTp->style['width'] = $origW;
@@ -939,7 +937,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                         foreach ($chTp->children as $grandchild) {
                             $grandchild->layoutDirty = true;
-                            $this->resolver->resolveNode($grandchild, $gcOffsetX, $gcOffsetY, $chTp, refval($scrollContainers));
+                            $gcCtx = new LayoutContext($gcOffsetX, $gcOffsetY, $chTp, refval($ctx->scrollContainers));
+                            $this->resolver->resolveNode($grandchild, $gcCtx);
                         }
                     }
                 }
@@ -950,7 +949,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     $padRsp = (int)($chTp->style['paddingRight'] ?? $chTp->style['padding'] ?? 0);
                     $coffY = $chTp->y + $padTsp - $chTp->scrollTop;
 
-                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $chTp->style, $coffY, $padLsp, $padRsp, refval($scrollContainers));
+                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $ctx, $chTp->style, $coffY, $padLsp, $padRsp);
                 }
             }
 
@@ -1091,7 +1090,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                     $bd = ($ch->style['fontWeight'] ?? 'normal') === 'bold' || ($ch->style['fontWeight'] ?? 'normal') === '700';
 
-                    $measured = PercentResolver::measureTextWidth($chText, $fs, $bd);
+                    $measured = PercentResolver::resolveTextWidth($chText, $fs, $bd);
 
                     if ($measured > 0) {
                         if ($isRow) {

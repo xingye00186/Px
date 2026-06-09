@@ -101,8 +101,8 @@ class VNodeRenderer
         // ── A1 重构: 设置节点的滚动偏移（用于 renderNodeToElement）──
         // position:fixed 元素不受任何祖先滚动影响
         $isFixed = ($node->style['position'] ?? '') === 'fixed';
-        $node->scrollOffsetX = $isFixed ? 0 : $accumOffsetX;
-        $node->scrollOffsetY = $isFixed ? 0 : $accumOffsetY;
+        $node->renderOffsetX = $isFixed ? 0 : $accumOffsetX;
+        $node->renderOffsetY = $isFixed ? 0 : $accumOffsetY;
 
         // 增量绘制：如果节点不需要绘制，跳过但继续处理子节点
         if (!$node->needsPaint($this->currentPaintFrame)) {
@@ -288,8 +288,8 @@ class VNodeRenderer
     {
         $style = $node->style;
         // A1 重构: 布局坐标 + 绘制时滚动偏移（不在布局层修改坐标）
-        $x = $node->x + $node->scrollOffsetX;
-        $y = $node->y + $node->scrollOffsetY;
+        $x = $node->x + $node->renderOffsetX;
+        $y = $node->y + $node->renderOffsetY;
         $w = $node->w;
         $h = $node->h;
         $layer = $node->layer;
