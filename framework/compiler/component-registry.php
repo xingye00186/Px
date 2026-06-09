@@ -75,30 +75,6 @@ class ComponentRegistry
     }
 
     /**
-     * Load component mappings from a config array (legacy API, kept for backward compat).
-     * Now delegates to register() with source='user'.
-     *
-     * @deprecated 直接使用 register() 逐项注册组件，或使用 loadLibraries() 加载库组件。
-     *             此方法保留仅为兼容旧调用方。
-     * @param array  $config   e.g. ['my-panel' => './components/MyPanel.vue']
-     * @param string $baseDir  Base directory for resolving relative paths
-     * @return string[]  Warnings for missing files or conflicts
-     */
-    public function load(array $config, string $baseDir): array
-    {
-        $warnings = [];
-        foreach ($config as $tagName => $relativePath) {
-            $absolutePath = $baseDir . DIRECTORY_SEPARATOR
-                . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
-            $warn = $this->register($tagName, $absolutePath, 'user');
-            if ($warn !== null) {
-                $warnings[] = $warn;
-            }
-        }
-        return $warnings;
-    }
-
-    /**
      * Load component libraries from project.yml configuration.
      *
      * @param array  $librariesConfig  Array of library config entries from project.yml

@@ -85,20 +85,14 @@ function loadComponentRegistry(string $vueFile): ComponentRegistry
     }
 
     $files = glob($componentsDir . DIRECTORY_SEPARATOR . '*.vue');
-    $config = [];
     foreach ($files as $file) {
         $baseName = pathinfo($file, PATHINFO_FILENAME);
         $tagName = strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $baseName));
         $tagName = strtolower($tagName);
         if ($tagName === '') continue;
-        $relativePath = 'components' . DIRECTORY_SEPARATOR . basename($file);
-        $config[$tagName] = $relativePath;
-    }
-
-    if (count($config) > 0) {
-        $warnings = $registry->load($config, $appDir);
-        foreach ($warnings as $w) {
-            echo "  [WARN] ComponentRegistry: $w\n";
+        $warn = $registry->register($tagName, $file, 'user');
+        if ($warn !== null) {
+            echo "  [WARN] ComponentRegistry: $warn\n";
         }
     }
 
