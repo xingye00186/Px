@@ -175,7 +175,7 @@ class GdiRenderContext extends RenderContext
                         );
                     }
                 }
-                if (!empty($el['label'])) {
+                if (isset($el['label']) && $el['label'] !== '') {
                     $this->drawText(
                         $el['labelX'] ?? 0,
                         $el['labelY'] ?? 0,
@@ -345,7 +345,7 @@ class GdiRenderContext extends RenderContext
                     $this->fillRect($x, $y, $fillW, $h, $el['fillColor'] ?? 0x4488CC);
                 }
                 // 进度文本 (可选的标签)
-                if (!empty($el['label'])) {
+                if (isset($el['label']) && $el['label'] !== '') {
                     $fontSize = $el['fontSize'] ?? 14;
                     $labelW = (int)(strlen($el['label']) * $fontSize * 0.6);
                     $this->drawText(
