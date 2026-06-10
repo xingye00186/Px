@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'
 
 # Use relative path based on script location
 $root = $PSScriptRoot
