@@ -13,7 +13,7 @@
 
 ## 修复 0：Snapshot 体积控制与智能触发（新增）
 
-**📁 文件**：`framework/Core/Application.php`、`apps/bilibili/px_debug.yml`
+**📁 文件**：`framework/Core/Application.php`、`apps/bilibili/project.yml`（`Px_debug_*` 项）
 
 **问题**：当前 snapshot 在每次 `render()` 都输出（包括动画帧、hover 光标变化等），导致 `_snapshot.log` 已达 121800 行。无文件轮转机制，单文件无限增长。
 
@@ -80,13 +80,13 @@ if (Config::get('snapshot_enabled', false)) {
   追加当前 snapshot
 ```
 
-**新增配置项**（px_debug.yml）：
+**新增配置项**（在 project.yml 中以 `Px_debug_` 前缀添加）：
 ```yaml
-snapshot_enabled: true
-snapshot_max_events: 5
-snapshot_detail: normal
-snapshot_max_size_mb: 5        # 轮转阈值，默认 5MB
-snapshot_max_backups: 5        # 保留的备份文件数
+Px_debug_snapshot_enabled: true
+Px_debug_snapshot_max_events: 5
+Px_debug_snapshot_detail: normal
+Px_debug_snapshot_max_size_mb: 5        # 轮转阈值，默认 5MB
+Px_debug_snapshot_max_backups: 5        # 保留的备份文件数
 ```
 
 **修改 `outputSnapshot()` 方法**：
@@ -446,7 +446,7 @@ if ($childML || $childMR) {
 | `framework/Core/Application.php` | ~610 | render 中改为检查 `$snapshotRequested` 标记 | 0-B |
 | `framework/Core/Application.php` | ~652 | doFirstRender 后主动触发初始快照 | 0-C |
 | `framework/Core/Application.php` | ~626 | outputSnapshot 增加文件大小检查 + 轮转 | 0-D |
-| `apps/bilibili/px_debug.yml` | - | 新增 `snapshot_max_size_mb`、`snapshot_max_backups` | 0-E |
+| `apps/bilibili/project.yml` | - | 新增 `Px_debug_snapshot_max_size_mb`、`Px_debug_snapshot_max_backups` | 0-E |
 | `framework/compiler/template-parser.php` | 310-316 | 仅通过正则提取 `width:(\d+)px` / `height:(\d+)px` | 1-A |
 | `framework/compiler/template-parser.php` | 331 | 只设置具有非零值维度的 style 属性 | 1-B |
 | `framework/compiler/template-parser.php` | 334-335 | #root w/h 使用 0 作为默认值 | 1-C |
@@ -469,7 +469,7 @@ if ($childML || $childMR) {
 
 ### 第 2 轮：Snapshot 布局坐标验证
 
-snapshot 配置：`apps/bilibili/px_debug.yml` 中 `snapshot_enabled: true`
+snapshot 配置：`apps/bilibili/project.yml` 中 `Px_debug_snapshot_enabled: true`
 输出文件：`apps/bilibili/debug/_snapshot.log`
 
 **验证检查清单**（对照 snapshot 输出逐项检查）：

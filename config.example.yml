@@ -1,2 +1,31 @@
 # SFC Framework Configuration
 swoole_compiler: D:\swoole_compiler
+
+# Debug mode: set debug: true to enable debug symbols and disable optimizations
+# Priority: project.yml > config.yml > default (off)
+# debug: false
+
+# Optional: manually specify vcvarsall.bat path if auto-detection fails
+# If not set, build.bat auto-searches C:\Program Files\Microsoft Visual Studio\
+# Example:
+#   vcvarsall: C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat
+
+# UTF-8 mode for generated C++ files
+utf8_output: true
+
+# Clear compilation cache: set true to delete build/ and gen/ before each SFC compile
+# Priority: project.yml > config.yml (project.yml false disables entirely)
+# If project.yml has true or is unset, config.yml true enables clearing
+# Default: off
+Px_clear_compilation_cache: false
+
+# Runtime debug config reference (place these in each app's project.yml)
+# Read by framework/Core/Config.php, keys use Px_debug_ prefix
+# Example:
+#   Px_debug_diag_enabled: false          # Enable/disable diagnostic logging
+#   Px_debug_diag_log_path: ''             # Diagnostic log file path
+#   Px_debug_snapshot_enabled: false       # Enable render snapshot debugging
+#   Px_debug_snapshot_max_events: 5        # Max snapshot events to capture
+#   Px_debug_snapshot_detail: normal       # Snapshot detail level
+#   Px_debug_snapshot_max_size_mb: 5       # Max snapshot file size
+#   Px_debug_snapshot_max_backups: 5       # Max snapshot backups

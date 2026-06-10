@@ -6,17 +6,17 @@
 
 ## 设计方案
 
-### 1. px_debug.yml 配置（每个项目独立）
+### 1. project.yml 配置（每个项目独立，Px_debug_ 前缀）
 
-**文件位置**: `apps/<项目名>/px_debug.yml`
+**文件位置**: `apps/<项目名>/project.yml`，以 `Px_debug_` 为前缀
 
 **不放在框架级 config.yml 中**，每个应用独立控制，互不影响。
 
 ```yaml
-# 应用级 Debug 配置 (与 main.php 同级)
-snapshot_enabled: true       # 是否启用渲染快照
-snapshot_max_events: 5       # 快照中包含的最近事件数
-snapshot_detail: normal      # minimal | normal | verbose（后续扩展）
+# 应用级 Debug 配置 (在 project.yml 中，使用 Px_debug_ 前缀)
+Px_debug_snapshot_enabled: true       # 是否启用渲染快照
+Px_debug_snapshot_max_events: 5       # 快照中包含的最近事件数
+Px_debug_snapshot_detail: normal      # minimal | normal | verbose（后续扩展）
 ```
 
 **输出目录**: 自动写入 `{APP_DIR}/debug/` 目录（如 `apps/bilibili/debug/`），无需在配置中指定。
@@ -43,7 +43,7 @@ class Config
 **配置查找路径**:
 - 在 `Application::mount()` 时，由 main.php 传入应用目录
 - 策略：在 main.php 中定义 `define('APP_DIR', __DIR__)`，Application 初始化时传给 Config
-- Config 读取 `{APP_DIR}/px_debug.yml`，文件不存在则所有 get() 返回默认值
+- Config 读取 `{APP_DIR}/project.yml` 中 `Px_debug_` 前缀的项，文件不存在则所有 get() 返回默认值
 
 实现一个极简 YAML 解析器，只处理本框架需要的一级 scalar。
 
@@ -184,13 +184,13 @@ private function outputSnapshot(string $snapshot): void
 ## 实施步骤
 
 ### Step 1: 新建 `framework/Core/Config.php`
-- 实现 `Config` 类，从 `{app_dir}/px_debug.yml` 读取配置
+- 实现 `Config` 类，从 `{app_dir}/project.yml` 读取 `Px_debug_` 前缀配置
 - 实现极简 YAML 一级解析（仅处理 `key: value` 和 `key: true/false/number/string`）
 - 提供 `init(string $appDir)` 和 `get(string $key, mixed $default)`
 - AOT 兼容：静态缓存，无闭包
 
 ### Step 2: 修改 `apps/bilibili/main.php`
-- 增加 `define('APP_DIR', __DIR__)` 常量，供 Config 定位 px_debug.yml
+- 增加 `define('APP_DIR', __DIR__)` 常量，供 Config 定位 project.yml
 
 ### Step 3: 修改 `framework/Core/Application.php`
 - 接收 `$appDir` 参数（通过 mount 或 run 传入）
@@ -207,8 +207,8 @@ private function outputSnapshot(string $snapshot): void
 - 按信息密度分级输出
 - 使用树形字符（`├─`, `│`, `└─`）表示层次
 
-### Step 5: 创建 `apps/bilibili/px_debug.yml`
-- 独立调试配置文件，不修改 config.yml
+### Step 5: 在 `apps/bilibili/project.yml` 中添加 `Px_debug_*` 配置项
+- 调试配置直接整合在 project.yml 中，使用 `Px_debug_` 前缀区分
 
 ### Step 6: 构建验证
 
@@ -218,9 +218,9 @@ private function outputSnapshot(string $snapshot): void
 
 | 检查项 | 通过标准 |
 |--------|---------|
-| 配置读取 | `Config::get('snapshot_enabled')` 返回 `true` |
+| 配置读取 | `Config::get('snapshot_enabled')` 返回 `true`（对应 `Px_debug_snapshot_enabled: true`） |
 | 事件记录 | 在控制台/文件中看到最近鼠标/键盘事件 |
 | 树输出 | 能看到完整的树层次结构 + 坐标信息 |
-| 开关有效 | `snapshot_enabled: false` 时无任何输出 |
+| 开关有效 | `Px_debug_snapshot_enabled: false` 时无任何输出 |
 | 性能无退化 | `snapshot_enabled: false` 时渲染帧率未下降 |
 | AOT 编译通过 | `build.bat bilibili` 成功 |

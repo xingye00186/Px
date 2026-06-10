@@ -19,7 +19,7 @@ d:/Px/
 │   │   ├── Application.php     事件路由、组件注册、VNode 树展开、bind 解析
 │   │   ├── ScrollManager.php   滚动服务（状态管理、拖拽、滚轮、水平滚动）
 │   │   ├── Scheduler.php       微任务/宏任务调度器
-│   │   ├── Config.php          配置管理类（px_debug.yml 解析）
+│   │   ├── Config.php          配置管理类（project.yml Px_debug_* 解析）
 │   │   └── PerfCounter.php     性能计数器（PX_PERF=1 启用，微秒计时）
 │   ├── Rendering/
 │   │   ├── VNode.php           虚拟 DOM 节点（元素描述 + 组件占位字段）
@@ -336,10 +336,10 @@ array $children;
 ### 4.4 Config（framework/Core/Config.php）
 
 **关键使用**：
-- 静态类，由 `Application::mount()` 初始化，读取 `{APP_DIR}/px_debug.yml`
+- 静态类，由 `Application::mount()` 初始化，从 `{APP_DIR}/project.yml` 中读取 `Px_debug_` 前缀配置
 - 核心方法：`init(string $appDir)`、`get(string $key, mixed $default)`、`getAppDir()`、`getOutputDir()`
 - AOT 兼容：`use native_types`，静态 `$cache`/`$appDir`
-- 应用示例：`apps/bilibili/px_debug.yml`
+- 配置示例：`apps/bilibili/project.yml` 中的 `Px_debug_*` 项
 
 ### 4.5 RenderTreeManager（framework/Rendering/RenderTreeManager.php）
 
@@ -1276,7 +1276,7 @@ LayoutResolver clamp 后，组件的 bind 值（如 scrollTop）保持旧值。�
 | Flex `height: auto` | 自动尺寸计算修复 | d734b3f |
 | `shiftDescendantsY/X` | 子节点偏移翻倍bug 修复 | d734b3f |
 | Grid 自动高度 | 从内容计算格子自动高度 | d734b3f |
-| Config 配置管理类 | px_debug.yml 解析，由 Application 初始化 | 3c93f78 |
+| Config 配置管理类 | project.yml Px_debug_* 解析，由 Application 初始化 | 3c93f78 |
 | RenderTreeManager | 渲染树管理，VNode→RenderNode 转换/差异追踪/命中测试 | 3c93f78 |
 | SFC 编译器中 `$` 前缀处理 | `$word`（非v-for）→ `$this->word` | d7cd2bc |
 | LayoutResolver 策略模式 | 拆分为 6 个策略类 | 878a048 |
