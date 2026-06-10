@@ -74,10 +74,10 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
             return;
         }
         $this->hasPendingUpdate = true;
-        $component = objval($this, self::class);
-        $this->scheduler->addMicrotask(function () use ($component) {
-            $component->hasPendingUpdate = false;
-            $component->performUpdate();
+
+        $this->scheduler->addMicrotask(function () {
+            $this->hasPendingUpdate = false;
+            $this->performUpdate();
         });
     }
 
