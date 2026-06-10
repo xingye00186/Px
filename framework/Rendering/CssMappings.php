@@ -1375,6 +1375,17 @@ class CssMappings
     }
 
     /**
+     * Alias for calculateSpecificity().
+     *
+     * @param string $selector Raw CSS selector string
+     * @return array [a, b, c, d] specificity values
+     */
+    public static function countSpecificity(string $selector): array
+    {
+        return self::calculateSpecificity($selector);
+    }
+
+    /**
      * Compare two specificity arrays.
      * Returns -1 if $a < $b, 0 if equal, 1 if $a > $b.
      *

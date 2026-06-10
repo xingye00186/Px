@@ -126,11 +126,11 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
                 $colX = $baseX + $currentCol * ($effectiveColW + $columnGap);
                 $child->x = $colX;
                 $child->y = $currentY;
-                $child->w = $effectiveColW;
 
-                // Resolve child
+                // Resolve child first, then force column width
                 $childCtx = new LayoutContext($colX, $currentY, $node);
                 $this->resolver->resolveNode($child, $childCtx);
+                $child->w = $effectiveColW;
 
                 $currentY += $child->h;
                 if (!isset($columnHeights[$currentCol])) {
@@ -149,10 +149,10 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
                     $colX = $baseX + $colIdx * ($effectiveColW + $columnGap);
                     $child->x = $colX;
                     $child->y = $baseY;
-                    $child->w = $effectiveColW;
 
                     $childCtx = new LayoutContext($colX, $baseY, $node);
                     $this->resolver->resolveNode($child, $childCtx);
+                    $child->w = $effectiveColW;
                     $colIdx++;
                 }
             } else {
@@ -170,10 +170,10 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
                         $child = $children[$startIdx + $i];
                         $child->x = $colX;
                         $child->y = $colY;
-                        $child->w = $effectiveColW;
 
                         $childCtx = new LayoutContext($colX, $colY, $node);
                         $this->resolver->resolveNode($child, $childCtx);
+                        $child->w = $effectiveColW;
                         $colY += $child->h;
                     }
                     $startIdx += $colChildCount;

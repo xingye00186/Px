@@ -36,6 +36,12 @@ $scripts = [
     'Level-20-Complex-Real-World' => 'test_complex_real_world.php',
     // 纯模板 CSS 测试（覆盖模板解析+渲染完整链路）
     'template-tests'               => 'test_from_template.php',
+    // 新增 Level 21-25
+    'Level-21-Html-Migration'      => 'test_html_migration.php',
+    'Level-22-New-Features'        => 'test_new_features.php',
+    'Level-23-CSS-Advanced'        => 'test_css_advanced.php',
+    'Level-24-Display-Modes'       => 'test_display_modes.php',
+    'Level-25-Selectors-Pseudos'   => 'test_selectors_pseudos.php',
 ];
 
 $analyzeMode = false;

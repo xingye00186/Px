@@ -293,6 +293,155 @@ test('background:rgba(0,0,0,0.06) url("img.png") left bottom/auto 组合', funct
 });
 
 // =============================================================
+// 10. 特异性计算
+// =============================================================
+echo "\n--- 10. 特异性计算 ---\n";
+
+test('calculateSpecificity 元素选择器 div 计算正确', function () {
+    $spec = CssMappings::calculateSpecificity('div');
+    assert_eq($spec[3], 1, 'div -> specificity[3]=1 (element selector)');
+});
+
+test('calculateSpecificity 类选择器 .my-class 计算正确', function () {
+    $spec = CssMappings::calculateSpecificity('.my-class');
+    assert_eq($spec[2], 1, '.my-class -> specificity[2]=1 (class selector)');
+});
+
+test('calculateSpecificity ID 选择器 #my-id 计算正确', function () {
+    $spec = CssMappings::calculateSpecificity('#my-id');
+    assert_eq($spec[1], 1, '#my-id -> specificity[1]=1 (ID selector)');
+});
+
+test('calculateSpecificity 组合选择器 div.my-class#id 计算正确', function () {
+    $spec = CssMappings::calculateSpecificity('div.my-class#my-id');
+    assert_eq($spec[1], 1, 'ID count=1');
+    assert_eq($spec[2], 1, 'class count=1');
+    assert_eq($spec[3], 1, 'element count=1');
+});
+
+test('compareSpecificity 相同返回0', function () {
+    $result = CssMappings::compareSpecificity([0,0,1,0], [0,0,1,0]);
+    assert_eq($result, 0, 'equal specificity -> 0');
+});
+
+test('compareSpecificity class > element', function () {
+    $result = CssMappings::compareSpecificity([0,0,1,0], [0,0,0,1]);
+    assert_eq($result, 1, 'class specificity > element');
+});
+
+test('compareSpecificity ID > class', function () {
+    $result = CssMappings::compareSpecificity([0,1,0,0], [0,0,1,0]);
+    assert_eq($result, 1, 'ID specificity > class');
+});
+
+// =============================================================
+// 11. 复杂选择器匹配
+// =============================================================
+echo "\n--- 11. 复杂选择器匹配 ---\n";
+
+test('matchComplexSelector 后代选择器 匹配', function () {
+    $result = CssMappings::matchComplexSelector(' ', 'parent', 'child', 'parent other', 'child');
+    assert_true($result, 'descendant selector matches');
+});
+
+test('matchComplexSelector 后代选择器 不匹配', function () {
+    $result = CssMappings::matchComplexSelector(' ', 'parent', 'child', 'other', 'child');
+    assert_false($result, 'descendant no match when parent not in parent class');
+});
+
+test('matchComplexSelector 子代选择器 > 匹配', function () {
+    $result = CssMappings::matchComplexSelector('>', 'container', 'item', 'container', 'item');
+    assert_true($result, 'child selector matches');
+});
+
+test('matchComplexSelector 相邻兄弟 + 匹配', function () {
+    $result = CssMappings::matchComplexSelector('+', 'first', 'second', '', 'second', ['first']);
+    assert_true($result, 'adjacent sibling matches');
+});
+
+test('matchComplexSelector 相邻兄弟 + 不匹配（前一个不是目标类）', function () {
+    $result = CssMappings::matchComplexSelector('+', 'first', 'second', '', 'second', ['wrong-class']);
+    assert_false($result, 'adjacent sibling no match');
+});
+
+test('matchComplexSelector 通用兄弟 ~ 匹配', function () {
+    $result = CssMappings::matchComplexSelector('~', 'first', 'third', '', 'third', ['first', 'second']);
+    assert_true($result, 'general sibling matches');
+});
+
+test('matchComplexSelector 通用兄弟 ~ 不匹配', function () {
+    $result = CssMappings::matchComplexSelector('~', 'first', 'third', '', 'third', ['other']);
+    assert_false($result, 'general sibling no match');
+});
+
+// =============================================================
+// 12. CSS 自定义属性提取
+// =============================================================
+echo "\n--- 12. CSS 自定义属性提取 extractCustomProperties ---\n";
+
+test('extractCustomProperties 从 :root 提取--primary-color', function () {
+    $vars = CssMappings::extractCustomProperties(':root { --primary-color: #FF6600; }');
+    assert_eq($vars['--primary-color'] ?? '', '#FF6600', '--primary-color extracted');
+});
+
+test('extractCustomProperties 多个变量提取', function () {
+    $vars = CssMappings::extractCustomProperties(':root { --spacing: 8px; --radius: 4px; --bg: #FFF; }');
+    assert_eq($vars['--spacing'] ?? '', '8px', '--spacing');
+    assert_eq($vars['--radius'] ?? '', '4px', '--radius');
+    assert_eq($vars['--bg'] ?? '', '#FFF', '--bg');
+});
+
+test('extractCustomProperties 无 :root 返回空数组', function () {
+    $vars = CssMappings::extractCustomProperties('.my-class { color: red; }');
+    assert_eq(count($vars), 0, 'empty array when no :root');
+});
+
+// =============================================================
+// 13. 伪类样式解析 (parseStyleBlock)
+// =============================================================
+echo "\n--- 13. parseStyleBlock 伪类/伪元素 ---\n";
+
+test('parseStyleBlock 解析 :hover 变体', function () {
+    $parsed = CssMappings::parseStyleBlock(
+        '.btn { width:100px; height:40px; }\n' .
+        '.btn:hover { background:#FF0000; color:#FFF; }'
+    );
+    assert_true(isset($parsed['btn']), 'base class parsed');
+    assert_true(isset($parsed['btn__hover']), ':hover variant stored as btn__hover');
+    // Color stored in BGR format (GDI convention)
+    assert_true(($parsed['btn__hover']['bg'] ?? 0) > 0, ':hover bg color is set');
+});
+
+test('parseStyleBlock 解析 ::before 伪元素', function () {
+    $parsed = CssMappings::parseStyleBlock(
+        '.label::before { content: "\2605"; color: #FFD700; font-size: 20px; }'
+    );
+    assert_true(isset($parsed['label__before']), '::before stored as label__before');
+    assert_true(isset($parsed['label__before']['content']), '::before has content');
+});
+
+test('parseStyleBlock 解析 ::after 伪元素', function () {
+    $parsed = CssMappings::parseStyleBlock(
+        '.icon::after { content: "\2192"; margin-left: 4px; }'
+    );
+    assert_true(isset($parsed['icon__after']), '::after stored as icon__after');
+});
+
+test('parseStyleBlock 复杂选择器存储为 __complex__ 键', function () {
+    $parsed = CssMappings::parseStyleBlock(
+        '.nav .item { padding: 8px; }\n' .
+        '.list > .item { margin: 4px; }'
+    );
+    $found = 0;
+    foreach ($parsed as $key => $val) {
+        if (str_starts_with((string)$key, '__complex__')) {
+            $found++;
+        }
+    }
+    assert_true($found >= 2, 'complex selectors stored (found ' . $found . ')');
+});
+
+// =============================================================
 // 摘要
 // =============================================================
 $exitCode = print_summary();
