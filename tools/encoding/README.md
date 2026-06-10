@@ -8,7 +8,7 @@
 
 | 工具 | 说明 |
 |------|------|
-| `_scan_encoding.php` | 项目级编码扫描（根目录入口） |
+| `scan.php` | 项目级编码扫描（`tools/encoding/scan.php`） |
 | `tools/encoding/repair.php` | PHP 修复工具（CP936 回环 + 分析） |
 | `tools/encoding/repair_context.py` | Python 深度修复（上下文重写 + 三路合并） |
 
@@ -20,13 +20,13 @@
 
 ```bash
 # 扫描整个项目
-php _scan_encoding.php
+php tools/encoding/scan.php
 
 # JSON 格式输出（供程序处理）
-php _scan_encoding.php --json
+php tools/encoding/scan.php --json
 
 # 分析单个文件的 U+FFFD 上下文
-php _scan_encoding.php --analyze path/to/file.php
+php tools/encoding/scan.php --analyze path/to/file.php
 ```
 
 ### 2. 修复乱码
@@ -37,7 +37,7 @@ php _scan_encoding.php --analyze path/to/file.php
 
 ```bash
 # 方式一：从根目录入口
-php _scan_encoding.php --fix path/to/file.php
+php tools/encoding/scan.php --fix path/to/file.php
 
 # 方式二：用专用工具
 php tools/encoding/repair.php roundtrip path/to/file.php
@@ -109,7 +109,7 @@ python tools/encoding/repair_context.py rewrite path/to/file.php file_fix.py
 
 ```mermaid
 graph TD
-    A[运行 php _scan_encoding.php] --> B{发现 U+FFFD?}
+    A[运行 php tools/encoding/scan.php] --> B{发现 U+FFFD?}
     B -->|无| C[✅ 编码正常]
     B -->|有| D[php repair.php roundtrip <file>]
     D --> E{仍有 U+FFFD?}

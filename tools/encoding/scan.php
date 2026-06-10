@@ -12,10 +12,10 @@
  *
  * 深度修复工具参见: tools/encoding/README.md
  *
- * 用法: php _scan_encoding.php
- *       php _scan_encoding.php --json        (JSON 输出)
- *       php _scan_encoding.php --fix <file>   (CP936 回环修复)
- *       php _scan_encoding.php --analyze <file> (U+FFFD 上下文分析)
+ * 用法: php tools/encoding/scan.php
+ *       php tools/encoding/scan.php --json        (JSON 输出)
+ *       php tools/encoding/scan.php --fix <file>   (CP936 回环修复)
+ *       php tools/encoding/scan.php --analyze <file> (U+FFFD 上下文分析)
  */
 
 // ── 配置 ────────────────────────────────────
@@ -30,6 +30,9 @@ $scanExts = ['php', 'phtml', 'vue'];
 $mojibakeSeq = [
     "锟斤拷" => "\xE9\x94\x9F\xE6\x96\xA4\xE6\x8B\xB7",
     "鍗曞厓" => "\xE9\x8D\x97\xE6\x9B\x9E\xE5\x8E\x93",
+    // 框线装饰符乱码：CP936 双重编码的盒绘制字符
+    "鈹€"  => "\xE9\x88\xB9\xE2\x82\xAC",  // ─ horizontal
+    "鈺€"  => "\xE9\x88\xBA\xE2\x82\xAC",  // └/┘ corner
 ];
 
 $rareChars = [
@@ -41,6 +44,9 @@ $rareChars = [
     "\xE9\x8D\x8F" => "鍏(U+934F)",
     "\xE4\xB8\xBE" => "举(U+4E3E)",
 ];
+
+// ── 扫描根目录（项目根）────────────────────
+$scanRoot = dirname(__DIR__, 2);
 
 // ── 命令行参数 ──────────────────────────────
 
@@ -178,7 +184,7 @@ if ($flags['--analyze']) {
     }
     
     echo "=== 修复指引 ===\n";
-    echo "1. 对纯双重编码乱码（无 U+FFFD）: php _scan_encoding.php --fix <file>\n";
+    echo "1. 对纯双重编码乱码（无 U+FFFD）: php tools/encoding/scan.php --fix <file>\n";
     echo "2. 对 U+FFFD 残留: 参考上方上下文，重写对应行的中文注释\n";
     echo "3. 还可用 Python 工具: python tools/encoding/repair_context.py <file>\n";
     exit(0);
@@ -186,19 +192,19 @@ if ($flags['--analyze']) {
 
 // ── 扫描模式（默认）───────────────────────
 
-$self = basename(__FILE__);
+$self = 'tools/encoding/' . basename(__FILE__);
 $total = 0;
 $issues = [];  // [relPath, [errorList]]
 
 $it = new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator(__DIR__, RecursiveDirectoryIterator::SKIP_DOTS)
+    new RecursiveDirectoryIterator($scanRoot, RecursiveDirectoryIterator::SKIP_DOTS)
 );
 
 foreach ($it as $f) {
     $ext = $f->getExtension();
     if (!in_array($ext, $scanExts, true)) continue;
 
-    $rel = str_replace(__DIR__ . DIRECTORY_SEPARATOR, '', $f->getPathname());
+    $rel = str_replace($scanRoot . DIRECTORY_SEPARATOR, '', $f->getPathname());
     if ($rel === $self) continue;
 
     // 排除目录
@@ -284,18 +290,12 @@ foreach ($it as $f) {
     }
 
     // ── 7. CP936 回环探测（仅对 UTF-8 含中文文件）──
-    // CP936 双重编码乱码的 UTF-8 校验和稀有单字检查均会漏过，
-    // 因为乱码字符是合法的 UTF-8 CJK 字（如"缁熶竴"代替"统一"）。
-    // 通过回环转换 + 字符级比较探测：统计 CJK→CJK 变更数。
-    // 若 CJK 字符在回环后被替换为不同的 CJK 字符，说明是语义乱码；
-    // 若仅 non-CJK 字符变化（emoji/特殊符号丢失），则忽略。
     if ($fileIsUtf8 && empty($err)) {
         if (preg_match('/[\x{4E00}-\x{9FFF}]/u', $c)) {
             $cp936str = @mb_convert_encoding($c, 'CP936', 'UTF-8');
             if ($cp936str !== false && $cp936str !== '') {
                 $back = @mb_convert_encoding($cp936str, 'UTF-8', 'CP936');
                 if ($back !== false && $back !== '' && $back !== $c) {
-                    // 字符级比较：只统计 CJK→CJK 的变更（乱码特征）
                     $cjkToCjk = 0;
                     $origChars = preg_split('//u', $c, -1, PREG_SPLIT_NO_EMPTY);
                     $backChars = preg_split('//u', $back, -1, PREG_SPLIT_NO_EMPTY);
@@ -315,7 +315,7 @@ foreach ($it as $f) {
                         $cjkAfter  = preg_match_all('/[\x{4E00}-\x{9FFF}]/u', $back);
                         $beforeFfd = substr_count($c, "\xEF\xBF\xBD");
                         $afterFfd  = substr_count($back, "\xEF\xBF\xBD");
-                        $err[] = "[WARN] CP936回环异常: CJK→CJK变更".$cjkToCjk."字({$cjkBefore}→{$cjkAfter}) U+FFFD({$beforeFfd}→{$afterFfd}) 建议手动检查或 php _scan_encoding.php --fix <file>";
+                        $err[] = "[WARN] CP936回环异常: CJK→CJK变更".$cjkToCjk."字({$cjkBefore}→{$cjkAfter}) U+FFFD({$beforeFfd}→{$afterFfd}) 建议手动检查或 php tools/encoding/scan.php --fix <file>";
                     }
                 }
             }
@@ -370,7 +370,7 @@ if (empty($issues)) {
 }
 
 echo "\n── 修复指引 ──────────────────────\n";
-echo "  查看详情:  php _scan_encoding.php --analyze <file>\n";
+echo "  查看详情:  php tools/encoding/scan.php --analyze <file>\n";
 echo "  深度修复:  php tools/encoding/repair.php <file>\n";
 echo "  完整文档:  tools/encoding/README.md\n";
 echo "───────────────────────────────────\n";

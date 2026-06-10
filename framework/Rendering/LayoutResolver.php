@@ -168,7 +168,7 @@ class LayoutResolver
                 $node->layer = $ctx->parent->layer;
             }
 
-            // Apply own z-index 鈫?RenderNode layer
+            // Apply own z-index → RenderNode layer
 
             $zIndex = (int)($effectiveStyle['zIndex'] ?? $effectiveStyle['zindex'] ?? 0);
 
@@ -220,7 +220,7 @@ class LayoutResolver
             }
 
 
-            // 鈹€鈹€ Scroll container post-processing for flex/grid display modes 鈹€鈹€
+            // ── Scroll container post-processing for flex/grid display modes ──
 
             // (block layout handles this internally in resolveBlockLayout)
 
@@ -283,13 +283,13 @@ class LayoutResolver
                     }
 
                 } else {
-                    // No horizontal scroll 鈥?content width equals container width
+                    // No horizontal scroll — content width equals container width
                     $node->contentWidth = $node->visualW;
                 }
             }
 
 
-            // 鈹€鈹€ position:sticky 澶勭悊锛圕SS 搂4.3 鍫嗗彔 + A1 visual 鍧愭爣瀵归綈锛夆攢鈹€
+            // ── position:sticky 处理（CSS §4.3 堆叠 + A1 visual 坐标对齐）──
             if ($position === 'sticky') {
 
                 $stickyTop = (int)($effectiveStyle['top'] ?? 0);
@@ -307,7 +307,7 @@ class LayoutResolver
 
                         $scKey = $sc->groupId . ':' . $i;
 
-                        // 鈹€鈹€ Vertical sticky (top) with stacking 鈹€鈹€
+                        // ── Vertical sticky (top) with stacking ──
                         $visualY = $node->y - $sc->scrollTop;
 
                         if ( ! isset($this->stickyStack[$scKey])) {
@@ -338,7 +338,7 @@ class LayoutResolver
                             ];
                         }
 
-                        // 鈹€鈹€ Horizontal sticky (left) with stacking 鈹€鈹€
+                        // ── Horizontal sticky (left) with stacking ──
                         $stickyLeft = (int)($effectiveStyle['left'] ?? 0);
                         if ($stickyLeft !== 0) {
                             $visualX = $node->x - $sc->scrollLeft;
@@ -372,12 +372,12 @@ class LayoutResolver
                 }
             }
 
-            // 鈹€鈹€ 娓呴櫎鑴忔爣璁帮細甯冨眬瀹屾垚鍚庢爣璁颁负娲佸噣 鈹€鈹€
+            // ── 清除脏标记：布局完成后标记为洁净 ──
             $node->layoutDirty = false;
 
         } else {
 
-            // 鈹€鈹€ Clean path: not layoutDirty, just propagate parent coords 鈹€鈹€
+            // ── Clean path: not layoutDirty, just propagate parent coords ──
 
             $style = $node->style;
 
