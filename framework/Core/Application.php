@@ -667,7 +667,10 @@ class Application
             'borderLeftWidth', 'borderLeftColor', 'borderRadius', 'textAlign',
             'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
             'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
-            'gap', 'boxSizing', 'flexDirection', 'alignItems', 'justifyContent', 'flexWrap'];
+            'gap', 'boxSizing', 'flexDirection', 'alignItems', 'justifyContent', 'flexWrap',
+            'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',
+            'gridColumn', 'gridRow', 'gridAutoRows', 'gridTemplateAreas',
+            'justifyItems', 'alignSelf', 'justifySelf', 'alignContent'];
         $style = [];
         foreach ($styleKeys as $k) {
             if (isset($node->style[$k]) && $node->style[$k] !== null) {

@@ -47,6 +47,8 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         array         $style
     ): void
     {
+        error_log('[GRID_DIAG] styleKeys=' . implode(',', array_keys($style)) . ' | gridTemplateCols=' . ($style['gridTemplateColumns'] ?? 'NOT_SET') . ' | nodeW=' . $node->w);
+
         $left = $style['left'] ?? 0;
 
         $top = $style['top'] ?? 0;
