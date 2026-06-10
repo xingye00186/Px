@@ -163,9 +163,12 @@ class VNodeRenderer
         $isScrollNode = $node->isScrollContainer;
 
         if ($isScrollNode) {
+            // CSS Overflow Module L3 §3.2: clip region = padding box (excludes border)
+            $borderW = (int)($node->style['borderWidth'] ?? 0);
             $this->scrollCtxStack[] = [
-                'x' => $node->x, 'y' => $node->y,
-                'w' => $node->visualW, 'h' => $node->visualH,
+                'x' => $node->x + $borderW, 'y' => $node->y + $borderW,
+                'w' => max(0, $node->visualW - $borderW * 2),
+                'h' => max(0, $node->visualH - $borderW * 2),
                 'scrollTop' => $node->scrollTop,
                 'scrollLeft' => $node->scrollLeft,
                 'overflowX' => $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible',
@@ -188,9 +191,16 @@ class VNodeRenderer
             if (!isset($elementsByLayer[$layer])) {
                 $elementsByLayer[$layer] = [];
             }
+            // CSS Overflow Module L3 §3.2: clip region = padding box (excludes border)
+            $borderW = (int)($node->style['borderWidth'] ?? 0);
+            $clipX = $node->x + $borderW;
+            $clipY = $node->y + $borderW;
+            $clipW = max(0, ($node->visualW > 0 ? $node->visualW : $node->w) - $borderW * 2);
+            $clipH = max(0, ($node->visualH > 0 ? $node->visualH : $node->h) - $borderW * 2);
             $elementsByLayer[$layer][] = [
                 'type' => 'clip-push',
-                'x' => $node->x, 'y' => $node->y, 'w' => $node->visualW, 'h' => $node->visualH,
+                'x' => $clipX, 'y' => $clipY,
+                'w' => $clipW, 'h' => $clipH,
                 'layer' => $layer,
             ];
         }
@@ -287,6 +297,24 @@ class VNodeRenderer
     private function renderNodeToElement(RenderNode $node): ?array
     {
         $style = $node->style;
+
+        // ── 伪类样式合并（:hover/:focus/:active）──
+        // 根据节点交互状态应用预解析的伪类样式，优先级：active > focus > hover
+        if ($node->hovered && isset($style['__hoverStyle'])) {
+            foreach ($style['__hoverStyle'] as $hk => $hv) {
+                $style[$hk] = $hv;
+            }
+        }
+        if ($node->focused && isset($style['__focusStyle'])) {
+            foreach ($style['__focusStyle'] as $fk => $fv) {
+                $style[$fk] = $fv;
+            }
+        }
+        if ($node->active && isset($style['__activeStyle'])) {
+            foreach ($style['__activeStyle'] as $ak => $av) {
+                $style[$ak] = $av;
+            }
+        }
         // A1 重构: 布局坐标 + 绘制时滚动偏移（不在布局层修改坐标）
         $x = $node->x + $node->renderOffsetX;
         $y = $node->y + $node->renderOffsetY;
@@ -781,11 +809,19 @@ class VNodeRenderer
             $text = $this->currentComponent()->getBindValue($bindKey);
         }
 
+        // ::placeholder pseudo-element support
+        // When input is empty and placeholder attribute is set, pass placeholder
+        // text info so the rendering backend draws it in a dimmed color.
+        $placeholder = $props['placeholder'] ?? '';
+        $showPlaceholder = ($text === '' && $placeholder !== '');
+
         return [
             'type' => 'input',
             'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'bg' => $bg, 'color' => $fg, 'fontSize' => $fontSize,
-            'text' => $text, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
+            'text' => $showPlaceholder ? $placeholder : $text,
+            'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
+            'placeholder' => $showPlaceholder,
         ];
     }
 

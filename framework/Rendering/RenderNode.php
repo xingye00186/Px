@@ -83,6 +83,24 @@ class RenderNode
      */
     public int $lastY = 0;
 
+    // ── 交互状态（用于伪类样式）─────────────────────────
+
+    /**
+     * 鼠标悬停状态（:hover 伪类）。
+     * 由 Application::handleMouseEvent 在 move 事件中更新。
+     * VNodeRenderer 根据此标志合并 :hover 样式。
+     */
+    public bool $hovered = false;
+
+    /**
+     * 聚焦状态（:focus 伪类）。
+     * 由 Application 在键盘/点击事件中更新。
+     */
+    public bool $focused = false;
+
+    /** 激活状态（:active 伪类，鼠标按下时） */
+    public bool $active = false;
+
     // ── 脏标记（用于增量更新）──────────────────────────────
 
     /** true → LayoutResolver 需重新计算此节点布局 */

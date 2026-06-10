@@ -372,7 +372,8 @@ class RenderTreeManager
         ReactiveComponentInterface $root,
         array $componentByGroupId,
         ?array $candidates = null,
-        string $currentGroupId = 'app'
+        string $currentGroupId = 'app',
+        string $parentClassStr = ''
     ): ?RenderNode {
         \Px\Core\PerfCounter::start('tree_convert');
         try {
@@ -400,7 +401,8 @@ class RenderTreeManager
                     $root,
                     $componentByGroupId,
                     $candidates,
-                    $childGroupId
+                    $childGroupId,
+                    $vnode->props['class'] ?? ''
                 );
 
                 // Vue 3 标准：父组件 props['style'] 全部透传合并到子组件根元素
@@ -447,7 +449,8 @@ class RenderTreeManager
 
                     $childRN = $this->updateFromVNode(
                         $child, $parent, $root, $componentByGroupId, $childCandidates,
-                        $currentGroupId
+                        $currentGroupId,
+                        $vnode->props['class'] ?? ''
                     );
                     if ($childRN !== null) {
                         if ($parent === null) {
@@ -470,7 +473,7 @@ class RenderTreeManager
             }
 
             // 普通元素节点
-            $resolvedStyle = $this->resolveNodeStyle($vnode);
+            $resolvedStyle = $this->resolveNodeStyle($vnode, $parentClassStr);
             $renderNode = null;
 
             if ($candidates !== null) {
@@ -605,7 +608,8 @@ class RenderTreeManager
 
                     $childRN = $this->updateFromVNode(
                         $childVNode, $renderNode, $root, $componentByGroupId, $childCandidates,
-                        $currentGroupId
+                        $currentGroupId,
+                        $vnode->props['class'] ?? ''
                     );
                 }
 
@@ -621,6 +625,26 @@ class RenderTreeManager
                         . ' consumed=' . count($consumed)
                         . ' destroyed=' . (count($oldChildren) - count($consumed)));
                 }
+            }
+
+            // Create ::before pseudo-element RenderNode if defined
+            $beforeStyle = $resolvedStyle['__beforeStyle'] ?? null;
+            if ($beforeStyle !== null && is_array($beforeStyle) && isset($beforeStyle['content']) && $beforeStyle['content'] !== '') {
+                $beforeRN = new RenderNode('span', $beforeStyle, $beforeStyle['content']);
+                $beforeRN->parent = $renderNode;
+                $beforeRN->groupId = $renderNode->groupId;
+                $beforeRN->layoutDirty = true;
+                array_unshift($renderNode->children, $beforeRN);
+            }
+
+            // Create ::after pseudo-element RenderNode if defined
+            $afterStyle = $resolvedStyle['__afterStyle'] ?? null;
+            if ($afterStyle !== null && is_array($afterStyle) && isset($afterStyle['content']) && $afterStyle['content'] !== '') {
+                $afterRN = new RenderNode('span', $afterStyle, $afterStyle['content']);
+                $afterRN->parent = $renderNode;
+                $afterRN->groupId = $renderNode->groupId;
+                $afterRN->layoutDirty = true;
+                $renderNode->children[] = $afterRN;
             }
 
             return $renderNode;
@@ -788,15 +812,21 @@ class RenderTreeManager
     }
 
     /**
-     * 解析 VNode 的完整样式（CSS class + inline style 合并）。
+     * 解析 VNode 的完整样式（CSS class + inline style 合并 + 复杂选择器匹配）。
      *
      * 解析顺序（后覆盖前）：
      *   1. CSS class 样式（从 ThemeProvider 全局注册表查找）
-     *   2. 内联 style 属性（最高优先级）
+     *   2. 复杂选择器匹配（后代/子代/兄弟选择器）
+     *   3. 内联 style 属性（最高优先级）
      *
      * AOT 安全：仅使用静态方法调用和数组操作。
+     *
+     * @param VNode $vnode 当前 VNode
+     * @param string $parentClassStr 父 VNode 的 class 字符串（用于复杂选择器匹配）
+     * @param array $precedingSiblingClasses 前面兄弟节点的 class 字符串数组
+     * @return array 合并后的样式
      */
-    private function resolveNodeStyle(VNode $vnode): array
+    private function resolveNodeStyle(VNode $vnode, string $parentClassStr = '', array $precedingSiblingClasses = []): array
     {
         // 1. 解析内联 style
         $inlineStyle = $this->parseVNodeStyle($vnode);
@@ -812,6 +842,9 @@ class RenderTreeManager
         //    CSS class 是全局的，需要跨组件搜索
         $allRegistered = ThemeProvider::getAllClassStyles();
         $merged = [];
+        $hoverMerged = [];
+        $focusMerged = [];
+        $activeMerged = [];
 
         foreach ($classNames as $className) {
             if ($className === '') {
@@ -823,12 +856,93 @@ class RenderTreeManager
                         $merged[$k] = $v;
                     }
                 }
+                // Resolve :hover variant
+                $hoverKey = $className . '__hover';
+                if (isset($componentStyles[$hoverKey])) {
+                    foreach ($componentStyles[$hoverKey] as $k => $v) {
+                        $hoverMerged[$k] = $v;
+                    }
+                }
+                // Resolve :focus variant
+                $focusKey = $className . '__focus';
+                if (isset($componentStyles[$focusKey])) {
+                    foreach ($componentStyles[$focusKey] as $k => $v) {
+                        $focusMerged[$k] = $v;
+                    }
+                }
+                // Resolve :active variant
+                $activeKey = $className . '__active';
+                if (isset($componentStyles[$activeKey])) {
+                    foreach ($componentStyles[$activeKey] as $k => $v) {
+                        $activeMerged[$k] = $v;
+                    }
+                }
+
+                // Resolve complex selectors (descendant, child, sibling)
+                // Match rules where secondClass matches current element
+                // Rules are stored as '__complex__N' keys
+                foreach ($componentStyles as $styleKey => $styleValue) {
+                    if (str_starts_with((string)$styleKey, '__complex__') && is_array($styleValue)) {
+                        $rule = $styleValue;
+                        if ($rule['secondClass'] === $className) {
+                            $matches = CssMappings::matchComplexSelector(
+                                $rule['combinator'],
+                                $rule['firstClass'],
+                                $rule['secondClass'],
+                                $parentClassStr,
+                                $classStr,
+                                $precedingSiblingClasses
+                            );
+                            if ($matches) {
+                                foreach ($rule['props'] as $k => $v) {
+                                    $merged[$k] = $v;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Resolve ::before / ::after pseudo-elements
+                $beforeKey = $className . '__before';
+                if (isset($componentStyles[$beforeKey])) {
+                    $pseudoElProps = $componentStyles[$beforeKey];
+                    if (!isset($merged['__beforeStyle'])) {
+                        $merged['__beforeStyle'] = $pseudoElProps;
+                    } else {
+                        // Merge: later classes override earlier ones
+                        foreach ($pseudoElProps as $k => $v) {
+                            $merged['__beforeStyle'][$k] = $v;
+                        }
+                    }
+                }
+                $afterKey = $className . '__after';
+                if (isset($componentStyles[$afterKey])) {
+                    $pseudoElProps = $componentStyles[$afterKey];
+                    if (!isset($merged['__afterStyle'])) {
+                        $merged['__afterStyle'] = $pseudoElProps;
+                    } else {
+                        foreach ($pseudoElProps as $k => $v) {
+                            $merged['__afterStyle'][$k] = $v;
+                        }
+                    }
+                }
             }
         }
 
         // 4. 内联样式覆盖 class 样式
         foreach ($inlineStyle as $k => $v) {
             $merged[$k] = $v;
+        }
+
+        // 5. Store pseudo-class styles for runtime application
+        if (count($hoverMerged) > 0) {
+            $merged['__hoverStyle'] = $hoverMerged;
+        }
+        if (count($focusMerged) > 0) {
+            $merged['__focusStyle'] = $focusMerged;
+        }
+        if (count($activeMerged) > 0) {
+            $merged['__activeStyle'] = $activeMerged;
         }
 
         return $merged;

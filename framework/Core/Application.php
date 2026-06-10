@@ -54,6 +54,9 @@ class Application
     /** 当前鼠标光标类型：'' 默认, 'pointer' 手型 */
     private string $currentCursor = '';
 
+    /** 当前 hover 的 RenderNode（用于 :hover 样式切换） */
+    private ?RenderNode $hoveredNode = null;
+
     /** @var array<string, ReactiveComponentInterface> VNode.groupId → Component instance */
     private array $componentByGroupId = [];
 
@@ -121,7 +124,7 @@ class Application
             return;
         }
 
-        // ── 鼠标拖动：滚动条拖拽 + 光标 hover ──
+        // ── 鼠标拖动：滚动条拖拽 + 光标 hover + :hover 样式 ──
         if ($event->getAction() === 'move') {
             // 先处理滚动条拖拽
             $this->scrollManager->handleScrollbarDrag($event->getX(), $event->getY());
@@ -139,6 +142,29 @@ class Application
                 if ($newCursor !== $this->currentCursor) {
                     $this->currentCursor = $newCursor;
                     $this->platform->setCursor($newCursor);
+                }
+
+                // ── :hover 伪类样式追踪 ──
+                // 当 hover 节点变化时，更新新旧节点的 hovered 标志并触发渲染
+                if ($hoverNode !== $this->hoveredNode) {
+                    // 清除旧节点的 hover 状态
+                    if ($this->hoveredNode !== null) {
+                        $this->hoveredNode->hovered = false;
+                    }
+                    // 设置新节点的 hover 状态
+                    if ($hoverNode !== null) {
+                        $hoverNode->hovered = true;
+                    }
+                    $this->hoveredNode = $hoverNode;
+                    // 请求渲染以应用 :hover 样式变化
+                    $this->requestRender();
+                }
+            } else {
+                // 拖拽中：清除 hover 状态
+                if ($this->hoveredNode !== null) {
+                    $this->hoveredNode->hovered = false;
+                    $this->hoveredNode = null;
+                    $this->requestRender();
                 }
             }
             return;

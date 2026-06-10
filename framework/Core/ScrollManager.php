@@ -39,6 +39,11 @@ class ScrollManager
     private int $scrollDragStartScrollPos = 0;
     private bool $scrollDragIsHorizontal = false;
 
+    // ── 平滑滚动状态 ────────────────────────
+    /** @var array{smoothNode:RenderNode,targetTop:int,targetLeft:int,steps:int,currentStep:int} */
+    private ?array $smoothScrollState = null;
+    private Scheduler $scheduler;
+
     /** 是否正在拖拽滚动条 */
     public function isDragging(): bool
     {
@@ -295,8 +300,81 @@ class ScrollManager
      *
      * bind 键读取自 sourceVNode->props（VNode 上的 :scroll-top 属性）。
      */
+    /**
+     * 检测节点是否启用平滑滚动（scroll-behavior: smooth）。
+     */
+    private function isSmoothScroll(RenderNode $node): bool
+    {
+        $sb = $node->style['scrollBehavior'] ?? $node->style['scroll-behavior'] ?? '';
+        return $sb === 'smooth';
+    }
+
+    /**
+     * 执行平滑滚动的一步。
+     * 如果还有剩余步数，继续调度下一帧。
+     */
+    private function smoothScrollStep(): void
+    {
+        if ($this->smoothScrollState === null) return;
+
+        $state = $this->smoothScrollState;
+        $node = $state['smoothNode'];
+        $currentStep = $state['currentStep'] + 1;
+        $steps = $state['steps'];
+
+        // 计算本步进度（ease-out: 先快后慢）
+        $progress = $currentStep / $steps;
+        // ease-out: 1 - (1 - t)^2
+        $eased = 1.0 - (1.0 - $progress) * (1.0 - $progress);
+
+        $targetTop = $state['targetTop'];
+        $targetLeft = $state['targetLeft'];
+        $startTop = $node->scrollTop;
+        $startLeft = $node->scrollLeft;
+        // 使用原始目标重新计算每步位置，避免累积误差
+        $origStartTop = $state['origStartTop'] ?? $startTop;
+        $origStartLeft = $state['origStartLeft'] ?? $startLeft;
+
+        $newTop = (int)($origStartTop + ($targetTop - $origStartTop) * $eased);
+        $newLeft = (int)($origStartLeft + ($targetLeft - $origStartLeft) * $eased);
+
+        $node->scrollTop = $newTop;
+        $node->scrollLeft = $newLeft;
+
+        // 更新状态
+        $this->smoothScrollState['currentStep'] = $currentStep;
+
+        // 直接重绘
+        ($this->directRender)();
+
+        if ($currentStep < $steps) {
+            // 调度下一步
+            $scheduler = Scheduler::getInstance();
+            $scheduler->addMacrotask($this->smoothScrollStep(...));
+        } else {
+            $this->smoothScrollState = null;
+        }
+    }
+
     public function applyScrollTop(RenderNode $node, int $newScrollTop, bool $persist): void
     {
+        // 检查是否启用平滑滚动
+        if ($persist && $this->isSmoothScroll($node) && $newScrollTop !== $node->scrollTop) {
+            $steps = 10;
+            $this->smoothScrollState = [
+                'smoothNode' => $node,
+                'targetTop' => $newScrollTop,
+                'targetLeft' => $node->scrollLeft,
+                'steps' => $steps,
+                'currentStep' => 0,
+                'origStartTop' => $node->scrollTop,
+                'origStartLeft' => $node->scrollLeft,
+            ];
+            // 立即执行第一步
+            $this->smoothScrollStep();
+            return;
+        }
+
         $node->scrollTop = $newScrollTop;
 
         if ($persist) {
@@ -320,6 +398,22 @@ class ScrollManager
      */
     public function applyScrollLeft(RenderNode $node, int $newScrollLeft, bool $persist): void
     {
+        // 检查是否启用平滑滚动
+        if ($persist && $this->isSmoothScroll($node) && $newScrollLeft !== $node->scrollLeft) {
+            $steps = 10;
+            $this->smoothScrollState = [
+                'smoothNode' => $node,
+                'targetTop' => $node->scrollTop,
+                'targetLeft' => $newScrollLeft,
+                'steps' => $steps,
+                'currentStep' => 0,
+                'origStartTop' => $node->scrollTop,
+                'origStartLeft' => $node->scrollLeft,
+            ];
+            $this->smoothScrollStep();
+            return;
+        }
+
         $node->scrollLeft = $newScrollLeft;
 
         if ($persist) {
