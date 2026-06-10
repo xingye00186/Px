@@ -146,14 +146,18 @@ class CssValueParser
         $parts = preg_split('/\s+/', $v);
         $width = 0;
         $color = '#000000';
+        $style = 'solid';
+        $styleKeywords = ['none','hidden','dotted','dashed','solid','double','groove','ridge','inset','outset'];
         foreach ($parts as $p) {
             if (preg_match('/^\d+/', $p)) {
                 $width = (int)$p;
             } elseif (preg_match('/^#/', $p)) {
                 $color = $p;
+            } elseif (in_array(strtolower($p), $styleKeywords, true)) {
+                $style = strtolower($p);
             }
         }
-        return $width . '|' . self::hexToBgr($color);
+        return $width . '|' . self::hexToBgr($color) . '|' . $style;
     }
 
     public static function parseBoxShadow(string $value): string

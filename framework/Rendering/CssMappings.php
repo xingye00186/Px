@@ -167,8 +167,75 @@ class CssMappings
             'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
             'default' => 0,
         ],
+        'border-top-width' => [
+            'key'     => 'borderTopWidth',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'border-right-width' => [
+            'key'     => 'borderRightWidth',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'border-bottom-width' => [
+            'key'     => 'borderBottomWidth',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'border-left-width' => [
+            'key'     => 'borderLeftWidth',
+            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'default' => 0,
+        ],
         'border-color' => [
             'key'     => 'borderColor',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'default' => 0,
+        ],
+        // ---- border-style (CSS 2.2 §8.5.3) ----
+        'border-style' => [
+            'key'     => 'borderStyle',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'default' => 'solid',
+        ],
+        'border-top-style' => [
+            'key'     => 'borderTopStyle',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'default' => 'solid',
+        ],
+        'border-right-style' => [
+            'key'     => 'borderRightStyle',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'default' => 'solid',
+        ],
+        'border-bottom-style' => [
+            'key'     => 'borderBottomStyle',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'default' => 'solid',
+        ],
+        'border-left-style' => [
+            'key'     => 'borderLeftStyle',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'default' => 'solid',
+        ],
+        // ---- per-side border colors (CSS 2.2 §8.5.2) ----
+        'border-top-color' => [
+            'key'     => 'borderTopColor',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'default' => 0,
+        ],
+        'border-right-color' => [
+            'key'     => 'borderRightColor',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'default' => 0,
+        ],
+        'border-bottom-color' => [
+            'key'     => 'borderBottomColor',
+            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'default' => 0,
+        ],
+        'border-left-color' => [
+            'key'     => 'borderLeftColor',
             'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
             'default' => 0,
         ],
@@ -696,17 +763,108 @@ class CssMappings
             }
         }
 
-        // Parse border shorthand into individual properties (only if not already explicitly set)
-        // Directional borders (更具体) 优先于通用 border 处理
-        foreach (['borderBottom', 'borderTop', 'borderLeft', 'borderRight', 'border'] as $borderProp) {
-            if (isset($style[$borderProp]) && $style[$borderProp] !== '') {
-                $parts = explode('|', $style[$borderProp]);
-                if (!isset($style['borderWidth'])) {
-                    $style['borderWidth'] = (int)($parts[0] ?? 0);
-                }
+        // ── Border property processing (CSS 2.2 §8.5-8.6) ──
+        // CSS standard processing order: directionless → directional → explicit properties
+        // Directional shorthands (border-bottom etc.) set ONLY per-side, NOT borderWidth
+
+        // 1. Directionless border shorthand: sets borderWidth + all 4 per-side widths
+        //    Also sets borderColor, borderStyle, and per-side colors/styles (CSS 2.2 §8.5)
+        //    Process first so directional shorthands can override individual sides later
+        if (isset($style['border']) && $style['border'] !== '') {
+            $parts = explode('|', $style['border']);
+            $bw = (int)($parts[0] ?? 0);
+            $bc = (int)($parts[1] ?? 0);
+            $bs = $parts[2] ?? 'solid';
+            if (!isset($style['borderWidth'])) {
+                $style['borderWidth'] = $bw;
+            }
+            if (!isset($style['borderColor'])) {
+                $style['borderColor'] = $bc;
+            }
+            if (!isset($style['borderStyle'])) {
+                $style['borderStyle'] = $bs;
+            }
+            if (!isset($style['borderTopWidth']))    $style['borderTopWidth'] = $bw;
+            if (!isset($style['borderRightWidth']))  $style['borderRightWidth'] = $bw;
+            if (!isset($style['borderBottomWidth'])) $style['borderBottomWidth'] = $bw;
+            if (!isset($style['borderLeftWidth']))   $style['borderLeftWidth'] = $bw;
+            if (!isset($style['borderTopColor']))    $style['borderTopColor'] = $bc;
+            if (!isset($style['borderRightColor']))  $style['borderRightColor'] = $bc;
+            if (!isset($style['borderBottomColor'])) $style['borderBottomColor'] = $bc;
+            if (!isset($style['borderLeftColor']))   $style['borderLeftColor'] = $bc;
+            if (!isset($style['borderTopStyle']))    $style['borderTopStyle'] = $bs;
+            if (!isset($style['borderRightStyle']))  $style['borderRightStyle'] = $bs;
+            if (!isset($style['borderBottomStyle'])) $style['borderBottomStyle'] = $bs;
+            if (!isset($style['borderLeftStyle']))   $style['borderLeftStyle'] = $bs;
+        }
+
+        // 2. Directional border shorthands: each sets ONLY its own per-side (CSS 2.2 §8.6)
+        //    Do NOT set borderWidth — directional shorthands don't affect opposite sides
+        $directionalMap = [
+            'borderBottom' => ['w' => 'borderBottomWidth', 'c' => 'borderBottomColor', 's' => 'borderBottomStyle'],
+            'borderTop'    => ['w' => 'borderTopWidth',    'c' => 'borderTopColor',    's' => 'borderTopStyle'],
+            'borderLeft'   => ['w' => 'borderLeftWidth',   'c' => 'borderLeftColor',   's' => 'borderLeftStyle'],
+            'borderRight'  => ['w' => 'borderRightWidth',  'c' => 'borderRightColor',  's' => 'borderRightStyle'],
+        ];
+        foreach ($directionalMap as $dirProp => $keys) {
+            if (isset($style[$dirProp]) && $style[$dirProp] !== '') {
+                $parts = explode('|', $style[$dirProp]);
+                $bw = (int)($parts[0] ?? 0);
+                $bc = (int)($parts[1] ?? 0);
+                $bs = $parts[2] ?? 'solid';
+                // Set borderColor only if no per-side color was already set
                 if (!isset($style['borderColor'])) {
-                    $style['borderColor'] = (int)($parts[1] ?? 0);
+                    $style['borderColor'] = $bc;
                 }
+                if (!isset($style[$keys['w']])) {
+                    $style[$keys['w']] = $bw;
+                }
+                if (!isset($style[$keys['c']])) {
+                    $style[$keys['c']] = $bc;
+                }
+                if (!isset($style[$keys['s']])) {
+                    $style[$keys['s']] = $bs;
+                }
+            }
+        }
+
+        // 3. Explicit border-width CSS property: propagate to all 4 per-side widths
+        //    Only propagates if NO per-side was set by any preceding shorthand
+        if (isset($style['borderWidth']) && $style['borderWidth'] > 0) {
+            $bw = (int)$style['borderWidth'];
+            $anySideSet = isset($style['borderTopWidth']) || isset($style['borderRightWidth'])
+                || isset($style['borderBottomWidth']) || isset($style['borderLeftWidth']);
+            if (!$anySideSet) {
+                $style['borderTopWidth'] = $bw;
+                $style['borderRightWidth'] = $bw;
+                $style['borderBottomWidth'] = $bw;
+                $style['borderLeftWidth'] = $bw;
+            }
+        }
+
+        // 4. Explicit border-style CSS property: propagate to all 4 per-side styles
+        if (isset($style['borderStyle']) && $style['borderStyle'] !== '') {
+            $bs = $style['borderStyle'];
+            $anySideSet = isset($style['borderTopStyle']) || isset($style['borderRightStyle'])
+                || isset($style['borderBottomStyle']) || isset($style['borderLeftStyle']);
+            if (!$anySideSet) {
+                $style['borderTopStyle']    = $bs;
+                $style['borderRightStyle']  = $bs;
+                $style['borderBottomStyle'] = $bs;
+                $style['borderLeftStyle']   = $bs;
+            }
+        }
+
+        // 5. Explicit border-color CSS property: propagate to all 4 per-side colors
+        if (isset($style['borderColor']) && $style['borderColor'] > 0) {
+            $bc = (int)$style['borderColor'];
+            $anySideSet = isset($style['borderTopColor']) || isset($style['borderRightColor'])
+                || isset($style['borderBottomColor']) || isset($style['borderLeftColor']);
+            if (!$anySideSet) {
+                $style['borderTopColor']    = $bc;
+                $style['borderRightColor']  = $bc;
+                $style['borderBottomColor'] = $bc;
+                $style['borderLeftColor']   = $bc;
             }
         }
 
@@ -760,6 +918,64 @@ class CssMappings
             // Keep original shorthand for backward compat
             $raw[$prop] = $top . 'px';
         }
+
+        // ---- border-width: 1-4 value expansion (CSS 2.2 §8.5.1) ----
+        // Same pattern as padding/margin: strips non-numeric, appends px
+        if (isset($raw['border-width'])) {
+            $parts = preg_split('/\s+/', trim($raw['border-width']));
+            $nums = [];
+            foreach ($parts as $p) {
+                $nums[] = (int) preg_replace('/[^-0-9]/', '', $p);
+            }
+            $count = count($nums);
+            if ($count >= 2) {
+                $top    = $nums[0];
+                $right  = $nums[1] ?? $top;
+                $bottom = $nums[2] ?? $top;
+                $left   = $nums[3] ?? $right;
+                $raw['border-top-width']    = $top . 'px';
+                $raw['border-right-width']  = $right . 'px';
+                $raw['border-bottom-width'] = $bottom . 'px';
+                $raw['border-left-width']   = $left . 'px';
+                $raw['border-width'] = $top . 'px';
+            }
+        }
+
+        // ---- border-color: 1-4 value expansion (CSS 2.2 §8.5.2) ----
+        // Colors are strings (not pixels), only expand when 2-4 values
+        if (isset($raw['border-color'])) {
+            $parts = preg_split('/\s+/', trim($raw['border-color']));
+            $count = count($parts);
+            if ($count >= 2) {
+                $top    = $parts[0];
+                $right  = $parts[1] ?? $top;
+                $bottom = $parts[2] ?? $top;
+                $left   = $parts[3] ?? $right;
+                $raw['border-top-color']    = $top;
+                $raw['border-right-color']  = $right;
+                $raw['border-bottom-color'] = $bottom;
+                $raw['border-left-color']   = $left;
+                $raw['border-color'] = $top;
+            }
+        }
+
+        // ---- border-style: 1-4 value expansion (CSS 2.2 §8.5.3) ----
+        if (isset($raw['border-style'])) {
+            $parts = preg_split('/\s+/', trim($raw['border-style']));
+            $count = count($parts);
+            if ($count >= 2) {
+                $top    = $parts[0];
+                $right  = $parts[1] ?? $top;
+                $bottom = $parts[2] ?? $top;
+                $left   = $parts[3] ?? $right;
+                $raw['border-top-style']    = $top;
+                $raw['border-right-style']  = $right;
+                $raw['border-bottom-style'] = $bottom;
+                $raw['border-left-style']   = $left;
+                $raw['border-style'] = $top;
+            }
+        }
+
         return $raw;
     }
 

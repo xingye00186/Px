@@ -164,11 +164,16 @@ class VNodeRenderer
 
         if ($isScrollNode) {
             // CSS Overflow Module L3 §3.2: clip region = padding box (excludes border)
-            $borderW = (int)($node->style['borderWidth'] ?? 0);
+            $bw = (int)($node->style['borderWidth'] ?? 0);
+            $ns = $node->style;
+            $bl = (int)($ns['borderLeftWidth'] ?? $bw);
+            $br = (int)($ns['borderRightWidth'] ?? $bw);
+            $bt = (int)($ns['borderTopWidth'] ?? $bw);
+            $bb = (int)($ns['borderBottomWidth'] ?? $bw);
             $this->scrollCtxStack[] = [
-                'x' => $node->x + $borderW, 'y' => $node->y + $borderW,
-                'w' => max(0, $node->visualW - $borderW * 2),
-                'h' => max(0, $node->visualH - $borderW * 2),
+                'x' => $node->x + $bl, 'y' => $node->y + $bt,
+                'w' => max(0, $node->visualW - $bl - $br),
+                'h' => max(0, $node->visualH - $bt - $bb),
                 'scrollTop' => $node->scrollTop,
                 'scrollLeft' => $node->scrollLeft,
                 'overflowX' => $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible',
@@ -192,11 +197,16 @@ class VNodeRenderer
                 $elementsByLayer[$layer] = [];
             }
             // CSS Overflow Module L3 §3.2: clip region = padding box (excludes border)
-            $borderW = (int)($node->style['borderWidth'] ?? 0);
-            $clipX = $node->x + $borderW;
-            $clipY = $node->y + $borderW;
-            $clipW = max(0, ($node->visualW > 0 ? $node->visualW : $node->w) - $borderW * 2);
-            $clipH = max(0, ($node->visualH > 0 ? $node->visualH : $node->h) - $borderW * 2);
+            $bw = (int)($node->style['borderWidth'] ?? 0);
+            $ns = $node->style;
+            $bl = (int)($ns['borderLeftWidth'] ?? $bw);
+            $br = (int)($ns['borderRightWidth'] ?? $bw);
+            $bt = (int)($ns['borderTopWidth'] ?? $bw);
+            $bb = (int)($ns['borderBottomWidth'] ?? $bw);
+            $clipX = $node->x + $bl;
+            $clipY = $node->y + $bt;
+            $clipW = max(0, ($node->visualW > 0 ? $node->visualW : $node->w) - $bl - $br);
+            $clipH = max(0, ($node->visualH > 0 ? $node->visualH : $node->h) - $bt - $bb);
             $elementsByLayer[$layer][] = [
                 'type' => 'clip-push',
                 'x' => $clipX, 'y' => $clipY,
@@ -427,7 +437,15 @@ class VNodeRenderer
         $offsets = CssMappings::parseBoxShadowOffsets($style['boxShadow'] ?? '');
         $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowColor = $offsets['color'];
         $borderWidth = $style['borderWidth'] ?? 0;
+        $borderTopWidth = $style['borderTopWidth'] ?? $borderWidth;
+        $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
+        $borderBottomWidth = $style['borderBottomWidth'] ?? $borderWidth;
+        $borderLeftWidth = $style['borderLeftWidth'] ?? $borderWidth;
         $borderColor = $style['borderColor'] ?? 0;
+        $borderTopColor = $style['borderTopColor'] ?? $borderColor;
+        $borderRightColor = $style['borderRightColor'] ?? $borderColor;
+        $borderBottomColor = $style['borderBottomColor'] ?? $borderColor;
+        $borderLeftColor = $style['borderLeftColor'] ?? $borderColor;
 
         // ── background-image 图片层（如果有）──
         $bgImageEl = null;
@@ -455,7 +473,7 @@ class VNodeRenderer
 
             $elements = [];
             if ($hasBg || $hasBorder) {
-                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'cursor' => $cursor];
+                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'cursor' => $cursor];
             }
             if ($bgImageEl !== null) {
                 $elements[] = $bgImageEl;
@@ -487,7 +505,12 @@ class VNodeRenderer
                 'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
                 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
                 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
-                'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'cursor' => $cursor,
+                'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
+                'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,
+                'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,
+                'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,
+                'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,
+                'cursor' => $cursor,
             ];
         }
         if ($bgImageEl !== null) {
@@ -629,10 +652,18 @@ class VNodeRenderer
         $bg     = $style['bg'] ?? 0x4488CC;
         $fg     = $style['fg'] ?? 0xFFFFFF;
         $borderWidth = $style['borderWidth'] ?? 0;
+        $borderTopWidth = $style['borderTopWidth'] ?? $borderWidth;
+        $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
+        $borderBottomWidth = $style['borderBottomWidth'] ?? $borderWidth;
+        $borderLeftWidth = $style['borderLeftWidth'] ?? $borderWidth;
         $borderColor = 0;
-        if ($borderWidth > 0) {
+        if ($borderWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0 || $borderLeftWidth > 0) {
             $borderColor = (int)($style['borderColor'] ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0));
         }
+        $borderTopColor = $style['borderTopColor'] ?? $borderColor;
+        $borderRightColor = $style['borderRightColor'] ?? $borderColor;
+        $borderBottomColor = $style['borderBottomColor'] ?? $borderColor;
+        $borderLeftColor = $style['borderLeftColor'] ?? $borderColor;
         $borderRadius = $style['borderRadius'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
         $boxShadow = $style['boxShadow'] ?? '';
@@ -686,7 +717,12 @@ class VNodeRenderer
 
         return [
             'type' => 'button', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-            'bg' => $bg, 'fg' => $fg, 'border' => $borderColor, 'borderWidth' => $borderWidth, 'borderRadius' => $borderRadius,
+            'bg' => $bg, 'fg' => $fg, 'border' => $borderColor, 'borderWidth' => $borderWidth,
+            'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,
+            'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,
+            'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,
+            'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,
+            'borderRadius' => $borderRadius,
             'label' => $label, 'labelX' => $labelX, 'labelY' => $labelY,
             'labelFontSize' => $labelFontSize, 'opacity' => $opacity, 'layer' => $layer,
             'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'cursor' => $cursor,
@@ -722,7 +758,15 @@ class VNodeRenderer
 
         // border
         $borderWidth = $style['borderWidth'] ?? 0;
+        $borderTopWidth = $style['borderTopWidth'] ?? $borderWidth;
+        $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
+        $borderBottomWidth = $style['borderBottomWidth'] ?? $borderWidth;
+        $borderLeftWidth = $style['borderLeftWidth'] ?? $borderWidth;
         $borderColor = $style['borderColor'] ?? 0;
+        $borderTopColor = $style['borderTopColor'] ?? $borderColor;
+        $borderRightColor = $style['borderRightColor'] ?? $borderColor;
+        $borderBottomColor = $style['borderBottomColor'] ?? $borderColor;
+        $borderLeftColor = $style['borderLeftColor'] ?? $borderColor;
 
         // object-fit: CSS Images §4.5 控制替换内容如何适应容器
         $objectFit = $style['objectFit'] ?? 'fill';
@@ -771,6 +815,10 @@ class VNodeRenderer
                 'color' => $bg, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
                 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor,
                 'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
+                'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,
+                'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,
+                'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,
+                'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,
             ];
         }
 

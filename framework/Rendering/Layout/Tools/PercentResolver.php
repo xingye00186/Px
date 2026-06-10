@@ -212,7 +212,9 @@ class PercentResolver
         $padL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
         $padR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
         $bw = (int)($style['borderWidth'] ?? 0);
-        return max(0, $w + $padL + $padR + $bw * 2);
+        $blw = (int)($style['borderLeftWidth'] ?? 0);
+        $brw = (int)($style['borderRightWidth'] ?? 0);
+        return max(0, $w + $padL + $padR + $blw + $brw);
     }
 
     /**
@@ -229,7 +231,9 @@ class PercentResolver
         $padT = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
         $padB = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
         $bw = (int)($style['borderWidth'] ?? 0);
-        return max(0, $h + $padT + $padB + $bw * 2);
+        $btw = (int)($style['borderTopWidth'] ?? 0);
+        $bbw = (int)($style['borderBottomWidth'] ?? 0);
+        return max(0, $h + $padT + $padB + $btw + $bbw);
     }
 
     /**

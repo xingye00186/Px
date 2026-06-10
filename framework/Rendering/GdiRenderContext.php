@@ -86,17 +86,26 @@ class GdiRenderContext extends RenderContext
                     );
                 }
                 // Draw border outline (skip when rounded corners)
+                // CSS 2.2 §8.6: per-side border widths and colors
                 $borderWidth = $el['borderWidth'] ?? 0;
                 $borderColor = $el['borderColor'] ?? 0;
-                if ($borderWidth > 0 && $radius === 0) {
+                $bt = $el['borderTopWidth'] ?? $borderWidth;
+                $bb = $el['borderBottomWidth'] ?? $borderWidth;
+                $bl = $el['borderLeftWidth'] ?? $borderWidth;
+                $br = $el['borderRightWidth'] ?? $borderWidth;
+                $btc = $el['borderTopColor'] ?? $borderColor;
+                $bbc = $el['borderBottomColor'] ?? $borderColor;
+                $blc = $el['borderLeftColor'] ?? $borderColor;
+                $brc = $el['borderRightColor'] ?? $borderColor;
+                if (($bt > 0 || $bb > 0 || $bl > 0 || $br > 0) && $radius === 0) {
                     $bx = $el['x'] ?? 0;
                     $by = $el['y'] ?? 0;
                     $bw = $el['w'] ?? 0;
                     $bh = $el['h'] ?? 0;
-                    $this->fillRect($bx, $by, $bw, $borderWidth, $borderColor);
-                    $this->fillRect($bx, $by + $bh - $borderWidth, $bw, $borderWidth, $borderColor);
-                    $this->fillRect($bx, $by, $borderWidth, $bh, $borderColor);
-                    $this->fillRect($bx + $bw - $borderWidth, $by, $borderWidth, $bh, $borderColor);
+                    if ($bt > 0) $this->fillRect($bx, $by, $bw, $bt, $btc);
+                    if ($bb > 0) $this->fillRect($bx, $by + $bh - $bb, $bw, $bb, $bbc);
+                    if ($bl > 0) $this->fillRect($bx, $by, $bl, $bh, $blc);
+                    if ($br > 0) $this->fillRect($bx + $bw - $br, $by, $br, $bh, $brc);
                 }
                 break;
 
