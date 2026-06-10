@@ -224,6 +224,9 @@ class CssMappings
         'grid-row-gap'         => ['key' => 'gridRowGap',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
         'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
         'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
+        'grid-area'            => ['key' => 'gridArea',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',   'default' => ''],
+        'grid-auto-rows'       => ['key' => 'gridAutoRows',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels',  'default' => 0],
+        'grid-template-areas'  => ['key' => 'gridTemplateAreas','parser' => 'Px\\Rendering\\CssMappings::parseIdent',   'default' => ''],
         'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
         'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
         'transform'            => ['key' => 'transform',       'parser' => 'Px\\Rendering\\CssMappings::parseTransform', 'default' => ''],
@@ -519,6 +522,11 @@ class CssMappings
             'padding-right' => 'paddingRightPercent',
             'padding-bottom' => 'paddingBottomPercent',
             'padding-left' => 'paddingLeftPercent',
+            // CSS Positioned Layout §3.1: left/top/right/bottom 百分比基于包含块
+            'left'   => 'leftPercent',
+            'top'    => 'topPercent',
+            'right'  => 'rightPercent',
+            'bottom' => 'bottomPercent',
         ];
         foreach ($pctMap as $cssProp => $styleKey) {
             if (isset($raw[$cssProp])) {

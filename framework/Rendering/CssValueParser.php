@@ -96,8 +96,11 @@ class CssValueParser
         if ($lower === 'none') {
             return ['grow' => 0.0, 'shrink' => 0.0, 'basis' => 'auto'];
         }
-        if ($lower === 'initial' || $lower === 'content') {
+        if ($lower === 'initial') {
             return ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 'auto'];
+        }
+        if ($lower === 'content') {
+            return ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 'content'];
         }
         $parts = preg_split('/\s+/', $flex);
         $result = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 0];

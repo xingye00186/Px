@@ -650,6 +650,15 @@ class RenderTreeManager
             return null;
         }
 
+        // CSSOM View §7.1: 滚动容器内，将视口坐标转换为文档坐标
+        // 子文档坐标 = 视口坐标 + scrollLeft/scrollTop
+        $childX = $x;
+        $childY = $y;
+        if ($node->isScrollContainer) {
+            $childX += $node->scrollLeft;
+            $childY += $node->scrollTop;
+        }
+
         // Layer-aware: 按 layer 递减遍历子节点（高 layer 优先命中）
         $layerGroups = [];
         foreach ($node->children as $i => $child) {
@@ -659,7 +668,7 @@ class RenderTreeManager
         foreach ($layerGroups as $indices) {
             for ($j = count($indices) - 1; $j >= 0; $j--) {
                 $child = $node->children[$indices[$j]];
-                $found = $this->hitTestRecursive($x, $y, $child);
+                $found = $this->hitTestRecursive($childX, $childY, $child);
                 if ($found !== null) {
                     return $found;
                 }
@@ -706,6 +715,14 @@ class RenderTreeManager
             return null;
         }
 
+        // CSSOM View §7.1: 滚动容器内，将视口坐标转换为文档坐标
+        $childX = $x;
+        $childY = $y;
+        if ($node->isScrollContainer) {
+            $childX += $node->scrollLeft;
+            $childY += $node->scrollTop;
+        }
+
         // Layer-aware: 按 layer 递减遍历子节点
         $layerGroups = [];
         foreach ($node->children as $i => $child) {
@@ -715,7 +732,7 @@ class RenderTreeManager
         foreach ($layerGroups as $indices) {
             for ($j = count($indices) - 1; $j >= 0; $j--) {
                 $child = $node->children[$indices[$j]];
-                $found = $this->findScrollContainerRecursive($x, $y, $child);
+                $found = $this->findScrollContainerRecursive($childX, $childY, $child);
                 if ($found !== null) {
                     return $found;
                 }

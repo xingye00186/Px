@@ -151,9 +151,12 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $cellW = (int)max(0, ($gridContentW - $totalGaps) / $cols);
         }
 
+        $gridAutoRows = (int)($style['gridAutoRows'] ?? 0);
+        $defaultRowH = $gridAutoRows > 0 ? $gridAutoRows : 60;
+
         $rows = $rowSpec['count'] ?? 5;
 
-        $cellH = (int)($rowSpec['size'] ?? 60);
+        $cellH = (int)($rowSpec['size'] ?? $defaultRowH);
 
         // 1fr 支持：根据容器宽度按比例分配
         if (($rowSpec['unit'] ?? '') === 'fr' && $node->h > 0) {
@@ -172,7 +175,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
             $gridContentW = PercentResolver::resolveContentWidth($style, $node->w);
 
-            // First pass: resolve fixed (px/%) widths, mark fr as null
+            // First pass: resolve fixed (px/%) widths, mark fr as null, minmax as ['min'=>...,'fr'=>...]
             foreach ($sizes as $size) {
                 if (preg_match('/^(\d+(?:\.\d+)?)px$/i', $size, $m)) {
                     $w = (int)$m[1];
@@ -186,6 +189,21 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 } elseif (preg_match('/^(\d+(?:\.\d+)?)fr$/i', $size, $m)) {
                     $explicitColWidths[] = null;
                     $totalFr += (int)$m[1];
+                } elseif (preg_match('/^minmax\(\s*(\d+(?:\.\d+)?)(px|%|)\s*,\s*(\d+(?:\.\d+)?)(px|fr|%|)\s*\)$/i', $size, $m)) {
+                    $minVal = (int)$m[1];
+                    $maxUnit = strtolower($m[4]);
+                    if ($maxUnit === 'fr') {
+                        // minmax(min, fr): fr track with minimum guarantee
+                        $frVal = (int)$m[3];
+                        $explicitColWidths[] = ['min' => $minVal, 'fr' => $frVal];
+                        $usedPx += $minVal;
+                        $totalFr += $frVal;
+                    } else {
+                        // minmax(px, px) or minmax(px, %): use min as initial width
+                        $w = $minVal;
+                        $explicitColWidths[] = $w;
+                        $usedPx += $w;
+                    }
                 } else {
                     // Bare number: treat as px
                     $w = (int)$size;
@@ -204,13 +222,20 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 foreach ($explicitColWidths as $i => $colW) {
                     if ($colW === null) {
                         $explicitColWidths[(int)$i] = $frUnit;
+                    } elseif (is_array($colW) && isset($colW['fr'])) {
+                        // minmax(min, fr): use min + fr share
+                        $min = $colW['min'];
+                        $fr = $colW['fr'];
+                        $explicitColWidths[(int)$i] = $min + $frUnit * $fr;
                     }
                 }
             } else {
-                // Replace remaining nulls with 0 (no fr tracks with remaining space)
+                // Replace remaining nulls/minmax arrays with their min value
                 foreach ($explicitColWidths as $i => $colW) {
                     if ($colW === null) {
                         $explicitColWidths[(int)$i] = 0;
+                    } elseif (is_array($colW) && isset($colW['min'])) {
+                        $explicitColWidths[(int)$i] = $colW['min'];
                     }
                 }
             }
@@ -239,6 +264,13 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         // 判断是否有显式 grid-template-rows
         $hasExplicitRows = ($rowSpec['type'] ?? '') === 'explicit' || !empty($rowSpec['size']);
 
+        // ── Parse grid-template-areas for named area placement ──
+        $areaMap = [];
+        $areasRaw = $style['gridTemplateAreas'] ?? '';
+        if ($areasRaw !== '') {
+            $areaMap = self::parseGridTemplateAreas($areasRaw);
+        }
+
         // ── Pass 1: 定位 + 内容高度探测 ──
         // 仅设置水平方向 stretch（宽度），不垂直 stretch——让 grid item
         // 保持自然高度，从而可以探测每行实际需要的行高。
@@ -249,8 +281,17 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $childStyle = $ch->style;
 
             // Use explicit grid-column/grid-row from style (CSS 1-based)
+            // grid-area: name overrides explicit grid-column/grid-row
             $explicitCol = $childStyle['gridColumn'] ?? null;
             $explicitRow = $childStyle['gridRow'] ?? null;
+            $gridAreaName = $childStyle['gridArea'] ?? '';
+            if ($gridAreaName !== '' && isset($areaMap[$gridAreaName])) {
+                $area = $areaMap[$gridAreaName];
+                $col = (int)($area['colStart']);
+                $row = (int)($area['rowStart']);
+                $colSpan = (int)($area['colEnd'] - $area['colStart']);
+                // Skip standard grid-column/grid-row parsing
+            } else {
             $colSpan = 1;
             if ($explicitCol !== null && $explicitCol !== '') {
                 if (preg_match('/^span\s+(\d+)$/i', $explicitCol, $m)) {
@@ -270,6 +311,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             }
             if ($explicitRow !== null && $explicitRow !== '') {
                 $row = (int)$explicitRow - 1;
+            }
             }
 
             // Auto-placement: if item with span doesn't fit current row, wrap to next row first
@@ -382,7 +424,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $actualRowHeights = [];
         if (!$hasExplicitRows) {
             foreach ($rowContentHeights as $r => $h) {
-                $actualRowHeights[$r] = max(60, $h);
+                $actualRowHeights[$r] = max($defaultRowH, $h);
             }
         } else {
             $totalRows = max($row + 1, count($rowContentHeights));
@@ -579,5 +621,65 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $childCtx = new LayoutContext($gridItem->x, $gridItem->y, $gridItem);
             $this->resolver->resolveNode($child, $childCtx);
         }
+    }
+
+    /**
+     * Parse CSS grid-template-areas ASCII-art string into area name → position mapping.
+     *
+     * Input: '"header header" "nav main" "footer footer"'
+     * Output: [
+     *   'header' => ['rowStart'=>0, 'colStart'=>0, 'rowEnd'=>1, 'colEnd'=>2],
+     *   'nav'    => ['rowStart'=>1, 'colStart'=>0, 'rowEnd'=>2, 'colEnd'=>1],
+     *   ...
+     * ]
+     */
+    public static function parseGridTemplateAreas(string $areas): array
+    {
+        $map = [];
+        $rows = [];
+        // Split by quoted strings: "..."
+        preg_match_all('/"([^"]*)"/', $areas, $matches);
+        if (empty($matches[1])) {
+            return $map;
+        }
+        foreach ($matches[1] as $rowStr) {
+            $cells = preg_split('/\s+/', trim($rowStr));
+            if (count($cells) > 0) {
+                $rows[] = $cells;
+            }
+        }
+        if (empty($rows)) {
+            return $map;
+        }
+        $numCols = count($rows[0]);
+        foreach ($rows as $ri => $row) {
+            if (count($row) !== $numCols) {
+                continue; // Malformed row, skip
+            }
+            for ($ci = 0; $ci < $numCols; $ci++) {
+                $name = trim($row[$ci]);
+                if ($name === '' || $name === '.') continue; // . = empty cell
+                if (!isset($map[$name])) {
+                    $map[$name] = [
+                        'rowStart' => $ri,
+                        'rowEnd'   => $ri + 1,
+                        'colStart' => $ci,
+                        'colEnd'   => $ci + 1,
+                    ];
+                } else {
+                    // Extend existing area
+                    if ($ri >= $map[$name]['rowEnd']) {
+                        $map[$name]['rowEnd'] = $ri + 1;
+                    }
+                    if ($ci < $map[$name]['colStart']) {
+                        $map[$name]['colStart'] = $ci;
+                    }
+                    if ($ci >= $map[$name]['colEnd']) {
+                        $map[$name]['colEnd'] = $ci + 1;
+                    }
+                }
+            }
+        }
+        return $map;
     }
 }

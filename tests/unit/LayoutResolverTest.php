@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * LayoutResolver 单元测试（RenderNode 版）
  *
@@ -754,8 +754,8 @@ test('auto-stack with margin', function () {
     $resolver->resolve($root);
 
     assert_eq($c1->y, 0, 'c1 y=0');
-    // stackY = 0 + c1(20+10) = 30, c2.y = stackY(30) + mt(5) = 35
-    assert_eq($c2->y, 35, 'c2 y=20(c1)+10(c1.mb)+5(c2.mt)=35');
+    // CSS 2.2 §8.3.1 margin collapsing: max(10,5)=10, c2.y=20(c1)+10(折叠后)=30
+    assert_eq($c2->y, 30, 'c2 y=30 (CSS 2.2 §8.3.1 margin collapsing max(10,5))');
 });
 
 test('auto-stack 被 explicit top 禁用', function () {

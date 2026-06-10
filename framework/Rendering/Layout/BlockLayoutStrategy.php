@@ -169,6 +169,9 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                 $containerW = PercentResolver::resolveContentWidth($node->style, $node->w);
 
+                // CSS 2.2 §8.3.1: 跟踪上一个可折叠兄弟的 margin-bottom
+                $prevMarginBottom = 0;
+                $prevCollapsible = false;
 
                 foreach ($node->children as $child) {
                     $childStyle = $child->style;
@@ -254,11 +257,32 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     }
 
 
-                    // Stack vertically with margin
+                    // ── CSS 2.2 §8.3.1: 外边距折叠 ──
+                    // 仅在相同 BFC 内的 block 兄弟之间发生
+                    $childOverflow = $childStyle['overflow'] ?? $childStyle['overflowY'] ?? 'visible';
+                    $createsBFC = ($childDisplay !== 'block')
+                        || ($childOverflow !== 'visible')
+                        || ($childStyle['float'] ?? 'none') !== 'none';
+                    $isCollapsible = !$createsBFC;
 
                     $oldY = $child->y;
 
-                    $child->y = $stackY + $mTop;
+                    if ($isCollapsible && $prevCollapsible && $mTop * $prevMarginBottom >= 0) {
+                        // 对于同号边距：折叠结果 = max(positives) + min(negatives)
+                        $positiveMax = max($prevMarginBottom > 0 ? $prevMarginBottom : 0, $mTop > 0 ? $mTop : 0);
+                        $negativeMin = min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0);
+                        $collapsed = $positiveMax + $negativeMin;
+                        $child->y = $stackY - $prevMarginBottom + $collapsed;
+                    } elseif ($isCollapsible && $prevCollapsible) {
+                        // 异号边距（一正一负）：折叠结果 = 直接相加
+                        $collapsed = $prevMarginBottom + $mTop;
+                        $child->y = $stackY - $prevMarginBottom + $collapsed;
+                    } else {
+                        $child->y = $stackY + $mTop;
+                    }
+
+                    // 保存 stack 推进位置（不受 position:relative 偏移影响）
+                    $stackAdvanceY = $child->y;
 
                     // position:relative 额外偏移（不推进 stack）
                     if ($childPosition === 'relative') {
@@ -275,7 +299,16 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         }
                     }
 
-                    $stackY += $child->visualH + $mBottom;
+                    $stackY = $stackAdvanceY + $child->visualH + $mBottom;
+
+                    if ($isCollapsible) {
+                        $prevMarginBottom = $mBottom;
+                        $prevCollapsible = true;
+                    } else {
+                        // 创建新 BFC 的元素阻止外边距折叠穿透
+                        $prevMarginBottom = 0;
+                        $prevCollapsible = false;
+                    }
                 }
             }
         }
@@ -439,6 +472,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $autoStack = true;
 
         if ($autoStack) {
+            // CSS 2.2 §8.3.1: 跟踪上一个可折叠兄弟的 margin-bottom
+            $prevMarginBottom = 0;
+            $prevCollapsible = false;
+
             foreach ($node->children as $child) {
                 $childStyle = $child->style;
 
@@ -473,7 +510,28 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                 $oldY = $child->y;
 
-                $child->y = $stackY + $mTop;
+                // CSS 2.2 §8.3.1: 外边距折叠
+                $childDisplay = $childStyle['display'] ?? 'block';
+                $childOverflow = $childStyle['overflow'] ?? $childStyle['overflowY'] ?? 'visible';
+                $createsBFC = ($childDisplay !== 'block')
+                    || ($childOverflow !== 'visible')
+                    || ($childStyle['float'] ?? 'none') !== 'none';
+                $isCollapsible = !$createsBFC;
+
+                if ($isCollapsible && $prevCollapsible && $mTop * $prevMarginBottom >= 0) {
+                    $positiveMax = max($prevMarginBottom > 0 ? $prevMarginBottom : 0, $mTop > 0 ? $mTop : 0);
+                    $negativeMin = min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0);
+                    $collapsed = $positiveMax + $negativeMin;
+                    $child->y = $stackY - $prevMarginBottom + $collapsed;
+                } elseif ($isCollapsible && $prevCollapsible) {
+                    $collapsed = $prevMarginBottom + $mTop;
+                    $child->y = $stackY - $prevMarginBottom + $collapsed;
+                } else {
+                    $child->y = $stackY + $mTop;
+                }
+
+                // 保存 stack 推进位置（不受 position:relative 偏移影响）
+                $stackAdvanceY = $child->y;
 
                 // position:relative 额外偏移 — 只对 y 生效
                 $relTop = $childStyle['top'] ?? 0;
@@ -491,7 +549,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     }
                 }
 
-                $stackY += $child->visualH + $mBottom;
+                $stackY = $stackAdvanceY + $child->visualH + $mBottom;
+
+                if ($isCollapsible) {
+                    $prevMarginBottom = $mBottom;
+                    $prevCollapsible = true;
+                } else {
+                    $prevMarginBottom = 0;
+                    $prevCollapsible = false;
+                }
             }
         }
 

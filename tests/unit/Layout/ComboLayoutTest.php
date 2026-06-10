@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * ComboLayoutTest — CSS 布局组合场景标准测试
  *
@@ -312,8 +312,9 @@ test('flex-wrap 使用 visualW 正确计算行总宽度', function () {
 
     // 可用宽度 = 200 - 10 - 10 = 180，c1=120 < 180 → 第一行
     // c2=120 > 剩余 60 → 换行
+    // align-content:stretch (CSS 默认): 剩余 100-60=40 均分, 每行+20
     assert_eq($c1->x, 10, 'c1 x = paddingLeft = 10');
-    assert_eq($c2->y, 30, 'c2 y 换行在第二行');
+    assert_eq($c2->y, 50, 'c2 y 换行在第二行 (stretch, 行高=30+20=50)');
 });
 
 test('block 子项 padding 影响父容器 stackY', function () {
@@ -340,4 +341,5 @@ echo "Results: {$GLOBALS['_test_passed']}/{$total} passed\n";
 if ($GLOBALS['_test_failed'] > 0) {
     exit(1);
 }
+echo "All tests passed.\n";
 echo "All tests passed.\n";

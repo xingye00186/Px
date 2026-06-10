@@ -315,6 +315,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         $accumulatedCrossOffset = 0;
 
+        $lineCrossData = []; // for align-content distribution
+
         foreach ($lines as $lineChildren) {
             $lineContainerMain = $containerMain;
 
@@ -971,6 +973,103 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
             // Advance cross axis offset for next wrapping line
             $accumulatedCrossOffset += $lineMaxCross + $gap;
+
+            $lineCrossData[] = [
+                'children' => $lineChildren,
+                'maxCross' => $lineMaxCross,
+                'crossBase' => $lineCrossBase,
+            ];
+        }
+
+
+        // ── align-content: distribute lines in cross axis (CSS Flexbox §8.4) ──
+        $alignContent = $style['alignContent'] ?? 'stretch';
+        if ($isWrapping && count($lineCrossData) > 1 && $containerCross > 0) {
+            $totalCrossUsed = 0;
+            foreach ($lineCrossData as $ld) {
+                $totalCrossUsed += (int)($ld['maxCross']);
+            }
+            $totalCrossUsed += $gap * (count($lineCrossData) - 1);
+            $remainingCross = max(0, $containerCross - $totalCrossUsed);
+
+            if ($remainingCross > 0 && $alignContent !== 'flex-start') {
+                $numLines = count($lineCrossData);
+                $newBases = [];
+                $newMaxCrosses = [];
+
+                if ($alignContent === 'stretch') {
+                    // Split remaining space equally among lines, increasing each line's cross size
+                    $extraPerLine = (int)($remainingCross / $numLines);
+                    $base = 0;
+                    for ($i = 0; $i < $numLines; $i++) {
+                        $newBases[$i] = $base;
+                        $newMaxCrosses[$i] = (int)($lineCrossData[$i]['maxCross'] + $extraPerLine);
+                        $base += $newMaxCrosses[$i] + $gap;
+                    }
+                    // Apply stretched height to each line's children
+                    foreach ($lineCrossData as $idx => $ld) {
+                        $stretchedCross = $newMaxCrosses[$idx];
+                        foreach ($ld['children'] as $ch) {
+                            $chStyle = $ch->style;
+                            $hasExplicitCrossSize = $isRow
+                                ? array_key_exists('height', $chStyle)
+                                : array_key_exists('width', $chStyle);
+                            if (!$hasExplicitCrossSize) {
+                                if ($isRow) {
+                                    $ch->h = $stretchedCross;
+                                    $ch->visualH = PercentResolver::resolveVisualH($chStyle, $ch->h);
+                                } else {
+                                    $ch->w = $stretchedCross;
+                                    $ch->visualW = PercentResolver::resolveVisualW($chStyle, $ch->w);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    $crossStart = 0;
+                    $space = 0;
+                    switch ($alignContent) {
+                        case 'flex-end':
+                            $crossStart = (int)($remainingCross);
+                            break;
+                        case 'center':
+                            $crossStart = (int)($remainingCross / 2);
+                            break;
+                        case 'space-between':
+                            $space = (int)($remainingCross / ($numLines - 1));
+                            break;
+                        case 'space-around':
+                            $space = (int)($remainingCross / $numLines);
+                            $crossStart = (int)($space / 2);
+                            break;
+                        case 'space-evenly':
+                            $space = (int)($remainingCross / ($numLines + 1));
+                            $crossStart = $space;
+                            break;
+                    }
+                    $base = $crossStart;
+                    $extraBetween = $space;
+                    for ($i = 0; $i < $numLines; $i++) {
+                        $newBases[$i] = $base;
+                        $newMaxCrosses[$i] = (int)($lineCrossData[$i]['maxCross']);
+                        $base += (int)($lineCrossData[$i]['maxCross']) + $gap + $extraBetween;
+                    }
+                }
+
+                // Apply cross offset shifts to each line's children
+                foreach ($lineCrossData as $idx => $ld) {
+                    $shift = (int)($newBases[$idx] - $ld['crossBase']);
+                    if ($shift !== 0) {
+                        foreach ($ld['children'] as $ch) {
+                            $dyShift = $shift;
+                            $ch->y += $dyShift;
+                            foreach ($ch->children as $gc) {
+                                ScrollHelper::shiftDescendantsY($gc, $dyShift);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
 
@@ -1078,7 +1177,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
             $basis = $data['basis'];
 
-            if ($basis >= 0) {
+            // ── Numeric basis (flex-basis: <length>|<percentage>) ──
+            if (is_int($basis) && $basis >= 0) {
                 if ($basis > 0) {
                     if ($isRow) {
                         $ch->w = (int)max(0, $basis);
@@ -1088,6 +1188,25 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                     }
                 }
+            // ── flex-basis: content — ignore width/height, always use content size ──
+            } elseif ($basis === 'content') {
+                $chText = $ch->content ?? '';
+                if (is_string($chText) && strlen($chText) > 0) {
+                    $fs = (int)($ch->style['fontSize'] ?? 14);
+                    $bd = ($ch->style['fontWeight'] ?? 'normal') === 'bold' || ($ch->style['fontWeight'] ?? 'normal') === '700';
+                    $measured = PercentResolver::resolveTextWidth($chText, $fs, $bd);
+                    if ($measured > 0) {
+                        if ($isRow) {
+                            $ch->w = $measured;
+                        } else {
+                            $lineH = PercentResolver::resolveLineHeight($ch->style, $fs);
+                            if ($ch->h === 0 || $ch->h < $lineH) {
+                                $ch->h = $lineH;
+                            }
+                        }
+                    }
+                }
+            // ── flex-basis: auto (default) — use width/height if set, else content ──
             } else {
                 $flexBasis = $ch->style['flexBasis'] ?? 'auto';
 
@@ -1105,7 +1224,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     }
                 }
 
-                // -- Text measurement for flex-basis:auto (basis=-1) --
+                // -- Text measurement for flex-basis:auto (basis=-1 or 'auto') --
 
                 $chText = $ch->content ?? '';
 

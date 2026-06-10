@@ -360,10 +360,11 @@ test('flex-wrap 换行', function () {
 
     // 180 wide, each item 80, gap default 0
     // row1: items 0,1 (80+80=160), row2: items 2,3
+    // align-content:stretch (CSS default): remaining 120-80=40 split equally, each line +20
     assert_eq($items[0]->y, 0, 'item0 y=0 (row1)');
     assert_eq($items[1]->y, 0, 'item1 y=0 (row1)');
-    assert_eq($items[2]->y, 40, 'item2 y=40 (row2)');
-    assert_eq($items[3]->y, 40, 'item3 y=40 (row2)');
+    assert_eq($items[2]->y, 60, 'item2 y=60 (row2, stretched line height=60)');
+    assert_eq($items[3]->y, 60, 'item3 y=60 (row2)');
 });
 
 // ============================================================

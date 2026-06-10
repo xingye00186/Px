@@ -40,11 +40,11 @@ class AbsolutePositioning implements AbsoluteStrategy
         array         $style
     ): void
     {
-        // 提取定位值
-        $left = (int)($style['left'] ?? 0);
-        $top = (int)($style['top'] ?? 0);
-        $right = $style['right'] ?? null;
-        $bottom = $style['bottom'] ?? null;
+        // 提取原始定位值（保留 null 用于 right/bottom 的判断）
+        $leftRaw = $style['left'] ?? null;
+        $topRaw = $style['top'] ?? null;
+        $rightRaw = $style['right'] ?? null;
+        $bottomRaw = $style['bottom'] ?? null;
 
         // 判断定位模式：fixed vs absolute
         $pos = $style['position'] ?? 'absolute';
@@ -85,9 +85,22 @@ class AbsolutePositioning implements AbsoluteStrategy
             : $viewportW;
         $ancestorH = ($ancestor !== null) ? $ancestor->h : $viewportH;
 
+        // CSS 2.2 §10.5: 包含块无显式高度时，top/bottom 百分比按 auto（0）处理
+        // fixed 定位的包含块为 viewport，始终有显式高度
+        $hasExplicitAncestorH = ($ancestor === null)
+            || (array_key_exists('height', $ancestor->style) && $ancestor->style['height'] !== 'auto' && $ancestor->style['height'] !== '')
+            || array_key_exists('heightPercent', $ancestor->style);
+        $effectiveAncestorH = $hasExplicitAncestorH ? $ancestorH : 0;
+
+        // CSS Positioned Layout §3.1: left/right % 基于包含块宽度，top/bottom % 基于包含块高度
+        $left = $leftRaw !== null ? PercentResolver::resolvePercent($style, 'left', 'leftPercent', $ancestorW) : 0;
+        $top = $topRaw !== null ? PercentResolver::resolvePercent($style, 'top', 'topPercent', $effectiveAncestorH) : 0;
+        $right = $rightRaw !== null ? PercentResolver::resolvePercent($style, 'right', 'rightPercent', $ancestorW) : null;
+        $bottom = $bottomRaw !== null ? PercentResolver::resolvePercent($style, 'bottom', 'bottomPercent', $effectiveAncestorH) : null;
+
         // 使用定位祖先尺寸解析百分比宽高（符合 CSS 规范）
         $width = PercentResolver::resolvePercent($style, 'width', 'widthPercent', $ancestorW);
-        $height = PercentResolver::resolvePercent($style, 'height', 'heightPercent', $ancestorH);
+        $height = PercentResolver::resolvePercent($style, 'height', 'heightPercent', $effectiveAncestorH);
 
         // Assign computed width/height to node (CSS 2.2 §10.3.7, §10.6.4)
         if ($width > 0) {

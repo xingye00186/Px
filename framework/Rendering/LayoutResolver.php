@@ -411,15 +411,26 @@ class LayoutResolver
 
             $display = $style['display'] ?? 'block';
 
-            if (($display === 'flex' || $display === 'grid') && ! empty($node->children)) {
+            // CSS 2.2 §10.5: auto-height 的块级容器遇到脏子节点需重算
+            $hasExplicitH = array_key_exists('height', $style) || array_key_exists('heightPercent', $style);
 
-                foreach ($node->children as $ch) {
-                    if ($ch->layoutDirty) {
-                        $node->layoutDirty = true;
-                        $this->resolveNode($node, $ctx);
-                        $this->resolveDepth--;
+            if (! empty($node->children)) {
+                $needsReLayout = false;
+                if ($display === 'flex' || $display === 'grid') {
+                    $needsReLayout = true;
+                } elseif ($display === 'block' && !$hasExplicitH) {
+                    $needsReLayout = true;
+                }
 
-                        return;
+                if ($needsReLayout) {
+                    foreach ($node->children as $ch) {
+                        if ($ch->layoutDirty) {
+                            $node->layoutDirty = true;
+                            $this->resolveNode($node, $ctx);
+                            $this->resolveDepth--;
+
+                            return;
+                        }
                     }
                 }
             }
