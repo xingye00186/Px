@@ -1,0 +1,196 @@
+# Px CSS 特性缺失清单与优先级建议（严格遵守 CSS 标准）
+
+本清单基于对 Px 框架源码（`Px\Rendering\Layout`、`CssMappings`、`VNodeRenderer` 等）的系统评估，对照以下 CSS 规范：
+- CSS 2.2（盒模型、定位、层叠上下文、表格等）
+- CSS Flexible Box Layout Module Level 1
+- CSS Grid Layout Module Level 1
+- CSS Overflow Module Level 3
+- CSS Positioned Layout Module Level 3
+- CSS Text Decoration Module Level 3
+- CSS Values and Units Module Level 3
+- CSS Scroll Behavior Module Level 1
+- CSS Pseudo-Elements Module Level 4
+- CSS Custom Properties for Cascading Variables Module Level 1
+- CSS Multi-column Layout Module Level 1
+- CSS Selectors Level 3
+
+每项标注优先级：
+- **P0**：严重影响日常交互、布局正确性或功能可用性（必须尽快修复）
+- **P1**：较常见使用场景，缺失导致用户体验下降或开发受限
+- **P2**：增强性或较少使用的特性，可后续迭代
+
+---
+
+## 一、交互与命中测试
+
+### 1. `:hover` 伪类样式响应
+- **缺失描述**：当鼠标悬停时，Px 仅能改变光标形状（`cursor: pointer`），但不支持重新计算匹配 `:hover` 的样式（如 `background`、`color` 变化），也不触发重绘。
+- **规范**：CSS Selectors Level 3 §6.6.2 – `:hover` 伪类。
+- **优先级**：**P0** – 用户交互的核心体验，按钮/链接悬停反馈是基本要求。
+- **实现建议**：
+  1. 在 `Application::handleMouseEvent` 的 `move` 中，对命中的 `RenderNode` 及其祖先标记需要重新计算 `:hover` 样式。
+  2. 维护每个元素的 `hover` 状态，动态生成一个临时的 `:hover` 类名，合并到 `style` 中。
+  3. 触发增量样式重算并请求渲染。
+
+### 2. `scroll-behavior: smooth` 平滑滚动
+- **缺失描述**：`ScrollManager` 中滚动直接设置 `scrollTop`/`scrollLeft`，无补间动画；`applyScrollTop` 调用 `directRender()` 或 `requestRender()`，滚动跳变。
+- **规范**：CSS Scroll Behavior Module Level 1 §2.1 – `scroll-behavior` 属性。
+- **优先级**：**P1** – 改善用户体验，非关键但常见。
+- **实现建议**：
+  - 在 `ScrollManager` 中增加动画队列，支持 `requestAnimationFrame` 风格的逐帧滚动。
+  - 当 `scroll-behavior:smooth` 且触发滚动时，启动定时器逐步改变 `scrollTop`，每步调用 `directRender()`。
+
+---
+
+## 二、行内布局与对齐
+
+### 3. `vertical-align` 垂直对齐
+- **缺失描述**：Px 无内联格式化上下文（IFC），`span`、文本等被当作块级元素处理，因此无法实现 `vertical-align`（`top`/`middle`/`bottom`/`baseline`）。
+- **规范**：CSS 2.2 §10.8.1 – `vertical-align`。
+- **优先级**：**P1** – 影响表单元素、图标与文本对齐，常见需求。
+- **实现建议**：需要先实现内联格式化上下文（见前文建议#2），然后在行内布局时根据 `vertical-align` 计算每个行内盒的 `y` 偏移。
+
+### 4. 内联格式化上下文（IFC）
+- **缺失描述**：完全无内联布局，所有元素均按块级盒处理。文本不能换行、行高无效、不能实现文字环绕图标等。
+- **规范**：CSS 2.2 §9.4.2 – 内联格式化上下文。
+- **优先级**：**P1** – 影响大量基础 UI（导航栏、段落、图标加文本）。
+- **实现建议**：新增 `InlineLayoutStrategy`，实现行盒模型。
+
+---
+
+## 三、伪类与伪元素
+
+### 5. `::before` / `::after` 伪元素
+- **缺失描述**：不支持生成额外元素插入内容树。无法实现装饰性图标、清除浮动等常见场景。
+- **规范**：CSS Pseudo-Elements Module Level 4 §4 – `::before` / `::after`。
+- **优先级**：**P2** – 可通过框架内显式添加元素替代，但降低了模板语法糖。
+- **实现建议**：
+  - 在 `VNode` 展开阶段，对元素检查是否有 `::before` / `::after` 样式规则（从全局类样式或主题获取）。
+  - 创建虚拟 `VNode` 插入到 `children` 的开头/结尾，类型为 `span` 或 `div`，内容来自 `content` 属性。
+
+### 6. 其他伪类（`:focus`、`:active`、`:visited`、`:first-child` 等）
+- **缺失描述**：除部分 `:hover`（光标变化）外，无任何动态伪类或结构伪类支持。
+- **规范**：CSS Selectors Level 3 – 各种伪类。
+- **优先级**：**P2** – 交互增强，但可通过 JS 事件模拟部分（如 `@focus` 手动切换 class）。
+- **实现建议**：可考虑增加 `:focus`（输入框高亮）作为 P1，其余可延后。
+
+---
+
+## 四、表格布局
+
+### 7. `border-collapse: collapse` 及表格布局模型
+- **缺失描述**：无 `<table>`、`<tr>`、`<td>` 等元素类型，无表格专用布局算法，自然无边框合并。
+- **规范**：CSS 2.2 §17 – 表格。
+- **优先级**：**P2** – 数据表格在现代 UI 中常用，但可通过 Flex/Grid 模拟，非核心。
+- **实现建议**：若确实需要，需新增 `TableLayoutStrategy`，实现自动/固定表格布局算法。
+
+---
+
+## 五、CSS 变量（自定义属性）
+
+### 8. `var()` 函数
+- **缺失描述**：不支持读取 `--*` 自定义属性，样式解析时无变量替换。
+- **规范**：CSS Custom Properties for Cascading Variables Module Level 1 §3 – `var()`。
+- **优先级**：**P1** – 主题切换和动态样式大量依赖 CSS 变量。
+- **实现建议**：
+  - 在 `CssMappings::parseInlineStyle` 和类样式合并后，增加 `resolveVariables()` 步骤。
+  - 维护每个组件的变量栈（可从主题继承 `:root` 变量），递归展开 `var(--name, fallback)`。
+
+---
+
+## 六、多列布局
+
+### 9. CSS Columns（`column-count`、`column-width`）
+- **缺失描述**：完全无多列布局实现，无法将内容分成多栏。
+- **规范**：CSS Multi-column Layout Module Level 1。
+- **优先级**：**P2** – 特定场景（新闻布局）需要，普通应用较少用。
+- **实现建议**：新增 `MultiColumnLayoutStrategy`，实现列平衡算法。
+
+---
+
+## 七、滚动与溢出
+
+### 10. 滚动条占用内容区宽度（标准行为）
+- **缺失描述**：当前滚动条叠加在内容上（类似 `overflow:overlay`），不改变布局宽度，导致内容可能被遮挡或宽度计算错误。
+- **规范**：CSS Overflow Module Level 3 §2.3 – `overflow: auto` 时滚动条应占用内容盒尺寸。
+- **优先级**：**P0** – 严重违反标准，且影响实际可用宽度，导致滚动容器内内容换行错误。
+- **实现建议**：在 `LayoutResolver` 中，当检测到需要垂直滚动条（`contentHeight > h`）且 `overflow-y: auto/scroll` 时，从 `w` 中减去 `scrollbarWidth` 作为新的内容宽度，重新布局子节点。
+
+---
+
+## 八、选择器与层叠
+
+### 11. 复杂选择器（后代、子代、相邻兄弟、通用兄弟）
+- **缺失描述**：仅支持单一类选择器（`.class`），不支持 `div span`、`ul > li`、`h1 + p`、`p ~ ul` 等。
+- **规范**：CSS Selectors Level 3。
+- **优先级**：**P2** – 可增加组件样式灵活性，但当前 class 唯一选择器也能覆盖多数场景。
+- **实现建议**：若需支持，需实现 CSS 选择器引擎（复杂，可引入第三方程式库，但 AOT 限制）。
+
+### 12. 层叠优先级计算（权重）
+- **缺失描述**：仅按“类样式 → 内联 style → 显式 props”简单覆盖，无通配符、元素、类、ID、`!important` 的权重计算。
+- **规范**：CSS Cascading and Inheritance Level 4 §6。
+- **优先级**：**P2** – 当前覆盖顺序能满足大多数情况，但严格 CSS 标准缺失。
+- **实现建议**：对每个选择器计算权重（a,b,c,d），合并时先按权重降序再按源码顺序。
+
+---
+
+## 九、单位与数值
+
+### 13. 相对单位（`em`、`rem`、`vw`、`vh`、`vmin`、`vmax`）
+- **缺失描述**：仅支持 `px` 和 `%`，无视口单位、字体相对单位。
+- **规范**：CSS Values and Units Module Level 3 §5 – 相对长度。
+- **优先级**：**P1** – 响应式设计与字体缩放严重依赖 `em`/`rem`/`vw`/`vh`。
+- **实现建议**：在 `PercentResolver` 中增加 `resolveLength()` 转换所有尺寸。
+
+### 14. `calc()` 复杂表达式
+- **缺失描述**：仅支持 `calc(100% - 40px)` 形式，不支持 `calc(50% + 2em)` 等多运算符、混合单位表达式。
+- **规范**：CSS Values and Units Module Level 3 §9 – `calc()`。
+- **优先级**：**P2** – 常见于响应式，但可手动计算替代。
+- **实现建议**：实现递归语法解析器，支持加减乘除，按需扩展。
+
+---
+
+## 十、其他视觉与效果
+
+### 15. `::placeholder` 伪元素
+- **缺失描述**：`<input>` 不支持占位符样式定制。
+- **规范**：CSS Pseudo-Elements Module Level 4 §4 – `::placeholder`。
+- **优先级**：**P2** – 增强表单美观度，非关键。
+- **实现建议**：在 `makeInputElement` 中，若 `value` 为空且定义了 `placeholder` 属性，绘制灰色文本作为占位符，并支持单独样式。
+
+### 16. `outline` 与 `box-shadow` 不占位
+- **缺失描述**：已支持 `box-shadow`（作为绘制效果），但 `outline` 无对应属性。
+- **规范**：CSS Basic User Interface Module Level 3 – `outline`。
+- **优先级**：**P2** – 焦点指示器常用，可用 `border` 模拟。
+- **实现建议**：映射 `outline` 属性到 `border` 逻辑。
+
+---
+
+## 优先级总结表
+
+| 优先级 | 数量 | 特性 |
+|--------|------|------|
+| **P0** | 2 | `:hover` 样式响应、滚动条占位布局 |
+| **P1** | 6 | `scroll-behavior:smooth`、`vertical-align`、内联格式化上下文、CSS 变量 `var()`、相对单位（`em/rem/vw/vh`） |
+| **P2** | 7 | 伪元素 `::before/::after`、表格布局、多列布局、复杂选择器、层叠权重、`calc()` 扩展、`::placeholder` 等 |
+
+---
+
+## 实施路线图建议
+
+**第一阶段（P0 修复）**
+- 实现 `:hover` 样式重算与重绘。
+- 修复滚动条占用内容区宽度。
+
+**第二阶段（P1 核心体验）**
+- 实现内联格式化上下文（含 `vertical-align`）。
+- 支持 `scroll-behavior:smooth` 平滑滚动。
+- 支持 CSS 变量 `var()` 解析与继承。
+- 实现 `em`/`rem`/`vw`/`vh` 单位转换。
+
+**第三阶段（P2 增强）**
+- 伪元素 `::before/::after` 生成。
+- 表格布局（若用户需求强烈）。
+- 多列布局、选择器增强等。
+
+以上清单严格对照 CSS 标准，优先级基于实际开发影响。Px 项目可按此逐步完善其 CSS 能力，最终实现与浏览器高度一致的布局与样式行为。

@@ -1,0 +1,178 @@
+## 最终 AI Prompt 改进建议
+
+基于上述对 Px 框架布局机制与 CSS 标准/浏览器实现的全面评估，现提出以下严格符合 CSS 规范的改进指令。请将这些要求作为 AI 辅助开发的输入，用于重构或增强 `Px\Rendering\Layout` 及相关模块。
+
+---
+
+### 1. 修复命中测试中的滚动偏移缺失（严重缺陷）
+
+**问题**：`RenderTreeManager::hitTestRecursive` 未考虑滚动容器的 `scrollLeft`/`scrollTop`，导致滚动后点击坐标与元素布局坐标错位。
+
+**规范**：CSSOM View Module – 命中测试应当相对于视口，滚动容器内的元素坐标需减去滚动偏移。
+
+**改进指令**：
+```php
+// 在 RenderTreeManager::hitTestRecursive 中，递归调用前需将鼠标坐标按滚动容器偏移转换
+private function hitTestRecursive(int $x, int $y, RenderNode $node): ?RenderNode
+{
+    // 若当前节点是滚动容器，则对子节点传入减去 scrollLeft/scrollTop 的坐标
+    $childX = $x;
+    $childY = $y;
+    if ($node->isScrollContainer) {
+        $childX += $node->scrollLeft;
+        $childY += $node->scrollTop;
+    }
+    foreach ($node->children as $child) {
+        $found = $this->hitTestRecursive($childX, $childY, $child);
+        if ($found) return $found;
+    }
+    // 检查自身时使用原始坐标（因为节点自身坐标未滚动偏移）
+    if (/* 命中条件 */) return $node;
+    return null;
+}
+```
+同时需确保 `findScrollContainerAt` 同样应用偏移。
+
+---
+
+### 2. 实现内联格式化上下文（Inline Formatting Context）
+
+**缺失**：`span`、文本节点等内联元素被当作块级元素布局，无行内盒模型、文本环绕、基线对齐。
+
+**规范**：CSS 2.2 §9.4.2 – 内联级元素生成内联盒，在行内格式化上下文中水平排列，行高决定行盒高度。
+
+**改进指令**：
+- 新增 `InlineLayoutStrategy` 类，实现 `LayoutStrategyInterface`。
+- 在 `LayoutResolver::resolveNode` 中，当父元素 `display` 为 `inline` 或 `inline-block`，或父元素为内联上下文时，切换到内联策略。
+- 算法：
+  1. 收集所有内联级子节点（包括文本节点）。
+  2. 按 `white-space: normal/pre/nowrap` 处理换行。
+  3. 逐字符/元素测量宽度，当超出可用宽度时换行。
+  4. 计算每行的最大行高（取子节点 `line-height` 最大值）。
+  5. 按 `vertical-align`（暂支持 `top/middle/bottom/baseline`）对齐行内盒。
+  6. 设置父节点高度为所有行盒高度之和。
+
+---
+
+### 3. 完善 Grid 布局至 Level 1 核心特性
+
+**缺失**：
+- `grid-template-areas` 与 `grid-area` 命名区域
+- `grid-auto-rows` / `grid-auto-flow` 隐式网格
+- 轨道列表中独立的 `minmax()`
+- `auto-fill` / `auto-fit` 符合标准行为（坍缩与填充）
+
+**改进指令**：
+- 在 `CssMappings::parseGridTemplateValue` 中增加对 `grid-template-areas` 字符串的解析，生成 `[areaName => (rowStart, colStart, rowEnd, colEnd)]` 映射。
+- 重构 `GridLayoutStrategy`：
+  - 先处理显式网格（`grid-template-rows/columns`），再处理命名区域。
+  - 未指定位置的子项按 `grid-auto-flow: row` 顺序填充（支持 `dense` 可选）。
+  - 实现 `grid-auto-rows` 作为隐式行高默认值。
+  - `minmax()` 解析扩展为 `minmax(min, max)` 独立使用，用于轨道尺寸约束。
+- 重写 `auto-fill`/`auto-fit`：根据容器宽度计算最多列数（`auto-fill`），`auto-fit` 在无项目时坍缩为空轨道。
+
+---
+
+### 4. 绝对定位的百分比偏移支持
+
+**缺失**：`left: 50%`, `top: 20%` 等被当作 0 处理。
+
+**规范**：CSS 2.2 §10.6.4 – 绝对定位元素的百分比偏移相对于包含块的宽度/高度。
+
+**改进指令**：
+在 `AbsolutePositioning::resolveAbsolutePositioning` 中：
+- 解析 `left`/`right` 百分比值时，使用包含块宽度计算 `$left = (int)($containingBlockWidth * $percent / 100)`。
+- 同样 `top`/`bottom` 使用包含块高度。
+- 注意：当 `left` 和 `right` 同时为百分比且 `width: auto` 时，应推导宽度为 `containingBlockWidth - left% - right%`。
+
+---
+
+### 5. 块级外边距折叠（Margin Collapsing）
+
+**缺失**：相邻块级兄弟元素的上下外边距直接累加，未取最大值。
+
+**规范**：CSS 2.2 §8.3.1 – 普通流中垂直相邻的两个块级盒子的外边距会折叠为其中较大者。
+
+**改进指令**：
+- 在 `BlockLayoutStrategy::resolveNormalFlow` 中，记录每个块级子元素的 `marginBottom`。
+- 当放置下一个块级子元素时，取其 `marginTop` 与上一个元素的 `marginBottom` 的最大值作为实际间距。
+- 父元素与其第一个/最后一个子元素的外边距折叠规则（父元素无 border/padding）需在父容器高度计算时处理。
+
+---
+
+### 6. Flex 布局补充标准特性
+
+**缺失**：
+- `align-content` 多行对齐
+- `flex-basis: content` 识别
+
+**改进指令**：
+- 在 `FlexLayoutStrategy` 中，当 `flex-wrap: wrap` 且存在多行时，根据 `align-content` 值（`flex-start/center/flex-end/space-between/space-around/stretch`）调整行在交叉轴上的分布。
+- 在 `CssValueParser::parseFlexValue` 中，将 `content` 关键字映射为 `basis = -2` 特殊值，并在 `applyFlexBasis` 中根据内容大小计算（对文本节点测量宽度/高度，对其他元素使用 `auto` 回退）。
+
+---
+
+### 7. 增强脏标记传播（确保父尺寸更新）
+
+**问题**：当子节点因 `flex-grow` 或内容变化导致尺寸改变时，父容器的 `contentHeight`/`contentWidth` 未及时更新。
+
+**规范**：任何尺寸变化应向上传播到受影响祖先，直至根节点。
+
+**改进指令**：
+- 在 `RenderNode::markLayoutDirty` 中增加参数 `$propagateUp` 默认为 `true`，递归调用父节点 `markLayoutDirty(true)`。
+- 所有导致子节点尺寸变化的代码（如 `applyFlexBasis`、`flex-grow` 分配、收缩计算、网格拉伸）必须触发子节点及其父节点的脏标记。
+- `LayoutResolver::resolveNode` 在洁净路径中，若子节点 `layoutDirty` 则强制父节点进入脏路径（即使父节点原为洁净）。
+
+---
+
+### 8. 单位系统扩展（em/rem/vw/vh）
+
+**缺失**：仅支持 `px` 和 `%`，无法使用相对单位。
+
+**规范**：CSS Values and Units Level 3 – 相对单位基于字体或视口。
+
+**改进指令**：
+- 在 `PercentResolver` 中增加 `resolveLength(string $value, array $context)` 方法，支持：
+  - `em`：相对于当前元素的 `fontSize`
+  - `rem`：相对于根元素（`#root`）的 `fontSize`
+  - `vw` / `vh`：视口宽度/高度的 1%
+  - `%`：继续现有逻辑。
+- 在布局计算前，对每个节点的样式属性（`width`、`height`、`margin`、`padding`、`left`、`top` 等）调用此方法转换为像素值。
+
+---
+
+### 9. 滚动条占位布局（可选）
+
+**规范**：CSS Overflow Module Level 3 – `overflow: auto` 或 `scroll` 的滚动条应占用内容区域宽度，导致可用空间减少。
+
+**当前行为**：滚动条叠加在内容之上（类似 `overlay`），不改变布局尺寸。
+
+**改进指令**（可选，因可能破坏现有 UI）：
+- 在 `LayoutResolver` 中标记有滚动条需求（`contentHeight > h`）的容器。
+- 在计算 `contentWidth` 时，减去滚动条宽度（默认 `scrollbarWidth`）作为实际可用内容宽度。
+- 重新布局子节点（触发父节点脏标记）。
+
+---
+
+### 10. 样式选择器级联增强
+
+**缺失**：仅支持单一类选择器，无后代、组合、伪类，无权重计算。
+
+**规范**：CSS Cascading and Inheritance Level 4 – 选择器优先级（a,b,c,d）决定规则覆盖。
+
+**改进指令**（可限定为静态 CSS 子集）：
+- 在 `CssMappings::parseStyleBlock` 中，将每条规则的选择器解析为结构体：`[type, class, id, attribute, pseudo]`。
+- 构建一个全局规则树（按优先级分组）。
+- 对每个元素，收集所有匹配的规则，按优先级排序后合并。
+- 优先级权重：`!important` > 内联 > ID > 类/属性/伪类 > 元素/伪元素 > 通配符。
+
+---
+
+### 交付物要求
+
+请将以上改进按优先级（P0：缺陷修复，P1：标准缺失，P2：增强）分批实现，并保证：
+- 所有新代码通过现有测试（若测试不足，补充对应 WPT 用例的子集）。
+- 不破坏 AOT 编译约束（避免动态调用、反射、eval）。
+- 每个策略类保持单一职责，现有 `LayoutResolver` 仅作调度。
+
+输出改进后的关键类文件（`RenderTreeManager`、`FlexLayoutStrategy`、`GridLayoutStrategy`、`AbsolutePositioning`、`LayoutResolver`、`CssValueParser` 等）及必要的单元测试。
