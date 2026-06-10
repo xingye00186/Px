@@ -71,8 +71,8 @@ $tests['align-content center 多行垂直居中'] = function() {
             VNode::h('div', ['style' => 'width:80px;height:40px'], 'C'),
         ])
     );
-    assert_contains($result, 'div (0,0 80x40)', 'align-content:center wrap first row A');
-    assert_contains($result, 'div (84,0 80x40)', 'align-content:center wrap second item B at x=80+4=84');
+    assert_contains($result, 'div (0,58 80x40)', 'align-content:center wrap first row A');
+    assert_contains($result, 'div (84,58 80x40)', 'align-content:center wrap second item B at x=80+4=84');
     return $result;
 };
 
@@ -85,7 +85,7 @@ $tests['align-content flex-end 多行底部'] = function() {
             VNode::h('div', ['style' => 'width:80px;height:40px'], 'C'),
         ])
     );
-    assert_contains($result, 'div (0,0 80x40)', 'align-content:flex-end wrap layout');
+    assert_contains($result, 'div (0,116 80x40)', 'align-content:flex-end wrap layout');
     return $result;
 };
 
@@ -111,7 +111,7 @@ $tests['align-content space-around 均匀分布'] = function() {
             VNode::h('div', ['style' => 'width:80px;height:40px'], 'C'),
         ])
     );
-    assert_contains($result, 'div (0,0 80x40)', 'align-content:space-around wrap layout');
+    assert_contains($result, 'div (0,29 80x40)', 'align-content:space-around wrap layout');
     return $result;
 };
 

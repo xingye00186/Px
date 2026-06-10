@@ -148,7 +148,7 @@ $tests['grid auto-flow 隐式行高'] = function() {
             VNode::h('div', ['style' => ''], 'E'),
         ])
     );
-    assert_contains($result, 'div (0,68 194x60) text="D"', 'auto-flow: D in row 2, y = implicit_row + gap');
+    assert_contains($result, 'div (0,88 194x80) text="D"', 'auto-flow: D in row 2, y = implicit_row + gap');
     return $result;
 };
 

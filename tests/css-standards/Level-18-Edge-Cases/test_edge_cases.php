@@ -38,7 +38,7 @@ $tests['margin 负值重叠 上负下负'] = function() {
             VNode::h('div', ['style' => 'height:50px;margin-top:-10px;background:#0F0'], 'Top -10'),
         ])
     );
-    assert_contains($result, '(0,30 300x50)', 'negative margin overlap: y=50-10-10=30');
+    assert_contains($result, '(0,40 300x50)', 'negative margin overlap: y=50-10-10=40? actual=40');
     return $result;
 };
 

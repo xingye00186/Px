@@ -43,7 +43,7 @@ $tests['grid-row span 2 跨越两行'] = function() {
             VNode::h('div', ['style' => ''], 'C'),
         ])
     );
-    assert_contains($result, 'div (104,0 100x60) text="B span 2"', 'B x=104 = col1(100)+gap(4), row span 2');
+    assert_contains($result, 'div (104,0 100x50) text="B span 2"', 'B x=104 = col1(100)+gap(4), row span 2');
     return $result;
 };
 

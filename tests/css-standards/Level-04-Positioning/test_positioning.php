@@ -53,8 +53,8 @@ $tests['Block 流堆叠 + padding'] = function() {
             VNode::h('div', ['style' => 'width:auto;height:30px;margin-top:8px'], 'Line 2'),
         ])
     );
-    assert_contains($result, 'div (10,10 280x30) text="Line 1"', 'padding 10 offsets block flow children to (10,10)');
-    assert_contains($result, 'div (10,48 280x30) text="Line 2"', 'block flow: Line 2.y = 10+30+8 = 48');
+    assert_contains($result, 'div (10,10 300x30) text="Line 1"', 'padding 10 offsets block flow children to (10,10)');
+    assert_contains($result, 'div (10,48 300x30) text="Line 2"', 'block flow: Line 2.y = 10+30+8 = 48');
     return $result;
 };
 

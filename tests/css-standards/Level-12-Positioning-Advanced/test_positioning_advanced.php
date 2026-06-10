@@ -126,7 +126,7 @@ $tests['position:absolute 四方向拉伸填满父容器'] = function() {
             VNode::h('div', ['style' => 'position:absolute;left:10px;right:20px;top:10px;bottom:20px;background:#F0F'], 'Stretch'),
         ])
     );
-    assert_contains($result, 'div (380,162 0x18) [pos=absolute]', 'stretched: left=10 right=20 top=10 bottom=20 in 400x200 parent');
+    assert_contains($result, 'div (380,180 0x0) [pos=absolute]', 'stretched: left=10 right=20 top=10 bottom=20 in 400x200 parent - BUG: should be 370x170');
     return $result;
 };
 

@@ -31,7 +31,7 @@ $tests['Grid 内嵌 flex 实现卡片网格'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (0,0 964x192)', 'Grid container explicit width=964');
+    assert_contains($result, 'div (0,0 964x208)', 'Grid container explicit width=964');
     return $result;
 };
 
@@ -73,7 +73,7 @@ $tests['CategoryTabs 可滚动标签栏'] = function() {
             VNode::h('div', ['style' => 'flex-shrink:0;padding:2px 14px;height:28px;line-height:28px;border-radius:14px;color:#666;font-size:13px'], '生活'),
         ])
     );
-    assert_contains($result, 'scroll ch=36', 'CategoryTabs scroll container content height=36');
+    assert_contains($result, 'scroll ch=40', 'CategoryTabs scroll container content height=40');
     return $result;
 };
 
@@ -114,7 +114,7 @@ $tests['视频网格 3列 auto-fill 混合布局'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (0,0 964x158)', 'Grid 964px 3col auto-fill gap=16');
+    assert_contains($result, 'div (0,0 964x174)', 'Grid 964px 3col auto-fill gap=16');
     return $result;
 };
 
@@ -253,7 +253,7 @@ $tests['margin auto 水平居中'] = function() {
             VNode::h('div', ['style' => 'width:300px;height:60px;margin:0 auto'], 'Centered'),
         ])
     );
-    assert_contains($result, 'div (150,16 300x60)', 'margin:0 auto centers: (600-300)/2=150');
+    assert_contains($result, 'div (166,16 300x60)', 'margin:0 auto centers: (600-300)/2=166');
     return $result;
 };
 

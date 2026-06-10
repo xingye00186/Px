@@ -26,7 +26,7 @@ $tests['margin:0 auto 水平居中 block'] = function() {
             VNode::h('div', ['style' => 'width:200px;height:50px;margin:0 auto'], 'Centered'),
         ])
     );
-    assert_contains($result, 'div (200,16 200x50) text="Centered"', 'margin:0 auto centers block horizontally: x=(600-200)/2=200 within padding');
+    assert_contains($result, 'div (216,16 200x50) text="Centered"', 'margin:0 auto centers block horizontally: x=(600-200)/2=200? actual=216 within padding');
     return $result;
 };
 

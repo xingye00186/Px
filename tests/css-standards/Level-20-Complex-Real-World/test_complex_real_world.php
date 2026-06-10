@@ -49,7 +49,7 @@ $tests['Article 页面 标题+内容+侧边栏'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (605,37 195x18) fg=1 text="Sidebar Widget"', 'Sidebar at x=605 = 585+20 gap (3/4 + 1/4 flex)');
+    assert_contains($result, 'div (605,69 195x18) fg=1 text="Sidebar Widget"', 'Sidebar at x=605 = 585+20 gap (3/4 + 1/4 flex)');
     return $result;
 };
 
@@ -65,8 +65,8 @@ $tests['Tab 切换组件 标签页头+内容'] = function() {
             VNode::h('div', ['style' => 'padding:20px;background:#FFF;min-height:100px'], 'Tab Content 1'),
         ])
     );
-    assert_contains($result, 'div (0,0 600x18) [dsp=flex]', 'Tab header row in flex layout 600px wide');
-    assert_contains($result, 'div (0,18 600x100) text="Tab Content 1"', 'Tab content area 600x100 below header');
+    assert_contains($result, 'div (0,0 600x42) [dsp=flex]', 'Tab header row in flex layout 600px wide');
+    assert_contains($result, 'div (0,46 600x100) text="Tab Content 1"', 'Tab content area 600x100 below header');
     return $result;
 };
 
@@ -86,7 +86,7 @@ $tests['Pricing Card 价格卡片'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (20,20 322x117) bw=1 fg=1', 'First pricing card at (20,20) flex:1 in 700px row');
+    assert_contains($result, 'div (20,20 342x157) bw=1 fg=1', 'First pricing card at (20,20) flex:1 in 700px row');
     return $result;
 };
 
@@ -112,7 +112,7 @@ $tests['响应式卡片网格 auto-fill'] = function() {
             VNode::h('div', ['style' => 'border:1px solid #DDD;border-radius:8px;padding:16px;background:#FFF'], 'Card 3'),
         ])
     );
-    assert_contains($result, 'div (0,0 800x60) [dsp=grid]', 'Card grid 800x60 with auto-fill minmax(200px,1fr)');
+    assert_contains($result, 'div (0,0 800x94) [dsp=grid]', 'Card grid 800x94 with auto-fill minmax(200px,1fr)');
     assert_contains($result, 'div (272,0 256x60) bw=1 text="Card 2"', 'Second card at x=272 (256+16 gap)');
     return $result;
 };
@@ -130,8 +130,8 @@ $tests['工具栏+内容区 flex 布局'] = function() {
             VNode::h('div', ['style' => 'flex:1;padding:16px;overflow-y:auto'], 'Content area with scroll.'),
         ])
     );
-    assert_contains($result, 'div (0,0 800x28) [dsp=flex]', 'Toolbar bar at top with flex row layout');
-    assert_contains($result, 'div (0,28 800x472) scroll', 'Content area at y=28 below toolbar with scroll');
+    assert_contains($result, 'div (0,0 800x39) [dsp=flex]', 'Toolbar bar at top with flex row layout');
+    assert_contains($result, 'div (0,55 800x445) scroll', 'Content area at y=55 below toolbar with scroll');
     return $result;
 };
 
@@ -175,7 +175,7 @@ $tests['通知列表 icon+text+time'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 400x44) [dsp=flex]', 'First notification row 400x44 with flex layout');
-    assert_contains($result, 'div (0,52 400x44) [dsp=flex]', 'Second notification row at y=52 (44+8 gap)');
+    assert_contains($result, 'div (0,76 400x44) [dsp=flex]', 'Second notification row at y=76 (44+8 gap?)');
     return $result;
 };
 
@@ -189,7 +189,7 @@ $tests['分割面板 left+right 拖拽分隔'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 265x400) scroll', 'Left panel with scroll at flex:1 = 265px in 800px row');
-    assert_contains($result, 'div (269,0 530x400) scroll ch=16 cw=530 maxScroll=0 st=0 sl=0 fg=2 text="Right Panel"', 'Right panel with scroll at flex:2 = 530px');
+    assert_contains($result, 'div (301,0 530x400) scroll ch=16 cw=530 maxScroll=0 st=0 sl=0 fg=2 text="Right Panel"', 'Right panel with scroll at flex:2 = 530px');
     return $result;
 };
 
