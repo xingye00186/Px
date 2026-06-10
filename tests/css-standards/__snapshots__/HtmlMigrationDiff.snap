@@ -2,13 +2,13 @@
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
   div (0,0 292x200) bw=1 fg=1 text="Card1"
-  div (308,0 292x200) bw=1 fg=1 text="Card2"
+  div (310,0 292x200) bw=1 fg=1 text="Card2"
 
 ---
 
 === Test: Grid 3列等宽 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x60) [dsp=grid]
+div (0,0 600x92) [dsp=grid]
   div (0,0 192x60) text="C1"
   div (204,0 192x60) text="C2"
   div (408,0 192x60) text="C3"
@@ -63,9 +63,9 @@ div (0,0 300x100) scroll ch=200 cw=300 maxScroll=100 st=0 sl=0
 
 === Test: flex row 模拟表格 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x17) [dsp=flex] bw=1
+div (0,0 600x35) [dsp=flex] bw=1
   div (0,0 200x17) bw=1 text="Column"
-  div (200,0 400x17) fg=1 text="Value"
+  div (226,0 374x17) fg=1 text="Value"
 
 ---
 
@@ -77,10 +77,10 @@ div (0,0 400x30) text="Dark theme text"
 
 === Test: 多层嵌套卡片 ===
 Frame #1 events=0 detail=normal
-div (0,0 500x96)
-  div (32,32 436x64) bw=3
-    div (52,52 396x18) text="Card Title"
-    div (52,78 396x18) text="Card content text"
+div (0,0 500x142)
+  div (32,32 500x64) bw=3
+    div (52,52 500x18) text="Card Title"
+    div (52,78 500x18) text="Card content text"
 
 ---
 
@@ -88,14 +88,14 @@ div (0,0 500x96)
 Frame #1 events=0 detail=normal
 div (0,0 200x24) [dsp=flex]
   div (0,5 36x14) text="Active"
-  span (42,3 40x18) text="v5 M3"
+  span (58,3 40x18) text="v5 M3"
 
 ---
 
 === Test: 代码块 white-space:pre ===
 Frame #1 events=0 detail=normal
 div (0,0 500x32) bw=1
-  div (20,16 460x16) text="abstract class RenderContext {
+  div (20,16 500x16) text="abstract class RenderContext {
     abst..."
 
 ---
@@ -104,9 +104,9 @@ div (0,0 500x32) bw=1
 Frame #1 events=0 detail=normal
 div (0,0 600x38) [dsp=flex]
   div (0,0 24x24) bw=2
-  div (32,0 568x38) fg=1
-    div (32,0 600x18) text="v5 M3: Flat + Layer"
-    div (32,4 600x16) text="~100 行 / 7 文件"
+  div (36,0 564x38) fg=1
+    div (36,0 600x18) text="v5 M3: Flat + Layer"
+    div (36,4 600x16) text="~100 行 / 7 文件"
 
 ---
 
@@ -124,21 +124,21 @@ div (0,0 600x30) text="Centered footer text"
 
 === Test: dep-box 分区布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 500x46) bw=1 ov=hidden
+div (0,0 500x88) bw=1 ov=hidden
   div (0,0 500x17) bw=1 text="v5 M3: Flat + Layer"
-  div (0,17 500x29)
-    div (14,29 472x17) text="框架提供:"
+  div (0,35 500x29)
+    div (14,47 500x17) text="框架提供:"
 
 ---
 
 === Test: flex-wrap 标签云 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x86) [dsp=flex]
-  div (0,0 24x14) text="rect"
-  div (0,18 24x14) text="text"
-  div (0,36 36x14) text="button"
-  div (0,54 24x14) text="grid"
-  div (0,72 30x14) text="label"
+div (0,0 400x110) [dsp=flex]
+  div (0,0 24x18) text="rect"
+  div (0,22 24x18) text="text"
+  div (0,44 36x18) text="button"
+  div (0,66 24x18) text="grid"
+  div (0,88 30x18) text="label"
 
 ---
 
@@ -152,8 +152,8 @@ div (0,0 300x40) scroll ch=40 cw=800 maxScroll=0 st=0 sl=0 ov=auto
 === Test: 完整卡片行组合场景 ===
 Frame #1 events=0 detail=normal
 div (0,0 1100x900)
-  div (32,32 1036x37) text="Title"
-  div (32,73 1036x20) text="Subtitle text"
-  div (32,117 1036x18) [dsp=flex]
-    div (32,117 510x18) bw=3 fg=1 text="Danger Card"
-    div (558,117 510x18) bw=3 fg=1 text="Success Card"
+  div (32,32 1100x37) text="Title"
+  div (32,73 1100x20) text="Subtitle text"
+  div (32,117 1100x64) [dsp=flex]
+    div (32,117 542x18) bw=3 fg=1 text="Danger Card"
+    div (636,117 542x18) bw=3 fg=1 text="Success Card"

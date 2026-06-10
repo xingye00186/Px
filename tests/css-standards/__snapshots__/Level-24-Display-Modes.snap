@@ -1,0 +1,88 @@
+=== Test: display:table 基本容器 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x24) [dsp=table]
+  div (0,0 0x24) [dsp=table-row]
+    div (10,10 200x24) [dsp=table-cell] text="Cell1"
+    div (10,10 200x24) [dsp=table-cell] text="Cell2"
+
+---
+
+=== Test: display:table 2x2 网格布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x48) [dsp=table]
+  div (0,0 0x24) [dsp=table-row]
+    div (0,0 150x24) [dsp=table-cell] text="R1C1"
+    div (0,0 150x24) [dsp=table-cell] text="R1C2"
+  div (0,24 0x24) [dsp=table-row]
+    div (0,24 150x24) [dsp=table-cell] text="R2C1"
+    div (0,24 150x24) [dsp=table-cell] text="R2C2"
+
+---
+
+=== Test: table-cell 嵌套 block 内容 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x24) [dsp=table]
+  div (0,0 0x24) [dsp=table-row]
+    div (5,5 400x24) [dsp=table-cell]
+      div (10,10 100x30) text="Nested"
+
+---
+
+=== Test: display:table-caption 标题 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x42) [dsp=table]
+  div (0,24 300x18) [dsp=table-caption] text="Caption"
+  div (0,0 0x24) [dsp=table-row]
+    div (0,0 300x24) [dsp=table-cell] text="Data"
+
+---
+
+=== Test: column-count:3 三列等分 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x40)
+  div (0,0 89x40) text="Item 1"
+  div (105,0 89x40) text="Item 2"
+  div (210,0 89x40) text="Item 3"
+
+---
+
+=== Test: column-width:100px 自适应列数 ===
+Frame #1 events=0 detail=normal
+div (0,0 350x30)
+  div (0,0 100x30) text="A"
+  div (116,0 100x30) text="B"
+  div (232,0 100x30) text="C"
+
+---
+
+=== Test: column-count:2 + column-gap:30px ===
+Frame #1 events=0 detail=normal
+div (0,0 230x30)
+  div (0,0 100x30) text="Left"
+  div (130,0 100x30) text="Right"
+
+---
+
+=== Test: display:inline 三个行内元素并排 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x54)
+  span (0,0 24x18) [dsp=inline] text="AA "
+  span (0,18 24x18) [dsp=inline] text="BB "
+  span (0,36 16x18) [dsp=inline] text="CC"
+
+---
+
+=== Test: display:inline-block 三个等高元素 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x180)
+  div (0,0 8x60) [dsp=inline-block] text="A"
+  div (0,60 8x60) [dsp=inline-block] text="B"
+  div (0,120 8x60) [dsp=inline-block] text="C"
+
+---
+
+=== Test: display:inline 溢出换行 ===
+Frame #1 events=0 detail=normal
+div (0,0 120x36)
+  span (0,0 72x18) [dsp=inline] text="LongTextA"
+  span (0,18 80x18) [dsp=inline] text=" LongTextB"

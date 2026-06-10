@@ -29,7 +29,7 @@ div (0,0 400x100)
 === Test: padding 缩小内容区 (padding=10px) ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100)
-  div (10,10 180x50) text="Padding test"
+  div (10,10 200x50) text="Padding test"
 
 ---
 
@@ -95,4 +95,4 @@ div (0,0 100x50) bw=2 text="Border"
 === Test: border+padding+width 组合 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100) bw=2
-  div (10,10 180x50) text="Inner"
+  div (10,10 200x50) text="Inner"

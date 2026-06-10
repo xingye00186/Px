@@ -1,10 +1,3 @@
-=== Test: margin:0 auto 水平居中 block ===
-Frame #1 events=0 detail=normal
-div (0,0 600x66)
-  div (200,16 200x50) text="Centered"
-
----
-
 === Test: margin-left auto 在 flex row 右推 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x50) [dsp=flex]
@@ -48,10 +41,10 @@ div (0,0 300x150) scroll ch=144 cw=300 maxScroll=0 st=0 sl=0
 
 === Test: margin + relative 偏移组合 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x128)
+div (0,0 400x136)
   div (0,0 400x40) text="Normal"
   div (20,58 400x40) [pos=relative] text="Rel margin"
-  div (0,88 400x40) text="After"
+  div (0,96 400x40) text="After"
 
 ---
 

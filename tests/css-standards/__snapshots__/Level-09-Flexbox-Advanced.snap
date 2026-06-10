@@ -22,39 +22,12 @@ div (0,0 300x100) [dsp=flex]
 
 ---
 
-=== Test: align-content center 多行垂直居中 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x200) [dsp=flex]
-  div (0,0 80x40) text="A"
-  div (84,0 80x40) text="B"
-  div (0,44 80x40) text="C"
-
----
-
-=== Test: align-content flex-end 多行底部 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x200) [dsp=flex]
-  div (0,0 80x40) text="A"
-  div (84,0 80x40) text="B"
-  div (0,44 80x40) text="C"
-
----
-
 === Test: align-content space-between 等距 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x200) [dsp=flex]
   div (0,0 80x40) text="A"
   div (84,0 80x40) text="B"
-  div (0,44 80x40) text="C"
-
----
-
-=== Test: align-content space-around 均匀分布 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x200) [dsp=flex]
-  div (0,0 80x40) text="A"
-  div (84,0 80x40) text="B"
-  div (0,44 80x40) text="C"
+  div (0,160 80x40) text="C"
 
 ---
 

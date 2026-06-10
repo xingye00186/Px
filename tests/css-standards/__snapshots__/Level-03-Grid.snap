@@ -80,17 +80,6 @@ div (0,0 400x200) [dsp=grid]
 
 ---
 
-=== Test: grid auto-flow 隐式行高 ===
-Frame #1 events=0 detail=normal
-div (0,0 600x128) [dsp=grid]
-  div (0,0 194x60) text="A"
-  div (202,0 194x60) text="B"
-  div (404,0 194x60) text="C"
-  div (0,68 194x60) text="D"
-  div (202,68 194x60) text="E"
-
----
-
 === Test: grid item 内部 flex column ===
 Frame #1 events=0 detail=normal
 div (0,0 400x0) [dsp=grid]

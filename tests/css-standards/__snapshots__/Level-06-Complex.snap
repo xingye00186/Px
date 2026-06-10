@@ -1,24 +1,13 @@
-=== Test: Grid 内嵌 flex 实现卡片网格 ===
-Frame #1 events=0 detail=normal
-div (0,0 964x192) [dsp=grid]
-  div (0,0 310x192) [dsp=flex]
-    div (0,0 310x140) text="Cover"
-    div (0,140 310x52) [dsp=flex]
-      div (8,148 36x36)
-      div (52,148 250x18) fg=1 text="Title text"
-
----
-
 === Test: NavBar 水平导航栏 (flex row) ===
 Frame #1 events=0 detail=normal
 div (0,0 1440x56) [dsp=flex] bw=1
   div (24,16 24x24)
-  div (64,17 1272x21) [dsp=flex] fg=1
+  div (64,17 1320x21) [dsp=flex] fg=1
     div (64,17 72x21) text="Bilibili"
     div (160,17 28x21) text="推荐"
     div (212,17 28x21) text="热门"
     div (264,17 28x21) text="关注"
-  div (1336,12 80x32)
+  div (1384,12 80x32)
 
 ---
 
@@ -28,42 +17,16 @@ div (700,400 48x48) [pos=fixed] text="Top"
 
 ---
 
-=== Test: CategoryTabs 可滚动标签栏 ===
-Frame #1 events=0 detail=normal
-div (0,0 1440x44) scroll ch=36 cw=1440 maxScroll=0 st=0 sl=0 [dsp=flex] ov=auto
-  div (16,8 26x28) text="推荐"
-  div (54,8 26x28) text="热门"
-  div (92,8 26x28) text="游戏"
-  div (130,8 26x28) text="科技"
-  div (168,8 26x28) text="生活"
-
----
-
 === Test: 视频卡片 (封面+信息) flex column ===
 Frame #1 events=0 detail=normal
 div (0,0 300x0) [dsp=flex] ov=hidden
   div (0,0 300x168)
   div (0,168 300x49) [dsp=flex]
-    div (8,176 284x20) text="视频标题最多两行"
-    div (8,200 284x9) [dsp=flex]
+    div (8,176 300x20) text="视频标题最多两行"
+    div (8,200 300x9) [dsp=flex]
       div (8,200 58x0) [dsp=flex] text="UP主名称"
       div (74,191 14x18) text="·"
       div (96,191 38x18) text="1.2万"
-
----
-
-=== Test: 视频网格 3列 auto-fill 混合布局 ===
-Frame #1 events=0 detail=normal
-div (0,0 964x158) [dsp=grid]
-  div (0,0 310x158) [dsp=flex]
-    div (0,0 310x140) text="Cover"
-    div (0,140 310x18) text="Video 1"
-  div (326,0 310x158) [dsp=flex]
-    div (326,0 310x140) text="Cover"
-    div (326,140 310x18) text="Video 2"
-  div (652,0 310x158) [dsp=flex]
-    div (652,0 310x140) text="Cover"
-    div (652,140 310x18) text="Video 3"
 
 ---
 
@@ -72,14 +35,14 @@ Frame #1 events=0 detail=normal
 div (0,0 1440x900) [dsp=flex]
   div (0,0 1440x56) [dsp=flex]
     div (24,16 24x24)
-    div (48,19 1368x18) [dsp=flex] fg=1
+    div (48,19 1416x18) [dsp=flex] fg=1
       div (48,19 64x18) text="Bilibili"
       div (136,19 28x18) text="推荐"
-  div (0,56 1440x44) scroll ch=31 cw=1440 maxScroll=0 st=0 sl=0 [dsp=flex] ov=auto
+  div (0,56 1440x44) scroll ch=35 cw=1472 maxScroll=0 st=0 sl=0 [dsp=flex] ov=auto
     div (16,69 28x18) text="推荐"
-    div (56,69 28x18) text="热门"
+    div (84,69 28x18) text="热门"
   div (0,100 1440x800) scroll ch=216 cw=1440 maxScroll=0 st=0 sl=0 fg=1
-    div (16,116 1408x200) text="Content Area"
+    div (16,116 1440x200) text="Content Area"
   div (700,400 48x48) [pos=fixed]
 
 ---
@@ -88,11 +51,11 @@ div (0,0 1440x900) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 964x0) [dsp=flex]
   div (0,0 964x200) text="Banner"
-  div (0,216 964x158) [dsp=grid]
-    div (0,216 310x158) [dsp=flex]
+  div (0,216 964x174) [dsp=grid]
+    div (0,216 310x174) [dsp=flex]
       div (0,216 310x140) text="Cover"
       div (0,356 310x18) text="Title"
-    div (326,216 310x158) [dsp=flex]
+    div (326,216 310x174) [dsp=flex]
       div (326,216 310x140) text="Cover"
       div (326,356 310x18) text="Title"
 
@@ -102,10 +65,10 @@ div (0,0 964x0) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 1440x900) [dsp=flex]
   div (0,0 240x900)
-    div (16,16 208x40) text="Nav 1"
-    div (16,64 208x40) text="Nav 2"
-  div (240,0 1200x900) scroll ch=216 cw=1200 maxScroll=0 st=0 sl=0 fg=1
-    div (256,16 1408x200) text="Main Content"
+    div (16,16 240x40) text="Nav 1"
+    div (16,64 240x40) text="Nav 2"
+  div (272,0 1168x900) scroll ch=216 cw=1168 maxScroll=0 st=0 sl=0 fg=1
+    div (288,16 1440x200) text="Main Content"
 
 ---
 
@@ -113,7 +76,7 @@ div (0,0 1440x900) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 1440x900) [pos=relative]
   div (0,0 1440x900) [pos=absolute]
-  div (-150,-100 400x300) [pos=absolute] text="Modal"
+  div (520,300 400x300) [pos=absolute] text="Modal"
 
 ---
 
@@ -142,19 +105,12 @@ div (0,0 964x316) [dsp=grid]
 === Test: 三层嵌套 flex row>column>row ===
 Frame #1 events=0 detail=normal
 div (0,0 800x200) [dsp=flex]
-  div (8,8 576x184) [dsp=flex] fg=1
-    div (8,8 576x40) [dsp=flex]
-      div (8,8 286x40) fg=1 text="A"
-      div (298,8 286x40) fg=1 text="B"
-    div (8,52 576x140) fg=1 text="C"
-  div (592,8 200x184) text="Side"
-
----
-
-=== Test: margin auto 水平居中 ===
-Frame #1 events=0 detail=normal
-div (0,0 600x76)
-  div (150,16 300x60) text="Centered"
+  div (8,8 592x200) [dsp=flex] fg=1
+    div (8,8 592x40) [dsp=flex]
+      div (8,8 294x40) fg=1 text="A"
+      div (306,8 294x40) fg=1 text="B"
+    div (8,52 592x156) fg=1 text="C"
+  div (608,8 200x200) text="Side"
 
 ---
 

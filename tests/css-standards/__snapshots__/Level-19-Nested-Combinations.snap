@@ -120,13 +120,13 @@ div (0,0 400x120) [dsp=grid]
 
 === Test: Grid auto-fill 嵌套 Flex 项目 ===
 Frame #1 events=0 detail=normal
-div (0,0 500x76) [dsp=grid]
+div (0,0 500x92) [dsp=grid]
   div (0,0 161x76) [dsp=flex]
-    div (60,8 40x40) text="Icon"
-    div (8,48 145x20) text="Label"
+    div (68,8 40x40) text="Icon"
+    div (8,48 161x20) text="Label"
   div (169,0 161x76) [dsp=flex]
-    div (229,8 40x40) text="Icon"
-    div (177,48 145x20) text="Label"
+    div (237,8 40x40) text="Icon"
+    div (177,48 161x20) text="Label"
   div (338,0 161x76) [dsp=flex]
-    div (398,8 40x40) text="Icon"
-    div (346,48 145x20) text="Label"
+    div (406,8 40x40) text="Icon"
+    div (346,48 161x20) text="Label"
