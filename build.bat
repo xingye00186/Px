@@ -256,6 +256,63 @@ echo   [OK] AOT static check passed
 echo.
 
 :: ====================================================================
+:: Step 0.75: Clear compilation cache (before SFC)
+:: ====================================================================
+echo ========================================
+echo   Step 0.75: Clear compilation cache
+echo ========================================
+echo.
+
+:: Read Px_clear_compilation_cache from project.yml
+set "CLEAR_CACHE_PROJ="
+for /f "tokens=2 delims=: " %%a in ('findstr /r "^ *Px_clear_compilation_cache:" "%APP_DIR%\project.yml" 2^>nul') do (
+    set "CLEAR_CACHE_PROJ=%%a"
+)
+
+:: Read Px_clear_compilation_cache from config.yml
+set "CLEAR_CACHE_CFG="
+for /f "tokens=2 delims=: " %%a in ('findstr /r "^ *Px_clear_compilation_cache:" "%FRAMEWORK_ROOT%\config.yml" 2^>nul') do (
+    set "CLEAR_CACHE_CFG=%%a"
+)
+
+:: If project.yml explicitly says false, skip clearing entirely
+if /i "!CLEAR_CACHE_PROJ!"=="false" (
+    echo   [SKIP] Disabled by project.yml ^(Px_clear_compilation_cache=false^)
+    echo.
+    goto :clear_cache_done
+)
+
+:: Determine if clearing is needed
+set "SHOULD_CLEAR=0"
+if /i "!CLEAR_CACHE_PROJ!"=="true" set "SHOULD_CLEAR=1"
+if /i "!CLEAR_CACHE_CFG!"=="true" set "SHOULD_CLEAR=1"
+
+if "!SHOULD_CLEAR!"=="1" (
+    echo   Clearing build/ directory ...
+    if exist "%FRAMEWORK_ROOT%\build" (
+        rmdir /s /q "%FRAMEWORK_ROOT%\build" 2>nul
+        echo     build/ cleared
+    ) else (
+        echo     build/ not found, skipping
+    )
+
+    echo   Clearing gen/ directory ...
+    if exist "%APP_DIR%\gen" (
+        rmdir /s /q "%APP_DIR%\gen" 2>nul
+        echo     gen/ cleared
+    ) else (
+        echo     gen/ not found, skipping
+    )
+
+    echo   [OK] Compilation cache cleared
+) else (
+    echo   [SKIP] Neither project.yml nor config.yml enables Px_clear_compilation_cache
+)
+
+:clear_cache_done
+echo.
+
+:: ====================================================================
 :: Step 1: SFC compile (only if .vue files exist)
 :: ====================================================================
 if "%HAS_VUE%"=="0" goto :skip_sfc

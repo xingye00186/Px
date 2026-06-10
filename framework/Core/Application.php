@@ -300,7 +300,7 @@ class Application
             ImageManager::setAppRoot($appDir);
         }
 
-        // 初始化调试配置（从 px_debug.yml）
+        // 初始化调试配置（从 project.yml 中读取 Px_debug_* 前缀项）
         if ($appDir !== '') {
             Config::init($appDir);
         }

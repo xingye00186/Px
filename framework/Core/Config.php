@@ -5,10 +5,11 @@ namespace Px\Core;
 use native_types;
 
 /**
- * Config — AOT 兼容的运行时配置读取（px_debug.yml）
+ * Config — AOT 兼容的运行时配置读取（来自 project.yml 中 Px_debug_* 前缀的项）
  *
  * 静态类，由 Application::mount() 初始化。
- * 读取 {APP_DIR}/px_debug.yml，解析一级 key: value 键值对。
+ * 从 {APP_DIR}/project.yml 中读取以 Px_debug_ 开头的键值对，
+ * 去除前缀后供 Config::get() 查询。
  * 文件不存在时所有 get() 返回默认值，不抛异常。
  */
 class Config
@@ -24,7 +25,7 @@ class Config
     {
         self::$appDir = $appDir;
         self::$cache = null; // 强制重新解析
-        $ymlFile = $appDir . '/px_debug.yml';
+        $ymlFile = $appDir . '/project.yml';
         if (!file_exists($ymlFile)) {
             return; // 无配置文件，全部走默认值
         }
@@ -32,6 +33,8 @@ class Config
         if ($lines === false) {
             return;
         }
+        $prefix = 'Px_debug_';
+        $prefixLen = strlen($prefix);
         $parsed = [];
         foreach ($lines as $line) {
             $line = trim($line);
@@ -45,14 +48,20 @@ class Config
             $key = trim(substr($line, 0, $pos));
             $val = trim(substr($line, $pos + 1));
 
+            // 只提取 Px_debug_ 前缀的项，去除前缀后存入缓存
+            if (!str_starts_with($key, $prefix)) {
+                continue;
+            }
+            $shortKey = substr($key, $prefixLen);
+
             // 解析布尔值
             if ($val === 'true') {
-                $parsed[$key] = true;
+                $parsed[$shortKey] = true;
             } elseif ($val === 'false') {
-                $parsed[$key] = false;
+                $parsed[$shortKey] = false;
             } elseif (is_numeric($val)) {
                 // 整数/浮点数
-                $parsed[$key] = strpos($val, '.') !== false ? (float)$val + 0 : (int)$val;
+                $parsed[$shortKey] = strpos($val, '.') !== false ? (float)$val + 0 : (int)$val;
             } else {
                 // 字符串，去掉引号
                 if ((str_starts_with($val, '"') && str_ends_with($val, '"'))
@@ -60,7 +69,7 @@ class Config
                 ) {
                     $val = substr($val, 1, -1);
                 }
-                $parsed[$key] = $val;
+                $parsed[$shortKey] = $val;
             }
         }
         self::$cache = $parsed;

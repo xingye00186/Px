@@ -15,3 +15,8 @@ sources:
 ignore:
   - ../../framework/compiler
   - ../../framework/aot-checker.php
+
+# ========================================================================
+# Runtime debug config (read by framework/Core/Config.php via Px_debug_ prefix)
+# ========================================================================
+Px_debug_diag_enabled: true
