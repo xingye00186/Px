@@ -93,54 +93,54 @@ class AbsolutePositioning implements AbsoluteStrategy
         $effectiveAncestorH = $hasExplicitAncestorH ? $ancestorH : 0;
 
         // CSS Positioned Layout §3.1: left/right % 基于包含块宽度，top/bottom % 基于包含块高度
-        $left = $leftRaw !== null ? PercentResolver::resolvePercent($style, 'left', 'leftPercent', $ancestorW) : 0;
-        $top = $topRaw !== null ? PercentResolver::resolvePercent($style, 'top', 'topPercent', $effectiveAncestorH) : 0;
-        $right = $rightRaw !== null ? PercentResolver::resolvePercent($style, 'right', 'rightPercent', $ancestorW) : null;
-        $bottom = $bottomRaw !== null ? PercentResolver::resolvePercent($style, 'bottom', 'bottomPercent', $effectiveAncestorH) : null;
+        $left = (int)($leftRaw !== null ? PercentResolver::resolvePercent($style, 'left', 'leftPercent', $ancestorW) : 0);
+        $top = (int)($topRaw !== null ? PercentResolver::resolvePercent($style, 'top', 'topPercent', $effectiveAncestorH) : 0);
+        $right = $rightRaw !== null ? (int)PercentResolver::resolvePercent($style, 'right', 'rightPercent', $ancestorW) : null;
+        $bottom = $bottomRaw !== null ? (int)PercentResolver::resolvePercent($style, 'bottom', 'bottomPercent', $effectiveAncestorH) : null;
 
         // 使用定位祖先尺寸解析百分比宽高（符合 CSS 规范）
-        $width = PercentResolver::resolvePercent($style, 'width', 'widthPercent', $ancestorW);
-        $height = PercentResolver::resolvePercent($style, 'height', 'heightPercent', $effectiveAncestorH);
+        $width = (int)PercentResolver::resolvePercent($style, 'width', 'widthPercent', $ancestorW);
+        $height = (int)PercentResolver::resolvePercent($style, 'height', 'heightPercent', $effectiveAncestorH);
 
         // CSS 2.2 §8.3, §8.4: margin/padding 百分比基于包含块 content box 宽度
         $ancestorContentW = ($ancestor !== null) ? PercentResolver::resolveContentWidth($ancestor->style, $ancestor->w) : $viewportW;
 
         // CSS Box Model §7: margin/padding 百分比基于包含块宽度
         $marginLeftRaw = $style['marginLeft'] ?? $style['margin'] ?? null;
-        $marginLeft = ($marginLeftRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $ancestorContentW);
+        $marginLeft = (int)(($marginLeftRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $ancestorContentW));
 
         $marginTopRaw = $style['marginTop'] ?? $style['margin'] ?? null;
-        $marginTop = ($marginTopRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $ancestorContentW);
+        $marginTop = (int)(($marginTopRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $ancestorContentW));
 
         // CSS 2.2 §10.3.7: Stretch-to-fill when left+right both set and width is auto
         if ($leftRaw !== null && $rightRaw !== null && $width <= 0) {
-            $width = max(0, $ancestorW - $left - $right - $marginLeft
+            $width = (int)max(0, $ancestorW - $left - $right - $marginLeft
                 - PercentResolver::resolveMarginPaddingPercent($style, 'marginRight', 'marginRightPercent', $ancestorContentW));
         }
         // CSS 2.2 §10.6.4: Same for top+bottom and auto height
         if ($topRaw !== null && $bottomRaw !== null && $height <= 0 && $hasExplicitAncestorH) {
-            $height = max(0, $effectiveAncestorH - $top - $bottom - $marginTop
+            $height = (int)max(0, $effectiveAncestorH - $top - $bottom - $marginTop
                 - PercentResolver::resolveMarginPaddingPercent($style, 'marginBottom', 'marginBottomPercent', $ancestorContentW));
         }
 
         // Assign computed width/height to node (CSS 2.2 §10.3.7, §10.6.4)
         if ($width > 0) {
-            $node->w = $width;
+            $node->w = (int)$width;
         }
         if ($height > 0) {
-            $node->h = $height;
+            $node->h = (int)$height;
         }
 
         // Guard: margin:auto resolved later in resolveMarginAuto; treat as 0 here
 
-        $paddingLeft = PercentResolver::resolveMarginPaddingPercent($style, 'paddingLeft', 'paddingLeftPercent', $ancestorContentW);
-        $paddingRight = PercentResolver::resolveMarginPaddingPercent($style, 'paddingRight', 'paddingRightPercent', $ancestorContentW);
-        $paddingTop = PercentResolver::resolveMarginPaddingPercent($style, 'paddingTop', 'paddingTopPercent', $ancestorContentW);
+        $paddingLeft = (int)PercentResolver::resolveMarginPaddingPercent($style, 'paddingLeft', 'paddingLeftPercent', $ancestorContentW);
+        $paddingRight = (int)PercentResolver::resolveMarginPaddingPercent($style, 'paddingRight', 'paddingRightPercent', $ancestorContentW);
+        $paddingTop = (int)PercentResolver::resolveMarginPaddingPercent($style, 'paddingTop', 'paddingTopPercent', $ancestorContentW);
 
         // relative: left/top 作为额外偏移（不改变 stack 推进位置）
-        $node->x = $ancestorX + $left + $marginLeft;
+        $node->x = (int)($ancestorX + $left + $marginLeft);
 
-        $node->y = $ancestorY + $top + $marginTop;
+        $node->y = (int)($ancestorY + $top + $marginTop);
 
         // right/bottom 替代：相对于 padding box 的右边/下边（CSS Positioned Layout §3.1）
         // position:fixed 时 ancestor=null（视口参考系），使用 $viewportW/$viewportH
@@ -148,9 +148,9 @@ class AbsolutePositioning implements AbsoluteStrategy
             // 元素右边缘 = padding box 右边界 - right - paddingRight
             $rightEdge = $ancestorX + $ancestorW - $ancestorPaddingLeft - $ancestorPaddingRight - $right;
             if ($width > 0) {
-                $node->x = $rightEdge - $width;
+                $node->x = (int)($rightEdge - $width);
             } else {
-                $node->x = $rightEdge - $node->w;
+                $node->x = (int)($rightEdge - $node->w);
             }
 
         }
@@ -159,22 +159,22 @@ class AbsolutePositioning implements AbsoluteStrategy
             // 元素下边缘 = padding box 下边界 - bottom - paddingBottom
             $bottomEdge = $ancestorY + $ancestorH - $ancestorPaddingTop - $ancestorPaddingBottom - $bottom;
             if ($height > 0) {
-                $node->y = $bottomEdge - $height;
+                $node->y = (int)($bottomEdge - $height);
             } else {
-                $node->y = $bottomEdge - $node->h;
+                $node->y = (int)($bottomEdge - $node->h);
             }
 
         }
 
         // ── margin:auto 水平 + 垂直居中 ──
         // margin:auto 时的父内容区宽度 = content box 宽度
-        $parentContentW = ($ancestor !== null) ? max(0, $ancestorContentW) : 0;
+        $parentContentW = ($ancestor !== null) ? (int)max(0, $ancestorContentW) : 0;
 
-        $paddingBottom = PercentResolver::resolveMarginPaddingPercent($style, 'paddingBottom', 'paddingBottomPercent', $ancestorContentW);
+        $paddingBottom = (int)PercentResolver::resolveMarginPaddingPercent($style, 'paddingBottom', 'paddingBottomPercent', $ancestorContentW);
 
-        $parentContentH = ($ancestor !== null)
+        $parentContentH = (int)(($ancestor !== null)
             ? PercentResolver::resolveContentHeight($ancestor->style, $ancestor->h)
-            : 0;
+            : 0);
 
         $this->resolveMarginAuto($node, $style, $parentContentW, $parentContentH);
 
@@ -184,19 +184,19 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         $translateY = (int)($style['translateY'] ?? 0);
 
-        $node->x += $translateX;
+        $node->x += (int)$translateX;
 
-        $node->y += $translateY;
+        $node->y += (int)$translateY;
 
         // ── Set container's own visualW/visualH ──
-        $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
-        $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+        $node->visualW = (int)PercentResolver::resolveVisualW($style, $node->w);
+        $node->visualH = (int)PercentResolver::resolveVisualH($style, $node->h);
 
         // Resolve children recursively
 
-        $childOffsetX = $node->x + $paddingLeft;
+        $childOffsetX = (int)($node->x + $paddingLeft);
 
-        $childOffsetY = $node->y + $paddingTop;
+        $childOffsetY = (int)($node->y + $paddingTop);
 
         foreach ($node->children as $child) {
             $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node);
