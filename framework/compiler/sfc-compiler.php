@@ -88,6 +88,7 @@ function loadComponentRegistry(string $vueFile): ComponentRegistry
     foreach ($files as $file) {
         $baseName = pathinfo($file, PATHINFO_FILENAME);
         $tagName = strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $baseName));
+        $tagName = str_replace('_', '-', $tagName);
         $tagName = strtolower($tagName);
         if ($tagName === '') continue;
         $warn = $registry->register($tagName, $file, 'user');

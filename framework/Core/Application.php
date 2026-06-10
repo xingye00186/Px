@@ -630,13 +630,74 @@ class Application
     }
 
     /**
+     * 导出布局快照到 JSON 文件。
+     * 序列化 RenderNode 树的位置/尺寸/样式信息，用于分治测试和对比验证。
+     */
+    public function dumpLayoutToFile(string $path): void
+    {
+        $root = $this->renderTreeManager->getRootRenderNode();
+        if ($root === null) {
+            file_put_contents($path, '[]');
+            return;
+        }
+        $data = $this->serializeRenderNode($root);
+        file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * 递归序列化 RenderNode 为数组。
+     */
+    private function serializeRenderNode(?RenderNode $node): ?array
+    {
+        if ($node === null) return null;
+        $result = [
+            'type' => $node->type,
+            'x' => $node->x,
+            'y' => $node->y,
+            'w' => $node->w,
+            'h' => $node->h,
+            'visualW' => $node->visualW,
+            'visualH' => $node->visualH,
+            'layer' => $node->layer,
+            'isScrollContainer' => $node->isScrollContainer,
+            'content' => $node->content,
+        ];
+        // 包含关键样式属性用于对比
+        $styleKeys = ['bg', 'fg', 'fontSize', 'bold', 'borderWidth', 'borderColor',
+            'borderLeftWidth', 'borderLeftColor', 'borderRadius', 'textAlign',
+            'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
+            'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
+            'gap', 'boxSizing', 'flexDirection', 'alignItems', 'justifyContent', 'flexWrap'];
+        $style = [];
+        foreach ($styleKeys as $k) {
+            if (isset($node->style[$k]) && $node->style[$k] !== null) {
+                $style[$k] = $node->style[$k];
+            }
+        }
+        if (count($style) > 0) {
+            $result['style'] = $style;
+        }
+        $children = [];
+        foreach ($node->children as $child) {
+            $serialized = $this->serializeRenderNode($child);
+            if ($serialized !== null) {
+                $children[] = $serialized;
+            }
+        }
+        if (count($children) > 0) {
+            $result['children'] = $children;
+        }
+        return $result;
+    }
+
+    /**
      * 完整渲染流程：
      *   1. 重建 VNode 树（含组件展开）
      *   2. RenderTreeManager::updateFromVNode 转换并同步 bind 值
      *   3. LayoutResolver::resolve 计算坐标
      *   4. VNodeRenderer::render 生成 GDI 调用
      */
-    private function render(): void
+    public function render(): void
     {
         $this->debugFrameNumber++;
         $frame = $this->debugFrameNumber;

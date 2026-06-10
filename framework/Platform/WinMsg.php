@@ -18,6 +18,7 @@ class WinMsg
     public const WM_SIZE        = 0x0005;
     public const WM_PAINT       = 0x000F;
     public const WM_CLOSE       = 0x0010;
+    public const WM_TIMER       = 0x0113;
 
     // Window Show State
     public const SW_SHOW = 5;

@@ -133,8 +133,18 @@ class CssMappings
         ],
         'text-align' => [
             'key'     => 'textAlign',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseTextAlign',
+            'parser'  => 'Px\Rendering\CssMappings::parseTextAlign',
             'default' => 'left',
+        ],
+        'line-height' => [
+            'key'     => 'lineHeight',
+            'parser'  => 'Px\Rendering\CssMappings::parseLineHeight',
+            'default' => '',
+        ],
+        'font-family' => [
+            'key'     => 'fontFamily',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => '',
         ],
         // ---- v8 UI extensions ----
         'border' => [
@@ -460,6 +470,39 @@ class CssMappings
     public static function parseTextAlign(string $value): string
     {
         return CssValueParser::parseTextAlign($value);
+    }
+
+    /**
+     * Parse line-height value.
+     * Supports: unitless number (1.7), px (28px), em (1.6em), % (150%).
+     * For unitless numbers, returns as 'N.N' string for runtime line spacing calculation.
+     * For px values, returns pixel count.
+     * For em/%, returns multiplier string (e.g., '1.6em' → '1.6').
+     */
+    public static function parseLineHeight(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') return '';
+        if ($value === 'normal') return '';
+        // unitless number (most common in base.html: line-height: 1.7)
+        if (preg_match('/^(\d+(\.\d+)?)$/', $value, $m)) {
+            return $m[1];
+        }
+        // px value
+        if (str_ends_with($value, 'px')) {
+            return (string)(int)$value;
+        }
+        // em value: return multiplier
+        if (str_ends_with($value, 'em')) {
+            $num = (float)$value;
+            return (string)$num;
+        }
+        // percentage
+        if (str_ends_with($value, '%')) {
+            $num = (float)$value / 100.0;
+            return (string)$num;
+        }
+        return $value;
     }
 
     /**
@@ -812,19 +855,15 @@ class CssMappings
                 $bw = (int)($parts[0] ?? 0);
                 $bc = (int)($parts[1] ?? 0);
                 $bs = $parts[2] ?? 'solid';
-                // Set borderColor only if no per-side color was already set
+                // Set borderColor only if no per-side color was already set by explicit property
                 if (!isset($style['borderColor'])) {
                     $style['borderColor'] = $bc;
                 }
-                if (!isset($style[$keys['w']])) {
-                    $style[$keys['w']] = $bw;
-                }
-                if (!isset($style[$keys['c']])) {
-                    $style[$keys['c']] = $bc;
-                }
-                if (!isset($style[$keys['s']])) {
-                    $style[$keys['s']] = $bs;
-                }
+                // Directional shorthand ALWAYS overrides (CSS 2.2 §8.6):
+                // border-left overrides any value set by directionless border shorthand
+                $style[$keys['w']] = $bw;
+                $style[$keys['c']] = $bc;
+                $style[$keys['s']] = $bs;
             }
         }
 

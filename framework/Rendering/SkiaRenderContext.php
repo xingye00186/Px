@@ -100,7 +100,7 @@ class SkiaRenderContext extends RenderContext
                         $el['w'] ?? 0, $el['h'] ?? 0, $color
                     );
                 }
-                // Draw border outline (skip when rounded corners)
+                // Draw border outline (also when rounded corners — simpler rects)
                 // CSS 2.2 §8.6: per-side border widths and colors
                 $borderWidth = $el['borderWidth'] ?? 0;
                 $borderColor = $el['borderColor'] ?? 0;
@@ -112,7 +112,7 @@ class SkiaRenderContext extends RenderContext
                 $bbc = $el['borderBottomColor'] ?? $borderColor;
                 $blc = $el['borderLeftColor'] ?? $borderColor;
                 $brc = $el['borderRightColor'] ?? $borderColor;
-                if (($bt > 0 || $bb > 0 || $bl > 0 || $br > 0) && $radius === 0) {
+                if ($bt > 0 || $bb > 0 || $bl > 0 || $br > 0) {
                     $bx = $el['x'] ?? 0;
                     $by = $el['y'] ?? 0;
                     $bw = $el['w'] ?? 0;
