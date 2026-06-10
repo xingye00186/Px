@@ -1,3 +1,4 @@
+@generated 2026-06-10 12:10:11
 === Test: Dashboard 侧边栏+头部+主内容 ===
 Frame #1 events=0 detail=normal
 div (0,0 900x600) [dsp=grid]
@@ -21,12 +22,12 @@ div (0,0 800x119)
 
 === Test: Tab 切换组件 标签页头+内容 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x186)
-  div (0,0 600x42) [dsp=flex] bw=2
-    div (0,0 40x18) bw=2 text="Tab 1"
-    div (84,0 40x18) text="Tab 2"
-    div (164,0 40x18) text="Tab 3"
-  div (0,46 600x100) text="Tab Content 1"
+div (0,0 600x182)
+  div (0,0 600x40) [dsp=flex]
+    div (0,0 40x18) text="Tab 1"
+    div (80,0 40x18) text="Tab 2"
+    div (160,0 40x18) text="Tab 3"
+  div (0,42 600x100) text="Tab Content 1"
 
 ---
 

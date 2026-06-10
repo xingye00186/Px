@@ -1,3 +1,4 @@
+@generated 2026-06-10 12:10:19
 === Test: Grid 内嵌 flex 实现卡片网格 ===
 Frame #1 events=0 detail=normal
 div (0,0 964x208) [dsp=grid]
@@ -11,7 +12,7 @@ div (0,0 964x208) [dsp=grid]
 
 === Test: NavBar 水平导航栏 (flex row) ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x56) [dsp=flex] bw=1
+div (0,0 1440x56) [dsp=flex]
   div (24,16 24x24)
   div (64,17 1320x21) [dsp=flex] fg=1
     div (64,17 72x21) text="Bilibili"

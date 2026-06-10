@@ -1,297 +1,298 @@
+@generated 2026-06-10 11:21:29
 === Test: Roadmap App 完整渲染快照 ===
 Frame #1 events=0 detail=normal
-div (0,0 1100x900) scroll ch=1868 cw=1100 maxScroll=968 st=0 sl=0
+div (0,0 1100x900) scroll ch=4245 cw=1100 maxScroll=3345 st=0 sl=0
   div (0,0 1100x69)
     span (32,32 380x37) text="VueCalc 框架架构演进路线图"
-  div (0,69 1100x24)
-    span (32,73 594x20) text="Overlay Layer 系统方案 &amp; 通用�..."
-  div (32,93 1100x194) bw=1
-    div (56,117 1052x0) text="目录"
-    div (56,127 1052x160) [dsp=flex]
-      div (56,127 480x160)
-        div (56,127 480x20) [dsp=flex]
-          span (56,128 112x17) text="1. 当前问题与目标"
-        div (56,147 480x20) [dsp=flex]
-          span (56,148 171x17) text="2. Overlay Layer 核心设计"
-        div (56,167 480x20) [dsp=flex]
-          span (56,168 115x17) text="3. v5 M3 实现步骤"
-        div (56,187 480x20) [dsp=flex]
-          span (56,188 138x17) text="4. 验证方案与向后兼容"
-        div (56,207 480x20) [dsp=flex]
-          span (56,208 184x17) text="5. DOM-like Tree 可行性分析"
-        div (56,227 480x20) [dsp=flex]
-          span (56,228 125x17) text="6. 统一架构演进路线"
-        div (56,247 480x20) [dsp=flex]
-          span (56,248 138x17) text="7. 生命周期与可扩展性"
-        div (56,267 480x20) [dsp=flex]
-          span (56,268 99x17) text="8. 框架对比总结"
-      div (544,127 480x160)
-        div (544,127 480x20) [dsp=flex]
-          span (544,128 148x17) text="9. Widget 四层能力分类"
-        div (544,127 480x20) [dsp=flex]
-          span (544,128 178x17) text="10. RenderContext 渲染抽象"
-        div (544,127 480x20) [dsp=flex]
-          span (544,128 145x17) text="11. 差距分析与模板语法"
-        div (544,127 480x20) [dsp=flex]
-          span (544,128 132x17) text="12. 分阶段实施路线图"
-        div (544,127 480x20) [dsp=flex]
-          span (544,128 106x17) text="13. 双线演进总览"
-        div (544,127 480x20) [dsp=flex]
-          span (544,128 106x17) text="14. 依赖关系详解"
-        div (544,127 480x20) [dsp=flex]
-          span (544,128 145x17) text="15. 实施顺序与关键决策"
-  div (32,311 1100x0)
-    div (32,311 1100x0) bw=2 text="1. 当前问题与目标"
-  div (0,311 1100x36) [dsp=flex]
-    div (0,311 542x36) bw=3 fg=1
-      div (20,331 1060x0) text="问题根因"
-      div (20,331 1060x0) text="框架缺少渲染层 (Layer/Z-Order) �..."
-      div (20,331 1060x0) text="具体表现:"
-      div (20,335 1060x0) text="1. 紧耦合: 父组件必须知道所�..."
-      div (20,331 1060x0) text="2. 不可扩展: 新增弹窗导致所�..."
-      div (20,331 1060x0) text="3. 不支持多层: 弹窗A上弹窗B复..."
-      div (20,331 1060x0) text="4. 点击穿透 Bug: 不检查 condition"
-    div (558,311 542x32) bw=3 fg=1
-      div (578,331 1060x0) text="解决目标"
-      div (578,331 1060x0) text="实现声明式的 overlay layer 系统:"
-      div (578,331 1060x0) text="- 开发者只需在弹窗组件上加 o..."
-      div (578,331 1060x0) text="- 不再需要手写 v-if="!showDialog""
-      div (578,331 1060x0) text="- 点击自动优先命中上层元素"
-      div (578,331 1060x0) text="- 天然支持多层叠加"
-      div (578,331 1060x0) text="- 100% 向后兼容"
-  div (32,359 1100x60) bw=1
-    div (52,379 1060x0) text="当前双重条件控制的痛点"
-    div (52,387 1060x32) bw=1
-      span (68,403 450x16) text="&lt;num-pad x="0" y="80" v-if="!showDial..."
-  div (32,443 1100x0)
-    div (32,443 1100x0) bw=2 text="2. Overlay Layer 核心设计"
-  div (32,443 1100x20)
-    div (32,443 1100x0) text="2.1 核心思路: 分层累积渲染 + �..."
-    div (32,455 1100x0) text="每个 element/button 携带一个 layer..."
-    div (32,463 1100x0) text="- Layer 0: 默认基础层 (主界面内..."
-    div (32,463 1100x0) text="- Layer 1+: 叠加层 (弹窗、tooltip ..."
-  div (0,475 1100x60) [dsp=flex]
-    div (0,475 542x60) bw=3 fg=1
-      div (20,495 1060x0) text="渲染策略 — 累积式"
-      div (20,495 1060x32) bw=1
-        span (36,511 199x16) text="Layer 0 → Layer 1 → Layer 2"
-    div (558,475 542x60) bw=3 fg=1
-      div (578,495 1060x0) text="点击策略 — 层过滤"
-      div (578,495 1060x32) bw=1
-        span (594,511 239x16) text="确定 maxActiveLayer → 仅检查该�..."
-  div (32,551 1100x36) bw=1
-    div (52,567 1060x12) bw=3
-      div (68,579 1028x0) text="没有 condition 的按钮视为 "chrome..."
-    div (52,587 1060x0) text="NumPad 按钮带有 condition → 被正..."
-  div (32,603 1100x0)
-    div (32,603 1100x0) text="5.2 为什么选择拍平: 硬约束"
-  div (32,603 1100x0) bw=1 ov=hidden
-    div (32,603 1100x0) [dsp=flex] bw=1
-      div (32,603 300x0) bw=1 text="缺失的 GDI 能力"
-      div (332,603 800x0) fg=1 text="在树结构中的角色"
-    div (32,603 1100x0) [dsp=flex] bw=1
-      div (32,603 300x0) bw=1 text="SaveDC / RestoreDC"
-      div (332,603 800x0) fg=1 text="进入/退出子节点时保存/恢复�..."
-    div (32,603 1100x0) [dsp=flex] bw=1
-      div (32,603 300x0) bw=1 text="SetViewportOrgEx"
-      div (332,603 800x0) fg=1 text="子节点使用相对坐标 (父坐标�..."
-    div (32,603 1100x0) [dsp=flex] bw=1
-      div (32,603 300x0) bw=1 text="SelectClipRgn"
-      div (332,603 800x0) fg=1 text="子节点裁剪到父容器范围内"
-    div (32,603 1100x0) [dsp=flex]
-      div (32,603 300x0) bw=1 text="Alpha / RGBA 混合"
-      div (332,603 800x0) fg=1 text="半透明叠加效果"
-  div (32,627 1100x0)
-    div (32,627 1100x0) bw=2 text="6. 统一架构演进路线"
-  div (0,627 1100x47) [dsp=flex]
-    div (0,629 24x24) [dsp=flex] bw=2
-      span (7,634 10x13) text="●"
-    div (32,627 1068x47) fg=1
-      div (32,627 1100x9) [dsp=flex]
-        span (32,620 22x14) text="当前"
-        span (62,618 152x18) text="v5 M3: Flat + Layer"
-      div (32,627 1100x30) [dsp=flex]
-        div (32,627 546x30)
-          span (38,629 44x14) text="数据结构"
-          span (38,643 64x14) text="+layer 字段"
-        div (586,627 546x30)
-          span (1146,629 44x14) text="渲染行为"
-          span (1146,643 72x14) text="分层渲染+点击"
-      div (32,631 1100x0) text="~100 行 / 7 文件 | 解决: overlay v-..."
-  div (0,686 1100x47) [dsp=flex]
-    div (0,688 24x24) [dsp=flex] bw=2
-    div (32,686 1068x47) fg=1
-      div (32,686 1100x9) [dsp=flex]
-        span (32,679 33x14) text="下一步"
-        span (73,677 296x18) text="v5 M4: Groups + Incremental Rendering"
-      div (32,686 1100x30) [dsp=flex]
-        div (32,686 546x30)
-          span (38,688 44x14) text="数据结构"
-          span (38,702 54x14) text="+group_id"
-        div (586,686 546x30)
-          span (1146,688 44x14) text="渲染行为"
-          span (1146,702 94x14) text="ChangeQueue 增量"
-      div (32,690 1100x0) text="~80 行 / 4 文件 | 收益: O(n)→O(di..."
-  div (0,745 1100x47) [dsp=flex]
-    div (0,747 24x24) [dsp=flex] bw=2
-    div (32,745 1068x47) fg=1
-      div (32,745 1100x9) [dsp=flex]
-        span (32,738 12x14) text="v6"
-        span (52,736 220x18) text="v6 M1: 分段布局 + 按需 Attach"
-      div (32,745 1100x30) [dsp=flex]
-        div (32,745 546x30)
-          span (38,747 44x14) text="数据结构"
-          span (38,761 117x14) text="拆分为 getLayout_X()"
-        div (586,745 546x30)
-          span (1146,747 44x14) text="生命周期"
-          span (1146,761 102x14) text="onAttach/onDetach"
-      div (32,749 1100x0) text="~300 行 PHP + ~180 行 C++ | 收益: 30..."
-  div (32,804 1100x0)
-    div (32,804 1100x0) bw=2 text="9. Widget 四层能力分类"
-  div (32,804 1100x158) bw=3
-    div (52,824 1060x14) [dsp=flex]
-      div (52,810 28x28) [dsp=flex]
-        span (62,815 7x17) text="1"
-      span (88,815 260x18) text="Tier 1: 已支持/零成本扩展 (当�..."
-    div (52,846 1060x116) [dsp=flex]
-      div (52,846 1060x16)
-        span (58,848 24x14) text="rect"
-      div (52,866 1060x16)
-        span (58,868 24x14) text="text"
-      div (52,886 1060x16)
-        span (58,888 36x14) text="button"
-      div (52,906 1060x16)
-        span (58,908 24x14) text="grid"
-      div (52,926 1060x16)
-        span (58,928 30x14) text="label"
-      div (52,946 1060x16)
-        span (58,948 54x14) text="separator"
-  div (32,970 1100x198) bw=3
-    div (52,990 1060x14) [dsp=flex]
-      div (52,976 28x28) [dsp=flex]
-        span (62,981 7x17) text="2"
-      span (88,981 308x18) text="Tier 2: 中等 GDI 扩展 + AST 新增 (..."
-    div (52,1012 1060x156) [dsp=flex]
-      div (52,1012 1060x16)
-        span (58,1014 30x14) text="image"
-      div (52,1032 1060x16)
-        span (58,1034 30x14) text="input"
-      div (52,1052 1060x16)
-        span (58,1054 48x14) text="textarea"
-      div (52,1072 1060x16)
-        span (58,1074 48x14) text="dropdown"
-      div (52,1092 1060x16)
-        span (58,1094 48x14) text="checkbox"
-      div (52,1112 1060x16)
-        span (58,1114 30x14) text="radio"
-      div (52,1132 1060x16)
-        span (58,1134 42x14) text="tooltip"
-      div (52,1152 1060x16)
-        span (58,1154 48x14) text="groupbox"
-  div (32,1176 1100x158) bw=3
-    div (52,1196 1060x14) [dsp=flex]
-      div (52,1182 28x28) [dsp=flex]
-        span (62,1187 7x17) text="3"
-      span (88,1187 348x18) text="Tier 3: 高级 GDI + 状态管理 + 拖�..."
-    div (52,1218 1060x116) [dsp=flex]
-      div (52,1218 1060x16)
-        span (58,1220 36x14) text="slider"
-      div (52,1238 1060x16)
-        span (58,1240 60x14) text="list/table"
-      div (52,1258 1060x16)
-        span (58,1260 54x14) text="scrollbar"
-      div (52,1278 1060x16)
-        span (58,1280 24x14) text="tabs"
-      div (52,1298 1060x16)
-        span (58,1300 60x14) text="split-pane"
-      div (52,1318 1060x16)
-        span (58,1320 72x14) text="progress-bar"
-  div (32,1342 1100x158) bw=3
-    div (52,1362 1060x14) [dsp=flex]
-      div (52,1348 28x28) [dsp=flex]
-        span (62,1353 7x17) text="4"
-      span (88,1353 220x18) text="Tier 4: 复杂组合组件 (v6 M3+)"
-    div (52,1384 1060x116) [dsp=flex]
-      div (52,1384 1060x16)
-        span (58,1386 42x14) text="menubar"
-      div (52,1404 1060x16)
-        span (58,1406 48x14) text="combobox"
-      div (52,1424 1060x16)
-        span (58,1426 48x14) text="datagrid"
-      div (52,1444 1060x16)
-        span (58,1446 24x14) text="tree"
-      div (52,1464 1060x16)
-        span (58,1466 48x14) text="richtext"
-      div (52,1484 1060x16)
-        span (58,1486 60x14) text="datepicker"
-  div (32,1516 1100x0)
-    div (32,1516 1100x0) bw=2 text="10. RenderContext 后端无关渲染接�..."
-  div (32,1516 1100x28) bw=3
-    div (52,1536 1060x0) text="设计目标"
-    div (52,1544 1060x0) text="对齐 Skia SkCanvas、Flutter Canvas、..."
-  div (32,1560 1100x16) bw=1
-    div (52,1576 1060x0) text="abstract class RenderContext {
+  div (0,101 1100x24)
+    span (32,105 594x20) text="Overlay Layer 系统方案 &amp; 通用�..."
+  div (32,161 1100x214) bw=1
+    div (56,185 1100x20) text="目录"
+    div (56,215 1100x160) [dsp=flex]
+      div (56,215 480x160)
+        div (56,215 480x20) [dsp=flex]
+          span (56,216 112x17) text="1. 当前问题与目标"
+        div (56,235 480x20) [dsp=flex]
+          span (56,236 171x17) text="2. Overlay Layer 核心设计"
+        div (56,255 480x20) [dsp=flex]
+          span (56,256 115x17) text="3. v5 M3 实现步骤"
+        div (56,275 480x20) [dsp=flex]
+          span (56,276 138x17) text="4. 验证方案与向后兼容"
+        div (56,295 480x20) [dsp=flex]
+          span (56,296 184x17) text="5. DOM-like Tree 可行性分析"
+        div (56,315 480x20) [dsp=flex]
+          span (56,316 125x17) text="6. 统一架构演进路线"
+        div (56,335 480x20) [dsp=flex]
+          span (56,336 138x17) text="7. 生命周期与可扩展性"
+        div (56,355 480x20) [dsp=flex]
+          span (56,356 99x17) text="8. 框架对比总结"
+      div (544,215 480x160)
+        div (544,215 480x20) [dsp=flex]
+          span (544,216 148x17) text="9. Widget 四层能力分类"
+        div (544,215 480x20) [dsp=flex]
+          span (544,216 178x17) text="10. RenderContext 渲染抽象"
+        div (544,215 480x20) [dsp=flex]
+          span (544,216 145x17) text="11. 差距分析与模板语法"
+        div (544,215 480x20) [dsp=flex]
+          span (544,216 132x17) text="12. 分阶段实施路线图"
+        div (544,215 480x20) [dsp=flex]
+          span (544,216 106x17) text="13. 双线演进总览"
+        div (544,215 480x20) [dsp=flex]
+          span (544,216 106x17) text="14. 依赖关系详解"
+        div (544,215 480x20) [dsp=flex]
+          span (544,216 145x17) text="15. 实施顺序与关键决策"
+  div (32,449 1100x39)
+    div (32,449 1100x27) bw=2 text="1. 当前问题与目标"
+  div (0,488 1100x208) [dsp=flex]
+    div (0,488 542x162) bw=3 fg=1
+      div (20,508 1100x18) text="问题根因"
+      div (20,508 1100x18) text="框架缺少渲染层 (Layer/Z-Order) �..."
+      div (20,508 1100x18) text="具体表现:"
+      div (20,512 1100x18) text="1. 紧耦合: 父组件必须知道所�..."
+      div (20,508 1100x18) text="2. 不可扩展: 新增弹窗导致所�..."
+      div (20,508 1100x18) text="3. 不支持多层: 弹窗A上弹窗B复..."
+      div (20,508 1100x18) text="4. 点击穿透 Bug: 不检查 condition"
+    div (604,488 542x158) bw=3 fg=1
+      div (624,508 1100x18) text="解决目标"
+      div (624,508 1100x18) text="实现声明式的 overlay layer 系统:"
+      div (624,508 1100x18) text="- 开发者只需在弹窗组件上加 o..."
+      div (624,508 1100x18) text="- 不再需要手写 v-if="!showDialog""
+      div (624,508 1100x18) text="- 点击自动优先命中上层元素"
+      div (624,508 1100x18) text="- 天然支持多层叠加"
+      div (624,508 1100x18) text="- 100% 向后兼容"
+  div (32,708 1100x112) bw=1
+    div (52,728 1100x18) text="当前双重条件控制的痛点"
+    div (52,754 1100x32) bw=1
+      span (68,770 450x16) text="&lt;num-pad x="0" y="80" v-if="!showDial..."
+  div (32,886 1100x39)
+    div (32,886 1100x27) bw=2 text="2. Overlay Layer 核心设计"
+  div (32,925 1100x95)
+    div (32,925 1100x21) text="2.1 核心思路: 分层累积渲染 + �..."
+    div (32,958 1100x18) text="每个 element/button 携带一个 layer..."
+    div (32,984 1100x18) text="- Layer 0: 默认基础层 (主界面内..."
+    div (32,1002 1100x18) text="- Layer 1+: 叠加层 (弹窗、tooltip ..."
+  div (0,1032 1100x158) [dsp=flex]
+    div (0,1032 542x112) bw=3 fg=1
+      div (20,1052 1100x18) text="渲染策略 — 累积式"
+      div (20,1052 1100x32) bw=1
+        span (36,1068 199x16) text="Layer 0 → Layer 1 → Layer 2"
+    div (604,1032 542x112) bw=3 fg=1
+      div (624,1052 1100x18) text="点击策略 — 层过滤"
+      div (624,1052 1100x32) bw=1
+        span (640,1068 239x16) text="确定 maxActiveLayer → 仅检查该�..."
+  div (32,1206 1100x102) bw=1
+    div (52,1222 1100x30) bw=3
+      div (68,1234 1100x18) text="没有 condition 的按钮视为 "chrome..."
+    div (52,1290 1100x18) text="NumPad 按钮带有 condition → 被正..."
+  div (32,1358 1100x21)
+    div (32,1358 1100x21) text="5.2 为什么选择拍平: 硬约束"
+  div (32,1379 1100x183) bw=1 ov=hidden
+    div (32,1379 1100x35) [dsp=flex] bw=1
+      div (32,1379 300x17) bw=1 text="缺失的 GDI 能力"
+      div (358,1379 774x17) fg=1 text="在树结构中的角色"
+    div (32,1416 1100x35) [dsp=flex] bw=1
+      div (32,1416 300x17) bw=1 text="SaveDC / RestoreDC"
+      div (358,1416 774x17) fg=1 text="进入/退出子节点时保存/恢复�..."
+    div (32,1453 1100x35) [dsp=flex] bw=1
+      div (32,1453 300x17) bw=1 text="SetViewportOrgEx"
+      div (358,1453 774x17) fg=1 text="子节点使用相对坐标 (父坐标�..."
+    div (32,1490 1100x35) [dsp=flex] bw=1
+      div (32,1490 300x17) bw=1 text="SelectClipRgn"
+      div (358,1490 774x17) fg=1 text="子节点裁剪到父容器范围内"
+    div (32,1527 1100x35) [dsp=flex]
+      div (32,1527 300x17) bw=1 text="Alpha / RGBA 混合"
+      div (358,1527 774x17) fg=1 text="半透明叠加效果"
+  div (32,1588 1100x39)
+    div (32,1588 1100x27) bw=2 text="6. 统一架构演进路线"
+  div (0,1627 1100x73) [dsp=flex]
+    div (0,1629 24x24) [dsp=flex] bw=2
+      span (7,1634 10x13) text="●"
+    div (36,1627 1064x73) fg=1
+      div (36,1627 1100x11) [dsp=flex]
+        span (36,1620 22x14) text="当前"
+        span (82,1618 152x18) text="v5 M3: Flat + Layer"
+      div (36,1627 1100x34) [dsp=flex]
+        div (36,1627 546x30)
+          span (42,1629 44x14) text="数据结构"
+          span (42,1643 64x14) text="+layer 字段"
+        div (602,1627 546x30)
+          span (1174,1629 44x14) text="渲染行为"
+          span (1174,1643 72x14) text="分层渲染+点击"
+      div (36,1631 1100x16) text="~100 行 / 7 文件 | 解决: overlay v-..."
+  div (0,1712 1100x73) [dsp=flex]
+    div (0,1714 24x24) [dsp=flex] bw=2
+    div (36,1712 1064x73) fg=1
+      div (36,1712 1100x11) [dsp=flex]
+        span (36,1705 33x14) text="下一步"
+        span (93,1703 296x18) text="v5 M4: Groups + Incremental Rendering"
+      div (36,1712 1100x34) [dsp=flex]
+        div (36,1712 546x30)
+          span (42,1714 44x14) text="数据结构"
+          span (42,1728 54x14) text="+group_id"
+        div (602,1712 546x30)
+          span (1174,1714 44x14) text="渲染行为"
+          span (1174,1728 94x14) text="ChangeQueue 增量"
+      div (36,1716 1100x16) text="~80 行 / 4 文件 | 收益: O(n)→O(di..."
+  div (0,1797 1100x73) [dsp=flex]
+    div (0,1799 24x24) [dsp=flex] bw=2
+    div (36,1797 1064x73) fg=1
+      div (36,1797 1100x11) [dsp=flex]
+        span (36,1790 12x14) text="v6"
+        span (72,1788 220x18) text="v6 M1: 分段布局 + 按需 Attach"
+      div (36,1797 1100x34) [dsp=flex]
+        div (36,1797 546x30)
+          span (42,1799 44x14) text="数据结构"
+          span (42,1813 117x14) text="拆分为 getLayout_X()"
+        div (602,1797 546x30)
+          span (1174,1799 44x14) text="生命周期"
+          span (1174,1813 102x14) text="onAttach/onDetach"
+      div (36,1801 1100x16) text="~300 行 PHP + ~180 行 C++ | 收益: 30..."
+  div (32,1882 1100x39)
+    div (32,1882 1100x27) bw=2 text="9. Widget 四层能力分类"
+  div (32,1921 1100x186) bw=3
+    div (52,1941 1100x14) [dsp=flex]
+      div (52,1927 28x28) [dsp=flex]
+        span (62,1932 7x17) text="1"
+      span (88,1932 260x18) text="Tier 1: 已支持/零成本扩展 (当�..."
+    div (52,1963 1100x144) [dsp=flex]
+      div (52,1963 1100x20)
+        span (58,1965 24x14) text="rect"
+      div (52,1987 1100x20)
+        span (58,1989 24x14) text="text"
+      div (52,2011 1100x20)
+        span (58,2013 36x14) text="button"
+      div (52,2035 1100x20)
+        span (58,2037 24x14) text="grid"
+      div (52,2059 1100x20)
+        span (58,2061 30x14) text="label"
+      div (52,2083 1100x20)
+        span (58,2085 54x14) text="separator"
+  div (32,2161 1100x234) bw=3
+    div (52,2181 1100x14) [dsp=flex]
+      div (52,2167 28x28) [dsp=flex]
+        span (62,2172 7x17) text="2"
+      span (88,2172 308x18) text="Tier 2: 中等 GDI 扩展 + AST 新增 (..."
+    div (52,2203 1100x192) [dsp=flex]
+      div (52,2203 1100x20)
+        span (58,2205 30x14) text="image"
+      div (52,2227 1100x20)
+        span (58,2229 30x14) text="input"
+      div (52,2251 1100x20)
+        span (58,2253 48x14) text="textarea"
+      div (52,2275 1100x20)
+        span (58,2277 48x14) text="dropdown"
+      div (52,2299 1100x20)
+        span (58,2301 48x14) text="checkbox"
+      div (52,2323 1100x20)
+        span (58,2325 30x14) text="radio"
+      div (52,2347 1100x20)
+        span (58,2349 42x14) text="tooltip"
+      div (52,2371 1100x20)
+        span (58,2373 48x14) text="groupbox"
+  div (32,2449 1100x186) bw=3
+    div (52,2469 1100x14) [dsp=flex]
+      div (52,2455 28x28) [dsp=flex]
+        span (62,2460 7x17) text="3"
+      span (88,2460 348x18) text="Tier 3: 高级 GDI + 状态管理 + 拖�..."
+    div (52,2491 1100x144) [dsp=flex]
+      div (52,2491 1100x20)
+        span (58,2493 36x14) text="slider"
+      div (52,2515 1100x20)
+        span (58,2517 60x14) text="list/table"
+      div (52,2539 1100x20)
+        span (58,2541 54x14) text="scrollbar"
+      div (52,2563 1100x20)
+        span (58,2565 24x14) text="tabs"
+      div (52,2587 1100x20)
+        span (58,2589 60x14) text="split-pane"
+      div (52,2611 1100x20)
+        span (58,2613 72x14) text="progress-bar"
+  div (32,2689 1100x186) bw=3
+    div (52,2709 1100x14) [dsp=flex]
+      div (52,2695 28x28) [dsp=flex]
+        span (62,2700 7x17) text="4"
+      span (88,2700 220x18) text="Tier 4: 复杂组合组件 (v6 M3+)"
+    div (52,2731 1100x144) [dsp=flex]
+      div (52,2731 1100x20)
+        span (58,2733 42x14) text="menubar"
+      div (52,2755 1100x20)
+        span (58,2757 48x14) text="combobox"
+      div (52,2779 1100x20)
+        span (58,2781 48x14) text="datagrid"
+      div (52,2803 1100x20)
+        span (58,2805 24x14) text="tree"
+      div (52,2827 1100x20)
+        span (58,2829 48x14) text="richtext"
+      div (52,2851 1100x20)
+        span (58,2853 60x14) text="datepicker"
+  div (32,2937 1100x39)
+    div (32,2937 1100x27) bw=2 text="10. RenderContext 后端无关渲染接�..."
+  div (32,2976 1100x64) bw=3
+    div (52,2996 1100x18) text="设计目标"
+    div (52,3022 1100x18) text="对齐 Skia SkCanvas、Flutter Canvas、..."
+  div (32,3102 1100x32) bw=1
+    div (52,3118 1100x16) text="abstract class RenderContext {
     abst..."
-  div (32,1592 1100x0)
-    div (32,1592 1100x0) bw=2 text="14. 依赖关系详解"
-  div (32,1592 1100x24) bw=1 ov=hidden
-    div (32,1592 1100x0) bw=1 text="v5 M3: Flat + Layer"
-    div (32,1592 1100x24)
-      div (46,1604 1072x0) text="框架提供:"
-      div (62,1608 1072x0) text="- layer 字段 (每个 element/button �..."
-      div (62,1608 1072x0) text="- maxActiveLayer (运行时确定最高�..."
-      div (62,1608 1072x0) text="- 两阶段渲染 + 分层点击"
-      div (46,1616 1072x0) text="应用解锁:"
-      div (62,1612 1072x0) text="- overlay 属性 → 弹窗不再需要 ..."
-      div (62,1612 1072x0) text="- 多层叠加天然支持"
-  div (32,1628 1100x24) bw=1 ov=hidden
-    div (32,1628 1100x0) bw=1 text="v6 M1: 分段布局 + RenderContext → ..."
-    div (32,1628 1100x24)
-      div (46,1640 1072x0) text="框架提供:"
-      div (62,1644 1072x0) text="- 编译拆分 getLayout_X()"
-      div (62,1644 1072x0) text="- RenderContext (26方法)"
-      div (62,1644 1072x0) text="- 8 GDI + 7 事件"
-      div (46,1652 1072x0) text="Widget 解锁:"
-      div (62,1648 1072x0) text="- image: onAttach → LoadImage"
-      div (62,1648 1072x0) text="- input: 分段布局 + KEYDOWN/CHAR"
-      div (62,1648 1072x0) text="- dropdown: overlay (基于 layer) + cli..."
-  div (32,1664 1100x0)
-    div (32,1664 1100x0) bw=2 text="11. 差距分析"
-  div (32,1664 1100x0) bw=1 ov=hidden
-    div (32,1664 1100x0) [dsp=flex] bw=1
-      div (32,1664 150x0) bw=1 text="维度"
-      div (182,1664 350x0) bw=1 text="当前状态 (v5)"
-      div (532,1664 600x0) fg=1 text="目标状态 (v6+)"
-    div (32,1664 1100x0) [dsp=flex] bw=1
-      div (32,1664 150x0) bw=1 text="GDI 原语"
-      div (182,1664 350x0) bw=1 text="5 个"
-      div (532,1664 600x0) fg=1 text="13 个 (+8: line, image, oval...)"
-    div (32,1664 1100x0) [dsp=flex] bw=1
-      div (32,1664 150x0) bw=1 text="AST 节点"
-      div (182,1664 350x0) bw=1 text="4 种 + 2 元节点"
-      div (532,1664 600x0) fg=1 text="15+ 种 (+11 个 widget 节点)"
-    div (32,1664 1100x0) [dsp=flex] bw=1
-      div (32,1664 150x0) bw=1 text="布局系统"
-      div (182,1664 350x0) bw=1 text="编译期扁平计算，无自适应"
-      div (532,1664 600x0) fg=1 text="编译期 + 运行时动态布局"
-    div (32,1664 1100x0) [dsp=flex]
-      div (32,1664 150x0) bw=1 text="CSS 映射"
-      div (182,1664 350x0) bw=1 text="8 属性"
-      div (532,1664 600x0) fg=1 text="18+ (border-radius, opacity, cursor...)"
-  div (32,1688 1100x0)
-    div (32,1688 1100x0) text="关键设计原则"
-  div (0,1688 1100x60) [dsp=grid]
-    div (0,1688 358x60) bw=1
-      div (0,1688 1068x0) text="原则 1"
-      div (0,1688 1068x0) text="每步只解决一个问题"
-    div (370,1688 358x60) bw=1
-      div (370,1688 1068x0) text="原则 2"
-      div (370,1688 1068x0) text="每步都是上一步的自然延伸"
-    div (740,1688 358x60) bw=1
-      div (740,1688 1068x0) text="原则 3"
-      div (740,1688 1068x0) text="数据结构先于行为变更"
-  div (0,1772 1100x96) [dsp=flex] bw=1
-    span (417,1820 266x16) text="VueCalc Framework Architecture Roadmap"
+  div (32,3184 1100x39)
+    div (32,3184 1100x27) bw=2 text="14. 依赖关系详解"
+  div (32,3223 1100x206) bw=1 ov=hidden
+    div (32,3223 1100x17) bw=1 text="v5 M3: Flat + Layer"
+    div (32,3258 1100x147)
+      div (46,3270 1100x17) text="框架提供:"
+      div (62,3291 1100x17) text="- layer 字段 (每个 element/button �..."
+      div (62,3308 1100x17) text="- maxActiveLayer (运行时确定最高�..."
+      div (62,3325 1100x17) text="- 两阶段渲染 + 分层点击"
+      div (46,3350 1100x17) text="应用解锁:"
+      div (62,3371 1100x17) text="- overlay 属性 → 弹窗不再需要 ..."
+      div (62,3388 1100x17) text="- 多层叠加天然支持"
+  div (32,3443 1100x223) bw=1 ov=hidden
+    div (32,3443 1100x17) bw=1 text="v6 M1: 分段布局 + RenderContext → ..."
+    div (32,3478 1100x164)
+      div (46,3490 1100x17) text="框架提供:"
+      div (62,3511 1100x17) text="- 编译拆分 getLayout_X()"
+      div (62,3528 1100x17) text="- RenderContext (26方法)"
+      div (62,3545 1100x17) text="- 8 GDI + 7 事件"
+      div (46,3570 1100x17) text="Widget 解锁:"
+      div (62,3591 1100x17) text="- image: onAttach → LoadImage"
+      div (62,3608 1100x17) text="- input: 分段布局 + KEYDOWN/CHAR"
+      div (62,3625 1100x17) text="- dropdown: overlay (基于 layer) + cli..."
+  div (32,3680 1100x39)
+    div (32,3680 1100x27) bw=2 text="11. 差距分析"
+  div (32,3719 1100x183) bw=1 ov=hidden
+    div (32,3719 1100x35) [dsp=flex] bw=1
+      div (32,3719 150x17) bw=1 text="维度"
+      div (208,3719 350x17) bw=1 text="当前状态 (v5)"
+      div (584,3719 548x17) fg=1 text="目标状态 (v6+)"
+    div (32,3756 1100x35) [dsp=flex] bw=1
+      div (32,3756 150x17) bw=1 text="GDI 原语"
+      div (208,3756 350x17) bw=1 text="5 个"
+      div (584,3756 548x17) fg=1 text="13 个 (+8: line, image, oval...)"
+    div (32,3793 1100x35) [dsp=flex] bw=1
+      div (32,3793 150x17) bw=1 text="AST 节点"
+      div (208,3793 350x17) bw=1 text="4 种 + 2 元节点"
+      div (584,3793 548x17) fg=1 text="15+ 种 (+11 个 widget 节点)"
+    div (32,3830 1100x35) [dsp=flex] bw=1
+      div (32,3830 150x17) bw=1 text="布局系统"
+      div (208,3830 350x17) bw=1 text="编译期扁平计算，无自适应"
+      div (584,3830 548x17) fg=1 text="编译期 + 运行时动态布局"
+    div (32,3867 1100x35) [dsp=flex]
+      div (32,3867 150x17) bw=1 text="CSS 映射"
+      div (208,3867 350x17) bw=1 text="8 属性"
+      div (584,3867 548x17) fg=1 text="18+ (border-radius, opacity, cursor...)"
+  div (32,3928 1100x21)
+    div (32,3928 1100x21) text="关键设计原则"
+  div (0,3949 1100x94) [dsp=grid]
+    div (0,3949 358x60) bw=1
+      div (0,3949 1100x17) text="原则 1"
+      div (0,3949 1100x17) text="每步只解决一个问题"
+    div (370,3949 358x60) bw=1
+      div (370,3949 1100x17) text="原则 2"
+      div (370,3949 1100x17) text="每步都是上一步的自然延伸"
+    div (740,3949 358x60) bw=1
+      div (740,3949 1100x17) text="原则 3"
+      div (740,3949 1100x17) text="数据结构先于行为变更"
+  div (0,4067 1100x96) [dsp=flex] bw=1
+    span (417,4115 266x16) text="VueCalc Framework Architecture Roadmap"
 
 ---
 
@@ -299,13 +300,13 @@ div (0,0 1100x900) scroll ch=1868 cw=1100 maxScroll=968 st=0 sl=0
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
   div (0,0 292x200) bw=1 fg=1 text="Card 1"
-  div (308,0 292x200) bw=1 fg=1 text="Card 2"
+  div (310,0 292x200) bw=1 fg=1 text="Card 2"
 
 ---
 
 === Test: Grid 3列等宽布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x60) [dsp=grid]
+div (0,0 600x92) [dsp=grid]
   div (0,0 192x60) text="Col 1"
   div (204,0 192x60) text="Col 2"
   div (408,0 192x60) text="Col 3"
@@ -362,15 +363,15 @@ div (0,0 400x200) scroll ch=800 cw=400 maxScroll=600 st=0 sl=0
 
 === Test: Flex row 模拟表格布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x0) bw=1 ov=hidden
-  div (0,0 600x0) [dsp=flex] bw=1
-    div (0,0 150x0) bw=1 text="Key"
-    div (150,0 350x0) bw=1 text="Current"
-    div (500,0 100x0) fg=1 text="Target"
-  div (0,0 600x0) [dsp=flex]
-    div (0,0 150x0) bw=1 text="GDI"
-    div (150,0 350x0) bw=1 text="5"
-    div (500,0 100x0) fg=1 text="13"
+div (0,0 600x72) bw=1 ov=hidden
+  div (0,0 600x35) [dsp=flex] bw=1
+    div (0,0 150x17) bw=1 text="Key"
+    div (176,0 350x17) bw=1 text="Current"
+    div (552,0 48x17) fg=1 text="Target"
+  div (0,37 600x35) [dsp=flex]
+    div (0,37 150x17) bw=1 text="GDI"
+    div (176,37 350x17) bw=1 text="5"
+    div (552,37 48x17) fg=1 text="13"
 
 ---
 
@@ -423,8 +424,8 @@ div (0,0 300x60) [dsp=flex]
 
 === Test: 深层嵌套布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x92)
-  div (32,32 536x60) bw=3
-    div (52,52 496x0) text="Title"
-    div (52,60 496x32) bw=1
-      span (68,76 112x16) text="Inner code block"
+div (0,0 600x190)
+  div (32,32 600x112) bw=3
+    div (52,52 600x18) text="Title"
+    div (52,78 600x32) bw=1
+      span (68,94 112x16) text="Inner code block"

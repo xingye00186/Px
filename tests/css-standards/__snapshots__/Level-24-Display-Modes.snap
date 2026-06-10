@@ -1,3 +1,4 @@
+@generated 2026-06-10 11:19:55
 === Test: display:table 基本容器 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x24) [dsp=table]
@@ -75,9 +76,9 @@ div (0,0 400x54)
 === Test: display:inline-block 三个等高元素 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x180)
-  div (0,0 8x60) [dsp=inline-block] text="A"
-  div (0,60 8x60) [dsp=inline-block] text="B"
-  div (0,120 8x60) [dsp=inline-block] text="C"
+  div (0,0 100x60) [dsp=inline-block] text="A"
+  div (0,60 100x60) [dsp=inline-block] text="B"
+  div (0,120 100x60) [dsp=inline-block] text="C"
 
 ---
 

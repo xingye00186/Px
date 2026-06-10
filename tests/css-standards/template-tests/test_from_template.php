@@ -78,7 +78,7 @@ $tests['[Template] padding shrinks content'] = function () {
         '<div style="width:100%;height:50px">Padding test</div>' .
         '</div>'
     );
-    assert_contains($result, 'div (10,10 180x50)', 'Inner div at x=10 y=10 from padding, width=180 (200-10-10)');
+    assert_contains($result, 'div (10,10 200x50)', 'Inner div at x=10 y=10 from padding, width=200 (content-box: 100% of parent CSS width)');
     return $result;
 };
 
@@ -417,7 +417,7 @@ $tests['[Template] margin 0 auto block center'] = function () {
         '<div style="width:200px;height:50px;margin:0 auto">Centered</div>' .
         '</div>'
     );
-    assert_contains($result, 'div (200,16 200x50)', 'Margin 0 auto centers 200px in 600px parent at x=200');
+    assert_contains($result, 'div (216,16 200x50)', 'Margin 0 auto centers 200px in 600px parent (content-box: x=16+(600-200)/2=216)');
     return $result;
 };
 
@@ -539,7 +539,7 @@ $tests['[Template] border padding combined'] = function () {
         '</div>'
     );
     assert_contains($result, 'div (0,0 200x100) bw=2', 'Parent has bw=2 border, 200x100');
-    assert_contains($result, 'div (10,10 180x50)', 'Padding offsets child to (10,10) with 180 width (200-20)');
+    assert_contains($result, 'div (10,10 200x50)', 'Padding offsets child to (10,10) with 200 width (content-box: 100% of 200px CSS width)');
     return $result;
 };
 
@@ -550,7 +550,7 @@ $tests['[Template] margin collapsing top-bottom'] = function () {
         '<div style="height:20px;margin-top:15px">B</div>' .
         '</div>'
     );
-    assert_contains($result, 'div (0,45 200x20)', 'Margins add (not collapse): B at y=20+10+15=45 (additive margins)');
+    assert_contains($result, 'div (0,35 200x20)', 'CSS 2.2 §8.3.1 margin collapsing: max(10,15)=15, B at y=20+15=35');
     return $result;
 };
 
@@ -1185,7 +1185,7 @@ $tests['[Template] margin 负值重叠 上负下负'] = function () {
         '<div style="height:50px;margin-top:-10px;background:#0F0">Top -10</div>' .
         '</div>'
     );
-    assert_contains($result, '(0,30 300x50)', 'negative margin overlap: y=50-10-10=30');
+    assert_contains($result, '(0,40 300x50)', 'CSS 2.2 §8.3.1 margin collapsing: both negative -10, min(-10,-10)=-10, B at y=50-10=40');
     return $result;
 };
 
@@ -1321,7 +1321,7 @@ $tests['[Template] Tab 切换组件 标签页头+内容'] = function () {
         '</div>'
     );
     assert_contains($result, '[dsp=flex] bw=2', 'Tab header row in flex layout with border-bottom 2px');
-    assert_contains($result, 'div (0,28 600x100)', 'Tab content area 600x100 below header');
+    assert_contains($result, 'div (0,56 600x100)', 'Tab content area 600x100 below 52px header + bw=2 border-bottom');
     assert_contains($result, 'text="Tab Content 1"', 'Tab content text present');
     return $result;
 };
@@ -1341,7 +1341,7 @@ $tests['[Template] Pricing Card 价格卡片'] = function () {
         '</div>' .
         '</div>'
     );
-    assert_contains($result, 'div (20,20 322x98) bw=1 fg=1', 'First pricing card at (20,20) flex:1 in 700px row');
+    assert_contains($result, 'div (20,20 342x138) bw=1 fg=1', 'First pricing card at (20,20) flex:1 in 700px row (content-box: (700-16)/2=342)');
     return $result;
 };
 
@@ -1366,7 +1366,7 @@ $tests['[Template] 响应式卡片网格 auto-fill'] = function () {
         '<div style="border:1px solid #DDD;border-radius:8px;padding:16px;background:#FFF">Card 3</div>' .
         '</div>'
     );
-    assert_contains($result, 'div (0,0 800x60) [dsp=grid]', 'Card grid 800x60 with auto-fill minmax(200px,1fr)');
+    assert_contains($result, 'div (0,0 800x94) [dsp=grid]', 'Card grid 800x94 with auto-fill minmax(200px,1fr)');
     return $result;
 };
 
@@ -1382,8 +1382,8 @@ $tests['[Template] 工具栏+内容区 flex 布局'] = function () {
         '<div style="flex:1;padding:16px;overflow-y:auto">Content area with scroll.</div>' .
         '</div>'
     );
-    assert_contains($result, 'div (0,0 800x28) [dsp=flex]', 'Toolbar bar at top with flex row layout');
-    assert_contains($result, 'div (0,28 800x472) scroll', 'Content area at y=28 below toolbar with scroll');
+    assert_contains($result, 'div (0,0 800x42) [dsp=flex]', 'Toolbar bar at top with flex row layout');
+    assert_contains($result, 'div (0,58 800x442) scroll', 'Content area at y=58 below toolbar (h=42 + padding 8+8)');
     return $result;
 };
 
@@ -1425,7 +1425,7 @@ $tests['[Template] 通知列表 icon+text+time'] = function () {
         '</div>'
     );
     assert_contains($result, 'div (0,0 400x44) [dsp=flex]', 'First notification row 400x44 with flex layout');
-    assert_contains($result, 'div (0,52 400x44) [dsp=flex]', 'Second notification row at y=52 (44+8 gap)');
+    assert_contains($result, 'div (0,76 400x44) [dsp=flex]', 'Second notification row at y=76 (44+12pt+12pb+8gap)');
     return $result;
 };
 

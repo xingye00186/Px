@@ -1,3 +1,4 @@
+@generated 2026-06-10 12:10:55
 === Test: [Template] absolute positioned div ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
@@ -24,8 +25,8 @@ div (0,0 400x100)
 === Test: [Template] padding shrinks content ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100)
-  div (10,10 180x50)
-    #text (10,10 180x18) text="Padding test"
+  div (10,10 200x50)
+    #text (10,10 200x18) text="Padding test"
 
 ---
 
@@ -307,7 +308,7 @@ div (0,0 80x30)
 === Test: [Template] margin 0 auto block center ===
 Frame #1 events=0 detail=normal
 div (0,0 600x66)
-  div (200,16 200x50)
+  div (216,16 200x50)
     #text (16,16 200x18) text="Centered"
 
 ---
@@ -403,18 +404,18 @@ div (0,0 500x100)
 === Test: [Template] border padding combined ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100) bw=2
-  div (10,10 180x50)
-    #text (10,10 180x18) text="Inner"
+  div (10,10 200x50)
+    #text (10,10 200x18) text="Inner"
 
 ---
 
 === Test: [Template] margin collapsing top-bottom ===
 Frame #1 events=0 detail=normal
-div (0,0 200x65)
+div (0,0 200x55)
   div (0,0 200x20)
     #text (0,0 200x18) text="A"
-  div (0,45 200x20)
-    #text (0,45 200x18) text="B"
+  div (0,35 200x20)
+    #text (0,35 200x18) text="B"
 
 ---
 
@@ -532,11 +533,11 @@ div (0,0 300x40) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 660x60) [dsp=grid]
   div (0,0 209x60)
-    #text (0,0 628x18) text="Item A"
+    #text (0,0 660x18) text="Item A"
   div (225,0 209x60)
-    #text (225,0 628x18) text="Item B"
+    #text (225,0 660x18) text="Item B"
   div (450,0 209x60)
-    #text (450,0 628x18) text="Item C"
+    #text (450,0 660x18) text="Item C"
 
 ---
 
@@ -777,41 +778,6 @@ div (0,0 300x50)
 
 ---
 
-=== Test: [Template] border-top 顶部边框 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x80) bw=2
-  #text (0,0 200x18) text="Top border"
-
----
-
-=== Test: [Template] border-bottom 底部边框 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x80) bw=3
-  #text (0,0 200x18) text="Bottom border"
-
----
-
-=== Test: [Template] border-left 左边框 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x80) bw=4
-  #text (0,0 200x18) text="Left border"
-
----
-
-=== Test: [Template] border-right 右边框 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x80) bw=5
-  #text (0,0 200x18) text="Right border"
-
----
-
-=== Test: [Template] 四方向不同颜色边框组合 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x100) bw=4
-  #text (0,0 200x18) text="Multi border"
-
----
-
 === Test: [Template] border + border-radius 圆角边框 ===
 Frame #1 events=0 detail=normal
 div (0,0 150x80) bw=2
@@ -877,13 +843,13 @@ div (0,0 100x50)
 
 === Test: [Template] display:inline 行内并排 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x0)
-  div (0,0 300x0) [dsp=inline]
-    #text (0,0 300x18) text="Red"
-  div (0,0 300x0) [dsp=inline]
-    #text (0,0 300x18) text="Blue"
-  div (0,0 300x0) [dsp=inline]
-    #text (0,0 300x18) text="Green"
+div (0,0 300x54)
+  div (0,0 300x18) [dsp=inline]
+    #text (0,0 0x18) text="Red"
+  div (0,18 300x18) [dsp=inline]
+    #text (0,18 0x18) text="Blue"
+  div (0,36 300x18) [dsp=inline]
+    #text (0,36 0x18) text="Green"
 
 ---
 
@@ -931,11 +897,11 @@ div (0,0 0x0) ov=hidden
 
 === Test: [Template] margin 负值重叠 上负下负 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x80)
+div (0,0 300x90)
   div (0,0 300x50)
     #text (0,0 300x18) text="Bottom -10"
-  div (0,30 300x50)
-    #text (0,30 300x18) text="Top -10"
+  div (0,40 300x50)
+    #text (0,40 300x18) text="Top -10"
 
 ---
 
@@ -1014,62 +980,47 @@ div (0,0 200x100)
 Frame #1 events=0 detail=normal
 div (0,0 900x600) [dsp=grid]
   div (0,0 200x60)
-    #text (0,0 868x18) text="Sidebar"
+    #text (0,0 900x18) text="Sidebar"
   div (200,0 700x60)
-    #text (200,0 868x18) text="Header"
+    #text (200,0 900x18) text="Header"
   div (200,60 700x60) [dsp=flex]
-    div (216,76 434x28) fg=2
-      #text (232,92 636x18) text="Main Content"
-    div (666,76 217x28) fg=1
-      #text (682,92 636x18) text="Side Panel"
+    div (216,76 456x60) fg=2
+      #text (232,92 700x18) text="Main Content"
+    div (720,76 228x60) fg=1
+      #text (736,92 700x18) text="Side Panel"
 
 ---
 
 === Test: [Template] Article 页面 标题+内容+侧边栏 ===
 Frame #1 events=0 detail=normal
-div (0,0 800x68)
+div (0,0 800x132)
   div (0,0 800x34)
     #text (0,16 800x18) text="Article Title"
-  div (0,34 800x34) [dsp=flex]
-    div (0,34 585x18) fg=3
-      #text (0,34 800x18) text="Article content paragraph here."
-    div (605,34 195x34) fg=1
-      #text (621,50 768x18) text="Sidebar Widget"
-
----
-
-=== Test: [Template] Tab 切换组件 标签页头+内容 ===
-Frame #1 events=0 detail=normal
-div (0,0 600x128)
-  div (0,0 600x28) [dsp=flex] bw=2
-    div (0,0 153x28) bw=2
-      #text (20,10 560x18) text="Tab 1"
-    div (153,0 199x28)
-      #text (373,10 560x18) text="Tab 2"
-    div (352,0 250x28)
-      #text (772,10 560x18) text="Tab 3"
-  div (0,28 600x100)
-    #text (20,48 560x18) text="Tab Content 1"
+  div (0,66 800x66) [dsp=flex]
+    div (0,66 585x18) fg=3
+      #text (0,66 800x18) text="Article content paragraph here."
+    div (605,66 195x34) fg=1
+      #text (621,82 800x18) text="Sidebar Widget"
 
 ---
 
 === Test: [Template] Pricing Card 价格卡片 ===
 Frame #1 events=0 detail=normal
-div (0,0 700x138) [dsp=flex]
-  div (20,20 322x98) bw=1 fg=1
-    div (44,44 612x18)
-      #text (44,44 612x18) text="Basic"
-    div (44,44 612x30)
-      #text (44,56 612x18) text="$9"
-    div (44,44 612x26)
-      #text (52,52 596x18) text="Sign Up"
-  div (358,20 322x98) bw=2 fg=1
-    div (382,44 612x18)
-      #text (382,44 612x18) text="Pro"
-    div (382,44 612x30)
-      #text (382,56 612x18) text="$29"
-    div (382,44 612x26)
-      #text (390,52 596x18) text="Sign Up"
+div (0,0 700x230) [dsp=flex]
+  div (20,20 342x138) bw=1 fg=1
+    div (44,44 700x18)
+      #text (44,44 700x18) text="Basic"
+    div (44,44 700x30)
+      #text (44,56 700x18) text="$9"
+    div (44,44 700x26)
+      #text (52,52 700x18) text="Sign Up"
+  div (428,20 342x138) bw=2 fg=1
+    div (452,44 700x18)
+      #text (452,44 700x18) text="Pro"
+    div (452,44 700x30)
+      #text (452,56 700x18) text="$29"
+    div (452,44 700x26)
+      #text (460,52 700x18) text="Sign Up"
 
 ---
 
@@ -1078,80 +1029,80 @@ Frame #1 events=0 detail=normal
 div (0,0 800x400) [dsp=flex]
   div (0,161 800x18)
     #text (0,161 800x18) text="Welcome"
-  div (0,179 800x30)
-    #text (12,191 776x18) text="Subtitle here"
-  div (0,209 800x30)
-    #text (32,221 736x18) text="Get Started"
+  div (-6,179 812x30)
+    #text (6,191 800x18) text="Subtitle here"
+  div (-16,233 832x30)
+    #text (16,245 800x18) text="Get Started"
 
 ---
 
 === Test: [Template] 响应式卡片网格 auto-fill ===
 Frame #1 events=0 detail=normal
-div (0,0 800x60) [dsp=grid]
+div (0,0 800x94) [dsp=grid]
   div (0,0 256x60) bw=1
-    #text (0,0 736x18) text="Card 1"
+    #text (0,0 800x18) text="Card 1"
   div (272,0 256x60) bw=1
-    #text (272,0 736x18) text="Card 2"
+    #text (272,0 800x18) text="Card 2"
   div (544,0 256x60) bw=1
-    #text (544,0 736x18) text="Card 3"
+    #text (544,0 800x18) text="Card 3"
 
 ---
 
 === Test: [Template] 工具栏+内容区 flex 布局 ===
 Frame #1 events=0 detail=normal
 div (0,0 800x500) [dsp=flex]
-  div (0,0 800x28) [dsp=flex]
-    div (16,-1 248x18)
-      #text (16,-1 768x18) text="Title"
-    div (272,8 0x0) fg=1
-    div (280,-4 248x24)
-      #text (296,2 736x18) text="Save"
-    div (536,-4 248x24) bw=1
-      #text (552,2 736x18) text="Cancel"
-  div (0,28 800x472) scroll ch=34 cw=800 maxScroll=0 st=0 sl=0 fg=1
-    #text (16,44 768x18) text="Content area with scroll."
+  div (0,0 800x42) [dsp=flex]
+    div (16,20 190x18)
+      #text (16,20 800x18) text="Title"
+    div (214,29 0x0) fg=1
+    div (222,17 258x24)
+      #text (510,23 800x18) text="Save"
+    div (520,17 329x24) bw=1
+      #text (1109,23 800x18) text="Cancel"
+  div (0,58 800x442) scroll ch=34 cw=800 maxScroll=0 st=0 sl=0 fg=1
+    #text (16,74 800x18) text="Content area with scroll."
 
 ---
 
 === Test: [Template] 表单布局 label+input 两列 ===
 Frame #1 events=0 detail=normal
-div (0,0 500x436) [dsp=grid]
+div (0,0 500x450) [dsp=grid]
   div (0,0 120x60)
-    #text (0,0 468x18) text="Username:"
+    #text (0,0 500x18) text="Username:"
   div (248,0 252x60) bw=1
-    #text (248,0 456x18) text="User input"
+    #text (248,0 500x18) text="User input"
   div (0,188 120x60)
-    #text (0,188 468x18) text="Password:"
+    #text (0,188 500x18) text="Password:"
   div (248,188 252x60) bw=1
-    #text (248,188 456x18) text="Pass input"
+    #text (248,188 500x18) text="Pass input"
   div (0,376 120x60)
-    #text (0,376 468x18) text="Bio:"
+    #text (0,376 500x18) text="Bio:"
   div (248,376 252x60) bw=1
-    #text (248,376 456x18) text="Bio text"
+    #text (248,376 500x18) text="Bio text"
 
 ---
 
 === Test: [Template] 通知列表 icon+text+time ===
 Frame #1 events=0 detail=normal
-div (0,0 400x96) [dsp=flex]
+div (0,0 400x144) [dsp=flex]
   div (0,0 400x44) [dsp=flex]
-    div (12,-8 40x40)
-    div (64,-6 0x36) fg=1
-      div (64,-6 376x18)
-        #text (64,-6 376x18) text="Notification title"
-      div (64,-6 376x18)
-        #text (64,-6 376x18) text="Notification description text."
-    div (76,3 312x18)
-      #text (76,3 376x18) text="2m ago"
-  div (0,52 400x44) [dsp=flex]
-    div (12,44 40x40)
-    div (64,46 0x36) fg=1
-      div (64,46 376x18)
-        #text (64,46 376x18) text="Another notification"
-      div (64,46 376x18)
-        #text (64,46 376x18) text="Some longer description here."
-    div (76,55 312x18)
-      #text (76,55 376x18) text="1h ago"
+    div (12,14 40x40)
+    div (64,16 0x36) fg=1
+      div (64,16 400x18)
+        #text (116,16 400x18) text="Notification title"
+      div (64,16 400x18)
+        #text (116,16 400x18) text="Notification description text."
+    div (76,25 336x18)
+      #text (140,25 400x18) text="2m ago"
+  div (0,76 400x44) [dsp=flex]
+    div (12,90 40x40)
+    div (64,92 0x36) fg=1
+      div (64,92 400x18)
+        #text (116,92 400x18) text="Another notification"
+      div (64,92 400x18)
+        #text (116,92 400x18) text="Some longer description here."
+    div (76,101 336x18)
+      #text (140,101 400x18) text="1h ago"
 
 ---
 
@@ -1159,7 +1110,7 @@ div (0,0 400x96) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 800x400) [dsp=flex] bw=1
   div (0,0 265x400) scroll ch=34 cw=265 maxScroll=0 st=0 sl=0 fg=1
-    #text (16,16 768x18) text="Left Panel"
-  div (265,0 4x400)
-  div (269,0 530x400) scroll ch=34 cw=530 maxScroll=0 st=0 sl=0 fg=2
-    #text (285,16 768x18) text="Right Panel"
+    #text (16,16 800x18) text="Left Panel"
+  div (297,0 4x400)
+  div (301,0 530x400) scroll ch=34 cw=530 maxScroll=0 st=0 sl=0 fg=2
+    #text (317,16 800x18) text="Right Panel"

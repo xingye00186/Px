@@ -1,3 +1,4 @@
+@generated 2026-06-10 11:19:54
 === Test: overflow-x:scroll 在 flex row 中 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x80) scroll ch=60 cw=300 maxScroll=0 st=0 sl=0 [dsp=flex] ov=scroll
@@ -34,9 +35,9 @@ div (0,0 150x80) [dsp=grid]
 Frame #1 events=0 detail=normal
 div (0,0 200x100) scroll ch=100 cw=600 maxScroll=0 st=0 sl=0 ov=scroll
   div (0,0 600x100)
-    div (0,0 8x80) [dsp=inline-block] text="A"
-    div (0,80 8x80) [dsp=inline-block] text="B"
-    div (0,160 8x80) [dsp=inline-block] text="C"
+    div (0,0 150x80) [dsp=inline-block] text="A"
+    div (0,80 150x80) [dsp=inline-block] text="B"
+    div (0,160 150x80) [dsp=inline-block] text="C"
 
 ---
 
