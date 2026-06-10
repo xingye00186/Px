@@ -65,6 +65,15 @@ div (0,0 200x60)
 
 ---
 
+=== Test: scroll 容器 padding 影响子项 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x150) scroll ch=146 cw=300 maxScroll=0 st=0 sl=0
+  div (10,10 300x40) text="Item 1"
+  div (10,58 300x40) text="Item 2"
+  div (10,106 300x40) text="Item 3"
+
+---
+
 === Test: overflow-x auto 水平滚动 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x100) scroll ch=80 cw=600 maxScroll=0 st=0 sl=0 ov=auto

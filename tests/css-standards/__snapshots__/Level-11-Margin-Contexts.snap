@@ -1,3 +1,10 @@
+=== Test: margin:0 auto 水平居中 block ===
+Frame #1 events=0 detail=normal
+div (0,0 600x66)
+  div (216,16 200x50) text="Centered"
+
+---
+
 === Test: margin-left auto 在 flex row 右推 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x50) [dsp=flex]

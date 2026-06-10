@@ -7,6 +7,15 @@ div (0,0 300x124) [dsp=grid]
 
 ---
 
+=== Test: grid-row span 2 跨越两行 ===
+Frame #1 events=0 detail=normal
+div (0,0 204x50) [dsp=grid]
+  div (0,0 100x50) text="A"
+  div (104,0 100x50) text="B span 2"
+  div (0,0 100x50) text="C"
+
+---
+
 === Test: grid-auto-flow column 列优先 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x124) [dsp=grid]

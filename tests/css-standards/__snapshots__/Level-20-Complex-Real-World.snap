@@ -9,12 +9,68 @@ div (0,0 900x600) [dsp=grid]
 
 ---
 
+=== Test: Article 页面 标题+内容+侧边栏 ===
+Frame #1 events=0 detail=normal
+div (0,0 800x119)
+  div (0,0 800x37) text="Article Title"
+  div (0,69 800x50) [dsp=flex]
+    div (0,69 585x22) fg=3 text="Article content paragraph here."
+    div (605,69 195x18) fg=1 text="Sidebar Widget"
+
+---
+
+=== Test: Tab 切换组件 标签页头+内容 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x186)
+  div (0,0 600x42) [dsp=flex] bw=2
+    div (0,0 40x18) bw=2 text="Tab 1"
+    div (84,0 40x18) text="Tab 2"
+    div (164,0 40x18) text="Tab 3"
+  div (0,46 600x100) text="Tab Content 1"
+
+---
+
+=== Test: Pricing Card 价格卡片 ===
+Frame #1 events=0 detail=normal
+div (0,0 700x249) [dsp=flex]
+  div (20,20 342x157) bw=1 fg=1
+    div (44,44 700x27) text="Basic"
+    div (44,44 700x48) text="$9"
+    div (44,44 700x18) text="Sign Up"
+  div (428,20 342x157) bw=2 fg=1
+    div (452,44 700x27) text="Pro"
+    div (452,44 700x48) text="$29"
+    div (452,44 700x18) text="Sign Up"
+
+---
+
 === Test: 垂直居中 Hero Section ===
 Frame #1 events=0 detail=normal
 div (0,0 800x400) [dsp=flex]
   div (0,151 800x56) text="Welcome"
   div (0,207 800x24) text="Subtitle here"
   div (0,255 800x18) text="Get Started"
+
+---
+
+=== Test: 响应式卡片网格 auto-fill ===
+Frame #1 events=0 detail=normal
+div (0,0 800x94) [dsp=grid]
+  div (0,0 256x60) bw=1 text="Card 1"
+  div (272,0 256x60) bw=1 text="Card 2"
+  div (544,0 256x60) bw=1 text="Card 3"
+
+---
+
+=== Test: 工具栏+内容区 flex 布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 800x500) [dsp=flex]
+  div (0,0 800x39) [dsp=flex]
+    div (16,-4 50x24) text="Title"
+    div (74,8 0x0) fg=1
+    div (82,-1 32x18) text="Save"
+    div (154,-1 48x18) bw=1 text="Cancel"
+  div (0,55 800x445) scroll ch=16 cw=800 maxScroll=0 st=0 sl=0 fg=1 text="Content area with scroll."
 
 ---
 
@@ -27,3 +83,30 @@ div (0,0 500x450) [dsp=grid]
   input (248,188 252x60) bw=1
   div (0,376 120x60) text="Bio:"
   textarea (248,376 252x60) bw=1
+
+---
+
+=== Test: 通知列表 icon+text+time ===
+Frame #1 events=0 detail=normal
+div (0,0 400x144) [dsp=flex]
+  div (0,0 400x44) [dsp=flex]
+    div (12,-8 40x40)
+    div (64,-5 0x34) fg=1
+      div (64,-5 400x18) text="Notification title"
+      div (64,-5 400x16) text="Notification description text."
+    div (76,4 42x16) text="2m ago"
+  div (0,76 400x44) [dsp=flex]
+    div (12,68 40x40)
+    div (64,71 0x34) fg=1
+      div (64,71 400x18) text="Another notification"
+      div (64,71 400x16) text="Some longer description here."
+    div (76,80 42x16) text="1h ago"
+
+---
+
+=== Test: 分割面板 left+right 拖拽分隔 ===
+Frame #1 events=0 detail=normal
+div (0,0 800x400) [dsp=flex] bw=1
+  div (0,0 265x400) scroll ch=16 cw=265 maxScroll=0 st=0 sl=0 fg=1 text="Left Panel"
+  div (297,0 4x400)
+  div (301,0 530x400) scroll ch=16 cw=530 maxScroll=0 st=0 sl=0 fg=2 text="Right Panel"
