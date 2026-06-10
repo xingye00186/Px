@@ -129,8 +129,10 @@ function run_css_tests(string $suiteName, string $snapFile, array $tests): void
         $combined = implode("\n---\n\n", array_map(function($name, $snap) {
             return "=== Test: $name ===\n$snap";
         }, array_keys($snapshots), $snapshots));
-        file_put_contents($snapFile, $combined);
-        echo "  [UPDATED] $snapFile\n";
+        $now = date('Y-m-d H:i:s');
+        $header = "@generated $now\n";
+        file_put_contents($snapFile, $header . $combined);
+        echo "  [UPDATED] $snapFile (generated at $now)\n";
         return;
     }
 
@@ -139,7 +141,10 @@ function run_css_tests(string $suiteName, string $snapFile, array $tests): void
         return;
     }
 
+    // Strip @generated metadata lines before comparison
     $baseline = file_get_contents($snapFile);
+    $baseline = preg_replace('/^@generated[^\n]*\n?/m', '', $baseline);
+
     $combined = implode("\n---\n\n", array_map(function($name, $snap) {
         return "=== Test: $name ===\n$snap";
     }, array_keys($snapshots), $snapshots));
