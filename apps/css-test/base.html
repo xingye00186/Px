@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VueCalc 框架架构演进路线图</title>
+<style>
+:root {
+  --color-bg: #0d1117;
+  --color-surface: #161b22;
+  --color-surface-elevated: #1c2128;
+  --color-text: #e6edf3;
+  --color-text-muted: #8b949e;
+  --color-accent: #7c3aed;
+  --color-accent-text: #ffffff;
+  --color-accent-light: #a78bfa;
+  --color-hover: rgba(124,58,237,0.08);
+  --color-border: #30363d;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #ffffff;
+    --color-surface: #f6f8fa;
+    --color-surface-elevated: #eaeef2;
+    --color-text: #1f2328;
+    --color-text-muted: #656d76;
+    --color-hover: rgba(124,58,237,0.05);
+    --color-border: #d0d7de;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-family); color: var(--color-text); background: var(--color-bg); line-height: 1.7; padding: 2rem; max-width: 1100px; margin: 0 auto; font-size: 14px; }
+h1 { font-size: 28px; font-weight: 700; margin-bottom: 0.25rem; }
+h2 { font-size: 20px; font-weight: 600; margin: 3rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--color-border); }
+h3 { font-size: 16px; font-weight: 600; margin: 2rem 0 0.75rem; }
+h4 { font-size: 14px; font-weight: 600; margin: 1rem 0 0.5rem; }
+p { margin: 0.5rem 0; }
+ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+li { margin: 0.25rem 0; }
+code { font-family: var(--font-mono); font-size: 12px; background: var(--color-surface); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--color-border); }
+pre { font-family: var(--font-mono); font-size: 12px; background: var(--color-surface); padding: 1rem 1.25rem; border-radius: 8px; border: 1px solid var(--color-border); overflow-x: auto; margin: 0.75rem 0; line-height: 1.6; white-space: pre; }
+a { color: var(--color-accent-light); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.subtitle { color: var(--color-text-muted); font-size: 15px; margin-bottom: 2rem; }
+.card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; margin: 0.75rem 0; }
+.card-accent { border-left: 3px solid var(--color-accent); }
+.card-success { border-left: 3px solid var(--color-success); }
+.card-warning { border-left: 3px solid var(--color-warning); }
+.card-danger { border-left: 3px solid var(--color-danger); }
+.card-info { border-left: 3px solid var(--color-info); }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; margin-right: 6px; vertical-align: middle; }
+.badge-active { background: rgba(34,197,94,0.15); color: var(--color-success); }
+.badge-next { background: rgba(59,130,246,0.15); color: var(--color-info); }
+.badge-future { background: rgba(124,58,237,0.15); color: var(--color-accent-light); }
+.badge-far { background: var(--color-surface-elevated); color: var(--color-text-muted); }
+table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 13px; }
+th { background: var(--color-surface); font-weight: 600; text-align: left; padding: 8px 12px; border: 1px solid var(--color-border); }
+td { padding: 8px 12px; border: 1px solid var(--color-border); vertical-align: top; }
+tr:hover td { background: var(--color-hover); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+@media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } body { padding: 1rem; } }
+.tag { display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 3px; background: var(--color-surface-elevated); color: var(--color-text-muted); margin: 2px 3px 2px 0; }
+blockquote { border-left: 3px solid var(--color-accent); padding: 0.75rem 1rem; margin: 0.75rem 0; background: rgba(124,58,237,0.04); border-radius: 0 8px 8px 0; }
+.tier-header { display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem; }
+.tier-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.tier-1 { background: rgba(34,197,94,0.15); color: var(--color-success); }
+.tier-2 { background: rgba(59,130,246,0.15); color: var(--color-info); }
+.tier-3 { background: rgba(245,158,11,0.15); color: var(--color-warning); }
+.tier-4 { background: rgba(239,68,68,0.15); color: var(--color-danger); }
+.milestone { position: relative; padding-left: 2.5rem; margin: 1.5rem 0; }
+.milestone::before { content: ''; position: absolute; left: 11px; top: 30px; bottom: -1.5rem; width: 2px; background: var(--color-border); }
+.milestone:last-child::before { display: none; }
+.milestone-dot { position: absolute; left: 0; top: 4px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--color-border); background: var(--color-bg); display: flex; align-items: center; justify-content: center; font-size: 10px; }
+.milestone-dot.current { border-color: var(--color-accent); background: rgba(124,58,237,0.15); }
+.step-list { counter-reset: step; }
+.step-item { position: relative; padding-left: 2.5rem; margin: 1.25rem 0; }
+.step-item::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--color-accent); color: var(--color-accent-text); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.highlight { background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.2); border-radius: 8px; padding: 1rem 1.25rem; margin: 0.75rem 0; }
+.toc { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; }
+.toc-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+.toc-grid { columns: 2; column-gap: 2rem; }
+.toc a { display: block; padding: 3px 0; font-size: 13px; }
+.dep-box { border: 1px solid var(--color-border); border-radius: 8px; margin: 1rem 0; overflow: hidden; }
+.dep-box-header { background: var(--color-surface); padding: 8px 14px; font-weight: 600; font-size: 13px; border-bottom: 1px solid var(--color-border); }
+.dep-box-body { padding: 12px 14px; font-size: 13px; }
+.dep-box-body ul { padding-left: 1.2rem; }
+.dep-box-body li { margin: 3px 0; }
+</style>
+</head>
+<body>
+
+<h1>VueCalc 框架架构演进路线图</h1>
+<p class="subtitle">Overlay Layer 系统方案 &amp; 通用桌面框架 Widget 能力扩展 &mdash; 完整技术文档</p>
+
+<div class="toc">
+  <div class="toc-title">目录</div>
+  <div class="toc-grid">
+    <a href="#s1">1. 当前问题与目标</a>
+    <a href="#s2">2. Overlay Layer 核心设计</a>
+    <a href="#s3">3. v5 M3 实现步骤 (含代码)</a>
+    <a href="#s4">4. 验证方案与向后兼容</a>
+    <a href="#s5">5. DOM-like Tree 可行性分析</a>
+    <a href="#s6">6. 统一架构演进路线</a>
+    <a href="#s7">7. 生命周期与可扩展性 (附录B)</a>
+    <a href="#s8">8. 框架对比总结 (附录C)</a>
+    <a href="#s9">9. Widget 四层能力分类 (附录D)</a>
+    <a href="#s10">10. RenderContext 渲染抽象</a>
+    <a href="#s11">11. 差距分析与模板语法</a>
+    <a href="#s12">12. 分阶段实施路线图</a>
+    <a href="#s13">13. 双线演进总览 (附录E)</a>
+    <a href="#s14">14. 依赖关系详解</a>
+    <a href="#s15">15. 实施顺序与关键决策</a>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s1">1. 当前问题与目标</h2>
+
+<div class="grid-2">
+  <div class="card card-danger">
+    <h4>问题根因</h4>
+    <p>框架缺少<strong>渲染层 (Layer/Z-Order)</strong> 概念。所有元素在同一个扁平列表中，没有分层机制，只能用条件模拟遮挡。</p>
+    <p style="margin-top:8px;"><strong>具体表现:</strong></p>
+    <ol>
+      <li><strong>紧耦合</strong>: 父组件必须知道所有弹窗状态，每个底层元素都要写逆条件</li>
+      <li><strong>不可扩展</strong>: 新增弹窗 &rarr; 所有已有元素都要加 <code>!showNewDialog</code></li>
+      <li><strong>不支持多层</strong>: 弹窗A上弹窗B &rarr; 弹窗A的元素也需要逆条件，复杂度指数增长</li>
+      <li><strong>点击穿透 Bug</strong>: <code>Application::handleClick()</code> 正序遍历按钮，不检查 condition</li>
+    </ol>
+  </div>
+  <div class="card card-success">
+    <h4>解决目标</h4>
+    <p>实现声明式的 overlay layer 系统:</p>
+    <ul>
+      <li>开发者只需在弹窗组件上加 <code>overlay</code> 属性</li>
+      <li>不再需要手写 <code>v-if="!showDialog"</code> 来隐藏底层元素</li>
+      <li>点击自动优先命中上层元素</li>
+      <li>天然支持多层叠加 (弹窗 &rarr; 弹窗 &rarr; tooltip)</li>
+      <li>100% 向后兼容</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <h4>当前双重条件控制的痛点</h4>
+<pre>&lt;num-pad x="0" y="80" v-if="!showDialog" /&gt;    &larr; 主界面隐藏
+&lt;about-dialog ... /&gt;                            &larr; 内部元素全有 v-if="showDialog"</pre>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s2">2. Overlay Layer 核心设计</h2>
+
+<h3>2.1 核心思路: 分层累积渲染 + 分层点击</h3>
+<p>每个 element/button 携带一个 <code>layer</code> 整数:</p>
+<ul>
+  <li><strong>Layer 0</strong>: 默认基础层 (主界面内容)</li>
+  <li><strong>Layer 1+</strong>: 叠加层 (弹窗、tooltip 等), 编译时自动分配</li>
+</ul>
+
+<div class="grid-2">
+  <div class="card card-accent">
+    <h4>渲染策略 &mdash; 累积式</h4>
+<pre>Layer 0 元素 &rarr; Layer 1 元素 &rarr; Layer 2 元素
+(低层先画，高层覆盖，同一 layer 内保持原有顺序)
+Overlay 的背景 rect 覆盖低层内容，视觉上自然遮挡。</pre>
+  </div>
+  <div class="card card-accent">
+    <h4>点击策略 &mdash; 层过滤</h4>
+<pre>确定 maxActiveLayer
+&rarr; 仅检查该层按钮 + 无条件的 chrome 按钮
+(高层优先，低层屏蔽)</pre>
+  </div>
+</div>
+
+<h3>2.2 Chrome 按钮规则</h3>
+<div class="highlight">
+  <blockquote>没有 <code>condition</code> 的按钮视为 "chrome" 按钮，永远可渲染、可点击，不受 layer 屏蔽影响。</blockquote>
+  <p style="margin-top:8px;">NumPad 按钮带有 <code>condition: ['prop' =&gt; 'showDialog', 'op' =&gt; 'falsy']</code> &rarr; 被正常屏蔽。<br>"?" 按钮没有 condition &rarr; 是 chrome 按钮，始终可用。</p>
+</div>
+
+<h3>2.3 数据流</h3>
+<div class="card">
+<pre>模板层面:
+  &lt;num-pad x="0" y="80" /&gt;                               &larr; layer 0 (默认)
+  &lt;btn label="?" ... /&gt;                                    &larr; layer 0, 无 condition (chrome)
+  &lt;about-dialog x="0" y="0" overlay v-if="showDialog" /&gt;  &larr; layer 1 (编译器自动)
+
+编译后布局:
+  buttons[0..17]: layer=0, condition={'prop'=&gt;'showDialog','op'=&gt;'falsy'}
+  buttons[18]:    layer=0, 无 condition (chrome!)
+  elements[...]:  layer=1, condition={'prop'=&gt;'showDialog','op'=&gt;'truthy'}
+
+运行时:
+  showDialog=false &rarr; maxActiveLayer=0 &rarr; 所有 layer 0 渲染, "?" 可点击
+  showDialog=true  &rarr; maxActiveLayer=1 &rarr; layer 0 按钮(有条件)被屏蔽, overlay 渲染, "?" 仍可点击</pre>
+</div>
+
+<h3>2.4 层级逻辑 (精确定义)</h3>
+<div class="grid-2">
+  <div class="card">
+    <h4>渲染 (BaseRenderer::render)</h4>
+<pre>Phase 1: 扫描所有 elements+buttons, 确定 maxActiveLayer
+  - 只统计 condition 通过 (或无 condition) 的元素
+  - maxActiveLayer = max(item['layer'] ?? 0)
+
+Phase 2: 渲染
+  - 按 layer 从 0 到 maxActiveLayer 分组渲染
+  - layer &lt; maxActiveLayer 的 elements: 仍然渲染 (被高层覆盖)
+  - layer &lt; maxActiveLayer 的 buttons (有条件): 跳过 (被高层屏蔽)
+  - layer &lt; maxActiveLayer 的 buttons (无条件 chrome): 仍然渲染
+  - layer == maxActiveLayer: 正常渲染</pre>
+  </div>
+  <div class="card">
+    <h4>点击 (Application::handleClick)</h4>
+<pre>Phase 1: 确定 maxActiveLayer (同渲染逻辑)
+
+Phase 2: 命中测试
+  for l = maxActiveLayer downto 0:
+    逆序遍历 buttons where layer == l:
+      跳过 condition 不满足的
+      跳过 layer &lt; maxActiveLayer 且有 condition 的 (非 chrome)
+      命中则 dispatch 并 return</pre>
+  </div>
+</div>
+
+<h3>2.5 多层叠加示例</h3>
+<div class="card">
+<pre>&lt;!-- App.vue --&gt;
+&lt;num-pad x="0" y="80" /&gt;                                    &lt;!-- layer 0 --&gt;
+&lt;about-dialog x="0" y="0" overlay v-if="showAbout" /&gt;       &lt;!-- layer 1 --&gt;
+&lt;tooltip-box x="0" y="0" overlay v-if="showTooltip" /&gt;      &lt;!-- layer 2 --&gt;
+
+当 showAbout=true, showTooltip=true:
+  maxActiveLayer=2
+  渲染: layer 0 背景 &rarr; layer 1 (跳过非chrome按钮) &rarr; layer 2 (活跃)
+  点击: 仅 layer 2 按钮 + chrome 按钮可响应</pre>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s3">3. v5 M3 实现步骤</h2>
+
+<div class="step-list">
+  <div class="step-item">
+    <strong>AST 节点扩展</strong> <span class="tag">framework/compiler/ast-nodes.php</span>
+<pre>  abstract class TemplateNode {
+      public int $line;
+      public string $vIf = '';
++     public int $layer = 0;        // 新增
+      ...
+  }
+
+  class ComponentRefNode extends TemplateNode {
+      ...
++     public bool $isOverlay = false;  // 新增
+  }</pre>
+  </div>
+
+  <div class="step-item">
+    <strong>模板解析增强</strong> <span class="tag">framework/compiler/template-parser.php</span>
+    <p><code>parseComponentRef()</code> (line ~493):</p>
+<pre>// 现有的 vIf 解析之后:
+$vIf = $attrs['v-if'] ?? '';
+
+// 新增: overlay boolean 属性检测
+$isOverlay = isset($attrs['overlay']);
+
+$node = new ComponentRefNode($tagName, $compFile, $attrs, $slotChildren, $selfClosing, $tok-&gt;line);
+$node-&gt;vIf = $vIf;
+$node-&gt;isOverlay = $isOverlay;  // 新增</pre>
+    <p><code>lowerToLayout()</code> (line ~556):</p>
+    <ul>
+      <li>每个 element 输出时添加: <code>'layer' =&gt; $child-&gt;layer</code></li>
+      <li>每个 button 输出时添加: <code>'layer' =&gt; $child-&gt;layer</code></li>
+    </ul>
+  </div>
+
+  <div class="step-item">
+    <strong>组件解析时分配 layer</strong> <span class="tag">framework/sfc-compiler.php</span>
+<pre>function resolveComponentRefs(AppNode $app, array &amp;$classStyles, int $depth = 0): array
+{
+    $warnings = [];
+    $resolvedChildren = [];
++   $nextOverlayLayer = 1;  // 全局 overlay 层计数器
+
+    foreach ($app-&gt;children as $child) {
+        if ($child instanceof ComponentRefNode) {
+            // ... 现有解析逻辑 ...
+
+            foreach ($childAst-&gt;children as $childNode) {
+                applyOffset($childNode, $offsetX, $offsetY);
+                applyPropBindings($childNode, $child-&gt;props);
+                if ($child-&gt;vIf !== '' &amp;&amp; $childNode-&gt;vIf === '') {
+                    $childNode-&gt;vIf = $child-&gt;vIf;
+                }
++               // 分配 overlay layer
++               if ($child-&gt;isOverlay) {
++                   $childNode-&gt;layer = $nextOverlayLayer;
++               }
+                $resolvedChildren[] = $childNode;
+            }
++           if ($child-&gt;isOverlay) {
++               $nextOverlayLayer++;
++           }
+        } else {
+            $resolvedChildren[] = $child;
+        }
+    }
+    ...
+}</pre>
+  </div>
+
+  <div class="step-item">
+    <strong>渲染器改造 (两阶段)</strong> <span class="tag">framework/BaseRenderer.php</span>
+<pre>public function render(): void
+{
+    $hdc = vue_begin_paint($this-&gt;hWnd);
+    $layout   = getLayout();
+    $elements = $layout['elements'];
+    $buttons  = $layout['buttons'];
+
+    // ====== Phase 1: 确定最高活跃层 ======
+    $maxLayer = 0;
+    foreach ($elements as $el) {
+        if (isset($el['condition']) &amp;&amp; !$this-&gt;component-&gt;evalCondition($el['condition'])) continue;
+        $layer = $el['layer'] ?? 0;
+        if ($layer &gt; $maxLayer) $maxLayer = $layer;
+    }
+    foreach ($buttons as $btn) {
+        if (isset($btn['condition']) &amp;&amp; !$this-&gt;component-&gt;evalCondition($btn['condition'])) continue;
+        $layer = $btn['layer'] ?? 0;
+        if ($layer &gt; $maxLayer) $maxLayer = $layer;
+    }
+
+    // ====== Phase 2: 分层渲染 ======
+    for ($l = 0; $l &lt;= $maxLayer; $l++) {
+        foreach ($elements as $el) {
+            if (($el['layer'] ?? 0) !== $l) continue;
+            if (isset($el['condition']) &amp;&amp; !$this-&gt;component-&gt;evalCondition($el['condition'])) continue;
+            // 现有渲染逻辑 (rect / text)
+        }
+    }
+
+    for ($l = 0; $l &lt;= $maxLayer; $l++) {
+        foreach ($buttons as $btn) {
+            $btnLayer = $btn['layer'] ?? 0;
+            if ($btnLayer !== $l) continue;
+            if ($btnLayer &lt; $maxLayer &amp;&amp; isset($btn['condition'])) continue; // 跳过被覆盖的非chrome
+            if (isset($btn['condition']) &amp;&amp; !$this-&gt;component-&gt;evalCondition($btn['condition'])) continue;
+            // 现有按钮渲染逻辑
+        }
+    }
+
+    vue_end_paint($this-&gt;hWnd, $hdc);
+}</pre>
+  </div>
+
+  <div class="step-item">
+    <strong>点击处理改造</strong> <span class="tag">apps/calculator/Application.php</span>
+<pre>private function handleClick(int $x, int $y): void
+{
+    $layout = getLayout();
+    $buttons = $layout['buttons'];
+
+    // Phase 1: 确定最高活跃层
+    $maxLayer = 0;
+    foreach ($buttons as $btn) {
+        if (isset($btn['condition']) &amp;&amp; !$this-&gt;component-&gt;evalCondition($btn['condition'])) continue;
+        $layer = $btn['layer'] ?? 0;
+        if ($layer &gt; $maxLayer) $maxLayer = $layer;
+    }
+
+    // Phase 2: 从最高层向下逆序命中测试
+    for ($l = $maxLayer; $l &gt;= 0; $l--) {
+        for ($i = count($buttons) - 1; $i &gt;= 0; $i--) {
+            $btn = $buttons[$i];
+            $btnLayer = $btn['layer'] ?? 0;
+            if ($btnLayer !== $l) continue;
+            if ($btnLayer &lt; $maxLayer &amp;&amp; isset($btn['condition'])) continue;
+            if (isset($btn['condition']) &amp;&amp; !$this-&gt;component-&gt;evalCondition($btn['condition'])) continue;
+
+            if ($x &gt;= $btn['x'] &amp;&amp; $x &lt; $btn['x'] + $btn['w'] &amp;&amp;
+                $y &gt;= $btn['y'] &amp;&amp; $y &lt; $btn['y'] + $btn['h']) {
+                $this-&gt;dispatchClick($btn);
+                return;
+            }
+        }
+    }
+}</pre>
+  </div>
+
+  <div class="step-item">
+    <strong>模板更新</strong> <span class="tag">apps/calculator/App.vue</span>
+<pre>- &lt;num-pad x="0" y="80" v-if="!showDialog" /&gt;
++ &lt;num-pad x="0" y="80" /&gt;
+
+- &lt;grid x="290" y="38" cols="1" rows="1" cell-w="30" cell-h="28" margin="0" v-if="!showDialog"&gt;
++ &lt;grid x="290" y="38" cols="1" rows="1" cell-w="30" cell-h="28" margin="0"&gt;
+    &lt;btn row="0" col="0" label="?" class="btn-func" @click="toggleAboutDialog" /&gt;
+  &lt;/grid&gt;
+
+- &lt;about-dialog x="0" y="0" /&gt;
++ &lt;about-dialog x="0" y="0" overlay v-if="showDialog" /&gt;</pre>
+  </div>
+
+  <div class="step-item">
+    <strong>重新编译</strong>
+    <pre>php framework/sfc-compiler.php apps/calculator/App.vue</pre>
+  </div>
+</div>
+
+<h3>受影响文件汇总</h3>
+<table>
+  <tr><th>#</th><th>文件</th><th>改动量</th><th>说明</th></tr>
+  <tr><td>1</td><td><code>framework/compiler/ast-nodes.php</code></td><td>+2 行</td><td>layer, isOverlay 属性</td></tr>
+  <tr><td>2</td><td><code>framework/compiler/template-parser.php</code></td><td>~15 行</td><td>overlay 解析 + layer 输出</td></tr>
+  <tr><td>3</td><td><code>framework/sfc-compiler.php</code></td><td>~15 行</td><td>layer 分配逻辑</td></tr>
+  <tr><td>4</td><td><code>framework/BaseRenderer.php</code></td><td>~40 行</td><td>两阶段分层渲染</td></tr>
+  <tr><td>5</td><td><code>apps/calculator/Application.php</code></td><td>~35 行</td><td>分层点击 + 条件检查</td></tr>
+  <tr><td>6</td><td><code>apps/calculator/App.vue</code></td><td>~5 行</td><td>移除逆条件 + 加 overlay</td></tr>
+  <tr><td>7</td><td><code>apps/calculator/components/AboutDialog.vue</code></td><td>可选</td><td>清理内部 v-if</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s4">4. 验证方案与向后兼容</h2>
+
+<h3>4.1 验证方案</h3>
+<div class="grid-2">
+  <div class="card">
+    <h4>编译验证</h4>
+    <p><code>php framework/sfc-compiler.php apps/calculator/App.vue</code> 无错误</p>
+  </div>
+  <div class="card">
+    <h4>布局验证</h4>
+    <p>检查生成的 <code>AppLayout_gen.php</code>:</p>
+    <ul>
+      <li>主界面元素 <code>'layer' =&gt; 0</code></li>
+      <li>弹窗元素 <code>'layer' =&gt; 1</code></li>
+      <li>"?" 按钮无 condition (chrome), <code>'layer' =&gt; 0</code></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>功能验证</h4>
+    <ul>
+      <li>初始状态: 计算器正常工作, 所有按钮可点击</li>
+      <li>点击 <code>?</code> &rarr; 弹窗出现, NumPad 按钮不可点击</li>
+      <li>再次点击 <code>?</code> &rarr; 弹窗关闭, 一切恢复</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>多层测试</h4>
+    <p>添加第二个 overlay 组件，验证多 overlay 叠加行为正确。</p>
+  </div>
+</div>
+
+<h3>4.2 向后兼容性</h3>
+<ul>
+  <li>所有现有元素默认 <code>layer=0</code>, 无 <code>condition</code> 则为 chrome, 行为不变</li>
+  <li>不使用 <code>overlay</code> 属性的组件完全不受影响</li>
+  <li>现有 condition 系统继续完整工作</li>
+  <li>布局新增 <code>'layer'</code> 字段, 不删除任何旧字段</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="s5">5. DOM-like Tree 结构可行性分析</h2>
+
+<h3>5.1 当前编译管线</h3>
+<div class="card">
+<pre>.vue 模板 &rarr; TemplateParser &rarr; AST (已经是树!)
+                          &darr;
+                   resolveComponentRefs (内联子组件到 AST)
+                          &darr;
+                   lowerToLayout (树 &rarr; 扁平数组)  &larr; 这里做了 flatten
+                          &darr;
+                   CodeGen &rarr; AppLayout_gen.php (扁平数组)
+                          &darr;
+                   Runtime: BaseRenderer 逐项遍历</pre>
+  <p><strong>关键发现:</strong> 编译器内部已经是树结构 (AST)。<code>lowerToLayout()</code> 刻意把树拍平，不是能力限制，而是设计选择。</p>
+</div>
+
+<h3>5.2 为什么选择拍平: 硬约束</h3>
+<p>C++ GDI 层只提供 5 个绘制函数，缺失关键能力:</p>
+<table>
+  <tr><th>缺失的 GDI 能力</th><th>在树结构中的角色</th></tr>
+  <tr><td><code>SaveDC / RestoreDC</code></td><td>进入/退出子节点时保存/恢复坐标变换</td></tr>
+  <tr><td><code>SetViewportOrgEx / SetWindowOrgEx</code></td><td>子节点使用相对坐标 (父坐标系)</td></tr>
+  <tr><td><code>SelectClipRgn / IntersectClipRect</code></td><td>子节点裁剪到父容器范围内</td></tr>
+  <tr><td>Alpha / RGBA 混合</td><td>半透明叠加效果</td></tr>
+</table>
+<p>没有这些能力，树结构的核心价值无法体现: 相对坐标、自动裁剪、状态隔离 都不可用。</p>
+
+<h3>5.3 三种树结构变体</h3>
+
+<div class="card">
+  <h4>变体 1: 纯运行时树</h4>
+<pre>function renderNode($hdc, $node, $parentX, $parentY) {
+    $x = $node['x'] + $parentX;
+    $y = $node['y'] + $parentY;
+    foreach ($node['children'] as $child) {
+        renderNode($hdc, $child, $x, $y);
+    }
+}</pre>
+  <p><strong>评估:</strong> 技术可行但意义不大 &mdash; 坐标累加编译时已知，性能不如 flat 循环。</p>
+</div>
+
+<div class="card">
+  <h4>变体 2: 编译时树 &rarr; 运行时保持树结构 (不拍平)</h4>
+  <p>优势: 组件边界保留，group 级 v-if 自动传播。<br>劣势: 渲染器复杂度翻倍 (~200行 vs ~80行)，无明显性能收益。</p>
+  <p><strong>评估:</strong> 低优先级。当前 overlay 问题用 layer 方案即可解决。</p>
+</div>
+
+<div class="card">
+  <h4>变体 3: 扩展 C++ 层支持树渲染</h4>
+<pre>// 新增接口
+vue_begin_group(int hdc, int x, int y, int w, int h);  // 设置裁剪区+坐标偏移
+vue_end_group(int hdc);                                   // 恢复</pre>
+  <p><strong>评估:</strong> 中期演进方向 (v6 M2)。当前 v5 scope 内不必要。</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s6">6. 统一架构演进路线</h2>
+
+<p style="color:var(--color-text-muted);">数据 + 行为 + 资源三个维度交织推进的完整路线。每步只解决一个问题。</p>
+
+<div class="milestone">
+  <div class="milestone-dot current"></div>
+  <div>
+    <span class="badge badge-active">当前</span> <strong>v5 M3: Flat + Layer</strong>
+    <div class="grid-3" style="margin-top:8px;">
+      <div><span class="tag">数据结构</span> +layer 字段</div>
+      <div><span class="tag">渲染行为</span> 分层渲染 + 分层点击</div>
+      <div><span class="tag">生命周期</span> 无</div>
+    </div>
+    <p style="font-size:12px;color:var(--color-text-muted);">~100 行 / 7 文件 | 解决: overlay v-if 双重耦合 | 触发: "框架机制问题？"</p>
+  </div>
+</div>
+<div class="milestone">
+  <div class="milestone-dot"></div>
+  <div>
+    <span class="badge badge-next">下一步</span> <strong>v5 M4: Groups + Incremental Rendering</strong>
+    <div class="grid-3" style="margin-top:8px;">
+      <div><span class="tag">数据结构</span> +group_id (保留组件边界)</div>
+      <div><span class="tag">渲染行为</span> ChangeQueue 增量</div>
+      <div><span class="tag">生命周期</span> dirty 粒度到 element</div>
+    </div>
+    <p style="font-size:12px;color:var(--color-text-muted);">~80 行 / 4 文件 | 收益: O(n)&rarr;O(dirty)，30&rarr;300 元素无退化 | 触发: "多嵌套组件性能？"</p>
+  </div>
+</div>
+<div class="milestone">
+  <div class="milestone-dot"></div>
+  <div>
+    <span class="badge badge-future">v6</span> <strong>v6 M1: 分段布局 + 按需 Attach</strong>
+    <div class="grid-3" style="margin-top:8px;">
+      <div><span class="tag">数据结构</span> 拆分为 getLayout_X()</div>
+      <div><span class="tag">渲染行为</span> 按需 attach / 活跃列表</div>
+      <div><span class="tag">生命周期</span> onAttach / onDetach</div>
+    </div>
+    <p style="font-size:12px;color:var(--color-text-muted);">~300 行 PHP + ~180 行 C++ | 收益: 300&rarr;3000 元素无退化 | 触发: "是不是要引入生命周期？"</p>
+  </div>
+</div>
+<div class="milestone">
+  <div class="milestone-dot"></div>
+  <div>
+    <span class="badge badge-future">v6</span> <strong>v6 M2: C++ Group 原语 + 递归渲染器</strong>
+    <div class="grid-3" style="margin-top:8px;">
+      <div><span class="tag">数据结构</span> 保留树结构 (不拍平)</div>
+      <div><span class="tag">渲染行为</span> 递归渲染器</div>
+      <div><span class="tag">生命周期</span> onActivate / onDeactivate</div>
+    </div>
+    <p style="font-size:12px;color:var(--color-text-muted);">~500 行 PHP + ~30 行 C++ | 真正的树渲染, 相对坐标, 自动裁剪 | 触发: "DOM 结构可行性？"</p>
+  </div>
+</div>
+<div class="milestone">
+  <div class="milestone-dot"></div>
+  <div>
+    <span class="badge badge-far">远期</span> <strong>v6 M3: 完整组件树 + keep-alive</strong>
+    <div class="grid-3" style="margin-top:8px;">
+      <div><span class="tag">数据结构</span> 完整嵌套组件树</div>
+      <div><span class="tag">渲染行为</span> 树 diff/patch</div>
+      <div><span class="tag">生命周期</span> keep-alive 模式</div>
+    </div>
+    <p style="font-size:12px;color:var(--color-text-muted);">~800 行 PHP + ~200 行 C++ | 对标 Vue 3 / Flutter</p>
+  </div>
+</div>
+<div class="milestone" style="margin-bottom:0;">
+  <div class="milestone-dot"></div>
+  <div>
+    <span class="badge badge-far">远景</span> <strong>v6+: 多后端 + 跨平台</strong>
+    <div class="grid-3" style="margin-top:8px;">
+      <div><span class="tag">数据结构</span> RenderContext 编译期绑定</div>
+      <div><span class="tag">渲染行为</span> GPU 加速 / Skia / Canvas</div>
+      <div><span class="tag">生命周期</span> 跨平台标准化钩子</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:2.5rem;">关键设计原则</h3>
+<ol>
+  <li><strong>每步只解决一个问题</strong> &mdash; 不提前引入不需要的复杂度</li>
+  <li><strong>每步都是上一步的自然延伸</strong> &mdash; group_id 依赖 layer, 分段布局依赖 group_id</li>
+  <li><strong>数据结构先于行为变更</strong> &mdash; 先在 flat array 上加 metadata，再改为增量遍历</li>
+  <li><strong>C++ 扩展作为分水岭</strong> &mdash; v5-v6 M1 纯 PHP 侧改动; v6 M2 需要动 C++ GDI 层</li>
+  <li><strong>生命周期在数据结构成熟后引入</strong> &mdash; 有 attach/detach 机制后，生命周期才有意义</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2 id="s7">7. 生命周期与可扩展性分析</h2>
+
+<h3>7.1 当前状态: 零生命周期</h3>
+<div class="card">
+<pre>abstract class ReactiveComponent {
+    public bool $dirty = false;
+    public string $template = '';
+    public function __construct(?string $componentId = null) { ... }
+    public static function initShared(int $tableSize = 10240): void { ... }
+}</pre>
+  <p><strong>没有</strong> mount / unmount / destroy / activate / deactivate 等任何生命周期钩子。</p>
+  <p><code>ChangeQueue</code> (4096 元素环形缓冲) 已分配但从未被 push &mdash; 是增量渲染的预留基础设施。</p>
+</div>
+
+<h3>7.2 Layer 方案的内存开销</h3>
+<div class="card">
+<pre>当前 AppLayout_gen.php:
+  Elements: 11  (背景、display、expression、overlay rect、dialog panel、文本&times;5、divider)
+  Buttons:  20  (NumPad &times;18, "?" &times;1, Close &times;1)
+  总计:     ~30 items, ~5 KB
+
+Layer 方案增加: 'layer' =&gt; int 每个元素 ~4 bytes &rarr; 总量增加 ~120 bytes (0.12KB)。可忽略。</pre>
+</div>
+
+<h3>7.3 可扩展性瓶颈时间线</h3>
+<table>
+  <tr><th>元素数量</th><th>每帧遍历耗时 (估算)</th><th>是否可接受</th></tr>
+  <tr><td>30 (当前)</td><td>~50 &mu;s</td><td style="color:var(--color-success);">无感</td></tr>
+  <tr><td>300</td><td>~500 &mu;s</td><td style="color:var(--color-success);">无感 (16ms 帧预算内)</td></tr>
+  <tr><td>3000</td><td>~5 ms</td><td style="color:var(--color-warning);">开始感知 (帧预算的 30%)</td></tr>
+  <tr><td>30000</td><td>~50 ms</td><td style="color:var(--color-danger);">丢帧 (需要增量渲染)</td></tr>
+</table>
+<p><strong>结论:</strong> Layer 方案不加剧内存问题。对 v5 计算器完全不是问题。框架在 v6 引入生命周期和延迟加载来支撑复杂应用。</p>
+
+<h3>7.4 延迟布局示意 (v6 方向)</h3>
+<div class="card">
+<pre>// 编译时: 每个 overlay 组件输出独立的 layout 函数
+function getLayout_aboutDialog(): array {
+    return ['elements' =&gt; [...], 'buttons' =&gt; [...]];
+}
+
+// 运行时: BaseRenderer 维护活跃布局列表
+class BaseRenderer {
+    private array $activeLayouts = [];
+    private array $attachedComponents = [];
+
+    public function attachComponent(string $name): void {
+        if (!isset($this-&gt;attachedComponents[$name])) {
+            $layoutFn = "getLayout_{$name}";
+            $this-&gt;activeLayouts[$name] = $layoutFn();
+            $this-&gt;attachedComponents[$name] = true;
+        }
+    }
+    public function detachComponent(string $name): void {
+        unset($this-&gt;activeLayouts[$name], $this-&gt;attachedComponents[$name]);
+    }
+    public function render(): void {
+        foreach ($this-&gt;activeLayouts as $layout) { /* 按 layer 排序渲染 */ }
+    }
+}</pre>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s8">8. 框架对比总结</h2>
+
+<table>
+  <tr><th>维度</th><th>Dear ImGui</th><th>Flutter</th><th>Android View</th><th>Web (z-index)</th><th><strong>VueCalc (Flat+Layer)</strong></th></tr>
+  <tr><td><strong>数据表示</strong></td><td>逐帧 draw list</td><td>RenderObject 树</td><td>View 树</td><td>DOM 树</td><td>编译时 flat 数组</td></tr>
+  <tr><td><strong>z-order</strong></td><td>调用顺序</td><td>Stack children</td><td>child index + elevation</td><td>z-index + stacking</td><td><strong>layer 字段 + 数组索引</strong></td></tr>
+  <tr><td><strong>Modal 屏蔽</strong></td><td>Modal flag</td><td>ModalBarrier</td><td>Window 层级</td><td>fixed overlay</td><td><strong>layer 过滤 + condition</strong></td></tr>
+  <tr><td><strong>Hit-test</strong></td><td>逆序窗口迭代</td><td>逆序 paint order</td><td>逆序 child</td><td>浏览器内部</td><td><strong>按 layer 逆序 + condition</strong></td></tr>
+  <tr><td><strong>编译/运行时</strong></td><td>纯运行时</td><td>运行时 (声明式)</td><td>运行时</td><td>运行时</td><td><strong>编译时 dominant (AOT)</strong></td></tr>
+  <tr><td><strong>改动量</strong></td><td>-</td><td>-</td><td>-</td><td>-</td><td><strong>~100 行, 7 文件</strong></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s9">9. Widget 四层能力分类</h2>
+
+<div class="card card-success" style="margin-bottom:0.5rem;">
+  <div class="tier-header"><div class="tier-num tier-1">1</div><strong>Tier 1: 已支持/零成本扩展 (当前 v5)</strong></div>
+  <div><span class="tag">rect</span><span class="tag">text</span><span class="tag">button</span><span class="tag">grid</span><span class="tag">label</span><span class="tag">separator</span></div>
+  <p style="font-size:12px;color:var(--color-text-muted);margin-top:4px;">仅需新增 <code>vue_draw_line</code> 一个原语即可解锁 separator/divider 语义标签。</p>
+</div>
+<div class="card card-info" style="margin-bottom:0.5rem;">
+  <div class="tier-header"><div class="tier-num tier-2">2</div><strong>Tier 2: 中等 GDI 扩展 + AST 新增 (v6 M1)</strong></div>
+  <div><span class="tag">image</span><span class="tag">input</span><span class="tag">textarea</span><span class="tag">dropdown</span><span class="tag">checkbox</span><span class="tag">radio</span><span class="tag">tooltip</span><span class="tag">groupbox</span></div>
+</div>
+<div class="card card-warning" style="margin-bottom:0.5rem;">
+  <div class="tier-header"><div class="tier-num tier-3">3</div><strong>Tier 3: 高级 GDI + 状态管理 + 拖拽交互 (v6 M2)</strong></div>
+  <div><span class="tag">slider</span><span class="tag">list/table</span><span class="tag">scrollbar</span><span class="tag">tabs</span><span class="tag">split-pane</span><span class="tag">progress-bar</span></div>
+</div>
+<div class="card card-danger">
+  <div class="tier-header"><div class="tier-num tier-4">4</div><strong>Tier 4: 复杂组合组件 (v6 M3+)</strong></div>
+  <div><span class="tag">menubar</span><span class="tag">combobox</span><span class="tag">datagrid</span><span class="tag">tree</span><span class="tag">richtext</span><span class="tag">datepicker</span></div>
+  <p style="font-size:12px;color:var(--color-text-muted);margin-top:4px;">核心挑战在交互状态机和弹出层管理，需要 PopupManager、FocusChain、AcceleratorTable、ThemeProvider。</p>
+</div>
+
+<h3>Tier 2 需求矩阵</h3>
+<table>
+  <tr><th>Widget</th><th>新增 GDI 原语</th><th>新增 AST 节点</th><th>新增事件</th><th>状态管理</th></tr>
+  <tr><td><strong>image</strong></td><td>vue_load_image, vue_draw_image</td><td>ImageNode(src,x,y,w,h)</td><td>无</td><td>imageHandle 资源池</td></tr>
+  <tr><td><strong>input</strong></td><td>vue_draw_focus_rect, vue_measure_text</td><td>InputNode(v-model,placeholder)</td><td>KEYDOWN, CHAR, SETFOCUS</td><td>focusedWidgetId, cursorPos</td></tr>
+  <tr><td><strong>textarea</strong></td><td>同上 + draw_text_multiline</td><td>TextareaNode(v-model,rows)</td><td>同 input</td><td>同 input + scrollLine</td></tr>
+  <tr><td><strong>dropdown</strong></td><td>vue_draw_arrow</td><td>DropdownNode(v-model,:items)</td><td>弹出外点击关闭</td><td>expandedWidgetId, items[]</td></tr>
+  <tr><td><strong>checkbox</strong></td><td>vue_draw_checkmark</td><td>CheckboxNode(v-model,label)</td><td>点击 toggle</td><td>checked 状态</td></tr>
+  <tr><td><strong>radio</strong></td><td>同 checkbox</td><td>RadioNode(v-model,value,group)</td><td>点击选择</td><td>group 互斥</td></tr>
+  <tr><td><strong>tooltip</strong></td><td>无 (rect+text 组合)</td><td>TooltipNode (overlay)</td><td>MOUSEMOVE, MOUSELEAVE, TIMER</td><td>hoveredWidgetId</td></tr>
+  <tr><td><strong>groupbox</strong></td><td>vue_draw_text 边框断点</td><td>GroupboxNode(title, children[])</td><td>无</td><td>纯视觉容器</td></tr>
+</table>
+
+<h3>新模板语法示例</h3>
+
+<h4>Tier 2 示例</h4>
+<div class="card">
+<pre>&lt;!-- image --&gt;
+&lt;image x="20" y="20" w="64" h="64" src="assets/logo.bmp" class="logo" /&gt;
+
+&lt;!-- input --&gt;
+&lt;input x="20" y="100" w="200" h="30" v-model="username"
+       placeholder="请输入用户名" max-length="20" class="input-field" /&gt;
+
+&lt;!-- dropdown --&gt;
+&lt;dropdown x="20" y="290" w="200" h="28" v-model="selectedCity"
+          :items="cities" @change="onCityChange" class="dropdown" /&gt;
+
+&lt;!-- checkbox --&gt;
+&lt;checkbox x="20" y="330" v-model="agreeToTerms"
+          label="我同意服务条款" @change="onToggle" /&gt;
+
+&lt;!-- radio group --&gt;
+&lt;radio x="20" y="370" v-model="selectedPlan" value="free" label="免费版" group="plan" /&gt;
+&lt;radio x="130" y="370" v-model="selectedPlan" value="pro" label="专业版" group="plan" /&gt;
+
+&lt;!-- groupbox --&gt;
+&lt;groupbox x="20" y="20" w="300" h="200" title="网络设置"&gt;
+  &lt;checkbox x="15" y="35" v-model="useProxy" label="使用代理" /&gt;
+  &lt;input x="15" y="70" w="250" h="28" v-model="proxyHost" placeholder="代理地址" v-if="useProxy" /&gt;
+&lt;/groupbox&gt;</pre>
+</div>
+
+<h4>Tier 3 示例</h4>
+<div class="card">
+<pre>&lt;slider x="20" y="20" w="250" h="24" v-model="volume" min="0" max="100" step="5" /&gt;
+
+&lt;scrollbar x="580" y="0" w="16" h="600" orientation="vertical"
+           v-model="scrollY" :view-size="viewportH" :content-size="contentH" /&gt;
+
+&lt;list x="20" y="60" w="300" h="400" :items="userList"
+      :columns="['name', 'email']" row-height="32" v-model="selectedUser" /&gt;
+
+&lt;tabs x="20" y="20" w="500" h="400" v-model="activeTab"&gt;
+  &lt;tab label="基本信息"&gt;
+    &lt;input x="15" y="15" w="200" h="28" v-model="name" placeholder="姓名" /&gt;
+  &lt;/tab&gt;
+  &lt;tab label="高级设置"&gt;
+    &lt;checkbox x="15" y="15" v-model="enableCache" label="启用缓存" /&gt;
+  &lt;/tab&gt;
+&lt;/tabs&gt;
+
+&lt;split-pane x="0" y="0" w="800" h="600" orientation="horizontal" v-model="splitPos"&gt;
+  &lt;pane min-size="150"&gt;&lt;list ... /&gt;&lt;/pane&gt;
+  &lt;pane min-size="300"&gt;&lt;textarea ... /&gt;&lt;/pane&gt;
+&lt;/split-pane&gt;
+
+&lt;progress-bar x="20" y="20" w="300" h="20" v-model="uploadProgress" :max="100" /&gt;</pre>
+</div>
+
+<h4>Tier 4 示例</h4>
+<div class="card">
+<pre>&lt;menu-bar&gt;
+  &lt;menu label="文件"&gt;
+    &lt;menu-item label="新建" @click="onNew" shortcut="Ctrl+N" /&gt;
+    &lt;menu-item label="打开" @click="onOpen" shortcut="Ctrl+O" /&gt;
+    &lt;menu-separator /&gt;
+    &lt;menu-item label="退出" @click="onQuit" shortcut="Alt+F4" /&gt;
+  &lt;/menu&gt;
+&lt;/menu-bar&gt;
+
+&lt;datagrid x="20" y="20" w="700" h="400" :data="tableRows" :columns="tableCols"
+          v-model="selectedRow" editable sortable @edit="onCellEdit" /&gt;
+
+&lt;tree x="20" y="60" w="280" h="500" :data="fileTree"
+      v-model="selectedPath" @select="onNodeSelect" @expand="onNodeExpand" /&gt;</pre>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s10">10. RenderContext 后端无关渲染接口</h2>
+
+<div class="card card-accent">
+  <h4>设计目标</h4>
+  <p>对齐 Skia <code>SkCanvas</code>、Flutter <code>Canvas</code>、HTML5 <code>CanvasRenderingContext2D</code>。框架面向抽象基类编程，后端可切换 (GDI &rarr; Skia &rarr; Web Canvas)。采用已验证 AOT 兼容的 <code>abstract class</code> + <code>extends</code> 模式。</p>
+</div>
+
+<h3>抽象基类定义 (26 方法)</h3>
+<div class="card">
+<pre>abstract class RenderContext {
+    // ── 状态栈 ──
+    abstract public function save(): void;
+    abstract public function restore(): void;
+    abstract public function translate(float $dx, float $dy): void;
+
+    // ── 裁剪 ──
+    abstract public function clipRect(float $x, float $y, float $w, float $h): void;
+    abstract public function clearClip(): void;
+
+    // ── 画笔属性 ──
+    abstract public function setFillColor(int $rgb): void;
+    abstract public function setStrokeColor(int $rgb): void;
+    abstract public function setStrokeWidth(float $w): void;
+    abstract public function setFontSize(int $size): void;
+    abstract public function setFontBold(bool $bold): void;
+    abstract public function setTextAlign(string $align): void;
+
+    // ── 绘制原语 ──
+    abstract public function fillRect(float $x, float $y, float $w, float $h): void;
+    abstract public function strokeRect(float $x, float $y, float $w, float $h): void;
+    abstract public function fillRoundRect(float $x, float $y, float $w, float $h, float $rx, float $ry): void;
+    abstract public function strokeRoundRect(float $x, float $y, float $w, float $h, float $rx, float $ry): void;
+    abstract public function drawText(float $x, float $y, string $text): void;
+    abstract public function drawLine(float $x1, float $y1, float $x2, float $y2): void;
+    abstract public function fillOval(float $x, float $y, float $w, float $h): void;
+    abstract public function strokeOval(float $x, float $y, float $w, float $h): void;
+    abstract public function drawImage(float $x, float $y, float $w, float $h, int $imageHandle): void;
+    abstract public function drawPolygon(array $points): void;
+
+    // ── 文字测量 ──
+    abstract public function measureText(string $text, int $fontSize, bool $bold): array;
+
+    // ── 帧管理 ──
+    abstract public function beginFrame(int $hWnd): void;
+    abstract public function endFrame(int $hWnd): void;
+
+    // ── 尺寸查询 ──
+    abstract public function getWidth(): int;
+    abstract public function getHeight(): int;
+}</pre>
+</div>
+
+<h3>三后端映射表</h3>
+<table>
+  <tr><th>RenderContext 方法</th><th>GDI 后端</th><th>Skia 后端</th><th>Web Canvas 后端</th></tr>
+  <tr><td><code>save()</code></td><td>SaveDC(hdc)</td><td>canvas-&gt;save()</td><td>ctx.save()</td></tr>
+  <tr><td><code>restore()</code></td><td>RestoreDC(hdc, -1)</td><td>canvas-&gt;restore()</td><td>ctx.restore()</td></tr>
+  <tr><td><code>translate(dx,dy)</code></td><td>OffsetViewportOrgEx</td><td>canvas-&gt;translate()</td><td>ctx.translate()</td></tr>
+  <tr><td><code>clipRect(x,y,w,h)</code></td><td>IntersectClipRect</td><td>canvas-&gt;clipRect()</td><td>ctx.rect()+clip()</td></tr>
+  <tr><td><code>setFillColor(rgb)</code></td><td>CreateSolidBrush</td><td>paint.setColor()</td><td>ctx.fillStyle</td></tr>
+  <tr><td><code>fillRect(x,y,w,h)</code></td><td>FillRect(hdc,&amp;r,brush)</td><td>canvas-&gt;drawRect()</td><td>ctx.fillRect()</td></tr>
+  <tr><td><code>fillRoundRect(...)</code></td><td>RoundRect()</td><td>canvas-&gt;drawRoundRect()</td><td>ctx.roundRect()+fill()</td></tr>
+  <tr><td><code>drawText(x,y,text)</code></td><td>TextOutA()</td><td>canvas-&gt;drawString()</td><td>ctx.fillText()</td></tr>
+  <tr><td><code>drawLine(x1,y1,x2,y2)</code></td><td>MoveToEx+LineTo</td><td>canvas-&gt;drawLine()</td><td>ctx.lineTo()+stroke()</td></tr>
+  <tr><td><code>fillOval(x,y,w,h)</code></td><td>Ellipse()</td><td>canvas-&gt;drawOval()</td><td>ctx.ellipse()+fill()</td></tr>
+  <tr><td><code>drawImage(...)</code></td><td>StretchBlt()</td><td>canvas-&gt;drawImageRect()</td><td>ctx.drawImage()</td></tr>
+  <tr><td><code>measureText(...)</code></td><td>GetTextExtentPoint32</td><td>font.measureText()</td><td>ctx.measureText()</td></tr>
+  <tr><td><code>beginFrame(hWnd)</code></td><td>CreateCompatibleDC+BMP</td><td>surface 创建</td><td>Canvas 获取</td></tr>
+  <tr><td><code>endFrame(hWnd)</code></td><td>BitBlt+DeleteDC</td><td>surface-&gt;flush()</td><td>无需操作</td></tr>
+</table>
+
+<h3>AOT 约束与落地策略</h3>
+<table>
+  <tr><th>模式</th><th>验证状态</th><th>证据</th></tr>
+  <tr><td><code>abstract class</code> + <code>extends</code></td><td style="color:var(--color-success);font-weight:600;">&#10003; 已验证</td><td>ReactiveComponent 是 abstract class，App extends 已编译为 .exe</td></tr>
+  <tr><td><code>interface</code> + <code>implements</code></td><td style="color:var(--color-success);font-weight:600;">&#10003; 已验证</td><td>最小测试通过 PHP&rarr;C++ 翻译阶段</td></tr>
+</table>
+<p>AOT 限制聚焦于动态语言特性 (<code>__get/__set</code>、<code>$obj-&gt;$var</code>)，而非 OOP 结构本身。</p>
+
+<h3>GDI 后端已知限制</h3>
+<table>
+  <tr><th>GDI 限制</th><th>影响</th><th>缓解</th></tr>
+  <tr><td>不支持 Alpha 通道</td><td>仅有 RGB</td><td>接口保留 setAlpha 为将来扩展，GDI 后端忽略</td></tr>
+  <tr><td>不支持旋转变换</td><td>无 rotate()</td><td>接口不暴露 rotate/scale，仅暴露 translate</td></tr>
+  <tr><td>SaveDC 栈深度有限 (~10层)</td><td>save/restore 受限</td><td>编译器检测嵌套 &gt; 5 时警告</td></tr>
+  <tr><td>字体不支持斜体</td><td>无 fontStyle</td><td>接口不暴露 setFontItalic</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s11">11. 差距分析</h2>
+
+<table>
+  <tr><th>维度</th><th>当前状态 (v5)</th><th>目标状态 (v6+)</th></tr>
+  <tr><td><strong>GDI 原语</strong></td><td>5 个 (fill_rect, draw_text, draw_button, begin/end_paint)</td><td>13 个 (+8: line, image, oval, polygon, arrow, measure_text, clip, save/restore)</td></tr>
+  <tr><td><strong>AST 节点</strong></td><td>4 种 + 2 元节点 (Rect, Text, Grid, Btn + Unknown, ComponentRef)</td><td>15+ 种 (+11 个 widget 节点)</td></tr>
+  <tr><td><strong>Windows 消息</strong></td><td>2 种 (WM_LBUTTONDOWN, WM_QUIT)</td><td>9 种 (+KEYDOWN, CHAR, MOUSEMOVE, LBUTTONUP, MOUSEWHEEL, SETFOCUS/KILLFOCUS, MOUSELEAVE, TIMER)</td></tr>
+  <tr><td><strong>状态管理</strong></td><td>单布尔 $dirty，零 widget 状态</td><td>分层 dirty + widget 交互状态 (focus, hover, drag, scroll, expand, select)</td></tr>
+  <tr><td><strong>渲染模型</strong></td><td>平铺数组 for-each，硬编码 if/elseif</td><td>RenderContext 抽象，Widget::render(ctx) 多态</td></tr>
+  <tr><td><strong>坐标系</strong></td><td>绝对像素坐标，无变换/裁剪</td><td>translate + save/restore + clipRect</td></tr>
+  <tr><td><strong>布局系统</strong></td><td>编译期扁平计算，无自适应</td><td>编译期 + 运行时动态布局 (min-width/flex/anchor)</td></tr>
+  <tr><td><strong>生命周期</strong></td><td>无 (仅构造)</td><td>onAttach/onDetach/onActivate + keep-alive</td></tr>
+  <tr><td><strong>CSS 映射</strong></td><td>8 属性</td><td>18+ (border-radius, opacity, cursor, transition, box-shadow, overflow...)</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s12">12. 分阶段实施路线图</h2>
+
+<h3>Phase 1: Tier 2 基础 + RenderContext (v6 M1)</h3>
+<div class="card card-info">
+<pre>目标: 解锁 7 个 Tier 2 widget，建立核心 C++ 扩展库和事件系统
+
+1.1 C++ GDI 扩展 (8 新原语)
+    vue_draw_line, vue_load_image, vue_draw_image,
+    vue_measure_text, vue_set_clip, vue_clear_clip,
+    vue_draw_arrow, vue_save_dc/vue_restore_dc
+    [cpp/vue_calc.cc ~+120行, stub ~+14行]
+
+1.2 事件系统扩展 (7 新消息)
+    WM_KEYDOWN, WM_CHAR, WM_MOUSEMOVE, WM_LBUTTONUP,
+    WM_MOUSEWHEEL, WM_SETFOCUS/KILLFOCUS, WM_MOUSELEAVE, WM_TIMER
+    [cpp/vue_calc.cc ~+60行, Application.php ~+80行]
+
+1.3 RenderContext 接口落地
+    framework/rendering/GdiRenderContext.php (GDI 实现)
+    [新增 ~300行]
+
+1.4 AST 节点扩展 (7 新节点)
+    ImageNode, InputNode, TextareaNode, DropdownNode,
+    CheckboxNode, RadioNode, GroupboxNode
+    [ast-nodes.php ~+120行]
+
+1.5 模板解析器扩展
+    parseElement() 新增 7 个 case，GroupboxNode 嵌套解析
+    [template-parser.php ~+200行]
+
+1.6 渲染器多态化
+    BaseRenderer → 策略模式 Widget::render(ctx)
+    [BaseRenderer.php 重构 ~+150行]
+
+1.7 状态管理框架
+    ReactiveComponent: focusedWidgetId, hoveredWidgetId 等
+    [ReactiveComponent.php ~+20行]
+
+预计: ~1050 行, 8 文件改动</pre>
+</div>
+
+<h3>Phase 2: Tier 3 交互组件 (v6 M2)</h3>
+<div class="card card-warning">
+<pre>目标: 解锁 6 个 Tier 3 widget + 拖拽状态机
+
+2.1 GDI 补充 (3 新原语)
+    vue_fill_oval, vue_draw_polygon, vue_save_dc/vue_restore_dc
+    [cpp/vue_calc.cc ~+30行]
+
+2.2 拖拽状态机
+    WM_LBUTTONDOWN → 记录起点 → WM_MOUSEMOVE → 更新 → mark dirty → WM_LBUTTONUP → 结束
+    [Application.php ~+100行]
+
+2.3 AST 节点扩展 (8 新节点)
+    SliderNode, ScrollbarNode, ListNode, TableNode,
+    TabsNode, TabNode, SplitPaneNode, PaneNode, ProgressBarNode
+    [ast-nodes.php ~+130行]
+
+2.4 复合容器解析
+    TabsNode/SplitPaneNode 嵌套子节点，编译时累加坐标偏移
+    [template-parser.php ~+150行]
+
+预计: ~620 行, 5 文件改动</pre>
+</div>
+
+<h3>Phase 3: Tier 4 复杂组件 + Skia 后端 (v6 M3+)</h3>
+<div class="card card-danger">
+<pre>目标: 解锁 6 个 Tier 4 widget + 弹出层管理器 + Skia 后端
+
+3.1 弹出层管理器
+    PopupManager: z-order、焦点捕获、外点击关闭
+    [新增 framework/PopupManager.php ~200行]
+
+3.2 焦点链与键盘导航
+    Tab 键遍历 + 快捷键表 (Ctrl+N/O/S, Alt+F4)
+    [Application.php ~+150行]
+
+3.3 Tier 4 Widget
+    MenuBarNode, ComboBoxNode, DataGridNode,
+    TreeNode, RichTextNode, DatePickerNode
+    [ast-nodes.php ~+180行, template-parser.php ~+250行]
+
+3.4 Skia 后端
+    SkiaRenderContext 作为第二个后端实现
+    [新增 ~200行 + C++ 桥接层]
+
+3.5 主题系统
+    ThemeProvider: light/dark 预设
+    [新增 framework/ThemeProvider.php ~150行]
+
+预计: ~1500 行, 8 文件改动</pre>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s13">13. 双线演进总览</h2>
+
+<table>
+  <tr><th>阶段</th><th>框架演进线</th><th>应用能力增强线</th><th>代码量</th></tr>
+  <tr>
+    <td><span class="badge badge-active">v5 M3</span></td>
+    <td>layer + maxActiveLayer + chrome<br>两阶段渲染 + 分层点击</td>
+    <td>overlay 弹窗: 去 inverse condition<br>多层叠加 | 点击穿透修复</td>
+    <td>~100行/7文件</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-next">v5 M4</span></td>
+    <td>group_id + ChangeQueue 增量渲染<br>dirty 粒度到 element</td>
+    <td>复杂嵌套: 30&rarr;300 元素无退化<br>Widget 级 dirty 基础</td>
+    <td>~80行/4文件</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-future">v6 M1</span></td>
+    <td>分段布局 + RenderContext + onAttach<br>8 GDI + 7 事件</td>
+    <td><strong>[Tier 2]</strong> image input textarea dropdown checkbox radio groupbox tooltip<br>解锁: 任何表单类应用</td>
+    <td>~480行+C++</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-future">v6 M2</span></td>
+    <td>C++ Group 原语 + 递归渲染器<br>clipRect + translate + 拖拽</td>
+    <td><strong>[Tier 3]</strong> slider scrollbar list tabs split-pane progress-bar<br>解锁: 数据密集桌面应用</td>
+    <td>~530行+C++</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-far">v6 M3</span></td>
+    <td>完整组件树 + 树 diff/patch<br>keep-alive + 基础设施 3 件套</td>
+    <td><strong>[Tier 4]</strong> menubar combobox datagrid tree richtext datepicker<br>解锁: 专业桌面应用</td>
+    <td>~1000行</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-far">v6+</span></td>
+    <td>Skia/OpenGL/WebCanvas<br>跨平台窗口抽象</td>
+    <td>所有 Widget 跨后端<br>Windows/Linux/macOS/Web</td>
+    <td>~1000行</td>
+  </tr>
+</table>
+
+<h3>各阶段新增 GDI 原语</h3>
+<table>
+  <tr><th>原语</th><th>阶段</th><th>用途</th></tr>
+  <tr><td><code>vue_draw_line</code></td><td>v6 M1</td><td>separator, divider, 任何线条</td></tr>
+  <tr><td><code>vue_load_image</code></td><td>v6 M1</td><td>加载 HBITMAP 到资源池</td></tr>
+  <tr><td><code>vue_draw_image</code></td><td>v6 M1</td><td>StretchBlt 绘制位图</td></tr>
+  <tr><td><code>vue_draw_arrow</code></td><td>v6 M1</td><td>dropdown 三角箭头, scrollbar 箭头</td></tr>
+  <tr><td><code>vue_measure_text</code></td><td>v6 M1</td><td>GetTextExtentPoint32, input 光标定位</td></tr>
+  <tr><td><code>vue_set_clip</code></td><td>v6 M1</td><td>IntersectClipRect, 视口裁剪</td></tr>
+  <tr><td><code>vue_clear_clip</code></td><td>v6 M1</td><td>SelectClipRgn(NULL)</td></tr>
+  <tr><td><code>vue_save_dc / vue_restore_dc</code></td><td>v6 M1</td><td>SaveDC/RestoreDC 状态栈</td></tr>
+  <tr><td><code>vue_fill_oval</code></td><td>v6 M2</td><td>Ellipse, slider/scrollbar thumb</td></tr>
+  <tr><td><code>vue_draw_polygon</code></td><td>v6 M2</td><td>Polygon, 复杂形状</td></tr>
+  <tr><td><code>vue_begin_group</code></td><td>v6 M2</td><td>SaveDC + 坐标偏移 + 裁剪区</td></tr>
+  <tr><td><code>vue_end_group</code></td><td>v6 M2</td><td>RestoreDC, 恢复上下文</td></tr>
+</table>
+
+<h3>各阶段新增事件</h3>
+<table>
+  <tr><th>事件</th><th>阶段</th><th>用途</th></tr>
+  <tr><td><code>WM_KEYDOWN</code></td><td>v6 M1</td><td>input/textarea 键盘输入</td></tr>
+  <tr><td><code>WM_CHAR</code></td><td>v6 M1</td><td>字符转换 (中文输入等)</td></tr>
+  <tr><td><code>WM_MOUSEMOVE</code></td><td>v6 M1</td><td>hover 检测 (tooltip), 拖拽追踪</td></tr>
+  <tr><td><code>WM_LBUTTONUP</code></td><td>v6 M1</td><td>拖拽结束 (slider/scrollbar)</td></tr>
+  <tr><td><code>WM_MOUSEWHEEL</code></td><td>v6 M1</td><td>鼠标滚轮 (scrollbar/list)</td></tr>
+  <tr><td><code>WM_SETFOCUS/KILLFOCUS</code></td><td>v6 M1</td><td>input 聚焦/失焦, 光标闪烁</td></tr>
+  <tr><td><code>WM_MOUSELEAVE</code></td><td>v6 M1</td><td>tooltip 隐藏, hover 清除</td></tr>
+  <tr><td><code>WM_TIMER</code></td><td>v6 M1</td><td>tooltip 延迟, input 光标闪烁</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s14">14. 依赖关系详解</h2>
+
+<h3>不可跳跃的架构依赖链</h3>
+<div class="highlight">
+<pre style="background:transparent;border:none;padding:0;">layer 字段 (v5 M3)
+  └─&gt; group_id 按层过滤 (v5 M4)
+       └─&gt; 分段布局按组隔离 (v6 M1)
+            └─&gt; C++ Group 原语裁剪变换 (v6 M2)
+                 └─&gt; 完整组件树全局视野 (v6 M3)
+                      └─&gt; 多后端抽象 (v6+)
+
+每一步的输出是下一步的输入 —— 不存在跳过前置阶段的捷径。</pre>
+</div>
+
+<h3>逐阶段依赖详表</h3>
+
+<div class="dep-box">
+  <div class="dep-box-header" style="background:rgba(34,197,94,0.1);">v5 M3: Flat + Layer</div>
+  <div class="dep-box-body">
+    <p><strong>框架提供:</strong></p>
+    <ul>
+      <li>layer 字段 (每个 element/button 携带层级编号)</li>
+      <li>maxActiveLayer (运行时确定最高活跃层)</li>
+      <li>chrome 按钮规则 (无条件按钮永远可点击)</li>
+      <li>两阶段渲染 + 分层点击</li>
+    </ul>
+    <p style="margin-top:8px;"><strong>应用解锁:</strong></p>
+    <ul>
+      <li>overlay 属性 &rarr; 弹窗不再需要 inverse condition</li>
+      <li>多层叠加天然支持</li>
+      <li>点击穿透 Bug 修复</li>
+    </ul>
+    <p style="margin-top:8px;"><strong>为后续提供:</strong></p>
+    <ul>
+      <li>layer 是 group_id 过滤的基础</li>
+      <li>maxActiveLayer 算法是分段布局活跃判断的模板</li>
+      <li>chrome 规则为未来"全局 chrome 区域"提供语义基础</li>
+    </ul>
+  </div>
+</div>
+
+<div class="dep-box">
+  <div class="dep-box-header" style="background:rgba(59,130,246,0.1);">v5 M4: Groups + Dirty</div>
+  <div class="dep-box-body">
+    <p><strong>框架提供:</strong> group_id 字段、ChangeQueue 接入、O(n) &rarr; O(dirty)</p>
+    <p><strong>为何是前置:</strong></p>
+    <ul>
+      <li>v6 M1 的 onAttach/onDetach 需要 group_id 识别"哪个组需要 attach"</li>
+      <li>分段布局的编译期拆分需要 group_id 作为组件边界标记</li>
+      <li>Widget 级 dirty 追踪依赖元素级 dirty</li>
+    </ul>
+  </div>
+</div>
+
+<div class="dep-box">
+  <div class="dep-box-header" style="background:rgba(124,58,237,0.1);">v6 M1: 分段布局 + RenderContext &rarr; [Tier 2 Widget]</div>
+  <div class="dep-box-body">
+    <p><strong>框架提供:</strong> 编译拆分 getLayout_X()、attachComponent/detachComponent、RenderContext (26方法)、8 GDI + 7 事件、onAttach/onDetach</p>
+    <p><strong>Widget 解锁:</strong></p>
+    <ul>
+      <li>image: onAttach &rarr; LoadImage; onDetach &rarr; 释放</li>
+      <li>input: 分段布局 &rarr; 组件隔离; 需 KEYDOWN/CHAR</li>
+      <li>dropdown: overlay 弹出 (基于 layer); clipRect 截断列表</li>
+      <li>checkbox/radio: drawLine 勾选标记 + 互斥状态</li>
+      <li>tooltip: onAttach &rarr; 注册 MOUSEMOVE/MOUSELEAVE/TIMER</li>
+    </ul>
+    <p><strong>为何必须等:</strong> 没有 onAttach 则 image 不知何时加载; 没有 RenderContext 则无法写后端无关代码; 没有新事件则 input 无法键入。</p>
+  </div>
+</div>
+
+<div class="dep-box">
+  <div class="dep-box-header" style="background:rgba(245,158,11,0.1);">v6 M2: C++ Group 原语 + 递归 &rarr; [Tier 3 Widget]</div>
+  <div class="dep-box-body">
+    <p><strong>框架提供:</strong> vue_begin_group/vue_end_group (SaveDC语义)、clipRect/clearClip、translate 坐标变换、递归渲染器、拖拽状态机</p>
+    <p><strong>Widget 解锁:</strong></p>
+    <ul>
+      <li>slider: thumb 相对 track 定位 (translate); 拖拽</li>
+      <li>scrollbar: clipRect 视口裁剪; 拖拽/滚轮; oval thumb</li>
+      <li>list/table: clipRect 裁剪超出行; scrollbar 联动</li>
+      <li>tabs: save/restore 切换时状态隔离</li>
+      <li>split-pane: clipRect 两侧裁剪; 拖拽调整</li>
+    </ul>
+    <p><strong>为何必须等:</strong> 没有 Group 原语则 list/scrollbar 无法裁剪; 没有 translate 则 slider thumb 无法相对定位; 没有拖拽状态机则交互无法实现。</p>
+  </div>
+</div>
+
+<div class="dep-box">
+  <div class="dep-box-header" style="background:rgba(239,68,68,0.1);">v6 M3: 完整组件树 + keep-alive &rarr; [Tier 4 Widget]</div>
+  <div class="dep-box-body">
+    <p><strong>框架提供:</strong> 完整嵌套组件树、树 diff/patch、keep-alive、PopupManager、FocusChain、AcceleratorTable、ThemeProvider</p>
+    <p><strong>Widget 解锁:</strong></p>
+    <ul>
+      <li>menubar: PopupManager 管理弹出子菜单; 键盘导航</li>
+      <li>combobox: InputNode + DropdownNode 子树内联</li>
+      <li>datagrid: 排序/筛选增量更新 + 行内编辑</li>
+      <li>tree: 递归展开/折叠 + FocusChain 键盘多选</li>
+      <li>datepicker: PopupManager 弹出定位 + 日历算法</li>
+    </ul>
+    <p><strong>为何必须等:</strong> 没有 PopupManager 则弹出无法管理 z-order; 没有 FocusChain 则 Tab 导航不可用; 没有 keep-alive 则主题切换丢失状态。</p>
+  </div>
+</div>
+
+<div class="dep-box">
+  <div class="dep-box-header">v6+: 多后端抽象 &rarr; [跨平台 + GPU 加速]</div>
+  <div class="dep-box-body">
+    <p><strong>框架提供:</strong> RenderContext 编译期绑定、SkiaRenderContext、OpenGLRenderContext、WebCanvasRenderContext、跨平台窗口抽象</p>
+    <p><strong>为何必须等:</strong> 需要全量 Widget 做跨后端验证; 需要完整生命周期钩子标准化跨平台语义。</p>
+  </div>
+</div>
+
+<h3>Widget &rarr; 框架依赖速查表</h3>
+<table>
+  <tr><th>应用能力</th><th>依赖里程碑</th><th>关键前提</th></tr>
+  <tr><td>Overlay 弹窗</td><td>v5 M3</td><td>layer + maxActiveLayer</td></tr>
+  <tr><td>image</td><td>v6 M1</td><td>onAttach/onDetach + load/draw image</td></tr>
+  <tr><td>input/textarea</td><td>v6 M1</td><td>分段布局 + KEYDOWN/CHAR + SETFOCUS</td></tr>
+  <tr><td>dropdown</td><td>v6 M1</td><td>RenderContext clipRect + v5 M3 layer</td></tr>
+  <tr><td>checkbox/radio</td><td>v6 M1</td><td>drawLine + click toggle</td></tr>
+  <tr><td>tooltip</td><td>v6 M1</td><td>MOUSEMOVE/MOUSELEAVE/TIMER</td></tr>
+  <tr><td>progress-bar</td><td>v6 M1</td><td>(无特殊依赖, 仅 fillRect 动态宽度)</td></tr>
+  <tr><td>slider</td><td>v6 M2</td><td>translate + 拖拽状态机</td></tr>
+  <tr><td>scrollbar</td><td>v6 M2</td><td>clipRect + oval + 拖拽 + 滚轮</td></tr>
+  <tr><td>list/table</td><td>v6 M2</td><td>clipRect + scrollbar</td></tr>
+  <tr><td>tabs</td><td>v6 M2</td><td>save/restore + 嵌套渲染</td></tr>
+  <tr><td>split-pane</td><td>v6 M2</td><td>clipRect + 拖拽 + min-size</td></tr>
+  <tr><td>menubar</td><td>v6 M3</td><td>PopupManager + FocusChain</td></tr>
+  <tr><td>combobox</td><td>v6 M3</td><td>PopupManager + InputNode + DropdownNode</td></tr>
+  <tr><td>datagrid</td><td>v6 M3</td><td>树 diff/patch + FocusChain</td></tr>
+  <tr><td>tree</td><td>v6 M3</td><td>完整组件树 + FocusChain</td></tr>
+  <tr><td>richtext</td><td>v6 M3</td><td>ThemeProvider + 剪贴板</td></tr>
+  <tr><td>datepicker</td><td>v6 M3</td><td>PopupManager + 日历算法</td></tr>
+  <tr><td>Skia/OpenGL/WebCanvas</td><td>v6+</td><td>RenderContext + 全量 Widget</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s15">15. 实施顺序与关键决策</h2>
+
+<h3>推荐执行流: 框架先行</h3>
+<div class="card">
+<pre>Phase 0: v5 M3 (当前阶段, 可立即执行)
+├── 框架: Step 1-5 (AST/layer/parser/renderer/handleClick) → Step 7 (编译)
+└── 应用: Step 6 (App.vue 模板更新: 去逆条件 + 加 overlay)
+
+Phase 1: v5 M4 → v6 M1
+├── 框架: group_id → ChangeQueue → 分段布局 → RenderContext → 8 GDI → 7 事件
+└── 应用: Tier 2 Widget 逐个落地 (先 image/input, 再 dropdown/checkbox, 最后 groupbox/tooltip)
+
+Phase 2: v6 M2
+├── 框架: C++ Group 原语 → 递归渲染器 → 拖拽状态机
+└── 应用: Tier 3 Widget 逐个落地 (先 slider/scrollbar, 再 list/tabs, 最后 split-pane)
+
+Phase 3: v6 M3
+├── 框架: 完整组件树 → tree diff/patch → keep-alive → PopupManager → FocusChain → ThemeProvider
+└── 应用: Tier 4 Widget 逐个落地 (先 menubar/popup 类的, 再组合类的)
+
+Phase 4: v6+
+├── 框架: SkiaRenderContext → OpenGLRenderContext → WebCanvasRenderContext
+└── 应用: 跨后端验证 → 跨平台窗口抽象</pre>
+</div>
+
+<h3>关键决策点</h3>
+<table>
+  <tr><th>决策</th><th>触发条件</th><th>选项</th></tr>
+  <tr><td><strong>RenderContext 用 interface 还是 abstract class?</strong></td><td>v6 M1 开始时</td><td>interface 纯契约更干净; abstract class 可含共享状态。两者 AOT 均验证通过</td></tr>
+  <tr><td><strong>saveDC/restoreDC 在 Phase 1 还是 Phase 2?</strong></td><td>v6 M1 C++ 扩展时</td><td>Phase 1 提前引入可立即支持 clipRect/clearClip, 降低 Phase 2 风险</td></tr>
+  <tr><td><strong>分段布局的粒度?</strong></td><td>v6 M1 编译期拆分时</td><td>每个 .vue 一个 getLayout_X() vs. 手工标注 lazy 属性</td></tr>
+  <tr><td><strong>Skia 还是 OpenGL 先?</strong></td><td>v6+ 多后端时</td><td>Skia 优先 (文本质量 + 2D 成熟度); OpenGL 作为 GPU 全线加速的后备</td></tr>
+</table>
+
+<h3>优先级判断</h3>
+<table>
+  <tr><th>优先级</th><th>内容</th><th>理由</th></tr>
+  <tr><td style="color:var(--color-danger);font-weight:700;">P0</td><td>RenderContext 抽象基类 + GDI 后端</td><td>所有后续 Widget 的前置依赖</td></tr>
+  <tr><td style="color:var(--color-danger);font-weight:700;">P0</td><td>C++ GDI 8 新原语</td><td>Widget 渲染的物质基础</td></tr>
+  <tr><td style="color:var(--color-danger);font-weight:700;">P0</td><td>事件系统 7 新消息</td><td>交互的基础 (无键盘则无 input)</td></tr>
+  <tr><td style="color:var(--color-warning);font-weight:700;">P1</td><td>Tier 2 Widget</td><td>任何"表单类"应用的必需集合</td></tr>
+  <tr><td style="color:var(--color-warning);font-weight:700;">P1</td><td>状态管理框架</td><td>输入/选择/drag 的状态基础</td></tr>
+  <tr><td style="color:var(--color-info);font-weight:700;">P2</td><td>Tier 3 Widget</td><td>数据密集应用的核心</td></tr>
+  <tr><td style="color:var(--color-info);font-weight:700;">P2</td><td>复合容器解析</td><td>结构化 UI 的前提</td></tr>
+  <tr><td style="color:var(--color-text-muted);font-weight:700;">P3</td><td>Tier 4 Widget + Skia</td><td>专业应用 + GPU 加速</td></tr>
+  <tr><td style="color:var(--color-text-muted);font-weight:700;">P4</td><td>OpenGL / Web Canvas</td><td>多平台扩展远景</td></tr>
+</table>
+
+<h3>技术风险</h3>
+<table>
+  <tr><th>风险项</th><th>严重度</th><th>缓解策略</th></tr>
+  <tr><td>多后端切换的编译期开销</td><td style="color:var(--color-success);font-weight:600;">低</td><td>interface/abstract class AOT 均验证; 后端切换仅需修改 project.yml + 重新编译</td></tr>
+  <tr><td>GDI SaveDC 栈深度限制</td><td style="color:var(--color-warning);font-weight:600;">中</td><td>编译器检测嵌套 &gt; 5 层时警告; 文档化最大深度</td></tr>
+  <tr><td>HBITMAP 资源泄漏</td><td style="color:var(--color-warning);font-weight:600;">中</td><td>引入 ImagePool 引用计数管理，组件 onDetach 时释放</td></tr>
+  <tr><td>编译期尺寸 vs 运行时动态数据</td><td style="color:var(--color-warning);font-weight:600;">中</td><td>固定布局编译期计算; 动态行数需运行时裁剪+滚动, 依赖 scrollbar</td></tr>
+  <tr><td>事件消息在 AOT 中的结构</td><td style="color:var(--color-success);font-weight:600;">低</td><td>vue_peek_message 保持简单固定长度数组; 复杂消息通过多次调用获取</td></tr>
+</table>
+
+<h3>v5 M3 交付后即具备的能力</h3>
+<div class="card card-success">
+  <table>
+    <tr><th>能力</th><th>说明</th></tr>
+    <tr><td><code>layer</code> 字段</td><td>所有 element/button 携带层级，默认 0</td></tr>
+    <tr><td><code>overlay</code> 属性</td><td>组件声明式叠加层</td></tr>
+    <tr><td>两阶段渲染</td><td>Phase 1 确定 maxActiveLayer, Phase 2 分层渲染</td></tr>
+    <tr><td>分层点击</td><td>从最高层逆序命中，低层普通按钮被屏蔽</td></tr>
+    <tr><td>chrome 按钮</td><td>无 condition 的按钮永远可点击，不受 layer 影响</td></tr>
+    <tr><td>向后兼容</td><td>不使用 overlay 的现有代码完全不受影响</td></tr>
+  </table>
+  <p style="margin-top:8px;font-size:13px;color:var(--color-text-muted);">这些是后续所有阶段的基础设施 &mdash; v5 M4 的 group_id 在 layer 上叠加组维度，v6 M1 的分段布局利用 layer 进行活跃判断。</p>
+</div>
+
+<hr style="margin:3rem 0;border:none;border-top:1px solid var(--color-border);">
+<p style="text-align:center;color:var(--color-text-muted);font-size:12px;">VueCalc Framework Architecture Roadmap &mdash; Generated from vue-dialog-overlay-pattern.md</p>
+
+</body>
+</html>
