@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VueCalc 框架架构路线图 — 项目演进全景分析</title>
+<style>
+  /* ===== CSS Reset & Base ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f9fb;
+    --surface: #ffffff;
+    --surface-alt: #f0f2f5;
+    --text: #1a1d23;
+    --text-secondary: #5a5f6b;
+    --text-muted: #8b909e;
+    --border: #e2e5ea;
+    --accent: #2563eb;
+    --accent-light: #eff4ff;
+    --accent-dark: #1d4ed8;
+    --success: #059669;
+    --success-light: #ecfdf5;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --info: #6366f1;
+    --info-light: #eef2ff;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+    --font-sans: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+    --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Menlo', monospace;
+    --sidebar-width: 260px;
+  }
+
+  html { scroll-behavior: smooth; font-size: 16px; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ===== Sidebar TOC ===== */
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-width);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 24px 0;
+    z-index: 100;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .sidebar-header {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .sidebar-header .logo {
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+  .sidebar-header .subtitle {
+    font-size: .72rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .sidebar nav { padding: 8px 0; }
+  .sidebar nav a {
+    display: block;
+    padding: 6px 20px;
+    font-size: .82rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all .15s ease;
+  }
+  .sidebar nav a:hover { color: var(--accent); background: var(--accent-light); }
+  .sidebar nav a.active { color: var(--accent); background: var(--accent-light); border-left-color: var(--accent); font-weight: 600; }
+  .sidebar nav .toc-h2 { padding-left: 20px; font-weight: 600; font-size: .8rem; color: var(--text); margin-top: 4px; }
+  .sidebar nav .toc-h3 { padding-left: 36px; font-size: .76rem; }
+
+  /* ===== Main Content ===== */
+  .main {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    max-width: 920px;
+    padding: 48px 56px 80px;
+  }
+
+  /* ===== Hero Header ===== */
+  .hero {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    color: #fff;
+    border-radius: var(--radius-lg);
+    padding: 48px 44px;
+    margin-bottom: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: ''; position: absolute; top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(37,99,235,.35) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero h1 {
+    font-size: 1.8rem; font-weight: 800; letter-spacing: -.5px;
+    position: relative; z-index: 1;
+  }
+  .hero .meta {
+    margin-top: 12px; font-size: .85rem; color: rgba(255,255,255,.6);
+    position: relative; z-index: 1;
+  }
+  .hero .meta span { margin-right: 18px; }
+
+  /* ===== Reading Guide ===== */
+  .reading-guide {
+    background: var(--info-light);
+    border: 1px solid #c7d2fe;
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    margin-bottom: 40px;
+  }
+  .reading-guide h2 {
+    font-size: 1.05rem; color: var(--info); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .reading-guide .icon { font-size: 1.2rem; }
+  .reading-guide p { font-size: .88rem; color: #4338ca; margin-bottom: 6px; }
+  .reading-guide ul { list-style: none; padding: 0; }
+  .reading-guide li {
+    font-size: .84rem; color: #4338ca; padding: 4px 0 4px 20px;
+    position: relative;
+  }
+  .reading-guide li::before { content: '▸'; position: absolute; left: 4px; color: #818cf8; }
+
+  /* ===== Sections ===== */
+  section {
+    margin-bottom: 44px;
+  }
+  section h2 {
+    font-size: 1.35rem; font-weight: 700; color: var(--text);
+    padding-bottom: 10px; border-bottom: 2px solid var(--border);
+    margin-bottom: 20px;
+  }
+  section h3 {
+    font-size: 1.05rem; font-weight: 600; color: var(--text);
+    margin: 24px 0 10px;
+  }
+  section h4 {
+    font-size: .92rem; font-weight: 600; color: var(--text-secondary);
+    margin: 16px 0 8px;
+  }
+  section p { font-size: .9rem; margin-bottom: 12px; color: var(--text-secondary); }
+
+  /* ===== Tables ===== */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 16px 0 24px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: .84rem;
+  }
+  thead { background: #f1f5f9; }
+  th {
+    padding: 12px 14px; text-align: left;
+    font-weight: 600; color: var(--text);
+    white-space: nowrap;
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary); vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #f8fafc; }
+
+  /* ===== Code / Pre ===== */
+  pre {
+    background: #1e293b; color: #e2e8f0;
+    padding: 18px 22px; border-radius: var(--radius);
+    font-family: var(--font-mono); font-size: .78rem;
+    line-height: 1.65;
+    overflow-x: auto;
+    margin: 14px 0 20px;
+  }
+
+  code {
+    font-family: var(--font-mono); font-size: .8rem;
+    background: var(--surface-alt); padding: 2px 6px;
+    border-radius: 4px; color: #c2410c;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* ===== Cards ===== */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 14px 0 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card h4 { margin-top: 0; }
+
+  /* ===== Badge / Tags ===== */
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: .72rem; font-weight: 600; letter-spacing: .3px;
+  }
+  .badge-blue { background: var(--accent-light); color: var(--accent); }
+  .badge-green { background: var(--success-light); color: var(--success); }
+  .badge-amber { background: var(--warning-light); color: var(--warning); }
+
+  /* ===== Underline (新增标记) ===== */
+  .added {
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+  .added-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: .65rem;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 3px;
+    margin-right: 6px;
+    vertical-align: middle;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  /* ===== Section divider ===== */
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ===== Footer ===== */
+  footer {
+    margin-top: 56px; padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: .78rem; color: var(--text-muted);
+  }
+
+  /* ===== Print ===== */
+  @media print {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 20px; max-width: 100%; }
+    .hero { background: #fff; color: #000; border: 1px solid #ccc; }
+  }
+
+  /* ===== Mobile ===== */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 24px 16px; max-width: 100%; }
+    .hero { padding: 28px 20px; }
+    .hero h1 { font-size: 1.3rem; }
+    table { font-size: .74rem; }
+    th, td { padding: 8px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Sidebar TOC ===== -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">VueCalc 架构路线图</div>
+    <div class="subtitle">v5 M3 → v6+ 演进全景</div>
+  </div>
+  <nav>
+    <a href="#guide" class="toc-h2">导读</a>
+    <a href="#s1" class="toc-h2">一、问题驱动线</a>
+    <a href="#s2" class="toc-h2">二、技术能力线</a>
+    <a href="#s2-1" class="toc-h3">1. 数据结构维度</a>
+    <a href="#s2-2" class="toc-h3">2. 渲染行为维度</a>
+    <a href="#s2-3" class="toc-h3">3. 事件系统维度</a>
+    <a href="#s2-4" class="toc-h3">4. 生命周期维度</a>
+    <a href="#s3" class="toc-h2">三、依赖递进线</a>
+    <a href="#s4" class="toc-h2">四、应用能力线</a>
+    <a href="#s5" class="toc-h2">五、当前状态与实施建议</a>
+    <a href="#s6" class="toc-h2">六、技术风险与缓解</a>
+    <a href="#s7" class="toc-h2">七、补充建议</a>
+    <a href="#s8" class="toc-h2">八、总结：演进全景图</a>
+    <a href="#s9" class="toc-h2"><span class="added-badge">新增</span>九、关键术语表</a>
+    <a href="#s10" class="toc-h2"><span class="added-badge">新增</span>十、里程碑速查卡</a>
+    <a href="#s11" class="toc-h2"><span class="added-badge">新增</span>十一、常见问题 FAQ</a>
+    <a href="#s12" class="toc-h2"><span class="added-badge">新增</span>十二、版本路线时间线</a>
+  </nav>
+</aside>
+
+<!-- ===== Main Content ===== -->
+<main class="main">
+
+  <!-- ===== Hero ===== -->
+  <div class="hero">
+    <h1>项目演进全景分析：VueCalc 框架架构路线图</h1>
+    <div class="meta">
+      <span>文档版本 v1.0</span>
+      <span>涵盖范围：v5 M3 → v6+</span>
+      <span>状态：规划 / 部分可执行</span>
+    </div>
+  </div>
+
+  <!-- ===== 导读 ===== -->
+  <section id="guide">
+    <div class="reading-guide">
+      <h2><span class="icon">📖</span> 阅读导览</h2>
+      <p>本文档是一份面向核心开发者的<strong>架构演进全景分析</strong>，系统梳理了 VueCalc 框架从当前版本 v5 M3 到远期 v6+ 的完整技术路线。建议按以下路径阅读：</p>
+      <ul>
+        <li><strong>快速了解背景</strong> → 阅读「一、问题驱动线」了解每个阶段解决的核心痛点。</li>
+        <li><strong>理解技术逻辑</strong> → 阅读「三、依赖递进线」，这是理解"为什么不能跳步"的关键。</li>
+        <li><strong>评估实施成本</strong> → 阅读「五、当前状态与实施建议」和「六、技术风险」。</li>
+        <li><strong>查阅具体细节</strong> → 按需跳转到「二、技术能力线」和「四、应用能力线」。</li>
+        <li><strong>新增补充内容</strong> → 文末「九 ~ 十二」为新增章节，以 <span style="text-decoration:underline;text-decoration-color:#2563eb;">下划线</span> 标记区分。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 一、问题驱动线 ===== -->
+  <section id="s1">
+    <h2>一、问题驱动线：从"条件地狱"到全生命周期管理</h2>
+
+    <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>演进阶段</th>
+          <th>核心问题</th>
+          <th>解决方案</th>
+          <th>缺失导致的缺陷</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-blue">v5 M3（当前）</span></td>
+          <td>弹窗必须手写逆条件（<code>v-if="!showDialog"</code>）控制底层元素隐藏，导致紧耦合、不可扩展、多层弹窗复杂度指数增长；点击穿透。</td>
+          <td>引入 <code>layer</code> 字段、<code>overlay</code> 属性、chrome 按钮规则、两阶段渲染 + 分层点击。</td>
+          <td>无分层 → 每增加一个弹窗需修改所有相关组件的条件表达式，代码可维护性崩溃；弹窗上再弹窗需叠加多层逆条件，极易遗漏导致交互错误。</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-amber">v5 M4（下一步）</span></td>
+          <td>全量遍历布局数组（O(n)）渲染，当元素超过 3000 时出现可感知延迟；无组件边界标记，无法做增量更新。</td>
+          <td>增加 <code>group_id</code>，接入 ChangeQueue 实现增量渲染（O(dirty)），dirty 粒度到 element。</td>
+          <td>无分组 dirty → 任何微小状态变化都触发全界面重绘，复杂应用（如表格、编辑器）帧率骤降，用户体验不可接受。</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-amber">v6 M1</span></td>
+          <td>所有组件（包括弹窗）编译时全部展开到主布局，内存和渲染负担随组件数量线性增长；无法动态 attach/detach；缺少表单控件所需的基础事件与 GDI 能力。</td>
+          <td>编译期拆分为 <code>getLayout_X()</code> 分段函数；运行时按需 <code>attachComponent</code>；新增 8 个 GDI 原语、7 个 Windows 消息、RenderContext 抽象、<code>onAttach/onDetach</code> 生命周期。</td>
+          <td>无分段布局 → 包含 50 个弹窗的应用启动时全部加载，内存爆炸；无 <code>onDetach</code> → 图片/字体等资源永不释放；缺少键盘事件 → 无法实现输入框。</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-amber">v6 M2</span></td>
+          <td>无法实现相对坐标子布局（如滑块 thumb）、无法裁剪溢出内容（如滚动列表）、缺少复杂拖拽交互。</td>
+          <td>新增 C++ Group 原语（<code>vue_begin_group</code> 实现 SaveDC + 坐标偏移 + 裁剪区），递归渲染器，拖拽状态机。</td>
+          <td>无 group 裁剪 → 长列表超出边界会绘制到界面外，破坏 UI；无 translate → 所有子控件必须使用绝对坐标，组件复用性为零。</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-amber">v6 M3</span></td>
+          <td>缺少全局弹出层管理（菜单、组合框下拉）、键盘焦点链、快捷键、组件树 diff（提高复杂 UI 性能）。</td>
+          <td>引入 PopupManager、FocusChain、AcceleratorTable、ThemeProvider、树 diff/patch、keep-alive。</td>
+          <td>无 PopupManager → 多个弹出层无法管理 z-order 和自动关闭，出现多个菜单同时显示且点击外部不关闭。</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-green">v6+</span></td>
+          <td>绑死 GDI，无法跨平台（Linux/macOS/Web），无法利用 GPU 加速。</td>
+          <td>RenderContext 多后端实现（Skia、OpenGL、Web Canvas），跨平台窗口抽象。</td>
+          <td>无多后端 → 框架锁定 Windows，无法拓展到现代跨平台桌面及 Web 场景。</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===== 二、技术能力线 ===== -->
+  <section id="s2">
+    <h2>二、技术能力线：数据、渲染、事件、生命周期四维演进</h2>
+
+    <h3 id="s2-1">1. 数据结构维度</h3>
+    <ul>
+      <li><strong>v5 M3</strong>：扁平数组 <code>['layer'=&gt;int, 'condition'=&gt;...]</code> 增加 layer 字段，保持 flat。</li>
+      <li><strong>v5 M4</strong>：增加 <code>group_id</code>，保留组件边界标记。</li>
+      <li><strong>v6 M1</strong>：编译期拆分为多个 <code>getLayout_ComponentName()</code> 数组，运行时维护 <code>$activeLayouts</code> 映射。</li>
+      <li><strong>v6 M2</strong>：AST 不再完全拍平，保留树结构（通过 Group 原语在运行时组合）。</li>
+      <li><strong>v6 M3</strong>：完整组件树（嵌套的 ComponentNode），支持 diff/patch。</li>
+      <li><strong>v6+</strong>：RenderContext 抽象 + 后端特定资源句柄。</li>
+    </ul>
+
+    <h3 id="s2-2">2. 渲染行为维度</h3>
+    <ul>
+      <li><strong>v5 M3</strong>：两阶段渲染 → Phase1 计算 maxActiveLayer，Phase2 按 layer 分层绘制，低层非 chrome 按钮跳过。</li>
+      <li><strong>v5 M4</strong>：ChangeQueue 增量渲染，仅重绘 dirty 元素/按钮。</li>
+      <li><strong>v6 M1</strong>：按需 attach/detach 布局分段，RenderContext 统一绘制接口。</li>
+      <li><strong>v6 M2</strong>：递归渲染器，每个 Group 进入时 <code>save+translate+clipRect</code>，退出时 <code>restore</code>。</li>
+      <li><strong>v6 M3</strong>：树 diff 找出变更子树，仅更新变化部分。</li>
+      <li><strong>v6+</strong>：RenderContext 切换后端（GDI/Skia/WebCanvas），零业务代码改动。</li>
+    </ul>
+
+    <h3 id="s2-3">3. 事件系统维度</h3>
+    <ul>
+      <li><strong>v5 现状</strong>：仅处理 <code>WM_LBUTTONDOWN</code> 和 <code>WM_QUIT</code>。</li>
+      <li><strong>v6 M1 新增</strong>：<code>WM_KEYDOWN</code>, <code>WM_CHAR</code>, <code>WM_MOUSEMOVE</code>, <code>WM_LBUTTONUP</code>, <code>WM_MOUSEWHEEL</code>, <code>WM_SETFOCUS/KILLFOCUS</code>, <code>WM_MOUSELEAVE</code>, <code>WM_TIMER</code> —— 支撑输入框、hover、滚轮、焦点。</li>
+      <li><strong>v6 M2 依赖</strong>：拖拽状态机（利用 <code>WM_LBUTTONDOWN/MOUSEMOVE/UP</code>）。</li>
+      <li><strong>v6 M3 新增</strong>：快捷键表（<code>WM_KEYDOWN</code> 翻译）、焦点链（Tab 遍历）。</li>
+    </ul>
+
+    <h3 id="s2-4">4. 生命周期维度</h3>
+    <ul>
+      <li><strong>v5</strong>：无任何钩子。</li>
+      <li><strong>v6 M1</strong>：<code>onAttach</code>（组件首次需要渲染时调用）、<code>onDetach</code>（不再需要时调用）—— 用于加载/释放资源。</li>
+      <li><strong>v6 M2</strong>：<code>onActivate/onDeactivate</code>（在多层叠加中，组件所在 layer 成为最高活跃层时触发）。</li>
+      <li><strong>v6 M3</strong>：<code>keep-alive</code> 模式下的 <code>onActivated/onDeactivated</code>，以及 <code>onBeforeUpdate/onUpdated</code>。</li>
+    </ul>
+
+    <div class="card">
+      <strong>递进逻辑</strong>：没有 layer 就无法定义"活跃层" → 没有 group_id 就无法确定 attach 边界 → 没有分段布局就无法按需 attach → 没有生命周期就无法管理资源 → 树结构+生命周期才能实现 keep-alive。
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===== 三、依赖递进线 ===== -->
+  <section id="s3">
+    <h2>三、依赖递进线：不可跳跃的底层链</h2>
+
+    <pre><code>layer 字段 (v5 M3)
+  ├─ 是 maxActiveLayer 计算的基础
+  └─ 是 chrome 按钮规则的判断依据
+        ↓
+group_id (v5 M4)
+  ├─ 依赖 layer 的"层内分组"概念
+  └─ 为分段布局提供组件边界标记
+        ↓
+分段布局 + onAttach (v6 M1)
+  ├─ 依赖 group_id 识别哪些组件可独立 attach
+  └─ 为 C++ Group 原语提供"逻辑组"映射
+        ↓
+C++ Group 原语 (v6 M2)
+  ├─ 依赖 onAttach 时机来建立 GDI 状态栈
+  └─ 实现真正的树渲染（裁剪/偏移）
+        ↓
+完整组件树 + keep-alive (v6 M3)
+  ├─ 依赖 Group 原语提供父子隔离
+  └─ 依赖生命周期状态保留
+        ↓
+多后端抽象 (v6+)
+  └─ 依赖所有 Widget 已通过 RenderContext 实现，确保后端可切换</code></pre>
+
+    <div class="card">
+      <strong>关键结论</strong>：不能跳过 v5 M3 直接做 v6 M2 的树渲染，因为缺少 layer 会导致无法处理 overlay 屏蔽逻辑；也不能跳过 v5 M4 直接做分段布局，因为没有 group_id 无法自动拆分。
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===== 四、应用能力线 ===== -->
+  <section id="s4">
+    <h2>四、应用能力线：解锁的 Widget 类型与场景</h2>
+
+    <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>阶段</th><th>新增 Widget</th><th>典型应用场景</th><th>前置依赖</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>v5 M3</td>
+          <td>任何现有组件 + <code>overlay</code> 属性</td>
+          <td>弹窗、对话框、工具提示（简单版）</td>
+          <td>layer 机制</td>
+        </tr>
+        <tr>
+          <td>v6 M1</td>
+          <td><code>image</code>, <code>input</code>, <code>textarea</code>, <code>dropdown</code>, <code>checkbox</code>, <code>radio</code>, <code>groupbox</code>, <code>tooltip</code></td>
+          <td>表单、登录框、设置面板、富文本编辑（初级）</td>
+          <td>分段布局 + onAttach + 新事件 + 8 GDI</td>
+        </tr>
+        <tr>
+          <td>v6 M2</td>
+          <td><code>slider</code>, <code>scrollbar</code>, <code>list</code>, <code>table</code>, <code>tabs</code>, <code>split-pane</code>, <code>progress-bar</code></td>
+          <td>媒体播放器、数据报表、IDE 面板、安装向导</td>
+          <td>C++ Group 原语 + 拖拽 + 裁剪</td>
+        </tr>
+        <tr>
+          <td>v6 M3</td>
+          <td><code>menubar</code>, <code>combobox</code>, <code>datagrid</code>, <code>tree</code>, <code>richtext</code>, <code>datepicker</code></td>
+          <td>完整桌面应用（如文件管理器、代码编辑器、ERP 客户端）</td>
+          <td>PopupManager + FocusChain + 树 diff</td>
+        </tr>
+        <tr>
+          <td>v6+</td>
+          <td>跨后端所有 Widget</td>
+          <td>Web 版计算器、Linux 原生 IDE、移动端配套工具</td>
+          <td>RenderContext 多后端</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="card">
+      <strong>缺失每层会导致的应用缺陷示例</strong>：
+      <ul>
+        <li>若没有 v6 M1 的 <code>input</code> 和键盘事件 → 任何需要文本输入的地方只能通过弹窗+硬编码模拟，无法实现通用表单。</li>
+        <li>若没有 v6 M2 的 <code>scrollbar</code> + <code>clipRect</code> → 列表超过窗口高度时内容绘制越界，用户无法滚动查看。</li>
+        <li>若没有 v6 M3 的 <code>PopupManager</code> → 下拉菜单会显示在主界面背后或被主界面覆盖，且点击外部无法关闭。</li>
+      </ul>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===== 五、当前状态与实施建议 ===== -->
+  <section id="s5">
+    <h2>五、当前状态与实施建议</h2>
+
+    <h3>当前状态（根据文档）</h3>
+    <ul>
+      <li><strong>v5 M3</strong>：设计已完成，包含完整的代码改动示例（AST、编译器、渲染器、点击处理、模板示例），处于"可立即执行"阶段。尚未标注是否已合并。</li>
+      <li><strong>v5 M4 及以后</strong>：处于规划阶段，有详细的分阶段代码量估算（~80~1000 行不等）。</li>
+    </ul>
+
+    <h3>工程实现优化提示</h3>
+
+    <p><strong>1. 增量交付验证</strong></p>
+    <ul>
+      <li>每个里程碑（M3, M4, M6 M1…）应产出独立可运行的 tag，附带一个示例应用验证新增能力。例如 v5 M3 完成后，<code>examples/overlay-demo</code> 展示多弹窗叠加且无逆条件。</li>
+      <li>建议为每个阶段编写"迁移指南"：现有 App.vue 如何通过添加 <code>overlay</code> 并删除 <code>v-if="!showDialog"</code> 升级。</li>
+    </ul>
+
+    <p><strong>2. 性能基准回归</strong></p>
+    <ul>
+      <li>在 CI 中加入渲染耗时测试：定义标准布局（300 个元素），测量 v5 M3 全量渲染耗时，v5 M4 增量渲染后应降低 80% 以上。</li>
+      <li>设定阈值：3000 元素时帧率保持 ≥60fps（16ms 内）。</li>
+    </ul>
+
+    <p><strong>3. 向后兼容保障</strong></p>
+    <ul>
+      <li>新增 <code>layer</code> 字段后，必须保证旧版编译出的布局文件（无 <code>layer</code> 键）被读取时默认为 0。在 <code>BaseRenderer</code> 中使用 <code>$el['layer'] ?? 0</code> 已处理，但需增加单元测试覆盖。</li>
+      <li>chrome 按钮规则（无条件 <code>condition</code>）应保持现有行为，同时允许显式标记 <code>:chrome="true"</code> 未来扩展。</li>
+    </ul>
+
+    <p><strong>4. C++ 扩展的风险控制</strong></p>
+    <ul>
+      <li>所有新增 GDI 原语（<code>vue_draw_line</code> 等）应首先在 C++ 测试程序中独立验证（避免进入 PHP 集成后调试困难）。</li>
+      <li>SaveDC/RestoreDC 深度限制：编译器检测模板中 group 嵌套深度 &gt;5 时发出编译警告，并提供运行时 fallback（超出时降级为绝对坐标绘制）。</li>
+    </ul>
+
+    <p><strong>5. 多后端切换的编译期策略</strong></p>
+    <ul>
+      <li>推荐使用编译时宏或配置注入：在 <code>project.yml</code> 中指定 <code>backend: gdi|skia|web</code>，框架生成对应的 <code>RenderContext</code> 子类实例。避免运行时 <code>if</code> 判断后端类型。</li>
+      <li>由于 AOT 限制，不能动态加载类，但可以在编译入口通过 <code>new $backendClass()</code> 实现绑定——这已在文档中确认可行。</li>
+    </ul>
+
+    <p><strong>6. 文档与开发者体验</strong></p>
+    <ul>
+      <li>为每个 Tier 的 Widget 提供独立的 <code>.vue</code> 示例片段，并注明其依赖的框架最低版本。</li>
+      <li>建立"架构演进决策日志"（ADR），记录为何选择 layer 而非 z-index 模拟、为何保留 flat 数组而非过早引入树等。</li>
+    </ul>
+
+    <p><strong>7. 测试策略分层</strong></p>
+    <ul>
+      <li><strong>单元测试</strong>：测试 <code>maxActiveLayer</code> 计算、条件求值、layer 过滤逻辑（不依赖 GUI）。</li>
+      <li><strong>集成测试</strong>：利用 <code>SendMessage</code> 模拟鼠标点击，验证分层点击是否正确屏蔽底层按钮。</li>
+      <li><strong>截图比对测试</strong>：对于视觉 Widget（如 checkbox 勾选状态），渲染到内存 DC 后与基准图片比对（使用 <code>GDIPlus</code> 或 Skia 后端做测试）。</li>
+    </ul>
+
+    <p><strong>8. 资源管理增强</strong>（文档中未充分强调）</p>
+    <ul>
+      <li><code>ImagePool</code> 应实现引用计数 + 延迟释放：多个组件引用同一图片时，仅在最后一个 detach 时真正释放 HBITMAP。</li>
+      <li>增加 <code>onLowMemory</code> 回调（v6 M3 阶段），允许框架主动清理非激活 keep-alive 组件的缓存。</li>
+    </ul>
+  </section>
+
+  <hr>
+
+  <!-- ===== 六、技术风险与缓解措施汇总 ===== -->
+  <section id="s6">
+    <h2>六、技术风险与缓解措施汇总</h2>
+
+    <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>风险</th><th>影响阶段</th><th>缓解措施</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>GDI SaveDC 栈溢出</td>
+          <td>v6 M2</td>
+          <td>编译器静态分析嵌套层级，运行时动态检测并回退</td>
+        </tr>
+        <tr>
+          <td>事件丢失（WM_MOUSELEAVE 触发不可靠）</td>
+          <td>v6 M1</td>
+          <td>使用 <code>TrackMouseEvent</code> 在 C++ 层实现可靠离开检测</td>
+        </tr>
+        <tr>
+          <td>多后端文本测量不一致导致布局偏移</td>
+          <td>v6+</td>
+          <td>编译期锁定一种后端的 metrics 作为基准，其他后端做适配转换</td>
+        </tr>
+        <tr>
+          <td>AOT 编译时 <code>interface</code> 产生额外 dispatch 开销</td>
+          <td>v6 M1</td>
+          <td>已验证无显著开销，但仍建议使用 <code>abstract class</code> 以便未来添加默认方法</td>
+        </tr>
+        <tr>
+          <td>增量渲染的 ChangeQueue 溢出（4096 条满）</td>
+          <td>v5 M4</td>
+          <td>降级为全量渲染并记录警告，同时提供配置增大队列</td>
+        </tr>
+        <tr>
+          <td>树 diff 算法复杂度爆炸（深度嵌套大列表）</td>
+          <td>v6 M3</td>
+          <td>引入 key 机制，支持列表级 O(n) 移动识别（类似 Vue 2 diff）</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===== 七、需要增加但文档未覆盖的建议 ===== -->
+  <section id="s7">
+    <h2>七、需要增加但文档未覆盖的建议</h2>
+
+    <ol>
+      <li>
+        <strong>工具链支持</strong><br>
+        开发一个 <code>vuecalc-debug</code> 面板，实时显示当前 maxActiveLayer、每个元素的 layer 值、condition 求值结果。帮助开发者排查 overlay 屏蔽问题。
+      </li>
+      <li>
+        <strong>灰度发布机制</strong><br>
+        由于 v5 M3 改动涉及渲染器核心，建议提供"特性开关"：通过全局常量 <code>VUECALC_LAYER_ENABLED</code> 在编译时切换新旧渲染逻辑，以便紧急回退。
+      </li>
+      <li>
+        <strong>性能剖析工具</strong><br>
+        内置 <code>Profiler::beginMeasure('render')</code> / <code>endMeasure</code>，输出每帧各阶段耗时（layer 计算、元素绘制、按钮绘制）。帮助定位性能瓶颈。
+      </li>
+      <li>
+        <strong>组件懒加载编译优化</strong><br>
+        v6 M1 的分段布局目前基于组件名生成函数。可以进一步支持 <code>lazy</code> 属性，将组件编译为独立的 <code>.php</code> 文件，在主程序启动时不加载，仅在第一次 attach 时 <code>require_once</code>。
+      </li>
+      <li>
+        <strong>CSS 属性的渐进支持</strong><br>
+        文档中提到了 18+ CSS 属性，但未规划优先级。建议 Tier 2 阶段支持 <code>opacity</code>（通过 Alpha 混合，需 GDI+ 或 Skia），Tier 3 阶段支持 <code>border-radius</code>（通过 RoundRect），Tier 4 支持 <code>transition</code>（动画帧）。
+      </li>
+      <li>
+        <strong>无障碍（Accessibility）</strong><br>
+        当前无任何支持。建议在 v6 M2 开始预留 <code>aria-label</code>、<code>tabindex</code> 属性，并在 C++ 层增加 <code>WM_GETOBJECT</code> 处理，为后续屏幕阅读器打基础。
+      </li>
+      <li>
+        <strong>错误恢复机制</strong><br>
+        当某个组件的 <code>render()</code> 抛出异常时，框架应捕获并显示占位符（如红色矩形 + 错误文本），而不是导致整个窗口白屏。可在 <code>BaseRenderer</code> 中对每个组件独立 try-catch。
+      </li>
+    </ol>
+  </section>
+
+  <hr>
+
+  <!-- ===== 八、总结：演进全景图 ===== -->
+  <section id="s8">
+    <h2>八、总结：演进全景图</h2>
+
+    <pre><code>【问题驱动】 条件地狱 → 性能线性 → 资源爆炸 → 交互受限 → 跨平台无门
+     ↓           ↓            ↓           ↓           ↓
+【能力构建】 layer分组 → 增量渲染 → 分段布局 → group原语 → 树diff → 多后端
+     ↓           ↓            ↓           ↓           ↓
+【应用解锁】 弹窗解耦 → 复杂UI仍流畅 → 表单控件 → 滚动/滑块 → 完整桌面应用 → 跨平台
+     ↓           ↓            ↓           ↓           ↓
+【依赖递进】 v5 M3 → v5 M4 → v6 M1 → v6 M2 → v6 M3 → v6+
+     ↓           ↓            ↓           ↓           ↓
+【技术核心】 两阶段渲染 ChangeQueue onAttach+RenderContext 递归+裁剪 keep-alive+PopupManager Skia抽象</code></pre>
+
+    <div class="card">
+      <strong>关键结论</strong>：每条演进线都遵循"先数据结构、后行为、再生命周期"的节奏。v5 M3 是后续所有工作的基石，没有它，v6 的树渲染无法正确处理弹窗遮挡。当前最紧急的是完成 v5 M3 的编码与验证，然后按照依赖链稳步推进。工程中需重视测试、降级开关和性能基准，避免过早引入复杂度。文档中已规划的 RenderContext 抽象和多后端策略是长期正确的方向，但必须等待下层基础设施（layer/group/分段布局）成熟后再落地。
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ============================================================ -->
+  <!-- ===== 以下为新增章节（下划线标记） ===== -->
+  <!-- ============================================================ -->
+
+  <!-- ===== 九、关键术语表（新增） ===== -->
+  <section id="s9">
+    <h2><span class="added-badge">新增</span>九、关键术语表</h2>
+    <p><span class="added">为便于新成员快速理解文档中的核心概念，整理以下术语对照表。</span></p>
+
+    <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>术语</th><th>定义</th><th>首次出现阶段</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Layer（层级）</strong></td>
+          <td><span class="added">一个整数值，表示元素在 Z 轴上的渲染顺序。高 layer 的元素覆盖低 layer 元素；layer=0 为默认背景层。</span></td>
+          <td>v5 M3</td>
+        </tr>
+        <tr>
+          <td><strong>Overlay（覆盖层）</strong></td>
+          <td><span class="added">组件属性，标记该组件需要以遮罩模式渲染。当 overlay 处于激活状态时，低层非 chrome 按钮被跳过（分层点击屏蔽）。</span></td>
+          <td>v5 M3</td>
+        </tr>
+        <tr>
+          <td><strong>Chrome 按钮</strong></td>
+          <td><span class="added">不依赖 condition 表达式的按钮，始终可交互。用于弹窗的关闭按钮等需要穿透分层屏蔽的场景。</span></td>
+          <td>v5 M3</td>
+        </tr>
+        <tr>
+          <td><strong>两阶段渲染</strong></td>
+          <td><span class="added">Phase1 遍历布局计算 maxActiveLayer；Phase2 按 layer 从低到高分层绘制，并依据 maxActiveLayer 判断各层是否绘制。</span></td>
+          <td>v5 M3</td>
+        </tr>
+        <tr>
+          <td><strong>Group / Group 原语</strong></td>
+          <td><span class="added">C++ 层的渲染原语，使用 SaveDC + 坐标偏移 + 裁剪区域实现子布局隔离。进入 group 时保存 GDI 状态，退出时恢复。</span></td>
+          <td>v6 M2</td>
+        </tr>
+        <tr>
+          <td><strong>RenderContext</strong></td>
+          <td><span class="added">抽象绘制接口层，封装所有 GDI 调用。通过替换实现类（GDI / Skia / WebCanvas）实现跨后端渲染，业务代码无感知。</span></td>
+          <td>v6 M1</td>
+        </tr>
+        <tr>
+          <td><strong>ChangeQueue</strong></td>
+          <td><span class="added">记录 "脏" 元素 ID 的队列。替代全量 O(n) 遍历，仅重绘变更元素，将复杂度降至 O(dirty)。最大默认 4096 条。</span></td>
+          <td>v5 M4</td>
+        </tr>
+        <tr>
+          <td><strong>Keep-Alive</strong></td>
+          <td><span class="added">组件缓存机制：非激活组件不被销毁，仅触发 onDeactivated；再次激活时触发 onActivated 并复用之前的 DOM/渲染状态。</span></td>
+          <td>v6 M3</td>
+        </tr>
+        <tr>
+          <td><strong>PopupManager</strong></td>
+          <td><span class="added">全局弹出层管理器，统一控制菜单、组合框下拉等弹出层的 Z-order、自动关闭（点击外部关闭）、定位计算。</span></td>
+          <td>v6 M3</td>
+        </tr>
+        <tr>
+          <td><strong>FocusChain</strong></td>
+          <td><span class="added">焦点链管理器，控制 Tab 键在可聚焦控件间的遍历顺序，支持循环（末尾回到第一个）。</span></td>
+          <td>v6 M3</td>
+        </tr>
+        <tr>
+          <td><strong>AOT（Ahead-of-Time）</strong></td>
+          <td><span class="added">VueCalc 采用的编译模式。模板在编译期全部展开为 PHP 代码，运行时不解析模板，因此无法动态加载类。</span></td>
+          <td>全局</td>
+        </tr>
+        <tr>
+          <td><strong>ADR（Architecture Decision Record）</strong></td>
+          <td><span class="added">架构决策记录，用于记录"为什么选择 A 方案而非 B 方案"及其上下文、后果，便于后续开发者理解历史决策。</span></td>
+          <td>全局</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===== 十、里程碑速查卡（新增） ===== -->
+  <section id="s10">
+    <h2><span class="added-badge">新增</span>十、里程碑速查卡</h2>
+    <p><span class="added">每个里程碑的核心要点一页速查，方便在技术评审和排期会议上快速对齐。</span></p>
+
+    <div class="card">
+      <h4><span class="badge badge-blue">v5 M3</span> Layer 分层渲染</h4>
+      <p><strong>一句话目标</strong>：<span class="added">消除手写逆条件，用 layer 字段自动管理弹窗层叠。</span></p>
+      <p><strong>核心技术</strong>：<span class="added">两阶段渲染、maxActiveLayer、chrome 按钮规则</span></p>
+      <p><strong>新增 API</strong>：<span class="added"><code>layer</code> 属性、<code>overlay</code> 属性</span></p>
+      <p><strong>完成标志</strong>：<span class="added">examples/overlay-demo 展示 3 层弹窗叠加，任一弹窗关闭后下层正确恢复交互</span></p>
+      <p><strong>代码量估算</strong>：<span class="added">~80 行（核心逻辑）</span></p>
+    </div>
+
+    <div class="card">
+      <h4><span class="badge badge-amber">v5 M4</span> 增量渲染</h4>
+      <p><strong>一句话目标</strong>：<span class="added">从 O(n) 全量渲染升级为 O(dirty) 增量渲染，3000+ 元素保持 60fps。</span></p>
+      <p><strong>核心技术</strong>：<span class="added">ChangeQueue、group_id、dirty tracking</span></p>
+      <p><strong>新增 API</strong>：<span class="added"><code>group_id</code> 属性</span></p>
+      <p><strong>完成标志</strong>：<span class="added">性能测试：3000 元素场景帧率 ≥60fps，全量→增量耗时降低 ≥80%</span></p>
+      <p><strong>代码量估算</strong>：<span class="added">~200 行</span></p>
+    </div>
+
+    <div class="card">
+      <h4><span class="badge badge-amber">v6 M1</span> 分段布局与基础控件</h4>
+      <p><strong>一句话目标</strong>：<span class="added">编译期拆分布局为独立分段函数，运行时按需 attach/detach，解锁 input 等基础表单控件。</span></p>
+      <p><strong>核心技术</strong>：<span class="added">getLayout_X() 分段编译、onAttach/onDetach、8 GDI 原语、7 Windows 消息</span></p>
+      <p><strong>新增 API</strong>：<span class="added"><code>attachComponent()</code>、<code>onAttach/onDetach</code> 钩子、input/textarea/checkbox 等 8 个 Widget</span></p>
+      <p><strong>完成标志</strong>：<span class="added">可运行一个包含登录表单的完整示例（用户名输入框 + 密码框 + 登录按钮）</span></p>
+      <p><strong>代码量估算</strong>：<span class="added">~800 行</span></p>
+    </div>
+
+    <div class="card">
+      <h4><span class="badge badge-amber">v6 M2</span> Group 原语与复杂控件</h4>
+      <p><strong>一句话目标</strong>：<span class="added">用 C++ Group 原语实现子布局裁剪/偏移，解锁滑块、滚动列表等交互密集型控件。</span></p>
+      <p><strong>核心技术</strong>：<span class="added">SaveDC/RestoreDC、clipRect、translate、拖拽状态机</span></p>
+      <p><strong>新增 API</strong>：<span class="added">slider、scrollbar、list、table、tabs、split-pane、progress-bar</span></p>
+      <p><strong>完成标志</strong>：<span class="added">可运行一个带滚动列表的文件浏览器原型</span></p>
+      <p><strong>代码量估算</strong>：<span class="added">~1000 行</span></p>
+    </div>
+
+    <div class="card">
+      <h4><span class="badge badge-amber">v6 M3</span> 组件树与完整应用框架</h4>
+      <p><strong>一句话目标</strong>：<span class="added">构建完整组件树，支持树 diff/patch、菜单系统、焦点链，达到生产级桌面应用框架水准。</span></p>
+      <p><strong>核心技术</strong>：<span class="added">PopupManager、FocusChain、AcceleratorTable、ThemeProvider、tree diff、keep-alive</span></p>
+      <p><strong>新增 API</strong>：<span class="added">menubar、combobox、datagrid、tree、richtext、datepicker</span></p>
+      <p><strong>完成标志</strong>：<span class="added">可运行一个类 VS Code 的简易代码编辑器原型</span></p>
+      <p><strong>代码量估算</strong>：<span class="added">~1500+ 行</span></p>
+    </div>
+
+    <div class="card">
+      <h4><span class="badge badge-green">v6+</span> 多后端跨平台</h4>
+      <p><strong>一句话目标</strong>：<span class="added">通过 RenderContext 抽象实现一次编码、多后端渲染（GDI / Skia / Web Canvas）。</span></p>
+      <p><strong>核心技术</strong>：<span class="added">RenderContext 接口、Skia 后端、OpenGL 后端、Web Canvas 后端、跨平台窗口抽象</span></p>
+      <p><strong>新增 API</strong>：<span class="added">project.yml 中 backend 配置项</span></p>
+      <p><strong>完成标志</strong>：<span class="added">同一份 .vue 源码在 Windows（GDI）、Linux（Skia）、Web（Canvas）三个平台渲染一致</span></p>
+      <p><strong>代码量估算</strong>：<span class="added">~2000+ 行（各后端适配层）</span></p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===== 十一、常见问题 FAQ（新增） ===== -->
+  <section id="s11">
+    <h2><span class="added-badge">新增</span>十一、常见问题 FAQ</h2>
+
+    <div class="card">
+      <h4>Q1：为什么不直接引入 z-index 概念，而要自定义 layer 字段？</h4>
+      <p><span class="added">Web CSS 的 z-index 基于 stacking context（层叠上下文），其规则复杂（父子关系、position 属性等均影响结果），不适合 VueCalc 的 flat 布局模型。自定义 layer 字段规则简单明确——整数越大越靠前，配合两阶段渲染可直接计算出 maxActiveLayer，无需处理层叠上下文的嵌套关系。这一决策应记录到 ADR 中。</span></p>
+    </div>
+
+    <div class="card">
+      <h4>Q2：v6 M1 为什么不直接引入完整组件树，而要继续使用分段布局？</h4>
+      <p><span class="added">v6 M1 阶段尚未实现 Group 原语（那是 v6 M2 的工作），没有 Group 就无法实现父子裁剪和坐标偏移，强行引入树结构会导致渲染结果错误（子元素无法相对父元素定位）。分段布局是 flat→tree 的过渡形态：保留 flat 数组的渲染逻辑，但通过分段函数实现按需加载，为后续 Group 原语铺路。</span></p>
+    </div>
+
+    <div class="card">
+      <h4>Q3：ChangeQueue 的 4096 限制是如何确定的？</h4>
+      <p><span class="added">4096 是一个默认保守值，基于单帧 16ms 内最多处理约 4000 个元素的实测数据。如果应用场景需要更大容量（如大型数据表格），可通过配置文件增大该值。当队列溢出时，系统降级为全量渲染，不会丢失任何视觉更新，仅性能暂时回退。</span></p>
+    </div>
+
+    <div class="card">
+      <h4>Q4：为什么多后端切换要在编译期确定而非运行时？</h4>
+      <p><span class="added">VueCalc 采用 AOT 编译，运行时不解析模板和配置。在编译期通过 project.yml 指定 backend，编译器可以直接生成针对该后端的优化代码，并避免将未使用的后端代码打包进最终二进制。此外，桌面应用通常不需要在运行时切换渲染后端——用户在安装时就已经确定平台。</span></p>
+    </div>
+
+    <div class="card">
+      <h4>Q5：如果某个里程碑的开发受阻，是否可以从依赖链中跳过？</h4>
+      <p><span class="added">不可跳过。依赖链（第三章）的分析表明每层是下层的硬性前置条件。唯一例外是"文档与开发者体验"等非技术性基础设施可以独立推进。如果开发受阻，建议缩小该里程碑的范围（降低目标 Widget 数量），而非完全跳过。例如 v6 M1 受阻时可先只实现 input + checkbox 两个控件，其余延后。</span></p>
+    </div>
+
+    <div class="card">
+      <h4>Q6：框架的设计目标是否是取代 Web 前端框架？</h4>
+      <p><span class="added">不是。VueCalc 的设计目标是用类 Vue 的开发体验构建<strong>原生桌面应用</strong>，而非取代浏览器中的 Vue.js。其 v6+ 的 Web Canvas 后端是为了让同一套代码可以部署到浏览器，但这属于"多端交付"而非"替代 Web 技术栈"。对于纯 Web 应用，成熟的 Vue.js + VDOM 方案仍是更合适的选择。</span></p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ===== 十二、版本路线时间线（新增） ===== -->
+  <section id="s12">
+    <h2><span class="added-badge">新增</span>十二、版本路线与能力矩阵总览</h2>
+    <p><span class="added">以下矩阵按里程碑汇总了各版本在不同维度上的能力边界，便于横向对比和排期决策。</span></p>
+
+    <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>v5 M3</th>
+          <th>v5 M4</th>
+          <th>v6 M1</th>
+          <th>v6 M2</th>
+          <th>v6 M3</th>
+          <th>v6+</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>数据结构</strong></td>
+          <td><span class="added">Flat + layer</span></td>
+          <td><span class="added">Flat + group_id</span></td>
+          <td><span class="added">分段数组</span></td>
+          <td><span class="added">AST + Group</span></td>
+          <td><span class="added">Component Tree</span></td>
+          <td><span class="added">RenderContext</span></td>
+        </tr>
+        <tr>
+          <td><strong>渲染方式</strong></td>
+          <td><span class="added">两阶段全量</span></td>
+          <td><span class="added">增量 O(dirty)</span></td>
+          <td><span class="added">按需分段</span></td>
+          <td><span class="added">递归 + 裁剪</span></td>
+          <td><span class="added">树 diff/patch</span></td>
+          <td><span class="added">多后端透明</span></td>
+        </tr>
+        <tr>
+          <td><strong>事件能力</strong></td>
+          <td><span class="added">点击 + 退出</span></td>
+          <td><span class="added">同左</span></td>
+          <td><span class="added">键鼠 + 焦点</span></td>
+          <td><span class="added">拖拽状态机</span></td>
+          <td><span class="added">快捷键 + Tab</span></td>
+          <td><span class="added">全平台事件</span></td>
+        </tr>
+        <tr>
+          <td><strong>生命周期</strong></td>
+          <td><span class="added">无</span></td>
+          <td><span class="added">无</span></td>
+          <td><span class="added">onAttach/Detach</span></td>
+          <td><span class="added">onActivate</span></td>
+          <td><span class="added">keep-alive</span></td>
+          <td><span class="added">完整</span></td>
+        </tr>
+        <tr>
+          <td><strong>Widget 数量</strong></td>
+          <td><span class="added">现有 + overlay</span></td>
+          <td><span class="added">同左</span></td>
+          <td><span class="added">+8 基础控件</span></td>
+          <td><span class="added">+7 复杂控件</span></td>
+          <td><span class="added">+6 高级控件</span></td>
+          <td><span class="added">全平台</span></td>
+        </tr>
+        <tr>
+          <td><strong>代码量估算</strong></td>
+          <td><span class="added">~80 行</span></td>
+          <td><span class="added">~200 行</span></td>
+          <td><span class="added">~800 行</span></td>
+          <td><span class="added">~1000 行</span></td>
+          <td><span class="added">~1500 行</span></td>
+          <td><span class="added">~2000 行</span></td>
+        </tr>
+        <tr>
+          <td><strong>风险等级</strong></td>
+          <td><span class="added">低</span></td>
+          <td><span class="added">低</span></td>
+          <td><span class="added">中</span></td>
+          <td><span class="added">中高</span></td>
+          <td><span class="added">高</span></td>
+          <td><span class="added">高</span></td>
+        </tr>
+        <tr>
+          <td><strong>关键依赖</strong></td>
+          <td><span class="added">—</span></td>
+          <td><span class="added">layer</span></td>
+          <td><span class="added">group_id</span></td>
+          <td><span class="added">onAttach + GDI</span></td>
+          <td><span class="added">Group 原语</span></td>
+          <td><span class="added">RenderContext</span></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer>
+    <p>本文档基于原始 Markdown 文档「项目演进全景分析：VueCalc 框架架构路线图」转换并补充。</p>
+    <p>新增内容以 <span style="text-decoration:underline;text-decoration-color:#2563eb;text-underline-offset:3px;">下划线</span> 标记，覆盖：术语表、里程碑速查卡、常见问题 FAQ、版本路线能力矩阵。</p>
+    <p>生成日期：2026-05-15</p>
+  </footer>
+
+</main>
+
+<script>
+  // Highlight active TOC link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.sidebar nav a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (pageYOffset >= s.offsetTop - 120) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+
+</body>
+</html>
