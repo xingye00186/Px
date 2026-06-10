@@ -68,7 +68,7 @@ $tests['display:inline-block 行内块布局'] = function() {
         ])
     );
     assert_contains($result, 'dsp=inline-block', 'inline-block elements');
-    assert_contains($result, '8x60', 'inline-block A has 8x60 size (text width, not explicit width)');
+    assert_contains($result, '100x60', 'inline-block A has 100x60 explicit width');
     return $result;
 };
 

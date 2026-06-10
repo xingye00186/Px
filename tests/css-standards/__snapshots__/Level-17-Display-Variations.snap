@@ -28,9 +28,9 @@ div (0,0 300x54)
 === Test: display:inline-block 行内块布局 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x190)
-  div (0,0 8x60) [dsp=inline-block] text="A"
-  div (0,60 8x80) [dsp=inline-block] text="B"
-  div (0,140 8x50) [dsp=inline-block] text="C"
+  div (0,0 100x60) [dsp=inline-block] text="A"
+  div (0,60 100x80) [dsp=inline-block] text="B"
+  div (0,140 100x50) [dsp=inline-block] text="C"
 
 ---
 

@@ -79,6 +79,7 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
             );
         }
 
+        $hasExplicitWidth = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         $node->w = (int)max(0, PercentResolver::resolveMinMax($style, $width, true));
         $node->h = (int)max(0, PercentResolver::resolveMinMax($style, $height, false));
         $node->visualW = (int)PercentResolver::resolveVisualW($style, $node->w);
@@ -92,8 +93,12 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
 
             $measured = PercentResolver::resolveTextWidth($node->content, $fs, $bd);
             if ($measured > 0) {
-                $node->w = (int)min($measured, max(0, PercentResolver::resolveMinMax($style, $measured, true)));
-                $node->visualW = (int)PercentResolver::resolveVisualW($style, $node->w);
+                // CSS 2.2 §10.3.9: Only use measured text width when no explicit width is set
+                // For inline-block with explicit width, preserve the explicit value
+                if (!$hasExplicitWidth) {
+                    $node->w = (int)min($measured, max(0, PercentResolver::resolveMinMax($style, $measured, true)));
+                    $node->visualW = (int)PercentResolver::resolveVisualW($style, $node->w);
+                }
             }
 
             // Line height
