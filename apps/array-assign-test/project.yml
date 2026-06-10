@@ -3,6 +3,7 @@ mode: bin
 no-console: false
 platform: win32
 entry: main.php
+Px_build_all_ignore: true
 sources:
   - ./mid.php
   - ./main.php
