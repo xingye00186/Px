@@ -462,169 +462,151 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         int           $paddingRight
     ): void
     {
-        // ── Auto-stack: for scroll containers, position children vertically ──
-
-        $stackY = $childOffsetY;
-
-
         $containerW = PercentResolver::resolveContentWidth($style, $node->w);
 
-        $autoStack = true;
+        // ── Auto-stack: for scroll containers, position children vertically ──
+        $this->autoStackChildren($node, $childOffsetY, $containerW);
 
-        if ($autoStack) {
-            // CSS 2.2 §8.3.1: 跟踪上一个可折叠兄弟的 margin-bottom
-            $prevMarginBottom = 0;
-            $prevCollapsible = false;
+        // ── Calculate initial contentHeight ──
+        $node->contentHeight = $this->calcContentHeight($node, $childOffsetY);
 
-            foreach ($node->children as $child) {
-                $childStyle = $child->style;
+        // ── CSS Overflow Module Level 3 §2.3: 滚动条占用内容区宽度 ──
+        // 检测是否需要垂直滚动条，若需要则从容器宽度中减去 scrollbar 宽度
+        // 并重新布局子节点
+        $overflowY = $node->style['overflowY'] ?? $node->style['overflow'] ?? 'visible';
+        $needsVScroll = ($overflowY === 'auto' || $overflowY === 'scroll')
+            && $node->contentHeight > $node->h;
 
-                $childPosition = $childStyle['position'] ?? 'static';
-
-                if ($childPosition === 'absolute' || $childPosition === 'fixed') {
-                    continue;
-                }
-
-                $mTop = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginTop', 'marginTopPercent', $containerW);
-
-                $mBottom = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginBottom', 'marginBottomPercent', $containerW);
-
-                // Auto-width: inherit from container (skip if percentage width)
-                $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
-
-                if (!$hasExplicitWidth || $child->w === 0) {
-                    $child->w = max(0, (int)$containerW);
-
-                    $child->style['width'] = $containerW;
-
-                    $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
-                }
-
-                // Apply min/max to child width
-
-                $child->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $child->w, true));
-
-                $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
-
-                // Auto-position: stack vertically with margin
-
-                $oldY = $child->y;
-
-                // CSS 2.2 §8.3.1: 外边距折叠
-                $childDisplay = $childStyle['display'] ?? 'block';
-                $childOverflow = $childStyle['overflow'] ?? $childStyle['overflowY'] ?? 'visible';
-                $createsBFC = ($childDisplay !== 'block')
-                    || ($childOverflow !== 'visible')
-                    || ($childStyle['float'] ?? 'none') !== 'none';
-                $isCollapsible = !$createsBFC;
-
-                if ($isCollapsible && $prevCollapsible && $mTop * $prevMarginBottom >= 0) {
-                    $positiveMax = max($prevMarginBottom > 0 ? $prevMarginBottom : 0, $mTop > 0 ? $mTop : 0);
-                    $negativeMin = min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0);
-                    $collapsed = $positiveMax + $negativeMin;
-                    $child->y = $stackY - $prevMarginBottom + $collapsed;
-                } elseif ($isCollapsible && $prevCollapsible) {
-                    $collapsed = $prevMarginBottom + $mTop;
-                    $child->y = $stackY - $prevMarginBottom + $collapsed;
-                } else {
-                    $child->y = $stackY + $mTop;
-                }
-
-                // 保存 stack 推进位置（不受 position:relative 偏移影响）
-                $stackAdvanceY = $child->y;
-
-                // position:relative 额外偏移 — 只对 y 生效
-                $relTop = $childStyle['top'] ?? 0;
-
-                if (($childStyle['position'] ?? 'static') === 'relative' && $relTop !== 0) {
-                    $child->y += $relTop;
-                }
-
-                // 仅平移子节点的后代（child 本身已在上方被正确设置位置）
-                $dy = $child->y - $oldY;
-
-                if ($dy !== 0) {
-                    foreach ($child->children as $grandchild) {
-                        ScrollHelper::shiftDescendantsY($grandchild, $dy);
-                    }
-                }
-
-                $stackY = $stackAdvanceY + $child->visualH + $mBottom;
-
-                if ($isCollapsible) {
-                    $prevMarginBottom = $mBottom;
-                    $prevCollapsible = true;
-                } else {
-                    $prevMarginBottom = 0;
-                    $prevCollapsible = false;
-                }
+        if ($needsVScroll) {
+            $scrollbarWidth = 15; // 标准滚动条宽度
+            $newContainerW = max(20, $containerW - $scrollbarWidth);
+            if ($newContainerW < $containerW) {
+                // 重新布局子节点（使用缩短后的宽度）
+                $this->autoStackChildren($node, $childOffsetY, $newContainerW);
+                // 重新计算 contentHeight
+                $node->contentHeight = $this->calcContentHeight($node, $childOffsetY);
             }
         }
 
-        // ── Calculate contentHeight (always, not just for autoStack) ────
-
-        $maxBottom = $childOffsetY;
-
-        foreach ($node->children as $child) {
-            $bottom = (int)($child->y + $child->visualH);
-
-            if ($bottom > $maxBottom) $maxBottom = $bottom;
-        }
-
-        // ── contentHeight: total scrollable content height (CSS scrollHeight) ──
-        // A1 重构: children 布局坐标不再包含 scrollTop 偏移
-        // contentHeight = children 底部最大值 - 容器顶部坐标
-        $node->contentHeight = $maxBottom - $node->y;
-
         // ── Clamp scrollTop when content shrinks ────
-        // A1 重构: 仅 clamp scrollTop，不需平移子节点坐标
-
         $maxScroll = max($node->contentHeight - $node->h, 0);
-
         if ($node->scrollTop > $maxScroll) {
             $node->scrollTop = $maxScroll;
         }
 
         // ── Content width for horizontal scroll ────
-
         $overflowX = $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible';
-
         $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
 
         if ($hasHScroll) {
             $maxRight = 0;
-
             foreach ($node->children as $child) {
                 $cLeft = $child->style['left'] ?? 0;
-
                 $cWidth = $child->style['width'] ?? $child->visualW;
-
                 $right = (int)($cLeft + $cWidth);
-
                 if ($right > $maxRight) $maxRight = $right;
             }
-
             $node->contentWidth = max($maxRight, $node->w);
 
-            // Clamp scrollLeft when content shrinks
-
             $maxScrollX = max($node->contentWidth - $node->w, 0);
-
             if ($node->scrollLeft > $maxScrollX) {
-                $oldScrollLeft = $node->scrollLeft;
-
                 $node->scrollLeft = $maxScrollX;
+            }
+        } else {
+            $node->contentWidth = $node->w;
+        }
+    }
 
-                $shiftRight = $oldScrollLeft - $node->scrollLeft;
+    /**
+     * Auto-stack children vertically in a scroll container.
+     * Manages margin collapsing, relative positioning, and child offset shifting.
+     */
+    private function autoStackChildren(RenderNode $node, int $childOffsetY, int $containerW): void
+    {
+        $stackY = $childOffsetY;
+        $prevMarginBottom = 0;
+        $prevCollapsible = false;
 
-                if ($shiftRight > 0) {
-                    // A1 重构: 仅 clamp scrollLeft，不需平移子节点坐标
+        foreach ($node->children as $child) {
+            $childStyle = $child->style;
+            $childPosition = $childStyle['position'] ?? 'static';
+
+            if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                continue;
+            }
+
+            $mTop = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginTop', 'marginTopPercent', $containerW);
+            $mBottom = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginBottom', 'marginBottomPercent', $containerW);
+
+            // Auto-width: inherit from container
+            $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
+            if (!$hasExplicitWidth || $child->w === 0) {
+                $child->w = max(0, (int)$containerW);
+                $child->style['width'] = $containerW;
+                $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+            }
+
+            $child->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $child->w, true));
+            $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+
+            $oldY = $child->y;
+
+            // CSS 2.2 §8.3.1: 外边距折叠
+            $childDisplay = $childStyle['display'] ?? 'block';
+            $childOverflow = $childStyle['overflow'] ?? $childStyle['overflowY'] ?? 'visible';
+            $createsBFC = ($childDisplay !== 'block')
+                || ($childOverflow !== 'visible')
+                || ($childStyle['float'] ?? 'none') !== 'none';
+            $isCollapsible = !$createsBFC;
+
+            if ($isCollapsible && $prevCollapsible && $mTop * $prevMarginBottom >= 0) {
+                $positiveMax = max($prevMarginBottom > 0 ? $prevMarginBottom : 0, $mTop > 0 ? $mTop : 0);
+                $negativeMin = min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0);
+                $collapsed = $positiveMax + $negativeMin;
+                $child->y = $stackY - $prevMarginBottom + $collapsed;
+            } elseif ($isCollapsible && $prevCollapsible) {
+                $collapsed = $prevMarginBottom + $mTop;
+                $child->y = $stackY - $prevMarginBottom + $collapsed;
+            } else {
+                $child->y = $stackY + $mTop;
+            }
+
+            $stackAdvanceY = $child->y;
+
+            $relTop = $childStyle['top'] ?? 0;
+            if (($childStyle['position'] ?? 'static') === 'relative' && $relTop !== 0) {
+                $child->y += $relTop;
+            }
+
+            $dy = $child->y - $oldY;
+            if ($dy !== 0) {
+                foreach ($child->children as $grandchild) {
+                    ScrollHelper::shiftDescendantsY($grandchild, $dy);
                 }
             }
 
-        } else {
-            // No horizontal scroll — content width equals container width
-            $node->contentWidth = $node->w;
+            $stackY = $stackAdvanceY + $child->visualH + $mBottom;
+
+            if ($isCollapsible) {
+                $prevMarginBottom = $mBottom;
+                $prevCollapsible = true;
+            } else {
+                $prevMarginBottom = 0;
+                $prevCollapsible = false;
+            }
         }
+    }
+
+    /**
+     * Calculate contentHeight for a scroll container.
+     */
+    private function calcContentHeight(RenderNode $node, int $childOffsetY): int
+    {
+        $maxBottom = $childOffsetY;
+        foreach ($node->children as $child) {
+            $bottom = (int)($child->y + $child->visualH);
+            if ($bottom > $maxBottom) $maxBottom = $bottom;
+        }
+        return $maxBottom - $node->y;
     }
 }

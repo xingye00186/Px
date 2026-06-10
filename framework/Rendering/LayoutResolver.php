@@ -12,6 +12,9 @@ use Px\Rendering\Layout\LayoutStrategyInterface;
 use Px\Rendering\Layout\BlockLayoutStrategy;
 use Px\Rendering\Layout\FlexLayoutStrategy;
 use Px\Rendering\Layout\GridLayoutStrategy;
+use Px\Rendering\Layout\InlineLayoutStrategy;
+use Px\Rendering\Layout\TableLayoutStrategy;
+use Px\Rendering\Layout\MultiColumnLayoutStrategy;
 use Px\Rendering\Layout\Tools\PercentResolver;
 use Px\Rendering\Layout\Tools\ScrollHelper;
 use Px\Rendering\Layout\LayoutContext;
@@ -43,6 +46,9 @@ class LayoutResolver
     private LayoutStrategyInterface $blockStrategy;
     private LayoutStrategyInterface $flexStrategy;
     private LayoutStrategyInterface $gridStrategy;
+    private LayoutStrategyInterface $inlineStrategy;
+    private LayoutStrategyInterface $tableStrategy;
+    private LayoutStrategyInterface $multiColumnStrategy;
 
     /** @var array<string, array> Per-scroll-container sticky stack (vertical) */
     private array $stickyStack = [];
@@ -60,6 +66,9 @@ class LayoutResolver
         $this->blockStrategy = new BlockLayoutStrategy($this);
         $this->flexStrategy = new FlexLayoutStrategy($this);
         $this->gridStrategy = new GridLayoutStrategy($this);
+        $this->inlineStrategy = new InlineLayoutStrategy($this);
+        $this->tableStrategy = new TableLayoutStrategy($this);
+        $this->multiColumnStrategy = new MultiColumnLayoutStrategy($this);
     }
 
     public function getAbsolutePositioning(): AbsoluteStrategy
@@ -80,6 +89,11 @@ class LayoutResolver
     public function getGridStrategy(): GridLayoutStrategy
     {
         return $this->gridStrategy;
+    }
+
+    public function getInlineStrategy(): InlineLayoutStrategy
+    {
+        return $this->inlineStrategy;
     }
 
     public function getRootNode(): ?RenderNode
@@ -208,8 +222,32 @@ class LayoutResolver
                 case 'grid':
                     $this->gridStrategy->resolve($node, $ctx, $effectiveStyle);
                     break;
-                default: // block, scroll-container, etc.
+
+                case 'inline':
+                case 'inline-block':
                     if ($position === 'absolute' || $position === 'fixed') {
+                        $this->absolutePositioning->resolveAbsolutePositioning($node, $ctx, $effectiveStyle);
+                    } else {
+                        $this->inlineStrategy->resolve($node, $ctx, $effectiveStyle);
+                    }
+                    break;
+
+                case 'table':
+                case 'table-row':
+                case 'table-cell':
+                case 'table-caption':
+                    if ($position === 'absolute' || $position === 'fixed') {
+                        $this->absolutePositioning->resolveAbsolutePositioning($node, $ctx, $effectiveStyle);
+                    } else {
+                        $this->tableStrategy->resolve($node, $ctx, $effectiveStyle);
+                    }
+                    break;
+
+                default: // block, scroll-container, etc.
+                    // Check for multi-column layout
+                    if (($effectiveStyle['columnCount'] ?? 0) > 0 || ($effectiveStyle['columnWidth'] ?? 0) > 0) {
+                        $this->multiColumnStrategy->resolve($node, $ctx, $effectiveStyle);
+                    } elseif ($position === 'absolute' || $position === 'fixed') {
                         $this->absolutePositioning->resolveAbsolutePositioning($node, $ctx, $effectiveStyle);
                     } else {
                         $this->blockStrategy->resolve($node, $ctx, $effectiveStyle);
