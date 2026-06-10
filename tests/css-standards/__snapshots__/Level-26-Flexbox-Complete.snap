@@ -1,0 +1,66 @@
+=== Test: flex row-reverse 反向水平排列 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60) [dsp=flex]
+  div (200,0 100x40) text="A"
+  div (100,0 100x40) text="B"
+  div (0,0 100x40) text="C"
+
+---
+
+=== Test: flex column-reverse 反向垂直排列 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200) [dsp=flex]
+  div (0,40 200x40) text="A"
+  div (0,0 200x40) text="B"
+
+---
+
+=== Test: flex wrap-reverse 反向换行 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x120) [dsp=flex]
+  div (0,0 47x40) text="A"
+  div (51,0 47x40) text="B"
+  div (102,0 47x40) text="C"
+  div (153,0 47x40) text="D"
+
+---
+
+=== Test: align-self:flex-end 子项底部对齐 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100) [dsp=flex]
+  div (0,30 80x40) text="Center"
+  div (80,60 80x40) text="Bottom"
+
+---
+
+=== Test: align-self:center 子项居中覆盖 stretch ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100) [dsp=flex]
+  div (0,0 80x40) text="Stretched"
+  div (80,41 80x18) text="Centered"
+
+---
+
+=== Test: order:2 和 order:-1 重排序 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50) [dsp=flex]
+  div (240,0 80x40) text="A"
+  div (0,0 80x40) text="B"
+  div (160,0 80x40) text="C"
+  div (80,0 80x40) text="D"
+
+---
+
+=== Test: flex-shrink:0 禁止收缩 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x50) [dsp=flex]
+  div (0,0 200x40) text="Fixed"
+  div (200,0 100x40) fg=1 text="Shrink"
+
+---
+
+=== Test: flex-basis:200px 固定基准 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50) [dsp=flex]
+  div (0,0 200x40) fg=1 text="Basis"
+  div (200,0 200x40) fg=1 text="Flex"

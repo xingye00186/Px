@@ -1,0 +1,53 @@
+=== Test: box-sizing:border-box 内容区缩小 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x80)
+  div (20,20 160x30) text="Child"
+
+---
+
+=== Test: box-sizing:border-box 边框进一步缩小内容 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x80) bw=2
+  div (10,10 176x30) text="Inner"
+
+---
+
+=== Test: box-sizing:content-box 默认内容宽度不受padding影响 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x80)
+  div (20,20 200x30) text="Child"
+
+---
+
+=== Test: min-width:300px 覆盖 width:100px ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60) [dsp=flex]
+  div (0,0 300x40) text="Min"
+
+---
+
+=== Test: max-width:150px 覆盖 width:300px ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60) [dsp=flex]
+  div (0,0 150x40) text="Max"
+
+---
+
+=== Test: min-height:200px 覆盖 height:50px ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200)
+  div (0,0 200x30) text="Tall"
+
+---
+
+=== Test: width:50% 百分比宽度 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60)
+  div (0,0 200x40) text="Half"
+
+---
+
+=== Test: calc(100% - 60px) 计算表达式 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60)
+  div (0,0 340x40) text="Calc"

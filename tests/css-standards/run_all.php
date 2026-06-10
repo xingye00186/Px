@@ -42,6 +42,10 @@ $scripts = [
     'Level-23-CSS-Advanced'        => 'test_css_advanced.php',
     'Level-24-Display-Modes'       => 'test_display_modes.php',
     'Level-25-Selectors-Pseudos'   => 'test_selectors_pseudos.php',
+    // 新增 Level 26-28
+    'Level-26-Flexbox-Complete'      => 'test_flexbox_complete.php',
+    'Level-27-Box-Sizing-Units'      => 'test_box_sizing_units.php',
+    'Level-28-Grid-Areas-Alignment'  => 'test_grid_areas_alignment.php',
 ];
 
 $analyzeMode = false;
@@ -59,7 +63,7 @@ $totalPassed = 0;
 $totalFailed = 0;
 $suiteOutputs = []; // 收集每个 suite 的输出供分析器使用
 
-$phpBin = 'F:\work\swoole_compiler_v1054\php.exe';
+$phpBin = 'D:\swoole_compiler\php.exe';
 
 echo "========================================\n";
 echo " CSS Standards Layout Test Suite\n";
