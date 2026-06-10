@@ -65,8 +65,8 @@ $tests['Tab 切换组件 标签页头+内容'] = function() {
             VNode::h('div', ['style' => 'padding:20px;background:#FFF;min-height:100px'], 'Tab Content 1'),
         ])
     );
-    assert_contains($result, 'div (0,0 600x42) [dsp=flex]', 'Tab header row in flex layout 600px wide');
-    assert_contains($result, 'div (0,46 600x100) text="Tab Content 1"', 'Tab content area 600x100 below header');
+    assert_contains($result, 'div (0,0 600x40) [dsp=flex]', 'Tab header row in flex layout 600px wide (border-bottom only adds 2px)');
+    assert_contains($result, 'div (0,42 600x100) text="Tab Content 1"', 'Tab content area 600x100 below header (y=42 = 40+2px border)');
     return $result;
 };
 
