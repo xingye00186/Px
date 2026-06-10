@@ -102,14 +102,6 @@ class AbsolutePositioning implements AbsoluteStrategy
         $width = PercentResolver::resolvePercent($style, 'width', 'widthPercent', $ancestorW);
         $height = PercentResolver::resolvePercent($style, 'height', 'heightPercent', $effectiveAncestorH);
 
-        // Assign computed width/height to node (CSS 2.2 §10.3.7, §10.6.4)
-        if ($width > 0) {
-            $node->w = $width;
-        }
-        if ($height > 0) {
-            $node->h = $height;
-        }
-
         // CSS 2.2 §8.3, §8.4: margin/padding 百分比基于包含块 content box 宽度
         $ancestorContentW = ($ancestor !== null) ? PercentResolver::resolveContentWidth($ancestor->style, $ancestor->w) : $viewportW;
 
@@ -119,6 +111,25 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         $marginTopRaw = $style['marginTop'] ?? $style['margin'] ?? null;
         $marginTop = ($marginTopRaw === 'auto') ? 0 : PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $ancestorContentW);
+
+        // CSS 2.2 §10.3.7: Stretch-to-fill when left+right both set and width is auto
+        if ($leftRaw !== null && $rightRaw !== null && $width <= 0) {
+            $width = max(0, $ancestorW - $left - $right - $marginLeft
+                - PercentResolver::resolveMarginPaddingPercent($style, 'marginRight', 'marginRightPercent', $ancestorContentW));
+        }
+        // CSS 2.2 §10.6.4: Same for top+bottom and auto height
+        if ($topRaw !== null && $bottomRaw !== null && $height <= 0 && $hasExplicitAncestorH) {
+            $height = max(0, $effectiveAncestorH - $top - $bottom - $marginTop
+                - PercentResolver::resolveMarginPaddingPercent($style, 'marginBottom', 'marginBottomPercent', $ancestorContentW));
+        }
+
+        // Assign computed width/height to node (CSS 2.2 §10.3.7, §10.6.4)
+        if ($width > 0) {
+            $node->w = $width;
+        }
+        if ($height > 0) {
+            $node->h = $height;
+        }
 
         // Guard: margin:auto resolved later in resolveMarginAuto; treat as 0 here
 
