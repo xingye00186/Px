@@ -378,4 +378,217 @@ class CssValueParser
         $b = $rgb & 0xFF;
         return ($b << 16) | ($g << 8) | $r;
     }
+
+    /**
+     * Resolve CSS var() references in a value string.
+     *
+     * Replaces var(--name, fallback) with the resolved value from $variables map.
+     * Supports nested var() calls via iterative resolution (up to 10 levels deep).
+     *
+     * @param string $value     CSS property value potentially containing var()
+     * @param array  $variables Map of --name => raw value
+     * @return string Resolved value with all var() replaced
+     */
+    public static function resolveCSSVariables(string $value, array $variables): string
+    {
+        $maxIterations = 10;
+        for ($i = 0; $i < $maxIterations; $i++) {
+            $resolved = preg_replace_callback(
+                '/var\(\s*--([a-zA-Z0-9_-]+)\s*(?:,\s*((?:[^()]|\([^()]*\))*)\s*)?\)/',
+                function(array $m) use ($variables): string {
+                    $varName = '--' . $m[1];
+                    if (array_key_exists($varName, $variables)) {
+                        return $variables[$varName];
+                    }
+                    return isset($m[2]) ? trim($m[2]) : '';
+                },
+                $value
+            );
+            if ($resolved === $value) {
+                break;
+            }
+            $value = $resolved;
+        }
+        return $value;
+    }
+
+    /**
+     * Parse a CSS length value and detect relative units.
+     *
+     * CSS Values and Units Module Level 3 §5:
+     *   em  → relative to parent element's font-size
+     *   rem → relative to root element's font-size
+     *   vw  → 1% of viewport width
+     *   vh  → 1% of viewport height
+     *   vmin → min(vw, vh)
+     *   vmax → max(vw, vh)
+     *
+     * @param string $value CSS length value (e.g., "1.5em", "100vw", "2rem")
+     * @return array ['value' => float, 'unit' => 'px'|'em'|'rem'|'vw'|'vh'|'vmin'|'vmax']
+     */
+    public static function parseRelativeValue(string $value): array
+    {
+        $value = trim($value);
+        $lower = strtolower($value);
+
+        // Try longer suffixes first to avoid partial matches (vmin vs vm, rem vs re)
+        $unitPatterns = [
+            'vmin' => '/^([\d.]+)\s*vmin$/',
+            'vmax' => '/^([\d.]+)\s*vmax$/',
+            'rem'  => '/^([\d.]+)\s*rem$/',
+            'em'   => '/^([\d.]+)\s*em$/',
+            'vw'   => '/^([\d.]+)\s*vw$/',
+            'vh'   => '/^([\d.]+)\s*vh$/',
+        ];
+
+        foreach ($unitPatterns as $unit => $pattern) {
+            if (preg_match($pattern, $lower, $m)) {
+                return ['value' => (float)$m[1], 'unit' => $unit];
+            }
+        }
+
+        // Default: treat as px
+        $numericVal = (float) preg_replace('/[^-\d.]/', '', $value);
+        return ['value' => $numericVal, 'unit' => 'px'];
+    }
+
+    /**
+     * Resolve a relative CSS length to an absolute pixel value.
+     *
+     * @param float  $value      The numeric part of the length
+     * @param string $unit       The unit (em, rem, vw, vh, vmin, vmax, px)
+     * @param int    $parentFontSize Parent element font-size in px (for em)
+     * @param int    $rootFontSize   Root element font-size in px (for rem)
+     * @param int    $viewportWidth  Viewport width in px (for vw)
+     * @param int    $viewportHeight Viewport height in px (for vh)
+     * @return int  Resolved pixel value
+     */
+    public static function resolveRelativeLength(float $value, string $unit, int $parentFontSize = 16, int $rootFontSize = 16, int $viewportWidth = 1920, int $viewportHeight = 1080): int
+    {
+        return match ($unit) {
+            'em'   => (int)round($value * $parentFontSize),
+            'rem'  => (int)round($value * $rootFontSize),
+            'vw'   => (int)round($value * $viewportWidth / 100.0),
+            'vh'   => (int)round($value * $viewportHeight / 100.0),
+            'vmin' => (int)round($value * min($viewportWidth, $viewportHeight) / 100.0),
+            'vmax' => (int)round($value * max($viewportWidth, $viewportHeight) / 100.0),
+            default => (int)round($value),
+        };
+    }
+
+    /**
+     * Parse and evaluate a calc() expression.
+     *
+     * CSS Values and Units Module Level 3 §9:
+     *   calc() supports +, -, *, / with mixed units where possible.
+     *
+     * Supported syntax:
+     *   calc(100% - 40px)     → percentage + pixel offset
+     *   calc(50% + 20px)     → percentage + pixel offset
+     *   calc(100vw - 200px)  → viewport-relative + pixel
+     *   calc(2 * 16px)       → simple multiplication
+     *   calc(100px / 2)      → simple division
+     *
+     * Returns an array with the parsed components:
+     *   ['percent' => float|null, 'px' => int, 'vw' => float|null, 'vh' => float|null]
+     *   or the string value if not a recognizable calc pattern.
+     *
+     * @param string $value Raw CSS value potentially containing calc()
+     * @return array|string Parsed components or original string if not calc
+     */
+    public static function parseCalcExpression(string $value): array|string
+    {
+        $value = trim($value);
+        if (!str_starts_with(strtolower($value), 'calc(')) {
+            return $value;
+        }
+
+        // Extract inner expression: calc( ... )
+        if (!preg_match('/^calc\s*\(\s*(.+)\)$/i', $value, $m)) {
+            return $value;
+        }
+        $expr = trim($m[1]);
+
+        // Pattern 1: calc(<percent>% [+-] <px>px)
+        if (preg_match('/^(\d+(?:\.\d+)?)%\s*([+\-])\s*(\d+(?:\.\d+)?)px$/i', $expr, $m)) {
+            $pct = (float)$m[1];
+            $offset = (float)$m[3];
+            if ($m[2] === '-') $offset = -$offset;
+            return ['percent' => $pct, 'px' => (int)$offset];
+        }
+
+        // Pattern 2: calc(<px>px [+-] <percent>%)
+        if (preg_match('/^(\d+(?:\.\d+)?)px\s*([+\-])\s*(\d+(?:\.\d+)?)%$/i', $expr, $m)) {
+            $pct = (float)$m[3];
+            $offset = (float)$m[1];
+            if ($m[2] === '-') $pct = -$pct;
+            return ['percent' => $pct, 'px' => (int)$offset];
+        }
+
+        // Pattern 3: calc(<percent>% [+-] <percent>%)
+        if (preg_match('/^(\d+(?:\.\d+)?)%\s*([+\-])\s*(\d+(?:\.\d+)?)%$/i', $expr, $m)) {
+            $pct1 = (float)$m[1];
+            $pct2 = (float)$m[3];
+            if ($m[2] === '-') $pct2 = -$pct2;
+            return ['percent' => $pct1 + $pct2, 'px' => 0];
+        }
+
+        // Pattern 4: calc(<px>px [+-] <px>px)
+        if (preg_match('/^(\d+(?:\.\d+)?)px\s*([+\-])\s*(\d+(?:\.\d+)?)px$/i', $expr, $m)) {
+            $px1 = (float)$m[1];
+            $px2 = (float)$m[3];
+            if ($m[2] === '-') $px2 = -$px2;
+            return ['percent' => null, 'px' => (int)($px1 + $px2)];
+        }
+
+        // Pattern 5: calc(<value> * <number>)
+        if (preg_match('/^(\d+(?:\.\d+)?)(px|)%\s*\*\s*(\d+(?:\.\d+)?)$/i', $expr, $m)) {
+            $val = (float)$m[1];
+            $mult = (float)$m[3];
+            $unit = $m[2];
+            if ($unit === '') {
+                // Unitless * number → px
+                return ['percent' => null, 'px' => (int)($val * $mult)];
+            }
+            return ['percent' => null, 'px' => (int)($val * $mult)];
+        }
+
+        // Pattern 6: calc(<number> * <value>)
+        if (preg_match('/^(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)(px|)%?$/i', $expr, $m)) {
+            $val = (float)$m[1];
+            $mult = (float)$m[2];
+            return ['percent' => null, 'px' => (int)($val * $mult)];
+        }
+
+        // Pattern 7: calc(<px>px / <number>)
+        if (preg_match('/^(\d+(?:\.\d+)?)px\s*\/\s*(\d+(?:\.\d+)?)$/i', $expr, $m)) {
+            $px = (float)$m[1];
+            $div = (float)$m[2];
+            if ($div === 0.0) return ['percent' => null, 'px' => 0];
+            return ['percent' => null, 'px' => (int)($px / $div)];
+        }
+
+        // Unrecognized calc pattern — return as string
+        return $value;
+    }
+
+    /**
+     * Evaluate a calc expression result into a single pixel value.
+     *
+     * @param array|string $calcResult Result from parseCalcExpression()
+     * @param int $containerSize Container size for percentage resolution
+     * @return int Pixel value
+     */
+    public static function resolveCalcToPx(array|string $calcResult, int $containerSize = 0): int
+    {
+        if (is_string($calcResult)) {
+            return (int)preg_replace('/[^0-9-]/', '', $calcResult);
+        }
+        $px = $calcResult['px'] ?? 0;
+        $pct = $calcResult['percent'] ?? null;
+        if ($pct !== null && $containerSize > 0) {
+            $px += (int)round($pct * $containerSize / 100.0);
+        }
+        return $px;
+    }
 }

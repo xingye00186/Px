@@ -184,8 +184,13 @@ class CssMappings
         ],
         'opacity' => [
             'key'     => 'opacity',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseOpacity',
+            'parser'  => 'Px\Rendering\CssMappings::parseOpacity',
             'default' => 1.0,
+        ],
+        'scroll-behavior' => [
+            'key'     => 'scrollBehavior',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => 'auto',
         ],
         // ---- Layout/positioning properties ----
         'left'             => ['key' => 'left',             'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
@@ -238,6 +243,47 @@ class CssMappings
         'text-decoration-style'     => ['key' => 'textDecorationStyle',    'parser' => 'Px\Rendering\CssMappings::parseIdent',     'default' => 'solid'],
         'text-decoration-thickness' => ['key' => 'textDecorationThickness','parser' => 'Px\Rendering\CssMappings::parsePixels',    'default' => 0],
         'text-underline-offset'     => ['key' => 'textUnderlineOffset',    'parser' => 'Px\Rendering\CssMappings::parsePixels',    'default' => 0],
+    
+        // CSS Inline Layout: vertical-align (CSS 2.2 §10.8.1)
+        'vertical-align' => [
+            'key'     => 'verticalAlign',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => 'baseline',
+        ],
+    
+        // CSS Basic User Interface Module Level 3: outline (不占布局空间)
+        'outline-width' => [
+            'key'     => 'outlineWidth',
+            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'outline-style' => [
+            'key'     => 'outlineStyle',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => 'none',
+        ],
+        'outline-color' => [
+            'key'     => 'outlineColor',
+            'parser'  => 'Px\Rendering\CssMappings::parseHexColor',
+            'default' => 0,
+        ],
+
+        // CSS Multi-column Layout Module Level 1
+        'column-count' => [
+            'key'     => 'columnCount',
+            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'column-width' => [
+            'key'     => 'columnWidth',
+            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'column-gap' => [
+            'key'     => 'columnGap',
+            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'default' => 16,
+        ],
     ];
     
     /**
@@ -450,7 +496,7 @@ class CssMappings
      * @param string $styleStr Raw style attribute value
      * @return array  ['propName' => parsedValue, ...]
      */
-    public static function parseInlineStyle(string $styleStr): array
+    public static function parseInlineStyle(string $styleStr, array $variables = []): array
     {
         $style = [];
 
@@ -465,6 +511,16 @@ class CssMappings
         foreach ($m as $decl) {
             $raw[strtolower(trim($decl[1]))] = trim($decl[2]);
         }
+
+        // Extract inline custom properties (--*) for var() resolution
+        $inlineVars = [];
+        foreach ($raw as $propName => $value) {
+            if (str_starts_with($propName, '--')) {
+                $inlineVars[$propName] = $value;
+            }
+        }
+        // Inline variables override passed variables (same specificity in CSS)
+        $allVariables = array_merge($variables, $inlineVars);
 
         // Pre-scan for 'auto' margin values (before expandBoxShorthand converts them to '0px')
         // Store as bool flags: marginLeftAuto, marginRightAuto, marginTopAuto, marginBottomAuto
@@ -506,6 +562,23 @@ class CssMappings
         // Expand text-decoration shorthand into individual sub-properties
         $raw = self::expandTextDecorationShorthand($raw);
 
+        // Expand outline shorthand into individual sub-properties
+        if (isset($raw['outline']) && $raw['outline'] !== '') {
+            $parts = preg_split('/\s+/', trim($raw['outline']));
+            foreach ($parts as $part) {
+                if (preg_match('/^\d+/', $part)) {
+                    if (!isset($raw['outline-width'])) $raw['outline-width'] = $part;
+                } elseif (preg_match('/^#/', $part)) {
+                    if (!isset($raw['outline-color'])) $raw['outline-color'] = $part;
+                } else {
+                    $lower = strtolower($part);
+                    if (in_array($lower, ['solid', 'dotted', 'dashed', 'double', 'none'])) {
+                        if (!isset($raw['outline-style'])) $raw['outline-style'] = $lower;
+                    }
+                }
+            }
+        }
+
         // Pre-detect percentage values for layout properties.
         // Store as "widthPercent" (float, e.g. 50.0 for "50%") alongside the
         // regular pixel key. LayoutResolver checks *Percent first.
@@ -544,11 +617,57 @@ class CssMappings
             }
         }
 
+        // Pre-detect relative unit values (em/rem/vw/vh/vmin/vmax) for layout properties.
+        // CSS Values and Units Module Level 3 §5:
+        //   em  → relative to parent element's font-size
+        //   rem → relative to root element's font-size
+        //   vw  → 1% of viewport width
+        //   vh  → 1% of viewport height
+        // Stored as "{value}|{unit}" string (e.g., "2|em") for layout-time resolution.
+        $relativeUnitMap = [
+            'font-size'          => 'fontSizeUnit',
+            'width'              => 'widthUnit',
+            'height'             => 'heightUnit',
+            'min-width'          => 'minWidthUnit',
+            'max-width'          => 'maxWidthUnit',
+            'min-height'         => 'minHeightUnit',
+            'max-height'         => 'maxHeightUnit',
+            'margin-top'         => 'marginTopUnit',
+            'margin-right'       => 'marginRightUnit',
+            'margin-bottom'      => 'marginBottomUnit',
+            'margin-left'        => 'marginLeftUnit',
+            'padding-top'        => 'paddingTopUnit',
+            'padding-right'      => 'paddingRightUnit',
+            'padding-bottom'     => 'paddingBottomUnit',
+            'padding-left'       => 'paddingLeftUnit',
+            'gap'                => 'gapUnit',
+            'top'                => 'topUnit',
+            'left'               => 'leftUnit',
+            'right'              => 'rightUnit',
+            'bottom'             => 'bottomUnit',
+        ];
+        foreach ($relativeUnitMap as $cssProp => $styleKey) {
+            if (isset($raw[$cssProp])) {
+                $parsed = CssValueParser::parseRelativeValue($raw[$cssProp]);
+                if ($parsed['unit'] !== 'px') {
+                    $style[$styleKey] = $parsed['value'] . '|' . $parsed['unit'];
+                }
+            }
+        }
+
         // Second pass: parse through lookup map
         $lookup = array_merge(self::PROPERTY_MAP, self::INLINE_PROPERTY_MAP);
         foreach ($raw as $propName => $value) {
+            // Skip custom properties (--*) — they are definitions, not rendering properties
+            if (str_starts_with($propName, '--')) {
+                continue;
+            }
             $map = $lookup[$propName] ?? null;
             if ($map !== null) {
+                // Resolve CSS variables in property value before parsing
+                if (count($allVariables) > 0) {
+                    $value = CssValueParser::resolveCSSVariables($value, $allVariables);
+                }
                 $style[$map['key']] = self::dispatchParser($map['parser'], $value);
             } else {
                 // Convert kebab-case to camelCase for unknown properties
@@ -892,7 +1011,12 @@ class CssMappings
     // ============================================================
 
     /**
-     * Parse a <style> block and return class→properties map.
+     * Parse a <style> block and return class→properties map,
+     * including :hover, :focus, :active pseudo-class variants
+     * and complex selector rules.
+     * 
+     * Pseudo-class variants are stored with key "{className}__{pseudo}".
+     * Complex selectors are stored as "__complex__{index}" with metadata.
      * 
      * @param string $styleCss  Raw content of <style>...</style>
      * @param array  $warnings  Output: collects parse warnings
@@ -902,8 +1026,13 @@ class CssMappings
     {
         $classStyles = [];
 
+        // Extract :root custom properties for var() resolution
+        $variables = self::extractCustomProperties($styleCss);
+
+        // --- First pass: Parse simple class rules ---
+        // Match .className { ... }
         if (!preg_match_all('#\.([a-zA-Z0-9_-]+)\s*\{([^}]*)\}#s', $styleCss, $rules, PREG_SET_ORDER)) {
-            return $classStyles;
+            // Even if no normal rules, still check for pseudo-class and complex rules
         }
 
         foreach ($rules as $rule) {
@@ -915,6 +1044,10 @@ class CssMappings
                 $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
                 if (preg_match($pattern, $body, $m)) {
                     $value = trim($m[1]);
+                    // Resolve CSS variables var(--name, fallback)
+                    if (count($variables) > 0) {
+                        $value = CssValueParser::resolveCSSVariables($value, $variables);
+                    }
                     $props[$map['key']] = self::dispatchParser($map['parser'], $value);
                 }
             }
@@ -948,10 +1081,417 @@ class CssMappings
                 }
             }
 
+            // Detect relative unit values (em/rem/vw/vh) in class body
+            $relativeUnitProps = [
+                'font-size'     => 'fontSizeUnit',
+                'width'         => 'widthUnit',
+                'height'        => 'heightUnit',
+                'min-width'     => 'minWidthUnit',
+                'max-width'     => 'maxWidthUnit',
+                'min-height'    => 'minHeightUnit',
+                'max-height'    => 'maxHeightUnit',
+                'margin-top'    => 'marginTopUnit',
+                'margin-right'  => 'marginRightUnit',
+                'margin-bottom' => 'marginBottomUnit',
+                'margin-left'   => 'marginLeftUnit',
+                'padding-top'   => 'paddingTopUnit',
+                'padding-right' => 'paddingRightUnit',
+                'padding-bottom'=>'paddingBottomUnit',
+                'padding-left'  => 'paddingLeftUnit',
+                'gap'           => 'gapUnit',
+                'top'           => 'topUnit',
+                'left'          => 'leftUnit',
+                'right'         => 'rightUnit',
+                'bottom'        => 'bottomUnit',
+            ];
+            foreach ($relativeUnitProps as $cssProp => $styleKey) {
+                $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
+                if (preg_match($pattern, $body, $m)) {
+                    $parsed = CssValueParser::parseRelativeValue(trim($m[1]));
+                    if ($parsed['unit'] !== 'px') {
+                        $props[$styleKey] = $parsed['value'] . '|' . $parsed['unit'];
+                    }
+                }
+            }
+
             $classStyles[$className] = $props;
         }
 
+        // Parse pseudo-class variants: .className:hover { ... }, .className:focus { ... }, .className:active { ... }
+        // Store as "{className}__hover", "{className}__focus", "{className}__active"
+        $pseudoClasses = ['hover', 'focus', 'active'];
+        foreach ($pseudoClasses as $pseudo) {
+            if (preg_match_all('#\.([a-zA-Z0-9_-]+):' . $pseudo . '\s*\{([^}]*)\}#s', $styleCss, $pseudoRules, PREG_SET_ORDER)) {
+                foreach ($pseudoRules as $rule) {
+                    $className = $rule[1];
+                    $body      = $rule[2];
+                    $props     = [];
+
+                    foreach (self::PROPERTY_MAP as $cssProp => $map) {
+                        $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
+                        if (preg_match($pattern, $body, $m)) {
+                            $value = trim($m[1]);
+                            // Resolve CSS variables
+                            if (count($variables) > 0) {
+                                $value = CssValueParser::resolveCSSVariables($value, $variables);
+                            }
+                            $props[$map['key']] = self::dispatchParser($map['parser'], $value);
+                        }
+                    }
+
+                    // Expand border shorthand
+                    foreach (['borderBottom', 'borderTop', 'borderLeft', 'borderRight', 'border'] as $borderProp) {
+                        if (isset($props[$borderProp]) && $props[$borderProp] !== '') {
+                            $parts = explode('|', $props[$borderProp]);
+                            if (!isset($props['borderWidth'])) {
+                                $props['borderWidth'] = (int)($parts[0] ?? 0);
+                            }
+                            if (!isset($props['borderColor'])) {
+                                $props['borderColor'] = (int)($parts[1] ?? 0);
+                            }
+                        }
+                    }
+
+                    // Expand text-decoration shorthand
+                    if (preg_match('~text-decoration\s*:\s*([^;]+)~', $body, $tdMatch)) {
+                        $expanded = self::expandTextDecorationValue(trim($tdMatch[1]));
+                        foreach ($expanded as $tdKey => $tdVal) {
+                            if (!isset($props[$tdKey])) {
+                                $props[$tdKey] = $tdVal;
+                            }
+                        }
+                    }
+
+                    // Detect relative unit values in pseudo-class body
+                    $relativeUnitProps = [
+                        'font-size'     => 'fontSizeUnit',
+                        'width'         => 'widthUnit',
+                        'height'        => 'heightUnit',
+                        'min-width'     => 'minWidthUnit',
+                        'max-width'     => 'maxWidthUnit',
+                        'min-height'    => 'minHeightUnit',
+                        'max-height'    => 'maxHeightUnit',
+                        'margin-top'    => 'marginTopUnit',
+                        'margin-right'  => 'marginRightUnit',
+                        'margin-bottom' => 'marginBottomUnit',
+                        'margin-left'   => 'marginLeftUnit',
+                        'padding-top'   => 'paddingTopUnit',
+                        'padding-right' => 'paddingRightUnit',
+                        'padding-bottom'=>'paddingBottomUnit',
+                        'padding-left'  => 'paddingLeftUnit',
+                        'gap'           => 'gapUnit',
+                        'top'           => 'topUnit',
+                        'left'          => 'leftUnit',
+                        'right'         => 'rightUnit',
+                        'bottom'        => 'bottomUnit',
+                    ];
+                    foreach ($relativeUnitProps as $cssProp => $styleKey) {
+                        $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
+                        if (preg_match($pattern, $body, $m)) {
+                            $parsed = CssValueParser::parseRelativeValue(trim($m[1]));
+                            if ($parsed['unit'] !== 'px') {
+                                $props[$styleKey] = $parsed['value'] . '|' . $parsed['unit'];
+                            }
+                        }
+                    }
+
+                    $pseudoKey = $className . '__' . $pseudo;
+                    $classStyles[$pseudoKey] = $props;
+                }
+            }
+        }
+
+        // --- Parse ::before / ::after pseudo-elements (CSS Pseudo-Elements Module Level 4 §4) ---
+        // Match .className::before { content: "..."; color: #...; }
+        if (preg_match_all('#\.([a-zA-Z0-9_-]+)::(before|after)\s*\{([^}]*)\}#s', $styleCss, $pseudoElRules, PREG_SET_ORDER)) {
+            foreach ($pseudoElRules as $rule) {
+                $className = $rule[1];
+                $pseudoEl = $rule[2]; // 'before' or 'after'
+                $body = $rule[3];
+                $props = [];
+
+                // Extract 'content' property specially (not in PROPERTY_MAP)
+                if (preg_match('~content\s*:\s*["\']?([^;"\'\}]+)["\']?\s*;?~', $body, $cMatch)) {
+                    $props['content'] = trim($cMatch[1]);
+                }
+
+                foreach (self::PROPERTY_MAP as $cssProp => $map) {
+                    $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
+                    if (preg_match($pattern, $body, $m)) {
+                        $value = trim($m[1]);
+                        if (count($variables) > 0) {
+                            $value = CssValueParser::resolveCSSVariables($value, $variables);
+                        }
+                        $props[$map['key']] = self::dispatchParser($map['parser'], $value);
+                    }
+                }
+
+                $pseudoElKey = $className . '__' . $pseudoEl;
+                $classStyles[$pseudoElKey] = $props;
+            }
+        }
+
+        // --- Second pass: Parse complex selectors (descendant, child, sibling) ---
+        // CSS Selectors Level 3: supported combinators:
+        //   ' ' (descendant), '>' (child), '+' (adjacent sibling), '~' (general sibling)
+        // Match .parent .child { }, .parent > .child { }, .sibling + .sibling { }, etc.
+        if (preg_match_all('#\.([a-zA-Z0-9_-]+)\s*([>+~ ])\s*\.([a-zA-Z0-9_-]+)\s*\{([^}]*)\}#s', $styleCss, $complexRules, PREG_SET_ORDER)) {
+            $complexIdx = 0;
+            foreach ($complexRules as $rule) {
+                $firstClass = $rule[1];
+                $combinator = trim($rule[2]);
+                $secondClass = $rule[3];
+                $body = $rule[4];
+                $props = [];
+
+                foreach (self::PROPERTY_MAP as $cssProp => $map) {
+                    $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
+                    if (preg_match($pattern, $body, $m)) {
+                        $value = trim($m[1]);
+                        if (count($variables) > 0) {
+                            $value = CssValueParser::resolveCSSVariables($value, $variables);
+                        }
+                        $props[$map['key']] = self::dispatchParser($map['parser'], $value);
+                    }
+                }
+
+                // Expand border shorthand
+                foreach (['borderBottom', 'borderTop', 'borderLeft', 'borderRight', 'border'] as $borderProp) {
+                    if (isset($props[$borderProp]) && $props[$borderProp] !== '') {
+                        $parts = explode('|', $props[$borderProp]);
+                        if (!isset($props['borderWidth'])) {
+                            $props['borderWidth'] = (int)($parts[0] ?? 0);
+                        }
+                        if (!isset($props['borderColor'])) {
+                            $props['borderColor'] = (int)($parts[1] ?? 0);
+                        }
+                    }
+                }
+
+                // Expand text-decoration shorthand
+                if (preg_match('~text-decoration\s*:\s*([^;]+)~', $body, $tdMatch)) {
+                    $expanded = self::expandTextDecorationValue(trim($tdMatch[1]));
+                    foreach ($expanded as $tdKey => $tdVal) {
+                        if (!isset($props[$tdKey])) {
+                            $props[$tdKey] = $tdVal;
+                        }
+                    }
+                }
+
+                // Detect relative unit values
+                $relativeUnitProps = [
+                    'font-size'     => 'fontSizeUnit',
+                    'width'         => 'widthUnit',
+                    'height'        => 'heightUnit',
+                    'margin-top'    => 'marginTopUnit',
+                    'margin-right'  => 'marginRightUnit',
+                    'margin-bottom' => 'marginBottomUnit',
+                    'margin-left'   => 'marginLeftUnit',
+                    'padding-top'   => 'paddingTopUnit',
+                    'padding-right' => 'paddingRightUnit',
+                    'padding-bottom'=>'paddingBottomUnit',
+                    'padding-left'  => 'paddingLeftUnit',
+                ];
+                foreach ($relativeUnitProps as $cssProp => $styleKey) {
+                    $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
+                    if (preg_match($pattern, $body, $m)) {
+                        $parsed = CssValueParser::parseRelativeValue(trim($m[1]));
+                        if ($parsed['unit'] !== 'px') {
+                            $props[$styleKey] = $parsed['value'] . '|' . $parsed['unit'];
+                        }
+                    }
+                }
+
+                // Store complex selector rule
+                $complexKey = '__complex__' . $complexIdx;
+                $classStyles[$complexKey] = [
+                    'firstClass'  => $firstClass,
+                    'combinator'  => $combinator,
+                    'secondClass' => $secondClass,
+                    'props'       => $props,
+                    'specificity' => self::calculateSpecificity('.' . $firstClass . ' ' . $combinator . ' .' . $secondClass),
+                ];
+                $complexIdx++;
+            }
+        }
+
         return $classStyles;
+    }
+
+    /**
+     * Calculate CSS selector specificity (a,b,c,d) per CSS Cascading and Inheritance Level 4 §6.
+     *
+     * Specificity calculation:
+     *   - a: inline style (not calculated here, handled externally)
+     *   - b: number of ID selectors (#id)
+     *   - c: number of class selectors (.class), attribute selectors, pseudo-classes
+     *   - d: number of element selectors, pseudo-elements
+     *
+     * @param string $selector Raw CSS selector string
+     * @return array [a, b, c, d] specificity values
+     */
+    public static function calculateSpecificity(string $selector): array
+    {
+        $a = 0; // inline style (always 0 here)
+        $b = 0; // ID selectors
+        $c = 0; // class, attribute, pseudo-class
+        $d = 0; // element, pseudo-element
+
+        // Count ID selectors
+        $b = (int)preg_match_all('/#[a-zA-Z0-9_-]+/', $selector);
+
+        // Count class selectors
+        $c = (int)preg_match_all('/\.[a-zA-Z0-9_-]+/', $selector);
+
+        // Count pseudo-classes (:hover, :focus, :active, etc.)
+        $c += (int)preg_match_all('/:(?:hover|focus|active|visited|link|first-child|last-child|nth-child|nth-of-type|not|is|where|has|enabled|disabled|checked|empty|target)/', $selector);
+
+        // Count attribute selectors [attr]
+        $c += (int)preg_match_all('/\[[^\]]+\]/', $selector);
+
+        // Remaining simple selectors are element selectors
+        // Remove ID, class, pseudo-class, attribute selectors first
+        $remaining = preg_replace(
+            ['/#[a-zA-Z0-9_-]+/', '/\.[a-zA-Z0-9_-]+/', '/:[a-zA-Z-]+(?:([^)]*))?/', '/\[[^\]]+\]/'],
+            '',
+            $selector
+        );
+        // Count remaining tags (words not separated by combinators)
+        // Split by combinators (space, >, +, ~) and count non-empty parts that look like element names
+        $parts = preg_split('/\s*[>+~ ]\s*/', $remaining);
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if ($part !== '' && !str_starts_with($part, '.') && !str_starts_with($part, '#') && !str_starts_with($part, ':') && !str_starts_with($part, '[')) {
+                // It's an element selector (e.g., 'div', 'span')
+                if (preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $part)) {
+                    $d++;
+                }
+            }
+        }
+        // Also count pseudo-elements (::before, ::after, etc.)
+        $d += (int)preg_match_all('/::[a-zA-Z-]+/', $selector);
+
+        return [$a, $b, $c, $d];
+    }
+
+    /**
+     * Compare two specificity arrays.
+     * Returns -1 if $a < $b, 0 if equal, 1 if $a > $b.
+     *
+     * @param array $specA First specificity [a,b,c,d]
+     * @param array $specB Second specificity [a,b,c,d]
+     * @return int Comparison result
+     */
+    public static function compareSpecificity(array $specA, array $specB): int
+    {
+        for ($i = 0; $i < 4; $i++) {
+            $sa = $specA[$i] ?? 0;
+            $sb = $specB[$i] ?? 0;
+            if ($sa !== $sb) {
+                return $sa > $sb ? 1 : -1;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Check if a complex selector matches given parent and child class names.
+     *
+     * @param string $combinator  The combinator character (' ', '>', '+', '~')
+     * @param string $firstClass  The first/left class in the selector
+     * @param string $secondClass The second/right class in the selector
+     * @param string $parentClassStr  The parent VNode's class attribute string
+     * @param string $childClassStr   The child VNode's class attribute string
+     * @param array  $parentSiblings  Array of preceding sibling class strings (for + and ~)
+     * @return bool True if the selector matches
+     */
+    public static function matchComplexSelector(string $combinator, string $firstClass, string $secondClass, string $parentClassStr, string $childClassStr, array $parentSiblings = []): bool
+    {
+        $childClasses = explode(' ', $childClassStr);
+        // The second class must match the child element
+        if (!in_array($secondClass, $childClasses, true)) {
+            return false;
+        }
+
+        $parentClasses = explode(' ', $parentClassStr);
+
+        switch ($combinator) {
+            case ' ':
+                // Descendant: parent must contain the first class
+                return in_array($firstClass, $parentClasses, true);
+
+            case '>':
+                // Child: direct parent must contain the first class
+                return in_array($firstClass, $parentClasses, true);
+
+            case '+':
+                // Adjacent sibling: the immediately preceding sibling must have the first class
+                if (count($parentSiblings) === 0) return false;
+                $prevSibling = end($parentSiblings);
+                $prevClasses = explode(' ', $prevSibling);
+                return in_array($firstClass, $prevClasses, true);
+
+            case '~':
+                // General sibling: any preceding sibling must have the first class
+                foreach ($parentSiblings as $sibling) {
+                    $siblingClasses = explode(' ', $sibling);
+                    if (in_array($firstClass, $siblingClasses, true)) {
+                        return true;
+                    }
+                }
+                return false;
+
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Get pseudo-class styles for a CSS class name.
+     * Returns the parsed :hover/:focus/:active variant properties, or empty array if not defined.
+     *
+     * @param array  $classStyles  Result of parseStyleBlock()
+     * @param string $className    CSS class name (without pseudo-class suffix)
+     * @param string $pseudo       Pseudo-class name ('hover', 'focus', 'active')
+     * @return array  Pseudo-class properties, or [] if no variant defined
+     */
+    public static function getPseudoStyle(array $classStyles, string $className, string $pseudo = 'hover'): array
+    {
+        return $classStyles[$className . '__' . $pseudo] ?? [];
+    }
+
+    /**
+     * Get hover styles for a CSS class name (convenience wrapper).
+     */
+    public static function getHoverStyle(array $classStyles, string $className): array
+    {
+        return self::getPseudoStyle($classStyles, $className, 'hover');
+    }
+
+    /**
+     * Extract CSS custom property definitions from :root { ... } blocks.
+     *
+     * CSS Custom Properties for Cascading Variables Module Level 1 §3:
+     * Custom properties are --* names defined in :root or element-level style.
+     * This method extracts them from :root in a <style> block for var() resolution.
+     *
+     * @param string $styleCss Raw <style> block content
+     * @return array  Map of --name => raw value
+     */
+    public static function extractCustomProperties(string $styleCss): array
+    {
+        $variables = [];
+        if (preg_match('/:root\s*\{([^}]*)\}/s', $styleCss, $m)) {
+            $body = $m[1];
+            if (preg_match_all('/\s*(--[a-zA-Z0-9_-]+)\s*:\s*([^;]+);?/', $body, $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $match) {
+                    $varName = trim($match[1]);
+                    $varValue = trim($match[2]);
+                    $variables[$varName] = $varValue;
+                }
+            }
+        }
+        return $variables;
     }
 
     /**
