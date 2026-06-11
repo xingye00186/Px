@@ -1,4 +1,4 @@
-@generated 2026-06-11 04:41:24
+@generated 2026-06-11 15:45:35
 === Test: Flex row + gap 两列等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
@@ -78,8 +78,8 @@ div (0,0 400x30) text="Dark theme text"
 
 === Test: 多层嵌套卡片 ===
 Frame #1 events=0 detail=normal
-div (0,0 500x134)
-  div (32,32 500x60) bw=1
+div (0,0 500x82)
+  div (32,32 500x40) bw=1
     div (52,52 500x16) text="Card Title"
     div (52,76 500x16) text="Card content text"
 
@@ -95,7 +95,7 @@ div (0,0 200x24) [dsp=flex]
 
 === Test: 代码块 white-space:pre ===
 Frame #1 events=0 detail=normal
-div (0,0 500x30) bw=1
+div (0,0 500x14) bw=1
   div (20,16 500x14) text="abstract class RenderContext {
     abst..."
 
@@ -125,9 +125,9 @@ div (0,0 600x30) text="Centered footer text"
 
 === Test: dep-box 分区布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 500x83) bw=1 ov=hidden
+div (0,0 500x71) bw=1 ov=hidden
   div (0,0 500x15) text="v5 M3: Flat + Layer"
-  div (0,32 500x27)
+  div (0,32 500x15)
     div (14,44 500x15) text="框架提供:"
 
 ---

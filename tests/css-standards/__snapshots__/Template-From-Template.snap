@@ -1,4 +1,4 @@
-@generated 2026-06-11 04:41:23
+@generated 2026-06-11 15:45:35
 === Test: [Template] absolute positioned div ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
@@ -307,7 +307,7 @@ div (0,0 80x30)
 
 === Test: [Template] margin 0 auto block center ===
 Frame #1 events=0 detail=normal
-div (0,0 600x66)
+div (0,0 600x50)
   div (216,16 200x50)
     #text (16,16 200x16) text="Centered"
 
@@ -993,14 +993,14 @@ div (0,0 900x600) [dsp=grid]
 
 === Test: [Template] Article 页面 标题+内容+侧边栏 ===
 Frame #1 events=0 detail=normal
-div (0,0 800x128)
-  div (0,0 800x32)
+div (0,0 800x96)
+  div (0,0 800x16)
     #text (0,16 800x16) text="Article Title"
-  div (0,64 800x64) [dsp=flex]
-    div (0,64 585x16) fg=3
-      #text (0,64 800x16) text="Article content paragraph here."
-    div (605,64 195x32) fg=1
-      #text (621,80 800x16) text="Sidebar Widget"
+  div (0,48 800x48) [dsp=flex]
+    div (0,48 585x16) fg=3
+      #text (0,48 800x16) text="Article content paragraph here."
+    div (605,48 195x16) fg=1
+      #text (621,64 800x16) text="Sidebar Widget"
 
 ---
 

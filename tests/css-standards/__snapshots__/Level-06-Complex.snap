@@ -1,4 +1,4 @@
-@generated 2026-06-11 04:41:05
+@generated 2026-06-11 15:45:34
 === Test: Grid 内嵌 flex 实现卡片网格 ===
 Frame #1 events=0 detail=normal
 div (0,0 964x208) [dsp=grid]
@@ -139,7 +139,7 @@ div (0,0 800x200) [dsp=flex]
 
 === Test: margin auto 水平居中 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x76)
+div (0,0 600x60)
   div (166,16 300x60) text="Centered"
 
 ---

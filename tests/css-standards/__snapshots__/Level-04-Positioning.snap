@@ -1,4 +1,4 @@
-@generated 2026-06-11 04:41:02
+@generated 2026-06-11 15:45:33
 === Test: position:relative left=10 top=5 ===
 Frame #1 events=0 detail=normal
 div (10,5 100x50) [pos=relative] text="Relative"
@@ -20,7 +20,7 @@ div (0,0 400x300) [pos=relative]
 
 === Test: Block 流堆叠 + padding ===
 Frame #1 events=0 detail=normal
-div (0,0 300x78)
+div (0,0 300x68)
   div (10,10 300x30) text="Line 1"
   div (10,48 300x30) text="Line 2"
 

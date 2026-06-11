@@ -201,6 +201,24 @@ $tests['Grid template-areas 命名区域 placement'] = function () {
     return $result;
 };
 
+// ─────────────────────────────────────────────────────────────────
+// Test 11: padding容器 + absolute bottom:0 right:0 (右下角锚定)
+// ─────────────────────────────────────────────────────────────────
+$tests['padding容器 + absolute bottom:0 right:0 右下角'] = function () {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'position:relative;width:480px;height:456px;padding:28px'], [
+            VNode::h('div', ['style' => 'position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF'], ''),
+        ])
+    );
+    // padding box 右下角坐标:
+    // ancestorX = 0 + 28 = 28, ancestorY = 0 + 28 = 28
+    // ancestorW = 480 + 28 + 28 = 536, ancestorH = 456
+    // right=0: rightEdge = 28 + 536 - 28 - 0 = 536 → x = 536 - 8 = 528
+    // bottom=0: bottomEdge = 28 + 456 + 28 - 0 = 512 → y = 512 - 8 = 504
+    assert_contains($result, '(528,504 8x8)', '⦿ absolute bottom:0 right:0 → (528,504) in padding box');
+    return $result;
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-22-New-Features.snap';
 run_css_tests('Level 22 - 新功能快照测试', $snapFile, $tests);
 

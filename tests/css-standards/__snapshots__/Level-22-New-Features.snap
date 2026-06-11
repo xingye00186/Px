@@ -1,4 +1,4 @@
-@generated 2026-06-11 04:41:24
+@generated 2026-06-11 15:45:35
 === Test: 绝对定位 left:25% top:20% ===
 Frame #1 events=0 detail=normal
 div (0,0 400x300) [pos=relative]
@@ -78,3 +78,10 @@ div (0,0 200x100) [dsp=grid]
   div (0,0 200x60) text="Header"
   div (0,60 100x60) text="Nav"
   div (100,60 100x60) text="Main"
+
+---
+
+=== Test: padding容器 + absolute bottom:0 right:0 右下角 ===
+Frame #1 events=0 detail=normal
+div (0,0 480x456) [pos=relative]
+  div (528,504 8x8) [pos=absolute]

@@ -1,7 +1,7 @@
-@generated 2026-06-11 04:41:11
+@generated 2026-06-11 15:45:34
 === Test: margin:0 auto 水平居中 block ===
 Frame #1 events=0 detail=normal
-div (0,0 600x66)
+div (0,0 600x50)
   div (216,16 200x50) text="Centered"
 
 ---
