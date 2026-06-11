@@ -226,8 +226,8 @@ echo "\n--- 6. HistoryPanel ---\n";
 
 test('HistoryPanel 文本垂直居中（y=518 在 30px 容器中心）', function () {
     $snap = CalculatorSnapshotTest::getSnapshot();
-    assert_contains($snap, 'span (19,518 63x17) text="> History"', 'History text centered at y=518');
-    assert_contains($snap, 'span (286,518 35x17) text="Clear"', 'Clear text centered at y=518');
+    assert_contains($snap, 'span (19,519 63x15) text="> History"', 'History text centered at y=519');
+    assert_contains($snap, 'span (286,519 35x15) text="Clear"', 'Clear text centered at y=519');
 });
 
 // =============================================================

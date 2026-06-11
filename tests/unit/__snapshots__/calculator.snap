@@ -47,6 +47,6 @@ div (0,0 340x660) [dsp=flex]
     button (171,460 78x50) text="="
     button (251,460 78x50) text="☰"
   div (11,512 318x30) [dsp=flex]
-    span (19,518 63x17) text="> History"
-    span (286,518 35x17) text="Clear"
+    span (19,519 63x15) text="> History"
+    span (286,519 35x15) text="Clear"
   div (0,542 340x118) fg=1

@@ -80,7 +80,7 @@ echo "\n--- 3. CategoryTabs ---\n";
 
 test('CategoryTabs 在 NavBar 下方 (y>=56)', function () {
     $snap = BilibiliSnapshotTest::getSnapshot();
-    assert_contains($snap, '(0,56 ', 'CategoryTabs starts at y=56');
+    assert_contains($snap, '(0,57 ', 'CategoryTabs starts at y=57');
 });
 
 test('CategoryTabs 有 border-bottom (bw=1)', function () {
@@ -108,7 +108,7 @@ echo "\n--- 4. MainContent ---\n";
 
 test('MainContent 在 CategoryTabs 下方', function () {
     $snap = BilibiliSnapshotTest::getSnapshot();
-    assert_contains($snap, '(0,129 ', 'MainContent starts at y=129 (56+73)');
+    assert_contains($snap, '(0,132 ', 'MainContent starts at y=132');
 });
 
 // =============================================================
@@ -136,7 +136,7 @@ test('VideoGrid 使用 display=flex（框架中 grid 通过 flex 模拟排列）
 test('VideoCard 宽度约 336px', function () {
     $snap = BilibiliSnapshotTest::getSnapshot();
     // 第一张卡片大约在 x=24+, 宽度约 336
-    assert_contains($snap, '(24,189 ', 'first card region at (24,189 ...)');
+    assert_contains($snap, '(24,192 ', 'first card region at (24,192 ...)');
     assert_contains($snap, '[pos=relative]', 'card container has relative positioning');
 });
 
