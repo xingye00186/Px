@@ -1351,6 +1351,48 @@ if ($distributedInPass <= 0) break;
 
 **教训**：所有用整数除法的迭代收敛算法都必须加 `if ($progress <= 0) break;` 防护。
 
+### 10.8 Auto-height 绝对定位子节点正反馈循环（已修复 2026-06-10）
+
+**根因**：`BlockLayoutStrategy::resolveBlockLayout()` 的 auto-height 计算（[行 374-391](file:///f:/work/Px/framework/Rendering/Layout/BlockLayoutStrategy.php#L374-L391)）在遍历所有子节点取 `maxBottom` 时，没有排除 `position:absolute` 和 `position:fixed` 的子节点，违反了 CSS 2.2 §10.6.3（只有 normal flow 子节点参与 auto-height 计算）。
+
+**正反馈链**：
+1. Frame 1: absolute 子节点尚未定位（y=0），auto-height 只取 normal flow 子节点 → computedH 正确 ✓
+2. Frame 2: absolute 锚点已被 Frame 1 的第二遍 AbsolutePositioning 定位到容器底部 → auto-height 包含它 → computedH 增长 28px（paddingBottom）
+3. Frame N: 容器高度每帧膨胀 paddingBottom(28px)，直到逼近窗口高度或受 max-height 限制
+
+**触发条件**：
+- `display: block` 容器 + 无显式 `height`（触发 auto-height）
+- 容器有 `position: relative`（使 absolute 子节点以其为定位祖先）
+- 容器包含 `position: absolute` 或 `position: fixed` 子节点
+- 容器在事件循环中经历多次 render（`run()` 模式 vs `--dump-layout` 单帧模式）
+
+**诊断特征**：
+- `--dump-layout` 布局完全正确，但实际像素渲染截图尺寸不同
+- 包含调试锚点（`__PX_ANCHOR_TL__` / `__PX_ANCHOR_BR__`）的页面优先触发
+- 容器的 `visualH` 随帧数增长，增长量为 paddingBottom
+- TL 锚点 y 上移、BR 锚点 y 下移（容器双向膨胀）
+
+**为什么测试没发现**：
+| 测试层 | 为什么没发现 | 根因 |
+|--------|-------------|------|
+| `--dump-layout` (Phase 1) | 单帧模式，Frame 1 永远正确 | —dump-layout 只 render 一次就退出 |
+| 截图对比 (Phase 2) | 基线兼容——buggy baseline 匹配 buggy exe | 缺乏独立于应用代码的绝对尺寸验证 |
+| 单元测试 LayoutResolverTest | 单次 resolve，无跨帧稳定性断言 | 未预期 Frame 依赖型 bug |
+
+**修复**：在 auto-height 的 foreach 循环开头添加 position 检查：
+```php
+$childPosition = $child->style['position'] ?? 'static';
+if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+    continue;
+}
+```
+
+**经验教训**：
+1. Frame 依赖型 bug（Frame 1 正常、Frame N 异常）是测试的死角——单次 resolve 无法暴露
+2. CSS 布局属性必须严格遵循规范：auto-height 只计算 normal flow 子节点
+3. 调试锚点（`position:absolute`）本身就是最容易触发此类 bug 的元素
+4. `--dump-layout` 单帧正确 ≠ `run()` 多帧正确，需要额外的多帧稳定性验证机制
+
 ## 十一、编码约定
 
 ### 11.1 PHP 版本要求
@@ -1528,6 +1570,14 @@ powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps
 12. **测试必须覆盖完整的用户操作链** — 仅测试"一直按 1"不够，必须包含"大量操作 → 清除/重置 → 验证 UI 完整性"的端到端场景。每个管道测试都应包含 clear-after-corruption 验证
 13. **按钮标签提取测试** — 使用 `<button><span :bind="label">{{ label }}</span></button>` 模板时，`makeButtonElement()` 必须提取到标签。管道测试中 `ltCheckButtonLabel()` 应断言 label 非空，不再标记为"known bug"
 14. **滚动拖拽测试必须验证 auto-stacked 位置** — 仅测试"添加 item 后布局正确"不够。必须模拟滚动拖拽（直接设置 scrollTop + directRender），验证 auto-stacked items 的 y 坐标保持严格递增不折叠。洁净路由中 style 无显式 top 的节点不应重算 y
+15. **多帧布局稳定性测试** — 对于涉及 `auto-height` + `position:absolute` 的布局容器，必须运行至少 2 次 `LayoutResolver::resolve()` 并在每次 resolve 后断言关键节点的 w/h/x/y 保持一致。这是 Frame 依赖型 bug 的唯一检测手段。
+    ```php
+    $resolver->resolve($root);
+    $h1 = $container->h;
+    $resolver->resolve($root);  // 第二次 resolve
+    assert_eq($container->h, $h1, 'Frame 2 auto-height 应保持与 Frame 1 一致');
+    ```
+    参见：[BlockLayoutStrategy auto-height 正反馈循环 bug (10.8)](#108-auto-height-绝对定位子节点正反馈循环已修复-2026-06-10)
 
 ---
 
@@ -1553,6 +1603,8 @@ powershell -ExecutionPolicy Bypass -File tests/screenshot/run_screenshot_test.ps
 18. **`$` 前缀表达式意识**：在 .vue 模板中使用 `$variable` 时确保该变量在组件中有对应的 `public` 属性声明，编译器会替换为 `$this->variable`
 19. **LayoutResolver 洁净路径保护**：修改 `resolveNode()` 中 `$node->x = ($style['left'] ?? 0) + $parentX` 类代码时，必须使用 `array_key_exists` 守卫仅对有显式 `left`/`top` 的节点做绝对值赋值（参考 `shiftDescendantsY/X` bug 修复经验）
 20. **RenderTreeManager 集成**：新增渲染树管理类时需要同步更新 `Application::render()` 中渲染树构建/差异更新逻辑
+21. **auto-height 必须排除 absolute/fixed 子节点**：修改 `BlockLayoutStrategy` 或任何含 auto-height 计算的代码时，必须在遍历子节点时跳过 `position: absolute` 和 `position: fixed` 的子节点（CSS 2.2 §10.6.3）。参见 [10.8](#108-auto-height-绝对定位子节点正反馈循环已修复-2026-06-10)
+22. **多帧稳定性验证**：新增或修改任何布局计算逻辑后，必须验证同一棵 RenderNode 树上连续 2 次 `LayoutResolver::resolve()` 的结果是否一致。Frame 依赖型 bug（Frame 1 正确、Frame N 异常）是单次 resolve 无法暴露的死角
 
 ---
 
