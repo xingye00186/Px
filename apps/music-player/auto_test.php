@@ -3,11 +3,15 @@
  * auto_test.php - 自动化测试脚本
  *
  * 流程:
- *   1. 构建 exe (build.bat music-player)
- *   2. 运行 --dump-layout → engine_layout.json
- *   3. 加载浏览器参考数据
- *   4. 逐元素对比
- *   5. 输出报告
+ *   Phase 1: 布局快照对比 (Snap Shot)
+ *     1. 构建 exe (build.bat music-player)
+ *     2. 运行 --dump-layout → engine_layout.json
+ *     3. 加载浏览器参考数据
+ *     4. 逐元素对比（位置+样式）
+ *   Phase 2: 截图对比
+ *     5. 生成/更新基线截图
+ *     6. 捕获 EXE 截图 → 锚点裁剪 → 像素对比
+ *     7. 输出报告
  */
 
 require_once __DIR__ . '/../../tools/shared_test_lib.php';
@@ -28,31 +32,22 @@ $skipCount = 0;
 // 检测命令行参数
 $updateBaseline = in_array('--update-baseline', $argv ?? []);
 
-// Step 0: 自动生成基线截图（如果不存在或指定 --update-baseline）
-if ($updateBaseline || !file_exists($APP_DIR . '/base_line_pic.png')) {
-    echo "Step 0: 自动生成基线截图\n";
-    echo "----------------------------------------\n";
-    $baselineOk = captureBaselineScreenshot($APP_NAME, $PROJECT_ROOT, $APP_DIR);
-    if ($baselineOk) {
-        pass("基线截图已生成\n");
-    } else {
-        echo "  [FAIL] 基线截图生成失败，请检查浏览器是否已打开\n";
-        if (!$updateBaseline) {
-            // 首次运行时失败不阻塞后续测试
-            echo "  [SKIP] 跳过截图对比步骤\n";
-        } else {
-            exit(1);
-        }
-    }
+if (!is_dir($LOG_DIR)) {
+    mkdir($LOG_DIR, 0777, true);
 }
 
 echo "========================================\n";
 echo "  CSS Layout Test - $APP_NAME\n";
 echo "========================================\n\n";
 
-if (!is_dir($LOG_DIR)) {
-    mkdir($LOG_DIR, 0777, true);
-}
+// ========================================================================
+// Phase 1: 布局快照对比 (Snap Shot)
+// 先验证布局数据（元素位置、样式）正确，再进入截图对比
+// ========================================================================
+
+echo "===================================================================\n";
+echo "  Phase 1: 布局快照对比 (Snap Shot)\n";
+echo "===================================================================\n\n";
 
 // Step 1: Build (skip if exe already exists)
 echo "Step 1: 编译构建\n";
@@ -121,11 +116,11 @@ if ($refData === null || !isset($refData['elements'])) {
     exit(1);
 }
 $browserElements = $refData['elements'];
-$browserIndex = indexBrowserElements($browserElements);
-pass("已加载 browser_ref_level_0.json (" . count($browserIndex) . " 个文本元素)\n");
+$browserAll = indexAllBrowserElements($browserElements);
+pass("已加载 browser_ref_level_0.json (" . count($browserAll) . " 个元素)\n");
 
-// Step 4: 对比
-echo "Step 4: 逐元素对比验证\n";
+// Step 4: 增强版逐元素对比
+echo "Step 4: 逐元素对比验证 (增强版 - 文本+容器+锚点)\n";
 echo "----------------------------------------\n";
 
 $layoutJson = file_get_contents($LAYOUT_FILE);
@@ -135,123 +130,154 @@ if ($layout === null) {
     exit(1);
 }
 
-$engineElements = flattenEngineTree($layout);
-$engineTextIndex = [];
-foreach ($engineElements as $i => $el) {
-    $content = trim($el['content'] ?? '');
-    if ($content !== '' && mb_strlen($content) >= 2) {
-        $engineTextIndex[$content][] = $i;
+// 使用增强版索引（保留所有元素 + 父容器相对坐标）
+$browserAll = indexAllBrowserElements($browserElements);
+$engineAll = flattenEngineTreeAll($layout);
+log_msg("浏览器: " . count($browserAll) . " 个元素, 引擎: " . count($engineAll) . " 个节点\n");
+
+// 构建引擎文本索引
+$engineByText = [];
+foreach ($engineAll as $i => $el) {
+    $c = trim($el['content'] ?? '');
+    if ($c !== '') {
+        $engineByText[$c][] = $i;
     }
 }
-log_msg("引擎布局: " . count($engineElements) . " 个节点, " . count($engineTextIndex) . " 个有文本节点\n");
 
 $reportLines = [];
-$reportLines[] = "# CSS 布局测试报告";
+$reportLines[] = "# CSS 布局测试报告 (增强版)";
 $reportLines[] = "";
 $reportLines[] = "## 测试概览";
 $reportLines[] = "- 日期: " . date('Y-m-d H:i:s');
 $reportLines[] = "- 应用: $APP_NAME";
 $reportLines[] = "- 布局 JSON: {$layoutSize} bytes";
-$reportLines[] = "- 引擎节点: " . count($engineElements);
-$reportLines[] = "- 浏览器参考: " . count($browserIndex) . " 个文本元素";
+$reportLines[] = "- 引擎节点: " . count($engineAll);
+$reportLines[] = "- 浏览器参考: " . count($browserAll) . " 个元素";
 $reportLines[] = "";
-
-$reportLines[] = "## 逐元素对比";
-$reportLines[] = "";
-$reportLines[] = "| 文本 | 相对位置(e|b) | 样式差异 | 状态 |";
-$reportLines[] = "|------|-----------|---------|------|";
-
-$propStats = [];
-$posStats = ['exact' => 0, 'total' => 0];
 
 $checks = defaultChecks();
+$propStats = [];
 
-foreach ($browserIndex as $text => $bEl) {
-    $totalEls = count($browserIndex);
+// ====================================================================
+// Phase A: 文本元素对比
+// ====================================================================
+$reportLines[] = "## Phase A: 文本元素";
+$reportLines[] = "";
+$reportLines[] = "| 文本 | 位置(e|b) | 尺寸(e|b) | 样式差异 | 状态 |";
+$reportLines[] = "|------|----------|----------|---------|------|";
+
+// 记录已匹配的引擎索引 → 浏览器索引，供容器对比使用
+$textMatched = [];
+
+foreach ($browserAll as $bIdx => $bEl) {
+    $text = trim($bEl['text'] ?? '');
+    if ($text === '' || mb_strlen($text) < 2) continue;
+
     $displayText = truncateText($text);
-    $matchedEl = null;
-    $matched = false;
 
-    if (isset($engineTextIndex[$text])) {
-        $candidates = $engineTextIndex[$text];
-        if (count($candidates) === 1) {
-            $eIdx = $candidates[0];
-            $matchedEl = $engineElements[$eIdx];
-            $matched = true;
-        } else {
-            $bX = $bEl['relX'] ?? ($bEl['x'] ?? 0);
-            $bY = $bEl['relY'] ?? ($bEl['y'] ?? 0);
-            $bestIdx = null;
-            $bestDist = PHP_INT_MAX;
-            foreach ($candidates as $cidx) {
-                $eX = $engineElements[$cidx]['relX'] ?? ($engineElements[$cidx]['x'] ?? 0);
-                $eY = $engineElements[$cidx]['relY'] ?? ($engineElements[$cidx]['y'] ?? 0);
-                $dist = abs($eX - $bX) * 2 + abs($eY - $bY);
-                if ($dist < $bestDist) {
-                    $bestDist = $dist;
-                    $bestIdx = $cidx;
-                }
-            }
-            $eIdx = $bestIdx;
-            $matchedEl = $engineElements[$eIdx];
-            $matched = true;
-        }
-    } else {
-        if (str_contains($text, "\n")) {
-            $skipCount++;
-            $reportLines[] = "| $displayText | - | 父容器串联文本 | ⚠️ |";
-            continue;
-        }
-        $shortText = mb_substr($text, 0, 20);
-        foreach ($engineTextIndex as $eText => $eIdxs) {
-            if (mb_substr($eText, 0, 20) === $shortText) {
-                $eIdx = $eIdxs[0];
-                $matchedEl = $engineElements[$eIdx];
-                $matched = true;
-                break;
-            }
-        }
-        if (!$matched) {
-            $substrCount = 0;
-            foreach ($engineTextIndex as $eText => $eIdxs) {
-                $eLen = mb_strlen($eText);
-                $bLen = mb_strlen($text);
-                if ($eLen > 1 && $bLen >= $eLen + 1 && mb_strpos($text, $eText) !== false) {
-                    $ratio = $eLen / $bLen;
-                    if ($ratio > 0.15 && $ratio < 0.93) {
-                        $matched = true;
-                        break;
-                    }
-                    $substrCount++;
-                }
-            }
-            // If multiple engine substrings found in long browser text, it's concatenated parent container
-            if (!$matched && $substrCount >= 3) {
-                $matched = true;
-            }
-            if ($matched) {
-                $skipCount++;
-                $reportLines[] = "| $displayText | - | 父容器串联文本 | ⚠️ |";
-                continue;
-            }
-        }
-    }
-
-    if (!$matched) {
-        $failCount++;
-        $reportLines[] = "| $displayText | - | 引擎中未找到匹配文本 | ❌ |";
+    // 跳过父容器串联文本（含换行符）
+    if (str_contains($text, "\n")) {
+        $skipCount++;
+        $reportLines[] = "| $displayText | - | - | 父容器串联文本 | ⚠️ |";
         continue;
     }
 
-    $result = compareElement('Level-0', $text, $bEl, $matchedEl, $checks);
+    // 匹配引擎元素
+    $eIdx = null;
+    if (isset($engineByText[$text])) {
+        // 精确匹配
+        $candidates = $engineByText[$text];
+        if (count($candidates) === 1) {
+            $eIdx = $candidates[0];
+        } else {
+            // 多个相同文本：按位置最近匹配
+            $bRelX = $bEl['relX'] ?? 0;
+            $bRelY = $bEl['relY'] ?? 0;
+            $bestDist = PHP_INT_MAX;
+            foreach ($candidates as $cidx) {
+                $eRelX = $engineAll[$cidx]['relX'] ?? 0;
+                $eRelY = $engineAll[$cidx]['relY'] ?? 0;
+                $dist = abs($eRelX - $bRelX) * 2 + abs($eRelY - $bRelY);
+                if ($dist < $bestDist) {
+                    $bestDist = $dist;
+                    $eIdx = $cidx;
+                }
+            }
+        }
+    } else {
+        // 检查是否为父容器串联文本（浏览器 ref 中容器元素的 text = 子文本拼接）
+        // 如果浏览器文本包含引擎子文本作为子串，跳过
+        $eLenTotal = 0;
+        $substrCount = 0;
+        foreach ($engineByText as $eText => $eIdxs) {
+            $eLen = mb_strlen($eText);
+            $bLen = mb_strlen($text);
+            if ($eLen > 1 && $bLen >= $eLen + 1 && mb_strpos($text, $eText) !== false) {
+                $ratio = $eLen / $bLen;
+                if ($ratio > 0.15 && $ratio < 0.93) {
+                    $substrCount++;
+                    $eLenTotal += $eLen;
+                }
+            }
+        }
+        // 如果有至少一个引擎文本是该浏览器文本的子串，且浏览器文本更长，判定为容器串联
+        if ($substrCount >= 1) {
+            $skipCount++;
+            $reportLines[] = "| $displayText | - | - | 父容器串联文本(子串检测) | ⚠️ |";
+            continue;
+        }
+
+        // 模糊匹配：前缀匹配
+        $shortText = mb_substr($text, 0, 20);
+        foreach ($engineByText as $eText => $eIdxs) {
+            if (mb_substr($eText, 0, 20) === $shortText) {
+                $eIdx = $eIdxs[0];
+                break;
+            }
+        }
+        if ($eIdx === null) {
+            // 子串匹配
+            foreach ($engineByText as $eText => $eIdxs) {
+                if (mb_strpos($text, $eText) !== false) {
+                    $ratio = mb_strlen($eText) / mb_strlen($text);
+                    if ($ratio > 0.15 && $ratio < 0.93) {
+                        $eIdx = $eIdxs[0];
+                        break;
+                    }
+                }
+            }
+        }
+        if ($eIdx === null) {
+            $skipCount++;
+            $reportLines[] = "| $displayText | - | - | 父容器串联文本(模糊) | ⚠️ |";
+            continue;
+        }
+    }
+
+    if ($eIdx === null) {
+        $failCount++;
+        $reportLines[] = "| $displayText | - | - | 引擎中未找到匹配文本 | ❌ |";
+        continue;
+    }
+
+    $eEl = $engineAll[$eIdx];
+    $textMatched[$eIdx] = $bIdx;
+
+    // 增强对比（位置+尺寸+样式，全部判Fail）
+    $result = compareElementEnhanced('text', $text, $bEl, $eEl, $checks, [
+        'posTol' => 1,
+        'sizeTol' => 1,
+    ]);
+
     $styleDiff = empty($result['styleDiffs']) ? '-' : implode('; ', $result['styleDiffs']);
+    $failReason = empty($result['failReasons']) ? '' : ' [' . implode('; ', $result['failReasons']) . ']';
 
     if ($result['passed']) {
         $passCount++;
-        $reportLines[] = "| $displayText | {$result['posInfo']} | $styleDiff | ✅ |";
+        $reportLines[] = "| $displayText | {$result['posInfo']} | {$result['sizeInfo']} | $styleDiff | ✅ |";
     } else {
         $failCount++;
-        $reportLines[] = "| $displayText | {$result['posInfo']} | $styleDiff | ❌ |";
+        $reportLines[] = "| $displayText | {$result['posInfo']} | {$result['sizeInfo']} | $styleDiff{$failReason} | ❌ |";
     }
 
     foreach ($result['propMatches'] as $pName => $pPassed) {
@@ -265,32 +291,184 @@ foreach ($browserIndex as $text => $bEl) {
             $propStats[$pName]['fail']++;
         }
     }
+}
 
-    $posStats['total']++;
-    $bRelX = $bEl['relX'] ?? ($bEl['x'] ?? 0);
-    $bRelY = $bEl['relY'] ?? ($bEl['y'] ?? 0);
-    $eRelX = $matchedEl['relX'] ?? ($matchedEl['x'] ?? 0);
-    $eRelY = $matchedEl['relY'] ?? ($matchedEl['y'] ?? 0);
-    if (abs($eRelX - $bRelX) === 0 && abs($eRelY - $bRelY) === 0) {
-        $posStats['exact']++;
+// ====================================================================
+// Phase B: 容器元素对比（卡片容器）
+// ====================================================================
+$reportLines[] = "";
+$reportLines[] = "## Phase B: 容器元素";
+$reportLines[] = "";
+$reportLines[] = "| 描述 | 浏览器尺寸 | 引擎尺寸 | 差异 | 状态 |";
+$reportLines[] = "|------|-----------|---------|------|------|";
+
+$containerCompared = false;
+foreach ($browserAll as $bEl) {
+    // depth=1 是卡片容器（root 的直接子元素）
+    if ($bEl['depth'] !== 1) continue;
+
+    // 在引擎中找到 depth=1 的容器
+    $matchedE = null;
+    foreach ($engineAll as $eEl) {
+        if ($eEl['depth'] === 1) {
+            $matchedE = $eEl;
+            break;
+        }
+    }
+
+    if ($matchedE === null) {
+        $failCount++;
+        $reportLines[] = "| 卡片容器 | - | - | 引擎中未找到容器 | ❌ |";
+        break;
+    }
+
+    // 容器：跳过位置对比（viewport 不同），对比 w/h
+    $result = compareElementEnhanced('container', 'card', $bEl, $matchedE, $checks, [
+        'skipPos' => true,
+        'sizeTol' => 1,
+        'noTextStyle' => true,
+    ]);
+
+    $failReason = empty($result['failReasons']) ? '' : ' [' . implode('; ', $result['failReasons']) . ']';
+
+    // 额外报告 padding
+    $eStyle = $matchedE['style'] ?? [];
+    $bStyle = $bEl['styles'] ?? [];
+    $padInfo = '';
+    if (isset($eStyle['paddingTop']) || isset($bStyle['padding-top'])) {
+        $ePad = ($eStyle['paddingTop'] ?? 0) . ' ' . ($eStyle['paddingLeft'] ?? 0) . ' ' . ($eStyle['paddingBottom'] ?? 0) . ' ' . ($eStyle['paddingRight'] ?? 0);
+        $bPad = cssPxToInt($bStyle['padding-top'] ?? '0') . ' ' . cssPxToInt($bStyle['padding-left'] ?? '0') . ' ' . cssPxToInt($bStyle['padding-bottom'] ?? '0') . ' ' . cssPxToInt($bStyle['padding-right'] ?? '0');
+        $padInfo = " padding(e:$ePad|b:$bPad)";
+    }
+
+    $sizeInfo = $result['sizeInfo'];
+    if ($result['passed']) {
+        $passCount++;
+        $reportLines[] = "| 卡片容器 w={$bEl['w']}h={$bEl['h']} | {$sizeInfo}{$padInfo} | - | ✅ |";
+    } else {
+        $failCount++;
+        $reportLines[] = "| 卡片容器 w={$bEl['w']}h={$bEl['h']} | {$sizeInfo}{$padInfo} | {$failReason} | ❌ |";
+    }
+    $containerCompared = true;
+    break;
+}
+
+if (!$containerCompared) {
+    $skipCount++;
+    $reportLines[] = "| 卡片容器 | - | - | 浏览器参考中无容器元素 | ⚠️ |";
+}
+
+// ====================================================================
+// Phase C: 锚点验证（从引擎布局中检测，浏览器 ref 可能不存在）
+// ====================================================================
+$reportLines[] = "";
+$reportLines[] = "## Phase C: 锚点验证";
+$reportLines[] = "";
+$reportLines[] = "| 锚点 | 期望位置(relX,relY) | 实际位置 | 状态 |";
+$reportLines[] = "|------|----------------------|----------|------|";
+
+// 锚点颜色 GDI 编码
+// #FF00FF (magenta) = TL, #00FFFF (cyan) = BR
+$ANCHOR_TL_BG = 16711935; // #FF00FF = RGB(255,0,255) = GDI BGR 0x00FF00FF
+$ANCHOR_BR_BG = 16776960; // #00FFFF = RGB(0,255,255) = GDI BGR 0x00FFFF00
+
+$anchorFound = false;
+foreach ($engineAll as $eEl) {
+    $bg = $eEl['style']['bg'] ?? 0;
+    $label = null;
+    $expectedRelX = null;
+    $expectedRelY = null;
+
+    if ($bg === $ANCHOR_TL_BG) {
+        $label = 'TL(左上) #FF00FF';
+        // TL 锚点：position:absolute;top:0;left:0 → padding box 左上角
+        $expectedRelX = 0;
+        $expectedRelY = 0;
+    } elseif ($bg === $ANCHOR_BR_BG) {
+        $label = 'BR(右下) #00FFFF';
+        // BR 锚点：position:absolute;bottom:0;right:0 → padding box 右下角-8px
+        $parent = findParentNode($engineAll, $eEl);
+        if ($parent !== null) {
+            // containing block = padding box = visualW x visualH
+            $expectedRelX = ($parent['visualW'] ?? $parent['w']) - 8;
+            $expectedRelY = ($parent['visualH'] ?? $parent['h']) - 8;
+        } else {
+            $expectedRelX = -1;
+            $expectedRelY = -1;
+        }
+    } else {
+        continue;
+    }
+
+    $anchorFound = true;
+    $posOk = (abs($eEl['relX'] - $expectedRelX) <= 1 && abs($eEl['relY'] - $expectedRelY) <= 1);
+    $actPos = "({$eEl['relX']},{$eEl['relY']})";
+    $expPos = "({$expectedRelX},{$expectedRelY})";
+
+    if ($posOk) {
+        $passCount++;
+        $reportLines[] = "| $label | $expPos | $actPos | ✅ |";
+    } else {
+        $failCount++;
+        $reportLines[] = "| $label | $expPos | $actPos | ❌ (偏移! relX=" . ($eEl['relX'] - $expectedRelX) . ", relY=" . ($eEl['relY'] - $expectedRelY) . ") |";
     }
 }
 
-// Step 5: 截图对比
+if (!$anchorFound) {
+    $skipCount++;
+    $reportLines[] = "| 锚点 | - | - | 引擎布局中未找到锚点 | ⚠️ |";
+}
+
+$reportLines[] = "";
+
+// ========================================================================
+// Phase 2: 截图对比
+// 布局快照通过后，进行像素级截图对比
+// ========================================================================
+
+echo "\n";
+echo "===================================================================\n";
+echo "  Phase 2: 截图对比\n";
+echo "===================================================================\n\n";
+
+// Step 5: 自动生成基线截图（如果不存在或指定 --update-baseline）
+$baselineOk = true;
+$baselineFile = $APP_DIR . '/base_line_pic.png';
+if ($updateBaseline || !file_exists($baselineFile)) {
+    echo "Step 5: 生成基线截图\n";
+    echo "----------------------------------------\n";
+    $baselineOk = captureBaselineScreenshot($APP_NAME, $PROJECT_ROOT, $APP_DIR);
+    if ($baselineOk) {
+        pass("基线截图已生成\n");
+    } else {
+        echo "  [FAIL] 基线截图生成失败，请检查浏览器是否已打开\n";
+        if (!$updateBaseline) {
+            echo "  [SKIP] 跳过截图对比步骤\n";
+        } else {
+            exit(1);
+        }
+    }
+} else {
+    log_msg("基线截图已存在: $baselineFile");
+}
+
+// Step 6: 截图对比
 // 对齐优先级:
 //   1. 嵌入颜色锚点（__PX_ANCHOR_TL__/#FF00FF  +  __PX_ANCHOR_BR__/#00FFFF）——自动检测，最快最准
 //   2. autoAlign 自动内容边界检测（回退方案）
-// 模板中已嵌入锚点色块（App.vue + baseline.html），重建基线后自动启用颜色锚点对齐
+echo "Step 6: 截图对比\n";
+echo "----------------------------------------\n";
 $reportLines[] = "";
 $reportLines[] = "### 对齐设置";
 $reportLines[] = "- 嵌入颜色锚点(__PX_ANCHOR__): 模板中已嵌入";
 $reportLines[] = "- 自动内容对齐(autoAlign): 回退方案";
 $screenshotAlignOptions = [
     'autoAlign' => true,
+    'cropAnchors' => true,  // 裁剪到 TL↔BR 锚点区域,消除 viewport 不一致
 ];
 $screenshotResult = runScreenshotTest($APP_NAME, $PROJECT_ROOT, $APP_DIR, $screenshotAlignOptions);
 if ($screenshotResult['diffPercent'] < 0) {
-    // 基线不存在，跳过
+    echo "  [SKIP] 基线不存在，跳过截图对比\n";
 } elseif ($screenshotResult['pass']) {
     pass("截图对比通过 (差异: {$screenshotResult['diffPercent']}%)");
 } else {

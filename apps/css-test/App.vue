@@ -1,5 +1,5 @@
 <template>
-  <div style="width:1280px;height:3000px;background:#0d1117;overflow-y:auto">
+  <div style="width:1280px;height:3000px;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column;align-items:center">
     <level0-container />
     <div style="border-top:1px solid #30363d;margin:0 32px"></div>
     <level1-typography />

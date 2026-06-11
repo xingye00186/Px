@@ -34,6 +34,7 @@ set "EXE_PATH=apps\css-test\bin\css-test.exe"
 if exist "%EXE_PATH%" (
     echo   运行: %EXE_PATH% --dump-layout
     echo.
+    set "PX_RENDERER=skia-cpu"
     "%EXE_PATH%" --dump-layout
     if %errorlevel% neq 0 (
         echo [WARN] exe 返回非零退出码: %errorlevel%
