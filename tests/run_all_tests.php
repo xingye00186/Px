@@ -22,11 +22,16 @@ if (file_exists($envCheckScript)) {
 
 $testDir = __DIR__ . '/unit';
 $testFiles = glob($testDir . '/*Test.php');
+
+// 同时扫描 tests/ 根目录的独立测试脚本
+$rootTestFiles = glob(__DIR__ . '/*-test.php');
+$testFiles = array_merge($testFiles, $rootTestFiles);
+
 $phpBin = PHP_BINARY; // 使用当前 PHP 二进制
 
 // 排除非测试文件
 $testFiles = array_filter($testFiles, function ($f) {
-    return preg_match('/Test\.php$/', $f);
+    return preg_match('/(Test|-test)\.php$/', $f);
 });
 
 sort($testFiles);
@@ -54,10 +59,17 @@ foreach ($testFiles as $file) {
     // 解析退出码（从输出中找 Results 行）
     $passed = 0;
     $failed = 0;
+    $total = 0;
+    // 匹配 "Results: X/Y passed"（如 CalculatorAppTest）
     if (preg_match('/Results:\s*(\d+)\/(\d+)\s+passed/', $output, $m)) {
         $passed = (int)$m[1];
         $total = (int)$m[2];
         $failed = $total - $passed;
+    // 匹配 "Results: X passed, Y failed"（如 sfc-compiler-test）
+    } elseif (preg_match('/Results:\s*(\d+)\s+passed,\s*(\d+)\s+failed/', $output, $m)) {
+        $passed = (int)$m[1];
+        $failed = (int)$m[2];
+        $total = $passed + $failed;
     } elseif (preg_match('/(全部通过|All tests passed)/', $output)) {
         // 某些测试没有 Results 行
         $passed = '?';
