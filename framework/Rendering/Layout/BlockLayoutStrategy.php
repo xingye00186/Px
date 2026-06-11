@@ -100,6 +100,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         }
 
 
+        // Resolve fontSize from relative unit (rem/em/vw/vh)
+        PercentResolver::resolveFontSizeUnit($style);
+        $node->style['fontSize'] = $style['fontSize'];
+
         // -- Nodes with text content: measure text width instead of filling parent --
         if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
             $fs = (int)($style['fontSize'] ?? 14);
@@ -198,6 +202,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                         $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
                     }
+
+                    // Resolve fontSize from relative unit for child
+                    PercentResolver::resolveFontSizeUnit($child->style);
+                    $childStyle['fontSize'] = $child->style['fontSize'];
 
                     // -- Children with text content: measure text width (only for content-sized children) --
                     if ($child->content !== null && is_string($child->content) && strlen($child->content) > 0) {

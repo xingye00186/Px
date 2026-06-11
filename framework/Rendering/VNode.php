@@ -228,7 +228,15 @@ class VNode
         if ($children === null) return [];
         if ($children instanceof VNode) return [$children];
         if (is_array($children)) {
-            return array_values(array_filter($children, fn($c) => $c instanceof VNode));
+            $result = [];
+            foreach ($children as $c) {
+                if ($c instanceof VNode) {
+                    $result[] = $c;
+                } elseif (is_string($c) && $c !== '') {
+                    $result[] = new VNode('#text', null, $c);
+                }
+            }
+            return $result;
         }
         return [];
     }

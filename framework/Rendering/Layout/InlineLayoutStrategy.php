@@ -79,6 +79,10 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
             );
         }
 
+        // Resolve fontSize from relative unit (rem/em/vw/vh)
+        PercentResolver::resolveFontSizeUnit($style, $rootFontSize, $viewportW, $viewportH);
+        $node->style['fontSize'] = $style['fontSize'];
+
         $hasExplicitWidth = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         $node->w = (int)max(0, PercentResolver::resolveMinMax($style, $width, true));
         $node->h = (int)max(0, PercentResolver::resolveMinMax($style, $height, false));

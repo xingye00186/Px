@@ -1192,6 +1192,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             } elseif ($basis === 'content') {
                 $chText = $ch->content ?? '';
                 if (is_string($chText) && strlen($chText) > 0) {
+                    PercentResolver::resolveFontSizeUnit($ch->style);
                     $fs = (int)($ch->style['fontSize'] ?? 14);
                     $bd = ($ch->style['fontWeight'] ?? 'normal') === 'bold' || ($ch->style['fontWeight'] ?? 'normal') === '700';
                     $measured = PercentResolver::resolveTextWidth($chText, $fs, $bd);
@@ -1229,6 +1230,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $chText = $ch->content ?? '';
 
                 if ((is_string($chText) && strlen($chText) > 0)) {
+                    PercentResolver::resolveFontSizeUnit($ch->style);
                     $fs = (int)($ch->style['fontSize'] ?? 14);
 
                     $bd = ($ch->style['fontWeight'] ?? 'normal') === 'bold' || ($ch->style['fontWeight'] ?? 'normal') === '700';

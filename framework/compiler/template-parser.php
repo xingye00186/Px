@@ -757,6 +757,13 @@ class TemplateParser
         $this->advance();
 
         $props = $this->convertElementAttrs($attrs, $tok->line, $tag);
+
+        // HTML void elements: no children, no closing tag
+        static $voidTags = ['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'];
+        if (in_array($tag, $voidTags, true)) {
+            return VNode::h($tag, $props);
+        }
+
         $children = $this->parseChildrenUntil($tag);
 
         if (count($children) === 1 && $children[0]->isText()) {

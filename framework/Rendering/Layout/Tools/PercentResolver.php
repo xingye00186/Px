@@ -105,6 +105,35 @@ class PercentResolver
     }
 
     /**
+     * Resolve fontSizeUnit (rem/em/vw/vh) to actual pixel fontSize.
+     * Must be called before fontSize is used in layout calculations.
+     *
+     * @param array &$style The node's style array (modified in-place)
+     * @param int $rootFontSize Root element font-size for rem resolution (default 16)
+     * @param int $viewportW Viewport width for vw resolution
+     * @param int $viewportH Viewport height for vh resolution
+     */
+    public static function resolveFontSizeUnit(array &$style, int $rootFontSize = 16, int $viewportW = 1920, int $viewportH = 1080): void
+    {
+        if (!isset($style['fontSizeUnit'])) return;
+        $parts = explode('|', $style['fontSizeUnit']);
+        $val = (float)$parts[0];
+        $unit = $parts[1] ?? 'px';
+        $parentFontSize = (int)($style['fontSize'] ?? 14);
+        $resolved = (int)match ($unit) {
+            'rem' => round($val * $rootFontSize),
+            'em' => round($val * $parentFontSize),
+            'vw' => round($val * $viewportW / 100.0),
+            'vh' => round($val * $viewportH / 100.0),
+            'vmin' => round($val * min($viewportW, $viewportH) / 100.0),
+            'vmax' => round($val * max($viewportW, $viewportH) / 100.0),
+            default => round($val),
+        };
+        $style['fontSize'] = $resolved;
+        unset($style['fontSizeUnit']);
+    }
+
+    /**
      * Measure text width for a given string using current font settings.
      *
      * Uses native C++ sk_measure_text_width when available, falls back to

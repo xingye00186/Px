@@ -51,9 +51,47 @@ class CssValueParser
     // Property parsers
     // ============================================================
 
+    private const NAMED_COLORS = [
+        // CSS Color Module Level 4 §7 — Named Colors
+        'white'      => 0xFFFFFF,
+        'black'      => 0x000000,
+        'red'        => 0x0000FF,
+        'green'      => 0x008000,
+        'blue'       => 0xFF0000,
+        'yellow'     => 0x00FFFF,
+        'cyan'       => 0xFFFF00,
+        'magenta'    => 0xFF00FF,
+        'gray'       => 0x808080,
+        'grey'       => 0x808080,
+        'orange'     => 0x00A5FF,
+        'purple'     => 0x800080,
+        'pink'       => 0xC0C0FF,
+        'brown'      => 0x2A2AA5,
+        'navy'       => 0x800000,
+        'teal'       => 0x808000,
+        'silver'     => 0xC0C0C0,
+        'gold'       => 0x00D7FF,
+        'aqua'       => 0xFFFF00,
+        'lime'       => 0x00FF00,
+        'maroon'     => 0x000080,
+        'olive'      => 0x008080,
+        'indigo'     => 0x82004B,
+        'violet'     => 0xEE82EE,
+        'coral'      => 0x507FFF,
+        'salmon'     => 0x7280FA,
+        'tomato'     => 0x4763FF,
+        'skyblue'    => 0xEBCE87,
+        'transparent'=> 0x00000000,
+    ];
+
     public static function parseHexColor(string $value): int
     {
         $value = trim($value);
+        // CSS named colors
+        $lower = strtolower($value);
+        if (isset(self::NAMED_COLORS[$lower])) {
+            return self::NAMED_COLORS[$lower];
+        }
         if (str_starts_with($value, 'linear-gradient')) {
             if (preg_match('/#[0-9a-fA-F]{3,8}|rgba?\s*\([^)]+\)/', $value, $m)) {
                 return self::parseHexColor($m[0]);
