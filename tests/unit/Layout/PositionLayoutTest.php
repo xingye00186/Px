@@ -138,9 +138,63 @@ test('absolute with right/bottom 定位', function () {
 });
 
 // ============================================================
-// Group 5: z-index 层级
+// Group 5: absolute bottom:0 right:0 (BR锚点) 与 padding 容器
 // ============================================================
-echo "\n--- Group 5: z-index ---\n";
+echo "\n--- Group 5: absolute bottom:0 right:0 + padding ---\n";
+
+test('absolute bottom:0 right:0 定位到容器右下角(无padding)', function () {
+    $abs = makeNode('div', [
+        'position' => 'absolute', 'bottom' => 0, 'right' => 0,
+        'width' => 30, 'height' => 20,
+    ], [], 'abs');
+    $container = makeNode('div', [
+        'position' => 'relative',
+        'width' => 200, 'height' => 150,
+    ], [$abs]);
+    $root = makeNode('div', ['width' => 400, 'height' => 300], [$container]);
+
+    runResolver($root);
+
+    // padding box = content box (无padding), right=0 → x = 200-30-0 = 170
+    // bottom=0 → y = 150-20-0 = 130
+    assert_eq($abs->x, 170, 'abs x=200-30-0=170 (right=0 in 200px container)');
+    assert_eq($abs->y, 130, 'abs y=150-20-0=130 (bottom=0 in 150px container)');
+});
+
+test('absolute bottom:0 right:0 在 padding 容器中正确', function () {
+    $abs = makeNode('div', [
+        'position' => 'absolute', 'bottom' => 0, 'right' => 0,
+        'width' => 8, 'height' => 8,
+    ], [], 'abs');
+    $container = makeNode('div', [
+        'position' => 'relative',
+        'width' => 480, 'height' => 456,
+        'paddingTop' => 28, 'paddingLeft' => 28,
+        'paddingRight' => 28, 'paddingBottom' => 28,
+    ], [$abs]);
+    $root = makeNode('div', ['width' => 1280, 'height' => 660], [$container]);
+
+    runResolver($root);
+
+    // positioning ancestor的padding box:
+    //   ancestorX = container.x + paddingLeft(28) = 0 + 28 = 28
+    //   ancestorY = container.y + paddingTop(28) = 0 + 28 = 28
+    //   ancestorW = container.w(480) + paddingLeft(28) + paddingRight(28) = 536
+    //   ancestorH = container.h(456)
+    // right=0: rightEdge = ancestryX + ancestorW - paddingLeft - right
+    //          = 28 + 536 - 28 - 0 = 536
+    //          x = rightEdge - width = 536 - 8 = 528
+    // bottom=0: bottomEdge = ancestorY + ancestorH + paddingBottom - bottom
+    //          = 28 + 456 + 28 - 0 = 512
+    //          y = bottomEdge - height = 512 - 8 = 504
+    assert_eq($abs->x, 528, 'abs x=528 (padding box right edge - 8)');
+    assert_eq($abs->y, 504, 'abs y=504 (padding box bottom edge - 8)');
+});
+
+// ============================================================
+// Group 6: z-index 层级
+// ============================================================
+echo "\n--- Group 6: z-index ---\n";
 
 test('z-index 影响 layer 值', function () {
     $c1 = makeNode('div', ['width' => 100, 'height' => 50, 'zIndex' => 5], [], 'c1');
