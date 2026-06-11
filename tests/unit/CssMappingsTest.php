@@ -26,7 +26,8 @@ test('border-bottom:1px solid #E3E5E7 产出 borderBottomWidth=1 和 borderBotto
     $result = CssMappings::parseInlineStyle('border-bottom:1px solid #E3E5E7');
     assert_true(isset($result['borderBottom']), 'borderBottom key exists');
     assert_contains($result['borderBottom'], '1|', 'borderBottom contains width=1 and color');
-    assert_eq($result['borderWidth'] ?? 0, 1, 'borderWidth = 1');
+    // CSS 2.2 §8.6: 方向性 border 简写只设置该边属性，不设置通用 borderWidth
+    assert_eq(($result['borderWidth'] ?? 0), 0, 'borderWidth 不应被方向性简写设置');
     // #E3E5E7 in BGR = (0xE7 << 16) | (0xE5 << 8) | 0xE3 = 15197667
     assert_eq($result['borderColor'] ?? 0, 0xE7E5E3, 'borderColor = 0xE3E5E7 in BGR');
 });
@@ -35,7 +36,8 @@ test('border-top:1px solid #F1F2F3 产出 borderTopWidth=1', function () {
     $result = CssMappings::parseInlineStyle('border-top:1px solid #F1F2F3');
     assert_true(isset($result['borderTop']), 'borderTop key exists');
     assert_contains($result['borderTop'], '1|', 'borderTop contains width=1');
-    assert_eq($result['borderWidth'] ?? 0, 1, 'borderWidth = 1');
+    // CSS 2.2 §8.6: 方向性 border 简写只设置该边属性，不设置通用 borderWidth
+    assert_eq(($result['borderWidth'] ?? 0), 0, 'borderWidth 不应被方向性简写设置');
 });
 
 test('border-left:1px solid #E3E5E7 产出 borderLeftWidth=1', function () {

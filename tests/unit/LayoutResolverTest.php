@@ -863,6 +863,141 @@ test('position:absolute with bottom 锚定底边缘', function () {
     // abs.bottom=15, height=40, rel.h=150 → abs.y = rel.y + 150 - 40 - 15 = 0 + 95
     assert_eq($abs->y, 95, 'bottom:15 height:40 → y=150-40-15=95');
 });
+test('auto-height relative 容器 + absolute bottom:0 子节点 (two-pass)', function () {
+    $normal = makeNode('div', ['height' => 80], [], 'normal');
+    $abs = makeNode('div', [
+        'position' => 'absolute', 'bottom' => 0, 'height' => 20,
+    ], [], 'abs');
+    $container = makeNode('div', [
+        'position' => 'relative',
+        'width' => 200,
+        // 无显式height → auto-height
+    ], [$normal, $abs]);
+    $root = makeNode('#root', ['width' => 400], [$container]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // 第一遍: normal flow children 确定 container height (auto = 80)
+    // 第二遍(absolute child): bottom=0, ancestorH=80, height=20
+    //   bottomEdge = ancestorY + ancestorH + ancestorPaddingBottom - bottom
+    //              = 0 + 80 + 0 - 0 = 80
+    //   abs.y = 80 - 20 = 60
+    assert_eq($container->h, 80, 'auto-height container h=80 (from normal child)');
+    assert_eq($abs->y, 60, 'abs y=60 (bottom=0 in 80px container, height=20)');
+});
+
+test('auto-height + padding + absolute right:0 bottom:0 (two-pass)', function () {
+    $normal = makeNode('div', ['height' => 60], [], 'normal');
+    $abs = makeNode('div', [
+        'position' => 'absolute', 'bottom' => 0, 'right' => 0,
+        'width' => 8, 'height' => 8,
+    ], [], 'abs');
+    $container = makeNode('div', [
+        'position' => 'relative',
+        'width' => 300,
+        'paddingTop' => 10,
+        'paddingBottom' => 10,
+    ], [$normal, $abs]);
+    $root = makeNode('#root', ['width' => 500], [$container]);
+
+    $resolver = new LayoutResolver();
+    $resolver->resolve($root);
+
+    // CSS 2.2 §10.6.3: auto-height = last child bottom - (container.y + paddingTop)
+    // child.y = container.y + paddingTop = 0 + 10 = 10
+    // auto-height = (10 + 60) - (0 + 10) = 60 (content box高度)
+    assert_eq($container->h, 60, 'auto-height container h=60');
+    // paddingBox 底边 = 0 + 60 + 10(PT) + 10(PB) = 80
+    //   abs.y = 80 - 8 = 72
+    assert_eq($abs->y, 72, 'abs y=72 (bottom=0, padding box bottom edge 80 - 8)');
+});
+
+// 多帧稳定性测试：Frame 依赖型 bug 检测
+// Frame 1 resolve 正确后，Frame 2 resolve 不应因 absolute 子节点已有坐标而改变 auto-height
+test('auto-height + absolute bottom:0 多帧稳定性（Frame 2 不应膨胀）', function () {
+    $normal = makeNode('div', ['height' => 80], [], 'normal');
+    $abs = makeNode('div', [
+        'position' => 'absolute', 'bottom' => 0, 'height' => 20,
+    ], [], 'abs');
+    $container = makeNode('div', [
+        'position' => 'relative',
+        'width' => 200,
+        'paddingTop' => 10,
+        'paddingBottom' => 10,
+    ], [$normal, $abs]);
+    $root = makeNode('#root', ['width' => 500], [$container]);
+
+    $resolver = new LayoutResolver();
+
+    // Frame 1 resolve
+    $resolver->resolve($root);
+    $h1 = $container->h;
+    $y1 = $abs->y;
+
+    // Frame 2 resolve：模拟 run() 模式下第二帧，此时 abs 已有 Frame 1 的坐标
+    $resolver->resolve($root);
+
+    // CSS §10.6.3: auto-height 只算 normal flow 子节点，不受 absolute 子节点坐标影响
+    // 因此 Frame 2 的 auto-height 应与 Frame 1 完全一致
+    assert_eq($container->h, $h1, 'Frame 2 auto-height 应与 Frame 1 一致（绝对定位子节点不应参与 auto-height）');
+    assert_eq($abs->y, $y1, 'Frame 2 absolute child y 应与 Frame 1 一致');
+
+    // 额外验证容器高度符合预期：content h=80(子元素) + padding(10+10)=100 → visualH=100
+    assert_eq($container->visualH, 100, 'container visualH = 80 content + 20 padding');
+});
+
+test('auto-height + absolute bottom:0 多帧稳定性（含 padding, 模拟实际锚点场景）', function () {
+    // 模拟实际卡片场景：容器有 padding，absolute 锚点在四角
+    // 核心检测：auto-height 在 Frame 1→Frame 2→Frame 3 间不会膨胀
+    $normal = makeNode('div', ['height' => 428], [], 'content');
+    $tl = makeNode('div', [
+        'position' => 'absolute', 'top' => 0, 'left' => 0,
+        'width' => 8, 'height' => 8,
+    ], [], '__PX_ANCHOR_TL__');
+    $br = makeNode('div', [
+        'position' => 'absolute', 'bottom' => 0, 'right' => 0,
+        'width' => 8, 'height' => 8,
+    ], [], '__PX_ANCHOR_BR__');
+    $container = makeNode('div', [
+        'position' => 'relative',
+        'width' => 480,
+        'paddingTop' => 28,
+        'paddingBottom' => 28,
+        'paddingLeft' => 28,
+        'paddingRight' => 28,
+        'borderRadius' => 40,
+    ], [$normal, $tl, $br]);
+    $root = makeNode('#root', ['width' => 1800, 'height' => 1200], [$container]);
+
+    $resolver = new LayoutResolver();
+
+    // Frame 1
+    $resolver->resolve($root);
+    $h1 = $container->h;
+    $vh1 = $container->visualH;
+
+    // Frame 2（关键：此时 absolute 子节点已有 Frame 1 的坐标）
+    $resolver->resolve($root);
+    $h2 = $container->h;
+    $vh2 = $container->visualH;
+
+    // Frame 3（验证完全收敛）
+    $resolver->resolve($root);
+    $h3 = $container->h;
+    $vh3 = $container->visualH;
+
+    // 核心断言：auto-height 在帧间不应膨胀
+    assert_eq($h2, $h1, 'Frame 2 auto-height 与 Frame 1 一致（不应因 absolute 子节点坐标而膨胀）');
+    assert_eq($h3, $h1, 'Frame 3 auto-height 与 Frame 1 一致（完全收敛）');
+
+    // visualH 也应稳定
+    assert_eq($vh2, $vh1, 'Frame 2 visualH 与 Frame 1 一致');
+    assert_eq($vh3, $vh1, 'Frame 3 visualH 与 Frame 1 一致');
+
+    // 验证绝对值：content h=428 + padding(28+28)=484
+    assert_eq($vh1, 484, 'container visualH = 428 + 28 + 28 = 484');
+});
 
 
 echo "\n--- 18. Scroll Container ---\n";
@@ -1233,7 +1368,7 @@ describe('Text node auto-height', function () {
         $resolver = new LayoutResolver();
         $resolver->resolve($root);
         assert_true($child->h > 0, 'div text node should have height');
-        assert_eq($child->h, (int)(16 * 1.35), 'div text height = line-height');
+        assert_eq($child->h, (int)(16 * 1.2), 'div text height = line-height');
     });
 
     test('flex column 中文本 div 子节点撑开父容器高度', function () {
@@ -1246,7 +1381,7 @@ describe('Text node auto-height', function () {
         $resolver = new LayoutResolver();
         $resolver->resolve($root);
         assert_true($child->h > 0, 'text div in flex column should have height');
-        assert_eq($child->h, (int)(16 * 1.35), 'text height = line-height');
+        assert_eq($child->h, (int)(16 * 1.2), 'text height = line-height');
     });
 
     test('flex-wrap 中文本内容子节点宽度测量正确', function () {
@@ -1269,8 +1404,8 @@ describe('Text node auto-height', function () {
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
         $resolver = new LayoutResolver();
         $resolver->resolve($root);
-        assert_eq($textChild->h, (int)(14 * 1.35), 'text type still gets height');
-        assert_eq($spanChild->h, (int)(14 * 1.35), 'span type still gets height');
+        assert_eq($textChild->h, (int)(14 * 1.2), 'text type still gets height');
+        assert_eq($spanChild->h, (int)(14 * 1.2), 'span type still gets height');
     });
 
     test('含显式 height 的节点不受影响', function () {
@@ -1369,7 +1504,7 @@ describe('line-height', function () {
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
         $resolver = new LayoutResolver();
         $resolver->resolve($root);
-        assert_eq($child->h, (int)(16 * 1.35), 'default line-height = fontSize * 1.35');
+        assert_eq($child->h, (int)(16 * 1.2), 'default line-height = fontSize * 1.2');
     });
 
     test('line-height 数值倍数正确解析', function () {
