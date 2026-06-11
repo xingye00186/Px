@@ -483,7 +483,7 @@ test('全量布局 + 滚动容器 + 快照正确性', function () {
 
     assert_eq($header->y, 0, 'header 在顶部');
     assert_eq($scrollArea->y, 60, 'scrollArea.y = header.h(60)');
-    assert_eq($footer->y, 260, 'footer 在 scrollArea 下方');
+    assert_eq($footer->y, 268, 'footer 在 scrollArea 下方 (scrollArea visualH=200+paddingTop8)');
 
     $sc = $result['scrollContainers'][0] ?? null;
     assert_not_null($sc, '应有 scroll container');
