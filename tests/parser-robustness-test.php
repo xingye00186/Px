@@ -9,10 +9,14 @@
  * Usage: php tests/parser-robustness-test.php
  */
 
-require_once __DIR__ . '/../framework/VNode.php';
-require_once __DIR__ . '/../framework/compiler/css-mappings.php';
+require_once __DIR__ . '/../framework/Rendering/VNode.php';
+require_once __DIR__ . '/../framework/Rendering/CssMappings.php';
+require_once __DIR__ . '/../framework/Rendering/CssValueParser.php';
 require_once __DIR__ . '/../framework/compiler/template-parser.php';
 require_once __DIR__ . '/../framework/compiler/component-registry.php';
+
+// Namespaced classes
+use Px\Rendering\CssMappings;
 
 $passed = 0;
 $failed = 0;
@@ -144,10 +148,7 @@ test('<input type="text" /> self-closing with space', function () {
 test('component tag <about-dialog /> self-closing with attributes', function () {
     $tpl = '<div><about-dialog style="left:0px;top:0px" overlay v-if="showDialog" /></div>';
     $registry = new ComponentRegistry();
-    $registry->load(
-        ['about-dialog' => './components/AboutDialog.vue'],
-        __DIR__ . '/../apps/calculator'
-    );
+    $registry->register('about-dialog', __DIR__ . '/../apps/calculator/components/AboutDialog.vue', 'user');
     $parser = new TemplateParser($registry);
     $root = $parser->parse($tpl);
     $errors = $parser->getErrors();
@@ -222,10 +223,7 @@ echo "\n--- 5. v-if 语义 ---\n";
 test('v-if on component tag propagates to inlined wrapper', function () {
     $tpl = '<div id="app"><about-dialog style="left:0px;top:0px" v-if="showDialog" /></div>';
     $registry = new ComponentRegistry();
-    $registry->load(
-        ['about-dialog' => './components/AboutDialog.vue'],
-        __DIR__ . '/../apps/calculator'
-    );
+    $registry->register('about-dialog', __DIR__ . '/../apps/calculator/components/AboutDialog.vue', 'user');
     $parser = new TemplateParser($registry);
     $root = $parser->parse($tpl);
     $errors = $parser->getErrors();

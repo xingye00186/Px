@@ -11,12 +11,16 @@
  *   4. Code generation: SFC compiler output
  */
 
-require_once __DIR__ . '/../framework/VNode.php';
-require_once __DIR__ . '/../framework/compiler/css-mappings.php';
+require_once __DIR__ . '/../framework/Rendering/VNode.php';
+require_once __DIR__ . '/../framework/Rendering/CssMappings.php';
 require_once __DIR__ . '/../framework/compiler/template-parser.php';
 require_once __DIR__ . '/../framework/compiler/aot-validator.php';
 require_once __DIR__ . '/../framework/compiler/component-registry.php';
-require_once __DIR__ . '/../framework/sfc-compiler.php';
+require_once __DIR__ . '/../framework/compiler/sfc-compiler.php';
+
+// Namespaced classes
+use Px\Rendering\CssMappings;
+use Px\Compiler\AotValidator;
 
 $passed = 0;
 $failed = 0;
@@ -156,7 +160,7 @@ test('Parser: parses flex container with CSS style', function () {
     assert($root->childCount() === 1, "Expected 1 child");
     
     $flex = $root->children[0];
-    $style = $flex->getInlineStyle();
+        $style = CssMappings::parseInlineStyle($flex->getProp('style'));
     assert($style['display'] === 'flex', "display should be flex");
     assert($style['flex-direction'] === 'column', "flex-direction should be column");
 });
@@ -300,7 +304,7 @@ echo "\n--- 4. Component Registry ---\n";
 test('ComponentRegistry: resolves registered tag to file path', function () {
     $registry = new ComponentRegistry();
     $dir = __DIR__ . '/../apps/calculator';
-    $registry->load(['test-comp' => './components/DisplayPanel.vue'], $dir);
+        $registry->register('test-comp', $dir . '/components/DisplayPanel.vue', 'user');
     
     $resolved = $registry->resolve('test-comp');
     $expected = realpath($dir . '/components/DisplayPanel.vue');
