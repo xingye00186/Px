@@ -104,7 +104,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
             if (!$hasExplicitW && $width === 0 && $ctx->parent !== null) {
-                $width = (int)($ctx->parent->w);
+                $width = (int)PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w);
 
                 $node->w = (int)max(0, (int)$width);
             }
@@ -273,8 +273,28 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
             $currentLineMain = 0;
 
+            // Build flex item data lookup for wrap calculation
+            $wrapFlexData = [];
             foreach ($children as $idx => $ch) {
-                $chMain = $isRow ? $ch->visualW : $ch->visualH;
+                $wrapGrow = 0.0;
+                $flexRaw = $ch->style['flex'] ?? '';
+                if ($flexRaw !== '') {
+                    $fv = CssMappings::parseFlexValue($flexRaw);
+                    $wrapGrow = $fv['grow'];
+                } else {
+                    $wrapGrow = (float)($ch->style['flexGrow'] ?? 0);
+                }
+                $wrapFlexData[$idx] = $wrapGrow;
+            }
+
+            foreach ($children as $idx => $ch) {
+                // Flex-grow items: use 0 as base size for wrap (they'll be sized by flex-grow)
+                $wrapGrow = $wrapFlexData[$idx] ?? 0;
+                if ($wrapGrow > 0) {
+                    $chMain = 0;
+                } else {
+                    $chMain = $isRow ? $ch->visualW : $ch->visualH;
+                }
 
                 // Include margins in size calculation
 
@@ -393,7 +413,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     if ($data['isFlexGrow']) {
                         $fixedTotalMain += $isRow ? $mL + $mR : $mT + $mB;
                     } else {
-                        $sz = $isRow ? $ch->visualW : $ch->visualH;
+                        $sz = $isRow ? $ch->w : $ch->h;
 
                         $fixedTotalMain += $sz + ($isRow ? $mL + $mR : $mT + $mB);
                     }
@@ -769,6 +789,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 } else {
                     $ch->y = $node->y + $paddingTop + (int)$currentMain + $childMarginTop;
                 }
+
 
                 // Cross axis alignment (use line cross offset instead of full containerCross)
                 $effectiveAlign = $childStyle['alignSelf'] ?? 'auto';

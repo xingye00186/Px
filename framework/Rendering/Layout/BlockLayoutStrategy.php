@@ -102,7 +102,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         // Resolve fontSize from relative unit (rem/em/vw/vh)
         PercentResolver::resolveFontSizeUnit($style);
-        $node->style['fontSize'] = $style['fontSize'];
+        $node->style['fontSize'] = $style['fontSize'] ?? 14;
 
         // -- Nodes with text content: measure text width instead of filling parent --
         if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
@@ -241,6 +241,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     if ($childDisplay === 'flex' || $childDisplay === 'grid') {
                         if (count($child->children) > 0) {
+                            error_log('[DIAG_BLOCK_AUTOSTACK] Re-resolving ' . $childDisplay . ' container w=' . $child->w . ' containerW=' . $containerW);
                             $child->layoutDirty = true;
 
                             foreach ($child->children as $gc) {
@@ -249,6 +250,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                             $childCtx = new LayoutContext($node->x + $paddingLeft, $stackY, $node);
                             $this->resolver->resolveNode($child, $childCtx);
+
+                            error_log('[DIAG_BLOCK_AUTOSTACK] After re-resolve: grid container w=' . $child->w);
+                            if (!empty($child->children)) {
+                                error_log('[DIAG_BLOCK_AUTOSTACK] First grid item w=' . $child->children[0]->w);
+                            }
                         }
                     }
 

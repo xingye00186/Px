@@ -400,7 +400,10 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             // 高度不应用 min/max——等调整后得到自然内容高度
 
             // 调整子节点（重解析 flex/grid 的百分比尺寸）
+            error_log('[DIAG_GRID] Pass1 BEFORE adjustGridItemChildren: gridItem w=' . $ch->w . ' type=' . $ch->type);
             $this->adjustGridItemChildren($ch, $ctx);
+
+            error_log('[DIAG_GRID] Pass1 AFTER adjustGridItemChildren: gridItem w=' . $ch->w . ' childrenCount=' . count($ch->children) . ' firstChildW=' . (!empty($ch->children) ? $ch->children[0]->w : -1));
 
             // 计算 grid item 的实际内容高度：从子节点的 bottom 边推算
             $actualContentH = $ch->h;
@@ -479,7 +482,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
             // 如果高度变化了（stretch），需要重新调整子节点
             if ($alignSelf === 'stretch') {
+                error_log('[DIAG_GRID] Pass2 BEFORE adjustGridItemChildren: gridItem w=' . $ch->w);
                 $this->adjustGridItemChildren($ch, $ctx);
+                error_log('[DIAG_GRID] Pass2 AFTER adjustGridItemChildren: gridItem w=' . $ch->w);
                 // 恢复 grid cell 决定的位置和宽度（adjustGridItemChildren 内部会 restore）
                 $ch->y = $newCellY;
                 $ch->h = $actualRowH;
@@ -520,7 +525,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
      */
     private function adjustGridItemChildren(RenderNode $gridItem, LayoutContext $ctx): void
     {
+        error_log('[DIAG_ADJUST] adjustGridItemChildren entered: gridItem w=' . $gridItem->w . ' children=' . count($gridItem->children) . ' display=' . ($gridItem->style['display'] ?? 'block'));
         if (empty($gridItem->children) || $gridItem->w <= 0) {
+            error_log('[DIAG_ADJUST] SKIP: w=' . $gridItem->w . ' children=' . count($gridItem->children));
             return;
         }
 
