@@ -41,10 +41,11 @@ class AbsolutePositioning implements AbsoluteStrategy
     ): void
     {
         // 提取原始定位值（保留 null 用于 right/bottom 的判断）
-        $leftRaw = $style['left'] ?? null;
-        $topRaw = $style['top'] ?? null;
-        $rightRaw = $style['right'] ?? null;
-        $bottomRaw = $style['bottom'] ?? null;
+        // CSS 规范初始值为 'auto'，表示未显式设置
+        $leftRaw = ($style['left'] ?? 'auto') !== 'auto' ? $style['left'] : null;
+        $topRaw = ($style['top'] ?? 'auto') !== 'auto' ? $style['top'] : null;
+        $rightRaw = ($style['right'] ?? 'auto') !== 'auto' ? $style['right'] : null;
+        $bottomRaw = ($style['bottom'] ?? 'auto') !== 'auto' ? $style['bottom'] : null;
 
         // 判断定位模式：fixed vs absolute
         $pos = $style['position'] ?? 'absolute';
@@ -76,14 +77,17 @@ class AbsolutePositioning implements AbsoluteStrategy
         $ancestorPaddingRight = ($ancestor !== null) ? (int)($ancestor->style['paddingRight'] ?? $ancestor->style['padding'] ?? 0) : 0;
         $ancestorPaddingBottom = ($ancestor !== null) ? (int)($ancestor->style['paddingBottom'] ?? $ancestor->style['padding'] ?? 0) : 0;
 
-        $ancestorX = ($ancestor !== null) ? $ancestor->x + $ancestorPaddingLeft : 0;
-        $ancestorY = ($ancestor !== null) ? $ancestor->y + $ancestorPaddingTop : 0;
-        // 使用定位祖先的 padding box 宽度（CSS Positioned Layout §3.1）
-        // 在新模型中 ancestor->w = CSS width, padding box = w + paddingLeft + paddingRight
+        // CSS Positioned Layout §3.1: containing block = padding box
+        // padding box 原点 = ancestor 坐标本身（不含 padding 偏移）
+        // padding box 尺寸 = ancestor->w/h + padding 总和
+        $ancestorX = ($ancestor !== null) ? $ancestor->x : 0;
+        $ancestorY = ($ancestor !== null) ? $ancestor->y : 0;
         $ancestorW = ($ancestor !== null)
             ? $ancestor->w + $ancestorPaddingLeft + $ancestorPaddingRight
             : $viewportW;
-        $ancestorH = ($ancestor !== null) ? $ancestor->h : $viewportH;
+        $ancestorH = ($ancestor !== null)
+            ? $ancestor->h + $ancestorPaddingTop + $ancestorPaddingBottom
+            : $viewportH;
 
         // CSS 2.2 §10.5: 包含块无显式高度时，top/bottom 百分比按 auto（0）处理
         // fixed 定位的包含块为 viewport，始终有显式高度
@@ -145,8 +149,9 @@ class AbsolutePositioning implements AbsoluteStrategy
         // right/bottom 替代：相对于 padding box 的右边/下边（CSS Positioned Layout §3.1）
         // position:fixed 时 ancestor=null（视口参考系），使用 $viewportW/$viewportH
         if ($right !== null && ($ancestor !== null || $isFixed)) {
-            // 元素右边缘 = padding box 右边界 - right - paddingRight
-            $rightEdge = $ancestorX + $ancestorW - $ancestorPaddingLeft - $ancestorPaddingRight - $right;
+            // 元素右边缘 = padding box 右边界 - right
+            // padding box 右边界 = ancestorX + ancestorW（含 padding）
+            $rightEdge = $ancestorX + $ancestorW - $right;
             if ($width > 0) {
                 $node->x = (int)($rightEdge - $width);
             } else {
@@ -156,8 +161,9 @@ class AbsolutePositioning implements AbsoluteStrategy
         }
 
         if ($bottom !== null && ($ancestor !== null || $isFixed)) {
-            // 元素下边缘 = padding box 下边界 - bottom - paddingBottom
-            $bottomEdge = $ancestorY + $ancestorH - $ancestorPaddingTop - $ancestorPaddingBottom - $bottom;
+            // 元素下边缘 = padding box 下边界 - bottom
+            // padding box 下边界 = ancestorY + ancestorH（含 padding）
+            $bottomEdge = $ancestorY + $ancestorH - $bottom;
             if ($height > 0) {
                 $node->y = (int)($bottomEdge - $height);
             } else {

@@ -375,15 +375,38 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $maxBottom = 0;
 
             foreach ($node->children as $child) {
+                // CSS 2.2 §10.6.3: absolute/fixed 子节点不参与 auto-height 计算
+                $childPosition = $child->style['position'] ?? 'static';
+                if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                    continue;
+                }
                 $childBottom = (int)($child->y + $child->visualH);
 
                 if ($childBottom > $maxBottom) $maxBottom = $childBottom;
             }
 
-            $computedH = max(0, $maxBottom - $node->y);
+            // CSS 2.2 §10.6.3: auto-height = distance from content edge top to last child bottom
+            // $node->y includes paddingTop offset — content area starts at $node->y + $paddingTop
+            $ahPaddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+            $computedH = max(0, $maxBottom - ($node->y + $ahPaddingTop));
 
             if ($computedH > $node->h) {
                 $node->h = (int)max(0, (int)PercentResolver::resolveMinMax($style, $computedH, false));
+            }
+        }
+
+        // ── Second pass: resolve absolute/fixed children now that container height is final ──
+        $absPadLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
+        $absPadTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+
+        foreach ($node->children as $child) {
+            $childPosition = $child->style['position'] ?? 'static';
+
+            if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                $child->layoutDirty = true;
+
+                $childCtx = new LayoutContext($node->x + $absPadLeft, $node->y + $absPadTop, $node);
+                $this->resolver->resolveNode($child, $childCtx);
             }
         }
         error_log('[DIAG_BLOCK] exit resolveBlockLayout type=' . $node->type);
@@ -443,13 +466,19 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         $node->y += $translateY;
 
-        // Resolve children recursively
+        // Resolve children recursively (skip absolute/fixed — resolved in second pass after container height is known)
 
         $childOffsetX = $node->x + $paddingLeft;
 
         $childOffsetY = $node->y + $paddingTop;
 
         foreach ($node->children as $child) {
+            $childPosition = $child->style['position'] ?? 'static';
+
+            if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                continue;
+            }
+
             $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node);
             $this->resolver->resolveNode($child, $childCtx);
         }

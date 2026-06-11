@@ -76,11 +76,12 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $node->y += $translateY;
 
         // CSS: flex item percentage width resolves against content width
+        // When parent is null (top-level element under #root), use window viewport as containing block
         $parentW = (int)(($ctx->parent !== null)
             ? PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w)
-            : 0);
+            : (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0));
 
-        $parentH = ($ctx->parent !== null) ? $ctx->parent->h : 0;
+        $parentH = ($ctx->parent !== null) ? $ctx->parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
 
         $width = PercentResolver::resolvePercent($style, 'width', 'widthPercent', $parentW);
 
