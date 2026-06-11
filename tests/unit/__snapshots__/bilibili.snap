@@ -112,7 +112,7 @@ div (0,0 1440x900) [dsp=flex]
         span (1654,103 26x15) text="课堂"
         span (1692,103 52x15) text="新歌热榜"
     div (24,129 40x2)
-  div (0,132 1440x768) scroll ch=16 cw=1440 maxScroll=0 st=0 sl=0 [dsp=flex] fg=1
+  div (0,132 1440x770) scroll ch=16 cw=1440 maxScroll=0 st=0 sl=0 [dsp=flex] fg=1
     div (24,148 1440x0) [dsp=flex]
       div (24,148 1440x180) [dsp=flex] ov=hidden
         div (24,148 864x180) [dsp=flex] fg=3
