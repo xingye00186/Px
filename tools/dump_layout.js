@@ -1,14 +1,22 @@
 /**
- * dump_layout.js — 浏览器布局提取函数
+ * dump_layout.js — 浏览器布局提取脚本
  *
- * 遍历页面 DOM 树，提取每个元素的:
- *   - getBoundingClientRect() 坐标/尺寸
- *   - getComputedStyle() 关键 CSS 属性
- *   - 文本内容
+ * 遍历页面 DOM 树，提取每个可见元素的坐标/尺寸、计算样式和文本内容。
+ * 将结果序列化为 JSON 写入隐藏的 <textarea>，供 PHP 端 auto_test.php 与引擎布局对比。
  *
- * 输出 JSON 可通过 Px 框架的 auto_test.php 与 engine_layout.json 对比。
+ * 工作流程:
+ *   1. 由 generate_project_ref.php / generate_browser_refs.php 注入到包装 HTML 中
+ *   2. Edge headless --dump-dom 渲染页面，JS 自动执行
+ *   3. 提取的 JSON 写入 <textarea id="layout-output">
+ *   4. PHP 端从 DOM 中提取该 textarea 的内容
  *
- * 用法: 由 generate_browser_refs.php 注入包装 HTML 后通过 Edge headless --dump-dom 提取
+ * 提取的属性包含: 坐标(x/y/w/h)、文本内容、以及 30+ 个关键 CSS 计算样式
+ *   (font-size, color, background-color, display, padding, margin, border 等)
+ *
+ * 输出格式: { browser, viewport, elements: [{ tag, x, y, w, h, text, styles, depth }] }
+ *
+ * 用法: 由 generate_browser_refs.php / generate_project_ref.php 间接调用
+ *   不直接运行，作为 JS 片段注入 HTML 通过 Edge headless --dump-dom 执行
  */
 (function() {
     'use strict';

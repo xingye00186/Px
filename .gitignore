@@ -23,6 +23,9 @@ tests/screenshot/output/*.png
 tests/anomaly/
 tests/screenshot/output/
 
+# 测试产物目录
+apps/*/test_log/
+
 # CC 标准测试产物
 tests/css-standards/**/error.txt
 tests/css-standards/**/stderr.txt
