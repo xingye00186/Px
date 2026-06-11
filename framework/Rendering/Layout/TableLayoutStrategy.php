@@ -142,7 +142,11 @@ class TableLayoutStrategy implements LayoutStrategyInterface
                 $cellH = $cell->h;
                 if ($cellH > $rowH) $rowH = $cellH;
             }
-            if ($rowH <= 0) $rowH = $style['lineHeight'] ?? 24;
+            if ($rowH <= 0) {
+                // CSS 2.2 §10.8.1: 行高默认 ≈ font-size × 1.2
+                $fs = (int)($style['fontSize'] ?? 14);
+                $rowH = (int)($fs * 1.2);
+            }
             $row->h = $rowH;
 
             // Position cells within the row with vertical-align:middle

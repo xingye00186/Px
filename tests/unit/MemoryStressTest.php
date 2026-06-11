@@ -16,7 +16,7 @@
  *   6. ReactiveComponent  — 事件处理器泄漏
  *   7. ThemeProvider      — 全局注册表增长
  *
- * Usage: D:\swoole_compiler\php.exe tests/unit/MemoryStressTest.php
+ * Usage: php tests/unit/MemoryStressTest.php
  */
 
 require_once __DIR__ . '/bootstrap.php';

@@ -6,10 +6,19 @@
  * 每个测试文件作为独立子进程运行，避免 exit() 中断。
  *
  * Usage:
- *   D:\swoole_compiler\php.exe tests/run_all_tests.php
+ *   php tests/run_all_tests.php
  *
  * 退出码: 0 = 全部通过, 非0 = 存在失败
  */
+
+// 环境一致性检测
+$envCheckScript = __DIR__ . '/check_environment.php';
+if (file_exists($envCheckScript)) {
+    $envOutput = [];
+    $envExitCode = 0;
+    exec(PHP_BINARY . ' ' . escapeshellarg($envCheckScript) . ' 2>&1', $envOutput, $envExitCode);
+    echo implode("\n", $envOutput) . "\n\n";
+}
 
 $testDir = __DIR__ . '/unit';
 $testFiles = glob($testDir . '/*Test.php');

@@ -10,7 +10,7 @@
  *   规则 B：条件不变（AC/C 标签，Memory 指示器）
  *   规则 C：变化有约束（display ≤ 15 位，纯数字）
  *
- * Usage: D:\swoole_compiler\php.exe tests/unit/RenderingPipelineTest.php
+ * Usage: php tests/unit/RenderingPipelineTest.php
  */
 
 require_once __DIR__ . '/bootstrap.php';

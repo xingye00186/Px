@@ -69,7 +69,8 @@ class TextOverflowProcessor
             // ── 多行模式：逐字符拆分行 ──
             $lineHeight = (int)($style['lineHeight'] ?? 0);
             if ($lineHeight <= 0) {
-                $lineHeight = (int)($fontSize * 1.4);
+                // CSS 2.2 §10.8.1: normal ≈ 1.2 × font-size
+                $lineHeight = (int)($fontSize * 1.2);
             }
 
             $lines = [];

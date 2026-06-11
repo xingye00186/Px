@@ -60,13 +60,15 @@ class PercentResolver
      * CSS line-height can be:
      *   - unitless number (e.g., 1.5): multiplier × font-size
      *   - pixel value (e.g., 20px): fixed line height in pixels
-     *   - 'normal' or unset: fallback to font-size × 1.35
+     *   - 'normal' or unset: fallback to font-size × 1.2 (CSS 2.2 §10.8.1)
+     *   - 'value|unit' pattern (e.g., '2|rem'): resolved with context (root font-size)
      */
-    public static function resolveLineHeight(array $style, int $fontSize): int
+    public static function resolveLineHeight(array $style, int $fontSize, int $rootFontSize = 16): int
     {
         $lh = $style['lineHeight'] ?? 'normal';
         if ($lh === 'normal' || $lh === '') {
-            return (int)($fontSize * 1.35);
+            // CSS 2.2 §10.8.1: 'normal' 的 line-height 约为字体大小的 1.2 倍
+            return (int)($fontSize * 1.2);
         }
         // String ending in 'px' — extract pixel value
         if (is_string($lh) && str_ends_with($lh, 'px')) {
@@ -76,7 +78,30 @@ class PercentResolver
         if (is_numeric($lh)) {
             return (int)((float)$lh * $fontSize);
         }
-        return (int)($fontSize * 1.35);
+        // "value|unit" pattern (rem, vw, vh, vmin, vmax, ch, ex)
+        if (is_string($lh) && str_contains($lh, '|')) {
+            $parts = explode('|', $lh);
+            $val = (float)$parts[0];
+            $unit = $parts[1] ?? 'px';
+            // rem → relative to root font-size; viewport units → use WINDOW_* constants
+            return (int)match ($unit) {
+                'rem' => $val * $rootFontSize,
+                'vw'  => $val * (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1920) / 100.0,
+                'vh'  => $val * (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 1080) / 100.0,
+                'vmin' => $val * min(
+                    defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1920,
+                    defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 1080
+                ) / 100.0,
+                'vmax' => $val * max(
+                    defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1920,
+                    defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 1080
+                ) / 100.0,
+                'ch'  => $val * $fontSize * 0.6,  // approximate: 1ch ≈ 0.6em
+                'ex'  => $val * $fontSize * 0.5,  // approximate: 1ex ≈ 0.5em
+                default => $val * $fontSize,
+            };
+        }
+        return (int)($fontSize * 1.2);
     }
 
     /**

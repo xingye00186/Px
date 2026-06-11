@@ -8,7 +8,24 @@
  *   php tests/css-standards/run_all.php                     # 运行所有测试（对比基线）
  *   php tests/css-standards/run_all.php --update-snapshots  # 更新所有基线快照
  *   php tests/css-standards/run_all.php --analyze           # 运行测试并生成分析报告
+ *   php tests/css-standards/run_all.php --skip-env-check    # 跳过环境检测
  */
+
+// 环境一致性检测（--skip-env-check可跳过）
+$skipEnvCheck = in_array('--skip-env-check', $_SERVER['argv'] ?? []);
+if (!$skipEnvCheck) {
+    $envCheckScript = __DIR__ . '/../check_environment.php';
+    if (file_exists($envCheckScript)) {
+        $envOutput = [];
+        $envExitCode = 0;
+        exec(PHP_BINARY . ' ' . escapeshellarg($envCheckScript) . ' 2>&1', $envOutput, $envExitCode);
+        echo implode("\n", $envOutput) . "\n\n";
+        if ($envExitCode !== 0) {
+            echo "⚠️  环境检测发现差异，快照可能跨机不一致。\n";
+            echo "   加 --skip-env-check 跳过检测。\n\n";
+        }
+    }
+}
 
 $rootDir = __DIR__;
 $scripts = [
@@ -63,7 +80,7 @@ $totalPassed = 0;
 $totalFailed = 0;
 $suiteOutputs = []; // 收集每个 suite 的输出供分析器使用
 
-$phpBin = 'D:\swoole_compiler\php.exe';
+$phpBin = PHP_BINARY;
 
 echo "========================================\n";
 echo " CSS Standards Layout Test Suite\n";
@@ -90,8 +107,11 @@ foreach ($scripts as $dir => $file) {
     echo "----------------------------------------\n";
 
     // Execute the test script
+    $extDir = dirname(PHP_BINARY) . DIRECTORY_SEPARATOR . 'ext';
     $cmd = sprintf(
-        'F:\work\swoole_compiler_v1054\php.exe -d extension_dir=F:\work\swoole_compiler_v1054\ext "%s"%s 2>nul',
+        '%s -d extension_dir=%s "%s"%s 2>$null',
+        $phpBin,
+        $extDir,
         $path,
         $updateFlag
     );

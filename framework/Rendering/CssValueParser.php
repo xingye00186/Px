@@ -133,10 +133,12 @@ class CssValueParser
     public static function parseTextAlign(string $value): string
     {
         $v = trim(strtolower($value));
-        if (in_array($v, ['left', 'right', 'center'], true)) {
+        // CSS Text Module Level 3 §7.1: start | end | left | right | center | justify | match-parent | justify-all
+        // Initial value: start (depends on writing direction, LTR→left, RTL→right)
+        if (in_array($v, ['left', 'right', 'center', 'justify', 'start', 'end', 'match-parent', 'justify-all'], true)) {
             return $v;
         }
-        return 'left';
+        return 'start';
     }
 
     public static function parseBorder(string $value): string

@@ -12,7 +12,7 @@
  *   规则 C2：按钮标签检查（单独报告，已知 bug：span 子节点 bind 不传递到 button label）
  *   规则 D：clip 区域与 item 坐标溢出检查
  *
- * Usage: D:\swoole_compiler\php.exe tests/unit/ListTestPipelineTest.php
+ * Usage: php tests/unit/ListTestPipelineTest.php
  */
 
 require_once __DIR__ . '/bootstrap.php';

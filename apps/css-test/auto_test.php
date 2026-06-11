@@ -110,9 +110,10 @@ function gdiColorToHex(int $color): string {
 /**
  * 递归展开引擎布局树为扁平列表。
  * 额外计算每个元素相对于其所在层级容器（depth=1 且含 boxSizing 的节点）的偏移。
- * 返回: [ [type, x, y, relX, relY, w, h, content, style, depth], ... ]
+ * 返回: [ [type, x, y, relX, relY, w, h, content, style, depth, cid], ... ]
+ * cid: 容器 ID，0=root，1-7=Level0~Level6 各自的容器
  */
-function flattenEngineTree(?array $node, int $depth = 0, ?array $containerOffset = null): array {
+function flattenEngineTree(?array $node, int $depth = 0, ?array $containerOffset = null, int $cid = 0): array {
     if ($node === null) return [];
     $result = [];
 
@@ -124,6 +125,7 @@ function flattenEngineTree(?array $node, int $depth = 0, ?array $containerOffset
     $isLevelContainer = ($depth === 0) || ($depth === 1 && isset($style['boxSizing']));
     if ($isLevelContainer) {
         $containerOffset = ['x' => $nodeX, 'y' => $nodeY];
+        if ($depth > 0) $cid++;  // 非根节点每遇到一个 Level 容器，cid 递增
     }
 
     // 相对位置 = 元素绝对位置 - 容器绝对位置
@@ -146,13 +148,41 @@ function flattenEngineTree(?array $node, int $depth = 0, ?array $containerOffset
         'content' => str_replace("\r\n", "\n", $node['content'] ?? ''),
         'style' => $style,
         'depth' => $depth,
+        'cid' => $cid,
     ];
     $result[] = $item;
 
     if (isset($node['children']) && is_array($node['children'])) {
         foreach ($node['children'] as $child) {
-            $result = array_merge($result, flattenEngineTree($child, $depth + 1, $containerOffset));
+            $result = array_merge($result, flattenEngineTree($child, $depth + 1, $containerOffset, $cid));
         }
+    }
+    return $result;
+}
+
+/**
+ * 为浏览器 Level-7 元素分配容器 ID。
+ * 检测浏览器 ref 中的容器节点（depth=1 且 display:block 的大块），
+ * 按出现顺序分配 cid 1~7，子元素继承其所在容器的 cid。
+ */
+function assignBrowserCidsLevel7(array $elements): array {
+    $containerStarts = [];
+    $cid = 0;
+    foreach ($elements as $i => $el) {
+        if (($el['depth'] ?? 0) === 1) {
+            $cid++;
+            $containerStarts[$i] = $cid;
+        }
+    }
+    // 为每个元素分配 cid
+    $result = [];
+    $currentCid = 0;
+    foreach ($elements as $i => $el) {
+        if (isset($containerStarts[$i])) {
+            $currentCid = $containerStarts[$i];
+        }
+        $el['cid'] = $currentCid;
+        $result[] = $el;
     }
     return $result;
 }
@@ -172,6 +202,7 @@ function indexBrowserElements(array $elements): array {
         if (mb_strlen($text) < 2) continue;
         $x = $el['x'] ?? 0;
         $y = $el['y'] ?? 0;
+        $cid = $el['cid'] ?? 0;
         // 用完整文本作为键（包含换行的截断文本）
         $index[$text] = [
             'x' => $x,
@@ -182,6 +213,7 @@ function indexBrowserElements(array $elements): array {
             'h' => $el['h'] ?? 0,
             'tag' => $el['tag'] ?? 'div',
             'styles' => $el['styles'] ?? [],
+            'cid' => $cid,
         ];
     }
     return $index;
@@ -290,6 +322,9 @@ function compareElement(string $levelName, string $text, array $bEl, array $eEl)
         ['fg',           'color',             'color',  'fg(color)'],
         ['bg',           'background-color',   'color',  'bg'],
         ['bold',         'font-weight',        'weight', 'bold'],
+        ['textAlign',    'text-align',        'string', 'textAlign'],
+        ['lineHeight',   'line-height',       'lineheight', 'lineHeight'],
+        ['whiteSpace',   'white-space',       'string', 'whiteSpace'],
 
         // ========== 内边距 ==========
         ['paddingTop',    'padding-top',       'px',     'paddingTop'],
@@ -407,8 +442,36 @@ function compareElement(string $levelName, string $text, array $bEl, array $eEl)
                 }
                 break;
 
+            case 'lineheight':
+                // line-height 特殊比较：引擎存CSS值（"1.7"倍率或"28"px），浏览器存计算后px值（"23.8px"）
+                $bPx = (int)round((float)$bRaw);
+                $eComputed = 0;
+                $fs = $eStyles['fontSize'] ?? 14;
+                if ($eVal === '' || $eVal === 'normal') {
+                    $eComputed = (int)($fs * 1.2);
+                } elseif (is_numeric($eVal)) {
+                    $eComputed = (int)((float)$eVal * $fs);
+                } else {
+                    $eComputed = (int)$eVal;
+                }
+                $diff = abs($eComputed - $bPx);
+                if ($diff > 2) {
+                    $styleDiffs[] = "{$label}: engine(computed)={$eComputed}px browser={$bRaw} (diff={$diff}px)";
+                    $allPassed = false;
+                    $propMatches[$label] = false;
+                }
+                break;
+
             case 'string':
-                if ((string)$eVal !== (string)$bRaw) {
+                // textAlign: start/end/match-parent 映射为等效值比较
+                $eStr = (string)$eVal;
+                $bStr = (string)$bRaw;
+                // start(LTR)=left, end(LTR)=right
+                if ($eStr === 'start') $eStr = 'left';
+                if ($eStr === 'end') $eStr = 'right';
+                if ($bStr === 'start') $bStr = 'left';
+                if ($bStr === 'end') $bStr = 'right';
+                if ($eStr !== $bStr) {
                     $styleDiffs[] = "{$label}: engine={$eVal} browser={$bRaw}";
                     $allPassed = false;
                     $propMatches[$label] = false;
@@ -450,6 +513,10 @@ function loadBrowserRefs(string $refDir): array {
             continue;
         }
         $elements = $data['elements'] ?? [];
+        // Level-7 整合页面：为元素分配容器 cid
+        if ($level === 7) {
+            $elements = assignBrowserCidsLevel7($elements);
+        }
         $refs[$level] = indexBrowserElements($elements);
         log_msg("Level $level: $path (" . count($refs[$level]) . " 个文本元素)");
     }
@@ -567,10 +634,8 @@ $engineTextIndex = [];
 foreach ($engineElements as $i => $el) {
     $content = trim($el['content'] ?? '');
     if ($content !== '' && mb_strlen($content) >= 2) {
-        // 当多个引擎元素有相同文本时，只保留第一个（避免重复匹配）
-        if (!isset($engineTextIndex[$content])) {
-            $engineTextIndex[$content] = $i;
-        }
+        // 存储所有匹配索引（支持重复文本，后续按位置择优匹配）
+        $engineTextIndex[$content][] = $i;
     }
 }
 
@@ -637,11 +702,38 @@ foreach ($browserRefs as $level => $browserIndex) {
         $matched = false;
 
         if (isset($engineTextIndex[$text])) {
-            // 完全匹配
-            $eIdx = $engineTextIndex[$text];
-            $matchedEl = $engineElements[$eIdx];
-            $matched = true;
-       } else {
+            // 完全匹配（可能有多个候选）
+            $candidates = $engineTextIndex[$text];
+            if (count($candidates) === 1) {
+                $eIdx = $candidates[0];
+                $matchedEl = $engineElements[$eIdx];
+                $matched = true;
+            } else {
+                // 多候选：优先匹配同一容器（cid）内的元素，其次按最近位置
+                $bCid = $bEl['cid'] ?? 0;
+                $bX = $bEl['relX'] ?? ($bEl['x'] ?? 0);
+                $bY = $bEl['relY'] ?? ($bEl['y'] ?? 0);
+                $bestIdx = null;
+                $bestDist = PHP_INT_MAX;
+                foreach ($candidates as $cidx) {
+                    $eX = $engineElements[$cidx]['relX'] ?? ($engineElements[$cidx]['x'] ?? 0);
+                    $eY = $engineElements[$cidx]['relY'] ?? ($engineElements[$cidx]['y'] ?? 0);
+                    $eCid = $engineElements[$cidx]['cid'] ?? 0;
+                    $dx = abs($eX - $bX);
+                    $dy = abs($eY - $bY);
+                    // 同容器权重减半（优先匹配同一 Level）
+                    $cidBonus = ($bCid > 0 && $eCid === $bCid) ? 0.5 : 1.0;
+                    $dist = ($dx * 2 + $dy) * $cidBonus;
+                    if ($dist < $bestDist) {
+                        $bestDist = $dist;
+                        $bestIdx = $cidx;
+                    }
+                }
+                $eIdx = $bestIdx;
+                $matchedEl = $engineElements[$eIdx];
+                $matched = true;
+            }
+        } else {
             // 浏览器中父容器 textContent 会串联所有子文本，引擎只有叶子节点文本
             // 如果文本含换行符且无精确匹配，则是父容器串联文本 → 跳过
             if (str_contains($text, "\n")) {
@@ -652,8 +744,9 @@ foreach ($browserRefs as $level => $browserIndex) {
             }
             // 尝试部分匹配：取前 20 个字符
             $shortText = mb_substr($text, 0, 20);
-            foreach ($engineTextIndex as $eText => $eIdx) {
+            foreach ($engineTextIndex as $eText => $eIdxs) {
                 if (mb_substr($eText, 0, 20) === $shortText) {
+                    $eIdx = $eIdxs[0];
                     $matchedEl = $engineElements[$eIdx];
                     $matched = true;
                     break;
@@ -661,7 +754,7 @@ foreach ($browserRefs as $level => $browserIndex) {
             }
             // 部分匹配也失败时，检查是否为单行父容器串联文本（子文本以空格分隔）
             if (!$matched) {
-                foreach ($engineTextIndex as $eText => $eIdx) {
+                foreach ($engineTextIndex as $eText => $eIdxs) {
                     $eLen = mb_strlen($eText);
                     $bLen = mb_strlen($text);
                     // 引擎文本完整出现在浏览器文本中，且引擎文本占浏览器文本 20%~85%
@@ -853,6 +946,14 @@ $e2b = [
     'alignItems' => 'align-items',
     'justifyContent' => 'justify-content',
     'boxSizing' => 'box-sizing',
+    'textAlign' => 'text-align',
+    'lineHeight' => 'line-height',
+    'whiteSpace' => 'white-space',
+    'fontFamily' => 'font-family',
+    'opacity' => 'opacity',
+    'overflow' => 'overflow',
+    'overflowX' => 'overflow-x',
+    'overflowY' => 'overflow-y',
 ];
 $b2e = array_flip($e2b);
 
@@ -940,21 +1041,13 @@ if (!empty($gaps)) {
     $reportLines[] = '|-----------|---------|-------|---------|';
     
     $priorityMap = [
-        'text-align' => ['文字对齐', '高', 'LayoutResolver/FlexLayoutStrategy 添加 textAlign 字段 → CssMappings 映射 → style 中输出 textAlign'],
-        'line-height' => ['行高', '高', 'GdiRenderContext::drawText 支持行高参数 → CssMappings 添加 → style 中输出 lineHeight'],
-        'white-space' => ['空白/换行处理', '高', 'VNodeRenderer/SkiaRenderContext 文本布局添加 white-space 处理'],
         'font-family' => ['字体', '中', 'CssMappings 添加 fontFamily → GdiRenderContext 选择字体'],
         'opacity' => ['透明度', '中', 'RenderNode 添加 opacity 字段 → GdiRenderContext alpha 混合'],
-        'overflow-x' => ['水平溢出', '中', 'ScrollContainer 溢出处理（配合 overflow-x: hidden）'],
-        'overflow-y' => ['垂直溢出', '中', 'ScrollContainer 溢出处理'],
         'width' => ['显式宽度', '低', '已通过布局 w 覆盖，可在 --dump-layout 的 style 中额外输出 width'],
         'height' => ['显式高度', '低', '已通过布局 h 覆盖，可在 --dump-layout 的 style 中额外输出 height'],
         'position' => ['定位方式', '低', '已通过布局系统 implicit 处理，AbsolutePositioning 策略'],
         'top' => ['定位偏移', '低', '已通过布局坐标 y 覆盖'],
         'left' => ['定位偏移', '低', '已通过布局坐标 x 覆盖'],
-        'flex-wrap' => ['Flex换行', '低', '已通过 camelCase flexWrap 覆盖'],
-        'align-items' => ['交叉轴对齐', '低', '已通过 camelCase alignItems 覆盖'],
-        'justify-content' => ['主轴对齐', '低', '已通过 camelCase justifyContent 覆盖'],
     ];
     
     foreach ($gaps as $bp) {
@@ -968,8 +1061,8 @@ if (!empty($gaps)) {
         $reportLines[] = "| `{$bp}` | {$scope} | {$priority} | {$suggestion} |";
     }
     $reportLines[] = "";
-    $reportLines[] = "> 高优先级属性直接影响渲染效果一致性（文字对齐/行高/换行）。";
-    $reportLines[] = "> 引擎暂缺 text-align，这直接导致用户看到的文字对齐差异。";
+    $reportLines[] = "> 高优先级属性（text-align/line-height/white-space）已在框架层实现并通过 dump-layout 输出。";
+    $reportLines[] = "> 若浏览器参考中存在这些属性，auto_test.php 现可自动对比校验。";
     $reportLines[] = "";
 }
 

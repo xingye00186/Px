@@ -23,6 +23,9 @@
  *   run_css_tests('MyTest');
  */
 
+// 强制使用 PHP 估算公式测量文本宽度，确保快照跨机一致
+putenv('PX_LAYOUT_TEST_FORCE_ESTIMATE=1');
+
 require_once __DIR__ . '/../unit/bootstrap.php';
 require_once __DIR__ . '/../unit/PipelineTestBase.php';
 

@@ -9,7 +9,7 @@
  * 确保 dispatchClick 的 switch-case 路由正确，
  * 以及事件冒泡链（ScientificPadComponent → AppComponent）工作正常。
  *
- * Usage: D:\swoole_compiler\php.exe tests/unit/CalculatorAppTest.php
+ * Usage: php tests/unit/CalculatorAppTest.php
  */
 
 require_once __DIR__ . '/bootstrap.php';

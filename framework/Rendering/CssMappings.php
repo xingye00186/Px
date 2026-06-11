@@ -492,15 +492,33 @@ class CssMappings
         if (str_ends_with($value, 'px')) {
             return (string)(int)$value;
         }
-        // em value: return multiplier
+        // em value: return multiplier (CSS: line-height:1.6em = 1.6 × font-size)
         if (str_ends_with($value, 'em')) {
             $num = (float)$value;
             return (string)$num;
         }
-        // percentage
+        // percentage: return multiplier (CSS: line-height:150% = 1.5 × font-size)
         if (str_ends_with($value, '%')) {
             $num = (float)$value / 100.0;
             return (string)$num;
+        }
+        // rem, viewport units: store as "value|unit" for runtime resolution
+        if (preg_match('/^(\d+(\.\d+)?)\s*(rem|vw|vh|vmin|vmax|ch|ex)$/i', $value, $m)) {
+            return $m[1] . '|' . strtolower($m[3]);
+        }
+        // Physical units: convert to px immediately
+        // CSS Values §5: 1pt=1/72in, 1pc=12pt, 1cm=96/2.54px, 1mm=96/25.4px, 1in=96px
+        $unitMap = [
+            'pt' => 96.0 / 72.0,   // 1.333px
+            'pc' => 96.0 / 6.0,     // 16px
+            'in' => 96.0,           // 96px
+            'cm' => 96.0 / 2.54,    // ~37.8px
+            'mm' => 96.0 / 25.4,    // ~3.78px
+        ];
+        foreach ($unitMap as $unit => $pxPerUnit) {
+            if (preg_match('/^(\d+(\.\d+)?)\s*' . $unit . '$/i', $value, $m)) {
+                return (string)(int)round((float)$m[1] * $pxPerUnit);
+            }
         }
         return $value;
     }

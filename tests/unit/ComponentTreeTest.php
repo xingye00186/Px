@@ -10,7 +10,7 @@
  *   5. patchComponentTree 机制 — 组件实例复用、groupId 正确路由
  *   6. Props 绑定同步 — 父子组件通过 setBindValue 同步
  *
- * Usage: D:\swoole_compiler\php.exe tests/unit/ComponentTreeTest.php
+ * Usage: php tests/unit/ComponentTreeTest.php
  */
 
 require_once __DIR__ . '/bootstrap.php';

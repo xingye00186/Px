@@ -8,7 +8,7 @@
  *   3. 纯文本不生成 parts
  *   4. 纯绑定表达式不生成 parts（使用 bind 代替）
  *
- * Usage: D:\swoole_compiler\php.exe tests/unit/SfcCompilerPartsTest.php
+ * Usage: php tests/unit/SfcCompilerPartsTest.php
  */
 
 require_once __DIR__ . '/bootstrap.php';

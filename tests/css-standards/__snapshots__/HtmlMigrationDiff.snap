@@ -1,4 +1,4 @@
-@generated 2026-06-10 11:19:55
+@generated 2026-06-11 04:41:24
 === Test: Flex row + gap 两列等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
@@ -18,7 +18,7 @@ div (0,0 600x92) [dsp=grid]
 
 === Test: border-left 彩色左边框 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x100) bw=3 text="Accent"
+div (0,0 400x100) bw=1 text="Accent"
 
 ---
 
@@ -48,7 +48,7 @@ div (0,0 28x28) [dsp=flex] text="1"
 Frame #1 events=0 detail=normal
 div (0,0 400x40) [dsp=flex]
   div (0,6 28x28)
-  span (36,11 40x18) text="Title"
+  span (36,12 40x16) text="Title"
 
 ---
 
@@ -64,9 +64,9 @@ div (0,0 300x100) scroll ch=200 cw=300 maxScroll=100 st=0 sl=0
 
 === Test: flex row 模拟表格 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x35) [dsp=flex] bw=1
-  div (0,0 200x17) bw=1 text="Column"
-  div (226,0 374x17) fg=1 text="Value"
+div (0,0 600x31) [dsp=flex]
+  div (0,0 200x15) text="Column"
+  div (225,0 375x15) fg=1 text="Value"
 
 ---
 
@@ -78,36 +78,36 @@ div (0,0 400x30) text="Dark theme text"
 
 === Test: 多层嵌套卡片 ===
 Frame #1 events=0 detail=normal
-div (0,0 500x142)
-  div (32,32 500x64) bw=3
-    div (52,52 500x18) text="Card Title"
-    div (52,78 500x18) text="Card content text"
+div (0,0 500x134)
+  div (32,32 500x60) bw=1
+    div (52,52 500x16) text="Card Title"
+    div (52,76 500x16) text="Card content text"
 
 ---
 
 === Test: badge 标签样式 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x24) [dsp=flex]
-  div (0,5 36x14) text="Active"
-  span (58,3 40x18) text="v5 M3"
+  div (0,5 36x13) text="Active"
+  span (58,4 40x16) text="v5 M3"
 
 ---
 
 === Test: 代码块 white-space:pre ===
 Frame #1 events=0 detail=normal
-div (0,0 500x32) bw=1
-  div (20,16 500x16) text="abstract class RenderContext {
+div (0,0 500x30) bw=1
+  div (20,16 500x14) text="abstract class RenderContext {
     abst..."
 
 ---
 
 === Test: timeline 里程碑 flex row ===
 Frame #1 events=0 detail=normal
-div (0,0 600x38) [dsp=flex]
+div (0,0 600x34) [dsp=flex]
   div (0,0 24x24) bw=2
-  div (36,0 564x38) fg=1
-    div (36,0 600x18) text="v5 M3: Flat + Layer"
-    div (36,4 600x16) text="~100 行 / 7 文件"
+  div (36,0 564x34) fg=1
+    div (36,0 600x16) text="v5 M3: Flat + Layer"
+    div (36,4 600x14) text="~100 行 / 7 文件"
 
 ---
 
@@ -125,21 +125,21 @@ div (0,0 600x30) text="Centered footer text"
 
 === Test: dep-box 分区布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 500x88) bw=1 ov=hidden
-  div (0,0 500x17) bw=1 text="v5 M3: Flat + Layer"
-  div (0,35 500x29)
-    div (14,47 500x17) text="框架提供:"
+div (0,0 500x83) bw=1 ov=hidden
+  div (0,0 500x15) text="v5 M3: Flat + Layer"
+  div (0,32 500x27)
+    div (14,44 500x15) text="框架提供:"
 
 ---
 
 === Test: flex-wrap 标签云 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x110) [dsp=flex]
-  div (0,0 24x18) text="rect"
-  div (0,22 24x18) text="text"
-  div (0,44 36x18) text="button"
-  div (0,66 24x18) text="grid"
-  div (0,88 30x18) text="label"
+div (0,0 400x105) [dsp=flex]
+  div (0,0 24x17) text="rect"
+  div (0,21 24x17) text="text"
+  div (0,42 36x17) text="button"
+  div (0,63 24x17) text="grid"
+  div (0,84 30x17) text="label"
 
 ---
 
@@ -153,8 +153,8 @@ div (0,0 300x40) scroll ch=40 cw=800 maxScroll=0 st=0 sl=0 ov=auto
 === Test: 完整卡片行组合场景 ===
 Frame #1 events=0 detail=normal
 div (0,0 1100x900)
-  div (32,32 1100x37) text="Title"
-  div (32,73 1100x20) text="Subtitle text"
-  div (32,117 1100x64) [dsp=flex]
-    div (32,117 542x18) bw=3 fg=1 text="Danger Card"
-    div (636,117 542x18) bw=3 fg=1 text="Success Card"
+  div (32,32 1100x33) text="Title"
+  div (32,69 1100x18) text="Subtitle text"
+  div (32,111 1100x58) [dsp=flex]
+    div (32,111 542x16) bw=1 fg=1 text="Danger Card"
+    div (634,111 542x16) bw=1 fg=1 text="Success Card"

@@ -1,4 +1,4 @@
-@generated 2026-06-10 12:10:19
+@generated 2026-06-11 04:41:05
 === Test: Grid 内嵌 flex 实现卡片网格 ===
 Frame #1 events=0 detail=normal
 div (0,0 964x208) [dsp=grid]
@@ -6,7 +6,7 @@ div (0,0 964x208) [dsp=grid]
     div (0,0 310x140) text="Cover"
     div (0,140 310x52) [dsp=flex]
       div (8,148 36x36)
-      div (52,148 266x18) fg=1 text="Title text"
+      div (52,148 266x16) fg=1 text="Title text"
 
 ---
 
@@ -14,11 +14,11 @@ div (0,0 964x208) [dsp=grid]
 Frame #1 events=0 detail=normal
 div (0,0 1440x56) [dsp=flex]
   div (24,16 24x24)
-  div (64,17 1320x21) [dsp=flex] fg=1
-    div (64,17 72x21) text="Bilibili"
-    div (160,17 28x21) text="推荐"
-    div (212,17 28x21) text="热门"
-    div (264,17 28x21) text="关注"
+  div (64,18 1320x19) [dsp=flex] fg=1
+    div (64,18 72x19) text="Bilibili"
+    div (160,18 28x19) text="推荐"
+    div (212,18 28x19) text="热门"
+    div (264,18 28x19) text="关注"
   div (1384,12 80x32)
 
 ---
@@ -44,27 +44,12 @@ div (0,0 1440x44) scroll ch=40 cw=1472 maxScroll=0 st=0 sl=0 [dsp=flex] ov=auto
 Frame #1 events=0 detail=normal
 div (0,0 300x0) [dsp=flex] ov=hidden
   div (0,0 300x168)
-  div (0,168 300x49) [dsp=flex]
+  div (0,168 300x48) [dsp=flex]
     div (8,176 300x20) text="视频标题最多两行"
-    div (8,200 300x9) [dsp=flex]
+    div (8,200 300x8) [dsp=flex]
       div (8,200 58x0) [dsp=flex] text="UP主名称"
-      div (74,191 14x18) text="·"
-      div (96,191 38x18) text="1.2万"
-
----
-
-=== Test: 视频网格 3列 auto-fill 混合布局 ===
-Frame #1 events=0 detail=normal
-div (0,0 964x174) [dsp=grid]
-  div (0,0 310x174) [dsp=flex]
-    div (0,0 310x140) text="Cover"
-    div (0,140 310x18) text="Video 1"
-  div (326,0 310x174) [dsp=flex]
-    div (326,0 310x140) text="Cover"
-    div (326,140 310x18) text="Video 2"
-  div (652,0 310x174) [dsp=flex]
-    div (652,0 310x140) text="Cover"
-    div (652,140 310x18) text="Video 3"
+      div (74,192 14x16) text="·"
+      div (96,192 38x16) text="1.2万"
 
 ---
 
@@ -73,12 +58,12 @@ Frame #1 events=0 detail=normal
 div (0,0 1440x900) [dsp=flex]
   div (0,0 1440x56) [dsp=flex]
     div (24,16 24x24)
-    div (48,19 1416x18) [dsp=flex] fg=1
-      div (48,19 64x18) text="Bilibili"
-      div (136,19 28x18) text="推荐"
-  div (0,56 1440x44) scroll ch=35 cw=1472 maxScroll=0 st=0 sl=0 [dsp=flex] ov=auto
-    div (16,69 28x18) text="推荐"
-    div (84,69 28x18) text="热门"
+    div (48,20 1416x16) [dsp=flex] fg=1
+      div (48,20 64x16) text="Bilibili"
+      div (136,20 28x16) text="推荐"
+  div (0,56 1440x44) scroll ch=34 cw=1472 maxScroll=0 st=0 sl=0 [dsp=flex] ov=auto
+    div (16,70 28x16) text="推荐"
+    div (84,70 28x16) text="热门"
   div (0,100 1440x800) scroll ch=216 cw=1440 maxScroll=0 st=0 sl=0 fg=1
     div (16,116 1440x200) text="Content Area"
   div (700,400 48x48) [pos=fixed]
@@ -89,13 +74,13 @@ div (0,0 1440x900) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 964x0) [dsp=flex]
   div (0,0 964x200) text="Banner"
-  div (0,216 964x174) [dsp=grid]
-    div (0,216 310x174) [dsp=flex]
+  div (0,216 964x172) [dsp=grid]
+    div (0,216 310x172) [dsp=flex]
       div (0,216 310x140) text="Cover"
-      div (0,356 310x18) text="Title"
-    div (326,216 310x174) [dsp=flex]
+      div (0,356 310x16) text="Title"
+    div (326,216 310x172) [dsp=flex]
       div (326,216 310x140) text="Cover"
-      div (326,356 310x18) text="Title"
+      div (326,356 310x16) text="Title"
 
 ---
 

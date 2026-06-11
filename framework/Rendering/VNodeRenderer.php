@@ -263,7 +263,10 @@ class VNodeRenderer
     private static function measureTextWidth(string $text, int $fontSize, bool $bold): int
     {
         static $hasNative = null;
-        if ($hasNative === null) $hasNative = function_exists('\\sk_measure_text_width');
+        if ($hasNative === null) {
+            $hasNative = function_exists('\\sk_measure_text_width')
+                && !getenv('PX_LAYOUT_TEST_FORCE_ESTIMATE');
+        }
         if ($hasNative) {
             return (int)\sk_measure_text_width($text, $fontSize, $bold);
         }
@@ -462,12 +465,23 @@ class VNodeRenderer
             $fontSize = $style['fontSize'] ?? 14;
             $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
             $bold = $style['bold'] ?? 0;
-            $align = $props['align'] ?? ($style['textAlign'] ?? 'center');
+            $align = $props['align'] ?? ($style['textAlign'] ?? 'start');
+            // CSS Text Module Level 3 §7: start=LTR→left, end=LTR→right, justify≈left(无justify渲染)
+            if ($align === 'start' || $align === 'match-parent') $align = 'left';
+            if ($align === 'end') $align = 'right';
+            if ($align === 'justify' || $align === 'justify-all') $align = 'left';
 
             $text = $node->content;
             $textWidth = strlen($text) * (int)($fontSize * 0.6);
 
-            $textX = $x + (int)(($w - $textWidth) / 2);
+            $textX = $x + 4;
+            if ($align === 'right') {
+                $textX = $x + $w - 12 - $textWidth;
+                if ($textX < $x + 4) $textX = $x + 4;
+            } elseif ($align === 'center') {
+                $textX = $x + (int)(($w - $textWidth) / 2);
+                if ($textX < $x + 4) $textX = $x + 4;
+            }
             if ($textX < $x + 4) $textX = $x + 4;
             $textY = $y + (int)(($h - $fontSize) / 2);
 
@@ -534,7 +548,11 @@ class VNodeRenderer
         $fontSize = $style['fontSize'] ?? 16;
         $color    = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
         $bold     = $style['bold'] ?? 0;
-        $align    = $props['align'] ?? ($style['textAlign'] ?? 'left');
+        $align    = $props['align'] ?? ($style['textAlign'] ?? 'start');
+        // CSS Text Module Level 3 §7: start=LTR→left, end=LTR→right, justify≈left
+        if ($align === 'start' || $align === 'match-parent') $align = 'left';
+        if ($align === 'end') $align = 'right';
+        if ($align === 'justify' || $align === 'justify-all') $align = 'left';
         $text = '';
 
         // AOT 兼容: php::Variant 在 use native_types 模式下 is_string() 可能返回 false

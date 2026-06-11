@@ -1,40 +1,40 @@
-@generated 2026-06-10 11:19:55
+@generated 2026-06-11 04:41:28
 === Test: display:table 基本容器 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x24) [dsp=table]
-  div (0,0 0x24) [dsp=table-row]
-    div (10,10 200x24) [dsp=table-cell] text="Cell1"
-    div (10,10 200x24) [dsp=table-cell] text="Cell2"
+div (0,0 400x16) [dsp=table]
+  div (0,0 0x16) [dsp=table-row]
+    div (10,10 200x16) [dsp=table-cell] text="Cell1"
+    div (10,10 200x16) [dsp=table-cell] text="Cell2"
 
 ---
 
 === Test: display:table 2x2 网格布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x48) [dsp=table]
-  div (0,0 0x24) [dsp=table-row]
-    div (0,0 150x24) [dsp=table-cell] text="R1C1"
-    div (0,0 150x24) [dsp=table-cell] text="R1C2"
-  div (0,24 0x24) [dsp=table-row]
-    div (0,24 150x24) [dsp=table-cell] text="R2C1"
-    div (0,24 150x24) [dsp=table-cell] text="R2C2"
+div (0,0 300x32) [dsp=table]
+  div (0,0 0x16) [dsp=table-row]
+    div (0,0 150x16) [dsp=table-cell] text="R1C1"
+    div (0,0 150x16) [dsp=table-cell] text="R1C2"
+  div (0,16 0x16) [dsp=table-row]
+    div (0,16 150x16) [dsp=table-cell] text="R2C1"
+    div (0,16 150x16) [dsp=table-cell] text="R2C2"
 
 ---
 
 === Test: table-cell 嵌套 block 内容 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x24) [dsp=table]
-  div (0,0 0x24) [dsp=table-row]
-    div (5,5 400x24) [dsp=table-cell]
+div (0,0 400x16) [dsp=table]
+  div (0,0 0x16) [dsp=table-row]
+    div (5,5 400x16) [dsp=table-cell]
       div (10,10 100x30) text="Nested"
 
 ---
 
 === Test: display:table-caption 标题 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x42) [dsp=table]
-  div (0,24 300x18) [dsp=table-caption] text="Caption"
-  div (0,0 0x24) [dsp=table-row]
-    div (0,0 300x24) [dsp=table-cell] text="Data"
+div (0,0 300x32) [dsp=table]
+  div (0,16 300x16) [dsp=table-caption] text="Caption"
+  div (0,0 0x16) [dsp=table-row]
+    div (0,0 300x16) [dsp=table-cell] text="Data"
 
 ---
 
@@ -66,10 +66,10 @@ div (0,0 230x30)
 
 === Test: display:inline 三个行内元素并排 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x54)
-  span (0,0 24x18) [dsp=inline] text="AA "
-  span (0,18 24x18) [dsp=inline] text="BB "
-  span (0,36 16x18) [dsp=inline] text="CC"
+div (0,0 400x48)
+  span (0,0 24x16) [dsp=inline] text="AA "
+  span (0,16 24x16) [dsp=inline] text="BB "
+  span (0,32 16x16) [dsp=inline] text="CC"
 
 ---
 
@@ -84,6 +84,6 @@ div (0,0 400x180)
 
 === Test: display:inline 溢出换行 ===
 Frame #1 events=0 detail=normal
-div (0,0 120x36)
-  span (0,0 72x18) [dsp=inline] text="LongTextA"
-  span (0,18 80x18) [dsp=inline] text=" LongTextB"
+div (0,0 120x32)
+  span (0,0 72x16) [dsp=inline] text="LongTextA"
+  span (0,16 80x16) [dsp=inline] text=" LongTextB"

@@ -10,7 +10,7 @@
  *   5. 边界情况：border: none、空字符串、缺失 border-color
  *   6. borderWidth=0 的显式解析
  *
- * Usage: D:\swoole_compiler\php.exe tests/unit/CssMappingsBorderTest.php
+ * Usage: php tests/unit/CssMappingsBorderTest.php
  */
 
 require_once __DIR__ . '/bootstrap.php';

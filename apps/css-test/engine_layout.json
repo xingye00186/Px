@@ -2087,7 +2087,8 @@
                     "style": {
                         "display": "grid",
                         "marginBottom": 24,
-                        "gap": 16
+                        "gap": 16,
+                        "gridTemplateColumns": "1fr 1fr"
                     },
                     "children": [
                         {
@@ -2260,7 +2261,8 @@
                     "style": {
                         "display": "grid",
                         "marginBottom": 24,
-                        "gap": 16
+                        "gap": 16,
+                        "gridTemplateColumns": "1fr 1fr"
                     },
                     "children": [
                         {
@@ -2470,7 +2472,8 @@
                     "style": {
                         "display": "grid",
                         "marginBottom": 24,
-                        "gap": 12
+                        "gap": 12,
+                        "gridTemplateColumns": "1fr 1fr 1fr"
                     },
                     "children": [
                         {

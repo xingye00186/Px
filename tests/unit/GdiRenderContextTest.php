@@ -14,7 +14,7 @@
  *   5. 嵌套 clip 栈深度追踪
  *   6. 零宽 clip-push 不压栈
  *
- * Usage: D:\swoole_compiler\php.exe tests/unit/GdiRenderContextTest.php
+ * Usage: php tests/unit/GdiRenderContextTest.php
  */
 
 require_once __DIR__ . '/bootstrap.php';
