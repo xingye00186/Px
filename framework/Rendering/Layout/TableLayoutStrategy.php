@@ -3,6 +3,7 @@
 namespace Px\Rendering\Layout;
 
 use Px\Rendering\LayoutResolver;
+use Px\Rendering\Layout\Tools\PercentResolver;
 use Px\Rendering\RenderNode;
 
 /**
@@ -144,6 +145,7 @@ class TableLayoutStrategy implements LayoutStrategyInterface
             }
             if ($rowH <= 0) {
                 // CSS 2.2 §10.8.1: 行高默认 ≈ font-size × 1.2
+                PercentResolver::resolveFontSizeUnit($style);
                 $fs = (int)($style['fontSize'] ?? 14);
                 $rowH = (int)($fs * 1.2);
             }
