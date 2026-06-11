@@ -1,15 +1,19 @@
 <?php
 /**
- * generate_browser_refs.php — 浏览器布局参考数据生成器
+ * generate_browser_refs.php — 批量生成浏览器参考数据（css-test 多 Level）
  *
- * 对每个 test_cases/level_X.html:
- *   1. 生成临时包装 HTML（嵌入原始内容 + dump_layout.js + 输出 textarea）
- *   2. 用 Edge headless --dump-dom 渲染并输出 DOM
- *   3. 从 DOM 中提取布局 JSON
- *   4. 保存为 apps/css-test/ref/browser_ref_level_X.json
+ * 对 apps/css-test/test_cases/ 下的所有 level_X.html，逐个执行:
+ *   1. 读取 HTML body 内容
+ *   2. 注入 dump_layout.js 生成包装 HTML
+ *   3. 用 Edge headless --dump-dom 渲染
+ *   4. 从 DOM 提取布局 JSON
+ *   5. 保存为 apps/css-test/ref/browser_ref_level_X.json
+ *
+ * 与 generate_project_ref.php（单项目单 Level）不同，本脚本批量处理 8 个 Level。
+ * 生成的参考数据供 apps/css-test/auto_test.php 逐 Level 逐元素对比验证。
  *
  * 用法:
- *   cd F:\work\Px
+ *   cd d:\Px
  *   php tools\generate_browser_refs.php
  *
  * 依赖:
