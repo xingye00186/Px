@@ -728,6 +728,8 @@ class CssMappings
             'top'    => 'topPercent',
             'right'  => 'rightPercent',
             'bottom' => 'bottomPercent',
+            // CSS Backgrounds & Borders §5.1: border-radius 百分比基于元素的宽度和高度
+            'border-radius' => 'borderRadiusPercent',
         ];
         foreach ($pctMap as $cssProp => $styleKey) {
             if (isset($raw[$cssProp])) {

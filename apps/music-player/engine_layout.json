@@ -28,12 +28,29 @@
                 "bg": 2366492,
                 "borderRadius": 40,
                 "opacity": 0.5,
+                "position": "relative",
                 "paddingTop": 28,
                 "paddingLeft": 28,
                 "paddingRight": 28,
                 "paddingBottom": 28
             },
             "children": [
+                {
+                    "type": "div",
+                    "x": 28,
+                    "y": 28,
+                    "w": 8,
+                    "h": 8,
+                    "visualW": 8,
+                    "visualH": 8,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "bg": 16711935,
+                        "position": "absolute"
+                    }
+                },
                 {
                     "type": "div",
                     "x": 28,
@@ -335,6 +352,22 @@
                             }
                         }
                     ]
+                },
+                {
+                    "type": "div",
+                    "x": 500,
+                    "y": -36,
+                    "w": 8,
+                    "h": 8,
+                    "visualW": 8,
+                    "visualH": 8,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "bg": 16776960,
+                        "position": "absolute"
+                    }
                 }
             ]
         }

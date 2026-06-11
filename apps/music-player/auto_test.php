@@ -25,6 +25,27 @@ $passCount = 0;
 $failCount = 0;
 $skipCount = 0;
 
+// 检测命令行参数
+$updateBaseline = in_array('--update-baseline', $argv ?? []);
+
+// Step 0: 自动生成基线截图（如果不存在或指定 --update-baseline）
+if ($updateBaseline || !file_exists($APP_DIR . '/base_line_pic.png')) {
+    echo "Step 0: 自动生成基线截图\n";
+    echo "----------------------------------------\n";
+    $baselineOk = captureBaselineScreenshot($APP_NAME, $PROJECT_ROOT, $APP_DIR);
+    if ($baselineOk) {
+        pass("基线截图已生成\n");
+    } else {
+        echo "  [FAIL] 基线截图生成失败，请检查浏览器是否已打开\n";
+        if (!$updateBaseline) {
+            // 首次运行时失败不阻塞后续测试
+            echo "  [SKIP] 跳过截图对比步骤\n";
+        } else {
+            exit(1);
+        }
+    }
+}
+
 echo "========================================\n";
 echo "  CSS Layout Test - $APP_NAME\n";
 echo "========================================\n\n";
@@ -61,6 +82,13 @@ if (file_exists($exePath)) {
 // Step 2: Run --dump-layout
 echo "Step 2: 运行 --dump-layout 导出布局\n";
 echo "----------------------------------------\n";
+if (!file_exists($exePath)) {
+    // 构建后可能产生不同文件名（music_player.exe vs music-player.exe）
+    $exeFiles = glob($BIN_DIR . '/*.exe');
+    if (!empty($exeFiles)) {
+        $exePath = $exeFiles[0];
+    }
+}
 if (!file_exists($exePath)) {
     echo "  [FAIL] 未找到 exe 文件\n";
     exit(1);
@@ -247,6 +275,29 @@ foreach ($browserIndex as $text => $bEl) {
         $posStats['exact']++;
     }
 }
+
+// Step 5: 截图对比
+// 对齐优先级:
+//   1. 嵌入颜色锚点（__PX_ANCHOR_TL__/#FF00FF  +  __PX_ANCHOR_BR__/#00FFFF）——自动检测，最快最准
+//   2. autoAlign 自动内容边界检测（回退方案）
+// 模板中已嵌入锚点色块（App.vue + baseline.html），重建基线后自动启用颜色锚点对齐
+$reportLines[] = "";
+$reportLines[] = "### 对齐设置";
+$reportLines[] = "- 嵌入颜色锚点(__PX_ANCHOR__): 模板中已嵌入";
+$reportLines[] = "- 自动内容对齐(autoAlign): 回退方案";
+$screenshotAlignOptions = [
+    'autoAlign' => true,
+];
+$screenshotResult = runScreenshotTest($APP_NAME, $PROJECT_ROOT, $APP_DIR, $screenshotAlignOptions);
+if ($screenshotResult['diffPercent'] < 0) {
+    // 基线不存在，跳过
+} elseif ($screenshotResult['pass']) {
+    pass("截图对比通过 (差异: {$screenshotResult['diffPercent']}%)");
+} else {
+    echo "  [FAIL] 截图差异: {$screenshotResult['diffPercent']}% > 5%\n";
+    $failCount++;
+}
+$reportLines = array_merge($reportLines, $screenshotResult['reportLines']);
 
 $reportLines[] = "";
 

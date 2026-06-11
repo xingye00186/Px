@@ -333,6 +333,14 @@ class VNodeRenderer
         $y = $node->y + $node->renderOffsetY;
         $w = $node->visualW;
         $h = $node->visualH;
+
+        // ── 解析 border-radius 百分比（CSS Backgrounds & Borders §5.1）──
+        // 百分比基于元素 min(w, h)：例如 50% 在 180x180 元素上 = 90px
+        if (isset($style['borderRadiusPercent'])) {
+            $minDim = min($w, $h);
+            $style['borderRadius'] = (int)($minDim * $style['borderRadiusPercent'] / 100.0);
+        }
+
         $layer = $node->layer;
 
         // 滚动裁切（position:fixed 元素不受祖先滚动容器影响）
@@ -466,13 +474,20 @@ class VNodeRenderer
             $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
             $bold = $style['bold'] ?? 0;
             $align = $props['align'] ?? ($style['textAlign'] ?? 'start');
+            // CSS Text Module Level 3 §7: text-align is inherited
+            if ($align === 'start' && !isset($style['textAlign']) && $node->parent !== null) {
+                $parentAlign = $node->parent->style['textAlign'] ?? null;
+                if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {
+                    $align = $parentAlign;
+                }
+            }
             // CSS Text Module Level 3 §7: start=LTR→left, end=LTR→right, justify≈left(无justify渲染)
             if ($align === 'start' || $align === 'match-parent') $align = 'left';
             if ($align === 'end') $align = 'right';
             if ($align === 'justify' || $align === 'justify-all') $align = 'left';
 
             $text = $node->content;
-            $textWidth = strlen($text) * (int)($fontSize * 0.6);
+            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
 
             $textX = $x + 4;
             if ($align === 'right') {
@@ -549,6 +564,13 @@ class VNodeRenderer
         $color    = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
         $bold     = $style['bold'] ?? 0;
         $align    = $props['align'] ?? ($style['textAlign'] ?? 'start');
+        // CSS Text Module Level 3 §7: text-align is inherited
+        if ($align === 'start' && !isset($style['textAlign']) && $node->parent !== null) {
+            $parentAlign = $node->parent->style['textAlign'] ?? null;
+            if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {
+                $align = $parentAlign;
+            }
+        }
         // CSS Text Module Level 3 §7: start=LTR→left, end=LTR→right, justify≈left
         if ($align === 'start' || $align === 'match-parent') $align = 'left';
         if ($align === 'end') $align = 'right';
