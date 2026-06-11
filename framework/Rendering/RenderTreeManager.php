@@ -408,15 +408,26 @@ class RenderTreeManager
                 // Vue 3 标准：父组件 props['style'] 全部透传合并到子组件根元素
                 // 子组件自身 style 为基准，父组件 style 覆盖（CSS 标准层叠规则）
                 $placeholderStyle = $vnode->props['style'] ?? '';
-                if ($placeholderStyle !== '' && $parent !== null && $beforeCount < count($parent->children)) {
-                    $newChildren = array_slice($parent->children, $beforeCount);
-                    if (count($newChildren) > 0) {
-                        $firstChild = $newChildren[0];
+                if ($placeholderStyle !== '') {
+                    $targetRN = null;
+                    if ($parent !== null && $beforeCount < count($parent->children)) {
+                        // 常规情况：通过 parent->children 定位新创建的 RN
+                        $newChildren = array_slice($parent->children, $beforeCount);
+                        if (count($newChildren) > 0) {
+                            $targetRN = $newChildren[0];
+                        }
+                    } elseif ($parent === null && $childRN !== null) {
+                        // #component 直接作为 #root 子节点（parent=null）时，
+                        // 子组件树的 RN 由递归返回的 $childRN 直接持有
+                        $targetRN = $childRN;
+                    }
+
+                    if ($targetRN !== null) {
                         $parsedStyles = CssMappings::parseInlineStyle($placeholderStyle);
                         foreach ($parsedStyles as $key => $value) {
-                            $firstChild->style[$key] = $value;
+                            $targetRN->style[$key] = $value;
                         }
-                        $firstChild->layoutDirty = true;
+                        $targetRN->layoutDirty = true;
                     }
                 }
 
