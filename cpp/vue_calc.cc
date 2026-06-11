@@ -69,7 +69,7 @@ static ULONG_PTR g_vueGdiplusToken = 0;
 static bool      g_vueGdiplusInited = false;
 
 // 默认字体名（可通过 vue_set_default_font 修改）
-static std::string g_vueDefaultFont = "Microsoft YaHei";
+static std::string g_vueDefaultFont = "Noto Sans SC";
 
 // 设置默认字体（C++ 编译后生效，GDI TextOutW 自带 OS 字体链接回退）
 void php_vue_set_default_font(String fontFamily) {

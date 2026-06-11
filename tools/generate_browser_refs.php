@@ -74,9 +74,10 @@ function buildWrapperHtml(string $bodyContent, string $jsCode): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0d1117; color: #e6edf3; font-size: 14px; line-height: 1.7; scrollbar-width: thin; }
+* { margin: 0; padding: 0; }
+body { background: #0d1117; color: #e6edf3; font-size: 14px; scrollbar-width: thin; }
 </style>
 </head>
 <body>

@@ -17,6 +17,18 @@
 .PARAMETER HtmlPath
     当 Mode=baseline 时, HTML 文件路径
 
+.PARAMETER SearchTitle
+    当 Mode=baseline 时, 浏览器窗口标题搜索关键字（默认自动生成 __PX_TEST_<hex>）
+
+.PARAMETER ExePath
+    当 Mode=exe 时, 指定 exe 路径（默认根据 AppName 自动查找）
+
+.PARAMETER TargetWidth
+    窗口目标宽度（px），0=不调整大小
+
+.PARAMETER TargetHeight
+    窗口目标高度（px），0=不调整大小
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File tools/capture_screenshot.ps1 `
         -AppName music-player -ProjectRoot f:/work/Px -OutputPath f:/work/Px/apps/music-player/test_log/captured.png
@@ -31,12 +43,28 @@ param(
     [string]$ProjectRoot,
     [string]$OutputPath,
     [string]$Mode = 'exe',
-    [string]$HtmlPath = ''
+    [string]$HtmlPath = '',
+    [string]$SearchTitle = '',
+    [string]$ExePath = '',
+    [int]$TargetWidth = 0,
+    [int]$TargetHeight = 0
 )
+
+# ── DPI 感知：确保 GetClientRect/ClientToScreen/CopyFromScreen 使用同一坐标空间 ──
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public class DPI {
+    [DllImport("user32.dll")]
+    public static extern bool SetProcessDPIAware();
+}
+'@
+[DPI]::SetProcessDPIAware() | Out-Null
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# ── Win32 API ──
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -166,16 +194,20 @@ function Take-Screenshot {
 # ── 主逻辑：根据 Mode 分支 ──
 if ($Mode -eq 'exe') {
     # ── 1. 定位 exe ──
-    $exeDir = "$ProjectRoot/apps/$AppName/bin"
-    $exePath = ""
-    if (Test-Path "$exeDir/${AppName}.exe") {
-        $exePath = "$exeDir/${AppName}.exe"
+    if ($ExePath -ne '' -and (Test-Path $ExePath)) {
+        $exePath = $ExePath
     } else {
-        $files = Get-ChildItem "$exeDir/*.exe" -ErrorAction SilentlyContinue
-        if ($files -and $files.Count -gt 0) { $exePath = $files[0].FullName }
+        $exeDir = "$ProjectRoot/apps/$AppName/bin"
+        $exePath = ""
+        if (Test-Path "$exeDir/${AppName}.exe") {
+            $exePath = "$exeDir/${AppName}.exe"
+        } else {
+            $files = Get-ChildItem "$exeDir/*.exe" -ErrorAction SilentlyContinue
+            if ($files -and $files.Count -gt 0) { $exePath = $files[0].FullName }
+        }
     }
     if ($exePath -eq "" -or -not (Test-Path $exePath)) {
-        Write-Error "exe not found: $exeDir"
+        Write-Error "exe not found: $exePath"
         exit 1
     }
 
@@ -227,7 +259,11 @@ if ($Mode -eq 'exe') {
     Start-Sleep 3
 
     # ── 2. 按标题查找浏览器窗口 ──
-    $searchTitle = "__PX_BASELINE_$AppName"
+    if ($SearchTitle -ne '') {
+        $searchTitle = $SearchTitle
+    } else {
+        $searchTitle = "__PX_BASELINE_$AppName"
+    }
     $hwnd = [IntPtr]::Zero
     for ($i = 0; $i -lt 20 -and $hwnd -eq [IntPtr]::Zero; $i++) {
         $hwnd = Find-WindowByTitle -TitleSubstring $searchTitle
@@ -238,25 +274,27 @@ if ($Mode -eq 'exe') {
         exit 2
     }
 
-    # ── 3. 调整窗口大小为标准尺寸 ──
-    # 精确计算边框：从窗口 rect 与 client rect 的差值算出实际边框+标题栏尺寸
-    $wr = New-Object Win32+RECT
-    [Win32]::GetWindowRect($hwnd, [ref]$wr) | Out-Null
-    $cr = New-Object Win32+RECT
-    [Win32]::GetClientRect($hwnd, [ref]$cr) | Out-Null
-    $pt = New-Object Win32+POINT
-    $pt.X = 0; $pt.Y = 0
-    [Win32]::ClientToScreen($hwnd, [ref]$pt) | Out-Null
-    $borderLeft   = $pt.X - $wr.Left
-    $borderTop    = $pt.Y - $wr.Top
-    $borderRight  = $wr.Right - $wr.Left - $cr.Right - $borderLeft
-    $borderBottom = $wr.Bottom - $wr.Top - $cr.Bottom - $borderTop
-    $frameW = $borderLeft + $borderRight
-    $frameH = $borderTop + $borderBottom
-    $targetW = 1280 + $frameW
-    $targetH = 660 + $frameH
-    [Win32]::MoveWindow($hwnd, 100, 100, $targetW, $targetH, $true) | Out-Null
-    Start-Sleep 1
+    # ── 3. 调整窗口大小（可选）──
+    if ($TargetWidth -gt 0 -and $TargetHeight -gt 0) {
+        # 精确计算边框：从窗口 rect 与 client rect 的差值算出实际边框+标题栏尺寸
+        $wr = New-Object Win32+RECT
+        [Win32]::GetWindowRect($hwnd, [ref]$wr) | Out-Null
+        $cr = New-Object Win32+RECT
+        [Win32]::GetClientRect($hwnd, [ref]$cr) | Out-Null
+        $pt = New-Object Win32+POINT
+        $pt.X = 0; $pt.Y = 0
+        [Win32]::ClientToScreen($hwnd, [ref]$pt) | Out-Null
+        $borderLeft   = $pt.X - $wr.Left
+        $borderTop    = $pt.Y - $wr.Top
+        $borderRight  = $wr.Right - $wr.Left - $cr.Right - $borderLeft
+        $borderBottom = $wr.Bottom - $wr.Top - $cr.Bottom - $borderTop
+        $frameW = $borderLeft + $borderRight
+        $frameH = $borderTop + $borderBottom
+        $targetW = $TargetWidth + $frameW
+        $targetH = $TargetHeight + $frameH
+        [Win32]::MoveWindow($hwnd, 100, 100, $targetW, $targetH, $true) | Out-Null
+        Start-Sleep 1
+    }
 
     # ── 4. 置前 ──
     [Win32]::ShowWindow($hwnd, 1) | Out-Null

@@ -760,6 +760,103 @@ function detectColorAnchors(GdImage $im): ?array {
 }
 
 /**
+ * 查找指定颜色所有匹配像素的包围盒（比 findColorAnchor 更完整：返回整个色块区域）。
+ */
+function findAnchorRect(GdImage $im, int $r, int $g, int $b, int $tolerance = 15, int $scanStep = 2): ?array {
+    $w = imagesx($im);
+    $h = imagesy($im);
+    $minX = $w; $minY = $h; $maxX = 0; $maxY = 0;
+    $found = false;
+
+    for ($y = 0; $y < $h; $y += $scanStep) {
+        for ($x = 0; $x < $w; $x += $scanStep) {
+            $c = imagecolorat($im, $x, $y);
+            $pr = ($c >> 16) & 0xFF;
+            $pg = ($c >> 8) & 0xFF;
+            $pb = $c & 0xFF;
+
+            if (abs($pr - $r) <= $tolerance &&
+                abs($pg - $g) <= $tolerance &&
+                abs($pb - $b) <= $tolerance) {
+                if ($x < $minX) $minX = $x;
+                if ($y < $minY) $minY = $y;
+                if ($x > $maxX) $maxX = $x;
+                if ($y > $maxY) $maxY = $y;
+                $found = true;
+            }
+        }
+    }
+
+    if (!$found) return null;
+
+    $margin = $scanStep;
+    $rx = max(0, $minX - $margin);
+    $ry = max(0, $minY - $margin);
+    $rw = min($w - 1, $maxX + $margin) - $rx + 1;
+    $rh = min($h - 1, $maxY + $margin) - $ry + 1;
+    return ['x' => $rx, 'y' => $ry, 'w' => $rw, 'h' => $rh];
+}
+
+/**
+ * 根据图片中的颜色锚点裁切到内容区域。
+ * 检测 TL（洋红 #FF00FF）和 BR（青 #00FFFF）锚点，裁切到两者包围盒。
+ *
+ * @return array{x:int,y:int,w:int,h:int}|null
+ */
+function cropImageByAnchors(string $srcPath, string $destPath): ?array {
+    $im = @imagecreatefrompng($srcPath);
+    if (!$im) return null;
+
+    $tl = findAnchorRect($im, 255, 0, 255);
+    $br = findAnchorRect($im, 0, 255, 255);
+
+    if (!$tl || !$br) {
+        imagedestroy($im);
+        return null;
+    }
+
+    $x = $tl['x'];
+    $y = $tl['y'];
+    $w = ($br['x'] + $br['w']) - $tl['x'];
+    $h = ($br['y'] + $br['h']) - $tl['y'];
+
+    $imgW = imagesx($im);
+    $imgH = imagesy($im);
+    $x = max(0, $x);
+    $y = max(0, $y);
+    $w = min($w, $imgW - $x);
+    $h = min($h, $imgH - $y);
+
+    if ($w <= 0 || $h <= 0) {
+        imagedestroy($im);
+        return null;
+    }
+
+    $dest = imagecreatetruecolor($w, $h);
+    imagecopy($dest, $im, 0, 0, $x, $y, $w, $h);
+    imagepng($dest, $destPath);
+    imagedestroy($im);
+    imagedestroy($dest);
+
+    return ['x' => $x, 'y' => $y, 'w' => $w, 'h' => $h];
+}
+
+/**
+ * 缩放 PNG 图片到指定尺寸。
+ */
+function resizeImage(string $srcPath, string $destPath, int $targetW, int $targetH): bool {
+    $src = @imagecreatefrompng($srcPath);
+    if (!$src) return false;
+
+    $dest = imagecreatetruecolor($targetW, $targetH);
+    imagecopyresampled($dest, $src, 0, 0, 0, 0, $targetW, $targetH, imagesx($src), imagesy($src));
+    $saved = imagepng($dest, $destPath);
+    imagedestroy($src);
+    imagedestroy($dest);
+    return (bool)$saved;
+}
+
+/**
  * 将两个截图按内容进行对齐，并裁剪到共同区域。
  *
  * 【策略一：锚点模板匹配】若 $anchorPositions 不为空，从基准图中提取锚点模板并在截图里定位。
@@ -887,8 +984,13 @@ function alignImages(string $baselinePath, string $capturedPath, array $anchorPo
 
 /**
  * 通过 PowerShell 截图脚本捕获应用窗口截图
+ *
+ * @param string $appName      应用名（用于窗口查找）
+ * @param string $projectRoot  项目根目录
+ * @param string $outputPath   输出 PNG 路径
+ * @param string $exePath      指定 exe 路径（留空则根据 appName 自动查找）
  */
-function captureAppScreenshot(string $appName, string $projectRoot, string $outputPath): bool {
+function captureAppScreenshot(string $appName, string $projectRoot, string $outputPath, string $exePath = ''): bool {
     $psScript = $projectRoot . '/tools/capture_screenshot.ps1';
     if (!file_exists($psScript)) {
         echo "  [FAIL] 截图脚本不存在: $psScript\n";
@@ -904,6 +1006,13 @@ function captureAppScreenshot(string $appName, string $projectRoot, string $outp
         'powershell -ExecutionPolicy Bypass -File "%s" -AppName "%s" -ProjectRoot "%s" -OutputPath "%s" 2>&1',
         $psScript, $appName, $projectRoot, $outputPath
     );
+    // 如果指定了 exe 路径，则传给 PowerShell
+    if ($exePath !== '') {
+        $cmd = sprintf(
+            'powershell -ExecutionPolicy Bypass -File "%s" -AppName "%s" -ProjectRoot "%s" -ExePath "%s" -OutputPath "%s" 2>&1',
+            $psScript, $appName, $projectRoot, $exePath, $outputPath
+        );
+    }
     $result = run_cmd($cmd);
     $exitCode = $result['exitCode'];
 
@@ -915,6 +1024,121 @@ function captureAppScreenshot(string $appName, string $projectRoot, string $outp
         echo "  [FAIL] 截图文件未生成: $outputPath\n";
         return false;
     }
+    return true;
+}
+
+/**
+ * 生成唯一的测试标识符，用于浏览器窗口搜索标题。
+ * 格式: __PX_TEST_<8位hex>
+ */
+function generateTestId(): string {
+    return '__PX_TEST_' . substr(bin2hex(random_bytes(4)), 0, 8);
+}
+
+/**
+ * 在 HTML 中注入搜索标题并写入临时文件。
+ *
+ * 为了避免修改用户原始 HTML，创建一份临时副本，
+ * 在 <title> 标签中注入 "__PX_TEST_<hex>" 前缀以便 PowerShell 定位浏览器窗口。
+ *
+ * @param string $htmlPath    原始 HTML 路径
+ * @param string $testId      搜索标题（如 __PX_TEST_a1b2c3d4）
+ * @return string|null 临时文件路径，失败返回 null
+ */
+function injectSearchTitle(string $htmlPath, string $testId): ?string {
+    $html = file_get_contents($htmlPath);
+    if ($html === false) return null;
+
+    // 注入搜索标题到 <title> 标签
+    if (preg_match('/<title>(.*?)<\/title>/is', $html, $m)) {
+        $origTitle = $m[1];
+        // 如果已包含 __PX_TEST_，则复用
+        if (strpos($origTitle, '__PX_TEST_') !== false) {
+            // 已注入过，提取已有 testId
+            if (preg_match('/__PX_TEST_[0-9a-f]+/', $origTitle, $idm)) {
+                $testId = $idm[0];
+            }
+            $newTitle = $origTitle;
+        } else {
+            $newTitle = $testId . ' ' . $origTitle;
+        }
+        $html = str_replace($m[0], '<title>' . $newTitle . '</title>', $html);
+    } else {
+        // 没有 <title>，在 <head> 末尾注入
+        $html = str_replace('</head>', '<title>' . $testId . '</title>' . "\n" . '</head>', $html);
+    }
+
+    $tmpDir = sys_get_temp_dir();
+    $tmpFile = $tmpDir . '/' . $testId . '.html';
+    file_put_contents($tmpFile, $html);
+    return $tmpFile;
+}
+
+/**
+ * 自动捕获浏览器截图：打开任意 HTML 文件并截取浏览器窗口。
+ *
+ * 支持任意 HTML 文件（无需预先嵌入锚点或特殊标题），通过注入搜索标题实现窗口定位。
+ *
+ * @param string $htmlPath      HTML 文件路径
+ * @param string $projectRoot   项目根目录
+ * @param string $outputPath    输出 PNG 路径
+ * @param string $testId        搜索标题（留空自动生成）
+ * @param int    $targetW       目标窗口宽度（0=不调整）
+ * @param int    $targetH       目标窗口高度（0=不调整）
+ * @return bool 成功/失败
+ */
+function captureBrowserScreenshot(string $htmlPath, string $projectRoot, string $outputPath, string &$testId = '', int $targetW = 0, int $targetH = 0): bool {
+    $psScript = $projectRoot . '/tools/capture_screenshot.ps1';
+    if (!file_exists($psScript)) {
+        echo "  [FAIL] 截图脚本不存在: $psScript\n";
+        return false;
+    }
+    if (!file_exists($htmlPath)) {
+        echo "  [FAIL] HTML 不存在: $htmlPath\n";
+        return false;
+    }
+
+    // 生成搜索标题并注入 HTML
+    if ($testId === '') {
+        $testId = generateTestId();
+    }
+    $tmpHtml = injectSearchTitle($htmlPath, $testId);
+    if ($tmpHtml === null) {
+        echo "  [FAIL] 无法处理 HTML\n";
+        return false;
+    }
+
+    $dir = dirname($outputPath);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    }
+
+    // 组装 PowerShell 命令
+    $cmd = sprintf(
+        'powershell -ExecutionPolicy Bypass -File "%s" -Mode baseline -AppName "tmp" -ProjectRoot "%s" -HtmlPath "%s" -SearchTitle "%s" -OutputPath "%s"',
+        $psScript, $projectRoot, $tmpHtml, $testId, $outputPath
+    );
+    if ($targetW > 0 && $targetH > 0) {
+        $cmd .= sprintf(' -TargetWidth %d -TargetHeight %d', $targetW, $targetH);
+    }
+    $cmd .= ' 2>&1';
+    $result = run_cmd($cmd);
+    $exitCode = $result['exitCode'];
+
+    // 清理临时文件
+    @unlink($tmpHtml);
+
+    if ($exitCode !== 0) {
+        echo "  [FAIL] 浏览器截图失败 (exit code: $exitCode)\n";
+        return false;
+    }
+    if (!file_exists($outputPath)) {
+        echo "  [FAIL] 浏览器截图未生成: $outputPath\n";
+        return false;
+    }
+
+    $fsize = filesize($outputPath);
+    echo "  [OK] 浏览器截图已生成: " . basename($outputPath) . " (" . round($fsize / 1024) . " KB)\n";
     return true;
 }
 
@@ -933,44 +1157,27 @@ function captureAppScreenshot(string $appName, string $projectRoot, string $outp
  * @return bool 成功/失败
  */
 function captureBaselineScreenshot(string $appName, string $projectRoot, string $appDir): bool {
-    $psScript = $projectRoot . '/tools/capture_screenshot.ps1';
     $htmlPath = $appDir . '/baseline.html';
     $outputPath = $appDir . '/base_line_pic.png';
+    $testId = '__PX_BASELINE_' . $appName;
 
-    if (!file_exists($psScript)) {
-        echo "  [FAIL] 截图脚本不存在: $psScript\n";
-        return false;
-    }
-    if (!file_exists($htmlPath)) {
-        echo "  [FAIL] baseline HTML 不存在: $htmlPath\n";
-        return false;
-    }
-
-    $dir = dirname($outputPath);
-    if (!is_dir($dir)) {
-        mkdir($dir, 0777, true);
-    }
-
-    // 使用 -Mode baseline 调用截图脚本
-    $cmd = sprintf(
-        'powershell -ExecutionPolicy Bypass -File "%s" -Mode baseline -AppName "%s" -ProjectRoot "%s" -HtmlPath "%s" -OutputPath "%s" 2>&1',
-        $psScript, $appName, $projectRoot, $htmlPath, $outputPath
-    );
-    $result = run_cmd($cmd);
-    $exitCode = $result['exitCode'];
-
-    if ($exitCode !== 0) {
-        echo "  [FAIL] 基线截图失败 (exit code: $exitCode)\n";
-        return false;
-    }
-    if (!file_exists($outputPath)) {
-        echo "  [FAIL] 基线截图未生成: $outputPath\n";
-        return false;
+    // Auto-detect WINDOW_WIDTH/WINDOW_HEIGHT from main.php to match the app's window size.
+    // This ensures baseline and EXE screenshots have the same viewport dimensions,
+    // enabling pixel-perfect anchor alignment.
+    $targetW = 1280; // default fallback
+    $targetH = 660;  // default fallback
+    $mainPhp = $appDir . '/main.php';
+    if (file_exists($mainPhp)) {
+        $content = file_get_contents($mainPhp);
+        if (preg_match('/const\s+WINDOW_WIDTH\s*=\s*(\d+)/', $content, $m)) {
+            $targetW = (int)$m[1];
+        }
+        if (preg_match('/const\s+WINDOW_HEIGHT\s*=\s*(\d+)/', $content, $m)) {
+            $targetH = (int)$m[1];
+        }
     }
 
-    $fsize = filesize($outputPath);
-    echo "  [OK] 基线截图已生成: $outputPath (" . round($fsize / 1024) . " KB)\n";
-    return true;
+    return captureBrowserScreenshot($htmlPath, $projectRoot, $outputPath, $testId, $targetW, $targetH);
 }
 
 /**
@@ -996,10 +1203,102 @@ function compareScreenshots(string $baselinePath, string $capturedPath, ?string 
     $bW = imagesx($baseImg); $bH = imagesy($baseImg);
     $cW = imagesx($capImg);  $cH = imagesy($capImg);
 
+    // —— 锚点裁剪：裁剪到 TL（洋红）↔ BR（青色）锚点之间 ——
+    // 消除浏览器与 EXE 之间因 viewport/DPI 不同导致的全局偏移,
+    // 只聚焦卡片内容区域做对比。
+    // 通用方案：用 findColorAnchor 精确定位锚点左上角，
+    // 各自裁剪到 TL→BR+8 区域，统一尺寸到交集后对比。
+    $_anchorsCropped = false;
+    if (!empty($options['cropAnchors'])) {
+        $bTL = findColorAnchor($baseImg, 255, 0, 255);
+        $bBR = findColorAnchor($baseImg, 0, 255, 255);
+        $cTL = findColorAnchor($capImg, 255, 0, 255);
+        $cBR = findColorAnchor($capImg, 0, 255, 255);
+
+        if ($bTL && $bBR && $cTL && $cBR) {
+            $bRX = $bTL['x']; $bRY = $bTL['y'];
+            $bRW = ($bBR['x'] + 8) - $bTL['x'];
+            $bRH = ($bBR['y'] + 8) - $bTL['y'];
+            $cRX = $cTL['x']; $cRY = $cTL['y'];
+            $cRW = ($cBR['x'] + 8) - $cTL['x'];
+            $cRH = ($cBR['y'] + 8) - $cTL['y'];
+
+            // 边界保护
+            $bW_limit = imagesx($baseImg); $bH_limit = imagesy($baseImg);
+            $cW_limit = imagesx($capImg);  $cH_limit = imagesy($capImg);
+            if ($bRX + $bRW > $bW_limit) $bRW = $bW_limit - $bRX;
+            if ($bRY + $bRH > $bH_limit) $bRH = $bH_limit - $bRY;
+            if ($cRX + $cRW > $cW_limit) $cRW = $cW_limit - $cRX;
+            if ($cRY + $cRH > $cH_limit) $cRH = $cH_limit - $cRY;
+
+            if ($bRW > 0 && $bRH > 0 && $cRW > 0 && $cRH > 0) {
+                // 分别裁剪到锚点区域
+                $bCrop = imagecreatetruecolor($bRW, $bRH);
+                imagecopy($bCrop, $baseImg, 0, 0, $bRX, $bRY, $bRW, $bRH);
+                $cCrop = imagecreatetruecolor($cRW, $cRH);
+                imagecopy($cCrop, $capImg, 0, 0, $cRX, $cRY, $cRW, $cRH);
+
+                // 保存诊断用裁剪图
+                $logDir = dirname($diffOutputPath ?? $capturedPath);
+                @mkdir($logDir, 0777, true);
+                imagepng($bCrop, $logDir . '/crop_baseline.png');
+                imagepng($cCrop, $logDir . '/crop_captured.png');
+
+                // —— 缩放一致性处理 ——
+                // DPI 虚拟化导致 EXE 截图和浏览器基线的内容比例可能不同
+                // （例如 125% DPI 下 EXE 窗口的物理/逻辑坐标失配）。
+                // 通过锚点跨度比率检测比例失配，将截图缩放到与基线一致。
+                // 基线来自浏览器（DPI 感知），默认作为参考标准。
+                $needScale = false;
+                $scaleW = $bRW;
+                $scaleH = $bRH;
+                if (abs($bRW - $cRW) > 2 || abs($bRH - $cRH) > 2) {
+                    // 计算缩放因子：基线跨度 / 截图跨度
+                    $sx = $bRW / $cRW;
+                    $sy = $bRH / $cRH;
+                    // 只有当缩放因子偏离 1.0 超过 2% 时才执行缩放
+                    if (abs($sx - 1.0) > 0.02 || abs($sy - 1.0) > 0.02) {
+                        $scaleW = (int)round($cRW * $sx);
+                        $scaleH = (int)round($cRH * $sy);
+                        if ($scaleW > 0 && $scaleH > 0) {
+                            // 缩放截图裁剪以匹配基线的锚点跨度
+                            $scaled = imagecreatetruecolor($scaleW, $scaleH);
+                            imagecopyresampled($scaled, $cCrop, 0, 0, 0, 0, $scaleW, $scaleH, $cRW, $cRH);
+                            imagedestroy($cCrop);
+                            $cCrop = $scaled;
+                            $cRW = $scaleW;
+                            $cRH = $scaleH;
+                            $needScale = true;
+                        }
+                    }
+                }
+
+                // 统一尺寸到交集（两者都能覆盖的最小区域）
+                $uniW = min($bRW, $cRW);
+                $uniH = min($bRH, $cRH);
+
+                // 替换原图
+                imagedestroy($baseImg);
+                imagedestroy($capImg);
+                $baseImg = imagecreatetruecolor($uniW, $uniH);
+                $capImg  = imagecreatetruecolor($uniW, $uniH);
+                imagecopy($baseImg, $bCrop, 0, 0, 0, 0, $uniW, $uniH);
+                imagecopy($capImg,  $cCrop, 0, 0, 0, 0, $uniW, $uniH);
+                imagedestroy($bCrop);
+                imagedestroy($cCrop);
+
+                $bW = $uniW; $bH = $uniH;
+                $cW = $uniW; $cH = $uniH;
+                // 锚点裁剪后内容已对齐，标记跳过后续对齐
+                $_anchorsCropped = true;
+            }
+        }
+    }
+
     // —— 计算对齐偏移 ——
-    $dx = $options['dx'] ?? 0;
-    $dy = $options['dy'] ?? 0;
-    $aligned = ($dx !== 0 || $dy !== 0);
+    $dx = 0;
+    $dy = 0;
+    $aligned = $_anchorsCropped;
 
     if (!$aligned) {
         $useAnchors = !empty($options['anchors']);
@@ -1157,6 +1456,336 @@ function runScreenshotTest(string $appName, string $projectRoot, string $appDir,
     $reportLines[] = "| 差异图 | - | {$diffFile} | - |";
 
     return ['pass' => $passed, 'diffPercent' => $dp, 'reportLines' => $reportLines];
+}
+
+/**
+ * 增强版浏览器元素索引 — 保留所有元素 + 相对父容器位置
+ *
+ * 与 indexBrowserElements（只索引文本节点）不同，此函数保留所有元素，
+ * 并计算 relX/relY 为相对于直接父容器（深度减一的最近元素）的偏移。
+ * 这样引擎与浏览器的 relX/relY 可直接比较（消除 viewport 差异）。
+ *
+ * @param array $elements 浏览器参考原始元素列表
+ * @return array 全部元素的索引数组，每项含 idx/x/y/relX/relY/w/h/depth/tag/text/styles/parentIdx
+ */
+function indexAllBrowserElements(array $elements): array {
+    $result = [];
+    $lastAtDepth = [];
+
+    foreach ($elements as $i => $el) {
+        $depth = $el['depth'] ?? 0;
+        $x = $el['x'] ?? 0;
+        $y = $el['y'] ?? 0;
+
+        // 父容器 = 最近一个深度-1 的元素
+        $parentIdx = null;
+        $parentX = 0;
+        $parentY = 0;
+        if ($depth > 0 && isset($lastAtDepth[$depth - 1])) {
+            $pItem = $result[$lastAtDepth[$depth - 1]];
+            $parentX = $pItem['x'];
+            $parentY = $pItem['y'];
+            $parentIdx = $pItem['idx'];
+        }
+
+        $text = str_replace("\r\n", "\n", $el['text'] ?? '');
+
+        $item = [
+            'idx' => $i,
+            'x' => $x,
+            'y' => $y,
+            'relX' => $x - $parentX,
+            'relY' => $y - $parentY,
+            'w' => $el['w'] ?? 0,
+            'h' => $el['h'] ?? 0,
+            'depth' => $depth,
+            'tag' => $el['tag'] ?? 'div',
+            'text' => $text,
+            'styles' => $el['styles'] ?? [],
+            'parentIdx' => $parentIdx,
+        ];
+        $result[] = $item;
+        $lastAtDepth[$depth] = count($result) - 1;
+    }
+
+    return $result;
+}
+
+/**
+ * 增强版引擎布局树展平 — 保持所有节点 + 相对父容器位置
+ *
+ * 与 flattenEngineTree（containerOffset 模式）不同，此函数计算 relX/relY
+ * 为相对于直接父节点坐标的偏移，与 indexAllBrowserElements 的算法对齐。
+ *
+ * @param array|null $node      引擎布局节点
+ * @param int        $depth     当前深度
+ * @param array|null $parentPos {x, y} 父节点绝对位置
+ * @param int|null   $parentIdx 父节点在结果数组中的索引
+ * @param int        $counter   全局递增计数器（深度优先序号）
+ * @return array 全部节点的索引数组
+ */
+/**
+ * 在展平的节点数组中查找给定节点的直接父节点。
+ */
+function findParentNode(array $flatNodes, array $node): ?array {
+    $pidx = $node['parentIdx'] ?? null;
+    if ($pidx === null) return null;
+    foreach ($flatNodes as $n) {
+        if (($n['idx'] ?? -1) === $pidx) return $n;
+    }
+    return null;
+}
+
+/**
+ * 增强版单元素对比 — 位置+尺寸+样式全部判 Fail。
+ *
+ * 与 compareElement（仅样式判 Fail）不同，此函数将 relX/relY/w/h 的差异
+ * 也计入 fail，可有效捕获容器高度异常、锚点偏移等 bug。
+ *
+ * @param string $category 分类名（text/container/anchor）
+ * @param string $label    显示标签（文本内容/描述）
+ * @param array  $bEl      浏览器参考元素
+ * @param array  $eEl      引擎布局元素
+ * @param array  $checks   样式检查项列表（null=defaultChecks()）
+ * @param array  $options  选项：
+ *   - skipPos: bool 是否跳过位置对比（depth=1 容器 viewport 不同）
+ *   - posTol:  int  位置容差像素（默认 1）
+ *   - sizeTol: int  尺寸容差像素（默认 1）
+ *   - noTextStyle: bool 是否跳过文本样式对比
+ * @return array{passed:bool, posInfo:string, sizeInfo:string, styleDiffs:array, propMatches:array}
+ */
+function compareElementEnhanced(string $category, string $label, array $bEl, array $eEl, ?array $checks = null, array $options = []): array {
+    if ($checks === null) $checks = defaultChecks();
+    $posTol = $options['posTol'] ?? 1;
+    $sizeTol = $options['sizeTol'] ?? 1;
+    $skipPos = !empty($options['skipPos']);
+
+    $bRelX = $bEl['relX'] ?? ($bEl['x'] ?? 0);
+    $bRelY = $bEl['relY'] ?? ($bEl['y'] ?? 0);
+    $eRelX = $eEl['relX'] ?? ($eEl['x'] ?? 0);
+    $eRelY = $eEl['relY'] ?? ($eEl['y'] ?? 0);
+    $bW = $bEl['w'] ?? 0;
+    $eW = $eEl['w'] ?? 0;
+    $bH = $bEl['h'] ?? 0;
+    $eH = $eEl['h'] ?? 0;
+
+    $allPassed = true;
+    $failReasons = [];
+
+    // 1. 位置对比
+    $posInfo = '';
+    if ($skipPos) {
+        $posInfo = "skip (viewport diff)";
+    } else {
+        $dx = abs($eRelX - $bRelX);
+        $dy = abs($eRelY - $bRelY);
+        $posOk = ($dx <= $posTol && $dy <= $posTol);
+        if ($dx === 0 && $dy === 0) {
+            $posInfo = "rel=({$bRelX},{$bRelY})";
+        } else {
+            $posInfo = "e:({$eRelX},{$eRelY}) b:({$bRelX},{$bRelY})";
+        }
+        if (!$posOk) {
+            $allPassed = false;
+            $failReasons[] = "位置偏移(dx={$dx},dy={$dy})";
+        }
+    }
+
+    // 2. 尺寸对比
+    $dw = abs($eW - $bW);
+    $dh = abs($eH - $bH);
+    $sizeOk = ($dw <= $sizeTol && $dh <= $sizeTol);
+    $sizeInfo = '';
+    if ($dw === 0 && $dh === 0) {
+        $sizeInfo = "w={$bW} h={$bH}";
+    } else {
+        $sizeInfo = "e:w{$eW}h{$eH} b:w{$bW}h{$bH}";
+    }
+    if (!$sizeOk) {
+        $allPassed = false;
+        $failReasons[] = "尺寸差异(dw={$dw},dh={$dh})";
+    }
+
+    // 3. 样式对比（仅文本元素）
+    $styleDiffs = [];
+    $propMatches = [];
+    if (empty($options['noTextStyle'])) {
+        $bStyles = $bEl['styles'] ?? [];
+        $eStyles = $eEl['style'] ?? [];
+
+        foreach ($checks as $check) {
+            [$eProp, $bProp, $type, $label] = $check;
+            $eVal = null;
+            if (!isset($eStyles[$eProp])) continue;
+            $eVal = $eStyles[$eProp];
+            if ($eVal === null) continue;
+            if (!isset($bStyles[$bProp])) continue;
+
+            $bRaw = $bStyles[$bProp];
+            $propMatches[$label] = true;
+
+            $eDisplay = match(true) {
+                $type === 'color' || $type === 'colorfirst' || $type === 'colorcontains' => gdiColorToHex($eVal),
+                $type === 'weight' => $eVal ? 'bold' : 'normal',
+                $type === 'boxsizing' => $eVal === 'border-box' ? 'border-box' : 'content-box',
+                default => $eVal,
+            };
+
+            switch ($type) {
+                case 'px':
+                    $bVal = cssPxToInt($bRaw);
+                    if ($eVal !== $bVal) {
+                        $styleDiffs[] = "{$label}: engine={$eDisplay}px browser={$bRaw}";
+                        $allPassed = false;
+                        $propMatches[$label] = false;
+                    }
+                    break;
+
+                case 'colorcontains':
+                    if (!cssColorContains($eVal, $bRaw)) {
+                        $styleDiffs[] = "{$label}: engine={$eDisplay} not in browser={$bRaw}";
+                        $allPassed = false;
+                        $propMatches[$label] = false;
+                    }
+                    break;
+
+                case 'pxmax':
+                    $bVal = cssPxMax($bRaw);
+                    if ($eVal !== $bVal) {
+                        $styleDiffs[] = "{$label}: engine={$eDisplay}px browser(shorthand)={$bRaw}";
+                        $allPassed = false;
+                        $propMatches[$label] = false;
+                    }
+                    break;
+
+                case 'color':
+                    $bColor = cssColorToGdi($bRaw);
+                    $skipBg = ($eProp === 'bg' && $eVal === 0);
+                    if ($bColor !== null && $eVal !== $bColor && !$skipBg) {
+                        $styleDiffs[] = "{$label}: engine={$eDisplay} browser={$bRaw}";
+                        $allPassed = false;
+                        $propMatches[$label] = false;
+                    }
+                    break;
+
+                case 'colorfirst':
+                    $bColor = cssColorFirst($bRaw);
+                    if ($bColor !== null && $eVal !== $bColor) {
+                        $styleDiffs[] = "{$label}: engine={$eDisplay} browser(shorthand)={$bRaw}";
+                        $allPassed = false;
+                        $propMatches[$label] = false;
+                    }
+                    break;
+
+                case 'weight':
+                    $bVal = cssWeightToBold($bRaw);
+                    if ($eVal !== $bVal) {
+                        $styleDiffs[] = "{$label}: engine={$eDisplay} browser={$bRaw}";
+                        $allPassed = false;
+                        $propMatches[$label] = false;
+                    }
+                    break;
+
+                case 'lineheight':
+                    $bPx = (int)round((float)$bRaw);
+                    $eComputed = 0;
+                    $fs = $eStyles['fontSize'] ?? 14;
+                    if ($eVal === '' || $eVal === 'normal') {
+                        $eComputed = (int)($fs * 1.2);
+                    } elseif (is_numeric($eVal)) {
+                        $eComputed = (int)((float)$eVal * $fs);
+                    } else {
+                        $eComputed = (int)$eVal;
+                    }
+                    $diff = abs($eComputed - $bPx);
+                    if ($diff > 2) {
+                        $styleDiffs[] = "{$label}: engine(computed)={$eComputed}px browser={$bRaw} (diff={$diff}px)";
+                        $allPassed = false;
+                        $propMatches[$label] = false;
+                    }
+                    break;
+
+                case 'string':
+                    $eStr = (string)$eVal;
+                    $bStr = (string)$bRaw;
+                    if ($eStr === 'start') $eStr = 'left';
+                    if ($eStr === 'end') $eStr = 'right';
+                    if ($bStr === 'start') $bStr = 'left';
+                    if ($bStr === 'end') $bStr = 'right';
+                    if ($eStr === 'inline-flex') $eStr = 'flex';
+                    if ($eStr !== $bStr) {
+                        $styleDiffs[] = "{$label}: engine={$eVal} browser={$bRaw}";
+                        $allPassed = false;
+                        $propMatches[$label] = false;
+                    }
+                    break;
+
+                case 'boxsizing':
+                    $bBox = strtolower(trim($bRaw));
+                    if ($bBox !== '' && (string)$eVal !== $bBox) {
+                        $styleDiffs[] = "{$label}: engine={$eDisplay} browser={$bRaw}";
+                        $allPassed = false;
+                        $propMatches[$label] = false;
+                    }
+                    break;
+            }
+        }
+    }
+
+    return [
+        'passed' => $allPassed,
+        'posInfo' => $posInfo,
+        'sizeInfo' => $sizeInfo,
+        'failReasons' => $failReasons,
+        'styleDiffs' => $styleDiffs,
+        'propMatches' => $propMatches,
+    ];
+}
+
+function flattenEngineTreeAll(?array $node, int $depth = 0, ?array $parentPos = null, ?int $parentIdx = null, int &$counter = 0): array {
+    if ($node === null) return [];
+    $result = [];
+
+    $nodeX = $node['x'] ?? 0;
+    $nodeY = $node['y'] ?? 0;
+
+    if ($parentPos !== null) {
+        $relX = $nodeX - $parentPos['x'];
+        $relY = $nodeY - $parentPos['y'];
+    } else {
+        $relX = $nodeX;
+        $relY = $nodeY;
+    }
+
+    $myIdx = $counter++;
+    $style = $node['style'] ?? [];
+    $content = str_replace("\r\n", "\n", $node['content'] ?? '');
+
+    $result[] = [
+        'idx' => $myIdx,
+        'type' => $node['type'] ?? 'unknown',
+        'x' => $nodeX,
+        'y' => $nodeY,
+        'relX' => $relX,
+        'relY' => $relY,
+        'w' => $node['w'] ?? 0,
+        'h' => $node['h'] ?? 0,
+        'visualW' => $node['visualW'] ?? 0,
+        'visualH' => $node['visualH'] ?? 0,
+        'content' => $content,
+        'style' => $style,
+        'depth' => $depth,
+        'parentIdx' => $parentIdx,
+    ];
+
+    $childParentPos = ['x' => $nodeX, 'y' => $nodeY];
+    if (isset($node['children']) && is_array($node['children'])) {
+        foreach ($node['children'] as $child) {
+            $result = array_merge($result, flattenEngineTreeAll($child, $depth + 1, $childParentPos, $myIdx, $counter));
+        }
+    }
+
+    return $result;
 }
 
 function getEngineToBrowserMap(): array {

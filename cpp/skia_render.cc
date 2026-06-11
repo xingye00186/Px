@@ -83,7 +83,7 @@ static bool      g_skGdiplusInited = false;
 
 // 默认字体名（可通过 sk_set_default_font 修改）
 // GDI 路径：CreateFont 参数；Skia 路径：skEnsureFont 优先查找
-static std::string g_skDefaultFont = "Microsoft YaHei";
+static std::string g_skDefaultFont = "Noto Sans SC";
 
 // 设置默认字体名（C++ 编译后生效）
 void php_sk_set_default_font(String fontFamily) {

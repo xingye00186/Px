@@ -70,9 +70,10 @@ function buildWrapperHtml(string $bodyContent, string $jsCode): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0d1117; color: #e6edf3; font-size: 14px; line-height: 1.7; }
+* { margin: 0; padding: 0; }
+body { background: #0d1117; color: #e6edf3; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -92,7 +93,7 @@ function runEdgeHeadless(string $edgePath, string $htmlPath, int $timeout = 30):
     $fileUrl = 'file:///' . $urlPath;
 
     $cmd = sprintf(
-        '"%s" --headless --disable-gpu --window-size=1280,3000 --dump-dom "%s"',
+        '"%s" --headless --disable-gpu --window-size=1800,1200 --dump-dom "%s"',
         $edgePath,
         $fileUrl
     );
