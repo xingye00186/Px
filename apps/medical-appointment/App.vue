@@ -1,0 +1,35 @@
+<template>
+  <div style="width:1280px;height:3000px;overflow-y:auto">
+<div style="max-width:1200px; margin:0 auto;">
+    <div style="background:white; border-radius:32px; padding:28px; box-shadow:0 15px 35px rgba(0,0,0,0.05);">
+        <!-- 头部 -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:28px;">
+            <div><h1 style="margin:0; color:#1e3a8a;">🏥 在线问诊</h1><p style="margin:4px 0 0; color:#4b5563;">快速预约 · 专家坐诊</p></div>
+            <div style="background:#eff6ff; padding:8px 20px; border-radius:40px; color:#2563eb; font-weight:600;">📅 3月 20日 周四</div>
+        </div>
+        <!-- 搜索与筛选 Flex 行 -->
+        <div style="display:flex; gap:12px; margin-bottom:32px; flex-wrap:wrap;">
+            <input type="text" placeholder="🔍 搜索医生或科室" style="flex:3; padding:14px 20px; border:1px solid #cbd5e1; border-radius:40px; background:#f9fafb;">
+            <select style="flex:1; padding:14px 20px; border:1px solid #cbd5e1; border-radius:40px; background:#fff;"><option>全科室</option><option>内科</option><option>儿科</option></select>
+            <button style="background:#2563eb; color:white; border:none; border-radius:40px; padding:0 28px; font-weight:600;">筛选</button>
+        </div>
+        <!-- 医生网格 (Grid) -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:24px;">
+            <div style="background:#fff; border-radius:28px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 4px 8px rgba(0,0,0,0.02);">
+                <div style="padding:20px;"><div style="display:flex; gap:16px;"><div style="width:70px; height:70px; background:#dbeafe; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem;">👩‍⚕️</div><div><div style="font-weight:700; font-size:1.2rem;">李敏华</div><div style="color:#2563eb;">内科主任</div></div></div></div>
+                <div style="border-top:1px solid #eef2ff; padding:16px 20px; background:#fafcff;"><div>⭐ 4.9 · 15年经验</div><button style="margin-top:12px; width:100%; background:#2563eb; color:white; border:none; border-radius:30px; padding:10px;">预约</button></div>
+            </div>
+            <div style="background:#fff; border-radius:28px; border:1px solid #e2e8f0; overflow:hidden;"><div style="padding:20px;"><div style="display:flex; gap:16px;"><div style="width:70px; height:70px; background:#d1fae5; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem;">👨‍⚕️</div><div><div style="font-weight:700; font-size:1.2rem;">张瑞华</div><div style="color:#059669;">儿科</div></div></div></div><div style="border-top:1px solid #eef2ff; padding:16px 20px;"><div>⭐ 4.8 · 22年经验</div><button style="margin-top:12px; width:100%; background:#2563eb; color:white; border:none; border-radius:30px; padding:10px;">预约</button></div></div>
+            <div style="background:#fff; border-radius:28px; border:1px solid #e2e8f0; overflow:hidden;"><div style="padding:20px;"><div style="display:flex; gap:16px;"><div style="width:70px; height:70px; background:#fee2e2; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem;">👩‍⚕️</div><div><div style="font-weight:700; font-size:1.2rem;">陈芳</div><div style="color:#dc2626;">心血管</div></div></div></div><div style="border-top:1px solid #eef2ff; padding:16px 20px;"><div>⭐ 4.9 · 18年经验</div><button style="margin-top:12px; width:100%; background:#2563eb; color:white; border:none; border-radius:30px; padding:10px;">预约</button></div></div>
+        </div>
+        <!-- 日历模拟行 -->
+        <div style="margin-top:32px; background:#f8fafc; border-radius:28px; padding:20px; text-align:center; color:#1e293b;">🗓️ 本周可预约时间：3月21日 09:30 · 3月22日 14:00 · 3月23日 全天</div>
+    </div>
+</div>
+  </div>
+</template>
+<script lang="php">
+class AppComponent extends ReactiveComponent
+{
+}
+</script>

@@ -1,0 +1,125 @@
+<template>
+  <div style="width:1280px;height:3000px;overflow-y:auto">
+<div class="login-card">
+    <h2>欢迎回来</h2>
+    <div class="sub">登录以继续访问仪表盘</div>
+    <div class="input-group">
+        <label>电子邮箱</label>
+        <input type="email" placeholder="your@email.com" value="test@example.com">
+    </div>
+    <div class="input-group">
+        <label>密码</label>
+        <input type="password" placeholder="********">
+    </div>
+    <div class="checkbox">
+        <input type="checkbox"> <label style="margin-bottom:0;">记住我</label>
+    </div>
+    <button class="btn-login">登 录</button>
+    <div class="register-link">还没有账号？ <a href="#">立即注册</a></div>
+</div>
+  </div>
+</template>
+<style>
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
+            background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-card {
+            background: rgba(255,255,255,0.98);
+            border-radius: 32px;
+            width: 100%;
+            max-width: 440px;
+            padding: 48px 40px;
+            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.3);
+            backdrop-filter: blur(0px);
+            transition: transform 0.2s;
+        }
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1e293b;
+        }
+        .sub {
+            color: #64748b;
+            margin-bottom: 32px;
+            font-size: 0.9rem;
+        }
+        .input-group {
+            margin-bottom: 24px;
+        }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #334155;
+        }
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            transition: 0.2s;
+            outline: none;
+        }
+        input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.2);
+        }
+        .btn-login {
+            background: #667eea;
+            color: white;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-login:hover {
+            background: #5a67d8;
+        }
+        .register-link {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 0.85rem;
+            color: #475569;
+        }
+        .register-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .checkbox input {
+            width: 18px;
+            height: 18px;
+        }
+        @media (max-width: 480px) {
+            .login-card { padding: 32px 24px; }
+        }
+</style>
+<script lang="php">
+class AppComponent extends ReactiveComponent
+{
+}
+</script>

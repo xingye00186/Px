@@ -1,0 +1,17 @@
+name: product-grid
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+cxx-flags:
+  - /utf-8
+
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php

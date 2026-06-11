@@ -1,0 +1,555 @@
+{
+    "type": "div",
+    "x": 0,
+    "y": 0,
+    "w": 1280,
+    "h": 3000,
+    "visualW": 1280,
+    "visualH": 3000,
+    "layer": 0,
+    "isScrollContainer": true,
+    "content": null,
+    "style": {
+        "overflowY": "auto"
+    },
+    "children": [
+        {
+            "type": "div",
+            "x": 0,
+            "y": 0,
+            "w": 1200,
+            "h": 357,
+            "visualW": 1200,
+            "visualH": 357,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "marginTop": 0,
+                "marginLeft": 0,
+                "marginRight": 0,
+                "marginBottom": 0
+            },
+            "children": [
+                {
+                    "type": "div",
+                    "x": 0,
+                    "y": 0,
+                    "w": 1200,
+                    "h": 24,
+                    "visualW": 1200,
+                    "visualH": 24,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "display": "flex",
+                        "marginBottom": 32,
+                        "alignItems": "center",
+                        "justifyContent": "space-between"
+                    },
+                    "children": [
+                        {
+                            "type": "h1",
+                            "x": 0,
+                            "y": -8,
+                            "w": 54,
+                            "h": 16,
+                            "visualW": 54,
+                            "visualH": 16,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "📚 我的课程",
+                            "style": {
+                                "marginTop": 0,
+                                "marginLeft": 0,
+                                "marginRight": 0,
+                                "marginBottom": 0
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 1146,
+                            "y": -8,
+                            "w": 54,
+                            "h": 16,
+                            "visualW": 94,
+                            "visualH": 32,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "👤 用户中心",
+                            "style": {
+                                "bg": 3877150,
+                                "fg": 16777215,
+                                "borderRadius": 40,
+                                "paddingTop": 8,
+                                "paddingLeft": 20,
+                                "paddingRight": 20,
+                                "paddingBottom": 8
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "div",
+                    "x": 0,
+                    "y": 56,
+                    "w": 1200,
+                    "h": 301,
+                    "visualW": 1200,
+                    "visualH": 301,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "display": "grid",
+                        "gap": 28,
+                        "gridTemplateColumns": "repeat(auto-fill, minmax(280px,1fr))"
+                    },
+                    "children": [
+                        {
+                            "type": "div",
+                            "x": 0,
+                            "y": 56,
+                            "w": 381,
+                            "h": 301,
+                            "visualW": 381,
+                            "visualH": 301,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16777215,
+                                "borderRadius": 28,
+                                "opacity": 0.05,
+                                "overflow": "hidden"
+                            },
+                            "children": [
+                                {
+                                    "type": "div",
+                                    "x": 0,
+                                    "y": 56,
+                                    "w": 1200,
+                                    "h": 140,
+                                    "visualW": 1200,
+                                    "visualH": 140,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": null,
+                                    "style": {
+                                        "bg": 16155195
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 0,
+                                    "y": 56,
+                                    "w": 1200,
+                                    "h": 121,
+                                    "visualW": 1240,
+                                    "visualH": 161,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": null,
+                                    "style": {
+                                        "paddingTop": 20,
+                                        "paddingLeft": 20,
+                                        "paddingRight": 20,
+                                        "paddingBottom": 20
+                                    },
+                                    "children": [
+                                        {
+                                            "type": "div",
+                                            "x": 20,
+                                            "y": 76,
+                                            "w": 1200,
+                                            "h": 21,
+                                            "visualW": 1200,
+                                            "visualH": 21,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": "JavaScript 进阶",
+                                            "style": {
+                                                "fontSize": 18,
+                                                "bold": 1
+                                            }
+                                        },
+                                        {
+                                            "type": "div",
+                                            "x": 20,
+                                            "y": 97,
+                                            "w": 1200,
+                                            "h": 16,
+                                            "visualW": 1200,
+                                            "visualH": 16,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": "已完成 65%",
+                                            "style": {
+                                                "fg": 8222060
+                                            }
+                                        },
+                                        {
+                                            "type": "div",
+                                            "x": 20,
+                                            "y": 125,
+                                            "w": 1200,
+                                            "h": 6,
+                                            "visualW": 1200,
+                                            "visualH": 6,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": null,
+                                            "style": {
+                                                "bg": 15788258,
+                                                "borderRadius": 3,
+                                                "marginTop": 12,
+                                                "marginLeft": 0,
+                                                "marginRight": 0,
+                                                "marginBottom": 12
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "x": 20,
+                                                    "y": 125,
+                                                    "w": 780,
+                                                    "h": 6,
+                                                    "visualW": 780,
+                                                    "visualH": 6,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": null,
+                                                    "style": {
+                                                        "bg": 16155195,
+                                                        "borderRadius": 3
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "button",
+                                            "x": 20,
+                                            "y": 143,
+                                            "w": 1200,
+                                            "h": 16,
+                                            "visualW": 1218,
+                                            "visualH": 34,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": "继续学习",
+                                            "style": {
+                                                "bg": 16579320,
+                                                "borderWidth": 1,
+                                                "borderColor": 13421772,
+                                                "borderLeftWidth": 1,
+                                                "borderLeftColor": 13421772,
+                                                "borderRadius": 40,
+                                                "paddingTop": 8,
+                                                "paddingLeft": 8,
+                                                "paddingRight": 8,
+                                                "paddingBottom": 8
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "div",
+                            "x": 409,
+                            "y": 56,
+                            "w": 381,
+                            "h": 301,
+                            "visualW": 381,
+                            "visualH": 301,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16777215,
+                                "borderRadius": 28
+                            },
+                            "children": [
+                                {
+                                    "type": "div",
+                                    "x": 409,
+                                    "y": 56,
+                                    "w": 1200,
+                                    "h": 140,
+                                    "visualW": 1200,
+                                    "visualH": 140,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": null,
+                                    "style": {
+                                        "bg": 8501520
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 409,
+                                    "y": 56,
+                                    "w": 1200,
+                                    "h": 121,
+                                    "visualW": 1240,
+                                    "visualH": 161,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": null,
+                                    "style": {
+                                        "paddingTop": 20,
+                                        "paddingLeft": 20,
+                                        "paddingRight": 20,
+                                        "paddingBottom": 20
+                                    },
+                                    "children": [
+                                        {
+                                            "type": "div",
+                                            "x": 429,
+                                            "y": 76,
+                                            "w": 1200,
+                                            "h": 21,
+                                            "visualW": 1200,
+                                            "visualH": 21,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": "Vue 3 实战",
+                                            "style": {
+                                                "fontSize": 18,
+                                                "bold": 1
+                                            }
+                                        },
+                                        {
+                                            "type": "div",
+                                            "x": 429,
+                                            "y": 97,
+                                            "w": 1200,
+                                            "h": 16,
+                                            "visualW": 1200,
+                                            "visualH": 16,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": "已完成 30%",
+                                            "style": {
+                                                "fg": 8222060
+                                            }
+                                        },
+                                        {
+                                            "type": "div",
+                                            "x": 429,
+                                            "y": 125,
+                                            "w": 1200,
+                                            "h": 6,
+                                            "visualW": 1200,
+                                            "visualH": 6,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": null,
+                                            "style": {
+                                                "bg": 15788258,
+                                                "borderRadius": 3,
+                                                "marginTop": 12,
+                                                "marginLeft": 0,
+                                                "marginRight": 0,
+                                                "marginBottom": 12
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "x": 429,
+                                                    "y": 125,
+                                                    "w": 360,
+                                                    "h": 6,
+                                                    "visualW": 360,
+                                                    "visualH": 6,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": null,
+                                                    "style": {
+                                                        "bg": 8501520,
+                                                        "borderRadius": 3
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "button",
+                                            "x": 429,
+                                            "y": 143,
+                                            "w": 1200,
+                                            "h": 16,
+                                            "visualW": 1218,
+                                            "visualH": 34,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": "开始学习",
+                                            "style": {
+                                                "bg": 16579320,
+                                                "borderWidth": 1,
+                                                "borderColor": 13421772,
+                                                "borderLeftWidth": 1,
+                                                "borderLeftColor": 13421772,
+                                                "borderRadius": 40,
+                                                "paddingTop": 8,
+                                                "paddingLeft": 8,
+                                                "paddingRight": 8,
+                                                "paddingBottom": 8
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "div",
+                            "x": 818,
+                            "y": 56,
+                            "w": 381,
+                            "h": 301,
+                            "visualW": 381,
+                            "visualH": 301,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16777215,
+                                "borderRadius": 28
+                            },
+                            "children": [
+                                {
+                                    "type": "div",
+                                    "x": 818,
+                                    "y": 56,
+                                    "w": 1200,
+                                    "h": 140,
+                                    "visualW": 1200,
+                                    "visualH": 140,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": null,
+                                    "style": {
+                                        "bg": 761589
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 818,
+                                    "y": 56,
+                                    "w": 1200,
+                                    "h": 121,
+                                    "visualW": 1240,
+                                    "visualH": 161,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": null,
+                                    "style": {
+                                        "paddingTop": 20,
+                                        "paddingLeft": 20,
+                                        "paddingRight": 20,
+                                        "paddingBottom": 20
+                                    },
+                                    "children": [
+                                        {
+                                            "type": "div",
+                                            "x": 838,
+                                            "y": 76,
+                                            "w": 1200,
+                                            "h": 21,
+                                            "visualW": 1200,
+                                            "visualH": 21,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": "Python 数据分析",
+                                            "style": {
+                                                "fontSize": 18,
+                                                "bold": 1
+                                            }
+                                        },
+                                        {
+                                            "type": "div",
+                                            "x": 838,
+                                            "y": 97,
+                                            "w": 1200,
+                                            "h": 16,
+                                            "visualW": 1200,
+                                            "visualH": 16,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": "已完成 90%",
+                                            "style": {
+                                                "fg": 8222060
+                                            }
+                                        },
+                                        {
+                                            "type": "div",
+                                            "x": 838,
+                                            "y": 125,
+                                            "w": 1200,
+                                            "h": 6,
+                                            "visualW": 1200,
+                                            "visualH": 6,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": null,
+                                            "style": {
+                                                "bg": 15788258,
+                                                "borderRadius": 3,
+                                                "marginTop": 12,
+                                                "marginLeft": 0,
+                                                "marginRight": 0,
+                                                "marginBottom": 12
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "x": 838,
+                                                    "y": 125,
+                                                    "w": 1080,
+                                                    "h": 6,
+                                                    "visualW": 1080,
+                                                    "visualH": 6,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": null,
+                                                    "style": {
+                                                        "bg": 761589,
+                                                        "borderRadius": 3
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "button",
+                                            "x": 838,
+                                            "y": 143,
+                                            "w": 1200,
+                                            "h": 16,
+                                            "visualW": 1218,
+                                            "visualH": 34,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": "继续学习",
+                                            "style": {
+                                                "bg": 16579320,
+                                                "borderWidth": 1,
+                                                "borderColor": 13421772,
+                                                "borderLeftWidth": 1,
+                                                "borderLeftColor": 13421772,
+                                                "borderRadius": 40,
+                                                "paddingTop": 8,
+                                                "paddingLeft": 8,
+                                                "paddingRight": 8,
+                                                "paddingBottom": 8
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+<template>
+  <div style="width:1280px;height:3000px;overflow-y:auto">
+<div style="max-width:1400px; margin:0 auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:28px;"><h1 style="margin:0;">📌 任务看板</h1><div style="display:flex; gap:12px;"><button style="background:#2563eb; color:white; border:none; border-radius:30px; padding:8px 20px;">+ 新建任务</button></div></div>
+    <div style="display:flex; gap:24px; overflow-x:auto; padding-bottom:12px;">
+        <!-- 看板列 1 -->
+        <div style="min-width:300px; background:#fff; border-radius:24px; padding:16px;"><div style="font-weight:700; margin-bottom:12px;">📋 待办 (3)</div>
+            <div style="background:#f9fafb; border-radius:16px; padding:12px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);"><div style="font-weight:600;">设计评审</div><div style="font-size:0.8rem; color:#6c757d;">今日截止</div></div>
+            <div style="background:#f9fafb; border-radius:16px; padding:12px; margin-bottom:12px;"><div style="font-weight:600;">API 文档更新</div><div style="font-size:0.8rem; color:#6c757d;">明日</div></div>
+        </div>
+        <!-- 看板列 2 -->
+        <div style="min-width:300px; background:#fff; border-radius:24px; padding:16px;"><div style="font-weight:700; margin-bottom:12px;">⚙️ 进行中 (2)</div>
+            <div style="background:#f9fafb; border-radius:16px; padding:12px; margin-bottom:12px;"><div style="font-weight:600;">前端重构</div><div style="font-size:0.8rem; color:#2563eb;">🔖 高优先级</div></div>
+            <div style="background:#f9fafb; border-radius:16px; padding:12px;"><div style="font-weight:600;">单元测试编写</div><div style="font-size:0.8rem; color:#6c757d;">进度 50%</div><div style="height:4px; background:#e2e8f0; border-radius:2px;"><div style="width:50%; height:4px; background:#3b82f6; border-radius:2px;"></div></div></div>
+        </div>
+        <!-- 看板列 3 -->
+        <div style="min-width:300px; background:#fff; border-radius:24px; padding:16px;"><div style="font-weight:700; margin-bottom:12px;">✅ 已完成 (4)</div>
+            <div style="background:#f0fdf4; border-radius:16px; padding:12px;"><div style="font-weight:600;">首页优化</div><div style="font-size:0.8rem; color:#16a34a;">✔️ 2025-03-18</div></div>
+        </div>
+    </div>
+</div>
+  </div>
+</template>
+<script lang="php">
+class AppComponent extends ReactiveComponent
+{
+}
+</script>
