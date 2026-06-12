@@ -1,0 +1,230 @@
+{
+    "type": "div",
+    "x": 0,
+    "y": 0,
+    "w": 1280,
+    "h": 1200,
+    "visualW": 1280,
+    "visualH": 1200,
+    "layer": 0,
+    "isScrollContainer": true,
+    "content": null,
+    "style": {
+        "bg": 16119285,
+        "fontSize": 14,
+        "overflowY": "auto"
+    },
+    "children": [
+        {
+            "type": "div",
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 40,
+            "visualW": 1320,
+            "visualH": 41,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "bg": 16777215,
+                "fg": 6710886,
+                "fontSize": 14,
+                "borderColor": 14540253,
+                "display": "flex",
+                "paddingTop": 0,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 0,
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "type": "#text",
+                    "x": 20,
+                    "y": 12,
+                    "w": 93,
+                    "h": 16,
+                    "visualW": 93,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "CSS Test Sandbox —",
+                    "style": {
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "type": "span",
+                    "x": 113,
+                    "y": 12,
+                    "w": 43,
+                    "h": 16,
+                    "visualW": 43,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "Test Case",
+                    "style": {
+                        "fg": 3355443,
+                        "fontSize": 14,
+                        "bold": 1
+                    }
+                }
+            ]
+        },
+        {
+            "type": "div",
+            "x": 0,
+            "y": 41,
+            "w": 1280,
+            "h": 200,
+            "visualW": 1320,
+            "visualH": 240,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "fontSize": 14,
+                "paddingTop": 20,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 20
+            },
+            "children": [
+                {
+                    "type": "div",
+                    "x": 260,
+                    "y": 61,
+                    "w": 800,
+                    "h": 150,
+                    "visualW": 850,
+                    "visualH": 200,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "bg": 16777215,
+                        "fontSize": 14,
+                        "borderWidth": 1,
+                        "borderColor": 14737632,
+                        "borderLeftWidth": 1,
+                        "borderLeftColor": 14737632,
+                        "borderRadius": 8,
+                        "paddingTop": 24,
+                        "paddingLeft": 24,
+                        "paddingRight": 24,
+                        "paddingBottom": 24,
+                        "marginTop": 0,
+                        "marginLeft": 0,
+                        "marginRight": 0,
+                        "marginBottom": 0
+                    },
+                    "children": [
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 85,
+                            "w": 800,
+                            "h": 21,
+                            "visualW": 800,
+                            "visualH": 21,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Centered Wrapper Test (margin: 0 auto)",
+                            "style": {
+                                "fg": 3355443,
+                                "fontSize": 18,
+                                "bold": 1,
+                                "marginBottom": 16
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 122,
+                            "w": 800,
+                            "h": 66,
+                            "visualW": 800,
+                            "visualH": 66,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "fg": 6710886,
+                                "fontSize": 14,
+                                "lineHeight": "1.6"
+                            },
+                            "children": [
+                                {
+                                    "type": "p",
+                                    "x": 44,
+                                    "y": 122,
+                                    "w": 800,
+                                    "h": 22,
+                                    "visualW": 800,
+                                    "visualH": 22,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "This container is 800px wide with margin:0 auto.",
+                                    "style": {
+                                        "fontSize": 14
+                                    }
+                                },
+                                {
+                                    "type": "p",
+                                    "x": 44,
+                                    "y": 144,
+                                    "w": 800,
+                                    "h": 22,
+                                    "visualW": 800,
+                                    "visualH": 22,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "The sandbox is 1280px wide with 20px padding.",
+                                    "style": {
+                                        "fontSize": 14
+                                    }
+                                },
+                                {
+                                    "type": "p",
+                                    "x": 44,
+                                    "y": 166,
+                                    "w": 800,
+                                    "h": 22,
+                                    "visualW": 800,
+                                    "visualH": 22,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "Expected x = (1280 - 800 - 2*20) \/ 2 = 220px",
+                                    "style": {
+                                        "fontSize": 14
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 204,
+                            "w": 800,
+                            "h": 14,
+                            "visualW": 800,
+                            "visualH": 31,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "case-001: wrapper x-position verification",
+                            "style": {
+                                "fg": 10066329,
+                                "fontSize": 12,
+                                "borderColor": 15658734,
+                                "paddingTop": 16,
+                                "marginTop": 16
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

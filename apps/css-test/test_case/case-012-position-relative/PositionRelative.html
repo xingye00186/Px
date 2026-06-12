@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Layout — Position Relative</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f0f2f5; font-family:sans-serif; display:flex; justify-content:center; padding:20px; }
+  .bx-card { width:720px; background:#fff; border-radius:12px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+  .bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
+  .bx-desc { font-size:13px; color:#888; margin-bottom:16px; line-height:1.5; }
+  .rel-row { display:flex; gap:12px; margin-bottom:16px; }
+  .rel-row div { flex:1; padding:20px; border-radius:8px; text-align:center; border:1px solid #e0e0e0; }
+  .rel-offset { background:#fef3c7; border-color:#fbbf24; position:relative; top:20px; left:10px; }
+  .bx-footer { margin-top:16px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
+</style></head><body>
+<div class="bx-card">
+  <div class="bx-header">?? 布局 · 相对定位测试</div>
+  <div class="bx-desc">中间的元素: 相对定位偏移(20px, -10px)，不脱流</div>
+  <div class="rel-row">
+    <div style="background:#f8f9ff;">Normal</div>
+    <div class="rel-offset">relative<br>top:20 left:10</div>
+    <div style="background:#f8f9ff;">Normal</div>
+  </div>
+  <div class="bx-desc" style="background:#fafafa;padding:12px;border-radius:6px;">?? 注意：相对偏移不影响兄弟元素位置，原空间保留。用于精细微调。</div>
+  <div class="bx-footer">case-012: Layout — Position Relative</div>
+</div>
+</body></html>

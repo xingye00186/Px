@@ -2,21 +2,20 @@
 use Px\Core\Application;
 
 const APP_PLATFORM  = 'win32';
-const WINDOW_WIDTH  = 1800;
+const WINDOW_WIDTH  = 1280;
 const WINDOW_HEIGHT = 1200;
 const WINDOW_TITLE  = 'Medical Appointment';
 
 function main(): int
 {
-    putenv('PX_RENDERER=skia-cpu');
     $root = ComponentFactory::create(AppComponent::class);
     $appDir = __DIR__;
     $app = Application::create()->mount($root, $appDir);
 
     global $argv;
-    if (in_array('--dump-layout', $argv)) {
-        $app->render();
-        $app->dumpLayoutToFile($appDir . '/engine_layout.json');
+    // 使用 Application 的通用 CLI 参数处理器
+    // 支持: --dump-layout, --dump-layout-after-frames=N
+    if (Application::handleDumpArgs($app, $appDir, $argv)) {
         return 0;
     }
 

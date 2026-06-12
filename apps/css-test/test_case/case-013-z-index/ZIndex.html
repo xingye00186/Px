@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Layout ¡ª Z-Index</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f0f2f5; font-family:sans-serif; display:flex; justify-content:center; padding:20px; }
+  .bx-card { width:720px; background:#fff; border-radius:12px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+  .bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
+  .zx-container { position:relative; height:160px; margin-bottom:16px; }
+  .zx-base { position:absolute; top:20px; left:20px; width:300px; height:120px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:14px; color:#fff; z-index:1; background:linear-gradient(135deg,#e94560,#f093fb); }
+  .zx-mid { position:absolute; top:50px; left:100px; width:280px; height:100px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:14px; color:#fff; z-index:2; background:linear-gradient(135deg,#0f3460,#4facfe); }
+  .zx-top { position:absolute; top:80px; left:180px; width:260px; height:80px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:14px; color:#333; z-index:3; background:linear-gradient(135deg,#4ade80,#38f9d7); }
+  .bx-footer { margin-top:16px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
+</style></head><body>
+<div class="bx-card">
+  <div class="bx-header">??? ²¼¾Ö ¡¤ Z-Index ²ãµþ²âÊÔ</div>
+  <div class="zx-container">
+    <div class="zx-base">z-index:1 (µ×²ã)</div>
+    <div class="zx-mid">z-index:2 (ÖÐ²ã)</div>
+    <div class="zx-top">z-index:3 (¶¥²ã)</div>
+  </div>
+  <div class="bx-footer">case-013: Layout ¡ª Z-Index</div>
+</div>
+</body></html>

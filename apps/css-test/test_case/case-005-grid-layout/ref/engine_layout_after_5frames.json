@@ -1,0 +1,365 @@
+{
+    "type": "div",
+    "x": 0,
+    "y": 0,
+    "w": 1600,
+    "h": 800,
+    "visualW": 1600,
+    "visualH": 800,
+    "layer": 0,
+    "isScrollContainer": true,
+    "content": null,
+    "style": {
+        "bg": 16119285,
+        "fontSize": 14,
+        "overflowY": "auto"
+    },
+    "children": [
+        {
+            "type": "div",
+            "x": 0,
+            "y": 0,
+            "w": 1600,
+            "h": 40,
+            "visualW": 1640,
+            "visualH": 41,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "bg": 16777215,
+                "fg": 6710886,
+                "fontSize": 14,
+                "borderColor": 14540253,
+                "display": "flex",
+                "paddingTop": 0,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 0,
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "type": "#text",
+                    "x": 20,
+                    "y": 12,
+                    "w": 93,
+                    "h": 16,
+                    "visualW": 93,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "CSS Test Sandbox —",
+                    "style": {
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "type": "span",
+                    "x": 113,
+                    "y": 12,
+                    "w": 43,
+                    "h": 16,
+                    "visualW": 43,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "Test Case",
+                    "style": {
+                        "fg": 3355443,
+                        "fontSize": 14,
+                        "bold": 1
+                    }
+                }
+            ]
+        },
+        {
+            "type": "div",
+            "x": 0,
+            "y": 41,
+            "w": 1600,
+            "h": 347,
+            "visualW": 1640,
+            "visualH": 387,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "fontSize": 14,
+                "paddingTop": 20,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 20
+            },
+            "children": [
+                {
+                    "type": "div",
+                    "x": 20,
+                    "y": 61,
+                    "w": 800,
+                    "h": 297,
+                    "visualW": 850,
+                    "visualH": 347,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "bg": 16777215,
+                        "fontSize": 14,
+                        "borderWidth": 1,
+                        "borderColor": 14737632,
+                        "borderLeftWidth": 1,
+                        "borderLeftColor": 14737632,
+                        "borderRadius": 8,
+                        "paddingTop": 24,
+                        "paddingLeft": 24,
+                        "paddingRight": 24,
+                        "paddingBottom": 24
+                    },
+                    "children": [
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 85,
+                            "w": 800,
+                            "h": 21,
+                            "visualW": 800,
+                            "visualH": 21,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Grid Layout Test",
+                            "style": {
+                                "fg": 3355443,
+                                "fontSize": 18,
+                                "bold": 1,
+                                "marginBottom": 16
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 122,
+                            "w": 800,
+                            "h": 16,
+                            "visualW": 800,
+                            "visualH": 16,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "2-column grid:",
+                            "style": {
+                                "fg": 6710886,
+                                "fontSize": 14,
+                                "bold": 1,
+                                "marginBottom": 8
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 146,
+                            "w": 800,
+                            "h": 132,
+                            "visualW": 800,
+                            "visualH": 132,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "display": "grid",
+                                "marginBottom": 20,
+                                "gap": 12,
+                                "gridTemplateColumns": "1fr 1fr"
+                            },
+                            "children": [
+                                {
+                                    "type": "div",
+                                    "x": 44,
+                                    "y": 146,
+                                    "w": 0,
+                                    "h": 60,
+                                    "visualW": 0,
+                                    "visualH": 60,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "Left cell",
+                                    "style": {
+                                        "bg": 16642787,
+                                        "fg": 12608789,
+                                        "fontSize": 13,
+                                        "borderRadius": 4,
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "justifyContent": "center"
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 56,
+                                    "y": 146,
+                                    "w": 0,
+                                    "h": 60,
+                                    "visualW": 0,
+                                    "visualH": 60,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "Right cell",
+                                    "style": {
+                                        "bg": 15525116,
+                                        "fg": 2631878,
+                                        "fontSize": 13,
+                                        "borderRadius": 4,
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "justifyContent": "center"
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 44,
+                                    "y": 218,
+                                    "w": 0,
+                                    "h": 60,
+                                    "visualW": 0,
+                                    "visualH": 60,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "Bottom left",
+                                    "style": {
+                                        "bg": 15332840,
+                                        "fg": 3308846,
+                                        "fontSize": 13,
+                                        "borderRadius": 4,
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "justifyContent": "center"
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 56,
+                                    "y": 218,
+                                    "w": 0,
+                                    "h": 60,
+                                    "visualW": 0,
+                                    "visualH": 60,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "Bottom right",
+                                    "style": {
+                                        "bg": 14742527,
+                                        "fg": 20966,
+                                        "fontSize": 13,
+                                        "borderRadius": 4,
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "justifyContent": "center"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 298,
+                            "w": 800,
+                            "h": 16,
+                            "visualW": 800,
+                            "visualH": 16,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "3-column grid (uneven):",
+                            "style": {
+                                "fg": 6710886,
+                                "fontSize": 14,
+                                "bold": 1,
+                                "marginBottom": 8
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 322,
+                            "w": 800,
+                            "h": 60,
+                            "visualW": 800,
+                            "visualH": 60,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "display": "grid",
+                                "gap": 8,
+                                "gridTemplateColumns": "2fr 1fr 1fr"
+                            },
+                            "children": [
+                                {
+                                    "type": "div",
+                                    "x": 44,
+                                    "y": 322,
+                                    "w": 0,
+                                    "h": 60,
+                                    "visualW": 0,
+                                    "visualH": 60,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "2fr",
+                                    "style": {
+                                        "bg": 16115187,
+                                        "fg": 10099562,
+                                        "fontSize": 13,
+                                        "borderRadius": 4,
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "justifyContent": "center"
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 52,
+                                    "y": 322,
+                                    "w": 0,
+                                    "h": 60,
+                                    "visualW": 0,
+                                    "visualH": 60,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "1fr",
+                                    "style": {
+                                        "bg": 15856352,
+                                        "fg": 6056192,
+                                        "fontSize": 13,
+                                        "borderRadius": 4,
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "justifyContent": "center"
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 60,
+                                    "y": 322,
+                                    "w": 0,
+                                    "h": 60,
+                                    "visualW": 0,
+                                    "visualH": 60,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "1fr",
+                                    "style": {
+                                        "bg": 15525116,
+                                        "fg": 2631878,
+                                        "fontSize": 13,
+                                        "borderRadius": 4,
+                                        "display": "flex",
+                                        "alignItems": "center",
+                                        "justifyContent": "center"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

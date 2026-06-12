@@ -203,6 +203,9 @@ function defaultChecks(): array {
         ['textAlign',    'text-align',        'string', 'textAlign'],
         ['lineHeight',   'line-height',       'lineheight', 'lineHeight'],
         ['whiteSpace',   'white-space',       'string', 'whiteSpace'],
+        ['wordBreak',    'word-break',        'string', 'wordBreak'],
+        ['fontStyle',    'font-style',        'string', 'fontStyle'],
+        ['textDecoration','text-decoration',   'string', 'textDecoration'],
         // 内边距
         ['paddingTop',    'padding-top',       'px',     'paddingTop'],
         ['paddingLeft',   'padding-left',      'px',     'paddingLeft'],
@@ -216,9 +219,18 @@ function defaultChecks(): array {
         // 边框
         ['borderWidth',       'border-width',       'pxmax',         'borderWidth'],
         ['borderColor',       'border-color',       'colorcontains', 'borderColor'],
+        ['borderTopWidth',    'border-top-width',   'px',            'borderTopWidth'],
+        ['borderTopColor',    'border-top-color',   'color',         'borderTopColor'],
+        ['borderRightWidth',  'border-right-width',  'px',            'borderRightWidth'],
+        ['borderRightColor',  'border-right-color',  'color',         'borderRightColor'],
+        ['borderBottomWidth', 'border-bottom-width', 'px',            'borderBottomWidth'],
+        ['borderBottomColor','border-bottom-color', 'color',         'borderBottomColor'],
         ['borderLeftWidth',   'border-left-width',  'px',            'borderLeftWidth'],
         ['borderLeftColor',   'border-left-color',  'color',         'borderLeftColor'],
         ['borderRadius',      'border-radius',      'px',            'borderRadius'],
+        // 阴影/轮廓
+        ['boxShadow',         'box-shadow',         'string',        'boxShadow'],
+        ['outline',           'outline',            'string',        'outline'],
         // 布局/盒模型
         ['display',          'display',          'string',    'display'],
         ['flexDirection',    'flex-direction',   'string',    'flexDirection'],

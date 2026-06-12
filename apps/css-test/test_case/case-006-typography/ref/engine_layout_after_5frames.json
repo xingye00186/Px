@@ -1,0 +1,277 @@
+{
+    "type": "div",
+    "x": 0,
+    "y": 0,
+    "w": 1600,
+    "h": 800,
+    "visualW": 1600,
+    "visualH": 800,
+    "layer": 0,
+    "isScrollContainer": true,
+    "content": null,
+    "style": {
+        "bg": 16119285,
+        "fontSize": 14,
+        "overflowY": "auto"
+    },
+    "children": [
+        {
+            "type": "div",
+            "x": 0,
+            "y": 0,
+            "w": 1600,
+            "h": 40,
+            "visualW": 1640,
+            "visualH": 41,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "bg": 16777215,
+                "fg": 6710886,
+                "fontSize": 14,
+                "borderColor": 14540253,
+                "display": "flex",
+                "paddingTop": 0,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 0,
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "type": "#text",
+                    "x": 20,
+                    "y": 12,
+                    "w": 133,
+                    "h": 16,
+                    "visualW": 133,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "CSS Test Sandbox —",
+                    "style": {
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "type": "span",
+                    "x": 153,
+                    "y": 12,
+                    "w": 63,
+                    "h": 16,
+                    "visualW": 63,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "Test Case",
+                    "style": {
+                        "fg": 3355443,
+                        "fontSize": 14,
+                        "bold": 1
+                    }
+                }
+            ]
+        },
+        {
+            "type": "div",
+            "x": 0,
+            "y": 41,
+            "w": 1600,
+            "h": 314,
+            "visualW": 1640,
+            "visualH": 354,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "fontSize": 14,
+                "paddingTop": 20,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 20
+            },
+            "children": [
+                {
+                    "type": "div",
+                    "x": 20,
+                    "y": 61,
+                    "w": 800,
+                    "h": 264,
+                    "visualW": 850,
+                    "visualH": 314,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "bg": 16777215,
+                        "fontSize": 14,
+                        "borderWidth": 1,
+                        "borderColor": 14737632,
+                        "borderLeftWidth": 1,
+                        "borderLeftColor": 14737632,
+                        "borderRadius": 8,
+                        "paddingTop": 24,
+                        "paddingLeft": 24,
+                        "paddingRight": 24,
+                        "paddingBottom": 24
+                    },
+                    "children": [
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 85,
+                            "w": 800,
+                            "h": 21,
+                            "visualW": 800,
+                            "visualH": 21,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Typography Test",
+                            "style": {
+                                "fg": 3355443,
+                                "fontSize": 18,
+                                "bold": 1,
+                                "marginBottom": 16
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 122,
+                            "w": 800,
+                            "h": 28,
+                            "visualW": 800,
+                            "visualH": 28,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Heading 1 — Large Bold",
+                            "style": {
+                                "fg": 1710618,
+                                "fontSize": 24,
+                                "bold": 1,
+                                "marginBottom": 8
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 158,
+                            "w": 800,
+                            "h": 24,
+                            "visualW": 800,
+                            "visualH": 24,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Heading 2 — Medium Semibold",
+                            "style": {
+                                "fg": 3355443,
+                                "fontSize": 20,
+                                "bold": 1,
+                                "marginBottom": 8
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 190,
+                            "w": 800,
+                            "h": 19,
+                            "visualW": 800,
+                            "visualH": 19,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Heading 3 — Small Bold",
+                            "style": {
+                                "fg": 5592405,
+                                "fontSize": 16,
+                                "bold": 1,
+                                "marginBottom": 12
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 221,
+                            "w": 800,
+                            "h": 25,
+                            "visualW": 800,
+                            "visualH": 25,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "This is a paragraph with line-height 1.8. The quick brown fox jumps over the lazy dog. \r\n    Px 框架的布局引擎应该能够正确处理文字换行和行间距，确保可读性良好。多行文本渲染是布局引擎的基础能力。",
+                            "style": {
+                                "fg": 6710886,
+                                "fontSize": 14,
+                                "lineHeight": "1.8",
+                                "marginBottom": 16
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 262,
+                            "w": 800,
+                            "h": 14,
+                            "visualW": 800,
+                            "visualH": 14,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Caption text — 12px, gray (#999)",
+                            "style": {
+                                "fg": 10066329,
+                                "fontSize": 12,
+                                "marginBottom": 8
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 284,
+                            "w": 800,
+                            "h": 16,
+                            "visualW": 800,
+                            "visualH": 16,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Colored link text — blue, semibold",
+                            "style": {
+                                "fg": 12608789,
+                                "fontSize": 14,
+                                "bold": 1,
+                                "marginBottom": 8
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 308,
+                            "w": 800,
+                            "h": 15,
+                            "visualW": 834,
+                            "visualH": 41,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Code block — monospace, green text, light background",
+                            "style": {
+                                "bg": 16119285,
+                                "fg": 3308846,
+                                "fontSize": 13,
+                                "borderWidth": 1,
+                                "borderColor": 14737632,
+                                "borderLeftWidth": 1,
+                                "borderLeftColor": 14737632,
+                                "borderRadius": 4,
+                                "fontFamily": "consolas,monospace",
+                                "paddingTop": 12,
+                                "paddingLeft": 16,
+                                "paddingRight": 16,
+                                "paddingBottom": 12
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

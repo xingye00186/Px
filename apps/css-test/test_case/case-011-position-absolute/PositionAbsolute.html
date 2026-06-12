@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Layout — Position Absolute</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f0f2f5; font-family:sans-serif; display:flex; justify-content:center; padding:20px; }
+  .bx-card { width:720px; background:#fff; border-radius:12px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+  .bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
+  .bx-desc { font-size:13px; color:#888; margin-bottom:16px; line-height:1.5; }
+  .abs-container { position:relative; width:100%; height:180px; background:linear-gradient(135deg,#1a1a2e,#16213e); border-radius:10px; margin-bottom:16px; }
+  .abs-tl { position:absolute; top:0; left:0; padding:8px 14px; background:#e94560; color:#fff; border-radius:0 0 8px 0; font-size:12px; }
+  .abs-tr { position:absolute; top:0; right:0; padding:8px 14px; background:#0f3460; color:#fff; border-radius:0 0 0 8px; font-size:12px; }
+  .abs-bl { position:absolute; bottom:0; left:0; padding:8px 14px; background:#4ade80; color:#fff; border-radius:0 8px 0 0; font-size:12px; }
+  .abs-br { position:absolute; bottom:0; right:0; padding:8px 14px; background:#fb923c; color:#fff; border-radius:8px 0 0 0; font-size:12px; }
+  .abs-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:60px; height:60px; background:rgba(255,255,255,.15); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; color:#fff; }
+  .bx-footer { margin-top:16px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
+</style></head><body>
+<div class="bx-card">
+  <div class="bx-header">?? 布局 · 绝对定位测试</div>
+  <div class="bx-desc">相对定位容器内，四个子元素分别 absolute 定位到四角</div>
+  <div class="abs-container">
+    <div class="abs-tl">TL</div>
+    <div class="abs-tr">TR</div>
+    <div class="abs-bl">BL</div>
+    <div class="abs-br">BR</div>
+    <div class="abs-center">C</div>
+  </div>
+  <div class="bx-footer">case-011: Layout — Position Absolute</div>
+</div>
+</body></html>

@@ -84,6 +84,47 @@ class Application
         return $app;
     }
 
+    /**
+     * 处理 CLI 布局导出参数。
+     *
+     * 支持的参数：
+     *   --dump-layout                    → 单帧导出 engine_layout.json
+     *   --dump-layout-after-frames=N     → N 帧后导出 engine_layout_after_Nframes.json
+     *
+     * @param self $app Application 实例
+     * @param string $appDir 应用目录（输出 JSON 到此目录）
+     * @param array $argv CLI 参数数组
+     * @return bool 是否匹配并处理了 CLI 参数（true=已处理，调用方应 return 0）
+     */
+    public static function handleDumpArgs(self $app, string $appDir, array $argv): bool
+    {
+        // --dump-layout: 单帧导出（保持向后兼容）
+        if (in_array('--dump-layout', $argv)) {
+            $app->render();
+            $app->dumpLayoutToFile($appDir . '/engine_layout.json');
+            return true;
+        }
+
+        // --dump-layout-after-frames=N: 多帧稳定性验证（§Phase 2 强制）
+        foreach ($argv as $arg) {
+            if (str_starts_with($arg, '--dump-layout-after-frames=')) {
+                $n = (int)substr($arg, strlen('--dump-layout-after-frames='));
+                if ($n < 1) {
+                    $n = 5;
+                }
+                $outputPath = $appDir . "/engine_layout_after_{$n}frames.json";
+                for ($i = 0; $i < $n; $i++) {
+                    $app->render();
+                    $app->scheduler->flushMicrotasks();
+                }
+                $app->dumpLayoutToFile($outputPath);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function __construct(
         Platform $platform,
         Scheduler $scheduler,

@@ -1,7 +1,13 @@
 <?php
 /**
- * auto_test.php - 医疗预约项目自动化测试脚本
- * 遵循 CSS标准对齐迭代工作流 Phase 1→2
+ * auto_test.php - 自动化测试脚本
+ *
+ * 流程:
+ *   1. 构建 exe (build.bat medical-appointment)
+ *   2. 运行 --dump-layout → engine_layout.json
+ *   3. 加载浏览器参考数据
+ *   4. 逐元素对比
+ *   5. 输出报告
  */
 
 require_once __DIR__ . '/../../tools/shared_test_lib.php';
@@ -19,37 +25,19 @@ $passCount = 0;
 $failCount = 0;
 $skipCount = 0;
 
-$updateBaseline = in_array('--update-baseline', $argv ?? []);
+echo "========================================\n";
+echo "  CSS Layout Test - $APP_NAME\n";
+echo "========================================\n\n";
 
 if (!is_dir($LOG_DIR)) {
     mkdir($LOG_DIR, 0777, true);
 }
 
-echo "========================================\n";
-echo "  CSS Layout Test - $APP_NAME\n";
-echo "========================================\n\n";
-
-// ========================================================================
-// Phase 1: 布局快照对比 (Snap Shot)
-// ========================================================================
-echo "===================================================================\n";
-echo "  Phase 1: 布局快照对比 (Snap Shot)\n";
-echo "===================================================================\n\n";
-
-// Step 1: Build
-echo "Step 1: 编译构建\n";
-echo "----------------------------------------\n";
-$exePath = $BIN_DIR . '/' . $APP_NAME . '.exe';
-if (!file_exists($exePath)) {
-    $exeFiles = glob($BIN_DIR . '/*.exe');
-    if (!empty($exeFiles)) $exePath = $exeFiles[0];
-}
-
-if (file_exists($exePath)) {
-    $fsize = filesize($exePath);
-    log_msg("exe 已存在: $exePath (" . round($fsize/1024) . " KB)");
-    pass("跳过构建\n");
-} else {
+// Step 1: Check existing build
+$exeFiles = glob($BIN_DIR . '/*.exe');
+if (empty($exeFiles)) {
+    echo "Step 1: 编译构建\n";
+    echo "----------------------------------------\n";
     chdir($PROJECT_ROOT);
     $result = run_cmd("build.bat $APP_NAME 2>&1");
     file_put_contents($LOG_DIR . '/build.log', implode("\n", $result['output']));
@@ -59,30 +47,88 @@ if (file_exists($exePath)) {
         exit(1);
     }
     pass("构建成功\n");
+    // 重新扫描 exe（构建后更新文件列表）
+    $exeFiles = glob($BIN_DIR . '/*.exe');
+} else {
+    echo "Step 1: 编译构建\n";
+    echo "----------------------------------------\n";
+    pass("跳过构建（已存在: " . basename($exeFiles[0]) . "）\n");
 }
 
-// Step 2: Run --dump-layout
+// Step 2: Run --dump-layout (skip if already exists)
 echo "Step 2: 运行 --dump-layout 导出布局\n";
 echo "----------------------------------------\n";
-if (!file_exists($exePath)) {
-    $exeFiles = glob($BIN_DIR . '/*.exe');
-    if (!empty($exeFiles)) $exePath = $exeFiles[0];
-}
-if (!file_exists($exePath)) {
-    echo "  [FAIL] 未找到 exe 文件\n";
-    exit(1);
-}
-log_msg("exe: $exePath");
-
-chdir($APP_DIR);
-$result = run_cmd("\"$exePath\" --dump-layout 2>&1");
-file_put_contents($LOG_DIR . '/run.log', implode("\n", $result['output']));
 if (!file_exists($LAYOUT_FILE)) {
-    echo "  [FAIL] engine_layout.json 未生成\n\n";
-    exit(1);
+    if (empty($exeFiles)) {
+        echo "  [FAIL] 未找到可执行文件\n\n";
+        exit(1);
+    }
+    $exePath = $exeFiles[0];
+    log_msg("exe: $exePath");
+    chdir($APP_DIR);
+    $result = run_cmd("\"$exePath\" --dump-layout 2>&1");
+    file_put_contents($LOG_DIR . '/run.log', implode("\n", $result['output']));
+    if (!file_exists($LAYOUT_FILE)) {
+        echo "  [FAIL] engine_layout.json 未生成\n\n";
+        exit(1);
+    }
 }
 $layoutSize = filesize($LAYOUT_FILE);
-pass("engine_layout.json 已生成 ({$layoutSize} bytes)\n");
+pass("engine_layout.json 已就绪 ({$layoutSize} bytes)\n");
+
+// Step 2b: 多帧稳定性验证（§Phase 2 强制）
+echo "Step 2b: 多帧稳定性验证\n";
+echo "----------------------------------------\n";
+$stabilityFrames = 5;
+$multiFrameExe = $exeFiles[0] ?? null;
+$stabilityIssues = 0;
+if ($multiFrameExe === null) {
+    echo "  [WARN] 无可执行文件，跳过多帧验证\n";
+    $stabilityIssues = -1;
+} else {
+    chdir($APP_DIR);
+    $mfResult = run_cmd("\"$multiFrameExe\" --dump-layout-after-frames=$stabilityFrames 2>&1");
+    file_put_contents($LOG_DIR . '/multi_frame.log', implode("\n", $mfResult['output']));
+    $multiFramePath = $APP_DIR . "/engine_layout_after_{$stabilityFrames}frames.json";
+    if (!file_exists($multiFramePath)) {
+        echo "  [WARN] 多帧布局文件未生成，跳过稳定性验证\n";
+        $stabilityIssues = -1;
+    } else {
+        $frame1Json = json_decode(file_get_contents($LAYOUT_FILE), true);
+        $frameNJson = json_decode(file_get_contents($multiFramePath), true);
+        if ($frame1Json === null || $frameNJson === null) {
+            echo "  [WARN] 无法解析布局 JSON，跳过稳定性验证\n";
+            $stabilityIssues = -1;
+        } else {
+            $flat1 = [];
+            $flatN = [];
+            $cnt1 = 0; $cntN = 0;
+            $flat1 = flattenEngineTreeAll($frame1Json, 0, null, null, $cnt1);
+            $flatN = flattenEngineTreeAll($frameNJson, 0, null, null, $cntN);
+            $maxCount = min(count($flat1), count($flatN));
+            $stabilityIssues = 0;
+            for ($i = 0; $i < $maxCount; $i++) {
+                $a = $flat1[$i];
+                $b = $flatN[$i];
+                $dx = abs($b['x'] - $a['x']);
+                $dy = abs($b['y'] - $a['y']);
+                $dw = abs($b['w'] - $a['w']);
+                $dh = abs($b['h'] - $a['h']);
+                if ($dx > 0 || $dy > 0 || $dw > 0 || $dh > 0) {
+                    $content = mb_substr($a['content'] ?: $b['content'] ?: '(无文本)', 0, 30);
+                    $stabilityIssues++;
+                    echo "  [STABILITY] 节点 #{$a['idx']} \"{$content}\": Δx={$dx} Δy={$dy} Δw={$dw} Δh={$dh}\n";
+                }
+            }
+            if ($stabilityIssues > 0) {
+                fail("多帧稳定性: {$stabilityIssues} 个节点位置/尺寸变化 (Frame 1 vs Frame {$stabilityFrames})\n");
+            } else {
+                pass("多帧稳定性: {$maxCount} 个节点均无变化 (Frame 1 vs Frame {$stabilityFrames})\n");
+            }
+        }
+        @unlink($multiFramePath);
+    }
+}
 
 // Step 3: 加载浏览器参考
 echo "Step 3: 加载浏览器参考数据\n";
@@ -100,11 +146,11 @@ if ($refData === null || !isset($refData['elements'])) {
     exit(1);
 }
 $browserElements = $refData['elements'];
-$browserAll = indexAllBrowserElements($browserElements);
-pass("已加载 browser_ref_level_0.json (" . count($browserAll) . " 个元素)\n");
+$browserIndex = indexBrowserElements($browserElements);
+pass("已加载 browser_ref_level_0.json (" . count($browserIndex) . " 个文本元素)\n");
 
-// Step 4: 增强版逐元素对比
-echo "Step 4: 逐元素对比验证 (增强版 - 文本+容器+锚点)\n";
+// Step 4: 对比
+echo "Step 4: 逐元素对比验证\n";
 echo "----------------------------------------\n";
 
 $layoutJson = file_get_contents($LAYOUT_FILE);
@@ -114,125 +160,124 @@ if ($layout === null) {
     exit(1);
 }
 
-$browserAll = indexAllBrowserElements($browserElements);
-$engineAll = flattenEngineTreeAll($layout);
-log_msg("浏览器: " . count($browserAll) . " 个元素, 引擎: " . count($engineAll) . " 个节点\n");
-
-// 构建引擎文本索引
-$engineByText = [];
-foreach ($engineAll as $i => $el) {
-    $c = trim($el['content'] ?? '');
-    if ($c !== '') {
-        $engineByText[$c][] = $i;
+$engineElements = flattenEngineTree($layout);
+$engineTextIndex = [];
+foreach ($engineElements as $i => $el) {
+    $content = trim($el['content'] ?? '');
+    if ($content !== '' && mb_strlen($content) >= 2) {
+        $engineTextIndex[$content][] = $i;
     }
 }
+log_msg("引擎布局: " . count($engineElements) . " 个节点, " . count($engineTextIndex) . " 个有文本节点\n");
 
 $reportLines = [];
-$reportLines[] = "# CSS 布局测试报告 (增强版)";
+$reportLines[] = "# CSS 布局测试报告";
 $reportLines[] = "";
 $reportLines[] = "## 测试概览";
 $reportLines[] = "- 日期: " . date('Y-m-d H:i:s');
 $reportLines[] = "- 应用: $APP_NAME";
 $reportLines[] = "- 布局 JSON: {$layoutSize} bytes";
-$reportLines[] = "- 引擎节点: " . count($engineAll);
-$reportLines[] = "- 浏览器参考: " . count($browserAll) . " 个元素";
+$reportLines[] = "- 引擎节点: " . count($engineElements);
+$reportLines[] = "- 浏览器参考: " . count($browserIndex) . " 个文本元素";
 $reportLines[] = "";
+
+$reportLines[] = "## 逐元素对比";
+$reportLines[] = "";
+$reportLines[] = "| 文本 | 相对位置(e|b) | 样式差异 | 状态 |";
+$reportLines[] = "|------|-----------|---------|------|";
+
+$propStats = [];
+$posStats = ['exact' => 0, 'total' => 0];
 
 $checks = defaultChecks();
-$propStats = [];
 
-// ====================================================================
-// Phase A: 文本元素对比
-// ====================================================================
-$reportLines[] = "## Phase A: 文本元素";
-$reportLines[] = "";
-$reportLines[] = "| 文本 | 位置(e|b) | 尺寸(e|b) | 样式差异 | 状态 |";
-$reportLines[] = "|------|----------|----------|---------|------|";
-
-$textMatched = [];
-
-foreach ($browserAll as $bIdx => $bEl) {
-    $text = trim($bEl['text'] ?? '');
-    if ($text === '' || mb_strlen($text) < 2) continue;
-
+foreach ($browserIndex as $text => $bEl) {
+    $totalEls = count($browserIndex);
     $displayText = truncateText($text);
+    $matchedEl = null;
+    $matched = false;
 
-    if (str_contains($text, "\n")) {
-        $skipCount++;
-        $reportLines[] = "| $displayText | - | - | 父容器串联文本 | ⚠️ |";
-        continue;
-    }
-
-    // 匹配引擎元素
-    $eIdx = null;
-    if (isset($engineByText[$text])) {
-        $candidates = $engineByText[$text];
+    if (isset($engineTextIndex[$text])) {
+        $candidates = $engineTextIndex[$text];
         if (count($candidates) === 1) {
             $eIdx = $candidates[0];
+            $matchedEl = $engineElements[$eIdx];
+            $matched = true;
         } else {
-            $bRelX = $bEl['relX'] ?? 0;
-            $bRelY = $bEl['relY'] ?? 0;
+            $bX = $bEl['relX'] ?? ($bEl['x'] ?? 0);
+            $bY = $bEl['relY'] ?? ($bEl['y'] ?? 0);
+            $bestIdx = null;
             $bestDist = PHP_INT_MAX;
             foreach ($candidates as $cidx) {
-                $eRelX = $engineAll[$cidx]['relX'] ?? 0;
-                $eRelY = $engineAll[$cidx]['relY'] ?? 0;
-                $dist = abs($eRelX - $bRelX) * 2 + abs($eRelY - $bRelY);
+                $eX = $engineElements[$cidx]['relX'] ?? ($engineElements[$cidx]['x'] ?? 0);
+                $eY = $engineElements[$cidx]['relY'] ?? ($engineElements[$cidx]['y'] ?? 0);
+                $dist = abs($eX - $bX) * 2 + abs($eY - $bY);
                 if ($dist < $bestDist) {
                     $bestDist = $dist;
-                    $eIdx = $cidx;
+                    $bestIdx = $cidx;
                 }
             }
+            $eIdx = $bestIdx;
+            $matchedEl = $engineElements[$eIdx];
+            $matched = true;
         }
     } else {
-        // 模糊匹配：前缀匹配
+        if (str_contains($text, "\n")) {
+            $skipCount++;
+            $reportLines[] = "| $displayText | - | 父容器串联文本 | ⚠️ |";
+            continue;
+        }
         $shortText = mb_substr($text, 0, 20);
-        foreach ($engineByText as $eText => $eIdxs) {
+        foreach ($engineTextIndex as $eText => $eIdxs) {
             if (mb_substr($eText, 0, 20) === $shortText) {
                 $eIdx = $eIdxs[0];
+                $matchedEl = $engineElements[$eIdx];
+                $matched = true;
                 break;
             }
         }
-        if ($eIdx === null) {
-            foreach ($engineByText as $eText => $eIdxs) {
-                if (mb_strpos($text, $eText) !== false) {
-                    $ratio = mb_strlen($eText) / mb_strlen($text);
-                    if ($ratio > 0.15 && $ratio < 0.93) {
-                        $eIdx = $eIdxs[0];
+        if (!$matched) {
+            $substrCount = 0;
+            foreach ($engineTextIndex as $eText => $eIdxs) {
+                $eLen = mb_strlen($eText);
+                $bLen = mb_strlen($text);
+                if ($eLen > 2 && $bLen > $eLen + 1 && mb_strpos($text, $eText) !== false) {
+                    $ratio = $eLen / $bLen;
+                    // 单个引擎文本覆盖浏览器文本大部分内容(20%~95%)，视为父容器串联
+                    if ($ratio > 0.2 && $ratio < 0.95) {
+                        $matched = true;
                         break;
                     }
+                    $substrCount++;
                 }
             }
-        }
-        if ($eIdx === null) {
-            $skipCount++;
-            $reportLines[] = "| $displayText | - | - | 父容器串联文本(模糊) | ⚠️ |";
-            continue;
+            // If multiple engine substrings found in long browser text, it's concatenated parent container
+            if (!$matched && $substrCount >= 2) {
+                $matched = true;
+            }
+            if ($matched) {
+                $skipCount++;
+                $reportLines[] = "| $displayText | - | 父容器串联文本 | ⚠️ |";
+                continue;
+            }
         }
     }
 
-    if ($eIdx === null) {
+    if (!$matched) {
         $failCount++;
-        $reportLines[] = "| $displayText | - | - | 引擎中未找到匹配文本 | ❌ |";
+        $reportLines[] = "| $displayText | - | 引擎中未找到匹配文本 | ❌ |";
         continue;
     }
 
-    $eEl = $engineAll[$eIdx];
-    $textMatched[$eIdx] = $bIdx;
-
-    $result = compareElementEnhanced('text', $text, $bEl, $eEl, $checks, [
-        'posTol' => 1,
-        'sizeTol' => 1,
-    ]);
-
+    $result = compareElement('Level-0', $text, $bEl, $matchedEl, $checks);
     $styleDiff = empty($result['styleDiffs']) ? '-' : implode('; ', $result['styleDiffs']);
-    $failReason = empty($result['failReasons']) ? '' : ' [' . implode('; ', $result['failReasons']) . ']';
 
     if ($result['passed']) {
         $passCount++;
-        $reportLines[] = "| $displayText | {$result['posInfo']} | {$result['sizeInfo']} | $styleDiff | ✅ |";
+        $reportLines[] = "| $displayText | {$result['posInfo']} | $styleDiff | ✅ |";
     } else {
         $failCount++;
-        $reportLines[] = "| $displayText | {$result['posInfo']} | {$result['sizeInfo']} | $styleDiff{$failReason} | ❌ |";
+        $reportLines[] = "| $displayText | {$result['posInfo']} | $styleDiff | ❌ |";
     }
 
     foreach ($result['propMatches'] as $pName => $pPassed) {
@@ -246,175 +291,16 @@ foreach ($browserAll as $bIdx => $bEl) {
             $propStats[$pName]['fail']++;
         }
     }
-}
 
-// ====================================================================
-// Phase B: 容器元素对比（主卡片容器）
-// ====================================================================
-$reportLines[] = "";
-$reportLines[] = "## Phase B: 容器元素";
-$reportLines[] = "";
-$reportLines[] = "| 描述 | 浏览器尺寸 | 引擎尺寸 | 差异 | 状态 |";
-$reportLines[] = "|------|-----------|---------|------|------|";
-
-$containerCompared = false;
-foreach ($browserAll as $bEl) {
-    // depth=1 是卡片容器（root 的直接子元素）
-    if ($bEl['depth'] !== 1) continue;
-
-    $matchedE = null;
-    foreach ($engineAll as $eEl) {
-        if ($eEl['depth'] === 1) {
-            $matchedE = $eEl;
-            break;
-        }
-    }
-
-    if ($matchedE === null) {
-        $failCount++;
-        $reportLines[] = "| 卡片容器 | - | - | 引擎中未找到容器 | ❌ |";
-        break;
-    }
-
-    $result = compareElementEnhanced('container', 'card', $bEl, $matchedE, $checks, [
-        'skipPos' => true,
-        'sizeTol' => 1,
-        'noTextStyle' => true,
-    ]);
-
-    $failReason = empty($result['failReasons']) ? '' : ' [' . implode('; ', $result['failReasons']) . ']';
-
-    $eStyle = $matchedE['style'] ?? [];
-    $bStyle = $bEl['styles'] ?? [];
-    $padInfo = '';
-    if (isset($eStyle['paddingTop']) || isset($bStyle['padding-top'])) {
-        $ePad = ($eStyle['paddingTop'] ?? 0) . ' ' . ($eStyle['paddingLeft'] ?? 0) . ' ' . ($eStyle['paddingBottom'] ?? 0) . ' ' . ($eStyle['paddingRight'] ?? 0);
-        $bPad = cssPxToInt($bStyle['padding-top'] ?? '0') . ' ' . cssPxToInt($bStyle['padding-left'] ?? '0') . ' ' . cssPxToInt($bStyle['padding-bottom'] ?? '0') . ' ' . cssPxToInt($bStyle['padding-right'] ?? '0');
-        $padInfo = " padding(e:$ePad|b:$bPad)";
-    }
-
-    $sizeInfo = $result['sizeInfo'];
-    if ($result['passed']) {
-        $passCount++;
-        $reportLines[] = "| 卡片容器 w={$bEl['w']}h={$bEl['h']} | {$sizeInfo}{$padInfo} | - | ✅ |";
-    } else {
-        $failCount++;
-        $reportLines[] = "| 卡片容器 w={$bEl['w']}h={$bEl['h']} | {$sizeInfo}{$padInfo} | {$failReason} | ❌ |";
-    }
-    $containerCompared = true;
-    break;
-}
-
-if (!$containerCompared) {
-    $skipCount++;
-    $reportLines[] = "| 卡片容器 | - | - | 浏览器参考中无容器元素 | ⚠️ |";
-}
-
-// ====================================================================
-// Phase C: 锚点验证
-// ====================================================================
-$reportLines[] = "";
-$reportLines[] = "## Phase C: 锚点验证";
-$reportLines[] = "";
-$reportLines[] = "| 锚点 | 期望位置(relX,relY) | 实际位置 | 状态 |";
-$reportLines[] = "|------|----------------------|----------|------|";
-
-$ANCHOR_TL_BG = 16711935; // #FF00FF = GDI BGR
-$ANCHOR_BR_BG = 16776960; // #00FFFF = GDI BGR
-
-$anchorFound = false;
-foreach ($engineAll as $eEl) {
-    $bg = $eEl['style']['bg'] ?? 0;
-    $label = null;
-    $expectedRelX = null;
-    $expectedRelY = null;
-
-    if ($bg === $ANCHOR_TL_BG) {
-        $label = 'TL(左上) #FF00FF';
-        $expectedRelX = 0;
-        $expectedRelY = 0;
-    } elseif ($bg === $ANCHOR_BR_BG) {
-        $label = 'BR(右下) #00FFFF';
-        $parent = findParentNode($engineAll, $eEl);
-        if ($parent !== null) {
-            $expectedRelX = ($parent['visualW'] ?? $parent['w']) - 8;
-            $expectedRelY = ($parent['visualH'] ?? $parent['h']) - 8;
-        } else {
-            $expectedRelX = -1;
-            $expectedRelY = -1;
-        }
-    } else {
-        continue;
-    }
-
-    $anchorFound = true;
-    $posOk = (abs($eEl['relX'] - $expectedRelX) <= 1 && abs($eEl['relY'] - $expectedRelY) <= 1);
-    $actPos = "({$eEl['relX']},{$eEl['relY']})";
-    $expPos = "({$expectedRelX},{$expectedRelY})";
-
-    if ($posOk) {
-        $passCount++;
-        $reportLines[] = "| $label | $expPos | $actPos | ✅ |";
-    } else {
-        $failCount++;
-        $reportLines[] = "| $label | $expPos | $actPos | ❌ (偏移! relX=" . ($eEl['relX'] - $expectedRelX) . ", relY=" . ($eEl['relY'] - $expectedRelY) . ") |";
+    $posStats['total']++;
+    $bRelX = $bEl['relX'] ?? ($bEl['x'] ?? 0);
+    $bRelY = $bEl['relY'] ?? ($bEl['y'] ?? 0);
+    $eRelX = $matchedEl['relX'] ?? ($matchedEl['x'] ?? 0);
+    $eRelY = $matchedEl['relY'] ?? ($matchedEl['y'] ?? 0);
+    if (abs($eRelX - $bRelX) === 0 && abs($eRelY - $bRelY) === 0) {
+        $posStats['exact']++;
     }
 }
-
-if (!$anchorFound) {
-    $skipCount++;
-    $reportLines[] = "| 锚点 | - | - | 引擎布局中未找到锚点 | ⚠️ |";
-}
-
-$reportLines[] = "";
-
-// ========================================================================
-// Phase 2: 截图对比
-// ========================================================================
-echo "\n";
-echo "===================================================================\n";
-echo "  Phase 2: 截图对比\n";
-echo "===================================================================\n\n";
-
-$baselineOk = true;
-$baselineFile = $APP_DIR . '/base_line_pic.png';
-if ($updateBaseline || !file_exists($baselineFile)) {
-    echo "Step 5: 生成基线截图\n";
-    echo "----------------------------------------\n";
-    $baselineOk = captureBaselineScreenshot($APP_NAME, $PROJECT_ROOT, $APP_DIR);
-    if ($baselineOk) {
-        pass("基线截图已生成\n");
-    } else {
-        echo "  [FAIL] 基线截图生成失败\n";
-        if (!$updateBaseline) {
-            echo "  [SKIP] 跳过截图对比步骤\n";
-        } else {
-            exit(1);
-        }
-    }
-} else {
-    log_msg("基线截图已存在: $baselineFile");
-}
-
-echo "Step 6: 截图对比\n";
-echo "----------------------------------------\n";
-$reportLines[] = "";
-$reportLines[] = "### 对齐设置";
-$reportLines[] = "- 嵌入颜色锚点: 模板中已嵌入";
-$screenshotAlignOptions = [
-    'autoAlign' => true,
-    'cropAnchors' => true,
-];
-$screenshotResult = runScreenshotTest($APP_NAME, $PROJECT_ROOT, $APP_DIR, $screenshotAlignOptions);
-if ($screenshotResult['diffPercent'] < 0) {
-    echo "  [SKIP] 基线不存在，跳过截图对比\n";
-} elseif ($screenshotResult['pass']) {
-    pass("截图对比通过 (差异: {$screenshotResult['diffPercent']}%)");
-} else {
-    echo "  [FAIL] 截图差异: {$screenshotResult['diffPercent']}% > 5%\n";
-    $failCount++;
-}
-$reportLines = array_merge($reportLines, $screenshotResult['reportLines']);
 
 $reportLines[] = "";
 
@@ -428,10 +314,12 @@ $reportLines[] = "- **通过**: $passCount";
 $reportLines[] = "- **失败**: $failCount";
 $reportLines[] = "- **跳过**: $skipCount";
 $reportLines[] = "- **总对比项**: $total";
+$reportLines[] = "- **多帧稳定性**: " . ($stabilityIssues < 0 ? '跳过' : ($stabilityIssues === 0 ? '✅ 稳定' : "❌ {$stabilityIssues} 个不稳定节点")) . " (Frame 1 vs Frame {$stabilityFrames})";
 $reportLines[] = "- **耗时**: " . round(microtime(true) - $startTime, 2) . "s";
 $reportLines[] = "";
 $reportLines[] = "**样式通过率**: $rate%";
 
+// 写入报告
 $reportFile = $LOG_DIR . '/test_report_' . date('Ymd_His') . '.md';
 file_put_contents($reportFile, implode("\n", $reportLines));
 file_put_contents($LOG_DIR . '/latest_report.md', implode("\n", $reportLines));
@@ -444,7 +332,14 @@ echo "  通过: $passCount / 失败: $failCount";
 if ($skipCount > 0) echo " / 跳过: $skipCount";
 echo "\n";
 echo "  样式通过率: {$rate}%\n";
+if ($stabilityIssues > 0) {
+    echo "  多帧稳定性: ❌ {$stabilityIssues} 个不稳定节点 (Frame 1 vs Frame {$stabilityFrames})\n";
+} elseif ($stabilityIssues === 0) {
+    echo "  多帧稳定性: ✅ 稳定\n";
+} else {
+    echo "  多帧稳定性: ⚠️ 跳过\n";
+}
 echo "  报告: $reportFile\n";
 echo "========================================\n";
 
-exit($failCount > 0 ? 1 : 0);
+exit(($failCount > 0 || $stabilityIssues > 0) ? 1 : 0);

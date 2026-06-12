@@ -280,7 +280,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $flexRaw = $ch->style['flex'] ?? '';
                 if ($flexRaw !== '') {
                     $fv = CssMappings::parseFlexValue($flexRaw);
-                    $wrapGrow = $fv['grow'];
+                    $wrapGrow = (float)($fv['grow']);
                 } else {
                     $wrapGrow = (float)($ch->style['flexGrow'] ?? 0);
                 }
@@ -289,11 +289,11 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
             foreach ($children as $idx => $ch) {
                 // Flex-grow items: use 0 as base size for wrap (they'll be sized by flex-grow)
-                $wrapGrow = $wrapFlexData[$idx] ?? 0;
+                $wrapGrow = (float)($wrapFlexData[$idx] ?? 0);
                 if ($wrapGrow > 0) {
                     $chMain = 0;
                 } else {
-                    $chMain = $isRow ? $ch->visualW : $ch->visualH;
+                    $chMain = $isRow ? (int)($ch->visualW) : (int)($ch->visualH);
                 }
 
                 // Include margins in size calculation
@@ -390,7 +390,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
             // ── Step 4: Apply flex-basis ──
 
-            $this->applyFlexBasis($lineChildren, $lineFlexData, $isRow);
+            $this->applyFlexBasis($lineChildren, $lineFlexData, $isRow, $style);
 
             // ── Step 5: Flex-grow ──
 
@@ -883,8 +883,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 }
 
                 // Shift descendants if position changed
-                $dx = $ch->x - $oldX;
-                $dy = $ch->y - $oldY;
+                $dx = (int)($ch->x) - (int)($oldX);
+                $dy = (int)($ch->y) - (int)($oldY);
 
                 if ($dy !== 0) {
                     foreach ($ch->children as $grandchild) {
@@ -899,7 +899,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 }
 
                 // Advance main position
-                $chMainSize = $isRow ? $ch->visualW : $ch->visualH;
+                $chMainSize = $isRow ? (int)($ch->visualW) : (int)($ch->visualH);
                 $currentMain += $chMainSize + $gap + $spaceBetween;
 
                 if ($isRow) {
@@ -922,7 +922,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 }
 
                 if ($needsTwoPass && count($chTp->children) > 0) {
-                    $display = $chTp->style['display'] ?? 'block';
+                    $display = (string)($chTp->style['display'] ?? 'block');
 
                     if ($display === 'flex' || $display === 'grid') {
                         // Full re-layout for flex/grid containers.
@@ -1192,7 +1192,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
     /**
      * Apply flex-basis to children in a flex line.
      */
-    private function applyFlexBasis(array $children, array $flexItemData, bool $isRow): void
+    private function applyFlexBasis(array $children, array $flexItemData, bool $isRow, array $parentStyle = []): void
     {
         foreach ($children as $idx => $ch) {
             $data = $flexItemData[$idx];
@@ -1222,7 +1222,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         if ($isRow) {
                             $ch->w = $measured;
                         } else {
-                            $lineH = PercentResolver::resolveLineHeight($ch->style, $fs);
+                            $lineH = PercentResolver::resolveLineHeight($ch->style, $fs, 16, $parentStyle);
                             if ($ch->h === 0 || $ch->h < $lineH) {
                                 $ch->h = $lineH;
                             }
@@ -1271,15 +1271,60 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             }
                         } else {
                             // Column: text height = line-height (based on font size)
-                            $lineH = PercentResolver::resolveLineHeight($ch->style, $fs);
+                            // CSS 2.2 §10.8.1: 从 flex 容器继承 line-height
+                            $lineH = PercentResolver::resolveLineHeight($ch->style, $fs, 16, $parentStyle);
 
                             if ($ch->h === 0 || $ch->h < $lineH) {
                                 $ch->h = $lineH;
                             }
                         }
                     }
+                } else {
+                    // ── Container element (no direct text): measure descendant text width ──
+                    // This handles cases like header flex items where a <div> contains
+                    // <h1> and <p> children with text. Without this, container flex items
+                    // keep w=parentWidth (from block default stretch) and incorrectly wrap.
+                    $descW = $this->getMaxDescendantTextWidth($ch);
+                    if ($descW > 0) {
+                        $hasFlexW = array_key_exists('width', $ch->style);
+                        if (!$hasFlexW && !$data['isFlexGrow']) {
+                            $ch->w = $descW;
+                        } elseif ($ch->w === 0 || $ch->w < $descW) {
+                            $ch->w = $descW;
+                        }
+                    }
                 }
             }
         }
+    }
+
+
+    /**
+     * Recursively find the maximum text content width among all descendant
+     * text leaf nodes. Used for flex-basis:auto container elements that have
+     * no direct text content but contain text-bearing children (e.g. header
+     * <div> with <h1> and <p> inside).
+     */
+    private function getMaxDescendantTextWidth(RenderNode $node): int
+    {
+        // Direct text content
+        $text = $node->content ?? '';
+        if (is_string($text) && strlen($text) > 0) {
+            PercentResolver::resolveFontSizeUnit($node->style);
+            $fs = (int)($node->style['fontSize'] ?? 14);
+            $bd = ($node->style['fontWeight'] ?? 'normal') === 'bold' || ($node->style['fontWeight'] ?? 'normal') === '700';
+            return PercentResolver::resolveTextWidth($text, $fs, $bd);
+        }
+
+        // Check children recursively
+        $maxW = 0;
+        foreach ($node->children as $child) {
+            $childW = $this->getMaxDescendantTextWidth($child);
+            if ($childW > $maxW) {
+                $maxW = $childW;
+            }
+        }
+
+        return $maxW;
     }
 }

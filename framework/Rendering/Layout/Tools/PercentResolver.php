@@ -62,11 +62,43 @@ class PercentResolver
      *   - pixel value (e.g., 20px): fixed line height in pixels
      *   - 'normal' or unset: fallback to font-size × 1.2 (CSS 2.2 §10.8.1)
      *   - 'value|unit' pattern (e.g., '2|rem'): resolved with context (root font-size)
+     *
+     * CSS 2.2 §10.8.1 规定 line-height 是继承属性。当子元素未设置时应继承父元素的计算值：
+     *   - 父元素为无单位数(1.7)：继承乘数，used value = 1.7 × childFontSize
+     *   - 父元素为长度值(28px)：直接继承像素值
+     *   - 父元素为百分比(150%)：继承计算后的长度值
+     *
+     * @param array $style 当前元素样式
+     * @param int $fontSize 当前元素字体大小
+     * @param int $rootFontSize 根元素字体大小（默认16）
+     * @param array|null $parentStyle 父元素样式（用于继承）
+     * @return int
      */
-    public static function resolveLineHeight(array $style, int $fontSize, int $rootFontSize = 16): int
+    public static function resolveLineHeight(array $style, int $fontSize, int $rootFontSize = 16, ?array $parentStyle = null): int
     {
-        $lh = $style['lineHeight'] ?? 'normal';
-        if ($lh === 'normal' || $lh === '') {
+        $lh = $style['lineHeight'] ?? null;
+        // 当前元素没有显式设置 line-height 时，尝试从父元素继承
+        if ($lh === null || $lh === '' || $lh === 'normal') {
+            if ($parentStyle !== null) {
+                $parentLH = $parentStyle['lineHeight'] ?? null;
+                if ($parentLH !== null && $parentLH !== '' && $parentLH !== 'normal') {
+                    // CSS 继承规则：
+                    if (is_numeric($parentLH)) {
+                        // 无单位数：继承乘数，应用于子元素的 font-size
+                        return (int)((float)$parentLH * $fontSize);
+                    }
+                    // px 值：直接继承像素值
+                    if (is_string($parentLH) && str_ends_with($parentLH, 'px')) {
+                        return (int)substr($parentLH, 0, -2);
+                    }
+                    // 已解析的 px 数值：直接继承
+                    if (is_int($parentLH) || is_float($parentLH)) {
+                        return (int)$parentLH;
+                    }
+                }
+                // 父元素也没有显式 line-height，继续向上查找
+                // 但我们只有一层 parentStyle，因此这里用 normal 处理
+            }
             // CSS 2.2 §10.8.1: 'normal' 的 line-height 约为字体大小的 1.2 倍
             return (int)($fontSize * 1.2);
         }
