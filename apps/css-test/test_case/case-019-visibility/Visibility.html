@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Layout — Visibility vs Display</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f0f2f5; font-family:sans-serif; display:flex; justify-content:center; padding:20px; }
+  .bx-card { width:720px; background:#fff; border-radius:12px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+  .bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
+  .bx-row { display:flex; gap:12px; align-items:center; margin-bottom:16px; }
+  .bx-row div { flex:1; padding:16px; border-radius:8px; text-align:center; border:1px solid #e0e0e0; }
+  #vis-hidden { background:#fff3e0; border-color:#fb923c; visibility:hidden; }
+  #disp-none { background:#fce4ec; border-color:#e94560; display:none; }
+  .bx-desc { font-size:13px; color:#888; line-height:1.6; background:#fafafa; padding:12px; border-radius:6px; }
+  code { background:#f0f0f0; padding:2px 6px; border-radius:3px; }
+  .bx-footer { margin-top:16px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
+</style></head><body>
+<div class="bx-card">
+  <div class="bx-header">??? 布局 · Visibility vs Display 测试</div>
+  <div class="bx-row">
+    <div style="background:#e8f5e9;border-color:#4ade80;">Normal</div>
+    <div id="vis-hidden">visibility: hidden (占位)</div>
+    <div id="disp-none">display: none</div>
+    <div style="background:#e8f5e9;border-color:#4ade80;">Normal</div>
+  </div>
+  <div class="bx-desc"><code>visibility:hidden</code> 隐藏但保留空间(占位)；<code>display:none</code> 完全消失不占空间。<br>所以 Normal 之间应只有 1 个间隙(visibility占位)而非 2 个。</div>
+  <div class="bx-footer">case-019: Layout — Visibility vs Display</div>
+</div>
+</body></html>

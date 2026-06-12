@@ -1,0 +1,24 @@
+<template>
+  <div class="bx-card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
+    <div class="bx-header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
+      ?? ºĞÄ£ĞÍ ¡¤ ÂÖÀª²âÊÔ
+    </div>
+    <div class="bx-grid" style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:24px;">
+      <div class="o-box" style="width:160px;height:100px;background:#fff;border-radius:8px;outline:3px solid #e94560;display:flex;align-items:center;justify-content:center;font-size:13px;color:#444;">
+        ÂÖÀª ºì 3px
+      </div>
+      <div class="o-box" style="width:160px;height:100px;background:#fff;border-radius:8px;outline:4px dashed #0f3460;outline-offset:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#444;">
+        ĞéÏßÂÖÀª Æ«ÒÆ
+      </div>
+      <div class="o-box" style="width:160px;height:100px;background:#fff;border-radius:8px;border:2px solid #4ade80;outline:3px solid #fb923c;outline-offset:-2px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#444;">
+        ±ß¿ò+ÂÖÀª
+      </div>
+    </div>
+    <div class="bx-footer" style="margin-top:20px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
+      case-009: Box Model ¡ª Outline
+    </div>
+  </div>
+</template>
+<script lang="php">
+class TestContent extends ReactiveComponent {}
+</script>

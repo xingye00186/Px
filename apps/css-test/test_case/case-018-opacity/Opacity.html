@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Layout — Opacity</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f0f2f5; font-family:sans-serif; display:flex; justify-content:center; padding:20px; }
+  .bx-card { width:720px; background:#fff; border-radius:12px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+  .bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
+  .bx-grid { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; margin-bottom:16px; }
+  .bx-grid div { width:130px; height:90px; background:linear-gradient(135deg,#e94560,#f093fb); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; color:#fff; }
+  .bx-footer { margin-top:16px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
+</style></head><body>
+<div class="bx-card">
+  <div class="bx-header">??? 布局 · 透明度测试</div>
+  <div class="bx-grid">
+    <div style="opacity:1;">opacity: 1</div>
+    <div style="opacity:.7;">opacity: 0.7</div>
+    <div style="opacity:.4;">opacity: 0.4</div>
+    <div style="opacity:.15;">opacity: 0.15</div>
+  </div>
+  <div class="bx-footer">case-018: Layout — Opacity</div>
+</div>
+</body></html>
