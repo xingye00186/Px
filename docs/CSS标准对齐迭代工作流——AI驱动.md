@@ -160,6 +160,8 @@ php apps\<project>\auto_test.php
 ```
 Step 1: .\build.bat <project> → bin/<project>.exe
 Step 2: <project>.exe --dump-layout → engine_layout.json
+Step 2b: <project>.exe --dump-layout-after-frames=5 → engine_layout_after_5frames.json
+         与 engine_layout.json 逐节点对比 x/y/w/h，验证跨帧稳定性
 Step 3: 加载 ref/browser_ref_level_{0-7}.json（或 browser_ref_level_0.json）
 Step 4: 三阶段逐元素对比（详见下方说明）
 Step 5: 对齐图片 → captureAppScreenshot → compareScreenshots 像素级对比
@@ -169,8 +171,11 @@ Step 6: 生成 test_log/test_report_YYYYmmdd_HHMMSS.md
 
 **⚠️ `--dump-layout` 的重要局限**：`--dump-layout` 是单帧模式——在 main.php 中执行 `$app->render()` 后立即 dump 并 exit(0)，**不进入事件循环**。因此它只能暴露 Frame 1 的布局问题，**无法检测 Frame 依赖型 bug**（如 auto-height + absolute 的正反馈循环，在 Frame 2+ 才触发）。
 
-**补偿措施**：
-- Phase 1 通过后，对涉及 auto-height 和 absolute 定位的测试，建议额外验证：先 `--dump-layout` 一次，再运行 exe 截图对比
+**🚨 多帧稳定性验证（强制）**：
+- **所有项目**必须在 Step 2b 中执行 `--dump-layout-after-frames=5` 多帧验证
+- auto_test.php 必须自动比较 Frame 1 与 Frame 5 的布局 JSON，逐节点对比 x/y/w/h
+- 任何节点跨帧变化（Δx/Δy/Δw/Δh ≠ 0）必须标记为 **STABILITY** 问题并计入测试失败
+- `Application::handleDumpArgs()` 提供通用 CLI 处理器，main.php 只需一行调用即可支持
 - 单元测试中增加跨帧稳定性断言（同一棵 RenderNode 树 resolve 两次 → 结果一致）
 - 参见 §九「多帧布局稳定性验证」
 
@@ -982,7 +987,7 @@ assert_eq($absoluteChild->y, $y_abs, 'Frame 2 absolute child y 应与 Frame 1 �
 - 任何调整了子节点 y 坐标的布局策略（flex/grid 重定位后）
 
 **`auto_test.php` 增强**：
-- Phase 1: `--dump-layout` 通过后，建议额外调 `$app->render()` 第二次再 dump，对比两次 layout JSON 中关键容器的 w/h 是否一致
+- 使用 `--dump-layout-after-frames=5`（§Phase 2 Step 2b 强制），auto_test.php 自动比较 Frame 1 与 Frame 5 的布局 JSON
 - 参考：此 bug 修复后已验证的稳定指标——TL 锚点 (660,386)、BR 锚点 (1188,862)、跨度 536×484
 
 ### auto_test.php 模板
