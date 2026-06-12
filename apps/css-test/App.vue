@@ -1,21 +1,13 @@
 <template>
-  <div style="width:1280px;height:3000px;background:#0d1117;overflow-y:auto;display:flex;flex-direction:column;align-items:center">
-    <level0-container />
-    <div style="border-top:1px solid #30363d;margin:0 32px"></div>
-    <level1-typography />
-    <div style="border-top:1px solid #30363d;margin:0 32px"></div>
-    <level2-cards />
-    <div style="border-top:1px solid #30363d;margin:0 32px"></div>
-    <level3-flex />
-    <div style="border-top:1px solid #30363d;margin:0 32px"></div>
-    <level4-grid />
-    <div style="border-top:1px solid #30363d;margin:0 32px"></div>
-    <level5-tables />
-    <div style="border-top:1px solid #30363d;margin:0 32px"></div>
-    <level6-special />
+  <div class="test-sandbox" style="width:1600px;height:800px;background:#f5f5f5;overflow-y:auto;">
+    <div class="sandbox-header" style="height:40px;background:#fff;border-bottom:1px solid #ddd;padding:0 20px;display:flex;align-items:center;font-size:14px;color:#666;">
+      CSS Test Sandbox — <span style="color:#333;font-weight:bold;">Test Case</span>
+    </div>
+    <div class="sandbox-content" style="padding:20px;">
+      <test-content />
+    </div>
   </div>
 </template>
-
 <script lang="php">
 class AppComponent extends ReactiveComponent
 {
