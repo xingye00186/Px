@@ -1,0 +1,52 @@
+name: medical-appointment
+mode: bin
+no-console: false
+platform: win32
+entry: main.php
+cxx-flags:
+  - /utf-8
+  - /wd4267
+  - /MT
+  - /DUSE_SKIA
+  - /I"cpp/skia"
+  - /DGR_GL_FUNCTION_TYPE=__stdcall
+
+ld-flags:
+  - cpp/skia/out/Release-x64/skia.lib
+  - cpp/skia/out/Release-x64/skunicode_icu.lib
+  - cpp/skia/out/Release-x64/icu.lib
+  - cpp/skia/out/Release-x64/skcms.lib
+  - cpp/skia/out/Release-x64/expat.lib
+  - cpp/skia/out/Release-x64/freetype2.lib
+  - cpp/skia/out/Release-x64/harfbuzz.lib
+  - cpp/skia/out/Release-x64/libpng.lib
+  - cpp/skia/out/Release-x64/zlib.lib
+  - cpp/skia/out/Release-x64/libjpeg.lib
+  - cpp/skia/out/Release-x64/libwebp.lib
+  - cpp/skia/out/Release-x64/sksg.lib
+  - cpp/skia/out/Release-x64/skshaper.lib
+  - cpp/skia/out/Release-x64/skresources.lib
+  - cpp/skia/out/Release-x64/skparagraph.lib
+  - cpp/skia/out/Release-x64/skunicode_core.lib
+  - cpp/skia/out/Release-x64/skottie.lib
+  - cpp/skia/out/Release-x64/svg.lib
+  - cpp/skia/out/Release-x64/wuffs.lib
+  - cpp/skia/out/Release-x64/bentleyottmann.lib
+  - cpp/skia/out/Release-x64/jsonreader.lib
+  - d3d12.lib
+  - dxgi.lib
+  - d3dcompiler.lib
+  - windowscodecs.lib
+  - user32.lib
+  - gdi32.lib
+  - opengl32.lib
+
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php
