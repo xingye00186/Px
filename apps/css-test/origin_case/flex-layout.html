@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>Flex Layout Test</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #f5f5f5; font-size: 14px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div style="width:800px;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;">
+  <div style="font-size:18px;font-weight:600;margin-bottom:16px;color:#333;">
+    Flex Layout Test
+  </div>
+
+  <div style="font-size:14px;font-weight:600;color:#666;margin-bottom:8px;">Row direction with gap:</div>
+  <div style="display:flex;flex-direction:row;gap:12px;margin-bottom:20px;">
+    <div style="flex:1;height:50px;background:#e3f2fd;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#1565c0;">Flex 1</div>
+    <div style="flex:1;height:50px;background:#fce4ec;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#c62828;">Flex 2</div>
+    <div style="flex:1;height:50px;background:#e8f5e9;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#2e7d32;">Flex 3</div>
+  </div>
+
+  <div style="font-size:14px;font-weight:600;color:#666;margin-bottom:8px;">Column direction with align-items:</div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:20px;">
+    <div style="width:200px;height:36px;background:#fff3e0;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#e65100;">Center item 1</div>
+    <div style="width:260px;height:36px;background:#f3e5f5;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#6a1b9a;">Center item 2 (wider)</div>
+  </div>
+
+  <div style="font-size:14px;font-weight:600;color:#666;margin-bottom:8px;">Flex-wrap with gap:</div>
+  <div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:8px;">
+    <div style="width:140px;height:32px;background:#e0f2f1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#00695c;">Tag 1</div>
+    <div style="width:100px;height:32px;background:#e0f2f1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#00695c;">Tag 2</div>
+    <div style="width:180px;height:32px;background:#e0f2f1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#00695c;">Tag 3 longer</div>
+    <div style="width:120px;height:32px;background:#e0f2f1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#00695c;">Tag 4</div>
+  </div>
+</div>
+</body>
+</html>
