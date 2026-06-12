@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Case 002 - Auto-Height Stability</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f5f5f5; font-family:sans-serif; }
+  .sandbox { padding:20px; }
+  .auto-height-test { background:#fff; border-radius:8px; padding:24px; border:1px solid #e0e0e0; }
+  .test-header { font-size:18px; font-weight:600; margin-bottom:16px; color:#333; }
+  .test-footer { margin-top:16px; padding-top:16px; border-top:1px solid #eee; font-size:12px; color:#999; }
+  .outer-container { width:100%; background:#fafafa; border:1px dashed #ccc; border-radius:4px; padding:16px; }
+  .item { height:40px; border-radius:4px; margin-bottom:8px; display:flex; align-items:center; padding:0 12px; font-size:13px; }
+  .item1 { background:#e3f2fd; color:#1565c0; }
+  .item2 { background:#fce4ec; color:#c62828; }
+  .item3 { background:#e8f5e9; color:#2e7d32; }
+  .item4 { background:#fff3e0; color:#e65100; }
+</style>
+</head>
+<body>
+<div class="sandbox">
+  <div class="auto-height-test">
+    <div class="test-header">Auto-Height Stability Test</div>
+    <div class="outer-container">
+      <div class="item item1">Item 1 — fixed height</div>
+      <div class="item item2">Item 2 — fixed height</div>
+      <div class="item item3">Item 3 — fixed height</div>
+      <div class="item item4">Item 4 — fixed height</div>
+    </div>
+    <div class="test-footer">case-002: auto-height stability (multi-frame)</div>
+  </div>
+</div>
+</body>
+</html>
