@@ -118,8 +118,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 }
             }
             // Text height = line-height if no explicit height
+            // CSS 2.2 §10.8.1: 从父容器继承 line-height
             if (!array_key_exists('height', $style) && !array_key_exists('heightPercent', $style)) {
-                $lineH = PercentResolver::resolveLineHeight($style, $fs);
+                $parentStyle = $ctx->parent !== null ? $ctx->parent->style : null;
+                $lineH = PercentResolver::resolveLineHeight($style, $fs, 16, $parentStyle);
 
                 if ($node->h === 0 || $node->h < $lineH) {
                     $node->h = $lineH;
@@ -221,8 +223,9 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             }
                         }
                         // Text height = line-height if no explicit height
+                        // CSS 2.2 §10.8.1: 从父容器继承 line-height
                         if (!array_key_exists('height', $childStyle)) {
-                            $lineH = PercentResolver::resolveLineHeight($childStyle, $fs);
+                            $lineH = PercentResolver::resolveLineHeight($childStyle, $fs, 16, $style);
                             if ($child->h === 0 || $child->h < $lineH) {
                                 $child->h = $lineH;
                                 $child->visualH = PercentResolver::resolveVisualH($childStyle, $child->h);
@@ -591,6 +594,13 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             $child->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $child->w, true));
             $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+
+            // ── Auto-margin centering (CSS 2.2 §10.3.3) ──
+            $childML = $childStyle['marginLeftAuto'] ?? false;
+            $childMR = $childStyle['marginRightAuto'] ?? false;
+            if ($childML || $childMR) {
+                $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
+            }
 
             $oldY = $child->y;
 

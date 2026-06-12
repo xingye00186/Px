@@ -93,7 +93,7 @@ function runEdgeHeadless(string $edgePath, string $htmlPath, int $timeout = 30):
     $fileUrl = 'file:///' . $urlPath;
 
     $cmd = sprintf(
-        '"%s" --headless --disable-gpu --window-size=1800,1200 --dump-dom "%s"',
+        '"%s" --headless --disable-gpu --window-size=1280,1200 --dump-dom "%s"',
         $edgePath,
         $fileUrl
     );
