@@ -57,7 +57,7 @@
 #endif
 
 // [SK] trace macro — disable for production; enable by uncommenting the #define below
-// #define SK_TRACE_ENABLED
+#define SK_TRACE_ENABLED
 #ifdef SK_TRACE_ENABLED
 #define SK_TRACE(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -85,6 +85,62 @@ static bool      g_skGdiplusInited = false;
 // GDI 路径：CreateFont 参数；Skia 路径：skEnsureFont 优先查找
 static std::string g_skDefaultFont = "Noto Sans SC";
 
+// GDI 字体加载状态（非 USE_SKIA 路径）：通过 AddFontMemResourceEx 预加载 Noto Sans SC 字体文件
+// AddFontMemResourceEx 比 AddFontResourceEx 更可靠，能确保 CreateFont 通过族名找到已加载字体
+static bool g_skPrivateFontsLoaded = false;
+static void* g_skFontRegData = NULL;   // Regular 字体内存数据
+static void* g_skFontBoldData = NULL;   // Bold 字体内存数据
+static DWORD g_skFontRegSize = 0;
+static DWORD g_skFontBoldSize = 0;
+
+// 在 GDI 路径中预加载 Noto Sans SC 字体（Regular + Bold）到私有字体集合
+// 确保 CreateFont("Noto Sans SC", FW_BOLD) 能使用真实的粗体字体文件
+static void skLoadPrivateFonts() {
+    if (g_skPrivateFontsLoaded) return;
+    const char* searchDirs[] = {"cpp/fonts", "fonts"};
+    const char* addFontFiles[] = {"NotoSansSC-Regular.ttf", "NotoSansSC-Bold.ttf"};
+    void** fontData[] = {&g_skFontRegData, &g_skFontBoldData};
+    DWORD* fontSizes[] = {&g_skFontRegSize, &g_skFontBoldSize};
+    for (int i = 0; i < 2; i++) {
+        for (int f = 0; f < 2; f++) {
+            if (*fontData[f] != NULL) continue;  // 已加载
+            std::string path = std::string(searchDirs[i]) + "/" + addFontFiles[f];
+            HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
+                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            if (hFile != INVALID_HANDLE_VALUE) {
+                *fontSizes[f] = GetFileSize(hFile, NULL);
+                if (*fontSizes[f] > 0) {
+                    *fontData[f] = malloc(*fontSizes[f]);
+                    DWORD bytesRead = 0;
+                    ReadFile(hFile, *fontData[f], *fontSizes[f], &bytesRead, NULL);
+                }
+                CloseHandle(hFile);
+                
+                if (*fontData[f] != NULL) {
+                    DWORD fontCount = 0;
+                    HANDLE hFont = AddFontMemResourceEx(*fontData[f], *fontSizes[f], NULL, &fontCount);
+                    SK_TRACE("[SK] AddFontMemResourceEx('%s') fontCount=%d\n", path.c_str(), (int)fontCount);
+                }
+            } else {
+                SK_TRACE("[SK] AddFontMemResourceEx: file not found '%s'\n", path.c_str());
+            }
+        }
+    }
+    // AddFontResourceEx 配合 FR_PRIVATE 注册字体，确保 CreateFont 能通过族名找到
+    // AddFontMemResourceEx 对某些环境可能注册名称不完整
+    // 支持两种路径：cpp/fonts/（开发时从项目根目录运行）和 fonts/（打包后从 bin/ 运行）
+    const char* fontSearchDirs[] = {"cpp/fonts", "fonts"};
+    const char* addFontFiles[] = {"NotoSansSC-Regular.ttf", "NotoSansSC-Bold.ttf"};
+    for (int d = 0; d < 2; d++) {
+        for (int f = 0; f < 2; f++) {
+            std::string fontPath = std::string(fontSearchDirs[d]) + "/" + addFontFiles[f];
+            int res = AddFontResourceEx(fontPath.c_str(), FR_PRIVATE, 0);
+            SK_TRACE("[SK] AddFontResourceEx('%s') result=%d\n", fontPath.c_str(), res);
+        }
+    }
+    g_skPrivateFontsLoaded = true;
+}
+
 // 设置默认字体名（C++ 编译后生效）
 void php_sk_set_default_font(String fontFamily) {
     if (fontFamily.length() > 0) {
@@ -99,7 +155,8 @@ static SkBitmap  g_skSkBitmap;             // 后端像素缓冲
 static std::unique_ptr<SkCanvas> g_skCanvas;  // 绘制 canvas
 static bool              g_skFontInited = false;
 static sk_sp<SkFontMgr>  g_skFontMgr;       // 阶段三：用 Custom_Directory 扫描 fonts 目录
-static sk_sp<SkTypeface> g_skTypeface;      // 从 FontMgr 加载的 typeface
+static sk_sp<SkTypeface> g_skTypeface;      // 从 FontMgr 加载的 Regular typeface
+static sk_sp<SkTypeface> g_skTypefaceBold;   // 从 FontMgr 加载的 Bold typeface
 static SkFont            g_skFont;          // 值类型（SkFont 非 ref-counted）
 static std::vector<uint8_t> g_skPixelBuf;  // end_frame 时 SkBitmap → GDI 中转
 #endif
@@ -133,13 +190,19 @@ static bool skEnsureFont() {
 
     const char* searchDirs[] = {"cpp/fonts", "fonts"};
     const char* fontName     = "NotoSansSC-Regular.ttf";
+    const char* boldFontName = "NotoSansSC-Bold.ttf";
 
     for (int i = 0; i < 2; i++) {
         g_skFontMgr = SkFontMgr_New_Custom_Directory(searchDirs[i]);
         if (!g_skFontMgr) continue;
         std::string fullPath = std::string(searchDirs[i]) + "/" + fontName;
         g_skTypeface = g_skFontMgr->makeFromFile(fullPath.c_str());
-        if (g_skTypeface) break;
+        if (g_skTypeface) {
+            // 预加载粗体字体文件，确保测宽与绘制使用真实粗体字形
+            std::string boldPath = std::string(searchDirs[i]) + "/" + boldFontName;
+            g_skTypefaceBold = g_skFontMgr->makeFromFile(boldPath.c_str());
+            break;
+        }
     }
 
     if (!g_skTypeface) {
@@ -206,6 +269,11 @@ Int php_sk_create_window_context(Int hWnd, Int width, Int height) {
     g_skW    = (int)width;
     g_skH    = (int)height;
     SK_TRACE("[SK] create_window_context hwnd=%p w=%d h=%d\n", g_skHwnd, g_skW, g_skH);
+
+    // GDI 路径：预加载 Noto Sans SC 字体（Regular + Bold）
+    // 确保后续 CreateFont("Noto Sans SC", FW_BOLD) 使用真实粗体字体
+    skLoadPrivateFonts();
+    SK_TRACE("[SK] private fonts loaded (gdi path)\n");
 
     // GDI+ 初始化（图片加载需要）
     if (!g_skGdiplusInited) {
@@ -330,7 +398,9 @@ void php_sk_fill_rect(Int x, Int y, Int w, Int h, Int rgb) {
     if (!g_skCanvas) return;
     if ((int)w <= 0 || (int)h <= 0) return;
     SkPaint paint;
-    paint.setAntiAlias(true);
+    // 对细矩形（1-2px）禁用抗锯齿，保持线条清晰
+    // 1px 分隔线/边框在 setAntiAlias(true) 下会模糊扩散至 ~3px
+    paint.setAntiAlias((int)w > 2 && (int)h > 2);
     paint.setColor(rgbToSkColor(rgb));
     g_skCanvas->drawRect(
         SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
@@ -387,7 +457,8 @@ void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity)
         return;
     }
     SkPaint paint;
-    paint.setAntiAlias(true);
+    // 对细矩形（1-2px）禁用抗锯齿，保持线条清晰
+    paint.setAntiAlias((int)w > 2 && (int)h > 2);
     paint.setColor(rgbToSkColor(rgb));
     paint.setAlphaf((SkScalar)opacity);
     g_skCanvas->drawRect(
@@ -469,10 +540,21 @@ void php_sk_draw_text(Int x, Int y, String text, Int fontSize, Int rgb, Int bold
     paint.setColor(rgbToSkColor(rgb));
 
     g_skFont.setSize((SkScalar)(int)fontSize);
-    g_skFont.setEmbolden((Int)bold != 0);
+
+    // 粗体：使用真实粗体字体文件（NotoSansSC-Bold.ttf），而非 setEmbolden 模拟
+    // setEmbolden 只改变笔画粗细但不改 glyph advance，导致测宽与绘制不一致
+    if ((Int)bold != 0 && g_skTypefaceBold) {
+        g_skFont.setTypeface(g_skTypefaceBold);
+    } else {
+        g_skFont.setTypeface(g_skTypeface);
+        g_skFont.setEmbolden((Int)bold != 0);
+    }
 
     // text 是 php::String，用 .data() 取 char*
     g_skCanvas->drawString(text.data(), (SkScalar)(int)x, (SkScalar)(int)y, g_skFont, paint);
+
+    // 恢复默认字体
+    g_skFont.setTypeface(g_skTypeface);
 #else
     if (!g_skHdc) return;
     if (text.length() == 0) return;
@@ -520,11 +602,37 @@ void php_sk_draw_text(Int x, Int y, String text, Int fontSize, Int rgb, Int bold
 Int php_sk_measure_text_width(String text, Int fontSize, Int bold) {
     if (text.length() == 0) return 0;
 #ifdef USE_SKIA
-    if (!skEnsureFont()) return 0;
-    g_skFont.setSize((SkScalar)(int)fontSize);
-    g_skFont.setEmbolden((Int)bold != 0);
-    SkScalar width = g_skFont.measureText(text.data(), text.length(), SkTextEncoding::kUTF8);
-    return (Int)(width + 0.5f);
+    // 使用 GDI GetTextExtentPoint32W 测量文本宽度以匹配浏览器行为
+    // （DirectWrite 与 GDI 的文本测量更接近，而 Skia/FreeType 测量偏宽）
+    // Skia 仍用于文本绘制，仅测量走 GDI 以保证布局一致性
+    skLoadPrivateFonts();
+    HDC hdc = GetDC(NULL);
+    if (!hdc) return 0;
+    HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
+        (Int)bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, g_skDefaultFont.c_str());
+    if (!hFont) { ReleaseDC(NULL, hdc); return 0; }
+    HFONT oldFont = (HFONT)SelectObject(hdc, hFont);
+    // 调试：确认 GDI 实际使用的字体
+    char faceName[128];
+    if (GetTextFaceA(hdc, 128, faceName)) {
+        SK_TRACE("[SK] GDI face='%s' fontSize=%d bold=%d\n", faceName, (int)fontSize, (int)bold);
+    }
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, NULL, 0);
+    Int result = 0;
+    if (wlen > 0) {
+        std::wstring wtext(wlen, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, text.data(), -1, &wtext[0], wlen);
+        SIZE sz = {0, 0};
+        GetTextExtentPoint32W(hdc, wtext.c_str(), (wlen > 1) ? (wlen - 1) : 0, &sz);
+        result = (Int)sz.cx;
+    }
+    SelectObject(hdc, oldFont);
+    DeleteObject(hFont);
+    ReleaseDC(NULL, hdc);
+    SK_TRACE("[SK] measure_text (GDI) text='%s' fontSize=%d bold=%d width=%d\n", text.data(), (int)fontSize, (int)bold, (int)result);
+    return result;
 #else
     HDC hdc = GetDC(NULL);
     if (!hdc) return 0;
