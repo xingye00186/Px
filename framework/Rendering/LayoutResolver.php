@@ -214,6 +214,16 @@ class LayoutResolver
             $position = $effectiveStyle['position'] ?? 'static';
 
             switch ($display) {
+                case 'none':
+                    // CSS 2.2 §9.2.4: display:none → element generates no box
+                    // No layout needed, set dimensions to 0 and skip children
+                    $node->w = 0;
+                    $node->h = 0;
+                    $node->visualW = 0;
+                    $node->visualH = 0;
+                    // Mark layout as resolved for parent auto-stack calculation
+                    break;
+
                 case 'flex':
                 case 'inline-flex':
                     $this->flexStrategy->resolve($node, $ctx, $effectiveStyle);

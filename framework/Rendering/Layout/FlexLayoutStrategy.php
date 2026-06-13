@@ -189,10 +189,20 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         foreach ($node->children as $child) {
             $childPosition = $child->style['position'] ?? 'static';
+            $childDisplay = $child->style['display'] ?? 'block';
 
-            // Defer absolute/fixed children — container dimensions not yet known
-            if ($childPosition === 'absolute' || $childPosition === 'fixed') {
-                $absoluteChildren[] = $child;
+            // Defer absolute/fixed children - container dimensions not yet known
+            // Skip display:none children (CSS 2.2 §9.2.4: generate no box)
+            if ($childPosition === 'absolute' || $childPosition === 'fixed' || $childDisplay === 'none') {
+                if ($childDisplay === 'none') {
+                    $child->w = 0;
+                    $child->h = 0;
+                    $child->visualW = 0;
+                    $child->visualH = 0;
+                }
+                if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                    $absoluteChildren[] = $child;
+                }
                 continue;
             }
 
@@ -290,10 +300,23 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             }
 
             foreach ($children as $idx => $ch) {
-                // Flex-grow items: use 0 as base size for wrap (they'll be sized by flex-grow)
+                // Flex-grow items: use min-width/min-height as base size for wrap
+                // (they'll be sized by flex-grow after wrapping, but min-size determines
+                //  whether they fit on the current line. CSS Flexbox §9.5)
                 $wrapGrow = (float)($wrapFlexData[$idx] ?? 0);
                 if ($wrapGrow > 0) {
-                    $chMain = 0;
+                    $minMain = $isRow ? (int)($ch->style['minWidth'] ?? 0) : (int)($ch->style['minHeight'] ?? 0);
+                    // Also consider intrinsic content width (text) as minimum
+                    $chText = $ch->content ?? '';
+                    if (is_string($chText) && strlen($chText) > 0 && $minMain <= 0) {
+                        $fs = (int)($ch->style['fontSize'] ?? 14);
+                        $bd = ($ch->style['bold'] ?? 0) !== 0;
+                        $textW = PercentResolver::resolveTextWidth($chText, $fs, $bd);
+                        if ($isRow) {
+                            $minMain = max(0, $textW);
+                        }
+                    }
+                    $chMain = max(0, $minMain);
                 } else {
                     $chMain = $isRow ? (int)($ch->visualW) : (int)($ch->visualH);
                 }
@@ -965,21 +988,45 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             unset($chTp->style['height']);
                         }
                     } else {
-                        // Current behavior for block/scroll containers
-                        $chPadLtp = (int)($chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0);
-                        $chPadTtp = (int)($chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0);
-                        $gcOffsetX = $chTp->x + $chPadLtp;
-                        $gcOffsetY = $chTp->y + $chPadTtp;
+                        // Block/scroll containers: full re-resolve so auto-stack
+                        // re-positions children with the corrected parent width.
+                        // CSS 2.2 §10.6.3: block children must be re-laid-out when
+                        // containing block width changes (e.g. via flex-grow).
+                        $leftOff = $chTp->style['left'] ?? 0;
+                        $topOff = $chTp->style['top'] ?? 0;
+                        $prX = $chTp->x - $leftOff;
+                        $prY = $chTp->y - $topOff;
 
-                        if ($chTp->isScrollContainer) {
-                            $gcOffsetX -= $chTp->scrollLeft;
-                            $gcOffsetY -= $chTp->scrollTop;
+                        $hasOrigW = array_key_exists('width', $chTp->style);
+                        $hasOrigH = array_key_exists('height', $chTp->style);
+                        $origW = $chTp->style['width'] ?? null;
+                        $origH = $chTp->style['height'] ?? null;
+
+                        $chTp->style['width'] = $chTp->w;
+                        $chTp->style['height'] = $chTp->h;
+
+                        $chTp->layoutDirty = true;
+
+                        foreach ($chTp->children as $gc) {
+                            $gc->layoutDirty = true;
                         }
 
-                        foreach ($chTp->children as $grandchild) {
-                            $grandchild->layoutDirty = true;
-                            $gcCtx = new LayoutContext($gcOffsetX, $gcOffsetY, $chTp);
-                            $this->resolver->resolveNode($grandchild, $gcCtx);
+                        $chCtx = new LayoutContext($prX, $prY, $ctx->parent);
+                        $this->resolver->resolveNode($chTp, $chCtx);
+
+                        $chTp->visualW = PercentResolver::resolveVisualW($chTp->style, $chTp->w);
+                        $chTp->visualH = PercentResolver::resolveVisualH($chTp->style, $chTp->h);
+
+                        if ($hasOrigW) {
+                            $chTp->style['width'] = $origW;
+                        } else {
+                            unset($chTp->style['width']);
+                        }
+
+                        if ($hasOrigH) {
+                            $chTp->style['height'] = $origH;
+                        } else {
+                            unset($chTp->style['height']);
                         }
                     }
                 }

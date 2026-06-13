@@ -328,6 +328,11 @@ class VNodeRenderer
     {
         $style = $node->style;
 
+        // CSS 2.2 §9.2.4: display:none 元素不生成盒子，不参与渲染
+        if (($style['display'] ?? '') === 'none') {
+            return null;
+        }
+
         // ── 伪类样式合并（:hover/:focus/:active）──
         // 根据节点交互状态应用预解析的伪类样式，优先级：active > focus > hover
         if ($node->hovered && isset($style['__hoverStyle'])) {
@@ -526,10 +531,17 @@ class VNodeRenderer
             }
             if ($textX < $contentX + 4) $textX = $contentX + 4;
 
+            // CSS Flexible Box Layout §8.2: justify-content:center → 主轴居中文本
+            // 当元素是 flex 容器且 justifyContent=center 时，文本在 content area 内水平居中
+            $display = $style['display'] ?? 'block';
+            $justifyContent = $style['justifyContent'] ?? 'flex-start';
+            if (($display === 'flex' || $display === 'inline-flex') && $justifyContent === 'center' && $textWidth > 0 && $contentW > $textWidth) {
+                $textX = $contentX + (int)(($contentW - $textWidth) / 2);
+            }
+
             // CSS Flexible Box Layout §8.2: align-items:center → 交叉轴居中文本
             // 当元素是 flex 容器且 alignItems=center 时，文本在 content area 内垂直居中
             $textY = $contentY;
-            $display = $style['display'] ?? 'block';
             $alignItems = $style['alignItems'] ?? 'stretch';
             if (($display === 'flex' || $display === 'inline-flex') && $alignItems === 'center') {
                 $contentH = max(0, $h - $borderTopWidth - $borderBottomWidth - ($style['paddingTop'] ?? 0) - ($style['paddingBottom'] ?? 0));
@@ -540,6 +552,27 @@ class VNodeRenderer
                 }
             }
 
+            // ── Auto-wrap text when exceeds content width ──
+            // CSS Text Module Level 3 §7: white-space:normal 允许自动换行
+            $isBold = (bool)$bold;
+            $whitespace = $style['whiteSpace'] ?? 'normal';
+            $isWrappable = ($whitespace !== 'nowrap' && $whitespace !== 'pre');
+            $lineH = 0;
+            if ($isWrappable && $textWidth > $contentW && $contentW > 20) {
+                // Compute line-height for multi-line rendering
+                $lhVal = $style['lineHeight'] ?? 'normal';
+                if (is_string($lhVal) && $lhVal !== 'normal' && $lhVal !== '') {
+                    if (str_contains($lhVal, 'px')) {
+                        $lineH = (int)$lhVal;
+                    } else {
+                        $lineH = (int)($fontSize * (float)$lhVal);
+                    }
+                }
+                if ($lineH <= 0) {
+                    $lineH = (int)($fontSize * 1.2);
+                }
+            }
+
             $elements = [];
             if ($hasBg || $hasBorder) {
                 $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'noFill' => $noFill, 'cursor' => $cursor];
@@ -547,24 +580,90 @@ class VNodeRenderer
             if ($bgImageEl !== null) {
                 $elements[] = $bgImageEl;
             }
-            $elements[] = ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
-                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $bold,
-                'fontFamily' => $style['fontFamily'] ?? '',
-                'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
-                'decorationLine' => $style['textDecorationLine'] ?? 'none',
-                'decorationColor' => $style['textDecorationColor'] ?? $textColor,
-                'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
-                'decorationThickness' => $style['textDecorationThickness'] ?? 0,
-                'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
-                'textWidth' => self::measureTextWidth($text, $fontSize, (bool)$bold)];
 
-            // 存储文本渲染位置信息（用于 layout dump 验证垂直居中）
-            $node->textRenderInfo = [
-                'x' => $textX,
-                'y' => $textY,
-                'textHeight' => $textHeight,
-                'textWidth' => $textWidth,
-            ];
+            if ($isWrappable && $textWidth > $contentW && $contentW > 20 && $lineH > 0) {
+                // ── Multi-line wrapped rendering ──
+                $lines = [];
+                $currentLine = '';
+                $textLen = strlen($text);
+                for ($i = 0; $i < $textLen;) {
+                    $charLen = 1;
+                    $b = ord($text[$i]);
+                    if ($b >= 0xF0) $charLen = 4;
+                    elseif ($b >= 0xE0) $charLen = 3;
+                    elseif ($b >= 0xC0) $charLen = 2;
+                    $chunk = substr($text, $i, $charLen);
+                    $candidate = $currentLine . $chunk;
+                    $candidateW = self::measureTextWidth($candidate, $fontSize, $isBold);
+                    // Available width for text (4px left pad, 12px right pad)
+                    $availW = max(1, $contentW - 4);
+                    if ($candidateW > $availW && $currentLine !== '') {
+                        $lines[] = $currentLine;
+                        $currentLine = $chunk;
+                    } else {
+                        $currentLine = $candidate;
+                    }
+                    $i += $charLen;
+                }
+                if ($currentLine !== '') {
+                    $lines[] = $currentLine;
+                }
+
+                $lineIdx = 0;
+                $maxLineW = 0;
+                foreach ($lines as $seg) {
+                    $segW = self::measureTextWidth($seg, $fontSize, $isBold);
+                    if ($segW > $maxLineW) $maxLineW = $segW;
+                    $segX = $contentX + 4;
+                    if ($align === 'right') {
+                        $segX = $contentX + $contentW - 12 - $segW;
+                        if ($segX < $contentX + 4) $segX = $contentX + 4;
+                    } elseif ($align === 'center') {
+                        $segX = $contentX + (int)(($contentW - $segW) / 2);
+                        if ($segX < $contentX + 4) $segX = $contentX + 4;
+                    }
+                    $segY = $contentY + $lineIdx * $lineH;
+                    $elements[] = ['type' => 'text', 'text' => $seg, 'x' => $segX, 'y' => $segY,
+                        'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
+                        'fontFamily' => $style['fontFamily'] ?? '',
+                        'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
+                        'decorationLine' => $style['textDecorationLine'] ?? 'none',
+                        'decorationColor' => $style['textDecorationColor'] ?? $textColor,
+                        'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
+                        'decorationThickness' => $style['textDecorationThickness'] ?? 0,
+                        'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
+                        'textWidth' => self::measureTextWidth($seg, $fontSize, $isBold)];
+                    $lineIdx++;
+                }
+
+                // 存储文本渲染位置信息（第一行位置）
+                $node->textRenderInfo = [
+                    'x' => $contentX + 4,
+                    'y' => $contentY,
+                    'textHeight' => $lineH * count($lines),
+                    'textWidth' => $maxLineW,
+                ];
+            } else {
+                // ── Single-line rendering (original) ──
+                $elements[] = ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
+                    'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
+                    'fontFamily' => $style['fontFamily'] ?? '',
+                    'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
+                    'decorationLine' => $style['textDecorationLine'] ?? 'none',
+                    'decorationColor' => $style['decorationColor'] ?? $textColor,
+                    'decorationStyle' => $style['decorationStyle'] ?? 'solid',
+                    'decorationThickness' => $style['decorationThickness'] ?? 0,
+                    'underlineOffset' => $style['underlineOffset'] ?? 0,
+                    'textWidth' => self::measureTextWidth($text, $fontSize, $isBold)];
+
+                // 存储文本渲染位置信息（用于 layout dump 验证垂直居中）
+                $node->textRenderInfo = [
+                    'x' => $textX,
+                    'y' => $textY,
+                    'textHeight' => $textHeight,
+                    'textWidth' => $textWidth,
+                ];
+            }
 
             if (count($elements) === 1) {
                 return $elements[0];

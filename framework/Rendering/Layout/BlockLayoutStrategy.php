@@ -139,6 +139,29 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     $node->h = $lineH;
                     $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
                 }
+
+                // CSS 2.2 §10.6.3: auto-wrap text when exceeds container content width
+                // white-space:nowrap/pre 不换行；默认为 normal 需要换行
+                $ws = $style['whiteSpace'] ?? 'normal';
+                if ($measured > 0 && $node->w > 0 && $ws !== 'nowrap' && $ws !== 'pre') {
+                    $wrapPadL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
+                    $wrapPadR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
+                    $wrapBw = (int)($style['borderLeftWidth'] ?? $style['borderWidth'] ?? 0);
+                    $wrapBwR = (int)($style['borderRightWidth'] ?? $style['borderWidth'] ?? 0);
+                    $containerTextW = max(1, $node->w - $wrapPadL - $wrapPadR - $wrapBw - $wrapBwR);
+                    if ($measured > $containerTextW) {
+                        $numLines = (int)max(1, (int)ceil($measured / $containerTextW));
+                        // 对于特定字符宽度大于行宽的情况，退化为逐字符测量
+                        if ($numLines * $containerTextW < $measured) {
+                            $numLines = (int)ceil($measured / $containerTextW);
+                        }
+                        $wrappedH = (int)($numLines * $lineH);
+                        if ($wrappedH > $node->h) {
+                            $node->h = $wrappedH;
+                            $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+                        }
+                    }
+                }
             }
         }
 
@@ -199,8 +222,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     $childPosition = $childStyle['position'] ?? 'static';
 
-                    // Skip absolute/fixed children �?they don't participate in normal flow
-                    if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                    // Skip absolute/fixed children (they don't participate in normal flow)
+                    // Skip display:none children (CSS 2.2 §9.2.4: generate no box)
+                    $childDisplay = $childStyle['display'] ?? 'block';
+                    if ($childPosition === 'absolute' || $childPosition === 'fixed' || $childDisplay === 'none') {
                         continue;
                     }
 
@@ -261,6 +286,28 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                                 $cBtw = (int)($childStyle['borderTopWidth'] ?? $childStyle['borderWidth'] ?? 0);
                                 $cBbw = (int)($childStyle['borderBottomWidth'] ?? $childStyle['borderWidth'] ?? 0);
                                 $child->visualH = max(0, $child->h + $cPadT + $cPadB + $cBtw + $cBbw);
+                            }
+
+                            // CSS 2.2 §10.6.3: auto-wrap child text when exceeds container content width
+                            $childWs = $childStyle['whiteSpace'] ?? 'normal';
+                            if ($measured > 0 && $child->w > 0 && $childWs !== 'nowrap' && $childWs !== 'pre') {
+                                $cPadL = (int)($childStyle['paddingLeft'] ?? $childStyle['padding'] ?? 0);
+                                $cPadR = (int)($childStyle['paddingRight'] ?? $childStyle['padding'] ?? 0);
+                                $cBwL = (int)($childStyle['borderLeftWidth'] ?? $childStyle['borderWidth'] ?? 0);
+                                $cBwR = (int)($childStyle['borderRightWidth'] ?? $childStyle['borderWidth'] ?? 0);
+                                $childTextW = max(1, $child->w - $cPadL - $cPadR - $cBwL - $cBwR);
+                                if ($measured > $childTextW) {
+                                    $numLines = (int)max(1, (int)ceil($measured / $childTextW));
+                                    $wrappedH = (int)($numLines * $lineH);
+                                    if ($wrappedH > $child->h) {
+                                        $child->h = $wrappedH;
+                                        $cPadT2 = (int)($childStyle['paddingTop'] ?? $childStyle['padding'] ?? 0);
+                                        $cPadB2 = (int)($childStyle['paddingBottom'] ?? $childStyle['padding'] ?? 0);
+                                        $cBtw2 = (int)($childStyle['borderTopWidth'] ?? $childStyle['borderWidth'] ?? 0);
+                                        $cBbw2 = (int)($childStyle['borderBottomWidth'] ?? $childStyle['borderWidth'] ?? 0);
+                                        $child->visualH = max(0, $child->h + $cPadT2 + $cPadB2 + $cBtw2 + $cBbw2);
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -426,8 +473,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             foreach ($node->children as $child) {
                 // CSS 2.2 §10.6.3: absolute/fixed 子节点不参与 auto-height 计算
+                // CSS 2.2 §9.2.4: display:none 子节点也不参与
                 $childPosition = $child->style['position'] ?? 'static';
-                if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                $childDisplay = $child->style['display'] ?? 'block';
+                if ($childPosition === 'absolute' || $childPosition === 'fixed' || $childDisplay === 'none') {
                     continue;
                 }
                 $childBottom = (int)($child->y + $child->visualH);
