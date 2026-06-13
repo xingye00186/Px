@@ -3,7 +3,7 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:#f0f2f5; font-family:sans-serif; display:flex; justify-content:center; padding:20px; }
-  .bx-card { width:720px; background:#fff; border-radius:12px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+  .bx-card { width:720px; background:#fff; border-radius:12px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative;}
   .bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
   .ta-section { margin-bottom:12px; padding:14px; background:#f8f9ff; border-radius:8px; border:1px solid #e0e0e0; }
   .ta-section div:first-child { font-size:11px; color:#999; margin-bottom:4px; }
@@ -11,10 +11,12 @@
   .bx-footer { margin-top:16px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
 </style></head><body>
 <div class="bx-card">
+<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
   <div class="bx-header">?? 文本 ・ 对齐方式测试</div>
   <div class="ta-section"><div>text-align: left (默认)</div><div style="text-align:left;">这是一段左对齐的文本内容。</div></div>
   <div class="ta-section"><div>text-align: center</div><div style="text-align:center;">这是一段居中对齐的文本内容。</div></div>
   <div class="ta-section"><div>text-align: right</div><div style="text-align:right;">这是一段右对齐的文本内容。</div></div>
   <div class="bx-footer">case-020: Text ― Text Align</div>
-</div>
+
+<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
 </body></html>

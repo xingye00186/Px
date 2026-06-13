@@ -3,13 +3,14 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:#f0f2f5; font-family:sans-serif; display:flex; justify-content:center; padding:20px; }
-  .bx-card { width:720px; background:#fff; border-radius:12px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+  .bx-card { width:720px; background:#fff; border-radius:12px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative;}
   .bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
   .bx-grid { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; margin-bottom:24px; }
   .o-box { width:160px; height:100px; background:#fff; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; color:#444; }
   .bx-footer { margin-top:20px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
 </style></head><body>
 <div class="bx-card">
+<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
   <div class="bx-header">?? 盒模型 ・ 轮廓测试</div>
   <div class="bx-grid">
     <div class="o-box" style="outline:3px solid #e94560;">轮廓 红 3px</div>
@@ -17,5 +18,6 @@
     <div class="o-box" style="border:2px solid #4ade80;outline:3px solid #fb923c;outline-offset:-2px;">边框+轮廓</div>
   </div>
   <div class="bx-footer">case-009: Box Model ― Outline</div>
-</div>
+
+<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
 </body></html>

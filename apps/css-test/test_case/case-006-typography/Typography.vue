@@ -1,5 +1,6 @@
 <template>
-<div style="width:800px;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;">
+<div style="width:800px;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative"><div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+    
   <div style="font-size:18px;font-weight:600;margin-bottom:16px;color:#333;">
     Typography Test
   </div>
@@ -28,7 +29,8 @@
   <div style="font-size:13px;color:#2e7d32;font-family:Consolas,monospace;background:#f5f5f5;padding:12px 16px;border-radius:4px;border:1px solid #e0e0e0;">
     Code block — monospace, green text, light background
   </div>
-</div>
+
+    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
 </template>
 <script lang="php">
 class Typography extends ReactiveComponent

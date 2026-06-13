@@ -31,6 +31,8 @@
                 "fg": 6710886,
                 "fontSize": 14,
                 "borderColor": 14540253,
+                "borderBottomWidth": 1,
+                "borderBottomColor": 14540253,
                 "display": "flex",
                 "paddingTop": 0,
                 "paddingLeft": 20,
@@ -78,9 +80,9 @@
             "x": 0,
             "y": 41,
             "w": 1560,
-            "h": 444,
+            "h": 325,
             "visualW": 1600,
-            "visualH": 484,
+            "visualH": 365,
             "layer": 0,
             "isScrollContainer": false,
             "content": null,
@@ -94,24 +96,35 @@
             "children": [
                 {
                     "type": "div",
-                    "x": 20,
-                    "y": 61,
-                    "w": 1560,
-                    "h": 444,
-                    "visualW": 1560,
-                    "visualH": 444,
+                    "x": 440,
+                    "y": 81,
+                    "w": 720,
+                    "h": 249,
+                    "visualW": 776,
+                    "visualH": 305,
                     "layer": 0,
                     "isScrollContainer": false,
                     "content": null,
                     "style": {
+                        "bg": 16777215,
                         "fontSize": 14,
-                        "position": "relative"
+                        "borderRadius": 12,
+                        "opacity": 0.08,
+                        "position": "relative",
+                        "paddingTop": 28,
+                        "paddingLeft": 28,
+                        "paddingRight": 28,
+                        "paddingBottom": 28,
+                        "marginTop": 20,
+                        "marginLeft": 0,
+                        "marginRight": 0,
+                        "marginBottom": 20
                     },
                     "children": [
                         {
                             "type": "div",
-                            "x": 20,
-                            "y": 61,
+                            "x": 440,
+                            "y": 81,
                             "w": 8,
                             "h": 8,
                             "visualW": 8,
@@ -126,665 +139,229 @@
                         },
                         {
                             "type": "div",
-                            "x": 440,
-                            "y": 81,
+                            "x": 468,
+                            "y": 109,
                             "w": 720,
-                            "h": 368,
-                            "visualW": 776,
-                            "visualH": 424,
+                            "h": 24,
+                            "visualW": 720,
+                            "visualH": 38,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "?? 布局 ・ Display None 测试",
+                            "style": {
+                                "fg": 3021338,
+                                "fontSize": 20,
+                                "bold": 1,
+                                "borderColor": 6309353,
+                                "borderBottomWidth": 2,
+                                "borderBottomColor": 6309353,
+                                "paddingBottom": 12,
+                                "marginBottom": 20
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 468,
+                            "y": 167,
+                            "w": 720,
+                            "h": 58,
+                            "visualW": 720,
+                            "visualH": 58,
                             "layer": 0,
                             "isScrollContainer": false,
                             "content": null,
                             "style": {
-                                "bg": 16777215,
-                                "fontSize": 14,
-                                "borderRadius": 12,
-                                "opacity": 0.08,
-                                "paddingTop": 28,
-                                "paddingLeft": 28,
-                                "paddingRight": 28,
-                                "paddingBottom": 28,
-                                "marginTop": 20,
-                                "marginLeft": 0,
-                                "marginRight": 0,
-                                "marginBottom": 20
+                                "display": "flex",
+                                "marginBottom": 16,
+                                "gap": 16
                             },
                             "children": [
                                 {
                                     "type": "div",
                                     "x": 468,
-                                    "y": 109,
-                                    "w": 720,
-                                    "h": 24,
-                                    "visualW": 720,
-                                    "visualH": 38,
+                                    "y": 167,
+                                    "w": 229,
+                                    "h": 16,
+                                    "visualW": 271,
+                                    "visualH": 58,
                                     "layer": 0,
                                     "isScrollContainer": false,
-                                    "content": "?? 文本 ・ 行高测试",
+                                    "content": "可见元素 A",
                                     "style": {
-                                        "fg": 3021338,
-                                        "fontSize": 20,
-                                        "bold": 1,
-                                        "borderColor": 6309353,
-                                        "paddingBottom": 12,
-                                        "marginBottom": 20
+                                        "bg": 16775672,
+                                        "fontSize": 14,
+                                        "borderWidth": 1,
+                                        "borderColor": 14737632,
+                                        "borderLeftWidth": 1,
+                                        "borderLeftColor": 14737632,
+                                        "borderTopWidth": 1,
+                                        "borderTopColor": 14737632,
+                                        "borderRightWidth": 1,
+                                        "borderRightColor": 14737632,
+                                        "borderBottomWidth": 1,
+                                        "borderBottomColor": 14737632,
+                                        "borderRadius": 8,
+                                        "textAlign": "center",
+                                        "paddingTop": 20,
+                                        "paddingLeft": 20,
+                                        "paddingRight": 20,
+                                        "paddingBottom": 20
                                     }
                                 },
                                 {
                                     "type": "div",
-                                    "x": 468,
+                                    "x": 755,
                                     "y": 167,
-                                    "w": 720,
-                                    "h": 126,
-                                    "visualW": 720,
-                                    "visualH": 126,
+                                    "w": 229,
+                                    "h": 16,
+                                    "visualW": 271,
+                                    "visualH": 58,
                                     "layer": 0,
                                     "isScrollContainer": false,
-                                    "content": null,
+                                    "content": "隐藏元素(display:none)",
                                     "style": {
-                                        "display": "flex",
-                                        "marginBottom": 16,
-                                        "gap": 16
-                                    },
-                                    "children": [
-                                        {
-                                            "type": "div",
-                                            "x": 468,
-                                            "y": 167,
-                                            "w": 352,
-                                            "h": 69,
-                                            "visualW": 382,
-                                            "visualH": 99,
-                                            "layer": 0,
-                                            "isScrollContainer": false,
-                                            "content": null,
-                                            "style": {
-                                                "bg": 16775672,
-                                                "fontSize": 14,
-                                                "borderWidth": 1,
-                                                "borderColor": 14737632,
-                                                "borderLeftWidth": 1,
-                                                "borderLeftColor": 14737632,
-                                                "borderRadius": 8,
-                                                "paddingTop": 14,
-                                                "paddingLeft": 14,
-                                                "paddingRight": 14,
-                                                "paddingBottom": 14
-                                            },
-                                            "children": [
-                                                {
-                                                    "type": "div",
-                                                    "x": 482,
-                                                    "y": 181,
-                                                    "w": 690,
-                                                    "h": 13,
-                                                    "visualW": 690,
-                                                    "visualH": 13,
-                                                    "layer": 0,
-                                                    "isScrollContainer": false,
-                                                    "content": "line-height: normal(默认)",
-                                                    "style": {
-                                                        "fg": 10066329,
-                                                        "fontSize": 11,
-                                                        "marginBottom": 8
-                                                    }
-                                                },
-                                                {
-                                                    "type": "div",
-                                                    "x": 482,
-                                                    "y": 181,
-                                                    "w": 690,
-                                                    "h": 48,
-                                                    "visualW": 690,
-                                                    "visualH": 48,
-                                                    "layer": 0,
-                                                    "isScrollContainer": false,
-                                                    "content": null,
-                                                    "style": {
-                                                        "fg": 4473924,
-                                                        "fontSize": 14,
-                                                        "lineHeight": "normal"
-                                                    },
-                                                    "children": [
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 482,
-                                                            "y": 181,
-                                                            "w": 690,
-                                                            "h": 16,
-                                                            "visualW": 690,
-                                                            "visualH": 16,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "normal行高",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "br",
-                                                            "x": 482,
-                                                            "y": 197,
-                                                            "w": 690,
-                                                            "h": 0,
-                                                            "visualW": 690,
-                                                            "visualH": 0,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": null,
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 482,
-                                                            "y": 197,
-                                                            "w": 690,
-                                                            "h": 16,
-                                                            "visualW": 690,
-                                                            "visualH": 16,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "第2行",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "br",
-                                                            "x": 482,
-                                                            "y": 213,
-                                                            "w": 690,
-                                                            "h": 0,
-                                                            "visualW": 690,
-                                                            "visualH": 0,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": null,
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 482,
-                                                            "y": 213,
-                                                            "w": 690,
-                                                            "h": 16,
-                                                            "visualW": 690,
-                                                            "visualH": 16,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "第3行",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "type": "div",
-                                            "x": 866,
-                                            "y": 167,
-                                            "w": 352,
-                                            "h": 96,
-                                            "visualW": 382,
-                                            "visualH": 126,
-                                            "layer": 0,
-                                            "isScrollContainer": false,
-                                            "content": null,
-                                            "style": {
-                                                "bg": 16775672,
-                                                "fontSize": 14,
-                                                "borderWidth": 1,
-                                                "borderColor": 14737632,
-                                                "borderLeftWidth": 1,
-                                                "borderLeftColor": 14737632,
-                                                "borderRadius": 8,
-                                                "paddingTop": 14,
-                                                "paddingLeft": 14,
-                                                "paddingRight": 14,
-                                                "paddingBottom": 14
-                                            },
-                                            "children": [
-                                                {
-                                                    "type": "div",
-                                                    "x": 880,
-                                                    "y": 181,
-                                                    "w": 690,
-                                                    "h": 13,
-                                                    "visualW": 690,
-                                                    "visualH": 13,
-                                                    "layer": 0,
-                                                    "isScrollContainer": false,
-                                                    "content": "line-height: 1.8 (倍)",
-                                                    "style": {
-                                                        "fg": 10066329,
-                                                        "fontSize": 11,
-                                                        "marginBottom": 8
-                                                    }
-                                                },
-                                                {
-                                                    "type": "div",
-                                                    "x": 880,
-                                                    "y": 181,
-                                                    "w": 690,
-                                                    "h": 75,
-                                                    "visualW": 690,
-                                                    "visualH": 75,
-                                                    "layer": 0,
-                                                    "isScrollContainer": false,
-                                                    "content": null,
-                                                    "style": {
-                                                        "fg": 4473924,
-                                                        "fontSize": 14,
-                                                        "lineHeight": "1.8"
-                                                    },
-                                                    "children": [
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 1278,
-                                                            "y": 181,
-                                                            "w": 690,
-                                                            "h": 25,
-                                                            "visualW": 690,
-                                                            "visualH": 25,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "宽松行高",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "br",
-                                                            "x": 1278,
-                                                            "y": 206,
-                                                            "w": 690,
-                                                            "h": 0,
-                                                            "visualW": 690,
-                                                            "visualH": 0,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": null,
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 1278,
-                                                            "y": 206,
-                                                            "w": 690,
-                                                            "h": 25,
-                                                            "visualW": 690,
-                                                            "visualH": 25,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "第2行",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "br",
-                                                            "x": 1278,
-                                                            "y": 231,
-                                                            "w": 690,
-                                                            "h": 0,
-                                                            "visualW": 690,
-                                                            "visualH": 0,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": null,
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 1278,
-                                                            "y": 231,
-                                                            "w": 690,
-                                                            "h": 25,
-                                                            "visualW": 690,
-                                                            "visualH": 25,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "第3行",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                                {
-                                    "type": "div",
-                                    "x": 468,
-                                    "y": 309,
-                                    "w": 720,
-                                    "h": 123,
-                                    "visualW": 720,
-                                    "visualH": 123,
-                                    "layer": 0,
-                                    "isScrollContainer": false,
-                                    "content": null,
-                                    "style": {
-                                        "display": "flex",
-                                        "gap": 16
-                                    },
-                                    "children": [
-                                        {
-                                            "type": "div",
-                                            "x": 468,
-                                            "y": 309,
-                                            "w": 352,
-                                            "h": 93,
-                                            "visualW": 382,
-                                            "visualH": 123,
-                                            "layer": 0,
-                                            "isScrollContainer": false,
-                                            "content": null,
-                                            "style": {
-                                                "bg": 16775672,
-                                                "fontSize": 14,
-                                                "borderWidth": 1,
-                                                "borderColor": 14737632,
-                                                "borderLeftWidth": 1,
-                                                "borderLeftColor": 14737632,
-                                                "borderRadius": 8,
-                                                "paddingTop": 14,
-                                                "paddingLeft": 14,
-                                                "paddingRight": 14,
-                                                "paddingBottom": 14
-                                            },
-                                            "children": [
-                                                {
-                                                    "type": "div",
-                                                    "x": 482,
-                                                    "y": 323,
-                                                    "w": 690,
-                                                    "h": 13,
-                                                    "visualW": 690,
-                                                    "visualH": 13,
-                                                    "layer": 0,
-                                                    "isScrollContainer": false,
-                                                    "content": "line-height: 24px (固定)",
-                                                    "style": {
-                                                        "fg": 10066329,
-                                                        "fontSize": 11,
-                                                        "marginBottom": 8
-                                                    }
-                                                },
-                                                {
-                                                    "type": "div",
-                                                    "x": 482,
-                                                    "y": 323,
-                                                    "w": 690,
-                                                    "h": 72,
-                                                    "visualW": 690,
-                                                    "visualH": 72,
-                                                    "layer": 0,
-                                                    "isScrollContainer": false,
-                                                    "content": null,
-                                                    "style": {
-                                                        "fg": 4473924,
-                                                        "fontSize": 14,
-                                                        "lineHeight": "24px"
-                                                    },
-                                                    "children": [
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 482,
-                                                            "y": 323,
-                                                            "w": 690,
-                                                            "h": 24,
-                                                            "visualW": 690,
-                                                            "visualH": 24,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "固定24px行高",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "br",
-                                                            "x": 482,
-                                                            "y": 347,
-                                                            "w": 690,
-                                                            "h": 0,
-                                                            "visualW": 690,
-                                                            "visualH": 0,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": null,
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 482,
-                                                            "y": 347,
-                                                            "w": 690,
-                                                            "h": 24,
-                                                            "visualW": 690,
-                                                            "visualH": 24,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "第2行",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "br",
-                                                            "x": 482,
-                                                            "y": 371,
-                                                            "w": 690,
-                                                            "h": 0,
-                                                            "visualW": 690,
-                                                            "visualH": 0,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": null,
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 482,
-                                                            "y": 371,
-                                                            "w": 690,
-                                                            "h": 24,
-                                                            "visualW": 690,
-                                                            "visualH": 24,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "第3行",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "type": "div",
-                                            "x": 866,
-                                            "y": 309,
-                                            "w": 352,
-                                            "h": 69,
-                                            "visualW": 382,
-                                            "visualH": 99,
-                                            "layer": 0,
-                                            "isScrollContainer": false,
-                                            "content": null,
-                                            "style": {
-                                                "bg": 16775672,
-                                                "fontSize": 14,
-                                                "borderWidth": 1,
-                                                "borderColor": 14737632,
-                                                "borderLeftWidth": 1,
-                                                "borderLeftColor": 14737632,
-                                                "borderRadius": 8,
-                                                "paddingTop": 14,
-                                                "paddingLeft": 14,
-                                                "paddingRight": 14,
-                                                "paddingBottom": 14
-                                            },
-                                            "children": [
-                                                {
-                                                    "type": "div",
-                                                    "x": 880,
-                                                    "y": 323,
-                                                    "w": 690,
-                                                    "h": 13,
-                                                    "visualW": 690,
-                                                    "visualH": 13,
-                                                    "layer": 0,
-                                                    "isScrollContainer": false,
-                                                    "content": "line-height: 1.2 (紧凑)",
-                                                    "style": {
-                                                        "fg": 10066329,
-                                                        "fontSize": 11,
-                                                        "marginBottom": 8
-                                                    }
-                                                },
-                                                {
-                                                    "type": "div",
-                                                    "x": 880,
-                                                    "y": 323,
-                                                    "w": 690,
-                                                    "h": 48,
-                                                    "visualW": 690,
-                                                    "visualH": 48,
-                                                    "layer": 0,
-                                                    "isScrollContainer": false,
-                                                    "content": null,
-                                                    "style": {
-                                                        "fg": 4473924,
-                                                        "fontSize": 14,
-                                                        "lineHeight": "1.2"
-                                                    },
-                                                    "children": [
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 1278,
-                                                            "y": 323,
-                                                            "w": 690,
-                                                            "h": 16,
-                                                            "visualW": 690,
-                                                            "visualH": 16,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "紧凑行高",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "br",
-                                                            "x": 1278,
-                                                            "y": 339,
-                                                            "w": 690,
-                                                            "h": 0,
-                                                            "visualW": 690,
-                                                            "visualH": 0,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": null,
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 1278,
-                                                            "y": 339,
-                                                            "w": 690,
-                                                            "h": 16,
-                                                            "visualW": 690,
-                                                            "visualH": 16,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "第2行",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "br",
-                                                            "x": 1278,
-                                                            "y": 355,
-                                                            "w": 690,
-                                                            "h": 0,
-                                                            "visualW": 690,
-                                                            "visualH": 0,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": null,
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "#text",
-                                                            "x": 1278,
-                                                            "y": 355,
-                                                            "w": 690,
-                                                            "h": 16,
-                                                            "visualW": 690,
-                                                            "visualH": 16,
-                                                            "layer": 0,
-                                                            "isScrollContainer": false,
-                                                            "content": "第3行",
-                                                            "style": {
-                                                                "fontSize": 14
-                                                            }
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                                {
-                                    "type": "div",
-                                    "x": 468,
-                                    "y": 448,
-                                    "w": 720,
-                                    "h": 14,
-                                    "visualW": 720,
-                                    "visualH": 29,
-                                    "layer": 0,
-                                    "isScrollContainer": false,
-                                    "content": "case-021: Text ― Line Height",
-                                    "style": {
-                                        "fg": 11184810,
-                                        "fontSize": 12,
-                                        "borderColor": 15658734,
+                                        "bg": 16775672,
+                                        "fontSize": 14,
+                                        "borderWidth": 1,
+                                        "borderColor": 14737632,
+                                        "borderLeftWidth": 1,
+                                        "borderLeftColor": 14737632,
+                                        "borderTopWidth": 1,
+                                        "borderTopColor": 14737632,
+                                        "borderRightWidth": 1,
+                                        "borderRightColor": 14737632,
+                                        "borderBottomWidth": 1,
+                                        "borderBottomColor": 14737632,
+                                        "borderRadius": 8,
                                         "textAlign": "center",
-                                        "paddingTop": 14,
-                                        "marginTop": 16
+                                        "display": "none",
+                                        "paddingTop": 20,
+                                        "paddingLeft": 20,
+                                        "paddingRight": 20,
+                                        "paddingBottom": 20
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 1042,
+                                    "y": 167,
+                                    "w": 229,
+                                    "h": 16,
+                                    "visualW": 271,
+                                    "visualH": 58,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "可见元素 B",
+                                    "style": {
+                                        "bg": 16775672,
+                                        "fontSize": 14,
+                                        "borderWidth": 1,
+                                        "borderColor": 14737632,
+                                        "borderLeftWidth": 1,
+                                        "borderLeftColor": 14737632,
+                                        "borderTopWidth": 1,
+                                        "borderTopColor": 14737632,
+                                        "borderRightWidth": 1,
+                                        "borderRightColor": 14737632,
+                                        "borderBottomWidth": 1,
+                                        "borderBottomColor": 14737632,
+                                        "borderRadius": 8,
+                                        "textAlign": "center",
+                                        "paddingTop": 20,
+                                        "paddingLeft": 20,
+                                        "paddingRight": 20,
+                                        "paddingBottom": 20
                                     }
                                 }
                             ]
                         },
                         {
                             "type": "div",
-                            "x": 1572,
-                            "y": 497,
+                            "x": 468,
+                            "y": 241,
+                            "w": 696,
+                            "h": 48,
+                            "visualW": 720,
+                            "visualH": 72,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16448250,
+                                "fg": 8947848,
+                                "fontSize": 13,
+                                "borderRadius": 6,
+                                "lineHeight": "1.6",
+                                "paddingTop": 12,
+                                "paddingLeft": 12,
+                                "paddingRight": 12,
+                                "paddingBottom": 12
+                            },
+                            "children": [
+                                {
+                                    "type": "code",
+                                    "x": 480,
+                                    "y": 253,
+                                    "w": 684,
+                                    "h": 22,
+                                    "visualW": 696,
+                                    "visualH": 26,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "display:none",
+                                    "style": {
+                                        "bg": 15790320,
+                                        "fontSize": 14,
+                                        "borderRadius": 3,
+                                        "paddingTop": 2,
+                                        "paddingLeft": 6,
+                                        "paddingRight": 6,
+                                        "paddingBottom": 2
+                                    }
+                                },
+                                {
+                                    "type": "#text",
+                                    "x": 480,
+                                    "y": 279,
+                                    "w": 696,
+                                    "h": 22,
+                                    "visualW": 696,
+                                    "visualH": 22,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "的元素应不占空间，A 和 B 应紧邻排列。",
+                                    "style": {
+                                        "fontSize": 14
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "div",
+                            "x": 468,
+                            "y": 329,
+                            "w": 720,
+                            "h": 14,
+                            "visualW": 720,
+                            "visualH": 29,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "case-010: Layout ― Display None",
+                            "style": {
+                                "fg": 11184810,
+                                "fontSize": 12,
+                                "borderColor": 15658734,
+                                "borderTopWidth": 1,
+                                "borderTopColor": 15658734,
+                                "textAlign": "center",
+                                "paddingTop": 14,
+                                "marginTop": 16
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 1208,
+                            "y": 378,
                             "w": 8,
                             "h": 8,
                             "visualW": 8,

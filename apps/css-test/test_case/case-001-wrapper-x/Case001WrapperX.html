@@ -7,8 +7,7 @@
   .sandbox { padding:20px; }
   .wrapper-test {
     width:800px; margin:0 auto; background:#fff; border-radius:8px;
-    padding:24px; border:1px solid #e0e0e0;
-  }
+    padding:24px; border:1px solid #e0e0e0;position:relative;}
   .test-header { font-size:18px; font-weight:600; margin-bottom:16px; color:#333; }
   .test-body { font-size:14px; color:#666; line-height:1.6; }
   .test-footer { margin-top:16px; padding-top:16px; border-top:1px solid #eee; font-size:12px; color:#999; }
@@ -17,6 +16,7 @@
 <body>
 <div class="sandbox">
   <div class="wrapper-test">
+<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
     <div class="test-header">Centered Wrapper Test (margin: 0 auto)</div>
     <div class="test-body">
       <p>This container is 800px wide with margin:0 auto.</p>
@@ -24,7 +24,8 @@
       <p>Expected x = (1600 - 800 - 2*20) / 2 = 380px</p>
     </div>
     <div class="test-footer">case-001: wrapper x-position verification</div>
-  </div>
+  
+<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
 </div>
 </body>
 </html>
