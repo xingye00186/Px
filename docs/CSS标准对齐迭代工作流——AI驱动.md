@@ -100,6 +100,7 @@ apps/css-test/
 渲染系统
   framework/Rendering/GdiRenderContext.php            GDI 绘制实现
   framework/Rendering/SkiaRenderContext.php           Skia 绘制实现
+  cpp/skia_render.cc                                  C++ 原生渲染层（字体加载/绘制原语/抗锯齿控制）
   framework/Rendering/VNode.php                       虚拟 DOM 节点
   framework/Rendering/RenderNode.php                  渲染专用节点（布局结果）
   framework/Rendering/VNodeRenderer.php               渲染树遍历+clip
@@ -233,24 +234,31 @@ Step C: 布局导出 + 多帧稳定性
    ├─ 对比 Frame 1 vs Frame N 的布局 JSON（逐节点 x/y/w/h）
    └─ 任何跨帧变化标记为 STABILITY 问题
 
-Step D: 浏览器参考生成
+Step D: 布局内容一致性校验（新增）
+   ├─ validateEngineLayoutContent() 检查 engine_layout.json 是否包含测试用例关键文本
+   ├─ 防止 ref/ 目录下的过期参考数据被误用于对比
+   └─ 内容不匹配时标记为 REF_STALE 错误，触发自动重新生成
+
+Step E: 浏览器参考生成
    ├─ Edge headless 渲染 CaseNnnName.html → browser_ref_level_0.json
-   ├─ 注入 dump_layout.js + normalize.css + Noto Sans SC 字体
+   ├─ 注入 dump_layout.js + normalize.css + Noto Sans SC 字体（Regular+Bold 分离声明）
    └─ 验证参考 JSON 结构完整性
 
-Step E: 逐元素对比（compareElementEnhanced）
+Step F: 逐元素对比（compareElementEnhanced）
    ├─ flattenEngineTree() 展平引擎布局树
    ├─ 按标签/内容/id 匹配浏览器元素
    ├─ defaultChecks() 覆盖所有样式属性
    └─ 位置 + 尺寸 + 样式三项对比
 
-Step F: 截图对比（可选）
-   ├─ captureAppScreenshot() 引擎截图
-   ├─ 浏览器参考截图
-   ├─ alignImages() 锚点对齐
-   └─ compareScreenshots() 像素级对比
+Step G: 截图对比（必须，独立于元素对比结果）
+   ├─ exe --dump-layout 后自动截图 → exe_capture_{timestamp}.png
+   ├─ Edge headless --window-size=1600,800 浏览器参考截图 → browser_ref_{timestamp}.png
+   ├─ diff_{timestamp}.png 差异图
+   ├─ alignImages() 锚点对齐（颜色锚点/模板匹配/自动检测 三策略）
+   ├─ compareScreenshots() 像素级对比（cropAnchors 模式裁剪+缩放）
+   └─ 截图步骤不被元素对比结果阻塞，即使有 FAIL 仍执行
 
-Step G: 生成测试报告
+Step H: 生成测试报告
    ├─ test_log/test_report_YYYYmmdd_HHMMSS.md
    ├─ 更新 test_log/latest_report.md
    └─ 控制台实时输出每步状态
@@ -274,7 +282,7 @@ Step G: 生成测试报告
 | 阴影/轮廓 | **boxShadow, outline** |
 | 布局 | display, flexDirection, flexWrap, gap, alignItems, justifyContent, boxSizing |
 
-> **粗体**为新近增补的属性
+> **粗体**为新近增补的属性。70+ 样式属性已覆盖，边框着色（borderColor 等）当前布局引擎尚未完整导出（引擎内部正确处理但 serializeRenderNode 白名单未包含），需要时补充．
 
 ---
 
@@ -491,7 +499,13 @@ Step G: 生成测试报告
 <style>
 @font-face {
   font-family: 'Noto Sans SC';
-  src: local('Noto Sans SC'), url('file:///...');
+  src: local('Noto Sans SC'), url('file:///.../NotoSansSC-Regular.ttf');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  src: local('Noto Sans SC Bold'), url('file:///.../NotoSansSC-Bold.ttf');
+  font-weight: 700;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }     <!-- 匹配引擎 -->
 html, body { width: 1600px; height: 800px; overflow: hidden; background: #0d1117; }
@@ -505,10 +519,11 @@ html, body { width: 1600px; height: 800px; overflow: hidden; background: #0d1117
 </html>
 ```
 
-**三条铁律**：
+**四条铁律**（新增第 4 条）：
 1. **html/body 固定宽高** — 1600×800，与引擎 `WINDOW_WIDTH/HEIGHT` 一致
 2. **`* { box-sizing: border-box }`** — 引擎使用 border-box 盒模型（与标准 CSS content-box 不一致但已统一）
 3. **字体声明** — 必须包含 Noto Sans SC 的 `@font-face` 加载块，否则浏览器 fallback 字体不同导致文本尺寸偏差
+4. **粗体字体分离声明** — `@font-face` 必须拆分为 Regular(400) 和 Bold(700) 两个声明，分别加载 `NotoSansSC-Regular.ttf` 和 `NotoSansSC-Bold.ttf`，使浏览器基线也使用真实粗体字宽（而非合成粗体）
 
 ### 4.2 --window-size 匹配规则
 
@@ -555,9 +570,9 @@ html, body { width: 1600px; height: 800px; overflow: hidden; background: #0d1117
 
 ```html
 <!-- __PX_ANCHOR_TL__ 左上角（卡片 padding-box 的左上角） -->
-<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;"></div>
+<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
 <!-- __PX_ANCHOR_BR__ 右下角（卡片 padding-box 的右下角） -->
-<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;"></div>
+<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div>
 ```
 
 - `position:relative` 设置方式：
@@ -575,11 +590,11 @@ html, body { width: 1600px; height: 800px; overflow: hidden; background: #0d1117
 
 ### 6.2 窗口尺寸一致性
 
-| 场景 | 窗口尺寸设置 |
-|------|-------------|
-| Px 应用 | `main.php` 中 `WINDOW_WIDTH`, `WINDOW_HEIGHT` |
-| 浏览器 ref 生成 | `buildCssTestWrapper()` 的 `--window-size=1600,800` |
-| 浏览器基准截图 | `capture_baseline_screenshot()` 传入 TargetWidth/Height 匹配引擎 |
+| 场景 | 窗口尺寸设置 | 注意事项 |
+|------|-------------|---------|
+| Px 应用 | `main.php` 中 `WINDOW_WIDTH`, `WINDOW_HEIGHT` | 默认 1600×800；exe 不含 DPI 感知清单，高 DPI 系统上 `GetClientRect` 返回虚拟坐标 |
+| 浏览器 ref 生成 | `buildCssTestWrapper()` 的 `--window-size=1600,800`（Edge headless） | Edge headless 不受窗口管理器约束，精确控制视口 |
+| 浏览器基准截图 | Edge headless `--window-size=1600,800 --screenshot=out.png` | 替代旧的 PowerShell MoveWindow 方式（不可靠） |
 
 ### 6.3 模板匹配对齐（回退方案）
 
@@ -751,6 +766,132 @@ if ($childPosition === 'absolute' || $childPosition === 'fixed') {
 
 ---
 
+### 案例 7：Skia 细矩形抗锯齿导致分隔线和卡片边缘渲染膨胀
+
+**症状**：1px 高的分隔线（`border-top:1px solid #eee`）在 EXE 中显示为 ~3px 高；卡片边缘轻微模糊，整体视觉偏"厚"
+
+**根因**：`skia_render.cc` 中 `php_sk_alpha_fill_rect` 在绘制矩形时无条件设置 `paint.setAntiAlias(true)`。对于宽或高只有 1~2px 的细矩形，抗锯齿会使本应锐利的线条在两侧各扩展约 1px，造成视觉膨胀。
+
+`php_sk_fill_rect` 的对应代码（line 403）已有保护逻辑：
+```cpp
+paint.setAntiAlias((int)w > 2 && (int)h > 2);
+```
+但 `php_sk_alpha_fill_rect` 缺失此保护，导致透明矩形路径（如分隔线）渲染膨胀。
+
+**修复**：在 `php_sk_alpha_fill_rect` 中添加相同的细矩形防抗锯齿保护：
+```cpp
+paint.setAntiAlias((int)w > 2 && (int)h > 2);
+```
+
+**框架文件**：`cpp/skia_render.cc`
+
+**管线盲区**：
+
+| 防线层 | 问题 | 根因 |
+|--------|------|------|
+| 元素对比（layout JSON） | 通过 ✅ | 布局引擎报告 h=1 正确，但渲染时抗锯齿膨胀；元素对比只比较 JSON 数据，不验渲染效果 |
+| 截图对比 | 未拦截 | 基线截图从同一 buggy exe 生成，膨胀效果抵销 |
+| 单元测试 | 未涉及 | 无渲染原语级别的抗锯齿行为测试 |
+
+**反思**：布局层数据正确 ≠ 渲染层效果正确。仅依赖 JSON 对比无法捕获渲染器级别的抗锯齿/颜色/字体渲染差异。
+
+---
+
+### 案例 8：Skia/FreeType 字体测宽与浏览器 DirectWrite 不一致
+
+**症状**："Test Case" 粗体 14px 引擎测量 72px，浏览器参考 64px（dw=8）。引擎整体布局因文本测宽偏宽而系统性偏移，导致等比例截图中 EXE 偏"宽"。
+
+**根因**：`skia_render.cc` 中 `php_sk_measure_text_width` 在 `USE_SKIA` 路径下使用 Skia/FreeType 引擎进行文本宽度测量。FreeType 与浏览器 Edge 使用的 DirectWrite 字体引擎渲染策略（hinting、glyph advance 计算）不同，同一字体的测宽结果存在固有差异。
+
+**修复**：`php_sk_measure_text_width` 在 `USE_SKIA` 路径下改用 GDI `GetTextExtentPoint32W` 进行文本宽度测量。Skia 仍负责实际绘制（提供抗锯齿和圆角），宽度测量改用 GDI 以保证与浏览器的 DirectWrite 测量一致。
+
+```cpp
+// 不再使用 Skia measureText，改用 GDI GetTextExtentPoint32W
+SelectObject(hdc, hFont);
+GetTextExtentPoint32W(hdc, text, len, &sz);
+width = sz.cx;
+```
+
+**额外修复——粗体真实字形加载**：
+- 引擎端：`skia_render.cc` 通过 `AddFontMemResourceEx` 预加载 `NotoSansSC-Bold.ttf`，在粗体绘制/测宽时切换到真实粗体字体文件
+- 浏览器端：`buildCssTestWrapper()` 将 `@font-face` 拆分为 Regular(400) 和 Bold(700) 两个声明，使浏览器基线也加载真实粗体字体
+
+**框架文件**：`cpp/skia_render.cc`、`apps/css-test/run.php`（@font-face 分离）
+
+**管线盲区**：
+
+| 防线层 | 问题 | 根因 |
+|--------|------|------|
+| 元素对比 | 未拦截 | 对比用的浏览器参考数据也受字体影响，差异未超过容差 |
+| 截图对比（cropAnchors 模式） | 未拦截 | 等比例缩放抵销了绝对宽度差异，但比例差异被归入"渲染差异" |
+| 布局 JSON 对比 | 未涉及 | 布局层只关心测宽结果，不判断测量值的绝对正确性 |
+
+**教训**：跨平台/跨引擎的字体渲染差异是持续问题。GDI 测宽 + Skia 绘制是当前最实用的折中方案。
+
+---
+
+### 案例 9：布局层 font-weight key 与 CssMappings 映射不一致
+
+**症状**：粗体文本（font-weight:700）在引擎中始终以常规宽度测量和渲染，即使 CSS 正确解析为 bold=1。
+
+**根因**：`CssMappings.php` 将 CSS 属性 `font-weight` 映射到内部 key `'bold'`（值 0/1），但所有布局策略类（`BlockLayoutStrategy`、`FlexLayoutStrategy`、`GridLayoutStrategy`、`AbsolutePositioning`、`InlineLayoutStrategy`）在访问粗体值时使用 `$style['fontWeight']`，导致始终读取到 `null`（fallback 为 'normal'）。
+
+CssMappings 映射链：
+```
+font-weight CSS → parseFontWeight → $style['bold'] = 0|1
+                                                 ↑
+                                         布局策略错误地用
+                                         $style['fontWeight']
+```
+
+**修复**：将 5 个布局策略文件中的 `$style['fontWeight']` 全部替换为 `($style['bold'] ?? 0)`：
+```php
+// 修复前
+$bold = $style['fontWeight'] ?? 'normal';
+// 修复后
+$bold = ($style['bold'] ?? 0) !== 0;
+```
+
+**框架文件**：
+- `framework/Rendering/Layout/BlockLayoutStrategy.php`
+- `framework/Rendering/Layout/FlexLayoutStrategy.php`
+- `framework/Rendering/Layout/GridLayoutStrategy.php`
+- `framework/Rendering/Layout/AbsolutePositioning.php`
+- `framework/Rendering/Layout/InlineLayoutStrategy.php`
+
+**教训**：CssMappings 的 key 映射与布局层的消费方之间存在隐式契约。新增 CSS 属性映射后，必须同步检查所有消费方使用的 key 是否正确。
+
+---
+
+### 案例 10：Block 布局 margin:auto 未包含 padding 和 border
+
+**症状**：`margin:0 auto` 居中时，引擎计算的位置比浏览器左偏。以 case-001 为例，引擎 `x=400`，浏览器 `x=375`（偏移 25px = 1px border-left + 24px padding-left）。
+
+**根因**：`BlockLayoutStrategy` 的 `resolveMarginAuto()` 函数用 `$parentContentW - $node->w` 计算水平剩余空间，只减了子元素的 content width，漏了 border 和 padding。CSS 规范中 margin:auto 居中的剩余空间应该用**父容器 content box 宽度 - 子元素 border-box 宽度**。
+
+```php
+// 修复前
+$remaining = $parentContentW - $node->w;
+// 修复后（考虑 padding 和 border）
+$remaining = $parentContentW - ($node->w + $paddingLeft + $paddingRight + $borderLeft + $borderRight);
+```
+
+**修复**：在 `resolveMarginAuto` 中从子元素的 `visualW` 获取完整盒宽度（含 padding + border），替代纯 content width。
+
+**框架文件**：`framework/Rendering/Layout/BlockLayoutStrategy.php`
+
+**管线盲区**：
+
+| 防线层 | 问题 | 根因 |
+|--------|------|------|
+| 元素对比 | 未拦截 | margin:auto 在浏览器和引擎间偏差 25px，但 layout JSON 对比未检查居中计算路径 |
+| 截图对比 | 未拦截 | 基线从旧 exe 生成，偏差被 normalize |
+| 单元测试 | 未涉及 | 无 margin:auto 居中路径的独立断言 |
+
+**教训**：margin:auto 布局正确性依赖浏览器参考数据作为独立锚点，不可依赖 exe 自生成的基线。
+
+---
+
 ## 九、问题反思机制
 
 ### 9.1 反思触发条件
@@ -835,7 +976,12 @@ if ($childPosition === 'absolute' || $childPosition === 'fixed') {
 | 3 | **单次 resolve 假设**：单元测试只 resolve 一次 → 无法暴露 Frame 2+ 的稳定性问题 | 案例 3b | run.php 默认 5 帧多帧验证，禁止减少帧数 |
 | 4 | **隐性基线偏差**：ref 生成工具的 wrapper CSS 引入非标准基线 | 案例 5 | 出现系统性差异时，先排查 buildCssTestWrapper()，再排查引擎 |
 | 5 | **视口不一致**：引擎和 ref 生成的 window-size 不匹配 → 系统性坐标偏移 | 案例 6 | 项目初始化时确认 `--window-size` 与 `WINDOW_WIDTH/HEIGHT` 一致 |
-| 6 | **字体缺失引起文本尺寸偏差**：浏览器 fallback 字体与引擎 Noto Sans SC 不同 | css-test 日常 | `@font-face` 声明必须包含在 buildCssTestWrapper() |
+| 6 | **字体缺失引起文本尺寸偏差**：浏览器 fallback 字体与引擎 Noto Sans SC 不同 | css-test 日常 | `@font-face` 声明必须包含在 buildCssTestWrapper() 中 |
+| 7 | **渲染层 vs 布局层分离**：layout JSON 数据正确 ≠ 渲染效果正确 | 案例 7 | 涉及 C++ Skia/GDI 绘制原语修改后，必须通过截图对比验证渲染效果 |
+| 8 | **字体引擎差异**：FreeType(Skia) 与 DirectWrite(浏览器) 测宽存在固有差异 | 案例 8 | `measure_text_width` 修改后需交叉验证 GDI/Skia/DirectWrite 三路测量结果一致性 |
+| 9 | **CSS 映射 key 不一致**：CssMappings 新增属性后消费方 key 未同步更新 | 案例 9 | 新增 CSS 属性映射后必须 grep 所有 `$style['...']` 消费方确认 key 一致 |
+| 10 | **过期参考数据**：ref/engine_layout.json 内容与测试用例不匹配未被检测 | 多个 case | 布局导出后立即执行 `validateEngineLayoutContent()` 校验内容一致性 |
+| 11 | **margin:auto 无独立断言**：居中计算正确性依赖外部基线，无自洽验证 | 案例 10 | margin:auto 修改后必须用浏览器 ref（非 exe）作为独立锚点验证居中结果 |
 
 ---
 
@@ -857,6 +1003,11 @@ php apps/css-test/run.php --skip-build               # 跳过编译
 php apps/css-test/run.php --skip-browser-ref          # 跳过浏览器对比
 php apps/css-test/run.php --update-baseline           # 更新参考数据
 
+# 截图（手动 — Edge headless）
+msedge --headless --disable-gpu --window-size=1600,800 `
+  --screenshot="test_log/browser_ref_20260613_143025.png" `
+  "file:///D:/Px/apps/css-test/test_case/case-NNN/wrapper.html"
+
 # 构建（单独）
 cd D:\Px
 .\build.bat css-test
@@ -875,7 +1026,7 @@ php tools\generate_project_ref.php <project>
 # css-test 浏览器参考（旧版工具，run.php 已内联）
 php tools\generate_browser_refs.php
 
-# 截图（手动）
+# 截图（手动 — PowerShell，已不建议使用）
 powershell -ExecutionPolicy Bypass -File tools/capture_screenshot.ps1 `
     -AppName css-test -ProjectRoot D:/Px `
     -OutputPath apps/css-test/test_log/captured.png
