@@ -232,7 +232,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             $lineH = PercentResolver::resolveLineHeight($childStyle, $fs, 16, $style);
                             if ($child->h === 0 || $child->h < $lineH) {
                                 $child->h = $lineH;
-                                $child->visualH = PercentResolver::resolveVisualH($childStyle, $child->h);
+                                // CSS border-box: visualH for auto-height must include padding+border
+                                // resolveVisualH in border-box mode returns h unchanged (assumes h
+                                // already includes padding+border), but for auto-height h is content
+                                // height only. Compute visualH explicitly.
+                                $cPadT = (int)($childStyle['paddingTop'] ?? $childStyle['padding'] ?? 0);
+                                $cPadB = (int)($childStyle['paddingBottom'] ?? $childStyle['padding'] ?? 0);
+                                $cBtw = (int)($childStyle['borderTopWidth'] ?? $childStyle['borderWidth'] ?? 0);
+                                $cBbw = (int)($childStyle['borderBottomWidth'] ?? $childStyle['borderWidth'] ?? 0);
+                                $child->visualH = max(0, $child->h + $cPadT + $cPadB + $cBtw + $cBbw);
                             }
                         }
                     } else {
@@ -410,6 +418,17 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
+        // CSS border-box: For auto-height blocks, visualH = contentH + padding + border
+        // resolveVisualH in border-box mode returns h unchanged (assumes h already includes
+        // padding+border), but auto-height h is content height only. Compute explicitly.
+        if ($isAutoHeight) {
+            $ahPadT = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+            $ahPadB = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
+            $ahBtw = (int)($style['borderTopWidth'] ?? $style['borderWidth'] ?? 0);
+            $ahBbw = (int)($style['borderBottomWidth'] ?? $style['borderWidth'] ?? 0);
+            $node->visualH = max(0, $node->h + $ahPadT + $ahPadB + $ahBtw + $ahBbw);
+        }
+
         // ── Second pass: resolve absolute/fixed children now that container height is final ──
         $absPadLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
         $absPadTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
@@ -426,8 +445,13 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         }
 
         // Set container's own visualW/visualH
+        // Note: For auto-height elements, visualH is already set above with padding+border.
+        // For explicit-height elements in border-box, resolveVisualW/H correctly return w/h
+        // which already include padding+border.
         $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
-        $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+        if (!$isAutoHeight) {
+            $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+        }
     }
 
     /**

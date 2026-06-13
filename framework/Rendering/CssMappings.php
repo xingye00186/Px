@@ -282,6 +282,8 @@ class CssMappings
         'overflow-y'       => ['key' => 'overflowY',        'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
         'text-overflow'    => ['key' => 'textOverflow',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'clip'],
         'white-space'      => ['key' => 'whiteSpace',       'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
+        'word-break'       => ['key' => 'wordBreak',        'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
+        'font-style'       => ['key' => 'fontStyle',        'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
         'flex-direction'   => ['key' => 'flexDirection',    'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'row'],
         'flex-wrap'        => ['key' => 'flexWrap',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'nowrap'],
         'justify-content'  => ['key' => 'justifyContent',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'flex-start'],

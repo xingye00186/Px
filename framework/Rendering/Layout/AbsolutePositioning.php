@@ -79,14 +79,21 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         // CSS Positioned Layout §3.1: containing block = padding box
         // padding box 原点 = ancestor 坐标本身（不含 padding 偏移）
-        // padding box 尺寸 = ancestor->w/h + padding 总和
+        // padding box 尺寸 = visualW/visualH（border-box）减去 border 宽度
+        // 使用 visualW/visualH 而非 resolveContentWidth/Height，因为
+        // auto-height 元素的 h 是内容高度（不是 CSS 'height' 属性），
+        // resolveContentWidth/Height 会错误地减去 padding。
+        $borderL = ($ancestor !== null) ? (int)($ancestor->style['borderLeftWidth'] ?? $ancestor->style['borderWidth'] ?? 0) : 0;
+        $borderR = ($ancestor !== null) ? (int)($ancestor->style['borderRightWidth'] ?? $ancestor->style['borderWidth'] ?? 0) : 0;
+        $borderT = ($ancestor !== null) ? (int)($ancestor->style['borderTopWidth'] ?? $ancestor->style['borderWidth'] ?? 0) : 0;
+        $borderB = ($ancestor !== null) ? (int)($ancestor->style['borderBottomWidth'] ?? $ancestor->style['borderWidth'] ?? 0) : 0;
         $ancestorX = ($ancestor !== null) ? $ancestor->x : 0;
         $ancestorY = ($ancestor !== null) ? $ancestor->y : 0;
         $ancestorW = ($ancestor !== null)
-            ? $ancestor->w + $ancestorPaddingLeft + $ancestorPaddingRight
+            ? $ancestor->visualW - $borderL - $borderR
             : $viewportW;
         $ancestorH = ($ancestor !== null)
-            ? $ancestor->h + $ancestorPaddingTop + $ancestorPaddingBottom
+            ? $ancestor->visualH - $borderT - $borderB
             : $viewportH;
 
         // CSS 2.2 §10.5: 包含块无显式高度时，top/bottom 百分比按 auto（0）处理
