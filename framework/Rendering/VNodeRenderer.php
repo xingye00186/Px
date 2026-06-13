@@ -668,11 +668,6 @@ class VNodeRenderer
                 $containerW = (int)($scrollCtx['w'] * $pct);
             }
         }
-        $rawContainerH = $props['container-h'] ?? null;
-        $containerH = $h;
-        if ($rawContainerH !== null && !str_contains($rawContainerH, '%')) {
-            $containerH = (int)$rawContainerH;
-        }
         $containerX = (int)($props['container-x'] ?? $x);
 
         // ── 文本溢出/省略处理（委派 TextOverflowProcessor）──
@@ -721,9 +716,6 @@ class VNodeRenderer
             } else {
                 $x = $containerX + (int)(($containerW - $textWidth) / 2);
                 if ($x < $containerX) $x = (int)$containerX;
-            }
-            if ($containerH > $fontSize * 2) {
-                $y = $y + (int)(($containerH - $fontSize) / 2);
             }
         }
 
