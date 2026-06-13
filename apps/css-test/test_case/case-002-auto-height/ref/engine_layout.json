@@ -53,7 +53,8 @@
                     "isScrollContainer": false,
                     "content": "CSS Test Sandbox —",
                     "style": {
-                        "fontSize": 14
+                        "fontSize": 14,
+                        "bg": -1
                     }
                 },
                 {
@@ -70,7 +71,8 @@
                     "style": {
                         "fg": 3355443,
                         "fontSize": 14,
-                        "bold": 1
+                        "bold": 1,
+                        "bg": -1
                     }
                 }
             ]
@@ -80,9 +82,9 @@
             "x": 0,
             "y": 41,
             "w": 1560,
-            "h": 392,
+            "h": 394,
             "visualW": 1600,
-            "visualH": 432,
+            "visualH": 434,
             "layer": 0,
             "isScrollContainer": false,
             "content": null,
@@ -91,7 +93,8 @@
                 "paddingTop": 20,
                 "paddingLeft": 20,
                 "paddingRight": 20,
-                "paddingBottom": 20
+                "paddingBottom": 20,
+                "bg": -1
             },
             "children": [
                 {
@@ -99,9 +102,9 @@
                     "x": 20,
                     "y": 61,
                     "w": 1520,
-                    "h": 352,
+                    "h": 354,
                     "visualW": 1560,
-                    "visualH": 392,
+                    "visualH": 394,
                     "layer": 0,
                     "isScrollContainer": false,
                     "content": null,
@@ -110,7 +113,8 @@
                         "paddingTop": 20,
                         "paddingLeft": 20,
                         "paddingRight": 20,
-                        "paddingBottom": 20
+                        "paddingBottom": 20,
+                        "bg": -1
                     },
                     "children": [
                         {
@@ -118,9 +122,9 @@
                             "x": 40,
                             "y": 81,
                             "w": 1470,
-                            "h": 302,
-                            "visualW": 1520,
-                            "visualH": 352,
+                            "h": 304,
+                            "visualW": 1470,
+                            "visualH": 354,
                             "layer": 0,
                             "isScrollContainer": false,
                             "content": null,
@@ -142,7 +146,8 @@
                                 "paddingTop": 24,
                                 "paddingLeft": 24,
                                 "paddingRight": 24,
-                                "paddingBottom": 24
+                                "paddingBottom": 24,
+                                "boxSizing": "border-box"
                             },
                             "children": [
                                 {
@@ -163,11 +168,11 @@
                                 },
                                 {
                                     "type": "div",
-                                    "x": 64,
-                                    "y": 105,
-                                    "w": 1470,
+                                    "x": 65,
+                                    "y": 106,
+                                    "w": 1420,
                                     "h": 21,
-                                    "visualW": 1470,
+                                    "visualW": 1420,
                                     "visualH": 21,
                                     "layer": 0,
                                     "isScrollContainer": false,
@@ -176,17 +181,18 @@
                                         "fg": 3355443,
                                         "fontSize": 18,
                                         "bold": 1,
-                                        "marginBottom": 16
+                                        "marginBottom": 16,
+                                        "bg": -1
                                     }
                                 },
                                 {
                                     "type": "div",
-                                    "x": 64,
-                                    "y": 142,
-                                    "w": 1470,
-                                    "h": 184,
-                                    "visualW": 1504,
-                                    "visualH": 218,
+                                    "x": 65,
+                                    "y": 143,
+                                    "w": 1420,
+                                    "h": 185,
+                                    "visualW": 1420,
+                                    "visualH": 219,
                                     "layer": 0,
                                     "isScrollContainer": false,
                                     "content": null,
@@ -207,16 +213,17 @@
                                         "paddingTop": 16,
                                         "paddingLeft": 16,
                                         "paddingRight": 16,
-                                        "paddingBottom": 16
+                                        "paddingBottom": 16,
+                                        "boxSizing": "border-box"
                                     },
                                     "children": [
                                         {
                                             "type": "div",
-                                            "x": 80,
-                                            "y": 158,
-                                            "w": 1446,
+                                            "x": 82,
+                                            "y": 160,
+                                            "w": 1362,
                                             "h": 40,
-                                            "visualW": 1470,
+                                            "visualW": 1386,
                                             "visualH": 40,
                                             "layer": 0,
                                             "isScrollContainer": false,
@@ -237,11 +244,11 @@
                                         },
                                         {
                                             "type": "div",
-                                            "x": 80,
-                                            "y": 206,
-                                            "w": 1446,
+                                            "x": 82,
+                                            "y": 208,
+                                            "w": 1362,
                                             "h": 40,
-                                            "visualW": 1470,
+                                            "visualW": 1386,
                                             "visualH": 40,
                                             "layer": 0,
                                             "isScrollContainer": false,
@@ -262,11 +269,11 @@
                                         },
                                         {
                                             "type": "div",
-                                            "x": 80,
-                                            "y": 254,
-                                            "w": 1446,
+                                            "x": 82,
+                                            "y": 256,
+                                            "w": 1362,
                                             "h": 40,
-                                            "visualW": 1470,
+                                            "visualW": 1386,
                                             "visualH": 40,
                                             "layer": 0,
                                             "isScrollContainer": false,
@@ -287,11 +294,11 @@
                                         },
                                         {
                                             "type": "div",
-                                            "x": 80,
-                                            "y": 302,
-                                            "w": 1446,
+                                            "x": 82,
+                                            "y": 304,
+                                            "w": 1362,
                                             "h": 40,
-                                            "visualW": 1470,
+                                            "visualW": 1386,
                                             "visualH": 40,
                                             "layer": 0,
                                             "isScrollContainer": false,
@@ -313,11 +320,11 @@
                                 },
                                 {
                                     "type": "div",
-                                    "x": 64,
-                                    "y": 376,
-                                    "w": 1470,
+                                    "x": 65,
+                                    "y": 378,
+                                    "w": 1420,
                                     "h": 14,
-                                    "visualW": 1470,
+                                    "visualW": 1420,
                                     "visualH": 31,
                                     "layer": 0,
                                     "isScrollContainer": false,
@@ -329,13 +336,14 @@
                                         "borderTopWidth": 1,
                                         "borderTopColor": 15658734,
                                         "paddingTop": 16,
-                                        "marginTop": 16
+                                        "marginTop": 16,
+                                        "bg": -1
                                     }
                                 },
                                 {
                                     "type": "div",
-                                    "x": 1608,
-                                    "y": 423,
+                                    "x": 1500,
+                                    "y": 425,
                                     "w": 8,
                                     "h": 8,
                                     "visualW": 8,
