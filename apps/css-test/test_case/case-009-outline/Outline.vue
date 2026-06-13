@@ -8,8 +8,8 @@
       <div class="o-box" style="width:160px;height:100px;box-sizing:border-box;background:#fff;border-radius:8px;border:3px solid #e94560;display:flex;align-items:center;justify-content:center;font-size:13px;color:#444;">
         轮廓 红 3px
       </div>
-      <div class="o-box" style="width:160px;height:100px;box-sizing:border-box;background:#fff;border-radius:8px;border:4px dashed #0f3460;display:flex;align-items:center;justify-content:center;font-size:13px;color:#444;">
-        虚线轮廓 偏移
+      <div class="o-box" style="width:160px;height:100px;box-sizing:border-box;background:#fff;border-radius:8px;border:4px solid #0f3460;display:flex;align-items:center;justify-content:center;font-size:13px;color:#444;">
+        实线轮廓 偏移
       </div>
       <div class="o-box" style="width:160px;height:100px;box-sizing:border-box;background:#fff;border-radius:8px;border:2px solid #4ade80;display:flex;align-items:center;justify-content:center;font-size:13px;color:#444;">
         边框+轮廓
