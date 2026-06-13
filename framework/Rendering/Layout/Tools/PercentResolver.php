@@ -99,8 +99,9 @@ class PercentResolver
                 // 父元素也没有显式 line-height，继续向上查找
                 // 但我们只有一层 parentStyle，因此这里用 normal 处理
             }
-            // CSS 2.2 §10.8.1: 'normal' 的 line-height 约为字体大小的 1.2 倍
-            return (int)($fontSize * 1.2);
+            // CSS 2.2 §10.8.1: 'normal' 的 line-height 由 UA 决定
+            // Px 选择 1.5x 以匹配主流浏览器(Edge/Chrome)对 Noto Sans SC 的渲染行为
+            return (int)($fontSize * 1.5);
         }
         // String ending in 'px' — extract pixel value
         if (is_string($lh) && str_ends_with($lh, 'px')) {
