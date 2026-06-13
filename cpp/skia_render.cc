@@ -526,10 +526,9 @@ void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity)
 }
 
 // 绘制文本（阶段三：用 SkFontMgr_New_Custom_Directory 加载 Noto Sans SC 后 drawString）
+// PHP 传入的 Y 为 text-top 坐标，Skia drawString 需要 baseline → 内部用 font metrics 转换
 void php_sk_draw_text(Int x, Int y, String text, Int fontSize, Int rgb, Int bold) {
 #ifdef USE_SKIA
-    SK_TRACE("[SK] draw_text x=%d y=%d text='%s' fontSize=%d rgb=0x%X bold=%d canvas=%p\n",
-        (int)x, (int)y, text.data() ? text.data() : "(null)", (int)fontSize, (unsigned int)(Int)rgb, (int)bold, g_skCanvas.get());
     if (!g_skCanvas) return;
     if (text.length() == 0) return;
     if (!skEnsureFont()) return;  // 字体未加载 → 静默跳过
@@ -549,8 +548,17 @@ void php_sk_draw_text(Int x, Int y, String text, Int fontSize, Int rgb, Int bold
         g_skFont.setEmbolden((Int)bold != 0);
     }
 
+    // PHP convention: Y = text-top; Skia drawString: Y = baseline
+    // 用 font metrics 将 Y 从 text-top 转换为 baseline
+    SkFontMetrics metrics;
+    g_skFont.getMetrics(&metrics);
+    SkScalar baselineY = (SkScalar)(int)y - metrics.fAscent;  // fAscent 为负值
+
+    SK_TRACE("[SK] draw_text x=%d y=%d baselineY=%.0f text='%s' fontSize=%d rgb=0x%X bold=%d canvas=%p\n",
+        (int)x, (int)y, (double)baselineY, text.data() ? text.data() : "(null)", (int)fontSize, (unsigned int)(Int)rgb, (int)bold, g_skCanvas.get());
+
     // text 是 php::String，用 .data() 取 char*
-    g_skCanvas->drawString(text.data(), (SkScalar)(int)x, (SkScalar)(int)y, g_skFont, paint);
+    g_skCanvas->drawString(text.data(), (SkScalar)(int)x, baselineY, g_skFont, paint);
 
     // 恢复默认字体
     g_skFont.setTypeface(g_skTypeface);
@@ -653,6 +661,45 @@ Int php_sk_measure_text_width(String text, Int fontSize, Int bold) {
     SelectObject(hdc, oldFont);
     DeleteObject(hFont);
     ReleaseDC(NULL, hdc);
+    return result;
+#endif
+}
+
+// 精确测量文本总高度（ascent + descent），用于垂直居中
+// 返回文本在给定 fontSize 下的像素高度
+Int php_sk_measure_text_height(Int fontSize, Int bold) {
+#ifdef USE_SKIA
+    skLoadPrivateFonts();
+    if (!g_skFont.getTypeface()) return (Int)fontSize;
+    g_skFont.setSize((SkScalar)(int)fontSize);
+    if ((Int)bold != 0 && g_skTypefaceBold) {
+        g_skFont.setTypeface(g_skTypefaceBold);
+    } else {
+        g_skFont.setTypeface(g_skTypeface);
+    }
+    SkFontMetrics metrics;
+    g_skFont.getMetrics(&metrics);
+    SkScalar totalHeight = -metrics.fAscent + metrics.fDescent;
+    g_skFont.setTypeface(g_skTypeface);
+    Int result = (Int)totalHeight;
+    if (result <= 0) result = (Int)fontSize;
+    SK_TRACE("[SK] measure_text_height fontSize=%d bold=%d height=%d\n", (int)fontSize, (int)bold, (int)result);
+    return result;
+#else
+    if (!g_skHdc) return (Int)fontSize;
+    HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
+        (Int)bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, g_skDefaultFont.c_str());
+    if (!hFont) return (Int)fontSize;
+    HFONT oldFont = (HFONT)SelectObject(g_skHdc, hFont);
+    TEXTMETRICW tm;
+    Int result = (Int)fontSize;
+    if (GetTextMetricsW(g_skHdc, &tm)) {
+        result = (Int)(tm.tmAscent + tm.tmDescent);
+    }
+    SelectObject(g_skHdc, oldFont);
+    DeleteObject(hFont);
     return result;
 #endif
 }
