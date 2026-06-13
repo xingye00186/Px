@@ -18,10 +18,12 @@
 | **排假阳** | 差异出现时，先排除浏览器 wrapper HTML 本身引入的基线差异 |
 | **工具共享优先** | 所有工具优先使用已有的共享库（`shared_test_lib.php` 等）；增强修复优先应用到共享工具 |
 | **持续追踪** | 每个项目独立维护 Bug 台账，记录所有已知缺陷及其修复状态 |
+| **CSS 标准铁律** | 框架层 fallback 必须使用 CSS 标准默认值。项目想要的非标准行为（如 `box-sizing:border-box`）必须在样式声明中**显式写出来**。凡框架符合 CSS 标准而测试失败，必须核查修正应用层，不得改动正确的标准框架行为 |
 
 **决策优先级**：差异出现时，先判断：
+0. **框架符合 CSS 标准吗？** — 查看相关 CSS 属性的标准默认值。如果框架的 fallback 已经使用了 CSS 标准默认值（如 `box-sizing:content-box`），但测试期望非标准值（如 `border-box`）→ **框架正确，应用层缺显式声明**，改应用层 |
 1. **浏览器 ref 生成 wrapper 引入了基线差异**（box-sizing/line-height/reset/字体不一致） → 修复 `buildCssTestWrapper()`，重新生成参考数据
-2. **框架不符合 CSS 标准** → 改框架 + 加测试
+2. **框架不符合 CSS 标准**（fallback 用了非标准默认值等） → 改框架 + 加测试
 3. **框架符合 CSS 标准，应用层用法错** → 改应用
 4. **框架尚未实现该特性** → 记录清单、实现或增强，并分析同类特性支持完善度
 
@@ -248,7 +250,10 @@ Step F: 逐元素对比（compareElementEnhanced）
    ├─ flattenEngineTree() 展平引擎布局树
    ├─ 按标签/内容/id 匹配浏览器元素
    ├─ defaultChecks() 覆盖所有样式属性
-   └─ 位置 + 尺寸 + 样式三项对比
+   ├─ 位置 + 尺寸 + 样式三项对比
+   ├─ bg 始终参与对比：未显式设置时导出 -1（透明），与浏览器 background-color 比对
+   │   └─ 引擎透明 vs 浏览器非透明 → FAIL，消除背景色漏检盲区
+   └─ Phase B 容器也新增 bg 对比（以前因 noTextStyle=true 完全跳过）
 
 Step G: 截图对比（必须，独立于元素对比结果）
    ├─ exe --dump-layout 后自动截图 → exe_capture_{timestamp}.png
@@ -275,14 +280,14 @@ Step H: 生成测试报告
 
 | 类别 | 属性 |
 |------|------|
-| 排版 | fontSize, fg(color), bg, bold(font-weight), textAlign, lineHeight, whiteSpace, wordBreak, fontStyle, textDecoration |
+| 排版 | fontSize, fg(color), **bg（始终导出：-1=透明）**, bold(font-weight), textAlign, lineHeight, whiteSpace, wordBreak, fontStyle, textDecoration |
 | 内边距 | paddingTop/Left/Right/Bottom |
 | 外边距 | marginTop/Left/Right/Bottom |
 | 边框 | borderWidth, borderColor, borderRadius, **borderTop/Right/Bottom/Left Width+Color** |
 | 阴影/轮廓 | **boxShadow, outline** |
 | 布局 | display, flexDirection, flexWrap, gap, alignItems, justifyContent, boxSizing |
 
-> **粗体**为新近增补的属性。70+ 样式属性已覆盖，边框着色（borderColor 等）当前布局引擎尚未完整导出（引擎内部正确处理但 serializeRenderNode 白名单未包含），需要时补充．
+> **粗体**为新近增补的属性。70+ 样式属性已覆盖。`bg` 现在**始终导出**：未显式设置 → `-1`（透明），确保即使无背景的元素也参与颜色对比，消除漏检盲区。
 
 ---
 
@@ -892,6 +897,33 @@ $remaining = $parentContentW - ($node->w + $paddingLeft + $paddingRight + $borde
 
 ---
 
+### 案例 11：无背景元素默认渲染黑色——渲染器 vs 布局 JSON 分离盲区
+
+**症状**：Footer div（`border-top:1px solid #eee`，无 `background`）在 EXE 中渲染为黑色大黑条，浏览器中为透明背景+细线。
+
+**根因**：`VNodeRenderer::makeDivElement()` 中 `$drawColor = ($bg !== null) ? $bg : 0`。CSS 标准 `background-color` 初始值为 `transparent`，但引擎在无显式背景时默认用 `0`（黑色 GDI 颜色）填充整个元素区域。
+
+**修复**：
+1. 引入 `$noFill` 标志：当 `$bg === null` 时所有背景填充分支（圆角/半透明/实心）跳过，边框不受影响
+2. 同时修复了 `$btc/bbc/blc/brc` 变量作用域问题——直角边框路径中 border color 变量未初始化
+
+**框架文件**：
+- `framework/Rendering/VNodeRenderer.php`
+- `framework/Rendering/GdiRenderContext.php`
+- `framework/Rendering/SkiaRenderContext.php`
+
+**增强**：dump-layout 现在**总是导出 `bg`**（未显式设置时用 `-1` 透明标记），元素对比和容器对比都参与颜色检测
+
+**管线盲区分析**：
+
+| 防线层 | 问题 | 根因 |
+|--------|------|------|
+| 元素对比（Phase A） | 未拦截 | `bg` 未显式设置 → 引擎不导出 → 对比跳过 |
+| 元素对比（Phase B 容器） | 未拦截 | `noTextStyle=true` 跳过全部样式对比 |
+| 截图对比 | 未拦截 | 基线可能从同一 buggy exe 生成 |
+
+**教训**：布局层数据正确 ≠ 渲染层效果正确。JSON 属性缺失时对比直接跳过，造成无声漏检。必须确保所有关键样式属性**始终导出**，即使取默认值也应显式标记，让对比能够参与检测。
+
 ## 九、问题反思机制
 
 ### 9.1 反思触发条件
@@ -982,6 +1014,7 @@ $remaining = $parentContentW - ($node->w + $paddingLeft + $paddingRight + $borde
 | 9 | **CSS 映射 key 不一致**：CssMappings 新增属性后消费方 key 未同步更新 | 案例 9 | 新增 CSS 属性映射后必须 grep 所有 `$style['...']` 消费方确认 key 一致 |
 | 10 | **过期参考数据**：ref/engine_layout.json 内容与测试用例不匹配未被检测 | 多个 case | 布局导出后立即执行 `validateEngineLayoutContent()` 校验内容一致性 |
 | 11 | **margin:auto 无独立断言**：居中计算正确性依赖外部基线，无自洽验证 | 案例 10 | margin:auto 修改后必须用浏览器 ref（非 exe）作为独立锚点验证居中结果 |
+| **12** | **属性缺失时对比跳过**：引擎未导出 `bg` → 对比 `!isset(eStyles['bg'])` → 无声跳过 → 黑色大黑条不被检测 | **案例 11** | 所有关键样式属性必须**始终导出**，未显式设置时用 sentinel 值（如 `-1`）标记默认态，确保对比参与检测 |
 
 ---
 
