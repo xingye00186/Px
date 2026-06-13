@@ -1034,7 +1034,7 @@ function buildScreenshotWrapper(string $originalHtml): string
 * { margin:0; padding:0; }
 html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 ' . $extraStyles . '
-* { box-sizing: content-box; }
+* { box-sizing: border-box; }
 </style>
 </head>
 <body style="font-family:\'' . $FONT_NOTO_NAME . '\',sans-serif;font-size:16px;">
@@ -1210,7 +1210,7 @@ function buildCssTestWrapper(string $originalHtml, string $jsCode): string
 * { margin:0; padding:0; }
 html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 ' . $extraStyles . '
-* { box-sizing: content-box; }
+* { box-sizing: border-box; }
 </style>
 </head>
 <body style="font-family:\'' . $FONT_NOTO_NAME . '\',sans-serif;font-size:16px;">
@@ -1549,6 +1549,20 @@ function compareEngineWithBrowser(string $engineLayoutPath, string $browserRefPa
                 ];
             } else {
                 $result['pass']++;
+            }
+        }
+
+        // Container style comparison: bg
+        $eBg = $eStyle['bg'] ?? -1;
+        $bBgRaw = $bStyle['background-color'] ?? '';
+        if ($eBg === -1 && $bBgRaw !== '') {
+            $bColor = cssColorToGdi($bBgRaw);
+            if ($bColor !== null && $bColor > 0) {
+                $result['fail']++;
+                $result['issues'][] = [
+                    'type' => 'CONTAINER',
+                    'msg' => "$desc bg: engine=transparent browser=$bBgRaw"
+                ];
             }
         }
 

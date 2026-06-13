@@ -212,7 +212,6 @@ function defaultChecks(): array {
         ['whiteSpace',   'white-space',       'string', 'whiteSpace'],
         ['wordBreak',    'word-break',        'string', 'wordBreak'],
         ['fontStyle',    'font-style',        'string', 'fontStyle'],
-        ['textDecoration','text-decoration',   'string', 'textDecoration'],
         // 内边距
         ['paddingTop',    'padding-top',       'px',     'paddingTop'],
         ['paddingLeft',   'padding-left',      'px',     'paddingLeft'],
@@ -237,7 +236,15 @@ function defaultChecks(): array {
         ['borderRadius',      'border-radius',      'px',            'borderRadius'],
         // 阴影/轮廓
         ['boxShadow',         'box-shadow',         'string',        'boxShadow'],
-        ['outline',           'outline',            'string',        'outline'],
+        // 轮廓（子属性）
+        ['outlineWidth',      'outline-width',      'px',            'outlineWidth'],
+        ['outlineStyle',      'outline-style',      'string',        'outlineStyle'],
+        ['outlineColor',      'outline-color',      'color',         'outlineColor'],
+        // 文本装饰（子属性）
+        ['textDecorationLine', 'text-decoration-line', 'string',     'textDecorationLine'],
+        ['textDecorationColor', 'text-decoration-color', 'color',    'textDecorationColor'],
+        ['textDecorationStyle', 'text-decoration-style', 'string',   'textDecorationStyle'],
+        ['textDecorationThickness', 'text-decoration-thickness', 'px', 'textDecorationThickness'],
         // 布局/盒模型
         ['display',          'display',          'string',    'display'],
         ['flexDirection',    'flex-direction',   'string',    'flexDirection'],
@@ -1648,6 +1655,7 @@ function compareElementEnhanced(string $category, string $label, array $bEl, arr
             $propMatches[$label] = true;
 
             $eDisplay = match(true) {
+                $eVal === -1 && $eProp === 'bg' => 'transparent',
                 $type === 'color' || $type === 'colorfirst' || $type === 'colorcontains' => gdiColorToHex($eVal),
                 $type === 'weight' => $eVal ? 'bold' : 'normal',
                 $type === 'boxsizing' => $eVal === 'border-box' ? 'border-box' : 'content-box',
@@ -1682,6 +1690,17 @@ function compareElementEnhanced(string $category, string $label, array $bEl, arr
                     break;
 
                 case 'color':
+                    // 引擎 bg: -1 表示"无显式背景/透明"
+                    if ($eProp === 'bg' && $eVal === -1) {
+                        $bColor = cssColorToGdi($bRaw);
+                        // 浏览器有显式非透明背景 → 不匹配
+                        if ($bColor !== null && $bColor > 0) {
+                            $styleDiffs[] = "{$label}: engine=transparent browser={$bRaw}";
+                            $allPassed = false;
+                            $propMatches[$label] = false;
+                        }
+                        break;
+                    }
                     $bColor = cssColorToGdi($bRaw);
                     $skipBg = ($eProp === 'bg' && $eVal === 0);
                     if ($bColor !== null && $eVal !== $bColor && !$skipBg) {

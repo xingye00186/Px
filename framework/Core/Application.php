@@ -708,19 +708,27 @@ class Application
             'borderLeftWidth', 'borderLeftColor', 'borderTopWidth', 'borderTopColor',
             'borderRightWidth', 'borderRightColor', 'borderBottomWidth', 'borderBottomColor',
             'borderRadius', 'textAlign',
-            'lineHeight', 'whiteSpace', 'fontFamily', 'opacity',
+            'lineHeight', 'whiteSpace', 'wordBreak', 'fontStyle', 'fontFamily', 'opacity',
             'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
             'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
-            'gap', 'boxSizing', 'flexDirection', 'alignItems', 'justifyContent', 'flexWrap',
+            'gap', 'boxSizing', 'boxShadow',
+            'flexDirection', 'alignItems', 'justifyContent', 'flexWrap',
             'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',
             'gridColumn', 'gridRow', 'gridAutoRows', 'gridTemplateAreas',
             'justifyItems', 'alignSelf', 'justifySelf', 'alignContent',
-            'overflow', 'overflowX', 'overflowY'];
-        $style = [];
+            'overflow', 'overflowX', 'overflowY',
+            'outlineWidth', 'outlineStyle', 'outlineColor',
+            'textDecorationLine', 'textDecorationColor', 'textDecorationStyle', 'textDecorationThickness'];
+       $style = [];
         foreach ($styleKeys as $k) {
             if (isset($node->style[$k]) && $node->style[$k] !== null) {
                 $style[$k] = $node->style[$k];
             }
+        }
+        // bg 总是导出：显式设置的值正常导出，未设置时用 -1 表示"无显式背景/透明"
+        // 这确保元素即使没设背景也能参与颜色对比，否则 bg 缺失时对比逻辑直接跳过此类漏洞
+        if (!isset($style['bg'])) {
+            $style['bg'] = -1;
         }
         if (count($style) > 0) {
             $result['style'] = $style;
