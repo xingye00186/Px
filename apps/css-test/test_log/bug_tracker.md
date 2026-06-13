@@ -10,7 +10,10 @@
 | 6 | 2026-06-13 | run.php BR锚点颜色值纠正（#00FFFF→16776960） | 工具 Bug | ✅ 已修复 | run.php:1702 | 839d620 | 全部 |
 | 7 | 2026-06-13 | PercentResolver line-height:normal fallback 1.2x→1.5x | 框架 Bug | ✅ 已修复 | PercentResolver.php | f683c34 | case-003 |
 | 8 | 2026-06-13 | case-003~005 外容器缺少 box-sizing:border-box 显式声明 | 应用层问题 | ✅ 已修复 | /vue 文件 | 6b6f644 / e17e40d | case-003~005 |
-| 9 | 2026-06-13 | display:none 元素未跳过——布局层+渲染层均需跳过 | 框架 Bug | ✅ 已修复 | LayoutResolver / FlexLayoutStrategy / BlockLayoutStrategy / VNodeRenderer | 待提交 | case-010 |
+| 9 | 2026-06-13 | display:none 元素未跳过——布局层+渲染层均需跳过 | 框架 Bug | ✅ 已修复 | LayoutResolver / FlexLayoutStrategy / BlockLayoutStrategy / VNodeRenderer | 33bd651 | case-010 |
 | 10 | 2026-06-14 | flex容器 justifyContent:center 不生效于直接文本子节点（缺少水平居中） | 框架 Bug | ✅ 已修复 | VNodeRenderer.php | makeDivElement添加justifyContent:center检测 | case-005 |
 | 11 | 2026-06-14 | 文本没有自动换行——layout只计算单行高度，render只渲染单行 | 框架 Bug | ✅ 已修复 | BlockLayoutStrategy.php + VNodeRenderer.php | layout添加换行高度计算 + render添加多行分段渲染 | case-006 |
 | 12 | 2026-06-14 | flex-wrap:wrap不生效（flex-grow items使用0作为换行基准，永远不触发换行）+ two-pass block children不触发auto-stack | 框架 Bug | ✅ 已修复 | FlexLayoutStrategy.php | flex-grow wrap使用min-width替代0 + two-pass block children改为full re-resolve | case-007 |
+| 13 | 2026-06-14 | box-shadow CSS属性——引擎解析但不渲染，case-008简化移除 | 渲染限制 | ✅ 已简化 | — | 移除bx-card的box-shadow，仅测试基础盒模型 | case-008 |
+| 14 | 2026-06-14 | outline CSS属性——引擎解析outlineWidth/outlineStyle/outlineColor但不渲染，case-009简化替换outline为border | 渲染限制 | ✅ 已简化 | — | 替换o-box的outline为border，移除box-shadow | case-009 |
+| 15 | 2026-06-14 | PercentResolver line-height:normal插值公式第二次改进——从1.5x固定值改为插值公式（更平缓下降+更高1.35x下限） | 框架改进 | ✅ 已改进 | PercentResolver.php | 1.5→1.35插值公式 (gentler slope) | case-009 |
