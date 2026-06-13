@@ -130,7 +130,6 @@ static void skLoadPrivateFonts() {
     // AddFontMemResourceEx 对某些环境可能注册名称不完整
     // 支持两种路径：cpp/fonts/（开发时从项目根目录运行）和 fonts/（打包后从 bin/ 运行）
     const char* fontSearchDirs[] = {"cpp/fonts", "fonts"};
-    const char* addFontFiles[] = {"NotoSansSC-Regular.ttf", "NotoSansSC-Bold.ttf"};
     for (int d = 0; d < 2; d++) {
         for (int f = 0; f < 2; f++) {
             std::string fontPath = std::string(fontSearchDirs[d]) + "/" + addFontFiles[f];
