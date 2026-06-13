@@ -109,7 +109,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         // -- Nodes with text content: measure text width instead of filling parent --
         if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
             $fs = (int)($style['fontSize'] ?? 14);
-            $bd = ($style['fontWeight'] ?? 'normal') === 'bold' || ($style['fontWeight'] ?? 'normal') === '700';
+            $bd = ($style['bold'] ?? 0) !== 0;
             $measured = PercentResolver::resolveTextWidth($node->content, $fs, $bd);
             if ($measured > 0) {
                 // Text-measured width: only for text/span types (block layout width is auto-filled)

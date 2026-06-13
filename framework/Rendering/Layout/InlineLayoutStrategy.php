@@ -92,7 +92,7 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
         // ── Text content measurement ──
         if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
             $fs = (int)($style['fontSize'] ?? 14);
-            $bd = ($style['bold'] ?? 0) !== 0 || ($style['fontWeight'] ?? 'normal') === 'bold';
+            $bd = ($style['bold'] ?? 0) !== 0;
             $parentFontSize = $fs;
 
             $measured = PercentResolver::resolveTextWidth($node->content, $fs, $bd);

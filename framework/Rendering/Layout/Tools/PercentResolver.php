@@ -186,10 +186,13 @@ class PercentResolver
 
         if ($hasNative === null) {
             $hasNative = function_exists('\\sk_measure_text_width');
+            error_log("[PX_DEBUG] resolveTextWidth: hasNative=" . ($hasNative ? 'true' : 'false'));
         }
 
         if ($hasNative) {
-            return (int)\sk_measure_text_width($text, $fontSize, $bold);
+            $result = (int)\sk_measure_text_width($text, $fontSize, $bold);
+            error_log("[PX_DEBUG] resolveTextWidth: native called text='$text' font=$fontSize bold=" . ($bold ? '1' : '0') . " => $result");
+            return $result;
         }
 
         // Fallback: character-width estimation

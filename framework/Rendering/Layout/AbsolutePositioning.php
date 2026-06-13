@@ -265,15 +265,18 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         $isMarginRightAuto = $style['marginRightAuto'] ?? $marginIsAuto;
 
-        if ($isMarginLeftAuto && $isMarginRightAuto && $node->w > 0 && $parentContentW > $node->w && $parentContentW > 0) {
-            $remaining = $parentContentW - $node->w;
+        // CSS 2.1 §10.3.3: margin:auto 居中使用的剩余空间 = 父内容宽度 - 子元素完整盒宽度
+        $totalBoxW = max($node->w, $node->visualW ?? $node->w);
+
+        if ($isMarginLeftAuto && $isMarginRightAuto && $totalBoxW > 0 && $parentContentW > $totalBoxW && $parentContentW > 0) {
+            $remaining = $parentContentW - $totalBoxW;
 
             $half = (int)($remaining / 2);
 
             $node->x += $half;
 
-        } elseif ($isMarginLeftAuto && !$isMarginRightAuto && $parentContentW > $node->w && $parentContentW > 0) {
-            $remaining = $parentContentW - $node->w;
+        } elseif ($isMarginLeftAuto && !$isMarginRightAuto && $parentContentW > $totalBoxW && $parentContentW > 0) {
+            $remaining = $parentContentW - $totalBoxW;
 
             $node->x += $remaining;
 

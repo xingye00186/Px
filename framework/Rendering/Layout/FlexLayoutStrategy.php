@@ -1222,7 +1222,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 if (is_string($chText) && strlen($chText) > 0) {
                     PercentResolver::resolveFontSizeUnit($ch->style);
                     $fs = (int)($ch->style['fontSize'] ?? 14);
-                    $bd = ($ch->style['fontWeight'] ?? 'normal') === 'bold' || ($ch->style['fontWeight'] ?? 'normal') === '700';
+                    $bd = ($ch->style['bold'] ?? 0) !== 0;
                     $measured = PercentResolver::resolveTextWidth($chText, $fs, $bd);
                     if ($measured > 0) {
                         if ($isRow) {
@@ -1261,7 +1261,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     PercentResolver::resolveFontSizeUnit($ch->style);
                     $fs = (int)($ch->style['fontSize'] ?? 14);
 
-                    $bd = ($ch->style['fontWeight'] ?? 'normal') === 'bold' || ($ch->style['fontWeight'] ?? 'normal') === '700';
+                    $bd = ($ch->style['bold'] ?? 0) !== 0;
 
                     $measured = PercentResolver::resolveTextWidth($chText, $fs, $bd);
 
@@ -1318,7 +1318,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         if (is_string($text) && strlen($text) > 0) {
             PercentResolver::resolveFontSizeUnit($node->style);
             $fs = (int)($node->style['fontSize'] ?? 14);
-            $bd = ($node->style['fontWeight'] ?? 'normal') === 'bold' || ($node->style['fontWeight'] ?? 'normal') === '700';
+            $bd = ($node->style['bold'] ?? 0) !== 0;
             return PercentResolver::resolveTextWidth($text, $fs, $bd);
         }
 
