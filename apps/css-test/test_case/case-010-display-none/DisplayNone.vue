@@ -1,18 +1,18 @@
 <template>
   <div class="bx-card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
     <div class="bx-header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
-      ?? ²¼¾Ö ¡¤ Display None ²âÊÔ
+      ?? å¸ƒå±€ ãƒ» Display None æµ‹è¯•
     </div>
     <div class="bx-row" style="display:flex;gap:16px;margin-bottom:16px;">
-      <div style="flex:1;padding:20px;background:#f8f9ff;border-radius:8px;text-align:center;border:1px solid #e0e0e0;">¿É¼ûÔªËØ A</div>
-      <div id="hidden-el" style="flex:1;padding:20px;background:#f8f9ff;border-radius:8px;text-align:center;border:1px solid #e0e0e0;display:none;">Òş²ØÔªËØ(display:none)</div>
-      <div style="flex:1;padding:20px;background:#f8f9ff;border-radius:8px;text-align:center;border:1px solid #e0e0e0;">¿É¼ûÔªËØ B</div>
+      <div style="flex:1;padding:20px;background:#f8f9ff;border-radius:8px;text-align:center;border:1px solid #e0e0e0;">å¯è§å…ƒç´  A</div>
+      <div id="hidden-el" style="flex:1;padding:20px;background:#f8f9ff;border-radius:8px;text-align:center;border:1px solid #e0e0e0;display:none;">éšè—å…ƒç´ (display:none)</div>
+      <div style="flex:1;padding:20px;background:#f8f9ff;border-radius:8px;text-align:center;border:1px solid #e0e0e0;">å¯è§å…ƒç´  B</div>
     </div>
     <div class="bx-desc" style="font-size:13px;color:#888;line-height:1.6;background:#fafafa;padding:12px;border-radius:6px;">
-      <code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;">display:none</code> µÄÔªËØÓ¦²»Õ¼¿Õ¼ä£¬A ºÍ B Ó¦½ôÁÚÅÅÁĞ¡£
+      <code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;">display:none</code> çš„å…ƒç´ åº”ä¸å ç©ºé—´ï¼ŒA å’Œ B åº”ç´§é‚»æ’åˆ—ã€‚
     </div>
     <div class="bx-footer" style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
-      case-010: Layout ¡ª Display None
+      case-010: Layout â€• Display None
     </div>
   </div>
 </template>

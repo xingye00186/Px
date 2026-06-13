@@ -11,6 +11,18 @@
  * 浏览器对比: Edge headless 渲染 .html → 逐元素位置+样式对比 + 锚点验证
  * 出栈: 清理 components/TestContent.vue → 准备下一个用例
  *
+ * 锚点可见性强制规范：
+ *   所有测试用例必须保证 TL 锚点（洋红 #FF00FF）和 BR 锚点（青色 #00FFFF）
+ *   都在窗口可见范围内（1600x800）。在 Step D 中自动校验，
+ *   若任一锚点越界则测试中止，提示先修复测试用例。
+ *   适配方法：确保测试内容的总视觉尺寸不超过 1600x800，
+ *   避免外层 padding 容器导致 position:relative 容器宽度超过视口。
+ *
+ * 截图对比机制：
+ *   compareScreenshots 使用 cropAnchors 模式裁剪到两个锚点之间的区域
+ *   再进行像素对比，排除标题栏/padding 等干扰。
+ *   若 BR 锚点不可见则裁剪退化为全图对比，精度下降。
+ *
  * 用法:
  *   php apps/css-test/run.php                          # 运行所有用例
  *   php apps/css-test/run.php --case=case-001          # 只运行指定用例
@@ -28,6 +40,47 @@ require_once __DIR__ . '/../../tools/shared_test_lib.php';
 // ============================================================
 $APP_DIR  = __DIR__;
 $ROOT_DIR = dirname($APP_DIR, 2);  // d:\Px
+
+// ── 进程安全：中断保护 + 清理孤儿 swoole_compiler 进程 ──
+$buildProc = null;
+$buildLockFile = $ROOT_DIR . '/.build.lock';
+
+/**
+ * 获取编译锁（确保同一时间只有一个 swoole_compiler 在跑）
+ * 返回 true=成功获取，false=已有活锁
+ */
+function acquireBuildLock(string $lockFile): bool {
+    if (file_exists($lockFile)) {
+        $pid = (int)@file_get_contents($lockFile);
+        if ($pid > 0) {
+            // Windows 下检测进程是否存活
+            $alive = trim(@shell_exec('tasklist /fi "PID eq ' . $pid . '" /nh 2>nul') ?? '');
+            if (str_contains($alive, (string)$pid)) {
+                echo "  [LOCK] ❌ 已有 swoole_compiler 进程 (PID $pid) 在运行，请等待完成\n";
+                return false;
+            }
+        }
+        // 进程已死或 PID 无效 → 清除过期锁
+        @unlink($lockFile);
+    }
+    file_put_contents($lockFile, getmypid());
+    return true;
+}
+
+function releaseBuildLock(string $lockFile): void {
+    if (file_exists($lockFile) && (int)@file_get_contents($lockFile) === getmypid()) {
+        @unlink($lockFile);
+    }
+}
+
+register_shutdown_function(function() use (&$buildProc, $buildLockFile) {
+    if (is_resource($buildProc)) {
+        @proc_terminate($buildProc, 9);  // 强制终止进程树
+    }
+    releaseBuildLock($buildLockFile);
+});
+// 清理之前可能残留的孤儿编译进程（用户 Ctrl+C 中断后）
+@exec('taskkill /f /im swoole_compiler*.exe 2>nul');
 $FRAMEWORK_DIR = $ROOT_DIR;
 $CASE_DIR = $APP_DIR . '/test_case';
 $COMPONENTS_DIR = $APP_DIR . '/components';
@@ -235,6 +288,11 @@ foreach ($cases as $caseDir) {
     foreach (glob($GEN_DIR . '/*.php') as $genFile) {
         @unlink($genFile);
     }
+    // Also delete dep-cache to force SFC recompilation of child components
+    $depCache = $GEN_DIR . '/.dep-cache.json';
+    if (file_exists($depCache)) {
+        @unlink($depCache);
+    }
 
     // Remove old engine_layout files
     foreach (glob($APP_DIR . '/engine_layout*.json') as $oldLayout) {
@@ -246,6 +304,15 @@ foreach ($cases as $caseDir) {
     // --------------------------------------------------
     if (!$SKIP_BUILD) {
         echo "  [B] 编译: build.bat css-test ...\n";
+
+        // 获取编译锁，防止并发 swoole_compiler 进程冲突
+        if (!acquireBuildLock($buildLockFile)) {
+            $reportLines[] = "| $caseName | ❌ | - | - | - | - | 编译锁冲突 | - |";
+            $totalFail++;
+            $anyFail = true;
+            continue;
+        }
+
         $buildExit = -1;
         $buildOut  = '';
 
@@ -257,24 +324,29 @@ foreach ($cases as $caseDir) {
         ];
         $proc = @proc_open($cmd, $desc, $pipes, $ROOT_DIR);
         if (is_resource($proc)) {
+            $buildProc = $proc;
             fclose($pipes[0]);
             $buildOut = stream_get_contents($pipes[1]);
             $buildErr = stream_get_contents($pipes[2]);
             fclose($pipes[1]);
             fclose($pipes[2]);
             $buildExit = proc_close($proc);
+            $buildProc = null;
         } else {
             $fallbackCmd = 'cmd.exe /c "' . $ROOT_DIR . '\\build.bat" css-test';
             $proc2 = @proc_open($fallbackCmd, $desc, $pipes2, $ROOT_DIR);
             if (is_resource($proc2)) {
+                $buildProc = $proc2;
                 fclose($pipes2[0]);
                 $buildOut = stream_get_contents($pipes2[1]);
                 $buildErr = stream_get_contents($pipes2[2]);
                 fclose($pipes2[1]);
                 fclose($pipes2[2]);
                 $buildExit = proc_close($proc2);
+                $buildProc = null;
             }
         }
+        releaseBuildLock($buildLockFile);
 
         if ($VERBOSE) {
             echo "    --- build output ---\n$buildOut\n";
@@ -362,19 +434,18 @@ foreach ($cases as $caseDir) {
 
         if ($exeToRun !== null) {
             echo "  [D] 导出布局: --dump-layout ...\n";
-            $layoutOut = '';
             $layoutExit = -1;
+            $layoutErr = '';
 
             $caseBinDir = dirname($exeToRun);
-            $dumpCmd = sprintf('cd /d "%s" && "%s" --dump-layout', $caseBinDir, $exeToRun);
-            $proc = @proc_open($dumpCmd, $desc, $pipes, $caseBinDir);
-            if (is_resource($proc)) {
-                fclose($pipes[0]);
-                $layoutOut = stream_get_contents($pipes[1]);
-                $layoutErr = stream_get_contents($pipes[2]);
-                fclose($pipes[1]);
-                fclose($pipes[2]);
-                $layoutExit = proc_close($proc);
+            $stderrTmp = sys_get_temp_dir() . '/px_dump_stderr_' . getmypid() . '.txt';
+            $dumpCmd = sprintf('"%s" --dump-layout 2>"%s"', $exeToRun, $stderrTmp);
+            $layoutOut = '';
+            exec($dumpCmd, $layoutOutArr, $layoutExit);
+            $layoutOut = implode("\n", $layoutOutArr);
+            if (file_exists($stderrTmp)) {
+                $layoutErr = file_get_contents($stderrTmp);
+                @unlink($stderrTmp);
             }
 
             // Stderr check
@@ -407,6 +478,19 @@ foreach ($cases as $caseDir) {
                     });
                     echo "  [D]   节点: ~$totalNodes, 文本: ~$textNodes\n";
                 }
+
+                // ── 锚点可见性强制校验 ──
+                $anchorCheck = validateAnchorVisibility($layoutFile, 1600, 800);
+                if (!$anchorCheck['pass']) {
+                    echo "  [D] ❌ 锚点可见性校验失败:\n";
+                    foreach ($anchorCheck['errors'] as $ae) {
+                        echo "    - $ae\n";
+                    }
+                    echo "  [D] 中止此用例。请修复测试用例使两个锚点都在窗口可见范围内。\n";
+                    echo "  [D] 规则: TL锚点(洋红#FF00FF)和BR锚点(青色#00FFFF)必须在 [0,1600)x[0,800) 内。\n";
+                    continue;  // 跳过后续步骤，处理下一个用例
+                }
+
             } else {
                 echo "  [D] ⚠️  layout 文件未生成\n";
                 if ($VERBOSE && $layoutExit !== 0) {
@@ -430,17 +514,17 @@ foreach ($cases as $caseDir) {
 
             $multiFrameFile = $APP_DIR . "/engine_layout_after_{$FRAMES}frames.json";
             $caseBinDir = dirname($exeToRun);
+            $mfErr = '';
 
-            $mfCmd = sprintf('cd /d "%s" && "%s" --dump-layout-after-frames=%d',
-                $caseBinDir, $exeToRun, $FRAMES);
-            $proc = @proc_open($mfCmd, $desc, $pipes, $caseBinDir);
-            if (is_resource($proc)) {
-                fclose($pipes[0]);
-                $mfOut = stream_get_contents($pipes[1]);
-                $mfErr = stream_get_contents($pipes[2]);
-                fclose($pipes[1]);
-                fclose($pipes[2]);
-                $mfExit = proc_close($proc);
+            $stderrTmp = sys_get_temp_dir() . '/px_mf_stderr_' . getmypid() . '.txt';
+            $mfCmd = sprintf('"%s" --dump-layout-after-frames=%d 2>"%s"',
+                $exeToRun, $FRAMES, $stderrTmp);
+            $mfExit = -1;
+            $mfOutArr = [];
+            exec($mfCmd, $mfOutArr, $mfExit);
+            if (file_exists($stderrTmp)) {
+                $mfErr = file_get_contents($stderrTmp);
+                @unlink($stderrTmp);
             }
 
             if (file_exists($multiFrameFile)) {
@@ -871,16 +955,24 @@ function buildScreenshotWrapper(string $originalHtml): string
   src: local(\'' . $FONT_NOTO_NAME . '\'), ' . $FONT_NOTO_URL . ';
   font-weight: 400 700;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
+* { margin:0; padding:0; }
 html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 ' . $extraStyles . '
+* { box-sizing: content-box; }
 </style>
 </head>
 <body style="font-family:\'' . $FONT_NOTO_NAME . '\',sans-serif;font-size:16px;">
-<div class="sandbox-content" style="padding:20px;position:relative;">
+<div style="width:1600px;height:800px;overflow-y:auto;background:#f5f5f5;">
+<div class="sandbox-header" style="height:40px;background:#fff;border-bottom:1px solid #ddd;padding:0 20px;display:flex;align-items:center;font-size:14px;color:#666;">
+  CSS Test Sandbox — <span style="color:#333;font-weight:bold;">Test Case</span>
+</div>
+<div style="padding:20px;">
+<div style="position:relative;">
 <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
 ' . $bodyContent . '
 <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div>
+</div>
+</div>
 </div>
 </body>
 </html>';
@@ -1023,14 +1115,24 @@ function buildCssTestWrapper(string $originalHtml, string $jsCode): string
   src: local(\'' . $FONT_NOTO_NAME . '\'), ' . $FONT_NOTO_URL . ';
   font-weight: 400 700;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
+* { margin:0; padding:0; }
 html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 ' . $extraStyles . '
+* { box-sizing: content-box; }
 </style>
 </head>
 <body style="font-family:\'' . $FONT_NOTO_NAME . '\',sans-serif;font-size:16px;">
-<div class="px-app-root" style="width:1600px;height:800px;overflow:auto;background:#f5f5f5;">
+<div class="px-app-root" style="width:1600px;height:800px;overflow-y:auto;background:#f5f5f5;">
+<div class="sandbox-header" style="height:40px;background:#fff;border-bottom:1px solid #ddd;padding:0 20px;display:flex;align-items:center;font-size:14px;color:#666;">
+  CSS Test Sandbox — <span style="color:#333;font-weight:bold;">Test Case</span>
+</div>
+<div style="padding:20px;">
+<div style="position:relative;">
+<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
 ' . $bodyContent . '
+<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div>
+</div>
+</div>
 </div>
 <textarea id="layout-output" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;resize:none;border:none;padding:0;margin:0"></textarea>
 <script>
@@ -1413,16 +1515,64 @@ function compareEngineWithBrowser(string $engineLayoutPath, string $browserRefPa
 }
 
 /**
+ * 校验引擎导出的 layout 中 TL 和 BR 锚点是否在窗口可见范围内。
+ * 如果任一锚点超出 [0,0)-(1600,800) 则测试应中止，提示先修复测试用例。
+ */
+function validateAnchorVisibility(string $layoutPath, int $viewportW, int $viewportH): array
+{
+    $json = json_decode(file_get_contents($layoutPath), true);
+    if ($json === null) {
+        return ['pass' => false, 'errors' => ['无法解析 layout JSON']];
+    }
+
+    $tl = null;
+    $br = null;
+    $walker = function(array $node) use (&$tl, &$br, &$walker) {
+        if (!isset($node['style'])) return;
+        $bg = $node['style']['bg'] ?? 0;
+        if ($bg === 16711935) { $tl = $node; }       // #FF00FF → TL
+        if ($bg === 16776960) { $br = $node; }       // #00FFFF → BR
+        foreach ($node['children'] ?? [] as $child) {
+            $walker($child);
+        }
+    };
+    $walker($json);
+
+    $errors = [];
+    if ($tl === null) {
+        $errors[] = 'TL锚点 (#FF00FF 洋红) 未在 layout 中找到';
+    } else {
+        $tlOk = ($tl['x'] >= 0 && $tl['x'] + $tl['w'] <= $viewportW &&
+                 $tl['y'] >= 0 && $tl['y'] + $tl['h'] <= $viewportH);
+        if (!$tlOk) {
+            $errors[] = "TL锚点 (x={$tl['x']},y={$tl['y']},w={$tl['w']},h={$tl['h']}) 超出视口 {$viewportW}x{$viewportH}";
+        }
+    }
+    if ($br === null) {
+        $errors[] = 'BR锚点 (#00FFFF 青色) 未在 layout 中找到';
+    } else {
+        $brOk = ($br['x'] >= 0 && $br['x'] + $br['w'] <= $viewportW &&
+                 $br['y'] >= 0 && $br['y'] + $br['h'] <= $viewportH);
+        if (!$brOk) {
+            $errors[] = "BR锚点 (x={$br['x']},y={$br['y']},w={$br['w']},h={$br['h']}) 超出视口 {$viewportW}x{$viewportH}";
+        }
+    }
+
+    return ['pass' => empty($errors), 'errors' => $errors];
+}
+
+
+/**
  * Find parent node of a given element in the flattened engine tree.
+ * Uses parentIdx (set by flattenEngineTreeAll) to locate the parent.
  */
 function findParentNodeFlat(array $flatTree, array $child): ?array
 {
-    $childKey = $child['idx'] ?? $child['cid'] ?? null;
-    if ($childKey === null) return null;
+    $parentIdx = $child['parentIdx'] ?? null;
+    if ($parentIdx === null) return null;
 
     foreach ($flatTree as $candidate) {
-        if (($candidate['depth'] ?? 0) < ($child['depth'] ?? 0)
-            && ($candidate['cid'] ?? -1) === ($child['cid'] ?? -2)) {
+        if (($candidate['idx'] ?? -1) === $parentIdx) {
             return $candidate;
         }
     }

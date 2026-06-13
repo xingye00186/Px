@@ -1,0 +1,634 @@
+{
+    "type": "div",
+    "x": 0,
+    "y": 0,
+    "w": 1600,
+    "h": 800,
+    "visualW": 1600,
+    "visualH": 800,
+    "layer": 0,
+    "isScrollContainer": true,
+    "content": null,
+    "style": {
+        "bg": 16119285,
+        "fontSize": 14,
+        "overflowY": "auto"
+    },
+    "children": [
+        {
+            "type": "div",
+            "x": 0,
+            "y": 0,
+            "w": 1560,
+            "h": 40,
+            "visualW": 1600,
+            "visualH": 41,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "bg": 16777215,
+                "fg": 6710886,
+                "fontSize": 14,
+                "borderColor": 14540253,
+                "display": "flex",
+                "paddingTop": 0,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 0,
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "type": "#text",
+                    "x": 20,
+                    "y": 12,
+                    "w": 93,
+                    "h": 16,
+                    "visualW": 93,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "CSS Test Sandbox —",
+                    "style": {
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "type": "span",
+                    "x": 113,
+                    "y": 12,
+                    "w": 43,
+                    "h": 16,
+                    "visualW": 43,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "Test Case",
+                    "style": {
+                        "fg": 3355443,
+                        "fontSize": 14,
+                        "bold": 1
+                    }
+                }
+            ]
+        },
+        {
+            "type": "div",
+            "x": 0,
+            "y": 41,
+            "w": 1560,
+            "h": 335,
+            "visualW": 1600,
+            "visualH": 375,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "fontSize": 14,
+                "paddingTop": 20,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 20
+            },
+            "children": [
+                {
+                    "type": "div",
+                    "x": 20,
+                    "y": 61,
+                    "w": 1560,
+                    "h": 335,
+                    "visualW": 1560,
+                    "visualH": 335,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "fontSize": 14,
+                        "position": "relative"
+                    },
+                    "children": [
+                        {
+                            "type": "div",
+                            "x": 20,
+                            "y": 61,
+                            "w": 8,
+                            "h": 8,
+                            "visualW": 8,
+                            "visualH": 8,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16711935,
+                                "position": "absolute"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 440,
+                            "y": 81,
+                            "w": 720,
+                            "h": 259,
+                            "visualW": 776,
+                            "visualH": 315,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16777215,
+                                "fontSize": 14,
+                                "borderRadius": 12,
+                                "opacity": 0.08,
+                                "paddingTop": 28,
+                                "paddingLeft": 28,
+                                "paddingRight": 28,
+                                "paddingBottom": 28,
+                                "marginTop": 20,
+                                "marginLeft": 0,
+                                "marginRight": 0,
+                                "marginBottom": 20
+                            },
+                            "children": [
+                                {
+                                    "type": "div",
+                                    "x": 468,
+                                    "y": 109,
+                                    "w": 720,
+                                    "h": 24,
+                                    "visualW": 720,
+                                    "visualH": 38,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "?? 布局 ・ Min\/Max 约束测试",
+                                    "style": {
+                                        "fg": 3021338,
+                                        "fontSize": 20,
+                                        "bold": 1,
+                                        "borderColor": 6309353,
+                                        "paddingBottom": 12,
+                                        "marginBottom": 20
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 468,
+                                    "y": 167,
+                                    "w": 720,
+                                    "h": 156,
+                                    "visualW": 720,
+                                    "visualH": 156,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": null,
+                                    "style": {
+                                        "display": "flex",
+                                        "gap": 16,
+                                        "alignItems": "stretch"
+                                    },
+                                    "children": [
+                                        {
+                                            "type": "div",
+                                            "x": 468,
+                                            "y": 167,
+                                            "w": 229,
+                                            "h": 56,
+                                            "visualW": 263,
+                                            "visualH": 90,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": null,
+                                            "style": {
+                                                "bg": 16775672,
+                                                "fontSize": 14,
+                                                "borderWidth": 1,
+                                                "borderColor": 14737632,
+                                                "borderLeftWidth": 1,
+                                                "borderLeftColor": 14737632,
+                                                "borderRadius": 8,
+                                                "paddingTop": 16,
+                                                "paddingLeft": 16,
+                                                "paddingRight": 16,
+                                                "paddingBottom": 16
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "x": 484,
+                                                    "y": 183,
+                                                    "w": 686,
+                                                    "h": 14,
+                                                    "visualW": 686,
+                                                    "visualH": 14,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": "min-height: 100px",
+                                                    "style": {
+                                                        "fg": 10066329,
+                                                        "fontSize": 12,
+                                                        "marginBottom": 8
+                                                    }
+                                                },
+                                                {
+                                                    "type": "div",
+                                                    "x": 484,
+                                                    "y": 183,
+                                                    "w": 666,
+                                                    "h": 0,
+                                                    "visualW": 686,
+                                                    "visualH": 20,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": "min-h 生效",
+                                                    "style": {
+                                                        "bg": 15367782,
+                                                        "fg": 16777215,
+                                                        "fontSize": 12,
+                                                        "borderRadius": 6,
+                                                        "display": "flex",
+                                                        "paddingTop": 10,
+                                                        "paddingLeft": 10,
+                                                        "paddingRight": 10,
+                                                        "paddingBottom": 10,
+                                                        "alignItems": "center",
+                                                        "justifyContent": "center"
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "div",
+                                            "x": 747,
+                                            "y": 167,
+                                            "w": 229,
+                                            "h": 122,
+                                            "visualW": 263,
+                                            "visualH": 156,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": null,
+                                            "style": {
+                                                "bg": 16775672,
+                                                "fontSize": 14,
+                                                "borderWidth": 1,
+                                                "borderColor": 14737632,
+                                                "borderLeftWidth": 1,
+                                                "borderLeftColor": 14737632,
+                                                "borderRadius": 8,
+                                                "paddingTop": 16,
+                                                "paddingLeft": 16,
+                                                "paddingRight": 16,
+                                                "paddingBottom": 16
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "x": 763,
+                                                    "y": 183,
+                                                    "w": 686,
+                                                    "h": 14,
+                                                    "visualW": 686,
+                                                    "visualH": 14,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": "max-height: 80px (内容多)",
+                                                    "style": {
+                                                        "fg": 10066329,
+                                                        "fontSize": 12,
+                                                        "marginBottom": 8
+                                                    }
+                                                },
+                                                {
+                                                    "type": "div",
+                                                    "x": 763,
+                                                    "y": 183,
+                                                    "w": 666,
+                                                    "h": 80,
+                                                    "visualW": 686,
+                                                    "visualH": 100,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": null,
+                                                    "style": {
+                                                        "bg": 16487408,
+                                                        "fg": 16777215,
+                                                        "fontSize": 12,
+                                                        "borderRadius": 6,
+                                                        "paddingTop": 10,
+                                                        "paddingLeft": 10,
+                                                        "paddingRight": 10,
+                                                        "paddingBottom": 10,
+                                                        "overflow": "hidden"
+                                                    },
+                                                    "children": [
+                                                        {
+                                                            "type": "#text",
+                                                            "x": 1052,
+                                                            "y": 193,
+                                                            "w": 666,
+                                                            "h": 16,
+                                                            "visualW": 666,
+                                                            "visualH": 16,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "多行文本内容",
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "br",
+                                                            "x": 1052,
+                                                            "y": 209,
+                                                            "w": 666,
+                                                            "h": 0,
+                                                            "visualW": 666,
+                                                            "visualH": 0,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": null,
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "#text",
+                                                            "x": 1052,
+                                                            "y": 209,
+                                                            "w": 666,
+                                                            "h": 16,
+                                                            "visualW": 666,
+                                                            "visualH": 16,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "第2行",
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "br",
+                                                            "x": 1052,
+                                                            "y": 225,
+                                                            "w": 666,
+                                                            "h": 0,
+                                                            "visualW": 666,
+                                                            "visualH": 0,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": null,
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "#text",
+                                                            "x": 1052,
+                                                            "y": 225,
+                                                            "w": 666,
+                                                            "h": 16,
+                                                            "visualW": 666,
+                                                            "visualH": 16,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "第3行",
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "br",
+                                                            "x": 1052,
+                                                            "y": 241,
+                                                            "w": 666,
+                                                            "h": 0,
+                                                            "visualW": 666,
+                                                            "visualH": 0,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": null,
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "#text",
+                                                            "x": 1052,
+                                                            "y": 241,
+                                                            "w": 666,
+                                                            "h": 16,
+                                                            "visualW": 666,
+                                                            "visualH": 16,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "第4行",
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "br",
+                                                            "x": 1052,
+                                                            "y": 257,
+                                                            "w": 666,
+                                                            "h": 0,
+                                                            "visualW": 666,
+                                                            "visualH": 0,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": null,
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "#text",
+                                                            "x": 1052,
+                                                            "y": 257,
+                                                            "w": 666,
+                                                            "h": 16,
+                                                            "visualW": 666,
+                                                            "visualH": 16,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "第5行",
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "br",
+                                                            "x": 1052,
+                                                            "y": 273,
+                                                            "w": 666,
+                                                            "h": 0,
+                                                            "visualW": 666,
+                                                            "visualH": 0,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": null,
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "#text",
+                                                            "x": 1052,
+                                                            "y": 273,
+                                                            "w": 666,
+                                                            "h": 16,
+                                                            "visualW": 666,
+                                                            "visualH": 16,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "第6行",
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "br",
+                                                            "x": 1052,
+                                                            "y": 289,
+                                                            "w": 666,
+                                                            "h": 0,
+                                                            "visualW": 666,
+                                                            "visualH": 0,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": null,
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "#text",
+                                                            "x": 1052,
+                                                            "y": 289,
+                                                            "w": 666,
+                                                            "h": 16,
+                                                            "visualW": 666,
+                                                            "visualH": 16,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "第7行",
+                                                            "style": {
+                                                                "fontSize": 14
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "div",
+                                            "x": 1026,
+                                            "y": 167,
+                                            "w": 229,
+                                            "h": 56,
+                                            "visualW": 263,
+                                            "visualH": 90,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": null,
+                                            "style": {
+                                                "bg": 16775672,
+                                                "fontSize": 14,
+                                                "borderWidth": 1,
+                                                "borderColor": 14737632,
+                                                "borderLeftWidth": 1,
+                                                "borderLeftColor": 14737632,
+                                                "borderRadius": 8,
+                                                "paddingTop": 16,
+                                                "paddingLeft": 16,
+                                                "paddingRight": 16,
+                                                "paddingBottom": 16
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "x": 1042,
+                                                    "y": 183,
+                                                    "w": 686,
+                                                    "h": 14,
+                                                    "visualW": 686,
+                                                    "visualH": 14,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": "无约束 (参考)",
+                                                    "style": {
+                                                        "fg": 10066329,
+                                                        "fontSize": 12,
+                                                        "marginBottom": 8
+                                                    }
+                                                },
+                                                {
+                                                    "type": "div",
+                                                    "x": 1042,
+                                                    "y": 183,
+                                                    "w": 666,
+                                                    "h": 14,
+                                                    "visualW": 686,
+                                                    "visualH": 34,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": "自适应高度",
+                                                    "style": {
+                                                        "bg": 8445514,
+                                                        "fg": 3355443,
+                                                        "fontSize": 12,
+                                                        "borderRadius": 6,
+                                                        "paddingTop": 10,
+                                                        "paddingLeft": 10,
+                                                        "paddingRight": 10,
+                                                        "paddingBottom": 10
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 468,
+                                    "y": 339,
+                                    "w": 720,
+                                    "h": 14,
+                                    "visualW": 720,
+                                    "visualH": 29,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "case-015: Layout ― Min \/ Max Height",
+                                    "style": {
+                                        "fg": 11184810,
+                                        "fontSize": 12,
+                                        "borderColor": 15658734,
+                                        "textAlign": "center",
+                                        "paddingTop": 14,
+                                        "marginTop": 16
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "div",
+                            "x": 1572,
+                            "y": 388,
+                            "w": 8,
+                            "h": 8,
+                            "visualW": 8,
+                            "visualH": 8,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16776960,
+                                "position": "absolute"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

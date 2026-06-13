@@ -1,24 +1,24 @@
 <template>
   <div class="bx-card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
     <div class="bx-header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
-      ? ºÐÄ£ÐÍ ¡¤ ÒõÓ°²âÊÔ
+      ? ç›’æ¨¡åž‹ ãƒ» é˜´å½±æµ‹è¯•
     </div>
     <div class="bx-grid" style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:24px;">
       <div class="s-box" style="width:160px;height:100px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:10px;box-shadow:0 4px 15px rgba(102,126,234,.4);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;">
-        Ð¡ÒõÓ°
+        å°é˜´å½±
       </div>
       <div class="s-box" style="width:160px;height:100px;background:linear-gradient(135deg,#f093fb,#f5576c);border-radius:10px;box-shadow:0 8px 30px rgba(245,87,108,.45);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;">
-        ´óÒõÓ°
+        å¤§é˜´å½±
       </div>
       <div class="s-box" style="width:160px;height:100px;background:linear-gradient(135deg,#4facfe,#00f2fe);border-radius:50%;box-shadow:0 0 20px rgba(79,172,254,.5);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;">
-        ·¢¹â
+        å‘å…‰
       </div>
       <div class="s-box" style="width:160px;height:100px;background:linear-gradient(135deg,#43e97b,#38f9d7);border-radius:10px;box-shadow:inset 0 2px 8px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-size:13px;color:#333;">
-        ÄÚÒõÓ°
+        å†…é˜´å½±
       </div>
     </div>
     <div class="bx-footer" style="margin-top:20px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
-      case-008: Box Model ¡ª Box Shadow
+      case-008: Box Model â€• Box Shadow
     </div>
   </div>
 </template>

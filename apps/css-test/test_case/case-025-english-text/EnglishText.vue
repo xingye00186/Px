@@ -1,28 +1,28 @@
 <template>
   <div class="bx-card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
     <div class="bx-header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
-      ?? ÎÄ±¾ ¡¤ Ó¢ÎÄÊı×ÖäÖÈ¾²âÊÔ
+      ?? æ–‡æœ¬ ãƒ» è‹±æ–‡æ•°å­—æ¸²æŸ“æµ‹è¯•
     </div>
     <div class="en-section" style="margin-bottom:12px;padding:16px;background:#f8f9ff;border-radius:8px;border:1px solid #e0e0e0;">
-      <div style="font-size:11px;color:#999;margin-bottom:8px;">´¿Ó¢ÎÄÎÄ±¾</div>
+      <div style="font-size:11px;color:#999;margin-bottom:8px;">çº¯è‹±æ–‡æ–‡æœ¬</div>
       <div style="font-size:15px;color:#444;line-height:1.6;">
         The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.
       </div>
     </div>
     <div class="en-section" style="margin-bottom:12px;padding:16px;background:#f8f9ff;border-radius:8px;border:1px solid #e0e0e0;">
-      <div style="font-size:11px;color:#999;margin-bottom:8px;">Êı×ÖºÍ·ûºÅ</div>
+      <div style="font-size:11px;color:#999;margin-bottom:8px;">æ•°å­—å’Œç¬¦å·</div>
       <div style="font-size:20px;color:#0f3460;font-weight:700;letter-spacing:1px;">
         1234567890 !@#$% 42.195km 99.9%
       </div>
     </div>
     <div class="en-section" style="margin-bottom:16px;padding:16px;background:#f8f9ff;border-radius:8px;border:1px solid #e0e0e0;">
-      <div style="font-size:11px;color:#999;margin-bottom:8px;">»ìºÏÖĞÓ¢ÎÄ</div>
+      <div style="font-size:11px;color:#999;margin-bottom:8px;">æ··åˆä¸­è‹±æ–‡</div>
       <div style="font-size:15px;color:#444;line-height:1.6;">
-        Px Framework °æ±¾ 3.0 Ö§³Ö CSS Flexbox ºÍ Grid ²¼¾Ö£¬ĞÔÄÜÌáÉı 200%¡£
+        Px Framework ç‰ˆæœ¬ 3.0 æ”¯æŒ CSS Flexbox å’Œ Grid å¸ƒå±€ï¼Œæ€§èƒ½æå‡ 200%ã€‚
       </div>
     </div>
     <div class="bx-footer" style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
-      case-025: Text ¡ª English / Numeric
+      case-025: Text â€• English / Numeric
     </div>
   </div>
 </template>

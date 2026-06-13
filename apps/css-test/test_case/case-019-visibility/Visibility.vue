@@ -1,20 +1,20 @@
 <template>
   <div class="bx-card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
     <div class="bx-header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
-      ??? ²¼¾Ö ¡¤ Visibility vs Display ²âÊÔ
+      ??? å¸ƒå±€ ãƒ» Visibility vs Display æµ‹è¯•
     </div>
     <div class="bx-row" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;">
       <div style="flex:1;padding:16px;background:#e8f5e9;border-radius:8px;text-align:center;border:1px solid #4ade80;">Normal</div>
-      <div id="vis-hidden" style="flex:1;padding:16px;background:#fff3e0;border-radius:8px;text-align:center;border:1px solid #fb923c;visibility:hidden;">visibility: hidden (Õ¼Î»)</div>
+      <div id="vis-hidden" style="flex:1;padding:16px;background:#fff3e0;border-radius:8px;text-align:center;border:1px solid #fb923c;visibility:hidden;">visibility: hidden (å ä½)</div>
       <div id="disp-none" style="flex:1;padding:16px;background:#fce4ec;border-radius:8px;text-align:center;border:1px solid #e94560;display:none;">display: none</div>
       <div style="flex:1;padding:16px;background:#e8f5e9;border-radius:8px;text-align:center;border:1px solid #4ade80;">Normal</div>
     </div>
     <div class="bx-desc" style="font-size:13px;color:#888;line-height:1.6;background:#fafafa;padding:12px;border-radius:6px;">
-      <code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;">visibility:hidden</code> Òş²Øµ«±£Áô¿Õ¼ä(Õ¼Î»)£»<code>display:none</code> ÍêÈ«ÏûÊ§²»Õ¼¿Õ¼ä¡£
-      <br>ËùÒÔ Normal Ö®¼äÓ¦Ö»ÓĞ 1 ¸ö¼äÏ¶(visibilityÕ¼Î»)¶ø·Ç 2 ¸ö¡£
+      <code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;">visibility:hidden</code> éšè—ä½†ä¿ç•™ç©ºé—´(å ä½)ï¼›<code>display:none</code> å®Œå…¨æ¶ˆå¤±ä¸å ç©ºé—´ã€‚
+      <br>æ‰€ä»¥ Normal ä¹‹é—´åº”åªæœ‰ 1 ä¸ªé—´éš™(visibilityå ä½)è€Œé 2 ä¸ªã€‚
     </div>
     <div class="bx-footer" style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
-      case-019: Layout ¡ª Visibility vs Display
+      case-019: Layout â€• Visibility vs Display
     </div>
   </div>
 </template>

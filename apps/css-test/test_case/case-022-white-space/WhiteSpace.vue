@@ -1,24 +1,24 @@
 <template>
   <div class="bx-card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
     <div class="bx-header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
-      ?? ÎÄ±¾ ¡¤ ¿Õ°×/Òç³ö²âÊÔ
+      ?? æ–‡æœ¬ ãƒ» ç©ºç™½/æº¢å‡ºæµ‹è¯•
     </div>
     <div class="ws-section" style="margin-bottom:12px;padding:14px;background:#f8f9ff;border-radius:8px;border:1px solid #e0e0e0;">
       <div style="font-size:11px;color:#999;margin-bottom:4px;">white-space: nowrap + text-overflow: ellipsis</div>
       <div class="ws-ellipsis" style="width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;color:#444;padding:8px;background:#fff;border-radius:4px;border:1px solid #eee;">
-        ÕâÊÇÒ»¶Î·Ç³£³¤µÄÎÄ±¾ÄÚÈÝ£¬³¬³¤Ê±Ó¦¸ÃÏÔÊ¾Ê¡ÂÔºÅ¶ø²»ÊÇ»»ÐÐÏÔÊ¾
+        è¿™æ˜¯ä¸€æ®µéžå¸¸é•¿çš„æ–‡æœ¬å†…å®¹ï¼Œè¶…é•¿æ—¶åº”è¯¥æ˜¾ç¤ºçœç•¥å·è€Œä¸æ˜¯æ¢è¡Œæ˜¾ç¤º
       </div>
     </div>
     <div class="ws-section" style="margin-bottom:16px;padding:14px;background:#f8f9ff;border-radius:8px;border:1px solid #e0e0e0;">
-      <div style="font-size:11px;color:#999;margin-bottom:4px;">white-space: pre (±£Áô¿Õ¸ñºÍ»»ÐÐ)</div>
+      <div style="font-size:11px;color:#999;margin-bottom:4px;">white-space: pre (ä¿ç•™ç©ºæ ¼å’Œæ¢è¡Œ)</div>
       <div class="ws-pre" style="white-space:pre;font-size:14px;color:#444;padding:8px;background:#fff;border-radius:4px;border:1px solid #eee;font-family:monospace;">
-        ±£Áô    ¿Õ¸ñ
-        ±£Áô»»ÐÐ
-        Ëõ½øÐ§¹û
+        ä¿ç•™    ç©ºæ ¼
+        ä¿ç•™æ¢è¡Œ
+        ç¼©è¿›æ•ˆæžœ
       </div>
     </div>
     <div class="bx-footer" style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
-      case-022: Text ¡ª White Space / Overflow
+      case-022: Text â€• White Space / Overflow
     </div>
   </div>
 </template>

@@ -1,5 +1,6 @@
 <template>
-  <div class="wrapper-test" style="width:800px;margin:0 auto;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;">
+  <div style="padding:20px;">
+    <div class="wrapper-test" style="width:800px;margin:0 auto;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;">
     <div class="test-header" style="font-size:18px;font-weight:600;margin-bottom:16px;color:#333;">
       Centered Wrapper Test (margin: 0 auto)
     </div>
@@ -11,6 +12,7 @@
     <div class="test-footer" style="margin-top:16px;padding-top:16px;border-top:1px solid #eee;font-size:12px;color:#999;">
       case-001: wrapper x-position verification
     </div>
+  </div>
   </div>
 </template>
 <script lang="php">

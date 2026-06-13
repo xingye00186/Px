@@ -1,17 +1,17 @@
 <template>
   <div class="bx-card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
     <div class="bx-header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
-      ? ²¼¾Ö ¡¤ ¸º Margin ²âÊÔ
+      ? å¸ƒå±€ ãƒ» è´Ÿ Margin æµ‹è¯•
     </div>
     <div class="bx-desc" style="font-size:13px;color:#888;margin-bottom:16px;line-height:1.5;">
-      ¸º margin-top ºÍ margin-left ¿ÉÊ¹ÔªËØÆ«ÒÆ£¬³£ÓÃÓÚÖØµşĞ§¹û
+      è´Ÿ margin-top å’Œ margin-left å¯ä½¿å…ƒç´ åç§»ï¼Œå¸¸ç”¨äºé‡å æ•ˆæœ
     </div>
     <div class="nm-container" style="position:relative;background:#f8f9ff;border-radius:8px;padding:20px;border:1px solid #e0e0e0;height:140px;margin-bottom:16px;">
-      <div class="nm-base" style="width:200px;height:80px;background:linear-gradient(135deg,#0f3460,#4facfe);border-radius:6px;color:#fff;display:flex;align-items:center;justify-content:center;">»ù×¼ÔªËØ</div>
-      <div class="nm-overlap" style="width:180px;height:60px;background:linear-gradient(135deg,#e94560,#f093fb);border-radius:6px;color:#fff;display:flex;align-items:center;justify-content:center;margin-top:-30px;margin-left:40px;position:relative;">¸ºmargin-top: -30</div>
+      <div class="nm-base" style="width:200px;height:80px;background:linear-gradient(135deg,#0f3460,#4facfe);border-radius:6px;color:#fff;display:flex;align-items:center;justify-content:center;">åŸºå‡†å…ƒç´ </div>
+      <div class="nm-overlap" style="width:180px;height:60px;background:linear-gradient(135deg,#e94560,#f093fb);border-radius:6px;color:#fff;display:flex;align-items:center;justify-content:center;margin-top:-30px;margin-left:40px;position:relative;">è´Ÿmargin-top: -30</div>
     </div>
     <div class="bx-footer" style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
-      case-017: Layout ¡ª Negative Margin
+      case-017: Layout â€• Negative Margin
     </div>
   </div>
 </template>

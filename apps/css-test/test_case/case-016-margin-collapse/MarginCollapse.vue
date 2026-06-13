@@ -1,20 +1,20 @@
 <template>
   <div class="bx-card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
     <div class="bx-header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
-      ?? ²¼¾Ö ¡¤ Margin ÕÛµş²âÊÔ
+      ?? å¸ƒå±€ ãƒ» Margin æŠ˜å æµ‹è¯•
     </div>
     <div class="bx-desc" style="font-size:13px;color:#888;margin-bottom:16px;line-height:1.5;">
-      ÏàÁÚ¿é¼¶ÔªËØ margin-bottom + margin-top Ó¦ÕÛµşÎª½Ï´óÖµ(¶ø·ÇÏà¼Ó)
+      ç›¸é‚»å—çº§å…ƒç´  margin-bottom + margin-top åº”æŠ˜å ä¸ºè¾ƒå¤§å€¼(è€Œéç›¸åŠ )
     </div>
     <div class="mc-container" style="background:#f8f9ff;border-radius:8px;padding:4px;border:1px solid #e0e0e0;margin-bottom:16px;">
       <div class="mc-a" style="margin-bottom:30px;padding:16px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:6px;color:#fff;text-align:center;">A: margin-bottom: 30px</div>
       <div class="mc-b" style="margin-top:20px;padding:16px;background:linear-gradient(135deg,#e94560,#f093fb);border-radius:6px;color:#fff;text-align:center;">B: margin-top: 20px</div>
       <div class="mc-note" style="font-size:11px;color:#888;padding:8px;text-align:center;">
-        AÓëB¼ä¾àÓ¦ = max(30,20) = 30px (¶ø·Ç 50px)
+        Aä¸Bé—´è·åº” = max(30,20) = 30px (è€Œé 50px)
       </div>
     </div>
     <div class="bx-footer" style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
-      case-016: Layout ¡ª Margin Collapse
+      case-016: Layout â€• Margin Collapse
     </div>
   </div>
 </template>

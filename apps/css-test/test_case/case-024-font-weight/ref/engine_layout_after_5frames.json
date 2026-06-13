@@ -1,0 +1,621 @@
+{
+    "type": "div",
+    "x": 0,
+    "y": 0,
+    "w": 1600,
+    "h": 800,
+    "visualW": 1600,
+    "visualH": 800,
+    "layer": 0,
+    "isScrollContainer": true,
+    "content": null,
+    "style": {
+        "bg": 16119285,
+        "fontSize": 14,
+        "overflowY": "auto"
+    },
+    "children": [
+        {
+            "type": "div",
+            "x": 0,
+            "y": 0,
+            "w": 1560,
+            "h": 40,
+            "visualW": 1600,
+            "visualH": 41,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "bg": 16777215,
+                "fg": 6710886,
+                "fontSize": 14,
+                "borderColor": 14540253,
+                "display": "flex",
+                "paddingTop": 0,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 0,
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "type": "#text",
+                    "x": 20,
+                    "y": 12,
+                    "w": 93,
+                    "h": 16,
+                    "visualW": 93,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "CSS Test Sandbox —",
+                    "style": {
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "type": "span",
+                    "x": 113,
+                    "y": 12,
+                    "w": 43,
+                    "h": 16,
+                    "visualW": 43,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "Test Case",
+                    "style": {
+                        "fg": 3355443,
+                        "fontSize": 14,
+                        "bold": 1
+                    }
+                }
+            ]
+        },
+        {
+            "type": "div",
+            "x": 0,
+            "y": 41,
+            "w": 1560,
+            "h": 328,
+            "visualW": 1600,
+            "visualH": 368,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "fontSize": 14,
+                "paddingTop": 20,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 20
+            },
+            "children": [
+                {
+                    "type": "div",
+                    "x": 20,
+                    "y": 61,
+                    "w": 1560,
+                    "h": 328,
+                    "visualW": 1560,
+                    "visualH": 328,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "fontSize": 14,
+                        "position": "relative"
+                    },
+                    "children": [
+                        {
+                            "type": "div",
+                            "x": 20,
+                            "y": 61,
+                            "w": 8,
+                            "h": 8,
+                            "visualW": 8,
+                            "visualH": 8,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16711935,
+                                "position": "absolute"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 440,
+                            "y": 81,
+                            "w": 720,
+                            "h": 252,
+                            "visualW": 776,
+                            "visualH": 308,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16777215,
+                                "fontSize": 14,
+                                "borderRadius": 12,
+                                "opacity": 0.08,
+                                "paddingTop": 28,
+                                "paddingLeft": 28,
+                                "paddingRight": 28,
+                                "paddingBottom": 28,
+                                "marginTop": 20,
+                                "marginLeft": 0,
+                                "marginRight": 0,
+                                "marginBottom": 20
+                            },
+                            "children": [
+                                {
+                                    "type": "div",
+                                    "x": 468,
+                                    "y": 109,
+                                    "w": 720,
+                                    "h": 24,
+                                    "visualW": 720,
+                                    "visualH": 38,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "?? 文本 ・ 字重测试",
+                                    "style": {
+                                        "fg": 3021338,
+                                        "fontSize": 20,
+                                        "bold": 1,
+                                        "borderColor": 6309353,
+                                        "paddingBottom": 12,
+                                        "marginBottom": 20
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 468,
+                                    "y": 167,
+                                    "w": 686,
+                                    "h": 31,
+                                    "visualW": 720,
+                                    "visualH": 65,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": null,
+                                    "style": {
+                                        "bg": 16775672,
+                                        "fontSize": 14,
+                                        "borderWidth": 1,
+                                        "borderColor": 14737632,
+                                        "borderLeftWidth": 1,
+                                        "borderLeftColor": 14737632,
+                                        "borderRadius": 8,
+                                        "paddingTop": 16,
+                                        "paddingLeft": 16,
+                                        "paddingRight": 16,
+                                        "paddingBottom": 16,
+                                        "marginBottom": 12
+                                    },
+                                    "children": [
+                                        {
+                                            "type": "div",
+                                            "x": 484,
+                                            "y": 183,
+                                            "w": 686,
+                                            "h": 13,
+                                            "visualW": 686,
+                                            "visualH": 13,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": "font-weight 对比",
+                                            "style": {
+                                                "fg": 10066329,
+                                                "fontSize": 11,
+                                                "marginBottom": 8
+                                            }
+                                        },
+                                        {
+                                            "type": "div",
+                                            "x": 484,
+                                            "y": 204,
+                                            "w": 686,
+                                            "h": 10,
+                                            "visualW": 686,
+                                            "visualH": 10,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": null,
+                                            "style": {
+                                                "display": "flex",
+                                                "gap": 24,
+                                                "alignItems": "center"
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "x": 484,
+                                                    "y": 195,
+                                                    "w": 44,
+                                                    "h": 19,
+                                                    "visualW": 44,
+                                                    "visualH": 19,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": null,
+                                                    "style": {
+                                                        "fontSize": 14
+                                                    },
+                                                    "children": [
+                                                        {
+                                                            "type": "span",
+                                                            "x": 484,
+                                                            "y": 195,
+                                                            "w": 44,
+                                                            "h": 19,
+                                                            "visualW": 44,
+                                                            "visualH": 19,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "100 Thin",
+                                                            "style": {
+                                                                "fontSize": 16,
+                                                                "bold": 0
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "div",
+                                                    "x": 552,
+                                                    "y": 195,
+                                                    "w": 46,
+                                                    "h": 19,
+                                                    "visualW": 46,
+                                                    "visualH": 19,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": null,
+                                                    "style": {
+                                                        "fontSize": 14
+                                                    },
+                                                    "children": [
+                                                        {
+                                                            "type": "span",
+                                                            "x": 620,
+                                                            "y": 195,
+                                                            "w": 46,
+                                                            "h": 19,
+                                                            "visualW": 46,
+                                                            "visualH": 19,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "300 Light",
+                                                            "style": {
+                                                                "fontSize": 16,
+                                                                "bold": 0
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "div",
+                                                    "x": 622,
+                                                    "y": 195,
+                                                    "w": 59,
+                                                    "h": 19,
+                                                    "visualW": 59,
+                                                    "visualH": 19,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": null,
+                                                    "style": {
+                                                        "fontSize": 14
+                                                    },
+                                                    "children": [
+                                                        {
+                                                            "type": "span",
+                                                            "x": 760,
+                                                            "y": 195,
+                                                            "w": 59,
+                                                            "h": 19,
+                                                            "visualW": 59,
+                                                            "visualH": 19,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "400 Regular",
+                                                            "style": {
+                                                                "fontSize": 16,
+                                                                "bold": 0
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "div",
+                                                    "x": 705,
+                                                    "y": 195,
+                                                    "w": 62,
+                                                    "h": 19,
+                                                    "visualW": 62,
+                                                    "visualH": 19,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": null,
+                                                    "style": {
+                                                        "fontSize": 14
+                                                    },
+                                                    "children": [
+                                                        {
+                                                            "type": "span",
+                                                            "x": 926,
+                                                            "y": 195,
+                                                            "w": 62,
+                                                            "h": 19,
+                                                            "visualW": 62,
+                                                            "visualH": 19,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "500 Medium",
+                                                            "style": {
+                                                                "fontSize": 16,
+                                                                "bold": 0
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "div",
+                                                    "x": 791,
+                                                    "y": 195,
+                                                    "w": 44,
+                                                    "h": 19,
+                                                    "visualW": 44,
+                                                    "visualH": 19,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": null,
+                                                    "style": {
+                                                        "fontSize": 14
+                                                    },
+                                                    "children": [
+                                                        {
+                                                            "type": "span",
+                                                            "x": 1098,
+                                                            "y": 195,
+                                                            "w": 44,
+                                                            "h": 19,
+                                                            "visualW": 44,
+                                                            "visualH": 19,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "700 Bold",
+                                                            "style": {
+                                                                "fg": 6304783,
+                                                                "fontSize": 16,
+                                                                "bold": 1
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "div",
+                                                    "x": 859,
+                                                    "y": 195,
+                                                    "w": 48,
+                                                    "h": 19,
+                                                    "visualW": 48,
+                                                    "visualH": 19,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": null,
+                                                    "style": {
+                                                        "fontSize": 14
+                                                    },
+                                                    "children": [
+                                                        {
+                                                            "type": "span",
+                                                            "x": 1234,
+                                                            "y": 195,
+                                                            "w": 48,
+                                                            "h": 19,
+                                                            "visualW": 48,
+                                                            "visualH": 19,
+                                                            "layer": 0,
+                                                            "isScrollContainer": false,
+                                                            "content": "900 Black",
+                                                            "style": {
+                                                                "fg": 6309353,
+                                                                "fontSize": 16,
+                                                                "bold": 1
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 468,
+                                    "y": 244,
+                                    "w": 720,
+                                    "h": 72,
+                                    "visualW": 720,
+                                    "visualH": 72,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": null,
+                                    "style": {
+                                        "display": "flex",
+                                        "gap": 16
+                                    },
+                                    "children": [
+                                        {
+                                            "type": "div",
+                                            "x": 468,
+                                            "y": 244,
+                                            "w": 352,
+                                            "h": 38,
+                                            "visualW": 386,
+                                            "visualH": 72,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": null,
+                                            "style": {
+                                                "bg": 16775672,
+                                                "fontSize": 14,
+                                                "borderWidth": 1,
+                                                "borderColor": 14737632,
+                                                "borderLeftWidth": 1,
+                                                "borderLeftColor": 14737632,
+                                                "borderRadius": 8,
+                                                "textAlign": "center",
+                                                "paddingTop": 16,
+                                                "paddingLeft": 16,
+                                                "paddingRight": 16,
+                                                "paddingBottom": 16
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "x": 484,
+                                                    "y": 260,
+                                                    "w": 686,
+                                                    "h": 13,
+                                                    "visualW": 686,
+                                                    "visualH": 13,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": "normal",
+                                                    "style": {
+                                                        "fg": 10066329,
+                                                        "fontSize": 11,
+                                                        "marginBottom": 4
+                                                    }
+                                                },
+                                                {
+                                                    "type": "div",
+                                                    "x": 484,
+                                                    "y": 260,
+                                                    "w": 686,
+                                                    "h": 21,
+                                                    "visualW": 686,
+                                                    "visualH": 21,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": "Normal",
+                                                    "style": {
+                                                        "fontSize": 18,
+                                                        "bold": 0
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "div",
+                                            "x": 870,
+                                            "y": 244,
+                                            "w": 352,
+                                            "h": 38,
+                                            "visualW": 386,
+                                            "visualH": 72,
+                                            "layer": 0,
+                                            "isScrollContainer": false,
+                                            "content": null,
+                                            "style": {
+                                                "bg": 15595519,
+                                                "fontSize": 14,
+                                                "borderWidth": 1,
+                                                "borderColor": 3969787,
+                                                "borderLeftWidth": 1,
+                                                "borderLeftColor": 3969787,
+                                                "borderRadius": 8,
+                                                "textAlign": "center",
+                                                "paddingTop": 16,
+                                                "paddingLeft": 16,
+                                                "paddingRight": 16,
+                                                "paddingBottom": 16
+                                            },
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "x": 886,
+                                                    "y": 260,
+                                                    "w": 686,
+                                                    "h": 13,
+                                                    "visualW": 686,
+                                                    "visualH": 13,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": "bold",
+                                                    "style": {
+                                                        "fg": 10066329,
+                                                        "fontSize": 11,
+                                                        "marginBottom": 4
+                                                    }
+                                                },
+                                                {
+                                                    "type": "div",
+                                                    "x": 886,
+                                                    "y": 260,
+                                                    "w": 686,
+                                                    "h": 21,
+                                                    "visualW": 686,
+                                                    "visualH": 21,
+                                                    "layer": 0,
+                                                    "isScrollContainer": false,
+                                                    "content": "Bold",
+                                                    "style": {
+                                                        "fg": 6304783,
+                                                        "fontSize": 18,
+                                                        "bold": 1
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 468,
+                                    "y": 332,
+                                    "w": 720,
+                                    "h": 14,
+                                    "visualW": 720,
+                                    "visualH": 29,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "case-024: Text ― Font Weight",
+                                    "style": {
+                                        "fg": 11184810,
+                                        "fontSize": 12,
+                                        "borderColor": 15658734,
+                                        "textAlign": "center",
+                                        "paddingTop": 14,
+                                        "marginTop": 16
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "div",
+                            "x": 1572,
+                            "y": 381,
+                            "w": 8,
+                            "h": 8,
+                            "visualW": 8,
+                            "visualH": 8,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16776960,
+                                "position": "absolute"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

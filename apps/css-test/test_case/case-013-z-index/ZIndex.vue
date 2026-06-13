@@ -1,15 +1,15 @@
 <template>
   <div class="bx-card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
     <div class="bx-header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
-      ??? ²¼¾Ö ¡¤ Z-Index ²ãµş²âÊÔ
+      ??? å¸ƒå±€ ãƒ» Z-Index å±‚å æµ‹è¯•
     </div>
     <div class="zx-container" style="position:relative;height:160px;margin-bottom:16px;">
-      <div class="zx-base" style="position:absolute;top:20px;left:20px;width:300px;height:120px;background:linear-gradient(135deg,#e94560,#f093fb);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;z-index:1;">z-index:1 (µ×²ã)</div>
-      <div class="zx-mid" style="position:absolute;top:50px;left:100px;width:280px;height:100px;background:linear-gradient(135deg,#0f3460,#4facfe);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;z-index:2;">z-index:2 (ÖĞ²ã)</div>
-      <div class="zx-top" style="position:absolute;top:80px;left:180px;width:260px;height:80px;background:linear-gradient(135deg,#4ade80,#38f9d7);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#333;z-index:3;">z-index:3 (¶¥²ã)</div>
+      <div class="zx-base" style="position:absolute;top:20px;left:20px;width:300px;height:120px;background:linear-gradient(135deg,#e94560,#f093fb);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;z-index:1;">z-index:1 (åº•å±‚)</div>
+      <div class="zx-mid" style="position:absolute;top:50px;left:100px;width:280px;height:100px;background:linear-gradient(135deg,#0f3460,#4facfe);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;z-index:2;">z-index:2 (ä¸­å±‚)</div>
+      <div class="zx-top" style="position:absolute;top:80px;left:180px;width:260px;height:80px;background:linear-gradient(135deg,#4ade80,#38f9d7);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#333;z-index:3;">z-index:3 (é¡¶å±‚)</div>
     </div>
     <div class="bx-footer" style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
-      case-013: Layout ¡ª Z-Index
+      case-013: Layout â€• Z-Index
     </div>
   </div>
 </template>
