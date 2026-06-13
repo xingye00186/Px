@@ -1699,7 +1699,7 @@ function validateAnchorVisibility(string $layoutPath, int $viewportW, int $viewp
         if (!isset($node['style'])) return;
         $bg = $node['style']['bg'] ?? 0;
         if ($bg === 16711935) { $tl = $node; }       // #FF00FF → TL
-        if ($bg === 16776960) { $br = $node; }       // #00FFFF → BR
+        if ($bg === 65535) { $br = $node; }          // #00FFFF → BR
         foreach ($node['children'] ?? [] as $child) {
             $walker($child);
         }
