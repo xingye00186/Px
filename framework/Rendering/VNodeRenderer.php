@@ -494,16 +494,33 @@ class VNodeRenderer
             $text = $node->content;
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
 
-            $textX = $x + 4;
+            // CSS 2.2 §17.5: 文本内容位于 content area (border + padding 内部)
+            $contentX = $x + $borderLeftWidth + ($style['paddingLeft'] ?? 0);
+            $contentY = $y + $borderTopWidth + ($style['paddingTop'] ?? 0);
+            $contentW = max(0, $w - $borderLeftWidth - $borderRightWidth - ($style['paddingLeft'] ?? 0) - ($style['paddingRight'] ?? 0));
+
+            $textX = $contentX + 4;
             if ($align === 'right') {
-                $textX = $x + $w - 12 - $textWidth;
-                if ($textX < $x + 4) $textX = $x + 4;
+                $textX = $contentX + $contentW - 12 - $textWidth;
+                if ($textX < $contentX + 4) $textX = $contentX + 4;
             } elseif ($align === 'center') {
-                $textX = $x + (int)(($w - $textWidth) / 2);
-                if ($textX < $x + 4) $textX = $x + 4;
+                $textX = $contentX + (int)(($contentW - $textWidth) / 2);
+                if ($textX < $contentX + 4) $textX = $contentX + 4;
             }
-            if ($textX < $x + 4) $textX = $x + 4;
-            $textY = $y + (int)(($h - $fontSize) / 2);
+            if ($textX < $contentX + 4) $textX = $contentX + 4;
+
+            // CSS Flexible Box Layout §8.2: align-items:center → 交叉轴居中文本
+            // 当元素是 flex 容器且 alignItems=center 时，文本在 content area 内垂直居中
+            $textY = $contentY;
+            $display = $style['display'] ?? 'block';
+            $alignItems = $style['alignItems'] ?? 'stretch';
+            if (($display === 'flex' || $display === 'inline-flex') && $alignItems === 'center') {
+                $contentH = max(0, $h - $borderTopWidth - $borderBottomWidth - ($style['paddingTop'] ?? 0) - ($style['paddingBottom'] ?? 0));
+                $textHeight = $fontSize + 2;  // 近似文本高度(font metrics ≈ fontSize + 2px)
+                if ($contentH > $textHeight) {
+                    $textY = $contentY + (int)(($contentH - $textHeight) / 2);
+                }
+            }
 
             $elements = [];
             if ($hasBg || $hasBorder) {
