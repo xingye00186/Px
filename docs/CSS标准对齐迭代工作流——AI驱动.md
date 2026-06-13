@@ -550,17 +550,26 @@ html, body { width: 1600px; height: 800px; overflow: hidden; background: #0d1117
 
 ### 6.1 颜色锚点对齐（推荐，优先级最高）
 
-在测试 HTML 内容区的 `position:relative` 容器内嵌入两个 8×8 纯色块：
+每个测试 case 的**最外层卡片容器**（`background:#fff` 的卡片 div）上设置 `position:relative`，
+在其 padding-box 四角嵌入两个 8×8 纯色块：
 
 ```html
-<!-- __PX_ANCHOR_TL__ 左上角 -->
+<!-- __PX_ANCHOR_TL__ 左上角（卡片 padding-box 的左上角） -->
 <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;"></div>
-<!-- __PX_ANCHOR_BR__ 右下角 -->
+<!-- __PX_ANCHOR_BR__ 右下角（卡片 padding-box 的右下角） -->
 <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;"></div>
 ```
 
-- 引擎渲染：绝对定位保证锚点始终在容器 padding box 四角
+- `position:relative` 设置方式：
+  - `.vue` 文件：在 card 的 inline style 末尾添加 `;position:relative`
+  - `.html` 文件：在对应 CSS class（如 `.bx-card`、`.wrapper-test`）定义末尾添加 `;position:relative}`
+- 锚点与卡片关系：
+  - TL 锚点 `top:0;left:0` → 卡片 padding-box 左上角
+  - BR 锚点 `bottom:0;right:0` → 卡片 padding-box 右下角
+- 锚点及卡片必须全程在可视化视口（1600×800）内
+- 引擎渲染：绝对定位保证锚点始终在卡片 padding box 四角
 - 浏览器截图：CSS 标准定位保证同样位置
+- `buildCssTestWrapper()` / `buildScreenshotWrapper()` 不再注入锚点包装层
 - 对齐算法：`detectColorAnchors()` 用 O(n) 扫描找到两个色块 → 计算偏移 dx/dy
 - 优势：无需模板预提取、像素级精确、不受内容变化影响
 
@@ -921,7 +930,7 @@ if ($label === '目标元素') {
 ```php
 // test_case/case-NNN-name/CaseNnnName.vue
 <template>
-  <div class="card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
+  <div class="card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative"><div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
     <div class="header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
       📐 测试标题
     </div>
@@ -929,7 +938,7 @@ if ($label === '目标元素') {
     <div class="footer" style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
       case-NNN: 测试描述
     </div>
-  </div>
+  <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
 </template>
 <script lang="php">
 class TestContent extends ReactiveComponent {}
