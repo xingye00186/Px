@@ -1,6 +1,7 @@
 name: multi_scroll
 mode: bin
 no-console: false
+job: 8
 platform: win32
 entry: main.php
 cxx-flags:
