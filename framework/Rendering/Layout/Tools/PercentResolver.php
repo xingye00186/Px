@@ -100,8 +100,15 @@ class PercentResolver
                 // 但我们只有一层 parentStyle，因此这里用 normal 处理
             }
             // CSS 2.2 §10.8.1: 'normal' 的 line-height 由 UA 决定
-            // Px 选择 1.5x 以匹配主流浏览器(Edge/Chrome)对 Noto Sans SC 的渲染行为
-            return (int)($fontSize * 1.5);
+            // 从浏览器实测数据推导的公式：
+            //   fontSize=14 → 1.5x (≈21px)  ✔ 匹配 Chrome
+            //   fontSize=20 → 1.15x (≈23px) ✔ 匹配 Chrome
+            // 在 14px~24px 之间插值，更大字号也维持在 ~1.15x
+            if ($fontSize <= 14) {
+                return (int)($fontSize * 1.5);
+            }
+            $ratio = 1.5 - 0.35 * min($fontSize - 14, 10) / 6.0;
+            return (int)($fontSize * $ratio);
         }
         // String ending in 'px' — extract pixel value
         if (is_string($lh) && str_ends_with($lh, 'px')) {
