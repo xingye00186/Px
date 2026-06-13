@@ -253,6 +253,8 @@ function defaultChecks(): array {
         ['alignItems',       'align-items',      'string',    'alignItems'],
         ['justifyContent',   'justify-content',  'string',    'justifyContent'],
         ['boxSizing',        'box-sizing',       'boxsizing', 'boxSizing'],
+        ['overflowX',        'overflow-x',       'string',    'overflowX'],
+        ['overflowY',        'overflow-y',       'string',    'overflowY'],
     ];
 }
 
