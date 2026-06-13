@@ -519,7 +519,6 @@ foreach ($cases as $caseDir) {
                 if (!is_dir($caseDir . '/ref')) {
                     mkdir($caseDir . '/ref', 0777, true);
                 }
-                copy($layoutFile, $caseDir . '/engine_layout.json');
                 copy($layoutFile, $caseDir . '/ref/engine_layout.json');
 
                 $layoutData = json_decode(file_get_contents($layoutFile), true);
@@ -583,13 +582,12 @@ foreach ($cases as $caseDir) {
 
             if (file_exists($multiFrameFile)) {
                 $stabilityIssues = compareStability(
-                    $caseDir . '/engine_layout.json',
+                    $caseDir . '/ref/engine_layout.json',
                     $multiFrameFile,
                     $VERBOSE
                 );
 
                 // Copy multi-frame ref to case dir
-                copy($multiFrameFile, $caseDir . "/engine_layout_after_{$FRAMES}frames.json");
                 copy($multiFrameFile, $caseDir . "/ref/engine_layout_after_{$FRAMES}frames.json");
 
                 if ($stabilityIssues === 0) {
@@ -671,7 +669,7 @@ foreach ($cases as $caseDir) {
     // --------------------------------------------------
     if ($caseOk && $layoutExported && $doBrowserRef) {
         $browserRefPath = $caseDir . '/ref/browser_ref_level_0.json';
-        $engineLayoutPath = $caseDir . '/engine_layout.json';
+        $engineLayoutPath = $caseDir . '/ref/engine_layout.json';
         if (!file_exists($engineLayoutPath)) {
             $engineLayoutPath = $APP_DIR . '/engine_layout.json';
         }

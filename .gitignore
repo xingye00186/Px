@@ -54,8 +54,8 @@ docs/_*.md
 docs/_*.py
 test_debug/
 
-# 运行产出的多帧布局快照（非 ref 基线）
-engine_layout_after_5frames.json
+# 运行产出的多帧布局快照（仅 case 根目录，不含 ref/ 基线）
+test_case/*/engine_layout_after_5frames.json
 
 # 构建锁文件
 .build.lock
