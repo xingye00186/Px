@@ -150,10 +150,14 @@ $SIZE_TOL = 2;       // 尺寸对比容差 (px)
 // --- Font consistency (Noto Sans SC) ---
 $FONT_NOTO_NAME = 'Noto Sans SC';
 $FONT_NOTO_PATH = $ROOT_DIR . '/cpp/fonts/NotoSansSC-Regular.ttf';
+$FONT_NOTO_BOLD_PATH = $ROOT_DIR . '/cpp/fonts/NotoSansSC-Bold.ttf';
 $FONT_NOTO_READY = file_exists($FONT_NOTO_PATH);
 $FONT_NOTO_URL = $FONT_NOTO_READY
     ? "url('file:///" . str_replace('\\', '/', $FONT_NOTO_PATH) . "')"
     : "local('Noto Sans SC')";
+$FONT_NOTO_BOLD_URL = $FONT_NOTO_READY && file_exists($FONT_NOTO_BOLD_PATH)
+    ? "url('file:///" . str_replace('\\', '/', $FONT_NOTO_BOLD_PATH) . "')"
+    : "local('Noto Sans SC Bold')";
 
 // --- Browser reference (Edge headless) ---
 $EDGE_PATH = findEdgePath();
@@ -546,6 +550,18 @@ foreach ($cases as $caseDir) {
                     echo "  [D] 规则: TL锚点(洋红#FF00FF)和BR锚点(青色#00FFFF)必须在 [0,1600)x[0,800) 内。\n";
                     continue;  // 跳过后续步骤，处理下一个用例
                 }
+
+                // ── layout 内容一致性校验（防 ref 数据过期）──
+                $contentCheck = validateLayoutContent($layoutFile, $caseVue);
+                if (!$contentCheck['pass']) {
+                    echo "  [D] ❌ layout 内容校验失败:\n";
+                    foreach ($contentCheck['errors'] as $ce) {
+                        echo "    - $ce\n";
+                    }
+                    echo "  [D] 中止此用例。请检查 TestContent.vue 是否正确部署。\n";
+                    continue;
+                }
+                echo "  [D] ✅ layout 内容一致\n";
 
             } else {
                 echo "  [D] ⚠️  layout 文件未生成\n";
@@ -995,7 +1011,7 @@ function buildScreenshotWrapper(string $originalHtml): string
         $extraStyles = $m[1];
     }
 
-    global $FONT_NOTO_URL, $FONT_NOTO_NAME;
+    global $FONT_NOTO_URL, $FONT_NOTO_NAME, $FONT_NOTO_BOLD_URL;
 
     return '<!DOCTYPE html>
 <html lang="zh-CN">
@@ -1008,7 +1024,12 @@ function buildScreenshotWrapper(string $originalHtml): string
 @font-face {
   font-family: \'' . $FONT_NOTO_NAME . '\';
   src: local(\'' . $FONT_NOTO_NAME . '\'), ' . $FONT_NOTO_URL . ';
-  font-weight: 400 700;
+  font-weight: 400;
+}
+@font-face {
+  font-family: \'' . $FONT_NOTO_NAME . '\';
+  src: local(\'' . $FONT_NOTO_NAME . ' Bold\'), ' . $FONT_NOTO_BOLD_URL . ';
+  font-weight: 700;
 }
 * { margin:0; padding:0; }
 html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
@@ -1166,7 +1187,7 @@ function buildCssTestWrapper(string $originalHtml, string $jsCode): string
         $extraStyles = $m[1];
     }
 
-    global $FONT_NOTO_URL, $FONT_NOTO_NAME;
+    global $FONT_NOTO_URL, $FONT_NOTO_NAME, $FONT_NOTO_BOLD_URL;
 
     return '<!DOCTYPE html>
 <html lang="zh-CN">
@@ -1179,7 +1200,12 @@ function buildCssTestWrapper(string $originalHtml, string $jsCode): string
 @font-face {
   font-family: \'' . $FONT_NOTO_NAME . '\';
   src: local(\'' . $FONT_NOTO_NAME . '\'), ' . $FONT_NOTO_URL . ';
-  font-weight: 400 700;
+  font-weight: 400;
+}
+@font-face {
+  font-family: \'' . $FONT_NOTO_NAME . '\';
+  src: local(\'' . $FONT_NOTO_NAME . ' Bold\'), ' . $FONT_NOTO_BOLD_URL . ';
+  font-weight: 700;
 }
 * { margin:0; padding:0; }
 html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
@@ -1630,6 +1656,60 @@ function validateAnchorVisibility(string $layoutPath, int $viewportW, int $viewp
     }
 
     return ['pass' => empty($errors), 'errors' => $errors];
+}
+
+
+/**
+ * 校验引擎导出的 layout JSON 是否包含测试用例 .vue 模板中的预期文本。
+ * 防止 ref/engine_layout.json 因过期导致测试使用错误参考数据。
+ */
+function validateLayoutContent(string $layoutPath, string $vuePath): array
+{
+    $json = json_decode(file_get_contents($layoutPath), true);
+    if ($json === null) {
+        return ['pass' => false, 'errors' => ['无法解析 layout JSON']];
+    }
+
+    $vueContent = file_get_contents($vuePath);
+    if ($vueContent === false) {
+        return ['pass' => false, 'errors' => ['无法读取 .vue 文件']];
+    }
+
+    // 从 .vue 模板提取可见文本（位于 > 和 < 之间的内容）
+    preg_match_all('/>([^<]+)</', $vueContent, $matches);
+    $vueTexts = array_filter(array_map('trim', $matches[1]), function(string $t): bool {
+        return strlen($t) >= 6;  // 只保留超过 6 字符的文本，过滤空/短文本
+    });
+
+    // 从 layout 中收集所有 content 字段（#text 节点的文本）
+    $layoutTexts = [];
+    array_walk_recursive($json, function($v, $k) use (&$layoutTexts) {
+        if ($k === 'content' && is_string($v) && strlen(trim($v)) > 0) {
+            $layoutTexts[] = trim($v);
+        }
+    });
+
+    // 检查布局是否包含 .vue 中的任何文本
+    foreach ($vueTexts as $expected) {
+        foreach ($layoutTexts as $actual) {
+            if (strpos($actual, $expected) !== false || strpos($expected, $actual) !== false) {
+                return ['pass' => true, 'errors' => []];
+            }
+        }
+    }
+
+    if (empty($vueTexts)) {
+        // .vue 中无可提取文本，跳过校验
+        return ['pass' => true, 'errors' => []];
+    }
+
+    $sample = reset($vueTexts);
+    return ['pass' => false, 'errors' => [
+        "layout 内容与 .vue 模板不匹配。",
+        "  .vue 示例文本: '$sample'",
+        "  layout 文本节点数: " . count($layoutTexts),
+        "  可能原因: 编译了旧版 TestContent.vue 或 exe 未更新"
+    ]];
 }
 
 
