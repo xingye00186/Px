@@ -47,8 +47,6 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         array         $style
     ): void
     {
-        error_log('[GRID_DIAG] styleKeys=' . implode(',', array_keys($style)) . ' | gridTemplateCols=' . ($style['gridTemplateColumns'] ?? 'NOT_SET') . ' | nodeW=' . $node->w);
-
         $left = $style['left'] ?? 0;
 
         $top = $style['top'] ?? 0;
@@ -179,39 +177,83 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
             // First pass: resolve fixed (px/%) widths, mark fr as null, minmax as ['min'=>...,'fr'=>...]
             foreach ($sizes as $size) {
-                if (preg_match('/^(\d+(?:\.\d+)?)px$/i', $size, $m)) {
-                    $w = (int)$m[1];
+                $s = trim($size);
+                $slen = strlen($s);
+
+                // px suffix
+                if ($slen > 2 && substr($s, -2) === 'px' && is_numeric(substr($s, 0, -2))) {
+                    $w = (int)substr($s, 0, -2);
                     $explicitColWidths[] = $w;
                     $usedPx += $w;
-                } elseif (preg_match('/^(\d+(?:\.\d+)?)%$/', $size, $m)) {
-                    $pct = (int)$m[1];
+                    continue;
+                }
+
+                // % suffix
+                if ($slen > 1 && substr($s, -1) === '%' && is_numeric(substr($s, 0, -1))) {
+                    $pct = (int)substr($s, 0, -1);
                     $pctW = (int)($gridContentW * $pct / 100);
                     $explicitColWidths[] = $pctW;
                     $usedPx += $pctW;
-                } elseif (preg_match('/^(\d+(?:\.\d+)?)fr$/i', $size, $m)) {
-                    $explicitColWidths[] = null;
-                    $totalFr += (int)$m[1];
-                } elseif (preg_match('/^minmax\(\s*(\d+(?:\.\d+)?)(px|%|)\s*,\s*(\d+(?:\.\d+)?)(px|fr|%|)\s*\)$/i', $size, $m)) {
-                    $minVal = (int)$m[1];
-                    $maxUnit = strtolower($m[4]);
-                    if ($maxUnit === 'fr') {
-                        // minmax(min, fr): fr track with minimum guarantee
-                        $frVal = (int)$m[3];
-                        $explicitColWidths[] = ['min' => $minVal, 'fr' => $frVal];
-                        $usedPx += $minVal;
-                        $totalFr += $frVal;
-                    } else {
-                        // minmax(px, px) or minmax(px, %): use min as initial width
-                        $w = $minVal;
-                        $explicitColWidths[] = $w;
-                        $usedPx += $w;
-                    }
-                } else {
-                    // Bare number: treat as px
-                    $w = (int)$size;
-                    $explicitColWidths[] = $w;
-                    $usedPx += $w;
+                    continue;
                 }
+
+                // fr suffix
+                if ($slen > 2 && substr($s, -2) === 'fr' && is_numeric(substr($s, 0, -2))) {
+                    $frVal = (int)substr($s, 0, -2);
+                    $explicitColWidths[] = ['fr' => $frVal];
+                    $totalFr += $frVal;
+                    continue;
+                }
+
+                // minmax(a,b)
+                if (substr($s, 0, 7) === 'minmax(' && substr($s, -1) === ')') {
+                    $inner = substr($s, 7, -1);
+                    $commaPos = strpos($inner, ',');
+                    if ($commaPos !== false) {
+                        $minStr = trim(substr($inner, 0, $commaPos));
+                        $maxStr = trim(substr($inner, $commaPos + 1));
+
+                        // Round-trip parse to verify (avoid preg_match in AOT)
+                        $minVal = 0;
+                        $minLen = strlen($minStr);
+                        if ($minLen > 2 && substr($minStr, -2) === 'px' && is_numeric(substr($minStr, 0, -2))) {
+                            $minVal = (int)substr($minStr, 0, -2);
+                        } elseif ($minLen > 1 && substr($minStr, -1) === '%' && is_numeric(substr($minStr, 0, -1))) {
+                            $minVal = (int)($gridContentW * (int)substr($minStr, 0, -1) / 100);
+                        } elseif (is_numeric($minStr)) {
+                            $minVal = (int)$minStr;
+                        }
+
+                        $maxVal = 0;
+                        $isMaxFr = false;
+                        $maxLen = strlen($maxStr);
+                        if ($maxLen > 2 && substr($maxStr, -2) === 'fr' && is_numeric(substr($maxStr, 0, -2))) {
+                            $maxVal = (int)substr($maxStr, 0, -2);
+                            $isMaxFr = true;
+                        } elseif ($maxLen > 2 && substr($maxStr, -2) === 'px' && is_numeric(substr($maxStr, 0, -2))) {
+                            $maxVal = (int)substr($maxStr, 0, -2);
+                        } elseif ($maxLen > 1 && substr($maxStr, -1) === '%' && is_numeric(substr($maxStr, 0, -1))) {
+                            $maxVal = (int)($gridContentW * (int)substr($maxStr, 0, -1) / 100);
+                        } elseif (is_numeric($maxStr)) {
+                            $maxVal = (int)$maxStr;
+                        }
+
+                        if ($isMaxFr && $maxVal > 0) {
+                            $explicitColWidths[] = ['min' => $minVal, 'fr' => $maxVal];
+                            $usedPx += $minVal;
+                            $totalFr += $maxVal;
+                        } else {
+                            $explicitColWidths[] = $minVal;
+                            $usedPx += $minVal;
+                        }
+                        continue;
+                    }
+                }
+
+                // Bare number: treat as px
+                $w = is_numeric($s) ? (int)$s : 0;
+                $explicitColWidths[] = $w;
+                $usedPx += $w;
             }
 
             $cols = count($explicitColWidths);
@@ -222,20 +264,17 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 $remaining = $gridContentW - $usedPx - $colGap * (int)max(0, $cols - 1);
                 $frUnit = (int)max(0, (int)($remaining / $totalFr));
                 foreach ($explicitColWidths as $i => $colW) {
-                    if ($colW === null) {
-                        $explicitColWidths[(int)$i] = $frUnit;
-                    } elseif (is_array($colW) && isset($colW['fr'])) {
-                        // minmax(min, fr): use min + fr share
-                        $min = $colW['min'];
+                    if (is_array($colW) && isset($colW['fr'])) {
                         $fr = $colW['fr'];
+                        $min = $colW['min'] ?? 0;
                         $explicitColWidths[(int)$i] = $min + $frUnit * $fr;
                     }
                 }
             } else {
-                // Replace remaining nulls/minmax arrays with their min value
+                // Replace remaining fr/minmax arrays with their min value
                 foreach ($explicitColWidths as $i => $colW) {
-                    if ($colW === null) {
-                        $explicitColWidths[(int)$i] = 0;
+                    if (is_array($colW) && isset($colW['fr'])) {
+                        $explicitColWidths[(int)$i] = $colW['min'] ?? 0;
                     } elseif (is_array($colW) && isset($colW['min'])) {
                         $explicitColWidths[(int)$i] = $colW['min'];
                     }
@@ -400,10 +439,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             // 高度不应用 min/max——等调整后得到自然内容高度
 
             // 调整子节点（重解析 flex/grid 的百分比尺寸）
-            error_log('[DIAG_GRID] Pass1 BEFORE adjustGridItemChildren: gridItem w=' . $ch->w . ' type=' . $ch->type);
             $this->adjustGridItemChildren($ch, $ctx);
-
-            error_log('[DIAG_GRID] Pass1 AFTER adjustGridItemChildren: gridItem w=' . $ch->w . ' childrenCount=' . count($ch->children) . ' firstChildW=' . (!empty($ch->children) ? $ch->children[0]->w : -1));
 
             // 计算 grid item 的实际内容高度：从子节点的 bottom 边推算
             $actualContentH = $ch->h;
@@ -429,7 +465,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $actualRowHeights = [];
         if (!$hasExplicitRows) {
             foreach ($rowContentHeights as $r => $h) {
-                $actualRowHeights[$r] = max($defaultRowH, $h);
+                $actualRowHeights[$r] = $h > 0 ? $h : $defaultRowH;
             }
         } else {
             $totalRows = max($row + 1, count($rowContentHeights));
@@ -482,9 +518,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
             // 如果高度变化了（stretch），需要重新调整子节点
             if ($alignSelf === 'stretch') {
-                error_log('[DIAG_GRID] Pass2 BEFORE adjustGridItemChildren: gridItem w=' . $ch->w);
                 $this->adjustGridItemChildren($ch, $ctx);
-                error_log('[DIAG_GRID] Pass2 AFTER adjustGridItemChildren: gridItem w=' . $ch->w);
                 // 恢复 grid cell 决定的位置和宽度（adjustGridItemChildren 内部会 restore）
                 $ch->y = $newCellY;
                 $ch->h = $actualRowH;
@@ -525,9 +559,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
      */
     private function adjustGridItemChildren(RenderNode $gridItem, LayoutContext $ctx): void
     {
-        error_log('[DIAG_ADJUST] adjustGridItemChildren entered: gridItem w=' . $gridItem->w . ' children=' . count($gridItem->children) . ' display=' . ($gridItem->style['display'] ?? 'block'));
         if (empty($gridItem->children) || $gridItem->w <= 0) {
-            error_log('[DIAG_ADJUST] SKIP: w=' . $gridItem->w . ' children=' . count($gridItem->children));
             return;
         }
 
