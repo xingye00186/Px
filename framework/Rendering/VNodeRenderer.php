@@ -446,6 +446,7 @@ class VNodeRenderer
             return null;
         }
 
+        $noFill = ($bg === null);
         $drawColor = ($bg !== null) ? $bg : 0;
         $borderRadius = $style['borderRadius'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
@@ -506,7 +507,7 @@ class VNodeRenderer
 
             $elements = [];
             if ($hasBg || $hasBorder) {
-                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'cursor' => $cursor];
+                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'noFill' => $noFill, 'cursor' => $cursor];
             }
             if ($bgImageEl !== null) {
                 $elements[] = $bgImageEl;
@@ -543,6 +544,7 @@ class VNodeRenderer
                 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,
                 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,
                 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,
+                'noFill' => $noFill,
                 'cursor' => $cursor,
             ];
         }

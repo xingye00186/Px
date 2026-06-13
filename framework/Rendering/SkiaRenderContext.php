@@ -82,19 +82,22 @@ class SkiaRenderContext extends RenderContext
                 $radius = $el['borderRadius'] ?? 0;
                 $opacity = $el['opacity'] ?? 1.0;
                 $color = $el['color'] ?? 0;
+                $noFill = $el['noFill'] ?? false;
                 if ($radius > 0 && $opacity >= 1.0) {
-                    sk_draw_round_rect(
-                        $el['x'] ?? 0, $el['y'] ?? 0,
-                        $el['w'] ?? 0, $el['h'] ?? 0,
-                        $radius, $color
-                    );
-                } elseif ($opacity < 1.0) {
+                    if (!$noFill) {
+                        sk_draw_round_rect(
+                            $el['x'] ?? 0, $el['y'] ?? 0,
+                            $el['w'] ?? 0, $el['h'] ?? 0,
+                            $radius, $color
+                        );
+                    }
+                } elseif (!$noFill && $opacity < 1.0) {
                     sk_alpha_fill_rect(
                         $el['x'] ?? 0, $el['y'] ?? 0,
                         $el['w'] ?? 0, $el['h'] ?? 0,
                         $color, $opacity
                     );
-                } else {
+                } elseif (!$noFill) {
                     $this->fillRect(
                         $el['x'] ?? 0, $el['y'] ?? 0,
                         $el['w'] ?? 0, $el['h'] ?? 0, $color

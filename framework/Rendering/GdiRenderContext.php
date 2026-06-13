@@ -65,6 +65,7 @@ class GdiRenderContext extends RenderContext
                 $radius = $el['borderRadius'] ?? 0;
                 $opacity = $el['opacity'] ?? 1.0;
                 $color = $el['color'] ?? 0;
+                $noFill = $el['noFill'] ?? false;
 
                 // 预读边框信息
                 $borderWidth = $el['borderWidth'] ?? 0;
@@ -73,15 +74,16 @@ class GdiRenderContext extends RenderContext
                 $bb = $el['borderBottomWidth'] ?? $borderWidth;
                 $bl = $el['borderLeftWidth'] ?? $borderWidth;
                 $br = $el['borderRightWidth'] ?? $borderWidth;
+                // CSS 标准：border color 超出作用域前统一初始化
+                $btc = $el['borderTopColor'] ?? $borderColor;
+                $bbc = $el['borderBottomColor'] ?? $borderColor;
+                $blc = $el['borderLeftColor'] ?? $borderColor;
+                $brc = $el['borderRightColor'] ?? $borderColor;
 
                 if ($radius > 0 && $opacity >= 1.0) {
                     if ($bt > 0 || $bb > 0 || $bl > 0 || $br > 0) {
-                        // 圆角 + 边框：双层圆角矩形，外层=边框色，内层=背景色
+                        // 圆角 + 边框：外层=边框色（不依赖背景，始终绘制）
                         // CSS Backgrounds and Borders §5.1: 内层圆角 = max(0, R - borderWidth)
-                        $btc = $el['borderTopColor'] ?? $borderColor;
-                        $bbc = $el['borderBottomColor'] ?? $borderColor;
-                        $blc = $el['borderLeftColor'] ?? $borderColor;
-                        $brc = $el['borderRightColor'] ?? $borderColor;
                         $bwMax = max($bt, $bb, $bl, $br);
                         $innerRadius = max(0, $radius - $bwMax);
                         // 外层：边框色填充（全圆角矩形）
@@ -91,31 +93,36 @@ class GdiRenderContext extends RenderContext
                             $el['w'] ?? 0, $el['h'] ?? 0,
                             $radius, $btc
                         );
-                        // 内层：背景色填充（缩进 borderWidth）
-                        vue_draw_round_rect(
-                            $this->hdc,
-                            ($el['x'] ?? 0) + $bl,
-                            ($el['y'] ?? 0) + $bt,
-                            ($el['w'] ?? 0) - $bl - $br,
-                            ($el['h'] ?? 0) - $bt - $bb,
-                            $innerRadius, $color
-                        );
+                        // 内层：背景色填充（缩进 borderWidth）—— 仅在有背景时绘制
+                        if (!$noFill) {
+                            vue_draw_round_rect(
+                                $this->hdc,
+                                ($el['x'] ?? 0) + $bl,
+                                ($el['y'] ?? 0) + $bt,
+                                ($el['w'] ?? 0) - $bl - $br,
+                                ($el['h'] ?? 0) - $bt - $bb,
+                                $innerRadius, $color
+                            );
+                        }
                     } else {
-                        vue_draw_round_rect(
-                            $this->hdc,
-                            $el['x'] ?? 0, $el['y'] ?? 0,
-                            $el['w'] ?? 0, $el['h'] ?? 0,
-                            $radius, $color
-                        );
+                        // 无边框 + 圆角：仅在背景存在时画
+                        if (!$noFill) {
+                            vue_draw_round_rect(
+                                $this->hdc,
+                                $el['x'] ?? 0, $el['y'] ?? 0,
+                                $el['w'] ?? 0, $el['h'] ?? 0,
+                                $radius, $color
+                            );
+                        }
                     }
-                } elseif ($opacity < 1.0) {
+                } elseif (!$noFill && $opacity < 1.0) {
                     vue_alpha_fill_rect(
                         $this->hdc,
                         $el['x'] ?? 0, $el['y'] ?? 0,
                         $el['w'] ?? 0, $el['h'] ?? 0,
                         $color, $opacity
                     );
-                } else {
+                } elseif (!$noFill) {
                     $this->fillRect(
                         $el['x'] ?? 0, $el['y'] ?? 0,
                         $el['w'] ?? 0, $el['h'] ?? 0, $color
