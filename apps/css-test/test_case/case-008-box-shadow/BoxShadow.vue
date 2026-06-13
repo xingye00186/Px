@@ -1,20 +1,20 @@
 <template>
-  <div class="bx-card" style="width:720px;box-sizing:border-box;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative"><div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+  <div class="bx-card" style="width:720px;box-sizing:border-box;margin:20px auto;background:#fff;border-radius:12px;padding:28px;position:relative"><div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
     
     <div class="bx-header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
       ? 盒模型 ・ 阴影测试
     </div>
     <div class="bx-grid" style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:24px;">
-      <div class="s-box" style="width:160px;height:100px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:10px;box-shadow:0 4px 15px rgba(102,126,234,.4);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;">
+      <div class="s-box" style="width:160px;height:100px;background:#667eea;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;">
         小阴影
       </div>
-      <div class="s-box" style="width:160px;height:100px;background:linear-gradient(135deg,#f093fb,#f5576c);border-radius:10px;box-shadow:0 8px 30px rgba(245,87,108,.45);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;">
+      <div class="s-box" style="width:160px;height:100px;background:#f093fb;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;">
         大阴影
       </div>
-      <div class="s-box" style="width:160px;height:100px;background:linear-gradient(135deg,#4facfe,#00f2fe);border-radius:50%;box-shadow:0 0 20px rgba(79,172,254,.5);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;">
+      <div class="s-box" style="width:160px;height:100px;background:#4facfe;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;">
         发光
       </div>
-      <div class="s-box" style="width:160px;height:100px;background:linear-gradient(135deg,#43e97b,#38f9d7);border-radius:10px;box-shadow:inset 0 2px 8px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-size:13px;color:#333;">
+      <div class="s-box" style="width:160px;height:100px;background:#43e97b;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#333;">
         内阴影
       </div>
     </div>
