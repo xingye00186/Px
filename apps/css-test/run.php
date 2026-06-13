@@ -123,10 +123,13 @@ register_shutdown_function(function() use ($PROCESS_REGISTRY, &$buildProc, $buil
 
 // 启动时清理：之前崩溃残留的进程 + 过期注册表
 cleanupProcessRegistry($PROCESS_REGISTRY);
-// cl.exe/link.exe 残留会锁定 .cc/.obj/.exe 文件，导致下次 build 报 File Locked
+// 清理孤儿进程：上一轮被硬杀后残留的子进程
+// cl.exe/link.exe 会锁定 .cc/.obj/.exe 导致下次 build 报 File Locked
+// msedge.exe 会占用端口/句柄
 @exec('taskkill /f /im swoole_compiler*.exe 2>nul');
 @exec('taskkill /f /im cl.exe 2>nul');
 @exec('taskkill /f /im link.exe 2>nul');
+@exec('taskkill /f /im msedge.exe 2>nul');
 $FRAMEWORK_DIR = $ROOT_DIR;
 $CASE_DIR = $APP_DIR . '/test_case';
 $COMPONENTS_DIR = $APP_DIR . '/components';
@@ -1028,8 +1031,8 @@ html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 
 /**
  * Run screenshot comparison for a css-test case:
- *   1. Open wrapper HTML in Edge (baseline) → base_line_pic.png
- *   2. Capture EXE screenshot → captured_screenshot.png
+ *   1. Open wrapper HTML in Edge (baseline) → browser_ref_{timestamp}.png
+ *   2. Capture EXE screenshot → exe_capture_{timestamp}.png
  *   3. Pixel-level comparison with anchor crop + auto-align
  *
  * Returns ['pass'=>bool, 'diffPercent'=>float, 'issues'=>array].
@@ -1050,9 +1053,10 @@ function runScreenshotComparison(
         mkdir($logDir, 0777, true);
     }
 
-    $baselineFile = $logDir . '/base_line_pic.png';
-    $capturedFile = $logDir . '/captured_screenshot.png';
-    $diffFile = $logDir . '/screenshot_diff.png';
+    $timestamp = date('Ymd_His');
+    $baselineFile = $logDir . "/browser_ref_{$timestamp}.png";
+    $capturedFile = $logDir . "/exe_capture_{$timestamp}.png";
+    $diffFile     = $logDir . "/diff_{$timestamp}.png";
 
     // ---- Step 1: Baseline screenshot (wrapper HTML with anchors via Edge) ----
     if ($updateBaseline || !file_exists($baselineFile)) {
