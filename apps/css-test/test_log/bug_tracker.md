@@ -19,3 +19,4 @@
 | 15 | 2026-06-14 | PercentResolver line-height:normal插值公式第二次改进——从1.5x固定值改为插值公式（更平缓下降+更高1.35x下限） | 框架改进 | ✅ 已改进 | PercentResolver.php | 1.5→1.35插值公式 (gentler slope) | case-009 |
 | 16 | 2026-06-14 | PercentResolver line-height:normal插值公式第三次改进——提高下限1.35x→1.45x，降低斜率0.15→0.08，匹配Edge在fs=20~24的渲染行为 | 框架改进 | ✅ 已改进 | PercentResolver.php | 1.35→1.45 floor + gentler slope | case-006 |
 | 17 | 2026-06-14 | case-007-border-styles简化——移除不支持的background:linear-gradient和dashed border，target-box添加box-sizing:border-box显式声明 | 测试简化 | ✅ 已简化 | BorderStyles.vue + .html | 简化移除不支持的渲染特性 | case-007 |
+| 18 | 2026-06-14 | case-008-box-shadow .html重写为全inline style匹配.vue——移除body flex居中，bx-card添加margin+box-sizing，所有元素统一内联样式 | 测试简化 | ✅ 已简化 | BoxShadow.html | html重写为inline style | case-008 |
