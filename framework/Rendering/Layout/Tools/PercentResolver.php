@@ -100,14 +100,16 @@ class PercentResolver
                 // 但我们只有一层 parentStyle，因此这里用 normal 处理
             }
             // CSS 2.2 §10.8.1: 'normal' 的 line-height 由 UA 决定
-            // 从浏览器实测数据推导的公式：
-            //   fontSize=14 → 1.5x (≈21px)  ✔ 匹配 Chrome
-            //   fontSize=20 → 1.15x (≈23px) ✔ 匹配 Chrome
-            // 在 14px~24px 之间插值，更大字号也维持在 ~1.15x
+            // 从浏览器实测数据推导的插值公式（第二次改进）：
+            //   fontSize=14 → 1.5x (≈21px)  ✔ 匹配 Chrome/Edge
+            //   fontSize=16 → 1.45x (≈23px) ✔
+            //   fontSize=20 → 1.35x (≈27px) ✔ 接近 Edge ~1.45x(29px)，差 2px
+            //   fontSize=24+ → 1.35x 下限
+            // 在 14px~24px 之间线性插值，更大字号保持 1.35x 下限
             if ($fontSize <= 14) {
                 return (int)($fontSize * 1.5);
             }
-            $ratio = 1.5 - 0.35 * min($fontSize - 14, 10) / 6.0;
+            $ratio = max(1.35, 1.5 - 0.15 * min($fontSize - 14, 10) / 6.0);
             return (int)($fontSize * $ratio);
         }
         // String ending in 'px' — extract pixel value
