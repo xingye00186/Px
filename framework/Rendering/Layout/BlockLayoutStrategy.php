@@ -90,13 +90,23 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
 
 
-        // ── CSS 2.1 §10.3.3: 正常流块级元素未显式宽度时，填充包含块内容宽度（减去自身padding+border）──
+        // ── CSS 2.1 §10.3.3: 正常流块级元素未显式宽度时，填充包含块内容宽度 ──
+        // CSS Box Model: $node->w 统一存储 CSS 'width' 属性的计算值
+        //   content-box: CSS 'width' = content width
+        //   border-box:  CSS 'width' = total width (含 padding+border)
         $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         if (!$hasExplicitW && $width === 0 && $ctx->parent !== null) {
             $autoPadL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
             $autoPadR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
             $autoBw = (int)($style['borderWidth'] ?? 0);
-            $autoW = max(0, $parentW - $autoPadL - $autoPadR - $autoBw * 2);
+            $boxSizing = $style['boxSizing'] ?? 'content-box';
+            if ($boxSizing === 'border-box') {
+                // border-box: CSS 'width' = total width = parent content width
+                $autoW = max(0, $parentW);
+            } else {
+                // content-box: CSS 'width' = content width = parent content - own padding - own border
+                $autoW = max(0, $parentW - $autoPadL - $autoPadR - $autoBw * 2);
+            }
             $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $autoW, true));
             $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
         }
@@ -206,7 +216,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $autoPadL = (int)($childStyle['paddingLeft'] ?? $childStyle['padding'] ?? 0);
                         $autoPadR = (int)($childStyle['paddingRight'] ?? $childStyle['padding'] ?? 0);
                         $autoBw = (int)($childStyle['borderWidth'] ?? 0);
-                        $autoW = max(0, (int)$containerW - $autoPadL - $autoPadR - $autoBw * 2);
+                        $childBoxSizing = $childStyle['boxSizing'] ?? 'content-box';
+                        if ($childBoxSizing === 'border-box') {
+                            // border-box: CSS 'width' = total width = container content width
+                            $autoW = max(0, (int)$containerW);
+                        } else {
+                            // content-box: CSS 'width' = content width = container content - own padding - own border
+                            $autoW = max(0, (int)$containerW - $autoPadL - $autoPadR - $autoBw * 2);
+                        }
                         $child->w = $autoW;
                         $child->style['width'] = $autoW;
                         $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
@@ -382,7 +399,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             $autoPadL = (int)($cs['paddingLeft'] ?? $cs['padding'] ?? 0);
                             $autoPadR = (int)($cs['paddingRight'] ?? $cs['padding'] ?? 0);
                             $autoBw = (int)($cs['borderWidth'] ?? 0);
-                            $autoW = max(0, $contentW - $autoPadL - $autoPadR - $autoBw * 2);
+                            $childBoxSizing = $cs['boxSizing'] ?? 'content-box';
+                            if ($childBoxSizing === 'border-box') {
+                                // border-box: CSS 'width' = total width = contentW
+                                $autoW = max(0, $contentW);
+                            } else {
+                                // content-box: CSS 'width' = content width = contentW - own padding - own border
+                                $autoW = max(0, $contentW - $autoPadL - $autoPadR - $autoBw * 2);
+                            }
                             $child->w = (int)max(0, (int)PercentResolver::resolveMinMax($cs, $autoW, true));
                             $child->visualW = PercentResolver::resolveVisualW($cs, $child->w);
                         }
@@ -626,7 +650,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 $autoPadL = (int)($childStyle['paddingLeft'] ?? $childStyle['padding'] ?? 0);
                 $autoPadR = (int)($childStyle['paddingRight'] ?? $childStyle['padding'] ?? 0);
                 $autoBw = (int)($childStyle['borderWidth'] ?? 0);
-                $autoW = max(0, (int)$containerW - $autoPadL - $autoPadR - $autoBw * 2);
+                $childBoxSizing = $childStyle['boxSizing'] ?? 'content-box';
+                if ($childBoxSizing === 'border-box') {
+                    // border-box: CSS 'width' = total width = container content width
+                    $autoW = max(0, (int)$containerW);
+                } else {
+                    // content-box: CSS 'width' = content width = container content - own padding - own border
+                    $autoW = max(0, (int)$containerW - $autoPadL - $autoPadR - $autoBw * 2);
+                }
                 $child->w = $autoW;
                 $child->style['width'] = $autoW;
                 $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
