@@ -426,7 +426,11 @@ class VNodeRenderer
         if ($h <= 0) $h = 32;
 
         $bg = $style['bg'] ?? null;
-        $hasBorder = ($style['borderWidth'] ?? 0) > 0;
+        $hasBorder = ($style['borderWidth'] ?? 0) > 0
+            || ($style['borderTopWidth'] ?? 0) > 0
+            || ($style['borderRightWidth'] ?? 0) > 0
+            || ($style['borderBottomWidth'] ?? 0) > 0
+            || ($style['borderLeftWidth'] ?? 0) > 0;
         $hasBg = $bg !== null;
 
         // ── background-image 支持 ──
@@ -561,7 +565,17 @@ class VNodeRenderer
     private function makeSpanElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $fontSize = $style['fontSize'] ?? 16;
-        $color    = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
+        // CSS 继承：若当前节点无 fg，沿父链查找
+        $color = $style['fg'] ?? ($style['color'] ?? null);
+        if ($color === null) {
+            $p = $node->parent;
+            while ($p !== null) {
+                $pc = $p->style['fg'] ?? null;
+                if ($pc !== null) { $color = $pc; break; }
+                $p = $p->parent;
+            }
+        }
+        if ($color === null) $color = 0xFFFFFF;
         $bold     = $style['bold'] ?? 0;
         $align    = $props['align'] ?? ($style['textAlign'] ?? 'start');
         // CSS Text Module Level 3 §7: text-align is inherited

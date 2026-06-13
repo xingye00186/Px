@@ -65,13 +65,49 @@ class GdiRenderContext extends RenderContext
                 $radius = $el['borderRadius'] ?? 0;
                 $opacity = $el['opacity'] ?? 1.0;
                 $color = $el['color'] ?? 0;
+
+                // 预读边框信息
+                $borderWidth = $el['borderWidth'] ?? 0;
+                $borderColor = $el['borderColor'] ?? 0;
+                $bt = $el['borderTopWidth'] ?? $borderWidth;
+                $bb = $el['borderBottomWidth'] ?? $borderWidth;
+                $bl = $el['borderLeftWidth'] ?? $borderWidth;
+                $br = $el['borderRightWidth'] ?? $borderWidth;
+
                 if ($radius > 0 && $opacity >= 1.0) {
-                    vue_draw_round_rect(
-                        $this->hdc,
-                        $el['x'] ?? 0, $el['y'] ?? 0,
-                        $el['w'] ?? 0, $el['h'] ?? 0,
-                        $radius, $color
-                    );
+                    if ($bt > 0 || $bb > 0 || $bl > 0 || $br > 0) {
+                        // 圆角 + 边框：双层圆角矩形，外层=边框色，内层=背景色
+                        // CSS Backgrounds and Borders §5.1: 内层圆角 = max(0, R - borderWidth)
+                        $btc = $el['borderTopColor'] ?? $borderColor;
+                        $bbc = $el['borderBottomColor'] ?? $borderColor;
+                        $blc = $el['borderLeftColor'] ?? $borderColor;
+                        $brc = $el['borderRightColor'] ?? $borderColor;
+                        $bwMax = max($bt, $bb, $bl, $br);
+                        $innerRadius = max(0, $radius - $bwMax);
+                        // 外层：边框色填充（全圆角矩形）
+                        vue_draw_round_rect(
+                            $this->hdc,
+                            $el['x'] ?? 0, $el['y'] ?? 0,
+                            $el['w'] ?? 0, $el['h'] ?? 0,
+                            $radius, $btc
+                        );
+                        // 内层：背景色填充（缩进 borderWidth）
+                        vue_draw_round_rect(
+                            $this->hdc,
+                            ($el['x'] ?? 0) + $bl,
+                            ($el['y'] ?? 0) + $bt,
+                            ($el['w'] ?? 0) - $bl - $br,
+                            ($el['h'] ?? 0) - $bt - $bb,
+                            $innerRadius, $color
+                        );
+                    } else {
+                        vue_draw_round_rect(
+                            $this->hdc,
+                            $el['x'] ?? 0, $el['y'] ?? 0,
+                            $el['w'] ?? 0, $el['h'] ?? 0,
+                            $radius, $color
+                        );
+                    }
                 } elseif ($opacity < 1.0) {
                     vue_alpha_fill_rect(
                         $this->hdc,
@@ -85,19 +121,9 @@ class GdiRenderContext extends RenderContext
                         $el['w'] ?? 0, $el['h'] ?? 0, $color
                     );
                 }
-                // Draw border outline (skip when rounded corners)
-                // CSS 2.2 §8.6: per-side border widths and colors
-                $borderWidth = $el['borderWidth'] ?? 0;
-                $borderColor = $el['borderColor'] ?? 0;
-                $bt = $el['borderTopWidth'] ?? $borderWidth;
-                $bb = $el['borderBottomWidth'] ?? $borderWidth;
-                $bl = $el['borderLeftWidth'] ?? $borderWidth;
-                $br = $el['borderRightWidth'] ?? $borderWidth;
-                $btc = $el['borderTopColor'] ?? $borderColor;
-                $bbc = $el['borderBottomColor'] ?? $borderColor;
-                $blc = $el['borderLeftColor'] ?? $borderColor;
-                $brc = $el['borderRightColor'] ?? $borderColor;
-                if (($bt > 0 || $bb > 0 || $bl > 0 || $br > 0) && $radius === 0) {
+                // Draw border outline (only when not already drawn by two-round-rect above)
+                // css-test: 若 radius > 0 且有 border，已在双层圆角中完成边框绘制
+                if ($radius === 0 && ($bt > 0 || $bb > 0 || $bl > 0 || $br > 0)) {
                     $bx = $el['x'] ?? 0;
                     $by = $el['y'] ?? 0;
                     $bw = $el['w'] ?? 0;

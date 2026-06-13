@@ -705,7 +705,9 @@ class Application
         ];
         // 包含关键样式属性用于对比
         $styleKeys = ['bg', 'fg', 'fontSize', 'bold', 'borderWidth', 'borderColor',
-            'borderLeftWidth', 'borderLeftColor', 'borderRadius', 'textAlign',
+            'borderLeftWidth', 'borderLeftColor', 'borderTopWidth', 'borderTopColor',
+            'borderRightWidth', 'borderRightColor', 'borderBottomWidth', 'borderBottomColor',
+            'borderRadius', 'textAlign',
             'lineHeight', 'whiteSpace', 'fontFamily', 'opacity',
             'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
             'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
