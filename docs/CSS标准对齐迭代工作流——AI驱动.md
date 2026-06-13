@@ -948,3 +948,21 @@ class TestContent extends ReactiveComponent {}
   <!-- 与 .vue <template> 一致的内容 -->
 </body></html>
 ```
+
+> **⚠️ 样本偏差警示 — .vue 与 .html 结构必须严格一致**
+>
+> 浏览器参考数据（`browser_ref_level_0.json`）从 `.html` 生成，引擎布局快照从 `.vue` 编译的 exe 生成。
+> 若两者 DOM 结构不一致，对比将产生系统性偏差，表现为**全用例一致的 dx/dw**（如 dw=90）。
+>
+> **历史案例**：case-001/case-002 的 `.html` 含 `<div class="sandbox" style="padding:20px">` 包装层，
+> 但 `.vue` 直接以根元素开始，导致引擎缺少 20px padding 包装 → 引擎元素宽度比浏览器宽 90px。
+>
+> **检查清单**（每次新建 test_case 必须核对）：
+> 1. `.vue` 的 `<template>` 根元素与 `.html` 的 `<body>` 内第一个元素结构一致
+> 2. 所有 CSS 类名和 inline style 在两者间一致
+> 3. 嵌套层级（额外 wrapper 层）完全对齐
+> 4. `buildCssTestWrapper()` 注入的全局 CSS（`* { margin:0; padding:0; }` 等）在引擎端有无匹配项
+> 5. 使用 `php run.php --case=case-NNN --update-baseline` 后检查 dw 是否接近 0
+>
+> **修复流程**：优先修改 `.vue` 对齐 `.html`（`<template>` 是源），然后重新编译并 `--update-baseline`。
+> 切勿仅修改 `.html` 而不更新 `.vue`，否则引擎与浏览器参考的偏差将持续存在。
