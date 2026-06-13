@@ -218,11 +218,11 @@ if ($Mode -eq 'exe') {
 
     # ── 3. 启动应用 ──
     $proc = Start-Process $exePath -PassThru
-    Start-Sleep 3
+    Start-Sleep 5
 
     # ── 4. 查找窗口 ──
     $hwnd = [IntPtr]::Zero
-    for ($i = 0; $i -lt 15 -and $hwnd -eq [IntPtr]::Zero; $i++) {
+    for ($i = 0; $i -lt 20 -and $hwnd -eq [IntPtr]::Zero; $i++) {
         $hwnd = Find-ProcessWindow -ProcessId $proc.Id
         if ($hwnd -eq [IntPtr]::Zero) { Start-Sleep 1 }
     }
@@ -232,11 +232,13 @@ if ($Mode -eq 'exe') {
         exit 2
     }
 
-    # ── 5. 置前 ──
-    [Win32]::ShowWindow($hwnd, 1) | Out-Null
-    Start-Sleep 0.5
-    [Win32]::SetForegroundWindow($hwnd) | Out-Null
-    Start-Sleep 1
+    # ── 5. 置前（多次确保窗口在最上层，不被控制台遮挡）──
+    for ($i = 0; $i -lt 3; $i++) {
+        [Win32]::ShowWindow($hwnd, 1) | Out-Null
+        Start-Sleep 0.5
+        [Win32]::SetForegroundWindow($hwnd) | Out-Null
+        Start-Sleep 1
+    }
 
     # ── 6. 截图 ──
     New-Item -ItemType Directory -Force -Path (Split-Path $OutputPath -Parent) | Out-Null
@@ -256,7 +258,7 @@ if ($Mode -eq 'exe') {
 
     # ── 1. 打开 HTML（默认浏览器）──
     Start-Process $HtmlPath
-    Start-Sleep 3
+    Start-Sleep 5
 
     # ── 2. 按标题查找浏览器窗口 ──
     if ($SearchTitle -ne '') {
@@ -265,7 +267,7 @@ if ($Mode -eq 'exe') {
         $searchTitle = "__PX_BASELINE_$AppName"
     }
     $hwnd = [IntPtr]::Zero
-    for ($i = 0; $i -lt 20 -and $hwnd -eq [IntPtr]::Zero; $i++) {
+    for ($i = 0; $i -lt 30 -and $hwnd -eq [IntPtr]::Zero; $i++) {
         $hwnd = Find-WindowByTitle -TitleSubstring $searchTitle
         if ($hwnd -eq [IntPtr]::Zero) { Start-Sleep 1 }
     }
@@ -293,14 +295,16 @@ if ($Mode -eq 'exe') {
         $targetW = $TargetWidth + $frameW
         $targetH = $TargetHeight + $frameH
         [Win32]::MoveWindow($hwnd, 100, 100, $targetW, $targetH, $true) | Out-Null
-        Start-Sleep 1
+        Start-Sleep 1.5
     }
 
-    # ── 4. 置前 ──
-    [Win32]::ShowWindow($hwnd, 1) | Out-Null
-    Start-Sleep 0.5
-    [Win32]::SetForegroundWindow($hwnd) | Out-Null
-    Start-Sleep 0.5
+    # ── 4. 置前（多次确保浏览器窗口在最上层）──
+    for ($i = 0; $i -lt 3; $i++) {
+        [Win32]::ShowWindow($hwnd, 1) | Out-Null
+        Start-Sleep 0.5
+        [Win32]::SetForegroundWindow($hwnd) | Out-Null
+        Start-Sleep 1
+    }
 
     # ── 5. 截图（客户端区域）──
     New-Item -ItemType Directory -Force -Path (Split-Path $OutputPath -Parent) | Out-Null
@@ -308,7 +312,7 @@ if ($Mode -eq 'exe') {
 
     # ── 6. 关闭标签页 (Ctrl+W) ──
     [System.Windows.Forms.SendKeys]::SendWait("^w")
-    Start-Sleep 1
+    Start-Sleep 1.5
 }
 
 if ($result) { exit 0 } else { Write-Error "screenshot failed"; exit 3 }

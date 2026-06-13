@@ -409,9 +409,9 @@ if !errorlevel! neq 0 (
 
 if exist "%APP_DIR%\project.dep.yml" (
     echo   [OK] Using project.dep.yml
-    set "DEP_PROJECT=apps\%APP_NAME%\project.dep.yml"
+    set "DEP_PROJECT=%APP_DIR%\project.dep.yml"
 ) else (
-    set "DEP_PROJECT=apps\%APP_NAME%\project.yml"
+    set "DEP_PROJECT=%APP_DIR%\project.yml"
 )
 echo.
 goto :step2
@@ -434,6 +434,13 @@ if !errorlevel! neq 0 (
     echo   Please run from Developer Command Prompt for VS
     exit /b 3
 )
+
+:: Clean stale PDB files from previous builds (avoid C1041)
+echo   Cleaning old vc*.pdb from previous builds ...
+for %%f in ("%FRAMEWORK_ROOT%\vc*.pdb") do del /f /q "%%f" 2>nul
+echo   [OK] Old PDB files cleaned
+
+
 
 :: Ensure php8embed.lib is in compiler root (swoole_compiler only searches its own directory)
 if not exist "%COMPILER_DIR%\php8embed.lib" (
