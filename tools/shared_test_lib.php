@@ -140,14 +140,21 @@ function flattenEngineTree(?array $node, int $depth = 0, ?array $containerOffset
         $relY = $nodeY;
     }
 
+    // Use visualW/visualH when available (they include padding+border,
+    // matching browser's getBoundingClientRect which reports full box size)
+    $useW = (isset($node['visualW']) && $node['visualW'] > ($node['w'] ?? 0))
+        ? $node['visualW'] : ($node['w'] ?? 0);
+    $useH = (isset($node['visualH']) && $node['visualH'] > ($node['h'] ?? 0))
+        ? $node['visualH'] : ($node['h'] ?? 0);
+
     $item = [
         'type' => $node['type'] ?? 'unknown',
         'x' => $nodeX,
         'y' => $nodeY,
         'relX' => $relX,
         'relY' => $relY,
-        'w' => $node['w'] ?? 0,
-        'h' => $node['h'] ?? 0,
+        'w' => $useW,
+        'h' => $useH,
         'content' => str_replace("\r\n", "\n", $node['content'] ?? ''),
         'style' => $style,
         'depth' => $depth,
@@ -270,13 +277,14 @@ function compareElement(string $levelName, string $text, array $bEl, array $eEl,
     $posInfo = implode(' ', $posParts);
 
     $bStyles = $bEl['styles'];
-    $eStyles = $eEl['style'];
+    $eStyles = $eEl['style'] ?? [];
     $propMatches = [];
+    $skippedInEngine = [];  // 追踪引擎缺失的检查项
 
     foreach ($checks as $check) {
         [$eProp, $bProp, $type, $label] = $check;
         $eVal = null;
-        if (!isset($eStyles[$eProp])) continue;
+        if (!isset($eStyles[$eProp])) { $skippedInEngine[] = $label; continue; }
         $eVal = $eStyles[$eProp];
         if ($eVal === null) continue;
         if (!isset($bStyles[$bProp])) continue;
@@ -392,7 +400,7 @@ function compareElement(string $levelName, string $text, array $bEl, array $eEl,
         }
     }
 
-    return ['passed' => $allPassed, 'styleDiffs' => $styleDiffs, 'posInfo' => $posInfo, 'propMatches' => $propMatches];
+    return ['passed' => $allPassed, 'styleDiffs' => $styleDiffs, 'posInfo' => $posInfo, 'propMatches' => $propMatches, 'skippedInEngine' => $skippedInEngine];
 }
 
 function truncateText(string $text, int $maxLen = 50): string {
@@ -1100,13 +1108,15 @@ function injectSearchTitle(string $htmlPath, string $testId): ?string {
  * @return bool 成功/失败
  */
 function captureBrowserScreenshot(string $htmlPath, string $projectRoot, string $outputPath, string &$testId = '', int $targetW = 0, int $targetH = 0): bool {
+    if (!file_exists($htmlPath)) {
+        echo "  [FAIL] HTML 不存在: $htmlPath\n";
+        return false;
+    }
+
+    // ---- 浏览器窗口模式（通过 PowerShell）----
     $psScript = $projectRoot . '/tools/capture_screenshot.ps1';
     if (!file_exists($psScript)) {
         echo "  [FAIL] 截图脚本不存在: $psScript\n";
-        return false;
-    }
-    if (!file_exists($htmlPath)) {
-        echo "  [FAIL] HTML 不存在: $htmlPath\n";
         return false;
     }
 
@@ -1621,6 +1631,7 @@ function compareElementEnhanced(string $category, string $label, array $bEl, arr
     // 3. 样式对比（仅文本元素）
     $styleDiffs = [];
     $propMatches = [];
+    $skippedInEngine = [];
     if (empty($options['noTextStyle'])) {
         $bStyles = $bEl['styles'] ?? [];
         $eStyles = $eEl['style'] ?? [];
@@ -1628,7 +1639,7 @@ function compareElementEnhanced(string $category, string $label, array $bEl, arr
         foreach ($checks as $check) {
             [$eProp, $bProp, $type, $label] = $check;
             $eVal = null;
-            if (!isset($eStyles[$eProp])) continue;
+            if (!isset($eStyles[$eProp])) { $skippedInEngine[] = $label; continue; }
             $eVal = $eStyles[$eProp];
             if ($eVal === null) continue;
             if (!isset($bStyles[$bProp])) continue;
@@ -1751,6 +1762,7 @@ function compareElementEnhanced(string $category, string $label, array $bEl, arr
         'failReasons' => $failReasons,
         'styleDiffs' => $styleDiffs,
         'propMatches' => $propMatches,
+        'skippedInEngine' => $skippedInEngine,
     ];
 }
 
@@ -1773,6 +1785,13 @@ function flattenEngineTreeAll(?array $node, int $depth = 0, ?array $parentPos = 
     $style = $node['style'] ?? [];
     $content = str_replace("\r\n", "\n", $node['content'] ?? '');
 
+    // Use visualW/visualH when available (they include padding+border,
+    // matching browser's getBoundingClientRect which reports full box size)
+    $useW = (isset($node['visualW']) && $node['visualW'] > ($node['w'] ?? 0))
+        ? $node['visualW'] : ($node['w'] ?? 0);
+    $useH = (isset($node['visualH']) && $node['visualH'] > ($node['h'] ?? 0))
+        ? $node['visualH'] : ($node['h'] ?? 0);
+
     $result[] = [
         'idx' => $myIdx,
         'type' => $node['type'] ?? 'unknown',
@@ -1780,8 +1799,8 @@ function flattenEngineTreeAll(?array $node, int $depth = 0, ?array $parentPos = 
         'y' => $nodeY,
         'relX' => $relX,
         'relY' => $relY,
-        'w' => $node['w'] ?? 0,
-        'h' => $node['h'] ?? 0,
+        'w' => $useW,
+        'h' => $useH,
         'visualW' => $node['visualW'] ?? 0,
         'visualH' => $node['visualH'] ?? 0,
         'content' => $content,

@@ -41,9 +41,10 @@ require_once __DIR__ . '/../../tools/shared_test_lib.php';
 $APP_DIR  = __DIR__;
 $ROOT_DIR = dirname($APP_DIR, 2);  // d:\Px
 
-// ── 进程安全：中断保护 + 清理孤儿 swoole_compiler 进程 ──
+// ── 进程安全：中断保护 + 进程注册表（Ctrl+C 查表清理）──
 $buildProc = null;
 $buildLockFile = $ROOT_DIR . '/.build.lock';
+$PROCESS_REGISTRY = $ROOT_DIR . '/.process_registry.json';
 
 /**
  * 获取编译锁（确保同一时间只有一个 swoole_compiler 在跑）
@@ -73,14 +74,59 @@ function releaseBuildLock(string $lockFile): void {
     }
 }
 
-register_shutdown_function(function() use (&$buildProc, $buildLockFile) {
+/**
+ * 注册子进程 PID 到进程注册表（Ctrl+C 中断时查表清理）。
+ */
+function registerProcess(string $registryFile, int $pid, string $name): void {
+    $entries = [];
+    if (file_exists($registryFile)) {
+        $entries = json_decode(@file_get_contents($registryFile), true) ?? [];
+    }
+    $entries[] = ['pid' => $pid, 'name' => $name, 'time' => time()];
+    @file_put_contents($registryFile, json_encode($entries, JSON_PRETTY_PRINT));
+}
+
+/**
+ * 清理进程注册表：kill 所有注册的子进程（含进程树），删除注册表文件。
+ */
+function cleanupProcessRegistry(string $registryFile): void {
+    if (!file_exists($registryFile)) return;
+    $entries = json_decode(@file_get_contents($registryFile), true) ?? [];
+    foreach ($entries as $entry) {
+        $pid = $entry['pid'] ?? 0;
+        if ($pid > 0) {
+            @exec("taskkill /f /t /pid {$pid} 2>nul");
+        }
+    }
+    @unlink($registryFile);
+}
+
+// ---- Ctrl+C 安全清理（Windows PHP CLI 原生支持）----
+if (function_exists('sapi_windows_set_ctrl_handler')) {
+    sapi_windows_set_ctrl_handler(function() use ($PROCESS_REGISTRY, &$buildProc) {
+        if (is_resource($buildProc)) {
+            @proc_terminate($buildProc, 9);
+        }
+        cleanupProcessRegistry($PROCESS_REGISTRY);
+        exit(1);
+    });
+}
+
+// ---- 正常退出/异常时的清理 ----
+register_shutdown_function(function() use ($PROCESS_REGISTRY, &$buildProc, $buildLockFile) {
+    cleanupProcessRegistry($PROCESS_REGISTRY);
     if (is_resource($buildProc)) {
-        @proc_terminate($buildProc, 9);  // 强制终止进程树
+        @proc_terminate($buildProc, 9);
     }
     releaseBuildLock($buildLockFile);
 });
-// 清理之前可能残留的孤儿编译进程（用户 Ctrl+C 中断后）
+
+// 启动时清理：之前崩溃残留的进程 + 过期注册表
+cleanupProcessRegistry($PROCESS_REGISTRY);
+// cl.exe/link.exe 残留会锁定 .cc/.obj/.exe 文件，导致下次 build 报 File Locked
 @exec('taskkill /f /im swoole_compiler*.exe 2>nul');
+@exec('taskkill /f /im cl.exe 2>nul');
+@exec('taskkill /f /im link.exe 2>nul');
 $FRAMEWORK_DIR = $ROOT_DIR;
 $CASE_DIR = $APP_DIR . '/test_case';
 $COMPONENTS_DIR = $APP_DIR . '/components';
@@ -325,6 +371,10 @@ foreach ($cases as $caseDir) {
         $proc = @proc_open($cmd, $desc, $pipes, $ROOT_DIR);
         if (is_resource($proc)) {
             $buildProc = $proc;
+            $status = @proc_get_status($proc);
+            if ($status && $status['pid'] > 0) {
+                registerProcess($PROCESS_REGISTRY, $status['pid'], 'build.bat');
+            }
             fclose($pipes[0]);
             $buildOut = stream_get_contents($pipes[1]);
             $buildErr = stream_get_contents($pipes[2]);
@@ -337,6 +387,10 @@ foreach ($cases as $caseDir) {
             $proc2 = @proc_open($fallbackCmd, $desc, $pipes2, $ROOT_DIR);
             if (is_resource($proc2)) {
                 $buildProc = $proc2;
+                $status2 = @proc_get_status($proc2);
+                if ($status2 && $status2['pid'] > 0) {
+                    registerProcess($PROCESS_REGISTRY, $status2['pid'], 'build.bat');
+                }
                 fclose($pipes2[0]);
                 $buildOut = stream_get_contents($pipes2[1]);
                 $buildErr = stream_get_contents($pipes2[2]);
@@ -668,7 +722,7 @@ foreach ($cases as $caseDir) {
     // --------------------------------------------------
     // Step I: 截图像素对比
     // --------------------------------------------------
-    if ($caseOk && $buildOk && $doScreenshot) {
+    if ($buildOk && $doScreenshot) {
         $targetExe = $caseDir . '/bin/' . $caseName . '.exe';
         $htmlFiles = glob($caseDir . '/*.html');
         $htmlPath = $htmlFiles[0] ?? null;
@@ -967,11 +1021,7 @@ html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
   CSS Test Sandbox — <span style="color:#333;font-weight:bold;">Test Case</span>
 </div>
 <div style="padding:20px;">
-<div style="position:relative;">
-<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
 ' . $bodyContent . '
-<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div>
-</div>
 </div>
 </div>
 </body>
@@ -1030,8 +1080,22 @@ function runScreenshotComparison(
         $tmpPath = $tmpDir . '/' . $caseName . '_baseline.html';
         file_put_contents($tmpPath, $wrapperHtml);
 
-        echo "    [I] 基线截图: captureBrowserScreenshot ...\n";
-        $ok = captureBrowserScreenshot($tmpPath, $projectRoot, $baselineFile);
+        echo "    [I] 基线截图: Edge headless ...\n";
+        $realPath = realpath($tmpPath);
+        $urlPath = str_replace('\\', '/', $realPath);
+        $fileUrl = 'file:///' . $urlPath;
+
+        $cmd = sprintf('"%s" --headless --disable-gpu --window-size=1600,800 --screenshot="%s" "%s" 2>&1',
+            $edgePath, $baselineFile, $fileUrl);
+        exec($cmd, $ssOutput, $ssRet);
+
+        $ok = file_exists($baselineFile) && filesize($baselineFile) > 100;
+        if ($ok) {
+            $img = getimagesize($baselineFile);
+            $actualW = $img[0] ?? 0;
+            $actualH = $img[1] ?? 0;
+            echo "    [OK] Edge headless 截图: {$actualW}x{$actualH}\n";
+        }
 
         @unlink($tmpPath);
         @rmdir($tmpDir);
@@ -1127,11 +1191,7 @@ html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
   CSS Test Sandbox — <span style="color:#333;font-weight:bold;">Test Case</span>
 </div>
 <div style="padding:20px;">
-<div style="position:relative;">
-<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
 ' . $bodyContent . '
-<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div>
-</div>
 </div>
 </div>
 <textarea id="layout-output" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;resize:none;border:none;padding:0;margin:0"></textarea>
@@ -1397,6 +1457,15 @@ function compareEngineWithBrowser(string $engineLayoutPath, string $browserRefPa
             } else {
                 $result['propStats'][$pName]['fail']++;
             }
+        }
+
+        // 引擎缺失的检查项警告
+        global $VERBOSE;
+        if (!empty($compResult['skippedInEngine']) && $VERBOSE) {
+            $result['issues'][] = [
+                'type' => 'SKIP',
+                'msg' => "\"$text\": 引擎未导出属性: " . implode(', ', array_unique($compResult['skippedInEngine'])),
+            ];
         }
     }
 
