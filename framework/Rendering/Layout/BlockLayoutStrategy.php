@@ -11,13 +11,13 @@ use Px\Rendering\Layout\Tools\PercentResolver;
 use Px\Rendering\Layout\Tools\ScrollHelper;
 
 /**
- * BlockLayoutStrategy — Block 布局策略
+ * BlockLayoutStrategy �?Block 布局策略
  *
- * 处理 display:block（包括 inline-block）和 scroll-container 的布局。
+ * 处理 display:block（包�?inline-block）和 scroll-container 的布局�?
  * 负责:
- * - 尺寸解析（百分比 + min/max + 文本测量）
- * - 按 position 分发到 normal flow 或 absolute/fixed
- * - Scroll container post-processing（auto-stack + contentHeight + clamp）
+ * - 尺寸解析（百分比 + min/max + 文本测量�?
+ * - �?position 分发�?normal flow �?absolute/fixed
+ * - Scroll container post-processing（auto-stack + contentHeight + clamp�?
  * - Normal flow auto-stack
  */
 class BlockLayoutStrategy implements LayoutStrategyInterface
@@ -38,11 +38,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
     }
 
     /**
-     * Block layout — normal flow (static/relative).
+     * Block layout �?normal flow (static/relative).
      *
      * 统一尺寸解析（百分比 + min/max + 文本测量），
-     * 然后调用 resolveNormalFlow 定位。
-     * 最后处理 scroll container post-processing + auto-width/height。
+     * 然后调用 resolveNormalFlow 定位�?
+     * 最后处�?scroll container post-processing + auto-width/height�?
      */
     public function resolveBlockLayout(
         RenderNode    $node,
@@ -50,8 +50,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         array         $style
     ): void
     {
-        error_log('[DIAG_BLOCK] enter resolveBlockLayout type=' . $node->type . ' display=' . ($style['display'] ?? '?'));
-
         $left = (int)($style['left'] ?? 0);
 
         $top = (int)($style['top'] ?? 0);
@@ -75,10 +73,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
 
 
-        // flex:1 已移至 flex 布局专用路径 (Task D)
+        // flex:1 已移�?flex 布局专用路径 (Task D)
 
 
-        // ── 应用 min/max 约束到尺寸（在子节点递归之前，确保 parent->w/h 立即可用）──
+        // ── 应用 min/max 约束到尺寸（在子节点递归之前，确�?parent->w/h 立即可用）──
         $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $width, true));
 
         // Debug: span h before min/max
@@ -92,10 +90,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
 
 
-        // ── CSS 规范: 正常流块级元素未显式设置宽度时，应填充包含块内容宽度 ──
+        // ── CSS 2.1 §10.3.3: 正常流块级元素未显式宽度时，填充包含块内容宽度（减去自身padding+border）──
         $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         if (!$hasExplicitW && $width === 0 && $ctx->parent !== null) {
-            $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $parentW, true));
+            $autoPadL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
+            $autoPadR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
+            $autoBw = (int)($style['borderWidth'] ?? 0);
+            $autoW = max(0, $parentW - $autoPadL - $autoPadR - $autoBw * 2);
+            $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $autoW, true));
             $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
         }
 
@@ -145,7 +147,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
-            // A1 重构: childOffsetY 不再减 scrollTop，偏移由 VNodeRenderer 在绘制层处理
+            // A1 重构: childOffsetY 不再�?scrollTop，偏移由 VNodeRenderer 在绘制层处理
             $childOffsetY = $node->y + $paddingTop;
 
             $this->finalizeScrollContainer($node, $ctx, $style, $childOffsetY, $paddingLeft, $paddingRight);
@@ -175,7 +177,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                 $containerW = PercentResolver::resolveContentWidth($node->style, $node->w);
 
-                // CSS 2.2 §8.3.1: 跟踪上一个可折叠兄弟的 margin-bottom
+                // CSS 2.2 §8.3.1: 跟踪上一个可折叠兄弟�?margin-bottom
                 $prevMarginBottom = 0;
                 $prevCollapsible = false;
 
@@ -184,7 +186,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     $childPosition = $childStyle['position'] ?? 'static';
 
-                    // Skip absolute/fixed children — they don't participate in normal flow
+                    // Skip absolute/fixed children �?they don't participate in normal flow
                     if ($childPosition === 'absolute' || $childPosition === 'fixed') {
                         continue;
                     }
@@ -193,15 +195,17 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     $mBottom = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginBottom', 'marginBottomPercent', $containerW);
 
-                    // Auto-width: inherit from container padding area (skip if percentage width)
+                    // CSS 2.1 §10.3.3: Auto-width = containerW - child's own padding - child's own border
 
                     $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
 
                     if (!$hasExplicitWidth || $child->w === 0) {
-                        $child->w = max(0, (int)$containerW);
-
-                        $child->style['width'] = $containerW;
-
+                        $autoPadL = (int)($childStyle['paddingLeft'] ?? $childStyle['padding'] ?? 0);
+                        $autoPadR = (int)($childStyle['paddingRight'] ?? $childStyle['padding'] ?? 0);
+                        $autoBw = (int)($childStyle['borderWidth'] ?? 0);
+                        $autoW = max(0, (int)$containerW - $autoPadL - $autoPadR - $autoBw * 2);
+                        $child->w = $autoW;
+                        $child->style['width'] = $autoW;
                         $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
                     }
 
@@ -215,7 +219,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $bd = ($childStyle['fontWeight'] ?? 'normal') === 'bold' || ($childStyle['fontWeight'] ?? 'normal') === '700';
                         $measured = PercentResolver::resolveTextWidth($child->content, $fs, $bd);
                         if ($measured > 0) {
-                            // Block auto-stack children fill parent width — text-measured width only for span/text
+                            // Block auto-stack children fill parent width �?text-measured width only for span/text
                             // Flex items get text-measured width in applyFlexBasis via explicit width check
                             if ($child->type === 'text' || $child->type === 'span') {
                                 $child->w = min($measured, max(0, (int)PercentResolver::resolveMinMax($childStyle, $measured, true)));
@@ -244,7 +248,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     if ($childDisplay === 'flex' || $childDisplay === 'grid') {
                         if (count($child->children) > 0) {
-                            error_log('[DIAG_BLOCK_AUTOSTACK] Re-resolving ' . $childDisplay . ' container w=' . $child->w . ' containerW=' . $containerW);
                             $child->layoutDirty = true;
 
                             foreach ($child->children as $gc) {
@@ -253,11 +256,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                             $childCtx = new LayoutContext($node->x + $paddingLeft, $stackY, $node);
                             $this->resolver->resolveNode($child, $childCtx);
-
-                            error_log('[DIAG_BLOCK_AUTOSTACK] After re-resolve: grid container w=' . $child->w);
-                            if (!empty($child->children)) {
-                                error_log('[DIAG_BLOCK_AUTOSTACK] First grid item w=' . $child->children[0]->w);
-                            }
                         }
                     }
 
@@ -269,12 +267,19 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     $childMR = $childStyle['marginRightAuto'] ?? false;
 
 
-                    if ($childML || $childMR) {
+                    if (($childML || $childMR)) {
+                        $oldX = $child->x;
                         $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
+                        $dx = $child->x - $oldX;
+                        if ($dx !== 0) {
+                            foreach ($child->children as $grandchild) {
+                                ScrollHelper::shiftDescendantsX($grandchild, $dx);
+                            }
+                        }
                     }
 
 
-                    // ── CSS 2.2 §8.3.1: 外边距折叠 ──
+                    // ── CSS 2.2 §8.3.1: 外边距折�?──
                     // 仅在相同 BFC 内的 block 兄弟之间发生
                     $childOverflow = $childStyle['overflow'] ?? $childStyle['overflowY'] ?? 'visible';
                     $createsBFC = ($childDisplay !== 'block')
@@ -285,23 +290,23 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     $oldY = $child->y;
 
                     if ($isCollapsible && $prevCollapsible && $mTop * $prevMarginBottom >= 0) {
-                        // 对于同号边距：折叠结果 = max(positives) + min(negatives)
+                        // 对于同号边距：折叠结�?= max(positives) + min(negatives)
                         $positiveMax = max($prevMarginBottom > 0 ? $prevMarginBottom : 0, $mTop > 0 ? $mTop : 0);
                         $negativeMin = min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0);
                         $collapsed = $positiveMax + $negativeMin;
                         $child->y = $stackY - $prevMarginBottom + $collapsed;
                     } elseif ($isCollapsible && $prevCollapsible) {
-                        // 异号边距（一正一负）：折叠结果 = 直接相加
+                        // 异号边距（一正一负）：折叠结�?= 直接相加
                         $collapsed = $prevMarginBottom + $mTop;
                         $child->y = $stackY - $prevMarginBottom + $collapsed;
                     } else {
                         $child->y = $stackY + $mTop;
                     }
 
-                    // 保存 stack 推进位置（不受 position:relative 偏移影响）
+                    // 保存 stack 推进位置（不�?position:relative 偏移影响�?
                     $stackAdvanceY = $child->y;
 
-                    // position:relative 额外偏移（不推进 stack）
+                    // position:relative 额外偏移（不推进 stack�?
                     if ($childPosition === 'relative') {
                         $child->y += ($childStyle['top'] ?? 0);
                     }
@@ -322,7 +327,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $prevMarginBottom = $mBottom;
                         $prevCollapsible = true;
                     } else {
-                        // 创建新 BFC 的元素阻止外边距折叠穿透
+                        // 创建�?BFC 的元素阻止外边距折叠穿�?
                         $prevMarginBottom = 0;
                         $prevCollapsible = false;
                     }
@@ -363,10 +368,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $cs = $child->style;
 
                         if (!array_key_exists('width', $cs)) {
-                            $child->w = (int)max(0, $contentW);
-
-                            $child->w = (int)max(0, (int)PercentResolver::resolveMinMax($cs, $child->w, true));
-
+                            $autoPadL = (int)($cs['paddingLeft'] ?? $cs['padding'] ?? 0);
+                            $autoPadR = (int)($cs['paddingRight'] ?? $cs['padding'] ?? 0);
+                            $autoBw = (int)($cs['borderWidth'] ?? 0);
+                            $autoW = max(0, $contentW - $autoPadL - $autoPadR - $autoBw * 2);
+                            $child->w = (int)max(0, (int)PercentResolver::resolveMinMax($cs, $autoW, true));
                             $child->visualW = PercentResolver::resolveVisualW($cs, $child->w);
                         }
                     }
@@ -395,7 +401,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
 
             // CSS 2.2 §10.6.3: auto-height = distance from content edge top to last child bottom
-            // $node->y includes paddingTop offset — content area starts at $node->y + $paddingTop
+            // $node->y includes paddingTop offset �?content area starts at $node->y + $paddingTop
             $ahPaddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
             $computedH = max(0, $maxBottom - ($node->y + $ahPaddingTop));
 
@@ -418,7 +424,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 $this->resolver->resolveNode($child, $childCtx);
             }
         }
-        error_log('[DIAG_BLOCK] exit resolveBlockLayout type=' . $node->type);
 
         // Set container's own visualW/visualH
         $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
@@ -428,8 +433,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
     /**
      * Normal flow positioning (static/relative).
      *
-     * static: 完全忽略 left/top/right/bottom，不推进 stack。
-     * relative: left/top 作为附加偏移量（不影响兄弟节点的 stack 位置）。
+     * static: 完全忽略 left/top/right/bottom，不推进 stack�?
+     * relative: left/top 作为附加偏移量（不影响兄弟节点的 stack 位置）�?
      */
     private function resolveNormalFlow(
         RenderNode    $node,
@@ -455,7 +460,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         $node->y = $ctx->parentY + $marginTop;
 
-        // relative: left/top 作为额外偏移（不改变 stack 推进位置）
+        // relative: left/top 作为额外偏移（不改变 stack 推进位置�?
         if ($position === 'relative') {
             $node->x += $left;
 
@@ -475,7 +480,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         $node->y += $translateY;
 
-        // Resolve children recursively (skip absolute/fixed — resolved in second pass after container height is known)
+        // Resolve children recursively (skip absolute/fixed �?resolved in second pass after container height is known)
 
         $childOffsetX = $node->x + $paddingLeft;
 
@@ -518,16 +523,16 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         // ── CSS Overflow Module Level 3 §2.3: 滚动条占用内容区宽度 ──
         // 检测是否需要垂直滚动条，若需要则从容器宽度中减去 scrollbar 宽度
-        // 并重新布局子节点
+        // 并重新布局子节�?
         $overflowY = $node->style['overflowY'] ?? $node->style['overflow'] ?? 'visible';
         $needsVScroll = ($overflowY === 'auto' || $overflowY === 'scroll')
             && $node->contentHeight > $node->h;
 
         if ($needsVScroll) {
-            $scrollbarWidth = 15; // 标准滚动条宽度
+            $scrollbarWidth = 15; // 标准滚动条宽�?
             $newContainerW = max(20, $containerW - $scrollbarWidth);
             if ($newContainerW < $containerW) {
-                // 重新布局子节点（使用缩短后的宽度）
+                // 重新布局子节点（使用缩短后的宽度�?
                 $this->autoStackChildren($node, $childOffsetY, $newContainerW);
                 // 重新计算 contentHeight
                 $node->contentHeight = $this->calcContentHeight($node, $childOffsetY);
@@ -584,11 +589,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $mTop = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginTop', 'marginTopPercent', $containerW);
             $mBottom = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginBottom', 'marginBottomPercent', $containerW);
 
-            // Auto-width: inherit from container
+            // CSS 2.1 §10.3.3: Auto-width = containerW - child's own padding - child's own border
             $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
             if (!$hasExplicitWidth || $child->w === 0) {
-                $child->w = max(0, (int)$containerW);
-                $child->style['width'] = $containerW;
+                $autoPadL = (int)($childStyle['paddingLeft'] ?? $childStyle['padding'] ?? 0);
+                $autoPadR = (int)($childStyle['paddingRight'] ?? $childStyle['padding'] ?? 0);
+                $autoBw = (int)($childStyle['borderWidth'] ?? 0);
+                $autoW = max(0, (int)$containerW - $autoPadL - $autoPadR - $autoBw * 2);
+                $child->w = $autoW;
+                $child->style['width'] = $autoW;
                 $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
             }
 
@@ -598,13 +607,20 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             // ── Auto-margin centering (CSS 2.2 §10.3.3) ──
             $childML = $childStyle['marginLeftAuto'] ?? false;
             $childMR = $childStyle['marginRightAuto'] ?? false;
-            if ($childML || $childMR) {
+            if (($childML || $childMR)) {
+                $oldX = $child->x;
                 $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
+                $dx = $child->x - $oldX;
+                if ($dx !== 0) {
+                    foreach ($child->children as $grandchild) {
+                        ScrollHelper::shiftDescendantsX($grandchild, $dx);
+                    }
+                }
             }
 
             $oldY = $child->y;
 
-            // CSS 2.2 §8.3.1: 外边距折叠
+            // CSS 2.2 §8.3.1: 外边距折�?
             $childDisplay = $childStyle['display'] ?? 'block';
             $childOverflow = $childStyle['overflow'] ?? $childStyle['overflowY'] ?? 'visible';
             $createsBFC = ($childDisplay !== 'block')

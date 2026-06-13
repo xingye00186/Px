@@ -748,15 +748,12 @@ class Application
         $this->debugFrameNumber++;
         $frame = $this->debugFrameNumber;
 
-        error_log('[DIAG_RENDER:1] rebuildVNodeTree start');
         $this->rebuildVNodeTree();
-        error_log('[DIAG_RENDER:2] rebuildVNodeTree done');
 
         // getRootRenderNodes() = 顶层 #root 所有旧子节点，作为 candidates 传递给 #root handler
         $oldRootChildren = $this->renderTreeManager->getRootRenderNodes();
         $candidates = !empty($oldRootChildren) ? $oldRootChildren : null;
 
-        error_log('[DIAG_RENDER:3] updateFromVNode start, oldRootChildren=' . count($oldRootChildren));
         // VNode → RenderNode 转换 + bind 值同步（type+key 匹配复用）
         // 传递 'app' 作为根组件的 groupId（VNode.groupId 不再写入，依赖参数传播）
         $rootRenderNode = $this->renderTreeManager->updateFromVNode(
@@ -767,21 +764,15 @@ class Application
             $candidates,
             'app'
         );
-        error_log('[DIAG_RENDER:4] updateFromVNode done');
         if ($rootRenderNode === null) {
-            error_log("[DIAG_RENDER] rootRenderNode is NULL - SKIP");
             return;
         }
 
-        error_log('[DIAG_RENDER:5] LayoutResolver::resolve start');
         // LayoutResolver 处理 RenderNode（利用 layoutDirty 增量）
         $this->layoutResolver->resolve($rootRenderNode);
-        error_log('[DIAG_RENDER:6] LayoutResolver::resolve done');
 
-        error_log('[DIAG_RENDER:7] VNodeRenderer::render start');
         // VNodeRenderer 处理 RenderNode（利用 paintDirty 增量）
         $this->renderer->render($rootRenderNode);
-        error_log('[DIAG_RENDER:8] VNodeRenderer::render done');
     }
 
     /**

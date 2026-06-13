@@ -50,7 +50,6 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         array         $style
     ): void
     {
-        error_log('[DIAG_FLEX] enter resolveFlexLayout type=' . $node->type . ' w=' . ((int)($style['width'] ?? 0)) . ' h=' . ((int)($style['height'] ?? 0)));
         // Container position
 
         $left = (int)($style['left'] ?? 0);
@@ -186,17 +185,21 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         }
 
         $children = [];
+        $absoluteChildren = [];
 
         foreach ($node->children as $child) {
             $childPosition = $child->style['position'] ?? 'static';
 
+            // Defer absolute/fixed children — container dimensions not yet known
+            if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                $absoluteChildren[] = $child;
+                continue;
+            }
+
             $childCtx = new LayoutContext($node->x + $paddingLeft - $scrollShiftX, $node->y + $paddingTop - $scrollShiftY, $node);
             $this->resolver->resolveNode($child, $childCtx);
 
-            // position:absolute/fixed children are removed from flex flow
-            if ($childPosition !== 'absolute' && $childPosition !== 'fixed') {
-                $children[] = $child;
-            }
+            $children[] = $child;
         }
 
         if (count($children) === 0) {
@@ -204,7 +207,6 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             if ($node->isScrollContainer) {
                 $node->contentHeight = 0;
             }
-            error_log('[DIAG_FLEX_EC] early_return type=' . $node->type . ' h=' . $node->h);
             return;
         }
 
@@ -1178,14 +1180,18 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $node->h = (int)max($node->h, $maxBottom - $node->y + $paddingBottom);
             }
         }
-        // Trace children heights for root container
-        error_log('[DIAG_FLEX_H] exit type=' . $node->type . ' w=' . $node->w . ' h=' . $node->h . ' explicitH=' . ((array_key_exists('height', $style) ? $style['height'] : 'none')));
+
+        // ── Second pass: resolve absolute/fixed children now that container dimensions are final ──
+        foreach ($absoluteChildren as $child) {
+            $childCtx = new LayoutContext($node->x + $paddingLeft - $scrollShiftX, $node->y + $paddingTop - $scrollShiftY, $node);
+            $this->resolver->resolveNode($child, $childCtx);
+        }
+
+
 
         // Set container's own visualW/visualH
         $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
         $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
-
-        error_log('[DIAG_FLEX] exit resolveFlexLayout type=' . $node->type);
     }
 
 

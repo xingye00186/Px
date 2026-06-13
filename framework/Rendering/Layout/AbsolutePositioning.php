@@ -290,7 +290,11 @@ class AbsolutePositioning implements AbsoluteStrategy
 
             $half = (int)($remaining / 2);
 
+            // Undo previously applied auto margin offset to prevent accumulation on re-resolution
+            $prevAutoY = $node->style['_marginAutoOffsetY'] ?? 0;
+            $node->y -= $prevAutoY;
             $node->y += $half;
+            $node->style['_marginAutoOffsetY'] = $half;
 
         }
     }
