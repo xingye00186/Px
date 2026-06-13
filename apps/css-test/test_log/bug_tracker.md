@@ -17,3 +17,4 @@
 | 13 | 2026-06-14 | box-shadow CSS属性——引擎解析但不渲染，case-008简化移除 | 渲染限制 | ✅ 已简化 | — | 移除bx-card的box-shadow，仅测试基础盒模型 | case-008 |
 | 14 | 2026-06-14 | outline CSS属性——引擎解析outlineWidth/outlineStyle/outlineColor但不渲染，case-009简化替换outline为border | 渲染限制 | ✅ 已简化 | — | 替换o-box的outline为border，移除box-shadow | case-009 |
 | 15 | 2026-06-14 | PercentResolver line-height:normal插值公式第二次改进——从1.5x固定值改为插值公式（更平缓下降+更高1.35x下限） | 框架改进 | ✅ 已改进 | PercentResolver.php | 1.5→1.35插值公式 (gentler slope) | case-009 |
+| 16 | 2026-06-14 | PercentResolver line-height:normal插值公式第三次改进——提高下限1.35x→1.45x，降低斜率0.15→0.08，匹配Edge在fs=20~24的渲染行为 | 框架改进 | ✅ 已改进 | PercentResolver.php | 1.35→1.45 floor + gentler slope | case-006 |
