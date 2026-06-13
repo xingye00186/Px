@@ -171,9 +171,12 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             $paddingRight = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
 
+            // CSS 2.2 §8.4: padding box 起始于 border 内侧
+            $borderTop = (int)($style['borderTopWidth'] ?? $style['borderWidth'] ?? 0);
+
 
             if (count($node->children) > 0) {
-                $stackY = $node->y + $paddingTop;
+                $stackY = $node->y + $borderTop + $paddingTop;
 
                 $containerW = PercentResolver::resolveContentWidth($node->style, $node->w);
 
@@ -477,7 +480,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
         $paddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
-
+        
+        // CSS 2.2 §8.4: padding box 起始于 border 内侧
+        $borderTop = (int)($style['borderTopWidth'] ?? $style['borderWidth'] ?? 0);
+        $borderLeft = (int)($style['borderLeftWidth'] ?? $style['borderWidth'] ?? 0);
+        
         // Base position = parent content area
 
         $node->x = $ctx->parentX + $marginLeft;
@@ -506,9 +513,9 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         // Resolve children recursively (skip absolute/fixed �?resolved in second pass after container height is known)
 
-        $childOffsetX = $node->x + $paddingLeft;
-
-        $childOffsetY = $node->y + $paddingTop;
+        $childOffsetX = $node->x + $borderLeft + $paddingLeft;
+        
+        $childOffsetY = $node->y + $borderTop + $paddingTop;
 
         foreach ($node->children as $child) {
             $childPosition = $child->style['position'] ?? 'static';
