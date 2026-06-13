@@ -702,6 +702,7 @@ class Application
             'layer' => $node->layer,
             'isScrollContainer' => $node->isScrollContainer,
             'content' => $node->content,
+            'textRenderInfo' => $node->textRenderInfo,
         ];
         // 包含关键样式属性用于对比
         $styleKeys = ['bg', 'fg', 'fontSize', 'bold', 'borderWidth', 'borderColor',

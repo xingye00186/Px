@@ -1622,6 +1622,63 @@ function compareEngineWithBrowser(string $engineLayoutPath, string $browserRefPa
         $result['skip']++;
     }
 
+    // ---- Phase D: 垂直居中对齐验证（基于 textRenderInfo）----
+    // 验证规则：当父容器 display=flex 且 alignItems=center 时，
+    // 子元素文本的视觉中心应与父容器 content area 中心对齐。
+    $centeringChecks = 0;
+    foreach ($engineAll as $eIdx => $eEl) {
+        $tr = $eEl['textRenderInfo'] ?? null;
+        if ($tr === null) continue;
+
+        // 查找父容器
+        $parentIdx = $eEl['parentIdx'] ?? null;
+        if ($parentIdx === null) continue;
+        $parent = null;
+        foreach ($engineAll as $candidate) {
+            if (($candidate['idx'] ?? -1) === $parentIdx) {
+                $parent = $candidate;
+                break;
+            }
+        }
+        if ($parent === null) continue;
+
+        $parentStyle = $parent['style'] ?? [];
+        $parentDisplay = $parentStyle['display'] ?? '';
+        $parentAlignItems = $parentStyle['alignItems'] ?? '';
+        if (!($parentDisplay === 'flex' || $parentDisplay === 'inline-flex')) continue;
+        if ($parentAlignItems !== 'center') continue;
+
+        $centeringChecks++;
+
+        // 计算父容器 content area 垂直中心
+        $pPadTop = $parentStyle['paddingTop'] ?? 0;
+        $pPadBottom = $parentStyle['paddingBottom'] ?? 0;
+        $pBorderTop = $parentStyle['borderTopWidth'] ?? 0;
+        $pBorderBottom = $parentStyle['borderBottomWidth'] ?? 0;
+        $contentTop = $parent['y'] + $pBorderTop + $pPadTop;
+        $contentBottom = $parent['y'] + $parent['visualH'] - $pBorderBottom - $pPadBottom;
+        $containerCenter = ($contentTop + $contentBottom) / 2.0;
+
+        // 计算文本视觉中心
+        $textCenter = $tr['y'] + $tr['textHeight'] / 2.0;
+
+        $diff = abs($textCenter - $containerCenter);
+        if ($diff <= 1.0) {
+            $result['pass']++;
+        } else {
+            $result['fail']++;
+            $content = $eEl['content'] ?? '';
+            $result['issues'][] = [
+                'type' => 'CENTER',
+                'msg' => "'$content' 未垂直居中: textCenter={$textCenter} containerCenter={$containerCenter} (差{$diff}px) 容器y={$parent['y']} h={$parent['visualH']} textY={$tr['y']} textH={$tr['textHeight']}"
+            ];
+        }
+    }
+
+    if ($centeringChecks === 0) {
+        $result['skip']++;
+    }
+
     return $result;
 }
 

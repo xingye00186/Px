@@ -293,6 +293,23 @@ class VNodeRenderer
     }
 
     /**
+     * 测量文本总高度（ascent + descent），用于垂直居中。
+     * 优先使用 C++ sk_measure_text_height 精确测量，退化使用 fontSize + 2 估算。
+     */
+    private static function measureTextHeight(int $fontSize, bool $bold): int
+    {
+        static $hasNative = null;
+        if ($hasNative === null) {
+            $hasNative = function_exists('\\sk_measure_text_height');
+        }
+        if ($hasNative) {
+            $h = (int)\sk_measure_text_height($fontSize, $bold ? 1 : 0);
+            if ($h > 0) return $h;
+        }
+        return $fontSize + 2;
+    }
+
+    /**
      * 获取当前活跃的组件实例（用于解析 bind 值）。
      * RenderNode 树无 #component 节点，故始终返回根组件。
      */
@@ -516,7 +533,8 @@ class VNodeRenderer
             $alignItems = $style['alignItems'] ?? 'stretch';
             if (($display === 'flex' || $display === 'inline-flex') && $alignItems === 'center') {
                 $contentH = max(0, $h - $borderTopWidth - $borderBottomWidth - ($style['paddingTop'] ?? 0) - ($style['paddingBottom'] ?? 0));
-                $textHeight = $fontSize + 2;  // 近似文本高度(font metrics ≈ fontSize + 2px)
+                // 精确测量文本总高度（ascent + descent），确保视觉居中
+                $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
                 if ($contentH > $textHeight) {
                     $textY = $contentY + (int)(($contentH - $textHeight) / 2);
                 }
@@ -539,6 +557,14 @@ class VNodeRenderer
                 'decorationThickness' => $style['textDecorationThickness'] ?? 0,
                 'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
                 'textWidth' => self::measureTextWidth($text, $fontSize, (bool)$bold)];
+
+            // 存储文本渲染位置信息（用于 layout dump 验证垂直居中）
+            $node->textRenderInfo = [
+                'x' => $textX,
+                'y' => $textY,
+                'textHeight' => $textHeight,
+                'textWidth' => $textWidth,
+            ];
 
             if (count($elements) === 1) {
                 return $elements[0];
@@ -700,6 +726,18 @@ class VNodeRenderer
                 $y = $y + (int)(($containerH - $fontSize) / 2);
             }
         }
+
+        // 存储文本渲染位置信息（用于 layout dump 验证垂直居中）
+        if (!isset($textWidth)) {
+            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
+        }
+        $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
+        $node->textRenderInfo = [
+            'x' => $x,
+            'y' => $y,
+            'textHeight' => $textHeight,
+            'textWidth' => $textWidth,
+        ];
 
         return [
             'type' => 'text', 'text' => $text,

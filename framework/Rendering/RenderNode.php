@@ -133,6 +133,16 @@ class RenderNode
     /** 子 RenderNode 数组 */
     public array $children = [];
 
+    // ── 文本渲染位置（由 VNodeRenderer 在绘制时填充，用于布局导出验证）──
+
+    /**
+     * 文本渲染位置信息，用于 layout dump 验证文本垂直居中。
+     * 格式: ['x'=>int, 'y'=>int, 'textHeight'=>int, 'textWidth'=>int]
+     * 其中 y 为 text-top 坐标，textHeight 为精确测量的文本总高度(ascent+descent)。
+     * 注意: 这是绘制时的逻辑坐标（包含滚动偏移），与布局坐标不一致时需自行调整。
+     */
+    public ?array $textRenderInfo = null;
+
     // ── 组件关联 ─────────────────────────────────────────
 
     /** 所属组件 ID（用于事件路由，从 sourceVNode.groupId 复制） */
