@@ -1,15 +1,12 @@
 <?php
 /**
- * run.php — CSS Test Sandbox 动态测试沙盒编排器
+ * run.php — CSS Test Sandbox 动态测试编排器 (动态组件模式)
  *
- * 遍历 test_case/ 下的每个测试用例，执行：
- *   入栈 → 编译 → 验证 → 浏览器对比 → 出栈
+ * 使用 sfc-compiler 的 <component :is> 动态组件功能，一次构建所有测试用例：
+ *   构建 → 遍历每个用例（--case=xxx --dump-layout）→ 验证 → 浏览器对比
  *
- * 入栈: 将 test_case/case-xxx/CaseXxx.vue 部署为 components/TestContent.vue
- * 编译: 清空 gen/ → 调用 build.bat css-test
- * 验证: --dump-layout + --dump-layout-after-frames=N 多帧稳定性检测
- * 浏览器对比: Edge headless 渲染 .html → 逐元素位置+样式对比 + 锚点验证
- * 出栈: 清理 components/TestContent.vue → 准备下一个用例
+ * 不再需要入栈/出栈模式，sfc-compiler 自动扫描 test_case/ 目录编译所有组件。
+ * 运行时通过 --case=xxx 指定要渲染的测试用例（kebab-case 目录名）。
  *
  * 锚点可见性强制规范：
  *   所有测试用例必须保证 TL 锚点（洋红 #FF00FF）和 BR 锚点（青色 #00FFFF）
@@ -292,6 +289,78 @@ $doBrowserRef = $BROWSER_REF_AVAILABLE && !$SKIP_BROWSER_REF;
 $doScreenshot = !$SKIP_SCREENSHOT;
 $_PX_RUN_START = microtime(true);
 
+// ============================================================
+// 构建阶段 — 一次构建所有测试用例 (动态组件模式)
+// ============================================================
+$buildOverallPass = false;
+if (!$SKIP_BUILD) {
+    echo "\n========================================\n";
+    echo "  Build Phase — 一次构建\n";
+    echo "========================================\n";
+
+    if (!acquireBuildLock($buildLockFile)) {
+        echo "  ❌ 编译锁冲突\n";
+        exit(1);
+    }
+
+    $buildExit = -1;
+    $buildOut  = '';
+    $cmd = sprintf('cd /d "%s" && "%s\\build.bat" css-test 2>&1', $ROOT_DIR, $ROOT_DIR);
+    $desc = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+    $proc = @proc_open($cmd, $desc, $pipes, $ROOT_DIR);
+    if (is_resource($proc)) {
+        $buildProc = $proc;
+        $status = @proc_get_status($proc);
+        if ($status && $status['pid'] > 0) {
+            registerProcess($PROCESS_REGISTRY, $status['pid'], 'build.bat');
+        }
+        fclose($pipes[0]);
+        $buildOut = stream_get_contents($pipes[1]);
+        $buildErr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $buildExit = proc_close($proc);
+        $buildProc = null;
+    }
+    releaseBuildLock($buildLockFile);
+
+    if ($VERBOSE) {
+        echo "    --- build output ---\n$buildOut\n";
+        if (!empty($buildErr)) echo "    --- stderr ---\n$buildErr\n";
+    }
+
+    if ($buildExit === 0) {
+        $buildOverallPass = true;
+        echo "  ✅ 构建成功\n";
+    } else {
+        echo "  ❌ 构建失败 (exit=$buildExit)\n";
+        if (!$VERBOSE) {
+            $lines = explode("\n", $buildOut);
+            $showLines = array_slice($lines, -20);
+            echo "    Last output:\n";
+            foreach ($showLines as $l) echo "    | $l\n";
+        }
+        exit(1);
+    }
+} else {
+    $buildOverallPass = true;
+    echo "⏭️ 跳过编译 (--skip-build)\n";
+}
+
+if (!file_exists($BIN_DIR . '/css_test.exe')) {
+    echo "[ERROR] exe not found: $BIN_DIR/css_test.exe\n";
+    exit(1);
+}
+
+// ============================================================
+// 5.5 生成 .bat 启动文件（双击直接启动指定 case）
+// ============================================================
+generateCaseBatFiles($CASE_DIR, $BIN_DIR, 'css_test.exe');
+
 foreach ($cases as $caseDir) {
     $caseName = basename($caseDir);
     $caseTitle = str_replace('-', ' ', substr($caseName, 5));
@@ -325,182 +394,23 @@ foreach ($cases as $caseDir) {
     $ssReportLines = [];  // 截图详细报告行
     $caseStart = microtime(true);
 
-    // --------------------------------------------------
-    // Step A: 入栈 — deploy TestContent.vue
-    // --------------------------------------------------
-    echo "  [A] 入栈: $vueFilename → components/TestContent.vue\n";
-    $targetVue = $COMPONENTS_DIR . '/TestContent.vue';
-    if (!copy($caseVue, $targetVue)) {
-        echo "  [FAIL] Cannot copy $vueFilename to components/\n";
-        $reportLines[] = "| $caseName | ❌ | - | - | - | - | 部署失败 | - |";
-        $totalFail++;
-        continue;
-    }
-
-    // Clean gen/ to force regeneration
-    foreach (glob($GEN_DIR . '/*.php') as $genFile) {
-        @unlink($genFile);
-    }
-    // Also delete dep-cache to force SFC recompilation of child components
-    $depCache = $GEN_DIR . '/.dep-cache.json';
-    if (file_exists($depCache)) {
-        @unlink($depCache);
-    }
-
-    // Remove old engine_layout files
-    foreach (glob($APP_DIR . '/engine_layout*.json') as $oldLayout) {
-        @unlink($oldLayout);
-    }
-
-    // --------------------------------------------------
-    // Step B: 编译
-    // --------------------------------------------------
-    if (!$SKIP_BUILD) {
-        echo "  [B] 编译: build.bat css-test ...\n";
-
-        // 获取编译锁，防止并发 swoole_compiler 进程冲突
-        if (!acquireBuildLock($buildLockFile)) {
-            $reportLines[] = "| $caseName | ❌ | - | - | - | - | 编译锁冲突 | - |";
-            $totalFail++;
-            $anyFail = true;
-            continue;
-        }
-
-        $buildExit = -1;
-        $buildOut  = '';
-
-        $cmd = sprintf('cd /d "%s" && "%s\\build.bat" css-test 2>&1', $ROOT_DIR, $ROOT_DIR);
-        $desc = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-        $proc = @proc_open($cmd, $desc, $pipes, $ROOT_DIR);
-        if (is_resource($proc)) {
-            $buildProc = $proc;
-            $status = @proc_get_status($proc);
-            if ($status && $status['pid'] > 0) {
-                registerProcess($PROCESS_REGISTRY, $status['pid'], 'build.bat');
-            }
-            fclose($pipes[0]);
-            $buildOut = stream_get_contents($pipes[1]);
-            $buildErr = stream_get_contents($pipes[2]);
-            fclose($pipes[1]);
-            fclose($pipes[2]);
-            $buildExit = proc_close($proc);
-            $buildProc = null;
-        } else {
-            $fallbackCmd = 'cmd.exe /c "' . $ROOT_DIR . '\\build.bat" css-test';
-            $proc2 = @proc_open($fallbackCmd, $desc, $pipes2, $ROOT_DIR);
-            if (is_resource($proc2)) {
-                $buildProc = $proc2;
-                $status2 = @proc_get_status($proc2);
-                if ($status2 && $status2['pid'] > 0) {
-                    registerProcess($PROCESS_REGISTRY, $status2['pid'], 'build.bat');
-                }
-                fclose($pipes2[0]);
-                $buildOut = stream_get_contents($pipes2[1]);
-                $buildErr = stream_get_contents($pipes2[2]);
-                fclose($pipes2[1]);
-                fclose($pipes2[2]);
-                $buildExit = proc_close($proc2);
-                $buildProc = null;
-            }
-        }
-        releaseBuildLock($buildLockFile);
-
-        if ($VERBOSE) {
-            echo "    --- build output ---\n$buildOut\n";
-            if (!empty($buildErr)) echo "    --- stderr ---\n$buildErr\n";
-        }
-
-        if ($buildExit === 0) {
-            $buildOk = true;
-            echo "  [B] ✅ 构建成功\n";
-        } else {
-            echo "  [B] ❌ 构建失败 (exit=$buildExit)\n";
-            if (!$VERBOSE) {
-                $lines = explode("\n", $buildOut);
-                $showLines = array_slice($lines, -20);
-                echo "    Last output:\n";
-                foreach ($showLines as $l) echo "    | $l\n";
-            }
-            $caseOk = false;
-        }
-    } else {
-        echo "  [B] ⏭️ 跳过编译 (--skip-build)\n";
-        $buildOk = true;
-    }
-
-    // --------------------------------------------------
-    // Step C: 复制 exe 到 test_case/bin/
-    // --------------------------------------------------
-    if ($buildOk) {
-        $sourceExe = $BIN_DIR . '/css_test.exe';
-        $targetDir = $caseDir . '/bin';
-        $targetExe = $targetDir . '/' . $caseName . '.exe';
-
-        if (file_exists($sourceExe)) {
-            if (!is_dir($targetDir)) {
-                mkdir($targetDir, 0777, true);
-            }
-            $allCopied = true;
-            if (!copy($sourceExe, $targetExe)) {
-                echo "  [C] ⚠️  复制 exe 失败\n";
-                $allCopied = false;
-            } else {
-                echo "  [C] ✅ exe → $caseName/bin/\n";
-            }
-
-            foreach (['php8ts.dll', 'phpx.dll'] as $dll) {
-                $dllPath = $BIN_DIR . '/' . $dll;
-                if (file_exists($dllPath)) {
-                    if (!copy($dllPath, $targetDir . '/' . $dll)) {
-                        echo "  [C] ⚠️  复制 $dll 失败\n";
-                        $allCopied = false;
-                    }
-                }
-            }
-            $fontsDir = $BIN_DIR . '/fonts';
-            if (is_dir($fontsDir)) {
-                $targetFonts = $targetDir . '/fonts';
-                if (!is_dir($targetFonts)) mkdir($targetFonts, 0777, true);
-                foreach (glob($fontsDir . '/*.ttf') as $f) {
-                    if (!copy($f, $targetFonts . '/' . basename($f))) {
-                        echo "  [C] ⚠️  复制字体 " . basename($f) . " 失败\n";
-                        $allCopied = false;
-                    }
-                }
-            }
-            if (!$allCopied) {
-                echo "  [C] ⚠️  复制部分文件失败，请检查\n";
-            }
-        } else {
-            echo "  [C] ⚠️  exe not found: $sourceExe (skip 复制)\n";
-        }
-    }
+    // 动态组件: 使用 --case 参数指定测试用例
+    $buildOk = $buildOverallPass;
 
     // --------------------------------------------------
     // Step D: 验证 — dump-layout
     // --------------------------------------------------
     if ($buildOk) {
-        $targetExe = $caseDir . '/bin/' . $caseName . '.exe';
+        $exeToRun = $BIN_DIR . '/css_test.exe';
 
-        $exeToRun = null;
-        if (file_exists($targetExe)) {
-            $exeToRun = $targetExe;
-        } elseif (file_exists($BIN_DIR . '/css_test.exe')) {
-            $exeToRun = $BIN_DIR . '/css_test.exe';
-        }
-
-        if ($exeToRun !== null) {
-            echo "  [D] 导出布局: --dump-layout ...\n";
+        if (file_exists($exeToRun)) {
+            echo "  [D] 导出布局: --case=$caseName --dump-layout ...\n";
             $layoutExit = -1;
             $layoutErr = '';
 
             $caseBinDir = dirname($exeToRun);
             $stderrTmp = sys_get_temp_dir() . '/px_dump_stderr_' . getmypid() . '.txt';
-            $dumpCmd = sprintf('"%s" --dump-layout 2>"%s"', $exeToRun, $stderrTmp);
+            $dumpCmd = sprintf('"%s" --case=%s --dump-layout 2>"%s"', $exeToRun, $caseName, $stderrTmp);
             $layoutOut = '';
             exec($dumpCmd, $layoutOutArr, $layoutExit);
             $layoutOut = implode("\n", $layoutOutArr);
@@ -578,19 +488,18 @@ foreach ($cases as $caseDir) {
     // Step E: 多帧稳定性检测
     // --------------------------------------------------
     if ($buildOk && $layoutExported) {
-        $targetExe = $caseDir . '/bin/' . $caseName . '.exe';
-        $exeToRun = file_exists($targetExe) ? $targetExe : ($BIN_DIR . '/css_test.exe');
+        $exeToRun = $BIN_DIR . '/css_test.exe';
 
         if (file_exists($exeToRun)) {
-            echo "  [E] 多帧稳定性: --dump-layout-after-frames=$FRAMES ...\n";
+            echo "  [E] 多帧稳定性: --case=$caseName --dump-layout-after-frames=$FRAMES ...\n";
 
             $multiFrameFile = $APP_DIR . "/engine_layout_after_{$FRAMES}frames.json";
             $caseBinDir = dirname($exeToRun);
             $mfErr = '';
 
             $stderrTmp = sys_get_temp_dir() . '/px_mf_stderr_' . getmypid() . '.txt';
-            $mfCmd = sprintf('"%s" --dump-layout-after-frames=%d 2>"%s"',
-                $exeToRun, $FRAMES, $stderrTmp);
+            $mfCmd = sprintf('"%s" --case=%s --dump-layout-after-frames=%d 2>"%s"',
+                $exeToRun, $caseName, $FRAMES, $stderrTmp);
             $mfExit = -1;
             $mfOutArr = [];
             exec($mfCmd, $mfOutArr, $mfExit);
@@ -780,15 +689,9 @@ foreach ($cases as $caseDir) {
     else $totalSsSkip++;
 
     // --------------------------------------------------
-    // Step F: 出栈 — cleanup
-    // --------------------------------------------------
-    @unlink($targetVue);
-    echo "  [F] 出栈: 清理 TestContent.vue\n";
-
-    // --------------------------------------------------
     // Report
     // --------------------------------------------------
-    $buildStr    = $SKIP_BUILD ? '⏭️' : ($buildOk ? '✅' : '❌');
+    $buildStr    = '✅';
     $layoutStr   = $layoutExported ? '✅' : '⏭️';
     $stabilityStr = '';
     if (!$layoutExported) {
@@ -986,6 +889,40 @@ function findEdgePath(): ?string
         if (file_exists($p)) return $p;
     }
     return null;
+}
+
+// ============================================================
+// Helper: 为每个 case 目录生成 .bat 启动文件
+// ============================================================
+
+/**
+ * 在每个 case 目录中生成 .bat 文件，双击即可启动 exe 并显示对应 case。
+ * 如果 .bat 已存在且内容相同则跳过（避免不必要的文件写入）。
+ */
+function generateCaseBatFiles(string $caseDir, string $binDir, string $exeName): void
+{
+    $cases = glob($caseDir . '/case-*', GLOB_ONLYDIR);
+    sort($cases);
+    $count = 0;
+    foreach ($cases as $dir) {
+        $caseName = basename($dir);
+        $batContent = "@echo off\r\n";
+        $batContent .= "\"%~dp0..\\..\\bin\\{$exeName}\" --case={$caseName}\r\n";
+        $batContent .= "pause\r\n";
+
+        $batPath = $dir . '/' . $caseName . '.bat';
+        $existing = file_exists($batPath) ? @file_get_contents($batPath) : '';
+        if ($existing !== $batContent) {
+            file_put_contents($batPath, $batContent);
+            echo "  [BAT] {$caseName}.bat\n";
+            $count++;
+        }
+    }
+    if ($count > 0) {
+        echo "  ✅ 生成了 {$count} 个 .bat 启动文件\n";
+    } elseif (count($cases) > 0) {
+        echo "  [BAT] 全部 .bat 已是最新\n";
+    }
 }
 
 // ============================================================

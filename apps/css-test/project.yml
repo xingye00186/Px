@@ -4,6 +4,7 @@ no-console: true
 job: 8
 platform: win32
 entry: main.php
+Px_dynamic_component_file: test_case
 cxx-flags:
   - /utf-8
   - /FS

@@ -4,12 +4,23 @@
       CSS Test Sandbox — <span style="color:#333;font-weight:bold;">Test Case</span>
     </div>
     <div style="padding:20px;">
-      <test-content />
+      <component :is="caseName" />
     </div>
   </div>
 </template>
 <script lang="php">
 class AppComponent extends ReactiveComponent
 {
+    public string $caseName = '';
+
+    public function onMount(): void
+    {
+        global $argv;
+        foreach ($argv as $arg) {
+            if (str_starts_with($arg, '--case=')) {
+                $this->caseName = substr($arg, 7);
+            }
+        }
+    }
 }
 </script>
