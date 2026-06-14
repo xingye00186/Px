@@ -772,6 +772,9 @@ class Application
         $oldRootChildren = $this->renderTreeManager->getRootRenderNodes();
         $candidates = !empty($oldRootChildren) ? $oldRootChildren : null;
 
+        // 保存旧根 RenderNode 供 scrollTop 恢复使用
+        $oldRootRenderNode = $this->renderTreeManager->getRootRenderNode();
+
         // VNode → RenderNode 转换 + bind 值同步（type+key 匹配复用）
         // 传递 'app' 作为根组件的 groupId（VNode.groupId 不再写入，依赖参数传播）
         $rootRenderNode = $this->renderTreeManager->updateFromVNode(
@@ -784,6 +787,13 @@ class Application
         );
         if ($rootRenderNode === null) {
             return;
+        }
+
+        // 恢复 scrollTop：根组件的直属子树（如 App.vue 中的 .case-list）
+        // 不经过 #component handler，因此不受 copyScrollTopFromOld 覆盖。
+        // 此处对根 RenderNode 整体执行一次 scrollTop 恢复。
+        if ($oldRootRenderNode !== null) {
+            $this->renderTreeManager->copyScrollTopFromOld($rootRenderNode, $oldRootRenderNode);
         }
 
         if (Config::get('diag_enabled', false)) {

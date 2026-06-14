@@ -981,7 +981,7 @@ class RenderTreeManager
      *
      * 遍历策略：同时 DFS 两棵树，按位置匹配子节点（与 updateFromVNode 的 key-less 匹配算法一致）。
      */
-    private function copyScrollTopFromOld(RenderNode $newNode, RenderNode $oldNode): void
+    public function copyScrollTopFromOld(RenderNode $newNode, RenderNode $oldNode): void
     {
         if ($oldNode->isScrollContainer) {
             $newNode->scrollTop = $oldNode->scrollTop;
