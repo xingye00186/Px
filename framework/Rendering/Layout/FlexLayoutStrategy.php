@@ -1035,9 +1035,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     $padTsp = (int)($chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0);
                     $padLsp = (int)($chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0);
                     $padRsp = (int)($chTp->style['paddingRight'] ?? $chTp->style['padding'] ?? 0);
+                    $padBsp = (int)($chTp->style['paddingBottom'] ?? $chTp->style['padding'] ?? 0);
                     $coffY = $chTp->y + $padTsp - $chTp->scrollTop;
 
-                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $ctx, $chTp->style, $coffY, $padLsp, $padRsp);
+                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $ctx, $chTp->style, $coffY, $padLsp, $padRsp, $padBsp);
                 }
             }
 

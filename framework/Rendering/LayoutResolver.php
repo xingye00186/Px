@@ -295,7 +295,8 @@ class LayoutResolver
                     }
                 }
 
-                $node->contentHeight = (int)max(0, $maxBottom - $childBaseY);
+                // CSS Overflow: scrollable content area includes paddingBottom
+                $node->contentHeight = (int)max(0, $maxBottom - $childBaseY) + $padB;
 
                 // Clamp scrollTop when content shrinks
 

@@ -171,7 +171,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $this->resolveNormalFlow($node, $ctx, $position, $style, $left, $top);
 
 
-        // ── Scroll container post-processing for flex/grid display modes ──
+        // ── Scroll container post-processing ──
 
         if ($node->isScrollContainer) {
             $paddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
@@ -180,10 +180,12 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
-            // A1 重构: childOffsetY 不再�?scrollTop，偏移由 VNodeRenderer 在绘制层处理
+            $paddingBottom = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
+
+            // A1 重构: childOffsetY 不再加上 scrollTop，偏移由 VNodeRenderer 在绘制层处理
             $childOffsetY = $node->y + $paddingTop;
 
-            $this->finalizeScrollContainer($node, $ctx, $style, $childOffsetY, $paddingLeft, $paddingRight);
+            $this->finalizeScrollContainer($node, $ctx, $style, $childOffsetY, $paddingLeft, $paddingRight, $paddingBottom);
         }
 
 
@@ -614,7 +616,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         array         $style,
         int           $childOffsetY,
         int           $paddingLeft,
-        int           $paddingRight
+        int           $paddingRight,
+        int           $paddingBottom = 0
     ): void
     {
         $containerW = PercentResolver::resolveContentWidth($style, $node->w);
@@ -623,7 +626,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $this->autoStackChildren($node, $childOffsetY, $containerW);
 
         // ── Calculate initial contentHeight ──
-        $node->contentHeight = $this->calcContentHeight($node, $childOffsetY);
+        // CSS Overflow: scrollable content area includes paddingBottom
+        $node->contentHeight = $this->calcContentHeight($node, $childOffsetY) + $paddingBottom;
 
         // ── CSS Overflow Module Level 3 §2.3: 滚动条占用内容区宽度 ──
         // 检测是否需要垂直滚动条，若需要则从容器宽度中减去 scrollbar 宽度
@@ -638,8 +642,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             if ($newContainerW < $containerW) {
                 // 重新布局子节点（使用缩短后的宽度�?
                 $this->autoStackChildren($node, $childOffsetY, $newContainerW);
-                // 重新计算 contentHeight
-                $node->contentHeight = $this->calcContentHeight($node, $childOffsetY);
+                // 重新计算 contentHeight (包含 paddingBottom)
+                $node->contentHeight = $this->calcContentHeight($node, $childOffsetY) + $paddingBottom;
             }
         }
 
