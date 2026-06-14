@@ -76,7 +76,7 @@ class ScrollManager
             if ($scrollNode === null) return;
 
             $delta = $event->getDelta();
-            $scrollAmount = (int)($delta / 40);
+            $scrollAmount = (int)($delta / 3);
 
             if ($event->isShiftDown()) {
                 // 横向滚动
