@@ -68,7 +68,7 @@ function extractCustomTags(string $template): array
 {
     preg_match_all('/<([a-z][a-z0-9-]*)/i', $template, $matches);
     $tags = array_map('strtolower', $matches[1]);
-    return array_values(array_unique(array_diff($tags, NATIVE_HTML_TAGS)));
+    return array_values(array_unique(array_diff($tags, NATIVE_HTML_TAGS, ['component'])));
 }
 
 // ============================================================
@@ -726,6 +726,9 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
 
     // Handle #component placeholder — VNode::hComponent() call
     if ($node->isComponent) {
+        // 检测动态组件: <component :is="expr" /> — componentClass === '__dynamic__'
+        $isDynamic = ($node->componentClass === '__dynamic__');
+
         $propsStr = [];
         if ($node->props !== null) {
             foreach ($node->props as $k => $v) {
@@ -740,6 +743,15 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
         }
         $propsOut = '[' . implode(',', $propsStr) . ']';
         $compPropsOut = generateComponentPropsExpr($node->componentProps ?? []);
+
+        if ($isDynamic) {
+            // 动态组件: 运行时通过 resolveComponent() 解析组件类名
+            $dynamicExpr = $node->props['__dynamicIs'] ?? '';
+            $parser = new ExpressionParser();
+            $parsedExpr = $parser->parse($dynamicExpr, $loopInfo);
+            return "VNode::hComponent(\$this->resolveComponent({$parsedExpr}), {$propsOut}, {$compPropsOut})";
+        }
+
         return "VNode::hComponent('{$node->componentClass}', {$propsOut}, {$compPropsOut})";
     }
 
@@ -1663,6 +1675,19 @@ function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &
             continue;
         }
 
+        // Dynamic component: <component :is="expr" /> — Vue 3 style
+        if ($child->type === 'component' && isset($child->props[':is'])) {
+            $isExpr = $child->props[':is'];
+            unset($child->props[':is']);
+            $child->props['__dynamicIs'] = $isExpr;
+            $child->type = '#component';
+            $child->isComponent = true;
+            $child->componentClass = '__dynamic__';
+            $child->children = null;
+            $resolvedChildren[] = $child;
+            continue;
+        }
+
         // Check for component ref (has __componentFile prop)
         $compFile = $child->props['__componentFile'] ?? '';
         if ($compFile === '') {
@@ -1926,7 +1951,8 @@ function compileOneComponent(
     string $vueFile,
     string $className,
     string $outDir,
-    ComponentRegistry $registry
+    ComponentRegistry $registry,
+    ?string $customComponentName = null  // 动态组件: 覆盖类名(不依赖 .vue 文件名)
 ): bool {
     if (!file_exists($vueFile)) {
         echo "  [SKIP] $className: source file not found\n";
@@ -1934,7 +1960,8 @@ function compileOneComponent(
     }
 
     $baseName = pathinfo($vueFile, PATHINFO_FILENAME);
-    echo "  Compiling: $vueFile\n";
+    $componentClassName = $customComponentName ?? ($baseName . 'Component');
+    echo "  Compiling: $vueFile → {$componentClassName}\n";
 
     $source = file_get_contents($vueFile);
 
@@ -2096,6 +2123,20 @@ class {$className} extends ReactiveComponent
 {$getBindValue}
     }
 {$vForHelpers}
+
+    /**
+     * 解析动态组件: kebab-case → PascalCase 类名
+     * e.g. "case-011-position-absolute" → "Case011PositionAbsoluteComponent"
+     */
+    public function resolveComponent(string \$tag): string
+    {
+        \$parts = explode('-', \$tag);
+        \$className = '';
+        foreach (\$parts as \$p) {
+            \$className .= ucfirst(\$p);
+        }
+        return \$className . 'Component';
+    }
 
     /**
      * 返回编译后的 CSS class styles（从 <style> 块编译）。
@@ -2407,6 +2448,8 @@ if (!empty($projectConfig['component-libraries'])) {
 
 $componentNames = array_keys($componentRegistry->all());
 $baseName = pathinfo($vueFile, PATHINFO_FILENAME);
+$componentClassName = $baseName . 'Component';
+$className = $componentClassName;
 $isRootComponent = (strtolower($baseName) === 'app' || strtolower($baseName) === 'appcomponent');
 
 if (count($componentNames) > 0) {
@@ -2457,17 +2500,76 @@ if ($isRootComponent) {
         }
     }
 
+    // ★ Dynamic component detection: <component :is="..." />
+    // When detected, auto-compile all case components from Px_dynamic_component_file
+    $hasDynamicComponent = preg_match('/<component\s[^>]*:is\s*=/i', $source);
+    if ($hasDynamicComponent) {
+        $dynamicFileDir = $projectConfig['Px_dynamic_component_file'] ?? 'test_case';
+        $dynamicPath = $appDir . '/' . $dynamicFileDir;
+        echo "  [DYNAMIC] Scanning: {$dynamicPath}\n";
+
+        if (is_dir($dynamicPath)) {
+            // Layer 1: .vue files directly in the configured directory
+            // 文件名: WrapperX.vue → tag=wrapper-x → class=WrapperXComponent
+            $layer1Files = glob($dynamicPath . '/*.vue');
+            foreach ($layer1Files as $vf) {
+                $baseName = pathinfo($vf, PATHINFO_FILENAME);
+                // PascalCase → kebab-case 作为 tag
+                $tag = strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $baseName));
+                $depClass = componentTagToComponentName($tag);
+
+                if (!isset($compiledSet[$depClass])) {
+                    $compiledSet[$depClass] = $vf;
+                    $queue->enqueue([
+                        'tag' => $tag,
+                        'file' => $vf,
+                        'className' => $depClass
+                    ]);
+                    echo "  [DYNAMIC] {$tag} → {$depClass} (direct)\n";
+                }
+            }
+
+            // Layer 2: .vue files in subdirectories
+            // 约定: case-011-position-absolute → Case011PositionAbsoluteComponent
+            $caseDirs = glob($dynamicPath . '/*', GLOB_ONLYDIR);
+            sort($caseDirs);
+            foreach ($caseDirs as $caseDir) {
+                $caseKey = basename($caseDir);
+                $vueFiles = glob($caseDir . '/*.vue');
+                foreach ($vueFiles as $vf) {
+                    $parts = explode('-', $caseKey);
+                    $depClass = '';
+                    foreach ($parts as $p) { $depClass .= ucfirst($p); }
+                    $depClass .= 'Component';
+
+                    if (!isset($compiledSet[$depClass])) {
+                        $compiledSet[$depClass] = $vf;
+                        $queue->enqueue([
+                            'tag' => $caseKey,
+                            'file' => $vf,
+                            'className' => $depClass
+                        ]);
+                        echo "  [DYNAMIC] {$caseKey} → {$depClass}\n";
+                    }
+                }
+            }
+        } else {
+            echo "  [DYNAMIC] ⚠️  Directory not found: {$dynamicPath}\n";
+        }
+    }
+
     // BFS loop
     $compiledCount = 0;
     while (!$queue->isEmpty()) {
         $item = $queue->dequeue();
         $file = $item['file'];
         $tag = $item['tag'];
-        $className = componentTagToComponentName($tag);
+        // 动态组件: 使用预设 className，否则从 tag 推导
+        $className = $item['className'] ?? componentTagToComponentName($tag);
 
         // cacheOnly: skip compilation but still discover sub-dependencies
         if (empty($item['cacheOnly'])) {
-            $ok = compileOneComponent($file, $className, $outDir, $componentRegistry);
+            $ok = compileOneComponent($file, $className, $outDir, $componentRegistry, $item['className'] ?? null);
             if ($ok) {
                 $compiledCount++;
             }
@@ -2639,8 +2741,7 @@ $getBindValueBody = generateGetBindValue($bindKeys, $arrayBindKeys);
 // Generate v-for helpers
 $vForHelpers = generateVForHelpers($loops);
 
-// Component class name
-$componentClassName = $baseName . 'Component';
+// Component class name (set at function entry via customComponentName)
 
 // Dynamic property declarations (for bind keys that are not in script)
 $dynamicPropsDeclaration = '';
@@ -2682,6 +2783,14 @@ if (count($classStyles) > 0) {
 $defaultConstruct = '';
 if (!str_contains($classBody, 'function __construct')) {
     $defaultConstruct = "    public function __construct(?string \$componentId = null)\n    {\n        parent::__construct(\$componentId ?? '{$baseName}');\n    }\n";
+}
+$defaultOnMount = '';
+$defaultOnUnmount = '';
+if (!str_contains($classBody, 'function onMount')) {
+    $defaultOnMount = "    public function onMount(): void\n    {\n    }\n\n";
+}
+if (!str_contains($classBody, 'function onUnmount')) {
+    $defaultOnUnmount = "    public function onUnmount(): void\n    {\n    }\n";
 }
 $classContent = <<<PHP
 <?php
@@ -2742,6 +2851,20 @@ class {$componentClassName} extends ReactiveComponent
 {$vForHelpers}
 
     /**
+     * 解析动态组件: kebab-case → PascalCase 类名
+     * e.g. "case-011-position-absolute" → "Case011PositionAbsoluteComponent"
+     */
+    public function resolveComponent(string \$tag): string
+    {
+        \$parts = explode('-', \$tag);
+        \$className = '';
+        foreach (\$parts as \$p) {
+            \$className .= ucfirst(\$p);
+        }
+        return \$className . 'Component';
+    }
+
+    /**
      * 返回编译后的 CSS class styles（从 <style> 块编译）。
      * 由 ThemeProvider::registerClassStyles() 在 mount 时读取并注册。
      */
@@ -2750,14 +2873,7 @@ class {$componentClassName} extends ReactiveComponent
         return {$classStylesExport};
     }
 
-    public function onMount(): void
-    {
-    }
-
-    public function onUnmount(): void
-    {
-    }
-{$defaultConstruct}}
+{$defaultOnMount}{$defaultOnUnmount}{$defaultConstruct}}
 PHP;
 
 // Step 6: AOT Validation
