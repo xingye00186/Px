@@ -537,7 +537,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         $activeItems[] = [
                             'idx' => $idx,
                             'shrinkWeight' => $shrinkBasis * $data['shrink'],
-                            'minVal' => $isRow ? (int)($ch->style['minWidth'] ?? 0) : (int)($ch->style['minHeight'] ?? 0),
+                            'minVal' => self::resolveFlexMinMain($ch, $isRow, $mainSize),
                         ];
                     }
                 }
@@ -1379,5 +1379,61 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         }
 
         return $maxW;
+    }
+
+    /**
+     * Resolve the minimum main-axis size for a flex item during shrink.
+     *
+     * CSS Flexbox §4.5: flex items have min-width/min-height: auto by default,
+     * meaning the minimum size is the content-based size (auto keyword).
+     *
+     * - overflow:visible (default) → min = content-based size (current computed size)
+     * - overflow:auto/scroll/hidden → min = 0 (enables clipping/scroll containment)
+     * - explicit min-width/min-height set → use that value
+     *
+     * @param RenderNode $ch The flex child node
+     * @param bool $isRow Whether main axis is row (horizontal)
+     * @param int $currentMainSize The item's current main-axis size before shrink
+     * @return int Minimum main-axis size in pixels
+     */
+    private static function resolveFlexMinMain(RenderNode $ch, bool $isRow, int $currentMainSize): int
+    {
+        // 1) Explicit min-width/min-height takes priority
+        if ($isRow) {
+            if (isset($ch->style['minWidth'])) {
+                return (int)$ch->style['minWidth'];
+            }
+        } else {
+            if (isset($ch->style['minHeight'])) {
+                return (int)$ch->style['minHeight'];
+            }
+        }
+
+        // 2) Check overflow in the main axis
+        // Order: overflowX/overflowY overrides, fallback to 'overflow' shorthand
+        $ov = 'visible';
+        if ($isRow) {
+            if (isset($ch->style['overflowX'])) {
+                $ov = $ch->style['overflowX'];
+            } elseif (isset($ch->style['overflow'])) {
+                $ov = $ch->style['overflow'];
+            }
+        } else {
+            if (isset($ch->style['overflowY'])) {
+                $ov = $ch->style['overflowY'];
+            } elseif (isset($ch->style['overflow'])) {
+                $ov = $ch->style['overflow'];
+            }
+        }
+
+        // overflow:auto/scroll/hidden → min is 0 (content can be clipped/scrolled)
+        if ($ov !== 'visible') {
+            return 0;
+        }
+
+        // 3) overflow:visible (default) → CSS min-height:auto → content-based minimum
+        // The content-based min is approximated by the current computed main-size
+        // from initial layout resolution (before flex shrink).
+        return $currentMainSize;
     }
 }
