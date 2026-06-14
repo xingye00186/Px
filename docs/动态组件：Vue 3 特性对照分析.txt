@@ -1,0 +1,102 @@
+动态组件：Vue 3 特性对照分析。
+
+---
+
+## 完整分析：Px `<component :is>` vs Vue 3
+
+### 核心流程追踪
+
+`<component :is="caseName" />` 的完整编译路径：
+
+```
+Parser → parseUnknownOrComponent()
+  → tag 'component' 不在 registry → 当作通用 HTML 元素
+  → 创建 VNode(type='component', props=[':is'=>'caseName'])
+
+resolveComponentRefsRecursive()
+  └─ 检查 child.props.__componentFile → 不存在，跳过 (普通元素)
+  └─ 问题：此时需要拦截！否则生成 VNode::h('component', ...)
+
+→ 需要我们在 resolveComponentRefsRecursive() 中加入:
+  if ($tagName === 'component' && isset($child->props[':is'])) {
+      // 转换为 #component 占位
+      $child->props['__dynamicIs'] = $child->props[':is'];
+      unset($child->props[':is']);
+      $child->type = '#component';
+      $child->isComponent = true;
+      $child->componentClass = '__dynamic__';  // 标记为动态
+      // 其他 :prop 自动进入 componentProps (已有代码处理)
+  }
+```
+
+### Vue 3 特性对照表
+
+| # | Vue 3 `<component :is>` 特性 | Px 支持 | 备注 |
+|---|------------------------------|---------|------|
+| 1 | `:is="stringVar"` (变量) | ✅ | `ExpressionParser` 解析 → `$this->caseName` |
+| 2 | `:is="'literal'"` (字面量) | ✅ | 解析为字符串常量 `'case-011'` |
+| 3 | `:is="expr ? a : b"` (条件) | ✅ | 三元表达式已支持 |
+| 4 | **多层嵌套动态组件** | ✅ | **各组件独立编译，各有自己的 resolveComponent()** |
+| 5 | `:prop="value"` 透传 | ✅ | `:prop` 自动进入 `componentProps` → `setBindValue()` |
+| 6 | `v-for` + `<component>` | ⚠️ 需验证 | v-for helper 生成在父组件，动态组件运行时才解析 |
+| 7 | `@click` 在 `<component>` 上 | ⚠️ 有限 | 事件处理器在父组件 dispatchClick 中，子组件独立 |
+| 8 | `:is={importedObject}` (传入组件对象) | ❌ | Px 不支持组件对象传递，仅字符串→约定映射 |
+| 9 | `<keep-alive>` 缓存 | ❌ | Px 无 keep-alive（但有跨帧 VNode 实例复用 `matchComponentNode`） |
+| 10 | **插槽 slot 内容** | ✅ 有限 | slot text 通过 `componentProps['text']` 透传 |
+| 11 | 约定映射 (kebab→Pascal) | ✅ | `componentTagToComponentName()` 已有相同逻辑 |
+| 12 | BFS 全量自动编译 | ✅ | 检测到 `<component>` 后遍历所有注册组件 |
+
+### 嵌套动态组件为什么自然支持
+
+```
+App.vue:     <component :is="caseName" />
+               │
+               ▼ 运行时 $this->caseName = 'case-011-position-absolute'
+               ▼ resolveComponent() → 'Case011PositionAbsoluteComponent'
+               ▼ expandComponentNode() → mount → render()
+                 │
+                 ▼ (如果 PositionAbsolute.vue 也用动态组件)
+                 ▼ <component :is="subCase" />
+                   → 它自己的 resolveComponent($this->subCase) 独立解析
+```
+
+每个组件编译时：
+- 生成**自己的** `resolveComponent()` 方法
+- 它的 `<component :is>` 触发 BFS 编译**它自己的**所有依赖
+- 两套 `resolveComponent()` 互不干扰，完全独立
+
+### 真正的缺口分析
+
+**1. `:is` 对 tag 'component' 的拦截必须在 `resolveComponentRefsRecursive()` 中处理**
+
+这是实现的核心，需要在 sfc-compiler.php 第 1660-1673 行的循环中加入 `tagName === 'component'` 的特殊分支。
+
+**2. 事件处理 — 这是架构性限制**
+
+Vue 3 中 `<component :is="comp" @click="handler" />` 会自动代理事件。Px 中 `@click` 通过 `dispatchClick()` 匹配到组件的 handler。如果 `<component>` 有 `@click`，它需要在**父组件**的 `dispatchClick()` 中定义 handler，但事件实际冒泡来自**子组件**的根元素。这在 Px 架构中不支持自动代理。
+
+但**对于 css-test 用例这不是问题**——测试 case 组件没有事件处理器。
+
+**3. `v-for` + `<component>` 需要测试**
+
+```vue
+<template v-for="item in items">
+  <component :is="item.type" />
+</template>
+```
+
+Px 的 v-for 生成 `getVNodeTreeForLoop()` helper 函数。动态组件在这个 context 中需要验证是否兼容。css-test 不需要这个场景。
+
+---
+
+### 最终结论
+
+| 问题 | 答案 |
+|------|------|
+| 多层嵌套动态组件？ | ✅ **自然支持**，每个组件独立编译 + 独立 resolveComponent() |
+| Prop 透传？ | ✅ 通过 `:prop="value"` 自动进入 `componentProps` 机制 |
+| 事件代理？ | ❌ 架构性不兼容。但**css-test 不需要** |
+| `v-for` + 动态组件？ | ⚠️ 待验证，但**css-test 不需要** |
+| 与 Vue 3 语义一致度？ | **~80%** — 核心功能全具备，缺口在事件/缓存等高阶场景 |
+
+**对你的 css-test 用来说，设计已经超额完成**——唯一需要关注的缺口是 `<component>` 在 `resolveComponentRefsRecursive` 中的拦截点，这是实现的核心。

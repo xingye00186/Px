@@ -54,8 +54,7 @@ apps/css-test/
 ├── run.php                  测试沙盒编排器（入口）
 ├── main.php                 exe 入口（支持 --dump-layout）
 ├── App.vue                  根模板（自动加载 test_case 的组件）
-├── components/
-│   └── TestContent.vue      当前正在测试的 case（由 run.php 动态部署）
+├── components/              备用组件目录（动态组件模式下未使用）
 ├── test_case/               所有测试用例（每个独立目录）
 │   ├── case-001-wrapper-x/
 │   │   ├── Case001WrapperX.vue    引擎端模板
@@ -71,7 +70,14 @@ apps/css-test/
 │   ├── case-005-grid-layout/
 │   ├── case-006-typography/
 │   ├── case-007-border-styles/
-│   ...（持续扩展，当前 26 个 case）
+│   ├── ...（标准布局/排版测试，至 case-026）
+│   ├── case-027-scroll-diagnostic/
+│   ├── case-028-scroll-block/
+│   ├── case-029-scroll-flex-col/
+│   ├── case-030-scroll-flex-row/
+│   ├── case-031-scroll-grid/
+│   ├── case-032-scroll-relative/
+│   ...（持续扩展，当前 32 个 case）
 ├── gen/                    SFC 编译器输出（run.php 自动清空/重建）
 ├── bin/                    构建输出（.exe + .dll）
 ├── test_cases/             旧版 Level 测试（已迁移到 test_case/）
@@ -148,15 +154,15 @@ apps/css-test/test_case/case-NNN-name/
 ├── ref/                    # 参考数据（由 run.php 自动生成）
 └── bin/                    # 构建缓存（自动）
 
-# 2. 编译
-php sfc-compiler.php apps/css-test
+# 2. 编译（SFC 编译器自动扫描 test_case/ 目录）
+php sfc-compiler.php apps/css-test/App.vue
 
-# 3. 构建
+# 3. 构建（一次构建，所有 case 共享同一个 exe）
 .\build.bat css-test
 
 # 4. 验证 --dump-layout 可用
 cd apps/css-test/bin
-.\css-test.exe --dump-layout
+.\css-test.exe --case=case-001 --dump-layout
 ```
 
 **Vue 模板 → HTML 同步规则**：
@@ -176,7 +182,7 @@ cd apps/css-test/bin
 | 1.1 | 在 `test_case/` 创建新目录 `case-NNN-name/` | 命名建议：case-007-border-styles |
 | 1.2 | 编写 `CaseNnnName.vue`（引擎端模板） | 从目标 HTML 提取，保持 inline style 不变 |
 | 1.3 | 编写 `CaseNnnName.html`（浏览器参考 HTML） | 与 .vue `<template>` 内容一致 |
-| 1.4 | 运行单个 case 验证 | `php apps/css-test/run.php --case=case-007` |
+| 1.4 | 运行单个 case 验证 | `php apps/css-test/run.php --case=case-007-border-styles`（使用完整目录名） |
 | 1.5 | 确认 wrapper CSS 与引擎基线一致 | 见 §四 buildCssTestWrapper() 规范 |
 | 1.6 | 确认 `--window-size` 匹配引擎 | run.php 中 `--window-size=1600,800` |
 | 1.7 | 全量运行 | `php apps/css-test/run.php` |
@@ -224,15 +230,17 @@ Step A: 准备工作
    ├─ 遍历 test_case/ 下所有 case-NNN-* 目录
    └─ 如指定 --case，只处理匹配的单个用例
 
-Step B: 构建（每个 case 独立编译）
-   ├─ 将 CaseNnnName.vue 部署为 components/TestContent.vue
-   ├─ 清空 gen/ → 调用 build.bat css-test
-   ├─ 复制 exe+dll 到 case-NNN/bin/
-   └─ 验证 copy 成功（复制失败标记为 BUILD 错误）
+Step B: 构建（一次构建，所有 case 共享）
+   ├─ Px_dynamic_component_file: test_case → sfc-compiler 自动扫描 test_case/ 目录
+   ├─ 所有 .vue 编译为独立组件（如 Case029ScrollFlexColComponent）
+   ├─ App.vue 通过 `<component :is="caseName">` 运行时动态加载
+   ├─ 调用 build.bat css-test（单次构建产出单一 css_test.exe）
+   ├─ 运行时通过 --case=case-xxx（完整目录名）选择测试用例
+   └─ 所有 case 共享 apps/css-test/bin/css_test.exe
 
 Step C: 布局导出 + 多帧稳定性
-   ├─ <exe> --dump-layout → engine_layout.json
-   ├─ <exe> --dump-layout-after-frames=N → engine_layout_after_{N}frames.json
+   ├─ <exe> --case=case-NNN-xxx --dump-layout → engine_layout.json
+   ├─ <exe> --case=case-NNN-xxx --dump-layout-after-frames=N → ...frames.json
    ├─ 对比 Frame 1 vs Frame N 的布局 JSON（逐节点 x/y/w/h）
    └─ 任何跨帧变化标记为 STABILITY 问题
 
@@ -1045,13 +1053,13 @@ msedge --headless --disable-gpu --window-size=1600,800 `
 cd D:\Px
 .\build.bat css-test
 
-# SFC 编译
-php sfc-compiler.php apps/css-test
+# SFC 编译（动态组件模式）
+php sfc-compiler.php apps/css-test/App.vue
 
-# 手动导出布局
+# 手动导出布局（带 --case 参数）
 cd apps/css-test/bin
-.\css-test.exe --dump-layout
-.\css-test.exe --dump-layout-after-frames=5
+.\css-test.exe --case=case-001 --dump-layout
+.\css-test.exe --case=case-029-scroll-flex-col --dump-layout-after-frames=5
 
 # 单项目浏览器参考（非 css-test）
 php tools\generate_project_ref.php <project>
