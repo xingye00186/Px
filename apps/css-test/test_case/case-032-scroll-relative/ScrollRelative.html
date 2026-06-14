@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><title>Scrollbar Diagnostic</title>
+<head><meta charset="UTF-8"><title>Scroll + Absolute Children</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #f5f5f5; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
 .sandbox { padding: 20px; }
 .card { width:800px; margin:0 auto; background:#fff; border-radius:12px; padding:24px; border:1px solid #e0e0e0; box-shadow:0 2px 12px rgba(0,0,0,.08); position:relative; }
-.scroll-box { height:300px; overflow-y:auto; border:2px solid #455a64; border-radius:6px; background:#fafafa; }
+.scroll-box { height:300px; overflow-y:auto; border:2px solid #c62828; border-radius:6px; background:#fafafa; position:relative; }
+.badge { position:absolute; background:#c62828; color:#fff; font-size:10px; padding:2px 8px; border-radius:4px; z-index:10; }
+.badge-blue { position:absolute; background:#1565c0; color:#fff; font-size:10px; padding:2px 8px; border-radius:4px; z-index:10; }
 .item { height:36px; display:flex; align-items:center; padding:0 14px; font-size:13px; border-bottom:1px solid #e0e0e0; }
-.item:nth-child(6n+1) { background:#f5f7ff; }
-.item:nth-child(6n+2) { background:#ffffff; }
-.item:nth-child(6n+3) { background:#fff8e1; }
-.item:nth-child(6n+4) { background:#e8f5e9; }
-.item:nth-child(6n+5) { background:#fce4ec; }
-.item:nth-child(6n+6) { background:#f3e5f5; }
-.num { display:inline-block; width:36px; font-weight:700; color:#78909c; }
+.item:nth-child(4n+1) { background:#ffebee; }
+.item:nth-child(4n+2) { background:#ffffff; }
+.item:nth-child(4n+3) { background:#f5f5f5; }
+.item:nth-child(4n+4) { background:#fce4ec; }
+.num { display:inline-block; width:36px; font-weight:700; color:#c62828; }
 .label { color:#37474f; }
 .hint { margin-left:10px; font-size:11px; color:#aaa; }
 </style>
@@ -23,16 +23,17 @@ body { background: #f5f5f5; font-family: 'Segoe UI', system-ui, -apple-system, s
 <div class="sandbox">
   <div class="card">
     <div style="margin-bottom:10px;font-size:18px;font-weight:700;color:#c62828;">
-      Scrollbar Diagnostic
+      Scroll + Absolute Children
     </div>
-    <div style="margin-bottom:14px;font-size:12px;color:#555;line-height:1.6;border-left:3px solid #ff9800;padding:10px 14px;background:#fff8e1;border-radius:4px;">
-      <b>Bug:</b> Drag scrollbar thumb down — top items disappear (directRender path).<br>
-      <b>Wheel:</b> Scroll wheel works correctly (requestRender path).<br>
-      <b>Container:</b> 300px visible, 30 items x 36px = 1080px content.<br>
-      <b>Expected:</b> Smooth scrolling, all items reachable, no clipping at top.
+    <div style="margin-bottom:14px;font-size:12px;color:#555;line-height:1.6;border-left:3px solid #c62828;padding:10px 14px;background:#ffebee;border-radius:4px;">
+      <b>Layout:</b> position:relative scroll container with both normal-flow and absolute-positioned children.<br>
+      <b>Container:</b> 300px visible, overflow-y:auto. Contains 20 static items + absolute overlay badge.<br>
+      <b>Expected:</b> Static items scroll correctly. Absolute badge stays fixed relative to container.<br>
+      <b>Edge case:</b> LayoutResolver must ignore absolute children in auto-stack (they don't affect contentHeight).
     </div>
 
     <div class="scroll-box">
+      <div class="badge" style="top:8px;right:8px;">ABSOLUTE BADGE</div>
       <div class="item"><span class="num">1.</span><span class="label">Scroll Item #1</span><span class="hint">36px</span></div>
       <div class="item"><span class="num">2.</span><span class="label">Scroll Item #2</span><span class="hint">36px</span></div>
       <div class="item"><span class="num">3.</span><span class="label">Scroll Item #3</span><span class="hint">36px</span></div>
@@ -53,20 +54,11 @@ body { background: #f5f5f5; font-family: 'Segoe UI', system-ui, -apple-system, s
       <div class="item"><span class="num">18.</span><span class="label">Scroll Item #18</span><span class="hint">36px</span></div>
       <div class="item"><span class="num">19.</span><span class="label">Scroll Item #19</span><span class="hint">36px</span></div>
       <div class="item"><span class="num">20.</span><span class="label">Scroll Item #20</span><span class="hint">36px</span></div>
-      <div class="item"><span class="num">21.</span><span class="label">Scroll Item #21</span><span class="hint">36px</span></div>
-      <div class="item"><span class="num">22.</span><span class="label">Scroll Item #22</span><span class="hint">36px</span></div>
-      <div class="item"><span class="num">23.</span><span class="label">Scroll Item #23</span><span class="hint">36px</span></div>
-      <div class="item"><span class="num">24.</span><span class="label">Scroll Item #24</span><span class="hint">36px</span></div>
-      <div class="item"><span class="num">25.</span><span class="label">Scroll Item #25</span><span class="hint">36px</span></div>
-      <div class="item"><span class="num">26.</span><span class="label">Scroll Item #26</span><span class="hint">36px</span></div>
-      <div class="item"><span class="num">27.</span><span class="label">Scroll Item #27</span><span class="hint">36px</span></div>
-      <div class="item"><span class="num">28.</span><span class="label">Scroll Item #28</span><span class="hint">36px</span></div>
-      <div class="item"><span class="num">29.</span><span class="label">Scroll Item #29</span><span class="hint">36px</span></div>
-      <div class="item"><span class="num">30.</span><span class="label">Scroll Item #30</span><span class="hint">36px</span></div>
+      <div class="badge-blue" style="bottom:8px;right:8px;">FIXED BADGE</div>
     </div>
 
     <div style="margin-top:14px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px;">
-      case-027-scroll-diagnostic &middot; 30 items
+      case-032-scroll-relative &middot; 20 items &middot; position:relative + overflow-y:auto + absolute children
     </div>
   <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div><div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
 </div>

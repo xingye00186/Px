@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>Scroll Flex Column</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #f5f5f5; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+.sandbox { padding: 20px; }
+.card { width:800px; margin:0 auto; background:#fff; border-radius:12px; padding:24px; border:1px solid #e0e0e0; box-shadow:0 2px 12px rgba(0,0,0,.08); position:relative; }
+.flex-host { height:250px; display:flex; flex-direction:column; border:2px solid #e65100; border-radius:6px; background:#fafafa; }
+.header { height:52px; flex-shrink:0; display:flex; align-items:center; padding:0 16px; background:#fff3e0; border-bottom:1px solid #e65100; font-size:13px; font-weight:600; color:#e65100; }
+.scroll-area { flex:1; overflow-y:auto; min-height:0; padding:4px 0; background:#fafafa; }
+.footer { height:52px; flex-shrink:0; display:flex; align-items:center; padding:0 16px; background:#fff3e0; border-top:1px solid #e65100; font-size:13px; font-weight:600; color:#e65100; }
+.item { height:36px; display:flex; align-items:center; padding:0 14px; font-size:13px; border-bottom:1px solid #e0e0e0; }
+.item:nth-child(5n+1) { background:#fff3e0; }
+.item:nth-child(5n+2) { background:#ffffff; }
+.item:nth-child(5n+3) { background:#f5f5f5; }
+.item:nth-child(5n+4) { background:#fbe9e7; }
+.item:nth-child(5n+5) { background:#fff8e1; }
+.num { display:inline-block; width:36px; font-weight:700; color:#e65100; }
+.label { color:#37474f; }
+.hint { margin-left:10px; font-size:11px; color:#aaa; }
+</style>
+</head>
+<body>
+<div class="sandbox">
+  <div class="card">
+    <div style="margin-bottom:10px;font-size:18px;font-weight:700;color:#e65100;">
+      Scroll Flex Column
+    </div>
+    <div style="margin-bottom:14px;font-size:12px;color:#555;line-height:1.6;border-left:3px solid #e65100;padding:10px 14px;background:#fff3e0;border-radius:4px;">
+      <b>Layout:</b> Flex container (column) → flex:1 child with overflow-y:auto.<br>
+      <b>This matches the .case-list scenario — the exact bug pattern.</b><br>
+      <b>Container:</b> flex container 250px, header+footer 52px each, flex:1 child fills remainder (~146px).<br>
+      <b>Items:</b> 30 items x 36px = 1080px content.<br>
+      <b>Expected:</b> Wheel + drag scroll stop at bottom. No bounce-back on drag release.
+    </div>
+
+    <div class="flex-host">
+      <div class="header">Flex Header (52px fixed)</div>
+      <div class="scroll-area">
+        <div class="item"><span class="num">1.</span><span class="label">FlexCol Item #1</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">2.</span><span class="label">FlexCol Item #2</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">3.</span><span class="label">FlexCol Item #3</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">4.</span><span class="label">FlexCol Item #4</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">5.</span><span class="label">FlexCol Item #5</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">6.</span><span class="label">FlexCol Item #6</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">7.</span><span class="label">FlexCol Item #7</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">8.</span><span class="label">FlexCol Item #8</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">9.</span><span class="label">FlexCol Item #9</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">10.</span><span class="label">FlexCol Item #10</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">11.</span><span class="label">FlexCol Item #11</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">12.</span><span class="label">FlexCol Item #12</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">13.</span><span class="label">FlexCol Item #13</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">14.</span><span class="label">FlexCol Item #14</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">15.</span><span class="label">FlexCol Item #15</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">16.</span><span class="label">FlexCol Item #16</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">17.</span><span class="label">FlexCol Item #17</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">18.</span><span class="label">FlexCol Item #18</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">19.</span><span class="label">FlexCol Item #19</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">20.</span><span class="label">FlexCol Item #20</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">21.</span><span class="label">FlexCol Item #21</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">22.</span><span class="label">FlexCol Item #22</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">23.</span><span class="label">FlexCol Item #23</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">24.</span><span class="label">FlexCol Item #24</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">25.</span><span class="label">FlexCol Item #25</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">26.</span><span class="label">FlexCol Item #26</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">27.</span><span class="label">FlexCol Item #27</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">28.</span><span class="label">FlexCol Item #28</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">29.</span><span class="label">FlexCol Item #29</span><span class="hint">36px</span></div>
+        <div class="item"><span class="num">30.</span><span class="label">FlexCol Item #30</span><span class="hint">36px</span></div>
+      </div>
+      <div class="footer">Flex Footer (52px fixed)</div>
+    </div>
+
+    <div style="margin-top:14px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px;">
+      case-029-scroll-flex-col &middot; 30 items &middot; flex:1 + overflow-y:auto
+    </div>
+  <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div><div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
+</div>
+</body>
+</html>

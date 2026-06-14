@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>Scroll Flex Row</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #f5f5f5; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+.sandbox { padding: 20px; }
+.card { width:800px; margin:0 auto; background:#fff; border-radius:12px; padding:24px; border:1px solid #e0e0e0; box-shadow:0 2px 12px rgba(0,0,0,.08); position:relative; }
+.flex-host { width:100%; height:200px; display:flex; flex-direction:row; border:2px solid #2e7d32; border-radius:6px; background:#fafafa; }
+.side-panel { width:60px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:#e8f5e9; font-size:12px; color:#2e7d32; }
+.scroll-area { flex:1; overflow-x:auto; min-width:0; padding:60px 0 0 0; background:#fafafa; }
+.inner-row { display:flex; flex-direction:row; gap:8px; padding:0 8px; }
+.item { width:100px; height:80px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; border-radius:6px; border:1px solid #c8e6c9; }
+.item:nth-child(4n+1) { background:#e8f5e9; }
+.item:nth-child(4n+2) { background:#ffffff; }
+.item:nth-child(4n+3) { background:#f1f8e9; }
+.item:nth-child(4n+4) { background:#e0f2f1; }
+</style>
+</head>
+<body>
+<div class="sandbox">
+  <div class="card">
+    <div style="margin-bottom:10px;font-size:18px;font-weight:700;color:#2e7d32;">
+      Scroll Flex Row (horizontal)
+    </div>
+    <div style="margin-bottom:14px;font-size:12px;color:#555;line-height:1.6;border-left:3px solid #2e7d32;padding:10px 14px;background:#e8f5e9;border-radius:4px;">
+      <b>Layout:</b> Flex container (row) → flex:1 child with overflow-x:auto.<br>
+      <b>Container:</b> flex container 700px wide, side panels 60px each, flex:1 child fills remainder (~580px).<br>
+      <b>Items:</b> 15 items x 100px wide = 1500px content (horizontal scroll).<br>
+      <b>Expected:</b> Horizontal wheel/drag scroll stops at right edge. scrollLeft clamped correctly.
+    </div>
+
+    <div class="flex-host">
+      <div class="side-panel" style="border-right:1px solid #2e7d32;writing-mode:vertical-lr;">Left</div>
+      <div class="scroll-area">
+        <div class="inner-row">
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#1</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#2</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#3</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#4</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#5</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#6</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#7</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#8</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#9</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#10</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#11</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#12</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#13</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#14</span></div>
+          <div class="item"><span style="font-weight:700;color:#2e7d32;">#15</span></div>
+        </div>
+      </div>
+      <div class="side-panel" style="border-left:1px solid #2e7d32;writing-mode:vertical-lr;">Right</div>
+    </div>
+
+    <div style="margin-top:14px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px;">
+      case-030-scroll-flex-row &middot; 15 items &middot; flex:1 + overflow-x:auto (horizontal)
+    </div>
+  <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div><div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
+</div>
+</body>
+</html>

@@ -36,12 +36,13 @@ class AppComponent extends ReactiveComponent
         sort($dirs);
 
         $list = [];
-        foreach ($dirs as $dir) {
+        $colorPalette = ['#313244', '#45475a', '#585b70', '#6c7086', '#7f849c', '#a6adc8', '#bac2de', '#1e1e2e', '#252540', '#2a2a45'];
+        foreach ($dirs as $i => $dir) {
             $base = basename($dir);
             $num = substr($base, 5, 3);
             $rest = substr($base, 9);
             $title = $num . ' ' . ucwords(str_replace('-', ' ', $rest));
-            $list[] = ['tag' => $base, 'title' => $title, 'name' => $base];
+            $list[] = ['tag' => $base, 'title' => $title, 'name' => $base, 'bgColor' => $colorPalette[$i % count($colorPalette)]];
         }
 
         $this->caseList = $list;
@@ -84,12 +85,13 @@ class AppComponent extends ReactiveComponent
         sort($dirs);
 
         $list = [];
-        foreach ($dirs as $dir) {
+        $colorPalette = ['#313244', '#45475a', '#585b70', '#6c7086', '#7f849c', '#a6adc8', '#bac2de', '#1e1e2e', '#252540', '#2a2a45'];
+        foreach ($dirs as $i => $dir) {
             $base = basename($dir);
             $num = substr($base, 5, 3);
             $rest = substr($base, 9);
             $title = $num . ' ' . ucwords(str_replace('-', ' ', $rest));
-            $list[] = ['tag' => $base, 'title' => $title, 'name' => $base];
+            $list[] = ['tag' => $base, 'title' => $title, 'name' => $base, 'bgColor' => $colorPalette[$i % count($colorPalette)]];
         }
 
         $this->caseList = $list;
@@ -193,9 +195,9 @@ class AppComponent extends ReactiveComponent
     {
         $children = [];
         foreach ($this->caseList as $item) {
-            $children[] = VNode::h('div', ['style'=>'display:flex;align-items:center;height:34px;padding:0 20px;font-size:13px;color:#a6adc8;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;','@click'=>'selectCase','click-arg'=>$item['tag']], [
+            $children[] = VNode::hKey('div', ['style'=>'display:flex;align-items:center;height:34px;padding:0 20px;font-size:13px;color:#cdd6f4;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;','@click'=>'selectCase','click-arg'=>$item['tag'],':style'=>'background:' . $item['bgColor'] . ';'], [
                     $item['title']
-                ]);
+                ], $item['tag']);
         }
         return $children;
     }
