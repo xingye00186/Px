@@ -3,6 +3,7 @@
 namespace Px\Interfaces;
 
 use Px\Core\Scheduler;
+use Px\Rendering\RenderNode;
 use Px\Rendering\VNode;
 
 /**
@@ -60,6 +61,18 @@ interface ReactiveComponentInterface
      * 获取绑定值。
      */
     public function getBindValue(string $bindKey): string;
+
+    // ── RenderNode 树状态管理 ────────────────────
+
+    /**
+     * 获取上一帧的根 RenderNode，用于跨帧匹配复用。
+     */
+    public function getRootRenderNode(): ?RenderNode;
+
+    /**
+     * 设置当前根 RenderNode，供下一帧匹配复用。
+     */
+    public function setRootRenderNode(?RenderNode $node): void;
 
     // ── 事件分发 ─────────────────────────────────
 

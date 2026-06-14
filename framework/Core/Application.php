@@ -205,7 +205,8 @@ class Application
                 if ($this->hoveredNode !== null) {
                     $this->hoveredNode->hovered = false;
                     $this->hoveredNode = null;
-                    $this->requestRender();
+                    // ⚠️ 拖拽中不触发 requestRender()，避免与 directRender() 竞争
+                    // directRender() 已经处理了拖拽过程中的视觉更新
                 }
             }
             return;
@@ -663,10 +664,16 @@ class Application
         }
 
         if (Config::get('diag_enabled', false)) {
+            $this->logScrollContainerStates('[DIAG] directRender BEFORE');
             error_log("[DIAG] directRender: type={$root->type} children=" . count($root->children));
         }
 
         $this->layoutResolver->resolve($root);
+
+        if (Config::get('diag_enabled', false)) {
+            $this->logScrollContainerStates('[DIAG] directRender AFTER');
+        }
+
         $this->renderer->render($root);
     }
 
@@ -779,8 +786,17 @@ class Application
             return;
         }
 
+        if (Config::get('diag_enabled', false)) {
+            error_log('[DIAG] render() frame=' . $frame . ' BEFORE resolve');
+            $this->logScrollContainerStates('[DIAG] render BEFORE');
+        }
+
         // LayoutResolver 处理 RenderNode（利用 layoutDirty 增量）
         $this->layoutResolver->resolve($rootRenderNode);
+
+        if (Config::get('diag_enabled', false)) {
+            $this->logScrollContainerStates('[DIAG] render AFTER');
+        }
 
         // VNodeRenderer 处理 RenderNode（利用 paintDirty 增量）
         $this->renderer->render($rootRenderNode);
@@ -893,6 +909,27 @@ class Application
     /**
      * 查找 VNode 树中第一个有键盘处理器的 input 元素。
      */
+    /**
+     * 诊断：输出所有滚动容器的 scrollTop/contentHeight/h 状态。
+     */
+    private function logScrollContainerStates(string $prefix): void
+    {
+        $root = $this->renderTreeManager->getRootRenderNode();
+        if ($root === null) return;
+        $this->traverseLogScrollContainers($root, $prefix, 0);
+    }
+
+    private function traverseLogScrollContainers(RenderNode $node, string $prefix, int $depth): void
+    {
+        if ($node->isScrollContainer) {
+            $indent = str_repeat('  ', $depth);
+            error_log("{$prefix} {$indent}scrollContainer type={$node->type} scrollTop={$node->scrollTop} contentH={$node->contentHeight} h={$node->h} layoutDirty=" . ($node->layoutDirty ? '1' : '0'));
+        }
+        foreach ($node->children as $child) {
+            $this->traverseLogScrollContainers($child, $prefix, $depth + 1);
+        }
+    }
+
     private function findFocusedInput(VNode $node): ?VNode
     {
         if ($node->type === 'input'

@@ -390,10 +390,15 @@ class RenderTreeManager
 
                 // 记录展开前的子节点数，用于定位第一个新增的子 RenderNode
                 $beforeCount = $parent !== null ? count($parent->children) : 0;
-
+                
                 // 从组件实例获取 groupId，传递给子 VNode 树
                 // （替代已废弃的 setGroupIdRecursive 对 VNode.groupId 的写入）
                 $childGroupId = $instance->getId();
+                
+                // ⚠️ 不传递跨帧 candidates：#component VNode 类型无法与旧 RenderNode 直接匹配。
+                // 使用 rootRenderNode 作为 candidate 会错误复用不再匹配的子树，导致显示异常。
+                // scrollTop 保留改为在创建新子树后通过 copyScrollTopFromOld() 安全复制。
+                $oldRootRN = $instance->getRootRenderNode();
 
                 $childRN = $this->updateFromVNode(
                     $instance->getVNodeTree(),
@@ -404,6 +409,14 @@ class RenderTreeManager
                     $childGroupId,
                     $vnode->props['class'] ?? ''
                 );
+
+                // 保留 scrollTop 值：从旧子树复制到新子树（仅 scroll containers）
+                if ($oldRootRN !== null && $childRN !== null) {
+                    $this->copyScrollTopFromOld($childRN, $oldRootRN);
+                }
+
+                // 存储当前根 RenderNode 供下一帧 scrollTop 保留使用
+                $instance->setRootRenderNode($childRN);
 
                 // Vue 3 标准：父组件 props['style'] 全部透传合并到子组件根元素
                 // 子组件自身 style 为基准，父组件 style 覆盖（CSS 标准层叠规则）
@@ -957,6 +970,31 @@ class RenderTreeManager
         }
 
         return $merged;
+    }
+
+    /**
+     * 从旧 RenderNode 子树向新子树安全复制 scrollTop 值。
+     *
+     * 由于 #component 节点类型无法与旧 RenderNode 直接匹配，
+     * updateFromVNode 每次为组件创建全新的子树，scrollTop 丢失。
+     * 此方法在创建新子树后，遍历新旧子树并复制 scrollTop（仅限 scroll containers）。
+     *
+     * 遍历策略：同时 DFS 两棵树，按位置匹配子节点（与 updateFromVNode 的 key-less 匹配算法一致）。
+     */
+    private function copyScrollTopFromOld(RenderNode $newNode, RenderNode $oldNode): void
+    {
+        if ($oldNode->isScrollContainer) {
+            $newNode->scrollTop = $oldNode->scrollTop;
+            $newNode->scrollLeft = $oldNode->scrollLeft;
+        }
+
+        $newChildren = $newNode->children;
+        $oldChildren = $oldNode->children;
+        $minCount = min(count($newChildren), count($oldChildren));
+
+        for ($i = 0; $i < $minCount; $i++) {
+            $this->copyScrollTopFromOld($newChildren[$i], $oldChildren[$i]);
+        }
     }
 
 

@@ -7,6 +7,7 @@ use native_types;
 use Px\Interfaces\ComponentInterface;
 use Px\Interfaces\ReactiveComponentInterface;
 use Px\Core\Scheduler;
+use Px\Rendering\RenderNode;
 use Px\Rendering\VNode;
 
 /**
@@ -45,6 +46,22 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
      *  - getVNodeTree() 仅在 dirty 时调用 render()
      */
     protected ?VNode $vnodeCache = null;
+
+    /**
+     * 上一帧的根 RenderNode，用于跨帧匹配复用。
+     * 由 RenderTreeManager::updateFromVNode 在 #component 处理器中设置。
+     */
+    public ?RenderNode $rootRenderNode = null;
+
+    public function getRootRenderNode(): ?RenderNode
+    {
+        return $this->rootRenderNode;
+    }
+
+    public function setRootRenderNode(?RenderNode $node): void
+    {
+        $this->rootRenderNode = $node;
+    }
 
     /**
      * Application 注入渲染请求回调。
@@ -221,6 +238,7 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     {
         $this->onUnmount();
         $this->isMounted = false;
+        $this->rootRenderNode = null;
 
         // 移除注册在子组件上的事件处理器
         foreach ($this->listenerIds as $entry) {
