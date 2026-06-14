@@ -355,10 +355,14 @@ function collectVForLoops(VNode $node, array &$loops, int &$counter): void
             }
             // Copy props, stripping v-for/:key (these are loop metadata, not element props)
             $elementProps = $node->props ?? [];
+            $keyExpr = $node->props[':key'] ?? $node->props['v-for-key'] ?? null;
             unset($elementProps['v-for']);
             unset($elementProps[':key']);
             unset($elementProps['v-for-key']); // alternate key format
             $entry['elementProps'] = $elementProps;
+            if ($keyExpr !== null) {
+                $entry['keyExpr'] = $keyExpr;
+            }
         }
 
         $loops[$name] = $entry;
@@ -1384,6 +1388,28 @@ function generateLoopItemPropsExpr(array $props, ?array $loopInfo): string
 }
 
 /**
+ * Resolve a v-for :key expression to a PHP expression string.
+ * Maps item.field → $item['field'], item → $item, index → $index.
+ */
+function resolveVForKeyExpr(string $expr, array $loopInfo): string
+{
+    $item = $loopInfo['item'] ?? '';
+    $index = $loopInfo['index'] ?? '';
+
+    if ($item !== '' && str_starts_with($expr, $item . '.')) {
+        $propName = substr($expr, strlen($item) + 1);
+        return "\${$item}['" . addslashes($propName) . "']";
+    } elseif ($item !== '' && $expr === $item) {
+        return "\${$item}";
+    } elseif ($index !== '' && $expr === $index) {
+        return "\${$index}";
+    } else {
+        // Static string or other expression: export as-is
+        return var_export($expr, true);
+    }
+}
+
+/**
  * Generate v-for helper methods (render_N).
  *
  * Template v-for (<template v-for="item in items">):
@@ -1529,9 +1555,19 @@ PHP;
                 // Regular element v-for
                 if (count($childExprs) > 0) {
                     $childBlock = "[\n                    " . implode(",\n                    ", $childExprs) . "\n                ]";
-                    $innerExpr = "VNode::h('{$elementType}', {$propsExpr}, {$childBlock})";
+                    if (!empty($info['keyExpr'])) {
+                        $keyValue = resolveVForKeyExpr($info['keyExpr'], $loopInfo);
+                        $innerExpr = "VNode::hKey('{$elementType}', {$propsExpr}, {$childBlock}, {$keyValue})";
+                    } else {
+                        $innerExpr = "VNode::h('{$elementType}', {$propsExpr}, {$childBlock})";
+                    }
                 } else {
-                    $innerExpr = "VNode::h('{$elementType}', {$propsExpr})";
+                    if (!empty($info['keyExpr'])) {
+                        $keyValue = resolveVForKeyExpr($info['keyExpr'], $loopInfo);
+                        $innerExpr = "VNode::hKey('{$elementType}', {$propsExpr}, null, {$keyValue})";
+                    } else {
+                        $innerExpr = "VNode::h('{$elementType}', {$propsExpr})";
+                    }
                 }
 
                 if ($parentItem !== null) {
