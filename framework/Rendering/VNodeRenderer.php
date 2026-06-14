@@ -213,6 +213,20 @@ class VNodeRenderer
                 'w' => $clipW, 'h' => $clipH,
                 'layer' => $layer,
             ];
+            // 滚动容器还需在 layer+1 推 clip 以裁切文字 (CSS Overflow L3 §3.2)
+            if ($isScrollNode) {
+                $textLayer = $layer + 1;
+                if ($textLayer > $maxLayer) $maxLayer = $textLayer;
+                if (!isset($elementsByLayer[$textLayer])) {
+                    $elementsByLayer[$textLayer] = [];
+                }
+                $elementsByLayer[$textLayer][] = [
+                    'type' => 'clip-push',
+                    'x' => $clipX, 'y' => $clipY,
+                    'w' => $clipW, 'h' => $clipH,
+                    'layer' => $textLayer,
+                ];
+            }
         }
 
         // ── 计算子节点的累计滚动偏移 ──
@@ -222,6 +236,7 @@ class VNodeRenderer
         if (!$isFixed && $node->isScrollContainer) {
             $childOffsetX -= $node->scrollLeft;
             $childOffsetY -= $node->scrollTop;
+            error_log('[SCROLL_DBG] collect scrollContainer x=' . $node->x . ' y=' . $node->y . ' w=' . $node->w . ' h=' . $node->h . ' visualH=' . $node->visualH . ' scrollTop=' . $node->scrollTop . ' scrollLeft=' . $node->scrollLeft . ' childOffY=' . $childOffsetY . ' children=' . count($node->children));
         }
 
         // 递归处理子节点（button 类型不展开，由 GDI 层绘制）
@@ -245,6 +260,18 @@ class VNodeRenderer
                 'type' => 'clip-pop',
                 'layer' => $layer,
             ];
+            // 滚动容器在 layer+1 弹对应 clip (与上方的 textLayer push 配对)
+            if ($isScrollNode) {
+                $textLayer = $layer + 1;
+                if ($textLayer > $maxLayer) $maxLayer = $textLayer;
+                if (!isset($elementsByLayer[$textLayer])) {
+                    $elementsByLayer[$textLayer] = [];
+                }
+                $elementsByLayer[$textLayer][] = [
+                    'type' => 'clip-pop',
+                    'layer' => $textLayer,
+                ];
+            }
 
             // 滚动容器还需在 clip-pop 之后绘制滚动条（确保在顶层）
             if ($isScrollNode) {
@@ -379,7 +406,8 @@ class VNodeRenderer
 
             // Y-axis: cull if completely outside, clip if partially outside
             if ($overflowY !== 'visible') {
-                if ($y + $h < $containerY || $y >= $containerY + $containerH) {
+                if ($y + $h <= $containerY || $y >= $containerY + $containerH) {
+                    error_log('[SCROLL_DBG] CULL y=' . $node->y . '+' . $node->renderOffsetY . '=' . $y . ' renderH=' . $h . ' containerY=' . $containerY . ' containerH=' . $containerH . ' v-for key=' . ($node->key ?? 'none'));
                     return null;
                 }
                 if ($y < $containerY) {
@@ -389,11 +417,15 @@ class VNodeRenderer
                 if ($y + $h > $containerY + $containerH) {
                     $h = ($containerY + $containerH) - $y;
                 }
+                // 截断后 h≤0 或 w≤0 表示无可见区域，应 CULL
+                if ($h <= 0 || $w <= 0) {
+                    return null;
+                }
             }
 
             // X-axis
             if ($overflowX !== 'visible') {
-                if ($x + $w < $containerX || $x >= $containerX + $containerW) {
+                if ($x + $w <= $containerX || $x >= $containerX + $containerW) {
                     return null;
                 }
                 if ($x < $containerX) {
@@ -402,6 +434,10 @@ class VNodeRenderer
                 }
                 if ($x + $w > $containerX + $containerW) {
                     $w = ($containerX + $containerW) - $x;
+                }
+                // 截断后 w≤0 表示无可见区域
+                if ($w <= 0) {
+                    return null;
                 }
             }
             }  // end if (!$isFixed)
@@ -516,10 +552,40 @@ class VNodeRenderer
             $text = $node->content;
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
 
+            // ── 元素自身坐标（scroll 偏移后的位置，不受 CULL 影响）──
+            // 用于文本定位和 item clip，确保两者在同一坐标空间
+            $selfY = $node->y + $node->renderOffsetY;
+            $selfH = $node->visualH;
+            $selfX = $node->x + $node->renderOffsetX;
+            $selfW = $node->visualW;
+
             // CSS 2.2 §17.5: 文本内容位于 content area (border + padding 内部)
-            $contentX = $x + $borderLeftWidth + ($style['paddingLeft'] ?? 0);
-            $contentY = $y + $borderTopWidth + ($style['paddingTop'] ?? 0);
-            $contentW = max(0, $w - $borderLeftWidth - $borderRightWidth - ($style['paddingLeft'] ?? 0) - ($style['paddingRight'] ?? 0));
+            $contentX = $selfX + $borderLeftWidth + ($style['paddingLeft'] ?? 0);
+            $contentY = $selfY + $borderTopWidth + ($style['paddingTop'] ?? 0);
+            $contentW = max(0, $selfW - $borderLeftWidth - $borderRightWidth - ($style['paddingLeft'] ?? 0) - ($style['paddingRight'] ?? 0));
+
+            // ── text-overflow: ellipsis 文本溢出省略（CSS Text Module Level 3 §5.3）──
+            // 标准 CSS 要求 overflow:hidden + white-space:nowrap 才生效，
+            // 但 Px 文本在 layer+1 (不受 overflow:hidden 裁剪)，所以直接按 text-overflow 处理
+            $textOverflow = $style['textOverflow'] ?? 'clip';
+            // 标准 CSS 要求 overflow:hidden/clip 才生效
+            $elOverflow = $style['overflow'] ?? 'visible';
+            $hasOverflow = ($elOverflow === 'hidden' || $elOverflow === 'clip');
+            if ($textOverflow === 'ellipsis' && $hasOverflow && $contentW > 0) {
+                $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $style);
+                $text = $overflowResult['text'];
+                // 多行 clamp 支持
+                $overflowLines = $overflowResult['lines'];
+                $overflowLineHeight = $overflowResult['lineHeight'];
+                // 重新测量截断后的文本宽度
+                $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
+                // ellipsis 时禁止自动换行
+                $isWrappableOverride = false;
+            } else {
+                $overflowLines = null;
+                $overflowLineHeight = 0;
+                $isWrappableOverride = null;
+            }
 
             $textX = $contentX + 4;
             if ($align === 'right') {
@@ -543,10 +609,10 @@ class VNodeRenderer
             // 当元素是 flex 容器且 alignItems=center 时，文本在 content area 内垂直居中
             $textY = $contentY;
             $alignItems = $style['alignItems'] ?? 'stretch';
+            $contentH = max(0, $selfH - $borderTopWidth - $borderBottomWidth - ($style['paddingTop'] ?? 0) - ($style['paddingBottom'] ?? 0));
+            // 精确测量文本总高度（ascent + descent），确保视觉居中
+            $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
             if (($display === 'flex' || $display === 'inline-flex') && $alignItems === 'center') {
-                $contentH = max(0, $h - $borderTopWidth - $borderBottomWidth - ($style['paddingTop'] ?? 0) - ($style['paddingBottom'] ?? 0));
-                // 精确测量文本总高度（ascent + descent），确保视觉居中
-                $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
                 if ($contentH > $textHeight) {
                     $textY = $contentY + (int)(($contentH - $textHeight) / 2);
                 }
@@ -556,7 +622,7 @@ class VNodeRenderer
             // CSS Text Module Level 3 §7: white-space:normal 允许自动换行
             $isBold = (bool)$bold;
             $whitespace = $style['whiteSpace'] ?? 'normal';
-            $isWrappable = ($whitespace !== 'nowrap' && $whitespace !== 'pre');
+            $isWrappable = $isWrappableOverride ?? ($whitespace !== 'nowrap' && $whitespace !== 'pre');
             $lineH = 0;
             if ($isWrappable && $textWidth > $contentW && $contentW > 20) {
                 // Compute line-height for multi-line rendering
@@ -581,7 +647,42 @@ class VNodeRenderer
                 $elements[] = $bgImageEl;
             }
 
-            if ($isWrappable && $textWidth > $contentW && $contentW > 20 && $lineH > 0) {
+            if ($overflowLines !== null && count($overflowLines) > 0) {
+                // ── -webkit-line-clamp 多行渲染（TextOverflowProcessor 已处理截断与省略号）──
+                $lineIdx = 0;
+                $maxLineW = 0;
+                $lineHeight = $overflowLineHeight > 0 ? $overflowLineHeight : (int)($fontSize * 1.2);
+                foreach ($overflowLines as $seg) {
+                    $segW = self::measureTextWidth($seg, $fontSize, $isBold);
+                    if ($segW > $maxLineW) $maxLineW = $segW;
+                    $segX = $contentX + 4;
+                    if ($align === 'right') {
+                        $segX = $contentX + $contentW - 12 - $segW;
+                        if ($segX < $contentX + 4) $segX = $contentX + 4;
+                    } elseif ($align === 'center') {
+                        $segX = $contentX + (int)(($contentW - $segW) / 2);
+                        if ($segX < $contentX + 4) $segX = $contentX + 4;
+                    }
+                    $segY = $contentY + $lineIdx * $lineHeight;
+                    $elements[] = ['type' => 'text', 'text' => $seg, 'x' => $segX, 'y' => $segY,
+                        'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
+                        'fontFamily' => $style['fontFamily'] ?? '',
+                        'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
+                        'decorationLine' => $style['textDecorationLine'] ?? 'none',
+                        'decorationColor' => $style['textDecorationColor'] ?? $textColor,
+                        'decorationStyle' => $style['decorationStyle'] ?? 'solid',
+                        'decorationThickness' => $style['decorationThickness'] ?? 0,
+                        'underlineOffset' => $style['underlineOffset'] ?? 0,
+                        'textWidth' => $segW];
+                    $lineIdx++;
+                }
+                $node->textRenderInfo = [
+                    'x' => ($contentX + 4) - $node->renderOffsetX,
+                    'y' => $contentY - $node->renderOffsetY,
+                    'textHeight' => $lineHeight * count($overflowLines),
+                    'textWidth' => $maxLineW,
+                ];
+            } elseif ($isWrappable && $textWidth > $contentW && $contentW > 20 && $lineH > 0) {
                 // ── Multi-line wrapped rendering ──
                 $lines = [];
                 $currentLine = '';
@@ -638,29 +739,29 @@ class VNodeRenderer
 
                 // 存储文本渲染位置信息（第一行位置）
                 $node->textRenderInfo = [
-                    'x' => $contentX + 4,
-                    'y' => $contentY,
+                    'x' => ($contentX + 4) - $node->renderOffsetX,
+                    'y' => $contentY - $node->renderOffsetY,
                     'textHeight' => $lineH * count($lines),
                     'textWidth' => $maxLineW,
                 ];
             } else {
                 // ── Single-line rendering (original) ──
                 $elements[] = ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
-                    'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
-                    'fontFamily' => $style['fontFamily'] ?? '',
-                    'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
-                    'decorationLine' => $style['textDecorationLine'] ?? 'none',
-                    'decorationColor' => $style['decorationColor'] ?? $textColor,
-                    'decorationStyle' => $style['decorationStyle'] ?? 'solid',
-                    'decorationThickness' => $style['decorationThickness'] ?? 0,
-                    'underlineOffset' => $style['underlineOffset'] ?? 0,
-                    'textWidth' => self::measureTextWidth($text, $fontSize, $isBold)];
+                        'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
+                        'fontFamily' => $style['fontFamily'] ?? '',
+                        'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
+                        'decorationLine' => $style['textDecorationLine'] ?? 'none',
+                        'decorationColor' => $style['decorationColor'] ?? $textColor,
+                        'decorationStyle' => $style['decorationStyle'] ?? 'solid',
+                        'decorationThickness' => $style['decorationThickness'] ?? 0,
+                        'underlineOffset' => $style['underlineOffset'] ?? 0,
+                        'textWidth' => self::measureTextWidth($text, $fontSize, $isBold)];
 
                 // 存储文本渲染位置信息（用于 layout dump 验证垂直居中）
                 $node->textRenderInfo = [
-                    'x' => $textX,
-                    'y' => $textY,
-                    'textHeight' => $textHeight,
+                    'x' => $textX - $node->renderOffsetX,
+                    'y' => $textY - $node->renderOffsetY,
+                    'textHeight' => max($textHeight, 0),
                     'textWidth' => $textWidth,
                 ];
             }
@@ -668,6 +769,36 @@ class VNodeRenderer
             if (count($elements) === 1) {
                 return $elements[0];
             }
+
+            // ── overflow:hidden 文本层 clip ──
+            // 使用自生坐标 (selfY + selfH), 与 text 在同一坐标空间
+            $elOverflowHidden = ($style['overflow'] ?? 'visible') === 'hidden';
+            if ($elOverflowHidden && !$node->isScrollContainer && $selfW > 0 && $selfH > 0) {
+                $clipX = $selfX + $borderLeftWidth;
+                $clipY = $selfY + $borderTopWidth;
+                $clipW = max(0, $selfW - $borderLeftWidth - $borderRightWidth);
+                $clipH = max(0, $selfH - $borderTopWidth - $borderBottomWidth);
+                if ($clipW > 0 && $clipH > 0) {
+                    $textLayer = $layer + 1;
+                    $clipPush = ['type' => 'clip-push', 'x' => $clipX, 'y' => $clipY, 'w' => $clipW, 'h' => $clipH, 'layer' => $textLayer];
+                    $clipPop = ['type' => 'clip-pop', 'layer' => $textLayer];
+                    $newElements = [];
+                    $inserted = false;
+                    foreach ($elements as $el) {
+                        $elLayer = $el['layer'] ?? $layer;
+                        if (!$inserted && $elLayer === $textLayer) {
+                            $newElements[] = $clipPush;
+                            $inserted = true;
+                        }
+                        $newElements[] = $el;
+                    }
+                    if ($inserted) {
+                        $newElements[] = $clipPop;
+                        $elements = $newElements;
+                    }
+                }
+            }
+
             return [
                 'type' => 'group', 'layer' => $layer, 'cursor' => $cursor,
                 'elements' => $elements,
@@ -824,8 +955,8 @@ class VNodeRenderer
         }
         $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
         $node->textRenderInfo = [
-            'x' => $x,
-            'y' => $y,
+            'x' => $x - $node->renderOffsetX,
+            'y' => $y - $node->renderOffsetY,
             'textHeight' => $textHeight,
             'textWidth' => $textWidth,
         ];

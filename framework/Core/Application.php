@@ -708,6 +708,12 @@ class Application
             'visualH' => $node->visualH,
             'layer' => $node->layer,
             'isScrollContainer' => $node->isScrollContainer,
+            'scrollTop' => $node->scrollTop,
+            'scrollLeft' => $node->scrollLeft,
+            'contentHeight' => $node->contentHeight,
+            'contentWidth' => $node->contentWidth,
+            'renderOffsetX' => $node->renderOffsetX,
+            'renderOffsetY' => $node->renderOffsetY,
             'content' => $node->content,
             'textRenderInfo' => $node->textRenderInfo,
         ];

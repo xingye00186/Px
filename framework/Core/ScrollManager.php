@@ -73,13 +73,15 @@ class ScrollManager
         PerfCounter::start('scroll_process');
         try {
             $scrollNode = ($this->findScrollContainer)($event->getX(), $event->getY());
-            if ($scrollNode === null) return;
+            if ($scrollNode === null) {
+                error_log('[SCROLL_DBG] no scroll container at x=' . $event->getX() . ' y=' . $event->getY());
+                return;
+            }
 
             $delta = $event->getDelta();
             $scrollAmount = (int)($delta / 3);
 
             if ($event->isShiftDown()) {
-                // 横向滚动
                 $contentW = $scrollNode->contentWidth;
                 $containerW = $scrollNode->w;
                 $maxScroll = max($contentW - $containerW, 0);
@@ -90,15 +92,16 @@ class ScrollManager
                     $this->applyScrollLeft($scrollNode, $newScrollLeft, true);
                 }
             } else {
-                // 竖向滚动
                 $contentH = $scrollNode->contentHeight;
                 $containerH = $scrollNode->h;
                 $maxScroll = max($contentH - $containerH, 0);
+                error_log('[SCROLL_DBG] wheel x=' . $event->getX() . ' y=' . $event->getY() . ' delta=' . $delta . ' sa=' . $scrollAmount . ' scrollTop=' . $scrollNode->scrollTop . ' contentH=' . $contentH . ' containerH=' . $containerH . ' maxScroll=' . $maxScroll);
                 if ($maxScroll <= 0) return;
 
                 $newScrollTop = max(0, min($maxScroll, $scrollNode->scrollTop - $scrollAmount));
                 if ($newScrollTop !== $scrollNode->scrollTop) {
                     $this->applyScrollTop($scrollNode, $newScrollTop, true);
+                    error_log('[SCROLL_DBG] applied scrollTop=' . $newScrollTop . ' (old was ' . $scrollNode->scrollTop . ')');
                 }
             }
         } finally {

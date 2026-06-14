@@ -82,7 +82,13 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         // Debug: span h before min/max
         $dbg_span_h_before = $node->h;
 
-        $node->h = (int)max(0, (int)PercentResolver::resolveMinMax($style, $height, false));
+        // ⚠️ 仅当有显式 height 或当前 h 为 0 时才覆盖 h。
+        // 对于 flex/grid 容器子节点，父容器已经设好了正确的 h（如 flex:1 分派的高度），
+        // 但这里没有显式 height 时 $height=0 → 覆盖为 0，导致后续 clamp 用 h=0 计算 maxScroll，
+        // scrollTop 无法正确限界，列表会无限空滚。
+        if ($height > 0 || $node->h === 0) {
+            $node->h = (int)max(0, (int)PercentResolver::resolveMinMax($style, $height, false));
+        }
 
         $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
         $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
@@ -186,6 +192,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $childOffsetY = $node->y + $paddingTop;
 
             $this->finalizeScrollContainer($node, $ctx, $style, $childOffsetY, $paddingLeft, $paddingRight, $paddingBottom);
+
+            error_log('[SCROLL_DBG] finalizeScrollContainer type=' . $node->type . ' x=' . $node->x . ' y=' . $node->y . ' w=' . $node->w . ' h=' . $node->h . ' visualH=' . $node->visualH . ' contentH=' . $node->contentHeight . ' maxScroll=' . max($node->contentHeight - $node->h, 0));
         }
 
 
@@ -470,7 +478,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $isAutoHeight = (!$hasExplicitHeight) ||
             ($hasExplicitHeight && $node->h === 0 && $overflowY !== 'hidden' && $overflowY !== 'scroll');
 
-        if ($isAutoHeight && $display === 'block') {
+        if ($isAutoHeight && $display === 'block' && !$node->isScrollContainer) {
             $maxBottom = 0;
 
             foreach ($node->children as $child) {

@@ -495,6 +495,22 @@ class LayoutResolver
             }
         }
 
+        // ── 统一 scrollTop/scrollLeft clamp（脏路径和洁净路径都执行）──
+        // 脏路径中 BlockLayoutStrategy::finalizeScrollContainer 和 flex/grid 后处理已经 clamp，
+        // 但洁净路径不重复这些步骤。如果 scrollTop 因任何原因超出范围（如 directRender 期间），
+        // 此处确保边界约束始终生效。
+        // CSS Overflow Module L3 §2.3: scrollable area clamp = max(0, content - visible)
+        if ($node->isScrollContainer) {
+            $maxScroll = (int)max($node->contentHeight - $node->h, 0);
+            if ($node->scrollTop > $maxScroll) {
+                $node->scrollTop = $maxScroll;
+            }
+            $maxScrollX = (int)max($node->contentWidth - $node->w, 0);
+            if ($node->scrollLeft > $maxScrollX) {
+                $node->scrollLeft = $maxScrollX;
+            }
+        }
+
         $this->resolveDepth--;
     }
 

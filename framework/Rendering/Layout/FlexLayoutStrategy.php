@@ -15,7 +15,7 @@ use Px\Rendering\Layout\Tools\ScrollHelper;
  * FlexLayoutStrategy — Flex 布局策略
  *
  * CSS Flexible Box Layout Module Level 1:
- * 实现完整的 flex 布局算法，包括:
+ * 实现完整的 flex 布局算法，包括
  * - flex-direction (row/column), flex-wrap
  * - flex-grow/flex-shrink/flex-basis
  * - justify-content (flex-start/center/flex-end/space-between/space-around/space-evenly)
@@ -144,7 +144,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // cross-axis direction differs from the parent's.
 
         // Example: a row flex-container child of a column flex-container should
-        // NOT have its height filled from parent height — only width should stretch.
+        // NOT have its height filled from parent height —only width should stretch.
 
         $gap = (int)($style['gap'] ?? 0);
 
@@ -174,15 +174,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // Apply scroll offset to child parent coordinates for scroll containers
 
-        $scrollShiftX = 0;
-
-        $scrollShiftY = 0;
-
-        if ($node->isScrollContainer) {
-            $scrollShiftX = $node->scrollLeft;
-
-            $scrollShiftY = $node->scrollTop;
-        }
+        // A1: scroll offset handled by VNodeRenderer at draw time
 
         $children = [];
         $absoluteChildren = [];
@@ -206,7 +198,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 continue;
             }
 
-            $childCtx = new LayoutContext($node->x + $paddingLeft - $scrollShiftX, $node->y + $paddingTop - $scrollShiftY, $node);
+            $childCtx = new LayoutContext($node->x + $paddingLeft, $node->y + $paddingTop, $node);
             $this->resolver->resolveNode($child, $childCtx);
 
             $children[] = $child;
@@ -1036,7 +1028,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     $padLsp = (int)($chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0);
                     $padRsp = (int)($chTp->style['paddingRight'] ?? $chTp->style['padding'] ?? 0);
                     $padBsp = (int)($chTp->style['paddingBottom'] ?? $chTp->style['padding'] ?? 0);
-                    $coffY = $chTp->y + $padTsp - $chTp->scrollTop;
+                    // A1 重构: childOffsetY 不再减去 scrollTop，偏移由 VNodeRenderer 在绘制层处理
+                    $coffY = $chTp->y + $padTsp;
 
                     $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $ctx, $chTp->style, $coffY, $padLsp, $padRsp, $padBsp);
                 }
@@ -1231,7 +1224,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // ── Second pass: resolve absolute/fixed children now that container dimensions are final ──
         foreach ($absoluteChildren as $child) {
-            $childCtx = new LayoutContext($node->x + $paddingLeft - $scrollShiftX, $node->y + $paddingTop - $scrollShiftY, $node);
+            $childCtx = new LayoutContext($node->x + $paddingLeft, $node->y + $paddingTop, $node);
             $this->resolver->resolveNode($child, $childCtx);
         }
 
@@ -1264,7 +1257,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                     }
                 }
-            // ── flex-basis: content — ignore width/height, always use content size ──
+            // ── flex-basis: content —ignore width/height, always use content size ──
             } elseif ($basis === 'content') {
                 $chText = $ch->content ?? '';
                 if (is_string($chText) && strlen($chText) > 0) {
@@ -1283,7 +1276,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         }
                     }
                 }
-            // ── flex-basis: auto (default) — use width/height if set, else content ──
+            // ── flex-basis: auto (default) —use width/height if set, else content ──
             } else {
                 $flexBasis = $ch->style['flexBasis'] ?? 'auto';
 
@@ -1432,9 +1425,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             return 0;
         }
 
-        // 3) overflow:visible (default) → CSS min-height:auto → content-based minimum
+        // 3) overflow:visible (default) → CSS min-height:auto →content-based minimum
         // The content-based min is approximated by the current computed main-size
         // from initial layout resolution (before flex shrink).
         return $currentMainSize;
     }
 }
+
