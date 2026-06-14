@@ -3,19 +3,19 @@
     <!-- Left Sidebar: dark theme -->
     <div class="sidebar" style="width:280px;height:100%;background:#1e1e2e;display:flex;flex-direction:column;flex-shrink:0;">
       <!-- Sidebar Header -->
-      <div class="sidebar-header" style="padding:16px 20px;background:#181825;border-bottom:1px solid #313244;">
+      <div class="sidebar-header" style="padding:16px 20px;background:#181825;border-bottom:1px solid #313244;flex-shrink:0;">
         <div style="font-size:18px;font-weight:700;color:#cdd6f4;">Test Console</div>
         <div style="font-size:11px;color:#6c7086;margin-top:2px;">CSS Test Suite · {{ caseCount }} cases</div>
       </div>
       <!-- Case List (scrollable) -->
-      <div class="case-list" style="flex:1;overflow-y:auto;padding:6px 0;">
+      <div class="case-list" style="flex:1;overflow-y:auto;padding:6px 0;min-height:0;">
         <div v-for="item in caseList" @click="selectCase(item.tag)" 
              style="display:flex;align-items:center;height:34px;padding:0 20px;font-size:13px;color:#a6adc8;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
           {{ item.title }}
         </div>
       </div>
       <!-- Sidebar Footer -->
-      <div class="sidebar-footer" style="padding:10px 16px;border-top:1px solid #313244;">
+      <div class="sidebar-footer" style="padding:10px 16px;border-top:1px solid #313244;flex-shrink:0;">
         <button @click="refreshCases" style="width:100%;height:32px;background:#313244;border:none;border-radius:6px;color:#cdd6f4;font-size:12px;cursor:pointer;">Refresh List</button>
       </div>
     </div>
@@ -24,7 +24,7 @@
       <div class="content-header" style="height:52px;background:#ffffff;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;padding:0 24px;flex-shrink:0;">
         <span style="font-size:15px;font-weight:600;color:#1e1e2e;">{{ currentTitle }}</span>
       </div>
-      <div class="content-body" style="flex:1;padding:20px;overflow-y:auto;">
+      <div class="content-body" style="flex:1;padding:20px;overflow:auto;position:relative;min-height:0;">
         <component :is="caseName" />
       </div>
     </div>

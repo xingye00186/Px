@@ -119,16 +119,16 @@ class AppComponent extends ReactiveComponent
     {
         return VNode::h('#root', ['title'=>'Untitled','style'=>'width:1600px;height:800px'], VNode::h('div', ['class'=>'test-console','style'=>'width:1600px;height:800px;display:flex;font-family:\'Segoe UI\',system-ui,-apple-system,sans-serif;'], [
                             VNode::h('div', ['class'=>'sidebar','style'=>'width:280px;height:100%;background:#1e1e2e;display:flex;flex-direction:column;flex-shrink:0;'], [
-                                    VNode::h('div', ['class'=>'sidebar-header','style'=>'padding:16px 20px;background:#181825;border-bottom:1px solid #313244;'], [
+                                    VNode::h('div', ['class'=>'sidebar-header','style'=>'padding:16px 20px;background:#181825;border-bottom:1px solid #313244;flex-shrink:0;'], [
                                             VNode::h('div', ['style'=>'font-size:18px;font-weight:700;color:#cdd6f4;'], 'Test Console'),
                                             VNode::h('div', ['style'=>'font-size:11px;color:#6c7086;margin-top:2px;'], 'CSS Test Suite · ' . $this->caseCount . ' cases'),
                                         ]),
-                                    VNode::h('div', ['class'=>'case-list','style'=>'flex:1;overflow-y:auto;padding:6px 0;'], $this->render_0()),
-                                    VNode::h('div', ['class'=>'sidebar-footer','style'=>'padding:10px 16px;border-top:1px solid #313244;'], VNode::h('button', ['style'=>'width:100%;height:32px;background:#313244;border:none;border-radius:6px;color:#cdd6f4;font-size:12px;cursor:pointer;','@click'=>'refreshCases'], 'Refresh List')),
+                                    VNode::h('div', ['class'=>'case-list','style'=>'flex:1;overflow-y:auto;padding:6px 0;min-height:0;'], $this->render_0()),
+                                    VNode::h('div', ['class'=>'sidebar-footer','style'=>'padding:10px 16px;border-top:1px solid #313244;flex-shrink:0;'], VNode::h('button', ['style'=>'width:100%;height:32px;background:#313244;border:none;border-radius:6px;color:#cdd6f4;font-size:12px;cursor:pointer;','@click'=>'refreshCases'], 'Refresh List')),
                                 ]),
                             VNode::h('div', ['class'=>'main-content','style'=>'flex:1;display:flex;flex-direction:column;background:#f5f5f5;'], [
                                     VNode::h('div', ['class'=>'content-header','style'=>'height:52px;background:#ffffff;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;padding:0 24px;flex-shrink:0;'], VNode::h('span', ['style'=>'font-size:15px;font-weight:600;color:#1e1e2e;','bind'=>'currentTitle'], $this->currentTitle)),
-                                    VNode::h('div', ['class'=>'content-body','style'=>'flex:1;padding:20px;overflow-y:auto;'], VNode::hComponent($this->resolveComponent($this->caseName), [], [])),
+                                    VNode::h('div', ['class'=>'content-body','style'=>'flex:1;padding:20px;overflow:auto;position:relative;min-height:0;'], VNode::hComponent($this->resolveComponent($this->caseName), [], [])),
                                 ]),
                         ]));
     }
