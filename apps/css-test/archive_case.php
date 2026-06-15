@@ -202,12 +202,15 @@ function archiveOneCase(string $caseName, int $frames, array &$registry): bool {
 $args = $argv ?? [];
 $scriptName = array_shift($args);
 $frames = $FRAMES_DEFAULT;
+$force = false;
 $command = null;
 
 foreach ($args as $arg) {
     if (str_starts_with($arg, '--frames=')) {
         $frames = (int)substr($arg, strlen('--frames='));
         if ($frames < 1) $frames = 1;
+    } elseif ($arg === '--force') {
+        $force = true;
     } elseif ($command === null) {
         $command = $arg;
     }
@@ -219,6 +222,7 @@ if ($command === null) {
     echo "  php archive_case.php --all        归档所有有 ref/ 的 case\n";
     echo "  php archive_case.php --list       列出可归档/已归档的 case\n";
     echo "  php archive_case.php --frames=10  指定多帧数（默认 5）\n";
+    echo "  php archive_case.php --force      覆盖已有归档基线\n";
     exit(0);
 }
 
@@ -260,10 +264,17 @@ if ($command === '--all') {
     $allCases = getAllCaseDirs();
     $success = 0;
     $skipped = 0;
+    $protected = 0;
     foreach ($allCases as $case) {
         if (!hasRefDir($case)) {
             echo "[SKIP] $case: 无 ref/ 目录\n";
             $skipped++;
+            continue;
+        }
+        // 归档保护
+        if (hasBaseline($case) && !$force) {
+            echo "[PROTECT] $case: 已有归档基线，跳过（使用 --force 覆盖）\n";
+            $protected++;
             continue;
         }
         echo "── 归档: $case (frames=$frames) ──\n";
@@ -271,8 +282,8 @@ if ($command === '--all') {
             $success++;
         }
     }
+    echo "\n完成: $success 归档, $skipped 跳过(无ref), $protected 保护跳过(已有基线)\n";
     saveRegistry($registry);
-    echo "\n完成: $success 归档, $skipped 跳过\n";
     exit(0);
 }
 
@@ -286,6 +297,12 @@ if (!in_array($caseName, $allCases)) {
         echo "  - $c\n";
     }
     exit(1);
+}
+
+// ── 归档保护：已归档的 case 需 --force 才能覆盖 ──
+if (hasBaseline($caseName) && !$force) {
+    echo "[PROTECT] $caseName 已有归档基线。使用 --force 强制覆盖\n";
+    exit(0);
 }
 
 echo "── 归档: $caseName (frames=$frames) ──\n";
