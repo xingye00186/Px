@@ -48,6 +48,34 @@ class VNodeRenderer
     }
 
     /**
+     * 计算节点的 padding-box 裁剪矩形（统一方法）。
+     *
+     * CSS Overflow Module L3 §3.2: clip region = padding box (excludes border).
+     * 使用渲染坐标（layout + renderOffset），与子元素文本/item-clip
+     * 处于同一坐标空间，保证嵌套 clip 相交计算一致。
+     *
+     * @return array{x: int, y: int, w: int, h: int}
+     */
+    private static function computePaddingBoxClip(RenderNode $node): array
+    {
+        $bw = (int)($node->style['borderWidth'] ?? 0);
+        $ns = $node->style;
+        $bl = (int)($ns['borderLeftWidth'] ?? $bw);
+        $br = (int)($ns['borderRightWidth'] ?? $bw);
+        $bt = (int)($ns['borderTopWidth'] ?? $bw);
+        $bb = (int)($ns['borderBottomWidth'] ?? $bw);
+        // visualW/visualH 优先，未设置时回退到 layout w/h
+        $vw = ($node->visualW > 0 ? $node->visualW : $node->w);
+        $vh = ($node->visualH > 0 ? $node->visualH : $node->h);
+        return [
+            'x' => $node->x + $node->renderOffsetX + $bl,
+            'y' => $node->y + $node->renderOffsetY + $bt,
+            'w' => max(0, $vw - $bl - $br),
+            'h' => max(0, $vh - $bt - $bb),
+        ];
+    }
+
+    /**
      * 渲染 RenderNode 树
      */
     public function render(RenderNode $root): void
@@ -164,16 +192,10 @@ class VNodeRenderer
 
         if ($isScrollNode) {
             // CSS Overflow Module L3 §3.2: clip region = padding box (excludes border)
-            $bw = (int)($node->style['borderWidth'] ?? 0);
-            $ns = $node->style;
-            $bl = (int)($ns['borderLeftWidth'] ?? $bw);
-            $br = (int)($ns['borderRightWidth'] ?? $bw);
-            $bt = (int)($ns['borderTopWidth'] ?? $bw);
-            $bb = (int)($ns['borderBottomWidth'] ?? $bw);
+            $clip = self::computePaddingBoxClip($node);
             $this->scrollCtxStack[] = [
-                'x' => $node->x + $bl, 'y' => $node->y + $bt,
-                'w' => max(0, $node->visualW - $bl - $br),
-                'h' => max(0, $node->visualH - $bt - $bb),
+                'x' => $clip['x'], 'y' => $clip['y'],
+                'w' => $clip['w'], 'h' => $clip['h'],
                 'scrollTop' => $node->scrollTop,
                 'scrollLeft' => $node->scrollLeft,
                 'overflowX' => $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible',
@@ -196,21 +218,12 @@ class VNodeRenderer
             if (!isset($elementsByLayer[$layer])) {
                 $elementsByLayer[$layer] = [];
             }
-            // CSS Overflow Module L3 §3.2: clip region = padding box (excludes border)
-            $bw = (int)($node->style['borderWidth'] ?? 0);
-            $ns = $node->style;
-            $bl = (int)($ns['borderLeftWidth'] ?? $bw);
-            $br = (int)($ns['borderRightWidth'] ?? $bw);
-            $bt = (int)($ns['borderTopWidth'] ?? $bw);
-            $bb = (int)($ns['borderBottomWidth'] ?? $bw);
-            $clipX = $node->x + $bl;
-            $clipY = $node->y + $bt;
-            $clipW = max(0, ($node->visualW > 0 ? $node->visualW : $node->w) - $bl - $br);
-            $clipH = max(0, ($node->visualH > 0 ? $node->visualH : $node->h) - $bt - $bb);
+            // 使用统一方法计算 padding-box clip，坐标系与 scrollCtxStack 一致
+            $clip = self::computePaddingBoxClip($node);
             $elementsByLayer[$layer][] = [
                 'type' => 'clip-push',
-                'x' => $clipX, 'y' => $clipY,
-                'w' => $clipW, 'h' => $clipH,
+                'x' => $clip['x'], 'y' => $clip['y'],
+                'w' => $clip['w'], 'h' => $clip['h'],
                 'layer' => $layer,
             ];
             // 滚动容器还需在 layer+1 推 clip 以裁切文字 (CSS Overflow L3 §3.2)
@@ -222,8 +235,8 @@ class VNodeRenderer
                 }
                 $elementsByLayer[$textLayer][] = [
                     'type' => 'clip-push',
-                    'x' => $clipX, 'y' => $clipY,
-                    'w' => $clipW, 'h' => $clipH,
+                    'x' => $clip['x'], 'y' => $clip['y'],
+                    'w' => $clip['w'], 'h' => $clip['h'],
                     'layer' => $textLayer,
                 ];
             }
@@ -754,13 +767,14 @@ class VNodeRenderer
             }
 
             // ── overflow:hidden 文本层 clip ──
-            // 使用自生坐标 (selfY + selfH), 与 text 在同一坐标空间
+            // 使用统一 computePaddingBoxClip 确保与 scroll 容器 clip 同一坐标系
             $elOverflowHidden = ($style['overflow'] ?? 'visible') === 'hidden';
             if ($elOverflowHidden && !$node->isScrollContainer && $selfW > 0 && $selfH > 0) {
-                $clipX = $selfX + $borderLeftWidth;
-                $clipY = $selfY + $borderTopWidth;
-                $clipW = max(0, $selfW - $borderLeftWidth - $borderRightWidth);
-                $clipH = max(0, $selfH - $borderTopWidth - $borderBottomWidth);
+                $itemClip = self::computePaddingBoxClip($node);
+                $clipX = $itemClip['x'];
+                $clipY = $itemClip['y'];
+                $clipW = $itemClip['w'];
+                $clipH = $itemClip['h'];
                 if ($clipW > 0 && $clipH > 0) {
                     $textLayer = $layer + 1;
                     $clipPush = ['type' => 'clip-push', 'x' => $clipX, 'y' => $clipY, 'w' => $clipW, 'h' => $clipH, 'layer' => $textLayer];
