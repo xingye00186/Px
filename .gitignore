@@ -54,7 +54,10 @@ docs/_*.md
 docs/_*.py
 test_debug/
 
-# 运行产出的多帧布局快照（仅 case 根目录，不含 ref/ 基线）
+# 所有实时参考数据（run.php 自动生成，无需跟踪）
+**/ref/
+
+# 运行产出的多帧布局快照（仅 case 根目录）
 test_case/*/engine_layout_after_5frames.json
 
 # 构建锁文件
