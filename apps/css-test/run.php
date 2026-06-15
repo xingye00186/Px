@@ -811,8 +811,21 @@ if (!empty($allPropStats)) {
     }
 }
 
-file_put_contents($APP_DIR . '/test_report.md', implode("\n", $reportLines));
-echo "\n报告已保存: test_report.md\n";
+$reportContent = implode("\n", $reportLines);
+
+// 保存到新版 docs/ 目录
+$reportDir = $APP_DIR . '/docs/02-测试报告';
+if (!is_dir($reportDir)) {
+    mkdir($reportDir, 0777, true);
+}
+$timestamp = date('Ymd_His');
+$reportPath = $reportDir . "/{$timestamp}.md";
+file_put_contents($reportPath, $reportContent);
+file_put_contents($reportDir . '/最新报告.md', $reportContent);
+echo "\n报告已保存: docs/02-测试报告/{$timestamp}.md\n";
+
+// 兼容旧版路径（逐步废弃）
+file_put_contents($APP_DIR . '/test_report.md', $reportContent);
 
 // ── 自动检查问题清单：发现未记录的 FAIL 则警告 ──
 $issueLogPath = $APP_DIR . '/docs/01-问题清单.md';
