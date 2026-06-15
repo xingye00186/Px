@@ -11,7 +11,7 @@
     <!-- History header -->
     <history-panel style="margin-left:11px;flex-shrink:0" :arrow="arrowText" />
     <!-- History list / spacer -->
-    <div v-if="showHistory" style="margin-left:11px;flex:1;background:#2C2C2E">
+    <div v-if="showHistory" style="margin-left:11px;margin-right:11px;flex:1;background:#2C2C2E">
       <template v-for="item in historyItems" :key="item.id">
         <div style="height:24px;cursor:pointer;display:flex;align-items:center;padding-left:8px" @click="loadHistoryItem" click-arg="item.id">
           <span style="font-size:12px;color:#FFFFFF">{{ item.text }}</span>
