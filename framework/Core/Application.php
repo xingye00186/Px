@@ -98,21 +98,39 @@ class Application
      */
     public static function handleDumpArgs(self $app, string $appDir, array $argv): bool
     {
-        // --dump-layout: 单帧导出（保持向后兼容）
+        // Extract --dump-layout-to=PATH (new) or use default path
+        $dumpTo = '';
+        foreach ($argv as $arg) {
+            if (str_starts_with($arg, '--dump-layout-to=')) {
+                $dumpTo = substr($arg, strlen('--dump-layout-to='));
+                break;
+            }
+        }
+
+        // --dump-layout: 单帧导出
         if (in_array('--dump-layout', $argv)) {
             $app->render();
-            $app->dumpLayoutToFile($appDir . '/engine_layout.json');
+            $path = $dumpTo !== '' ? $dumpTo : $appDir . '/engine_layout.json';
+            $app->dumpLayoutToFile($path);
             return true;
         }
 
-        // --dump-layout-after-frames=N: 多帧稳定性验证（§Phase 2 强制）
+        // --dump-layout-after-frames=N: 多帧稳定性验证
         foreach ($argv as $arg) {
             if (str_starts_with($arg, '--dump-layout-after-frames=')) {
                 $n = (int)substr($arg, strlen('--dump-layout-after-frames='));
                 if ($n < 1) {
                     $n = 5;
                 }
-                $outputPath = $appDir . "/engine_layout_after_{$n}frames.json";
+                $prefix = $dumpTo !== '' ? $dumpTo : ($appDir . '/engine_layout');
+                // For dump-to path, insert frame number before extension
+                if ($dumpTo !== '') {
+                    $ext = '.json';
+                    $base = substr($dumpTo, 0, -strlen($ext));
+                    $outputPath = $base . "_after_{$n}frames.json";
+                } else {
+                    $outputPath = $appDir . "/engine_layout_after_{$n}frames.json";
+                }
                 for ($i = 0; $i < $n; $i++) {
                     $app->render();
                     $app->scheduler->flushMicrotasks();
