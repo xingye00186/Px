@@ -100,13 +100,13 @@ class PercentResolver
                 // 但我们只有一层 parentStyle，因此这里用 normal 处理
             }
             // CSS 2.2 §10.8.1: 'normal' 的 line-height 由 UA 决定
-            // 从浏览器实测数据推导的插值公式（第三次改进）：
-            //   fontSize=14 → 1.5x (≈21px)  ✔ 匹配 Chrome/Edge
-            //   fontSize=16 → ~1.473x (≈24px) ✔
-            //   fontSize=18 → ~1.447x (≈26px) ✔
-            //   fontSize=20 → 1.45x (≈29px) ✔ 匹配 Edge
-            //   fontSize=24+ → 1.45x (≈35px) ✔ 匹配 Edge
-            // 在 14px~24px 之间线性插值，更大字号保持 1.45x 下限
+            // 引擎使用简单倍数近似。对于 Noto Sans SC 等 CJK 字体，调校值约 1.45x。
+            // 浏览器（如 Edge）的 line-height:normal 基于字体度量，CJK 字体约 1.4~1.5x。
+            // 从浏览器实测数据推导的插值公式：
+            //   fontSize=14 → 1.5x (≈21px)
+            //   fontSize=16 → ~1.473x (≈24px)
+            //   fontSize=18 → ~1.447x (≈26px)
+            //   fontSize=20+ → 1.45x
             if ($fontSize <= 14) {
                 return (int)($fontSize * 1.5);
             }
