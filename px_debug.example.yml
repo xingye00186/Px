@@ -1,6 +1,0 @@
-# 调试配置 - 快照输出系统
-snapshot_enabled: true
-snapshot_max_events: 5
-snapshot_detail: normal
-snapshot_max_size_mb: 5
-snapshot_max_backups: 5
