@@ -393,6 +393,12 @@ class VNodeRenderer
         $layer = $node->layer;
 
         // 滚动裁切（position:fixed 元素不受祖先滚动容器影响）
+        // 仅 CULL 完全不可见元素，不做坐标截断调整。
+        // 坐标截断会导致 rect 与 text/item-clip 坐标不一致：
+        // rect 被吸附到容器边界，而 text（在 makeDivElement/makeSpanElement 中
+        // 使用 selfX/selfY = node->x/y + renderOffset 定位）保持原始位置，
+        // 破坏"视觉随动"原则——列表项整体（rect+text+clip）应同步位移，
+        // 统一由 clip-push/clip-pop 在渲染层做裁剪。
         if (count($this->scrollCtxStack) > 0) {
             $isFixed = ($node->style['position'] ?? '') === 'fixed';
             if (!$isFixed) {
@@ -404,39 +410,16 @@ class VNodeRenderer
             $overflowX = $scrollCtx['overflowX'];
             $overflowY = $scrollCtx['overflowY'];
 
-            // Y-axis: cull if completely outside, clip if partially outside
+            // Y-axis: cull if completely outside the container
             if ($overflowY !== 'visible') {
                 if ($y + $h <= $containerY || $y >= $containerY + $containerH) {
-                    error_log('[SCROLL_DBG] CULL y=' . $node->y . '+' . $node->renderOffsetY . '=' . $y . ' renderH=' . $h . ' containerY=' . $containerY . ' containerH=' . $containerH . ' v-for key=' . ($node->key ?? 'none'));
-                    return null;
-                }
-                if ($y < $containerY) {
-                    $h -= ($containerY - $y);
-                    $y = (int)$containerY;
-                }
-                if ($y + $h > $containerY + $containerH) {
-                    $h = ($containerY + $containerH) - $y;
-                }
-                // 截断后 h≤0 或 w≤0 表示无可见区域，应 CULL
-                if ($h <= 0 || $w <= 0) {
                     return null;
                 }
             }
 
-            // X-axis
+            // X-axis: cull if completely outside the container
             if ($overflowX !== 'visible') {
                 if ($x + $w <= $containerX || $x >= $containerX + $containerW) {
-                    return null;
-                }
-                if ($x < $containerX) {
-                    $w -= ($containerX - $x);
-                    $x = (int)$containerX;
-                }
-                if ($x + $w > $containerX + $containerW) {
-                    $w = ($containerX + $containerW) - $x;
-                }
-                // 截断后 w≤0 表示无可见区域
-                if ($w <= 0) {
                     return null;
                 }
             }
