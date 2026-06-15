@@ -13,6 +13,8 @@ $null
 .idea/
 config.yml
 .qoder/
+!.qoder/skills/
+!.qoder/skills/**/*
 *.cache.json
 
 # Skia 字体资源（暂存 .zip 压缩包不跟踪）
