@@ -4,7 +4,7 @@
     <span style="padding:14px 0 0 14px;font-size:18px;color:#FFFFFF;font-weight:bold">{{ listTitle }}</span>
 
     <!-- Scroll container with v-for list items -->
-    <div style="overflow:auto;margin:14px 10px 0 10px;flex:1" :scroll-top="scrollTop">
+    <div style="overflow:auto;margin:14px 10px 0 10px;flex:1">
       <template v-for="item in todoItems" :key="item.id">
         <div class="item-bg"
              style="height:48px;margin-bottom:4px;padding-left:14px;display:flex;align-items:center"
@@ -28,7 +28,7 @@ class AppComponent extends ReactiveComponent
 {
     public string $listTitle = "Todo List";
     public string $addBtnText = "Add Item";
-    public string $scrollTop = "0";
+
     public array $todoItems = [
         ['id' => '1', 'text' => 'Task 1'],
         ['id' => '2', 'text' => 'Task 2'],
