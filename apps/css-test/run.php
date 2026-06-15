@@ -814,6 +814,41 @@ if (!empty($allPropStats)) {
 file_put_contents($APP_DIR . '/test_report.md', implode("\n", $reportLines));
 echo "\n报告已保存: test_report.md\n";
 
+// ── 自动检查问题清单：发现未记录的 FAIL 则警告 ──
+$issueLogPath = $APP_DIR . '/docs/01-问题清单.md';
+if ($totalFail > 0 && file_exists($issueLogPath)) {
+    $issueLog = file_get_contents($issueLogPath);
+    $loggedCaseNames = [];
+    // 扫描问题清单中所有关联的 case 名称
+    if (preg_match_all('/case-\d+[-\w]*/', $issueLog, $matches)) {
+        $loggedCaseNames = array_unique($matches[0]);
+    }
+    // 检查报告中有 FAIL 的 case 是否在问题清单中有记录
+    $unlogged = [];
+    foreach ($cases as $caseDir) {
+        $cn = basename($caseDir);
+        // 跳过通过的 case
+        $resultStr = '';
+        foreach ($reportLines as $rl) {
+            if (str_starts_with($rl, "| $cn ")) {
+                $cols = explode('|', $rl);
+                $resultStr = $cols[6] ?? '';
+                break;
+            }
+        }
+        if (str_contains($resultStr, '失败') && !in_array($cn, $loggedCaseNames)) {
+            $unlogged[] = $cn;
+        }
+    }
+    if (!empty($unlogged)) {
+        echo "\n⚠️ [DOC_WARN] 以下 FAIL case 在问题清单中无记录，请更新 docs/01-问题清单.md:\n";
+        foreach ($unlogged as $uc) {
+            echo "  - $uc\n";
+        }
+        echo "\n";
+    }
+}
+
 exit($totalFail > 0 ? 1 : 0);
 
 // ============================================================
@@ -1660,6 +1695,53 @@ function compareEngineWithBrowser(string $engineLayoutPath, string $browserRefPa
     }
 
     if ($centeringChecks === 0) {
+        $result['skip']++;
+    }
+
+    // ---- Phase E: 文本溢出容器检测（防渲染盲区）----
+    // 检测引擎布局中 textRenderInfo.textWidth 是否超出父容器 content width。
+    // 如果 textWidth > contentW + tolerance，说明文本可能未正确换行，
+    // 即使布局层容器高度正确，渲染层可能画成单行溢出。
+    $overflowChecks = 0;
+    foreach ($engineAll as $eIdx => $eEl) {
+        $tr = $eEl['textRenderInfo'] ?? null;
+        if ($tr === null) continue;
+        $textW = $tr['textWidth'] ?? 0;
+        if ($textW <= 0) continue;
+
+        $parentIdx = $eEl['parentIdx'] ?? null;
+        if ($parentIdx === null) continue;
+        $parent = null;
+        foreach ($engineAll as $candidate) {
+            if (($candidate['idx'] ?? -1) === $parentIdx) {
+                $parent = $candidate;
+                break;
+            }
+        }
+        if ($parent === null) continue;
+
+        $pStyle = $parent['style'] ?? [];
+        $pBorderL = (int)($pStyle['borderLeftWidth'] ?? $pStyle['borderWidth'] ?? 0);
+        $pBorderR = (int)($pStyle['borderRightWidth'] ?? $pStyle['borderWidth'] ?? 0);
+        $pPadL = (int)($pStyle['paddingLeft'] ?? $pStyle['padding'] ?? 0);
+        $pPadR = (int)($pStyle['paddingRight'] ?? $pStyle['padding'] ?? 0);
+        $parentContentW = max(1, ($parent['visualW'] ?? $parent['w'] ?? 0) - $pBorderL - $pBorderR - $pPadL - $pPadR);
+
+        $overflow = $textW - $parentContentW;
+        if ($overflow > 5) {
+            $overflowChecks++;
+            $content = $eEl['content'] ?? '';
+            $result['issues'][] = [
+                'type' => 'OVERFLOW',
+                'msg' => "'" . mb_substr($content, 0, 40) . "...' textWidth={$textW} > 父容器contentW={$parentContentW} (溢出{$overflow}px)，文本可能未正确换行"
+            ];
+        }
+    }
+
+    if ($overflowChecks > 0) {
+        // 溢出检测到的 FAIL 数 = overflowChecks（每项是一个独立的渲染风险）
+        $result['fail'] += $overflowChecks;
+    } else {
         $result['skip']++;
     }
 
