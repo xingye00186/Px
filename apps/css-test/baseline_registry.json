@@ -2,7 +2,7 @@
     "_format_version": 1,
     "cases": {
         "case-001-wrapper-x": {
-            "archived_at": "2026-06-15 13:41:45",
+            "archived_at": "2026-06-15 13:52:18",
             "md5": "136448484416327d6e3362f4e9429410",
             "node_count": 85,
             "multi_frames": 5,
@@ -164,6 +164,47 @@
                 "whiteSpace"
             ],
             "style_field_count": 33
+        },
+        "case-006-typography": {
+            "archived_at": "2026-06-15 13:54:17",
+            "md5": "4e5f07ba3b12177304b164ae8cf2e74c",
+            "node_count": 87,
+            "multi_frames": 5,
+            "multi_frame_nodes": 87,
+            "style_fields": [
+                "alignItems",
+                "bg",
+                "bold",
+                "borderBottomColor",
+                "borderBottomWidth",
+                "borderColor",
+                "borderLeftColor",
+                "borderLeftWidth",
+                "borderRadius",
+                "borderRightColor",
+                "borderRightWidth",
+                "borderTopColor",
+                "borderTopWidth",
+                "borderWidth",
+                "boxSizing",
+                "display",
+                "fg",
+                "flexDirection",
+                "fontFamily",
+                "fontSize",
+                "lineHeight",
+                "marginBottom",
+                "marginTop",
+                "overflow",
+                "overflowY",
+                "paddingBottom",
+                "paddingLeft",
+                "paddingRight",
+                "paddingTop",
+                "position",
+                "whiteSpace"
+            ],
+            "style_field_count": 31
         }
     }
 }

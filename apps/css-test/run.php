@@ -650,7 +650,7 @@ foreach ($cases as $caseDir) {
                 // Show first 5 issues
                 $shown = 0;
                 foreach ($issues as $issue) {
-                    if ($shown++ >= 5) { echo "    ... 还有更多问题\n"; break; }
+                    if ($shown++ >= 50) { echo "    ... 还有更多问题\n"; break; }
                     echo "    [$issue[type]] $issue[msg]\n";
                 }
             } else {
