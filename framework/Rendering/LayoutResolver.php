@@ -442,7 +442,10 @@ class LayoutResolver
 
             $cleanPos = $style['position'] ?? 'static';
 
-            if ($cleanPos !== 'static') {
+            // CSS Positioned Layout §3.1: absolute/fixed 使用 positioning ancestor 参考系
+            // clean path 不应覆盖 dirty path 中 AbsolutePositioning 已经正确计算的位置
+            // 只有 relative 元素的 left/top 偏移可以在 clean path 中应用
+            if ($cleanPos === 'relative') {
                 if (array_key_exists('left', $style)) {
                     $node->x = (int)($style['left'] + $ctx->parentX + $marginLeft);
                 }

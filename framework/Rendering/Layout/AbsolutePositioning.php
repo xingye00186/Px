@@ -89,6 +89,14 @@ class AbsolutePositioning implements AbsoluteStrategy
         $borderB = ($ancestor !== null) ? (int)($ancestor->style['borderBottomWidth'] ?? $ancestor->style['borderWidth'] ?? 0) : 0;
         $ancestorX = ($ancestor !== null) ? $ancestor->x : 0;
         $ancestorY = ($ancestor !== null) ? $ancestor->y : 0;
+
+        // DIAG: trace absolute positioning computation
+        if ($node->w === 8 && $node->h === 8) {
+            $diagAncType = ($ancestor !== null) ? $ancestor->type : 'null';
+            $diagAncX = $ancestorX;
+            $diagBdrL = $borderL;
+            error_log("[DIAG_ABS] ANCHOR 8x8: ancestor.type=$diagAncType ancestor.x=$diagAncX borderL=$diagBdrL left=" . ($leftRaw ?? 'null') . " top=" . ($topRaw ?? 'null'));
+        }
         $ancestorW = ($ancestor !== null)
             ? $ancestor->visualW - $borderL - $borderR
             : $viewportW;
@@ -148,10 +156,16 @@ class AbsolutePositioning implements AbsoluteStrategy
         $paddingRight = (int)PercentResolver::resolveMarginPaddingPercent($style, 'paddingRight', 'paddingRightPercent', $ancestorContentW);
         $paddingTop = (int)PercentResolver::resolveMarginPaddingPercent($style, 'paddingTop', 'paddingTopPercent', $ancestorContentW);
 
-        // relative: left/top 作为额外偏移（不改变 stack 推进位置）
-        $node->x = (int)($ancestorX + $left + $marginLeft);
+        // CSS Positioned Layout §3.1: containing block = padding box
+        // 绝对定位原点 = border-box 原点 + border 宽度，到达 padding-box 原点
+        $node->x = (int)($ancestorX + $borderL + $left + $marginLeft);
 
-        $node->y = (int)($ancestorY + $top + $marginTop);
+        $node->y = (int)($ancestorY + $borderT + $top + $marginTop);
+
+        // DIAG: trace computed position for 8x8 anchors
+        if ($node->w === 8 && $node->h === 8) {
+            error_log("[DIAG_ABS] ANCHOR after setPos: x={$node->x} y={$node->y} (expected ~" . ($ancestorX + $borderL) . ")");
+        }
 
         // right/bottom 替代：相对于 padding box 的右边/下边（CSS Positioned Layout §3.1）
         // position:fixed 时 ancestor=null（视口参考系），使用 $viewportW/$viewportH

@@ -37,9 +37,9 @@ tests/css-standards/**/debug_*.php
 dep.json
 project.dep.yml
 
-# Debug 输出文件
+# Debug 输出文件（仅匹配各应用根目录，不影响 test_case/ 下 ref/ baseline/ 中的布局数据）
 debug_layout.txt
-engine_layout.json
+apps/*/engine_layout.json
 _debug_out.txt
 
 # Debug 脚本目录

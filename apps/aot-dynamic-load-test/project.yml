@@ -1,0 +1,11 @@
+name: aot-dynamic-load-test
+mode: bin
+no-console: false
+job: 8
+platform: win32
+entry: main.php
+Px_build_all_ignore: true
+sources:
+  - main.php
+  - ../../stub
+  - ../../cpp

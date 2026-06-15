@@ -1,0 +1,283 @@
+{
+    "type": "div",
+    "x": 0,
+    "y": 0,
+    "w": 1600,
+    "h": 800,
+    "visualW": 1600,
+    "visualH": 800,
+    "layer": 0,
+    "isScrollContainer": true,
+    "content": null,
+    "style": {
+        "bg": 16119285,
+        "fontSize": 14,
+        "overflowY": "auto"
+    },
+    "children": [
+        {
+            "type": "div",
+            "x": 0,
+            "y": 0,
+            "w": 1560,
+            "h": 40,
+            "visualW": 1600,
+            "visualH": 41,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "bg": 16777215,
+                "fg": 6710886,
+                "fontSize": 14,
+                "borderColor": 14540253,
+                "borderBottomWidth": 1,
+                "borderBottomColor": 14540253,
+                "display": "flex",
+                "paddingTop": 0,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 0,
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "type": "#text",
+                    "x": 20,
+                    "y": 12,
+                    "w": 93,
+                    "h": 16,
+                    "visualW": 93,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "CSS Test Sandbox —",
+                    "style": {
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "type": "span",
+                    "x": 113,
+                    "y": 12,
+                    "w": 43,
+                    "h": 16,
+                    "visualW": 43,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "Test Case",
+                    "style": {
+                        "fg": 3355443,
+                        "fontSize": 14,
+                        "bold": 1
+                    }
+                }
+            ]
+        },
+        {
+            "type": "div",
+            "x": 0,
+            "y": 41,
+            "w": 1560,
+            "h": 383,
+            "visualW": 1600,
+            "visualH": 423,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "fontSize": 14,
+                "paddingTop": 20,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 20
+            },
+            "children": [
+                {
+                    "type": "div",
+                    "x": 20,
+                    "y": 61,
+                    "w": 800,
+                    "h": 333,
+                    "visualW": 850,
+                    "visualH": 383,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "bg": 16777215,
+                        "fontSize": 14,
+                        "borderWidth": 1,
+                        "borderColor": 14737632,
+                        "borderLeftWidth": 1,
+                        "borderLeftColor": 14737632,
+                        "borderTopWidth": 1,
+                        "borderTopColor": 14737632,
+                        "borderRightWidth": 1,
+                        "borderRightColor": 14737632,
+                        "borderBottomWidth": 1,
+                        "borderBottomColor": 14737632,
+                        "borderRadius": 8,
+                        "position": "relative",
+                        "paddingTop": 24,
+                        "paddingLeft": 24,
+                        "paddingRight": 24,
+                        "paddingBottom": 24
+                    },
+                    "children": [
+                        {
+                            "type": "div",
+                            "x": 20,
+                            "y": 61,
+                            "w": 8,
+                            "h": 8,
+                            "visualW": 8,
+                            "visualH": 8,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16711935,
+                                "position": "absolute"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 85,
+                            "w": 800,
+                            "h": 21,
+                            "visualW": 800,
+                            "visualH": 21,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Basic Block Layout Test",
+                            "style": {
+                                "fg": 3355443,
+                                "fontSize": 18,
+                                "bold": 1,
+                                "marginBottom": 16
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 122,
+                            "w": 768,
+                            "h": 60,
+                            "visualW": 800,
+                            "visualH": 60,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Block Item 1 — fixed height 60px",
+                            "style": {
+                                "bg": 16642787,
+                                "fg": 12608789,
+                                "fontSize": 14,
+                                "borderRadius": 4,
+                                "display": "flex",
+                                "paddingTop": 0,
+                                "paddingLeft": 16,
+                                "paddingRight": 16,
+                                "paddingBottom": 0,
+                                "marginBottom": 12,
+                                "alignItems": "center"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 194,
+                            "w": 768,
+                            "h": 60,
+                            "visualW": 800,
+                            "visualH": 60,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Block Item 2 — fixed height 60px",
+                            "style": {
+                                "bg": 15525116,
+                                "fg": 2631878,
+                                "fontSize": 14,
+                                "borderRadius": 4,
+                                "display": "flex",
+                                "paddingTop": 0,
+                                "paddingLeft": 16,
+                                "paddingRight": 16,
+                                "paddingBottom": 0,
+                                "marginBottom": 12,
+                                "alignItems": "center"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 266,
+                            "w": 768,
+                            "h": 80,
+                            "visualW": 800,
+                            "visualH": 80,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Block Item 3 — fixed height 80px (taller)",
+                            "style": {
+                                "bg": 15332840,
+                                "fg": 3308846,
+                                "fontSize": 14,
+                                "borderRadius": 4,
+                                "display": "flex",
+                                "paddingTop": 0,
+                                "paddingLeft": 16,
+                                "paddingRight": 16,
+                                "paddingBottom": 0,
+                                "marginBottom": 12,
+                                "alignItems": "center"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 44,
+                            "y": 358,
+                            "w": 768,
+                            "h": 60,
+                            "visualW": 800,
+                            "visualH": 60,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "Block Item 4 — fixed height 60px (no margin-bottom)",
+                            "style": {
+                                "bg": 14742527,
+                                "fg": 20966,
+                                "fontSize": 14,
+                                "borderRadius": 4,
+                                "display": "flex",
+                                "paddingTop": 0,
+                                "paddingLeft": 16,
+                                "paddingRight": 16,
+                                "paddingBottom": 0,
+                                "alignItems": "center"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 860,
+                            "y": 434,
+                            "w": 8,
+                            "h": 8,
+                            "visualW": 8,
+                            "visualH": 8,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16776960,
+                                "position": "absolute"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

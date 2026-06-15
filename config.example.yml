@@ -17,7 +17,7 @@ utf8_output: true
 # Priority: project.yml > config.yml (project.yml false disables entirely)
 # If project.yml has true or is unset, config.yml true enables clearing
 # Default: off
-Px_clear_compilation_cache: false
+Px_clear_compilation_cache: true
 
 # Runtime debug config reference (place these in each app's project.yml)
 # Read by framework/Core/Config.php, keys use Px_debug_ prefix

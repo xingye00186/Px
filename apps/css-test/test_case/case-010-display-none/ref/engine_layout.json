@@ -1,0 +1,382 @@
+{
+    "type": "div",
+    "x": 0,
+    "y": 0,
+    "w": 1600,
+    "h": 800,
+    "visualW": 1600,
+    "visualH": 800,
+    "layer": 0,
+    "isScrollContainer": true,
+    "content": null,
+    "style": {
+        "bg": 16119285,
+        "fontSize": 14,
+        "overflowY": "auto"
+    },
+    "children": [
+        {
+            "type": "div",
+            "x": 0,
+            "y": 0,
+            "w": 1560,
+            "h": 40,
+            "visualW": 1600,
+            "visualH": 41,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "bg": 16777215,
+                "fg": 6710886,
+                "fontSize": 14,
+                "borderColor": 14540253,
+                "borderBottomWidth": 1,
+                "borderBottomColor": 14540253,
+                "display": "flex",
+                "paddingTop": 0,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 0,
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "type": "#text",
+                    "x": 20,
+                    "y": 12,
+                    "w": 93,
+                    "h": 16,
+                    "visualW": 93,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "CSS Test Sandbox —",
+                    "style": {
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "type": "span",
+                    "x": 113,
+                    "y": 12,
+                    "w": 43,
+                    "h": 16,
+                    "visualW": 43,
+                    "visualH": 16,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": "Test Case",
+                    "style": {
+                        "fg": 3355443,
+                        "fontSize": 14,
+                        "bold": 1
+                    }
+                }
+            ]
+        },
+        {
+            "type": "div",
+            "x": 0,
+            "y": 41,
+            "w": 1560,
+            "h": 325,
+            "visualW": 1600,
+            "visualH": 365,
+            "layer": 0,
+            "isScrollContainer": false,
+            "content": null,
+            "style": {
+                "fontSize": 14,
+                "paddingTop": 20,
+                "paddingLeft": 20,
+                "paddingRight": 20,
+                "paddingBottom": 20
+            },
+            "children": [
+                {
+                    "type": "div",
+                    "x": 440,
+                    "y": 81,
+                    "w": 720,
+                    "h": 249,
+                    "visualW": 776,
+                    "visualH": 305,
+                    "layer": 0,
+                    "isScrollContainer": false,
+                    "content": null,
+                    "style": {
+                        "bg": 16777215,
+                        "fontSize": 14,
+                        "borderRadius": 12,
+                        "opacity": 0.08,
+                        "position": "relative",
+                        "paddingTop": 28,
+                        "paddingLeft": 28,
+                        "paddingRight": 28,
+                        "paddingBottom": 28,
+                        "marginTop": 20,
+                        "marginLeft": 0,
+                        "marginRight": 0,
+                        "marginBottom": 20
+                    },
+                    "children": [
+                        {
+                            "type": "div",
+                            "x": 440,
+                            "y": 81,
+                            "w": 8,
+                            "h": 8,
+                            "visualW": 8,
+                            "visualH": 8,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16711935,
+                                "position": "absolute"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 468,
+                            "y": 109,
+                            "w": 720,
+                            "h": 24,
+                            "visualW": 720,
+                            "visualH": 38,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "?? 布局 ・ Display None 测试",
+                            "style": {
+                                "fg": 3021338,
+                                "fontSize": 20,
+                                "bold": 1,
+                                "borderColor": 6309353,
+                                "borderBottomWidth": 2,
+                                "borderBottomColor": 6309353,
+                                "paddingBottom": 12,
+                                "marginBottom": 20
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 468,
+                            "y": 167,
+                            "w": 720,
+                            "h": 58,
+                            "visualW": 720,
+                            "visualH": 58,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "display": "flex",
+                                "marginBottom": 16,
+                                "gap": 16
+                            },
+                            "children": [
+                                {
+                                    "type": "div",
+                                    "x": 468,
+                                    "y": 167,
+                                    "w": 229,
+                                    "h": 16,
+                                    "visualW": 271,
+                                    "visualH": 58,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "可见元素 A",
+                                    "style": {
+                                        "bg": 16775672,
+                                        "fontSize": 14,
+                                        "borderWidth": 1,
+                                        "borderColor": 14737632,
+                                        "borderLeftWidth": 1,
+                                        "borderLeftColor": 14737632,
+                                        "borderTopWidth": 1,
+                                        "borderTopColor": 14737632,
+                                        "borderRightWidth": 1,
+                                        "borderRightColor": 14737632,
+                                        "borderBottomWidth": 1,
+                                        "borderBottomColor": 14737632,
+                                        "borderRadius": 8,
+                                        "textAlign": "center",
+                                        "paddingTop": 20,
+                                        "paddingLeft": 20,
+                                        "paddingRight": 20,
+                                        "paddingBottom": 20
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 755,
+                                    "y": 167,
+                                    "w": 229,
+                                    "h": 16,
+                                    "visualW": 271,
+                                    "visualH": 58,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "隐藏元素(display:none)",
+                                    "style": {
+                                        "bg": 16775672,
+                                        "fontSize": 14,
+                                        "borderWidth": 1,
+                                        "borderColor": 14737632,
+                                        "borderLeftWidth": 1,
+                                        "borderLeftColor": 14737632,
+                                        "borderTopWidth": 1,
+                                        "borderTopColor": 14737632,
+                                        "borderRightWidth": 1,
+                                        "borderRightColor": 14737632,
+                                        "borderBottomWidth": 1,
+                                        "borderBottomColor": 14737632,
+                                        "borderRadius": 8,
+                                        "textAlign": "center",
+                                        "display": "none",
+                                        "paddingTop": 20,
+                                        "paddingLeft": 20,
+                                        "paddingRight": 20,
+                                        "paddingBottom": 20
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "x": 1042,
+                                    "y": 167,
+                                    "w": 229,
+                                    "h": 16,
+                                    "visualW": 271,
+                                    "visualH": 58,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "可见元素 B",
+                                    "style": {
+                                        "bg": 16775672,
+                                        "fontSize": 14,
+                                        "borderWidth": 1,
+                                        "borderColor": 14737632,
+                                        "borderLeftWidth": 1,
+                                        "borderLeftColor": 14737632,
+                                        "borderTopWidth": 1,
+                                        "borderTopColor": 14737632,
+                                        "borderRightWidth": 1,
+                                        "borderRightColor": 14737632,
+                                        "borderBottomWidth": 1,
+                                        "borderBottomColor": 14737632,
+                                        "borderRadius": 8,
+                                        "textAlign": "center",
+                                        "paddingTop": 20,
+                                        "paddingLeft": 20,
+                                        "paddingRight": 20,
+                                        "paddingBottom": 20
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "div",
+                            "x": 468,
+                            "y": 241,
+                            "w": 696,
+                            "h": 48,
+                            "visualW": 720,
+                            "visualH": 72,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16448250,
+                                "fg": 8947848,
+                                "fontSize": 13,
+                                "borderRadius": 6,
+                                "lineHeight": "1.6",
+                                "paddingTop": 12,
+                                "paddingLeft": 12,
+                                "paddingRight": 12,
+                                "paddingBottom": 12
+                            },
+                            "children": [
+                                {
+                                    "type": "code",
+                                    "x": 480,
+                                    "y": 253,
+                                    "w": 684,
+                                    "h": 22,
+                                    "visualW": 696,
+                                    "visualH": 26,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "display:none",
+                                    "style": {
+                                        "bg": 15790320,
+                                        "fontSize": 14,
+                                        "borderRadius": 3,
+                                        "paddingTop": 2,
+                                        "paddingLeft": 6,
+                                        "paddingRight": 6,
+                                        "paddingBottom": 2
+                                    }
+                                },
+                                {
+                                    "type": "#text",
+                                    "x": 480,
+                                    "y": 279,
+                                    "w": 696,
+                                    "h": 22,
+                                    "visualW": 696,
+                                    "visualH": 22,
+                                    "layer": 0,
+                                    "isScrollContainer": false,
+                                    "content": "的元素应不占空间，A 和 B 应紧邻排列。",
+                                    "style": {
+                                        "fontSize": 14
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "div",
+                            "x": 468,
+                            "y": 329,
+                            "w": 720,
+                            "h": 14,
+                            "visualW": 720,
+                            "visualH": 29,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": "case-010: Layout ― Display None",
+                            "style": {
+                                "fg": 11184810,
+                                "fontSize": 12,
+                                "borderColor": 15658734,
+                                "borderTopWidth": 1,
+                                "borderTopColor": 15658734,
+                                "textAlign": "center",
+                                "paddingTop": 14,
+                                "marginTop": 16
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "x": 1208,
+                            "y": 378,
+                            "w": 8,
+                            "h": 8,
+                            "visualW": 8,
+                            "visualH": 8,
+                            "layer": 0,
+                            "isScrollContainer": false,
+                            "content": null,
+                            "style": {
+                                "bg": 16776960,
+                                "position": "absolute"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

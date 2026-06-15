@@ -1,5 +1,7 @@
 ﻿# CSS Test Sandbox — Bug 追踪台账
 
+## 一、全局 Bug 清单
+
 | # | 发现日期 | 问题描述 | 分类 | 状态 | 根因文件 | 修复 | 测试 |
 |---|---------|---------|------|------|---------|------|------|
 | 1 | 2026-06-12 | buildCssTestWrapper CSS 层叠顺序错误 | 工具 Bug | 🟡 待处理 | run.php | - | case-001 |
@@ -21,3 +23,39 @@
 | 17 | 2026-06-14 | case-007-border-styles简化——移除不支持的background:linear-gradient和dashed border，target-box添加box-sizing:border-box显式声明 | 测试简化 | ✅ 已简化 | BorderStyles.vue + .html | 简化移除不支持的渲染特性 | case-007 |
 | 18 | 2026-06-14 | case-008-box-shadow .html重写为全inline style匹配.vue——移除body flex居中，bx-card添加margin+box-sizing，所有元素统一内联样式 | 测试简化 | ✅ 已简化 | BoxShadow.html | html重写为inline style | case-008 |
 | 19 | 2026-06-14 | case-010-display-none .html重写为全inline style匹配.vue + 移除bx-card不支持的box-shadow | 测试简化 | ✅ 已简化 | DisplayNone.vue + .html | html重写+移除不支持box-shadow | case-010 |
+| 20 | 2026-06-15 | **case-001 文本高度 dh=5**: 18px粗体引擎 h=26 vs 浏览器 h=21，PercentResolver line-height:normal插值公式(1.45x) vs 浏览器继承normalize.css html{line-height:1.15}(~1.17x) | 已知限制 | 📋 待定 | PercentResolver.php | - | case-001 |
+| 21 | 2026-06-15 | **case-001 位置偏移 dy=4**: 级联于#20的文本高度差异，下方的footer文本位置相应地偏移 | 已知限制 | 📋 待定 | — | 连锁反应，随#20解决 | case-001 |
+| 22 | 2026-06-15 | **case-001 根容器 bg 不匹配**: engine=transparent vs browser=#f5f5f5，buildCssTestWrapper()中`.px-app-root`有background:#f5f5f5但App.vue根`.test-console`无bg | 工具 Bug | 🟡 待处理 | run.php / App.vue | 需对齐 wrapper CSS 基线 | case-001 |
+
+---
+
+## 二、Per-Case 跳过清单
+
+> 以下列出每个 case 中**未通过但不阻塞迭代**的项目（已知限制/工具差异/框架尚未实现的特性）。
+> 分类说明：
+> - **SKIP-已知限制**: 引擎行为偏离CSS标准但当前可接受，后续改进
+> - **SKIP-工具差异**: buildCssTestWrapper() 与 App.vue 之间的CSS基线不匹配
+> - **SKIP-渲染限制**: 引擎尚未实现的渲染特性（阴影/轮廓等）
+> - **SKIP-连锁反应**: 因其他 SKIP 项目导致的次级偏差
+
+### case-001-wrapper-x
+| # | 跳过项 | 引擎值 | 浏览器值 | 分类 | 根因 | 关联Bug# |
+|---|--------|--------|---------|------|------|---------|
+| 1 | 文本高度: "Centered Wrapper Test" 18px bold | h=26 | h=21 | SKIP-已知限制 | PercentResolver line-height:normal公式18px→1.45x(26px) vs 浏览器继承normalize.css line-height:1.15→~1.17x(21px) | #20 |
+| 2 | 位置: "case-001: wrapper x-position verification" dy=4 | y=149 | y=145 | SKIP-连锁反应 | 因#1文本高度偏大5px，级联使后续元素下移4px | #21 |
+| 3 | 根容器 background-color | transparent | #f5f5f5 | SKIP-工具差异 | buildCssTestWrapper().px-app-root有bg:#f5f5f5，App.vue .test-console无bg | #22 |
+
+**结论**: 7/10 元素通过(70%)，3项SKIP。核心布局（wrapper-test居中、文本位置、锚点位置）全部正确。
+
+### case-002-auto-height
+| # | 跳过项 | 引擎值 | 浏览器值 | 分类 | 根因 | 关联Bug# |
+|---|--------|--------|---------|------|------|---------|
+| (待运行验证) | | | | | | |
+
+### case-003-basic-block
+| # | 跳过项 | 引擎值 | 浏览器值 | 分类 | 根因 | 关联Bug# |
+|---|--------|--------|---------|------|------|---------|
+| (待运行验证) | | | | | | |
+
+### ... (其他 case 待运行后补充)
+

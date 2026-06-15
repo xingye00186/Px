@@ -107,14 +107,19 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $autoBw = (int)($style['borderWidth'] ?? 0);
             $boxSizing = $style['boxSizing'] ?? 'content-box';
             if ($boxSizing === 'border-box') {
-                // border-box: CSS 'width' = total width = parent content width
                 $autoW = max(0, $parentW);
             } else {
-                // content-box: CSS 'width' = content width = parent content - own padding - own border
                 $autoW = max(0, $parentW - $autoPadL - $autoPadR - $autoBw * 2);
             }
+            error_log('[DIAG_BLKAF] node=' . $node->type . ' parentW=' . $parentW . ' autoW=' . $autoW . ' hasExplicitW=' . ($hasExplicitW ? '1' : '0') . ' parent=' . ($ctx->parent !== null ? $ctx->parent->type : 'null'));
             $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $autoW, true));
             $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+        }
+
+        // [DIAG] Log node final width after auto-fill
+        if ($node->x === 300) {
+            $hasEW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
+            error_log('[DIAG_PADDING] AFTER auto-fill: node=' . $node->type . ' x=' . $node->x . ' w=' . $node->w . ' parentW=' . $parentW . ' parent=' . ($ctx->parent !== null ? $ctx->parent->type : 'null') . ' hasEW=' . ($hasEW ? '1' : '0') . ' width=' . ($style['width'] ?? 'NULL') . ' widthPct=' . ($style['widthPercent'] ?? 'NULL'));
         }
 
 
@@ -192,8 +197,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $childOffsetY = $node->y + $paddingTop;
 
             $this->finalizeScrollContainer($node, $ctx, $style, $childOffsetY, $paddingLeft, $paddingRight, $paddingBottom);
-
-            error_log('[SCROLL_DBG] finalizeScrollContainer type=' . $node->type . ' x=' . $node->x . ' y=' . $node->y . ' w=' . $node->w . ' h=' . $node->h . ' visualH=' . $node->visualH . ' contentH=' . $node->contentHeight . ' maxScroll=' . max($node->contentHeight - $node->h, 0));
         }
 
 
@@ -260,7 +263,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             $autoW = max(0, (int)$containerW - $autoPadL - $autoPadR - $autoBw * 2);
                         }
                         $child->w = $autoW;
-                        $child->style['width'] = $autoW;
                         $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
                     }
 
@@ -439,6 +441,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             $computedW = max(0, $maxRight - $node->x);
 
+            if ($node->x === 300) {
+                error_log('[DIAG_PADDING] auto-width: node=' . $node->type . ' x=' . $node->x . ' currentW=' . $node->w . ' maxRight=' . $maxRight . ' computedW=' . $computedW);
+            }
+
             if ($computedW > $node->w) {
                 $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $computedW, true));
 
@@ -447,6 +453,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 $padR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
 
                 $contentW = PercentResolver::resolveContentWidth($style, $node->w);
+
+                if ($node->x === 300) {
+                    error_log('[DIAG_PADDING] auto-width TRIGGERED! node=' . $node->type . ' x=' . $node->x . ' newW=' . $node->w . ' contentW=' . $contentW);
+                }
 
                 if ($contentW > 0) {
                     foreach ($node->children as $child) {
@@ -537,6 +547,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
         if (!$isAutoHeight) {
             $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+        }
+
+        // [DIAG] Log node final width at resolveBlockLayout end
+        if ($node->x === 300) {
+            error_log('[DIAG_PADDING] FINAL at resolveBlockLayout end: node=' . $node->type . ' x=' . $node->x . ' w=' . $node->w . ' h=' . $node->h . ' hasExplicitW=' . (array_key_exists('width', $style) ? '1' : '0'));
         }
     }
 
@@ -719,8 +734,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     // content-box: CSS 'width' = content width = container content - own padding - own border
                     $autoW = max(0, (int)$containerW - $autoPadL - $autoPadR - $autoBw * 2);
                 }
+                error_log('[DIAG_ASTACK] child=' . $child->type . ' containerW=' . $containerW . ' autoW=' . $autoW . ' padL=' . $autoPadL . ' padR=' . $autoPadR . ' hasExplicitW=' . ($hasExplicitWidth ? '1' : '0') . ' childWbefore=' . $child->w);
                 $child->w = $autoW;
-                $child->style['width'] = $autoW;
                 $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
             }
 

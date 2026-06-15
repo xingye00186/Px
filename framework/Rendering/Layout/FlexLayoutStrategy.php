@@ -933,9 +933,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $dataTp = $lineFlexData[$idxTp];
                 $needsTwoPass = $dataTp['isFlexGrow'] || $dataTp['crossAxisSized'];
 
-                // Debug: two-pass condition
-                if ($chTp->isScrollContainer) {
-                    // removed file_put_contents debug log
+                    // Debug: two-pass condition
+                if ($chTp->isScrollContainer || $chTp->type === 'div') {
+                    error_log('[DIAG_2PASS] idx=' . $idxTp . ' type=' . $chTp->type . ' w=' . $chTp->w . ' h=' . $chTp->h . ' isFlexGrow=' . ($dataTp['isFlexGrow'] ? '1' : '0') . ' crossAxisSized=' . ($dataTp['crossAxisSized'] ? '1' : '0') . ' needsTwoPass=' . ($needsTwoPass ? '1' : '0') . ' display=' . ($chTp->style['display'] ?? 'block') . ' scrollContainer=' . ($chTp->isScrollContainer ? '1' : '0') . ' children=' . count($chTp->children));
                 }
 
                 if ($needsTwoPass && count($chTp->children) > 0) {
@@ -988,6 +988,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         $topOff = $chTp->style['top'] ?? 0;
                         $prX = $chTp->x - $leftOff;
                         $prY = $chTp->y - $topOff;
+
+                        error_log('[DIAG_BLK2P] chTp=' . $chTp->type . ' w=' . $chTp->w . ' ctx_parent=' . ($ctx->parent !== null ? ('type=' . $ctx->parent->type . ' w=' . $ctx->parent->w) : 'null'));
 
                         $hasOrigW = array_key_exists('width', $chTp->style);
                         $hasOrigH = array_key_exists('height', $chTp->style);

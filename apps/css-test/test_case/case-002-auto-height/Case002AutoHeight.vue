@@ -1,6 +1,5 @@
 <template>
-  <div style="padding:20px;">
-    <div class="auto-height-test" style="background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative;box-sizing:border-box"><div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+<div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative"><div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
     
     <div class="test-header" style="font-size:18px;font-weight:600;margin-bottom:16px;color:#333;">
       Auto-Height Stability Test
@@ -27,7 +26,6 @@
     </div>
   
     <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
-  </div>
 </template>
 <script lang="php">
 class TestContent extends ReactiveComponent

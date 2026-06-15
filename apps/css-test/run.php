@@ -1524,15 +1524,32 @@ function compareEngineWithBrowser(string $engineLayoutPath, string $browserRefPa
 
         if ($bg === $ANCHOR_TL_BG) {
             $label = 'TL(左上) #FF00FF';
-            $expectedRelX = 0;
-            $expectedRelY = 0;
-        } elseif ($bg === $ANCHOR_BR_BG) {
-            $label = 'BR(右下) #00FFFF';
-            // BR expected at parent padding-box bottom-right -8px
+            // TL: position:absolute;top:0;left:0 在 padding-box 原点
+            // relX/relY 相对于 direct parent，padding-box 原点 = border-box + border 宽度
             $parent = findParentNodeFlat($engineAll, $eEl);
             if ($parent !== null) {
-                $expectedRelX = ($parent['visualW'] ?? $parent['w']) - 8;
-                $expectedRelY = ($parent['visualH'] ?? $parent['h']) - 8;
+                $expectedRelX = (int)($parent['style']['borderLeftWidth'] ?? $parent['style']['borderWidth'] ?? 0);
+                $expectedRelY = (int)($parent['style']['borderTopWidth'] ?? $parent['style']['borderWidth'] ?? 0);
+            } else {
+                $expectedRelX = 0;
+                $expectedRelY = 0;
+            }
+        } elseif ($bg === $ANCHOR_BR_BG) {
+            $label = 'BR(右下) #00FFFF';
+            // BR: position:absolute;bottom:0;right:0 在 padding-box 右下角 - 8px
+            // 期望 relX = padding-box 宽度 - 8, relY = padding-box 高度 - 8
+            $parent = findParentNodeFlat($engineAll, $eEl);
+            if ($parent !== null) {
+                $pBorderL = (int)($parent['style']['borderLeftWidth'] ?? $parent['style']['borderWidth'] ?? 0);
+                $pBorderR = (int)($parent['style']['borderRightWidth'] ?? $parent['style']['borderWidth'] ?? 0);
+                $pBorderT = (int)($parent['style']['borderTopWidth'] ?? $parent['style']['borderWidth'] ?? 0);
+                $pBorderB = (int)($parent['style']['borderBottomWidth'] ?? $parent['style']['borderWidth'] ?? 0);
+                $parentVisualW = $parent['visualW'] ?? $parent['w'];
+                $parentVisualH = $parent['visualH'] ?? $parent['h'];
+                $paddingBoxW = max(0, $parentVisualW - $pBorderL - $pBorderR);
+                $paddingBoxH = max(0, $parentVisualH - $pBorderT - $pBorderB);
+                $expectedRelX = $paddingBoxW - 8;
+                $expectedRelY = $paddingBoxH - 8;
             } else {
                 $expectedRelX = -1;
                 $expectedRelY = -1;
