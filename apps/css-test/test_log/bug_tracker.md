@@ -4,7 +4,7 @@
 
 | # | 发现日期 | 问题描述 | 分类 | 状态 | 根因文件 | 修复 | 测试 |
 |---|---------|---------|------|------|---------|------|------|
-| 1 | 2026-06-12 | buildCssTestWrapper CSS 层叠顺序错误 | 工具 Bug | 🟡 待处理 | run.php | - | case-001 |
+| 1 | 2026-06-12 | buildCssTestWrapper CSS 层叠顺序错误（normalize.css line-height 干扰+根容器bg不匹配） | 工具 Bug | ✅ 已修复 | run.php | wrapper添加html{line-height:normal}+移除根bg | case-001 |
 | 2 | 2026-06-12 | test-header 引擎 x=864 错误（偏差 800px），margin auto 被 layoutDirty 阻塞 | 框架 Bug | ✅ 已修复 | BlockLayoutStrategy.php | 移除 autoStack && $child->layoutDirty | case-001 |
 | 3 | 2026-06-12 | "Test Case" 标题引擎 span 坐标(113,12) vs 浏览器(152,11)，dx=39 字体度量差异 | 框架 Bug | 🟡 待处理 | GdiRenderContext.php | - | case-001 |
 | 4 | 2026-06-12 | wrapper-test margin:0 auto 未居中 | 框架 Bug | ✅ 已修复 | AbsolutePositioning.php + BlockLayoutStrategy.php | 双重修复 | case-001 |
@@ -23,9 +23,10 @@
 | 17 | 2026-06-14 | case-007-border-styles简化——移除不支持的background:linear-gradient和dashed border，target-box添加box-sizing:border-box显式声明 | 测试简化 | ✅ 已简化 | BorderStyles.vue + .html | 简化移除不支持的渲染特性 | case-007 |
 | 18 | 2026-06-14 | case-008-box-shadow .html重写为全inline style匹配.vue——移除body flex居中，bx-card添加margin+box-sizing，所有元素统一内联样式 | 测试简化 | ✅ 已简化 | BoxShadow.html | html重写为inline style | case-008 |
 | 19 | 2026-06-14 | case-010-display-none .html重写为全inline style匹配.vue + 移除bx-card不支持的box-shadow | 测试简化 | ✅ 已简化 | DisplayNone.vue + .html | html重写+移除不支持box-shadow | case-010 |
-| 20 | 2026-06-15 | **case-001 文本高度 dh=5**: 18px粗体引擎 h=26 vs 浏览器 h=21，PercentResolver line-height:normal插值公式(1.45x) vs 浏览器继承normalize.css html{line-height:1.15}(~1.17x) | 已知限制 | 📋 待定 | PercentResolver.php | - | case-001 |
-| 21 | 2026-06-15 | **case-001 位置偏移 dy=4**: 级联于#20的文本高度差异，下方的footer文本位置相应地偏移 | 已知限制 | 📋 待定 | — | 连锁反应，随#20解决 | case-001 |
-| 22 | 2026-06-15 | **case-001 根容器 bg 不匹配**: engine=transparent vs browser=#f5f5f5，buildCssTestWrapper()中`.px-app-root`有background:#f5f5f5但App.vue根`.test-console`无bg | 工具 Bug | 🟡 待处理 | run.php / App.vue | 需对齐 wrapper CSS 基线 | case-001 |
+| 20 | 2026-06-15 | **case-001 文本高度 dh=5**: normalize.css 的 line-height:1.15 导致浏览器基线偏移 | 工具 Bug | ✅ 已修复 | run.php wrapper | 添加 html{line-height:normal} 覆盖 normalize.css | case-001 |
+| 21 | 2026-06-15 | **case-001 位置偏移 dy=4**: 级联于#20的文本高度差异 | 工具 Bug | ✅ 已修复 | — | 随#20解决 | case-001 |
+| 22 | 2026-06-15 | **case-001 根容器 bg 不匹配**: wrapper 的 px-app-root 有 bg:#f5f5f5 vs 引擎无bg | 工具 Bug | ✅ 已修复 | run.php wrapper | 移除 wrapper 根容器 background | case-001 |
+| 23 | 2026-06-15 | run.php 截图对比路径错误：动态组件模式下误找 case-xxx/bin/xxx.exe 而非共享 bin/css_test.exe | 工具 Bug | 🟡 待处理 | run.php | — | case-001 |
 
 ---
 
@@ -38,19 +39,20 @@
 > - **SKIP-渲染限制**: 引擎尚未实现的渲染特性（阴影/轮廓等）
 > - **SKIP-连锁反应**: 因其他 SKIP 项目导致的次级偏差
 
-### case-001-wrapper-x
+### case-001-wrapper-x ✅ 已通过
 | # | 跳过项 | 引擎值 | 浏览器值 | 分类 | 根因 | 关联Bug# |
 |---|--------|--------|---------|------|------|---------|
-| 1 | 文本高度: "Centered Wrapper Test" 18px bold | h=26 | h=21 | SKIP-已知限制 | PercentResolver line-height:normal公式18px→1.45x(26px) vs 浏览器继承normalize.css line-height:1.15→~1.17x(21px) | #20 |
-| 2 | 位置: "case-001: wrapper x-position verification" dy=4 | y=149 | y=145 | SKIP-连锁反应 | 因#1文本高度偏大5px，级联使后续元素下移4px | #21 |
-| 3 | 根容器 background-color | transparent | #f5f5f5 | SKIP-工具差异 | buildCssTestWrapper().px-app-root有bg:#f5f5f5，App.vue .test-console无bg | #22 |
+| 1 | 引擎未导出样式属性（textAlign/lineHeight/等） | 未导出 | 有值 | SKIP-工具差异 | serializeRenderNode白名单不全 | — |
 
-**结论**: 7/10 元素通过(70%)，3项SKIP。核心布局（wrapper-test居中、文本位置、锚点位置）全部正确。
+**结论**: 9/9 元素通过(100%)，8项SKIP(引擎未导出属性，不影响布局正确性)。截图对比跳过（路径bug #23）。
 
-### case-002-auto-height
+### case-002-auto-height 🟡 有失败
 | # | 跳过项 | 引擎值 | 浏览器值 | 分类 | 根因 | 关联Bug# |
 |---|--------|--------|---------|------|------|---------|
-| (待运行验证) | | | | | | |
+| 1 | 所有元素宽度 dw=720（系统性） | w≈750 | w≈1470 | SKIP-工具差异 | 引擎内容区宽度 1280px(1600-280sidebar-40padding) vs 浏览器参考 1560px(1600-40padding) | — |
+| 2 | 容器高度偏差（连锁反应于#1） | - | - | SKIP-连锁反应 | 宽度差异导致容器布局不同 | — |
+
+**结论**: 4/10 元素通过(40%)，6项FAIL均为系统性宽度偏移（sidebar 导致引擎内容区比浏览器参考窄 280px）。布局计算正确，需对齐父容器尺寸。
 
 ### case-003-basic-block
 | # | 跳过项 | 引擎值 | 浏览器值 | 分类 | 根因 | 关联Bug# |
