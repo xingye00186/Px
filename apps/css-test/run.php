@@ -130,11 +130,13 @@ cleanupProcessRegistry($PROCESS_REGISTRY);
 $FRAMEWORK_DIR = $ROOT_DIR;
 $CASE_DIR = $APP_DIR . '/test_case';
 $COMPONENTS_DIR = $APP_DIR . '/components';
+$BUILD_HASH_FILE = $APP_DIR . '/.build_hash';
 $GEN_DIR  = $APP_DIR . '/gen';
 $BIN_DIR  = $APP_DIR . '/bin';
 
 $FRAMES            = 5;            // 多帧稳定检测帧数
 $SKIP_BUILD        = false;
+$FORCE_BUILD       = false;
 $SKIP_BROWSER_REF  = false;
 $SKIP_SCREENSHOT   = false;
 $UPDATE_BASELINE   = false;
@@ -172,6 +174,8 @@ for ($i = 1; $i < $argc; $i++) {
         $FRAMES = max(1, (int)substr($arg, 9));
     } elseif ($arg === '--skip-build') {
         $SKIP_BUILD = true;
+    } elseif ($arg === '--force-build') {
+        $FORCE_BUILD = true;
     } elseif ($arg === '--skip-browser-ref') {
         $SKIP_BROWSER_REF = true;
     } elseif ($arg === '--skip-screenshot') {
@@ -185,6 +189,7 @@ for ($i = 1; $i < $argc; $i++) {
         echo "  --case=xxx           仅运行指定用例\n";
         echo "  --frames=N           多帧检测帧数(默认5)\n";
         echo "  --skip-build         跳过编译(需已有exe)\n";
+        echo "  --force-build        强制重新编译(忽略缓存)\n";
         echo "  --skip-browser-ref   跳过浏览器参考对比\n";
         echo "  --skip-screenshot    跳过截图像素对比\n";
         echo "  --update-baseline    更新参考数据\n";
@@ -257,6 +262,7 @@ echo "  Frames:      $FRAMES\n";
 echo "  PHP:         $phpExe\n";
 echo "  Browser ref: " . ($BROWSER_REF_AVAILABLE ? 'Edge available' : 'N/A (skip)') . "\n";
 echo "  Skip build:      " . ($SKIP_BUILD ? 'YES' : 'no') . "\n";
+echo "  Force build:     " . ($FORCE_BUILD ? 'YES' : 'no') . "\n";
 echo "  Skip br ref:     " . ($SKIP_BROWSER_REF ? 'YES' : 'no') . "\n";
 echo "  Skip screenshot: " . ($SKIP_SCREENSHOT ? 'YES' : 'no') . "\n";
 echo "  posTol:      {$POS_TOL}px, sizeTol: {$SIZE_TOL}px\n";
@@ -293,58 +299,82 @@ $_PX_RUN_START = microtime(true);
 // 构建阶段 — 一次构建所有测试用例 (动态组件模式)
 // ============================================================
 $buildOverallPass = false;
+
 if (!$SKIP_BUILD) {
-    echo "\n========================================\n";
-    echo "  Build Phase — 一次构建\n";
-    echo "========================================\n";
-
-    if (!acquireBuildLock($buildLockFile)) {
-        echo "  ❌ 编译锁冲突\n";
-        exit(1);
-    }
-
-    $buildExit = -1;
-    $buildOut  = '';
-    $cmd = sprintf('cd /d "%s" && "%s\\build.bat" css-test 2>&1', $ROOT_DIR, $ROOT_DIR);
-    $desc = [
-        0 => ['pipe', 'r'],
-        1 => ['pipe', 'w'],
-        2 => ['pipe', 'w'],
-    ];
-    $proc = @proc_open($cmd, $desc, $pipes, $ROOT_DIR);
-    if (is_resource($proc)) {
-        $buildProc = $proc;
-        $status = @proc_get_status($proc);
-        if ($status && $status['pid'] > 0) {
-            registerProcess($PROCESS_REGISTRY, $status['pid'], 'build.bat');
+    // ── 智能检测：源码是否变化？ ──
+    $exePath = $BIN_DIR . '/css_test.exe';
+    $shouldBuild = true;
+    if (file_exists($exePath) && file_exists($BUILD_HASH_FILE) && !$FORCE_BUILD) {
+        $currentHash = computeBuildHash($ROOT_DIR, $APP_DIR);
+        $prevHash = @file_get_contents($BUILD_HASH_FILE);
+        if ($currentHash === $prevHash) {
+            $shouldBuild = false;
+            echo "  ⏭️ 源码无变化，跳过构建 (已缓存 hash)\n";
         }
-        fclose($pipes[0]);
-        $buildOut = stream_get_contents($pipes[1]);
-        $buildErr = stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        $buildExit = proc_close($proc);
-        $buildProc = null;
-    }
-    releaseBuildLock($buildLockFile);
-
-    if ($VERBOSE) {
-        echo "    --- build output ---\n$buildOut\n";
-        if (!empty($buildErr)) echo "    --- stderr ---\n$buildErr\n";
     }
 
-    if ($buildExit === 0) {
-        $buildOverallPass = true;
-        echo "  ✅ 构建成功\n";
+    if ($FORCE_BUILD && $shouldBuild) {
+        echo "  [--force-build] 强制重新编译\n";
+    }
+
+    if ($shouldBuild) {
+        echo "\n========================================\n";
+        echo "  Build Phase — 一次构建\n";
+        echo "========================================\n";
+
+        if (!acquireBuildLock($buildLockFile)) {
+            echo "  ❌ 编译锁冲突\n";
+            exit(1);
+        }
+
+        $buildExit = -1;
+        $buildOut  = '';
+        $cmd = sprintf('cd /d "%s" && "%s\\build.bat" css-test 2>&1', $ROOT_DIR, $ROOT_DIR);
+        $desc = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $proc = @proc_open($cmd, $desc, $pipes, $ROOT_DIR);
+        if (is_resource($proc)) {
+            $buildProc = $proc;
+            $status = @proc_get_status($proc);
+            if ($status && $status['pid'] > 0) {
+                registerProcess($PROCESS_REGISTRY, $status['pid'], 'build.bat');
+            }
+            fclose($pipes[0]);
+            $buildOut = stream_get_contents($pipes[1]);
+            $buildErr = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            $buildExit = proc_close($proc);
+            $buildProc = null;
+        }
+        releaseBuildLock($buildLockFile);
+
+        if ($VERBOSE) {
+            echo "    --- build output ---\n$buildOut\n";
+            if (!empty($buildErr)) echo "    --- stderr ---\n$buildErr\n";
+        }
+
+        if ($buildExit === 0) {
+            $buildOverallPass = true;
+            // 构建成功后保存 hash
+            $newHash = computeBuildHash($ROOT_DIR, $APP_DIR);
+            @file_put_contents($BUILD_HASH_FILE, $newHash);
+            echo "  ✅ 构建成功\n";
+        } else {
+            echo "  ❌ 构建失败 (exit=$buildExit)\n";
+            if (!$VERBOSE) {
+                $lines = explode("\n", $buildOut);
+                $showLines = array_slice($lines, -20);
+                echo "    Last output:\n";
+                foreach ($showLines as $l) echo "    | $l\n";
+            }
+            exit(1);
+        }
     } else {
-        echo "  ❌ 构建失败 (exit=$buildExit)\n";
-        if (!$VERBOSE) {
-            $lines = explode("\n", $buildOut);
-            $showLines = array_slice($lines, -20);
-            echo "    Last output:\n";
-            foreach ($showLines as $l) echo "    | $l\n";
-        }
-        exit(1);
+        $buildOverallPass = true;
     }
 } else {
     $buildOverallPass = true;
@@ -968,14 +998,14 @@ function buildScreenshotWrapper(string $originalHtml): string
   src: local(\'' . $FONT_NOTO_NAME . ' Bold\'), ' . $FONT_NOTO_BOLD_URL . ';
   font-weight: 700;
 }
-* { margin:0; padding:0; }
-html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
+* { margin:0; padding:0; box-sizing:border-box; }
+html { line-height: normal; }
+body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 ' . $extraStyles . '
-* { box-sizing: border-box; }
 </style>
 </head>
 <body style="font-family:\'' . $FONT_NOTO_NAME . '\',sans-serif;font-size:16px;">
-<div style="width:1600px;height:800px;overflow-y:auto;background:#f5f5f5;">
+<div style="width:1600px;height:800px;overflow-y:auto;">
 <div class="sandbox-header" style="height:40px;background:#fff;border-bottom:1px solid #ddd;padding:0 20px;display:flex;align-items:center;font-size:14px;color:#666;">
   CSS Test Sandbox — <span style="color:#333;font-weight:bold;">Test Case</span>
 </div>
@@ -1144,14 +1174,14 @@ function buildCssTestWrapper(string $originalHtml, string $jsCode): string
   src: local(\'' . $FONT_NOTO_NAME . ' Bold\'), ' . $FONT_NOTO_BOLD_URL . ';
   font-weight: 700;
 }
-* { margin:0; padding:0; }
-html, body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
+* { margin:0; padding:0; box-sizing:border-box; }
+html { line-height: normal; }
+body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 ' . $extraStyles . '
-* { box-sizing: border-box; }
 </style>
 </head>
 <body style="font-family:\'' . $FONT_NOTO_NAME . '\',sans-serif;font-size:16px;">
-<div class="px-app-root" style="width:1600px;height:800px;overflow-y:auto;background:#f5f5f5;">
+<div class="px-app-root" style="width:1600px;height:800px;overflow-y:auto;">
 <div class="sandbox-header" style="height:40px;background:#fff;border-bottom:1px solid #ddd;padding:0 20px;display:flex;align-items:center;font-size:14px;color:#666;">
   CSS Test Sandbox — <span style="color:#333;font-weight:bold;">Test Case</span>
 </div>
@@ -1737,6 +1767,41 @@ function validateLayoutContent(string $layoutPath, string $vuePath): array
     ]];
 }
 
+
+/**
+ * 计算源码 hash，用于智能检测是否需要重新构建。
+ * 对 framework/ apps/css-test/ cpp/ .vue 等关键源文件的路径+mtime 计算哈希。
+ * 若 hash 无变化则跳过 build.bat 调用。
+ */
+function computeBuildHash(string $rootDir, string $appDir): string
+{
+    $patterns = [
+        $rootDir . '/framework/**/*.php',
+        $appDir . '/*.php',
+        $appDir . '/test_case/**/*.vue',
+        $appDir . '/project.yml',
+        $rootDir . '/cpp/*.cc',
+        $rootDir . '/cpp/*.h',
+        $rootDir . '/stub/*.php',
+        $rootDir . '/build.bat',
+        $rootDir . '/tools/shared_test_lib.php',
+    ];
+
+    $entries = [];
+    foreach ($patterns as $pattern) {
+        $files = glob($pattern);
+        if ($files === false) continue;
+        foreach ($files as $f) {
+            if (!is_file($f)) continue;
+            $mtime = filemtime($f);
+            $size = filesize($f);
+            // 用路径 + mtime + size 做摘要，避免读文件内容
+            $entries[] = "$f|$mtime|$size";
+        }
+    }
+    sort($entries);
+    return md5(implode("\n", $entries));
+}
 
 /**
  * Find parent node of a given element in the flattened engine tree.
