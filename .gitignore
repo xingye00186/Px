@@ -28,6 +28,9 @@ tests/screenshot/output/
 apps/**/test_log/
 
 # CC 标准测试输出
+
+# 构建 hash 缓存（本地生成，因人而异）
+.build_hash
 tests/css-standards/**/error.txt
 tests/css-standards/**/stderr.txt
 tests/css-standards/**/lint_result.txt
