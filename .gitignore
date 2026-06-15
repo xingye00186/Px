@@ -34,6 +34,10 @@ apps/**/test_log/
 tests/css-standards/**/error.txt
 tests/css-standards/**/stderr.txt
 tests/css-standards/**/lint_result.txt
+
+# css-test 自动生成的报告（保留最新报告.md 由 run.php 管理）
+apps/css-test/docs/02-测试报告/*.md
+!apps/css-test/docs/02-测试报告/最新报告.md
 tests/css-standards/**/debug_*.php
 
 # 依赖分析自动生成文件
