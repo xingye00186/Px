@@ -249,7 +249,7 @@ class GdiRenderContext extends RenderContext
                     );
                 }
                 // 文本值
-                if (!empty($el['text'])) {
+                if (isset($el['text']) && $el['text'] !== '') {
                     $fontSize = $el['fontSize'] ?? 16;
                     $padX = 6;
                     $padY = (int)((($el['h'] ?? 0) - $fontSize) / 2);

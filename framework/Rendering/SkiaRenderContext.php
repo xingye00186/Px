@@ -198,7 +198,7 @@ class SkiaRenderContext extends RenderContext
                         );
                     }
                 }
-                if (!empty($el['label'])) {
+                if (isset($el['label']) && $el['label'] !== '') {
                     $this->drawText(
                         $el['labelX'] ?? 0,
                         $el['labelY'] ?? 0,
@@ -227,7 +227,7 @@ class SkiaRenderContext extends RenderContext
                         $el['bg'] ?? 0x1E1E1E
                     );
                 }
-                if (!empty($el['text'])) {
+                if (isset($el['text']) && $el['text'] !== '') {
                     $fontSize = $el['fontSize'] ?? 16;
                     $padX = 6;
                     $padY = (int)((($el['h'] ?? 0) - $fontSize) / 2);
@@ -358,7 +358,7 @@ class SkiaRenderContext extends RenderContext
                 if ($fillW > 0) {
                     $this->fillRect($x, $y, $fillW, $h, $el['fillColor'] ?? 0x4488CC);
                 }
-                if (!empty($el['label'])) {
+                if (isset($el['label']) && $el['label'] !== '') {
                     $fontSize = $el['fontSize'] ?? 14;
                     $labelW = (int)(strlen($el['label']) * $fontSize * 0.6);
                     $this->drawText(
