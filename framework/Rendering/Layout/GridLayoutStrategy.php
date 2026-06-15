@@ -71,7 +71,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
         if (!$hasExplicitW && $width === 0 && $ctx->parent !== null) {
-            $width = $ctx->parent->w;
+            $width = $parentW;
         }
 
         // Note: height:auto for grid containers is content-based (computed below)
