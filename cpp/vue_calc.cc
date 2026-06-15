@@ -382,11 +382,14 @@ Int php_vue_measure_text_width(Int hdc, String text, Int fontSize) {
     return (Int)sz.cx;
 }
 
-// Push clip rectangle - saves DC state and sets clip region
+// Push clip rectangle - saves DC state and intersects clip region
+// 使用 ExtSelectClipRgn(RGN_AND) 而非 SelectClipRgn，确保嵌套 clip 正确相交：
+// 父容器 clip ∩ 子元素 clip → 视觉随动原则——裁剪蒙版作为容器属性，
+// 所有后代元素的裁剪区域都是祖先裁剪链的交集。
 void php_vue_push_clip(Int hdc, Int x, Int y, Int w, Int h) {
     SaveDC((HDC)hdc);
     HRGN clipRgn = CreateRectRgn((int)x, (int)y, (int)(x + w), (int)(y + h));
-    SelectClipRgn((HDC)hdc, clipRgn);
+    ExtSelectClipRgn((HDC)hdc, clipRgn, RGN_AND);
     DeleteObject(clipRgn);
 }
 

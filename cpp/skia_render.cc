@@ -716,7 +716,7 @@ void php_sk_push_clip(Int x, Int y, Int w, Int h) {
     if (!g_skHdc) return;
     SaveDC(g_skHdc);
     HRGN clipRgn = CreateRectRgn((int)x, (int)y, (int)(x + w), (int)(y + h));
-    SelectClipRgn(g_skHdc, clipRgn);
+    ExtSelectClipRgn(g_skHdc, clipRgn, RGN_AND);
     DeleteObject(clipRgn);
 #endif
 }
