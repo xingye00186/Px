@@ -2,7 +2,7 @@
 
 > **目标**：通过 `apps/css-test/` 统一测试框架 + 自动化迭代，逐步使 Px 框架渲染结果与浏览器（Edge Chromium）像素级一致。
 >
-> **核心思想**：数据驱动差异分析 → 定位根因 → 区分框架问题与应用问题 → 治本修复 → 回归验证 — 形成持续迭代闭环。
+> **核心思想**：数据驱动差异分析 → 定位根因 → 区分框架问题与应用问题 → 更新清单 → 治本修复 → 回归验证 → 更新清单 → 分类提交代码和文档 — 形成持续迭代闭环。
 
 ---
 
@@ -12,20 +12,22 @@
 |------|------|
 | **先验证后修复** | 跑完整测试链，让数据告诉你差异在哪，不靠猜测 |
 | **治本不治标** | 框架层的 bug 在框架层修复，不在 App.vue 打补丁 |
-| **通用合规** | 修复应符合 CSS 标准，不针对特定测试特化 |
+| **通用合规** | 修复应严格符合 CSS 标准，不针对特定测试特化 |
 | **分治** | 每个 test_case 只测一个 CSS 特性或一个页面区域 |
 | **回归防护** | 每次修复后必须验证原有测试不退化 |
 | **排假阳** | 差异出现时，先排除浏览器 wrapper HTML 本身引入的基线差异 |
 | **工具共享优先** | 所有工具优先使用已有的共享库（`shared_test_lib.php` 等）；增强修复优先应用到共享工具 |
 | **持续追踪** | 每个项目独立维护 Bug 台账，记录所有已知缺陷及其修复状态 |
 | **CSS 标准铁律** | 框架层 fallback 必须使用 CSS 标准默认值。项目想要的非标准行为（如 `box-sizing:border-box`）必须在样式声明中**显式写出来**。凡框架符合 CSS 标准而测试失败，必须核查修正应用层，不得改动正确的标准框架行为 |
+| **不支持即实现** | 测试发现的框架未支持的 CSS 特性，不得通过 SKIP 跳过，不得修改测试样例回避。必须按照 CSS 规范在框架层实现完整支持。GDI 不支持的渲染特性（如 box-shadow、outline、border-radius 高级效果），必须使用 Skia 后端实现，不可绕过 |
+| **不可绕过测试样例** | 任何情况下不得修改测试样例（.vue/.html）来绕过框架的功能缺失。测试样例是 CSS 标准的忠实表达，应保持不变作为验证基准。框架能力不足时，增强框架，而非降低测试标准 |
 
 **决策优先级**：差异出现时，先判断：
 0. **框架符合 CSS 标准吗？** — 查看相关 CSS 属性的标准默认值。如果框架的 fallback 已经使用了 CSS 标准默认值（如 `box-sizing:content-box`），但测试期望非标准值（如 `border-box`）→ **框架正确，应用层缺显式声明**，改应用层 |
 1. **浏览器 ref 生成 wrapper 引入了基线差异**（box-sizing/line-height/reset/字体不一致） → 修复 `buildCssTestWrapper()`，重新生成参考数据
 2. **框架不符合 CSS 标准**（fallback 用了非标准默认值等） → 改框架 + 加测试
 3. **框架符合 CSS 标准，应用层用法错** → 改应用
-4. **框架尚未实现该特性** → 记录清单、实现或增强，并分析同类特性支持完善度
+4. **框架尚未实现该特性** → **必须实现，不得 SKIP**。按照 CSS 规范实现完整支持后继续迭代。GDI 不支持的特性使用 Skia 后端，不得绕过 |
 
 ---
 
@@ -36,7 +38,7 @@
 | 工具 | 路径 | 用途 |
 |------|------|------|
 | 测试沙盒编排器 | `php apps/css-test/run.php` | 遍历 test_case/ 编译 → 布局导出 → 多帧验证 → 浏览器对比 → 报告 |
-| SFC 编译器 | `php sfc-compiler.php apps/css-test` | .vue → gen/*.php |
+| SFC 编译器 （无须调用，.\build.bat 中已经包含）| `php sfc-compiler.php apps/css-test` | .vue → gen/*.php |
 | 构建脚本 | `.\build.bat css-test` | PHP → .exe（run.php 内部调用） |
 | 布局导出 | `bin/css-test.exe --dump-layout` | → engine_layout.json |
 | 浏览器 ref 生成 | `run.php` 内嵌 `generateBrowserRef()` 函数 | Edge headless 渲染 .html → JSON |
@@ -275,6 +277,14 @@ Step H: 生成测试报告
    ├─ test_log/test_report_YYYYmmdd_HHMMSS.md
    ├─ 更新 test_log/latest_report.md
    └─ 控制台实时输出每步状态
+
+Step I: 归档基线快照（case 通过后执行）
+   ├─ 当前 case 通过所有检查后 → `php archive_case.php case-NNN-name`
+   ├─ 生成 baseline/engine_layout.json（Frame 0 布局）
+   ├─ 生成 baseline/engine_layout_after_5frames.json（多帧稳定性基线）
+   ├─ baseline_registry.json 自动注册（含节点数、多帧数、样式字段清单）
+   ├─ 查看归档状态：`php archive_case.php --list`
+   └─ 归档后才进入下一个 case 的迭代
 ```
 
 **多帧稳定性验证（强制）**：
@@ -366,8 +376,9 @@ Step H: 生成测试报告
 │       └─ 否 → ✅ 通过
 │
 ├─ 引擎无此属性（浏览器有）？
-│   ├─ 框架尚未实现 → 记录清单并且严格按照css标准实现或增强
-│   └─ 框架已实现但未导出 → serializeRenderNode 白名单
+│   ├─ 框架尚未实现 → **禁止 SKIP，禁止修改测试样例**，必须按照 CSS 标准实现完整支持
+│   ├─ 框架已实现但未导出 → serializeRenderNode 白名单
+│   └─ GDI 不支持但 Skia 可支持 → 使用 Skia 后端实现，不可绕过
 │
 └─ STABILITY 标记？
     └─ auto-height/absolute 相关布局修改必须加多帧稳定性断言
@@ -489,8 +500,41 @@ Step H: 生成测试报告
 **维护规范**：
 1. **发现即记录** — 无论通过何种方式发现，立即新增台账条目
 2. **修复后更新** — 更新状态、填写修复提交、记录新增的 test_case
-3. **反思联动** — 每次反思（§九）后，检查是否需要新增台账条目
-4. **定期审查** — 每个迭代周期结束时审查 "待处理" 和 "已知限制"
+3. **每 case 必更** — 每个 case 完成后，必须立即更新 bug_tracker.md 的全局清单和 per-case 跳过清单，完成确认后（含 SKIP 项）再进入下一个 case
+4. **反思联动** — 每次反思（§九）后，检查是否需要新增台账条目
+5. **定期审查** — 每个迭代周期结束时审查 "待处理" 和 "已知限制"
+
+**Per-Case 跳过清单**（`test_log/bug_tracker.md §二`）：
+
+对于每个测试 case，必须维护一份显式的 **Per-Case 跳过清单**，列出所有**已知差异但不阻塞迭代**的项目。
+
+```markdown
+### case-NNN-name
+| # | 跳过项 | 引擎值 | 浏览器值 | 分类 | 根因 | 关联Bug# |
+|---|--------|--------|---------|------|------|---------|
+| 1 | 描述具体差异 | engine_value | browser_value | SKIP-分类 | 根因说明 | #Bug编号 |
+```
+
+**跳过分类定义**：
+
+| 分类 | 说明 | 典型原因 |
+|------|------|---------|
+| **SKIP-工具差异** | buildCssTestWrapper() 与 App.vue 之间的 CSS 基线不匹配 | wrapper 的 `* { box-sizing }` 或 bg |
+| **SKIP-连锁反应** | 因其他 SKIP 项目导致的次级偏差 | 位置偏移由上级文本高度偏差级联导致 |
+
+**通过条件**：所有不通过的项均为 SKIP 分类时，该 case 视为**通过**。但 SKIP 仅允许**工具差异**和**连锁反应**两类，**不允许以「框架不支持」为由 SKIP**。框架未实现的 CSS 特性必须进入 Phase 4 修复，不得跳过
+
+**禁止性规定**（从本文档生效起强制执行）：
+1. 框架未支持的 CSS 特性 → ❌ 不得 SKIP → 必须：Phase 4 实现完整支持
+2. 测试样例（.vue/.html） → ❌ 不得修改来绕过框架限制 → 必须：增强框架
+3. GDI 不支持的特性 → ❌ 不得删减测试内容 → 必须：使用 Skia 后端实现
+4. `serializeRenderNode` 白名单缺失 → ❌ 不得作为假阳性跳过 → 必须：补全 `$styleKeys`
+
+——
+
+**维护规范**（续）：
+6. **直通不阻** — 已知限制/SKIP 项不阻塞迭代进度，但必须在 per-case 清单中显式记录后才能跳过
+7. **SKIP 升级** — 同一 SKIP 项在同一模块多次出现，应升级为独立的框架改进任务
 
 ---
 
@@ -561,8 +605,7 @@ html, body { width: 1600px; height: 800px; overflow: hidden; background: #0d1117
 
 1. **新增用例通过率 ≥95%** — 所有匹配元素的样式+位置正确
 2. **截图差异 ≤5%** — 像素级对比在阈值内
-3. **剩余差异为已知框架限制** — 如 `<table>` 等框架尚未实现的特性
-4. **所有属性均已覆盖** — 核心 CSS 属性白名单已全覆盖
+3. **所有属性均已覆盖** — 核心 CSS 属性白名单已全覆盖
 
 ### 全项目最终验收标准
 
@@ -667,6 +710,74 @@ php apps/css-test/run.php
 - **日常开发**：`php apps/css-test/run.php --case=case-NNN` 聚焦单一特性
 - **提交前**：`php apps/css-test/run.php` 全量回归
 - **框架修改后**：全量回归验证无退化
+
+### 7.4 归档基线回归检查
+
+**原理**：将通过的 case 布局数据冻存为基线快照，后续框架修改后重新运行已归档 case 的布局并与基线比对，在几何/样式/稳定性三维度检测回归。
+
+**归档内容**（每个已归档 case 在 `test_case/case-xxx/baseline/` 下）：
+
+```
+baseline/
+├── engine_layout.json                   ← Frame 0 布局快照（含完整 RenderNode 树 + 样式字段）
+└── engine_layout_after_5frames.json     ← 多帧稳定性基线
+```
+
+**三维度回归对比**：
+
+| 维度 | 对比内容 | 数据来源 |
+|------|---------|---------|
+| 几何 | x, y, w, h, visualW, visualH（容差可配，默认 1px） | `--dump-layout` |
+| 样式 | style 对象中所有 CSS 属性（bg/fontSize/color/display/border…） | `--dump-layout` |
+| 稳定性 | 多帧间节点位置/尺寸漂移 | `--dump-layout-after-frames=5` |
+
+**使用流程**：
+
+```bash
+# 归档（case 稳定后）
+php archive_case.php case-003-basic-block        # 单个归档（默认 5 帧）
+php archive_case.php --frames=10 case-xxx        # 自定义帧数
+php archive_case.php --all                       # 批量归档所有有 ref/ 的 case
+
+# 查看归档状态
+php archive_case.php --list     # 显示多帧数、样式字段数
+
+# 回归检查（框架修改后或提交前）
+php check_regression.php                              # 全量检查所有归档 case
+php check_regression.php case-003-basic-block         # 只检查指定 case
+php check_regression.php --json                       # JSON 输出（供 CI/工具解析）
+php check_regression.php --tolerance=2                # 自定义几何容差
+php check_regression.php --skip-styles                # 跳过样式对比（调试加速）
+php check_regression.php --skip-multiframe            # 跳过稳定性对比（调试加速）
+php check_regression.php --fail-fast                  # 遇首个失败即停
+```
+
+**工作流中的位置**：
+
+```
+框架修改 → 构建 → check_regression.php（全量回归）
+                              ↓ 通过
+                           run.php --case=新case（开发新特性）
+                              ↓ 通过
+                           archive_case.php（归档新case）
+                              ↓
+                           git commit
+```
+
+**容差策略**：
+- 几何容差默认 1px，允许 GDI/Skia/浏览器间的亚像素舍入差异
+- 样式字段必须精确匹配（无容差），任何 CSS 属性值变化都视为回归
+- 稳定性要求 5 帧间零漂移，否则标记为 STABILITY 失败
+
+**与 run.php 的区别**：
+
+| 方面 | run.php（全量测试） | check_regression.php（回归检查） |
+|------|-------------------|--------------------------------|
+| 参考源 | 浏览器 ref（Edge headless） | 基线快照（引擎自身历史数据） |
+| 速度 | 慢（需启动 Edge） | 快（仅 exe + JSON 对比） |
+| 检测范围 | 几何 + 样式 + 截图 | 几何 + 样式 + 稳定性 |
+| 使用时机 | 新 case 开发 | 框架修改后快速回归 |
+| 依赖 | Edge headless + 字体 | 无外部依赖 |
 
 ---
 
@@ -1071,6 +1182,12 @@ php tools\generate_browser_refs.php
 powershell -ExecutionPolicy Bypass -File tools/capture_screenshot.ps1 `
     -AppName css-test -ProjectRoot D:/Px `
     -OutputPath apps/css-test/test_log/captured.png
+
+# 归档与回归检查
+php archive_case.php --list                         # 查看归档状态
+php archive_case.php --all                          # 全量归档
+php check_regression.php                            # 回归对比检查
+php check_regression.php --json | python -m json.tool # JSON 格式输出
 
 # 全量测试（所有项目，含回归）
 php tests/run_all_tests.php
