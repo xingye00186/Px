@@ -22,6 +22,14 @@ use Px\Rendering\Layout\Tools\ScrollHelper;
  */
 class BlockLayoutStrategy implements LayoutStrategyInterface
 {
+    /** HTML inline elements: width should be text-measured, not container-filled */
+    private const INLINE_TYPES = ['#text','text','span','b','strong','em','i','code','a','label','abbr','cite','dfn','kbd','mark','q','samp','small','sub','sup','time','var'];
+
+    private static function isInlineType(string $type): bool
+    {
+        return in_array($type, self::INLINE_TYPES, true);
+    }
+
     public function resolve(
         RenderNode    $node,
         LayoutContext $ctx,
@@ -101,7 +109,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         //   content-box: CSS 'width' = content width
         //   border-box:  CSS 'width' = total width (含 padding+border)
         $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
-        if (!$hasExplicitW && $width === 0 && $ctx->parent !== null) {
+        if (!$hasExplicitW && $width === 0 && $ctx->parent !== null && !self::isInlineType($node->type)) {
+            error_log('[DIAG_LOC1_CHECK] node=' . $node->type . ' content_null=' . ($node->content === null ? '1' : '0') . ' content_str=' . (is_string($node->content) ? '1' : '0') . ' content_len=' . (is_string($node->content) ? strlen($node->content) : -1));
             $autoPadL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
             $autoPadR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
             $autoBw = (int)($style['borderWidth'] ?? 0);
@@ -128,15 +137,17 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $node->style['fontSize'] = $style['fontSize'] ?? 14;
 
         // -- Nodes with text content: measure text width instead of filling parent --
+        error_log('[DIAG_LOC1] node=' . $node->type . ' hasContent=' . ($node->content !== null && is_string($node->content) && strlen($node->content) > 0 ? '1' : '0') . ' isInline=' . (self::isInlineType($node->type) ? '1' : '0'));
         if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
             $fs = (int)($style['fontSize'] ?? 14);
             $bd = ($style['bold'] ?? 0) !== 0;
             $measured = PercentResolver::resolveTextWidth($node->content, $fs, $bd);
             if ($measured > 0) {
-                // Text-measured width: only for text/span types (block layout width is auto-filled)
-                // Flex items get their text-measured width in applyFlexBasis
-                if ($node->type === 'text' || $node->type === 'span') {
-                    $node->w = (int)min($measured, (int)max(0, (int)PercentResolver::resolveMinMax($style, $measured, true)));
+                // CSS: inline elements use text-measured width, block fills parent
+                if (self::isInlineType($node->type)) {
+                    $newW = (int)min($measured, (int)max(0, (int)PercentResolver::resolveMinMax($style, $measured, true)));
+                    error_log('[DIAG_LOC1_SET] type=' . $node->type . ' measured=' . $measured . ' oldW=' . $node->w . ' newW=' . $newW);
+                    $node->w = $newW;
                     $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
                 }
             }
@@ -250,7 +261,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
 
-                    if (!$hasExplicitWidth || $child->w === 0) {
+                    if ((!$hasExplicitWidth || $child->w === 0) && !self::isInlineType($child->type)) {
                         $autoPadL = (int)($childStyle['paddingLeft'] ?? $childStyle['padding'] ?? 0);
                         $autoPadR = (int)($childStyle['paddingRight'] ?? $childStyle['padding'] ?? 0);
                         $autoBw = (int)($childStyle['borderWidth'] ?? 0);
@@ -270,15 +281,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     PercentResolver::resolveFontSizeUnit($child->style);
                     $childStyle['fontSize'] = $child->style['fontSize'];
 
-                    // -- Children with text content: measure text width (only for content-sized children) --
+                    // -- Children with text content: measure text width (inline elements use text-width) --
                     if ($child->content !== null && is_string($child->content) && strlen($child->content) > 0) {
                         $fs = (int)($childStyle['fontSize'] ?? 14);
-                        $bd = ($childStyle['fontWeight'] ?? 'normal') === 'bold' || ($childStyle['fontWeight'] ?? 'normal') === '700';
+                        $bd = ($childStyle['bold'] ?? 0) != 0;
                         $measured = PercentResolver::resolveTextWidth($child->content, $fs, $bd);
+                        error_log('[DIAG_INLINE] child=' . $child->type . ' content_len=' . strlen($child->content) . ' measured=' . $measured . ' isInline=' . (self::isInlineType($child->type) ? '1' : '0'));
                         if ($measured > 0) {
-                            // Block auto-stack children fill parent width �?text-measured width only for span/text
-                            // Flex items get text-measured width in applyFlexBasis via explicit width check
-                            if ($child->type === 'text' || $child->type === 'span') {
+                            // CSS: inline children use text-measured width; block children fill parent
+                            if (self::isInlineType($child->type)) {
                                 $child->w = min($measured, max(0, (int)PercentResolver::resolveMinMax($childStyle, $measured, true)));
                                 $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
                             }
@@ -462,7 +473,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     foreach ($node->children as $child) {
                         $cs = $child->style;
 
-                        if (!array_key_exists('width', $cs)) {
+                        if (!array_key_exists('width', $cs) && !self::isInlineType($child->type)) {
                             $autoPadL = (int)($cs['paddingLeft'] ?? $cs['padding'] ?? 0);
                             $autoPadR = (int)($cs['paddingRight'] ?? $cs['padding'] ?? 0);
                             $autoBw = (int)($cs['borderWidth'] ?? 0);
@@ -722,7 +733,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             // CSS 2.1 §10.3.3: Auto-width = containerW - child's own padding - child's own border
             $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
-            if (!$hasExplicitWidth || $child->w === 0) {
+            if ((!$hasExplicitWidth || $child->w === 0) && !self::isInlineType($child->type)) {
                 $autoPadL = (int)($childStyle['paddingLeft'] ?? $childStyle['padding'] ?? 0);
                 $autoPadR = (int)($childStyle['paddingRight'] ?? $childStyle['padding'] ?? 0);
                 $autoBw = (int)($childStyle['borderWidth'] ?? 0);
@@ -737,6 +748,18 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 error_log('[DIAG_ASTACK] child=' . $child->type . ' containerW=' . $containerW . ' autoW=' . $autoW . ' padL=' . $autoPadL . ' padR=' . $autoPadR . ' hasExplicitW=' . ($hasExplicitWidth ? '1' : '0') . ' childWbefore=' . $child->w);
                 $child->w = $autoW;
                 $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+            }
+
+            // CSS: inline elements with text content use text-measured width instead of container fill
+            if (self::isInlineType($child->type) && $child->content !== null && is_string($child->content) && strlen($child->content) > 0) {
+                $fs = (int)($childStyle['fontSize'] ?? 14);
+                $bd = ($childStyle['bold'] ?? 0) != 0;
+                $measured = PercentResolver::resolveTextWidth($child->content, $fs, $bd);
+                error_log('[DIAG_INLINE_ASTACK] child=' . $child->type . ' measured=' . $measured);
+                if ($measured > 0) {
+                    $child->w = min($measured, max(0, (int)PercentResolver::resolveMinMax($childStyle, $measured, true)));
+                    $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+                }
             }
 
             $child->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $child->w, true));

@@ -506,6 +506,7 @@ class TemplateParser
             'ol'        => $this->parseGenericElement($tok, 'ol'),
             'li'        => $this->parseGenericElement($tok, 'li'),
             'strong'    => $this->parseGenericElement($tok, 'strong'),
+            'b'         => $this->parseGenericElement($tok, 'b'),
             'em'        => $this->parseGenericElement($tok, 'em'),
             'code'      => $this->parseGenericElement($tok, 'code'),
             'pre'       => $this->parseGenericElement($tok, 'pre'),
@@ -757,6 +758,25 @@ class TemplateParser
         $this->advance();
 
         $props = $this->convertElementAttrs($attrs, $tok->line, $tag);
+
+        // Apply default UA styles for HTML elements (CSS standard defaults)
+        static $defaultStyles = [
+            'b'       => 'font-weight:700',
+            'strong'  => 'font-weight:700',
+            'em'      => 'font-style:italic',
+            'i'       => 'font-style:italic',
+            'u'       => 'text-decoration:underline',
+            'code'    => 'font-family:Consolas,monospace',
+            'small'   => 'font-size:smaller',
+            'mark'    => 'background:#ffff00',
+        ];
+        if (isset($defaultStyles[$tag])) {
+            if (isset($props['style']) && $props['style'] !== '') {
+                $props['style'] .= ';' . $defaultStyles[$tag];
+            } else {
+                $props['style'] = $defaultStyles[$tag];
+            }
+        }
 
         // HTML void elements: no children, no closing tag
         static $voidTags = ['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'];

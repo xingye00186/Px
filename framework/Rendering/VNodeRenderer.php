@@ -450,8 +450,30 @@ class VNodeRenderer
                 return $this->makeButtonElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'input':   return $this->makeInputElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'img':     return $this->makeImgElement($node, $style, $props, $x, $y, $w, $h, $layer);
+            // Inline elements → span (block rendering breaks text width matching)
             case 'span':
+            case '#text':
+            case 'b':
+            case 'strong':
+            case 'em':
+            case 'i':
+            case 'code':
+            case 'a':
+            case 'label':
+            case 'abbr':
+            case 'cite':
+            case 'dfn':
+            case 'kbd':
+            case 'mark':
+            case 'q':
+            case 'samp':
+            case 'small':
+            case 'sub':
+            case 'sup':
+            case 'time':
+            case 'var':
                 return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
+            // Heading elements → span (inline semantic, not block)
             case 'p':
             case 'h1':
             case 'h2':
