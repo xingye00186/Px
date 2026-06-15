@@ -576,11 +576,11 @@ class VNodeRenderer
                 // 重新测量截断后的文本宽度
                 $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
                 // ellipsis 时禁止自动换行
-                $isWrappableOverride = false;
+                $isWrappable = false;
             } else {
                 $overflowLines = null;
                 $overflowLineHeight = 0;
-                $isWrappableOverride = null;
+                $isWrappable = true;  // 默认允许换行，稍后根据 whitespace 覆盖
             }
 
             $textX = $contentX + 4;
@@ -618,7 +618,10 @@ class VNodeRenderer
             // CSS Text Module Level 3 §7: white-space:normal 允许自动换行
             $isBold = (bool)$bold;
             $whitespace = $style['whiteSpace'] ?? 'normal';
-            $isWrappable = $isWrappableOverride ?? ($whitespace !== 'nowrap' && $whitespace !== 'pre');
+            // ellipsis 分支已设为 false，非 ellipsis 分支设为 true 后在这里根据 whitespace 修正
+            if ($whitespace === 'nowrap' || $whitespace === 'pre') {
+                $isWrappable = false;
+            }
             $lineH = 0;
             if ($isWrappable && $textWidth > $contentW && $contentW > 20) {
                 // Compute line-height for multi-line rendering
