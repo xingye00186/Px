@@ -440,7 +440,9 @@ foreach ($cases as $caseDir) {
 
             $caseBinDir = dirname($exeToRun);
             $stderrTmp = sys_get_temp_dir() . '/px_dump_stderr_' . getmypid() . '.txt';
-            $dumpCmd = sprintf('"%s" --case=%s --dump-layout 2>"%s"', $exeToRun, $caseName, $stderrTmp);
+            $layoutTarget = $caseDir . '/ref/engine_layout.json';
+            $dumpCmd = sprintf('"%s" --case=%s --dump-layout --dump-layout-to="%s" 2>"%s"',
+                $exeToRun, $caseName, $layoutTarget, $stderrTmp);
             $layoutOut = '';
             exec($dumpCmd, $layoutOutArr, $layoutExit);
             $layoutOut = implode("\n", $layoutOutArr);
@@ -457,16 +459,15 @@ foreach ($cases as $caseDir) {
                 }
             }
 
-            $layoutFile = $APP_DIR . '/engine_layout.json';
+            $layoutFile = $layoutTarget;
             if (file_exists($layoutFile)) {
                 $layoutExported = true;
                 echo "  [D] ✅ layout 导出成功\n";
 
-                // Copy layout to case ref dir
+                // Ensure ref dir exists
                 if (!is_dir($caseDir . '/ref')) {
                     mkdir($caseDir . '/ref', 0777, true);
                 }
-                copy($layoutFile, $caseDir . '/ref/engine_layout.json');
 
                 $layoutData = json_decode(file_get_contents($layoutFile), true);
                 if ($layoutData !== null) {
@@ -523,13 +524,13 @@ foreach ($cases as $caseDir) {
         if (file_exists($exeToRun)) {
             echo "  [E] 多帧稳定性: --case=$caseName --dump-layout-after-frames=$FRAMES ...\n";
 
-            $multiFrameFile = $APP_DIR . "/engine_layout_after_{$FRAMES}frames.json";
+            $multiFrameTarget = $caseDir . '/ref/engine_layout.json';  // _after_Nframes appended by handleDumpArgs
             $caseBinDir = dirname($exeToRun);
             $mfErr = '';
 
             $stderrTmp = sys_get_temp_dir() . '/px_mf_stderr_' . getmypid() . '.txt';
-            $mfCmd = sprintf('"%s" --case=%s --dump-layout-after-frames=%d 2>"%s"',
-                $exeToRun, $caseName, $FRAMES, $stderrTmp);
+            $mfCmd = sprintf('"%s" --case=%s --dump-layout-after-frames=%d --dump-layout-to="%s" 2>"%s"',
+                $exeToRun, $caseName, $FRAMES, $multiFrameTarget, $stderrTmp);
             $mfExit = -1;
             $mfOutArr = [];
             exec($mfCmd, $mfOutArr, $mfExit);
@@ -538,15 +539,14 @@ foreach ($cases as $caseDir) {
                 @unlink($stderrTmp);
             }
 
+            $multiFrameFile = $caseDir . "/ref/engine_layout_after_{$FRAMES}frames.json";
+
             if (file_exists($multiFrameFile)) {
                 $stabilityIssues = compareStability(
                     $caseDir . '/ref/engine_layout.json',
                     $multiFrameFile,
                     $VERBOSE
                 );
-
-                // Copy multi-frame ref to case dir
-                copy($multiFrameFile, $caseDir . "/ref/engine_layout_after_{$FRAMES}frames.json");
 
                 if ($stabilityIssues === 0) {
                     $stabilityPass = true;
@@ -555,8 +555,6 @@ foreach ($cases as $caseDir) {
                     echo "  [E] ❌ 发现 $stabilityIssues 个不稳定节点\n";
                     $caseOk = false;
                 }
-
-                @unlink($multiFrameFile);
             } else {
                 echo "  [E] ⚠️  多帧导出文件未生成\n";
             }
@@ -584,7 +582,7 @@ foreach ($cases as $caseDir) {
 
             if ($needsRegen) {
                 echo "  [G] 浏览器参考: Edge headless 渲染 ...\n";
-                $brResult = generateBrowserRef($htmlPath, $refPath, $EDGE_PATH, $JS_DUMPER, $VERBOSE);
+                $brResult = generateBrowserRef($htmlPath, $refPath, $EDGE_PATH, $JS_DUMPER, $VERBOSE, $caseName, $cases);
                 if ($brResult) {
                     echo "  [G] ✅ 浏览器参考已生成: " . basename($refPath) . "\n";
                 } else {
@@ -687,7 +685,7 @@ foreach ($cases as $caseDir) {
             $ssResult = runScreenshotComparison(
                 $caseName, $caseDir, $targetExe, $htmlPath,
                 $EDGE_PATH, $JS_DUMPER, $ROOT_DIR,
-                $UPDATE_BASELINE, $VERBOSE
+                $UPDATE_BASELINE, $VERBOSE, $cases
             );
             $ssPass = $ssResult['pass'];
             $ssDiffPercent = $ssResult['diffPercent'];
@@ -1011,7 +1009,7 @@ function generateCaseBatFiles(string $caseDir, string $binDir, string $exeName):
  * Build a wrapper HTML for baseline screenshot, identical to App.vue sandbox-content
  * with TL(#FF00FF) and BR(#00FFFF) anchors for pixel-level anchor crop alignment.
  */
-function buildScreenshotWrapper(string $originalHtml): string
+function buildScreenshotWrapper(string $originalHtml, string $caseName = '', array $caseDirs = []): string
 {
     // Extract body content
     $bodyContent = '';
@@ -1027,6 +1025,13 @@ function buildScreenshotWrapper(string $originalHtml): string
     }
 
     global $FONT_NOTO_URL, $FONT_NOTO_NAME, $FONT_NOTO_BOLD_URL;
+
+    // Compute header title from case name
+    $headerTitle = 'Test Case';
+    if ($caseName !== '') {
+        $title = ucwords(str_replace('-', ' ', substr($caseName, 5)));
+        $headerTitle = substr($caseName, 5, 3) . ' ' . $title;
+    }
 
     return '<!DOCTYPE html>
 <html lang="zh-CN">
@@ -1055,7 +1060,7 @@ body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 <body style="font-family:\'' . $FONT_NOTO_NAME . '\',sans-serif;font-size:16px;">
 <div style="width:1600px;height:800px;overflow-y:auto;">
 <div class="sandbox-header" style="height:40px;background:#fff;border-bottom:1px solid #ddd;padding:0 20px;display:flex;align-items:center;font-size:14px;color:#666;">
-  CSS Test Sandbox — <span style="color:#333;font-weight:bold;">Test Case</span>
+  CSS Test Sandbox — <span style="color:#333;font-weight:bold;">' . htmlspecialchars($headerTitle) . '</span>
 </div>
 <div style="padding:20px;">
 ' . $bodyContent . '
@@ -1082,7 +1087,8 @@ function runScreenshotComparison(
     string $jsDumper,
     string $projectRoot,
     bool   $updateBaseline,
-    bool   $verbose
+    bool   $verbose,
+    array  $caseDirs = []
 ): array {
     $logDir = $caseDir . '/test_log';
     if (!is_dir($logDir)) {
@@ -1100,7 +1106,7 @@ function runScreenshotComparison(
         if ($originalHtml === false) {
             return ['pass' => false, 'diffPercent' => -1, 'issues' => ["无法读取HTML: $htmlPath"]];
         }
-        $wrapperHtml = buildScreenshotWrapper($originalHtml);
+        $wrapperHtml = buildScreenshotWrapper($originalHtml, $caseName, $caseDirs);
 
         // Verify wrapper HTML includes required font declarations
         if (strpos($wrapperHtml, 'font-family:\'Noto Sans SC\'') === false) {
@@ -1187,7 +1193,7 @@ function runScreenshotComparison(
  * Build a wrapper HTML for Edge headless rendering.
  * Matches the engine's viewport (1600×800) so layout comparison is valid.
  */
-function buildCssTestWrapper(string $originalHtml, string $jsCode): string
+function buildCssTestWrapper(string $originalHtml, string $jsCode, string $caseName = '', array $caseDirs = []): string
 {
     // Extract body content and styles from the self-contained test case HTML
     $bodyContent = '';
@@ -1203,6 +1209,16 @@ function buildCssTestWrapper(string $originalHtml, string $jsCode): string
     }
 
     global $FONT_NOTO_URL, $FONT_NOTO_NAME, $FONT_NOTO_BOLD_URL;
+
+    // Build sidebar case list (matching App.vue behavior) - currently unused, kept for future wrapper alignment
+    $sidebarItems = '';
+
+    // Compute header title from case name
+    $headerTitle = 'Test Case';
+    if ($caseName !== '') {
+        $title = ucwords(str_replace('-', ' ', substr($caseName, 5)));
+        $headerTitle = substr($caseName, 5, 3) . ' ' . $title;
+    }
 
     return '<!DOCTYPE html>
 <html lang="zh-CN">
@@ -1231,7 +1247,7 @@ body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 <body style="font-family:\'' . $FONT_NOTO_NAME . '\',sans-serif;font-size:16px;">
 <div class="px-app-root" style="width:1600px;height:800px;overflow-y:auto;">
 <div class="sandbox-header" style="height:40px;background:#fff;border-bottom:1px solid #ddd;padding:0 20px;display:flex;align-items:center;font-size:14px;color:#666;">
-  CSS Test Sandbox — <span style="color:#333;font-weight:bold;">Test Case</span>
+  CSS Test Sandbox — <span style="color:#333;font-weight:bold;">' . htmlspecialchars($headerTitle) . '</span>
 </div>
 <div style="padding:20px;">
 ' . $bodyContent . '
@@ -1249,7 +1265,7 @@ body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
  * Generate browser reference JSON from a test case HTML file using Edge headless.
  * Returns true on success.
  */
-function generateBrowserRef(string $htmlPath, string $refPath, string $edgePath, string $jsDumper, bool $verbose): bool
+function generateBrowserRef(string $htmlPath, string $refPath, string $edgePath, string $jsDumper, bool $verbose, string $caseName = '', array $caseDirs = []): bool
 {
     $jsCode = file_get_contents($jsDumper);
     if ($jsCode === false) {
@@ -1263,7 +1279,7 @@ function generateBrowserRef(string $htmlPath, string $refPath, string $edgePath,
         return false;
     }
 
-    $wrapperHtml = buildCssTestWrapper($originalHtml, $jsCode);
+    $wrapperHtml = buildCssTestWrapper($originalHtml, $jsCode, $caseName, $caseDirs);
 
     // Verify wrapper HTML includes required font declarations
     if (strpos($wrapperHtml, 'font-family:\'Noto Sans SC\'') === false) {
