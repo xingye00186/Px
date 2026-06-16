@@ -929,21 +929,16 @@ void php_sk_save_screenshot(String path) {
     int w = g_skW, h = g_skH;
     if (w <= 0 || h <= 0) return;
 
-    SK_TRACE("[SK] save_screenshot: %s (%dx%d)\n", path.c_str(), w, h);
+    SK_TRACE("[SK] save_screenshot: %s (%dx%d)\n", path.data(), w, h);
 
-#ifdef USE_SKIA
-    // Skia 路径：直接从 g_skSkBitmap 编码为 PNG
-    sk_sp<SkData> data = g_skSkBitmap.encodeToData(SkEncodedImageFormat::kPNG, 100);
-    if (data) {
-        FILE* fp = fopen(path.c_str(), "wb");
-        if (fp) {
-            fwrite(data->data(), 1, data->size(), fp);
-            fclose(fp);
-            SK_TRACE("[SK] save_screenshot OK (skia path): %d bytes\n", (int)data->size());
-        }
-    }
-#else
-    // GDI 路径：从窗口 DC 捕捉像素，通过 GDI+ 保存为 PNG
+    // 统一使用 GDI+ 路径：从窗口 DC 捕捉像素（Skia 路径在 end_frame 中已通
+    // 过 skBlitToGdi/SetDIBitsToDevice 将像素同步到窗口 DC）
+    // 先将 UTF-8 path 转为宽字符串（GDI+ 需要）
+    int wideLen = MultiByteToWideChar(CP_UTF8, 0, path.data(), (int)path.length(), NULL, 0);
+    if (wideLen <= 0) return;
+    std::wstring widePath(wideLen, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, path.data(), (int)path.length(), &widePath[0], wideLen);
+
     HDC hdcWindow = GetDC(g_skHwnd);
     if (!hdcWindow) return;
 
@@ -951,13 +946,10 @@ void php_sk_save_screenshot(String path) {
     HBITMAP hBitmap = CreateCompatibleBitmap(hdcWindow, w, h);
     HBITMAP hOld = (HBITMAP)SelectObject(hdcMem, hBitmap);
 
-    // BitBlt 从窗口 DC 到内存 DC（即使窗口隐藏，DC 内容仍在）
     BitBlt(hdcMem, 0, 0, w, h, hdcWindow, 0, 0, SRCCOPY);
 
-    // 用 GDI+ Bitmap(HBITMAP) 构造并保存为 PNG
     Gdiplus::Bitmap gdiBmp(hBitmap, NULL);
     CLSID pngClsid = {};
-    // 查找 PNG encoder
     UINT numEncoders = 0, encSize = 0;
     Gdiplus::GetImageEncodersSize(&numEncoders, &encSize);
     if (encSize > 0) {
@@ -974,12 +966,11 @@ void php_sk_save_screenshot(String path) {
         }
     }
 
-    Gdiplus::Status status = gdiBmp.Save(Gdiplus::GdiplusString(path.c_str()), &pngClsid, NULL);
-    SK_TRACE("[SK] save_screenshot %s (gdi path): status=%d\n", path.c_str(), (int)status);
+    Gdiplus::Status status = gdiBmp.Save(widePath.c_str(), &pngClsid, NULL);
+    SK_TRACE("[SK] save_screenshot %s (gdi): status=%d\n", path.data(), (int)status);
 
     SelectObject(hdcMem, hOld);
     DeleteObject(hBitmap);
     DeleteDC(hdcMem);
     ReleaseDC(g_skHwnd, hdcWindow);
-#endif
 }

@@ -256,17 +256,3 @@ function main(): int
     $app->run();
     return 0;
 }
-                }
-
-                $app->dumpLayoutToFile($appDir . '/diag_after.json');
-                error_log('[AUTO_SCROLL] After-scroll layout dumped (scrollTop=' . $autoScroll . ' mode=' . ($useFullRender ? 'render' : 'directRender') . ')');
-            }
-        } else {
-            error_log('[DIAG] ERROR: Could not find case-list scrollContainer at (0,77)!');
-        }
-        return 0;
-    }
-
-    $app->run();
-    return 0;
-}

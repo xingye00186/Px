@@ -41,4 +41,4 @@ function sk_draw_image(int $handle, int $x, int $y, int $w, int $h): void {}
 function sk_free_image(int $handle): void {}
 
 // ---- 截图：将当前窗口 DC 保存为 PNG（headless 模式） ----
-function sk_save_screenshot(string $path): bool {}
+function sk_save_screenshot(string $path): void {}

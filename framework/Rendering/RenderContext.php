@@ -17,11 +17,10 @@ abstract class RenderContext
      * 将当前渲染缓冲区保存为 PNG 截图（headless 模式）。
      * 底层调用 sk_save_screenshot() 从窗口 DC 直接保存。
      */
-    public function saveScreenshot(string $path): bool
+    public function saveScreenshot(string $path): void
     {
         if (function_exists('sk_save_screenshot')) {
-            return sk_save_screenshot($path);
+            sk_save_screenshot($path);
         }
-        return false;
     }
 }
