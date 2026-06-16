@@ -374,6 +374,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                                 ScrollHelper::shiftDescendantsX($grandchild, $dx);
                             }
                         }
+                        // 清除 auto margin flags 防止后续重解析时重复累加偏移
+                        unset($child->style['marginLeftAuto'], $child->style['marginRightAuto']);
                     }
 
 
@@ -777,6 +779,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         ScrollHelper::shiftDescendantsX($grandchild, $dx);
                     }
                 }
+                // 清除 auto margin flags 防止后续重解析时重复累加偏移
+                unset($child->style['marginLeftAuto'], $child->style['marginRightAuto']);
             }
 
             $oldY = $child->y;
