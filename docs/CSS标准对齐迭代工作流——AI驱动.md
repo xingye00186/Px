@@ -50,6 +50,7 @@
 | 单项目 ref 生成 | `tools/generate_project_ref.php <project>` | 单项目浏览器参考 JSON |
 | 无窗口布局导出 | `bin/css_test.exe --case=case-xxx --headless --dump-layout` | 不弹出窗口，静默输出 JSON（run.php 已默认使用） |
 | 无窗口截图 | `bin/css_test.exe --case=case-xxx --headless --screenshot=out.png` | 离屏渲染保存 PNG，支持 GDI/Skia 双路径 |
+| 多帧截图 | `bin/css_test.exe --headless --screenshot=out.png --screenshot-frames=5` | 渲染 5 帧后截图，文件名追加 `_after_5frames`，与引擎多帧 dump 一致 |
 | 归档基线 | `php apps/css-test/archive_case.php` | case 稳定后冻存布局+多帧+浏览器元素数据到 baseline/ |
 | 回归检查 | `php apps/css-test/check_regression.php` | 几何/样式/稳定性/浏览器元素 四维度回归对比 |
 

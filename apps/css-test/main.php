@@ -76,14 +76,28 @@ function main(): int
     }
 
     // --screenshot=path: 渲染后直接保存截图到文件（无需窗口可见）
+    // --screenshot-frames=N: 渲染 N 帧后保存（默认 1），文件名自动追加 _after_{N}frames
     $screenshotPath = '';
+    $screenshotFrames = 1;
     foreach ($argv as $arg) {
         if (str_starts_with($arg, '--screenshot=')) {
             $screenshotPath = substr($arg, strlen('--screenshot='));
+        } elseif (str_starts_with($arg, '--screenshot-frames=')) {
+            $screenshotFrames = max(1, (int)substr($arg, strlen('--screenshot-frames=')));
         }
     }
     if ($screenshotPath !== '') {
-        $app->render();
+        for ($i = 0; $i < $screenshotFrames; $i++) {
+            $app->render();
+            $app->scheduler->flushMicrotasks();
+        }
+        if ($screenshotFrames > 1) {
+            $dir = dirname($screenshotPath);
+            $ext = '.png';
+            $baseName = basename($screenshotPath, $ext);
+            $newName = $baseName . "_after_{$screenshotFrames}frames.png";
+            $screenshotPath = $dir !== '.' ? $dir . '/' . $newName : $newName;
+        }
         $app->saveScreenshot($screenshotPath);
         return 0;
     }
@@ -228,6 +242,20 @@ function main(): int
                 $caseListAfter = $findSC($rootAfter, 0, 77);
                 if ($caseListAfter !== null) {
                     logChildren('AFTER', $caseListAfter, $caseListAfter->scrollTop, $caseListAfter->contentHeight, $caseListAfter->h);
+                }
+
+                $app->dumpLayoutToFile($appDir . '/diag_after.json');
+                error_log('[AUTO_SCROLL] After-scroll layout dumped (scrollTop=' . $autoScroll . ' mode=' . ($useFullRender ? 'render' : 'directRender') . ')');
+            }
+        } else {
+            error_log('[DIAG] ERROR: Could not find case-list scrollContainer at (0,77)!');
+        }
+        return 0;
+    }
+
+    $app->run();
+    return 0;
+}
                 }
 
                 $app->dumpLayoutToFile($appDir . '/diag_after.json');
