@@ -67,6 +67,9 @@ class Application
 
     private static ?self $instance = null;
 
+    /** headless 模式标志（AOT 下 defined() 编译期失效，用静态属性替代） */
+    public static bool $HEADLESS = false;
+
     /** 帧计数器，用于诊断输出 */
     private int $debugFrameNumber = 0;
 

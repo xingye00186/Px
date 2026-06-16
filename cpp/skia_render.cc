@@ -315,20 +315,19 @@ void php_sk_destroy_context() {
     }
 }
 
-// 开始一帧：GDI 创双缓冲 memDC（始终保留以兼容 end_frame BitBlt 流程）
+// 开始一帧：GDI 创双缓冲 memDC（headless 时用桌面 DC 创建兼容内存 DC）
 void php_sk_begin_frame() {
-    if (!g_skHwnd) {
-        SK_TRACE("[SK] begin_frame SKIP (no hwnd)\n");
-        return;
-    }
-    HDC screen = GetDC(g_skHwnd);
-    RECT rc;
-    GetClientRect(g_skHwnd, &rc);
+    HDC screen = g_skHwnd ? GetDC(g_skHwnd) : GetDC(NULL);
+    int w = g_skW, h = g_skH;
     g_skHdc = CreateCompatibleDC(screen);
-    g_skBitmap = CreateCompatibleBitmap(screen, rc.right, rc.bottom);
+    g_skBitmap = CreateCompatibleBitmap(screen, w, h);
     SelectObject(g_skHdc, g_skBitmap);
-    ReleaseDC(g_skHwnd, screen);
-    SK_TRACE("[SK] begin_frame rc=(%d,%d) hdc=%p bmp=%p\n", rc.right, rc.bottom, g_skHdc, g_skBitmap);
+    if (g_skHwnd) {
+        ReleaseDC(g_skHwnd, screen);
+    } else {
+        ReleaseDC(NULL, screen);
+    }
+    SK_TRACE("[SK] begin_frame w=%d h=%d hdc=%p bmp=%p%s\n", w, h, g_skHdc, g_skBitmap, g_skHwnd ? "" : " (headless)");
 
 #ifdef USE_SKIA
     if (g_skCanvas) {
@@ -341,14 +340,13 @@ void php_sk_begin_frame() {
 
 // 结束一帧：阶段三 Skia → GDI 中转 → BitBlt 到 screen
 void php_sk_end_frame() {
-    if (!g_skHwnd || !g_skHdc) {
-        SK_TRACE("[SK] end_frame SKIP (hwnd=%p hdc=%p)\n", g_skHwnd, g_skHdc);
+    if (!g_skHdc) {
+        SK_TRACE("[SK] end_frame SKIP (hdc=%p)\n", g_skHdc);
         return;
     }
-    RECT rc;
-    GetClientRect(g_skHwnd, &rc);
+    int w = g_skW, h = g_skH;
 #ifdef USE_SKIA
-    SK_TRACE("[SK] end_frame BEGIN rc=(%d,%d) hdc=%p canvas=%p\n", rc.right, rc.bottom, g_skHdc, g_skCanvas.get());
+    SK_TRACE("[SK] end_frame BEGIN w=%d h=%d hdc=%p canvas=%p\n", w, h, g_skHdc, g_skCanvas.get());
     if (g_skCanvas) {
         g_skCanvas->restore();
         SK_TRACE("[SK] end_frame after restore\n");
@@ -357,12 +355,16 @@ void php_sk_end_frame() {
     }
 #endif
 
-    HDC screen = GetDC(g_skHwnd);
-    SK_TRACE("[SK] end_frame screen=%p\n", screen);
-    if (screen) {
-        BOOL ok = BitBlt(screen, 0, 0, rc.right, rc.bottom, g_skHdc, 0, 0, SRCCOPY);
-        SK_TRACE("[SK] end_frame BitBlt ok=%d\n", ok);
-        ReleaseDC(g_skHwnd, screen);
+    if (g_skHwnd) {
+        HDC screen = GetDC(g_skHwnd);
+        SK_TRACE("[SK] end_frame screen=%p\n", screen);
+        if (screen) {
+            BOOL ok = BitBlt(screen, 0, 0, w, h, g_skHdc, 0, 0, SRCCOPY);
+            SK_TRACE("[SK] end_frame BitBlt ok=%d\n", ok);
+            ReleaseDC(g_skHwnd, screen);
+        }
+    } else {
+        SK_TRACE("[SK] end_frame SKIP BitBlt (headless)\n");
     }
     DeleteDC(g_skHdc);
     if (g_skBitmap) {
@@ -922,8 +924,8 @@ void php_sk_free_image(Int handle) {
 // 截图：将当前窗口 DC 内容保存为 PNG（headless 模式／调试用）
 // ============================================================
 void php_sk_save_screenshot(String path) {
-    if (!g_skHwnd) {
-        SK_TRACE("[SK] save_screenshot SKIP (no hwnd)\n");
+    if (!g_skHdc) {
+        SK_TRACE("[SK] save_screenshot SKIP (no hdc)\n");
         return;
     }
     int w = g_skW, h = g_skH;
