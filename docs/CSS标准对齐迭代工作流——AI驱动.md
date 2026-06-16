@@ -48,6 +48,8 @@
 | 锚点对齐 | `tools/shared_test_lib.php::alignImages()` | 颜色锚点/模板匹配/自动检测 三策略 |
 | 浏览器 ref 批量生成 | `tools/generate_browser_refs.php` | 旧版 css-test Level 参考（保留兼容，run.php 已内联） |
 | 单项目 ref 生成 | `tools/generate_project_ref.php <project>` | 单项目浏览器参考 JSON |
+| 归档基线 | `php apps/css-test/archive_case.php` | case 稳定后冻存布局+多帧+浏览器元素数据到 baseline/ |
+| 回归检查 | `php apps/css-test/check_regression.php` | 几何/样式/稳定性/浏览器元素 四维度回归对比 |
 
 ### 2.2 css-test 测试沙盒目录结构
 
@@ -282,6 +284,7 @@ Step I: 归档基线快照（case 通过后执行）
    ├─ 当前 case 通过所有检查后 → `php archive_case.php case-NNN-name`
    ├─ 生成 baseline/engine_layout.json（Frame 0 布局）
    ├─ 生成 baseline/engine_layout_after_5frames.json（多帧稳定性基线）
+   ├─ 缓存 ref/browser_ref_level_0.json → baseline/browser_ref_elements.json（浏览器基线元素数据）
    ├─ baseline_registry.json 自动注册（含节点数、多帧数、样式字段清单）
    ├─ 查看归档状态：`php archive_case.php --list`
    └─ 归档后才进入下一个 case 的迭代
@@ -344,8 +347,9 @@ Step I: 归档基线快照（case 通过后执行）
 | **Grid/Flex 子元素 w=0** | GridLayoutStrategy 未设 style['width'] / BlockLayout 重解释 | `GridLayoutStrategy` / `BlockLayoutStrategy` |
 | **颜色不匹配** | GDI 颜色格式转换有误 / border-left 简写默认颜色 | `CssMappings` |
 | **属性引擎缺失** | serializeRenderNode 白名单未添加 / CssMappings 未映射 | `Application.php` / `CssMappings` |
+| **Flex 宽度/位置偏差** | flex-grow/flex-shrink/justify-content/gap 计算 | `FlexLayoutStrategy` | **浏览器元素对比（JSON 对比无法发现）** |
 | **尺寸偏差 (w/h)** | 盒模型假设不一致 / 百分比解析 / 视口不匹配 | `PercentResolver` / `buildCssTestWrapper()` |
-| **截图差异 > 5%** | 字体渲染 / 抗锯齿 / 颜色差异 / 布局偏移 | 联合 JSON 对比定位 |
+| **截图差异 > 5%** | 字体渲染 / 抗锯齿 / 颜色差异 / 布局偏移 | 联合 JSON 对比+浏览器元素对比定位 |
 | **截图中锚点找不到** | 窗口尺寸不对 / 色块被遮挡 / 偏移过大 | 检查 WINDOW_WIDTH/HEIGHT 匹配 |
 | **STABILITY 问题** | 多帧间坐标或尺寸不稳定（auto-height 正反馈） | `BlockLayoutStrategy` auto-height 排除 absolute/fixed |
 
@@ -713,23 +717,25 @@ php apps/css-test/run.php
 
 ### 7.4 归档基线回归检查
 
-**原理**：将通过的 case 布局数据冻存为基线快照，后续框架修改后重新运行已归档 case 的布局并与基线比对，在几何/样式/稳定性三维度检测回归。
+**原理**：将通过的 case 布局数据冻存为基线快照，后续框架修改后重新运行已归档 case 的布局并与基线比对，在几何/样式/稳定性/浏览器元素对比四维度检测回归。
 
 **归档内容**（每个已归档 case 在 `test_case/case-xxx/baseline/` 下）：
 
 ```
 baseline/
 ├── engine_layout.json                   ← Frame 0 布局快照（含完整 RenderNode 树 + 样式字段）
-└── engine_layout_after_5frames.json     ← 多帧稳定性基线
+├── engine_layout_after_5frames.json     ← 多帧稳定性基线
+└── browser_ref_elements.json            ← 浏览器基线元素数据（Edge headless 渲染参考）
 ```
 
-**三维度回归对比**：
+**四维度回归对比**：
 
-| 维度 | 对比内容 | 数据来源 |
-|------|---------|---------|
-| 几何 | x, y, w, h, visualW, visualH（容差可配，默认 1px） | `--dump-layout` |
-| 样式 | style 对象中所有 CSS 属性（bg/fontSize/color/display/border…） | `--dump-layout` |
-| 稳定性 | 多帧间节点位置/尺寸漂移 | `--dump-layout-after-frames=5` |
+| 维度 | 对比内容 | 数据来源 | 覆盖范围 |
+|------|---------|---------|---------|
+| 几何 | x, y, w, h, visualW, visualH（容差可配，默认 1px） | `--dump-layout` | 32/32 case ✅ |
+| 样式 | style 对象中所有 CSS 属性（bg/fontSize/color/display/border…） | `--dump-layout` | 32/32 case ✅ |
+| 稳定性 | 多帧间节点位置/尺寸漂移 | `--dump-layout-after-frames=5` | 32/32 case ✅ |
+| 浏览器元素对比 | 引擎 vs 浏览器逐文本元素对比（位置+尺寸+样式），发现 JSON 布局对比无法捕捉的 flex 宽度偏差、内容高度差异、渲染效果偏差 | `browser_ref_elements.json` | 32/32 case ✅ |
 
 **使用流程**：
 
@@ -738,9 +744,7 @@ baseline/
 php archive_case.php case-003-basic-block        # 单个归档（默认 5 帧）
 php archive_case.php --frames=10 case-xxx        # 自定义帧数
 php archive_case.php --all                       # 批量归档所有有 ref/ 的 case
-
-# 查看归档状态
-php archive_case.php --list     # 显示多帧数、样式字段数
+php archive_case.php --list                      # 查看归档状态（多帧数、样式字段数）
 
 # 回归检查（框架修改后或提交前）
 php check_regression.php                              # 全量检查所有归档 case
@@ -749,6 +753,7 @@ php check_regression.php --json                       # JSON 输出（供 CI/工
 php check_regression.php --tolerance=2                # 自定义几何容差
 php check_regression.php --skip-styles                # 跳过样式对比（调试加速）
 php check_regression.php --skip-multiframe            # 跳过稳定性对比（调试加速）
+php check_regression.php --skip-browser               # 跳过浏览器元素对比（调试加速）
 php check_regression.php --fail-fast                  # 遇首个失败即停
 ```
 
