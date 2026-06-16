@@ -49,8 +49,8 @@
 | `php apps/css-test/run.php --force-build` | 强制重新构建（忽略 hash 缓存） |
 | `php apps/css-test/run.php --skip-browser-ref` | 跳过浏览器参考对比 |
 | `php apps/css-test/run.php --update-baseline` | 强制重新生成浏览器参考数据 |
-| `bin/css_test.exe --case=case-xxx --headless --dump-layout` | 无窗口模式导出布局（exe 窗口不弹出） |
-| `bin/css_test.exe --case=case-xxx --headless --screenshot=out.png` | 无窗口模式渲染后直接保存截图（无需 `CopyFromScreen`） |
+| `bin/css_test.exe --case=case-xxx --headless --dump-layout` | 无窗口模式导出布局，**同时自动截图到 ref/engine_screenshot_{ts}.png** |
+| `bin/css_test.exe --case=case-xxx --headless --dump-layout --no-screenshot` | 布局导出，**不截图** |
 | `bin/css_test.exe --case=case-xxx --headless --screenshot=out.png --screenshot-frames=5` | 渲染 5 帧后保存截图，文件名自动追加 `_after_5frames` |
 | `.\build.bat css-test` | 单独构建 |
 | `php sfc-compiler.php apps/css-test/App.vue` | 单独编译 SFC |

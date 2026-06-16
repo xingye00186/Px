@@ -133,6 +133,12 @@ class Application
                 @mkdir($dir, 0777, true);
             }
             $app->dumpLayoutToFile($path);
+            // 默认自动截图（除非 --no-screenshot）
+            if (!in_array('--no-screenshot', $argv) && function_exists('sk_save_screenshot')) {
+                $ts = date('Ymd_His');
+                $ssPath = $dir . '/engine_screenshot_' . $ts . '.png';
+                $app->saveScreenshot($ssPath);
+            }
             return true;
         }
 
@@ -160,6 +166,13 @@ class Application
                     $app->scheduler->flushMicrotasks();
                 }
                 $app->dumpLayoutToFile($outputPath);
+                // 多帧截图（除非 --no-screenshot），文件名带 _after_{N}frames
+                if (!in_array('--no-screenshot', $argv) && function_exists('sk_save_screenshot')) {
+                    $ts = date('Ymd_His');
+                    $dir2 = dirname($outputPath);
+                    $ssPath = $dir2 . '/engine_screenshot_' . $ts . "_after_{$n}frames.png";
+                    $app->saveScreenshot($ssPath);
+                }
                 return true;
             }
         }

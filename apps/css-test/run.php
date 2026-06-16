@@ -443,8 +443,9 @@ foreach ($cases as $caseDir) {
             $caseBinDir = dirname($exeToRun);
             $stderrTmp = sys_get_temp_dir() . '/px_dump_stderr_' . getmypid() . '.txt';
             $layoutTarget = $caseDir . '/ref/engine_layout.json';
-            $dumpCmd = sprintf('"%s" --case=%s --headless --dump-layout 2>"%s"',
-                $exeToRun, $caseName, $stderrTmp);
+            $noSs = $SKIP_SCREENSHOT ? ' --no-screenshot' : '';
+            $dumpCmd = sprintf('"%s" --case=%s --headless --dump-layout%s 2>"%s"',
+                $exeToRun, $caseName, $noSs, $stderrTmp);
             $layoutOut = '';
             exec($dumpCmd, $layoutOutArr, $layoutExit);
             $layoutOut = implode("\n", $layoutOutArr);
@@ -530,8 +531,9 @@ foreach ($cases as $caseDir) {
             $mfErr = '';
 
             $stderrTmp = sys_get_temp_dir() . '/px_mf_stderr_' . getmypid() . '.txt';
-            $mfCmd = sprintf('"%s" --case=%s --headless --dump-layout-after-frames=%d 2>"%s"',
-                $exeToRun, $caseName, $FRAMES, $stderrTmp);
+            $noSs = $SKIP_SCREENSHOT ? ' --no-screenshot' : '';
+            $mfCmd = sprintf('"%s" --case=%s --headless --dump-layout-after-frames=%d%s 2>"%s"',
+                $exeToRun, $caseName, $FRAMES, $noSs, $stderrTmp);
             $mfExit = -1;
             $mfOutArr = [];
             exec($mfCmd, $mfOutArr, $mfExit);
@@ -1091,15 +1093,15 @@ function runScreenshotComparison(
     bool   $verbose,
     array  $caseDirs = []
 ): array {
-    $logDir = $caseDir . '/test_log';
-    if (!is_dir($logDir)) {
-        mkdir($logDir, 0777, true);
+    $refDir = $caseDir . '/ref';
+    if (!is_dir($refDir)) {
+        mkdir($refDir, 0777, true);
     }
 
     $timestamp = date('Ymd_His');
-    $baselineFile = $logDir . "/browser_ref_{$timestamp}.png";
-    $capturedFile = $logDir . "/exe_capture_{$timestamp}.png";
-    $diffFile     = $logDir . "/diff_{$timestamp}.png";
+    $baselineFile = $refDir . "/browser_ref_{$timestamp}.png";
+    $capturedFile = $refDir . "/engine_screenshot_{$timestamp}.png";
+    $diffFile     = $refDir . "/diff_{$timestamp}.png";
 
     // ---- Step 1: Baseline screenshot (wrapper HTML with anchors via Edge) ----
     if ($updateBaseline || !file_exists($baselineFile)) {

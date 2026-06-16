@@ -30,9 +30,15 @@ php apps/css-test/run.php --case=case-xxx --verbose
 php apps/css-test/run.php --case=case-xxx --force-build
 
 # headless 模式：exe 窗口不弹出（run.php dump-layout 已自动启用）
-bin/css_test.exe --case=case-xxx --headless --dump-layout
+bin/css_test.exe --case=case-xxx --headless --dump-layout            # 导出 JSON + 自动截图
+bin/css_test.exe --case=case-xxx --headless --dump-layout --no-screenshot  # 仅 JSON，不截图
 bin/css_test.exe --case=case-xxx --headless --screenshot=out.png
 bin/css_test.exe --case=case-xxx --headless --screenshot=out.png --screenshot-frames=5
+
+截图文件统一存放在 ref/ 目录，命名格式：
+  engine_screenshot_20260616_143000.png  # 引擎离屏截图
+  browser_ref_20260616_143000.png        # 浏览器基线截图
+  diff_20260616_143000.png               # 像素差异图
 ```
 
 构建缓存自动跳过——源码无变化时不编译。
