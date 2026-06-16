@@ -110,8 +110,17 @@ class Application
         }
 
         // Auto-default: --case=xxx → test_case/{xxx}/ref/engine_layout.json
-        if ($dumpTo === '' && $caseName !== '') {
-            $dumpTo = $appDir . '/test_case/' . $caseName . '/ref/engine_layout.json';
+        // If no --case=, scan test_case/ and use first case
+        if ($dumpTo === '') {
+            if ($caseName !== '') {
+                $dumpTo = $appDir . '/test_case/' . $caseName . '/ref/engine_layout.json';
+            } else {
+                $caseDirs = glob($appDir . '/test_case/case-*', GLOB_ONLYDIR);
+                if (!empty($caseDirs)) {
+                    $firstCase = basename($caseDirs[0]);
+                    $dumpTo = $appDir . '/test_case/' . $firstCase . '/ref/engine_layout.json';
+                }
+            }
         }
 
         // --dump-layout: 单帧导出

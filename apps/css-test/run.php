@@ -441,8 +441,8 @@ foreach ($cases as $caseDir) {
             $caseBinDir = dirname($exeToRun);
             $stderrTmp = sys_get_temp_dir() . '/px_dump_stderr_' . getmypid() . '.txt';
             $layoutTarget = $caseDir . '/ref/engine_layout.json';
-            $dumpCmd = sprintf('"%s" --case=%s --dump-layout --dump-layout-to="%s" 2>"%s"',
-                $exeToRun, $caseName, $layoutTarget, $stderrTmp);
+            $dumpCmd = sprintf('"%s" --case=%s --dump-layout 2>"%s"',
+                $exeToRun, $caseName, $stderrTmp);
             $layoutOut = '';
             exec($dumpCmd, $layoutOutArr, $layoutExit);
             $layoutOut = implode("\n", $layoutOutArr);
@@ -524,13 +524,12 @@ foreach ($cases as $caseDir) {
         if (file_exists($exeToRun)) {
             echo "  [E] 多帧稳定性: --case=$caseName --dump-layout-after-frames=$FRAMES ...\n";
 
-            $multiFrameTarget = $caseDir . '/ref/engine_layout.json';  // _after_Nframes appended by handleDumpArgs
             $caseBinDir = dirname($exeToRun);
             $mfErr = '';
 
             $stderrTmp = sys_get_temp_dir() . '/px_mf_stderr_' . getmypid() . '.txt';
-            $mfCmd = sprintf('"%s" --case=%s --dump-layout-after-frames=%d --dump-layout-to="%s" 2>"%s"',
-                $exeToRun, $caseName, $FRAMES, $multiFrameTarget, $stderrTmp);
+            $mfCmd = sprintf('"%s" --case=%s --dump-layout-after-frames=%d 2>"%s"',
+                $exeToRun, $caseName, $FRAMES, $stderrTmp);
             $mfExit = -1;
             $mfOutArr = [];
             exec($mfCmd, $mfOutArr, $mfExit);
