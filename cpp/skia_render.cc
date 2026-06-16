@@ -77,6 +77,9 @@ static void*  g_skBits = NULL;     // CreateDIBSection 返回的像素指针（�
 static int  g_skW = 0;
 static int  g_skH = 0;
 
+// 待保存截图路径（save_screenshot 设置，end_frame 在清理 DC 前处理）
+static std::string g_skPendingSSPath = "";
+
 // GDI+ 初始化状态（图片加载需要，非 USE_SKIA 路径）
 static ULONG_PTR g_skGdiplusToken = 0;
 static bool      g_skGdiplusInited = false;
@@ -365,6 +368,42 @@ void php_sk_end_frame() {
         }
     } else {
         SK_TRACE("[SK] end_frame SKIP BitBlt (headless)\n");
+    }
+    // 保存待处理截图（在清理 DC 之前，从 g_skHdc 直接读取像素）
+    if (!g_skPendingSSPath.empty()) {
+        std::string ssPath = g_skPendingSSPath;
+        g_skPendingSSPath.clear();
+        int wideLen = MultiByteToWideChar(CP_UTF8, 0, ssPath.data(), (int)ssPath.length(), NULL, 0);
+        if (wideLen > 0) {
+            std::wstring widePath(wideLen, L'\0');
+            MultiByteToWideChar(CP_UTF8, 0, ssPath.data(), (int)ssPath.length(), &widePath[0], wideLen);
+            HDC hdcMem = CreateCompatibleDC(g_skHdc);
+            HBITMAP hBitmap = CreateCompatibleBitmap(g_skHdc, w, h);
+            HBITMAP hOld = (HBITMAP)SelectObject(hdcMem, hBitmap);
+            BitBlt(hdcMem, 0, 0, w, h, g_skHdc, 0, 0, SRCCOPY);
+            Gdiplus::Bitmap gdiBmp(hBitmap, NULL);
+            CLSID pngClsid = {};
+            UINT numEncoders = 0, encSize = 0;
+            Gdiplus::GetImageEncodersSize(&numEncoders, &encSize);
+            if (encSize > 0) {
+                Gdiplus::ImageCodecInfo* encoders = (Gdiplus::ImageCodecInfo*)malloc(encSize);
+                if (encoders) {
+                    Gdiplus::GetImageEncoders(numEncoders, encSize, encoders);
+                    for (UINT i = 0; i < numEncoders; i++) {
+                        if (wcscmp(encoders[i].MimeType, L"image/png") == 0) {
+                            pngClsid = encoders[i].Clsid;
+                            break;
+                        }
+                    }
+                    free(encoders);
+                }
+            }
+            Gdiplus::Status status = gdiBmp.Save(widePath.c_str(), &pngClsid, NULL);
+            SK_TRACE("[SK] save_screenshot %s (gdi): status=%d\n", ssPath.c_str(), (int)status);
+            SelectObject(hdcMem, hOld);
+            DeleteObject(hBitmap);
+            DeleteDC(hdcMem);
+        }
     }
     DeleteDC(g_skHdc);
     if (g_skBitmap) {
@@ -921,58 +960,8 @@ void php_sk_free_image(Int handle) {
 }
 
 // ============================================================
-// 截图：将当前窗口 DC 内容保存为 PNG（headless 模式／调试用）
-// ============================================================
+// 延迟保存截图：仅存储路径，由 end_frame 在清理 DC 前执行
 void php_sk_save_screenshot(String path) {
-    if (!g_skHdc) {
-        SK_TRACE("[SK] save_screenshot SKIP (no hdc)\n");
-        return;
-    }
-    int w = g_skW, h = g_skH;
-    if (w <= 0 || h <= 0) return;
-
-    SK_TRACE("[SK] save_screenshot: %s (%dx%d)\n", path.data(), w, h);
-
-    // 统一使用 GDI+ 路径：从窗口 DC 捕捉像素（Skia 路径在 end_frame 中已通
-    // 过 skBlitToGdi/SetDIBitsToDevice 将像素同步到窗口 DC）
-    // 先将 UTF-8 path 转为宽字符串（GDI+ 需要）
-    int wideLen = MultiByteToWideChar(CP_UTF8, 0, path.data(), (int)path.length(), NULL, 0);
-    if (wideLen <= 0) return;
-    std::wstring widePath(wideLen, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, path.data(), (int)path.length(), &widePath[0], wideLen);
-
-    HDC hdcWindow = GetDC(g_skHwnd);
-    if (!hdcWindow) return;
-
-    HDC hdcMem = CreateCompatibleDC(hdcWindow);
-    HBITMAP hBitmap = CreateCompatibleBitmap(hdcWindow, w, h);
-    HBITMAP hOld = (HBITMAP)SelectObject(hdcMem, hBitmap);
-
-    BitBlt(hdcMem, 0, 0, w, h, hdcWindow, 0, 0, SRCCOPY);
-
-    Gdiplus::Bitmap gdiBmp(hBitmap, NULL);
-    CLSID pngClsid = {};
-    UINT numEncoders = 0, encSize = 0;
-    Gdiplus::GetImageEncodersSize(&numEncoders, &encSize);
-    if (encSize > 0) {
-        Gdiplus::ImageCodecInfo* encoders = (Gdiplus::ImageCodecInfo*)malloc(encSize);
-        if (encoders) {
-            Gdiplus::GetImageEncoders(numEncoders, encSize, encoders);
-            for (UINT i = 0; i < numEncoders; i++) {
-                if (wcscmp(encoders[i].MimeType, L"image/png") == 0) {
-                    pngClsid = encoders[i].Clsid;
-                    break;
-                }
-            }
-            free(encoders);
-        }
-    }
-
-    Gdiplus::Status status = gdiBmp.Save(widePath.c_str(), &pngClsid, NULL);
-    SK_TRACE("[SK] save_screenshot %s (gdi): status=%d\n", path.data(), (int)status);
-
-    SelectObject(hdcMem, hOld);
-    DeleteObject(hBitmap);
-    DeleteDC(hdcMem);
-    ReleaseDC(g_skHwnd, hdcWindow);
+    g_skPendingSSPath = std::string(path.data(), path.length());
+    SK_TRACE("[SK] save_screenshot deferred: %s\n", path.data());
 }

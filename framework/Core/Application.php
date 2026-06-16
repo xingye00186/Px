@@ -128,20 +128,19 @@ class Application
 
         // --dump-layout: 单帧导出
         if (in_array('--dump-layout', $argv)) {
-            $app->render();
             $path = $dumpTo !== '' ? $dumpTo : $appDir . '/engine_layout.json';
-            // Ensure ref directory exists
             $dir = dirname($path);
             if (!is_dir($dir)) {
                 @mkdir($dir, 0777, true);
             }
-            $app->dumpLayoutToFile($path);
-            // 默认自动截图（除非 --no-screenshot）
+            // 先设截图路径（end_frame 在清理 DC 前会处理）
             if (!in_array('--no-screenshot', $argv) && function_exists('sk_save_screenshot')) {
                 $ts = date('Ymd_His');
                 $ssPath = $dir . '/engine_screenshot_' . $ts . '.png';
                 $app->saveScreenshot($ssPath);
             }
+            $app->render();
+            $app->dumpLayoutToFile($path);
             return true;
         }
 
@@ -164,18 +163,17 @@ class Application
                 if (!is_dir($dir)) {
                     @mkdir($dir, 0777, true);
                 }
+                // 设截图路径（end_frame 在清理 DC 前会处理最后一帧）
+                if (!in_array('--no-screenshot', $argv) && function_exists('sk_save_screenshot')) {
+                    $ts = date('Ymd_His');
+                    $ssPath = $dir . '/engine_screenshot_' . $ts . "_after_{$n}frames.png";
+                    $app->saveScreenshot($ssPath);
+                }
                 for ($i = 0; $i < $n; $i++) {
                     $app->render();
                     $app->scheduler->flushMicrotasks();
                 }
                 $app->dumpLayoutToFile($outputPath);
-                // 多帧截图（除非 --no-screenshot），文件名带 _after_{N}frames
-                if (!in_array('--no-screenshot', $argv) && function_exists('sk_save_screenshot')) {
-                    $ts = date('Ymd_His');
-                    $dir2 = dirname($outputPath);
-                    $ssPath = $dir2 . '/engine_screenshot_' . $ts . "_after_{$n}frames.png";
-                    $app->saveScreenshot($ssPath);
-                }
                 return true;
             }
         }
