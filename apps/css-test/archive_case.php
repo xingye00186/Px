@@ -73,7 +73,8 @@ function findExe(): ?string {
 }
 
 /**
- * 运行 exe 生成布局 JSON，返回文件路径（在 appDir 下生成）
+ * 运行 exe 生成布局 JSON，返回文件路径
+ * 使用 --dump-layout-to= 显式控制输出路径
  */
 function runDumpLayout(string $caseName, string $flag, string $outFile): ?string {
     $exe = findExe();
@@ -84,24 +85,34 @@ function runDumpLayout(string $caseName, string $flag, string $outFile): ?string
 
     $cwd = getcwd();
     chdir(__DIR__);
-    $cmd = escapeshellarg($exe) . ' --case=' . escapeshellarg($caseName) . ' ' . $flag . ' 2>NUL';
+
+    // 框架 handleDumpArgs 在 --case=xxx 时自动写入 test_case/{case}/ref/
+    $outputPath = __DIR__ . '/test_case/' . $caseName . '/ref/' . $outFile;
+
+    // 先尝试用 --dump-layout-to= 显式控制路径（如果框架支持）
+    $cmd = escapeshellarg($exe)
+        . ' --case=' . escapeshellarg($caseName)
+        . ' ' . $flag
+        . ' --dump-layout-to=' . escapeshellarg($outputPath)
+        . ' 2>NUL';
     shell_exec($cmd);
 
-    // --dump-layout 输出到 engine_layout.json；--dump-layout-after-frames=N 输出到 engine_layout_after_Nframes.json
-    $generatedPath = __DIR__ . '/' . $outFile;
-    if (!file_exists($generatedPath)) {
+    if (!file_exists($outputPath)) {
+        // 降级：不用 --dump-layout-to=，让框架自动写入 ref/
+        $cmd2 = escapeshellarg($exe)
+            . ' --case=' . escapeshellarg($caseName)
+            . ' ' . $flag
+            . ' 2>NUL';
+        shell_exec($cmd2);
+    }
+
+    if (!file_exists($outputPath)) {
         echo "[ERR] $caseName: $flag 未生成 $outFile\n";
         chdir($cwd);
         return null;
     }
-    $content = file_get_contents($generatedPath);
-    @unlink($generatedPath);
+    $content = file_get_contents($outputPath);
     chdir($cwd);
-
-    if (empty($content)) {
-        echo "[ERR] $caseName: $outFile 为空\n";
-        return null;
-    }
     return $content;
 }
 
