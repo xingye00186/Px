@@ -53,7 +53,8 @@
 | `php sfc-compiler.php apps/css-test/App.vue` | 单独编译 SFC |
 | `php apps/css-test/archive_case.php case-xxx` | 归档已通过 case（冻结基线） |
 | `php apps/css-test/archive_case.php --list` | 查看归档状态 |
-| `php apps/css-test/check_regression.php` | 回归检查（对比当前布局 vs 归档基线） |
+| `php apps/css-test/check_regression.php` | 回归检查 — 几何/样式/稳定性/浏览器元素 四维度对比当前 vs 归档基线 |
+| `php apps/css-test/check_regression.php --skip-browser` | 回归检查 — 跳过浏览器元素对比（调试加速） |
 
 ### 关键文件
 
@@ -229,7 +230,7 @@ php apps/css-test/archive_case.php --list
 php apps/css-test/archive_case.php case-xxx --force
 ```
 
-归档内容：`engine_layout.json`（Frame 0）+ `engine_layout_after_Nframes.json`（多帧稳定性），注册到 `baseline_registry.json`。
+归档内容：`engine_layout.json`（Frame 0）+ `engine_layout_after_Nframes.json`（多帧稳定性）+ `browser_ref_elements.json`（浏览器基线元素），注册到 `baseline_registry.json`。
 
 ---
 
@@ -282,7 +283,12 @@ php apps/css-test/run.php --skip-build                     # 仅验证（已有 
 php apps/css-test/archive_case.php case-xxx                # 归档
 php apps/css-test/archive_case.php --list                  # 查看状态
 php apps/css-test/archive_case.php --force case-xxx        # 强制覆盖
-php apps/css-test/check_regression.php                     # 全量回归检查
+php apps/css-test/check_regression.php                     # 全量四维回归检查
+php apps/css-test/check_regression.php --skip-styles       # 跳过样式对比
+php apps/css-test/check_regression.php --skip-multiframe   # 跳过稳定性对比
+php apps/css-test/check_regression.php --skip-browser      # 跳过浏览器元素对比
+php apps/css-test/check_regression.php --tolerance=2       # 自定义几何容差
+php apps/css-test/check_regression.php --fail-fast         # 遇首个失败即停
 
 # ==== 构建 ====
 .\build.bat css-test                                       # 单独构建

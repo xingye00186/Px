@@ -9,6 +9,8 @@ description: Execute the CSS standard alignment iteration workflow for the Px fr
 
 7 步循环：**跑测试 → 分析报告 → 定位根因 → 更新清单 → 修复+验证 → 归档 → 提交**
 
+> **回归防护四维度**：几何对比 + 样式对比 + 稳定性对比 + **浏览器元素对比**（覆盖全部 32 case）
+
 ```
 [1. 跑测试] → [2. 分析报告] → [3. 定位根因] → [4. 更新问题清单]
     ↑                                              ↓
@@ -93,7 +95,8 @@ FAIL
 # 验证
 php apps/css-test/run.php --case=case-xxx --force-build
 php apps/css-test/run.php --skip-screenshot   # 全量回归
-php apps/css-test/check_regression.php         # 基线回归
+php apps/css-test/check_regression.php         # 四维基线回归（几何/样式/稳定性/浏览器元素）
+php apps/css-test/check_regression.php --skip-browser  # 跳过浏览器元素对比（调试加速）
 ```
 
 ## Step 6：归档
@@ -101,9 +104,10 @@ php apps/css-test/check_regression.php         # 基线回归
 只有全部通过（或仅"引擎未导出属性"）才能归档：
 
 ```bash
-php apps/css-test/archive_case.php case-xxx
-php apps/css-test/archive_case.php --list     # 查看状态
-php apps/css-test/archive_case.php --force case-xxx  # 覆盖归档
+php apps/css-test/archive_case.php case-xxx                       # 归档（布局+多帧+浏览器元素）
+php apps/css-test/archive_case.php --list                         # 查看状态
+php apps/css-test/archive_case.php --force case-xxx               # 覆盖归档
+php apps/css-test/archive_case.php --frames=5 --all --force       # 全量重新归档
 ```
 
 ## Step 7：分类提交
@@ -121,6 +125,6 @@ git commit -m "chore: ..."
 
 **提交前检查**：
 - [ ] `docs/01-问题清单.md` 已更新
-- [ ] 归档的 `baseline/` 已加入提交
+- [ ] 归档的 `baseline/`（含 `browser_ref_elements.json`）已加入提交
 - [ ] `baseline_registry.json` 已更新
 - [ ] 无未提交的框架源码改动
