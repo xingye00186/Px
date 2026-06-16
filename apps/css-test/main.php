@@ -1,5 +1,4 @@
 <?php
-use Px\Core\Application;
 use Px\Rendering\RenderNode;
 
 const APP_PLATFORM  = 'win32';
@@ -21,7 +20,7 @@ function logChildren(string $tag, RenderNode $parent, int $scrollTop, int $conte
     error_log($info);
 }
 
-function runMultiStepTest(Application $app, RenderNode $caseList, int $steps, int $maxScroll, bool $useFullRender): void {
+function runMultiStepTest(\Px\Core\Application $app, RenderNode $caseList, int $steps, int $maxScroll, bool $useFullRender): void {
     $mode = $useFullRender ? 'render' : 'directRender';
     error_log("[MULTI_STEP_START] mode=$mode steps=$steps maxScroll=$maxScroll");
     for ($step = 1; $step <= $steps; $step++) {
@@ -61,17 +60,18 @@ function main(): int
 {
     global $argv;
 
+    // 设置上海时区（截图文件名使用 date() 时需要）
+    date_default_timezone_set('Asia/Shanghai');
+
     // --headless: 不显示窗口（用于 CI/自动化 dump-layout）
-    if (in_array('--headless', $argv)) {
-        define('APP_HEADLESS', true);
-    }
+    \Px\Core\Application::$HEADLESS = in_array('--headless', $argv);
 
     $root = ComponentFactory::create(AppComponent::class);
     $appDir = __DIR__;
-    $app = Application::create()->mount($root, $appDir);
+    $app = \Px\Core\Application::create()->mount($root, $appDir);
 
     global $argv;
-    if (Application::handleDumpArgs($app, $appDir, $argv)) {
+    if (\Px\Core\Application::handleDumpArgs($app, $appDir, $argv)) {
         return 0;
     }
 
