@@ -98,19 +98,31 @@ class Application
      */
     public static function handleDumpArgs(self $app, string $appDir, array $argv): bool
     {
-        // Extract --dump-layout-to=PATH (new) or use default path
+        // Extract --dump-layout-to=PATH (explicit override) or --case=CASE_NAME (auto-detect)
         $dumpTo = '';
+        $caseName = '';
         foreach ($argv as $arg) {
             if (str_starts_with($arg, '--dump-layout-to=')) {
                 $dumpTo = substr($arg, strlen('--dump-layout-to='));
-                break;
+            } elseif (str_starts_with($arg, '--case=')) {
+                $caseName = substr($arg, strlen('--case='));
             }
+        }
+
+        // Auto-default: --case=xxx → test_case/{xxx}/ref/engine_layout.json
+        if ($dumpTo === '' && $caseName !== '') {
+            $dumpTo = $appDir . '/test_case/' . $caseName . '/ref/engine_layout.json';
         }
 
         // --dump-layout: 单帧导出
         if (in_array('--dump-layout', $argv)) {
             $app->render();
             $path = $dumpTo !== '' ? $dumpTo : $appDir . '/engine_layout.json';
+            // Ensure ref directory exists
+            $dir = dirname($path);
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0777, true);
+            }
             $app->dumpLayoutToFile($path);
             return true;
         }
@@ -122,14 +134,17 @@ class Application
                 if ($n < 1) {
                     $n = 5;
                 }
-                $prefix = $dumpTo !== '' ? $dumpTo : ($appDir . '/engine_layout');
-                // For dump-to path, insert frame number before extension
+                // Build output path: if dumpTo is set, append _after_Nframes before .json
                 if ($dumpTo !== '') {
                     $ext = '.json';
                     $base = substr($dumpTo, 0, -strlen($ext));
                     $outputPath = $base . "_after_{$n}frames.json";
                 } else {
                     $outputPath = $appDir . "/engine_layout_after_{$n}frames.json";
+                }
+                $dir = dirname($outputPath);
+                if (!is_dir($dir)) {
+                    @mkdir($dir, 0777, true);
                 }
                 for ($i = 0; $i < $n; $i++) {
                     $app->render();
