@@ -32,7 +32,10 @@ class Win32Platform implements Platform
     public function init(string $title, int $width, int $height): RenderContext
     {
         $this->hwnd = vue_window_create($title, $width, $height);
-        vue_window_show($this->hwnd, WinMsg::SW_SHOW);
+        // APP_HEADLESS: 不显示窗口（用于 CI/自动化 dump-layout）
+        if (!defined('APP_HEADLESS') || !APP_HEADLESS) {
+            vue_window_show($this->hwnd, WinMsg::SW_SHOW);
+        }
         vue_hide_console();
         // APP_RENDERER='skia' 则用 Skia 路径，默认 GDI（零侵入）
         if (defined('APP_RENDERER') && APP_RENDERER === 'skia') {

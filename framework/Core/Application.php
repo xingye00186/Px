@@ -735,6 +735,17 @@ class Application
     }
 
     /**
+     * 保存当前渲染结果为 PNG 截图（headless 模式／调试用）。
+     * 底层调用 sk_save_screenshot() 从窗口 DC 或 Skia 离屏缓冲区直接保存。
+     */
+    public function saveScreenshot(string $path): void
+    {
+        if ($this->renderer !== null && function_exists('sk_save_screenshot')) {
+            $this->renderer->getRenderContext()->saveScreenshot($path);
+        }
+    }
+
+    /**
      * 递归序列化 RenderNode 为数组。
      */
     private function serializeRenderNode(?RenderNode $node): ?array

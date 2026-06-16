@@ -917,3 +917,69 @@ void php_sk_free_image(Int handle) {
     SK_TRACE("[SK] free_image %p (GDI+ Image)\n", (void*)image);
 #endif
 }
+
+// ============================================================
+// 截图：将当前窗口 DC 内容保存为 PNG（headless 模式／调试用）
+// ============================================================
+void php_sk_save_screenshot(String path) {
+    if (!g_skHwnd) {
+        SK_TRACE("[SK] save_screenshot SKIP (no hwnd)\n");
+        return;
+    }
+    int w = g_skW, h = g_skH;
+    if (w <= 0 || h <= 0) return;
+
+    SK_TRACE("[SK] save_screenshot: %s (%dx%d)\n", path.c_str(), w, h);
+
+#ifdef USE_SKIA
+    // Skia 路径：直接从 g_skSkBitmap 编码为 PNG
+    sk_sp<SkData> data = g_skSkBitmap.encodeToData(SkEncodedImageFormat::kPNG, 100);
+    if (data) {
+        FILE* fp = fopen(path.c_str(), "wb");
+        if (fp) {
+            fwrite(data->data(), 1, data->size(), fp);
+            fclose(fp);
+            SK_TRACE("[SK] save_screenshot OK (skia path): %d bytes\n", (int)data->size());
+        }
+    }
+#else
+    // GDI 路径：从窗口 DC 捕捉像素，通过 GDI+ 保存为 PNG
+    HDC hdcWindow = GetDC(g_skHwnd);
+    if (!hdcWindow) return;
+
+    HDC hdcMem = CreateCompatibleDC(hdcWindow);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdcWindow, w, h);
+    HBITMAP hOld = (HBITMAP)SelectObject(hdcMem, hBitmap);
+
+    // BitBlt 从窗口 DC 到内存 DC（即使窗口隐藏，DC 内容仍在）
+    BitBlt(hdcMem, 0, 0, w, h, hdcWindow, 0, 0, SRCCOPY);
+
+    // 用 GDI+ Bitmap(HBITMAP) 构造并保存为 PNG
+    Gdiplus::Bitmap gdiBmp(hBitmap, NULL);
+    CLSID pngClsid = {};
+    // 查找 PNG encoder
+    UINT numEncoders = 0, encSize = 0;
+    Gdiplus::GetImageEncodersSize(&numEncoders, &encSize);
+    if (encSize > 0) {
+        Gdiplus::ImageCodecInfo* encoders = (Gdiplus::ImageCodecInfo*)malloc(encSize);
+        if (encoders) {
+            Gdiplus::GetImageEncoders(numEncoders, encSize, encoders);
+            for (UINT i = 0; i < numEncoders; i++) {
+                if (wcscmp(encoders[i].MimeType, L"image/png") == 0) {
+                    pngClsid = encoders[i].Clsid;
+                    break;
+                }
+            }
+            free(encoders);
+        }
+    }
+
+    Gdiplus::Status status = gdiBmp.Save(Gdiplus::GdiplusString(path.c_str()), &pngClsid, NULL);
+    SK_TRACE("[SK] save_screenshot %s (gdi path): status=%d\n", path.c_str(), (int)status);
+
+    SelectObject(hdcMem, hOld);
+    DeleteObject(hBitmap);
+    DeleteDC(hdcMem);
+    ReleaseDC(g_skHwnd, hdcWindow);
+#endif
+}

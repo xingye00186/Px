@@ -443,7 +443,7 @@ foreach ($cases as $caseDir) {
             $caseBinDir = dirname($exeToRun);
             $stderrTmp = sys_get_temp_dir() . '/px_dump_stderr_' . getmypid() . '.txt';
             $layoutTarget = $caseDir . '/ref/engine_layout.json';
-            $dumpCmd = sprintf('"%s" --case=%s --dump-layout 2>"%s"',
+            $dumpCmd = sprintf('"%s" --case=%s --headless --dump-layout 2>"%s"',
                 $exeToRun, $caseName, $stderrTmp);
             $layoutOut = '';
             exec($dumpCmd, $layoutOutArr, $layoutExit);
@@ -530,7 +530,7 @@ foreach ($cases as $caseDir) {
             $mfErr = '';
 
             $stderrTmp = sys_get_temp_dir() . '/px_mf_stderr_' . getmypid() . '.txt';
-            $mfCmd = sprintf('"%s" --case=%s --dump-layout-after-frames=%d 2>"%s"',
+            $mfCmd = sprintf('"%s" --case=%s --headless --dump-layout-after-frames=%d 2>"%s"',
                 $exeToRun, $caseName, $FRAMES, $stderrTmp);
             $mfExit = -1;
             $mfOutArr = [];

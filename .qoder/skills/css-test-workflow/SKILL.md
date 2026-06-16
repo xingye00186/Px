@@ -28,6 +28,10 @@ php apps/css-test/run.php --case=case-xxx --verbose
 
 # 强制重编（框架源码改动后）
 php apps/css-test/run.php --case=case-xxx --force-build
+
+# headless 模式：exe 窗口不弹出（run.php dump-layout 已自动启用）
+bin/css_test.exe --case=case-xxx --headless --dump-layout
+bin/css_test.exe --case=case-xxx --headless --screenshot=out.png
 ```
 
 构建缓存自动跳过——源码无变化时不编译。

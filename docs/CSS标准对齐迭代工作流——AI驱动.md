@@ -48,6 +48,8 @@
 | 锚点对齐 | `tools/shared_test_lib.php::alignImages()` | 颜色锚点/模板匹配/自动检测 三策略 |
 | 浏览器 ref 批量生成 | `tools/generate_browser_refs.php` | 旧版 css-test Level 参考（保留兼容，run.php 已内联） |
 | 单项目 ref 生成 | `tools/generate_project_ref.php <project>` | 单项目浏览器参考 JSON |
+| 无窗口布局导出 | `bin/css_test.exe --case=case-xxx --headless --dump-layout` | 不弹出窗口，静默输出 JSON（run.php 已默认使用） |
+| 无窗口截图 | `bin/css_test.exe --case=case-xxx --headless --screenshot=out.png` | 离屏渲染保存 PNG，支持 GDI/Skia 双路径 |
 | 归档基线 | `php apps/css-test/archive_case.php` | case 稳定后冻存布局+多帧+浏览器元素数据到 baseline/ |
 | 回归检查 | `php apps/css-test/check_regression.php` | 几何/样式/稳定性/浏览器元素 四维度回归对比 |
 

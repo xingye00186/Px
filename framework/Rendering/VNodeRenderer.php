@@ -47,6 +47,11 @@ class VNodeRenderer
         $this->render_ctx = $render_ctx;
     }
 
+    public function getRenderContext(): RenderContext
+    {
+        return $this->render_ctx;
+    }
+
     /**
      * 计算节点的 padding-box 裁剪矩形（统一方法）。
      *

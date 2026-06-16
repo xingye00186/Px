@@ -381,6 +381,14 @@ class SkiaRenderContext extends RenderContext
         }
     }
 
+    /**
+     * 将当前渲染缓冲区保存为 PNG 截图（支持 headless 模式）
+     */
+    public function saveScreenshot(string $path): bool
+    {
+        return sk_save_screenshot($path);
+    }
+
     public function fillRect(int $x, int $y, int $w, int $h, int $color): void
     {
         sk_fill_rect($x, $y, $w, $h, $color);

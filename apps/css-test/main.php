@@ -59,12 +59,32 @@ function runMultiStepTest(Application $app, RenderNode $caseList, int $steps, in
 
 function main(): int
 {
+    global $argv;
+
+    // --headless: 不显示窗口（用于 CI/自动化 dump-layout）
+    if (in_array('--headless', $argv)) {
+        define('APP_HEADLESS', true);
+    }
+
     $root = ComponentFactory::create(AppComponent::class);
     $appDir = __DIR__;
     $app = Application::create()->mount($root, $appDir);
 
     global $argv;
     if (Application::handleDumpArgs($app, $appDir, $argv)) {
+        return 0;
+    }
+
+    // --screenshot=path: 渲染后直接保存截图到文件（无需窗口可见）
+    $screenshotPath = '';
+    foreach ($argv as $arg) {
+        if (str_starts_with($arg, '--screenshot=')) {
+            $screenshotPath = substr($arg, strlen('--screenshot='));
+        }
+    }
+    if ($screenshotPath !== '') {
+        $app->render();
+        $app->saveScreenshot($screenshotPath);
         return 0;
     }
 
