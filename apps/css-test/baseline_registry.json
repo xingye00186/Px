@@ -2,8 +2,8 @@
     "_format_version": 1,
     "cases": {
         "case-001-wrapper-x": {
-            "archived_at": "2026-06-15 13:52:18",
-            "md5": "136448484416327d6e3362f4e9429410",
+            "archived_at": "2026-06-16 16:02:53",
+            "md5": "a7ebf7a9ee86ba2e31b51f1cba508392",
             "node_count": 85,
             "multi_frames": 5,
             "multi_frame_nodes": 85,
@@ -43,8 +43,8 @@
             "style_field_count": 31
         },
         "case-002-auto-height": {
-            "archived_at": "2026-06-15 07:51:09",
-            "md5": "62594b65fdbc7d2c22d99a39a4ca5c0b",
+            "archived_at": "2026-06-16 16:02:55",
+            "md5": "8e61c14f115da95080316a4b7277c38c",
             "node_count": 86,
             "multi_frames": 5,
             "multi_frame_nodes": 86,
@@ -83,8 +83,8 @@
             "style_field_count": 30
         },
         "case-003-basic-block": {
-            "archived_at": "2026-06-15 13:41:55",
-            "md5": "b9d65655cefaebae3e95b2ec2627988a",
+            "archived_at": "2026-06-16 16:02:59",
+            "md5": "68f48cdbfe13bfa103d157e0abab1f5e",
             "node_count": 84,
             "multi_frames": 5,
             "multi_frame_nodes": 84,
@@ -123,8 +123,8 @@
             "style_field_count": 30
         },
         "case-004-flex-layout": {
-            "archived_at": "2026-06-15 13:41:56",
-            "md5": "321fa260274b18df0f331a5c9dfb4cd6",
+            "archived_at": "2026-06-16 16:03:01",
+            "md5": "342451a292c4da2054964b2d8b732326",
             "node_count": 95,
             "multi_frames": 5,
             "multi_frame_nodes": 95,
@@ -166,8 +166,8 @@
             "style_field_count": 33
         },
         "case-005-grid-layout": {
-            "archived_at": "2026-06-15 14:25:52",
-            "md5": "1a82bef897d7473afbf84871dba9319e",
+            "archived_at": "2026-06-16 16:03:03",
+            "md5": "2957b87e7559bac4e0a30a41178ae0b6",
             "node_count": 91,
             "multi_frames": 5,
             "multi_frame_nodes": 91,
@@ -209,8 +209,8 @@
             "style_field_count": 33
         },
         "case-006-typography": {
-            "archived_at": "2026-06-15 13:54:17",
-            "md5": "4e5f07ba3b12177304b164ae8cf2e74c",
+            "archived_at": "2026-06-16 16:03:06",
+            "md5": "a761b54dadfb84bd4db71e5fabc4c821",
             "node_count": 87,
             "multi_frames": 5,
             "multi_frame_nodes": 87,
@@ -250,7 +250,7 @@
             "style_field_count": 31
         },
         "case-007-border-styles": {
-            "archived_at": "2026-06-16 07:41:30",
+            "archived_at": "2026-06-16 16:03:09",
             "md5": "d30797990b2e0acc1aa4a100118a23f7",
             "node_count": 96,
             "multi_frames": 5,
@@ -297,7 +297,7 @@
             "style_field_count": 37
         },
         "case-008-box-shadow": {
-            "archived_at": "2026-06-16 05:22:57",
+            "archived_at": "2026-06-16 16:03:11",
             "md5": "1f98cb42e56419f8492e85d48956abe6",
             "node_count": 86,
             "multi_frames": 5,
@@ -343,7 +343,7 @@
             "style_field_count": 36
         },
         "case-009-outline": {
-            "archived_at": "2026-06-16 05:22:59",
+            "archived_at": "2026-06-16 16:03:13",
             "md5": "29247979fa2f674a0a579bfe9b3a1bef",
             "node_count": 85,
             "multi_frames": 5,
@@ -390,7 +390,7 @@
             "style_field_count": 37
         },
         "case-010-display-none": {
-            "archived_at": "2026-06-16 05:23:02",
+            "archived_at": "2026-06-16 16:03:16",
             "md5": "c5dabd4711e0fb6c405e24222199f645",
             "node_count": 88,
             "multi_frames": 5,
@@ -433,7 +433,7 @@
             "style_field_count": 33
         },
         "case-011-position-absolute": {
-            "archived_at": "2026-06-16 05:23:04",
+            "archived_at": "2026-06-16 16:03:19",
             "md5": "9d55d603f6fd653320144c46cf3d8597",
             "node_count": 88,
             "multi_frames": 5,
@@ -477,7 +477,7 @@
             "style_field_count": 34
         },
         "case-012-position-relative": {
-            "archived_at": "2026-06-16 05:23:07",
+            "archived_at": "2026-06-16 16:03:21",
             "md5": "8a2abc65d5bd4130e2932a81238eec3b",
             "node_count": 90,
             "multi_frames": 5,
@@ -520,7 +520,7 @@
             "style_field_count": 33
         },
         "case-013-z-index": {
-            "archived_at": "2026-06-16 05:23:09",
+            "archived_at": "2026-06-16 16:03:23",
             "md5": "d5e791eaa39a6d15926c7f4f1eed67c5",
             "node_count": 85,
             "multi_frames": 5,
@@ -562,8 +562,8 @@
             "style_field_count": 32
         },
         "case-014-overflow-hidden": {
-            "archived_at": "2026-06-16 05:23:13",
-            "md5": "7fd74483650e89f1e15f090f6d740e05",
+            "archived_at": "2026-06-16 16:03:26",
+            "md5": "04ded6e9d6dda61780e877f0a998ca85",
             "node_count": 86,
             "multi_frames": 5,
             "multi_frame_nodes": 86,
@@ -607,7 +607,7 @@
             "style_field_count": 35
         },
         "case-015-min-max-height": {
-            "archived_at": "2026-06-16 05:23:16",
+            "archived_at": "2026-06-16 16:03:28",
             "md5": "7ae25a348e86ed75500023ab74f5c262",
             "node_count": 104,
             "multi_frames": 5,
@@ -650,7 +650,7 @@
             "style_field_count": 33
         },
         "case-016-margin-collapse": {
-            "archived_at": "2026-06-16 05:23:19",
+            "archived_at": "2026-06-16 16:03:31",
             "md5": "ce20f4005f074893ad01add4de9c86dd",
             "node_count": 86,
             "multi_frames": 5,
@@ -692,7 +692,7 @@
             "style_field_count": 32
         },
         "case-017-negative-margin": {
-            "archived_at": "2026-06-16 05:23:21",
+            "archived_at": "2026-06-16 16:03:34",
             "md5": "b5b886942c65d290a6eea3f3b6d5f340",
             "node_count": 85,
             "multi_frames": 5,
@@ -736,7 +736,7 @@
             "style_field_count": 34
         },
         "case-018-opacity": {
-            "archived_at": "2026-06-16 05:23:24",
+            "archived_at": "2026-06-16 16:03:36",
             "md5": "04809623a40200fa4ae2ecbe784e8ac3",
             "node_count": 86,
             "multi_frames": 5,
@@ -781,7 +781,7 @@
             "style_field_count": 35
         },
         "case-019-visibility": {
-            "archived_at": "2026-06-16 05:23:28",
+            "archived_at": "2026-06-16 16:03:39",
             "md5": "e3f7998fc7a78e3ee24954bbf9f65ac7",
             "node_count": 93,
             "multi_frames": 5,
@@ -824,7 +824,7 @@
             "style_field_count": 33
         },
         "case-020-text-align": {
-            "archived_at": "2026-06-16 05:23:32",
+            "archived_at": "2026-06-16 16:03:41",
             "md5": "b7e4f1802d6e84c727597e1f361eec9b",
             "node_count": 90,
             "multi_frames": 5,
@@ -865,7 +865,7 @@
             "style_field_count": 31
         },
         "case-021-line-height": {
-            "archived_at": "2026-06-16 05:23:35",
+            "archived_at": "2026-06-16 16:03:44",
             "md5": "b6cb67694c6531e478e4ee5cb80f52c5",
             "node_count": 115,
             "multi_frames": 5,
@@ -908,7 +908,7 @@
             "style_field_count": 33
         },
         "case-022-white-space": {
-            "archived_at": "2026-06-16 05:23:39",
+            "archived_at": "2026-06-16 16:03:47",
             "md5": "4f3e218d89a748b55020e8ae52bce185",
             "node_count": 87,
             "multi_frames": 5,
@@ -949,7 +949,7 @@
             "style_field_count": 31
         },
         "case-023-word-break": {
-            "archived_at": "2026-06-16 05:23:43",
+            "archived_at": "2026-06-16 16:03:49",
             "md5": "2f871d1dffee629d706612a55a5192d4",
             "node_count": 88,
             "multi_frames": 5,
@@ -992,7 +992,7 @@
             "style_field_count": 33
         },
         "case-024-font-weight": {
-            "archived_at": "2026-06-16 05:23:45",
+            "archived_at": "2026-06-16 16:03:51",
             "md5": "f906290f15408f370117003c54549383",
             "node_count": 103,
             "multi_frames": 5,
@@ -1034,7 +1034,7 @@
             "style_field_count": 32
         },
         "case-025-english-text": {
-            "archived_at": "2026-06-16 05:23:47",
+            "archived_at": "2026-06-16 16:03:54",
             "md5": "dba63cafb84ed708969fded1c4c9b9d1",
             "node_count": 90,
             "multi_frames": 5,
@@ -1076,7 +1076,7 @@
             "style_field_count": 32
         },
         "case-026-font-style": {
-            "archived_at": "2026-06-16 05:23:49",
+            "archived_at": "2026-06-16 16:03:56",
             "md5": "1b7b53e366578f882dfcd66ceaad1f86",
             "node_count": 91,
             "multi_frames": 5,
@@ -1121,7 +1121,7 @@
             "style_field_count": 35
         },
         "case-027-scroll-diagnostic": {
-            "archived_at": "2026-06-16 05:23:51",
+            "archived_at": "2026-06-16 16:03:59",
             "md5": "fba76610fd621c5eb884bfda4ad1923c",
             "node_count": 214,
             "multi_frames": 5,
@@ -1164,7 +1164,7 @@
             "style_field_count": 33
         },
         "case-028-scroll-block": {
-            "archived_at": "2026-06-16 05:23:53",
+            "archived_at": "2026-06-16 16:04:01",
             "md5": "d0585c3e72f310f815030c192528dcaa",
             "node_count": 211,
             "multi_frames": 5,
@@ -1207,7 +1207,7 @@
             "style_field_count": 33
         },
         "case-029-scroll-flex-col": {
-            "archived_at": "2026-06-16 05:23:55",
+            "archived_at": "2026-06-16 16:04:05",
             "md5": "b99fe7f6a0da7b246b55f9b4658243b5",
             "node_count": 219,
             "multi_frames": 5,
@@ -1250,7 +1250,7 @@
             "style_field_count": 33
         },
         "case-030-scroll-flex-row": {
-            "archived_at": "2026-06-16 05:23:57",
+            "archived_at": "2026-06-16 16:04:08",
             "md5": "03ebe9641f711e38ba11cab9ad765d8b",
             "node_count": 128,
             "multi_frames": 5,
@@ -1295,7 +1295,7 @@
             "style_field_count": 35
         },
         "case-031-scroll-grid": {
-            "archived_at": "2026-06-16 05:24:00",
+            "archived_at": "2026-06-16 16:04:13",
             "md5": "7a23a749a21cafb592ce9a606cc423a2",
             "node_count": 197,
             "multi_frames": 5,
@@ -1340,7 +1340,7 @@
             "style_field_count": 35
         },
         "case-032-scroll-relative": {
-            "archived_at": "2026-06-16 05:24:02",
+            "archived_at": "2026-06-16 16:04:15",
             "md5": "e0d39aa14b8862ff27d10d100829a3c0",
             "node_count": 176,
             "multi_frames": 5,
