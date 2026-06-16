@@ -1075,9 +1075,10 @@ body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 
 /**
  * Run screenshot comparison for a css-test case:
- *   1. Open wrapper HTML in Edge (baseline) → browser_ref_{timestamp}.png
- *   2. Capture EXE screenshot → exe_capture_{timestamp}.png
+ *   1. Open wrapper HTML in Edge (baseline) → ref/browser_ref_{timestamp}.png
+ *   2. Capture EXE screenshot → ref/engine_screenshot_{timestamp}.png
  *   3. Pixel-level comparison with anchor crop + auto-align
+ *   4. Diff output → ref/diff_{timestamp}.png
  *
  * Returns ['pass'=>bool, 'diffPercent'=>float, 'issues'=>array].
  */
