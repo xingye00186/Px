@@ -20,11 +20,16 @@
 $appDir = __DIR__;
 $registryPath = $appDir . '/baseline_registry.json';
 $tolerance = 1;
+
+date_default_timezone_set('Asia/Shanghai');
 $skipStyles = false;
 $skipMultiframe = false;
+$skipBrowser = false;
 $outputJson = false;
 $failFast = false;
 $targetCase = null;
+
+require_once __DIR__ . '/../../tools/shared_test_lib.php';
 
 // ─── 参数解析 ───
 
@@ -35,6 +40,7 @@ foreach ($args as $arg) {
     if ($arg === '--fail-fast') { $failFast = true; continue; }
     if ($arg === '--skip-styles') { $skipStyles = true; continue; }
     if ($arg === '--skip-multiframe') { $skipMultiframe = true; continue; }
+    if ($arg === '--skip-browser') { $skipBrowser = true; continue; }
     if (str_starts_with($arg, '--tolerance=')) {
         $tolerance = (int)substr($arg, strlen('--tolerance='));
         continue;
@@ -80,10 +86,10 @@ function runDumpLayout(string $caseName, string $flag, string $outFile): ?array 
     $cmd = escapeshellarg($exe) . ' --case=' . escapeshellarg($caseName) . ' ' . $flag . ' 2>NUL';
     shell_exec($cmd);
 
-    $path = __DIR__ . '/' . $outFile;
-    if (!file_exists($path)) { chdir($cwd); return null; }
-    $content = file_get_contents($path);
-    @unlink($path);
+    // 框架 --case=xxx 时写入 test_case/{case}/ref/（archive_case.php 已确认此行为）
+    $refPath = __DIR__ . '/test_case/' . $caseName . '/ref/' . $outFile;
+    if (!file_exists($refPath)) { chdir($cwd); return null; }
+    $content = file_get_contents($refPath);
     chdir($cwd);
     if (empty($content)) return null;
 
@@ -302,6 +308,23 @@ foreach ($cases as $caseName => $meta) {
         $stabilityIssues = checkStability($frame0Base, $multiFrameBase, $tolerance);
     }
 
+    // ─── 3. 浏览器元素对比 ───
+    $browserIssues = [];
+    $browserPass = 0;
+    $browserFail = 0;
+    $browserSkip = 0;
+    if (!$skipBrowser) {
+        $browserRefPath = "$baseDir/browser_ref_elements.json";
+        $curLayoutPath = __DIR__ . "/test_case/$caseName/ref/engine_layout.json";
+        if (file_exists($browserRefPath) && file_exists($curLayoutPath)) {
+            $brResult = compareEngineWithBrowser($curLayoutPath, $browserRefPath, false);
+            $browserIssues = $brResult['issues'];
+            $browserPass = $brResult['pass'];
+            $browserFail = $brResult['fail'];
+            $browserSkip = $brResult['skip'];
+        }
+    }
+
     $geoCount = count($geoDiffs);
     $styleCount = count($styleDiffs);
     $stabCount = count($stabilityIssues);
@@ -316,12 +339,12 @@ foreach ($cases as $caseName => $meta) {
         }
     }
 
-    $pass = !$hasGeoError && $styleCount === 0 && !$hasStabError && $stabCount === 0;
+    $pass = !$hasGeoError && $styleCount === 0 && !$hasStabError && $stabCount === 0 && $browserFail === 0;
 
     if ($pass) {
         $totalPass++;
         if (!$outputJson) {
-            echo "  ✅ PASS (几何={$geoCount} 样式={$styleCount} 稳定={$stabCount})\n";
+            echo "  ✅ PASS (几何={$geoCount} 样式={$styleCount} 稳定={$stabCount} 浏览器=通过{$browserPass}/{$browserFail}" . ($browserSkip > 0 ? "/跳{$browserSkip}" : "") . ")\n";
         }
     } else {
         $totalFail++;
@@ -330,7 +353,7 @@ foreach ($cases as $caseName => $meta) {
         $totalStabilityIssues += $stabCount;
 
         if (!$outputJson) {
-            echo "  ❌ FAIL (几何差异={$geoCount} 样式差异={$styleCount} 稳定性={$stabCount})\n";
+            echo "  ❌ FAIL (几何差异={$geoCount} 样式差异={$styleCount} 稳定性={$stabCount}" . ($browserFail > 0 ? " 浏览器失败={$browserFail}" : "") . ")\n";
 
             if ($hasStabError) {
                 echo "    ● [稳定性] {$stableErrorMsg}\n";
@@ -356,6 +379,9 @@ foreach ($cases as $caseName => $meta) {
                 if (!isset($si['error'])) {
                     echo "    ● [稳定性] {$si['node']}: {$si['issue']}\n";
                 }
+            }
+            foreach ($browserIssues as $bi) {
+                echo "    ● [浏览器] {$bi['msg']}\n";
             }
         }
     }
@@ -402,3 +428,96 @@ echo "  几何差异: $totalGeoDiffs  |  样式差异: $totalStyleDiffs  |  稳�
 echo "═══════════════════════════════════════════════\n";
 
 exit($totalFail > 0 ? 1 : 0);
+
+// ============================================================
+// Browser Element Comparison (adapted from run.php)
+// ============================================================
+
+function compareEngineWithBrowser(string $engineLayoutPath, string $browserRefPath, bool $verbose): array
+{
+    $POS_TOL = 2;
+    $SIZE_TOL = 2;
+    $result = ['pass' => 0, 'fail' => 0, 'skip' => 0, 'issues' => [], 'propStats' => []];
+
+    $engineJson = file_get_contents($engineLayoutPath);
+    $engineData = json_decode($engineJson, true);
+    if ($engineData === null) {
+        $result['issues'][] = ['type' => 'FATAL', 'msg' => '无法解析 engine_layout.json'];
+        return $result;
+    }
+
+    $browserJson = file_get_contents($browserRefPath);
+    $browserData = json_decode($browserJson, true);
+    if ($browserData === null || !isset($browserData['elements'])) {
+        $result['issues'][] = ['type' => 'FATAL', 'msg' => 'browser_ref 格式错误'];
+        return $result;
+    }
+
+    $engineAll = flattenEngineTreeAll($engineData);
+    $engineByText = [];
+    foreach ($engineAll as $i => $el) {
+        $c = trim($el['content'] ?? '');
+        if ($c !== '' && mb_strlen($c) >= 2) {
+            $engineByText[$c][] = $i;
+        }
+    }
+
+    $browserAll = indexAllBrowserElements($browserData['elements']);
+    $checks = defaultChecks();
+
+    // Phase A: Text element comparison
+    foreach ($browserAll as $bIdx => $bEl) {
+        $text = trim($bEl['text'] ?? '');
+        if ($text === '' || mb_strlen($text) < 2) continue;
+        if (str_contains($text, "\n")) { $result['skip']++; continue; }
+
+        $eIdx = null;
+        if (isset($engineByText[$text])) {
+            $candidates = $engineByText[$text];
+            if (count($candidates) === 1) {
+                $eIdx = $candidates[0];
+            } else {
+                $bRelX = $bEl['relX'] ?? 0;
+                $bRelY = $bEl['relY'] ?? 0;
+                $bestDist = PHP_INT_MAX;
+                foreach ($candidates as $cidx) {
+                    $eRelX = $engineAll[$cidx]['relX'] ?? 0;
+                    $eRelY = $engineAll[$cidx]['relY'] ?? 0;
+                    $dist = abs($eRelX - $bRelX) * 2 + abs($eRelY - $bRelY);
+                    if ($dist < $bestDist) { $bestDist = $dist; $eIdx = $cidx; }
+                }
+            }
+        } else {
+            $shortText = mb_substr($text, 0, 20);
+            foreach ($engineByText as $eText => $eIdxs) {
+                if (mb_substr($eText, 0, 20) === $shortText) { $eIdx = $eIdxs[0]; break; }
+            }
+            if ($eIdx === null) { $result['skip']++; continue; }
+        }
+
+        if ($eIdx === null) {
+            $result['fail']++;
+            $result['issues'][] = ['type' => 'TEXT_MISS', 'msg' => '引擎中未找到文本: ' . truncateText($text)];
+            continue;
+        }
+
+        $eEl = $engineAll[$eIdx];
+        $compResult = compareElementEnhanced('text', $text, $bEl, $eEl, $checks, [
+            'posTol' => $POS_TOL,
+            'sizeTol' => $SIZE_TOL,
+        ]);
+
+        if ($compResult['passed']) {
+            $result['pass']++;
+        } else {
+            $result['fail']++;
+            $reasons = !empty($compResult['failReasons']) ? ' (' . implode(', ', $compResult['failReasons']) . ')' : '';
+            $result['issues'][] = [
+                'type' => 'TEXT',
+                'msg' => "\"$text\": {$compResult['posInfo']} {$compResult['sizeInfo']}{$reasons}"
+            ];
+        }
+    }
+
+    return $result;
+}

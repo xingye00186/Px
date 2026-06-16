@@ -18,6 +18,8 @@ $FRAMES_DEFAULT = 5;
 $appDir = __DIR__;
 $registryPath = $appDir . '/baseline_registry.json';
 
+date_default_timezone_set('Asia/Shanghai');
+
 // ─── 辅助函数 ───
 
 function getRegistry(): array {
@@ -193,6 +195,14 @@ function archiveOneCase(string $caseName, int $frames, array &$registry): bool {
     $styleFields = [];
     collectStyleFields($data0, $styleFields);
     sort($styleFields);
+
+    // 缓存浏览器基线元素数据（browser_ref_level_0.json 由 run.php 生成）
+    $browserRefPath = __DIR__ . "/test_case/$caseName/ref/browser_ref_level_0.json";
+    $baselineBrowserPath = "$baselineDir/browser_ref_elements.json";
+    if (file_exists($browserRefPath)) {
+        copy($browserRefPath, $baselineBrowserPath);
+        echo "  [OK] 浏览器基线: browser_ref_elements.json\n";
+    }
 
     $md5 = md5($jsonFrame0);
     $registry['cases'][$caseName] = [
