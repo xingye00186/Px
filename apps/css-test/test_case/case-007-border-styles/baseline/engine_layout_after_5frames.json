@@ -96,7 +96,7 @@
                             "textRenderInfo": {
                                 "x": 24,
                                 "y": 16,
-                                "textHeight": 23,
+                                "textHeight": 26,
                                 "textWidth": 78
                             },
                             "style": {
@@ -126,7 +126,7 @@
                             "textRenderInfo": {
                                 "x": 24,
                                 "y": 44,
-                                "textHeight": 14,
+                                "textHeight": 15,
                                 "textWidth": 96
                             },
                             "style": {
@@ -218,7 +218,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 89,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -280,7 +280,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 123,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -342,7 +342,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 157,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -404,7 +404,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 191,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -466,7 +466,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 225,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -528,7 +528,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 259,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -590,7 +590,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 293,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -652,7 +652,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 327,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -714,7 +714,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 361,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -776,7 +776,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 395,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -838,7 +838,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 429,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -900,7 +900,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 463,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -962,7 +962,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 497,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -1024,7 +1024,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 531,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -1086,7 +1086,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 565,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -1148,7 +1148,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 599,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -1210,7 +1210,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 633,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -1272,7 +1272,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 667,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -1334,7 +1334,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 701,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -1396,7 +1396,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 735,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -1458,7 +1458,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 769,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -1520,7 +1520,7 @@
                                     "textRenderInfo": {
                                         "x": 20,
                                         "y": 803,
-                                        "textHeight": 18,
+                                        "textHeight": 20,
                                         "textWidth": 0
                                     },
                                     "style": {
@@ -2236,7 +2236,7 @@
                             "textRenderInfo": {
                                 "x": 304,
                                 "y": 15,
-                                "textHeight": 19,
+                                "textHeight": 21,
                                 "textWidth": 0
                             },
                             "style": {
@@ -2360,7 +2360,7 @@
                                     "textRenderInfo": {
                                         "x": 329,
                                         "y": 98,
-                                        "textHeight": 26,
+                                        "textHeight": 28,
                                         "textWidth": 163
                                     },
                                     "style": {
@@ -2395,7 +2395,7 @@
                                     "textRenderInfo": {
                                         "x": 329,
                                         "y": 161,
-                                        "textHeight": 17,
+                                        "textHeight": 18,
                                         "textWidth": 292
                                     },
                                     "style": {
@@ -2408,7 +2408,7 @@
                                 },
                                 {
                                     "type": "div",
-                                    "x": 994,
+                                    "x": 548,
                                     "y": 200,
                                     "w": 300,
                                     "h": 120,
@@ -2424,9 +2424,9 @@
                                     "renderOffsetY": 0,
                                     "content": "不同方向边框",
                                     "textRenderInfo": {
-                                        "x": 1115,
-                                        "y": 255,
-                                        "textHeight": 18,
+                                        "x": 669,
+                                        "y": 254,
+                                        "textHeight": 20,
                                         "textWidth": 60
                                     },
                                     "style": {
@@ -2527,7 +2527,7 @@
                                                     "textRenderInfo": {
                                                         "x": 443,
                                                         "y": 366,
-                                                        "textHeight": 14,
+                                                        "textHeight": 15,
                                                         "textWidth": 32
                                                     },
                                                     "style": {
@@ -2538,7 +2538,7 @@
                                                 },
                                                 {
                                                     "type": "div",
-                                                    "x": 417,
+                                                    "x": 340,
                                                     "y": 392,
                                                     "w": 80,
                                                     "h": 60,
@@ -2594,7 +2594,7 @@
                                                     "textRenderInfo": {
                                                         "x": 416,
                                                         "y": 464,
-                                                        "textHeight": 14,
+                                                        "textHeight": 15,
                                                         "textWidth": 87
                                                     },
                                                     "style": {
@@ -2655,7 +2655,7 @@
                                                     "textRenderInfo": {
                                                         "x": 730,
                                                         "y": 366,
-                                                        "textHeight": 14,
+                                                        "textHeight": 15,
                                                         "textWidth": 32
                                                     },
                                                     "style": {
@@ -2666,7 +2666,7 @@
                                                 },
                                                 {
                                                     "type": "div",
-                                                    "x": 703,
+                                                    "x": 627,
                                                     "y": 392,
                                                     "w": 80,
                                                     "h": 60,
@@ -2722,7 +2722,7 @@
                                                     "textRenderInfo": {
                                                         "x": 711,
                                                         "y": 466,
-                                                        "textHeight": 14,
+                                                        "textHeight": 15,
                                                         "textWidth": 71
                                                     },
                                                     "style": {
@@ -2783,7 +2783,7 @@
                                                     "textRenderInfo": {
                                                         "x": 1021,
                                                         "y": 366,
-                                                        "textHeight": 14,
+                                                        "textHeight": 15,
                                                         "textWidth": 24
                                                     },
                                                     "style": {
@@ -2794,7 +2794,7 @@
                                                 },
                                                 {
                                                     "type": "div",
-                                                    "x": 993,
+                                                    "x": 914,
                                                     "y": 392,
                                                     "w": 80,
                                                     "h": 60,
@@ -2840,7 +2840,7 @@
                                                     "textRenderInfo": {
                                                         "x": 1009,
                                                         "y": 460,
-                                                        "textHeight": 14,
+                                                        "textHeight": 15,
                                                         "textWidth": 48
                                                     },
                                                     "style": {
@@ -2874,7 +2874,7 @@
                                     "textRenderInfo": {
                                         "x": 628,
                                         "y": 661,
-                                        "textHeight": 15,
+                                        "textHeight": 17,
                                         "textWidth": 143
                                     },
                                     "style": {

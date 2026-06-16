@@ -35,6 +35,8 @@ require_once __DIR__ . '/../../tools/shared_test_lib.php';
 // ============================================================
 // 0. Config
 // ============================================================
+date_default_timezone_set('Asia/Shanghai');
+
 $APP_DIR  = __DIR__;
 $ROOT_DIR = dirname($APP_DIR, 2);  // d:\Px
 
