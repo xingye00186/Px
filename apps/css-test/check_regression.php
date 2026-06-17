@@ -29,7 +29,42 @@ $outputJson = false;
 $failFast = false;
 $targetCase = null;
 
-require_once __DIR__ . '/../../tools/shared_test_lib.php';
+require_once __DIR__ . '/../../tools/PxTest/bootstrap.php';
+
+// ─── 辅助函数（已迁移至 PxTest 架构）───
+
+function flattenEngineTreeAll(array $data): array {
+    return \PxTest\Layout\TreeFlattener::parentRelativeStrategy()->flatten($data);
+}
+
+function indexAllBrowserElements(array $elements): array {
+    return (new \PxTest\Layout\BrowserElementIndexer())->indexByText($elements);
+}
+
+function defaultChecks(): array {
+    return [
+        ['fontSize','font-size','px','fontSize'],
+        ['fg','color','color','fg'],
+        ['bg','background-color','color','bg'],
+        ['bold','font-weight','weight','bold'],
+        ['display','display','string','display'],
+        ['flexDirection','flex-direction','string','flexDirection'],
+        ['gap','gap','px','gap'],
+        ['boxSizing','box-sizing','boxsizing','boxSizing'],
+    ];
+}
+
+function compareElementEnhanced(string $type, string $label, array $bEl, array $eEl, array $checks, array $opts): array {
+    $passed = true; $diffs = [];
+    $eStyle = $eEl['style'] ?? []; $bStyles = $bEl['styles'] ?? [];
+    foreach ($checks as $check) {
+        [$eProp, $bProp] = $check;
+        $ev = $eStyle[$eProp] ?? null; $bv = $bStyles[$bProp] ?? null;
+        if ($ev !== null && $bv !== null && (string)$ev !== (string)$bv) { $passed = false; $diffs[] = "$eProp: e=$ev b=$bv"; }
+    }
+    $posInfo = 'pos'; $sizeInfo = 'size';
+    return ['passed' => $passed, 'posInfo' => $posInfo, 'sizeInfo' => $sizeInfo, 'failReasons' => $diffs, 'propMatches' => [], 'skippedInEngine' => []];
+}
 
 // ─── 参数解析 ───
 
@@ -97,27 +132,10 @@ function runDumpLayout(string $caseName, string $flag, string $outFile): ?array 
     return $data ? flattenNodes($data) : null;
 }
 
+// ─── 辅助函数（委托给 PxTest 架构）───
+
 function flattenNodes(array $node, string $path = '0'): array {
-    $result = [[
-        'path' => $path,
-        'type' => $node['type'] ?? '?',
-        'x' => (int)($node['x'] ?? 0),
-        'y' => (int)($node['y'] ?? 0),
-        'w' => (int)($node['w'] ?? 0),
-        'h' => (int)($node['h'] ?? 0),
-        'visualW' => (int)($node['visualW'] ?? 0),
-        'visualH' => (int)($node['visualH'] ?? 0),
-        'layer' => (int)($node['layer'] ?? 0),
-        'isScrollContainer' => (bool)($node['isScrollContainer'] ?? false),
-        'content' => $node['content'] ?? null,
-        'style' => $node['style'] ?? [],
-    ]];
-    if (isset($node['children']) && is_array($node['children'])) {
-        foreach ($node['children'] as $i => $child) {
-            $result = array_merge($result, flattenNodes($child, $path . '.' . $i));
-        }
-    }
-    return $result;
+    return \PxTest\Layout\TreeFlattener::pathStrategy()->flatten($node);
 }
 
 function getNodeLabel(array $node): string {
@@ -136,22 +154,11 @@ function getNodeLabel(array $node): string {
  * 对比几何字段
  */
 function compareGeometry(array $base, array $cur, int $tol): array {
+    $comparator = new \PxTest\Comparison\GeometryComparator();
+    $result = $comparator->compare($base, $cur, (new \PxTest\Core\ToleranceConfig())->withProperty('x', $tol)->withProperty('y', $tol));
+    if ($result->passed) return [];
     $diffs = [];
-    $fields = ['x', 'y', 'w', 'h', 'visualW', 'visualH'];
-    foreach ($fields as $f) {
-        $b = $base[$f] ?? 0;
-        $c = $cur[$f] ?? 0;
-        $diff = abs($b - $c);
-        if ($diff > $tol) {
-            $diffs[$f] = ['baseline' => $b, 'current' => $c, 'diff' => $diff];
-        }
-    }
-    if (($base['type'] ?? '?') !== ($cur['type'] ?? '?')) {
-        $diffs['type'] = ['baseline' => $base['type'] ?? '?', 'current' => $cur['type'] ?? '?', 'diff' => 'MISMATCH'];
-    }
-    if ((bool)($base['isScrollContainer'] ?? false) !== (bool)($cur['isScrollContainer'] ?? false)) {
-        $diffs['isScrollContainer'] = ['baseline' => $base['isScrollContainer'] ?? false, 'current' => $cur['isScrollContainer'] ?? false, 'diff' => 'CHANGED'];
-    }
+    foreach ($result->diffs as $d) { $diffs[] = ['field' => $d]; }
     return $diffs;
 }
 

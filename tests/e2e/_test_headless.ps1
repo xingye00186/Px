@@ -1,7 +1,7 @@
 # Px Framework — Headless 截图测试脚本
 # 在 d:\Px 目录下执行: powershell -ExecutionPolicy Bypass -File .qoder\_test_headless.ps1
 
-$ROOT = "d:\Px"
+$ROOT = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $CASE = "case-001-wrapper-x"
 $REF_DIR = "$ROOT\apps\css-test\test_case\$CASE\ref"
 $EXE = "$ROOT\apps\css-test\bin\css_test.exe"
