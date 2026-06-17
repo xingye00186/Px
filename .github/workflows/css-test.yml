@@ -1,0 +1,45 @@
+name: Px CSS Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '0 2 * * *'  # 每天凌晨 2 点
+
+jobs:
+  fast:
+    name: Fast Tests (unit + quick integration)
+    if: github.event_name != 'schedule'
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: php tests/run_all.php --group=fast --format=tap
+
+  full:
+    name: Full Tests (integration + E2E)
+    if: github.event_name == 'schedule'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: php tests/run_all.php --format=json
+
+  stress:
+    name: Stress Tests
+    if: github.event_name == 'schedule'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: php tests/run_all.php --group=stress --format=tap
+
+  regression:
+    name: CSS Regression Check
+    if: github.event_name == 'push'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: php apps/css-test/check_regression.php --json
