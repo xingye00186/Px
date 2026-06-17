@@ -487,3 +487,82 @@ class TestContent extends ReactiveComponent {}
 >
 > **修复流程**：优先修改 `.vue` 对齐 `.html`（`<template>` 是源），然后重新编译并重新测试。
 > 切勿仅修改 `.html` 而不更新 `.vue`，否则引擎与浏览器参考的偏差将持续存在。
+
+---
+
+## 十二、AI 迭代引导规则
+
+### 12.1 迭代退出条件
+
+AI 在运行测试→修复循环时必须检查以下条件，满足任一即停止迭代并报告：
+
+| 条件 | 判定 | 动作 |
+|------|------|------|
+| **全部 PASS** | 所有 case 的 D/E/G/H/I 步骤均通过 | 运行 `check_regression.php` → 归档 → 提交 |
+| **FAIL 收敛** | 连续 2 次迭代 FAIL 数不变或增加 | 停止。报告"修复无效或引入新回归"，附 diff |
+| **假阳性确认** | 所有 FAIL 均为 wrapper CSS 基线差异 | 修复 `buildCssTestWrapper()` → 重新生成 ref |
+| **已知限制** | 所有剩余差异均为已知引擎限制（如字体差异） | 记录到问题清单 B-xxx 类，标注"已知限制" |
+| **迭代上限** | 同一 case 迭代超过 5 轮 | 停止。报告阻塞点，请求人工判断 |
+| **新回归** | `check_regression.php` 发现新 FAIL | 回滚本次修复，先修复回归 |
+
+### 12.2 浏览器参考生成规范
+
+AI 生成浏览器参考数据时必须遵守以下规则，避免引入假阳性：
+
+**wrapper CSS 基线**（`BrowserRefStep.buildCssTestWrapper()` 自动注入，`!important` 最高优先级）：
+
+```css
+*,*::before,*::after { margin:0!important; padding:0!important; box-sizing:border-box!important; }
+html,body { width:1600px!important; height:800px!important; overflow:hidden!important;
+  font-family:"Segoe UI","Noto Sans SC",sans-serif!important;
+  font-size:16px!important; line-height:1.2!important; background:#fff!important; color:#000!important; }
+```
+
+**窗口尺寸匹配**：`main.php` 的 `WINDOW_WIDTH × WINDOW_HEIGHT` 必须与 Edge headless `--window-size` 一致。
+
+**生成后验证**：
+1. 确认 ref JSON 包含 `font-family: 'Noto Sans SC'`
+2. 确认 `font-size: 16px`
+3. 确认 body `background-color` 不是透明/none
+4. 检查 `.vue` 与 `.html` 的第一个元素结构一致（无额外 wrapper 层）
+
+### 12.3 典型修复案例
+
+以下是常见差异类型的诊断路径和修复位置，供 AI 参考：
+
+| 症状 | 诊断 | 修复文件 | 关键代码 |
+|------|------|---------|---------|
+| Flex 子元素宽度=0，parent=null 时百分比失效 | 根容器无 parent，`PercentResolver` 返回 0 | `PercentResolver.php` | 无 parent 时退回 content-box 宽度 |
+| 绝对定位 `bottom:0;right:0` 锚点位置错误 | `AbsolutePositioning` 未正确处理 bottom/right | `AbsolutePositioning.php` | 计算 y = parentH - nodeH |
+| auto-height 容器 Frame 2+ 高度漂移 | absolute 子节点被计入 auto-height 导致正反馈 | `BlockLayoutStrategy.php` | `resolveBlockLayout` 排除 absolute/fixed 子节点 |
+| 所有元素宽度系统性偏窄 90px | `.html` 有 wrapper padding 层而 `.vue` 无 | 修改 `.vue` 对齐 `.html` | 统一根元素结构 |
+| Skia 渲染的细矩形/分隔线膨胀 1-2px | Skia 抗锯齿导致 fillRect 边界外溢 | `skia_render.cc` | 禁用细矩形的抗锯齿或使用 integral 坐标 |
+| CSS 属性有值但 compareElement 报告缺失 | `RenderNodeSerializer` 白名单未包含该属性 | `Application.php` | 在 `serializeRenderNode` 的 `styleKeys` 中新增 |
+| margin:auto 居中偏移 | 盒宽度计算未包含 padding+border | `BlockLayoutStrategy.php` | `availableSpace = parentW - nodeW - padding - border` |
+| 引擎渲染黑色背景但 JSON 报告无背景色 | 渲染层默认填充黑色，布局层未导出 | `VNodeRenderer.php` | 无 `background-color` 时显式填充 `#fff` |
+
+### 12.4 修复后自检清单
+
+AI 每次修复框架代码后必须执行：
+
+```bash
+# 1. 验证受影响的 case
+php apps/css-test/test_pipeline.php --case=case-xxx
+
+# 2. 全量回归（确保未引入新退化）
+php apps/css-test/test_pipeline.php --skip-screenshot
+
+# 3. 基线回归
+php apps/css-test/check_regression.php
+
+# 4. 更新问题清单
+# 编辑 apps/css-test/docs/01-问题清单.md
+```
+
+**自检问题**：
+- [ ] 修复在框架层还是应用层？必须框架层修复
+- [ ] 修复是否符合 CSS 规范？不可针对特定测试特化
+- [ ] 已有归档 case 是否新增 FAIL？
+- [ ] 截图差异是否从 <5% 上升到 >10%？
+- [ ] 问题清单是否已更新？
+- [ ] 分类提交：`fix(framework):` / `fix(css-test):` / `docs:` / `chore:`
