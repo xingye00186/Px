@@ -123,10 +123,14 @@
         }
     }
 
-    // 找到 root 容器(第一个有 width/style 的 div)
+    // 找到 root 容器(从 test-content-wrapper 或第一个有宽度的 div)
     function findRootContainer() {
         var body = document.body;
         if (!body) return null;
+
+        // 优先使用带标记的测试内容容器
+        var testContent = document.getElementById('test-content-wrapper');
+        if (testContent) return testContent;
 
         // 找到第一个有宽度的容器 div
         for (var i = 0; i < body.children.length; i++) {
@@ -144,7 +148,10 @@
     if (!container) container = document.body;
 
     var elements = [];
-    walkDOM(container, 0, elements);
+    // 从 root container 的子节点开始遍历，跳过 root 自身（避免其 textContent 包含子元素文本导致宽度错误）
+    for (var i = 0; i < container.children.length; i++) {
+        walkDOM(container.children[i], 0, elements);
+    }
 
     var output = {
         browser: (navigator && navigator.userAgent) ? navigator.userAgent : 'unknown',
