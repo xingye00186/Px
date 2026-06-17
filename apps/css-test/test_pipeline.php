@@ -1,16 +1,14 @@
 <?php
 
 /**
- * CSS Test Pipeline — PxTest 全流程编排器 (D→E→G→H→I)。
- *
- * 替代原 run.php 的 5 阶段验证，使用 Pipeline + Strategy 设计。
+ * CSS Test Pipeline — PxTest D→I 六步全流程编排器。
  *
  * Usage:
- *   php apps/css-test/pipeline.php                              # 全量测试
- *   php apps/css-test/pipeline.php --case=case-007-border-styles # 单 case
- *   php apps/css-test/pipeline.php --skip-browser-ref           # 跳过浏览器
- *   php apps/css-test/pipeline.php --skip-screenshot            # 跳过截图
- *   php apps/css-test/pipeline.php --format=md                  # Markdown 报告
+ *   php apps/css-test/test_pipeline.php                              # 全量测试
+ *   php apps/css-test/test_pipeline.php --case=case-007-border-styles # 单 case
+ *   php apps/css-test/test_pipeline.php --skip-browser-ref           # 跳过浏览器
+ *   php apps/css-test/test_pipeline.php --skip-screenshot            # 跳过截图
+ *   php apps/css-test/test_pipeline.php --format=md                  # Markdown 报告
  */
 
 $projectRoot = dirname(__DIR__, 2);
