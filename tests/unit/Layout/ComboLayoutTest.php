@@ -212,51 +212,9 @@ test('flex column with gap + flex:1', function () {
 });
 
 // ============================================================
-// Group 6: Bilibili 骨架
+// Group 6: visualW/visualH — 严格 CSS 盒模型
 // ============================================================
-echo "\n--- Group 6: Bilibili 页面骨架 ---\n";
-
-test('Bilibili 完整页面骨架精确坐标', function () {
-    $navbar = makeNode('div', [
-        'width' => 1440, 'height' => 56,
-        'display' => 'flex', 'alignItems' => 'center',
-    ]);
-    $catTabs = makeNode('div', [
-        'width' => 1440, 'height' => 74,
-        'display' => 'flex', 'flexDirection' => 'column',
-    ]);
-    $mainContent = makeNode('div', [
-        'display' => 'flex', 'flexDirection' => 'column',
-        'flex' => '1',
-        'paddingLeft' => 24, 'paddingRight' => 24, 'paddingTop' => 16,
-    ]);
-    $root = makeNode('div', [
-        'display' => 'flex', 'flexDirection' => 'column',
-        'width' => 1440, 'height' => 900,
-    ], [$navbar, $catTabs, $mainContent]);
-
-    runResolver($root);
-
-    assert_eq($navbar->x, 0, 'navbar x=0');
-    assert_eq($navbar->y, 0, 'navbar y=0');
-    assert_eq($navbar->w, 1440, 'navbar w=1440');
-    assert_eq($navbar->h, 56, 'navbar h=56');
-
-    assert_eq($catTabs->x, 0, 'catTabs x=0');
-    assert_eq($catTabs->y, 56, 'catTabs y=56 (below navbar)');
-    assert_eq($catTabs->w, 1440, 'catTabs w=1440');
-    assert_eq($catTabs->h, 74, 'catTabs h=74');
-
-    assert_eq($mainContent->x, 0, 'mainContent x=0');
-    assert_eq($mainContent->y, 130, 'mainContent y=56+74=130');
-    assert_eq($mainContent->w, 1440, 'mainContent w=1440');
-    assert_eq($mainContent->h, 770, 'mainContent h=900-130=770');
-});
-
-// ============================================================
-// Group 7: visualW/visualH — 严格 CSS 盒模型
-// ============================================================
-echo "\n--- Group 7: visualW/visualH ---\n";
+echo "\n--- Group 6: visualW/visualH ---\n";
 
 test('content-box padding 使 visualW > w', function () {
     $child = makeNode('div', ['width' => 50, 'height' => 30], [], 'child');

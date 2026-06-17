@@ -92,9 +92,15 @@ require_once $frameworkDir . '/Platform/PlatformEvent.php';
 
 // ---- Application ----
 require_once $frameworkDir . '/Core/Application.php';
+require_once $frameworkDir . '/Core/ScrollManager.php';
+require_once $frameworkDir . '/Rendering/ImageManager.php';
 
 // ---- 性能计数器（AOT 适配） ----
 require_once $frameworkDir . '/Core/PerfCounter.php';
+
+// ---- 动画系统 ----
+require_once $frameworkDir . '/Animation/CssAnimationParser.php';
+require_once $frameworkDir . '/Animation/EasingFunctions.php';
 
 // ---- 编译器 (按需加载) ----
 require_once $frameworkDir . '/compiler/template-parser.php';
@@ -107,6 +113,9 @@ require_once $frameworkDir . '/Styling/Theme/TextTheme.php';
 require_once $frameworkDir . '/Styling/Theme/ComponentTheme.php';
 require_once $frameworkDir . '/Styling/Theme/ThemeData.php';
 require_once $frameworkDir . '/Styling/Provider/ThemeProvider.php';
+require_once $frameworkDir . '/Styling/Adapter/PlatformAdapter.php';
+require_once $frameworkDir . '/Styling/Adapter/PlatformStyling.php';
+require_once $frameworkDir . '/Styling/Adapter/Win32Styling.php';
 
 // ---- Rendering Backend (RuntimeBackendSelector 依赖) ----
 require_once $frameworkDir . '/Rendering/Backend/BackendCapability.php';
