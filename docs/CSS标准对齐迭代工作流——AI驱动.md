@@ -367,4 +367,123 @@ php apps/css-test/check_regression.php
 
 # 构建
 .\build.bat css-test
+
+# 手动 exe 操作（调试用）
+apps\css-test\bin\css_test.exe --case=case-001 --dump-layout
+apps\css-test\bin\css_test.exe --case=case-029 --dump-layout-after-frames=5
+apps\css-test\bin\css_test.exe --headless --screenshot=out.png
+apps\css-test\bin\css_test.exe --headless --screenshot=out.png --screenshot-frames=5
+
+# SFC 编译
+php sfc-compiler.php apps/css-test/App.vue
+
+# Edge headless 手动截图
+msedge --headless --disable-gpu --window-size=1600,800 --screenshot=ref/browser_ref.png "file:///D:/Px/apps/css-test/test_case/case-NNN/wrapper.html"
+
+# 回归（JSON 格式）
+php apps/css-test/check_regression.php --json
 ```
+
+---
+
+## 九、技术参考
+
+### CSS 规范
+
+- [CSS Positioned Layout Level 3](https://www.w3.org/TR/css-position-3/) — 绝对/固定定位
+- [CSS Flexible Box Layout Level 1](https://www.w3.org/TR/css-flexbox-1/) — Flex 布局
+- [CSS Grid Layout Level 1](https://www.w3.org/TR/css-grid-1/) — Grid 布局
+- [CSS Box Model Level 3](https://www.w3.org/TR/css-box-3/) — 盒模型 padding/margin
+- [CSS Values and Units Level 3](https://www.w3.org/TR/css-values-3/) — 百分比/calc/单位
+- [CSS Overflow Module Level 3](https://www.w3.org/TR/css-overflow-3/) — 溢出/滚动
+- [CSS Cascading and Inheritance Level 4](https://www.w3.org/TR/css-cascade-4/) — 层叠/继承
+
+### 诊断技巧
+
+```php
+// 在框架代码中加日志（修完后删除）
+error_log('[DIAG] enter resolveFlexLayout type=' . $node->type . ' w=' . ($style['width'] ?? 0));
+
+// 直接检查 engine_layout.json 确认引擎坐标和样式
+// 位于 test_case/case-NNN/ref/engine_layout.json
+
+// 在框架中添加调试输出
+if ($label === '目标元素') {
+    file_put_contents('debug_element.log', print_r(['browser' => $bEl, 'engine' => $eEl], true));
+}
+```
+
+---
+
+## 十、多帧稳定性验证
+
+**背景**：auto-height + absolute 子节点的正反馈循环 bug，证明了 Frame 依赖 bug 是 `--dump-layout` 的死角。
+
+**PxTest 中的多帧验证**（内置在 `test_pipeline.php` 的 Step E 中）：
+- `--dump-layout-after-frames=5` 默认执行
+- `MultiFrameStep` 自动比较 Frame 1 与 Frame N 的布局 JSON，逐节点对比 x/y/w/h
+- 任何节点跨帧变化（Δx/Δy/Δw/Δh ≠ 0）标记为 **STABILITY** 问题计入失败
+
+**具体场景**（必须关注多帧稳定性）：
+- 任何含 `auto-height` 的 block 容器 + absolute/fixed 子节点
+- 任何含 `padding` 的 auto-height 容器
+- 任何调整了子节点 y 坐标的布局策略（flex/grid 重定位后）
+
+---
+
+## 十一、test_case 创建模板
+
+### Vue 模板（引擎端）
+
+```php
+// test_case/case-NNN-name/CaseNnnName.vue
+<template>
+  <div class="card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative">
+    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+    <div class="header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
+      Test Title
+    </div>
+    <!-- 测试内容 →
+    <div class="footer" style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
+      case-NNN: Description
+    </div>
+    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div>
+  </div>
+</template>
+<script lang="php">
+class TestContent extends ReactiveComponent {}
+</script>
+```
+
+### HTML 模板（浏览器参考）
+
+```html
+<!-- test_case/case-NNN-name/CaseNnnName.html →
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Test Title</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f0f2f5; font-family:sans-serif; display:flex; justify-content:center; padding:20px; }
+  /* 与 .vue 同步的样式 */
+</style></head><body>
+  <!-- 与 .vue <template> 一致的内容 →
+</body></html>
+```
+
+> **样本偏差警示**：.vue 与 .html 结构必须严格一致！
+>
+> 浏览器参考数据从 `.html` 生成，引擎布局快照从 `.vue` 编译的 exe 生成。
+> 若两者 DOM 结构不一致，对比将产生**全用例一致的 dx/dw 系统性偏差**。
+>
+> **历史案例**：case-001/case-002 的 `.html` 有 `<div class="sandbox" style="padding:20px">` 包装层，
+> 而 `.vue` 直接以根元素开始，导致引擎缺少 20px padding 包装 → 引擎元素宽度比浏览器窄 90px。
+>
+> **检查清单**（每次新建 test_case 必须核对）：
+> 1. `.vue` `<template>` 根元素与 `.html` `<body>` 内第一个元素结构一致
+> 2. 所有 CSS 类名和 inline style 在两者间一致
+> 3. 嵌套层级（额外 wrapper 层）完全对齐
+> 4. `buildCssTestWrapper()` 注入的全局 CSS（`* { margin:0; padding:0; }` 等）在引擎端有无匹配
+> 5. 使用 `php apps/css-test/test_pipeline.php --case=case-NNN` 后检查 dw 是否接近 0
+>
+> **修复流程**：优先修改 `.vue` 对齐 `.html`（`<template>` 是源），然后重新编译并重新测试。
+> 切勿仅修改 `.html` 而不更新 `.vue`，否则引擎与浏览器参考的偏差将持续存在。
