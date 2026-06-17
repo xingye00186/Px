@@ -37,22 +37,20 @@
 
 | 工具 | 路径 | 用途 |
 |------|------|------|
-| 测试沙盒编排器 | `php apps/css-test/run.php` | 遍历 test_case/ 编译 → 布局导出 → 多帧验证 → 浏览器对比 → 报告 |
-| SFC 编译器 （无须调用，.\build.bat 中已经包含）| `php sfc-compiler.php apps/css-test` | .vue → gen/*.php |
-| 构建脚本 | `.\build.bat css-test` | PHP → .exe（run.php 内部调用） |
-| 布局导出 | `bin/css-test.exe --dump-layout` | → engine_layout.json |
-| 浏览器 ref 生成 | `run.php` 内嵌 `generateBrowserRef()` 函数 | Edge headless 渲染 .html → JSON |
-| 布局 JS 导出器 | `tools/dump_layout.js` | 注入浏览器 HTML，从 DOM 提取布局 JSON |
-| 共享对比库 | `tools/shared_test_lib.php` | flattenEngineTree, compareElementEnhanced, alignImages, compareScreenshots |
-| 截图工具 | `tools/capture_screenshot.ps1` | 应用/浏览器窗口截图 |
-| 锚点对齐 | `tools/shared_test_lib.php::alignImages()` | 颜色锚点/模板匹配/自动检测 三策略 |
-| 浏览器 ref 批量生成 | `tools/generate_browser_refs.php` | 旧版 css-test Level 参考（保留兼容，run.php 已内联） |
-| 单项目 ref 生成 | `tools/generate_project_ref.php <project>` | 单项目浏览器参考 JSON |
-| 无窗口布局导出+自动截图 | `bin/css_test.exe --case=case-xxx --headless --dump-layout` | 导出 JSON 并自动截图到 ref/engine_screenshot_{ts}.png，`--no-screenshot` 禁用 |
-| 无窗口截图 | `bin/css_test.exe --case=case-xxx --headless --screenshot=out.png` | 离屏渲染保存 PNG，支持 GDI/Skia 双路径 |
-| 多帧截图 | `bin/css_test.exe --headless --screenshot=out.png --screenshot-frames=5` | 渲染 5 帧后截图，文件名追加 `_after_5frames`，与引擎多帧 dump 一致 |
-| 归档基线 | `php apps/css-test/archive_case.php` | case 稳定后冻存布局+多帧+浏览器元素数据到 baseline/ |
-| 回归检查 | `php apps/css-test/check_regression.php` | 几何/样式/稳定性/浏览器元素 四维度回归对比 |
+| **PxTest 编排器** | `php apps/css-test/pipeline.php` | Pipeline+Strategy D→I 全流程编排（构建→布局→多帧→浏览器→元素对比→截图） |
+| **入口包装** | `php apps/css-test/run.php` | 薄包装，委托给 pipeline.php |
+| SFC 编译器 | `php sfc-compiler.php apps/css-test` | .vue → gen/*.php（build.bat 内含） |
+| 构建脚本 | `.\build.bat css-test` | PHP → AOT exe（pipeline.php 的 BuildStep 内部调用） |
+| 布局导出 | `bin/css-test.exe --headless --dump-layout` | → engine_layout.json |
+| 浏览器 ref 生成 | `PxTest\Pipeline\Strategy\BrowserRefStep` | Edge headless + wrapper!important 注入 |
+| 对比引擎 | `PxTest\Comparison\ComparatorRegistry` | 几何 + 样式 + 稳定性 + 像素 四维对比器 |
+| 锚点对齐 | `PxTest\Pipeline\ScreenshotStep::detectColorAnchors()` | 颜色锚点(#FF00FF/#00FFFF)/8×8块检测/自动内容边界 三策略 |
+| 无窗口布局导出+截图 | `bin/css-test.exe --case=case-xxx --headless --dump-layout` | 导出 JSON 并自动截图 |
+| 无窗口截图 | `bin/css-test.exe --case=case-xxx --headless --screenshot=out.png` | 离屏渲染 PNG |
+| 多帧截图 | `bin/css-test.exe --headless --screenshot=out.png --screenshot-frames=5` | 渲染 N 帧后截图 |
+| 归档基线 | `php apps/css-test/archive_case.php` | case 通过后冻存基线 |
+| 回归检查 | `php apps/css-test/check_regression.php` | 四维度回归对比 |
+| PxTest 测试基础设施 | `tools/PxTest/` | Pipeline/Strategy/Mock/Builder/Snapshot/Reporting/Baseline/Comparison |
 
 ### 2.2 css-test 测试沙盒目录结构
 
@@ -136,13 +134,17 @@ apps/css-test/
   framework/Rendering/Backend/SkiaGraphiteDawnBackend.php Skia Dawn 后端
 
 测试工具
-  tools/shared_test_lib.php                           共享对比函数库
-  tools/dump_layout.js                                浏览器端布局数据提取脚本
-  tools/generate_browser_refs.php                     css-test 多 Level ref 生成（旧版）
-  tools/generate_project_ref.php                      单项目 ref 生成
-  tools/capture_screenshot.ps1                        截图工具
-  tools/screenshot_test.php                           截图测试
-  tools/calibrate_anchors.php                         锚点校准
+  tools/PxTest/Pipeline/                  Pipeline+Strategy 编排引擎
+  tools/PxTest/Comparison/                对比器（Geometry+Style+Stability+Pixel）
+  tools/PxTest/Mock/                      Mock 平台（无需 exe 即可验证）
+  tools/PxTest/Builder/                   Fluent Builder 测试数据工厂
+  tools/PxTest/Snapshot/                  快照管理器
+  tools/PxTest/Reporting/                 报告器（Console/Markdown/JSON/TAP）
+  tools/PxTest/Baseline/                  基线归档
+  tests/unit/PxTest/                      单元测试（11 模块覆盖）
+  tests/integration/                      集成测试（7 跨模块协作）
+  tests/stress/                           压力测试（500 节点/200 帧内存泄漏）
+  tests/e2e/                              E2E 编排 + headless 脚本
 ```
 
 ---
@@ -229,68 +231,47 @@ php apps/css-test/run.php --skip-browser-ref             # 跳过浏览器对比
 php apps/css-test/run.php --update-baseline              # 更新参考数据
 ```
 
-**run.php 标准执行流程**：
+**pipeline.php 标准执行流程（Pipeline+Strategy 六步编排）**：
 
 ```
-Step A: 准备工作
-   ├─ 解析 CLI 参数（--case= / --frames= / --skip-build 等）
-   ├─ 遍历 test_case/ 下所有 case-NNN-* 目录
-   └─ 如指定 --case，只处理匹配的单个用例
+Step 0: Build（BuildStep）
+   ├─ 哈希缓存跳过（ComputeHash + .build_hash 对比）
+   ├─ ProcessManager：孤儿进程清理 + 编译锁 + Ctrl+C 安全退出
+   ├─ proc_open build.bat css-test + 子进程注册
+   └─ 产出：apps/css-test/bin/css_test.exe
 
-Step B: 构建（一次构建，所有 case 共享）
-   ├─ Px_dynamic_component_file: test_case → sfc-compiler 自动扫描 test_case/ 目录
-   ├─ 所有 .vue 编译为独立组件（如 Case029ScrollFlexColComponent）
-   ├─ App.vue 通过 `<component :is="caseName">` 运行时动态加载
-   ├─ 调用 build.bat css-test（单次构建产出单一 css_test.exe）
-   ├─ 运行时通过 --case=case-xxx（完整目录名）选择测试用例
-   └─ 所有 case 共享 apps/css-test/bin/css_test.exe
-
-Step C: 布局导出 + 多帧稳定性
-   ├─ <exe> --case=case-NNN-xxx --dump-layout → engine_layout.json
-   ├─ <exe> --case=case-NNN-xxx --dump-layout-after-frames=N → ...frames.json
-   ├─ 对比 Frame 1 vs Frame N 的布局 JSON（逐节点 x/y/w/h）
-   └─ 任何跨帧变化标记为 STABILITY 问题
-
-Step D: 布局内容一致性校验（新增）
-   ├─ validateEngineLayoutContent() 检查 engine_layout.json 是否包含测试用例关键文本
+Step D: 布局导出（LayoutDumpStep + DumpStrategy）
+   ├─ ExeDumpStrategy：<exe> --case=xxx --headless --dump-layout
+   ├─ MockDumpStrategy（无 exe 降级）：MockPlatform 渲染
+   ├─ REF_STALE 检测：验证导出的 JSON 包含测试用例关键文本内容
    ├─ 防止 ref/ 目录下的过期参考数据被误用于对比
-   └─ 内容不匹配时标记为 REF_STALE 错误，触发自动重新生成
+   └─ 产出：ref/engine_layout.json
 
-Step E: 浏览器参考生成
-   ├─ Edge headless 渲染 CaseNnnName.html → browser_ref_level_0.json
-   ├─ 注入 dump_layout.js + normalize.css + Noto Sans SC 字体（Regular+Bold 分离声明）
-   └─ 验证参考 JSON 结构完整性
+Step E: 多帧稳定性（MultiFrameStep）
+   ├─ --dump-layout-after-frames=5 → 
+   ├─ 逐节点对比 Frame 1 vs Frame N 的 x/y/w/h
+   └─ Δ≠0 标记为 STABILITY 问题
 
-Step F: 逐元素对比（compareElementEnhanced）
-   ├─ flattenEngineTree() 展平引擎布局树
-   ├─ 按标签/内容/id 匹配浏览器元素
-   ├─ defaultChecks() 覆盖所有样式属性
-   ├─ 位置 + 尺寸 + 样式三项对比
-   ├─ bg 始终参与对比：未显式设置时导出 -1（透明），与浏览器 background-color 比对
-   │   └─ 引擎透明 vs 浏览器非透明 → FAIL，消除背景色漏检盲区
-   └─ Phase B 容器也新增 bg 对比（以前因 noTextStyle=true 完全跳过）
+Step G: 浏览器参考（BrowserRefStep + BrowserRefStrategy）
+   ├─ buildCssTestWrapper()：注入 normalize.css 重置（!important 最大优先级）
+   ├─ EdgeDomStrategy：Edge headless 渲染 → DOM JSON
+   ├─ EdgeScreenshotStrategy：Edge headless 截图
+   └─ 产出：ref/browser_ref_*.png + ref/wrapper.html
 
-Step G: 截图对比（必须，独立于元素对比结果）
-   ├─ exe --dump-layout 后自动截图 → exe_capture_{timestamp}.png
-   ├─ Edge headless --window-size=1600,800 浏览器参考截图 → browser_ref_{timestamp}.png
-   ├─ diff_{timestamp}.png 差异图
-   ├─ alignImages() 锚点对齐（颜色锚点/模板匹配/自动检测 三策略）
-   ├─ compareScreenshots() 像素级对比（cropAnchors 模式裁剪+缩放）
-   └─ 截图步骤不被元素对比结果阻塞，即使有 FAIL 仍执行
+Step H: 逐元素对比（ElementCompareStep + ComparatorRegistry）
+   ├─ GeometryComparator：位置 + 尺寸 对比
+   ├─ StyleComparator：70+ 样式属性（含 bg 透明检测）
+   ├─ StabilityComparator：多帧稳定性
+   ├─ Phase F 溢出检测：textRenderInfo.textWidth vs contentW
+   └─ 产出：PASS/FAIL/SKIP 统计
 
-Step H: 生成测试报告
-   ├─ test_log/test_report_YYYYmmdd_HHMMSS.md
-   ├─ 更新 test_log/latest_report.md
-   └─ 控制台实时输出每步状态
-
-Step I: 归档基线快照（case 通过后执行）
-   ├─ 当前 case 通过所有检查后 → `php archive_case.php case-NNN-name`
-   ├─ 生成 baseline/engine_layout.json（Frame 0 布局）
-   ├─ 生成 baseline/engine_layout_after_5frames.json（多帧稳定性基线）
-   ├─ 缓存 ref/browser_ref_level_0.json → baseline/browser_ref_elements.json（浏览器基线元素数据）
-   ├─ baseline_registry.json 自动注册（含节点数、多帧数、样式字段清单）
-   ├─ 查看归档状态：`php archive_case.php --list`
-   └─ 归档后才进入下一个 case 的迭代
+Step I: 截图对比（ScreenshotStep）
+   ├─ exe --headless --screenshot → engine_screenshot_{ts}.png
+   ├─ Edge headless → browser_ref_{ts}.png
+   ├─ 三层锚点对齐：detectColorAnchors(#FF00FF/#00FFFF) → autoDetectContentBounds
+   ├─ GD 像素 diff + diff_{ts}.png 差异图生成
+   ├─ 锚点可见性校验：main.php WINDOW_WIDTH/HEIGHT 常量
+   └─ 截图步骤不被元素对比结果阻塞
 ```
 
 **多帧稳定性验证（强制）**：

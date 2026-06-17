@@ -1,3 +1,144 @@
+# CSS 标准对齐 — 循环测试迭代工作流（PxTest 架构）
+
+> **目标**：通过 `apps/css-test/` + `tools/PxTest/` 统一测试框架 + 自动化迭代，使 Px 框架渲染结果与 Edge Chromium 像素级一致。
+> **核心**：数据驱动 → 治本修复 → 归档验证 → 分类提交，形成持续闭环。
+> **铁律**：所有框架限制必须修复至符合 CSS 标准，**不得 SKIP**。
+> **架构**：Pipeline + Strategy 设计模式，D→I 六步全流程编排。
+
+---
+
+## 一、核心原则
+
+| 原则 | 说明 |
+|------|------|
+| **先验证后修复** | 跑完整测试链，让数据告诉你差异在哪，不靠猜测 |
+| **治本不治标** | 框架层 bug 在框架层修复，不在 App.vue 打补丁 |
+| **CSS 标准铁律** | 框架 fallback 必须使用 CSS 标准默认值（如 `box-sizing:content-box`） |
+| **不支持即实现** | 测试发现框架未支持的 CSS 特性，必须按 CSS 规范实现，不得 SKIP |
+| **回归防护** | 每次修复后必须验证已有归档 case 不退化 |
+| **分类提交** | 框架修复 `fix(framework):`、工具修复 `fix(css-test):`、文档 `docs:`、杂项 `chore:` 分开提交 |
+
+---
+
+## 二、工具链
+
+### 核心工具
+
+| 工具 | 说明 |
+|------|------|
+| `php apps/css-test/pipeline.php` | **PxTest 编排器** — 构建 → 布局导出 → 多帧验证 → 浏览器对比 → 截图对比 → 报告 |
+| `php apps/css-test/pipeline.php --case=case-xxx` | 运行单个 case |
+| `php apps/css-test/pipeline.php --skip-build` | 跳过构建（哈希缓存自动跳过） |
+| `php apps/css-test/pipeline.php --force-build` | 强制重新构建 |
+| `php apps/css-test/pipeline.php --skip-browser-ref` | 跳过浏览器参考对比 |
+| `php apps/css-test/pipeline.php --skip-screenshot` | 跳过截图对比 |
+| `php apps/css-test/pipeline.php --format=md` | Markdown 报告输出 |
+| `php apps/css-test/run.php` | 薄包装入口，委托给 `pipeline.php` |
+| `.\build.bat css-test` | 单独构建 |
+| `php apps/css-test/archive_case.php case-xxx` | 归档已通过 case |
+| `php apps/css-test/check_regression.php` | 四维回归检查 |
+
+### PxTest 架构速查
+
+```
+tools/PxTest/
+├── Pipeline/          编排引擎
+│   ├── PipelineBuilder     CLI→Pipeline 配置
+│   ├── PipelineOrchestrator 依赖拓扑编排
+│   ├── BuildStep          构建（哈希缓存+进程锁+孤儿清理）
+│   ├── Strategy/
+│   │   ├── DumpStrategy        ExeDump / MockDump 双轨
+│   │   ├── BrowserRefStrategy  EdgeDom / EdgeScreenshot
+│   │   └── PipelineSteps       LayoutDump + BrowserRef（含 REF_STALE + wrapper!important）
+│   ├── ScreenshotStep     截图对比（锚点对齐 + diff 图生成）
+│   └── ElementCompareStep 逐元素对比 + Phase F 溢出检测
+├── Comparison/         对比器
+│   ├── ComparatorRegistry    链式组合（Geometry + Style + Stability + Pixel）
+├── Mock/               测试双轨（无需 exe 即可验证）
+├── Snapshot/           快照管理
+├── Reporting/          报告器（Console / Markdown / JSON / TAP）
+└── Baseline/           基线归档
+```
+
+### 测试文件结构
+
+```
+tests/
+├── unit/PxTest/        单元测试（VNode/ReactiveComponent/Layout/Renderer/Css/Theme/Anim/Scroll/Event/Config/Image/AOT）
+├── unit/Contracts/     契约测试（LayoutStrategyContract）
+├── integration/        集成测试（Pipeline/ComponentLifecycle/Interaction/StyleMerge/Animation/AOT/ResourceLifecycle）
+├── stress/             压力测试（LargeVNodeTree/MemoryLeak）
+├── e2e/                E2E 编排 + headless 脚本
+└── run_all.php         统一运行器
+```
+
+---
+
+## 三、完整迭代流程（7 步循环）
+
+```
+[1. 跑测试] → [2. 分析报告] → [3. 定位根因]
+    ↑                            ↓
+[7. 分类提交] ← [6. 归档] ← [5. 修复+验证]
+                 ↑
+            [4. 更新问题清单]
+```
+
+### Step 1：跑测试
+
+```bash
+# 全量测试（跳过截图加速）
+php apps/css-test/pipeline.php --skip-screenshot
+
+# 单 case 开发
+php apps/css-test/pipeline.php --case=case-007-border-styles
+
+# 强制重编+测试
+php apps/css-test/pipeline.php --case=case-xxx --force-build
+```
+
+**Pipeline 六步流程（D→I）**：
+
+| 步骤 | 内容 | 产出 |
+|------|------|------|
+| Build | SFC 编译 + AOT 构建（哈希缓存 + 进程锁 + 孤儿清理） | `bin/css_test.exe` |
+| D | 布局导出（ExeDump / MockDump 双轨） | `ref/engine_layout.json` |
+| E | 多帧稳定性（5 帧对比，逐节点 x/y/w/h） | STABILITY 标记 |
+| G | 浏览器参考生成（Edge headless + wrapper!important 注入） | `ref/browser_ref_*.png` + `ref/wrapper.html` |
+| H | 逐元素对比（几何+样式+稳定性 + Phase F 溢出检测） | PASS/FAIL 统计 |
+| I | 截图像素对比（三层锚点对齐 + diff 图 + 锚点可见性校验） | 差异百分比 + `ref/diff_*.png` |
+
+**自动检查**：
+- REF_STALE 检测：布局内容校验，防止过期 ref 数据
+- DOC_WARN：FAIL case 不在问题清单时告警
+- 锚点可见性：TL/BR 锚点在 main.php 定义的视口范围内
+
+### Step 2-7
+
+与旧版一致：分析报告 → 定位根因 → 更新问题清单 → 修复+验证 → 归档 → 分类提交。
+
+---
+
+## 四、命令速查
+
+```bash
+# ==== 测试 ====
+php apps/css-test/pipeline.php --skip-screenshot               # 全量测试
+php apps/css-test/pipeline.php --case=case-xxx --verbose        # 单 case
+php apps/css-test/pipeline.php --case=case-xxx --force-build    # 强制重编
+php apps/css-test/pipeline.php --skip-build                     # 仅验证
+php apps/css-test/pipeline.php --format=md                      # Markdown 报告
+
+# ==== 单元测试 ====
+php tests/run_all.php                                           # 全部单元+集成+压力测试
+
+# ==== 归档与回归 ====
+php apps/css-test/archive_case.php case-xxx                     # 归档
+php apps/css-test/check_regression.php                          # 四维回归检查
+
+# ==== 构建 ====
+.\build.bat css-test                                            # 单独构建
+```
 # CSS 标准对齐 — 循环测试迭代工作流
 
 > **目标**：通过 `apps/css-test/` 统一测试框架 + 自动化迭代，使 Px 框架渲染结果与 Edge Chromium 像素级一致。
