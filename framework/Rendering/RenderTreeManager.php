@@ -855,17 +855,34 @@ class RenderTreeManager
         // 1. 解析内联 style
         $inlineStyle = $this->parseVNodeStyle($vnode);
 
-        // 2. 获取 CSS class 名并拆分
+        // 2. 获取所有已注册的 class styles（含通用选择器）
+        $allRegistered = ThemeProvider::getAllClassStyles();
+
+        // 3. 收集通用选择器（*、html、body）基础样式
+        $universalBase = [];
+        foreach ($allRegistered as $compName => $componentStyles) {
+            foreach (['*', 'html', 'body'] as $univ) {
+                if (isset($componentStyles[$univ])) {
+                    foreach ($componentStyles[$univ] as $k => $v) {
+                        // 不要用 universal 的 bg 覆盖显式透明背景
+                        if ($k === 'bg' && $v === -1) continue;
+                        $universalBase[$k] = $v;
+                    }
+                }
+            }
+        }
+
+        // 4. 获取 CSS class 名并拆分
         $classStr = $vnode->props['class'] ?? '';
         if ($classStr === '') {
-            return $inlineStyle;
+            // 无 class 时仍应用通用选择器基础样式
+            return array_merge($universalBase, $inlineStyle);
         }
         $classNames = explode(' ', $classStr);
 
-        // 3. 从 ThemeProvider 搜索所有已注册的 class styles
+        // 5. 从 ThemeProvider 搜索所有已注册的 class styles
         //    CSS class 是全局的，需要跨组件搜索
-        $allRegistered = ThemeProvider::getAllClassStyles();
-        $merged = [];
+        $merged = $universalBase;  // 全局选择器基础样式（最低优先级）
         $hoverMerged = [];
         $focusMerged = [];
         $activeMerged = [];

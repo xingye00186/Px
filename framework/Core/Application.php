@@ -799,6 +799,7 @@ class Application
             'gridColumn', 'gridRow', 'gridAutoRows', 'gridTemplateAreas',
             'justifyItems', 'alignSelf', 'justifySelf', 'alignContent',
             'overflow', 'overflowX', 'overflowY',
+            'pointerEvents',
             'outlineWidth', 'outlineStyle', 'outlineColor',
             'textDecorationLine', 'textDecorationColor', 'textDecorationStyle', 'textDecorationThickness'];
        $style = [];

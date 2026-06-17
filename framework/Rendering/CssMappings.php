@@ -1394,6 +1394,33 @@ class CssMappings
             $classStyles[$className] = $props;
         }
 
+        // --- Pass 1.5: Parse universal/tag selectors (*, html, body, etc.) ---
+        // Store as '*' for universal base styles
+        if (preg_match_all('#([a-zA-Z*]+)\s*\{([^}]*)\}#s', $styleCss, $tagRules, PREG_SET_ORDER)) {
+            foreach ($tagRules as $rule) {
+                $selector = $rule[1];
+                // Skip class-based rules (already parsed above) and pseudo-rules
+                if (str_starts_with($selector, '.') || $selector === '') continue;
+                $body = $rule[2];
+                $props = [];
+                foreach (self::PROPERTY_MAP as $cssProp => $map) {
+                    $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
+                    if (preg_match($pattern, $body, $m)) {
+                        $value = trim($m[1]);
+                        if (count($variables) > 0) {
+                            $value = CssValueParser::resolveCSSVariables($value, $variables);
+                        }
+                        $props[$map['key']] = self::dispatchParser($map['parser'], $value);
+                    }
+                }
+                if (!empty($props)) {
+                    // 通用选择器 * 归入 '*' 键，其他标签选择器归入对应键
+                    $key = $selector === '*' ? '*' : $selector;
+                    $classStyles[$key] = $props;
+                }
+            }
+        }
+
         // Parse pseudo-class variants: .className:hover { ... }, .className:focus { ... }, .className:active { ... }
         // Store as "{className}__hover", "{className}__focus", "{className}__active"
         $pseudoClasses = ['hover', 'focus', 'active'];
