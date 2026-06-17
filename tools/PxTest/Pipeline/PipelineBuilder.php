@@ -116,7 +116,6 @@ class PipelineBuilder
 
     private function selectDumpStrategy(): Strategy\DumpStrategy
     {
-        if ($this->skipBuild) return new NoopDumpStrategy();
         $exeDiscovery = new ExeDiscovery($this->appDir);
         if ($exeDiscovery->isReady('css_test.exe')) {
             return new ExeDumpStrategy(
