@@ -10,7 +10,7 @@
  * 5. 多帧稳定性检查
  */
 
-require_once __DIR__ . '/../../tests/unit/bootstrap.php';
+require_once __DIR__ . '/../unit/bootstrap.php';
 require_once __DIR__ . '/../../tools/PxTest/bootstrap.php';
 
 use PxTest\Mock\MockPlatform;
@@ -116,7 +116,7 @@ $json = $serializer->toJson($root);
 $data = json_decode($json, true);
 check('JSON valid', $data !== null);
 
-$refDir = __DIR__ . '/test_case/case-007-border-styles/ref';
+$refDir = __DIR__ . '/../../apps/css-test/test_case/case-007-border-styles/ref';
 @mkdir($refDir, 0777, true);
 file_put_contents("$refDir/px_test_engine_layout.json", $json);
 check('JSON saved to ref/', file_exists("$refDir/px_test_engine_layout.json"));
