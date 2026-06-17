@@ -133,7 +133,7 @@ php apps/css-test/test_pipeline.php --case=case-007 --force-build  # 单 case
 | **迭代上限** | 同一 case 迭代超过 5 轮 | 停止。报告阻塞点，请求人工判断 |
 | **新回归** | `check_regression.php` 发现新 FAIL | 回滚本次修复，先修复回归 |
 
-### Step 5：验证
+### Step 5：修复+验证
 ```bash
 php apps/css-test/test_pipeline.php --case=case-xxx          # 单 case 验证
 php apps/css-test/test_pipeline.php --skip-screenshot        # 全量回归
@@ -141,10 +141,10 @@ php apps/css-test/check_regression.php                       # 基线回归
 ```
 
 **修复后自检（每次修复后执行）**：
-- [ ] 修复在框架层还是应用层？必须框架层修复
+- [ ] 修复在框架层还是应用层？框架层缺陷必须修复，框架层符合标准则改应用层
 - [ ] 修复是否符合 CSS 规范？不可针对特定测试特化
 - [ ] 已有归档 case 是否新增 FAIL？
-- [ ] 截图差异是否从 <5% 上升到 >10%？
+- [ ] 截图差异是否上升？
 - [ ] 问题清单是否已更新？
 
 ### Step 6：归档
