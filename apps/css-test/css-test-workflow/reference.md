@@ -35,7 +35,7 @@ php apps/css-test/check_regression.php --tolerance=2       # 自定义容差
 
 | 文件 | 用途 |
 |------|------|
-| `run.php` | 测试编排器 |
+| `run.php` | 测试编排器（含构建缓存、多帧验证、浏览器对比、Phase F 容器溢出/对齐检测） |
 | `archive_case.php` | 归档工具（`--force` 覆盖保护） |
 | `check_regression.php` | 基线回归检查 |
 | `docs/00-索引.md` | 文档索引 |
