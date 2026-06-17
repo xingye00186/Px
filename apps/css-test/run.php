@@ -441,7 +441,7 @@ foreach ($cases as $caseDir) {
             $layoutErr = '';
 
             $caseBinDir = dirname($exeToRun);
-            $stderrTmp = sys_get_temp_dir() . '/px_dump_stderr_' . getmypid() . '.txt';
+            $stderrTmp = sys_get_temp_dir() . '/px_dump_stderr_' . $caseName . '_' . getmypid() . '.txt';
             $layoutTarget = $caseDir . '/ref/engine_layout.json';
             $noSs = $SKIP_SCREENSHOT ? ' --no-screenshot' : '';
             $dumpCmd = sprintf('"%s" --case=%s --headless --dump-layout%s 2>"%s"',
@@ -449,9 +449,20 @@ foreach ($cases as $caseDir) {
             $layoutOut = '';
             exec($dumpCmd, $layoutOutArr, $layoutExit);
             $layoutOut = implode("\n", $layoutOutArr);
+            // 等待文件系统同步（Windows exec + shell 重定向可能延迟）
+            if (!file_exists($stderrTmp)) {
+                // exec 已等待进程结束，但文件创建可能延迟，等待最多 500ms
+                $maxWait = 50; // 50 × 10ms = 500ms
+                for ($i = 0; $i < $maxWait; $i++) {
+                    usleep(10000); // 10ms
+                    if (file_exists($stderrTmp)) break;
+                }
+            }
             if (file_exists($stderrTmp)) {
                 $layoutErr = file_get_contents($stderrTmp);
                 @unlink($stderrTmp);
+            } else {
+                $layoutErr = '';
             }
 
             // Stderr check
@@ -530,16 +541,26 @@ foreach ($cases as $caseDir) {
             $caseBinDir = dirname($exeToRun);
             $mfErr = '';
 
-            $stderrTmp = sys_get_temp_dir() . '/px_mf_stderr_' . getmypid() . '.txt';
+            $stderrTmp = sys_get_temp_dir() . '/px_mf_stderr_' . $caseName . '_' . getmypid() . '.txt';
             $noSs = $SKIP_SCREENSHOT ? ' --no-screenshot' : '';
             $mfCmd = sprintf('"%s" --case=%s --headless --dump-layout-after-frames=%d%s 2>"%s"',
                 $exeToRun, $caseName, $FRAMES, $noSs, $stderrTmp);
             $mfExit = -1;
             $mfOutArr = [];
             exec($mfCmd, $mfOutArr, $mfExit);
+            // 等待文件系统同步
+            if (!file_exists($stderrTmp)) {
+                $maxWait = 50;
+                for ($i = 0; $i < $maxWait; $i++) {
+                    usleep(10000);
+                    if (file_exists($stderrTmp)) break;
+                }
+            }
             if (file_exists($stderrTmp)) {
                 $mfErr = file_get_contents($stderrTmp);
                 @unlink($stderrTmp);
+            } else {
+                $mfErr = '';
             }
 
             $multiFrameFile = $caseDir . "/ref/engine_layout_after_{$FRAMES}frames.json";
@@ -1065,7 +1086,7 @@ body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 <div class="sandbox-header" style="height:40px;background:#fff;border-bottom:1px solid #ddd;padding:0 20px;display:flex;align-items:center;font-size:14px;color:#666;">
   CSS Test Sandbox — <span style="color:#333;font-weight:bold;">' . htmlspecialchars($headerTitle) . '</span>
 </div>
-<div style="padding:20px;">
+<div id="test-content-wrapper" style="padding:20px;">
 ' . $bodyContent . '
 </div>
 </div>
@@ -1253,7 +1274,7 @@ body { width:1600px; height:800px; overflow:hidden; background:#0d1117; }
 <div class="sandbox-header" style="height:40px;background:#fff;border-bottom:1px solid #ddd;padding:0 20px;display:flex;align-items:center;font-size:14px;color:#666;">
   CSS Test Sandbox — <span style="color:#333;font-weight:bold;">' . htmlspecialchars($headerTitle) . '</span>
 </div>
-<div style="padding:20px;">
+<div id="test-content-wrapper" style="padding:20px;">
 ' . $bodyContent . '
 </div>
 </div>
@@ -1774,6 +1795,220 @@ function compareEngineWithBrowser(string $engineLayoutPath, string $browserRefPa
     if ($overflowChecks > 0) {
         // 溢出检测到的 FAIL 数 = overflowChecks（每项是一个独立的渲染风险）
         $result['fail'] += $overflowChecks;
+    } else {
+        $result['skip']++;
+    }
+
+    // ---- Phase F: 容器溢出与布局对齐检测（基于 TL 锚点参考系）----
+    // 以 TL 锚点(洋红 #FF00FF)为原点建立统一参考系，只检测测试内容区块内的溢出，
+    // 彻底排除侧边栏、内容头等结构元素的坐标干扰。
+    $containerIssues = 0;
+
+    // 1. 找到 TL 锚点——双保险：背景色 + pointer-events:none
+    //    TL: #FF00FF(洋红) → GDI 0x00FF00FF → 16711935, pointerEvents="none"
+    //    BR: #00FFFF(青色) → GDI 0x00FFFF00 → 16776960, pointerEvents="none"
+    $tlX = null; $tlY = null;
+    $TL_BG = 16711935;
+    foreach ($engineAll as $eEl) {
+        $bg = $eEl['style']['bg'] ?? null;
+        $pe = $eEl['style']['pointerEvents'] ?? null;
+        if ($bg === $TL_BG && $pe === 'none') {
+            $tlX = $eEl['x'];
+            $tlY = $eEl['y'];
+            break;
+        }
+    }
+    // fallback: 找不到 TL 锚点时不执行容器检测
+    if ($tlX === null) {
+        // 无法确定参考系，跳过 Phase F
+    }
+
+    // Build parent->children index
+    $parentChildren = [];
+    foreach ($engineAll as $eEl) {
+        $pIdx = $eEl['parentIdx'] ?? null;
+        if ($pIdx !== null) {
+            $parentChildren[$pIdx][] = $eEl;
+        }
+    }
+
+    foreach ($engineAll as $eEl) {
+        $idx = $eEl['idx'];
+        $children = $parentChildren[$idx] ?? [];
+        if (empty($children)) continue;
+
+        // 参考系过滤：只检测包含在 TL 锚点附近的容器
+        //（TL 锚点通常比容器靠内 1px（border），用 10px 容差排除侧边栏等结构元素）
+        if ($tlX !== null && $eEl['x'] + $eEl['w'] <= $tlX - 10) continue;
+        if ($tlY !== null && $eEl['y'] + $eEl['h'] <= $tlY - 10) continue;
+        // 跳过 8x8 锚点自身
+        if ($eEl['w'] === 8 && $eEl['h'] === 8) continue;
+
+        $pRight = $eEl['x'] + $eEl['w'];
+        $pBottom = $eEl['y'] + $eEl['h'];
+        $pStyle = $eEl['style'] ?? [];
+        $pDisplay = $pStyle['display'] ?? '';
+
+        // 跳过有 overflow:hidden/auto 的容器（它们设计为可溢出或主动裁切）
+        $pOverflow = $pStyle['overflow'] ?? $pStyle['overflowX'] ?? $pStyle['overflowY'] ?? '';
+        if (in_array($pOverflow, ['hidden', 'auto', 'scroll'])) continue;
+
+        // 对于 flex 容器，检查子项是否溢出
+        $overflowCount = 0;
+        $maxChildRight = 0;
+        $maxChildBottom = 0;
+        foreach ($children as $ch) {
+            $chRight = $ch['x'] + $ch['w'];
+            $chBottom = $ch['y'] + $ch['h'];
+            if ($chRight > $pRight + 5) { // +5px tolerance
+                $overflowCount++;
+            }
+            if ($chBottom > $pBottom + 5) {
+                $overflowCount++;
+            }
+            $maxChildRight = max($maxChildRight, $chRight);
+            $maxChildBottom = max($maxChildBottom, $chBottom);
+        }
+
+        $maxOverflow = max($maxChildRight - $pRight, $maxChildBottom - $pBottom);
+        // 最小溢出阈值 15px（过滤 padding/border 导致的小幅偏移）
+        if ($maxOverflow > 15) {
+            $containerIssues++;
+            $content = mb_substr($eEl['content'] ?? '', 0, 30);
+            $result['issues'][] = [
+                'type' => 'CONTAINER_OVERFLOW',
+                'msg' => "容器(type={$eEl['type']}) 子元素溢出: parent=({$eEl['x']},{$eEl['y']}) {$eEl['w']}x{$eEl['h']}, 最右子项到达 x={$maxChildRight} (溢出=" . ($maxChildRight - $pRight) . "px)"
+            ];
+        }
+
+        // flex/grid容器对齐检查：如果justify-content:center，检查首子项位置是否正确
+        if (in_array($pDisplay, ['flex', 'inline-flex']) && $overflowCount === 0) {
+            $jc = $pStyle['justifyContent'] ?? '';
+            if ($jc === 'center' && count($children) >= 1) {
+                $firstCh = $children[0];
+                // 计算总宽度: 子项宽度 + gap
+                $totalChildrenW = 0;
+                $gaps = 0;
+                $gapVal = (int)($pStyle['gap'] ?? 0);
+                foreach ($children as $i => $ch) {
+                    $totalChildrenW += $ch['w'];
+                    if ($i > 0) $gaps += $gapVal;
+                }
+                $expectedTotal = $totalChildrenW + $gaps;
+                $remaining = max(0, $eEl['w'] - $expectedTotal);
+                $expectedFirstX = $eEl['x'] + (int)($remaining / 2);
+                $actualFirstX = $firstCh['x'];
+                $alignOff = abs($actualFirstX - $expectedFirstX);
+                if ($alignOff > 10) {
+                    $containerIssues++;
+                    $result['issues'][] = [
+                        'type' => 'ALIGNMENT',
+                        'msg' => "容器 justify-content:center 对齐异常: 期望首子项 x≈{$expectedFirstX}, 实际 x={$actualFirstX} (偏差={$alignOff}px)"
+                    ];
+                }
+            }
+        }
+    }
+
+    if ($containerIssues > 0) {
+        $result['fail'] += $containerIssues;
+    } else {
+        $result['skip']++;
+    }
+
+    // ---- Phase G: flex gap 一致性验证 ----
+    // 验证 flex 容器中实际子项间距与 CSS `gap` 声明值一致。
+    // case-007: CSS gap:16px，引擎实际间距 48px（差 32px）
+    $gapIssues = 0;
+    foreach ($engineAll as $eEl) {
+        // 只处理 TL 区域内的 flex 容器
+        if ($tlX !== null && $eEl['x'] + $eEl['w'] <= $tlX - 10) continue;
+        if ($tlY !== null && $eEl['y'] + $eEl['h'] <= $tlY - 10) continue;
+
+        $pStyle = $eEl['style'] ?? [];
+        $pDisplay = $pStyle['display'] ?? '';
+        if (!in_array($pDisplay, ['flex', 'inline-flex'])) continue;
+
+        $children = $parentChildren[$eEl['idx']] ?? [];
+        if (count($children) < 2) continue;
+
+        $cssGap = (int)($pStyle['gap'] ?? 0);
+        if ($cssGap === 0) continue;  // 无显示 gap 声明时跳过
+
+        // 计算实际子项间距（基于 x 坐标差值减去前一个子项宽度）
+        $actualGaps = [];
+        $sortedChildren = $children;
+        usort($sortedChildren, function($a, $b) { return ($a['x'] ?? 0) <=> ($b['x'] ?? 0); });
+
+        for ($i = 1; $i < count($sortedChildren); $i++) {
+            $prev = $sortedChildren[$i - 1];
+            $curr = $sortedChildren[$i];
+            $prevRight = ($prev['x'] ?? 0) + ($prev['w'] ?? 0);
+            $actualGap = ($curr['x'] ?? 0) - $prevRight;
+            if ($actualGap > 0 && $actualGap < 200) {  // 合理范围 1-200px
+                $actualGaps[] = $actualGap;
+            }
+        }
+
+        if (empty($actualGaps)) continue;
+
+        $avgActualGap = array_sum($actualGaps) / count($actualGaps);
+        $gapDiff = abs($avgActualGap - $cssGap);
+        if ($gapDiff > 5) {
+            $gapIssues++;
+            $result['issues'][] = [
+                'type' => 'GAP_MISMATCH',
+                'msg' => "flex gap 不一致: CSS gap={$cssGap}px, 实际平均间距=" . round($avgActualGap, 1) . "px (差" . round($gapDiff, 1) . "px)"
+            ];
+        }
+    }
+    if ($gapIssues > 0) {
+        $result['fail'] += $gapIssues;
+    } else {
+        $result['skip']++;
+    }
+
+    // ---- Phase H: 容器 auto-width 合理性检测 ----
+    // 检查无显式 width 的块级容器，其 auto-width 是否合理：
+    // 应该与父容器 content width 或子项展开宽度一致。
+    $autoWidthIssues = 0;
+    foreach ($engineAll as $eEl) {
+        // TL 区域过滤
+        if ($tlX !== null && $eEl['x'] + $eEl['w'] <= $tlX - 10) continue;
+        if ($tlY !== null && $eEl['y'] + $eEl['h'] <= $tlY - 10) continue;
+
+        $pStyle = $eEl['style'] ?? [];
+        // 跳过有显式 width 的元素
+        if (isset($pStyle['width']) || isset($pStyle['minWidth'])) continue;
+        // 跳过 position:absolute/fixed（它们脱离文档流）
+        $pos = $pStyle['position'] ?? '';
+        if (in_array($pos, ['absolute', 'fixed'])) continue;
+
+        $children = $parentChildren[$eEl['idx']] ?? [];
+        if (empty($children)) continue;
+
+        // 计算子项展开后的最右边界
+        $maxChildRight = 0;
+        foreach ($children as $ch) {
+            $chRight = ($ch['x'] ?? 0) + ($ch['w'] ?? 0);
+            $maxChildRight = max($maxChildRight, $chRight);
+        }
+
+        $containerRight = $eEl['x'] + $eEl['w'];
+        $childrenExcess = $maxChildRight - $containerRight;
+
+        // 子项超出容器右边界 > 20px 说明容器 auto-width 过窄
+        if ($childrenExcess > 20) {
+            $autoWidthIssues++;
+            $content = mb_substr($eEl['content'] ?? '', 0, 30);
+            $result['issues'][] = [
+                'type' => 'AUTO_WIDTH',
+                'msg' => "容器(type={$eEl['type']}) auto-width 不合理: 容器 w={$eEl['w']} 右界={$containerRight}, 子项达到 x={$maxChildRight} (超出{$childrenExcess}px)，容器宽度可能过窄"
+            ];
+        }
+    }
+    if ($autoWidthIssues > 0) {
+        $result['fail'] += $autoWidthIssues;
     } else {
         $result['skip']++;
     }
