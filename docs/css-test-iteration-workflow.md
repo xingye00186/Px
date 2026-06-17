@@ -1,6 +1,8 @@
 # CSS 标准对齐 — 测试迭代工作流（PxTest 架构）
 
 > **目标**：使 Px 框架渲染结果与 Edge Chromium 像素级一致。
+> **核心**：数据驱动 → 治本修复 → 归档验证 → 分类提交，形成持续闭环。
+> **铁律**：所有框架限制必须修复至符合 CSS 标准，**不得 SKIP**。
 > **入口**：`php apps/css-test/test_pipeline.php`
 > **架构**：Pipeline + Strategy 六步编排（Build → D → E → G → H → I）
 
@@ -10,7 +12,7 @@
 
 | 原则 | 说明 |
 |------|------|
-| **先验证后修复** | 跑完整测试链，让数据告诉你差异在哪 |
+| **先验证后修复** | 跑完整测试链，让数据告诉你差异在哪，不靠猜测 |
 | **治本不治标** | 框架层 bug 在框架层修复，不在 App.vue 打补丁 |
 | **CSS 标准铁律** | 框架 fallback 使用 CSS 标准默认值（如 `box-sizing:content-box`） |
 | **不支持即实现** | 测试发现的 CSS 特性缺失必须按规范实现，不得 SKIP |
@@ -25,7 +27,7 @@
 
 | 工具 | 用途 |
 |------|------|
-| `php apps/css-test/test_pipeline.php` | **编排器** — 构建 → 布局 → 多帧 → 浏览器 → 元素对比 → 截图 → 报告 |
+| `php apps/css-test/test_pipeline.php` | **编排器** — 构建 → 布局导出 → 多帧验证 → 浏览器对比 → 元素对比 → 截图对比 → 报告 |
 | `php apps/css-test/test_pipeline.php --case=case-xxx` | 单 case |
 | `php apps/css-test/test_pipeline.php --skip-build` | 跳过构建（哈希缓存自动跳过） |
 | `php apps/css-test/test_pipeline.php --force-build` | 强制重编 |
@@ -158,3 +160,103 @@ php apps/css-test/check_regression.php
 # 构建
 .\build.bat css-test
 ```
+
+---
+
+## 六、根因定位决策树
+
+差异出现时按以下路径排查：
+
+```
+报告显示 FAIL
+├─ 所有元素系统性偏移（同方向同量级）?
+│   └─ 视口不一致 → 检查 buildCssTestWrapper() 的 --window-size
+│
+├─ 元素位置/尺寸偏差但样式值正确?
+│   ├─ 容器 auto-height 偏差 → BlockLayoutStrategy
+│   ├─ Grid/Flex 子元素宽度不对 → GridLayoutStrategy / FlexLayoutStrategy
+│   ├─ 文本高度偏差 → PercentResolver line-height
+│   └─ 绝对定位偏差 → AbsolutePositioning
+│
+├─ 样式值不匹配?
+│   ├─ 字体/颜色差异 → CssMappings / Skia/GDI 渲染
+│   └─ 边框/间距差异 → 盒模型检查
+│
+├─ 布局正确但渲染效果不对?
+│   └─ 渲染层 vs 布局层分离 → VNodeRenderer / GdiRenderContext / SkiaRenderContext
+│
+├─ 引擎无此属性（浏览器有）?
+│   └─ RenderNodeSerializer 白名单缺失 / CssMappings 未映射
+│
+├─ STABILITY 标记?
+│   └─ auto-height + absolute 子节点正反馈 → BlockLayoutStrategy
+│
+└─ wrapper 引入基线差异（normalize.css line-height / 根容器 bg）?
+    └─ 修复 buildCssTestWrapper() + 重新生成浏览器 ref
+```
+
+### 决策优先级
+
+```
+差异出现
+├─ wrapper 引入基线差异 → 修复 buildCssTestWrapper() + 重新生成浏览器 ref
+├─ 框架不符合 CSS 标准（fallback 用了非标准默认值）→ 改框架 + 更新问题清单
+├─ 框架尚未实现该 CSS 特性 → 必须按规范实现（不得 SKIP）
+├─ 框架符合 CSS 标准，应用层用法错 → 改 .vue + 同步改 .html
+└─ 字体引擎差异（Skia/DirectWrite）→ 记录到问题清单 B-012 类
+```
+
+---
+
+## 七、已知 AOT 编译陷阱
+
+| 模式 | 问题 | 修复 |
+|------|------|------|
+| `$var ?? expr` | AOT 不支持 `??` | `$var !== null ? $var : expr` |
+| `$var = null; if (...) $var = val;` 后 `$var ?? fallback` | `php::toBool(null)` 返回 false 而非 null | 显式 if/else 分支赋值 |
+| `$arr['key'] ?? default` | 部分 AOT 版本不支持 | `isset($arr['key']) ? $arr['key'] : default` |
+
+---
+
+## 八、Phase 0：创建新测试用例
+
+```bash
+# 1. 创建 case 目录
+apps/css-test/test_case/case-NNN-name/
+├── CaseNnnName.vue         # 引擎端模板
+├── CaseNnnName.html        # 浏览器参考 HTML
+├── ref/                    # 参考数据（test_pipeline.php 自动生成）
+└── bin/                    # 构建缓存（自动）
+```
+
+**Vue ↔ HTML 同步规则**：
+- `.vue` `<template>` 与 `.html` `<body>` 内容一致（相同结构 + inline style）
+- 基础样式：`* { margin:0; padding:0; box-sizing:border-box; }`
+- 容器宽度建议 720px，居中（`margin:0 auto`），卡片式设计
+- `.vue` 需要 `<script lang="php">class TestContent extends ReactiveComponent {}</script>`
+
+### 锚点嵌入要求
+
+每个测试 case 的最外层卡片容器上嵌入颜色锚点：
+
+```html
+<!-- __PX_ANCHOR_TL__ 左上角（卡片 padding-box 左上角） -->
+<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+<!-- __PX_ANCHOR_BR__ 右下角（卡片 padding-box 右下角） -->
+<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div>
+```
+
+- 锚点及卡片必须在 `main.php` 定义的 `WINDOW_WIDTH×WINDOW_HEIGHT` 视口内
+- `position:relative` 加到卡片容器的 inline style
+
+---
+
+## 九、提交前必查清单
+
+- [ ] `docs/01-问题清单.md` 已更新（新增/修改条目、关联 commit）
+- [ ] 已归档 case 的 `baseline/` 已加入提交
+- [ ] `baseline_registry.json` 已随归档更新
+- [ ] 无未提交的框架源码改动
+- [ ] 全量测试通过：`php apps/css-test/test_pipeline.php`
+- [ ] 基线回归通过：`php apps/css-test/check_regression.php`
+- [ ] 分类提交：`fix(framework):` / `fix(css-test):` / `docs:` / `chore:`
