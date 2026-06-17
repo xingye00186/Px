@@ -56,6 +56,10 @@ $reporter = match ($format) {
     default => new ConsoleReporter(),
 };
 
+// ─── Load issue tracker for DOC_WARN ───
+$issueTracker = $projectRoot . '/apps/css-test/docs/01-问题清单.md';
+$issueContent = file_exists($issueTracker) ? file_get_contents($issueTracker) : '';
+
 // ─── Run Pipeline for each case ───
 $suite = new TestSuite('css-test-pipeline');
 $reporter->reportStart($suite);
@@ -79,6 +83,19 @@ foreach ($filtered as $caseName) {
     $reporter->reportCaseResult($caseName, $result);
     $passed ? $totalPass++ : $totalFail++;
     echo "\n";
+}
+
+// DOC_WARN: check FAIL cases against issue tracker
+if ($totalFail > 0 && $issueContent !== '') {
+    echo "\n[DOC_WARN] Checking FAIL cases against issue tracker...\n";
+    foreach ($filtered as $caseName) {
+        // Check if case has FAIL but not in issue tracker
+        if (stripos($issueContent, $caseName) === false
+            && stripos($issueContent, str_replace('-', ' ', $caseName)) === false
+        ) {
+            echo "  [DOC_WARN] $caseName has FAIL but is not mentioned in issue tracker!\n";
+        }
+    }
 }
 
 $reporter->reportEnd($suite);

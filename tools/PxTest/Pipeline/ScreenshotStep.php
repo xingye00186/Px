@@ -8,9 +8,9 @@ use PxTest\Infrastructure\BrowserLauncher;
  * Screenshot + anchor-aligned pixel comparison step.
  *
  * Alignment: three-tier fallback
- *   1. detectColorAnchors()   â€” #FF00FF(TL) + #00FFFF(BR) color blocks
+ *   1. detectColorAnchors()   â€?#FF00FF(TL) + #00FFFF(BR) color blocks
  *   2. The 8x8 anchors sit at card padding-box corners in both screenshots
- *   3. Crop to anchor-bounded rectangle â†’ zero-chrome pure content diff
+ *   3. Crop to anchor-bounded rectangle â†?zero-chrome pure content diff
  */
 class ScreenshotStep implements PipelineStepInterface
 {
@@ -22,8 +22,8 @@ class ScreenshotStep implements PipelineStepInterface
     private BrowserLauncher $browser;
 
     /** Anchor color constants */
-    private const TL_COLOR = 0xFF00FF;  // #FF00FF â€” magenta, top-left anchor
-    private const BR_COLOR = 0x00FFFF;  // #00FFFF â€” cyan, bottom-right anchor
+    private const TL_COLOR = 0xFF00FF;  // #FF00FF â€?magenta, top-left anchor
+    private const BR_COLOR = 0x00FFFF;  // #00FFFF â€?cyan, bottom-right anchor
     private const ANCHOR_TOLERANCE = 5;  // per-channel tolerance for anchor color match (tight)
     private const ANCHOR_SIZE     = 8;  // anchor block size (8x8)
     private const DIFF_TOLERANCE  = 25; // per-pixel RGB diff threshold
@@ -51,9 +51,14 @@ class ScreenshotStep implements PipelineStepInterface
     {
         $start = microtime(true);
         @mkdir($this->refDir, 0777, true);
+        $ts = date('Ymd_His');
 
-        // I-1: Exe headless screenshot
-        $engineFile = $this->refDir . '/engine_screenshot.png';
+        // Read window dimensions from main.php for anchor validation
+        $viewW = $this->readWindowDimension('WINDOW_WIDTH', 1600);
+        $viewH = $this->readWindowDimension('WINDOW_HEIGHT', 800);
+
+        // I-1: Exe headless screenshot (timestamped filename)
+        $engineFile = "{$this->refDir}/engine_screenshot_{$ts}.png";
         if (file_exists($this->exePath)) {
             $cmd = sprintf(
                 '"%s" --case=%s --headless --screenshot=%s 2>&1',
@@ -68,19 +73,32 @@ class ScreenshotStep implements PipelineStepInterface
             return StepResult::err('screenshot_compare', 'Exe not found: ' . $this->exePath);
         }
 
-        // I-2: Browser screenshot
-        $browserFile = $this->refDir . '/browser_ref.png';
+        // I-2: Browser screenshot (timestamped filename)
+        $browserFile = "{$this->refDir}/browser_ref_{$ts}.png";
         if (!$this->browser->isAvailable()) {
             return StepResult::err('screenshot_compare', 'Edge not available');
         }
-        if (!$this->browser->screenshot($this->htmlPath, $browserFile, 1600, 800)) {
+        if (!$this->browser->screenshot($this->htmlPath, $browserFile, $viewW, $viewH)) {
             return StepResult::err('screenshot_compare', 'Browser screenshot failed');
         }
-        echo "  [browser screenshot] " . filesize($browserFile) . " bytes\n";
+        echo "  [browser screenshot] " . filesize($browserFile) . " bytes (view={$viewW}x{$viewH})\n";
+
+        // I-2.5: Anchor visibility validation
+        $anchorStatus = $this->validateAnchorsInViewport($engineFile, $viewW, $viewH);
+        if (!$anchorStatus['valid']) {
+            echo "  [anchor] WARNING: anchor visibility issue â€?{$anchorStatus['reason']}\n";
+        }
 
         // I-3: Anchor-aligned pixel diff
         $diffPct = $this->comparePixels($engineFile, $browserFile);
         echo "  [pixel diff] {$diffPct}%\n";
+
+        // I-4: Generate diff image
+        if ($diffPct > 0) {
+            $diffFile = "{$this->refDir}/diff_{$ts}.png";
+            $this->generateDiffImage($engineFile, $browserFile, $diffFile);
+            echo "  [diff image] $diffFile\n";
+        }
 
         $elapsed = (microtime(true) - $start) * 1000;
         $ctx->set('pixel_diff_pct', $diffPct);
@@ -103,7 +121,7 @@ class ScreenshotStep implements PipelineStepInterface
      *
      * Strategy:
      *   1. detectColorAnchors() on BOTH images independently
-     *   2. Compute per-image crop rect: TL anchor â†’ BR anchor
+     *   2. Compute per-image crop rect: TL anchor â†?BR anchor
      *   3. Crop both to their content rectangles
      *   4. Pixel diff on cropped regions
      *   5. Fallback: if anchors not found, auto-detect content bounds
@@ -261,7 +279,7 @@ class ScreenshotStep implements PipelineStepInterface
     }
 
     /**
-     * Auto content bounds detection â€” find the non-background content area.
+     * Auto content bounds detection â€?find the non-background content area.
      * Uses top-left and bottom-right edge scanning to crop chrome margins.
      */
     private function autoDetectContentBounds(\GdImage $imgA, int $wA, int $hA, \GdImage $imgB, int $wB, int $hB): ?array
@@ -282,6 +300,77 @@ class ScreenshotStep implements PipelineStepInterface
             'w' => $right - 2 * $marginX,
             'h' => $bottom - 2 * $marginY,
         ];
+    }
+
+    /**
+     * Read WINDOW_WIDTH/HEIGHT from main.php.
+     * Falls back to default if file not found.
+     */
+    private function readWindowDimension(string $constName, int $default): int
+    {
+        $mainPhp = dirname($this->refDir, 2) . '/main.php';
+        if (!file_exists($mainPhp)) return $default;
+        $content = @file_get_contents($mainPhp);
+        if ($content === false) return $default;
+        if (preg_match('/const\s+' . $constName . '\s*=\s*(\d+)/', $content, $m)) {
+            return (int)$m[1];
+        }
+        return $default;
+    }
+
+    /**
+     * Validate TL/BR anchors are within the visible viewport.
+     * Anchors outside viewport â†?screenshot alignment will fail.
+     */
+    private function validateAnchorsInViewport(string $pngPath, int $viewW, int $viewH): array
+    {
+        if (!extension_loaded('gd')) return ['valid' => true, 'reason' => 'GD not available, skip'];
+        $img = @imagecreatefrompng($pngPath);
+        if (!$img) return ['valid' => true, 'reason' => 'Cannot load screenshot'];
+        $anchors = $this->detectColorAnchors($img, imagesx($img), imagesy($img));
+        imagedestroy($img);
+
+        if (!$anchors) return ['valid' => false, 'reason' => 'No anchor blocks found in screenshot'];
+
+        // Check bounds
+        if ($anchors['tl_x'] < 0 || $anchors['tl_y'] < 0) {
+            return ['valid' => false, 'reason' => "TL anchor ({$anchors['tl_x']},{$anchors['tl_y']}) out of viewport"];
+        }
+        if ($anchors['br_x'] > $viewW || $anchors['br_y'] > $viewH) {
+            return ['valid' => false, 'reason' => "BR anchor ({$anchors['br_x']},{$anchors['br_y']}) exceeds viewport ({$viewW}x{$viewH})"];
+        }
+
+        return ['valid' => true, 'reason' => 'ok'];
+    }
+
+    /**
+     * Generate diff image highlighting pixel differences.
+     * Red overlay on differing regions.
+     */
+    private function generateDiffImage(string $fileA, string $fileB, string $outPath): void
+    {
+        if (!extension_loaded('gd')) return;
+        $imgA = @imagecreatefrompng($fileA);
+        $imgB = @imagecreatefrompng($fileB);
+        if (!$imgA || !$imgB) return;
+
+        $w = min(imagesx($imgA), imagesx($imgB));
+        $h = min(imagesy($imgA), imagesy($imgB));
+        $diff = imagecreatetruecolor($w, $h);
+        $red = imagecolorallocatealpha($diff, 255, 0, 0, 64);
+
+        // Copy imgA as base, overlay red where pixels differ
+        imagecopy($diff, $imgA, 0, 0, 0, 0, $w, $h);
+        for ($y = 0; $y < $h; $y += 4) {
+            for ($x = 0; $x < $w; $x += 4) {
+                if ($this->colorDiff(imagecolorat($imgA, $x, $y), imagecolorat($imgB, $x, $y)) > 25) {
+                    imagefilledrectangle($diff, $x, $y, $x + 3, $y + 3, $red);
+                }
+            }
+        }
+
+        imagepng($diff, $outPath);
+        imagedestroy($imgA); imagedestroy($imgB); imagedestroy($diff);
     }
 
     private function colorDiff(int $c1, int $c2): int
