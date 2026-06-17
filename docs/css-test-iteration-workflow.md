@@ -122,12 +122,30 @@ php apps/css-test/test_pipeline.php --skip-screenshot        # 全量
 php apps/css-test/test_pipeline.php --case=case-007 --force-build  # 单 case
 ```
 
+### 迭代退出条件（AI 必须检查，满足任一即停止）
+
+| 条件 | 判定 | 动作 |
+|------|------|------|
+| **全部 PASS** | 所有 case D/E/G/H/I 步骤均通过 | 运行 `check_regression.php` → 归档 → 提交 |
+| **FAIL 收敛** | 连续 2 次迭代 FAIL 数不变或增加 | 停止。报告"修复无效或引入新回归" |
+| **假阳性确认** | 所有 FAIL 均为 wrapper CSS 基线差异 | 修复 `buildCssTestWrapper()` → 重新生成 ref |
+| **已知限制** | 所有剩余差异均为已知引擎限制 | 记录到问题清单 B-xxx 类，标注"已知限制" |
+| **迭代上限** | 同一 case 迭代超过 5 轮 | 停止。报告阻塞点，请求人工判断 |
+| **新回归** | `check_regression.php` 发现新 FAIL | 回滚本次修复，先修复回归 |
+
 ### Step 5：验证
 ```bash
 php apps/css-test/test_pipeline.php --case=case-xxx          # 单 case 验证
 php apps/css-test/test_pipeline.php --skip-screenshot        # 全量回归
 php apps/css-test/check_regression.php                       # 基线回归
 ```
+
+**修复后自检（每次修复后执行）**：
+- [ ] 修复在框架层还是应用层？必须框架层修复
+- [ ] 修复是否符合 CSS 规范？不可针对特定测试特化
+- [ ] 已有归档 case 是否新增 FAIL？
+- [ ] 截图差异是否从 <5% 上升到 >10%？
+- [ ] 问题清单是否已更新？
 
 ### Step 6：归档
 ```bash
@@ -253,19 +271,6 @@ apps/css-test/test_case/case-NNN-name/
 
 ## 九、提交前必查清单
 
-### 迭代退出条件（AI 必须检查）
-
-| 条件 | 判定 | 动作 |
-|------|------|------|
-| **全部 PASS** | 所有 case D/E/G/H/I 步骤均通过 | 运行 `check_regression.php` → 归档 → 提交 |
-| **FAIL 收敛** | 连续 2 次迭代 FAIL 数不变或增加 | 停止。报告"修复无效或引入新回归" |
-| **假阳性确认** | 所有 FAIL 均为 wrapper CSS 基线差异 | 修复 `buildCssTestWrapper()` → 重新生成 ref |
-| **已知限制** | 所有剩余差异均为已知引擎限制 | 记录到问题清单 B-xxx 类，标注"已知限制" |
-| **迭代上限** | 同一 case 迭代超过 5 轮 | 停止。报告阻塞点，请求人工判断 |
-| **新回归** | `check_regression.php` 发现新 FAIL | 回滚本次修复，先修复回归 |
-
-### 提交前检查
-
 - [ ] `docs/01-问题清单.md` 已更新（新增/修改条目、关联 commit）
 - [ ] 已归档 case 的 `baseline/` 已加入提交
 - [ ] `baseline_registry.json` 已随归档更新
@@ -273,17 +278,3 @@ apps/css-test/test_case/case-NNN-name/
 - [ ] 全量测试通过：`php apps/css-test/test_pipeline.php`
 - [ ] 基线回归通过：`php apps/css-test/check_regression.php`
 - [ ] 分类提交：`fix(framework):` / `fix(css-test):` / `docs:` / `chore:`
-
-### 修复后自检（每次修复后执行）
-
-```bash
-php apps/css-test/test_pipeline.php --case=case-xxx      # 验证受影响 case
-php apps/css-test/test_pipeline.php --skip-screenshot     # 全量回归
-php apps/css-test/check_regression.php                    # 基线回归
-```
-
-- [ ] 修复在框架层还是应用层？必须框架层修复
-- [ ] 修复是否符合 CSS 规范？不可针对特定测试特化
-- [ ] 已有归档 case 是否新增 FAIL？
-- [ ] 截图差异是否从 <5% 上升到 >10%？
-- [ ] 问题清单是否已更新？
