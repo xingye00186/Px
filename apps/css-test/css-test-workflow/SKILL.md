@@ -18,17 +18,17 @@ description: Execute the CSS standard alignment iteration workflow for the Px fr
 ## Step 1：跑测试
 
 ```bash
-# 全量（推荐 --skip-screenshot 加速）
-php apps/css-test/run.php --skip-screenshot
+# 全量（截图默认跳过，--screenshot 启用）
+php apps/css-test/test_pipeline.php
 
 # 单 case
-php apps/css-test/run.php --case=case-xxx --verbose
+php apps/css-test/test_pipeline.php --case=case-xxx
 
 # 强制重编（框架源码改动后）
-php apps/css-test/run.php --case=case-xxx --force-build
+php apps/css-test/test_pipeline.php --case=case-xxx --force-build
 
 # 跳过编译（仅重新验证，不重编）
-php apps/css-test/run.php --skip-build
+php apps/css-test/test_pipeline.php --skip-build
 ```
 
 构建缓存自动跳过——源码无变化时不编译。
@@ -118,8 +118,8 @@ FAIL
 
 ```bash
 # 验证
-php apps/css-test/run.php --case=case-xxx --force-build
-php apps/css-test/run.php --skip-screenshot   # 全量回归
+php apps/css-test/test_pipeline.php --case=case-xxx --force-build
+php apps/css-test/test_pipeline.php   # 全量回归
 php apps/css-test/check_regression.php         # 基线回归
 ```
 

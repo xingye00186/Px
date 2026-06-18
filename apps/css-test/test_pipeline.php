@@ -7,7 +7,7 @@
  *   php apps/css-test/test_pipeline.php                              # 全量测试
  *   php apps/css-test/test_pipeline.php --case=case-007-border-styles # 单 case
  *   php apps/css-test/test_pipeline.php --skip-browser-ref           # 跳过浏览器
- *   php apps/css-test/test_pipeline.php --with-screenshot            # 启用截图对比（默认跳过）
+ *   php apps/css-test/test_pipeline.php --screenshot            # 启用截图对比（默认跳过）
  *   php apps/css-test/test_pipeline.php --format=md                  # Markdown 报告
  */
 

@@ -13,7 +13,7 @@ php apps/css-test/run.php --update-baseline                # 刷新浏览器参�
 
 # ==== 默认 headless（窗口不弹出）====
 bin/css_test.exe --case=case-xxx --dump-layout                     # 导出布局 JSON（不含截图）
-bin/css_test.exe --case=case-xxx --dump-layout-after-frames=5      # 导出多帧 JSON
+bin/css_test.exe --case=case-xxx --frame=5 --dump-layout      # 导出多帧 JSON
 bin/css_test.exe --case=case-xxx --screenshot=out.png              # 显式截图（默认不截图）
 bin/css_test.exe --case=case-xxx --show-window                     # 显式显示窗口（调试用）
 
@@ -53,9 +53,9 @@ php apps/css-test/check_regression.php --tolerance=2       # 自定义容差
 | 文件 | 来源 |
 |------|------|
 | `engine_layout.json` | `--dump-layout` 产出 |
-| `engine_layout_after_5frames.json` | `--dump-layout-after-frames=5` 产出 |
+| `engine_layout_after_5frames.json` | `--frame=5 --dump-layout` 产出 |
 | `engine_screenshot_yyyyMMdd_HHmmss.png` | `--screenshot=path` 产出 |
-| `engine_screenshot_yyyyMMdd_HHmmss_after_5frames.png` | `--screenshot=path --screenshot-frames=N` 产出 |
+| `engine_screenshot_yyyyMMdd_HHmmss_after_5frames.png` | `--frame=N --screenshot=path` 产出 |
 
 ## 迭代退出条件
 

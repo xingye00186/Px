@@ -50,7 +50,7 @@
 | 构建脚本 | `.\build.bat css-test` | PHP → AOT exe（BuildStep 内部调用） |
 | 布局导出 | `bin/css_test.exe --dump-layout` | → engine_layout.json（默认 headless） |
 | 截图（显式触发） | `bin/css_test.exe --screenshot=out.png` | 离屏渲染 PNG（默认不截图） |
-| 多帧截图 | `--screenshot=out.png --screenshot-frames=5` | 渲染 N 帧后截图 |
+| 多帧截图 | `--frame=5 --screenshot=out.png` | 渲染 N 帧后截图 |
 | 浏览器 ref | `PxTest\Pipeline\Strategy\BrowserRefStep` | Edge headless + wrapper!important 注入 |
 | 对比引擎 | `PxTest\Comparison\ComparatorRegistry` | 几何+样式+稳定性+像素 四维对比 |
 | 锚点对齐 | `PxTest\Pipeline\ScreenshotStep::detectColorAnchors()` | #FF00FF/#00FFFF 8×8 块三策略 |
@@ -370,9 +370,9 @@ php apps/css-test/check_regression.php
 
 # 手动 exe 操作（调试用）
 apps\css-test\bin\css_test.exe --case=case-001 --dump-layout
-apps\css-test\bin\css_test.exe --case=case-029 --dump-layout-after-frames=5
+apps\css-test\bin\css_test.exe --case=case-029 --frame=5 --dump-layout
 apps\css-test\bin\css_test.exe --screenshot=out.png
-apps\css-test\bin\css_test.exe --screenshot=out.png --screenshot-frames=5
+apps\css-test\bin\css_test.exe --frame=5 --screenshot=out.png
 
 # SFC 编译
 php sfc-compiler.php apps/css-test/App.vue
@@ -420,7 +420,7 @@ if ($label === '目标元素') {
 **背景**：auto-height + absolute 子节点的正反馈循环 bug，证明了 Frame 依赖 bug 是 `--dump-layout` 的死角。
 
 **PxTest 中的多帧验证**（内置在 `test_pipeline.php` 的 Step E 中）：
-- `--dump-layout-after-frames=5` 默认执行
+- `--frame=5 --dump-layout` 默认执行
 - `MultiFrameStep` 自动比较 Frame 1 与 Frame N 的布局 JSON，逐节点对比 x/y/w/h
 - 任何节点跨帧变化（Δx/Δy/Δw/Δh ≠ 0）标记为 **STABILITY** 问题计入失败
 
