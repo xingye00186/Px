@@ -1,5 +1,5 @@
 <template>
-<div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative"><div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+<div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative"><div data-px-anchor="tl" style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
     
   <div style="font-size:18px;font-weight:600;margin-bottom:16px;color:#333;">
     Basic Block Layout Test
@@ -17,7 +17,7 @@
     Block Item 4 — fixed height 60px (no margin-bottom)
   </div>
 
-    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
+    <div data-px-anchor="br" style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
 </template>
 <script lang="php">
 class BasicBlock extends ReactiveComponent

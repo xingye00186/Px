@@ -1,5 +1,5 @@
 <template>
-<div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative"><div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+<div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative"><div data-px-anchor="tl" style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
     
   <div style="font-size:18px;font-weight:600;margin-bottom:16px;color:#333;">
     Flex Layout Test
@@ -26,7 +26,7 @@
     <div style="width:120px;height:32px;background:#e0f2f1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#00695c;">Tag 4</div>
   </div>
 
-    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
+    <div data-px-anchor="br" style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
 </template>
 <script lang="php">
 class FlexLayout extends ReactiveComponent
