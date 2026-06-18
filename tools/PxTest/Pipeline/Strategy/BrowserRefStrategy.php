@@ -34,9 +34,6 @@ class EdgeDomStrategy implements BrowserRefStrategy
         $domOutput = $this->browser->dumpDom($htmlPath, 1600, 800);
         if ($domOutput === null) return false;
 
-        // Save raw --dump-dom output for debugging
-        file_put_contents("$refDir/browser_ref_dom.html", $domOutput);
-
         // Extract JSON from <textarea id="layout-output"> injected by dump_layout.js
         // The textarea is hidden (display:none), but --dump-dom includes its textContent
         if (preg_match('/<textarea[^>]*id="layout-output"[^>]*>([\s\S]*?)<\/textarea>/i', $domOutput, $m)) {
