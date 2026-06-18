@@ -32,7 +32,7 @@
 | `php apps/css-test/test_pipeline.php --skip-build` | 跳过构建（哈希缓存自动跳过） |
 | `php apps/css-test/test_pipeline.php --force-build` | 强制重编 |
 | `php apps/css-test/test_pipeline.php --skip-browser-ref` | 跳过浏览器参考 |
-| `php apps/css-test/test_pipeline.php --with-screenshot` | 启用截图对比（默认跳过） |
+| `php apps/css-test/test_pipeline.php --screenshot` | 启用截图对比（默认跳过） |
 | `php apps/css-test/test_pipeline.php --format=md` | Markdown 报告 |
 
 ### 构建与验证

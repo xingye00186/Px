@@ -35,7 +35,7 @@ class PipelineBuilder
     private bool $skipBuild = false;
     private bool $forceBuild = false;
     private bool $skipBrowserRef = false;
-    private bool $skipScreenshot = true;  // 默认跳过截图，需 --with-screenshot 启用
+    private bool $skipScreenshot = true;  // 默认跳过截图，需 --screenshot 启用
     private bool $updateBaseline = false;
     private bool $verbose = false;
     private string $format = 'console';
@@ -57,7 +57,7 @@ class PipelineBuilder
             elseif ($arg === '--skip-build') { $this->skipBuild = true; }
             elseif ($arg === '--force-build') { $this->forceBuild = true; }
             elseif ($arg === '--skip-browser-ref') { $this->skipBrowserRef = true; }
-            elseif ($arg === '--with-screenshot') { $this->skipScreenshot = false; }
+            elseif ($arg === '--screenshot') { $this->skipScreenshot = false; }
             elseif ($arg === '--update-baseline') { $this->updateBaseline = true; }
             elseif ($arg === '--verbose') { $this->verbose = true; }
             elseif (str_starts_with($arg, '--format=')) { $this->format = substr($arg, 9); }
