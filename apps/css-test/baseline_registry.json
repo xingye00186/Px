@@ -2,8 +2,8 @@
     "_format_version": 1,
     "cases": {
         "case-001-wrapper-x": {
-            "archived_at": "2026-06-16 16:02:53",
-            "md5": "a7ebf7a9ee86ba2e31b51f1cba508392",
+            "archived_at": "2026-06-18 10:56:36",
+            "md5": "a970f7ba9748b51e8716665a68c4fd90",
             "node_count": 85,
             "multi_frames": 5,
             "multi_frame_nodes": 85,
@@ -37,14 +37,15 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "whiteSpace"
             ],
-            "style_field_count": 31
+            "style_field_count": 32
         },
         "case-002-auto-height": {
-            "archived_at": "2026-06-16 16:02:55",
-            "md5": "8e61c14f115da95080316a4b7277c38c",
+            "archived_at": "2026-06-18 10:56:38",
+            "md5": "3d13326abdf774af82434658c9380071",
             "node_count": 86,
             "multi_frames": 5,
             "multi_frame_nodes": 86,
@@ -77,14 +78,15 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "whiteSpace"
             ],
-            "style_field_count": 30
+            "style_field_count": 31
         },
         "case-003-basic-block": {
-            "archived_at": "2026-06-16 16:02:59",
-            "md5": "68f48cdbfe13bfa103d157e0abab1f5e",
+            "archived_at": "2026-06-18 10:56:40",
+            "md5": "9bfdf218df62188a8a14ae8d007b1eab",
             "node_count": 84,
             "multi_frames": 5,
             "multi_frame_nodes": 84,
@@ -117,14 +119,15 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "whiteSpace"
             ],
-            "style_field_count": 30
+            "style_field_count": 31
         },
         "case-004-flex-layout": {
-            "archived_at": "2026-06-16 16:03:01",
-            "md5": "342451a292c4da2054964b2d8b732326",
+            "archived_at": "2026-06-18 10:56:42",
+            "md5": "c4b1ccfc2cb4c4153600341d4c2a7fd2",
             "node_count": 95,
             "multi_frames": 5,
             "multi_frame_nodes": 95,
@@ -160,14 +163,15 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-005-grid-layout": {
-            "archived_at": "2026-06-16 16:03:03",
-            "md5": "2957b87e7559bac4e0a30a41178ae0b6",
+            "archived_at": "2026-06-18 10:56:44",
+            "md5": "0d3fd2324ec08b419e580cdc96910233",
             "node_count": 91,
             "multi_frames": 5,
             "multi_frame_nodes": 91,
@@ -203,14 +207,15 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-006-typography": {
-            "archived_at": "2026-06-16 16:03:06",
-            "md5": "a761b54dadfb84bd4db71e5fabc4c821",
+            "archived_at": "2026-06-18 10:56:47",
+            "md5": "4ae5c15420cf9b25f627032c98ec6c47",
             "node_count": 87,
             "multi_frames": 5,
             "multi_frame_nodes": 87,
@@ -244,14 +249,15 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "whiteSpace"
             ],
-            "style_field_count": 31
+            "style_field_count": 32
         },
         "case-007-border-styles": {
-            "archived_at": "2026-06-16 16:03:09",
-            "md5": "d30797990b2e0acc1aa4a100118a23f7",
+            "archived_at": "2026-06-18 10:56:50",
+            "md5": "d65068203afc151bd76766e910ea7943",
             "node_count": 96,
             "multi_frames": 5,
             "multi_frame_nodes": 96,
@@ -290,15 +296,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 37
+            "style_field_count": 38
         },
         "case-008-box-shadow": {
-            "archived_at": "2026-06-16 16:03:11",
-            "md5": "1f98cb42e56419f8492e85d48956abe6",
+            "archived_at": "2026-06-18 10:56:52",
+            "md5": "3125e358c09d9a30cb6dd5c6f9c9706b",
             "node_count": 86,
             "multi_frames": 5,
             "multi_frame_nodes": 86,
@@ -336,15 +343,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 36
+            "style_field_count": 37
         },
         "case-009-outline": {
-            "archived_at": "2026-06-16 16:03:13",
-            "md5": "29247979fa2f674a0a579bfe9b3a1bef",
+            "archived_at": "2026-06-18 10:56:55",
+            "md5": "b7f31da8b36d3c79731ee319cbdde200",
             "node_count": 85,
             "multi_frames": 5,
             "multi_frame_nodes": 85,
@@ -383,15 +391,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 37
+            "style_field_count": 38
         },
         "case-010-display-none": {
-            "archived_at": "2026-06-16 16:03:16",
-            "md5": "c5dabd4711e0fb6c405e24222199f645",
+            "archived_at": "2026-06-18 10:56:57",
+            "md5": "0460e14beb8d1edede2158409a99b8cb",
             "node_count": 88,
             "multi_frames": 5,
             "multi_frame_nodes": 88,
@@ -426,15 +435,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-011-position-absolute": {
-            "archived_at": "2026-06-16 16:03:19",
-            "md5": "9d55d603f6fd653320144c46cf3d8597",
+            "archived_at": "2026-06-18 10:57:00",
+            "md5": "355f42bfb0029fd2884eecb9b6113748",
             "node_count": 88,
             "multi_frames": 5,
             "multi_frame_nodes": 88,
@@ -470,15 +480,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 34
+            "style_field_count": 35
         },
         "case-012-position-relative": {
-            "archived_at": "2026-06-16 16:03:21",
-            "md5": "8a2abc65d5bd4130e2932a81238eec3b",
+            "archived_at": "2026-06-18 10:57:04",
+            "md5": "ef335983ee121b0afb6a69abb264b5de",
             "node_count": 90,
             "multi_frames": 5,
             "multi_frame_nodes": 90,
@@ -513,15 +524,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-013-z-index": {
-            "archived_at": "2026-06-16 16:03:23",
-            "md5": "d5e791eaa39a6d15926c7f4f1eed67c5",
+            "archived_at": "2026-06-18 10:57:06",
+            "md5": "93c7812c1f539652c230a04b01b7d391",
             "node_count": 85,
             "multi_frames": 5,
             "multi_frame_nodes": 85,
@@ -555,15 +567,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 32
+            "style_field_count": 33
         },
         "case-014-overflow-hidden": {
-            "archived_at": "2026-06-16 16:03:26",
-            "md5": "04ded6e9d6dda61780e877f0a998ca85",
+            "archived_at": "2026-06-18 10:57:10",
+            "md5": "9e896c39b925b0cfac4cff70e8ea046d",
             "node_count": 86,
             "multi_frames": 5,
             "multi_frame_nodes": 86,
@@ -600,15 +613,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 35
+            "style_field_count": 36
         },
         "case-015-min-max-height": {
-            "archived_at": "2026-06-16 16:03:28",
-            "md5": "7ae25a348e86ed75500023ab74f5c262",
+            "archived_at": "2026-06-18 10:57:13",
+            "md5": "f4850244a258e7ce7f76ba4914870973",
             "node_count": 104,
             "multi_frames": 5,
             "multi_frame_nodes": 104,
@@ -643,15 +657,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-016-margin-collapse": {
-            "archived_at": "2026-06-16 16:03:31",
-            "md5": "ce20f4005f074893ad01add4de9c86dd",
+            "archived_at": "2026-06-18 10:57:16",
+            "md5": "fcebf2b853d0b84bc0a9e488e3e2b99e",
             "node_count": 86,
             "multi_frames": 5,
             "multi_frame_nodes": 86,
@@ -685,15 +700,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 32
+            "style_field_count": 33
         },
         "case-017-negative-margin": {
-            "archived_at": "2026-06-16 16:03:34",
-            "md5": "b5b886942c65d290a6eea3f3b6d5f340",
+            "archived_at": "2026-06-18 10:57:24",
+            "md5": "02f35c12d3f0bdc7e6852c8a7992cccc",
             "node_count": 85,
             "multi_frames": 5,
             "multi_frame_nodes": 85,
@@ -729,15 +745,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 34
+            "style_field_count": 35
         },
         "case-018-opacity": {
-            "archived_at": "2026-06-16 16:03:36",
-            "md5": "04809623a40200fa4ae2ecbe784e8ac3",
+            "archived_at": "2026-06-18 10:57:28",
+            "md5": "12d90edb148a72ee31beef4ceb67f0e4",
             "node_count": 86,
             "multi_frames": 5,
             "multi_frame_nodes": 86,
@@ -774,15 +791,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 35
+            "style_field_count": 36
         },
         "case-019-visibility": {
-            "archived_at": "2026-06-16 16:03:39",
-            "md5": "e3f7998fc7a78e3ee24954bbf9f65ac7",
+            "archived_at": "2026-06-18 10:57:32",
+            "md5": "198543d1e820973d8ce3d8a8bc9e8852",
             "node_count": 93,
             "multi_frames": 5,
             "multi_frame_nodes": 93,
@@ -817,15 +835,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-020-text-align": {
-            "archived_at": "2026-06-16 16:03:41",
-            "md5": "b7e4f1802d6e84c727597e1f361eec9b",
+            "archived_at": "2026-06-18 10:57:36",
+            "md5": "4b939cafb0f4570e1a1e010717bdb5bd",
             "node_count": 90,
             "multi_frames": 5,
             "multi_frame_nodes": 90,
@@ -858,15 +877,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 31
+            "style_field_count": 32
         },
         "case-021-line-height": {
-            "archived_at": "2026-06-16 16:03:44",
-            "md5": "b6cb67694c6531e478e4ee5cb80f52c5",
+            "archived_at": "2026-06-18 10:57:41",
+            "md5": "61fb8ef711fd6aedaaa3bd86a7bcfb37",
             "node_count": 115,
             "multi_frames": 5,
             "multi_frame_nodes": 115,
@@ -901,15 +921,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-022-white-space": {
-            "archived_at": "2026-06-16 16:03:47",
-            "md5": "4f3e218d89a748b55020e8ae52bce185",
+            "archived_at": "2026-06-18 10:57:45",
+            "md5": "48dc4614ab3d03676a33d9617dbaf10c",
             "node_count": 87,
             "multi_frames": 5,
             "multi_frame_nodes": 87,
@@ -942,15 +963,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 31
+            "style_field_count": 32
         },
         "case-023-word-break": {
-            "archived_at": "2026-06-16 16:03:49",
-            "md5": "2f871d1dffee629d706612a55a5192d4",
+            "archived_at": "2026-06-18 10:57:47",
+            "md5": "48851cfd374e7d5e56a814afc9b1134f",
             "node_count": 88,
             "multi_frames": 5,
             "multi_frame_nodes": 88,
@@ -984,16 +1006,17 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace",
                 "wordBreak"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-024-font-weight": {
-            "archived_at": "2026-06-16 16:03:51",
-            "md5": "f906290f15408f370117003c54549383",
+            "archived_at": "2026-06-18 10:57:50",
+            "md5": "14687f53c461633f1c14d284cf92c04d",
             "node_count": 103,
             "multi_frames": 5,
             "multi_frame_nodes": 103,
@@ -1027,15 +1050,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 32
+            "style_field_count": 33
         },
         "case-025-english-text": {
-            "archived_at": "2026-06-16 16:03:54",
-            "md5": "dba63cafb84ed708969fded1c4c9b9d1",
+            "archived_at": "2026-06-18 10:57:54",
+            "md5": "91447f2022c5121d8bea21754086764b",
             "node_count": 90,
             "multi_frames": 5,
             "multi_frame_nodes": 90,
@@ -1069,15 +1093,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 32
+            "style_field_count": 33
         },
         "case-026-font-style": {
-            "archived_at": "2026-06-16 16:03:56",
-            "md5": "1b7b53e366578f882dfcd66ceaad1f86",
+            "archived_at": "2026-06-18 10:57:57",
+            "md5": "ee5ab5b76ba093f586b33c9a30f7365a",
             "node_count": 91,
             "multi_frames": 5,
             "multi_frame_nodes": 91,
@@ -1113,16 +1138,17 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "textDecorationLine",
                 "whiteSpace"
             ],
-            "style_field_count": 35
+            "style_field_count": 36
         },
         "case-027-scroll-diagnostic": {
-            "archived_at": "2026-06-16 16:03:59",
-            "md5": "fba76610fd621c5eb884bfda4ad1923c",
+            "archived_at": "2026-06-18 10:58:01",
+            "md5": "e1a20c65c390aa29e6045659c9e0841c",
             "node_count": 214,
             "multi_frames": 5,
             "multi_frame_nodes": 214,
@@ -1157,15 +1183,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-028-scroll-block": {
-            "archived_at": "2026-06-16 16:04:01",
-            "md5": "d0585c3e72f310f815030c192528dcaa",
+            "archived_at": "2026-06-18 10:58:04",
+            "md5": "32c6779dc03ae9fa0453ab750e51f718",
             "node_count": 211,
             "multi_frames": 5,
             "multi_frame_nodes": 211,
@@ -1200,15 +1227,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-029-scroll-flex-col": {
-            "archived_at": "2026-06-16 16:04:05",
-            "md5": "b99fe7f6a0da7b246b55f9b4658243b5",
+            "archived_at": "2026-06-18 10:58:08",
+            "md5": "598ce4e15315f52427e04650b86134ac",
             "node_count": 219,
             "multi_frames": 5,
             "multi_frame_nodes": 219,
@@ -1243,15 +1271,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         },
         "case-030-scroll-flex-row": {
-            "archived_at": "2026-06-16 16:04:08",
-            "md5": "03ebe9641f711e38ba11cab9ad765d8b",
+            "archived_at": "2026-06-18 10:58:13",
+            "md5": "fe35d7ca438985e651139e4cf3500fcc",
             "node_count": 128,
             "multi_frames": 5,
             "multi_frame_nodes": 128,
@@ -1288,15 +1317,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 35
+            "style_field_count": 36
         },
         "case-031-scroll-grid": {
-            "archived_at": "2026-06-16 16:04:13",
-            "md5": "7a23a749a21cafb592ce9a606cc423a2",
+            "archived_at": "2026-06-18 10:58:21",
+            "md5": "de0fef01894f93a5eb2ef8b7452ed564",
             "node_count": 197,
             "multi_frames": 5,
             "multi_frame_nodes": 197,
@@ -1333,15 +1363,16 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 35
+            "style_field_count": 36
         },
         "case-032-scroll-relative": {
-            "archived_at": "2026-06-16 16:04:15",
-            "md5": "e0d39aa14b8862ff27d10d100829a3c0",
+            "archived_at": "2026-06-18 10:58:28",
+            "md5": "b6003353f5d0b88c12edf7aab2181945",
             "node_count": 176,
             "multi_frames": 5,
             "multi_frame_nodes": 176,
@@ -1376,11 +1407,12 @@
                 "paddingLeft",
                 "paddingRight",
                 "paddingTop",
+                "pointerEvents",
                 "position",
                 "textAlign",
                 "whiteSpace"
             ],
-            "style_field_count": 33
+            "style_field_count": 34
         }
     }
 }

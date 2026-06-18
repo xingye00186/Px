@@ -2337,7 +2337,8 @@
                                     "textRenderInfo": null,
                                     "style": {
                                         "bg": 16711935,
-                                        "position": "absolute"
+                                        "position": "absolute",
+                                        "pointerEvents": "none"
                                     }
                                 },
                                 {
@@ -2621,7 +2622,8 @@
                                     "textRenderInfo": null,
                                     "style": {
                                         "bg": 16776960,
-                                        "position": "absolute"
+                                        "position": "absolute",
+                                        "pointerEvents": "none"
                                     }
                                 }
                             ]

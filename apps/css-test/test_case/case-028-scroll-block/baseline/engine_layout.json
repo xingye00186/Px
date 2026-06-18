@@ -42,6 +42,7 @@
             "textRenderInfo": null,
             "style": {
                 "bg": 3022366,
+                "fontFamily": "'segoe ui',system-ui,-apple-system,sans-serif",
                 "display": "flex",
                 "flexDirection": "column"
             },
@@ -70,6 +71,7 @@
                         "borderColor": 4469297,
                         "borderBottomWidth": 1,
                         "borderBottomColor": 4469297,
+                        "fontFamily": "'segoe ui',system-ui,-apple-system,sans-serif",
                         "paddingTop": 16,
                         "paddingLeft": 20,
                         "paddingRight": 20,
@@ -158,6 +160,7 @@
                     "textRenderInfo": null,
                     "style": {
                         "fontSize": 14,
+                        "fontFamily": "'segoe ui',system-ui,-apple-system,sans-serif",
                         "paddingTop": 6,
                         "paddingLeft": 0,
                         "paddingRight": 0,
@@ -2125,6 +2128,7 @@
                         "borderColor": 4469297,
                         "borderTopWidth": 1,
                         "borderTopColor": 4469297,
+                        "fontFamily": "'segoe ui',system-ui,-apple-system,sans-serif",
                         "paddingTop": 10,
                         "paddingLeft": 16,
                         "paddingRight": 16,
@@ -2181,6 +2185,7 @@
             "textRenderInfo": null,
             "style": {
                 "bg": 16119285,
+                "fontFamily": "'segoe ui',system-ui,-apple-system,sans-serif",
                 "display": "flex",
                 "flexDirection": "column"
             },
@@ -2208,6 +2213,7 @@
                         "borderColor": 14737632,
                         "borderBottomWidth": 1,
                         "borderBottomColor": 14737632,
+                        "fontFamily": "'segoe ui',system-ui,-apple-system,sans-serif",
                         "display": "flex",
                         "paddingTop": 0,
                         "paddingLeft": 24,
@@ -2268,6 +2274,7 @@
                     "textRenderInfo": null,
                     "style": {
                         "fontSize": 14,
+                        "fontFamily": "'segoe ui',system-ui,-apple-system,sans-serif",
                         "position": "relative",
                         "paddingTop": 20,
                         "paddingLeft": 20,
@@ -6083,7 +6090,8 @@
                                     "textRenderInfo": null,
                                     "style": {
                                         "bg": 16711935,
-                                        "position": "absolute"
+                                        "position": "absolute",
+                                        "pointerEvents": "none"
                                     }
                                 },
                                 {
@@ -6106,7 +6114,8 @@
                                     "textRenderInfo": null,
                                     "style": {
                                         "bg": 16776960,
-                                        "position": "absolute"
+                                        "position": "absolute",
+                                        "pointerEvents": "none"
                                     }
                                 }
                             ]
