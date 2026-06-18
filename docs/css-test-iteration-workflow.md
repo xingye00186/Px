@@ -32,7 +32,7 @@
 | `php apps/css-test/test_pipeline.php --skip-build` | 跳过构建（哈希缓存自动跳过） |
 | `php apps/css-test/test_pipeline.php --force-build` | 强制重编 |
 | `php apps/css-test/test_pipeline.php --skip-browser-ref` | 跳过浏览器参考 |
-| `php apps/css-test/test_pipeline.php --skip-screenshot` | 跳过截图对比 |
+| `php apps/css-test/test_pipeline.php --with-screenshot` | 启用截图对比（默认跳过） |
 | `php apps/css-test/test_pipeline.php --format=md` | Markdown 报告 |
 
 ### 构建与验证
@@ -118,7 +118,7 @@ Step I: ScreenshotCompare（ScreenshotStep）
 
 ### Step 1：跑测试
 ```bash
-php apps/css-test/test_pipeline.php --skip-screenshot        # 全量
+php apps/css-test/test_pipeline.php                        # 全量（截图已默认跳过）
 php apps/css-test/test_pipeline.php --case=case-007 --force-build  # 单 case
 ```
 
@@ -136,7 +136,7 @@ php apps/css-test/test_pipeline.php --case=case-007 --force-build  # 单 case
 ### Step 5：修复+验证
 ```bash
 php apps/css-test/test_pipeline.php --case=case-xxx          # 单 case 验证
-php apps/css-test/test_pipeline.php --skip-screenshot        # 全量回归
+php apps/css-test/test_pipeline.php                        # 全量回归
 php apps/css-test/check_regression.php                       # 基线回归
 ```
 
@@ -162,7 +162,7 @@ php apps/css-test/archive_case.php --list                    # 查看状态
 
 ```bash
 # 测试
-php apps/css-test/test_pipeline.php --skip-screenshot
+php apps/css-test/test_pipeline.php                        # 全量（截图默认跳过）
 php apps/css-test/test_pipeline.php --case=case-xxx --verbose
 php apps/css-test/test_pipeline.php --case=case-xxx --force-build
 php apps/css-test/test_pipeline.php --skip-build
