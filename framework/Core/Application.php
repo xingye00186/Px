@@ -858,7 +858,9 @@ class Application
             $this->rootComponent,
             $this->componentByGroupId,
             $candidates,
-            'app'
+            'app',
+            '',
+            []
         );
         if ($rootRenderNode === null) {
             return;

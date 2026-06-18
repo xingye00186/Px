@@ -373,7 +373,8 @@ class RenderTreeManager
         array $componentByGroupId,
         ?array $candidates = null,
         string $currentGroupId = 'app',
-        string $parentClassStr = ''
+        string $parentClassStr = '',
+        array $parentStyle = []
     ): ?RenderNode {
         \Px\Core\PerfCounter::start('tree_convert');
         try {
@@ -407,7 +408,8 @@ class RenderTreeManager
                     $componentByGroupId,
                     $candidates,
                     $childGroupId,
-                    $vnode->props['class'] ?? ''
+                    $vnode->props['class'] ?? '',
+                    $parentStyle
                 );
 
                 // 保留 scrollTop 值：从旧子树复制到新子树（仅 scroll containers）
@@ -474,7 +476,8 @@ class RenderTreeManager
                     $childRN = $this->updateFromVNode(
                         $child, $parent, $root, $componentByGroupId, $childCandidates,
                         $currentGroupId,
-                        $vnode->props['class'] ?? ''
+                        $vnode->props['class'] ?? '',
+                        $parentStyle
                     );
                     if ($childRN !== null) {
                         if ($parent === null) {
@@ -497,7 +500,7 @@ class RenderTreeManager
             }
 
             // 普通元素节点
-            $resolvedStyle = $this->resolveNodeStyle($vnode, $parentClassStr);
+            $resolvedStyle = $this->resolveNodeStyle($vnode, $parentClassStr, [], $parentStyle);
             $renderNode = null;
 
             if ($candidates !== null) {
@@ -633,7 +636,8 @@ class RenderTreeManager
                     $childRN = $this->updateFromVNode(
                         $childVNode, $renderNode, $root, $componentByGroupId, $childCandidates,
                         $currentGroupId,
-                        $vnode->props['class'] ?? ''
+                        $vnode->props['class'] ?? '',
+                        $resolvedStyle
                     );
                 }
 
@@ -850,7 +854,7 @@ class RenderTreeManager
      * @param array $precedingSiblingClasses 前面兄弟节点的 class 字符串数组
      * @return array 合并后的样式
      */
-    private function resolveNodeStyle(VNode $vnode, string $parentClassStr = '', array $precedingSiblingClasses = []): array
+    private function resolveNodeStyle(VNode $vnode, string $parentClassStr = '', array $precedingSiblingClasses = [], array $parentStyle = []): array
     {
         // 1. 解析内联 style
         $inlineStyle = $this->parseVNodeStyle($vnode);
@@ -986,6 +990,16 @@ class RenderTreeManager
             $merged['__activeStyle'] = $activeMerged;
         }
 
+        // CSS 继承传播：父节点已计算的继承属性 -> 当前节点未显式设置时继承
+        // CSS 2.2 §6.1.1: color/font/line-height/text-align/visibility 等默认继承
+        if (!empty($parentStyle)) {
+            $inheritedKeys = ['color','fontFamily','fontSize','fontWeight','fontStyle','lineHeight','textAlign','textIndent','whiteSpace','wordBreak','visibility','opacity','cursor','direction'];
+            foreach ($inheritedKeys as $key) {
+                if (!isset($merged[$key]) && isset($parentStyle[$key])) {
+                    $merged[$key] = $parentStyle[$key];
+                }
+            }
+        }
         return $merged;
     }
 
