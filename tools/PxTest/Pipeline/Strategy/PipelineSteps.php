@@ -154,12 +154,9 @@ class BrowserRefStep implements PipelineStepInterface
         if ($html === false) return '';
 
         $injectCss = '<style>
-/* PxTest Wrapper Baseline — !important max priority */
-*,*::before,*::after {
-    margin:0 !important;
-    padding:0 !important;
-    box-sizing:border-box !important;
-}
+/* PxTest Wrapper Baseline — html/body only, no !important on universal selector */
+/* NOTE: Avoid *{...!important} because it overrides test case inline styles   */
+/*       (margin:0 auto, padding:24px etc), causing layout mismatch with engine */
 html,body {
     width:1600px !important;
     height:800px !important;
