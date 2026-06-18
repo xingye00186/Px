@@ -59,28 +59,14 @@ class BuildStep implements PipelineStepInterface
             return StepResult::err('build', 'Build lock conflict - swoole_compiler already running');
         }
 
-        // Execute build
+        // Execute build (使用临时日志文件避免 Windows 管道缓冲区死锁)
         echo "  [build] {$this->appName} ...\n";
         $buildScript = "{$this->projectRoot}/build.bat";
-        $desc = [0 => array('pipe','r'), 1 => array('pipe','w'), 2 => array('pipe','w')];
-        $proc = @proc_open("$buildScript {$this->appName} 2>&1", $desc, $pipes, $this->projectRoot);
-
-        if (!is_resource($proc)) {
-            $this->processMgr->releaseBuildLock();
-            return StepResult::err('build', 'Cannot start build process');
-        }
-
-        // Register child process for cleanup
-        $status = @proc_get_status($proc);
-        if ($status && ($status['pid'] ?? 0) > 0) {
-            $this->processMgr->registerProcess($status['pid'], 'build.bat');
-        }
-
-        fclose($pipes[0]);
-        $buildOut = stream_get_contents($pipes[1]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        $buildExit = proc_close($proc);
+        $logFile = tempnam(sys_get_temp_dir(), 'css_build_');
+        $cmd = sprintf('"%s" %s > "%s" 2>&1', $buildScript, $this->appName, $logFile);
+        exec($cmd, $_output, $buildExit);
+        $buildOut = file_get_contents($logFile);
+        @unlink($logFile);
 
         $this->processMgr->releaseBuildLock();
         $elapsed = (microtime(true) - $start) * 1000;
@@ -89,9 +75,12 @@ class BuildStep implements PipelineStepInterface
             @file_put_contents($hashFile, $this->computeHash());
             $ctx->set('exe_path', $exePath);
             $ctx->set('build_output', $buildOut);
+            echo "  [build] OK\n";
             return StepResult::ok('build', $elapsed);
         }
 
+        echo "  [build] Build failed (exit=$buildExit)\n";
+        echo "  [build] Output:\n$buildOut\n";
         return StepResult::err('build', "Build failed (exit=$buildExit)", $elapsed);
     }
 
