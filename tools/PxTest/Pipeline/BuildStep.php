@@ -33,7 +33,9 @@ class BuildStep implements PipelineStepInterface
     {
         $start = microtime(true);
 
-        $exePath  = "{$this->projectRoot}/apps/{$this->appName}/bin/{$this->appName}.exe";
+        // appName may contain hyphens; actual exe uses underscores (build.bat converts them)
+        $exeName  = str_replace('-', '_', $this->appName) . '.exe';
+        $exePath  = "{$this->projectRoot}/apps/{$this->appName}/bin/{$exeName}";
         $hashFile = "{$this->projectRoot}/apps/{$this->appName}/.build_hash";
 
         // Smart skip: exe exists + hash unchanged + not forced

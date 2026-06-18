@@ -78,8 +78,18 @@
             w: Math.round(rect.width),
             h: Math.round(rect.height),
             depth: depth,
-            styles: {}
+            styles: {},
+            dataset: {}
         };
+
+        // 提取 data-* 属性（用于锚点识别等）
+        if (el.dataset) {
+            for (var key in el.dataset) {
+                if (el.dataset.hasOwnProperty(key)) {
+                    result.dataset[key] = el.dataset[key];
+                }
+            }
+        }
 
         // 提取文本内容（截断过长文本）
         var text = el.textContent.trim();

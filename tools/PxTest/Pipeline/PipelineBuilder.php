@@ -13,7 +13,6 @@ use PxTest\Pipeline\Strategy\MockDumpStrategy;
 use PxTest\Pipeline\Strategy\NoopDumpStrategy;
 use PxTest\Pipeline\Strategy\BrowserRefStrategy;
 use PxTest\Pipeline\Strategy\EdgeDomStrategy;
-use PxTest\Pipeline\Strategy\EdgeScreenshotStrategy;
 use PxTest\Pipeline\Strategy\NoopBrowserRefStrategy;
 use PxTest\Infrastructure\ExeDiscovery;
 use PxTest\Infrastructure\BrowserLauncher;
@@ -36,7 +35,7 @@ class PipelineBuilder
     private bool $skipBuild = false;
     private bool $forceBuild = false;
     private bool $skipBrowserRef = false;
-    private bool $skipScreenshot = false;
+    private bool $skipScreenshot = true;  // 默认跳过截图，需 --with-screenshot 启用
     private bool $updateBaseline = false;
     private bool $verbose = false;
     private string $format = 'console';
@@ -58,7 +57,7 @@ class PipelineBuilder
             elseif ($arg === '--skip-build') { $this->skipBuild = true; }
             elseif ($arg === '--force-build') { $this->forceBuild = true; }
             elseif ($arg === '--skip-browser-ref') { $this->skipBrowserRef = true; }
-            elseif ($arg === '--skip-screenshot') { $this->skipScreenshot = true; }
+            elseif ($arg === '--with-screenshot') { $this->skipScreenshot = false; }
             elseif ($arg === '--update-baseline') { $this->updateBaseline = true; }
             elseif ($arg === '--verbose') { $this->verbose = true; }
             elseif (str_starts_with($arg, '--format=')) { $this->format = substr($arg, 9); }
@@ -94,12 +93,19 @@ class PipelineBuilder
         }
 
         // Step H: element compare (ComparatorRegistry)
-        $orchestrator->addStep(new ElementCompareStep(\PxTest\Comparison\ComparatorRegistry::default()));
+        $caseDir = "{$this->appDir}/test_case/" . ($this->caseName ?? 'case-001-wrapper-x');
+        $orchestrator->addStep(new ElementCompareStep(
+            \PxTest\Comparison\ComparatorRegistry::default(),
+            $caseDir,
+            $this->caseName ?? 'case-001-wrapper-x'
+        ));
 
         // Step I: Screenshot comparison (exe headless vs browser headless)
         if (!$this->skipScreenshot) {
             $exeBinDir = "{$this->appDir}/bin";
-            $exePath = "{$exeBinDir}/{$this->appName}.exe";
+            // build.bat converts hyphens to underscores in exe name
+            $exeName = str_replace('-', '_', $this->appName) . '.exe';
+            $exePath = "{$exeBinDir}/{$exeName}";
             $caseHtml = "{$this->appDir}/test_case/" . ($this->caseName ?? 'case-001-wrapper-x') . '/*.html';
             $htmlFiles = glob($caseHtml);
             $htmlPath = !empty($htmlFiles) ? $htmlFiles[0] : '';
@@ -132,9 +138,9 @@ class PipelineBuilder
         if ($this->skipBrowserRef) return new NoopBrowserRefStrategy();
         $browser = new BrowserLauncher();
         if (!$browser->isAvailable()) return new NoopBrowserRefStrategy();
-        return $this->skipScreenshot
-            ? new EdgeDomStrategy($browser)
-            : new EdgeScreenshotStrategy($browser);
+        // 浏览器参考数据始终用 EdgeDomStrategy（dump_layout.js 提取元素位置）
+        // 截图由 ScreenshotStep 独立控制，与 selectBrowserStrategy 无关
+        return new EdgeDomStrategy($browser);
     }
 
     /** Scan all case directories under test_case/. */
