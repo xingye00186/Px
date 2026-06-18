@@ -90,8 +90,10 @@ Step E: MultiFrame（MultiFrameStep）
   └─ 5 帧 x/y/w/h 逐节点稳定性
 
 Step G: BrowserRef（BrowserRefStep + BrowserRefStrategy）
-  ├─ buildCssTestWrapper(!important 最大优先级注入)
-  └─ EdgeScreenshot / EdgeDom 策略
+  ├─ validateHtmlSpec() 校验 .html CSS 基线 + 结构
+  ├─ validateVueConsistency() 校验 .html vs .vue 一致性
+  ├─ instrumentHtml() 仅注入 dump_layout.js（不修改 CSS）
+  └─ EdgeDom 策略
 
 Step H: ElementCompare（ElementCompareStep + ComparatorRegistry）
   ├─ 几何 + 样式 + 稳定性 四维对比
@@ -209,15 +211,15 @@ php apps/css-test/check_regression.php
 ├─ STABILITY 标记?
 │   └─ auto-height + absolute 子节点正反馈 → BlockLayoutStrategy
 │
-└─ wrapper 引入基线差异（normalize.css line-height / 根容器 bg）?
-    └─ 修复 buildCssTestWrapper() + 重新生成浏览器 ref
+└─ wrapper 引入基线差异（.html 缺少 CSS 基线声明）?
+    └─ 在 .html 中添加 html,body 基线声明
 ```
 
 ### 决策优先级
 
 ```
 差异出现
-├─ wrapper 引入基线差异 → 修复 buildCssTestWrapper() + 重新生成浏览器 ref
+├─ wrapper 引入基线差异 → 在 .html 中添加 html,body 基线声明
 ├─ 框架不符合 CSS 标准（fallback 用了非标准默认值）→ 改框架 + 更新问题清单
 ├─ 框架尚未实现该 CSS 特性 → 必须按规范实现（不得 SKIP）
 ├─ 框架符合 CSS 标准，应用层用法错 → 改 .vue + 同步改 .html
@@ -249,7 +251,7 @@ apps/css-test/test_case/case-NNN-name/
 
 **Vue ↔ HTML 同步规则**：
 - `.vue` `<template>` 与 `.html` `<body>` 内容一致（相同结构 + inline style）
-- 基础样式：`* { margin:0; padding:0; box-sizing:border-box; }`
+- `.html` **必须自包含 CSS 基线**：`html,body { width:1600px; height:800px; font-family:...; font-size:16px; background:#fff; }`
 - 容器宽度建议 720px，居中（`margin:0 auto`），卡片式设计
 - `.vue` 需要 `<script lang="php">class TestContent extends ReactiveComponent {}</script>`
 

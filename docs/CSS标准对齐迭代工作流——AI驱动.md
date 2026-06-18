@@ -27,7 +27,7 @@
 ├─ 框架符合 CSS 标准吗？查看属性标准默认值
 │   └─ 框架正确但测试期望非标准值 → 框架正确，应用层缺显式声明，改应用层
 ├─ wrapper 引入基线差异（box-sizing/line-height/字体不一致）
-│   └─ 修复 buildCssTestWrapper() + 重新生成浏览器 ref
+│   └─ 在 .html 中添加 html,body CSS 基线声明
 ├─ 框架不符合 CSS 标准（fallback 用了非标准默认值）
 │   └─ 改框架 + 更新问题清单
 ├─ 框架尚未实现该 CSS 特性
@@ -51,7 +51,7 @@
 | 布局导出 | `bin/css_test.exe --dump-layout` | → engine_layout.json（默认 headless） |
 | 截图（显式触发） | `bin/css_test.exe --screenshot=out.png` | 离屏渲染 PNG（默认不截图） |
 | 多帧截图 | `--frame=5 --screenshot=out.png` | 渲染 N 帧后截图 |
-| 浏览器 ref | `PxTest\Pipeline\Strategy\BrowserRefStep` | Edge headless + wrapper!important 注入 |
+│ 浏览器 ref | `PxTest\Pipeline\Strategy\BrowserRefStep` | validateHtmlSpec + instrumentHtml（仅注入 dump_layout.js） |
 | 对比引擎 | `PxTest\Comparison\ComparatorRegistry` | 几何+样式+稳定性+像素 四维对比 |
 | 锚点对齐 | `PxTest\Pipeline\ScreenshotStep::detectColorAnchors()` | #FF00FF/#00FFFF 8×8 块三策略 |
 | 归档基线 | `php apps/css-test/archive_case.php` | case 通过后冻存基线 |
@@ -69,7 +69,7 @@ apps/css-test/
 │   └── case-NNN-name/
 │       ├── CaseNnnName.vue   引擎端模板
 │       ├── CaseNnnName.html  浏览器参考 HTML
-│       ├── ref/              参考数据 + 截图（test_pipeline.php 自动生成）
+│       ├── ref/              参考数据 + 对比报告（test_pipeline.php 自动生成，原始 .html 即标杆）
 │       └── baseline/         归档基线（archive_case.php 生成）
 ├── archive_case.php          归档工具
 ├── check_regression.php      回归检查
@@ -144,7 +144,7 @@ apps/css-test/test_case/case-NNN-name/
 
 **Vue ↔ HTML 同步规则**：
 - `.vue` `<template>` 与 `.html` `<body>` 内容一致（相同结构 + inline style）
-- 基础样式：`* { margin:0; padding:0; box-sizing:border-box; }`
+- `.html` **必须自包含 CSS 基线**：`html,body { width:1600px; height:800px; font-family:...; font-size:16px; background:#fff; }`
 - 容器宽度建议 720px，居中（`margin:0 auto`），卡片式设计
 - `.vue` 需要 `<script lang="php">class TestContent extends ReactiveComponent {}</script>`
 - 关键元素加 `id` 属性（便于 ElementCompare 精确匹配）
@@ -187,7 +187,7 @@ php apps/css-test/test_pipeline.php --format=md
 | **Build** | 哈希缓存 + 进程锁(.build.lock) + proc_open + Ctrl+C | `css_test.exe` |
 | **D** | 布局导出（ExeDump/MockDump）+ REF_STALE 校验 | `ref/engine_layout.json` |
 | **E** | 多帧稳定性（5 帧逐节点 x/y/w/h 对比） | STABILITY 标记 |
-| **G** | 浏览器参考（wrapper!important 注入 + Edge headless） | `ref/browser_ref_*.png` |
+| **G** | 浏览器参考（validateHtmlSpec + instrumentHtml，仅注入 dump_layout.js） | `ref/browser_ref_level_0.json` |
 | **H** | 逐元素对比（几何+样式+稳定性 + Phase F 溢出检测） | PASS/FAIL/SKIP |
 | **I** | 截图对比（三层锚点对齐 + GD 像素 diff + diff 图 + 锚点校验） | 差异 % |
 
@@ -458,21 +458,33 @@ class TestContent extends ReactiveComponent {}
 ### HTML 模板（浏览器参考）
 
 ```html
-<!-- test_case/case-NNN-name/CaseNnnName.html →
+<!-- test_case/case-NNN-name/CaseNnnName.html -->
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Test Title</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#f0f2f5; font-family:sans-serif; display:flex; justify-content:center; padding:20px; }
-  /* 与 .vue 同步的样式 */
+/* PxTest baseline — mandatory: viewport + font + background */
+html,body {
+    width:1600px;
+    height:800px;
+    overflow:hidden;
+    font-family:"Segoe UI","Noto Sans SC",sans-serif;
+    font-size:16px;
+    line-height:1.2;
+    background:#fff;
+    color:#000;
+}
+/* Test case styles */
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f0f2f5; display:flex; justify-content:center; padding:20px; }
 </style></head><body>
-  <!-- 与 .vue <template> 一致的内容 →
+  <!-- 与 .vue <template> 一致的内容 -->
 </body></html>
 ```
 
 > **样本偏差警示**：.vue 与 .html 结构必须严格一致！
 >
-> 浏览器参考数据从 `.html` 生成，引擎布局快照从 `.vue` 编译的 exe 生成。
+> 浏览器参考数据从 `.html` 生成（`.html` 即最终对比标杆，pipeline 不修改 CSS），
+> 引擎布局快照从 `.vue` 编译的 exe 生成。
 > 若两者 DOM 结构不一致，对比将产生**全用例一致的 dx/dw 系统性偏差**。
 >
 > **历史案例**：case-001/case-002 的 `.html` 有 `<div class="sandbox" style="padding:20px">` 包装层，
@@ -482,8 +494,8 @@ class TestContent extends ReactiveComponent {}
 > 1. `.vue` `<template>` 根元素与 `.html` `<body>` 内第一个元素结构一致
 > 2. 所有 CSS 类名和 inline style 在两者间一致
 > 3. 嵌套层级（额外 wrapper 层）完全对齐
-> 4. `buildCssTestWrapper()` 注入的全局 CSS（`* { margin:0; padding:0; }` 等）在引擎端有无匹配
-> 5. 使用 `php apps/css-test/test_pipeline.php --case=case-NNN` 后检查 dw 是否接近 0
+> 4. `.html` 包含 `html,body` CSS 基线声明
+> 5. 使用 `php apps/css-test/test_pipeline.php --browser-engine-el-compare --case=case-NNN` 后检查 dw 是否接近 0
 >
 > **修复流程**：优先修改 `.vue` 对齐 `.html`（`<template>` 是源），然后重新编译并重新测试。
 > 切勿仅修改 `.html` 而不更新 `.vue`，否则引擎与浏览器参考的偏差将持续存在。
@@ -505,26 +517,53 @@ AI 在运行测试→修复循环时必须检查以下条件，满足任一即�
 | **迭代上限** | 同一 case 迭代超过 5 轮 | 停止。报告阻塞点，请求人工判断 |
 | **新回归** | `check_regression.php` 发现新 FAIL | 回滚本次修复，先修复回归 |
 
-### 12.2 浏览器参考生成规范
+### 12.2 .html 文件规范
 
-AI 生成浏览器参考数据时必须遵守以下规则，避免引入假阳性：
+每个 `.html` 文件是**浏览器对比的最终标杆**，必须自包含：
 
-**wrapper CSS 基线**（`BrowserRefStep.buildCssTestWrapper()` 自动注入，`!important` 最高优先级）：
-
-```css
-*,*::before,*::after { margin:0!important; padding:0!important; box-sizing:border-box!important; }
-html,body { width:1600px!important; height:800px!important; overflow:hidden!important;
-  font-family:"Segoe UI","Noto Sans SC",sans-serif!important;
-  font-size:16px!important; line-height:1.2!important; background:#fff!important; color:#000!important; }
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Case Title</title>
+    <style>
+        /* PxTest baseline — mandatory: viewport + font + background */
+        html,body {
+            width:1600px;
+            height:800px;
+            overflow:hidden;
+            font-family:"Segoe UI","Noto Sans SC",sans-serif;
+            font-size:16px;
+            line-height:1.2;
+            background:#fff;
+            color:#000;
+        }
+        /* Test case styles */
+        ...
+    </style>
+</head>
+<body>
+    <!-- 内容与 .vue 一致 -->
+    <!-- 含 data-px-anchor="tl" 和 data-px-anchor="br" -->
+</body>
+</html>
 ```
 
-**窗口尺寸匹配**：`main.php` 的 `WINDOW_WIDTH × WINDOW_HEIGHT` 必须与 Edge headless `--window-size` 一致。
+pipeline `BrowserRefStep` 自动校验：
+1. `validateHtmlSpec()` — 检查 CSS 基线（viewport/font/color/background）和锚点
+2. `validateVueConsistency()` — 检查 .html vs .vue 锚点匹配、文本内容一致性
+3. 校验不通过 → 终止并报 `[SPEC_FAIL]` / `[VUE_MISMATCH]`
 
-**生成后验证**：
-1. 确认 ref JSON 包含 `font-family: 'Noto Sans SC'`
-2. 确认 `font-size: 16px`
-3. 确认 body `background-color` 不是透明/none
-4. 检查 `.vue` 与 `.html` 的第一个元素结构一致（无额外 wrapper 层）
+**pipeline 不再注入 CSS**，`buildCssTestWrapper()` 已移除。
+`instrumentHtml()` 仅注入 `dump_layout.js` + `<textarea id="layout-output">`。
+`ref/wrapper.html` 和 `ref/browser_ref_dom.html` 不再生成。
+
+**窗口尺寸匹配**：`main.php` 的 `WINDOW_WIDTH × WINDOW_HEIGHT` 必须与 `.html` 基线声明一致。
+
+**验证**：
+1. 设置正确的 `PX_PERF=1` 可查看对比耗时
+2. `.html` 内容与 `.vue` 一致（`--browser-engine-el-compare` 下自动校验）
 
 ### 12.3 典型修复案例
 
