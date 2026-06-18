@@ -61,7 +61,7 @@ class ScreenshotStep implements PipelineStepInterface
         $engineFile = "{$this->refDir}/engine_screenshot_{$ts}.png";
         if (file_exists($this->exePath)) {
             $cmd = sprintf(
-                '"%s" --case=%s --headless --screenshot=%s 2>&1',
+                '"%s" --case=%s --screenshot=%s 2>&1',
                 $this->exePath, $this->caseName, $engineFile
             );
             exec($cmd, $output, $exitCode);

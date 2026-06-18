@@ -75,27 +75,27 @@ function main(): int
         return 0;
     }
 
-    // --screenshot=path: 渲染后直接保存截图到文件（无需窗口可见）
-    // --screenshot-frames=N: 渲染 N 帧后保存（默认 1），文件名自动追加 _after_{N}frames
+    // --screenshot=path: 渲染后直接保存截图（受 --frame=N 控制帧数，默认 1 帧）
+    // frame>1 时文件名自动追加 _after_{N}frames
     $screenshotPath = '';
-    $screenshotFrames = 1;
+    $ssFrame = 1;
     foreach ($argv as $arg) {
         if (str_starts_with($arg, '--screenshot=')) {
             $screenshotPath = substr($arg, strlen('--screenshot='));
-        } elseif (str_starts_with($arg, '--screenshot-frames=')) {
-            $screenshotFrames = max(1, (int)substr($arg, strlen('--screenshot-frames=')));
+        } elseif (str_starts_with($arg, '--frame=')) {
+            $ssFrame = max(1, (int)substr($arg, strlen('--frame=')));
         }
     }
     if ($screenshotPath !== '') {
-        for ($i = 0; $i < $screenshotFrames; $i++) {
+        for ($i = 0; $i < $ssFrame; $i++) {
             $app->render();
             $app->scheduler->flushMicrotasks();
         }
-        if ($screenshotFrames > 1) {
+        if ($ssFrame > 1) {
             $dir = dirname($screenshotPath);
             $ext = '.png';
             $baseName = basename($screenshotPath, $ext);
-            $newName = $baseName . "_after_{$screenshotFrames}frames.png";
+            $newName = $baseName . "_after_{$ssFrame}frames.png";
             $screenshotPath = $dir !== '.' ? $dir . '/' . $newName : $newName;
         }
         $app->saveScreenshot($screenshotPath);

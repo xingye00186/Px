@@ -101,11 +101,14 @@ class Application
      */
     public static function handleDumpArgs(self $app, string $appDir, array $argv): bool
     {
-        // Extract --dump-layout-to=PATH (explicit override) or --case=CASE_NAME (auto-detect)
+        // Extract --frame=N (default 1), --dump-layout-to=PATH, --case=CASE_NAME
+        $frame = 1;
         $dumpTo = '';
         $caseName = '';
         foreach ($argv as $arg) {
-            if (str_starts_with($arg, '--dump-layout-to=')) {
+            if (str_starts_with($arg, '--frame=')) {
+                $frame = max(1, (int)substr($arg, strlen('--frame=')));
+            } elseif (str_starts_with($arg, '--dump-layout-to=')) {
                 $dumpTo = substr($arg, strlen('--dump-layout-to='));
             } elseif (str_starts_with($arg, '--case=')) {
                 $caseName = substr($arg, strlen('--case='));
@@ -113,7 +116,6 @@ class Application
         }
 
         // Auto-default: --case=xxx → test_case/{xxx}/ref/engine_layout.json
-        // If no --case=, scan test_case/ and use first case
         if ($dumpTo === '') {
             if ($caseName !== '') {
                 $dumpTo = $appDir . '/test_case/' . $caseName . '/ref/engine_layout.json';
@@ -126,44 +128,28 @@ class Application
             }
         }
 
-        // --dump-layout: 单帧导出
+        // --dump-layout: 导出布局（受 --frame=N 控制渲染帧数）
         if (in_array('--dump-layout', $argv)) {
-            $path = $dumpTo !== '' ? $dumpTo : $appDir . '/engine_layout.json';
+            // 当 frame>1 时使用 _after_{N}frames 后缀
+            if ($frame > 1) {
+                $ext = '.json';
+                $base = substr($dumpTo, 0, -strlen($ext));
+                $path = $base . "_after_{$frame}frames.json";
+            } else {
+                $path = $dumpTo;
+            }
             $dir = dirname($path);
             if (!is_dir($dir)) {
                 @mkdir($dir, 0777, true);
             }
-            $app->render();
-            $app->dumpLayoutToFile($path);
-            return true;
-        }
-
-        // --dump-layout-after-frames=N: 多帧稳定性验证
-        foreach ($argv as $arg) {
-            if (str_starts_with($arg, '--dump-layout-after-frames=')) {
-                $n = (int)substr($arg, strlen('--dump-layout-after-frames='));
-                if ($n < 1) {
-                    $n = 5;
-                }
-                // Build output path: if dumpTo is set, append _after_Nframes before .json
-                if ($dumpTo !== '') {
-                    $ext = '.json';
-                    $base = substr($dumpTo, 0, -strlen($ext));
-                    $outputPath = $base . "_after_{$n}frames.json";
-                } else {
-                    $outputPath = $appDir . "/engine_layout_after_{$n}frames.json";
-                }
-                $dir = dirname($outputPath);
-                if (!is_dir($dir)) {
-                    @mkdir($dir, 0777, true);
-                }
-                for ($i = 0; $i < $n; $i++) {
-                    $app->render();
+            for ($i = 0; $i < $frame; $i++) {
+                $app->render();
+                if ($i < $frame - 1) {
                     $app->scheduler->flushMicrotasks();
                 }
-                $app->dumpLayoutToFile($outputPath);
-                return true;
             }
+            $app->dumpLayoutToFile($path);
+            return true;
         }
 
         return false;
