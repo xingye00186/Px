@@ -34,7 +34,7 @@ class PipelineBuilder
     private ?string $caseName = null;
     private bool $skipBuild = false;
     private bool $forceBuild = false;
-    private bool $skipBrowserRef = false;
+    private bool $browserElCompare = false;  // 默认不进行浏览器元素对比
     private bool $skipScreenshot = true;  // 默认跳过截图，需 --screenshot 启用
     private bool $updateBaseline = false;
     private bool $verbose = false;
@@ -56,7 +56,7 @@ class PipelineBuilder
             if (str_starts_with($arg, '--case=')) { $this->caseName = substr($arg, 7); }
             elseif ($arg === '--skip-build') { $this->skipBuild = true; }
             elseif ($arg === '--force-build') { $this->forceBuild = true; }
-            elseif ($arg === '--skip-browser-ref') { $this->skipBrowserRef = true; }
+            elseif ($arg === '--browser-engine-el-compare') { $this->browserElCompare = true; }
             elseif ($arg === '--screenshot') { $this->skipScreenshot = false; }
             elseif ($arg === '--update-baseline') { $this->updateBaseline = true; }
             elseif ($arg === '--verbose') { $this->verbose = true; }
@@ -86,19 +86,17 @@ class PipelineBuilder
             }
         }
 
-        // Step G: browser reference
-        $browserStrategy = $this->selectBrowserStrategy();
-        if (!$this->skipBrowserRef) {
+        // Step G+H: 浏览器元素对比（默认跳过，--browser-engine-el-compare 启用）
+        if ($this->browserElCompare) {
+            $browserStrategy = $this->selectBrowserStrategy();
             $orchestrator->addStep(new Strategy\BrowserRefStep($browserStrategy, $this->appDir, $this->caseName ?? 'case-001-wrapper-x'));
+            $caseDir = "{$this->appDir}/test_case/" . ($this->caseName ?? 'case-001-wrapper-x');
+            $orchestrator->addStep(new ElementCompareStep(
+                \PxTest\Comparison\ComparatorRegistry::default(),
+                $caseDir,
+                $this->caseName ?? 'case-001-wrapper-x'
+            ));
         }
-
-        // Step H: element compare (ComparatorRegistry)
-        $caseDir = "{$this->appDir}/test_case/" . ($this->caseName ?? 'case-001-wrapper-x');
-        $orchestrator->addStep(new ElementCompareStep(
-            \PxTest\Comparison\ComparatorRegistry::default(),
-            $caseDir,
-            $this->caseName ?? 'case-001-wrapper-x'
-        ));
 
         // Step I: Screenshot comparison (exe headless vs browser headless)
         if (!$this->skipScreenshot) {
@@ -135,7 +133,6 @@ class PipelineBuilder
 
     private function selectBrowserStrategy(): Strategy\BrowserRefStrategy
     {
-        if ($this->skipBrowserRef) return new NoopBrowserRefStrategy();
         $browser = new BrowserLauncher();
         if (!$browser->isAvailable()) return new NoopBrowserRefStrategy();
         // 浏览器参考数据始终用 EdgeDomStrategy（dump_layout.js 提取元素位置）
