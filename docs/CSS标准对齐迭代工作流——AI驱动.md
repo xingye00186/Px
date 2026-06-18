@@ -48,9 +48,9 @@
 |------|------|------|
 | **PxTest 编排器** | `php apps/css-test/test_pipeline.php` | Pipeline+Strategy D→I 全流程编排 |
 | 构建脚本 | `.\build.bat css-test` | PHP → AOT exe（BuildStep 内部调用） |
-| 布局导出 | `bin/css_test.exe --headless --dump-layout` | → engine_layout.json |
-| 无窗口截图 | `bin/css_test.exe --headless --screenshot=out.png` | 离屏渲染 PNG |
-| 多帧截图 | `--headless --screenshot=out.png --screenshot-frames=5` | 渲染 N 帧后截图 |
+| 布局导出 | `bin/css_test.exe --dump-layout` | → engine_layout.json（默认 headless） |
+| 截图（显式触发） | `bin/css_test.exe --screenshot=out.png` | 离屏渲染 PNG（默认不截图） |
+| 多帧截图 | `--screenshot=out.png --screenshot-frames=5` | 渲染 N 帧后截图 |
 | 浏览器 ref | `PxTest\Pipeline\Strategy\BrowserRefStep` | Edge headless + wrapper!important 注入 |
 | 对比引擎 | `PxTest\Comparison\ComparatorRegistry` | 几何+样式+稳定性+像素 四维对比 |
 | 锚点对齐 | `PxTest\Pipeline\ScreenshotStep::detectColorAnchors()` | #FF00FF/#00FFFF 8×8 块三策略 |
@@ -371,8 +371,8 @@ php apps/css-test/check_regression.php
 # 手动 exe 操作（调试用）
 apps\css-test\bin\css_test.exe --case=case-001 --dump-layout
 apps\css-test\bin\css_test.exe --case=case-029 --dump-layout-after-frames=5
-apps\css-test\bin\css_test.exe --headless --screenshot=out.png
-apps\css-test\bin\css_test.exe --headless --screenshot=out.png --screenshot-frames=5
+apps\css-test\bin\css_test.exe --screenshot=out.png
+apps\css-test\bin\css_test.exe --screenshot=out.png --screenshot-frames=5
 
 # SFC 编译
 php sfc-compiler.php apps/css-test/App.vue
