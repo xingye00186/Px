@@ -47,7 +47,7 @@ php apps/css-test/test_pipeline.php --skip-build
 
 **字体差异过滤**：报告中的 fontSize 失败项（47.5% 通过率）由 GDI vs DirectWrite 字体度量差异导致，属已知限制不纳入 FAIL 计数。详见问题清单 B-018。
 
-run.php 会自动检查问题清单是否有遗漏 FAIL case 记录。
+test_pipeline.php 会自动检查问题清单是否有遗漏 FAIL case 记录。
 
 ## Step 3：定位根因
 

@@ -8,7 +8,7 @@ php apps/css-test/test_pipeline.php                        # 全量测试（截�
 php apps/css-test/run.php --case=case-xxx --verbose        # 单 case
 php apps/css-test/run.php --case=case-xxx --force-build    # 强制重编+测试
 php apps/css-test/run.php --skip-build                     # 跳过编译
-php apps/css-test/run.php --skip-browser-ref               # 跳过浏览器对比
+php apps/css-test/test_pipeline.php --browser-engine-el-compare # 启用浏览器元素对比
 php apps/css-test/run.php --update-baseline                # 刷新浏览器参考
 
 # ==== 默认 headless（窗口不弹出）====

@@ -199,7 +199,7 @@ php apps/css-test/test_pipeline.php --format=md
 php apps/css-test/test_pipeline.php                 # 全量
 php apps/css-test/test_pipeline.php --case=case-xxx # 单 case
 php apps/css-test/test_pipeline.php --skip-build    # 跳过编译
-php apps/css-test/test_pipeline.php --skip-browser-ref # 跳过浏览器对比
+php apps/css-test/test_pipeline.php --browser-engine-el-compare  # 启用浏览器元素对比
 php apps/css-test/test_pipeline.php --update-baseline   # 更新参考数据
 ```
 
