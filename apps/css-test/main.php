@@ -63,8 +63,8 @@ function main(): int
     // 设置上海时区（截图文件名使用 date() 时需要）
     date_default_timezone_set('Asia/Shanghai');
 
-    // --headless: 不显示窗口（用于 CI/自动化 dump-layout）
-    \Px\Core\Application::$HEADLESS = in_array('--headless', $argv);
+    // 默认 headless（不显示窗口）。--show-window 可显式启用窗口
+    \Px\Core\Application::$HEADLESS = !in_array('--show-window', $argv);
 
     $root = ComponentFactory::create(AppComponent::class);
     $appDir = __DIR__;
