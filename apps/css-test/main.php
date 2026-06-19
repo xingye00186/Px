@@ -99,6 +99,9 @@ function main(): int
             $screenshotPath = $dir !== '.' ? $dir . '/' . $newName : $newName;
         }
         $app->saveScreenshot($screenshotPath);
+        // 再渲染一帧触发截图画布落盘（end_frame 处理 g_skPendingSSPath）
+        $app->render();
+        $app->scheduler->flushMicrotasks();
         return 0;
     }
 

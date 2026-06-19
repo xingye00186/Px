@@ -23,6 +23,7 @@ function sk_fill_rect(int $x, int $y, int $w, int $h, int $rgb): void {}
 function sk_draw_text(int $x, int $y, string $text, int $fontSize, int $rgb, int $bold): void {}
 function sk_draw_round_rect(int $x, int $y, int $w, int $h, int $radius, int $rgb): void {}
 function sk_alpha_fill_rect(int $x, int $y, int $w, int $h, int $rgb, float $opacity): void {}
+function sk_shadow_round_rect(int $x, int $y, int $w, int $h, int $radius, int $blur, int $rgb, float $opacity): void {}
 function sk_draw_button(int $x, int $y, int $w, int $h, int $bgColor, int $borderColor): void {}
 function sk_push_clip(int $x, int $y, int $w, int $h): void {}
 function sk_pop_clip(): void {}

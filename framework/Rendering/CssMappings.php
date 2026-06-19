@@ -554,6 +554,8 @@ class CssMappings
         return [
             'h'     => (int)($parts[0] ?? 0),
             'v'     => (int)($parts[1] ?? 0),
+            'blur'  => (int)($parts[2] ?? 0),
+            'alpha' => (float)($parts[5] ?? 0.5),
             'color' => self::hexToBgr($parts[4] ?? '#000000'),
         ];
     }

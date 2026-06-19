@@ -8,9 +8,9 @@ use PxTest\Infrastructure\BrowserLauncher;
  * Screenshot + anchor-aligned pixel comparison step.
  *
  * Alignment: three-tier fallback
- *   1. detectColorAnchors()   â€?#FF00FF(TL) + #00FFFF(BR) color blocks
+ *   1. detectColorAnchors()   éˆ¥?#FF00FF(TL) + #00FFFF(BR) color blocks
  *   2. The 8x8 anchors sit at card padding-box corners in both screenshots
- *   3. Crop to anchor-bounded rectangle â†?zero-chrome pure content diff
+ *   3. Crop to anchor-bounded rectangle éˆ«?zero-chrome pure content diff
  */
 class ScreenshotStep implements PipelineStepInterface
 {
@@ -22,8 +22,8 @@ class ScreenshotStep implements PipelineStepInterface
     private BrowserLauncher $browser;
 
     /** Anchor color constants */
-    private const TL_COLOR = 0xFF00FF;  // #FF00FF â€?magenta, top-left anchor
-    private const BR_COLOR = 0x00FFFF;  // #00FFFF â€?cyan, bottom-right anchor
+    private const TL_COLOR = 0xFF00FF;  // #FF00FF éˆ¥?magenta, top-left anchor
+    private const BR_COLOR = 0x00FFFF;  // #00FFFF éˆ¥?cyan, bottom-right anchor
     private const ANCHOR_TOLERANCE = 5;  // per-channel tolerance for anchor color match (tight)
     private const ANCHOR_SIZE     = 8;  // anchor block size (8x8)
     private const DIFF_TOLERANCE  = 25; // per-pixel RGB diff threshold
@@ -86,7 +86,7 @@ class ScreenshotStep implements PipelineStepInterface
         // I-2.5: Anchor visibility validation
         $anchorStatus = $this->validateAnchorsInViewport($engineFile, $viewW, $viewH);
         if (!$anchorStatus['valid']) {
-            echo "  [anchor] WARNING: anchor visibility issue â€?{$anchorStatus['reason']}\n";
+            echo "  [anchor] WARNING: anchor visibility issue éˆ¥?{$anchorStatus['reason']}\n";
         }
 
         // I-3: Anchor-aligned pixel diff
@@ -121,7 +121,7 @@ class ScreenshotStep implements PipelineStepInterface
      *
      * Strategy:
      *   1. detectColorAnchors() on BOTH images independently
-     *   2. Compute per-image crop rect: TL anchor â†?BR anchor
+     *   2. Compute per-image crop rect: TL anchor éˆ«?BR anchor
      *   3. Crop both to their content rectangles
      *   4. Pixel diff on cropped regions
      *   5. Fallback: if anchors not found, auto-detect content bounds
@@ -174,27 +174,38 @@ class ScreenshotStep implements PipelineStepInterface
      * Detect TL(#FF00FF) and BR(#00FFFF) color anchors.
      *
      * Anchors are 8x8px pure color blocks at card padding-box corners.
-     * Verifies full 8x8 block match (not just single pixel).
+     * Two-phase: coarse scan for matching pixel, then verify 8x8 block
+     * at optimal alignment around the found pixel.
      */
     private function detectColorAnchors(\GdImage $img, int $w, int $h): ?array
     {
-        $step = max(4, (int)($w / 400));
         $tl = null; $br = null;
+        $step = max(2, (int)($w / 600));
 
-        // TL: scan from top-left inward
-        for ($y = 0; $y < $h * 0.4 && $tl === null; $y += $step) {
-            for ($x = 0; $x < $w * 0.4 && $tl === null; $x += $step) {
-                if ($this->isAnchorBlock($img, $x, $y, self::TL_COLOR, $w, $h)) {
-                    $tl = ['x' => $x, 'y' => $y];
+        // Phase 1: coarse scan for TL matching pixel (top-left region)
+        for ($y = 0; $y < $h && $tl === null; $y += $step) {
+            for ($x = 0; $x < $w && $tl === null; $x += $step) {
+                if ($this->isAnchorColor(imagecolorat($img, $x, $y), self::TL_COLOR)) {
+                    // Phase 2: verify 8x8 block at best alignment
+                    $aligned = $this->findAnchorBlockAt($img, $x, $y, self::TL_COLOR, $w, $h);
+                    if ($aligned !== null) {
+                        $tl = $aligned;
+                    }
                 }
             }
         }
 
-        // BR: scan from bottom-right inward
-        for ($y = $h - 1; $y > $h * 0.6 && $br === null; $y -= $step) {
-            for ($x = $w - 1; $x > $w * 0.6 && $br === null; $x -= $step) {
-                if ($this->isAnchorBlock($img, $x, $y, self::BR_COLOR, $w, $h)) {
-                    $br = ['x' => $x + self::ANCHOR_SIZE, 'y' => $y + self::ANCHOR_SIZE];
+        // Phase 1: coarse scan for BR matching pixel (bottom-right region, full height)
+        for ($y = $h - 1; $y >= 0 && $br === null; $y -= $step) {
+            for ($x = $w - 1; $x >= 0 && $br === null; $x -= $step) {
+                if ($this->isAnchorColor(imagecolorat($img, $x, $y), self::BR_COLOR)) {
+                    // Phase 2: verify 8x8 block at best alignment
+                    $aligned = $this->findAnchorBlockAt($img, $x, $y, self::BR_COLOR, $w, $h);
+                    if ($aligned !== null) {
+                        // Return bottom-right corner (+ ANCHOR_SIZE for BR)
+                        $br = ['x' => $aligned['x'] + self::ANCHOR_SIZE,
+                                'y' => $aligned['y'] + self::ANCHOR_SIZE];
+                    }
                 }
             }
         }
@@ -203,6 +214,27 @@ class ScreenshotStep implements PipelineStepInterface
         if ($tl['x'] >= $br['x'] || $tl['y'] >= $br['y']) return null;
 
         return ['tl_x' => $tl['x'], 'tl_y' => $tl['y'], 'br_x' => $br['x'], 'br_y' => $br['y']];
+    }
+
+    /**
+     * Given a candidate anchor pixel, search nearby 8x8 alignments
+     * to find the one that best matches the anchor color.
+     */
+    private function findAnchorBlockAt(\GdImage $img, int $px, int $py, int $target, int $maxW, int $maxH): ?array
+    {
+        // Try all 8x8 alignments that include (px, py)
+        for ($dy = -(self::ANCHOR_SIZE - 1); $dy <= 0; $dy++) {
+            for ($dx = -(self::ANCHOR_SIZE - 1); $dx <= 0; $dx++) {
+                $sx = $px + $dx;
+                $sy = $py + $dy;
+                if ($sx < 0 || $sy < 0) continue;
+                if ($sx + self::ANCHOR_SIZE > $maxW || $sy + self::ANCHOR_SIZE > $maxH) continue;
+                if ($this->isAnchorBlock($img, $sx, $sy, $target, $maxW, $maxH)) {
+                    return ['x' => $sx, 'y' => $sy];
+                }
+            }
+        }
+        return null;
     }
 
     /** Verify a full ANCHOR_SIZE x ANCHOR_SIZE block matches the target color. */
@@ -279,7 +311,7 @@ class ScreenshotStep implements PipelineStepInterface
     }
 
     /**
-     * Auto content bounds detection â€?find the non-background content area.
+     * Auto content bounds detection éˆ¥?find the non-background content area.
      * Uses top-left and bottom-right edge scanning to crop chrome margins.
      */
     private function autoDetectContentBounds(\GdImage $imgA, int $wA, int $hA, \GdImage $imgB, int $wB, int $hB): ?array
@@ -320,7 +352,7 @@ class ScreenshotStep implements PipelineStepInterface
 
     /**
      * Validate TL/BR anchors are within the visible viewport.
-     * Anchors outside viewport â†?screenshot alignment will fail.
+     * Anchors outside viewport éˆ«?screenshot alignment will fail.
      */
     private function validateAnchorsInViewport(string $pngPath, int $viewW, int $viewH): array
     {

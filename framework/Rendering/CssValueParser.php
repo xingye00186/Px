@@ -206,12 +206,17 @@ class CssValueParser
         if ($v === '' || $v === 'none') return '';
 
         $color = '#000000';
+        $alpha = 0.5;
         $numericStr = $v;
 
         if (preg_match('/rgba?\s*\([^)]+\)/i', $v, $m)) {
-            if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i', $m[0], $cm)) {
+            // 提取 alpha（rgba 第四参数）
+            if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,?\s*([\d.]+)?/i', $m[0], $cm)) {
                 $r = (int)$cm[1]; $g = (int)$cm[2]; $b = (int)$cm[3];
                 $color = sprintf('#%02X%02X%02X', $r, $g, $b);
+                if (isset($cm[4]) && $cm[4] !== '') {
+                    $alpha = (float)$cm[4];
+                }
             }
             $numericStr = trim(preg_replace('/' . preg_quote(explode('(', $m[0])[0], '/') . '\([^)]+\)\s*,?\s*/', '', $v));
         } elseif (preg_match('/#([0-9a-fA-F]{3,8})\b/', $v, $m)) {
@@ -230,7 +235,7 @@ class CssValueParser
         $vOff = $numParts[1] ?? 0;
         $blur = $numParts[2] ?? 0;
         $spread = $numParts[3] ?? 0;
-        return $h . '|' . $vOff . '|' . $blur . '|' . $spread . '|' . $color;
+        return $h . '|' . $vOff . '|' . $blur . '|' . $spread . '|' . $color . '|' . $alpha;
     }
 
     public static function parseOpacity(string $value): float

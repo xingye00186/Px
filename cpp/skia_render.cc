@@ -52,6 +52,7 @@
 #include "include/core/SkData.h"
 #include "include/core/SkImage.h"
 #include "include/ports/SkFontMgr_directory.h"   // SkFontMgr_New_Custom_Directory
+#include "include/effects/SkImageFilters.h"
 #include <cstdio>
 
 #endif
@@ -485,6 +486,82 @@ void php_sk_draw_round_rect(Int x, Int y, Int w, Int h, Int radius, Int rgb) {
 #endif
 }
 
+// 绘制阴影（带圆角 + 高斯模糊）
+void php_sk_shadow_round_rect(Int x, Int y, Int w, Int h, Int radius, Int blur, Int rgb, double opacity) {
+#ifdef USE_SKIA
+    if (!g_skCanvas) return;
+    if ((int)w <= 0 || (int)h <= 0) return;
+    if (opacity <= 0.0) return;
+    float sigma = (float)(int)blur * 0.5f;
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    paint.setColor(rgbToSkColor(rgb));
+    paint.setAlphaf((SkScalar)opacity);
+    if (sigma >= 0.5f) {
+        paint.setImageFilter(SkImageFilters::Blur(sigma, sigma, SkTileMode::kClamp, nullptr));
+    }
+    int r = (int)radius;
+    if (r > 0) {
+        SkRRect rrect;
+        rrect.setRectXY(
+            SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                             (SkScalar)(int)w, (SkScalar)(int)h),
+            (SkScalar)r, (SkScalar)r);
+        g_skCanvas->drawRRect(rrect, paint);
+    } else {
+        g_skCanvas->drawRect(
+            SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                             (SkScalar)(int)w, (SkScalar)(int)h),
+            paint);
+    }
+#else
+    (void)blur;
+    (void)radius;
+    if (!g_skHdc) return;
+    if ((int)w <= 0 || (int)h <= 0) return;
+    int alpha = (int)(opacity * 255.0);
+    if (alpha >= 255 || alpha <= 0) return;
+    int blue  = (Int)rgb & 0xFF;
+    int green = ((Int)rgb >> 8) & 0xFF;
+    int red   = ((Int)rgb >> 16) & 0xFF;
+    BITMAPINFO bmi;
+    ZeroMemory(&bmi, sizeof(bmi));
+    bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth       = (int)w;
+    bmi.bmiHeader.biHeight      = -(int)h;
+    bmi.bmiHeader.biPlanes      = 1;
+    bmi.bmiHeader.biBitCount    = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+    void* bits = NULL;
+    HBITMAP hBitmap = CreateDIBSection(g_skHdc, &bmi, DIB_RGB_COLORS, &bits, NULL, 0);
+    if (!hBitmap || !bits) {
+        if (hBitmap) DeleteObject(hBitmap);
+        return;
+    }
+    HDC memDC = CreateCompatibleDC(g_skHdc);
+    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, hBitmap);
+    unsigned char* p = (unsigned char*)bits;
+    int total = (int)w * (int)h;
+    for (int i = 0; i < total; i++) {
+        p[0] = (unsigned char)(blue  * alpha / 255);
+        p[1] = (unsigned char)(green * alpha / 255);
+        p[2] = (unsigned char)(red   * alpha / 255);
+        p[3] = (unsigned char)alpha;
+        p += 4;
+    }
+    BLENDFUNCTION blend;
+    blend.BlendOp             = AC_SRC_OVER;
+    blend.BlendFlags          = 0;
+    blend.SourceConstantAlpha = 255;
+    blend.AlphaFormat         = AC_SRC_ALPHA;
+    AlphaBlend(g_skHdc, (int)x, (int)y, (int)w, (int)h,
+               memDC, 0, 0, (int)w, (int)h, blend);
+    SelectObject(memDC, oldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(memDC);
+#endif
+}
+
 // 半透明矩形填充
 // 阶段三：R15 风险对策——与 php_sk_fill_rect 合并实现（唯一差异 paint.setAlphaf）
 void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity) {
@@ -565,6 +642,7 @@ void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity)
     DeleteDC(memDC);
 #endif
 }
+
 
 // 绘制文本（阶段三：用 SkFontMgr_New_Custom_Directory 加载 Noto Sans SC 后 drawString）
 // PHP 传入的 Y 为 text-top 坐标，Skia drawString 需要 baseline → 内部用 font metrics 转换

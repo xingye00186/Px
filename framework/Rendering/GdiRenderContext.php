@@ -53,13 +53,16 @@ class GdiRenderContext extends RenderContext
                 $shadowX = $el['shadowX'] ?? 0;
                 $shadowY = $el['shadowY'] ?? 0;
                 $shadowColor = $el['shadowColor'] ?? 0;
+                $shadowBlur = $el['shadowBlur'] ?? 0;
                 if ($shadowX !== 0 || $shadowY !== 0) {
+                    $shadowAlpha = 0.5 * (1.0 / (1.0 + $shadowBlur * 0.05));
+                    $shadowAlpha = max(0.05, min(0.5, $shadowAlpha));
                     vue_alpha_fill_rect(
                         $this->hdc,
                         ($el['x'] ?? 0) + $shadowX,
                         ($el['y'] ?? 0) + $shadowY,
                         $el['w'] ?? 0, $el['h'] ?? 0,
-                        $shadowColor, 0.5
+                        $shadowColor, $shadowAlpha
                     );
                 }
                 $radius = $el['borderRadius'] ?? 0;
@@ -175,13 +178,16 @@ class GdiRenderContext extends RenderContext
                 $shadowX = $el['shadowX'] ?? 0;
                 $shadowY = $el['shadowY'] ?? 0;
                 $shadowColor = $el['shadowColor'] ?? 0;
+                $shadowBlur = $el['shadowBlur'] ?? 0;
                 if ($shadowX !== 0 || $shadowY !== 0) {
+                    $shadowAlpha = 0.5 * (1.0 / (1.0 + $shadowBlur * 0.05));
+                    $shadowAlpha = max(0.05, min(0.5, $shadowAlpha));
                     vue_alpha_fill_rect(
                         $this->hdc,
                         ($el['x'] ?? 0) + $shadowX,
                         ($el['y'] ?? 0) + $shadowY,
                         $el['w'] ?? 0, $el['h'] ?? 0,
-                        $shadowColor, 0.5
+                        $shadowColor, $shadowAlpha
                     );
                 }
                 $radius = $el['borderRadius'] ?? 0;

@@ -71,12 +71,17 @@ class SkiaRenderContext extends RenderContext
                 $shadowX = $el['shadowX'] ?? 0;
                 $shadowY = $el['shadowY'] ?? 0;
                 $shadowColor = $el['shadowColor'] ?? 0;
+                $shadowBlur = $el['shadowBlur'] ?? 0;
+                $shadowAlpha = $el['shadowAlpha'] ?? 0.5;
                 if ($shadowX !== 0 || $shadowY !== 0) {
-                    sk_alpha_fill_rect(
+                    sk_shadow_round_rect(
                         ($el['x'] ?? 0) + $shadowX,
                         ($el['y'] ?? 0) + $shadowY,
                         $el['w'] ?? 0, $el['h'] ?? 0,
-                        $shadowColor, 0.5
+                        $el['borderRadius'] ?? 0,
+                        $shadowBlur,
+                        $shadowColor,
+                        $shadowAlpha
                     );
                 }
                 $radius = $el['borderRadius'] ?? 0;
@@ -159,12 +164,17 @@ class SkiaRenderContext extends RenderContext
                 $shadowX = $el['shadowX'] ?? 0;
                 $shadowY = $el['shadowY'] ?? 0;
                 $shadowColor = $el['shadowColor'] ?? 0;
+                $shadowBlur = $el['shadowBlur'] ?? 0;
+                $shadowAlpha = $el['shadowAlpha'] ?? 0.5;
                 if ($shadowX !== 0 || $shadowY !== 0) {
-                    sk_alpha_fill_rect(
+                    sk_shadow_round_rect(
                         ($el['x'] ?? 0) + $shadowX,
                         ($el['y'] ?? 0) + $shadowY,
                         $el['w'] ?? 0, $el['h'] ?? 0,
-                        $shadowColor, 0.5
+                        $el['borderRadius'] ?? 0,
+                        $shadowBlur,
+                        $shadowColor,
+                        $shadowAlpha
                     );
                 }
                 $radius = $el['borderRadius'] ?? 0;
