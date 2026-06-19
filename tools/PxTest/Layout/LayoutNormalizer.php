@@ -262,25 +262,17 @@ class LayoutNormalizer
      */
     private function normalizeStyleValue(string $engineKey, mixed $value, string $cssKey): ?string
     {
-        // bg: engine 用 ARGB 整数，转 rgb()/rgba() 字符串
-        if ($engineKey === 'bg' && is_int($value)) {
+        // bg/fg/borderColor: engine 用 0x00BBGGRR (COLORREF/GDI 格式)，转 rgb() 字符串
+        // CssValueParser::hexToBgr 存储为 (b<<16)|(g<<8)|r 即 0x00BBGGRR
+        if (in_array($engineKey, ['bg', 'fg', 'borderColor', 'borderTopColor', 'borderRightColor',
+            'borderBottomColor', 'borderLeftColor', 'scrollbarTrackColor', 'scrollbarThumbColor'], true)
+            && is_int($value)
+        ) {
             if ($value === -1) return 'rgba(0, 0, 0, 0)'; // 透明 sentinel
-            $a = ($value >> 24) & 0xFF;
-            $r = ($value >> 16) & 0xFF;
+            // COLORREF 格式: 0x00BBGGRR — bits 0-7=R, 8-15=G, 16-23=B
+            $r = $value & 0xFF;
             $g = ($value >> 8) & 0xFF;
-            $b = $value & 0xFF;
-            if ($a === 0) {
-                return "rgb($r, $g, $b)";
-            }
-            return "rgba($r, $g, $b, " . round($a / 255, 2) . ")";
-        }
-
-        // fg: engine 用 ARGB 整数，转 rgb() 字符串
-        if ($engineKey === 'fg' && is_int($value)) {
-            if ($value === -16777216) return 'rgb(0, 0, 0)'; // 黑色快捷
-            $r = ($value >> 16) & 0xFF;
-            $g = ($value >> 8) & 0xFF;
-            $b = $value & 0xFF;
+            $b = ($value >> 16) & 0xFF;
             return "rgb($r, $g, $b)";
         }
 
