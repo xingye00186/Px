@@ -250,12 +250,16 @@ class ElementCompareStep implements PipelineStepInterface
             $ctx->set('overflow_issues', $overflowIssues);
         }
 
-        // ─── Phase G: 容器溢出检测（子元素超出父容器边界）───
+        // ─── Phase G: 容器溢出检测（仅锚点子树，排除侧边栏）───
         $containerIssues = [];
         $layoutPath = $ctx->get('layout_path');
         if ($layoutPath && file_exists($layoutPath)) {
             $engineLayout = json_decode(file_get_contents($layoutPath), true);
-            $containerIssues = $this->detectContainerOverflow($engineLayout);
+            // 在树中搜索 TL 锚点（bg=16711935=0xFF00FF），取其父节点子树
+            $anchorParent = $this->findAnchorParentInTree($engineLayout);
+            if ($anchorParent !== null) {
+                $containerIssues = $this->detectContainerOverflow($anchorParent);
+            }
         }
         if (!empty($containerIssues)) {
             echo "  [Phase G] container overflow:\n";
@@ -544,6 +548,32 @@ class ElementCompareStep implements PipelineStepInterface
         return $issues;
     }
 
+    /**
+     * 在引擎布局树中搜索 TL 锚点（bg=16711935=0xFF00FF），返回其父节点。
+     * Phase G 只检测锚点父容器下的子树，排除侧边栏误报。
+     */
+    private function findAnchorParentInTree(array $node): ?array
+    {
+        $bg = $node['style']['bg'] ?? null;
+        if ($bg === 16711935) {
+            // 找到锚点，返回 null 由调用方在父递归中处理
+            return null;
+        }
+        foreach ($node['children'] ?? [] as $child) {
+            if (is_array($child)) {
+                $childBg = $child['style']['bg'] ?? null;
+                if ($childBg === 16711935) {
+                    return $node; // 当前节点是锚点的父容器
+                }
+                $found = $this->findAnchorParentInTree($child);
+                if ($found !== null) {
+                    return $found;
+                }
+            }
+        }
+        return null;
+    }
+
     private function scanContainerOverflow(array $node, ?array $parent, array &$issues): void
     {
         if ($parent !== null) {
@@ -564,8 +594,8 @@ class ElementCompareStep implements PipelineStepInterface
             $pRight = $pX + $pW;
             $pBottom = $pY + $pH;
 
-            // 只检查有意义的容器（宽 > 300px 且高 > 50px，排除侧边栏小容器）
-            if ($pW > 300 && $pH > 50 && $cW > 10) {
+            // 只检查有意义的容器（排除 0 尺寸内部节点）
+            if ($pW > 10 && $cW > 0) {
                 if ($cRight > $pRight + 2) {
                     $over = $cRight - $pRight;
                     $type = $node['type'] ?? '?';
@@ -576,7 +606,7 @@ class ElementCompareStep implements PipelineStepInterface
             // 底部溢出检测（滚动容器内子元素溢出是正常的）
             // 仅当父容器非滚动容器时检查
             $parentScroll = $parent['isScrollContainer'] ?? false;
-            if (!$parentScroll && $pW > 300 && $pH > 50 && $cH > 10) {
+            if (!$parentScroll && $pH > 10 && $cH > 0) {
                 if ($cBottom > $pBottom + 2) {
                     $over = $cBottom - $pBottom;
                     $issues[] = "child(type={$node['type']} bottom=$cBottom) overflows parent(type={$parent['type']} bottom=$pBottom) by {$over}px (bottom overflow)";
