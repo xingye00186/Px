@@ -34,7 +34,7 @@ class PipelineBuilder
     private ?string $caseName = null;
     private bool $skipBuild = false;
     private bool $forceBuild = false;
-    private bool $browserElCompare = false;  // 默认不进行浏览器元素对比
+    private bool $browserElCompare = true;  // 默认开启浏览器元素对比
     private bool $skipScreenshot = true;  // 默认跳过截图，需 --screenshot 启用
     private bool $updateBaseline = false;
     private bool $verbose = false;

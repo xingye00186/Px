@@ -250,11 +250,28 @@ class ElementCompareStep implements PipelineStepInterface
             $ctx->set('overflow_issues', $overflowIssues);
         }
 
+        // ─── Phase G: 容器溢出检测（子元素超出父容器边界）───
+        $containerIssues = [];
+        $layoutPath = $ctx->get('layout_path');
+        if ($layoutPath && file_exists($layoutPath)) {
+            $engineLayout = json_decode(file_get_contents($layoutPath), true);
+            $containerIssues = $this->detectContainerOverflow($engineLayout);
+        }
+        if (!empty($containerIssues)) {
+            echo "  [Phase G] container overflow:\n";
+            foreach ($containerIssues as $issue) {
+                echo "    - $issue\n";
+            }
+            $containerOverflowDiffs = count($containerIssues);
+        } else {
+            $containerOverflowDiffs = 0;
+        }
+
         // ─── 保存报告文件 ───
-        $this->saveReport($structDiffs, $missingDiffs, $geoDiffs, $mismatchDiffs, $totalDiffs);
+        $this->saveReport($structDiffs, $missingDiffs, $geoDiffs, $mismatchDiffs, $totalDiffs, $containerIssues);
 
         // MISSING（引擎未导出属性）不计入失败——工作流规则：仅引擎未导出属性时可通过
-        $realDiffs = count($geoDiffs) + count($mismatchDiffs) + count($structDiffs);
+        $realDiffs = count($geoDiffs) + count($mismatchDiffs) + count($structDiffs) + $containerOverflowDiffs;
         $allPassed = $realDiffs === 0;
         return $allPassed ? StepResult::ok('element_compare') : StepResult::err('element_compare', 'Differences found');
     }
@@ -395,7 +412,7 @@ class ElementCompareStep implements PipelineStepInterface
      *   element_compare_report.json  — 结构化数据，供程序读取
      *   element_compare_report.md    — 可读报告，供人工查阅
      */
-    private function saveReport(array $structDiffs, array $missingDiffs, array $geoDiffs, array $mismatchDiffs, int $totalDiffs): void
+    private function saveReport(array $structDiffs, array $missingDiffs, array $geoDiffs, array $mismatchDiffs, int $totalDiffs, array $containerIssues = []): void
     {
         if ($this->caseDir === '' || $this->caseName === '') return;
 
@@ -512,6 +529,64 @@ class ElementCompareStep implements PipelineStepInterface
         foreach ($node['children'] ?? [] as $child) {
             if (is_array($child)) {
                 $this->scanOverflow($child, $node, $issues);
+            }
+        }
+    }
+
+    /**
+     * Phase G: 检测容器溢出——子元素超出父容器 content 边界。
+     * 使用原始 engine_layout.json 树结构遍历。
+     */
+    private function detectContainerOverflow(array $node): array
+    {
+        $issues = [];
+        $this->scanContainerOverflow($node, null, $issues);
+        return $issues;
+    }
+
+    private function scanContainerOverflow(array $node, ?array $parent, array &$issues): void
+    {
+        if ($parent !== null) {
+            $pW = (int)($parent['w'] ?? 0);
+            $pH = (int)($parent['h'] ?? 0);
+            $pX = (int)($parent['x'] ?? 0);
+            $pY = (int)($parent['y'] ?? 0);
+            // 使用 contentW 如果存在（border-box 内容区），否则 fallback
+            $pContentW = (int)($parent['contentW'] ?? ($parent['visualW'] ?? $pW));
+            $pContentH = (int)($parent['contentH'] ?? ($parent['visualH'] ?? $pH));
+
+            $cX = (int)($node['x'] ?? 0);
+            $cY = (int)($node['y'] ?? 0);
+            $cW = (int)($node['w'] ?? 0);
+            $cH = (int)($node['h'] ?? 0);
+            $cRight = $cX + $cW;
+            $cBottom = $cY + $cH;
+            $pRight = $pX + $pW;
+            $pBottom = $pY + $pH;
+
+            // 只检查有意义的容器（宽 > 300px 且高 > 50px，排除侧边栏小容器）
+            if ($pW > 300 && $pH > 50 && $cW > 10) {
+                if ($cRight > $pRight + 2) {
+                    $over = $cRight - $pRight;
+                    $type = $node['type'] ?? '?';
+                    $pType = $parent['type'] ?? '?';
+                    $issues[] = "child(type=$type right=$cRight) overflows parent(type=$pType right=$pRight) by {$over}px (w: child=$cW parent=$pW)";
+                }
+            }
+            // 底部溢出检测（滚动容器内子元素溢出是正常的）
+            // 仅当父容器非滚动容器时检查
+            $parentScroll = $parent['isScrollContainer'] ?? false;
+            if (!$parentScroll && $pW > 300 && $pH > 50 && $cH > 10) {
+                if ($cBottom > $pBottom + 2) {
+                    $over = $cBottom - $pBottom;
+                    $issues[] = "child(type={$node['type']} bottom=$cBottom) overflows parent(type={$parent['type']} bottom=$pBottom) by {$over}px (bottom overflow)";
+                }
+            }
+        }
+
+        foreach ($node['children'] ?? [] as $child) {
+            if (is_array($child)) {
+                $this->scanContainerOverflow($child, $node, $issues);
             }
         }
     }
