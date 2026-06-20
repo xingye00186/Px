@@ -134,19 +134,31 @@ class LayoutNormalizer
 
     /**
      * 递归展平树并规范化每个节点。
+     * 同时传播继承属性（text-align 等 CSS 继承属性）。
      */
-    private function flatten(array $node, int $depth): array
+    private function flatten(array $node, int $depth, array $parentInherited = []): array
     {
         $result = [];
 
-        $element = $this->normalizeNode($node, $depth);
+        $element = $this->normalizeNode($node, $depth, $parentInherited);
         if ($element !== null) {
             $result[] = $element;
         }
 
+        // 提取当前节点的继承属性传给子节点
+        $childInherited = $parentInherited;
+        if ($element !== null && isset($element['styles'])) {
+            $inheritableKeys = ['text-align'];
+            foreach ($inheritableKeys as $key) {
+                if (isset($element['styles'][$key])) {
+                    $childInherited[$key] = $element['styles'][$key];
+                }
+            }
+        }
+
         foreach ($node['children'] ?? [] as $child) {
             if (is_array($child)) {
-                $result = array_merge($result, $this->flatten($child, $depth + 1));
+                $result = array_merge($result, $this->flatten($child, $depth + 1, $childInherited));
             }
         }
 
@@ -156,7 +168,7 @@ class LayoutNormalizer
     /**
      * 规范化单个节点：映射键、过滤字段、转换样式。
      */
-    private function normalizeNode(array $node, int $depth): ?array
+    private function normalizeNode(array $node, int $depth, array $parentInherited = []): ?array
     {
         $type = $node['type'] ?? '';
 
@@ -210,6 +222,15 @@ class LayoutNormalizer
         foreach ($cssDefaults as $cssKey => $defaultVal) {
             if (!isset($element['styles'][$cssKey])) {
                 $element['styles'][$cssKey] = $defaultVal;
+            }
+        }
+
+        // CSS 继承传播：父节点有显式 text-align 时覆盖默认值
+        // 引擎只导出显式设置的属性，继承的 text-align 不在 style 中
+        if (!empty($parentInherited) && isset($parentInherited['text-align'])) {
+            if (isset($element['styles']['text-align']) && $element['styles']['text-align'] === 'start') {
+                // 'start' 是 CSS 默认值，父节点有不同值时说明应继承
+                $element['styles']['text-align'] = $parentInherited['text-align'];
             }
         }
 

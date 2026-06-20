@@ -183,6 +183,14 @@ class ElementCompareStep implements PipelineStepInterface
                     // 跳过已知噪音：
                     // 1. top/left 已在 GEOMETRY 中比较（x/y），style 中的 top/left 是不同维度
                     if (in_array($k, ['top', 'left'], true)) continue;
+                    // 2. background-color: 引擎从 linear-gradient 提取首色作为 bg，
+                    //    浏览器对只有渐变的元素不导出背景色（rgba(0,0,0,0) 表示透明）
+                    if ($k === 'background-color') {
+                        $bIsTransparent = $bvs === 'rgba(0, 0, 0, 0)' || $bvs === 'transparent';
+                        if ($bIsTransparent) {
+                            continue; // 引擎的 bg 来自渐变色，非真实背景色
+                        }
+                    }
                     $totalLen = strlen((string)$evs) + strlen((string)$bvs);
                     if ($totalLen < 100) {
                         $mismatchDiffs[] = "elem[$i].$k: engine=$evs browser=$bvs";
