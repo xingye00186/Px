@@ -286,22 +286,40 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         $isMarginRightAuto = $style['marginRightAuto'] ?? $marginIsAuto;
 
+        // Undo previously applied auto-margin offset to prevent accumulation on re-application
+        $prevOffsetX = $node->style['_marginAutoOffsetX'] ?? 0;
+        if ($prevOffsetX !== 0) {
+            $node->x -= $prevOffsetX;
+        }
+
         // CSS 2.1 §10.3.3: margin:auto 居中使用的剩余空间 = 父内容宽度 - 子元素完整盒宽度
         $totalBoxW = max($node->w, $node->visualW ?? $node->w);
 
+        $appliedOffset = 0;
         if ($isMarginLeftAuto && $isMarginRightAuto && $totalBoxW > 0 && $parentContentW > $totalBoxW && $parentContentW > 0) {
             $remaining = $parentContentW - $totalBoxW;
 
             $half = (int)($remaining / 2);
 
             $node->x += $half;
+            $appliedOffset = $half;
+            // Sync serialized margin style so layout comparison sees the computed value
+            $node->style['marginLeft'] = $half;
+            $node->style['marginRight'] = $remaining - $half;
 
         } elseif ($isMarginLeftAuto && !$isMarginRightAuto && $parentContentW > $totalBoxW && $parentContentW > 0) {
             $remaining = $parentContentW - $totalBoxW;
 
             $node->x += $remaining;
+            $appliedOffset = $remaining;
+            $node->style['marginLeft'] = $remaining;
 
+        } elseif (!$isMarginLeftAuto && $isMarginRightAuto && $parentContentW > $totalBoxW && $parentContentW > 0) {
+            $remaining = $parentContentW - $totalBoxW;
+
+            $node->style['marginRight'] = $remaining;
         }
+        $node->style['_marginAutoOffsetX'] = $appliedOffset;
 
         // Vertical auto margins: only when both auto (centering)
 

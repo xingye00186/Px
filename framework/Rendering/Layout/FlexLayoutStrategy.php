@@ -1013,6 +1013,37 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $chTp->visualH = 0;
                         }
 
+                        // Re-evaluate auto-margin: the first pass may have applied
+                        // margin:auto with an incorrect parent width (before flex-grow).
+                        // Clear computed margin style and restore flags so the
+                        // re-layout (with correct post-grow width) recalculates them.
+                        $chOrigML = $chTp->style['marginLeftAuto'] ?? false;
+                        $chOrigMR = $chTp->style['marginRightAuto'] ?? false;
+                        if ($chOrigML || $chOrigMR) {
+                            // Clear first-pass computed margin values; re-layout will set correct ones
+                            unset($chTp->style['marginLeft'], $chTp->style['marginRight']);
+                            $chTp->style['marginLeftAuto'] = $chOrigML;
+                            $chTp->style['marginRightAuto'] = $chOrigMR;
+                        }
+                        // Also fix descendant auto-margins: first pass may have computed
+                        // margins with wrong parent width. Clear _marginAutoApplied so
+                        // re-layout (with correct post-grow width) recalculates correctly.
+                        $stack = [$chTp];
+                        while (!empty($stack)) {
+                            $cur = array_pop($stack);
+                            foreach ($cur->children as $gc) {
+                                $gcML = $gc->style['marginLeftAuto'] ?? false;
+                                $gcMR = $gc->style['marginRightAuto'] ?? false;
+                                if ($gcML || $gcMR) {
+                                    // Allow re-application with correct parent width
+                                    unset($gc->style['_marginAutoApplied']);
+                                    // Clear stale computed margin values
+                                    unset($gc->style['marginLeft'], $gc->style['marginRight']);
+                                }
+                                $stack[] = $gc;
+                            }
+                        }
+
                         $chTp->layoutDirty = true;
 
                         foreach ($chTp->children as $gc) {
