@@ -691,6 +691,14 @@ class CssMappings
         // Expand background shorthand into individual sub-properties
         $raw = self::expandBackgroundShorthand($raw);
 
+        // Detect linear-gradient in background — the parser extracts the first
+        // color as bg, but the element doesn't have a solid background-color.
+        // Set a flag so the normalizer can skip exporting background-color
+        // for gradient-only elements (browser shows rgba(0,0,0,0) for these).
+        if (isset($raw['background']) && stripos($raw['background'], 'linear-gradient') !== false) {
+            $style['bgFromGradient'] = true;
+        }
+
         // Expand text-decoration shorthand into individual sub-properties
         $raw = self::expandTextDecorationShorthand($raw);
 

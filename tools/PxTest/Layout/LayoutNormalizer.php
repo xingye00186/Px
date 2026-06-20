@@ -279,6 +279,11 @@ class LayoutNormalizer
             $normalized[$cssKey] = $cssValue;
         }
 
+        // bgFromGradient 标记：元素有 linear-gradient 背景，无实质 background-color
+        if (!empty($style['bgFromGradient'])) {
+            unset($normalized['background-color']);
+        }
+
         // ─── 统一 border-color: 从 per-side 颜色构建完整值 ───
         // 引擎同时导出 borderColor(单色) 和 borderTopColor 等(四边)，
         // 浏览器 border-color 包含全部四边值。

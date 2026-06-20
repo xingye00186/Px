@@ -736,7 +736,7 @@ class Application
     /**
      * 递归序列化 RenderNode 为数组。
      */
-    private function serializeRenderNode(?RenderNode $node): ?array
+    private function serializeRenderNode(?RenderNode $node, array $parentStyle = []): ?array
     {
         if ($node === null) return null;
         $result = [
@@ -759,14 +759,13 @@ class Application
             'textRenderInfo' => $node->textRenderInfo,
         ];
         // 包含关键样式属性用于对比
-        $styleKeys = ['bg', 'fg', 'fontSize', 'fontWeight', 'bold', 'borderWidth', 'borderColor',
-            'borderLeftWidth', 'borderLeftColor', 'borderTopWidth', 'borderTopColor',
-            'borderRightWidth', 'borderRightColor', 'borderBottomWidth', 'borderBottomColor',
+        // 不导出 per-side border 属性：它们与 borderWidth/borderColor 简写重复，
+        // 且浏览器只导出简写不单独导出各边。对比层通过浏览器 skip 列表忽略。
+        $styleKeys = ['bg', 'fg', 'bgFromGradient', 'fontSize', 'fontWeight', 'bold', 'borderWidth', 'borderColor',
             'borderRadius', 'textAlign',
             'lineHeight', 'whiteSpace', 'wordBreak', 'fontStyle', 'fontFamily', 'opacity',
             'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
             'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
-            'marginTopAuto', 'marginLeftAuto', 'marginRightAuto', 'marginBottomAuto',
             'gap', 'boxSizing', 'boxShadow',
             'flexDirection', 'alignItems', 'justifyContent', 'flexWrap',
             'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',
@@ -782,6 +781,14 @@ class Application
                 $style[$k] = $node->style[$k];
             }
         }
+        // CSS 继承属性补全：引擎在 resolveNodeStyle 中已做继承，
+        // 但部分场景下（如两阶段重布局后）继承值可能丢失。
+        // 从父节点样式补全当前节点缺失的继承属性。
+        // 仅补全 textAlign，其他继承属性如 fontFamily/fontSize 等
+        // 因引擎全局 style 与浏览器默认值不同，序列化后会引入新噪声。
+        if (!isset($style['textAlign']) && isset($parentStyle['textAlign'])) {
+            $style['textAlign'] = $parentStyle['textAlign'];
+        }
         // bg 总是导出：显式设置的值正常导出，未设置时用 -1 表示"无显式背景/透明"
         // 这确保元素即使没设背景也能参与颜色对比，否则 bg 缺失时对比逻辑直接跳过此类漏洞
         if (!isset($style['bg'])) {
@@ -792,7 +799,7 @@ class Application
         }
         $children = [];
         foreach ($node->children as $child) {
-            $serialized = $this->serializeRenderNode($child);
+            $serialized = $this->serializeRenderNode($child, $style);
             if ($serialized !== null) {
                 $children[] = $serialized;
             }

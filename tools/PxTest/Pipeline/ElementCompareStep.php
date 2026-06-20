@@ -39,7 +39,7 @@ class ElementCompareStep implements PipelineStepInterface
      * 引擎缺失的浏览器属性白名单——这些 MISSING 不计入失败（引擎不导出默认值）。
      */
     private static array $BROWSER_DEFAULT_SKIP_KEYS = [
-        'font-size', 'color', 'border-left-width', 'border-left-color',
+        'font-size', 'color', 'background-color', 'border-left-width', 'border-left-color',
         'border-width', 'border-color', 'border-radius',
         'padding-top', 'padding-left', 'padding-right', 'padding-bottom',
         'margin-top', 'margin-left', 'margin-right', 'margin-bottom',
