@@ -246,11 +246,75 @@ class LayoutNormalizer
             $cssKey = self::STYLE_KEY_MAP[$key] ?? null;
             if ($cssKey === null) continue;  // 跳过未映射的引擎字段
 
+            // 如果 fontWeight 已处理（保留原始 CSS 数值），跳过 bold 的硬编码映射
+            if ($key === 'bold' && isset($normalized['font-weight'])) {
+                continue;
+            }
+
             // 值规范化
-            $cssValue = $this->normalizeStyleValue($key, $value, $cssKey);
+            $cssValue = $this->normalizeStyleValue($key, $value, $cssKey, $style);
             if ($cssValue === null) continue;
 
             $normalized[$cssKey] = $cssValue;
+        }
+
+        // ─── 统一 border-color: 从 per-side 颜色构建完整值 ───
+        // 引擎同时导出 borderColor(单色) 和 borderTopColor 等(四边)，
+        // 浏览器 border-color 包含全部四边值。
+        // 但当 per-side 值已覆盖所有边时，移除冗余的 border-color 简写
+        // 因为在比较时浏览器会跳过 border-color（已在 $BROWSER_DEFAULT_SKIP_KEYS）
+        if (isset($normalized['border-color'])) {
+            $sides = ['border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color'];
+            $allSides = [];
+            foreach ($sides as $side) {
+                if (isset($normalized[$side])) {
+                    $allSides[] = $normalized[$side];
+                } else {
+                    $allSides[] = $normalized['border-color'];
+                }
+            }
+            $unique = array_unique($allSides);
+            $hasPerSideColors = count(array_filter([
+                isset($normalized['border-top-color']),
+                isset($normalized['border-right-color']),
+                isset($normalized['border-bottom-color']),
+                isset($normalized['border-left-color']),
+            ])) > 0;
+            if ($hasPerSideColors) {
+                // per-side 已能覆盖所有边框颜色，移除冗余的简写
+                unset($normalized['border-color']);
+            } else {
+                $normalized['border-color'] = count($unique) === 1
+                    ? $unique[0]
+                    : implode(' ', $allSides);
+            }
+        }
+
+        // ─── 统一 border-width: 同上逻辑 ───
+        if (isset($normalized['border-width'])) {
+            $sides = ['border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width'];
+            $allSides = [];
+            foreach ($sides as $side) {
+                if (isset($normalized[$side])) {
+                    $allSides[] = $normalized[$side];
+                } else {
+                    $allSides[] = $normalized['border-width'];
+                }
+            }
+            $unique = array_unique($allSides);
+            $hasPerSideWidths = count(array_filter([
+                isset($normalized['border-top-width']),
+                isset($normalized['border-right-width']),
+                isset($normalized['border-bottom-width']),
+                isset($normalized['border-left-width']),
+            ])) > 0;
+            if ($hasPerSideWidths) {
+                unset($normalized['border-width']);
+            } else {
+                $normalized['border-width'] = count($unique) === 1
+                    ? $unique[0]
+                    : implode(' ', $allSides);
+            }
         }
 
         return $normalized;
@@ -260,8 +324,19 @@ class LayoutNormalizer
      * 规范化样式值。
      * 处理：bg=-1 跳过、fg 整数转 rgb、bold 转 font-weight 值等。
      */
-    private function normalizeStyleValue(string $engineKey, mixed $value, string $cssKey): ?string
+    private function normalizeStyleValue(string $engineKey, mixed $value, string $cssKey, array $fullStyle = []): ?string
     {
+        // line-height 因子 → px：引擎存储原始因子(1.6)，浏览器导出计算值(22.4px)
+        // 用元素自身的 font-size 计算以匹配浏览器格式
+        if ($engineKey === 'lineHeight' && is_numeric($value) && (float)$value < 10) {
+            $fs = 16; // 默认 font-size
+            if (isset($fullStyle['fontSize']) && is_numeric($fullStyle['fontSize'])) {
+                $fs = (int)$fullStyle['fontSize'];
+            }
+            $px = (float)$value * $fs;
+            // 保留一位小数（与浏览器格式对齐）
+            return number_format($px, 1) . 'px';
+        }
         // bg/fg/borderColor: engine 用 0x00BBGGRR (COLORREF/GDI 格式)，转 rgb() 字符串
         // CssValueParser::hexToBgr 存储为 (b<<16)|(g<<8)|r 即 0x00BBGGRR
         if (in_array($engineKey, ['bg', 'fg', 'borderColor', 'borderTopColor', 'borderRightColor',

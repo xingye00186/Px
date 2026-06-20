@@ -77,6 +77,9 @@ class PipelineBuilder
         $dumpStrategy = $this->selectDumpStrategy();
         $orchestrator->addStep(new Strategy\LayoutDumpStep($dumpStrategy, $this->caseName ?? 'case-001-wrapper-x', $this->appDir));
 
+        // Phase L: CSS layout assertions on engine tree (after dump, before browser)
+        $orchestrator->addStep(new LayoutValidationStep());
+
         // Step E: multi-frame stability
         if ($dumpStrategy instanceof ExeDumpStrategy) {
             $exeDiscovery = new ExeDiscovery($this->appDir);

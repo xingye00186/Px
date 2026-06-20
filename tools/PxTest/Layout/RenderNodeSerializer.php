@@ -32,7 +32,7 @@ class RenderNodeSerializer
      * Style 归一化保留字段 — 仅保留关键布局属性。
      */
     public const STYLE_KEEP_KEYS = [
-        'bg', 'fg', 'fontSize', 'bold', 'display',
+        'bg', 'fg', 'fontSize', 'fontWeight', 'bold', 'display',
         'flexDirection', 'flexWrap', 'gap',
         'justifyContent', 'alignItems',
         'boxSizing', 'overflowX', 'overflowY',
