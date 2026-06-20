@@ -1011,9 +1011,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             // Reset node height so BlockLayoutStrategy's auto-height
                             // triggers (line 97: $height>0 || $node->h===0). Without this,
                             // the stretched height (244) persists and prevents recompute.
-                            // Cross-axis stretch is re-applied after two-pass below.
-                            $chTp->h = 0;
-                            $chTp->visualH = 0;
+                            // Cross-axis stretch is re-applied after two-pass below,
+                            // but main-axis size is NOT restored. Scroll containers
+                            // rely on parent flex layout for height — skip reset.
+                            if (!$chTp->isScrollContainer) {
+                                $chTp->h = 0;
+                                $chTp->visualH = 0;
+                            }
                         }
 
                         // Re-evaluate auto-margin: the first pass may have applied
