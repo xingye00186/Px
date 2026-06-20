@@ -1331,6 +1331,24 @@ class CssMappings
             // Even if no normal rules, still check for pseudo-class and complex rules
         }
 
+        // --- Also parse universal selector rules: *, html, body ---
+        // These apply to all elements and are stored under key '*', 'html', 'body'.
+        $universalSelectors = ['*', 'html', 'body'];
+        $universalRules = [];
+        foreach ($universalSelectors as $us) {
+            $escaped = preg_quote($us, '#');
+            if (preg_match_all('#' . $escaped . '\s*\{([^}]*)\}#s', $styleCss, $m)) {
+                foreach ($m[1] as $body) {
+                    if (!isset($universalRules[$us])) $universalRules[$us] = '';
+                    $universalRules[$us] .= $body;
+                }
+            }
+        }
+        // Treat universal rules as if they were .* { ... } in the rules list
+        foreach ($universalRules as $us => $body) {
+            $rules[] = [$us, $us, $body];
+        }
+
         foreach ($rules as $rule) {
             $className = $rule[1];
             $body      = $rule[2];
@@ -1349,8 +1367,12 @@ class CssMappings
             }
 
             // If neither background nor color was specified, log a warning
+            // Skip for universal selectors — they apply to all elements and
+            // don't need explicit styling.
             if (!isset($props['bg']) && !isset($props['fg'])) {
-                $warnings[] = "CSS class '$className': no background or color property (will render as transparent)";
+                if (!in_array($className, ['*', 'html', 'body'], true)) {
+                    $warnings[] = "CSS class '$className': no background or color property (will render as transparent)";
+                }
             }
 
             // Parse border shorthand into individual properties (only if not already explicitly set)

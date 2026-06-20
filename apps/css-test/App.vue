@@ -135,3 +135,20 @@ class AppComponent extends ReactiveComponent
     }
 }
 </script>
+
+<style>
+/* Global reset — matches the * { ... } in each .html reference file */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+html, body {
+    width: 1600px;
+    height: 800px;
+    overflow: hidden;
+    font-size: 16px;
+    background: #fff;
+    color: #000;
+}
+</style>

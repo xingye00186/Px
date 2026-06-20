@@ -864,14 +864,27 @@ class RenderTreeManager
 
         // 3. 收集通用选择器（*、html、body）基础样式
         $universalBase = [];
+        $htmlBase = [];
+        $bodyBase = [];
         foreach ($allRegistered as $compName => $componentStyles) {
-            foreach (['*', 'html', 'body'] as $univ) {
-                if (isset($componentStyles[$univ])) {
-                    foreach ($componentStyles[$univ] as $k => $v) {
-                        // 不要用 universal 的 bg 覆盖显式透明背景
-                        if ($k === 'bg' && $v === -1) continue;
-                        $universalBase[$k] = $v;
-                    }
+            // * 应用到所有元素
+            if (isset($componentStyles['*'])) {
+                foreach ($componentStyles['*'] as $k => $v) {
+                    if ($k === 'bg' && $v === -1) continue;
+                    $universalBase[$k] = $v;
+                }
+            }
+            // html/body 仅应用于对应类型的节点
+            if (isset($componentStyles['html'])) {
+                foreach ($componentStyles['html'] as $k => $v) {
+                    if ($k === 'bg' && $v === -1) continue;
+                    $htmlBase[$k] = $v;
+                }
+            }
+            if (isset($componentStyles['body'])) {
+                foreach ($componentStyles['body'] as $k => $v) {
+                    if ($k === 'bg' && $v === -1) continue;
+                    $bodyBase[$k] = $v;
                 }
             }
         }
