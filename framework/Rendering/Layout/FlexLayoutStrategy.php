@@ -916,7 +916,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 }
 
                 // Advance main position
-                $chMainSize = $isRow ? (int)($ch->visualW) : (int)($ch->visualH);
+                // Use content box (w/h) not visual box — padding+border is internal to the item
+                // and does not affect external positioning (CSS §4.2 box model).
+                $chMainSize = $isRow ? (int)($ch->w) : (int)($ch->h);
                 $currentMain += $chMainSize + $gap + $spaceBetween;
 
                 if ($isRow) {
@@ -997,7 +999,19 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         $origH = $chTp->style['height'] ?? null;
 
                         $chTp->style['width'] = $chTp->w;
-                        $chTp->style['height'] = $chTp->h;
+                        // Block-level flex items without explicit height:
+                        // don't lock the stretched height — let auto-height compute
+                        // from re-laid-out children after width change (CSS §9.5).
+                        if ($hasOrigH) {
+                            $chTp->style['height'] = $chTp->h;
+                        } else {
+                            unset($chTp->style['height']);
+                            // Reset node height so BlockLayoutStrategy's auto-height
+                            // triggers (line 97: $height>0 || $node->h===0). Without this,
+                            // the stretched height (244) persists and prevents recompute.
+                            $chTp->h = 0;
+                            $chTp->visualH = 0;
+                        }
 
                         $chTp->layoutDirty = true;
 
@@ -1160,8 +1174,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         if ($isRow) {
             // Main-axis: auto-width from children
+            // For flex-wrap:wrap, do NOT expand width from children — items wrap,
+            // container width stays constrained by parent (CSS §9.5).
 
-            if (!$hasExplicitW && !$hasWPct) {
+            if (!$hasExplicitW && !$hasWPct && $wrap !== 'wrap') {
                 $maxRight = $node->x + $paddingLeft;
 
                 foreach ($children as $ch) {
@@ -1208,8 +1224,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             }
 
             // Main-axis: auto-height from children
+            // For flex-wrap:wrap, do NOT expand height from children — items wrap,
+            // container height stays constrained by parent (CSS §9.5).
 
-            if (!$hasExplicitH && !$hasHPct) {
+            if (!$hasExplicitH && !$hasHPct && $wrap !== 'wrap') {
                 $maxBottom = $node->y + $paddingTop;
 
                 foreach ($children as $ch) {

@@ -759,7 +759,7 @@ class Application
             'textRenderInfo' => $node->textRenderInfo,
         ];
         // 包含关键样式属性用于对比
-        $styleKeys = ['bg', 'fg', 'fontSize', 'bold', 'borderWidth', 'borderColor',
+        $styleKeys = ['bg', 'fg', 'fontSize', 'fontWeight', 'bold', 'borderWidth', 'borderColor',
             'borderLeftWidth', 'borderLeftColor', 'borderTopWidth', 'borderTopColor',
             'borderRightWidth', 'borderRightColor', 'borderBottomWidth', 'borderBottomColor',
             'borderRadius', 'textAlign',

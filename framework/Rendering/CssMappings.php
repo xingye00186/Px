@@ -810,6 +810,15 @@ class CssMappings
             }
         }
 
+        // Preserve original CSS font-weight numeric value for test comparison.
+        // engine 内部用 bold(0/1) 做渲染，但 CSS 对比需要原始数值（如 600、700）。
+        if (isset($raw['font-weight'])) {
+            $fw = trim($raw['font-weight']);
+            if (is_numeric($fw)) {
+                $style['fontWeight'] = (int)$fw;
+            }
+        }
+
         // Merge auto margin flags (preserved from pre-scan)
         if (isset($marginAutoFlags['marginTopAuto']))  $style['marginTopAuto']  = true;
         if (isset($marginAutoFlags['marginRightAuto'])) $style['marginRightAuto'] = true;
