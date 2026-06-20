@@ -131,6 +131,10 @@ class LayoutValidationStep implements PipelineStepInterface
 
                 $chH = (int)($ch['h'] ?? 0);
                 if ($chH <= 0) continue;
+                
+                // Skip scroll containers: their height is determined by parent
+                // flex layout (fill remaining space), not by their content.
+                if (!empty($ch['isScrollContainer'])) continue;
 
                 // Estimate content height from children
                 $contentBottom = 0;
