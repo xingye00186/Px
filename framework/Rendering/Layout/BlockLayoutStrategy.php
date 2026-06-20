@@ -352,6 +352,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                                 $gc->layoutDirty = true;
                             }
 
+                            // Allow auto-margin re-application after re-layout
+                            // (resolveNormalFlow resets x, so auto-margin needs to re-run)
+                            unset($child->style['_marginAutoApplied']);
+                            unset($child->style['_marginAutoOffsetX']);
+
                             $childCtx = new LayoutContext($node->x + $paddingLeft, $stackY, $node);
                             $this->resolver->resolveNode($child, $childCtx);
                         }

@@ -766,6 +766,7 @@ class Application
             'lineHeight', 'whiteSpace', 'wordBreak', 'fontStyle', 'fontFamily', 'opacity',
             'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
             'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
+            '_computedMarginLeft', '_computedMarginRight',
             'gap', 'boxSizing', 'boxShadow',
             'flexDirection', 'alignItems', 'justifyContent', 'flexWrap',
             'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',

@@ -1046,6 +1046,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                                     unset($gc->style['_marginAutoApplied']);
                                     // Clear stale computed margin values
                                     unset($gc->style['marginLeft'], $gc->style['marginRight']);
+                                    // Clear previous offset so undo doesn't subtract wrong value
+                                    unset($gc->style['_marginAutoOffsetX']);
                                 }
                                 $stack[] = $gc;
                             }

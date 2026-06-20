@@ -51,6 +51,8 @@ class LayoutNormalizer
         'marginRight'      => 'margin-right',
         'marginBottom'     => 'margin-bottom',
         'marginLeft'       => 'margin-left',
+        '_computedMarginLeft'  => 'margin-left',
+        '_computedMarginRight' => 'margin-right',
 
         // padding
         'paddingTop'       => 'padding-top',

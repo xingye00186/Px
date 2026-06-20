@@ -303,21 +303,23 @@ class AbsolutePositioning implements AbsoluteStrategy
 
             $node->x += $half;
             $appliedOffset = $half;
-            // Sync serialized margin style so layout comparison sees the computed value
-            $node->style['marginLeft'] = $half;
-            $node->style['marginRight'] = $remaining - $half;
+            // Store computed values in hidden fields so serialization can export
+            // them for comparison, without corrupting resolveNormalFlow's use of
+            // style['marginLeft'] (which resolveNormalFlow reads and adds to x).
+            $node->style['_computedMarginLeft'] = $half;
+            $node->style['_computedMarginRight'] = $remaining - $half;
 
         } elseif ($isMarginLeftAuto && !$isMarginRightAuto && $parentContentW > $totalBoxW && $parentContentW > 0) {
             $remaining = $parentContentW - $totalBoxW;
 
             $node->x += $remaining;
             $appliedOffset = $remaining;
-            $node->style['marginLeft'] = $remaining;
+            $node->style['_computedMarginLeft'] = $remaining;
 
         } elseif (!$isMarginLeftAuto && $isMarginRightAuto && $parentContentW > $totalBoxW && $parentContentW > 0) {
             $remaining = $parentContentW - $totalBoxW;
 
-            $node->style['marginRight'] = $remaining;
+            $node->style['_computedMarginRight'] = $remaining;
         }
         $node->style['_marginAutoOffsetX'] = $appliedOffset;
 
