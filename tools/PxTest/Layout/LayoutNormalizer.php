@@ -63,6 +63,7 @@ class LayoutNormalizer
         // border
         'borderWidth'      => 'border-width',
         'borderColor'      => 'border-color',
+        'borderStyle'      => 'border-style',
         'borderTopWidth'   => 'border-top-width',
         'borderTopColor'   => 'border-top-color',
         'borderRightWidth' => 'border-right-width',

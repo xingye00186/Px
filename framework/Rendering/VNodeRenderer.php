@@ -538,6 +538,8 @@ class VNodeRenderer
         $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
         $borderBottomWidth = $style['borderBottomWidth'] ?? $borderWidth;
         $borderLeftWidth = $style['borderLeftWidth'] ?? $borderWidth;
+        $borderStyle = $style['borderStyle'] ?? 'solid';
+        $borderStyle = $style['borderStyle'] ?? 'solid';
         $borderColor = $style['borderColor'] ?? 0;
         $borderTopColor = $style['borderTopColor'] ?? $borderColor;
         $borderRightColor = $style['borderRightColor'] ?? $borderColor;
@@ -667,7 +669,7 @@ class VNodeRenderer
 
             $elements = [];
             if ($hasBg || $hasBorder) {
-                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'noFill' => $noFill, 'cursor' => $cursor];
+                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'borderStyle' => $borderStyle, 'noFill' => $noFill, 'cursor' => $cursor];
             }
             if ($bgImageEl !== null) {
                 $elements[] = $bgImageEl;
@@ -1016,6 +1018,7 @@ class VNodeRenderer
         $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
         $borderBottomWidth = $style['borderBottomWidth'] ?? $borderWidth;
         $borderLeftWidth = $style['borderLeftWidth'] ?? $borderWidth;
+        $borderStyle = $style['borderStyle'] ?? 'solid';
         $borderColor = 0;
         if ($borderWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0 || $borderLeftWidth > 0) {
             $borderColor = (int)($style['borderColor'] ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0));
@@ -1126,6 +1129,7 @@ class VNodeRenderer
         $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
         $borderBottomWidth = $style['borderBottomWidth'] ?? $borderWidth;
         $borderLeftWidth = $style['borderLeftWidth'] ?? $borderWidth;
+        $borderStyle = $style['borderStyle'] ?? 'solid';
         $borderColor = $style['borderColor'] ?? 0;
         $borderTopColor = $style['borderTopColor'] ?? $borderColor;
         $borderRightColor = $style['borderRightColor'] ?? $borderColor;

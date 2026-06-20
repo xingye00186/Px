@@ -47,6 +47,7 @@ class ElementCompareStep implements PipelineStepInterface
         'font-family', 'line-height',
         'flex-direction', 'flex-wrap', 'overflow-x', 'overflow-y',
         'display',
+        'border-style',
     ];
 
     private ComparatorRegistry $registry;
