@@ -109,7 +109,13 @@ class CssValueParser
 
     public static function parsePixels(string $value): int
     {
-        return (int) preg_replace('/[^-0-9]/', '', $value);
+        // Only extract the FIRST numeric value. The old implementation used
+        // preg_replace('/[^-0-9]/', '', $value) which concatenated ALL numbers,
+        // causing border-radius: 16px 4px 16px 4px → 164164 (wrong).
+        if (preg_match('/-?\d+/', $value, $m)) {
+            return (int) $m[0];
+        }
+        return 0;
     }
 
     public static function parseFlex(string $value): string
