@@ -20,9 +20,19 @@ class ElementCompareStep implements PipelineStepInterface
      * 引擎导出但浏览器不导出的默认值白名单——这些不计入真实 MISMATCH。
      * 引擎在序列化时总是输出某些 CSS 初始值，而浏览器不显示它们。
      */
+    /**
+     * 引擎导出但浏览器不导出的默认值白名单——这些不计入真实 MISMATCH。
+     * 引擎在序列化时总是输出某些 CSS 初始值，而浏览器不显示它们。
+     * 引擎还按四边单独导出边框属性，浏览器只用 border-width/color 简写。
+     */
     private static array $ENGINE_DEFAULT_ONLY_KEYS = [
         'font-style', 'white-space', 'word-break', 'visibility',
         'cursor', 'direction', 'pointer-events',
+        // border per-side: engine exports all 4, browser only has shorthand
+        'border-top-width', 'border-top-color',
+        'border-right-width', 'border-right-color',
+        'border-bottom-width', 'border-bottom-color',
+        'border-left-width', 'border-left-color',
     ];
 
     /**
@@ -158,7 +168,7 @@ class ElementCompareStep implements PipelineStepInterface
                 $bvs = $bStyle[$k] ?? null;
                 if ($evs === null && $bvs === null) continue;
                 if ($evs === null) {
-                    // 浏览器有但引擎没有：Catergorize as MISSING
+                    // 浏览器有但引擎没有：Categorize as MISSING
                     // 但有些是浏览器默认值，跳过它们避免大量噪音
                     if (!in_array($k, self::$BROWSER_DEFAULT_SKIP_KEYS, true)) {
                         $missingDiffs[] = "elem[$i].$k: browser=$bvs";
@@ -173,8 +183,6 @@ class ElementCompareStep implements PipelineStepInterface
                     // 跳过已知噪音：
                     // 1. top/left 已在 GEOMETRY 中比较（x/y），style 中的 top/left 是不同维度
                     if (in_array($k, ['top', 'left'], true)) continue;
-                    // 2. border-top-width/top-color 浏览器不单独导出
-                    if (in_array($k, ['border-top-width', 'border-top-color'], true)) continue;
                     $totalLen = strlen((string)$evs) + strlen((string)$bvs);
                     if ($totalLen < 100) {
                         $mismatchDiffs[] = "elem[$i].$k: engine=$evs browser=$bvs";
@@ -577,39 +585,49 @@ class ElementCompareStep implements PipelineStepInterface
     private function scanContainerOverflow(array $node, ?array $parent, array &$issues): void
     {
         if ($parent !== null) {
-            $pW = (int)($parent['w'] ?? 0);
-            $pH = (int)($parent['h'] ?? 0);
-            $pX = (int)($parent['x'] ?? 0);
-            $pY = (int)($parent['y'] ?? 0);
-            // 使用 contentW 如果存在（border-box 内容区），否则 fallback
-            $pContentW = (int)($parent['contentW'] ?? ($parent['visualW'] ?? $pW));
-            $pContentH = (int)($parent['contentH'] ?? ($parent['visualH'] ?? $pH));
+            // CSS 2.2 §10.6.3: absolute/fixed 定位元素不参与 normal flow,
+            // 不会导致父容器溢出（它们被定位在容器的 padding box 内）
+            $childPosition = $node['style']['position'] ?? 'static';
+            if ($childPosition !== 'absolute' && $childPosition !== 'fixed') {
+                $pW = (int)($parent['w'] ?? 0);
+                $pH = (int)($parent['h'] ?? 0);
+                $pX = (int)($parent['x'] ?? 0);
+                $pY = (int)($parent['y'] ?? 0);
 
-            $cX = (int)($node['x'] ?? 0);
-            $cY = (int)($node['y'] ?? 0);
-            $cW = (int)($node['w'] ?? 0);
-            $cH = (int)($node['h'] ?? 0);
-            $cRight = $cX + $cW;
-            $cBottom = $cY + $cH;
-            $pRight = $pX + $pW;
-            $pBottom = $pY + $pH;
+                // 计算父容器的实际内容区边界（包含 padding+border 偏移）
+                // 子元素的坐标已包含父容器的 padding/border 偏移，
+                // 因此内容区右/下边界 = pX/pY + padding + border + w/h
+                $pPadL = (int)($parent['style']['paddingLeft'] ?? $parent['style']['padding'] ?? 0);
+                $pPadT = (int)($parent['style']['paddingTop'] ?? $parent['style']['padding'] ?? 0);
+                $pBL = (int)($parent['style']['borderLeftWidth'] ?? $parent['style']['borderWidth'] ?? 0);
+                $pBT = (int)($parent['style']['borderTopWidth'] ?? $parent['style']['borderWidth'] ?? 0);
+                $pContentRight = $pX + $pPadL + $pBL + $pW;
+                $pContentBottom = $pY + $pPadT + $pBT + $pH;
 
-            // 只检查有意义的容器（排除 0 尺寸内部节点）
-            if ($pW > 10 && $cW > 0) {
-                if ($cRight > $pRight + 2) {
-                    $over = $cRight - $pRight;
-                    $type = $node['type'] ?? '?';
-                    $pType = $parent['type'] ?? '?';
-                    $issues[] = "child(type=$type right=$cRight) overflows parent(type=$pType right=$pRight) by {$over}px (w: child=$cW parent=$pW)";
+                $cX = (int)($node['x'] ?? 0);
+                $cY = (int)($node['y'] ?? 0);
+                $cW = (int)($node['w'] ?? 0);
+                $cH = (int)($node['h'] ?? 0);
+                $cRight = $cX + $cW;
+                $cBottom = $cY + $cH;
+
+                // 只检查有意义的容器（排除 0 尺寸内部节点）
+                if ($pW > 10 && $cW > 0) {
+                    if ($cRight > $pContentRight + 2) {
+                        $over = $cRight - $pContentRight;
+                        $type = $node['type'] ?? '?';
+                        $pType = $parent['type'] ?? '?';
+                        $issues[] = "child(type=$type right=$cRight) overflows parent(type=$pType contentRight=$pContentRight) by {$over}px (w: child=$cW parent=$pW)";
+                    }
                 }
-            }
-            // 底部溢出检测（滚动容器内子元素溢出是正常的）
-            // 仅当父容器非滚动容器时检查
-            $parentScroll = $parent['isScrollContainer'] ?? false;
-            if (!$parentScroll && $pH > 10 && $cH > 0) {
-                if ($cBottom > $pBottom + 2) {
-                    $over = $cBottom - $pBottom;
-                    $issues[] = "child(type={$node['type']} bottom=$cBottom) overflows parent(type={$parent['type']} bottom=$pBottom) by {$over}px (bottom overflow)";
+                // 底部溢出检测（滚动容器内子元素溢出是正常的）
+                // 仅当父容器非滚动容器时检查
+                $parentScroll = $parent['isScrollContainer'] ?? false;
+                if (!$parentScroll && $pH > 10 && $cH > 0) {
+                    if ($cBottom > $pContentBottom + 2) {
+                        $over = $cBottom - $pContentBottom;
+                        $issues[] = "child(type={$node['type']} bottom=$cBottom) overflows parent(type={$parent['type']} contentBottom=$pContentBottom) by {$over}px (bottom overflow)";
+                    }
                 }
             }
         }
