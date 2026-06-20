@@ -1009,12 +1009,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             // Reset node height so BlockLayoutStrategy's auto-height
                             // triggers (line 97: $height>0 || $node->h===0). Without this,
                             // the stretched height (244) persists and prevents recompute.
-                            // BUT skip scroll containers: their height is determined by
-                            // parent flex layout, not by auto-height from content.
-                            if (!$chTp->isScrollContainer) {
-                                $chTp->h = 0;
-                                $chTp->visualH = 0;
-                            }
+                            // Cross-axis stretch is re-applied after two-pass below.
+                            $chTp->h = 0;
+                            $chTp->visualH = 0;
                         }
 
                         // Re-evaluate auto-margin: the first pass may have applied
@@ -1083,6 +1080,40 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     $coffY = $chTp->y + $padTsp;
 
                     $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $ctx, $chTp->style, $coffY, $padLsp, $padRsp, $padBsp);
+                }
+            }
+
+            // ── Re-apply cross-axis stretch after two-pass ──
+            // Only for non-wrapping flex containers: cross-axis size is determined
+            // by the parent container (e.g., scroll containers filling remaining space).
+            // For wrapping containers, the cross-axis is determined by content height
+            // and the two-pass already computed the correct auto-height.
+            if ($align === 'stretch' && !$isWrapping) {
+                $crossTarget = $containerCross;
+                foreach ($lineChildren as $ci => $ch) {
+                    $childDisplay = $ch->style['display'] ?? 'block';
+                    if ($childDisplay === 'none') continue;
+                    $hasExplicitCross = $isRow
+                        ? array_key_exists('height', $ch->style)
+                        : array_key_exists('width', $ch->style);
+                    if ($hasExplicitCross) continue;
+                    $childMarginT = (int)($ch->style['marginTop'] ?? $ch->style['margin'] ?? 0);
+                    $childMarginB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
+                    $childMarginL = (int)($ch->style['marginLeft'] ?? $ch->style['margin'] ?? 0);
+                    $childMarginR = (int)($ch->style['marginRight'] ?? $ch->style['margin'] ?? 0);
+                    if ($isRow) {
+                        $stretched = (int)max(0, $crossTarget - $childMarginT - $childMarginB);
+                        if ($stretched > 0 && $stretched !== $ch->h) {
+                            $ch->h = $stretched;
+                            $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
+                        }
+                    } else {
+                        $stretched = (int)max(0, $crossTarget - $childMarginL - $childMarginR);
+                        if ($stretched > 0 && $stretched !== $ch->w) {
+                            $ch->w = $stretched;
+                            $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
+                        }
+                    }
                 }
             }
 
