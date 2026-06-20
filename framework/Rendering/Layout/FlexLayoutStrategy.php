@@ -916,9 +916,11 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 }
 
                 // Advance main position
-                // Use content box (w/h) not visual box — padding+border is internal to the item
-                // and does not affect external positioning (CSS §4.2 box model).
-                $chMainSize = $isRow ? (int)($ch->w) : (int)($ch->h);
+                // Use visual box (visualW/visualH) which accounts for padding+border
+                // in content-box mode. In border-box mode, visualW/H == w/h.
+                // CSS §4.2: the item's box extent is w/h + padding + border for
+                // content-box; the next item's position starts at this outer edge.
+                $chMainSize = $isRow ? (int)($ch->visualW) : (int)($ch->visualH);
                 $currentMain += $chMainSize + $gap + $spaceBetween;
 
                 if ($isRow) {

@@ -104,8 +104,8 @@ class LayoutValidationStep implements PipelineStepInterface
                 $next = $children[$i + 1];
 
                 $curEnd = $isRow
-                    ? (int)($cur['x'] ?? 0) + (int)($cur['w'] ?? 0)
-                    : (int)($cur['y'] ?? 0) + (int)($cur['h'] ?? 0);
+                    ? (int)($cur['x'] ?? 0) + (int)(($cur['visualW'] ?? $cur['w']) ?? 0)
+                    : (int)($cur['y'] ?? 0) + (int)(($cur['visualH'] ?? $cur['h']) ?? 0);
                 $nextStart = $isRow ? (int)($next['x'] ?? 0) : (int)($next['y'] ?? 0);
                 $actualGap = $nextStart - $curEnd;
 
