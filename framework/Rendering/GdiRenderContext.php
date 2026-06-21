@@ -138,10 +138,11 @@ class GdiRenderContext extends RenderContext
                     $by = $el['y'] ?? 0;
                     $bw = $el['w'] ?? 0;
                     $bh = $el['h'] ?? 0;
-                    if ($bt > 0) $this->fillRect($bx, $by, $bw, $bt, $btc);
-                    if ($bb > 0) $this->fillRect($bx, $by + $bh - $bb, $bw, $bb, $bbc);
-                    if ($bl > 0) $this->fillRect($bx, $by, $bl, $bh, $blc);
-                    if ($br > 0) $this->fillRect($bx + $bw - $br, $by, $br, $bh, $brc);
+                    $bs = $el['borderStyle'] ?? 'solid';
+                    if ($bt > 0) $this->drawBorderLine($bx, $by, $bw, $bt, $btc, $bs, true);
+                    if ($bb > 0) $this->drawBorderLine($bx, $by + $bh - $bb, $bw, $bb, $bbc, $bs, true);
+                    if ($bl > 0) $this->drawBorderLine($bx, $by, $bh, $bl, $blc, $bs, false);
+                    if ($br > 0) $this->drawBorderLine($bx + $bw - $br, $by, $bh, $br, $brc, $bs, false);
                 }
                 break;
 
@@ -549,6 +550,59 @@ class GdiRenderContext extends RenderContext
                     $waveY = $y + ($phase === 0 ? 0 : $amplitude);
                     $this->fillRect($dx, $waveY, $segW, $thickness, $color);
                     $phase = 1 - $phase;
+                }
+                break;
+        }
+    }
+
+    /**
+     * Draw a border line segment with style support (solid/dashed/dotted/double).
+     * Used for element borders (horizontal = top/bottom, vertical = left/right).
+     */
+    private function drawBorderLine(int $x, int $y, int $length, int $thickness, int $color, string $style, bool $horizontal): void
+    {
+        switch ($style) {
+            case 'dashed':
+                $dashLen = (int)max($thickness * 4, 4);
+                $gap = (int)max($thickness * 2, 2);
+                for ($pos = 0; $pos < $length; $pos += $dashLen + $gap) {
+                    $seg = (int)min($dashLen, $length - $pos);
+                    if ($seg <= 0) break;
+                    if ($horizontal) {
+                        $this->fillRect($x + $pos, $y, $seg, $thickness, $color);
+                    } else {
+                        $this->fillRect($x, $y + $pos, $thickness, $seg, $color);
+                    }
+                }
+                break;
+            case 'dotted':
+                $dotLen = (int)max($thickness, 2);
+                $spacing = $dotLen * 3;
+                for ($pos = 0; $pos < $length; $pos += $spacing) {
+                    $seg = (int)min($dotLen, $length - $pos);
+                    if ($seg <= 0) break;
+                    if ($horizontal) {
+                        $this->fillRect($x + $pos, $y, $seg, $thickness, $color);
+                    } else {
+                        $this->fillRect($x, $y + $pos, $thickness, $seg, $color);
+                    }
+                }
+                break;
+            case 'double':
+                $gap = (int)max(1, $thickness);
+                if ($horizontal) {
+                    $this->fillRect($x, $y, $length, $thickness, $color);
+                    $this->fillRect($x, $y + $thickness + $gap, $length, $thickness, $color);
+                } else {
+                    $this->fillRect($x, $y, $thickness, $length, $color);
+                    $this->fillRect($x + $thickness + $gap, $y, $thickness, $length, $color);
+                }
+                break;
+            default: // solid
+                if ($horizontal) {
+                    $this->fillRect($x, $y, $length, $thickness, $color);
+                } else {
+                    $this->fillRect($x, $y, $thickness, $length, $color);
                 }
                 break;
         }

@@ -28,7 +28,7 @@ class ElementCompareStep implements PipelineStepInterface
     private static array $ENGINE_DEFAULT_ONLY_KEYS = [
         'font-style', 'white-space', 'word-break', 'visibility',
         'cursor', 'direction', 'pointer-events',
-        'box-sizing',
+        'box-sizing', 'border-style',
         // border per-side: engine exports all 4, browser only has shorthand
         'border-top-width', 'border-top-color',
         'border-right-width', 'border-right-color',
