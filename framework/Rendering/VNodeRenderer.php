@@ -846,6 +846,7 @@ class VNodeRenderer
                 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,
                 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,
                 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,
+                'borderStyle' => $borderStyle,
                 'noFill' => $noFill,
                 'cursor' => $cursor,
             ];
