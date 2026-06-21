@@ -199,6 +199,14 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             }
 
             $childCtx = new LayoutContext($node->x + $paddingLeft, $node->y + $paddingTop, $node);
+            // Defer auto-margin for flex-grow items: their final width is
+            // determined by flex-grow, not by first-pass auto-width.
+            // Browser: auto-margin computed ONCE after final width is known.
+            // Engine: two-pass re-resolves with correct width — skip first pass.
+            $childGrow = (int)($child->style['flexGrow'] ?? 0);
+            if ($childGrow > 0) {
+                $child->style['_deferAutoMargin'] = true;
+            }
             $this->resolver->resolveNode($child, $childCtx);
 
             $children[] = $child;
@@ -1058,6 +1066,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         }
 
                         $chCtx = new LayoutContext($prX, $prY, $ctx->parent);
+                        // Clear defer marker: two-pass has correct final width,
+                        // apply auto-margin now (browser-equivalent: one calculation)
+                        unset($chTp->style['_deferAutoMargin']);
                         $this->resolver->resolveNode($chTp, $chCtx);
 
                         $chTp->visualW = PercentResolver::resolveVisualW($chTp->style, $chTp->w);

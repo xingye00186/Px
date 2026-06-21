@@ -366,12 +366,16 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
 
                     if (($childML || $childMR)) {
-                        $oldX = $child->x;
-                        $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
-                        $dx = $child->x - $oldX;
-                        if ($dx !== 0) {
-                            foreach ($child->children as $grandchild) {
-                                ScrollHelper::shiftDescendantsX($grandchild, $dx);
+                        // Browser-equivalent: flex-grow items' auto-margin is deferred
+                        // to two-pass (when final width is known). Skip first-pass.
+                        if (empty($node->style['_deferAutoMargin'])) {
+                            $oldX = $child->x;
+                            $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
+                            $dx = $child->x - $oldX;
+                            if ($dx !== 0) {
+                                foreach ($child->children as $grandchild) {
+                                    ScrollHelper::shiftDescendantsX($grandchild, $dx);
+                                }
                             }
                         }
                     }
@@ -772,12 +776,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $childML = $childStyle['marginLeftAuto'] ?? false;
             $childMR = $childStyle['marginRightAuto'] ?? false;
             if (($childML || $childMR)) {
-                $oldX = $child->x;
-                $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
-                $dx = $child->x - $oldX;
-                if ($dx !== 0) {
-                    foreach ($child->children as $grandchild) {
-                        ScrollHelper::shiftDescendantsX($grandchild, $dx);
+                // Browser-equivalent: flex-grow items' auto-margin is deferred
+                if (empty($node->style['_deferAutoMargin'])) {
+                    $oldX = $child->x;
+                    $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
+                    $dx = $child->x - $oldX;
+                    if ($dx !== 0) {
+                        foreach ($child->children as $grandchild) {
+                            ScrollHelper::shiftDescendantsX($grandchild, $dx);
+                        }
                     }
                 }
             }
