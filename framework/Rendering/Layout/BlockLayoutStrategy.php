@@ -352,11 +352,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                                 $gc->layoutDirty = true;
                             }
 
-                            // Allow auto-margin re-application after re-layout
-                            // (resolveNormalFlow resets x, so auto-margin needs to re-run)
-                            unset($child->style['_marginAutoApplied']);
-                            unset($child->style['_marginAutoOffsetX']);
-
                             $childCtx = new LayoutContext($node->x + $paddingLeft, $stackY, $node);
                             $this->resolver->resolveNode($child, $childCtx);
                         }
@@ -371,20 +366,13 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
 
                     if (($childML || $childMR)) {
-                        // Check if already applied (survives across re-layouts).
-                        // The _marginAutoApplied flag is cleared during two-pass
-                        // re-layout in FlexLayoutStrategy to force recalculation
-                        // with correct post-grow parent width.
-                        if (empty($child->style['_marginAutoApplied'])) {
-                            $oldX = $child->x;
-                            $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
-                            $dx = $child->x - $oldX;
-                            if ($dx !== 0) {
-                                foreach ($child->children as $grandchild) {
-                                    ScrollHelper::shiftDescendantsX($grandchild, $dx);
-                                }
+                        $oldX = $child->x;
+                        $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
+                        $dx = $child->x - $oldX;
+                        if ($dx !== 0) {
+                            foreach ($child->children as $grandchild) {
+                                ScrollHelper::shiftDescendantsX($grandchild, $dx);
                             }
-                            $child->style['_marginAutoApplied'] = true;
                         }
                     }
 
@@ -609,6 +597,9 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         // Base position = parent content area
 
         $node->x = $ctx->parentX + $marginLeft;
+        // x was recomputed from parent context; auto-margin offset is now stale.
+        // resolveMarginAuto will re-apply with correct parent width on next pass.
+        $node->style['_marginAutoOffsetX'] = 0;
 
         $node->y = $ctx->parentY + $marginTop;
 
@@ -781,16 +772,13 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $childML = $childStyle['marginLeftAuto'] ?? false;
             $childMR = $childStyle['marginRightAuto'] ?? false;
             if (($childML || $childMR)) {
-                if (empty($child->style['_marginAutoApplied'])) {
-                    $oldX = $child->x;
-                    $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
-                    $dx = $child->x - $oldX;
-                    if ($dx !== 0) {
-                        foreach ($child->children as $grandchild) {
-                            ScrollHelper::shiftDescendantsX($grandchild, $dx);
-                        }
+                $oldX = $child->x;
+                $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
+                $dx = $child->x - $oldX;
+                if ($dx !== 0) {
+                    foreach ($child->children as $grandchild) {
+                        ScrollHelper::shiftDescendantsX($grandchild, $dx);
                     }
-                    $child->style['_marginAutoApplied'] = true;
                 }
             }
 

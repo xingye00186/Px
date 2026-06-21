@@ -1033,7 +1033,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $chTp->style['marginRightAuto'] = $chOrigMR;
                         }
                         // Also fix descendant auto-margins: first pass may have computed
-                        // margins with wrong parent width. Clear _marginAutoApplied so
+                        // margins with wrong parent width. Clear stale offset so
                         // re-layout (with correct post-grow width) recalculates correctly.
                         $stack = [$chTp];
                         while (!empty($stack)) {
@@ -1042,8 +1042,6 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                                 $gcML = $gc->style['marginLeftAuto'] ?? false;
                                 $gcMR = $gc->style['marginRightAuto'] ?? false;
                                 if ($gcML || $gcMR) {
-                                    // Allow re-application with correct parent width
-                                    unset($gc->style['_marginAutoApplied']);
                                     // Clear stale computed margin values
                                     unset($gc->style['marginLeft'], $gc->style['marginRight']);
                                     // Clear previous offset so undo doesn't subtract wrong value

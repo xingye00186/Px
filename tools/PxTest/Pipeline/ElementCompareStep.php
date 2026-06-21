@@ -178,7 +178,7 @@ class ElementCompareStep implements PipelineStepInterface
                 } elseif ($bvs === null) {
                     // 引擎有但浏览器没有：如果是引擎默认值白名单，直接跳过
                     // 同时也跳过 top/left（已在 GEOMETRY 比较）
-                    if (!in_array($k, self::$ENGINE_DEFAULT_ONLY_KEYS, true) && !in_array($k, ['top', 'left'], true)) {
+                    if (!in_array($k, self::$ENGINE_DEFAULT_ONLY_KEYS, true) && !in_array($k, ['top', 'left'], true) && !in_array($k, self::$BROWSER_DEFAULT_SKIP_KEYS, true)) {
                         $mismatchDiffs[] = "elem[$i].$k: engine=$evs (browser has no value)";
                     }
                 } elseif ((string)$evs !== (string)$bvs) {

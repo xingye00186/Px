@@ -83,7 +83,9 @@ class GdiRenderContext extends RenderContext
                 $blc = $el['borderLeftColor'] ?? $borderColor;
                 $brc = $el['borderRightColor'] ?? $borderColor;
 
-                if ($radius > 0 && $opacity >= 1.0) {
+                $borderStyle = $el['borderStyle'] ?? 'solid';
+
+                if ($radius > 0 && $opacity >= 1.0 && $borderStyle === 'solid') {
                     if ($bt > 0 || $bb > 0 || $bl > 0 || $br > 0) {
                         // 圆角 + 边框：外层=边框色（不依赖背景，始终绘制）
                         // CSS Backgrounds and Borders §5.1: 内层圆角 = max(0, R - borderWidth)
@@ -131,9 +133,9 @@ class GdiRenderContext extends RenderContext
                         $el['w'] ?? 0, $el['h'] ?? 0, $color
                     );
                 }
-                // Draw border outline (only when not already drawn by two-round-rect above)
-                // css-test: 若 radius > 0 且有 border，已在双层圆角中完成边框绘制
-                if ($radius === 0 && ($bt > 0 || $bb > 0 || $bl > 0 || $br > 0)) {
+                // Draw border outline — only skipped when solid+rounded (drawn by two-round-rect)
+                // For non-solid borders with radius, draw using drawBorderLine (square corners).
+                if (($radius === 0 || $borderStyle !== 'solid') && ($bt > 0 || $bb > 0 || $bl > 0 || $br > 0)) {
                     $bx = $el['x'] ?? 0;
                     $by = $el['y'] ?? 0;
                     $bw = $el['w'] ?? 0;
