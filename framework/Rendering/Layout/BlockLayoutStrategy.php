@@ -372,6 +372,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     // ── Auto-width/height for block containers (CSS content-based sizing) ──
 
+                    // CSS 2.2 §10.3.3: 正常流块级子元素的初始 x = 父内容区左边界
+                    // 必须在 auto-margin 之前设置，确保 margin:auto 居中基于正确基线
+                    $child->x = $node->x + $paddingLeft;
+
                     $childML = $childStyle['marginLeftAuto'] ?? false;
 
                     $childMR = $childStyle['marginRightAuto'] ?? false;
@@ -388,11 +392,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                                 $oldX = $child->x;
                                 $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
                                 $dx = $child->x - $oldX;
-                                if ($dx !== 0) {
+                                // 仅在首次 auto-margin 时位移子元素
+                                // 第二遍（_marginAutoShifted 已置位）已位移过，防止重复
+                                $alreadyShifted = $child->style['_marginAutoShifted'] ?? false;
+                                if ($dx !== 0 && !$alreadyShifted) {
                                     foreach ($child->children as $grandchild) {
                                         ScrollHelper::shiftDescendantsX($grandchild, $dx);
                                     }
                                 }
+                                $child->style['_marginAutoShifted'] = true;
                             }
                         }
                     }
@@ -801,7 +809,9 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $oldX = $child->x;
                         $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
                         $dx = $child->x - $oldX;
-                        if ($dx !== 0) {
+                        // _marginAutoShifted 在首次 auto-margin 中已置位，此处跳过重复位移
+                        $alreadyShifted = $child->style['_marginAutoShifted'] ?? false;
+                        if ($dx !== 0 && !$alreadyShifted) {
                             foreach ($child->children as $grandchild) {
                                 ScrollHelper::shiftDescendantsX($grandchild, $dx);
                             }
