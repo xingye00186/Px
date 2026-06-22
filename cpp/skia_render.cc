@@ -36,6 +36,10 @@
 #include <gdiplus.h>
 #pragma comment(lib, "gdiplus.lib")
 
+// DirectWrite 字体度量（阶段四：与浏览器使用同一种字体引擎）
+#include <dwrite.h>
+#pragma comment(lib, "dwrite.lib")
+
 #ifdef USE_SKIA
 #include "include/core/SkBitmap.h"
 #include "include/core/SkCanvas.h"
@@ -87,7 +91,63 @@ static bool      g_skGdiplusInited = false;
 
 // 默认字体名（可通过 sk_set_default_font 修改）
 // GDI 路径：CreateFont 参数；Skia 路径：skEnsureFont 优先查找
-static std::string g_skDefaultFont = "Noto Sans SC";
+static std::string g_skDefaultFont = "Segoe UI";
+
+// DirectWrite 工厂（线程安全，进程级单例）
+static bool g_dwInitAttempted = false;
+static IDWriteFactory* g_dwFactory = nullptr;
+
+/** 确保 DirectWrite 工厂已创建 */
+static bool ensureDWriteFactory() {
+    if (g_dwFactory) return true;
+    if (g_dwInitAttempted) return false;
+    g_dwInitAttempted = true;
+    HRESULT hr = DWriteCreateFactory(
+        DWRITE_FACTORY_TYPE_SHARED,
+        __uuidof(IDWriteFactory),
+        reinterpret_cast<IUnknown**>(&g_dwFactory));
+    return SUCCEEDED(hr) && g_dwFactory != nullptr;
+}
+
+/**
+ * 用 DirectWrite 测量文本行高，与浏览器使用同一字体引擎。
+ * 返回像素高度，失败时返回 0。
+ */
+static int measureHeightDWrite(int fontSize, int bold) {
+    if (!ensureDWriteFactory()) return 0;
+
+    // 字体名 UTF-8 → WCHAR
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, g_skDefaultFont.c_str(), -1, NULL, 0);
+    if (wlen <= 0) return 0;
+    std::wstring wfont(wlen, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, g_skDefaultFont.c_str(), -1, &wfont[0], wlen);
+
+    IDWriteTextFormat* format = nullptr;
+    HRESULT hr = g_dwFactory->CreateTextFormat(
+        wfont.c_str(),
+        nullptr,
+        (Int)bold != 0 ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_REGULAR,
+        DWRITE_FONT_STYLE_NORMAL,
+        DWRITE_FONT_STRETCH_NORMAL,
+        (FLOAT)fontSize,
+        L"",
+        &format);
+    if (FAILED(hr) || !format) return 0;
+
+    IDWriteTextLayout* layout = nullptr;
+    hr = g_dwFactory->CreateTextLayout(
+        L"A", 1, format, 10000.0f, 10000.0f, &layout);
+
+    int result = 0;
+    if (SUCCEEDED(hr) && layout) {
+        DWRITE_TEXT_METRICS metrics;
+        layout->GetMetrics(&metrics);
+        result = (int)(metrics.height + 0.5f);
+        layout->Release();
+    }
+    format->Release();
+    return result > 0 ? result : 0;
+}
 
 // GDI 字体加载状态（非 USE_SKIA 路径）：通过 AddFontMemResourceEx 预加载 Noto Sans SC 字体文件
 // AddFontMemResourceEx 比 AddFontResourceEx 更可靠，能确保 CreateFont 通过族名找到已加载字体
@@ -787,22 +847,33 @@ Int php_sk_measure_text_width(String text, Int fontSize, Int bold) {
 // 精确测量文本总高度（ascent + descent），用于垂直居中
 // 返回文本在给定 fontSize 下的像素高度
 Int php_sk_measure_text_height(Int fontSize, Int bold) {
-#ifdef USE_SKIA
-    skLoadPrivateFonts();
-    if (!g_skFont.getTypeface()) return (Int)fontSize;
-    g_skFont.setSize((SkScalar)(int)fontSize);
-    if ((Int)bold != 0 && g_skTypefaceBold) {
-        g_skFont.setTypeface(g_skTypefaceBold);
-    } else {
-        g_skFont.setTypeface(g_skTypeface);
+    // 阶段四：优先用 DirectWrite 测量字体行高（与浏览器同引擎）
+    int dwResult = measureHeightDWrite((int)fontSize, (int)bold);
+    if (dwResult > 0) {
+        SK_TRACE("[SK] measure_text_height fontSize=%d bold=%d height=%d (DirectWrite)\n", (int)fontSize, (int)bold, dwResult);
+        return (Int)dwResult;
     }
-    SkFontMetrics metrics;
-    g_skFont.getMetrics(&metrics);
-    SkScalar totalHeight = -metrics.fAscent + metrics.fDescent;
-    g_skFont.setTypeface(g_skTypeface);
-    Int result = (Int)totalHeight;
-    if (result <= 0) result = (Int)fontSize;
-    SK_TRACE("[SK] measure_text_height fontSize=%d bold=%d height=%d\n", (int)fontSize, (int)bold, (int)result);
+
+#ifdef USE_SKIA
+    // Fallback: GDI GetTextMetricsW
+    skLoadPrivateFonts();
+    HDC hdc = GetDC(NULL);
+    if (!hdc) return (Int)fontSize;
+    HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
+        (Int)bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, g_skDefaultFont.c_str());
+    if (!hFont) { ReleaseDC(NULL, hdc); return (Int)fontSize; }
+    HFONT oldFont = (HFONT)SelectObject(hdc, hFont);
+    TEXTMETRICW tm;
+    Int result = (Int)fontSize;
+    if (GetTextMetricsW(hdc, &tm)) {
+        result = (Int)(tm.tmAscent + tm.tmDescent);
+    }
+    SelectObject(hdc, oldFont);
+    DeleteObject(hFont);
+    ReleaseDC(NULL, hdc);
+    SK_TRACE("[SK] measure_text_height fontSize=%d bold=%d height=%d (GDI)\n", (int)fontSize, (int)bold, (int)result);
     return result;
 #else
     if (!g_skHdc) return (Int)fontSize;
