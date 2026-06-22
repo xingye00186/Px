@@ -48,7 +48,7 @@
 |------|------|------|
 | **PxTest 编排器** | `php apps/css-test/test_pipeline.php` | Pipeline+Strategy D→I 全流程编排 |
 | 构建脚本 | `.\build.bat css-test` | PHP → AOT exe（BuildStep 内部调用） |
-| 布局导出 | `bin/css_test.exe --dump-layout` | → engine_layout.json（默认 headless） |
+| 布局导出 | `bin/css_test.exe --headless --dump-layout` | → engine_layout.json（自动化流程必须加 --headless） |
 | 截图（显式触发） | `bin/css_test.exe --screenshot=out.png` | 离屏渲染 PNG（默认不截图） |
 | 多帧截图 | `--frame=5 --screenshot=out.png` | 渲染 N 帧后截图 |
 │ 浏览器 ref | `PxTest\Pipeline\Strategy\BrowserRefStep` | validateHtmlSpec + instrumentHtml（仅注入 dump_layout.js） |

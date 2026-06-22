@@ -82,7 +82,7 @@ Step 0: Build（BuildStep）
   └─ 哈希缓存 + .build.lock 进程锁 + proc_open + 孤儿清理 + Ctrl+C
 
 Step D: LayoutDump（LayoutDumpStep + DumpStrategy）
-  ├─ ExeDump: --dump-layout（默认 headless）
+  ├─ ExeDump: --headless --dump-layout（自动化流程必须加 --headless）
   ├─ MockDump: MockPlatform 降级（无需 exe）
   └─ REF_STALE: 验证导出 JSON 含测试用例文本
 
