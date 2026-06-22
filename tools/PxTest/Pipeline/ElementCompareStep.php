@@ -290,7 +290,7 @@ class ElementCompareStep implements PipelineStepInterface
         }
 
         // ─── 保存报告文件 ───
-        $this->saveReport($structDiffs, $missingDiffs, $geoDiffs, $mismatchDiffs, $totalDiffs, $containerIssues);
+        $this->saveReport($structDiffs, $missingDiffs, $geoDiffs, $mismatchDiffs, $totalDiffs, $overflowIssues, $containerIssues);
 
         // MISSING（引擎未导出属性）不计入失败——工作流规则：仅引擎未导出属性时可通过
         $realDiffs = count($geoDiffs) + count($mismatchDiffs) + count($structDiffs) + $containerOverflowDiffs;
@@ -434,7 +434,7 @@ class ElementCompareStep implements PipelineStepInterface
      *   element_compare_report.json  — 结构化数据，供程序读取
      *   element_compare_report.md    — 可读报告，供人工查阅
      */
-    private function saveReport(array $structDiffs, array $missingDiffs, array $geoDiffs, array $mismatchDiffs, int $totalDiffs, array $containerIssues = []): void
+    private function saveReport(array $structDiffs, array $missingDiffs, array $geoDiffs, array $mismatchDiffs, int $totalDiffs, array $overflowIssues = [], array $containerIssues = []): void
     {
         if ($this->caseDir === '' || $this->caseName === '') return;
 
@@ -448,6 +448,8 @@ class ElementCompareStep implements PipelineStepInterface
             'MISMATCH' => count($mismatchDiffs),
             'GEOMETRY' => count($geoDiffs),
             'STRUCTURE'=> count($structDiffs),
+            'TEXT_OVERFLOW' => count($overflowIssues),
+            'CONTAINER_OVERFLOW' => count($containerIssues),
             'total'    => $totalDiffs,
         ];
 
@@ -461,6 +463,8 @@ class ElementCompareStep implements PipelineStepInterface
                 'MISMATCH' => $mismatchDiffs,
                 'GEOMETRY' => $geoDiffs,
                 'STRUCTURE'=> $structDiffs,
+                'TEXT_OVERFLOW' => $overflowIssues,
+                'CONTAINER_OVERFLOW' => $containerIssues,
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         file_put_contents("$refDir/element_compare_report.json", $jsonReport);
@@ -475,6 +479,8 @@ class ElementCompareStep implements PipelineStepInterface
         $md .= "| GEOMETRY | {$counts['GEOMETRY']} | 几何偏差（位置/尺寸）→ 引擎布局计算需修正 |\n";
         $md .= "| MISMATCH | {$counts['MISMATCH']} | 值不一致（两边都有但值不同）→ 需修正格式/计算 |\n";
         $md .= "| STRUCTURE | {$counts['STRUCTURE']} | 结构差异（元素数量/tag映射）→ 需对齐 |\n";
+        $md .= "| TEXT_OVERFLOW | {$counts['TEXT_OVERFLOW']} | 文本溢出（文本宽度超父容器）→ 需修正布局/渲染 |\n";
+        $md .= "| CONTAINER_OVERFLOW | {$counts['CONTAINER_OVERFLOW']} | 容器溢出（子项超出父边界）→ 需修正布局计算 |\n";
         $md .= "| **合计** | **{$counts['total']}** | |\n\n";
 
         $md .= "## 详细差异\n\n";
@@ -505,6 +511,22 @@ class ElementCompareStep implements PipelineStepInterface
             $md .= "### STRUCTURE（结构差异，共 {$counts['STRUCTURE']} 项）\n\n";
             $md .= "```\n";
             foreach ($structDiffs as $d) $md .= "$d\n";
+            $md .= "```\n\n";
+        }
+
+        if (!empty($overflowIssues)) {
+            $md .= "### TEXT_OVERFLOW（文本溢出，共 {$counts['TEXT_OVERFLOW']} 项）\n\n";
+            $md .= "引擎文本宽度超出父容器内容区：\n\n";
+            $md .= "```\n";
+            foreach ($overflowIssues as $d) $md .= "$d\n";
+            $md .= "```\n\n";
+        }
+
+        if (!empty($containerIssues)) {
+            $md .= "### CONTAINER_OVERFLOW（容器溢出，共 {$counts['CONTAINER_OVERFLOW']} 项）\n\n";
+            $md .= "子元素超出父容器 content 边界：\n\n";
+            $md .= "```\n";
+            foreach ($containerIssues as $d) $md .= "$d\n";
             $md .= "```\n\n";
         }
 

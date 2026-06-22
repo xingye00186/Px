@@ -36,6 +36,34 @@ class LayoutValidationStep implements PipelineStepInterface
 
         $this->scanTree($json, null);
 
+        // ─── 保存 Phase L 报告 ───
+        $refDir = dirname($layoutPath);
+        $caseName = basename(dirname($refDir));
+        if (!is_dir($refDir)) {
+            @mkdir($refDir, 0777, true);
+        }
+        $jsonReport = json_encode([
+            'step' => 'layout_validation',
+            'case' => $caseName,
+            'timestamp' => date('Y-m-d H:i:s'),
+            'total_issues' => count($this->issues),
+            'issues' => $this->issues,
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        file_put_contents("$refDir/layout_validation_report.json", $jsonReport);
+        $md = "# Phase L 布局断言报告: $caseName\n\n";
+        $md .= "**生成时间**: " . date('Y-m-d H:i:s') . "\n\n";
+        if (!empty($this->issues)) {
+            $md .= "发现 " . count($this->issues) . " 个 CSS 布局违规：\n\n";
+            $md .= "```\n";
+            foreach ($this->issues as $issue) {
+                $md .= "$issue\n";
+            }
+            $md .= "```\n";
+        } else {
+            $md .= "未发现 CSS 布局违规。\n";
+        }
+        file_put_contents("$refDir/layout_validation_report.md", $md);
+
         if (!empty($this->issues)) {
             echo "  [Phase L] CSS layout violations:\n";
             foreach ($this->issues as $issue) {
