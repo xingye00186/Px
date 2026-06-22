@@ -56,6 +56,7 @@
 | 锚点对齐 | `PxTest\Pipeline\ScreenshotStep::detectColorAnchors()` | #FF00FF/#00FFFF 8×8 块三策略 |
 | 归档基线 | `php apps/css-test/archive_case.php` | case 通过后冻存基线 |
 | 回归检查 | `php apps/css-test/check_regression.php` | 四维度回归对比 |
+| 测试报告 | `test_pipeline.php` → `SummaryReporter` | pipeline 跑完后自动生成 `最新报告.md` + `.run_history.json` |
 | 单元测试 | `php tests/run_all.php` | 全部单元+集成+压力测试 |
 
 ### 2.2 目录结构
@@ -70,7 +71,8 @@ apps/css-test/
 │       ├── CaseNnnName.vue   引擎端模板
 │       ├── CaseNnnName.html  浏览器参考 HTML
 │       ├── ref/              参考数据 + 对比报告（test_pipeline.php 自动生成，原始 .html 即标杆）
-│       └── baseline/         归档基线（archive_case.php 生成）
+│       └── baseline/         归档基线（archive_case.php 生成，当前未使用）
+├── .run_history.json    pipeline 运行历史时间序列（P1 罗盘）
 ├── archive_case.php          归档工具
 ├── check_regression.php      回归检查
 ├── gen/                      SFC 编译器输出
@@ -87,7 +89,7 @@ tools/PxTest/
 ├── Comparison/               对比器（Geometry/Style/Stability/Pixel/RenderNode）
 ├── Mock/                     测试双轨（MockPlatform/Component/EventSimulator）
 ├── Snapshot/                 快照管理器
-├── Reporting/                报告器（Console/Markdown/JSON/TAP）
+├── Reporting/                报告器（Console/Markdown/JSON/TAP/Summary）
 ├── Baseline/                 基线归档
 └── Builder/                  Fluent Builder（VNodeBuilder/RenderNodeBuilder）
 

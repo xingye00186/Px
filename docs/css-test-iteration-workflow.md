@@ -274,9 +274,6 @@ apps/css-test/test_case/case-NNN-name/
 ## 九、提交前必查清单
 
 - [ ] `docs/01-问题清单.md` 已更新（新增/修改条目、关联 commit）
-- [ ] 已归档 case 的 `baseline/` 已加入提交
-- [ ] `baseline_registry.json` 已随归档更新
 - [ ] 无未提交的框架源码改动
 - [ ] 全量测试通过：`php apps/css-test/test_pipeline.php`
-- [ ] 基线回归通过：`php apps/css-test/check_regression.php`
-- [ ] 分类提交：`fix(framework):` / `fix(css-test):` / `docs:` / `chore:`
+- [ ] 分类提交：`feat(css-test):` / `fix(css-test):` / `docs:` / `chore:`

@@ -10,6 +10,109 @@ php apps/css-test/test_pipeline.php --case=case-xxx --force-build    # 强制重
 php apps/css-test/test_pipeline.php --skip-build           # 跳过编译
 php apps/css-test/test_pipeline.php --browser-engine-el-compare # 启用浏览器元素对比
 
+# ==== exe（默认 show-window，--headless 启用无窗口模式）====
+bin/css_test.exe --case=case-xxx --headless --dump-layout          # 导出布局 JSON（无窗口）
+bin/css_test.exe --case=case-xxx --headless --frame=5 --dump-layout # 导出多帧 JSON
+bin/css_test.exe --case=case-xxx --headless --screenshot=out.png    # 离屏截图
+bin/css_test.exe                                                    # 默认显示窗口（调试用）
+
+# ==== 构建 ====
+php sfc-compiler.php apps/css-test/App.vue                 # 编译 SFC
+.\build.bat css-test                                       # 构建 exe
+
+# ==== 归档 ====
+php apps/css-test/archive_case.php case-xxx                # 归档
+php apps/css-test/archive_case.php --list                  # 查看状态
+php apps/css-test/archive_case.php --all                   # 批量归档
+php apps/css-test/archive_case.php case-xxx --force        # 强制覆盖
+
+# ==== 回归 ====
+php apps/css-test/check_regression.php                     # 全量回归检查
+php apps/css-test/check_regression.php --tolerance=2       # 自定义容差
+```
+
+## 关键文件
+
+| 文件 | 用途 |
+|------|------|
+| `test_pipeline.php` | PxTest 编排器（Build→D→E→G→H→I 六步） |
+| `archive_case.php` | 归档工具（`--force` 覆盖保护） |
+| `check_regression.php` | 基线回归检查 |
+| `tools/PxTest/Reporting/SummaryReporter.php` | pipeline 全量跑完后自动生成汇总报告 + 运行历史 |
+| `docs/00-索引.md` | 文档索引 |
+| `docs/01-问题清单.md` | **统一 Bug 台账** |
+| `docs/02-测试报告/最新报告.md` | 当前测试报告（pipeline 自动生成） |
+| `.run_history.json` | pipeline 运行历史时间序列（gitignored） |
+| `.build_hash` | 构建缓存（自动生成，gitignore） |
+| `test_case/case-xxx/ref/` | headless 输出目录（engine_layout + browser_ref JSON + 对比报告） |
+
+## ref/ 目录文件说明
+
+| 文件 | 来源 | 说明 |
+|------|------|------|
+| `engine_layout.json` | `--dump-layout` | 引擎布局 JSON |
+| `engine_layout_after_5frames.json` | `--frame=5 --dump-layout` | 多帧稳定性 |
+| `engine_ref_level_0.json` | `LayoutNormalizer` | 引擎布局归一化版本 |
+| `browser_ref_level_0.json` | Edge headless `--dump-dom` + dump_layout.js | 浏览器元素数据 |
+| `element_compare_report.json` | `ElementCompareStep` | 对比报告（程序用） |
+| `element_compare_report.md` | `ElementCompareStep` | 对比报告（人工阅读） |
+| `layout_validation_report.json` / `.md` | `LayoutValidationStep` | Phase L CSS 布局断言报告 |
+
+> **原始 `.html` 即最终对比标杆**，pipeline 仅校验不修改 CSS。
+
+## .html 文件规范
+
+每个 `test_case/case-xxx/CaseXxx.html` 必须包含：
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Case Title</title>
+    <style>
+        /* PxTest baseline — mandatory: viewport + font + background */
+        html,body {
+            width:1600px;
+            height:800px;
+            overflow:hidden;
+            font-family:"Segoe UI","Noto Sans SC",sans-serif;
+            font-size:16px;
+            line-height:1.2;
+            background:#fff;
+            color:#000;
+        }
+        /* Test case styles */
+        ...
+    </style>
+</head>
+<body>
+    <!-- 内容与 .vue 一致 -->
+    <!-- 含 data-px-anchor="tl" 和 data-px-anchor="br" -->
+</body>
+</html>
+```
+
+pipeline `BrowserRefStep` 会自动校验：
+- `[SPEC_FAIL]` — 缺少基线声明，终止
+- `[VUE_MISMATCH]` — .html 与 .vue 结构不一致，终止
+
+## 迭代退出条件
+
+- 单 case：通过率 100%，或仅"引擎未导出属性"跳过
+- 全项目：已归档 case ≥ 90%，无构建失败，无回归
+# css-test 工具参考
+
+## 命令速查
+
+```bash
+# ==== 测试 ====
+php apps/css-test/test_pipeline.php                        # 全量测试（浏览器对比默认跳过）
+php apps/css-test/test_pipeline.php --case=case-xxx        # 单 case
+php apps/css-test/test_pipeline.php --case=case-xxx --force-build    # 强制重编+测试
+php apps/css-test/test_pipeline.php --skip-build           # 跳过编译
+php apps/css-test/test_pipeline.php --browser-engine-el-compare # 启用浏览器元素对比
+
 # ==== 默认 headless（窗口不弹出）====
 bin/css_test.exe --case=case-xxx --dump-layout                     # 导出布局 JSON（不含截图）
 bin/css_test.exe --case=case-xxx --frame=5 --dump-layout      # 导出多帧 JSON
