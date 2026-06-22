@@ -87,6 +87,19 @@ class SummaryReporter
             $phaseLIcon = $this->stepIcon($stepMap, 'layout_validation');
             $screenshotIcon = $this->stepIcon($stepMap, 'screenshot_compare');
 
+            // Phase G container overflow count
+            $containerIssues = $data['container_issues'] ?? [];
+            $containerOverflowCount = count($containerIssues);
+            $phaseGIcon = $containerOverflowCount > 0 ? "⚠️ {$containerOverflowCount}" : '✅';
+
+            // Element compare diff counts
+            $compStats = $data['compare_stats'] ?? [];
+            $geoCount = $compStats['geometry'] ?? 0;
+            $misCount = $compStats['mismatch'] ?? 0;
+            $structCount = $compStats['structure'] ?? 0;
+            $totalDiff = $geoCount + $misCount + $structCount;
+            $diffInfo = $totalDiff > 0 ? "{$totalDiff}diff" : '✅';
+
             // Screenshot info
             $pixelDiff = $data['pixel_diff'] ?? null;
             $screenshotInfo = $screenshotIcon;
@@ -104,6 +117,14 @@ class SummaryReporter
                 'browser_ref'  => $browserRefIcon,
                 'element_comp' => $elemCompIcon,
                 'phase_l'      => $phaseLIcon,
+                'phase_g'      => $phaseGIcon,
+                'diff_detail'  => $diffInfo,
+                'missing_count'  => $compStats['missing'] ?? 0,
+                'geometry_count' => $geoCount,
+                'mismatch_count' => $misCount,
+                'structure_count'=> $structCount,
+                'overflow_count' => $containerOverflowCount,
+                'container_issues' => $containerIssues,
                 'screenshot'   => $screenshotInfo,
                 'result'       => $stepPassed ? '✅ 通过' : '❌ 失败',
                 'time_ms'      => round($caseTime / 1000, 1), // seconds
@@ -146,18 +167,21 @@ class SummaryReporter
         $lines[] = '';
         $lines[] = '**运行时间**: ' . $report['timestamp'] . ' | **总耗时**: ' . $report['total_time_s'] . 's';
         $lines[] = '';
-        $lines[] = '| 用例 | 构建 | 布局导出 | 多帧稳定性 | 浏览器对比 | Phase L | 截图像素 | 结果 | 耗时 |';
-        $lines[] = '|------|------|----------|------------|-----------|---------|----------|------|------|';
+        $lines[] = '| 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |';
+        $lines[] = '|------|------|------|------|--------|----------|---------|---------|------|------|------|------|';
 
         foreach ($report['case_rows'] as $row) {
             $lines[] = sprintf(
-                '| %s | %s | %s | %s | %s | %s | %s | %s | %ss |',
+                '| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %ss |',
                 $row['name'],
                 $row['build'],
                 $row['layout'],
                 $row['multiframe'],
                 $row['browser_ref'],
+                $row['element_comp'],
                 $row['phase_l'],
+                $row['phase_g'],
+                $row['diff_detail'],
                 $row['screenshot'],
                 $row['result'],
                 $row['time_ms']
@@ -189,6 +213,46 @@ class SummaryReporter
                 $total = $stat['match'] + $stat['diff'];
                 $rate = $total > 0 ? round($stat['match'] / $total * 100, 1) : 0;
                 $lines[] = "| $prop | {$rate}% | {$stat['match']}/{$total} |";
+            }
+        }
+
+        // ─── 逐 Case 差异详情 ───
+        $lines[] = '';
+        $lines[] = '---';
+        $lines[] = '';
+        $lines[] = '## 逐 Case 差异详情';
+        $lines[] = '';
+        $lines[] = '| 用例 | 缺失(MISSING) | 几何(GEOMETRY) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |';
+        $lines[] = '|------|:-------------:|:--------------:|:-------------:|:---------------:|:------------:|';
+        foreach ($report['case_rows'] as $row) {
+            $lines[] = sprintf(
+                '| %s | %s | %s | %s | %s | %s |',
+                $row['name'],
+                $row['missing_count'],
+                $row['geometry_count'],
+                $row['mismatch_count'],
+                $row['structure_count'],
+                $row['overflow_count']
+            );
+        }
+        $lines[] = '';
+
+        // ─── Phase G 容器溢出详情 ───
+        $hasPhaseG = false;
+        foreach ($report['case_rows'] as $row) {
+            if (!empty($row['container_issues'])) {
+                if (!$hasPhaseG) {
+                    $lines[] = '---';
+                    $lines[] = '';
+                    $lines[] = '## Phase G 容器溢出详情';
+                    $lines[] = '';
+                    $hasPhaseG = true;
+                }
+                $lines[] = "### {$row['name']}\n";
+                foreach ($row['container_issues'] as $issue) {
+                    $lines[] = "- $issue";
+                }
+                $lines[] = '';
             }
         }
 

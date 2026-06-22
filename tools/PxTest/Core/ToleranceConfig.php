@@ -31,9 +31,9 @@ class ToleranceConfig
 
         $this->propertyTolerances = [
             'x'          => 0,   // 位置必须精确
-            'y'          => 0,
+            'y'          => 2,   // 2px 容差（DirectWrite 与浏览器 line-height 残余差异）
             'w'          => 1,   // 宽度允许 1px 偏差
-            'h'          => 1,
+            'h'          => 2,   // 2px 容差（DirectWrite 与浏览器 font metrics 残余差异）
             'visualW'    => 1,
             'visualH'    => 1,
             'fontSize'   => 0,   // 字体大小必须精确

@@ -307,6 +307,13 @@ class ElementCompareStep implements PipelineStepInterface
             $containerOverflowDiffs = 0;
         }
 
+        // Store diff counts in context for summary report
+        $ctx->set('compare_missing_count', count($missingDiffs));
+        $ctx->set('compare_geometry_count', count($geoDiffs));
+        $ctx->set('compare_mismatch_count', count($mismatchDiffs));
+        $ctx->set('compare_structure_count', count($structDiffs));
+        $ctx->set('container_overflow_issues', $containerIssues);
+
         // ─── 保存报告文件 ───
         $this->saveReport($structDiffs, $missingDiffs, $geoDiffs, $mismatchDiffs, $totalDiffs, $overflowIssues, $containerIssues);
 
@@ -662,7 +669,12 @@ class ElementCompareStep implements PipelineStepInterface
                 $cBottom = $cY + $cH;
 
                 // 只检查有意义的容器（排除 0 尺寸内部节点）
-                if ($pW > 10 && $cW > 0) {
+                // 跳过 overflow:hidden 父容器——CSS §11.1.1: 子项可溢出，仅被裁切
+                $parentOverflow = $parent['style']['overflow'] ?? 'visible';
+                $parentScroll = $parent['isScrollContainer'] ?? false;
+                $skipOverflow = ($parentOverflow === 'hidden' || $parentScroll);
+
+                if ($pW > 10 && $cW > 0 && !$skipOverflow) {
                     if ($cRight > $pContentRight + 2) {
                         $over = $cRight - $pContentRight;
                         $type = $node['type'] ?? '?';
@@ -670,10 +682,8 @@ class ElementCompareStep implements PipelineStepInterface
                         $issues[] = "child(type=$type right=$cRight) overflows parent(type=$pType contentRight=$pContentRight) by {$over}px (w: child=$cW parent=$pW)";
                     }
                 }
-                // 底部溢出检测（滚动容器内子元素溢出是正常的）
-                // 仅当父容器非滚动容器时检查
-                $parentScroll = $parent['isScrollContainer'] ?? false;
-                if (!$parentScroll && $pH > 10 && $cH > 0) {
+                // 底部溢出检测（滚动容器或 overflow:hidden 内子元素溢出是正常的）
+                if (!$skipOverflow && $pH > 10 && $cH > 0) {
                     if ($cBottom > $pContentBottom + 2) {
                         $over = $cBottom - $pContentBottom;
                         $issues[] = "child(type={$node['type']} bottom=$cBottom) overflows parent(type={$parent['type']} contentBottom=$pContentBottom) by {$over}px (bottom overflow)";

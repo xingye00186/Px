@@ -15,6 +15,9 @@ $projectRoot = dirname(__DIR__, 2);
 require_once $projectRoot . '/tests/unit/bootstrap.php';
 require_once $projectRoot . '/tools/PxTest/bootstrap.php';
 
+// 设置上海时区，确保报告和截图时间戳一致
+date_default_timezone_set('Asia/Shanghai');
+
 use PxTest\Pipeline\PipelineBuilder;
 use PxTest\Reporting\ConsoleReporter;
 use PxTest\Reporting\MarkdownReporter;
@@ -79,6 +82,13 @@ foreach ($filtered as $caseName) {
         'browser_count'    => $ctx->get('element_browser_count', 0),
         'layout_issues'    => $ctx->get('layout_validation_issues', -1),
         'overflow_issues'  => $ctx->get('overflow_issues', []),
+        'container_issues' => $ctx->get('container_overflow_issues', []),
+        'compare_stats'    => [
+            'missing'   => $ctx->get('compare_missing_count', 0),
+            'geometry'  => $ctx->get('compare_geometry_count', 0),
+            'mismatch'  => $ctx->get('compare_mismatch_count', 0),
+            'structure' => $ctx->get('compare_structure_count', 0),
+        ],
         'pixel_diff'       => $ctx->get('pixel_diff_pct', null),
     ];
 

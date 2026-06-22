@@ -189,8 +189,8 @@ class LayoutNormalizer
             'tag'   => $tag,
             'x'     => (int)($node['x'] ?? 0),
             'y'     => (int)($node['y'] ?? 0),
-            'w'     => (int)($node['w'] ?? 0),
-            'h'     => (int)($node['h'] ?? 0),
+            'w'     => (int)($node['visualW'] ?? $node['w'] ?? 0),
+            'h'     => (int)($node['visualH'] ?? $node['h'] ?? 0),
             'depth' => $depth,
         ];
 
@@ -200,8 +200,8 @@ class LayoutNormalizer
         // 节点字段补全到 styles（引擎把 w/h/position 放在节点字段而非 style 中）
         // 浏览器将这些作为 CSS 属性，所以补全以消除 MISSING
         // 仅当引擎 style 中没导出时补全，避免覆盖引擎已有值
-        if (!isset($element['styles']['width']))  $element['styles']['width']  = (int)($node['w'] ?? 0) . 'px';
-        if (!isset($element['styles']['height'])) $element['styles']['height'] = (int)($node['h'] ?? 0) . 'px';
+        if (!isset($element['styles']['width']))  $element['styles']['width']  = (int)($node['visualW'] ?? $node['w'] ?? 0) . 'px';
+        if (!isset($element['styles']['height'])) $element['styles']['height'] = (int)($node['visualH'] ?? $node['h'] ?? 0) . 'px';
         if (!isset($element['styles']['top']))    $element['styles']['top']    = (int)($node['y'] ?? 0) . 'px';
         if (!isset($element['styles']['left']))   $element['styles']['left']   = (int)($node['x'] ?? 0) . 'px';
         if (!isset($element['styles']['position'])) {

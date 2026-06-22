@@ -127,7 +127,8 @@ class LayoutValidationStep implements PipelineStepInterface
             $children = array_values(array_filter($node['children'] ?? [], function($ch) {
                 if (!is_array($ch)) return false;
                 $pos = $ch['style']['position'] ?? 'static';
-                return $pos !== 'absolute' && $pos !== 'fixed';
+                $disp = $ch['style']['display'] ?? 'block';
+                return $pos !== 'absolute' && $pos !== 'fixed' && $disp !== 'none';
             }));
 
             for ($i = 0; $i < count($children) - 1; $i++) {

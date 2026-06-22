@@ -1,5 +1,5 @@
 <template>
-  <div class="test-console" style="width:1600px;height:800px;display:flex;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;">
+  <div class="test-console" style="width:1600px;height:800px;display:flex;font-family:'Segoe UI','Noto Sans SC',system-ui,-apple-system,sans-serif;">
     <!-- Left Sidebar: dark theme -->
     <div class="sidebar" style="width:280px;height:100%;background:#1e1e2e;display:flex;flex-direction:column;flex-shrink:0;">
       <!-- Sidebar Header -->
