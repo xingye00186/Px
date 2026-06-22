@@ -128,6 +128,7 @@ class ElementCompareStep implements PipelineStepInterface
 
         // ─── 逐元素对比（锚点归一化坐标）───
         $max = min($eCount, $bCount);
+        $perPropStats = []; // ['property-name' => ['match' => N, 'diff' => N]]
         for ($i = 0; $i < $max; $i++) {
             $e = $engineSubset[$i];
             $b = $browserSubset[$i];
@@ -169,17 +170,25 @@ class ElementCompareStep implements PipelineStepInterface
                 $evs = $eStyle[$k] ?? null;
                 $bvs = $bStyle[$k] ?? null;
                 if ($evs === null && $bvs === null) continue;
+
+                // Per-property stats tracking
+                if (!isset($perPropStats[$k])) {
+                    $perPropStats[$k] = ['match' => 0, 'diff' => 0];
+                }
+
                 if ($evs === null) {
                     // 浏览器有但引擎没有：Categorize as MISSING
                     // 但有些是浏览器默认值，跳过它们避免大量噪音
                     if (!in_array($k, self::$BROWSER_DEFAULT_SKIP_KEYS, true)) {
                         $missingDiffs[] = "elem[$i].$k: browser=$bvs";
+                        $perPropStats[$k]['diff']++;
                     }
                 } elseif ($bvs === null) {
                     // 引擎有但浏览器没有：如果是引擎默认值白名单，直接跳过
                     // 同时也跳过 top/left（已在 GEOMETRY 比较）
                     if (!in_array($k, self::$ENGINE_DEFAULT_ONLY_KEYS, true) && !in_array($k, ['top', 'left'], true) && !in_array($k, self::$BROWSER_DEFAULT_SKIP_KEYS, true)) {
                         $mismatchDiffs[] = "elem[$i].$k: engine=$evs (browser has no value)";
+                        $perPropStats[$k]['diff']++;
                     }
                 } elseif ((string)$evs !== (string)$bvs) {
                     // 跳过已知噪音：
@@ -196,10 +205,19 @@ class ElementCompareStep implements PipelineStepInterface
                     $totalLen = strlen((string)$evs) + strlen((string)$bvs);
                     if ($totalLen < 100) {
                         $mismatchDiffs[] = "elem[$i].$k: engine=$evs browser=$bvs";
+                        $perPropStats[$k]['diff']++;
                     }
+                } else {
+                    // 两者都有且值相同 → 匹配
+                    $perPropStats[$k]['match']++;
                 }
             }
         }
+
+        // Store per-property stats in context for summary report
+        $ctx->set('element_prop_stats', $perPropStats);
+        $ctx->set('element_engine_count', $eCount);
+        $ctx->set('element_browser_count', $bCount);
 
         // ═══════════════════════════════════════════════
         // 输出：结构差异 → 几何差异 → 引擎缺失 → 值不一致

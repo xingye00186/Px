@@ -64,6 +64,9 @@ class LayoutValidationStep implements PipelineStepInterface
         }
         file_put_contents("$refDir/layout_validation_report.md", $md);
 
+        // Store issue count in context for summary report
+        $ctx->set('layout_validation_issues', count($this->issues));
+
         if (!empty($this->issues)) {
             echo "  [Phase L] CSS layout violations:\n";
             foreach ($this->issues as $issue) {

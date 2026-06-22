@@ -19,6 +19,7 @@ use PxTest\Pipeline\PipelineBuilder;
 use PxTest\Reporting\ConsoleReporter;
 use PxTest\Reporting\MarkdownReporter;
 use PxTest\Reporting\JsonReporter;
+use PxTest\Reporting\SummaryReporter;
 use PxTest\Core\TestSuite;
 
 echo "═══════════════════════════════════════════════\n";
@@ -63,11 +64,23 @@ $suite = new TestSuite('css-test-pipeline');
 $reporter->reportStart($suite);
 
 $totalPass = 0; $totalFail = 0;
+$allCaseData = []; // collect per-case data for summary report
 foreach ($filtered as $caseName) {
     echo "── $caseName ──\n";
     $ctx = new \PxTest\Pipeline\PipelineContext();
     $ctx->set('case_name', $caseName);
     $results = $orchestrator->run($ctx);
+
+    // Collect per-case data for summary
+    $allCaseData[$caseName] = [
+        'results'          => $results,
+        'prop_stats'       => $ctx->get('element_prop_stats', []),
+        'engine_count'     => $ctx->get('element_engine_count', 0),
+        'browser_count'    => $ctx->get('element_browser_count', 0),
+        'layout_issues'    => $ctx->get('layout_validation_issues', -1),
+        'overflow_issues'  => $ctx->get('overflow_issues', []),
+        'pixel_diff'       => $ctx->get('pixel_diff_pct', null),
+    ];
 
     $passed = true;
     foreach ($results as $r) {
@@ -81,6 +94,12 @@ foreach ($filtered as $caseName) {
     $reporter->reportCaseResult($caseName, $result);
     $passed ? $totalPass++ : $totalFail++;
     echo "\n";
+}
+
+// ─── 生成汇总报告 + 运行历史 ───
+if (!empty($allCaseData)) {
+    $summary = new SummaryReporter($projectRoot . '/apps/css-test');
+    $summary->generate($allCaseData);
 }
 
 // DOC_WARN: check FAIL cases against issue tracker
