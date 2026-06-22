@@ -25,15 +25,18 @@ class LayoutDumpStep implements PipelineStepInterface
     public function requires(): array { return []; }
     public function execute(PipelineContext $ctx): StepResult
     {
-        $refDir = "{$this->appDir}/test_case/{$this->caseName}/ref";
-        $result = $this->strategy->dump($this->caseName, $refDir);
+        // 从上下文获取当前 case 名（全量运行时每个 case 独立设置）
+        $ctxCase = $ctx->get('case_name');
+        $currentCase = ($ctxCase !== null && $ctxCase !== '') ? $ctxCase : $this->caseName;
+        $refDir = "{$this->appDir}/test_case/{$currentCase}/ref";
+        $result = $this->strategy->dump($currentCase, $refDir);
         if ($result === null) {
             return StepResult::err('dump_layout', 'Strategy ' . $this->strategy->name() . ' failed');
         }
 
         // REF_STALE check: verify layout JSON contains test case key content
         $json = $result[0];
-        $caseDir = "{$this->appDir}/test_case/{$this->caseName}";
+        $caseDir = "{$this->appDir}/test_case/{$currentCase}";
         $staleErrors = $this->validateContent($json, $caseDir);
         if (!empty($staleErrors)) {
             foreach ($staleErrors as $e) {
@@ -121,7 +124,9 @@ class BrowserRefStep implements PipelineStepInterface
     public function requires(): array { return []; }
     public function execute(PipelineContext $ctx): StepResult
     {
-        $caseDir = "{$this->appDir}/test_case/{$this->caseName}";
+        $ctxCase = $ctx->get('case_name');
+        $currentCase = ($ctxCase !== null && $ctxCase !== '') ? $ctxCase : $this->caseName;
+        $caseDir = "{$this->appDir}/test_case/{$currentCase}";
         $htmlFiles = glob("$caseDir/*.html");
         if (empty($htmlFiles)) return StepResult::err('browser_ref', 'No HTML file found');
         $htmlPath = $htmlFiles[0];
@@ -155,11 +160,11 @@ class BrowserRefStep implements PipelineStepInterface
         @mkdir($refDir, 0777, true);
         // Write to temp file with .html extension — original .html IS the benchmark
         $tempDir = sys_get_temp_dir();
-        $instrumentedPath = $tempDir . '/px_browser_ref_' . $this->caseName . '.html';
+        $instrumentedPath = $tempDir . '/px_browser_ref_' . $currentCase . '.html';
         file_put_contents($instrumentedPath, $instrumented);
 
         // ─── Step 4: Run browser (Edge headless) ───
-        $ok = $this->strategy->generate($instrumentedPath, $refDir, $this->caseName);
+        $ok = $this->strategy->generate($instrumentedPath, $refDir, $currentCase);
         $ctx->set('browser_wrapper_html', $instrumented);
         @unlink($instrumentedPath); // clean up temp file
 
