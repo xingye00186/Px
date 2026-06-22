@@ -118,7 +118,7 @@ function runDumpLayout(string $caseName, string $flag, string $outFile): ?array 
 
     $cwd = getcwd();
     chdir(__DIR__);
-    $cmd = escapeshellarg($exe) . ' --case=' . escapeshellarg($caseName) . ' ' . $flag . ' 2>NUL';
+    $cmd = escapeshellarg($exe) . ' --case=' . escapeshellarg($caseName) . ' --headless ' . $flag . ' 2>NUL';
     shell_exec($cmd);
 
     // 框架 --case=xxx 时写入 test_case/{case}/ref/（archive_case.php 已确认此行为）

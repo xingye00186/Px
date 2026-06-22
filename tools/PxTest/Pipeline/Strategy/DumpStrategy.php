@@ -21,7 +21,7 @@ class ExeDumpStrategy implements DumpStrategy
     public function dump(string $caseName, string $refDir): ?array
     {
         $outFile = "$refDir/engine_layout.json";
-        $cmd = sprintf('"%s" --case=%s --dump-layout 2>&1', $this->exePath, $caseName);
+        $cmd = sprintf('"%s" --case=%s --headless --dump-layout 2>&1', $this->exePath, $caseName);
         exec($cmd, $output, $exitCode);
         if (!file_exists($outFile)) return null;
         return [file_get_contents($outFile), $outFile];

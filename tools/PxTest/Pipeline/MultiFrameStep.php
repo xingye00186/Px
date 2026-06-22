@@ -24,7 +24,7 @@ class MultiFrameStep implements PipelineStepInterface
     public function execute(PipelineContext $ctx): StepResult
     {
         $start = microtime(true);
-        $cmd = sprintf('"%s" --case=%s --frame=%d --dump-layout 2>&1',
+        $cmd = sprintf('"%s" --case=%s --headless --frame=%d --dump-layout 2>&1',
             $this->exePath, $this->caseName, $this->frames);
 
         exec($cmd, $output, $exitCode);

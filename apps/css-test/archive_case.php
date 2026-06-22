@@ -94,7 +94,7 @@ function runDumpLayout(string $caseName, string $flag, string $outFile): ?string
     // 先尝试用 --dump-layout-to= 显式控制路径（如果框架支持）
     $cmd = escapeshellarg($exe)
         . ' --case=' . escapeshellarg($caseName)
-        . ' ' . $flag
+        . ' --headless ' . $flag
         . ' --dump-layout-to=' . escapeshellarg($outputPath)
         . ' 2>NUL';
     shell_exec($cmd);
@@ -103,7 +103,7 @@ function runDumpLayout(string $caseName, string $flag, string $outFile): ?string
         // 降级：不用 --dump-layout-to=，让框架自动写入 ref/
         $cmd2 = escapeshellarg($exe)
             . ' --case=' . escapeshellarg($caseName)
-            . ' ' . $flag
+            . ' --headless ' . $flag
             . ' 2>NUL';
         shell_exec($cmd2);
     }
