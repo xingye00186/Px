@@ -763,7 +763,7 @@ class Application
         // 且浏览器只导出简写不单独导出各边。对比层通过浏览器 skip 列表忽略。
         $styleKeys = ['bg', 'fg', 'bgFromGradient', 'fontSize', 'fontWeight', 'bold', 'borderWidth', 'borderColor',
             'borderRadius', 'borderStyle', 'textAlign',
-            'lineHeight', 'whiteSpace', 'wordBreak', 'fontStyle', 'fontFamily', 'opacity',
+            'lineHeight', 'whiteSpace', 'wordBreak', 'fontStyle', 'fontFamily', 'opacity', 'visibility',
             'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
             'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
             '_computedMarginLeft', '_computedMarginRight',

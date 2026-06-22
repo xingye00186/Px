@@ -100,18 +100,20 @@ class PercentResolver
                 // 但我们只有一层 parentStyle，因此这里用 normal 处理
             }
             // CSS 2.2 §10.8.1: 'normal' 的 line-height 由 UA 决定
-            // 引擎使用简单倍数近似。对于 Noto Sans SC 等 CJK 字体，调校值约 1.45x。
-            // 浏览器（如 Edge）的 line-height:normal 基于字体度量，CJK 字体约 1.4~1.5x。
-            // 从浏览器实测数据推导的插值公式：
-            //   fontSize=14 → 1.5x (≈21px)
-            //   fontSize=16 → ~1.473x (≈24px)
-            //   fontSize=18 → ~1.447x (≈26px)
-            //   fontSize=20+ → 1.45x
-            if ($fontSize <= 14) {
-                return (int)($fontSize * 1.5);
+            // 使用 GDI 测量真实字体行高（ascent + descent），替代硬编码倍数公式
+            // GDI 默认字体现为 Segoe UI（与浏览器一致），测高结果 ≈ fontSize × 1.2
+            static $hasNativeLH = null;
+            if ($hasNativeLH === null) {
+                $hasNativeLH = function_exists('\\sk_measure_text_height');
             }
-            $ratio = max(1.45, 1.5 - 0.08 * min($fontSize - 14, 10) / 6.0);
-            return (int)($fontSize * $ratio);
+            if ($hasNativeLH) {
+                $measured = (int)\sk_measure_text_height($fontSize, 0);
+                if ($measured > 0) {
+                    return $measured;
+                }
+            }
+            // Fallback: font-size × 1.2 (CSS standard ratio for most fonts)
+            return (int)($fontSize * 1.2);
         }
         // String ending in 'px' — extract pixel value
         if (is_string($lh) && str_ends_with($lh, 'px')) {

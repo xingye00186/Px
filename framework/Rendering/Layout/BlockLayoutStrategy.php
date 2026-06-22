@@ -134,12 +134,20 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         // Resolve fontSize from relative unit (rem/em/vw/vh)
         PercentResolver::resolveFontSizeUnit($style);
-        $node->style['fontSize'] = $style['fontSize'] ?? 14;
+        // CSS 2.2 §15.1.1: font-size 继承属性，未显式设置时从父容器继承
+        // 父容器也未有则使用 CSS 初始值 medium = 16px
+        if (isset($style['fontSize'])) {
+            $node->style['fontSize'] = $style['fontSize'];
+        } elseif ($ctx->parent !== null && isset($ctx->parent->style['fontSize'])) {
+            $node->style['fontSize'] = $ctx->parent->style['fontSize'];
+        } else {
+            $node->style['fontSize'] = 16;
+        }
 
         // -- Nodes with text content: measure text width instead of filling parent --
         error_log('[DIAG_LOC1] node=' . $node->type . ' hasContent=' . ($node->content !== null && is_string($node->content) && strlen($node->content) > 0 ? '1' : '0') . ' isInline=' . (self::isInlineType($node->type) ? '1' : '0'));
         if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
-            $fs = (int)($style['fontSize'] ?? 14);
+            $fs = (int)($node->style['fontSize']);
             $bd = ($style['bold'] ?? 0) !== 0;
             $measured = PercentResolver::resolveTextWidth($node->content, $fs, $bd);
             if ($measured > 0) {
@@ -279,11 +287,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     // Resolve fontSize from relative unit for child
                     PercentResolver::resolveFontSizeUnit($child->style);
+                    // CSS 继承：子元素未设 font-size 时从父元素继承
+                    if (!isset($child->style['fontSize'])) {
+                        $child->style['fontSize'] = $node->style['fontSize'];
+                    }
                     $childStyle['fontSize'] = $child->style['fontSize'];
 
                     // -- Children with text content: measure text width (inline elements use text-width) --
                     if ($child->content !== null && is_string($child->content) && strlen($child->content) > 0) {
-                        $fs = (int)($childStyle['fontSize'] ?? 14);
+                        $fs = (int)($child->style['fontSize']);
                         $bd = ($childStyle['bold'] ?? 0) != 0;
                         $measured = PercentResolver::resolveTextWidth($child->content, $fs, $bd);
                         error_log('[DIAG_INLINE] child=' . $child->type . ' content_len=' . strlen($child->content) . ' measured=' . $measured . ' isInline=' . (self::isInlineType($child->type) ? '1' : '0'));
@@ -764,7 +776,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             // CSS: inline elements with text content use text-measured width instead of container fill
             if (self::isInlineType($child->type) && $child->content !== null && is_string($child->content) && strlen($child->content) > 0) {
-                $fs = (int)($childStyle['fontSize'] ?? 14);
+                $fs = (int)($child->style['fontSize']);
                 $bd = ($childStyle['bold'] ?? 0) != 0;
                 $measured = PercentResolver::resolveTextWidth($child->content, $fs, $bd);
                 error_log('[DIAG_INLINE_ASTACK] child=' . $child->type . ' measured=' . $measured);

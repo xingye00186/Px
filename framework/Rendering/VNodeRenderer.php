@@ -869,7 +869,7 @@ class VNodeRenderer
 
     private function makeSpanElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
-        $fontSize = $style['fontSize'] ?? 16;
+        $fontSize = $style['fontSize'] ?? 14;
         // CSS 继承：若当前节点无 fg，沿父链查找
         $color = $style['fg'] ?? ($style['color'] ?? null);
         if ($color === null) {
@@ -1216,7 +1216,7 @@ class VNodeRenderer
     {
         $bg       = $style['bg'] ?? 0x1E1E1E;
         $fg       = $style['fg'] ?? 0xFFFFFF;
-        $fontSize = $style['fontSize'] ?? 16;
+        $fontSize = $style['fontSize'] ?? 14;
         $borderRadius = $style['borderRadius'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
 
