@@ -37,9 +37,9 @@ tests/css-standards/**/error.txt
 tests/css-standards/**/stderr.txt
 tests/css-standards/**/lint_result.txt
 
-# css-test 自动生成的报告（保留最新报告.md 由 run.php 管理）
-apps/css-test/docs/02-测试报告/*.md
-!apps/css-test/docs/02-测试报告/最新报告.md
+# css-test 自动生成的报告（pipeline 自动输出，无需跟踪）
+apps/css-test/docs/02-测试报告/
+apps/css-test/.run_history.json
 tests/css-standards/**/debug_*.php
 
 # 依赖分析自动生成文件
@@ -76,4 +76,4 @@ test_case/*/engine_layout_after_5frames.json
 apps/css-test/components/TestContent.vue
 
 # 运行报告
-test_report.md
+# test_report.md (不再使用)
