@@ -61,6 +61,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $height = (int)($style['height'] ?? 0);
 
         $node->x = $left + $ctx->parentX;
+        // DEBUG: check target-box positioning
+        if ($node->w === 300 && $node->h >= 100) {
+            $dbgPW = ($ctx->parent !== null) ? $ctx->parent->w : -1;
+            $dbgPT = ($ctx->parent !== null) ? $ctx->parent->type : 'null';
+            $dbgPX = ($ctx->parent !== null) ? $ctx->parent->x : -1;
+            error_log('[FLEX_AUTOMARGIN] SET_X: left=' . $left . ' parentX=' . $ctx->parentX . ' x=' . $node->x . ' pw=' . $dbgPW . ' ptype=' . $dbgPT . ' px=' . $dbgPX);
+        }
 
         $node->y = $top + $ctx->parentY;
 
@@ -92,6 +99,39 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
         $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+
+        // ── Auto-margin centering for flex containers (CSS 2.2 §10.3.3) ──
+        // Flex containers (display:flex) don't go through BlockLayoutStrategy's
+        // auto-margin path (resolveNormalFlow). Handle margin:auto here so that
+        // every re-resolution via two-pass preserves the centering offset.
+        // Must be placed AFTER w/visualW are set so $totalW is correct.
+        $checkML = $style['marginLeftAuto'] ?? false;
+        $checkMR = $style['marginRightAuto'] ?? false;
+        if ($checkML || $checkMR) {
+            $cbW = ($ctx->parent !== null)
+                ? PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w)
+                : 0;
+            if ($cbW > 0) {
+                $totalW = max($node->w, $node->visualW ?? $node->w);
+                if ($checkML && $checkMR && $cbW > $totalW) {
+                    $half = (int)(($cbW - $totalW) / 2);
+                    // Undo previous offset to prevent accumulation
+                    $prevX = $node->style['_marginAutoOffsetX'] ?? 0;
+                    $node->x += $half - $prevX;
+                    $node->style['_marginAutoOffsetX'] = $half;
+                    $node->style['_computedMarginLeft'] = $half;
+                    $node->style['_computedMarginRight'] = $cbW - $totalW - $half;
+                } elseif ($checkML && !$checkMR && $cbW > $totalW) {
+                    $remaining = $cbW - $totalW;
+                    $prevX = $node->style['_marginAutoOffsetX'] ?? 0;
+                    $node->x += $remaining - $prevX;
+                    $node->style['_marginAutoOffsetX'] = $remaining;
+                    $node->style['_computedMarginLeft'] = $remaining;
+                } elseif (!$checkML && $checkMR && $cbW > $totalW) {
+                    $node->style['_computedMarginRight'] = $cbW - $totalW;
+                }
+            }
+        }
 
         // ── Scroll container post-processing for flex/grid display modes ──
 

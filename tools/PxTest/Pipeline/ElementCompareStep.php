@@ -533,8 +533,8 @@ class ElementCompareStep implements PipelineStepInterface
                 ?? $node['textWidth']
                 ?? $node['w']
                 ?? 0;
-            if ($parent && isset($parent['contentW'])) {
-                $contentW = $parent['contentW'];
+            if ($parent && isset($parent['contentWidth'])) {
+                $contentW = $parent['contentWidth'];
                 if ($textWidth > $contentW && $contentW > 0) {
                     $text = $node['content'] ?? $node['text'] ?? '(unknown)';
                     if (is_string($text) && mb_strlen($text) > 20) {
@@ -637,6 +637,75 @@ class ElementCompareStep implements PipelineStepInterface
                     if ($cBottom > $pContentBottom + 2) {
                         $over = $cBottom - $pContentBottom;
                         $issues[] = "child(type={$node['type']} bottom=$cBottom) overflows parent(type={$parent['type']} contentBottom=$pContentBottom) by {$over}px (bottom overflow)";
+                    }
+                }
+            }
+        }
+
+        // ═══ Phase G+：flex 容器子项宽度偏差检测 ═══
+        $display = $node['style']['display'] ?? '';
+        $isFlex = ($display === 'flex' || $display === 'inline-flex');
+        if ($isFlex && !empty($node['children'])) {
+            $flexDir = $node['style']['flexDirection'] ?? 'row';
+            $flexWrap = $node['style']['flexWrap'] ?? 'nowrap';
+            $gap = (int)($node['style']['gap'] ?? 0);
+            $isRow = ($flexDir !== 'column');
+
+            // 收集非 absolute 子项
+            $flexChildren = [];
+            foreach ($node['children'] as $ch) {
+                if (!is_array($ch)) continue;
+                $pos = $ch['style']['position'] ?? 'static';
+                if ($pos === 'absolute' || $pos === 'fixed') continue;
+                $flexChildren[] = $ch;
+            }
+
+            $count = count($flexChildren);
+            if ($count >= 2) {
+                $available = $isRow ? (int)($node['w'] ?? 0) : (int)($node['h'] ?? 0);
+
+                if ($available > 20) {
+                    if ($isRow) {
+                        // 累计子项宽度 + gap
+                        $totalW = 0;
+                        foreach ($flexChildren as $ch) {
+                            $totalW += (int)($ch['visualW'] ?? $ch['w'] ?? 0);
+                        }
+                        $totalW += ($count - 1) * $gap;
+                        $diff = $totalW - $available;
+                        // 如果总宽度 + gap 显著超出可用宽度（>10%），标记偏差
+                        if ($diff > $available * 0.1 && $diff > 5) {
+                            $issues[] = "[FLEX-WIDTH] row flex items total width ($totalW) exceeds container content width ($available) by {$diff}px (gap=${gap}px, children=$count, wrap=$flexWrap)";
+                        }
+                        // 对 flex-wrap:wrap，且不换行时超额严重，额外提示
+                        if ($flexWrap === 'wrap' && $diff > $available * 0.2) {
+                            $issues[] = "[FLEX-WRAP-WIDTH] wrap container: items exceed row width by {$diff}px — items may be too wide for flex:1 distribution";
+                        }
+                        // 对 flex:1 等分子项，检查宽度是否大致相等
+                        if ($count >= 2) {
+                            $firstW = (int)($flexChildren[0]['visualW'] ?? $flexChildren[0]['w'] ?? 0);
+                            $allSimilar = true;
+                            $maxDiff = 0;
+                            for ($i = 1; $i < $count; $i++) {
+                                $wi = (int)($flexChildren[$i]['visualW'] ?? $flexChildren[$i]['w'] ?? 0);
+                                $d = abs($wi - $firstW);
+                                if ($d > $maxDiff) $maxDiff = $d;
+                            }
+                            if ($maxDiff > 5 && $firstW > 20) {
+                                $issues[] = "[FLEX-UNBALANCED] flex items have uneven widths: first={$firstW}px max-diff={$maxDiff}px (gap=${gap}px, children=$count)";
+                            }
+                        }
+                    } else {
+                        // column 方向：累计高度 + gap
+                        $totalH = 0;
+                        foreach ($flexChildren as $ch) {
+                            $totalH += (int)($ch['visualH'] ?? $ch['h'] ?? 0);
+                        }
+                        $totalH += ($count - 1) * $gap;
+                        $diff = $totalH - $available;
+                        if ($diff > $available * 0.1 && $diff > 5) {
+                            $issues[] = "[FLEX-HEIGHT] column flex items total height ($totalH) exceeds container content height ($available) by {$diff}px";
+                        }
                     }
                 }
             }

@@ -48,7 +48,7 @@ class Scheduler
 
     public function flushMicrotasks(): void
     {
-        while (count($this->microtasks) > 0) {
+        while (!empty($this->microtasks)) {
             $task = objval(array_shift($this->microtasks), \Closure::class);
             ($task)();
         }
@@ -56,7 +56,7 @@ class Scheduler
 
     public function runOneMacrotask(): bool
     {
-        if (count($this->macrotasks) === 0) {
+        if (empty($this->macrotasks)) {
             return false;
         }
         $task = objval(array_shift($this->macrotasks), \Closure::class);
