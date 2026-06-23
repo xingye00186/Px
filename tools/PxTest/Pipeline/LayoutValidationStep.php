@@ -116,7 +116,11 @@ class LayoutValidationStep implements PipelineStepInterface
             // Element width is significantly less than parent content width (>20% smaller)
             $muchSmaller = $nW < $pContentW * 0.8;
 
-            if ($atLeftEdge && $muchSmaller && ($computedML === null || $computedML === 0)) {
+            // Only flag if element has auto-margin indicators (margin:auto intent)
+            $hasAutoMargin = ($style['marginLeftAuto'] ?? false) || ($style['marginRightAuto'] ?? false)
+                || ($style['marginLeft'] === 'auto') || ($style['marginRight'] === 'auto');
+
+            if ($atLeftEdge && $muchSmaller && $hasAutoMargin && ($computedML === null || $computedML === 0)) {
                 $this->issues[] = "[D] flex container margin:auto likely missing: x=$nX at parent content left edge "
                     . "(pContentX=$pContentX), w=$nW < pContentW=$pContentW, _computedMarginLeft not set";
             }
