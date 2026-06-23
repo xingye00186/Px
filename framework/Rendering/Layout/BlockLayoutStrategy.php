@@ -159,6 +159,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
                 }
             }
+        } elseif ($node->type === 'br') {
+            // CSS: <br> is a zero-width line break — set w=0, h=line-height
+            $node->w = 0;
+            $node->visualW = 0;
+            $fs = (int)($node->style['fontSize']);
+            $parentStyle = $ctx->parent !== null ? $ctx->parent->style : null;
+            $lineH = PercentResolver::resolveLineHeight($style, $fs, 16, $parentStyle);
+            $node->h = $lineH;
+            $node->visualH = $lineH;
             // Text height = line-height if no explicit height
             // CSS 2.2 §10.8.1: 从父容器继承 line-height
             if (!array_key_exists('height', $style) && !array_key_exists('heightPercent', $style)) {
