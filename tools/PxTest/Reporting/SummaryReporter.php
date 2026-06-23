@@ -85,6 +85,12 @@ class SummaryReporter
             $browserRefIcon = $this->stepIcon($stepMap, 'browser_ref');
             $elemCompIcon = $this->stepIcon($stepMap, 'element_compare');
             $phaseLIcon = $this->stepIcon($stepMap, 'layout_validation');
+
+            // Phase L issue count
+            $layoutIssues = $data['layout_issues'] ?? -1;
+            if ($layoutIssues > 0) {
+                $phaseLIcon .= " {$layoutIssues}issue";
+            }
             $screenshotIcon = $this->stepIcon($stepMap, 'screenshot_compare');
 
             // Phase G container overflow count
