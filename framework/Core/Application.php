@@ -795,6 +795,10 @@ class Application
         if (!isset($style['bg'])) {
             $style['bg'] = -1;
         }
+        // 总是导出 display，默认 block（CSS 2.2 §9.2.4：块级元素默认 display:block）
+        if (!isset($style['display'])) {
+            $style['display'] = 'block';
+        }
         if (count($style) > 0) {
             $result['style'] = $style;
         }
