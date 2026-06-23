@@ -98,7 +98,11 @@ class SummaryReporter
             $misCount = $compStats['mismatch'] ?? 0;
             $structCount = $compStats['structure'] ?? 0;
             $totalDiff = $geoCount + $misCount + $structCount;
+            $critical = $compStats['critical'] ?? 0;
+            $major = $compStats['major'] ?? 0;
             $diffInfo = $totalDiff > 0 ? "{$totalDiff}diff" : '✅';
+            if ($critical > 0) $diffInfo .= " 🔴{$critical}";
+            elseif ($major > 0) $diffInfo .= " 🟡{$major}";
 
             // Screenshot info
             $pixelDiff = $data['pixel_diff'] ?? null;
@@ -119,6 +123,8 @@ class SummaryReporter
                 'diff_detail'  => $diffInfo,
                 'missing_count'  => $compStats['missing'] ?? 0,
                 'geometry_count' => $geoCount,
+                'critical_count' => $compStats['critical'] ?? 0,
+                'major_count'    => $compStats['major'] ?? 0,
                 'mismatch_count' => $misCount,
                 'structure_count'=> $structCount,
                 'overflow_count' => $containerOverflowCount,
@@ -220,14 +226,19 @@ class SummaryReporter
         $lines[] = '';
         $lines[] = '## 逐 Case 差异详情';
         $lines[] = '';
-        $lines[] = '| 用例 | 缺失(MISSING) | 几何(GEOMETRY) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |';
-        $lines[] = '|------|:-------------:|:--------------:|:-------------:|:---------------:|:------------:|';
+        $lines[] = '| 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |';
+        $lines[] = '|------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|';
         foreach ($report['case_rows'] as $row) {
+            $critical = $row['critical_count'] ?? 0;
+            $major = $row['major_count'] ?? 0;
+            $cLabel = $critical > 0 ? "**{$critical}**" : '0';
+            $mLabel = $major > 0 ? "**{$major}**" : '0';
             $lines[] = sprintf(
-                '| %s | %s | %s | %s | %s | %s |',
+                '| %s | %s | %s | %s | %s | %s | %s |',
                 $row['name'],
                 $row['missing_count'],
-                $row['geometry_count'],
+                $cLabel,
+                $mLabel,
                 $row['mismatch_count'],
                 $row['structure_count'],
                 $row['overflow_count']

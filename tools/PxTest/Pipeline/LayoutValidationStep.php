@@ -87,6 +87,39 @@ class LayoutValidationStep implements PipelineStepInterface
             $this->validateFlexContainer($node, $parent, $style);
         }
 
+        // ─── Assertion D: margin:auto centering for block-level children ───
+        // Elements with width < parent content width sitting at content left edge
+        // should have margin:auto centering applied (indicated by _computedMarginLeft)
+        // Only check elements in test content zone (x >= 200) to avoid sidebar noise
+        if ($parent !== null && ($display === 'flex' || $display === 'inline-flex')) {
+            $nX = (int)($node['x'] ?? 0);
+            $nW = (int)($node['w'] ?? 0);
+
+            // Skip sidebar elements, scroll containers, and empty elements
+            if ($nX < 200 || $nW <= 0) return;
+
+            $pStyle = $parent['style'] ?? [];
+            $pW = (int)($parent['w'] ?? 0);
+            $pX = (int)($parent['x'] ?? 0);
+            $pBorderL = (int)($pStyle['borderWidth'] ?? $pStyle['borderLeftWidth'] ?? 0);
+            $pPadL = (int)($pStyle['paddingLeft'] ?? $pStyle['padding'] ?? 0);
+            $pContentX = $pX + $pBorderL + $pPadL;
+            $computedML = $style['_computedMarginLeft'] ?? null;
+            $pPadR = (int)($pStyle['paddingRight'] ?? $pStyle['padding'] ?? 0);
+            $pBorderR = (int)($pStyle['borderRightWidth'] ?? $pStyle['borderWidth'] ?? 0);
+            $pContentW = max(1, $pW - $pBorderL - $pBorderR - $pPadL - $pPadR);
+
+            // Element is at (or very near) parent content left edge
+            $atLeftEdge = abs($nX - $pContentX) <= 2;
+            // Element width is significantly less than parent content width (>20% smaller)
+            $muchSmaller = $nW < $pContentW * 0.8;
+
+            if ($atLeftEdge && $muchSmaller && ($computedML === null || $computedML === 0)) {
+                $this->issues[] = "[D] flex container margin:auto likely missing: x=$nX at parent content left edge "
+                    . "(pContentX=$pContentX), w=$nW < pContentW=$pContentW, _computedMarginLeft not set";
+            }
+        }
+
         foreach ($node['children'] ?? [] as $child) {
             if (is_array($child)) {
                 $this->scanTree($child, $node);

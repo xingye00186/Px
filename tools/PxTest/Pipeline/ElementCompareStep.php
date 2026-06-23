@@ -174,7 +174,20 @@ class ElementCompareStep implements PipelineStepInterface
                 $delta = abs($ev - $bv);
                 $t = $tol->forProperty($f);
                 if ($delta > $t) {
-                    $geoDiffs[] = "elem[$i].$f: engine=$ev browser=$bv diff=$delta (tol=$t)";
+                    // 按差异大小分级：CRITICAL > 20px, MAJOR > 5px, MINOR <= 5px
+                    $severity = 'MINOR';
+                    if ($delta > 20) {
+                        $severity = 'CRITICAL';
+                    } elseif ($delta > 5) {
+                        $severity = 'MAJOR';
+                    }
+                    $geoDiffs[] = [
+                        'text' => "elem[$i].$f: engine=$ev browser=$bv diff=$delta (tol=$t)",
+                        'delta' => $delta,
+                        'severity' => $severity,
+                        'field' => $f,
+                        'elem_idx' => $i,
+                    ];
                 }
             }
 
@@ -262,14 +275,71 @@ class ElementCompareStep implements PipelineStepInterface
             $hasOutput = true;
         }
 
-        // 3) 几何偏差
+        // 3) 几何偏差（按严重程度排序显示）
         if (!empty($geoDiffs)) {
-            $showGeo = array_slice($geoDiffs, 0, 20);
-            echo "  [GEOMETRY] " . count($geoDiffs) . " diffs (showing first " . count($showGeo) . "):\n";
-            foreach ($showGeo as $d) echo "    - $d\n";
-            if (count($geoDiffs) > 20) {
-                echo "    ... and " . (count($geoDiffs) - 20) . " more\n";
+            // Sort by delta descending so largest diffs appear first
+            usort($geoDiffs, function($a, $b) { return $b['delta'] - $a['delta']; });
+
+            // Count severity buckets
+            $critical = 0; $major = 0; $minor = 0;
+            foreach ($geoDiffs as $g) {
+                if ($g['severity'] === 'CRITICAL') $critical++;
+                elseif ($g['severity'] === 'MAJOR') $major++;
+                else $minor++;
             }
+
+            // Store severity counts in context for summary report
+            $ctx->set('geo_critical_count', $critical);
+            $ctx->set('geo_major_count', $major);
+            $ctx->set('geo_minor_count', $minor);
+
+            if ($critical > 0) {
+                echo "  [CRITICAL_GEOMETRY] $critical large diffs (diff > 20px, 重点布局偏差):\n";
+                $idx = 0;
+                foreach ($geoDiffs as $g) {
+                    if ($g['severity'] === 'CRITICAL') {
+                        if ($idx >= 10) break;
+                        echo "    - {$g['text']}\n";
+                        $idx++;
+                    }
+                }
+                if ($critical > 10) {
+                    echo "    ... and " . ($critical - 10) . " more CRITICAL\n";
+                }
+            }
+
+            if ($major > 0) {
+                echo "  [MAJOR_GEOMETRY] $major moderate diffs (diff 5-20px):\n";
+                $idx = 0;
+                foreach ($geoDiffs as $g) {
+                    if ($g['severity'] === 'MAJOR') {
+                        if ($idx >= 10) break;
+                        echo "    - {$g['text']}\n";
+                        $idx++;
+                    }
+                }
+                if ($major > 10) {
+                    echo "    ... and " . ($major - 10) . " more MAJOR\n";
+                }
+            }
+
+            if ($minor > 0) {
+                $minorTexts = [];
+                foreach ($geoDiffs as $g) {
+                    if ($g['severity'] === 'MINOR') {
+                        $minorTexts[] = $g['text'];
+                    }
+                }
+                $showMinor = array_slice($minorTexts, 0, 10);
+                if (!empty($showMinor)) {
+                    echo "  [MINOR_GEOMETRY] " . count($showMinor) . " small diffs (diff <= 5px, 含字体度量 & 1px偏移):\n";
+                    foreach ($showMinor as $g) echo "    - $g\n";
+                    if ($minor > 10) {
+                        echo "    ... and " . ($minor - 10) . " more MINOR\n";
+                    }
+                }
+            }
+
             $hasOutput = true;
         }
 
@@ -536,9 +606,19 @@ class ElementCompareStep implements PipelineStepInterface
         }
 
         if (!empty($geoDiffs)) {
+            // Count severity buckets for MD report
+            $gCritical = 0; $gMajor = 0; $gMinor = 0;
+            foreach ($geoDiffs as $g) {
+                if ($g['severity'] === 'CRITICAL') $gCritical++;
+                elseif ($g['severity'] === 'MAJOR') $gMajor++;
+                else $gMinor++;
+            }
             $md .= "### GEOMETRY（几何偏差，共 {$counts['GEOMETRY']} 项）\n\n";
-            $md .= "```\n";
-            foreach ($geoDiffs as $d) $md .= "$d\n";
+            if ($gCritical > 0) $md .= "- **CRITICAL（>20px）**: $gCritical 项 — 重点布局偏差，需优先排查\n";
+            if ($gMajor > 0) $md .= "- **MAJOR（5-20px）**: $gMajor 项\n";
+            if ($gMinor > 0) $md .= "- **MINOR（<=5px）**: $gMinor 项（含字体度量差异 & 1px 系统性偏移）\n";
+            $md .= "\n```\n";
+            foreach ($geoDiffs as $g) $md .= $g['text'] . "\n";
             $md .= "```\n\n";
         }
 
@@ -668,15 +748,16 @@ class ElementCompareStep implements PipelineStepInterface
                 $pX = (int)($parent['x'] ?? 0);
                 $pY = (int)($parent['y'] ?? 0);
 
-                // 计算父容器的实际内容区边界（包含 padding+border 偏移）
-                // 子元素的坐标已包含父容器的 padding/border 偏移，
-                // 因此内容区右/下边界 = pX/pY + padding + border + w/h
+                // 计算父容器的实际内容区边界
+                // 引擎中 w/h 始终是内容尺寸（content size），与 boxSizing 无关
+                // 子元素的坐标 = 父坐标 + border + padding + 子内容偏移
+                // 因此内容区右下边界 = 父坐标 + border + padding + 内容尺寸
                 $pPadL = (int)($parent['style']['paddingLeft'] ?? $parent['style']['padding'] ?? 0);
                 $pPadT = (int)($parent['style']['paddingTop'] ?? $parent['style']['padding'] ?? 0);
                 $pBL = (int)($parent['style']['borderLeftWidth'] ?? $parent['style']['borderWidth'] ?? 0);
                 $pBT = (int)($parent['style']['borderTopWidth'] ?? $parent['style']['borderWidth'] ?? 0);
-                $pContentRight = $pX + $pPadL + $pBL + $pW;
-                $pContentBottom = $pY + $pPadT + $pBT + $pH;
+                $pContentRight = $pX + $pBL + $pPadL + $pW;
+                $pContentBottom = $pY + $pBT + $pPadT + $pH;
 
                 $cX = (int)($node['x'] ?? 0);
                 $cY = (int)($node['y'] ?? 0);
@@ -687,11 +768,16 @@ class ElementCompareStep implements PipelineStepInterface
 
                 // 只检查有意义的容器（排除 0 尺寸内部节点）
                 // 跳过 overflow:hidden 父容器——CSS §11.1.1: 子项可溢出，仅被裁切
+                // 跳过所有子项都有 flex-shrink:0 的容器——设计溢出（如水平滚动容器）
                 $parentOverflow = $parent['style']['overflow'] ?? 'visible';
                 $parentScroll = $parent['isScrollContainer'] ?? false;
                 $skipOverflow = ($parentOverflow === 'hidden' || $parentScroll);
 
-                if ($pW > 10 && $cW > 0 && !$skipOverflow) {
+                // 检查当前节点自己是否有 flex-shrink:0（设计不可收缩）
+                $nodeFlexShrink = $node['style']['flexShrink'] ?? null;
+                $nodeAllShrinkZero = ($nodeFlexShrink !== null && (int)$nodeFlexShrink === 0);
+
+                if ($pW > 10 && $cW > 0 && !$skipOverflow && !$nodeAllShrinkZero) {
                     if ($cRight > $pContentRight + 2) {
                         $over = $cRight - $pContentRight;
                         $type = $node['type'] ?? '?';
@@ -735,14 +821,22 @@ class ElementCompareStep implements PipelineStepInterface
                     if ($isRow) {
                         // 累计子项宽度 + gap
                         $totalW = 0;
+                        $allShrinkZero = true;  // 检查是否所有子项都有 flex-shrink:0（设计溢出如水平滚动）
                         foreach ($flexChildren as $ch) {
                             $totalW += (int)($ch['visualW'] ?? $ch['w'] ?? 0);
+                            $fs = $ch['style']['flexShrink'] ?? null;
+                            if ($fs === null || (int)$fs !== 0) {
+                                $allShrinkZero = false;
+                            }
                         }
                         $totalW += ($count - 1) * $gap;
                         $diff = $totalW - $available;
-                        // 如果总宽度 + gap 显著超出可用宽度（>10%），标记偏差
-                        if ($diff > $available * 0.1 && $diff > 5) {
-                            $issues[] = "[FLEX-WIDTH] row flex items total width ($totalW) exceeds container content width ($available) by {$diff}px (gap=${gap}px, children=$count, wrap=$flexWrap)";
+                        // 如果所有子项都是 flex-shrink:0（设计溢出，如水平滚动容器），跳过检测
+                        if (!$allShrinkZero) {
+                            // 如果总宽度 + gap 显著超出可用宽度（>10%），标记偏差
+                            if ($diff > $available * 0.1 && $diff > 5) {
+                                $issues[] = "[FLEX-WIDTH] row flex items total width ($totalW) exceeds container content width ($available) by {$diff}px (gap=\${gap}px, children=$count, wrap=$flexWrap)";
+                            }
                         }
                         // 对 flex-wrap:wrap，且不换行时超额严重，额外提示
                         if ($flexWrap === 'wrap' && $diff > $available * 0.2) {
@@ -753,16 +847,27 @@ class ElementCompareStep implements PipelineStepInterface
                         if ($flexWrap !== 'wrap') {
                             $gcCount = count($flexChildren);
                             if ($gcCount >= 2) {
-                                $firstW = (int)($flexChildren[0]['visualW'] ?? $flexChildren[0]['w'] ?? 0);
-                                $allSimilar = true;
-                                $maxDiff = 0;
-                                for ($i = 1; $i < $gcCount; $i++) {
-                                    $wi = (int)($flexChildren[$i]['visualW'] ?? $flexChildren[$i]['w'] ?? 0);
-                                    $d = abs($wi - $firstW);
-                                    if ($d > $maxDiff) $maxDiff = $d;
+                                // 先检查是否有子项设置了显式 width——有则跳过 UNBALANCED
+                                // （如 scroll-item 中 width:36px 的 span 是故意不同宽度的）
+                                $anyExplicitW = false;
+                                foreach ($flexChildren as $ch) {
+                                    if (array_key_exists('width', ($ch['style'] ?? []))) {
+                                        $anyExplicitW = true;
+                                        break;
+                                    }
                                 }
-                                if ($maxDiff > 5 && $firstW > 20) {
-                                    $issues[] = "[FLEX-UNBALANCED] flex items have uneven widths: first={$firstW}px max-diff={$maxDiff}px (gap={$gap}px, children=$gcCount)";
+                                if (!$anyExplicitW) {
+                                    $firstW = (int)($flexChildren[0]['visualW'] ?? $flexChildren[0]['w'] ?? 0);
+                                    $allSimilar = true;
+                                    $maxDiff = 0;
+                                    for ($i = 1; $i < $gcCount; $i++) {
+                                        $wi = (int)($flexChildren[$i]['visualW'] ?? $flexChildren[$i]['w'] ?? 0);
+                                        $d = abs($wi - $firstW);
+                                        if ($d > $maxDiff) $maxDiff = $d;
+                                    }
+                                    if ($maxDiff > 5 && $firstW > 20) {
+                                        $issues[] = "[FLEX-UNBALANCED] flex items have uneven widths: first={$firstW}px max-diff={$maxDiff}px (gap={$gap}px, children=$gcCount)";
+                                    }
                                 }
                             }
                         }

@@ -88,6 +88,9 @@ foreach ($filtered as $caseName) {
             'geometry'  => $ctx->get('compare_geometry_count', 0),
             'mismatch'  => $ctx->get('compare_mismatch_count', 0),
             'structure' => $ctx->get('compare_structure_count', 0),
+            'critical'  => $ctx->get('geo_critical_count', 0),
+            'major'     => $ctx->get('geo_major_count', 0),
+            'minor'     => $ctx->get('geo_minor_count', 0),
         ],
         'pixel_diff'       => $ctx->get('pixel_diff_pct', null),
     ];
