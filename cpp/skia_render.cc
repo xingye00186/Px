@@ -57,6 +57,7 @@
 #include "include/core/SkImage.h"
 #include "include/ports/SkFontMgr_directory.h"   // SkFontMgr_New_Custom_Directory
 #include "include/effects/SkImageFilters.h"
+#include "include/effects/SkGradient.h"
 #include <cstdio>
 
 #endif
@@ -91,7 +92,7 @@ static bool      g_skGdiplusInited = false;
 
 // 默认字体名（可通过 sk_set_default_font 修改）
 // GDI 路径：CreateFont 参数；Skia 路径：skEnsureFont 优先查找
-static std::string g_skDefaultFont = "Segoe UI";
+static std::string g_skDefaultFont = "Noto Sans SC";
 
 // DirectWrite 工厂（线程安全，进程级单例）
 static bool g_dwInitAttempted = false;
@@ -546,19 +547,39 @@ void php_sk_draw_round_rect(Int x, Int y, Int w, Int h, Int radius, Int rgb) {
 #endif
 }
 
+// 绘制圆角矩形（独立XY半径）
+void php_sk_draw_round_rect_xy(Int x, Int y, Int w, Int h, Int rx, Int ry, Int rgb) {
+#ifdef USE_SKIA
+    if (!g_skCanvas) return;
+    if ((int)w <= 0 || (int)h <= 0) return;
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    paint.setColor(rgbToSkColor(rgb));
+    SkRRect rrect;
+    rrect.setRectXY(
+        SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                         (SkScalar)(int)w, (SkScalar)(int)h),
+        (SkScalar)(int)rx, (SkScalar)(int)ry);
+    g_skCanvas->drawRRect(rrect, paint);
+#else
+    (void)ry;
+    php_sk_draw_round_rect(x, y, w, h, rx, rgb);
+#endif
+}
+
 // 绘制阴影（带圆角 + 高斯模糊）
 void php_sk_shadow_round_rect(Int x, Int y, Int w, Int h, Int radius, Int blur, Int rgb, double opacity) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
     if ((int)w <= 0 || (int)h <= 0) return;
     if (opacity <= 0.0) return;
-    float sigma = (float)(int)blur * 0.5f;
+    float sigma = (float)(int)blur * 0.333f;
     SkPaint paint;
     paint.setAntiAlias(true);
     paint.setColor(rgbToSkColor(rgb));
     paint.setAlphaf((SkScalar)opacity);
     if (sigma >= 0.5f) {
-        paint.setImageFilter(SkImageFilters::Blur(sigma, sigma, SkTileMode::kClamp, nullptr));
+        paint.setImageFilter(SkImageFilters::Blur(sigma, sigma, SkTileMode::kDecal, nullptr));
     }
     int r = (int)radius;
     if (r > 0) {
@@ -619,6 +640,161 @@ void php_sk_shadow_round_rect(Int x, Int y, Int w, Int h, Int radius, Int blur, 
     SelectObject(memDC, oldBitmap);
     DeleteObject(hBitmap);
     DeleteDC(memDC);
+#endif
+}
+
+// 绘制阴影（独立XY半径 + 高斯模糊）
+void php_sk_shadow_round_rect_xy(Int x, Int y, Int w, Int h, Int rx, Int ry, Int blur, Int rgb, double opacity) {
+#ifdef USE_SKIA
+    if (!g_skCanvas) return;
+    if ((int)w <= 0 || (int)h <= 0) return;
+    if (opacity <= 0.0) return;
+    float sigma = (float)(int)blur * 0.333f;
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    paint.setColor(rgbToSkColor(rgb));
+    paint.setAlphaf((SkScalar)opacity);
+    if (sigma >= 0.5f) {
+        paint.setImageFilter(SkImageFilters::Blur(sigma, sigma, SkTileMode::kDecal, nullptr));
+    }
+    SkRRect rrect;
+    rrect.setRectXY(
+        SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                         (SkScalar)(int)w, (SkScalar)(int)h),
+        (SkScalar)(int)rx, (SkScalar)(int)ry);
+    g_skCanvas->drawRRect(rrect, paint);
+#else
+    (void)blur;
+    (void)rx;
+    (void)ry;
+    if (!g_skHdc) return;
+    php_sk_shadow_round_rect(x, y, w, h, rx, blur, rgb, opacity);
+#endif
+}
+
+// 线性渐变矩形填充（Skia 路径：使用 SkGradientShader）
+// angle: CSS 角度（0=向上，90=向右，180=向下，270=向左）
+// color1/color2: BGR 格式颜色值
+// radius: 圆角半径（0=直角）
+void php_sk_fill_gradient_rect(Int x, Int y, Int w, Int h, Int angle, Int color1, Int color2, Int radius) {
+#ifdef USE_SKIA
+    if (!g_skCanvas) return;
+    if ((int)w <= 0 || (int)h <= 0) return;
+    
+    // CSS 角度转换为数学角度
+    // CSS: 0deg=向上, 90deg=向右
+    // Math: 0°=向右, 90°=向上
+    // CSS θ → math: 90° - θ
+    double rad = (90.0 - (double)(int)angle) * M_PI / 180.0;
+    
+    // 从矩形中心出发的梯度线，长度覆盖对角线
+    double cx = (double)(int)x + (double)(int)w / 2.0;
+    double cy = (double)(int)y + (double)(int)h / 2.0;
+    double r = sqrt((double)(int)w * (double)(int)w + (double)(int)h * (double)(int)h) / 2.0;
+    
+    SkPoint pts[2] = {
+        { (SkScalar)(cx - cos(rad) * r), (SkScalar)(cy - sin(rad) * r) },
+        { (SkScalar)(cx + cos(rad) * r), (SkScalar)(cy + sin(rad) * r) }
+    };
+    
+    // Convert BGR ints to SkColor4f (float [0-1] RGBA)
+    auto toSkColor4f = [](int bgr) -> SkColor4f {
+        // Px BGR int format: bits [23:16]=B, [15:8]=G, [7:0]=R
+        return SkColor4f{
+            (float)(bgr & 0xFF) / 255.0f,             // R from low byte
+            (float)((bgr >> 8) & 0xFF) / 255.0f,       // G from middle byte
+            (float)((bgr >> 16) & 0xFF) / 255.0f,      // B from high byte
+            1.0f
+        };
+    };
+    SkColor4f color4f[2] = {
+        toSkColor4f((int)color1),
+        toSkColor4f((int)color2)
+    };
+    
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    
+    SkGradient::Colors gradColors(SkSpan<const SkColor4f>(color4f, 2), SkTileMode::kClamp);
+    SkGradient grad(gradColors, {});
+    paint.setShader(SkShaders::LinearGradient(pts, grad));
+    
+    int rr = (int)radius;
+    if (rr > 0) {
+        SkRRect rrect;
+        rrect.setRectXY(
+            SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                             (SkScalar)(int)w, (SkScalar)(int)h),
+            (SkScalar)rr, (SkScalar)rr);
+        g_skCanvas->drawRRect(rrect, paint);
+    } else {
+        g_skCanvas->drawRect(
+            SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                             (SkScalar)(int)w, (SkScalar)(int)h),
+            paint);
+    }
+#else
+    (void)angle;
+    (void)radius;
+    // GDI fallback: draw with color1 as solid (simple approximation)
+    php_sk_fill_rect(x, y, w, h, color1);
+#endif
+}
+
+// 线性渐变矩形填充（独立XY半径）
+void php_sk_fill_gradient_rect_xy(Int x, Int y, Int w, Int h, Int angle, Int color1, Int color2, Int rx, Int ry) {
+#ifdef USE_SKIA
+    if (!g_skCanvas) return;
+    if ((int)w <= 0 || (int)h <= 0) return;
+    
+    double rad = (90.0 - (double)(int)angle) * M_PI / 180.0;
+    double cx = (double)(int)x + (double)(int)w / 2.0;
+    double cy = (double)(int)y + (double)(int)h / 2.0;
+    double r = sqrt((double)(int)w * (double)(int)w + (double)(int)h * (double)(int)h) / 2.0;
+    
+    SkPoint pts[2] = {
+        { (SkScalar)(cx - cos(rad) * r), (SkScalar)(cy - sin(rad) * r) },
+        { (SkScalar)(cx + cos(rad) * r), (SkScalar)(cy + sin(rad) * r) }
+    };
+    
+    auto toSkColor4f = [](int bgr) -> SkColor4f {
+        return SkColor4f{
+            (float)(bgr & 0xFF) / 255.0f,
+            (float)((bgr >> 8) & 0xFF) / 255.0f,
+            (float)((bgr >> 16) & 0xFF) / 255.0f,
+            1.0f
+        };
+    };
+    SkColor4f color4f[2] = {
+        toSkColor4f((int)color1),
+        toSkColor4f((int)color2)
+    };
+    
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    SkGradient::Colors gradColors(SkSpan<const SkColor4f>(color4f, 2), SkTileMode::kClamp);
+    SkGradient grad(gradColors, {});
+    paint.setShader(SkShaders::LinearGradient(pts, grad));
+    
+    int rrx = (int)rx, rry = (int)ry;
+    if (rrx > 0 || rry > 0) {
+        SkRRect rrect;
+        rrect.setRectXY(
+            SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                             (SkScalar)(int)w, (SkScalar)(int)h),
+            (SkScalar)rrx, (SkScalar)rry);
+        g_skCanvas->drawRRect(rrect, paint);
+    } else {
+        g_skCanvas->drawRect(
+            SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                             (SkScalar)(int)w, (SkScalar)(int)h),
+            paint);
+    }
+#else
+    (void)angle;
+    (void)rx;
+    (void)ry;
+    php_sk_fill_rect(x, y, w, h, color1);
 #endif
 }
 
@@ -908,6 +1084,24 @@ void php_sk_push_clip(Int x, Int y, Int w, Int h) {
     HRGN clipRgn = CreateRectRgn((int)x, (int)y, (int)(x + w), (int)(y + h));
     ExtSelectClipRgn(g_skHdc, clipRgn, RGN_AND);
     DeleteObject(clipRgn);
+#endif
+}
+
+// 入栈裁剪区域（圆角矩形）
+void php_sk_push_clip_rrect(Int x, Int y, Int w, Int h, Int radius) {
+#ifdef USE_SKIA
+    if (!g_skCanvas) return;
+    if ((int)w <= 0 || (int)h <= 0) return;
+    g_skCanvas->save();
+    SkRRect clipRRect;
+    clipRRect.setRectXY(
+        SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                         (SkScalar)(int)w, (SkScalar)(int)h),
+        (SkScalar)(int)radius, (SkScalar)(int)radius);
+    g_skCanvas->clipRRect(clipRRect, SkClipOp::kIntersect, true);
+#else
+    (void)radius;
+    php_sk_push_clip(x, y, w, h);
 #endif
 }
 

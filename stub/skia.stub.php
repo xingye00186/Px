@@ -26,6 +26,7 @@ function sk_alpha_fill_rect(int $x, int $y, int $w, int $h, int $rgb, float $opa
 function sk_shadow_round_rect(int $x, int $y, int $w, int $h, int $radius, int $blur, int $rgb, float $opacity): void {}
 function sk_draw_button(int $x, int $y, int $w, int $h, int $bgColor, int $borderColor): void {}
 function sk_push_clip(int $x, int $y, int $w, int $h): void {}
+function sk_push_clip_rrect(int $x, int $y, int $w, int $h, int $radius): void {}
 function sk_pop_clip(): void {}
 
 // ---- 字体管理 ----
@@ -43,3 +44,11 @@ function sk_free_image(int $handle): void {}
 
 // ---- 截图：将当前窗口 DC 保存为 PNG（headless 模式） ----
 function sk_save_screenshot(string $path): void {}
+
+// ---- 阶段三增强：线性渐变填充 ----
+function sk_fill_gradient_rect(int $x, int $y, int $w, int $h, int $angle, int $color1, int $color2, int $radius): void {}
+
+// ---- 阶段四：独立XY半径变体 ----
+function sk_draw_round_rect_xy(int $x, int $y, int $w, int $h, int $rx, int $ry, int $rgb): void {}
+function sk_shadow_round_rect_xy(int $x, int $y, int $w, int $h, int $rx, int $ry, int $blur, int $rgb, float $opacity): void {}
+function sk_fill_gradient_rect_xy(int $x, int $y, int $w, int $h, int $angle, int $color1, int $color2, int $rx, int $ry): void {}
