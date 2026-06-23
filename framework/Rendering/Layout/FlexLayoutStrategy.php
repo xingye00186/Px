@@ -1112,7 +1112,14 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         $this->resolver->resolveNode($chTp, $chCtx);
 
                         $chTp->visualW = PercentResolver::resolveVisualW($chTp->style, $chTp->w);
-                        $chTp->visualH = PercentResolver::resolveVisualH($chTp->style, $chTp->h);
+                        // Only override visualH for items with explicit height.
+                        // Auto-height items have correct visualH from resolveNode's
+                        // $isAutoHeight logic (adds padding+border to content-h).
+                        // Re-computing with resolveVisualH in border-box mode would
+                        // treat content-h as total-h, producing incorrect small height.
+                        if ($hasOrigH) {
+                            $chTp->visualH = PercentResolver::resolveVisualH($chTp->style, $chTp->h);
+                        }
 
                         if ($hasOrigW) {
                             $chTp->style['width'] = $origW;
