@@ -767,6 +767,7 @@ class Application
             'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
             'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
             '_computedMarginLeft', '_computedMarginRight',
+            'minHeight', 'maxHeight', 'minWidth', 'maxWidth',
             'gap', 'boxSizing', 'boxShadow',
             'width', 'height',
             'flexDirection', 'alignItems', 'justifyContent', 'flexWrap',

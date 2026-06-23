@@ -195,6 +195,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
+        // CSS 2.2 §10.7: Re-apply max-height constraint after inline content
+        // processing may have increased h (text wrapping) beyond max-height.
+        $maxH = (int)($style['maxHeight'] ?? 0);
+        if ($maxH > 0 && $node->h > $maxH) {
+            $node->h = $maxH;
+            $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+        }
+
 
         // ── Normal flow positioning (static/relative) ──
         $position = $style['position'] ?? 'static';
