@@ -5,7 +5,8 @@
 /* PxTest baseline — mandatory: viewport + font + background */
 html,body {
     width:1600px;
-    height:800px;
+    min-height:800px;
+    height:auto;
     overflow:hidden;
     font-family:"Segoe UI","Noto Sans SC",sans-serif;
     font-size:16px;
@@ -16,7 +17,6 @@ html,body {
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #f5f5f5; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-.sandbox { padding: 20px; }
 .card { width:800px; margin:0 auto; background:#fff; border-radius:12px; padding:24px; border:1px solid #e0e0e0; box-shadow:0 2px 12px rgba(0,0,0,.08); position:relative; }
 .scroll-box { height:300px; overflow-y:auto; border:2px solid #455a64; border-radius:6px; background:#fafafa; }
 .item { height:36px; display:flex; align-items:center; padding:0 14px; font-size:13px; border-bottom:1px solid #e0e0e0; }
@@ -33,7 +33,7 @@ body { background: #f5f5f5; font-family: 'Segoe UI', system-ui, -apple-system, s
 </head>
 <body>
 <div class="sandbox">
-  <div class="card">
+  <div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative">
     <div style="margin-bottom:10px;font-size:18px;font-weight:700;color:#c62828;">
       Scrollbar Diagnostic
     </div>
