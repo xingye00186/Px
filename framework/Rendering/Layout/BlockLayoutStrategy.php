@@ -201,6 +201,19 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         }
                     }
                 }
+
+                // CSS Text Module Level 3 §4.1: white-space:pre preserves newlines
+                if ($ws === 'pre' && $node->content !== null && is_string($node->content)) {
+                    $newlineCount = substr_count($node->content, "\n");
+                    if ($newlineCount > 0) {
+                        $preLines = $newlineCount + 1;
+                        $preH = (int)($preLines * $lineH);
+                        if ($preH > $node->h) {
+                            $node->h = $preH;
+                            $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+                        }
+                    }
+                }
             }
         }
 
