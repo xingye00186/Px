@@ -700,6 +700,17 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
             }
 
+            // ── Two-pass: re-resolve children with final widths from grow/shrink/minmax ──
+            // First pass ran at collect time with flex-basis width (typically 0).
+            // Now real width is known, re-run layout for auto-height/content.
+            foreach ($lineChildren as $idx3 => $ch3) {
+                $fd3 = $lineFlexData[$idx3] ?? [];
+                if (($fd3['isFlexGrow'] ?? false) || (isset($shrinkSizes[$idx3]))) {
+                    $childCtx3 = new LayoutContext($node->x + $paddingLeft, $node->y + $paddingTop, $node);
+                    $this->resolver->resolveNode($ch3, $childCtx3);
+                }
+            }
+
             // ── Step 9: Recalculate totalMain after shrink ──
 
             $lineTotalMain = 0;
