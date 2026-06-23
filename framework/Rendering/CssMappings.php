@@ -1432,6 +1432,11 @@ class CssMappings
                 }
             }
 
+            // Preserve original CSS font-weight numeric value for test comparison.
+            if (preg_match('/font-weight\s*:\s*(\d+)/i', $body, $fwMatch)) {
+                $props['fontWeight'] = (int)$fwMatch[1];
+            }
+
             $classStyles[$className] = $props;
         }
 
@@ -1453,6 +1458,10 @@ class CssMappings
                         }
                         $props[$map['key']] = self::dispatchParser($map['parser'], $value);
                     }
+                }
+                // Preserve original CSS font-weight numeric value for test comparison.
+                if (preg_match('/font-weight\s*:\s*(\d+)/i', $body, $fwMatch)) {
+                    $props['fontWeight'] = (int)$fwMatch[1];
                 }
                 if (!empty($props)) {
                     // 通用选择器 * 归入 '*' 键，其他标签选择器归入对应键

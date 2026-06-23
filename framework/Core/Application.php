@@ -768,7 +768,9 @@ class Application
             'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
             '_computedMarginLeft', '_computedMarginRight',
             'gap', 'boxSizing', 'boxShadow',
+            'width', 'height',
             'flexDirection', 'alignItems', 'justifyContent', 'flexWrap',
+            'flexShrink', 'flexGrow', 'order',
             'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',
             'gridColumn', 'gridRow', 'gridAutoRows', 'gridTemplateAreas',
             'justifyItems', 'alignSelf', 'justifySelf', 'alignContent',
@@ -794,6 +796,23 @@ class Application
         // 这确保元素即使没设背景也能参与颜色对比，否则 bg 缺失时对比逻辑直接跳过此类漏洞
         if (!isset($style['bg'])) {
             $style['bg'] = -1;
+        }
+        // ── border-color: 4-side format export (CSS 2.2 §8.5.2) ──
+        // Browser exports borderColor as 4-side string when per-side colors differ.
+        // Check if per-side border colors exist and differ from the main borderColor.
+        $bc = $style['borderColor'] ?? null;
+        $bTopC = $node->style['borderTopColor'] ?? null;
+        $bRightC = $node->style['borderRightColor'] ?? null;
+        $bBottomC = $node->style['borderBottomColor'] ?? null;
+        $bLeftC = $node->style['borderLeftColor'] ?? null;
+        if ($bc !== null && $bTopC !== null) {
+            if ($bTopC !== $bc || $bRightC !== $bc || $bBottomC !== $bc || $bLeftC !== $bc) {
+                // Per-side colors differ from shorthand — export 4-side format
+                $style['borderColor'] = self::formatColorInt($bTopC) . ' '
+                    . self::formatColorInt($bRightC) . ' '
+                    . self::formatColorInt($bBottomC) . ' '
+                    . self::formatColorInt($bLeftC);
+            }
         }
         // 总是导出 display，默认 block（CSS 2.2 §9.2.4：块级元素默认 display:block）
         if (!isset($style['display'])) {
@@ -1023,5 +1042,17 @@ class Application
             }
         }
         return null;
+    }
+
+    /**
+     * Convert COLORREF int to CSS rgb() string for serialization.
+     * COLORREF: bits 0-7=B, 8-15=G, 16-23=R
+     */
+    private static function formatColorInt(int $color): string
+    {
+        $r = ($color >> 16) & 0xFF;
+        $g = ($color >> 8) & 0xFF;
+        $b = $color & 0xFF;
+        return "rgb($r, $g, $b)";
     }
 }

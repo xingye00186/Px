@@ -374,7 +374,13 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     // CSS 2.2 §10.3.3: 正常流块级子元素的初始 x = 父内容区左边界
                     // 必须在 auto-margin 之前设置，确保 margin:auto 居中基于正确基线
-                    $child->x = $node->x + $paddingLeft;
+                    // 注意：flex/grid 子节点的 x 已由各自布局策略(FlexLayoutStrategy等)
+                    // 在 two-pass (第359行) 中正确设置（含 margin:auto 居中偏移），
+                    // 此处不再覆盖，否则居中偏移会被清除。
+                    $childDisplayCheck = $childStyle['display'] ?? 'block';
+                    if ($childDisplayCheck !== 'flex' && $childDisplayCheck !== 'inline-flex' && $childDisplayCheck !== 'grid') {
+                        $child->x = $node->x + $paddingLeft;
+                    }
 
                     $childML = $childStyle['marginLeftAuto'] ?? false;
 
