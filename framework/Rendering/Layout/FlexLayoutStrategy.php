@@ -93,9 +93,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         $height = PercentResolver::resolvePercent($style, 'height', 'heightPercent', $parentH);
 
-        $node->w = (int)max(0, (int)$width);
+        // CSS 2.2 §10.7: min/max constraints apply to flex containers too
+        $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $width, true));
 
-        $node->h = (int)max(0, (int)$height);
+        $node->h = (int)max(0, (int)PercentResolver::resolveMinMax($style, $height, false));
 
         $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
         $node->visualH = PercentResolver::resolveVisualH($style, $node->h);

@@ -23,7 +23,7 @@ use Px\Rendering\Layout\Tools\ScrollHelper;
 class BlockLayoutStrategy implements LayoutStrategyInterface
 {
     /** HTML inline elements: width should be text-measured, not container-filled */
-    private const INLINE_TYPES = ['#text','text','span','b','strong','em','i','code','a','label','abbr','cite','dfn','kbd','mark','q','samp','small','sub','sup','time','var'];
+    private const INLINE_TYPES = ['#text','text','span','b','strong','em','i','code','br','a','label','abbr','cite','dfn','kbd','mark','q','samp','small','sub','sup','time','var'];
 
     private static function isInlineType(string $type): bool
     {
