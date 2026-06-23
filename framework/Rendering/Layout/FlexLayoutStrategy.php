@@ -700,17 +700,6 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
             }
 
-            // ── Two-pass: re-resolve children with final widths from grow/shrink/minmax ──
-            // First pass ran at collect time with flex-basis width (typically 0).
-            // Now real width is known, re-run layout for auto-height/content.
-            foreach ($lineChildren as $idx3 => $ch3) {
-                $fd3 = $lineFlexData[$idx3] ?? [];
-                if (($fd3['isFlexGrow'] ?? false) || (isset($shrinkSizes[$idx3]))) {
-                    $childCtx3 = new LayoutContext($node->x + $paddingLeft, $node->y + $paddingTop, $node);
-                    $this->resolver->resolveNode($ch3, $childCtx3);
-                }
-            }
-
             // ── Step 9: Recalculate totalMain after shrink ──
 
             $lineTotalMain = 0;
@@ -1001,7 +990,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     error_log('[DIAG_2PASS] idx=' . $idxTp . ' type=' . $chTp->type . ' w=' . $chTp->w . ' h=' . $chTp->h . ' isFlexGrow=' . ($dataTp['isFlexGrow'] ? '1' : '0') . ' crossAxisSized=' . ($dataTp['crossAxisSized'] ? '1' : '0') . ' needsTwoPass=' . ($needsTwoPass ? '1' : '0') . ' display=' . ($chTp->style['display'] ?? 'block') . ' scrollContainer=' . ($chTp->isScrollContainer ? '1' : '0') . ' children=' . count($chTp->children));
                 }
 
-                if ($needsTwoPass && count($chTp->children) > 0) {
+                if ($needsTwoPass && (count($chTp->children) > 0 || $chTp->content !== null)) {
                     $display = (string)($chTp->style['display'] ?? 'block');
 
                     if ($display === 'flex' || $display === 'grid') {
