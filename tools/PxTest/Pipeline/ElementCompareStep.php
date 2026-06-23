@@ -119,7 +119,24 @@ class ElementCompareStep implements PipelineStepInterface
         echo " | anchor origin: engine=({$eAnchor[0]},{$eAnchor[1]}) browser=({$bAnchor[0]},{$bAnchor[1]})";
         echo "\n";
 
-        // ─── 元素数量 ───
+        // ─── 锚点跨度校验：TL→BR 距离在引擎与浏览器中应一致 ───
+        $engineBr = $this->findAnchor($engineSubset, 'br');
+        $browserBr = $this->findAnchor($browserSubset, 'br');
+        if ($engineBr !== null && $browserBr !== null) {
+            $eSpanW = abs((int)$engineBr['x'] - (int)$eAnchor[0]);
+            $eSpanH = abs((int)$engineBr['y'] - (int)$eAnchor[1]);
+            $bSpanW = abs((int)$browserBr['x'] - (int)$bAnchor[0]);
+            $bSpanH = abs((int)$browserBr['y'] - (int)$bAnchor[1]);
+            echo "  [ANCHOR_SPAN] engine TL→BR: {$eSpanW}x{$eSpanH} | browser TL→BR: {$bSpanW}x{$bSpanH}\n";
+            $spanWTol = max(5, (int)($bSpanW * 0.05));
+            $spanHTol = max(5, (int)($bSpanH * 0.05));
+            if (abs($eSpanW - $bSpanW) > $spanWTol) {
+                echo "  [ANCHOR_WARN] TL→BR width mismatch: engine={$eSpanW}px browser={$bSpanW}px (tolerance={$spanWTol}px). Check HTML body height / wrapper structure\n";
+            }
+            if (abs($eSpanH - $bSpanH) > $spanHTol) {
+                echo "  [ANCHOR_WARN] TL→BR height mismatch: engine={$eSpanH}px browser={$bSpanH}px (tolerance={$spanHTol}px). Check HTML body height / wrapper structure\n";
+            }
+        }
         $eCount = count($engineSubset);
         $bCount = count($browserSubset);
         if ($eCount !== $bCount) {
@@ -732,17 +749,21 @@ class ElementCompareStep implements PipelineStepInterface
                             $issues[] = "[FLEX-WRAP-WIDTH] wrap container: items exceed row width by {$diff}px — items may be too wide for flex:1 distribution";
                         }
                         // 对 flex:1 等分子项，检查宽度是否大致相等
-                        if ($count >= 2) {
-                            $firstW = (int)($flexChildren[0]['visualW'] ?? $flexChildren[0]['w'] ?? 0);
-                            $allSimilar = true;
-                            $maxDiff = 0;
-                            for ($i = 1; $i < $count; $i++) {
-                                $wi = (int)($flexChildren[$i]['visualW'] ?? $flexChildren[$i]['w'] ?? 0);
-                                $d = abs($wi - $firstW);
-                                if ($d > $maxDiff) $maxDiff = $d;
-                            }
-                            if ($maxDiff > 5 && $firstW > 20) {
-                                $issues[] = "[FLEX-UNBALANCED] flex items have uneven widths: first={$firstW}px max-diff={$maxDiff}px (gap=${gap}px, children=$count)";
+                        // 只检查非 wrap 容器——wrap 容器中固定宽度子项是正常的设计
+                        if ($flexWrap !== 'wrap') {
+                            $gcCount = count($flexChildren);
+                            if ($gcCount >= 2) {
+                                $firstW = (int)($flexChildren[0]['visualW'] ?? $flexChildren[0]['w'] ?? 0);
+                                $allSimilar = true;
+                                $maxDiff = 0;
+                                for ($i = 1; $i < $gcCount; $i++) {
+                                    $wi = (int)($flexChildren[$i]['visualW'] ?? $flexChildren[$i]['w'] ?? 0);
+                                    $d = abs($wi - $firstW);
+                                    if ($d > $maxDiff) $maxDiff = $d;
+                                }
+                                if ($maxDiff > 5 && $firstW > 20) {
+                                    $issues[] = "[FLEX-UNBALANCED] flex items have uneven widths: first={$firstW}px max-diff={$maxDiff}px (gap={$gap}px, children=$gcCount)";
+                                }
                             }
                         }
                     } else {

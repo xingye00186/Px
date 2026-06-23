@@ -9,6 +9,9 @@ use PxTest\Infrastructure\ProcessManager;
  */
 class BuildStep implements PipelineStepInterface
 {
+    /** 进程级构建标记：确保 --force-build 下也只编一次，后续 case 循环直接跳过 */
+    private static bool $buildAlreadyDone = false;
+
     private string $projectRoot;
     private string $appName;
     private ProcessManager $processMgr;
@@ -33,6 +36,11 @@ class BuildStep implements PipelineStepInterface
     {
         $start = microtime(true);
 
+        // 进程级构建去重：force-build 也只编一次，后续 case 循环直接跳过
+        if (self::$buildAlreadyDone) {
+            return StepResult::ok('build', (microtime(true) - $start) * 1000);
+        }
+
         // appName may contain hyphens; actual exe uses underscores (build.bat converts them)
         $exeName  = str_replace('-', '_', $this->appName) . '.exe';
         $exePath  = "{$this->projectRoot}/apps/{$this->appName}/bin/{$exeName}";
@@ -44,6 +52,7 @@ class BuildStep implements PipelineStepInterface
             $prevHash = trim(@file_get_contents($hashFile) ?: '');
             if ($currentHash === $prevHash) {
                 $ctx->set('exe_path', $exePath);
+                self::$buildAlreadyDone = true;
                 echo "  [skip] Source unchanged, skip build\n";
                 return StepResult::ok('build', (microtime(true) - $start) * 1000);
             }
@@ -73,6 +82,7 @@ class BuildStep implements PipelineStepInterface
 
         if ($buildExit === 0) {
             @file_put_contents($hashFile, $this->computeHash());
+            self::$buildAlreadyDone = true;
             $ctx->set('exe_path', $exePath);
             $ctx->set('build_output', $buildOut);
             echo "  [build] OK\n";

@@ -50,6 +50,20 @@ class ScreenshotStep implements PipelineStepInterface
     public function execute(PipelineContext $ctx): StepResult
     {
         $start = microtime(true);
+
+        // 从上下文读取当前 case 名（全量运行时每个 case 独立设置），覆盖构造时默认值
+        $ctxCase = $ctx->get('case_name');
+        if ($ctxCase !== null && $ctxCase !== '') {
+            $this->caseName = $ctxCase;
+            // 根据当前 case 名重新计算 htmlPath 和 refDir
+            $caseDir = dirname($this->refDir, 2) . '/' . $ctxCase;
+            $htmlFiles = glob($caseDir . '/*.html');
+            if (!empty($htmlFiles)) {
+                $this->htmlPath = $htmlFiles[0];
+            }
+            $this->refDir = $caseDir . '/ref';
+        }
+
         @mkdir($this->refDir, 0777, true);
         $ts = date('Ymd_His');
 
@@ -89,15 +103,13 @@ class ScreenshotStep implements PipelineStepInterface
             echo "  [anchor] WARNING: anchor visibility issue 鈥?{$anchorStatus['reason']}\n";
         }
 
-        // I-3: Anchor-aligned pixel diff
-        $diffPct = $this->comparePixels($engineFile, $browserFile);
+        // I-3: Anchor-aligned pixel diff + 锚点裁剪后 diff 图
+        $diffResult = $this->comparePixels($engineFile, $browserFile);
+        $diffPct = $diffResult['diff'];
         echo "  [pixel diff] {$diffPct}%\n";
 
-        // I-4: Generate diff image
-        if ($diffPct > 0) {
-            $diffFile = "{$this->refDir}/diff_{$ts}.png";
-            $this->generateDiffImage($engineFile, $browserFile, $diffFile);
-            echo "  [diff image] $diffFile\n";
+        if ($diffPct > 0 && $diffResult['diffFile'] !== null) {
+            echo "  [diff image] {$diffResult['diffFile']}\n";
         }
 
         $elapsed = (microtime(true) - $start) * 1000;
@@ -126,15 +138,15 @@ class ScreenshotStep implements PipelineStepInterface
      *   4. Pixel diff on cropped regions
      *   5. Fallback: if anchors not found, auto-detect content bounds
      */
-    private function comparePixels(string $fileA, string $fileB): float
+    private function comparePixels(string $fileA, string $fileB): array
     {
         if (!extension_loaded('gd')) {
-            return $this->comparePixelsFallback($fileA, $fileB);
+            return ['diff' => 100.0, 'diffFile' => null];
         }
 
         $imgA = @imagecreatefrompng($fileA);
         $imgB = @imagecreatefrompng($fileB);
-        if (!$imgA || !$imgB) return 100.0;
+        if (!$imgA || !$imgB) return ['diff' => 100.0, 'diffFile' => null];
 
         $wA = imagesx($imgA); $hA = imagesy($imgA);
         $wB = imagesx($imgB); $hB = imagesy($imgB);
@@ -147,10 +159,30 @@ class ScreenshotStep implements PipelineStepInterface
             echo "  [align] color anchors: TL=({$anchorsA['tl_x']},{$anchorsA['tl_y']}) BR=({$anchorsA['br_x']},{$anchorsA['br_y']})\n";
             $cropA = $this->cropImage($imgA, $anchorsA);
             $cropB = $this->cropImage($imgB, $anchorsB);
+
+            // 以浏览器截图为基准，等比例缩放引擎图使 BR.x 对齐
+            // 补偿字体度量差异导致的宽度偏差
+            $bw = imagesx($cropB);
+            $bh = imagesy($cropB);
+            $ew = imagesx($cropA);
+            $eh = imagesy($cropA);
+            if ($ew > 0 && $ew !== $bw) {
+                $scale = $bw / $ew;
+                $newH = (int)round($eh * $scale);
+                $scaledA = imagescale($cropA, $bw, $newH);
+                if ($scaledA !== false) {
+                    imagedestroy($cropA);
+                    $cropA = $scaledA;
+                    echo "  [align] engine scaled: {$ew}x{$eh} → {$bw}x{$newH} (factor={$scale})\n";
+                }
+            }
+
             $frac = $this->pixelDiff($cropA, $cropB, "anchor");
+            // 从对齐后的图片生成 diff 图
+            $diffFile = $this->generateDiffImageFromCropped($cropA, $cropB);
             imagedestroy($cropA); imagedestroy($cropB);
             imagedestroy($imgA); imagedestroy($imgB);
-            return $frac;
+            return ['diff' => $frac, 'diffFile' => $diffFile];
         }
 
         // Tier 2-3 fallback: auto content bounds detection
@@ -160,14 +192,15 @@ class ScreenshotStep implements PipelineStepInterface
             $cropA = $this->cropImageDirect($imgA, $bounds['x'], $bounds['y'], $bounds['w'], $bounds['h']);
             $cropB = $this->cropImageDirect($imgB, $bounds['x'], $bounds['y'], $bounds['w'], $bounds['h']);
             $frac = $this->pixelDiff($cropA, $cropB, "auto_bounds");
+            $diffFile = $this->generateDiffImageFromCropped($cropA, $cropB);
             imagedestroy($cropA); imagedestroy($cropB);
             imagedestroy($imgA); imagedestroy($imgB);
-            return $frac;
+            return ['diff' => $frac, 'diffFile' => $diffFile];
         }
 
         imagedestroy($imgA); imagedestroy($imgB);
         echo "  [align] fallback: no anchors or bounds found\n";
-        return 100.0;
+        return ['diff' => 100.0, 'diffFile' => null];
     }
 
     /**
@@ -376,33 +409,44 @@ class ScreenshotStep implements PipelineStepInterface
     }
 
     /**
-     * Generate diff image highlighting pixel differences.
+     * Generate diff image from already-cropped (anchor-aligned) images.
      * Red overlay on differing regions.
      */
-    private function generateDiffImage(string $fileA, string $fileB, string $outPath): void
+    private function generateDiffImageFromCropped(\GdImage $cropA, \GdImage $cropB): ?string
     {
-        if (!extension_loaded('gd')) return;
-        $imgA = @imagecreatefrompng($fileA);
-        $imgB = @imagecreatefrompng($fileB);
-        if (!$imgA || !$imgB) return;
-
-        $w = min(imagesx($imgA), imagesx($imgB));
-        $h = min(imagesy($imgA), imagesy($imgB));
+        $w = min(imagesx($cropA), imagesx($cropB));
+        $h = min(imagesy($cropA), imagesy($cropB));
         $diff = imagecreatetruecolor($w, $h);
-        $red = imagecolorallocatealpha($diff, 255, 0, 0, 64);
 
-        // Copy imgA as base, overlay red where pixels differ
-        imagecopy($diff, $imgA, 0, 0, 0, 0, $w, $h);
-        for ($y = 0; $y < $h; $y += 4) {
-            for ($x = 0; $x < $w; $x += 4) {
-                if ($this->colorDiff(imagecolorat($imgA, $x, $y), imagecolorat($imgB, $x, $y)) > 25) {
-                    imagefilledrectangle($diff, $x, $y, $x + 3, $y + 3, $red);
+        // 以浏览器截图(cropB)为底图，引擎截图(cropA)在差异区域以 50% 混合叠加
+        // 一致区域显示浏览器原图
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $cA = @imagecolorat($cropA, $x, $y);
+                $cB = @imagecolorat($cropB, $x, $y);
+                $rA = ($cA >> 16) & 0xFF; $gA = ($cA >> 8) & 0xFF; $bA = $cA & 0xFF;
+                $rB = ($cB >> 16) & 0xFF; $gB = ($cB >> 8) & 0xFF; $bB = $cB & 0xFF;
+                $diffPx = abs($rA - $rB) + abs($gA - $gB) + abs($bA - $bB);
+                if ($diffPx > 25) {
+                    // 差异区域：引擎截图半透明叠加到浏览器上
+                    $mixed = imagecolorallocatealpha($diff,
+                        (int)(($rA + $rB) / 2),
+                        (int)(($gA + $gB) / 2),
+                        (int)(($bA + $bB) / 2),
+                        0);
+                    imagesetpixel($diff, $x, $y, $mixed);
+                } else {
+                    $blend = imagecolorallocate($diff, $rB, $gB, $bB);
+                    imagesetpixel($diff, $x, $y, $blend);
                 }
             }
         }
 
-        imagepng($diff, $outPath);
-        imagedestroy($imgA); imagedestroy($imgB); imagedestroy($diff);
+        $ts = date('Ymd_His');
+        $diffFile = "{$this->refDir}/diff_{$ts}.png";
+        imagepng($diff, $diffFile);
+        imagedestroy($diff);
+        return $diffFile;
     }
 
     private function colorDiff(int $c1, int $c2): int

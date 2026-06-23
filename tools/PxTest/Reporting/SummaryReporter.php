@@ -103,10 +103,8 @@ class SummaryReporter
             // Screenshot info
             $pixelDiff = $data['pixel_diff'] ?? null;
             $screenshotInfo = $screenshotIcon;
-            if ($screenshotIcon === '✅' && $pixelDiff !== null) {
-                $screenshotInfo = "✅ {$pixelDiff}%";
-            } elseif ($screenshotIcon !== '⏭️' && $screenshotIcon !== '') {
-                $screenshotInfo = $screenshotIcon;
+            if ($pixelDiff !== null) {
+                $screenshotInfo = ($screenshotIcon === '✅' ? '✅' : '❌') . " {$pixelDiff}%";
             }
 
             $caseRows[] = [
