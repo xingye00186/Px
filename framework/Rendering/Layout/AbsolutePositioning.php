@@ -143,11 +143,45 @@ class AbsolutePositioning implements AbsoluteStrategy
         }
 
         // Assign computed width/height to node (CSS 2.2 §10.3.7, §10.6.4)
-        if ($width > 0) {
+        $hasExplicitW = $width > 0;
+        $hasExplicitH = $height > 0;
+        if ($hasExplicitW) {
             $node->w = (int)$width;
         }
-        if ($height > 0) {
+        if ($hasExplicitH) {
             $node->h = (int)$height;
+        }
+
+        // ── Auto-width/auto-height for absolute elements with text content ──
+        // CSS 2.2 §10.3.7 + §10.6.4: absolutely positioned elements with
+        // auto width/height compute their size from intrinsic content.
+        if ((!$hasExplicitW || !$hasExplicitH) && $node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
+            $fs = (int)($node->style['fontSize']);
+            $bd = ($style['bold'] ?? 0) !== 0;
+            $measured = PercentResolver::resolveTextWidth($node->content, $fs, $bd);
+            if ($measured > 0) {
+                $padL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
+                $padR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
+                $bwL = (int)($style['borderLeftWidth'] ?? $style['borderWidth'] ?? 0);
+                $bwR = (int)($style['borderRightWidth'] ?? $style['borderWidth'] ?? 0);
+                $autoW = $measured + $padL + $padR + $bwL + $bwR;
+                if (!$hasExplicitW) {
+                    $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $autoW, true));
+                    $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+                }
+            }
+            // Auto-height: line-height from font-size
+            if (!$hasExplicitH) {
+                $parentStyle = $ctx->parent !== null ? $ctx->parent->style : null;
+                $lineH = PercentResolver::resolveLineHeight($style, $fs, 16, $parentStyle);
+                $padT = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+                $padB = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
+                $bwT = (int)($style['borderTopWidth'] ?? $style['borderWidth'] ?? 0);
+                $bwB = (int)($style['borderBottomWidth'] ?? $style['borderWidth'] ?? 0);
+                $contentH = max($lineH, $node->h);
+                $node->h = $contentH;
+                $node->visualH = max(0, $contentH + $padT + $padB + $bwT + $bwB);
+            }
         }
 
         // Guard: margin:auto resolved later in resolveMarginAuto; treat as 0 here
