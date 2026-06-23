@@ -73,28 +73,78 @@ class SkiaRenderContext extends RenderContext
                 $shadowColor = $el['shadowColor'] ?? 0;
                 $shadowBlur = $el['shadowBlur'] ?? 0;
                 $shadowAlpha = $el['shadowAlpha'] ?? 0.5;
-                if ($shadowX !== 0 || $shadowY !== 0) {
-                    sk_shadow_round_rect(
-                        ($el['x'] ?? 0) + $shadowX,
-                        ($el['y'] ?? 0) + $shadowY,
-                        $el['w'] ?? 0, $el['h'] ?? 0,
-                        $el['borderRadius'] ?? 0,
-                        $shadowBlur,
-                        $shadowColor,
-                        $shadowAlpha
-                    );
+                $shadowInset = $el['shadowInset'] ?? false;
+                $hasRegularShadow = !$shadowInset && ($shadowX !== 0 || $shadowY !== 0 || $shadowBlur > 0);
+                $rx = $el['borderRadiusX'] ?? 0;
+                $ry = $el['borderRadiusY'] ?? 0;
+                $useXY = ($rx > 0 && $ry > 0 && $rx !== $ry);
+                if ($hasRegularShadow) {
+                    if ($useXY) {
+                        sk_shadow_round_rect_xy(
+                            ($el['x'] ?? 0) + $shadowX,
+                            ($el['y'] ?? 0) + $shadowY,
+                            $el['w'] ?? 0, $el['h'] ?? 0,
+                            $rx, $ry,
+                            $shadowBlur,
+                            $shadowColor,
+                            $shadowAlpha
+                        );
+                    } else {
+                        sk_shadow_round_rect(
+                            ($el['x'] ?? 0) + $shadowX,
+                            ($el['y'] ?? 0) + $shadowY,
+                            $el['w'] ?? 0, $el['h'] ?? 0,
+                            $el['borderRadius'] ?? 0,
+                            $shadowBlur,
+                            $shadowColor,
+                            $shadowAlpha
+                        );
+                    }
                 }
                 $radius = $el['borderRadius'] ?? 0;
                 $opacity = $el['opacity'] ?? 1.0;
                 $color = $el['color'] ?? 0;
                 $noFill = $el['noFill'] ?? false;
-                if ($radius > 0 && $opacity >= 1.0) {
-                    if (!$noFill) {
-                        sk_draw_round_rect(
+                // ── Gradient fill (takes priority over solid fill) ──
+                $gradientAngle = $el['gradientAngle'] ?? null;
+                $gradientColors = $el['gradientColors'] ?? null;
+                $hasInsetShadow = $shadowInset && ($shadowX !== 0 || $shadowY !== 0 || $shadowBlur > 0);
+                // For inset shadow: draw fill FIRST, then overlay shadow on top
+                if (!$noFill && $gradientAngle !== null && $gradientColors !== null && count($gradientColors) >= 2) {
+                    if ($useXY) {
+                        sk_fill_gradient_rect_xy(
                             $el['x'] ?? 0, $el['y'] ?? 0,
                             $el['w'] ?? 0, $el['h'] ?? 0,
-                            $radius, $color
+                            $gradientAngle,
+                            $gradientColors[0],
+                            $gradientColors[1],
+                            $rx, $ry
                         );
+                    } else {
+                        sk_fill_gradient_rect(
+                            $el['x'] ?? 0, $el['y'] ?? 0,
+                            $el['w'] ?? 0, $el['h'] ?? 0,
+                            $gradientAngle,
+                            $gradientColors[0],
+                            $gradientColors[1],
+                            $radius
+                        );
+                    }
+                } elseif ($radius > 0 && $opacity >= 1.0) {
+                    if (!$noFill) {
+                        if ($useXY) {
+                            sk_draw_round_rect_xy(
+                                $el['x'] ?? 0, $el['y'] ?? 0,
+                                $el['w'] ?? 0, $el['h'] ?? 0,
+                                $rx, $ry, $color
+                            );
+                        } else {
+                            sk_draw_round_rect(
+                                $el['x'] ?? 0, $el['y'] ?? 0,
+                                $el['w'] ?? 0, $el['h'] ?? 0,
+                                $radius, $color
+                            );
+                        }
                     }
                 } elseif (!$noFill && $opacity < 1.0) {
                     sk_alpha_fill_rect(
@@ -107,6 +157,44 @@ class SkiaRenderContext extends RenderContext
                         $el['x'] ?? 0, $el['y'] ?? 0,
                         $el['w'] ?? 0, $el['h'] ?? 0, $color
                     );
+                }
+                // ── Inset shadow: layered on TOP of fill ──
+                if ($hasInsetShadow) {
+                    $pad = $shadowBlur * 2 + 10;
+                    $ix = $el['x'] ?? 0;
+                    $iy = $el['y'] ?? 0;
+                    $iw = $el['w'] ?? 0;
+                    $ih = $el['h'] ?? 0;
+                    $rr = $el['borderRadius'] ?? 0;
+                    if ($rr > 0) {
+                        sk_push_clip_rrect($ix, $iy, $iw, $ih, $useXY ? max($rx, $ry) : $rr);
+                    } else {
+                        sk_push_clip($ix, $iy, $iw, $ih);
+                    }
+                    if ($useXY) {
+                        sk_shadow_round_rect_xy(
+                            $ix - $pad + $shadowX,
+                            $iy - $pad + $shadowY,
+                            $iw + $pad * 2,
+                            $ih + $pad * 2,
+                            $rx, $ry,
+                            $shadowBlur,
+                            $shadowColor,
+                            $shadowAlpha
+                        );
+                    } else {
+                        sk_shadow_round_rect(
+                            $ix - $pad + $shadowX,
+                            $iy - $pad + $shadowY,
+                            $iw + $pad * 2,
+                            $ih + $pad * 2,
+                            $rr,
+                            $shadowBlur,
+                            $shadowColor,
+                            $shadowAlpha
+                        );
+                    }
+                    sk_pop_clip();
                 }
                 // Draw border outline (also when rounded corners — simpler rects)
                 // CSS 2.2 §8.6: per-side border widths and colors
@@ -167,7 +255,9 @@ class SkiaRenderContext extends RenderContext
                 $shadowColor = $el['shadowColor'] ?? 0;
                 $shadowBlur = $el['shadowBlur'] ?? 0;
                 $shadowAlpha = $el['shadowAlpha'] ?? 0.5;
-                if ($shadowX !== 0 || $shadowY !== 0) {
+                $shadowInset = $el['shadowInset'] ?? false;
+                $hasRegularShadow = !$shadowInset && ($shadowX !== 0 || $shadowY !== 0 || $shadowBlur > 0);
+                if ($hasRegularShadow) {
                     sk_shadow_round_rect(
                         ($el['x'] ?? 0) + $shadowX,
                         ($el['y'] ?? 0) + $shadowY,

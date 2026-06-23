@@ -213,9 +213,16 @@ class CssValueParser
 
         $color = '#000000';
         $alpha = 0.5;
+        $isInset = false;
         $numericStr = $v;
 
-        if (preg_match('/rgba?\s*\([^)]+\)/i', $v, $m)) {
+        // Strip 'inset' keyword first (must be the first word if present)
+        if (str_starts_with(strtolower($numericStr), 'inset')) {
+            $isInset = true;
+            $numericStr = trim(substr($numericStr, 5)); // Remove 'inset'
+        }
+
+        if (preg_match('/rgba?\s*\([^)]+\)/i', $numericStr, $m)) {
             // 提取 alpha（rgba 第四参数）
             if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,?\s*([\d.]+)?/i', $m[0], $cm)) {
                 $r = (int)$cm[1]; $g = (int)$cm[2]; $b = (int)$cm[3];
@@ -224,10 +231,10 @@ class CssValueParser
                     $alpha = (float)$cm[4];
                 }
             }
-            $numericStr = trim(preg_replace('/' . preg_quote(explode('(', $m[0])[0], '/') . '\([^)]+\)\s*,?\s*/', '', $v));
-        } elseif (preg_match('/#([0-9a-fA-F]{3,8})\b/', $v, $m)) {
+            $numericStr = trim(preg_replace('/' . preg_quote(explode('(', $m[0])[0], '/') . '\([^)]+\)\s*,?\s*/', '', $numericStr));
+        } elseif (preg_match('/#([0-9a-fA-F]{3,8})\b/', $numericStr, $m)) {
             $color = $m[0];
-            $numericStr = trim(str_replace($m[0], '', $v));
+            $numericStr = trim(str_replace($m[0], '', $numericStr));
         }
 
         $parts = preg_split('/\s+/', $numericStr);
@@ -241,7 +248,72 @@ class CssValueParser
         $vOff = $numParts[1] ?? 0;
         $blur = $numParts[2] ?? 0;
         $spread = $numParts[3] ?? 0;
-        return $h . '|' . $vOff . '|' . $blur . '|' . $spread . '|' . $color . '|' . $alpha;
+        return ($isInset ? 'inset|' : '') . $h . '|' . $vOff . '|' . $blur . '|' . $spread . '|' . $color . '|' . $alpha;
+    }
+
+    /**
+     * Parse linear-gradient() CSS value into structured array.
+     *
+     * Supports: linear-gradient(angle, color1, color2, ...)
+     * Currently simplified to 2-color gradient support.
+     *
+     * @return array{angle:int, colors:array, stops:array}|null
+     */
+    public static function parseLinearGradient(string $value): ?array
+    {
+        $v = trim($value);
+        if (!str_starts_with($v, 'linear-gradient(')) {
+            return null;
+        }
+        // Extract content inside parentheses
+        if (!preg_match('/^linear-gradient\s*\(([^)]+)\)$/i', $v, $m)) {
+            return null;
+        }
+        $content = trim($m[1]);
+        if ($content === '') return null;
+
+        // Extract angle (e.g., "135deg", "45deg", "to bottom")
+        $angle = 180; // default: to bottom
+        $rest = $content;
+        if (preg_match('/^(\d+(?:\.\d+)?)deg\s*,?\s*/i', $content, $am)) {
+            $angle = (int)$am[1];
+            $rest = trim(substr($content, strlen($am[0])));
+        } elseif (preg_match('/^to\s+(top|bottom|left|right|top\s+left|top\s+right|bottom\s+left|bottom\s+right)\s*,?\s*/i', $content, $tm)) {
+            $dir = strtolower(trim($tm[1]));
+            $dirMap = [
+                'bottom' => 0, 'top' => 180, 'right' => 270, 'left' => 90,
+                'top right' => 225, 'top left' => 135,
+                'bottom right' => 315, 'bottom left' => 45,
+            ];
+            $angle = $dirMap[$dir] ?? 180;
+            $rest = trim(substr($content, strlen($tm[0])));
+        }
+
+        // Split remaining by comma to get color stops
+        $parts = explode(',', $rest);
+        $colors = [];
+        $stops = [];
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if ($part === '') continue;
+            // Extract optional percentage stop
+            $stop = null;
+            if (preg_match('/\s+(\d+(?:\.\d+)?)%\s*$/', $part, $sm)) {
+                $stop = (float)$sm[1];
+                $part = trim(substr($part, 0, -(strlen($sm[0]))));
+            }
+            $colorValue = self::parseHexColor($part);
+            $colors[] = $colorValue;
+            $stops[] = $stop;
+        }
+
+        if (count($colors) < 2) return null;
+
+        return [
+            'angle' => $angle,
+            'colors' => $colors,
+            'stops' => $stops,
+        ];
     }
 
     public static function parseOpacity(string $value): float

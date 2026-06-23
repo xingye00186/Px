@@ -54,7 +54,8 @@ class GdiRenderContext extends RenderContext
                 $shadowY = $el['shadowY'] ?? 0;
                 $shadowColor = $el['shadowColor'] ?? 0;
                 $shadowBlur = $el['shadowBlur'] ?? 0;
-                if ($shadowX !== 0 || $shadowY !== 0) {
+                $shadowInset = $el['shadowInset'] ?? false;
+                if (!$shadowInset && ($shadowX !== 0 || $shadowY !== 0 || $shadowBlur > 0)) {
                     $shadowAlpha = 0.5 * (1.0 / (1.0 + $shadowBlur * 0.05));
                     $shadowAlpha = max(0.05, min(0.5, $shadowAlpha));
                     vue_alpha_fill_rect(
@@ -182,7 +183,8 @@ class GdiRenderContext extends RenderContext
                 $shadowY = $el['shadowY'] ?? 0;
                 $shadowColor = $el['shadowColor'] ?? 0;
                 $shadowBlur = $el['shadowBlur'] ?? 0;
-                if ($shadowX !== 0 || $shadowY !== 0) {
+                $shadowInset = $el['shadowInset'] ?? false;
+                if (!$shadowInset && ($shadowX !== 0 || $shadowY !== 0 || $shadowBlur > 0)) {
                     $shadowAlpha = 0.5 * (1.0 / (1.0 + $shadowBlur * 0.05));
                     $shadowAlpha = max(0.05, min(0.5, $shadowAlpha));
                     vue_alpha_fill_rect(

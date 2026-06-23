@@ -402,10 +402,15 @@ class VNodeRenderer
         $h = $node->visualH;
 
         // ── 解析 border-radius 百分比（CSS Backgrounds & Borders §5.1）──
-        // 百分比基于元素 min(w, h)：例如 50% 在 180x180 元素上 = 90px
+        // CSS规范：百分比基于对应边尺寸，水平半径用元素宽度，垂直半径用元素高度
+        // 例如 160x100 盒子 + border-radius:50% → rx=80, ry=50（椭圆）
         if (isset($style['borderRadiusPercent'])) {
-            $minDim = min($w, $h);
-            $style['borderRadius'] = (int)($minDim * $style['borderRadiusPercent'] / 100.0);
+            $pct = $style['borderRadiusPercent'];
+            $elemW = max(1, $w);
+            $elemH = max(1, $h);
+            $style['borderRadiusX'] = (int)($elemW * $pct / 100.0);
+            $style['borderRadiusY'] = (int)($elemH * $pct / 100.0);
+            $style['borderRadius'] = min($style['borderRadiusX'], $style['borderRadiusY']);
         }
 
         $layer = $node->layer;
@@ -530,9 +535,13 @@ class VNodeRenderer
         $noFill = ($bg === null);
         $drawColor = ($bg !== null) ? $bg : 0;
         $borderRadius = $style['borderRadius'] ?? 0;
+        $borderRadiusX = $style['borderRadiusX'] ?? 0;
+        $borderRadiusY = $style['borderRadiusY'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
         $offsets = CssMappings::parseBoxShadowOffsets($style['boxShadow'] ?? '');
-        $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowBlur = $offsets['blur']; $shadowColor = $offsets['color']; $shadowAlpha = $offsets['alpha'];
+        $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowBlur = $offsets['blur']; $shadowColor = $offsets['color']; $shadowAlpha = $offsets['alpha']; $shadowInset = $offsets['inset'];
+        $gradientAngle = $style['gradientAngle'] ?? null;
+        $gradientColors = $style['gradientColors'] ?? null;
         $borderWidth = $style['borderWidth'] ?? 0;
         $borderTopWidth = $style['borderTopWidth'] ?? $borderWidth;
         $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
@@ -669,7 +678,7 @@ class VNodeRenderer
 
             $elements = [];
             if ($hasBg || $hasBorder) {
-                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'borderStyle' => $borderStyle, 'noFill' => $noFill, 'cursor' => $cursor];
+                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'borderRadiusX' => $borderRadiusX, 'borderRadiusY' => $borderRadiusY, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'borderStyle' => $borderStyle, 'noFill' => $noFill, 'cursor' => $cursor, 'gradientAngle' => $gradientAngle, 'gradientColors' => $gradientColors];
             }
             if ($bgImageEl !== null) {
                 $elements[] = $bgImageEl;
@@ -839,8 +848,8 @@ class VNodeRenderer
         if ($hasBg || $hasBorder) {
             $elements[] = [
                 'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
-                'color' => $drawColor, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
-                'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor,
+                'color' => $drawColor, 'borderRadius' => $borderRadius, 'borderRadiusX' => $borderRadiusX, 'borderRadiusY' => $borderRadiusY, 'opacity' => $opacity, 'layer' => $layer,
+                'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset,
                 'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
                 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,
                 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,
@@ -849,6 +858,7 @@ class VNodeRenderer
                 'borderStyle' => $borderStyle,
                 'noFill' => $noFill,
                 'cursor' => $cursor,
+                'gradientAngle' => $gradientAngle, 'gradientColors' => $gradientColors,
             ];
         }
         if ($bgImageEl !== null) {
@@ -1029,17 +1039,11 @@ class VNodeRenderer
         $borderBottomColor = $style['borderBottomColor'] ?? $borderColor;
         $borderLeftColor = $style['borderLeftColor'] ?? $borderColor;
         $borderRadius = $style['borderRadius'] ?? 0;
+        $borderRadiusX = $style['borderRadiusX'] ?? 0;
+        $borderRadiusY = $style['borderRadiusY'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
-        $boxShadow = $style['boxShadow'] ?? '';
-        $shadowX = 0; $shadowY = 0; $shadowBlur = 0; $shadowColor = 0; $shadowAlpha = 0.5;
-        if ($boxShadow !== '') {
-            $parts = explode('|', $boxShadow);
-            $shadowX = (int)($parts[0] ?? 0);
-            $shadowY = (int)($parts[1] ?? 0);
-            $shadowBlur = (int)($parts[2] ?? 0);
-            $shadowColor = CssMappings::hexToBgr($parts[4] ?? '#000000');
-            $shadowAlpha = (float)($parts[5] ?? 0.5);
-        }
+        $shadowOffsets = CssMappings::parseBoxShadowOffsets($style['boxShadow'] ?? '');
+        $shadowX = $shadowOffsets['h']; $shadowY = $shadowOffsets['v']; $shadowBlur = $shadowOffsets['blur']; $shadowColor = $shadowOffsets['color']; $shadowAlpha = $shadowOffsets['alpha']; $shadowInset = $shadowOffsets['inset'];
 
         $label = '';
         // AOT 兼容: php::Variant 在 use native_types 模式下 is_string() 可能返回 false
@@ -1091,7 +1095,7 @@ class VNodeRenderer
             'borderRadius' => $borderRadius,
             'label' => $label, 'labelX' => $labelX, 'labelY' => $labelY,
             'labelFontSize' => $labelFontSize, 'opacity' => $opacity, 'layer' => $layer,
-            'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'cursor' => $cursor,
+            'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset, 'cursor' => $cursor,
         ];
     }
 
@@ -1110,19 +1114,13 @@ class VNodeRenderer
         // 背景色：CSS background 属性（CssMappings 已映射为 style['bg']）
         $bg = $style['bg'] ?? 0xCCCCCC;
         $borderRadius = $style['borderRadius'] ?? 0;
+        $borderRadiusX = $style['borderRadiusX'] ?? 0;
+        $borderRadiusY = $style['borderRadiusY'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
 
         // box-shadow
-        $boxShadow = $style['boxShadow'] ?? '';
-        $shadowX = 0; $shadowY = 0; $shadowBlur = 0; $shadowColor = 0; $shadowAlpha = 0.5;
-        if ($boxShadow !== '') {
-            $parts = explode('|', $boxShadow);
-            $shadowX = (int)($parts[0] ?? 0);
-            $shadowY = (int)($parts[1] ?? 0);
-            $shadowBlur = (int)($parts[2] ?? 0);
-            $shadowColor = CssMappings::hexToBgr($parts[4] ?? '#000000');
-            $shadowAlpha = (float)($parts[5] ?? 0.5);
-        }
+        $shadowOffsets = CssMappings::parseBoxShadowOffsets($style['boxShadow'] ?? '');
+        $shadowX = $shadowOffsets['h']; $shadowY = $shadowOffsets['v']; $shadowBlur = $shadowOffsets['blur']; $shadowColor = $shadowOffsets['color']; $shadowAlpha = $shadowOffsets['alpha']; $shadowInset = $shadowOffsets['inset'];
 
         // border
         $borderWidth = $style['borderWidth'] ?? 0;
@@ -1182,7 +1180,7 @@ class VNodeRenderer
             $elements[] = [
                 'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
                 'color' => $bg, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
-                'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor,
+                'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset,
                 'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
                 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,
                 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,
@@ -1218,6 +1216,8 @@ class VNodeRenderer
         $fg       = $style['fg'] ?? 0xFFFFFF;
         $fontSize = $style['fontSize'] ?? 14;
         $borderRadius = $style['borderRadius'] ?? 0;
+        $borderRadiusX = $style['borderRadiusX'] ?? 0;
+        $borderRadiusY = $style['borderRadiusY'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
 
         $bindKey = $props['v-model'] ?? '';
@@ -1246,6 +1246,8 @@ class VNodeRenderer
     {
         $bg = $style['bg'] ?? 0x2D2D2D;
         $borderRadius = $style['borderRadius'] ?? 0;
+        $borderRadiusX = $style['borderRadiusX'] ?? 0;
+        $borderRadiusY = $style['borderRadiusY'] ?? 0;
         $opacity = $style['opacity'] ?? 1.0;
 
         $contentH = $node->contentHeight;

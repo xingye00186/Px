@@ -551,12 +551,20 @@ class CssMappings
     public static function parseBoxShadowOffsets(string $boxShadow): array
     {
         $parts = explode('|', $boxShadow);
+        $offset = 0;
+        $isInset = false;
+        if (isset($parts[0]) && $parts[0] === 'inset') {
+            $isInset = true;
+            $offset = 1;
+        }
         return [
-            'h'     => (int)($parts[0] ?? 0),
-            'v'     => (int)($parts[1] ?? 0),
-            'blur'  => (int)($parts[2] ?? 0),
-            'alpha' => (float)($parts[5] ?? 0.5),
-            'color' => self::hexToBgr($parts[4] ?? '#000000'),
+            'h'      => (int)($parts[0 + $offset] ?? 0),
+            'v'      => (int)($parts[1 + $offset] ?? 0),
+            'blur'   => (int)($parts[2 + $offset] ?? 0),
+            'spread' => (int)($parts[3 + $offset] ?? 0),
+            'color'  => self::hexToBgr($parts[4 + $offset] ?? '#000000'),
+            'alpha'  => (float)($parts[5 + $offset] ?? 0.5),
+            'inset'  => $isInset,
         ];
     }
 
@@ -691,12 +699,15 @@ class CssMappings
         // Expand background shorthand into individual sub-properties
         $raw = self::expandBackgroundShorthand($raw);
 
-        // Detect linear-gradient in background — the parser extracts the first
-        // color as bg, but the element doesn't have a solid background-color.
-        // Set a flag so the normalizer can skip exporting background-color
-        // for gradient-only elements (browser shows rgba(0,0,0,0) for these).
+        // Detect linear-gradient in background — store parsed gradient data
         if (isset($raw['background']) && stripos($raw['background'], 'linear-gradient') !== false) {
-            $style['bgFromGradient'] = true;
+            $gradientData = \Px\Rendering\CssValueParser::parseLinearGradient($raw['background']);
+            if ($gradientData !== null) {
+                $style['bgFromGradient'] = true;
+                $style['gradientAngle'] = $gradientData['angle'];
+                $style['gradientColors'] = $gradientData['colors'];
+                $style['gradientStops'] = $gradientData['stops'];
+            }
         }
 
         // Expand text-decoration shorthand into individual sub-properties
@@ -948,15 +959,20 @@ class CssMappings
             }
         }
 
-        // Extract rgba alpha channel as opacity (only if opacity not explicitly set)
+        // Extract rgba alpha channel as opacity (only if opacity not explicitly set).
+        // IMPORTANT: Only source from color/background properties, NOT box-shadow,
+        // because box-shadow's rgba alpha describes shadow transparency, not element opacity.
         if (!isset($style['opacity'])) {
-            foreach ($raw as $rawValue) {
-                if (preg_match('/rgba\s*\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)/i', $rawValue, $m)) {
-                    $alpha = (float)$m[1];
-                    if ($alpha >= 0.0 && $alpha < 1.0) {
-                        $style['opacity'] = $alpha;
+            $opacityCheckProps = ['color', 'background', 'background-color'];
+            foreach ($opacityCheckProps as $checkProp) {
+                if (isset($raw[$checkProp])) {
+                    if (preg_match('/rgba\s*\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)/i', $raw[$checkProp], $m)) {
+                        $alpha = (float)$m[1];
+                        if ($alpha >= 0.0 && $alpha < 1.0) {
+                            $style['opacity'] = $alpha;
+                        }
+                        break;
                     }
-                    break;
                 }
             }
         }
