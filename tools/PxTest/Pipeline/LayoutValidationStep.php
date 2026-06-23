@@ -118,7 +118,7 @@ class LayoutValidationStep implements PipelineStepInterface
 
             // Only flag if element has auto-margin indicators (margin:auto intent)
             $hasAutoMargin = ($style['marginLeftAuto'] ?? false) || ($style['marginRightAuto'] ?? false)
-                || ($style['marginLeft'] === 'auto') || ($style['marginRight'] === 'auto');
+                || (($style['marginLeft'] ?? '') === 'auto') || (($style['marginRight'] ?? '') === 'auto');
 
             if ($atLeftEdge && $muchSmaller && $hasAutoMargin && ($computedML === null || $computedML === 0)) {
                 $this->issues[] = "[D] flex container margin:auto likely missing: x=$nX at parent content left edge "

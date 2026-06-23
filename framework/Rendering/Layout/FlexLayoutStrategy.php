@@ -60,7 +60,12 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         $height = (int)($style['height'] ?? 0);
 
-        $node->x = $left + $ctx->parentX;
+        // CSS 2.2 §10.3.7: margins apply to flex containers as block-level elements
+        $cbWidth = $ctx->parent ? PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w) : 0;
+        $marginLeft = PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $cbWidth);
+        $marginTop = PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $cbWidth);
+
+        $node->x = $left + $ctx->parentX + $marginLeft;
         // DEBUG: check target-box positioning
         if ($node->w === 300 && $node->h >= 100) {
             $dbgPW = ($ctx->parent !== null) ? $ctx->parent->w : -1;
@@ -69,7 +74,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             error_log('[FLEX_AUTOMARGIN] SET_X: left=' . $left . ' parentX=' . $ctx->parentX . ' x=' . $node->x . ' pw=' . $dbgPW . ' ptype=' . $dbgPT . ' px=' . $dbgPX);
         }
 
-        $node->y = $top + $ctx->parentY;
+        $node->y = $top + $ctx->parentY + $marginTop;
 
         // Apply translate from animatedStyle
 
