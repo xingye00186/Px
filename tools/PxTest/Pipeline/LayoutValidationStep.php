@@ -13,6 +13,8 @@ namespace PxTest\Pipeline;
  *   A. flex-wrap container width <= parent content width (no auto-expansion)
  *   B. flex item gap matches specified gap value
  *   C. block-level flex item cross-size not inflated by stretch
+ *   D. margin:auto centering detection
+ *   E. block-level flex item with text content has proper auto-height
  */
 class LayoutValidationStep implements PipelineStepInterface
 {
@@ -233,6 +235,46 @@ class LayoutValidationStep implements PipelineStepInterface
                     $ratio = round($chH / $expectedTotalH, 1);
                     $this->issues[] = "[C] block flex item cross-size inflated: h={$chH}px vs expected ~{$expectedTotalH}px "
                         . "(ratio={$ratio}x, contentBottom=$contentBottom, itemContentTop=$itemContentTop)";
+                }
+            }
+        }
+
+        // ─── Assertion E: block-level flex item with text content has proper auto-height ───
+        // Flex items with flex-grow get width=0 on first layout pass, causing text to be skipped.
+        // Without two-pass re-resolution, the item's visualH won't account for text content.
+        // Detect: block item with text content but visualH too small to fit padding+text.
+        if ($align === 'stretch') {
+            foreach ($node['children'] ?? [] as $ch) {
+                if (!is_array($ch)) continue;
+                $chPos = $ch['style']['position'] ?? 'static';
+                if ($chPos === 'absolute' || $chPos === 'fixed') continue;
+                $chDisplay = $ch['style']['display'] ?? 'block';
+                if ($chDisplay !== 'block' && $chDisplay !== '') continue;
+                if (array_key_exists('height', $ch['style'] ?? [])) continue;
+
+                // Must have text content but no child elements
+                $textContent = $ch['content'] ?? null;
+                if ($textContent === null || $textContent === '') continue;
+                if (!empty($ch['children'])) continue;
+                if (!empty($ch['isScrollContainer'])) continue;
+
+                $chH = (int)($ch['h'] ?? 0);
+                $chVH = (int)($ch['visualH'] ?? $chH);
+                if ($chVH <= 0) continue;
+
+                // Expected min height = padding-top + ~text-height + padding-bottom + border
+                $fs = (int)($ch['style']['fontSize'] ?? 14);
+                $lh = (int)($fs * 1.2);
+                $padT = (int)($ch['style']['paddingTop'] ?? $ch['style']['padding'] ?? 0);
+                $padB = (int)($ch['style']['paddingBottom'] ?? $ch['style']['padding'] ?? 0);
+                $bT = (int)($ch['style']['borderTopWidth'] ?? $ch['style']['borderWidth'] ?? 0);
+                $bB = (int)($ch['style']['borderBottomWidth'] ?? $ch['style']['borderWidth'] ?? 0);
+                $minExpectedVH = $padT + $lh + $padB + $bT + $bB;
+
+                if ($chVH < $minExpectedVH * 0.8) {
+                    $this->issues[] = "[E] block flex item cross-size too small: visualH={$chVH}px "
+                        . "expected >= {$minExpectedVH}px (text='{$textContent}', "
+                        . "h={$chH}, padT={$padT}, padB={$padB}, fontSize={$fs})";
                 }
             }
         }
