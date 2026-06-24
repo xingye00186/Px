@@ -246,6 +246,17 @@ class BrowserRefStep implements PipelineStepInterface
         $body = $dom->getElementsByTagName('body')->item(0);
         if (!$body || $body->childNodes->length < 2) {
             $errors[] = "Body has < 2 child elements — add test content container and anchor";
+        } else {
+            // 5) Batch mode compatibility: first child of body must be a <div>
+            // generateBatch() 注入 id="test-content-wrapper" 到首个 <div>
+            $firstChild = $body->firstChild;
+            while ($firstChild && $firstChild->nodeType !== XML_ELEMENT_NODE) {
+                $firstChild = $firstChild->nextSibling;
+            }
+            if ($firstChild && strtolower($firstChild->tagName) !== 'div') {
+                $errors[] = "First element in <body> must be a <div> (the main content container) — "
+                    . "batch mode requires it for id=\"test-content-wrapper\" injection";
+            }
         }
 
         return $errors;
