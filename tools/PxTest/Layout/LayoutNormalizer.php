@@ -24,6 +24,13 @@ namespace PxTest\Layout;
  */
 class LayoutNormalizer
 {
+    /** CSS 内联元素：width/height 默认 auto */
+    private const INLINE_TAGS = [
+        'span', '#text', 'b', 'strong', 'em', 'i', 'code', 'br',
+        'a', 'label', 'abbr', 'cite', 'dfn', 'kbd', 'mark', 'q',
+        'samp', 'small', 'sub', 'sup', 'time', 'var',
+    ];
+
     /** 引擎样式键 → CSS 属性名映射 */
     private const STYLE_KEY_MAP = [
         'fontFamily'       => 'font-family',
@@ -143,6 +150,14 @@ class LayoutNormalizer
     {
         $result = [];
 
+        // CSS DOM: #text 节点在浏览器 flatten 中不作为独立元素出现，
+        // 它们的文本内容是父元素的一部分。跳过独立 #text 元素，
+        // 将其文本合并到父元素中，以消除 engine vs browser 的元素结构差异。
+        $nodeType = $node['type'] ?? '';
+        if ($nodeType === '#text') {
+            return $result; // 跳过 #text 节点
+        }
+
         $element = $this->normalizeNode($node, $depth, $parentInherited);
         if ($element !== null) {
             $result[] = $element;
@@ -156,6 +171,26 @@ class LayoutNormalizer
                 if (isset($element['styles'][$key])) {
                     $childInherited[$key] = $element['styles'][$key];
                 }
+            }
+        }
+
+        // 收集 #text 子节点的文本并合并到当前元素
+        $mergedText = '';
+        foreach ($node['children'] ?? [] as $child) {
+            if (is_array($child) && ($child['type'] ?? '') === '#text') {
+                $childText = $child['content'] ?? $child['text'] ?? '';
+                if (is_string($childText)) {
+                    $mergedText .= $childText;
+                }
+            }
+        }
+        if ($mergedText !== '' && $element !== null && empty($element['text'])) {
+            $element['text'] = mb_strlen($mergedText) > 200
+                ? mb_substr($mergedText, 0, 200)
+                : (string)$mergedText;
+            // Update the last element in result since $element is a copy
+            if (!empty($result)) {
+                $result[count($result) - 1]['text'] = $element['text'];
             }
         }
 
@@ -197,13 +232,31 @@ class LayoutNormalizer
         // 样式规范化
         $element['styles'] = $this->normalizeStyle($node['style'] ?? []);
 
+        // CSS 2.2 §9.2.4: display:none 元素不生成盒子——与 browser dump_layout.js
+        // 的 `if (style.display === 'none') return null` 保持一致，消除计数差异
+        if (($element['styles']['display'] ?? '') === 'none') {
+            return null;
+        }
+
         // 节点字段补全到 styles（引擎把 w/h/position 放在节点字段而非 style 中）
         // 浏览器将这些作为 CSS 属性，所以补全以消除 MISSING
         // 仅当引擎 style 中没导出时补全，避免覆盖引擎已有值
-        if (!isset($element['styles']['width']))  $element['styles']['width']  = (int)($node['visualW'] ?? $node['w'] ?? 0) . 'px';
-        if (!isset($element['styles']['height'])) $element['styles']['height'] = (int)($node['visualH'] ?? $node['h'] ?? 0) . 'px';
-        if (!isset($element['styles']['top']))    $element['styles']['top']    = (int)($node['y'] ?? 0) . 'px';
-        if (!isset($element['styles']['left']))   $element['styles']['left']   = (int)($node['x'] ?? 0) . 'px';
+        // CSS 2.2 §10.3.1: 内联元素的 width/height 默认值为 'auto'
+        $isInline = in_array($tag, self::INLINE_TAGS, true);
+        if (!isset($element['styles']['width'])) {
+            $element['styles']['width'] = $isInline ? 'auto' : (int)($node['visualW'] ?? $node['w'] ?? 0) . 'px';
+        }
+        if (!isset($element['styles']['height'])) {
+            $element['styles']['height'] = $isInline ? 'auto' : (int)($node['visualH'] ?? $node['h'] ?? 0) . 'px';
+        }
+        // CSS 2.2 §9.3.2: static 定位元素的 top/left 默认值为 'auto'
+        $nodePos = $node['style']['position'] ?? 'static';
+        if (!isset($element['styles']['top'])) {
+            $element['styles']['top'] = ($nodePos === 'static') ? 'auto' : (int)($node['y'] ?? 0) . 'px';
+        }
+        if (!isset($element['styles']['left'])) {
+            $element['styles']['left'] = ($nodePos === 'static') ? 'auto' : (int)($node['x'] ?? 0) . 'px';
+        }
         if (!isset($element['styles']['position'])) {
             $element['styles']['position'] = $node['style']['position'] ?? 'static';
         }
