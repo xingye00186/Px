@@ -1969,3 +1969,22 @@ safeCall(method, args):
 22. **修改 RenderContext 抽象方法**：同步更新所有后端 RenderContext 实现
 23. **新增后端**：实现 `IRenderBackend` → 注册到 `BackendRegistry::CANDIDATES` → 处理 `PX_RENDERER` 映射
 24. **迭代分布循环必须有无进度保护**：所有 while/for 循环中，如果每次迭代都做 `(int)` 截断计算然后累积到 `$progress`，必须在循环末尾检查 `if ($progress <= 0) break;`。典型场景：flex-shrink 比例收缩（`FlexLayoutStrategy.php`）、Grid 行/列分布、以及其他"逐渐逼近目标值"的迭代算法。整数除法截断可能导致无限循环。
+
+---
+
+## 十六、test_pipeline 改进与已知问题
+
+### 16.1 已修复的 Pipeline 问题（2026-06-24）
+
+| 问题 | 修复 | 文件 |
+|------|------|------|
+| PHP CLI 拒绝访问（php-cgi 锁） | 入口 taskkill php-cgi.exe/msedge.exe | `test_pipeline.php` |
+| 构建缓存不感知变更 | computeHash 递归扫描全部 framework | `BuildStep.php` |
+| Edge 挂起导致无限阻塞 | 构造器 taskkill + --virtual-time-budget=30000 | `BrowserLauncher.php` |
+| build.bat 拒绝访问 | 头部 taskkill cl.exe/link.exe | `build.bat` |
+| stale ref 数据 | `_html_hash` 校验跳过 | `BrowserRefStrategy.php` |
+| 增量编译一致性 | `Px_clear_compilation_cache: true` | `project.yml` |
+
+### 16.2 已知约束
+
+- **PowerShell 管道中断**：Sandbox 环境中 `| Select-String` 偶发进入 `>>` 多行输入模式。应使用文件重定向替代管道：`命令 > log.txt 2>&1` 然后 `Select-String -Path log.txt`
