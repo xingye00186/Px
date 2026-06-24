@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Table ― Border-Collapse &amp; Layout</title>
+<style>
+html,body { width:1600px; min-height:800px; height:auto; overflow:hidden; font-family:"Segoe UI","Noto Sans SC",sans-serif; font-size:16px; line-height:1.2; background:#fff; color:#000; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f0f2f5; font-family:sans-serif; padding:20px; }
+.bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
+.tb-row { display:flex; flex-direction:column; gap:16px; margin-bottom:16px; }
+.tb-item { padding:16px; background:#f9f9f9; border-radius:6px; border:1px solid #e0e0e0; }
+.tb-label { font-size:14px; color:#666; margin-bottom:6px; }
+.tb-collapse { border-collapse:collapse; width:100%; font-size:13px; }
+.tb-collapse td { border:1px solid #e94560; padding:6px; }
+.tb-separate { border-collapse:separate; border-spacing:4px; width:100%; font-size:13px; }
+.tb-separate td { border:1px solid #4facfe; padding:6px; background:#e3f2fd; }
+.tb-fixed { table-layout:fixed; width:100%; font-size:13px; border:1px solid #a5d6a7; }
+.tb-fixed td { border:1px solid #a5d6a7; padding:4px; }
+.tb-caption { width:100%; font-size:13px; border:1px solid #ffcc80; }
+.tb-caption td { border:1px solid #ffcc80; padding:6px; }
+.tb-caption caption { caption-side:bottom; padding:4px; font-size:12px; color:#888; }
+.bx-footer { margin-top:16px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
+</style></head><body>
+<div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative">
+<div data-px-anchor="tl" style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+  <div class="bx-header">??? 表格 ・ Table 属性测试</div>
+  <div class="tb-row">
+    <div class="tb-item"><div class="tb-label">border-collapse: collapse（合并边框）</div><table class="tb-collapse"><tr><td>A1</td><td>B1</td></tr><tr><td>A2</td><td>B2</td></tr></table></div>
+    <div class="tb-item"><div class="tb-label">border-collapse: separate + border-spacing</div><table class="tb-separate"><tr><td>X1</td><td>Y1</td></tr><tr><td>X2</td><td>Y2</td></tr></table></div>
+    <div class="tb-item"><div class="tb-label">table-layout: fixed（固定布局）</div><table class="tb-fixed"><colgroup><col style="width:60px;"><col style="width:auto;"></colgroup><tr><td>短</td><td>自动宽度列</td></tr></table></div>
+    <div class="tb-item"><div class="tb-label">caption-side: bottom</div><table class="tb-caption"><caption>表格底部标题</caption><tr><td>数据 1</td><td>数据 2</td></tr></table></div>
+  </div>
+  <div class="bx-footer">case-048: Table ― Border-Collapse &amp; Layout</div>
+<div data-px-anchor="br" style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
+</body></html>
