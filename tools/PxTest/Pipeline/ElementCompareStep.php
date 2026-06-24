@@ -51,6 +51,9 @@ class ElementCompareStep implements PipelineStepInterface
         // flex-item getComputedStyle artifact: flex items inherit align-items/justify-content
         // from parent flex container in getComputedStyle, but engine correctly doesn't set them.
         'align-items', 'justify-content',
+        // overflow shorthand: engine only exports overflowX/overflowY individually,
+        // not the shorthand. When both are same value, overflow shorthand is redundant.
+        'overflow',
     ];
 
     private ComparatorRegistry $registry;
