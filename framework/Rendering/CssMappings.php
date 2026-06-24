@@ -47,7 +47,7 @@ class CssMappings
         'color' => [
             'key'     => 'fg',
             'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
-            'default' => 0xFFFFFF,
+            'default' => 0x000000,
         ],
         'font-size' => [
             'key'     => 'fontSize',

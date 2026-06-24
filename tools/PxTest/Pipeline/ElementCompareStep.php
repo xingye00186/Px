@@ -40,7 +40,7 @@ class ElementCompareStep implements PipelineStepInterface
      * 引擎缺失的浏览器属性白名单——这些 MISSING 不计入失败（引擎不导出默认值）。
      */
     private static array $BROWSER_DEFAULT_SKIP_KEYS = [
-        'font-size', 'color', 'background-color', 'border-left-width', 'border-left-color',
+        'font-size', 'background-color', 'border-left-width', 'border-left-color',
         'border-width', 'border-color', 'border-radius',
         'padding-top', 'padding-left', 'padding-right', 'padding-bottom',
         'margin-top', 'margin-left', 'margin-right', 'margin-bottom',
@@ -209,7 +209,11 @@ class ElementCompareStep implements PipelineStepInterface
                 if ($evs === null) {
                     // 浏览器有但引擎没有：Categorize as MISSING
                     // 但有些是浏览器默认值，跳过它们避免大量噪音
-                    if (!in_array($k, self::$BROWSER_DEFAULT_SKIP_KEYS, true)) {
+                    // color: 仅在浏览器值为 CSS 初始值 rgb(0,0,0) 时才跳过
+                    // （否则如实上报引擎遗漏非默认颜色的 bug）
+                    if ($k === 'color' && $bvs === 'rgb(0, 0, 0)') {
+                        // CSS 2.2 §18.2: color 初始值为 black，引擎不导出时跳过
+                    } elseif (!in_array($k, self::$BROWSER_DEFAULT_SKIP_KEYS, true)) {
                         $missingDiffs[] = "elem[$i].$k: browser=$bvs";
                         $perPropStats[$k]['diff']++;
                     }
