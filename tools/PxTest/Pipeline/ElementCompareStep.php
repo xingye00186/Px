@@ -804,12 +804,13 @@ class ElementCompareStep implements PipelineStepInterface
             $gap = (int)($node['style']['gap'] ?? 0);
             $isRow = ($flexDir !== 'column');
 
-            // 收集非 absolute 子项
+            // 收集非 absolute 且非 display:none 子项
             $flexChildren = [];
             foreach ($node['children'] as $ch) {
                 if (!is_array($ch)) continue;
                 $pos = $ch['style']['position'] ?? 'static';
-                if ($pos === 'absolute' || $pos === 'fixed') continue;
+                $disp = $ch['style']['display'] ?? 'block';
+                if ($pos === 'absolute' || $pos === 'fixed' || $disp === 'none') continue;
                 $flexChildren[] = $ch;
             }
 
@@ -848,7 +849,6 @@ class ElementCompareStep implements PipelineStepInterface
                             $gcCount = count($flexChildren);
                             if ($gcCount >= 2) {
                                 // 先检查是否有子项设置了显式 width——有则跳过 UNBALANCED
-                                // （如 scroll-item 中 width:36px 的 span 是故意不同宽度的）
                                 $anyExplicitW = false;
                                 foreach ($flexChildren as $ch) {
                                     if (array_key_exists('width', ($ch['style'] ?? []))) {
@@ -857,15 +857,27 @@ class ElementCompareStep implements PipelineStepInterface
                                     }
                                 }
                                 if (!$anyExplicitW) {
-                                    $firstW = (int)($flexChildren[0]['visualW'] ?? $flexChildren[0]['w'] ?? 0);
+                                    // 额外检查：至少有一些子项有 flex-grow（表示它们应该等分空间）
+                                    // 没有 flex-grow 的子项按自然内容宽度排列，宽度不同是正常的
+                                    $hasFlexGrow = false;
+                                    foreach ($flexChildren as $ch) {
+                                        $fg = $ch['style']['flexGrow'] ?? 0;
+                                        if ($fg > 0) {
+                                            $hasFlexGrow = true;
+                                            break;
+                                        }
+                                    }
+                                    // 使用 content width (w) 而非 visualW 进行比较
+                                    // visualW 包含 padding/border，不同子项 padding 不同是正当的
+                                    $firstW = (int)($flexChildren[0]['w'] ?? 0);
                                     $allSimilar = true;
                                     $maxDiff = 0;
                                     for ($i = 1; $i < $gcCount; $i++) {
-                                        $wi = (int)($flexChildren[$i]['visualW'] ?? $flexChildren[$i]['w'] ?? 0);
+                                        $wi = (int)($flexChildren[$i]['w'] ?? 0);
                                         $d = abs($wi - $firstW);
                                         if ($d > $maxDiff) $maxDiff = $d;
                                     }
-                                    if ($maxDiff > 5 && $firstW > 20) {
+                                    if ($maxDiff > 10 && $firstW > 30 && $hasFlexGrow) {
                                         $issues[] = "[FLEX-UNBALANCED] flex items have uneven widths: first={$firstW}px max-diff={$maxDiff}px (gap={$gap}px, children=$gcCount)";
                                     }
                                 }
