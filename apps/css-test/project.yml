@@ -55,3 +55,6 @@ sources:
 ignore:
   - ../../framework/compiler
   - ../../framework/aot-checker.php
+
+# 每次构建前清理编译缓存
+Px_clear_compilation_cache: true

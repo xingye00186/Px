@@ -1,5 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
+
+:: ─── Process cleanup: kill stale compiler/browser processes ───
+taskkill /F /IM cl.exe 2>NUL
+taskkill /F /IM link.exe 2>NUL
+taskkill /F /IM mspdbsrv.exe 2>NUL
+
 :: ============================================================================
 ::  build.bat - Non-interactive Build Script
 ::
