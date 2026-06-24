@@ -38,7 +38,6 @@ class PipelineBuilder
     private bool $skipScreenshot = true;  // 默认跳过截图，需 --screenshot 启用
     private bool $updateBaseline = false;
     private bool $verbose = false;
-    private bool $batchBrowserRef = false;
     private string $format = 'console';
 
     private function __construct(string $projectRoot)
@@ -58,7 +57,6 @@ class PipelineBuilder
             elseif ($arg === '--skip-build') { $this->skipBuild = true; }
             elseif ($arg === '--force-build') { $this->forceBuild = true; }
             elseif ($arg === '--browser-engine-el-compare') { $this->browserElCompare = true; }
-            elseif ($arg === '--batch-browser-ref') { $this->batchBrowserRef = true; }
             elseif ($arg === '--screenshot') { $this->skipScreenshot = false; }
             elseif ($arg === '--update-baseline') { $this->updateBaseline = true; }
             elseif ($arg === '--verbose') { $this->verbose = true; }
@@ -75,9 +73,10 @@ class PipelineBuilder
         // Step 0: Build (hash cache + process lock + orphan cleanup)
         $orchestrator->addStep(new BuildStep($this->projectRoot, 'css-test', $this->forceBuild));
 
-        // Step B: 批次 browser ref（可选，--batch-browser-ref 启用）
-        // 在全量循环前一次性生成所有 case 的 ref，比逐 case 启动 Edge 快 20x
-        if ($this->batchBrowserRef && $this->browserElCompare) {
+        // Step B: 自动批次 browser ref（全量模式无 --case= 时启用）
+        // 单次 Edge 启动为所有 case 生成 ref，比逐 case 启动快 20x
+        // --case=xxx 单 case 模式保持逐个生成（更快更精确）
+        if ($this->caseName === null && $this->browserElCompare) {
             $browser = new BrowserLauncher();
             $strategy = $browser->isAvailable() ? new EdgeDomStrategy($browser) : new NoopBrowserRefStrategy();
             $caseDirs = glob($this->appDir . '/test_case/case-*', GLOB_ONLYDIR);
