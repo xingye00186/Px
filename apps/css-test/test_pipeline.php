@@ -12,6 +12,14 @@
  */
 
 $projectRoot = dirname(__DIR__, 2);
+
+// ─── Windows 进程清理：杀掉残留 php-cgi 避免 PHP CLI 拒绝访问 ───
+// PhpStorm 的 php-cgi 进程通常无法被 taskkill，但不影响 php.exe 运行
+if (PHP_OS_FAMILY === 'Windows') {
+    exec('taskkill /F /IM php-cgi.exe /T 2>NUL');
+    exec('taskkill /F /IM msedge.exe /T 2>NUL');
+}
+
 require_once $projectRoot . '/tests/unit/bootstrap.php';
 require_once $projectRoot . '/tools/PxTest/bootstrap.php';
 
