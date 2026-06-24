@@ -48,6 +48,9 @@ class ElementCompareStep implements PipelineStepInterface
         'flex-direction', 'flex-wrap', 'overflow-x', 'overflow-y',
         'display',
         'border-style',
+        // flex-item getComputedStyle artifact: flex items inherit align-items/justify-content
+        // from parent flex container in getComputedStyle, but engine correctly doesn't set them.
+        'align-items', 'justify-content',
     ];
 
     private ComparatorRegistry $registry;
