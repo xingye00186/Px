@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Text ― Word-Wrap &amp; Overflow-Wrap</title>
+<style>
+html,body { width:1600px; min-height:800px; height:auto; overflow:hidden; font-family:"Segoe UI","Noto Sans SC",sans-serif; font-size:16px; line-height:1.2; background:#fff; color:#000; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f0f2f5; font-family:sans-serif; padding:20px; }
+.bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
+.ww-row { display:flex; flex-direction:column; gap:16px; margin-bottom:16px; }
+.ww-item { padding:16px; background:#f9f9f9; border-radius:6px; border:1px solid #e0e0e0; }
+.ww-label { font-size:14px; color:#666; margin-bottom:4px; }
+.ww-box { width:200px; font-size:14px; color:#333; background:#fff; padding:6px; border:1px solid #ddd; }
+.ww-normal { overflow-wrap:normal; }
+.ww-break { overflow-wrap:break-word; }
+.ww-old { word-wrap:break-word; }
+.bx-footer { margin-top:16px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
+</style></head><body>
+<div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative">
+<div data-px-anchor="tl" style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+  <div class="bx-header">??? 文本 ・ Word-Wrap &amp; Overflow-Wrap 换行测试</div>
+  <div class="ww-row">
+    <div class="ww-item"><div class="ww-label">overflow-wrap: normal（默认不换行）</div><div class="ww-box ww-normal">SuperLongWordWithoutAnyBreakPointThatShouldOverflow</div></div>
+    <div class="ww-item"><div class="ww-label">overflow-wrap: break-word 强制换行</div><div class="ww-box ww-break">SuperLongWordWithoutAnyBreakPointThatShouldOverflow</div></div>
+    <div class="ww-item"><div class="ww-label">word-wrap: break-word（旧名别名）</div><div class="ww-box ww-old">AnotherVeryLongWordThatNeedsToBeBrokenAcrossLines</div></div>
+  </div>
+  <div class="bx-footer">case-040: Text ― Word-Wrap &amp; Overflow-Wrap</div>
+<div data-px-anchor="br" style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div></div>
+</body></html>
