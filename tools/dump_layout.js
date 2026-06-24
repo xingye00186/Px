@@ -52,6 +52,8 @@
         'top',
         'left',
         'flex-direction',
+        'flex-grow',
+        'flex-shrink',
         'align-items',
         'justify-content',
         'flex-wrap',

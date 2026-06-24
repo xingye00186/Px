@@ -29,6 +29,8 @@ class ElementCompareStep implements PipelineStepInterface
         'font-style', 'white-space', 'word-break', 'visibility',
         'cursor', 'direction', 'pointer-events',
         'box-sizing', 'border-style',
+        // flex-grow/flex-shrink: engine always exports them, browser only when non-default
+        'flex-grow', 'flex-shrink',
         // border per-side: engine exports all 4, browser only has shorthand
         'border-top-width', 'border-top-color',
         'border-right-width', 'border-right-color',
@@ -46,6 +48,7 @@ class ElementCompareStep implements PipelineStepInterface
         'margin-top', 'margin-left', 'margin-right', 'margin-bottom',
         'font-family', 'line-height',
         'flex-direction', 'flex-wrap', 'overflow-x', 'overflow-y',
+        'flex-grow', 'flex-shrink',
         'display',
         'border-style',
         // flex-item getComputedStyle artifact: flex items inherit align-items/justify-content
