@@ -75,6 +75,71 @@ function main(): int
         return 0;
     }
 
+    // ─── --cases-list: 单进程遍历所有 case ───
+    if (in_array('--cases-list', $argv)) {
+        \Px\Core\Application::$HEADLESS = true;
+        $csFrame = 1;
+        foreach ($argv as $arg) {
+            if (str_starts_with($arg, '--frame=')) {
+                $csFrame = max(1, (int)substr($arg, strlen('--frame=')));
+            }
+        }
+        $hasDump = in_array('--dump-layout', $argv);
+        $hasScreenshot = false;
+        $ssBasePath = '';
+        foreach ($argv as $arg) {
+            if (str_starts_with($arg, '--screenshot=')) {
+                $hasScreenshot = true;
+                $ssBasePath = substr($arg, strlen('--screenshot='));
+                $ssDir = dirname($ssBasePath);
+                $ssExt = '.png';
+                $ssName = basename($ssBasePath, $ssExt);
+            }
+        }
+
+        // 等待 onMount 填充 caseList
+        $app->scheduler->flushMicrotasks();
+        if (count($root->caseList) === 0) {
+            error_log('[CASES_LIST] ERROR: No cases found');
+            return 1;
+        }
+
+        $total = count($root->caseList);
+        $success = 0;
+        foreach ($root->caseList as $idx => $case) {
+            $tag = $case['tag'];
+            try {
+                $root->selectCase($tag);
+                $app->scheduler->flushMicrotasks();
+
+                for ($i = 0; $i < $csFrame; $i++) {
+                    $app->render();
+                    $app->scheduler->flushMicrotasks();
+                }
+
+                if ($hasDump) {
+                    $dumpTo = $appDir . '/test_case/' . $tag . '/ref/engine_layout.json';
+                    @mkdir(dirname($dumpTo), 0777, true);
+                    $app->dumpLayoutToFile($dumpTo);
+                }
+
+                if ($hasScreenshot) {
+                    $ssPath = $ssDir . '/' . $ssName . '_' . $tag . $ssExt;
+                    $app->saveScreenshot($ssPath);
+                    $app->render();
+                    $app->scheduler->flushMicrotasks();
+                }
+
+                $success++;
+                error_log('[CASES_LIST] ' . ($idx + 1) . '/' . $total . ' ' . $tag . ' OK');
+            } catch (\Throwable $e) {
+                error_log('[CASES_LIST] ' . ($idx + 1) . '/' . $total . ' ' . $tag . ' FAILED: ' . $e->getMessage());
+            }
+        }
+        error_log('[CASES_LIST] Done: ' . $success . '/' . $total . ' passed');
+        return $success === $total ? 0 : 1;
+    }
+
     // --screenshot=path: 渲染后直接保存截图（受 --frame=N 控制帧数，默认 1 帧）
     // frame>1 时文件名自动追加 _after_{N}frames
     $screenshotPath = '';
