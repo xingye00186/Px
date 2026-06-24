@@ -51,6 +51,8 @@ class ElementCompareStep implements PipelineStepInterface
         'font-family', 'line-height',
         'flex-direction', 'flex-wrap', 'overflow-x', 'overflow-y',
         'flex-grow', 'flex-shrink',
+        // min/max: browser may export default values (0px/auto) that engine doesn't
+        'min-width', 'min-height', 'max-width', 'max-height',
         'display',
         'border-style',
         // flex-item getComputedStyle artifact: flex items inherit align-items/justify-content

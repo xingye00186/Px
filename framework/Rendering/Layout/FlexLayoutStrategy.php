@@ -1217,15 +1217,18 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     $childMarginR = (int)($ch->style['marginRight'] ?? $ch->style['margin'] ?? 0);
                     if ($isRow) {
                         $stretched = (int)max(0, $crossTarget - $childMarginT - $childMarginB);
-                        // 两阶段重布局后 auto-height 已设正确高度，仅当 stretch 更大时才覆盖
+                        // CSS 2.2 §10.7: stretch 时也要受 min/max-height 约束
                         if ($stretched > $ch->h && $stretched > 0) {
                             $ch->h = $stretched;
+                            $ch->h = (int)max(0, (int)PercentResolver::resolveMinMax($ch->style, $ch->h, false));
                             $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                         }
                     } else {
                         $stretched = (int)max(0, $crossTarget - $childMarginL - $childMarginR);
+                        // CSS 2.2 §10.7: stretch 时也要受 min/max-width 约束
                         if ($stretched > 0 && $stretched !== $ch->w) {
                             $ch->w = $stretched;
+                            $ch->w = (int)max(0, (int)PercentResolver::resolveMinMax($ch->style, $ch->w, true));
                             $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
                         }
                     }
