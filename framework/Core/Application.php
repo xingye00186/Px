@@ -793,6 +793,16 @@ class Application
         if (!isset($style['textAlign']) && isset($parentStyle['textAlign'])) {
             $style['textAlign'] = $parentStyle['textAlign'];
         }
+        // CSS 百分比宽/高：当 widthPercent/heightPercent 存在时，
+        // style.width/style.height 是原始 CSS 值（如 100% → parsePixels 返回 100），
+        // 应使用引擎布局计算后的 $node->w / $node->h 作为导出值
+        if (isset($node->style['widthPercent'])) {
+            $style['width'] = $node->w;
+        }
+        if (isset($node->style['heightPercent'])) {
+            $style['height'] = $node->h;
+        }
+
         // bg 总是导出：显式设置的值正常导出，未设置时用 -1 表示"无显式背景/透明"
         // 这确保元素即使没设背景也能参与颜色对比，否则 bg 缺失时对比逻辑直接跳过此类漏洞
         if (!isset($style['bg'])) {
