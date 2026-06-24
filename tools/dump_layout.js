@@ -174,6 +174,48 @@
 
     // 写入输出容器
     var outputEl = document.getElementById('layout-output');
+    // 检测是否为批次模式（存在 data-case 容器）
+    var batchContainers = document.querySelectorAll('[data-case]');
+    if (batchContainers.length > 0) {
+        // ── 批次模式：遍历每个 data-case 容器，分别提取 ──
+        var batchResult = {};
+        batchContainers.forEach(function(container) {
+            var caseName = container.getAttribute('data-case');
+            if (!caseName) return;
+            var elements = [];
+            for (var i = 0; i < container.children.length; i++) {
+                walkDOM(container.children[i], 0, elements);
+            }
+            batchResult[caseName] = {
+                browser: (navigator && navigator.userAgent) ? navigator.userAgent : 'unknown',
+                viewport: { width: window.innerWidth, height: window.innerHeight },
+                elements: elements
+            };
+        });
+        if (outputEl) {
+            outputEl.textContent = JSON.stringify(batchResult);
+        }
+        return batchResult;
+    }
+
+    // ── 单 case 模式：现有逻辑 ──
+    var container = findRootContainer();
+    if (!container) container = document.body;
+
+    var elements = [];
+    for (var i = 0; i < container.children.length; i++) {
+        walkDOM(container.children[i], 0, elements);
+    }
+
+    var output = {
+        browser: (navigator && navigator.userAgent) ? navigator.userAgent : 'unknown',
+        viewport: {
+            width: window.innerWidth,
+            height: window.innerHeight
+        },
+        elements: elements
+    };
+
     if (outputEl) {
         outputEl.textContent = JSON.stringify(output);
     }
