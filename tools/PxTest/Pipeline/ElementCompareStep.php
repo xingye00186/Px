@@ -31,6 +31,8 @@ class ElementCompareStep implements PipelineStepInterface
         'box-sizing', 'border-style',
         // flex-grow/flex-shrink: engine always exports them, browser only when non-default
         'flex-grow', 'flex-shrink',
+        // min/max constraints: engine exports from style, browser getComputedStyle may not show them
+        'min-width', 'min-height', 'max-width', 'max-height',
         // border per-side: engine exports all 4, browser only has shorthand
         'border-top-width', 'border-top-color',
         'border-right-width', 'border-right-color',
