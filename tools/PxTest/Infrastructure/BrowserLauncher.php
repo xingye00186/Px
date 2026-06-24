@@ -56,7 +56,7 @@ class BrowserLauncher
         return file_exists($outputPath) && filesize($outputPath) > 100;
     }
 
-    /** dump DOM（内置 30s 超时） */
+    /** dump DOM（内置 30s 超时，batch模式可设更长时间） */
     public function dumpDom(string $htmlPath, int $width = 1600, int $height = 800): ?string
     {
         if ($this->edgePath === null) return null;
@@ -64,8 +64,11 @@ class BrowserLauncher
         if ($realPath === false) return null;
         $fileUrl = 'file:///' . str_replace('\\', '/', $realPath);
 
-        $cmd = sprintf('"%s" --headless --disable-gpu --virtual-time-budget=30000 --window-size=%d,%d --dump-dom "%s" 2>&1',
-            $this->edgePath, $width, $height, $fileUrl);
+        // batch 模式用 .bat.html 后缀识别（50 cases 需要更多时间）
+        $timeout = strpos($htmlPath, 'batch_ref') !== false ? 120000 : 30000;
+
+        $cmd = sprintf('"%s" --headless --disable-gpu --virtual-time-budget=%d --window-size=%d,%d --dump-dom "%s" 2>&1',
+            $this->edgePath, $timeout, $width, $height, $fileUrl);
         $output = [];
         exec($cmd, $output);
         return empty($output) ? null : implode("\n", $output);
