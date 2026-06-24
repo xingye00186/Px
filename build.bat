@@ -480,19 +480,21 @@ if defined DEP_PROJECT (
 set "AOT_EXIT=!errorlevel!"
 if !AOT_EXIT! neq 0 (
     echo.
-    echo [ERROR] AOT compile failed, exit code: !AOT_EXIT!
+    echo [WARN] AOT compiler link step failed, retrying with response file...
     echo.
-    echo   Common causes:
-    echo     1. MSVC [cl.exe] not found
-    echo        == Run from Developer Command Prompt for VS
-    echo     2. Top-level stray code [require_once, include]
-    echo        == All code must be in functions or classes
-    echo     3. Variable used before defined
-    echo        == Ensure all variables have initial values
-    echo     4. Variable type changed [int to string]
-    echo     5. Filename with special chars [only a-zA-Z0-9_]
-    echo.
-    exit /b 3
+    :: 编译本身成功但链接命令行过长时，使用响应文件重试
+    if exist "%FRAMEWORK_ROOT%\link_manual.ps1" (
+        powershell -ExecutionPolicy Bypass -File "%FRAMEWORK_ROOT%\link_manual.ps1"
+        set "AOT_EXIT=!errorlevel!"
+        if !AOT_EXIT! neq 0 (
+            echo.
+            echo [ERROR] Manual link also failed, exit code: !AOT_EXIT!
+            exit /b 3
+        )
+    ) else (
+        echo [ERROR] link_manual.ps1 not found
+        exit /b 3
+    )
 )
 
 :: Verify output exe
