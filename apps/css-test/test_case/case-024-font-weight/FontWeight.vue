@@ -7,12 +7,12 @@
     <div class="fw-section" style="margin-bottom:12px;padding:16px;background:#f8f9ff;border-radius:8px;border:1px solid #e0e0e0;">
       <div style="font-size:11px;color:#999;margin-bottom:8px;">font-weight 对比</div>
       <div style="display:flex;gap:24px;align-items:center;">
-        <div><span style="font-weight:100;font-size:16px;">100 Thin</span></div>
-        <div><span style="font-weight:300;font-size:16px;">300 Light</span></div>
-        <div><span style="font-weight:400;font-size:16px;">400 Regular</span></div>
-        <div><span style="font-weight:500;font-size:16px;">500 Medium</span></div>
-        <div><span style="font-weight:700;font-size:16px;color:#0f3460;">700 Bold</span></div>
-        <div><span style="font-weight:900;font-size:16px;color:#e94560;">900 Black</span></div>
+        <span style="font-weight:100;font-size:16px;">100 Thin</span>
+        <span style="font-weight:300;font-size:16px;">300 Light</span>
+        <span style="font-weight:400;font-size:16px;">400 Regular</span>
+        <span style="font-weight:500;font-size:16px;">500 Medium</span>
+        <span style="font-weight:700;font-size:16px;color:#0f3460;">700 Bold</span>
+        <span style="font-weight:900;font-size:16px;color:#e94560;">900 Black</span>
       </div>
     </div>
     <div class="fw-compare" style="display:flex;gap:16px;">

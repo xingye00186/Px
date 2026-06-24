@@ -52,6 +52,10 @@ class LayoutNormalizer
         'overflowX'        => 'overflow-x',
         'overflowY'        => 'overflow-y',
         'whiteSpace'       => 'white-space',
+        'wordBreak'        => 'word-break',
+        'fontStyle'        => 'font-style',
+        'fontFamily'       => 'font-family',
+        'visibility'       => 'visibility',
 
         // margin
         'marginTop'        => 'margin-top',
@@ -88,10 +92,51 @@ class LayoutNormalizer
         'justifyContent'   => 'justify-content',
         'gap'              => 'gap',
 
+        // flex item
+        'flexGrow'         => 'flex-grow',
+        'flexShrink'       => 'flex-shrink',
+        'order'            => 'order',
+
+        // grid
+        'gridTemplateColumns'  => 'grid-template-columns',
+        'gridTemplateRows'     => 'grid-template-rows',
+        'gridColumnGap'        => 'grid-column-gap',
+        'gridRowGap'          => 'grid-row-gap',
+        'gridColumn'           => 'grid-column',
+        'gridRow'              => 'grid-row',
+        'gridAutoRows'         => 'grid-auto-rows',
+        'gridTemplateAreas'    => 'grid-template-areas',
+
+        // alignment
+        'justifyItems'   => 'justify-items',
+        'alignSelf'      => 'align-self',
+        'justifySelf'    => 'justify-self',
+        'alignContent'   => 'align-content',
+
+        // sizing constraints
+        'minWidth'       => 'min-width',
+        'minHeight'      => 'min-height',
+        'maxWidth'       => 'max-width',
+        'maxHeight'      => 'max-height',
+
+        // visual effects
+        'boxShadow'      => 'box-shadow',
+
         // other
         'textAlign'        => 'text-align',
         'boxSizing'        => 'box-sizing',
         'pointerEvents'    => 'pointer-events',
+
+        // outline
+        'outlineWidth'     => 'outline-width',
+        'outlineStyle'     => 'outline-style',
+        'outlineColor'     => 'outline-color',
+
+        // text decoration
+        'textDecorationLine'      => 'text-decoration-line',
+        'textDecorationColor'     => 'text-decoration-color',
+        'textDecorationStyle'     => 'text-decoration-style',
+        'textDecorationThickness' => 'text-decoration-thickness',
 
         // engine-specific logical props
         'bold'             => 'font-weight',
@@ -146,7 +191,7 @@ class LayoutNormalizer
      * 递归展平树并规范化每个节点。
      * 同时传播继承属性（text-align 等 CSS 继承属性）。
      */
-    private function flatten(array $node, int $depth, array $parentInherited = []): array
+    private function flatten(array $node, int $depth, array $parentInherited = [], ?string $parentDisplay = null): array
     {
         $result = [];
 
@@ -158,9 +203,17 @@ class LayoutNormalizer
             return $result; // 跳过 #text 节点
         }
 
-        $element = $this->normalizeNode($node, $depth, $parentInherited);
+        $element = $this->normalizeNode($node, $depth, $parentInherited, $parentDisplay);
         if ($element !== null) {
             $result[] = $element;
+        }
+
+        // 提取当前节点的 display 值传给子节点
+        $childDisplay = null;
+        if ($element !== null && isset($element['styles']['display'])) {
+            $childDisplay = $element['styles']['display'];
+        } elseif ($element === null && isset($node['style']['display'])) {
+            $childDisplay = $node['style']['display'];
         }
 
         // 提取当前节点的继承属性传给子节点
@@ -196,7 +249,7 @@ class LayoutNormalizer
 
         foreach ($node['children'] ?? [] as $child) {
             if (is_array($child)) {
-                $result = array_merge($result, $this->flatten($child, $depth + 1, $childInherited));
+                $result = array_merge($result, $this->flatten($child, $depth + 1, $childInherited, $childDisplay));
             }
         }
 
@@ -206,7 +259,7 @@ class LayoutNormalizer
     /**
      * 规范化单个节点：映射键、过滤字段、转换样式。
      */
-    private function normalizeNode(array $node, int $depth, array $parentInherited = []): ?array
+    private function normalizeNode(array $node, int $depth, array $parentInherited = [], ?string $parentDisplay = null): ?array
     {
         $type = $node['type'] ?? '';
 
@@ -259,6 +312,17 @@ class LayoutNormalizer
         }
         if (!isset($element['styles']['position'])) {
             $element['styles']['position'] = $node['style']['position'] ?? 'static';
+        }
+
+        // CSS display 补全：引擎可能不导出 display，基于 tag 推断
+        if (!isset($element['styles']['display'])) {
+            $element['styles']['display'] = $isInline ? 'inline' : 'block';
+        }
+
+        // CSS 2.2 §9.4: 当父容器为 flex/grid 时，所有子项生成 block-level 盒子
+        $flexGridDisplays = ['flex', 'inline-flex', 'grid', 'inline-grid'];
+        if ($parentDisplay !== null && in_array($parentDisplay, $flexGridDisplays, true)) {
+            $element['styles']['display'] = 'block';
         }
 
         // 文本内容
@@ -447,6 +511,8 @@ class LayoutNormalizer
                 'margin-bottom', 'margin-left', 'border-width', 'border-top-width',
                 'border-right-width', 'border-bottom-width', 'border-left-width',
                 'border-radius', 'width', 'height', 'top', 'left', 'gap',
+                'min-width', 'min-height', 'max-width', 'max-height',
+                'outline-width', 'text-decoration-thickness',
             ];
             if (in_array($cssKey, $pxProperties, true)) {
                 return (string)(int)$value . 'px';
