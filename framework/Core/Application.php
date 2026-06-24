@@ -816,8 +816,14 @@ class Application
             }
         }
         // 总是导出 display，默认 block（CSS 2.2 §9.2.4：块级元素默认 display:block）
+        // 内联元素（span, b, code, br 等）默认 display:inline（CSS 2.2 §9.2.2）
         if (!isset($style['display'])) {
-            $style['display'] = 'block';
+            $inlineTypes = ['span', '#text', 'b', 'strong', 'em', 'i', 'code', 'a', 'label', 'br'];
+            if (in_array($node->type, $inlineTypes, true)) {
+                $style['display'] = 'inline';
+            } else {
+                $style['display'] = 'block';
+            }
         }
         if (count($style) > 0) {
             $result['style'] = $style;

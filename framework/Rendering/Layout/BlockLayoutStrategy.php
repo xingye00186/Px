@@ -605,7 +605,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             // CSS 2.2 §10.6.3: auto-height = distance from content edge top to last child bottom
             // $node->y includes paddingTop offset �?content area starts at $node->y + $paddingTop
             $ahPaddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
-            $computedH = max(0, $maxBottom - ($node->y + $ahPaddingTop));
+            $contentTop = $node->y + $ahPaddingTop;
+            if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
+                $textFs = (int)($node->style['fontSize'] ?? 14);
+                $parentSt = $ctx->parent !== null ? $ctx->parent->style : null;
+                $textLineH = (int)PercentResolver::resolveLineHeight($style, $textFs, 16, $parentSt);
+                $textBottom = $contentTop + $textLineH;
+                if ($textBottom > $maxBottom) $maxBottom = $textBottom;
+            }
+            $computedH = max(0, $maxBottom - $contentTop);
 
             if ($computedH > $node->h) {
                 $node->h = (int)max(0, (int)PercentResolver::resolveMinMax($style, $computedH, false));

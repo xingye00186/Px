@@ -460,7 +460,8 @@ class VNodeRenderer
                 return $this->makeButtonElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'input':   return $this->makeInputElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'img':     return $this->makeImgElement($node, $style, $props, $x, $y, $w, $h, $layer);
-            // Inline elements → span (block rendering breaks text width matching)
+            // Inline elements: #text has actual content to render, others create
+            // span elements if they have content. <br> is the only zero-size line break.
             case 'span':
             case '#text':
             case 'b':
@@ -468,6 +469,7 @@ class VNodeRenderer
             case 'em':
             case 'i':
             case 'code':
+                return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
             case 'br':
                 // CSS: <br> generates a line break — render as zero-size placeholder
                 // to maintain element tree structure alignment with browser DOM.
@@ -895,7 +897,8 @@ class VNodeRenderer
                 $p = $p->parent;
             }
         }
-        if ($color === null) $color = 0xFFFFFF;
+        // CSS 2.2 §18.2: color 属性的初始值为 black (0x000000)
+        if ($color === null) $color = 0x000000;
         $bold     = $style['bold'] ?? 0;
         $align    = $props['align'] ?? ($style['textAlign'] ?? 'start');
         // CSS Text Module Level 3 §7: text-align is inherited

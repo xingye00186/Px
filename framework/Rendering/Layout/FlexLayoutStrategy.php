@@ -502,19 +502,63 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                 $totalFlexGrow = (int)max($totalFlexGrow, 1);
 
+                // First pass: proportional allocation (only flex-grow items)
+                $growAllocations = [];
+                $totalAllocated = 0;
                 foreach ($lineChildren as $idx => $ch) {
                     $data = $lineFlexData[$idx];
-
                     if ($data['isFlexGrow']) {
                         $allocated = (int)(($data['grow'] / $totalFlexGrow) * $remainingSpace);
+                        $growAllocations[$idx] = max(0, $allocated);
+                        $totalAllocated += $allocated;
+                    }
+                }
 
-                        if ($isRow) {
-                            $ch->w = (int)max(0, $allocated);
-                            $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
-                        } else {
-                            $ch->h = (int)max(0, $allocated);
-                            $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
+                // Second pass: distribute remainder to avoid truncation bias
+                // CSS §9.7: remaining fractional space is distributed 1px at a time
+                // to items with the largest fractional remainder (in order)
+                $remainder = $remainingSpace - $totalAllocated;
+                if ($remainder > 0) {
+                    // Sort flex-grow items by their un-truncated fractional remainder
+                    // (largest first), to allocate the leftover 1px units fairly
+                    $growIndices = [];
+                    foreach ($lineChildren as $idx => $ch) {
+                        $data = $lineFlexData[$idx];
+                        if ($data['isFlexGrow']) {
+                            $exact = ($data['grow'] / $totalFlexGrow) * $remainingSpace;
+                            $fractionalRemainder = $exact - (int)$exact;
+                            $growIndices[] = ['idx' => $idx, 'fraction' => $fractionalRemainder];
                         }
+                    }
+                    // Sort by fractional remainder descending (bubble sort for AOT)
+                    $gn = count($growIndices);
+                    for ($gi = 0; $gi < $gn; $gi++) {
+                        for ($gj = 0; $gj < $gn - $gi - 1; $gj++) {
+                            if ($growIndices[$gj]['fraction'] < $growIndices[$gj + 1]['fraction']) {
+                                $gtmp = $growIndices[$gj];
+                                $growIndices[$gj] = $growIndices[$gj + 1];
+                                $growIndices[$gj + 1] = $gtmp;
+                            }
+                        }
+                    }
+                    for ($gi = 0; $gi < $remainder && $gi < $gn; $gi++) {
+                        $allocIdx = (int)$growIndices[$gi]['idx'];
+                        if (!isset($growAllocations[$allocIdx])) {
+                            $growAllocations[$allocIdx] = 0;
+                        }
+                        $growAllocations[$allocIdx] = $growAllocations[$allocIdx] + 1;
+                    }
+                }
+
+                // Write back final allocations (only flex-grow items, non-grow keep original sizes)
+                foreach ($growAllocations as $growIdx => $growSize) {
+                    $ch = $lineChildren[$growIdx];
+                    if ($isRow) {
+                        $ch->w = (int)max(0, $growSize);
+                        $ch->visualW = PercentResolver::resolveVisualW($ch->style, $ch->w);
+                    } else {
+                        $ch->h = (int)max(0, $growSize);
+                        $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                     }
                 }
             }
