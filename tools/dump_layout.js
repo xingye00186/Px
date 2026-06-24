@@ -183,8 +183,18 @@
             var caseName = container.getAttribute('data-case');
             if (!caseName) return;
             var elements = [];
-            for (var i = 0; i < container.children.length; i++) {
-                walkDOM(container.children[i], 0, elements);
+            // 在每个 [data-case] 作用域内复用 findRootContainer 逻辑
+            var scope = null;
+            for (var j = 0; j < container.children.length; j++) {
+                var child = container.children[j];
+                if (child.tagName === 'DIV') {
+                    var rect = child.getBoundingClientRect();
+                    if (rect.width > 500) { scope = child; break; }
+                }
+            }
+            if (!scope) scope = container;
+            for (var i = 0; i < scope.children.length; i++) {
+                walkDOM(scope.children[i], 0, elements);
             }
             batchResult[caseName] = {
                 browser: (navigator && navigator.userAgent) ? navigator.userAgent : 'unknown',

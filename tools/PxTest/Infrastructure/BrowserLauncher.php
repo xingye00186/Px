@@ -19,6 +19,7 @@ class BrowserLauncher
         if (PHP_OS_FAMILY === 'Windows') {
             exec('taskkill /F /IM msedge.exe /T 2>NUL');
         }
+        $this->findEdge();
     }
 
     /** 查找 Edge 路径 */
