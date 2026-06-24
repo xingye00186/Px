@@ -876,7 +876,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             if (!$lineFlexData[$i]['hasExplicitCrossSize']) {
                                 $crossBefore = $ch->h;
                                 $stretchedH = (int)max(0, (int)($lineMaxCross - $childMarginTop - $childMarginBottom));
-                                if ($stretchedH > 0) {
+                                if ($stretchedH > $ch->h && $stretchedH > 0) {
                                     $ch->h = $stretchedH;
                                     $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                                     $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
@@ -915,7 +915,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         if ($isRow && !$lineFlexData[$i]['hasExplicitCrossSize']) {
                             $crossBefore = $ch->h;
                             $stretchedH = (int)max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
-                            if ($stretchedH > 0) {
+                            if ($stretchedH > $ch->h && $stretchedH > 0) {
                                 $ch->h = $stretchedH;
                                 $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                                 $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
@@ -993,7 +993,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                     // Debug: two-pass condition
                 if ($chTp->isScrollContainer || $chTp->type === 'div') {
-                    error_log('[DIAG_2PASS] idx=' . $idxTp . ' type=' . $chTp->type . ' w=' . $chTp->w . ' h=' . $chTp->h . ' isFlexGrow=' . ($dataTp['isFlexGrow'] ? '1' : '0') . ' crossAxisSized=' . ($dataTp['crossAxisSized'] ? '1' : '0') . ' needsTwoPass=' . ($needsTwoPass ? '1' : '0') . ' display=' . ($chTp->style['display'] ?? 'block') . ' scrollContainer=' . ($chTp->isScrollContainer ? '1' : '0') . ' children=' . count($chTp->children));
+                    error_log('[DIAG_2PASS] idx=' . $idxTp . ' type=' . $chTp->type . ' w=' . $chTp->w . ' h=' . $chTp->h . ' isFlexGrow=' . ($dataTp['isFlexGrow'] ? '1' : '0') . ' crossAxisSized=' . ($dataTp['crossAxisSized'] ? '1' : '0') . ' needsTwoPass=' . ($needsTwoPass ? '1' : '0') . ' display=' . ($chTp->style['display'] ?? 'block') . ' scrollContainer=' . ($chTp->isScrollContainer ? '1' : '0') . ' children=' . count($chTp->children) . ' content=' . ($chTp->content !== null ? strlen($chTp->content) . 'chars' : 'null'));
                 }
 
                 if ($needsTwoPass && (count($chTp->children) > 0 || $chTp->content !== null)) {
@@ -1173,7 +1173,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     $childMarginR = (int)($ch->style['marginRight'] ?? $ch->style['margin'] ?? 0);
                     if ($isRow) {
                         $stretched = (int)max(0, $crossTarget - $childMarginT - $childMarginB);
-                        if ($stretched > 0 && $stretched !== $ch->h) {
+                        // 两阶段重布局后 auto-height 已设正确高度，仅当 stretch 更大时才覆盖
+                        if ($stretched > $ch->h && $stretched > 0) {
                             $ch->h = $stretched;
                             $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                         }

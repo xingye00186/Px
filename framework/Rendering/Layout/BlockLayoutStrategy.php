@@ -176,7 +176,19 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                 if ($node->h === 0 || $node->h < $lineH) {
                     $node->h = $lineH;
-                    $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+                    // CSS border-box: resolveVisualH 在 border-box 模式返回 h（假设 h
+                    // 已含 padding+border），但 auto-height 时 h 仅内容高度。显式计算 visualH
+                    // 并在 border-box 模式下同步更新 h 为总高度（含 padding+border）。
+                    $aPadT = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+                    $aPadB = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
+                    $aBtw = (int)($style['borderTopWidth'] ?? $style['borderWidth'] ?? 0);
+                    $aBbw = (int)($style['borderBottomWidth'] ?? $style['borderWidth'] ?? 0);
+                    $boxSizing = $style['boxSizing'] ?? 'content-box';
+                    if ($boxSizing === 'border-box') {
+                        // border-box: h=总高度（含 padding+border），content-box: h=内容高度
+                        $node->h = max(0, $node->h + $aPadT + $aPadB + $aBtw + $aBbw);
+                    }
+                    $node->visualH = max(0, $node->h + $aPadT + $aPadB + $aBtw + $aBbw);
                 }
 
                 // CSS 2.2 §10.6.3: auto-wrap text when exceeds container content width
@@ -197,7 +209,12 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $wrappedH = (int)($numLines * $lineH);
                         if ($wrappedH > $node->h) {
                             $node->h = $wrappedH;
-                            $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+                            // border-box 补偿（同 auto-height 路径）
+                            $wPadT = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+                            $wPadB = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
+                            $wBtw = (int)($style['borderTopWidth'] ?? $style['borderWidth'] ?? 0);
+                            $wBbw = (int)($style['borderBottomWidth'] ?? $style['borderWidth'] ?? 0);
+                            $node->visualH = max(0, $node->h + $wPadT + $wPadB + $wBtw + $wBbw);
                         }
                     }
                 }
@@ -210,7 +227,12 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $preH = (int)($preLines * $lineH);
                         if ($preH > $node->h) {
                             $node->h = $preH;
-                            $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+                            // border-box 补偿（同 auto-height 路径）
+                            $pPadT = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+                            $pPadB = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
+                            $pBtw = (int)($style['borderTopWidth'] ?? $style['borderWidth'] ?? 0);
+                            $pBbw = (int)($style['borderBottomWidth'] ?? $style['borderWidth'] ?? 0);
+                            $node->visualH = max(0, $node->h + $pPadT + $pPadB + $pBtw + $pBbw);
                         }
                     }
                 }
