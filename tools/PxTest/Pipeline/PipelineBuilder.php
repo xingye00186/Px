@@ -38,6 +38,7 @@ class PipelineBuilder
     private bool $skipScreenshot = true;  // 默认跳过截图，需 --screenshot 启用
     private bool $updateBaseline = false;
     private bool $verbose = false;
+    private bool $batchBrowserRef = false;
     private string $format = 'console';
 
     private function __construct(string $projectRoot)
@@ -57,6 +58,7 @@ class PipelineBuilder
             elseif ($arg === '--skip-build') { $this->skipBuild = true; }
             elseif ($arg === '--force-build') { $this->forceBuild = true; }
             elseif ($arg === '--browser-engine-el-compare') { $this->browserElCompare = true; }
+            elseif ($arg === '--batch-browser-ref') { $this->batchBrowserRef = true; }
             elseif ($arg === '--screenshot') { $this->skipScreenshot = false; }
             elseif ($arg === '--update-baseline') { $this->updateBaseline = true; }
             elseif ($arg === '--verbose') { $this->verbose = true; }
@@ -72,6 +74,28 @@ class PipelineBuilder
 
         // Step 0: Build (hash cache + process lock + orphan cleanup)
         $orchestrator->addStep(new BuildStep($this->projectRoot, 'css-test', $this->forceBuild));
+
+        // Step B: 批次 browser ref（可选，--batch-browser-ref 启用）
+        // 在全量循环前一次性生成所有 case 的 ref，比逐 case 启动 Edge 快 20x
+        if ($this->batchBrowserRef && $this->browserElCompare) {
+            $browser = new BrowserLauncher();
+            $strategy = $browser->isAvailable() ? new EdgeDomStrategy($browser) : new NoopBrowserRefStrategy();
+            $caseDirs = glob($this->appDir . '/test_case/case-*', GLOB_ONLYDIR);
+            $allCases = [];
+            foreach ($caseDirs as $dir) {
+                $tag = basename($dir);
+                $htmlFiles = glob("$dir/*.html");
+                if (empty($htmlFiles)) continue;
+                $allCases[] = [
+                    'tag' => $tag,
+                    'htmlPath' => $htmlFiles[0],
+                    'refDir' => "$dir/ref",
+                ];
+            }
+            if (!empty($allCases)) {
+                $orchestrator->addStep(new \PxTest\Pipeline\Strategy\BatchBrowserRefStep($strategy, $allCases));
+            }
+        }
 
         // Step D: layout export
         $dumpStrategy = $this->selectDumpStrategy();

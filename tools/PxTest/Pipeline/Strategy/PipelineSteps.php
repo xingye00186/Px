@@ -365,3 +365,38 @@ class BrowserRefStep implements PipelineStepInterface
         return $html;
     }
 }
+
+/**
+ * BatchBrowserRefStep — 单次 Edge 启动为所有 case 生成 browser ref。
+ * 必须放在全量循环之前执行，比逐个 case 启动 Edge 快 20x。
+ */
+class BatchBrowserRefStep implements \PxTest\Pipeline\PipelineStepInterface
+{
+    private static bool $alreadyDone = false;
+
+    public function __construct(
+        private BrowserRefStrategy $strategy,
+        private array $cases,
+    ) {}
+    public function name(): string { return 'batch_browser_ref'; }
+    public function requires(): array { return ['build']; }
+    public function execute(\PxTest\Pipeline\PipelineContext $ctx): \PxTest\Pipeline\StepResult
+    {
+        if (self::$alreadyDone) {
+            return \PxTest\Pipeline\StepResult::ok('batch_browser_ref', 0);
+        }
+        $start = microtime(true);
+        if (empty($this->cases)) {
+            return \PxTest\Pipeline\StepResult::ok('batch_browser_ref', 0);
+        }
+        echo "  [batch_browser_ref] " . count($this->cases) . " cases, single Edge launch...\n";
+        $ok = $this->strategy->generateBatch($this->cases);
+        $elapsed = (microtime(true) - $start) * 1000;
+        self::$alreadyDone = true;
+        if ($ok) {
+            $ctx->set('batch_ref_done', true);
+            return \PxTest\Pipeline\StepResult::ok('batch_browser_ref', $elapsed);
+        }
+        return \PxTest\Pipeline\StepResult::err('batch_browser_ref', 'Batch ref generation failed', $elapsed);
+    }
+}
