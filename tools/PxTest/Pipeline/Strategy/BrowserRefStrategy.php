@@ -35,12 +35,14 @@ class EdgeDomStrategy implements BrowserRefStrategy
         if ($domOutput === null) return false;
 
         // Extract JSON from <textarea id="layout-output"> injected by dump_layout.js
-        // The textarea is hidden (display:none), but --dump-dom includes its textContent
         if (preg_match('/<textarea[^>]*id="layout-output"[^>]*>([\s\S]*?)<\/textarea>/i', $domOutput, $m)) {
             $layoutJson = trim($m[1]);
-            // Validate it's actual JSON
             $decoded = json_decode($layoutJson, true);
             if ($decoded !== null && isset($decoded['elements'])) {
+                // Store HTML source hash for skip-ref detection
+                $htmlHash = md5_file($htmlPath);
+                $decoded['_html_hash'] = $htmlHash;
+                $layoutJson = json_encode($decoded, JSON_UNESCAPED_UNICODE);
                 // Write structured element data for element_compare
                 file_put_contents("$refDir/browser_ref_level_0.json", $layoutJson);
                 echo "  [edge_dom] extracted " . count($decoded['elements']) . " elements from browser DOM\n";
@@ -48,7 +50,7 @@ class EdgeDomStrategy implements BrowserRefStrategy
             }
         }
 
-        // Fallback: dump_layout.js didn't execute (maybe non-HTML5 browser?), save raw DOM
+        // Fallback: dump_layout.js didn't execute, save raw DOM
         echo "  [edge_dom] WARNING: layout-output textarea not found, saving raw DOM only\n";
         return true;
     }

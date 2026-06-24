@@ -163,7 +163,24 @@ class BrowserRefStep implements PipelineStepInterface
         $instrumentedPath = $tempDir . '/px_browser_ref_' . $currentCase . '.html';
         file_put_contents($instrumentedPath, $instrumented);
 
-        // ─── Step 4: Run browser (Edge headless) ───
+        // ─── Step 4: Check if ref already exists with matching HTML ───
+        $refJsonPath = "$refDir/browser_ref_level_0.json";
+        if (file_exists($refJsonPath)) {
+            $existingRef = json_decode(file_get_contents($refJsonPath), true);
+            $storedHash = $existingRef['_html_hash'] ?? null;
+            $currentHash = md5_file($htmlPath);
+            if ($storedHash !== null && $storedHash === $currentHash) {
+                echo "  [browser_ref] Skip: HTML unchanged (hash match), using existing ref\n";
+                $refJson = file_get_contents($refJsonPath);
+                $ctx->set('browser_ref', $refJson);
+                return StepResult::ok('browser_ref');
+            }
+            if ($storedHash !== null && $storedHash !== $currentHash) {
+                echo "  [browser_ref] HTML changed, regenerating ref\n";
+            }
+        }
+
+        // ─── Step 5: Run browser (Edge headless) ───
         $ok = $this->strategy->generate($instrumentedPath, $refDir, $currentCase);
         $ctx->set('browser_wrapper_html', $instrumented);
         @unlink($instrumentedPath); // clean up temp file
