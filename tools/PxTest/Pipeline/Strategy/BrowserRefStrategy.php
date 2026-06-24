@@ -67,7 +67,8 @@ class EdgeDomStrategy implements BrowserRefStrategy
         if (!$this->browser->isAvailable() || empty($cases)) return false;
 
         $tempDir = sys_get_temp_dir();
-        $projectRoot = dirname(dirname(dirname(__DIR__))); // 3 levels up from tools/PxTest/Pipeline
+        // __DIR__ = tools/PxTest/Pipeline/Strategy → up 4 levels to project root
+        $projectRoot = dirname(__DIR__, 4);
         $dumpLayoutJsPath = $projectRoot . '/tools/dump_layout.js';
         $dumpLayoutJs = file_exists($dumpLayoutJsPath) ? file_get_contents($dumpLayoutJsPath) : '';
 
@@ -80,22 +81,46 @@ class EdgeDomStrategy implements BrowserRefStrategy
             if ($html === false) continue;
 
             // 提取 <style> 块并作用域化
+            // 核心原则：遍历起点统一为 #test-content-wrapper，确保单case/批次结构一致
             $scopedStyles = [];
             if (preg_match_all('/<style[^>]*>([\s\S]*?)<\/style>/i', $html, $styleMatches)) {
                 foreach ($styleMatches[1] as $css) {
+                    // Step 1: 将 body/html 选择器转换为 [data-case] 自身（丢失的 body 级基础样式影响最大）
                     $scoped = preg_replace(
-                        '/([.#]?[a-zA-Z*][\w-]*(?:\s*,\s*[.#]?[a-zA-Z][\w-]*)*)\s*\{/',
-                        "[data-case=\"$tag\"] $0",
+                        '/(?:^|[\s,]+)(?<!\w)(?:html|body)(?=\s*(?:\{|,))/i',
+                        '[data-case="'.$tag.'"]',
                         $css
                     );
+                    // Step 2: body/html 作为复合选择器的一部分（如 html>body）
+                    $scoped = preg_replace(
+                        '/(?:^|[\s,]+)(?<!\w)(?:html|body)(?=\s*[>~+\[.#:])/i',
+                        '[data-case="'.$tag.'"]',
+                        $scoped
+                    );
+                    // Step 3: 所有其他选择器加 [data-case] 前缀
+                    $scoped = preg_replace(
+                        '/((?:^|,\s*))([.#]?[a-zA-Z\*][\w-]*(?:\s*,\s*[.#]?[a-zA-Z][\w-]*)*)\s*\{/',
+                        '${1}[data-case="'.$tag.'"] ${2}{',
+                        $scoped
+                    );
+                    // 修复Step3可能产生的双前缀：去掉 [data-case][data-case]
+                    $scoped = str_replace('[data-case="'.$tag.'"] [data-case="'.$tag.'"]', '[data-case="'.$tag.'"]', $scoped);
                     $scopedStyles[] = $scoped;
                 }
             }
             $caseStyles .= implode("\n", $scopedStyles) . "\n";
 
-            // 提取 <body> 内内容
+            // 提取 <body> 内内容，并为首个 div 注入 test-content-wrapper id
             if (preg_match('/<body[^>]*>([\s\S]*)<\/body>/i', $html, $bodyMatch)) {
-                $caseBodies .= "<div data-case=\"$tag\">{$bodyMatch[1]}</div>\n";
+                $bodyContent = $bodyMatch[1];
+                // 为 body 内的首个 div 注入标准化 id，确保 dump_layout.js 遍历起点一致
+                $bodyContent = preg_replace(
+                    '/<div\s/',
+                    '<div id="test-content-wrapper" ',
+                    $bodyContent,
+                    1
+                );
+                $caseBodies .= "<div data-case=\"$tag\">{$bodyContent}</div>\n";
             }
         }
 

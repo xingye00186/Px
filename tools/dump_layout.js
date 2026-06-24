@@ -183,15 +183,8 @@
             var caseName = container.getAttribute('data-case');
             if (!caseName) return;
             var elements = [];
-            // 在每个 [data-case] 作用域内复用 findRootContainer 逻辑
-            var scope = null;
-            for (var j = 0; j < container.children.length; j++) {
-                var child = container.children[j];
-                if (child.tagName === 'DIV') {
-                    var rect = child.getBoundingClientRect();
-                    if (rect.width > 500) { scope = child; break; }
-                }
-            }
+            // 统一从 #test-content-wrapper 开始遍历，与单 case 模式的 findRootContainer 对齐
+            var scope = container.querySelector('#test-content-wrapper');
             if (!scope) scope = container;
             for (var i = 0; i < scope.children.length; i++) {
                 walkDOM(scope.children[i], 0, elements);
