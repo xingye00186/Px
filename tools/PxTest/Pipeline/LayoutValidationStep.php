@@ -89,6 +89,27 @@ class LayoutValidationStep implements PipelineStepInterface
             $this->validateFlexContainer($node, $parent, $style);
         }
 
+        // ─── Assertion F: text content node h > 0 invariant ───
+        // Any node with text content should have positive content height.
+        // h=0 means the text won't be rendered regardless of padding/borders.
+        $hasText = !empty($node['content']) && strlen(trim($node['content'])) > 0;
+        $isHidden = ($style['display'] ?? '') === 'none';
+        // 跳过侧边栏项：textRenderInfo 为 null 表示未渲染的 flex 子项
+        $hasRenderInfo = isset($node['textRenderInfo']) && $node['textRenderInfo'] !== null;
+        if ($hasText && !$isHidden && $hasRenderInfo) {
+            $ch = (int)($node['h'] ?? 0);
+            $cvh = (int)($node['visualH'] ?? $ch);
+            // Skip if it's just a spacer (depth < 3 sidebar items)
+            // h=0 is OK only when text is spacer/separator text or visibility:hidden
+            $vis = $style['visibility'] ?? 'visible';
+            if ($ch === 0 && $cvh === 0 && $vis === 'visible') {
+                $textPreview = mb_substr($node['content'], 0, 30);
+                $disp = $style['display'] ?? 'block';
+                $this->issues[] = "[F] text content h=0: '{$textPreview}' has zero content height "
+                    . "(visualH={$cvh}, display={$disp})";
+            }
+        }
+
         // ─── Assertion D: margin:auto centering for block-level children ───
         // Elements with width < parent content width sitting at content left edge
         // should have margin:auto centering applied (indicated by _computedMarginLeft)
