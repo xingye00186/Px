@@ -99,14 +99,24 @@ class BuildStep implements PipelineStepInterface
         $frameworkDir = "{$this->projectRoot}/framework";
         $appDir       = "{$this->projectRoot}/apps/{$this->appName}";
         $cppDir       = "{$this->projectRoot}/cpp";
+        $stubDir      = "{$this->projectRoot}/stub";
+        $configFile   = "{$this->projectRoot}/config.yml";
 
         $files = [];
-        foreach (['Core','Rendering','Rendering/Layout','Platform','Styling','compiler'] as $sub) {
-            $files = array_merge($files, glob("$frameworkDir/$sub/*.php") ?: []);
-        }
+        // 递归扫描所有 framework PHP 文件（替代硬编码子目录列表）
+        $files = array_merge($files, glob("$frameworkDir/**/*.php") ?: []);
+        // 应用层源码
         $files = array_merge($files, glob("$appDir/**/*.vue") ?: []);
         $files = array_merge($files, glob("$appDir/**/*.php") ?: []);
+        // C++ 原生层
         $files = array_merge($files, glob("$cppDir/*.cc") ?: []);
+        $files = array_merge($files, glob("$cppDir/*.h") ?: []);
+        // PHP stub 声明
+        $files = array_merge($files, glob("$stubDir/*.php") ?: []);
+        // 构建配置
+        if (file_exists($configFile)) {
+            $files[] = $configFile;
+        }
 
         $hashes = '';
         foreach ($files as $f) {
