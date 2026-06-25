@@ -58,3 +58,7 @@ ignore:
 
 # 每次构建前清理编译缓存
 Px_clear_compilation_cache: true
+
+# 文本引擎配置：可选 dwrite / skia / gdi，不设置则自动选择（默认 dwrite）
+# Px_text_engine: dwrite
+# Px_text_engine_verbose: false

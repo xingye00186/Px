@@ -62,6 +62,7 @@ extern std::string g_skDefaultFont;
 // DirectWrite
 // DWrite RenderTarget（真正用 DWrite 绘制到 GDI 兼容表面）
 bool ensureDWriteRenderTarget(HDC hdc, int w, int h);
+void shutdownDWrite();
 extern IDWriteBitmapRenderTarget* g_dwRenderTarget;
 
 extern bool g_dwInitAttempted;

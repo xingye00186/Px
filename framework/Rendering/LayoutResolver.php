@@ -119,7 +119,7 @@ class LayoutResolver
         $this->resolveNode($root, $ctx);
 
         // Debug: final span dimensions after full layout (guarded by diag_enabled)
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             $this->debugCheckSpanDims($root);
         }
 

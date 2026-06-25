@@ -30,10 +30,11 @@ class ResilientTextBackendProxy extends RenderContext
     private int $failureThreshold = 3;
 
     public function __construct(
-        TextBackendSelector $selector,
         RenderContext $delegate
     ) {
-        $this->selector = $selector;
+        // 确保文本后端已初始化（由渲染层管理）
+        TextBackendRegistry::initialize();
+        $this->selector = TextBackendRegistry::getSelector() ?? new TextBackendSelector();
         $this->delegate = $delegate;
     }
 

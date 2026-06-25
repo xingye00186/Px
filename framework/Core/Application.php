@@ -12,7 +12,7 @@ use Px\Platform\WindowEvent;
 use Px\Platform\PlatformFactory;
 use Px\Rendering\Backend\ResilientRenderContext;
 use Px\Rendering\Backend\RuntimeBackendSelector;
-use Px\Rendering\TextBackend\TextBackendSelector;
+use Px\Rendering\TextBackend\TextBackendRegistry;
 use Px\Rendering\TextBackend\ResilientTextBackendProxy;
 use Px\Rendering\VNode;
 use Px\Rendering\RenderNode;
@@ -346,31 +346,10 @@ class Application
     public function getRenderTreeManager(): RenderTreeManager { return $this->renderTreeManager; }
 
     private ?string $selectedBackendName = null;
-    private ?TextBackendSelector $textBackendSelector = null;
 
     public function getSelectedBackendName(): ?string
     {
         return $this->selectedBackendName;
-    }
-
-    /**
-     * 初始化文本后端：用 TextBackendSelector 探测 + 选择 + 激活。
-     * 替代原先的直接 sk_set_text_engine() 调用。
-     */
-    private function initTextBackend(): void
-    {
-        // C++ 绑定不可用（测试环境），跳过
-        if (!function_exists('sk_set_text_engine')) {
-            return;
-        }
-
-        $this->textBackendSelector = new TextBackendSelector();
-        $backend = $this->textBackendSelector->select();
-        if ($backend !== null) {
-            error_log('[Px] TextBackend: ' . $backend->getName());
-        } else {
-            error_log('[Px] TextBackend: none available, using C++ default');
-        }
     }
 
     private function initRenderer(): void
@@ -379,7 +358,7 @@ class Application
         $h = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : Config::get('window_height', 720);
 
         // Stage 1: 让 platform 创建窗口 + 默认 RenderContext（测试环境直接使用此 context）
-        $title = defined('WINDOW_TITLE') ? WINDOW_TITLE : Config::get('window_title', 'Px');
+        $title = defined('WINDOW_TITLE') ? WINDOW_TITLE : Config::get('debug_window_title', 'Px');
         $defaultCtx = $this->platform->init($title, $w, $h);
 
         // 检查 C++ 绑定是否可用：无 vue_begin_paint 说明是测试环境（PHP-only），跳过后端选择
@@ -406,10 +385,8 @@ class Application
         // Stage 3: 包一层 ResilientRenderContext 支持渲染后端降级
         $renderCtx = new ResilientRenderContext($selector, $backend->getContext(), $hwnd, $w, $h);
 
-        // Stage 4: 包一层 ResilientTextBackendProxy 支持文本引擎降级
-        if ($this->textBackendSelector !== null) {
-            $renderCtx = new ResilientTextBackendProxy($this->textBackendSelector, $renderCtx);
-        }
+        // Stage 4: 包一层 ResilientTextBackendProxy 支持文本引擎降级（由渲染层管理）
+        $renderCtx = new ResilientTextBackendProxy($renderCtx);
 
         $this->renderer = new VNodeRenderer($this->rootComponent, $renderCtx);
     }
@@ -431,8 +408,8 @@ class Application
             Config::init($appDir);
         }
 
-        // 初始化文本后端（使用 TextBackendSelector 探测 + 选择 + 激活）
-        $this->initTextBackend();
+        // 初始化文本后端（渲染层管理：TextBackendRegistry）
+        TextBackendRegistry::initialize();
 
         $this->initRenderer();
 
@@ -488,7 +465,7 @@ class Application
 
         $this->activeVNodeTree = $this->rootComponent->getVNodeTree();
 
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             $isSame = $oldTree !== null && $this->activeVNodeTree === $oldTree;
             error_log("[DIAG] rebuildVNodeTree: sameTree=" . ($isSame ? 'YES' : 'NO')
                 . " oldReg=" . count($oldRegistry)
@@ -528,14 +505,14 @@ class Application
         $instance->setId($instanceId);
         $this->registerComponent($instanceId, $instance);
 
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             error_log("[DIAG] expandComponentNode: class={$className} id={$instanceId}"
                 . " owner=" . get_class($owner)
                 . " hasPropVals=" . ($node->componentPropValues !== null ? 'YES' : 'NO'));
         }
 
         // ── VideoGridComponent 诊断：检查 mount 后的数据状态 ──
-        if (Config::get('diag_enabled', false) && $className === 'VideoGridComponent') {
+        if (Config::get('debug_diag_enabled', false) && $className === 'VideoGridComponent') {
             $allVCnt = (int)(property_exists($instance, 'allVideos') ? count($instance->allVideos) : -1);
             $vlCnt = (int)(property_exists($instance, 'videoList') ? count($instance->videoList) : -1);
             error_log('[DIAG] VGRID after mount: allVideos=' . $allVCnt . ' videoList=' . $vlCnt);
@@ -648,7 +625,7 @@ class Application
             }
         }
 
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             $path = $instance !== null ? 'REUSE' : 'EXPAND';
             $newInstState = $newNode->componentInstance !== null ? 'SET' : 'NULL';
             $oldInstState = ($oldNode !== null && $oldNode->componentInstance !== null) ? 'SET' : 'NULL';
@@ -718,20 +695,20 @@ class Application
     {
         $root = $this->renderTreeManager->getRootRenderNode();
         if ($root === null) {
-            if (Config::get('diag_enabled', false)) {
+            if (Config::get('debug_diag_enabled', false)) {
                 error_log("[DIAG] directRender: root is null - SKIP");
             }
             return;
         }
 
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] directRender BEFORE');
             error_log("[DIAG] directRender: type={$root->type} children=" . count($root->children));
         }
 
         $this->layoutResolver->resolve($root);
 
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] directRender AFTER');
         }
 
@@ -926,7 +903,7 @@ class Application
             $this->renderTreeManager->copyScrollTopFromOld($rootRenderNode, $oldRootRenderNode);
         }
 
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             error_log('[DIAG] render() frame=' . $frame . ' BEFORE resolve');
             $this->logScrollContainerStates('[DIAG] render BEFORE');
         }
@@ -934,7 +911,7 @@ class Application
         // LayoutResolver 处理 RenderNode（利用 layoutDirty 增量）
         $this->layoutResolver->resolve($rootRenderNode);
 
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] render AFTER');
         }
 
@@ -978,14 +955,14 @@ class Application
         $this->render();
         error_log('[DIAG] doFirstRender: Frame 1 done');
 
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             $rootRN = $this->renderTreeManager->getRootRenderNode();
             error_log('[DIAG] doFirstRender: Frame1 renderRequested=' . ($this->renderRequested ? 'yes' : 'no'));
         }
 
         $this->scheduler->flushMicrotasks();
 
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             error_log('[DIAG] doFirstRender: after flush renderRequested=' . ($this->renderRequested ? 'yes' : 'no'));
         }
 

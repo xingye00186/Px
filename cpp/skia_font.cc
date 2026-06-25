@@ -33,6 +33,19 @@ bool ensureDWriteRenderTarget(HDC hdc, int w, int h) {
     return SUCCEEDED(hr) && g_dwRenderTarget != nullptr;
 }
 
+void shutdownDWrite() {
+    if (g_dwRenderTarget) {
+        g_dwRenderTarget->Release();
+        g_dwRenderTarget = nullptr;
+    }
+    if (g_dwFactory) {
+        g_dwFactory->Release();
+        g_dwFactory = nullptr;
+    }
+    g_dwInitAttempted = false;
+    SK_TRACE("[SK] DWrite shutdown\n");
+}
+
 int measureHeightDWrite(int fontSize, int bold) {
     if (!ensureDWriteFactory()) return 0;
     int wlen = MultiByteToWideChar(CP_UTF8, 0, g_skDefaultFont.c_str(), -1, NULL, 0);

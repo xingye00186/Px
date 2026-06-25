@@ -50,6 +50,9 @@ void php_sk_destroy_context() {
         g_skGdiplusInited = false;
         SK_TRACE("[SK] GDI+ shutdown\n");
     }
+
+    // DirectWrite 关闭
+    shutdownDWrite();
 }
 
 // 开始一帧：GDI 创建双缓冲 memDC（headless 时用桌面 DC 创建兼容内存 DC）

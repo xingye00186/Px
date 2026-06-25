@@ -5,11 +5,11 @@ namespace Px\Core;
 use native_types;
 
 /**
- * Config — AOT 兼容的运行时配置读取（来自 project.yml 中 Px_debug_* 前缀的项）
+ * Config — AOT 兼容的运行时配置读取（来自 project.yml 中 Px_* 前缀的项）
  *
  * 静态类，由 Application::mount() 初始化。
- * 从 {APP_DIR}/project.yml 中读取以 Px_debug_ 开头的键值对，
- * 去除前缀后供 Config::get() 查询。
+ * 从 {APP_DIR}/project.yml 中读取以 Px_ 开头的键值对，
+ * 去除 Px_ 前缀后供 Config::get() 查询。
  * 文件不存在时所有 get() 返回默认值，不抛异常。
  */
 class Config
@@ -33,8 +33,7 @@ class Config
         if ($lines === false) {
             return;
         }
-        $prefix = 'Px_debug_';
-        $prefixLen = strlen($prefix);
+        $prefix = 'Px_';
         $parsed = [];
         foreach ($lines as $line) {
             $line = trim($line);
@@ -48,11 +47,11 @@ class Config
             $key = trim(substr($line, 0, $pos));
             $val = trim(substr($line, $pos + 1));
 
-            // 只提取 Px_debug_ 前缀的项，去除前缀后存入缓存
-            if (!str_starts_with($key, $prefix)) {
+            // 提取 Px_ 前缀的项，去除前缀后存入缓存
+            if (!str_starts_with($key, 'Px_')) {
                 continue;
             }
-            $shortKey = substr($key, $prefixLen);
+            $shortKey = substr($key, 3);
 
             // 解析布尔值
             if ($val === 'true') {

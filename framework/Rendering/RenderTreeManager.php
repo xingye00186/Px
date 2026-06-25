@@ -325,7 +325,7 @@ class RenderTreeManager
      */
     private function destroyRenderNodeTree(RenderNode $rn): void
     {
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             $style = $rn->style;
             $dsp = $style['display'] ?? '';
             error_log('[DIAG] DESTROY: type=' . $rn->type . ' dsp=' . $dsp
@@ -383,7 +383,7 @@ class RenderTreeManager
             if ($vnode->isComponent()) {
                 $instance = $vnode->componentInstance;
                 if ($instance === null) {
-                    if (Config::get('diag_enabled', false)) {
+                    if (Config::get('debug_diag_enabled', false)) {
                         error_log('[DIAG] RTM: #component(' . $vnode->componentClass . ') SKIPPED - instance=null');
                     }
                     return null;
@@ -589,7 +589,7 @@ class RenderTreeManager
             $oldChildren = $renderNode->children;
             $renderNode->clearChildren();
 
-            $isGrid = Config::get('diag_enabled', false)
+            $isGrid = Config::get('debug_diag_enabled', false)
                 && ($resolvedStyle['display'] ?? '') === 'grid';
             if ($isGrid) {
                 error_log('[DIAG] RTM grid BEFORE: renderNode=' . spl_object_hash($renderNode)

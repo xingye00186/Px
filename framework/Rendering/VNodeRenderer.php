@@ -100,7 +100,7 @@ class VNodeRenderer
         $maxLayer = 0;
         $this->collectElements($root, $elementsByLayer, $maxLayer);
 
-        if (Config::get('diag_enabled', false)) {
+        if (Config::get('debug_diag_enabled', false)) {
             $totalElements = 0;
             for ($l = 0; $l <= $maxLayer; $l++) {
                 $totalElements += count($elementsByLayer[$l] ?? []);
@@ -927,7 +927,7 @@ class VNodeRenderer
             $text = $this->currentComponent()->getBindValue($vModel);
         }
 
-        $diagLogPath = Config::get('diag_log_path', '');
+        $diagLogPath = Config::get('debug_diag_log_path', '');
         if ($diagLogPath !== '') {
             file_put_contents($diagLogPath, "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);
         }
