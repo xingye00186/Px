@@ -169,67 +169,58 @@ class SummaryReporter
      * 返回 ['regressed'=>bool, 'reasons'=>string[]]
      */
     private function detectRegression(array $current, ?array $previous): array
-    {
-        $result = ['regressed' => false, 'reasons' => []];
-        if ($previous === null) {
-            $result['first_run'] = true;
-            return $result;
-        }
-        $result['first_run'] = false;
+{
+    $r = ["regressed" => false, "reasons" => []];
+    if ($previous === null) { $r["first_run"] = true; return $r; }
+    $r["first_run"] = false;
 
-        // 1. 通过率下降
-        if ($previous['total_cases'] > 0) {
-            $prevRate = $previous['passed'] / $previous['total_cases'];
-            if ($current['total_cases'] > 0) {
-                $curRate = $current['passed'] / $current['total_cases'];
-                if ($curRate < $prevRate - 0.01) {
-                    $result['regressed'] = true;
-                    $result['reasons'][] = sprintf(
-                        '通过率下降: %.1f%% → %.1f%%',
-                        $prevRate * 100, $curRate * 100
-                    );
-                }
-            }
-        }
-
-        // 2. 上次通过本次失败（精确 case 级回归）
-        // 从 property_stats 推断：上次每个属性的 diff 不应增加
-        $prevStats = $previous['property_stats'] ?? [];
-        $curStats = $current['property_stats'] ?? [];
-
-        foreach ($curStats as $prop => $curStat) {
-            $curDiff = $curStat['diff'] ?? 0;
-            $prevDiff = ($prevStats[$prop]['diff'] ?? 0);
-            // 上次 total 不为 0 才比较（避免首次出现时的误报）
-            $prevTotal = ($prevStats[$prop]['total'] ?? 0);
-            $curTotal = $curStat['total'] ?? 0;
-            if ($prevTotal > 0 && $curDiff > $prevDiff && $curTotal >= $prevTotal) {
-                $inc = $curDiff - $prevDiff;
-                if ($inc >= 2) {  // 2px 以下忽略微小波动
-                    $result['regressed'] = true;
-                    $result['reasons'][] = "属性 '{$prop}' diff 增加: {$prevDiff}→{$curDiff} (+{$inc})";
-                }
-            }
-        }
-
-        // 3. 浏览器对比失败数增加
-        $prevBrFail = $previous['browser_fail'] ?? 0;
-        $curBrFail = 0;
-        foreach ($current['case_rows'] ?? [] as $row) {
-            if (($row['element_comp'] ?? '') === '❌') $curBrFail++;
-        }
-        if ($curBrFail > $prevBrFail) {
-            $result['regressed'] = true;
-            $result['reasons'][] = "浏览器元素对比失败增加: {$prevBrFail}→{$curBrFail}";
-        }
-
-        // 4. case_rows 级别逐一对比（需保存上一次的 case_rows）
-        // 当前 appendHistory 未保存 per-case 明细，暂不对比
-
-        return $result;
+    if (($previous["total_cases"] ?? 0) > 0 && ($current["total_cases"] ?? 0) > 0) {
+        $pr = $previous["passed"] / $previous["total_cases"];
+        $cr = $current["passed"] / $current["total_cases"];
+        if ($cr < $pr - 0.01) { $r["regressed"] = true; $r["reasons"][] = "pass rate " . round($pr*100,1) . "->" . round($cr*100,1); }
     }
 
-    private function stepIcon(array $stepMap, string $name): string
+    foreach ($current["property_stats"] ?? [] as $prop => $cs) {
+        $pd = ($previous["property_stats"][$prop]["diff"] ?? 0);
+        $cd = $cs["diff"] ?? 0;
+        $pt = ($previous["property_stats"][$prop]["total"] ?? 0);
+        if ($pt > 0 && $cd > $pd && $cd - $pd >= 2) {
+            $r["regressed"] = true; $r["reasons"][] = "prop $prop diff $pd->$cd";
+        }
+    }
+
+    $prevCases = $previous["case_details"] ?? [];
+    foreach ($current["case_rows"] ?? [] as $row) {
+        $nm = $row["name"]; $pr = $prevCases[$nm] ?? null;
+        if (!$pr) continue;
+        foreach (["geometry","mismatch","structure","missing","critical","major"] as $k) {
+            $cv = (int)($row[$k."_count"] ?? 0); $pv = (int)($pr[$k."_count"] ?? 0);
+            if ($cv > $pv) { $r["regressed"] = true; $r["reasons"][] = "$nm $k $pv->$cv"; }
+        }
+    }
+
+    $pbf = $previous["browser_fail"] ?? 0; $cbf = 0;
+    foreach ($current["case_rows"] ?? [] as $rw) { if (str_contains($rw["element_comp"] ?? "", "X")) $cbf++; }
+    if ($cbf > $pbf) { $r["regressed"] = true; $r["reasons"][] = "browser $pbf->$cbf"; }
+
+    $po = 0; foreach ($prevCases as $pc) { $po += (int)($pc["overflow_count"] ?? 0); }
+    $co = 0; foreach ($current["case_rows"] ?? [] as $rw) { $co += (int)($rw["overflow_count"] ?? 0); }
+    if ($co > $po) { $r["regressed"] = true; $r["reasons"][] = "overflow $po->$co"; }
+
+    $ps = $previous["step_fails"] ?? 0; $cs = 0;
+    foreach ($current["case_rows"] ?? [] as $rw) { foreach(["build","layout","multiframe","phase_l"] as $s) { if (str_contains($rw[$s] ?? "", "X")) $cs++; } }
+    if ($cs > $ps) { $r["regressed"] = true; $r["reasons"][] = "steps $ps->$cs"; }
+
+    $pp = $previous["avg_pixel_diff"] ?? null; $ct = 0; $cc = 0;
+    foreach ($current["case_rows"] ?? [] as $rw) { if (preg_match("/(\\d+\\.?\\d*)%/", $rw["screenshot"] ?? "", $m)) { $ct += (float)$m[1]; $cc++; } }
+    $ca = $cc > 0 ? round($ct/$cc,1) : null;
+    if ($pp !== null && $ca !== null && $ca > $pp + 1) { $r["regressed"] = true; $r["reasons"][] = "pixel $pp%->$ca%"; }
+
+    $ptm = $previous["elapsed_s"] ?? 0; $ctm = $current["total_time_s"] ?? 0;
+    if ($ptm > 5 && $ctm > $ptm * 2) { $r["regressed"] = true; $r["reasons"][] = "time $ptm->$ctm (" . round($ctm/$ptm,1) . "x)"; }
+
+    return $r;
+}private function stepIcon(array $stepMap, string $name): string
     {
         if (!isset($stepMap[$name])) return '⏭️';
         return $stepMap[$name] ? '✅' : '❌';
