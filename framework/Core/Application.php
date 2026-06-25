@@ -12,6 +12,8 @@ use Px\Platform\WindowEvent;
 use Px\Platform\PlatformFactory;
 use Px\Rendering\Backend\ResilientRenderContext;
 use Px\Rendering\Backend\RuntimeBackendSelector;
+use Px\Rendering\TextBackend\TextBackendSelector;
+use Px\Rendering\TextBackend\ResilientTextBackendProxy;
 use Px\Rendering\VNode;
 use Px\Rendering\RenderNode;
 use Px\Rendering\VNodeRenderer;
@@ -344,10 +346,31 @@ class Application
     public function getRenderTreeManager(): RenderTreeManager { return $this->renderTreeManager; }
 
     private ?string $selectedBackendName = null;
+    private ?TextBackendSelector $textBackendSelector = null;
 
     public function getSelectedBackendName(): ?string
     {
         return $this->selectedBackendName;
+    }
+
+    /**
+     * 初始化文本后端：用 TextBackendSelector 探测 + 选择 + 激活。
+     * 替代原先的直接 sk_set_text_engine() 调用。
+     */
+    private function initTextBackend(): void
+    {
+        // C++ 绑定不可用（测试环境），跳过
+        if (!function_exists('sk_set_text_engine')) {
+            return;
+        }
+
+        $this->textBackendSelector = new TextBackendSelector();
+        $backend = $this->textBackendSelector->select();
+        if ($backend !== null) {
+            error_log('[Px] TextBackend: ' . $backend->getName());
+        } else {
+            error_log('[Px] TextBackend: none available, using C++ default');
+        }
     }
 
     private function initRenderer(): void
@@ -380,8 +403,13 @@ class Application
         $this->selectedBackendName = $backend->getName();
         error_log('[DIAG] initRenderer: selected backend=' . $this->selectedBackendName);
 
-        // Stage 3: 包一层 ResilientRenderContext 支持运行时降级
+        // Stage 3: 包一层 ResilientRenderContext 支持渲染后端降级
         $renderCtx = new ResilientRenderContext($selector, $backend->getContext(), $hwnd, $w, $h);
+
+        // Stage 4: 包一层 ResilientTextBackendProxy 支持文本引擎降级
+        if ($this->textBackendSelector !== null) {
+            $renderCtx = new ResilientTextBackendProxy($this->textBackendSelector, $renderCtx);
+        }
 
         $this->renderer = new VNodeRenderer($this->rootComponent, $renderCtx);
     }
@@ -401,13 +429,10 @@ class Application
         // 初始化调试配置（从 project.yml 中读取 Px_debug_* 前缀项）
         if ($appDir !== '') {
             Config::init($appDir);
-
-            // 初始化文本引擎（Windows 默认 dwrite）
-            $textEngine = Config::get('text_engine', 'dwrite');
-            if (function_exists('sk_set_text_engine')) {
-                sk_set_text_engine($textEngine);
-            }
         }
+
+        // 初始化文本后端（使用 TextBackendSelector 探测 + 选择 + 激活）
+        $this->initTextBackend();
 
         $this->initRenderer();
 

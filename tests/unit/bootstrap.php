@@ -132,5 +132,14 @@ require_once $frameworkDir . '/Rendering/Backend/SkiaGraphiteDawnBackend.php';
 require_once $frameworkDir . '/Rendering/Backend/RuntimeBackendSelector.php';
 require_once $frameworkDir . '/Rendering/Backend/ResilientRenderContext.php';
 
+// ---- TextBackend（文本引擎接口抽象）----
+require_once $frameworkDir . '/Rendering/TextBackend/ITextBackend.php';
+require_once $frameworkDir . '/Rendering/TextBackend/TextBackendRegistry.php';
+require_once $frameworkDir . '/Rendering/TextBackend/TextBackendSelector.php';
+require_once $frameworkDir . '/Rendering/TextBackend/ResilientTextBackendProxy.php';
+require_once $frameworkDir . '/Rendering/TextBackend/DWriteTextBackend.php';
+require_once $frameworkDir . '/Rendering/TextBackend/SkiaTextBackend.php';
+require_once $frameworkDir . '/Rendering/TextBackend/GdiTextBackend.php';
+
 // ---- 测试框架（全局计数器+test/assert函数+Jest风格扩展）----
 require_once __DIR__ . '/test-framework.php';
