@@ -11,13 +11,13 @@ use Px\Rendering\Layout\Tools\PercentResolver;
 use Px\Rendering\Layout\Tools\ScrollHelper;
 
 /**
- * BlockLayoutStrategy �?Block 布局策略
+ * BlockLayoutStrategy ??Block 布局策略
  *
- * 处理 display:block（包�?inline-block）和 scroll-container 的布局�?
+ * 处理 display:block（包??inline-block）和 scroll-container 的布局??
  * 负责:
- * - 尺寸解析（百分比 + min/max + 文本测量�?
- * - �?position 分发�?normal flow �?absolute/fixed
- * - Scroll container post-processing（auto-stack + contentHeight + clamp�?
+ * - 尺寸解析（百分比 + min/max + 文本测量??
+ * - ??position 分发??normal flow ??absolute/fixed
+ * - Scroll container post-processing（auto-stack + contentHeight + clamp??
  * - Normal flow auto-stack
  */
 class BlockLayoutStrategy implements LayoutStrategyInterface
@@ -46,11 +46,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
     }
 
     /**
-     * Block layout �?normal flow (static/relative).
+     * Block layout ??normal flow (static/relative).
      *
      * 统一尺寸解析（百分比 + min/max + 文本测量），
-     * 然后调用 resolveNormalFlow 定位�?
-     * 最后处�?scroll container post-processing + auto-width/height�?
+     * 然后调用 resolveNormalFlow 定位??
+     * 最后处??scroll container post-processing + auto-width/height??
      */
     public function resolveBlockLayout(
         RenderNode    $node,
@@ -81,16 +81,16 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
 
 
-        // flex:1 已移�?flex 布局专用路径 (Task D)
+        // flex:1 已移??flex 布局专用路径 (Task D)
 
 
-        // ── 应用 min/max 约束到尺寸（在子节点递归之前，确�?parent->w/h 立即可用）──
+        // ── 应用 min/max 约束到尺寸（在子节点递归之前，确??parent->w/h 立即可用）──
         $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $width, true));
 
         // Debug: span h before min/max
         $dbg_span_h_before = $node->h;
 
-        // ⚠️ 仅当有显式 height 或当前 h 为 0 时才覆盖 h。
+        // ?? 仅当有显式 height 或当前 h 为 0 时才覆盖 h。
         // 对于 flex/grid 容器子节点，父容器已经设好了正确的 h（如 flex:1 分派的高度），
         // 但这里没有显式 height 时 $height=0 → 覆盖为 0，导致后续 clamp 用 h=0 计算 maxScroll，
         // scrollTop 无法正确限界，列表会无限空滚。
@@ -297,7 +297,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                 $containerW = PercentResolver::resolveContentWidth($node->style, $node->w);
 
-                // CSS 2.2 §8.3.1: 跟踪上一个可折叠兄弟�?margin-bottom
+                // CSS 2.2 §8.3.1: 跟踪上一个可折叠兄弟??margin-bottom
                 $prevMarginBottom = 0;
                 $prevCollapsible = false;
 
@@ -464,7 +464,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     }
 
 
-                    // ── CSS 2.2 §8.3.1: 外边距折�?──
+                    // ── CSS 2.2 §8.3.1: 外边距折??──
                     // 仅在相同 BFC 内的 block 兄弟之间发生
                     $childOverflow = $childStyle['overflow'] ?? $childStyle['overflowY'] ?? 'visible';
                     $createsBFC = ($childDisplay !== 'block')
@@ -475,23 +475,23 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     $oldY = $child->y;
 
                     if ($isCollapsible && $prevCollapsible && $mTop * $prevMarginBottom >= 0) {
-                        // 对于同号边距：折叠结�?= max(positives) + min(negatives)
+                        // 对于同号边距：折叠结??= max(positives) + min(negatives)
                         $positiveMax = max($prevMarginBottom > 0 ? $prevMarginBottom : 0, $mTop > 0 ? $mTop : 0);
                         $negativeMin = min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0);
                         $collapsed = $positiveMax + $negativeMin;
                         $child->y = $stackY - $prevMarginBottom + $collapsed;
                     } elseif ($isCollapsible && $prevCollapsible) {
-                        // 异号边距（一正一负）：折叠结�?= 直接相加
+                        // 异号边距（一正一负）：折叠结??= 直接相加
                         $collapsed = $prevMarginBottom + $mTop;
                         $child->y = $stackY - $prevMarginBottom + $collapsed;
                     } else {
                         $child->y = $stackY + $mTop;
                     }
 
-                    // 保存 stack 推进位置（不�?position:relative 偏移影响�?
+                    // 保存 stack 推进位置（不??position:relative 偏移影响??
                     $stackAdvanceY = $child->y;
 
-                    // position:relative 额外偏移（不推进 stack�?
+                    // position:relative 额外偏移（不推进 stack??
                     if ($childPosition === 'relative') {
                         $child->y += ($childStyle['top'] ?? 0);
                     }
@@ -512,7 +512,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $prevMarginBottom = $mBottom;
                         $prevCollapsible = true;
                     } else {
-                        // 创建�?BFC 的元素阻止外边距折叠穿�?
+                        // 创建??BFC 的元素阻止外边距折叠穿??
                         $prevMarginBottom = 0;
                         $prevCollapsible = false;
                     }
@@ -603,7 +603,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
 
             // CSS 2.2 §10.6.3: auto-height = distance from content edge top to last child bottom
-            // $node->y includes paddingTop offset �?content area starts at $node->y + $paddingTop
+            // $node->y includes paddingTop offset ??content area starts at $node->y + $paddingTop
             $ahPaddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
             $contentTop = $node->y + $ahPaddingTop;
             if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
@@ -664,8 +664,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
     /**
      * Normal flow positioning (static/relative).
      *
-     * static: 完全忽略 left/top/right/bottom，不推进 stack�?
-     * relative: left/top 作为附加偏移量（不影响兄弟节点的 stack 位置）�?
+     * static: 完全忽略 left/top/right/bottom，不推进 stack??
+     * relative: left/top 作为附加偏移量（不影响兄弟节点的 stack 位置）??
      */
     private function resolveNormalFlow(
         RenderNode    $node,
@@ -698,7 +698,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         $node->y = $ctx->parentY + $marginTop;
 
-        // relative: left/top 作为额外偏移（不改变 stack 推进位置�?
+        // relative: left/top 作为额外偏移（不改变 stack 推进位置??
         if ($position === 'relative') {
             $node->x += $left;
 
@@ -718,7 +718,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         $node->y += $translateY;
 
-        // Resolve children recursively (skip absolute/fixed �?resolved in second pass after container height is known)
+        // Resolve children recursively (skip absolute/fixed ??resolved in second pass after container height is known)
 
         $childOffsetX = $node->x + $borderLeft + $paddingLeft;
         
@@ -763,16 +763,16 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         // ── CSS Overflow Module Level 3 §2.3: 滚动条占用内容区宽度 ──
         // 检测是否需要垂直滚动条，若需要则从容器宽度中减去 scrollbar 宽度
-        // 并重新布局子节�?
+        // 并重新布局子节??
         $overflowY = $node->style['overflowY'] ?? $node->style['overflow'] ?? 'visible';
         $needsVScroll = ($overflowY === 'auto' || $overflowY === 'scroll')
             && $node->contentHeight > $node->h;
 
         if ($needsVScroll) {
-            $scrollbarWidth = 15; // 标准滚动条宽�?
+            $scrollbarWidth = 15; // 标准滚动条宽??
             $newContainerW = max(20, $containerW - $scrollbarWidth);
             if ($newContainerW < $containerW) {
-                // 重新布局子节点（使用缩短后的宽度�?
+                // 重新布局子节点（使用缩短后的宽度??
                 $this->autoStackChildren($node, $childOffsetY, $newContainerW);
                 // 重新计算 contentHeight (包含 paddingBottom)
                 $node->contentHeight = $this->calcContentHeight($node, $childOffsetY) + $paddingBottom;
@@ -888,7 +888,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             $oldY = $child->y;
 
-            // CSS 2.2 §8.3.1: 外边距折�?
+            // CSS 2.2 §8.3.1: 外边距折??
             $childDisplay = $childStyle['display'] ?? 'block';
             $childOverflow = $childStyle['overflow'] ?? $childStyle['overflowY'] ?? 'visible';
             $createsBFC = ($childDisplay !== 'block')

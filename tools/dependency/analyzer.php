@@ -1,12 +1,12 @@
-﻿#!/usr/bin/env php
+#!/usr/bin/env php
 <?php
 /**
- * dependency-analyzer.php 鈥?AOT 缂栬瘧渚濊禆鏀堕泦鍒嗘瀽鍣?
+ * dependency-analyzer.php — AOT 编译依赖收集分析器
  *
- * 浠庡叆鍙?main.php 寮€濮嬮€掑綊鍒嗘瀽 PHP AST锛屾敹闆嗗疄闄呬緷璧栫殑 PHP 绫诲拰 C++ 鍑芥暟锛?
- * 鐢熸垚绮剧‘鐨?dep.json 鏂囦欢锛屾浛浠?project.yml 涓殑鐩綍閫氶厤绗︺€?
+ * 从入口 main.php 开始递归分析 PHP AST，收集实际依赖的 PHP 类和 C++ 函数，
+ * 生成精确的 dep.json 文件，替代 project.yml 中的目录通配符。
  *
- * 渚濊禆锛歯ikic/php-parser ^5.0锛堥€氳繃 tools/vendor/ 鐙珛鍔犺浇锛?
+ * 依赖：nikic/php-parser ^5.0（通过 tools/vendor/ 独立加载）
  *
  * Usage:
  *   php tools/dependency/analyzer.php --app=calculator-ng
@@ -21,9 +21,9 @@ use PhpParser\NodeVisitorAbstract;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\ParserFactory;
 
-// 鈹€鈹€鈹€ Stub 鏂囦欢鏄犲皠琛紙璺緞鐩稿浜庨」鐩牴鐩綍锛?鈹€鈹€鈹€
-// 鍖归厤 vue_/sk_ 鍓嶇紑鐨勫嚱鏁拌皟鐢ㄦ椂锛屽悓姝ュ叧鑱斿搴旂殑 stub 鏂囦欢
-// C++ .cc 鏂囦欢涓嶅啀鐢辨槧灏勮〃缁存姢锛屾敼涓鸿嚜鍔ㄦ壂鎻?cpp/ 鐩綍
+// ─── Stub 文件映射表（路径相对于项目根目录）───
+// 匹配 vue_/sk_ 前缀的函数调用时，同步关联对应的 stub 文件
+// C++ .cc 文件不再由映射表维护，改为自动扫描 cpp/ 目录
 define('STUB_MAPPING', serialize([
     'vue_' => [
         'stub' => ['stub/vue_calc.stub.php'],
@@ -33,9 +33,9 @@ define('STUB_MAPPING', serialize([
     ],
 ]));
 
-// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
-//  ClassToPathResolver 鈥?绫诲悕 鈫?鏂囦欢璺緞瑙ｆ瀽
-// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+// ╔══════════════════════════════════════════════════════════╗
+//   ClassToPathResolver — 类名 → 文件路径解析
+// ╚══════════════════════════════════════════════════════════╝
 class ClassToPathResolver
 {
     private string $appDir;
@@ -43,7 +43,7 @@ class ClassToPathResolver
     private string $stubDir;
     private array $nsPrefixes = [];
 
-    /** @var array<string, string> 澶氱被鏂囦欢瑕嗙洊锛氱被鍚?鈫?瀹為檯鏂囦欢璺緞 */
+    /** @var array<string, string> 多类文件覆盖：类名 → 实际文件路径 */
     private array $classOverrides = [];
 
     public function __construct(string $appDir, string $frameworkDir, string $stubDir)
@@ -52,7 +52,7 @@ class ClassToPathResolver
         $this->frameworkDir = rtrim(str_replace('\\', '/', $frameworkDir), '/');
         $this->stubDir      = rtrim(str_replace('\\', '/', $stubDir), '/');
 
-        // 鍛藉悕绌洪棿鍓嶇紑 鈫?妗嗘灦瀛愮洰褰曟槧灏?
+        // 命名空间前缀 → 框架子目录映射
         $this->nsPrefixes = [
             'Px\\Core\\'             => $this->frameworkDir . '/Core',
             'Px\\Rendering\\'        => $this->frameworkDir . '/Rendering',
@@ -67,7 +67,7 @@ class ClassToPathResolver
             'Px\\Interfaces\\'       => $this->frameworkDir . '/interfaces',
         ];
 
-        // 澶氱被鏂囦欢锛歅latformEvent.php 瀹氫箟浜?6 涓被锛岀被鍚?鈮?鏂囦欢鍚?
+        // 多类文件：PlatformEvent.php 定义了 6 个类，类名 ≠ 文件名
         $pfx = $this->frameworkDir . '/Platform/PlatformEvent.php';
         $this->classOverrides = [
             'Px\\Platform\\MouseEvent'    => $pfx,
@@ -79,17 +79,17 @@ class ClassToPathResolver
     }
 
     /**
-     * 灏嗗畬鍏ㄩ檺瀹氱被鍚?FCQN)瑙ｆ瀽涓烘枃浠剁粷瀵硅矾寰勩€?
-     * 杩斿洖 null 琛ㄧず PHP 鍐呯疆绫绘垨澶栭儴搴撶被锛屽簲璺宠繃銆?
+     * 将完全限定类名(FQCN)解析为文件绝对路径。
+     * 返回 null 表示 PHP 内置类或外部库类，应跳过。
      */
     public function classToPath(string $fqn): ?string
     {
-        // 0. 澶氱被鏂囦欢瑕嗙洊锛堝悓涓€ PHP 鏂囦欢涓畾涔夊涓被鏃讹級
+        // 0. 多类文件覆盖（同一 PHP 文件中定义多个类时）
         if (isset($this->classOverrides[$fqn])) {
             return $this->normalize($this->classOverrides[$fqn]);
         }
 
-        // 1. 宸茬煡鍛藉悕绌洪棿鍓嶇紑鏄犲皠
+        // 1. 已知命名空间前缀映射
         foreach ($this->nsPrefixes as $prefix => $baseDir) {
             if (str_starts_with($fqn, $prefix)) {
                 $short = substr($fqn, strlen($prefix));
@@ -98,33 +98,33 @@ class ClassToPathResolver
             }
         }
 
-        // 2. Px\ 鍗曠骇鍛藉悕绌洪棿锛圧eactiveComponent, BaseComponent 绛夛級
+        // 2. Px\ 单级命名空间（ReactiveComponent, BaseComponent 等）
         if (str_starts_with($fqn, 'Px\\') && substr_count($fqn, '\\') === 1) {
             $short = substr($fqn, 3);
             $path = $this->normalize($this->frameworkDir . '/' . $short . '.php');
             if ($path !== null) return $path;
-            // 鏂囦欢涓嶅瓨鍦ㄦ椂缁х画鍒板洖閫€ #6锛堝 MockComp.php 涓畾涔変簡 Px\MockReactiveComp锛?
+            // 文件不存在时继续到回退 #6（如 MockComp.php 中定义了 Px\MockReactiveComp）
         }
 
-        // 3. 鏃犲懡鍚嶇┖闂寸殑缁勪欢绫伙紙gen/*.php锛?
+        // 3. 无命名空间的组件类（gen/*.php）
         if (!str_contains($fqn, '\\') && str_ends_with($fqn, 'Component')) {
             return $this->normalize($this->appDir . '/gen/' . $fqn . '.php');
         }
 
-        // 4. WinMsg锛坰tub 涓畾涔夌殑绫伙級
+        // 4. WinMsg（stub 中定义的类）
         if ($fqn === 'WinMsg') {
             return $this->normalize($this->stubDir . '/vue_calc.stub.php');
         }
 
-        // 5. 椤剁骇鍛藉悕绌洪棿鐨勬鏋剁被锛圥erfCounter 绛夛級鈥?鏄犲皠鍒?framework/Core/
+        // 5. 顶级命名空间的框架类（PerfCounter 等）— 映射到 framework/Core/
         if (!str_contains($fqn, '\\')) {
             $candidate = $this->normalize($this->frameworkDir . '/Core/' . $fqn . '.php');
             if ($candidate !== null) return $candidate;
         }
 
-        // 6. 鍥為€€锛氭壂鎻忓簲鐢ㄧ洰褰曪紙鍚?gen/锛変腑鎵€鏈?PHP 鏂囦欢锛屾煡鎵剧被瀹氫箟
-        //    鏀寔澶氱被鏂囦欢锛堝 MockComp.php 鍚屾椂瀹氫箟 MockBaseComp 鍜?MockReactiveComp锛?
-        //    鍚屾椂鏀寔 namespace 澹版槑锛團QN='Px\MockReactiveComp' 鍖归厤 'class MockReactiveComp'锛?
+        // 6. 回退：扫描应用目录（含 gen/）中所有 PHP 文件，查找类定义
+        //     支持多类文件（如 MockComp.php 同时定义 MockBaseComp 和 MockReactiveComp）
+        //     同时支持 namespace 声明：FQN='Px\MockReactiveComp' 匹配 'class MockReactiveComp'
         $shortName = substr($fqn, strrpos($fqn, '\\') !== false ? strrpos($fqn, '\\') + 1 : 0);
         foreach ([$this->appDir, $this->appDir . '/gen'] as $scanDir) {
             if (!is_dir($scanDir)) continue;
@@ -132,7 +132,7 @@ class ClassToPathResolver
                 $appPhpFile = str_replace('\\', '/', $appPhpFile);
                 $content = @file_get_contents($appPhpFile);
                 if ($content === false) continue;
-                // 鍏堝皾璇曞尮閰?FQN锛堟棤 namespace 鐨勭被锛夛紝鍐嶅皾璇曞尮閰嶇煭绫诲悕
+                // 先尝试匹配 FQN（无 namespace 的类），再尝试匹配短类名
                 if (preg_match('/\\bclass\\s+' . preg_quote($fqn, '/') . '\\b/s', $content) ||
                     preg_match('/\\bclass\\s+' . preg_quote($shortName, '/') . '\\b/s', $content)) {
                     return $appPhpFile;
@@ -140,10 +140,10 @@ class ClassToPathResolver
             }
         }
 
-        return null; // 鏈煡绫伙紝璺宠繃
+        return null; // 未知类，跳过
     }
 
-    /** 瑙勮寖鍖栬矾寰勶細瑙ｆ瀽 realpath锛屾枃浠朵笉瀛樺湪鏃惰繑鍥?null */
+    /** 规范化路径：解析 realpath，文件不存在时返回 null */
     private function normalize(string $path): ?string
     {
         $real = realpath($path);
@@ -153,21 +153,21 @@ class ClassToPathResolver
     public function getAppDir(): string { return $this->appDir; }
 }
 
-// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
-//  DependencyVisitor 鈥?AST 渚濊禆璁块棶鑰?
-// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+// ╔══════════════════════════════════════════════════════════╗
+//   DependencyVisitor — AST 依赖访问者
+// ╚══════════════════════════════════════════════════════════╝
 class DependencyVisitor extends NodeVisitorAbstract
 {
     private ClassToPathResolver $resolver;
     private string $projectRoot;
 
-    /** @var array<string, true> 鏀堕泦鍒扮殑绫?FQN */
+    /** @var array<string, true> 收集到的类 FQN */
     private array $classes = [];
 
-    /** @var array<string, true> C++ 鏂囦欢锛坘ey 涓洪」鐩浉瀵硅矾寰勶級 */
+    /** @var array<string, true> C++ 文件（key 为项目相对路径） */
     private array $cxxFiles = [];
 
-    /** @var array<string, true> stub 鏂囦欢锛坘ey 涓洪」鐩浉瀵硅矾寰勶級 */
+    /** @var array<string, true> stub 文件（key 为项目相对路径） */
     private array $stubFiles = [];
 
     public function __construct(ClassToPathResolver $resolver, string $projectRoot)
@@ -178,7 +178,7 @@ class DependencyVisitor extends NodeVisitorAbstract
 
     public function enterNode(Node $node): void
     {
-        // 鈹€鈹€ 绫讳緷璧?鈹€鈹€
+        // ── 类依赖 ──
 
         // new ClassName(...)
         if ($node instanceof Node\Expr\New_ && $node->class instanceof Node\Name) {
@@ -223,22 +223,22 @@ class DependencyVisitor extends NodeVisitorAbstract
             }
         }
 
-        // 鈹€鈹€ 绫诲瀷鎻愮ず鍜岃繑鍥炵被鍨嬩腑鐨勭被寮曠敤 鈹€鈹€
-        // 鏂规硶鍙傛暟 type hint: function foo(ClassName $x) / ?ClassName / ClassName1|ClassName2
+        // ── 类型提示和返回类型中的类引用 ──
+        // 方法参数 type hint: function foo(ClassName $x) / ?ClassName / ClassName1|ClassName2
         if ($node instanceof Node\Param && $node->type !== null) {
             $this->addClassesFromType($node->type);
         }
-        // 鏂规硶/闂寘杩斿洖绫诲瀷: function foo(): ClassName / ?ClassName / ClassName1|ClassName2
+        // 方法/闭包返回类型: function foo(): ClassName / ?ClassName / ClassName1|ClassName2
         if (($node instanceof Node\FunctionLike) && $node->returnType !== null) {
             $this->addClassesFromType($node->returnType);
         }
-        // 绫诲瀷鍖栧睘鎬? public ClassName|?ClassName $prop
+        // 类型化属性: public ClassName|?ClassName $prop
         if ($node instanceof Node\Stmt\Property && $node->type !== null) {
             $this->addClassesFromType($node->type);
         }
 
-        // 鈹€鈹€ C++ 鍘熺敓鍑芥暟璋冪敤 鈫?鍏宠仈 stub 鏂囦欢 鈹€鈹€
-        if ($node instanceof NodeExprFuncCall && $node->name instanceof NodeName) {
+        // ── C++ 原生函数调用 → 关联 stub 文件 ──
+        if ($node instanceof Node\Expr\FuncCall && $node->name instanceof Node\Name) {
             $funcName = $node->name->toString();
             $mapping = unserialize(STUB_MAPPING);
             foreach ($mapping as $prefix => $entry) {
@@ -253,48 +253,48 @@ class DependencyVisitor extends NodeVisitorAbstract
     }
 
     /**
-     * 浠庣被鍨嬭妭鐐逛腑鎻愬彇鎵€鏈夌被鍚嶅苟鍔犲叆渚濊禆銆?
-     * 鏀寔锛欳lassName銆?ClassName锛圢ullableType锛夈€丄|B锛圲nionType锛夈€丄&B锛圛ntersectionType锛?
+     * 从类型节点中提取所有类名并加入依赖。
+     * 支持：ClassName、?ClassName（NullableType）、A|B（UnionType）、A&B（IntersectionType）
      */
     private function addClassesFromType(Node $typeNode): void
     {
-        // NullableType: ?ClassName 鈫?鍙栧叾鍐呭眰 type
+        // NullableType: ?ClassName → 取其内层 type
         if ($typeNode instanceof Node\NullableType) {
             $this->addClassesFromType($typeNode->type);
             return;
         }
-        // UnionType: A|B 鈫?閫掑綊澶勭悊姣忎釜瀛愮被鍨?
+        // UnionType: A|B → 递归处理每个子类型
         if ($typeNode instanceof Node\UnionType) {
             foreach ($typeNode->types as $t) {
                 $this->addClassesFromType($t);
             }
             return;
         }
-        // IntersectionType: A&B 鈫?閫掑綊澶勭悊姣忎釜瀛愮被鍨?
+        // IntersectionType: A&B → 递归处理每个子类型
         if ($typeNode instanceof Node\IntersectionType) {
             foreach ($typeNode->types as $t) {
                 $this->addClassesFromType($t);
             }
             return;
         }
-        // Name: ClassName锛堝寘鎷?FullyQualified銆丷elative銆丵ualified锛?
+        // Name: ClassName（包括 FullyQualified、Relative、Qualified）
         if ($typeNode instanceof Node\Name) {
             $this->addClass($typeNode->toString());
             return;
         }
-        // Identifier: int, string, array 绛夊唴缃被鍨?鈥?璺宠繃
+        // Identifier: int, string, array 等内置类型 — 跳过
     }
 
     private function addClass(string $fqn): void
     {
         $fqn = ltrim($fqn, '\\');
 
-        // 璺宠繃 AOT 鎸囦护鍜?PHP 鍏抽敭瀛?
+        // 跳过 AOT 指令和 PHP 关键字
         if (in_array($fqn, ['native_types', 'mixed', 'self', 'parent', 'static', 'true', 'false', 'null'], true)) {
             return;
         }
 
-        // 鏈夋晥绫绘墠鍔犲叆
+        // 有效类才加入
         if ($this->resolver->classToPath($fqn) !== null) {
             $this->classes[$fqn] = true;
         }
@@ -305,9 +305,9 @@ class DependencyVisitor extends NodeVisitorAbstract
     public function getStubFiles(): array  { return array_keys($this->stubFiles); }
 }
 
-// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
-//  閫掑綊鍒嗘瀽寮曟搸
-// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+// ╔══════════════════════════════════════════════════════════╗
+//   递归分析引擎
+// ╚══════════════════════════════════════════════════════════╝
 function analyzeFile(
     string $absFile,
     ClassToPathResolver $resolver,
@@ -338,11 +338,11 @@ function analyzeFile(
 
     $visitor = new DependencyVisitor($resolver, $projectRoot);
     $traverser = new NodeTraverser();
-    $traverser->addVisitor(new NameResolver()); // 鈽?鍏?FQN 瑙ｆ瀽
+    $traverser->addVisitor(new NameResolver()); // ★ 启 FQN 解析
     $traverser->addVisitor($visitor);
     $traverser->traverse($ast);
 
-    // 閫掑綊澶勭悊绫讳緷璧?
+    // 递归处理类依赖
     foreach ($visitor->getClasses() as $fqn) {
         $path = $resolver->classToPath($fqn);
         if ($path !== null) {
@@ -350,12 +350,12 @@ function analyzeFile(
         }
     }
 
-    // 鏀堕泦 C++ 鏂囦欢锛坴isit 杩斿洖椤圭洰鐩稿璺緞锛岃浆涓虹粷瀵圭敤浜庡幓閲嶅拰缂撳瓨锛?
+    // 收集 C++ 文件（visit 返回项目相对路径，转为绝对用于去重和缓存）
     foreach ($visitor->getCxxFiles() as $relCxx) {
         $allCxxFiles[$projectRoot . '/' . $relCxx] = true;
     }
 
-    // stub 鏂囦欢鍔犲叆 PHP 鏂囦欢鍒楄〃
+    // stub 文件加入 PHP 文件列表
     foreach ($visitor->getStubFiles() as $relStub) {
         $absStub = $projectRoot . '/' . $relStub;
         if (!isset($visited[$absStub])) {
@@ -365,9 +365,9 @@ function analyzeFile(
     }
 }
 
-// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
-//  璺緞宸ュ叿
-// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+// ╔══════════════════════════════════════════════════════════╗
+//   路径工具
+// ╚══════════════════════════════════════════════════════════╝
 function makeRelative(string $from, string $to): string
 {
     $from = rtrim(str_replace('\\', '/', $from), '/');
@@ -393,13 +393,39 @@ function makeRelative(string $from, string $to): string
     return implode('/', $rel) ?: '.';
 }
 
-// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
-//  CLI 涓诲叆鍙ｏ紙浠呯洿鎺ヨ繍琛屾椂鎵ц锛岃 require 鏃朵笉鎵ц锛?
-// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+/**
+ * 自动扫描 cpp/ 目录下所有 .cc 文件
+ *
+ * @param string $cppDir      cpp 目录绝对路径
+ * @param string $projectRoot 项目根目录绝对路径
+ * @return array<string>      文件绝对路径列表
+ */
+function scanCppFiles(string $cppDir, string $projectRoot): array
+{
+    $files = [];
+    if (!is_dir($cppDir)) {
+        return $files;
+    }
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($cppDir, RecursiveDirectoryIterator::SKIP_DOTS)
+    );
+    foreach ($iterator as $file) {
+        if ($file->isFile() && str_ends_with($file->getFilename(), '.cc')) {
+            $absPath = str_replace('\\', '/', $file->getPathname());
+            $files[] = $absPath;
+        }
+    }
+    sort($files);
+    return $files;
+}
+
+// ╔══════════════════════════════════════════════════════════╗
+//   CLI 入口（仅直接运行时执行，被 require 时不执行）
+// ╚══════════════════════════════════════════════════════════╝
 if (empty($GLOBALS['_TEST_MODE'])) {
     $RC = 0;
     try {
-        // 瑙ｆ瀽鍙傛暟
+        // 解析参数
         $opts = [];
         for ($i = 1; $i < $argc; $i++) {
             if (str_starts_with($argv[$i], '--')) {
@@ -417,7 +443,7 @@ if (empty($GLOBALS['_TEST_MODE'])) {
 
         $projectRoot = str_replace('\\', '/', realpath(__DIR__ . '/../..'));
 
-        // 瀹氫綅 app 鐩綍
+        // 定位 app 目录
         if (preg_match('#[/\\\\]#', $appInput)) {
             $appDir = realpath($appInput);
         } else {
@@ -451,18 +477,18 @@ if (empty($GLOBALS['_TEST_MODE'])) {
         $phpFiles   = [];
         $cxxFiles   = [];
 
-        // 褰撳墠 STUB_MAPPING 鐨勫搱甯?鈥?缂撳瓨涓?cpp_hash 姣斿姝ゅ€间互妫€娴嬪彉鏇?
+        // 当前 STUB_MAPPING 的哈希 — 缓存中 cpp_hash 对比此值以检测变更
         $cppHash = md5(STUB_MAPPING);
 
-        // 鈹€鈹€ 鍩轰簬鏂囦欢 mtime 鐨勭紦瀛樻鏌?鈹€鈹€
-        // 缂撳瓨鍏冩暟鎹凡宓屽叆 dep.json 鐨?cache 鑺傦紝涓嶅啀浣跨敤鐙珛 dep.cache.json
+        // ── 基于文件 mtime 的缓存检查 ──
+        // 缓存元数据已嵌入 dep.json 的 cache 节，不再使用独立 dep.cache.json
         $cacheValid = false;
 
         if (file_exists($outputFile)) {
             $depData = json_decode(file_get_contents($outputFile), true);
             if ($depData && isset($depData['cache']['files_mtime'])) {
                 $cacheMeta = $depData['cache'];
-                // STUB_MAPPING 鏄惁鏈夊彉鏇达紙鏂板/鍒犻櫎 C++ 鏂囦欢鏄犲皠绛夛級
+                // STUB_MAPPING 是否有变更（新增/删除 C++ 文件映射等）
                 if (!isset($cacheMeta['cpp_hash']) || $cacheMeta['cpp_hash'] !== $cppHash) {
                     $cacheValid = false;
                 } else {
@@ -475,7 +501,7 @@ if (empty($GLOBALS['_TEST_MODE'])) {
                             break;
                         }
                     }
-                    // 妫€鏌?gen/ 鐩綍鏄惁鏈夋柊澧炴枃浠?
+                    // 检查 gen/ 目录是否有新增文件
                     if ($valid) {
                         $genDir = $appDir . '/gen';
                         if (is_dir($genDir)) {
@@ -497,10 +523,10 @@ if (empty($GLOBALS['_TEST_MODE'])) {
         if ($cacheValid) {
             echo "[INFO] Dependency cache valid, using cached result\n";
         } else {
-            // 浠庡叆鍙ｅ紑濮嬮€掑綊鍒嗘瀽
+            // 从入口开始递归分析
             analyzeFile($entryFile, $resolver, $projectRoot, $visited, $phpFiles, $cxxFiles);
 
-            // 瀹夊叏缃戯細鍏ㄩ噺鍖呭惈 gen/ 涓嬫墍鏈?PHP 鏂囦欢
+            // 安全网：全量包含 gen/ 下所有 PHP 文件
             $genDir = $appDir . '/gen';
             if (is_dir($genDir)) {
                 foreach (glob($genDir . '/*.php') as $genFile) {
@@ -511,18 +537,18 @@ if (empty($GLOBALS['_TEST_MODE'])) {
                 }
             }
 
-            // 鑷姩鎵弿 cpp/ 鐩綍涓嬫墍鏈?..cc 鏂囦欢锛屾棤闇€鎵嬪姩娉ㄥ唽
+            // 自动扫描 cpp/ 目录下所有 .cc 文件，无需手动注册
             foreach (scanCppFiles($projectRoot . '/cpp', $projectRoot) as $ccFile) {
                 $cxxFiles[$ccFile] = true;
             }
 
-            // 鍘婚噸 + 鎺掑簭
+            // 去重 + 排序
             $phpAbsList = array_keys($phpFiles);
             $cxxAbsList = array_keys($cxxFiles);
             sort($phpAbsList);
             sort($cxxAbsList);
 
-            // 杞崲涓虹浉瀵?app 鐩綍鐨勮矾寰?
+            // 转换为相对 app 目录的路径
             $phpRel = [];
             foreach ($phpAbsList as $abs) {
                 $rel = makeRelative($appDir, $abs);
@@ -541,7 +567,7 @@ if (empty($GLOBALS['_TEST_MODE'])) {
                 $cxxRel[] = $rel;
             }
 
-            // 璁＄畻缂撳瓨锛氶」鐩牴鐩稿璺緞锛堟棤 ../../锛?鈫?mtime
+            // 计算缓存：项目根相对路径（无 ../../）→ mtime
             $rootPrefix = $projectRoot . '/';
             $cacheFilesMtime = [];
             foreach (array_keys($visited) as $absPath) {
@@ -574,6 +600,3 @@ if (empty($GLOBALS['_TEST_MODE'])) {
     end:
     exit($RC);
 }
-
-
-
