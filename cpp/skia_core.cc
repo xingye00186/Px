@@ -6,7 +6,7 @@ Int php_sk_create_window_context(Int hWnd, Int width, Int height) {
     g_skH    = (int)height;
     SK_TRACE("[SK] create_window_context hwnd=%p w=%d h=%d\n", g_skHwnd, g_skW, g_skH);
 
-    // GDI 路径：预加载 Noto Sans SC 字体（Regular + Bold�?
+    // GDI 路径：预加载 Noto Sans SC 字体（Regular + Bold�?
     // 确保后续 CreateFont("Noto Sans SC", FW_BOLD) 使用真实粗体字体
     skLoadPrivateFonts();
     SK_TRACE("[SK] private fonts loaded (gdi path)\n");
@@ -52,7 +52,7 @@ void php_sk_destroy_context() {
     }
 }
 
-// 开始一帧：GDI 创双缓冲 memDC（headless 时用桌面 DC 创建兼容内存 DC�?
+// 开始一帧：GDI 创双缓冲 memDC（headless 时用桌面 DC 创建兼容内存 DC�?
 void php_sk_begin_frame() {
     HDC screen = g_skHwnd ? GetDC(g_skHwnd) : GetDC(NULL);
     int w = g_skW, h = g_skH;
@@ -69,13 +69,13 @@ void php_sk_begin_frame() {
 #ifdef USE_SKIA
     if (g_skCanvas) {
         g_skCanvas->save();
-        // 每帧开�?clear 画布（避免残留上一�?+ 替代 sk_clear_window 退化为空）
+        // 每帧开�?clear 画布（避免残留上一�?+ 替代 sk_clear_window 退化为空）
         g_skCanvas->clear(SK_ColorWHITE);
     }
 #endif
 }
 
-// 结束一帧：阶段�?Skia �?GDI 中转 �?BitBlt �?screen
+// 结束一帧：阶段�?Skia �?GDI 中转 �?BitBlt �?screen
 void php_sk_end_frame() {
     if (!g_skHdc) {
         SK_TRACE("[SK] end_frame SKIP (hdc=%p)\n", g_skHdc);
@@ -103,7 +103,7 @@ void php_sk_end_frame() {
     } else {
         SK_TRACE("[SK] end_frame SKIP BitBlt (headless)\n");
     }
-    // 保存待处理截图（在清�?DC 之前，从 g_skHdc 直接读取像素�?
+    // 保存待处理截图（在清�?DC 之前，从 g_skHdc 直接读取像素�?
     if (!g_skPendingSSPath.empty()) {
         std::string ssPath = g_skPendingSSPath;
         g_skPendingSSPath.clear();
@@ -148,8 +148,8 @@ void php_sk_end_frame() {
     SK_TRACE("[SK] end_frame DONE\n");
 }
 
-// 全窗口清�?
-// 阶段三：R14 风险对策——退化为空实现（清屏由根节点 canvas->clear 完成�?
+// 全窗口清�?
+// 阶段三：R14 风险对策——退化为空实现（清屏由根节点 canvas->clear 完成�?
 void php_sk_clear_window(Int rgb) {
 #ifdef USE_SKIA
     (void)rgb;
@@ -162,7 +162,7 @@ void php_sk_clear_window(Int rgb) {
 #endif
 }
 
-// 单矩形填�?
+// 单矩形填�?
 void php_sk_fill_rect(Int x, Int y, Int w, Int h, Int rgb) {
     static int fillRectCount = 0;
     if (++fillRectCount <= 20 || fillRectCount % 20 == 0) {
@@ -172,8 +172,8 @@ void php_sk_fill_rect(Int x, Int y, Int w, Int h, Int rgb) {
     if (!g_skCanvas) return;
     if ((int)w <= 0 || (int)h <= 0) return;
     SkPaint paint;
-    // 对细矩形�?-2px）禁用抗锯齿，保持线条清�?
-    // 1px 分隔�?边框�?setAntiAlias(true) 下会模糊扩散�?~3px
+    // 对细矩形�?-2px）禁用抗锯齿，保持线条清�?
+    // 1px 分隔�?边框�?setAntiAlias(true) 下会模糊扩散�?~3px
     paint.setAntiAlias((int)w > 2 && (int)h > 2);
     paint.setColor(rgbToSkColor(rgb));
     g_skCanvas->drawRect(
@@ -190,8 +190,8 @@ void php_sk_fill_rect(Int x, Int y, Int w, Int h, Int rgb) {
 }
 
 // ============================================================
-// Task 2.1 �?阶段�?GDI 兼容层：6 个函�?
-// USE_SKIA 阶段三替换为�?Skia 实现
+// Task 2.1 �?阶段�?GDI 兼容层：6 个函�?
+// USE_SKIA 阶段三替换为�?Skia 实现
 // ============================================================
 
 // 绘制圆角矩形
@@ -219,7 +219,7 @@ void php_sk_draw_round_rect(Int x, Int y, Int w, Int h, Int radius, Int rgb) {
 #endif
 }
 
-// 绘制圆角矩形（独立XY半径�?
+// 绘制圆角矩形（独立XY半径�?
 void php_sk_draw_round_rect_xy(Int x, Int y, Int w, Int h, Int rx, Int ry, Int rgb) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -239,7 +239,7 @@ void php_sk_draw_round_rect_xy(Int x, Int y, Int w, Int h, Int rx, Int ry, Int r
 #endif
 }
 
-// 绘制阴影（带圆角 + 高斯模糊�?
+// 绘制阴影（带圆角 + 高斯模糊�?
 void php_sk_shadow_round_rect(Int x, Int y, Int w, Int h, Int radius, Int blur, Int rgb, double opacity) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -315,7 +315,7 @@ void php_sk_shadow_round_rect(Int x, Int y, Int w, Int h, Int radius, Int blur, 
 #endif
 }
 
-// 绘制阴影（独立XY半径 + 高斯模糊�?
+// 绘制阴影（独立XY半径 + 高斯模糊�?
 void php_sk_shadow_round_rect_xy(Int x, Int y, Int w, Int h, Int rx, Int ry, Int blur, Int rgb, double opacity) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -344,22 +344,22 @@ void php_sk_shadow_round_rect_xy(Int x, Int y, Int w, Int h, Int rx, Int ry, Int
 #endif
 }
 
-// 线性渐变矩形填充（Skia 路径：使�?SkGradientShader�?
-// angle: CSS 角度�?=向上�?0=向右�?80=向下�?70=向左�?
-// color1/color2: BGR 格式颜色�?
-// radius: 圆角半径�?=直角�?
+// 线性渐变矩形填充（Skia 路径：使�?SkGradientShader�?
+// angle: CSS 角度�?=向上�?0=向右�?80=向下�?70=向左�?
+// color1/color2: BGR 格式颜色�?
+// radius: 圆角半径�?=直角�?
 void php_sk_fill_gradient_rect(Int x, Int y, Int w, Int h, Int angle, Int color1, Int color2, Int radius) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
     if ((int)w <= 0 || (int)h <= 0) return;
     
-    // CSS 角度转换为数学角�?
+    // CSS 角度转换为数学角�?
     // CSS: 0deg=向上, 90deg=向右
     // Math: 0°=向右, 90°=向上
-    // CSS θ �?math: 90° - θ
+    // CSS θ �?math: 90° - θ
     double rad = (90.0 - (double)(int)angle) * M_PI / 180.0;
     
-    // 从矩形中心出发的梯度线，长度覆盖对角�?
+    // 从矩形中心出发的梯度线，长度覆盖对角�?
     double cx = (double)(int)x + (double)(int)w / 2.0;
     double cy = (double)(int)y + (double)(int)h / 2.0;
     double r = sqrt((double)(int)w * (double)(int)w + (double)(int)h * (double)(int)h) / 2.0;
@@ -413,7 +413,7 @@ void php_sk_fill_gradient_rect(Int x, Int y, Int w, Int h, Int angle, Int color1
 #endif
 }
 
-// 线性渐变矩形填充（独立XY半径�?
+// 线性渐变矩形填充（独立XY半径�?
 void php_sk_fill_gradient_rect_xy(Int x, Int y, Int w, Int h, Int angle, Int color1, Int color2, Int rx, Int ry) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -471,7 +471,7 @@ void php_sk_fill_gradient_rect_xy(Int x, Int y, Int w, Int h, Int angle, Int col
 }
 
 // 半透明矩形填充
-// 阶段三：R15 风险对策——与 php_sk_fill_rect 合并实现（唯一差异 paint.setAlphaf�?
+// 阶段三：R15 风险对策——与 php_sk_fill_rect 合并实现（唯一差异 paint.setAlphaf�?
 void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -482,7 +482,7 @@ void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity)
         return;
     }
     SkPaint paint;
-    // 对细矩形�?-2px）禁用抗锯齿，保持线条清�?
+    // 对细矩形�?-2px）禁用抗锯齿，保持线条清�?
     paint.setAntiAlias((int)w > 2 && (int)h > 2);
     paint.setColor(rgbToSkColor(rgb));
     paint.setAlphaf((SkScalar)opacity);
@@ -552,8 +552,8 @@ void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity)
 }
 
 
-// 绘制文本（阶段三：用 SkFontMgr_New_Custom_Directory 加载 Noto Sans SC �?drawString�?
-// PHP 传入�?Y �?text-top 坐标，Skia drawString 需�?baseline �?内部�?font metrics 转换
+// 绘制文本（阶段三：用 SkFontMgr_New_Custom_Directory 加载 Noto Sans SC �?drawString�?
+// PHP 传入�?Y �?text-top 坐标，Skia drawString 需�?baseline �?内部�?font metrics 转换
 
 // ─── 裁剪区域（clip）───
 void php_sk_push_clip(Int x, Int y, Int w, Int h) {

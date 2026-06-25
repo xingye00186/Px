@@ -31,7 +31,7 @@ function sk_pop_clip(): void {}
 
 // ---- 字体管理 ----
 function sk_set_default_font(string $fontFamily): void {}
-//function sk_set_text_engine(string $engine): void {}
+function sk_set_text_engine(string $engine): void {}
 
 // ---- 阶段三：窗口尺寸变更（WM_SIZE 监听，重建 SkSurface） ----
 function sk_measure_text_width(string $text, int $fontSize, int $bold): int {}
