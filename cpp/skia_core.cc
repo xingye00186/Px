@@ -6,7 +6,7 @@ Int php_sk_create_window_context(Int hWnd, Int width, Int height) {
     g_skH    = (int)height;
     SK_TRACE("[SK] create_window_context hwnd=%p w=%d h=%d\n", g_skHwnd, g_skW, g_skH);
 
-    // GDI 路径：预加载 Noto Sans SC 字体（Regular + Bold）
+    // GDI 路径：预加载 Noto Sans SC 字体（Regular + Bold�?
     // 确保后续 CreateFont("Noto Sans SC", FW_BOLD) 使用真实粗体字体
     skLoadPrivateFonts();
     SK_TRACE("[SK] private fonts loaded (gdi path)\n");
@@ -52,7 +52,7 @@ void php_sk_destroy_context() {
     }
 }
 
-// 开始一帧：GDI 创双缓冲 memDC（headless 时用桌面 DC 创建兼容内存 DC）
+// 开始一帧：GDI 创双缓冲 memDC（headless 时用桌面 DC 创建兼容内存 DC�?
 void php_sk_begin_frame() {
     HDC screen = g_skHwnd ? GetDC(g_skHwnd) : GetDC(NULL);
     int w = g_skW, h = g_skH;
@@ -69,13 +69,13 @@ void php_sk_begin_frame() {
 #ifdef USE_SKIA
     if (g_skCanvas) {
         g_skCanvas->save();
-        // 每帧开始 clear 画布（避免残留上一帧 + 替代 sk_clear_window 退化为空）
+        // 每帧开�?clear 画布（避免残留上一�?+ 替代 sk_clear_window 退化为空）
         g_skCanvas->clear(SK_ColorWHITE);
     }
 #endif
 }
 
-// 结束一帧：阶段三 Skia → GDI 中转 → BitBlt 到 screen
+// 结束一帧：阶段�?Skia �?GDI 中转 �?BitBlt �?screen
 void php_sk_end_frame() {
     if (!g_skHdc) {
         SK_TRACE("[SK] end_frame SKIP (hdc=%p)\n", g_skHdc);
@@ -103,7 +103,7 @@ void php_sk_end_frame() {
     } else {
         SK_TRACE("[SK] end_frame SKIP BitBlt (headless)\n");
     }
-    // 保存待处理截图（在清理 DC 之前，从 g_skHdc 直接读取像素）
+    // 保存待处理截图（在清�?DC 之前，从 g_skHdc 直接读取像素�?
     if (!g_skPendingSSPath.empty()) {
         std::string ssPath = g_skPendingSSPath;
         g_skPendingSSPath.clear();
@@ -148,8 +148,8 @@ void php_sk_end_frame() {
     SK_TRACE("[SK] end_frame DONE\n");
 }
 
-// 全窗口清屏
-// 阶段三：R14 风险对策——退化为空实现（清屏由根节点 canvas->clear 完成）
+// 全窗口清�?
+// 阶段三：R14 风险对策——退化为空实现（清屏由根节点 canvas->clear 完成�?
 void php_sk_clear_window(Int rgb) {
 #ifdef USE_SKIA
     (void)rgb;
@@ -162,7 +162,7 @@ void php_sk_clear_window(Int rgb) {
 #endif
 }
 
-// 单矩形填充
+// 单矩形填�?
 void php_sk_fill_rect(Int x, Int y, Int w, Int h, Int rgb) {
     static int fillRectCount = 0;
     if (++fillRectCount <= 20 || fillRectCount % 20 == 0) {
@@ -172,8 +172,8 @@ void php_sk_fill_rect(Int x, Int y, Int w, Int h, Int rgb) {
     if (!g_skCanvas) return;
     if ((int)w <= 0 || (int)h <= 0) return;
     SkPaint paint;
-    // 对细矩形（1-2px）禁用抗锯齿，保持线条清晰
-    // 1px 分隔线/边框在 setAntiAlias(true) 下会模糊扩散至 ~3px
+    // 对细矩形�?-2px）禁用抗锯齿，保持线条清�?
+    // 1px 分隔�?边框�?setAntiAlias(true) 下会模糊扩散�?~3px
     paint.setAntiAlias((int)w > 2 && (int)h > 2);
     paint.setColor(rgbToSkColor(rgb));
     g_skCanvas->drawRect(
@@ -190,8 +190,8 @@ void php_sk_fill_rect(Int x, Int y, Int w, Int h, Int rgb) {
 }
 
 // ============================================================
-// Task 2.1 — 阶段二 GDI 兼容层：6 个函数
-// USE_SKIA 阶段三替换为真 Skia 实现
+// Task 2.1 �?阶段�?GDI 兼容层：6 个函�?
+// USE_SKIA 阶段三替换为�?Skia 实现
 // ============================================================
 
 // 绘制圆角矩形
@@ -219,7 +219,7 @@ void php_sk_draw_round_rect(Int x, Int y, Int w, Int h, Int radius, Int rgb) {
 #endif
 }
 
-// 绘制圆角矩形（独立XY半径）
+// 绘制圆角矩形（独立XY半径�?
 void php_sk_draw_round_rect_xy(Int x, Int y, Int w, Int h, Int rx, Int ry, Int rgb) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -239,7 +239,7 @@ void php_sk_draw_round_rect_xy(Int x, Int y, Int w, Int h, Int rx, Int ry, Int r
 #endif
 }
 
-// 绘制阴影（带圆角 + 高斯模糊）
+// 绘制阴影（带圆角 + 高斯模糊�?
 void php_sk_shadow_round_rect(Int x, Int y, Int w, Int h, Int radius, Int blur, Int rgb, double opacity) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -315,7 +315,7 @@ void php_sk_shadow_round_rect(Int x, Int y, Int w, Int h, Int radius, Int blur, 
 #endif
 }
 
-// 绘制阴影（独立XY半径 + 高斯模糊）
+// 绘制阴影（独立XY半径 + 高斯模糊�?
 void php_sk_shadow_round_rect_xy(Int x, Int y, Int w, Int h, Int rx, Int ry, Int blur, Int rgb, double opacity) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -344,22 +344,22 @@ void php_sk_shadow_round_rect_xy(Int x, Int y, Int w, Int h, Int rx, Int ry, Int
 #endif
 }
 
-// 线性渐变矩形填充（Skia 路径：使用 SkGradientShader）
-// angle: CSS 角度（0=向上，90=向右，180=向下，270=向左）
-// color1/color2: BGR 格式颜色值
-// radius: 圆角半径（0=直角）
+// 线性渐变矩形填充（Skia 路径：使�?SkGradientShader�?
+// angle: CSS 角度�?=向上�?0=向右�?80=向下�?70=向左�?
+// color1/color2: BGR 格式颜色�?
+// radius: 圆角半径�?=直角�?
 void php_sk_fill_gradient_rect(Int x, Int y, Int w, Int h, Int angle, Int color1, Int color2, Int radius) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
     if ((int)w <= 0 || (int)h <= 0) return;
     
-    // CSS 角度转换为数学角度
+    // CSS 角度转换为数学角�?
     // CSS: 0deg=向上, 90deg=向右
     // Math: 0°=向右, 90°=向上
-    // CSS θ → math: 90° - θ
+    // CSS θ �?math: 90° - θ
     double rad = (90.0 - (double)(int)angle) * M_PI / 180.0;
     
-    // 从矩形中心出发的梯度线，长度覆盖对角线
+    // 从矩形中心出发的梯度线，长度覆盖对角�?
     double cx = (double)(int)x + (double)(int)w / 2.0;
     double cy = (double)(int)y + (double)(int)h / 2.0;
     double r = sqrt((double)(int)w * (double)(int)w + (double)(int)h * (double)(int)h) / 2.0;
@@ -413,7 +413,7 @@ void php_sk_fill_gradient_rect(Int x, Int y, Int w, Int h, Int angle, Int color1
 #endif
 }
 
-// 线性渐变矩形填充（独立XY半径）
+// 线性渐变矩形填充（独立XY半径�?
 void php_sk_fill_gradient_rect_xy(Int x, Int y, Int w, Int h, Int angle, Int color1, Int color2, Int rx, Int ry) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -471,7 +471,7 @@ void php_sk_fill_gradient_rect_xy(Int x, Int y, Int w, Int h, Int angle, Int col
 }
 
 // 半透明矩形填充
-// 阶段三：R15 风险对策——与 php_sk_fill_rect 合并实现（唯一差异 paint.setAlphaf）
+// 阶段三：R15 风险对策——与 php_sk_fill_rect 合并实现（唯一差异 paint.setAlphaf�?
 void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity) {
 #ifdef USE_SKIA
     if (!g_skCanvas) return;
@@ -482,7 +482,7 @@ void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity)
         return;
     }
     SkPaint paint;
-    // 对细矩形（1-2px）禁用抗锯齿，保持线条清晰
+    // 对细矩形�?-2px）禁用抗锯齿，保持线条清�?
     paint.setAntiAlias((int)w > 2 && (int)h > 2);
     paint.setColor(rgbToSkColor(rgb));
     paint.setAlphaf((SkScalar)opacity);
@@ -552,5 +552,141 @@ void php_sk_alpha_fill_rect(Int x, Int y, Int w, Int h, Int rgb, double opacity)
 }
 
 
-// 绘制文本（阶段三：用 SkFontMgr_New_Custom_Directory 加载 Noto Sans SC 后 drawString）
-// PHP 传入的 Y 为 text-top 坐标，Skia drawString 需要 baseline → 内部用 font metrics 转换
+// 绘制文本（阶段三：用 SkFontMgr_New_Custom_Directory 加载 Noto Sans SC �?drawString�?
+// PHP 传入�?Y �?text-top 坐标，Skia drawString 需�?baseline �?内部�?font metrics 转换
+
+// ─── 裁剪区域（clip）───
+void php_sk_push_clip(Int x, Int y, Int w, Int h) {
+#ifdef USE_SKIA
+    if (!g_skCanvas) return;
+    g_skCanvas->save();
+    g_skCanvas->clipRect(
+        SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                         (SkScalar)(int)w, (SkScalar)(int)h));
+#else
+    if (!g_skHdc) return;
+    SaveDC(g_skHdc);
+    HRGN clipRgn = CreateRectRgn((int)x, (int)y, (int)(x + w), (int)(y + h));
+    ExtSelectClipRgn(g_skHdc, clipRgn, RGN_AND);
+    DeleteObject(clipRgn);
+#endif
+}
+
+void php_sk_push_clip_rrect(Int x, Int y, Int w, Int h, Int radius) {
+#ifdef USE_SKIA
+    if (!g_skCanvas) return;
+    if ((int)w <= 0 || (int)h <= 0) return;
+    g_skCanvas->save();
+    SkRRect clipRRect;
+    clipRRect.setRectXY(
+        SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                         (SkScalar)(int)w, (SkScalar)(int)h),
+        (SkScalar)(int)radius, (SkScalar)(int)radius);
+    g_skCanvas->clipRRect(clipRRect, SkClipOp::kIntersect, true);
+#else
+    (void)radius;
+    php_sk_push_clip(x, y, w, h);
+#endif
+}
+
+void php_sk_pop_clip() {
+#ifdef USE_SKIA
+    if (!g_skCanvas) return;
+    g_skCanvas->restore();
+#else
+    if (!g_skHdc) return;
+    RestoreDC(g_skHdc, -1);
+#endif
+}
+
+// ─── 绘制按钮 ───
+void php_sk_draw_button(Int x, Int y, Int w, Int h, Int bgColor, Int borderColor) {
+#ifdef USE_SKIA
+    if (!g_skCanvas) return;
+    if ((int)w <= 0 || (int)h <= 0) return;
+    SkPaint bgPaint;
+    bgPaint.setAntiAlias(true);
+    bgPaint.setColor(rgbToSkColor(bgColor));
+    g_skCanvas->drawRect(
+        SkRect::MakeXYWH((SkScalar)(int)x, (SkScalar)(int)y,
+                         (SkScalar)(int)w, (SkScalar)(int)h),
+        bgPaint);
+    SkPaint borderPaint;
+    borderPaint.setAntiAlias(true);
+    borderPaint.setColor(rgbToSkColor(borderColor));
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.0f);
+    SkScalar fx = (SkScalar)(int)x + 0.5f;
+    SkScalar fy = (SkScalar)(int)y + 0.5f;
+    SkScalar fw = (SkScalar)(int)w - 1.0f;
+    SkScalar fh = (SkScalar)(int)h - 1.0f;
+    g_skCanvas->drawRect(SkRect::MakeLTRB(fx, fy, fx + fw, fy + fh), borderPaint);
+#else
+    if (!g_skHdc) return;
+    HBRUSH brush = CreateSolidBrush((COLORREF)(Int)bgColor);
+    RECT r = {(int)x, (int)y, (int)(x + w), (int)(y + h)};
+    FillRect(g_skHdc, &r, brush);
+    DeleteObject(brush);
+    HPEN pen = CreatePen(PS_SOLID, 1, (COLORREF)(Int)borderColor);
+    HPEN oldPen = (HPEN)SelectObject(g_skHdc, pen);
+    HBRUSH oldBrush = (HBRUSH)SelectObject(g_skHdc, GetStockObject(NULL_BRUSH));
+    Rectangle(g_skHdc, (int)x, (int)y, (int)(x + w), (int)(y + h));
+    SelectObject(g_skHdc, oldBrush);
+    SelectObject(g_skHdc, oldPen);
+    DeleteObject(pen);
+#endif
+}
+
+// ─── 窗口尺寸变更 ───
+void php_sk_resize_context(Int width, Int height) {
+    if ((int)width <= 0 || (int)height <= 0) return;
+    g_skW = (int)width;
+    g_skH = (int)height;
+#ifdef USE_SKIA
+    if (g_skCanvas
+        && g_skSkBitmap.width()  == (int)width
+        && g_skSkBitmap.height() == (int)height) {
+        return;
+    }
+    g_skCanvas.reset();
+    g_skSkBitmap.reset();
+    g_skSkBitmap.allocN32Pixels(g_skW, g_skH);
+    g_skCanvas = SkCanvas::MakeRasterDirectN32(
+        g_skW, g_skH,
+        (SkPMColor*)g_skSkBitmap.getPixels(),
+        g_skSkBitmap.rowBytes());
+    if (g_skCanvas) {
+        g_skCanvas->clear(SK_ColorWHITE);
+    }
+#endif
+}
+
+// ─── WM_PAINT 处理 ───
+Int php_sk_handle_paint(Int hdc) {
+#ifdef USE_SKIA
+    if (!g_skSkBitmap.getPixels()) return 0;
+    int w = g_skSkBitmap.width();
+    int h = g_skSkBitmap.height();
+    if (w <= 0 || h <= 0) return 0;
+    size_t rowBytes = w * 4;
+    g_skPixelBuf.resize(rowBytes * h);
+    SkImageInfo info = SkImageInfo::Make(w, h, kBGRA_8888_SkColorType, kPremul_SkAlphaType);
+    g_skSkBitmap.readPixels(info, g_skPixelBuf.data(), rowBytes, 0, 0);
+    BITMAPINFO bmi;
+    ZeroMemory(&bmi, sizeof(bmi));
+    bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth       = w;
+    bmi.bmiHeader.biHeight      = -h;
+    bmi.bmiHeader.biPlanes      = 1;
+    bmi.bmiHeader.biBitCount    = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+    SetDIBitsToDevice((HDC)hdc, 0, 0, w, h, 0, 0, 0, h,
+                      g_skPixelBuf.data(), &bmi, DIB_RGB_COLORS);
+    return 1;
+#else
+    (void)hdc;
+    return 0;
+#endif
+}
+#include "skia_render.h"
+
