@@ -140,3 +140,52 @@ Int php_sk_measure_text_width(String text, Int fontSize, Int bold) {
 
 // 精确测量文本总高度（ascent + descent），用于垂直居中
 // 返回文本在给定 fontSize 下的像素高度
+
+
+Int php_sk_measure_text_height(Int fontSize, Int bold) {
+    // 阶段四：优先用 DirectWrite 测量字体行高（与浏览器同引擎）
+    int dwResult = measureHeightDWrite((int)fontSize, (int)bold);
+    if (dwResult > 0) {
+        SK_TRACE("[SK] measure_text_height fontSize=%d bold=%d height=%d (DirectWrite)\n", (int)fontSize, (int)bold, dwResult);
+        return (Int)dwResult;
+    }
+
+#ifdef USE_SKIA
+    // Fallback: GDI GetTextMetricsW
+    skLoadPrivateFonts();
+    HDC hdc = GetDC(NULL);
+    if (!hdc) return (Int)fontSize;
+    HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
+        (Int)bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, g_skDefaultFont.c_str());
+    if (!hFont) { ReleaseDC(NULL, hdc); return (Int)fontSize; }
+    HFONT oldFont = (HFONT)SelectObject(hdc, hFont);
+    TEXTMETRICW tm;
+    Int result = (Int)fontSize;
+    if (GetTextMetricsW(hdc, &tm)) {
+        result = (Int)(tm.tmAscent + tm.tmDescent);
+    }
+    SelectObject(hdc, oldFont);
+    DeleteObject(hFont);
+    ReleaseDC(NULL, hdc);
+    SK_TRACE("[SK] measure_text_height fontSize=%d bold=%d height=%d (GDI)\n", (int)fontSize, (int)bold, (int)result);
+    return result;
+#else
+    if (!g_skHdc) return (Int)fontSize;
+    HFONT hFont = CreateFont((int)fontSize, 0, 0, 0,
+        (Int)bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, g_skDefaultFont.c_str());
+    if (!hFont) return (Int)fontSize;
+    HFONT oldFont = (HFONT)SelectObject(g_skHdc, hFont);
+    TEXTMETRICW tm;
+    Int result = (Int)fontSize;
+    if (GetTextMetricsW(g_skHdc, &tm)) {
+        result = (Int)(tm.tmAscent + tm.tmDescent);
+    }
+    SelectObject(g_skHdc, oldFont);
+    DeleteObject(hFont);
+    return result;
+#endif
+}
