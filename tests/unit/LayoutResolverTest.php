@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * LayoutResolver 单元测试（RenderNode 版）
  *

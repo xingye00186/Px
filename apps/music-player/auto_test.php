@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * auto_test.php - 自动化测试脚本
  *

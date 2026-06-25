@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * batch_fix2.php — 快速批量修复：对 6 个内联样式项目的 auto_test.php 应用子串匹配阈值改进
  *

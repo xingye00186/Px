@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * batch_fix_test.php — 调试用：枚举项目列表
  *

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * ComboLayoutTest — CSS 布局组合场景标准测试
  *
