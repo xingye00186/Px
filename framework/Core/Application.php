@@ -401,6 +401,12 @@ class Application
         // 初始化调试配置（从 project.yml 中读取 Px_debug_* 前缀项）
         if ($appDir !== '') {
             Config::init($appDir);
+
+            // 初始化文本引擎（Windows 默认 dwrite）
+            $textEngine = Config::get('text_engine', 'dwrite');
+            if (function_exists('sk_set_text_engine')) {
+                sk_set_text_engine($textEngine);
+            }
         }
 
         $this->initRenderer();

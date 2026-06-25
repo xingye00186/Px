@@ -7,6 +7,7 @@
 // ─── DirectWrite ───
 bool g_dwInitAttempted = false;
 IDWriteFactory* g_dwFactory = nullptr;
+IDWriteBitmapRenderTarget* g_dwRenderTarget = nullptr;
 
 bool ensureDWriteFactory() {
     if (g_dwFactory) return true;
@@ -17,6 +18,19 @@ bool ensureDWriteFactory() {
         __uuidof(IDWriteFactory),
         reinterpret_cast<IUnknown**>(&g_dwFactory));
     return SUCCEEDED(hr) && g_dwFactory != nullptr;
+}
+
+bool ensureDWriteRenderTarget(HDC hdc, int w, int h) {
+    if (g_dwRenderTarget) {
+        if (w > 0 && h > 0) {
+            g_dwRenderTarget->Resize(w, h);
+        }
+        return true;
+    }
+    if (!ensureDWriteFactory()) return false;
+    HRESULT hr = g_dwFactory->CreateBitmapRenderTarget(
+        hdc, w > 0 ? w : 1, h > 0 ? h : 1, &g_dwRenderTarget);
+    return SUCCEEDED(hr) && g_dwRenderTarget != nullptr;
 }
 
 int measureHeightDWrite(int fontSize, int bold) {

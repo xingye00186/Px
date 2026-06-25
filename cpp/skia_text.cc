@@ -1,9 +1,51 @@
 #include "skia_render.h"
 
+// ─── DirectWrite 文本渲染器（IDWriteTextRenderer 实现）───
+// 将 DWrite 的 GlyphRun 绘制到 IDWriteBitmapRenderTarget，
+// 然后 BitBlt 到目标 HDC。
+class DWriteTextRenderer : public IDWriteTextRenderer {
+    ULONG refCount_ = 1;
+    IDWriteBitmapRenderTarget* rt_;
+public:
+    DWriteTextRenderer(IDWriteBitmapRenderTarget* rt) : rt_(rt) {}
+
+    IFACEMETHODIMP DrawGlyphRun(void*, FLOAT originX, FLOAT originY,
+        DWRITE_MEASURING_MODE, DWRITE_GLYPH_RUN const* glyphRun,
+        DWRITE_GLYPH_RUN_DESCRIPTION const*, IUnknown*) override {
+        return rt_->DrawGlyphRun(originX, originY, glyphRun, nullptr, 0, nullptr);
+    }
+    IFACEMETHODIMP DrawUnderline(void*, FLOAT, FLOAT,
+        DWRITE_UNDERLINE const*, IUnknown*) override { return S_OK; }
+    IFACEMETHODIMP DrawStrikethrough(void*, FLOAT, FLOAT,
+        DWRITE_STRIKETHROUGH const*, IUnknown*) override { return S_OK; }
+    IFACEMETHODIMP DrawInlineObject(void*, FLOAT, FLOAT,
+        IDWriteInlineObject*, BOOL, BOOL, IUnknown*) override { return S_OK; }
+    IFACEMETHODIMP IsPixelSnappingDisabled(void*, BOOL* isDisabled) override {
+        *isDisabled = FALSE; return S_OK;
+    }
+    IFACEMETHODIMP GetCurrentTransform(void*, DWRITE_MATRIX*) override { return E_NOTIMPL; }
+    IFACEMETHODIMP GetPixelsPerDip(void*, FLOAT* ppd) override {
+        *ppd = 96.0f; return S_OK;
+    }
+
+    IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
+        if (riid == __uuidof(IDWriteTextRenderer) || riid == __uuidof(IUnknown)) {
+            *ppv = this; AddRef(); return S_OK;
+        }
+        *ppv = nullptr; return E_NOINTERFACE;
+    }
+    IFACEMETHODIMP_(ULONG) AddRef() override { return ++refCount_; }
+    IFACEMETHODIMP_(ULONG) Release() override {
+        ULONG c = --refCount_;
+        if (c == 0) delete this;
+        return c;
+    }
+};
+
 /**
- * drawTextDWrite — 用 DirectWrite + 同一字体 GDI 渲染文本。
- * 确保测量（DWrite）和渲染（GDI）使用同一字体族（Segoe UI），
- * 消除字体度量偏差。
+ * drawTextDWrite — 用 DirectWrite 实际绘制文本（经 IDWriteBitmapRenderTarget 渲染到 HDC）。
+ * 统一字体（Segoe UI），用 DWrite font metrics 精确计算 baseline，
+ * 缩小 y-offset 差异。
  * 返回 true 表示渲染成功，false 回退到 Skia/GDI。
  */
 bool drawTextDWrite(HDC hdc, int x, int y, const char* text, int textLen,
@@ -11,19 +53,16 @@ bool drawTextDWrite(HDC hdc, int x, int y, const char* text, int textLen,
     if (!ensureDWriteFactory() || !hdc || textLen <= 0 || fontSize <= 0) return false;
     const char* fontName = (fontFamily && fontFamily[0]) ? fontFamily : g_skDefaultFont.c_str();
 
-    // Convert font name UTF-8 -> WCHAR
     int wlen = MultiByteToWideChar(CP_UTF8, 0, fontName, -1, NULL, 0);
     if (wlen <= 0) return false;
     std::wstring wfont(wlen, L'\0');
     MultiByteToWideChar(CP_UTF8, 0, fontName, -1, &wfont[0], wlen);
 
-    // Convert text UTF-8 -> WCHAR  
     int tlen = MultiByteToWideChar(CP_UTF8, 0, text, textLen, NULL, 0);
     if (tlen <= 0) return false;
     std::wstring wtext(tlen, L'\0');
     MultiByteToWideChar(CP_UTF8, 0, text, textLen, &wtext[0], tlen);
 
-    // Create DWrite text format
     IDWriteTextFormat* format = nullptr;
     HRESULT hr = g_dwFactory->CreateTextFormat(
         wfont.c_str(), nullptr,
@@ -32,38 +71,53 @@ bool drawTextDWrite(HDC hdc, int x, int y, const char* text, int textLen,
         (FLOAT)fontSize, L"en-US", &format);
     if (FAILED(hr) || !format) return false;
 
-    float estW = (float)fontSize * (float)textLen * 0.6f + 4.0f;
-    if (estW < 10.0f) estW = 10.0f;
-    float estH = (float)fontSize * 2.0f;
+    // 用 DWrite 精确计算文本边界
+    DWRITE_TEXT_METRICS textMetrics;
+    {
+        float estW = (float)fontSize * (float)textLen * 0.6f + 4.0f;
+        if (estW < 10.0f) estW = 10.0f;
+        float estH = (float)fontSize * 2.0f;
 
-    IDWriteTextLayout* layout = nullptr;
-    hr = g_dwFactory->CreateTextLayout(wtext.c_str(), (UINT32)tlen, format, estW, estH, &layout);
-    if (FAILED(hr) || !layout) { format->Release(); return false; }
+        IDWriteTextLayout* layout = nullptr;
+        hr = g_dwFactory->CreateTextLayout(wtext.c_str(), (UINT32)tlen, format, estW, estH, &layout);
+        if (FAILED(hr) || !layout) { format->Release(); return false; }
+        layout->GetMetrics(&textMetrics);
 
-    // Get baseline from DWrite metrics
-    DWRITE_TEXT_METRICS metrics;
-    layout->GetMetrics(&metrics);
+        // 获取 DWrite font metrics 计算精确 baseline
+        // DWrite: baseline = text-top + ascent
+        // ascent ≈ fontSize * (tmAscent / (tmAscent + tmDescent))
+        DWRITE_FONT_METRICS dwMetrics;
+        format->GetFontMetrics(&dwMetrics);
+        float ratio = (float)dwMetrics.ascent / (float)(dwMetrics.ascent + dwMetrics.descent);
+        float baseline = (float)fontSize * ratio;
+        int drawY = y + (int)(baseline + 0.5f);
 
-    // Render using GDI with the SAME font name as DWrite measurement
-    COLORREF oldColor = SetTextColor(hdc, (COLORREF)color);
-    int oldBkMode = SetBkMode(hdc, TRANSPARENT);
-    float baseline = (float)fontSize * 0.8f;  // DWrite ascent ~ 80% of fontSize
-    int drawY = y + (int)baseline;
+        // ── 用 IDWriteBitmapRenderTarget 真正用 DWrite 绘制 ──
+        int rw = (int)(textMetrics.width + 2.0f);
+        int rh = (int)(textMetrics.height + 2.0f);
+        if (rw < 1) rw = 1;
+        if (rh < 1) rh = 1;
 
-    HFONT hFont = CreateFont(fontSize, 0, 0, 0,
-        bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, fontName);
-    if (hFont) {
-        SelectObject(hdc, hFont);
-        TextOutA(hdc, x, drawY, text, textLen);
-        SelectObject(hdc, GetStockObject(SYSTEM_FONT));
-        DeleteObject(hFont);
+        if (!ensureDWriteRenderTarget(hdc, rw, rh)) {
+            layout->Release(); format->Release(); return false;
+        }
+
+        // 设置文本颜色
+        g_dwRenderTarget->SetTextColor((COLORREF)color);
+
+        // 用 DWrite 实际绘制文字到 RenderTarget 的 bitmap
+        DWriteTextRenderer* renderer = new DWriteTextRenderer(g_dwRenderTarget);
+        layout->Draw(nullptr, renderer, 0, (FLOAT)drawY);
+        renderer->Release();
+
+        // BitBlt 从 RenderTarget 的内存 DC 到目标 HDC
+        HDC rtDC = g_dwRenderTarget->GetMemoryDC();
+        if (rtDC) {
+            BitBlt(hdc, x, y, rw, rh, rtDC, 0, 0, SRCCOPY | CAPTUREBLT);
+        }
+
+        layout->Release();
     }
-
-    SetTextColor(hdc, oldColor);
-    SetBkMode(hdc, oldBkMode);
-    layout->Release();
     format->Release();
     return true;
 }
