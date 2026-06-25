@@ -383,10 +383,10 @@ class Application
         error_log('[DIAG] initRenderer: selected backend=' . $this->selectedBackendName);
 
         // Stage 3: 包一层 ResilientRenderContext 支持渲染后端降级
-        $renderCtx = new ResilientRenderContext($selector, $backend->getContext(), $hwnd, $w, $h);
+        $baseCtx = new ResilientRenderContext($selector, $backend->getContext(), $hwnd, $w, $h);
 
-        // Stage 4: 包一层 ResilientTextBackendProxy 支持文本引擎降级（由渲染层管理）
-        $renderCtx = new ResilientTextBackendProxy($renderCtx);
+        // Stage 4: 包一层 ResilientTextBackendProxy 支持文本引擎降级
+        $renderCtx = new ResilientTextBackendProxy($baseCtx);
 
         $this->renderer = new VNodeRenderer($this->rootComponent, $renderCtx);
     }
@@ -770,7 +770,7 @@ class Application
         // 不导出 per-side border 属性：它们与 borderWidth/borderColor 简写重复，
         // 且浏览器只导出简写不单独导出各边。对比层通过浏览器 skip 列表忽略。
         $styleKeys = ['bg', 'fg', 'bgFromGradient', 'fontSize', 'fontWeight', 'bold', 'borderWidth', 'borderColor',
-            'borderRadius', 'borderStyle', 'textAlign',
+            'borderRadius', 'borderStyle', 'textAlign', 'textIndent', 'textTransform',
             'lineHeight', 'whiteSpace', 'wordBreak', 'fontStyle', 'fontFamily', 'opacity', 'visibility',
             'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
             'marginTop', 'marginLeft', 'marginRight', 'marginBottom',

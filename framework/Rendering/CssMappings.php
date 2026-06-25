@@ -136,6 +136,16 @@ class CssMappings
             'parser'  => 'Px\Rendering\CssMappings::parseTextAlign',
             'default' => 'left',
         ],
+        'text-indent' => [
+            'key'     => 'textIndent',
+            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'text-transform' => [
+            'key'     => 'textTransform',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => 'none',
+        ],
         'line-height' => [
             'key'     => 'lineHeight',
             'parser'  => 'Px\Rendering\CssMappings::parseLineHeight',

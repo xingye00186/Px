@@ -341,6 +341,35 @@ class VNodeRenderer
      * 测量文本总高度（ascent + descent），用于垂直居中。
      * 优先使用 C++ sk_measure_text_height 精确测量，退化使用 fontSize + 2 估算。
      */
+    /**
+     * CSS Text Module Level 3 §2: text-transform
+     * uppercase / lowercase / capitalize / none
+     */
+    private static function applyTextTransform(string $text, string $transform): string
+    {
+        switch ($transform) {
+            case 'uppercase':
+                return mb_strtoupper($text, 'UTF-8');
+            case 'lowercase':
+                return mb_strtolower($text, 'UTF-8');
+            case 'capitalize':
+                $words = explode(' ', $text);
+                foreach ($words as &$w) {
+                    if ($w !== '') {
+                        $w = mb_strtoupper(mb_substr($w, 0, 1, 'UTF-8'), 'UTF-8')
+                           . mb_substr($w, 1, null, 'UTF-8');
+                    }
+                }
+                return implode(' ', $words);
+            default:
+                return $text;
+        }
+    }
+
+    /**
+     * 测量文本总高度（ascent + descent），用于垂直居中。
+     * 优先使用 C++ sk_measure_text_height 精确测量，退化使用 fontSize + 2 估算。
+     */
     private static function measureTextHeight(int $fontSize, bool $bold): int
     {
         static $hasNative = null;
@@ -591,6 +620,13 @@ class VNodeRenderer
             if ($align === 'justify' || $align === 'justify-all') $align = 'left';
 
             $text = $node->content;
+
+            // CSS Text Module Level 3 §2: text-transform
+            $textTransform = $style['textTransform'] ?? 'none';
+            if ($textTransform !== 'none') {
+                $text = self::applyTextTransform($text, $textTransform);
+            }
+
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
 
             // ── 元素自身坐标（scroll 偏移后的位置，不受 CULL 影响）──
