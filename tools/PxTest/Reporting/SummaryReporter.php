@@ -40,6 +40,8 @@ class SummaryReporter
     public function generate(array $allCaseData): void
     {
         $report = $this->buildSummary($allCaseData);
+        $previous = $this->loadLastRun();
+        $report['regression'] = $this->detectRegression($report, $previous);
         $this->writeReport($report);
         $this->appendHistory($report);
     }
@@ -152,6 +154,81 @@ class SummaryReporter
         ];
     }
 
+    private function loadLastRun(): ?array
+    {
+        $historyPath = $this->appDir . '/.run_history.json';
+        if (!file_exists($historyPath)) return null;
+        $content = @file_get_contents($historyPath);
+        $decoded = json_decode($content, true);
+        if (!is_array($decoded) || empty($decoded)) return null;
+        return end($decoded);
+    }
+
+    /**
+     * 对比当前运行与上一次运行，检测回归。
+     * 返回 ['regressed'=>bool, 'reasons'=>string[]]
+     */
+    private function detectRegression(array $current, ?array $previous): array
+    {
+        $result = ['regressed' => false, 'reasons' => []];
+        if ($previous === null) {
+            $result['first_run'] = true;
+            return $result;
+        }
+        $result['first_run'] = false;
+
+        // 1. 通过率下降
+        if ($previous['total_cases'] > 0) {
+            $prevRate = $previous['passed'] / $previous['total_cases'];
+            if ($current['total_cases'] > 0) {
+                $curRate = $current['passed'] / $current['total_cases'];
+                if ($curRate < $prevRate - 0.01) {
+                    $result['regressed'] = true;
+                    $result['reasons'][] = sprintf(
+                        '通过率下降: %.1f%% → %.1f%%',
+                        $prevRate * 100, $curRate * 100
+                    );
+                }
+            }
+        }
+
+        // 2. 上次通过本次失败（精确 case 级回归）
+        // 从 property_stats 推断：上次每个属性的 diff 不应增加
+        $prevStats = $previous['property_stats'] ?? [];
+        $curStats = $current['property_stats'] ?? [];
+
+        foreach ($curStats as $prop => $curStat) {
+            $curDiff = $curStat['diff'] ?? 0;
+            $prevDiff = ($prevStats[$prop]['diff'] ?? 0);
+            // 上次 total 不为 0 才比较（避免首次出现时的误报）
+            $prevTotal = ($prevStats[$prop]['total'] ?? 0);
+            $curTotal = $curStat['total'] ?? 0;
+            if ($prevTotal > 0 && $curDiff > $prevDiff && $curTotal >= $prevTotal) {
+                $inc = $curDiff - $prevDiff;
+                if ($inc >= 2) {  // 2px 以下忽略微小波动
+                    $result['regressed'] = true;
+                    $result['reasons'][] = "属性 '{$prop}' diff 增加: {$prevDiff}→{$curDiff} (+{$inc})";
+                }
+            }
+        }
+
+        // 3. 浏览器对比失败数增加
+        $prevBrFail = $previous['browser_fail'] ?? 0;
+        $curBrFail = 0;
+        foreach ($current['case_rows'] ?? [] as $row) {
+            if (($row['element_comp'] ?? '') === '❌') $curBrFail++;
+        }
+        if ($curBrFail > $prevBrFail) {
+            $result['regressed'] = true;
+            $result['reasons'][] = "浏览器元素对比失败增加: {$prevBrFail}→{$curBrFail}";
+        }
+
+        // 4. case_rows 级别逐一对比（需保存上一次的 case_rows）
+        // 当前 appendHistory 未保存 per-case 明细，暂不对比
+
+        return $result;
+    }
+
     private function stepIcon(array $stepMap, string $name): string
     {
         if (!isset($stepMap[$name])) return '⏭️';
@@ -202,7 +279,26 @@ class SummaryReporter
         $lines[] = '**汇总**: ' . $report['passed'] . ' ✅ / ' . $report['failed'] . ' ❌ / ' . $report['total_cases'] . ' 总计 (总耗时: ' . $report['total_time_s'] . 's)';
         $lines[] = '';
 
-        // Property stats section
+        // ─── 回归判定 ───
+        $reg = $report['regression'] ?? [];
+        $lines[] = '## 回归判定';
+        $lines[] = '';
+        if (!empty($reg['first_run'])) {
+            $lines[] = '> 🟢 首次运行，无历史数据可供对比，本次结果将作为后续回归的基线。';
+        } elseif (!empty($reg['regressed'])) {
+            $lines[] = '> 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:';
+            $lines[] = '>';
+            foreach ($reg['reasons'] as $reason) {
+                $lines[] = "> - {$reason}";
+            }
+            $lines[] = '>';
+            $lines[] = '> ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。';
+        } else {
+            $lines[] = '> ✅ **无回归** — 与上一次运行相比，各项指标均未恶化。';
+        }
+        $lines[] = '';
+
+        // ─── 回归对比详情表 ───
         $propStats = $report['property_stats'];
         if (!empty($propStats)) {
             // Sort: by total count descending, then by pass rate ascending
