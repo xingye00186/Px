@@ -23,9 +23,11 @@
 $excludeDirs = [
     'vendor', '.git', '.idea', '.qoder',
     'bin', 'cpp', 'build', 'docs', 'node_modules',
-    'tools',  // 工具目录含编码检测字节序列，不参与扫描
+    // 'tools' 默认排除，可用 --include-tools 包含
 ];
-$scanExts = ['php', 'phtml', 'vue'];
+$excludeTools = true;  // 默认排除 tools/
+
+$scanExts = ['php', 'phtml', 'vue', 'html', 'js', 'cc', 'h'];
 
 $mojibakeSeq = [
     "锟斤拷" => "\xE9\x94\x9F\xE6\x96\xA4\xE6\x8B\xB7",
@@ -45,16 +47,17 @@ $rareChars = [
     "\xE4\xB8\xBE" => "举(U+4E3E)",
 ];
 
-// ── 扫描根目录（项目根）────────────────────
+// ── 扫描根目录（项目根），--path 可覆盖 ────
 $scanRoot = dirname(__DIR__, 2);
 
 // ── 命令行参数 ──────────────────────────────
 
 $argv = $_SERVER['argv'] ?? [];
 $argc = count($argv);
-$flags = ['--json' => false, '--fix' => false, '--analyze' => false];
+$flags = ['--json' => false, '--fix' => false, '--analyze' => false, '--include-tools' => false];
 $fixTarget = null;
 $analyzeTarget = null;
+$customPath = null;  // --path=<path> 指定扫描路径
 
 for ($i = 1; $i < $argc; $i++) {
     $a = $argv[$i];
@@ -66,6 +69,11 @@ for ($i = 1; $i < $argc; $i++) {
     } elseif ($a === '--analyze' && $i + 1 < $argc) {
         $flags['--analyze'] = true;
         $analyzeTarget = $argv[++$i];
+    } elseif ($a === '--include-tools') {
+        $flags['--include-tools'] = true;
+        $excludeTools = false;
+    } elseif (str_starts_with($a, '--path=')) {
+        $customPath = substr($a, 7);
     }
 }
 
@@ -193,51 +201,221 @@ if ($flags['--analyze']) {
 // ── 扫描模式（默认）───────────────────────
 
 $self = 'tools/encoding/' . basename(__FILE__);
-$total = 0;
+$total  = 0;
 $issues = [];  // [relPath, [errorList]]
+$warnings = [];
+
+// 确定扫描根目录
+if ($customPath !== null) {
+    $resolved = realpath($customPath);
+    if ($resolved === false) {
+        fwrite(STDERR, "[ERROR] 路径不存在: {$customPath}\n");
+        exit(1);
+    }
+    $scanRoot = str_replace('\\', '/', $resolved);
+    echo "[INFO] 自定义扫描路径: {$scanRoot}\n";
+}
+
+// 初始化全局计时器（在任意扫描路径前设置）
+$GLOBALS['_SCAN_START'] = microtime(true);
+
+// 如果是单个文件，直接扫描
+if (is_file($scanRoot)) {
+    scanSingleFile($scanRoot);
+    outputReport();
+    exit(0);
+}
 
 $it = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($scanRoot, RecursiveDirectoryIterator::SKIP_DOTS)
 );
+
+$scanStart = microtime(true);
+$scanCount = 0;
+$scanLogInterval = max(1, (int)(100 * (100000 / max(1, count(scandirScout($scanRoot))))));
+$scanLogInterval = min($scanLogInterval, 2000);
+
+/**
+ * 快速估算文件数（用于进度日志间隔）
+ */
+function scandirScout(string $dir): array {
+    $files = [];
+    try {
+        $dit = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+        $i = 0;
+        foreach ($dit as $f) {
+            if ($i++ > 5000) break;
+        }
+        $files = array_fill(0, $i, true);
+    } catch (\Throwable $e) {
+        // ignore
+    }
+    return $files;
+}
 
 foreach ($it as $f) {
     $ext = $f->getExtension();
     if (!in_array($ext, $scanExts, true)) continue;
 
     $rel = str_replace($scanRoot . DIRECTORY_SEPARATOR, '', $f->getPathname());
+    $rel = str_replace('\\', '/', $rel);
     if ($rel === $self) continue;
 
     // 排除目录
     $skip = false;
     foreach ($excludeDirs as $d) {
-        $prefix = $d . DIRECTORY_SEPARATOR;
-        if (strncmp($rel, $prefix, strlen($prefix)) === 0 && strpos($rel, $prefix) === 0) {
+        $prefix = $d . '/';
+        if (str_starts_with($rel, $prefix)) {
             $skip = true;
             break;
         }
     }
+    // 排除 tools/（默认）
+    if ($excludeTools && str_starts_with($rel, 'tools/')) {
+        $skip = true;
+    }
     if ($skip) continue;
 
     $total++;
+    $scanCount++;
+    $GLOBALS['_CURRENT_REL'] = $rel;
+
+    // 进度日志（每扫描约 500 文件输出一次）
+    if ($scanCount % 500 === 0) {
+        $elapsed = microtime(true) - $scanStart;
+        printf("[SCAN] %d files scanned (%.1f sec)...\n", $scanCount, $elapsed);
+    }
     $c = file_get_contents($f->getPathname());
+    $err = scanFileContent($c);
+
+    $ffdCount = substr_count($c, "\xEF\xBF\xBD");
+
+    if (!empty($err)) {
+        $issues[] = [$rel, $err, $ffdCount];
+    }
+}
+
+// 默认扫描模式完成后输出报告
+if (!isset($GLOBALS['_SCAN_DONE'])) {
+    $GLOBALS['_SCAN_DONE'] = true;
+    outputReport();
+}
+
+// ── 输出报告 ────────────────────────────────
+
+function outputReport(): void {
+    global $total, $issues, $flags;
+
+    if ($flags['--json']) {
+        echo json_encode([
+            'scanned' => $total,
+            'issues' => count($issues),
+            'files' => array_map(function($v) {
+                return ['path' => $v[0], 'errors' => $v[1], 'ffdCount' => $v[2]];
+            }, $issues),
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n";
+        return;
+    }
+
+    $elapsed = microtime(true) - $GLOBALS['_SCAN_START'];
+    echo "=== Encoding Scan ===\n";
+    echo "扫描: {$total} 文件, 发现: " . count($issues) . " 个问题文件 (耗时: " . number_format($elapsed, 1) . "s)\n\n";
+
+    if (empty($issues)) {
+        echo "  ✅  全部文件编码正常！\n";
+    } else {
+        // 统计严重程度
+        $nError = 0; $nWarn = 0; $nInfo = 0;
+        foreach ($issues as $v) {
+            foreach ($v[1] as $e) {
+                if (strpos($e, '[ERROR]') === 0) $nError++;
+                elseif (strpos($e, '[WARN]') === 0) $nWarn++;
+                else $nInfo++;
+            }
+        }
+        echo "  严重: {$nError} | 警告: {$nWarn} | 提示: {$nInfo}\n\n";
+
+        // 按严重程度分组输出
+        $errors = array_filter($issues, fn($v) => strpos($v[1][0] ?? '', '[ERROR]') === 0);
+        $others = array_filter($issues, fn($v) => strpos($v[1][0] ?? '', '[ERROR]') !== 0);
+
+        $nTotal = 0;
+        foreach ([$errors, $others] as $group) {
+            foreach ($group as $v) {
+                $nTotal++;
+                $ffd = $v[2] > 0 ? " (U+FFFD x{$v[2]})" : "";
+                echo "  {$nTotal}. {$v[0]}{$ffd}\n";
+                foreach ($v[1] as $e) {
+                    echo "       - {$e}\n";
+                }
+            }
+        }
+        echo "\n  ❌  " . count($issues) . " 个文件存在问题\n";
+    }
+
+    echo "\n── 修复指引 ──────────────────────\n";
+    echo "  查看详情:  php tools/encoding/scan.php --analyze <file>\n";
+    echo "  深度修复:  php tools/encoding/repair.php <file>\n";
+    echo "  完整文档:  tools/encoding/README.md\n";
+    echo "───────────────────────────────────\n";
+    echo "\nScan completed.\n";
+}
+
+/**
+ * 扫描单个文件（--path 指向文件时调用）
+ */
+function scanSingleFile(string $filePath): void {
+    global $total, $issues, $excludeTools, $excludeDirs, $mojibakeSeq, $rareChars, $scanRoot;
+
+    $f = new SplFileInfo($filePath);
+    $ext = $f->getExtension();
+    if (!in_array($ext, $GLOBALS['scanExts'], true)) {
+        echo "[WARN] 不支持的文件扩展名: .{$ext}\n";
+        return;
+    }
+
+    $rel = str_replace($scanRoot . '/', '', $filePath);
+    $rel = str_replace('\\', '/', $rel);
+    $GLOBALS['_CURRENT_REL'] = $rel;
+
+    $c = @file_get_contents($filePath);
+    if ($c === false) {
+        echo "[ERROR] 无法读取文件: {$filePath}\n";
+        return;
+    }
+
+    $total++;
+    $err = scanFileContent($c);
+
+    if (!empty($err)) {
+        $ffdCount = substr_count($c, "\xEF\xBF\xBD");
+        $issues[] = [$rel, $err, $ffdCount];
+    }
+}
+
+/**
+ * 扫描文件内容，返回错误列表
+ */
+function scanFileContent(string $c): array {
     $err = [];
 
-    // ── 1. BOM 检查 ──
+    // 1. BOM 检查
     if (substr($c, 0, 3) === "\xEF\xBB\xBF") {
         $err[] = "[WARN] BOM标记";
     }
 
-    // ── 2. 全文件 UTF-8 有效性 ──
+    // 2. 全文件 UTF-8 有效性
     $fileIsUtf8 = mb_check_encoding($c, 'UTF-8');
     if (!$fileIsUtf8) {
         $det = mb_detect_encoding($c, ['UTF-8', 'GBK', 'CP936', 'GB2312', 'ISO-8859-1'], true);
         $err[] = "[ERROR] 非UTF-8(检测:" . ($det ?: '?') . ")";
     }
 
-    // ── 3. U+FFFD 替换字符 ──
+    // 3. U+FFFD 替换字符
     $ffdCount = substr_count($c, "\xEF\xBF\xBD");
     if ($ffdCount > 0) {
-        // 统计每行 U+FFFD 数量
         $lineCounts = [];
         $lines = explode("\n", $c);
         foreach ($lines as $i => $line) {
@@ -254,23 +432,28 @@ foreach ($it as $f) {
         $err[] = "[{$severity}] U+FFFD x{$ffdCount} 行:{$linesStr}";
     }
 
-    // ── 4. 确凿乱码序列 ──
-    foreach ($mojibakeSeq as $name => $bytes) {
-        if (strpos($c, $bytes) !== false) {
-            $err[] = "[ERROR] 序列乱码:" . $name;
+    // 4. 确凿乱码序列
+    // 跳过 tools/encoding/ 自身文件（含检测字节序列，非乱码）
+    $relPath = $GLOBALS['_CURRENT_REL'] ?? '';
+    $isEncodingTool = str_starts_with($relPath, 'tools/encoding/');
+    if (!$isEncodingTool) {
+        foreach ($GLOBALS['mojibakeSeq'] as $name => $bytes) {
+            if (strpos($c, $bytes) !== false) {
+                $err[] = "[ERROR] 序列乱码:" . $name;
+            }
         }
     }
 
-    // ── 5. 稀有乱码单字 ──
+    // 5. 稀有乱码单字
     if (!$fileIsUtf8) {
-        foreach ($rareChars as $bytes => $name) {
+        foreach ($GLOBALS['rareChars'] as $bytes => $name) {
             if (strpos($c, $bytes) !== false) {
                 $err[] = "[WARN] 可疑字符:" . $name;
             }
         }
     }
 
-    // ── 6. 逐行 UTF-8 校验 ──
+    // 6. 逐行 UTF-8 校验
     if ($fileIsUtf8 && strlen($c) > 1000) {
         $lines = explode("\n", $c);
         $badLines = [];
@@ -289,7 +472,7 @@ foreach ($it as $f) {
         }
     }
 
-    // ── 7. CP936 回环探测（仅对 UTF-8 含中文文件）──
+    // 7. CP936 回环探测
     if ($fileIsUtf8 && empty($err)) {
         if (preg_match('/[\x{4E00}-\x{9FFF}]/u', $c)) {
             $cp936str = @mb_convert_encoding($c, 'CP936', 'UTF-8');
@@ -315,63 +498,14 @@ foreach ($it as $f) {
                         $cjkAfter  = preg_match_all('/[\x{4E00}-\x{9FFF}]/u', $back);
                         $beforeFfd = substr_count($c, "\xEF\xBF\xBD");
                         $afterFfd  = substr_count($back, "\xEF\xBF\xBD");
-                        $err[] = "[WARN] CP936回环异常: CJK→CJK变更".$cjkToCjk."字({$cjkBefore}→{$cjkAfter}) U+FFFD({$beforeFfd}→{$afterFfd}) 建议手动检查或 php tools/encoding/scan.php --fix <file>";
+                        $err[] = "[WARN] CP936回环异常: CJK→CJK变更{$cjkToCjk}字({$cjkBefore}→{$cjkAfter}) U+FFFD({$beforeFfd}→{$afterFfd}) 建议手动检查或 php tools/encoding/scan.php --fix <file>";
                     }
                 }
             }
         }
     }
 
-    if (!empty($err)) {
-        $issues[] = [$rel, $err, $ffdCount ?? 0];
-    }
+    return $err;
 }
 
-// ── 输出报告 ────────────────────────────────
 
-if ($flags['--json']) {
-    echo json_encode([
-        'scanned' => $total,
-        'issues' => count($issues),
-        'files' => array_map(function($v) {
-            return ['path' => $v[0], 'errors' => $v[1], 'ffdCount' => $v[2]];
-        }, $issues),
-    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n";
-    exit(0);
-}
-
-echo "=== Encoding Scan ===\n";
-echo "扫描: {$total} 文件, 发现: " . count($issues) . " 个问题文件\n\n";
-
-if (empty($issues)) {
-    echo "  ✅  全部文件编码正常！\n";
-} else {
-    // 统计严重程度
-    $nError = 0; $nWarn = 0; $nInfo = 0;
-    foreach ($issues as $v) {
-        foreach ($v[1] as $e) {
-            if (strpos($e, '[ERROR]') === 0) $nError++;
-            elseif (strpos($e, '[WARN]') === 0) $nWarn++;
-            else $nInfo++;
-        }
-    }
-    echo "  严重: {$nError} | 警告: {$nWarn} | 提示: {$nInfo}\n\n";
-
-    $nTotal = 0;
-    foreach ($issues as $v) {
-        $nTotal++;
-        $ffd = $v[2] > 0 ? " (U+FFFD x{$v[2]})" : "";
-        echo "  {$nTotal}. {$v[0]}{$ffd}\n";
-        foreach ($v[1] as $e) {
-            echo "       - {$e}\n";
-        }
-    }
-    echo "\n  ❌  " . count($issues) . " 个文件存在问题\n";
-}
-
-echo "\n── 修复指引 ──────────────────────\n";
-echo "  查看详情:  php tools/encoding/scan.php --analyze <file>\n";
-echo "  深度修复:  php tools/encoding/repair.php <file>\n";
-echo "  完整文档:  tools/encoding/README.md\n";
-echo "───────────────────────────────────\n";
-echo "\nScan completed.\n";
