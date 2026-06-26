@@ -1005,8 +1005,9 @@ class RenderTreeManager
 
         // CSS 继承传播：父节点已计算的继承属性 -> 当前节点未显式设置时继承
         // CSS 2.2 §6.1.1: color/font/line-height/text-align/visibility 等默认继承
+        // parentStyle 使用引擎key名（如 fg 而非 color），直接匹配
         if (!empty($parentStyle)) {
-            $inheritedKeys = ['color','fontFamily','fontSize','fontWeight','fontStyle','lineHeight','textAlign','textIndent','whiteSpace','wordBreak','visibility','opacity','cursor','direction'];
+            $inheritedKeys = ['fg','fontFamily','fontSize','fontWeight','bold','fontStyle','lineHeight','textAlign','textIndent','whiteSpace','wordBreak','visibility','opacity','cursor','direction'];
             foreach ($inheritedKeys as $key) {
                 if (!isset($merged[$key]) && isset($parentStyle[$key])) {
                     $merged[$key] = $parentStyle[$key];

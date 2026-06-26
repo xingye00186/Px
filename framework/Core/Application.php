@@ -817,16 +817,18 @@ class Application
             $style['bg'] = -1;
         }
         // ── border-color: 4-side format export (CSS 2.2 §8.5.2) ──
-        // Browser exports borderColor as 4-side string when per-side colors differ.
-        // Check if per-side border colors exist and differ from the main borderColor.
+        // Browser always exports borderColor as 4-side string via getComputedStyle.
+        // Engine must also export 4-side format when any per-side color is set.
+        // Per-side colors not explicitly set fall back to the shorthand borderColor.
         $bc = $style['borderColor'] ?? null;
-        $bTopC = $node->style['borderTopColor'] ?? null;
-        $bRightC = $node->style['borderRightColor'] ?? null;
-        $bBottomC = $node->style['borderBottomColor'] ?? null;
-        $bLeftC = $node->style['borderLeftColor'] ?? null;
-        if ($bc !== null && $bTopC !== null) {
-            if ($bTopC !== $bc || $bRightC !== $bc || $bBottomC !== $bc || $bLeftC !== $bc) {
-                // Per-side colors differ from shorthand — export 4-side format
+        $bw = $style['borderWidth'] ?? 0;
+        if ($bc !== null || $bw > 0) {
+            $bTopC = $node->style['borderTopColor'] ?? $bc;
+            $bRightC = $node->style['borderRightColor'] ?? $bc;
+            $bBottomC = $node->style['borderBottomColor'] ?? $bc;
+            $bLeftC = $node->style['borderLeftColor'] ?? $bc;
+            // Always export as 4-side format when any per-side color exists or borderWidth>0
+            if ($bTopC !== null && $bRightC !== null && $bBottomC !== null && $bLeftC !== null) {
                 $style['borderColor'] = self::formatColorInt($bTopC) . ' '
                     . self::formatColorInt($bRightC) . ' '
                     . self::formatColorInt($bBottomC) . ' '
