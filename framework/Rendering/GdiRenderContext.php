@@ -216,6 +216,8 @@ class GdiRenderContext extends RenderContext
                 }
                 // 绘制 text-decoration 装饰线
                 $this->drawTextDecoration($el);
+                // 绘制 text-emphasis 强调标记（CSS Text Decoration §8）
+                $this->drawTextEmphasis($el);
                 break;
 
             // ── 复合类型 (多次 GDI 调用) ──────
@@ -679,6 +681,50 @@ class GdiRenderContext extends RenderContext
                     $this->fillRect($x, $y, $thickness, $length, $color);
                 }
                 break;
+        }
+    }
+
+    /**
+     * 绘制 text-emphasis 强调标记（CSS Text Decoration Module Level 3 §8）
+     * 在每个字符上方绘制圈/点等强调符号
+     */
+    private function drawTextEmphasis(array $el): void
+    {
+        $style = $el['textEmphasisStyle'] ?? 'none';
+        if ($style === 'none' || $style === '') return;
+
+        $x = (int)($el['x'] ?? 0);
+        $y = (int)($el['y'] ?? 0);
+        $fontSize = (int)($el['fontSize'] ?? 16);
+        $textWidth = (int)($el['textWidth'] ?? 80);
+        $color = (int)($el['textEmphasisColor'] ?? 0xFF0000);
+        $position = $el['textEmphasisPosition'] ?? 'over';
+        if ($textWidth <= 0 || $fontSize <= 0) return;
+
+        // Emphasis mark size: ~30% of font-size
+        $markSize = max(3, (int)($fontSize * 0.3));
+        // Space marks evenly across text, approximately per-character
+        $charCount = max(1, (int)($textWidth / ($fontSize * 0.6)));
+        $spacing = (int)($textWidth / max($charCount, 1));
+        // Y position: above (over) or below (under) the text
+        $baseY = ($position === 'under') ? ($y + $fontSize + 2) : ($y - $markSize - 1);
+
+        for ($i = 0; $i < $charCount; $i++) {
+            $cx = $x + $i * $spacing + (int)($spacing / 2);
+            if ($cx > $x + $textWidth) break;
+            if ($style === 'dot' || $style === 'filled dot') {
+                // Filled circle
+                $this->fillRect($cx - (int)($markSize/2), $baseY, $markSize, $markSize, $color);
+            } elseif ($style === 'circle' || $style === 'filled circle') {
+                // Outlined circle (draw as 2px border rect)
+                $this->fillRect($cx - (int)($markSize/2), $baseY, $markSize, 1, $color);
+                $this->fillRect($cx - (int)($markSize/2), $baseY + $markSize - 1, $markSize, 1, $color);
+                $this->fillRect($cx - (int)($markSize/2), $baseY, 1, $markSize, $color);
+                $this->fillRect($cx + (int)($markSize/2) - 1, $baseY, 1, $markSize, $color);
+            } else {
+                // Default: filled circle (dot)
+                $this->fillRect($cx - (int)($markSize/2), $baseY, $markSize, $markSize, $color);
+            }
         }
     }
 }

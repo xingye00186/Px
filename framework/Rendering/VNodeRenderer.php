@@ -698,6 +698,11 @@ class VNodeRenderer
                 $style['letterSpacing'] = ($style['letterSpacing'] ?? 0) + $fontStretchExtra;
             }
 
+            // CSS Text Decoration L3 §8: text-emphasis
+            $style['textEmphasisStyle'] = $style['textEmphasisStyle'] ?? 'none';
+            $style['textEmphasisColor'] = $style['textEmphasisColor'] ?? 0xFF0000;
+            $style['textEmphasisPosition'] = $style['textEmphasisPosition'] ?? 'over';
+
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
 
             // ── 元素自身坐标（scroll 偏移后的位置，不受 CULL 影响）──
@@ -875,7 +880,10 @@ class VNodeRenderer
                         'textWidth' => $segW,
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
                         'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
-                        'letterSpacing' => $style['letterSpacing'] ?? 0];
+                        'letterSpacing' => $style['letterSpacing'] ?? 0,
+                        'textEmphasisStyle' => $style['textEmphasisStyle'] ?? 'none',
+                        'textEmphasisColor' => $style['textEmphasisColor'] ?? 0xFF0000,
+                        'textEmphasisPosition' => $style['textEmphasisPosition'] ?? 'over'];
                     $lineIdx++;
                 }
                 $node->textRenderInfo = [
@@ -1125,6 +1133,11 @@ class VNodeRenderer
         if ($fontStretchExtra !== 0) {
             $style['letterSpacing'] = ($style['letterSpacing'] ?? 0) + $fontStretchExtra;
         }
+
+        // CSS Text Decoration L3 §8: text-emphasis
+        $style['textEmphasisStyle'] = $style['textEmphasisStyle'] ?? 'none';
+        $style['textEmphasisColor'] = $style['textEmphasisColor'] ?? 0xFF0000;
+        $style['textEmphasisPosition'] = $style['textEmphasisPosition'] ?? 'over';
 
         // Parse text-shadow
         $tsOffsets = CssMappings::parseBoxShadowOffsets($style['textShadow'] ?? '');

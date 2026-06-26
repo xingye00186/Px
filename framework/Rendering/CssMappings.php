@@ -363,6 +363,10 @@ class CssMappings
         'text-decoration-color'     => ['key' => 'textDecorationColor',    'parser' => 'Px\Rendering\CssMappings::parseHexColor',   'default' => 0xFFFFFF],
         'text-decoration-style'     => ['key' => 'textDecorationStyle',    'parser' => 'Px\Rendering\CssMappings::parseIdent',     'default' => 'solid'],
         'text-decoration-thickness' => ['key' => 'textDecorationThickness','parser' => 'Px\Rendering\CssMappings::parsePixels',    'default' => 0],
+        // ---- Text Emphasis (CSS Text Decoration Module Level 3 §8) ----
+        'text-emphasis-style'    => ['key' => 'textEmphasisStyle',  'parser' => 'Px\Rendering\CssMappings::parseIdent',   'default' => 'none'],
+        'text-emphasis-color'    => ['key' => 'textEmphasisColor',  'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0xFF0000],
+        'text-emphasis-position' => ['key' => 'textEmphasisPosition','parser' => 'Px\Rendering\CssMappings::parseIdent',   'default' => 'over'],
         'text-underline-offset'     => ['key' => 'textUnderlineOffset',    'parser' => 'Px\Rendering\CssMappings::parsePixels',    'default' => 0],
     
         // CSS Inline Layout: vertical-align (CSS 2.2 §10.8.1)
