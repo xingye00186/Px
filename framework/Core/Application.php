@@ -802,6 +802,10 @@ class Application
         if (!isset($style['textAlign']) && isset($parentStyle['textAlign'])) {
             $style['textAlign'] = $parentStyle['textAlign'];
         }
+        // fg (color) 继承补全：与 textAlign 同样逻辑
+        if (!isset($style['fg']) && isset($parentStyle['fg'])) {
+            $style['fg'] = $parentStyle['fg'];
+        }
         // CSS 百分比宽/高：当 widthPercent/heightPercent 存在时，
         // style.width/style.height 是原始 CSS 值（如 100% → parsePixels 返回 100），
         // 应使用引擎布局计算后的 $node->w / $node->h 作为导出值
@@ -840,8 +844,11 @@ class Application
         // 内联元素（span, b, code, br 等）默认 display:inline（CSS 2.2 §9.2.2）
         if (!isset($style['display'])) {
             $inlineTypes = ['span', '#text', 'b', 'strong', 'em', 'i', 'code', 'a', 'label', 'br'];
+            $listItemTypes = ['li'];
             if (in_array($node->type, $inlineTypes, true)) {
                 $style['display'] = 'inline';
+            } elseif (in_array($node->type, $listItemTypes, true)) {
+                $style['display'] = 'list-item';
             } else {
                 $style['display'] = 'block';
             }
