@@ -783,7 +783,7 @@ class Application
             'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',
             'gridColumn', 'gridRow', 'gridAutoRows', 'gridTemplateAreas',
             'justifyItems', 'alignSelf', 'justifySelf', 'alignContent',
-            'overflow', 'overflowX', 'overflowY', 'overflowWrap', 'backgroundRepeat', 'backgroundClip', 'backgroundOrigin', 'backgroundAttachment', 'objectFit', 'objectPosition', 'textShadow', 'letterSpacing', 'wordSpacing', 'verticalAlign', 'fontVariant', 'fontStretch', 'appearance', 'borderCollapse', 'borderSpacing', 'tableLayout', 'captionSide',
+            'overflow', 'overflowX', 'overflowY', 'overflowWrap', 'backgroundRepeat', 'backgroundClip', 'backgroundOrigin', 'backgroundAttachment', 'objectFit', 'objectPosition', 'textShadow', 'letterSpacing', 'wordSpacing', 'verticalAlign', 'fontVariant', 'fontStretch', 'appearance', 'borderCollapse', 'borderSpacing', 'tableLayout', 'captionSide', 'listStyleType', 'listStylePosition',
             'pointerEvents',
             'outlineWidth', 'outlineStyle', 'outlineColor', 'outlineOffset',
             'columnCount', 'columnWidth', 'columnGap', 'columnRuleWidth', 'columnRuleStyle', 'columnRuleColor',

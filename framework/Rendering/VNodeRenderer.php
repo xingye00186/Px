@@ -629,6 +629,30 @@ class VNodeRenderer
         $tableLayout = $style['tableLayout'] ?? 'auto';
         $borderCollapse = $style['borderCollapse'] ?? 'separate';
         $borderSpacing = $style['borderSpacing'] ?? 0;
+        // CSS Lists L3 §3: list-style-type — 列表标记前缀
+        $listMarker = '';
+        if ($node->type === 'li') {
+            $parent = $node->parent;
+            $lst = 'disc';
+            if ($parent !== null) {
+                $lst = $parent->style['listStyleType'] ?? 'disc';
+                // Count previous li siblings for decimal numbering
+                $liIndex = 0;
+                foreach ($parent->children as $sibling) {
+                    if ($sibling === $node) break;
+                    if ($sibling->type === 'li') $liIndex++;
+                }
+                switch ($lst) {
+                    case 'decimal': $listMarker = ($liIndex + 1) . '. '; break;
+                    case 'lower-alpha': $listMarker = chr(97 + ($liIndex % 26)) . '. '; break;
+                    case 'upper-alpha': $listMarker = chr(65 + ($liIndex % 26)) . '. '; break;
+                    case 'square': $listMarker = "\xE2\x96\xAA "; break; // ▪
+                    case 'circle': $listMarker = "\xE2\x97\x8B "; break; // ○
+                    case 'none': $listMarker = ''; break;
+                    default: $listMarker = "\xE2\x80\xA2 "; break; // •
+                }
+            }
+        }
         $gradientAngle = $style['gradientAngle'] ?? null;
         $gradientColors = $style['gradientColors'] ?? null;
         // Parse text-shadow (CSS Text Decoration Module L3 §7)
@@ -680,6 +704,11 @@ class VNodeRenderer
             if ($align === 'justify' || $align === 'justify-all') $align = 'left';
 
             $text = $node->content;
+
+            // CSS Lists L3 §3: prepend list marker to li content
+            if ($listMarker !== '') {
+                $text = $listMarker . $text;
+            }
 
             // CSS Text Module Level 3 §2: text-transform
             $textTransform = $style['textTransform'] ?? 'none';
