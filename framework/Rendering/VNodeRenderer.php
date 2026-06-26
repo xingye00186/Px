@@ -625,6 +625,7 @@ class VNodeRenderer
         $offsets = CssMappings::parseBoxShadowOffsets($style['boxShadow'] ?? '');
         $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowBlur = $offsets['blur']; $shadowColor = $offsets['color']; $shadowAlpha = $offsets['alpha']; $shadowInset = $offsets['inset'];
         $backgroundClip = $style['backgroundClip'] ?? 'border-box';
+        $backgroundAttachment = $style['backgroundAttachment'] ?? 'scroll';
         $gradientAngle = $style['gradientAngle'] ?? null;
         $gradientColors = $style['gradientColors'] ?? null;
         // Parse text-shadow (CSS Text Decoration Module L3 §7)
@@ -646,10 +647,12 @@ class VNodeRenderer
         // ── background-image 图片层（如果有）──
         $bgImageEl = null;
         if ($bgImageHandle !== 0) {
+            $imgX = $backgroundAttachment === 'fixed' ? $node->x : $x;
+            $imgY = $backgroundAttachment === 'fixed' ? $node->y : $y;
             $bgImageEl = [
                 'type' => 'image',
                 'handle' => $bgImageHandle,
-                'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+                'x' => $imgX, 'y' => $imgY, 'w' => $w, 'h' => $h,
                 'layer' => $layer,
                 'backgroundRepeat' => $style['backgroundRepeat'] ?? 'repeat',
             ];
@@ -818,7 +821,9 @@ class VNodeRenderer
             $elements = [];
             if ($hasBg || $hasBorder) {
                 // CSS Backgrounds §3.7: background-clip — 背景裁剪区域
-                $clipX = $x; $clipY = $y; $clipW = $w; $clipH = $h;
+                $bgX = $backgroundAttachment === 'fixed' ? $node->x : $x;
+                $bgY = $backgroundAttachment === 'fixed' ? $node->y : $y;
+                $clipX = $bgX; $clipY = $bgY; $clipW = $w; $clipH = $h;
                 if ($backgroundClip === 'padding-box' && ($borderLeftWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0)) {
                     $clipX += $borderLeftWidth; $clipY += $borderTopWidth;
                     $clipW -= ($borderLeftWidth + $borderRightWidth);

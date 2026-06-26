@@ -49,6 +49,11 @@ class CssMappings
             'parser'  => 'Px\Rendering\CssMappings::parseIdent',
             'default' => 'repeat',
         ],
+        'background-attachment' => [
+            'key'     => 'backgroundAttachment',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => 'scroll',
+        ],
         'background-clip' => [
             'key'     => 'backgroundClip',
             'parser'  => 'Px\Rendering\CssMappings::parseIdent',
