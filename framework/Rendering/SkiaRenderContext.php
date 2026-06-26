@@ -209,10 +209,11 @@ class SkiaRenderContext extends RenderContext
                 $blc = $el['borderLeftColor'] ?? $borderColor;
                 $brc = $el['borderRightColor'] ?? $borderColor;
                 if ($bt > 0 || $bb > 0 || $bl > 0 || $br > 0) {
-                    $bx = $el['x'] ?? 0;
-                    $by = $el['y'] ?? 0;
-                    $bw = $el['w'] ?? 0;
-                    $bh = $el['h'] ?? 0;
+                    $oo = $el['outlineOffset'] ?? 0;
+                    $bx = ($el['x'] ?? 0) - $oo;
+                    $by = ($el['y'] ?? 0) - $oo;
+                    $bw = ($el['w'] ?? 0) + $oo * 2;
+                    $bh = ($el['h'] ?? 0) + $oo * 2;
                     $bs = $el['borderStyle'] ?? 'solid';
                     if ($bt > 0) $this->drawBorderLine($bx, $by, $bw, $bt, $btc, $bs, true);
                     if ($bb > 0) $this->drawBorderLine($bx, $by + $bh - $bb, $bw, $bb, $bbc, $bs, true);

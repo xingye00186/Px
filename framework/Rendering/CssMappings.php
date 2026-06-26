@@ -388,6 +388,11 @@ class CssMappings
             'parser'  => 'Px\Rendering\CssMappings::parseHexColor',
             'default' => 0,
         ],
+        'outline-offset' => [
+            'key'     => 'outlineOffset',
+            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'default' => 0,
+        ],
 
         // CSS Multi-column Layout Module Level 1
         'column-count' => [

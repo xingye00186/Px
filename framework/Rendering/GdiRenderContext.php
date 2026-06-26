@@ -137,10 +137,11 @@ class GdiRenderContext extends RenderContext
                 // Draw border outline — only skipped when solid+rounded (drawn by two-round-rect)
                 // For non-solid borders with radius, draw using drawBorderLine (square corners).
                 if (($radius === 0 || $borderStyle !== 'solid') && ($bt > 0 || $bb > 0 || $bl > 0 || $br > 0)) {
-                    $bx = $el['x'] ?? 0;
-                    $by = $el['y'] ?? 0;
-                    $bw = $el['w'] ?? 0;
-                    $bh = $el['h'] ?? 0;
+                    $oo = $el['outlineOffset'] ?? 0;
+                    $bx = ($el['x'] ?? 0) - $oo;
+                    $by = ($el['y'] ?? 0) - $oo;
+                    $bw = ($el['w'] ?? 0) + $oo * 2;
+                    $bh = ($el['h'] ?? 0) + $oo * 2;
                     $bs = $el['borderStyle'] ?? 'solid';
                     if ($bt > 0) $this->drawBorderLine($bx, $by, $bw, $bt, $btc, $bs, true);
                     if ($bb > 0) $this->drawBorderLine($bx, $by + $bh - $bb, $bw, $bb, $bbc, $bs, true);

@@ -785,7 +785,7 @@ class Application
             'justifyItems', 'alignSelf', 'justifySelf', 'alignContent',
              'overflow', 'overflowX', 'overflowY', 'overflowWrap', 'backgroundRepeat', 'backgroundClip', 'backgroundOrigin', 'backgroundAttachment', 'textShadow', 'letterSpacing', 'wordSpacing', 'verticalAlign', 'fontVariant', 'fontStretch',
             'pointerEvents',
-            'outlineWidth', 'outlineStyle', 'outlineColor',
+            'outlineWidth', 'outlineStyle', 'outlineColor', 'outlineOffset',
             'textDecorationLine', 'textDecorationColor', 'textDecorationStyle', 'textDecorationThickness'];
        $style = [];
         foreach ($styleKeys as $k) {
