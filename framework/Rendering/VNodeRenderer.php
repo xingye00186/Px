@@ -792,7 +792,8 @@ class VNodeRenderer
                         'underlineOffset' => $style['underlineOffset'] ?? 0,
                         'textWidth' => $segW,
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
-                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha];
+                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
+                        'letterSpacing' => $style['letterSpacing'] ?? 0];
                     $lineIdx++;
                 }
                 $node->textRenderInfo = [
@@ -854,7 +855,8 @@ class VNodeRenderer
                         'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
                         'textWidth' => self::measureTextWidth($seg, $fontSize, $isBold),
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
-                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha];
+                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
+                        'letterSpacing' => $style['letterSpacing'] ?? 0];
                     $lineIdx++;
                 }
 
@@ -878,7 +880,8 @@ class VNodeRenderer
                         'underlineOffset' => $style['underlineOffset'] ?? 0,
                         'textWidth' => self::measureTextWidth($text, $fontSize, $isBold),
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
-                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha];
+                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
+                        'letterSpacing' => $style['letterSpacing'] ?? 0];
 
                 // 存储文本渲染位置信息（用于 layout dump 验证垂直居中）
                 $node->textRenderInfo = [
@@ -1073,7 +1076,8 @@ class VNodeRenderer
                     'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
                     'textWidth' => self::measureTextWidth($seg, $fontSize, (bool)$bold),
                     'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
-                    'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha];
+                    'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
+                    'letterSpacing' => $style['letterSpacing'] ?? 0];
                 $lineIdx++;
             }
             return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
@@ -1114,7 +1118,8 @@ class VNodeRenderer
             'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
             'textWidth' => self::measureTextWidth($text, $fontSize, (bool)$bold),
             'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
-            'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha];
+            'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
+            'letterSpacing' => $style['letterSpacing'] ?? 0];
     }
 
     private function makeButtonElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array

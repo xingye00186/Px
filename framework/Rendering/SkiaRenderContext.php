@@ -226,28 +226,62 @@ class SkiaRenderContext extends RenderContext
                 $ty = $el['y'] ?? 0;
                 $tt = $el['text'] ?? '';
                 if ($tx < 0 || $ty < 0) break;
+                $letterSpacing = $el['letterSpacing'] ?? 0;
                 // ── text-shadow 阴影文字绘制（CSS Text Decoration §7）──
                 $tsX = $el['textShadowX'] ?? 0;
                 $tsY = $el['textShadowY'] ?? 0;
                 if ($tsX !== 0 || $tsY !== 0) {
                     $tsColor = $el['textShadowColor'] ?? 0;
+                    $tsFontSize = $el['fontSize'] ?? 16;
+                    $tsBold = $el['bold'] ?? 0;
+                    $tsFamily = $el['fontFamily'] ?? '';
+                    $tsText = $el['text'] ?? '';
+                    if ($letterSpacing > 0) {
+                        $cx = $tx + $tsX; $textLen = strlen($tsText);
+                        for ($i = 0; $i < $textLen;) {
+                            $charLen = 1; $b = ord($tsText[$i]);
+                            if ($b >= 0xF0) $charLen = 4;
+                            elseif ($b >= 0xE0) $charLen = 3;
+                            elseif ($b >= 0xC0) $charLen = 2;
+                            $char = substr($tsText, $i, $charLen);
+                            $charW = max(1, (int)sk_measure_text_width($char, $tsFontSize, $tsBold));
+                            $this->drawText($cx, $ty + $tsY, $char, $tsFontSize, $tsColor, $tsBold, $tsFamily);
+                            $cx += $charW + $letterSpacing;
+                            $i += $charLen;
+                        }
+                    } else {
+                        $this->drawText($tx + $tsX, $ty + $tsY, $tsText, $tsFontSize, $tsColor, $tsBold, $tsFamily);
+                    }
+                }
+                // ── letter-spacing: 逐字符绘制（CSS Text §4）──
+                if ($letterSpacing > 0) {
+                    $text = $el['text'] ?? '';
+                    $fontSize = $el['fontSize'] ?? 16;
+                    $bold = $el['bold'] ?? 0;
+                    $fontFamily = $el['fontFamily'] ?? '';
+                    $color = $el['color'] ?? 0xFFFFFF;
+                    $cx = $tx; $textLen = strlen($text);
+                    for ($i = 0; $i < $textLen;) {
+                        $charLen = 1; $b = ord($text[$i]);
+                        if ($b >= 0xF0) $charLen = 4;
+                        elseif ($b >= 0xE0) $charLen = 3;
+                        elseif ($b >= 0xC0) $charLen = 2;
+                        $char = substr($text, $i, $charLen);
+                        $charW = max(1, (int)sk_measure_text_width($char, $fontSize, $bold));
+                        $this->drawText($cx, $ty, $char, $fontSize, $color, $bold, $fontFamily);
+                        $cx += $charW + $letterSpacing;
+                        $i += $charLen;
+                    }
+                } else {
                     $this->drawText(
-                        $tx + $tsX, $ty + $tsY,
+                        $tx, $ty,
                         $el['text'] ?? '',
                         $el['fontSize'] ?? 16,
-                        $tsColor,
+                        $el['color'] ?? 0xFFFFFF,
                         $el['bold'] ?? 0,
                         $el['fontFamily'] ?? ''
                     );
                 }
-                $this->drawText(
-                    $tx, $ty,
-                    $el['text'] ?? '',
-                    $el['fontSize'] ?? 16,
-                    $el['color'] ?? 0xFFFFFF,
-                    $el['bold'] ?? 0,
-                    $el['fontFamily'] ?? ''
-                );
                 // 绘制 text-decoration 装饰线
                 $this->drawTextDecoration($el);
                 break;

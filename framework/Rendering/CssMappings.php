@@ -333,7 +333,9 @@ class CssMappings
         'transform'            => ['key' => 'transform',       'parser' => 'Px\\Rendering\\CssMappings::parseTransform', 'default' => ''],
         'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => ''],
         'text-shadow'          => ['key' => 'textShadow',       'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => ''],
-    
+        'letter-spacing'       => ['key' => 'letterSpacing',    'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+        'word-spacing'         => ['key' => 'wordSpacing',      'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+            
         // ---- Text Decoration (CSS Text Decoration Module Level 3) ----
         'text-decoration-line'      => ['key' => 'textDecorationLine',     'parser' => 'Px\Rendering\CssMappings::parseIdent',     'default' => 'none'],
         'text-decoration-color'     => ['key' => 'textDecorationColor',    'parser' => 'Px\Rendering\CssMappings::parseHexColor',   'default' => 0xFFFFFF],
