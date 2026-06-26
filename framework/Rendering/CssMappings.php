@@ -151,6 +151,11 @@ class CssMappings
             'parser'  => 'Px\Rendering\CssMappings::parseIdent',
             'default' => 'none',
         ],
+        'vertical-align' => [
+            'key'     => 'verticalAlign',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => 'baseline',
+        ],
         'line-height' => [
             'key'     => 'lineHeight',
             'parser'  => 'Px\Rendering\CssMappings::parseLineHeight',

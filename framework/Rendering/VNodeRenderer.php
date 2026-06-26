@@ -1034,6 +1034,20 @@ class VNodeRenderer
         $tsOffsets = CssMappings::parseBoxShadowOffsets($style['textShadow'] ?? '');
         $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];
 
+        // CSS Inline Layout L3 §2: vertical-align — 内联元素垂直对齐偏移
+        $verticalAlign = $style['verticalAlign'] ?? 'baseline';
+        $vaY = 0;
+        if ($verticalAlign !== 'baseline' && $verticalAlign !== 'top' && $verticalAlign !== 'bottom') {
+            $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
+            switch ($verticalAlign) {
+                case 'sub':        $vaY = (int)($fontSize * 0.25); break;
+                case 'super':      $vaY = -(int)($fontSize * 0.35); break;
+                case 'middle':     $vaY = -(int)($fontSize * 0.2); break;
+                case 'text-top':   $vaY = 0; break;
+                case 'text-bottom':$vaY = $textHeight - $fontSize; break;
+            }
+        }
+
         // Check raw VNode props for overflow-wrap/word-wrap fallback
         if (($style['overflowWrap'] ?? 'normal') === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
             $rawStyle = $node->sourceVNode->props['style'] ?? '';
@@ -1066,7 +1080,7 @@ class VNodeRenderer
                 }
                 $elements[] = [
                     'type' => 'text', 'text' => $seg,
-                    'x' => $segX, 'y' => $lineY,
+                    'x' => $segX, 'y' => $lineY + $vaY,
                     'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
                     'align' => 'left', 'layer' => $layer,
                     'decorationLine' => $style['textDecorationLine'] ?? 'none',
@@ -1108,7 +1122,7 @@ class VNodeRenderer
 
         return [
             'type' => 'text', 'text' => $text,
-            'x' => $x, 'y' => $y,
+            'x' => $x, 'y' => $y + $vaY,
             'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
             'align' => $align, 'layer' => $layer,
             'decorationLine' => $style['textDecorationLine'] ?? 'none',
