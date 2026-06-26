@@ -329,7 +329,12 @@ class CssMappings
         'justify-content'  => ['key' => 'justifyContent',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'flex-start'],
         'align-items'      => ['key' => 'alignItems',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'stretch'],
         'align-content'    => ['key' => 'alignContent',     'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'stretch'],
-        'gap'              => ['key' => 'gap',              'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
+        'gap'              => ['key' => 'gap',              'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+        // ---- CSS Tables (CSS 2.2 §17) ----
+        'border-collapse'  => ['key' => 'borderCollapse',   'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => 'separate'],
+        'border-spacing'   => ['key' => 'borderSpacing',    'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+        'table-layout'     => ['key' => 'tableLayout',      'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => 'auto'],
+        'caption-side'     => ['key' => 'captionSide',       'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => 'top'],
         'flex'             => ['key' => 'flex',              'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
         'flex-grow'        => ['key' => 'flexGrow',    'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
         'flex-basis'       => ['key' => 'flexBasis',    'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'auto'],
@@ -415,8 +420,23 @@ class CssMappings
             'parser'  => 'Px\Rendering\CssMappings::parsePixels',
             'default' => 16,
         ],
+        'column-rule-width' => [
+            'key'     => 'columnRuleWidth',
+            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'default' => 0,
+        ],
+        'column-rule-style' => [
+            'key'     => 'columnRuleStyle',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => 'none',
+        ],
+        'column-rule-color' => [
+            'key'     => 'columnRuleColor',
+            'parser'  => 'Px\Rendering\CssMappings::parseHexColor',
+            'default' => 0,
+        ],
     ];
-    
+        
     /**
      * Inline style → 布局属性映射（仅 PROPERTY_MAP 未覆盖的属性）
      *
@@ -777,6 +797,23 @@ class CssMappings
                     $lower = strtolower($part);
                     if (in_array($lower, ['solid', 'dotted', 'dashed', 'double', 'none'])) {
                         if (!isset($raw['outline-style'])) $raw['outline-style'] = $lower;
+                    }
+                }
+            }
+        }
+
+        // Expand column-rule shorthand into individual sub-properties
+        if (isset($raw['column-rule']) && $raw['column-rule'] !== '') {
+            $parts = preg_split('/\s+/', trim($raw['column-rule']));
+            foreach ($parts as $part) {
+                if (preg_match('/^\d+/', $part)) {
+                    if (!isset($raw['column-rule-width'])) $raw['column-rule-width'] = $part;
+                } elseif (preg_match('/^#/', $part)) {
+                    if (!isset($raw['column-rule-color'])) $raw['column-rule-color'] = $part;
+                } else {
+                    $lower = strtolower($part);
+                    if (in_array($lower, ['solid', 'dotted', 'dashed', 'double', 'none'])) {
+                        if (!isset($raw['column-rule-style'])) $raw['column-rule-style'] = $lower;
                     }
                 }
             }

@@ -783,9 +783,10 @@ class Application
             'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',
             'gridColumn', 'gridRow', 'gridAutoRows', 'gridTemplateAreas',
             'justifyItems', 'alignSelf', 'justifySelf', 'alignContent',
-             'overflow', 'overflowX', 'overflowY', 'overflowWrap', 'backgroundRepeat', 'backgroundClip', 'backgroundOrigin', 'backgroundAttachment', 'objectFit', 'objectPosition', 'textShadow', 'letterSpacing', 'wordSpacing', 'verticalAlign', 'fontVariant', 'fontStretch', 'appearance',
+            'overflow', 'overflowX', 'overflowY', 'overflowWrap', 'backgroundRepeat', 'backgroundClip', 'backgroundOrigin', 'backgroundAttachment', 'objectFit', 'objectPosition', 'textShadow', 'letterSpacing', 'wordSpacing', 'verticalAlign', 'fontVariant', 'fontStretch', 'appearance', 'borderCollapse', 'borderSpacing', 'tableLayout', 'captionSide',
             'pointerEvents',
             'outlineWidth', 'outlineStyle', 'outlineColor', 'outlineOffset',
+            'columnCount', 'columnWidth', 'columnGap', 'columnRuleWidth', 'columnRuleStyle', 'columnRuleColor',
             'textDecorationLine', 'textDecorationColor', 'textDecorationStyle', 'textDecorationThickness'];
        $style = [];
         foreach ($styleKeys as $k) {

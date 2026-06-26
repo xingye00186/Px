@@ -626,6 +626,9 @@ class VNodeRenderer
         $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowBlur = $offsets['blur']; $shadowColor = $offsets['color']; $shadowAlpha = $offsets['alpha']; $shadowInset = $offsets['inset'];
         $backgroundClip = $style['backgroundClip'] ?? 'border-box';
         $backgroundAttachment = $style['backgroundAttachment'] ?? 'scroll';
+        $tableLayout = $style['tableLayout'] ?? 'auto';
+        $borderCollapse = $style['borderCollapse'] ?? 'separate';
+        $borderSpacing = $style['borderSpacing'] ?? 0;
         $gradientAngle = $style['gradientAngle'] ?? null;
         $gradientColors = $style['gradientColors'] ?? null;
         // Parse text-shadow (CSS Text Decoration Module L3 §7)
