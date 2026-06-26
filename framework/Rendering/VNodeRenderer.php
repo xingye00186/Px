@@ -1353,8 +1353,55 @@ class VNodeRenderer
         $borderBottomColor = $style['borderBottomColor'] ?? $borderColor;
         $borderLeftColor = $style['borderLeftColor'] ?? $borderColor;
 
-        // object-fit: CSS Images §4.5 控制替换内容如何适应容器
+        // object-fit: CSS Images §5.5 控制替换内容如何适应容器
         $objectFit = $style['objectFit'] ?? 'fill';
+        $objectPosition = $style['objectPosition'] ?? '50% 50%';
+        // Compute image destination rect based on object-fit
+        $imgX = $x; $imgY = $y; $imgW = $w; $imgH = $h;
+        if ($imageHandle !== 0 && $objectFit !== 'fill') {
+            $natW = sk_get_image_width($imageHandle);
+            $natH = sk_get_image_height($imageHandle);
+            if ($natW > 0 && $natH > 0) {
+                $containerRatio = (float)$w / (float)$h;
+                $imageRatio = (float)$natW / (float)$natH;
+                if ($objectFit === 'contain') {
+                    if ($containerRatio > $imageRatio) {
+                        $imgH = $h; $imgW = (int)($h * $imageRatio);
+                    } else {
+                        $imgW = $w; $imgH = (int)($w / $imageRatio);
+                    }
+                    $imgX = $x + (int)(($w - $imgW) / 2);
+                    $imgY = $y + (int)(($h - $imgH) / 2);
+                } elseif ($objectFit === 'cover') {
+                    if ($containerRatio > $imageRatio) {
+                        $imgW = $w; $imgH = (int)($w / $imageRatio);
+                    } else {
+                        $imgH = $h; $imgW = (int)($h * $imageRatio);
+                    }
+                    $imgX = $x + (int)(($w - $imgW) / 2);
+                    $imgY = $y + (int)(($h - $imgH) / 2);
+                } elseif ($objectFit === 'none') {
+                    $imgW = $natW; $imgH = $natH;
+                    $imgX = $x + (int)(($w - $imgW) / 2);
+                    $imgY = $y + (int)(($h - $imgH) / 2);
+                } elseif ($objectFit === 'scale-down') {
+                    // Smaller of 'none' and 'contain'
+                    $noneW = $natW; $noneH = $natH;
+                    if ($containerRatio > $imageRatio) {
+                        $contH = $h; $contW = (int)($h * $imageRatio);
+                    } else {
+                        $contW = $w; $contH = (int)($w / $imageRatio);
+                    }
+                    if ($noneW <= $contW && $noneH <= $contH) {
+                        $imgW = $noneW; $imgH = $noneH;
+                    } else {
+                        $imgW = $contW; $imgH = $contH;
+                    }
+                    $imgX = $x + (int)(($w - $imgW) / 2);
+                    $imgY = $y + (int)(($h - $imgH) / 2);
+                }
+            }
+        }
 
         // alt 属性：图片加载失败时的回退文本（HTML 标准）
         $alt = $props['alt'] ?? '';
@@ -1387,7 +1434,7 @@ class VNodeRenderer
             $elements[] = [
                 'type' => 'image',
                 'handle' => $imageHandle,
-                'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+                'x' => $imgX, 'y' => $imgY, 'w' => $imgW, 'h' => $imgH,
                 'layer' => $layer,
             ];
             if ($borderRadius > 0) {
