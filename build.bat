@@ -480,21 +480,8 @@ if defined DEP_PROJECT (
 set "AOT_EXIT=!errorlevel!"
 if !AOT_EXIT! neq 0 (
     echo.
-    echo [WARN] AOT compiler link step failed, retrying with response file...
-    echo.
-    :: 编译本身成功但链接命令行过长时，使用响应文件重试
-    if exist "%FRAMEWORK_ROOT%\link_manual.ps1" (
-        powershell -ExecutionPolicy Bypass -File "%FRAMEWORK_ROOT%\link_manual.ps1"
-        set "AOT_EXIT=!errorlevel!"
-        if !AOT_EXIT! neq 0 (
-            echo.
-            echo [ERROR] Manual link also failed, exit code: !AOT_EXIT!
-            exit /b 3
-        )
-    ) else (
-        echo [ERROR] link_manual.ps1 not found
-        exit /b 3
-    )
+    echo [ERROR] AOT compiler link step failed, exit code: !AOT_EXIT!
+    exit /b 3
 )
 
 :: Verify output exe
