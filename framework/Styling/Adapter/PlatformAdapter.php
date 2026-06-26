@@ -18,13 +18,10 @@ class PlatformAdapter
      * @param ThemeData $baseTheme  基础主题
      * @return PlatformStyling
      */
-    public static function create(string $platform, ThemeData $baseTheme): PlatformStyling
+    public static function create(string $platform, ThemeData $baseTheme): Win32Styling
     {
-        return match ($platform) {
-            'win32'  => new Win32Styling($baseTheme),
-            'macos'  => new MacOSStyling($baseTheme),
-            'linux'  => new LinuxStyling($baseTheme),
-            default  => new Win32Styling($baseTheme),
-        };
+        // AOT native_types 下不能用 match + 抽象基类返回类型（vtable 崩溃）
+        // 因此直接返回具体类 Win32Styling
+        return new Win32Styling($baseTheme);
     }
 }
