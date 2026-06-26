@@ -1,5 +1,16 @@
 #include "skia_render.h"
 
+// ─── 全局状态定义 ───
+HWND g_skHwnd = nullptr;
+HDC  g_skHdc = nullptr;
+HBITMAP g_skBitmap = nullptr;
+void*  g_skBits = nullptr;
+int  g_skW = 0;
+int  g_skH = 0;
+std::string g_skPendingSSPath;
+ULONG_PTR g_skGdiplusToken = 0;
+bool g_skGdiplusInited = false;
+
 Int php_sk_create_window_context(Int hWnd, Int width, Int height) {
     g_skHwnd = (HWND)(Int)hWnd;
     g_skW    = (int)width;
