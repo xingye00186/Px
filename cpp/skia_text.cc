@@ -6,17 +6,21 @@
 class DWriteTextRenderer : public IDWriteTextRenderer {
     ULONG refCount_ = 1;
     IDWriteBitmapRenderTarget* rt_;
+    COLORREF color_;
 public:
-    DWriteTextRenderer(IDWriteBitmapRenderTarget* rt) : rt_(rt) {}
+    DWriteTextRenderer(IDWriteBitmapRenderTarget* rt, COLORREF color) : rt_(rt), color_(color) {}
 
     IFACEMETHODIMP DrawGlyphRun(void*, FLOAT originX, FLOAT originY,
         DWRITE_MEASURING_MODE, DWRITE_GLYPH_RUN const* glyphRun,
         DWRITE_GLYPH_RUN_DESCRIPTION const*, IUnknown*) override {
-        // SDK 10.0.26100.0+: DrawGlyphRun on IDWriteBitmapRenderTarget
-        // now takes DWRITE_MEASURING_MODE as 3rd parameter.
-        // Color is passed directly instead of via SetTextColor.
+        // SDK 10.0.26100.0+: SetTextColor removed from IDWriteBitmapRenderTarget.
+        // Set text color on the underlying HDC via GDI SetTextColor.
+        HDC rtDC = rt_->GetMemoryDC();
+        if (rtDC) {
+            SetTextColor(rtDC, color_);
+        }
         return rt_->DrawGlyphRun(originX, originY, DWRITE_MEASURING_MODE_NATURAL,
-            glyphRun, nullptr, 0, nullptr);
+            glyphRun, nullptr, color_, nullptr);
     }
     IFACEMETHODIMP DrawUnderline(void*, FLOAT, FLOAT,
         DWRITE_UNDERLINE const*, IUnknown*) override { return S_OK; }
@@ -131,14 +135,8 @@ bool drawTextDWrite(HDC hdc, int x, int y, const char* text, int textLen,
             layout->Release(); format->Release(); return false;
         }
 
-        // SDK 10.0.26100.0+: SetTextColor removed from IDWriteBitmapRenderTarget.
-        // Text color is now passed directly to DrawGlyphRun. The DWriteTextRenderer
-        // callback will pass the color during DrawGlyphRun.
-        // Since we use a custom renderer, color is handled through the renderer itself.
-        // For the draw call, color is embedded in the DrawGlyphRun call within renderer.
-
-        // 用 DWrite 实际绘制文字到 RenderTarget 的 bitmap
-        DWriteTextRenderer* renderer = new DWriteTextRenderer(g_dwRenderTarget);
+        // 用 DWrite 实际绘制文字到 RenderTarget 的 bitmap，传入颜色
+        DWriteTextRenderer* renderer = new DWriteTextRenderer(g_dwRenderTarget, (COLORREF)color);
         layout->Draw(nullptr, renderer, 0, (FLOAT)drawY);
         renderer->Release();
 
