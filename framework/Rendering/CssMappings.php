@@ -49,6 +49,16 @@ class CssMappings
             'parser'  => 'Px\Rendering\CssMappings::parseIdent',
             'default' => 'repeat',
         ],
+        'background-clip' => [
+            'key'     => 'backgroundClip',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => 'border-box',
+        ],
+        'background-origin' => [
+            'key'     => 'backgroundOrigin',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => 'padding-box',
+        ],
         'color' => [
             'key'     => 'fg',
             'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',

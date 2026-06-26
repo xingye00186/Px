@@ -576,6 +576,7 @@ class VNodeRenderer
         $opacity = $style['opacity'] ?? 1.0;
         $offsets = CssMappings::parseBoxShadowOffsets($style['boxShadow'] ?? '');
         $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowBlur = $offsets['blur']; $shadowColor = $offsets['color']; $shadowAlpha = $offsets['alpha']; $shadowInset = $offsets['inset'];
+        $backgroundClip = $style['backgroundClip'] ?? 'border-box';
         $gradientAngle = $style['gradientAngle'] ?? null;
         $gradientColors = $style['gradientColors'] ?? null;
         // Parse text-shadow (CSS Text Decoration Module L3 §7)
@@ -754,7 +755,20 @@ class VNodeRenderer
 
             $elements = [];
             if ($hasBg || $hasBorder) {
-                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'color' => $drawColor, 'borderRadius' => $borderRadius, 'borderRadiusX' => $borderRadiusX, 'borderRadiusY' => $borderRadiusY, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'borderStyle' => $borderStyle, 'noFill' => $noFill, 'cursor' => $cursor, 'gradientAngle' => $gradientAngle, 'gradientColors' => $gradientColors];
+                // CSS Backgrounds §3.7: background-clip — 背景裁剪区域
+                $clipX = $x; $clipY = $y; $clipW = $w; $clipH = $h;
+                if ($backgroundClip === 'padding-box' && ($borderLeftWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0)) {
+                    $clipX += $borderLeftWidth; $clipY += $borderTopWidth;
+                    $clipW -= ($borderLeftWidth + $borderRightWidth);
+                    $clipH -= ($borderTopWidth + $borderBottomWidth);
+                } elseif ($backgroundClip === 'content-box') {
+                    $pl = $style['paddingLeft'] ?? 0; $pt = $style['paddingTop'] ?? 0;
+                    $pr = $style['paddingRight'] ?? 0; $pb = $style['paddingBottom'] ?? 0;
+                    $clipX += ($borderLeftWidth + $pl); $clipY += ($borderTopWidth + $pt);
+                    $clipW -= ($borderLeftWidth + $borderRightWidth + $pl + $pr);
+                    $clipH -= ($borderTopWidth + $borderBottomWidth + $pt + $pb);
+                }
+                $elements[] = ['type' => 'rect', 'x' => $clipX, 'y' => $clipY, 'w' => max(0,$clipW), 'h' => max(0,$clipH), 'color' => $drawColor, 'borderRadius' => $borderRadius, 'borderRadiusX' => $borderRadiusX, 'borderRadiusY' => $borderRadiusY, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'borderStyle' => $borderStyle, 'noFill' => $noFill, 'cursor' => $cursor, 'gradientAngle' => $gradientAngle, 'gradientColors' => $gradientColors, 'backgroundClip' => $backgroundClip];
             }
             if ($bgImageEl !== null) {
                 $elements[] = $bgImageEl;
