@@ -61,6 +61,8 @@ class ElementCompareStep implements PipelineStepInterface
         // overflow shorthand: engine only exports overflowX/overflowY individually,
         // not the shorthand. When both are same value, overflow shorthand is redundant.
         'overflow',
+        // text-align: engine start/left vs browser justify/match-parent are contextual defaults
+        'text-align',
     ];
 
     private ComparatorRegistry $registry;
