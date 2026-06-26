@@ -9,8 +9,7 @@
  * 失败: C2660 'php::toReference': function does not take 1 arguments
  */
 
-declare(strict_types=1);
-use native_types;
+
 
 const APP_PLATFORM  = 'win32';
 const WINDOW_WIDTH  = 100;

@@ -1,5 +1,16 @@
 <?php
 
+class LikeScheduler {
+    private array $items = [];
+
+    public function countItems(): int {
+        return count($this->items);
+    }
+    public function hasItems(): bool {
+        return !empty($this->items);
+    }
+}
+
 function main(): void {
     $passed = 0; $failed = 0;
 
