@@ -29,7 +29,61 @@ class TextOverflowProcessor
         $result = ['text' => $text, 'lines' => null, 'lineHeight' => 0];
 
         $textOverflow = $style['textOverflow'] ?? 'clip';
-        if ($textOverflow !== 'ellipsis' || $containerW <= 0) {
+        if (($textOverflow !== 'ellipsis' && ($style['overflowWrap'] ?? 'normal') !== 'break-word') || $containerW <= 0) {
+            return $result;
+        }
+
+        // Check if overflow-wrap:break-word is set (for long word breaking)
+        $overflowWrap = $style['overflowWrap'] ?? 'normal';
+        $isBreakWord = ($overflowWrap === 'break-word' || $overflowWrap === 'anywhere');
+        
+        if ($textOverflow !== 'ellipsis' && $isBreakWord) {
+            // ── overflow-wrap:break-word 模式 ──
+            // CSS Text Module Level 3 §6: break-word allows breaking within words
+            // when a word would otherwise overflow its container.
+            $availWidth = $containerW - 4;
+            if ($availWidth <= 10) return $result;
+            
+            // Measure full text width
+            $fullWidth = self::measureTextWidth($text, $fontSize, $bold);
+            if ($fullWidth <= $availWidth) return $result;
+            
+            // Compute line height
+            $lineHeight = (int)($style['lineHeight'] ?? 0);
+            if ($lineHeight <= 0) $lineHeight = (int)($fontSize * 1.2);
+            
+            // Break text into lines that fit within availWidth
+            $lines = [];
+            $remaining = $text;
+            $len = strlen($text);
+            $pos = 0;
+            $currentLine = '';
+            
+            while ($pos < $len) {
+                $charLen = 1;
+                $b = ord($remaining[$pos]);
+                if ($b >= 0xF0) $charLen = 4;
+                elseif ($b >= 0xE0) $charLen = 3;
+                elseif ($b >= 0xC0) $charLen = 2;
+                
+                $chunk = substr($remaining, $pos, $charLen);
+                $candidate = $currentLine . $chunk;
+                
+                if (self::measureTextWidth($candidate, $fontSize, $bold) > $availWidth && $currentLine !== '') {
+                    $lines[] = $currentLine;
+                    $currentLine = $chunk;
+                } else {
+                    $currentLine = $candidate;
+                }
+                $pos += $charLen;
+            }
+            if ($currentLine !== '') {
+                $lines[] = $currentLine;
+            }
+            
+            $result['text'] = $lines[0] ?? $text;
+            $result['lines'] = $lines;
+            $result['lineHeight'] = $lineHeight;
             return $result;
         }
 

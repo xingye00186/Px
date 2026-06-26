@@ -648,6 +648,19 @@ class VNodeRenderer
             // 标准 CSS 要求 overflow:hidden/clip 才生效
             $elOverflow = $style['overflow'] ?? 'visible';
             $hasOverflow = ($elOverflow === 'hidden' || $elOverflow === 'clip');
+            $overflowWrap = $style['overflowWrap'] ?? 'normal';
+            // Fallback: also check raw VNode props for overflow-wrap/word-wrap
+            if ($overflowWrap === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+                $rawStyle = $node->sourceVNode->props['style'] ?? '';
+                if ($rawStyle !== '' && (stripos($rawStyle, 'overflow-wrap:break-word') !== false || stripos($rawStyle, 'word-wrap:break-word') !== false)) {
+                    $overflowWrap = 'break-word';
+                }
+            }
+            $isBreakWord = ($overflowWrap === 'break-word' || $overflowWrap === 'anywhere');
+            // Sync back to style array for TextOverflowProcessor
+            if ($isBreakWord) {
+                $style['overflowWrap'] = $overflowWrap;
+            }
             if ($textOverflow === 'ellipsis' && $hasOverflow && $contentW > 0) {
                 $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $style);
                 $text = $overflowResult['text'];
@@ -658,6 +671,14 @@ class VNodeRenderer
                 $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
                 // ellipsis 时禁止自动换行
                 $isWrappable = false;
+            } elseif ($isBreakWord && $contentW > 0 && self::measureTextWidth($text, $fontSize, (bool)$bold) > $contentW) {
+                // CSS Text Module Level 3 §6: overflow-wrap:break-word — 长单词强制换行
+                $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $style);
+                $text = $overflowResult['text'];
+                $overflowLines = $overflowResult['lines'];
+                $overflowLineHeight = $overflowResult['lineHeight'];
+                $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
+                $isWrappable = false;  // break-word 已处理换行
             } else {
                 $overflowLines = null;
                 $overflowLineHeight = 0;
@@ -995,6 +1016,14 @@ class VNodeRenderer
             }
         }
         $containerX = (int)($props['container-x'] ?? $x);
+
+        // Check raw VNode props for overflow-wrap/word-wrap fallback
+        if (($style['overflowWrap'] ?? 'normal') === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+            $rawStyle = $node->sourceVNode->props['style'] ?? '';
+            if ($rawStyle !== '' && (stripos($rawStyle, 'overflow-wrap:break-word') !== false || stripos($rawStyle, 'word-wrap:break-word') !== false)) {
+                $style['overflowWrap'] = 'break-word';
+            }
+        }
 
         // ── 文本溢出/省略处理（委派 TextOverflowProcessor）──
         $overflowResult = TextOverflowProcessor::process($text, $containerW, $fontSize, $bold, $style);
