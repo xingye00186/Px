@@ -370,6 +370,54 @@ class VNodeRenderer
      * 测量文本总高度（ascent + descent），用于垂直居中。
      * 优先使用 C++ sk_measure_text_height 精确测量，退化使用 fontSize + 2 估算。
      */
+    /**
+     * CSS Fonts Module Level 3 §5: font-variant — small-caps 小大写
+     * 将小写字母转为大写，使用缩小比例(0.7×)的字号渲染
+     * @return array{text:string, fontSize:int} 转换后的文本和字号
+     */
+    private static function applyFontVariant(string $text, int $fontSize, string $variant): array
+    {
+        if ($variant === 'normal') {
+            return ['text' => $text, 'fontSize' => $fontSize];
+        }
+        // small-caps: lowercase→uppercase, font size→0.7×
+        // all-small-caps: all→uppercase, font size→0.7×
+        $result = ['text' => $text, 'fontSize' => $fontSize];
+        if ($variant === 'small-caps' || $variant === 'all-small-caps') {
+            // Use mb_strtoupper for proper Unicode uppercase conversion
+            if (function_exists('mb_strtoupper')) {
+                $result['text'] = mb_strtoupper($text, 'UTF-8');
+            } else {
+                $result['text'] = strtoupper($text);
+            }
+            // Reduce font size for small-caps rendering
+            $result['fontSize'] = max(6, (int)($fontSize * 0.7));
+        }
+        return $result;
+    }
+
+    /**
+     * CSS Fonts Module Level §4: font-stretch — 字体宽度模拟
+     * 通过调整字符间距近似 condensed(紧缩)/expanded(扩展)
+     */
+    private static function applyFontStretch(string $stretch): int
+    {
+        switch ($stretch) {
+            case 'condensed':
+            case 'semi-condensed':
+            case 'ultra-condensed':
+            case 'extra-condensed':
+                return -1;  // slight negative spacing
+            case 'expanded':
+            case 'semi-expanded':
+            case 'ultra-expanded':
+            case 'extra-expanded':
+                return 1;   // slight positive spacing
+            default:
+                return 0;
+        }
+    }
+
     private static function measureTextHeight(int $fontSize, bool $bold): int
     {
         static $hasNative = null;
@@ -630,6 +678,20 @@ class VNodeRenderer
             $textTransform = $style['textTransform'] ?? 'none';
             if ($textTransform !== 'none') {
                 $text = self::applyTextTransform($text, $textTransform);
+            }
+
+            // CSS Fonts Module L3 §5: font-variant small-caps
+            $fontVariant = $style['fontVariant'] ?? 'normal';
+            if ($fontVariant !== 'normal') {
+                $fvRet = self::applyFontVariant($text, $fontSize, $fontVariant);
+                $text = $fvRet['text'];
+                $fontSize = $fvRet['fontSize'];
+            }
+
+            // CSS Fonts Module L3 §4: font-stretch (approximate via spacing)
+            $fontStretchExtra = self::applyFontStretch($style['fontStretch'] ?? 'normal');
+            if ($fontStretchExtra !== 0) {
+                $style['letterSpacing'] = ($style['letterSpacing'] ?? 0) + $fontStretchExtra;
             }
 
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
@@ -1043,6 +1105,20 @@ class VNodeRenderer
             }
         }
         $containerX = (int)($props['container-x'] ?? $x);
+
+        // CSS Fonts Module L3 §5: font-variant small-caps
+        $fontVariant = $style['fontVariant'] ?? 'normal';
+        if ($fontVariant !== 'normal') {
+            $fvRet = self::applyFontVariant($text, $fontSize, $fontVariant);
+            $text = $fvRet['text'];
+            $fontSize = $fvRet['fontSize'];
+        }
+
+        // CSS Fonts Module L3 §4: font-stretch (approximate via spacing)
+        $fontStretchExtra = self::applyFontStretch($style['fontStretch'] ?? 'normal');
+        if ($fontStretchExtra !== 0) {
+            $style['letterSpacing'] = ($style['letterSpacing'] ?? 0) + $fontStretchExtra;
+        }
 
         // Parse text-shadow
         $tsOffsets = CssMappings::parseBoxShadowOffsets($style['textShadow'] ?? '');

@@ -316,6 +316,8 @@ class CssMappings
         'overflow-wrap'    => ['key' => 'overflowWrap',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
         'word-wrap'        => ['key' => 'overflowWrap',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
         'font-style'       => ['key' => 'fontStyle',        'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
+        'font-variant'     => ['key' => 'fontVariant',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
+        'font-stretch'     => ['key' => 'fontStretch',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
         'flex-direction'   => ['key' => 'flexDirection',    'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'row'],
         'flex-wrap'        => ['key' => 'flexWrap',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'nowrap'],
         'justify-content'  => ['key' => 'justifyContent',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'flex-start'],
