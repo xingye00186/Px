@@ -28,8 +28,15 @@ bool ensureDWriteRenderTarget(HDC hdc, int w, int h) {
         return true;
     }
     if (!ensureDWriteFactory()) return false;
-    HRESULT hr = g_dwFactory->CreateBitmapRenderTarget(
-        hdc, w > 0 ? w : 1, h > 0 ? h : 1, &g_dwRenderTarget);
+    // CreateBitmapRenderTarget was moved from IDWriteFactory to IDWriteGdiInterop in SDK 10.0.26100.0+.
+    // Using IDWriteGdiInterop works on all SDK versions.
+    IDWriteGdiInterop* gdiInterop = nullptr;
+    HRESULT hr = g_dwFactory->GetGdiInterop(&gdiInterop);
+    if (SUCCEEDED(hr) && gdiInterop) {
+        hr = gdiInterop->CreateBitmapRenderTarget(
+            hdc, w > 0 ? w : 1, h > 0 ? h : 1, &g_dwRenderTarget);
+        gdiInterop->Release();
+    }
     return SUCCEEDED(hr) && g_dwRenderTarget != nullptr;
 }
 

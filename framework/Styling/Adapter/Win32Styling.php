@@ -24,7 +24,7 @@ class Win32Styling extends PlatformStyling
             'height'   => 32,
             'fontSize' => 14,
             'bold'     => 0,
-            'padding'  => 8,  // 0 16px → 左右各 8px
+            'padding'  => 8,
         ]);
 
         // input 默认样式

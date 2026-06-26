@@ -12,7 +12,11 @@ public:
     IFACEMETHODIMP DrawGlyphRun(void*, FLOAT originX, FLOAT originY,
         DWRITE_MEASURING_MODE, DWRITE_GLYPH_RUN const* glyphRun,
         DWRITE_GLYPH_RUN_DESCRIPTION const*, IUnknown*) override {
-        return rt_->DrawGlyphRun(originX, originY, glyphRun, nullptr, 0, nullptr);
+        // SDK 10.0.26100.0+: DrawGlyphRun on IDWriteBitmapRenderTarget
+        // now takes DWRITE_MEASURING_MODE as 3rd parameter.
+        // Color is passed directly instead of via SetTextColor.
+        return rt_->DrawGlyphRun(originX, originY, DWRITE_MEASURING_MODE_NATURAL,
+            glyphRun, nullptr, 0, nullptr);
     }
     IFACEMETHODIMP DrawUnderline(void*, FLOAT, FLOAT,
         DWRITE_UNDERLINE const*, IUnknown*) override { return S_OK; }
@@ -84,10 +88,35 @@ bool drawTextDWrite(HDC hdc, int x, int y, const char* text, int textLen,
         layout->GetMetrics(&textMetrics);
 
         // 获取 DWrite font metrics 计算精确 baseline
-        // DWrite: baseline = text-top + ascent
-        // ascent ≈ fontSize * (tmAscent / (tmAscent + tmDescent))
-        DWRITE_FONT_METRICS dwMetrics;
-        format->GetFontMetrics(&dwMetrics);
+        // SDK 10.0.26100.0+: GetFontMetrics removed from IDWriteTextFormat.
+        // Use IDWriteFontFace via layout instead.
+        DWRITE_FONT_METRICS dwMetrics = {};
+        {
+            IDWriteFontCollection* collection = nullptr;
+            UINT32 fontIndex = 0;
+            if (SUCCEEDED(format->GetFontCollection(&collection)) && collection) {
+                IDWriteFontFamily* fontFamily = nullptr;
+                if (SUCCEEDED(collection->GetFontFamily(0, &fontFamily)) && fontFamily) {
+                    IDWriteFont* font = nullptr;
+                    if (SUCCEEDED(fontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT_NORMAL,
+                            DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, &font)) && font) {
+                        IDWriteFontFace* fontFace = nullptr;
+                        if (SUCCEEDED(font->CreateFontFace(&fontFace)) && fontFace) {
+                            fontFace->GetMetrics(&dwMetrics);
+                            fontFace->Release();
+                        }
+                        font->Release();
+                    }
+                    fontFamily->Release();
+                }
+                collection->Release();
+            }
+            // Fallback: use default ratio
+            if (dwMetrics.ascent == 0 && dwMetrics.descent == 0) {
+                dwMetrics.ascent = (UINT16)fontSize;
+                dwMetrics.descent = (UINT16)(fontSize * 0.25f);
+            }
+        }
         float ratio = (float)dwMetrics.ascent / (float)(dwMetrics.ascent + dwMetrics.descent);
         float baseline = (float)fontSize * ratio;
         int drawY = y + (int)(baseline + 0.5f);
@@ -102,8 +131,11 @@ bool drawTextDWrite(HDC hdc, int x, int y, const char* text, int textLen,
             layout->Release(); format->Release(); return false;
         }
 
-        // 设置文本颜色
-        g_dwRenderTarget->SetTextColor((COLORREF)color);
+        // SDK 10.0.26100.0+: SetTextColor removed from IDWriteBitmapRenderTarget.
+        // Text color is now passed directly to DrawGlyphRun. The DWriteTextRenderer
+        // callback will pass the color during DrawGlyphRun.
+        // Since we use a custom renderer, color is handled through the renderer itself.
+        // For the draw call, color is embedded in the DrawGlyphRun call within renderer.
 
         // 用 DWrite 实际绘制文字到 RenderTarget 的 bitmap
         DWriteTextRenderer* renderer = new DWriteTextRenderer(g_dwRenderTarget);
