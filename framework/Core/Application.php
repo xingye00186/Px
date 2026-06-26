@@ -208,8 +208,8 @@ class Application
                 $newCursor = '';
                 if ($hoverNode !== null) {
                     $cursorStyle = $hoverNode->style['cursor'] ?? '';
-                    if ($cursorStyle === 'pointer' || $cursorStyle === 'hand') {
-                        $newCursor = 'pointer';
+                    if ($cursorStyle !== '') {
+                        $newCursor = $cursorStyle;
                     }
                 }
                 if ($newCursor !== $this->currentCursor) {
@@ -783,7 +783,7 @@ class Application
             'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',
             'gridColumn', 'gridRow', 'gridAutoRows', 'gridTemplateAreas',
             'justifyItems', 'alignSelf', 'justifySelf', 'alignContent',
-             'overflow', 'overflowX', 'overflowY', 'overflowWrap', 'backgroundRepeat', 'backgroundClip', 'backgroundOrigin', 'backgroundAttachment', 'objectFit', 'objectPosition', 'textShadow', 'letterSpacing', 'wordSpacing', 'verticalAlign', 'fontVariant', 'fontStretch',
+             'overflow', 'overflowX', 'overflowY', 'overflowWrap', 'backgroundRepeat', 'backgroundClip', 'backgroundOrigin', 'backgroundAttachment', 'objectFit', 'objectPosition', 'textShadow', 'letterSpacing', 'wordSpacing', 'verticalAlign', 'fontVariant', 'fontStretch', 'appearance',
             'pointerEvents',
             'outlineWidth', 'outlineStyle', 'outlineColor', 'outlineOffset',
             'textDecorationLine', 'textDecorationColor', 'textDecorationStyle', 'textDecorationThickness'];

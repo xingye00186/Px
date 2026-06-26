@@ -85,3 +85,6 @@ function vue_kill_timer(int $hwnd, int $timerId): void {}
 function vue_load_image(string $path): int {}
 function vue_draw_image(int $hdc, int $handle, int $x, int $y, int $w, int $h): void {}
 function vue_free_image(int $handle): void {}
+
+// ---- 光标 ----
+function vue_set_cursor(string $cursor): void {}

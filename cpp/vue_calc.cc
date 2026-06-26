@@ -483,3 +483,21 @@ void php_vue_free_image(Int handle) {
     delete image;
     VUE_TRACE("[VUE] free_image %p\n", (void*)image);
 }
+
+// 设置光标形状
+void php_vue_set_cursor(String cursor) {
+    if (cursor.length() == 0) return;
+    LPCTSTR id = IDC_ARROW;
+    std::string c(cursor.data(), cursor.length());
+    if (c == "pointer" || c == "hand")         id = IDC_HAND;
+    else if (c == "text" || c == "vertical-text") id = IDC_IBEAM;
+    else if (c == "wait")                       id = IDC_WAIT;
+    else if (c == "crosshair")                  id = IDC_CROSS;
+    else if (c == "move" || c == "all-scroll")   id = IDC_SIZEALL;
+    else if (c == "help")                       id = IDC_HELP;
+    else if (c == "not-allowed" || c == "no-drop") id = IDC_NO;
+    else if (c == "col-resize")                 id = IDC_SIZEWE;
+    else if (c == "row-resize")                 id = IDC_SIZENS;
+    SetCursor(LoadCursor(NULL, id));
+    VUE_TRACE("[VUE] set_cursor: %s\n", c.c_str());
+}
