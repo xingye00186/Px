@@ -83,6 +83,30 @@ void php_sk_free_image(Int handle) {
 #endif
 }
 
+// 获取图片宽度
+Int php_sk_get_image_width(Int handle) {
+    if (handle == 0) return 0;
+#ifdef USE_SKIA
+    SkImage* image = reinterpret_cast<SkImage*>((int)handle);
+    return (Int)image->width();
+#else
+    Gdiplus::Image* image = reinterpret_cast<Gdiplus::Image*>((int)handle);
+    return (Int)image->GetWidth();
+#endif
+}
+
+// 获取图片高度
+Int php_sk_get_image_height(Int handle) {
+    if (handle == 0) return 0;
+#ifdef USE_SKIA
+    SkImage* image = reinterpret_cast<SkImage*>((int)handle);
+    return (Int)image->height();
+#else
+    Gdiplus::Image* image = reinterpret_cast<Gdiplus::Image*>((int)handle);
+    return (Int)image->GetHeight();
+#endif
+}
+
 // 保存截图（headless 模式：Skia → GDI → PNG）
 void php_sk_save_screenshot(String path) {
     if (path.length() == 0) return;

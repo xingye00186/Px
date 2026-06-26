@@ -41,8 +41,13 @@ class CssMappings
         ],
         'background-position' => [
             'key'     => 'backgroundPosition',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
             'default' => '',
+        ],
+        'background-repeat' => [
+            'key'     => 'backgroundRepeat',
+            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'default' => 'repeat',
         ],
         'color' => [
             'key'     => 'fg',
@@ -327,6 +332,7 @@ class CssMappings
         'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
         'transform'            => ['key' => 'transform',       'parser' => 'Px\\Rendering\\CssMappings::parseTransform', 'default' => ''],
         'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => ''],
+        'text-shadow'          => ['key' => 'textShadow',       'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => ''],
     
         // ---- Text Decoration (CSS Text Decoration Module Level 3) ----
         'text-decoration-line'      => ['key' => 'textDecorationLine',     'parser' => 'Px\Rendering\CssMappings::parseIdent',     'default' => 'none'],
@@ -1142,6 +1148,7 @@ class CssMappings
         $bgImage = '';
         $bgPosition = '';
         $bgSize = '';
+        $bgRepeat = '';
 
         // 1. Extract color (distinctive formats)
         if (preg_match('/#[\da-fA-F]{3,8}\b/', $rest, $m)) {
@@ -1172,6 +1179,7 @@ class CssMappings
         // 4. Extract repeat keywords
         foreach (['repeat-x', 'repeat-y', 'no-repeat', 'repeat', 'space', 'round'] as $kw) {
             if (stripos($rest, $kw) !== false) {
+                $bgRepeat = $kw;
                 $rest = trim(str_ireplace($kw, '', $rest));
                 break;
             }
@@ -1201,6 +1209,9 @@ class CssMappings
         }
         if ($bgSize !== '' && !isset($raw['background-size'])) {
             $raw['background-size'] = $bgSize;
+        }
+        if ($bgRepeat !== '' && !isset($raw['background-repeat'])) {
+            $raw['background-repeat'] = $bgRepeat;
         }
 
         // Update background to color-only value for PROPERTY_MAP parsing

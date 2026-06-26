@@ -154,11 +154,25 @@ class GdiRenderContext extends RenderContext
                 $ty = $el['y'] ?? 0;
                 // 防御：负坐标或超出窗口边界的文本会损坏 GDI 状态
                 if ($tx < 0 || $ty < 0) break;
+                $textColor = $el['color'] ?? 0xFFFFFF;
+                // ── text-shadow 阴影文字绘制（CSS Text Decoration §7）──
+                $tsX = $el['textShadowX'] ?? 0;
+                $tsY = $el['textShadowY'] ?? 0;
+                $tsBlur = $el['textShadowBlur'] ?? 0;
+                if ($tsX !== 0 || $tsY !== 0) {
+                    $tsColor = $el['textShadowColor'] ?? 0;
+                    // Draw shadow text at offset (GDI: solid shadow, Skia handles blur)
+                    $this->drawText($tx + $tsX, $ty + $tsY,
+                        $el['text'] ?? '',
+                        $el['fontSize'] ?? 16,
+                        $tsColor, $el['bold'] ?? 0,
+                        $el['fontFamily'] ?? '');
+                }
                 $this->drawText(
                     $tx, $ty,
                     $el['text'] ?? '',
                     $el['fontSize'] ?? 16,
-                    $el['color'] ?? 0xFFFFFF,
+                    $textColor,
                     $el['bold'] ?? 0,
                     $el['fontFamily'] ?? ''
                 );
@@ -412,11 +426,29 @@ class GdiRenderContext extends RenderContext
                 }
                 break;
 
-            // ── 图片 ──────────────────────
+            // ── 图片（支持 background-repeat）──
             case 'image':
                 $handle = $el['handle'] ?? 0;
                 if ($handle === 0 || ($el['w'] ?? 0) <= 0 || ($el['h'] ?? 0) <= 0) break;
-                vue_draw_image($this->hdc, $handle, $el['x'] ?? 0, $el['y'] ?? 0, $el['w'] ?? 0, $el['h'] ?? 0);
+                $repeat = $el['backgroundRepeat'] ?? 'repeat';
+                if ($repeat === 'no-repeat') {
+                    vue_draw_image($this->hdc, $handle, $el['x'] ?? 0, $el['y'] ?? 0, $el['w'] ?? 0, $el['h'] ?? 0);
+                } else {
+                    // Get natural image size for tiling
+                    $imgW = sk_get_image_width($handle);
+                    $imgH = sk_get_image_height($handle);
+                    if ($imgW <= 0 || $imgH <= 0) { $imgW = $el['w']; $imgH = $el['h']; }
+                    $bx = $el['x'] ?? 0; $by = $el['y'] ?? 0;
+                    $bw = $el['w'] ?? 0; $bh = $el['h'] ?? 0;
+                    $endX = $bx + $bw; $endY = $by + $bh;
+                    for ($ty = $by; $ty < $endY && !($repeat === 'repeat-x'); ) {
+                        for ($tx = $bx; $tx < $endX; $tx += $imgW) {
+                            vue_draw_image($this->hdc, $handle, $tx, $ty, $imgW, $imgH);
+                        }
+                        $ty += $imgH;
+                        if ($repeat === 'repeat-y') break;
+                    }
+                }
                 break;
         }
     }

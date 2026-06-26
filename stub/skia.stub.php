@@ -40,6 +40,8 @@ function sk_resize_context(int $width, int $height): void {}
 
 // ---- 图片加载（双路径：USE_SKIA → SkImage, 非USE_SKIA → GDI+） ----
 function sk_load_image(string $path): int {}
+function sk_get_image_width(int $handle): int {}
+function sk_get_image_height(int $handle): int {}
 function sk_draw_image(int $handle, int $x, int $y, int $w, int $h): void {}
 function sk_free_image(int $handle): void {}
 

@@ -578,6 +578,9 @@ class VNodeRenderer
         $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowBlur = $offsets['blur']; $shadowColor = $offsets['color']; $shadowAlpha = $offsets['alpha']; $shadowInset = $offsets['inset'];
         $gradientAngle = $style['gradientAngle'] ?? null;
         $gradientColors = $style['gradientColors'] ?? null;
+        // Parse text-shadow (CSS Text Decoration Module L3 §7)
+        $tsOffsets = CssMappings::parseBoxShadowOffsets($style['textShadow'] ?? '');
+        $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];
         $borderWidth = $style['borderWidth'] ?? 0;
         $borderTopWidth = $style['borderTopWidth'] ?? $borderWidth;
         $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
@@ -599,6 +602,7 @@ class VNodeRenderer
                 'handle' => $bgImageHandle,
                 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
                 'layer' => $layer,
+                'backgroundRepeat' => $style['backgroundRepeat'] ?? 'repeat',
             ];
         }
 
@@ -786,7 +790,9 @@ class VNodeRenderer
                         'decorationStyle' => $style['decorationStyle'] ?? 'solid',
                         'decorationThickness' => $style['decorationThickness'] ?? 0,
                         'underlineOffset' => $style['underlineOffset'] ?? 0,
-                        'textWidth' => $segW];
+                        'textWidth' => $segW,
+                        'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
+                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha];
                     $lineIdx++;
                 }
                 $node->textRenderInfo = [
@@ -846,7 +852,9 @@ class VNodeRenderer
                         'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
                         'decorationThickness' => $style['textDecorationThickness'] ?? 0,
                         'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
-                        'textWidth' => self::measureTextWidth($seg, $fontSize, $isBold)];
+                        'textWidth' => self::measureTextWidth($seg, $fontSize, $isBold),
+                        'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
+                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha];
                     $lineIdx++;
                 }
 
@@ -868,7 +876,9 @@ class VNodeRenderer
                         'decorationStyle' => $style['decorationStyle'] ?? 'solid',
                         'decorationThickness' => $style['decorationThickness'] ?? 0,
                         'underlineOffset' => $style['underlineOffset'] ?? 0,
-                        'textWidth' => self::measureTextWidth($text, $fontSize, $isBold)];
+                        'textWidth' => self::measureTextWidth($text, $fontSize, $isBold),
+                        'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
+                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha];
 
                 // 存储文本渲染位置信息（用于 layout dump 验证垂直居中）
                 $node->textRenderInfo = [
@@ -1017,6 +1027,10 @@ class VNodeRenderer
         }
         $containerX = (int)($props['container-x'] ?? $x);
 
+        // Parse text-shadow
+        $tsOffsets = CssMappings::parseBoxShadowOffsets($style['textShadow'] ?? '');
+        $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];
+
         // Check raw VNode props for overflow-wrap/word-wrap fallback
         if (($style['overflowWrap'] ?? 'normal') === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
             $rawStyle = $node->sourceVNode->props['style'] ?? '';
@@ -1057,7 +1071,9 @@ class VNodeRenderer
                     'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
                     'decorationThickness' => $style['textDecorationThickness'] ?? 0,
                     'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
-                    'textWidth' => self::measureTextWidth($seg, $fontSize, (bool)$bold),];
+                    'textWidth' => self::measureTextWidth($seg, $fontSize, (bool)$bold),
+                    'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
+                    'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha];
                 $lineIdx++;
             }
             return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
@@ -1096,7 +1112,9 @@ class VNodeRenderer
             'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
             'decorationThickness' => $style['textDecorationThickness'] ?? 0,
             'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
-            'textWidth' => self::measureTextWidth($text, $fontSize, (bool)$bold),];
+            'textWidth' => self::measureTextWidth($text, $fontSize, (bool)$bold),
+            'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
+            'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha];
     }
 
     private function makeButtonElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array

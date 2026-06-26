@@ -783,7 +783,7 @@ class Application
             'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',
             'gridColumn', 'gridRow', 'gridAutoRows', 'gridTemplateAreas',
             'justifyItems', 'alignSelf', 'justifySelf', 'alignContent',
-            'overflow', 'overflowX', 'overflowY', 'overflowWrap',
+            'overflow', 'overflowX', 'overflowY', 'overflowWrap', 'backgroundRepeat', 'textShadow',
             'pointerEvents',
             'outlineWidth', 'outlineStyle', 'outlineColor',
             'textDecorationLine', 'textDecorationColor', 'textDecorationStyle', 'textDecorationThickness'];
