@@ -674,6 +674,14 @@ class VNodeRenderer
             }
             if ($textX < $contentX + 4) $textX = $contentX + 4;
 
+            // CSS Text Module Level 3 §2.1: text-indent — 首行缩进
+            // 仅对块容器生效，缩进从 start edge 算起。正数缩进首行向起始边方向移动。
+            // 对于左对齐 LTR 文本，首行向右缩进。不影响居中和右对齐。
+            $textIndent = (int)($style['textIndent'] ?? 0);
+            if ($textIndent > 0 && $align !== 'right' && $align !== 'center') {
+                $textX += $textIndent;
+            }
+
             // CSS Flexible Box Layout §8.2: justify-content:center → 主轴居中文本
             // 当元素是 flex 容器且 justifyContent=center 时，文本在 content area 内水平居中
             $display = $style['display'] ?? 'block';
@@ -742,6 +750,10 @@ class VNodeRenderer
                     } elseif ($align === 'center') {
                         $segX = $contentX + (int)(($contentW - $segW) / 2);
                         if ($segX < $contentX + 4) $segX = $contentX + 4;
+                    }
+                    // text-indent 仅作用于第一行
+                    if ($textIndent > 0 && $lineIdx === 0 && $align !== 'right' && $align !== 'center') {
+                        $segX += $textIndent;
                     }
                     $segY = $contentY + $lineIdx * $lineHeight;
                     $elements[] = ['type' => 'text', 'text' => $seg, 'x' => $segX, 'y' => $segY,

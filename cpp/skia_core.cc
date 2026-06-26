@@ -89,6 +89,35 @@ void php_sk_begin_frame() {
 #endif
 }
 
+// Skia -> GDI blit: 将 Skia raster 像素复制到 GDI HDC
+#ifdef USE_SKIA
+static void skBlitToGdi() {
+    if (!g_skHdc || !g_skSkBitmap.getPixels()) {
+        SK_TRACE("[SK] skBlitToGdi SKIP (hdc=%p pixels=%p)\n", g_skHdc, g_skSkBitmap.getPixels());
+        return;
+    }
+    int w = g_skW, h = g_skH;
+    // Skia N32 = BGRA premultiplied on Windows, SetDIBitsToDevice handles conversion
+    BITMAPINFO bmi = {};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = w;
+    bmi.bmiHeader.biHeight = -h; // negative = top-down order
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+    int result = SetDIBitsToDevice(
+        g_skHdc,
+        0, 0, w, h,
+        0, 0,
+        0, h,
+        g_skSkBitmap.getPixels(),
+        &bmi,
+        DIB_RGB_COLORS
+    );
+    SK_TRACE("[SK] skBlitToGdi w=%d h=%d result=%d\n", w, h, result);
+}
+#endif
+
 // 结束一帧：阶段三 Skia -> GDI 中转 -> BitBlt -> screen
 void php_sk_end_frame() {
     if (!g_skHdc) {

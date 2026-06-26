@@ -109,11 +109,19 @@ class CssValueParser
 
     public static function parsePixels(string $value): int
     {
-        // Only extract the FIRST numeric value. The old implementation used
-        // preg_replace('/[^-0-9]/', '', $value) which concatenated ALL numbers,
-        // causing border-radius: 16px 4px 16px 4px → 164164 (wrong).
-        if (preg_match('/-?\d+/', $value, $m)) {
-            return (int) $m[0];
+        // Handle em/rem units: 1em = default font-size 16px
+        // CSS Values and Units Module Level 3 §5: em is relative to font-size
+        if (preg_match('/^-?(\d+(\.\d+)?)/', $value, $m)) {
+            $num = (float)$m[1];
+            $lower = strtolower($value);
+            if (str_contains($lower, 'em')) {
+                return (int)($num * 16.0);
+            }
+            // Percentage values: return the numeric part (percentage detected separately via *Percent keys)
+            if (str_contains($lower, '%')) {
+                return (int)$num;
+            }
+            return (int)$num;
         }
         return 0;
     }
