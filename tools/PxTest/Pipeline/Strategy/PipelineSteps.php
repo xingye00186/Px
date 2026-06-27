@@ -29,6 +29,21 @@ class LayoutDumpStep implements PipelineStepInterface
         $ctxCase = $ctx->get('case_name');
         $currentCase = ($ctxCase !== null && $ctxCase !== '') ? $ctxCase : $this->caseName;
         $refDir = "{$this->appDir}/test_case/{$currentCase}/ref";
+
+        // ─── Vue 结构准入检查（引擎渲染前置条件）───
+        $caseDir = "{$this->appDir}/test_case/{$currentCase}";
+        $vueFiles = glob("$caseDir/*.vue");
+        if (!empty($vueFiles)) {
+            $vueSpecErrors = $this->validateVueSpec($vueFiles[0]);
+            if (!empty($vueSpecErrors)) {
+                echo "  [VUE_SPEC_FAIL] " . basename($vueFiles[0]) . " violates PxTest Vue spec:\n";
+                foreach ($vueSpecErrors as $e) {
+                    echo "    - $e\n";
+                }
+                return StepResult::err('dump_layout', 'Vue spec validation failed');
+            }
+        }
+
         $result = $this->strategy->dump($currentCase, $refDir);
         if ($result === null) {
             return StepResult::err('dump_layout', 'Strategy ' . $this->strategy->name() . ' failed');
@@ -95,6 +110,43 @@ class LayoutDumpStep implements PipelineStepInterface
 
         return $errors;
     }
+
+    /**
+     * Validate .vue file: root div must have position:relative.
+     * Anchors use position:absolute and need a relative containing block.
+     */
+    private function validateVueSpec(string $vuePath): array
+    {
+        $errors = [];
+        $vue = @file_get_contents($vuePath);
+        if ($vue === false) return ["Cannot read file: " . basename($vuePath)];
+
+        // Extract template content
+        if (!preg_match('/<template>([\s\S]*)<\/template>/i', $vue, $m)) {
+            return ["No <template> found in " . basename($vuePath)];
+        }
+        $template = trim($m[1]);
+
+        // Check root element has position:relative
+        if (preg_match('/<div[^>]*style="([^"]*)"[^>]*>/i', $template, $sm)) {
+            $style = $sm[1];
+            if (stripos($style, 'position:relative') === false) {
+                $errors[] = "Root div must have position:relative — "
+                    . "anchors use position:absolute and need a relative containing block. "
+                    . "Add 'position:relative' to the root div's style.";
+            }
+        }
+
+        // Check anchors exist inside template
+        if (stripos($template, 'data-px-anchor="tl"') === false) {
+            $errors[] = "Missing data-px-anchor=\"tl\" in template";
+        }
+        if (stripos($template, 'data-px-anchor="br"') === false) {
+            $errors[] = "Missing data-px-anchor=\"br\" in template";
+        }
+
+        return $errors;
+    }
 }
 
 /**
@@ -139,19 +191,6 @@ class BrowserRefStep implements PipelineStepInterface
                 echo "    - $e\n";
             }
             return StepResult::err('browser_ref', 'HTML spec validation failed');
-        }
-
-        // ─── Step 1.5: Validate .vue spec compliance ───
-        $vueFiles = glob("$caseDir/*.vue");
-        if (!empty($vueFiles)) {
-            $vueSpecErrors = $this->validateVueSpec($vueFiles[0]);
-            if (!empty($vueSpecErrors)) {
-                echo "  [VUE_SPEC_FAIL] " . basename($vueFiles[0]) . " violates PxTest Vue spec:\n";
-                foreach ($vueSpecErrors as $e) {
-                    echo "    - $e\n";
-                }
-                return StepResult::err('browser_ref', 'Vue spec validation failed');
-            }
         }
 
         // ─── Step 2: Validate .html vs .vue consistency ───
@@ -277,44 +316,6 @@ class BrowserRefStep implements PipelineStepInterface
                 $errors[] = "First element in <body> must be the test content container, "
                     . "not a data-px-anchor element — move anchors inside the container div";
             }
-        }
-
-        return $errors;
-    }
-
-    /**
-     * Validate .vue file: root div must have position:relative.
-     * Anchors use position:absolute and need a relative containing block.
-     */
-    private function validateVueSpec(string $vuePath): array
-    {
-        $errors = [];
-        $vue = @file_get_contents($vuePath);
-        if ($vue === false) return ["Cannot read file: " . basename($vuePath)];
-
-        // Extract template content
-        if (!preg_match('/<template>([\s\S]*)<\/template>/i', $vue, $m)) {
-            return ["No <template> found in " . basename($vuePath)];
-        }
-        $template = trim($m[1]);
-
-        // Check root element has position:relative
-        // Root is the first tag after <template>
-        if (preg_match('/<div[^>]*style="([^"]*)"[^>]*>/i', $template, $sm)) {
-            $style = $sm[1];
-            if (stripos($style, 'position:relative') === false) {
-                $errors[] = "Root div must have position:relative — "
-                    . "anchors use position:absolute and need a relative containing block. "
-                    . "Add 'position:relative' to the root div's style.";
-            }
-        }
-
-        // Check anchors exist inside template
-        if (stripos($template, 'data-px-anchor="tl"') === false) {
-            $errors[] = "Missing data-px-anchor=\"tl\" in template";
-        }
-        if (stripos($template, 'data-px-anchor="br"') === false) {
-            $errors[] = "Missing data-px-anchor=\"br\" in template";
         }
 
         return $errors;
