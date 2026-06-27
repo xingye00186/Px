@@ -1,15 +1,15 @@
 <template>
-  <div class="prt-wrap" style="width:800px;position:relative;">
-    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
-    <div style="display:flex;align-items:stretch;width:450px;height:60px;background:#f5f5f5;border:1px solid #ccc;padding:6px;gap:8px;margin-bottom:8px;">
-      <div style="flex:1;background:#e3f2fd;border:1px solid #1565c0;"></div>
-      <div style="flex:1;background:#fce4ec;border:1px solid #c62828;"></div>
+  <div class="prt-wrap" style="width:800px;position:relative">
+    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none" data-px-anchor="tl"></div>
+    <div style="display:flex;align-items:stretch;width:450px;height:60px;background:#f5f5f5;border:1px solid #ccc;padding:6px;gap:8px;margin-bottom:8px">
+      <div style="flex:1;background:#e3f2fd;border:1px solid #1565c0"></div>
+      <div style="flex:1;background:#fce4ec;border:1px solid #c62828"></div>
     </div>
-    <div style="display:flex;align-items:center;width:450px;height:60px;background:#f5f5f5;border:1px solid #ccc;padding:6px;gap:8px;">
-      <div style="flex:1;height:30px;background:#e3f2fd;border:1px solid #1565c0;"></div>
-      <div style="flex:1;height:40px;background:#fce4ec;border:1px solid #c62828;"></div>
+    <div style="display:flex;align-items:center;width:450px;height:60px;background:#f5f5f5;border:1px solid #ccc;padding:6px;gap:8px">
+      <div style="flex:1;height:30px;background:#e3f2fd;border:1px solid #1565c0"></div>
+      <div style="flex:1;height:40px;background:#fce4ec;border:1px solid #c62828"></div>
     </div>
-    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;" data-px-anchor="br"></div>
+    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none" data-px-anchor="br"></div>
   </div>
 </template>
 <script lang="php">

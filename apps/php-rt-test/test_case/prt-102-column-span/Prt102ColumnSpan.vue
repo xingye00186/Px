@@ -1,9 +1,9 @@
 <template>
   <div class="prt-wrap" style="width:800px;position:relative;line-height:0">
-    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
-    <div style="font-size:12px;color:#999;margin-bottom:8px;"><span style="display:inline-block;width:277px;height:17px;"></span></div>
-    <div style="width:500px;column-count:3;column-gap:16px;column-rule:1px solid #ccc;background:#f5f5f5;border:1px solid #ccc;padding:12px;line-height:0"><div style="font-size:13px;color:#666;"><span style="display:inline-block;width:157px;height:18px;"></span></div><div style="column-span:all;margin:8px 0;padding:8px;background:#e3f2fd;border:1px solid #1565c0;line-height:0"><span style="display:inline-block;width:139px;height:20px;"></span></div><div"><span style="display:inline-block;width:250px;height:18px;"></span></div></div>
-    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;" data-px-anchor="br"></div>
+    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none" data-px-anchor="tl"></div>
+    <div style="margin-bottom:8px"><span style="display:inline-block;width:277px;height:17px"></span></div>
+    <div style="width:500px;column-count:3;column-gap:16px;column-rule:1px solid #ccc;background:#f5f5f5;border:1px solid #ccc;padding:12px;line-height:0"><div style=""><span style="display:inline-block;width:157px;height:18px"></span></div><div style="column-span:all;margin:8px 0;padding:8px;background:#e3f2fd;border:1px solid #1565c0;line-height:0"><span style="display:inline-block;width:139px;height:20px"></span></div><div"><span style="display:inline-block;width:250px;height:18px"></span></div></div>
+    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none" data-px-anchor="br"></div>
   </div>
 </template>
 <script lang="php">

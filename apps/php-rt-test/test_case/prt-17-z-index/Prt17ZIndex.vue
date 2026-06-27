@@ -1,13 +1,13 @@
 <template>
   <div class="prt-wrap" style="width:800px;position:relative;line-height:0">
-    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
-    <div style="font-size:18px;font-weight:600;color:#333;margin-bottom:12px;"><span style="display:inline-block;width:78px;height:25px;"></span></div>
-    <div style="width:400px;height:180px;background:#f5f5f5;border:1px solid #ccc;position:relative;">
-      <div style="width:150px;height:80px;background:#e3f2fd;border:2px solid #1565c0;position:absolute;top:20px;left:60px;z-index:1;"></div>
-      <div style="width:150px;height:80px;background:#fce4ec;border:2px solid #c62828;position:absolute;top:50px;left:100px;z-index:2;"></div>
-      <div style="width:150px;height:80px;background:#e8f5e9;border:2px solid #2e7d32;position:absolute;top:80px;left:140px;z-index:3;"></div>
+    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none" data-px-anchor="tl"></div>
+    <div style="margin-bottom:12px"><span style="display:inline-block;width:78px;height:25px"></span></div>
+    <div style="width:400px;height:180px;background:#f5f5f5;border:1px solid #ccc;position:relative">
+      <div style="width:150px;height:80px;background:#e3f2fd;border:2px solid #1565c0;position:absolute;top:20px;left:60px;z-index:1"></div>
+      <div style="width:150px;height:80px;background:#fce4ec;border:2px solid #c62828;position:absolute;top:50px;left:100px;z-index:2"></div>
+      <div style="width:150px;height:80px;background:#e8f5e9;border:2px solid #2e7d32;position:absolute;top:80px;left:140px;z-index:3"></div>
     </div>
-    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;" data-px-anchor="br"></div>
+    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none" data-px-anchor="br"></div>
   </div>
 </template>
 <script lang="php">

@@ -1,13 +1,13 @@
 <template>
   <div class="prt-wrap" style="width:800px;position:relative;line-height:0">
-    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
-    <div style="font-size:18px;font-weight:600;color:#333;margin-bottom:12px;"><span style="display:inline-block;width:167px;height:25px;"></span></div>
-    <div style="width:400px;background:#f5f5f5;border:1px solid #ccc;">
-      <div style="height:30px;background:#e3f2fd;border:1px solid #1565c0;margin-bottom:20px;"></div>
-      <div style="height:30px;background:#fce4ec;border:1px solid #c62828;margin-top:30px;"></div>
-      <div style="height:30px;background:#e8f5e9;border:1px solid #2e7d32;margin-top:10px;"></div>
+    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none" data-px-anchor="tl"></div>
+    <div style="margin-bottom:12px"><span style="display:inline-block;width:167px;height:25px"></span></div>
+    <div style="width:400px;background:#f5f5f5;border:1px solid #ccc">
+      <div style="height:30px;background:#e3f2fd;border:1px solid #1565c0;margin-bottom:20px"></div>
+      <div style="height:30px;background:#fce4ec;border:1px solid #c62828;margin-top:30px"></div>
+      <div style="height:30px;background:#e8f5e9;border:1px solid #2e7d32;margin-top:10px"></div>
     </div>
-    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;" data-px-anchor="br"></div>
+    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none" data-px-anchor="br"></div>
   </div>
 </template>
 <script lang="php">
