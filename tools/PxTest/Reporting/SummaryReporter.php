@@ -393,7 +393,22 @@ class SummaryReporter
             'browser_pass' => $browserPass,
             'browser_fail' => $browserFail,
             'property_stats' => $propStats,
+            'case_details' => [],
         ];
+
+        // Store per-case detail for run-history merge support
+        foreach ($report['case_rows'] as $row) {
+            $entry['case_details'][$row['name']] = [
+                'geometry_count'  => (int)($row['geometry_count'] ?? 0),
+                'critical_count'  => (int)($row['critical_count'] ?? 0),
+                'major_count'     => (int)($row['major_count'] ?? 0),
+                'mismatch_count'  => (int)($row['mismatch_count'] ?? 0),
+                'missing_count'   => (int)($row['missing_count'] ?? 0),
+                'structure_count' => (int)($row['structure_count'] ?? 0),
+                'overflow_count'  => (int)($row['overflow_count'] ?? 0),
+                'passed'         => $row['result'] === '✅ 通过',
+            ];
+        }
 
         $history = [];
         if (file_exists($historyPath)) {

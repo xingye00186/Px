@@ -39,7 +39,8 @@ tests/css-standards/**/lint_result.txt
 
 # css-test 自动生成的报告（pipeline 自动输出，无需跟踪）
 apps/css-test/docs/02-测试报告/
-apps/css-test/.run_history.json
+apps/css-test/.case_data.json
+.run_history.json
 tests/css-standards/**/debug_*.php
 
 # 依赖分析自动生成文件

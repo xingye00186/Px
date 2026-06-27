@@ -383,7 +383,8 @@ class BrowserRefStep implements PipelineStepInterface
  */
 class BatchBrowserRefStep implements \PxTest\Pipeline\PipelineStepInterface
 {
-    private static bool $alreadyDone = false;
+    private static bool $batchAttempted = false;
+    private static bool $batchSucceeded = false;
 
     public function __construct(
         private BrowserRefStrategy $strategy,
@@ -393,21 +394,28 @@ class BatchBrowserRefStep implements \PxTest\Pipeline\PipelineStepInterface
     public function requires(): array { return ['build']; }
     public function execute(\PxTest\Pipeline\PipelineContext $ctx): \PxTest\Pipeline\StepResult
     {
-        if (self::$alreadyDone) {
+        if (self::$batchSucceeded) {
             return \PxTest\Pipeline\StepResult::ok('batch_browser_ref', 0);
         }
+        if (self::$batchAttempted) {
+            return \PxTest\Pipeline\StepResult::err('batch_browser_ref', 'Previous batch attempt failed, skipped (per-case fallback active)');
+        }
+        self::$batchAttempted = true;
         $start = microtime(true);
         if (empty($this->cases)) {
+            self::$batchSucceeded = true;
             return \PxTest\Pipeline\StepResult::ok('batch_browser_ref', 0);
         }
         echo "  [batch_browser_ref] " . count($this->cases) . " cases, single Edge launch...\n";
         $ok = $this->strategy->generateBatch($this->cases);
         $elapsed = (microtime(true) - $start) * 1000;
-        self::$alreadyDone = true;
         if ($ok) {
+            self::$batchSucceeded = true;
             $ctx->set('batch_ref_done', true);
+            echo "  [batch_browser_ref] OK ({$elapsed}ms)\n";
             return \PxTest\Pipeline\StepResult::ok('batch_browser_ref', $elapsed);
         }
-        return \PxTest\Pipeline\StepResult::err('batch_browser_ref', 'Batch ref generation failed', $elapsed);
+        echo "  [batch_browser_ref] FAILED ({$elapsed}ms), will fallback to per-case\n";
+        return \PxTest\Pipeline\StepResult::err('batch_browser_ref', 'Batch ref generation failed, per-case fallback', $elapsed);
     }
 }

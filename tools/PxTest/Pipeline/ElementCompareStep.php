@@ -912,7 +912,7 @@ class ElementCompareStep implements PipelineStepInterface
                         // column 方向：累计高度 + gap
                         $totalH = 0;
                         foreach ($flexChildren as $ch) {
-                            $totalH += (int)($ch['visualH'] ?? $ch['h'] ?? 0);
+                            $totalH += (int)($ch['h'] ?? 0);
                         }
                         $totalH += ($count - 1) * $gap;
                         $diff = $totalH - $available;

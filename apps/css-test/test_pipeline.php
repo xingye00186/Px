@@ -13,8 +13,7 @@
 
 $projectRoot = dirname(__DIR__, 2);
 
-// ─── Windows 进程清理：杀掉残留 php-cgi 避免 PHP CLI 拒绝访问 ───
-// PhpStorm 的 php-cgi 进程通常无法被 taskkill，但不影响 php.exe 运行
+// ─── Windows 进程清理 ───
 if (PHP_OS_FAMILY === 'Windows') {
     exec('taskkill /F /IM php-cgi.exe /T 2>NUL');
     exec('taskkill /F /IM msedge.exe /T 2>NUL');
@@ -23,10 +22,10 @@ if (PHP_OS_FAMILY === 'Windows') {
 require_once $projectRoot . '/tests/unit/bootstrap.php';
 require_once $projectRoot . '/tools/PxTest/bootstrap.php';
 
-// 设置上海时区，确保报告和截图时间戳一致
 date_default_timezone_set('Asia/Shanghai');
 
 use PxTest\Pipeline\PipelineBuilder;
+use PxTest\Pipeline\StepResult;
 use PxTest\Reporting\ConsoleReporter;
 use PxTest\Reporting\MarkdownReporter;
 use PxTest\Reporting\JsonReporter;
@@ -70,12 +69,39 @@ $reporter = match ($format) {
 $issueTracker = $projectRoot . '/apps/css-test/docs/01-问题清单.md';
 $issueContent = file_exists($issueTracker) ? file_get_contents($issueTracker) : '';
 
+// ─── 单 case 模式：从 .case_data.json 加载历史数据 ───
+$isSingleCase = (count($filtered) < count($cases));
+$caseDataFile = $projectRoot . '/apps/css-test/.case_data.json';
+
+$allCaseData = []; // collect per-case data for summary report
+if ($isSingleCase && file_exists($caseDataFile)) {
+    $stored = @json_decode(@file_get_contents($caseDataFile), true);
+    if (is_array($stored)) {
+        // 反序列化 StepResult 对象（JSON 编码会丢失对象类型）
+        foreach ($stored as $cName => &$cData) {
+            if (isset($cData['results']) && is_array($cData['results'])) {
+                $restored = [];
+                foreach ($cData['results'] as $r) {
+                    $restored[] = new StepResult(
+                        $r['stepName'] ?? '',
+                        $r['passed'] ?? false,
+                        $r['errors'] ?? [],
+                        $r['durationMs'] ?? 0.0,
+                    );
+                }
+                $cData['results'] = $restored;
+            }
+        }
+        unset($cData);
+        $allCaseData = $stored;
+    }
+}
+
 // ─── Run Pipeline for each case ───
 $suite = new TestSuite('css-test-pipeline');
 $reporter->reportStart($suite);
 
 $totalPass = 0; $totalFail = 0;
-$allCaseData = []; // collect per-case data for summary report
 foreach ($filtered as $caseName) {
     echo "── $caseName ──\n";
     $ctx = new \PxTest\Pipeline\PipelineContext();
@@ -117,6 +143,9 @@ foreach ($filtered as $caseName) {
     echo "\n";
 }
 
+// ─── 保存 case 数据缓存（支持后续单 case 合并）───
+@file_put_contents($caseDataFile, json_encode($allCaseData, JSON_UNESCAPED_UNICODE));
+
 // ─── 生成汇总报告 + 运行历史 ───
 if (!empty($allCaseData)) {
     $summary = new SummaryReporter($projectRoot . '/apps/css-test');
@@ -127,7 +156,6 @@ if (!empty($allCaseData)) {
 if ($totalFail > 0 && $issueContent !== '') {
     echo "\n[DOC_WARN] Checking FAIL cases against issue tracker...\n";
     foreach ($filtered as $caseName) {
-        // Check if case has FAIL but not in issue tracker
         if (stripos($issueContent, $caseName) === false
             && stripos($issueContent, str_replace('-', ' ', $caseName)) === false
         ) {

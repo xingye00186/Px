@@ -72,7 +72,7 @@ class EdgeDomStrategy implements BrowserRefStrategy
         $dumpLayoutJsPath = $projectRoot . '/tools/dump_layout.js';
         $dumpLayoutJs = file_exists($dumpLayoutJsPath) ? file_get_contents($dumpLayoutJsPath) : '';
 
-        $caseStyles = '';
+        $allStyles = [];
         $caseBodies = '';
         foreach ($cases as $case) {
             $tag = $case['tag'];
@@ -80,35 +80,35 @@ class EdgeDomStrategy implements BrowserRefStrategy
             $html = file_get_contents($htmlPath);
             if ($html === false) continue;
 
-            // 提取 <style> 块并作用域化
-            // 核心原则：遍历起点统一为 #test-content-wrapper，确保单case/批次结构一致
-            $scopedStyles = [];
+            // ── CSS 作用域化：用 preg_replace_callback 逐条规则处理 ──
+            $scope = '[data-case="'.$tag.'"]';
             if (preg_match_all('/<style[^>]*>([\s\S]*?)<\/style>/i', $html, $styleMatches)) {
                 foreach ($styleMatches[1] as $css) {
-                    // Step 1: 将 body/html 选择器转换为 [data-case] 自身（丢失的 body 级基础样式影响最大）
-                    $scoped = preg_replace(
-                        '/(?:^|[\s,]+)(?<!\w)(?:html|body)(?=\s*(?:\{|,))/i',
-                        '[data-case="'.$tag.'"]',
+                    $scoped = preg_replace_callback(
+                        '/([^{}]+)\{([^{}]*)\}/s',
+                        function($m) use ($tag, $scope) {
+                            $selectors = trim($m[1]);
+                            $body = trim($m[2]);
+                            if (empty($selectors) || empty($body)) return $m[0];
+
+                            $scopedList = [];
+                            foreach (explode(',', $selectors) as $sel) {
+                                $sel = trim($sel);
+                                if (empty($sel)) continue;
+                                // html/body 根选择器 → 替换为 [data-case]
+                                if (preg_match('/^(html|body)$/i', $sel)) {
+                                    $scopedList[] = $scope;
+                                } else {
+                                    $scopedList[] = "$scope $sel";
+                                }
+                            }
+                            return implode(', ', $scopedList) . ' {' . $body . '}';
+                        },
                         $css
                     );
-                    // Step 2: body/html 作为复合选择器的一部分（如 html>body）
-                    $scoped = preg_replace(
-                        '/(?:^|[\s,]+)(?<!\w)(?:html|body)(?=\s*[>~+\[.#:])/i',
-                        '[data-case="'.$tag.'"]',
-                        $scoped
-                    );
-                    // Step 3: 所有其他选择器加 [data-case] 前缀
-                    $scoped = preg_replace(
-                        '/((?:^|,\s*))([.#]?[a-zA-Z\*][\w-]*(?:\s*,\s*[.#]?[a-zA-Z][\w-]*)*)\s*\{/',
-                        '${1}[data-case="'.$tag.'"] ${2}{',
-                        $scoped
-                    );
-                    // 修复Step3可能产生的双前缀：去掉 [data-case][data-case]
-                    $scoped = str_replace('[data-case="'.$tag.'"] [data-case="'.$tag.'"]', '[data-case="'.$tag.'"]', $scoped);
-                    $scopedStyles[] = $scoped;
+                    $allStyles[] = $scoped;
                 }
             }
-            $caseStyles .= implode("\n", $scopedStyles) . "\n";
 
             // 提取 <body> 内内容，并为首个 div 注入 test-content-wrapper id
             if (preg_match('/<body[^>]*>([\s\S]*)<\/body>/i', $html, $bodyMatch)) {
@@ -128,7 +128,7 @@ class EdgeDomStrategy implements BrowserRefStrategy
 
         // 构建批次 HTML
         $batchHtml = '<!DOCTYPE html><html><head><meta charset="utf-8">';
-        $batchHtml .= '<style>' . $caseStyles . '</style>';
+        $batchHtml .= '<style>' . implode("\n", $allStyles) . '</style>';
         $batchHtml .= '</head><body>';
         $batchHtml .= $caseBodies;
         $batchHtml .= '<textarea id="layout-output" style="display:none;"></textarea>';
@@ -146,16 +146,37 @@ class EdgeDomStrategy implements BrowserRefStrategy
 
         if ($domOutput === null) return false;
 
-        // 从 DOM 输出中提取 #layout-output
-        if (!preg_match('/<textarea[^>]*id="layout-output"[^>]*>([\s\S]*?)<\/textarea>/i', $domOutput, $m)) {
-            echo "  [edge_dom] WARNING: batch layout-output not found\n";
+        // 从 DOM 输出中提取 #layout-output（使用更健壮的方式）
+        // Edge --dump-dom 可能以不同方式序列化 textarea，用 strpos 定位更可靠
+        $layoutMarker = 'id="layout-output"';
+        $layoutPos = strpos($domOutput, $layoutMarker);
+        if ($layoutPos === false) {
+            echo "  [edge_dom] WARNING: batch layout-output id not found (raw output length=" . strlen($domOutput) . ")\n";
+            return false;
+        }
+        // 找到 textarea 开始标签的结束位置
+        $tagEnd = strpos($domOutput, '>', $layoutPos);
+        if ($tagEnd === false) {
+            echo "  [edge_dom] WARNING: batch layout-output tag not closed\n";
+            return false;
+        }
+        $contentStart = $tagEnd + 1;
+        // Edge --dump-dom 可能省略 </textarea>，需检测后续标签
+        $contentEnd = strlen($domOutput);
+        foreach (['</textarea>', '<script', '</body>', '</html>'] as $marker) {
+            $pos = strpos($domOutput, $marker, $contentStart);
+            if ($pos !== false && $pos < $contentEnd) $contentEnd = $pos;
+        }
+        $batchJson = trim(substr($domOutput, $contentStart, $contentEnd - $contentStart));
+
+        if (empty($batchJson)) {
+            echo "  [edge_dom] WARNING: batch layout-output is empty\n";
             return false;
         }
 
-        $batchJson = trim($m[1]);
         $decoded = json_decode($batchJson, true);
         if ($decoded === null) {
-            echo "  [edge_dom] WARNING: batch JSON parse failed\n";
+            echo "  [edge_dom] WARNING: batch JSON parse failed (error=" . json_last_error_msg() . ", first 200 chars: " . substr($batchJson, 0, 200) . ")\n";
             return false;
         }
 
