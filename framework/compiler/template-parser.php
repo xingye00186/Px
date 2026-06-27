@@ -495,6 +495,10 @@ class TemplateParser
             'table'     => $this->parseGenericElement($tok, 'table'),
             'thead'     => $this->parseGenericElement($tok, 'thead'),
             'tbody'     => $this->parseGenericElement($tok, 'tbody'),
+            'tfoot'     => $this->parseGenericElement($tok, 'tfoot'),
+            'colgroup'  => $this->parseTableColgroup($tok),
+            'col'       => $this->parseGenericElement($tok, 'col'),
+            'caption'   => $this->parseGenericElement($tok, 'caption'),
             'tr'        => $this->parseGenericElement($tok, 'tr'),
             'th'        => $this->parseGenericElement($tok, 'th'),
             'td'        => $this->parseGenericElement($tok, 'td'),
@@ -752,6 +756,52 @@ class TemplateParser
     /**
      * Generic HTML element (<p>, <h1>, etc.)
      */
+    private function parseTableColgroup(Token $tok): VNode
+    {
+        $attrs = $this->parseAttrs($tok->content);
+        $this->advance(); // consume <colgroup>
+
+        $props = $this->convertElementAttrs($attrs, $tok->line, 'colgroup');
+        $children = [];
+
+        // Parse only <col> / <template> children
+        // HTML5 §12.2.6.4.8: any non-col child auto-closes colgroup
+        while ($this->pos < $this->len) {
+            $tt = $this->tokens[$this->pos];
+            $type = $tt->type;
+
+            if ($type === TOK_TAG_CLOSE && strtolower(trim($tt->content)) === 'colgroup') {
+                $this->advance();
+                break;
+            }
+
+            if ($type !== TOK_TAG_OPEN && $type !== TOK_TAG_SELF) {
+                $this->advance();
+                continue;
+            }
+
+            // Determine child tag name
+            $content = trim($tt->content);
+            $spacePos = strpos($content, ' ');
+            $childTag = $spacePos !== false ? substr($content, 0, $spacePos) : $content;
+            $childTag = strtolower($childTag);
+
+            // Only <col> and <template> are valid inside colgroup
+            if ($childTag === 'col' || $childTag === 'template') {
+                $child = $this->parseElement();
+                if ($child !== null) $children[] = $child;
+            } else {
+                // Auto-close colgroup on any other tag (HTML5)
+                break;
+            }
+        }
+
+        return VNode::h('colgroup', $props, $children);
+    }
+
+
+
+
     private function parseGenericElement(Token $tok, string $tag): VNode
     {
         $attrs = $this->parseAttrs($tok->content);

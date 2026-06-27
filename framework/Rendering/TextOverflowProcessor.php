@@ -33,64 +33,7 @@ class TextOverflowProcessor
             return $result;
         }
 
-        // Check if overflow-wrap:break-word is set (for long word breaking)
-        $overflowWrap = $style['overflowWrap'] ?? 'normal';
-        $isBreakWord = ($overflowWrap === 'break-word' || $overflowWrap === 'anywhere');
-        
-        if ($textOverflow !== 'ellipsis' && $isBreakWord) {
-            // ── overflow-wrap:break-word 模式 ──
-            // CSS Text Module Level 3 §6: break-word allows breaking within words
-            // when a word would otherwise overflow its container.
-            $availWidth = $containerW - 4;
-            if ($availWidth <= 10) return $result;
-            
-            // Measure full text width
-            $fullWidth = self::measureTextWidth($text, $fontSize, $bold);
-            if ($fullWidth <= $availWidth) return $result;
-            
-            // Compute line height
-            $lineHeight = (int)($style['lineHeight'] ?? 0);
-            if ($lineHeight <= 0) $lineHeight = (int)($fontSize * 1.2);
-            
-            // Break text into lines that fit within availWidth
-            $lines = [];
-            $remaining = $text;
-            $len = strlen($text);
-            $pos = 0;
-            $currentLine = '';
-            
-            while ($pos < $len) {
-                $charLen = 1;
-                $b = ord($remaining[$pos]);
-                if ($b >= 0xF0) $charLen = 4;
-                elseif ($b >= 0xE0) $charLen = 3;
-                elseif ($b >= 0xC0) $charLen = 2;
-                
-                $chunk = substr($remaining, $pos, $charLen);
-                $candidate = $currentLine . $chunk;
-                
-                if (self::measureTextWidth($candidate, $fontSize, $bold) > $availWidth && $currentLine !== '') {
-                    $lines[] = $currentLine;
-                    $currentLine = $chunk;
-                } else {
-                    $currentLine = $candidate;
-                }
-                $pos += $charLen;
-            }
-            if ($currentLine !== '') {
-                $lines[] = $currentLine;
-            }
-            
-            $result['text'] = $lines[0] ?? $text;
-            $result['lines'] = $lines;
-            $result['lineHeight'] = $lineHeight;
-            return $result;
-        }
-
-        $lineClamp = (int)($style['WebkitLineClamp'] ?? $style['webkitLineClamp'] ?? 0);
-        $availWidth = $containerW - 4; // 4px 内边距
-
-        // ── 文本测量闭包 ──
+        // ── 文本测量闭包（提前定义，break-word 和 line-clamp 分支共用）──
         $measureTextWidth = function (string $str) use ($fontSize, $bold): int {
             static $hasNative = null;
             if ($hasNative === null) $hasNative = function_exists('\\sk_measure_text_width');
@@ -118,6 +61,63 @@ class TextOverflowProcessor
             }
             return $total;
         };
+
+        // Check if overflow-wrap:break-word is set (for long word breaking)
+        $overflowWrap = $style['overflowWrap'] ?? 'normal';
+        $isBreakWord = ($overflowWrap === 'break-word' || $overflowWrap === 'anywhere');
+        
+        if ($textOverflow !== 'ellipsis' && $isBreakWord) {
+            // ── overflow-wrap:break-word 模式 ──
+            // CSS Text Module Level 3 §6: break-word allows breaking within words
+            // when a word would otherwise overflow its container.
+            $availWidth = $containerW - 4;
+            if ($availWidth <= 10) return $result;
+            
+            // Measure full text width
+            $fullWidth = $measureTextWidth($text);
+            if ($fullWidth <= $availWidth) return $result;
+            
+            // Compute line height
+            $lineHeight = (int)($style['lineHeight'] ?? 0);
+            if ($lineHeight <= 0) $lineHeight = (int)($fontSize * 1.2);
+            
+            // Break text into lines that fit within availWidth
+            $lines = [];
+            $remaining = $text;
+            $len = strlen($text);
+            $pos = 0;
+            $currentLine = '';
+            
+            while ($pos < $len) {
+                $charLen = 1;
+                $b = ord($remaining[$pos]);
+                if ($b >= 0xF0) $charLen = 4;
+                elseif ($b >= 0xE0) $charLen = 3;
+                elseif ($b >= 0xC0) $charLen = 2;
+                
+                $chunk = substr($remaining, $pos, $charLen);
+                $candidate = $currentLine . $chunk;
+                
+                if ($measureTextWidth($candidate) > $availWidth && $currentLine !== '') {
+                    $lines[] = $currentLine;
+                    $currentLine = $chunk;
+                } else {
+                    $currentLine = $candidate;
+                }
+                $pos += $charLen;
+            }
+            if ($currentLine !== '') {
+                $lines[] = $currentLine;
+            }
+            
+            $result['text'] = $lines[0] ?? $text;
+            $result['lines'] = $lines;
+            $result['lineHeight'] = $lineHeight;
+            return $result;
+        }
+
+        $lineClamp = (int)($style['WebkitLineClamp'] ?? $style['webkitLineClamp'] ?? 0);
+        $availWidth = $containerW - 4; // 4px 内边距
 
         if ($lineClamp > 0) {
             // ── 多行模式：逐字符拆分行 ──
