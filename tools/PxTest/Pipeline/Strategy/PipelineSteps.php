@@ -44,6 +44,19 @@ class LayoutDumpStep implements PipelineStepInterface
             }
         }
 
+        // ─── HTML 结构准入检查（浏览器渲染前置条件）───
+        $htmlFiles = glob("$caseDir/*.html");
+        if (!empty($htmlFiles)) {
+            $htmlSpecErrors = $this->validateHtmlSpec($htmlFiles[0]);
+            if (!empty($htmlSpecErrors)) {
+                echo "  [HTML_SPEC_FAIL] " . basename($htmlFiles[0]) . " violates PxTest HTML spec:\n";
+                foreach ($htmlSpecErrors as $e) {
+                    echo "    - $e\n";
+                }
+                return StepResult::err('dump_layout', 'HTML spec validation failed');
+            }
+        }
+
         $result = $this->strategy->dump($currentCase, $refDir);
         if ($result === null) {
             return StepResult::err('dump_layout', 'Strategy ' . $this->strategy->name() . ' failed');
@@ -333,6 +346,15 @@ class BrowserRefStep implements PipelineStepInterface
                 if ($firstChild && $firstChild->getAttribute('data-px-anchor') !== '') {
                     $errors[] = "First element in <body> must be the test content container, "
                         . "not a data-px-anchor element — move anchors inside the container div";
+                }
+                // 7) Root content container must have position:relative
+                // position:absolute anchors need a relative containing block.
+                if ($firstChild && $firstChild->nodeType === XML_ELEMENT_NODE) {
+                    $style = $firstChild->getAttribute('style');
+                    if (stripos($style, 'position:relative') === false) {
+                        $errors[] = "Root content container (first <div> in <body>) must have "
+                            . "position:relative — anchors use position:absolute and need a relative containing block.";
+                    }
                 }
             }
         }
