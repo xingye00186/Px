@@ -1,10 +1,10 @@
 <template>
-  <div class="prt-wrap" style="width:800px;position:relative;">
+  <div class="prt-wrap" style="width:800px;position:relative;line-height:0">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="width:500px;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:20px;">
       <div style="display:grid;grid-template-columns:100px 1fr;gap:8px 12px;">
         <div style="height:32px;background:#e3f2fd;display:flex;align-items:center;padding:0 8px;"><span style="font-size:13px;"><span style="display:inline-block;width:36px;height:18px;"></span></span></div>
-        <div style="height:32px;background:#f5f5f5;border:1px solid #ccc;border-radius:4px;"></div>
+        <div style="height:32px;background:#f5f5f5;border:1px solid #ccc;border-radius:4px;line-height:0"></div>
         <div style="height:32px;background:#fce4ec;display:flex;align-items:center;padding:0 8px;"><span style="font-size:13px;"><span style="display:inline-block;width:43px;height:18px;"></span></span></div>
         <div style="height:32px;background:#f5f5f5;border:1px solid #ccc;border-radius:4px;"></div>
       </div>

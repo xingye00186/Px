@@ -108,6 +108,13 @@
         for (var i = 0; i < STYLE_PROPERTIES.length; i++) {
             var prop = STYLE_PROPERTIES[i];
             var val = style.getPropertyValue(prop);
+            // line-height: getPropertyValue 返回 'normal'，改用 .lineHeight 获取计算后像素值
+            if (prop === 'line-height') {
+                if (style.lineHeight) {
+                    result.styles[prop] = style.lineHeight;
+                }
+                continue;
+            }
             // 跳过默认值以减少体积
             if (val !== '' && val !== 'none' && val !== 'normal') {
                 result.styles[prop] = val;

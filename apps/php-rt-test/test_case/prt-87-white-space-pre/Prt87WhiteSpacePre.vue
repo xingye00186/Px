@@ -1,8 +1,8 @@
 <template>
-  <div class="prt-wrap" style="width:800px;position:relative;">
+  <div class="prt-wrap" style="width:800px;position:relative;line-height:0">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;"><span style="display:inline-block;width:383px;height:17px;"></span></div>
-    <div style="width:400px;background:#f5f5f5;border:1px solid #ccc;padding:8px;font-size:14px;"><div style="background:#e3f2fd;border:1px solid #1565c0;margin-bottom:4px;white-space:pre;overflow:hidden;"><span><span style="display:inline-block;width:211px;height:22px;"></span></span></div><div style="background:#fce4ec;border:1px solid #c62828;margin-bottom:4px;white-space:pre-wrap;"><span><span style="display:inline-block;width:229px;height:22px;"></span></span></div><div style="background:#e8f5e9;border:1px solid #2e7d32;white-space:pre-line;"><span><span style="display:inline-block;width:264px;height:22px;"></span></span></div></div>
+    <div style="width:400px;background:#f5f5f5;border:1px solid #ccc;padding:8px;line-height:0"><div style="background:#e3f2fd;border:1px solid #1565c0;margin-bottom:4px;white-space:pre;overflow:hidden;"><span><span style="display:inline-block;width:211px;height:22px;"></span></span></div><div style="background:#fce4ec;border:1px solid #c62828;margin-bottom:4px;white-space:pre-wrap;line-height:0"><span><span style="display:inline-block;width:229px;height:22px;"></span></span></div><div style="background:#e8f5e9;border:1px solid #2e7d32;white-space:pre-line;line-height:0"><span><span style="display:inline-block;width:264px;height:22px;"></span></span></div></div>
     <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;" data-px-anchor="br"></div>
   </div>
 </template>

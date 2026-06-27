@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;position:relative;">
+  <div class="prt-wrap" style="width:800px;position:relative;line-height:0">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;"><span style="display:inline-block;width:310px;height:17px;"></span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:40px 40px;align-content:center;gap:8px;width:300px;height:200px;background:#f5f5f5;border:1px solid #ccc;padding:8px;"><div style="background:#e3f2fd;border:1px solid #1565c0;"></div><div style="background:#fce4ec;border:1px solid #c62828;"></div><div style="background:#e8f5e9;border:1px solid #2e7d32;"></div><div style="background:#fff3e0;border:1px solid #e65100;"></div></div>
