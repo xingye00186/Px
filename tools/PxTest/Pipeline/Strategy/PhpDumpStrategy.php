@@ -61,7 +61,100 @@ class PhpDumpStrategy implements DumpStrategy
         if (!defined('WINDOW_HEIGHT')) define('WINDOW_HEIGHT', 800);
         if (!defined('WINDOW_TITLE'))  define('WINDOW_TITLE', 'CSS Test');
 
-        // Step 4: 构建应用基础设施（MockPlatform 替代 Win32 窗口）
+        // Step 4: 加载框架基础类（gen/ 组件依赖它们）
+        // PhpRuntimeBootstrap 已定义 native_types trait
+        // 显式加载核心文件（确保依赖顺序）
+        $fwDir = $this->projectRoot . '/framework';
+        $coreFiles = [
+            $fwDir . '/Rendering/VNode.php',
+            $fwDir . '/Rendering/RenderNode.php',
+            $fwDir . '/Rendering/CssMappings.php',
+            $fwDir . '/Rendering/CssValueParser.php',
+            $fwDir . '/interfaces/ComponentInterface.php',
+            $fwDir . '/interfaces/ReactiveComponentInterface.php',
+            $fwDir . '/BaseComponent.php',
+            $fwDir . '/ReactiveComponent.php',
+            $fwDir . '/Platform/Platform.php',
+            $fwDir . '/Platform/PlatformEvent.php',
+            $fwDir . '/Platform/MouseEvent.php',
+            $fwDir . '/Platform/KeyboardEvent.php',
+            $fwDir . '/Platform/WindowEvent.php',
+            $fwDir . '/Platform/PlatformFactory.php',
+            $fwDir . '/Core/Scheduler.php',
+            $fwDir . '/Core/Config.php',
+            $fwDir . '/Core/PerfCounter.php',
+            $fwDir . '/Core/ScrollManager.php',
+            $fwDir . '/Core/Application.php',
+            $fwDir . '/Rendering/RenderContext.php',
+            $fwDir . '/Rendering/GdiRenderContext.php',
+            $fwDir . '/Rendering/TextBackend/ITextBackend.php',
+            $fwDir . '/Rendering/TextBackend/GdiTextBackend.php',
+            $fwDir . '/Rendering/TextBackend/SkiaTextBackend.php',
+            $fwDir . '/Rendering/TextBackend/DWriteTextBackend.php',
+            $fwDir . '/Rendering/TextBackend/TextBackendRegistry.php',
+            $fwDir . '/Rendering/TextBackend/ResilientTextBackendProxy.php',
+            $fwDir . '/Rendering/ImageManager.php',
+            $fwDir . '/Rendering/RenderTreeManager.php',
+            $fwDir . '/Rendering/VNodeRenderer.php',
+            $fwDir . '/Rendering/LayoutResolver.php',
+            $fwDir . '/Rendering/Layout/LayoutContext.php',
+            $fwDir . '/Rendering/Layout/LayoutStrategyInterface.php',
+            $fwDir . '/Rendering/TextOverflowProcessor.php',
+            // Styling/Theme (Application::mount 需要)
+            $fwDir . '/Styling/Theme/ColorScheme.php',
+            $fwDir . '/Styling/Theme/ComponentTheme.php',
+            $fwDir . '/Styling/Theme/TextTheme.php',
+            $fwDir . '/Styling/Theme/ThemeData.php',
+            $fwDir . '/Styling/Provider/ThemeProvider.php',
+            $fwDir . '/Styling/Adapter/PlatformStyling.php',
+            $fwDir . '/Styling/Adapter/Win32Styling.php',
+            $fwDir . '/Styling/Adapter/MacOSStyling.php',
+            $fwDir . '/Styling/Adapter/LinuxStyling.php',
+            $fwDir . '/Styling/Adapter/PlatformAdapter.php',
+            $fwDir . '/Styling/Resolver/StyleResolver.php',
+        ];
+        foreach ($coreFiles as $p) {
+            if (file_exists($p)) require_once $p;
+        }
+        // 加载 Layout/ 下所有文件（接口/策略类先于实现类）
+        $layoutFiles = glob($fwDir . '/Rendering/Layout/*.php');
+        sort($layoutFiles);
+        $interfaces = []; $implementations = [];
+        foreach ($layoutFiles as $p) {
+            $bn = basename($p);
+            if (str_contains($bn, 'Interface') || str_contains($bn, 'Strategy')) {
+                $interfaces[] = $p;
+            } else {
+                $implementations[] = $p;
+            }
+        }
+        // 加载 Layout/Tools/ 下所有文件
+        $toolFiles = glob($fwDir . '/Rendering/Layout/Tools/*.php');
+        sort($toolFiles);
+        foreach (array_merge($interfaces, $toolFiles, $implementations) as $p) require_once $p;
+
+        // 递归加载 framework/ 下其余所有 PHP 文件
+        $dirIter = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($fwDir,
+                \RecursiveDirectoryIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS)
+        );
+        foreach ($dirIter as $f) {
+            if ($f->getExtension() !== 'php') continue;
+            $path = $f->getPathname();
+            if (str_contains($path, '/compiler/') || str_contains($path, 'aot-checker')) continue;
+            // 跳过 Backend/Styling/TextBackend/Animation/DevTools（纯渲染层，Mock 替代）
+            $skipDirs = ['/Backend/', '/Animation/', '/DevTools/'];
+            $skipFile = false;
+            foreach ($skipDirs as $sd) {
+                if (str_contains($path, $sd)) { $skipFile = true; break; }
+            }
+            if ($skipFile) continue;
+            // 跳过已加载的核心文件
+            if (in_array($path, $coreFiles, true)) continue;
+            require_once $path;
+        }
+
+        // Step 5: 构建应用基础设施（MockPlatform 替代 Win32 窗口）
         $platform = new MockPlatform(1600, 800);
         $scheduler = new Scheduler();
         $app = new Application($platform, $scheduler);
