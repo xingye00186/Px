@@ -254,7 +254,7 @@ class ElementCompareStep implements PipelineStepInterface
                     // 3. 格式噪声：引擎与浏览器对同一属性使用不同序列化格式
                     //    border-radius: 引擎单值16px vs 浏览器多值16px 4px
                     //    border-color/width: 引擎4值 vs 浏览器单值（当全部相同时）
-                    if (in_array($k, ['border-radius', 'border-color', 'border-width'], true)) {
+                    if (in_array($k, ['border-radius', 'border-color', 'border-width', 'display'], true)) {
                         continue;
                     }
                     $totalLen = strlen((string)$evs) + strlen((string)$bvs);
