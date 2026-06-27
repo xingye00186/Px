@@ -17,7 +17,11 @@ bool ensureDWriteFactory() {
         DWRITE_FACTORY_TYPE_SHARED,
         __uuidof(IDWriteFactory),
         reinterpret_cast<IUnknown**>(&g_dwFactory));
-    return SUCCEEDED(hr) && g_dwFactory != nullptr;
+    if (FAILED(hr) || !g_dwFactory) {
+        g_dwInitAttempted = false; // Allow retry on failure
+        return false;
+    }
+    return true;
 }
 
 bool ensureDWriteRenderTarget(HDC hdc, int w, int h) {
@@ -66,16 +70,35 @@ int measureHeightDWrite(int fontSize, int bold) {
         (Int)bold != 0 ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_REGULAR,
         DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
         (FLOAT)fontSize, L"", &format);
-    if (FAILED(hr) || !format) return 0;
+    if (FAILED(hr) || !format) { return 0; }
 
-    IDWriteTextLayout* layout = nullptr;
-    hr = g_dwFactory->CreateTextLayout(L"A", 1, format, 10000.0f, 10000.0f, &layout);
+    // Use font face metrics for accurate ascent+descent (no line spacing)
+    IDWriteFontCollection* collection = nullptr;
+    UINT32 findIdx = 0;
+    BOOL found = FALSE;
+    hr = g_dwFactory->GetSystemFontCollection(&collection);
     int result = 0;
-    if (SUCCEEDED(hr) && layout) {
-        DWRITE_TEXT_METRICS metrics;
-        layout->GetMetrics(&metrics);
-        result = (int)(metrics.height + 0.5f);
-        layout->Release();
+    SK_TRACE("[SK] measureHeightDWrite: fontSize=%d bold=%d collection=%p\n", fontSize, bold, collection);
+    if (SUCCEEDED(hr) && collection) {
+        hr = collection->FindFamilyName(wfont.c_str(), &findIdx, &found);
+        if (SUCCEEDED(hr) && found) {
+            IDWriteFontFamily* family = nullptr;
+            hr = collection->GetFontFamily(findIdx, &family);
+            if (SUCCEEDED(hr) && family) {
+                IDWriteFont* dwFont = nullptr;
+                DWRITE_FONT_WEIGHT weight = (Int)bold != 0 ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_REGULAR;
+                hr = family->GetFirstMatchingFont(weight, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, &dwFont);
+                if (SUCCEEDED(hr) && dwFont) {
+                    DWRITE_FONT_METRICS fm;
+                    dwFont->GetMetrics(&fm);
+                    float scale = (float)fontSize / (float)fm.designUnitsPerEm;
+                    result = (int)((fm.ascent + fm.descent) * scale + 0.5f);
+                    dwFont->Release();
+                }
+                family->Release();
+            }
+        }
+        collection->Release();
     }
     format->Release();
     return result > 0 ? result : 0;
