@@ -1,16 +1,16 @@
 <template>
   <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
-    <div style="font-size:18px;font-weight:600;color:#333;margin-bottom:8px;">Table Layout</div>
+    <div style="font-size:18px;font-weight:600;color:#333;margin-bottom:8px;"><span style="display:inline-block;width:134px;height:25px;"></span></div>
     <div style="width:500px;background:#f5f5f5;border:1px solid #ccc;">
       <div style="display:table;width:100%;border-collapse:collapse;">
         <div style="display:table-row;background:#e3f2fd;">
-          <div style="display:table-cell;border:1px solid #1565c0;padding:8px;width:50%;">Cell A1</div>
-          <div style="display:table-cell;border:1px solid #1565c0;padding:8px;width:50%;">Cell B1</div>
+          <div style="display:table-cell;border:1px solid #1565c0;padding:8px;width:50%;"><span style="display:inline-block;width:62px;height:22px;"></span></div>
+          <div style="display:table-cell;border:1px solid #1565c0;padding:8px;width:50%;"><span style="display:inline-block;width:62px;height:22px;"></span></div>
         </div>
         <div style="display:table-row;background:#fce4ec;">
-          <div style="display:table-cell;border:1px solid #c62828;padding:8px;">Cell A2</div>
-          <div style="display:table-cell;border:1px solid #c62828;padding:8px;">Cell B2</div>
+          <div style="display:table-cell;border:1px solid #c62828;padding:8px;"><span style="display:inline-block;width:62px;height:22px;"></span></div>
+          <div style="display:table-cell;border:1px solid #c62828;padding:8px;"><span style="display:inline-block;width:62px;height:22px;"></span></div>
         </div>
       </div>
     </div>

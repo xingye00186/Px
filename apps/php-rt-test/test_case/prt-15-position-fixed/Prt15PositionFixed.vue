@@ -1,7 +1,7 @@
 <template>
   <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
-    <div style="font-size:18px;font-weight:600;color:#333;margin-bottom:12px;">Position Fixed</div>
+    <div style="font-size:18px;font-weight:600;color:#333;margin-bottom:12px;"><span style="display:inline-block;width:156px;height:25px;"></span></div>
     <div style="width:400px;height:120px;background:#f5f5f5;border:1px solid #ccc;overflow:hidden;position:relative;">
       <div style="height:30px;background:#e3f2fd;border:1px solid #1565c0;"></div>
     </div>

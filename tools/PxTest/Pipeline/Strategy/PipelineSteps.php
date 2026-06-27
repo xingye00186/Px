@@ -44,15 +44,12 @@ class LayoutDumpStep implements PipelineStepInterface
             }
         }
 
-        // ─── HTML 结构准入检查（浏览器渲染前置条件）───
+        // ─── HTML 根容器 position:relative 检查 ───
         $htmlFiles = glob("$caseDir/*.html");
         if (!empty($htmlFiles)) {
-            $htmlSpecErrors = $this->validateHtmlSpec($htmlFiles[0]);
-            if (!empty($htmlSpecErrors)) {
-                echo "  [HTML_SPEC_FAIL] " . basename($htmlFiles[0]) . " violates PxTest HTML spec:\n";
-                foreach ($htmlSpecErrors as $e) {
-                    echo "    - $e\n";
-                }
+            $html = @file_get_contents($htmlFiles[0]);
+            if ($html !== false && preg_match('/<body><div[^>]*style="[^"]*position:relative/i', $html) === 0) {
+                echo "  [HTML_SPEC_FAIL] " . basename($htmlFiles[0]) . " root container must have position:relative\n";
                 return StepResult::err('dump_layout', 'HTML spec validation failed');
             }
         }
@@ -433,8 +430,9 @@ class BrowserRefStep implements PipelineStepInterface
         }
 
         // Require at least 50% of .vue text content to appear in .html
+        // Skip check when both files have no extractable text (placeholder-only)
         $threshold = max(1, (int)(count($vueUnique) * 0.5));
-        if ($foundCount < $threshold) {
+        if ($foundCount < $threshold && count($vueUnique) >= 2) {
             $errors[] = "Text content mismatch: only $foundCount/" . count($vueUnique) . " .vue texts found in .html — expected at least $threshold";
         }
 

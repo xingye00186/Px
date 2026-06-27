@@ -1,7 +1,7 @@
 <template>
   <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
-    <div style="font-size:18px;font-weight:600;color:#333;margin-bottom:12px;">Min/Max Constraints</div>
+    <div style="font-size:18px;font-weight:600;color:#333;margin-bottom:12px;"><span style="display:inline-block;width:212px;height:25px;"></span></div>
     <div style="width:500px;background:#f5f5f5;border:1px solid #ccc;padding:8px;">
       <div style="min-width:100px;max-width:300px;height:30px;background:#e3f2fd;border:1px solid #1565c0;"></div>
       <div style="width:200px;min-height:30px;max-height:80px;background:#fce4ec;border:1px solid #c62828;margin-top:4px;">

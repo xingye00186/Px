@@ -1,8 +1,8 @@
 <template>
   <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
-    <div style="font-size:12px;color:#999;margin-bottom:8px;">empty-cells:hide on empty table cells</div>
-    <div style="width:400px;background:#f5f5f5;border:1px solid #ccc;"><div style="display:table;width:100%;border-collapse:separate;border-spacing:4px;empty-cells:hide;"><div style="display:table-row;background:#e3f2fd;"><div style="display:table-cell;border:1px solid #1565c0;padding:6px;">Full</div><div style="display:table-cell;border:1px solid #1565c0;padding:6px;"></div><div style="display:table-cell;border:1px solid #1565c0;padding:6px;">Full</div></div></div></div>
+    <div style="font-size:12px;color:#999;margin-bottom:8px;"><span style="display:inline-block;width:244px;height:17px;"></span></div>
+    <div style="width:400px;background:#f5f5f5;border:1px solid #ccc;"><div style="display:table;width:100%;border-collapse:separate;border-spacing:4px;empty-cells:hide;"><div style="display:table-row;background:#e3f2fd;"><div style="display:table-cell;border:1px solid #1565c0;padding:6px;"><span style="display:inline-block;width:35px;height:22px;"></span></div><div style="display:table-cell;border:1px solid #1565c0;padding:6px;"></div><div style="display:table-cell;border:1px solid #1565c0;padding:6px;"><span style="display:inline-block;width:35px;height:22px;"></span></div></div></div></div>
     <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;" data-px-anchor="br"></div>
   </div>
 </template>

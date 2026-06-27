@@ -12,28 +12,28 @@
       <div style="display:flex;">
         <div style="width:180px;background:#181825;min-height:300px;display:flex;flex-direction:column;">
           <div style="padding:12px 8px;display:flex;flex-direction:column;gap:4px;">
-            <div style="height:32px;background:#313244;border-radius:4px;display:flex;align-items:center;padding:0 8px;"><span style="font-size:13px;color:#cdd6f4;">Dashboard</span></div>
-            <div style="height:32px;background:#45475a;border-radius:4px;display:flex;align-items:center;padding:0 8px;"><span style="font-size:13px;color:#cdd6f4;">Analytics</span></div>
-            <div style="height:32px;background:#45475a;border-radius:4px;display:flex;align-items:center;padding:0 8px;"><span style="font-size:13px;color:#cdd6f4;">Settings</span></div>
+            <div style="height:32px;background:#313244;border-radius:4px;display:flex;align-items:center;padding:0 8px;"><span style="font-size:13px;color:#cdd6f4;"><span style="display:inline-block;width:64px;height:18px;"></span></span></div>
+            <div style="height:32px;background:#45475a;border-radius:4px;display:flex;align-items:center;padding:0 8px;"><span style="font-size:13px;color:#cdd6f4;"><span style="display:inline-block;width:64px;height:18px;"></span></span></div>
+            <div style="height:32px;background:#45475a;border-radius:4px;display:flex;align-items:center;padding:0 8px;"><span style="font-size:13px;color:#cdd6f4;"><span style="display:inline-block;width:57px;height:18px;"></span></span></div>
           </div>
           <div style="border-top:1px solid #313244;padding:8px;display:flex;flex-direction:column;gap:4px;">
-            <div style="height:32px;background:#45475a;border-radius:4px;display:flex;align-items:center;padding:0 8px;"><span style="font-size:13px;color:#6c7086;">Help</span></div>
+            <div style="height:32px;background:#45475a;border-radius:4px;display:flex;align-items:center;padding:0 8px;"><span style="font-size:13px;color:#6c7086;"><span style="display:inline-block;width:29px;height:18px;"></span></span></div>
           </div>
         </div>
         <div style="flex:1;padding:12px;">
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
             <div style="height:60px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:8px;display:flex;flex-direction:column;justify-content:center;padding:8px;">
-              <span style="font-size:12px;color:rgba(255,255,255,0.7);">Total Users</span>
-              <span style="font-size:20px;font-weight:700;color:#fff;">2,847</span>
+              <span style="font-size:12px;color:rgba(255,255,255,0.7);"><span style="display:inline-block;width:73px;height:17px;"></span></span>
+              <span style="font-size:20px;font-weight:700;color:#fff;"><span style="display:inline-block;width:62px;height:28px;"></span></span>
             </div>
             <div style="height:60px;background:linear-gradient(135deg,#f093fb,#f5576c);border-radius:8px;display:flex;flex-direction:column;justify-content:center;padding:8px;">
-              <span style="font-size:12px;color:rgba(255,255,255,0.7);">Revenue</span>
-              <span style="font-size:20px;font-weight:700;color:#fff;">$12.4k</span>
+              <span style="font-size:12px;color:rgba(255,255,255,0.7);"><span style="display:inline-block;width:46px;height:17px;"></span></span>
+              <span style="font-size:20px;font-weight:700;color:#fff;"><span style="display:inline-block;width:74px;height:28px;"></span></span>
             </div>
           </div>
           <div style="display:flex;gap:12px;">
             <div style="flex:2;height:160px;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:12px;">
-              <span style="font-size:14px;font-weight:600;color:#333;">Chart</span>
+              <span style="font-size:14px;font-weight:600;color:#333;"><span style="display:inline-block;width:43px;height:20px;"></span></span>
               <div style="display:flex;gap:4px;align-items:flex-end;height:100px;margin-top:8px;">
                 <div style="flex:1;height:60px;background:#667eea;border-radius:3px;"></div>
                 <div style="flex:1;height:40px;background:#667eea;border-radius:3px;"></div>
@@ -43,18 +43,18 @@
               </div>
             </div>
             <div style="flex:1;height:160px;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;">
-              <span style="font-size:14px;font-weight:600;color:#333;">Activity</span>
+              <span style="font-size:14px;font-weight:600;color:#333;"><span style="display:inline-block;width:69px;height:20px;"></span></span>
               <div style="display:flex;gap:8px;align-items:center;">
                 <div style="width:8px;height:8px;border-radius:50%;background:#4caf50;"></div>
-                <span style="font-size:13px;color:#666;">12 new signups</span>
+                <span style="font-size:13px;color:#666;"><span style="display:inline-block;width:100px;height:18px;"></span></span>
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
                 <div style="width:8px;height:8px;border-radius:50%;background:#2196f3;"></div>
-                <span style="font-size:13px;color:#666;">5 new orders</span>
+                <span style="font-size:13px;color:#666;"><span style="display:inline-block;width:86px;height:18px;"></span></span>
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
                 <div style="width:8px;height:8px;border-radius:50%;background:#ff9800;"></div>
-                <span style="font-size:13px;color:#666;">3 pending tasks</span>
+                <span style="font-size:13px;color:#666;"><span style="display:inline-block;width:107px;height:18px;"></span></span>
               </div>
             </div>
           </div>

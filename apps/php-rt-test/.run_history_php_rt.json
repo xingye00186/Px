@@ -9708,5 +9708,2871 @@
                 "passed": false
             }
         }
+    },
+    {
+        "timestamp": "2026-06-27 21:54:41",
+        "total_cases": 110,
+        "passed": 0,
+        "failed": 110,
+        "elapsed_s": 102.3,
+        "browser_pass": 0,
+        "browser_fail": 110,
+        "property_stats": {
+            "background-color": {
+                "match": 391,
+                "diff": 233,
+                "total": 624
+            },
+            "position": {
+                "match": 703,
+                "diff": 61,
+                "total": 764
+            },
+            "box-sizing": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "width": {
+                "match": 269,
+                "diff": 495,
+                "total": 764
+            },
+            "height": {
+                "match": 281,
+                "diff": 483,
+                "total": 764
+            },
+            "pointer-events": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "display": {
+                "match": 563,
+                "diff": 0,
+                "total": 563
+            },
+            "top": {
+                "match": 559,
+                "diff": 0,
+                "total": 559
+            },
+            "left": {
+                "match": 559,
+                "diff": 0,
+                "total": 559
+            },
+            "font-weight": {
+                "match": 660,
+                "diff": 104,
+                "total": 764
+            },
+            "font-style": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "text-align": {
+                "match": 760,
+                "diff": 4,
+                "total": 764
+            },
+            "white-space": {
+                "match": 1,
+                "diff": 3,
+                "total": 4
+            },
+            "word-break": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "visibility": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "opacity": {
+                "match": 752,
+                "diff": 12,
+                "total": 764
+            },
+            "cursor": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "direction": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "font-size": {
+                "match": 347,
+                "diff": 167,
+                "total": 514
+            },
+            "color": {
+                "match": 82,
+                "diff": 136,
+                "total": 218
+            },
+            "border-left-width": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "border-left-color": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "border-width": {
+                "match": 191,
+                "diff": 0,
+                "total": 191
+            },
+            "border-color": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "border-radius": {
+                "match": 33,
+                "diff": 0,
+                "total": 33
+            },
+            "padding-top": {
+                "match": 66,
+                "diff": 53,
+                "total": 119
+            },
+            "padding-left": {
+                "match": 60,
+                "diff": 59,
+                "total": 119
+            },
+            "padding-right": {
+                "match": 60,
+                "diff": 59,
+                "total": 119
+            },
+            "padding-bottom": {
+                "match": 65,
+                "diff": 54,
+                "total": 119
+            },
+            "margin-top": {
+                "match": 7,
+                "diff": 14,
+                "total": 21
+            },
+            "margin-left": {
+                "match": 10,
+                "diff": 10,
+                "total": 20
+            },
+            "margin-right": {
+                "match": 4,
+                "diff": 5,
+                "total": 9
+            },
+            "margin-bottom": {
+                "match": 73,
+                "diff": 49,
+                "total": 122
+            },
+            "font-family": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "min-width": {
+                "match": 4,
+                "diff": 1,
+                "total": 5
+            },
+            "min-height": {
+                "match": 0,
+                "diff": 3,
+                "total": 3
+            },
+            "flex-direction": {
+                "match": 6,
+                "diff": 18,
+                "total": 24
+            },
+            "flex-grow": {
+                "match": 18,
+                "diff": 16,
+                "total": 34
+            },
+            "flex-shrink": {
+                "match": 32,
+                "diff": 4,
+                "total": 36
+            },
+            "flex-wrap": {
+                "match": 5,
+                "diff": 2,
+                "total": 7
+            },
+            "overflow-x": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "overflow-y": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "border-style": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "gap": {
+                "match": 18,
+                "diff": 79,
+                "total": 97
+            },
+            "max-width": {
+                "match": 1,
+                "diff": 0,
+                "total": 1
+            },
+            "max-height": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "overflow": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "align-items": {
+                "match": 6,
+                "diff": 0,
+                "total": 6
+            },
+            "line-height": {
+                "match": 1,
+                "diff": 1,
+                "total": 2
+            },
+            "grid-template-columns": {
+                "match": 0,
+                "diff": 13,
+                "total": 13
+            },
+            "justify-content": {
+                "match": 1,
+                "diff": 1,
+                "total": 2
+            },
+            "grid-auto-rows": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "grid-template-rows": {
+                "match": 0,
+                "diff": 2,
+                "total": 2
+            },
+            "grid-column": {
+                "match": 0,
+                "diff": 5,
+                "total": 5
+            },
+            "align-content": {
+                "match": 0,
+                "diff": 2,
+                "total": 2
+            },
+            "order": {
+                "match": 0,
+                "diff": 3,
+                "total": 3
+            },
+            "text-decoration-line": {
+                "match": 0,
+                "diff": 2,
+                "total": 2
+            },
+            "text-decoration-color": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "text-decoration-style": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "text-decoration-thickness": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "outline-width": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "outline-style": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "outline-color": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "box-shadow": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            }
+        },
+        "case_details": {
+            "prt-01-margin": {
+                "geometry_count": 16,
+                "critical_count": 12,
+                "major_count": 4,
+                "mismatch_count": 29,
+                "missing_count": 3,
+                "structure_count": 3,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-02-margin-auto": {
+                "geometry_count": 19,
+                "critical_count": 11,
+                "major_count": 7,
+                "mismatch_count": 23,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-03-negative-margin": {
+                "geometry_count": 18,
+                "critical_count": 10,
+                "major_count": 7,
+                "mismatch_count": 20,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-04-padding": {
+                "geometry_count": 16,
+                "critical_count": 9,
+                "major_count": 6,
+                "mismatch_count": 17,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-05-border": {
+                "geometry_count": 16,
+                "critical_count": 6,
+                "major_count": 7,
+                "mismatch_count": 13,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-06-border-radius": {
+                "geometry_count": 21,
+                "critical_count": 14,
+                "major_count": 6,
+                "mismatch_count": 16,
+                "missing_count": 2,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-07-width-height": {
+                "geometry_count": 16,
+                "critical_count": 5,
+                "major_count": 9,
+                "mismatch_count": 14,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-08-min-max": {
+                "geometry_count": 23,
+                "critical_count": 12,
+                "major_count": 9,
+                "mismatch_count": 26,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-09-box-sizing": {
+                "geometry_count": 33,
+                "critical_count": 23,
+                "major_count": 9,
+                "mismatch_count": 43,
+                "missing_count": 4,
+                "structure_count": 1,
+                "overflow_count": 4,
+                "passed": false
+            },
+            "prt-10-overflow": {
+                "geometry_count": 56,
+                "critical_count": 44,
+                "major_count": 11,
+                "mismatch_count": 52,
+                "missing_count": 5,
+                "structure_count": 1,
+                "overflow_count": 7,
+                "passed": false
+            },
+            "prt-100-table-caption": {
+                "geometry_count": 40,
+                "critical_count": 25,
+                "major_count": 15,
+                "mismatch_count": 19,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-101-table-empty-cells": {
+                "geometry_count": 28,
+                "critical_count": 22,
+                "major_count": 6,
+                "mismatch_count": 13,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-102-column-span": {
+                "geometry_count": 18,
+                "critical_count": 10,
+                "major_count": 7,
+                "mismatch_count": 8,
+                "missing_count": 1,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-103-list-style-position": {
+                "geometry_count": 43,
+                "critical_count": 21,
+                "major_count": 17,
+                "mismatch_count": 24,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 6,
+                "passed": false
+            },
+            "prt-104-margin-percent": {
+                "geometry_count": 11,
+                "critical_count": 3,
+                "major_count": 8,
+                "mismatch_count": 7,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-105-width-percent-chain": {
+                "geometry_count": 13,
+                "critical_count": 3,
+                "major_count": 10,
+                "mismatch_count": 5,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-106-min-width-override": {
+                "geometry_count": 12,
+                "critical_count": 4,
+                "major_count": 8,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 2,
+                "passed": false
+            },
+            "prt-107-max-width-constraint": {
+                "geometry_count": 12,
+                "critical_count": 4,
+                "major_count": 8,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 1,
+                "passed": false
+            },
+            "prt-108-integ-overlap-layers": {
+                "geometry_count": 15,
+                "critical_count": 4,
+                "major_count": 11,
+                "mismatch_count": 10,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-109-integ-responsive-card": {
+                "geometry_count": 26,
+                "critical_count": 3,
+                "major_count": 22,
+                "mismatch_count": 15,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-11-display-types": {
+                "geometry_count": 19,
+                "critical_count": 7,
+                "major_count": 11,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-110-integ-complex-toolbar": {
+                "geometry_count": 58,
+                "critical_count": 16,
+                "major_count": 39,
+                "mismatch_count": 19,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 5,
+                "passed": false
+            },
+            "prt-12-display-none": {
+                "geometry_count": 18,
+                "critical_count": 10,
+                "major_count": 7,
+                "mismatch_count": 19,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-13-position-relative": {
+                "geometry_count": 20,
+                "critical_count": 12,
+                "major_count": 6,
+                "mismatch_count": 22,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-14-position-absolute": {
+                "geometry_count": 24,
+                "critical_count": 15,
+                "major_count": 7,
+                "mismatch_count": 21,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-15-position-fixed": {
+                "geometry_count": 20,
+                "critical_count": 12,
+                "major_count": 6,
+                "mismatch_count": 19,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-16-top-left-right-bottom": {
+                "geometry_count": 24,
+                "critical_count": 18,
+                "major_count": 4,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-17-z-index": {
+                "geometry_count": 20,
+                "critical_count": 15,
+                "major_count": 4,
+                "mismatch_count": 16,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-18-position-static": {
+                "geometry_count": 20,
+                "critical_count": 9,
+                "major_count": 10,
+                "mismatch_count": 20,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-19-flex-basic": {
+                "geometry_count": 22,
+                "critical_count": 14,
+                "major_count": 7,
+                "mismatch_count": 25,
+                "missing_count": 2,
+                "structure_count": 1,
+                "overflow_count": 1,
+                "passed": false
+            },
+            "prt-20-flex-direction": {
+                "geometry_count": 30,
+                "critical_count": 18,
+                "major_count": 11,
+                "mismatch_count": 35,
+                "missing_count": 3,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-21-flex-wrap": {
+                "geometry_count": 25,
+                "critical_count": 18,
+                "major_count": 6,
+                "mismatch_count": 25,
+                "missing_count": 2,
+                "structure_count": 1,
+                "overflow_count": 2,
+                "passed": false
+            },
+            "prt-22-flex-jc-start": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-23-flex-jc-center": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-24-flex-jc-end": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-25-flex-jc-between": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-26-flex-jc-around": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-27-flex-jc-evenly": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-28-flex-align-items": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-29-flex-align-self": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-30-flex-grow": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-31-flex-order": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-32-flex-gap": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-33-grid-basic": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-34-grid-fr": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-35-grid-repeat": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-36-grid-gap": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-37-grid-span": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-38-grid-align": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-39-grid-justify-self": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-40-grid-minmax": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-41-font-size": {
+                "geometry_count": 31,
+                "critical_count": 15,
+                "major_count": 15,
+                "mismatch_count": 25,
+                "missing_count": 1,
+                "structure_count": 7,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-42-font-weight": {
+                "geometry_count": 28,
+                "critical_count": 14,
+                "major_count": 14,
+                "mismatch_count": 32,
+                "missing_count": 1,
+                "structure_count": 7,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-43-text-align": {
+                "geometry_count": 28,
+                "critical_count": 15,
+                "major_count": 13,
+                "mismatch_count": 31,
+                "missing_count": 1,
+                "structure_count": 7,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-44-line-height": {
+                "geometry_count": 18,
+                "critical_count": 10,
+                "major_count": 6,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-45-text-indent": {
+                "geometry_count": 12,
+                "critical_count": 6,
+                "major_count": 6,
+                "mismatch_count": 10,
+                "missing_count": 1,
+                "structure_count": 3,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-46-white-space": {
+                "geometry_count": 19,
+                "critical_count": 12,
+                "major_count": 7,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-47-opacity": {
+                "geometry_count": 31,
+                "critical_count": 22,
+                "major_count": 9,
+                "mismatch_count": 34,
+                "missing_count": 5,
+                "structure_count": 7,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-48-visibility": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-49-outline": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-50-background": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-51-integ-flex-grid": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-52-integ-card-grid": {
+                "geometry_count": 41,
+                "critical_count": 33,
+                "major_count": 8,
+                "mismatch_count": 64,
+                "missing_count": 7,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-53-integ-form": {
+                "geometry_count": 43,
+                "critical_count": 30,
+                "major_count": 11,
+                "mismatch_count": 46,
+                "missing_count": 3,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-54-integ-navigation": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-55-integ-dashboard": {
+                "geometry_count": 39,
+                "critical_count": 29,
+                "major_count": 6,
+                "mismatch_count": 47,
+                "missing_count": 4,
+                "structure_count": 3,
+                "overflow_count": 1,
+                "passed": false
+            },
+            "prt-56-integ-fullpage": {
+                "geometry_count": 72,
+                "critical_count": 50,
+                "major_count": 17,
+                "mismatch_count": 72,
+                "missing_count": 6,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-57-margin-collapse": {
+                "geometry_count": 20,
+                "critical_count": 9,
+                "major_count": 8,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-58-float-left": {
+                "geometry_count": 24,
+                "critical_count": 15,
+                "major_count": 8,
+                "mismatch_count": 25,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-59-float-right": {
+                "geometry_count": 24,
+                "critical_count": 16,
+                "major_count": 6,
+                "mismatch_count": 25,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-60-float-clear": {
+                "geometry_count": 22,
+                "critical_count": 13,
+                "major_count": 7,
+                "mismatch_count": 23,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-61-direction-rtl": {
+                "geometry_count": 16,
+                "critical_count": 8,
+                "major_count": 7,
+                "mismatch_count": 17,
+                "missing_count": 1,
+                "structure_count": 3,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-62-text-transform": {
+                "geometry_count": 32,
+                "critical_count": 16,
+                "major_count": 15,
+                "mismatch_count": 30,
+                "missing_count": 1,
+                "structure_count": 7,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-63-word-break": {
+                "geometry_count": 24,
+                "critical_count": 13,
+                "major_count": 9,
+                "mismatch_count": 30,
+                "missing_count": 1,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-64-overflow-wrap": {
+                "geometry_count": 16,
+                "critical_count": 10,
+                "major_count": 4,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 3,
+                "overflow_count": 1,
+                "passed": false
+            },
+            "prt-65-vertical-align": {
+                "geometry_count": 28,
+                "critical_count": 17,
+                "major_count": 9,
+                "mismatch_count": 22,
+                "missing_count": 1,
+                "structure_count": 3,
+                "overflow_count": 3,
+                "passed": false
+            },
+            "prt-66-letter-spacing": {
+                "geometry_count": 24,
+                "critical_count": 12,
+                "major_count": 11,
+                "mismatch_count": 22,
+                "missing_count": 1,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-67-font-variant": {
+                "geometry_count": 16,
+                "critical_count": 8,
+                "major_count": 7,
+                "mismatch_count": 14,
+                "missing_count": 1,
+                "structure_count": 3,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-68-scroll-container": {
+                "geometry_count": 24,
+                "critical_count": 15,
+                "major_count": 8,
+                "mismatch_count": 23,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-69-table-basic": {
+                "geometry_count": 40,
+                "critical_count": 31,
+                "major_count": 8,
+                "mismatch_count": 35,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-70-grid-auto-flow": {
+                "geometry_count": 61,
+                "critical_count": 55,
+                "major_count": 5,
+                "mismatch_count": 66,
+                "missing_count": 2,
+                "structure_count": 15,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-71-grid-areas": {
+                "geometry_count": 43,
+                "critical_count": 31,
+                "major_count": 11,
+                "mismatch_count": 47,
+                "missing_count": 2,
+                "structure_count": 9,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-72-integ-complex-sidebar": {
+                "geometry_count": 178,
+                "critical_count": 109,
+                "major_count": 59,
+                "mismatch_count": 210,
+                "missing_count": 23,
+                "structure_count": 25,
+                "overflow_count": 4,
+                "passed": false
+            },
+            "prt-73-integ-media-object": {
+                "geometry_count": 43,
+                "critical_count": 28,
+                "major_count": 13,
+                "mismatch_count": 60,
+                "missing_count": 5,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-74-integ-holy-grail": {
+                "geometry_count": 55,
+                "critical_count": 44,
+                "major_count": 9,
+                "mismatch_count": 54,
+                "missing_count": 6,
+                "structure_count": 11,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-75-integ-masonry": {
+                "geometry_count": 69,
+                "critical_count": 51,
+                "major_count": 17,
+                "mismatch_count": 79,
+                "missing_count": 2,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-76-integ-complex-form": {
+                "geometry_count": 75,
+                "critical_count": 49,
+                "major_count": 23,
+                "mismatch_count": 92,
+                "missing_count": 12,
+                "structure_count": 13,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-77-position-sticky": {
+                "geometry_count": 15,
+                "critical_count": 3,
+                "major_count": 12,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-78-clip-path": {
+                "geometry_count": 14,
+                "critical_count": 4,
+                "major_count": 10,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-79-flex-basis-pct": {
+                "geometry_count": 16,
+                "critical_count": 5,
+                "major_count": 10,
+                "mismatch_count": 5,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-80-flex-align-content": {
+                "geometry_count": 15,
+                "critical_count": 3,
+                "major_count": 12,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 1,
+                "passed": false
+            },
+            "prt-81-flex-column-gap": {
+                "geometry_count": 13,
+                "critical_count": 3,
+                "major_count": 10,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-82-flex-auto-margin": {
+                "geometry_count": 13,
+                "critical_count": 3,
+                "major_count": 10,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-83-grid-justify-content": {
+                "geometry_count": 14,
+                "critical_count": 9,
+                "major_count": 5,
+                "mismatch_count": 4,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-84-grid-align-content": {
+                "geometry_count": 19,
+                "critical_count": 11,
+                "major_count": 8,
+                "mismatch_count": 9,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-85-grid-auto-columns": {
+                "geometry_count": 15,
+                "critical_count": 8,
+                "major_count": 7,
+                "mismatch_count": 6,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-86-grid-item-order": {
+                "geometry_count": 14,
+                "critical_count": 9,
+                "major_count": 5,
+                "mismatch_count": 10,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-87-white-space-pre": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-88-text-overflow": {
+                "geometry_count": 11,
+                "critical_count": 4,
+                "major_count": 6,
+                "mismatch_count": 4,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-89-word-spacing": {
+                "geometry_count": 12,
+                "critical_count": 4,
+                "major_count": 6,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-90-text-decoration": {
+                "geometry_count": 19,
+                "critical_count": 7,
+                "major_count": 10,
+                "mismatch_count": 9,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-91-text-shadow": {
+                "geometry_count": 12,
+                "critical_count": 5,
+                "major_count": 6,
+                "mismatch_count": 4,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-92-filter": {
+                "geometry_count": 16,
+                "critical_count": 4,
+                "major_count": 12,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-93-mix-blend-mode": {
+                "geometry_count": 11,
+                "critical_count": 3,
+                "major_count": 8,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-94-backdrop-filter": {
+                "geometry_count": 9,
+                "critical_count": 3,
+                "major_count": 6,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-95-outline-offset": {
+                "geometry_count": 7,
+                "critical_count": 3,
+                "major_count": 4,
+                "mismatch_count": 5,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-96-box-shadow-spread": {
+                "geometry_count": 7,
+                "critical_count": 3,
+                "major_count": 4,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-97-appearance-none": {
+                "geometry_count": 7,
+                "critical_count": 3,
+                "major_count": 4,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-98-resize-both": {
+                "geometry_count": 10,
+                "critical_count": 4,
+                "major_count": 6,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-99-table-layout-fixed": {
+                "geometry_count": 44,
+                "critical_count": 30,
+                "major_count": 14,
+                "mismatch_count": 19,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            }
+        }
+    },
+    {
+        "timestamp": "2026-06-27 22:14:50",
+        "total_cases": 110,
+        "passed": 0,
+        "failed": 110,
+        "elapsed_s": 104,
+        "browser_pass": 0,
+        "browser_fail": 110,
+        "property_stats": {
+            "background-color": {
+                "match": 392,
+                "diff": 234,
+                "total": 626
+            },
+            "position": {
+                "match": 704,
+                "diff": 61,
+                "total": 765
+            },
+            "box-sizing": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "width": {
+                "match": 270,
+                "diff": 495,
+                "total": 765
+            },
+            "height": {
+                "match": 282,
+                "diff": 483,
+                "total": 765
+            },
+            "pointer-events": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "display": {
+                "match": 565,
+                "diff": 0,
+                "total": 565
+            },
+            "top": {
+                "match": 560,
+                "diff": 0,
+                "total": 560
+            },
+            "left": {
+                "match": 560,
+                "diff": 0,
+                "total": 560
+            },
+            "font-weight": {
+                "match": 661,
+                "diff": 104,
+                "total": 765
+            },
+            "font-style": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "text-align": {
+                "match": 761,
+                "diff": 4,
+                "total": 765
+            },
+            "white-space": {
+                "match": 1,
+                "diff": 3,
+                "total": 4
+            },
+            "word-break": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "visibility": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "opacity": {
+                "match": 753,
+                "diff": 12,
+                "total": 765
+            },
+            "cursor": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "direction": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "font-size": {
+                "match": 348,
+                "diff": 167,
+                "total": 515
+            },
+            "color": {
+                "match": 83,
+                "diff": 135,
+                "total": 218
+            },
+            "border-left-width": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "border-left-color": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "border-width": {
+                "match": 192,
+                "diff": 0,
+                "total": 192
+            },
+            "border-color": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "border-radius": {
+                "match": 33,
+                "diff": 0,
+                "total": 33
+            },
+            "padding-top": {
+                "match": 66,
+                "diff": 53,
+                "total": 119
+            },
+            "padding-left": {
+                "match": 60,
+                "diff": 59,
+                "total": 119
+            },
+            "padding-right": {
+                "match": 60,
+                "diff": 59,
+                "total": 119
+            },
+            "padding-bottom": {
+                "match": 65,
+                "diff": 54,
+                "total": 119
+            },
+            "margin-top": {
+                "match": 7,
+                "diff": 14,
+                "total": 21
+            },
+            "margin-left": {
+                "match": 10,
+                "diff": 10,
+                "total": 20
+            },
+            "margin-right": {
+                "match": 4,
+                "diff": 5,
+                "total": 9
+            },
+            "margin-bottom": {
+                "match": 73,
+                "diff": 49,
+                "total": 122
+            },
+            "font-family": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "min-width": {
+                "match": 4,
+                "diff": 1,
+                "total": 5
+            },
+            "min-height": {
+                "match": 0,
+                "diff": 3,
+                "total": 3
+            },
+            "flex-direction": {
+                "match": 6,
+                "diff": 18,
+                "total": 24
+            },
+            "flex-grow": {
+                "match": 18,
+                "diff": 16,
+                "total": 34
+            },
+            "flex-shrink": {
+                "match": 32,
+                "diff": 4,
+                "total": 36
+            },
+            "flex-wrap": {
+                "match": 5,
+                "diff": 2,
+                "total": 7
+            },
+            "overflow-x": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "overflow-y": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "border-style": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "gap": {
+                "match": 18,
+                "diff": 79,
+                "total": 97
+            },
+            "max-width": {
+                "match": 1,
+                "diff": 0,
+                "total": 1
+            },
+            "max-height": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "overflow": {
+                "match": 0,
+                "diff": 0,
+                "total": 0
+            },
+            "align-items": {
+                "match": 6,
+                "diff": 0,
+                "total": 6
+            },
+            "line-height": {
+                "match": 1,
+                "diff": 1,
+                "total": 2
+            },
+            "grid-template-columns": {
+                "match": 0,
+                "diff": 13,
+                "total": 13
+            },
+            "justify-content": {
+                "match": 1,
+                "diff": 1,
+                "total": 2
+            },
+            "grid-auto-rows": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "grid-template-rows": {
+                "match": 0,
+                "diff": 2,
+                "total": 2
+            },
+            "grid-column": {
+                "match": 0,
+                "diff": 5,
+                "total": 5
+            },
+            "align-content": {
+                "match": 0,
+                "diff": 2,
+                "total": 2
+            },
+            "order": {
+                "match": 0,
+                "diff": 3,
+                "total": 3
+            },
+            "text-decoration-line": {
+                "match": 0,
+                "diff": 2,
+                "total": 2
+            },
+            "text-decoration-color": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "text-decoration-style": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "text-decoration-thickness": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "outline-width": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "outline-style": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "outline-color": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            },
+            "box-shadow": {
+                "match": 0,
+                "diff": 1,
+                "total": 1
+            }
+        },
+        "case_details": {
+            "prt-01-margin": {
+                "geometry_count": 16,
+                "critical_count": 13,
+                "major_count": 1,
+                "mismatch_count": 30,
+                "missing_count": 2,
+                "structure_count": 2,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-02-margin-auto": {
+                "geometry_count": 19,
+                "critical_count": 11,
+                "major_count": 7,
+                "mismatch_count": 23,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-03-negative-margin": {
+                "geometry_count": 18,
+                "critical_count": 10,
+                "major_count": 7,
+                "mismatch_count": 20,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-04-padding": {
+                "geometry_count": 16,
+                "critical_count": 9,
+                "major_count": 6,
+                "mismatch_count": 17,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-05-border": {
+                "geometry_count": 16,
+                "critical_count": 6,
+                "major_count": 7,
+                "mismatch_count": 13,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-06-border-radius": {
+                "geometry_count": 21,
+                "critical_count": 14,
+                "major_count": 6,
+                "mismatch_count": 16,
+                "missing_count": 2,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-07-width-height": {
+                "geometry_count": 16,
+                "critical_count": 5,
+                "major_count": 9,
+                "mismatch_count": 14,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-08-min-max": {
+                "geometry_count": 23,
+                "critical_count": 12,
+                "major_count": 9,
+                "mismatch_count": 26,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-09-box-sizing": {
+                "geometry_count": 33,
+                "critical_count": 23,
+                "major_count": 9,
+                "mismatch_count": 43,
+                "missing_count": 4,
+                "structure_count": 1,
+                "overflow_count": 4,
+                "passed": false
+            },
+            "prt-10-overflow": {
+                "geometry_count": 56,
+                "critical_count": 44,
+                "major_count": 11,
+                "mismatch_count": 52,
+                "missing_count": 5,
+                "structure_count": 1,
+                "overflow_count": 7,
+                "passed": false
+            },
+            "prt-100-table-caption": {
+                "geometry_count": 40,
+                "critical_count": 25,
+                "major_count": 15,
+                "mismatch_count": 19,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-101-table-empty-cells": {
+                "geometry_count": 28,
+                "critical_count": 22,
+                "major_count": 6,
+                "mismatch_count": 13,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-102-column-span": {
+                "geometry_count": 18,
+                "critical_count": 10,
+                "major_count": 7,
+                "mismatch_count": 8,
+                "missing_count": 1,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-103-list-style-position": {
+                "geometry_count": 43,
+                "critical_count": 21,
+                "major_count": 17,
+                "mismatch_count": 24,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 6,
+                "passed": false
+            },
+            "prt-104-margin-percent": {
+                "geometry_count": 11,
+                "critical_count": 3,
+                "major_count": 8,
+                "mismatch_count": 7,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-105-width-percent-chain": {
+                "geometry_count": 13,
+                "critical_count": 3,
+                "major_count": 10,
+                "mismatch_count": 5,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-106-min-width-override": {
+                "geometry_count": 12,
+                "critical_count": 4,
+                "major_count": 8,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 2,
+                "passed": false
+            },
+            "prt-107-max-width-constraint": {
+                "geometry_count": 12,
+                "critical_count": 4,
+                "major_count": 8,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 1,
+                "passed": false
+            },
+            "prt-108-integ-overlap-layers": {
+                "geometry_count": 15,
+                "critical_count": 4,
+                "major_count": 11,
+                "mismatch_count": 10,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-109-integ-responsive-card": {
+                "geometry_count": 26,
+                "critical_count": 3,
+                "major_count": 22,
+                "mismatch_count": 15,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-11-display-types": {
+                "geometry_count": 19,
+                "critical_count": 7,
+                "major_count": 11,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-110-integ-complex-toolbar": {
+                "geometry_count": 58,
+                "critical_count": 16,
+                "major_count": 39,
+                "mismatch_count": 19,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 5,
+                "passed": false
+            },
+            "prt-12-display-none": {
+                "geometry_count": 18,
+                "critical_count": 10,
+                "major_count": 7,
+                "mismatch_count": 19,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-13-position-relative": {
+                "geometry_count": 20,
+                "critical_count": 12,
+                "major_count": 6,
+                "mismatch_count": 22,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-14-position-absolute": {
+                "geometry_count": 24,
+                "critical_count": 15,
+                "major_count": 7,
+                "mismatch_count": 21,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-15-position-fixed": {
+                "geometry_count": 20,
+                "critical_count": 12,
+                "major_count": 6,
+                "mismatch_count": 19,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-16-top-left-right-bottom": {
+                "geometry_count": 24,
+                "critical_count": 18,
+                "major_count": 4,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-17-z-index": {
+                "geometry_count": 20,
+                "critical_count": 15,
+                "major_count": 4,
+                "mismatch_count": 16,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-18-position-static": {
+                "geometry_count": 20,
+                "critical_count": 9,
+                "major_count": 10,
+                "mismatch_count": 20,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-19-flex-basic": {
+                "geometry_count": 22,
+                "critical_count": 14,
+                "major_count": 7,
+                "mismatch_count": 25,
+                "missing_count": 2,
+                "structure_count": 1,
+                "overflow_count": 1,
+                "passed": false
+            },
+            "prt-20-flex-direction": {
+                "geometry_count": 30,
+                "critical_count": 18,
+                "major_count": 11,
+                "mismatch_count": 35,
+                "missing_count": 3,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-21-flex-wrap": {
+                "geometry_count": 25,
+                "critical_count": 18,
+                "major_count": 6,
+                "mismatch_count": 25,
+                "missing_count": 2,
+                "structure_count": 1,
+                "overflow_count": 2,
+                "passed": false
+            },
+            "prt-22-flex-jc-start": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-23-flex-jc-center": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-24-flex-jc-end": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-25-flex-jc-between": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-26-flex-jc-around": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-27-flex-jc-evenly": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-28-flex-align-items": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-29-flex-align-self": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-30-flex-grow": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-31-flex-order": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-32-flex-gap": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-33-grid-basic": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-34-grid-fr": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-35-grid-repeat": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-36-grid-gap": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-37-grid-span": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-38-grid-align": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-39-grid-justify-self": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-40-grid-minmax": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-41-font-size": {
+                "geometry_count": 31,
+                "critical_count": 15,
+                "major_count": 15,
+                "mismatch_count": 25,
+                "missing_count": 1,
+                "structure_count": 7,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-42-font-weight": {
+                "geometry_count": 28,
+                "critical_count": 14,
+                "major_count": 14,
+                "mismatch_count": 32,
+                "missing_count": 1,
+                "structure_count": 7,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-43-text-align": {
+                "geometry_count": 28,
+                "critical_count": 15,
+                "major_count": 13,
+                "mismatch_count": 31,
+                "missing_count": 1,
+                "structure_count": 7,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-44-line-height": {
+                "geometry_count": 18,
+                "critical_count": 10,
+                "major_count": 6,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-45-text-indent": {
+                "geometry_count": 12,
+                "critical_count": 6,
+                "major_count": 6,
+                "mismatch_count": 10,
+                "missing_count": 1,
+                "structure_count": 3,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-46-white-space": {
+                "geometry_count": 19,
+                "critical_count": 12,
+                "major_count": 7,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-47-opacity": {
+                "geometry_count": 31,
+                "critical_count": 22,
+                "major_count": 9,
+                "mismatch_count": 34,
+                "missing_count": 5,
+                "structure_count": 7,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-48-visibility": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-49-outline": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-50-background": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-51-integ-flex-grid": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-52-integ-card-grid": {
+                "geometry_count": 41,
+                "critical_count": 33,
+                "major_count": 8,
+                "mismatch_count": 64,
+                "missing_count": 7,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-53-integ-form": {
+                "geometry_count": 43,
+                "critical_count": 30,
+                "major_count": 11,
+                "mismatch_count": 46,
+                "missing_count": 3,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-54-integ-navigation": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-55-integ-dashboard": {
+                "geometry_count": 39,
+                "critical_count": 29,
+                "major_count": 6,
+                "mismatch_count": 47,
+                "missing_count": 4,
+                "structure_count": 3,
+                "overflow_count": 1,
+                "passed": false
+            },
+            "prt-56-integ-fullpage": {
+                "geometry_count": 72,
+                "critical_count": 50,
+                "major_count": 17,
+                "mismatch_count": 72,
+                "missing_count": 6,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-57-margin-collapse": {
+                "geometry_count": 20,
+                "critical_count": 9,
+                "major_count": 8,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-58-float-left": {
+                "geometry_count": 24,
+                "critical_count": 15,
+                "major_count": 8,
+                "mismatch_count": 25,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-59-float-right": {
+                "geometry_count": 24,
+                "critical_count": 16,
+                "major_count": 6,
+                "mismatch_count": 25,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-60-float-clear": {
+                "geometry_count": 22,
+                "critical_count": 13,
+                "major_count": 7,
+                "mismatch_count": 23,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-61-direction-rtl": {
+                "geometry_count": 16,
+                "critical_count": 8,
+                "major_count": 7,
+                "mismatch_count": 17,
+                "missing_count": 1,
+                "structure_count": 3,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-62-text-transform": {
+                "geometry_count": 32,
+                "critical_count": 16,
+                "major_count": 15,
+                "mismatch_count": 30,
+                "missing_count": 1,
+                "structure_count": 7,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-63-word-break": {
+                "geometry_count": 24,
+                "critical_count": 13,
+                "major_count": 9,
+                "mismatch_count": 30,
+                "missing_count": 1,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-64-overflow-wrap": {
+                "geometry_count": 16,
+                "critical_count": 10,
+                "major_count": 4,
+                "mismatch_count": 18,
+                "missing_count": 1,
+                "structure_count": 3,
+                "overflow_count": 1,
+                "passed": false
+            },
+            "prt-65-vertical-align": {
+                "geometry_count": 28,
+                "critical_count": 17,
+                "major_count": 9,
+                "mismatch_count": 22,
+                "missing_count": 1,
+                "structure_count": 3,
+                "overflow_count": 3,
+                "passed": false
+            },
+            "prt-66-letter-spacing": {
+                "geometry_count": 24,
+                "critical_count": 12,
+                "major_count": 11,
+                "mismatch_count": 22,
+                "missing_count": 1,
+                "structure_count": 5,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-67-font-variant": {
+                "geometry_count": 16,
+                "critical_count": 8,
+                "major_count": 7,
+                "mismatch_count": 14,
+                "missing_count": 1,
+                "structure_count": 3,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-68-scroll-container": {
+                "geometry_count": 24,
+                "critical_count": 15,
+                "major_count": 8,
+                "mismatch_count": 23,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-69-table-basic": {
+                "geometry_count": 40,
+                "critical_count": 31,
+                "major_count": 8,
+                "mismatch_count": 35,
+                "missing_count": 1,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-70-grid-auto-flow": {
+                "geometry_count": 61,
+                "critical_count": 55,
+                "major_count": 5,
+                "mismatch_count": 66,
+                "missing_count": 2,
+                "structure_count": 15,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-71-grid-areas": {
+                "geometry_count": 43,
+                "critical_count": 31,
+                "major_count": 11,
+                "mismatch_count": 47,
+                "missing_count": 2,
+                "structure_count": 9,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-72-integ-complex-sidebar": {
+                "geometry_count": 178,
+                "critical_count": 109,
+                "major_count": 59,
+                "mismatch_count": 210,
+                "missing_count": 23,
+                "structure_count": 25,
+                "overflow_count": 4,
+                "passed": false
+            },
+            "prt-73-integ-media-object": {
+                "geometry_count": 43,
+                "critical_count": 28,
+                "major_count": 13,
+                "mismatch_count": 60,
+                "missing_count": 5,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-74-integ-holy-grail": {
+                "geometry_count": 55,
+                "critical_count": 44,
+                "major_count": 9,
+                "mismatch_count": 54,
+                "missing_count": 6,
+                "structure_count": 11,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-75-integ-masonry": {
+                "geometry_count": 69,
+                "critical_count": 51,
+                "major_count": 17,
+                "mismatch_count": 79,
+                "missing_count": 2,
+                "structure_count": 1,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-76-integ-complex-form": {
+                "geometry_count": 75,
+                "critical_count": 49,
+                "major_count": 23,
+                "mismatch_count": 92,
+                "missing_count": 12,
+                "structure_count": 13,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-77-position-sticky": {
+                "geometry_count": 15,
+                "critical_count": 3,
+                "major_count": 12,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-78-clip-path": {
+                "geometry_count": 14,
+                "critical_count": 4,
+                "major_count": 10,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-79-flex-basis-pct": {
+                "geometry_count": 16,
+                "critical_count": 5,
+                "major_count": 10,
+                "mismatch_count": 5,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-80-flex-align-content": {
+                "geometry_count": 15,
+                "critical_count": 3,
+                "major_count": 12,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 1,
+                "passed": false
+            },
+            "prt-81-flex-column-gap": {
+                "geometry_count": 13,
+                "critical_count": 3,
+                "major_count": 10,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-82-flex-auto-margin": {
+                "geometry_count": 13,
+                "critical_count": 3,
+                "major_count": 10,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-83-grid-justify-content": {
+                "geometry_count": 14,
+                "critical_count": 9,
+                "major_count": 5,
+                "mismatch_count": 4,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-84-grid-align-content": {
+                "geometry_count": 19,
+                "critical_count": 11,
+                "major_count": 8,
+                "mismatch_count": 9,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-85-grid-auto-columns": {
+                "geometry_count": 15,
+                "critical_count": 8,
+                "major_count": 7,
+                "mismatch_count": 6,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-86-grid-item-order": {
+                "geometry_count": 14,
+                "critical_count": 9,
+                "major_count": 5,
+                "mismatch_count": 10,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-87-white-space-pre": {
+                "geometry_count": 0,
+                "critical_count": 0,
+                "major_count": 0,
+                "mismatch_count": 0,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-88-text-overflow": {
+                "geometry_count": 11,
+                "critical_count": 4,
+                "major_count": 6,
+                "mismatch_count": 4,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-89-word-spacing": {
+                "geometry_count": 12,
+                "critical_count": 4,
+                "major_count": 6,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-90-text-decoration": {
+                "geometry_count": 19,
+                "critical_count": 7,
+                "major_count": 10,
+                "mismatch_count": 9,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-91-text-shadow": {
+                "geometry_count": 12,
+                "critical_count": 5,
+                "major_count": 6,
+                "mismatch_count": 4,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-92-filter": {
+                "geometry_count": 16,
+                "critical_count": 4,
+                "major_count": 12,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-93-mix-blend-mode": {
+                "geometry_count": 11,
+                "critical_count": 3,
+                "major_count": 8,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-94-backdrop-filter": {
+                "geometry_count": 9,
+                "critical_count": 3,
+                "major_count": 6,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-95-outline-offset": {
+                "geometry_count": 7,
+                "critical_count": 3,
+                "major_count": 4,
+                "mismatch_count": 5,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-96-box-shadow-spread": {
+                "geometry_count": 7,
+                "critical_count": 3,
+                "major_count": 4,
+                "mismatch_count": 3,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-97-appearance-none": {
+                "geometry_count": 7,
+                "critical_count": 3,
+                "major_count": 4,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-98-resize-both": {
+                "geometry_count": 10,
+                "critical_count": 4,
+                "major_count": 6,
+                "mismatch_count": 2,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            },
+            "prt-99-table-layout-fixed": {
+                "geometry_count": 44,
+                "critical_count": 30,
+                "major_count": 14,
+                "mismatch_count": 19,
+                "missing_count": 0,
+                "structure_count": 0,
+                "overflow_count": 0,
+                "passed": false
+            }
+        }
     }
 ]
