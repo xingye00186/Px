@@ -72,6 +72,7 @@ class AppComponent extends ReactiveComponent
                     break;
                 }
             }
+            $this->markDirty();
         } elseif (!empty($list)) {
             $this->caseName = $list[0]['tag'];
             $this->currentTitle = $list[0]['title'];
