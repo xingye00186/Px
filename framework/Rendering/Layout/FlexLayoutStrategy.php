@@ -961,6 +961,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $stretchedH = (int)max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
                             if ($stretchedH > $ch->h && $stretchedH > 0) {
                                 $ch->h = $stretchedH;
+                                $ch->h = (int)max(0, (int)PercentResolver::resolveMinMax($ch->style, $ch->h, false));
                                 $ch->visualH = PercentResolver::resolveVisualH($ch->style, $ch->h);
                                 $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
                             }
