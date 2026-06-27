@@ -27,19 +27,10 @@ class DWriteTextBackend implements ITextBackend
 
     public function probe(): BackendCapability
     {
-        // 1. C++ 绑定存在性检测
-        if (!function_exists('sk_draw_text')) {
-            return BackendCapability::unavailable('sk_draw_text not linked (C++ bindings missing)');
-        }
-
-        // 2. DirectWrite 可用性检测：调用 sk_measure_text_height 间接验证
-        // measureHeightDWrite 内部调用 ensureDWriteFactory()，失败返回 0
-        $height = sk_measure_text_height(16, 0);
-        if ($height <= 0) {
-            return BackendCapability::unavailable('DirectWrite not available on this system');
-        }
-
-        return BackendCapability::ok(['dwrite_available' => true]);
+        // SDK 10.0.26100.0 中 IDWriteBitmapRenderTarget::DrawGlyphRun 的
+        // COLORREF textColor 参数被忽略，文字始终渲染为黑色。
+        // 临时禁用 DWrite 后端，回退到 GDI 文本渲染。
+        return BackendCapability::unavailable('DrawGlyphRun textColor broken in SDK 26100');
     }
 
     public function activate(): void

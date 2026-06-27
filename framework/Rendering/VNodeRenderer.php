@@ -432,6 +432,22 @@ class VNodeRenderer
     }
 
     /**
+     * CSS Images Level 3 §5.6: 解析 object-position 值
+     */
+    private static function resolveObjectPosition(string $value, int $containerSize, int $imageSize): int
+    {
+        $value = trim(strtolower($value));
+        if ($value === 'left' || $value === 'top') return 0;
+        if ($value === 'right' || $value === 'bottom') return $containerSize - $imageSize;
+        if ($value === 'center') return (int)(($containerSize - $imageSize) / 2);
+        if (str_ends_with($value, '%')) {
+            return (int)(($containerSize - $imageSize) * (float)$value / 100.0);
+        }
+        if (preg_match('/^-?\d+/', $value, $m)) return (int)$m[0];
+        return (int)(($containerSize - $imageSize) / 2);
+    }
+
+    /**
      * 获取当前活跃的组件实例（用于解析 bind 值）。
      * RenderNode 树无 #component 节点，故始终返回根组件。
      */
@@ -1444,6 +1460,20 @@ class VNodeRenderer
                     }
                     $imgX = $x + (int)(($w - $imgW) / 2);
                     $imgY = $y + (int)(($h - $imgH) / 2);
+                }
+                // CSS Images §5.6: object-position — 根据 position 值计算偏移
+                $opX = 0; $opY = 0;
+                if ($objectPosition !== '50% 50%') {
+                    $parts = preg_split('/\s+/', trim($objectPosition));
+                    $opX = self::resolveObjectPosition($parts[0] ?? '50%', $w, $imgW);
+                    $opY = self::resolveObjectPosition($parts[1] ?? '50%', $h, $imgH);
+                    if ($opX !== 0 || $opY !== 0) {
+                        // Re-center first, then apply position offset
+                        $baseX = $x + (int)(($w - $imgW) / 2);
+                        $baseY = $y + (int)(($h - $imgH) / 2);
+                        $imgX = $baseX + $opX - (int)(($w - $imgW) / 2);
+                        $imgY = $baseY + $opY - (int)(($h - $imgH) / 2);
+                    }
                 }
             }
         }
