@@ -81,6 +81,40 @@ int measureHeightDWrite(int fontSize, int bold) {
     return result > 0 ? result : 0;
 }
 
+// DirectWrite 精确测量文本宽度
+int measureWidthDWrite(const char* text, int textLen, int fontSize, int bold) {
+    if (!ensureDWriteFactory() || textLen <= 0) return 0;
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, text, textLen, NULL, 0);
+    if (wlen <= 0) return 0;
+    std::wstring wtext(wlen, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, text, textLen, &wtext[0], wlen);
+
+    int fwlen = MultiByteToWideChar(CP_UTF8, 0, g_skDefaultFont.c_str(), -1, NULL, 0);
+    if (fwlen <= 0) return 0;
+    std::wstring wfont(fwlen, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, g_skDefaultFont.c_str(), -1, &wfont[0], fwlen);
+
+    IDWriteTextFormat* format = nullptr;
+    HRESULT hr = g_dwFactory->CreateTextFormat(
+        wfont.c_str(), nullptr,
+        (Int)bold != 0 ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_REGULAR,
+        DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
+        (FLOAT)fontSize, L"", &format);
+    if (FAILED(hr) || !format) return 0;
+
+    IDWriteTextLayout* layout = nullptr;
+    hr = g_dwFactory->CreateTextLayout(wtext.c_str(), wlen - 1, format, 10000.0f, 10000.0f, &layout);
+    int result = 0;
+    if (SUCCEEDED(hr) && layout) {
+        DWRITE_TEXT_METRICS metrics;
+        layout->GetMetrics(&metrics);
+        result = (int)(metrics.widthIncludingTrailingWhitespace + 0.5f);
+        layout->Release();
+    }
+    format->Release();
+    return result > 0 ? result : 0;
+}
+
 // ─── GDI 字体加载 ───
 bool g_skPrivateFontsLoaded = false;
 void* g_skFontRegData = NULL;

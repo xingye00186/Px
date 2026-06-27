@@ -13,12 +13,6 @@ public:
     IFACEMETHODIMP DrawGlyphRun(void*, FLOAT originX, FLOAT originY,
         DWRITE_MEASURING_MODE, DWRITE_GLYPH_RUN const* glyphRun,
         DWRITE_GLYPH_RUN_DESCRIPTION const*, IUnknown*) override {
-        // SDK 10.0.26100.0+: SetTextColor removed from IDWriteBitmapRenderTarget.
-        // Set text color on the underlying HDC via GDI SetTextColor.
-        HDC rtDC = rt_->GetMemoryDC();
-        if (rtDC) {
-            SetTextColor(rtDC, color_);
-        }
         return rt_->DrawGlyphRun(originX, originY, DWRITE_MEASURING_MODE_NATURAL,
             glyphRun, nullptr, color_, nullptr);
     }
@@ -136,14 +130,18 @@ bool drawTextDWrite(HDC hdc, int x, int y, const char* text, int textLen,
         }
 
         // 用 DWrite 实际绘制文字到 RenderTarget 的 bitmap，传入颜色
+        // SDK 10.0.26100.0+: 先对 RT 的 HDC 设文字颜色，再触发绘制
+        HDC rtDC = g_dwRenderTarget->GetMemoryDC();
+        if (rtDC) {
+            SetTextColor(rtDC, (COLORREF)color);
+        }
         DWriteTextRenderer* renderer = new DWriteTextRenderer(g_dwRenderTarget, (COLORREF)color);
         layout->Draw(nullptr, renderer, 0, (FLOAT)drawY);
         renderer->Release();
 
         // BitBlt 从 RenderTarget 的内存 DC 到目标 HDC
-        HDC rtDC = g_dwRenderTarget->GetMemoryDC();
         if (rtDC) {
-            BitBlt(hdc, x, y, rw, rh, rtDC, 0, 0, SRCCOPY | CAPTUREBLT);
+            BitBlt(hdc, x, y, rw, rh, rtDC, 0, 0, SRCCOPY);
         }
 
         layout->Release();
@@ -238,9 +236,14 @@ void php_sk_draw_text(Int x, Int y, String text, Int fontSize, Int rgb, Int bold
 #endif
 }
 
-// 精确测量文本宽度（用于 line-clamp 行拆分）
+// 精确测量文本宽度（优先 DirectWrite，退化 GDI）
 Int php_sk_measure_text_width(String text, Int fontSize, Int bold) {
     if (text.length() == 0) return 0;
+    // DirectWrite 优先
+    int dwResult = measureWidthDWrite(text.data(), (int)text.length(), (int)fontSize, (int)bold);
+    if (dwResult > 0) {
+        return (Int)dwResult;
+    }
 #ifdef USE_SKIA
     skLoadPrivateFonts();
     HDC hdc = GetDC(NULL);

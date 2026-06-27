@@ -69,6 +69,7 @@ extern bool g_dwInitAttempted;
 extern IDWriteFactory* g_dwFactory;
 bool ensureDWriteFactory();
 int measureHeightDWrite(int fontSize, int bold);
+int measureWidthDWrite(const char* text, int textLen, int fontSize, int bold);
 bool drawTextDWrite(HDC hdc, int x, int y, const char* text, int textLen,
                     int fontSize, int color, int bold, const char* fontFamily);
 
@@ -99,3 +100,4 @@ extern std::vector<uint8_t> g_skPixelBuf;
 SkColor rgbToSkColor(Int rgb);
 bool skEnsureFont();
 #endif
+int measureWidthDWrite(const char* text, int textLen, int fontSize, int bold);
