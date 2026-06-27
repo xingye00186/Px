@@ -73,6 +73,15 @@ class LayoutDumpStep implements PipelineStepInterface
                 echo "  [HTML_SPEC_FAIL] " . basename($htmlFiles[0]) . " root container must have position:relative\n";
                 return StepResult::err('dump_layout', 'HTML spec validation failed');
             }
+            // ─── HTML 字体属性检查 ───
+            $htmlFontErrors = $this->validateHtmlFontSpec($htmlFiles[0]);
+            if (!empty($htmlFontErrors)) {
+                echo "  [HTML_FONT_FAIL] " . basename($htmlFiles[0]) . " has font properties on placeholder elements:\n";
+                foreach ($htmlFontErrors as $e) {
+                    echo "    - $e\n";
+                }
+                return StepResult::err('dump_layout', 'HTML font spec validation failed');
+            }
         }
 
         $result = $this->strategy->dump($currentCase, $refDir);
@@ -186,6 +195,44 @@ class LayoutDumpStep implements PipelineStepInterface
             $errors[] = "Missing data-px-anchor=\"br\" in template";
         }
 
+        // Check font properties on elements with placeholder spans
+        // 文字已替换为固定宽高 span，字体属性应全部移除
+        $fontProps = ['font-size', 'font-weight', 'color', 'font-family'];
+        // line-height:0 是允许的（用于消除浏览器默认行高间距）
+        if (preg_match_all('/<div[^>]*style="([^"]*)"[^>]*>.*?<span style="display:inline-block/s', $template, $fm)) {
+            foreach ($fm[1] as $style) {
+                foreach ($fontProps as $fp) {
+                    if (preg_match('/' . str_replace('-', '\-', $fp) . '\s*:/i', $style)) {
+                        $errors[] = "Element with placeholder span must not have '$fp' in style. "
+                            . "Text is replaced by fixed-size spans; font properties are unnecessary and cause MISMATCH.";
+                    }
+                }
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * .html 文件字体属性检查（与 validateVueSpec 相同的逻辑）
+     */
+    private function validateHtmlFontSpec(string $htmlPath): array
+    {
+        $errors = [];
+        $html = @file_get_contents($htmlPath);
+        if ($html === false) return ["Cannot read file: " . basename($htmlPath)];
+
+        $fontProps = ['font-size', 'font-weight', 'color', 'font-family'];
+        // line-height:0 是允许的
+        if (preg_match_all('/<div[^>]*style="([^"]*)"[^>]*>.*?<span style="display:inline-block/s', $html, $fm)) {
+            foreach ($fm[1] as $style) {
+                foreach ($fontProps as $fp) {
+                    if (preg_match('/' . str_replace('-', '\-', $fp) . '\s*:/i', $style)) {
+                        $errors[] = "Element with placeholder span must not have '$fp' in style.";
+                    }
+                }
+            }
+        }
         return $errors;
     }
 }
