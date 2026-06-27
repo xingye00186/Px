@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;">white-space:pre / pre-wrap / pre-line behavior differences</div>
     <div style="width:400px;background:#f5f5f5;border:1px solid #ccc;padding:8px;font-size:14px;"><div style="background:#e3f2fd;border:1px solid #1565c0;margin-bottom:4px;white-space:pre;overflow:hidden;"><span>pre:   spaces

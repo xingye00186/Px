@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;">list-style-position:inside vs outside</div>
     <div style="display:flex;gap:20px;"><div><div style="font-size:13px;font-weight:600;color:#666;margin-bottom:4px;">inside</div><div style="border:1px solid #ccc;padding:8px;"><div style="display:list-item;list-style-position:inside;margin-left:20px;background:#e3f2fd;border:1px solid #1565c0;padding:4px;">Item inside</div><div style="display:list-item;list-style-position:inside;margin-left:20px;background:#fce4ec;border:1px solid #c62828;padding:4px;">Item inside 2</div></div></div><div><div style="font-size:13px;font-weight:600;color:#666;margin-bottom:4px;">outside</div><div style="border:1px solid #ccc;padding:8px;"><div style="display:list-item;list-style-position:outside;margin-left:20px;background:#e3f2fd;border:1px solid #1565c0;padding:4px;">Item outside</div><div style="display:list-item;list-style-position:outside;margin-left:20px;background:#fce4ec;border:1px solid #c62828;padding:4px;">Item outside 2</div></div></div></div>

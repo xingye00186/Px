@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;">percentage margin relative to containing block width</div>
     <div style="width:400px;background:#f5f5f5;border:1px solid #ccc;padding:8px;"><div style="height:30px;background:#e3f2fd;border:1px solid #1565c0;margin-left:10%;">10%</div><div style="height:30px;background:#fce4ec;border:1px solid #c62828;margin-left:25%;">25%</div></div>

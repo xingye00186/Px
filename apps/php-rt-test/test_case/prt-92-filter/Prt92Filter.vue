@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;">filter property (blur, brightness, grayscale)</div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;"><div style="width:80px;height:80px;background:#e3f2fd;border:1px solid #1565c0;filter:blur(2px);"></div><div style="width:80px;height:80px;background:#fce4ec;border:1px solid #c62828;filter:brightness(0.5);"></div><div style="width:80px;height:80px;background:#e8f5e9;border:1px solid #2e7d32;filter:grayscale(100%);"></div><div style="width:80px;height:80px;background:#fff3e0;border:1px solid #e65100;filter:drop-shadow(4px 4px 4px rgba(0,0,0,0.3));"></div></div>

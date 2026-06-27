@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;">text-decoration-line/style/color/thickness</div>
     <div style="height:34px;background:#e3f2fd;border:1px solid #1565c0;margin-bottom:4px;text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:#ff5722;font-size:14px;padding:4px;"><span>Wavy underline text</span></div><div style="height:34px;background:#fce4ec;border:1px solid #c62828;text-decoration-line:line-through;text-decoration-thickness:3px;font-size:14px;padding:4px;"><span>Thick line-through</span></div>

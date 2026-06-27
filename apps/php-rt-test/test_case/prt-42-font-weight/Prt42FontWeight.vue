@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-weight:300;height:30px;background:#e3f2fd;border:1px solid #1565c0;margin-bottom:4px;"><span style="font-size:14px;">Light 300</span></div>
     <div style="font-weight:400;height:30px;background:#fce4ec;border:1px solid #c62828;margin-bottom:4px;"><span style="font-size:14px;">Normal 400</span></div>

@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;">outline-offset spacing from border edge</div>
     <div style="width:200px;height:50px;margin:20px;background:#e3f2fd;border:1px solid #1565c0;outline:3px solid #ff5722;outline-offset:6px;"></div>

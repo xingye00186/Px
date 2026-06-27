@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;">caption-side for table caption placement</div>
     <div style="width:400px;background:#f5f5f5;border:1px solid #ccc;"><div style="display:table;width:100%;border-collapse:collapse;"><div style="display:table-caption;caption-side:bottom;padding:6px;font-size:14px;font-weight:600;color:#333;">Table Caption (bottom)</div><div style="display:table-row;background:#e3f2fd;"><div style="display:table-cell;border:1px solid #1565c0;padding:6px;">Data 1</div><div style="display:table-cell;border:1px solid #1565c0;padding:6px;">Data 2</div></div><div style="display:table-row;background:#fce4ec;"><div style="display:table-cell;border:1px solid #c62828;padding:6px;">Data 3</div><div style="display:table-cell;border:1px solid #c62828;padding:6px;">Data 4</div></div></div></div>

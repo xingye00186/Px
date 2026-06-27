@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:18px;font-weight:600;color:#333;margin-bottom:12px;">Padding</div>
     <div style="width:300px;height:100px;background:#fff3e0;border:2px solid #e65100;padding:15px 20px 10px 25px;">

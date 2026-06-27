@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;">multiple stacking contexts: absolute+relative+fixed</div>
     <div style="width:400px;height:200px;background:#f5f5f5;border:1px solid #ccc;position:relative;"><div style="width:120px;height:80px;background:rgba(227,242,253,0.8);border:1px solid #1565c0;position:relative;top:20px;left:30px;z-index:1;padding:4px;"><div style="width:60px;height:40px;background:rgba(252,228,236,0.9);border:1px solid #c62828;position:absolute;top:-10px;left:20px;z-index:2;"></div><div style="width:80px;height:30px;background:rgba(232,245,233,0.9);border:1px solid #2e7d32;position:fixed;top:50px;right:20px;z-index:3;"></div></div><div style="width:100px;height:60px;background:rgba(255,243,224,0.8);border:1px solid #e65100;position:absolute;bottom:20px;right:30px;z-index:0;"></div></div>

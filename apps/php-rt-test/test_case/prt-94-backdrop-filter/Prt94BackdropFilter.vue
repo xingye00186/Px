@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="font-size:12px;color:#999;margin-bottom:8px;">backdrop-filter with absolute child</div>
     <div style="width:300px;height:100px;background:#667eea;border:1px solid #ccc;position:relative;"><div style="width:100px;height:60px;backdrop-filter:blur(8px);position:absolute;top:20px;left:100px;border:1px solid rgba(255,255,255,0.3);"></div></div>

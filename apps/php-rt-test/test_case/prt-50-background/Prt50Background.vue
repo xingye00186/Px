@@ -1,5 +1,5 @@
 <template>
-  <div class="prt-wrap" style="width:800px;">
+  <div class="prt-wrap" style="width:800px;position:relative;">
     <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div style="width:200px;height:40px;background-color:#e3f2fd;border:1px solid #1565c0;margin-bottom:4px;"></div>
     <div style="width:200px;height:40px;background-color:#ff5722;border:1px solid #bf360c;"></div>
