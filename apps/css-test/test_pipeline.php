@@ -32,13 +32,22 @@ use PxTest\Reporting\JsonReporter;
 use PxTest\Reporting\SummaryReporter;
 use PxTest\Core\TestSuite;
 
-echo "═══════════════════════════════════════════════\n";
-echo "  CSS Test Pipeline — PxTest (D→E→G→H→I)\n";
-echo "═══════════════════════════════════════════════\n\n";
-
 // ─── Build Pipeline ───
 $builder = PipelineBuilder::create($projectRoot);
 $builder->parseCli($argv ?? []);
+$appName = (function() use ($argv) {
+    foreach ($argv ?? [] as $a) {
+        if (str_starts_with($a, '--app=')) return substr($a, 6);
+    }
+    return 'css-test';
+})();
+$appDir = $projectRoot . '/apps/' . $appName;
+$title = $appName === 'php-rt-test' ? 'PHP RT Test Pipeline' : 'CSS Test Pipeline';
+
+echo "═══════════════════════════════════════════════\n";
+echo "  $title — PxTest (D→E→G→H→I)\n";
+echo "═══════════════════════════════════════════════\n\n";
+
 $orchestrator = $builder->build();
 
 // ─── Discover Cases ───
@@ -66,13 +75,13 @@ $reporter = match ($format) {
 };
 
 // ─── Load issue tracker for DOC_WARN ───
-$issueTracker = $projectRoot . '/apps/css-test/docs/01-问题清单.md';
+$issueTracker = $appDir . '/docs/01-问题清单.md';
 $issueContent = file_exists($issueTracker) ? file_get_contents($issueTracker) : '';
 
 // ─── 单 case 模式：从 .case_data.json 加载历史数据 ───
 $isSingleCase = (count($filtered) < count($cases));
 $isPhpRuntime = getenv('PX_PHP_RUNTIME') !== false && getenv('PX_PHP_RUNTIME') !== '';
-$caseDataFile = $projectRoot . '/apps/css-test/' . ($isPhpRuntime ? '.case_data_php_rt.json' : '.case_data.json');
+$caseDataFile = $appDir . '/' . ($isPhpRuntime ? '.case_data_php_rt.json' : '.case_data.json');
 
 $allCaseData = []; // collect per-case data for summary report
 if ($isSingleCase && file_exists($caseDataFile)) {
@@ -149,7 +158,7 @@ foreach ($filtered as $caseName) {
 
 // ─── 生成汇总报告 + 运行历史 ───
 if (!empty($allCaseData)) {
-    $summary = new SummaryReporter($projectRoot . '/apps/css-test');
+    $summary = new SummaryReporter($appDir);
     $summary->generate($allCaseData);
 }
 

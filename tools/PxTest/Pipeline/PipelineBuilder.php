@@ -31,12 +31,13 @@ class PipelineBuilder
     private string $projectRoot;
     private string $appDir;
     private string $appName = 'css-test';
+    private string $casePrefix = 'case-';  // case-* for css-test, prt-* for php-rt-test
     private ?string $caseName = null;
     private bool $skipBuild = false;
     private bool $forceBuild = false;
     private bool $usePhpRuntime = false;
-    private bool $browserElCompare = true;  // 默认开启浏览器元素对比
-    private bool $skipScreenshot = true;  // 默认跳过截图，需 --screenshot 启用
+    private bool $browserElCompare = true;
+    private bool $skipScreenshot = true;
     private bool $updateBaseline = false;
     private bool $verbose = false;
     private string $format = 'console';
@@ -49,12 +50,31 @@ class PipelineBuilder
 
     public static function create(string $projectRoot): self { return new self($projectRoot); }
 
+    /** 设置应用名（同时更新 appDir 和 case 前缀） */
+    public function setAppName(string $name): self
+    {
+        $this->appName = $name;
+        $this->appDir = $this->projectRoot . '/apps/' . $name;
+        // php-rt-test 使用 prt-* 前缀，css-test 使用 case-* 前缀
+        $this->casePrefix = ($name === 'php-rt-test') ? 'prt-' : 'case-';
+        return $this;
+    }
+
+    public function getDefaultCaseName(): string {
+        return $this->casePrefix === 'prt-' ? 'prt-01-margin' : 'case-001-wrapper-x';
+    }
+
+    public function getExeName(): string {
+        return str_replace('-', '_', $this->appName) . '.exe';
+    }
+
     /** Parse CLI arguments into builder config. */
     public function parseCli(array $argv): self
     {
         for ($i = 1; $i < count($argv); $i++) {
             $arg = $argv[$i];
             if (str_starts_with($arg, '--case=')) { $this->caseName = substr($arg, 7); }
+            elseif (str_starts_with($arg, '--app=')) { $this->setAppName(substr($arg, 6)); }
             elseif ($arg === '--skip-build') { $this->skipBuild = true; }
             elseif ($arg === '--force-build') { $this->forceBuild = true; }
             elseif ($arg === '--php-runtime') { $this->usePhpRuntime = true; }
@@ -73,11 +93,10 @@ class PipelineBuilder
         $orchestrator = new PipelineOrchestrator();
 
         // Step 0: Build (hash cache + process lock + orphan cleanup)
-        // PHP Runtime 模式跳过编译步骤
         if (!$this->usePhpRuntime) {
-            $orchestrator->addStep(new BuildStep($this->projectRoot, 'css-test', $this->forceBuild));
+            $orchestrator->addStep(new BuildStep($this->projectRoot, $this->appName, $this->forceBuild));
         } else {
-            echo "  [php-runtime] Skip build, using PHP native layout computation\n";
+            echo "  [{$this->appName}] Skip build, using PHP native layout computation\n";
         }
 
         // Step B: 自动批次 browser ref（全量模式无 --case= 时启用）
@@ -86,7 +105,7 @@ class PipelineBuilder
         if ($this->caseName === null && $this->browserElCompare) {
             $browser = new BrowserLauncher();
             $strategy = $browser->isAvailable() ? new EdgeDomStrategy($browser) : new NoopBrowserRefStrategy();
-            $caseDirs = glob($this->appDir . '/test_case/case-*', GLOB_ONLYDIR);
+            $caseDirs = glob($this->appDir . '/test_case/' . $this->casePrefix . '*', GLOB_ONLYDIR);
             $allCases = [];
             foreach ($caseDirs as $dir) {
                 $tag = basename($dir);
@@ -105,7 +124,7 @@ class PipelineBuilder
 
         // Step D: layout export
         $dumpStrategy = $this->selectDumpStrategy();
-        $orchestrator->addStep(new Strategy\LayoutDumpStep($dumpStrategy, $this->caseName ?? 'case-001-wrapper-x', $this->appDir));
+        $orchestrator->addStep(new Strategy\LayoutDumpStep($dumpStrategy, $this->caseName ?? $this->getDefaultCaseName(), $this->appDir));
 
         // Phase L: CSS layout assertions on engine tree (after dump, before browser)
         $orchestrator->addStep(new LayoutValidationStep());
@@ -113,37 +132,35 @@ class PipelineBuilder
         // Step E: multi-frame stability
         if ($dumpStrategy instanceof ExeDumpStrategy) {
             $exeDiscovery = new ExeDiscovery($this->appDir);
-            $exePath = $exeDiscovery->findExe('css_test.exe');
+            $exePath = $exeDiscovery->findExe($this->getExeName());
             if ($exePath) {
-                $orchestrator->addStep(new MultiFrameStep($exePath, $this->caseName ?? 'case-001-wrapper-x', 5));
+                $orchestrator->addStep(new MultiFrameStep($exePath, $this->caseName ?? $this->getDefaultCaseName(), 5));
             }
         }
 
         // Step G+H: 浏览器元素对比（默认跳过，--browser-engine-el-compare 启用）
         if ($this->browserElCompare) {
             $browserStrategy = $this->selectBrowserStrategy();
-            $orchestrator->addStep(new Strategy\BrowserRefStep($browserStrategy, $this->appDir, $this->caseName ?? 'case-001-wrapper-x'));
-            $caseDir = "{$this->appDir}/test_case/" . ($this->caseName ?? 'case-001-wrapper-x');
+            $orchestrator->addStep(new Strategy\BrowserRefStep($browserStrategy, $this->appDir, $this->caseName ?? $this->getDefaultCaseName()));
+            $caseDir = "{$this->appDir}/test_case/" . ($this->caseName ?? $this->getDefaultCaseName());
             $orchestrator->addStep(new ElementCompareStep(
                 \PxTest\Comparison\ComparatorRegistry::default(),
                 $caseDir,
-                $this->caseName ?? 'case-001-wrapper-x'
+                $this->caseName ?? $this->getDefaultCaseName()
             ));
         }
 
         // Step I: Screenshot comparison (exe headless vs browser headless)
         if (!$this->skipScreenshot) {
             $exeBinDir = "{$this->appDir}/bin";
-            // build.bat converts hyphens to underscores in exe name
-            $exeName = str_replace('-', '_', $this->appName) . '.exe';
-            $exePath = "{$exeBinDir}/{$exeName}";
-            $caseHtml = "{$this->appDir}/test_case/" . ($this->caseName ?? 'case-001-wrapper-x') . '/*.html';
+            $exePath = "{$exeBinDir}/" . $this->getExeName();
+            $caseHtml = "{$this->appDir}/test_case/" . ($this->caseName ?? $this->getDefaultCaseName()) . '/*.html';
             $htmlFiles = glob($caseHtml);
             $htmlPath = !empty($htmlFiles) ? $htmlFiles[0] : '';
             if (file_exists($exePath) && $htmlPath) {
                 $refDir = dirname($htmlPath) . '/ref';
                 $orchestrator->addStep(new ScreenshotStep(
-                    $exePath, $htmlPath, $refDir, $this->caseName ?? 'case-001-wrapper-x'
+                    $exePath, $htmlPath, $refDir, $this->caseName ?? $this->getDefaultCaseName()
                 ));
             }
         }
@@ -153,22 +170,16 @@ class PipelineBuilder
 
     private function selectDumpStrategy(): Strategy\DumpStrategy
     {
-        // PHP Runtime 模式：零编译，使用 MockPlatform + 真实组件
         if ($this->usePhpRuntime) {
-            return new Strategy\PhpDumpStrategy(
-                $this->projectRoot,
-                $this->appDir
-            );
+            return new Strategy\PhpDumpStrategy($this->projectRoot, $this->appDir);
         }
 
+        $exeName = $this->getExeName();
         $exeDiscovery = new ExeDiscovery($this->appDir);
-        if ($exeDiscovery->isReady('css_test.exe')) {
-            return new ExeDumpStrategy(
-                $exeDiscovery->findExe('css_test.exe')
-            );
+        if ($exeDiscovery->isReady($exeName)) {
+            return new ExeDumpStrategy($exeDiscovery->findExe($exeName));
         }
-        // Fallback to Mock
-        if ($this->verbose) echo "  [INFO] Exe not found, using MockPlatform fallback\n";
+        if ($this->verbose) echo "  [INFO] Exe $exeName not found, using MockPlatform fallback\n";
         return new MockDumpStrategy();
     }
 
@@ -184,7 +195,7 @@ class PipelineBuilder
     /** Scan all case directories under test_case/. */
     public function getAllCases(): array
     {
-        $dirs = glob($this->appDir . '/test_case/case-*', GLOB_ONLYDIR);
+        $dirs = glob($this->appDir . '/test_case/' . $this->casePrefix . '*', GLOB_ONLYDIR);
         sort($dirs);
         return array_map('basename', $dirs);
     }
