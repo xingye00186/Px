@@ -49,6 +49,16 @@ class LayoutDumpStep implements PipelineStepInterface
             return StepResult::err('dump_layout', 'Strategy ' . $this->strategy->name() . ' failed');
         }
 
+        // Mode-specific file naming: avoid overwrite between PHP Runtime and AOT
+        $isPhpRuntime = getenv('PX_PHP_RUNTIME') !== false && getenv('PX_PHP_RUNTIME') !== '';
+        $engineFile = $result[1];
+        $modeSuffix = $isPhpRuntime ? '_php' : '_aot';
+        $modeFile = dirname($engineFile) . '/engine_layout' . $modeSuffix . '.json';
+        if (file_exists($engineFile) && !file_exists($modeFile)) {
+            copy($engineFile, $modeFile);
+        }
+        $result[1] = $modeFile; // update path for subsequent steps
+
         // REF_STALE check: verify layout JSON contains test case key content
         $json = $result[0];
         $caseDir = "{$this->appDir}/test_case/{$currentCase}";

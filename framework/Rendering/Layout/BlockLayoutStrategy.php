@@ -111,14 +111,18 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         if (!$hasExplicitW && $width === 0 && $ctx->parent !== null && !self::isInlineType($node->type)) {
             error_log('[DIAG_LOC1_CHECK] node=' . $node->type . ' content_null=' . ($node->content === null ? '1' : '0') . ' content_str=' . (is_string($node->content) ? '1' : '0') . ' content_len=' . (is_string($node->content) ? strlen($node->content) : -1));
+            $autoMarginL = PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $parentW);
+            $autoMarginR = PercentResolver::resolveMarginPaddingPercent($style, 'marginRight', 'marginRightPercent', $parentW);
             $autoPadL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
             $autoPadR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
             $autoBw = (int)($style['borderWidth'] ?? 0);
             $boxSizing = $style['boxSizing'] ?? 'content-box';
             if ($boxSizing === 'border-box') {
-                $autoW = max(0, $parentW);
+                // border-box: CSS 'width' = total width = containing block - margin
+                $autoW = max(0, $parentW - $autoMarginL - $autoMarginR);
             } else {
-                $autoW = max(0, $parentW - $autoPadL - $autoPadR - $autoBw * 2);
+                // content-box: CSS 'width' = content width = containing block - margin - own padding - own border
+                $autoW = max(0, $parentW - $autoMarginL - $autoMarginR - $autoPadL - $autoPadR - $autoBw * 2);
             }
             error_log('[DIAG_BLKAF] node=' . $node->type . ' parentW=' . $parentW . ' autoW=' . $autoW . ' hasExplicitW=' . ($hasExplicitW ? '1' : '0') . ' parent=' . ($ctx->parent !== null ? $ctx->parent->type : 'null'));
             $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $autoW, true));
@@ -314,10 +318,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     }
 
                     $mTop = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginTop', 'marginTopPercent', $containerW);
-
                     $mBottom = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginBottom', 'marginBottomPercent', $containerW);
+                    $mLeft = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginLeft', 'marginLeftPercent', $containerW);
+                    $mRight = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginRight', 'marginRightPercent', $containerW);
 
-                    // CSS 2.1 §10.3.3: Auto-width = containerW - child's own padding - child's own border
+                    // CSS 2.1 §10.3.3: Auto-width = containerW - child's own margin - child's own padding - child's own border
 
                     $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
 
@@ -327,11 +332,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $autoBw = (int)($childStyle['borderWidth'] ?? 0);
                         $childBoxSizing = $childStyle['boxSizing'] ?? 'content-box';
                         if ($childBoxSizing === 'border-box') {
-                            // border-box: CSS 'width' = total width = container content width
-                            $autoW = max(0, (int)$containerW);
+                            // border-box: CSS 'width' = total width = container content - margin
+                            $autoW = max(0, (int)$containerW - $mLeft - $mRight);
                         } else {
-                            // content-box: CSS 'width' = content width = container content - own padding - own border
-                            $autoW = max(0, (int)$containerW - $autoPadL - $autoPadR - $autoBw * 2);
+                            // content-box: CSS 'width' = content width = container content - margin - own padding - own border
+                            $autoW = max(0, (int)$containerW - $mLeft - $mRight - $autoPadL - $autoPadR - $autoBw * 2);
                         }
                         $child->w = $autoW;
                         $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
@@ -424,14 +429,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     // ── Auto-width/height for block containers (CSS content-based sizing) ──
 
-                    // CSS 2.2 §10.3.3: 正常流块级子元素的初始 x = 父内容区左边界
+                    // CSS 2.2 §10.3.3: 正常流块级子元素的初始 x = 父内容区左边界 + margin-left
+                    // $mLeft 确保 auto-stack 不丢失 resolveNormalFlow 阶段已计算的 margin-left
                     // 必须在 auto-margin 之前设置，确保 margin:auto 居中基于正确基线
                     // 注意：flex/grid 子节点的 x 已由各自布局策略(FlexLayoutStrategy等)
                     // 在 two-pass (第359行) 中正确设置（含 margin:auto 居中偏移），
                     // 此处不再覆盖，否则居中偏移会被清除。
                     $childDisplayCheck = $childStyle['display'] ?? 'block';
                     if ($childDisplayCheck !== 'flex' && $childDisplayCheck !== 'inline-flex' && $childDisplayCheck !== 'grid') {
-                        $child->x = $node->x + $paddingLeft;
+                        $child->x = $node->x + $paddingLeft + $mLeft;
                     }
 
                     $childML = $childStyle['marginLeftAuto'] ?? false;
@@ -561,16 +567,18 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $cs = $child->style;
 
                         if (!array_key_exists('width', $cs) && !self::isInlineType($child->type)) {
+                            $autoML = PercentResolver::resolveMarginPaddingPercent($cs, 'marginLeft', 'marginLeftPercent', $contentW);
+                            $autoMR = PercentResolver::resolveMarginPaddingPercent($cs, 'marginRight', 'marginRightPercent', $contentW);
                             $autoPadL = (int)($cs['paddingLeft'] ?? $cs['padding'] ?? 0);
                             $autoPadR = (int)($cs['paddingRight'] ?? $cs['padding'] ?? 0);
                             $autoBw = (int)($cs['borderWidth'] ?? 0);
                             $childBoxSizing = $cs['boxSizing'] ?? 'content-box';
                             if ($childBoxSizing === 'border-box') {
-                                // border-box: CSS 'width' = total width = contentW
-                                $autoW = max(0, $contentW);
+                                // border-box: CSS 'width' = total width = contentW - margin
+                                $autoW = max(0, $contentW - $autoML - $autoMR);
                             } else {
-                                // content-box: CSS 'width' = content width = contentW - own padding - own border
-                                $autoW = max(0, $contentW - $autoPadL - $autoPadR - $autoBw * 2);
+                                // content-box: CSS 'width' = content width = contentW - margin - own padding - own border
+                                $autoW = max(0, $contentW - $autoML - $autoMR - $autoPadL - $autoPadR - $autoBw * 2);
                             }
                             $child->w = (int)max(0, (int)PercentResolver::resolveMinMax($cs, $autoW, true));
                             $child->visualW = PercentResolver::resolveVisualW($cs, $child->w);
@@ -829,19 +837,21 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $mTop = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginTop', 'marginTopPercent', $containerW);
             $mBottom = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginBottom', 'marginBottomPercent', $containerW);
 
-            // CSS 2.1 §10.3.3: Auto-width = containerW - child's own padding - child's own border
+            // CSS 2.1 §10.3.3: Auto-width = containerW - child's own margin - child's own padding - child's own border
             $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
             if ((!$hasExplicitWidth || $child->w === 0) && !self::isInlineType($child->type)) {
+                $autoML = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginLeft', 'marginLeftPercent', $containerW);
+                $autoMR = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginRight', 'marginRightPercent', $containerW);
                 $autoPadL = (int)($childStyle['paddingLeft'] ?? $childStyle['padding'] ?? 0);
                 $autoPadR = (int)($childStyle['paddingRight'] ?? $childStyle['padding'] ?? 0);
                 $autoBw = (int)($childStyle['borderWidth'] ?? 0);
                 $childBoxSizing = $childStyle['boxSizing'] ?? 'content-box';
                 if ($childBoxSizing === 'border-box') {
-                    // border-box: CSS 'width' = total width = container content width
-                    $autoW = max(0, (int)$containerW);
+                    // border-box: CSS 'width' = total width = container content - margin
+                    $autoW = max(0, (int)$containerW - $autoML - $autoMR);
                 } else {
-                    // content-box: CSS 'width' = content width = container content - own padding - own border
-                    $autoW = max(0, (int)$containerW - $autoPadL - $autoPadR - $autoBw * 2);
+                    // content-box: CSS 'width' = content width = container content - margin - own padding - own border
+                    $autoW = max(0, (int)$containerW - $autoML - $autoMR - $autoPadL - $autoPadR - $autoBw * 2);
                 }
                 error_log('[DIAG_ASTACK] child=' . $child->type . ' containerW=' . $containerW . ' autoW=' . $autoW . ' padL=' . $autoPadL . ' padR=' . $autoPadR . ' hasExplicitW=' . ($hasExplicitWidth ? '1' : '0') . ' childWbefore=' . $child->w);
                 $child->w = $autoW;
