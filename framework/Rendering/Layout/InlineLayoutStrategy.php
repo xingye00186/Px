@@ -81,7 +81,22 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
 
         // Resolve fontSize from relative unit (rem/em/vw/vh)
         PercentResolver::resolveFontSizeUnit($style, $rootFontSize, $viewportW, $viewportH);
-        $node->style['fontSize'] = $style['fontSize'] ?? 14;
+        // CSS 2.2 §15.1.1: font-size/color 等属性从父容器继承
+        if (isset($style['fontSize'])) {
+            $node->style['fontSize'] = $style['fontSize'];
+        } elseif ($ctx->parent !== null && isset($ctx->parent->style['fontSize'])) {
+            $node->style['fontSize'] = $ctx->parent->style['fontSize'];
+        } else {
+            $node->style['fontSize'] = 16;
+        }
+        // font-weight 继承：从父节点继承粗体状态
+        if (!isset($style['bold'])) {
+            if ($ctx->parent !== null) {
+                $node->style['bold'] = $ctx->parent->style['bold'] ?? 0;
+            } else {
+                $node->style['bold'] = 0;
+            }
+        }
 
         $hasExplicitWidth = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         $node->w = (int)max(0, PercentResolver::resolveMinMax($style, $width, true));

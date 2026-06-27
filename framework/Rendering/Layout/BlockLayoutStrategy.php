@@ -611,9 +611,18 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
 
             // CSS 2.2 §10.6.3: auto-height = distance from content edge top to last child bottom
-            // $node->y includes paddingTop offset ??content area starts at $node->y + $paddingTop
+            // CSS 2.2 §10.8: 对于只包含 inline-level 子元素的容器，行高贡献最小高度
+            // line-box height = max(line-height, max child outer height)
             $ahPaddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
             $contentTop = $node->y + $ahPaddingTop;
+
+            // 检查容器自身的 line-height（仅对 inline formatting context 有效）
+            $parentFontSize = (int)($node->style['fontSize'] ?? 16);
+            $parentStyle = $ctx->parent !== null ? $ctx->parent->style : null;
+            $containerLineH = (int)PercentResolver::resolveLineHeight($style, $parentFontSize, 16, $parentStyle);
+            $lineBoxBottom = $contentTop + $containerLineH;
+            if ($lineBoxBottom > $maxBottom) $maxBottom = $lineBoxBottom;
+
             if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
                 $textFs = (int)($node->style['fontSize'] ?? 14);
                 $parentSt = $ctx->parent !== null ? $ctx->parent->style : null;
