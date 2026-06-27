@@ -30,6 +30,27 @@ class LayoutDumpStep implements PipelineStepInterface
         $currentCase = ($ctxCase !== null && $ctxCase !== '') ? $ctxCase : $this->caseName;
         $refDir = "{$this->appDir}/test_case/{$currentCase}/ref";
 
+        // ─── SFC 编译器：检测 .vue 变更后自动重新编译 ───
+        // .vue 是源文件，gen/ 是编译产物。当 .vue 比 gen/ 新时需要重新编译。
+        $genDir = "{$this->appDir}/gen";
+        $appVue = "{$this->appDir}/App.vue";
+        $compiledMarker = "$genDir/ComponentFactory.php";
+        if ((file_exists($appVue) && file_exists($compiledMarker) && filemtime($appVue) > filemtime($compiledMarker))
+            || (file_exists($appVue) && !file_exists($genDir))) {
+                echo "  [sfc] .vue changed, recompiling...\n";
+                $sfcScript = "{$this->appDir}/../../sfc-compiler.php";
+                if (file_exists($sfcScript)) {
+                    $cmd = sprintf('%s %s %s 2>&1', PHP_BINARY, escapeshellarg($sfcScript), escapeshellarg($appVue));
+                    exec($cmd, $output, $exitCode);
+                    if ($exitCode !== 0) {
+                        echo "  [sfc] FAILED (exit=$exitCode)\n";
+                        foreach ($output as $line) echo "    $line\n";
+                        return StepResult::err('dump_layout', 'SFC compilation failed');
+                    }
+                    echo "  [sfc] OK\n";
+                }
+            }
+
         // ─── Vue 结构准入检查（引擎渲染前置条件）───
         $caseDir = "{$this->appDir}/test_case/{$currentCase}";
         $vueFiles = glob("$caseDir/*.vue");
