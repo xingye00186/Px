@@ -228,14 +228,17 @@ class SummaryReporter
 
     private function writeReport(array $report): void
     {
-        $reportDir = $this->appDir . '/docs/02-测试报告';
+        $reportDir = $this->appDir . '/docs';
         if (!is_dir($reportDir)) {
             @mkdir($reportDir, 0777, true);
         }
 
+        $isPhpRuntime = getenv('PX_PHP_RUNTIME') !== false && getenv('PX_PHP_RUNTIME') !== '';
+        $reportFile = $reportDir . ($isPhpRuntime ? '/最新报告-PHP-RT.md' : '/最新报告.md');
+
         $md = $this->formatMarkdown($report);
-        file_put_contents($reportDir . '/最新报告.md', $md);
-        echo "\n[SUMMARY] Report saved: {$reportDir}/最新报告.md\n";
+        file_put_contents($reportFile, $md);
+        echo "\n[SUMMARY] Report saved: {$reportFile}\n";
     }
 
     private function formatMarkdown(array $report): string
@@ -363,7 +366,8 @@ class SummaryReporter
 
     private function appendHistory(array $report): void
     {
-        $historyPath = $this->appDir . '/.run_history.json';
+        $isPhpRuntime = getenv('PX_PHP_RUNTIME') !== false && getenv('PX_PHP_RUNTIME') !== '';
+        $historyPath = $this->appDir . ($isPhpRuntime ? '/.run_history_php_rt.json' : '/.run_history.json');
 
         // Aggregate property stats from report
         $propStats = [];

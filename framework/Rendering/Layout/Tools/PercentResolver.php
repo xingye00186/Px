@@ -195,6 +195,15 @@ class PercentResolver
             return 0;
         }
 
+        // ── PHP Runtime 黄金宽度表 ──
+        // 仅在 PX_PHP_RUNTIME=1 时激活，class_exists 第二层防护确保 AOT 下永假
+        if (getenv('PX_PHP_RUNTIME') && class_exists('\\PxTest\\Bootstrap\\GoldenTextWidth')) {
+            $golden = \PxTest\Bootstrap\GoldenTextWidth::measure($text, $fontSize, $bold);
+            if ($golden !== null) {
+                return $golden;
+            }
+        }
+
         static $hasNative = null;
 
         if ($hasNative === null) {

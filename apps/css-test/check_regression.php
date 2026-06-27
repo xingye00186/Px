@@ -25,6 +25,7 @@ date_default_timezone_set('Asia/Shanghai');
 $skipStyles = false;
 $skipMultiframe = false;
 $skipBrowser = false;
+$usePhpRuntime = false;
 $outputJson = false;
 $failFast = false;
 $targetCase = null;
@@ -76,6 +77,7 @@ foreach ($args as $arg) {
     if ($arg === '--skip-styles') { $skipStyles = true; continue; }
     if ($arg === '--skip-multiframe') { $skipMultiframe = true; continue; }
     if ($arg === '--skip-browser') { $skipBrowser = true; continue; }
+    if ($arg === '--php-runtime') { $usePhpRuntime = true; continue; }
     if (str_starts_with($arg, '--tolerance=')) {
         $tolerance = (int)substr($arg, strlen('--tolerance='));
         continue;
@@ -113,6 +115,25 @@ function findExe(): ?string {
 }
 
 function runDumpLayout(string $caseName, string $flag, string $outFile): ?array {
+    global $usePhpRuntime;
+
+    // PHP Runtime 模式：纯 PHP 计算布局，零编译
+    if ($usePhpRuntime) {
+        $projectRoot = dirname(__DIR__, 2);
+        $appDir = __DIR__;
+
+        // 加载 PhpDumpStrategy
+        require_once $projectRoot . '/tools/PxTest/Pipeline/Strategy/PhpDumpStrategy.php';
+        $strategy = new \PxTest\Pipeline\Strategy\PhpDumpStrategy($projectRoot, $appDir);
+        $refDir = __DIR__ . '/test_case/' . $caseName . '/ref';
+        $result = $strategy->dump($caseName, $refDir);
+        if ($result === null) return null;
+
+        $data = json_decode($result[0], true);
+        return $data ? flattenNodes($data) : null;
+    }
+
+    // 标准模式：使用 AOT 编译的 exe
     $exe = findExe();
     if (!$exe) return null;
 
@@ -121,7 +142,7 @@ function runDumpLayout(string $caseName, string $flag, string $outFile): ?array 
     $cmd = escapeshellarg($exe) . ' --case=' . escapeshellarg($caseName) . ' --headless ' . $flag . ' 2>NUL';
     shell_exec($cmd);
 
-    // 框架 --case=xxx 时写入 test_case/{case}/ref/（archive_case.php 已确认此行为）
+    // 框架 --case=xxx 时写入 test_case/{case}/ref/
     $refPath = __DIR__ . '/test_case/' . $caseName . '/ref/' . $outFile;
     if (!file_exists($refPath)) { chdir($cwd); return null; }
     $content = file_get_contents($refPath);

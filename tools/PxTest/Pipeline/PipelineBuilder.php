@@ -34,6 +34,7 @@ class PipelineBuilder
     private ?string $caseName = null;
     private bool $skipBuild = false;
     private bool $forceBuild = false;
+    private bool $usePhpRuntime = false;
     private bool $browserElCompare = true;  // 默认开启浏览器元素对比
     private bool $skipScreenshot = true;  // 默认跳过截图，需 --screenshot 启用
     private bool $updateBaseline = false;
@@ -56,6 +57,7 @@ class PipelineBuilder
             if (str_starts_with($arg, '--case=')) { $this->caseName = substr($arg, 7); }
             elseif ($arg === '--skip-build') { $this->skipBuild = true; }
             elseif ($arg === '--force-build') { $this->forceBuild = true; }
+            elseif ($arg === '--php-runtime') { $this->usePhpRuntime = true; }
             elseif ($arg === '--browser-engine-el-compare') { $this->browserElCompare = true; }
             elseif ($arg === '--screenshot') { $this->skipScreenshot = false; }
             elseif ($arg === '--update-baseline') { $this->updateBaseline = true; }
@@ -71,7 +73,12 @@ class PipelineBuilder
         $orchestrator = new PipelineOrchestrator();
 
         // Step 0: Build (hash cache + process lock + orphan cleanup)
-        $orchestrator->addStep(new BuildStep($this->projectRoot, 'css-test', $this->forceBuild));
+        // PHP Runtime 模式跳过编译步骤
+        if (!$this->usePhpRuntime) {
+            $orchestrator->addStep(new BuildStep($this->projectRoot, 'css-test', $this->forceBuild));
+        } else {
+            echo "  [php-runtime] Skip build, using PHP native layout computation\n";
+        }
 
         // Step B: 自动批次 browser ref（全量模式无 --case= 时启用）
         // 单次 Edge 启动为所有 case 生成 ref，比逐 case 启动快 20x
@@ -146,6 +153,14 @@ class PipelineBuilder
 
     private function selectDumpStrategy(): Strategy\DumpStrategy
     {
+        // PHP Runtime 模式：零编译，使用 MockPlatform + 真实组件
+        if ($this->usePhpRuntime) {
+            return new Strategy\PhpDumpStrategy(
+                $this->projectRoot,
+                $this->appDir
+            );
+        }
+
         $exeDiscovery = new ExeDiscovery($this->appDir);
         if ($exeDiscovery->isReady('css_test.exe')) {
             return new ExeDumpStrategy(

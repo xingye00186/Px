@@ -71,7 +71,8 @@ $issueContent = file_exists($issueTracker) ? file_get_contents($issueTracker) : 
 
 // ─── 单 case 模式：从 .case_data.json 加载历史数据 ───
 $isSingleCase = (count($filtered) < count($cases));
-$caseDataFile = $projectRoot . '/apps/css-test/.case_data.json';
+$isPhpRuntime = getenv('PX_PHP_RUNTIME') !== false && getenv('PX_PHP_RUNTIME') !== '';
+$caseDataFile = $projectRoot . '/apps/css-test/' . ($isPhpRuntime ? '.case_data_php_rt.json' : '.case_data.json');
 
 $allCaseData = []; // collect per-case data for summary report
 if ($isSingleCase && file_exists($caseDataFile)) {
