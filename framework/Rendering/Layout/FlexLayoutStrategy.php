@@ -1375,8 +1375,6 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $node->w = (int)max($node->w, $maxRight - $node->x + $paddingRight);
             }
 
-            // Cross-axis: auto-height from children
-
             if (!$hasExplicitH && !$hasHPct) {
                 $maxBottom = $node->y + $paddingTop;
 
@@ -1388,7 +1386,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     if ($chBottom + $mB > $maxBottom) $maxBottom = (int)($chBottom + $mB);
                 }
 
-                $node->h = (int)max($node->h, $maxBottom - $node->y + $paddingBottom);
+                $node->h = (int)max(0, $maxBottom - $node->y + $paddingBottom);
             }
         } else {
             // Cross-axis: auto-width from children
@@ -1422,7 +1420,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     if ($chBottom + $mB > $maxBottom) $maxBottom = (int)($chBottom + $mB);
                 }
 
-                $node->h = (int)max($node->h, $maxBottom - $node->y + $paddingBottom);
+                $node->h = (int)max(0, $maxBottom - $node->y + $paddingBottom);
             }
         }
 
