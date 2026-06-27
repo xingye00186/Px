@@ -1,10 +1,10 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-06-27 21:27:49 | **总耗时**: 102s
+**运行时间**: 2026-06-27 21:35:14 | **总耗时**: 103.5s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 48diff 🔴10 | ⏭️ | ❌ 失败 | 1s |
+| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴10 | ⏭️ | ❌ 失败 | 2.6s |
 | prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 43diff 🔴11 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴10 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff 🔴9 | ⏭️ | ❌ 失败 | 1.1s |
@@ -115,7 +115,7 @@
 | prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴4 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 63diff 🔴30 | ⏭️ | ❌ 失败 | 1.2s |
 
-**汇总**: 0 ✅ / 110 ❌ / 110 总计 (总耗时: 102s)
+**汇总**: 0 ✅ / 110 ❌ / 110 总计 (总耗时: 103.5s)
 
 ## 回归判定
 
@@ -123,7 +123,7 @@
 >
 > - prop background-color diff 3->235
 > - prop position diff 1->61
-> - prop width diff 5->496
+> - prop width diff 5->495
 > - prop height diff 4->483
 > - prop font-weight diff 1->102
 > - prop text-align diff 0->4
@@ -138,9 +138,6 @@
 > - prop margin-left diff 2->10
 > - prop margin-right diff 1->4
 > - prop margin-bottom diff 2->49
-> - prt-01-margin geometry 19->20
-> - prt-01-margin mismatch 26->27
-> - prt-01-margin major 3->9
 > - prt-02-margin-auto geometry 0->19
 > - prt-02-margin-auto mismatch 0->23
 > - prt-02-margin-auto missing 0->1
@@ -559,7 +556,7 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| width | 35.1% | 268/764 |
+| width | 35.2% | 269/764 |
 | height | 36.8% | 281/764 |
 | font-weight | 86.6% | 662/764 |
 | position | 92% | 703/764 |
@@ -630,7 +627,7 @@
 
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
-| prt-01-margin | 1 | **10** | **9** | 27 | 1 | 0 |
+| prt-01-margin | 1 | **10** | **2** | 26 | 1 | 0 |
 | prt-02-margin-auto | 1 | **11** | **7** | 23 | 1 | 0 |
 | prt-03-negative-margin | 1 | **10** | **7** | 20 | 1 | 0 |
 | prt-04-padding | 1 | **9** | **6** | 17 | 1 | 0 |

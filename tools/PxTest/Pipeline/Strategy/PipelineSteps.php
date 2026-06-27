@@ -306,25 +306,34 @@ class BrowserRefStep implements PipelineStepInterface
         $dom = new \DOMDocument();
         @$dom->loadHTML($html);
         $body = $dom->getElementsByTagName('body')->item(0);
-        if (!$body || $body->childNodes->length < 2) {
-            $errors[] = "Body has < 2 child elements — add test content container and anchor";
+        if (!$body) {
+            $errors[] = "No <body> element found";
         } else {
-            // 5) Batch mode compatibility: first child of body must be a <div>
-            // generateBatch() 注入 id="test-content-wrapper" 到首个 <div>
-            $firstChild = $body->firstChild;
-            while ($firstChild && $firstChild->nodeType !== XML_ELEMENT_NODE) {
-                $firstChild = $firstChild->nextSibling;
+            // Count direct child elements (not text nodes)
+            $childCount = 0;
+            foreach ($body->childNodes as $child) {
+                if ($child->nodeType === XML_ELEMENT_NODE) $childCount++;
             }
-            if ($firstChild && strtolower($firstChild->tagName) !== 'div') {
-                $errors[] = "First element in <body> must be a <div> (the main content container) — "
-                    . "batch mode requires it for id=\"test-content-wrapper\" injection";
-            }
-            // 6) First <div> must NOT be an anchor element
-            // If batch injects id="test-content-wrapper" into an anchor div,
-            // dump_layout.js will extract content from the wrong subtree root.
-            if ($firstChild && $firstChild->getAttribute('data-px-anchor') !== '') {
-                $errors[] = "First element in <body> must be the test content container, "
-                    . "not a data-px-anchor element — move anchors inside the container div";
+            if ($childCount < 1) {
+                $errors[] = "Body must have at least one child element — the test content container div";
+            } else {
+                // 5) Batch mode compatibility: first child of body must be a <div>
+                // generateBatch() 注入 id="test-content-wrapper" 到首个 <div>
+                $firstChild = $body->firstChild;
+                while ($firstChild && $firstChild->nodeType !== XML_ELEMENT_NODE) {
+                    $firstChild = $firstChild->nextSibling;
+                }
+                if ($firstChild && strtolower($firstChild->tagName) !== 'div') {
+                    $errors[] = "First element in <body> must be a <div> (the main content container) — "
+                        . "batch mode requires it for id=\"test-content-wrapper\" injection";
+                }
+                // 6) First <div> must NOT be an anchor element
+                // If batch injects id="test-content-wrapper" into an anchor div,
+                // dump_layout.js will extract content from the wrong subtree root.
+                if ($firstChild && $firstChild->getAttribute('data-px-anchor') !== '') {
+                    $errors[] = "First element in <body> must be the test content container, "
+                        . "not a data-px-anchor element — move anchors inside the container div";
+                }
             }
         }
 
