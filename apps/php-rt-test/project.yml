@@ -1,0 +1,15 @@
+name: php-rt-test
+mode: bin
+job: 4
+platform: win32
+entry: main.php
+Px_dynamic_component_file: test_case
+
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  - ../../stub
+ignore:
+  - ../../framework/compiler
+  - ../../framework/aot-checker.php
