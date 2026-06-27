@@ -239,15 +239,22 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         $this->resolveMarginAuto($node, $style, $parentContentW, $parentContentH);
 
-        // Apply translate from animatedStyle
+        // Apply translate from transform (CSS transform:translate(x, y))
+        $transform = $style['transform'] ?? null;
+        $translateX = 0;
+        $translateY = 0;
+        if (is_array($transform)) {
+            $translateX = (int)($transform['translateX'] ?? 0);
+            $translateY = (int)($transform['translateY'] ?? 0);
+        }
+        // Also check for legacy translateX/translateY keys
+        if (!isset($style['transform'])) {
+            $translateX = (int)($style['translateX'] ?? $translateX);
+            $translateY = (int)($style['translateY'] ?? $translateY);
+        }
 
-        $translateX = (int)($style['translateX'] ?? 0);
-
-        $translateY = (int)($style['translateY'] ?? 0);
-
-        $node->x += (int)$translateX;
-
-        $node->y += (int)$translateY;
+        $node->x += $translateX;
+        $node->y += $translateY;
 
         // ── Set container's own visualW/visualH ──
         $node->visualW = (int)PercentResolver::resolveVisualW($style, $node->w);

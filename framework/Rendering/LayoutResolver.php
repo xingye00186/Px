@@ -226,7 +226,11 @@ class LayoutResolver
 
                 case 'flex':
                 case 'inline-flex':
-                    $this->flexStrategy->resolve($node, $ctx, $effectiveStyle);
+                    if ($position === 'absolute' || $position === 'fixed') {
+                        $this->absolutePositioning->resolveAbsolutePositioning($node, $ctx, $effectiveStyle);
+                    } else {
+                        $this->flexStrategy->resolve($node, $ctx, $effectiveStyle);
+                    }
                     break;
 
                 case 'grid':

@@ -766,7 +766,7 @@ class TemplateParser
 
         // Parse only <col> / <template> children
         // HTML5 §12.2.6.4.8: any non-col child auto-closes colgroup
-        while ($this->pos < $this->len) {
+        while ($this->pos < count($this->tokens)) {
             $tt = $this->tokens[$this->pos];
             $type = $tt->type;
 

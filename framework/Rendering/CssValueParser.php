@@ -111,7 +111,7 @@ class CssValueParser
     {
         // Handle em/rem units: 1em = default font-size 16px
         // CSS Values and Units Module Level 3 §5: em is relative to font-size
-        if (preg_match('/^-?(\d+(\.\d+)?)/', $value, $m)) {
+        if (preg_match('/^(-?\d+(\.\d+)?)/', $value, $m)) {
             $num = (float)$m[1];
             $lower = strtolower($value);
             if (str_contains($lower, 'em')) {
