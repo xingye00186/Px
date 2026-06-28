@@ -12,17 +12,17 @@ use Px\Rendering\Layout\Tools\PercentResolver;
 use Px\Rendering\Layout\Tools\ScrollHelper;
 
 /**
- * FlexLayoutStrategy �?Flex 布局策略
+ * FlexLayoutStrategy �?Flex 布局策略
  *
  * CSS Flexible Box Layout Module Level 1:
- * 实现完整�?flex 布局算法，包�?
+ * 实现完整�?flex 布局算法，包�?
  * - flex-direction (row/column), flex-wrap
  * - flex-grow/flex-shrink/flex-basis
  * - justify-content (flex-start/center/flex-end/space-between/space-around/space-evenly)
  * - align-items (stretch/center/flex-start/flex-end)
- * - align-self (单子项覆�?
+ * - align-self (单子项覆�?
  * - order 排序
- * - 两阶段子项重解析（flex-grow/cross-axis stretch 后的内部 re-layout�?
+ * - 两阶段子项重解析（flex-grow/cross-axis stretch 后的内部 re-layout�?
  */
 class FlexLayoutStrategy implements LayoutStrategyInterface
 {
@@ -248,7 +248,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             // Defer auto-margin for flex-grow items: their final width is
             // determined by flex-grow, not by first-pass auto-width.
             // Browser: auto-margin computed ONCE after final width is known.
-            // Engine: two-pass re-resolves with correct width �?skip first pass.
+            // Engine: two-pass re-resolves with correct width �?skip first pass.
             $childGrow = (int)($child->style['flexGrow'] ?? 0);
             if ($childGrow > 0) {
                 $child->style['_deferAutoMargin'] = true;
@@ -285,7 +285,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
-        // ── Step 3: 收集 flex item 元数�?(grow/shrink/basis) ──
+        // ── Step 3: 收集 flex item 元数�?(grow/shrink/basis) ──
         $flexItemData = [];
 
         foreach ($children as $ch) {
@@ -306,7 +306,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                 $data['shrink'] = (float)($ch->style['flexShrink'] ?? 1);
 
-                // 捕获独立�?flex-basis 属性（仅数值，'auto' 由默�?-1 处理�?
+                // 捕获独立�?flex-basis 属性（仅数值，'auto' 由默�?-1 处理�?
                 if (isset($ch->style['flexBasis']) && $ch->style['flexBasis'] !== 'auto') {
                     $data['basis'] = (int)$ch->style['flexBasis'];
                 }
@@ -440,7 +440,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                     $data['shrink'] = (float)($ch->style['flexShrink'] ?? 1);
 
-                    // 捕获独立�?flex-basis 属性（仅数值，'auto' 由默�?-1 处理�?
+                    // 捕获独立�?flex-basis 属性（仅数值，'auto' 由默�?-1 处理�?
                     if (isset($ch->style['flexBasis']) && $ch->style['flexBasis'] !== 'auto') {
                         $data['basis'] = (int)$ch->style['flexBasis'];
                     }
@@ -1036,10 +1036,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $dataTp = $lineFlexData[$idxTp];
                 $needsTwoPass = $dataTp['isFlexGrow'] || $dataTp['crossAxisSized'];
 
-                    // Debug: two-pass condition
-                if ($chTp->isScrollContainer || $chTp->type === 'div') {
-                    error_log('[DIAG_2PASS] idx=' . $idxTp . ' type=' . $chTp->type . ' w=' . $chTp->w . ' h=' . $chTp->h . ' isFlexGrow=' . ($dataTp['isFlexGrow'] ? '1' : '0') . ' crossAxisSized=' . ($dataTp['crossAxisSized'] ? '1' : '0') . ' needsTwoPass=' . ($needsTwoPass ? '1' : '0') . ' display=' . ($chTp->style['display'] ?? 'block') . ' scrollContainer=' . ($chTp->isScrollContainer ? '1' : '0') . ' children=' . count($chTp->children) . ' content=' . ($chTp->content !== null ? strlen($chTp->content) . 'chars' : 'null'));
-                }
+
 
                 if ($needsTwoPass && (count($chTp->children) > 0 || $chTp->content !== null)) {
                     $display = (string)($chTp->style['display'] ?? 'block');
@@ -1101,7 +1098,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                         $chTp->style['width'] = $chTp->w;
                         // Block-level flex items without explicit height:
-                        // don't lock the stretched height �?let auto-height compute
+                        // don't lock the stretched height �?let auto-height compute
                         // from re-laid-out children after width change (CSS §9.5).
                         if ($hasOrigH) {
                             $chTp->style['height'] = $chTp->h;
@@ -1112,7 +1109,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             // the stretched height (244) persists and prevents recompute.
                             // Cross-axis stretch is re-applied after two-pass below,
                             // but main-axis size is NOT restored. Scroll containers
-                            // rely on parent flex layout for height �?skip reset.
+                            // rely on parent flex layout for height �?skip reset.
                             if (!$chTp->isScrollContainer) {
                                 $chTp->h = 0;
                                 $chTp->visualH = 0;
@@ -1359,7 +1356,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         if ($isRow) {
             // Main-axis: auto-width from children
-            // For flex-wrap:wrap, do NOT expand width from children �?items wrap,
+            // For flex-wrap:wrap, do NOT expand width from children �?items wrap,
             // container width stays constrained by parent (CSS §9.5).
 
             if (!$hasExplicitW && !$hasWPct && $wrap !== 'wrap') {
@@ -1407,7 +1404,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             }
 
             // Main-axis: auto-height from children
-            // For flex-wrap:wrap, do NOT expand height from children �?items wrap,
+            // For flex-wrap:wrap, do NOT expand height from children �?items wrap,
             // container height stays constrained by parent (CSS §9.5).
 
             if (!$hasExplicitH && !$hasHPct && $wrap !== 'wrap') {
@@ -1521,7 +1518,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             }
                         } else {
                             // Column: text height = line-height (based on font size)
-                            // CSS 2.2 §10.8.1: �?flex 容器继承 line-height
+                            // CSS 2.2 §10.8.1: �?flex 容器继承 line-height
                             $lineH = PercentResolver::resolveLineHeight($ch->style, $fs, 16, $parentStyle);
 
                             if ($ch->h === 0 || $ch->h < $lineH) {
@@ -1584,9 +1581,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
      * CSS Flexbox §4.5: flex items have min-width/min-height: auto by default,
      * meaning the minimum size is the content-based size (auto keyword).
      *
-     * - overflow:visible (default) �?min = content-based size (current computed size)
-     * - overflow:auto/scroll/hidden �?min = 0 (enables clipping/scroll containment)
-     * - explicit min-width/min-height set �?use that value
+     * - overflow:visible (default) �?min = content-based size (current computed size)
+     * - overflow:auto/scroll/hidden �?min = 0 (enables clipping/scroll containment)
+     * - explicit min-width/min-height set �?use that value
      *
      * @param RenderNode $ch The flex child node
      * @param bool $isRow Whether main axis is row (horizontal)
@@ -1623,12 +1620,12 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
-        // overflow:auto/scroll/hidden �?min is 0 (content can be clipped/scrolled)
+        // overflow:auto/scroll/hidden �?min is 0 (content can be clipped/scrolled)
         if ($ov !== 'visible') {
             return 0;
         }
 
-        // 3) overflow:visible (default) �?CSS min-height:auto →content-based minimum
+        // 3) overflow:visible (default) �?CSS min-height:auto →content-based minimum
         // The content-based min is approximated by the current computed main-size
         // from initial layout resolution (before flex shrink).
         return $currentMainSize;
