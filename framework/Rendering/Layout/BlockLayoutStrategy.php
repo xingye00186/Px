@@ -303,6 +303,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 $inlineCursorX = 0;
                 $inlineCursorY = 0;
                 $inlineLineMaxH = 0;
+                // CSS 2.2 §10.8: 容器 line-height 是行盒最小高度
+                $inlineContainerFS = (int)($node->style['fontSize'] ?? 16);
+                $inlineContainerParent = $ctx->parent !== null ? $ctx->parent->style : null;
+                $inlineContainerLH = (int)PercentResolver::resolveLineHeight($style, $inlineContainerFS, 16, $inlineContainerParent);
+                $inlineNoWrap = (($style['whiteSpace'] ?? 'normal') === 'nowrap' || ($style['whiteSpace'] ?? 'normal') === 'pre');
 
                 $containerW = PercentResolver::resolveContentWidth($node->style, $node->w);
 
@@ -486,11 +491,13 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             $inlineLineMaxH = 0;
                             $inlineStarted = true;
                         }
-                        // 换行判断：if child exceeds container content width
+                        // 换行判断：仅 white-space 非 nowrap/pre 时换行（CSS 2.2 §16.6）
                         $childW = $child->w;
                         $contentRight = $node->x + $containerW;
-                        if ($inlineCursorX + $childW > $contentRight) {
-                            $inlineCursorY += $inlineLineMaxH;
+                        if (!$inlineNoWrap && $inlineCursorX + $childW > $contentRight) {
+                            // CSS 2.2 §10.8: 行盒推进 min=line-height
+                            $lineBoxH = max($inlineLineMaxH, $inlineContainerLH);
+                            $inlineCursorY += $lineBoxH;
                             $inlineCursorX = $node->x + $paddingLeft;
                             $inlineLineMaxH = 0;
                         }
@@ -927,9 +934,17 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     $inlineY = $childOffsetY;
                     $inlineMaxH = 0;
                     $inlineStarted = true;
+                    // CSS 2.2 §10.8: 容器 line-height 是行盒最小高度
+                    $astackFS = (int)($node->style['fontSize'] ?? 16);
+                    $astackParent = $node->parent !== null ? $node->parent->style : null;
+                    $astackLH = (int)PercentResolver::resolveLineHeight($node->style, $astackFS, 16, $astackParent);
+                    $astackNoWrap = (($node->style['whiteSpace'] ?? 'normal') === 'nowrap' || ($node->style['whiteSpace'] ?? 'normal') === 'pre');
                 }
-                if ($inlineX + $child->w > $containerW) {
-                    $inlineY += $inlineMaxH;
+                // 仅 white-space 非 nowrap/pre 时换行（CSS 2.2 §16.6）
+                if (!$astackNoWrap && $inlineX + $child->w > $containerW) {
+                    // CSS 2.2 §10.8: 行盒推进 min=line-height
+                    $lineBoxH = max($inlineMaxH, $astackLH);
+                    $inlineY += $lineBoxH;
                     $inlineX = 0;
                     $inlineMaxH = 0;
                 }
