@@ -298,6 +298,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             if (count($node->children) > 0) {
                 $stackY = $node->y + $borderTop + $paddingTop;
+                // AOT native_types 要求：变量在使用前必须显式初始化
+                $inlineCursorX = -1;
+                $inlineCursorY = 0;
+                $inlineLineMaxH = 0;
 
                 $containerW = PercentResolver::resolveContentWidth($node->style, $node->w);
 
@@ -469,6 +473,31 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         }
                     }
 
+
+                    // ── Inline-level children: participate in inline formatting context ──
+                    // CSS 2.2 §9.4.2: inline-level 子元素在行盒内水平排列，不参与 auto-stack
+                    $isInlineLevel = ($childDisplay === 'inline' || $childDisplay === 'inline-block' || self::isInlineType($child->type));
+                    if ($isInlineLevel) {
+                        // first inline child: start inline cursor
+                        if (!isset($inlineCursorX)) {
+                            $inlineCursorX = $node->x + $paddingLeft;
+                            $inlineCursorY = $node->y + $borderTop + $paddingTop;
+                            $inlineLineMaxH = 0;
+                        }
+                        // 换行判断：if child exceeds container content width
+                        $childW = $child->w;
+                        $contentRight = $node->x + $containerW;
+                        if ($inlineCursorX + $childW > $contentRight) {
+                            $inlineCursorY += $inlineLineMaxH;
+                            $inlineCursorX = $node->x + $paddingLeft;
+                            $inlineLineMaxH = 0;
+                        }
+                        $child->x = $inlineCursorX;
+                        $child->y = $inlineCursorY;
+                        $inlineCursorX += $childW;
+                        $inlineLineMaxH = max($inlineLineMaxH, $child->visualH);
+                        continue;
+                    }
 
                     // ── CSS 2.2 §8.3.1: 外边距折??──
                     // 仅在相同 BFC 内的 block 兄弟之间发生
@@ -834,6 +863,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $stackY = $childOffsetY;
         $prevMarginBottom = 0;
         $prevCollapsible = false;
+        // AOT native_types: inline cursor 必须先初始化
+        $inlineX = -1;
+        $inlineY = 0;
+        $inlineMaxH = 0;
 
         foreach ($node->children as $child) {
             $childStyle = $child->style;
@@ -882,6 +915,36 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $child->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $child->w, true));
             $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
 
+            // ── Inline-level children: horizontal layout in inline formatting context ──
+            $childDisplay = $childStyle['display'] ?? 'block';
+            $isInlineLevel = ($childDisplay === 'inline' || $childDisplay === 'inline-block' || self::isInlineType($child->type));
+            if ($isInlineLevel) {
+                if (!isset($inlineX)) {
+                    $inlineX = 0;
+                    $inlineY = $childOffsetY;
+                    $inlineMaxH = 0;
+                }
+                if ($inlineX + $child->w > $containerW) {
+                    $inlineY += $inlineMaxH;
+                    $inlineX = 0;
+                    $inlineMaxH = 0;
+                }
+                $child->x = $inlineX;
+                $child->y = $inlineY;
+                $inlineX += $child->w;
+                $inlineMaxH = max($inlineMaxH, $child->visualH);
+
+                if ($isCollapsible) {
+                    $prevMarginBottom = $mBottom;
+                    $prevCollapsible = true;
+                } else {
+                    $prevCollapsible = false;
+                }
+                continue;
+            }
+
+            $oldY = $child->y;
+
             // ── Auto-margin centering (CSS 2.2 §10.3.3) ──
             $childML = $childStyle['marginLeftAuto'] ?? false;
             $childMR = $childStyle['marginRightAuto'] ?? false;
@@ -894,7 +957,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $oldX = $child->x;
                         $this->resolver->getAbsolutePositioning()->resolveMarginAuto($child, $childStyle, $containerW, 0);
                         $dx = $child->x - $oldX;
-                        // _marginAutoShifted 在首次 auto-margin 中已置位，此处跳过重复位移
+                        // _marginAutoShifted ???首次 auto-margin ???已置位，此处跳过重复位移
                         $alreadyShifted = $child->style['_marginAutoShifted'] ?? false;
                         if ($dx !== 0 && !$alreadyShifted) {
                             foreach ($child->children as $grandchild) {
@@ -904,8 +967,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     }
                 }
             }
-
-            $oldY = $child->y;
 
             // CSS 2.2 §8.3.1: 外边距折??
             $childDisplay = $childStyle['display'] ?? 'block';
