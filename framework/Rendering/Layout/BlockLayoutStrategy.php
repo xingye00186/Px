@@ -299,7 +299,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             if (count($node->children) > 0) {
                 $stackY = $node->y + $borderTop + $paddingTop;
                 // AOT native_types 要求：变量在使用前必须显式初始化
-                $inlineCursorX = -1;
+                $inlineStarted = false;
+                $inlineCursorX = 0;
                 $inlineCursorY = 0;
                 $inlineLineMaxH = 0;
 
@@ -478,11 +479,12 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     // CSS 2.2 §9.4.2: inline-level 子元素在行盒内水平排列，不参与 auto-stack
                     $isInlineLevel = ($childDisplay === 'inline' || $childDisplay === 'inline-block' || self::isInlineType($child->type));
                     if ($isInlineLevel) {
-                        // first inline child: start inline cursor
-                        if (!isset($inlineCursorX)) {
+                        // first inline child: initialize inline cursor
+                        if (!$inlineStarted) {
                             $inlineCursorX = $node->x + $paddingLeft;
                             $inlineCursorY = $node->y + $borderTop + $paddingTop;
                             $inlineLineMaxH = 0;
+                            $inlineStarted = true;
                         }
                         // 换行判断：if child exceeds container content width
                         $childW = $child->w;
@@ -864,7 +866,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $prevMarginBottom = 0;
         $prevCollapsible = false;
         // AOT native_types: inline cursor 必须先初始化
-        $inlineX = -1;
+        $inlineStarted = false;
+        $inlineX = 0;
         $inlineY = 0;
         $inlineMaxH = 0;
 
@@ -919,10 +922,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $childDisplay = $childStyle['display'] ?? 'block';
             $isInlineLevel = ($childDisplay === 'inline' || $childDisplay === 'inline-block' || self::isInlineType($child->type));
             if ($isInlineLevel) {
-                if (!isset($inlineX)) {
+                if (!$inlineStarted) {
                     $inlineX = 0;
                     $inlineY = $childOffsetY;
                     $inlineMaxH = 0;
+                    $inlineStarted = true;
                 }
                 if ($inlineX + $child->w > $containerW) {
                     $inlineY += $inlineMaxH;
@@ -934,6 +938,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 $inlineX += $child->w;
                 $inlineMaxH = max($inlineMaxH, $child->visualH);
 
+                // Inline-level children are never margin-collapsible (they create BFC)
+                $isCollapsible = false;
                 if ($isCollapsible) {
                     $prevMarginBottom = $mBottom;
                     $prevCollapsible = true;
