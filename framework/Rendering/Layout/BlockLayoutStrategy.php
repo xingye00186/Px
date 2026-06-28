@@ -294,6 +294,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             // CSS 2.2 §8.4: padding box 起始于 border 内侧
             $borderTop = (int)($style['borderTopWidth'] ?? $style['borderWidth'] ?? 0);
+            $borderLeft = (int)($style['borderLeftWidth'] ?? $style['borderWidth'] ?? 0);
 
 
             if (count($node->children) > 0) {
@@ -447,7 +448,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     // 此处不再覆盖，否则居中偏移会被清除。
                     $childDisplayCheck = $childStyle['display'] ?? 'block';
                     if ($childDisplayCheck !== 'flex' && $childDisplayCheck !== 'inline-flex' && $childDisplayCheck !== 'grid') {
-                        $child->x = $node->x + $paddingLeft + $mLeft;
+                        $child->x = $node->x + $borderLeft + $paddingLeft + $mLeft;
                     }
 
                     $childML = $childStyle['marginLeftAuto'] ?? false;
@@ -651,8 +652,37 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             // CSS 2.2 §10.6.3: auto-height = distance from content edge top to last child bottom
             // CSS 2.2 §10.8: 对于只包含 inline-level 子元素的容器，行高贡献最小高度
             // line-box height = max(line-height, max child outer height)
+            $ahBorderTop = (int)($style['borderTopWidth'] ?? $style['borderWidth'] ?? 0);
             $ahPaddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
-            $contentTop = $node->y + $ahPaddingTop;
+            $ahBotBorder = (int)($style['borderBottomWidth'] ?? $style['borderWidth'] ?? 0);
+            $ahBotPad = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
+            $hasBottomCb = $ahBotBorder > 0 || $ahBotPad > 0;
+            $contentTop = $node->y + $ahBorderTop + $ahPaddingTop;
+
+            if ($hasBottomCb) {
+                $mbIdx = -1; $mbMax = 0; $mbCnt = -1;
+                foreach ($node->children as $mbCh) {
+                    $mbCnt++;
+                    $mbP = $mbCh->style['position'] ?? 'static';
+                    $mbD = $mbCh->style['display'] ?? 'block';
+                    if ($mbP === 'absolute' || $mbP === 'fixed' || $mbD === 'none') continue;
+                    $mbB = (int)($mbCh->y + $mbCh->visualH);
+                    if ($mbB > $mbMax) { $mbMax = $mbB; $mbIdx = $mbCnt; }
+                }
+                if ($mbIdx >= 0) {
+                    $mbCnt2 = -1;
+                    foreach ($node->children as $mbCh) {
+                        $mbCnt2++;
+                        if ($mbCnt2 !== $mbIdx) continue;
+                        $mbD = $mbCh->style['display'] ?? 'block';
+                        if ($mbD !== 'inline' && !in_array($mbCh->type, ['#text','text','span','b','strong','em','i','code','br','a','label'], true)) {
+                            $mbW = PercentResolver::resolveContentWidth($style, $node->w);
+                            $maxBottom += (int)PercentResolver::resolveMarginPaddingPercent($mbCh->style, 'marginBottom', 'marginBottomPercent', $mbW);
+                        }
+                        break;
+                    }
+                }
+            }
 
             // 检查容器自身的 line-height（仅对 inline formatting context 有效）
             $parentFontSize = (int)($node->style['fontSize'] ?? 16);
