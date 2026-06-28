@@ -340,7 +340,8 @@ class AbsolutePositioning implements AbsoluteStrategy
         if ($isMarginLeftAuto && $isMarginRightAuto && $totalBoxW > 0 && $parentContentW > $totalBoxW && $parentContentW > 0) {
             $remaining = $parentContentW - $totalBoxW;
 
-            $half = (int)($remaining / 2);
+            $half = (int)(($remaining + 1) / 2);
+            // CSS 2.1 §10.3.3: 浏览器把余数像素分配给 margin-left
 
             $node->x += $half;
             $appliedOffset = $half;

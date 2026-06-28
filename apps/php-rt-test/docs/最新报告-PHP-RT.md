@@ -1,129 +1,408 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-06-28 22:03:49 | **总耗时**: 134.3s
+**运行时间**: 2026-06-28 22:43:03 | **总耗时**: 178.6s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 5diff 🟡2 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 46diff 🔴11 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴10 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 33diff 🔴8 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-05-border | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 31diff 🔴9 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-06-border-radius | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴14 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-07-width-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 31diff 🔴9 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-08-min-max | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 48diff 🔴9 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-09-box-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 94diff 🔴29 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-10-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 138diff 🔴49 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-100-table-caption | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 7 | 66diff 🔴29 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-101-table-empty-cells | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 41diff 🔴15 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-102-column-span | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 32diff 🔴12 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-103-list-style-position | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 85diff 🔴35 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-104-margin-percent | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff | ⏭️ | ❌ 失败 | 1.1s |
-| prt-105-width-percent-chain | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 14diff | ⏭️ | ❌ 失败 | 1.2s |
-| prt-106-min-width-override | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 17diff 🔴1 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-107-max-width-constraint | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 17diff 🔴1 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-108-integ-overlap-layers | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 20diff 🔴1 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-109-integ-responsive-card | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 36diff 🟡1 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 32diff 🔴7 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-110-integ-complex-toolbar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ⚠️ 1 | 82diff 🔴6 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴7 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🔴10 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-14-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴14 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-15-position-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴11 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-16-top-left-right-bottom | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 47diff 🔴15 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-17-z-index | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴13 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-18-position-static | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-19-flex-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 46diff 🔴9 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-20-flex-direction | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 71diff 🔴15 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-21-flex-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 2 | 52diff 🔴10 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-22-flex-jc-start | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴10 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-23-flex-jc-center | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴11 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-24-flex-jc-end | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴11 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-25-flex-jc-between | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴10 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-26-flex-jc-around | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴11 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-27-flex-jc-evenly | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴11 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-28-flex-align-items | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 64diff 🔴16 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-29-flex-align-self | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🔴11 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-30-flex-grow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 68diff 🔴17 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-31-flex-order | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ✅ | 44diff 🔴10 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-32-flex-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 68diff 🔴15 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-33-grid-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴9 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-34-grid-fr | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴10 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-35-grid-repeat | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴16 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-36-grid-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🔴10 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-37-grid-span | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 52diff 🔴14 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-38-grid-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴13 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-39-grid-justify-self | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴11 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-40-grid-minmax | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🔴14 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-41-font-size | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 81diff 🔴14 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-42-font-weight | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 78diff 🔴12 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-43-text-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 81diff 🔴15 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-44-line-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 52diff 🔴10 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-45-text-indent | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 27diff 🔴6 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-46-white-space | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 53diff 🔴12 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-47-opacity | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 87diff 🔴27 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-48-visibility | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴7 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-49-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 25diff 🔴4 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-50-background | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 24diff 🔴7 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-51-integ-flex-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 90diff 🔴35 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-52-integ-card-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 136diff 🔴38 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-53-integ-form | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 121diff 🔴32 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-54-integ-navigation | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ✅ | 131diff 🔴51 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-55-integ-dashboard | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 109diff 🔴32 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-56-integ-fullpage | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 177diff 🔴61 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-57-margin-collapse | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴8 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-58-float-left | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 54diff 🔴13 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-59-float-right | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 54diff 🔴14 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-60-float-clear | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 49diff 🔴12 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-61-direction-rtl | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴6 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-62-text-transform | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 78diff 🔴13 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-63-word-break | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 68diff 🔴10 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-64-overflow-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 41diff 🔴7 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-65-vertical-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴20 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-66-letter-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 58diff 🔴10 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-67-font-variant | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 33diff 🔴5 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-68-scroll-container | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 48diff 🔴9 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-69-table-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 6 | 97diff 🔴36 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-70-grid-auto-flow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 90diff 🔴39 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-71-grid-areas | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 121diff 🔴37 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-72-integ-complex-sidebar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 548diff 🔴141 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-73-integ-media-object | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 2 | 147diff 🔴45 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-74-integ-holy-grail | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 161diff 🔴53 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-75-integ-masonry | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 138diff 🔴43 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-76-integ-complex-form | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 255diff 🔴69 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-77-position-sticky | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 15diff | ⏭️ | ❌ 失败 | 1.2s |
-| prt-78-clip-path | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 8diff | ⏭️ | ❌ 失败 | 1.2s |
-| prt-79-flex-basis-pct | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 17diff 🔴1 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-80-flex-align-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 1 | 14diff | ⏭️ | ❌ 失败 | 1.1s |
-| prt-81-flex-column-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff | ⏭️ | ❌ 失败 | 1.2s |
-| prt-82-flex-auto-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 11diff | ⏭️ | ❌ 失败 | 1.4s |
-| prt-83-grid-justify-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 14diff 🔴4 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-84-grid-align-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 24diff 🔴4 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-85-grid-auto-columns | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 17diff 🔴3 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-86-grid-item-order | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 29diff 🔴5 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-87-white-space-pre | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 46diff 🟡15 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-88-text-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 13diff 🟡2 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-89-word-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 9diff 🟡1 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-90-text-decoration | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff 🟡2 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-91-text-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff | ⏭️ | ❌ 失败 | 1.2s |
-| prt-92-filter | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 9diff | ⏭️ | ❌ 失败 | 1.1s |
-| prt-93-mix-blend-mode | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 7diff | ⏭️ | ❌ 失败 | 1.1s |
-| prt-94-backdrop-filter | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 6diff | ⏭️ | ❌ 失败 | 1.1s |
-| prt-95-outline-offset | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 8diff | ⏭️ | ❌ 失败 | 1.5s |
-| prt-96-box-shadow-spread | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 6diff | ⏭️ | ❌ 失败 | 1.2s |
-| prt-97-appearance-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 5diff | ⏭️ | ❌ 失败 | 1.1s |
-| prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 8diff 🟡1 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 65diff 🔴30 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 5diff 🟡2 | ⏭️ | ❌ 失败 | 2.7s |
+| prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴9 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff 🔴8 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 24diff 🔴6 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-05-border | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴10 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-06-border-radius | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴14 | ⏭️ | ❌ 失败 | 1.9s |
+| prt-07-width-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 49diff 🔴27 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-08-min-max | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴9 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-09-box-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 124diff 🔴43 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-10-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 178diff 🔴68 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-100-table-caption | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 7 | 154diff 🔴110 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-101-table-empty-cells | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 52diff 🔴29 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-102-column-span | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 141diff 🔴110 | ⏭️ | ❌ 失败 | 3.1s |
+| prt-103-list-style-position | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 153diff 🔴124 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-104-margin-percent | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 17diff | ⏭️ | ❌ 失败 | 1.6s |
+| prt-105-width-percent-chain | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 6diff | ⏭️ | ❌ 失败 | 1.4s |
+| prt-106-min-width-override | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 20diff 🔴1 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-107-max-width-constraint | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 19diff 🔴1 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-108-integ-overlap-layers | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴1 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-109-integ-responsive-card | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 23diff | ⏭️ | ❌ 失败 | 1.6s |
+| prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 26diff 🔴7 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-110-integ-complex-toolbar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ⚠️ 1 | 84diff 🔴38 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 32diff 🔴7 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴8 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-14-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴11 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-15-position-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴8 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-16-top-left-right-bottom | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴20 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-17-z-index | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴16 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-18-position-static | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴9 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-19-flex-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 44diff 🔴8 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-20-flex-direction | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 75diff 🔴18 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-21-flex-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 2 | 50diff 🔴12 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-22-flex-jc-start | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴8 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-23-flex-jc-center | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴9 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-24-flex-jc-end | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴9 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-25-flex-jc-between | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴8 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-26-flex-jc-around | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴9 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-27-flex-jc-evenly | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴9 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-28-flex-align-items | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 67diff 🔴17 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-29-flex-align-self | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 46diff 🔴12 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-30-flex-grow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 76diff 🔴17 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-31-flex-order | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ✅ | 47diff 🔴8 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-32-flex-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 76diff 🔴17 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-33-grid-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴8 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-34-grid-fr | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴8 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-35-grid-repeat | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴18 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-36-grid-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 47diff 🔴12 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-37-grid-span | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 56diff 🔴18 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-38-grid-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 33diff 🔴10 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-39-grid-justify-self | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 33diff 🔴7 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-40-grid-minmax | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴3 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-41-font-size | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 144diff 🔴70 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-42-font-weight | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 150diff 🔴59 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-43-text-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 126diff 🔴41 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-44-line-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 153diff 🔴77 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-45-text-indent | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 78diff 🔴32 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-46-white-space | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 226diff 🔴111 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-47-opacity | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 86diff 🔴28 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-48-visibility | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴9 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-49-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 21diff 🔴3 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-50-background | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 20diff 🔴5 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-51-integ-flex-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 113diff 🔴33 | ⏭️ | ❌ 失败 | 1.8s |
+| prt-52-integ-card-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 205diff 🔴70 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-53-integ-form | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 148diff 🔴49 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-54-integ-navigation | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ✅ | 152diff 🔴44 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-55-integ-dashboard | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 151diff 🔴54 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-56-integ-fullpage | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 225diff 🔴79 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-57-margin-collapse | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴9 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-58-float-left | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴12 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-59-float-right | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴12 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-60-float-clear | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴11 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-61-direction-rtl | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 98diff 🔴37 | ⏭️ | ❌ 失败 | 1.9s |
+| prt-62-text-transform | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 211diff 🔴101 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-63-word-break | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 120diff 🔴51 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-64-overflow-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 152diff 🔴79 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-65-vertical-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 134diff 🔴48 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-66-letter-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 180diff 🔴81 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-67-font-variant | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 82diff 🔴28 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-68-scroll-container | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴14 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-69-table-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 6 | 213diff 🔴74 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-70-grid-auto-flow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 118diff 🔴31 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-71-grid-areas | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 191diff 🔴71 | ⏭️ | ❌ 失败 | 2s |
+| prt-72-integ-complex-sidebar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 942diff 🔴392 | ⏭️ | ❌ 失败 | 2.2s |
+| prt-73-integ-media-object | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 2 | 421diff 🔴234 | ⏭️ | ❌ 失败 | 1.8s |
+| prt-74-integ-holy-grail | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 297diff 🔴137 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-75-integ-masonry | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 191diff 🔴66 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-76-integ-complex-form | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 442diff 🔴178 | ⏭️ | ❌ 失败 | 2.2s |
+| prt-77-position-sticky | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff | ⏭️ | ❌ 失败 | 1.6s |
+| prt-78-clip-path | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
+| prt-79-flex-basis-pct | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 9diff 🔴1 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-80-flex-align-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 1 | 5diff | ⏭️ | ❌ 失败 | 1.6s |
+| prt-81-flex-column-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 4diff | ⏭️ | ❌ 失败 | 1.6s |
+| prt-82-flex-auto-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 3.1s |
+| prt-83-grid-justify-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 10diff 🔴3 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-84-grid-align-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff 🔴4 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-85-grid-auto-columns | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 13diff 🔴3 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-86-grid-item-order | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 79diff 🔴30 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-87-white-space-pre | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 321diff 🔴176 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-88-text-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 217diff 🔴140 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-89-word-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴36 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-90-text-decoration | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 92diff 🔴78 | ⏭️ | ❌ 失败 | 1.8s |
+| prt-91-text-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🔴40 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-92-filter | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
+| prt-93-mix-blend-mode | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.6s |
+| prt-94-backdrop-filter | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
+| prt-95-outline-offset | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 1.5s |
+| prt-96-box-shadow-spread | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 1.6s |
+| prt-97-appearance-none | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
+| prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴37 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 87diff 🔴48 | ⏭️ | ❌ 失败 | 1.6s |
 
-**汇总**: 0 ✅ / 110 ❌ / 110 总计 (总耗时: 134.3s)
+**汇总**: 0 ✅ / 110 ❌ / 110 总计 (总耗时: 178.6s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
+> - prop background-color diff 300->529
+> - prop position diff 84->91
+> - prop width diff 640->771
+> - prop height diff 695->1176
+> - prop text-align diff 7->22
+> - prop white-space diff 11->189
+> - prop padding-top diff 78->82
+> - prop padding-left diff 90->93
+> - prop padding-right diff 90->93
+> - prop padding-bottom diff 79->83
+> - prop margin-bottom diff 56->59
+> - prop line-height diff 1->105
+> - prop flex-grow diff 34->47
 > - prt-01-margin geometry 0->4
 > - prt-01-margin mismatch 0->1
 > - prt-01-margin major 0->2
+> - prt-02-margin-auto structure 2->4
+> - prt-02-margin-auto major 3->4
+> - prt-03-negative-margin structure 2->4
+> - prt-03-negative-margin major 3->5
+> - prt-04-padding structure 2->3
+> - prt-04-padding major 1->2
+> - prt-05-border structure 2->4
+> - prt-05-border critical 9->10
+> - prt-05-border major 1->2
+> - prt-06-border-radius structure 2->6
+> - prt-06-border-radius major 0->1
+> - prt-07-width-height geometry 12->31
+> - prt-07-width-height structure 2->5
+> - prt-07-width-height critical 9->27
+> - prt-07-width-height major 1->3
+> - prt-08-min-max structure 2->5
+> - prt-08-min-max major 4->6
+> - prt-09-box-sizing geometry 33->73
+> - prt-09-box-sizing critical 29->43
+> - prt-09-box-sizing major 1->30
+> - prt-10-overflow geometry 59->98
+> - prt-10-overflow structure 8->17
+> - prt-10-overflow critical 49->68
+> - prt-10-overflow major 3->23
+> - prt-100-table-caption geometry 42->132
+> - prt-100-table-caption critical 29->110
+> - prt-100-table-caption major 0->11
+> - prt-101-table-empty-cells geometry 26->39
+> - prt-101-table-empty-cells critical 15->29
+> - prt-102-column-span geometry 21->132
+> - prt-102-column-span structure 0->1
+> - prt-102-column-span critical 12->110
+> - prt-102-column-span major 0->3
+> - prt-103-list-style-position geometry 53->126
+> - prt-103-list-style-position critical 35->124
+> - prt-106-min-width-override geometry 12->17
+> - prt-107-max-width-constraint geometry 12->16
+> - prt-11-display-types structure 2->4
+> - prt-110-integ-complex-toolbar geometry 60->63
+> - prt-110-integ-complex-toolbar critical 6->38
+> - prt-110-integ-complex-toolbar major 2->12
+> - prt-12-display-none structure 2->4
+> - prt-13-position-relative structure 2->5
+> - prt-13-position-relative major 3->6
+> - prt-14-position-absolute structure 2->5
+> - prt-14-position-absolute major 0->2
+> - prt-15-position-fixed structure 2->4
+> - prt-15-position-fixed major 0->2
+> - prt-16-top-left-right-bottom geometry 22->28
+> - prt-16-top-left-right-bottom mismatch 23->27
+> - prt-16-top-left-right-bottom structure 2->7
+> - prt-16-top-left-right-bottom critical 15->20
+> - prt-16-top-left-right-bottom major 3->7
+> - prt-17-z-index structure 2->5
+> - prt-17-z-index critical 13->16
+> - prt-18-position-static structure 2->5
+> - prt-18-position-static critical 8->9
+> - prt-19-flex-basic structure 2->5
+> - prt-20-flex-direction geometry 28->29
+> - prt-20-flex-direction structure 2->8
+> - prt-20-flex-direction critical 15->18
+> - prt-21-flex-wrap structure 2->6
+> - prt-21-flex-wrap critical 10->12
+> - prt-22-flex-jc-start geometry 16->17
+> - prt-22-flex-jc-start structure 2->5
+> - prt-22-flex-jc-start major 6->9
+> - prt-23-flex-jc-center geometry 16->17
+> - prt-23-flex-jc-center structure 2->5
+> - prt-23-flex-jc-center major 5->8
+> - prt-24-flex-jc-end geometry 16->17
+> - prt-24-flex-jc-end structure 2->5
+> - prt-24-flex-jc-end major 5->8
+> - prt-25-flex-jc-between geometry 16->17
+> - prt-25-flex-jc-between structure 2->5
+> - prt-25-flex-jc-between major 6->9
+> - prt-26-flex-jc-around geometry 16->17
+> - prt-26-flex-jc-around structure 2->5
+> - prt-26-flex-jc-around major 5->8
+> - prt-27-flex-jc-evenly geometry 16->17
+> - prt-27-flex-jc-evenly structure 2->5
+> - prt-27-flex-jc-evenly major 5->8
+> - prt-28-flex-align-items structure 2->7
+> - prt-28-flex-align-items critical 16->17
+> - prt-29-flex-align-self structure 2->5
+> - prt-29-flex-align-self critical 11->12
+> - prt-30-flex-grow geometry 26->29
+> - prt-30-flex-grow structure 2->8
+> - prt-30-flex-grow major 6->8
+> - prt-31-flex-order geometry 16->17
+> - prt-31-flex-order structure 2->5
+> - prt-31-flex-order major 4->5
+> - prt-32-flex-gap geometry 27->29
+> - prt-32-flex-gap structure 2->8
+> - prt-32-flex-gap critical 15->17
+> - prt-33-grid-basic structure 2->5
+> - prt-34-grid-fr structure 2->5
+> - prt-34-grid-fr major 4->5
+> - prt-35-grid-repeat geometry 20->25
+> - prt-35-grid-repeat structure 2->8
+> - prt-35-grid-repeat critical 16->18
+> - prt-35-grid-repeat major 2->7
+> - prt-36-grid-gap structure 2->6
+> - prt-36-grid-gap critical 10->12
+> - prt-36-grid-gap major 4->6
+> - prt-37-grid-span geometry 20->22
+> - prt-37-grid-span structure 2->7
+> - prt-37-grid-span critical 14->18
+> - prt-38-grid-align structure 2->4
+> - prt-38-grid-align major 0->1
+> - prt-39-grid-justify-self structure 2->4
+> - prt-39-grid-justify-self major 1->3
+> - prt-40-grid-minmax structure 2->6
+> - prt-40-grid-minmax major 4->10
+> - prt-41-font-size geometry 35->98
+> - prt-41-font-size mismatch 39->40
+> - prt-41-font-size critical 14->70
+> - prt-41-font-size major 10->14
+> - prt-42-font-weight geometry 32->93
+> - prt-42-font-weight mismatch 39->51
+> - prt-42-font-weight critical 12->59
+> - prt-43-text-align geometry 33->61
+> - prt-43-text-align mismatch 41->61
+> - prt-43-text-align critical 15->41
+> - prt-44-line-height geometry 23->102
+> - prt-44-line-height mismatch 24->46
+> - prt-44-line-height critical 10->77
+> - prt-45-text-indent geometry 11->52
+> - prt-45-text-indent mismatch 13->25
+> - prt-45-text-indent critical 6->32
+> - prt-45-text-indent major 3->4
+> - prt-46-white-space geometry 23->144
+> - prt-46-white-space mismatch 25->77
+> - prt-46-white-space critical 12->111
+> - prt-46-white-space major 5->12
+> - prt-47-opacity geometry 34->48
+> - prt-47-opacity critical 27->28
+> - prt-47-opacity major 6->15
+> - prt-48-visibility structure 2->5
+> - prt-48-visibility critical 7->9
+> - prt-50-background structure 2->3
+> - prt-50-background major 2->3
+> - prt-51-integ-flex-grid geometry 43->49
+> - prt-51-integ-flex-grid mismatch 45->51
+> - prt-51-integ-flex-grid structure 2->13
+> - prt-51-integ-flex-grid major 5->11
+> - prt-52-integ-card-grid geometry 47->103
+> - prt-52-integ-card-grid mismatch 81->85
+> - prt-52-integ-card-grid structure 8->17
+> - prt-52-integ-card-grid critical 38->70
+> - prt-52-integ-card-grid major 6->12
+> - prt-53-integ-form geometry 52->78
+> - prt-53-integ-form mismatch 59->61
+> - prt-53-integ-form critical 32->49
+> - prt-53-integ-form major 17->23
+> - prt-54-integ-navigation geometry 59->63
+> - prt-54-integ-navigation mismatch 70->72
+> - prt-54-integ-navigation structure 2->17
+> - prt-54-integ-navigation major 6->11
+> - prt-55-integ-dashboard geometry 42->74
+> - prt-55-integ-dashboard mismatch 61->67
+> - prt-55-integ-dashboard structure 6->10
+> - prt-55-integ-dashboard critical 32->54
+> - prt-56-integ-fullpage geometry 81->110
+> - prt-56-integ-fullpage mismatch 87->94
+> - prt-56-integ-fullpage structure 9->21
+> - prt-56-integ-fullpage critical 61->79
+> - prt-56-integ-fullpage major 17->22
+> - prt-57-margin-collapse structure 2->5
+> - prt-57-margin-collapse critical 8->9
+> - prt-57-margin-collapse major 2->3
+> - prt-58-float-left structure 2->6
+> - prt-58-float-left major 4->5
+> - prt-59-float-right structure 2->6
+> - prt-59-float-right major 3->5
+> - prt-60-float-clear structure 2->5
+> - prt-61-direction-rtl geometry 16->64
+> - prt-61-direction-rtl mismatch 22->33
+> - prt-61-direction-rtl critical 6->37
+> - prt-62-text-transform geometry 34->144
+> - prt-62-text-transform mismatch 37->60
+> - prt-62-text-transform critical 13->101
+> - prt-62-text-transform major 12->13
+> - prt-63-word-break geometry 26->74
+> - prt-63-word-break mismatch 37->42
+> - prt-63-word-break critical 10->51
+> - prt-64-overflow-wrap geometry 15->110
+> - prt-64-overflow-wrap mismatch 23->39
+> - prt-64-overflow-wrap critical 7->79
+> - prt-64-overflow-wrap major 3->8
+> - prt-65-vertical-align geometry 30->84
+> - prt-65-vertical-align mismatch 29->47
+> - prt-65-vertical-align critical 20->48
+> - prt-65-vertical-align major 6->7
+> - prt-66-letter-spacing geometry 25->120
+> - prt-66-letter-spacing mismatch 28->54
+> - prt-66-letter-spacing structure 5->6
+> - prt-66-letter-spacing critical 10->81
+> - prt-67-font-variant geometry 13->54
+> - prt-67-font-variant mismatch 17->26
+> - prt-67-font-variant critical 5->28
+> - prt-68-scroll-container geometry 18->26
+> - prt-68-scroll-container mismatch 28->29
+> - prt-68-scroll-container structure 2->7
+> - prt-68-scroll-container critical 9->14
+> - prt-69-table-basic geometry 46->125
+> - prt-69-table-basic mismatch 46->76
+> - prt-69-table-basic structure 5->12
+> - prt-69-table-basic critical 36->74
+> - prt-69-table-basic major 7->27
+> - prt-70-grid-auto-flow geometry 43->54
+> - prt-70-grid-auto-flow mismatch 44->55
+> - prt-70-grid-auto-flow structure 3->9
+> - prt-70-grid-auto-flow major 3->9
+> - prt-71-grid-areas geometry 51->108
+> - prt-71-grid-areas mismatch 59->75
+> - prt-71-grid-areas critical 37->71
+> - prt-71-grid-areas major 13->29
+> - prt-72-integ-complex-sidebar geometry 229->522
+> - prt-72-integ-complex-sidebar mismatch 278->367
+> - prt-72-integ-complex-sidebar structure 41->53
+> - prt-72-integ-complex-sidebar critical 141->392
+> - prt-72-integ-complex-sidebar major 64->95
+> - prt-73-integ-media-object geometry 59->300
+> - prt-73-integ-media-object mismatch 83->105
+> - prt-73-integ-media-object structure 5->16
+> - prt-73-integ-media-object critical 45->234
+> - prt-73-integ-media-object major 8->51
+> - prt-74-integ-holy-grail geometry 67->181
+> - prt-74-integ-holy-grail mismatch 79->103
+> - prt-74-integ-holy-grail critical 53->137
+> - prt-74-integ-holy-grail major 13->15
+> - prt-75-integ-masonry geometry 60->84
+> - prt-75-integ-masonry mismatch 76->88
+> - prt-75-integ-masonry structure 2->19
+> - prt-75-integ-masonry critical 43->66
+> - prt-76-integ-complex-form geometry 103->265
+> - prt-76-integ-complex-form mismatch 127->153
+> - prt-76-integ-complex-form critical 69->178
+> - prt-76-integ-complex-form major 18->52
+> - prt-77-position-sticky geometry 11->32
+> - prt-83-grid-justify-content major 4->5
+> - prt-86-grid-item-order geometry 16->68
+> - prt-86-grid-item-order critical 5->30
+> - prt-86-grid-item-order major 9->38
+> - prt-87-white-space-pre geometry 31->194
+> - prt-87-white-space-pre mismatch 15->121
+> - prt-87-white-space-pre structure 0->6
+> - prt-87-white-space-pre critical 0->176
+> - prt-88-text-overflow geometry 8->144
+> - prt-88-text-overflow mismatch 5->73
+> - prt-88-text-overflow critical 0->140
+> - prt-89-word-spacing geometry 7->40
+> - prt-89-word-spacing critical 0->36
+> - prt-89-word-spacing major 1->2
+> - prt-90-text-decoration geometry 12->86
+> - prt-90-text-decoration critical 0->78
+> - prt-90-text-decoration major 2->4
+> - prt-91-text-shadow geometry 7->44
+> - prt-91-text-shadow critical 0->40
+> - prt-91-text-shadow major 0->2
+> - prt-98-resize-both geometry 5->40
+> - prt-98-resize-both critical 0->37
+> - prt-98-resize-both major 1->3
+> - prt-99-table-layout-fixed geometry 43->67
+> - prt-99-table-layout-fixed critical 30->48
+> - prt-99-table-layout-fixed major 0->9
 >
 > ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
 
@@ -131,33 +410,33 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 40.3% | 470/1166 |
-| width | 45.1% | 526/1166 |
-| font-weight | 77.2% | 900/1166 |
-| position | 92.8% | 1082/1166 |
-| opacity | 99% | 1154/1166 |
-| text-align | 99.4% | 1159/1166 |
-| background-color | 68.3% | 645/945 |
-| top | 100% | 914/914 |
-| left | 100% | 914/914 |
-| font-size | 52% | 448/861 |
-| display | 100% | 791/791 |
-| color | 36.9% | 170/461 |
-| border-width | 100% | 234/234 |
-| gap | 11.8% | 18/152 |
-| padding-left | 39.6% | 59/149 |
-| padding-right | 39.6% | 59/149 |
-| padding-bottom | 47% | 70/149 |
-| padding-top | 47.7% | 71/149 |
-| margin-bottom | 56.9% | 74/130 |
+| height | 73.2% | 3220/4396 |
+| width | 82.5% | 3625/4396 |
+| position | 97.9% | 4305/4396 |
+| text-align | 99.5% | 4374/4396 |
+| opacity | 99.8% | 4388/4396 |
+| font-weight | 100% | 4396/4396 |
+| background-color | 87.6% | 3724/4253 |
+| top | 100% | 4147/4147 |
+| left | 100% | 4147/4147 |
+| font-size | 100% | 4093/4094 |
+| display | 100% | 3769/3769 |
+| white-space | 2.1% | 4/193 |
+| padding-left | 37.2% | 55/148 |
+| padding-right | 37.2% | 55/148 |
+| padding-bottom | 43.9% | 65/148 |
+| padding-top | 44.6% | 66/148 |
+| margin-bottom | 54.6% | 71/130 |
+| border-width | 100% | 117/117 |
+| gap | 16.7% | 18/108 |
+| line-height | 0% | 0/105 |
 | flex-shrink | 96.7% | 58/60 |
-| flex-grow | 41.4% | 24/58 |
-| border-radius | 100% | 36/36 |
-| flex-direction | 19.2% | 5/26 |
+| flex-grow | 19% | 11/58 |
+| flex-direction | 23.1% | 6/26 |
 | grid-template-columns | 0% | 0/24 |
 | margin-top | 31.8% | 7/22 |
 | margin-left | 57.1% | 12/21 |
-| white-space | 26.7% | 4/15 |
+| border-radius | 100% | 19/19 |
 | margin-right | 60% | 6/10 |
 | flex-wrap | 71.4% | 5/7 |
 | order | 0% | 0/6 |
@@ -173,10 +452,8 @@
 | grid-template-rows | 0% | 0/2 |
 | align-content | 0% | 0/2 |
 | text-decoration-line | 0% | 0/2 |
-| line-height | 50% | 1/2 |
 | justify-items | 0% | 0/1 |
 | grid-auto-rows | 0% | 0/1 |
-| text-decoration-color | 0% | 0/1 |
 | text-decoration-style | 0% | 0/1 |
 | text-decoration-thickness | 0% | 0/1 |
 | box-shadow | 0% | 0/1 |
@@ -189,6 +466,7 @@
 | visibility | 0% | 0/0 |
 | cursor | 0% | 0/0 |
 | direction | 0% | 0/0 |
+| color | 0% | 0/0 |
 | border-left-width | 0% | 0/0 |
 | border-left-color | 0% | 0/0 |
 | border-color | 0% | 0/0 |
@@ -206,115 +484,115 @@
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
 | prt-01-margin | 0 | 0 | **2** | 1 | 0 | 0 |
-| prt-02-margin-auto | 2 | **11** | **3** | 28 | 2 | 0 |
-| prt-03-negative-margin | 2 | **10** | **3** | 24 | 2 | 0 |
-| prt-04-padding | 2 | **8** | **1** | 19 | 2 | 0 |
-| prt-05-border | 2 | **9** | **1** | 17 | 2 | 0 |
-| prt-06-border-radius | 3 | **14** | 0 | 19 | 2 | 0 |
-| prt-07-width-height | 2 | **9** | **1** | 17 | 2 | 0 |
-| prt-08-min-max | 2 | **9** | **4** | 28 | 2 | 0 |
-| prt-09-box-sizing | 7 | **29** | **1** | 55 | 6 | 2 |
-| prt-10-overflow | 9 | **49** | **3** | 71 | 8 | 4 |
-| prt-100-table-caption | 0 | **29** | 0 | 24 | 0 | 7 |
-| prt-101-table-empty-cells | 0 | **15** | **4** | 15 | 0 | 3 |
-| prt-102-column-span | 1 | **12** | 0 | 11 | 0 | 2 |
-| prt-103-list-style-position | 0 | **35** | **6** | 32 | 0 | 4 |
-| prt-104-margin-percent | 0 | 0 | 0 | 9 | 0 | 0 |
-| prt-105-width-percent-chain | 0 | 0 | 0 | 5 | 0 | 0 |
-| prt-106-min-width-override | 0 | **1** | 0 | 5 | 0 | 2 |
-| prt-107-max-width-constraint | 0 | **1** | 0 | 5 | 0 | 1 |
-| prt-108-integ-overlap-layers | 0 | **1** | 0 | 10 | 0 | 0 |
-| prt-109-integ-responsive-card | 0 | 0 | **1** | 15 | 0 | 0 |
-| prt-11-display-types | 2 | **7** | **3** | 18 | 2 | 0 |
-| prt-110-integ-complex-toolbar | 0 | **6** | **2** | 22 | 0 | 1 |
-| prt-12-display-none | 2 | **7** | **4** | 23 | 2 | 0 |
-| prt-13-position-relative | 2 | **10** | **3** | 25 | 2 | 0 |
-| prt-14-position-absolute | 2 | **14** | 0 | 22 | 2 | 0 |
-| prt-15-position-fixed | 2 | **11** | 0 | 20 | 2 | 0 |
-| prt-16-top-left-right-bottom | 2 | **15** | **3** | 23 | 2 | 0 |
-| prt-17-z-index | 2 | **13** | **2** | 20 | 2 | 0 |
-| prt-18-position-static | 2 | **8** | **4** | 25 | 2 | 0 |
-| prt-19-flex-basic | 3 | **9** | **5** | 27 | 2 | 1 |
-| prt-20-flex-direction | 4 | **15** | **6** | 41 | 2 | 0 |
-| prt-21-flex-wrap | 3 | **10** | **7** | 28 | 2 | 2 |
-| prt-22-flex-jc-start | 3 | **10** | **6** | 21 | 2 | 0 |
-| prt-23-flex-jc-center | 3 | **11** | **5** | 21 | 2 | 0 |
-| prt-24-flex-jc-end | 3 | **11** | **5** | 21 | 2 | 0 |
-| prt-25-flex-jc-between | 2 | **10** | **6** | 20 | 2 | 0 |
-| prt-26-flex-jc-around | 2 | **11** | **5** | 20 | 2 | 0 |
-| prt-27-flex-jc-evenly | 2 | **11** | **5** | 20 | 2 | 0 |
-| prt-28-flex-align-items | 4 | **16** | **8** | 37 | 2 | 0 |
-| prt-29-flex-align-self | 3 | **11** | **5** | 26 | 2 | 0 |
-| prt-30-flex-grow | 4 | **17** | **6** | 40 | 2 | 2 |
-| prt-31-flex-order | 3 | **10** | **4** | 26 | 2 | 0 |
-| prt-32-flex-gap | 4 | **15** | **7** | 39 | 2 | 1 |
-| prt-33-grid-basic | 3 | **9** | **5** | 22 | 2 | 0 |
-| prt-34-grid-fr | 3 | **10** | **4** | 23 | 2 | 0 |
-| prt-35-grid-repeat | 3 | **16** | **2** | 29 | 2 | 0 |
-| prt-36-grid-gap | 3 | **10** | **4** | 25 | 2 | 0 |
-| prt-37-grid-span | 3 | **14** | **4** | 30 | 2 | 0 |
-| prt-38-grid-align | 3 | **13** | 0 | 22 | 2 | 0 |
-| prt-39-grid-justify-self | 3 | **11** | **1** | 23 | 2 | 0 |
-| prt-40-grid-minmax | 3 | **14** | **4** | 25 | 2 | 0 |
-| prt-41-font-size | 2 | **14** | **10** | 39 | 7 | 0 |
-| prt-42-font-weight | 2 | **12** | **12** | 39 | 7 | 0 |
-| prt-43-text-align | 2 | **15** | **12** | 41 | 7 | 0 |
-| prt-44-line-height | 2 | **10** | **7** | 24 | 5 | 0 |
-| prt-45-text-indent | 2 | **6** | **3** | 13 | 3 | 0 |
-| prt-46-white-space | 2 | **12** | **5** | 25 | 5 | 0 |
-| prt-47-opacity | 6 | **27** | **6** | 44 | 9 | 2 |
-| prt-48-visibility | 2 | **7** | **6** | 20 | 2 | 0 |
-| prt-49-outline | 2 | **4** | **4** | 15 | 2 | 0 |
-| prt-50-background | 2 | **7** | **2** | 13 | 2 | 0 |
-| prt-51-integ-flex-grid | 6 | **35** | **5** | 45 | 2 | 1 |
-| prt-52-integ-card-grid | 12 | **38** | **6** | 81 | 8 | 0 |
-| prt-53-integ-form | 4 | **32** | **17** | 59 | 10 | 0 |
-| prt-54-integ-navigation | 5 | **51** | **6** | 70 | 2 | 0 |
-| prt-55-integ-dashboard | 6 | **32** | **10** | 61 | 6 | 1 |
-| prt-56-integ-fullpage | 8 | **61** | **17** | 87 | 9 | 0 |
-| prt-57-margin-collapse | 2 | **8** | **2** | 22 | 2 | 0 |
-| prt-58-float-left | 2 | **13** | **4** | 30 | 2 | 0 |
-| prt-59-float-right | 2 | **14** | **3** | 30 | 2 | 0 |
-| prt-60-float-clear | 2 | **12** | **4** | 27 | 2 | 0 |
-| prt-61-direction-rtl | 2 | **6** | **6** | 22 | 3 | 0 |
-| prt-62-text-transform | 2 | **13** | **12** | 37 | 7 | 0 |
-| prt-63-word-break | 2 | **10** | **8** | 37 | 5 | 0 |
-| prt-64-overflow-wrap | 2 | **7** | **3** | 23 | 3 | 1 |
-| prt-65-vertical-align | 2 | **20** | **6** | 29 | 3 | 0 |
-| prt-66-letter-spacing | 2 | **10** | **9** | 28 | 5 | 0 |
-| prt-67-font-variant | 2 | **5** | **5** | 17 | 3 | 0 |
-| prt-68-scroll-container | 2 | **9** | **6** | 28 | 2 | 0 |
-| prt-69-table-basic | 2 | **36** | **7** | 46 | 5 | 6 |
-| prt-70-grid-auto-flow | 3 | **39** | **3** | 44 | 3 | 0 |
-| prt-71-grid-areas | 3 | **37** | **13** | 59 | 11 | 0 |
-| prt-72-integ-complex-sidebar | 31 | **141** | **64** | 278 | 41 | 4 |
-| prt-73-integ-media-object | 7 | **45** | **8** | 83 | 5 | 2 |
-| prt-74-integ-holy-grail | 8 | **53** | **13** | 79 | 15 | 1 |
-| prt-75-integ-masonry | 3 | **43** | **16** | 76 | 2 | 0 |
-| prt-76-integ-complex-form | 18 | **69** | **18** | 127 | 25 | 0 |
-| prt-77-position-sticky | 0 | 0 | 0 | 4 | 0 | 0 |
-| prt-78-clip-path | 0 | 0 | 0 | 2 | 0 | 0 |
-| prt-79-flex-basis-pct | 0 | **1** | **4** | 5 | 0 | 0 |
-| prt-80-flex-align-content | 0 | 0 | 0 | 3 | 0 | 1 |
-| prt-81-flex-column-gap | 0 | 0 | 0 | 3 | 0 | 0 |
-| prt-82-flex-auto-margin | 0 | 0 | 0 | 2 | 0 | 0 |
-| prt-83-grid-justify-content | 0 | **4** | **4** | 4 | 0 | 0 |
-| prt-84-grid-align-content | 0 | **4** | **8** | 9 | 0 | 0 |
-| prt-85-grid-auto-columns | 0 | **3** | **6** | 6 | 0 | 0 |
-| prt-86-grid-item-order | 0 | **5** | **9** | 13 | 0 | 0 |
-| prt-87-white-space-pre | 0 | 0 | **15** | 15 | 0 | 0 |
-| prt-88-text-overflow | 0 | 0 | **2** | 5 | 0 | 0 |
-| prt-89-word-spacing | 0 | 0 | **1** | 2 | 0 | 0 |
-| prt-90-text-decoration | 0 | 0 | **2** | 7 | 0 | 0 |
-| prt-91-text-shadow | 0 | 0 | 0 | 5 | 0 | 0 |
-| prt-92-filter | 0 | 0 | 0 | 2 | 0 | 0 |
-| prt-93-mix-blend-mode | 0 | 0 | 0 | 2 | 0 | 0 |
-| prt-94-backdrop-filter | 0 | 0 | 0 | 2 | 0 | 0 |
-| prt-95-outline-offset | 0 | 0 | 0 | 5 | 0 | 0 |
-| prt-96-box-shadow-spread | 0 | 0 | 0 | 3 | 0 | 0 |
-| prt-97-appearance-none | 0 | 0 | 0 | 2 | 0 | 0 |
-| prt-98-resize-both | 0 | 0 | **1** | 3 | 0 | 0 |
-| prt-99-table-layout-fixed | 0 | **30** | 0 | 22 | 0 | 4 |
+| prt-02-margin-auto | 0 | **9** | **4** | 21 | 4 | 0 |
+| prt-03-negative-margin | 0 | **8** | **5** | 17 | 4 | 0 |
+| prt-04-padding | 0 | **6** | **2** | 12 | 3 | 0 |
+| prt-05-border | 0 | **10** | **2** | 12 | 4 | 0 |
+| prt-06-border-radius | 0 | **14** | **1** | 18 | 6 | 0 |
+| prt-07-width-height | 0 | **27** | **3** | 13 | 5 | 0 |
+| prt-08-min-max | 0 | **9** | **6** | 21 | 5 | 0 |
+| prt-09-box-sizing | 1 | **43** | **30** | 47 | 4 | 2 |
+| prt-10-overflow | 1 | **68** | **23** | 63 | 17 | 4 |
+| prt-100-table-caption | 0 | **110** | **11** | 22 | 0 | 7 |
+| prt-101-table-empty-cells | 0 | **29** | **2** | 13 | 0 | 3 |
+| prt-102-column-span | 1 | **110** | **3** | 8 | 1 | 2 |
+| prt-103-list-style-position | 0 | **124** | 0 | 27 | 0 | 4 |
+| prt-104-margin-percent | 0 | 0 | 0 | 7 | 0 | 0 |
+| prt-105-width-percent-chain | 0 | 0 | 0 | 3 | 0 | 0 |
+| prt-106-min-width-override | 0 | **1** | 0 | 3 | 0 | 2 |
+| prt-107-max-width-constraint | 0 | **1** | 0 | 3 | 0 | 1 |
+| prt-108-integ-overlap-layers | 0 | **1** | 0 | 8 | 0 | 0 |
+| prt-109-integ-responsive-card | 0 | 0 | 0 | 13 | 0 | 0 |
+| prt-11-display-types | 0 | **7** | **3** | 11 | 4 | 0 |
+| prt-110-integ-complex-toolbar | 0 | **38** | **12** | 21 | 0 | 1 |
+| prt-12-display-none | 0 | **7** | **3** | 16 | 4 | 0 |
+| prt-13-position-relative | 0 | **8** | **6** | 20 | 5 | 0 |
+| prt-14-position-absolute | 0 | **11** | **2** | 17 | 5 | 0 |
+| prt-15-position-fixed | 0 | **8** | **2** | 13 | 4 | 0 |
+| prt-16-top-left-right-bottom | 0 | **20** | **7** | 27 | 7 | 0 |
+| prt-17-z-index | 0 | **16** | **1** | 18 | 5 | 0 |
+| prt-18-position-static | 0 | **9** | **4** | 20 | 5 | 0 |
+| prt-19-flex-basic | 0 | **8** | **5** | 22 | 5 | 1 |
+| prt-20-flex-direction | 0 | **18** | **1** | 38 | 8 | 0 |
+| prt-21-flex-wrap | 0 | **12** | **5** | 23 | 6 | 2 |
+| prt-22-flex-jc-start | 0 | **8** | **9** | 19 | 5 | 0 |
+| prt-23-flex-jc-center | 0 | **9** | **8** | 19 | 5 | 0 |
+| prt-24-flex-jc-end | 0 | **9** | **8** | 19 | 5 | 0 |
+| prt-25-flex-jc-between | 0 | **8** | **9** | 18 | 5 | 0 |
+| prt-26-flex-jc-around | 0 | **9** | **8** | 18 | 5 | 0 |
+| prt-27-flex-jc-evenly | 0 | **9** | **8** | 18 | 5 | 0 |
+| prt-28-flex-align-items | 0 | **17** | **7** | 35 | 7 | 0 |
+| prt-29-flex-align-self | 0 | **12** | **4** | 24 | 5 | 0 |
+| prt-30-flex-grow | 0 | **17** | **8** | 39 | 8 | 2 |
+| prt-31-flex-order | 0 | **8** | **5** | 25 | 5 | 0 |
+| prt-32-flex-gap | 0 | **17** | **3** | 39 | 8 | 1 |
+| prt-33-grid-basic | 0 | **8** | **5** | 20 | 5 | 0 |
+| prt-34-grid-fr | 0 | **8** | **5** | 20 | 5 | 0 |
+| prt-35-grid-repeat | 0 | **18** | **7** | 29 | 8 | 0 |
+| prt-36-grid-gap | 0 | **12** | **6** | 23 | 6 | 0 |
+| prt-37-grid-span | 0 | **18** | **4** | 27 | 7 | 0 |
+| prt-38-grid-align | 0 | **10** | **1** | 18 | 4 | 0 |
+| prt-39-grid-justify-self | 0 | **7** | **3** | 19 | 4 | 0 |
+| prt-40-grid-minmax | 0 | **3** | **10** | 23 | 6 | 0 |
+| prt-41-font-size | 0 | **70** | **14** | 40 | 6 | 0 |
+| prt-42-font-weight | 0 | **59** | **12** | 51 | 6 | 0 |
+| prt-43-text-align | 0 | **41** | **6** | 61 | 4 | 0 |
+| prt-44-line-height | 0 | **77** | **5** | 46 | 5 | 0 |
+| prt-45-text-indent | 0 | **32** | **4** | 25 | 1 | 0 |
+| prt-46-white-space | 0 | **111** | **12** | 77 | 5 | 0 |
+| prt-47-opacity | 1 | **28** | **15** | 33 | 5 | 2 |
+| prt-48-visibility | 0 | **9** | **4** | 18 | 5 | 0 |
+| prt-49-outline | 0 | **3** | **4** | 12 | 2 | 0 |
+| prt-50-background | 0 | **5** | **3** | 9 | 3 | 0 |
+| prt-51-integ-flex-grid | 0 | **33** | **11** | 51 | 13 | 1 |
+| prt-52-integ-card-grid | 3 | **70** | **12** | 85 | 17 | 0 |
+| prt-53-integ-form | 1 | **49** | **23** | 61 | 9 | 0 |
+| prt-54-integ-navigation | 0 | **44** | **11** | 72 | 17 | 0 |
+| prt-55-integ-dashboard | 0 | **54** | **8** | 67 | 10 | 1 |
+| prt-56-integ-fullpage | 0 | **79** | **22** | 94 | 21 | 0 |
+| prt-57-margin-collapse | 0 | **9** | **3** | 17 | 5 | 0 |
+| prt-58-float-left | 0 | **12** | **5** | 25 | 6 | 0 |
+| prt-59-float-right | 0 | **12** | **5** | 25 | 6 | 0 |
+| prt-60-float-clear | 0 | **11** | **4** | 20 | 5 | 0 |
+| prt-61-direction-rtl | 0 | **37** | **6** | 33 | 1 | 0 |
+| prt-62-text-transform | 0 | **101** | **13** | 60 | 7 | 0 |
+| prt-63-word-break | 0 | **51** | **5** | 42 | 4 | 0 |
+| prt-64-overflow-wrap | 0 | **79** | **8** | 39 | 3 | 1 |
+| prt-65-vertical-align | 0 | **48** | **7** | 47 | 3 | 0 |
+| prt-66-letter-spacing | 0 | **81** | **6** | 54 | 6 | 0 |
+| prt-67-font-variant | 0 | **28** | **5** | 26 | 2 | 0 |
+| prt-68-scroll-container | 0 | **14** | **4** | 29 | 7 | 0 |
+| prt-69-table-basic | 0 | **74** | **27** | 76 | 12 | 6 |
+| prt-70-grid-auto-flow | 0 | **31** | **9** | 55 | 9 | 0 |
+| prt-71-grid-areas | 1 | **71** | **29** | 75 | 8 | 0 |
+| prt-72-integ-complex-sidebar | 8 | **392** | **95** | 367 | 53 | 4 |
+| prt-73-integ-media-object | 1 | **234** | **51** | 105 | 16 | 2 |
+| prt-74-integ-holy-grail | 0 | **137** | **15** | 103 | 13 | 1 |
+| prt-75-integ-masonry | 0 | **66** | **4** | 88 | 19 | 0 |
+| prt-76-integ-complex-form | 5 | **178** | **52** | 153 | 24 | 0 |
+| prt-77-position-sticky | 0 | 0 | 0 | 2 | 0 | 0 |
+| prt-78-clip-path | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-79-flex-basis-pct | 0 | **1** | **4** | 3 | 0 | 0 |
+| prt-80-flex-align-content | 0 | 0 | 0 | 1 | 0 | 1 |
+| prt-81-flex-column-gap | 0 | 0 | 0 | 1 | 0 | 0 |
+| prt-82-flex-auto-margin | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-83-grid-justify-content | 0 | **3** | **5** | 2 | 0 | 0 |
+| prt-84-grid-align-content | 0 | **4** | **8** | 7 | 0 | 0 |
+| prt-85-grid-auto-columns | 0 | **3** | **6** | 4 | 0 | 0 |
+| prt-86-grid-item-order | 0 | **30** | **38** | 11 | 0 | 0 |
+| prt-87-white-space-pre | 0 | **176** | **9** | 121 | 6 | 0 |
+| prt-88-text-overflow | 0 | **140** | **2** | 73 | 0 | 0 |
+| prt-89-word-spacing | 0 | **36** | **2** | 1 | 0 | 0 |
+| prt-90-text-decoration | 0 | **78** | **4** | 6 | 0 | 0 |
+| prt-91-text-shadow | 0 | **40** | **2** | 1 | 0 | 0 |
+| prt-92-filter | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-93-mix-blend-mode | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-94-backdrop-filter | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-95-outline-offset | 0 | 0 | 0 | 3 | 0 | 0 |
+| prt-96-box-shadow-spread | 0 | 0 | 0 | 1 | 0 | 0 |
+| prt-97-appearance-none | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-98-resize-both | 0 | **37** | **3** | 1 | 0 | 0 |
+| prt-99-table-layout-fixed | 0 | **48** | **9** | 20 | 0 | 4 |
 
 ---
 
