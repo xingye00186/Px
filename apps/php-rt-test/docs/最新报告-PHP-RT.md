@@ -1,121 +1,121 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-06-28 22:43:03 | **总耗时**: 178.6s
+**运行时间**: 2026-06-29 07:44:50 | **总耗时**: 172.1s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 5diff 🟡2 | ⏭️ | ❌ 失败 | 2.7s |
-| prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴9 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff 🔴8 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 24diff 🔴6 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-05-border | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴10 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-06-border-radius | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴14 | ⏭️ | ❌ 失败 | 1.9s |
-| prt-07-width-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 49diff 🔴27 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-08-min-max | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴9 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-09-box-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 124diff 🔴43 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-10-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 178diff 🔴68 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-100-table-caption | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 7 | 154diff 🔴110 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-101-table-empty-cells | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 52diff 🔴29 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-102-column-span | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 141diff 🔴110 | ⏭️ | ❌ 失败 | 3.1s |
-| prt-103-list-style-position | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 153diff 🔴124 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-104-margin-percent | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 17diff | ⏭️ | ❌ 失败 | 1.6s |
-| prt-105-width-percent-chain | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 6diff | ⏭️ | ❌ 失败 | 1.4s |
-| prt-106-min-width-override | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 20diff 🔴1 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-107-max-width-constraint | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 19diff 🔴1 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-108-integ-overlap-layers | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴1 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-109-integ-responsive-card | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 23diff | ⏭️ | ❌ 失败 | 1.6s |
-| prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 26diff 🔴7 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-110-integ-complex-toolbar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ⚠️ 1 | 84diff 🔴38 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 32diff 🔴7 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴8 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-14-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴11 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-15-position-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴8 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-16-top-left-right-bottom | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴20 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-17-z-index | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴16 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-18-position-static | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴9 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-19-flex-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 44diff 🔴8 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-20-flex-direction | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 75diff 🔴18 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-21-flex-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 2 | 50diff 🔴12 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-22-flex-jc-start | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴8 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-23-flex-jc-center | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴9 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-24-flex-jc-end | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴9 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-25-flex-jc-between | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴8 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-26-flex-jc-around | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴9 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-27-flex-jc-evenly | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴9 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-28-flex-align-items | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 67diff 🔴17 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-29-flex-align-self | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 46diff 🔴12 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-30-flex-grow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 76diff 🔴17 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-31-flex-order | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ✅ | 47diff 🔴8 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-32-flex-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 76diff 🔴17 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-33-grid-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴8 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-34-grid-fr | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴8 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-35-grid-repeat | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴18 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-36-grid-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 47diff 🔴12 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-37-grid-span | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 56diff 🔴18 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-38-grid-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 33diff 🔴10 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-39-grid-justify-self | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 33diff 🔴7 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-40-grid-minmax | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴3 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-41-font-size | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 144diff 🔴70 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-42-font-weight | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 150diff 🔴59 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-43-text-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 126diff 🔴41 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-44-line-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 153diff 🔴77 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-45-text-indent | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 78diff 🔴32 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-46-white-space | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 226diff 🔴111 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-47-opacity | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 86diff 🔴28 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-48-visibility | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴9 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-49-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 21diff 🔴3 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-50-background | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 20diff 🔴5 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-51-integ-flex-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 113diff 🔴33 | ⏭️ | ❌ 失败 | 1.8s |
-| prt-52-integ-card-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 205diff 🔴70 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-53-integ-form | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 148diff 🔴49 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-54-integ-navigation | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ✅ | 152diff 🔴44 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-55-integ-dashboard | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 151diff 🔴54 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-56-integ-fullpage | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 225diff 🔴79 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-57-margin-collapse | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴9 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-58-float-left | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴12 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-59-float-right | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴12 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-60-float-clear | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴11 | ⏭️ | ❌ 失败 | 1.4s |
-| prt-61-direction-rtl | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 98diff 🔴37 | ⏭️ | ❌ 失败 | 1.9s |
-| prt-62-text-transform | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 211diff 🔴101 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-63-word-break | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 120diff 🔴51 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-64-overflow-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 152diff 🔴79 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-65-vertical-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 134diff 🔴48 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-66-letter-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 180diff 🔴81 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-67-font-variant | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 82diff 🔴28 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-68-scroll-container | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴14 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-69-table-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 6 | 213diff 🔴74 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-70-grid-auto-flow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 118diff 🔴31 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-71-grid-areas | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 191diff 🔴71 | ⏭️ | ❌ 失败 | 2s |
-| prt-72-integ-complex-sidebar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 942diff 🔴392 | ⏭️ | ❌ 失败 | 2.2s |
-| prt-73-integ-media-object | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 2 | 421diff 🔴234 | ⏭️ | ❌ 失败 | 1.8s |
-| prt-74-integ-holy-grail | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 297diff 🔴137 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-75-integ-masonry | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 191diff 🔴66 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-76-integ-complex-form | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 442diff 🔴178 | ⏭️ | ❌ 失败 | 2.2s |
-| prt-77-position-sticky | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff | ⏭️ | ❌ 失败 | 1.6s |
-| prt-78-clip-path | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
-| prt-79-flex-basis-pct | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 9diff 🔴1 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-80-flex-align-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 1 | 5diff | ⏭️ | ❌ 失败 | 1.6s |
-| prt-81-flex-column-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 4diff | ⏭️ | ❌ 失败 | 1.6s |
-| prt-82-flex-auto-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 3.1s |
-| prt-83-grid-justify-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 10diff 🔴3 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-84-grid-align-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff 🔴4 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-85-grid-auto-columns | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 13diff 🔴3 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-86-grid-item-order | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 79diff 🔴30 | ⏭️ | ❌ 失败 | 1.6s |
-| prt-87-white-space-pre | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 321diff 🔴176 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-88-text-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 217diff 🔴140 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-89-word-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴36 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-90-text-decoration | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 92diff 🔴78 | ⏭️ | ❌ 失败 | 1.8s |
-| prt-91-text-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🔴40 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-92-filter | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
-| prt-93-mix-blend-mode | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.6s |
-| prt-94-backdrop-filter | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
-| prt-95-outline-offset | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 1.5s |
-| prt-96-box-shadow-spread | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 1.6s |
-| prt-97-appearance-none | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
-| prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴37 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 87diff 🔴48 | ⏭️ | ❌ 失败 | 1.6s |
+| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 1.6s |
+| prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴9 | ⏭️ | ❌ 失败 | 4.8s |
+| prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff 🔴8 | ⏭️ | ❌ 失败 | 4.7s |
+| prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 24diff 🔴6 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-05-border | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴10 | ⏭️ | ❌ 失败 | 4.8s |
+| prt-06-border-radius | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴14 | ⏭️ | ❌ 失败 | 4.8s |
+| prt-07-width-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 49diff 🔴27 | ⏭️ | ❌ 失败 | 4.8s |
+| prt-08-min-max | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴9 | ⏭️ | ❌ 失败 | 4.7s |
+| prt-09-box-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 124diff 🔴43 | ⏭️ | ❌ 失败 | 4.7s |
+| prt-10-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 178diff 🔴68 | ⏭️ | ❌ 失败 | 4.7s |
+| prt-100-table-caption | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 7 | 154diff 🔴110 | ⏭️ | ❌ 失败 | 4.8s |
+| prt-101-table-empty-cells | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 52diff 🔴29 | ⏭️ | ❌ 失败 | 4.9s |
+| prt-102-column-span | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 141diff 🔴110 | ⏭️ | ❌ 失败 | 5.3s |
+| prt-103-list-style-position | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 153diff 🔴124 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-104-margin-percent | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 17diff | ⏭️ | ❌ 失败 | 1.2s |
+| prt-105-width-percent-chain | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 6diff | ⏭️ | ❌ 失败 | 1.3s |
+| prt-106-min-width-override | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 20diff 🔴1 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-107-max-width-constraint | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 19diff 🔴1 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-108-integ-overlap-layers | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴1 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-109-integ-responsive-card | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 23diff | ⏭️ | ❌ 失败 | 1.1s |
+| prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 26diff 🔴7 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-110-integ-complex-toolbar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ⚠️ 1 | 84diff 🔴38 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 32diff 🔴7 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-14-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴11 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-15-position-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-16-top-left-right-bottom | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴20 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-17-z-index | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴16 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-18-position-static | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴9 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-19-flex-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 44diff 🔴8 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-20-flex-direction | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 75diff 🔴18 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-21-flex-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 2 | 50diff 🔴12 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-22-flex-jc-start | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-23-flex-jc-center | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴9 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-24-flex-jc-end | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴9 | ⏭️ | ❌ 失败 | 2.5s |
+| prt-25-flex-jc-between | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-26-flex-jc-around | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴9 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-27-flex-jc-evenly | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴9 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-28-flex-align-items | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 67diff 🔴17 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-29-flex-align-self | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 46diff 🔴12 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-30-flex-grow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 76diff 🔴17 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-31-flex-order | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ✅ | 47diff 🔴8 | ⏭️ | ❌ 失败 | 1s |
+| prt-32-flex-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 76diff 🔴17 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-33-grid-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-34-grid-fr | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴8 | ⏭️ | ❌ 失败 | 1s |
+| prt-35-grid-repeat | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴18 | ⏭️ | ❌ 失败 | 1s |
+| prt-36-grid-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 47diff 🔴12 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-37-grid-span | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 56diff 🔴18 | ⏭️ | ❌ 失败 | 1s |
+| prt-38-grid-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 33diff 🔴10 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-39-grid-justify-self | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 33diff 🔴7 | ⏭️ | ❌ 失败 | 1s |
+| prt-40-grid-minmax | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴3 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-41-font-size | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 144diff 🔴70 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-42-font-weight | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 150diff 🔴59 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-43-text-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 126diff 🔴41 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-44-line-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 153diff 🔴77 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-45-text-indent | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 78diff 🔴32 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-46-white-space | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 226diff 🔴111 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-47-opacity | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 86diff 🔴28 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-48-visibility | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴9 | ⏭️ | ❌ 失败 | 1s |
+| prt-49-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 21diff 🔴3 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-50-background | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 20diff 🔴5 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-51-integ-flex-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 113diff 🔴33 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-52-integ-card-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 205diff 🔴70 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-53-integ-form | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 148diff 🔴49 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-54-integ-navigation | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ✅ | 152diff 🔴44 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-55-integ-dashboard | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 151diff 🔴54 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-56-integ-fullpage | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 225diff 🔴79 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-57-margin-collapse | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴9 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-58-float-left | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴12 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-59-float-right | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴12 | ⏭️ | ❌ 失败 | 1s |
+| prt-60-float-clear | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴11 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-61-direction-rtl | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 98diff 🔴37 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-62-text-transform | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 211diff 🔴101 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-63-word-break | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 120diff 🔴51 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-64-overflow-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 152diff 🔴79 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-65-vertical-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 134diff 🔴48 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-66-letter-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 180diff 🔴81 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-67-font-variant | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 82diff 🔴28 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-68-scroll-container | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴14 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-69-table-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 6 | 213diff 🔴74 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-70-grid-auto-flow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 118diff 🔴31 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-71-grid-areas | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 191diff 🔴71 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-72-integ-complex-sidebar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 942diff 🔴392 | ⏭️ | ❌ 失败 | 2s |
+| prt-73-integ-media-object | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 2 | 421diff 🔴234 | ⏭️ | ❌ 失败 | 1.4s |
+| prt-74-integ-holy-grail | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 297diff 🔴137 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-75-integ-masonry | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 191diff 🔴66 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-76-integ-complex-form | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 442diff 🔴178 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-77-position-sticky | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff | ⏭️ | ❌ 失败 | 1.4s |
+| prt-78-clip-path | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1s |
+| prt-79-flex-basis-pct | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 9diff 🔴1 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-80-flex-align-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 1 | 5diff | ⏭️ | ❌ 失败 | 1.1s |
+| prt-81-flex-column-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 4diff | ⏭️ | ❌ 失败 | 1.2s |
+| prt-82-flex-auto-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 1.2s |
+| prt-83-grid-justify-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 10diff 🔴3 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-84-grid-align-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff 🔴4 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-85-grid-auto-columns | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 13diff 🔴3 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-86-grid-item-order | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 79diff 🔴30 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-87-white-space-pre | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 321diff 🔴176 | ⏭️ | ❌ 失败 | 1.5s |
+| prt-88-text-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 217diff 🔴140 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-89-word-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴36 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-90-text-decoration | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 92diff 🔴78 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-91-text-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🔴40 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-92-filter | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
+| prt-93-mix-blend-mode | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
+| prt-94-backdrop-filter | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
+| prt-95-outline-offset | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 1.1s |
+| prt-96-box-shadow-spread | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 1.2s |
+| prt-97-appearance-none | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
+| prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴37 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 87diff 🔴48 | ⏭️ | ❌ 失败 | 1.1s |
 
-**汇总**: 0 ✅ / 110 ❌ / 110 总计 (总耗时: 178.6s)
+**汇总**: 1 ✅ / 109 ❌ / 110 总计 (总耗时: 172.1s)
 
 ## 回归判定
 
@@ -124,7 +124,7 @@
 > - prop background-color diff 300->529
 > - prop position diff 84->91
 > - prop width diff 640->771
-> - prop height diff 695->1176
+> - prop height diff 695->1175
 > - prop text-align diff 7->22
 > - prop white-space diff 11->189
 > - prop padding-top diff 78->82
@@ -134,9 +134,6 @@
 > - prop margin-bottom diff 56->59
 > - prop line-height diff 1->105
 > - prop flex-grow diff 34->47
-> - prt-01-margin geometry 0->4
-> - prt-01-margin mismatch 0->1
-> - prt-01-margin major 0->2
 > - prt-02-margin-auto structure 2->4
 > - prt-02-margin-auto major 3->4
 > - prt-03-negative-margin structure 2->4
@@ -410,7 +407,7 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 73.2% | 3220/4396 |
+| height | 73.3% | 3221/4396 |
 | width | 82.5% | 3625/4396 |
 | position | 97.9% | 4305/4396 |
 | text-align | 99.5% | 4374/4396 |
@@ -483,7 +480,7 @@
 
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
-| prt-01-margin | 0 | 0 | **2** | 1 | 0 | 0 |
+| prt-01-margin | 0 | 0 | 0 | 0 | 0 | 0 |
 | prt-02-margin-auto | 0 | **9** | **4** | 21 | 4 | 0 |
 | prt-03-negative-margin | 0 | **8** | **5** | 17 | 4 | 0 |
 | prt-04-padding | 0 | **6** | **2** | 12 | 3 | 0 |
