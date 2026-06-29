@@ -45,6 +45,8 @@ class ElementCompareStep implements PipelineStepInterface
         'outline-width', 'outline-style', 'outline-color',
         // box-shadow: engine uses pipe-delimited format, browser getComputedStyle may not show it
         'box-shadow',
+        // align-content: engine always exports, browser only when non-default (flex-wrap container)
+        'align-content',
     ];
 
     /**
