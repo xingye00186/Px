@@ -211,10 +211,20 @@ class ElementCompareStep implements PipelineStepInterface
             $b = $browserSubset[$pair['bIdx']];
 
             // 归一化坐标：相对各自锚点的偏移
-            $eRX = (int)($e['x'] ?? 0) - $eAnchor[0];
-            $eRY = (int)($e['y'] ?? 0) - $eAnchor[1];
-            $bRX = (int)($b['x'] ?? 0) - $bAnchor[0];
-            $bRY = (int)($b['y'] ?? 0) - $bAnchor[1];
+            // position:fixed 元素以视口为包含块，不参与锚点归一化
+            $ePos = $e['styles']['position'] ?? 'static';
+            $bPos = $b['styles']['position'] ?? 'static';
+            if ($ePos === 'fixed' || $bPos === 'fixed') {
+                $eRX = (int)($e['x'] ?? 0);
+                $eRY = (int)($e['y'] ?? 0);
+                $bRX = (int)($b['x'] ?? 0);
+                $bRY = (int)($b['y'] ?? 0);
+            } else {
+                $eRX = (int)($e['x'] ?? 0) - $eAnchor[0];
+                $eRY = (int)($e['y'] ?? 0) - $eAnchor[1];
+                $bRX = (int)($b['x'] ?? 0) - $bAnchor[0];
+                $bRY = (int)($b['y'] ?? 0) - $bAnchor[1];
+            }
 
             // tag
             $eTag = $e['tag'] ?? '';
