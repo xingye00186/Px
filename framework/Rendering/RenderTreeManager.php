@@ -438,10 +438,8 @@ class RenderTreeManager
                     }
 
                     if ($targetRN !== null) {
-                        $parsedStyles = CssMappings::parseInlineStyle($placeholderStyle);
-                        foreach ($parsedStyles as $key => $value) {
-                            $targetRN->style[$key] = $value;
-                        }
+                        $parsedDecls = StyleResolver::parseInlineStyle($placeholderStyle);
+                        $targetRN->computedStyle = new ComputedStyle($parsedDecls, $targetRN->computedStyle?->toExportArray() ?? []);
                         $targetRN->layoutDirty = true;
                     }
                 }
@@ -499,8 +497,19 @@ class RenderTreeManager
                 return $result;
             }
 
-            // 普通元素节点
-            $resolvedStyle = $this->resolveNodeStyle($vnode, $parentClassStr, [], $parentStyle);
+            // 普通元素节点 — 使用 StyleResolver 解析样式
+            $pseudoStyles = [];
+            $computedStyle = StyleResolver::resolve(
+                inlineStyle: $vnode->props['style'] ?? '',
+                className: $vnode->props['class'] ?? '',
+                parentDeclarations: $parentStyle,
+                elementType: $vnode->type,
+                parentClassStr: $parentClassStr,
+                precedingSiblingClasses: [],
+                parentStyleDeclarations: $parentStyle,
+                pseudoStyles: $pseudoStyles
+            );
+            $resolvedStyle = $computedStyle->toExportArray();
             $renderNode = null;
 
             if ($candidates !== null) {
@@ -513,16 +522,18 @@ class RenderTreeManager
             $groupId = $currentGroupId;
 
             if ($renderNode === null) {
-                $renderNode = new RenderNode($vnode->type, $resolvedStyle, null, $vnode->key);
+                $renderNode = new RenderNode($vnode->type, $computedStyle, null, $vnode->key);
                 $renderNode->sourceVNode = $vnode;
                 $renderNode->groupId = $groupId;
                 $renderNode->layoutDirty = true;
+                $renderNode->pseudoStyles = $pseudoStyles;
             } else {
                 $oldVNode = $renderNode->sourceVNode;
-                $renderNode->style = $resolvedStyle;
+                $renderNode->computedStyle = $computedStyle;
                 $renderNode->lastPaintFrame = 0;
                 $renderNode->sourceVNode = $vnode;
                 $renderNode->groupId = $groupId;
+                $renderNode->pseudoStyles = $pseudoStyles;
 
                 $vnodeChildren = is_array($vnode->children)
                     ? VNode::childrenToArray($vnode->children)
@@ -656,9 +667,10 @@ class RenderTreeManager
             }
 
             // Create ::before pseudo-element RenderNode if defined
-            $beforeStyle = $resolvedStyle['__beforeStyle'] ?? null;
+            $beforeStyle = $renderNode->pseudoStyles['before'] ?? null;
             if ($beforeStyle !== null && is_array($beforeStyle) && isset($beforeStyle['content']) && $beforeStyle['content'] !== '') {
-                $beforeRN = new RenderNode('span', $beforeStyle, $beforeStyle['content']);
+                $beforeCS = new ComputedStyle($beforeStyle);
+                $beforeRN = new RenderNode('span', $beforeCS, $beforeStyle['content']);
                 $beforeRN->parent = $renderNode;
                 $beforeRN->groupId = $renderNode->groupId;
                 $beforeRN->layoutDirty = true;
@@ -666,9 +678,10 @@ class RenderTreeManager
             }
 
             // Create ::after pseudo-element RenderNode if defined
-            $afterStyle = $resolvedStyle['__afterStyle'] ?? null;
+            $afterStyle = $renderNode->pseudoStyles['after'] ?? null;
             if ($afterStyle !== null && is_array($afterStyle) && isset($afterStyle['content']) && $afterStyle['content'] !== '') {
-                $afterRN = new RenderNode('span', $afterStyle, $afterStyle['content']);
+                $afterCS = new ComputedStyle($afterStyle);
+                $afterRN = new RenderNode('span', $afterCS, $afterStyle['content']);
                 $afterRN->parent = $renderNode;
                 $afterRN->groupId = $renderNode->groupId;
                 $afterRN->layoutDirty = true;

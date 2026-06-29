@@ -4,6 +4,8 @@ namespace Px\Rendering;
 
 use native_types;
 
+use Px\Core\Config;
+
 /**
  * RenderNode — 渲染专用节点
  *
@@ -19,8 +21,18 @@ class RenderNode
     /** 元素类型: 'div','span','button','input','text' */
     public string $type;
 
-    /** 已解析的 GDI 可用样式（来自 VNode.computedStyle） */
-    public array $style = [];
+    /**
+     * 不可变样式快照（Phase 2 新增，替代 $style 数组）。
+     * 由 RenderTreeManager::updateFromVNode 在转换时设置。
+     */
+    public ?ComputedStyle $computedStyle = null;
+
+    /**
+     * 伪类/伪元素样式，由 StyleResolver 在样式解析时填充。
+     * 键: 'hover', 'focus', 'active', 'before', 'after'
+     * VNodeRenderer 在渲染时按需合并。
+     */
+    public array $pseudoStyles = [];
 
     /** 文本内容（string）或子节点数组（通过 addChild 管理） */
     public mixed $content = null;
@@ -152,14 +164,49 @@ class RenderNode
 
     public function __construct(
         string $type,
-        array $style = [],
+        ?ComputedStyle $computedStyle = null,
         mixed $content = null,
         ?string $key = null
     ) {
-        $this->type    = $type;
-        $this->style   = $style;
-        $this->content = $content;
-        $this->key     = $key;
+        $this->type          = $type;
+        $this->computedStyle = $computedStyle;
+        $this->content       = $content;
+        $this->key           = $key;
+    }
+
+    // ── 向后兼容 ────────────────────────────────────────
+
+    /**
+     * 魔术方法：兼容旧代码中 $node->style['key'] 的读取。
+     * 返回 computedStyle 的原始声明数组。
+     * Phase 3 完成后应逐步移除。
+     */
+    public function __get(string $name): mixed
+    {
+        if ($name === 'style') {
+            // 返回等效的原始声明（从 computedStyle 导出）
+            return $this->computedStyle !== null
+                ? $this->computedStyle->toExportArray()
+                : [];
+        }
+        $trace = debug_backtrace();
+        trigger_error(
+            'Undefined property: ' . $name .
+            ' in ' . $trace[0]['file'] .
+            ' on line ' . $trace[0]['line'],
+            E_USER_NOTICE
+        );
+        return null;
+    }
+
+    /** $node->style 写入也做兼容（Phase 3 后逐步移除） */
+    public function __set(string $name, mixed $value): void
+    {
+        if ($name === 'style') {
+            // 向后兼容：忽略 style 写入（computedStyle 不可变）
+            return;
+        }
+        $this->$name = $value;
     }
 
     // ── 脏标记方法 ──────────────────────────────────────
