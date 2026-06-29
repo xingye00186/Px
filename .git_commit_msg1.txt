@@ -1,0 +1,7 @@
+feat: 添加 data-px-id 注入核心工具
+
+HtmlDataPxIdInjector — 自动为 HTML 元素注入自增 data-px-id
+HtmlToVueConverter — 从 .html 生成对应 .vue（含类名、样式过滤、font-family 继承）
+
+单源策略：.html 是唯一事实源，.vue 由此代码自动生成，
+保证引擎与浏览器端的 data-px-id 绝对一致。

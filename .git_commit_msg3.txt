@@ -1,0 +1,8 @@
+feat: 测试流水线 data-px-id 集成
+
+- ElementCompareStep: 纯 data-px-id 匹配，零回退；注入失败直接硬终止
+- PipelineBuilder: 添加 PxIdGenerateStep 全量预处理步骤
+- PipelineSteps: 新增 PxIdGenerateStep（全量生成 .vue + 单次 SFC 编译）
+  LayoutDumpStep 移除 PXID 块；BrowserRefStep 注入 data-px-id 到 .html
+  validateContent 改用 .html 源；移除冗余的 validateVueConsistency
+- BrowserRefStrategy: 批次模式注入 data-px-id
