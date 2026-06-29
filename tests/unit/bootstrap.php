@@ -66,7 +66,8 @@ require_once $frameworkDir . '/Rendering/CssValue.php';
 require_once $frameworkDir . '/Rendering/CssStyleHelper.php';
 require_once $frameworkDir . '/Rendering/ComputedStyle.php';
 require_once $frameworkDir . '/Rendering/StyleResolver.php';
-require_once $frameworkDir . '/Rendering/Layout/Tools/ScrollHelper.php';
+// ScrollHelper.php was moved/removed — no longer needed
+        // require_once $frameworkDir . '/Rendering/Layout/Tools/ScrollHelper.php';
 require_once $frameworkDir . '/Rendering/Layout/AbsoluteStrategy.php';
 require_once $frameworkDir . '/Rendering/Layout/AbsolutePositioning.php';
 require_once $frameworkDir . '/Rendering/Layout/LayoutStrategyInterface.php';

@@ -93,7 +93,9 @@ class PipelineBuilder
         $orchestrator = new PipelineOrchestrator();
 
         // Step 0: Build (hash cache + process lock + orphan cleanup)
-        if (!$this->usePhpRuntime) {
+        if ($this->skipBuild) {
+            echo "  [{$this->appName}] Skip build (--skip-build)\n";
+        } elseif (!$this->usePhpRuntime) {
             $orchestrator->addStep(new BuildStep($this->projectRoot, $this->appName, $this->forceBuild));
         } else {
             echo "  [{$this->appName}] Skip build, using PHP native layout computation\n";
