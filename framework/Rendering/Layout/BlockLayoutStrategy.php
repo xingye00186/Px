@@ -541,6 +541,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     // position:relative 额外偏移（不推进 stack??
                     if ($childPosition === 'relative') {
                         $child->y += ($childStyle['top'] ?? 0);
+                        $child->x += ($childStyle['left'] ?? 0);
                     }
 
                     // Shift descendants
