@@ -538,6 +538,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     // 保存 stack 推进位置（不??position:relative 偏移影响??
                     $stackAdvanceY = $child->y;
 
+
+
                     // position:relative 额外偏移（不推进 stack??
                     if ($childPosition === 'relative') {
                         $child->y += ($childStyle['top'] ?? 0);
@@ -552,6 +554,26 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         foreach ($child->children as $grandchild) {
                             ScrollHelper::shiftDescendantsY($grandchild, $dy);
                         }
+                    }
+
+                    // ── Two-pass: re-resolve block child's internal children ──
+                    // 父容器 auto-stack 调整子元素 y 后，子元素内部 auto-stack
+                    // 仍可能用了旧的 y 值（resolveNormalFlow 阶段的初值）。
+                    // 重新解析让子元素的 auto-stack 基于正确的 y 定位其子元素。
+                    $childDisplay2 = $childStyle['display'] ?? 'block';
+                    $isFlexGrid = ($childDisplay2 === 'flex' || $childDisplay2 === 'grid');
+                    if (!$isFlexGrid && $childDisplay2 !== 'none' && $childDisplay2 !== 'inline' && count($child->children) > 0) {
+                        $child->layoutDirty = true;
+                        foreach ($child->children as $gc) {
+                            $gc->layoutDirty = true;
+                        }
+                        // 使用 child 的当前 y（已被 auto-stack 修正）作为 parentY
+                        $childCtx2 = new LayoutContext(
+                            $node->x + $paddingLeft,
+                            $child->y,
+                            $node
+                        );
+                        $this->resolver->resolveNode($child, $childCtx2);
                     }
 
                     $stackY = $stackAdvanceY + $child->visualH + $mBottom;
