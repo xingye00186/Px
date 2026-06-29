@@ -41,6 +41,10 @@ class ElementCompareStep implements PipelineStepInterface
         'border-right-width', 'border-right-color',
         'border-bottom-width', 'border-bottom-color',
         'border-left-width', 'border-left-color',
+        // outline individual props: engine exports them, browser only has shorthand 'outline'
+        'outline-width', 'outline-style', 'outline-color',
+        // box-shadow: engine uses pipe-delimited format, browser getComputedStyle may not show it
+        'box-shadow',
     ];
 
     /**
