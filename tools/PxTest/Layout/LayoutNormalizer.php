@@ -274,12 +274,13 @@ class LayoutNormalizer
         if (is_array($text)) $text = '';
 
         $element = [
-            'tag'   => $tag,
-            'x'     => (int)($node['x'] ?? 0),
-            'y'     => (int)($node['y'] ?? 0),
-            'w'     => (int)($node['visualW'] ?? $node['w'] ?? 0),
-            'h'     => (int)($node['visualH'] ?? $node['h'] ?? 0),
-            'depth' => $depth,
+            'tag'     => $tag,
+            'x'       => (int)($node['x'] ?? 0),
+            'y'       => (int)($node['y'] ?? 0),
+            'w'       => (int)($node['visualW'] ?? $node['w'] ?? 0),
+            'h'       => (int)($node['visualH'] ?? $node['h'] ?? 0),
+            'depth'   => $depth,
+            'dataset' => $node['dataset'] ?? [],
         ];
 
         // 样式规范化

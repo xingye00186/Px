@@ -766,6 +766,25 @@ class Application
             'content' => $node->content,
             'textRenderInfo' => $node->textRenderInfo,
         ];
+
+        // dataset: 从 sourceVNode 提取 data-* 属性（如 data-px-id）
+        // 注意：浏览器 dump_layout.js 中 dataset 使用 JS dataset API，
+        // 将 data-px-id 转为 dataset.pxId（驼峰式），引擎端必须保持一致。
+        if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+            $dataset = [];
+            foreach ($node->sourceVNode->props as $key => $val) {
+                if (str_starts_with((string)$key, 'data-')) {
+                    $dsKey = substr((string)$key, 5); // 'px-id'
+                    // 转为驼峰式以匹配浏览器 dataset API: px-id → pxId
+                    $camelKey = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $dsKey))));
+                    $dataset[$camelKey] = (string)$val;
+                }
+            }
+            if (!empty($dataset)) {
+                $result['dataset'] = $dataset;
+            }
+        }
+
         // 包含关键样式属性用于对比
         // 不导出 per-side border 属性：它们与 borderWidth/borderColor 简写重复，
         // 且浏览器只导出简写不单独导出各边。对比层通过浏览器 skip 列表忽略。
