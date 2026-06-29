@@ -488,7 +488,9 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         // first inline child: initialize inline cursor
                         if (!$inlineStarted) {
                             $inlineCursorX = $node->x + $paddingLeft;
-                            $inlineCursorY = $node->y + $borderTop + $paddingTop;
+                            // CSS 2.2 §9.4.2: inline formatting context starts at current
+                            // stackY when block-level children precede inline-level children
+                            $inlineCursorY = ($stackY > $node->y + $borderTop + $paddingTop) ? $stackY : $node->y + $borderTop + $paddingTop;
                             $inlineLineMaxH = 0;
                             $inlineStarted = true;
                         }
