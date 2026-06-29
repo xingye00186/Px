@@ -107,17 +107,23 @@ class CssValueParser
         return self::hexToBgr($value);
     }
 
-    public static function parsePixels(string $value): int
+    public static function parsePixels(string $value): CssLength
     {
-        // Handle em/rem units: 1em = default font-size 16px
-        // CSS Values and Units Module Level 3 §5: em is relative to font-size
+        return CssLength::fromString($value);
+    }
+
+    /**
+     * Legacy: parse raw CSS length to int (for backward compat in style array).
+     * Percentage values return the numeric part (for detectability).
+     */
+    public static function parsePixelsRaw(string $value): int
+    {
         if (preg_match('/^(-?\d+(\.\d+)?)/', $value, $m)) {
             $num = (float)$m[1];
             $lower = strtolower($value);
             if (str_contains($lower, 'em')) {
                 return (int)($num * 16.0);
             }
-            // Percentage values: return the numeric part (percentage detected separately via *Percent keys)
             if (str_contains($lower, '%')) {
                 return (int)$num;
             }
@@ -128,49 +134,21 @@ class CssValueParser
 
     public static function parseFlex(string $value): string
     {
-        $value = trim($value);
-        if (preg_match('/^(\d+(?:\.\d+)?)/', $value, $m)) {
-            return $m[1];
-        }
-        return $value;
+        // 返回完整的 flex 简写值（如 "1 1 30%"），供 FlexLayoutStrategy 解析
+        // 注意：不要截断为第一个数字，否则会丢失 flex-basis 和 flex-shrink 信息
+        return trim($value);
     }
 
     public static function parseFlexValue(string $flex): array
     {
-        $flex = trim($flex);
-        if ($flex === '') {
-            return ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 0];
-        }
-        $lower = strtolower($flex);
-        if ($lower === 'auto') {
-            return ['grow' => 1.0, 'shrink' => 1.0, 'basis' => 'auto'];
-        }
-        if ($lower === 'none') {
-            return ['grow' => 0.0, 'shrink' => 0.0, 'basis' => 'auto'];
-        }
-        if ($lower === 'initial') {
-            return ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 'auto'];
-        }
-        if ($lower === 'content') {
-            return ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 'content'];
-        }
-        $parts = preg_split('/\s+/', $flex);
-        $result = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => 0];
-        if (count($parts) >= 1 && $parts[0] !== '') {
-            $result['grow'] = (float)$parts[0];
-        }
-        if (count($parts) >= 2 && $parts[1] !== '') {
-            $result['shrink'] = (float)$parts[1];
-        }
-        if (count($parts) >= 3 && $parts[2] !== '') {
-            $v = strtolower(trim($parts[2]));
-            if ($v === 'auto' || $v === 'content') {
-                $result['basis'] = $v;
-            } else {
-                $result['basis'] = (int) preg_replace('/[^0-9]/', '', $parts[2]);
-            }
-        }
-        return $result;
+        $cf = CssFlex::fromString($flex);
+        $basis = $cf->basis;
+        $basisRaw = $basis->isAuto() ? 'auto' : ($basis->isContent() ? 'content' : $basis->toPx());
+        return [
+            'grow'   => $cf->grow,
+            'shrink' => $cf->shrink,
+            'basis'  => $basisRaw,
+        ];
     }
 
     public static function parseFontWeight(string $value): int
@@ -333,7 +311,13 @@ class CssValueParser
         return min(1.0, max(0.0, (float)$v));
     }
 
-    public static function parseIdent(string $value): string
+    public static function parseIdent(string $value): CssKeyword
+    {
+        return new CssKeyword($value);
+    }
+
+    /** Legacy: return raw string for backward compat */
+    public static function parseIdentRaw(string $value): string
     {
         return trim(strtolower($value));
     }

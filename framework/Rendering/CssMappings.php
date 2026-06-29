@@ -672,6 +672,18 @@ class CssMappings
         return CssValueParser::parseBackgroundImage($value);
     }
 
+    /** @return array 供外部（如 StyleResolver）使用的 PROPERTY_MAP */
+    public static function getPropertyMap(): array
+    {
+        return self::PROPERTY_MAP;
+    }
+
+    /** @return array 供外部使用的 INLINE_PROPERTY_MAP */
+    public static function getInlinePropertyMap(): array
+    {
+        return self::INLINE_PROPERTY_MAP;
+    }
+
     /**
      * AOT-compatible parser dispatcher.
      * Replaces call_user_func() which is not supported by AOT.
@@ -682,13 +694,13 @@ class CssMappings
         $method = substr($parser, (int)strrpos($parser, '::') + 2);
         return match($method) {
             'parseHexColor'        => CssValueParser::parseHexColor($value),
-            'parsePixels'          => CssValueParser::parsePixels($value),
+            'parsePixels'          => CssValueParser::parsePixelsRaw($value),
             'parseFlex'            => CssValueParser::parseFlex($value),
             'parseFontWeight'      => CssValueParser::parseFontWeight($value),
             'parseTextAlign'       => CssValueParser::parseTextAlign($value),
             'parseBorder'          => CssValueParser::parseBorder($value),
             'parseOpacity'         => CssValueParser::parseOpacity($value),
-            'parseIdent'           => CssValueParser::parseIdent($value),
+            'parseIdent'           => CssValueParser::parseIdentRaw($value),
             'parseBackgroundImage' => CssValueParser::parseBackgroundImage($value),
             'parseTransform'       => CssValueParser::parseTransform($value),
             'parseBoxShadow'       => CssValueParser::parseBoxShadow($value),
@@ -824,14 +836,12 @@ class CssMappings
             }
         }
 
-        // Pre-detect percentage values for layout properties.
-        // Store as "widthPercent" (float, e.g. 50.0 for "50%") alongside the
-        // regular pixel key. LayoutResolver checks *Percent first.
+        // Phase 1: 保留 pctMap/relativeUnitMap 以保持 style 数组向后兼容。
+        // Phase 2: ComputedStyle 接管后彻底移除。
         $pctMap = [
             'width' => 'widthPercent', 'height' => 'heightPercent',
             'min-width' => 'minWidthPercent', 'max-width' => 'maxWidthPercent',
             'min-height' => 'minHeightPercent', 'max-height' => 'maxHeightPercent',
-            // CSS Box Model §7: margin/padding 百分比基于包含块宽度
             'margin-top' => 'marginTopPercent',
             'margin-right' => 'marginRightPercent',
             'margin-bottom' => 'marginBottomPercent',
@@ -840,23 +850,18 @@ class CssMappings
             'padding-right' => 'paddingRightPercent',
             'padding-bottom' => 'paddingBottomPercent',
             'padding-left' => 'paddingLeftPercent',
-            // CSS Positioned Layout §3.1: left/top/right/bottom 百分比基于包含块
             'left'   => 'leftPercent',
             'top'    => 'topPercent',
             'right'  => 'rightPercent',
             'bottom' => 'bottomPercent',
-            // CSS Backgrounds & Borders §5.1: border-radius 百分比基于元素的宽度和高度
             'border-radius' => 'borderRadiusPercent',
         ];
         foreach ($pctMap as $cssProp => $styleKey) {
             if (isset($raw[$cssProp])) {
                 $val = trim($raw[$cssProp]);
-                // Standalone percentage: 50%
                 if (str_ends_with($val, '%')) {
                     $style[$styleKey] = (float) substr($val, 0, -1);
-                }
-                // calc() expression with percentage + pixel offset: calc(100% - 40px)
-                elseif (preg_match('/^calc\s*\(\s*(\d+(?:\.\d+)?)%\s*([+\-])\s*(\d+(?:\.\d+)?)px\s*\)$/i', $val, $m)) {
+                } elseif (preg_match('/^calc\s*\(\s*(\d+(?:\.\d+)?)%\s*([+\-])\s*(\d+(?:\.\d+)?)px\s*\)$/i', $val, $m)) {
                     $style[$styleKey] = (float) $m[1];
                     $calcOffsetKey = str_replace('Percent', 'CalcOffset', $styleKey);
                     $style[$calcOffsetKey] = (int)($m[2] === '-' ? -$m[3] : $m[3]);
@@ -864,13 +869,6 @@ class CssMappings
             }
         }
 
-        // Pre-detect relative unit values (em/rem/vw/vh/vmin/vmax) for layout properties.
-        // CSS Values and Units Module Level 3 §5:
-        //   em  → relative to parent element's font-size
-        //   rem → relative to root element's font-size
-        //   vw  → 1% of viewport width
-        //   vh  → 1% of viewport height
-        // Stored as "{value}|{unit}" string (e.g., "2|em") for layout-time resolution.
         $relativeUnitMap = [
             'font-size'          => 'fontSizeUnit',
             'width'              => 'widthUnit',
@@ -941,15 +939,22 @@ class CssMappings
         // Expand flex shorthand into flex-grow/flex-shrink/flex-basis
         if (isset($raw['flex']) && $raw['flex'] !== '') {
             $flexParsed = self::parseFlexValue($raw['flex']);
+            $dbgMsg = '[DIAG_FLEX] raw=' . $raw['flex'] . ' basis=' . json_encode($flexParsed['basis']);
             if (!isset($style['flexGrow'])) {
                 $style['flexGrow'] = $flexParsed['grow'];
+                $dbgMsg .= ' setGrow=' . $flexParsed['grow'];
             }
             if (!isset($style['flexShrink'])) {
                 $style['flexShrink'] = $flexParsed['shrink'];
+                $dbgMsg .= ' setShrink=' . $flexParsed['shrink'];
             }
             if (!isset($style['flexBasis'])) {
                 $style['flexBasis'] = $flexParsed['basis'];
+                $dbgMsg .= ' setBasis=' . json_encode($flexParsed['basis']);
+            } else {
+                $dbgMsg .= ' alreadyHasBasis=' . json_encode($style['flexBasis']);
             }
+            error_log($dbgMsg);
         }
 
         // ── Border property processing (CSS 2.2 §8.5-8.6) ──
@@ -1514,38 +1519,7 @@ class CssMappings
                 }
             }
 
-            // Detect relative unit values (em/rem/vw/vh) in class body
-            $relativeUnitProps = [
-                'font-size'     => 'fontSizeUnit',
-                'width'         => 'widthUnit',
-                'height'        => 'heightUnit',
-                'min-width'     => 'minWidthUnit',
-                'max-width'     => 'maxWidthUnit',
-                'min-height'    => 'minHeightUnit',
-                'max-height'    => 'maxHeightUnit',
-                'margin-top'    => 'marginTopUnit',
-                'margin-right'  => 'marginRightUnit',
-                'margin-bottom' => 'marginBottomUnit',
-                'margin-left'   => 'marginLeftUnit',
-                'padding-top'   => 'paddingTopUnit',
-                'padding-right' => 'paddingRightUnit',
-                'padding-bottom'=>'paddingBottomUnit',
-                'padding-left'  => 'paddingLeftUnit',
-                'gap'           => 'gapUnit',
-                'top'           => 'topUnit',
-                'left'          => 'leftUnit',
-                'right'         => 'rightUnit',
-                'bottom'        => 'bottomUnit',
-            ];
-            foreach ($relativeUnitProps as $cssProp => $styleKey) {
-                $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
-                if (preg_match($pattern, $body, $m)) {
-                    $parsed = CssValueParser::parseRelativeValue(trim($m[1]));
-                    if ($parsed['unit'] !== 'px') {
-                        $props[$styleKey] = $parsed['value'] . '|' . $parsed['unit'];
-                    }
-                }
-            }
+
 
             // Preserve original CSS font-weight numeric value for test comparison.
             if (preg_match('/font-weight\s*:\s*(\d+)/i', $body, $fwMatch)) {
@@ -1631,38 +1605,7 @@ class CssMappings
                         }
                     }
 
-                    // Detect relative unit values in pseudo-class body
-                    $relativeUnitProps = [
-                        'font-size'     => 'fontSizeUnit',
-                        'width'         => 'widthUnit',
-                        'height'        => 'heightUnit',
-                        'min-width'     => 'minWidthUnit',
-                        'max-width'     => 'maxWidthUnit',
-                        'min-height'    => 'minHeightUnit',
-                        'max-height'    => 'maxHeightUnit',
-                        'margin-top'    => 'marginTopUnit',
-                        'margin-right'  => 'marginRightUnit',
-                        'margin-bottom' => 'marginBottomUnit',
-                        'margin-left'   => 'marginLeftUnit',
-                        'padding-top'   => 'paddingTopUnit',
-                        'padding-right' => 'paddingRightUnit',
-                        'padding-bottom'=>'paddingBottomUnit',
-                        'padding-left'  => 'paddingLeftUnit',
-                        'gap'           => 'gapUnit',
-                        'top'           => 'topUnit',
-                        'left'          => 'leftUnit',
-                        'right'         => 'rightUnit',
-                        'bottom'        => 'bottomUnit',
-                    ];
-                    foreach ($relativeUnitProps as $cssProp => $styleKey) {
-                        $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
-                        if (preg_match($pattern, $body, $m)) {
-                            $parsed = CssValueParser::parseRelativeValue(trim($m[1]));
-                            if ($parsed['unit'] !== 'px') {
-                                $props[$styleKey] = $parsed['value'] . '|' . $parsed['unit'];
-                            }
-                        }
-                    }
+
 
                     $pseudoKey = $className . '__' . $pseudo;
                     $classStyles[$pseudoKey] = $props;
@@ -1747,29 +1690,7 @@ class CssMappings
                     }
                 }
 
-                // Detect relative unit values
-                $relativeUnitProps = [
-                    'font-size'     => 'fontSizeUnit',
-                    'width'         => 'widthUnit',
-                    'height'        => 'heightUnit',
-                    'margin-top'    => 'marginTopUnit',
-                    'margin-right'  => 'marginRightUnit',
-                    'margin-bottom' => 'marginBottomUnit',
-                    'margin-left'   => 'marginLeftUnit',
-                    'padding-top'   => 'paddingTopUnit',
-                    'padding-right' => 'paddingRightUnit',
-                    'padding-bottom'=>'paddingBottomUnit',
-                    'padding-left'  => 'paddingLeftUnit',
-                ];
-                foreach ($relativeUnitProps as $cssProp => $styleKey) {
-                    $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
-                    if (preg_match($pattern, $body, $m)) {
-                        $parsed = CssValueParser::parseRelativeValue(trim($m[1]));
-                        if ($parsed['unit'] !== 'px') {
-                            $props[$styleKey] = $parsed['value'] . '|' . $parsed['unit'];
-                        }
-                    }
-                }
+
 
                 // Store complex selector rule
                 $complexKey = '__complex__' . $complexIdx;
