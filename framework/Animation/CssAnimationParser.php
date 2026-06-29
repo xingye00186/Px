@@ -3,6 +3,7 @@
 namespace Px\Animation;
 
 use Px\Rendering\CssMappings;
+use Px\Rendering\StyleResolver;
 
 /**
  * CssAnimationParser — CSS 动画解析器
@@ -100,7 +101,7 @@ class CssAnimationParser
                     }
 
                     // 解析帧内的 CSS 属性
-                    $props = CssMappings::parseInlineStyle($frameMatch[2]);
+                    $props = StyleResolver::parseInlineStyle($frameMatch[2]);
                     $frames[(int)$percent] = $props;
                 }
             }

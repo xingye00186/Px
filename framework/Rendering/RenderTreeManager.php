@@ -711,7 +711,7 @@ class RenderTreeManager
     private function hitTestRecursive(int $x, int $y, RenderNode $node): ?RenderNode
     {
         // pointer-events: none 的元素跳过命中测试
-        if (($node->style['pointerEvents'] ?? '') === 'none') {
+        if (($node->computedStyle?->pointerEvents?->value ?? '') === 'none') {
             return null;
         }
 
@@ -743,7 +743,7 @@ class RenderTreeManager
         // Transform 偏移：对 transform: translate(X,Y) 调整命中测试区域
         $hitOffX = 0;
         $hitOffY = 0;
-        $xform = $node->style['transform'] ?? '';
+        $xform = $node->computedStyle?->transform ?? '';
         if (is_array($xform)) {
             $hitOffX = (int)($xform['translateX'] ?? 0);
             $hitOffY = (int)($xform['translateY'] ?? 0);
@@ -776,7 +776,7 @@ class RenderTreeManager
     private function findScrollContainerRecursive(int $x, int $y, RenderNode $node): ?RenderNode
     {
         // pointer-events: none 的元素不参与滚动容器查找
-        if (($node->style['pointerEvents'] ?? '') === 'none') {
+        if (($node->computedStyle?->pointerEvents?->value ?? '') === 'none') {
             return null;
         }
 
@@ -807,7 +807,7 @@ class RenderTreeManager
         // Transform 偏移适配
         $hitOffX = 0;
         $hitOffY = 0;
-        $xform = $node->style['transform'] ?? '';
+        $xform = $node->computedStyle?->transform ?? '';
         if (is_array($xform)) {
             $hitOffX = (int)($xform['translateX'] ?? 0);
             $hitOffY = (int)($xform['translateY'] ?? 0);
@@ -837,13 +837,13 @@ class RenderTreeManager
         // 1. 解析静态 style
         $staticStyle = $vnode->props['style'] ?? '';
         if ($staticStyle !== '') {
-            $result = CssMappings::parseInlineStyle($staticStyle);
+            $result = StyleResolver::parseInlineStyle($staticStyle);
         }
 
         // 2. 解析动态 :style 绑定，覆盖静态 style
         $dynamicStyle = $vnode->props[':style'] ?? '';
         if ($dynamicStyle !== '') {
-            $dynamicParsed = CssMappings::parseInlineStyle($dynamicStyle);
+            $dynamicParsed = StyleResolver::parseInlineStyle($dynamicStyle);
             foreach ($dynamicParsed as $k => $v) {
                 $result[$k] = $v;
             }
