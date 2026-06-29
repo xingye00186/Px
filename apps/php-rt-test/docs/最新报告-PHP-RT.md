@@ -1,10 +1,10 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-06-29 10:05:09 | **总耗时**: 157.1s
+**运行时间**: 2026-06-29 10:11:38 | **总耗时**: 157s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 2.4s |
+| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 2.3s |
 | prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 3.1s |
 | prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 1.1s |
 | prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 2.5s |
@@ -71,7 +71,7 @@
 | prt-54-integ-navigation | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ✅ | 152diff 🔴44 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-55-integ-dashboard | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 151diff 🔴54 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-56-integ-fullpage | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 225diff 🔴79 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-57-margin-collapse | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴9 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-57-margin-collapse | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 1.2s |
 | prt-58-float-left | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴12 | ⏭️ | ❌ 失败 | 1.3s |
 | prt-59-float-right | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴12 | ⏭️ | ❌ 失败 | 1s |
 | prt-60-float-clear | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴11 | ⏭️ | ❌ 失败 | 1.1s |
@@ -115,15 +115,15 @@
 | prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴37 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 87diff 🔴48 | ⏭️ | ❌ 失败 | 1.1s |
 
-**汇总**: 9 ✅ / 101 ❌ / 110 总计 (总耗时: 157.1s)
+**汇总**: 10 ✅ / 100 ❌ / 110 总计 (总耗时: 157s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop background-color diff 300->476
-> - prop width diff 640->714
-> - prop height diff 695->1093
+> - prop background-color diff 300->472
+> - prop width diff 640->710
+> - prop height diff 695->1088
 > - prop text-align diff 7->22
 > - prop white-space diff 11->189
 > - prop line-height diff 1->105
@@ -263,9 +263,6 @@
 > - prt-56-integ-fullpage structure 9->21
 > - prt-56-integ-fullpage critical 61->79
 > - prt-56-integ-fullpage major 17->22
-> - prt-57-margin-collapse structure 2->5
-> - prt-57-margin-collapse critical 8->9
-> - prt-57-margin-collapse major 2->3
 > - prt-58-float-left structure 2->6
 > - prt-58-float-left major 4->5
 > - prt-59-float-right structure 2->6
@@ -369,31 +366,31 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 75.1% | 3294/4387 |
-| width | 83.7% | 3673/4387 |
-| position | 98.4% | 4318/4387 |
+| height | 75.2% | 3299/4387 |
+| width | 83.8% | 3677/4387 |
+| position | 98.4% | 4319/4387 |
 | text-align | 99.5% | 4365/4387 |
 | opacity | 99.8% | 4379/4387 |
 | font-weight | 100% | 4387/4387 |
-| background-color | 88.8% | 3785/4261 |
+| background-color | 88.9% | 3790/4262 |
 | top | 100% | 4139/4139 |
 | left | 100% | 4138/4138 |
 | font-size | 100% | 4085/4086 |
-| display | 100% | 3823/3823 |
+| display | 100% | 3827/3827 |
 | white-space | 2.1% | 4/193 |
-| border-width | 100% | 159/159 |
+| border-width | 100% | 163/163 |
 | padding-left | 41.9% | 62/148 |
 | padding-right | 41.9% | 62/148 |
 | padding-bottom | 49.3% | 73/148 |
 | padding-top | 50% | 74/148 |
-| margin-bottom | 59.7% | 77/129 |
+| margin-bottom | 60.5% | 78/129 |
 | gap | 19.8% | 21/106 |
 | line-height | 0% | 0/105 |
 | flex-shrink | 96.7% | 58/60 |
 | flex-grow | 19% | 11/58 |
 | flex-direction | 23.1% | 6/26 |
 | grid-template-columns | 0% | 0/24 |
-| margin-top | 50% | 11/22 |
+| margin-top | 59.1% | 13/22 |
 | border-radius | 100% | 22/22 |
 | margin-left | 76.2% | 16/21 |
 | margin-right | 80% | 8/10 |
@@ -509,7 +506,7 @@
 | prt-54-integ-navigation | 0 | **44** | **11** | 72 | 17 | 0 |
 | prt-55-integ-dashboard | 0 | **54** | **8** | 67 | 10 | 1 |
 | prt-56-integ-fullpage | 0 | **79** | **22** | 94 | 21 | 0 |
-| prt-57-margin-collapse | 0 | **9** | **3** | 17 | 5 | 0 |
+| prt-57-margin-collapse | 0 | 0 | 0 | 0 | 0 | 0 |
 | prt-58-float-left | 0 | **12** | **5** | 25 | 6 | 0 |
 | prt-59-float-right | 0 | **12** | **5** | 25 | 6 | 0 |
 | prt-60-float-clear | 0 | **11** | **4** | 20 | 5 | 0 |
