@@ -30,7 +30,7 @@ class ToleranceConfig
         ];
 
         $this->propertyTolerances = [
-            'x'          => 0,   // 位置必须精确
+            'x'          => 1,   // 1px 容差（GDI vs DirectWrite 字体度量四舍五入差异）
             'y'          => 2,   // 2px 容差（DirectWrite 与浏览器 line-height 残余差异）
             'w'          => 1,   // 宽度允许 1px 偏差
             'h'          => 2,   // 2px 容差（DirectWrite 与浏览器 font metrics 残余差异）
