@@ -1,5 +1,0 @@
-chore: 忽略自动生成的测试产物
-
-- .gitignore: 添加 apps/php-rt-test 和 apps/css-test 的 test_case/*.vue
-  以及 .pxid_done 标记文件
-- git rm --cached: 移除 158 个已跟踪的 .vue 文件（php-rt-test 108 + css-test 50）

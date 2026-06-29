@@ -1,5 +1,0 @@
-feat: 引擎端 data-px-id 序列化支持
-
-- Application.php: serializeRenderNode 从 sourceVNode.props 提取 data-* 属性，
-  转为驼峰式 key（匹配浏览器 dataset API），输出到 dataset 字段
-- LayoutNormalizer: 透传 dataset 字段到规范化输出
