@@ -205,8 +205,9 @@ class AbsolutePositioning implements AbsoluteStrategy
         // position:fixed 时 ancestor=null（视口参考系），使用 $viewportW/$viewportH
         if ($right !== null && ($ancestor !== null || $isFixed)) {
             // 元素右边缘 = padding box 右边界 - right
-            // padding box 右边界 = ancestorX + ancestorW（含 padding）
-            $rightEdge = $ancestorX + $ancestorW - $right;
+            // CSS section 10.1: absolute containing block = padding box
+            // rightEdge = ancestorX + borderL + paddingLeft + contentWidth - right
+            $rightEdge = $ancestorX + $borderL + $ancestorPaddingLeft + $ancestorContentW - $right;
             if ($width > 0) {
                 $node->x = (int)($rightEdge - $width);
             } else {
