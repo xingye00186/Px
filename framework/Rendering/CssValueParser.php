@@ -142,12 +142,10 @@ class CssValueParser
     public static function parseFlexValue(string $flex): array
     {
         $cf = CssFlex::fromString($flex);
-        $basis = $cf->basis;
-        $basisRaw = $basis->isAuto() ? 'auto' : ($basis->isContent() ? 'content' : $basis->toPx());
         return [
             'grow'   => $cf->grow,
             'shrink' => $cf->shrink,
-            'basis'  => $basisRaw,
+            'basis'  => $cf->basis,  // CssLength 类型
         ];
     }
 

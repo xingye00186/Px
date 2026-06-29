@@ -7,13 +7,13 @@ use native_types;
 use Px\Styling\Provider\ThemeProvider;
 
 /**
- * StyleResolver — 独立样式解析器
+ * StyleResolver — 样式解析器
  *
- * 合并 CssMappings::parseInlineStyle()、dispatchParser()
- * 和 RenderTreeManager::resolveNodeStyle() 的样式解析逻辑。
- * 输出 ComputedStyle 不可变样式快照。
+ * 职责分离：
+ *   parseInlineStyle() — 解析内联样式字符串为声明数组（供合并后传入 ComputedStyle 构造器）
+ *   resolve() — 合并内联样式 + class 样式 + 继承，输出 ComputedStyle 不可变快照
  *
- * Phase 2 新增，替代散落在多个类的样式解析。
+ * Phase 2 新增。
  */
 class StyleResolver
 {
@@ -115,53 +115,6 @@ class StyleResolver
         // Expand shorthand padding/margin to individual values
         $raw = self::expandBoxShorthand($raw);
 
-        // Pre-detect percentage values
-        $pctMap = [
-            'width' => 'widthPercent', 'height' => 'heightPercent',
-            'min-width' => 'minWidthPercent', 'max-width' => 'maxWidthPercent',
-            'min-height' => 'minHeightPercent', 'max-height' => 'maxHeightPercent',
-            'margin-top' => 'marginTopPercent', 'margin-right' => 'marginRightPercent',
-            'margin-bottom' => 'marginBottomPercent', 'margin-left' => 'marginLeftPercent',
-            'padding-top' => 'paddingTopPercent', 'padding-right' => 'paddingRightPercent',
-            'padding-bottom' => 'paddingBottomPercent', 'padding-left' => 'paddingLeftPercent',
-            'left' => 'leftPercent', 'top' => 'topPercent',
-            'right' => 'rightPercent', 'bottom' => 'bottomPercent',
-            'border-radius' => 'borderRadiusPercent',
-        ];
-        foreach ($pctMap as $cssProp => $styleKey) {
-            if (isset($raw[$cssProp])) {
-                $val = trim($raw[$cssProp]);
-                if (str_ends_with($val, '%')) {
-                    $style[$styleKey] = (float)substr($val, 0, -1);
-                } elseif (preg_match('/^calc\s*\(\s*(\d+(?:\.\d+)?)%\s*([+\-])\s*(\d+(?:\.\d+)?)px\s*\)$/i', $val, $m)) {
-                    $style[$styleKey] = (float)$m[1];
-                    $calcOffsetKey = str_replace('Percent', 'CalcOffset', $styleKey);
-                    $style[$calcOffsetKey] = (int)($m[2] === '-' ? -$m[3] : $m[3]);
-                }
-            }
-        }
-
-        // Pre-detect relative unit values
-        $relativeUnitMap = [
-            'font-size' => 'fontSizeUnit', 'width' => 'widthUnit', 'height' => 'heightUnit',
-            'min-width' => 'minWidthUnit', 'max-width' => 'maxWidthUnit',
-            'min-height' => 'minHeightUnit', 'max-height' => 'maxHeightUnit',
-            'margin-top' => 'marginTopUnit', 'margin-right' => 'marginRightUnit',
-            'margin-bottom' => 'marginBottomUnit', 'margin-left' => 'marginLeftUnit',
-            'padding-top' => 'paddingTopUnit', 'padding-right' => 'paddingRightUnit',
-            'padding-bottom' => 'paddingBottomUnit', 'padding-left' => 'paddingLeftUnit',
-            'gap' => 'gapUnit', 'top' => 'topUnit', 'left' => 'leftUnit',
-            'right' => 'rightUnit', 'bottom' => 'bottomUnit',
-        ];
-        foreach ($relativeUnitMap as $cssProp => $styleKey) {
-            if (isset($raw[$cssProp])) {
-                $parsed = CssValueParser::parseRelativeValue($raw[$cssProp]);
-                if ($parsed['unit'] !== 'px') {
-                    $style[$styleKey] = $parsed['value'] . '|' . $parsed['unit'];
-                }
-            }
-        }
-
         // Apply PROPERTY_MAP parsers
         $lookup = array_merge(CssMappings::getPropertyMap(), CssMappings::getInlinePropertyMap());
         foreach ($raw as $propName => $value) {
@@ -171,9 +124,31 @@ class StyleResolver
                 if (count($allVariables) > 0) {
                     $value = CssValueParser::resolveCSSVariables($value, $allVariables);
                 }
-                $style[$map['key']] = self::dispatchParser($map['parser'], $value);
+                $parsed = self::dispatchParser($map['parser'], $value);
+                $style[$map['key']] = $parsed;
+
+                // Auto-create percentage/unit shadow keys from CssLength type info
+                if ($parsed instanceof CssLength) {
+                    if ($parsed->isPercent()) {
+                        $style[$map['key'] . 'Percent'] = $parsed->value;
+                    }
+                    if ($parsed->isRelative()) {
+                        $style[$map['key'] . 'Unit'] = $parsed->value . '|' . $parsed->unit;
+                    }
+                }
             } else {
                 $style[self::kebabToCamelCase($propName)] = $value;
+            }
+        }
+
+        // calc() 百分比偏移支持（在 CssLength 解析后补全）
+        foreach ($raw as $propName => $value) {
+            if (preg_match('/^calc\s*\(\s*(\d+(?:\.\d+)?)%\s*([+\-])\s*(\d+(?:\.\d+)?)px\s*\)$/i', $value, $m)) {
+                $camelKey = self::kebabToCamelCase($propName);
+                $styleKey = $camelKey . 'Percent';
+                $style[$styleKey] = (float)$m[1];
+                $calcOffsetKey = $camelKey . 'CalcOffset';
+                $style[$calcOffsetKey] = (int)($m[2] === '-' ? -$m[3] : $m[3]);
             }
         }
 

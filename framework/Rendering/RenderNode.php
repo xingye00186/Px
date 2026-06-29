@@ -174,42 +174,36 @@ class RenderNode
         $this->key           = $key;
     }
 
-    // ── 向后兼容 ────────────────────────────────────────
+    // ── 兼容桥接：Flex/Grid 内部算法体的 array style 访问 ────────
+    // FlexLayoutStrategy/GridLayoutStrategy 的内部算法体仍使用 `getStyleArray()['key']`
+    // 读取样式值，这些算法将在后续迭代中逐步迁移到 ComputedStyle 类型安全 API。
+    // 当前保留只读的 style 数组桥接，阻止直接写入（写入 getStyleArray() 返回值无效果）。
+
+    /** @var array|null Cached export array for backward compat reads */
+    private ?array $_styleCache = null;
 
     /**
-     * 魔术方法：兼容旧代码中 $node->style['key'] 的读取。
-     * 返回 computedStyle 的原始声明数组。
-     * Phase 3 完成后应逐步移除。
+     * 兼容桥接：返回 computedStyle 的导出数组。
+     * 仅供 FlexLayoutStrategy/GridLayoutStrategy 的内部算法体使用。
+     * 注意：写入返回值的元素（如 `getStyleArray()['key'] = val`）无实际效果。
      */
-    public function __get(string $name): mixed
+    public function getStyleArray(): array
     {
-        if ($name === 'style') {
-            // 返回等效的原始声明（从 computedStyle 导出）
-            return $this->computedStyle !== null
-                ? $this->computedStyle->toExportArray()
-                : [];
+        if ($this->_styleCache === null && $this->computedStyle !== null) {
+            $this->_styleCache = $this->computedStyle->toExportArray();
         }
-        $trace = debug_backtrace();
-        trigger_error(
-            'Undefined property: ' . $name .
-            ' in ' . $trace[0]['file'] .
-            ' on line ' . $trace[0]['line'],
-            E_USER_NOTICE
-        );
-        return null;
+        return $this->_styleCache ?? [];
     }
 
-    /** $node->style 写入也做兼容（Phase 3 后逐步移除） */
-    public function __set(string $name, mixed $value): void
+    /**
+     * 清除样式缓存（computedStyle 变化时调用）。
+     */
+    public function clearStyleCache(): void
     {
-        if ($name === 'style') {
-            // 向后兼容：忽略 style 写入（computedStyle 不可变）
-            return;
-        }
-        $this->$name = $value;
+        $this->_styleCache = null;
     }
 
-    // ── 脏标记方法 ──────────────────────────────────────
+    // ── 脏标记方法 ────
 
     /**
      * 标记布局脏。

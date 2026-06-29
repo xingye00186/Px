@@ -14,129 +14,129 @@ use native_types;
 class ComputedStyle
 {
     // ── 尺寸属性 ──
-    public CssLength $width;
-    public CssLength $height;
-    public CssLength $minWidth;
-    public CssLength $maxWidth;
-    public CssLength $minHeight;
-    public CssLength $maxHeight;
-    public CssLength $flexBasis;
-    public CssLength $gap;
-    public CssLength $columnGap;
-    public CssLength $rowGap;
+    public readonly CssLength $width;
+    public readonly CssLength $height;
+    public readonly CssLength $minWidth;
+    public readonly CssLength $maxWidth;
+    public readonly CssLength $minHeight;
+    public readonly CssLength $maxHeight;
+    public readonly CssLength $flexBasis;
+    public readonly CssLength $gap;
+    public readonly CssLength $columnGap;
+    public readonly CssLength $rowGap;
 
     // ── 颜色属性 ──
-    public CssColor $backgroundColor;
-    public CssColor $color;
+    public readonly CssColor $backgroundColor;
+    public readonly CssColor $color;
 
     // ── 关键字/标识符属性 ──
-    public CssKeyword $display;
-    public CssKeyword $position;
-    public CssKeyword $overflow;
-    public CssKeyword $overflowX;
-    public CssKeyword $overflowY;
-    public CssKeyword $boxSizing;
-    public CssKeyword $flexDirection;
-    public CssKeyword $flexWrap;
-    public CssKeyword $alignItems;
-    public CssKeyword $alignContent;
-    public CssKeyword $alignSelf;
-    public CssKeyword $justifyContent;
-    public CssKeyword $justifyItems;
-    public CssKeyword $justifySelf;
-    public CssKeyword $whiteSpace;
-    public CssKeyword $wordBreak;
-    public CssKeyword $textAlign;
-    public CssKeyword $verticalAlign;
-    public CssKeyword $visibility;
-    public CssKeyword $cursor;
-    public CssKeyword $fontStyle;
-    public CssKeyword $borderCollapse;
-    public CssKeyword $pointerEvents;
+    public readonly CssKeyword $display;
+    public readonly CssKeyword $position;
+    public readonly CssKeyword $overflow;
+    public readonly CssKeyword $overflowX;
+    public readonly CssKeyword $overflowY;
+    public readonly CssKeyword $boxSizing;
+    public readonly CssKeyword $flexDirection;
+    public readonly CssKeyword $flexWrap;
+    public readonly CssKeyword $alignItems;
+    public readonly CssKeyword $alignContent;
+    public readonly CssKeyword $alignSelf;
+    public readonly CssKeyword $justifyContent;
+    public readonly CssKeyword $justifyItems;
+    public readonly CssKeyword $justifySelf;
+    public readonly CssKeyword $whiteSpace;
+    public readonly CssKeyword $wordBreak;
+    public readonly CssKeyword $textAlign;
+    public readonly CssKeyword $verticalAlign;
+    public readonly CssKeyword $visibility;
+    public readonly CssKeyword $cursor;
+    public readonly CssKeyword $fontStyle;
+    public readonly CssKeyword $borderCollapse;
+    public readonly CssKeyword $pointerEvents;
 
     // ── 复合值 ──
-    public CssFlex $flex;
-    public CssRect $padding;
-    public CssRect $margin;
-    public CssRect $borderWidth;
+    public readonly CssFlex $flex;
+    public readonly CssRect $padding;
+    public readonly CssRect $margin;
+    public readonly CssRect $borderWidth;
 
     // ── 数值属性 ──
-    public int $fontSize;
-    public int $fontWeight;
-    public bool $bold;
-    public int $zIndex;
-    public int $borderRadius;
-    public int $columnCount;
-    public int $columnWidth;
-    public float $opacity;
+    public readonly int $fontSize;
+    public readonly int $fontWeight;
+    public readonly bool $bold;
+    public readonly int $zIndex;
+    public readonly int $borderRadius;
+    public readonly int $columnCount;
+    public readonly int $columnWidth;
+    public readonly float $opacity;
 
     // ── 定位偏移（原始 int 用于布局计算） ──
-    public int $left;
-    public int $top;
-    public int $right;
-    public int $bottom;
+    public readonly int $left;
+    public readonly int $top;
+    public readonly int $right;
+    public readonly int $bottom;
 
     // ── 文本渲染 ──
-    public string $fontFamily;
-    public int $lineHeight;
-    public int $textIndent;
+    public readonly string $fontFamily;
+    public readonly int $lineHeight;
+    public readonly int $textIndent;
 
     // ── 边框 ──
-    public int $borderTopWidth;
-    public int $borderRightWidth;
-    public int $borderBottomWidth;
-    public int $borderLeftWidth;
-    public int $borderColor;
-    public string $borderStyle;
-    public int $borderTopColor;
-    public int $borderRightColor;
-    public int $borderBottomColor;
-    public int $borderLeftColor;
-    public string $borderTopStyle;
-    public string $borderRightStyle;
-    public string $borderBottomStyle;
-    public string $borderLeftStyle;
+    public readonly int $borderTopWidth;
+    public readonly int $borderRightWidth;
+    public readonly int $borderBottomWidth;
+    public readonly int $borderLeftWidth;
+    public readonly int $borderColor;
+    public readonly string $borderStyle;
+    public readonly int $borderTopColor;
+    public readonly int $borderRightColor;
+    public readonly int $borderBottomColor;
+    public readonly int $borderLeftColor;
+    public readonly string $borderTopStyle;
+    public readonly string $borderRightStyle;
+    public readonly string $borderBottomStyle;
+    public readonly string $borderLeftStyle;
 
     // ── 其他 ──
-    public string $textDecorationLine;
-    public string $textDecorationColor;
-    public string $textDecorationStyle;
-    public int $textDecorationThickness;
-    public string $backgroundImage;
-    public string $backgroundRepeat;
-    public string $backgroundSize;
-    public string $backgroundPosition;
-    public string $backgroundClip;
-    public string $backgroundOrigin;
-    public string $backgroundAttachment;
-    public string $boxShadow;
-    public string $transform;
-    public string $outlineWidth;
-    public string $outlineStyle;
-    public string $outlineColor;
-    public int $outlineOffset;
-    public string $listStyleType;
-    public string $listStylePosition;
-    public string $gridTemplateColumns;
-    public string $gridTemplateRows;
-    public string $gridAutoRows;
-    public string $gridColumn;
-    public string $gridRow;
-    public string $gridTemplateAreas;
-    public string $objectFit;
-    public string $objectPosition;
-    public string $appearance;
-    public string $borderSpacing;
-    public string $tableLayout;
-    public string $captionSide;
-    public string $fontStretch;
-    public string $fontVariant;
-    public string $textShadow;
-    public string $letterSpacing;
-    public string $wordSpacing;
-    public string $overflowWrap;
-    public string $textTransform;
-    public string $wordWrap;
+    public readonly string $textDecorationLine;
+    public readonly string $textDecorationColor;
+    public readonly string $textDecorationStyle;
+    public readonly int $textDecorationThickness;
+    public readonly string $backgroundImage;
+    public readonly string $backgroundRepeat;
+    public readonly string $backgroundSize;
+    public readonly string $backgroundPosition;
+    public readonly string $backgroundClip;
+    public readonly string $backgroundOrigin;
+    public readonly string $backgroundAttachment;
+    public readonly string $boxShadow;
+    public readonly string $transform;
+    public readonly string $outlineWidth;
+    public readonly string $outlineStyle;
+    public readonly string $outlineColor;
+    public readonly int $outlineOffset;
+    public readonly string $listStyleType;
+    public readonly string $listStylePosition;
+    public readonly string $gridTemplateColumns;
+    public readonly string $gridTemplateRows;
+    public readonly string $gridAutoRows;
+    public readonly string $gridColumn;
+    public readonly string $gridRow;
+    public readonly string $gridTemplateAreas;
+    public readonly string $objectFit;
+    public readonly string $objectPosition;
+    public readonly string $appearance;
+    public readonly string $borderSpacing;
+    public readonly string $tableLayout;
+    public readonly string $captionSide;
+    public readonly string $fontStretch;
+    public readonly string $fontVariant;
+    public readonly string $textShadow;
+    public readonly string $letterSpacing;
+    public readonly string $wordSpacing;
+    public readonly string $overflowWrap;
+    public readonly string $textTransform;
+    public readonly string $wordWrap;
 
     // ── 原始声明存储（部分属性布局计算需要原始值） ──
     private array $rawDeclarations = [];
@@ -174,146 +174,95 @@ class ComputedStyle
     ) {
         $this->rawDeclarations = $declarations;
 
-        // 1. 设置默认值
-        $this->setDefaults($elementType);
+        // 合并默认值 + 显式声明 + 继承：确保每个属性只赋值一次（readonly）
+        $merged = self::getDefaultsArray($elementType);
+        foreach ($declarations as $k => $v) {
+            $merged[$k] = $v;
+        }
+        // 父元素继承：仅当子元素未显式设置时
+        foreach (self::INHERITED_KEYS as $key) {
+            if (!isset($merged[$key]) && isset($parentDeclarations[$key])) {
+                $merged[$key] = $parentDeclarations[$key];
+            }
+        }
 
-        // 2. 应用当前元素声明
-        $this->applyDeclarations($declarations);
-
-        // 3. 继承父元素属性
-        $this->inheritFromParent($parentDeclarations);
-
-        // 4. 冻结
+        $this->applyDeclarations($merged);
         $this->frozen = true;
     }
 
-    /**
-     * 设置 CSS 默认值。
-     */
-    private function setDefaults(string $elementType): void
+    private static function getDefaultsArray(string $elementType): array
     {
-        $this->width = CssLength::px(0);
-        $this->height = CssLength::px(0);
-        $this->minWidth = CssLength::px(0);
-        $this->maxWidth = CssLength::px(0);
-        $this->minHeight = CssLength::px(0);
-        $this->maxHeight = CssLength::px(0);
-        $this->flexBasis = CssLength::auto();
-        $this->gap = CssLength::px(0);
-        $this->columnGap = CssLength::px(0);
-        $this->rowGap = CssLength::px(0);
-
-        $this->backgroundColor = CssColor::transparent();
-        $this->color = CssColor::transparent();
-
         $defaultDisplay = in_array($elementType, self::INLINE_TYPES, true) ? 'inline' : 'block';
-        $this->display = new CssKeyword($defaultDisplay);
-        $this->position = new CssKeyword('static');
-        $this->overflow = new CssKeyword('visible');
-        $this->overflowX = new CssKeyword('visible');
-        $this->overflowY = new CssKeyword('visible');
-        $this->boxSizing = new CssKeyword('content-box');
-        $this->flexDirection = new CssKeyword('row');
-        $this->flexWrap = new CssKeyword('nowrap');
-        $this->alignItems = new CssKeyword('stretch');
-        $this->alignContent = new CssKeyword('stretch');
-        $this->alignSelf = new CssKeyword('auto');
-        $this->justifyContent = new CssKeyword('flex-start');
-        $this->justifyItems = new CssKeyword('stretch');
-        $this->justifySelf = new CssKeyword('auto');
-        $this->whiteSpace = new CssKeyword('normal');
-        $this->wordBreak = new CssKeyword('normal');
-        $this->textAlign = new CssKeyword('start');
-        $this->verticalAlign = new CssKeyword('baseline');
-        $this->visibility = new CssKeyword('visible');
-        $this->cursor = new CssKeyword('auto');
-        $this->fontStyle = new CssKeyword('normal');
-        $this->borderCollapse = new CssKeyword('separate');
-        $this->pointerEvents = new CssKeyword('auto');
-
-        $this->flex = CssFlex::initial();
-        $this->padding = new CssRect(
-            CssLength::px(0), CssLength::px(0), CssLength::px(0), CssLength::px(0)
-        );
-        $this->margin = new CssRect(
-            CssLength::px(0), CssLength::px(0), CssLength::px(0), CssLength::px(0)
-        );
-        $this->borderWidth = new CssRect(
-            CssLength::px(0), CssLength::px(0), CssLength::px(0), CssLength::px(0)
-        );
-
-        $this->fontSize = self::DEFAULT_FONT_SIZE;
-        $this->fontWeight = 400;
-        $this->bold = false;
-        $this->zIndex = 0;
-        $this->borderRadius = 0;
-        $this->columnCount = 0;
-        $this->columnWidth = 0;
-        $this->opacity = 1.0;
-
-        $this->left = 0;
-        $this->top = 0;
-        $this->right = 0;
-        $this->bottom = 0;
-
-        $this->fontFamily = 'Segoe UI';
-        $this->lineHeight = 0;
-        $this->textIndent = 0;
-
-        $this->borderTopWidth = 0;
-        $this->borderRightWidth = 0;
-        $this->borderBottomWidth = 0;
-        $this->borderLeftWidth = 0;
-        $this->borderColor = 0;
-        $this->borderStyle = 'none';
-        $this->borderTopColor = 0;
-        $this->borderRightColor = 0;
-        $this->borderBottomColor = 0;
-        $this->borderLeftColor = 0;
-        $this->borderTopStyle = 'none';
-        $this->borderRightStyle = 'none';
-        $this->borderBottomStyle = 'none';
-        $this->borderLeftStyle = 'none';
-
-        $this->textDecorationLine = '';
-        $this->textDecorationColor = '';
-        $this->textDecorationStyle = '';
-        $this->textDecorationThickness = 0;
-        $this->backgroundImage = '';
-        $this->backgroundRepeat = 'repeat';
-        $this->backgroundSize = '';
-        $this->backgroundPosition = '';
-        $this->backgroundClip = 'border-box';
-        $this->backgroundOrigin = 'padding-box';
-        $this->backgroundAttachment = 'scroll';
-        $this->boxShadow = '';
-        $this->transform = '';
-        $this->outlineWidth = '';
-        $this->outlineStyle = '';
-        $this->outlineColor = '';
-        $this->outlineOffset = 0;
-        $this->listStyleType = '';
-        $this->listStylePosition = '';
-        $this->gridTemplateColumns = '';
-        $this->gridTemplateRows = '';
-        $this->gridAutoRows = '';
-        $this->gridColumn = '';
-        $this->gridRow = '';
-        $this->gridTemplateAreas = '';
-        $this->objectFit = '';
-        $this->objectPosition = '';
-        $this->appearance = '';
-        $this->borderSpacing = '';
-        $this->tableLayout = '';
-        $this->captionSide = '';
-        $this->fontStretch = '';
-        $this->fontVariant = '';
-        $this->textShadow = '';
-        $this->letterSpacing = '';
-        $this->wordSpacing = '';
-        $this->overflowWrap = '';
-        $this->textTransform = '';
-        $this->wordWrap = '';
+        return [
+            'width' => CssLength::px(0),
+            'height' => CssLength::px(0),
+            'minWidth' => CssLength::px(0),
+            'maxWidth' => CssLength::px(0),
+            'minHeight' => CssLength::px(0),
+            'maxHeight' => CssLength::px(0),
+            'flexBasis' => CssLength::auto(),
+            'gap' => CssLength::px(0),
+            'columnGap' => CssLength::px(0),
+            'rowGap' => CssLength::px(0),
+            'bg' => CssColor::transparent(),
+            'fg' => CssColor::transparent(),
+            'display' => new CssKeyword($defaultDisplay),
+            'position' => new CssKeyword('static'),
+            'overflow' => new CssKeyword('visible'),
+            'overflowX' => new CssKeyword('visible'),
+            'overflowY' => new CssKeyword('visible'),
+            'boxSizing' => new CssKeyword('content-box'),
+            'flexDirection' => new CssKeyword('row'),
+            'flexWrap' => new CssKeyword('nowrap'),
+            'alignItems' => new CssKeyword('stretch'),
+            'alignContent' => new CssKeyword('stretch'),
+            'alignSelf' => new CssKeyword('auto'),
+            'justifyContent' => new CssKeyword('flex-start'),
+            'justifyItems' => new CssKeyword('stretch'),
+            'justifySelf' => new CssKeyword('auto'),
+            'whiteSpace' => new CssKeyword('normal'),
+            'wordBreak' => new CssKeyword('normal'),
+            'textAlign' => new CssKeyword('start'),
+            'verticalAlign' => new CssKeyword('baseline'),
+            'visibility' => new CssKeyword('visible'),
+            'cursor' => new CssKeyword('auto'),
+            'fontStyle' => new CssKeyword('normal'),
+            'borderCollapse' => new CssKeyword('separate'),
+            'pointerEvents' => new CssKeyword('auto'),
+            'flex' => CssFlex::initial(),
+            'padding' => new CssRect(CssLength::px(0), CssLength::px(0), CssLength::px(0), CssLength::px(0)),
+            'margin' => new CssRect(CssLength::px(0), CssLength::px(0), CssLength::px(0), CssLength::px(0)),
+            'borderWidth' => new CssRect(CssLength::px(0), CssLength::px(0), CssLength::px(0), CssLength::px(0)),
+            'fontSize' => self::DEFAULT_FONT_SIZE,
+            'fontWeight' => 400,
+            'bold' => false,
+            'zIndex' => 0,
+            'borderRadius' => 0,
+            'columnCount' => 0,
+            'columnWidth' => 0,
+            'opacity' => 1.0,
+            'left' => 0, 'top' => 0, 'right' => 0, 'bottom' => 0,
+            'fontFamily' => 'Segoe UI',
+            'lineHeight' => 0,
+            'textIndent' => 0,
+            'borderTopWidth' => 0, 'borderRightWidth' => 0, 'borderBottomWidth' => 0, 'borderLeftWidth' => 0,
+            'borderColor' => 0, 'borderStyle' => 'none',
+            'borderTopColor' => 0, 'borderRightColor' => 0, 'borderBottomColor' => 0, 'borderLeftColor' => 0,
+            'borderTopStyle' => 'none', 'borderRightStyle' => 'none', 'borderBottomStyle' => 'none', 'borderLeftStyle' => 'none',
+            'textDecorationLine' => '', 'textDecorationColor' => '', 'textDecorationStyle' => '', 'textDecorationThickness' => 0,
+            'backgroundImage' => '', 'backgroundRepeat' => 'repeat', 'backgroundSize' => '', 'backgroundPosition' => '',
+            'backgroundClip' => 'border-box', 'backgroundOrigin' => 'padding-box', 'backgroundAttachment' => 'scroll',
+            'boxShadow' => '', 'transform' => '',
+            'outlineWidth' => '', 'outlineStyle' => '', 'outlineColor' => '', 'outlineOffset' => 0,
+            'listStyleType' => '', 'listStylePosition' => '',
+            'gridTemplateColumns' => '', 'gridTemplateRows' => '', 'gridAutoRows' => '',
+            'gridColumn' => '', 'gridRow' => '', 'gridTemplateAreas' => '',
+            'objectFit' => '', 'objectPosition' => '', 'appearance' => '',
+            'borderSpacing' => '', 'tableLayout' => '', 'captionSide' => '',
+            'fontStretch' => '', 'fontVariant' => '',
+            'textShadow' => '', 'letterSpacing' => '', 'wordSpacing' => '',
+            'overflowWrap' => '', 'textTransform' => '', 'wordWrap' => '',
+        ];
     }
 
     /**
@@ -322,39 +271,42 @@ class ComputedStyle
     private function applyDeclarations(array $d): void
     {
         // ── CssLength 属性 ──
-        $this->applyCssLength('width', 'width', $d);
-        $this->applyCssLength('height', 'height', $d);
-        $this->applyCssLength('minWidth', 'minWidth', $d);
-        $this->applyCssLength('maxWidth', 'maxWidth', $d);
-        $this->applyCssLength('minHeight', 'minHeight', $d);
-        $this->applyCssLength('maxHeight', 'maxHeight', $d);
-        $this->applyCssLength('gap', 'gap', $d);
+        $this->width = $this->resolveCssLength('width', $d) ?? $this->width;
+        $this->height = $this->resolveCssLength('height', $d) ?? $this->height;
+        $this->minWidth = $this->resolveCssLength('minWidth', $d) ?? $this->minWidth;
+        $this->maxWidth = $this->resolveCssLength('maxWidth', $d) ?? $this->maxWidth;
+        $this->minHeight = $this->resolveCssLength('minHeight', $d) ?? $this->minHeight;
+        $this->maxHeight = $this->resolveCssLength('maxHeight', $d) ?? $this->maxHeight;
+        $this->gap = $this->resolveCssLength('gap', $d) ?? $this->gap;
+        $this->columnGap = $this->resolveCssLength('columnGap', $d) ?? $this->columnGap;
+        $this->rowGap = $this->resolveCssLength('rowGap', $d) ?? $this->rowGap;
+        $this->flexBasis = $this->resolveCssLength('flexBasis', $d) ?? $this->flexBasis;
 
         // ── 颜色 ──
-        $this->applyColor('backgroundColor', 'bg', $d);
-        $this->applyColor('color', 'fg', $d);
+        $bgVal = $this->resolveColor('bg', $d); if ($bgVal !== null) $this->backgroundColor = $bgVal;
+        $fgVal = $this->resolveColor('fg', $d); if ($fgVal !== null) $this->color = $fgVal;
 
         // ── 关键字 ──
-        $this->applyKeyword('display', 'display', $d, 'block');
-        $this->applyKeyword('position', 'position', $d, 'static');
-        $this->applyKeyword('overflow', 'overflow', $d, 'visible');
-        $this->applyKeyword('overflowX', 'overflowX', $d, 'visible');
-        $this->applyKeyword('overflowY', 'overflowY', $d, 'visible');
-        $this->applyKeyword('boxSizing', 'boxSizing', $d, 'content-box');
-        $this->applyKeyword('flexDirection', 'flexDirection', $d, 'row');
-        $this->applyKeyword('flexWrap', 'flexWrap', $d, 'nowrap');
-        $this->applyKeyword('alignItems', 'alignItems', $d, 'stretch');
-        $this->applyKeyword('alignContent', 'alignContent', $d, 'stretch');
-        $this->applyKeyword('justifyContent', 'justifyContent', $d, 'flex-start');
-        $this->applyKeyword('justifyItems', 'justifyItems', $d, 'stretch');
-        $this->applyKeyword('whiteSpace', 'whiteSpace', $d, 'normal');
-        $this->applyKeyword('wordBreak', 'wordBreak', $d, 'normal');
-        $this->applyKeyword('textAlign', 'textAlign', $d, 'start');
-        $this->applyKeyword('verticalAlign', 'verticalAlign', $d, 'baseline');
-        $this->applyKeyword('visibility', 'visibility', $d, 'visible');
-        $this->applyKeyword('cursor', 'cursor', $d, 'auto');
-        $this->applyKeyword('borderCollapse', 'borderCollapse', $d, 'separate');
-        $this->applyKeyword('pointerEvents', 'pointerEvents', $d, 'auto');
+        $this->display = $this->resolveKeyword('display', $d, 'block');
+        $this->position = $this->resolveKeyword('position', $d, 'static');
+        $this->overflow = $this->resolveKeyword('overflow', $d, 'visible');
+        $this->overflowX = $this->resolveKeyword('overflowX', $d, 'visible');
+        $this->overflowY = $this->resolveKeyword('overflowY', $d, 'visible');
+        $this->boxSizing = $this->resolveKeyword('boxSizing', $d, 'content-box');
+        $this->flexDirection = $this->resolveKeyword('flexDirection', $d, 'row');
+        $this->flexWrap = $this->resolveKeyword('flexWrap', $d, 'nowrap');
+        $this->alignItems = $this->resolveKeyword('alignItems', $d, 'stretch');
+        $this->alignContent = $this->resolveKeyword('alignContent', $d, 'stretch');
+        $this->justifyContent = $this->resolveKeyword('justifyContent', $d, 'flex-start');
+        $this->justifyItems = $this->resolveKeyword('justifyItems', $d, 'stretch');
+        $this->whiteSpace = $this->resolveKeyword('whiteSpace', $d, 'normal');
+        $this->wordBreak = $this->resolveKeyword('wordBreak', $d, 'normal');
+        $this->textAlign = $this->resolveKeyword('textAlign', $d, 'start');
+        $this->verticalAlign = $this->resolveKeyword('verticalAlign', $d, 'baseline');
+        $this->visibility = $this->resolveKeyword('visibility', $d, 'visible');
+        $this->cursor = $this->resolveKeyword('cursor', $d, 'auto');
+        $this->borderCollapse = $this->resolveKeyword('borderCollapse', $d, 'separate');
+        $this->pointerEvents = $this->resolveKeyword('pointerEvents', $d, 'auto');
 
         // ── flex ──
         if (isset($d['flex'])) {
@@ -408,8 +360,8 @@ class ComputedStyle
         $this->right = (int)($d['right'] ?? 0);
         $this->bottom = (int)($d['bottom'] ?? 0);
 
-        // ── 其他字符串属性 ──
-        foreach ([
+        // ── 其他字符串属性（AOT 兼容：显式逐一赋值，不用变量属性名）─
+        $keys = [
             'fontFamily', 'backgroundImage', 'backgroundRepeat', 'backgroundSize',
             'backgroundPosition', 'backgroundClip', 'backgroundOrigin',
             'backgroundAttachment', 'boxShadow', 'transform',
@@ -422,64 +374,87 @@ class ComputedStyle
             'overflowWrap', 'textTransform', 'wordWrap',
             'textDecorationLine', 'textDecorationColor', 'textDecorationStyle',
             'textDecorationThickness',
-        ] as $k) {
+        ];
+        foreach ($keys as $k) {
             if (isset($d[$k])) {
                 $v = $d[$k];
                 if (is_string($v) || is_int($v)) {
-                    $this->$k = (string)$v;
+                    // AOT 兼容：match 显式分支，每支用字面量属性名
+                    match ($k) {
+                        'fontFamily' => $this->fontFamily = (string)$v,
+                        'backgroundImage' => $this->backgroundImage = (string)$v,
+                        'backgroundRepeat' => $this->backgroundRepeat = (string)$v,
+                        'backgroundSize' => $this->backgroundSize = (string)$v,
+                        'backgroundPosition' => $this->backgroundPosition = (string)$v,
+                        'backgroundClip' => $this->backgroundClip = (string)$v,
+                        'backgroundOrigin' => $this->backgroundOrigin = (string)$v,
+                        'backgroundAttachment' => $this->backgroundAttachment = (string)$v,
+                        'boxShadow' => $this->boxShadow = (string)$v,
+                        'transform' => $this->transform = (string)$v,
+                        'outlineWidth' => $this->outlineWidth = (string)$v,
+                        'outlineStyle' => $this->outlineStyle = (string)$v,
+                        'outlineColor' => $this->outlineColor = (string)$v,
+                        'outlineOffset' => $this->outlineOffset = (int)$v,
+                        'listStyleType' => $this->listStyleType = (string)$v,
+                        'listStylePosition' => $this->listStylePosition = (string)$v,
+                        'gridTemplateColumns' => $this->gridTemplateColumns = (string)$v,
+                        'gridTemplateRows' => $this->gridTemplateRows = (string)$v,
+                        'gridAutoRows' => $this->gridAutoRows = (string)$v,
+                        'gridColumn' => $this->gridColumn = (string)$v,
+                        'gridRow' => $this->gridRow = (string)$v,
+                        'gridTemplateAreas' => $this->gridTemplateAreas = (string)$v,
+                        'objectFit' => $this->objectFit = (string)$v,
+                        'objectPosition' => $this->objectPosition = (string)$v,
+                        'appearance' => $this->appearance = (string)$v,
+                        'borderSpacing' => $this->borderSpacing = (string)$v,
+                        'tableLayout' => $this->tableLayout = (string)$v,
+                        'captionSide' => $this->captionSide = (string)$v,
+                        'fontStretch' => $this->fontStretch = (string)$v,
+                        'fontVariant' => $this->fontVariant = (string)$v,
+                        'textShadow' => $this->textShadow = (string)$v,
+                        'letterSpacing' => $this->letterSpacing = (string)$v,
+                        'wordSpacing' => $this->wordSpacing = (string)$v,
+                        'overflowWrap' => $this->overflowWrap = (string)$v,
+                        'textTransform' => $this->textTransform = (string)$v,
+                        'wordWrap' => $this->wordWrap = (string)$v,
+                        'textDecorationLine' => $this->textDecorationLine = (string)$v,
+                        'textDecorationColor' => $this->textDecorationColor = (string)$v,
+                        'textDecorationStyle' => $this->textDecorationStyle = (string)$v,
+                        'textDecorationThickness' => $this->textDecorationThickness = (int)$v,
+                        default => null,
+                    };
                 }
             }
         }
-
-        // ── display 覆盖 ──
-        // 内联元素如果显式设置了 display 则使用该值
-        if (isset($d['display'])) {
-            $dv = $d['display'];
-            if ($dv instanceof CssKeyword) {
-                $this->display = $dv;
-            } elseif (is_string($dv)) {
-                $this->display = new CssKeyword($dv);
-            }
-        }
     }
 
-    private function applyCssLength(string $prop, string $key, array $d): void
+    private function resolveCssLength(string $key, array $d): ?CssLength
     {
-        if (!isset($d[$key])) return;
+        if (!isset($d[$key])) return null;
         $v = $d[$key];
-        if ($v instanceof CssLength) {
-            $this->$prop = $v;
-        } elseif (is_numeric($v)) {
-            $this->$prop = CssLength::px((float)$v);
-        } elseif (is_string($v) && $v !== '') {
-            $this->$prop = CssLength::fromString($v);
-        }
+        if ($v instanceof CssLength) return $v;
+        if (is_numeric($v)) return CssLength::px((float)$v);
+        if (is_string($v) && $v !== '') return CssLength::fromString($v);
+        return null;
     }
 
-    private function applyColor(string $prop, string $key, array $d): void
+    private function resolveColor(string $key, array $d): ?CssColor
     {
-        if (!isset($d[$key])) return;
+        if (!isset($d[$key])) return null;
         $v = $d[$key];
-        if ($v instanceof CssColor) {
-            $this->$prop = $v;
-        } elseif (is_int($v)) {
-            $this->$prop = CssColor::fromArgb($v);
-        } elseif (is_string($v) && $v !== '') {
-            $this->$prop = CssColor::fromString($v);
-        }
+        if ($v instanceof CssColor) return $v;
+        if (is_int($v)) return CssColor::fromArgb($v);
+        if (is_string($v) && $v !== '') return CssColor::fromString($v);
+        return null;
     }
 
-    private function applyKeyword(string $prop, string $key, array $d, string $default): void
+    private function resolveKeyword(string $key, array $d, string $default): CssKeyword
     {
-        if (!isset($d[$key])) return;
+        if (!isset($d[$key])) return new CssKeyword($default);
         $v = $d[$key];
-        if ($v instanceof CssKeyword) {
-            $this->$prop = $v;
-        } elseif (is_string($v) && $v !== '') {
-            $this->$prop = new CssKeyword($v);
-        } else {
-            $this->$prop = new CssKeyword($default);
-        }
+        if ($v instanceof CssKeyword) return $v;
+        if (is_string($v) && $v !== '') return new CssKeyword($v);
+        return new CssKeyword($default);
     }
 
     private function applyPaddingMarginBorder(array $d): void
@@ -545,36 +520,6 @@ class ComputedStyle
         return $default;
     }
 
-    /**
-     * 从父元素继承 CSS 继承属性。
-     */
-    private function inheritFromParent(array $parentDeclarations): void
-    {
-        if (empty($parentDeclarations)) return;
-
-        foreach (self::INHERITED_KEYS as $key) {
-            if (!isset($this->rawDeclarations[$key]) && isset($parentDeclarations[$key])) {
-                // 仅当子节点未显式设置时才继承
-                // 实际继承逻辑在布局策略中通过 parentStyle 参数处理
-            }
-        }
-
-        // 继承 font-size
-        if (!isset($this->rawDeclarations['fontSize']) && isset($parentDeclarations['fontSize'])) {
-            $this->fontSize = $parentDeclarations['fontSize'] instanceof CssLength
-                ? $parentDeclarations['fontSize']->toPx()
-                : (int)$parentDeclarations['fontSize'];
-        }
-
-        // 继承 bold/fontWeight
-        if (!isset($this->rawDeclarations['bold']) && isset($parentDeclarations['bold'])) {
-            $this->bold = (bool)$parentDeclarations['bold'];
-        }
-        if (!isset($this->rawDeclarations['fontWeight']) && isset($parentDeclarations['fontWeight'])) {
-            $this->fontWeight = (int)$parentDeclarations['fontWeight'];
-        }
-    }
-
     // ════════════════════════════════════════════════════════════════
     //  导出的 key → 原始声明数组
     // ════════════════════════════════════════════════════════════════
@@ -609,6 +554,18 @@ class ComputedStyle
         'columnRuleWidth', 'columnRuleStyle', 'columnRuleColor',
         'textDecorationLine', 'textDecorationColor', 'textDecorationStyle',
         'textDecorationThickness',
+        // Percentage flags (generated by StyleResolver, consumed by flex/grid internals)
+        'widthPercent', 'heightPercent',
+        'minWidthPercent', 'maxWidthPercent', 'minHeightPercent', 'maxHeightPercent',
+        'marginTopPercent', 'marginRightPercent', 'marginBottomPercent', 'marginLeftPercent',
+        'paddingTopPercent', 'paddingRightPercent', 'paddingBottomPercent', 'paddingLeftPercent',
+        'leftPercent', 'topPercent', 'rightPercent', 'bottomPercent', 'borderRadiusPercent',
+        // Relative unit flags
+        'fontSizeUnit', 'widthUnit', 'heightUnit',
+        'minWidthUnit', 'maxWidthUnit', 'minHeightUnit', 'maxHeightUnit',
+        'marginTopUnit', 'marginRightUnit', 'marginBottomUnit', 'marginLeftUnit',
+        'paddingTopUnit', 'paddingRightUnit', 'paddingBottomUnit', 'paddingLeftUnit',
+        'gapUnit', 'topUnit', 'leftUnit', 'rightUnit', 'bottomUnit',
     ];
 
     /**
@@ -617,6 +574,57 @@ class ComputedStyle
     public function getRaw(string $key): mixed
     {
         return $this->rawDeclarations[$key] ?? null;
+    }
+
+    /**
+     * 获取 CSSValue 类型的属性值。
+     */
+    public function get(string $key): ?CssValue
+    {
+        // AOT 兼容：match 显式分支，每支用字面量属性名
+        $val = match ($key) {
+            'width' => $this->width,
+            'height' => $this->height,
+            'minWidth' => $this->minWidth,
+            'maxWidth' => $this->maxWidth,
+            'minHeight' => $this->minHeight,
+            'maxHeight' => $this->maxHeight,
+            'flexBasis' => $this->flexBasis,
+            'gap' => $this->gap,
+            'columnGap' => $this->columnGap,
+            'rowGap' => $this->rowGap,
+            'backgroundColor' => $this->backgroundColor,
+            'color' => $this->color,
+            'display' => $this->display,
+            'position' => $this->position,
+            'overflow' => $this->overflow,
+            'overflowX' => $this->overflowX,
+            'overflowY' => $this->overflowY,
+            'boxSizing' => $this->boxSizing,
+            'flexDirection' => $this->flexDirection,
+            'flexWrap' => $this->flexWrap,
+            'alignItems' => $this->alignItems,
+            'alignContent' => $this->alignContent,
+            'justifyContent' => $this->justifyContent,
+            'justifyItems' => $this->justifyItems,
+            'whiteSpace' => $this->whiteSpace,
+            'wordBreak' => $this->wordBreak,
+            'textAlign' => $this->textAlign,
+            'verticalAlign' => $this->verticalAlign,
+            'visibility' => $this->visibility,
+            'cursor' => $this->cursor,
+            'fontStyle' => $this->fontStyle,
+            'borderCollapse' => $this->borderCollapse,
+            'pointerEvents' => $this->pointerEvents,
+            'flex' => $this->flex,
+            'padding' => $this->padding,
+            'margin' => $this->margin,
+            'borderWidth' => $this->borderWidth,
+            default => null,
+        };
+        if ($val instanceof CssValue) return $val;
+        $raw = $this->getRaw($key);
+        return $raw instanceof CssValue ? $raw : null;
     }
 
     /**

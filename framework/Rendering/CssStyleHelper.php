@@ -5,12 +5,13 @@ namespace Px\Rendering;
 use native_types;
 
 /**
- * CssStyleHelper — 过渡期样式值解析辅助
+ * CssStyleHelper — 样式值解析辅助
  *
- * 替换 PercentResolver，适配 CssValue 类型（CssLength/CssKeyword 等）
+ * 适配 CssValue 类型（CssLength/CssKeyword 等）
  * 与旧式 int/string 并存的混合 $style 数组。
  *
- * Phase 2 中由 ComputedStyle 完全替代后删除此类。
+ * FlexLayoutStrategy/GridLayoutStrategy 内部算法体仍在使用，
+ * 待内部算法体迁移到 ComputedStyle 后删除。
  */
 class CssStyleHelper
 {
@@ -162,7 +163,6 @@ class CssStyleHelper
 
     /**
      * Resolve line-height from style.
-     * 同 PercentResolver::resolveLineHeight 逻辑。
      */
     public static function lineHeight(array $style, int $fontSize, int $rootFontSize = 16, ?array $parentStyle = null): int
     {
@@ -261,7 +261,6 @@ class CssStyleHelper
 
     /**
      * Resolve fontSize from relative unit (em/rem/vw/vh).
-     * Inline version of PercentResolver::resolveFontSizeUnit for the mixed style array.
      */
     public static function resolveFontSize(array &$style, int $rootFontSize = 16, int $viewportW = 1920, int $viewportH = 1080): void
     {
