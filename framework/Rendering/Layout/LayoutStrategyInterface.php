@@ -15,13 +15,13 @@ interface LayoutStrategyInterface
     /**
      * 对单个 RenderNode 执行布局计算。
      *
-     * @param RenderNode    $node   当前布局节点（mutated in-place）
-     * @param LayoutContext $ctx    布局上下文（父坐标、父引用、滚动容器）
-     * @param array         $style  合并后的 effective style
+     * @param RenderNode $node   当前布局节点
+     * @param object     $ctx    布局上下文（父坐标、父引用）
+     * @param array      $style  合并后的 effective style
      */
     public function resolve(
         RenderNode    $node,
-        LayoutContext $ctx,
+        object        $ctx,
         array         $style
     ): void;
 }

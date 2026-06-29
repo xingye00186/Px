@@ -29,19 +29,9 @@ use Px\Rendering\Layout\Tools\ScrollHelper;
  */
 class FlexLayoutStrategy implements LayoutStrategyInterface
 {
-    public function resolve(
-        RenderNode    $node,
-        LayoutContext $ctx,
-        array         $style
-    ): void
-    {
-        $this->resolveFlexLayout($node, $ctx, $style);
-    }
-
     /**
-     * Phase 3: 使用 FragmentBuilder 的布局入口。
-     * 通过旧 resolveFlexLayout 计算，但结果路由到 builder，不直接写 node。
-     * 不再递归子节点（由 LayoutResolver 统一处理）。
+     * Pure FragmentBuilder 布局入口。
+     * 直接使用 LayoutConstraints + ComputedStyle。
      */
     public function resolveWithBuilder(
         RenderNode         $node,
@@ -50,21 +40,15 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         FragmentBuilder    $builder
     ): void
     {
-        $ctx = new LayoutContext(
-            $constraints->parentContentX,
-            $constraints->parentContentY,
-            $node->parent
-        );
-        $styleArr = $style !== null ? $style->toExportArray() : $node->style;
-        $this->resolveFlexLayout($node, $ctx, $styleArr, false);
-        $builder
-            ->setPosition($node->x, $node->y)
-            ->setSize($node->w, $node->h, $style)
-            ->setLayer($node->layer)
-            ->setContentSize($node->contentWidth, $node->contentHeight);
+        $parentX = $constraints->parentContentX;
+        $parentY = $constraints->parentContentY;
+        $this->resolveFlexLayout($node, $parentX, $parentY, $style, $builder);
     }
 
     private LayoutResolver $resolver;
+
+    /** @var array<string, int> Auto margin X offset tracking */
+    private array $marginAutoOffsetsX = [];
 
     public function __construct(LayoutResolver $resolver)
     {
@@ -76,12 +60,14 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
      */
     public function resolveFlexLayout(
         RenderNode    $node,
-        LayoutContext $ctx,
-        array         $style,
-        bool          $recurseChildren = true
+        int           $parentX,
+        int           $parentY,
+        ?ComputedStyle $computedStyle,
+        ?FragmentBuilder $builder = null
     ): void
     {
-        // Container position
+        // Local style array from ComputedStyle for algorithm body
+        $style = $node->getStyleArray();
 
         $left = (int)($style['left'] ?? 0);
 
@@ -92,20 +78,20 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $height = (int)($style['height'] ?? 0);
 
         // CSS 2.2 §10.3.7: margins apply to flex containers as block-level elements
-        $cbWidth = $ctx->parent ? CssStyleHelper::contentBoxWidth($ctx->parent->style, $ctx->parent->w) : 0;
+        $cbWidth = $node->parent ? CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w) : 0;
         $marginLeft = CssStyleHelper::resolveLength($style, 'marginLeft', $cbWidth);
         $marginTop = CssStyleHelper::resolveLength($style, 'marginTop', $cbWidth);
 
-        $node->x = $left + $ctx->parentX + $marginLeft;
+        $node->x = $left + $parentX + $marginLeft;
         // DEBUG: check target-box positioning
         if ($node->w === 300 && $node->h >= 100) {
-            $dbgPW = ($ctx->parent !== null) ? $ctx->parent->w : -1;
-            $dbgPT = ($ctx->parent !== null) ? $ctx->parent->type : 'null';
-            $dbgPX = ($ctx->parent !== null) ? $ctx->parent->x : -1;
-            error_log('[FLEX_AUTOMARGIN] SET_X: left=' . $left . ' parentX=' . $ctx->parentX . ' x=' . $node->x . ' pw=' . $dbgPW . ' ptype=' . $dbgPT . ' px=' . $dbgPX);
+            $dbgPW = ($node->parent !== null) ? $node->parent->w : -1;
+            $dbgPT = ($node->parent !== null) ? $node->parent->type : 'null';
+            $dbgPX = ($node->parent !== null) ? $node->parent->x : -1;
+            error_log('[FLEX_AUTOMARGIN] SET_X: left=' . $left . ' parentX=' . $parentX . ' x=' . $node->x . ' pw=' . $dbgPW . ' ptype=' . $dbgPT . ' px=' . $dbgPX);
         }
 
-        $node->y = $top + $ctx->parentY + $marginTop;
+        $node->y = $top + $parentY + $marginTop;
 
         // Apply translate from animatedStyle
 
@@ -119,11 +105,11 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // CSS: flex item percentage width resolves against content width
         // When parent is null (top-level element under #root), use window viewport as containing block
-        $parentW = (int)(($ctx->parent !== null)
-            ? CssStyleHelper::contentBoxWidth($ctx->parent->style, $ctx->parent->w)
+        $parentW = (int)(($node->parent !== null)
+            ? CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w)
             : (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0));
 
-        $parentH = ($ctx->parent !== null) ? $ctx->parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
+        $parentH = ($node->parent !== null) ? $node->parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
 
         $width = CssStyleHelper::resolveWithCalc($style, 'width', $parentW);
 
@@ -145,46 +131,43 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $checkML = $style['marginLeftAuto'] ?? false;
         $checkMR = $style['marginRightAuto'] ?? false;
         if ($checkML || $checkMR) {
-            $cbW = ($ctx->parent !== null)
-                ? CssStyleHelper::contentBoxWidth($ctx->parent->style, $ctx->parent->w)
+            $cbW = ($node->parent !== null)
+                ? CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w)
                 : 0;
             if ($cbW > 0) {
                 $totalW = max($node->w, $node->visualW ?? $node->w);
                 if ($checkML && $checkMR && $cbW > $totalW) {
                     $half = (int)(($cbW - $totalW + 1) / 2);
-                    // Undo previous offset to prevent accumulation
-                    $prevX = $node->style['_marginAutoOffsetX'] ?? 0;
-                    $node->x += $half - $prevX;
-                    $node->style['_marginAutoOffsetX'] = $half;
-                    $node->style['_computedMarginLeft'] = $half;
-                    $node->style['_computedMarginRight'] = $cbW - $totalW - $half;
+                    // 使用本地跟踪避免累积，不写入 getStyleArray（只读拷贝）
+                    $nodeX = $this->marginAutoOffsetsX[$node->type] ?? 0;
+                    $node->x += $half - $nodeX;
+                    $this->marginAutoOffsetsX[$node->type] = $half;
                 } elseif ($checkML && !$checkMR && $cbW > $totalW) {
                     $remaining = $cbW - $totalW;
-                    $prevX = $node->style['_marginAutoOffsetX'] ?? 0;
-                    $node->x += $remaining - $prevX;
-                    $node->style['_marginAutoOffsetX'] = $remaining;
-                    $node->style['_computedMarginLeft'] = $remaining;
+                    $nodeX = $this->marginAutoOffsetsX[$node->type] ?? 0;
+                    $node->x += $remaining - $nodeX;
+                    $this->marginAutoOffsetsX[$node->type] = $remaining;
                 } elseif (!$checkML && $checkMR && $cbW > $totalW) {
-                    $node->style['_computedMarginRight'] = $cbW - $totalW;
+                    // right margin auto: no offset needed
                 }
             }
         }
 
         // ── Scroll container post-processing for flex/grid display modes ──
 
-        $parentDisplay = ($ctx->parent !== null) ? ($ctx->parent->style['display'] ?? '') : '';
+        $parentDisplay = ($node->parent !== null) ? ($node->parent->getStyleArray()['display'] ?? '') : '';
 
         $isFlexOrGridItem = ($parentDisplay === 'flex' || $parentDisplay === 'grid');
 
         if (!$isFlexOrGridItem) {
             $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
-            if (!$hasExplicitW && $width === 0 && $ctx->parent !== null) {
-                $width = (int)CssStyleHelper::contentBoxWidth($ctx->parent->style, $ctx->parent->w);
+            if (!$hasExplicitW && $width === 0 && $node->parent !== null) {
+                $width = (int)CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w);
 
                 $node->w = (int)max(0, (int)$width);
             }
-        } elseif ($ctx->parent !== null && $parentDisplay === 'flex') {
+        } elseif ($node->parent !== null && $parentDisplay === 'flex') {
             // ── Scroll container post-processing for flex/grid display modes ──
 
             // cross-axis (width) size for correct first-pass internal layout.
@@ -193,14 +176,14 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             // their internal grid to compute 1 column with inflated height, which
             // then triggers flex-shrink and damages sibling items' explicit sizes.
 
-            $parentDirection = $ctx->parent->style['flexDirection'] ?? 'row';
+            $parentDirection = $node->parent->getStyleArray()['flexDirection'] ?? 'row';
 
             $parentIsColumn = ($parentDirection === 'column' || $parentDirection === 'column-reverse');
 
             $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
             if ($parentIsColumn && !$hasExplicitW && $width === 0) {
-                $parentContentW = CssStyleHelper::contentBoxWidth($ctx->parent->style, $ctx->parent->w);
+                $parentContentW = CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w);
 
                 $width = $parentContentW;
 
@@ -257,8 +240,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $absoluteChildren = [];
 
         foreach ($node->children as $child) {
-            $childPosition = $child->style['position'] ?? 'static';
-            $childDisplay = $child->style['display'] ?? 'block';
+            $childPosition = $child->getStyleArray()['position'] ?? 'static';
+            $childDisplay = $child->getStyleArray()['display'] ?? 'block';
 
             // Defer absolute/fixed children - container dimensions not yet known
             // Skip display:none children (CSS 2.2 §9.2.4: generate no box)
@@ -275,18 +258,12 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 continue;
             }
 
-            $childCtx = new LayoutContext($node->x + $paddingLeft, $node->y + $paddingTop, $node);
             // Defer auto-margin for flex-grow items: their final width is
             // determined by flex-grow, not by first-pass auto-width.
             // Browser: auto-margin computed ONCE after final width is known.
-            // Engine: two-pass re-resolves with correct width �?skip first pass.
-            $childGrow = (int)($child->style['flexGrow'] ?? 0);
-            if ($childGrow > 0) {
-                $child->style['_deferAutoMargin'] = true;
-            }
-            if ($recurseChildren) {
-                $this->resolver->resolveNode($child, $childCtx);
-            }
+            // Engine: two-pass re-resolves with correct width - skip first pass.
+            $childGrow = (float)($child->getStyleArray()['flexGrow'] ?? 0);
+            $this->resolver->resolveChildNode($child, $node->x + $paddingLeft, $node->y + $paddingTop, $node);
 
             $children[] = $child;
         }
@@ -304,9 +281,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         for ($i = 0; $i < $n; $i++) {
             for ($j = 0; $j < $n - $i - 1; $j++) {
-                $orderA = (int)($children[$j]->style['order'] ?? 0);
+                $orderA = (int)($children[$j]->getStyleArray()['order'] ?? 0);
 
-                $orderB = (int)($children[$j + 1]->style['order'] ?? 0);
+                $orderB = (int)($children[$j + 1]->getStyleArray()['order'] ?? 0);
 
                 if ($orderA > $orderB) {
                     $tmp = $children[$j];
@@ -324,7 +301,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         foreach ($children as $ch) {
             $data = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => -1, 'isFlexGrow' => false];
 
-            $flexRaw = $ch->style['flex'] ?? '';
+            $flexRaw = $ch->getStyleArray()['flex'] ?? '';
 
             if ($flexRaw !== '') {
                 $fv = CssMappings::parseFlexValue($flexRaw);
@@ -335,13 +312,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                 $data['basis'] = $fv['basis'];
             } else {
-                $data['grow'] = (float)($ch->style['flexGrow'] ?? 0);
+                $data['grow'] = (float)($ch->getStyleArray()['flexGrow'] ?? 0);
 
-                $data['shrink'] = (float)($ch->style['flexShrink'] ?? 1);
+                $data['shrink'] = (float)($ch->getStyleArray()['flexShrink'] ?? 1);
 
                 // 捕获独立�?flex-basis 属性（仅数值，'auto' 由默�?-1 处理�?
-                if (isset($ch->style['flexBasis']) && $ch->style['flexBasis'] !== 'auto') {
-                    $data['basis'] = (int)$ch->style['flexBasis'];
+                if (isset($ch->getStyleArray()['flexBasis']) && $ch->getStyleArray()['flexBasis'] !== 'auto') {
+                    $data['basis'] = (int)$ch->getStyleArray()['flexBasis'];
                 }
             }
 
@@ -368,12 +345,12 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $wrapFlexData = [];
             foreach ($children as $idx => $ch) {
                 $wrapGrow = 0.0;
-                $flexRaw = $ch->style['flex'] ?? '';
+                $flexRaw = $ch->getStyleArray()['flex'] ?? '';
                 if ($flexRaw !== '') {
                     $fv = CssMappings::parseFlexValue($flexRaw);
                     $wrapGrow = (float)($fv['grow']);
                 } else {
-                    $wrapGrow = (float)($ch->style['flexGrow'] ?? 0);
+                    $wrapGrow = (float)($ch->getStyleArray()['flexGrow'] ?? 0);
                 }
                 $wrapFlexData[$idx] = $wrapGrow;
             }
@@ -384,12 +361,12 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 //  whether they fit on the current line. CSS Flexbox §9.5)
                 $wrapGrow = (float)($wrapFlexData[$idx] ?? 0);
                 if ($wrapGrow > 0) {
-                    $minMain = $isRow ? (int)($ch->style['minWidth'] ?? 0) : (int)($ch->style['minHeight'] ?? 0);
+                    $minMain = $isRow ? (int)($ch->getStyleArray()['minWidth'] ?? 0) : (int)($ch->getStyleArray()['minHeight'] ?? 0);
                     // Also consider intrinsic content width (text) as minimum
                     $chText = $ch->content ?? '';
                     if (is_string($chText) && strlen($chText) > 0 && $minMain <= 0) {
-                        $fs = (int)($ch->style['fontSize'] ?? 14);
-                        $bd = ($ch->style['bold'] ?? 0) !== 0;
+                        $fs = (int)($ch->getStyleArray()['fontSize'] ?? 14);
+                        $bd = ($ch->getStyleArray()['bold'] ?? 0) !== 0;
                         $textW = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($chText, $fs, $bd) : 0);
                         if ($isRow) {
                             $minMain = max(0, $textW);
@@ -458,7 +435,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             foreach ($lineChildren as $ch) {
                 $data = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => -1, 'isFlexGrow' => false, 'hasExplicitCrossSize' => false, 'crossAxisSized' => false];
 
-                $flexRaw = $ch->style['flex'] ?? '';
+                $flexRaw = $ch->getStyleArray()['flex'] ?? '';
 
                 if ($flexRaw !== '') {
                     $fv = CssMappings::parseFlexValue($flexRaw);
@@ -469,13 +446,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                     $data['basis'] = $fv['basis'];
                 } else {
-                    $data['grow'] = (float)($ch->style['flexGrow'] ?? 0);
+                    $data['grow'] = (float)($ch->getStyleArray()['flexGrow'] ?? 0);
 
-                    $data['shrink'] = (float)($ch->style['flexShrink'] ?? 1);
+                    $data['shrink'] = (float)($ch->getStyleArray()['flexShrink'] ?? 1);
 
                     // 捕获独立�?flex-basis 属性（仅数值，'auto' 由默�?-1 处理�?
-                    if (isset($ch->style['flexBasis']) && $ch->style['flexBasis'] !== 'auto') {
-                        $data['basis'] = (int)$ch->style['flexBasis'];
+                    if (isset($ch->getStyleArray()['flexBasis']) && $ch->getStyleArray()['flexBasis'] !== 'auto') {
+                        $data['basis'] = (int)$ch->getStyleArray()['flexBasis'];
                     }
                 }
 
@@ -862,8 +839,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         $mL = (int)($resolvedAutoMargins[$idx]['left']);
                         $mR = (int)($resolvedAutoMargins[$idx]['right']);
 
-                        $mT = (int)($ch->style['marginTop'] ?? $ch->style['margin'] ?? 0);
-                        $mB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
+                        $mT = (int)($ch->getStyleArray()['marginTop'] ?? $ch->getStyleArray()['margin'] ?? 0);
+                        $mB = (int)($ch->getStyleArray()['marginBottom'] ?? $ch->getStyleArray()['margin'] ?? 0);
 
                         if ($isRow) {
                             $lineTotalMain += $ch->visualW + $mL + $mR;
@@ -1073,22 +1050,22 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
 
                 if ($needsTwoPass && (count($chTp->children) > 0 || $chTp->content !== null)) {
-                    $display = (string)($chTp->style['display'] ?? 'block');
+                    $display = (string)($chTp->getStyleArray()['display'] ?? 'block');
 
                     if ($display === 'flex' || $display === 'grid') {
                         // Full re-layout for flex/grid containers.
-                        $leftOff = $chTp->style['left'] ?? 0;
-                        $topOff = $chTp->style['top'] ?? 0;
+                        $leftOff = $chTp->getStyleArray()['left'] ?? 0;
+                        $topOff = $chTp->getStyleArray()['top'] ?? 0;
                         $prX = $chTp->x - $leftOff;
                         $prY = $chTp->y - $topOff;
 
                         $hasOrigW = array_key_exists('width', $chTp->style);
                         $hasOrigH = array_key_exists('height', $chTp->style);
-                        $origW = $chTp->style['width'] ?? null;
-                        $origH = $chTp->style['height'] ?? null;
+                        $origW = $chTp->getStyleArray()['width'] ?? null;
+                        $origH = $chTp->getStyleArray()['height'] ?? null;
 
-                        $chTp->style['width'] = $chTp->w;
-                        $chTp->style['height'] = $chTp->h;
+                        $chTp->getStyleArray()['width'] = $chTp->w;
+                        $chTp->getStyleArray()['height'] = $chTp->h;
 
                         $chTp->layoutDirty = true;
 
@@ -1096,50 +1073,47 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $gc->layoutDirty = true;
                         }
 
-                        $chCtx = new LayoutContext($prX, $prY, $ctx->parent);
-                        if ($recurseChildren) {
-                            $this->resolver->resolveNode($chTp, $chCtx);
-                        }
+                        $this->resolver->resolveChildNode($chTp, $prX, $prY, $node->parent);
 
-                        $chTp->visualW = CssStyleHelper::visualWidth($chTp->style, $chTp->w);
-                        $chTp->visualH = CssStyleHelper::visualHeight($chTp->style, $chTp->h);
+                        $chTp->visualW = CssStyleHelper::visualWidth($chTp->getStyleArray(), $chTp->w);
+                        $chTp->visualH = CssStyleHelper::visualHeight($chTp->getStyleArray(), $chTp->h);
 
                         if ($hasOrigW) {
-                            $chTp->style['width'] = $origW;
+                            $chTp->getStyleArray()['width'] = $origW;
                         } else {
-                            unset($chTp->style['width']);
+                            unset($chTp->getStyleArray()['width']);
                         }
 
                         if ($hasOrigH) {
-                            $chTp->style['height'] = $origH;
+                            $chTp->getStyleArray()['height'] = $origH;
                         } else {
-                            unset($chTp->style['height']);
+                            unset($chTp->getStyleArray()['height']);
                         }
                     } else {
                         // Block/scroll containers: full re-resolve so auto-stack
                         // re-positions children with the corrected parent width.
                         // CSS 2.2 §10.6.3: block children must be re-laid-out when
                         // containing block width changes (e.g. via flex-grow).
-                        $leftOff = $chTp->style['left'] ?? 0;
-                        $topOff = $chTp->style['top'] ?? 0;
+                        $leftOff = $chTp->getStyleArray()['left'] ?? 0;
+                        $topOff = $chTp->getStyleArray()['top'] ?? 0;
                         $prX = $chTp->x - $leftOff;
                         $prY = $chTp->y - $topOff;
 
-                        error_log('[DIAG_BLK2P] chTp=' . $chTp->type . ' w=' . $chTp->w . ' ctx_parent=' . ($ctx->parent !== null ? ('type=' . $ctx->parent->type . ' w=' . $ctx->parent->w) : 'null'));
+                        error_log('[DIAG_BLK2P] chTp=' . $chTp->type . ' w=' . $chTp->w . ' ctx_parent=' . ($node->parent !== null ? ('type=' . $node->parent->type . ' w=' . $node->parent->w) : 'null'));
 
                         $hasOrigW = array_key_exists('width', $chTp->style);
                         $hasOrigH = array_key_exists('height', $chTp->style);
-                        $origW = $chTp->style['width'] ?? null;
-                        $origH = $chTp->style['height'] ?? null;
+                        $origW = $chTp->getStyleArray()['width'] ?? null;
+                        $origH = $chTp->getStyleArray()['height'] ?? null;
 
-                        $chTp->style['width'] = $chTp->w;
+                        $chTp->getStyleArray()['width'] = $chTp->w;
                         // Block-level flex items without explicit height:
                         // don't lock the stretched height �?let auto-height compute
                         // from re-laid-out children after width change (CSS §9.5).
                         if ($hasOrigH) {
-                            $chTp->style['height'] = $chTp->h;
+                            $chTp->getStyleArray()['height'] = $chTp->h;
                         } else {
-                            unset($chTp->style['height']);
+                            unset($chTp->getStyleArray()['height']);
                             // Reset node height so BlockLayoutStrategy's auto-height
                             // triggers (line 97: $height>0 || $node->h===0). Without this,
                             // the stretched height (244) persists and prevents recompute.
@@ -1156,13 +1130,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         // margin:auto with an incorrect parent width (before flex-grow).
                         // Clear computed margin style and restore flags so the
                         // re-layout (with correct post-grow width) recalculates them.
-                        $chOrigML = $chTp->style['marginLeftAuto'] ?? false;
-                        $chOrigMR = $chTp->style['marginRightAuto'] ?? false;
+                        $chOrigML = $chTp->getStyleArray()['marginLeftAuto'] ?? false;
+                        $chOrigMR = $chTp->getStyleArray()['marginRightAuto'] ?? false;
                         if ($chOrigML || $chOrigMR) {
                             // Clear first-pass computed margin values; re-layout will set correct ones
-                            unset($chTp->style['marginLeft'], $chTp->style['marginRight']);
-                            $chTp->style['marginLeftAuto'] = $chOrigML;
-                            $chTp->style['marginRightAuto'] = $chOrigMR;
+                            unset($chTp->getStyleArray()['marginLeft'], $chTp->getStyleArray()['marginRight']);
+                            $chTp->getStyleArray()['marginLeftAuto'] = $chOrigML;
+                            $chTp->getStyleArray()['marginRightAuto'] = $chOrigMR;
                         }
                         // Also fix descendant auto-margins: first pass may have computed
                         // margins with wrong parent width. Clear stale offset so
@@ -1171,13 +1145,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         while (!empty($stack)) {
                             $cur = array_pop($stack);
                             foreach ($cur->children as $gc) {
-                                $gcML = $gc->style['marginLeftAuto'] ?? false;
-                                $gcMR = $gc->style['marginRightAuto'] ?? false;
+                                $gcML = $gc->getStyleArray()['marginLeftAuto'] ?? false;
+                                $gcMR = $gc->getStyleArray()['marginRightAuto'] ?? false;
                                 if ($gcML || $gcMR) {
                                     // Clear stale computed margin values
-                                    unset($gc->style['marginLeft'], $gc->style['marginRight']);
+                                    unset($gc->getStyleArray()['marginLeft'], $gc->getStyleArray()['marginRight']);
                                     // Clear previous offset so undo doesn't subtract wrong value
-                                    unset($gc->style['_marginAutoOffsetX']);
+                                    unset($gc->getStyleArray()['_marginAutoOffsetX']);
                                 }
                                 $stack[] = $gc;
                             }
@@ -1189,47 +1163,44 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $gc->layoutDirty = true;
                         }
 
-                        $chCtx = new LayoutContext($prX, $prY, $ctx->parent);
                         // Clear defer marker: two-pass has correct final width,
                         // apply auto-margin now (browser-equivalent: one calculation)
-                        unset($chTp->style['_deferAutoMargin']);
-                        if ($recurseChildren) {
-                            $this->resolver->resolveNode($chTp, $chCtx);
-                        }
 
-                        $chTp->visualW = CssStyleHelper::visualWidth($chTp->style, $chTp->w);
+                        $this->resolver->resolveChildNode($chTp, $prX, $prY, $node->parent);
+
+                        $chTp->visualW = CssStyleHelper::visualWidth($chTp->getStyleArray(), $chTp->w);
                         // Only override visualH for items with explicit height.
                         // Auto-height items have correct visualH from resolveNode's
                         // $isAutoHeight logic (adds padding+border to content-h).
                         // Re-computing with resolveVisualH in border-box mode would
                         // treat content-h as total-h, producing incorrect small height.
                         if ($hasOrigH) {
-                            $chTp->visualH = CssStyleHelper::visualHeight($chTp->style, $chTp->h);
+                            $chTp->visualH = CssStyleHelper::visualHeight($chTp->getStyleArray(), $chTp->h);
                         }
 
                         if ($hasOrigW) {
-                            $chTp->style['width'] = $origW;
+                            $chTp->getStyleArray()['width'] = $origW;
                         } else {
-                            unset($chTp->style['width']);
+                            unset($chTp->getStyleArray()['width']);
                         }
 
                         if ($hasOrigH) {
-                            $chTp->style['height'] = $origH;
+                            $chTp->getStyleArray()['height'] = $origH;
                         } else {
-                            unset($chTp->style['height']);
+                            unset($chTp->getStyleArray()['height']);
                         }
                     }
                 }
 
                 if ($needsTwoPass && $chTp->isScrollContainer) {
-                    $padTsp = (int)($chTp->style['paddingTop'] ?? $chTp->style['padding'] ?? 0);
-                    $padLsp = (int)($chTp->style['paddingLeft'] ?? $chTp->style['padding'] ?? 0);
-                    $padRsp = (int)($chTp->style['paddingRight'] ?? $chTp->style['padding'] ?? 0);
-                    $padBsp = (int)($chTp->style['paddingBottom'] ?? $chTp->style['padding'] ?? 0);
+                    $padTsp = (int)($chTp->getStyleArray()['paddingTop'] ?? $chTp->getStyleArray()['padding'] ?? 0);
+                    $padLsp = (int)($chTp->getStyleArray()['paddingLeft'] ?? $chTp->getStyleArray()['padding'] ?? 0);
+                    $padRsp = (int)($chTp->getStyleArray()['paddingRight'] ?? $chTp->getStyleArray()['padding'] ?? 0);
+                    $padBsp = (int)($chTp->getStyleArray()['paddingBottom'] ?? $chTp->getStyleArray()['padding'] ?? 0);
                     // A1 重构: childOffsetY 不再减去 scrollTop，偏移由 VNodeRenderer 在绘制层处理
                     $coffY = $chTp->y + $padTsp;
 
-                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $ctx, $chTp->style, $coffY, $padLsp, $padRsp, $padBsp);
+                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $node->parent, $chTp->style, $coffY, $padLsp, $padRsp, $padBsp);
                 }
             }
 
@@ -1241,16 +1212,16 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             if ($align === 'stretch' && !$isWrapping) {
                 $crossTarget = $containerCross;
                 foreach ($lineChildren as $ci => $ch) {
-                    $childDisplay = $ch->style['display'] ?? 'block';
+                    $childDisplay = $ch->getStyleArray()['display'] ?? 'block';
                     if ($childDisplay === 'none') continue;
                     $hasExplicitCross = $isRow
                         ? array_key_exists('height', $ch->style)
                         : array_key_exists('width', $ch->style);
                     if ($hasExplicitCross) continue;
-                    $childMarginT = (int)($ch->style['marginTop'] ?? $ch->style['margin'] ?? 0);
-                    $childMarginB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
-                    $childMarginL = (int)($ch->style['marginLeft'] ?? $ch->style['margin'] ?? 0);
-                    $childMarginR = (int)($ch->style['marginRight'] ?? $ch->style['margin'] ?? 0);
+                    $childMarginT = (int)($ch->getStyleArray()['marginTop'] ?? $ch->getStyleArray()['margin'] ?? 0);
+                    $childMarginB = (int)($ch->getStyleArray()['marginBottom'] ?? $ch->getStyleArray()['margin'] ?? 0);
+                    $childMarginL = (int)($ch->getStyleArray()['marginLeft'] ?? $ch->getStyleArray()['margin'] ?? 0);
+                    $childMarginR = (int)($ch->getStyleArray()['marginRight'] ?? $ch->getStyleArray()['margin'] ?? 0);
                     if ($isRow) {
                         $stretched = (int)max(0, $crossTarget - $childMarginT - $childMarginB);
                         // CSS 2.2 §10.7: stretch 时也要受 min/max-height 约束
@@ -1403,7 +1374,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 foreach ($children as $ch) {
                     $chRight = $ch->x + $ch->visualW;
 
-                    $mR = (int)($ch->style['marginRight'] ?? $ch->style['margin'] ?? 0);
+                    $mR = (int)($ch->getStyleArray()['marginRight'] ?? $ch->getStyleArray()['margin'] ?? 0);
 
                     if ($chRight + $mR > $maxRight) $maxRight = (int)($chRight + $mR);
                 }
@@ -1417,7 +1388,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 foreach ($children as $ch) {
                     $chBottom = $ch->y + $ch->visualH;
 
-                    $mB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
+                    $mB = (int)($ch->getStyleArray()['marginBottom'] ?? $ch->getStyleArray()['margin'] ?? 0);
 
                     if ($chBottom + $mB > $maxBottom) $maxBottom = (int)($chBottom + $mB);
                 }
@@ -1433,7 +1404,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 foreach ($children as $ch) {
                     $chRight = $ch->x + $ch->visualW;
 
-                    $mR = (int)($ch->style['marginRight'] ?? $ch->style['margin'] ?? 0);
+                    $mR = (int)($ch->getStyleArray()['marginRight'] ?? $ch->getStyleArray()['margin'] ?? 0);
 
                     if ($chRight + $mR > $maxRight) $maxRight = (int)($chRight + $mR);
                 }
@@ -1451,7 +1422,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 foreach ($children as $ch) {
                     $chBottom = $ch->y + $ch->visualH;
 
-                    $mB = (int)($ch->style['marginBottom'] ?? $ch->style['margin'] ?? 0);
+                    $mB = (int)($ch->getStyleArray()['marginBottom'] ?? $ch->getStyleArray()['margin'] ?? 0);
 
                     if ($chBottom + $mB > $maxBottom) $maxBottom = (int)($chBottom + $mB);
                 }
@@ -1461,11 +1432,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         }
 
         // ── Second pass: resolve absolute/fixed children now that container dimensions are final ──
-        if ($recurseChildren) {
-            foreach ($absoluteChildren as $child) {
-                $childCtx = new LayoutContext($node->x + $paddingLeft, $node->y + $paddingTop, $node);
-                $this->resolver->resolveNode($child, $childCtx);
-            }
+        foreach ($absoluteChildren as $child) {
+            $this->resolver->resolveChildNode($child, $node->x + $paddingLeft, $node->y + $paddingTop, $node);
         }
 
 
@@ -1486,7 +1454,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $basis = $data['basis'];
 
             // ── Percentage flex-basis: 检查原始 CSS 值是否含 % ──
-            $rawBasis = $ch->style['flexBasis'] ?? $data['basis'] ?? '';
+            $rawBasis = $ch->getStyleArray()['flexBasis'] ?? $data['basis'] ?? '';
             $isPercent = is_string($rawBasis) && str_ends_with($rawBasis, '%');
 
             // ── Numeric basis (flex-basis: <length>|<percentage>) ──
@@ -1511,8 +1479,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $chText = $ch->content ?? '';
                 if (is_string($chText) && strlen($chText) > 0) {
                     CssStyleHelper::resolveFontSize($ch->style);
-                    $fs = (int)($ch->style['fontSize'] ?? 14);
-                    $bd = ($ch->style['bold'] ?? 0) !== 0;
+                    $fs = (int)($ch->getStyleArray()['fontSize'] ?? 14);
+                    $bd = ($ch->getStyleArray()['bold'] ?? 0) !== 0;
                     $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($chText, $fs, $bd) : 0);
                     if ($measured > 0) {
                         if ($isRow) {
@@ -1527,7 +1495,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 }
             // ── flex-basis: auto (default) —use width/height if set, else content ──
             } else {
-                $flexBasis = $ch->style['flexBasis'] ?? 'auto';
+                $flexBasis = $ch->getStyleArray()['flexBasis'] ?? 'auto';
 
                 if ($flexBasis !== 'auto') {
                     $basisVal = (int)$flexBasis;
@@ -1549,9 +1517,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                 if ((is_string($chText) && strlen($chText) > 0)) {
                     CssStyleHelper::resolveFontSize($ch->style);
-                    $fs = (int)($ch->style['fontSize'] ?? 14);
+                    $fs = (int)($ch->getStyleArray()['fontSize'] ?? 14);
 
-                    $bd = ($ch->style['bold'] ?? 0) !== 0;
+                    $bd = ($ch->getStyleArray()['bold'] ?? 0) !== 0;
 
                     $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($chText, $fs, $bd) : 0);
 
@@ -1607,8 +1575,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $text = $node->content ?? '';
         if (is_string($text) && strlen($text) > 0) {
             CssStyleHelper::resolveFontSize($node->style);
-            $fs = (int)($node->style['fontSize'] ?? 14);
-            $bd = ($node->style['bold'] ?? 0) !== 0;
+            $fs = (int)($node->getStyleArray()['fontSize'] ?? 14);
+            $bd = ($node->getStyleArray()['bold'] ?? 0) !== 0;
             return (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($text, $fs, $bd) : 0);
         }
 
@@ -1643,12 +1611,12 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
     {
         // 1) Explicit min-width/min-height takes priority
         if ($isRow) {
-            if (isset($ch->style['minWidth'])) {
-                return (int)$ch->style['minWidth'];
+            if (isset($ch->getStyleArray()['minWidth'])) {
+                return (int)$ch->getStyleArray()['minWidth'];
             }
         } else {
-            if (isset($ch->style['minHeight'])) {
-                return (int)$ch->style['minHeight'];
+            if (isset($ch->getStyleArray()['minHeight'])) {
+                return (int)$ch->getStyleArray()['minHeight'];
             }
         }
 
@@ -1656,16 +1624,16 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // Order: overflowX/overflowY overrides, fallback to 'overflow' shorthand
         $ov = 'visible';
         if ($isRow) {
-            if (isset($ch->style['overflowX'])) {
-                $ov = $ch->style['overflowX'];
-            } elseif (isset($ch->style['overflow'])) {
-                $ov = $ch->style['overflow'];
+            if (isset($ch->getStyleArray()['overflowX'])) {
+                $ov = $ch->getStyleArray()['overflowX'];
+            } elseif (isset($ch->getStyleArray()['overflow'])) {
+                $ov = $ch->getStyleArray()['overflow'];
             }
         } else {
-            if (isset($ch->style['overflowY'])) {
-                $ov = $ch->style['overflowY'];
-            } elseif (isset($ch->style['overflow'])) {
-                $ov = $ch->style['overflow'];
+            if (isset($ch->getStyleArray()['overflowY'])) {
+                $ov = $ch->getStyleArray()['overflowY'];
+            } elseif (isset($ch->getStyleArray()['overflow'])) {
+                $ov = $ch->getStyleArray()['overflow'];
             }
         }
 

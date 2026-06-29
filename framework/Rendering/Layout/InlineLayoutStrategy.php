@@ -6,10 +6,7 @@ use native_types;
 
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
-use Px\Rendering\CssStyleHelper;
 use Px\Rendering\ComputedStyle;
-use Px\Rendering\Layout\LayoutConstraints;
-use Px\Rendering\Layout\FragmentBuilder;
 
 /**
  * InlineLayoutStrategy — 内联格式化上下文 (IFC) 布局策略
@@ -33,17 +30,24 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
 
     public function resolve(
         RenderNode    $node,
-        LayoutContext $ctx,
+        object        $ctx,
         array         $style
-    ): void
-    {
-        $this->resolveInlineLayout($node, $ctx, $style);
+    ): void {
+        // Fallback: create stub LayoutConstraints and FragmentBuilder
+        $constraints = new LayoutConstraints(
+            $ctx->parentX, $ctx->parentY,
+            $node->w, $node->h,
+            $ctx->parentX, $ctx->parentY,
+            $node->parent !== null ? $node->parent->w : $node->w,
+            $node->parent !== null ? $node->parent->h : $node->h
+        );
+        $builder = new FragmentBuilder();
+        $this->resolveWithBuilder($node, $constraints, $node->computedStyle, $builder);
     }
 
     /**
-     * Phase 3: \u4f7f\u7528 FragmentBuilder \u7684\u5e03\u5c40\u5165\u53e3\u3002
-     * \u901a\u8fc7\u65e7 resolveInlineLayout \u8ba1\u7b97\uff0c\u4f46\u7ed3\u679c\u8def\u7531\u5230 builder\uff0c\u4e0d\u76f4\u63a5\u5199 node\u3002
-     * \u4e0d\u518d\u9012\u5f52\u5b50\u8282\u70b9\uff08\u7531 LayoutResolver \u7edf\u4e00\u5904\u7406\uff09\u3002
+     * Pure FragmentBuilder 布局入口。
+     * 直接使用 LayoutConstraints + ComputedStyle。
      */
     public function resolveWithBuilder(
         RenderNode         $node,
@@ -52,126 +56,64 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
         FragmentBuilder    $builder
     ): void
     {
-        $ctx = new LayoutContext(
-            $constraints->parentContentX,
-            $constraints->parentContentY,
-            $node->parent
-        );
-        $styleArr = $style !== null ? $style->toExportArray() : $node->style;
+        // 直接使用 constraints 获取容器信息
+        $parentX = $constraints->parentContentX;
+        $parentY = $constraints->parentContentY;
+        $parentW = $constraints->contentWidth;
+        $parentH = $constraints->contentHeight;
 
-        // Phase 3: \u4e0d\u9012\u5f52\u5b50\u8282\u70b9\uff08\u7531 LayoutResolver \u9884\u89e3\u6790\uff09
-        $this->resolveInlineLayout($node, $ctx, $styleArr, false);
+        $left = $style?->left ?? 0;
+        $top = $style?->top ?? 0;
+        $fs = $style?->fontSize ?? 16;
 
-        $builder
-            ->setPosition($node->x, $node->y)
-            ->setSize($node->w, $node->h, $style)
-            ->setLayer($node->layer)
-            ->setContentSize($node->contentWidth, $node->contentHeight);
-    }
-
-    /**
-     * Resolve layout for a display:inline element.
-     *
-     * Inline elements are sized by their content (text measurement or child inline elements).
-     * They participate in the parent's line box and do not create new block formatting contexts.
-     */
-    public function resolveInlineLayout(
-        RenderNode    $node,
-        LayoutContext $ctx,
-        array         $style,
-        bool          $recurseChildren = true
-    ): void
-    {
-        $left = (int)($style['left'] ?? 0);
-        $top  = (int)($style['top'] ?? 0);
-
-        // Containing block width from parent (for percentage resolution)
-        $parentW_raw = (int)(($ctx->parent !== null) ? $ctx->parent->w : (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0));
-        $parentH     = (int)(($ctx->parent !== null) ? $ctx->parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0));
-        if ($ctx->parent !== null) {
-            $parentW = CssStyleHelper::contentBoxWidth($ctx->parent->style, $parentW_raw);
-        } else {
-            $parentW = (int)$parentW_raw;
+        // 计算尺寸
+        $w = 0;
+        $h = 0;
+        if ($style !== null) {
+            $w = $style->width->toPx();
+            $h = $style->height->toPx();
         }
-
-        $width  = CssStyleHelper::resolveWithCalc($style, 'width', $parentW);
-        $height = CssStyleHelper::resolveWithCalc($style, 'height', $parentH);
-
-        // Default parentFontSize for em unit resolution
-        $parentFontSize = (int)($style['fontSize'] ?? 14);
-        $rootFontSize = 16; // default root font-size
-        $viewportW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1920;
-        $viewportH = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 1080;
-
-        // Resolve relative units (em/rem/vw/vh)
-        if (isset($style['widthUnit'])) {
-            $parts = explode('|', $style['widthUnit']);
-            $width = (int)CssValueParser::resolveRelativeLength(
-                (float)$parts[0], $parts[1],
-                $parentFontSize, $rootFontSize, $viewportW, $viewportH
-            );
-        }
-
-        // Resolve fontSize from relative unit (rem/em/vw/vh)
-        CssStyleHelper::resolveFontSize($style, $rootFontSize, $viewportW, $viewportH);
-                // CSS 2.2 §15.1.1: font-size/color 等属性从父容器继承
-        if (isset($style['fontSize'])) {
-            $node->style['fontSize'] = $style['fontSize'];
-        } elseif ($ctx->parent !== null && isset($ctx->parent->style['fontSize'])) {
-            $node->style['fontSize'] = $ctx->parent->style['fontSize'];
-        } else {
-            $node->style['fontSize'] = 16;
-        }
-        // font-weight 继承：从父节点继承粗体状态
-        if (!isset($style['bold'])) {
-            if ($ctx->parent !== null) {
-                $node->style['bold'] = $ctx->parent->style['bold'] ?? 0;
-            } else {
-                $node->style['bold'] = 0;
-            }
-        }
-
-        $hasExplicitWidth = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
-        $node->w = (int)max(0, CssStyleHelper::applyMinMax($style, $width, true));
-        $node->h = (int)max(0, CssStyleHelper::applyMinMax($style, $height, false));
-        $node->visualW = (int)CssStyleHelper::visualWidth($style, $node->w);
-        $node->visualH = (int)CssStyleHelper::visualHeight($style, $node->h);
 
         // ── Text content measurement ──
         if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
-            $fs = (int)($style['fontSize'] ?? 14);
-            $bd = ($style['bold'] ?? 0) !== 0;
-            $parentFontSize = $fs;
-
+            $bd = $style?->bold ?? false;
             $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($node->content, $fs, $bd) : 0);
-            if ($measured > 0) {
-                // CSS 2.2 §10.3.9: Only use measured text width when no explicit width is set
-                // For inline-block with explicit width, preserve the explicit value
-                if (!$hasExplicitWidth) {
-                    $node->w = (int)min($measured, max(0, CssStyleHelper::applyMinMax($style, $measured, true)));
-                    $node->visualW = (int)CssStyleHelper::visualWidth($style, $node->w);
-                }
+            if ($measured > 0 && $w <= 0) {
+                $w = (int)$measured;
             }
 
-            // Line height
-            $lineH = (int)CssStyleHelper::lineHeight($style, $fs);
-            if ($node->h === 0 || $node->h < $lineH) {
-                $node->h = (int)$lineH;
-                $node->visualH = (int)CssStyleHelper::visualHeight($style, $node->h);
-            }
+            // Line height: use computedStyle->lineHeight if set, else font-size * 1.2
+            $lh = $style?->lineHeight ?? 0;
+            if ($lh <= 0) $lh = (int)($fs * 1.2);
+            if ($h < $lh) $h = $lh;
         }
 
         // ── Layout inline children into line boxes ──
         if (count($node->children) > 0) {
-            $this->layoutLineBoxes($node, $style, $parentW, $recurseChildren);
+            $this->layoutLineBoxes($node, $style, $parentW);
+            // After line box layout, children positions are written to node
+            // Read back for our dimensions
+            $cursorY = 0;
+            $maxLineW = 0;
+            foreach ($node->children as $child) {
+                $bottom = $child->y + $child->h - $parentY;
+                if ($bottom > $cursorY) $cursorY = $bottom;
+                $right = $child->x + $child->w - $parentX;
+                if ($right > $maxLineW) $maxLineW = $right;
+            }
+            if ($cursorY > $h) $h = (int)$cursorY;
+            if ($maxLineW > $w) $w = (int)$maxLineW;
         }
 
-        // ── Position in normal flow (stacked by parent) ──
-        $position = $style['position'] ?? 'static';
-        if ($position === 'static' || $position === 'relative') {
-            $node->x = $ctx->parentX + $left;
-            $node->y = $ctx->parentY + $top;
-        }
+        // ── Position ──
+        $pos = $style?->position?->value ?? 'static';
+        $x = ($pos === 'static' || $pos === 'relative') ? $parentX + $left : 0;
+        $y = ($pos === 'static' || $pos === 'relative') ? $parentY + $top : 0;
+
+        $builder
+            ->setPosition((int)$x, (int)$y)
+            ->setSize((int)max(0, $w), (int)max(0, $h), $style)
+            ->setLayer($node->layer);
     }
 
     /**
@@ -181,71 +123,35 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
      *   Inline elements are laid out in line boxes. When the total width of
      *   inline elements on a line exceeds the container width, they wrap to
      *   a new line. Each line box has a baseline for vertical alignment.
-     *
-     * @param RenderNode $node       The inline container node
-     * @param array      $style      Effective style
-     * @param int        $containerW Available content width for line boxes
      */
-    private function layoutLineBoxes(RenderNode $node, array $style, int $containerW, bool $recurseChildren = true): void
+    private function layoutLineBoxes(RenderNode $node, ?ComputedStyle $style, int $containerW): void
     {
         if ($containerW <= 0) {
-            $containerW = 640; // fallback default
+            $containerW = 640;
         }
 
-        // Capability: get viewport dimensions for vw/vh resolution
-        $viewportW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1920;
-        $viewportH = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 1080;
-        $rootFontSize = 16; // default root font-size
-
-        // Step 1: Resolve all children and collect into line boxes
-        $lines = []; // Array of ['children' => RenderNode[], 'width' => int, 'height' => int, 'baseline' => int]
-
-        /** @var RenderNode[] $currentLine */
+        $lines = [];
         $currentLine = [];
         $currentLineW = 0;
-        $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
-        $paddingRight = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
-        $availW = $containerW - $paddingLeft - $paddingRight;
+
+        $padL = $style?->padding?->left->toPx() ?? 0;
+        $padR = $style?->padding?->right->toPx() ?? 0;
+        $availW = $containerW - $padL - $padR;
 
         foreach ($node->children as $child) {
-            // Resolve child layout (recursive)
-            $childCtx = new LayoutContext(0, 0, $node);
-            if ($recurseChildren) {
-                $this->resolver->resolveNode($child, $childCtx);
-            }
+            $childW = (int)($child->visualW > 0 ? $child->visualW : $child->w);
+            if ($childW <= 0) $childW = 1;
 
-            $childW = (int)($child->visualW);
-            if ($childW <= 0) {
-                $childW = (int)($child->w);
-            }
-            if ($childW <= 0) {
-                $childW = 1; // Minimum width to make progress
-            }
-
-            // Check if wrapping is needed (CSS 2.2 §9.4.2: line breaking)
             if ($currentLineW + $childW > $availW && count($currentLine) > 0) {
-                // Finalize current line
                 $lineH = 0;
                 $lineBaseline = 0;
                 foreach ($currentLine as $clChild) {
                     $ch = (int)($clChild->visualH > 0 ? $clChild->visualH : $clChild->h);
-                    if ($ch > $lineH) {
-                        $lineH = (int)$ch;
-                    }
-                    // Baseline: approximated as 80% from top for text content
-                    $childBaseline = (int)($ch > 0 ? (int)($ch * 0.8) : 0);
-                    if ($childBaseline > $lineBaseline) {
-                        $lineBaseline = (int)$childBaseline;
-                    }
+                    if ($ch > $lineH) $lineH = (int)$ch;
+                    $cb = (int)($ch > 0 ? (int)($ch * 0.8) : 0);
+                    if ($cb > $lineBaseline) $lineBaseline = (int)$cb;
                 }
-
-                $lines[] = [
-                    'children' => $currentLine,
-                    'width'    => $currentLineW,
-                    'height'   => $lineH,
-                    'baseline' => $lineBaseline,
-                ];
-
+                $lines[] = ['children' => $currentLine, 'width' => $currentLineW, 'height' => $lineH, 'baseline' => $lineBaseline];
                 $currentLine = [];
                 $currentLineW = 0;
             }
@@ -254,34 +160,23 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
             $currentLineW += (int)$childW;
         }
 
-        // Finalize last line
         if (count($currentLine) > 0) {
             $lineH = 0;
             $lineBaseline = 0;
             foreach ($currentLine as $clChild) {
                 $ch = (int)($clChild->visualH > 0 ? $clChild->visualH : $clChild->h);
-                if ($ch > $lineH) {
-                    $lineH = (int)$ch;
-                }
-                $childBaseline = (int)($ch > 0 ? (int)($ch * 0.8) : 0);
-                if ($childBaseline > $lineBaseline) {
-                    $lineBaseline = (int)$childBaseline;
-                }
+                if ($ch > $lineH) $lineH = (int)$ch;
+                $cb = (int)($ch > 0 ? (int)($ch * 0.8) : 0);
+                if ($cb > $lineBaseline) $lineBaseline = (int)$cb;
             }
-            $lines[] = [
-                'children' => $currentLine,
-                'width'    => $currentLineW,
-                'height'   => $lineH,
-                'baseline' => $lineBaseline,
-            ];
+            $lines[] = ['children' => $currentLine, 'width' => $currentLineW, 'height' => $lineH, 'baseline' => $lineBaseline];
         }
 
-        // Step 2: Position children within their line boxes applying vertical-align
         $cursorY = 0;
         $maxLineW = 0;
 
         foreach ($lines as $line) {
-            $cursorX = $paddingLeft;
+            $cursorX = $padL;
             $lineH = (int)($line['height']);
             $lineBaseline = (int)($line['baseline']);
 
@@ -289,29 +184,20 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
                 $child->x = $node->x + $cursorX;
                 $child->y = $node->y + $cursorY;
 
-                // Apply vertical-align (§10.8.1)
-                $va = $child->style['verticalAlign'] ?? 'baseline';
+                $vaStyle = $child->computedStyle?->verticalAlign?->value ?? 'baseline';
                 $childH = $child->visualH > 0 ? $child->visualH : $child->h;
 
-                switch ($va) {
+                switch ($vaStyle) {
                     case 'top':
-                        // Align top of child with top of line box
                         $child->y = $node->y + $cursorY;
                         break;
-
                     case 'bottom':
-                        // Align bottom of child with bottom of line box
                         $child->y = $node->y + $cursorY + $lineH - $childH;
                         break;
-
                     case 'middle':
-                        // Align middle of child with middle of line box (approximate)
                         $child->y = $node->y + $cursorY + (int)(($lineH - $childH) / 2);
                         break;
-
-                    case 'baseline':
                     default:
-                        // Baseline alignment: child's baseline aligns with line's baseline
                         $childBaseline = $childH > 0 ? (int)($childH * 0.8) : 0;
                         $child->y = $node->y + $cursorY + ($lineBaseline - $childBaseline);
                         break;
@@ -322,18 +208,6 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
 
             $maxLineW = (int)max($maxLineW, $cursorX);
             $cursorY += (int)$lineH;
-        }
-
-        // Update node height to encompass all lines
-        if ($cursorY > $node->h) {
-            $node->h = (int)$cursorY;
-            $node->visualH = (int)CssStyleHelper::visualHeight($style, $node->h);
-        }
-
-        // Update node width to the maximum line width
-        if ($maxLineW > $node->w) {
-            $node->w = (int)$maxLineW;
-            $node->visualW = (int)CssStyleHelper::visualWidth($style, $node->w);
         }
     }
 }

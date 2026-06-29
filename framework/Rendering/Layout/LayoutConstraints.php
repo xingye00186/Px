@@ -7,8 +7,8 @@ use native_types;
 /**
  * LayoutConstraints — 布局约束（输入）
  *
- * Phase 3 新增，替代 LayoutContext。
- * 合并后者 $parentX/$parentY 后删除 LayoutContext。
+ * Phase 3 新增，已替代旧的 LayoutContext。
+ * 合并了后者的 $parentX/$parentY 字段。
  */
 class LayoutConstraints
 {

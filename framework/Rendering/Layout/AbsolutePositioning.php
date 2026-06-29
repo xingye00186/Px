@@ -12,10 +12,11 @@ use Px\Rendering\RenderNode;
 /**
  * AbsolutePositioning — 绝对/固定定位布局
  *
- * Phase 3: 使用 FragmentBuilder 写入布局结果，不直接修改 RenderNode.x/y/w/h。
  * CSS Positioned Layout Module Level 3 §3.1-3.2:
  * - position:absolute 的 containing block = 最近定位祖先的 padding box
  * - position:fixed 的 containing block = viewport (0,0)
+ *
+ * Pure FragmentBuilder 实现，直接使用 LayoutConstraints + ComputedStyle。
  */
 class AbsolutePositioning implements AbsoluteStrategy
 {
@@ -33,15 +34,13 @@ class AbsolutePositioning implements AbsoluteStrategy
         FragmentBuilder    $builder
     ): void
     {
-        $styleArr = $node->style; // backward compat via __get
+        // 直接使用 ComputedStyle 属性（不转 array）
+        $leftVal = $style?->left ?? 0;
+        $topVal = $style?->top ?? 0;
+        $rightVal = $style?->right ?? 0;
+        $bottomVal = $style?->bottom ?? 0;
 
-        // 提取原始定位值
-        $leftRaw = ($styleArr['left'] ?? 'auto') !== 'auto' ? $styleArr['left'] : null;
-        $topRaw = ($styleArr['top'] ?? 'auto') !== 'auto' ? $styleArr['top'] : null;
-        $rightRaw = ($styleArr['right'] ?? 'auto') !== 'auto' ? $styleArr['right'] : null;
-        $bottomRaw = ($styleArr['bottom'] ?? 'auto') !== 'auto' ? $styleArr['bottom'] : null;
-
-        $pos = $styleArr['position'] ?? 'absolute';
+        $pos = $style?->position?->value ?? 'absolute';
         $isFixed = ($pos === 'fixed');
 
         if ($isFixed) {
@@ -56,172 +55,124 @@ class AbsolutePositioning implements AbsoluteStrategy
             $viewportH = 0;
         }
 
-        $ancestorPaddingLeft = ($ancestor !== null) ? (int)($ancestor->style['paddingLeft'] ?? $ancestor->style['padding'] ?? 0) : 0;
-        $ancestorPaddingTop = ($ancestor !== null) ? (int)($ancestor->style['paddingTop'] ?? $ancestor->style['padding'] ?? 0) : 0;
-        $ancestorPaddingRight = ($ancestor !== null) ? (int)($ancestor->style['paddingRight'] ?? $ancestor->style['padding'] ?? 0) : 0;
-        $ancestorPaddingBottom = ($ancestor !== null) ? (int)($ancestor->style['paddingBottom'] ?? $ancestor->style['padding'] ?? 0) : 0;
+        // 从祖先的 computedStyle 获取 padding/border
+        $ancCS = $ancestor?->computedStyle;
+        $ancestorPaddingLeft = $ancCS?->padding?->left->toPx() ?? 0;
+        $ancestorPaddingTop = $ancCS?->padding?->top->toPx() ?? 0;
+        $ancestorPaddingRight = $ancCS?->padding?->right->toPx() ?? 0;
+        $ancestorPaddingBottom = $ancCS?->padding?->bottom->toPx() ?? 0;
 
-        $borderL = ($ancestor !== null) ? (int)($ancestor->style['borderLeftWidth'] ?? $ancestor->style['borderWidth'] ?? 0) : 0;
-        $borderR = ($ancestor !== null) ? (int)($ancestor->style['borderRightWidth'] ?? $ancestor->style['borderWidth'] ?? 0) : 0;
-        $borderT = ($ancestor !== null) ? (int)($ancestor->style['borderTopWidth'] ?? $ancestor->style['borderWidth'] ?? 0) : 0;
-        $borderB = ($ancestor !== null) ? (int)($ancestor->style['borderBottomWidth'] ?? $ancestor->style['borderWidth'] ?? 0) : 0;
-        $ancestorX = ($ancestor !== null) ? $ancestor->x : 0;
-        $ancestorY = ($ancestor !== null) ? $ancestor->y : 0;
+        $borderL = $ancCS?->borderLeftWidth ?? 0;
+        $borderR = $ancCS?->borderRightWidth ?? 0;
+        $borderT = $ancCS?->borderTopWidth ?? 0;
+        $borderB = $ancCS?->borderBottomWidth ?? 0;
 
-        $ancestorW = ($ancestor !== null) ? $ancestor->visualW - $borderL - $borderR : $viewportW;
-        $ancestorH = ($ancestor !== null) ? $ancestor->visualH - $borderT - $borderB : $viewportH;
+        $ancestorX = $ancestor?->x ?? 0;
+        $ancestorY = $ancestor?->y ?? 0;
+        $ancestorW = $ancestor ? ($ancestor->w - $borderL - $borderR) : $viewportW;
+        $ancestorH = $ancestor ? ($ancestor->h - $borderT - $borderB) : $viewportH;
 
-        $hasExplicitAncestorH = ($ancestor === null)
-            || (array_key_exists('height', $ancestor->style) && $ancestor->style['height'] !== 'auto' && $ancestor->style['height'] !== '')
-            || array_key_exists('heightPercent', $ancestor->style);
-        $effectiveAncestorH = $hasExplicitAncestorH ? $ancestorH : 0;
+        // 布局容器宽高
+        $cbW = $ancestor ? ($ancestorW) : $viewportW;
 
-        // 计算 left/top/width/height
-        $left = (int)($leftRaw !== null ? CssStyleHelper::resolveWithCalc($styleArr, 'left', $ancestorW) : 0);
-        $top = (int)($topRaw !== null ? CssStyleHelper::resolveWithCalc($styleArr, 'top', $effectiveAncestorH) : 0);
-        $right = $rightRaw !== null ? (int)CssStyleHelper::resolveWithCalc($styleArr, 'right', $ancestorW) : null;
-        $bottom = $bottomRaw !== null ? (int)CssStyleHelper::resolveWithCalc($styleArr, 'bottom', $effectiveAncestorH) : null;
+        // 从 style 读取 width/height（CssLength 携带单位信息）
+        $width = $style?->width->toPx() ?? 0;
+        $height = $style?->height->toPx() ?? 0;
+        if ($style?->width->isPercent()) $width = $style->resolveWidth($cbW);
+        if ($style?->height->isPercent()) $height = $style->resolveHeight($ancestorH);
 
-        $width = (int)CssStyleHelper::resolveWithCalc($styleArr, 'width', $ancestorW);
-        $height = (int)CssStyleHelper::resolveWithCalc($styleArr, 'height', $effectiveAncestorH);
+        // 计算边距
+        $marginLeft = $style?->margin?->left->toPx() ?? 0;
+        $marginTop = $style?->margin?->top->toPx() ?? 0;
+        $marginRight = $style?->margin?->right->toPx() ?? 0;
+        $marginBottom = $style?->margin?->bottom->toPx() ?? 0;
 
-        $ancestorContentW = ($ancestor !== null) ? CssStyleHelper::contentBoxWidth($ancestor->style, $ancestor->w) : $viewportW;
-
-        $marginLeftRaw = $styleArr['marginLeft'] ?? $styleArr['margin'] ?? null;
-        $marginLeft = (int)(($marginLeftRaw === 'auto') ? 0 : CssStyleHelper::resolveLength($styleArr, 'marginLeft', $ancestorContentW));
-        $marginTopRaw = $styleArr['marginTop'] ?? $styleArr['margin'] ?? null;
-        $marginTop = (int)(($marginTopRaw === 'auto') ? 0 : CssStyleHelper::resolveLength($styleArr, 'marginTop', $ancestorContentW));
-
-        if ($leftRaw !== null && $rightRaw !== null && $width <= 0) {
-            $width = (int)max(0, $ancestorW - $left - $right - $marginLeft
-                - CssStyleHelper::resolveLength($styleArr, 'marginRight', $ancestorContentW));
+        // 如果 left+right 都设置且 width=0，用两者决定宽度
+        if ($leftVal !== 0 && $rightVal !== 0 && $width <= 0) {
+            $width = max(0, $ancestorW - $leftVal - $rightVal - $marginLeft - $marginRight);
         }
-        if ($topRaw !== null && $bottomRaw !== null && $height <= 0 && $hasExplicitAncestorH) {
-            $height = (int)max(0, $effectiveAncestorH - $top - $bottom - $marginTop
-                - CssStyleHelper::resolveLength($styleArr, 'marginBottom', $ancestorContentW));
+        if ($topVal !== 0 && $bottomVal !== 0 && $height <= 0) {
+            $height = max(0, $ancestorH - $topVal - $bottomVal - $marginTop - $marginBottom);
         }
 
-        $hasExplicitW = $width > 0;
-        $hasExplicitH = $height > 0;
+        $hasExplicitW = $width > 0 || ($style?->width->toPx() ?? 0) > 0;
+        $hasExplicitH = $height > 0 || ($style?->height->toPx() ?? 0) > 0;
 
         // Auto-size for text content
         if ((!$hasExplicitW || !$hasExplicitH) && $node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
-            $fs = (int)($node->style['fontSize']);
-            $bd = ($styleArr['bold'] ?? 0) !== 0;
+            $fs = $style?->fontSize ?? 14;
+            $bd = $style?->bold ?? false;
             $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($node->content, $fs, $bd) : 0);
             if ($measured > 0) {
-                $padL = (int)($styleArr['paddingLeft'] ?? $styleArr['padding'] ?? 0);
-                $padR = (int)($styleArr['paddingRight'] ?? $styleArr['padding'] ?? 0);
-                $bwL = (int)($styleArr['borderLeftWidth'] ?? $styleArr['borderWidth'] ?? 0);
-                $bwR = (int)($styleArr['borderRightWidth'] ?? $styleArr['borderWidth'] ?? 0);
-                $autoW = $measured + $padL + $padR + $bwL + $bwR;
-                if (!$hasExplicitW) {
-                    $width = (int)max(0, (int)CssStyleHelper::applyMinMax($styleArr, $autoW, true));
-                }
+                $padL = $style?->padding?->left->toPx() ?? 0;
+                $padR = $style?->padding?->right->toPx() ?? 0;
+                $bwL = $style?->borderLeftWidth ?? 0;
+                $bwR = $style?->borderRightWidth ?? 0;
+                if (!$hasExplicitW) $width = max(0, $measured + $padL + $padR + $bwL + $bwR);
             }
             if (!$hasExplicitH) {
-                $parentStyle = $constraints->parentContentY !== 0 ? $styleArr : [];
-                $lineH = CssStyleHelper::lineHeight($styleArr, $fs, 16, $parentStyle);
-                $padT = (int)($styleArr['paddingTop'] ?? $styleArr['padding'] ?? 0);
-                $padB = (int)($styleArr['paddingBottom'] ?? $styleArr['padding'] ?? 0);
-                $bwT = (int)($styleArr['borderTopWidth'] ?? $styleArr['borderWidth'] ?? 0);
-                $bwB = (int)($styleArr['borderBottomWidth'] ?? $styleArr['borderWidth'] ?? 0);
-                $height = max($lineH, $height);
+                $lh = $style?->lineHeight ?? (int)($fs * 1.2);
+                $padT = $style?->padding?->top->toPx() ?? 0;
+                $padB = $style?->padding?->bottom->toPx() ?? 0;
+                $height = max($lh, $height);
             }
         }
 
-        $paddingLeft = (int)CssStyleHelper::resolveLength($styleArr, 'paddingLeft', $ancestorContentW);
-        $paddingRight = (int)CssStyleHelper::resolveLength($styleArr, 'paddingRight', $ancestorContentW);
-        $paddingTop = (int)CssStyleHelper::resolveLength($styleArr, 'paddingTop', $ancestorContentW);
+        // 计算最终坐标
+        $calcX = $ancestorX + $borderL + $leftVal + $marginLeft;
+        $calcY = $ancestorY + $borderT + $topVal + $marginTop;
 
-        // 计算最终 x/y（核心位置计算）
-        $calcX = (int)($ancestorX + $borderL + $left + $marginLeft);
-        $calcY = (int)($ancestorY + $borderT + $top + $marginTop);
-
-        if ($right !== null && ($ancestor !== null || $isFixed)) {
-            $rightEdge = $ancestorX + $borderL + $ancestorPaddingLeft + $ancestorContentW - $right;
-            $calcX = (int)($rightEdge - ($width > 0 ? $width : 0));
+        // right/bottom 覆盖
+        if ($rightVal !== 0 && ($ancestor !== null || $isFixed)) {
+            $rightEdge = $ancestorX + $borderL + $ancestorPaddingLeft + $cbW - $rightVal;
+            $calcX = $rightEdge - ($width > 0 ? $width : 0);
         }
-        if ($bottom !== null && ($ancestor !== null || $isFixed)) {
-            $bottomEdge = $ancestorY + $ancestorH - $bottom;
-            $calcY = (int)($bottomEdge - ($height > 0 ? $height : 0));
+        if ($bottomVal !== 0 && ($ancestor !== null || $isFixed)) {
+            $bottomEdge = $ancestorY + $ancestorH - $bottomVal;
+            $calcY = $bottomEdge - ($height > 0 ? $height : 0);
         }
 
-        // margin:auto 居中
-        $parentContentW = ($ancestor !== null) ? (int)max(0, $ancestorContentW) : 0;
-        $paddingBottom = (int)CssStyleHelper::resolveLength($styleArr, 'paddingBottom', $ancestorContentW);
-        $parentContentH = (int)(($ancestor !== null)
-            ? CssStyleHelper::contentBoxHeight($ancestor->style, $ancestor->h) : 0);
+        // translate
+        $calcX += $style?->getRaw('translateX') ?? 0;
+        $calcY += $style?->getRaw('translateY') ?? 0;
 
-        // Apply translate
-        $translateX = 0;
-        $translateY = 0;
-        $transform = $styleArr['transform'] ?? null;
-        if (is_array($transform)) {
-            $translateX = (int)($transform['translateX'] ?? 0);
-            $translateY = (int)($transform['translateY'] ?? 0);
-        }
-        if (!isset($styleArr['transform'])) {
-            $translateX = (int)($styleArr['translateX'] ?? $translateX);
-            $translateY = (int)($styleArr['translateY'] ?? $translateY);
-        }
-
-        $calcX += $translateX;
-        $calcY += $translateY;
-
-        // 通过 FragmentBuilder 写入布局结果
         $builder
             ->setPosition($calcX, $calcY)
             ->setSize($width > 0 ? $width : 0, $height > 0 ? $height : 0, $style)
             ->setLayer($constraints->containerWidth > 0 ? 1 : 0);
-
-        // margin:auto 居中后调整
-        // （注意：resolveMarginAuto 目前仍直接写 $node->x，需后续迁移）
     }
 
     public function resolveMarginAuto(RenderNode $node, ?ComputedStyle $style, int $parentContentW, int $parentContentH = 0): void
     {
-        $styleArr = $style !== null ? $style->toExportArray() : [];
+        $isMarginLeftAuto = false;
+        $isMarginRightAuto = false;
 
-        $marginIsAuto = ($styleArr['margin'] ?? '') === 'auto';
-        $isMarginLeftAuto = $styleArr['marginLeftAuto'] ?? $marginIsAuto;
-        $isMarginRightAuto = $styleArr['marginRightAuto'] ?? $marginIsAuto;
-
-        $prevOffsetX = $node->style['_marginAutoOffsetX'] ?? 0;
-        if ($prevOffsetX !== 0) {
-            $node->x -= $prevOffsetX;
+        $rawMargin = $style?->getRaw('margin');
+        if (is_string($rawMargin) && strtolower(trim($rawMargin)) === 'auto') {
+            $isMarginLeftAuto = true;
+            $isMarginRightAuto = true;
         }
+        if ($style?->getRaw('marginLeftAuto') ?? false) $isMarginLeftAuto = true;
+        if ($style?->getRaw('marginRightAuto') ?? false) $isMarginRightAuto = true;
 
         $totalBoxW = max($node->w, $node->visualW ?? $node->w);
-        $appliedOffset = 0;
 
-        if ($isMarginLeftAuto && $isMarginRightAuto && $totalBoxW > 0 && $parentContentW > $totalBoxW && $parentContentW > 0) {
+        if ($isMarginLeftAuto && $isMarginRightAuto && $totalBoxW > 0 && $parentContentW > $totalBoxW) {
             $remaining = $parentContentW - $totalBoxW;
             $half = (int)(($remaining + 1) / 2);
             $node->x += $half;
-            $appliedOffset = $half;
-            $node->style['_computedMarginLeft'] = $half;
-            $node->style['_computedMarginRight'] = $remaining - $half;
-        } elseif ($isMarginLeftAuto && !$isMarginRightAuto && $parentContentW > $totalBoxW && $parentContentW > 0) {
-            $remaining = $parentContentW - $totalBoxW;
-            $node->x += $remaining;
-            $appliedOffset = $remaining;
-            $node->style['_computedMarginLeft'] = $remaining;
-        } elseif (!$isMarginLeftAuto && $isMarginRightAuto && $parentContentW > $totalBoxW && $parentContentW > 0) {
-            $node->style['_computedMarginRight'] = $parentContentW - $totalBoxW;
+        } elseif ($isMarginLeftAuto && !$isMarginRightAuto && $parentContentW > $totalBoxW) {
+            $node->x += $parentContentW - $totalBoxW;
         }
-        $node->style['_marginAutoOffsetX'] = $appliedOffset;
 
-        $isMarginTopAuto = $styleArr['marginTopAuto'] ?? $marginIsAuto;
-        $isMarginBottomAuto = $styleArr['marginBottomAuto'] ?? $marginIsAuto;
+        // Vertical auto margin
+        $isMarginTopAuto = $style?->getRaw('marginTopAuto') ?? false;
+        $isMarginBottomAuto = $style?->getRaw('marginBottomAuto') ?? false;
 
-        if ($isMarginTopAuto && $isMarginBottomAuto && $node->h > 0 && $parentContentH > $node->h && $parentContentH > 0) {
+        if ($isMarginTopAuto && $isMarginBottomAuto && $node->h > 0 && $parentContentH > $node->h) {
             $remaining = $parentContentH - $node->h;
             $half = (int)($remaining / 2);
-            $prevAutoY = $node->style['_marginAutoOffsetY'] ?? 0;
-            $node->y -= $prevAutoY;
             $node->y += $half;
-            $node->style['_marginAutoOffsetY'] = $half;
         }
     }
 
@@ -231,7 +182,7 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         $ancestor = $node->parent;
         while ($ancestor !== null) {
-            $pos = $ancestor->style['position'] ?? 'static';
+            $pos = $ancestor->computedStyle?->position?->value ?? 'static';
             if ($pos !== 'static') {
                 $node->positioningAncestor = $ancestor;
                 $node->positioningAncestorValid = true;

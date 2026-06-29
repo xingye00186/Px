@@ -8,7 +8,6 @@ use Px\Rendering\CssMappings;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
 use Px\Rendering\CssStyleHelper;
-use Px\Rendering\Layout\Tools\ScrollHelper;
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\FragmentBuilder;
@@ -26,15 +25,10 @@ use Px\Rendering\Layout\FragmentBuilder;
  */
 class GridLayoutStrategy implements LayoutStrategyInterface
 {
-    public function resolve(
-        RenderNode    $node,
-        LayoutContext $ctx,
-        array         $style
-    ): void
-    {
-        $this->resolveGridLayout($node, $ctx, $style);
-    }
-
+    /**
+     * Pure FragmentBuilder 布局入口。
+     * 直接使用 LayoutConstraints + ComputedStyle。
+     */
     public function resolveWithBuilder(
         RenderNode         $node,
         LayoutConstraints  $constraints,
@@ -42,18 +36,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         FragmentBuilder    $builder
     ): void
     {
-        $ctx = new LayoutContext(
-            $constraints->parentContentX,
-            $constraints->parentContentY,
-            $node->parent
-        );
-        $styleArr = $style !== null ? $style->toExportArray() : $node->style;
-        $this->resolveGridLayout($node, $ctx, $styleArr, false);
-        $builder
-            ->setPosition($node->x, $node->y)
-            ->setSize($node->w, $node->h, $style)
-            ->setLayer($node->layer)
-            ->setContentSize($node->contentWidth, $node->contentHeight);
+        $parentX = $constraints->parentContentX;
+        $parentY = $constraints->parentContentY;
+        $this->resolveGridLayout($node, $parentX, $parentY, $style, $builder);
     }
 
     private LayoutResolver $resolver;
@@ -68,11 +53,14 @@ class GridLayoutStrategy implements LayoutStrategyInterface
      */
     public function resolveGridLayout(
         RenderNode    $node,
-        LayoutContext $ctx,
-        array         $style,
-        bool          $recurseChildren = true
+        int           $parentX,
+        int           $parentY,
+        ?ComputedStyle $computedStyle,
+        ?FragmentBuilder $builder = null
     ): void
     {
+        $style = $node->getStyleArray();
+
         $left = $style['left'] ?? 0;
 
         $top = $style['top'] ?? 0;
@@ -82,11 +70,11 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $height = $style['height'] ?? 0;
 
         // CSS: grid item percentage width resolves against content width
-        $parentW = (int)(($ctx->parent !== null)
-            ? CssStyleHelper::contentBoxWidth($ctx->parent->style, $ctx->parent->w)
+        $parentW = (int)(($node->parent !== null)
+            ? CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w)
             : 0);
 
-        $parentH = ($ctx->parent !== null) ? $ctx->parent->h : 0;
+        $parentH = ($node->parent !== null) ? $node->parent->h : 0;
 
         $width = CssStyleHelper::resolveWithCalc($style, 'width', $parentW);
 
@@ -96,15 +84,15 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
-        if (!$hasExplicitW && $width === 0 && $ctx->parent !== null) {
+        if (!$hasExplicitW && $width === 0 && $node->parent !== null) {
             $width = $parentW;
         }
 
         // Note: height:auto for grid containers is content-based (computed below)
 
-        $node->x = $left + $ctx->parentX;
+        $node->x = $left + $parentX;
 
-        $node->y = $top + $ctx->parentY;
+        $node->y = $top + $parentY;
 
         // Apply translate from animatedStyle
 
@@ -316,11 +304,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $children = [];
 
         foreach ($node->children as $child) {
-            $childCtx = new LayoutContext($node->x, $node->y, $node);
-            if ($recurseChildren) {
-                $this->resolver->resolveNode($child, $childCtx);
-            }
-
+            $this->resolver->resolveChildNode($child, $node->x, $node->y, $node);
             $children[] = $child;
         }
 
@@ -467,7 +451,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             // 高度不应用 min/max——等调整后得到自然内容高度
 
             // 调整子节点（重解析 flex/grid 的百分比尺寸）
-            $this->adjustGridItemChildren($ch, $ctx, $recurseChildren);
+            $this->adjustGridItemChildren($ch, $node->parent, true);
 
             // 计算 grid item 的实际内容高度：从子节点的 bottom 边推算
             $actualContentH = $ch->h;
@@ -546,7 +530,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
             // 如果高度变化了（stretch），需要重新调整子节点
             if ($alignSelf === 'stretch') {
-                $this->adjustGridItemChildren($ch, $ctx, $recurseChildren);
+                $this->adjustGridItemChildren($ch, $node->parent, true);
                 // 恢复 grid cell 决定的位置和宽度（adjustGridItemChildren 内部会 restore）
                 $ch->y = $newCellY;
                 $ch->h = $actualRowH;
@@ -585,112 +569,46 @@ class GridLayoutStrategy implements LayoutStrategyInterface
      *
      * CSS 规范: 重新解析时需保持 grid item 自身的布局上下文。
      */
-    private function adjustGridItemChildren(RenderNode $gridItem, LayoutContext $ctx, bool $recurseChildren = true): void
+    private function adjustGridItemChildren(RenderNode $gridItem, $parentCtx, bool $recurseChildren = true): void
     {
         if (empty($gridItem->children) || $gridItem->w <= 0) {
             return;
         }
 
-        $display = $gridItem->style['display'] ?? 'block';
+        $display = $gridItem->computedStyle?->display?->value ?? 'block';
 
         if ($display === 'flex' || $display === 'inline-flex') {
             // Flex 容器: 整个 flex 布局重新处理。
-            ScrollHelper::markSubtreeDirty($gridItem);
-
-            $savedX = $gridItem->x;
-            $savedY = $gridItem->y;
-            $savedW = $gridItem->w;
-            $savedH = $gridItem->h;
-
-            // 临时注入 cell 尺寸到 style,使 flex 布局使用正确的包含块尺寸。
-            $hasOrigW = array_key_exists('width', $gridItem->style);
-            $hasOrigH = array_key_exists('height', $gridItem->style);
-            $origW = $gridItem->style['width'] ?? null;
-            $origH = $gridItem->style['height'] ?? null;
-            $gridItem->style['width'] = $savedW;
-            $gridItem->style['height'] = $savedH;
-
-            $childCtx = new LayoutContext($savedX, $savedY, $gridItem);
+            $gridItem->markSubtreeDirty();
 
             $this->resolver->getFlexStrategy()->resolveFlexLayout(
                 $gridItem,
-                $childCtx,
-                $gridItem->style
+                $gridItem->x,
+                $gridItem->y,
+                $gridItem->computedStyle
             );
-
-            // 还原原始 style
-            if ($hasOrigW) {
-                $gridItem->style['width'] = $origW;
-            } else {
-                unset($gridItem->style['width']);
-            }
-            if ($hasOrigH) {
-                $gridItem->style['height'] = $origH;
-            } else {
-                unset($gridItem->style['height']);
-            }
-
-            // 恢复 grid cell 决定的坐标和尺寸
-            $gridItem->x = $savedX;
-            $gridItem->y = $savedY;
-            $gridItem->w = $savedW;
-            $gridItem->h = $savedH;
 
             return;
         }
 
         if ($display === 'grid') {
             // 嵌套 grid: 整个 grid 布局重新处理
-            ScrollHelper::markSubtreeDirty($gridItem);
-
-            $savedX = $gridItem->x;
-            $savedY = $gridItem->y;
-            $savedW = $gridItem->w;
-            $savedH = $gridItem->h;
-
-            // 同样注入 cell 尺寸到 style
-            $hasOrigW = array_key_exists('width', $gridItem->style);
-            $hasOrigH = array_key_exists('height', $gridItem->style);
-            $origW = $gridItem->style['width'] ?? null;
-            $origH = $gridItem->style['height'] ?? null;
-            $gridItem->style['width'] = $savedW;
-            $gridItem->style['height'] = $savedH;
-
-            $childCtx2 = new LayoutContext($savedX, $savedY, $gridItem);
+            $gridItem->markSubtreeDirty();
 
             $this->resolveGridLayout(
                 $gridItem,
-                $childCtx2,
-                $gridItem->style
+                $gridItem->x,
+                $gridItem->y,
+                $gridItem->computedStyle
             );
-
-            // 还原原始 style
-            if ($hasOrigW) {
-                $gridItem->style['width'] = $origW;
-            } else {
-                unset($gridItem->style['width']);
-            }
-            if ($hasOrigH) {
-                $gridItem->style['height'] = $origH;
-            } else {
-                unset($gridItem->style['height']);
-            }
-
-            $gridItem->x = $savedX;
-            $gridItem->y = $savedY;
-            $gridItem->w = $savedW;
-            $gridItem->h = $savedH;
 
             return;
         }
 
         // Block 显示: 逐个重新解析子节点
         foreach ($gridItem->children as $child) {
-            ScrollHelper::markSubtreeDirty($child);
-            if ($recurseChildren) {
-                $childCtx = new LayoutContext($gridItem->x, $gridItem->y, $gridItem);
-                $this->resolver->resolveNode($child, $childCtx);
-            }
+            $child->markSubtreeDirty();
+            $this->resolver->resolveChildNode($child, $gridItem->x, $gridItem->y, $gridItem);
         }
     }
 

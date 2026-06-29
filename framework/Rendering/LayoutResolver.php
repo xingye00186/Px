@@ -16,8 +16,6 @@ use Px\Rendering\Layout\InlineLayoutStrategy;
 use Px\Rendering\Layout\TableLayoutStrategy;
 use Px\Rendering\Layout\MultiColumnLayoutStrategy;
 use Px\Rendering\CssStyleHelper;
-use Px\Rendering\Layout\Tools\ScrollHelper;
-use Px\Rendering\Layout\LayoutContext;
 use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\LayoutFragment;
 use Px\Rendering\Layout\FragmentBuilder;
@@ -34,10 +32,9 @@ use Px\Rendering\Layout\FragmentBuilder;
  *     1. 读取 computedStyle
  *     2. 创建 FragmentBuilder
  *     3. 按 display/position 选择策略
- *     4. 新策略模式：先 resolveChildren() 再调用策略
- *     5. 旧策略模式：通过 callLegacyStrategy() 适配
- *     6. build() → LayoutFragment → applyTo()
- *     7. 后处理（滚动容器、sticky 等）
+ *     4. 新策略：先 resolveChildren() 再调用策略
+ *     5. build() → LayoutFragment → applyTo()
+ *     6. 后处理（滚动容器、sticky 等）
  */
 class LayoutResolver
 {
@@ -60,12 +57,6 @@ class LayoutResolver
 
     /** 滚动容器收集数组（布局过程按需追加） */
     private array $scrollContainers = [];
-
-    /**
-     * 当前节点的父 RenderNode。
-     * 在 resolveNodeInternal 递归过程中维护，供旧策略 LayoutContext 使用。
-     */
-    private ?RenderNode $currentParent = null;
 
 
     public function __construct()
@@ -144,67 +135,27 @@ class LayoutResolver
     }
 
     /**
-     * 旧式 resolve 入口（返回 void），包裹 Fragment 流程。
+     * 供 FlexLayoutStrategy/GridLayoutStrategy 内部算法体使用的子节点解析入口。
+     * 替代 resolveNode() 方法，直接使用坐标参数。
      */
-    public function resolveLegacy(RenderNode $root): array
+    public function resolveChildNode(RenderNode $child, int $parentX, int $parentY, ?RenderNode $parentNode): void
     {
-        $fragment = $this->resolve($root);
-        return ['scrollContainers' => $this->scrollContainers];
-    }
-
-    // Debug: check span dimensions after full layout
-    private function debugCheckSpanDims(RenderNode $node): void
-    {
-        // Debug removed
-    }
-
-    /**
-     * @deprecated Phase 3 向后兼容包装。
-     * 旧策略（Block/Flex/Grid/Inline/Table/MultiColumn）内部通过
-     * $this->resolver->resolveNode($child, $ctx) 解析子节点。
-     *
-     * 将 LayoutContext 转换为 LayoutConstraints 后委托给 resolveNodeInternal，
-     * 并维护 currentParent 以保证旧策略能正确获取父节点。
-     */
-    public function resolveNode(RenderNode $node, LayoutContext $ctx): void
-    {
-        // 保存/恢复 currentParent 以维护递归栈
-        $savedParent = $this->currentParent;
-        $this->currentParent = $ctx->parent;
-
-        $parent = $ctx->parent;
-        $parentW = $parent !== null ? $parent->w : $node->w;
-        $parentH = $parent !== null ? $parent->h : $node->h;
-
+        $parentW = $parentNode !== null ? $parentNode->w : $child->w;
+        $parentH = $parentNode !== null ? $parentNode->h : $child->h;
         $constraints = new LayoutConstraints(
             containerWidth: $parentW,
             containerHeight: $parentH,
-            parentContentX: $ctx->parentX,
-            parentContentY: $ctx->parentY,
+            parentContentX: $parentX,
+            parentContentY: $parentY,
             contentWidth: $parentW,
             contentHeight: $parentH,
         );
-
-        $fragment = $this->resolveNodeInternal($node, $constraints);
-        $fragment->applyTo($node);
-
-        $this->currentParent = $savedParent;
+        $fragment = $this->resolveNodeInternal($child, $constraints);
+        $fragment->applyTo($child);
     }
 
     /**
      * Phase 3 核心递归布局方法。
-     *
-     * 流程（匹配新 FragmentBuilder 范式）：
-     *   1. 读取 computedStyle → effectiveStyle
-     *   2. 创建 FragmentBuilder
-     *   3. 按 display/position 选择策略
-     *   4. 新策略（AbsoluteStrategy）：先 resolveChildren() 递归子节点，
-     *      然后调用策略（策略内部调用 builder.setSize/setPosition）
-     *   5. 旧策略（LayoutStrategyInterface）：通过 callLegacyStrategy() 适配，
-     *      调用旧 resolve() 后从 node 回读结果写入 builder
-     *   6. builder->build(style) → LayoutFragment
-     *   7. fragment->applyTo(node) 原子回写
-     *   8. 后处理（滚动容器、sticky）
      *
      * @param RenderNode         $node            当前节点
      * @param LayoutConstraints  $constraints     布局约束
@@ -254,8 +205,8 @@ class LayoutResolver
         // ════════════════════════════════════════════════════════════════
 
         // ── Layer 继承 ──
-        if ($this->currentParent !== null && $this->currentParent->layer > 0) {
-            $node->layer = $this->currentParent->layer;
+        if ($node->parent !== null && $node->parent->layer > 0) {
+            $node->layer = $node->parent->layer;
         }
 
         // 应用自身 z-index → RenderNode layer
@@ -406,7 +357,7 @@ class LayoutResolver
             if ($hasHScroll2) {
                 $maxRight = 0;
                 foreach ($node->children as $child) {
-                    $cLeft = $child->style['left'] ?? 0;
+                    $cLeft = $child->computedStyle?->left ?? 0;
                     $right = (int)($cLeft + $child->visualW);
                     if ($right > $maxRight) {
                         $maxRight = $right;
@@ -426,9 +377,6 @@ class LayoutResolver
         // ── position:sticky 处理 ──
         if ($position === 'sticky') {
             $stickyTop = (int)($effectiveStyle['top'] ?? 0);
-
-            // Save base Y for stacking calculations
-            $node->style['_stickyBaseY'] = $node->y;
 
             // Find nearest scroll container that contains this node
             for ($i = count($this->scrollContainers) - 1; $i >= 0; $i--) {
@@ -458,7 +406,7 @@ class LayoutResolver
                         $node->y = $adjustedStuckY + $sc->scrollTop;
 
                         foreach ($node->children as $child) {
-                            ScrollHelper::shiftDescendantsY($child, $dy);
+                            $child->y += $dy;
                         }
 
                         $this->stickyStack[$scKey][] = [
@@ -486,7 +434,7 @@ class LayoutResolver
                             $dx = $adjustedStuckX - $visualX;
                             $node->x = $adjustedStuckX + $sc->scrollLeft;
                             foreach ($node->children as $child) {
-                                ScrollHelper::shiftDescendantsX($child, $dx);
+                                $child->x += $dx;
                             }
 
                             $this->stickyStackX[$scKey][] = [
@@ -539,9 +487,6 @@ class LayoutResolver
         $childOffX = $node->computedStyle?->childOffsetX() ?? 0;
         $childOffY = $node->computedStyle?->childOffsetY() ?? 0;
 
-        $savedParent = $this->currentParent;
-        $this->currentParent = $node;
-
         foreach ($node->children as $child) {
             $childConstraints = new LayoutConstraints(
                 containerWidth: $constraints->contentWidth,
@@ -554,8 +499,6 @@ class LayoutResolver
             $childFragment = $this->resolveNodeInternal($child, $childConstraints);
             $builder->addChild($childFragment);
         }
-
-        $this->currentParent = $savedParent;
     }
 
     /**
@@ -569,9 +512,6 @@ class LayoutResolver
         $childOffX = $node->computedStyle?->childOffsetX() ?? 0;
         $childOffY = $node->computedStyle?->childOffsetY() ?? 0;
 
-        $savedParent = $this->currentParent;
-        $this->currentParent = $node;
-
         foreach ($node->children as $child) {
             $childConstraints = new LayoutConstraints(
                 containerWidth: $constraints->contentWidth,
@@ -584,48 +524,5 @@ class LayoutResolver
             $childFragment = $this->resolveNodeInternal($child, $childConstraints);
             $builder->addChild($childFragment);
         }
-
-        $this->currentParent = $savedParent;
-    }
-
-    /**
-     * 旧策略兼容包装。
-     *
-     * 为仍使用 LayoutStrategyInterface（LayoutContext, array）的策略
-     * 创建适配层：
-     *   1. 从 LayoutConstraints 创建 LayoutContext
-     *   2. 调用旧策略的 resolve($node, $ctx, $style)
-     *   3. 从 node 回读 x/y/w/h/layer/contentWidth/contentHeight
-     *      写入 FragmentBuilder
-     *
-     * @param RenderNode              $node
-     * @param LayoutConstraints       $constraints
-     * @param array                   $effectiveStyle  有效的样式数组
-     * @param LayoutStrategyInterface $strategy         旧策略
-     * @param FragmentBuilder         $builder          Fragment 构建器
-     */
-    private function callLegacyStrategy(
-        RenderNode              $node,
-        LayoutConstraints       $constraints,
-        array                   $effectiveStyle,
-        LayoutStrategyInterface $strategy,
-        FragmentBuilder         $builder
-    ): void {
-        // 创建旧式 LayoutContext（parent 引用从 currentParent 获取）
-        $ctx = new LayoutContext(
-            $constraints->parentContentX,
-            $constraints->parentContentY,
-            $this->currentParent
-        );
-
-        // 旧策略内部调用 $this->resolver->resolveNode($child, $childCtx)
-        $strategy->resolve($node, $ctx, $effectiveStyle);
-
-        // 从 node 回读结果，写入 Builder
-        $builder
-            ->setPosition($node->x, $node->y)
-            ->setSize($node->w, $node->h, $node->computedStyle)
-            ->setLayer($node->layer)
-            ->setContentSize($node->contentWidth, $node->contentHeight);
     }
 }
