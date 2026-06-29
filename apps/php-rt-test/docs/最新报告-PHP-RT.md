@@ -1,6 +1,6 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-06-29 10:11:38 | **总耗时**: 157s
+**运行时间**: 2026-06-29 10:19:02 | **总耗时**: 158s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
@@ -72,7 +72,7 @@
 | prt-55-integ-dashboard | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 151diff 🔴54 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-56-integ-fullpage | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 225diff 🔴79 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-57-margin-collapse | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 1.2s |
-| prt-58-float-left | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴12 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-58-float-left | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 6diff 🔴5 | ⏭️ | ❌ 失败 | 2.3s |
 | prt-59-float-right | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴12 | ⏭️ | ❌ 失败 | 1s |
 | prt-60-float-clear | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴11 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-61-direction-rtl | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 98diff 🔴37 | ⏭️ | ❌ 失败 | 1.2s |
@@ -115,15 +115,15 @@
 | prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴37 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 87diff 🔴48 | ⏭️ | ❌ 失败 | 1.1s |
 
-**汇总**: 10 ✅ / 100 ❌ / 110 总计 (总耗时: 157s)
+**汇总**: 10 ✅ / 100 ❌ / 110 总计 (总耗时: 158s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop background-color diff 300->472
-> - prop width diff 640->710
-> - prop height diff 695->1088
+> - prop background-color diff 300->467
+> - prop width diff 640->705
+> - prop height diff 695->1083
 > - prop text-align diff 7->22
 > - prop white-space diff 11->189
 > - prop line-height diff 1->105
@@ -263,8 +263,6 @@
 > - prt-56-integ-fullpage structure 9->21
 > - prt-56-integ-fullpage critical 61->79
 > - prt-56-integ-fullpage major 17->22
-> - prt-58-float-left structure 2->6
-> - prt-58-float-left major 4->5
 > - prt-59-float-right structure 2->6
 > - prt-59-float-right major 3->5
 > - prt-60-float-clear structure 2->5
@@ -366,24 +364,24 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 75.2% | 3299/4387 |
-| width | 83.8% | 3677/4387 |
-| position | 98.4% | 4319/4387 |
+| height | 75.3% | 3304/4387 |
+| width | 83.9% | 3682/4387 |
+| position | 98.5% | 4320/4387 |
 | text-align | 99.5% | 4365/4387 |
 | opacity | 99.8% | 4379/4387 |
 | font-weight | 100% | 4387/4387 |
-| background-color | 88.9% | 3790/4262 |
+| background-color | 89% | 3796/4263 |
 | top | 100% | 4139/4139 |
 | left | 100% | 4138/4138 |
 | font-size | 100% | 4085/4086 |
-| display | 100% | 3827/3827 |
+| display | 100% | 3832/3832 |
 | white-space | 2.1% | 4/193 |
-| border-width | 100% | 163/163 |
-| padding-left | 41.9% | 62/148 |
-| padding-right | 41.9% | 62/148 |
-| padding-bottom | 49.3% | 73/148 |
-| padding-top | 50% | 74/148 |
-| margin-bottom | 60.5% | 78/129 |
+| border-width | 100% | 168/168 |
+| padding-left | 42.6% | 63/148 |
+| padding-right | 42.6% | 63/148 |
+| padding-bottom | 50% | 74/148 |
+| padding-top | 50.7% | 75/148 |
+| margin-bottom | 62.8% | 81/129 |
 | gap | 19.8% | 21/106 |
 | line-height | 0% | 0/105 |
 | flex-shrink | 96.7% | 58/60 |
@@ -393,7 +391,7 @@
 | margin-top | 59.1% | 13/22 |
 | border-radius | 100% | 22/22 |
 | margin-left | 76.2% | 16/21 |
-| margin-right | 80% | 8/10 |
+| margin-right | 90% | 9/10 |
 | flex-wrap | 85.7% | 6/7 |
 | order | 0% | 0/6 |
 | grid-column | 0% | 0/6 |
@@ -507,7 +505,7 @@
 | prt-55-integ-dashboard | 0 | **54** | **8** | 67 | 10 | 1 |
 | prt-56-integ-fullpage | 0 | **79** | **22** | 94 | 21 | 0 |
 | prt-57-margin-collapse | 0 | 0 | 0 | 0 | 0 | 0 |
-| prt-58-float-left | 0 | **12** | **5** | 25 | 6 | 0 |
+| prt-58-float-left | 0 | **5** | 0 | 1 | 0 | 0 |
 | prt-59-float-right | 0 | **12** | **5** | 25 | 6 | 0 |
 | prt-60-float-clear | 0 | **11** | **4** | 20 | 5 | 0 |
 | prt-61-direction-rtl | 0 | **37** | **6** | 33 | 1 | 0 |
