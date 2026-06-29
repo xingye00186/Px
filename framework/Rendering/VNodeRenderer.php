@@ -63,12 +63,11 @@ class VNodeRenderer
      */
     private static function computePaddingBoxClip(RenderNode $node): array
     {
-        $bw = (int)($node->style['borderWidth'] ?? 0);
-        $ns = $node->style;
-        $bl = (int)($ns['borderLeftWidth'] ?? $bw);
-        $br = (int)($ns['borderRightWidth'] ?? $bw);
-        $bt = (int)($ns['borderTopWidth'] ?? $bw);
-        $bb = (int)($ns['borderBottomWidth'] ?? $bw);
+        $cs = $node->computedStyle;
+        $bl = (int)($cs?->borderLeftWidth ?? 0);
+        $br = (int)($cs?->borderRightWidth ?? 0);
+        $bt = (int)($cs?->borderTopWidth ?? 0);
+        $bb = (int)($cs?->borderBottomWidth ?? 0);
         // visualW/visualH 优先，未设置时回退到 layout w/h
         $vw = ($node->visualW > 0 ? $node->visualW : $node->w);
         $vh = ($node->visualH > 0 ? $node->visualH : $node->h);
@@ -133,7 +132,7 @@ class VNodeRenderer
     {
         // ── A1 重构: 设置节点的滚动偏移（用于 renderNodeToElement）──
         // position:fixed 元素不受任何祖先滚动影响
-        $isFixed = ($node->style['position'] ?? '') === 'fixed';
+        $isFixed = ($node->computedStyle?->position?->value ?? '') === 'fixed';
         $node->renderOffsetX = $isFixed ? 0 : $accumOffsetX;
         $node->renderOffsetY = $isFixed ? 0 : $accumOffsetY;
 
@@ -203,15 +202,15 @@ class VNodeRenderer
                 'w' => $clip['w'], 'h' => $clip['h'],
                 'scrollTop' => $node->scrollTop,
                 'scrollLeft' => $node->scrollLeft,
-                'overflowX' => $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible',
-                'overflowY' => $node->style['overflowY'] ?? $node->style['overflow'] ?? 'visible',
+                'overflowX' => $node->computedStyle?->overflowX?->value ?? $node->computedStyle?->overflow?->value ?? 'visible',
+                'overflowY' => $node->computedStyle?->overflowY?->value ?? $node->computedStyle?->overflow?->value ?? 'visible',
                 'layer' => $node->layer,
             ];
             $pushedClip = true;
         } else {
             // 非滚动容器：overflow:hidden 也需要裁切子元素
-            $noX = $node->style['overflowX'] ?? $node->style['overflow'] ?? 'visible';
-            $noY = $node->style['overflowY'] ?? $node->style['overflow'] ?? 'visible';
+            $noX = $node->computedStyle?->overflowX?->value ?? $node->computedStyle?->overflow?->value ?? 'visible';
+            $noY = $node->computedStyle?->overflowY?->value ?? $node->computedStyle?->overflow?->value ?? 'visible';
             if ($noX === 'hidden' || $noY === 'hidden') {
                 $pushedClip = true;
             }
@@ -516,7 +515,7 @@ class VNodeRenderer
         // 破坏"视觉随动"原则——列表项整体（rect+text+clip）应同步位移，
         // 统一由 clip-push/clip-pop 在渲染层做裁剪。
         if (count($this->scrollCtxStack) > 0) {
-            $isFixed = ($node->style['position'] ?? '') === 'fixed';
+            $isFixed = ($node->computedStyle?->position?->value ?? '') === 'fixed';
             if (!$isFixed) {
             $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];
             $containerX = $scrollCtx['x'];
@@ -651,7 +650,7 @@ class VNodeRenderer
             $parent = $node->parent;
             $lst = 'disc';
             if ($parent !== null) {
-                $lst = $parent->style['listStyleType'] ?? 'disc';
+                $lst = $parent->computedStyle?->listStyleType ?? 'disc';
                 // Count previous li siblings for decimal numbering
                 $liIndex = 0;
                 foreach ($parent->children as $sibling) {
@@ -709,7 +708,7 @@ class VNodeRenderer
             $align = $props['align'] ?? ($style['textAlign'] ?? 'start');
             // CSS Text Module Level 3 §7: text-align is inherited
             if ($align === 'start' && !isset($style['textAlign']) && $node->parent !== null) {
-                $parentAlign = $node->parent->style['textAlign'] ?? null;
+                $parentAlign = $node->parent->computedStyle?->textAlign?->value ?? null;
                 if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {
                     $align = $parentAlign;
                 }
@@ -1112,7 +1111,7 @@ class VNodeRenderer
         if ($color === null) {
             $p = $node->parent;
             while ($p !== null) {
-                $pc = $p->style['fg'] ?? null;
+                $pc = $p->computedStyle?->getRaw('fg') ?? null;
                 if ($pc !== null) { $color = $pc; break; }
                 $p = $p->parent;
             }
@@ -1123,7 +1122,7 @@ class VNodeRenderer
         $align    = $props['align'] ?? ($style['textAlign'] ?? 'start');
         // CSS Text Module Level 3 §7: text-align is inherited
         if ($align === 'start' && !isset($style['textAlign']) && $node->parent !== null) {
-            $parentAlign = $node->parent->style['textAlign'] ?? null;
+            $parentAlign = $node->parent->computedStyle?->textAlign?->value ?? null;
             if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {
                 $align = $parentAlign;
             }
@@ -1593,7 +1592,7 @@ class VNodeRenderer
         $contentH = $node->contentHeight;
         if ($contentH === 0) {
             foreach ($node->children as $child) {
-                $itemH = (int)($child->style['height'] ?? 0);
+                $itemH = (int)($child->computedStyle?->height->toPx() ?? 0);
                 $contentH += (int)max($child->h, $itemH);
             }
         }

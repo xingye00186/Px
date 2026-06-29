@@ -21,10 +21,10 @@ class ScrollbarEmitter
     public static function emit(RenderNode $node, array $scrollCtx, array &$elementsByLayer, int &$maxLayer): void
     {
         $layer = $scrollCtx['layer'];
-        $sbWidth = $node->style['scrollbarWidth'] ?? 12;
-        $trackColor = $node->style['scrollbarTrackColor'] ?? 0x4A4A4A;
-        $thumbColor = $node->style['scrollbarThumbColor'] ?? 0x888888;
-        $sbRadius = $node->style['scrollbarBorderRadius'] ?? 0;
+        $sbWidth = $node->computedStyle?->getRaw('scrollbarWidth') ?? 12;
+        $trackColor = $node->computedStyle?->getRaw('scrollbarTrackColor') ?? 0x4A4A4A;
+        $thumbColor = $node->computedStyle?->getRaw('scrollbarThumbColor') ?? 0x888888;
+        $sbRadius = $node->computedStyle?->getRaw('scrollbarBorderRadius') ?? 0;
 
         // ── 竖滚动条 ──
         $contentH = $node->contentHeight;

@@ -128,7 +128,7 @@ class ScrollManager
         if (!$node->isScrollContainer) return null;
 
         // 从节点 style 读取可配置的滚动条宽度
-        $sbWidth = $node->style['scrollbarWidth'] ?? 12;
+        $sbWidth = $node->computedStyle?->getRaw('scrollbarWidth') ?? 12;
 
         // ── 竖滚动条（右侧）──
         $contentH = $node->contentHeight;
@@ -308,7 +308,7 @@ class ScrollManager
      */
     private function isSmoothScroll(RenderNode $node): bool
     {
-        $sb = $node->style['scrollBehavior'] ?? $node->style['scroll-behavior'] ?? '';
+        $sb = $node->computedStyle?->getRaw('scrollBehavior') ?? $node->computedStyle?->getRaw('scroll-behavior') ?? '';
         return $sb === 'smooth';
     }
 

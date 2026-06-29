@@ -207,7 +207,7 @@ class Application
                 $hoverNode = $this->renderTreeManager->hitTest($event->getX(), $event->getY());
                 $newCursor = '';
                 if ($hoverNode !== null) {
-                    $cursorStyle = $hoverNode->style['cursor'] ?? '';
+                    $cursorStyle = $hoverNode->computedStyle?->cursor?->value ?? '';
                     if ($cursorStyle !== '') {
                         $newCursor = $cursorStyle;
                     }
@@ -808,9 +808,10 @@ class Application
             'columnCount', 'columnWidth', 'columnGap', 'columnRuleWidth', 'columnRuleStyle', 'columnRuleColor',
             'textDecorationLine', 'textDecorationColor', 'textDecorationStyle', 'textDecorationThickness'];
        $style = [];
+        $exportData = $node->computedStyle !== null ? $node->computedStyle->toExportArray() : [];
         foreach ($styleKeys as $k) {
-            if (isset($node->style[$k]) && $node->style[$k] !== null) {
-                $style[$k] = $node->style[$k];
+            if (isset($exportData[$k]) && $exportData[$k] !== null) {
+                $style[$k] = $exportData[$k];
             }
         }
         // CSS 继承属性补全：引擎在 resolveNodeStyle 中已做继承，
@@ -828,10 +829,10 @@ class Application
         // CSS 百分比宽/高：当 widthPercent/heightPercent 存在时，
         // style.width/style.height 是原始 CSS 值（如 100% → parsePixels 返回 100），
         // 应使用引擎布局计算后的 $node->w / $node->h 作为导出值
-        if (isset($node->style['widthPercent'])) {
+        if ($node->computedStyle !== null && $node->computedStyle->width->isPercent()) {
             $style['width'] = $node->w;
         }
-        if (isset($node->style['heightPercent'])) {
+        if ($node->computedStyle !== null && $node->computedStyle->height->isPercent()) {
             $style['height'] = $node->h;
         }
 
@@ -847,10 +848,10 @@ class Application
         $bc = $style['borderColor'] ?? null;
         $bw = $style['borderWidth'] ?? 0;
         if ($bc !== null || $bw > 0) {
-            $bTopC = $node->style['borderTopColor'] ?? $bc;
-            $bRightC = $node->style['borderRightColor'] ?? $bc;
-            $bBottomC = $node->style['borderBottomColor'] ?? $bc;
-            $bLeftC = $node->style['borderLeftColor'] ?? $bc;
+            $bTopC = $exportData['borderTopColor'] ?? $bc;
+            $bRightC = $exportData['borderRightColor'] ?? $bc;
+            $bBottomC = $exportData['borderBottomColor'] ?? $bc;
+            $bLeftC = $exportData['borderLeftColor'] ?? $bc;
             // Always export as 4-side format when any per-side color exists or borderWidth>0
             if ($bTopC !== null && $bRightC !== null && $bBottomC !== null && $bLeftC !== null) {
                 $style['borderColor'] = self::formatColorInt($bTopC) . ' '

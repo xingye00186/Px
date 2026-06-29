@@ -354,8 +354,11 @@ class AnimationManager
             return;
         }
 
-        // 将最终值写入 style（保留 animatedStyle 作为最终状态）
-        $node->style[$anim->property] = $anim->toValue;
+        // 将最终值写入 animatedStyle（保留 animatedStyle 作为最终状态）
+        if ($node->animatedStyle === null) {
+            $node->animatedStyle = [];
+        }
+        $node->animatedStyle[$anim->property] = $anim->toValue;
 
         // 清理 animatedStyle 中该属性的动画值
         if ($node->animatedStyle !== null) {
