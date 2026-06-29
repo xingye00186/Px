@@ -2,6 +2,8 @@
 
 namespace Px\Core;
 
+use native_types;
+
 /**
  * PerfCounter — 轻量级静态性能计数器
  * 

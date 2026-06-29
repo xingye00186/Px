@@ -133,13 +133,6 @@ class AotChecker
             'message' => '业务代码不应直接调用 vue_* C++ 函数，应通过 GdiRenderContext',
         ],
 
-        // ========== CSS 语义规则（仅警告） ==========
-
-        'left_without_position' => [
-            'severity' => 'WARNING',
-            'pattern' => '/\'(left|top|right|bottom)\'\s*=>/',
-            'message' => 'CSS: left/top/right/bottom 在 static 定位下无效，请显式添加 position:absolute',
-        ],
     ];
 
     /** 排除的文件（平台封装层，直接调用 C++ 函数是合法的） */
@@ -457,11 +450,6 @@ class AotChecker
 
             // 对于 direct_cpp_call 规则，排除 GdiRenderContext
             if ($ruleId === 'direct_cpp_call' && $filename === 'GdiRenderContext.php') {
-                continue;
-            }
-
-            // 对于 left_without_position 规则，排除 CssMappings（lookup 表包含 left/top/right/bottom 键）
-            if ($ruleId === 'left_without_position' && $filename === 'CssMappings.php') {
                 continue;
             }
 
