@@ -584,8 +584,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             $computedW = max(0, $maxRight - $node->x);
 
-            if ($node->x === 300) {
-                error_log('[DIAG_PADDING] auto-width: node=' . $node->type . ' x=' . $node->x . ' currentW=' . $node->w . ' maxRight=' . $maxRight . ' computedW=' . $computedW);
+            // CSS 2.2 §10.3.3: auto-width must not exceed containing block width
+            // This prevents the positive feedback loop where a child's overflow causes
+            // the parent to expand, which causes the child to expand further, etc.
+            if ($ctx->parent !== null) {
+                $parentCW = PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w);
+                if ($computedW > $parentCW) {
+                    $computedW = $parentCW;
+                }
             }
 
             if ($computedW > $node->w) {
@@ -596,10 +602,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 $padR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
 
                 $contentW = PercentResolver::resolveContentWidth($style, $node->w);
-
-                if ($node->x === 300) {
-                    error_log('[DIAG_PADDING] auto-width TRIGGERED! node=' . $node->type . ' x=' . $node->x . ' newW=' . $node->w . ' contentW=' . $contentW);
-                }
 
                 if ($contentW > 0) {
                     foreach ($node->children as $child) {
