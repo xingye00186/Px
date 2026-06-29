@@ -1,6 +1,6 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-06-29 08:52:54 | **总耗时**: 151.4s
+**运行时间**: 2026-06-29 09:16:25 | **总耗时**: 153.2s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
@@ -12,8 +12,8 @@
 | prt-06-border-radius | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 2.3s |
 | prt-07-width-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 26diff 🔴9 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-08-min-max | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 1.2s |
-| prt-09-box-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 32diff 🔴20 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-10-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 178diff 🔴68 | ⏭️ | ❌ 失败 | 1.8s |
+| prt-09-box-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 32diff 🔴20 | ⏭️ | ❌ 失败 | 2.5s |
+| prt-10-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 44diff 🔴27 | ⏭️ | ❌ 失败 | 2.3s |
 | prt-100-table-caption | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 7 | 154diff 🔴110 | ⏭️ | ❌ 失败 | 4.8s |
 | prt-101-table-empty-cells | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 52diff 🔴29 | ⏭️ | ❌ 失败 | 4.9s |
 | prt-102-column-span | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 141diff 🔴110 | ⏭️ | ❌ 失败 | 5.3s |
@@ -24,10 +24,10 @@
 | prt-107-max-width-constraint | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 19diff 🔴1 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-108-integ-overlap-layers | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴1 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-109-integ-responsive-card | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 23diff | ⏭️ | ❌ 失败 | 1.1s |
-| prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 26diff 🔴7 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 2.3s |
 | prt-110-integ-complex-toolbar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ⚠️ 1 | 84diff 🔴38 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 2.5s |
-| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴8 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff 🔴1 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-14-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴11 | ⏭️ | ❌ 失败 | 1.4s |
 | prt-15-position-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-16-top-left-right-bottom | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴20 | ⏭️ | ❌ 失败 | 1.1s |
@@ -115,25 +115,21 @@
 | prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴37 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 87diff 🔴48 | ⏭️ | ❌ 失败 | 1.1s |
 
-**汇总**: 8 ✅ / 102 ❌ / 110 总计 (总耗时: 151.4s)
+**汇总**: 8 ✅ / 102 ❌ / 110 总计 (总耗时: 153.2s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop background-color diff 300->502
-> - prop width diff 640->742
-> - prop height diff 695->1130
+> - prop background-color diff 300->482
+> - prop width diff 640->722
+> - prop height diff 695->1104
 > - prop text-align diff 7->22
 > - prop white-space diff 11->189
 > - prop line-height diff 1->105
 > - prop flex-grow diff 34->47
 > - prt-07-width-height structure 2->4
 > - prt-07-width-height major 1->2
-> - prt-10-overflow geometry 59->98
-> - prt-10-overflow structure 8->17
-> - prt-10-overflow critical 49->68
-> - prt-10-overflow major 3->23
 > - prt-100-table-caption geometry 42->132
 > - prt-100-table-caption critical 29->110
 > - prt-100-table-caption major 0->11
@@ -147,12 +143,9 @@
 > - prt-103-list-style-position critical 35->124
 > - prt-106-min-width-override geometry 12->17
 > - prt-107-max-width-constraint geometry 12->16
-> - prt-11-display-types structure 2->4
 > - prt-110-integ-complex-toolbar geometry 60->63
 > - prt-110-integ-complex-toolbar critical 6->38
 > - prt-110-integ-complex-toolbar major 2->12
-> - prt-13-position-relative structure 2->5
-> - prt-13-position-relative major 3->6
 > - prt-14-position-absolute structure 2->5
 > - prt-14-position-absolute major 0->2
 > - prt-15-position-fixed structure 2->4
@@ -382,31 +375,31 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 74.2% | 3257/4387 |
-| width | 83.1% | 3645/4387 |
-| position | 98.1% | 4304/4387 |
+| height | 74.8% | 3283/4387 |
+| width | 83.5% | 3665/4387 |
+| position | 98.2% | 4308/4387 |
 | text-align | 99.5% | 4365/4387 |
 | opacity | 99.8% | 4379/4387 |
 | font-weight | 100% | 4387/4387 |
-| background-color | 88.2% | 3750/4252 |
+| background-color | 88.7% | 3776/4258 |
 | top | 100% | 4138/4138 |
 | left | 100% | 4138/4138 |
 | font-size | 100% | 4085/4086 |
-| display | 100% | 3790/3790 |
+| display | 100% | 3813/3813 |
 | white-space | 2.1% | 4/193 |
-| padding-left | 41.2% | 61/148 |
-| padding-right | 41.2% | 61/148 |
-| padding-bottom | 48.6% | 72/148 |
-| padding-top | 49.3% | 73/148 |
-| border-width | 100% | 139/139 |
-| margin-bottom | 58.9% | 76/129 |
-| gap | 18.7% | 20/107 |
+| border-width | 100% | 149/149 |
+| padding-left | 41.9% | 62/148 |
+| padding-right | 41.9% | 62/148 |
+| padding-bottom | 49.3% | 73/148 |
+| padding-top | 50% | 74/148 |
+| margin-bottom | 59.7% | 77/129 |
+| gap | 19.8% | 21/106 |
 | line-height | 0% | 0/105 |
 | flex-shrink | 96.7% | 58/60 |
 | flex-grow | 19% | 11/58 |
 | flex-direction | 23.1% | 6/26 |
 | grid-template-columns | 0% | 0/24 |
-| margin-top | 45.5% | 10/22 |
+| margin-top | 50% | 11/22 |
 | border-radius | 100% | 22/22 |
 | margin-left | 76.2% | 16/21 |
 | margin-right | 80% | 8/10 |
@@ -464,7 +457,7 @@
 | prt-07-width-height | 0 | **9** | **2** | 10 | 4 | 0 |
 | prt-08-min-max | 0 | 0 | 0 | 0 | 0 | 0 |
 | prt-09-box-sizing | 0 | **20** | 0 | 12 | 0 | 2 |
-| prt-10-overflow | 1 | **68** | **23** | 63 | 17 | 4 |
+| prt-10-overflow | 0 | **27** | 0 | 17 | 0 | 4 |
 | prt-100-table-caption | 0 | **110** | **11** | 22 | 0 | 7 |
 | prt-101-table-empty-cells | 0 | **29** | **2** | 13 | 0 | 3 |
 | prt-102-column-span | 1 | **110** | **3** | 8 | 1 | 2 |
@@ -475,10 +468,10 @@
 | prt-107-max-width-constraint | 0 | **1** | 0 | 3 | 0 | 1 |
 | prt-108-integ-overlap-layers | 0 | **1** | 0 | 8 | 0 | 0 |
 | prt-109-integ-responsive-card | 0 | 0 | 0 | 13 | 0 | 0 |
-| prt-11-display-types | 0 | **7** | **3** | 11 | 4 | 0 |
+| prt-11-display-types | 0 | 0 | 0 | 0 | 0 | 0 |
 | prt-110-integ-complex-toolbar | 0 | **38** | **12** | 21 | 0 | 1 |
 | prt-12-display-none | 0 | 0 | 0 | 0 | 0 | 0 |
-| prt-13-position-relative | 0 | **8** | **6** | 20 | 5 | 0 |
+| prt-13-position-relative | 0 | **1** | 0 | 0 | 0 | 0 |
 | prt-14-position-absolute | 0 | **11** | **2** | 17 | 5 | 0 |
 | prt-15-position-fixed | 0 | **8** | **2** | 13 | 4 | 0 |
 | prt-16-top-left-right-bottom | 0 | **20** | **7** | 27 | 7 | 0 |
