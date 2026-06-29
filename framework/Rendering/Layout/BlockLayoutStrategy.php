@@ -7,8 +7,11 @@ use native_types;
 use Px\Core\Config;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
-use Px\Rendering\Layout\Tools\PercentResolver;
+use Px\Rendering\ComputedStyle;
+use Px\Rendering\CssStyleHelper;
 use Px\Rendering\Layout\Tools\ScrollHelper;
+use Px\Rendering\Layout\LayoutConstraints;
+use Px\Rendering\Layout\FragmentBuilder;
 
 /**
  * BlockLayoutStrategy ??Block 布局策略
@@ -31,12 +34,42 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
     }
 
     public function resolve(
-        RenderNode    $node,
-        LayoutContext $ctx,
-        array         $style
+        RenderNode         $node,
+        LayoutContext      $ctx,
+        array              $style
     ): void
     {
         $this->resolveBlockLayout($node, $ctx, $style);
+    }
+
+    /**
+     * Phase 3: 使用 FragmentBuilder 的布局入口。
+     * 通过旧 resolveBlockLayout 计算，但结果路由到 builder，不直接写 node。
+     * 不再递归子节点（由 LayoutResolver 统一处理）。
+     */
+    public function resolveWithBuilder(
+        RenderNode         $node,
+        LayoutConstraints  $constraints,
+        ?ComputedStyle     $style,
+        FragmentBuilder    $builder
+    ): void
+    {
+        $ctx = new LayoutContext(
+            $constraints->parentContentX,
+            $constraints->parentContentY,
+            $node->parent
+        );
+        $styleArr = $style !== null ? $style->toExportArray() : $node->style;
+
+        // Phase 3: 不递归子节点（由 LayoutResolver 预解析），
+        // resolveBlockLayout 专注于自身定位计算 + auto-stack 子节点位置调整
+        $this->resolveBlockLayout($node, $ctx, $styleArr, false);
+
+        $builder
+            ->setPosition($node->x, $node->y)
+            ->setSize($node->w, $node->h, $style)
+            ->setLayer($node->layer)
+            ->setContentSize($node->contentWidth, $node->contentHeight);
     }
     private LayoutResolver $resolver;
 
@@ -55,7 +88,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
     public function resolveBlockLayout(
         RenderNode    $node,
         LayoutContext $ctx,
-        array         $style
+        array         $style,
+        bool          $recurseChildren = true
     ): void
     {
         $left = (int)($style['left'] ?? 0);
@@ -70,14 +104,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         if ($ctx->parent !== null) {
             $padL = (int)($ctx->parent->style['paddingLeft'] ?? $ctx->parent->style['padding'] ?? 0);
             $padR = (int)($ctx->parent->style['paddingRight'] ?? $ctx->parent->style['padding'] ?? 0);
-            $parentW = PercentResolver::resolveContentWidth($ctx->parent->style, $parentW_raw);
+            $parentW = CssStyleHelper::contentBoxWidth($ctx->parent->style, $parentW_raw);
         } else {
             $parentW = (int)$parentW_raw;
         }
 
-        $width = PercentResolver::resolvePercent($style, 'width', 'widthPercent', $parentW);
+        $width = CssStyleHelper::resolveWithCalc($style, 'width', $parentW);
 
-        $height = PercentResolver::resolvePercent($style, 'height', 'heightPercent', $parentH);
+        $height = CssStyleHelper::resolveWithCalc($style, 'height', $parentH);
 
 
 
@@ -85,7 +119,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
 
         // ── 应用 min/max 约束到尺寸（在子节点递归之前，确??parent->w/h 立即可用）──
-        $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $width, true));
+        $node->w = (int)max(0, (int)CssStyleHelper::applyMinMax($style, $width, true));
 
         // Debug: span h before min/max
         $dbg_span_h_before = $node->h;
@@ -95,11 +129,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         // 但这里没有显式 height 时 $height=0 → 覆盖为 0，导致后续 clamp 用 h=0 计算 maxScroll，
         // scrollTop 无法正确限界，列表会无限空滚。
         if ($height > 0 || $node->h === 0) {
-            $node->h = (int)max(0, (int)PercentResolver::resolveMinMax($style, $height, false));
+            $node->h = (int)max(0, (int)CssStyleHelper::applyMinMax($style, $height, false));
         }
 
-        $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
-        $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+        $node->visualW = CssStyleHelper::visualWidth($style, $node->w);
+        $node->visualH = CssStyleHelper::visualHeight($style, $node->h);
 
 
 
@@ -111,8 +145,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
         if (!$hasExplicitW && $width === 0 && $ctx->parent !== null && !self::isInlineType($node->type)) {
             error_log('[DIAG_LOC1_CHECK] node=' . $node->type . ' content_null=' . ($node->content === null ? '1' : '0') . ' content_str=' . (is_string($node->content) ? '1' : '0') . ' content_len=' . (is_string($node->content) ? strlen($node->content) : -1));
-            $autoMarginL = PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $parentW);
-            $autoMarginR = PercentResolver::resolveMarginPaddingPercent($style, 'marginRight', 'marginRightPercent', $parentW);
+            $autoMarginL = CssStyleHelper::resolveLength($style, 'marginLeft', $parentW);
+            $autoMarginR = CssStyleHelper::resolveLength($style, 'marginRight', $parentW);
             $autoPadL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
             $autoPadR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
             $autoBw = (int)($style['borderWidth'] ?? 0);
@@ -125,8 +159,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 $autoW = max(0, $parentW - $autoMarginL - $autoMarginR - $autoPadL - $autoPadR - $autoBw * 2);
             }
             error_log('[DIAG_BLKAF] node=' . $node->type . ' parentW=' . $parentW . ' autoW=' . $autoW . ' hasExplicitW=' . ($hasExplicitW ? '1' : '0') . ' parent=' . ($ctx->parent !== null ? $ctx->parent->type : 'null'));
-            $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $autoW, true));
-            $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+            $node->w = (int)max(0, (int)CssStyleHelper::applyMinMax($style, $autoW, true));
+            $node->visualW = CssStyleHelper::visualWidth($style, $node->w);
         }
 
         // [DIAG] Log node final width after auto-fill
@@ -137,7 +171,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
 
         // Resolve fontSize from relative unit (rem/em/vw/vh)
-        PercentResolver::resolveFontSizeUnit($style);
+        CssStyleHelper::resolveFontSize($style);
         // CSS 2.2 §15.1.1: font-size 继承属性，未显式设置时从父容器继承
         // 父容器也未有则使用 CSS 初始值 medium = 16px
         if (isset($style['fontSize'])) {
@@ -153,14 +187,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
             $fs = (int)($node->style['fontSize']);
             $bd = ($style['bold'] ?? 0) !== 0;
-            $measured = PercentResolver::resolveTextWidth($node->content, $fs, $bd);
+            $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($node->content, $fs, $bd) : 0);
             if ($measured > 0) {
                 // CSS: inline elements use text-measured width, block fills parent
                 if (self::isInlineType($node->type)) {
-                    $newW = (int)min($measured, (int)max(0, (int)PercentResolver::resolveMinMax($style, $measured, true)));
+                    $newW = (int)min($measured, (int)max(0, (int)CssStyleHelper::applyMinMax($style, $measured, true)));
                     error_log('[DIAG_LOC1_SET] type=' . $node->type . ' measured=' . $measured . ' oldW=' . $node->w . ' newW=' . $newW);
                     $node->w = $newW;
-                    $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+                    $node->visualW = CssStyleHelper::visualWidth($style, $node->w);
                 }
             }
         } elseif ($node->type === 'br') {
@@ -169,14 +203,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $node->visualW = 0;
             $fs = (int)($node->style['fontSize']);
             $parentStyle = $ctx->parent !== null ? $ctx->parent->style : null;
-            $lineH = PercentResolver::resolveLineHeight($style, $fs, 16, $parentStyle);
+            $lineH = CssStyleHelper::lineHeight($style, $fs, 16, $parentStyle);
             $node->h = $lineH;
             $node->visualH = $lineH;
             // Text height = line-height if no explicit height
             // CSS 2.2 §10.8.1: 从父容器继承 line-height
             if (!array_key_exists('height', $style) && !array_key_exists('heightPercent', $style)) {
                 $parentStyle = $ctx->parent !== null ? $ctx->parent->style : null;
-                $lineH = PercentResolver::resolveLineHeight($style, $fs, 16, $parentStyle);
+                $lineH = CssStyleHelper::lineHeight($style, $fs, 16, $parentStyle);
 
                 if ($node->h === 0 || $node->h < $lineH) {
                     $node->h = $lineH;
@@ -248,13 +282,13 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $maxH = (int)($style['maxHeight'] ?? 0);
         if ($maxH > 0 && $node->h > $maxH) {
             $node->h = $maxH;
-            $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+            $node->visualH = CssStyleHelper::visualHeight($style, $node->h);
         }
 
 
         // ── Normal flow positioning (static/relative) ──
         $position = $style['position'] ?? 'static';
-        $this->resolveNormalFlow($node, $ctx, $position, $style, $left, $top);
+        $this->resolveNormalFlow($node, $ctx, $position, $style, $left, $top, $recurseChildren);
 
 
         // ── Scroll container post-processing ──
@@ -307,10 +341,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 // CSS 2.2 §10.8: 容器 line-height 是行盒最小高度
                 $inlineContainerFS = (int)($node->style['fontSize'] ?? 16);
                 $inlineContainerParent = $ctx->parent !== null ? $ctx->parent->style : null;
-                $inlineContainerLH = (int)PercentResolver::resolveLineHeight($style, $inlineContainerFS, 16, $inlineContainerParent);
+                $inlineContainerLH = (int)CssStyleHelper::lineHeight($style, $inlineContainerFS, 16, $inlineContainerParent);
                 $inlineNoWrap = (($style['whiteSpace'] ?? 'normal') === 'nowrap' || ($style['whiteSpace'] ?? 'normal') === 'pre');
 
-                $containerW = PercentResolver::resolveContentWidth($node->style, $node->w);
+                $containerW = CssStyleHelper::contentBoxWidth($node->style, $node->w);
 
                 // CSS 2.2 §8.3.1: 跟踪上一个可折叠兄弟??margin-bottom
                 $prevMarginBottom = 0;
@@ -328,10 +362,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         continue;
                     }
 
-                    $mTop = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginTop', 'marginTopPercent', $containerW);
-                    $mBottom = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginBottom', 'marginBottomPercent', $containerW);
-                    $mLeft = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginLeft', 'marginLeftPercent', $containerW);
-                    $mRight = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginRight', 'marginRightPercent', $containerW);
+                    $mTop = CssStyleHelper::resolveLength($childStyle, 'marginTop', $containerW);
+                    $mBottom = CssStyleHelper::resolveLength($childStyle, 'marginBottom', $containerW);
+                    $mLeft = CssStyleHelper::resolveLength($childStyle, 'marginLeft', $containerW);
+                    $mRight = CssStyleHelper::resolveLength($childStyle, 'marginRight', $containerW);
 
                     // CSS 2.1 §10.3.3: Auto-width = containerW - child's own margin - child's own padding - child's own border
 
@@ -350,11 +384,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             $autoW = max(0, (int)$containerW - $mLeft - $mRight - $autoPadL - $autoPadR - $autoBw * 2);
                         }
                         $child->w = $autoW;
-                        $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+                        $child->visualW = CssStyleHelper::visualWidth($childStyle, $child->w);
                     }
 
                     // Resolve fontSize from relative unit for child
-                    PercentResolver::resolveFontSizeUnit($child->style);
+                    CssStyleHelper::resolveFontSize($child->style);
                     // CSS 继承：子元素未设 font-size 时从父元素继承
                     if (!isset($child->style['fontSize'])) {
                         $child->style['fontSize'] = $node->style['fontSize'];
@@ -365,19 +399,19 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     if ($child->content !== null && is_string($child->content) && strlen($child->content) > 0) {
                         $fs = (int)($child->style['fontSize']);
                         $bd = ($childStyle['bold'] ?? 0) != 0;
-                        $measured = PercentResolver::resolveTextWidth($child->content, $fs, $bd);
+                        $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($child->content, $fs, $bd) : 0);
                         error_log('[DIAG_INLINE] child=' . $child->type . ' content_len=' . strlen($child->content) . ' measured=' . $measured . ' isInline=' . (self::isInlineType($child->type) ? '1' : '0'));
                         if ($measured > 0) {
                             // CSS: inline children use text-measured width; block children fill parent
                             if (self::isInlineType($child->type)) {
-                                $child->w = min($measured, max(0, (int)PercentResolver::resolveMinMax($childStyle, $measured, true)));
-                                $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+                                $child->w = min($measured, max(0, (int)CssStyleHelper::applyMinMax($childStyle, $measured, true)));
+                                $child->visualW = CssStyleHelper::visualWidth($childStyle, $child->w);
                             }
                         }
                         // Text height = line-height if no explicit height
                         // CSS 2.2 §10.8.1: 从父容器继承 line-height
                         if (!array_key_exists('height', $childStyle)) {
-                            $lineH = PercentResolver::resolveLineHeight($childStyle, $fs, 16, $style);
+                            $lineH = CssStyleHelper::lineHeight($childStyle, $fs, 16, $style);
                             if ($child->h === 0 || $child->h < $lineH) {
                                 $child->h = $lineH;
                                 // CSS border-box: visualH for auto-height must include padding+border
@@ -414,8 +448,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             }
                         }
                     } else {
-                        $child->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $child->w, true));
-                        $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+                        $child->w = max(0, (int)CssStyleHelper::applyMinMax($childStyle, $child->w, true));
+                        $child->visualW = CssStyleHelper::visualWidth($childStyle, $child->w);
                     }
 
 
@@ -425,7 +459,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
 
                     if ($childDisplay === 'flex' || $childDisplay === 'grid') {
-                        if (count($child->children) > 0) {
+                        if (count($child->children) > 0 && $recurseChildren) {
                             $child->layoutDirty = true;
 
                             foreach ($child->children as $gc) {
@@ -562,7 +596,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     // 重新解析让子元素的 auto-stack 基于正确的 y 定位其子元素。
                     $childDisplay2 = $childStyle['display'] ?? 'block';
                     $isFlexGrid = ($childDisplay2 === 'flex' || $childDisplay2 === 'grid');
-                    if (!$isFlexGrid && $childDisplay2 !== 'none' && $childDisplay2 !== 'inline' && count($child->children) > 0) {
+                    if (!$isFlexGrid && $childDisplay2 !== 'none' && $childDisplay2 !== 'inline' && count($child->children) > 0 && $recurseChildren) {
                         $child->layoutDirty = true;
                         foreach ($child->children as $gc) {
                             $gc->layoutDirty = true;
@@ -613,28 +647,28 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             // This prevents the positive feedback loop where a child's overflow causes
             // the parent to expand, which causes the child to expand further, etc.
             if ($ctx->parent !== null) {
-                $parentCW = PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w);
+                $parentCW = CssStyleHelper::contentBoxWidth($ctx->parent->style, $ctx->parent->w);
                 if ($computedW > $parentCW) {
                     $computedW = $parentCW;
                 }
             }
 
             if ($computedW > $node->w) {
-                $node->w = (int)max(0, (int)PercentResolver::resolveMinMax($style, $computedW, true));
+                $node->w = (int)max(0, (int)CssStyleHelper::applyMinMax($style, $computedW, true));
 
                 $padL = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
                 $padR = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
 
-                $contentW = PercentResolver::resolveContentWidth($style, $node->w);
+                $contentW = CssStyleHelper::contentBoxWidth($style, $node->w);
 
                 if ($contentW > 0) {
                     foreach ($node->children as $child) {
                         $cs = $child->style;
 
                         if (!array_key_exists('width', $cs) && !self::isInlineType($child->type)) {
-                            $autoML = PercentResolver::resolveMarginPaddingPercent($cs, 'marginLeft', 'marginLeftPercent', $contentW);
-                            $autoMR = PercentResolver::resolveMarginPaddingPercent($cs, 'marginRight', 'marginRightPercent', $contentW);
+                            $autoML = CssStyleHelper::resolveLength($cs, 'marginLeft', $contentW);
+                            $autoMR = CssStyleHelper::resolveLength($cs, 'marginRight', $contentW);
                             $autoPadL = (int)($cs['paddingLeft'] ?? $cs['padding'] ?? 0);
                             $autoPadR = (int)($cs['paddingRight'] ?? $cs['padding'] ?? 0);
                             $autoBw = (int)($cs['borderWidth'] ?? 0);
@@ -646,8 +680,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                                 // content-box: CSS 'width' = content width = contentW - margin - own padding - own border
                                 $autoW = max(0, $contentW - $autoML - $autoMR - $autoPadL - $autoPadR - $autoBw * 2);
                             }
-                            $child->w = (int)max(0, (int)PercentResolver::resolveMinMax($cs, $autoW, true));
-                            $child->visualW = PercentResolver::resolveVisualW($cs, $child->w);
+                            $child->w = (int)max(0, (int)CssStyleHelper::applyMinMax($cs, $autoW, true));
+                            $child->visualW = CssStyleHelper::visualWidth($cs, $child->w);
                         }
                     }
                 }
@@ -703,8 +737,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         if ($mbCnt2 !== $mbIdx) continue;
                         $mbD = $mbCh->style['display'] ?? 'block';
                         if ($mbD !== 'inline' && !in_array($mbCh->type, ['#text','text','span','b','strong','em','i','code','br','a','label'], true)) {
-                            $mbW = PercentResolver::resolveContentWidth($style, $node->w);
-                            $maxBottom += (int)PercentResolver::resolveMarginPaddingPercent($mbCh->style, 'marginBottom', 'marginBottomPercent', $mbW);
+                            $mbW = CssStyleHelper::contentBoxWidth($style, $node->w);
+                            $maxBottom += (int)CssStyleHelper::resolveLength($mbCh->style, 'marginBottom', $mbW);
                         }
                         break;
                     }
@@ -714,21 +748,21 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             // 检查容器自身的 line-height（仅对 inline formatting context 有效）
             $parentFontSize = (int)($node->style['fontSize'] ?? 16);
             $parentStyle = $ctx->parent !== null ? $ctx->parent->style : null;
-            $containerLineH = (int)PercentResolver::resolveLineHeight($style, $parentFontSize, 16, $parentStyle);
+            $containerLineH = (int)CssStyleHelper::lineHeight($style, $parentFontSize, 16, $parentStyle);
             $lineBoxBottom = $contentTop + $containerLineH;
             if ($lineBoxBottom > $maxBottom) $maxBottom = $lineBoxBottom;
 
             if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
                 $textFs = (int)($node->style['fontSize'] ?? 14);
                 $parentSt = $ctx->parent !== null ? $ctx->parent->style : null;
-                $textLineH = (int)PercentResolver::resolveLineHeight($style, $textFs, 16, $parentSt);
+                $textLineH = (int)CssStyleHelper::lineHeight($style, $textFs, 16, $parentSt);
                 $textBottom = $contentTop + $textLineH;
                 if ($textBottom > $maxBottom) $maxBottom = $textBottom;
             }
             $computedH = max(0, $maxBottom - $contentTop);
 
             if ($computedH > $node->h) {
-                $node->h = (int)max(0, (int)PercentResolver::resolveMinMax($style, $computedH, false));
+                $node->h = (int)max(0, (int)CssStyleHelper::applyMinMax($style, $computedH, false));
             }
         }
 
@@ -747,14 +781,16 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $absPadLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
         $absPadTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
 
-        foreach ($node->children as $child) {
-            $childPosition = $child->style['position'] ?? 'static';
+        if ($recurseChildren) {
+            foreach ($node->children as $child) {
+                $childPosition = $child->style['position'] ?? 'static';
 
-            if ($childPosition === 'absolute' || $childPosition === 'fixed') {
-                $child->layoutDirty = true;
+                if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+                    $child->layoutDirty = true;
 
-                $childCtx = new LayoutContext($node->x + $absPadLeft, $node->y + $absPadTop, $node);
-                $this->resolver->resolveNode($child, $childCtx);
+                    $childCtx = new LayoutContext($node->x + $absPadLeft, $node->y + $absPadTop, $node);
+                    $this->resolver->resolveNode($child, $childCtx);
+                }
             }
         }
 
@@ -762,9 +798,9 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         // Note: For auto-height elements, visualH is already set above with padding+border.
         // For explicit-height elements in border-box, resolveVisualW/H correctly return w/h
         // which already include padding+border.
-        $node->visualW = PercentResolver::resolveVisualW($style, $node->w);
+        $node->visualW = CssStyleHelper::visualWidth($style, $node->w);
         if (!$isAutoHeight) {
-            $node->visualH = PercentResolver::resolveVisualH($style, $node->h);
+            $node->visualH = CssStyleHelper::visualHeight($style, $node->h);
         }
 
         // [DIAG] Log node final width at resolveBlockLayout end
@@ -785,13 +821,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         string        $position,
         array         $style,
         int           $left,
-        int           $top
+        int           $top,
+        bool          $recurseChildren = true
     ): void
     {
-        $cbWidth = $ctx->parent ? PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w) : 0;
-        $marginLeft = PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent', $cbWidth);
+        $cbWidth = $ctx->parent ? CssStyleHelper::contentBoxWidth($ctx->parent->style, $ctx->parent->w) : 0;
+        $marginLeft = CssStyleHelper::resolveLength($style, 'marginLeft', $cbWidth);
 
-        $marginTop = PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent', $cbWidth);
+        $marginTop = CssStyleHelper::resolveLength($style, 'marginTop', $cbWidth);
 
         $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
@@ -839,7 +876,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         foreach ($node->children as $child) {
             $childPosition = $child->style['position'] ?? 'static';
 
-            if ($childPosition === 'absolute' || $childPosition === 'fixed') {
+            if ($childPosition === 'absolute' || $childPosition === 'fixed' || !$recurseChildren) {
                 continue;
             }
 
@@ -864,7 +901,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         int           $paddingBottom = 0
     ): void
     {
-        $containerW = PercentResolver::resolveContentWidth($style, $node->w);
+        $containerW = CssStyleHelper::contentBoxWidth($style, $node->w);
 
         // ── Auto-stack: for scroll containers, position children vertically ──
         $this->autoStackChildren($node, $childOffsetY, $containerW);
@@ -943,14 +980,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 continue;
             }
 
-            $mTop = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginTop', 'marginTopPercent', $containerW);
-            $mBottom = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginBottom', 'marginBottomPercent', $containerW);
+            $mTop = CssStyleHelper::resolveLength($childStyle, 'marginTop', $containerW);
+            $mBottom = CssStyleHelper::resolveLength($childStyle, 'marginBottom', $containerW);
 
             // CSS 2.1 §10.3.3: Auto-width = containerW - child's own margin - child's own padding - child's own border
             $hasExplicitWidth = array_key_exists('width', $child->style) || array_key_exists('widthPercent', $child->style);
             if ((!$hasExplicitWidth || $child->w === 0) && !self::isInlineType($child->type)) {
-                $autoML = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginLeft', 'marginLeftPercent', $containerW);
-                $autoMR = PercentResolver::resolveMarginPaddingPercent($childStyle, 'marginRight', 'marginRightPercent', $containerW);
+                $autoML = CssStyleHelper::resolveLength($childStyle, 'marginLeft', $containerW);
+                $autoMR = CssStyleHelper::resolveLength($childStyle, 'marginRight', $containerW);
                 $autoPadL = (int)($childStyle['paddingLeft'] ?? $childStyle['padding'] ?? 0);
                 $autoPadR = (int)($childStyle['paddingRight'] ?? $childStyle['padding'] ?? 0);
                 $autoBw = (int)($childStyle['borderWidth'] ?? 0);
@@ -964,23 +1001,23 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 }
                 error_log('[DIAG_ASTACK] child=' . $child->type . ' containerW=' . $containerW . ' autoW=' . $autoW . ' padL=' . $autoPadL . ' padR=' . $autoPadR . ' hasExplicitW=' . ($hasExplicitWidth ? '1' : '0') . ' childWbefore=' . $child->w);
                 $child->w = $autoW;
-                $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+                $child->visualW = CssStyleHelper::visualWidth($childStyle, $child->w);
             }
 
             // CSS: inline elements with text content use text-measured width instead of container fill
             if (self::isInlineType($child->type) && $child->content !== null && is_string($child->content) && strlen($child->content) > 0) {
                 $fs = (int)($child->style['fontSize']);
                 $bd = ($childStyle['bold'] ?? 0) != 0;
-                $measured = PercentResolver::resolveTextWidth($child->content, $fs, $bd);
+                $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($child->content, $fs, $bd) : 0);
                 error_log('[DIAG_INLINE_ASTACK] child=' . $child->type . ' measured=' . $measured);
                 if ($measured > 0) {
-                    $child->w = min($measured, max(0, (int)PercentResolver::resolveMinMax($childStyle, $measured, true)));
-                    $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+                    $child->w = min($measured, max(0, (int)CssStyleHelper::applyMinMax($childStyle, $measured, true)));
+                    $child->visualW = CssStyleHelper::visualWidth($childStyle, $child->w);
                 }
             }
 
-            $child->w = max(0, (int)PercentResolver::resolveMinMax($childStyle, $child->w, true));
-            $child->visualW = PercentResolver::resolveVisualW($childStyle, $child->w);
+            $child->w = max(0, (int)CssStyleHelper::applyMinMax($childStyle, $child->w, true));
+            $child->visualW = CssStyleHelper::visualWidth($childStyle, $child->w);
 
             // ── Inline-level children: horizontal layout in inline formatting context ──
             $childDisplay = $childStyle['display'] ?? 'block';
@@ -994,7 +1031,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     // CSS 2.2 §10.8: 容器 line-height 是行盒最小高度
                     $astackFS = (int)($node->style['fontSize'] ?? 16);
                     $astackParent = $node->parent !== null ? $node->parent->style : null;
-                    $astackLH = (int)PercentResolver::resolveLineHeight($node->style, $astackFS, 16, $astackParent);
+                    $astackLH = (int)CssStyleHelper::lineHeight($node->style, $astackFS, 16, $astackParent);
                     $astackNoWrap = (($node->style['whiteSpace'] ?? 'normal') === 'nowrap' || ($node->style['whiteSpace'] ?? 'normal') === 'pre');
                 }
                 // 仅 white-space 非 nowrap/pre 时换行（CSS 2.2 §16.6）

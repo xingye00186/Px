@@ -15,27 +15,29 @@ use Px\Rendering\Layout\GridLayoutStrategy;
 use Px\Rendering\Layout\InlineLayoutStrategy;
 use Px\Rendering\Layout\TableLayoutStrategy;
 use Px\Rendering\Layout\MultiColumnLayoutStrategy;
-use Px\Rendering\Layout\Tools\PercentResolver;
+use Px\Rendering\CssStyleHelper;
 use Px\Rendering\Layout\Tools\ScrollHelper;
 use Px\Rendering\Layout\LayoutContext;
+use Px\Rendering\Layout\LayoutConstraints;
+use Px\Rendering\Layout\LayoutFragment;
+use Px\Rendering\Layout\FragmentBuilder;
 
 
 /**
  * LayoutResolver — 运行时 CSS 布局引擎（RenderNode 版）
  *
- * 遍历 RenderNode 树，根据 style 属性计算每个节点的 x/y/w/h 位置。
- * 自 B1 重构后为调度器，按 display 类型分派到相应策略类，
- * - display:flex/inline-flex → FlexLayoutStrategy
- * - display:grid → GridLayoutStrategy
- * - display:block 及其他 → BlockLayoutStrategy
+ * Phase 3: 使用 FragmentBuilder 的新流程。
  *
- * resolveNode 保留为核心调度入口，负责：
- * 1. 脏标记检查与动画样式合并
- * 2. Layer 继承
- * 3. 滚动容器检测
- * 4. Flex/grid 滚动容器后处理
- * 5. Sticky 定位
- * 6. 洁净路径坐标传播
+ * 流程：
+ *   resolve(RenderNode) → 创建 LayoutConstraints → resolveNodeInternal()
+ *   resolveNodeInternal() 负责递归：
+ *     1. 读取 computedStyle
+ *     2. 创建 FragmentBuilder
+ *     3. 按 display/position 选择策略
+ *     4. 新策略模式：先 resolveChildren() 再调用策略
+ *     5. 旧策略模式：通过 callLegacyStrategy() 适配
+ *     6. build() → LayoutFragment → applyTo()
+ *     7. 后处理（滚动容器、sticky 等）
  */
 class LayoutResolver
 {
@@ -58,6 +60,12 @@ class LayoutResolver
 
     /** 滚动容器收集数组（布局过程按需追加） */
     private array $scrollContainers = [];
+
+    /**
+     * 当前节点的父 RenderNode。
+     * 在 resolveNodeInternal 递归过程中维护，供旧策略 LayoutContext 使用。
+     */
+    private ?RenderNode $currentParent = null;
 
 
     public function __construct()
@@ -105,26 +113,43 @@ class LayoutResolver
     /**
      * Resolve layout for the entire RenderNode tree.
      *
-     * @param RenderNode $root Root RenderNode (mutated in-place)
-     * @return array List of scroll containers: ['scrollContainers' => RenderNode[]]
+     * Phase 3: 创建初始 LayoutConstraints，进入 resolveNodeInternal 新流程。
+     *
+     * @param RenderNode $root Root RenderNode (mutated in-place via applyTo)
+     * @return LayoutFragment 根 fragment
      */
-
-
-    public function resolve(RenderNode $root): array
+    public function resolve(RenderNode $root): LayoutFragment
     {
         $this->rootNode = $root;
         $this->scrollContainers = [];
+        $this->stickyStack = [];
+        $this->stickyStackX = [];
 
-        $ctx = new LayoutContext(0, 0, null);
-        $this->resolveNode($root, $ctx);
+        $constraints = new LayoutConstraints(
+            containerWidth: $root->w,
+            containerHeight: $root->h,
+            parentContentX: 0,
+            parentContentY: 0,
+        );
 
-        // Debug: final span dimensions after full layout (guarded by diag_enabled)
+        $rootFragment = $this->resolveNodeInternal($root, $constraints);
+        $rootFragment->applyTo($root);
+
+        // Debug: final span dimensions after full layout
         if (Config::get('debug_diag_enabled', false)) {
             $this->debugCheckSpanDims($root);
         }
 
-        return ['scrollContainers' => $this->scrollContainers];
+        return $rootFragment;
+    }
 
+    /**
+     * 旧式 resolve 入口（返回 void），包裹 Fragment 流程。
+     */
+    public function resolveLegacy(RenderNode $root): array
+    {
+        $fragment = $this->resolve($root);
+        return ['scrollContainers' => $this->scrollContainers];
     }
 
     // Debug: check span dimensions after full layout
@@ -134,379 +159,352 @@ class LayoutResolver
     }
 
     /**
-     * Recursively resolve layout for a single node and its children.
+     * @deprecated Phase 3 向后兼容包装。
+     * 旧策略（Block/Flex/Grid/Inline/Table/MultiColumn）内部通过
+     * $this->resolver->resolveNode($child, $ctx) 解析子节点。
      *
-     * @param RenderNode $node Current node
-     * @param LayoutContext $ctx Layout context (parent coords, parent ref, scroll containers)
+     * 将 LayoutContext 转换为 LayoutConstraints 后委托给 resolveNodeInternal，
+     * 并维护 currentParent 以保证旧策略能正确获取父节点。
      */
-    public function resolveNode(
-        RenderNode $node,
-        LayoutContext $ctx
-    ): void {
+    public function resolveNode(RenderNode $node, LayoutContext $ctx): void
+    {
+        // 保存/恢复 currentParent 以维护递归栈
+        $savedParent = $this->currentParent;
+        $this->currentParent = $ctx->parent;
+
+        $parent = $ctx->parent;
+        $parentW = $parent !== null ? $parent->w : $node->w;
+        $parentH = $parent !== null ? $parent->h : $node->h;
+
+        $constraints = new LayoutConstraints(
+            containerWidth: $parentW,
+            containerHeight: $parentH,
+            parentContentX: $ctx->parentX,
+            parentContentY: $ctx->parentY,
+            contentWidth: $parentW,
+            contentHeight: $parentH,
+        );
+
+        $fragment = $this->resolveNodeInternal($node, $constraints);
+        $fragment->applyTo($node);
+
+        $this->currentParent = $savedParent;
+    }
+
+    /**
+     * Phase 3 核心递归布局方法。
+     *
+     * 流程（匹配新 FragmentBuilder 范式）：
+     *   1. 读取 computedStyle → effectiveStyle
+     *   2. 创建 FragmentBuilder
+     *   3. 按 display/position 选择策略
+     *   4. 新策略（AbsoluteStrategy）：先 resolveChildren() 递归子节点，
+     *      然后调用策略（策略内部调用 builder.setSize/setPosition）
+     *   5. 旧策略（LayoutStrategyInterface）：通过 callLegacyStrategy() 适配，
+     *      调用旧 resolve() 后从 node 回读结果写入 builder
+     *   6. builder->build(style) → LayoutFragment
+     *   7. fragment->applyTo(node) 原子回写
+     *   8. 后处理（滚动容器、sticky）
+     *
+     * @param RenderNode         $node            当前节点
+     * @param LayoutConstraints  $constraints     布局约束
+     * @param LayoutFragment|null $parentFragment 父 fragment（用于层继承等）
+     * @return LayoutFragment
+     */
+    private function resolveNodeInternal(
+        RenderNode         $node,
+        LayoutConstraints  $constraints,
+        ?LayoutFragment    $parentFragment = null
+    ): LayoutFragment {
         $this->resolveDepth++;
         if ($this->resolveDepth > 500) {
             error_log('[DIAG_LAYOUT] INFINITE RECURSION? depth=' . $this->resolveDepth . ' type=' . $node->type . ' x=' . $node->x . ' y=' . $node->y . ' w=' . $node->w . ' h=' . $node->h . ' layoutDirty=' . ($node->layoutDirty ? '1' : '0'));
             if ($this->resolveDepth > 520) {
                 error_log('[DIAG_LAYOUT] HALTING - depth exceeded 520');
                 $this->resolveDepth--;
-                return;
+                return (new FragmentBuilder())->build();
             }
         }
 
-        if ($node->layoutDirty) {
+        // ── 读取 computedStyle ──
+        $style = $node->computedStyle;
+        $effectiveStyle = $style !== null ? $style->toExportArray() : [];
+        $display = $effectiveStyle['display'] ?? 'block';
+        $position = $effectiveStyle['position'] ?? 'static';
 
-            // ──┬── 脏标记检查：进入完整布局计算 ──┬──
-            // 统一入口：在 style 解析处合并 animatedStyle
-            $style = $node->style;
+        // ── 脏标记检查 ──
+        // 非脏节点：直接构建 Fragment 并递归子节点（无需重新布局计算）
+        if (!$node->layoutDirty) {
+            $builder = new FragmentBuilder();
+            $builder
+                ->setPosition($node->x, $node->y)
+                ->setSize($node->w, $node->h, $style)
+                ->setLayer($node->layer)
+                ->setContentSize($node->contentWidth, $node->contentHeight);
 
-            if ($node->isAnimating && ! empty($node->animatedStyle)) {
+            // 递归解析子节点（子节点可能脏）
+            $this->resolveCurrentChildren($node, $constraints, $builder);
 
-                // 深度拷贝：避免修改原始 $node->style
-                $effectiveStyle = [];
+            $this->resolveDepth--;
+            return $builder->build($style);
+        }
 
-                foreach ($style as $k => $v) {
-                    $effectiveStyle[$k] = $v;
+        // ════════════════════════════════════════════════════════════════
+        //  脏路径：完整布局计算
+        // ════════════════════════════════════════════════════════════════
+
+        // ── Layer 继承 ──
+        if ($this->currentParent !== null && $this->currentParent->layer > 0) {
+            $node->layer = $this->currentParent->layer;
+        }
+
+        // 应用自身 z-index → RenderNode layer
+        if ($style !== null && $style->zIndex > $node->layer) {
+            $node->layer = $style->zIndex;
+        }
+
+        // ── 滚动容器检测 ──
+        $overflowX = $style?->overflowX?->value
+            ?? $effectiveStyle['overflowX'] ?? $effectiveStyle['overflow'] ?? 'visible';
+        $overflowY = $style?->overflowY?->value
+            ?? $effectiveStyle['overflowY'] ?? $effectiveStyle['overflow'] ?? 'visible';
+        $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
+        $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
+
+        if ($hasHScroll || $hasVScroll) {
+            $node->isScrollContainer = true;
+            $this->scrollContainers[] = $node;
+        }
+
+        // ── 创建 FragmentBuilder ──
+        $builder = new FragmentBuilder();
+
+        // ── 按 display/position 策略调度 ──
+        switch ($display) {
+            case 'none':
+                // CSS 2.2 §9.2.4: display:none → element generates no box
+                $builder->setSize(0, 0);
+                break;
+
+            case 'flex':
+            case 'inline-flex':
+                if ($position === 'absolute' || $position === 'fixed') {
+                    // 新 AbsoluteStrategy：先 resolve 子节点，再调用新签名
+                    $this->resolveChildren($node, $constraints, $builder);
+                    $this->absolutePositioning->resolveAbsolutePositioning(
+                        $node, $constraints, $style, $builder
+                    );
+                } else {
+                    // FlexLayoutStrategy 支持新 resolveWithBuilder
+                    $this->resolveChildren($node, $constraints, $builder);
+                    $this->flexStrategy->resolveWithBuilder(
+                        $node, $constraints, $style, $builder
+                    );
                 }
+                break;
 
-                foreach ($node->animatedStyle as $k => $v) {
-                    $effectiveStyle[$k] = $v;
+            case 'grid':
+                $this->resolveChildren($node, $constraints, $builder);
+                $this->gridStrategy->resolveWithBuilder(
+                    $node, $constraints, $style, $builder
+                );
+                break;
+
+            case 'inline':
+            case 'inline-block':
+                if ($position === 'absolute' || $position === 'fixed') {
+                    $this->resolveChildren($node, $constraints, $builder);
+                    $this->absolutePositioning->resolveAbsolutePositioning(
+                        $node, $constraints, $style, $builder
+                    );
+                } else {
+                    $this->resolveChildren($node, $constraints, $builder);
+                    $this->inlineStrategy->resolveWithBuilder(
+                        $node, $constraints, $style, $builder
+                    );
+                }
+                break;
+
+            case 'table':
+            case 'table-row':
+            case 'table-cell':
+            case 'table-caption':
+                if ($position === 'absolute' || $position === 'fixed') {
+                    $this->resolveChildren($node, $constraints, $builder);
+                    $this->absolutePositioning->resolveAbsolutePositioning(
+                        $node, $constraints, $style, $builder
+                    );
+                } else {
+                    $this->resolveChildren($node, $constraints, $builder);
+                    $this->tableStrategy->resolveWithBuilder(
+                        $node, $constraints, $style, $builder
+                    );
+                }
+                break;
+
+            default: // block, scroll-container, etc.
+                // 多列布局检测
+                $isMultiCol = ($style !== null
+                    && ($style->columnCount > 0 || ($style->columnWidth ?? 0) > 0));
+                if ($isMultiCol) {
+                    $this->resolveChildren($node, $constraints, $builder);
+                    $this->multiColumnStrategy->resolveWithBuilder(
+                        $node, $constraints, $style, $builder
+                    );
+                } elseif ($position === 'absolute' || $position === 'fixed') {
+                    $this->resolveChildren($node, $constraints, $builder);
+                    $this->absolutePositioning->resolveAbsolutePositioning(
+                        $node, $constraints, $style, $builder
+                    );
+                } else {
+                    // BlockLayoutStrategy 支持新 resolveWithBuilder
+                    /** @var BlockLayoutStrategy $blockStrategy */
+                    $this->resolveChildren($node, $constraints, $builder);
+                    $this->blockStrategy->resolveWithBuilder(
+                        $node, $constraints, $style, $builder
+                    );
+                }
+                break;
+        }
+
+        // ── 构建 Fragment 并原子回写 RenderNode ──
+        $fragment = $builder->build($style);
+        $fragment->applyTo($node);
+
+        // ── 滚动容器后处理（flex/grid display 模式） ──
+        if ($node->isScrollContainer
+            && ($display === 'flex' || $display === 'inline-flex' || $display === 'grid')
+        ) {
+            $padT = (int)($effectiveStyle['paddingTop'] ?? $effectiveStyle['padding'] ?? 0);
+            $padL = (int)($effectiveStyle['paddingLeft'] ?? $effectiveStyle['padding'] ?? 0);
+            $padR = (int)($effectiveStyle['paddingRight'] ?? $effectiveStyle['padding'] ?? 0);
+            $padB = (int)($effectiveStyle['paddingBottom'] ?? $effectiveStyle['padding'] ?? 0);
+
+            $childBaseY = $node->y + $padT;
+
+            // Calculate contentHeight: max bottom edge of all children
+            $maxBottom = $childBaseY;
+            foreach ($node->children as $child) {
+                $bottom = (int)($child->y + $child->visualH);
+                if ($bottom > $maxBottom) {
+                    $maxBottom = $bottom;
+                }
+            }
+
+            $node->contentHeight = (int)max(0, $maxBottom - $childBaseY) + $padB;
+
+            // Clamp scrollTop when content shrinks
+            $maxScroll = (int)max($node->contentHeight - $node->h, 0);
+            if ($node->scrollTop > $maxScroll) {
+                $node->scrollTop = $maxScroll;
+            }
+
+            // ContentWidth for horizontal scroll
+            $overflowX2 = $style?->overflowX?->value
+                ?? $effectiveStyle['overflowX'] ?? $effectiveStyle['overflow'] ?? 'visible';
+            $hasHScroll2 = ($overflowX2 === 'auto' || $overflowX2 === 'scroll');
+            if ($hasHScroll2) {
+                $maxRight = 0;
+                foreach ($node->children as $child) {
+                    $cLeft = $child->style['left'] ?? 0;
+                    $right = (int)($cLeft + $child->visualW);
+                    if ($right > $maxRight) {
+                        $maxRight = $right;
+                    }
+                }
+                $node->contentWidth = (int)max($maxRight, $node->visualW);
+
+                $maxScrollX = (int)max($node->contentWidth - $node->w, 0);
+                if ($node->scrollLeft > $maxScrollX) {
+                    $node->scrollLeft = $maxScrollX;
                 }
             } else {
-                $effectiveStyle = $style;
-            }
-
-            // Inherit parent's layer (CSS stacking context)
-
-            if ($ctx->parent !== null && $ctx->parent->layer > 0) {
-
-                $node->layer = $ctx->parent->layer;
-            }
-
-            // Apply own z-index → RenderNode layer
-
-            $zIndex = (int)($effectiveStyle['zIndex'] ?? $effectiveStyle['zindex'] ?? 0);
-
-            if ($zIndex > $node->layer) {
-
-                $node->layer = $zIndex;
-
-            }
-
-            // Check for scroll container
-
-            $overflowX = $effectiveStyle['overflowX'] ?? $effectiveStyle['overflow'] ?? 'visible';
-
-            $overflowY = $effectiveStyle['overflowY'] ?? $effectiveStyle['overflow'] ?? 'visible';
-
-            $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
-
-            $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
-
-            if ($hasHScroll || $hasVScroll) {
-
-                $node->isScrollContainer = true;
-                $this->scrollContainers[] = $node;
-            }
-
-            // Determine display mode
-
-            $display = $effectiveStyle['display'] ?? 'block';
-            $position = $effectiveStyle['position'] ?? 'static';
-
-            switch ($display) {
-                case 'none':
-                    // CSS 2.2 §9.2.4: display:none → element generates no box
-                    // No layout needed, set dimensions to 0 and skip children
-                    $node->w = 0;
-                    $node->h = 0;
-                    $node->visualW = 0;
-                    $node->visualH = 0;
-                    // Mark layout as resolved for parent auto-stack calculation
-                    break;
-
-                case 'flex':
-                case 'inline-flex':
-                    if ($position === 'absolute' || $position === 'fixed') {
-                        $this->absolutePositioning->resolveAbsolutePositioning($node, $ctx, $effectiveStyle);
-                    } else {
-                        $this->flexStrategy->resolve($node, $ctx, $effectiveStyle);
-                    }
-                    break;
-
-                case 'grid':
-                    $this->gridStrategy->resolve($node, $ctx, $effectiveStyle);
-                    break;
-
-                case 'inline':
-                case 'inline-block':
-                    if ($position === 'absolute' || $position === 'fixed') {
-                        $this->absolutePositioning->resolveAbsolutePositioning($node, $ctx, $effectiveStyle);
-                    } else {
-                        $this->inlineStrategy->resolve($node, $ctx, $effectiveStyle);
-                    }
-                    break;
-
-                case 'table':
-                case 'table-row':
-                case 'table-cell':
-                case 'table-caption':
-                    if ($position === 'absolute' || $position === 'fixed') {
-                        $this->absolutePositioning->resolveAbsolutePositioning($node, $ctx, $effectiveStyle);
-                    } else {
-                        $this->tableStrategy->resolve($node, $ctx, $effectiveStyle);
-                    }
-                    break;
-
-                default: // block, scroll-container, etc.
-                    // Check for multi-column layout
-                    if (($effectiveStyle['columnCount'] ?? 0) > 0 || ($effectiveStyle['columnWidth'] ?? 0) > 0) {
-                        $this->multiColumnStrategy->resolve($node, $ctx, $effectiveStyle);
-                    } elseif ($position === 'absolute' || $position === 'fixed') {
-                        $this->absolutePositioning->resolveAbsolutePositioning($node, $ctx, $effectiveStyle);
-                    } else {
-                        $this->blockStrategy->resolve($node, $ctx, $effectiveStyle);
-                    }
-                    break;
-
-
-            }
-
-
-            // ── Scroll container post-processing for flex/grid display modes ──
-
-            // (block layout handles this internally in resolveBlockLayout)
-
-
-            if ($node->isScrollContainer && ($display === 'flex' || $display === 'inline-flex' || $display === 'grid')) {
-
-                $padT = (int)($effectiveStyle['paddingTop'] ?? $effectiveStyle['padding'] ?? 0);
-                $padL = (int)($effectiveStyle['paddingLeft'] ?? $effectiveStyle['padding'] ?? 0);
-                $padR = (int)($effectiveStyle['paddingRight'] ?? $effectiveStyle['padding'] ?? 0);
-                $padB = (int)($effectiveStyle['paddingBottom'] ?? $effectiveStyle['padding'] ?? 0);
-
-                $childBaseY = $node->y + $padT;
-
-                // Calculate contentHeight: max bottom edge of all children
-
-                $maxBottom = $childBaseY;
-
-                foreach ($node->children as $child) {
-
-                    $bottom = (int)($child->y + $child->visualH);
-
-                    if ($bottom > $maxBottom) {
-                        $maxBottom = $bottom;
-                    }
-                }
-
-                // CSS Overflow: scrollable content area includes paddingBottom
-                $node->contentHeight = (int)max(0, $maxBottom - $childBaseY) + $padB;
-
-                // Clamp scrollTop when content shrinks
-
-                $maxScroll = (int)max($node->contentHeight - $node->h, 0);
-
-                if ($node->scrollTop > $maxScroll) {
-                    $node->scrollTop = $maxScroll;
-                }
-
-                // ContentWidth for horizontal scroll
-                $overflowX = $effectiveStyle['overflowX'] ?? $effectiveStyle['overflow'] ?? 'visible';
-
-                $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
-
-                if ($hasHScroll) {
-                    $maxRight = 0;
-                    foreach ($node->children as $child) {
-
-                        $cLeft = $child->style['left'] ?? 0;
-                        $right = (int)($cLeft + $child->visualW);
-
-                        if ($right > $maxRight) {
-                            $maxRight = $right;
-                        }
-                    }
-                    $node->contentWidth = (int)max($maxRight, $node->visualW);
-
-                    $maxScrollX = (int)max($node->contentWidth - $node->w, 0);
-
-                    if ($node->scrollLeft > $maxScrollX) {
-
-                        $node->scrollLeft = $maxScrollX;
-                    }
-
-                } else {
-                    // No horizontal scroll — content width equals container width
-                    $node->contentWidth = $node->visualW;
-                }
-            }
-
-
-            // ── position:sticky 处理（CSS §4.3 堆叠 + A1 visual 坐标对齐）──
-            if ($position === 'sticky') {
-
-                $stickyTop = (int)($effectiveStyle['top'] ?? 0);
-
-                // Save base Y for stacking calculations
-                $node->style['_stickyBaseY'] = $node->y;
-
-                // Find nearest scroll container that contains this node
-                for ($i = count($this->scrollContainers) - 1; $i >= 0; $i--) {
-                    $sc = $this->scrollContainers[$i];
-
-                    // Check if node is within this scroll container's bounds
-                    if ($node->x >= $sc->x && $node->x < $sc->x + $sc->w &&
-                        $node->y >= $sc->y && $node->y < $sc->y + $sc->h) {
-
-                        $scKey = $sc->groupId . ':' . $i;
-
-                        // ── Vertical sticky (top) with stacking ──
-                        $visualY = $node->y - $sc->scrollTop;
-
-                        if ( ! isset($this->stickyStack[$scKey])) {
-                            $this->stickyStack[$scKey] = [];
-                        }
-
-                        // Adjust stuckY for previous sticky elements in this container
-                        $baseStuckY = $sc->y + $stickyTop;
-                        $adjustedStuckY = $baseStuckY;
-                        foreach ($this->stickyStack[$scKey] as $prev) {
-                            $adjustedStuckY = (int)max($adjustedStuckY, $prev['stuckY'] + $prev['height']);
-                        }
-
-                        if ($visualY < $adjustedStuckY) {
-                            // Element scrolls above sticky threshold 鈫?clamp
-                            $dy = $adjustedStuckY - $visualY;
-                            $node->y = $adjustedStuckY + $sc->scrollTop;
-
-                            // Shift descendants to maintain layout integrity
-                            foreach ($node->children as $child) {
-                                ScrollHelper::shiftDescendantsY($child, $dy);
-                            }
-
-                            // Register in sticky stack for subsequent elements
-                            $this->stickyStack[$scKey][] = [
-                                'stuckY' => $adjustedStuckY,
-                                'height' => $node->h,
-                            ];
-                        }
-
-                        // ── Horizontal sticky (left) with stacking ──
-                        $stickyLeft = (int)($effectiveStyle['left'] ?? 0);
-                        if ($stickyLeft !== 0) {
-                            $visualX = $node->x - $sc->scrollLeft;
-
-                            if ( ! isset($this->stickyStackX[$scKey])) {
-                                $this->stickyStackX[$scKey] = [];
-                            }
-
-                            $baseStuckX = $sc->x + $stickyLeft;
-                            $adjustedStuckX = $baseStuckX;
-                            foreach ($this->stickyStackX[$scKey] as $prev) {
-                                $adjustedStuckX = (int)max($adjustedStuckX, $prev['stuckX'] + $prev['width']);
-                            }
-
-                            if ($visualX < $adjustedStuckX) {
-                                $dx = $adjustedStuckX - $visualX;
-                                $node->x = $adjustedStuckX + $sc->scrollLeft;
-                                foreach ($node->children as $child) {
-                                    ScrollHelper::shiftDescendantsX($child, $dx);
-                                }
-
-                                $this->stickyStackX[$scKey][] = [
-                                    'stuckX' => $adjustedStuckX,
-                                    'width' => $node->w,
-                                ];
-                            }
-                        }
-
-                        break;
-                    }
-                }
-            }
-
-            // ── 清除脏标记：布局完成后标记为洁净 ──
-            $node->layoutDirty = false;
-
-        } else {
-
-            // ── Clean path: not layoutDirty, just propagate parent coords ──
-
-            $style = $node->style;
-
-            $cbWidth = $ctx->parent ? PercentResolver::resolveContentWidth($ctx->parent->style, $ctx->parent->w) : 0;
-            $marginLeft = PercentResolver::resolveMarginPaddingPercent($style, 'marginLeft', 'marginLeftPercent',
-                $cbWidth);
-
-            $marginTop = PercentResolver::resolveMarginPaddingPercent($style, 'marginTop', 'marginTopPercent',
-                $cbWidth);
-
-            // For static flex/grid items, their positions are determined by the parent's
-            // layout algorithm (flex/grid), not by 'left'/'top' style values.
-
-            $cleanPos = $style['position'] ?? 'static';
-
-            // CSS Positioned Layout §3.1: absolute/fixed 使用 positioning ancestor 参考系
-            // clean path 不应覆盖 dirty path 中 AbsolutePositioning 已经正确计算的位置
-            // 只有 relative 元素的 left/top 偏移可以在 clean path 中应用
-            if ($cleanPos === 'relative') {
-                if (array_key_exists('left', $style)) {
-                    $node->x = (int)($style['left'] + $ctx->parentX + $marginLeft);
-                }
-
-                if (array_key_exists('top', $style)) {
-
-                    $node->y = (int)($style['top'] + $ctx->parentY + $marginTop);
-                }
-            }
-
-            // ──┬── 滚动偏移由 VNodeRenderer 在绘制层处理（A1 重构）──┬──
-
-            // ──┬── 子节点脏标记处理 ──┬──
-            // Flex/grid container with dirty children: re-run full layout
-
-            $display = $style['display'] ?? 'block';
-
-            // CSS 2.2 §10.5: auto-height 的块级容器遇到脏子节点需重算
-            $hasExplicitH = array_key_exists('height', $style) || array_key_exists('heightPercent', $style);
-
-            if (! empty($node->children)) {
-                $needsReLayout = false;
-                if ($display === 'flex' || $display === 'grid') {
-                    $needsReLayout = true;
-                } elseif ($display === 'block' && !$hasExplicitH) {
-                    $needsReLayout = true;
-                }
-
-                if ($needsReLayout) {
-                    foreach ($node->children as $ch) {
-                        if ($ch->layoutDirty) {
-                            $node->layoutDirty = true;
-                            $this->resolveNode($node, $ctx);
-                            $this->resolveDepth--;
-
-                            return;
-                        }
-                    }
-                }
-            }
-
-
-            $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
-            $paddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
-            $childOffsetX = $node->x + $paddingLeft;
-            $childOffsetY = $node->y + $paddingTop;
-            foreach ($node->children as $child) {
-                $childCtx = new LayoutContext($childOffsetX, $childOffsetY, $node);
-                $this->resolveNode($child, $childCtx);
+                $node->contentWidth = $node->visualW;
             }
         }
 
-        // ── 统一 scrollTop/scrollLeft clamp（脏路径和洁净路径都执行）──
-        // 脏路径中 BlockLayoutStrategy::finalizeScrollContainer 和 flex/grid 后处理已经 clamp，
-        // 但洁净路径不重复这些步骤。如果 scrollTop 因任何原因超出范围（如 directRender 期间），
-        // 此处确保边界约束始终生效。
-        // CSS Overflow Module L3 §2.3: scrollable area clamp = max(0, content - visible)
+        // ── position:sticky 处理 ──
+        if ($position === 'sticky') {
+            $stickyTop = (int)($effectiveStyle['top'] ?? 0);
+
+            // Save base Y for stacking calculations
+            $node->style['_stickyBaseY'] = $node->y;
+
+            // Find nearest scroll container that contains this node
+            for ($i = count($this->scrollContainers) - 1; $i >= 0; $i--) {
+                $sc = $this->scrollContainers[$i];
+
+                // Check if node is within this scroll container's bounds
+                if ($node->x >= $sc->x && $node->x < $sc->x + $sc->w &&
+                    $node->y >= $sc->y && $node->y < $sc->y + $sc->h) {
+
+                    $scKey = $sc->groupId . ':' . $i;
+
+                    // ── Vertical sticky (top) with stacking ──
+                    $visualY = $node->y - $sc->scrollTop;
+
+                    if (!isset($this->stickyStack[$scKey])) {
+                        $this->stickyStack[$scKey] = [];
+                    }
+
+                    $baseStuckY = $sc->y + $stickyTop;
+                    $adjustedStuckY = $baseStuckY;
+                    foreach ($this->stickyStack[$scKey] as $prev) {
+                        $adjustedStuckY = (int)max($adjustedStuckY, $prev['stuckY'] + $prev['height']);
+                    }
+
+                    if ($visualY < $adjustedStuckY) {
+                        $dy = $adjustedStuckY - $visualY;
+                        $node->y = $adjustedStuckY + $sc->scrollTop;
+
+                        foreach ($node->children as $child) {
+                            ScrollHelper::shiftDescendantsY($child, $dy);
+                        }
+
+                        $this->stickyStack[$scKey][] = [
+                            'stuckY' => $adjustedStuckY,
+                            'height' => $node->h,
+                        ];
+                    }
+
+                    // ── Horizontal sticky (left) with stacking ──
+                    $stickyLeft = (int)($effectiveStyle['left'] ?? 0);
+                    if ($stickyLeft !== 0) {
+                        $visualX = $node->x - $sc->scrollLeft;
+
+                        if (!isset($this->stickyStackX[$scKey])) {
+                            $this->stickyStackX[$scKey] = [];
+                        }
+
+                        $baseStuckX = $sc->x + $stickyLeft;
+                        $adjustedStuckX = $baseStuckX;
+                        foreach ($this->stickyStackX[$scKey] as $prev) {
+                            $adjustedStuckX = (int)max($adjustedStuckX, $prev['stuckX'] + $prev['width']);
+                        }
+
+                        if ($visualX < $adjustedStuckX) {
+                            $dx = $adjustedStuckX - $visualX;
+                            $node->x = $adjustedStuckX + $sc->scrollLeft;
+                            foreach ($node->children as $child) {
+                                ScrollHelper::shiftDescendantsX($child, $dx);
+                            }
+
+                            $this->stickyStackX[$scKey][] = [
+                                'stuckX' => $adjustedStuckX,
+                                'width' => $node->w,
+                            ];
+                        }
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        // ── 清除脏标记 ──
+        $node->layoutDirty = false;
+
+        // ── 统一 scrollTop/scrollLeft clamp ──
         if ($node->isScrollContainer) {
             $maxScroll = (int)max($node->contentHeight - $node->h, 0);
             if ($node->scrollTop > $maxScroll) {
@@ -519,7 +517,115 @@ class LayoutResolver
         }
 
         $this->resolveDepth--;
+        return $fragment;
     }
 
 
+    // ════════════════════════════════════════════════════════════════
+    //  辅助方法
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * 新策略模式：预解析子节点。
+     *
+     * 在调用新签名策略（如 AbsoluteStrategy::resolveAbsolutePositioning）之前，
+     * 先递归 resolve 所有子节点，并加入 builder。
+     */
+    private function resolveChildren(
+        RenderNode        $node,
+        LayoutConstraints $constraints,
+        FragmentBuilder   $builder
+    ): void {
+        $childOffX = $node->computedStyle?->childOffsetX() ?? 0;
+        $childOffY = $node->computedStyle?->childOffsetY() ?? 0;
+
+        $savedParent = $this->currentParent;
+        $this->currentParent = $node;
+
+        foreach ($node->children as $child) {
+            $childConstraints = new LayoutConstraints(
+                containerWidth: $constraints->contentWidth,
+                containerHeight: $constraints->contentHeight,
+                parentContentX: $constraints->parentContentX + $childOffX,
+                parentContentY: $constraints->parentContentY + $childOffY,
+                contentWidth: $constraints->contentWidth,
+                contentHeight: $constraints->contentHeight,
+            );
+            $childFragment = $this->resolveNodeInternal($child, $childConstraints);
+            $builder->addChild($childFragment);
+        }
+
+        $this->currentParent = $savedParent;
+    }
+
+    /**
+     * 洁净路径：递归解析子节点（无需策略调度，仅传递约束）。
+     */
+    private function resolveCurrentChildren(
+        RenderNode        $node,
+        LayoutConstraints $constraints,
+        FragmentBuilder   $builder
+    ): void {
+        $childOffX = $node->computedStyle?->childOffsetX() ?? 0;
+        $childOffY = $node->computedStyle?->childOffsetY() ?? 0;
+
+        $savedParent = $this->currentParent;
+        $this->currentParent = $node;
+
+        foreach ($node->children as $child) {
+            $childConstraints = new LayoutConstraints(
+                containerWidth: $constraints->contentWidth,
+                containerHeight: $constraints->contentHeight,
+                parentContentX: $constraints->parentContentX + $childOffX,
+                parentContentY: $constraints->parentContentY + $childOffY,
+                contentWidth: $constraints->contentWidth,
+                contentHeight: $constraints->contentHeight,
+            );
+            $childFragment = $this->resolveNodeInternal($child, $childConstraints);
+            $builder->addChild($childFragment);
+        }
+
+        $this->currentParent = $savedParent;
+    }
+
+    /**
+     * 旧策略兼容包装。
+     *
+     * 为仍使用 LayoutStrategyInterface（LayoutContext, array）的策略
+     * 创建适配层：
+     *   1. 从 LayoutConstraints 创建 LayoutContext
+     *   2. 调用旧策略的 resolve($node, $ctx, $style)
+     *   3. 从 node 回读 x/y/w/h/layer/contentWidth/contentHeight
+     *      写入 FragmentBuilder
+     *
+     * @param RenderNode              $node
+     * @param LayoutConstraints       $constraints
+     * @param array                   $effectiveStyle  有效的样式数组
+     * @param LayoutStrategyInterface $strategy         旧策略
+     * @param FragmentBuilder         $builder          Fragment 构建器
+     */
+    private function callLegacyStrategy(
+        RenderNode              $node,
+        LayoutConstraints       $constraints,
+        array                   $effectiveStyle,
+        LayoutStrategyInterface $strategy,
+        FragmentBuilder         $builder
+    ): void {
+        // 创建旧式 LayoutContext（parent 引用从 currentParent 获取）
+        $ctx = new LayoutContext(
+            $constraints->parentContentX,
+            $constraints->parentContentY,
+            $this->currentParent
+        );
+
+        // 旧策略内部调用 $this->resolver->resolveNode($child, $childCtx)
+        $strategy->resolve($node, $ctx, $effectiveStyle);
+
+        // 从 node 回读结果，写入 Builder
+        $builder
+            ->setPosition($node->x, $node->y)
+            ->setSize($node->w, $node->h, $node->computedStyle)
+            ->setLayer($node->layer)
+            ->setContentSize($node->contentWidth, $node->contentHeight);
+    }
 }

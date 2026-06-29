@@ -3,8 +3,11 @@
 namespace Px\Rendering\Layout;
 
 use Px\Rendering\LayoutResolver;
-use Px\Rendering\Layout\Tools\PercentResolver;
+use Px\Rendering\CssStyleHelper;
 use Px\Rendering\RenderNode;
+use Px\Rendering\ComputedStyle;
+use Px\Rendering\Layout\LayoutConstraints;
+use Px\Rendering\Layout\FragmentBuilder;
 
 /**
  * TableLayoutStrategy — CSS 表格布局模型（CSS 2.2 §17）
@@ -30,27 +33,52 @@ class TableLayoutStrategy implements LayoutStrategyInterface
         $this->resolver = $resolver;
     }
 
-    public function resolve(RenderNode $node, LayoutContext $ctx, array $style): void
+    public function resolveWithBuilder(
+        RenderNode         $node,
+        LayoutConstraints  $constraints,
+        ?ComputedStyle     $style,
+        FragmentBuilder    $builder
+    ): void
+    {
+        $ctx = new LayoutContext(
+            $constraints->parentContentX,
+            $constraints->parentContentY,
+            $node->parent
+        );
+        $styleArr = $style !== null ? $style->toExportArray() : $node->style;
+
+        $this->resolve($node, $ctx, $styleArr, false);
+
+        $builder
+            ->setPosition($node->x, $node->y)
+            ->setSize($node->w, $node->h, $style)
+            ->setLayer($node->layer)
+            ->setContentSize($node->contentWidth, $node->contentHeight);
+    }
+
+    public function resolve(RenderNode $node, LayoutContext $ctx, array $style, bool $recurseChildren = true): void
     {
         $display = $style['display'] ?? 'table';
 
         switch ($display) {
             case 'table':
-                $this->resolveTable($node, $ctx, $style);
+                $this->resolveTable($node, $ctx, $style, $recurseChildren);
                 break;
             case 'table-row':
-                $this->resolveTableRow($node, $ctx, $style);
+                $this->resolveTableRow($node, $ctx, $style, $recurseChildren);
                 break;
             case 'table-cell':
-                $this->resolveTableCell($node, $ctx, $style);
+                $this->resolveTableCell($node, $ctx, $style, $recurseChildren);
                 break;
             case 'table-caption':
-                $this->resolveTableCaption($node, $ctx, $style);
+                $this->resolveTableCaption($node, $ctx, $style, $recurseChildren);
                 break;
             default:
                 // Fallback to block layout for other table-* values
                 $blockStrategy = $this->resolver->getBlockStrategy();
-                $blockStrategy->resolve($node, $ctx, $style);
+                if ($recurseChildren) {
+                    $blockStrategy->resolve($node, $ctx, $style);
+                }
                 break;
         }
     }
@@ -58,7 +86,7 @@ class TableLayoutStrategy implements LayoutStrategyInterface
     /**
      * Resolve display:table — 块级表格容器
      */
-    private function resolveTable(RenderNode $node, LayoutContext $ctx, array $style): void
+    private function resolveTable(RenderNode $node, LayoutContext $ctx, array $style, bool $recurseChildren = true): void
     {
         // ── 容器自身尺寸 ──
         $w = (int)($style['width'] ?? 0);
@@ -145,7 +173,7 @@ class TableLayoutStrategy implements LayoutStrategyInterface
             }
             if ($rowH <= 0) {
                 // CSS 2.2 §10.8.1: 行高默认 ≈ font-size × 1.2
-                PercentResolver::resolveFontSizeUnit($style);
+                CssStyleHelper::resolveFontSize($style);
                 $fs = (int)($style['fontSize'] ?? 14);
                 $rowH = (int)($fs * 1.2);
             }
@@ -164,7 +192,9 @@ class TableLayoutStrategy implements LayoutStrategyInterface
                 // Resolve cell children
                 $cellCtx = new LayoutContext($cell->x + (int)($cell->style['paddingLeft'] ?? 0), $cell->y + (int)($cell->style['paddingTop'] ?? 0), $cell);
                 foreach ($cell->children as $grandchild) {
-                    $this->resolver->resolveNode($grandchild, $cellCtx);
+                    if ($recurseChildren) {
+                        $this->resolver->resolveNode($grandchild, $cellCtx);
+                    }
                 }
             }
 
@@ -179,7 +209,9 @@ class TableLayoutStrategy implements LayoutStrategyInterface
                 $child->y = $currentY;
                 $child->w = $contentW;
                 $capCtx = new LayoutContext($child->x, $child->y, $node);
-                $this->resolver->resolveNode($child, $capCtx);
+                if ($recurseChildren) {
+                    $this->resolver->resolveNode($child, $capCtx);
+                }
                 $totalContentH += $child->h;
                 $currentY += $child->h;
             }
@@ -199,7 +231,7 @@ class TableLayoutStrategy implements LayoutStrategyInterface
     /**
      * Resolve display:table-row — 水平排列子代（单元格）
      */
-    private function resolveTableRow(RenderNode $node, LayoutContext $ctx, array $style): void
+    private function resolveTableRow(RenderNode $node, LayoutContext $ctx, array $style, bool $recurseChildren = true): void
     {
         $node->x = $ctx->parentX;
         $node->y = $ctx->parentY;
@@ -217,7 +249,9 @@ class TableLayoutStrategy implements LayoutStrategyInterface
                 $cell->y + (int)($cell->style['paddingTop'] ?? 0),
                 $node
             );
-            $this->resolver->resolveNode($cell, $cellCtx);
+            if ($recurseChildren) {
+                $this->resolver->resolveNode($cell, $cellCtx);
+            }
             $cellX += $cell->w;
         }
         $node->w = $cellX - $node->x;
@@ -226,7 +260,7 @@ class TableLayoutStrategy implements LayoutStrategyInterface
     /**
      * Resolve display:table-cell
      */
-    private function resolveTableCell(RenderNode $node, LayoutContext $ctx, array $style): void
+    private function resolveTableCell(RenderNode $node, LayoutContext $ctx, array $style, bool $recurseChildren = true): void
     {
         $node->x = $ctx->parentX;
         $node->y = $ctx->parentY;
@@ -243,7 +277,9 @@ class TableLayoutStrategy implements LayoutStrategyInterface
 
         foreach ($node->children as $child) {
             $childCtx = new LayoutContext($node->x + $padL, $contentY, $node);
-            $this->resolver->resolveNode($child, $childCtx);
+            if ($recurseChildren) {
+                $this->resolver->resolveNode($child, $childCtx);
+            }
             $contentY += $child->h;
         }
     }
@@ -251,14 +287,16 @@ class TableLayoutStrategy implements LayoutStrategyInterface
     /**
      * Resolve display:table-caption
      */
-    private function resolveTableCaption(RenderNode $node, LayoutContext $ctx, array $style): void
+    private function resolveTableCaption(RenderNode $node, LayoutContext $ctx, array $style, bool $recurseChildren = true): void
     {
         $node->x = $ctx->parentX;
         $node->y = $ctx->parentY;
 
         // Caption behaves like block-level element
-        $blockStrategy = $this->resolver->getBlockStrategy();
-        $blockStrategy->resolve($node, $ctx, $style);
+        if ($recurseChildren) {
+            $blockStrategy = $this->resolver->getBlockStrategy();
+            $blockStrategy->resolve($node, $ctx, $style);
+        }
     }
 
     /**

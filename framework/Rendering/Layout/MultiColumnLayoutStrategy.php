@@ -4,6 +4,9 @@ namespace Px\Rendering\Layout;
 
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
+use Px\Rendering\ComputedStyle;
+use Px\Rendering\Layout\LayoutConstraints;
+use Px\Rendering\Layout\FragmentBuilder;
 
 /**
  * MultiColumnLayoutStrategy — CSS 多列布局（CSS Multi-column Layout Module Level 1）
@@ -29,7 +32,30 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
         $this->resolver = $resolver;
     }
 
-    public function resolve(RenderNode $node, LayoutContext $ctx, array $style): void
+    public function resolveWithBuilder(
+        RenderNode         $node,
+        LayoutConstraints  $constraints,
+        ?ComputedStyle     $style,
+        FragmentBuilder    $builder
+    ): void
+    {
+        $ctx = new LayoutContext(
+            $constraints->parentContentX,
+            $constraints->parentContentY,
+            $node->parent
+        );
+        $styleArr = $style !== null ? $style->toExportArray() : $node->style;
+
+        $this->resolve($node, $ctx, $styleArr, false);
+
+        $builder
+            ->setPosition($node->x, $node->y)
+            ->setSize($node->w, $node->h, $style)
+            ->setLayer($node->layer)
+            ->setContentSize($node->contentWidth, $node->contentHeight);
+    }
+
+    public function resolve(RenderNode $node, LayoutContext $ctx, array $style, bool $recurseChildren = true): void
     {
         $display = $style['display'] ?? 'block';
 
@@ -41,8 +67,10 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
         // 默认 column-count=2 如果 column-width 也未指定
         if ($columnCount <= 0 && $columnWidth <= 0) {
             // Not a multi-column layout — fallback
-            $blockStrategy = $this->resolver->getBlockStrategy();
-            $blockStrategy->resolve($node, $ctx, $style);
+            if ($recurseChildren) {
+                $blockStrategy = $this->resolver->getBlockStrategy();
+                $blockStrategy->resolve($node, $ctx, $style);
+            }
             return;
         }
 
@@ -129,7 +157,9 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
 
                 // Resolve child first, then force column width
                 $childCtx = new LayoutContext($colX, $currentY, $node);
-                $this->resolver->resolveNode($child, $childCtx);
+                if ($recurseChildren) {
+                    $this->resolver->resolveNode($child, $childCtx);
+                }
                 $child->w = $effectiveColW;
 
                 $currentY += $child->h;
@@ -151,7 +181,9 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
                     $child->y = $baseY;
 
                     $childCtx = new LayoutContext($colX, $baseY, $node);
-                    $this->resolver->resolveNode($child, $childCtx);
+                    if ($recurseChildren) {
+                        $this->resolver->resolveNode($child, $childCtx);
+                    }
                     $child->w = $effectiveColW;
                     $colIdx++;
                 }
@@ -172,7 +204,9 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
                         $child->y = $colY;
 
                         $childCtx = new LayoutContext($colX, $colY, $node);
-                        $this->resolver->resolveNode($child, $childCtx);
+                        if ($recurseChildren) {
+                            $this->resolver->resolveNode($child, $childCtx);
+                        }
                         $child->w = $effectiveColW;
                         $colY += $child->h;
                     }
