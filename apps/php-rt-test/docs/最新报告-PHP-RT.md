@@ -1,18 +1,18 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-06-29 08:08:32 | **总耗时**: 153.1s
+**运行时间**: 2026-06-29 08:52:54 | **总耗时**: 151.4s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 3s |
-| prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴9 | ⏭️ | ❌ 失败 | 1.8s |
-| prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff 🔴8 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 24diff 🔴6 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-05-border | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴10 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-06-border-radius | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴14 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-07-width-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 49diff 🔴27 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-08-min-max | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 43diff 🔴9 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-09-box-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 124diff 🔴43 | ⏭️ | ❌ 失败 | 1.8s |
+| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 1.2s |
+| prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 3.1s |
+| prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 1.1s |
+| prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 2.5s |
+| prt-05-border | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 1.2s |
+| prt-06-border-radius | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 2.3s |
+| prt-07-width-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 26diff 🔴9 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-08-min-max | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 1.2s |
+| prt-09-box-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 32diff 🔴20 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-10-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 178diff 🔴68 | ⏭️ | ❌ 失败 | 1.8s |
 | prt-100-table-caption | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 7 | 154diff 🔴110 | ⏭️ | ❌ 失败 | 4.8s |
 | prt-101-table-empty-cells | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 52diff 🔴29 | ⏭️ | ❌ 失败 | 4.9s |
@@ -26,7 +26,7 @@
 | prt-109-integ-responsive-card | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 23diff | ⏭️ | ❌ 失败 | 1.1s |
 | prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 26diff 🔴7 | ⏭️ | ❌ 失败 | 1.7s |
 | prt-110-integ-complex-toolbar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ⚠️ 1 | 84diff 🔴38 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 33diff 🔴7 | ⏭️ | ❌ 失败 | 1.8s |
+| prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 2.5s |
 | prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴8 | ⏭️ | ❌ 失败 | 1.7s |
 | prt-14-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴11 | ⏭️ | ❌ 失败 | 1.4s |
 | prt-15-position-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
@@ -115,45 +115,21 @@
 | prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴37 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 87diff 🔴48 | ⏭️ | ❌ 失败 | 1.1s |
 
-**汇总**: 1 ✅ / 109 ❌ / 110 总计 (总耗时: 153.1s)
+**汇总**: 8 ✅ / 102 ❌ / 110 总计 (总耗时: 151.4s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop background-color diff 300->529
-> - prop position diff 84->91
-> - prop width diff 640->771
-> - prop height diff 695->1175
+> - prop background-color diff 300->502
+> - prop width diff 640->742
+> - prop height diff 695->1130
 > - prop text-align diff 7->22
 > - prop white-space diff 11->189
-> - prop padding-top diff 78->82
-> - prop padding-left diff 90->93
-> - prop padding-right diff 90->93
-> - prop padding-bottom diff 79->83
-> - prop margin-bottom diff 56->59
 > - prop line-height diff 1->105
 > - prop flex-grow diff 34->47
-> - prt-02-margin-auto structure 2->4
-> - prt-02-margin-auto major 3->4
-> - prt-03-negative-margin structure 2->4
-> - prt-03-negative-margin major 3->5
-> - prt-04-padding structure 2->3
-> - prt-04-padding major 1->2
-> - prt-05-border structure 2->4
-> - prt-05-border critical 9->10
-> - prt-05-border major 1->2
-> - prt-06-border-radius structure 2->6
-> - prt-06-border-radius major 0->1
-> - prt-07-width-height geometry 12->31
-> - prt-07-width-height structure 2->5
-> - prt-07-width-height critical 9->27
-> - prt-07-width-height major 1->3
-> - prt-08-min-max structure 2->5
-> - prt-08-min-max major 4->6
-> - prt-09-box-sizing geometry 33->73
-> - prt-09-box-sizing critical 29->43
-> - prt-09-box-sizing major 1->30
+> - prt-07-width-height structure 2->4
+> - prt-07-width-height major 1->2
 > - prt-10-overflow geometry 59->98
 > - prt-10-overflow structure 8->17
 > - prt-10-overflow critical 49->68
@@ -175,7 +151,6 @@
 > - prt-110-integ-complex-toolbar geometry 60->63
 > - prt-110-integ-complex-toolbar critical 6->38
 > - prt-110-integ-complex-toolbar major 2->12
-> - prt-12-display-none structure 2->4
 > - prt-13-position-relative structure 2->5
 > - prt-13-position-relative major 3->6
 > - prt-14-position-absolute structure 2->5
@@ -407,40 +382,40 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 73.3% | 3221/4396 |
-| width | 82.5% | 3625/4396 |
-| position | 97.9% | 4305/4396 |
-| text-align | 99.5% | 4374/4396 |
-| opacity | 99.8% | 4388/4396 |
-| font-weight | 100% | 4396/4396 |
-| background-color | 87.6% | 3724/4253 |
-| top | 100% | 4147/4147 |
-| left | 100% | 4147/4147 |
-| font-size | 100% | 4093/4094 |
-| display | 100% | 3769/3769 |
+| height | 74.2% | 3257/4387 |
+| width | 83.1% | 3645/4387 |
+| position | 98.1% | 4304/4387 |
+| text-align | 99.5% | 4365/4387 |
+| opacity | 99.8% | 4379/4387 |
+| font-weight | 100% | 4387/4387 |
+| background-color | 88.2% | 3750/4252 |
+| top | 100% | 4138/4138 |
+| left | 100% | 4138/4138 |
+| font-size | 100% | 4085/4086 |
+| display | 100% | 3790/3790 |
 | white-space | 2.1% | 4/193 |
-| padding-left | 37.2% | 55/148 |
-| padding-right | 37.2% | 55/148 |
-| padding-bottom | 43.9% | 65/148 |
-| padding-top | 44.6% | 66/148 |
-| margin-bottom | 54.6% | 71/130 |
-| border-width | 100% | 117/117 |
-| gap | 16.7% | 18/108 |
+| padding-left | 41.2% | 61/148 |
+| padding-right | 41.2% | 61/148 |
+| padding-bottom | 48.6% | 72/148 |
+| padding-top | 49.3% | 73/148 |
+| border-width | 100% | 139/139 |
+| margin-bottom | 58.9% | 76/129 |
+| gap | 18.7% | 20/107 |
 | line-height | 0% | 0/105 |
 | flex-shrink | 96.7% | 58/60 |
 | flex-grow | 19% | 11/58 |
 | flex-direction | 23.1% | 6/26 |
 | grid-template-columns | 0% | 0/24 |
-| margin-top | 31.8% | 7/22 |
-| margin-left | 57.1% | 12/21 |
-| border-radius | 100% | 19/19 |
-| margin-right | 60% | 6/10 |
-| flex-wrap | 71.4% | 5/7 |
+| margin-top | 45.5% | 10/22 |
+| border-radius | 100% | 22/22 |
+| margin-left | 76.2% | 16/21 |
+| margin-right | 80% | 8/10 |
+| flex-wrap | 85.7% | 6/7 |
 | order | 0% | 0/6 |
 | grid-column | 0% | 0/6 |
-| min-width | 80% | 4/5 |
+| min-width | 100% | 5/5 |
 | align-items | 100% | 5/5 |
-| min-height | 0% | 0/3 |
+| min-height | 33.3% | 1/3 |
 | align-self | 0% | 0/2 |
 | justify-self | 0% | 0/2 |
 | outline-width | 0% | 0/2 |
@@ -449,12 +424,13 @@
 | grid-template-rows | 0% | 0/2 |
 | align-content | 0% | 0/2 |
 | text-decoration-line | 0% | 0/2 |
+| max-width | 100% | 2/2 |
 | justify-items | 0% | 0/1 |
 | grid-auto-rows | 0% | 0/1 |
 | text-decoration-style | 0% | 0/1 |
 | text-decoration-thickness | 0% | 0/1 |
 | box-shadow | 0% | 0/1 |
-| max-width | 100% | 1/1 |
+| max-height | 100% | 1/1 |
 | justify-content | 100% | 1/1 |
 | box-sizing | 0% | 0/0 |
 | pointer-events | 0% | 0/0 |
@@ -471,7 +447,6 @@
 | overflow-x | 0% | 0/0 |
 | overflow-y | 0% | 0/0 |
 | border-style | 0% | 0/0 |
-| max-height | 0% | 0/0 |
 | overflow | 0% | 0/0 |
 
 ---
@@ -481,14 +456,14 @@
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
 | prt-01-margin | 0 | 0 | 0 | 0 | 0 | 0 |
-| prt-02-margin-auto | 0 | **9** | **4** | 21 | 4 | 0 |
-| prt-03-negative-margin | 0 | **8** | **5** | 17 | 4 | 0 |
-| prt-04-padding | 0 | **6** | **2** | 12 | 3 | 0 |
-| prt-05-border | 0 | **10** | **2** | 12 | 4 | 0 |
-| prt-06-border-radius | 0 | **14** | **1** | 18 | 6 | 0 |
-| prt-07-width-height | 0 | **27** | **3** | 13 | 5 | 0 |
-| prt-08-min-max | 0 | **9** | **6** | 21 | 5 | 0 |
-| prt-09-box-sizing | 1 | **43** | **30** | 47 | 4 | 2 |
+| prt-02-margin-auto | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-03-negative-margin | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-04-padding | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-05-border | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-06-border-radius | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-07-width-height | 0 | **9** | **2** | 10 | 4 | 0 |
+| prt-08-min-max | 0 | 0 | 0 | 0 | 0 | 0 |
+| prt-09-box-sizing | 0 | **20** | 0 | 12 | 0 | 2 |
 | prt-10-overflow | 1 | **68** | **23** | 63 | 17 | 4 |
 | prt-100-table-caption | 0 | **110** | **11** | 22 | 0 | 7 |
 | prt-101-table-empty-cells | 0 | **29** | **2** | 13 | 0 | 3 |
@@ -502,7 +477,7 @@
 | prt-109-integ-responsive-card | 0 | 0 | 0 | 13 | 0 | 0 |
 | prt-11-display-types | 0 | **7** | **3** | 11 | 4 | 0 |
 | prt-110-integ-complex-toolbar | 0 | **38** | **12** | 21 | 0 | 1 |
-| prt-12-display-none | 0 | **7** | **3** | 16 | 4 | 0 |
+| prt-12-display-none | 0 | 0 | 0 | 0 | 0 | 0 |
 | prt-13-position-relative | 0 | **8** | **6** | 20 | 5 | 0 |
 | prt-14-position-absolute | 0 | **11** | **2** | 17 | 5 | 0 |
 | prt-15-position-fixed | 0 | **8** | **2** | 13 | 4 | 0 |
