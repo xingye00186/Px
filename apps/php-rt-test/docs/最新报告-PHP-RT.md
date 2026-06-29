@@ -1,19 +1,19 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-06-29 08:02:27 | **总耗时**: 169.2s
+**运行时间**: 2026-06-29 08:08:32 | **总耗时**: 153.1s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 1.7s |
+| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 3s |
 | prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🔴9 | ⏭️ | ❌ 失败 | 1.8s |
-| prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff 🔴8 | ⏭️ | ❌ 失败 | 4.7s |
+| prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff 🔴8 | ⏭️ | ❌ 失败 | 1.7s |
 | prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 24diff 🔴6 | ⏭️ | ❌ 失败 | 1.7s |
-| prt-05-border | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴10 | ⏭️ | ❌ 失败 | 4.8s |
-| prt-06-border-radius | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴14 | ⏭️ | ❌ 失败 | 4.8s |
-| prt-07-width-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 49diff 🔴27 | ⏭️ | ❌ 失败 | 4.8s |
-| prt-08-min-max | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴9 | ⏭️ | ❌ 失败 | 4.7s |
-| prt-09-box-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 124diff 🔴43 | ⏭️ | ❌ 失败 | 4.7s |
-| prt-10-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 178diff 🔴68 | ⏭️ | ❌ 失败 | 4.7s |
+| prt-05-border | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴10 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-06-border-radius | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 39diff 🔴14 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-07-width-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 49diff 🔴27 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-08-min-max | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 43diff 🔴9 | ⏭️ | ❌ 失败 | 1.7s |
+| prt-09-box-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 124diff 🔴43 | ⏭️ | ❌ 失败 | 1.8s |
+| prt-10-overflow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 178diff 🔴68 | ⏭️ | ❌ 失败 | 1.8s |
 | prt-100-table-caption | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 7 | 154diff 🔴110 | ⏭️ | ❌ 失败 | 4.8s |
 | prt-101-table-empty-cells | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 52diff 🔴29 | ⏭️ | ❌ 失败 | 4.9s |
 | prt-102-column-span | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 2 | 141diff 🔴110 | ⏭️ | ❌ 失败 | 5.3s |
@@ -24,10 +24,10 @@
 | prt-107-max-width-constraint | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 19diff 🔴1 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-108-integ-overlap-layers | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴1 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-109-integ-responsive-card | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 23diff | ⏭️ | ❌ 失败 | 1.1s |
-| prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 26diff 🔴7 | ⏭️ | ❌ 失败 | 1.3s |
+| prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 26diff 🔴7 | ⏭️ | ❌ 失败 | 1.7s |
 | prt-110-integ-complex-toolbar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ⚠️ 1 | 84diff 🔴38 | ⏭️ | ❌ 失败 | 1.2s |
-| prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 32diff 🔴7 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 33diff 🔴7 | ⏭️ | ❌ 失败 | 1.8s |
+| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🔴8 | ⏭️ | ❌ 失败 | 1.7s |
 | prt-14-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 37diff 🔴11 | ⏭️ | ❌ 失败 | 1.4s |
 | prt-15-position-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-16-top-left-right-bottom | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴20 | ⏭️ | ❌ 失败 | 1.1s |
@@ -91,12 +91,12 @@
 | prt-74-integ-holy-grail | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 297diff 🔴137 | ⏭️ | ❌ 失败 | 1.3s |
 | prt-75-integ-masonry | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 191diff 🔴66 | ⏭️ | ❌ 失败 | 1.3s |
 | prt-76-integ-complex-form | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 442diff 🔴178 | ⏭️ | ❌ 失败 | 1.5s |
-| prt-77-position-sticky | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff | ⏭️ | ❌ 失败 | 1.4s |
+| prt-77-position-sticky | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff | ⏭️ | ❌ 失败 | 1.8s |
 | prt-78-clip-path | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1s |
 | prt-79-flex-basis-pct | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 9diff 🔴1 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-80-flex-align-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 1 | 5diff | ⏭️ | ❌ 失败 | 1.1s |
 | prt-81-flex-column-gap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 4diff | ⏭️ | ❌ 失败 | 1.2s |
-| prt-82-flex-auto-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 1.2s |
+| prt-82-flex-auto-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 1.7s |
 | prt-83-grid-justify-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 10diff 🔴3 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-84-grid-align-content | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff 🔴4 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-85-grid-auto-columns | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 13diff 🔴3 | ⏭️ | ❌ 失败 | 1.2s |
@@ -109,13 +109,13 @@
 | prt-92-filter | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
 | prt-93-mix-blend-mode | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
 | prt-94-backdrop-filter | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
-| prt-95-outline-offset | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 1.1s |
-| prt-96-box-shadow-spread | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 1.2s |
+| prt-95-outline-offset | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 1.7s |
+| prt-96-box-shadow-spread | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 1.7s |
 | prt-97-appearance-none | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
 | prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴37 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 87diff 🔴48 | ⏭️ | ❌ 失败 | 1.1s |
 
-**汇总**: 1 ✅ / 109 ❌ / 110 总计 (总耗时: 169.2s)
+**汇总**: 1 ✅ / 109 ❌ / 110 总计 (总耗时: 153.1s)
 
 ## 回归判定
 
