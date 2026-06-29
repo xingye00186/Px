@@ -1,6 +1,6 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-06-29 09:54:34 | **总耗时**: 156.8s
+**运行时间**: 2026-06-29 10:05:09 | **总耗时**: 157.1s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
@@ -27,10 +27,10 @@
 | prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 2.3s |
 | prt-110-integ-complex-toolbar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ⚠️ 1 | 84diff 🔴38 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 2.5s |
-| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff 🔴1 | ⏭️ | ❌ 失败 | 2.4s |
+| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff 🔴1 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-14-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 2.5s |
-| prt-15-position-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 28diff 🔴8 | ⏭️ | ❌ 失败 | 1.1s |
-| prt-16-top-left-right-bottom | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 62diff 🔴20 | ⏭️ | ❌ 失败 | 1.1s |
+| prt-15-position-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff 🔴2 | ⏭️ | ❌ 失败 | 2.5s |
+| prt-16-top-left-right-bottom | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 51diff 🔴21 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-17-z-index | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 40diff 🔴16 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-18-position-static | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴9 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-19-flex-basic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 44diff 🔴8 | ⏭️ | ❌ 失败 | 1.7s |
@@ -115,15 +115,15 @@
 | prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 41diff 🔴37 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 87diff 🔴48 | ⏭️ | ❌ 失败 | 1.1s |
 
-**汇总**: 9 ✅ / 101 ❌ / 110 总计 (总耗时: 156.8s)
+**汇总**: 9 ✅ / 101 ❌ / 110 总计 (总耗时: 157.1s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop background-color diff 300->478
-> - prop width diff 640->718
-> - prop height diff 695->1099
+> - prop background-color diff 300->476
+> - prop width diff 640->714
+> - prop height diff 695->1093
 > - prop text-align diff 7->22
 > - prop white-space diff 11->189
 > - prop line-height diff 1->105
@@ -146,13 +146,9 @@
 > - prt-110-integ-complex-toolbar geometry 60->63
 > - prt-110-integ-complex-toolbar critical 6->38
 > - prt-110-integ-complex-toolbar major 2->12
-> - prt-15-position-fixed structure 2->4
-> - prt-15-position-fixed major 0->2
-> - prt-16-top-left-right-bottom geometry 22->28
-> - prt-16-top-left-right-bottom mismatch 23->27
-> - prt-16-top-left-right-bottom structure 2->7
-> - prt-16-top-left-right-bottom critical 15->20
-> - prt-16-top-left-right-bottom major 3->7
+> - prt-16-top-left-right-bottom geometry 22->25
+> - prt-16-top-left-right-bottom structure 2->4
+> - prt-16-top-left-right-bottom critical 15->21
 > - prt-17-z-index structure 2->5
 > - prt-17-z-index critical 13->16
 > - prt-18-position-static structure 2->5
@@ -373,19 +369,19 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 74.9% | 3288/4387 |
-| width | 83.6% | 3669/4387 |
-| position | 98.3% | 4312/4387 |
+| height | 75.1% | 3294/4387 |
+| width | 83.7% | 3673/4387 |
+| position | 98.4% | 4318/4387 |
 | text-align | 99.5% | 4365/4387 |
 | opacity | 99.8% | 4379/4387 |
 | font-weight | 100% | 4387/4387 |
-| background-color | 88.8% | 3781/4259 |
-| top | 100% | 4138/4138 |
+| background-color | 88.8% | 3785/4261 |
+| top | 100% | 4139/4139 |
 | left | 100% | 4138/4138 |
 | font-size | 100% | 4085/4086 |
-| display | 100% | 3817/3817 |
+| display | 100% | 3823/3823 |
 | white-space | 2.1% | 4/193 |
-| border-width | 100% | 153/153 |
+| border-width | 100% | 159/159 |
 | padding-left | 41.9% | 62/148 |
 | padding-right | 41.9% | 62/148 |
 | padding-bottom | 49.3% | 73/148 |
@@ -471,8 +467,8 @@
 | prt-12-display-none | 0 | 0 | 0 | 0 | 0 | 0 |
 | prt-13-position-relative | 0 | **1** | 0 | 0 | 0 | 0 |
 | prt-14-position-absolute | 0 | 0 | 0 | 0 | 0 | 0 |
-| prt-15-position-fixed | 0 | **8** | **2** | 13 | 4 | 0 |
-| prt-16-top-left-right-bottom | 0 | **20** | **7** | 27 | 7 | 0 |
+| prt-15-position-fixed | 0 | **2** | 0 | 0 | 0 | 0 |
+| prt-16-top-left-right-bottom | 0 | **21** | **3** | 22 | 4 | 0 |
 | prt-17-z-index | 0 | **16** | **1** | 18 | 5 | 0 |
 | prt-18-position-static | 0 | **9** | **4** | 20 | 5 | 0 |
 | prt-19-flex-basic | 0 | **8** | **5** | 22 | 5 | 1 |
