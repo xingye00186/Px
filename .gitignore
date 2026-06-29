@@ -76,6 +76,13 @@ test_case/*/engine_layout_after_5frames.json
 # run.php 部署的临时组件
 apps/css-test/components/TestContent.vue
 
+# 测试用例自动生成的 .vue（PxIdGenerateStep 从 .html 生成，不再手动维护）
+apps/php-rt-test/test_case/*/*.vue
+apps/css-test/test_case/*/*.vue
+
+# data-px-id 预处理标记文件（按 case 存放，自动生成）
+.pxid_done
+
 # 运行报告
 # test_report.md (不再使用)
 *.rsp
