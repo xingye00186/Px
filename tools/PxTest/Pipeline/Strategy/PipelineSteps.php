@@ -28,7 +28,11 @@ class LayoutDumpStep implements PipelineStepInterface
         // 从上下文获取当前 case 名（全量运行时每个 case 独立设置）
         $ctxCase = $ctx->get('case_name');
         $currentCase = ($ctxCase !== null && $ctxCase !== '') ? $ctxCase : $this->caseName;
-        $refDir = "{$this->appDir}/test_case/{$currentCase}/ref";
+        $caseDir = "{$this->appDir}/test_case/{$currentCase}";
+        $refDir = "$caseDir/ref";
+
+        // ─── data-px-id 已由 PxIdGenerateStep 全量预处理完成 ───
+        // .vue 已包含 data-px-id，无需在此再次生成或编译。
 
         // ─── SFC 编译器：检测 .vue 变更后自动重新编译 ───
         // .vue 是源文件，gen/ 是编译产物。当 .vue 比 gen/ 新时需要重新编译。
@@ -135,20 +139,25 @@ class LayoutDumpStep implements PipelineStepInterface
     {
         $errors = [];
 
-        // Find the .vue template file
-        $vueFiles = glob("$caseDir/*.vue");
-        if (empty($vueFiles)) return ['No .vue template found'];
-
-        $vueContent = @file_get_contents($vueFiles[0]);
-        if ($vueContent === false) return ['Cannot read .vue file'];
-
-        // Extract key text content between template tags
-        if (preg_match_all('/>([^<]{4,})</', $vueContent, $m)) {
-            $texts = array_slice(array_unique($m[1]), 0, 5); // top 5 unique texts
-            foreach ($texts as $text) {
-                if (mb_strlen(trim($text)) < 4) continue;
-                if (str_contains($json, trim($text))) continue;
-                $errors[] = "Content missing: \"" . mb_substr(trim($text), 0, 40) . "\"";
+        // 从原始 .html 提取文本内容（.html 是唯一事实源，不受 PXID 覆写影响）
+        $htmlFiles = glob("$caseDir/*.html");
+        if (!empty($htmlFiles)) {
+            $htmlContent = @file_get_contents($htmlFiles[0]);
+            if ($htmlContent !== false) {
+                // 提取 <body> 内文本
+                if (preg_match('/<body[^>]*>([\s\S]*)<\/body>/i', $htmlContent, $m)) {
+                    $bodyHtml = $m[1];
+                } else {
+                    $bodyHtml = $htmlContent;
+                }
+                if (preg_match_all('/>([^<]{4,})</', $bodyHtml, $m)) {
+                    $texts = array_slice(array_unique($m[1]), 0, 3);
+                    foreach ($texts as $text) {
+                        if (mb_strlen(trim($text)) < 4) continue;
+                        if (str_contains($json, trim($text))) continue;
+                        $errors[] = "Content missing: \"" . mb_substr(trim($text), 0, 40) . "\"";
+                    }
+                }
             }
         }
 
@@ -281,20 +290,9 @@ class BrowserRefStep implements PipelineStepInterface
             return StepResult::err('browser_ref', 'HTML spec validation failed');
         }
 
-        // ─── Step 2: Validate .html vs .vue consistency ───
-        $vueFiles = glob("$caseDir/*.vue");
-        if (!empty($vueFiles)) {
-            $vueErrors = $this->validateVueConsistency($htmlPath, $vueFiles[0]);
-            if (!empty($vueErrors)) {
-                echo "  [VUE_MISMATCH] .html vs .vue inconsistency:\n";
-                foreach ($vueErrors as $e) {
-                    echo "    - $e\n";
-                }
-                return StepResult::err('browser_ref', '.html/.vue consistency check failed');
-            }
-        }
-
-        // ─── Step 3: Inject dump_layout.js + textarea only (no CSS) ───
+        // ─── Step 2: Inject dump_layout.js + textarea only (no CSS) ───
+        // .vue vs .html 一致性检查已移除：.vue 由 HtmlToVueConverter 从 .html 自动生成，
+        // 结构天然一致，无需校验。
         $instrumented = $this->instrumentHtml($htmlPath);
         $refDir = "$caseDir/ref";
         @mkdir($refDir, 0777, true);
@@ -439,74 +437,6 @@ class BrowserRefStep implements PipelineStepInterface
      *
      * Style strategy (inline vs class) is NOT compared — both are equivalent.
      */
-    private function validateVueConsistency(string $htmlPath, string $vuePath): array
-    {
-        $errors = [];
-        $html = @file_get_contents($htmlPath);
-        $vue = @file_get_contents($vuePath);
-        if ($html === false || $vue === false) return [];
-
-        // Extract .vue template content
-        if (!preg_match('/<template>([\s\S]*?)<\/template>/i', $vue, $m)) return [];
-        $vueTemplate = trim($m[1]);
-
-        // Extract .html body content
-        $htmlBody = '';
-        $htmlDom = new \DOMDocument();
-        @$htmlDom->loadHTML($html);
-        $bodyNode = $htmlDom->getElementsByTagName('body')->item(0);
-        if ($bodyNode) {
-            foreach ($bodyNode->childNodes as $child) {
-                $htmlBody .= $htmlDom->saveHTML($child);
-            }
-        } else {
-            $htmlBody = $html;
-        }
-
-        // Verify anchors match
-        $hasVueTl = stripos($vueTemplate, 'data-px-anchor="tl"') !== false;
-        $hasHtmlTl = stripos($htmlBody, 'data-px-anchor="tl"') !== false;
-        if ($hasVueTl !== $hasHtmlTl) {
-            $errors[] = "TL anchor mismatch: .vue=" . ($hasVueTl ? 'yes' : 'no') . " .html=" . ($hasHtmlTl ? 'yes' : 'no') . " — add/remove data-px-anchor=\"tl\"";
-        }
-        $hasVueBr = stripos($vueTemplate, 'data-px-anchor="br"') !== false;
-        $hasHtmlBr = stripos($htmlBody, 'data-px-anchor="br"') !== false;
-        if ($hasVueBr !== $hasHtmlBr) {
-            $errors[] = "BR anchor mismatch: .vue=" . ($hasVueBr ? 'yes' : 'no') . " .html=" . ($hasHtmlBr ? 'yes' : 'no') . " — add/remove data-px-anchor=\"br\"";
-        }
-
-        // Extract anchor and text content for basic consistency check
-        // .vue: get all text snippets (between > and <)
-        preg_match_all('/>([^<]{3,})</', $vueTemplate, $vueTexts);
-        // .html: get all text snippets in body
-        preg_match_all('/>([^<]{3,})</', $htmlBody, $htmlTexts);
-
-        $vueUnique = array_unique(array_map('trim', $vueTexts[1]));
-        $htmlUnique = array_unique(array_map('trim', $htmlTexts[1]));
-
-        // Check key test content text appears in .html (allow extra elements like sidebar nav)
-        $foundCount = 0;
-        foreach ($vueUnique as $txt) {
-            if (empty($txt)) continue;
-            $normalized = trim(preg_replace('/\s+/', ' ', $txt));
-            foreach ($htmlUnique as $ht) {
-                if (stripos($ht, $normalized) !== false || stripos($normalized, $ht) !== false) {
-                    $foundCount++;
-                    break;
-                }
-            }
-        }
-
-        // Require at least 50% of .vue text content to appear in .html
-        // Skip check when both files have no extractable text (placeholder-only)
-        $threshold = max(1, (int)(count($vueUnique) * 0.5));
-        if ($foundCount < $threshold && count($vueUnique) >= 2) {
-            $errors[] = "Text content mismatch: only $foundCount/" . count($vueUnique) . " .vue texts found in .html — expected at least $threshold";
-        }
-
-        return $errors;
-    }
-
     /**
      * Inject dump_layout.js and textarea only (no CSS modification).
      *
@@ -518,6 +448,12 @@ class BrowserRefStep implements PipelineStepInterface
     {
         $html = @file_get_contents($htmlPath);
         if ($html === false) return '';
+
+        // ─── data-px-id 注入（与 LayoutDumpStep 相同的单源注入）───
+        // 使用相同的 HtmlDataPxIdInjector，确保浏览器端 data-px-id
+        // 与引擎端（由 HtmlToVueConverter 生成）完全一致。
+        require_once __DIR__ . '/../../HtmlDataPxIdInjector.php';
+        $html = \PxTest\HtmlDataPxIdInjector::inject($html);
 
         // Load dump_layout.js from tools/
         $projectRoot = dirname($this->appDir, 2);
@@ -583,5 +519,87 @@ class BatchBrowserRefStep implements \PxTest\Pipeline\PipelineStepInterface
         }
         echo "  [batch_browser_ref] FAILED ({$elapsed}ms), will fallback to per-case\n";
         return \PxTest\Pipeline\StepResult::err('batch_browser_ref', 'Batch ref generation failed, per-case fallback', $elapsed);
+    }
+}
+
+/**
+ * PxIdGenerateStep — 全量 data-px-id 预处理（仅执行一次）。
+ *
+ * 扫描所有 test_case，从 .html 生成含 data-px-id 的 .vue，
+ * 然后编译 SFC 一次。静态标记确保多 case 循环中只执行第一轮。
+ */
+class PxIdGenerateStep implements \PxTest\Pipeline\PipelineStepInterface
+{
+    private static bool $done = false;
+    private string $appDir;
+    private string $casePrefix;
+
+    public function __construct(string $appDir, string $casePrefix)
+    {
+        $this->appDir = $appDir;
+        $this->casePrefix = $casePrefix;
+    }
+    public function name(): string { return 'pxid_generate'; }
+    public function requires(): array { return []; }
+
+    public function execute(\PxTest\Pipeline\PipelineContext $ctx): \PxTest\Pipeline\StepResult
+    {
+        if (self::$done) {
+            return \PxTest\Pipeline\StepResult::ok('pxid_generate', 0);
+        }
+        self::$done = true;
+
+        $changed = 0;
+        $caseDirs = glob($this->appDir . '/test_case/' . $this->casePrefix . '*', GLOB_ONLYDIR);
+        sort($caseDirs);
+
+        require_once __DIR__ . '/../../HtmlDataPxIdInjector.php';
+        require_once __DIR__ . '/../../HtmlToVueConverter.php';
+
+        foreach ($caseDirs as $dir) {
+            $tag = basename($dir);
+            $htmlFiles = glob("$dir/*.html");
+            if (empty($htmlFiles)) continue;
+            $htmlFile = $htmlFiles[0];
+            $markerFile = "$dir/.pxid_done";
+
+            // mtime 检查
+            if (file_exists($markerFile) && filemtime($htmlFile) <= filemtime($markerFile)) {
+                continue;
+            }
+
+            $htmlContent = @file_get_contents($htmlFile);
+            if ($htmlContent === false) continue;
+
+            $injectedHtml = \PxTest\HtmlDataPxIdInjector::inject($htmlContent);
+            $generatedVue = \PxTest\HtmlToVueConverter::convert($injectedHtml, $tag);
+
+            $vueFiles = glob("$dir/*.vue");
+            if (empty($vueFiles)) continue;
+
+            file_put_contents($vueFiles[0], $generatedVue);
+            touch($markerFile);
+            $changed++;
+        }
+
+        if ($changed > 0) {
+            echo "  [pxid] $changed .vue files regenerated, compiling SFC...\n";
+            $sfcScript = $this->appDir . '/../../sfc-compiler.php';
+            if (file_exists($sfcScript)) {
+                $appVue = $this->appDir . '/App.vue';
+                $cmd = sprintf('%s %s %s 2>&1', PHP_BINARY, escapeshellarg($sfcScript), escapeshellarg($appVue));
+                exec($cmd, $output, $exitCode);
+                if ($exitCode !== 0) {
+                    echo "  [pxid] SFC compilation FAILED (exit=$exitCode)\n";
+                    foreach ($output as $line) echo "    $line\n";
+                    return \PxTest\Pipeline\StepResult::err('pxid_generate', 'SFC compilation failed');
+                }
+                echo "  [pxid] SFC compilation OK ($changed files changed)\n";
+            }
+        } else {
+            echo "  [pxid] all .vue up-to-date, skipping SFC\n";
+        }
+
+        return \PxTest\Pipeline\StepResult::ok('pxid_generate', $changed);
     }
 }

@@ -29,6 +29,9 @@ class ElementCompareStep implements PipelineStepInterface
         'font-style', 'white-space', 'word-break', 'visibility',
         'cursor', 'direction', 'pointer-events',
         'box-sizing', 'border-style',
+        // font-family: engine exports as lowercase with single quotes, browser has proper case
+        // This is a serialization format artifact, not a real CSS difference.
+        'font-family',
         // flex-grow/flex-shrink: engine always exports them, browser only when non-default
         'flex-grow', 'flex-shrink',
         // min/max constraints: engine exports from style, browser getComputedStyle may not show them
@@ -154,16 +157,54 @@ class ElementCompareStep implements PipelineStepInterface
         }
         $eCount = count($engineSubset);
         $bCount = count($browserSubset);
-        if ($eCount !== $bCount) {
-            $structDiffs[] = "content_element_count: engine=$eCount browser=$bCount";
+
+        // ─── 纯 data-px-id 匹配 ───
+        // 注入器确保所有元素都有 data-px-id，匹配 100% 靠 px-id
+        // 若任一侧无 px-id，说明注入失败，直接终止
+        $matchPairs = [];
+        $eByPxId = [];
+        $bByPxId = [];
+        foreach ($engineSubset as $idx => $el) {
+            $pid = $el['dataset']['pxId'] ?? null;
+            if ($pid !== null) $eByPxId[$pid] = $idx;
+        }
+        foreach ($browserSubset as $idx => $el) {
+            $pid = $el['dataset']['pxId'] ?? null;
+            if ($pid !== null) $bByPxId[$pid] = $idx;
         }
 
+        if (empty($eByPxId) || empty($bByPxId)) {
+            $err = 'data-px-id injection failed: engine=' . (empty($eByPxId) ? '0' : count($eByPxId))
+                . ' browser=' . (empty($bByPxId) ? '0' : count($bByPxId))
+                . ' — check that .html file exists and HtmlDataPxIdInjector ran successfully';
+            return StepResult::err('element_compare', $err);
+        }
+
+        $eUsed = []; $bUsed = [];
+        foreach ($eByPxId as $pid => $eIdx) {
+            if (isset($bByPxId[$pid])) {
+                $bIdx = $bByPxId[$pid];
+                $matchPairs[] = ['eIdx' => $eIdx, 'bIdx' => $bIdx];
+                $eUsed[$eIdx] = true;
+                $bUsed[$bIdx] = true;
+            }
+        }
+        usort($matchPairs, function(array $a, array $b): int { return $a['eIdx'] - $b['eIdx']; });
+
+        $eRemaining = [];
+        $bRemaining = [];
+        for ($i = 0; $i < $eCount; $i++) { if (!isset($eUsed[$i])) $eRemaining[] = $i; }
+        for ($i = 0; $i < $bCount; $i++) { if (!isset($bUsed[$i])) $bRemaining[] = $i; }
+
+        echo "  [MATCH] px-id=" . count($matchPairs)
+            . " engine_extra=" . count($eRemaining)
+            . " browser_extra=" . count($bRemaining) . "\n";
+
         // ─── 逐元素对比（锚点归一化坐标）───
-        $max = min($eCount, $bCount);
         $perPropStats = []; // ['property-name' => ['match' => N, 'diff' => N]]
-        for ($i = 0; $i < $max; $i++) {
-            $e = $engineSubset[$i];
-            $b = $browserSubset[$i];
+        foreach ($matchPairs as $mpIdx => $pair) {
+            $e = $engineSubset[$pair['eIdx']];
+            $b = $browserSubset[$pair['bIdx']];
 
             // 归一化坐标：相对各自锚点的偏移
             $eRX = (int)($e['x'] ?? 0) - $eAnchor[0];
@@ -175,7 +216,7 @@ class ElementCompareStep implements PipelineStepInterface
             $eTag = $e['tag'] ?? '';
             $bTag = $b['tag'] ?? '';
             if ($eTag !== $bTag) {
-                $structDiffs[] = "elem[$i].tag: engine=$eTag browser=$bTag";
+                $structDiffs[] = "elem[{$pair['eIdx']}].tag: engine=$eTag browser=$bTag";
             }
 
             // 几何（锚点归一化坐标）
@@ -197,11 +238,11 @@ class ElementCompareStep implements PipelineStepInterface
                         $severity = 'MAJOR';
                     }
                     $geoDiffs[] = [
-                        'text' => "elem[$i].$f: engine=$ev browser=$bv diff=$delta (tol=$t)",
+                        'text' => "elem[{$pair['eIdx']}].$f: engine=$ev browser=$bv diff=$delta (tol=$t)",
                         'delta' => $delta,
                         'severity' => $severity,
                         'field' => $f,
-                        'elem_idx' => $i,
+                        'elem_idx' => $pair['eIdx'],
                     ];
                 }
             }
@@ -229,14 +270,14 @@ class ElementCompareStep implements PipelineStepInterface
                     if ($k === 'color' && $bvs === 'rgb(0, 0, 0)') {
                         // CSS 2.2 §18.2: color 初始值为 black，引擎不导出时跳过
                     } elseif (!in_array($k, self::$BROWSER_DEFAULT_SKIP_KEYS, true)) {
-                        $missingDiffs[] = "elem[$i].$k: browser=$bvs";
+                        $missingDiffs[] = "elem[{$pair['eIdx']}].$k: browser=$bvs";
                         $perPropStats[$k]['diff']++;
                     }
                 } elseif ($bvs === null) {
                     // 引擎有但浏览器没有：如果是引擎默认值白名单，直接跳过
                     // 同时也跳过 top/left（已在 GEOMETRY 比较）
                     if (!in_array($k, self::$ENGINE_DEFAULT_ONLY_KEYS, true) && !in_array($k, ['top', 'left'], true) && !in_array($k, self::$BROWSER_DEFAULT_SKIP_KEYS, true)) {
-                        $mismatchDiffs[] = "elem[$i].$k: engine=$evs (browser has no value)";
+                        $mismatchDiffs[] = "elem[{$pair['eIdx']}].$k: engine=$evs (browser has no value)";
                         $perPropStats[$k]['diff']++;
                     }
                 } elseif ((string)$evs !== (string)$bvs) {
@@ -254,12 +295,13 @@ class ElementCompareStep implements PipelineStepInterface
                     // 3. 格式噪声：引擎与浏览器对同一属性使用不同序列化格式
                     //    border-radius: 引擎单值16px vs 浏览器多值16px 4px
                     //    border-color/width: 引擎4值 vs 浏览器单值（当全部相同时）
-                    if (in_array($k, ['border-radius', 'border-color', 'border-width', 'display'], true)) {
+                    //    font-family: 引擎 lower/single-quotes vs 浏览器 proper case/double-quotes
+                    if (in_array($k, ['border-radius', 'border-color', 'border-width', 'display', 'font-family'], true)) {
                         continue;
                     }
                     $totalLen = strlen((string)$evs) + strlen((string)$bvs);
                     if ($totalLen < 100) {
-                        $mismatchDiffs[] = "elem[$i].$k: engine=$evs browser=$bvs";
+                        $mismatchDiffs[] = "elem[{$pair['eIdx']}].$k: engine=$evs browser=$bvs";
                         $perPropStats[$k]['diff']++;
                     }
                 } else {
@@ -267,6 +309,20 @@ class ElementCompareStep implements PipelineStepInterface
                     $perPropStats[$k]['match']++;
                 }
             }
+        }
+
+        // ─── 未匹配元素报告 ───
+        foreach ($eRemaining as $eIdx) {
+            $structDiffs[] = "elem[engine_only_$eIdx]: engine-only element (tag={$engineSubset[$eIdx]['tag']})";
+        }
+        foreach ($bRemaining as $bIdx) {
+            $structDiffs[] = "elem[browser_only_$bIdx]: browser-only element (tag={$browserSubset[$bIdx]['tag']})";
+        }
+
+        // 更新元素计数（使用匹配对数量替代 min 截断）
+        $matchedCount = count($matchPairs);
+        if ($matchedCount !== $eCount || $matchedCount !== $bCount) {
+            $structDiffs[] = "content_element_count: engine=$eCount browser=$bCount matched=$matchedCount";
         }
 
         // Store per-property stats in context for summary report

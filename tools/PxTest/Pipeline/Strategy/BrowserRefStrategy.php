@@ -80,6 +80,13 @@ class EdgeDomStrategy implements BrowserRefStrategy
             $html = file_get_contents($htmlPath);
             if ($html === false) continue;
 
+            // 注入 data-px-id（与 LayoutDumpStep/BrowserRefStep 一致）
+            $injectorPath = dirname(__DIR__, 2) . '/HtmlDataPxIdInjector.php';
+            if (file_exists($injectorPath)) {
+                require_once $injectorPath;
+                $html = \PxTest\HtmlDataPxIdInjector::inject($html);
+            }
+
             // ── CSS 作用域化：用 preg_replace_callback 逐条规则处理 ──
             $scope = '[data-case="'.$tag.'"]';
             if (preg_match_all('/<style[^>]*>([\s\S]*?)<\/style>/i', $html, $styleMatches)) {
