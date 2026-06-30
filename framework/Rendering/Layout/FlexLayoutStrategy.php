@@ -132,11 +132,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // CSS: flex item percentage width resolves against content width
         // When parent is null (top-level element under #root), use window viewport as containing block
-        $parentW = (int)(($node->parent !== null)
-            ? ($node->parent->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent->w)
-            : (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0));
+        $parentW = (int)(($node->parent?->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent?->w) ?: (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0));
 
-        $parentH = ($node->parent !== null) ? $node->parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
+        $parentH = $node->parent?->h ?? (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
 
         $width = CssStyleHelper::resolveWithCalc($style, 'width', $parentW);
 
@@ -159,7 +157,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $checkMR = $style['marginRightAuto'] ?? false;
         if ($checkML || $checkMR) {
             $cbW = ($node->parent !== null)
-                ? ($node->parent->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent->w)
+                ? ($node->parent?->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent?->w)
                 : 0;
             if ($cbW > 0) {
                 $totalW = max($node->w, $node->visualW ?? $node->w);
