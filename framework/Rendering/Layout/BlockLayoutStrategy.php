@@ -331,6 +331,23 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $child->x += ($childCS?->left ?? 0);
                     }
 
+                    // ── Auto margin centering for block elements (CSS 2.2 §10.3.3) ──
+                    $mLauto = $childCS?->getRaw('marginLeftAuto') ?? false;
+                    $mRauto = $childCS?->getRaw('marginRightAuto') ?? false;
+                    if (($mLauto || $mRauto) && $child->w > 0) {
+                        $containerContentW = $containerW;
+                        // The 0px margin values in $mLeft/$mRight are placeholders for auto
+                        $remaining = $containerContentW - $child->w - $mLeft - $mRight;
+                        if ($remaining > 0) {
+                            if ($mLauto && $mRauto) {
+                                $child->x += (int)($remaining / 2);
+                            } elseif ($mLauto) {
+                                $child->x += $remaining;
+                            }
+                            // marginRightAuto alone: no x offset needed
+                        }
+                    }
+
                     $dy = $child->y - $oldY;
                     // Simple descendant shift: child's children get dy offset
                     foreach ($child->children as $gc) {

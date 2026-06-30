@@ -103,10 +103,27 @@ class StyleResolver
                 $marginAutoFlags['marginBottomAuto'] = true;
                 $marginAutoFlags['marginLeftAuto'] = true;
             } else {
-                for ($i = 0; $i < $count && $i < 4; $i++) {
-                    if (strtolower(trim($parts[$i])) === 'auto') {
-                        $dirMap = ['marginTopAuto', 'marginRightAuto', 'marginBottomAuto', 'marginLeftAuto'];
-                        $marginAutoFlags[$dirMap[$i]] = true;
+                $count = count($parts);
+                if ($count === 2) {
+                    // CSS §8.3: 2-value = [top/bottom, left/right]
+                    for ($i = 0; $i < 2; $i++) {
+                        if (strtolower(trim($parts[$i])) === 'auto') {
+                            if ($i === 0) {
+                                $marginAutoFlags['marginTopAuto'] = true;
+                                $marginAutoFlags['marginBottomAuto'] = true;
+                            } else {
+                                $marginAutoFlags['marginLeftAuto'] = true;
+                                $marginAutoFlags['marginRightAuto'] = true;
+                            }
+                        }
+                    }
+                } else {
+                    // 3/4-value: top, right, bottom, left
+                    for ($i = 0; $i < $count && $i < 4; $i++) {
+                        if (strtolower(trim($parts[$i])) === 'auto') {
+                            $dirMap = ['marginTopAuto', 'marginRightAuto', 'marginBottomAuto', 'marginLeftAuto'];
+                            $marginAutoFlags[$dirMap[$i]] = true;
+                        }
                     }
                 }
             }
