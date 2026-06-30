@@ -1,142 +1,91 @@
-@generated 2026-06-11 15:45:34
+@generated 2026-06-30 17:48:12
 === Test: color:#FF0000 红色文字 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Red text"
+div (0,0 200x30) [dsp=block pos=static] text="Red text"
 
 ---
 
 === Test: font-size 32px 大字 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x50) text="Big text"
+div (0,0 200x50) [dsp=block pos=static] text="Big text"
 
 ---
 
 === Test: font-weight bold 加粗 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Bold text"
+div (0,0 200x30) [dsp=block pos=static] text="Bold text"
 
 ---
 
 === Test: text-align right 右对齐 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x30) text="Right aligned"
+div (0,0 300x30) [dsp=block pos=static] text="Right aligned"
 
 ---
 
 === Test: text-align center 居中 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x30) text="Center aligned"
+div (0,0 300x30) [dsp=block pos=static] text="Center aligned"
 
 ---
 
 === Test: white-space nowrap 不折行 ===
 Frame #1 events=0 detail=normal
-div (0,0 80x30) text="Long text that should not wrap"
+div (0,0 80x30) [dsp=block pos=static] text="Long text that should not wrap"
 
 ---
 
 === Test: text-overflow ellipsis 省略号 ===
 Frame #1 events=0 detail=normal
-div (0,0 80x30) ov=hidden text="Very long text clipped"
+div (0,0 80x30) [dsp=block pos=static] ov=hidden text="Very long text clipped"
 
 ---
 
 === Test: 字体属性组合 (color+font-size+bold) ===
 Frame #1 events=0 detail=normal
-div (0,0 400x50) text="Styled text"
-
----
-
-=== Test: text-decoration-line: underline 下划线 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Underlined text"
-=== render ===
-  [0] type=text text="Underlined text" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=underline decorationStyle=solid decorationColor=0x333333 decorationThickness=0 underlineOffset=0 textWidth=120
-
----
-
-=== Test: text-decoration-line: overline 上划线 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Overlined text"
-=== render ===
-  [0] type=text text="Overlined text" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=overline decorationStyle=solid decorationColor=0x333333 decorationThickness=0 underlineOffset=0 textWidth=112
-
----
-
-=== Test: text-decoration-line: line-through 删除线 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Strikethrough text"
-=== render ===
-  [0] type=text text="Strikethrough text" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=line-through decorationStyle=solid decorationColor=0x333333 decorationThickness=0 underlineOffset=0 textWidth=144
-
----
-
-=== Test: text-decoration-color 自定义颜色 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Colorful underline"
-=== render ===
-  [0] type=text text="Colorful underline" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=underline decorationStyle=solid decorationColor=0x0000FF decorationThickness=0 underlineOffset=0 textWidth=144
+div (0,0 400x50) [dsp=block pos=static] text="Styled text"
 
 ---
 
 === Test: text-decoration-style: double 双线 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Double underline"
+div (0,0 200x30) [dsp=block pos=static] text="Double underline"
 === render ===
-  [0] type=text text="Double underline" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=underline decorationStyle=double decorationColor=0x333333 decorationThickness=0 underlineOffset=0 textWidth=128
+  [0] type=rect | x=0 y=0 w=200 h=30 color=0x000000 layer=0
+  [1] type=text text="Double underline" | x=4 y=0 | fontSize=16 color=0x333333 bold= | decorationLine= decorationStyle=double decorationColor=3355443 decorationThickness=0 underlineOffset=0 textWidth=144
 
 ---
 
 === Test: text-decoration-style: dotted 点线 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Dotted underline"
+div (0,0 200x30) [dsp=block pos=static] text="Dotted underline"
 === render ===
-  [0] type=text text="Dotted underline" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=underline decorationStyle=dotted decorationColor=0x333333 decorationThickness=0 underlineOffset=0 textWidth=128
+  [0] type=rect | x=0 y=0 w=200 h=30 color=0x000000 layer=0
+  [1] type=text text="Dotted underline" | x=4 y=0 | fontSize=16 color=0x333333 bold= | decorationLine= decorationStyle=dotted decorationColor=3355443 decorationThickness=0 underlineOffset=0 textWidth=144
 
 ---
 
 === Test: text-decoration-style: dashed 虚线 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Dashed underline"
+div (0,0 200x30) [dsp=block pos=static] text="Dashed underline"
 === render ===
-  [0] type=text text="Dashed underline" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=underline decorationStyle=dashed decorationColor=0x333333 decorationThickness=0 underlineOffset=0 textWidth=128
+  [0] type=rect | x=0 y=0 w=200 h=30 color=0x000000 layer=0
+  [1] type=text text="Dashed underline" | x=4 y=0 | fontSize=16 color=0x333333 bold= | decorationLine= decorationStyle=dashed decorationColor=3355443 decorationThickness=0 underlineOffset=0 textWidth=144
 
 ---
 
 === Test: text-decoration-style: wavy 波浪线 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Wavy underline"
+div (0,0 200x30) [dsp=block pos=static] text="Wavy underline"
 === render ===
-  [0] type=text text="Wavy underline" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=underline decorationStyle=wavy decorationColor=0x333333 decorationThickness=0 underlineOffset=0 textWidth=112
+  [0] type=rect | x=0 y=0 w=200 h=30 color=0x000000 layer=0
+  [1] type=text text="Wavy underline" | x=4 y=0 | fontSize=16 color=0x333333 bold= | decorationLine= decorationStyle=wavy decorationColor=3355443 decorationThickness=0 underlineOffset=0 textWidth=126
 
 ---
 
 === Test: text-decoration-thickness: 3px 厚度 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Thick underline"
+div (0,0 200x30) [dsp=block pos=static] text="Thick underline"
 === render ===
-  [0] type=text text="Thick underline" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=underline decorationStyle=solid decorationColor=0x333333 decorationThickness=3 underlineOffset=0 textWidth=120
-
----
-
-=== Test: text-underline-offset: 5px 偏移 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Offset underline"
-=== render ===
-  [0] type=text text="Offset underline" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=underline decorationStyle=solid decorationColor=0x333333 decorationThickness=0 underlineOffset=5 textWidth=128
-
----
-
-=== Test: text-decoration: underline overline 多线组合 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Underline and overline"
-=== render ===
-  [0] type=text text="Underline and overline" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=underline overline decorationStyle=solid decorationColor=0x333333 decorationThickness=0 underlineOffset=0 textWidth=176
-
----
-
-=== Test: text-decoration 简写 (underline wavy #FF0000 2px) ===
-Frame #1 events=0 detail=normal
-div (0,0 200x30) text="Shorthand text"
-=== render ===
-  [0] type=text text="Shorthand text" | x=4 y=8 | fontSize=14 color=0x333333 bold=0 | decorationLine=underline decorationStyle=wavy decorationColor=0x0000FF decorationThickness=2 underlineOffset=0 textWidth=112
+  [0] type=rect | x=0 y=0 w=200 h=30 color=0x000000 layer=0
+  [1] type=text text="Thick underline" | x=4 y=0 | fontSize=16 color=0x333333 bold= | decorationLine= decorationStyle= decorationColor=3355443 decorationThickness=3 underlineOffset=0 textWidth=135
