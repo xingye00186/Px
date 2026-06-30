@@ -345,6 +345,49 @@ class CssValueParser
         return trim(strtolower($value));
     }
 
+    /**
+     * Parse line-height CSS value.
+     * Returns a string representation:
+     *   - empty string for 'normal'
+     *   - multiplier for unitless/em/percentage (e.g. '1.5')
+     *   - px string for absolute values
+     *   - 'value|unit' for rem/vw/vh/etc (resolved at runtime)
+     */
+    public static function parseLineHeight(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') return '';
+        if ($value === 'normal') return '';
+        if (preg_match('/^(\d+(\.\d+)?)$/', $value, $m)) {
+            return $m[1];
+        }
+        if (str_ends_with($value, 'px')) {
+            return (string)(int)$value;
+        }
+        if (str_ends_with($value, 'em')) {
+            return (string)(float)$value;
+        }
+        if (str_ends_with($value, '%')) {
+            return (string)((float)$value / 100.0);
+        }
+        if (preg_match('/^(\d+(\.\d+)?)\s*(rem|vw|vh|vmin|vmax|ch|ex)$/i', $value, $m)) {
+            return $m[1] . '|' . strtolower($m[3]);
+        }
+        $unitMap = [
+            'pt' => 96.0 / 72.0,
+            'pc' => 96.0 / 6.0,
+            'in' => 96.0,
+            'cm' => 96.0 / 2.54,
+            'mm' => 96.0 / 25.4,
+        ];
+        foreach ($unitMap as $unit => $pxPerUnit) {
+            if (preg_match('/^(\d+(\.\d+)?)\s*' . $unit . '$/i', $value, $m)) {
+                return (string)(int)round((float)$m[1] * $pxPerUnit);
+            }
+        }
+        return $value;
+    }
+
     public static function parseBackgroundImage(string $value): string
     {
         $v = trim($value);

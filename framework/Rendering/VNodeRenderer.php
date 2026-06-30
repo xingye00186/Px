@@ -478,16 +478,7 @@ class VNodeRenderer
         $w = $node->visualW;
         $h = $node->visualH;
 
-        // ── borderRadiusPercent — 百分比圆角（CSS Backgrounds & Borders §5.1）──
-        $brPct = $node->computedStyle?->getRaw('borderRadiusPercent');
-        if ($brPct !== null) {
-            $bp = is_numeric($brPct) ? (float)$brPct : 0.0;
-            $elemW = max(1, $w);
-            $elemH = max(1, $h);
-            $style['borderRadiusX'] = (int)($elemW * $bp / 100.0);
-            $style['borderRadiusY'] = (int)($elemH * $bp / 100.0);
-            $style['borderRadius'] = min($style['borderRadiusX'], $style['borderRadiusY']);
-        }
+        // borderRadiusPercent is now resolved inline in element builders
 
         $layer = $node->layer;
 
@@ -606,7 +597,7 @@ class VNodeRenderer
         $hasBg = $bg !== null;
 
         // ── background-image 支持 ──
-        $bgImage = $style['backgroundImage'] ?? '';
+                $bgImage = $pseudoOverrides['backgroundImage'] ?? $cs?->backgroundImage ?? '';
         $bgImageHandle = 0;
         if ($bgImage !== '' && $w > 0 && $h > 0) {
             $bgImageHandle = ImageManager::loadImage($bgImage);
@@ -864,10 +855,10 @@ class VNodeRenderer
                     $clipW -= ($borderLeftWidth + $borderRightWidth);
                     $clipH -= ($borderTopWidth + $borderBottomWidth);
                 } elseif ($backgroundClip === 'content-box') {
-                    $pl = CssStyleHelper::getInt($style, 'paddingLeft');
-                    $pt = CssStyleHelper::getInt($style, 'paddingTop');
-                    $pr = CssStyleHelper::getInt($style, 'paddingRight');
-                    $pb = CssStyleHelper::getInt($style, 'paddingBottom');
+                    $pl = $cs?->padding?->left?->toPx() ?? 0;
+                    $pt = $cs?->padding?->top?->toPx() ?? 0;
+                    $pr = $cs?->padding?->right?->toPx() ?? 0;
+                    $pb = $cs?->padding?->bottom?->toPx() ?? 0;
                     $clipX += ($borderLeftWidth + $pl); $clipY += ($borderTopWidth + $pt);
                     $clipW -= ($borderLeftWidth + $borderRightWidth + $pl + $pr);
                     $clipH -= ($borderTopWidth + $borderBottomWidth + $pt + $pb);
@@ -901,20 +892,20 @@ class VNodeRenderer
                     $segY = $contentY + $lineIdx * $lineHeight;
                     $elements[] = ['type' => 'text', 'text' => $seg, 'x' => $segX, 'y' => $segY,
                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
-                        'fontFamily' => $style['fontFamily'] ?? '',
+                        'fontFamily' => $cs?->fontFamily ?? '',
                         'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
-                        'decorationLine' => $style['textDecorationLine'] ?? 'none',
-                        'decorationColor' => $style['textDecorationColor'] ?? $textColor,
-                        'decorationStyle' => $style['decorationStyle'] ?? 'solid',
-                        'decorationThickness' => $style['decorationThickness'] ?? 0,
-                        'underlineOffset' => $style['underlineOffset'] ?? 0,
+                        'decorationLine' => $cs?->textDecorationLine ?? 'none',
+                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,
+                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
+                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                        'underlineOffset' => $cs?->getRaw('underlineOffset') ?? 0,
                         'textWidth' => $segW,
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
                         'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
-                        'letterSpacing' => $style['letterSpacing'] ?? 0,
-                        'textEmphasisStyle' => $style['textEmphasisStyle'] ?? 'none',
-                        'textEmphasisColor' => $style['textEmphasisColor'] ?? 0xFF0000,
-                        'textEmphasisPosition' => $style['textEmphasisPosition'] ?? 'over'];
+                        'letterSpacing' => $letterSpacing,
+                        'textEmphasisStyle' => 'none',
+                        'textEmphasisColor' => 0xFF0000,
+                        'textEmphasisPosition' => 'over'];
                     $lineIdx++;
                 }
                 $node->textRenderInfo = [
@@ -967,17 +958,17 @@ class VNodeRenderer
                     $segY = $contentY + $lineIdx * $lineH;
                     $elements[] = ['type' => 'text', 'text' => $seg, 'x' => $segX, 'y' => $segY,
                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
-                        'fontFamily' => $style['fontFamily'] ?? '',
+                        'fontFamily' => $cs?->fontFamily ?? '',
                         'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
-                        'decorationLine' => $style['textDecorationLine'] ?? 'none',
-                        'decorationColor' => $style['textDecorationColor'] ?? $textColor,
-                        'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
-                        'decorationThickness' => $style['textDecorationThickness'] ?? 0,
-                        'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
+                        'decorationLine' => $cs?->textDecorationLine ?? 'none',
+                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,
+                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
+                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                        'underlineOffset' => $cs?->getRaw('textUnderlineOffset') ?? 0,
                         'textWidth' => self::measureTextWidth($seg, $fontSize, $isBold),
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
                         'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
-                        'letterSpacing' => $style['letterSpacing'] ?? 0];
+                        'letterSpacing' => $letterSpacing];
                     $lineIdx++;
                 }
 
@@ -992,17 +983,17 @@ class VNodeRenderer
                 // ── Single-line rendering (original) ──
                 $elements[] = ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
-                        'fontFamily' => $style['fontFamily'] ?? '',
+                        'fontFamily' => $cs?->fontFamily ?? '',
                         'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
-                        'decorationLine' => $style['textDecorationLine'] ?? 'none',
-                        'decorationColor' => $style['decorationColor'] ?? $textColor,
-                        'decorationStyle' => $style['decorationStyle'] ?? 'solid',
-                        'decorationThickness' => $style['decorationThickness'] ?? 0,
-                        'underlineOffset' => $style['underlineOffset'] ?? 0,
+                        'decorationLine' => $cs?->textDecorationLine ?? 'none',
+                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,
+                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
+                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                        'underlineOffset' => $cs?->getRaw('underlineOffset') ?? 0,
                         'textWidth' => self::measureTextWidth($text, $fontSize, $isBold),
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
                         'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
-                        'letterSpacing' => $style['letterSpacing'] ?? 0];
+                        'letterSpacing' => $letterSpacing];
 
                 // 存储文本渲染位置信息（用于 layout dump 验证垂直居中）
                 $node->textRenderInfo = [
@@ -1019,7 +1010,7 @@ class VNodeRenderer
 
             // ── overflow:hidden 文本层 clip ──
             // 使用统一 computePaddingBoxClip 确保与 scroll 容器 clip 同一坐标系
-            $elOverflowHidden = ($style['overflow'] ?? 'visible') === 'hidden';
+            $elOverflowHidden = ($cs?->overflow?->value ?? 'visible') === 'hidden';
             if ($elOverflowHidden && !$node->isScrollContainer && $selfW > 0 && $selfH > 0) {
                 $itemClip = self::computePaddingBoxClip($node);
                 $clipX = $itemClip['x'];

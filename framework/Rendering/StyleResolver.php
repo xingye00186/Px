@@ -263,6 +263,7 @@ class StyleResolver
             'parseBorder' => CssValueParser::parseBorder($value),
             'parseOpacity' => CssValueParser::parseOpacity($value),
             'parseIdent' => CssValueParser::parseIdent($value),
+            'parseLineHeight' => CssValueParser::parseLineHeight($value),
             'parseBackgroundImage' => CssValueParser::parseBackgroundImage($value),
             'parseTransform' => CssValueParser::parseTransform($value),
             'parseBoxShadow' => CssValueParser::parseBoxShadow($value),
