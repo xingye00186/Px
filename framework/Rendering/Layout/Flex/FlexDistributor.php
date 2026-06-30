@@ -39,7 +39,7 @@ class FlexDistributor
      */
     public function distributeLine(
         array $lineChildren,
-        array &$lineFlexData,
+        array $lineFlexData,
         array $style,
         array $layoutParams,
         int $lineCrossBase
