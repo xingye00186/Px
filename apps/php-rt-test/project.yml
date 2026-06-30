@@ -13,3 +13,5 @@ sources:
 ignore:
   - ../../framework/compiler
   - ../../framework/aot-checker.php
+
+Px_clear_compilation_cache: true
