@@ -574,10 +574,11 @@ class PxIdGenerateStep implements \PxTest\Pipeline\PipelineStepInterface
             $injectedHtml = \PxTest\HtmlDataPxIdInjector::inject($htmlContent);
             $generatedVue = \PxTest\HtmlToVueConverter::convert($injectedHtml, $tag);
 
+            // 确定 .vue 路径：优先覆盖已有 .vue，否则新建
             $vueFiles = glob("$dir/*.vue");
-            if (empty($vueFiles)) continue;
+            $vueFile = !empty($vueFiles) ? $vueFiles[0] : "$dir/$tag.vue";
 
-            file_put_contents($vueFiles[0], $generatedVue);
+            file_put_contents($vueFile, $generatedVue);
             touch($markerFile);
             $changed++;
         }

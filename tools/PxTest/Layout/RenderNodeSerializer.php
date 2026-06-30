@@ -2,14 +2,15 @@
 
 namespace PxTest\Layout;
 
+use Px\Rendering\ComputedStyle;
 use Px\Rendering\RenderNode;
 
 /**
- * RenderNode 序列化器 — 从 RenderTreeManager::dumpRenderTree 抽取的独立类。
+ * RenderNode 序列化器 — Application::serializeRenderNode 的职责迁出目标。
  *
  * 支持多种输出格式，强制归一化剔除动态字段（防止假阳性）：
  * - 剔除: parent, sourceVNode, positioningAncestor, animatedStyle
- * - 保留: type, x/y/w/h, visualW/visualH, layer, style (关键布局属性)
+ * - 保留: type, x/y/w/h, visualW/visualH, layer, style, dataset (关键布局属性)
  */
 class RenderNodeSerializer
 {
@@ -29,20 +30,34 @@ class RenderNodeSerializer
     ];
 
     /**
-     * Style 归一化保留字段 — 仅保留关键布局属性。
+     * Style 导出白名单 — 与 Application::serializeRenderNode 保持一致。
      */
-    public const STYLE_KEEP_KEYS = [
-        'bg', 'fg', 'fontSize', 'fontWeight', 'bold', 'display',
-        'flexDirection', 'flexWrap', 'gap',
-        'justifyContent', 'alignItems',
-        'boxSizing', 'overflowX', 'overflowY',
-        'textAlign', 'lineHeight', 'whiteSpace', 'wordBreak',
-        'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
+    private const STYLE_EXPORT_KEYS = [
+        'bg', 'fg', 'bgFromGradient', 'fontSize', 'fontWeight', 'bold', 'borderWidth', 'borderColor',
+        'borderRadius', 'borderStyle', 'textAlign', 'textIndent', 'textTransform',
+        'lineHeight', 'whiteSpace', 'wordBreak', 'fontStyle', 'fontFamily', 'opacity', 'visibility',
+        'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
         'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
-        'borderWidth', 'borderColor', 'borderRadius',
-        'outlineWidth', 'outlineStyle', 'outlineColor',
-        'textDecorationLine', 'textDecorationColor', 'textDecorationStyle',
+        '_computedMarginLeft', '_computedMarginRight',
+        'minHeight', 'maxHeight', 'minWidth', 'maxWidth',
+        'gap', 'boxSizing', 'boxShadow',
+        'width', 'height',
+        'flexDirection', 'alignItems', 'justifyContent', 'flexWrap',
+        'flexShrink', 'flexGrow', 'order',
+        'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',
+        'gridColumn', 'gridRow', 'gridAutoRows', 'gridTemplateAreas',
+        'justifyItems', 'alignSelf', 'justifySelf', 'alignContent',
+        'overflow', 'overflowX', 'overflowY', 'overflowWrap', 'backgroundRepeat', 'backgroundClip', 'backgroundOrigin', 'backgroundAttachment', 'objectFit', 'objectPosition', 'textShadow', 'letterSpacing', 'wordSpacing', 'verticalAlign', 'fontVariant', 'fontStretch', 'appearance', 'borderCollapse', 'borderSpacing', 'tableLayout', 'captionSide', 'listStyleType', 'listStylePosition',
+        'pointerEvents',
+        'outlineWidth', 'outlineStyle', 'outlineColor', 'outlineOffset',
+        'columnCount', 'columnWidth', 'columnGap', 'columnRuleWidth', 'columnRuleStyle', 'columnRuleColor',
+        'textDecorationLine', 'textDecorationColor', 'textDecorationStyle', 'textDecorationThickness',
     ];
+
+    /** 内联元素类型（用于默认 display 推断） */
+    private const INLINE_TYPES = ['span', '#text', 'b', 'strong', 'em', 'i', 'code', 'a', 'label', 'br'];
+
+    private const LIST_ITEM_TYPES = ['li'];
 
     /**
      * 序列化为 JSON 格式（含归一化）。
@@ -58,17 +73,22 @@ class RenderNodeSerializer
      */
     public function toArray(RenderNode $node): array
     {
-        $result = $this->nodeToArray($node);
-        if (!empty($node->children)) {
-            $result['children'] = [];
-            foreach ($node->children as $i => $child) {
-                $result['children'][] = $this->nodeToArray($child);
-                // 递归
-                $childData = $this->toArray($child);
-                if (isset($childData['children'])) {
-                    $result['children'][$i]['children'] = $childData['children'];
-                }
-            }
+        return $this->nodeToArrayRecursive($node, []);
+    }
+
+    /**
+     * 递归序列化，携带 parentStyle 用于继承补全。
+     */
+    private function nodeToArrayRecursive(RenderNode $node, array $parentStyle): array
+    {
+        $result = $this->nodeToArray($node, $parentStyle);
+        $children = [];
+        $ownStyle = $result['style'] ?? [];
+        foreach ($node->children as $child) {
+            $children[] = $this->nodeToArrayRecursive($child, $ownStyle);
+        }
+        if (!empty($children)) {
+            $result['children'] = $children;
         }
         return $result;
     }
@@ -93,9 +113,9 @@ class RenderNodeSerializer
 
         // 仅导出关键样式
         $styleParts = [];
-        foreach (self::STYLE_KEEP_KEYS as $k) {
-            if (isset($node->style[$k])) {
-                $styleParts[] = "{$k}={$node->style[$k]}";
+        foreach (self::STYLE_EXPORT_KEYS as $k) {
+            if (isset($node->getStyleArray()[$k])) {
+                $styleParts[] = "{$k}={$node->getStyleArray()[$k]}";
             }
         }
         if (!empty($styleParts)) {
@@ -119,9 +139,11 @@ class RenderNodeSerializer
     }
 
     /**
-     * 单个节点转数组（含归一化剔除）。
+     * 单个节点转数组。
+     *
+     * @param array $parentStyle 父节点样式（用于 CSS 继承属性补全）
      */
-    private function nodeToArray(RenderNode $node): array
+    private function nodeToArray(RenderNode $node, array $parentStyle = []): array
     {
         $result = [
             'type'             => $node->type,
@@ -133,32 +155,117 @@ class RenderNodeSerializer
             'visualH'          => $node->visualH,
             'layer'            => $node->layer,
             'isScrollContainer' => $node->isScrollContainer,
+            'scrollTop'        => $node->scrollTop,
+            'scrollLeft'       => $node->scrollLeft,
+            'contentHeight'    => $node->contentHeight,
+            'contentWidth'     => $node->contentWidth,
+            'renderOffsetX'    => $node->renderOffsetX,
+            'renderOffsetY'    => $node->renderOffsetY,
             'key'              => $node->key,
             'groupId'          => $node->groupId,
             'layoutDirty'      => $node->layoutDirty,
         ];
-
-        // 滚动容器专属字段
-        if ($node->isScrollContainer) {
-            $result['scrollTop']     = $node->scrollTop;
-            $result['scrollLeft']    = $node->scrollLeft;
-            $result['contentHeight'] = $node->contentHeight;
-            $result['contentWidth']  = $node->contentWidth;
-        }
-
-        // 归一化 style：仅保留关键布局属性
-        $result['style'] = [];
-        foreach (self::STYLE_KEEP_KEYS as $k) {
-            if (isset($node->style[$k])) {
-                $result['style'][$k] = $node->style[$k];
-            }
-        }
 
         // 文本内容
         if ($node->content !== null && is_string($node->content)) {
             $result['content'] = $node->content;
         }
 
+        // textRenderInfo
+        if ($node->textRenderInfo !== null) {
+            $result['textRenderInfo'] = $node->textRenderInfo;
+        }
+
+        // dataset: 从 sourceVNode 提取 data-* 属性（如 data-px-id）
+        // 浏览器 dump_layout.js 中 dataset 使用 JS dataset API，
+        // 将 data-px-id 转为 dataset.pxId（驼峰式），引擎端必须保持一致。
+        if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+            $dataset = [];
+            foreach ($node->sourceVNode->props as $key => $val) {
+                if (str_starts_with((string)$key, 'data-')) {
+                    $dsKey = substr((string)$key, 5);
+                    // 转为驼峰式以匹配浏览器 dataset API: px-id → pxId
+                    $camelKey = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $dsKey))));
+                    $dataset[$camelKey] = (string)$val;
+                }
+            }
+            if (!empty($dataset)) {
+                $result['dataset'] = $dataset;
+            }
+        }
+
+        // ── Style 导出 ──
+        $exportData = $node->computedStyle !== null ? $node->computedStyle->toExportArray() : [];
+        $style = [];
+        foreach (self::STYLE_EXPORT_KEYS as $k) {
+            if (isset($exportData[$k]) && $exportData[$k] !== null) {
+                $style[$k] = $exportData[$k];
+            }
+        }
+
+        // CSS 继承属性补全
+        if (!isset($style['textAlign']) && isset($parentStyle['textAlign'])) {
+            $style['textAlign'] = $parentStyle['textAlign'];
+        }
+        if (!isset($style['fg']) && isset($parentStyle['fg'])) {
+            $style['fg'] = $parentStyle['fg'];
+        }
+
+        // 百分比宽/高：用布局计算值替换原始 CSS 值
+        if ($node->computedStyle !== null && $node->computedStyle->width->isPercent()) {
+            $style['width'] = $node->w;
+        }
+        if ($node->computedStyle !== null && $node->computedStyle->height->isPercent()) {
+            $style['height'] = $node->h;
+        }
+
+        // bg 默认 -1 表示无显式背景/透明
+        if (!isset($style['bg'])) {
+            $style['bg'] = -1;
+        }
+
+        // Border color 4-side format (CSS 2.2 §8.5.2)
+        $bc = $style['borderColor'] ?? null;
+        $bw = $style['borderWidth'] ?? 0;
+        if ($bc !== null || $bw > 0) {
+            $bTopC = $exportData['borderTopColor'] ?? $bc;
+            $bRightC = $exportData['borderRightColor'] ?? $bc;
+            $bBottomC = $exportData['borderBottomColor'] ?? $bc;
+            $bLeftC = $exportData['borderLeftColor'] ?? $bc;
+            if ($bTopC !== null && $bRightC !== null && $bBottomC !== null && $bLeftC !== null) {
+                $style['borderColor'] = self::formatColorInt($bTopC) . ' '
+                    . self::formatColorInt($bRightC) . ' '
+                    . self::formatColorInt($bBottomC) . ' '
+                    . self::formatColorInt($bLeftC);
+            }
+        }
+
+        // 默认 display
+        if (!isset($style['display'])) {
+            if (in_array($node->type, self::INLINE_TYPES, true)) {
+                $style['display'] = 'inline';
+            } elseif (in_array($node->type, self::LIST_ITEM_TYPES, true)) {
+                $style['display'] = 'list-item';
+            } else {
+                $style['display'] = 'block';
+            }
+        }
+
+        if (!empty($style)) {
+            $result['style'] = $style;
+        }
+
         return $result;
+    }
+
+    /**
+     * 将 ARGB int 格式化为 "rgb(r, g, b)" 字符串。
+     */
+    private static function formatColorInt(int $color): string
+    {
+        $r = ($color >> 16) & 0xFF;
+        $g = ($color >> 8) & 0xFF;
+        $b = $color & 0xFF;
+        return "rgb($r, $g, $b)";
     }
 }
