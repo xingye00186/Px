@@ -569,6 +569,35 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         // ── Set container's own visualW/visualH ──
         $node->visualW = CssStyleHelper::visualWidth($style, $node->w);
         $node->visualH = CssStyleHelper::visualHeight($style, $node->h);
+
+        // ── 同步 builder 中的子 Fragment 为 grid 算法计算的正确位置 ──
+        // grid 算法直接写入 $node->children[$i]->x/y/w/h，但 builder 中的子 Fragment
+        // 来自 resolveChildren（grid 算法之前），位置/尺寸已过时。
+        if ($builder !== null) {
+            $gridChildren = [];
+            foreach ($node->children as $ch) {
+                $chCS = $ch->computedStyle;
+                $gridChildren[] = new LayoutFragment(
+                    x: $ch->x,
+                    y: $ch->y,
+                    w: $ch->w,
+                    h: $ch->h,
+                    visualW: $ch->visualW,
+                    visualH: $ch->visualH,
+                    layer: $ch->layer,
+                    contentWidth: $ch->contentWidth,
+                    contentHeight: $ch->contentHeight,
+                    style: $chCS,
+                    children: [],
+                );
+            }
+            $builder->replaceChildren($gridChildren);
+            $builder
+                ->setPosition($node->x, $node->y)
+                ->setSize($node->w, $node->h, $computedStyle)
+                ->setLayer($node->layer)
+                ->setContentSize($node->contentWidth, $node->contentHeight);
+        }
     }
 
     /**
