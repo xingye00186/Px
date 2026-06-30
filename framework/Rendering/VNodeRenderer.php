@@ -463,7 +463,7 @@ class VNodeRenderer
      */
     private function renderNodeToElement(RenderNode $node): ?array
     {
-        $style = $node->style;
+        $style = $node->getStyleArray();
 
         // CSS 2.2 §9.2.4: display:none 元素不生成盒子，不参与渲染
         if (($style['display'] ?? '') === 'none') {
