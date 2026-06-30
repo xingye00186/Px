@@ -625,7 +625,7 @@ class VNodeRenderer
         $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;
         $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;
         $boxShadowRaw = $pseudoOverrides['boxShadow'] ?? $cs?->boxShadow ?? '';
-        $offsets = CssMappings::parseBoxShadowOffsets($boxShadowRaw);
+        $offsets = CssValueParser::parseBoxShadowOffsets($boxShadowRaw);
         $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowBlur = $offsets['blur']; $shadowColor = $offsets['color']; $shadowAlpha = $offsets['alpha']; $shadowInset = $offsets['inset'];
         $backgroundClip = $pseudoOverrides['backgroundClip'] ?? $cs?->backgroundClip ?? 'border-box';
         $backgroundAttachment = $pseudoOverrides['backgroundAttachment'] ?? $cs?->backgroundAttachment ?? 'scroll';
@@ -661,7 +661,7 @@ class VNodeRenderer
 
         // ── Text shadow ──
         $textShadowRaw = $pseudoOverrides['textShadow'] ?? $cs?->textShadow ?? '';
-        $tsOffsets = CssMappings::parseBoxShadowOffsets($textShadowRaw);
+        $tsOffsets = CssValueParser::parseBoxShadowOffsets($textShadowRaw);
         $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];
 
         // ── Border properties ──
@@ -1181,7 +1181,7 @@ class VNodeRenderer
 
         // ── Text shadow ──
         $rawTextShadow = $cs?->textShadow ?? '';
-        $tsOffsets = CssMappings::parseBoxShadowOffsets($rawTextShadow);
+        $tsOffsets = CssValueParser::parseBoxShadowOffsets($rawTextShadow);
         $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];
 
         // ── Vertical alignment ──
@@ -1336,7 +1336,7 @@ class VNodeRenderer
         $borderRadiusX = 0;
         $borderRadiusY = 0;
         $opacity = $cs?->opacity ?? 1.0;
-        $shadowOffsets = CssMappings::parseBoxShadowOffsets($cs?->boxShadow ?? '');
+        $shadowOffsets = CssValueParser::parseBoxShadowOffsets($cs?->boxShadow ?? '');
         $shadowX = $shadowOffsets['h']; $shadowY = $shadowOffsets['v']; $shadowBlur = $shadowOffsets['blur']; $shadowColor = $shadowOffsets['color']; $shadowAlpha = $shadowOffsets['alpha']; $shadowInset = $shadowOffsets['inset'];
 
         $label = '';
@@ -1415,7 +1415,7 @@ class VNodeRenderer
 
         // box-shadow
         $boxShadowRaw = $pseudoOverrides['boxShadow'] ?? $cs?->boxShadow ?? '';
-        $shadowOffsets = CssMappings::parseBoxShadowOffsets($boxShadowRaw);
+        $shadowOffsets = CssValueParser::parseBoxShadowOffsets($boxShadowRaw);
         $shadowX = $shadowOffsets['h']; $shadowY = $shadowOffsets['v']; $shadowBlur = $shadowOffsets['blur']; $shadowColor = $shadowOffsets['color']; $shadowAlpha = $shadowOffsets['alpha']; $shadowInset = $shadowOffsets['inset'];
 
         // border

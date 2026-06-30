@@ -190,7 +190,7 @@ class CssValueParser
         return $width . '|' . self::hexToBgr($color) . '|' . $style;
     }
 
-    public static function parseBoxShadow(string $value): string
+   public static function parseBoxShadow(string $value): string
     {
         $v = trim($value);
         if ($v === '' || $v === 'none') return '';
@@ -236,7 +236,32 @@ class CssValueParser
     }
 
     /**
-     * Parse linear-gradient() CSS value into structured array.
+     * 将 parseBoxShadow 的 | 分隔字符串解析为偏移量数组。
+     *
+     * @return array{h:int, v:int, blur:int, spread:int, color:int, alpha:float, inset:bool}
+     */
+    public static function parseBoxShadowOffsets(string $boxShadow): array
+    {
+        $parts = explode('|', $boxShadow);
+        $offset = 0;
+        $isInset = false;
+        if (isset($parts[0]) && $parts[0] === 'inset') {
+            $isInset = true;
+            $offset = 1;
+        }
+        return [
+            'h'      => (int)($parts[0 + $offset] ?? 0),
+            'v'      => (int)($parts[1 + $offset] ?? 0),
+            'blur'   => (int)($parts[2 + $offset] ?? 0),
+            'spread' => (int)($parts[3 + $offset] ?? 0),
+            'color'  => self::hexToBgr($parts[4 + $offset] ?? '#000000'),
+            'alpha'  => (float)($parts[5 + $offset] ?? 0.5),
+            'inset'  => $isInset,
+        ];
+    }
+
+    /**
+     * Parse linear-gradient() CSS value into structured array.",
      *
      * Supports: linear-gradient(angle, color1, color2, ...)
      * Currently simplified to 2-color gradient support.
