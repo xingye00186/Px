@@ -465,6 +465,13 @@ class VNodeRenderer
     {
         $style = $node->getStyleArray();
 
+        // ── DIAG: 检测 style 数组中是否有 CssValue 残留 ──
+        foreach ($style as $sk => $sv) {
+            if ($sv instanceof CssValue) {
+                error_log('[DIAG_VNR] renderNodeToElement node=' . $node->type . ' key=' . $sk . ' class=' . get_class($sv));
+            }
+        }
+
         // CSS 2.2 §9.2.4: display:none 元素不生成盒子，不参与渲染
         if (($style['display'] ?? '') === 'none') {
             return null;
@@ -472,19 +479,20 @@ class VNodeRenderer
 
         // ── 伪类样式合并（:hover/:focus/:active）──
         // 根据节点交互状态应用预解析的伪类样式，优先级：active > focus > hover
+        // 注意: 伪类样式中的 CssValue 对象需要转 raw 值，否则后续 (int) 强转会炸
         if ($node->hovered && isset($style['__hoverStyle'])) {
             foreach ($style['__hoverStyle'] as $hk => $hv) {
-                $style[$hk] = $hv;
+                $style[$hk] = self::cssValueToRaw($hv);
             }
         }
         if ($node->focused && isset($style['__focusStyle'])) {
             foreach ($style['__focusStyle'] as $fk => $fv) {
-                $style[$fk] = $fv;
+                $style[$fk] = self::cssValueToRaw($fv);
             }
         }
         if ($node->active && isset($style['__activeStyle'])) {
             foreach ($style['__activeStyle'] as $ak => $av) {
-                $style[$ak] = $av;
+                $style[$ak] = self::cssValueToRaw($av);
             }
         }
         // A1 重构: 布局坐标 + 绘制时滚动偏移（不在布局层修改坐标）
@@ -611,7 +619,11 @@ class VNodeRenderer
         if ($h <= 0) $h = 32;
 
         $bg = $style['bg'] ?? null;
-        $hasBorder = ($style['borderWidth'] ?? 0) > 0
+        $bwVal = $style['borderWidth'] ?? 0;
+        if ($bwVal instanceof CssValue) {
+            error_log('[DIAG_VNR] borderWidth class=' . get_class($bwVal));
+        }
+        $hasBorder = ($bwVal > 0)
             || ($style['borderTopWidth'] ?? 0) > 0
             || ($style['borderRightWidth'] ?? 0) > 0
             || ($style['borderBottomWidth'] ?? 0) > 0
@@ -760,9 +772,9 @@ class VNodeRenderer
             $selfW = $node->visualW;
 
             // CSS 2.2 §17.5: 文本内容位于 content area (border + padding 内部)
-            $contentX = $selfX + $borderLeftWidth + ($style['paddingLeft'] ?? 0);
-            $contentY = $selfY + $borderTopWidth + ($style['paddingTop'] ?? 0);
-            $contentW = max(0, $selfW - $borderLeftWidth - $borderRightWidth - ($style['paddingLeft'] ?? 0) - ($style['paddingRight'] ?? 0));
+            $contentX = $selfX + $borderLeftWidth + CssStyleHelper::getInt($style, 'paddingLeft');
+            $contentY = $selfY + $borderTopWidth + CssStyleHelper::getInt($style, 'paddingTop');
+            $contentW = max(0, $selfW - $borderLeftWidth - $borderRightWidth - CssStyleHelper::getInt($style, 'paddingLeft') - CssStyleHelper::getInt($style, 'paddingRight'));
 
             // ── text-overflow: ellipsis 文本溢出省略（CSS Text Module Level 3 §5.3）──
             // 标准 CSS 要求 overflow:hidden + white-space:nowrap 才生效，
@@ -838,7 +850,7 @@ class VNodeRenderer
             // 当元素是 flex 容器且 alignItems=center 时，文本在 content area 内垂直居中
             $textY = $contentY;
             $alignItems = $style['alignItems'] ?? 'stretch';
-            $contentH = max(0, $selfH - $borderTopWidth - $borderBottomWidth - ($style['paddingTop'] ?? 0) - ($style['paddingBottom'] ?? 0));
+            $contentH = max(0, $selfH - $borderTopWidth - $borderBottomWidth - CssStyleHelper::getInt($style, 'paddingTop') - CssStyleHelper::getInt($style, 'paddingBottom'));
             // 精确测量文本总高度（ascent + descent），确保视觉居中
             $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
             if (($display === 'flex' || $display === 'inline-flex') && $alignItems === 'center') {
@@ -882,8 +894,10 @@ class VNodeRenderer
                     $clipW -= ($borderLeftWidth + $borderRightWidth);
                     $clipH -= ($borderTopWidth + $borderBottomWidth);
                 } elseif ($backgroundClip === 'content-box') {
-                    $pl = $style['paddingLeft'] ?? 0; $pt = $style['paddingTop'] ?? 0;
-                    $pr = $style['paddingRight'] ?? 0; $pb = $style['paddingBottom'] ?? 0;
+                    $pl = CssStyleHelper::getInt($style, 'paddingLeft');
+                    $pt = CssStyleHelper::getInt($style, 'paddingTop');
+                    $pr = CssStyleHelper::getInt($style, 'paddingRight');
+                    $pb = CssStyleHelper::getInt($style, 'paddingBottom');
                     $clipX += ($borderLeftWidth + $pl); $clipY += ($borderTopWidth + $pt);
                     $clipW -= ($borderLeftWidth + $borderRightWidth + $pl + $pr);
                     $clipH -= ($borderTopWidth + $borderBottomWidth + $pt + $pb);
@@ -1620,5 +1634,25 @@ class VNodeRenderer
         foreach ($node->children as $child) {
             $this->resetAllPaintFlags($child);
         }
+    }
+
+    /**
+     * 将 CssValue 对象转为原始 PHP 值（避免 (int) 强转炸掉）。
+     */
+private static function cssValueToRaw(mixed $v): mixed
+    {
+        if ($v instanceof CssLength || $v instanceof CssRect) {
+            return $v->toPx();
+        }
+        if ($v instanceof CssKeyword) {
+            return $v->value;
+        }
+        if ($v instanceof CssColor) {
+            return $v->toBgr();
+        }
+        if ($v instanceof CssFlex) {
+            return $v->grow . ' ' . $v->shrink . ' ' . $v->basis->toPx();
+        }
+        return $v;
     }
 }
