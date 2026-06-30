@@ -958,7 +958,7 @@ class CssMappings
      * @param array $raw Raw style declarations
      * @return array Updated raw declarations with expanded sub-properties
      */
-    private static function expandTextDecorationShorthand(array $raw): array
+    public static function expandTextDecorationShorthand(array $raw): array
     {
         if (!isset($raw['text-decoration']) || $raw['text-decoration'] === '') {
             return $raw;

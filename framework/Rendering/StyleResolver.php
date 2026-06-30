@@ -134,6 +134,10 @@ class StyleResolver
 
         // Apply PROPERTY_MAP parsers
         $lookup = array_merge(CssMappings::getPropertyMap(), CssMappings::getInlinePropertyMap());
+
+        // Expand text-decoration shorthand before property parsing
+        $raw = \Px\Rendering\CssMappings::expandTextDecorationShorthand($raw);
+
         foreach ($raw as $propName => $value) {
             if (str_starts_with($propName, '--')) continue;
             $map = $lookup[$propName] ?? null;
