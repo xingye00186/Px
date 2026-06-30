@@ -319,6 +319,8 @@ class ComputedStyle
             $fv = $d['flex'];
             if ($fv instanceof CssFlex) {
                 $this->flex = $fv;
+            } elseif ($fv instanceof CssKeyword) {
+                $this->flex = CssFlex::fromString($fv->value);
             } elseif (is_string($fv)) {
                 $this->flex = CssFlex::fromString($fv);
             } else {
