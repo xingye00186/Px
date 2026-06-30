@@ -86,5 +86,5 @@ apps/css-test/test_case/*/*.vue
 # 运行报告
 # test_report.md (不再使用)
 *.rsp
-layout/
-layout_new/
+/layout/
+/layout_new/
