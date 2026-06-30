@@ -481,17 +481,45 @@ class LayoutResolver
         LayoutConstraints $constraints,
         FragmentBuilder   $builder
     ): void {
-        $childOffX = $node->computedStyle !== null ? $node->computedStyle->childOffsetX() : 0;
-        $childOffY = $node->computedStyle !== null ? $node->computedStyle->childOffsetY() : 0;
+        // 使用节点自身的 content box 作为子节点的包含块，而非传递约束
+        // 对于 block 元素，节点尺寸在 resolveWithBuilder 中设置，但 resolveChildren 先执行
+        // 此处使用 node->w/h 的当前值（可能在策略执行后更新）
+        $cs = $node->computedStyle;
+        $padL = $cs !== null ? $cs->padding->left->toPx() : 0;
+        $padR = $cs !== null ? $cs->padding->right->toPx() : 0;
+        $padT = $cs !== null ? $cs->padding->top->toPx() : 0;
+        $padB = $cs !== null ? $cs->padding->bottom->toPx() : 0;
+        $bL = $cs !== null ? $cs->borderLeftWidth : 0;
+        $bR = $cs !== null ? $cs->borderRightWidth : 0;
+        $bT = $cs !== null ? $cs->borderTopWidth : 0;
+        $bB = $cs !== null ? $cs->borderBottomWidth : 0;
+        $isBorderBox = $cs !== null && $cs->boxSizing->value === 'border-box';
+
+        // 子节点的包含块宽度：优先用 node->w（策略已执行），其次用 style 显式宽度，最后回退到约束值
+        // 注意：node->w 的意义取决于 box-sizing
+        //   content-box: node->w = 内容宽度（不包含 padding/border），直接用作包含块宽度
+        //   border-box:  node->w = 总宽度（包含 padding/border），需减去 padding/border 得内容宽度
+        $csW = $cs !== null ? $cs->width->toPx() : 0;
+        $rawW = $node->w > 0 ? $node->w : ($csW > 0 ? $csW : 0);
+        if ($rawW > 0) {
+            $cbWidth = $isBorderBox ? max(0, $rawW - $padL - $padR - $bL - $bR) : $rawW;
+        } else {
+            $cbWidth = max(0, $constraints->contentWidth);
+        }
+        $cbHeight = $node->h > 0
+            ? ($node->h - $padT - $padB - $bT - $bB)
+            : max(0, $constraints->contentHeight);
+        $childOffX = $node->x + $padL + $bL;
+        $childOffY = $node->y + $padT + $bT;
 
         foreach ($node->children as $child) {
             $childConstraints = new LayoutConstraints(
-                (int)($constraints->contentWidth ?? 0),
-                (int)($constraints->contentHeight ?? 0),
-                (int)($constraints->parentContentX ?? 0) + (int)($childOffX ?? 0),
-                (int)($constraints->parentContentY ?? 0) + (int)($childOffY ?? 0),
-                (int)($constraints->contentWidth ?? 0),
-                (int)($constraints->contentHeight ?? 0),
+                (int)max(0, $cbWidth),
+                (int)max(0, $cbHeight),
+                (int)($childOffX),
+                (int)($childOffY),
+                (int)max(0, $cbWidth),
+                (int)max(0, $cbHeight),
             );
             $childFragment = $this->resolveNodeInternal($child, $childConstraints);
             $builder->addChild($childFragment);

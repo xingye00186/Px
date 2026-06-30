@@ -95,7 +95,19 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $padL = $ps->padding->left->toPx();
             $padR = $ps->padding->right->toPx();
             $pbw = $ps->borderLeftWidth + $ps->borderRightWidth;
-            $parentW = $parentW_raw - $padL - $padR - $pbw;
+            // 如果父容器的 w 尚未计算（0），使用 computedStyle 中的显式宽度
+            if ($parentW_raw <= 0) {
+                $parentW_raw = $ps->width->toPx();
+            }
+            // 根据 box-sizing 确定 parentW_raw 是否包含 padding/border
+            // content-box: parentW_raw = 内容宽度，padding/border 在外围，不用减
+            // border-box:  parentW_raw = 总宽度，需减去 padding/border 得内容宽度
+            $parentSizing = $ps->boxSizing->value;
+            if ($parentSizing === 'border-box') {
+                $parentW = $parentW_raw - $padL - $padR - $pbw;
+            } else {
+                $parentW = (int)$parentW_raw;
+            }
         } else {
             $parentW = (int)$parentW_raw;
         }
@@ -110,9 +122,20 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
-        // ── 应用 min/max 约束到尺寸 ──
+        // ── 初始尺寸 ──
         $node->w = (int)max(0, $width);
         $node->h = (int)max(0, $height);
+
+        // ── min/max-width 约束（在 auto-width 前后都应用一次） ──
+        $minW = $computedStyle?->minWidth?->toPx() ?? 0;
+        $maxW = $computedStyle?->maxWidth?->toPx() ?? 0;
+        $minH = $computedStyle?->minHeight?->toPx() ?? 0;
+        $maxH = $computedStyle?->maxHeight?->toPx() ?? 0;
+        $clampWidth = function() use (&$node, $minW, $maxW) {
+            if ($maxW > 0 && $node->w > $maxW) $node->w = $maxW;
+            if ($minW > 0 && $node->w < $minW) $node->w = $minW;
+        };
+        $clampWidth();
 
         $hasExplicitW = $computedStyle !== null && ($computedStyle->width->toPx() > 0 || $computedStyle->width->isPercent());
         if ($computedStyle !== null) {
@@ -135,6 +158,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
             $node->w = (int)max(0, $autoW);
             if ($computedStyle !== null) $node->visualW = $computedStyle->visualWidth($node->w);
+            $clampWidth(); // auto-width 后再 clamp 一次（min/max 约束）
         }
 
         // ── Text content measurement ──
@@ -346,6 +370,31 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
+        // ── 同步子 fragment 位置（auto-stack 直接修改了 RenderNode，需同步到 builder）──
+        if ($builder !== null && $builder->childCount() > 0 && count($node->children) > 0) {
+            $existingChildren = $builder->getChildren();
+            $updatedChildren = [];
+            $childCount = min(count($existingChildren), count($node->children));
+            for ($i = 0; $i < $childCount; $i++) {
+                $child = $node->children[$i];
+                $oldFrag = $existingChildren[$i];
+                $updatedChildren[] = new LayoutFragment(
+                    x: $child->x,
+                    y: $child->y,
+                    w: $oldFrag->w,
+                    h: $oldFrag->h,
+                    visualW: $oldFrag->visualW,
+                    visualH: $oldFrag->visualH,
+                    layer: $oldFrag->layer,
+                    contentWidth: $oldFrag->contentWidth,
+                    contentHeight: $oldFrag->contentHeight,
+                    style: $oldFrag->style,
+                    children: $oldFrag->children
+                );
+            }
+            $builder->replaceChildren($updatedChildren);
+        }
+
         // ── 通过 builder 输出最终结果（不依赖 node 读回）──
         if ($builder !== null) {
             $builder
@@ -368,9 +417,13 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         int $left,
         int $top
     ): void {
-        if ($position === 'static' || $position === 'relative') {
+        if ($position === 'relative') {
             $node->x = $parentX + $left;
             $node->y = $parentY + $top;
+        } elseif ($position === 'static') {
+            // CSS 2.2 §9.3.1: left/top 在 static 定位下无效
+            $node->x = $parentX;
+            $node->y = $parentY;
         }
     }
 
