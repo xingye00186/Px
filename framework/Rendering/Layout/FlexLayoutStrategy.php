@@ -12,7 +12,6 @@ use Px\Rendering\RenderNode;
 use Px\Rendering\CssStyleHelper;
 use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\FragmentBuilder;
-use Px\Rendering\Layout\Tools\ScrollHelper;
 
 /**
  * FlexLayoutStrategy �?Flex 布局策略
@@ -43,6 +42,29 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $parentX = $constraints->parentContentX;
         $parentY = $constraints->parentContentY;
         $this->resolveFlexLayout($node, $parentX, $parentY, $style, $builder);
+
+        // 同步 builder 中的子节点 Fragment 为 flex 算法计算的正确位置
+        // flex 算法直接写入 $node->children[$i]->x/y，但 builder 中的子 Fragment
+        // 来自 resolveChildren（flex 算法之前），位置已过时。
+        // 此处用 flex 计算后的位置重建子 Fragment 列表，确保 applyTo 写入正确的值。
+        $flexChildren = [];
+        foreach ($node->children as $child) {
+            $childCS = $child->computedStyle;
+            $flexChildren[] = new LayoutFragment(
+                x: $child->x,
+                y: $child->y,
+                w: $child->w,
+                h: $child->h,
+                visualW: $child->visualW,
+                visualH: $child->visualH,
+                layer: $child->layer,
+                contentWidth: $child->contentWidth,
+                contentHeight: $child->contentHeight,
+                style: $childCS,
+                children: [], // children will be applied via their own applyTo
+            );
+        }
+        $builder->replaceChildren($flexChildren);
     }
 
     private LayoutResolver $resolver;
@@ -379,7 +401,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                 // Include margins in size calculation
 
-                $cs = $ch->style;
+                $cs = $ch->getStyleArray();
 
                 $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
 
@@ -463,8 +485,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 }
 
                 $data['hasExplicitCrossSize'] = $isRow
-                    ? array_key_exists('height', $ch->style)
-                    : array_key_exists('width', $ch->style);
+                    ? array_key_exists('height', $ch->getStyleArray())
+                    : array_key_exists('width', $ch->getStyleArray());
 
                 $lineFlexData[] = $data;
             }
@@ -482,7 +504,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 foreach ($lineChildren as $idx => $ch) {
                     $data = $lineFlexData[$idx];
 
-                    $cs = $ch->style;
+                    $cs = $ch->getStyleArray();
 
                     $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
 
@@ -566,10 +588,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     $ch = $lineChildren[$growIdx];
                     if ($isRow) {
                         $ch->w = (int)max(0, $growSize);
-                        $ch->visualW = CssStyleHelper::visualWidth($ch->style, $ch->w);
+                        $ch->visualW = CssStyleHelper::visualWidth($ch->getStyleArray(), $ch->w);
                     } else {
                         $ch->h = (int)max(0, $growSize);
-                        $ch->visualH = CssStyleHelper::visualHeight($ch->style, $ch->h);
+                        $ch->visualH = CssStyleHelper::visualHeight($ch->getStyleArray(), $ch->h);
                     }
                 }
             }
@@ -581,7 +603,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $lineMaxCross = 0;
 
             foreach ($lineChildren as $ch) {
-                $cs = $ch->style;
+                $cs = $ch->getStyleArray();
 
                 $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
 
@@ -742,10 +764,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                     if ($isRow) {
                         $ch->w = (int)$size;
-                        $ch->visualW = CssStyleHelper::visualWidth($ch->style, $ch->w);
+                        $ch->visualW = CssStyleHelper::visualWidth($ch->getStyleArray(), $ch->w);
                     } else {
                         $ch->h = (int)$size;
-                        $ch->visualH = CssStyleHelper::visualHeight($ch->style, $ch->h);
+                        $ch->visualH = CssStyleHelper::visualHeight($ch->getStyleArray(), $ch->h);
                     }
                 }
             }
@@ -753,12 +775,12 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             // ── Step 8: Min/max constraints ──
 
             foreach ($lineChildren as $ch) {
-                $ch->w = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->style, $ch->w, true));
+                $ch->w = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->getStyleArray(), $ch->w, true));
 
-                $ch->h = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->style, $ch->h, false));
+                $ch->h = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->getStyleArray(), $ch->h, false));
 
-                $ch->visualW = CssStyleHelper::visualWidth($ch->style, $ch->w);
-                $ch->visualH = CssStyleHelper::visualHeight($ch->style, $ch->h);
+                $ch->visualW = CssStyleHelper::visualWidth($ch->getStyleArray(), $ch->w);
+                $ch->visualH = CssStyleHelper::visualHeight($ch->getStyleArray(), $ch->h);
             }
 
             // ── Step 9: Recalculate totalMain after shrink ──
@@ -768,7 +790,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $lineMaxCross = 0;
 
             foreach ($lineChildren as $ch) {
-                $cs = $ch->style;
+                $cs = $ch->getStyleArray();
 
                 $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
 
@@ -800,7 +822,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
 
             foreach ($lineChildren as $ch) {
-                $cs = $ch->style;
+                $cs = $ch->getStyleArray();
 
                 $mL = (int)($cs['marginLeftAuto'] ?? false);
 
@@ -824,7 +846,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     $resolvedAutoMargins = [];
 
                     foreach ($lineChildren as $idx => $ch) {
-                        $cs = $ch->style;
+                        $cs = $ch->getStyleArray();
 
                         $resolvedAutoMargins[$idx] = [
                             'left' => ($cs['marginLeftAuto'] ?? false) ? $spacePerAuto : 0,
@@ -894,7 +916,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             foreach ($indices as $idx) {
                 $i = (int)$idx;
                 $ch = $lineChildren[$i];
-                $childStyle = $ch->style;
+                $childStyle = $ch->getStyleArray();
 
                 $childMarginLeft = ($resolvedAutoMargins !== null && isset($resolvedAutoMargins[$i]['left']) ? $resolvedAutoMargins[$i]['left'] : null)
                     ?? (int)($childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0);
@@ -933,7 +955,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                                 $stretchedH = (int)max(0, (int)($lineMaxCross - $childMarginTop - $childMarginBottom));
                                 if ($stretchedH > $ch->h && $stretchedH > 0) {
                                     $ch->h = $stretchedH;
-                                    $ch->visualH = CssStyleHelper::visualHeight($ch->style, $ch->h);
+                                    $ch->visualH = CssStyleHelper::visualHeight($ch->getStyleArray(), $ch->h);
                                     $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
                                 }
                             }
@@ -944,7 +966,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                                 $stretchedW = (int)max(0, (int)($lineMaxCross - $childMarginLeft - $childMarginRight));
                                 if ($stretchedW > 0) {
                                     $ch->w = $stretchedW;
-                                    $ch->visualW = CssStyleHelper::visualWidth($ch->style, $ch->w);
+                                    $ch->visualW = CssStyleHelper::visualWidth($ch->getStyleArray(), $ch->w);
                                     $lineFlexData[$i]['crossAxisSized'] = ($ch->w !== $crossBefore);
                                 }
                             }
@@ -972,8 +994,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $stretchedH = (int)max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
                             if ($stretchedH > $ch->h && $stretchedH > 0) {
                                 $ch->h = $stretchedH;
-                                $ch->h = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->style, $ch->h, false));
-                                $ch->visualH = CssStyleHelper::visualHeight($ch->style, $ch->h);
+                                $ch->h = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->getStyleArray(), $ch->h, false));
+                                $ch->visualH = CssStyleHelper::visualHeight($ch->getStyleArray(), $ch->h);
                                 $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
                             }
                         } elseif (!$isRow && !$lineFlexData[$i]['hasExplicitCrossSize']) {
@@ -981,7 +1003,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $stretchedW = (int)max(0, (int)($containerCross - $childMarginLeft - $childMarginRight));
                             if ($stretchedW > 0) {
                                 $ch->w = $stretchedW;
-                                $ch->visualW = CssStyleHelper::visualWidth($ch->style, $ch->w);
+                                $ch->visualW = CssStyleHelper::visualWidth($ch->getStyleArray(), $ch->w);
                                 $lineFlexData[$i]['crossAxisSized'] = ($ch->w !== $crossBefore);
                             }
                         }
@@ -1015,13 +1037,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                 if ($dy !== 0) {
                     foreach ($ch->children as $grandchild) {
-                        ScrollHelper::shiftDescendantsY($grandchild, $dy);
+                        $grandchild->y += $dy;
                     }
                 }
 
                 if ($dx !== 0) {
                     foreach ($ch->children as $grandchild) {
-                        ScrollHelper::shiftDescendantsX($grandchild, $dx);
+                        $grandchild->x += $dx;
                     }
                 }
 
@@ -1059,8 +1081,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         $prX = $chTp->x - $leftOff;
                         $prY = $chTp->y - $topOff;
 
-                        $hasOrigW = array_key_exists('width', $chTp->style);
-                        $hasOrigH = array_key_exists('height', $chTp->style);
+                        $hasOrigW = array_key_exists('width', $chTp->getStyleArray());
+                        $hasOrigH = array_key_exists('height', $chTp->getStyleArray());
                         $origW = $chTp->getStyleArray()['width'] ?? null;
                         $origH = $chTp->getStyleArray()['height'] ?? null;
 
@@ -1101,8 +1123,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
                         error_log('[DIAG_BLK2P] chTp=' . $chTp->type . ' w=' . $chTp->w . ' ctx_parent=' . ($node->parent !== null ? ('type=' . $node->parent->type . ' w=' . $node->parent->w) : 'null'));
 
-                        $hasOrigW = array_key_exists('width', $chTp->style);
-                        $hasOrigH = array_key_exists('height', $chTp->style);
+                        $hasOrigW = array_key_exists('width', $chTp->getStyleArray());
+                        $hasOrigH = array_key_exists('height', $chTp->getStyleArray());
                         $origW = $chTp->getStyleArray()['width'] ?? null;
                         $origH = $chTp->getStyleArray()['height'] ?? null;
 
@@ -1200,7 +1222,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     // A1 重构: childOffsetY 不再减去 scrollTop，偏移由 VNodeRenderer 在绘制层处理
                     $coffY = $chTp->y + $padTsp;
 
-                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, $node->parent, $chTp->style, $coffY, $padLsp, $padRsp, $padBsp);
+                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, 0, 0, $chTp->computedStyle, $coffY, $padLsp, $padRsp, $padBsp);
                 }
             }
 
@@ -1215,8 +1237,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     $childDisplay = $ch->getStyleArray()['display'] ?? 'block';
                     if ($childDisplay === 'none') continue;
                     $hasExplicitCross = $isRow
-                        ? array_key_exists('height', $ch->style)
-                        : array_key_exists('width', $ch->style);
+                        ? array_key_exists('height', $ch->getStyleArray())
+                        : array_key_exists('width', $ch->getStyleArray());
                     if ($hasExplicitCross) continue;
                     $childMarginT = (int)($ch->getStyleArray()['marginTop'] ?? $ch->getStyleArray()['margin'] ?? 0);
                     $childMarginB = (int)($ch->getStyleArray()['marginBottom'] ?? $ch->getStyleArray()['margin'] ?? 0);
@@ -1227,16 +1249,16 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         // CSS 2.2 §10.7: stretch 时也要受 min/max-height 约束
                         if ($stretched > $ch->h && $stretched > 0) {
                             $ch->h = $stretched;
-                            $ch->h = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->style, $ch->h, false));
-                            $ch->visualH = CssStyleHelper::visualHeight($ch->style, $ch->h);
+                            $ch->h = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->getStyleArray(), $ch->h, false));
+                            $ch->visualH = CssStyleHelper::visualHeight($ch->getStyleArray(), $ch->h);
                         }
                     } else {
                         $stretched = (int)max(0, $crossTarget - $childMarginL - $childMarginR);
                         // CSS 2.2 §10.7: stretch 时也要受 min/max-width 约束
                         if ($stretched > 0 && $stretched !== $ch->w) {
                             $ch->w = $stretched;
-                            $ch->w = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->style, $ch->w, true));
-                            $ch->visualW = CssStyleHelper::visualWidth($ch->style, $ch->w);
+                            $ch->w = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->getStyleArray(), $ch->w, true));
+                            $ch->visualW = CssStyleHelper::visualWidth($ch->getStyleArray(), $ch->w);
                         }
                     }
                 }
@@ -1282,7 +1304,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     foreach ($lineCrossData as $idx => $ld) {
                         $stretchedCross = $newMaxCrosses[$idx];
                         foreach ($ld['children'] as $ch) {
-                            $chStyle = $ch->style;
+                            $chStyle = $ch->getStyleArray();
                             $hasExplicitCrossSize = $isRow
                                 ? array_key_exists('height', $chStyle)
                                 : array_key_exists('width', $chStyle);
@@ -1336,7 +1358,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                             $dyShift = $shift;
                             $ch->y += $dyShift;
                             foreach ($ch->children as $gc) {
-                                ScrollHelper::shiftDescendantsY($gc, $dyShift);
+                                $gc->y += $dyShift;
                             }
                         }
                     }
@@ -1441,6 +1463,15 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // Set container's own visualW/visualH
         $node->visualW = CssStyleHelper::visualWidth($style, $node->w);
         $node->visualH = CssStyleHelper::visualHeight($style, $node->h);
+
+        // 输出到 builder，确保 applyTo 不覆盖 flex 正确计算的容器值
+        if ($builder !== null) {
+            $builder
+                ->setPosition($node->x, $node->y)
+                ->setSize($node->w, $node->h, $computedStyle)
+                ->setLayer($node->layer)
+                ->setContentSize($node->contentWidth, $node->contentHeight);
+        }
     }
 
 
@@ -1468,25 +1499,26 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 if ($resolvedBasis > 0) {
                     if ($isRow) {
                         $ch->w = (int)max(0, $resolvedBasis);
-                        $ch->visualW = CssStyleHelper::visualWidth($ch->style, $ch->w);
+                        $ch->visualW = CssStyleHelper::visualWidth($ch->getStyleArray(), $ch->w);
                     } else {
                         $ch->h = (int)max(0, $resolvedBasis);
-                        $ch->visualH = CssStyleHelper::visualHeight($ch->style, $ch->h);
+                        $ch->visualH = CssStyleHelper::visualHeight($ch->getStyleArray(), $ch->h);
                     }
                 }
             // ── flex-basis: content —ignore width/height, always use content size ──
             } elseif ($basis === 'content') {
                 $chText = $ch->content ?? '';
                 if (is_string($chText) && strlen($chText) > 0) {
-                    CssStyleHelper::resolveFontSize($ch->style);
-                    $fs = (int)($ch->getStyleArray()['fontSize'] ?? 14);
-                    $bd = ($ch->getStyleArray()['bold'] ?? 0) !== 0;
+                    $chStyle = $ch->getStyleArray();
+                    CssStyleHelper::resolveFontSize($chStyle);
+                    $fs = (int)($chStyle['fontSize'] ?? 14);
+                    $bd = ($chStyle['bold'] ?? 0) !== 0;
                     $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($chText, $fs, $bd) : 0);
                     if ($measured > 0) {
                         if ($isRow) {
                             $ch->w = $measured;
                         } else {
-                            $lineH = CssStyleHelper::lineHeight($ch->style, $fs, 16, $parentStyle);
+                            $lineH = CssStyleHelper::lineHeight($ch->getStyleArray(), $fs, 16, $parentStyle);
                             if ($ch->h === 0 || $ch->h < $lineH) {
                                 $ch->h = $lineH;
                             }
@@ -1503,10 +1535,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     if ($basisVal > 0) {
                         if ($isRow) {
                             $ch->w = (int)max(0, $basisVal);
-                            $ch->visualW = CssStyleHelper::visualWidth($ch->style, $ch->w);
+                            $ch->visualW = CssStyleHelper::visualWidth($ch->getStyleArray(), $ch->w);
                         } else {
                             $ch->h = (int)max(0, $basisVal);
-                            $ch->visualH = CssStyleHelper::visualHeight($ch->style, $ch->h);
+                            $ch->visualH = CssStyleHelper::visualHeight($ch->getStyleArray(), $ch->h);
                         }
                     }
                 }
@@ -1516,10 +1548,11 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $chText = $ch->content ?? '';
 
                 if ((is_string($chText) && strlen($chText) > 0)) {
-                    CssStyleHelper::resolveFontSize($ch->style);
-                    $fs = (int)($ch->getStyleArray()['fontSize'] ?? 14);
+                    $chStyle = $ch->getStyleArray();
+                    CssStyleHelper::resolveFontSize($chStyle);
+                    $fs = (int)($chStyle['fontSize'] ?? 14);
 
-                    $bd = ($ch->getStyleArray()['bold'] ?? 0) !== 0;
+                    $bd = ($chStyle['bold'] ?? 0) !== 0;
 
                     $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($chText, $fs, $bd) : 0);
 
@@ -1527,7 +1560,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         if ($isRow) {
                             // Row: text width = measured content width
                             // Content-sized child (no explicit width, no flex-grow): always use text-measured
-                            $hasFlexW = array_key_exists('width', $ch->style);
+                            $hasFlexW = array_key_exists('width', $ch->getStyleArray());
                             if (!$hasFlexW && !$data['isFlexGrow']) {
                                 $ch->w = $measured;
                             } elseif ($ch->w === 0 || $ch->w < $measured) {
@@ -1536,7 +1569,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         } else {
                             // Column: text height = line-height (based on font size)
                             // CSS 2.2 §10.8.1: �?flex 容器继承 line-height
-                            $lineH = CssStyleHelper::lineHeight($ch->style, $fs, 16, $parentStyle);
+                            $lineH = CssStyleHelper::lineHeight($ch->getStyleArray(), $fs, 16, $parentStyle);
 
                             if ($ch->h === 0 || $ch->h < $lineH) {
                                 $ch->h = $lineH;
@@ -1550,7 +1583,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     // keep w=parentWidth (from block default stretch) and incorrectly wrap.
                     $descW = $this->getMaxDescendantTextWidth($ch);
                     if ($descW > 0) {
-                        $hasFlexW = array_key_exists('width', $ch->style);
+                        $hasFlexW = array_key_exists('width', $ch->getStyleArray());
                         if (!$hasFlexW && !$data['isFlexGrow']) {
                             $ch->w = $descW;
                         } elseif ($ch->w === 0 || $ch->w < $descW) {
@@ -1574,9 +1607,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // Direct text content
         $text = $node->content ?? '';
         if (is_string($text) && strlen($text) > 0) {
-            CssStyleHelper::resolveFontSize($node->style);
-            $fs = (int)($node->getStyleArray()['fontSize'] ?? 14);
-            $bd = ($node->getStyleArray()['bold'] ?? 0) !== 0;
+            $nodeStyle = $node->getStyleArray();
+            CssStyleHelper::resolveFontSize($nodeStyle);
+            $fs = (int)($nodeStyle['fontSize'] ?? 14);
+            $bd = ($nodeStyle['bold'] ?? 0) !== 0;
             return (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($text, $fs, $bd) : 0);
         }
 

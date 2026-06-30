@@ -331,7 +331,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $itemRowMap = [];
 
         foreach ($children as $idx => $ch) {
-            $childStyle = $ch->style;
+            $childStyle = $ch->getStyleArray();
 
             // Use explicit grid-column/grid-row from style (CSS 1-based)
             // grid-area: name overrides explicit grid-column/grid-row
@@ -497,7 +497,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 $newCellY += ($actualRowHeights[$r] ?? $cellH) + $rowGap;
             }
 
-            $childStyle = $ch->style;
+            $childStyle = $ch->getStyleArray();
             $alignSelf = $childStyle['alignSelf'] ?? 'auto';
             if ($alignSelf === 'auto') $alignSelf = 'stretch';
 
