@@ -31,6 +31,9 @@ class TableLayoutStrategy implements LayoutStrategyInterface
         $this->resolver = $resolver;
     }
 
+    /**
+     * @deprecated 已弃用，请使用 resolveWithBuilder。Phase 3 后删除。
+     */
     public function resolve(
         RenderNode    $node,
         object        $ctx,
