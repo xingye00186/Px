@@ -110,13 +110,6 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $marginTop = CssStyleHelper::resolveLength($style, 'marginTop', $cbWidth);
 
         $node->x = $left + $parentX + $marginLeft;
-        // DEBUG: check target-box positioning
-        if ($node->w === 300 && $node->h >= 100) {
-            $dbgPW = ($node->parent !== null) ? $node->parent->w : -1;
-            $dbgPT = ($node->parent !== null) ? $node->parent->type : 'null';
-            $dbgPX = ($node->parent !== null) ? $node->parent->x : -1;
-            error_log('[FLEX_AUTOMARGIN] SET_X: left=' . $left . ' parentX=' . $parentX . ' x=' . $node->x . ' pw=' . $dbgPW . ' ptype=' . $dbgPT . ' px=' . $dbgPX);
-        }
 
         $node->y = $top + $parentY + $marginTop;
 

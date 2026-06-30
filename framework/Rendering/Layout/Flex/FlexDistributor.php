@@ -598,7 +598,17 @@ class FlexDistributor
             ? ($chCS?->overflowX?->value ?? $chCS?->overflow?->value ?? 'visible')
             : ($chCS?->overflowY?->value ?? $chCS?->overflow?->value ?? 'visible');
         if ($ov !== 'visible') return 0;
-        return $currentMainSize;
+        // Content-based minimum: text width (CSS §4.5, automatic minimum size)
+        $chText = $ch->content ?? '';
+        if (is_string($chText) && strlen($chText) > 0) {
+            $fs = $ch->computedStyle?->fontSize ?? 14;
+            $bd = $ch->computedStyle?->bold ?? false;
+            $textW = function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($chText, $fs, $bd) : 0;
+            return $textW > 0 ? $textW : 0;
+        }
+        // Check child text nodes
+        $descW = $this->maxDescendantTextWidth($ch);
+        return $descW > 0 ? $descW : 0;
     }
 
     private function maxDescendantTextWidth(RenderNode $node): int
