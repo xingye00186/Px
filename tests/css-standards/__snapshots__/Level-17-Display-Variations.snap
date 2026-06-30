@@ -1,52 +1,52 @@
-@generated 2026-06-11 15:45:34
+@generated 2026-06-30 18:04:39
 === Test: display:none 不渲染 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x120)
-  div (0,0 200x40) text="Visible"
-  div (0,40 200x40) [dsp=none] text="Hidden"
-  div (0,80 200x40) text="After"
+div (0,0 200x80) [dsp=block pos=static]
+  div (0,0 200x40) [dsp=block pos=static] text="Visible"
+  div (0,0 0x0) [dsp=none pos=static] text="Hidden"
+  div (0,40 200x40) [dsp=block pos=static] text="After"
 
 ---
 
 === Test: visibility:hidden 隐藏但占位 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x120)
-  div (0,0 300x40) text="Item 1"
-  div (0,40 300x40) text="Hidden but space"
-  div (0,80 300x40) text="Item 3"
+div (0,0 300x120) [dsp=block pos=static]
+  div (0,0 300x40) [dsp=block pos=static] text="Item 1"
+  div (0,40 300x40) [dsp=block pos=static] text="Hidden but space"
+  div (0,80 300x40) [dsp=block pos=static] text="Item 3"
 
 ---
 
 === Test: display:inline 行内并排 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x48)
-  span (0,0 32x16) [dsp=inline] text="Red "
-  span (0,16 40x16) [dsp=inline] text="Blue "
-  span (0,32 40x16) [dsp=inline] text="Green"
+div (0,0 300x19) [dsp=block pos=static]
+  span (0,0 0x19) [dsp=inline pos=static] text="Red "
+  span (0,0 0x19) [dsp=inline pos=static] text="Blue "
+  span (0,0 0x19) [dsp=inline pos=static] text="Green"
 
 ---
 
 === Test: display:inline-block 行内块布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x190)
-  div (0,0 100x60) [dsp=inline-block] text="A"
-  div (0,60 100x80) [dsp=inline-block] text="B"
-  div (0,140 100x50) [dsp=inline-block] text="C"
+div (0,0 400x80) [dsp=block pos=static]
+  div (0,0 100x60) [dsp=inline-block pos=static] text="A"
+  div (100,0 100x80) [dsp=inline-block pos=static] text="B"
+  div (200,0 100x50) [dsp=inline-block pos=static] text="C"
 
 ---
 
 === Test: display:none 在 flex row 中 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x50) [dsp=flex]
-  div (0,0 80x30) text="A"
-  div (80,0 200x30) [dsp=none] text="Hidden"
-  div (280,0 80x30) text="C"
+div (0,0 400x50) [dsp=flex pos=static]
+  div (0,0 80x30) [dsp=block pos=static] text="A"
+  div (0,0 0x0) [dsp=none pos=static] text="Hidden"
+  div (80,0 80x30) [dsp=block pos=static] text="C"
 
 ---
 
 === Test: visibility:visible 子项覆盖父 hidden ===
 Frame #1 events=0 detail=normal
-div (0,0 300x60)
-  div (0,0 300x60)
-    div (0,0 300x30) text="Hidden parent"
-    div (0,30 300x30) text="Visible child"
+div (0,0 300x60) [dsp=block pos=static]
+  div (0,0 300x60) [dsp=block pos=static]
+    div (0,0 0x30) [dsp=block pos=static] text="Hidden parent"
+    div (0,30 0x30) [dsp=block pos=static] text="Visible child"
