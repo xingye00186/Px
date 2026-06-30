@@ -136,6 +136,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // CSS 2.2 §10.7: min/max constraints apply to flex containers too
         $node->w = (int)max(0, (int)CssStyleHelper::applyMinMax($style, $width, true));
 
+        // 保存覆盖前的已有高度（二次解析中 flex-grow 分配的高度）
+        $prevH = $node->h;
         $node->h = (int)max(0, (int)CssStyleHelper::applyMinMax($style, $height, false));
 
         $node->visualW = CssStyleHelper::visualWidth($style, $node->w);
@@ -244,9 +246,17 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
 
-        $containerMain = max(0, $isRow ? CssStyleHelper::contentBoxWidth($style, $width) : CssStyleHelper::contentBoxHeight($style, $height));
+        // 使用当前已有尺寸作为回退（用于二次解析：flex-grow 分配后的高度）
+        $effectiveMain = $isRow
+            ? ($width > 0 ? $width : $node->w)
+            : ($height > 0 ? $height : $prevH);
+        $containerMain = max(0, $isRow
+            ? CssStyleHelper::contentBoxWidth($style, $effectiveMain)
+            : CssStyleHelper::contentBoxHeight($style, $effectiveMain));
 
-        $containerCross = max(0, $isRow ? CssStyleHelper::contentBoxHeight($style, $height) : CssStyleHelper::contentBoxWidth($style, $width));
+        $containerCross = max(0, $isRow
+            ? CssStyleHelper::contentBoxHeight($style, $height)
+            : CssStyleHelper::contentBoxWidth($style, $width));
 
         // ── Step 1-3: 使用 FlexItemCollector ──
         if ($this->collector === null) {

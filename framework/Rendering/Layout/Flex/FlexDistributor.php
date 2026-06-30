@@ -555,7 +555,7 @@ class FlexDistributor
                 $topOff = (int)($chTp->computedStyle?->top ?? 0);
                 $chTp->layoutDirty = true;
                 foreach ($chTp->children as $gc) { $gc->layoutDirty = true; }
-                $this->resolver->resolveChildNode($chTp, $chTp->x - $leftOff, $chTp->y - $topOff, $node->parent);
+                $this->resolver->resolveChildNode($chTp, $chTp->x - $leftOff, $chTp->y - $topOff, $node);
 
                 // Restore flex-allocated main-axis size (resolveChildNode resets it)
                 $chTp->w = $savedW;
