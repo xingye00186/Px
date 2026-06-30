@@ -121,21 +121,22 @@ class RenderTreeManager
             }
 
             // border info
-            $bw = $style['borderWidth'] ?? 0;
+            $bw = $cs?->borderWidth?->top?->toPx() ?? 0;
             if ($bw > 0) {
                 $output .= " bw=";
                 $output .= (string)$bw;
             }
 
             // overflow
-            $overflow = $style['overflow'] ?? $style['overflowX'] ?? '';
+            $overflow = $cs?->overflow?->value ?? $cs?->overflowX?->value ?? '';
             if ($overflow !== '' && $overflow !== 'visible') {
                 $output .= " ov=";
                 $output .= $overflow;
             }
 
             // flex grow/shrink
-            $fg = $style['flexGrow'] ?? $style['flex'] ?? '';
+            $flexGrowRaw = $cs?->getRaw('flexGrow');
+            $fg = is_numeric($flexGrowRaw) ? (string)$flexGrowRaw : '';
             if ($fg !== '' && $fg !== 0) {
                 $output .= " fg=";
                 $output .= (string)$fg;

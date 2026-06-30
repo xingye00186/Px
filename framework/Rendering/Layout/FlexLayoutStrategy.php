@@ -105,7 +105,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $height = (int)($style['height'] ?? 0);
 
         // CSS 2.2 §10.3.7: margins apply to flex containers as block-level elements
-        $cbWidth = $node->parent ? ($node->parent->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent->w) : 0;
+        $cbWidth = $node->parent?->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent?->w ?? 0;
         $marginLeft = CssStyleHelper::resolveLength($style, 'marginLeft', $cbWidth);
         $marginTop = CssStyleHelper::resolveLength($style, 'marginTop', $cbWidth);
 
