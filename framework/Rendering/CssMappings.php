@@ -5,21 +5,21 @@ namespace Px\Rendering;
 use native_types;
 
 /**
- * CSS → GDI Mapping Table
+ * CSS �?GDI Mapping Table
  *
  * Defines which CSS properties are supported, how they map to GDI rendering
  * parameters, and what keys they produce in the layout output.
  *
  * Usage:
- *   $mapped = CssMappings::parseStyleBlock($styleCss);
- *   // → ['app-bg' => ['bg'=>1973790], 'display-text' => ['fg'=>16777215, 'fontSize'=>32, 'bold'=>1], ...]
+ *   $mapped = CssValueParser::parseStyleBlock($styleCss);
+ *   // �?['app-bg' => ['bg'=>1973790], 'display-text' => ['fg'=>16777215, 'fontSize'=>32, 'bold'=>1], ...]
  *
  * Extend $PROPERTY_MAP to add new CSS property support.
  */
 class CssMappings
 {
     /**
-     * CSS property → [outputKey, parserFunction, default]
+     * CSS property �?[outputKey, parserFunction, default]
      *
      * Each entry maps a CSS property name to:
      *   - outputKey: the key in the generated layout array
@@ -31,429 +31,429 @@ class CssMappings
     const PROPERTY_MAP = [
         'background' => [
             'key'     => 'bg',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseHexColor',
             'default' => 0,
         ],
         'background-size' => [
             'key'     => 'backgroundSize',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => '',
         ],
         'background-position' => [
             'key'     => 'backgroundPosition',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => '',
         ],
         'background-repeat' => [
             'key'     => 'backgroundRepeat',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'repeat',
         ],
         'background-attachment' => [
             'key'     => 'backgroundAttachment',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'scroll',
         ],
         'background-clip' => [
             'key'     => 'backgroundClip',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'border-box',
         ],
         'background-origin' => [
             'key'     => 'backgroundOrigin',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'padding-box',
         ],
         'color' => [
             'key'     => 'fg',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseHexColor',
             'default' => 0x000000,
         ],
         'font-size' => [
             'key'     => 'fontSize',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 16,
         ],
         'font-weight' => [
             'key'     => 'bold',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseFontWeight',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseFontWeight',
             'default' => 0,
         ],
         // ---- Layout properties (width/height for CSS class styles) ----
         'width' => [
             'key'     => 'width',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'height' => [
             'key'     => 'height',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'box-sizing' => [
             'key'     => 'boxSizing',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'content-box',
         ],
         // ---- Extensions for future GDI/Direct2D support ----
         'border-radius' => [
             'key'     => 'borderRadius',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'padding-top' => [
             'key'     => 'paddingTop',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'padding-right' => [
             'key'     => 'paddingRight',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'padding-bottom' => [
             'key'     => 'paddingBottom',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'padding-left' => [
             'key'     => 'paddingLeft',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'margin-top' => [
             'key'     => 'marginTop',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'margin-right' => [
             'key'     => 'marginRight',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'margin-bottom' => [
             'key'     => 'marginBottom',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'margin-left' => [
             'key'     => 'marginLeft',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'padding' => [
             'key'     => 'padding',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'margin' => [
             'key'     => 'margin',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'text-align' => [
             'key'     => 'textAlign',
-            'parser'  => 'Px\Rendering\CssMappings::parseTextAlign',
+            'parser'  => 'Px\Rendering\CssValueParser::parseTextAlign'
             'default' => 'left',
         ],
         'text-indent' => [
             'key'     => 'textIndent',
-            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'text-transform' => [
             'key'     => 'textTransform',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'none',
         ],
         'vertical-align' => [
             'key'     => 'verticalAlign',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'baseline',
         ],
         'line-height' => [
             'key'     => 'lineHeight',
-            'parser'  => 'Px\Rendering\CssMappings::parseLineHeight',
+            'parser'  => 'Px\Rendering\CssValueParser::parseLineHeight',
             'default' => '',
         ],
         'font-family' => [
             'key'     => 'fontFamily',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => '',
         ],
         // ---- v8 UI extensions ----
         'border' => [
             'key'     => 'border',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseBorder',
             'default' => '',
         ],
         'border-bottom' => [
             'key'     => 'borderBottom',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseBorder',
             'default' => '',
         ],
         'border-top' => [
             'key'     => 'borderTop',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseBorder',
             'default' => '',
         ],
         'border-left' => [
             'key'     => 'borderLeft',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseBorder',
             'default' => '',
         ],
         'border-right' => [
             'key'     => 'borderRight',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseBorder',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseBorder',
             'default' => '',
         ],
         'border-width' => [
             'key'     => 'borderWidth',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'border-top-width' => [
             'key'     => 'borderTopWidth',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'border-right-width' => [
             'key'     => 'borderRightWidth',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'border-bottom-width' => [
             'key'     => 'borderBottomWidth',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'border-left-width' => [
             'key'     => 'borderLeftWidth',
-            'parser'  => 'Px\\Rendering\\CssMappings::parsePixels',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'border-color' => [
             'key'     => 'borderColor',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseHexColor',
             'default' => 0,
         ],
         // ---- border-style (CSS 2.2 §8.5.3) ----
         'border-style' => [
             'key'     => 'borderStyle',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'solid',
         ],
         'border-top-style' => [
             'key'     => 'borderTopStyle',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'solid',
         ],
         'border-right-style' => [
             'key'     => 'borderRightStyle',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'solid',
         ],
         'border-bottom-style' => [
             'key'     => 'borderBottomStyle',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'solid',
         ],
         'border-left-style' => [
             'key'     => 'borderLeftStyle',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'solid',
         ],
         // ---- per-side border colors (CSS 2.2 §8.5.2) ----
         'border-top-color' => [
             'key'     => 'borderTopColor',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseHexColor',
             'default' => 0,
         ],
         'border-right-color' => [
             'key'     => 'borderRightColor',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseHexColor',
             'default' => 0,
         ],
         'border-bottom-color' => [
             'key'     => 'borderBottomColor',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseHexColor',
             'default' => 0,
         ],
         'border-left-color' => [
             'key'     => 'borderLeftColor',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseHexColor',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseHexColor',
             'default' => 0,
         ],
         'box-shadow' => [
             'key'     => 'boxShadow',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseBoxShadow',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseBoxShadow',
             'default' => '',
         ],
         'cursor' => [
             'key'     => 'cursor',
-            'parser'  => 'Px\\Rendering\\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'default',
         ],
         'opacity' => [
             'key'     => 'opacity',
-            'parser'  => 'Px\Rendering\CssMappings::parseOpacity',
+            'parser'  => 'Px\Rendering\CssValueParser::parseOpacity',
             'default' => 1.0,
         ],
         'scroll-behavior' => [
             'key'     => 'scrollBehavior',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'auto',
         ],
         // ---- Layout/positioning properties ----
-        'left'             => ['key' => 'left',             'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 'auto'],
-        'top'              => ['key' => 'top',              'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 'auto'],
-        'right'            => ['key' => 'right',            'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 'auto'],
-        'bottom'           => ['key' => 'bottom',           'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 'auto'],
-        'display'          => ['key' => 'display',          'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'block'],
-        'position'         => ['key' => 'position',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'static'],
-        'z-index'          => ['key' => 'zIndex',           'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'overflow'         => ['key' => 'overflow',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
-        'overflow-x'       => ['key' => 'overflowX',        'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
-        'overflow-y'       => ['key' => 'overflowY',        'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'visible'],
-        'text-overflow'    => ['key' => 'textOverflow',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'clip'],
-        'white-space'      => ['key' => 'whiteSpace',       'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        'word-break'       => ['key' => 'wordBreak',        'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        'overflow-wrap'    => ['key' => 'overflowWrap',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        'word-wrap'        => ['key' => 'overflowWrap',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        'font-style'       => ['key' => 'fontStyle',        'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        'font-variant'     => ['key' => 'fontVariant',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        'font-stretch'     => ['key' => 'fontStretch',      'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        'appearance'       => ['key' => 'appearance',       'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'auto'],
-        'flex-direction'   => ['key' => 'flexDirection',    'parser' => 'PxRenderingCssMappings::parseIdent',  'default' => 'row'],
+        'left'             => ['key' => 'left',             'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 'auto'],
+        'top'              => ['key' => 'top',              'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 'auto'],
+        'right'            => ['key' => 'right',            'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 'auto'],
+        'bottom'           => ['key' => 'bottom',           'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 'auto'],
+        'display'          => ['key' => 'display',          'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'block'],
+        'position'         => ['key' => 'position',         'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'static'],
+        'z-index'          => ['key' => 'zIndex',           'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
+        'overflow'         => ['key' => 'overflow',         'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'visible'],
+        'overflow-x'       => ['key' => 'overflowX',        'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'visible'],
+        'overflow-y'       => ['key' => 'overflowY',        'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'visible'],
+        'text-overflow'    => ['key' => 'textOverflow',      'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'clip'],
+        'white-space'      => ['key' => 'whiteSpace',       'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
+        'word-break'       => ['key' => 'wordBreak',        'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
+        'overflow-wrap'    => ['key' => 'overflowWrap',      'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
+        'word-wrap'        => ['key' => 'overflowWrap',      'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
+        'font-style'       => ['key' => 'fontStyle',        'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
+        'font-variant'     => ['key' => 'fontVariant',      'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
+        'font-stretch'     => ['key' => 'fontStretch',      'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
+        'appearance'       => ['key' => 'appearance',       'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'auto'],
+        'flex-direction'   => ['key' => 'flexDirection',    'parser' => 'PxRenderingCssValueParser::parseIdent',  'default' => 'row'],
         // ---- CSS Lists (CSS Lists L3 §3-4) ----
-        'list-style-type'  => ['key' => 'listStyleType',    'parser' => 'PxRenderingCssMappings::parseIdent', 'default' => 'disc'],
-        'list-style-position' => ['key' => 'listStylePosition','parser' => 'PxRenderingCssMappings::parseIdent','default' => 'outside'],
-        'flex-wrap'        => ['key' => 'flexWrap',         'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'nowrap'],
-        'justify-content'  => ['key' => 'justifyContent',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'flex-start'],
-        'align-items'      => ['key' => 'alignItems',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'stretch'],
-        'align-content'    => ['key' => 'alignContent',     'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'stretch'],
-        'gap'              => ['key' => 'gap',              'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+        'list-style-type'  => ['key' => 'listStyleType',    'parser' => 'PxRenderingCssValueParser::parseIdent', 'default' => 'disc'],
+        'list-style-position' => ['key' => 'listStylePosition','parser' => 'PxRenderingCssValueParser::parseIdent','default' => 'outside'],
+        'flex-wrap'        => ['key' => 'flexWrap',         'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'nowrap'],
+        'justify-content'  => ['key' => 'justifyContent',   'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'flex-start'],
+        'align-items'      => ['key' => 'alignItems',       'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'stretch'],
+        'align-content'    => ['key' => 'alignContent',     'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'stretch'],
+        'gap'              => ['key' => 'gap',              'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
         // ---- CSS Tables (CSS 2.2 §17) ----
-        'border-collapse'  => ['key' => 'borderCollapse',   'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => 'separate'],
-        'border-spacing'   => ['key' => 'borderSpacing',    'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
-        'table-layout'     => ['key' => 'tableLayout',      'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => 'auto'],
-        'caption-side'     => ['key' => 'captionSide',       'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => 'top'],
-        'flex'             => ['key' => 'flex',              'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
-        'flex-grow'        => ['key' => 'flexGrow',    'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
-        'flex-basis'       => ['key' => 'flexBasis',    'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'auto'],
-        'flex-shrink'      => ['key' => 'flexShrink',   'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 1],
-        'order'            => ['key' => 'order',        'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'align-self'       => ['key' => 'alignSelf',   'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => 'auto'],
-        'justify-self'     => ['key' => 'justifySelf', 'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'auto'],
-        'justify-items'    => ['key' => 'justifyItems', 'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        'min-width'        => ['key' => 'minWidth',  'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
-        'max-width'        => ['key' => 'maxWidth',  'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'min-height'       => ['key' => 'minHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'max-height'       => ['key' => 'maxHeight', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'grid-template-columns' => ['key' => 'gridTemplateColumns', 'parser' => 'Px\\Rendering\\CssMappings::parseIdent', 'default' => ''],
-        'grid-template-rows'    => ['key' => 'gridTemplateRows',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent', 'default' => ''],
-        'grid-column-gap'      => ['key' => 'gridColumnGap', 'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'grid-row-gap'         => ['key' => 'gridRowGap',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels', 'default' => 0],
-        'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
-        'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssMappings::parseIdent',  'default' => ''],
-        'grid-area'            => ['key' => 'gridArea',       'parser' => 'Px\\Rendering\\CssMappings::parseIdent',   'default' => ''],
-        'grid-auto-rows'       => ['key' => 'gridAutoRows',    'parser' => 'Px\\Rendering\\CssMappings::parsePixels',  'default' => 0],
-        'grid-template-areas'  => ['key' => 'gridTemplateAreas','parser' => 'Px\\Rendering\\CssMappings::parseIdent',   'default' => ''],
-        'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'fill'],
-        'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssMappings::parseBackgroundImage', 'default' => ''],
-        'transform'            => ['key' => 'transform',       'parser' => 'Px\\Rendering\\CssMappings::parseTransform', 'default' => ''],
-        'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => ''],
-        'direction'            => ['key' => 'direction',        'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'ltr'],
-        'unicode-bidi'         => ['key' => 'unicodeBidi',     'parser' => 'Px\Rendering\CssMappings::parseIdent',  'default' => 'normal'],
-        'text-shadow'          => ['key' => 'textShadow',       'parser' => 'Px\Rendering\CssMappings::parseIdent', 'default' => ''],
-        'letter-spacing'       => ['key' => 'letterSpacing',    'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
-        'word-spacing'         => ['key' => 'wordSpacing',      'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+        'border-collapse'  => ['key' => 'borderCollapse',   'parser' => 'Px\Rendering\CssValueParser::parseIdent', 'default' => 'separate'],
+        'border-spacing'   => ['key' => 'borderSpacing',    'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
+        'table-layout'     => ['key' => 'tableLayout',      'parser' => 'Px\Rendering\CssValueParser::parseIdent', 'default' => 'auto'],
+        'caption-side'     => ['key' => 'captionSide',       'parser' => 'Px\Rendering\CssValueParser::parseIdent', 'default' => 'top'],
+        'flex'             => ['key' => 'flex',              'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => ''],
+        'flex-grow'        => ['key' => 'flexGrow',    'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
+        'flex-basis'       => ['key' => 'flexBasis',    'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'auto'],
+        'flex-shrink'      => ['key' => 'flexShrink',   'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 1],
+        'order'            => ['key' => 'order',        'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
+        'align-self'       => ['key' => 'alignSelf',   'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'auto'],
+        'justify-self'     => ['key' => 'justifySelf', 'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'auto'],
+        'justify-items'    => ['key' => 'justifyItems', 'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
+        'min-width'        => ['key' => 'minWidth',  'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
+        'max-width'        => ['key' => 'maxWidth',  'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
+        'min-height'       => ['key' => 'minHeight', 'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
+        'max-height'       => ['key' => 'maxHeight', 'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
+        'grid-template-columns' => ['key' => 'gridTemplateColumns', 'parser' => 'Px\\Rendering\\CssValueParser::parseIdent', 'default' => ''],
+        'grid-template-rows'    => ['key' => 'gridTemplateRows',    'parser' => 'Px\\Rendering\\CssValueParser::parseIdent', 'default' => ''],
+        'grid-column-gap'      => ['key' => 'gridColumnGap', 'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
+        'grid-row-gap'         => ['key' => 'gridRowGap',    'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
+        'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => ''],
+        'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => ''],
+        'grid-area'            => ['key' => 'gridArea',       'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',   'default' => ''],
+        'grid-auto-rows'       => ['key' => 'gridAutoRows',    'parser' => 'Px\\Rendering\\CssValueParser::parsePixels',  'default' => 0],
+        'grid-template-areas'  => ['key' => 'gridTemplateAreas','parser' => 'Px\\Rendering\\CssValueParser::parseIdent',   'default' => ''],
+        'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'fill'],
+        'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssValueParser::parseBackgroundImage', 'default' => ''],
+        'transform'            => ['key' => 'transform',       'parser' => 'Px\\Rendering\\CssValueParser::parseTransform', 'default' => ''],
+        'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => ''],
+        'direction'            => ['key' => 'direction',        'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'ltr'],
+        'unicode-bidi'         => ['key' => 'unicodeBidi',     'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
+        'text-shadow'          => ['key' => 'textShadow',       'parser' => 'Px\Rendering\CssValueParser::parseIdent', 'default' => ''],
+        'letter-spacing'       => ['key' => 'letterSpacing',    'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
+        'word-spacing'         => ['key' => 'wordSpacing',      'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
             
         // ---- Text Decoration (CSS Text Decoration Module Level 3) ----
-        'text-decoration-line'      => ['key' => 'textDecorationLine',     'parser' => 'Px\Rendering\CssMappings::parseIdent',     'default' => 'none'],
-        'text-decoration-color'     => ['key' => 'textDecorationColor',    'parser' => 'Px\Rendering\CssMappings::parseHexColor',   'default' => 0xFFFFFF],
-        'text-decoration-style'     => ['key' => 'textDecorationStyle',    'parser' => 'Px\Rendering\CssMappings::parseIdent',     'default' => 'solid'],
-        'text-decoration-thickness' => ['key' => 'textDecorationThickness','parser' => 'Px\Rendering\CssMappings::parsePixels',    'default' => 0],
+        'text-decoration-line'      => ['key' => 'textDecorationLine',     'parser' => 'Px\Rendering\CssValueParser::parseIdent',     'default' => 'none'],
+        'text-decoration-color'     => ['key' => 'textDecorationColor',    'parser' => 'Px\Rendering\CssValueParser::parseHexColor',   'default' => 0xFFFFFF],
+        'text-decoration-style'     => ['key' => 'textDecorationStyle',    'parser' => 'Px\Rendering\CssValueParser::parseIdent',     'default' => 'solid'],
+        'text-decoration-thickness' => ['key' => 'textDecorationThickness','parser' => 'Px\Rendering\CssValueParser::parsePixels',    'default' => 0],
         // ---- Text Emphasis (CSS Text Decoration Module Level 3 §8) ----
-        'text-emphasis-style'    => ['key' => 'textEmphasisStyle',  'parser' => 'Px\Rendering\CssMappings::parseIdent',   'default' => 'none'],
-        'text-emphasis-color'    => ['key' => 'textEmphasisColor',  'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0xFF0000],
-        'text-emphasis-position' => ['key' => 'textEmphasisPosition','parser' => 'Px\Rendering\CssMappings::parseIdent',   'default' => 'over'],
-        'text-underline-offset'     => ['key' => 'textUnderlineOffset',    'parser' => 'Px\Rendering\CssMappings::parsePixels',    'default' => 0],
+        'text-emphasis-style'    => ['key' => 'textEmphasisStyle',  'parser' => 'Px\Rendering\CssValueParser::parseIdent',   'default' => 'none'],
+        'text-emphasis-color'    => ['key' => 'textEmphasisColor',  'parser' => 'Px\Rendering\CssValueParser::parseHexColor', 'default' => 0xFF0000],
+        'text-emphasis-position' => ['key' => 'textEmphasisPosition','parser' => 'Px\Rendering\CssValueParser::parseIdent',   'default' => 'over'],
+        'text-underline-offset'     => ['key' => 'textUnderlineOffset',    'parser' => 'Px\Rendering\CssValueParser::parsePixels',    'default' => 0],
     
         // CSS Inline Layout: vertical-align (CSS 2.2 §10.8.1)
         'vertical-align' => [
             'key'     => 'verticalAlign',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'baseline',
         ],
     
         // CSS Basic User Interface Module Level 3: outline (不占布局空间)
         'outline-width' => [
             'key'     => 'outlineWidth',
-            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'outline-style' => [
             'key'     => 'outlineStyle',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'none',
         ],
         'outline-color' => [
             'key'     => 'outlineColor',
-            'parser'  => 'Px\Rendering\CssMappings::parseHexColor',
+            'parser'  => 'Px\Rendering\CssValueParser::parseHexColor',
             'default' => 0,
         ],
         'outline-offset' => [
             'key'     => 'outlineOffset',
-            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
             'default' => 0,
         ],
 
         // CSS Multi-column Layout Module Level 1
         'column-count' => [
             'key'     => 'columnCount',
-            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'column-width' => [
             'key'     => 'columnWidth',
-            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'column-gap' => [
             'key'     => 'columnGap',
-            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
             'default' => 16,
         ],
         'column-rule-width' => [
             'key'     => 'columnRuleWidth',
-            'parser'  => 'Px\Rendering\CssMappings::parsePixels',
+            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'column-rule-style' => [
             'key'     => 'columnRuleStyle',
-            'parser'  => 'Px\Rendering\CssMappings::parseIdent',
+            'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent'
             'default' => 'none',
         ],
         'column-rule-color' => [
             'key'     => 'columnRuleColor',
-            'parser'  => 'Px\Rendering\CssMappings::parseHexColor',
+            'parser'  => 'Px\Rendering\CssValueParser::parseHexColor',
             'default' => 0,
         ],
     ];
         
     /**
-     * Inline style → 布局属性映射（仅 PROPERTY_MAP 未覆盖的属性）
+     * Inline style �?布局属性映射（�?PROPERTY_MAP 未覆盖的属性）
      *
-     * 布局/定位/弹性/网格属性在 PROPERTY_MAP 中已定义，此处只加补充项。
-     * parseInlineStyle() 通过 array_merge(PROPERTY_MAP, INLINE_PROPERTY_MAP) 合并使用。
+     * 布局/定位/弹�?网格属性在 PROPERTY_MAP 中已定义，此处只加补充项�?
+     * parseInlineStyle() 通过 array_merge(PROPERTY_MAP, INLINE_PROPERTY_MAP) 合并使用�?
      */
     const INLINE_PROPERTY_MAP = [
-        // ---- 滚动条样式 (PROPERTY_MAP 中未包含, 其余布局属性从 PROPERTY_MAP 合并) ----
-        'scrollbar-width'        => ['key' => 'scrollbarWidth',      'parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 12],
-        'scrollbar-track-color'  => ['key' => 'scrollbarTrackColor', 'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0x4A4A4A],
-        'scrollbar-thumb-color'  => ['key' => 'scrollbarThumbColor', 'parser' => 'Px\Rendering\CssMappings::parseHexColor', 'default' => 0x888888],
-        'scrollbar-border-radius'=> ['key' => 'scrollbarBorderRadius','parser' => 'Px\Rendering\CssMappings::parsePixels', 'default' => 0],
+        // ---- 滚动条样�?(PROPERTY_MAP 中未包含, 其余布局属性从 PROPERTY_MAP 合并) ----
+        'scrollbar-width'        => ['key' => 'scrollbarWidth',      'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 12],
+        'scrollbar-track-color'  => ['key' => 'scrollbarTrackColor', 'parser' => 'Px\Rendering\CssValueParser::parseHexColor', 'default' => 0x4A4A4A],
+        'scrollbar-thumb-color'  => ['key' => 'scrollbarThumbColor', 'parser' => 'Px\Rendering\CssValueParser::parseHexColor', 'default' => 0x888888],
+        'scrollbar-border-radius'=> ['key' => 'scrollbarBorderRadius','parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
     ];
 
     // ============================================================
@@ -482,12 +482,12 @@ class CssMappings
     // ============================================================
 
     /**
-     * Parse CSS color value → BGR integer
+     * Parse CSS color value �?BGR integer
      *
      * Supports:
      *   - "#RRGGBB" / "#RGB" (hex colors)
      *   - rgb(r, g, b) / rgba(r, g, b, a)
-     *   - linear-gradient(...) → extract first color stop
+     *   - linear-gradient(...) �?extract first color stop
      */
     public static function parseHexColor(string $value): int
     {
@@ -495,7 +495,7 @@ class CssMappings
     }
 
     /**
-     * Parse "16px" → 16 (int)
+     * Parse "16px" �?16 (int)
      */
     public static function parsePixels(string $value): int
     {
@@ -503,7 +503,7 @@ class CssMappings
     }
 
     /**
-     * Parse "1" / "1.5" / "0" → flex grow value as string (e.g., "1", "2")
+     * Parse "1" / "1.5" / "0" �?flex grow value as string (e.g., "1", "2")
      */
     public static function parseFlex(string $value): string
     {
@@ -514,21 +514,21 @@ class CssMappings
      * Parse flex shorthand value into structured array per CSS spec.
      *
      * CSS flex shorthand (https://www.w3.org/TR/css-flexbox-1/#flex-shorthand):
-     *   auto    → flex: 1 1 auto
-     *   initial → flex: 0 1 auto
-     *   none    → flex: 0 0 auto
-     *   <num>        → flex-grow: <num>, flex-shrink: 1, flex-basis: 0
-     *   <num> <num>  → flex-grow + flex-shrink, flex-basis: 0
-     *   <num> <num> <basis>  → all three
+     *   auto    �?flex: 1 1 auto
+     *   initial �?flex: 0 1 auto
+     *   none    �?flex: 0 0 auto
+     *   <num>        �?flex-grow: <num>, flex-shrink: 1, flex-basis: 0
+     *   <num> <num>  �?flex-grow + flex-shrink, flex-basis: 0
+     *   <num> <num> <basis>  �?all three
      *
      * Examples:
-     *   "1"         → ['grow'=>1.0, 'shrink'=>1.0, 'basis'=>0]
-     *   "auto"      → ['grow'=>1.0, 'shrink'=>1.0, 'basis'=>'auto']
-     *   "none"      → ['grow'=>0.0, 'shrink'=>0.0, 'basis'=>'auto']
-     *   "initial"   → ['grow'=>0.0, 'shrink'=>1.0, 'basis'=>'auto']
-     *   "1 0 auto"  → ['grow'=>1.0, 'shrink'=>0.0, 'basis'=>'auto']
-     *   "2 0 100px" → ['grow'=>2.0, 'shrink'=>0.0, 'basis'=>100]
-     *   ""          → ['grow'=>0.0, 'shrink'=>1.0, 'basis'=>0]
+     *   "1"         �?['grow'=>1.0, 'shrink'=>1.0, 'basis'=>0]
+     *   "auto"      �?['grow'=>1.0, 'shrink'=>1.0, 'basis'=>'auto']
+     *   "none"      �?['grow'=>0.0, 'shrink'=>0.0, 'basis'=>'auto']
+     *   "initial"   �?['grow'=>0.0, 'shrink'=>1.0, 'basis'=>'auto']
+     *   "1 0 auto"  �?['grow'=>1.0, 'shrink'=>0.0, 'basis'=>'auto']
+     *   "2 0 100px" �?['grow'=>2.0, 'shrink'=>0.0, 'basis'=>100]
+     *   ""          �?['grow'=>0.0, 'shrink'=>1.0, 'basis'=>0]
      */
     public static function parseFlexValue(string $flex): array
     {
@@ -536,7 +536,7 @@ class CssMappings
     }
 
     /**
-     * Parse "bold" / "700" → 1, "normal" / "400" → 0
+     * Parse "bold" / "700" �?1, "normal" / "400" �?0
      */
     public static function parseFontWeight(string $value): int
     {
@@ -544,7 +544,7 @@ class CssMappings
     }
 
     /**
-     * Parse "left" / "right" / "center" → align string
+     * Parse "left" / "right" / "center" �?align string
      */
     public static function parseTextAlign(string $value): string
     {
@@ -556,7 +556,7 @@ class CssMappings
      * Supports: unitless number (1.7), px (28px), em (1.6em), % (150%).
      * For unitless numbers, returns as 'N.N' string for runtime line spacing calculation.
      * For px values, returns pixel count.
-     * For em/%, returns multiplier string (e.g., '1.6em' → '1.6').
+     * For em/%, returns multiplier string (e.g., '1.6em' �?'1.6').
      */
     public static function parseLineHeight(string $value): string
     {
@@ -603,7 +603,7 @@ class CssMappings
     }
 
     /**
-     * Parse "1px solid #d9d9d9" → border string (v8)
+     * Parse "1px solid #d9d9d9" �?border string (v8)
      */
     public static function parseBorder(string $value): string
     {
@@ -646,7 +646,7 @@ class CssMappings
     }
 
     /**
-     * Parse "0.5" or "50%" → float 0.0-1.0 (v8)
+     * Parse "0.5" or "50%" �?float 0.0-1.0 (v8)
      */
     public static function parseOpacity(string $value): float
     {
@@ -655,7 +655,7 @@ class CssMappings
 
     /**
      * Parse identity: return the trimmed value as-is
-     * Used for display, flex-direction, overflow, position 等关键字属性
+     * Used for display, flex-direction, overflow, position 等关键字属�?
      */
     public static function parseIdent(string $value): string
     {
@@ -663,7 +663,7 @@ class CssMappings
     }
 
     /**
-     * Parse `url("path/to/image.png")` → extract the image path
+     * Parse `url("path/to/image.png")` �?extract the image path
      * Matches CSS background-image property: background-image: url("...")
      * Supports both single/double quotes and unquoted URLs.
      */
@@ -672,7 +672,7 @@ class CssMappings
         return CssValueParser::parseBackgroundImage($value);
     }
 
-    /** @return array 供外部（如 StyleResolver）使用的 PROPERTY_MAP */
+    /** @return array 供外部（�?StyleResolver）使用的 PROPERTY_MAP */
     public static function getPropertyMap(): array
     {
         return self::PROPERTY_MAP;
@@ -690,7 +690,7 @@ class CssMappings
      */
     private static function dispatchParser(string $parser, string $value): mixed
     {
-        // 从 "Px\\Rendering\\CssMappings::parseHexColor" 提取方法名 parseHexColor
+        // �?"Px\\Rendering\\CssValueParser::parseHexColor" 提取方法�?parseHexColor
         $method = substr($parser, (int)strrpos($parser, '::') + 2);
         return match($method) {
             'parseHexColor'        => CssValueParser::parseHexColor($value),
@@ -715,10 +715,10 @@ class CssMappings
     /**
      * Expand CSS shorthand padding/margin into individual direction properties.
      *
-     * Input "padding: 10px" → padding-top, padding-right, padding-bottom, padding-left = 10
-     * Input "margin: 10px 20px" → margin-top=margin-bottom=10, margin-left=margin-right=20
-     * Input "padding: 1px 2px 3px" → top=1, left/right=2, bottom=3
-     * Input "margin: 1px 2px 3px 4px" → top=1, right=2, bottom=3, left=4
+     * Input "padding: 10px" �?padding-top, padding-right, padding-bottom, padding-left = 10
+     * Input "margin: 10px 20px" �?margin-top=margin-bottom=10, margin-left=margin-right=20
+     * Input "padding: 1px 2px 3px" �?top=1, left/right=2, bottom=3
+     * Input "margin: 1px 2px 3px 4px" �?top=1, right=2, bottom=3, left=4
      */
     private static function expandBoxShorthand(array $raw): array
     {
@@ -819,17 +819,17 @@ class CssMappings
      *   3. Position/Size (".../size" pattern)
      *   4. Repeat keywords (no-repeat, repeat-x, etc.)
      *   5. Attachment keywords (scroll, fixed, local)
-     *   6. Remainder → position (if /size was extracted) or empty
+     *   6. Remainder �?position (if /size was extracted) or empty
      *
      * Only expands multi-value shorthands containing url() or /
      * (position/size delimiter). Single color values pass through unchanged.
      *
      * Examples:
-     *   "#FB7299"                                    → unchanged (single color)
-     *   "url('bg.png')"                              → image only
-     *   "url('bg.png') center/cover no-repeat"       → image + position + size
-     *   "#FB7299 url('bg.png') center/cover no-repeat" → full shorthand
-     *   "rgba(251,114,153,0.4) url('bg.png')"         → rgba color + image
+     *   "#FB7299"                                    �?unchanged (single color)
+     *   "url('bg.png')"                              �?image only
+     *   "url('bg.png') center/cover no-repeat"       �?image + position + size
+     *   "#FB7299 url('bg.png') center/cover no-repeat" �?full shorthand
+     *   "rgba(251,114,153,0.4) url('bg.png')"         �?rgba color + image
      *
      * @param array $raw Raw style declarations
      * @return array Updated raw declarations with expanded sub-properties
@@ -842,7 +842,7 @@ class CssMappings
 
         $value = trim($raw['background']);
 
-        // Single color value (hex, rgb/rgba, gradient, transparent, none) → no expansion
+        // Single color value (hex, rgb/rgba, gradient, transparent, none) �?no expansion
         if (preg_match('/^#[\da-fA-F]{3,8}$/', $value) ||
             preg_match('/^rgba?\s*\([^)]*\)$/i', trim($value)) ||
             preg_match('/^linear-gradient\s*\([^)]*\)$/i', trim($value)) ||
@@ -851,7 +851,7 @@ class CssMappings
             return $raw;
         }
 
-        // No url() and no position/size delimiter → not a multi-value shorthand
+        // No url() and no position/size delimiter �?not a multi-value shorthand
         if (!preg_match('/url\s*\(/i', $value) && !str_contains($value, '/')) {
             return $raw;
         }
@@ -932,7 +932,7 @@ class CssMappings
         if ($bgColor !== '') {
             $raw['background'] = $bgColor;
         } else {
-            // No color specified → transparent (parseHexColor returns 0)
+            // No color specified �?transparent (parseHexColor returns 0)
             $raw['background'] = 'transparent';
         }
 
@@ -946,11 +946,11 @@ class CssMappings
      *   text-decoration: <line> || <style> || <color> || <thickness>
      *
      * Examples:
-     *   "underline"                        → line=underline
-     *   "underline wavy red"               → line=underline, style=wavy, color=red
-     *   "underline overline"               → line=underline overline
-     *   "underline wavy #FF0000 2px"        → line=underline, style=wavy, color=#FF0000, thickness=2
-     *   "none"                             → line=none (no decoration)
+     *   "underline"                        �?line=underline
+     *   "underline wavy red"               �?line=underline, style=wavy, color=red
+     *   "underline overline"               �?line=underline overline
+     *   "underline wavy #FF0000 2px"        �?line=underline, style=wavy, color=#FF0000, thickness=2
+     *   "none"                             �?line=none (no decoration)
      *
      * All four components can appear in any order. Multiple line keywords are
      * space-separated (e.g., "underline overline line-through").
@@ -1043,9 +1043,9 @@ class CssMappings
      * Parse grid-template-columns / grid-template-rows value.
      *
      * Examples:
-     *   "repeat(4, 80px)" → ['repeat' => true, 'count' => 4, 'size' => 80]
-     *   "1fr 1fr 1fr 1fr" → ['type' => 'explicit', 'sizes' => ['1fr','1fr','1fr','1fr']]
-     *   "auto"            → ['type' => 'auto']
+     *   "repeat(4, 80px)" �?['repeat' => true, 'count' => 4, 'size' => 80]
+     *   "1fr 1fr 1fr 1fr" �?['type' => 'explicit', 'sizes' => ['1fr','1fr','1fr','1fr']]
+     *   "auto"            �?['type' => 'auto']
      *
      * @param string $val Raw CSS value
      * @return array
@@ -1120,7 +1120,7 @@ class CssMappings
             }
 
             // If neither background nor color was specified, log a warning
-            // Skip for universal selectors — they apply to all elements and
+            // Skip for universal selectors �?they apply to all elements and
             // don't need explicit styling.
             if (!isset($props['bg']) && !isset($props['fg'])) {
                 if (!in_array($className, ['*', 'html', 'body'], true)) {
@@ -1129,7 +1129,7 @@ class CssMappings
             }
 
             // Parse border shorthand into individual properties (only if not already explicitly set)
-            // Directional borders (更具体) 优先于通用 border 处理
+            // Directional borders (更具�? 优先于通用 border 处理
             foreach (['borderBottom', 'borderTop', 'borderLeft', 'borderRight', 'border'] as $borderProp) {
                 if (isset($props[$borderProp]) && $props[$borderProp] !== '') {
                     $parts = explode('|', $props[$borderProp]);
@@ -1186,7 +1186,7 @@ class CssMappings
                     $props['fontWeight'] = (int)$fwMatch[1];
                 }
                 if (!empty($props)) {
-                    // 通用选择器 * 归入 '*' 键，其他标签选择器归入对应键
+                    // 通用选择�?* 归入 '*' 键，其他标签选择器归入对应键
                     $key = $selector === '*' ? '*' : $selector;
                     $classStyles[$key] = $props;
                 }
@@ -1543,13 +1543,13 @@ class CssMappings
     }
 
     /**
-     * RGB → BGR 格式转换。
+     * RGB �?BGR 格式转换�?
      *
-     * GDI COLORREF 使用 BGR 字节序，而主题系统（ColorScheme）存储 RGB 格式。
-     * 例如：0xRRGGBB → 0xBBGGRR。
+     * GDI COLORREF 使用 BGR 字节序，而主题系统（ColorScheme）存�?RGB 格式�?
+     * 例如�?xRRGGBB �?0xBBGGRR�?
      *
-     * @param int $rgb RGB 格式颜色值
-     * @return int BGR 格式颜色值
+     * @param int $rgb RGB 格式颜色�?
+     * @return int BGR 格式颜色�?
      */
     public static function rgbToBgr(int $rgb): int
     {
@@ -1557,11 +1557,11 @@ class CssMappings
     }
 
     /**
-     * 将 CSS 样式字符串解析为键值对数组。
+     * �?CSS 样式字符串解析为键值对数组�?
      * 输入: "background:#2C2C2E;color:#FFF;left:10px"
      * 输出: ['background' => '#2C2C2E', 'color' => '#FFF', 'left' => '10px']
      *
-     * AOT 安全：仅使用字符串操作和数组遍历。
+     * AOT 安全：仅使用字符串操作和数组遍历�?
      */
     public static function parseStyleStringToArray(string $style): array
     {
@@ -1582,13 +1582,13 @@ class CssMappings
     }
 
     /**
-     * 将键值对数组序列化为 CSS 样式字符串。
+     * 将键值对数组序列化为 CSS 样式字符串�?
      * 输入: ['background' => '#2C2C2E', 'left' => '11px']
      * 输出: "background:#2C2C2E;left:11px;"
      * 输入: []
      * 输出: ""
      *
-     * AOT 安全：仅使用字符串操作和数组遍历。
+     * AOT 安全：仅使用字符串操作和数组遍历�?
      */
     public static function buildStyleStringFromArray(array $style): string
     {
@@ -1607,13 +1607,13 @@ class CssMappings
     // ============================================================
 
     /**
-     * 解析 CSS transition 属性。
+     * 解析 CSS transition 属性�?
      *
      * 格式: property duration timing-function delay
      * 示例: "all 300ms ease-in-out"
      *       "background-color 200ms linear, transform 300ms ease"
      *
-     * @param string $value CSS transition 值
+     * @param string $value CSS transition �?
      * @return array 每个属性的解析结果
      *   [
      *     ['property' => 'all', 'duration' => 300, 'timing' => 'ease', 'delay' => 0],
@@ -1626,12 +1626,12 @@ class CssMappings
     }
 
     /**
-     * 解析 CSS animation 属性。
+     * 解析 CSS animation 属性�?
      *
      * 格式: name duration timing-function delay count direction fill-mode play-state
      * 示例: "fadeIn 300ms ease-in-out"
      *
-     * @param string $value CSS animation 值
+     * @param string $value CSS animation �?
      * @return array 解析结果
      */
     public static function parseAnimation(string $value): array
@@ -1640,13 +1640,13 @@ class CssMappings
     }
 
     /**
-     * 解析 CSS transform 属性。
+     * 解析 CSS transform 属性�?
      *
      * 格式: translateX(X) translateY(Y)
      * 示例: "translateX(10px) translateY(-20px)"
      *       "translate(10px, -20px)"
      *
-     * @param string $value CSS transform 值
+     * @param string $value CSS transform �?
      * @return array ['translateX' => int, 'translateY' => int]
      */
     public static function parseTransform(string $value): array
@@ -1655,10 +1655,10 @@ class CssMappings
     }
 
     /**
-     * 序列化 transform 数组为 CSS 字符串。
+     * 序列�?transform 数组�?CSS 字符串�?
      *
      * @param array $transform ['translateX' => int, 'translateY' => int]
-     * @return string CSS transform 值
+     * @return string CSS transform �?
      */
     public static function buildTransformString(array $transform): string
     {
