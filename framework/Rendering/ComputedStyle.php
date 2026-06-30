@@ -342,14 +342,14 @@ class ComputedStyle
             $this->bold = (bool)$d['bold'];
         }
         if (isset($d['fontWeight'])) {
-            $this->fontWeight = (int)$d['fontWeight'];
+            $this->fontWeight = self::safeInt($d['fontWeight'], 400);
         }
         if (isset($d['zIndex'])) {
-            $this->zIndex = (int)$d['zIndex'];
+            $this->zIndex = self::safeInt($d['zIndex']);
         }
         if (isset($d['borderRadius'])) {
             $v = $d['borderRadius'];
-            $this->borderRadius = $v instanceof CssLength ? $v->toPx() : (int)$v;
+            $this->borderRadius = $v instanceof CssLength ? $v->toPx() : self::safeInt($v);
         }
         if (isset($d['columnCount'])) {
             $this->columnCount = (int)$d['columnCount'];
@@ -362,10 +362,10 @@ class ComputedStyle
         }
 
         // ── 定位 ──
-        $this->left = (int)($d['left'] ?? 0);
-        $this->top = (int)($d['top'] ?? 0);
-        $this->right = (int)($d['right'] ?? 0);
-        $this->bottom = (int)($d['bottom'] ?? 0);
+        $this->left = self::safeInt($d['left'] ?? 0);
+        $this->top = self::safeInt($d['top'] ?? 0);
+        $this->right = self::safeInt($d['right'] ?? 0);
+        $this->bottom = self::safeInt($d['bottom'] ?? 0);
 
         // ── 其他字符串属性（AOT 兼容：显式逐一赋值，不用变量属性名）─
         $keys = [
@@ -464,6 +464,18 @@ class ComputedStyle
         return new CssKeyword($default);
     }
 
+    /**
+     * 安全将任意值转为 int（防止 CssValue 对象强转崩溃）
+     */
+    private static function safeInt(mixed $v, int $default = 0): int
+    {
+        if ($v instanceof CssLength) return $v->toPx();
+        if ($v instanceof CssRect) return $v->top->toPx();
+        if ($v instanceof CssKeyword) return 0;
+        if ($v instanceof CssColor) return $v->toBgr();
+        return is_numeric($v) ? (int)$v : $default;
+    }
+
     private function applyPaddingMarginBorder(array $d): void
     {
         // padding
@@ -484,7 +496,14 @@ class ComputedStyle
         );
 
         // border-width
-        $bw = (int)($d['borderWidth'] ?? 0);
+        $bwRaw = $d['borderWidth'] ?? 0;
+        if ($bwRaw instanceof CssRect) {
+            $bw = $bwRaw->top->toPx();
+        } elseif ($bwRaw instanceof CssLength) {
+            $bw = $bwRaw->toPx();
+        } else {
+            $bw = (int)$bwRaw;
+        }
         $bw = $bw < 0 ? 0 : $bw;
         $bwCl = CssLength::px($bw);
         $this->borderWidth = new CssRect(
@@ -495,18 +514,18 @@ class ComputedStyle
         );
 
         // border per-side widths (int storage for layout)
-        $this->borderTopWidth = (int)($d['borderTopWidth'] ?? $bw);
-        $this->borderRightWidth = (int)($d['borderRightWidth'] ?? $bw);
-        $this->borderBottomWidth = (int)($d['borderBottomWidth'] ?? $bw);
-        $this->borderLeftWidth = (int)($d['borderLeftWidth'] ?? $bw);
+        $this->borderTopWidth = self::safeInt($d['borderTopWidth'] ?? $bw);
+        $this->borderRightWidth = self::safeInt($d['borderRightWidth'] ?? $bw);
+        $this->borderBottomWidth = self::safeInt($d['borderBottomWidth'] ?? $bw);
+        $this->borderLeftWidth = self::safeInt($d['borderLeftWidth'] ?? $bw);
 
         // border color
-        $bc = (int)($d['borderColor'] ?? 0);
+        $bc = self::safeInt($d['borderColor'] ?? 0);
         $this->borderColor = $bc;
-        $this->borderTopColor = (int)($d['borderTopColor'] ?? $bc);
-        $this->borderRightColor = (int)($d['borderRightColor'] ?? $bc);
-        $this->borderBottomColor = (int)($d['borderBottomColor'] ?? $bc);
-        $this->borderLeftColor = (int)($d['borderLeftColor'] ?? $bc);
+        $this->borderTopColor = self::safeInt($d['borderTopColor'] ?? $bc);
+        $this->borderRightColor = self::safeInt($d['borderRightColor'] ?? $bc);
+        $this->borderBottomColor = self::safeInt($d['borderBottomColor'] ?? $bc);
+        $this->borderLeftColor = self::safeInt($d['borderLeftColor'] ?? $bc);
 
         // border style
         $bs = (string)($d['borderStyle'] ?? '');

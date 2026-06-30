@@ -128,11 +128,6 @@ class LayoutResolver
         $rootFragment = $this->resolveNodeInternal($root, $constraints);
         $rootFragment->applyTo($root);
 
-        // Debug: final span dimensions after full layout
-        if (Config::get('debug_diag_enabled', false)) {
-            $this->debugCheckSpanDims($root);
-        }
-
         return $rootFragment;
     }
 
@@ -491,12 +486,12 @@ class LayoutResolver
 
         foreach ($node->children as $child) {
             $childConstraints = new LayoutConstraints(
-                $constraints->contentWidth,
-                $constraints->contentHeight,
-                $constraints->parentContentX + $childOffX,
-                $constraints->parentContentY + $childOffY,
-                $constraints->contentWidth,
-                $constraints->contentHeight,
+                (int)($constraints->contentWidth ?? 0),
+                (int)($constraints->contentHeight ?? 0),
+                (int)($constraints->parentContentX ?? 0) + (int)($childOffX ?? 0),
+                (int)($constraints->parentContentY ?? 0) + (int)($childOffY ?? 0),
+                (int)($constraints->contentWidth ?? 0),
+                (int)($constraints->contentHeight ?? 0),
             );
             $childFragment = $this->resolveNodeInternal($child, $childConstraints);
             $builder->addChild($childFragment);
@@ -516,12 +511,12 @@ class LayoutResolver
 
         foreach ($node->children as $child) {
             $childConstraints = new LayoutConstraints(
-                $constraints->contentWidth,
-                $constraints->contentHeight,
-                $constraints->parentContentX + $childOffX,
-                $constraints->parentContentY + $childOffY,
-                $constraints->contentWidth,
-                $constraints->contentHeight,
+                (int)($constraints->contentWidth ?? 0),
+                (int)($constraints->contentHeight ?? 0),
+                (int)($constraints->parentContentX ?? 0) + (int)($childOffX ?? 0),
+                (int)($constraints->parentContentY ?? 0) + (int)($childOffY ?? 0),
+                (int)($constraints->contentWidth ?? 0),
+                (int)($constraints->contentHeight ?? 0),
             );
             $childFragment = $this->resolveNodeInternal($child, $childConstraints);
             $builder->addChild($childFragment);

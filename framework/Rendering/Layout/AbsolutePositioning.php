@@ -5,6 +5,7 @@ namespace Px\Rendering\Layout;
 use native_types;
 
 use Px\Rendering\ComputedStyle;
+use Px\Rendering\CssLength;
 use Px\Rendering\CssStyleHelper;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
@@ -57,10 +58,10 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         // 从祖先的 computedStyle 获取 padding/border
         $ancCS = $ancestor?->computedStyle;
-        $ancestorPaddingLeft = $ancCS?->padding?->left->toPx() ?? 0;
-        $ancestorPaddingTop = $ancCS?->padding?->top->toPx() ?? 0;
-        $ancestorPaddingRight = $ancCS?->padding?->right->toPx() ?? 0;
-        $ancestorPaddingBottom = $ancCS?->padding?->bottom->toPx() ?? 0;
+        $ancestorPaddingLeft = $ancCS?->padding?->left?->toPx() ?? 0;
+        $ancestorPaddingTop = $ancCS?->padding?->top?->toPx() ?? 0;
+        $ancestorPaddingRight = $ancCS?->padding?->right?->toPx() ?? 0;
+        $ancestorPaddingBottom = $ancCS?->padding?->bottom?->toPx() ?? 0;
 
         $borderL = $ancCS?->borderLeftWidth ?? 0;
         $borderR = $ancCS?->borderRightWidth ?? 0;
@@ -76,16 +77,16 @@ class AbsolutePositioning implements AbsoluteStrategy
         $cbW = $ancestor ? ($ancestorW) : $viewportW;
 
         // 从 style 读取 width/height（CssLength 携带单位信息）
-        $width = $style?->width->toPx() ?? 0;
-        $height = $style?->height->toPx() ?? 0;
-        if ($style?->width->isPercent()) $width = $style->resolveWidth($cbW);
-        if ($style?->height->isPercent()) $height = $style->resolveHeight($ancestorH);
+        $width = $style?->width?->toPx() ?? 0;
+        $height = $style?->height?->toPx() ?? 0;
+        if ($style?->width?->isPercent()) $width = $style->resolveWidth($cbW);
+        if ($style?->height?->isPercent()) $height = $style->resolveHeight($ancestorH);
 
         // 计算边距
-        $marginLeft = $style?->margin?->left->toPx() ?? 0;
-        $marginTop = $style?->margin?->top->toPx() ?? 0;
-        $marginRight = $style?->margin?->right->toPx() ?? 0;
-        $marginBottom = $style?->margin?->bottom->toPx() ?? 0;
+        $marginLeft = $style?->margin?->left?->toPx() ?? 0;
+        $marginTop = $style?->margin?->top?->toPx() ?? 0;
+        $marginRight = $style?->margin?->right?->toPx() ?? 0;
+        $marginBottom = $style?->margin?->bottom?->toPx() ?? 0;
 
         // 如果 left+right 都设置且 width=0，用两者决定宽度
         if ($leftVal !== 0 && $rightVal !== 0 && $width <= 0) {
@@ -95,8 +96,8 @@ class AbsolutePositioning implements AbsoluteStrategy
             $height = max(0, $ancestorH - $topVal - $bottomVal - $marginTop - $marginBottom);
         }
 
-        $hasExplicitW = $width > 0 || ($style?->width->toPx() ?? 0) > 0;
-        $hasExplicitH = $height > 0 || ($style?->height->toPx() ?? 0) > 0;
+        $hasExplicitW = $width > 0 || ($style?->width?->toPx() ?? 0) > 0;
+        $hasExplicitH = $height > 0 || ($style?->height?->toPx() ?? 0) > 0;
 
         // Auto-size for text content
         if ((!$hasExplicitW || !$hasExplicitH) && $node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
@@ -104,16 +105,16 @@ class AbsolutePositioning implements AbsoluteStrategy
             $bd = $style?->bold ?? false;
             $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($node->content, $fs, $bd) : 0);
             if ($measured > 0) {
-                $padL = $style?->padding?->left->toPx() ?? 0;
-                $padR = $style?->padding?->right->toPx() ?? 0;
+                $padL = $style?->padding?->left?->toPx() ?? 0;
+                $padR = $style?->padding?->right?->toPx() ?? 0;
                 $bwL = $style?->borderLeftWidth ?? 0;
                 $bwR = $style?->borderRightWidth ?? 0;
                 if (!$hasExplicitW) $width = max(0, $measured + $padL + $padR + $bwL + $bwR);
             }
             if (!$hasExplicitH) {
                 $lh = $style?->lineHeight ?? (int)($fs * 1.2);
-                $padT = $style?->padding?->top->toPx() ?? 0;
-                $padB = $style?->padding?->bottom->toPx() ?? 0;
+                $padT = $style?->padding?->top?->toPx() ?? 0;
+                $padB = $style?->padding?->bottom?->toPx() ?? 0;
                 $height = max($lh, $height);
             }
         }

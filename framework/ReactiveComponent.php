@@ -32,7 +32,7 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     private ?\Closure $renderCallback = null;
 
     /** @var array<string, array<int, callable>> eventName => [handlerId => callback] */
-    private array $eventHandlers = [];
+    protected array $eventHandlers = [];
 
     /** @var array<array{child: ReactiveComponent, handlerId: int}> 注册在子组件上的处理器引用 */
     protected array $listenerIds = [];

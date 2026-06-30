@@ -193,7 +193,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // ── Scroll container post-processing for flex/grid display modes ──
 
-        $parentDisplay = ($node->parent !== null) ? ($node->parent->getStyleArray()['display'] ?? '') : '';
+        $parentDisplay = $node->parent?->getStyleArray()['display'] ?? '';
 
         $isFlexOrGridItem = ($parentDisplay === 'flex' || $parentDisplay === 'grid');
 
