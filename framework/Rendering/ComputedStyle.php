@@ -173,6 +173,12 @@ class ComputedStyle
         string $elementType = 'div'
     ) {
         $this->rawDeclarations = $declarations;
+        // ── DIAG: 检测 rawDeclarations 中是否有 CssRect 残留 ──
+        foreach ($declarations as $dk => $dv) {
+            if ($dv instanceof CssRect) {
+                error_log('[DIAG_RAW] CssRect in rawDeclarations key=' . $dk);
+            }
+        }
 
         // 合并默认值 + 显式声明 + 继承：确保每个属性只赋值一次（readonly）
         $merged = self::getDefaultsArray($elementType);
@@ -646,6 +652,9 @@ class ComputedStyle
                     $result[$k] = $v->toBgr();
                 } elseif ($v instanceof CssFlex) {
                     $result[$k] = $v->grow . ' ' . $v->shrink . ' ' . $v->basis->toPx();
+                } elseif ($v instanceof CssRect) {
+                    // CssRect (borderWidth/padding/margin) 转 top 值像素
+                    $result[$k] = $v->top->toPx();
                 } else {
                     $result[$k] = $v;
                 }

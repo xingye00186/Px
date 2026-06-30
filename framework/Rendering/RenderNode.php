@@ -190,7 +190,30 @@ class RenderNode
     public function getStyleArray(): array
     {
         if ($this->_styleCache === null && $this->computedStyle !== null) {
-            $this->_styleCache = $this->computedStyle->toExportArray();
+            $arr = $this->computedStyle->toExportArray();
+            // ── DIAG: 检测 toExportArray 中是否有 CssValue 漏网 ──
+            foreach ($arr as $k => $v) {
+                if (is_object($v)) {
+                    error_log('[DIAG_SA] leak key=' . $k . ' class=' . get_class($v));
+                }
+            }
+            // 安全防护：清除 export 中残留的 CssValue 对象
+            foreach ($arr as $k => $v) {
+                if ($v instanceof \Px\Rendering\CssLength || $v instanceof \Px\Rendering\CssRect) {
+                    $arr[$k] = $v->toPx();
+                } elseif ($v instanceof \Px\Rendering\CssKeyword) {
+                    $arr[$k] = $v->value;
+                } elseif ($v instanceof \Px\Rendering\CssColor) {
+                    $arr[$k] = $v->toBgr();
+                }
+            }
+            // ── DIAG: 检测 toExportArray 结果中是否有漏网的对象 ──
+            foreach ($arr as $k => $v) {
+                if (is_object($v)) {
+                    error_log('[DIAG_SA] getStyleArray leak key=' . $k . ' class=' . get_class($v) . ' node=' . ($this->type ?? ''));
+                }
+            }
+            $this->_styleCache = $arr;
         }
         return $this->_styleCache ?? [];
     }

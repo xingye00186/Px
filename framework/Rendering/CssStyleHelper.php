@@ -38,6 +38,10 @@ class CssStyleHelper
         if (is_string($val)) {
             return CssLength::fromString($val)->resolveInContext($containerSize);
         }
+        if ($val instanceof CssRect) {
+            error_log('[DIAG_CSS] resolveLength key=' . $key . ' got CssRect top=' . $val->top->toPx());
+            return $val->top->toPx();
+        }
         return (int)$val;
     }
 
@@ -59,7 +63,9 @@ class CssStyleHelper
             $result = $val->resolveInContext($containerSize);
             return max(0, $result + $calcOffset);
         }
-
+        if ($val instanceof CssRect) {
+            return max(0, $val->top->toPx() + $calcOffset);
+        }
         $result = (int)$val;
         return max(0, $result + $calcOffset);
     }
@@ -106,7 +112,7 @@ class CssStyleHelper
         if ($boxSizing === 'border-box') {
             $padL = self::resolveLength($style, 'paddingLeft', $totalW);
             $padR = self::resolveLength($style, 'paddingRight', $totalW);
-            $bw = (int)($style['borderWidth'] ?? 0);
+            $bw = self::getInt($style, 'borderWidth');
             return max(0, $totalW - $padL - $padR - $bw * 2);
         }
         return max(0, $totalW);
@@ -121,7 +127,7 @@ class CssStyleHelper
         if ($boxSizing === 'border-box') {
             $padT = self::resolveLength($style, 'paddingTop', $totalH);
             $padB = self::resolveLength($style, 'paddingBottom', $totalH);
-            $bw = (int)($style['borderWidth'] ?? 0);
+            $bw = self::getInt($style, 'borderWidth');
             return max(0, $totalH - $padT - $padB - $bw * 2);
         }
         return max(0, $totalH);
@@ -138,9 +144,9 @@ class CssStyleHelper
         }
         $padL = self::resolveLength($style, 'paddingLeft', $contentW);
         $padR = self::resolveLength($style, 'paddingRight', $contentW);
-        $bw = (int)($style['borderWidth'] ?? 0);
-        $blw = (int)($style['borderLeftWidth'] ?? 0);
-        $brw = (int)($style['borderRightWidth'] ?? 0);
+        $bw = self::getInt($style, 'borderWidth');
+        $blw = self::getInt($style, 'borderLeftWidth');
+        $brw = self::getInt($style, 'borderRightWidth');
         return max(0, $contentW + $padL + $padR + $blw + $brw);
     }
 
@@ -155,9 +161,9 @@ class CssStyleHelper
         }
         $padT = self::resolveLength($style, 'paddingTop', $contentH);
         $padB = self::resolveLength($style, 'paddingBottom', $contentH);
-        $bw = (int)($style['borderWidth'] ?? 0);
-        $btw = (int)($style['borderTopWidth'] ?? 0);
-        $bbw = (int)($style['borderBottomWidth'] ?? 0);
+        $bw = self::getInt($style, 'borderWidth');
+        $btw = self::getInt($style, 'borderTopWidth');
+        $bbw = self::getInt($style, 'borderBottomWidth');
         return max(0, $contentH + $padT + $padB + $btw + $bbw);
     }
 
@@ -246,7 +252,14 @@ class CssStyleHelper
     {
         $val = $style[$key] ?? null;
         if ($val === null) return $default;
-        if ($val instanceof CssLength) return $val->toPx();
+        if ($val instanceof CssLength) {
+            error_log('[DIAG_CSS] getInt key=' . $key . ' got CssLength val=' . $val->toPx());
+            return $val->toPx();
+        }
+        if ($val instanceof CssRect) {
+            error_log('[DIAG_CSS] getInt key=' . $key . ' got CssRect top=' . $val->top->toPx());
+            return $val->top->toPx();
+        }
         if (is_string($val)) return (int)$val;
         return (int)$val;
     }
