@@ -59,7 +59,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         ?FragmentBuilder $builder = null
     ): void
     {
-        $style = $node->getStyleArray();
+        $style = $computedStyle !== null ? $computedStyle->toExportArray() : [];
         // ── 安全防护：将 style 数组中的 CssValue 对象转为原始值 ──
         foreach ($style as $sk => $sv) {
             if ($sv instanceof \Px\Rendering\CssLength || $sv instanceof \Px\Rendering\CssRect) {
@@ -81,7 +81,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         // CSS: grid item percentage width resolves against content width
         $parentW = (int)(($node->parent !== null)
-            ? CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w)
+            ? CssStyleHelper::contentBoxWidth($node->parent->computedStyle !== null ? $node->parent->computedStyle->toExportArray() : [], $node->parent->w)
             : 0);
 
         $parentH = ($node->parent !== null) ? $node->parent->h : 0;
@@ -341,7 +341,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $itemRowMap = [];
 
         foreach ($children as $idx => $ch) {
-            $childStyle = $ch->getStyleArray();
+            $childStyle = $ch->computedStyle !== null ? $ch->computedStyle->toExportArray() : [];
 
             // Use explicit grid-column/grid-row from style (CSS 1-based)
             // grid-area: name overrides explicit grid-column/grid-row
@@ -507,7 +507,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 $newCellY += ($actualRowHeights[$r] ?? $cellH) + $rowGap;
             }
 
-            $childStyle = $ch->getStyleArray();
+            $childStyle = $ch->computedStyle !== null ? $ch->computedStyle->toExportArray() : [];
             $alignSelf = $childStyle['alignSelf'] ?? 'auto';
             if ($alignSelf === 'auto') $alignSelf = 'stretch';
 

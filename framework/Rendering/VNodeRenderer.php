@@ -1308,33 +1308,34 @@ class VNodeRenderer
 
     private function makeButtonElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
-        $cursor = $style['cursor'] ?? '';
+        $cs = $node->computedStyle;
+        $cursor = $cs?->cursor?->value ?? '';
         if ($w <= 0 || $h <= 0) {
             $w = $w <= 0 ? 80 : $w;
             $h = $h <= 0 ? 32 : $h;
         }
 
-        $bg     = $style['bg'] ?? 0x4488CC;
-        $fg     = $style['fg'] ?? 0xFFFFFF;
-        $borderWidth = $style['borderWidth'] ?? 0;
-        $borderTopWidth = $style['borderTopWidth'] ?? $borderWidth;
-        $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
-        $borderBottomWidth = $style['borderBottomWidth'] ?? $borderWidth;
-        $borderLeftWidth = $style['borderLeftWidth'] ?? $borderWidth;
-        $borderStyle = $style['borderStyle'] ?? 'solid';
+        $bg     = $cs?->backgroundColor?->toBgr() ?? 0x4488CC;
+        $fg     = $cs?->color?->toBgr() ?? 0xFFFFFF;
+        $borderWidth = $cs?->borderWidth?->top?->toPx() ?? 0;
+        $borderTopWidth = $cs?->borderTopWidth ?? $borderWidth;
+        $borderRightWidth = $cs?->borderRightWidth ?? $borderWidth;
+        $borderBottomWidth = $cs?->borderBottomWidth ?? $borderWidth;
+        $borderLeftWidth = $cs?->borderLeftWidth ?? $borderWidth;
+        $borderStyle = $cs?->borderStyle ?? 'solid';
         $borderColor = 0;
         if ($borderWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0 || $borderLeftWidth > 0) {
-            $borderColor = (int)($style['borderColor'] ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0));
+            $borderColor = $cs?->borderColor ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0);
         }
-        $borderTopColor = $style['borderTopColor'] ?? $borderColor;
-        $borderRightColor = $style['borderRightColor'] ?? $borderColor;
-        $borderBottomColor = $style['borderBottomColor'] ?? $borderColor;
-        $borderLeftColor = $style['borderLeftColor'] ?? $borderColor;
-        $borderRadius = $style['borderRadius'] ?? 0;
-        $borderRadiusX = $style['borderRadiusX'] ?? 0;
-        $borderRadiusY = $style['borderRadiusY'] ?? 0;
-        $opacity = $style['opacity'] ?? 1.0;
-        $shadowOffsets = CssMappings::parseBoxShadowOffsets($style['boxShadow'] ?? '');
+        $borderTopColor = $cs?->borderTopColor ?? $borderColor;
+        $borderRightColor = $cs?->borderRightColor ?? $borderColor;
+        $borderBottomColor = $cs?->borderBottomColor ?? $borderColor;
+        $borderLeftColor = $cs?->borderLeftColor ?? $borderColor;
+        $borderRadius = $cs?->borderRadius ?? 0;
+        $borderRadiusX = 0;
+        $borderRadiusY = 0;
+        $opacity = $cs?->opacity ?? 1.0;
+        $shadowOffsets = CssMappings::parseBoxShadowOffsets($cs?->boxShadow ?? '');
         $shadowX = $shadowOffsets['h']; $shadowY = $shadowOffsets['v']; $shadowBlur = $shadowOffsets['blur']; $shadowColor = $shadowOffsets['color']; $shadowAlpha = $shadowOffsets['alpha']; $shadowInset = $shadowOffsets['inset'];
 
         $label = '';
@@ -1565,13 +1566,14 @@ class VNodeRenderer
 
     private function makeInputElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
-        $bg       = $style['bg'] ?? 0x1E1E1E;
-        $fg       = $style['fg'] ?? 0xFFFFFF;
-        $fontSize = $style['fontSize'] ?? 14;
-        $borderRadius = $style['borderRadius'] ?? 0;
-        $borderRadiusX = $style['borderRadiusX'] ?? 0;
-        $borderRadiusY = $style['borderRadiusY'] ?? 0;
-        $opacity = $style['opacity'] ?? 1.0;
+        $cs = $node->computedStyle;
+        $bg       = $cs?->backgroundColor?->toBgr() ?? 0x1E1E1E;
+        $fg       = $cs?->color?->toBgr() ?? 0xFFFFFF;
+        $fontSize = $cs?->fontSize ?? 14;
+        $borderRadius = $cs?->borderRadius ?? 0;
+        $borderRadiusX = 0;
+        $borderRadiusY = 0;
+        $opacity = $cs?->opacity ?? 1.0;
 
         $bindKey = $props['v-model'] ?? '';
         $text = '';

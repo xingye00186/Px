@@ -184,8 +184,16 @@ class RenderNode
 
     /**
      * 兼容桥接：返回 computedStyle 的导出数组。
+     *
+     * @deprecated 请直接通过 $node->computedStyle 类型安全 API 访问样式属性。
+     *   - $style['bg']  → $computedStyle->backgroundColor->toBgr()
+     *   - $style['fg']  → $computedStyle->color->toBgr()
+     *   - $style['fontSize'] → $computedStyle->fontSize
+     *   - $style['display'] → $computedStyle->display->value
+     *   - $style['paddingLeft'] → $computedStyle->padding->left->toPx()
+     *     注意：写入返回值的元素（如 `getStyleArray()['key'] = val`）无实际效果。
+     *
      * 仅供 FlexLayoutStrategy/GridLayoutStrategy 的内部算法体使用。
-     * 注意：写入返回值的元素（如 `getStyleArray()['key'] = val`）无实际效果。
      */
     public function getStyleArray(): array
     {

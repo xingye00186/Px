@@ -103,10 +103,9 @@ class RenderTreeManager
 
         // ── normal/verbose 级别附加信息 ──
         if ($detail !== 'minimal') {
-            $style = $node->getStyleArray();
-            // display + position + overflow
-            $display = $style['display'] ?? '';
-            $position = $style['position'] ?? '';
+            $cs = $node->computedStyle;
+            $display = $cs?->display?->value ?? '';
+            $position = $cs?->position?->value ?? '';
             if ($display !== '' || $position !== '') {
                 $output .= " [";
                 if ($display !== '') {
@@ -326,8 +325,7 @@ class RenderTreeManager
     private function destroyRenderNodeTree(RenderNode $rn): void
     {
         if (Config::get('debug_diag_enabled', false)) {
-            $style = $rn->getStyleArray();
-            $dsp = $style['display'] ?? '';
+            $dsp = $rn->computedStyle?->display?->value ?? '';
             error_log('[DIAG] DESTROY: type=' . $rn->type . ' dsp=' . $dsp
                 . ' children=' . count($rn->children));
         }
