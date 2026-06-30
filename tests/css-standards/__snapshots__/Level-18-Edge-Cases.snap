@@ -1,75 +1,46 @@
-@generated 2026-06-11 15:45:34
+@generated 2026-06-30 18:07:24
 === Test: width:0 height:0 零尺寸元素 ===
 Frame #1 events=0 detail=normal
-div (0,0 0x0) ov=hidden text="Zero"
+div (0,0 0x0) [dsp=block pos=static] ov=hidden text="Zero"
 
 ---
 
 === Test: margin 负值重叠 上负下负 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x90)
-  div (0,0 300x50) text="Bottom -10"
-  div (0,40 300x50) text="Top -10"
+div (0,0 300x90) [dsp=block pos=static]
+  div (0,0 300x50) [dsp=block pos=static] text="Bottom -10"
+  div (0,40 300x50) [dsp=block pos=static] text="Top -10"
 
 ---
 
 === Test: width:10000px 极大宽度 裁边 ===
 Frame #1 events=0 detail=normal
-div (0,0 10000x30) text="Very wide element"
-
----
-
-=== Test: overflow:hidden 零尺寸容器 ===
-Frame #1 events=0 detail=normal
-div (0,0 0x0) ov=hidden
-  div (0,0 200x100) text="Hidden content"
-
----
-
-=== Test: 空子元素容器 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x40)
+div (0,0 10000x30) [dsp=block pos=static] text="Very wide element"
 
 ---
 
 === Test: 单一子项 margin auto 居中 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x100)
-  div (150,0 100x50) text="Only child"
+div (0,0 400x100) [dsp=block pos=static]
+  div (150,0 100x50) [dsp=block pos=static] text="Only child"
 
 ---
 
 === Test: border 在零尺寸元素上 ===
 Frame #1 events=0 detail=normal
-div (0,0 0x0) bw=2 ov=hidden
+div (0,0 0x0) [dsp=block pos=static] bw=2 ov=hidden
 
 ---
 
 === Test: padding 在零尺寸元素上 ===
 Frame #1 events=0 detail=normal
-div (0,0 0x0) ov=hidden text="Pad"
+div (0,0 0x0) [dsp=block pos=static] ov=hidden text="Pad"
 
 ---
 
 === Test: opacity:0 子项在 flex row 中 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x50) [dsp=flex]
-  div (0,0 60x30) text="A"
-  div (60,0 72x30) text="Invisible"
-  div (132,0 60x30) text="C"
-
----
-
-=== Test: 深度嵌套 10 层空 div ===
-Frame #1 events=0 detail=normal
-div (0,0 200x100)
-  div (0,0 200x10)
-    div (0,0 200x10)
-      div (0,0 200x10)
-        div (0,0 200x10)
-          div (0,0 200x10)
-            div (0,0 200x10)
-              div (0,0 200x10)
-                div (0,0 200x10)
-                  div (0,0 200x10)
-                    div (0,0 10x10) text="Deep"
+div (0,0 300x50) [dsp=flex pos=static]
+  div (0,0 60x30) [dsp=block pos=static] text="A"
+  div (60,0 60x30) [dsp=block pos=static] text="Invisible"
+  div (120,0 60x30) [dsp=block pos=static] text="C"

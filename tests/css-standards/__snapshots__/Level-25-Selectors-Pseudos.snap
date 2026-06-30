@@ -1,21 +1,21 @@
-@generated 2026-06-11 15:45:35
+@generated 2026-06-30 18:07:24
 === Test: 后代选择器 .ancestor .child 匹配 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x100)
-  div (0,0 160x30) text="Descendant"
+div (0,0 200x100) [dsp=block pos=static]
+  div (0,0 160x30) [dsp=block pos=static] text="Descendant"
 
 ---
 
 === Test: 子代选择器 .parent > .direct-child 匹配 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x100)
-  div (0,0 200x25) text="Direct"
+div (0,0 200x100) [dsp=block pos=static]
+  div (0,0 200x25) [dsp=block pos=static] text="Direct"
 
 ---
 
 === Test: 特异性 class选择器 > 元素选择器 ===
 Frame #1 events=0 detail=normal
-div (0,0 120x40) text="Specific"
+div (0,0 120x40) [dsp=block pos=static] text="Specific"
 
 ---
 
@@ -37,13 +37,6 @@ OK
 
 === Test: ::after 伪元素 content 解析 ===
 OK
----
-
-=== Test: scroll-behavior:smooth 属性解析 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x100) scroll ch=300 cw=200 maxScroll=200 st=0 sl=0 ov=auto
-  div (0,0 200x300) text="Tall content"
-
 ---
 
 === Test: 相邻兄弟选择器匹配 ===
