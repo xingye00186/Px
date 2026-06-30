@@ -11,6 +11,7 @@
  */
 
 use Px\Rendering\RenderNode;
+use Px\Rendering\ComputedStyle;
 use Px\Rendering\LayoutResolver;
 
 /**
@@ -18,7 +19,8 @@ use Px\Rendering\LayoutResolver;
  */
 function makeNode(string $type, array $style = [], array $children = [], ?string $content = null): RenderNode
 {
-    $node = new RenderNode($type, $style, $content);
+    $computedStyle = !empty($style) ? new ComputedStyle($style) : null;
+    $node = new RenderNode($type, $computedStyle, $content);
     foreach ($children as $child) {
         $node->addChild($child);
     }
@@ -43,8 +45,8 @@ function runResolver(RenderNode $root): LayoutResolver
 function treeToText(RenderNode $node, int $depth = 0): string
 {
     $indent = str_repeat('  ', $depth);
-    $display = $node->style['display'] ?? 'block';
-    $position = $node->style['position'] ?? 'static';
+    $display = $node->computedStyle?->display?->value ?? 'block';
+    $position = $node->computedStyle?->position?->value ?? 'static';
 
     // 基础信息: [类型] display position x y w h layer
     $parts = [

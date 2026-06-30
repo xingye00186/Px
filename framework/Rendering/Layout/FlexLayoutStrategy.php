@@ -10,6 +10,9 @@ use Px\Rendering\CssMappings;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
 use Px\Rendering\CssStyleHelper;
+use Px\Rendering\Layout\Flex\FlexItemCollector;
+use Px\Rendering\Layout\Flex\FlexLineBreaker;
+use Px\Rendering\Layout\Flex\FlexDistributor;
 use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\FragmentBuilder;
 
@@ -68,6 +71,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
     }
 
     private LayoutResolver $resolver;
+    private ?FlexItemCollector $collector = null;
+    private ?FlexDistributor $distributor = null;
 
     /** @var array<string, int> Auto margin X offset tracking */
     private array $marginAutoOffsetsX = [];
@@ -100,7 +105,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $height = (int)($style['height'] ?? 0);
 
         // CSS 2.2 §10.3.7: margins apply to flex containers as block-level elements
-        $cbWidth = $node->parent ? CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w) : 0;
+        $cbWidth = $node->parent ? ($node->parent->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent->w) : 0;
         $marginLeft = CssStyleHelper::resolveLength($style, 'marginLeft', $cbWidth);
         $marginTop = CssStyleHelper::resolveLength($style, 'marginTop', $cbWidth);
 
@@ -128,7 +133,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // CSS: flex item percentage width resolves against content width
         // When parent is null (top-level element under #root), use window viewport as containing block
         $parentW = (int)(($node->parent !== null)
-            ? CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w)
+            ? ($node->parent->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent->w)
             : (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0));
 
         $parentH = ($node->parent !== null) ? $node->parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
@@ -154,7 +159,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $checkMR = $style['marginRightAuto'] ?? false;
         if ($checkML || $checkMR) {
             $cbW = ($node->parent !== null)
-                ? CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w)
+                ? ($node->parent->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent->w)
                 : 0;
             if ($cbW > 0) {
                 $totalW = max($node->w, $node->visualW ?? $node->w);
@@ -177,7 +182,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // ── Scroll container post-processing for flex/grid display modes ──
 
-        $parentDisplay = $node->parent?->getStyleArray()['display'] ?? '';
+        $parentDisplay = $node->parent?->computedStyle?->display?->value ?? '';
 
         $isFlexOrGridItem = ($parentDisplay === 'flex' || $parentDisplay === 'grid');
 
@@ -185,7 +190,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
             if (!$hasExplicitW && $width === 0 && $node->parent !== null) {
-                $width = (int)CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w);
+                $width = (int)($node->parent->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent->w);
 
                 $node->w = (int)max(0, (int)$width);
             }
@@ -198,14 +203,14 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             // their internal grid to compute 1 column with inflated height, which
             // then triggers flex-shrink and damages sibling items' explicit sizes.
 
-            $parentDirection = $node->parent->getStyleArray()['flexDirection'] ?? 'row';
+            $parentDirection = $node->parent->computedStyle?->flexDirection?->value ?? 'row';
 
             $parentIsColumn = ($parentDirection === 'column' || $parentDirection === 'column-reverse');
 
             $hasExplicitW = array_key_exists('width', $style) || array_key_exists('widthPercent', $style);
 
             if ($parentIsColumn && !$hasExplicitW && $width === 0) {
-                $parentContentW = CssStyleHelper::contentBoxWidth($node->parent->getStyleArray(), $node->parent->w);
+                $parentContentW = (int)($node->parent->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent->w);
 
                 $width = $parentContentW;
 
@@ -252,985 +257,103 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         $containerCross = max(0, $isRow ? CssStyleHelper::contentBoxHeight($style, $height) : CssStyleHelper::contentBoxWidth($style, $width));
 
-        // ── Step 1: Collect children and resolve ──
-
-        // Apply scroll offset to child parent coordinates for scroll containers
-
-        // A1: scroll offset handled by VNodeRenderer at draw time
-
-        $children = [];
-        $absoluteChildren = [];
-
-        foreach ($node->children as $child) {
-            $childPosition = $child->getStyleArray()['position'] ?? 'static';
-            $childDisplay = $child->getStyleArray()['display'] ?? 'block';
-
-            // Defer absolute/fixed children - container dimensions not yet known
-            // Skip display:none children (CSS 2.2 §9.2.4: generate no box)
-            if ($childPosition === 'absolute' || $childPosition === 'fixed' || $childDisplay === 'none') {
-                if ($childDisplay === 'none') {
-                    $child->w = 0;
-                    $child->h = 0;
-                    $child->visualW = 0;
-                    $child->visualH = 0;
-                }
-                if ($childPosition === 'absolute' || $childPosition === 'fixed') {
-                    $absoluteChildren[] = $child;
-                }
-                continue;
-            }
-
-            // Defer auto-margin for flex-grow items: their final width is
-            // determined by flex-grow, not by first-pass auto-width.
-            // Browser: auto-margin computed ONCE after final width is known.
-            // Engine: two-pass re-resolves with correct width - skip first pass.
-            $childGrow = (float)($child->getStyleArray()['flexGrow'] ?? 0);
-            $this->resolver->resolveChildNode($child, $node->x + $paddingLeft, $node->y + $paddingTop, $node);
-
-            $children[] = $child;
+        // ── Step 1-3: 使用 FlexItemCollector ──
+        if ($this->collector === null) {
+            $this->collector = new FlexItemCollector($this->resolver);
         }
+        $collected = $this->collector->collect($node, $parentX, $parentY, $style);
+        $children = $collected['children'];
+        $absoluteChildren = $collected['absoluteChildren'];
+        $flexItemData = $collected['flexItemData'];
 
         if (count($children) === 0) {
-            // Still need to finalize scroll container contentHeight if applicable
             if ($node->isScrollContainer) {
                 $node->contentHeight = 0;
             }
             return;
         }
 
-        // ── Step 2: Order sort (AOT 兼容的冒泡排序，稳定排序) ──
-        $n = count($children);
-
-        for ($i = 0; $i < $n; $i++) {
-            for ($j = 0; $j < $n - $i - 1; $j++) {
-                $orderA = (int)($children[$j]->getStyleArray()['order'] ?? 0);
-
-                $orderB = (int)($children[$j + 1]->getStyleArray()['order'] ?? 0);
-
-                if ($orderA > $orderB) {
-                    $tmp = $children[$j];
-
-                    $children[$j] = $children[$j + 1];
-
-                    $children[$j + 1] = $tmp;
-                }
-            }
-        }
-
-        // ── Step 3: 收集 flex item 元数�?(grow/shrink/basis) ──
-        $flexItemData = [];
-
-        foreach ($children as $ch) {
-            $data = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => -1, 'isFlexGrow' => false];
-
-            $flexRaw = $ch->computedStyle?->toExportArray() ?? []['flex'] ?? '';
-
-            if ($flexRaw !== '') {
-                $fv = CssMappings::parseFlexValue($flexRaw);
-
-                $data['grow'] = $fv['grow'];
-
-                $data['shrink'] = $fv['shrink'];
-
-                $data['basis'] = $fv['basis'];
-            } else {
-                $data['grow'] = (float)($ch->computedStyle?->toExportArray() ?? []['flexGrow'] ?? 0);
-
-                $data['shrink'] = (float)($ch->computedStyle?->toExportArray() ?? []['flexShrink'] ?? 1);
-
-                // 捕获独立flex-basis 属性（仅数值，'auto' 由默认-1处理）
-                $basisArr = $ch->computedStyle?->toExportArray() ?? [];
-                if (isset($basisArr['flexBasis']) && $basisArr['flexBasis'] !== 'auto') {
-                    $data['basis'] = (int)$basisArr['flexBasis'];
-                }
-            }
-
-            if ($data['grow'] > 0) {
-                $data['isFlexGrow'] = true;
-            }
-
-            $flexItemData[] = $data;
-        }
-
-        // ── Step 3.5: Flex-wrap 按行分割 ──
+        // ── Step 3.5: 使用 FlexLineBreaker 分割行 ──
         $isWrapping = ($wrap === 'wrap');
+        $breakResult = FlexLineBreaker::breakLines(
+            $children, $flexItemData, $isWrapping, $isRow,
+            $containerMain, $gap
+        );
+        $lines = $breakResult[0];
+        $linesFlexData = $breakResult[1];
 
-        $lines = [$children];
+        // ── Per-line flex layout via FlexDistributor ──
 
-        if ($isWrapping) {
-            $lines = [];
-
-            $currentLine = [];
-
-            $currentLineMain = 0;
-
-            // Build flex item data lookup for wrap calculation
-            $wrapFlexData = [];
-            foreach ($children as $idx => $ch) {
-                $wrapGrow = 0.0;
-                $flexRaw = $ch->computedStyle?->toExportArray() ?? []['flex'] ?? '';
-                if ($flexRaw !== '') {
-                    $fv = CssMappings::parseFlexValue($flexRaw);
-                    $wrapGrow = (float)($fv['grow']);
-                } else {
-                    $wrapGrow = (float)($ch->computedStyle?->toExportArray() ?? []['flexGrow'] ?? 0);
-                }
-                $wrapFlexData[$idx] = $wrapGrow;
-            }
-
-            foreach ($children as $idx => $ch) {
-                // Flex-grow items: use min-width/min-height as base size for wrap
-                // (they'll be sized by flex-grow after wrapping, but min-size determines
-                //  whether they fit on the current line. CSS Flexbox §9.5)
-                $wrapGrow = (float)($wrapFlexData[$idx] ?? 0);
-                if ($wrapGrow > 0) {
-                    $minMain = $isRow ? (int)($ch->computedStyle?->toExportArray() ?? []['minWidth'] ?? 0) : (int)($ch->computedStyle?->toExportArray() ?? []['minHeight'] ?? 0);
-                    // Also consider intrinsic content width (text) as minimum
-                    $chText = $ch->content ?? '';
-                    if (is_string($chText) && strlen($chText) > 0 && $minMain <= 0) {
-                        $fs = (int)($ch->computedStyle?->toExportArray() ?? []['fontSize'] ?? 14);
-                        $bd = ($ch->computedStyle?->toExportArray() ?? []['bold'] ?? 0) !== 0;
-                        $textW = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($chText, $fs, $bd) : 0);
-                        if ($isRow) {
-                            $minMain = max(0, $textW);
-                        }
-                    }
-                    $chMain = max(0, $minMain);
-                } else {
-                    $chMain = $isRow ? (int)($ch->visualW) : (int)($ch->visualH);
-                }
-
-                // Include margins in size calculation
-
-                $cs = $ch->computedStyle?->toExportArray() ?? [];
-
-                $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
-
-                $mR = (int)($cs['marginRight'] ?? $cs['margin'] ?? 0);
-
-                $mT = (int)($cs['marginTop'] ?? $cs['margin'] ?? 0);
-
-                $mB = (int)($cs['marginBottom'] ?? $cs['margin'] ?? 0);
-
-                $chSizeWithMargin = $chMain + ($isRow ? $mL + $mR : $mT + $mB);
-
-                // If item alone exceeds container, it goes on its own line
-
-                $needsNewLine = !empty($currentLine) && ($currentLineMain + $chSizeWithMargin + $gap > $containerMain);
-
-                if ($needsNewLine) {
-                    $lines[] = $currentLine;
-
-                    $currentLine = [];
-
-                    $currentLineMain = 0;
-                }
-
-                $currentLine[] = $ch;
-
-                $currentLineMain += $chSizeWithMargin + (count($currentLine) > 1 ? $gap : 0);
-            }
-
-            if (!empty($currentLine)) {
-                $lines[] = $currentLine;
-            }
+        if ($this->distributor === null) {
+            $this->distributor = new FlexDistributor($this->resolver);
         }
 
-        // ── Per-line flex layout ──
+        $layoutParams = [
+            'isRow' => $isRow,
+            'isWrapping' => $isWrapping,
+            'reversed' => $reversed,
+            'gap' => $gap,
+            'containerMain' => $containerMain,
+            'containerCross' => $containerCross,
+            'node' => $node,
+            'paddingLeft' => $paddingLeft,
+            'paddingTop' => $paddingTop,
+            'justify' => $justify,
+            'align' => $align,
+            'containerContentW' => CssStyleHelper::contentBoxWidth($style, $node->w),
+            'parentNode' => $node->parent,
+        ];
 
         $accumulatedCrossOffset = 0;
-
-        $lineCrossData = []; // for align-content distribution
+        $lineCrossData = [];
 
         foreach ($lines as $lineChildren) {
-            $lineContainerMain = $containerMain;
-
             $lineCount = count($lineChildren);
-
             if ($lineCount === 0) continue;
 
-            // ── Step 3 (per-line): Rebuild flex data for this line ──
-
+            // Build line flex data from computedStyle
             $lineFlexData = [];
-
-            $lineHasFlexGrow = false;
-
             foreach ($lineChildren as $ch) {
-                $data = ['grow' => 0.0, 'shrink' => 1.0, 'basis' => -1, 'isFlexGrow' => false, 'hasExplicitCrossSize' => false, 'crossAxisSized' => false];
-
-                $flexRaw = $ch->computedStyle?->toExportArray() ?? []['flex'] ?? '';
-
-                if ($flexRaw !== '') {
-                    $fv = CssMappings::parseFlexValue($flexRaw);
-
-                    $data['grow'] = $fv['grow'];
-
-                    $data['shrink'] = $fv['shrink'];
-
-                    $data['basis'] = $fv['basis'];
-                } else {
-                    $data['grow'] = (float)($ch->computedStyle?->toExportArray() ?? []['flexGrow'] ?? 0);
-
-                    $data['shrink'] = (float)($ch->computedStyle?->toExportArray() ?? []['flexShrink'] ?? 1);
-
-                    // 捕获独立flex-basis 属性（仅数值，'auto' 由默认-1处理）
-                    $basisArr2 = $ch->computedStyle?->toExportArray() ?? [];
-                    if (isset($basisArr2['flexBasis']) && $basisArr2['flexBasis'] !== 'auto') {
-                        $data['basis'] = (int)$basisArr2['flexBasis'];
-                    }
+                $chCS = $ch->computedStyle;
+                $flex = $chCS?->flex;
+                $g = 0.0; $s = 1.0; $b = -1;
+                if ($flex !== null) {
+                    $g = $flex->grow;
+                    $s = $flex->shrink;
+                    if (!$flex->basis->isAuto()) $b = $flex->basis->toPx();
                 }
-
-                if ($data['grow'] > 0) {
-                    $data['isFlexGrow'] = true;
-
-                    $lineHasFlexGrow = true;
+                if ($g <= 0) {
+                    $rawG = $chCS?->getRaw('flexGrow');
+                    if (is_numeric($rawG)) $g = (float)$rawG;
                 }
-
-                $data['hasExplicitCrossSize'] = $isRow
-                    ? array_key_exists('height', $ch->computedStyle?->toExportArray() ?? [])
-                    : array_key_exists('width', $ch->computedStyle?->toExportArray() ?? []);
-
-                $lineFlexData[] = $data;
+                if ($s >= 1.0) {
+                    $rawS = $chCS?->getRaw('flexShrink');
+                    if (is_numeric($rawS)) $s = (float)$rawS;
+                }
+                if ($b === -1) {
+                    $bv = $chCS?->flexBasis;
+                    if ($bv !== null && !$bv->isAuto()) $b = $bv->toPx();
+                }
+                $lineFlexData[] = [
+                    'grow' => $g, 'shrink' => $s, 'basis' => $b,
+                    'isFlexGrow' => ($g > 0),
+                    'hasExplicitCrossSize' => $chCS?->getRaw($isRow ? 'height' : 'width') !== null,
+                    'crossAxisSized' => false,
+                ];
             }
 
-            // ── Step 4: Apply flex-basis ──
-            // 传入容器内容区宽度供百分比 flex-basis 解析
-            $containerContentW = CssStyleHelper::contentBoxWidth($style, $node->w);
-            $this->applyFlexBasis($lineChildren, $lineFlexData, $isRow, $style, $containerContentW);
+            $this->distributor->distributeLine(
+                $lineChildren, $lineFlexData, $style, $layoutParams, $accumulatedCrossOffset
+            );
 
-            // ── Step 5: Flex-grow ──
-
-            if ($lineHasFlexGrow) {
-                $fixedTotalMain = 0;
-
-                foreach ($lineChildren as $idx => $ch) {
-                    $data = $lineFlexData[$idx];
-
-                    $cs = $ch->computedStyle?->toExportArray() ?? [];
-
-                    $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
-
-                    $mR = (int)($cs['marginRight'] ?? $cs['margin'] ?? 0);
-
-                    $mT = (int)($cs['marginTop'] ?? $cs['margin'] ?? 0);
-
-                    $mB = (int)($cs['marginBottom'] ?? $cs['margin'] ?? 0);
-
-                    if ($data['isFlexGrow']) {
-                        $fixedTotalMain += $isRow ? $mL + $mR : $mT + $mB;
-                    } else {
-                        $sz = $isRow ? $ch->w : $ch->h;
-
-                        $fixedTotalMain += $sz + ($isRow ? $mL + $mR : $mT + $mB);
-                    }
-                }
-
-                $gapTotal = $gap * ($lineCount - 1);
-
-                $remainingSpace = max($lineContainerMain - $fixedTotalMain - $gapTotal, 0);
-
-                $totalFlexGrow = 0;
-
-                foreach ($lineFlexData as $entry) {
-                    $totalFlexGrow += $entry['grow'];
-                }
-
-                $totalFlexGrow = (int)max($totalFlexGrow, 1);
-
-                // First pass: proportional allocation (only flex-grow items)
-                $growAllocations = [];
-                $totalAllocated = 0;
-                foreach ($lineChildren as $idx => $ch) {
-                    $data = $lineFlexData[$idx];
-                    if ($data['isFlexGrow']) {
-                        $allocated = (int)(($data['grow'] / $totalFlexGrow) * $remainingSpace);
-                        $growAllocations[$idx] = max(0, $allocated);
-                        $totalAllocated += $allocated;
-                    }
-                }
-
-                // Second pass: distribute remainder to avoid truncation bias
-                // CSS §9.7: remaining fractional space is distributed 1px at a time
-                // to items with the largest fractional remainder (in order)
-                $remainder = $remainingSpace - $totalAllocated;
-                if ($remainder > 0) {
-                    // Sort flex-grow items by their un-truncated fractional remainder
-                    // (largest first), to allocate the leftover 1px units fairly
-                    $growIndices = [];
-                    foreach ($lineChildren as $idx => $ch) {
-                        $data = $lineFlexData[$idx];
-                        if ($data['isFlexGrow']) {
-                            $exact = ($data['grow'] / $totalFlexGrow) * $remainingSpace;
-                            $fractionalRemainder = $exact - (int)$exact;
-                            $growIndices[] = ['idx' => $idx, 'fraction' => $fractionalRemainder];
-                        }
-                    }
-                    // Sort by fractional remainder descending (bubble sort for AOT)
-                    $gn = count($growIndices);
-                    for ($gi = 0; $gi < $gn; $gi++) {
-                        for ($gj = 0; $gj < $gn - $gi - 1; $gj++) {
-                            if ($growIndices[$gj]['fraction'] < $growIndices[$gj + 1]['fraction']) {
-                                $gtmp = $growIndices[$gj];
-                                $growIndices[$gj] = $growIndices[$gj + 1];
-                                $growIndices[$gj + 1] = $gtmp;
-                            }
-                        }
-                    }
-                    for ($gi = 0; $gi < $remainder && $gi < $gn; $gi++) {
-                        $allocIdx = (int)$growIndices[$gi]['idx'];
-                        if (!isset($growAllocations[$allocIdx])) {
-                            $growAllocations[$allocIdx] = 0;
-                        }
-                        $growAllocations[$allocIdx] = $growAllocations[$allocIdx] + 1;
-                    }
-                }
-
-                // Write back final allocations (only flex-grow items, non-grow keep original sizes)
-                foreach ($growAllocations as $growIdx => $growSize) {
-                    $ch = $lineChildren[$growIdx];
-                    if ($isRow) {
-                        $ch->w = (int)max(0, $growSize);
-                        $ch->visualW = CssStyleHelper::visualWidth($ch->computedStyle?->toExportArray() ?? [], $ch->w);
-                    } else {
-                        $ch->h = (int)max(0, $growSize);
-                        $ch->visualH = CssStyleHelper::visualHeight($ch->computedStyle?->toExportArray() ?? [], $ch->h);
-                    }
-                }
-            }
-
-            // ── Step 6: Calculate line totalMain ──
-
-            $lineTotalMain = 0;
-
+            // Calculate line maxCross after distribution
             $lineMaxCross = 0;
-
             foreach ($lineChildren as $ch) {
-                $cs = $ch->computedStyle?->toExportArray() ?? [];
-
-                $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
-
-                $mR = (int)($cs['marginRight'] ?? $cs['margin'] ?? 0);
-
-                $mT = (int)($cs['marginTop'] ?? $cs['margin'] ?? 0);
-
-                $mB = (int)($cs['marginBottom'] ?? $cs['margin'] ?? 0);
-
-                if ($isRow) {
-                    $lineTotalMain += $ch->w + $mL + $mR;
-
-                    $lineMaxCross = (int)max($lineMaxCross, $ch->visualH);
-                } else {
-                    $lineTotalMain += $ch->h + $mT + $mB;
-
-                    $lineMaxCross = (int)max($lineMaxCross, $ch->visualW);
-                }
+                $cross = $isRow ? $ch->visualH : $ch->visualW;
+                if ($cross > $lineMaxCross) $lineMaxCross = $cross;
             }
 
-            $lineTotalMain += $gap * ($lineCount - 1);
-
-            // ── Step 7: Flex-shrink with min-width redistribution ──
-
-            // CSS spec §9.7: shrink items proportionally, clamp at min-width,
-            // redistribute remaining overflow to other non-clamped items.
-
-            // Skip when containerMain == 0 (auto main-axis size) or no overflow.
-
-            if ($lineContainerMain > 0 && $lineTotalMain > $lineContainerMain) {
-                $remainingOverflow = $lineTotalMain - $lineContainerMain;
-
-                // ── Build active item list with shrink weights ──
-
-                // shrinkSizes[idx] tracks final size for ALL shrink items
-                $shrinkSizes = [];
-
-                $activeItems = [];
-
-                foreach ($lineChildren as $idx => $ch) {
-                    $data = $lineFlexData[$idx];
-
-                    if ($data['shrink'] > 0) {
-                        $mainSize = $isRow ? $ch->w : $ch->h;
-
-                        $shrinkSizes[$idx] = $mainSize;
-
-                        // CSS §9.7: shrink weight = flex-basis × flex-shrink
-                        $shrinkBasis = $mainSize;
-                        if ($data['basis'] >= 0) {
-                            $shrinkBasis = (int)$data['basis'];
-                        }
-
-                        $activeItems[] = [
-                            'idx' => $idx,
-                            'shrinkWeight' => $shrinkBasis * $data['shrink'],
-                            'minVal' => self::resolveFlexMinMain($ch, $isRow, $mainSize),
-                        ];
-                    }
-                }
-
-                // ── Proportional shrink with min-width redistribution ──
-                // CSS §9.7: if an item hits min-width, it stops shrinking
-                // and remaining overflow is redistributed to other active items.
-
-                // If all shrink weights are 0 (e.g. all flex-basis:0),
-                // fall back to equal distribution per old behavior.
-                $hasWeight = false;
-                foreach ($activeItems as $item) {
-                    if ($item['shrinkWeight'] > 0) {
-                        $hasWeight = true;
-                        break;
-                    }
-                }
-
-                if ($hasWeight) {
-                    // Iterative proportional distribution with clamping
-                    while ($remainingOverflow > 0 && !empty($activeItems)) {
-                        $totalSw = 0;
-
-                        foreach ($activeItems as $item) {
-                            $totalSw += $item['shrinkWeight'];
-                        }
-
-                        if ($totalSw <= 0) break;
-
-                        $distributedInPass = 0;
-
-                        $newActive = [];
-
-                        foreach ($activeItems as $item) {
-                            $idx = $item['idx'];
-
-                            $currentSize = $shrinkSizes[$idx];
-
-                            $reduction = (int)($remainingOverflow * $item['shrinkWeight'] / $totalSw);
-
-                            $newSize = $currentSize - $reduction;
-
-                            if ($newSize < 0) {
-                                $newSize = 0;
-                            }
-
-                            $clamped = false;
-
-                            if ($item['minVal'] > 0 && $newSize < $item['minVal']) {
-                                $newSize = (int)($item['minVal']);
-
-                                $clamped = true;
-                            }
-
-                            $actualReduction = $currentSize - $newSize;
-
-                            $distributedInPass += $actualReduction;
-
-                            $shrinkSizes[$idx] = $newSize;
-
-                            if (!$clamped) {
-                                $newActive[] = $item;
-                            }
-                        }
-
-                        $remainingOverflow -= $distributedInPass;
-
-                        // Prevent infinite loop: if all reductions round to 0 (int math),
-                        // no progress is made and loop would never exit.
-                        if ($distributedInPass <= 0) break;
-
-                        $activeItems = $newActive;
-                    }
-                } else {
-                    // All shrink weights are 0: equal distribution
-                    $equalShare = count($shrinkSizes) > 0 ? (int)($remainingOverflow / count($shrinkSizes)) : 0;
-
-                    foreach ($shrinkSizes as $idx => $size) {
-                        $newSize = (int)($size - $equalShare);
-
-                        if ($newSize < 0) {
-                            $newSize = 0;
-                        }
-
-                        // Apply min-width clamp
-                        foreach ($activeItems as $item) {
-                            if ($item['idx'] === $idx && $item['minVal'] > 0 && $newSize < $item['minVal']) {
-                                $newSize = (int)($item['minVal']);
-                                break;
-                            }
-                        }
-
-                        $shrinkSizes[$idx] = $newSize;
-                    }
-                }
-
-                // ── Write back final sizes for all shrink items ──
-
-                foreach ($shrinkSizes as $idx => $size) {
-                    $ch = $lineChildren[$idx];
-
-                    if ($isRow) {
-                        $ch->w = (int)$size;
-                        $ch->visualW = CssStyleHelper::visualWidth($ch->computedStyle?->toExportArray() ?? [], $ch->w);
-                    } else {
-                        $ch->h = (int)$size;
-                        $ch->visualH = CssStyleHelper::visualHeight($ch->computedStyle?->toExportArray() ?? [], $ch->h);
-                    }
-                }
-            }
-
-            // ── Step 8: Min/max constraints ──
-
-            foreach ($lineChildren as $ch) {
-                $ch->w = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->computedStyle?->toExportArray() ?? [], $ch->w, true));
-
-                $ch->h = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->computedStyle?->toExportArray() ?? [], $ch->h, false));
-
-                $ch->visualW = CssStyleHelper::visualWidth($ch->computedStyle?->toExportArray() ?? [], $ch->w);
-                $ch->visualH = CssStyleHelper::visualHeight($ch->computedStyle?->toExportArray() ?? [], $ch->h);
-            }
-
-            // ── Step 9: Recalculate totalMain after shrink ──
-
-            $lineTotalMain = 0;
-
-            $lineMaxCross = 0;
-
-            foreach ($lineChildren as $ch) {
-                $cs = $ch->computedStyle?->toExportArray() ?? [];
-
-                $mL = (int)($cs['marginLeft'] ?? $cs['margin'] ?? 0);
-
-                $mR = (int)($cs['marginRight'] ?? $cs['margin'] ?? 0);
-
-                $mT = (int)($cs['marginTop'] ?? $cs['margin'] ?? 0);
-
-                $mB = (int)($cs['marginBottom'] ?? $cs['margin'] ?? 0);
-
-                if ($isRow) {
-                    $lineTotalMain += $ch->w + $mL + $mR;
-
-                    $lineMaxCross = (int)max($lineMaxCross, $ch->visualH);
-                } else {
-                    $lineTotalMain += $ch->h + $mT + $mB;
-
-                    $lineMaxCross = (int)max($lineMaxCross, $ch->visualW);
-                }
-            }
-
-            $lineTotalMain += $gap * ($lineCount - 1);
-
-
-            // ── Auto margins absorb positive free space BEFORE justify-content. ──
-
-            $hasAutoMainMargin = false;
-
-            $autoMarginCount = 0;
-
-
-            foreach ($lineChildren as $ch) {
-                $cs = $ch->computedStyle?->toExportArray() ?? [];
-
-                $mL = (int)($cs['marginLeftAuto'] ?? false);
-
-                $mR = (int)($cs['marginRightAuto'] ?? false);
-
-                if ($mL || $mR) $hasAutoMainMargin = true;
-
-                if ($mL) $autoMarginCount++;
-
-                if ($mR) $autoMarginCount++;
-            }
-
-            $resolvedAutoMargins = null;
-
-            if ($hasAutoMainMargin) {
-                $remainingForAuto = $lineContainerMain - $lineTotalMain;
-
-                if ($remainingForAuto > 0 && $autoMarginCount > 0) {
-                    $spacePerAuto = (int)($remainingForAuto / $autoMarginCount);
-
-                    $resolvedAutoMargins = [];
-
-                    foreach ($lineChildren as $idx => $ch) {
-                        $cs = $ch->computedStyle?->toExportArray() ?? [];
-
-                        $resolvedAutoMargins[$idx] = [
-                            'left' => ($cs['marginLeftAuto'] ?? false) ? $spacePerAuto : 0,
-                            'right' => ($cs['marginRightAuto'] ?? false) ? $spacePerAuto : 0,
-                        ];
-                    }
-
-                    // Recalculate lineTotalMain with resolved auto margins
-                    $lineTotalMain = 0;
-
-                    foreach ($lineChildren as $idx => $ch) {
-                        $mL = (int)($resolvedAutoMargins[$idx]['left']);
-                        $mR = (int)($resolvedAutoMargins[$idx]['right']);
-
-                        $mT = (int)($ch->computedStyle?->toExportArray() ?? []['marginTop'] ?? $ch->computedStyle?->toExportArray() ?? []['margin'] ?? 0);
-                        $mB = (int)($ch->computedStyle?->toExportArray() ?? []['marginBottom'] ?? $ch->computedStyle?->toExportArray() ?? []['margin'] ?? 0);
-
-                        if ($isRow) {
-                            $lineTotalMain += $ch->visualW + $mL + $mR;
-                        } else {
-                            $lineTotalMain += $ch->visualH + $mT + $mB;
-                        }
-                    }
-
-                    $lineTotalMain += $gap * ($lineCount - 1);
-                }
-            }
-
-
-            // ── Step 10: Justify-content for this line ──
-
-            $mainStart = match ($justify) {
-                'center' => ($lineContainerMain - $lineTotalMain) / 2,
-                'flex-end' => $lineContainerMain - $lineTotalMain,
-                'space-between' => 0,
-                'space-around' => 0,
-                'space-evenly' => 0,
-                default => 0,
-            };
-
-            $spaceBetween = 0;
-
-            if ($justify === 'space-between' && $lineCount > 1) {
-                $spaceBetween = ($lineContainerMain - $lineTotalMain) / ($lineCount - 1);
-            } elseif ($justify === 'space-around' && $lineCount > 0) {
-                $spaceBetween = ($lineContainerMain - $lineTotalMain) / $lineCount;
-                $mainStart = $spaceBetween / 2;
-            } elseif ($justify === 'space-evenly' && $lineCount > 0) {
-                $spaceBetween = ($lineContainerMain - $lineTotalMain) / ($lineCount + 1);
-                $mainStart = $spaceBetween;
-            }
-
-
-            // ── Step 11: Position children in this line ──
-
-            $currentMain = $mainStart;
-
-            $indices = range(0, $lineCount - 1);
-
-            if ($reversed) {
-                $indices = array_reverse($indices);
-            }
-
-            // This line's cross-axis position
             $lineCrossBase = $accumulatedCrossOffset;
-
-            foreach ($indices as $idx) {
-                $i = (int)$idx;
-                $ch = $lineChildren[$i];
-                $childStyle = $ch->computedStyle?->toExportArray() ?? [];
-
-                $childMarginLeft = ($resolvedAutoMargins !== null && isset($resolvedAutoMargins[$i]['left']) ? $resolvedAutoMargins[$i]['left'] : null)
-                    ?? (int)($childStyle['marginLeft'] ?? $childStyle['margin'] ?? 0);
-
-                $childMarginRight = ($resolvedAutoMargins !== null && isset($resolvedAutoMargins[$i]['right']) ? $resolvedAutoMargins[$i]['right'] : null)
-                    ?? (int)($childStyle['marginRight'] ?? $childStyle['margin'] ?? 0);
-
-                $childMarginTop = (int)($childStyle['marginTop'] ?? $childStyle['margin'] ?? 0);
-
-                $childMarginBottom = (int)($childStyle['marginBottom'] ?? $childStyle['margin'] ?? 0);
-
-                // Main axis position
-                $oldX = $ch->x;
-                $oldY = $ch->y;
-
-                if ($isRow) {
-                    $ch->x = $node->x + $paddingLeft + (int)$currentMain + $childMarginLeft;
-                } else {
-                    $ch->y = $node->y + $paddingTop + (int)$currentMain + $childMarginTop;
-                }
-
-
-                // Cross axis alignment (use line cross offset instead of full containerCross)
-                $effectiveAlign = $childStyle['alignSelf'] ?? 'auto';
-
-                if ($effectiveAlign === 'auto') {
-                    $effectiveAlign = $align;
-                }
-
-                if ($isWrapping) {
-                    // In wrapping mode, cross axis is per-line
-                    if ($effectiveAlign === 'stretch') {
-                        if ($isRow) {
-                            if (!$lineFlexData[$i]['hasExplicitCrossSize']) {
-                                $crossBefore = $ch->h;
-                                $stretchedH = (int)max(0, (int)($lineMaxCross - $childMarginTop - $childMarginBottom));
-                                if ($stretchedH > $ch->h && $stretchedH > 0) {
-                                    $ch->h = $stretchedH;
-                                    $ch->visualH = CssStyleHelper::visualHeight($ch->computedStyle?->toExportArray() ?? [], $ch->h);
-                                    $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
-                                }
-                            }
-                            $ch->y = $node->y + $paddingTop + $lineCrossBase + $childMarginTop;
-                        } else {
-                            if (!$lineFlexData[$i]['hasExplicitCrossSize']) {
-                                $crossBefore = $ch->w;
-                                $stretchedW = (int)max(0, (int)($lineMaxCross - $childMarginLeft - $childMarginRight));
-                                if ($stretchedW > 0) {
-                                    $ch->w = $stretchedW;
-                                    $ch->visualW = CssStyleHelper::visualWidth($ch->computedStyle?->toExportArray() ?? [], $ch->w);
-                                    $lineFlexData[$i]['crossAxisSized'] = ($ch->w !== $crossBefore);
-                                }
-                            }
-                            $ch->x = $node->x + $paddingLeft + $lineCrossBase + $childMarginLeft;
-                        }
-                    } else {
-                        $crossSize = $isRow ? $ch->h : $ch->w;
-                        $crossOffset = match ($effectiveAlign) {
-                            'center' => (int)(($lineMaxCross - $crossSize) / 2),
-                            'flex-end' => $lineMaxCross - $crossSize,
-                            default => 0,
-                        };
-
-                        if ($isRow) {
-                            $ch->y = $node->y + $paddingTop + $lineCrossBase + $crossOffset + $childMarginTop;
-                        } else {
-                            $ch->x = $node->x + $paddingLeft + $lineCrossBase + $crossOffset + $childMarginLeft;
-                        }
-                    }
-                } else {
-                    // Non-wrapping: full containerCross with margin adjustment
-                    if ($effectiveAlign === 'stretch') {
-                        if ($isRow && !$lineFlexData[$i]['hasExplicitCrossSize']) {
-                            $crossBefore = $ch->h;
-                            $stretchedH = (int)max(0, (int)($containerCross - $childMarginTop - $childMarginBottom));
-                            if ($stretchedH > $ch->h && $stretchedH > 0) {
-                                $ch->h = $stretchedH;
-                                $ch->h = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->computedStyle?->toExportArray() ?? [], $ch->h, false));
-                                $ch->visualH = CssStyleHelper::visualHeight($ch->computedStyle?->toExportArray() ?? [], $ch->h);
-                                $lineFlexData[$i]['crossAxisSized'] = ($ch->h !== $crossBefore);
-                            }
-                        } elseif (!$isRow && !$lineFlexData[$i]['hasExplicitCrossSize']) {
-                            $crossBefore = $ch->w;
-                            $stretchedW = (int)max(0, (int)($containerCross - $childMarginLeft - $childMarginRight));
-                            if ($stretchedW > 0) {
-                                $ch->w = $stretchedW;
-                                $ch->visualW = CssStyleHelper::visualWidth($ch->computedStyle?->toExportArray() ?? [], $ch->w);
-                                $lineFlexData[$i]['crossAxisSized'] = ($ch->w !== $crossBefore);
-                            }
-                        }
-                    }
-
-                    $crossSize = $isRow ? $ch->h : $ch->w;
-                    $crossOffset = match ($effectiveAlign) {
-                        'center' => (int)(($containerCross - $crossSize) / 2),
-                        'flex-end' => $containerCross - $crossSize,
-                        'stretch' => 0,
-                        default => 0,
-                    };
-
-                    if ($isRow) {
-                        $ch->y = $node->y + $paddingTop + $crossOffset;
-                    } else {
-                        $ch->x = $node->x + $paddingLeft + $crossOffset;
-                    }
-                }
-
-                // Cross axis margin
-                if ($isRow) {
-                    $ch->y += $childMarginTop;
-                } else {
-                    $ch->x += $childMarginLeft;
-                }
-
-                // Shift descendants if position changed
-                $dx = (int)($ch->x) - (int)($oldX);
-                $dy = (int)($ch->y) - (int)($oldY);
-
-                if ($dy !== 0) {
-                    foreach ($ch->children as $grandchild) {
-                        $grandchild->y += $dy;
-                    }
-                }
-
-                if ($dx !== 0) {
-                    foreach ($ch->children as $grandchild) {
-                        $grandchild->x += $dx;
-                    }
-                }
-
-                // Advance main position
-                // Use visual box (visualW/visualH) which accounts for padding+border
-                // in content-box mode. In border-box mode, visualW/H == w/h.
-                // CSS §4.2: the item's box extent is w/h + padding + border for
-                // content-box; the next item's position starts at this outer edge.
-                $chMainSize = $isRow ? (int)($ch->visualW) : (int)($ch->visualH);
-                $currentMain += $chMainSize + $gap + $spaceBetween;
-
-                if ($isRow) {
-                    $currentMain += $childMarginLeft + $childMarginRight;
-                } else {
-                    $currentMain += $childMarginTop + $childMarginBottom;
-                }
-            }
-
-
-            // ── Two-pass: re-resolve internal children of sized items ──
-
-            foreach ($lineChildren as $idxTp => $chTp) {
-                $dataTp = $lineFlexData[$idxTp];
-                $needsTwoPass = $dataTp['isFlexGrow'] || $dataTp['crossAxisSized'];
-
-
-
-                if ($needsTwoPass && (count($chTp->children) > 0 || $chTp->content !== null)) {
-                    $display = (string)($chTp->computedStyle?->toExportArray() ?? []['display'] ?? 'block');
-
-                    if ($display === 'flex' || $display === 'grid') {
-                        // Full re-layout for flex/grid containers.
-                        $leftOff = (int)($chTp->computedStyle?->left ?? 0);
-                        $topOff = (int)($chTp->computedStyle?->top ?? 0);
-                        $prX = $chTp->x - $leftOff;
-                        $prY = $chTp->y - $topOff;
-
-                        $chStyleArr = $chTp->computedStyle?->toExportArray() ?? [];
-                        $hasOrigW = array_key_exists('width', $chStyleArr);
-                        $hasOrigH = array_key_exists('height', $chStyleArr);
-                        $origW = $chStyleArr['width'] ?? null;
-                        $origH = $chStyleArr['height'] ?? null;
-
-                        $chTp->layoutDirty = true;
-
-                        foreach ($chTp->children as $gc) {
-                            $gc->layoutDirty = true;
-                        }
-
-                        $this->resolver->resolveChildNode($chTp, $prX, $prY, $node->parent);
-
-                        $chTp->visualW = CssStyleHelper::visualWidth($chTp->computedStyle?->toExportArray() ?? [], $chTp->w);
-                        $chTp->visualH = CssStyleHelper::visualHeight($chTp->computedStyle?->toExportArray() ?? [], $chTp->h);
-                    } else {
-                        // Block/scroll containers: full re-resolve so auto-stack
-                        // re-positions children with the corrected parent width.
-                        // CSS 2.2 §10.6.3: block children must be re-laid-out when
-                        // containing block width changes (e.g. via flex-grow).
-                        $leftOff = (int)($chTp->computedStyle?->left ?? 0);
-                        $topOff = (int)($chTp->computedStyle?->top ?? 0);
-                        $prX = $chTp->x - $leftOff;
-                        $prY = $chTp->y - $topOff;
-
-                        error_log('[DIAG_BLK2P] chTp=' . $chTp->type . ' w=' . $chTp->w . ' ctx_parent=' . ($node->parent !== null ? ('type=' . $node->parent->type . ' w=' . $node->parent->w) : 'null'));
-
-                        $styleArr = $chTp->computedStyle?->toExportArray() ?? [];
-                        $hasOrigW = array_key_exists('width', $styleArr);
-                        $hasOrigH = array_key_exists('height', $styleArr);
-                        $origW = $styleArr['width'] ?? null;
-                        $origH = $styleArr['height'] ?? null;
-
-                        $styleArr['width'] = $chTp->w;
-                        // Block-level flex items without explicit height:
-                        // don't lock the stretched height �?let auto-height compute
-                        // from re-laid-out children after width change (CSS §9.5).
-                        if ($hasOrigH) {
-                            $styleArr['height'] = $chTp->h;
-                        } else {
-                            unset($styleArr['height']);
-                            // Reset node height so BlockLayoutStrategy's auto-height
-                            // triggers (line 97: $height>0 || $node->h===0). Without this,
-                            // the stretched height (244) persists and prevents recompute.
-                            // Cross-axis stretch is re-applied after two-pass below,
-                            // but main-axis size is NOT restored. Scroll containers
-                            // rely on parent flex layout for height �?skip reset.
-                            if (!$chTp->isScrollContainer) {
-                                $chTp->h = 0;
-                                $chTp->visualH = 0;
-                            }
-                        }
-
-                        // Re-evaluate auto-margin: the first pass may have applied
-                        // margin:auto with an incorrect parent width (before flex-grow).
-                        // Clear computed margin style and restore flags so the
-                        // re-layout (with correct post-grow width) recalculates them.
-                        // Also fix descendant auto-margins: first pass may have computed
-                        // margins with wrong parent width. Clear stale offset so
-                        // re-layout (with correct post-grow width) recalculates correctly.
-                        $stack = [$chTp];
-                        while (!empty($stack)) {
-                            $cur = array_pop($stack);
-                            foreach ($cur->children as $gc) {
-                                $gcML = $gc->computedStyle?->toExportArray() ?? []['marginLeftAuto'] ?? false;
-                                $gcMR = $gc->computedStyle?->toExportArray() ?? []['marginRightAuto'] ?? false;
-                                if ($gcML || $gcMR) {
-                                }
-                                $stack[] = $gc;
-                            }
-                        }
-
-                        $chTp->layoutDirty = true;
-
-                        foreach ($chTp->children as $gc) {
-                            $gc->layoutDirty = true;
-                        }
-
-                        // Clear defer marker: two-pass has correct final width,
-                        // apply auto-margin now (browser-equivalent: one calculation)
-
-                        $this->resolver->resolveChildNode($chTp, $prX, $prY, $node->parent);
-
-                        $chTp->visualW = CssStyleHelper::visualWidth($chTp->computedStyle?->toExportArray() ?? [], $chTp->w);
-                        // Only override visualH for items with explicit height.
-                        // Auto-height items have correct visualH from resolveNode's
-                        // $isAutoHeight logic (adds padding+border to content-h).
-                        // Re-computing with resolveVisualH in border-box mode would
-                        // treat content-h as total-h, producing incorrect small height.
-                        if ($hasOrigH) {
-                            $chTp->visualH = CssStyleHelper::visualHeight($chTp->computedStyle?->toExportArray() ?? [], $chTp->h);
-                        }
-                    }
-                }
-
-                if ($needsTwoPass && $chTp->isScrollContainer) {
-                    $padTsp = (int)($chTp->computedStyle?->padding?->top?->toPx() ?? 0);
-                    $padLsp = (int)($chTp->computedStyle?->padding?->left?->toPx() ?? 0);
-                    $padRsp = (int)($chTp->computedStyle?->padding?->right?->toPx() ?? 0);
-                    $padBsp = (int)($chTp->computedStyle?->padding?->bottom?->toPx() ?? 0);
-                    // A1 重构: childOffsetY 不再减去 scrollTop，偏移由 VNodeRenderer 在绘制层处理
-                    $coffY = $chTp->y + $padTsp;
-
-                    $this->resolver->getBlockStrategy()->finalizeScrollContainer($chTp, 0, 0, $chTp->computedStyle, $coffY, $padLsp, $padRsp, $padBsp);
-                }
-            }
-
-            // ── Re-apply cross-axis stretch after two-pass ──
-            // Only for non-wrapping flex containers: cross-axis size is determined
-            // by the parent container (e.g., scroll containers filling remaining space).
-            // For wrapping containers, the cross-axis is determined by content height
-            // and the two-pass already computed the correct auto-height.
-            if ($align === 'stretch' && !$isWrapping) {
-                $crossTarget = $containerCross;
-                foreach ($lineChildren as $ci => $ch) {
-                    $childDisplay = $ch->computedStyle?->toExportArray() ?? []['display'] ?? 'block';
-                    if ($childDisplay === 'none') continue;
-                    $hasExplicitCross = $isRow
-                        ? array_key_exists('height', $ch->computedStyle?->toExportArray() ?? [])
-                        : array_key_exists('width', $ch->computedStyle?->toExportArray() ?? []);
-                    if ($hasExplicitCross) continue;
-                    $childMarginT = (int)($ch->computedStyle?->toExportArray() ?? []['marginTop'] ?? $ch->computedStyle?->toExportArray() ?? []['margin'] ?? 0);
-                    $childMarginB = (int)($ch->computedStyle?->toExportArray() ?? []['marginBottom'] ?? $ch->computedStyle?->toExportArray() ?? []['margin'] ?? 0);
-                    $childMarginL = (int)($ch->computedStyle?->toExportArray() ?? []['marginLeft'] ?? $ch->computedStyle?->toExportArray() ?? []['margin'] ?? 0);
-                    $childMarginR = (int)($ch->computedStyle?->toExportArray() ?? []['marginRight'] ?? $ch->computedStyle?->toExportArray() ?? []['margin'] ?? 0);
-                    if ($isRow) {
-                        $stretched = (int)max(0, $crossTarget - $childMarginT - $childMarginB);
-                        // CSS 2.2 §10.7: stretch 时也要受 min/max-height 约束
-                        if ($stretched > $ch->h && $stretched > 0) {
-                            $ch->h = $stretched;
-                            $ch->h = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->computedStyle?->toExportArray() ?? [], $ch->h, false));
-                            $ch->visualH = CssStyleHelper::visualHeight($ch->computedStyle?->toExportArray() ?? [], $ch->h);
-                        }
-                    } else {
-                        $stretched = (int)max(0, $crossTarget - $childMarginL - $childMarginR);
-                        // CSS 2.2 §10.7: stretch 时也要受 min/max-width 约束
-                        if ($stretched > 0 && $stretched !== $ch->w) {
-                            $ch->w = $stretched;
-                            $ch->w = (int)max(0, (int)CssStyleHelper::applyMinMax($ch->computedStyle?->toExportArray() ?? [], $ch->w, true));
-                            $ch->visualW = CssStyleHelper::visualWidth($ch->computedStyle?->toExportArray() ?? [], $ch->w);
-                        }
-                    }
-                }
-            }
-
-
-            // Advance cross axis offset for next wrapping line
             $accumulatedCrossOffset += $lineMaxCross + $gap;
 
             $lineCrossData[] = [
@@ -1239,7 +362,6 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 'crossBase' => $lineCrossBase,
             ];
         }
-
 
         // ── align-content: distribute lines in cross axis (CSS Flexbox §8.4) ──
         $alignContent = $style['alignContent'] ?? 'stretch';
@@ -1500,7 +622,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     if ($basisVal > 0) {
                         if ($isRow) {
                             $ch->w = (int)max(0, $basisVal);
-                            $ch->visualW = CssStyleHelper::visualWidth($ch->computedStyle?->toExportArray() ?? [], $ch->w);
+                            $chStyle = $ch->computedStyle?->toExportArray() ?? [];
+                            $ch->visualW = CssStyleHelper::visualWidth($chStyle, $ch->w);
                         } else {
                             $ch->h = (int)max(0, $basisVal);
                             $ch->visualH = CssStyleHelper::visualHeight($ch->computedStyle?->toExportArray() ?? [], $ch->h);
@@ -1572,10 +695,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // Direct text content
         $text = $node->content ?? '';
         if (is_string($text) && strlen($text) > 0) {
-            $nodeStyle = $node->getStyleArray();
-            CssStyleHelper::resolveFontSize($nodeStyle);
-            $fs = (int)($nodeStyle['fontSize'] ?? 14);
-            $bd = ($nodeStyle['bold'] ?? 0) !== 0;
+            $fs = $node->computedStyle?->fontSize ?? 14;
+            $bd = $node->computedStyle?->bold ?? false;
             return (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($text, $fs, $bd) : 0);
         }
 

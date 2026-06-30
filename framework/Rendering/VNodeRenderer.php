@@ -463,57 +463,29 @@ class VNodeRenderer
      */
     private function renderNodeToElement(RenderNode $node): ?array
     {
-        // Build style array from ComputedStyle (替代已废弃的 getStyleArray())
-        $style = [];
-        if ($node->computedStyle !== null) {
-            $style = $node->computedStyle->toExportArray();
-            // 补充 pseudo-class 样式（不在 EXPORT_KEYS 中）
-            foreach (['__hoverStyle', '__focusStyle', '__activeStyle'] as $pk) {
-                $pv = $node->computedStyle->getRaw($pk);
-                if ($pv !== null) {
-                    $style[$pk] = $pv;
-                }
-            }
-        }
+        // Pseudo-class overrides for element builders
+        $pseudoKeys = self::extractPseudoOverrides($node);
 
         // CSS 2.2 §9.2.4: display:none 元素不生成盒子，不参与渲染
-        if (($style['display'] ?? '') === 'none') {
+        if (($node->computedStyle?->display?->value ?? '') === 'none') {
             return null;
         }
 
-        // ── 伪类样式合并（:hover/:focus/:active）──
-        // 根据节点交互状态应用预解析的伪类样式，优先级：active > focus > hover
-        // 注意: 伪类样式中的 CssValue 对象需要转 raw 值，否则后续 (int) 强转会炸
-        if ($node->hovered && isset($style['__hoverStyle'])) {
-            foreach ($style['__hoverStyle'] as $hk => $hv) {
-                $style[$hk] = self::cssValueToRaw($hv);
-            }
-        }
-        if ($node->focused && isset($style['__focusStyle'])) {
-            foreach ($style['__focusStyle'] as $fk => $fv) {
-                $style[$fk] = self::cssValueToRaw($fv);
-            }
-        }
-        if ($node->active && isset($style['__activeStyle'])) {
-            foreach ($style['__activeStyle'] as $ak => $av) {
-                $style[$ak] = self::cssValueToRaw($av);
-            }
-        }
+
         // A1 重构: 布局坐标 + 绘制时滚动偏移（不在布局层修改坐标）
         $x = $node->x + $node->renderOffsetX;
         $y = $node->y + $node->renderOffsetY;
         $w = $node->visualW;
         $h = $node->visualH;
 
-        // ── 解析 border-radius 百分比（CSS Backgrounds & Borders §5.1）──
-        // CSS规范：百分比基于对应边尺寸，水平半径用元素宽度，垂直半径用元素高度
-        // 例如 160x100 盒子 + border-radius:50% → rx=80, ry=50（椭圆）
-        if (isset($style['borderRadiusPercent'])) {
-            $pct = $style['borderRadiusPercent'];
+        // ── borderRadiusPercent — 百分比圆角（CSS Backgrounds & Borders §5.1）──
+        $brPct = $node->computedStyle?->getRaw('borderRadiusPercent');
+        if ($brPct !== null) {
+            $bp = is_numeric($brPct) ? (float)$brPct : 0.0;
             $elemW = max(1, $w);
             $elemH = max(1, $h);
-            $style['borderRadiusX'] = (int)($elemW * $pct / 100.0);
-            $style['borderRadiusY'] = (int)($elemH * $pct / 100.0);
+            $style['borderRadiusX'] = (int)($elemW * $bp / 100.0);
+            $style['borderRadiusY'] = (int)($elemH * $bp / 100.0);
             $style['borderRadius'] = min($style['borderRadiusX'], $style['borderRadiusY']);
         }
 
@@ -561,9 +533,9 @@ class VNodeRenderer
 
         switch ($node->type) {
             case 'button':
-                return $this->makeButtonElement($node, $style, $props, $x, $y, $w, $h, $layer);
-            case 'input':   return $this->makeInputElement($node, $style, $props, $x, $y, $w, $h, $layer);
-            case 'img':     return $this->makeImgElement($node, $style, $props, $x, $y, $w, $h, $layer);
+                return $this->makeButtonElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
+            case 'input':   return $this->makeInputElement($node, $props, $x, $y, $w, $h, $layer);
+            case 'img':     return $this->makeImgElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
             // Inline elements: #text has actual content to render, others create
             // span elements if they have content. <br> is the only zero-size line break.
             case 'span':
@@ -573,7 +545,7 @@ class VNodeRenderer
             case 'em':
             case 'i':
             case 'code':
-                return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
+                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
             case 'br':
                 // CSS: <br> generates a line break — render as zero-size placeholder
                 // to maintain element tree structure alignment with browser DOM.
@@ -593,7 +565,7 @@ class VNodeRenderer
             case 'sup':
             case 'time':
             case 'var':
-                return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
+                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
             // Heading elements → span (inline semantic, not block)
             case 'p':
             case 'h1':
@@ -602,9 +574,9 @@ class VNodeRenderer
             case 'h4':
             case 'h5':
             case 'h6':
-                            return $this->makeSpanElement($node, $style, $props, $x, $y, $w, $h, $layer);
+                            return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
             case 'div':
-            default:        return $this->makeDivElement($node, $style, $props, $x, $y, $w, $h, $layer);
+            default:        return $this->makeDivElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
         }
     }
 
@@ -613,25 +585,24 @@ class VNodeRenderer
     //  null → invisible (nothing to draw)
     // ──────────────────────────────────────────────
 
-    private function makeDivElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeDivElement(RenderNode $node, array $pseudoOverrides, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
-        $cursor = $style['cursor'] ?? '';
+        $cs = $node->computedStyle;
+        $cursor = $pseudoOverrides['cursor'] ?? $cs?->cursor?->value ?? '';
         if ($node->isScrollContainer) {
-            return $this->makeScrollContainerElement($node, $style, $x, $y, $w, $h, $layer);
+            return $this->makeScrollContainerElement($node, $pseudoOverrides, $x, $y, $w, $h, $layer);
         }
         if ($w <= 0) $w = 80;
         if ($h <= 0) $h = 32;
 
-        $bg = $style['bg'] ?? null;
-        $bwVal = $style['borderWidth'] ?? 0;
-        if ($bwVal instanceof CssValue) {
-            error_log('[DIAG_VNR] borderWidth class=' . get_class($bwVal));
-        }
+        $rawBg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr();
+        $bg = $rawBg !== null ? $rawBg : null;
+        $bwVal = $pseudoOverrides['borderWidth'] ?? ($cs?->borderWidth?->top?->toPx() ?? 0);
         $hasBorder = ($bwVal > 0)
-            || ($style['borderTopWidth'] ?? 0) > 0
-            || ($style['borderRightWidth'] ?? 0) > 0
-            || ($style['borderBottomWidth'] ?? 0) > 0
-            || ($style['borderLeftWidth'] ?? 0) > 0;
+            || ($pseudoOverrides['borderTopWidth'] ?? $cs?->borderTopWidth ?? 0) > 0
+            || ($pseudoOverrides['borderRightWidth'] ?? $cs?->borderRightWidth ?? 0) > 0
+            || ($pseudoOverrides['borderBottomWidth'] ?? $cs?->borderBottomWidth ?? 0) > 0
+            || ($pseudoOverrides['borderLeftWidth'] ?? $cs?->borderLeftWidth ?? 0) > 0;
         $hasBg = $bg !== null;
 
         // ── background-image 支持 ──
@@ -649,25 +620,26 @@ class VNodeRenderer
 
         $noFill = ($bg === null);
         $drawColor = ($bg !== null) ? $bg : 0;
-        $borderRadius = $style['borderRadius'] ?? 0;
-        $borderRadiusX = $style['borderRadiusX'] ?? 0;
-        $borderRadiusY = $style['borderRadiusY'] ?? 0;
-        $opacity = $style['opacity'] ?? 1.0;
-        $offsets = CssMappings::parseBoxShadowOffsets($style['boxShadow'] ?? '');
+        $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;
+        $borderRadiusX = $pseudoOverrides['borderRadiusX'] ?? 0;
+        $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;
+        $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;
+        $boxShadowRaw = $pseudoOverrides['boxShadow'] ?? $cs?->boxShadow ?? '';
+        $offsets = CssMappings::parseBoxShadowOffsets($boxShadowRaw);
         $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowBlur = $offsets['blur']; $shadowColor = $offsets['color']; $shadowAlpha = $offsets['alpha']; $shadowInset = $offsets['inset'];
-        $backgroundClip = $style['backgroundClip'] ?? 'border-box';
-        $backgroundAttachment = $style['backgroundAttachment'] ?? 'scroll';
-        $tableLayout = $style['tableLayout'] ?? 'auto';
-        $borderCollapse = $style['borderCollapse'] ?? 'separate';
-        $borderSpacing = $style['borderSpacing'] ?? 0;
-        // CSS Lists L3 §3: list-style-type — 列表标记前缀
+        $backgroundClip = $pseudoOverrides['backgroundClip'] ?? $cs?->backgroundClip ?? 'border-box';
+        $backgroundAttachment = $pseudoOverrides['backgroundAttachment'] ?? $cs?->backgroundAttachment ?? 'scroll';
+        $tableLayout = $cs?->tableLayout ?? 'auto';
+        $borderCollapse = $cs?->borderCollapse?->value ?? 'separate';
+        $borderSpacing = $cs?->borderSpacing ?? 0;
+
+        // ── List marker for li elements ──
         $listMarker = '';
         if ($node->type === 'li') {
             $parent = $node->parent;
             $lst = 'disc';
             if ($parent !== null) {
                 $lst = $parent->computedStyle?->listStyleType ?? 'disc';
-                // Count previous li siblings for decimal numbering
                 $liIndex = 0;
                 foreach ($parent->children as $sibling) {
                     if ($sibling === $node) break;
@@ -677,33 +649,36 @@ class VNodeRenderer
                     case 'decimal': $listMarker = ($liIndex + 1) . '. '; break;
                     case 'lower-alpha': $listMarker = chr(97 + ($liIndex % 26)) . '. '; break;
                     case 'upper-alpha': $listMarker = chr(65 + ($liIndex % 26)) . '. '; break;
-                    case 'square': $listMarker = "\xE2\x96\xAA "; break; // ▪
-                    case 'circle': $listMarker = "\xE2\x97\x8B "; break; // ○
+                    case 'square': $listMarker = "\xE2\x96\xAA "; break;
+                    case 'circle': $listMarker = "\xE2\x97\x8B "; break;
                     case 'none': $listMarker = ''; break;
-                    default: $listMarker = "\xE2\x80\xA2 "; break; // •
+                    default: $listMarker = "\xE2\x80\xA2 "; break;
                 }
             }
         }
-        $gradientAngle = $style['gradientAngle'] ?? null;
-        $gradientColors = $style['gradientColors'] ?? null;
-        // Parse text-shadow (CSS Text Decoration Module L3 §7)
-        $tsOffsets = CssMappings::parseBoxShadowOffsets($style['textShadow'] ?? '');
-        $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];
-        $borderWidth = $style['borderWidth'] ?? 0;
-        $borderTopWidth = $style['borderTopWidth'] ?? $borderWidth;
-        $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
-        $borderBottomWidth = $style['borderBottomWidth'] ?? $borderWidth;
-        $borderLeftWidth = $style['borderLeftWidth'] ?? $borderWidth;
-        $borderStyle = $style['borderStyle'] ?? 'solid';
-        $borderStyle = $style['borderStyle'] ?? 'solid';
-        $outlineOffset = $style['outlineOffset'] ?? 0;
-        $borderColor = $style['borderColor'] ?? 0;
-        $borderTopColor = $style['borderTopColor'] ?? $borderColor;
-        $borderRightColor = $style['borderRightColor'] ?? $borderColor;
-        $borderBottomColor = $style['borderBottomColor'] ?? $borderColor;
-        $borderLeftColor = $style['borderLeftColor'] ?? $borderColor;
+        $gradientAngle = $pseudoOverrides['gradientAngle'] ?? $cs?->getRaw('gradientAngle');
+        $gradientColors = $pseudoOverrides['gradientColors'] ?? $cs?->getRaw('gradientColors');
 
-        // ── background-image 图片层（如果有）──
+        // ── Text shadow ──
+        $textShadowRaw = $pseudoOverrides['textShadow'] ?? $cs?->textShadow ?? '';
+        $tsOffsets = CssMappings::parseBoxShadowOffsets($textShadowRaw);
+        $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];
+
+        // ── Border properties ──
+        $borderWidth = $pseudoOverrides['borderWidth'] ?? ($cs?->borderWidth?->top?->toPx() ?? 0);
+        $borderTopWidth = $pseudoOverrides['borderTopWidth'] ?? $cs?->borderTopWidth ?? $borderWidth;
+        $borderRightWidth = $pseudoOverrides['borderRightWidth'] ?? $cs?->borderRightWidth ?? $borderWidth;
+        $borderBottomWidth = $pseudoOverrides['borderBottomWidth'] ?? $cs?->borderBottomWidth ?? $borderWidth;
+        $borderLeftWidth = $pseudoOverrides['borderLeftWidth'] ?? $cs?->borderLeftWidth ?? $borderWidth;
+        $borderStyle = $pseudoOverrides['borderStyle'] ?? $cs?->borderStyle ?? 'solid';
+        $outlineOffset = $pseudoOverrides['outlineOffset'] ?? $cs?->outlineOffset ?? 0;
+        $borderColor = $pseudoOverrides['borderColor'] ?? $cs?->borderColor ?? 0;
+        $borderTopColor = $pseudoOverrides['borderTopColor'] ?? $cs?->borderTopColor ?? $borderColor;
+        $borderRightColor = $pseudoOverrides['borderRightColor'] ?? $cs?->borderRightColor ?? $borderColor;
+        $borderBottomColor = $pseudoOverrides['borderBottomColor'] ?? $cs?->borderBottomColor ?? $borderColor;
+        $borderLeftColor = $pseudoOverrides['borderLeftColor'] ?? $cs?->borderLeftColor ?? $borderColor;
+
+        // ── background-image layer ──
         $bgImageEl = null;
         if ($bgImageHandle !== 0) {
             $imgX = $backgroundAttachment === 'fixed' ? $node->x : $x;
@@ -713,58 +688,58 @@ class VNodeRenderer
                 'handle' => $bgImageHandle,
                 'x' => $imgX, 'y' => $imgY, 'w' => $w, 'h' => $h,
                 'layer' => $layer,
-                'backgroundRepeat' => $style['backgroundRepeat'] ?? 'repeat',
+                'backgroundRepeat' => $pseudoOverrides['backgroundRepeat'] ?? $cs?->backgroundRepeat ?? 'repeat',
             ];
         }
 
         if ($hasTextChild) {
-            $fontSize = $style['fontSize'] ?? 14;
-            $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
-            $bold = $style['bold'] ?? 0;
-            $align = $props['align'] ?? ($style['textAlign'] ?? 'start');
+            $fontSize = $pseudoOverrides['fontSize'] ?? $cs?->fontSize ?? 14;
+            $rawTextColor = $pseudoOverrides['fg'] ?? $pseudoOverrides['color'] ?? ($cs?->color?->toBgr() ?? null);
+            $textColor = $rawTextColor !== null ? $rawTextColor : 0xFFFFFF;
+            $bold = $pseudoOverrides['bold'] ?? $cs?->bold ?? false;
+            $rawTextAlign = $cs?->getRaw('textAlign');
+            $align = $props['align'] ?? ($pseudoOverrides['textAlign'] ?? ($rawTextAlign ? (is_string($rawTextAlign) ? $rawTextAlign : ($cs?->textAlign?->value ?? 'start')) : 'start'));
             // CSS Text Module Level 3 §7: text-align is inherited
-            if ($align === 'start' && !isset($style['textAlign']) && $node->parent !== null) {
+            if ($align === 'start' && $rawTextAlign === null && $node->parent !== null) {
                 $parentAlign = $node->parent->computedStyle?->textAlign?->value ?? null;
                 if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {
                     $align = $parentAlign;
                 }
             }
-            // CSS Text Module Level 3 §7: start=LTR→left, end=LTR→right, justify≈left(无justify渲染)
             if ($align === 'start' || $align === 'match-parent') $align = 'left';
             if ($align === 'end') $align = 'right';
             if ($align === 'justify' || $align === 'justify-all') $align = 'left';
 
             $text = $node->content;
 
-            // CSS Lists L3 §3: prepend list marker to li content
             if ($listMarker !== '') {
                 $text = $listMarker . $text;
             }
 
-            // CSS Text Module Level 3 §2: text-transform
-            $textTransform = $style['textTransform'] ?? 'none';
+            // ── Text transform ──
+            $textTransform = $pseudoOverrides['textTransform'] ?? $cs?->textTransform ?? 'none';
             if ($textTransform !== 'none') {
                 $text = self::applyTextTransform($text, $textTransform);
             }
 
-            // CSS Fonts Module L3 §5: font-variant small-caps
-            $fontVariant = $style['fontVariant'] ?? 'normal';
+            // ── Font variant (small-caps) ──
+            $rawFontVariant = $cs?->getRaw('fontVariant');
+            $fontVariant = $pseudoOverrides['fontVariant'] ?? ($rawFontVariant ? (is_string($rawFontVariant) ? $rawFontVariant : ($cs?->fontVariant ?? 'normal')) : 'normal');
             if ($fontVariant !== 'normal') {
                 $fvRet = self::applyFontVariant($text, $fontSize, $fontVariant);
                 $text = $fvRet['text'];
                 $fontSize = $fvRet['fontSize'];
             }
 
-            // CSS Fonts Module L3 §4: font-stretch (approximate via spacing)
-            $fontStretchExtra = self::applyFontStretch($style['fontStretch'] ?? 'normal');
+            // ── Font stretch (approximate via spacing) ──
+            $rawFontStretch = $cs?->getRaw('fontStretch');
+            $fontStretchVal = $pseudoOverrides['fontStretch'] ?? ($rawFontStretch ? (is_string($rawFontStretch) ? $rawFontStretch : ($cs?->fontStretch ?? 'normal')) : 'normal');
+            $fontStretchExtra = self::applyFontStretch($fontStretchVal);
+            $rawLetterSpacing = $cs?->getRaw('letterSpacing');
+            $letterSpacing = $pseudoOverrides['letterSpacing'] ?? ($rawLetterSpacing ? (is_numeric($rawLetterSpacing) ? (int)$rawLetterSpacing : 0) : 0);
             if ($fontStretchExtra !== 0) {
-                $style['letterSpacing'] = ($style['letterSpacing'] ?? 0) + $fontStretchExtra;
+                $letterSpacing += $fontStretchExtra;
             }
-
-            // CSS Text Decoration L3 §8: text-emphasis
-            $style['textEmphasisStyle'] = $style['textEmphasisStyle'] ?? 'none';
-            $style['textEmphasisColor'] = $style['textEmphasisColor'] ?? 0xFF0000;
-            $style['textEmphasisPosition'] = $style['textEmphasisPosition'] ?? 'over';
 
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
 
@@ -775,53 +750,59 @@ class VNodeRenderer
             $selfX = $node->x + $node->renderOffsetX;
             $selfW = $node->visualW;
 
-            // CSS 2.2 §17.5: 文本内容位于 content area (border + padding 内部)
-            $contentX = $selfX + $borderLeftWidth + CssStyleHelper::getInt($style, 'paddingLeft');
-            $contentY = $selfY + $borderTopWidth + CssStyleHelper::getInt($style, 'paddingTop');
-            $contentW = max(0, $selfW - $borderLeftWidth - $borderRightWidth - CssStyleHelper::getInt($style, 'paddingLeft') - CssStyleHelper::getInt($style, 'paddingRight'));
+            // ── Padding from computedStyle ──
+            $pdL = $pseudoOverrides['paddingLeft'] ?? $cs?->padding?->left?->toPx() ?? 0;
+            $pdT = $pseudoOverrides['paddingTop'] ?? $cs?->padding?->top?->toPx() ?? 0;
+            $pdR = $pseudoOverrides['paddingRight'] ?? $cs?->padding?->right?->toPx() ?? 0;
+            $pdB = $pseudoOverrides['paddingBottom'] ?? $cs?->padding?->bottom?->toPx() ?? 0;
+            $contentX = $selfX + $borderLeftWidth + $pdL;
+            $contentY = $selfY + $borderTopWidth + $pdT;
+            $contentW = max(0, $selfW - $borderLeftWidth - $borderRightWidth - $pdL - $pdR);
 
-            // ── text-overflow: ellipsis 文本溢出省略（CSS Text Module Level 3 §5.3）──
-            // 标准 CSS 要求 overflow:hidden + white-space:nowrap 才生效，
-            // 但 Px 文本在 layer+1 (不受 overflow:hidden 裁剪)，所以直接按 text-overflow 处理
-            $textOverflow = $style['textOverflow'] ?? 'clip';
-            // 标准 CSS 要求 overflow:hidden/clip 才生效
-            $elOverflow = $style['overflow'] ?? 'visible';
+            // ── Overflow / overflow-wrap / text-overflow ──
+            $rawOverflow = $cs?->overflow?->value ?? 'visible';
+            $elOverflow = $pseudoOverrides['overflow'] ?? $rawOverflow;
             $hasOverflow = ($elOverflow === 'hidden' || $elOverflow === 'clip');
-            $overflowWrap = $style['overflowWrap'] ?? 'normal';
-            // Fallback: also check raw VNode props for overflow-wrap/word-wrap
+            $rawOverflowWrap = $cs?->overflowWrap ?? 'normal';
+            $overflowWrap = $pseudoOverrides['overflowWrap'] ?? ($rawOverflowWrap !== '' ? $rawOverflowWrap : 'normal');
             if ($overflowWrap === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
-                $rawStyle = $node->sourceVNode->props['style'] ?? '';
-                if ($rawStyle !== '' && (stripos($rawStyle, 'overflow-wrap:break-word') !== false || stripos($rawStyle, 'word-wrap:break-word') !== false)) {
+                $rawStyleVNode = $node->sourceVNode->props['style'] ?? '';
+                if ($rawStyleVNode !== '' && (stripos($rawStyleVNode, 'overflow-wrap:break-word') !== false || stripos($rawStyleVNode, 'word-wrap:break-word') !== false)) {
                     $overflowWrap = 'break-word';
                 }
             }
             $isBreakWord = ($overflowWrap === 'break-word' || $overflowWrap === 'anywhere');
-            // Sync back to style array for TextOverflowProcessor
-            if ($isBreakWord) {
-                $style['overflowWrap'] = $overflowWrap;
-            }
+            $rawTextOverflow = $cs?->getRaw('textOverflow') ?? 'clip';
+            $textOverflow = $pseudoOverrides['textOverflow'] ?? (is_string($rawTextOverflow) ? $rawTextOverflow : 'clip');
+
+            // ── Build minimal overflow style for TextOverflowProcessor ──
+            $rawLineClamp = $cs?->getRaw('webkitLineClamp') ?? 0;
+            $lineClampVal = is_numeric($rawLineClamp) ? (int)$rawLineClamp : 0;
+            $overflowStyle = [
+                'textOverflow' => $textOverflow,
+                'overflowWrap' => $overflowWrap,
+                'lineHeight' => $cs?->lineHeight ?? 0,
+                'WebkitLineClamp' => $lineClampVal,
+            ];
+
             if ($textOverflow === 'ellipsis' && $hasOverflow && $contentW > 0) {
-                $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $style);
+                $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $overflowStyle);
                 $text = $overflowResult['text'];
-                // 多行 clamp 支持
                 $overflowLines = $overflowResult['lines'];
                 $overflowLineHeight = $overflowResult['lineHeight'];
-                // 重新测量截断后的文本宽度
                 $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
-                // ellipsis 时禁止自动换行
                 $isWrappable = false;
             } elseif ($isBreakWord && $contentW > 0 && self::measureTextWidth($text, $fontSize, (bool)$bold) > $contentW) {
-                // CSS Text Module Level 3 §6: overflow-wrap:break-word — 长单词强制换行
-                $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $style);
+                $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $overflowStyle);
                 $text = $overflowResult['text'];
                 $overflowLines = $overflowResult['lines'];
                 $overflowLineHeight = $overflowResult['lineHeight'];
                 $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
-                $isWrappable = false;  // break-word 已处理换行
+                $isWrappable = false;
             } else {
                 $overflowLines = null;
                 $overflowLineHeight = 0;
-                $isWrappable = true;  // 默认允许换行，稍后根据 whitespace 覆盖
+                $isWrappable = true;
             }
 
             $textX = $contentX + 4;
@@ -834,28 +815,23 @@ class VNodeRenderer
             }
             if ($textX < $contentX + 4) $textX = $contentX + 4;
 
-            // CSS Text Module Level 3 §2.1: text-indent — 首行缩进
-            // 仅对块容器生效，缩进从 start edge 算起。正数缩进首行向起始边方向移动。
-            // 对于左对齐 LTR 文本，首行向右缩进。不影响居中和右对齐。
-            $textIndent = (int)($style['textIndent'] ?? 0);
+            // ── Text indent ──
+            $textIndent = (int)($pseudoOverrides['textIndent'] ?? $cs?->textIndent ?? 0);
             if ($textIndent > 0 && $align !== 'right' && $align !== 'center') {
                 $textX += $textIndent;
             }
 
-            // CSS Flexible Box Layout §8.2: justify-content:center → 主轴居中文本
-            // 当元素是 flex 容器且 justifyContent=center 时，文本在 content area 内水平居中
-            $display = $style['display'] ?? 'block';
-            $justifyContent = $style['justifyContent'] ?? 'flex-start';
+            // ── Flex container text centering ──
+            $display = $pseudoOverrides['display'] ?? $cs?->display?->value ?? 'block';
+            $justifyContent = $pseudoOverrides['justifyContent'] ?? $cs?->justifyContent?->value ?? 'flex-start';
             if (($display === 'flex' || $display === 'inline-flex') && $justifyContent === 'center' && $textWidth > 0 && $contentW > $textWidth) {
                 $textX = $contentX + (int)(($contentW - $textWidth) / 2);
             }
 
-            // CSS Flexible Box Layout §8.2: align-items:center → 交叉轴居中文本
-            // 当元素是 flex 容器且 alignItems=center 时，文本在 content area 内垂直居中
+            // ── Flex container cross-axis text centering ──
             $textY = $contentY;
-            $alignItems = $style['alignItems'] ?? 'stretch';
-            $contentH = max(0, $selfH - $borderTopWidth - $borderBottomWidth - CssStyleHelper::getInt($style, 'paddingTop') - CssStyleHelper::getInt($style, 'paddingBottom'));
-            // 精确测量文本总高度（ascent + descent），确保视觉居中
+            $alignItems = $pseudoOverrides['alignItems'] ?? $cs?->alignItems?->value ?? 'stretch';
+            $contentH = max(0, $selfH - $borderTopWidth - $borderBottomWidth - $pdT - $pdB);
             $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
             if (($display === 'flex' || $display === 'inline-flex') && $alignItems === 'center') {
                 if ($contentH > $textHeight) {
@@ -863,25 +839,15 @@ class VNodeRenderer
                 }
             }
 
-            // ── Auto-wrap text when exceeds content width ──
-            // CSS Text Module Level 3 §7: white-space:normal 允许自动换行
+            // ── White-space & auto-wrap ──
             $isBold = (bool)$bold;
-            $whitespace = $style['whiteSpace'] ?? 'normal';
-            // ellipsis 分支已设为 false，非 ellipsis 分支设为 true 后在这里根据 whitespace 修正
+            $whitespace = $pseudoOverrides['whiteSpace'] ?? $cs?->whiteSpace?->value ?? 'normal';
             if ($whitespace === 'nowrap' || $whitespace === 'pre') {
                 $isWrappable = false;
             }
             $lineH = 0;
             if ($isWrappable && $textWidth > $contentW && $contentW > 20) {
-                // Compute line-height for multi-line rendering
-                $lhVal = $style['lineHeight'] ?? 'normal';
-                if (is_string($lhVal) && $lhVal !== 'normal' && $lhVal !== '') {
-                    if (str_contains($lhVal, 'px')) {
-                        $lineH = (int)$lhVal;
-                    } else {
-                        $lineH = (int)($fontSize * (float)$lhVal);
-                    }
-                }
+                $lineH = $pseudoOverrides['lineHeight'] ?? $cs?->lineHeight ?? 0;
                 if ($lineH <= 0) {
                     $lineH = (int)($fontSize * 1.2);
                 }
@@ -1121,25 +1087,34 @@ class VNodeRenderer
         ];
     }
 
-    private function makeSpanElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeSpanElement(RenderNode $node, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
-        $fontSize = $style['fontSize'] ?? 14;
-        // CSS 继承：若当前节点无 fg，沿父链查找
-        $color = $style['fg'] ?? ($style['color'] ?? null);
+        $cs = $node->computedStyle;
+        $fontSize = $cs?->fontSize ?? 14;
+        // CSS 继承：若当前节点无 fg（color），沿父链查找
+        $rawColor = $cs?->getRaw('fg') ?? $cs?->getRaw('color') ?? null;
+        $color = null;
+        if ($rawColor !== null) {
+            $color = $rawColor instanceof CssColor ? $rawColor->toBgr() : (is_int($rawColor) ? $rawColor : null);
+        }
         if ($color === null) {
             $p = $node->parent;
             while ($p !== null) {
                 $pc = $p->computedStyle?->getRaw('fg') ?? null;
-                if ($pc !== null) { $color = $pc; break; }
+                if ($pc !== null) {
+                    $color = $pc instanceof CssColor ? $pc->toBgr() : (is_int($pc) ? $pc : null);
+                    break;
+                }
                 $p = $p->parent;
             }
         }
         // CSS 2.2 §18.2: color 属性的初始值为 black (0x000000)
         if ($color === null) $color = 0x000000;
-        $bold     = $style['bold'] ?? 0;
-        $align    = $props['align'] ?? ($style['textAlign'] ?? 'start');
+        $bold     = $cs?->bold ?? false;
+        $rawTextAlign = $cs?->getRaw('textAlign');
+        $align    = $props['align'] ?? ($rawTextAlign ? (is_string($rawTextAlign) ? $rawTextAlign : ($cs?->textAlign?->value ?? 'start')) : 'start');
         // CSS Text Module Level 3 §7: text-align is inherited
-        if ($align === 'start' && !isset($style['textAlign']) && $node->parent !== null) {
+        if ($align === 'start' && $rawTextAlign === null && $node->parent !== null) {
             $parentAlign = $node->parent->computedStyle?->textAlign?->value ?? null;
             if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {
                 $align = $parentAlign;
@@ -1185,31 +1160,32 @@ class VNodeRenderer
         }
         $containerX = (int)($props['container-x'] ?? $x);
 
-        // CSS Fonts Module L3 §5: font-variant small-caps
-        $fontVariant = $style['fontVariant'] ?? 'normal';
+        // ── Font variant (small-caps) ──
+        $rawFontVariant = $cs?->getRaw('fontVariant') ?? null;
+        $fontVariant = $rawFontVariant ? (is_string($rawFontVariant) ? $rawFontVariant : ($cs?->fontVariant ?? 'normal')) : 'normal';
         if ($fontVariant !== 'normal') {
             $fvRet = self::applyFontVariant($text, $fontSize, $fontVariant);
             $text = $fvRet['text'];
             $fontSize = $fvRet['fontSize'];
         }
 
-        // CSS Fonts Module L3 §4: font-stretch (approximate via spacing)
-        $fontStretchExtra = self::applyFontStretch($style['fontStretch'] ?? 'normal');
+        // ── Font stretch (approximate via spacing) ──
+        $rawFontStretch = $cs?->getRaw('fontStretch') ?? null;
+        $fontStretchVal = $rawFontStretch ? (is_string($rawFontStretch) ? $rawFontStretch : ($cs?->fontStretch ?? 'normal')) : 'normal';
+        $fontStretchExtra = self::applyFontStretch($fontStretchVal);
+        $rawLetterSpacing = $cs?->getRaw('letterSpacing') ?? null;
+        $letterSpacing = $rawLetterSpacing ? (is_numeric($rawLetterSpacing) ? (int)$rawLetterSpacing : 0) : 0;
         if ($fontStretchExtra !== 0) {
-            $style['letterSpacing'] = ($style['letterSpacing'] ?? 0) + $fontStretchExtra;
+            $letterSpacing += $fontStretchExtra;
         }
 
-        // CSS Text Decoration L3 §8: text-emphasis
-        $style['textEmphasisStyle'] = $style['textEmphasisStyle'] ?? 'none';
-        $style['textEmphasisColor'] = $style['textEmphasisColor'] ?? 0xFF0000;
-        $style['textEmphasisPosition'] = $style['textEmphasisPosition'] ?? 'over';
-
-        // Parse text-shadow
-        $tsOffsets = CssMappings::parseBoxShadowOffsets($style['textShadow'] ?? '');
+        // ── Text shadow ──
+        $rawTextShadow = $cs?->textShadow ?? '';
+        $tsOffsets = CssMappings::parseBoxShadowOffsets($rawTextShadow);
         $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];
 
-        // CSS Inline Layout L3 §2: vertical-align — 内联元素垂直对齐偏移
-        $verticalAlign = $style['verticalAlign'] ?? 'baseline';
+        // ── Vertical alignment ──
+        $verticalAlign = $cs?->verticalAlign?->value ?? 'baseline';
         $vaY = 0;
         if ($verticalAlign !== 'baseline' && $verticalAlign !== 'top' && $verticalAlign !== 'bottom') {
             $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
@@ -1222,19 +1198,33 @@ class VNodeRenderer
             }
         }
 
-        // Check raw VNode props for overflow-wrap/word-wrap fallback
-        if (($style['overflowWrap'] ?? 'normal') === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+        // ── Overflow-wrap from raw VNode props (fallback) ──
+        $rawOverflowWrap = $cs?->overflowWrap ?? 'normal';
+        $overflowWrap = $rawOverflowWrap !== '' ? $rawOverflowWrap : 'normal';
+        if ($overflowWrap === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
             $rawStyle = $node->sourceVNode->props['style'] ?? '';
             if ($rawStyle !== '' && (stripos($rawStyle, 'overflow-wrap:break-word') !== false || stripos($rawStyle, 'word-wrap:break-word') !== false)) {
-                $style['overflowWrap'] = 'break-word';
+                $overflowWrap = 'break-word';
             }
         }
 
-        // ── 文本溢出/省略处理（委派 TextOverflowProcessor）──
-        $overflowResult = TextOverflowProcessor::process($text, $containerW, $fontSize, $bold, $style);
+        // ── Build minimal overflow style for TextOverflowProcessor ──
+        $rawTextOverflow = $cs?->getRaw('textOverflow') ?? 'clip';
+        $textOverflow = is_string($rawTextOverflow) ? $rawTextOverflow : 'clip';
+        $rawLineClamp = $cs?->getRaw('webkitLineClamp') ?? 0;
+        $lineClamp = is_numeric($rawLineClamp) ? (int)$rawLineClamp : 0;
+        $overflowStyle = [
+            'textOverflow' => $textOverflow,
+            'overflowWrap' => $overflowWrap,
+            'lineHeight' => $cs?->lineHeight ?? 0,
+            'WebkitLineClamp' => $lineClamp,
+        ];
+
+        // ── Text overflow processing ──
+        $overflowResult = TextOverflowProcessor::process($text, $containerW, $fontSize, (bool)$bold, $overflowStyle);
         $text = $overflowResult['text'];
         
-        // 多行 clamp：构建 group 元素直接返回
+        // ── Multi-line clamp ──
         if ($overflowResult['lines'] !== null && count($overflowResult['lines']) > 1) {
             $elements = [];
             $lineIdx = 0;
@@ -1243,7 +1233,7 @@ class VNodeRenderer
                 $lineY = $y + $lineIdx * $lineHeight;
                 $segX = $x;
                 if ($align === 'right' || $align === 'center') {
-                    $segW = self::measureTextWidth($seg, $fontSize, $bold);
+                    $segW = self::measureTextWidth($seg, $fontSize, (bool)$bold);
                     if ($align === 'right') {
                         $segX = $containerX + $containerW - 12 - $segW;
                         if ($segX < $containerX + 4) $segX = $containerX + 4;
@@ -1257,22 +1247,22 @@ class VNodeRenderer
                     'x' => $segX, 'y' => $lineY + $vaY,
                     'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
                     'align' => 'left', 'layer' => $layer,
-                    'decorationLine' => $style['textDecorationLine'] ?? 'none',
-                    'decorationColor' => $style['textDecorationColor'] ?? $color,
-                    'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
-                    'decorationThickness' => $style['textDecorationThickness'] ?? 0,
-                    'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
+                    'decorationLine' => $cs?->textDecorationLine ?? 'none',
+                    'decorationColor' => $cs?->textDecorationColor ?: (string)$color,
+                    'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
+                    'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                    'underlineOffset' => $cs?->getRaw('textUnderlineOffset') ?? 0,
                     'textWidth' => self::measureTextWidth($seg, $fontSize, (bool)$bold),
                     'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
                     'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
-                    'letterSpacing' => $style['letterSpacing'] ?? 0];
+                    'letterSpacing' => $letterSpacing];
                 $lineIdx++;
             }
             return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
         }
         
         if ($align === 'right' || $align === 'center') {
-            $textWidth = self::measureTextWidth($text, $fontSize, $bold);
+            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
             if ($align === 'right') {
                 $x = $containerX + $containerW - 12 - $textWidth;
                 if ($x < $containerX + 4) $x = $containerX + 4;
@@ -1294,23 +1284,30 @@ class VNodeRenderer
             'textWidth' => $textWidth,
         ];
 
+        // ── Decoration properties from computedStyle ──
+        $decorationLine = $cs?->textDecorationLine ?? 'none';
+        $decorationColor = $cs?->textDecorationColor ?: (string)$color;
+        $decorationStyle = $cs?->textDecorationStyle ?? 'solid';
+        $decorationThickness = $cs?->textDecorationThickness ?? 0;
+        $underlineOffset = $cs?->getRaw('textUnderlineOffset') ?? 0;
+
         return [
             'type' => 'text', 'text' => $text,
             'x' => $x, 'y' => $y + $vaY,
             'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
             'align' => $align, 'layer' => $layer,
-            'decorationLine' => $style['textDecorationLine'] ?? 'none',
-            'decorationColor' => $style['textDecorationColor'] ?? $color,
-            'decorationStyle' => $style['textDecorationStyle'] ?? 'solid',
-            'decorationThickness' => $style['textDecorationThickness'] ?? 0,
-            'underlineOffset' => $style['textUnderlineOffset'] ?? 0,
+            'decorationLine' => $decorationLine,
+            'decorationColor' => $decorationColor,
+            'decorationStyle' => $decorationStyle,
+            'decorationThickness' => $decorationThickness,
+            'underlineOffset' => $underlineOffset,
             'textWidth' => self::measureTextWidth($text, $fontSize, (bool)$bold),
             'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
             'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
-            'letterSpacing' => $style['letterSpacing'] ?? 0];
+            'letterSpacing' => $letterSpacing];
     }
 
-    private function makeButtonElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeButtonElement(RenderNode $node, array $pseudoOverrides, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $cs = $node->computedStyle;
         $cursor = $cs?->cursor?->value ?? '';
@@ -1396,8 +1393,9 @@ class VNodeRenderer
         ];
     }
 
-    private function makeImgElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeImgElement(RenderNode $node, array $pseudoOverrides, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
+        $cs = $node->computedStyle;
         // CSS 标准 §10.3.2: <img> 是替换元素，宽度由布局层决定
         $noSize = ($w <= 0 || $h <= 0);
 
@@ -1408,33 +1406,34 @@ class VNodeRenderer
             $imageHandle = ImageManager::loadImage($src);
         }
 
-        // 背景色：CSS background 属性（CssMappings 已映射为 style['bg']）
-        $bg = $style['bg'] ?? 0xCCCCCC;
-        $borderRadius = $style['borderRadius'] ?? 0;
-        $borderRadiusX = $style['borderRadiusX'] ?? 0;
-        $borderRadiusY = $style['borderRadiusY'] ?? 0;
-        $opacity = $style['opacity'] ?? 1.0;
+        // 背景色
+        $bg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr() ?? 0xCCCCCC;
+        $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;
+        $borderRadiusX = 0;
+        $borderRadiusY = 0;
+        $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;
 
         // box-shadow
-        $shadowOffsets = CssMappings::parseBoxShadowOffsets($style['boxShadow'] ?? '');
+        $boxShadowRaw = $pseudoOverrides['boxShadow'] ?? $cs?->boxShadow ?? '';
+        $shadowOffsets = CssMappings::parseBoxShadowOffsets($boxShadowRaw);
         $shadowX = $shadowOffsets['h']; $shadowY = $shadowOffsets['v']; $shadowBlur = $shadowOffsets['blur']; $shadowColor = $shadowOffsets['color']; $shadowAlpha = $shadowOffsets['alpha']; $shadowInset = $shadowOffsets['inset'];
 
         // border
-        $borderWidth = $style['borderWidth'] ?? 0;
-        $borderTopWidth = $style['borderTopWidth'] ?? $borderWidth;
-        $borderRightWidth = $style['borderRightWidth'] ?? $borderWidth;
-        $borderBottomWidth = $style['borderBottomWidth'] ?? $borderWidth;
-        $borderLeftWidth = $style['borderLeftWidth'] ?? $borderWidth;
-        $borderStyle = $style['borderStyle'] ?? 'solid';
-        $borderColor = $style['borderColor'] ?? 0;
-        $borderTopColor = $style['borderTopColor'] ?? $borderColor;
-        $borderRightColor = $style['borderRightColor'] ?? $borderColor;
-        $borderBottomColor = $style['borderBottomColor'] ?? $borderColor;
-        $borderLeftColor = $style['borderLeftColor'] ?? $borderColor;
+        $borderWidth = $pseudoOverrides['borderWidth'] ?? ($cs?->borderWidth?->top?->toPx() ?? 0);
+        $borderTopWidth = $pseudoOverrides['borderTopWidth'] ?? $cs?->borderTopWidth ?? $borderWidth;
+        $borderRightWidth = $pseudoOverrides['borderRightWidth'] ?? $cs?->borderRightWidth ?? $borderWidth;
+        $borderBottomWidth = $pseudoOverrides['borderBottomWidth'] ?? $cs?->borderBottomWidth ?? $borderWidth;
+        $borderLeftWidth = $pseudoOverrides['borderLeftWidth'] ?? $cs?->borderLeftWidth ?? $borderWidth;
+        $borderStyle = $cs?->borderStyle ?? 'solid';
+        $borderColor = $pseudoOverrides['borderColor'] ?? $cs?->borderColor ?? 0;
+        $borderTopColor = $pseudoOverrides['borderTopColor'] ?? $cs?->borderTopColor ?? $borderColor;
+        $borderRightColor = $pseudoOverrides['borderRightColor'] ?? $cs?->borderRightColor ?? $borderColor;
+        $borderBottomColor = $pseudoOverrides['borderBottomColor'] ?? $cs?->borderBottomColor ?? $borderColor;
+        $borderLeftColor = $pseudoOverrides['borderLeftColor'] ?? $cs?->borderLeftColor ?? $borderColor;
 
         // object-fit: CSS Images §5.5 控制替换内容如何适应容器
-        $objectFit = $style['objectFit'] ?? 'fill';
-        $objectPosition = $style['objectPosition'] ?? '50% 50%';
+        $objectFit = $pseudoOverrides['objectFit'] ?? $cs?->objectFit ?? 'fill';
+        $objectPosition = $pseudoOverrides['objectPosition'] ?? $cs?->objectPosition ?? '50% 50%';
         // Compute image destination rect based on object-fit
         $imgX = $x; $imgY = $y; $imgW = $w; $imgH = $h;
         if ($imageHandle !== 0 && $objectFit !== 'fill') {
@@ -1502,8 +1501,8 @@ class VNodeRenderer
         // ── 尺寸为 0 时降级显示 ──
         if ($noSize) {
             if ($alt !== '') {
-                $fontSize = $style['fontSize'] ?? 14;
-                $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
+                $fontSize = $cs?->fontSize ?? 14;
+                $textColor = $cs?->color?->toBgr() ?? 0xFFFFFF;
                 return [
                     'type' => 'text', 'text' => '🖼 ' . $alt,
                     'x' => $x, 'y' => $y,
@@ -1549,8 +1548,8 @@ class VNodeRenderer
 
         // 若有 alt 文本，在图片上叠加显示
         if ($alt !== '') {
-            $fontSize = $style['fontSize'] ?? 14;
-            $textColor = $style['fg'] ?? ($style['color'] ?? 0xFFFFFF);
+            $fontSize = $cs?->fontSize ?? 14;
+            $textColor = $cs?->color?->toBgr() ?? 0xFFFFFF;
             $altX = $x + 4;
             $altY = $y + (int)(($h - $fontSize) / 2);
             if ($altY < $y) $altY = $y;
@@ -1568,7 +1567,7 @@ class VNodeRenderer
         return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
     }
 
-    private function makeInputElement(RenderNode $node, array $style, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeInputElement(RenderNode $node, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $cs = $node->computedStyle;
         $bg       = $cs?->backgroundColor?->toBgr() ?? 0x1E1E1E;
@@ -1601,13 +1600,14 @@ class VNodeRenderer
         ];
     }
 
-    private function makeScrollContainerElement(RenderNode $node, array $style, int $x, int $y, int $w, int $h, int $layer): ?array
+    private function makeScrollContainerElement(RenderNode $node, array $pseudoOverrides, int $x, int $y, int $w, int $h, int $layer): ?array
     {
-        $bg = $style['bg'] ?? 0x2D2D2D;
-        $borderRadius = $style['borderRadius'] ?? 0;
-        $borderRadiusX = $style['borderRadiusX'] ?? 0;
-        $borderRadiusY = $style['borderRadiusY'] ?? 0;
-        $opacity = $style['opacity'] ?? 1.0;
+        $cs = $node->computedStyle;
+        $bg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr() ?? 0x2D2D2D;
+        $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;
+        $borderRadiusX = $pseudoOverrides['borderRadiusX'] ?? 0;
+        $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;
+        $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;
 
         $contentH = $node->contentHeight;
         if ($contentH === 0) {
@@ -1660,5 +1660,35 @@ private static function cssValueToRaw(mixed $v): mixed
             return $v->grow . ' ' . $v->shrink . ' ' . $v->basis->toPx();
         }
         return $v;
+    }
+
+    /**
+     * 从 RenderNode 提取伪类样式覆盖（:hover/:focus/:active）。
+     * 伪类样式存储在 computedStyle 的 rawDeclarations 中，通过 getRaw() 访问。
+     * pseudoOverrides 中的值已转换为原始 PHP 类型，可直接用于元素构建。
+     *
+     * @return array<string, mixed> 伪类样式覆盖键值对
+     */
+    private static function extractPseudoOverrides(RenderNode $node): array
+    {
+        $cs = $node->computedStyle;
+        if ($cs === null) return [];
+
+        $overrides = [];
+        $states = [];
+        if ($node->hovered) $states[] = '__hoverStyle';
+        if ($node->focused) $states[] = '__focusStyle';
+        if ($node->active) $states[] = '__activeStyle';
+
+        // 优先级: active > focus > hover (后遍历的覆盖先遍历的)
+        foreach ($states as $key) {
+            $raw = $cs->getRaw($key);
+            if ($raw !== null && is_array($raw)) {
+                foreach ($raw as $k => $v) {
+                    $overrides[$k] = self::cssValueToRaw($v);
+                }
+            }
+        }
+        return $overrides;
     }
 }
