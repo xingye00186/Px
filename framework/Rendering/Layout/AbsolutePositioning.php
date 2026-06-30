@@ -133,8 +133,10 @@ class AbsolutePositioning implements AbsoluteStrategy
         }
 
         // translate
-        $calcX += $style?->getRaw('translateX') ?? 0;
-        $calcY += $style?->getRaw('translateY') ?? 0;
+        $rawTX = $style?->getRaw('translateX');
+        $rawTY = $style?->getRaw('translateY');
+        $calcX += $rawTX instanceof CssLength ? $rawTX->toPx() : (int)($rawTX ?? 0);
+        $calcY += $rawTY instanceof CssLength ? $rawTY->toPx() : (int)($rawTY ?? 0);
 
         $builder
             ->setPosition($calcX, $calcY)

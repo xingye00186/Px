@@ -60,6 +60,16 @@ class GridLayoutStrategy implements LayoutStrategyInterface
     ): void
     {
         $style = $node->getStyleArray();
+        // ── 安全防护：将 style 数组中的 CssValue 对象转为原始值 ──
+        foreach ($style as $sk => $sv) {
+            if ($sv instanceof \Px\Rendering\CssLength || $sv instanceof \Px\Rendering\CssRect) {
+                $style[$sk] = $sv->toPx();
+            } elseif ($sv instanceof \Px\Rendering\CssKeyword) {
+                $style[$sk] = $sv->value;
+            } elseif ($sv instanceof \Px\Rendering\CssColor) {
+                $style[$sk] = $sv->toBgr();
+            }
+        }
 
         $left = $style['left'] ?? 0;
 

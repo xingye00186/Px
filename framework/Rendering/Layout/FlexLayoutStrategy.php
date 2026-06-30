@@ -90,6 +90,22 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
     {
         // Local style array from ComputedStyle for algorithm body
         $style = $node->getStyleArray();
+        // ── 安全防护：将 style 数组中的 CssValue 对象转为原始值 ──
+        foreach ($style as $sk => $sv) {
+            if ($sv instanceof \Px\Rendering\CssLength || $sv instanceof \Px\Rendering\CssRect) {
+                $style[$sk] = $sv->toPx();
+            } elseif ($sv instanceof \Px\Rendering\CssKeyword) {
+                $style[$sk] = $sv->value;
+            } elseif ($sv instanceof \Px\Rendering\CssColor) {
+                $style[$sk] = $sv->toBgr();
+            }
+        }
+        // ── DIAG: 检测 cleanup 后 style 中是否有漏网的对象 ──
+        foreach ($style as $sk => $sv) {
+            if (is_object($sv)) {
+                error_log('[DIAG_OBJ] node=' . $node->type . ' key=' . $sk . ' class=' . get_class($sv));
+            }
+        }
 
         $left = (int)($style['left'] ?? 0);
 
