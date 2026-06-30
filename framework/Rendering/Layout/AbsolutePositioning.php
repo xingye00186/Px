@@ -161,6 +161,32 @@ class AbsolutePositioning implements AbsoluteStrategy
             // Update builder position with potentially auto-centered coordinates
             $builder->setPosition($node->x, $node->y);
         }
+
+        // ── 同步 builder 中的子 Fragment 为绝对定位算法计算的正确位置 ──
+        // resolveChildren 先于绝对定位算法执行，其中的子 Fragment 位置已过时。
+        if ($builder->childCount() > 0 && count($node->children) > 0) {
+            $existingChildren = $builder->getChildren();
+            $updatedChildren = [];
+            $childCount = min(count($existingChildren), count($node->children));
+            for ($i = 0; $i < $childCount; $i++) {
+                $child = $node->children[$i];
+                $oldFrag = $existingChildren[$i];
+                $updatedChildren[] = new LayoutFragment(
+                    x: $child->x,
+                    y: $child->y,
+                    w: $oldFrag->w,
+                    h: $oldFrag->h,
+                    visualW: $oldFrag->visualW,
+                    visualH: $oldFrag->visualH,
+                    layer: $oldFrag->layer,
+                    contentWidth: $oldFrag->contentWidth,
+                    contentHeight: $oldFrag->contentHeight,
+                    style: $oldFrag->style,
+                    children: $oldFrag->children
+                );
+            }
+            $builder->replaceChildren($updatedChildren);
+        }
     }
 
     public function resolveMarginAuto(RenderNode $node, ?ComputedStyle $style, int $parentContentW, int $parentContentH = 0): void
