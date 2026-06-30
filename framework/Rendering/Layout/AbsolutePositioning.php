@@ -152,6 +152,15 @@ class AbsolutePositioning implements AbsoluteStrategy
             ->setPosition($calcX, $calcY)
             ->setSize($width > 0 ? $width : 0, $height > 0 ? $height : 0, $style)
             ->setLayer($constraints->containerWidth > 0 ? 1 : 0);
+
+        // Apply margin:auto centering for absolute positioned elements
+        // Must be after position/size are determined but before builder is finalized
+        if ($style !== null && $width > 0) {
+            $hasExplicitH = $height > 0;
+            $this->resolveMarginAuto($node, $style, $cbW, $hasExplicitH ? $ancestorH : 0);
+            // Update builder position with potentially auto-centered coordinates
+            $builder->setPosition($node->x, $node->y);
+        }
     }
 
     public function resolveMarginAuto(RenderNode $node, ?ComputedStyle $style, int $parentContentW, int $parentContentH = 0): void
