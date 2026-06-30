@@ -168,6 +168,16 @@ class FlexItemCollector
     }
 
     /**
+     * 安全取 order 整数值（raw 可能是 CssLength 对象）
+     */
+    private static function flexOrderInt(mixed $raw): int
+    {
+        if ($raw === null) return 0;
+        if ($raw instanceof \Px\Rendering\CssLength) return $raw->toPx();
+        return (int)$raw;
+    }
+
+    /**
      * AOT 兼容的冒泡排序（stable sort by order）。
      */
     private function sortByOrder(array &$children): void
@@ -175,8 +185,8 @@ class FlexItemCollector
         $n = count($children);
         for ($i = 0; $i < $n; $i++) {
             for ($j = 0; $j < $n - $i - 1; $j++) {
-                $orderA = (int)($children[$j]->computedStyle?->getRaw('order') ?? 0);
-                $orderB = (int)($children[$j + 1]->computedStyle?->getRaw('order') ?? 0);
+                $orderA = self::flexOrderInt($children[$j]->computedStyle?->getRaw('order'));
+                $orderB = self::flexOrderInt($children[$j + 1]->computedStyle?->getRaw('order'));
                 if ($orderA > $orderB) {
                     $tmp = $children[$j];
                     $children[$j] = $children[$j + 1];
