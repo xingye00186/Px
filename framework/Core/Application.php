@@ -27,6 +27,7 @@ use Px\Styling\Theme\ThemeData;
 use Px\Styling\Provider\ThemeProvider;
 use Px\Styling\Adapter\PlatformAdapter;
 use Px\Core\Config;
+use PxTest\Layout\RenderNodeSerializer;
 
 /**
  * Application — AOT 框架入口（RenderNode 版）
@@ -726,7 +727,8 @@ class Application
             file_put_contents($path, '[]');
             return;
         }
-        $data = $this->serializeRenderNode($root);
+        $serializer = new RenderNodeSerializer();
+        $data = $serializer->toArray($root);
         file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 
@@ -739,154 +741,6 @@ class Application
         if ($this->renderer !== null && function_exists('sk_save_screenshot')) {
             $this->renderer->getRenderContext()->saveScreenshot($path);
         }
-    }
-
-    /**
-     * 递归序列化 RenderNode 为数组。
-     */
-    private function serializeRenderNode(?RenderNode $node, array $parentStyle = []): ?array
-    {
-        if ($node === null) return null;
-        $result = [
-            'type' => $node->type,
-            'x' => $node->x,
-            'y' => $node->y,
-            'w' => $node->w,
-            'h' => $node->h,
-            'visualW' => $node->visualW,
-            'visualH' => $node->visualH,
-            'layer' => $node->layer,
-            'isScrollContainer' => $node->isScrollContainer,
-            'scrollTop' => $node->scrollTop,
-            'scrollLeft' => $node->scrollLeft,
-            'contentHeight' => $node->contentHeight,
-            'contentWidth' => $node->contentWidth,
-            'renderOffsetX' => $node->renderOffsetX,
-            'renderOffsetY' => $node->renderOffsetY,
-            'content' => $node->content,
-            'textRenderInfo' => $node->textRenderInfo,
-        ];
-
-        // dataset: 从 sourceVNode 提取 data-* 属性（如 data-px-id）
-        // 注意：浏览器 dump_layout.js 中 dataset 使用 JS dataset API，
-        // 将 data-px-id 转为 dataset.pxId（驼峰式），引擎端必须保持一致。
-        if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
-            $dataset = [];
-            foreach ($node->sourceVNode->props as $key => $val) {
-                if (str_starts_with((string)$key, 'data-')) {
-                    $dsKey = substr((string)$key, 5); // 'px-id'
-                    // 转为驼峰式以匹配浏览器 dataset API: px-id → pxId
-                    $camelKey = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $dsKey))));
-                    $dataset[$camelKey] = (string)$val;
-                }
-            }
-            if (!empty($dataset)) {
-                $result['dataset'] = $dataset;
-            }
-        }
-
-        // 包含关键样式属性用于对比
-        // 不导出 per-side border 属性：它们与 borderWidth/borderColor 简写重复，
-        // 且浏览器只导出简写不单独导出各边。对比层通过浏览器 skip 列表忽略。
-        $styleKeys = ['bg', 'fg', 'bgFromGradient', 'fontSize', 'fontWeight', 'bold', 'borderWidth', 'borderColor',
-            'borderRadius', 'borderStyle', 'textAlign', 'textIndent', 'textTransform',
-            'lineHeight', 'whiteSpace', 'wordBreak', 'fontStyle', 'fontFamily', 'opacity', 'visibility',
-            'display', 'position', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
-            'marginTop', 'marginLeft', 'marginRight', 'marginBottom',
-            '_computedMarginLeft', '_computedMarginRight',
-            'minHeight', 'maxHeight', 'minWidth', 'maxWidth',
-            'gap', 'boxSizing', 'boxShadow',
-            'width', 'height',
-            'flexDirection', 'alignItems', 'justifyContent', 'flexWrap',
-            'flexShrink', 'flexGrow', 'order',
-            'gridTemplateColumns', 'gridTemplateRows', 'gridColumnGap', 'gridRowGap',
-            'gridColumn', 'gridRow', 'gridAutoRows', 'gridTemplateAreas',
-            'justifyItems', 'alignSelf', 'justifySelf', 'alignContent',
-            'overflow', 'overflowX', 'overflowY', 'overflowWrap', 'backgroundRepeat', 'backgroundClip', 'backgroundOrigin', 'backgroundAttachment', 'objectFit', 'objectPosition', 'textShadow', 'letterSpacing', 'wordSpacing', 'verticalAlign', 'fontVariant', 'fontStretch', 'appearance', 'borderCollapse', 'borderSpacing', 'tableLayout', 'captionSide', 'listStyleType', 'listStylePosition',
-            'pointerEvents',
-            'outlineWidth', 'outlineStyle', 'outlineColor', 'outlineOffset',
-            'columnCount', 'columnWidth', 'columnGap', 'columnRuleWidth', 'columnRuleStyle', 'columnRuleColor',
-            'textDecorationLine', 'textDecorationColor', 'textDecorationStyle', 'textDecorationThickness'];
-       $style = [];
-        $exportData = $node->computedStyle !== null ? $node->computedStyle->toExportArray() : [];
-        foreach ($styleKeys as $k) {
-            if (isset($exportData[$k]) && $exportData[$k] !== null) {
-                $style[$k] = $exportData[$k];
-            }
-        }
-        // CSS 继承属性补全：引擎在 resolveNodeStyle 中已做继承，
-        // 但部分场景下（如两阶段重布局后）继承值可能丢失。
-        // 从父节点样式补全当前节点缺失的继承属性。
-        // 仅补全 textAlign，其他继承属性如 fontFamily/fontSize 等
-        // 因引擎全局 style 与浏览器默认值不同，序列化后会引入新噪声。
-        if (!isset($style['textAlign']) && isset($parentStyle['textAlign'])) {
-            $style['textAlign'] = $parentStyle['textAlign'];
-        }
-        // fg (color) 继承补全：与 textAlign 同样逻辑
-        if (!isset($style['fg']) && isset($parentStyle['fg'])) {
-            $style['fg'] = $parentStyle['fg'];
-        }
-        // CSS 百分比宽/高：当 widthPercent/heightPercent 存在时，
-        // style.width/style.height 是原始 CSS 值（如 100% → parsePixels 返回 100），
-        // 应使用引擎布局计算后的 $node->w / $node->h 作为导出值
-        if ($node->computedStyle !== null && $node->computedStyle->width->isPercent()) {
-            $style['width'] = $node->w;
-        }
-        if ($node->computedStyle !== null && $node->computedStyle->height->isPercent()) {
-            $style['height'] = $node->h;
-        }
-
-        // bg 总是导出：显式设置的值正常导出，未设置时用 -1 表示"无显式背景/透明"
-        // 这确保元素即使没设背景也能参与颜色对比，否则 bg 缺失时对比逻辑直接跳过此类漏洞
-        if (!isset($style['bg'])) {
-            $style['bg'] = -1;
-        }
-        // ── border-color: 4-side format export (CSS 2.2 §8.5.2) ──
-        // Browser always exports borderColor as 4-side string via getComputedStyle.
-        // Engine must also export 4-side format when any per-side color is set.
-        // Per-side colors not explicitly set fall back to the shorthand borderColor.
-        $bc = $style['borderColor'] ?? null;
-        $bw = $style['borderWidth'] ?? 0;
-        if ($bc !== null || $bw > 0) {
-            $bTopC = $exportData['borderTopColor'] ?? $bc;
-            $bRightC = $exportData['borderRightColor'] ?? $bc;
-            $bBottomC = $exportData['borderBottomColor'] ?? $bc;
-            $bLeftC = $exportData['borderLeftColor'] ?? $bc;
-            // Always export as 4-side format when any per-side color exists or borderWidth>0
-            if ($bTopC !== null && $bRightC !== null && $bBottomC !== null && $bLeftC !== null) {
-                $style['borderColor'] = self::formatColorInt($bTopC) . ' '
-                    . self::formatColorInt($bRightC) . ' '
-                    . self::formatColorInt($bBottomC) . ' '
-                    . self::formatColorInt($bLeftC);
-            }
-        }
-        // 总是导出 display，默认 block（CSS 2.2 §9.2.4：块级元素默认 display:block）
-        // 内联元素（span, b, code, br 等）默认 display:inline（CSS 2.2 §9.2.2）
-        if (!isset($style['display'])) {
-            $inlineTypes = ['span', '#text', 'b', 'strong', 'em', 'i', 'code', 'a', 'label', 'br'];
-            $listItemTypes = ['li'];
-            if (in_array($node->type, $inlineTypes, true)) {
-                $style['display'] = 'inline';
-            } elseif (in_array($node->type, $listItemTypes, true)) {
-                $style['display'] = 'list-item';
-            } else {
-                $style['display'] = 'block';
-            }
-        }
-        if (count($style) > 0) {
-            $result['style'] = $style;
-        }
-        $children = [];
-        foreach ($node->children as $child) {
-            $serialized = $this->serializeRenderNode($child, $style);
-            if ($serialized !== null) {
-                $children[] = $serialized;
-            }
-        }
-        if (count($children) > 0) {
-            $result['children'] = $children;
-        }
-        return $result;
     }
 
     /**
@@ -1097,17 +951,5 @@ class Application
             }
         }
         return null;
-    }
-
-    /**
-     * Convert COLORREF int to CSS rgb() string for serialization.
-     * COLORREF: bits 0-7=B, 8-15=G, 16-23=R
-     */
-    private static function formatColorInt(int $color): string
-    {
-        $r = ($color >> 16) & 0xFF;
-        $g = ($color >> 8) & 0xFF;
-        $b = $color & 0xFF;
-        return "rgb($r, $g, $b)";
     }
 }

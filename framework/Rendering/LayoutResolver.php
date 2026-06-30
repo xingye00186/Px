@@ -117,10 +117,12 @@ class LayoutResolver
         $this->stickyStackX = [];
 
         $constraints = new LayoutConstraints(
-            containerWidth: $root->w,
-            containerHeight: $root->h,
-            parentContentX: 0,
-            parentContentY: 0,
+            $root->w,
+            $root->h,
+            0,
+            0,
+            $root->w,
+            $root->h,
         );
 
         $rootFragment = $this->resolveNodeInternal($root, $constraints);
@@ -484,17 +486,17 @@ class LayoutResolver
         LayoutConstraints $constraints,
         FragmentBuilder   $builder
     ): void {
-        $childOffX = $node->computedStyle?->childOffsetX() ?? 0;
-        $childOffY = $node->computedStyle?->childOffsetY() ?? 0;
+        $childOffX = $node->computedStyle !== null ? $node->computedStyle->childOffsetX() : 0;
+        $childOffY = $node->computedStyle !== null ? $node->computedStyle->childOffsetY() : 0;
 
         foreach ($node->children as $child) {
             $childConstraints = new LayoutConstraints(
-                containerWidth: $constraints->contentWidth,
-                containerHeight: $constraints->contentHeight,
-                parentContentX: $constraints->parentContentX + $childOffX,
-                parentContentY: $constraints->parentContentY + $childOffY,
-                contentWidth: $constraints->contentWidth,
-                contentHeight: $constraints->contentHeight,
+                $constraints->contentWidth,
+                $constraints->contentHeight,
+                $constraints->parentContentX + $childOffX,
+                $constraints->parentContentY + $childOffY,
+                $constraints->contentWidth,
+                $constraints->contentHeight,
             );
             $childFragment = $this->resolveNodeInternal($child, $childConstraints);
             $builder->addChild($childFragment);
@@ -509,17 +511,17 @@ class LayoutResolver
         LayoutConstraints $constraints,
         FragmentBuilder   $builder
     ): void {
-        $childOffX = $node->computedStyle?->childOffsetX() ?? 0;
-        $childOffY = $node->computedStyle?->childOffsetY() ?? 0;
+        $childOffX = $node->computedStyle !== null ? $node->computedStyle->childOffsetX() : 0;
+        $childOffY = $node->computedStyle !== null ? $node->computedStyle->childOffsetY() : 0;
 
         foreach ($node->children as $child) {
             $childConstraints = new LayoutConstraints(
-                containerWidth: $constraints->contentWidth,
-                containerHeight: $constraints->contentHeight,
-                parentContentX: $constraints->parentContentX + $childOffX,
-                parentContentY: $constraints->parentContentY + $childOffY,
-                contentWidth: $constraints->contentWidth,
-                contentHeight: $constraints->contentHeight,
+                $constraints->contentWidth,
+                $constraints->contentHeight,
+                $constraints->parentContentX + $childOffX,
+                $constraints->parentContentY + $childOffY,
+                $constraints->contentWidth,
+                $constraints->contentHeight,
             );
             $childFragment = $this->resolveNodeInternal($child, $childConstraints);
             $builder->addChild($childFragment);

@@ -316,7 +316,8 @@ class ComputedStyle
             } elseif (is_string($fv)) {
                 $this->flex = CssFlex::fromString($fv);
             }
-            $this->flexBasis = $this->flex->basis;
+            // flexBasis 已在上方通过 resolveCssLength('flexBasis', $d) 设置
+            // 此处仅设置 flex 对象，不再重复赋值 flexBasis（readonly 不可二次赋值）
         }
 
         // ── 复合值 ──
