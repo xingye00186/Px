@@ -584,21 +584,9 @@ class PxIdGenerateStep implements \PxTest\Pipeline\PipelineStepInterface
         }
 
         if ($changed > 0) {
-            echo "  [pxid] $changed .vue files regenerated, compiling SFC...\n";
-            $sfcScript = $this->appDir . '/../../sfc-compiler.php';
-            if (file_exists($sfcScript)) {
-                $appVue = $this->appDir . '/App.vue';
-                $cmd = sprintf('%s %s %s 2>&1', PHP_BINARY, escapeshellarg($sfcScript), escapeshellarg($appVue));
-                exec($cmd, $output, $exitCode);
-                if ($exitCode !== 0) {
-                    echo "  [pxid] SFC compilation FAILED (exit=$exitCode)\n";
-                    foreach ($output as $line) echo "    $line\n";
-                    return \PxTest\Pipeline\StepResult::err('pxid_generate', 'SFC compilation failed');
-                }
-                echo "  [pxid] SFC compilation OK ($changed files changed)\n";
-            }
+            echo "  [pxid] $changed .vue files regenerated\n";
         } else {
-            echo "  [pxid] all .vue up-to-date, skipping SFC\n";
+            echo "  [pxid] all .vue up-to-date\n";
         }
 
         return \PxTest\Pipeline\StepResult::ok('pxid_generate', $changed);

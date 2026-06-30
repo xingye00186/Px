@@ -92,6 +92,9 @@ class PipelineBuilder
     {
         $orchestrator = new PipelineOrchestrator();
 
+        // Step A: data-px-id 全量预处理（先于构建，确保 .vue 已生成）
+        $orchestrator->addStep(new \PxTest\Pipeline\Strategy\PxIdGenerateStep($this->appDir, $this->casePrefix));
+
         // Step 0: Build (hash cache + process lock + orphan cleanup)
         if ($this->skipBuild) {
             echo "  [{$this->appName}] Skip build (--skip-build)\n";
@@ -100,9 +103,6 @@ class PipelineBuilder
         } else {
             echo "  [{$this->appName}] Skip build, using PHP native layout computation\n";
         }
-
-        // Step A: data-px-id 全量预处理（仅执行一次，静态标记防重复）
-        $orchestrator->addStep(new \PxTest\Pipeline\Strategy\PxIdGenerateStep($this->appDir, $this->casePrefix));
 
         // Step B: 自动批次 browser ref（全量模式无 --case= 时启用）
         // 单次 Edge 启动为所有 case 生成 ref，比逐 case 启动快 20x
