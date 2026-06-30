@@ -39,8 +39,8 @@ class FragmentBuilder
         $this->w = $w;
         $this->h = $h;
         if ($style !== null) {
-            $this->visualW = $style->visualWidth($w);
-            $this->visualH = $style->visualHeight($h);
+            $this->visualW = (int)$style->visualWidth($w);
+            $this->visualH = (int)$style->visualHeight($h);
         }
         return $this;
     }
@@ -69,6 +69,32 @@ class FragmentBuilder
     {
         $this->children[] = $child;
         return $this;
+    }
+
+    /**
+     * 替换全部子 Fragment（用于策略后处理完全重排 children）。
+     */
+    public function replaceChildren(array $children): self
+    {
+        $this->children = $children;
+        return $this;
+    }
+
+    /**
+     * 当前子 Fragment 数量。
+     */
+    public function childCount(): int
+    {
+        return count($this->children);
+    }
+
+    /**
+     * 获取当前子 Fragment 列表。
+     * @return LayoutFragment[]
+     */
+    public function getChildren(): array
+    {
+        return $this->children;
     }
 
     public function setStyle(?ComputedStyle $style): self
