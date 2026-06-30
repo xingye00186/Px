@@ -314,17 +314,21 @@ class ComputedStyle
         $this->borderCollapse = $this->resolveKeyword('borderCollapse', $d, 'separate');
         $this->pointerEvents = $this->resolveKeyword('pointerEvents', $d, 'auto');
 
-        // ── flex ──
+        // ── flex（readonly 属性，必须恰好赋值一次）
         if (isset($d['flex'])) {
             $fv = $d['flex'];
             if ($fv instanceof CssFlex) {
                 $this->flex = $fv;
             } elseif (is_string($fv)) {
                 $this->flex = CssFlex::fromString($fv);
+            } else {
+                $this->flex = CssFlex::initial();
             }
-            // flexBasis 已在上方通过 resolveCssLength('flexBasis', $d) 设置
-            // 此处仅设置 flex 对象，不再重复赋值 flexBasis（readonly 不可二次赋值）
+        } else {
+            $this->flex = CssFlex::initial();
         }
+        // flexBasis 已在上方通过 resolveCssLength('flexBasis', $d) 设置
+        // 此处仅设置 flex 对象，不再重复赋值 flexBasis（readonly 不可二次赋值）
 
         // ── 复合值 ──
         $this->applyPaddingMarginBorder($d);
