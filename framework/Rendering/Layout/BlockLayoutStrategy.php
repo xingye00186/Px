@@ -321,14 +321,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
                     $stackAdvanceY = $child->y;
 
+                    // Position: set x for non-flex/grid children BEFORE relative offset
+                    if ($childDisplay !== 'flex' && $childDisplay !== 'inline-flex' && $childDisplay !== 'grid') {
+                        $child->x = $node->x + $borderLeft + $padLeft + $mLeft;
+                    }
+
                     if ($childPosition === 'relative') {
                         $child->y += ($childCS?->top ?? 0);
                         $child->x += ($childCS?->left ?? 0);
-                    }
-
-                    // Position: set x for non-flex/grid children
-                    if ($childDisplay !== 'flex' && $childDisplay !== 'inline-flex' && $childDisplay !== 'grid') {
-                        $child->x = $node->x + $borderLeft + $padLeft + $mLeft;
                     }
 
                     $dy = $child->y - $oldY;

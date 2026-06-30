@@ -70,8 +70,17 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         $ancestorX = $ancestor?->x ?? 0;
         $ancestorY = $ancestor?->y ?? 0;
-        $ancestorW = $ancestor ? ($ancestor->w - $borderL - $borderR) : $viewportW;
+        // 祖先宽度可能尚未设置（resolveChildren 先于策略执行），使用 style 回退
+        $ancestorRawW = $ancestor?->w ?? 0;
+        if ($ancestorRawW <= 0 && $ancCS !== null) {
+            $ancestorRawW = $ancCS->width->toPx();
+        }
+        $ancestorW = $ancestor ? ($ancestorRawW - $borderL - $borderR) : $viewportW;
         $ancestorH = $ancestor ? ($ancestor->h - $borderT - $borderB) : $viewportH;
+        if ($ancestorH <= 0 && $ancCS !== null) {
+            $ch = $ancCS->height->toPx();
+            if ($ch > 0) $ancestorH = $ch - $borderT - $borderB;
+        }
 
         // 布局容器宽高
         $cbW = $ancestor ? ($ancestorW) : $viewportW;
