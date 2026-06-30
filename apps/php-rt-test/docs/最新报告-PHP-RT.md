@@ -1,10 +1,10 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-01 00:50:08 | **总耗时**: 152.4s
+**运行时间**: 2026-07-01 00:54:14 | **总耗时**: 151.9s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 64diff 🔴23 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 13diff 🔴4 | ⏭️ | ❌ 失败 | 1.3s |
 | prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 83diff 🔴33 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 60diff 🔴23 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 11diff 🔴6 | ⏭️ | ❌ 失败 | 2.9s |
@@ -27,7 +27,7 @@
 | prt-11-display-types | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 56diff 🔴22 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-110-integ-complex-toolbar | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ⚠️ 1 | 208diff 🔴92 | ⏭️ | ❌ 失败 | 1.5s |
 | prt-12-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 55diff 🔴19 | ⏭️ | ❌ 失败 | 1.3s |
-| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 72diff 🔴28 | ⏭️ | ❌ 失败 | 1.8s |
+| prt-13-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff 🔴5 | ⏭️ | ❌ 失败 | 1.3s |
 | prt-14-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 69diff 🔴28 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-15-position-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 59diff 🔴21 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-16-top-left-right-bottom | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 86diff 🔴37 | ⏭️ | ❌ 失败 | 1.2s |
@@ -115,7 +115,7 @@
 | prt-98-resize-both | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 97diff 🔴36 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-99-table-layout-fixed | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 4 | 169diff 🔴67 | ⏭️ | ❌ 失败 | 1.5s |
 
-**汇总**: 0 ✅ / 110 ❌ / 110 总计 (总耗时: 152.4s)
+**汇总**: 0 ✅ / 110 ❌ / 110 总计 (总耗时: 151.9s)
 
 ## 回归判定
 
@@ -123,10 +123,10 @@
 >
 > - prop white-space diff 11->188
 > - prop line-height diff 1->126
-> - prt-01-margin geometry 0->61
-> - prt-01-margin mismatch 0->3
-> - prt-01-margin critical 0->23
-> - prt-01-margin major 0->33
+> - prt-01-margin geometry 0->12
+> - prt-01-margin mismatch 0->1
+> - prt-01-margin critical 0->4
+> - prt-01-margin major 0->6
 > - prt-02-margin-auto geometry 16->76
 > - prt-02-margin-auto critical 11->33
 > - prt-02-margin-auto major 3->37
@@ -190,9 +190,7 @@
 > - prt-12-display-none geometry 16->50
 > - prt-12-display-none critical 7->19
 > - prt-12-display-none major 4->28
-> - prt-13-position-relative geometry 18->66
-> - prt-13-position-relative critical 10->28
-> - prt-13-position-relative major 3->36
+> - prt-13-position-relative major 3->10
 > - prt-14-position-absolute geometry 18->66
 > - prt-14-position-absolute critical 14->28
 > - prt-14-position-absolute major 0->33
@@ -469,16 +467,16 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| width | 90.9% | 4812/5293 |
-| height | 93.9% | 4971/5293 |
+| width | 91% | 4814/5293 |
+| height | 94% | 4973/5293 |
 | position | 100% | 5293/5293 |
 | font-weight | 100% | 5293/5293 |
 | text-align | 100% | 5293/5293 |
 | opacity | 100% | 5293/5293 |
 | background-color | 99.9% | 5285/5291 |
 | display | 100% | 5235/5235 |
-| top | 100% | 5048/5048 |
-| left | 100% | 5046/5046 |
+| top | 100% | 5049/5049 |
+| left | 100% | 5047/5047 |
 | border-width | 100% | 404/404 |
 | white-space | 2.6% | 5/193 |
 | margin-bottom | 100% | 176/176 |
@@ -538,7 +536,7 @@
 
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
-| prt-01-margin | 0 | **23** | **33** | 3 | 0 | 0 |
+| prt-01-margin | 0 | **4** | **6** | 1 | 0 | 0 |
 | prt-02-margin-auto | 0 | **33** | **37** | 7 | 0 | 0 |
 | prt-03-negative-margin | 0 | **23** | **29** | 3 | 0 | 0 |
 | prt-04-padding | 0 | **6** | **4** | 1 | 0 | 0 |
@@ -561,7 +559,7 @@
 | prt-11-display-types | 0 | **22** | **27** | 3 | 0 | 0 |
 | prt-110-integ-complex-toolbar | 0 | **92** | **88** | 22 | 0 | 1 |
 | prt-12-display-none | 0 | **19** | **28** | 5 | 0 | 0 |
-| prt-13-position-relative | 0 | **28** | **36** | 6 | 0 | 0 |
+| prt-13-position-relative | 0 | **5** | **10** | 4 | 0 | 0 |
 | prt-14-position-absolute | 0 | **28** | **33** | 3 | 0 | 0 |
 | prt-15-position-fixed | 0 | **21** | **30** | 3 | 0 | 0 |
 | prt-16-top-left-right-bottom | 0 | **37** | **39** | 2 | 0 | 0 |
