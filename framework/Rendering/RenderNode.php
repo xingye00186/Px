@@ -174,66 +174,6 @@ class RenderNode
         $this->key           = $key;
     }
 
-    // ── 兼容桥接：Flex/Grid 内部算法体的 array style 访问 ────────
-    // FlexLayoutStrategy/GridLayoutStrategy 的内部算法体仍使用 `getStyleArray()['key']`
-    // 读取样式值，这些算法将在后续迭代中逐步迁移到 ComputedStyle 类型安全 API。
-    // 当前保留只读的 style 数组桥接，阻止直接写入（写入 getStyleArray() 返回值无效果）。
-
-    /** @var array|null Cached export array for backward compat reads */
-    private ?array $_styleCache = null;
-
-    /**
-     * 兼容桥接：返回 computedStyle 的导出数组。
-     *
-     * @deprecated 请直接通过 $node->computedStyle 类型安全 API 访问样式属性。
-     *   - $style['bg']  → $computedStyle->backgroundColor->toBgr()
-     *   - $style['fg']  → $computedStyle->color->toBgr()
-     *   - $style['fontSize'] → $computedStyle->fontSize
-     *   - $style['display'] → $computedStyle->display->value
-     *   - $style['paddingLeft'] → $computedStyle->padding->left->toPx()
-     *     注意：写入返回值的元素（如 `getStyleArray()['key'] = val`）无实际效果。
-     *
-     * 仅供 FlexLayoutStrategy/GridLayoutStrategy 的内部算法体使用。
-     */
-    public function getStyleArray(): array
-    {
-        if ($this->_styleCache === null && $this->computedStyle !== null) {
-            $arr = $this->computedStyle->toExportArray();
-            // ── DIAG: 检测 toExportArray 中是否有 CssValue 漏网 ──
-            foreach ($arr as $k => $v) {
-                if (is_object($v)) {
-                    error_log('[DIAG_SA] leak key=' . $k . ' class=' . get_class($v));
-                }
-            }
-            // 安全防护：清除 export 中残留的 CssValue 对象
-            foreach ($arr as $k => $v) {
-                if ($v instanceof \Px\Rendering\CssLength || $v instanceof \Px\Rendering\CssRect) {
-                    $arr[$k] = $v->toPx();
-                } elseif ($v instanceof \Px\Rendering\CssKeyword) {
-                    $arr[$k] = $v->value;
-                } elseif ($v instanceof \Px\Rendering\CssColor) {
-                    $arr[$k] = $v->toBgr();
-                }
-            }
-            // ── DIAG: 检测 toExportArray 结果中是否有漏网的对象 ──
-            foreach ($arr as $k => $v) {
-                if (is_object($v)) {
-                    error_log('[DIAG_SA] getStyleArray leak key=' . $k . ' class=' . get_class($v) . ' node=' . ($this->type ?? ''));
-                }
-            }
-            $this->_styleCache = $arr;
-        }
-        return $this->_styleCache ?? [];
-    }
-
-    /**
-     * 清除样式缓存（computedStyle 变化时调用）。
-     */
-    public function clearStyleCache(): void
-    {
-        $this->_styleCache = null;
-    }
-
     // ── 脏标记方法 ────
 
     /**

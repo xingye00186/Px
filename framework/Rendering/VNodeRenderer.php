@@ -463,12 +463,16 @@ class VNodeRenderer
      */
     private function renderNodeToElement(RenderNode $node): ?array
     {
-        $style = $node->getStyleArray();
-
-        // ── DIAG: 检测 style 数组中是否有 CssValue 残留 ──
-        foreach ($style as $sk => $sv) {
-            if ($sv instanceof CssValue) {
-                error_log('[DIAG_VNR] renderNodeToElement node=' . $node->type . ' key=' . $sk . ' class=' . get_class($sv));
+        // Build style array from ComputedStyle (替代已废弃的 getStyleArray())
+        $style = [];
+        if ($node->computedStyle !== null) {
+            $style = $node->computedStyle->toExportArray();
+            // 补充 pseudo-class 样式（不在 EXPORT_KEYS 中）
+            foreach (['__hoverStyle', '__focusStyle', '__activeStyle'] as $pk) {
+                $pv = $node->computedStyle->getRaw($pk);
+                if ($pv !== null) {
+                    $style[$pk] = $pv;
+                }
             }
         }
 
