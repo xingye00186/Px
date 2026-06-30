@@ -1,4 +1,4 @@
-@generated 2026-06-30 17:52:58
+@generated 2026-06-30 18:01:25
 === Test: align-items flex-start 顶部对齐 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x100) [dsp=flex pos=static]
@@ -56,6 +56,22 @@ div (0,0 200x200) [dsp=flex pos=static]
   div (0,29 80x40) [dsp=block pos=static] text="A"
   div (84,29 80x40) [dsp=block pos=static] text="B"
   div (0,131 80x40) [dsp=block pos=static] text="C"
+
+---
+
+=== Test: align-self center 单个居中覆盖 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x100) [dsp=flex pos=static]
+  div (0,0 60x30) [dsp=block pos=static] text="A"
+  div (60,30 60x40) [dsp=block pos=static] text="Center"
+
+---
+
+=== Test: align-self flex-end 单个底部覆盖 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x100) [dsp=flex pos=static]
+  div (0,0 60x30) [dsp=block pos=static] text="A"
+  div (60,60 60x40) [dsp=block pos=static] text="Bottom"
 
 ---
 

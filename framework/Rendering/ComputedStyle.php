@@ -305,6 +305,8 @@ class ComputedStyle
         $this->alignContent = $this->resolveKeyword('alignContent', $d, 'stretch');
         $this->justifyContent = $this->resolveKeyword('justifyContent', $d, 'flex-start');
         $this->justifyItems = $this->resolveKeyword('justifyItems', $d, 'stretch');
+        $this->justifySelf = $this->resolveKeyword('justifySelf', $d, 'auto');
+        $this->alignSelf = $this->resolveKeyword('alignSelf', $d, 'auto');
         $this->whiteSpace = $this->resolveKeyword('whiteSpace', $d, 'normal');
         $this->wordBreak = $this->resolveKeyword('wordBreak', $d, 'normal');
         $this->textAlign = $this->resolveKeyword('textAlign', $d, 'start');
