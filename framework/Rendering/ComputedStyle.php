@@ -455,6 +455,7 @@ class ComputedStyle
         if (!isset($d[$key])) return null;
         $v = $d[$key];
         if ($v instanceof CssLength) return $v;
+        if ($v instanceof CssKeyword) return CssLength::fromString($v->value);
         if (is_numeric($v)) return CssLength::px((float)$v);
         if (is_string($v) && $v !== '') return CssLength::fromString($v);
         return null;
