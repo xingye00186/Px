@@ -457,7 +457,14 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         }
 
         $node->contentHeight = (int)max(0, $accY - $childOffsetY + $paddingBottom);
-        $node->contentWidth = $node->w;
+
+        // 根据子项实际宽度计算 contentWidth（支持水平滚动）
+        $maxChildRight = 0;
+        foreach ($node->children as $child) {
+            $cRight = (int)($child->x + $child->visualW);
+            if ($cRight > $maxChildRight) $maxChildRight = $cRight;
+        }
+        $node->contentWidth = max($node->w, $maxChildRight);
 
         // Clamp scrollTop
         $maxScroll = max(0, $node->contentHeight - $node->h);
