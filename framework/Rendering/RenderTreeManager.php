@@ -300,14 +300,16 @@ class RenderTreeManager
     }
 
     /**
-     * 递归销毁 RenderNode 子树。
+     * 递归销毁 RenderNode 子树，并从所有映射/动画中移除。
      *
      * 清理：
-     *   - 从 renderNodeToVNodeMap 移除当前节点及其子孙的映射
+     *   - 从父节点 children 中移除
+     *   - 从 groupIdToRenderNodeMap 移除所有后代节点
+     *   - 取消 AnimationManager 中的动画
      *   - 递归销毁子节点
-     *   - 清空 children 数组
+     *   - 断开 sourceVNode/computedStyle 引用（帮助 GC）
      */
-    private function destroyRenderNodeTree(RenderNode $rn): void
+    public function destroyRenderNodeTree(RenderNode $rn, bool $removeFromParent = true): void
     {
         if (Config::get('debug_diag_enabled', false)) {
             $dsp = $rn->computedStyle?->display?->value ?? '';
@@ -315,12 +317,71 @@ class RenderTreeManager
                 . ' children=' . count($rn->children));
         }
 
-        // 递归销毁子节点
-        foreach ($rn->children as $child) {
-            $this->destroyRenderNodeTree($child);
+        // 1. 从父节点 children 中移除
+        if ($removeFromParent && $rn->parent !== null) {
+            $parent = $rn->parent;
+            $idx = array_search($rn, $parent->children, true);
+            if ($idx !== false) {
+                array_splice($parent->children, $idx, 1);
+            }
+            $rn->parent = null;
         }
 
+        // 2. 从 groupIdToRenderNodeMap 中移除所有后代节点
+        $groupIds = [];
+        $this->collectGroupIds($rn, $groupIds);
+        foreach ($groupIds as $gid) {
+            if (isset($this->groupIdToRenderNodeMap[$gid])) {
+                $this->groupIdToRenderNodeMap[$gid] = array_values(
+                    array_filter(
+                        $this->groupIdToRenderNodeMap[$gid],
+                        fn($n) => $n !== $rn && !$this->isDescendantOf($n, $rn)
+                    )
+                );
+                if (empty($this->groupIdToRenderNodeMap[$gid])) {
+                    unset($this->groupIdToRenderNodeMap[$gid]);
+                }
+            }
+        }
+
+        // 3. 取消 AnimationManager 中的动画
+        \Px\Animation\AnimationManager::getInstance()->cancelAllTransitions($rn);
+
+        // 4. 递归销毁子节点
+        foreach ($rn->children as $child) {
+            $this->destroyRenderNodeTree($child, false);
+        }
         $rn->children = [];
+
+        // 5. 断开引用（帮助 GC）
+        $rn->sourceVNode = null;
+        $rn->computedStyle = null;
+    }
+
+    /**
+     * 递归收集节点及其所有后代的 groupId（去重）。
+     */
+    private function collectGroupIds(RenderNode $node, array &$collector): void
+    {
+        if ($node->groupId !== null) {
+            $collector[$node->groupId] = true;
+        }
+        foreach ($node->children as $child) {
+            $this->collectGroupIds($child, $collector);
+        }
+    }
+
+    /**
+     * 检查 $node 是否为 $ancestor 的后代。
+     */
+    private function isDescendantOf(RenderNode $node, RenderNode $ancestor): bool
+    {
+        $current = $node;
+        while ($current !== null) {
+            if ($current === $ancestor) return true;
+            $current = $current->parent;
+        }
+        return false;
     }
 
     // ── VNode → RenderNode 转换 ──────────

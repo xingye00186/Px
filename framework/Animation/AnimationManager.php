@@ -166,7 +166,9 @@ class AnimationManager
     }
 
     /**
-     * 取消节点上的所有动画。
+     * 取消节点上的所有动画，并从 nodeMap 中移除。
+     *
+     * 由 destroyRenderNodeTree 在节点销毁时调用，确保动画系统无残留引用。
      */
     public function cancelAllTransitions(RenderNode $node): void
     {
@@ -177,6 +179,7 @@ class AnimationManager
             }
         }
         $this->animations = array_values($this->animations);
+        unset($this->nodeMap[$nodeId]);
     }
 
     /**

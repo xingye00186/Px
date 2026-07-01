@@ -477,7 +477,15 @@ class Application
         // 卸载不再存在的旧实例
         foreach ($oldRegistry as $id => $instance) {
             if ($id !== 'app' && !isset($this->componentByGroupId[$id])) {
+                // 1. 销毁 RenderNode 树（包含从父级移除、映射清除、动画取消）
+                $oldRootRN = $instance->getRootRenderNode();
+                if ($oldRootRN !== null) {
+                    $this->renderTreeManager->destroyRenderNodeTree($oldRootRN);
+                }
+                // 2. 卸载组件（事件监听、生命周期）
                 $instance->unmount();
+                // 3. 从 Application 组件注册表中移除
+                $this->unregisterComponent($id);
             }
         }
 
@@ -663,9 +671,27 @@ class Application
 
             return $matched;
         } else {
+            // ── 不重用：旧组件必须彻底销毁 ──
             if ($oldNode !== null && $oldNode->componentInstance !== null) {
-                $oldNode->componentInstance->unmount();
+                $oldInst = $oldNode->componentInstance;
+                $oldRootRN = $oldInst->getRootRenderNode();
+
+                // 1. 彻底销毁 RenderNode 树（包含从父级移除、映射清除、动画取消）
+                if ($oldRootRN !== null) {
+                    $this->renderTreeManager->destroyRenderNodeTree($oldRootRN);
+                }
+
+                // 2. 卸载组件（事件监听、生命周期）
+                $oldInst->unmount();
+
+                // 3. 从 Application 组件注册表中移除
+                $this->unregisterComponent($oldInst->getId());
+
+                // 4. 清除旧节点上的 componentInstance 引用（帮助 GC）
+                $oldNode->componentInstance = null;
             }
+
+            // 5. 展开新组件
             return $this->expandComponentNode($newNode, $owner);
         }
 
