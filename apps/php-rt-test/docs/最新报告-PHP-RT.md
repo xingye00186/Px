@@ -1,10 +1,10 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-01 12:40:49 | **总耗时**: 151.9s
+**运行时间**: 2026-07-01 12:59:33 | **总耗时**: 151.9s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴6 | ⏭️ | ❌ 失败 | 1.2s |
+| prt-01-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 56diff 🔴50 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-02-margin-auto | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 83diff 🔴33 | ⏭️ | ❌ 失败 | 1.2s |
 | prt-03-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 60diff 🔴23 | ⏭️ | ❌ 失败 | 1.1s |
 | prt-04-padding | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 11diff 🔴6 | ⏭️ | ❌ 失败 | 2.9s |
@@ -123,9 +123,9 @@
 >
 > - prop white-space diff 11->188
 > - prop line-height diff 1->126
-> - prt-01-margin geometry 0->11
+> - prt-01-margin geometry 0->55
 > - prt-01-margin mismatch 0->1
-> - prt-01-margin critical 0->6
+> - prt-01-margin critical 0->50
 > - prt-01-margin major 0->3
 > - prt-02-margin-auto geometry 16->76
 > - prt-02-margin-auto critical 11->33
@@ -475,8 +475,8 @@
 | opacity | 100% | 5293/5293 |
 | background-color | 99.9% | 5285/5291 |
 | display | 100% | 5235/5235 |
-| top | 100% | 5049/5049 |
-| left | 100% | 5047/5047 |
+| top | 100% | 5048/5048 |
+| left | 100% | 5046/5046 |
 | border-width | 100% | 404/404 |
 | white-space | 2.6% | 5/193 |
 | margin-bottom | 100% | 176/176 |
@@ -536,7 +536,7 @@
 
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
-| prt-01-margin | 0 | **6** | **3** | 1 | 0 | 0 |
+| prt-01-margin | 0 | **50** | **3** | 1 | 0 | 0 |
 | prt-02-margin-auto | 0 | **33** | **37** | 7 | 0 | 0 |
 | prt-03-negative-margin | 0 | **23** | **29** | 3 | 0 | 0 |
 | prt-04-padding | 0 | **6** | **4** | 1 | 0 | 0 |
