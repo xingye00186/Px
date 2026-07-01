@@ -31,6 +31,7 @@ use Px\Compiler\AotValidator;
 $compilerDir = __DIR__;
 $frameworkDir = dirname(__DIR__);
 require_once $frameworkDir . '/Rendering/VNode.php';
+require_once $frameworkDir . '/Rendering/CssValue.php';
 require_once $frameworkDir . '/Rendering/CssMappings.php';
 require_once $frameworkDir . '/Rendering/CssValueParser.php';
 require_once $compilerDir . '/template-parser.php';

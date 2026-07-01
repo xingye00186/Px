@@ -73,7 +73,7 @@ class LayoutDumpStep implements PipelineStepInterface
         $htmlFiles = glob("$caseDir/*.html");
         if (!empty($htmlFiles)) {
             $html = @file_get_contents($htmlFiles[0]);
-            if ($html !== false && preg_match('/<body><div[^>]*style="[^"]*position:relative/i', $html) === 0) {
+            if ($html !== false && preg_match('/<body>\s*<div[^>]*style="[^"]*position:relative/i', $html) === 0) {
                 echo "  [HTML_SPEC_FAIL] " . basename($htmlFiles[0]) . " root container must have position:relative\n";
                 return StepResult::err('dump_layout', 'HTML spec validation failed');
             }
