@@ -91,17 +91,29 @@ function mergeClassStylesIntoNode($node, array $rawStyles): void
         $classVal = $node->props['class'];
         if (is_string($classVal) && $classVal !== '') {
             $classNames = explode(' ', $classVal);
-            $merged = [];
+            $normalDecls = [];
+            $importantDecls = [];
             foreach ($classNames as $cn) {
                 $cn = trim($cn);
-                if ($cn !== '' && isset($rawStyles[$cn])) {
-                    $merged[] = $rawStyles[$cn];
+                if ($cn === '' || !isset($rawStyles[$cn])) continue;
+                $parts = explode(';', $rawStyles[$cn]);
+                foreach ($parts as $decl) {
+                    $decl = trim($decl);
+                    if ($decl === '') continue;
+                    if (stripos($decl, '!important') !== false) {
+                        $importantDecls[] = $decl;
+                    } else {
+                        $normalDecls[] = $decl;
+                    }
                 }
             }
-            if (!empty($merged)) {
+            if (!empty($normalDecls) || !empty($importantDecls)) {
                 $existing = $node->props['style'] ?? '';
-                $newStyle = implode(';', $merged);
-                $node->props['style'] = $existing === '' ? $newStyle : $newStyle . ';' . $existing;
+                $parts = [];
+                if (!empty($normalDecls)) $parts[] = implode(';', $normalDecls);
+                if ($existing !== '') $parts[] = $existing;
+                if (!empty($importantDecls)) $parts[] = implode(';', $importantDecls);
+                $node->props['style'] = implode(';', $parts);
             }
         }
     }
