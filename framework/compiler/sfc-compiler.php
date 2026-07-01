@@ -65,6 +65,54 @@ const NATIVE_HTML_TAGS = [
 // ============================================================
 // Helper — extract custom component tags from template text
 // ============================================================
+
+// ============================================================
+// Helper -- parse CSS to class->raw style string (no CssValue)
+// ============================================================
+function parseCssClassesForMerge(string $css): array
+{
+    $result = [];
+    if (preg_match_all('#\.([a-zA-Z0-9_-]+)\s*\{([^}]*)\}#s', $css, $rules, PREG_SET_ORDER)) {
+        foreach ($rules as $rule) {
+            $className = $rule[1];
+            $body = trim($rule[2]);
+            $body = preg_replace('/\s+/', ' ', $body);
+            $body = rtrim($body, ';');
+            $result[$className] = $body;
+        }
+    }
+    return $result;
+}
+
+function mergeClassStylesIntoNode($node, array $rawStyles): void
+{
+    if ($node === null) return;
+    if ($node->props !== null && isset($node->props['class']) && !isset($node->props[':class'])) {
+        $classVal = $node->props['class'];
+        if (is_string($classVal) && $classVal !== '') {
+            $classNames = explode(' ', $classVal);
+            $merged = [];
+            foreach ($classNames as $cn) {
+                $cn = trim($cn);
+                if ($cn !== '' && isset($rawStyles[$cn])) {
+                    $merged[] = $rawStyles[$cn];
+                }
+            }
+            if (!empty($merged)) {
+                $existing = $node->props['style'] ?? '';
+                $newStyle = implode(';', $merged);
+                $node->props['style'] = $existing === '' ? $newStyle : $newStyle . ';' . $existing;
+            }
+        }
+    }
+    if (is_array($node->children)) {
+        foreach ($node->children as $child) {
+            if (is_object($child) && property_exists($child, 'props')) {
+                mergeClassStylesIntoNode($child, $rawStyles);
+            }
+        }
+    }
+}
 function extractCustomTags(string $template): array
 {
     preg_match_all('/<([a-z][a-z0-9-]*)/i', $template, $matches);
@@ -2031,7 +2079,10 @@ function compileOneComponent(
     $styleWarnings = [];
     $classStyles = \Px\Rendering\CssMappings::parseStyleBlock($styles, $styleWarnings);
 
-    // Build class styles export (for runtime LayoutResolver)
+        // Parse raw CSS for compile-time class style merge
+    $rawClassStyles = \parseCssClassesForMerge($styles);
+
+// Build class styles export (for runtime LayoutResolver)
     $classStylesExport = '[]';
     if (count($classStyles) > 0) {
         $classStylesExport = varExportShort($classStyles);
@@ -2040,6 +2091,9 @@ function compileOneComponent(
     // Parse template → VNode tree
     $parser = new TemplateParser($registry);
     $root = $parser->parse($template);
+    // Merge class styles into VNode inline styles (compile time)
+    \mergeClassStylesIntoNode($root, $rawClassStyles);
+
 
     // Collect handlers and bind keys from VNode tree
     $clickHandlers = [];
@@ -2188,10 +2242,8 @@ class {$className} extends ReactiveComponent
      * 返回编译后的 CSS class styles（从 <style> 块编译）。
      * 由 ThemeProvider::registerClassStyles() 在 mount 时读取并注册。
      */
-    public function getClassStyles(): array
-    {
-        return {$classStylesExport};
-    }
+
+
 
     public function __construct(?string \$componentId = null)
     {
