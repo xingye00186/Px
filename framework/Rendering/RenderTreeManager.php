@@ -104,22 +104,6 @@ class RenderTreeManager
         // ── normal/verbose 级别附加信息 ──
         if ($detail !== 'minimal') {
             $cs = $node->computedStyle;
-            $display = $cs?->display?->value ?? '';
-            $position = $cs?->position?->value ?? '';
-            if ($display !== '' || $position !== '') {
-                $output .= " [";
-                if ($display !== '') {
-                    $output .= "dsp=";
-                    $output .= $display;
-                }
-                if ($position !== '') {
-                    if ($display !== '') $output .= " ";
-                    $output .= "pos=";
-                    $output .= $position;
-                }
-                $output .= "]";
-            }
-
             // border info
             $bw = $cs?->borderWidth?->top?->toPx() ?? 0;
             if ($bw > 0) {

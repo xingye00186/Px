@@ -1,4 +1,92 @@
-@generated 2026-06-30 16:49:53
+@generated 2026-07-01 00:04:19
 === Test: 绝对定位 div (left=10, top=20, w=100, h=50) ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Hello"
+div (0,0 100x50) text="Hello"
+
+---
+
+=== Test: Auto-stack 两个 div 垂直排列 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x70)
+  div (0,0 200x30) text="Line 1"
+  div (0,30 200x40) text="Line 2"
+
+---
+
+=== Test: 嵌套 div (父含子) ===
+Frame #1 events=0 detail=normal
+div (0,0 300x200)
+  div (0,0 100x80) text="Child"
+
+---
+
+=== Test: 百分比宽度 width=50% ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100)
+  div (0,0 200x50) text="50% width"
+
+---
+
+=== Test: padding 缩小内容区 (padding=10px) ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100)
+  div (10,10 200x50) text="Padding test"
+
+---
+
+=== Test: margin-top 在 block 间间距 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x70)
+  div (0,0 200x30) text="Item 1"
+  div (0,40 200x30) text="Item 2"
+
+---
+
+=== Test: min-width 约束限制最小宽度 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x100)
+  div (0,0 100x50) text="min-width"
+
+---
+
+=== Test: max-width 约束限制最大宽度 ===
+Frame #1 events=0 detail=normal
+div (0,0 800x100)
+  div (0,0 400x50) text="max-width"
+
+---
+
+=== Test: margin-left 负值左移 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x60)
+  div (0,0 100x30) text="Item 1"
+  div (-20,30 100x30) text="Item 2"
+
+---
+
+=== Test: 宽度 auto 填充包含块 (无显式 width) ===
+Frame #1 events=0 detail=normal
+div (0,0 500x100)
+  div (0,0 500x50) text="auto width"
+
+---
+
+=== Test: 三个子项不同高度依次堆叠 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x90)
+  div (0,0 300x20) text="A"
+  div (0,20 300x30) text="B"
+  div (0,50 300x40) text="C"
+
+---
+
+=== Test: 百分比高度 height=50% ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200)
+  div (0,0 100x100) text="50% h"
+
+---
+
+=== Test: border 增加外尺寸 ===
+Frame #1 events=0 detail=normal
+div (0,0 100x50) bw=2 text="Border"

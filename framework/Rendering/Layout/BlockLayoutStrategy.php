@@ -89,15 +89,18 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         // Container info from parent (via node->parent, directly)
         $parent = $node->parent;
         $parentW_raw = ($parent !== null) ? $parent->w : (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0);
-        $parentH = ($parent !== null) ? $parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
+        $parentH_raw = ($parent !== null) ? $parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
         if ($parent !== null && $parent->computedStyle !== null) {
             $ps = $parent->computedStyle;
             $padL = $ps->padding->left->toPx();
             $padR = $ps->padding->right->toPx();
             $pbw = $ps->borderLeftWidth + $ps->borderRightWidth;
-            // 如果父容器的 w 尚未计算（0），使用 computedStyle 中的显式宽度
+            // 如果父容器的 w/h 尚未计算（0），使用 computedStyle 中的显式值
             if ($parentW_raw <= 0) {
                 $parentW_raw = $ps->width->toPx();
+            }
+            if ($parentH_raw <= 0) {
+                $parentH_raw = $ps->height->toPx();
             }
             // 根据 box-sizing 确定 parentW_raw 是否包含 padding/border
             // content-box: parentW_raw = 内容宽度，padding/border 在外围，不用减
@@ -111,6 +114,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         } else {
             $parentW = (int)$parentW_raw;
         }
+        // 父容器高度（用于百分比高度解析）
+        $parentH = (int)$parentH_raw;
 
         $width = 0;
         $height = 0;
@@ -119,6 +124,9 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $height = $computedStyle->height->toPx();
             if ($computedStyle->width->isPercent()) {
                 $width = $computedStyle->width->resolveInContext($parentW);
+            }
+            if ($computedStyle->height->isPercent()) {
+                $height = $computedStyle->height->resolveInContext($parentH);
             }
         }
 
