@@ -2962,14 +2962,6 @@ class {$componentClassName} extends ReactiveComponent
         return \$className . 'Component';
     }
 
-    /**
-     * 返回编译后的 CSS class styles（从 <style> 块编译）。
-     * 由 ThemeProvider::registerClassStyles() 在 mount 时读取并注册。
-     */
-    public function getClassStyles(): array
-    {
-        return {$classStylesExport};
-    }
 
 {$defaultOnMount}{$defaultOnUnmount}{$defaultConstruct}}
 PHP;

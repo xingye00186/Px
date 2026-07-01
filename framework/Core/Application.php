@@ -420,13 +420,8 @@ class Application
         $finalTheme = $platformStyling->apply($baseTheme);
         ThemeProvider::inject($finalTheme);
 
-        if (method_exists($this->rootComponent, 'getClassStyles')) {
-            $rootCs = $this->rootComponent->getClassStyles();
-            ThemeProvider::registerClassStyles(
-                get_class($this->rootComponent),
-                $rootCs
-            );
-        }
+        // 编译时 class→style 合并已完成，无需运行时注册
+        // （getClassStyles() 已从 gen 文件中移除）
 
         $this->rootComponent->mount();
         
@@ -536,13 +531,7 @@ class Application
             }
         }
 
-        if (method_exists($instance, 'getClassStyles')) {
-            $cs = $instance->getClassStyles();
-            ThemeProvider::registerClassStyles(
-                get_class($instance),
-                $cs
-            );
-        }
+        // 编译时 class→style 合并已完成，此处不再需要 getClassStyles()
 
         // 必须使用 getVNodeTree() 而非 render()，确保结果缓存到 vnodeCache。
         // 否则后续 updateFromVNode() 调用 $instance->getVNodeTree() 时会再次执行 render()，
