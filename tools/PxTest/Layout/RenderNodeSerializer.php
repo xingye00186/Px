@@ -176,22 +176,9 @@ class RenderNodeSerializer
             $result['textRenderInfo'] = $node->textRenderInfo;
         }
 
-        // dataset: 优先使用 RenderNode.dataset（VNode→RenderNode 同步后的产物）
-        // 回退到从 sourceVNode 提取 data-* 属性
+        // dataset: 从 RenderNode.dataset 读取（由 RenderTreeManager::updateFromVNode 同步）
         if (!empty($node->dataset)) {
             $result['dataset'] = $node->dataset;
-        } elseif ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
-            $dataset = [];
-            foreach ($node->sourceVNode->props as $key => $val) {
-                if (str_starts_with((string)$key, 'data-')) {
-                    $dsKey = substr((string)$key, 5);
-                    $camelKey = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $dsKey))));
-                    $dataset[$camelKey] = (string)$val;
-                }
-            }
-            if (!empty($dataset)) {
-                $result['dataset'] = $dataset;
-            }
         }
 
         // ── Style 导出 ──
