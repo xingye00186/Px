@@ -504,11 +504,15 @@ class LayoutResolver
         if ($rawW > 0) {
             $cbWidth = $isBorderBox ? max(0, $rawW - $padL - $padR - $bL - $bR) : $rawW;
         } else {
-            $cbWidth = max(0, $constraints->contentWidth);
+            $cW = $constraints->contentWidth;
+            $cbWidth = max(0, $cW !== null ? $cW : 0);
         }
-        $cbHeight = $node->h > 0
-            ? ($node->h - $padT - $padB - $bT - $bB)
-            : max(0, $constraints->contentHeight);
+        if ($node->h > 0) {
+            $cbHeight = $node->h - $padT - $padB - $bT - $bB;
+        } else {
+            $cH = $constraints->contentHeight;
+            $cbHeight = max(0, $cH !== null ? $cH : 0);
+        }
         $childOffX = $node->x + $padL + $bL;
         $childOffY = $node->y + $padT + $bT;
 

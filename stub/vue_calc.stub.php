@@ -45,21 +45,25 @@ class WinMsg
 }
 
 // ---- 窗口管理 ----
-function vue_window_create(string $title, int $width, int $height): int {}
+function vue_window_create(string $title, int $width, int $height): int { return 0; }
 function vue_window_show(int $hWnd, int $cmdShow): void {}
 function vue_hide_console(): void {}
-function vue_quit_requested(): bool {}
-function vue_peek_message(): array {}
+function vue_quit_requested(): bool { return false; }
+function vue_peek_message(): array { return []; }
 
 // ---- GDI 绘制原语 ----
-function vue_begin_paint(int $hWnd): int {}
+function vue_begin_paint(int $hWnd): int {
+    // PHP Runtime mode: return dummy HDC
+    if (getenv('PX_PHP_RUNTIME')) return 1;
+    return 0;
+}
 function vue_end_paint(int $hWnd, int $hdc): void {}
 function vue_fill_rect(int $hdc, int $x, int $y, int $w, int $h, int $rgb): void {}
 function vue_alpha_fill_rect(int $hdc, int $x, int $y, int $w, int $h, int $color, float $opacity): void {}
 function vue_draw_round_rect(int $hdc, int $x, int $y, int $w, int $h, int $radius, int $color): void {}
 function vue_draw_text(int $hdc, int $x, int $y, string $text, int $fontSize, int $rgb, int $bold): void {}
 function vue_draw_button(int $hdc, int $x, int $y, int $w, int $h, int $bgColor, int $borderColor): void {}
-function vue_measure_text_width(int $hdc, string $text, int $fontSize): int {}
+function vue_measure_text_width(int $hdc, string $text, int $fontSize): int { return 0; }
 function vue_push_clip(int $hdc, int $x, int $y, int $w, int $h): void {}
 function vue_pop_clip(int $hdc): void {}
 
@@ -67,7 +71,7 @@ function vue_pop_clip(int $hdc): void {}
 function vue_set_default_font(string $fontFamily): void {}
 
 // ---- Scrollbar Hit Test ----
-function vue_hit_test_scrollbar(int $hwnd, int $x, int $y): array {}
+function vue_hit_test_scrollbar(int $hwnd, int $x, int $y): array { return []; }
 
 // ---- Animation Timer ----
 /**
@@ -77,12 +81,12 @@ function vue_hit_test_scrollbar(int $hwnd, int $x, int $y): array {}
  * @param int $intervalMs 定时器间隔（毫秒），约 16ms ≈ 60fps
  * @return int 定时器 ID（>0 表示成功，0 表示失败）
  */
-function vue_set_timer(int $hwnd, int $intervalMs): int {}
+function vue_set_timer(int $hwnd, int $intervalMs): int { return 0; }
 
 function vue_kill_timer(int $hwnd, int $timerId): void {}
 
 // ---- GDI+ 图片加载 ----
-function vue_load_image(string $path): int {}
+function vue_load_image(string $path): int { return 0; }
 function vue_draw_image(int $hdc, int $handle, int $x, int $y, int $w, int $h): void {}
 function vue_free_image(int $handle): void {}
 

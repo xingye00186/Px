@@ -12,7 +12,7 @@
  */
 
 // ---- 阶段一 POC：上下文与基础原语 ----
-function sk_create_window_context(int $hWnd, int $width, int $height): int {}
+function sk_create_window_context(int $hWnd, int $width, int $height): int { return 1; }
 function sk_destroy_context(): void {}
 function sk_begin_frame(): void {}
 function sk_end_frame(): void {}
@@ -34,14 +34,31 @@ function sk_set_default_font(string $fontFamily): void {}
 function sk_set_text_engine(string $engine): void {}
 
 // ---- 阶段三：窗口尺寸变更（WM_SIZE 监听，重建 SkSurface） ----
-function sk_measure_text_width(string $text, int $fontSize, int $bold): int {}
-function sk_measure_text_height(int $fontSize, int $bold): int {}
+function sk_measure_text_width(string $text, int $fontSize, int $bold): int {
+    // PHP Runtime mode: use GoldenTextWidth table for accurate text measurement
+    if (getenv('PX_PHP_RUNTIME') && class_exists('\\PxTest\\Bootstrap\\GoldenTextWidth')) {
+        $w = \PxTest\Bootstrap\GoldenTextWidth::measure($text, $fontSize, $bold !== 0);
+        if ($w !== null) return $w;
+        // Fallback: simple per-char estimation (avg char width ~0.6 * fontSize)
+        $charWidth = (int)($fontSize * 0.6);
+        $estimated = $charWidth * strlen($text);
+        return $estimated;
+    }
+    return 0;
+}
+function sk_measure_text_height(int $fontSize, int $bold): int {
+    // PHP Runtime mode: estimate from font size
+    if (getenv('PX_PHP_RUNTIME')) {
+        return (int)($fontSize * 1.2);
+    }
+    return 0;
+}
 function sk_resize_context(int $width, int $height): void {}
 
 // ---- 图片加载（双路径：USE_SKIA → SkImage, 非USE_SKIA → GDI+） ----
-function sk_load_image(string $path): int {}
-function sk_get_image_width(int $handle): int {}
-function sk_get_image_height(int $handle): int {}
+function sk_load_image(string $path): int { return 0; }
+function sk_get_image_width(int $handle): int { return 0; }
+function sk_get_image_height(int $handle): int { return 0; }
 function sk_draw_image(int $handle, int $x, int $y, int $w, int $h): void {}
 function sk_free_image(int $handle): void {}
 

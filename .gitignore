@@ -88,3 +88,7 @@ apps/css-test/test_case/*/*.vue
 *.rsp
 /layout/
 /layout_new/
+.run_history_php_rt.json
+.case_data_php_rt.json
+apps/css-test/docs/最新报告-PHP-RT.md
+apps/css-test/docs/最新报告.md

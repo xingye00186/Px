@@ -23,6 +23,13 @@ function px_php_runtime_init(): void
     if ($initialized) return;
     $initialized = true;
 
+    // 0. 加载 skia 和 vue_calc stub 函数（PHP RT 下替代原生 C++ 实现）
+    $projectRoot = dirname(__DIR__, 3);
+    foreach (['skia.stub.php', 'vue_calc.stub.php'] as $stub) {
+        $stubPath = $projectRoot . '/stub/' . $stub;
+        if (file_exists($stubPath)) require_once $stubPath;
+    }
+
     // 1. any() — phpx Variant 包装函数
     // 纯 PHP 下退化为恒等函数
     if (!function_exists('any')) {
