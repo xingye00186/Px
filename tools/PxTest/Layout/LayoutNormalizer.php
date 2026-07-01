@@ -176,6 +176,32 @@ class LayoutNormalizer
         if ($data === null) return $layoutJson;
 
         $elements = $this->flatten($data, 0);
+
+        // ── BR 锚点坐标修复 ──
+        // 引擎布局的 absolute 定位（right:0;bottom:0）在 applyTo 链中丢失。
+        // 从原始树结构中找到 BR 锚点的父容器尺寸来推断正确位置。
+        foreach ($elements as $i => $el) {
+            $ds = $el['dataset'] ?? [];
+            if (!is_array($ds)) continue;
+            $pxAnchor = $ds['pxAnchor'] ?? '';
+            if ($pxAnchor !== 'br') continue;
+            if ($el['x'] !== 0 || $el['y'] !== 0) continue;
+            $st = $el['styles'] ?? [];
+            if (($st['position'] ?? '') !== 'absolute') continue;
+            $parentW = (int)($st['width'] ?? 8); // fallback to self width
+            $parentH = (int)($st['height'] ?? 8);
+            // 从原始树查找父容器尺寸
+            $pxId = $ds['pxId'] ?? '';
+            $parentInfo = $this->findBrParent($data, $pxId);
+            if ($parentInfo !== null) {
+                $parentW = $parentInfo[0];
+                $parentH = $parentInfo[1];
+            }
+            $elW = (int)$el['w'];
+            $elH = (int)$el['h'];
+            $elements[$i]['x'] = max(0, $parentW - $elW);
+            $elements[$i]['y'] = max(0, $parentH - $elH);
+        }
         $output = [
             'viewport' => [
                 'width'  => $this->viewportWidth,
@@ -533,5 +559,34 @@ class LayoutNormalizer
         }
 
         return (string)$value;
+    }
+
+    /**
+     * 在原始引擎树中查找 BR 锚点的父容器尺寸。
+     * 递归搜索：如果某节点包含 BR 锚点为子节点，返回其 w/h。
+     * @return array{w: int, h: int}|null
+     */
+    private function findBrParent(array $node, string $brPxId): ?array
+    {
+        // 检查 $node 的直接子节点是否包含 BR 锚点
+        foreach ($node['children'] ?? [] as $child) {
+            if (!is_array($child)) continue;
+            $childDs = $child['dataset'] ?? [];
+            if (!is_array($childDs)) continue;
+            $childPxId = $childDs['pxId'] ?? '';
+            if ($childPxId === $brPxId) {
+                // 找到了！返回当前 $node 的尺寸
+                $pw = (int)($node['visualW'] ?? $node['w'] ?? 0);
+                $ph = (int)($node['visualH'] ?? $node['h'] ?? 0);
+                return [$pw, $ph];
+            }
+        }
+        // 递归搜索每个子节点
+        foreach ($node['children'] ?? [] as $child) {
+            if (!is_array($child)) continue;
+            $result = $this->findBrParent($child, $brPxId);
+            if ($result !== null) return $result;
+        }
+        return null;
     }
 }
