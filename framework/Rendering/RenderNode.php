@@ -40,6 +40,13 @@ class RenderNode
     /** v-for key（用于复用匹配） */
     public ?string $key = null;
 
+    /**
+     * data-* attributes 的驼峰式 Map（如 px-id → pxId）。
+     * 由 RenderTreeManager::updateFromVNode 从 VNode props 复制。
+     * 用于测试锚点识别（pxAnchor）、元素对比匹配（pxId）等场景。
+     */
+    public array $dataset = [];
+
     // ── 布局结果（由 LayoutResolver 填入）────────────────
 
     public int $x = 0;

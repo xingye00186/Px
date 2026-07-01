@@ -176,15 +176,15 @@ class RenderNodeSerializer
             $result['textRenderInfo'] = $node->textRenderInfo;
         }
 
-        // dataset: 从 sourceVNode 提取 data-* 属性（如 data-px-id）
-        // 浏览器 dump_layout.js 中 dataset 使用 JS dataset API，
-        // 将 data-px-id 转为 dataset.pxId（驼峰式），引擎端必须保持一致。
-        if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+        // dataset: 优先使用 RenderNode.dataset（VNode→RenderNode 同步后的产物）
+        // 回退到从 sourceVNode 提取 data-* 属性
+        if (!empty($node->dataset)) {
+            $result['dataset'] = $node->dataset;
+        } elseif ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
             $dataset = [];
             foreach ($node->sourceVNode->props as $key => $val) {
                 if (str_starts_with((string)$key, 'data-')) {
                     $dsKey = substr((string)$key, 5);
-                    // 转为驼峰式以匹配浏览器 dataset API: px-id → pxId
                     $camelKey = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $dsKey))));
                     $dataset[$camelKey] = (string)$val;
                 }
