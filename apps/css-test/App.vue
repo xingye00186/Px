@@ -25,7 +25,7 @@
       <div class="content-header" style="height:52px;background:#ffffff;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;padding:0 24px;flex-shrink:0;">
         <span style="font-size:15px;font-weight:600;color:#1e1e2e;">{{ currentTitle }}</span>
       </div>
-      <div class="content-body" style="flex:1;padding:20px;overflow:auto;position:relative;min-height:0;">
+      <div class="content-body" style="flex:1;padding:20px;overflow:auto;min-height:0;">
         <component :is="caseName" />
       </div>
     </div>
