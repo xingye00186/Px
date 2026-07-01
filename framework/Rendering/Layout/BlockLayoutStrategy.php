@@ -36,7 +36,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         FragmentBuilder    $builder
     ): void
     {
-        $this->resolveBlockLayout($node, $constraints->parentContentX, $constraints->parentContentY, $style, $builder);
+        $this->resolveBlockLayout($node, $constraints->parentContentX, $constraints->parentContentY, $style, $builder, $constraints->contentWidth);
         // 不读回：resolveBlockLayout 已在内部写入 builder
     }
     private LayoutResolver $resolver;
@@ -70,7 +70,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         int           $parentX,
         int           $parentY,
         ?ComputedStyle $computedStyle,
-        ?FragmentBuilder $builder = null
+        ?FragmentBuilder $builder = null,
+        int           $constraintContentWidth = 0
     ): void
     {
         // Use a local helper to access style values from ComputedStyle
@@ -89,6 +90,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         // Container info from parent (via node->parent, directly)
         $parent = $node->parent;
         $parentW_raw = ($parent !== null) ? $parent->w : (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0);
+        // Use constraint content width as fallback when parent width not yet calculated
+        if ($parentW_raw <= 0 && $constraintContentWidth > 0) {
+            $parentW_raw = $constraintContentWidth;
+        }
         $parentH_raw = ($parent !== null) ? $parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
         if ($parent !== null && $parent->computedStyle !== null) {
             $ps = $parent->computedStyle;
