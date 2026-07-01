@@ -1,21 +1,21 @@
-@generated 2026-06-30 18:07:24
+@generated 2026-07-01 00:08:04
 === Test: 后代选择器 .ancestor .child 匹配 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x100) [dsp=block pos=static]
-  div (0,0 160x30) [dsp=block pos=static] text="Descendant"
+div (0,0 200x100)
+  div (0,0 160x30) text="Descendant"
 
 ---
 
 === Test: 子代选择器 .parent > .direct-child 匹配 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x100) [dsp=block pos=static]
-  div (0,0 200x25) [dsp=block pos=static] text="Direct"
+div (0,0 200x100)
+  div (0,0 200x25) text="Direct"
 
 ---
 
 === Test: 特异性 class选择器 > 元素选择器 ===
 Frame #1 events=0 detail=normal
-div (0,0 120x40) [dsp=block pos=static] text="Specific"
+div (0,0 120x40) text="Specific"
 
 ---
 

@@ -1,70 +1,70 @@
-@generated 2026-06-30 18:04:03
+@generated 2026-07-01 00:08:03
 === Test: border-radius 8px 圆角 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Rounded"
+div (0,0 100x50) text="Rounded"
 
 ---
 
 === Test: border-radius 50% 圆形 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x100) [dsp=block pos=static] text="Circle"
+div (0,0 100x100) text="Circle"
 
 ---
 
 === Test: border-radius 4值 (10 20 30 40) ===
 Frame #1 events=0 detail=normal
-div (0,0 200x100) [dsp=block pos=static] text="Mixed radius"
+div (0,0 200x100) text="Mixed radius"
 
 ---
 
 === Test: box-shadow 4px 4px 灰色 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Shadow"
+div (0,0 100x50) text="Shadow"
 
 ---
 
 === Test: box-shadow 大模糊扩散 8px ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Blur shadow"
+div (0,0 100x50) text="Blur shadow"
 
 ---
 
 === Test: opacity 0.5 半透明 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Semi transparent"
+div (0,0 100x50) text="Semi transparent"
 
 ---
 
 === Test: opacity 0 完全透明 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Invisible"
+div (0,0 100x50) text="Invisible"
 
 ---
 
 === Test: background 颜色填充 #FF6600 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Orange bg"
+div (0,0 100x50) text="Orange bg"
 
 ---
 
 === Test: background-size cover ===
 Frame #1 events=0 detail=normal
-div (0,0 200x100) [dsp=block pos=static] text="Cover"
+div (0,0 200x100) text="Cover"
 
 ---
 
 === Test: background + border-radius 组合 ===
 Frame #1 events=0 detail=normal
-div (0,0 120x60) [dsp=block pos=static] text="Blue rounded"
+div (0,0 120x60) text="Blue rounded"
 
 ---
 
 === Test: rgba(251,114,153,0.4) 半透明背景 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="RGBA"
+div (0,0 100x50) text="RGBA"
 
 ---
 
 === Test: background 简写 #3366FF + center/cover ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="shorthand"
+div (0,0 100x50) text="shorthand"

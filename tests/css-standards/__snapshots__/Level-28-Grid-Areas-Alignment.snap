@@ -1,41 +1,41 @@
-@generated 2026-06-30 18:07:24
+@generated 2026-07-01 00:08:05
 === Test: grid-template-areas header-main-footer 三行布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x300) [dsp=grid pos=static]
-  div (0,0 198x60) [dsp=block pos=static] text="Header"
-  div (202,0 396x60) [dsp=block pos=static] text="Main"
-  div (0,64 198x60) [dsp=block pos=static] text="Sidebar"
-  div (202,64 396x60) [dsp=block pos=static] text="Footer"
+div (0,0 600x300)
+  div (0,0 198x60) text="Header"
+  div (202,0 396x60) text="Main"
+  div (0,64 198x60) text="Sidebar"
+  div (202,64 396x60) text="Footer"
 
 ---
 
 === Test: justify-self:end grid子项右对齐 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x100) [dsp=grid pos=static]
-  div (0,0 200x40) [dsp=block pos=static] text="Start"
-  div (324,0 80x40) [dsp=block pos=static] text="End"
+div (0,0 400x100)
+  div (0,0 200x40) text="Start"
+  div (324,0 80x40) text="End"
 
 ---
 
 === Test: justify-self:start grid子项左对齐 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x100) [dsp=grid pos=static]
-  div (0,0 200x40) [dsp=block pos=static] text="Right"
-  div (204,0 80x40) [dsp=block pos=static] text="Start"
+div (0,0 400x100)
+  div (0,0 200x40) text="Right"
+  div (204,0 80x40) text="Start"
 
 ---
 
 === Test: justify-self:stretch grid子项拉伸 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x100) [dsp=grid pos=static]
-  div (0,0 200x40) [dsp=block pos=static] text="Auto"
-  div (204,0 200x40) [dsp=block pos=static] text="Stretch"
+div (0,0 400x100)
+  div (0,0 200x40) text="Auto"
+  div (204,0 200x40) text="Stretch"
 
 ---
 
 === Test: grid-area header 跨两列 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x200) [dsp=grid pos=static]
-  div (0,0 198x60) [dsp=block pos=static] text="Header"
-  div (202,0 198x60) [dsp=block pos=static] text="Main"
-  div (0,64 198x60) [dsp=block pos=static] text="Sidebar"
+div (0,0 400x200)
+  div (0,0 198x60) text="Header"
+  div (202,0 198x60) text="Main"
+  div (0,64 198x60) text="Sidebar"

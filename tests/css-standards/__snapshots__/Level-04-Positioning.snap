@@ -1,1 +1,19 @@
-@generated 2026-06-30 17:35:38
+@generated 2026-07-01 00:08:03
+=== Test: Block 流堆叠 + padding ===
+Frame #1 events=0 detail=normal
+div (0,0 300x68)
+  div (10,10 300x30) text="Line 1"
+  div (10,48 300x30) text="Line 2"
+
+---
+
+=== Test: border 对布局的影响 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) bw=2 text="Bordered"
+
+---
+
+=== Test: overflow:hidden + border-radius 裁切子元素 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) ov=hidden
+  div (0,0 400x200) text="Overflowing content"

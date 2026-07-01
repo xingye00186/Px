@@ -1,6 +1,6 @@
-@generated 2026-06-30 18:07:24
+@generated 2026-07-01 00:08:04
 === Test: Grid 内 overflow 滚动容器 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x150) [dsp=grid pos=static]
-  div (0,0 200x80) [dsp=block pos=static] text="Normal"
-  div (208,0 200x80) scroll ch=0 cw=400 maxScroll=0 st=0 sl=0 [dsp=block pos=static] text="Scroll"
+div (0,0 400x150)
+  div (0,0 200x80) text="Normal"
+  div (208,0 200x80) scroll ch=0 cw=400 maxScroll=0 st=0 sl=0 text="Scroll"

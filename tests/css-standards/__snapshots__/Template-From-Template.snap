@@ -1,8 +1,8 @@
-@generated 2026-06-11 15:45:35
+@generated 2026-07-01 00:08:05
 === Test: [Template] absolute positioned div ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="Box"
+  #text (0,0 0x0) text="Box"
 
 ---
 
@@ -10,7 +10,7 @@ div (0,0 100x50)
 Frame #1 events=0 detail=normal
 div (0,0 300x200)
   div (0,0 100x80)
-    #text (0,0 100x16) text="Child"
+    #text (0,0 0x0) text="Child"
 
 ---
 
@@ -18,7 +18,7 @@ div (0,0 300x200)
 Frame #1 events=0 detail=normal
 div (0,0 400x100)
   div (0,0 200x50)
-    #text (0,0 200x16) text="50% width"
+    #text (0,0 0x0) text="50% width"
 
 ---
 
@@ -26,7 +26,7 @@ div (0,0 400x100)
 Frame #1 events=0 detail=normal
 div (0,0 200x100)
   div (10,10 200x50)
-    #text (10,10 200x16) text="Padding test"
+    #text (10,10 0x0) text="Padding test"
 
 ---
 
@@ -34,184 +34,94 @@ div (0,0 200x100)
 Frame #1 events=0 detail=normal
 div (0,0 200x70)
   div (0,0 200x30)
-    #text (0,0 200x16) text="Item 1"
+    #text (0,0 0x0) text="Item 1"
   div (0,40 200x30)
-    #text (0,40 200x16) text="Item 2"
+    #text (0,0 0x0) text="Item 2"
 
 ---
 
 === Test: [Template] border adds outer size ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50) bw=2
-  #text (0,0 100x16) text="Border"
+  #text (0,2 0x0) text="Border"
 
 ---
 
 === Test: [Template] min-width constraint ===
 Frame #1 events=0 detail=normal
 div (0,0 150x30)
-  #text (0,0 150x16) text="Min 150"
+  #text (0,0 0x0) text="Min 150"
 
 ---
 
 === Test: [Template] max-width constraint ===
 Frame #1 events=0 detail=normal
 div (0,0 100x30)
-  #text (0,0 100x16) text="Max 100"
-
----
-
-=== Test: [Template] flex row 3 items ===
-Frame #1 events=0 detail=normal
-div (0,0 400x60) [dsp=flex]
-  div (0,0 80x40)
-    #text (0,0 80x16) text="A"
-  div (80,0 80x40)
-    #text (80,0 80x16) text="B"
-  div (160,0 80x40)
-    #text (160,0 80x16) text="C"
+  #text (0,0 0x0) text="Max 100"
 
 ---
 
 === Test: [Template] flex column vertical ===
 Frame #1 events=0 detail=normal
-div (0,0 200x300) [dsp=flex]
+div (0,0 200x300)
   div (0,0 200x50)
-    #text (0,0 200x16) text="A"
+    #text (0,0 0x0) text="A"
   div (0,50 200x50)
-    #text (0,50 200x16) text="B"
+    #text (0,50 0x0) text="B"
   div (0,100 200x50)
-    #text (0,100 200x16) text="C"
-
----
-
-=== Test: [Template] flex 1 equal space ===
-Frame #1 events=0 detail=normal
-div (0,0 600x50) [dsp=flex]
-  div (0,0 150x30) fg=1
-    #text (0,0 600x16) text="A"
-  div (150,0 150x30) fg=1
-    #text (150,0 600x16) text="B"
-  div (300,0 300x30) fg=2
-    #text (300,0 600x16) text="C"
+    #text (0,100 0x0) text="C"
 
 ---
 
 === Test: [Template] flex gap 16px ===
 Frame #1 events=0 detail=normal
-div (0,0 400x50) [dsp=flex]
+div (0,0 400x50)
   div (0,0 80x30)
-    #text (0,0 80x16) text="A"
+    #text (0,0 0x0) text="A"
   div (96,0 80x30)
-    #text (96,0 80x16) text="B"
+    #text (96,0 0x0) text="B"
 
 ---
 
 === Test: [Template] flex justify-content center ===
 Frame #1 events=0 detail=normal
-div (0,0 400x50) [dsp=flex]
+div (0,0 400x50)
   div (160,0 80x30)
-    #text (160,0 80x16) text="Center"
+    #text (160,0 0x0) text="Center"
 
 ---
 
 === Test: [Template] flex-wrap overflow ===
 Frame #1 events=0 detail=normal
-div (0,0 200x100) [dsp=flex]
+div (0,0 200x100)
   div (0,0 100x40)
-    #text (0,0 100x16) text="A"
+    #text (0,0 0x0) text="A"
   div (0,44 100x40)
-    #text (0,44 100x16) text="B"
+    #text (0,44 0x0) text="B"
   div (0,88 100x40)
-    #text (0,88 100x16) text="C"
+    #text (0,88 0x0) text="C"
 
 ---
 
 === Test: [Template] align-items center ===
 Frame #1 events=0 detail=normal
-div (0,0 300x100) [dsp=flex]
+div (0,0 300x100)
   div (0,35 60x30)
-    #text (0,35 60x16) text="A"
+    #text (0,35 0x0) text="A"
   div (60,25 60x50)
-    #text (60,25 60x16) text="B"
-
----
-
-=== Test: [Template] grid 3 equal columns ===
-Frame #1 events=0 detail=normal
-div (0,0 300x60) [dsp=grid]
-  div (0,0 100x60)
-    #text (0,0 300x16) text="A"
-  div (104,0 100x60)
-    #text (104,0 300x16) text="B"
-  div (208,0 100x60)
-    #text (208,0 300x16) text="C"
+    #text (60,25 0x0) text="B"
 
 ---
 
 === Test: [Template] grid repeat 3 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x80) [dsp=grid]
+div (0,0 600x80)
   div (0,0 194x60)
-    #text (0,0 600x16) text="A"
+    #text (0,0 0x0) text="A"
   div (202,0 194x60)
-    #text (202,0 600x16) text="B"
+    #text (202,0 0x0) text="B"
   div (404,0 194x60)
-    #text (404,0 600x16) text="C"
-
----
-
-=== Test: [Template] grid mixed fr px auto ===
-Frame #1 events=0 detail=normal
-div (0,0 700x60) [dsp=grid]
-  div (0,0 484x60)
-    #text (0,0 700x16) text="Flex"
-  div (492,0 200x60)
-    #text (492,0 700x16) text="Fixed"
-  div (700,0 0x60)
-    #text (0,0 700x16) text="Auto"
-
----
-
-=== Test: [Template] grid column span 2 ===
-Frame #1 events=0 detail=normal
-div (0,0 300x124) [dsp=grid]
-  div (0,0 100x60)
-    #text (0,0 300x16) text="A"
-  div (104,0 100x60)
-    #text (104,0 300x16) text="B"
-  div (0,64 204x60)
-    #text (0,64 300x16) text="C span 2"
-
----
-
-=== Test: [Template] position relative offset ===
-Frame #1 events=0 detail=normal
-div (0,0 300x130)
-  div (0,0 300x40)
-    #text (0,0 300x16) text="Normal"
-  div (20,50 300x50) [pos=relative]
-    #text (20,50 300x16) text="Relative"
-  div (0,90 300x40)
-    #text (0,90 300x16) text="After"
-
----
-
-=== Test: [Template] absolute center margin auto ===
-Frame #1 events=0 detail=normal
-div (0,0 400x200) [pos=relative]
-  div (375,180 150x80) [pos=absolute]
-    #text (375,180 150x16) text="Center"
-
----
-
-=== Test: [Template] z-index stacking ===
-Frame #1 events=0 detail=normal
-div (0,0 300x150) [pos=relative]
-  div (20,20 150x80) [pos=absolute]
-    #text (20,20 150x16) text="Layer 1"
-  div (60,50 150x80) [pos=absolute]
-    #text (60,50 150x16) text="Layer 2"
+    #text (404,0 0x0) text="C"
 
 ---
 
@@ -219,89 +129,89 @@ div (0,0 300x150) [pos=relative]
 Frame #1 events=0 detail=normal
 div (0,0 100x60) ov=hidden
   div (0,0 300x100)
-    #text (0,0 300x16) text="Overflow content"
+    #text (0,0 0x0) text="Overflow content"
 
 ---
 
 === Test: [Template] overflow-x scroll ===
 Frame #1 events=0 detail=normal
-div (0,0 300x80) scroll ch=60 cw=300 maxScroll=0 st=0 sl=0 [dsp=flex] ov=scroll
-  div (0,0 200x60)
-    #text (0,0 200x16) text="Item 1"
-  div (200,0 200x60)
-    #text (200,0 200x16) text="Item 2"
-  div (400,0 200x60)
-    #text (400,0 200x16) text="Item 3"
+div (0,0 300x80) scroll ch=60 cw=300 maxScroll=0 st=0 sl=0
+  div (0,0 100x60)
+    #text (0,0 0x0) text="Item 1"
+  div (100,0 100x60)
+    #text (100,0 0x0) text="Item 2"
+  div (200,0 100x60)
+    #text (200,0 0x0) text="Item 3"
 
 ---
 
 === Test: [Template] border-radius rounded ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="Rounded"
+  #text (0,0 0x0) text="Rounded"
 
 ---
 
 === Test: [Template] border-radius 50% circle ===
 Frame #1 events=0 detail=normal
 div (0,0 100x100)
-  #text (0,0 100x16) text="Circle"
+  #text (0,0 0x0) text="Circle"
 
 ---
 
 === Test: [Template] box-shadow ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="Shadow"
+  #text (0,0 0x0) text="Shadow"
 
 ---
 
 === Test: [Template] opacity semi ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="Semi"
+  #text (0,0 0x0) text="Semi"
 
 ---
 
 === Test: [Template] background color ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="Orange"
+  #text (0,0 0x0) text="Orange"
 
 ---
 
 === Test: [Template] color red ===
 Frame #1 events=0 detail=normal
 div (0,0 200x30)
-  #text (0,0 200x16) text="Red text"
+  #text (0,0 0x0) text="Red text"
 
 ---
 
 === Test: [Template] font-size large ===
 Frame #1 events=0 detail=normal
 div (0,0 200x50)
-  #text (0,0 200x16) text="Big text"
+  #text (0,0 0x0) text="Big text"
 
 ---
 
 === Test: [Template] font-weight bold ===
 Frame #1 events=0 detail=normal
 div (0,0 200x30)
-  #text (0,0 200x16) text="Bold text"
+  #text (0,0 0x0) text="Bold text"
 
 ---
 
 === Test: [Template] text-align center ===
 Frame #1 events=0 detail=normal
 div (0,0 300x30)
-  #text (0,0 300x16) text="Centered"
+  #text (0,0 0x0) text="Centered"
 
 ---
 
 === Test: [Template] white-space nowrap ===
 Frame #1 events=0 detail=normal
 div (0,0 80x30)
-  #text (0,0 80x16) text="Long text no wrap"
+  #text (0,0 0x0) text="Long text no wrap"
 
 ---
 
@@ -309,77 +219,17 @@ div (0,0 80x30)
 Frame #1 events=0 detail=normal
 div (0,0 600x50)
   div (216,16 200x50)
-    #text (16,16 200x16) text="Centered"
+    #text (16,16 0x0) text="Centered"
 
 ---
 
 === Test: [Template] margin-left auto flex push ===
 Frame #1 events=0 detail=normal
-div (0,0 400x50) [dsp=flex]
+div (0,0 400x50)
   div (0,0 80x30)
-    #text (0,0 80x16) text="Left"
+    #text (0,0 0x0) text="Left"
   div (300,0 100x30)
-    #text (300,0 100x16) text="Right"
-
----
-
-=== Test: [Template] min-height in flex ===
-Frame #1 events=0 detail=normal
-div (0,0 300x200) [dsp=flex]
-  div (0,0 300x200) fg=1
-    #text (0,0 300x16) text="Min 80px"
-
----
-
-=== Test: [Template] max-height in flex ===
-Frame #1 events=0 detail=normal
-div (0,0 300x200) [dsp=flex]
-  div (0,0 300x60) fg=1
-    #text (0,0 300x16) text="Max 60px"
-
----
-
-=== Test: [Template] Grid inside Flex Row ===
-Frame #1 events=0 detail=normal
-div (0,0 600x120) [dsp=flex]
-  div (0,0 197x120) [dsp=grid] fg=1
-    div (0,0 96x60)
-      #text (0,0 600x16) text="1"
-    div (100,0 96x60)
-      #text (100,0 600x16) text="2"
-  div (205,0 394x120) [dsp=grid] fg=2
-    div (205,0 128x60)
-      #text (205,0 600x16) text="3"
-    div (337,0 128x60)
-      #text (337,0 600x16) text="4"
-    div (469,0 128x60)
-      #text (469,0 600x16) text="5"
-
----
-
-=== Test: [Template] Flex Row inside Grid ===
-Frame #1 events=0 detail=normal
-div (0,0 500x100) [dsp=grid]
-  div (0,0 246x60) [dsp=flex]
-    div (0,0 40x30)
-      #text (0,0 40x16) text="A"
-    div (40,0 40x30)
-      #text (40,0 40x16) text="B"
-  div (254,0 246x60) [dsp=flex]
-    div (357,0 40x30)
-      #text (357,0 40x16) text="C"
-
----
-
-=== Test: [Template] display none hides ===
-Frame #1 events=0 detail=normal
-div (0,0 200x120)
-  div (0,0 200x40)
-    #text (0,0 200x16) text="Visible"
-  div (0,40 200x40) [dsp=none]
-    #text (0,40 200x16) text="Hidden"
-  div (0,80 200x40)
-    #text (0,80 200x16) text="After"
+    #text (300,0 0x0) text="Right"
 
 ---
 
@@ -387,9 +237,9 @@ div (0,0 200x120)
 Frame #1 events=0 detail=normal
 div (0,0 200x60)
   div (0,0 100x30)
-    #text (0,0 100x16) text="Item 1"
+    #text (0,0 0x0) text="Item 1"
   div (-20,30 100x30)
-    #text (-20,30 100x16) text="Item 2"
+    #text (0,0 0x0) text="Item 2"
 
 ---
 
@@ -397,15 +247,7 @@ div (0,0 200x60)
 Frame #1 events=0 detail=normal
 div (0,0 500x100)
   div (0,0 500x50)
-    #text (0,0 500x16) text="Auto width fills"
-
----
-
-=== Test: [Template] border padding combined ===
-Frame #1 events=0 detail=normal
-div (0,0 200x100) bw=2
-  div (10,10 200x50)
-    #text (10,10 200x16) text="Inner"
+    #text (0,0 0x0) text="Auto width fills"
 
 ---
 
@@ -413,9 +255,9 @@ div (0,0 200x100) bw=2
 Frame #1 events=0 detail=normal
 div (0,0 200x55)
   div (0,0 200x20)
-    #text (0,0 200x16) text="A"
+    #text (0,0 0x0) text="A"
   div (0,35 200x20)
-    #text (0,35 200x16) text="B"
+    #text (0,0 0x0) text="B"
 
 ---
 
@@ -423,11 +265,11 @@ div (0,0 200x55)
 Frame #1 events=0 detail=normal
 div (0,0 300x90)
   div (0,0 300x20)
-    #text (0,0 300x16) text="A"
+    #text (0,0 0x0) text="A"
   div (0,20 300x30)
-    #text (0,20 300x16) text="B"
+    #text (0,0 0x0) text="B"
   div (0,50 300x40)
-    #text (0,50 300x16) text="C"
+    #text (0,0 0x0) text="C"
 
 ---
 
@@ -435,235 +277,103 @@ div (0,0 300x90)
 Frame #1 events=0 detail=normal
 div (0,0 400x200)
   div (0,0 100x100)
-    #text (0,0 100x16) text="50% h"
-
----
-
-=== Test: [Template] flex-shrink item ===
-Frame #1 events=0 detail=normal
-div (0,0 200x50) [dsp=flex]
-  div (0,0 150x50)
-    #text (0,0 150x16) text="Fixed"
-  div (150,0 50x50)
-    #text (150,0 150x16) text="Shrink"
+    #text (0,0 0x0) text="50% h"
 
 ---
 
 === Test: [Template] flex order reorder ===
 Frame #1 events=0 detail=normal
-div (0,0 400x40) [dsp=flex]
+div (0,0 400x40)
   div (200,0 100x40)
-    #text (200,0 100x16) text="A"
+    #text (200,0 0x0) text="A"
   div (0,0 200x40)
-    #text (0,0 200x16) text="B"
+    #text (0,0 0x0) text="B"
   div (300,0 100x40)
-    #text (300,0 100x16) text="C"
-
----
-
-=== Test: [Template] flex basis and grow ===
-Frame #1 events=0 detail=normal
-div (0,0 500x40) [dsp=flex]
-  div (0,0 200x40) fg=0
-    #text (0,0 500x16) text="Basis 200"
-  div (200,0 300x40) fg=1
-    #text (200,0 500x16) text="Fill"
+    #text (300,0 0x0) text="C"
 
 ---
 
 === Test: [Template] flex justify flex-end ===
 Frame #1 events=0 detail=normal
-div (0,0 400x40) [dsp=flex]
+div (0,0 400x40)
   div (300,0 100x40)
-    #text (300,0 100x16) text="End"
+    #text (300,0 0x0) text="End"
 
 ---
 
 === Test: [Template] flex space-between ===
 Frame #1 events=0 detail=normal
-div (0,0 400x40) [dsp=flex]
+div (0,0 400x40)
   div (0,0 80x40)
-    #text (0,0 80x16) text="A"
+    #text (0,0 0x0) text="A"
   div (160,0 80x40)
-    #text (160,0 80x16) text="B"
+    #text (160,0 0x0) text="B"
   div (320,0 80x40)
-    #text (320,0 80x16) text="C"
+    #text (320,0 0x0) text="C"
 
 ---
 
 === Test: [Template] flex space-around ===
 Frame #1 events=0 detail=normal
-div (0,0 400x40) [dsp=flex]
+div (0,0 400x40)
   div (60,0 80x40)
-    #text (60,0 80x16) text="A"
+    #text (60,0 0x0) text="A"
   div (260,0 80x40)
-    #text (260,0 80x16) text="B"
+    #text (260,0 0x0) text="B"
 
 ---
 
 === Test: [Template] align-self override ===
 Frame #1 events=0 detail=normal
-div (0,0 300x100) [dsp=flex]
+div (0,0 300x100)
   div (0,35 60x30)
-    #text (0,35 60x16) text="Center"
+    #text (0,35 0x0) text="Center"
   div (60,0 60x30)
-    #text (60,0 60x16) text="Top"
+    #text (60,0 0x0) text="Top"
 
 ---
 
 === Test: [Template] flex stretch default ===
 Frame #1 events=0 detail=normal
-div (0,0 300x100) [dsp=flex]
-  div (0,0 300x100) fg=1
-    #text (0,0 300x16) text="Stretch"
+div (0,0 300x100)
+  div (0,0 300x100)
+    #text (0,0 0x0) text="Stretch"
 
 ---
 
 === Test: [Template] flex direction row-reverse ===
 Frame #1 events=0 detail=normal
-div (0,0 300x40) [dsp=flex]
+div (0,0 300x40)
   div (80,0 80x40)
-    #text (80,0 80x16) text="A"
+    #text (80,0 0x0) text="A"
   div (0,0 80x40)
-    #text (0,0 80x16) text="B"
-
----
-
-=== Test: [Template] grid auto-fill minmax ===
-Frame #1 events=0 detail=normal
-div (0,0 660x60) [dsp=grid]
-  div (0,0 209x60)
-    #text (0,0 660x16) text="Item A"
-  div (225,0 209x60)
-    #text (225,0 660x16) text="Item B"
-  div (450,0 209x60)
-    #text (450,0 660x16) text="Item C"
-
----
-
-=== Test: [Template] grid fixed fr mixed ===
-Frame #1 events=0 detail=normal
-div (0,0 600x60) [dsp=grid]
-  div (0,0 200x60)
-    #text (0,0 600x16) text="Fixed"
-  div (208,0 392x60)
-    #text (208,0 600x16) text="Flex"
-
----
-
-=== Test: [Template] grid percentage columns ===
-Frame #1 events=0 detail=normal
-div (0,0 600x60) [dsp=grid]
-  div (0,0 300x60)
-    #text (0,0 600x16) text="Left"
-  div (308,0 300x60)
-    #text (308,0 600x16) text="Right"
-
----
-
-=== Test: [Template] grid separate gap ===
-Frame #1 events=0 detail=normal
-div (0,0 224x128) [dsp=grid]
-  div (0,0 100x60)
-    #text (0,0 224x16) text="A"
-  div (108,0 100x60)
-    #text (108,0 224x16) text="B"
-  div (0,68 100x60)
-    #text (0,68 224x16) text="C"
-
----
-
-=== Test: [Template] grid cell justify items ===
-Frame #1 events=0 detail=normal
-div (0,0 416x100) [dsp=grid]
-  div (60,0 80x60)
-    #text (60,0 80x16) text="Center"
-  div (276,0 80x60)
-    #text (276,0 80x16) text="Center2"
+    #text (0,0 0x0) text="B"
 
 ---
 
 === Test: [Template] grid auto flow dense ===
 Frame #1 events=0 detail=normal
-div (0,0 600x140) [dsp=grid]
+div (0,0 600x140)
   div (0,0 396x60)
-    #text (0,0 600x16) text="Wide"
+    #text (0,0 0x0) text="Wide"
   div (404,0 194x60)
-    #text (404,0 600x16) text="A"
+    #text (404,0 0x0) text="A"
   div (0,68 194x60)
-    #text (0,68 600x16) text="B"
+    #text (0,68 0x0) text="B"
 
 ---
 
 === Test: [Template] grid template areas ===
 Frame #1 events=0 detail=normal
-div (0,0 600x300) [dsp=grid]
+div (0,0 600x300)
   div (0,0 600x60)
-    #text (0,0 600x16) text="Header"
+    #text (0,0 0x0) text="Header"
   div (0,64 200x60)
-    #text (0,64 600x16) text="Sidebar"
+    #text (0,64 0x0) text="Sidebar"
   div (204,64 396x60)
-    #text (204,64 600x16) text="Main"
+    #text (204,64 0x0) text="Main"
   div (0,128 600x60)
-    #text (0,128 600x16) text="Footer"
-
----
-
-=== Test: [Template] position fixed top left ===
-Frame #1 events=0 detail=normal
-div (0,0 200x200)
-  div (30,40 100x50) [pos=fixed]
-    #text (30,40 100x16) text="Fixed"
-  div (0,0 200x40)
-    #text (0,0 200x16) text="Normal"
-
----
-
-=== Test: [Template] absolute nested in relative ===
-Frame #1 events=0 detail=normal
-div (0,0 400x300) [pos=relative]
-  div (50,50 200x150) [pos=absolute]
-    #text (50,50 200x16) text="Abs"
-  div (100,100 100x80) [pos=absolute]
-    #text (100,100 100x16) text="Abs2"
-
----
-
-=== Test: [Template] position relative z-index ===
-Frame #1 events=0 detail=normal
-div (0,0 300x150)
-  div (20,20 150x80) [pos=relative]
-    #text (20,20 150x16) text="Layer 1"
-  div (60,60 150x80) [pos=relative]
-    #text (60,60 150x20) text="Layer 2"
-
----
-
-=== Test: [Template] position absolute no positioned parent ===
-Frame #1 events=0 detail=normal
-div (0,0 500x400)
-  div (0,0 100x60) [pos=absolute]
-    #text (0,0 100x16) text="Abs"
-
----
-
-=== Test: [Template] position relative normal flow ===
-Frame #1 events=0 detail=normal
-div (0,0 200x120)
-  div (0,0 200x40)
-    #text (0,0 200x16) text="A"
-  div (0,50 200x40) [pos=relative]
-    #text (0,50 200x16) text="B"
-  div (0,80 200x40)
-    #text (0,80 200x16) text="C"
-
----
-
-=== Test: [Template] overflow auto scroll ===
-Frame #1 events=0 detail=normal
-div (0,0 200x100) scroll ch=200 cw=400 maxScroll=100 st=0 sl=0 ov=auto
-  div (0,0 400x200)
-    #text (0,0 400x16) text="Large content triggers scroll"
+    #text (0,128 0x0) text="Footer"
 
 ---
 
@@ -671,56 +381,56 @@ div (0,0 200x100) scroll ch=200 cw=400 maxScroll=100 st=0 sl=0 ov=auto
 Frame #1 events=0 detail=normal
 div (0,0 100x60) ov=clip
   div (0,0 400x200)
-    #text (0,0 400x16) text="Clipped away"
+    #text (0,0 0x0) text="Clipped away"
 
 ---
 
 === Test: [Template] overflow-x hidden overflow-y scroll ===
 Frame #1 events=0 detail=normal
-div (10,10 300x100) scroll ch=150 cw=300 maxScroll=50 st=0 sl=0 [dsp=flex] ov=hidden
-  div (10,10 300x50)
-    #text (10,10 300x16) text="Item 1"
-  div (10,60 300x50)
-    #text (10,60 300x16) text="Item 2"
-  div (10,110 300x50)
-    #text (10,110 300x16) text="Item 3"
+div (0,0 300x100) scroll ch=102 cw=300 maxScroll=2 st=0 sl=0
+  div (0,0 300x34)
+    #text (0,0 0x0) text="Item 1"
+  div (0,34 300x34)
+    #text (0,34 0x0) text="Item 2"
+  div (0,68 300x34)
+    #text (0,68 0x0) text="Item 3"
 
 ---
 
 === Test: [Template] nested overflow containers ===
 Frame #1 events=0 detail=normal
 div (0,0 300x200) ov=hidden
-  div (0,0 400x300) scroll ch=300 cw=400 maxScroll=0 st=0 sl=0
+  div (0,0 400x0) scroll ch=300 cw=400 maxScroll=300 st=0 sl=0
     div (0,0 400x300)
-      #text (0,0 400x16) text="Inner tall content"
+      #text (0,0 0x0) text="Inner tall content"
 
 ---
 
 === Test: [Template] opacity 0 hides visual ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="Invisible"
+  #text (0,0 0x0) text="Invisible"
 
 ---
 
 === Test: [Template] line-height spacing ===
 Frame #1 events=0 detail=normal
 div (0,0 200x60)
-  #text (0,0 200x16) text="Multi-line text content"
+  #text (0,0 0x0) text="Multi-line text content"
 
 ---
 
 === Test: [Template] text-decoration underline ===
 Frame #1 events=0 detail=normal
 div (0,0 200x30)
-  #text (0,0 200x16) text="Underlined text"
+  #text (0,0 0x0) text="Underlined text"
 
 ---
 
 === Test: [Template] font-family serif ===
 Frame #1 events=0 detail=normal
 div (0,0 300x40)
-  #text (0,0 300x16) text="Serif text"
+  #text (0,0 0x0) text="Serif text"
 
 ---
 
@@ -728,152 +438,94 @@ div (0,0 300x40)
 Frame #1 events=0 detail=normal
 div (0,0 300x120)
   div (0,0 300x40)
-    #text (0,0 300x16) text="Visible"
+    #text (0,0 0x0) text="Visible"
   div (0,40 300x40)
-    #text (0,40 300x16) text="Hidden"
+    #text (0,0 0x0) text="Hidden"
   div (0,80 300x40)
-    #text (0,80 300x16) text="After"
-
----
-
-=== Test: [Template] min-height overrides auto ===
-Frame #1 events=0 detail=normal
-div (0,0 300x80)
-  #text (0,0 300x16) text="Min 80"
-
----
-
-=== Test: [Template] max-height caps size ===
-Frame #1 events=0 detail=normal
-div (0,0 300x60)
-  #text (0,0 300x16) text="Max 60"
+    #text (0,0 0x0) text="After"
 
 ---
 
 === Test: [Template] min-width in flex ===
 Frame #1 events=0 detail=normal
-div (0,0 300x50) [dsp=flex]
+div (0,0 300x50)
   div (0,0 100x30)
-    #text (0,0 100x16) text="Min"
-  div (100,0 200x30) fg=1
-    #text (100,0 300x16) text="Fill"
+    #text (0,0 0x0) text="Min"
+  div (100,0 200x30)
+    #text (100,0 0x0) text="Fill"
 
 ---
 
 === Test: [Template] max-width in flex ===
 Frame #1 events=0 detail=normal
-div (0,0 500x50) [dsp=flex]
+div (0,0 500x50)
   div (0,0 200x30)
-    #text (0,0 200x16) text="Max"
-  div (200,0 300x30) fg=1
-    #text (200,0 500x16) text="Fill"
-
----
-
-=== Test: [Template] width calc expression ===
-Frame #1 events=0 detail=normal
-div (0,0 300x50)
-  div (0,0 300x30)
-    #text (0,0 300x16) text="Calc child"
+    #text (0,0 0x0) text="Max"
+  div (200,0 300x30)
+    #text (200,0 0x0) text="Fill"
 
 ---
 
 === Test: [Template] border + border-radius 圆角边框 ===
 Frame #1 events=0 detail=normal
 div (0,0 150x80) bw=2
-  #text (0,0 150x16) text="Round border"
+  #text (0,2 0x0) text="Round border"
 
 ---
 
 === Test: [Template] border:0 无边框 ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="No border"
+  #text (0,0 0x0) text="No border"
 
 ---
 
 === Test: [Template] border-width 独立设置 6px ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50) bw=6
-  #text (0,0 100x16) text="Border width"
+  #text (0,6 0x0) text="Border width"
 
 ---
 
 === Test: [Template] transform translateX(30px) 水平偏移 ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="Translate X"
+  #text (0,0 0x0) text="Translate X"
 
 ---
 
 === Test: [Template] transform translateY(20px) 垂直偏移 ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="Translate Y"
+  #text (0,0 0x0) text="Translate Y"
 
 ---
 
 === Test: [Template] object-fit cover 覆盖填充 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100)
-  #text (0,0 200x16) text="Cover"
+  #text (0,0 0x0) text="Cover"
 
 ---
 
 === Test: [Template] object-fit contain 适应 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100)
-  #text (0,0 200x16) text="Contain"
+  #text (0,0 0x0) text="Contain"
 
 ---
 
 === Test: [Template] cursor pointer 指针样式 ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="Clickable"
+  #text (0,0 0x0) text="Clickable"
 
 ---
 
 === Test: [Template] transform rotate(45deg) 旋转 ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
-  #text (0,0 100x16) text="Rotated"
-
----
-
-=== Test: [Template] display:inline 行内并排 ===
-Frame #1 events=0 detail=normal
-div (0,0 300x48)
-  div (0,0 300x16) [dsp=inline]
-    #text (0,0 0x16) text="Red"
-  div (0,16 300x16) [dsp=inline]
-    #text (0,16 0x16) text="Blue"
-  div (0,32 300x16) [dsp=inline]
-    #text (0,32 0x16) text="Green"
-
----
-
-=== Test: [Template] display:inline-block 行内块布局 ===
-Frame #1 events=0 detail=normal
-div (0,0 400x190)
-  div (0,0 100x60) [dsp=inline-block]
-    #text (0,0 100x16) text="A"
-  div (0,60 100x80) [dsp=inline-block]
-    #text (0,60 100x16) text="B"
-  div (0,140 100x50) [dsp=inline-block]
-    #text (0,140 100x16) text="C"
-
----
-
-=== Test: [Template] display:none 在 flex row 中 ===
-Frame #1 events=0 detail=normal
-div (0,0 400x50) [dsp=flex]
-  div (0,0 80x30)
-    #text (0,0 80x16) text="A"
-  div (80,0 200x30) [dsp=none]
-    #text (80,0 200x16) text="Hidden"
-  div (280,0 80x30)
-    #text (280,0 80x16) text="C"
+  #text (0,0 0x0) text="Rotated"
 
 ---
 
@@ -881,17 +533,17 @@ div (0,0 400x50) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 300x60)
   div (0,0 300x60)
-    div (0,0 300x30)
-      #text (0,0 300x16) text="Hidden parent"
-    div (0,30 300x30)
-      #text (0,30 300x16) text="Visible child"
+    div (0,0 0x30)
+      #text (0,0 0x0) text="Hidden parent"
+    div (0,30 0x30)
+      #text (0,0 0x0) text="Visible child"
 
 ---
 
 === Test: [Template] width:0 height:0 零尺寸元素 ===
 Frame #1 events=0 detail=normal
-div (0,0 0x0) ov=hidden
-  #text (0,0 0x16) text="Zero"
+div (0,0 0x19) ov=hidden
+  #text (0,0 0x0) text="Zero"
 
 ---
 
@@ -899,30 +551,24 @@ div (0,0 0x0) ov=hidden
 Frame #1 events=0 detail=normal
 div (0,0 300x90)
   div (0,0 300x50)
-    #text (0,0 300x16) text="Bottom -10"
+    #text (0,0 0x0) text="Bottom -10"
   div (0,40 300x50)
-    #text (0,40 300x16) text="Top -10"
+    #text (0,0 0x0) text="Top -10"
 
 ---
 
 === Test: [Template] width:10000px 极大宽度 裁边 ===
 Frame #1 events=0 detail=normal
 div (0,0 10000x30)
-  #text (0,0 10000x16) text="Very wide element"
+  #text (0,0 0x0) text="Very wide element"
 
 ---
 
 === Test: [Template] overflow:hidden 零尺寸容器 ===
 Frame #1 events=0 detail=normal
-div (0,0 0x0) ov=hidden
+div (0,0 0x100) ov=hidden
   div (0,0 200x100)
-    #text (0,0 200x16) text="Hidden content"
-
----
-
-=== Test: [Template] 空子元素容器 ===
-Frame #1 events=0 detail=normal
-div (0,0 200x40)
+    #text (0,0 0x0) text="Hidden content"
 
 ---
 
@@ -930,7 +576,7 @@ div (0,0 200x40)
 Frame #1 events=0 detail=normal
 div (0,0 400x100)
   div (150,0 100x50)
-    #text (0,0 100x16) text="Only child"
+    #text (0,0 0x0) text="Only child"
 
 ---
 
@@ -942,20 +588,20 @@ div (0,0 0x0) bw=2 ov=hidden
 
 === Test: [Template] padding 在零尺寸元素上 ===
 Frame #1 events=0 detail=normal
-div (0,0 0x0) ov=hidden
-  #text (10,10 0x16) text="Pad"
+div (0,0 0x38) ov=hidden
+  #text (10,29 0x0) text="Pad"
 
 ---
 
 === Test: [Template] opacity:0 子项在 flex row 中 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x50) [dsp=flex]
+div (0,0 300x50)
   div (0,0 60x30)
-    #text (0,0 60x16) text="A"
+    #text (0,0 0x0) text="A"
   div (60,0 60x30)
-    #text (60,0 60x16) text="Invisible"
+    #text (60,0 0x0) text="Invisible"
   div (120,0 60x30)
-    #text (120,0 60x16) text="C"
+    #text (120,0 0x0) text="C"
 
 ---
 
@@ -963,106 +609,39 @@ div (0,0 300x50) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 200x100)
   div (0,0 200x10)
-    div (0,0 200x10)
-      div (0,0 200x10)
-        div (0,0 200x10)
-          div (0,0 200x10)
-            div (0,0 200x10)
-              div (0,0 200x10)
-                div (0,0 200x10)
-                  div (0,0 200x10)
+    div (0,0 0x10)
+      div (0,0 0x10)
+        div (0,0 0x10)
+          div (0,0 0x10)
+            div (0,0 0x10)
+              div (0,0 0x10)
+                div (0,0 0x10)
+                  div (0,0 0x10)
                     div (0,0 10x10)
-                      #text (0,0 10x16) text="Deep"
+                      #text (0,0 0x0) text="Deep"
 
 ---
 
 === Test: [Template] Dashboard 侧边栏+头部+主内容 ===
 Frame #1 events=0 detail=normal
-div (0,0 900x600) [dsp=grid]
+div (0,0 900x600)
   div (0,0 200x60)
-    #text (0,0 900x16) text="Sidebar"
+    #text (0,0 0x0) text="Sidebar"
   div (200,0 700x60)
-    #text (200,0 900x16) text="Header"
-  div (200,60 700x60) [dsp=flex]
-    div (216,76 456x60) fg=2
-      #text (232,92 700x16) text="Main Content"
-    div (720,76 228x60) fg=1
-      #text (736,92 700x16) text="Side Panel"
-
----
-
-=== Test: [Template] Article 页面 标题+内容+侧边栏 ===
-Frame #1 events=0 detail=normal
-div (0,0 800x96)
-  div (0,0 800x16)
-    #text (0,16 800x16) text="Article Title"
-  div (0,48 800x48) [dsp=flex]
-    div (0,48 585x16) fg=3
-      #text (0,48 800x16) text="Article content paragraph here."
-    div (605,48 195x16) fg=1
-      #text (621,64 800x16) text="Sidebar Widget"
-
----
-
-=== Test: [Template] 响应式卡片网格 auto-fill ===
-Frame #1 events=0 detail=normal
-div (0,0 800x94) [dsp=grid]
-  div (0,0 256x60) bw=1
-    #text (0,0 800x16) text="Card 1"
-  div (272,0 256x60) bw=1
-    #text (272,0 800x16) text="Card 2"
-  div (544,0 256x60) bw=1
-    #text (544,0 800x16) text="Card 3"
-
----
-
-=== Test: [Template] 表单布局 label+input 两列 ===
-Frame #1 events=0 detail=normal
-div (0,0 500x450) [dsp=grid]
-  div (0,0 120x60)
-    #text (0,0 500x16) text="Username:"
-  div (248,0 252x60) bw=1
-    #text (248,0 500x16) text="User input"
-  div (0,188 120x60)
-    #text (0,188 500x16) text="Password:"
-  div (248,188 252x60) bw=1
-    #text (248,188 500x16) text="Pass input"
-  div (0,376 120x60)
-    #text (0,376 500x16) text="Bio:"
-  div (248,376 252x60) bw=1
-    #text (248,376 500x16) text="Bio text"
-
----
-
-=== Test: [Template] 通知列表 icon+text+time ===
-Frame #1 events=0 detail=normal
-div (0,0 400x144) [dsp=flex]
-  div (0,0 400x44) [dsp=flex]
-    div (12,14 40x40)
-    div (64,18 0x32) fg=1
-      div (64,18 400x16)
-        #text (116,18 400x16) text="Notification title"
-      div (64,18 400x16)
-        #text (116,18 400x16) text="Notification description text."
-    div (76,26 336x16)
-      #text (140,26 400x16) text="2m ago"
-  div (0,76 400x44) [dsp=flex]
-    div (12,90 40x40)
-    div (64,94 0x32) fg=1
-      div (64,94 400x16)
-        #text (116,94 400x16) text="Another notification"
-      div (64,94 400x16)
-        #text (116,94 400x16) text="Some longer description here."
-    div (76,102 336x16)
-      #text (140,102 400x16) text="1h ago"
+    #text (200,0 0x0) text="Header"
+  div (200,60 113x60)
+    div (216,76 0x38)
+      #text (232,111 0x0) text="Main Content"
+    div (264,76 0x38)
+      #text (280,111 0x0) text="Side Panel"
 
 ---
 
 === Test: [Template] 分割面板 left+right ===
 Frame #1 events=0 detail=normal
-div (0,0 800x400) [dsp=flex] bw=1
-  div (0,0 265x400) scroll ch=32 cw=265 maxScroll=0 st=0 sl=0 fg=1
-    #text (16,16 800x16) text="Left Panel"
+div (0,0 800x400) bw=1
+  div (0,0 265x400) scroll ch=16 cw=768 maxScroll=0 st=0 sl=0
+    #text (16,16 0x0) text="Left Panel"
   div (297,0 4x400)
-  div (301,0 530x400) scroll ch=32 cw=530 maxScroll=0 st=0 sl=0 fg=2
-    #text (317,16 800x16) text="Right Panel"
+  div (301,0 531x400) scroll ch=16 cw=768 maxScroll=0 st=0 sl=0
+    #text (317,16 0x0) text="Right Panel"

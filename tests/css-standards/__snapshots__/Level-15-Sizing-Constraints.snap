@@ -1,35 +1,35 @@
-@generated 2026-06-30 18:07:23
+@generated 2026-07-01 00:08:04
 === Test: min-height 在 flex column 中 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x200) [dsp=flex pos=static]
-  div (0,0 300x200) [dsp=block pos=static] text="Min 80px"
+div (0,0 300x200)
+  div (0,0 300x200) text="Min 80px"
 
 ---
 
 === Test: max-height 在 flex column 中 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x200) [dsp=flex pos=static]
-  div (0,0 300x60) [dsp=block pos=static] text="Max 60px"
+div (0,0 300x200)
+  div (0,0 300x60) text="Max 60px"
 
 ---
 
 === Test: min-width 在 flex row 中 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x50) [dsp=flex pos=static]
-  div (0,0 400x50) [dsp=block pos=static] text="Min 150px"
+div (0,0 400x50)
+  div (0,0 400x50) text="Min 150px"
 
 ---
 
 === Test: max-width 在 flex row 中 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x50) [dsp=flex pos=static]
-  div (0,0 100x50) [dsp=block pos=static] text="Max 100px"
+div (0,0 400x50)
+  div (0,0 100x50) text="Max 100px"
 
 ---
 
 === Test: height auto 在 flex column 中子项撑开 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x0) [dsp=flex pos=static]
-  div (0,0 300x50) [dsp=block pos=static] text="Header"
-  div (0,50 300x80) [dsp=block pos=static] text="Body"
-  div (0,130 300x40) [dsp=block pos=static] text="Footer"
+div (0,0 300x0)
+  div (0,0 300x50) text="Header"
+  div (0,50 300x80) text="Body"
+  div (0,130 300x40) text="Footer"

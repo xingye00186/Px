@@ -1,34 +1,34 @@
-@generated 2026-06-30 18:07:23
+@generated 2026-07-01 00:08:04
 === Test: transform translateX(30px) 水平偏移 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Translate X"
+div (0,0 100x50) text="Translate X"
 
 ---
 
 === Test: transform translateY(20px) 垂直偏移 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Translate Y"
+div (0,0 100x50) text="Translate Y"
 
 ---
 
 === Test: object-fit cover 覆盖填充 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x100) [dsp=block pos=static] text="Cover"
+div (0,0 200x100) text="Cover"
 
 ---
 
 === Test: object-fit contain 适应 ===
 Frame #1 events=0 detail=normal
-div (0,0 200x100) [dsp=block pos=static] text="Contain"
+div (0,0 200x100) text="Contain"
 
 ---
 
 === Test: cursor pointer 指针样式 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Clickable"
+div (0,0 100x50) text="Clickable"
 
 ---
 
 === Test: transform rotate(45deg) 旋转 ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) [dsp=block pos=static] text="Rotated"
+div (0,0 100x50) text="Rotated"

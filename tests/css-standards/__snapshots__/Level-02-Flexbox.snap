@@ -1,1 +1,129 @@
-@generated 2026-06-30 17:25:24
+@generated 2026-07-01 00:08:03
+=== Test: flex row 三个子项水平排列 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60)
+  div (0,0 80x40) text="A"
+  div (80,0 80x40) text="B"
+  div (160,0 80x40) text="C"
+
+---
+
+=== Test: flex column 三个子项垂直排列 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200)
+  div (0,0 200x40) text="A"
+  div (0,40 200x40) text="B"
+
+---
+
+=== Test: flex row with gap=16px ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (0,0 100x50) text="A"
+  div (116,0 100x50) text="B"
+
+---
+
+=== Test: flex row justify-content=center ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60)
+  div (160,0 80x40) text="Center"
+
+---
+
+=== Test: flex-wrap 子项超出折行 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x0)
+  div (0,0 100x30) text="A"
+  div (0,34 100x30) text="B"
+  div (0,68 100x30) text="C"
+
+---
+
+=== Test: align-items center 交叉轴居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x80)
+  div (0,25 60x30) text="A"
+  div (60,20 60x40) text="B"
+
+---
+
+=== Test: align-items stretch 交叉轴拉伸 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x80)
+  div (0,0 60x80) text="A"
+  div (60,0 60x80) text="B"
+
+---
+
+=== Test: flex-shrink 子项超出时收缩 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x50)
+  div (0,0 120x50) text="Wide"
+  div (120,0 80x50) text="Narrow"
+
+---
+
+=== Test: order 属性改变视觉顺序 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (200,0 100x50) text="Third"
+  div (100,0 100x50) text="Second"
+  div (0,0 100x50) text="First"
+
+---
+
+=== Test: justify-content space-between 两端对齐 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (0,0 60x30) text="L"
+  div (340,0 60x30) text="R"
+
+---
+
+=== Test: justify-content space-around 均匀分布 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (36,0 60x30) text="A"
+  div (169,0 60x30) text="B"
+  div (303,0 60x30) text="C"
+
+---
+
+=== Test: flex-direction row-reverse 反向行 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (80,0 80x30) text="A"
+  div (0,0 80x30) text="B"
+
+---
+
+=== Test: flex-direction column-reverse 反向列 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200)
+  div (0,40 200x40) text="A"
+  div (0,0 200x40) text="B"
+
+---
+
+=== Test: auto margin-left 在 flex 中右推 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (0,0 60x30) text="Left"
+  div (340,0 60x30) text="Right"
+
+---
+
+=== Test: flex 容器 padding 影响子项位置 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100)
+  div (10,10 80x50) text="Item"
+
+---
+
+=== Test: flex row gap + padding 组合 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x80)
+  div (12,12 80x40) text="A"
+  div (108,12 80x40) text="B"
+  div (204,12 80x40) text="C"
