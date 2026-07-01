@@ -400,6 +400,11 @@ class RenderTreeManager
                     $this->copyScrollTopFromOld($childRN, $oldRootRN);
                 }
 
+                // 清理旧框架组件根节点：旧帧残留的 RenderNode 树不再需要
+                if ($oldRootRN !== null && $oldRootRN !== $childRN) {
+                    $this->destroyRenderNodeTree($oldRootRN);
+                }
+
                 // 存储当前根 RenderNode 供下一帧 scrollTop 保留使用
                 $instance->setRootRenderNode($childRN);
 

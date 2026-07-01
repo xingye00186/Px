@@ -232,19 +232,28 @@ class AbsolutePositioning implements AbsoluteStrategy
 
     private function resolvePositioningAncestor(RenderNode $node): void
     {
-        if ($node->positioningAncestorValid) return;
+        if ($node->positioningAncestorValid) {
+            error_log('[POS_ANC] CACHED anc=' . ($node->positioningAncestor?->type ?? 'null') . ' x=' . ($node->positioningAncestor?->x ?? -1));
+            return;
+        }
 
+        $chainStr = 'anchor.type=' . $node->type . ' parent=' . ($node->parent?->type ?? 'null') . '@(' . ($node->parent?->x ?? -1) . ',' . ($node->parent?->y ?? -1) . ')';
         $ancestor = $node->parent;
+        $depth = 0;
         while ($ancestor !== null) {
             $pos = $ancestor->computedStyle?->position?->value ?? 'static';
+            $chainStr .= ' -> d=' . $depth . ' ' . $ancestor->type . '@(' . $ancestor->x . ',' . $ancestor->y . ')pos=' . $pos;
             if ($pos !== 'static') {
                 $node->positioningAncestor = $ancestor;
                 $node->positioningAncestorValid = true;
+                error_log('[POS_ANC] FOUND depth=' . $depth . ' ' . $ancestor->type . ' x=' . $ancestor->x . ' y=' . $ancestor->y . ' pos=' . $pos . ' w=' . $ancestor->w . ' h=' . $ancestor->h . ' | ' . $chainStr);
                 return;
             }
             $ancestor = $ancestor->parent;
+            $depth++;
         }
         $node->positioningAncestor = null;
         $node->positioningAncestorValid = true;
+        error_log('[POS_ANC] NOT FOUND (no positioned ancestor) | ' . $chainStr);
     }
 }

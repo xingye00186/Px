@@ -184,6 +184,13 @@ class LayoutResolver
         // 非脏节点：直接构建 Fragment 并递归子节点（无需重新布局计算）
         if (!$node->layoutDirty) {
             $builder = new FragmentBuilder();
+            // 非脏节点也可能被绝对定位子节点引用为其定位祖先
+            // 确保位置已从约束中设置，使绝对定位子节点能正确获取祖先坐标
+            $posStr = $effectiveStyle['position'] ?? 'static';
+            if ($posStr === 'static' || $posStr === 'relative') {
+                $node->x = $constraints->parentContentX + ($style?->left ?? 0);
+                $node->y = $constraints->parentContentY + ($style?->top ?? 0);
+            }
             $builder
                 ->setPosition($node->x, $node->y)
                 ->setSize($node->w, $node->h, $style)
@@ -228,10 +235,9 @@ class LayoutResolver
         $builder = new FragmentBuilder();
         
         // ══ 在策略调度前预置节点位置（使绝对定位子节点能正确获取祖先坐标）══
-        // 对于 static/relative 定位，位置由约束的 parentContentX/Y 决定
-        // 注意：$position 可能是 CssKeyword 对象，需要用 value 比较
-        $positionValue = $position instanceof \Px\Rendering\CssKeyword ? $position->value : (string)$position;
-        if ($positionValue === 'static' || $positionValue === 'relative') {
+        // 不使用 $position（可能是 CssKeyword 对象），直接用 $effectiveStyle['position']（字符串）
+        $posStr = $effectiveStyle['position'] ?? 'static';
+        if ($posStr === 'static' || $posStr === 'relative') {
             $node->x = $constraints->parentContentX + ($style?->left ?? 0);
             $node->y = $constraints->parentContentY + ($style?->top ?? 0);
         }

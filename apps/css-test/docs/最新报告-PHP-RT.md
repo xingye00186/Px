@@ -1,10 +1,10 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-01 20:40:38 | **总耗时**: 75.5s
+**运行时间**: 2026-07-01 22:36:10 | **总耗时**: 75.1s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 3issue | ✅ | 501diff 🔴446 | ⏭️ | ❌ 失败 | 5.3s |
+| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ⚠️ 3 | 455diff 🔴390 | ⏭️ | ❌ 失败 | 4.9s |
 | case-002-auto-height | ⏭️ | ❌ | ⏭️ | ❌ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 0s |
 | case-003-basic-block | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 4.6s |
 | case-004-flex-layout | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
@@ -55,17 +55,18 @@
 | case-049-multi-column | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.9s |
 | case-050-text-emphasis | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 2s |
 
-**汇总**: 0 ✅ / 50 ❌ / 50 总计 (总耗时: 75.5s)
+**汇总**: 0 ✅ / 50 ❌ / 50 总计 (总耗时: 75.1s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - case-001-wrapper-x geometry 0->453
+> - case-001-wrapper-x geometry 0->407
 > - case-001-wrapper-x mismatch 0->48
-> - case-001-wrapper-x critical 0->446
-> - case-001-wrapper-x major 0->4
-> - time 12.1->75.5 (6.2x)
+> - case-001-wrapper-x critical 0->390
+> - case-001-wrapper-x major 0->14
+> - overflow 0->3
+> - time 12.1->75.1 (6.2x)
 >
 > ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
 
@@ -122,7 +123,7 @@
 
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
-| case-001-wrapper-x | 0 | **446** | **4** | 48 | 0 | 0 |
+| case-001-wrapper-x | 0 | **390** | **14** | 48 | 0 | 3 |
 | case-002-auto-height | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-003-basic-block | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-004-flex-layout | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -172,4 +173,14 @@
 | case-048-table-props | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-049-multi-column | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-050-text-emphasis | 0 | 0 | 0 | 0 | 0 | 0 |
+
+---
+
+## Phase G 容器溢出详情
+
+### case-001-wrapper-x
+
+- child(type=p right=1075) overflows parent(type=div contentRight=1025) by 50px (w: child=750 parent=700)
+- child(type=p right=1075) overflows parent(type=div contentRight=1025) by 50px (w: child=750 parent=700)
+- child(type=p right=1075) overflows parent(type=div contentRight=1025) by 50px (w: child=750 parent=700)
 
