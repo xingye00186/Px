@@ -121,8 +121,17 @@ function componentTagToComponentName(string $tag): string
 function varExportShort(array $data): string
 {
     $export = var_export($data, true);
-    $export = preg_replace('/array\s*\(/', '[', $export);
-    $export = preg_replace('/\)(,?)$/m', ']$1', $export);
+    $export = str_replace('array (', '[', $export);
+    $export = str_replace('array(', '[', $export);
+    $lines = explode("\n", $export);
+    foreach ($lines as &$line) {
+        // Skip __set_state lines — their closing parens are handled by __set_state syntax
+        if (str_contains($line, '__set_state')) continue;
+        // Convert closing parens to brackets: ) → ], )) → ]], )) → ]] etc.
+        $line = preg_replace('/^(\s*)\)\)((,?))$/', '$1])$3', $line);
+        $line = preg_replace('/^(\s*)\)((,?))$/', '$1]$2', $line);
+    }
+    $export = implode("\n", $lines);
     return $export;
 }
 
