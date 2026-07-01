@@ -188,8 +188,16 @@ class LayoutResolver
             // 确保位置已从约束中设置，使绝对定位子节点能正确获取祖先坐标
             $posStr = $effectiveStyle['position'] ?? 'static';
             if ($posStr === 'static' || $posStr === 'relative') {
-                $node->x = $constraints->parentContentX + ($style?->left ?? 0);
-                $node->y = $constraints->parentContentY + ($style?->top ?? 0);
+                $leftVal = $style?->left ?? null;
+                $topVal = $style?->top ?? null;
+                $leftPx = $leftVal instanceof \Px\Rendering\CssLength
+                    ? $leftVal->resolveInContext($constraints->contentWidth)
+                    : (int)($leftVal ?? 0);
+                $topPx = $topVal instanceof \Px\Rendering\CssLength
+                    ? $topVal->resolveInContext($constraints->contentHeight)
+                    : (int)($topVal ?? 0);
+                $node->x = $constraints->parentContentX + $leftPx;
+                $node->y = $constraints->parentContentY + $topPx;
             }
             $builder
                 ->setPosition($node->x, $node->y)
@@ -235,11 +243,18 @@ class LayoutResolver
         $builder = new FragmentBuilder();
         
         // ══ 在策略调度前预置节点位置（使绝对定位子节点能正确获取祖先坐标）══
-        // 不使用 $position（可能是 CssKeyword 对象），直接用 $effectiveStyle['position']（字符串）
         $posStr = $effectiveStyle['position'] ?? 'static';
         if ($posStr === 'static' || $posStr === 'relative') {
-            $node->x = $constraints->parentContentX + ($style?->left ?? 0);
-            $node->y = $constraints->parentContentY + ($style?->top ?? 0);
+            $leftVal = $style?->left ?? null;
+            $topVal = $style?->top ?? null;
+            $leftPx = $leftVal instanceof \Px\Rendering\CssLength
+                ? $leftVal->resolveInContext($constraints->contentWidth)
+                : (int)($leftVal ?? 0);
+            $topPx = $topVal instanceof \Px\Rendering\CssLength
+                ? $topVal->resolveInContext($constraints->contentHeight)
+                : (int)($topVal ?? 0);
+            $node->x = $constraints->parentContentX + $leftPx;
+            $node->y = $constraints->parentContentY + $topPx;
         }
         
         // ── 按 display/position 策略调度 ──

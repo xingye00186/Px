@@ -70,11 +70,11 @@ class ComputedStyle
     public readonly int $columnWidth;
     public readonly float $opacity;
 
-    // ── 定位偏移（原始 int 用于布局计算） ──
-    public readonly int $left;
-    public readonly int $top;
-    public readonly int $right;
-    public readonly int $bottom;
+    // ── 定位偏移（CssLength 用于动态解析百分比） ──
+    public readonly CssLength $left;
+    public readonly CssLength $top;
+    public readonly CssLength $right;
+    public readonly CssLength $bottom;
 
     // ── 文本渲染 ──
     public readonly string $fontFamily;
@@ -247,7 +247,7 @@ class ComputedStyle
             'columnCount' => 0,
             'columnWidth' => 0,
             'opacity' => 1.0,
-            'left' => 0, 'top' => 0, 'right' => 0, 'bottom' => 0,
+            'left' => CssLength::px(0), 'top' => CssLength::px(0), 'right' => CssLength::px(0), 'bottom' => CssLength::px(0),
             'fontFamily' => 'Segoe UI',
             'lineHeight' => 0,
             'textIndent' => 0,
@@ -369,11 +369,11 @@ class ComputedStyle
             $this->opacity = (float)$d['opacity'];
         }
 
-        // ── 定位 ──
-        $this->left = self::safeInt($d['left'] ?? 0);
-        $this->top = self::safeInt($d['top'] ?? 0);
-        $this->right = self::safeInt($d['right'] ?? 0);
-        $this->bottom = self::safeInt($d['bottom'] ?? 0);
+        // ── 定位（CssLength，支持百分比解析） ──
+        $this->left = $this->resolveCssLength('left', $d) ?? CssLength::px(0);
+        $this->top = $this->resolveCssLength('top', $d) ?? CssLength::px(0);
+        $this->right = $this->resolveCssLength('right', $d) ?? CssLength::px(0);
+        $this->bottom = $this->resolveCssLength('bottom', $d) ?? CssLength::px(0);
 
         // ── 其他字符串属性（AOT 兼容：显式逐一赋值，不用变量属性名）─
         $keys = [

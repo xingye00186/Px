@@ -65,8 +65,8 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
         $parentW = $constraints->contentWidth;
         $parentH = $constraints->contentHeight;
 
-        $left = $style?->left ?? 0;
-        $top = $style?->top ?? 0;
+        $left = $style?->left?->toPx() ?? 0;
+        $top = $style?->top?->toPx() ?? 0;
         $fs = $style?->fontSize ?? 16;
 
         // 计算尺寸

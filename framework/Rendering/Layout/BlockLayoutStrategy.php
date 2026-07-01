@@ -84,8 +84,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             return is_callable($getter) ? $getter()->toPx() : $default;
         };
 
-        $left = $computedStyle?->left ?? 0;
-        $top = $computedStyle?->top ?? 0;
+        $left = $computedStyle?->left?->toPx() ?? 0;
+        $top = $computedStyle?->top?->toPx() ?? 0;
 
         // Container info from parent (via node->parent, directly)
         $parent = $node->parent;
@@ -340,8 +340,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                     }
 
                     if ($childPosition === 'relative') {
-                        $child->y += ($childCS?->top ?? 0);
-                        $child->x += ($childCS?->left ?? 0);
+                        $child->y += ($childCS?->top?->toPx() ?? 0);
+                        $child->x += ($childCS?->left?->toPx() ?? 0);
                     }
 
                     // ── Auto margin centering for block elements (CSS 2.2 §10.3.3) ──

@@ -36,10 +36,10 @@ class AbsolutePositioning implements AbsoluteStrategy
     ): void
     {
         // 直接使用 ComputedStyle 属性（不转 array）
-        $leftVal = $style?->left ?? 0;
-        $topVal = $style?->top ?? 0;
-        $rightVal = $style?->right ?? 0;
-        $bottomVal = $style?->bottom ?? 0;
+        $leftVal = $style?->left?->toPx() ?? 0;
+        $topVal = $style?->top?->toPx() ?? 0;
+        $rightVal = $style?->right?->toPx() ?? 0;
+        $bottomVal = $style?->bottom?->toPx() ?? 0;
 
         $pos = $style?->position?->value ?? 'absolute';
         $isFixed = ($pos === 'fixed');

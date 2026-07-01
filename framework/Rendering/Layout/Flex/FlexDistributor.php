@@ -551,8 +551,8 @@ class FlexDistributor
                 $savedW = $chTp->w;
                 $savedH = $chTp->h;
 
-                $leftOff = (int)($chTp->computedStyle?->left ?? 0);
-                $topOff = (int)($chTp->computedStyle?->top ?? 0);
+                $leftOff = (int)($chTp->computedStyle?->left?->toPx() ?? 0);
+                $topOff = (int)($chTp->computedStyle?->top?->toPx() ?? 0);
                 $chTp->layoutDirty = true;
                 foreach ($chTp->children as $gc) { $gc->layoutDirty = true; }
                 $this->resolver->resolveChildNode($chTp, $chTp->x - $leftOff, $chTp->y - $topOff, $node);
