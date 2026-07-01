@@ -229,7 +229,9 @@ class LayoutResolver
         
         // ══ 在策略调度前预置节点位置（使绝对定位子节点能正确获取祖先坐标）══
         // 对于 static/relative 定位，位置由约束的 parentContentX/Y 决定
-        if ($position === 'static' || $position === 'relative') {
+        // 注意：$position 可能是 CssKeyword 对象，需要用 value 比较
+        $positionValue = $position instanceof \Px\Rendering\CssKeyword ? $position->value : (string)$position;
+        if ($positionValue === 'static' || $positionValue === 'relative') {
             $node->x = $constraints->parentContentX + ($style?->left ?? 0);
             $node->y = $constraints->parentContentY + ($style?->top ?? 0);
         }
