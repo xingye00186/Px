@@ -129,15 +129,22 @@ class AbsolutePositioning implements AbsoluteStrategy
         }
 
         // 计算最终坐标
+        // CSS 2.2 §9.3.2: 检测 left/right/top/bottom 是否显式设置（包括值为0）
+        $hasLeft = $style?->getRaw('left') !== null;
+        $hasRight = $style?->getRaw('right') !== null;
+        $hasTop = $style?->getRaw('top') !== null;
+        $hasBottom = $style?->getRaw('bottom') !== null;
+
         $calcX = $ancestorX + $borderL + $leftVal + $marginLeft;
         $calcY = $ancestorY + $borderT + $topVal + $marginTop;
 
-        // right/bottom 覆盖
-        if ($rightVal !== 0 && ($ancestor !== null || $isFixed)) {
+        // right（当 left 未设置时使用）
+        if ($hasRight && !$hasLeft && ($ancestor !== null || $isFixed)) {
             $rightEdge = $ancestorX + $borderL + $ancestorPaddingLeft + $cbW - $rightVal;
             $calcX = $rightEdge - ($width > 0 ? $width : 0);
         }
-        if ($bottomVal !== 0 && ($ancestor !== null || $isFixed)) {
+        // bottom（当 top 未设置时使用）
+        if ($hasBottom && !$hasTop && ($ancestor !== null || $isFixed)) {
             $bottomEdge = $ancestorY + $ancestorH - $bottomVal;
             $calcY = $bottomEdge - ($height > 0 ? $height : 0);
         }
