@@ -1,0 +1,37 @@
+{
+    "type": "div",
+    "x": 0,
+    "y": 0,
+    "w": 400,
+    "h": 100,
+    "visualW": 400,
+    "visualH": 100,
+    "layer": 0,
+    "content": null,
+    "key": null,
+    "isScrollContainer": false,
+    "scrollTop": 0,
+    "scrollLeft": 0,
+    "contentHeight": 0,
+    "contentWidth": 0,
+    "children": [
+        {
+            "type": "div",
+            "x": 0,
+            "y": 40,
+            "w": 80,
+            "h": 20,
+            "visualW": 80,
+            "visualH": 20,
+            "layer": 0,
+            "content": "A",
+            "key": null,
+            "isScrollContainer": false,
+            "scrollTop": 0,
+            "scrollLeft": 0,
+            "contentHeight": 0,
+            "contentWidth": 0,
+            "children": []
+        }
+    ]
+}

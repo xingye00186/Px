@@ -580,9 +580,13 @@ class ElementCompareStep implements PipelineStepInterface
 
         $subset = array_slice($elements, $startIdx, $endIdx - $startIdx);
 
+        // 使用父容器坐标作为锚点（锚点自身可能是 position:absolute 导致坐标不准确）
+        $anchorX = (int)($elements[$parentIdx]['x'] ?? 0);
+        $anchorY = (int)($elements[$parentIdx]['y'] ?? 0);
+
         return [
             'elements' => $subset,
-            'anchor'   => [(int)$anchor['x'], (int)$anchor['y']],
+            'anchor'   => [$anchorX, $anchorY],
             'count'    => count($subset),
             'skipped'  => $startIdx,
         ];

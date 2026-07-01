@@ -226,7 +226,14 @@ class LayoutResolver
 
         // ── 创建 FragmentBuilder ──
         $builder = new FragmentBuilder();
-
+        
+        // ══ 在策略调度前预置节点位置（使绝对定位子节点能正确获取祖先坐标）══
+        // 对于 static/relative 定位，位置由约束的 parentContentX/Y 决定
+        if ($position === 'static' || $position === 'relative') {
+            $node->x = $constraints->parentContentX + ($style?->left ?? 0);
+            $node->y = $constraints->parentContentY + ($style?->top ?? 0);
+        }
+        
         // ── 按 display/position 策略调度 ──
         switch ($display) {
             case 'none':
