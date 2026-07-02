@@ -605,16 +605,16 @@ class RenderTreeManager
             }
 
             // 同步 dataset（data-* attributes -> 驼峰式 Map）
-                $renderNode->dataset = [];
-                if ($vnode->props !== null) {
-                    foreach ($vnode->props as $k => $v) {
-                        if (str_starts_with((string)$k, 'data-')) {
-                            $dsKey = substr((string)$k, 5);
-                            $camelKey = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $dsKey))));
-                            $renderNode->dataset[$camelKey] = (string)$v;
-                        }
+            $renderNode->dataset = [];
+            if ($vnode->props !== null) {
+                foreach ($vnode->props as $k => $v) {
+                    if (str_starts_with((string)$k, 'data-')) {
+                        $dsKey = substr((string)$k, 5);
+                        $camelKey = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $dsKey))));
+                        $renderNode->dataset[$camelKey] = (string)$v;
                     }
                 }
+            }
 
             // 同步 scroll bind 值
             $component = $componentByGroupId[$groupId] ?? $root;
