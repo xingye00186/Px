@@ -47,7 +47,7 @@ class ScreenshotStep implements PipelineStepInterface
     public function name(): string { return 'screenshot_compare'; }
     public function requires(): array { return ['build']; }
 
-    public function execute(PipelineContext $ctx): StepResult
+    public function execute(CaseContext $ctx): StepResult
     {
         $start = microtime(true);
 

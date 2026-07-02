@@ -32,7 +32,7 @@ class BuildStep implements PipelineStepInterface
     public function name(): string { return 'build'; }
     public function requires(): array { return []; }
 
-    public function execute(PipelineContext $ctx): StepResult
+    public function execute(CaseContext $ctx): StepResult
     {
         $start = microtime(true);
 

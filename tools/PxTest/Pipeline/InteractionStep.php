@@ -7,7 +7,7 @@ class InteractionStep implements PipelineStepInterface
 {
     public function name(): string { return 'interaction'; }
     public function requires(): array { return []; }
-    public function execute(PipelineContext $ctx): StepResult
+    public function execute(CaseContext $ctx): StepResult
     {
         return StepResult::ok('interaction');
     }

@@ -83,11 +83,10 @@ $isSingleCase = (count($filtered) < count($cases));
 $isPhpRuntime = getenv('PX_PHP_RUNTIME') !== false && getenv('PX_PHP_RUNTIME') !== '';
 $caseDataFile = $appDir . '/' . ($isPhpRuntime ? '.case_data_php_rt.json' : '.case_data.json');
 
-$allCaseData = []; // collect per-case data for summary report
+$allCaseData = [];
 if ($isSingleCase && file_exists($caseDataFile)) {
     $stored = @json_decode(@file_get_contents($caseDataFile), true);
     if (is_array($stored)) {
-        // 反序列化 StepResult 对象（JSON 编码会丢失对象类型）
         foreach ($stored as $cName => &$cData) {
             if (isset($cData['results']) && is_array($cData['results'])) {
                 $restored = [];
@@ -111,14 +110,14 @@ if ($isSingleCase && file_exists($caseDataFile)) {
 $suite = new TestSuite('css-test-pipeline');
 $reporter->reportStart($suite);
 
+$pipelineCtx = new \PxTest\Pipeline\PipelineContext();
 $totalPass = 0; $totalFail = 0;
 foreach ($filtered as $caseName) {
     echo "── $caseName ──\n";
-    $ctx = new \PxTest\Pipeline\PipelineContext();
+    $ctx = new \PxTest\Pipeline\CaseContext($pipelineCtx);
     $ctx->set('case_name', $caseName);
     $results = $orchestrator->run($ctx);
 
-    // Collect per-case data for summary
     $allCaseData[$caseName] = [
         'results'          => $results,
         'prop_stats'       => $ctx->get('element_prop_stats', []),

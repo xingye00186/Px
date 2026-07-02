@@ -7,7 +7,7 @@ class ComponentLifecycleStep implements PipelineStepInterface
 {
     public function name(): string { return 'component_lifecycle'; }
     public function requires(): array { return []; }
-    public function execute(PipelineContext $ctx): StepResult
+    public function execute(CaseContext $ctx): StepResult
     {
         return StepResult::ok('component_lifecycle');
     }

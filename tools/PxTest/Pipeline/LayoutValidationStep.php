@@ -23,7 +23,7 @@ class LayoutValidationStep implements PipelineStepInterface
     public function name(): string { return 'layout_validation'; }
     public function requires(): array { return ['dump_layout']; }
 
-    public function execute(PipelineContext $ctx): StepResult
+    public function execute(CaseContext $ctx): StepResult
     {
         $this->issues = [];
         $layoutPath = $ctx->get('layout_path');

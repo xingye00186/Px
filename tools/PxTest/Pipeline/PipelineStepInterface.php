@@ -8,7 +8,7 @@ namespace PxTest\Pipeline;
 interface PipelineStepInterface
 {
     /** 执行步骤 */
-    public function execute(PipelineContext $ctx): StepResult;
+    public function execute(CaseContext $ctx): StepResult;
 
     /** 步骤名称 */
     public function name(): string;

@@ -5,6 +5,7 @@ namespace PxTest\Pipeline\Strategy;
 use PxTest\Layout\LayoutNormalizer;
 use PxTest\Pipeline\PipelineStepInterface;
 use PxTest\Pipeline\PipelineContext;
+use PxTest\Pipeline\CaseContext;
 use PxTest\Pipeline\StepResult;
 
 /**
@@ -23,7 +24,7 @@ class LayoutDumpStep implements PipelineStepInterface
     ) {}
     public function name(): string { return 'dump_layout'; }
     public function requires(): array { return []; }
-    public function execute(PipelineContext $ctx): StepResult
+    public function execute(CaseContext $ctx): StepResult
     {
         // 从上下文获取当前 case 名（全量运行时每个 case 独立设置）
         $ctxCase = $ctx->get('case_name');
@@ -440,7 +441,7 @@ class LayoutDumpStep implements PipelineStepInterface
  */
 class BatchBrowserRefStep implements \PxTest\Pipeline\PipelineStepInterface
 {
-    private static bool $batchAttempted = false;
+    /** 仅首次成功后缓存，避免重复执行 */
     private static bool $batchSucceeded = false;
 
     public function __construct(
@@ -448,16 +449,12 @@ class BatchBrowserRefStep implements \PxTest\Pipeline\PipelineStepInterface
         private array $cases,
     ) {}
     public function name(): string { return 'batch_browser_ref'; }
-    public function requires(): array { return ['build']; }
-    public function execute(\PxTest\Pipeline\PipelineContext $ctx): \PxTest\Pipeline\StepResult
+    public function requires(): array { return ['pxid_generate']; }
+    public function execute(CaseContext $ctx): \PxTest\Pipeline\StepResult
     {
         if (self::$batchSucceeded) {
             return \PxTest\Pipeline\StepResult::ok('batch_browser_ref', 0);
         }
-        if (self::$batchAttempted) {
-            return \PxTest\Pipeline\StepResult::err('batch_browser_ref', 'Previous batch attempt failed, skipped (per-case fallback active)');
-        }
-        self::$batchAttempted = true;
         $start = microtime(true);
         if (empty($this->cases)) {
             self::$batchSucceeded = true;
@@ -468,7 +465,7 @@ class BatchBrowserRefStep implements \PxTest\Pipeline\PipelineStepInterface
         $elapsed = (microtime(true) - $start) * 1000;
         if ($ok) {
             self::$batchSucceeded = true;
-            $ctx->set('batch_ref_done', true);
+            $ctx->pipeline()->set('batch_ref_done', true);
             echo "  [batch_browser_ref] OK ({$elapsed}ms)\n";
             return \PxTest\Pipeline\StepResult::ok('batch_browser_ref', $elapsed);
         }
@@ -497,7 +494,7 @@ class PxIdGenerateStep implements \PxTest\Pipeline\PipelineStepInterface
     public function name(): string { return 'pxid_generate'; }
     public function requires(): array { return []; }
 
-    public function execute(\PxTest\Pipeline\PipelineContext $ctx): \PxTest\Pipeline\StepResult
+    public function execute(CaseContext $ctx): \PxTest\Pipeline\StepResult
     {
         if (self::$done) {
             return \PxTest\Pipeline\StepResult::ok('pxid_generate', 0);

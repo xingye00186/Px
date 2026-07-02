@@ -19,7 +19,7 @@ class LayoutDumpStep implements PipelineStepInterface
     public function name(): string { return 'dump_layout'; }
     public function requires(): array { return ['build']; }
 
-    public function execute(PipelineContext $ctx): StepResult
+    public function execute(CaseContext $ctx): StepResult
     {
         $start = microtime(true);
         $cmd = sprintf('"%s" --case=%s --headless --dump-layout 2>&1',

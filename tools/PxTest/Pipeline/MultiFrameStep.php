@@ -21,7 +21,7 @@ class MultiFrameStep implements PipelineStepInterface
     public function name(): string { return 'multiframe'; }
     public function requires(): array { return ['build']; }
 
-    public function execute(PipelineContext $ctx): StepResult
+    public function execute(CaseContext $ctx): StepResult
     {
         $start = microtime(true);
         $cmd = sprintf('"%s" --case=%s --headless --frame=%d --dump-layout 2>&1',

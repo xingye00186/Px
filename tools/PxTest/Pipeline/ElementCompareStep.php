@@ -98,7 +98,7 @@ class ElementCompareStep implements PipelineStepInterface
     public function name(): string { return 'element_compare'; }
     public function requires(): array { return ['browser_ref']; }
 
-    public function execute(PipelineContext $ctx): StepResult
+    public function execute(CaseContext $ctx): StepResult
     {
         // 从上下文获取当前 case 名（每个 case 独立设置），覆盖构造时默认值
         $ctxCase = $ctx->get('case_name');

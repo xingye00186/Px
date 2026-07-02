@@ -4,13 +4,6 @@ namespace PxTest\Pipeline;
 
 /**
  * 管道编排器 — 按依赖顺序执行 Steps。
- *
- * 用法:
- *   $orchestrator = new PipelineOrchestrator();
- *   $orchestrator->addStep(new BuildStep(...));
- *   $orchestrator->addStep(new LayoutDumpStep(...));
- *   $orchestrator->addStep(new ScreenshotStep(...));
- *   $results = $orchestrator->run();
  */
 class PipelineOrchestrator
 {
@@ -29,11 +22,11 @@ class PipelineOrchestrator
 
     /**
      * 运行所有步骤（按依赖拓扑排序）。
+     * @param CaseContext $ctx case 级上下文（内含 pipeline 级引用）
      * @return StepResult[]
      */
-    public function run(PipelineContext $ctx = null): array
+    public function run(CaseContext $ctx): array
     {
-        $ctx = $ctx ?? new PipelineContext();
         $results = [];
         $completed = [];
 
@@ -44,14 +37,12 @@ class PipelineOrchestrator
                 $name = $step->name();
                 if (isset($completed[$name])) continue;
 
-                // 检查前置依赖是否都已完成
                 $depsOk = true;
                 foreach ($step->requires() as $req) {
                     if (!isset($completed[$req])) {
                         $depsOk = false;
                         break;
                     }
-                    // 前置步骤失败 → 当前步骤跳过
                     if (!$completed[$req]->passed) {
                         $results[] = StepResult::err($name, "skipped: dependency '$req' failed");
                         $completed[$name] = StepResult::err($name, "skipped");
@@ -74,15 +65,9 @@ class PipelineOrchestrator
                 $results[] = $finalResult;
                 $completed[$name] = $finalResult;
                 $progress = true;
-
-                if (!$finalResult->passed) {
-                    // 默认行为：失败不阻断后续独立步骤
-                    // （可通过 ctx 设置 failFast 改变此行为）
-                }
             }
 
             if (!$progress) {
-                // 循环依赖或不可达
                 foreach ($this->steps as $step) {
                     if (!isset($completed[$step->name()])) {
                         $results[] = StepResult::err($step->name(), 'unmet dependency cycle');
@@ -96,7 +81,6 @@ class PipelineOrchestrator
         return $results;
     }
 
-    /** 获取所有步骤名称 */
     public function getStepNames(): array
     {
         return array_map(fn($s) => $s->name(), $this->steps);
