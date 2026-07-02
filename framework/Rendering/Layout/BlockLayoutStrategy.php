@@ -91,8 +91,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $parent = $node->parent;
         $parentW_raw = ($parent !== null) ? $parent->w : (defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0);
         // Use constraint content width as fallback when parent width not yet calculated
+        $usedConstraintFallback = false;
         if ($parentW_raw <= 0 && $constraintContentWidth > 0) {
             $parentW_raw = $constraintContentWidth;
+            $usedConstraintFallback = true;
         }
         $parentH_raw = ($parent !== null) ? $parent->h : (defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0);
         if ($parent !== null && $parent->computedStyle !== null) {
@@ -111,7 +113,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             // content-box: parentW_raw = 内容宽度，padding/border 在外围，不用减
             // border-box:  parentW_raw = 总宽度，需减去 padding/border 得内容宽度
             $parentSizing = $ps->boxSizing->value;
-            if ($parentSizing === 'border-box') {
+            if ($parentSizing === 'border-box' && !$usedConstraintFallback) {
                 $parentW = $parentW_raw - $padL - $padR - $pbw;
             } else {
                 $parentW = (int)$parentW_raw;
