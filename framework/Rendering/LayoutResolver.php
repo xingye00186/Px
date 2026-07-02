@@ -175,7 +175,8 @@ class LayoutResolver
 
         // 鈹€鈹€ 璇诲彇 computedStyle 鈹€鈹€
         $style = $node->computedStyle;
-        `$display = `$style?->display?->value ?? 'block';`n        `$position = `$style?->position?->value ?? 'static';
+        $display = $style?->display?->value ?? 'block';
+        $position = $style?->position?->value ?? 'static';
 
         // 鈹€鈹€ 鑴忔爣璁版鏌?鈹€鈹€
         // 闈炶剰鑺傜偣锛氱洿鎺ユ瀯寤?Fragment 骞堕€掑綊瀛愯妭鐐癸紙鏃犻渶閲嶆柊甯冨眬璁＄畻锛?
