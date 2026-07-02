@@ -70,6 +70,9 @@ class ComputedStyle
     public readonly int $columnWidth;
     public readonly float $opacity;
 
+    // ── 宽高比 ──
+    public readonly float $aspectRatio;
+
     // ── 定位偏移（CssLength 用于动态解析百分比） ──
     public readonly CssLength $left;
     public readonly CssLength $top;
@@ -247,6 +250,7 @@ class ComputedStyle
             'columnCount' => 0,
             'columnWidth' => 0,
             'opacity' => 1.0,
+            'aspectRatio' => 0.0,
             'left' => CssLength::px(0), 'top' => CssLength::px(0), 'right' => CssLength::px(0), 'bottom' => CssLength::px(0),
             'fontFamily' => 'Segoe UI',
             'lineHeight' => 0,
@@ -367,6 +371,9 @@ class ComputedStyle
         }
         if (isset($d['opacity'])) {
             $this->opacity = (float)$d['opacity'];
+        }
+        if (isset($d['aspectRatio'])) {
+            $this->aspectRatio = (float)$d['aspectRatio'];
         }
 
         // ── 定位（CssLength，支持百分比解析） ──

@@ -97,6 +97,10 @@ class CssLength extends CssValue
         if ($lower === 'auto') return self::auto();
         if ($lower === 'content') return self::content();
         if ($lower === 'none' || $lower === '0') return self::px(0);
+        // Intrinsic sizing keywords
+        if ($lower === 'min-content') return new self(0, 'min-content');
+        if ($lower === 'max-content') return new self(0, 'max-content');
+        if ($lower === 'fit-content') return new self(0, 'fit-content');
 
         if (str_ends_with($lower, '%')) {
             $num = (float)substr($lower, 0, -1);
@@ -139,6 +143,8 @@ class CssLength extends CssValue
     public function isPercent(): bool { return $this->unit === '%'; }
     public function isContent(): bool { return $this->unit === 'content'; }
     public function isNone(): bool { return $this->unit === 'none'; }
+    /** 是否为 intrinsic sizing 关键字 */
+    public function isIntrinsic(): bool { return in_array($this->unit, ['min-content', 'max-content', 'fit-content'], true); }
     public function isRelative(): bool
     {
         return in_array($this->unit, ['%', 'em', 'rem', 'vw', 'vh', 'vmin', 'vmax'], true);

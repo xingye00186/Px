@@ -29,26 +29,6 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
     }
 
     /**
-     * @deprecated 已弃用，请使用 resolveWithBuilder。Phase 3 后删除。
-     */
-    public function resolve(
-        RenderNode    $node,
-        object        $ctx,
-        array         $style
-    ): void {
-        // Fallback: create stub LayoutConstraints and FragmentBuilder
-        $constraints = new LayoutConstraints(
-            $ctx->parentX, $ctx->parentY,
-            $node->w, $node->h,
-            $ctx->parentX, $ctx->parentY,
-            $node->parent !== null ? $node->parent->w : $node->w,
-            $node->parent !== null ? $node->parent->h : $node->h
-        );
-        $builder = new FragmentBuilder();
-        $this->resolveWithBuilder($node, $constraints, $node->computedStyle, $builder);
-    }
-
-    /**
      * Pure FragmentBuilder 布局入口。
      * 直接使用 LayoutConstraints + ComputedStyle。
      */

@@ -113,9 +113,10 @@ class RenderNodeSerializer
 
         // 仅导出关键样式
         $styleParts = [];
+        $exportStyle = $node->computedStyle?->toExportArray() ?? [];
         foreach (self::STYLE_EXPORT_KEYS as $k) {
-            if (isset($node->getStyleArray()[$k])) {
-                $styleParts[] = "{$k}={$node->getStyleArray()[$k]}";
+            if (isset($exportStyle[$k])) {
+                $styleParts[] = "{$k}={$exportStyle[$k]}";
             }
         }
         if (!empty($styleParts)) {

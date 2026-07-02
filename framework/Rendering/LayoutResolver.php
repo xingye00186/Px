@@ -15,26 +15,25 @@ use Px\Rendering\Layout\GridLayoutStrategy;
 use Px\Rendering\Layout\InlineLayoutStrategy;
 use Px\Rendering\Layout\TableLayoutStrategy;
 use Px\Rendering\Layout\MultiColumnLayoutStrategy;
-use Px\Rendering\CssStyleHelper;
 use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\LayoutFragment;
 use Px\Rendering\Layout\FragmentBuilder;
 
 
 /**
- * LayoutResolver — 运行时 CSS 布局引擎（RenderNode 版）
+ * LayoutResolver 鈥?杩愯鏃?CSS 甯冨眬寮曟搸锛圧enderNode 鐗堬級
  *
- * Phase 3: 使用 FragmentBuilder 的新流程。
+ * Phase 3: 浣跨敤 FragmentBuilder 鐨勬柊娴佺▼銆?
  *
- * 流程：
- *   resolve(RenderNode) → 创建 LayoutConstraints → resolveNodeInternal()
- *   resolveNodeInternal() 负责递归：
- *     1. 读取 computedStyle
- *     2. 创建 FragmentBuilder
- *     3. 按 display/position 选择策略
- *     4. 新策略：先 resolveChildren() 再调用策略
- *     5. build() → LayoutFragment → applyTo()
- *     6. 后处理（滚动容器、sticky 等）
+ * 娴佺▼锛?
+ *   resolve(RenderNode) 鈫?鍒涘缓 LayoutConstraints 鈫?resolveNodeInternal()
+ *   resolveNodeInternal() 璐熻矗閫掑綊锛?
+ *     1. 璇诲彇 computedStyle
+ *     2. 鍒涘缓 FragmentBuilder
+ *     3. 鎸?display/position 閫夋嫨绛栫暐
+ *     4. 鏂扮瓥鐣ワ細鍏?resolveChildren() 鍐嶈皟鐢ㄧ瓥鐣?
+ *     5. build() 鈫?LayoutFragment 鈫?applyTo()
+ *     6. 鍚庡鐞嗭紙婊氬姩瀹瑰櫒銆乻ticky 绛夛級
  */
 class LayoutResolver
 {
@@ -55,7 +54,7 @@ class LayoutResolver
     /** @var array<string, array> Per-scroll-container sticky stack (horizontal) */
     private array $stickyStackX = [];
 
-    /** 滚动容器收集数组（布局过程按需追加） */
+    /** 婊氬姩瀹瑰櫒鏀堕泦鏁扮粍锛堝竷灞€杩囩▼鎸夐渶杩藉姞锛?*/
     private array $scrollContainers = [];
 
 
@@ -104,10 +103,10 @@ class LayoutResolver
     /**
      * Resolve layout for the entire RenderNode tree.
      *
-     * Phase 3: 创建初始 LayoutConstraints，进入 resolveNodeInternal 新流程。
+     * Phase 3: 鍒涘缓鍒濆 LayoutConstraints锛岃繘鍏?resolveNodeInternal 鏂版祦绋嬨€?
      *
      * @param RenderNode $root Root RenderNode (mutated in-place via applyTo)
-     * @return LayoutFragment 根 fragment
+     * @return LayoutFragment 鏍?fragment
      */
     public function resolve(RenderNode $root): LayoutFragment
     {
@@ -132,8 +131,8 @@ class LayoutResolver
     }
 
     /**
-     * 供 FlexLayoutStrategy/GridLayoutStrategy 内部算法体使用的子节点解析入口。
-     * 替代 resolveNode() 方法，直接使用坐标参数。
+     * 渚?FlexLayoutStrategy/GridLayoutStrategy 鍐呴儴绠楁硶浣撲娇鐢ㄧ殑瀛愯妭鐐硅В鏋愬叆鍙ｃ€?
+     * 鏇夸唬 resolveNode() 鏂规硶锛岀洿鎺ヤ娇鐢ㄥ潗鏍囧弬鏁般€?
      */
     public function resolveChildNode(RenderNode $child, int $parentX, int $parentY, ?RenderNode $parentNode): void
     {
@@ -152,11 +151,11 @@ class LayoutResolver
     }
 
     /**
-     * Phase 3 核心递归布局方法。
+     * Phase 3 鏍稿績閫掑綊甯冨眬鏂规硶銆?
      *
-     * @param RenderNode         $node            当前节点
-     * @param LayoutConstraints  $constraints     布局约束
-     * @param LayoutFragment|null $parentFragment 父 fragment（用于层继承等）
+     * @param RenderNode         $node            褰撳墠鑺傜偣
+     * @param LayoutConstraints  $constraints     甯冨眬绾︽潫
+     * @param LayoutFragment|null $parentFragment 鐖?fragment锛堢敤浜庡眰缁ф壙绛夛級
      * @return LayoutFragment
      */
     private function resolveNodeInternal(
@@ -174,19 +173,17 @@ class LayoutResolver
             }
         }
 
-        // ── 读取 computedStyle ──
+        // 鈹€鈹€ 璇诲彇 computedStyle 鈹€鈹€
         $style = $node->computedStyle;
-        $effectiveStyle = $style !== null ? $style->toExportArray() : [];
-        $display = $effectiveStyle['display'] ?? 'block';
-        $position = $effectiveStyle['position'] ?? 'static';
+        `$display = `$style?->display?->value ?? 'block';`n        `$position = `$style?->position?->value ?? 'static';
 
-        // ── 脏标记检查 ──
-        // 非脏节点：直接构建 Fragment 并递归子节点（无需重新布局计算）
+        // 鈹€鈹€ 鑴忔爣璁版鏌?鈹€鈹€
+        // 闈炶剰鑺傜偣锛氱洿鎺ユ瀯寤?Fragment 骞堕€掑綊瀛愯妭鐐癸紙鏃犻渶閲嶆柊甯冨眬璁＄畻锛?
         if (!$node->layoutDirty) {
             $builder = new FragmentBuilder();
-            // 非脏节点也可能被绝对定位子节点引用为其定位祖先
-            // 确保位置已从约束中设置，使绝对定位子节点能正确获取祖先坐标
-            $posStr = $effectiveStyle['position'] ?? 'static';
+            // 闈炶剰鑺傜偣涔熷彲鑳借缁濆瀹氫綅瀛愯妭鐐瑰紩鐢ㄤ负鍏跺畾浣嶇鍏?
+            // 纭繚浣嶇疆宸蹭粠绾︽潫涓缃紝浣跨粷瀵瑰畾浣嶅瓙鑺傜偣鑳芥纭幏鍙栫鍏堝潗鏍?
+            $posStr = $style?->position?->value ?? 'static';
             if ($posStr === 'static' || $posStr === 'relative') {
                 $leftVal = $style?->left ?? null;
                 $topVal = $style?->top ?? null;
@@ -205,32 +202,32 @@ class LayoutResolver
                 ->setLayer($node->layer)
                 ->setContentSize($node->contentWidth, $node->contentHeight);
 
-            // 递归解析子节点（子节点可能脏）
+            // 閫掑綊瑙ｆ瀽瀛愯妭鐐癸紙瀛愯妭鐐瑰彲鑳借剰锛?
             $this->resolveCurrentChildren($node, $constraints, $builder);
 
             $this->resolveDepth--;
             return $builder->build($style);
         }
 
-        // ════════════════════════════════════════════════════════════════
-        //  脏路径：完整布局计算
-        // ════════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        //  鑴忚矾寰勶細瀹屾暣甯冨眬璁＄畻
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
-        // ── Layer 继承 ──
+        // 鈹€鈹€ Layer 缁ф壙 鈹€鈹€
         if ($node->parent !== null && $node->parent->layer > 0) {
             $node->layer = $node->parent->layer;
         }
 
-        // 应用自身 z-index → RenderNode layer
+        // 搴旂敤鑷韩 z-index 鈫?RenderNode layer
         if ($style !== null && $style->zIndex > $node->layer) {
             $node->layer = $style->zIndex;
         }
 
-        // ── 滚动容器检测 ──
+        // 鈹€鈹€ 婊氬姩瀹瑰櫒妫€娴?鈹€鈹€
         $overflowX = $style?->overflowX?->value
-            ?? $effectiveStyle['overflowX'] ?? $effectiveStyle['overflow'] ?? 'visible';
+            ?? $style?->overflow?->value ?? 'visible';
         $overflowY = $style?->overflowY?->value
-            ?? $effectiveStyle['overflowY'] ?? $effectiveStyle['overflow'] ?? 'visible';
+            ?? $style?->overflow?->value ?? 'visible';
         $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
         $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
 
@@ -239,11 +236,11 @@ class LayoutResolver
             $this->scrollContainers[] = $node;
         }
 
-        // ── 创建 FragmentBuilder ──
+        // 鈹€鈹€ 鍒涘缓 FragmentBuilder 鈹€鈹€
         $builder = new FragmentBuilder();
         
-        // ══ 在策略调度前预置节点位置（使绝对定位子节点能正确获取祖先坐标）══
-        $posStr = $effectiveStyle['position'] ?? 'static';
+        // 鈺愨晲 鍦ㄧ瓥鐣ヨ皟搴﹀墠棰勭疆鑺傜偣浣嶇疆锛堜娇缁濆瀹氫綅瀛愯妭鐐硅兘姝ｇ‘鑾峰彇绁栧厛鍧愭爣锛夆晲鈺?
+        $posStr = $style?->position?->value ?? 'static';
         if ($posStr === 'static' || $posStr === 'relative') {
             $leftVal = $style?->left ?? null;
             $topVal = $style?->top ?? null;
@@ -257,23 +254,23 @@ class LayoutResolver
             $node->y = (int)($constraints->parentContentY ?? 0) + $topPx;
         }
         
-        // ── 按 display/position 策略调度 ──
+        // 鈹€鈹€ 鎸?display/position 绛栫暐璋冨害 鈹€鈹€
         switch ($display) {
             case 'none':
-                // CSS 2.2 §9.2.4: display:none → element generates no box
+                // CSS 2.2 搂9.2.4: display:none 鈫?element generates no box
                 $builder->setSize(0, 0);
                 break;
 
             case 'flex':
             case 'inline-flex':
                 if ($position === 'absolute' || $position === 'fixed') {
-                    // 新 AbsoluteStrategy：先 resolve 子节点，再调用新签名
+                    // 鏂?AbsoluteStrategy锛氬厛 resolve 瀛愯妭鐐癸紝鍐嶈皟鐢ㄦ柊绛惧悕
                     $this->resolveChildren($node, $constraints, $builder);
                     $this->absolutePositioning->resolveAbsolutePositioning(
                         $node, $constraints, $style, $builder
                     );
                 } else {
-                    // FlexLayoutStrategy 支持新 resolveWithBuilder
+                    // FlexLayoutStrategy 鏀寔鏂?resolveWithBuilder
                     $this->resolveChildren($node, $constraints, $builder);
                     $this->flexStrategy->resolveWithBuilder(
                         $node, $constraints, $style, $builder
@@ -321,7 +318,7 @@ class LayoutResolver
                 break;
 
             default: // block, scroll-container, etc.
-                // 多列布局检测
+                // 澶氬垪甯冨眬妫€娴?
                 $isMultiCol = ($style !== null
                     && ($style->columnCount > 0 || ($style->columnWidth ?? 0) > 0));
                 if ($isMultiCol) {
@@ -335,7 +332,7 @@ class LayoutResolver
                         $node, $constraints, $style, $builder
                     );
                 } else {
-                    // BlockLayoutStrategy 支持新 resolveWithBuilder
+                    // BlockLayoutStrategy 鏀寔鏂?resolveWithBuilder
                     /** @var BlockLayoutStrategy $blockStrategy */
                     $this->resolveChildren($node, $constraints, $builder);
                     $this->blockStrategy->resolveWithBuilder(
@@ -345,18 +342,29 @@ class LayoutResolver
                 break;
         }
 
-        // ── 构建 Fragment 并原子回写 RenderNode ──
+        // 鈹€鈹€ 鏋勫缓 Fragment 骞跺師瀛愬洖鍐?RenderNode 鈹€鈹€
         $fragment = $builder->build($style);
         $fragment->applyTo($node);
 
-        // ── 滚动容器后处理（flex/grid display 模式） ──
+        // Post-process: fix coordinates for position:absolute/fixed children
+        // These are skipped by strategies (out-of-flow), need AbsolutePositioning
+        foreach ($node->children as $child) {
+            $childPos = $child->computedStyle?->position?->value ?? 'static';
+            if ($childPos === 'absolute' || $childPos === 'fixed') {
+                $this->absolutePositioning->resolveAbsolutePositioning(
+                    $child, $constraints, $child->computedStyle, new FragmentBuilder()
+                );
+            }
+        }
+
+        // 鈹€鈹€ 婊氬姩瀹瑰櫒鍚庡鐞嗭紙flex/grid display 妯″紡锛?鈹€鈹€
         if ($node->isScrollContainer
             && ($display === 'flex' || $display === 'inline-flex' || $display === 'grid')
         ) {
-            $padT = (int)($effectiveStyle['paddingTop'] ?? $effectiveStyle['padding'] ?? 0);
-            $padL = (int)($effectiveStyle['paddingLeft'] ?? $effectiveStyle['padding'] ?? 0);
-            $padR = (int)($effectiveStyle['paddingRight'] ?? $effectiveStyle['padding'] ?? 0);
-            $padB = (int)($effectiveStyle['paddingBottom'] ?? $effectiveStyle['padding'] ?? 0);
+            $padT = (int)($style?->paddingTop?->toPx() ?? $style?->padding?->top?->toPx() ?? 0);
+            $padL = (int)($style?->paddingLeft?->toPx() ?? $style?->padding?->left?->toPx() ?? 0);
+            $padR = (int)($style?->paddingRight?->toPx() ?? $style?->padding?->right?->toPx() ?? 0);
+            $padB = (int)($style?->paddingBottom?->toPx() ?? $style?->padding?->bottom?->toPx() ?? 0);
 
             $childBaseY = $node->y + $padT;
 
@@ -379,7 +387,7 @@ class LayoutResolver
 
             // ContentWidth for horizontal scroll
             $overflowX2 = $style?->overflowX?->value
-                ?? $effectiveStyle['overflowX'] ?? $effectiveStyle['overflow'] ?? 'visible';
+                ?? $style?->overflow?->value ?? 'visible';
             $hasHScroll2 = ($overflowX2 === 'auto' || $overflowX2 === 'scroll');
             if ($hasHScroll2) {
                 $maxRight = 0;
@@ -401,9 +409,9 @@ class LayoutResolver
             }
         }
 
-        // ── position:sticky 处理 ──
+        // 鈹€鈹€ position:sticky 澶勭悊 鈹€鈹€
         if ($position === 'sticky') {
-            $stickyTop = (int)($effectiveStyle['top'] ?? 0);
+            $stickyTop = (int)($style?->top?->toPx() ?? 0);
 
             // Find nearest scroll container that contains this node
             for ($i = count($this->scrollContainers) - 1; $i >= 0; $i--) {
@@ -415,7 +423,7 @@ class LayoutResolver
 
                     $scKey = $sc->groupId . ':' . $i;
 
-                    // ── Vertical sticky (top) with stacking ──
+                    // 鈹€鈹€ Vertical sticky (top) with stacking 鈹€鈹€
                     $visualY = $node->y - $sc->scrollTop;
 
                     if (!isset($this->stickyStack[$scKey])) {
@@ -442,8 +450,8 @@ class LayoutResolver
                         ];
                     }
 
-                    // ── Horizontal sticky (left) with stacking ──
-                    $stickyLeft = (int)($effectiveStyle['left'] ?? 0);
+                    // 鈹€鈹€ Horizontal sticky (left) with stacking 鈹€鈹€
+                    $stickyLeft = (int)($style?->left?->toPx() ?? 0);
                     if ($stickyLeft !== 0) {
                         $visualX = $node->x - $sc->scrollLeft;
 
@@ -476,10 +484,10 @@ class LayoutResolver
             }
         }
 
-        // ── 清除脏标记 ──
+        // 鈹€鈹€ 娓呴櫎鑴忔爣璁?鈹€鈹€
         $node->layoutDirty = false;
 
-        // ── 统一 scrollTop/scrollLeft clamp ──
+        // 鈹€鈹€ 缁熶竴 scrollTop/scrollLeft clamp 鈹€鈹€
         if ($node->isScrollContainer) {
             $maxScroll = (int)max($node->contentHeight - $node->h, 0);
             if ($node->scrollTop > $maxScroll) {
@@ -496,24 +504,24 @@ class LayoutResolver
     }
 
 
-    // ════════════════════════════════════════════════════════════════
-    //  辅助方法
-    // ════════════════════════════════════════════════════════════════
+    // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+    //  杈呭姪鏂规硶
+    // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
     /**
-     * 新策略模式：预解析子节点。
+     * 鏂扮瓥鐣ユā寮忥細棰勮В鏋愬瓙鑺傜偣銆?
      *
-     * 在调用新签名策略（如 AbsoluteStrategy::resolveAbsolutePositioning）之前，
-     * 先递归 resolve 所有子节点，并加入 builder。
+     * 鍦ㄨ皟鐢ㄦ柊绛惧悕绛栫暐锛堝 AbsoluteStrategy::resolveAbsolutePositioning锛変箣鍓嶏紝
+     * 鍏堥€掑綊 resolve 鎵€鏈夊瓙鑺傜偣锛屽苟鍔犲叆 builder銆?
      */
     private function resolveChildren(
         RenderNode        $node,
         LayoutConstraints $constraints,
         FragmentBuilder   $builder
     ): void {
-        // 使用节点自身的 content box 作为子节点的包含块，而非传递约束
-        // 对于 block 元素，节点尺寸在 resolveWithBuilder 中设置，但 resolveChildren 先执行
-        // 此处使用 node->w/h 的当前值（可能在策略执行后更新）
+        // 浣跨敤鑺傜偣鑷韩鐨?content box 浣滀负瀛愯妭鐐圭殑鍖呭惈鍧楋紝鑰岄潪浼犻€掔害鏉?
+        // 瀵逛簬 block 鍏冪礌锛岃妭鐐瑰昂瀵稿湪 resolveWithBuilder 涓缃紝浣?resolveChildren 鍏堟墽琛?
+        // 姝ゅ浣跨敤 node->w/h 鐨勫綋鍓嶅€硷紙鍙兘鍦ㄧ瓥鐣ユ墽琛屽悗鏇存柊锛?
         $cs = $node->computedStyle;
         $padL = $cs !== null ? $cs->padding->left->toPx() : 0;
         $padR = $cs !== null ? $cs->padding->right->toPx() : 0;
@@ -525,10 +533,10 @@ class LayoutResolver
         $bB = $cs !== null ? $cs->borderBottomWidth : 0;
         $isBorderBox = $cs !== null && $cs->boxSizing->value === 'border-box';
 
-        // 子节点的包含块宽度：优先用 node->w（策略已执行），其次用 style 显式宽度，最后回退到约束值
-        // 注意：node->w 的意义取决于 box-sizing
-        //   content-box: node->w = 内容宽度（不包含 padding/border），直接用作包含块宽度
-        //   border-box:  node->w = 总宽度（包含 padding/border），需减去 padding/border 得内容宽度
+        // 瀛愯妭鐐圭殑鍖呭惈鍧楀搴︼細浼樺厛鐢?node->w锛堢瓥鐣ュ凡鎵ц锛夛紝鍏舵鐢?style 鏄惧紡瀹藉害锛屾渶鍚庡洖閫€鍒扮害鏉熷€?
+        // 娉ㄦ剰锛歯ode->w 鐨勬剰涔夊彇鍐充簬 box-sizing
+        //   content-box: node->w = 鍐呭瀹藉害锛堜笉鍖呭惈 padding/border锛夛紝鐩存帴鐢ㄤ綔鍖呭惈鍧楀搴?
+        //   border-box:  node->w = 鎬诲搴︼紙鍖呭惈 padding/border锛夛紝闇€鍑忓幓 padding/border 寰楀唴瀹瑰搴?
         $csW = $cs !== null ? $cs->width->toPx() : 0;
         $rawW = $node->w > 0 ? $node->w : ($csW > 0 ? $csW : 0);
         if ($rawW > 0) {
@@ -561,7 +569,7 @@ class LayoutResolver
     }
 
     /**
-     * 洁净路径：递归解析子节点（无需策略调度，仅传递约束）。
+     * 娲佸噣璺緞锛氶€掑綊瑙ｆ瀽瀛愯妭鐐癸紙鏃犻渶绛栫暐璋冨害锛屼粎浼犻€掔害鏉燂級銆?
      */
     private function resolveCurrentChildren(
         RenderNode        $node,
@@ -585,3 +593,4 @@ class LayoutResolver
         }
     }
 }
+

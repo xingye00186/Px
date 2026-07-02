@@ -35,6 +35,14 @@ class FlexItem
     /** 交叉轴起始偏移 */
     public int $crossOffset = 0;
 
+    // ── 布局结果坐标（由 Distributor 填入，FragmentMapper 读取） ──
+    public int $x = 0;
+    public int $y = 0;
+    public int $w = 0;
+    public int $h = 0;
+    public int $visualW = 0;
+    public int $visualH = 0;
+
     // ── 外边距（沿主轴/交叉轴方向） ──
     public int $marginBefore = 0;
     public int $marginAfter = 0;

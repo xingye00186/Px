@@ -7,7 +7,6 @@ use native_types;
 use Px\Rendering\CssMappings;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
-use Px\Rendering\CssStyleHelper;
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\FragmentBuilder;
@@ -81,14 +80,14 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         // CSS: grid item percentage width resolves against content width
         $parentW = (int)(($node->parent !== null)
-            ? CssStyleHelper::contentBoxWidth($node->parent->computedStyle !== null ? $node->parent->computedStyle->toExportArray() : [], $node->parent->w)
+            ? $node->parent->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent->w
             : 0);
 
         $parentH = ($node->parent !== null) ? $node->parent->h : 0;
 
-        $width = CssStyleHelper::resolveWithCalc($style, 'width', $parentW);
+        $width = $computedStyle?->width?->resolveInContext($parentW) ?? 0;
 
-        $height = CssStyleHelper::resolveWithCalc($style, 'height', $parentH);
+        $height = $computedStyle?->height?->resolveInContext($parentH) ?? 0;
 
         // CSS Grid Level 1: block-level grid container with auto width fills containing block
 
@@ -115,12 +114,22 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $node->y += $translateY;
 
         // ── 应用 min/max 约束到尺寸（在子节点递归之前，确保 parent->w/h 立即可用）──
-        $node->w = (int)max(0, (int)CssStyleHelper::applyMinMax($style, $width, true));
+        $node->w = (int)max(0, $width);
+        { $_mnW = $computedStyle?->minWidth?->resolveInContext($parentW) ?? 0; $_mxW = $computedStyle?->maxWidth?->resolveInContext($parentW) ?? 0;
+            if ($_mnW > 0 && $_mxW > 0 && $_mnW > $_mxW) $_mxW = 0;
+            if ($_mnW > 0 && $node->w < $_mnW) $node->w = $_mnW;
+            if ($_mxW > 0 && $node->w > $_mxW) $node->w = $_mxW;
+        }
 
-        $node->h = (int)max(0, (int)CssStyleHelper::applyMinMax($style, $height, false));
+        $node->h = (int)max(0, $height);
+        { $_mnH = $computedStyle?->minHeight?->resolveInContext($parentH) ?? 0; $_mxH = $computedStyle?->maxHeight?->resolveInContext($parentH) ?? 0;
+            if ($_mnH > 0 && $_mxH > 0 && $_mnH > $_mxH) $_mxH = 0;
+            if ($_mnH > 0 && $node->h < $_mnH) $node->h = $_mnH;
+            if ($_mxH > 0 && $node->h > $_mxH) $node->h = $_mxH;
+        }
 
-        $node->visualW = CssStyleHelper::visualWidth($style, $node->w);
-        $node->visualH = CssStyleHelper::visualHeight($style, $node->h);
+        $node->visualW = $computedStyle?->visualWidth($node->w) ?? $node->w;
+        $node->visualH = $computedStyle?->visualHeight($node->h) ?? $node->h;
 
         // Parse grid template
 
@@ -148,7 +157,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         if ($colRepeat === 'auto-fill' || $colRepeat === 'auto-fit') {
             $minColW = (int)($colSpec['min'] ?? 245);
 
-            $gridContentW = CssStyleHelper::contentBoxWidth($style, $node->w);
+            $gridContentW = $computedStyle?->contentBoxWidth($node->w) ?? $node->w;
 
             // CSS Grid 规范 §7.1: cols = floor((availableW + gap) / (min + gap))
             $cols = (int)max(1, floor(($gridContentW + $colGap) / ($minColW + $colGap)));
@@ -169,7 +178,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         // 1fr 支持：根据容器宽度按比例分配
         if (($colSpec['unit'] ?? '') === 'fr' && $node->w > 0 && $colRepeat !== 'auto-fill' && $colRepeat !== 'auto-fit') {
-            $gridContentW = CssStyleHelper::contentBoxWidth($style, $node->w);
+            $gridContentW = $computedStyle?->contentBoxWidth($node->w) ?? $node->w;
             $totalGaps = $colGap * ($cols - 1);
 
             $cellW = (int)max(0, ($gridContentW - $totalGaps) / $cols);
@@ -197,7 +206,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $totalFr = 0;
             $usedPx = 0;
 
-            $gridContentW = CssStyleHelper::contentBoxWidth($style, $node->w);
+            $gridContentW = $computedStyle?->contentBoxWidth($node->w) ?? $node->w;
 
             // First pass: resolve fixed (px/%) widths, mark fr as null, minmax as ['min'=>...,'fr'=>...]
             foreach ($sizes as $size) {
@@ -284,7 +293,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
             // Second pass: distribute remaining space to fr tracks
             if ($totalFr > 0) {
-                $gridContentW = CssStyleHelper::contentBoxWidth($style, $node->w);
+                $gridContentW = $computedStyle?->contentBoxWidth($node->w) ?? $node->w;
                 $remaining = $gridContentW - $usedPx - $colGap * (int)max(0, $cols - 1);
                 $frUnit = (int)max(0, (int)($remaining / $totalFr));
                 foreach ($explicitColWidths as $i => $colW) {
@@ -341,13 +350,13 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $itemRowMap = [];
 
         foreach ($children as $idx => $ch) {
-            $childStyle = $ch->computedStyle !== null ? $ch->computedStyle->toExportArray() : [];
+            // typed access used directly
 
             // Use explicit grid-column/grid-row from style (CSS 1-based)
             // grid-area: name overrides explicit grid-column/grid-row
-            $explicitCol = $childStyle['gridColumn'] ?? null;
-            $explicitRow = $childStyle['gridRow'] ?? null;
-            $gridAreaName = $childStyle['gridArea'] ?? '';
+            $explicitCol = $ch->computedStyle?->getRaw('gridColumn') ?? null;
+            $explicitRow = $ch->computedStyle?->getRaw('gridRow') ?? null;
+            $gridAreaName = $ch->computedStyle?->getRaw('gridArea') ?? '';
             if ($gridAreaName !== '' && isset($areaMap[$gridAreaName])) {
                 $area = $areaMap[$gridAreaName];
                 $col = (int)($area['colStart']);
@@ -420,7 +429,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             // ── Pass 1 只设宽度，不设高度 ──
             // justify-self / justify-items: 控制 grid item 水平对齐
             $explicitW = $ch->w;
-            $justifySelf = $childStyle['justifySelf'] ?? 'auto';
+            $justifySelf = $ch->computedStyle?->getRaw('justifySelf') ?? 'auto';
             if ($justifySelf === 'auto') {
                 $justifySelf = $style['justifyItems'] ?? 'normal';
             }
@@ -456,8 +465,13 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             // NOTE: 不设置 $ch->h，保留 resolveNode 后的自然高度
 
             // min/max 约束（仅宽度）
-            $ch->w = (int)max(0, (int)CssStyleHelper::applyMinMax($childStyle, $ch->w, true));
-            $ch->visualW = CssStyleHelper::visualWidth($childStyle, $ch->w);
+            $ch->w = (int)max(0, $ch->w);
+            { $__mnW = $ch->computedStyle?->minWidth?->resolveInContext($parentW) ?? 0; $__mxW = $ch->computedStyle?->maxWidth?->resolveInContext($parentW) ?? 0;
+                if ($__mnW > 0 && $__mxW > 0 && $__mnW > $__mxW) $__mxW = 0;
+                if ($__mnW > 0 && $ch->w < $__mnW) $ch->w = $__mnW;
+                if ($__mxW > 0 && $ch->w > $__mxW) $ch->w = $__mxW;
+            }
+            $ch->visualW = $ch->computedStyle?->visualWidth($ch->w) ?? $ch->w;
             // 高度不应用 min/max——等调整后得到自然内容高度
 
             // 调整子节点（重解析 flex/grid 的百分比尺寸）
@@ -507,8 +521,8 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 $newCellY += ($actualRowHeights[$r] ?? $cellH) + $rowGap;
             }
 
-            $childStyle = $ch->computedStyle !== null ? $ch->computedStyle->toExportArray() : [];
-            $alignSelf = $childStyle['alignSelf'] ?? 'auto';
+            // typed access used directly
+            $alignSelf = $ch->computedStyle?->getRaw('alignSelf') ?? 'auto';
             if ($alignSelf === 'auto') $alignSelf = 'stretch';
 
             // 保持水平位置不变（已在 Pass 1 中设置好）
@@ -528,15 +542,25 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 default: // stretch
                     $ch->y = $newCellY;
                     $ch->h = $actualRowH;
-                    $ch->visualH = CssStyleHelper::visualHeight($childStyle, $ch->h);
+                    $ch->visualH = $ch->computedStyle?->visualHeight($ch->h) ?? $ch->h;
                     break;
             }
 
             // min/max 约束
-            $ch->w = max(0, (int)CssStyleHelper::applyMinMax($childStyle, $ch->w, true));
-            $ch->h = max(0, (int)CssStyleHelper::applyMinMax($childStyle, $ch->h, false));
-            $ch->visualW = CssStyleHelper::visualWidth($childStyle, $ch->w);
-            $ch->visualH = CssStyleHelper::visualHeight($childStyle, $ch->h);
+            $ch->w = max(0, $ch->w);
+            { $__mnW2 = $ch->computedStyle?->minWidth?->resolveInContext($parentW) ?? 0; $__mxW2 = $ch->computedStyle?->maxWidth?->resolveInContext($parentW) ?? 0;
+                if ($__mnW2 > 0 && $__mxW2 > 0 && $__mnW2 > $__mxW2) $__mxW2 = 0;
+                if ($__mnW2 > 0 && $ch->w < $__mnW2) $ch->w = $__mnW2;
+                if ($__mxW2 > 0 && $ch->w > $__mxW2) $ch->w = $__mxW2;
+            }
+            $ch->h = max(0, $ch->h);
+            { $__mnH = $ch->computedStyle?->minHeight?->resolveInContext($parentH) ?? 0; $__mxH = $ch->computedStyle?->maxHeight?->resolveInContext($parentH) ?? 0;
+                if ($__mnH > 0 && $__mxH > 0 && $__mnH > $__mxH) $__mxH = 0;
+                if ($__mnH > 0 && $ch->h < $__mnH) $ch->h = $__mnH;
+                if ($__mxH > 0 && $ch->h > $__mxH) $ch->h = $__mxH;
+            }
+            $ch->visualW = $ch->computedStyle?->visualWidth($ch->w) ?? $ch->w;
+            $ch->visualH = $ch->computedStyle?->visualHeight($ch->h) ?? $ch->h;
 
             // 如果高度变化了（stretch），需要重新调整子节点
             if ($alignSelf === 'stretch') {
@@ -544,7 +568,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                 // 恢复 grid cell 决定的位置和宽度（adjustGridItemChildren 内部会 restore）
                 $ch->y = $newCellY;
                 $ch->h = $actualRowH;
-                $ch->visualH = CssStyleHelper::visualHeight($childStyle, $ch->h);
+                $ch->visualH = $ch->computedStyle?->visualHeight($ch->h) ?? $ch->h;
             }
         }
 
@@ -560,22 +584,30 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             }
             $contentH = (int)($maxBottom - $node->y);
             if ($contentH > $node->h) {
-                $computedH = (int)CssStyleHelper::applyMinMax($style, $contentH, false);
+                $computedH = (int)max(0, $contentH);
+                { $_mH = $computedStyle?->minHeight?->resolveInContext($parentH) ?? 0; $_xH = $computedStyle?->maxHeight?->resolveInContext($parentH) ?? 0;
+                    if ($_mH > 0 && $_xH > 0 && $_mH > $_xH) $_xH = 0;
+                    if ($_mH > 0 && $computedH < $_mH) $computedH = $_mH;
+                    if ($_xH > 0 && $computedH > $_xH) $computedH = $_xH;
+                }
                 if ($computedH > $node->h) {
                     $node->h = $computedH;
                 }
             }
         }
         // ── Set container's own visualW/visualH ──
-        $node->visualW = CssStyleHelper::visualWidth($style, $node->w);
-        $node->visualH = CssStyleHelper::visualHeight($style, $node->h);
+        $node->visualW = $computedStyle?->visualWidth($node->w) ?? $node->w;
+        $node->visualH = $computedStyle?->visualHeight($node->h) ?? $node->h;
 
         // ── 同步 builder 中的子 Fragment 为 grid 算法计算的正确位置 ──
         // grid 算法直接写入 $node->children[$i]->x/y/w/h，但 builder 中的子 Fragment
         // 来自 resolveChildren（grid 算法之前），位置/尺寸已过时。
+        // 关键：必须保留原始子 Fragment 的孙子链（grandchildren），否则深层嵌套的坐标会丢失。
         if ($builder !== null) {
+            $originalChildren = $builder->getChildren();
             $gridChildren = [];
-            foreach ($node->children as $ch) {
+            foreach ($node->children as $i => $ch) {
+                $orig = $originalChildren[$i] ?? null;
                 $chCS = $ch->computedStyle;
                 $gridChildren[] = new LayoutFragment(
                     x: $ch->x,
@@ -588,7 +620,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
                     contentWidth: $ch->contentWidth,
                     contentHeight: $ch->contentHeight,
                     style: $chCS,
-                    children: [],
+                    children: $orig?->children ?? [],
                 );
             }
             $builder->replaceChildren($gridChildren);

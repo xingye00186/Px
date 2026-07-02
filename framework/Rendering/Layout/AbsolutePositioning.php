@@ -6,18 +6,17 @@ use native_types;
 
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\CssLength;
-use Px\Rendering\CssStyleHelper;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
 
 /**
- * AbsolutePositioning — 绝对/固定定位布局
+ * AbsolutePositioning 鈥?缁濆/鍥哄畾瀹氫綅甯冨眬
  *
- * CSS Positioned Layout Module Level 3 §3.1-3.2:
- * - position:absolute 的 containing block = 最近定位祖先的 padding box
- * - position:fixed 的 containing block = viewport (0,0)
+ * CSS Positioned Layout Module Level 3 搂3.1-3.2:
+ * - position:absolute 鐨?containing block = 鏈€杩戝畾浣嶇鍏堢殑 padding box
+ * - position:fixed 鐨?containing block = viewport (0,0)
  *
- * Pure FragmentBuilder 实现，直接使用 LayoutConstraints + ComputedStyle。
+ * Pure FragmentBuilder 瀹炵幇锛岀洿鎺ヤ娇鐢?LayoutConstraints + ComputedStyle銆?
  */
 class AbsolutePositioning implements AbsoluteStrategy
 {
@@ -35,7 +34,7 @@ class AbsolutePositioning implements AbsoluteStrategy
         FragmentBuilder    $builder
     ): void
     {
-        // 直接使用 ComputedStyle 属性（不转 array）
+        // 鐩存帴浣跨敤 ComputedStyle 灞炴€э紙涓嶈浆 array锛?
         $leftVal = $style?->left?->toPx() ?? 0;
         $topVal = $style?->top?->toPx() ?? 0;
         $rightVal = $style?->right?->toPx() ?? 0;
@@ -56,7 +55,7 @@ class AbsolutePositioning implements AbsoluteStrategy
             $viewportH = 0;
         }
 
-        // 从祖先的 computedStyle 获取 padding/border
+        // 浠庣鍏堢殑 computedStyle 鑾峰彇 padding/border
         $ancCS = $ancestor?->computedStyle;
         $ancestorPaddingLeft = $ancCS?->padding?->left?->toPx() ?? 0;
         $ancestorPaddingTop = $ancCS?->padding?->top?->toPx() ?? 0;
@@ -70,34 +69,43 @@ class AbsolutePositioning implements AbsoluteStrategy
 
         $ancestorX = $ancestor?->x ?? 0;
         $ancestorY = $ancestor?->y ?? 0;
-        // 祖先宽度可能尚未设置（resolveChildren 先于策略执行），使用 style 回退
+        // 绁栧厛瀹藉害鍙兘灏氭湭璁剧疆锛坮esolveChildren 鍏堜簬绛栫暐鎵ц锛夛紝浣跨敤 style 鍥為€€
         $ancestorRawW = $ancestor?->w ?? 0;
         if ($ancestorRawW <= 0 && $ancCS !== null) {
             $ancestorRawW = $ancCS->width->toPx();
         }
         $ancestorW = $ancestor ? ($ancestorRawW - $borderL - $borderR) : $viewportW;
         $ancestorH = $ancestor ? ($ancestor->h - $borderT - $borderB) : $viewportH;
-        if ($ancestorH <= 0 && $ancCS !== null) {
-            $ch = $ancCS->height->toPx();
-            if ($ch > 0) $ancestorH = $ch - $borderT - $borderB;
+        if ($ancestorH <= 0) {
+            if ($ancCS !== null) {
+                $ch = $ancCS->height->toPx();
+                if ($ch > 0) {
+                    $ancestorH = $ch - $borderT - $borderB;
+                } else {
+                    // Height auto: use visualHeight from layout (may be 0 during first pass)
+                    // Fall back to ancestor's rendered h if available
+                    $visH = $ancCS->visualHeight($ancestor->h);
+                    if ($visH > 0) $ancestorH = $ancCS->contentBoxHeight($visH);
+                }
+            }
         }
 
-        // 布局容器宽高
+        // 甯冨眬瀹瑰櫒瀹介珮
         $cbW = $ancestor ? ($ancestorW) : $viewportW;
 
-        // 从 style 读取 width/height（CssLength 携带单位信息）
+        // 浠?style 璇诲彇 width/height锛圕ssLength 鎼哄甫鍗曚綅淇℃伅锛?
         $width = $style?->width?->toPx() ?? 0;
         $height = $style?->height?->toPx() ?? 0;
         if ($style?->width?->isPercent()) $width = $style->resolveWidth($cbW);
         if ($style?->height?->isPercent()) $height = $style->resolveHeight($ancestorH);
 
-        // 计算边距
+        // 璁＄畻杈硅窛
         $marginLeft = $style?->margin?->left?->toPx() ?? 0;
         $marginTop = $style?->margin?->top?->toPx() ?? 0;
         $marginRight = $style?->margin?->right?->toPx() ?? 0;
         $marginBottom = $style?->margin?->bottom?->toPx() ?? 0;
 
-        // 如果 left+right 都设置且 width=0，用两者决定宽度
+        // 濡傛灉 left+right 閮借缃笖 width=0锛岀敤涓よ€呭喅瀹氬搴?
         if ($leftVal !== 0 && $rightVal !== 0 && $width <= 0) {
             $width = max(0, $ancestorW - $leftVal - $rightVal - $marginLeft - $marginRight);
         }
@@ -128,8 +136,8 @@ class AbsolutePositioning implements AbsoluteStrategy
             }
         }
 
-        // 计算最终坐标
-        // CSS 2.2 §9.3.2: 检测 left/right/top/bottom 是否显式设置（包括值为0）
+        // 璁＄畻鏈€缁堝潗鏍?
+        // CSS 2.2 搂9.3.2: 妫€娴?left/right/top/bottom 鏄惁鏄惧紡璁剧疆锛堝寘鎷€间负0锛?
         $hasLeft = $style?->getRaw('left') !== null;
         $hasRight = $style?->getRaw('right') !== null;
         $hasTop = $style?->getRaw('top') !== null;
@@ -138,12 +146,12 @@ class AbsolutePositioning implements AbsoluteStrategy
         $calcX = $ancestorX + $borderL + $leftVal + $marginLeft;
         $calcY = $ancestorY + $borderT + $topVal + $marginTop;
 
-        // right（当 left 未设置时使用）
+        // right锛堝綋 left 鏈缃椂浣跨敤锛?
         if ($hasRight && !$hasLeft && ($ancestor !== null || $isFixed)) {
             $rightEdge = $ancestorX + $borderL + $ancestorPaddingLeft + $cbW - $rightVal;
             $calcX = $rightEdge - ($width > 0 ? $width : 0);
         }
-        // bottom（当 top 未设置时使用）
+        // bottom锛堝綋 top 鏈缃椂浣跨敤锛?
         if ($hasBottom && !$hasTop && ($ancestor !== null || $isFixed)) {
             $bottomEdge = $ancestorY + $ancestorH - $bottomVal;
             $calcY = $bottomEdge - ($height > 0 ? $height : 0);
@@ -169,8 +177,8 @@ class AbsolutePositioning implements AbsoluteStrategy
             $builder->setPosition($node->x, $node->y);
         }
 
-        // ── 同步 builder 中的子 Fragment 为绝对定位算法计算的正确位置 ──
-        // resolveChildren 先于绝对定位算法执行，其中的子 Fragment 位置已过时。
+        // 鈹€鈹€ 鍚屾 builder 涓殑瀛?Fragment 涓虹粷瀵瑰畾浣嶇畻娉曡绠楃殑姝ｇ‘浣嶇疆 鈹€鈹€
+        // resolveChildren 鍏堜簬缁濆瀹氫綅绠楁硶鎵ц锛屽叾涓殑瀛?Fragment 浣嶇疆宸茶繃鏃躲€?
         if ($builder->childCount() > 0 && count($node->children) > 0) {
             $existingChildren = $builder->getChildren();
             $updatedChildren = [];
@@ -257,3 +265,4 @@ class AbsolutePositioning implements AbsoluteStrategy
         error_log('[POS_ANC] NOT FOUND (no positioned ancestor) | ' . $chainStr);
     }
 }
+

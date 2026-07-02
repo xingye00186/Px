@@ -8,12 +8,11 @@ use Px\Core\Config;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderNode;
 use Px\Rendering\ComputedStyle;
-use Px\Rendering\CssStyleHelper;
 
 /**
- * BlockLayoutStrategy — Block 布局策略
+ * BlockLayoutStrategy 鈥?Block 甯冨眬绛栫暐
  *
- * Pure FragmentBuilder 实现，直接使用 LayoutConstraints + ComputedStyle。
+ * Pure FragmentBuilder 瀹炵幇锛岀洿鎺ヤ娇鐢?LayoutConstraints + ComputedStyle銆?
  */
 class BlockLayoutStrategy implements LayoutStrategyInterface
 {
@@ -26,8 +25,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
     }
 
     /**
-     * Pure FragmentBuilder 布局入口。
-     * 直接使用 LayoutConstraints + ComputedStyle。
+     * Pure FragmentBuilder 甯冨眬鍏ュ彛銆?
+     * 鐩存帴浣跨敤 LayoutConstraints + ComputedStyle銆?
      */
     public function resolveWithBuilder(
         RenderNode         $node,
@@ -37,29 +36,13 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
     ): void
     {
         $this->resolveBlockLayout($node, $constraints->parentContentX, $constraints->parentContentY, $style, $builder, $constraints->contentWidth);
-        // 不读回：resolveBlockLayout 已在内部写入 builder
+        // 涓嶈鍥烇細resolveBlockLayout 宸插湪鍐呴儴鍐欏叆 builder
     }
     private LayoutResolver $resolver;
 
     public function __construct(LayoutResolver $resolver)
     {
         $this->resolver = $resolver;
-    }
-
-    /**
-     * @deprecated 已弃用，请使用 resolveWithBuilder。Phase 3 后删除。
-     */
-    public function resolve(
-        RenderNode    $node,
-        object        $ctx,
-        array         $style
-    ): void {
-        $this->resolveBlockLayout(
-            $node,
-            $ctx->parentX,
-            $ctx->parentY,
-            $node->computedStyle
-        );
     }
 
     /**
@@ -102,16 +85,16 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $padL = $ps->padding->left->toPx();
             $padR = $ps->padding->right->toPx();
             $pbw = $ps->borderLeftWidth + $ps->borderRightWidth;
-            // 如果父容器的 w/h 尚未计算（0），使用 computedStyle 中的显式值
+            // 濡傛灉鐖跺鍣ㄧ殑 w/h 灏氭湭璁＄畻锛?锛夛紝浣跨敤 computedStyle 涓殑鏄惧紡鍊?
             if ($parentW_raw <= 0) {
                 $parentW_raw = $ps->width->toPx();
             }
             if ($parentH_raw <= 0) {
                 $parentH_raw = $ps->height->toPx();
             }
-            // 根据 box-sizing 确定 parentW_raw 是否包含 padding/border
-            // content-box: parentW_raw = 内容宽度，padding/border 在外围，不用减
-            // border-box:  parentW_raw = 总宽度，需减去 padding/border 得内容宽度
+            // 鏍规嵁 box-sizing 纭畾 parentW_raw 鏄惁鍖呭惈 padding/border
+            // content-box: parentW_raw = 鍐呭瀹藉害锛宲adding/border 鍦ㄥ鍥达紝涓嶇敤鍑?
+            // border-box:  parentW_raw = 鎬诲搴︼紝闇€鍑忓幓 padding/border 寰楀唴瀹瑰搴?
             $parentSizing = $ps->boxSizing->value;
             if ($parentSizing === 'border-box' && !$usedConstraintFallback) {
                 $parentW = $parentW_raw - $padL - $padR - $pbw;
@@ -121,7 +104,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         } else {
             $parentW = (int)$parentW_raw;
         }
-        // 父容器高度（用于百分比高度解析）
+        // 鐖跺鍣ㄩ珮搴︼紙鐢ㄤ簬鐧惧垎姣旈珮搴﹁В鏋愶級
         $parentH = (int)$parentH_raw;
 
         $width = 0;
@@ -129,6 +112,29 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         if ($computedStyle !== null) {
             $width = $computedStyle->width->toPx();
             $height = $computedStyle->height->toPx();
+            // Intrinsic sizing: min-content/max-content/fit-content
+            if ($computedStyle->width->isIntrinsic()) {
+                $textContent = $node->content ?? '';
+                if (is_string($textContent) && strlen($textContent) > 0) {
+                    $fs = $computedStyle->fontSize;
+                    $bd = $computedStyle->bold;
+                    $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, $bd) : (int)(strlen($textContent) * $fs * 0.6));
+                    if ($computedStyle->width->unit === 'min-content') {
+                        // Approximate: use measured width as min-content
+                        $width = $measured;
+                    } else {
+                        // max-content / fit-content: use measured width
+                        $width = $measured;
+                    }
+                }
+            }
+            if ($computedStyle->height->isIntrinsic()) {
+                $textContent = $node->content ?? '';
+                if (is_string($textContent) && strlen($textContent) > 0) {
+                    $lineH = $computedStyle->lineHeight > 0 ? $computedStyle->lineHeight : (int)($computedStyle->fontSize * 1.2);
+                    $height = $lineH;
+                }
+            }
             if ($computedStyle->width->isPercent()) {
                 $width = $computedStyle->width->resolveInContext($parentW);
             }
@@ -137,11 +143,28 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
-        // ── 初始尺寸 ──
+        // 鈹€鈹€ 鍒濆灏哄 鈹€鈹€
         $node->w = (int)max(0, $width);
         $node->h = (int)max(0, $height);
 
-        // ── min/max-width 约束（在 auto-width 前后都应用一次） ──
+        // aspect-ratio: if one dim is auto, derive from the other
+        $ar = $computedStyle?->aspectRatio ?? 0;
+        if ($ar > 0) {
+            if ($height === 0 && $node->w > 0) {
+                $node->h = (int)($node->w / $ar);
+            } elseif ($width === 0 && $node->h > 0) {
+                $node->w = (int)($node->h * $ar);
+            }
+            // Re-clamp after aspect-ratio derivation
+            $clampWidth();
+            $clampHeight = function() use (&$node, $minH, $maxH) {
+                if ($maxH > 0 && $node->h > $maxH) $node->h = $maxH;
+                if ($minH > 0 && $node->h < $minH) $node->h = $minH;
+            };
+            $clampHeight();
+        }
+
+        // 鈹€鈹€ min/max-width 绾︽潫锛堝湪 auto-width 鍓嶅悗閮藉簲鐢ㄤ竴娆★級 鈹€鈹€
         $minW = $computedStyle?->minWidth?->toPx() ?? 0;
         $maxW = $computedStyle?->maxWidth?->toPx() ?? 0;
         $minH = $computedStyle?->minHeight?->toPx() ?? 0;
@@ -158,7 +181,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $node->visualH = $computedStyle->visualHeight($node->h);
         }
 
-        // ── CSS 2.1 §10.3.3: auto-fill width for block elements ──
+        // 鈹€鈹€ CSS 2.1 搂10.3.3: auto-fill width for block elements 鈹€鈹€
         if (!$hasExplicitW && $width === 0 && $parent !== null && !self::isInlineType($node->type)) {
             $ml = $computedStyle?->margin?->left->toPx() ?? 0;
             $mr = $computedStyle?->margin?->right->toPx() ?? 0;
@@ -173,10 +196,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
             $node->w = (int)max(0, $autoW);
             if ($computedStyle !== null) $node->visualW = $computedStyle->visualWidth($node->w);
-            $clampWidth(); // auto-width 后再 clamp 一次（min/max 约束）
+            $clampWidth(); // auto-width 鍚庡啀 clamp 涓€娆★紙min/max 绾︽潫锛?
         }
 
-        // ── Text content measurement ──
+        // 鈹€鈹€ Text content measurement 鈹€鈹€
         if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
             $fs = $computedStyle?->fontSize ?? 14;
             $bd = $computedStyle?->bold ?? false;
@@ -196,11 +219,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $node->visualH = $lineH;
         }
 
-        // ── Normal flow positioning ──
+        // 鈹€鈹€ Normal flow positioning 鈹€鈹€
         $positionVal = $computedStyle?->position?->value ?? 'static';
         $this->resolveNormalFlow($node, $parentX, $parentY, $positionVal, $computedStyle, $left, $top);
 
-        // ── Scroll container post-processing ──
+        // 鈹€鈹€ Scroll container post-processing 鈹€鈹€
         if ($node->isScrollContainer) {
             $padTop = $computedStyle?->padding?->top->toPx() ?? 0;
             $padLeft = $computedStyle?->padding?->left->toPx() ?? 0;
@@ -210,7 +233,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $this->finalizeScrollContainer($node, $parentX, $parentY, $computedStyle, $childOffsetY, $padLeft, $padRight, $padBottom);
         }
 
-        // ── Normal Flow auto-stack for block containers ──
+        // 鈹€鈹€ Normal Flow auto-stack for block containers 鈹€鈹€
         $displayVal = $computedStyle?->display?->value ?? 'block';
         if ($displayVal === 'block' && !$node->isScrollContainer) {
             $padTop = $computedStyle?->padding?->top->toPx() ?? 0;
@@ -319,7 +342,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         continue;
                     }
 
-                    // ── Margin collapse ──
+                    // 鈹€鈹€ Margin collapse 鈹€鈹€
                     $childOverflow = $childCS?->overflowY?->value ?? $childCS?->overflow?->value ?? 'visible';
                     $createsBFC = ($childDisplay !== 'block') || ($childOverflow !== 'visible');
                     $isCollapsible = !$createsBFC;
@@ -346,7 +369,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $child->x += ($childCS?->left?->toPx() ?? 0);
                     }
 
-                    // ── Auto margin centering for block elements (CSS 2.2 §10.3.3) ──
+                    // 鈹€鈹€ Auto margin centering for block elements (CSS 2.2 搂10.3.3) 鈹€鈹€
                     $mLauto = $childCS?->getRaw('marginLeftAuto') ?? false;
                     $mRauto = $childCS?->getRaw('marginRightAuto') ?? false;
                     if (($mLauto || $mRauto) && $child->w > 0) {
@@ -382,7 +405,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
-        // ── Auto-height for block containers ──
+        // 鈹€鈹€ Auto-height for block containers 鈹€鈹€
         $hasExplicitH = $computedStyle !== null && $computedStyle->height->toPx() > 0;
         if (!$hasExplicitH && $displayVal === 'block' && !$node->isScrollContainer) {
             $maxBottom = 0;
@@ -402,7 +425,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
-        // ── 同步子 fragment 位置（auto-stack 直接修改了 RenderNode，需同步到 builder）──
+        // 鈹€鈹€ 鍚屾瀛?fragment 浣嶇疆锛坅uto-stack 鐩存帴淇敼浜?RenderNode锛岄渶鍚屾鍒?builder锛夆攢鈹€
         if ($builder !== null && $builder->childCount() > 0 && count($node->children) > 0) {
             $existingChildren = $builder->getChildren();
             $updatedChildren = [];
@@ -427,7 +450,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $builder->replaceChildren($updatedChildren);
         }
 
-        // ── 通过 builder 输出最终结果（不依赖 node 读回）──
+        // 鈹€鈹€ 閫氳繃 builder 杈撳嚭鏈€缁堢粨鏋滐紙涓嶄緷璧?node 璇诲洖锛夆攢鈹€
         if ($builder !== null) {
             $builder
                 ->setPosition($node->x, $node->y)
@@ -453,7 +476,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $node->x = $parentX + $left;
             $node->y = $parentY + $top;
         } elseif ($position === 'static') {
-            // CSS 2.2 §9.3.1: left/top 在 static 定位下无效
+            // CSS 2.2 搂9.3.1: left/top 鍦?static 瀹氫綅涓嬫棤鏁?
             $node->x = $parentX;
             $node->y = $parentY;
         }
@@ -490,7 +513,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         $node->contentHeight = (int)max(0, $accY - $childOffsetY + $paddingBottom);
 
-        // 根据子项实际宽度计算 contentWidth（支持水平滚动）
+        // 鏍规嵁瀛愰」瀹為檯瀹藉害璁＄畻 contentWidth锛堟敮鎸佹按骞虫粴鍔級
         $maxChildRight = 0;
         foreach ($node->children as $child) {
             $cRight = (int)($child->x + $child->visualW);
@@ -503,3 +526,4 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         if ($node->scrollTop > $maxScroll) $node->scrollTop = $maxScroll;
     }
 }
+

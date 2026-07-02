@@ -299,6 +299,11 @@ class CssMappings
             'parser'  => 'Px\Rendering\CssValueParser::parseOpacity',
             'default' => 1.0,
         ],
+        'aspect-ratio' => [
+            'key'     => 'aspectRatio',
+            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
+            'default' => 0,
+        ],
         'scroll-behavior' => [
             'key'     => 'scrollBehavior',
             'parser'  => 'Px\\Rendering\\CssValueParser::parseIdent',
@@ -460,23 +465,6 @@ class CssMappings
     // Color helpers
     // ============================================================
 
-    /**
-     * Convert CSS hex color #RRGGBB to GDI BGR integer (COLORREF).
-     * Supports shorthand #RGB (expanded to #RRGGBB).
-     */
-    public static function hexToBgr(string $hex): int
-    {
-        return CssValueParser::hexToBgr($hex);
-    }
-
-    /**
-     * Derive border color from background (lighten each channel by a delta).
-     */
-    public static function borderColor(int $bg, int $delta = 20): int
-    {
-        return CssValueParser::borderColor($bg, $delta);
-    }
-
     // ============================================================
     // Property parsers (each returns a typed value from CSS string)
     // ============================================================
@@ -489,26 +477,17 @@ class CssMappings
      *   - rgb(r, g, b) / rgba(r, g, b, a)
      *   - linear-gradient(...) �?extract first color stop
      */
-    public static function parseHexColor(string $value): int
-    {
-        return CssValueParser::parseHexColor($value);
-    }
+    
 
     /**
      * Parse "16px" �?16 (int)
      */
-    public static function parsePixels(string $value): int
-    {
-        return CssValueParser::parsePixels($value);
-    }
+    
 
     /**
      * Parse "1" / "1.5" / "0" �?flex grow value as string (e.g., "1", "2")
      */
-    public static function parseFlex(string $value): string
-    {
-        return CssValueParser::parseFlex($value);
-    }
+    
 
     /**
      * Parse flex shorthand value into structured array per CSS spec.
@@ -530,26 +509,17 @@ class CssMappings
      *   "2 0 100px" �?['grow'=>2.0, 'shrink'=>0.0, 'basis'=>100]
      *   ""          �?['grow'=>0.0, 'shrink'=>1.0, 'basis'=>0]
      */
-    public static function parseFlexValue(string $flex): array
-    {
-        return CssValueParser::parseFlexValue($flex);
-    }
+    
 
     /**
      * Parse "bold" / "700" �?1, "normal" / "400" �?0
      */
-    public static function parseFontWeight(string $value): int
-    {
-        return CssValueParser::parseFontWeight($value);
-    }
+    
 
     /**
      * Parse "left" / "right" / "center" �?align string
      */
-    public static function parseTextAlign(string $value): string
-    {
-        return CssValueParser::parseTextAlign($value);
-    }
+    
 
     /**
      * Parse line-height value.
@@ -605,19 +575,13 @@ class CssMappings
     /**
      * Parse "1px solid #d9d9d9" �?border string (v8)
      */
-    public static function parseBorder(string $value): string
-    {
-        return CssValueParser::parseBorder($value);
-    }
+    
 
     /**
      * Parse "h-offset v-offset [blur] [spread] [color]" into structured string.
      * Returns "h|v|blur|spread|color" for downstream use.
      */
-    public static function parseBoxShadow(string $value): string
-    {
-        return CssValueParser::parseBoxShadow($value);
-    }
+    
 
     /**
      * Parse "h|v|blur|spread|color" box-shadow string to offset array.
@@ -639,7 +603,7 @@ class CssMappings
             'v'      => (int)($parts[1 + $offset] ?? 0),
             'blur'   => (int)($parts[2 + $offset] ?? 0),
             'spread' => (int)($parts[3 + $offset] ?? 0),
-            'color'  => self::hexToBgr($parts[4 + $offset] ?? '#000000'),
+            'color'  => CssValueParser::hexToBgr($parts[4 + $offset] ?? '#000000'),
             'alpha'  => (float)($parts[5 + $offset] ?? 0.5),
             'inset'  => $isInset,
         ];
@@ -648,29 +612,20 @@ class CssMappings
     /**
      * Parse "0.5" or "50%" �?float 0.0-1.0 (v8)
      */
-    public static function parseOpacity(string $value): float
-    {
-        return CssValueParser::parseOpacity($value);
-    }
+    
 
     /**
      * Parse identity: return the trimmed value as-is
      * Used for display, flex-direction, overflow, position 等关键字属�?
      */
-    public static function parseIdent(string $value): string
-    {
-        return CssValueParser::parseIdent($value);
-    }
+    
 
     /**
      * Parse `url("path/to/image.png")` �?extract the image path
      * Matches CSS background-image property: background-image: url("...")
      * Supports both single/double quotes and unquoted URLs.
      */
-    public static function parseBackgroundImage(string $value): string
-    {
-        return CssValueParser::parseBackgroundImage($value);
-    }
+    
 
     /** @return array 供外部（�?StyleResolver）使用的 PROPERTY_MAP */
     public static function getPropertyMap(): array
