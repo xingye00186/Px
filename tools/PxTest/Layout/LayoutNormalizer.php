@@ -196,11 +196,17 @@ class LayoutNormalizer
             if ($parentInfo !== null) {
                 $parentW = $parentInfo[0];
                 $parentH = $parentInfo[1];
+                $parentAbsX = $parentInfo[2];
+                $parentAbsY = $parentInfo[3];
+            } else {
+                $parentAbsX = 0;
+                $parentAbsY = 0;
             }
             $elW = (int)$el['w'];
             $elH = (int)$el['h'];
-            $elements[$i]['x'] = max(0, $parentW - $elW);
-            $elements[$i]['y'] = max(0, $parentH - $elH);
+            // BR 锚点 absolute 坐标 = 父容器 absolute 坐标 + (父容器尺寸 - 锚点尺寸)
+            $elements[$i]['x'] = $parentAbsX + max(0, $parentW - $elW);
+            $elements[$i]['y'] = $parentAbsY + max(0, $parentH - $elH);
         }
         $output = [
             'viewport' => [
@@ -562,9 +568,9 @@ class LayoutNormalizer
     }
 
     /**
-     * 在原始引擎树中查找 BR 锚点的父容器尺寸。
-     * 递归搜索：如果某节点包含 BR 锚点为子节点，返回其 w/h。
-     * @return array{w: int, h: int}|null
+     * 在原始引擎树中查找 BR 锚点的父容器尺寸和坐标。
+     * 递归搜索：如果某节点包含 BR 锚点为子节点，返回其 w/h/x/y。
+     * @return array{w: int, h: int, x: int, y: int}|null
      */
     private function findBrParent(array $node, string $brPxId): ?array
     {
@@ -575,10 +581,12 @@ class LayoutNormalizer
             if (!is_array($childDs)) continue;
             $childPxId = $childDs['pxId'] ?? '';
             if ($childPxId === $brPxId) {
-                // 找到了！返回当前 $node 的尺寸
+                // 找到了！返回当前 $node 的尺寸和绝对坐标
                 $pw = (int)($node['visualW'] ?? $node['w'] ?? 0);
                 $ph = (int)($node['visualH'] ?? $node['h'] ?? 0);
-                return [$pw, $ph];
+                $px = (int)($node['x'] ?? 0);
+                $py = (int)($node['y'] ?? 0);
+                return [$pw, $ph, $px, $py];
             }
         }
         // 递归搜索每个子节点

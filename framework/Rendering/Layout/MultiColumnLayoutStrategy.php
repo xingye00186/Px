@@ -62,8 +62,10 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
         $parentY = $constraints->parentContentY;
 
         $columnCount = $style?->columnCount ?? 0;
-        $columnWidth = $style?->columnWidth ?? 0;
-        $columnGap = $style?->columnGap ?? 0;
+        $rawColWidth = $style?->columnWidth;
+        $columnWidth = $rawColWidth instanceof \Px\Rendering\CssLength ? $rawColWidth->toPx() : (int)($rawColWidth ?? 0);
+        $rawColGap = $style?->columnGap;
+        $columnGap = $rawColGap instanceof \Px\Rendering\CssLength ? $rawColGap->toPx() : (int)($rawColGap ?? 0);
         if ($columnGap <= 0) $columnGap = 16;
 
         // fallback to block if not multi-column

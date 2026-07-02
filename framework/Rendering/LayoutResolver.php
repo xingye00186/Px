@@ -196,8 +196,8 @@ class LayoutResolver
                 $topPx = $topVal instanceof \Px\Rendering\CssLength
                     ? $topVal->resolveInContext($constraints->contentHeight)
                     : (int)($topVal ?? 0);
-                $node->x = $constraints->parentContentX + $leftPx;
-                $node->y = $constraints->parentContentY + $topPx;
+                $node->x = (int)($constraints->parentContentX ?? 0) + $leftPx;
+                $node->y = (int)($constraints->parentContentY ?? 0) + $topPx;
             }
             $builder
                 ->setPosition($node->x, $node->y)
@@ -253,8 +253,8 @@ class LayoutResolver
             $topPx = $topVal instanceof \Px\Rendering\CssLength
                 ? $topVal->resolveInContext($constraints->contentHeight)
                 : (int)($topVal ?? 0);
-            $node->x = $constraints->parentContentX + $leftPx;
-            $node->y = $constraints->parentContentY + $topPx;
+            $node->x = (int)($constraints->parentContentX ?? 0) + $leftPx;
+            $node->y = (int)($constraints->parentContentY ?? 0) + $topPx;
         }
         
         // ── 按 display/position 策略调度 ──
