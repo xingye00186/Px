@@ -209,7 +209,9 @@ class LayoutValidationStep implements PipelineStepInterface
         }
 
         // ─── Assertion C: block-level flex item cross-size not inflated ───
-        if ($align === 'stretch') {
+        // For row containers: cross-axis = height, stretch fills height = correct CSS §7.2
+        // For column containers: cross-axis = width (not height), skip
+        if ($align === 'stretch' && !$isRow) {
             foreach ($node['children'] ?? [] as $ch) {
                 if (!is_array($ch)) continue;
                 $chPos = $ch['style']['position'] ?? 'static';
