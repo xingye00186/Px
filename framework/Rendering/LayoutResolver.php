@@ -18,6 +18,7 @@ use Px\Rendering\Layout\MultiColumnLayoutStrategy;
 use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\LayoutFragment;
 use Px\Rendering\Layout\FragmentBuilder;
+use Px\Rendering\Layout\StickyPostProcessor;
 
 
 /**
@@ -57,6 +58,7 @@ class LayoutResolver
     /** 婊氬姩瀹瑰櫒鏀堕泦鏁扮粍锛堝竷灞€杩囩▼鎸夐渶杩藉姞锛?*/
     private array $scrollContainers = [];
 
+    private StickyPostProcessor $stickyProcessor;
 
     public function __construct()
     {
@@ -67,6 +69,7 @@ class LayoutResolver
         $this->inlineStrategy = new InlineLayoutStrategy($this);
         $this->tableStrategy = new TableLayoutStrategy($this);
         $this->multiColumnStrategy = new MultiColumnLayoutStrategy($this);
+        $this->stickyProcessor = new StickyPostProcessor($this->scrollContainers);
     }
 
     public function getAbsolutePositioning(): AbsoluteStrategy
@@ -112,6 +115,7 @@ class LayoutResolver
     {
         $this->rootNode = $root;
         $this->scrollContainers = [];
+        $this->stickyProcessor->reset();
         $this->stickyStack = [];
         $this->stickyStackX = [];
 
