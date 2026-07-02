@@ -10,6 +10,8 @@ use Px\Rendering\RenderNode;
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\FragmentBuilder;
+use Px\Rendering\Layout\Grid\GridFragmentMapper;
+use Px\Rendering\Layout\Grid\GridItem;
 
 /**
  * GridLayoutStrategy — CSS Grid 布局策略
@@ -599,31 +601,25 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $node->visualW = $computedStyle?->visualWidth($node->w) ?? $node->w;
         $node->visualH = $computedStyle?->visualHeight($node->h) ?? $node->h;
 
-        // ── 同步 builder 中的子 Fragment 为 grid 算法计算的正确位置 ──
+        // ── 使用 GridFragmentMapper 同步 builder 中的子 Fragment ──
         // grid 算法直接写入 $node->children[$i]->x/y/w/h，但 builder 中的子 Fragment
         // 来自 resolveChildren（grid 算法之前），位置/尺寸已过时。
-        // 关键：必须保留原始子 Fragment 的孙子链（grandchildren），否则深层嵌套的坐标会丢失。
+        // GridFragmentMapper 将 GridItem[] → LayoutFragment[]，保留孙子链。
         if ($builder !== null) {
             $originalChildren = $builder->getChildren();
-            $gridChildren = [];
+            $gridItems = [];
             foreach ($node->children as $i => $ch) {
-                $orig = $originalChildren[$i] ?? null;
-                $chCS = $ch->computedStyle;
-                $gridChildren[] = new LayoutFragment(
-                    x: $ch->x,
-                    y: $ch->y,
-                    w: $ch->w,
-                    h: $ch->h,
-                    visualW: $ch->visualW,
-                    visualH: $ch->visualH,
-                    layer: $ch->layer,
-                    contentWidth: $ch->contentWidth,
-                    contentHeight: $ch->contentHeight,
-                    style: $chCS,
-                    children: $orig?->children ?? [],
-                );
+                $item = new GridItem($ch);
+                $item->x = $ch->x;
+                $item->y = $ch->y;
+                $item->w = $ch->w;
+                $item->h = $ch->h;
+                $item->visualW = $ch->visualW;
+                $item->visualH = $ch->visualH;
+                $gridItems[] = $item;
             }
-            $builder->replaceChildren($gridChildren);
+            $mappedFragments = GridFragmentMapper::toFragments($gridItems, $originalChildren);
+            $builder->replaceChildren($mappedFragments);
             $builder
                 ->setPosition($node->x, $node->y)
                 ->setSize($node->w, $node->h, $computedStyle)
