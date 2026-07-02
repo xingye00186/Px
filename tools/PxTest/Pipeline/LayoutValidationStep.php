@@ -101,8 +101,10 @@ class LayoutValidationStep implements PipelineStepInterface
             $cvh = (int)($node['visualH'] ?? $ch);
             // Skip if it's just a spacer (depth < 3 sidebar items)
             // h=0 is OK only when text is spacer/separator text or visibility:hidden
+            // or display:inline (inline elements get h=0 in box layout, rendered by text system)
             $vis = $style['visibility'] ?? 'visible';
-            if ($ch === 0 && $cvh === 0 && $vis === 'visible') {
+            $disp = $style['display'] ?? 'block';
+            if ($ch === 0 && $cvh === 0 && $vis === 'visible' && $disp !== 'inline') {
                 $textPreview = mb_substr($node['content'], 0, 30);
                 $disp = $style['display'] ?? 'block';
                 $this->issues[] = "[F] text content h=0: '{$textPreview}' has zero content height "
@@ -228,7 +230,10 @@ class LayoutValidationStep implements PipelineStepInterface
                 
                 // Skip scroll containers: their height is determined by parent
                 // flex layout (fill remaining space), not by their content.
-                if (!empty($ch['isScrollContainer'])) continue;
+                // Also check style overflowY/overflowX directly in case isScrollContainer
+                // was not exported in the layout JSON.
+                $chOverflowY = $ch['style']['overflowY'] ?? $ch['style']['overflow'] ?? 'visible';
+                if (!empty($ch['isScrollContainer']) || $chOverflowY === 'auto' || $chOverflowY === 'scroll') continue;
 
                 // Estimate content height from children
                 $contentBottom = 0;
