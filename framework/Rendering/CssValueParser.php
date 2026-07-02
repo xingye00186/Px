@@ -152,10 +152,14 @@ class CssValueParser
     public static function parseFontWeight(string $value): int
     {
         $v = trim(strtolower($value));
-        if ($v === 'bold' || (int)$v >= 600) {
-            return 1;
+        if ($v === 'bold' || $v === 'bolder') return 700;
+        if ($v === 'normal') return 400;
+        if ($v === 'lighter') return 300;
+        if (is_numeric($v)) {
+            $num = (int)$v;
+            if ($num >= 100 && $num <= 900) return $num;
         }
-        return 0;
+        return 400;
     }
 
     public static function parseTextAlign(string $value): string

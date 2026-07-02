@@ -346,11 +346,11 @@ class ComputedStyle
                 $this->fontSize = (int)$fs;
             }
         }
-        if (isset($d['bold'])) {
-            $this->bold = (bool)$d['bold'];
-        }
         if (isset($d['fontWeight'])) {
             $this->fontWeight = self::safeInt($d['fontWeight'], 400);
+            $this->bold = $this->fontWeight >= 600;
+        } elseif (isset($d['bold'])) {
+            $this->bold = (bool)$d['bold'];
         }
         if (isset($d['zIndex'])) {
             $this->zIndex = self::safeInt($d['zIndex']);

@@ -75,9 +75,9 @@ class CssMappings
             'default' => 16,
         ],
         'font-weight' => [
-            'key'     => 'bold',
+            'key'     => 'fontWeight',
             'parser'  => 'Px\\Rendering\\CssValueParser::parseFontWeight',
-            'default' => 0,
+            'default' => 400,
         ],
         // ---- Layout properties (width/height for CSS class styles) ----
         'width' => [
