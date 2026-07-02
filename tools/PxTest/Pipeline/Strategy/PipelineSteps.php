@@ -79,6 +79,18 @@ class LayoutDumpStep implements PipelineStepInterface
             }
         }
 
+        // ── 字体属性强制检查（CssTest Layout Spec）──
+        // 测试用例中禁止任何字体属性，违反即阻断管线
+        $inHtml = file_exists($htmlFiles[0]) ? file_get_contents($htmlFiles[0]) : '';
+        $fontErrors = self::checkFontPropertiesInHtml($inHtml, 'html');
+        if (!empty($fontErrors)) {
+            echo "  [HTML_SPEC_FAIL] " . basename($htmlFiles[0]) . " has forbidden font properties:\n";
+            foreach ($fontErrors as $e) {
+                echo "    - $e\n";
+            }
+            return StepResult::err('dump_layout', 'Font properties are forbidden in test case HTML');
+        }
+
         $result = $this->strategy->dump($currentCase, $refDir);
         if ($result === null) {
             return StepResult::err('dump_layout', 'Strategy ' . $this->strategy->name() . ' failed');
@@ -193,6 +205,90 @@ class LayoutDumpStep implements PipelineStepInterface
         }
         if (stripos($template, 'data-px-anchor="br"') === false) {
             $errors[] = "Missing data-px-anchor=\"br\" in template";
+        }
+
+        // ── 字体属性强制检查（CssTest Layout Spec）──
+        // 测试用例中禁止任何字体属性，违反即阻断管线
+        $fontErrors = self::checkFontPropertiesInHtml($template, 'vue');
+        $errors = array_merge($errors, $fontErrors);
+
+        return $errors;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  CssTest Layout Spec — 字体属性规范
+    // ═══════════════════════════════════════════════════════════════
+    //
+    //  目的：引擎与浏览器的字体度量系统不同（Skia/GDI vs DirectWrite），
+    //  字体属性（font-size/font-weight/line-height 等）必然产生偏差
+    //  （B-018/S-001 已知限制）。为聚焦布局系统测试，CssTest 用例中
+    //  **禁止**出现任何字体相关属性。
+    //
+    //  替代方案：所有文本内容用固定尺寸占位符 span：
+    //    <span style="display:inline-block;width:8px;height:25px;background:#xxx;"></span>
+    //  宽高固定，不受父元素字体属性影响。
+    //
+    //  禁止出现在任意元素 style="..." 中的属性：
+    //    font-size, font-weight, font-family, color,
+    //    letter-spacing, word-spacing
+    //
+    //  例外：
+    //    1. <style> 块中的基线 CSS 不受此限
+    //    2. line-height:0 是唯一允许的字体属性值
+    //       （用于消除浏览器默认行高间距）
+    //
+    //  阻断行为：
+    //    LayoutDumpStep 会在 execute 中扫描所有 .vue 和 .html
+    //    的 inline style，若发现禁止属性立即终止管线并输出修改说明。
+    //    所有 case 必须通过此检查才能运行布局对比。
+    // ═══════════════════════════════════════════════════════════════
+
+    /** 禁止在测试用例 inline style 中出现的字体属性 */
+    private const FORBIDDEN_FONT_PROPS = [
+        'font-size', 'font-weight', 'font-family', 'color',
+        'letter-spacing', 'word-spacing',
+    ];
+
+    /**
+     * 扫描 HTML/Vue 模板中所有元素的 inline style，检查字体属性。
+     *
+     * @param string $html HTML 或 Vue template 字符串
+     * @param string $source 来源标记（'html' 或 'vue'）
+     * @return array 错误描述数组（空数组=通过）
+     */
+    private static function checkFontPropertiesInHtml(string $html, string $source = 'html'): array
+    {
+        $errors = [];
+
+        if (!preg_match_all('/style="([^"]*)"/i', $html, $matches, PREG_SET_ORDER)) {
+            return $errors;
+        }
+
+        foreach ($matches as $m) {
+            $styleContent = $m[1];
+
+            // line-height:0 是允许的例外，先移除再检查
+            $cleaned = preg_replace('/line-height\s*:\s*0\s*(;|$)/i', '', $styleContent);
+
+            foreach (self::FORBIDDEN_FONT_PROPS as $prop) {
+                if (preg_match('/' . str_replace('-', '\-', $prop) . '\s*:/i', $cleaned)) {
+                    $errors[] = "Forbidden font property '$prop' in $source inline style. "
+                        . "Remove all font properties. "
+                        . "Found: style=\"$styleContent\". "
+                        . "Use inline-block placeholder spans instead of real text.";
+                    break; // 一个 style 只报一次
+                }
+            }
+
+            // line-height 检查（除 0 以外的值都禁止）
+            if (preg_match('/line-height\s*:\s*([^;]+)/i', $styleContent, $lm)) {
+                $lhValue = trim($lm[1]);
+                if ($lhValue !== '0') {
+                    $errors[] = "Forbidden font property 'line-height: $lhValue' in $source inline style. "
+                        . "Only line-height:0 is allowed (to eliminate browser default line spacing). "
+                        . "Found: style=\"$styleContent\".";
+                }
+            }
         }
 
         return $errors;
