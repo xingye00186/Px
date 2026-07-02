@@ -97,7 +97,6 @@ class PhpDumpStrategy implements DumpStrategy
             $fwDir . '/Rendering/RenderTreeManager.php',
             $fwDir . '/Rendering/VNodeRenderer.php',
             $fwDir . '/Rendering/LayoutResolver.php',
-            $fwDir . '/Rendering/Layout/LayoutContext.php',
             $fwDir . '/Rendering/Layout/LayoutStrategyInterface.php',
             $fwDir . '/Rendering/TextOverflowProcessor.php',
             // Styling/Theme (Application::mount 需要)

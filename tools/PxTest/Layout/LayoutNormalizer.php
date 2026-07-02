@@ -180,33 +180,41 @@ class LayoutNormalizer
         // ── BR 锚点坐标修复 ──
         // 引擎布局的 absolute 定位（right:0;bottom:0）在 applyTo 链中丢失。
         // 从原始树结构中找到 BR 锚点的父容器尺寸来推断正确位置。
+        // 如果 findBrParent 查找失败，退而使用 TL 锚点 + 内容容器尺寸推算
+        $tlAnchor = null;
+        foreach ($elements as $el) {
+            $ds = $el['dataset'] ?? [];
+            if (!is_array($ds)) continue;
+            if (($ds['pxAnchor'] ?? '') === 'tl') { $tlAnchor = $el; break; }
+        }
         foreach ($elements as $i => $el) {
             $ds = $el['dataset'] ?? [];
             if (!is_array($ds)) continue;
             $pxAnchor = $ds['pxAnchor'] ?? '';
             if ($pxAnchor !== 'br') continue;
-            if ($el['x'] !== 0 || $el['y'] !== 0) continue;
             $st = $el['styles'] ?? [];
             if (($st['position'] ?? '') !== 'absolute') continue;
-            $parentW = (int)($st['width'] ?? 8); // fallback to self width
-            $parentH = (int)($st['height'] ?? 8);
-            // 从原始树查找父容器尺寸
+            $elW = (int)$el['w'];
+            $elH = (int)$el['h'];
+            // 方案 A: 通过 parent chain 查找
             $pxId = $ds['pxId'] ?? '';
             $parentInfo = $this->findBrParent($data, $pxId);
             if ($parentInfo !== null) {
-                $parentW = $parentInfo[0];
-                $parentH = $parentInfo[1];
-                $parentAbsX = $parentInfo[2];
-                $parentAbsY = $parentInfo[3];
-            } else {
-                $parentAbsX = 0;
-                $parentAbsY = 0;
+                $elements[$i]['x'] = $parentInfo[2] + max(0, $parentInfo[0] - $elW);
+                $elements[$i]['y'] = $parentInfo[3] + max(0, $parentInfo[1] - $elH);
+            } elseif ($tlAnchor !== null) {
+                // 方案 B: 从 TL 锚点 + 内容容器尺寸推算
+                // BR 在 wrapper 右下角，wrapper 尺寸 = TL→BR 间距
+                $tlX = (int)($tlAnchor['x'] ?? 0);
+                $tlY = (int)($tlAnchor['y'] ?? 0);
+                // 查找 TL 锚点的父容器（wrapper），用其 w/h 作为内容尺寸
+                $tlPxId = $tlAnchor['dataset']['pxId'] ?? '';
+                $tlParent = $this->findBrParent($data, $tlPxId);
+                if ($tlParent !== null) {
+                    $elements[$i]['x'] = $tlParent[2] + max(0, $tlParent[0] - $elW);
+                    $elements[$i]['y'] = $tlParent[3] + max(0, $tlParent[1] - $elH);
+                }
             }
-            $elW = (int)$el['w'];
-            $elH = (int)$el['h'];
-            // BR 锚点 absolute 坐标 = 父容器 absolute 坐标 + (父容器尺寸 - 锚点尺寸)
-            $elements[$i]['x'] = $parentAbsX + max(0, $parentW - $elW);
-            $elements[$i]['y'] = $parentAbsY + max(0, $parentH - $elH);
         }
         $output = [
             'viewport' => [

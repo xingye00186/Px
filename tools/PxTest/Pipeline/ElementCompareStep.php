@@ -573,17 +573,17 @@ class ElementCompareStep implements PipelineStepInterface
         }
 
         if ($parentIdx < 0) {
-            // 没找到父容器，从锚点自身开始
+            // 没找到父容器，从锚点之后开始（跳过锚点自身，与有父容器时的行为一致）
             return [
-                'elements' => array_slice($elements, $anchorIdx),
+                'elements' => array_slice($elements, $anchorIdx + 1),
                 'anchor'   => [(int)$anchor['x'], (int)$anchor['y']],
-                'count'    => count($elements) - $anchorIdx,
-                'skipped'  => $anchorIdx,
+                'count'    => count($elements) - $anchorIdx - 1,
+                'skipped'  => $anchorIdx + 1,
             ];
         }
 
-        // 父容器之后开始
-        $startIdx = $parentIdx + 1;
+        // 父容器之后开始，但跳过锚点自身
+        $startIdx = $anchorIdx + 1;
 
         // 找到父容器的结束位置：下一个 depth <= parentDepth 的元素
         $parentDepth = (int)($elements[$parentIdx]['depth'] ?? 0);
@@ -597,7 +597,7 @@ class ElementCompareStep implements PipelineStepInterface
 
         $subset = array_slice($elements, $startIdx, $endIdx - $startIdx);
 
-        // 使用父容器坐标作为锚点（锚点自身可能是 position:absolute 导致坐标不准确）
+        // 使用父容器坐标作为锚点（父容器边界更稳定，不受 absolute 定位偏移影响）
         $anchorX = (int)($elements[$parentIdx]['x'] ?? 0);
         $anchorY = (int)($elements[$parentIdx]['y'] ?? 0);
 

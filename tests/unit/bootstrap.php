@@ -63,7 +63,6 @@ require_once $frameworkDir . '/Rendering/RenderNode.php';
 require_once $frameworkDir . '/Rendering/RenderTreeManager.php';
 require_once $frameworkDir . '/Rendering/LayoutResolver.php';
 require_once $frameworkDir . '/Rendering/CssValue.php';
-require_once $frameworkDir . '/Rendering/CssStyleHelper.php';
 require_once $frameworkDir . '/Rendering/ComputedStyle.php';
 require_once $frameworkDir . '/Rendering/StyleResolver.php';
 // ScrollHelper.php was moved/removed — no longer needed
