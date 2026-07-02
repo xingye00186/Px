@@ -146,7 +146,7 @@ class PipelineBuilder
         // Step G+H: 浏览器元素对比（默认跳过，--browser-engine-el-compare 启用）
         if ($this->browserElCompare) {
             $browserStrategy = $this->selectBrowserStrategy();
-            $orchestrator->addStep(new Strategy\BrowserRefStep($browserStrategy, $this->appDir, $this->caseName ?? $this->getDefaultCaseName()));
+            $orchestrator->addStep(new \PxTest\Pipeline\BrowserRefStep($browserStrategy, $this->appDir, $this->caseName ?? $this->getDefaultCaseName()));
             $caseDir = "{$this->appDir}/test_case/" . ($this->caseName ?? $this->getDefaultCaseName());
             $orchestrator->addStep(new ElementCompareStep(
                 \PxTest\Comparison\ComparatorRegistry::default(),

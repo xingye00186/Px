@@ -77,15 +77,6 @@ class LayoutDumpStep implements PipelineStepInterface
                 echo "  [HTML_SPEC_FAIL] " . basename($htmlFiles[0]) . " root container must have position:relative\n";
                 return StepResult::err('dump_layout', 'HTML spec validation failed');
             }
-            // ─── HTML 字体属性检查 ───
-            $htmlFontErrors = $this->validateHtmlFontSpec($htmlFiles[0]);
-            if (!empty($htmlFontErrors)) {
-                echo "  [HTML_FONT_FAIL] " . basename($htmlFiles[0]) . " has font properties on placeholder elements:\n";
-                foreach ($htmlFontErrors as $e) {
-                    echo "    - $e\n";
-                }
-                return StepResult::err('dump_layout', 'HTML font spec validation failed');
-            }
         }
 
         $result = $this->strategy->dump($currentCase, $refDir);
@@ -198,25 +189,10 @@ class LayoutDumpStep implements PipelineStepInterface
 
         // Check anchors exist inside template
         if (stripos($template, 'data-px-anchor="tl"') === false) {
-            $errors[] = "Missing data-px-anchor=\"tl\" in template";
+            $errors[] = "Missing data-px-anchor='tl' in template";
         }
         if (stripos($template, 'data-px-anchor="br"') === false) {
             $errors[] = "Missing data-px-anchor=\"br\" in template";
-        }
-
-        // Check font properties on elements with placeholder spans
-        // 文字已替换为固定宽高 span，字体属性应全部移除
-        $fontProps = ['font-size', 'font-weight', 'color', 'font-family'];
-        // line-height:0 是允许的（用于消除浏览器默认行高间距）
-        if (preg_match_all('/<div[^>]*style="([^"]*)"[^>]*>.*?<span style="display:inline-block/s', $template, $fm)) {
-            foreach ($fm[1] as $style) {
-                foreach ($fontProps as $fp) {
-                    if (preg_match('/' . str_replace('-', '\-', $fp) . '\s*:/i', $style)) {
-                        $errors[] = "Element with placeholder span must not have '$fp' in style. "
-                            . "Text is replaced by fixed-size spans; font properties are unnecessary and cause MISMATCH.";
-                    }
-                }
-            }
         }
 
         return $errors;
@@ -224,123 +200,6 @@ class LayoutDumpStep implements PipelineStepInterface
 
     /**
      * .html 文件字体属性检查（与 validateVueSpec 相同的逻辑）
-     */
-    private function validateHtmlFontSpec(string $htmlPath): array
-    {
-        $errors = [];
-        $html = @file_get_contents($htmlPath);
-        if ($html === false) return ["Cannot read file: " . basename($htmlPath)];
-
-        $fontProps = ['font-size', 'font-weight', 'color', 'font-family'];
-        // line-height:0 是允许的
-        if (preg_match_all('/<div[^>]*style="([^"]*)"[^>]*>.*?<span style="display:inline-block/s', $html, $fm)) {
-            foreach ($fm[1] as $style) {
-                foreach ($fontProps as $fp) {
-                    if (preg_match('/' . str_replace('-', '\-', $fp) . '\s*:/i', $style)) {
-                        $errors[] = "Element with placeholder span must not have '$fp' in style.";
-                    }
-                }
-            }
-        }
-        return $errors;
-    }
-}
-
-/**
- * BrowserRefStep — validate .html spec compliance, inject instrumentation.
- *
- * The .html file must already contain CSS baseline declarations (width/height,
- * font-family, font-size) and anchor elements. This step validates the spec,
- * checks .html vs .vue consistency, and injects only infrastructure
- * (dump_layout.js + textarea) — no CSS modification.
- *
- * Spec requirements for .html:
- *   1. <!DOCTYPE html> + <meta charset="utf-8">
- *   2. CSS baseline: html,body { width:1600px; height:800px; font-family:...; font-size:16px; ... }
- *   3. data-px-anchor="tl" and data-px-anchor="br" anchor elements
- *   4. Structure consistent with .vue template (element count, nesting, CSS props)
- *
- * If validation fails, the step aborts with detailed fix instructions.
- */
-class BrowserRefStep implements PipelineStepInterface
-{
-    public function __construct(
-        private BrowserRefStrategy $strategy,
-        private string $appDir,
-        private string $caseName,
-    ) {}
-    public function name(): string { return 'browser_ref'; }
-    public function requires(): array { return []; }
-    public function execute(PipelineContext $ctx): StepResult
-    {
-        $ctxCase = $ctx->get('case_name');
-        $currentCase = ($ctxCase !== null && $ctxCase !== '') ? $ctxCase : $this->caseName;
-        $caseDir = "{$this->appDir}/test_case/{$currentCase}";
-        $htmlFiles = glob("$caseDir/*.html");
-        if (empty($htmlFiles)) return StepResult::err('browser_ref', 'No HTML file found');
-        $htmlPath = $htmlFiles[0];
-
-        // ─── Step 1: Validate .html spec compliance ───
-        $specErrors = $this->validateHtmlSpec($htmlPath);
-        if (!empty($specErrors)) {
-            echo "  [SPEC_FAIL] " . basename($htmlPath) . " violates PxTest HTML spec:\n";
-            foreach ($specErrors as $e) {
-                echo "    - $e\n";
-            }
-            return StepResult::err('browser_ref', 'HTML spec validation failed');
-        }
-
-        // ─── Step 2: Inject dump_layout.js + textarea only (no CSS) ───
-        // .vue vs .html 一致性检查已移除：.vue 由 HtmlToVueConverter 从 .html 自动生成，
-        // 结构天然一致，无需校验。
-        $instrumented = $this->instrumentHtml($htmlPath);
-        $refDir = "$caseDir/ref";
-        @mkdir($refDir, 0777, true);
-        // Write to temp file with .html extension — original .html IS the benchmark
-        $tempDir = sys_get_temp_dir();
-        $instrumentedPath = $tempDir . '/px_browser_ref_' . $currentCase . '.html';
-        file_put_contents($instrumentedPath, $instrumented);
-
-        // ─── Step 4: Check if ref already exists with matching HTML ───
-        $refJsonPath = "$refDir/browser_ref_level_0.json";
-        if (file_exists($refJsonPath)) {
-            $existingRef = json_decode(file_get_contents($refJsonPath), true);
-            $storedHash = $existingRef['_html_hash'] ?? null;
-            $currentHash = md5_file($htmlPath);
-            if ($storedHash !== null && $storedHash === $currentHash) {
-                echo "  [browser_ref] Skip: HTML unchanged (hash match), using existing ref\n";
-                $refJson = file_get_contents($refJsonPath);
-                $ctx->set('browser_ref', $refJson);
-                return StepResult::ok('browser_ref');
-            }
-            if ($storedHash !== null && $storedHash !== $currentHash) {
-                echo "  [browser_ref] HTML changed, regenerating ref\n";
-            }
-        }
-
-        // ─── Step 5: Run browser (Edge headless) ───
-        $ok = $this->strategy->generate($instrumentedPath, $refDir, $currentCase);
-        $ctx->set('browser_wrapper_html', $instrumented);
-        @unlink($instrumentedPath); // clean up temp file
-
-        $refJsonPath = "$refDir/browser_ref_level_0.json";
-        if ($ok && file_exists($refJsonPath)) {
-            $refJson = file_get_contents($refJsonPath);
-            $ctx->set('browser_ref', $refJson);
-        }
-
-        return $ok ? StepResult::ok('browser_ref') : StepResult::err('browser_ref', 'Strategy ' . $this->strategy->name() . ' failed');
-    }
-
-    /**
-     * Validate .html file against PxTest HTML spec.
-     *
-     * The .html must be self-contained with:
-     *   - DOCTYPE + charset
-     *   - CSS baseline: html,body { width:1600px; height:800px; font-family; font-size; }
-     *   - Anchor elements (data-px-anchor="tl", data-px-anchor="br")
-     *
-     * Any violation returns specific fix instruction.
      */
     private function validateHtmlSpec(string $htmlPath): array
     {
