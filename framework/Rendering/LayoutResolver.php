@@ -118,7 +118,9 @@ class LayoutResolver
         $this->stickyProcessor->reset();
         $this->stickyStack = [];
         $this->stickyStackX = [];
-
+        
+        $this->invalidatePositioningAncestors($root);
+        
         $constraints = new LayoutConstraints(
             $root->w,
             $root->h,
@@ -130,8 +132,19 @@ class LayoutResolver
 
         $rootFragment = $this->resolveNodeInternal($root, $constraints);
         $rootFragment->applyTo($root);
-
+    
         return $rootFragment;
+    }
+    
+    /**
+     * 递归失效所有节点的 positioningAncestorValid 缓存
+     */
+    private function invalidatePositioningAncestors(RenderNode $node): void
+    {
+        $node->positioningAncestorValid = false;
+        foreach ($node->children as $child) {
+            $this->invalidatePositioningAncestors($child);
+        }
     }
 
     /**
