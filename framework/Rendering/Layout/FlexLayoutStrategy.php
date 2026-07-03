@@ -100,13 +100,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // Local style array from ComputedStyle for algorithm body
         $style = $computedStyle !== null ? $computedStyle->toExportArray() : [];
 
-        $left = (int)($style['left'] ?? 0);
+        $left = (int)($computedStyle?->left?->toPx() ?? 0);
 
-        $top = (int)($style['top'] ?? 0);
+        $top = (int)($computedStyle?->top?->toPx() ?? 0);
 
-        $width = (int)($style['width'] ?? 0);
+        $width = (int)($computedStyle?->width?->toPx() ?? 0);
 
-        $height = (int)($style['height'] ?? 0);
+        $height = (int)($computedStyle?->height?->toPx() ?? 0);
 
         // CSS 2.2 搂10.3.7: margins apply to flex containers as block-level elements
         $cbWidth = $node->parent?->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent?->w ?? 0;
@@ -232,7 +232,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         }
 
         // 鈹€鈹€ 鑴忚矾寰勶細瀹屾暣甯冨眬璁＄畻 鈹€鈹€
-        $direction = $style['flexDirection'] ?? 'row';
+        $direction = $computedStyle?->flexDirection?->value ?? 'row';
 
         $isRow = ($direction === 'row' || $direction === 'row-reverse');
 
@@ -244,25 +244,25 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // Example: a row flex-container child of a column flex-container should
         // NOT have its height filled from parent height 鈥攐nly width should stretch.
 
-        $gap = (int)($style['gap'] ?? 0);
+        $gap = (int)($computedStyle?->gap?->toPx() ?? 0);
 
-        $justify = $style['justifyContent'] ?? 'flex-start';
+        $justify = $computedStyle?->justifyContent?->value ?? 'flex-start';
 
-        $align = $style['alignItems'] ?? 'stretch';
+        $align = $computedStyle?->alignItems?->value ?? 'stretch';
 
-        $wrap = $style['flexWrap'] ?? 'nowrap';
+        $wrap = $computedStyle?->flexWrap?->value ?? 'nowrap';
 
         $reversed = ($direction === 'row-reverse' || $direction === 'column-reverse');
 
         // 鈹€鈹€ Padding 鈹€鈹€
 
-        $paddingTop = (int)($style['paddingTop'] ?? $style['padding'] ?? 0);
+        $paddingTop = (int)($computedStyle?->padding?->top?->toPx() ?? 0);
 
-        $paddingRight = (int)($style['paddingRight'] ?? $style['padding'] ?? 0);
+        $paddingRight = (int)($computedStyle?->padding?->right?->toPx() ?? 0);
 
-        $paddingBottom = (int)($style['paddingBottom'] ?? $style['padding'] ?? 0);
+        $paddingBottom = (int)($computedStyle?->padding?->bottom?->toPx() ?? 0);
 
-        $paddingLeft = (int)($style['paddingLeft'] ?? $style['padding'] ?? 0);
+        $paddingLeft = (int)($computedStyle?->padding?->left?->toPx() ?? 0);
 
         // 浣跨敤褰撳墠宸叉湁灏哄浣滀负鍥為€€锛堢敤浜庝簩娆¤В鏋愶細flex-grow 鍒嗛厤鍚庣殑楂樺害锛?
         $effectiveMain = $isRow
@@ -383,7 +383,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         }
 
         // 鈹€鈹€ align-content: distribute lines in cross axis (CSS Flexbox 搂8.4) 鈹€鈹€
-        $alignContent = $style['alignContent'] ?? 'stretch';
+        $alignContent = $computedStyle?->alignContent?->value ?? 'stretch';
         if ($isWrapping && count($lineCrossData) > 1 && $containerCross > 0) {
             $totalCrossUsed = 0;
             foreach ($lineCrossData as $ld) {
@@ -480,9 +480,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // height:auto is set, which caused auto-height to be SKIPPED. We must
         // explicitly check that the value is not 'auto' or empty.
 
-        $hasExplicitW = array_key_exists('width', $style) && $style['width'] !== 'auto' && $style['width'] !== '';
+        $hasExplicitW = $computedStyle !== null && $computedStyle->width->toPx() > 0;
 
-        $hasExplicitH = array_key_exists('height', $style) && $style['height'] !== 'auto' && $style['height'] !== '';
+        $hasExplicitH = $computedStyle !== null && $computedStyle->height->toPx() > 0;
 
         $hasWPct = array_key_exists('widthPercent', $style);
 
