@@ -537,46 +537,54 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             switch ($alignSelf) {
                 case 'center':
                     $oldH = $ch->h;
-                    $ch->y = $newCellY + (int)(($actualRowH - $oldH) / 2);
+                    $gridItems[$idx]->y = $newCellY + (int)(($actualRowH - $oldH) / 2);
                     break;
                 case 'end':
                 case 'flex-end':
-                    $ch->y = (int)($newCellY + $actualRowH - $ch->h);
+                    $gridItems[$idx]->y = (int)($newCellY + $actualRowH - $ch->h);
                     break;
                 case 'start':
                 case 'flex-start':
-                    $ch->y = $newCellY;
+                    $gridItems[$idx]->y = $newCellY;
                     break;
                 default: // stretch
-                    $ch->y = $newCellY;
-                    $ch->h = $actualRowH;
+                    $gridItems[$idx]->y = $newCellY;
+                    $gridItems[$idx]->h = $actualRowH;
                     $ch->visualH = $ch->computedStyle?->visualHeight($ch->h) ?? $ch->h;
                     break;
             }
 
             // min/max 约束
-            $ch->w = max(0, $ch->w);
+            $gridItems[$idx]->w = max(0, $ch->w);
             { $__mnW2 = $ch->computedStyle?->minWidth?->resolveInContext($parentW) ?? 0; $__mxW2 = $ch->computedStyle?->maxWidth?->resolveInContext($parentW) ?? 0;
                 if ($__mnW2 > 0 && $__mxW2 > 0 && $__mnW2 > $__mxW2) $__mxW2 = 0;
-                if ($__mnW2 > 0 && $ch->w < $__mnW2) $ch->w = $__mnW2;
-                if ($__mxW2 > 0 && $ch->w > $__mxW2) $ch->w = $__mxW2;
+                if ($__mnW2 > 0 && $ch->w < $__mnW2) $gridItems[$idx]->w = $__mnW2;
+                if ($__mxW2 > 0 && $ch->w > $__mxW2) $gridItems[$idx]->w = $__mxW2;
             }
-            $ch->h = max(0, $ch->h);
+            $gridItems[$idx]->h = max(0, $ch->h);
             { $__mnH = $ch->computedStyle?->minHeight?->resolveInContext($parentH) ?? 0; $__mxH = $ch->computedStyle?->maxHeight?->resolveInContext($parentH) ?? 0;
                 if ($__mnH > 0 && $__mxH > 0 && $__mnH > $__mxH) $__mxH = 0;
-                if ($__mnH > 0 && $ch->h < $__mnH) $ch->h = $__mnH;
-                if ($__mxH > 0 && $ch->h > $__mxH) $ch->h = $__mxH;
+                if ($__mnH > 0 && $ch->h < $__mnH) $gridItems[$idx]->h = $__mnH;
+                if ($__mxH > 0 && $ch->h > $__mxH) $gridItems[$idx]->h = $__mxH;
             }
             $ch->visualW = $ch->computedStyle?->visualWidth($ch->w) ?? $ch->w;
             $ch->visualH = $ch->computedStyle?->visualHeight($ch->h) ?? $ch->h;
+            // ── sync GridItem x/w/y/h back to RenderNode ──
+            $ch->x = $gridItems[$idx]->x;
+            $ch->w = $gridItems[$idx]->w;
+            $ch->y = $gridItems[$idx]->y;
+            $ch->h = $gridItems[$idx]->h;
 
             // 如果高度变化了（stretch），需要重新调整子节点
             if ($alignSelf === 'stretch') {
                 $this->adjustGridItemChildren($ch, $node->parent, true);
                 // 恢复 grid cell 决定的位置和宽度（adjustGridItemChildren 内部会 restore）
-                $ch->y = $newCellY;
-                $ch->h = $actualRowH;
-                $ch->visualH = $ch->computedStyle?->visualHeight($ch->h) ?? $ch->h;
+                $gridItems[$idx]->y = $newCellY;
+                $gridItems[$idx]->h = $actualRowH;
+                $ch->visualH = $ch->computedStyle?->visualHeight($gridItems[$idx]->h) ?? $gridItems[$idx]->h;
+                // ── sync GridItem y/h back to RenderNode ──
+                $ch->y = $gridItems[$idx]->y;
+                $ch->h = $gridItems[$idx]->h;
             }
         }
 
