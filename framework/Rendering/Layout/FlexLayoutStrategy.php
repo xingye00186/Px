@@ -118,9 +118,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // Apply translate from animatedStyle
 
-        $translateX = (int)($style['translateX'] ?? 0);
+        $translateX = (int)($computedStyle?->getRaw('translateX') ?? 0);
 
-        $translateY = (int)($style['translateY'] ?? 0);
+        $translateY = (int)($computedStyle?->getRaw('translateY') ?? 0);
 
         $node->x += $translateX;
 
@@ -165,8 +165,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // auto-margin path (resolveNormalFlow). Handle margin:auto here so that
         // every re-resolution via two-pass preserves the centering offset.
         // Must be placed AFTER w/visualW are set so $totalW is correct.
-        $checkML = $style['marginLeftAuto'] ?? false;
-        $checkMR = $style['marginRightAuto'] ?? false;
+        $checkML = $computedStyle?->getRaw('marginLeftAuto') ?? false;
+        $checkMR = $computedStyle?->getRaw('marginRightAuto') ?? false;
         if ($checkML || $checkMR) {
             $cbW = ($node->parent !== null)
                 ? ($node->parent?->computedStyle?->contentBoxWidth($node->parent->w) ?? $node->parent?->w)
@@ -652,43 +652,19 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
      */
     private static function resolveFlexMinMain(RenderNode $ch, bool $isRow, int $currentMainSize): int
     {
-        // 1) Explicit min-width/min-height takes priority
-        // $chArr 不再需要，通过 typed 访问
+        $cs = $ch->computedStyle;
         if ($isRow) {
-            if (isset($chArr['minWidth'])) {
-                return (int)$chArr['minWidth'];
-            }
+            $minVal = $cs?->minWidth?->toPx() ?? 0;
         } else {
-            if (isset($chArr['minHeight'])) {
-                return (int)$chArr['minHeight'];
-            }
+            $minVal = $cs?->minHeight?->toPx() ?? 0;
         }
+        if ($minVal > 0) return $minVal;
 
-        // 2) Check overflow in the main axis
-        // Order: overflowX/overflowY overrides, fallback to 'overflow' shorthand
-        $ov = 'visible';
-        if ($isRow) {
-            if (isset($chArr['overflowX'])) {
-                $ov = $chArr['overflowX'];
-            } elseif (isset($chArr['overflow'])) {
-                $ov = $chArr['overflow'];
-            }
-        } else {
-            if (isset($chArr['overflowY'])) {
-                $ov = $chArr['overflowY'];
-            } elseif (isset($chArr['overflow'])) {
-                $ov = $chArr['overflow'];
-            }
-        }
+        $ov = $isRow
+            ? ($cs?->overflowX?->value ?? $cs?->overflow?->value ?? 'visible')
+            : ($cs?->overflowY?->value ?? $cs?->overflow?->value ?? 'visible');
+        if ($ov !== 'visible') return 0;
 
-        // overflow:auto/scroll/hidden 锟?min is 0 (content can be clipped/scrolled)
-        if ($ov !== 'visible') {
-            return 0;
-        }
-
-        // 3) overflow:visible (default) 锟?CSS min-height:auto 鈫抍ontent-based minimum
-        // The content-based min is approximated by the current computed main-size
-        // from initial layout resolution (before flex shrink).
         return $currentMainSize;
     }
 }
