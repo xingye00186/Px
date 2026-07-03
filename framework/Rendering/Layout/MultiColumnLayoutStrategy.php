@@ -163,6 +163,27 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
             $h = $padT + $maxColH + $padB;
         }
 
+        // ── Sync child coordinates to builder fragments ──
+        $originalChildren = $builder->getChildren();
+        $syncedChildren = [];
+        foreach ($node->children as $i => $ch) {
+            $orig = $originalChildren[$i] ?? null;
+            $syncedChildren[] = new LayoutFragment(
+                x: $ch->x,
+                y: $ch->y,
+                w: $ch->w,
+                h: $ch->h,
+                visualW: $ch->visualW,
+                visualH: $ch->visualH,
+                layer: $orig?->layer ?? 0,
+                contentWidth: $orig?->contentWidth ?? 0,
+                contentHeight: $orig?->contentHeight ?? 0,
+                style: $ch->computedStyle,
+                children: $orig?->children ?? [],
+            );
+        }
+        $builder->replaceChildren($syncedChildren);
+
         $builder
             ->setPosition($parentX, $parentY)
             ->setSize($w, $h, $style)
