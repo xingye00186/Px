@@ -5,21 +5,21 @@ namespace Px\Rendering;
 use native_types;
 
 /**
- * CSS �?GDI Mapping Table
+ * CSS —?GDI Mapping Table
  *
  * Defines which CSS properties are supported, how they map to GDI rendering
  * parameters, and what keys they produce in the layout output.
  *
  * Usage:
  *   $mapped = CssValueParser::parseStyleBlock($styleCss);
- *   // �?['app-bg' => ['bg'=>1973790], 'display-text' => ['fg'=>16777215, 'fontSize'=>32, 'bold'=>1], ...]
+ *   // —?['app-bg' => ['bg'=>1973790], 'display-text' => ['fg'=>16777215, 'fontSize'=>32, 'bold'=>1], ...]
  *
  * Extend $PROPERTY_MAP to add new CSS property support.
  */
 class CssMappings
 {
     /**
-     * CSS property �?[outputKey, parserFunction, default]
+     * CSS property —?[outputKey, parserFunction, default]
      *
      * Each entry maps a CSS property name to:
      *   - outputKey: the key in the generated layout array
@@ -449,13 +449,13 @@ class CssMappings
     ];
         
     /**
-     * Inline style �?布局属性映射（�?PROPERTY_MAP 未覆盖的属性）
+     * Inline style —?布局属性映射（—?PROPERTY_MAP 未覆盖的属性）
      *
-     * 布局/定位/弹�?网格属性在 PROPERTY_MAP 中已定义，此处只加补充项�?
-     * parseInlineStyle() 通过 array_merge(PROPERTY_MAP, INLINE_PROPERTY_MAP) 合并使用�?
+     * 布局/定位/弹—?网格属性在 PROPERTY_MAP 中已定义，此处只加补充项。?
+     * parseInlineStyle() 通过 array_merge(PROPERTY_MAP, INLINE_PROPERTY_MAP) 合并使用。?
      */
     const INLINE_PROPERTY_MAP = [
-        // ---- 滚动条样�?(PROPERTY_MAP 中未包含, 其余布局属性从 PROPERTY_MAP 合并) ----
+        // ---- 滚动条样式?(PROPERTY_MAP 中未包含, 其余布局属性从 PROPERTY_MAP 合并) ----
         'scrollbar-width'        => ['key' => 'scrollbarWidth',      'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 12],
         'scrollbar-track-color'  => ['key' => 'scrollbarTrackColor', 'parser' => 'Px\Rendering\CssValueParser::parseHexColor', 'default' => 0x4A4A4A],
         'scrollbar-thumb-color'  => ['key' => 'scrollbarThumbColor', 'parser' => 'Px\Rendering\CssValueParser::parseHexColor', 'default' => 0x888888],
@@ -471,22 +471,22 @@ class CssMappings
     // ============================================================
 
     /**
-     * Parse CSS color value �?BGR integer
+     * Parse CSS color value —?BGR integer
      *
      * Supports:
      *   - "#RRGGBB" / "#RGB" (hex colors)
      *   - rgb(r, g, b) / rgba(r, g, b, a)
-     *   - linear-gradient(...) �?extract first color stop
+     *   - linear-gradient(...) —?extract first color stop
      */
     
 
     /**
-     * Parse "16px" �?16 (int)
+     * Parse "16px" —?16 (int)
      */
     
 
     /**
-     * Parse "1" / "1.5" / "0" �?flex grow value as string (e.g., "1", "2")
+     * Parse "1" / "1.5" / "0" —?flex grow value as string (e.g., "1", "2")
      */
     
 
@@ -494,31 +494,31 @@ class CssMappings
      * Parse flex shorthand value into structured array per CSS spec.
      *
      * CSS flex shorthand (https://www.w3.org/TR/css-flexbox-1/#flex-shorthand):
-     *   auto    �?flex: 1 1 auto
-     *   initial �?flex: 0 1 auto
-     *   none    �?flex: 0 0 auto
-     *   <num>        �?flex-grow: <num>, flex-shrink: 1, flex-basis: 0
-     *   <num> <num>  �?flex-grow + flex-shrink, flex-basis: 0
-     *   <num> <num> <basis>  �?all three
+     *   auto    —?flex: 1 1 auto
+     *   initial —?flex: 0 1 auto
+     *   none    —?flex: 0 0 auto
+     *   <num>        —?flex-grow: <num>, flex-shrink: 1, flex-basis: 0
+     *   <num> <num>  —?flex-grow + flex-shrink, flex-basis: 0
+     *   <num> <num> <basis>  —?all three
      *
      * Examples:
-     *   "1"         �?['grow'=>1.0, 'shrink'=>1.0, 'basis'=>0]
-     *   "auto"      �?['grow'=>1.0, 'shrink'=>1.0, 'basis'=>'auto']
-     *   "none"      �?['grow'=>0.0, 'shrink'=>0.0, 'basis'=>'auto']
-     *   "initial"   �?['grow'=>0.0, 'shrink'=>1.0, 'basis'=>'auto']
-     *   "1 0 auto"  �?['grow'=>1.0, 'shrink'=>0.0, 'basis'=>'auto']
-     *   "2 0 100px" �?['grow'=>2.0, 'shrink'=>0.0, 'basis'=>100]
-     *   ""          �?['grow'=>0.0, 'shrink'=>1.0, 'basis'=>0]
+     *   "1"         —?['grow'=>1.0, 'shrink'=>1.0, 'basis'=>0]
+     *   "auto"      —?['grow'=>1.0, 'shrink'=>1.0, 'basis'=>'auto']
+     *   "none"      —?['grow'=>0.0, 'shrink'=>0.0, 'basis'=>'auto']
+     *   "initial"   —?['grow'=>0.0, 'shrink'=>1.0, 'basis'=>'auto']
+     *   "1 0 auto"  —?['grow'=>1.0, 'shrink'=>0.0, 'basis'=>'auto']
+     *   "2 0 100px" —?['grow'=>2.0, 'shrink'=>0.0, 'basis'=>100]
+     *   ""          —?['grow'=>0.0, 'shrink'=>1.0, 'basis'=>0]
      */
     
 
     /**
-     * Parse "bold" / "700" �?1, "normal" / "400" �?0
+     * Parse "bold" / "700" —?1, "normal" / "400" —?0
      */
     
 
     /**
-     * Parse "left" / "right" / "center" �?align string
+     * Parse "left" / "right" / "center" —?align string
      */
     
 
@@ -527,7 +527,7 @@ class CssMappings
      * Supports: unitless number (1.7), px (28px), em (1.6em), % (150%).
      * For unitless numbers, returns as 'N.N' string for runtime line spacing calculation.
      * For px values, returns pixel count.
-     * For em/%, returns multiplier string (e.g., '1.6em' �?'1.6').
+     * For em/%, returns multiplier string (e.g., '1.6em' —?'1.6').
      */
     public static function parseLineHeight(string $value): string
     {
@@ -574,7 +574,7 @@ class CssMappings
     }
 
     /**
-     * Parse "1px solid #d9d9d9" �?border string (v8)
+     * Parse "1px solid #d9d9d9" —?border string (v8)
      */
     
 
@@ -611,24 +611,24 @@ class CssMappings
     }
 
     /**
-     * Parse "0.5" or "50%" �?float 0.0-1.0 (v8)
+     * Parse "0.5" or "50%" —?float 0.0-1.0 (v8)
      */
     
 
     /**
      * Parse identity: return the trimmed value as-is
-     * Used for display, flex-direction, overflow, position 等关键字属�?
+     * Used for display, flex-direction, overflow, position 等关键字属性。?
      */
     
 
     /**
-     * Parse `url("path/to/image.png")` �?extract the image path
+     * Parse `url("path/to/image.png")` —?extract the image path
      * Matches CSS background-image property: background-image: url("...")
      * Supports both single/double quotes and unquoted URLs.
      */
     
 
-    /** @return array 供外部（�?StyleResolver）使用的 PROPERTY_MAP */
+    /** @return array 供外部（—?StyleResolver）使用的 PROPERTY_MAP */
     public static function getPropertyMap(): array
     {
         return self::PROPERTY_MAP;
@@ -646,7 +646,7 @@ class CssMappings
      */
     private static function dispatchParser(string $parser, string $value): mixed
     {
-        // �?"Px\\Rendering\\CssValueParser::parseHexColor" 提取方法�?parseHexColor
+        // —?"Px\\Rendering\\CssValueParser::parseHexColor" 提取方法—?parseHexColor
         $method = substr($parser, (int)strrpos($parser, '::') + 2);
         return match($method) {
             'parseHexColor'        => CssValueParser::parseHexColor($value),
@@ -671,10 +671,10 @@ class CssMappings
     /**
      * Expand CSS shorthand padding/margin into individual direction properties.
      *
-     * Input "padding: 10px" �?padding-top, padding-right, padding-bottom, padding-left = 10
-     * Input "margin: 10px 20px" �?margin-top=margin-bottom=10, margin-left=margin-right=20
-     * Input "padding: 1px 2px 3px" �?top=1, left/right=2, bottom=3
-     * Input "margin: 1px 2px 3px 4px" �?top=1, right=2, bottom=3, left=4
+     * Input "padding: 10px" —?padding-top, padding-right, padding-bottom, padding-left = 10
+     * Input "margin: 10px 20px" —?margin-top=margin-bottom=10, margin-left=margin-right=20
+     * Input "padding: 1px 2px 3px" —?top=1, left/right=2, bottom=3
+     * Input "margin: 1px 2px 3px 4px" —?top=1, right=2, bottom=3, left=4
      */
     private static function expandBoxShorthand(array $raw): array
     {
@@ -775,17 +775,17 @@ class CssMappings
      *   3. Position/Size (".../size" pattern)
      *   4. Repeat keywords (no-repeat, repeat-x, etc.)
      *   5. Attachment keywords (scroll, fixed, local)
-     *   6. Remainder �?position (if /size was extracted) or empty
+     *   6. Remainder —?position (if /size was extracted) or empty
      *
      * Only expands multi-value shorthands containing url() or /
      * (position/size delimiter). Single color values pass through unchanged.
      *
      * Examples:
-     *   "#FB7299"                                    �?unchanged (single color)
-     *   "url('bg.png')"                              �?image only
-     *   "url('bg.png') center/cover no-repeat"       �?image + position + size
-     *   "#FB7299 url('bg.png') center/cover no-repeat" �?full shorthand
-     *   "rgba(251,114,153,0.4) url('bg.png')"         �?rgba color + image
+     *   "#FB7299"                                    —?unchanged (single color)
+     *   "url('bg.png')"                              —?image only
+     *   "url('bg.png') center/cover no-repeat"       —?image + position + size
+     *   "#FB7299 url('bg.png') center/cover no-repeat" —?full shorthand
+     *   "rgba(251,114,153,0.4) url('bg.png')"         —?rgba color + image
      *
      * @param array $raw Raw style declarations
      * @return array Updated raw declarations with expanded sub-properties
@@ -798,7 +798,7 @@ class CssMappings
 
         $value = trim($raw['background']);
 
-        // Single color value (hex, rgb/rgba, gradient, transparent, none) �?no expansion
+        // Single color value (hex, rgb/rgba, gradient, transparent, none) —?no expansion
         if (preg_match('/^#[\da-fA-F]{3,8}$/', $value) ||
             preg_match('/^rgba?\s*\([^)]*\)$/i', trim($value)) ||
             preg_match('/^linear-gradient\s*\([^)]*\)$/i', trim($value)) ||
@@ -807,7 +807,7 @@ class CssMappings
             return $raw;
         }
 
-        // No url() and no position/size delimiter �?not a multi-value shorthand
+        // No url() and no position/size delimiter —?not a multi-value shorthand
         if (!preg_match('/url\s*\(/i', $value) && !str_contains($value, '/')) {
             return $raw;
         }
@@ -888,7 +888,7 @@ class CssMappings
         if ($bgColor !== '') {
             $raw['background'] = $bgColor;
         } else {
-            // No color specified �?transparent (parseHexColor returns 0)
+            // No color specified —?transparent (parseHexColor returns 0)
             $raw['background'] = 'transparent';
         }
 
@@ -902,11 +902,11 @@ class CssMappings
      *   text-decoration: <line> || <style> || <color> || <thickness>
      *
      * Examples:
-     *   "underline"                        �?line=underline
-     *   "underline wavy red"               �?line=underline, style=wavy, color=red
-     *   "underline overline"               �?line=underline overline
-     *   "underline wavy #FF0000 2px"        �?line=underline, style=wavy, color=#FF0000, thickness=2
-     *   "none"                             �?line=none (no decoration)
+     *   "underline"                        —?line=underline
+     *   "underline wavy red"               —?line=underline, style=wavy, color=red
+     *   "underline overline"               —?line=underline overline
+     *   "underline wavy #FF0000 2px"        —?line=underline, style=wavy, color=#FF0000, thickness=2
+     *   "none"                             —?line=none (no decoration)
      *
      * All four components can appear in any order. Multiple line keywords are
      * space-separated (e.g., "underline overline line-through").
@@ -999,9 +999,9 @@ class CssMappings
      * Parse grid-template-columns / grid-template-rows value.
      *
      * Examples:
-     *   "repeat(4, 80px)" �?['repeat' => true, 'count' => 4, 'size' => 80]
-     *   "1fr 1fr 1fr 1fr" �?['type' => 'explicit', 'sizes' => ['1fr','1fr','1fr','1fr']]
-     *   "auto"            �?['type' => 'auto']
+     *   "repeat(4, 80px)" —?['repeat' => true, 'count' => 4, 'size' => 80]
+     *   "1fr 1fr 1fr 1fr" —?['type' => 'explicit', 'sizes' => ['1fr','1fr','1fr','1fr']]
+     *   "auto"            —?['type' => 'auto']
      *
      * @param string $val Raw CSS value
      * @return array
@@ -1076,7 +1076,7 @@ class CssMappings
             }
 
             // If neither background nor color was specified, log a warning
-            // Skip for universal selectors �?they apply to all elements and
+            // Skip for universal selectors —?they apply to all elements and
             // don't need explicit styling.
             if (!isset($props['bg']) && !isset($props['fg'])) {
                 if (!in_array($className, ['*', 'html', 'body'], true)) {
@@ -1085,7 +1085,7 @@ class CssMappings
             }
 
             // Parse border shorthand into individual properties (only if not already explicitly set)
-            // Directional borders (更具�? 优先于通用 border 处理
+            // Directional borders (更具—? 优先于通用 border 处理
             foreach (['borderBottom', 'borderTop', 'borderLeft', 'borderRight', 'border'] as $borderProp) {
                 if (isset($props[$borderProp]) && $props[$borderProp] !== '') {
                     $parts = explode('|', $props[$borderProp]);
@@ -1142,7 +1142,7 @@ class CssMappings
                     $props['fontWeight'] = (int)$fwMatch[1];
                 }
                 if (!empty($props)) {
-                    // 通用选择�?* 归入 '*' 键，其他标签选择器归入对应键
+                    // 通用选择—?* 归入 '*' 键，其他标签选择器归入对应键
                     $key = $selector === '*' ? '*' : $selector;
                     $classStyles[$key] = $props;
                 }
@@ -1499,13 +1499,13 @@ class CssMappings
     }
 
     /**
-     * RGB �?BGR 格式转换�?
+     * RGB —?BGR 格式转换—?
      *
-     * GDI COLORREF 使用 BGR 字节序，而主题系统（ColorScheme）存�?RGB 格式�?
-     * 例如�?xRRGGBB �?0xBBGGRR�?
+     * GDI COLORREF 使用 BGR 字节序，而主题系统（ColorScheme）存—?RGB 格式—?
+     * 例如—?xRRGGBB —?0xBBGGRR—?
      *
-     * @param int $rgb RGB 格式颜色�?
-     * @return int BGR 格式颜色�?
+     * @param int $rgb RGB 格式颜色—?
+     * @return int BGR 格式颜色—?
      */
     public static function rgbToBgr(int $rgb): int
     {
@@ -1513,11 +1513,11 @@ class CssMappings
     }
 
     /**
-     * �?CSS 样式字符串解析为键值对数组�?
+     * —?CSS 样式字符串解析为键值对数组—?
      * 输入: "background:#2C2C2E;color:#FFF;left:10px"
      * 输出: ['background' => '#2C2C2E', 'color' => '#FFF', 'left' => '10px']
      *
-     * AOT 安全：仅使用字符串操作和数组遍历�?
+     * AOT 安全：仅使用字符串操作和数组遍历—?
      */
     public static function parseStyleStringToArray(string $style): array
     {
@@ -1538,13 +1538,13 @@ class CssMappings
     }
 
     /**
-     * 将键值对数组序列化为 CSS 样式字符串�?
+     * 将键值对数组序列化为 CSS 样式字符串—?
      * 输入: ['background' => '#2C2C2E', 'left' => '11px']
      * 输出: "background:#2C2C2E;left:11px;"
      * 输入: []
      * 输出: ""
      *
-     * AOT 安全：仅使用字符串操作和数组遍历�?
+     * AOT 安全：仅使用字符串操作和数组遍历—?
      */
     public static function buildStyleStringFromArray(array $style): string
     {
@@ -1563,13 +1563,13 @@ class CssMappings
     // ============================================================
 
     /**
-     * 解析 CSS transition 属性�?
+     * 解析 CSS transition 属性—?
      *
      * 格式: property duration timing-function delay
      * 示例: "all 300ms ease-in-out"
      *       "background-color 200ms linear, transform 300ms ease"
      *
-     * @param string $value CSS transition �?
+     * @param string $value CSS transition —?
      * @return array 每个属性的解析结果
      *   [
      *     ['property' => 'all', 'duration' => 300, 'timing' => 'ease', 'delay' => 0],
@@ -1582,12 +1582,12 @@ class CssMappings
     }
 
     /**
-     * 解析 CSS animation 属性�?
+     * 解析 CSS animation 属性—?
      *
      * 格式: name duration timing-function delay count direction fill-mode play-state
      * 示例: "fadeIn 300ms ease-in-out"
      *
-     * @param string $value CSS animation �?
+     * @param string $value CSS animation —?
      * @return array 解析结果
      */
     public static function parseAnimation(string $value): array
@@ -1596,13 +1596,13 @@ class CssMappings
     }
 
     /**
-     * 解析 CSS transform 属性�?
+     * 解析 CSS transform 属性—?
      *
      * 格式: translateX(X) translateY(Y)
      * 示例: "translateX(10px) translateY(-20px)"
      *       "translate(10px, -20px)"
      *
-     * @param string $value CSS transform �?
+     * @param string $value CSS transform —?
      * @return array ['translateX' => int, 'translateY' => int]
      */
     public static function parseTransform(string $value): array
@@ -1611,10 +1611,10 @@ class CssMappings
     }
 
     /**
-     * 序列�?transform 数组�?CSS 字符串�?
+     * 序列—?transform 数组—?CSS 字符串—?
      *
      * @param array $transform ['translateX' => int, 'translateY' => int]
-     * @return string CSS transform �?
+     * @return string CSS transform —?
      */
     public static function buildTransformString(array $transform): string
     {

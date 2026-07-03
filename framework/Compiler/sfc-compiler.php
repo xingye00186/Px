@@ -27,17 +27,20 @@ use Px\Compiler\AotValidator;
  *   - v-show 指令: 条件可见性
  */
 
-// ---- Load compiler modules ----
-$compilerDir = __DIR__;
+// ---- Load autoloader + compiler modules ----
 $frameworkDir = dirname(__DIR__);
+require_once $frameworkDir . '/autoload.php';
+
+// Compiler-specific files (not autoloaded since they define functions/constants at file scope)
+$compilerDir = __DIR__;
 require_once $frameworkDir . '/Rendering/VNode.php';
 require_once $frameworkDir . '/Rendering/CssValue.php';
 require_once $frameworkDir . '/Rendering/CssMappings.php';
 require_once $frameworkDir . '/Rendering/CssValueParser.php';
-require_once $compilerDir . '/template-parser.php';
-require_once $compilerDir . '/aot-validator.php';
-require_once $compilerDir . '/script-analyzer.php';
-require_once $compilerDir . '/component-registry.php';
+require_once $compilerDir . '/TemplateParser.php';
+require_once $compilerDir . '/AotValidator.php';
+require_once $compilerDir . '/ScriptAnalyzer.php';
+require_once $compilerDir . '/ComponentRegistry.php';
 
 // ---- Load expression and directive modules (v8) ----
 require_once $compilerDir . '/expression/ExpressionParserInterface.php';

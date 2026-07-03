@@ -29,9 +29,8 @@ use Px\Rendering\CssMappings;
  */
 
 $frameworkDir = dirname(__DIR__);
-require_once $frameworkDir . '/Rendering/VNode.php';
-require_once $frameworkDir . '/Rendering/CssMappings.php';
-require_once __DIR__ . '/component-registry.php';
+require_once $frameworkDir . '/autoload.php';
+require_once __DIR__ . '/ComponentRegistry.php';
 
 // ============================================================
 // Token types

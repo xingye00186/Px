@@ -22,19 +22,19 @@ use Px\Rendering\Layout\StickyPostProcessor;
 
 
 /**
- * LayoutResolver 鈥?杩愯鏃?CSS 甯冨眬寮曟搸锛圧enderNode 鐗堬級
+ * LayoutResolver — 运行时 CSS 布局引擎（RenderNode 版）
  *
- * Phase 3: 浣跨敤 FragmentBuilder 鐨勬柊娴佺▼銆?
+ * Phase 3: 使用 FragmentBuilder 的新流程。
  *
- * 娴佺▼锛?
- *   resolve(RenderNode) 鈫?鍒涘缓 LayoutConstraints 鈫?resolveNodeInternal()
- *   resolveNodeInternal() 璐熻矗閫掑綊锛?
- *     1. 璇诲彇 computedStyle
- *     2. 鍒涘缓 FragmentBuilder
- *     3. 鎸?display/position 閫夋嫨绛栫暐
- *     4. 鏂扮瓥鐣ワ細鍏?resolveChildren() 鍐嶈皟鐢ㄧ瓥鐣?
- *     5. build() 鈫?LayoutFragment 鈫?applyTo()
- *     6. 鍚庡鐞嗭紙婊氬姩瀹瑰櫒銆乻ticky 绛夛級
+ * 流程：
+ *   resolve(RenderNode) → 创建 LayoutConstraints → resolveNodeInternal()
+ *   resolveNodeInternal() 负责递归：
+ *     1. 读取 computedStyle
+ *     2. 创建 FragmentBuilder
+ *     3. 按 display/position 选择策略
+ *     4. 新策略：先 resolveChildren() 再调用策略
+ *     5. build() → LayoutFragment → applyTo()
+ *     6. 后处理（滚动容器、sticky 等）
  */
 class LayoutResolver
 {
