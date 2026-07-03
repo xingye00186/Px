@@ -60,8 +60,8 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         ?FragmentBuilder $builder = null
     ): void
     {
+        // ── 安全防护：保留 style 数组用于网格字符串属性，其余用 ComputedStyle 直访 ──
         $style = $computedStyle !== null ? $computedStyle->toExportArray() : [];
-        // ── 安全防护：将 style 数组中的 CssValue 对象转为原始值 ──
         foreach ($style as $sk => $sv) {
             if ($sv instanceof \Px\Rendering\CssLength || $sv instanceof \Px\Rendering\CssRect) {
                 $style[$sk] = $sv->toPx();
@@ -72,13 +72,11 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
-        $left = $style['left'] ?? 0;
+        $leftPx = $computedStyle?->left?->toPx() ?? 0;
+        $topPx = $computedStyle?->top?->toPx() ?? 0;
 
-        $top = $style['top'] ?? 0;
-
-        $width = $style['width'] ?? 0;
-
-        $height = $style['height'] ?? 0;
+        $width = $computedStyle?->width?->toPx() ?? 0;
+        $height = $computedStyle?->height?->toPx() ?? 0;
 
         // CSS: grid item percentage width resolves against content width
         $parentW = (int)(($node->parent !== null)
@@ -135,9 +133,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         // Parse grid template
 
-        $gridCols = $style['gridTemplateColumns'] ?? '';
+        $gridCols = $computedStyle?->gridTemplateColumns ?? '';
 
-        $gridRows = $style['gridTemplateRows'] ?? '';
+        $gridRows = $computedStyle?->gridTemplateRows ?? '';
 
         $colSpec = CssMappings::parseGridTemplateValue($gridCols);
 
@@ -145,9 +143,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         // Gap values (must be defined before 1fr calculation)
 
-        $colGap = (int)($style['gridColumnGap'] ?? $style['gap'] ?? 0);
+        $colGap = (int)($computedStyle?->columnGap?->toPx() ?? $computedStyle?->gap?->toPx() ?? 0);
 
-        $rowGap = (int)($style['gridRowGap'] ?? $style['gap'] ?? 0);
+        $rowGap = (int)($computedStyle?->rowGap?->toPx() ?? $computedStyle?->gap?->toPx() ?? 0);
 
         $cols = null;
 
@@ -186,7 +184,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $cellW = (int)max(0, ($gridContentW - $totalGaps) / $cols);
         }
 
-        $gridAutoRows = (int)($style['gridAutoRows'] ?? 0);
+        $gridAutoRows = (int)($computedStyle?->gridAutoRows ?? 0);
         $defaultRowH = $gridAutoRows > 0 ? $gridAutoRows : 60;
 
         $rows = $rowSpec['count'] ?? 5;
@@ -340,7 +338,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         // ── Parse grid-template-areas for named area placement ──
         $areaMap = [];
-        $areasRaw = $style['gridTemplateAreas'] ?? '';
+        $areasRaw = $computedStyle?->gridTemplateAreas ?? '';
         if ($areasRaw !== '') {
             $areaMap = self::parseGridTemplateAreas($areasRaw);
         }
@@ -575,7 +573,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         }
 
         // ── 容器高度 = 最后一行底部 ──
-        $hasExplicitH = array_key_exists('height', $style) && $style['height'] !== 'auto' && $style['height'] !== '';
+        $hasExplicitH = $computedStyle !== null && $computedStyle->height->toPx() > 0;
         $hasHPct = array_key_exists('heightPercent', $style);
 
         if (!$hasExplicitH && !$hasHPct) {
