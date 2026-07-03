@@ -1,14 +1,14 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-03 11:12:09 | **总耗时**: 7.6s
+**运行时间**: 2026-07-03 14:48:44 | **总耗时**: 17.5s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 235diff 🔴227 | ⏭️ | ❌ 失败 | 1.6s |
+| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 225diff 🔴223 | ⏭️ | ❌ 失败 | 1.5s |
 | case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 157diff 🔴141 | ⏭️ | ❌ 失败 | 0.1s |
 | case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 196diff 🔴189 | ⏭️ | ❌ 失败 | 0.1s |
-| case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 6issue | ⚠️ 2 | 297diff 🔴281 | ⏭️ | ❌ 失败 | 0.1s |
-| case-005-grid-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 199diff 🔴181 | ⏭️ | ❌ 失败 | 0.1s |
+| case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 6issue | ⚠️ 2 | 297diff 🔴281 | ⏭️ | ❌ 失败 | 2s |
+| case-005-grid-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 201diff 🔴181 | ⏭️ | ❌ 失败 | 2.1s |
 | case-006-typography | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 373diff 🔴358 | ⏭️ | ❌ 失败 | 0.1s |
 | case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ✅ | 368diff 🔴302 | ⏭️ | ❌ 失败 | 0.1s |
 | case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 3issue | ✅ | 119diff 🔴111 | ⏭️ | ❌ 失败 | 0.1s |
@@ -30,7 +30,7 @@
 | case-024-font-weight | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 6issue | ⚠️ 2 | 311diff 🔴252 | ⏭️ | ❌ 失败 | 0.1s |
 | case-025-english-text | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 6 | 313diff 🔴288 | ⏭️ | ❌ 失败 | 0.1s |
 | case-026-font-style | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 2issue | ✅ | 264diff 🔴226 | ⏭️ | ❌ 失败 | 0.1s |
-| case-027-scroll-diagnostic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.3s |
+| case-027-scroll-diagnostic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 6.4s |
 | case-028-scroll-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.3s |
 | case-029-scroll-flex-col | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.3s |
 | case-030-scroll-flex-row | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 14issue | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.2s |
@@ -60,18 +60,21 @@
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ✅ | 21diff 🔴17 | ⏭️ | ❌ 失败 | 0s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 3 | 25diff 🔴17 | ⏭️ | ❌ 失败 | 0s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 7.6s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 17.5s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop height diff 458->464
-> - case-001-wrapper-x geometry 0->229
-> - case-001-wrapper-x mismatch 0->6
-> - case-001-wrapper-x critical 0->227
-> - case-001-wrapper-x major 0->1
+> - prop height diff 458->460
+> - case-001-wrapper-x geometry 0->224
+> - case-001-wrapper-x mismatch 0->1
+> - case-001-wrapper-x critical 0->223
+> - case-005-grid-layout geometry 185->186
+> - case-005-grid-layout mismatch 14->15
+> - case-005-grid-layout major 0->1
 > - overflow 241->244
+> - time 7.8->17.5 (2.2x)
 >
 > ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
 
@@ -79,7 +82,7 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 94.6% | 8051/8515 |
+| height | 94.6% | 8055/8515 |
 | width | 96.7% | 8231/8515 |
 | position | 100% | 8515/8515 |
 | opacity | 100% | 8515/8515 |
@@ -88,7 +91,7 @@
 | left | 100% | 8445/8445 |
 | text-align | 100% | 8324/8324 |
 | display | 100% | 8247/8247 |
-| font-weight | 100% | 7528/7528 |
+| font-weight | 100% | 7529/7529 |
 | color | 100% | 6011/6011 |
 | font-size | 100% | 243/243 |
 | margin-bottom | 100% | 197/197 |
@@ -139,11 +142,11 @@
 
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
-| case-001-wrapper-x | 0 | **227** | **1** | 6 | 0 | 3 |
+| case-001-wrapper-x | 0 | **223** | 0 | 1 | 0 | 3 |
 | case-002-auto-height | 0 | **141** | **3** | 10 | 0 | 0 |
 | case-003-basic-block | 0 | **189** | 0 | 5 | 0 | 0 |
 | case-004-flex-layout | 0 | **281** | 0 | 11 | 0 | 2 |
-| case-005-grid-layout | 0 | **181** | 0 | 14 | 0 | 0 |
+| case-005-grid-layout | 0 | **181** | **1** | 15 | 0 | 0 |
 | case-006-typography | 0 | **358** | 0 | 7 | 0 | 0 |
 | case-007-border-styles | 0 | **302** | **26** | 31 | 0 | 0 |
 | case-008-box-shadow | 0 | **111** | **2** | 4 | 0 | 0 |
