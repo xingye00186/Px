@@ -353,8 +353,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $negativeMin = min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0);
                         $collapsed = $positiveMax + $negativeMin;
                         $child->y = $stackY - $prevMarginBottom + $collapsed;
+                        $dy = $collapsed - $prevMarginBottom - $mTop;
                     } else {
                         $child->y = $stackY + $mTop;
+                        $dy = 0;
                     }
 
                     $stackAdvanceY = $child->y;
@@ -386,8 +388,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         }
                     }
 
-                    $dy = $child->y - $oldY;
-                    // Simple descendant shift: child's children get dy offset
+                    // Descendant shift from margin collapse
                     foreach ($child->children as $gc) {
                         $gc->y += $dy;
                     }
