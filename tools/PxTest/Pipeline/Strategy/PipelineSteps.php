@@ -260,39 +260,68 @@ class LayoutDumpStep implements PipelineStepInterface
     private static function checkFontPropertiesInHtml(string $html, string $source = 'html'): array
     {
         $errors = [];
-
-        if (!preg_match_all('/style="([^"]*)"/i', $html, $matches, PREG_SET_ORDER)) {
-            return $errors;
-        }
-
-        foreach ($matches as $m) {
-            $styleContent = $m[1];
-
-            // line-height:0 是允许的例外，先移除再检查
-            $cleaned = preg_replace('/line-height\s*:\s*0\s*(;|$)/i', '', $styleContent);
-
-            foreach (self::FORBIDDEN_FONT_PROPS as $prop) {
-                if (preg_match('/' . str_replace('-', '\-', $prop) . '\s*:/i', $cleaned)) {
-                    $errors[] = "Forbidden font property '$prop' in $source inline style. "
-                        . "Remove all font properties. "
-                        . "Found: style=\"$styleContent\". "
-                        . "Use inline-block placeholder spans instead of real text.";
-                    break; // 一个 style 只报一次
-                }
+    
+        // 检查 inline style="..." 属性
+        if (preg_match_all('/style="([^"]*)"/i', $html, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $styleContent = $m[1];
+                $checkResult = self::checkSingleStyle($styleContent, $source, 'inline style');
+                if ($checkResult !== null) $errors[] = $checkResult;
             }
-
-            // line-height 检查（除 0 以外的值都禁止）
-            if (preg_match('/line-height\s*:\s*([^;]+)/i', $styleContent, $lm)) {
-                $lhValue = trim($lm[1]);
-                if ($lhValue !== '0') {
-                    $errors[] = "Forbidden font property 'line-height: $lhValue' in $source inline style. "
-                        . "Only line-height:0 is allowed (to eliminate browser default line spacing). "
-                        . "Found: style=\"$styleContent\".";
+        }
+    
+        // 检查 <style>...</style> 块中的 CSS 规则
+        if (preg_match_all('/<style[^>]*>([\s\S]*?)<\/style>/i', $html, $styleBlocks, PREG_SET_ORDER)) {
+            foreach ($styleBlocks as $sb) {
+                $cssContent = $sb[1];
+                // 提取每条 CSS 规则: selector { ... }
+                if (preg_match_all('/([^{]+)\{([^}]*)\}/', $cssContent, $cssRules, PREG_SET_ORDER)) {
+                    foreach ($rules[0] as $rule) {
+                        // Skip mandatory html,body baseline
+                        if (preg_match('/^\s*html\s*,\s*body/i', $rule)) continue;
+                        $checkResult = self::checkSingleStyle($rule, $source, '<style> block');
+                        if ($checkResult !== null) $errors[] = $checkResult;
+                    }
                 }
             }
         }
-
+    
         return $errors;
+    }
+    
+    /**
+     * 检查单个样式内容是否含禁止的字体属性。
+     *
+     * @param string $styleContent 样式内容（inline style 或 CSS 规则体）
+     * @param string $source 'html' 或 'vue'
+     * @param string $context 上下文描述
+     * @return string|null 错误信息或 null（通过）
+     */
+    private static function checkSingleStyle(string $styleContent, string $source, string $context): ?string
+    {
+        // line-height:0 是允许的例外，先移除再检查
+        $cleaned = preg_replace('/line-height\s*:\s*0\s*(;|$)/i', '', $styleContent);
+    
+        foreach (self::FORBIDDEN_FONT_PROPS as $prop) {
+            if (preg_match('/' . str_replace('-', '\-', $prop) . '\s*:/i', $cleaned)) {
+                return "Forbidden font property '$prop' in $source $context. "
+                    . "Remove all font properties. "
+                    . "Use inline-block placeholder spans instead of real text. "
+                    . "Found: " . substr($styleContent, 0, 120);
+            }
+        }
+    
+        // line-height 检查（除 0 以外的值都禁止）
+        if (preg_match('/line-height\s*:\s*([^;}]+)/i', $styleContent, $lm)) {
+            $lhValue = trim($lm[1]);
+            if ($lhValue !== '0') {
+                return "Forbidden font property 'line-height: $lhValue' in $source $context. "
+                    . "Only line-height:0 is allowed (to eliminate browser default line spacing). "
+                    . "Found: " . substr($styleContent, 0, 120);
+            }
+        }
+    
+        return null;
     }
 
     /**
