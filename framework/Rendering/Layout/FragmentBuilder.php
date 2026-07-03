@@ -5,6 +5,7 @@ namespace Px\Rendering\Layout;
 use native_types;
 
 use Px\Rendering\ComputedStyle;
+use Px\Rendering\RenderNode;
 
 /**
  * FragmentBuilder — 布局计算过程中的可变构建器。
@@ -77,6 +78,35 @@ class FragmentBuilder
     public function replaceChildren(array $children): self
     {
         $this->children = $children;
+        return $this;
+    }
+
+    /**
+     * 同步子节点坐标：将 RenderNode.children 的当前位置写回 Fragment，
+     * 解决 auto-stack 被 applyTo(stale) 覆盖的架构问题。
+     * 单阶段策略在算法运行后、build() 前调用此方法。
+     */
+    public function syncChildrenFromNode(RenderNode $node): self
+    {
+        $original = $this->children;
+        $synced = [];
+        foreach ($node->children as $i => $ch) {
+            $orig = $original[$i] ?? null;
+            $synced[] = new LayoutFragment(
+                x: $ch->x,
+                y: $ch->y,
+                w: $ch->w,
+                h: $ch->h,
+                visualW: $ch->visualW,
+                visualH: $ch->visualH,
+                layer: $orig?->layer ?? 0,
+                contentWidth: $orig?->contentWidth ?? 0,
+                contentHeight: $orig?->contentHeight ?? 0,
+                style: $ch->computedStyle,
+                children: $orig?->children ?? [],
+            );
+        }
+        $this->children = $synced;
         return $this;
     }
 
