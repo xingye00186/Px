@@ -119,7 +119,7 @@ class LayoutResolver
         $this->stickyStack = [];
         $this->stickyStackX = [];
         
-        $this->invalidatePositioningAncestors($root);
+
         
         $constraints = new LayoutConstraints(
             $root->w,
@@ -223,6 +223,19 @@ class LayoutResolver
             // 閫掑綊瑙ｆ瀽瀛愯妭鐐癸紙瀛愯妭鐐瑰彲鑳借剰锛?
             $this->resolveCurrentChildren($node, $constraints, $builder);
 
+            // Absolute positioning for clean-path children (preserve first-pass positions)
+            foreach ($node->children as $child) {
+                $cp = $child->computedStyle?->position?->value ?? 'static';
+                if ($cp === 'absolute' || $cp === 'fixed') {
+                    $child->positioningAncestorValid = false;
+                    $this->absolutePositioning->resolveAbsolutePositioning(
+                        $child, $constraints, $child->computedStyle, new FragmentBuilder()
+                    );
+                }
+            }
+            // Rebuild fragment to prevent stale applyTo overwrite
+            $this->rebuildChildFragments($builder, $node);
+
             $this->resolveDepth--;
             return $builder->build($style);
         }
@@ -273,6 +286,8 @@ class LayoutResolver
         }
         
         // 鈹€鈹€ 鎸?display/position 绛栫暐璋冨害 鈹€鈹€
+        $oldNodeX = $node->x;
+        $oldNodeY = $node->y;
         switch ($display) {
             case 'none':
                 // CSS 2.2 搂9.2.4: display:none 鈫?element generates no box
@@ -361,6 +376,15 @@ class LayoutResolver
         }
 
         // 鈹€鈹€ 鏋勫缓 Fragment 骞跺師瀛愬洖鍐?RenderNode 鈹€鈹€
+        // Shift children by parent position delta (absolute coordinate system)
+        $parentDx = $node->x - $oldNodeX;
+        $parentDy = $node->y - $oldNodeY;
+        if ($parentDx !== 0 || $parentDy !== 0) {
+            foreach ($node->children as $ch) {
+                $ch->x += $parentDx;
+                $ch->y += $parentDy;
+            }
+        }
         $fragment = $builder->build($style);
         $fragment->applyTo($node);
 
@@ -530,8 +554,8 @@ $this->stickyProcessor->process($node, $style);
             $childConstraints = new LayoutConstraints(
                 (int)($constraints->contentWidth ?? 0),
                 (int)($constraints->contentHeight ?? 0),
-                (int)($constraints->parentContentX ?? 0) + (int)($childOffX ?? 0),
-                (int)($constraints->parentContentY ?? 0) + (int)($childOffY ?? 0),
+                $node->x + (int)($childOffX ?? 0),
+                $node->y + (int)($childOffY ?? 0),
                 (int)($constraints->contentWidth ?? 0),
                 (int)($constraints->contentHeight ?? 0),
             );
@@ -539,5 +563,45 @@ $this->stickyProcessor->process($node, $style);
             $builder->addChild($childFragment);
         }
     }
-}
 
+
+    /**
+     * Rebuild builder child fragments from current RenderNode positions.
+     * Call after absolute positioning / auto-stack to prevent stale applyTo overwrite.
+     */
+    private function rebuildChildFragments(FragmentBuilder $builder, RenderNode $node): void
+    {
+        $synced = [];
+        foreach ($node->children as $i => $ch) {
+            $synced[] = new LayoutFragment(
+                x: $ch->x, y: $ch->y,
+                w: $ch->w, h: $ch->h,
+                visualW: $ch->visualW, visualH: $ch->visualH,
+                layer: $ch->layer,
+                contentWidth: $ch->contentWidth,
+                contentHeight: $ch->contentHeight,
+                style: $ch->computedStyle,
+                children: $this->rebuildDescendantFrags($ch),
+            );
+        }
+        $builder->replaceChildren($synced);
+    }
+
+    private function rebuildDescendantFrags(RenderNode $node): array
+    {
+        $result = [];
+        foreach ($node->children as $ch) {
+            $result[] = new LayoutFragment(
+                x: $ch->x, y: $ch->y,
+                w: $ch->w, h: $ch->h,
+                visualW: $ch->visualW, visualH: $ch->visualH,
+                layer: $ch->layer,
+                contentWidth: $ch->contentWidth,
+                contentHeight: $ch->contentHeight,
+                style: $ch->computedStyle,
+                children: $this->rebuildDescendantFrags($ch),
+            );
+        }
+        return $result;
+    }
+}

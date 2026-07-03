@@ -167,7 +167,11 @@ class AbsolutePositioning implements AbsoluteStrategy
             ->setPosition($calcX, $calcY)
             ->setSize($width > 0 ? $width : 0, $height > 0 ? $height : 0, $style)
             ->setLayer($constraints->containerWidth > 0 ? 1 : 0);
-
+        
+        // 将计算位置持久化到 RenderNode，供后续 builder->setPosition 读取
+        $node->x = $calcX;
+        $node->y = $calcY;
+        
         // Apply margin:auto centering for absolute positioned elements
         // Must be after position/size are determined but before builder is finalized
         if ($style !== null && $width > 0) {
