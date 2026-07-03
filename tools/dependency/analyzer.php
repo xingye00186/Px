@@ -41,90 +41,47 @@ class ClassToPathResolver
     private string $appDir;
     private string $frameworkDir;
     private string $stubDir;
-    private array $nsPrefixes = [];
-
-    /** @var array<string, string> 多类文件覆盖：类名 → 实际文件路径 */
-    private array $classOverrides = [];
 
     public function __construct(string $appDir, string $frameworkDir, string $stubDir)
     {
         $this->appDir       = rtrim(str_replace('\\', '/', $appDir), '/');
         $this->frameworkDir = rtrim(str_replace('\\', '/', $frameworkDir), '/');
         $this->stubDir      = rtrim(str_replace('\\', '/', $stubDir), '/');
-
-        // 命名空间前缀 → 框架子目录映射
-        $this->nsPrefixes = [
-            'Px\\Core\\'             => $this->frameworkDir . '/Core',
-            'Px\\Rendering\\'        => $this->frameworkDir . '/Rendering',
-            'Px\\Platform\\'         => $this->frameworkDir . '/Platform',
-            'Px\\Animation\\'        => $this->frameworkDir . '/Animation',
-            'Px\\Styling\\Theme\\'   => $this->frameworkDir . '/Styling/Theme',
-            'Px\\Styling\\Provider\\' => $this->frameworkDir . '/Styling/Provider',
-            'Px\\Styling\\Adapter\\' => $this->frameworkDir . '/Styling/Adapter',
-            'Px\\Styling\\Resolver\\' => $this->frameworkDir . '/Styling/Resolver',
-            'Px\\Compiler\\Expression\\' => $this->frameworkDir . '/compiler/expression',
-            'Px\\DevTools\\'         => $this->frameworkDir . '/DevTools',
-            'Px\\Interfaces\\'       => $this->frameworkDir . '/interfaces',
-        ];
-
-        // 多类文件：PlatformEvent.php 定义了 6 个类，类名 ≠ 文件名
-        $pfx = $this->frameworkDir . '/Platform/PlatformEvent.php';
-        $this->classOverrides = [
-            'Px\\Platform\\MouseEvent'    => $pfx,
-            'Px\\Platform\\KeyboardEvent' => $pfx,
-            'Px\\Platform\\WindowEvent'   => $pfx,
-            'Px\\Platform\\TimerEvent'    => $pfx,
-            'Px\\Platform\\IoEvent'       => $pfx,
-        ];
     }
 
     /**
      * 将完全限定类名(FQCN)解析为文件绝对路径。
+     * 使用与 framework/autoload.php 一致的 PSR-4 规则：
+     *   Px\Xxx\Yyy\Zzz → frameworkDir/Xxx/Yyy/Zzz.php
+     *   Px\Foo          → frameworkDir/Foo.php
      * 返回 null 表示 PHP 内置类或外部库类，应跳过。
      */
     public function classToPath(string $fqn): ?string
     {
-        // 0. 多类文件覆盖（同一 PHP 文件中定义多个类时）
-        if (isset($this->classOverrides[$fqn])) {
-            return $this->normalize($this->classOverrides[$fqn]);
-        }
-
-        // 1. 已知命名空间前缀映射
-        foreach ($this->nsPrefixes as $prefix => $baseDir) {
-            if (str_starts_with($fqn, $prefix)) {
-                $short = substr($fqn, strlen($prefix));
-                $path = $baseDir . '/' . str_replace('\\', '/', $short) . '.php';
-                return $this->normalize($path);
-            }
-        }
-
-        // 2. Px\ 单级命名空间（ReactiveComponent, BaseComponent 等）
-        if (str_starts_with($fqn, 'Px\\') && substr_count($fqn, '\\') === 1) {
-            $short = substr($fqn, 3);
-            $path = $this->normalize($this->frameworkDir . '/' . $short . '.php');
+        // PSR-4: Px\* → frameworkDir/
+        if (str_starts_with($fqn, 'Px\\')) {
+            $rel = substr($fqn, 3);
+            $path = $this->normalize($this->frameworkDir . '/' . str_replace('\\', '/', $rel) . '.php');
             if ($path !== null) return $path;
-            // 文件不存在时继续到回退 #6（如 MockComp.php 中定义了 Px\MockReactiveComp）
         }
 
-        // 3. 无命名空间的组件类（gen/*.php）
+        // 无命名空间的组件类（gen/*.php）
         if (!str_contains($fqn, '\\') && str_ends_with($fqn, 'Component')) {
             return $this->normalize($this->appDir . '/gen/' . $fqn . '.php');
         }
 
-        // 4. WinMsg（stub 中定义的类）
+        // WinMsg（stub 中定义的类）
         if ($fqn === 'WinMsg') {
             return $this->normalize($this->stubDir . '/vue_calc.stub.php');
         }
 
-        // 5. 顶级命名空间的框架类（PerfCounter 等）— 映射到 framework/Core/
+        // 无命名空间的框架类 — 映射到 framework/Core/
         if (!str_contains($fqn, '\\')) {
             $candidate = $this->normalize($this->frameworkDir . '/Core/' . $fqn . '.php');
             if ($candidate !== null) return $candidate;
         }
 
-        // 6. 回退：扫描应用目录（含 gen/）中所有 PHP 文件，查找类定义
-        //     支持多类文件（如 MockComp.php 同时定义 MockBaseComp 和 MockReactiveComp）
-        //     同时支持 namespace 声明：FQN='Px\MockReactiveComp' 匹配 'class MockReactiveComp'
+        // 回退：扫描应用目录（含 gen/）中所有 PHP 文件，查找类定义
         $shortName = substr($fqn, strrpos($fqn, '\\') !== false ? strrpos($fqn, '\\') + 1 : 0);
         foreach ([$this->appDir, $this->appDir . '/gen'] as $scanDir) {
             if (!is_dir($scanDir)) continue;
@@ -132,7 +89,6 @@ class ClassToPathResolver
                 $appPhpFile = str_replace('\\', '/', $appPhpFile);
                 $content = @file_get_contents($appPhpFile);
                 if ($content === false) continue;
-                // 先尝试匹配 FQN（无 namespace 的类），再尝试匹配短类名
                 if (preg_match('/\\bclass\\s+' . preg_quote($fqn, '/') . '\\b/s', $content) ||
                     preg_match('/\\bclass\\s+' . preg_quote($shortName, '/') . '\\b/s', $content)) {
                     return $appPhpFile;
