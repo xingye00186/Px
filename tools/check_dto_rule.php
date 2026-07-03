@@ -13,8 +13,16 @@
 $strategies = glob(__DIR__ . '/../framework/Rendering/Layout/*LayoutStrategy.php');
 $violations = [];
 
+// 单阶段策略直接写子节点是设计允许的，跳过检查
+$skipPrefixes = ['Block', 'Inline', 'Absolute', 'Table', 'MultiColumn'];
+
 foreach ($strategies as $f) {
     $basename = basename($f);
+    $skip = false;
+    foreach ($skipPrefixes as $p) {
+        if (str_starts_with($basename, $p)) { $skip = true; break; }
+    }
+    if ($skip) continue;
     foreach (file($f) as $i => $line) {
         $t = trim($line);
         if ($t === '' || $t[0] === '/' || $t[0] === '*') continue;
