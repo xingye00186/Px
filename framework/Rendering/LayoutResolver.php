@@ -415,81 +415,10 @@ class LayoutResolver
         }
 
         // 鈹€鈹€ position:sticky 澶勭悊 鈹€鈹€
-        if ($position === 'sticky') {
-            $stickyTop = (int)($style?->top?->toPx() ?? 0);
-
-            // Find nearest scroll container that contains this node
-            for ($i = count($this->scrollContainers) - 1; $i >= 0; $i--) {
-                $sc = $this->scrollContainers[$i];
-
-                // Check if node is within this scroll container's bounds
-                if ($node->x >= $sc->x && $node->x < $sc->x + $sc->w &&
-                    $node->y >= $sc->y && $node->y < $sc->y + $sc->h) {
-
-                    $scKey = $sc->groupId . ':' . $i;
-
-                    // 鈹€鈹€ Vertical sticky (top) with stacking 鈹€鈹€
-                    $visualY = $node->y - $sc->scrollTop;
-
-                    if (!isset($this->stickyStack[$scKey])) {
-                        $this->stickyStack[$scKey] = [];
-                    }
-
-                    $baseStuckY = $sc->y + $stickyTop;
-                    $adjustedStuckY = $baseStuckY;
-                    foreach ($this->stickyStack[$scKey] as $prev) {
-                        $adjustedStuckY = (int)max($adjustedStuckY, $prev['stuckY'] + $prev['height']);
-                    }
-
-                    if ($visualY < $adjustedStuckY) {
-                        $dy = $adjustedStuckY - $visualY;
-                        $node->y = $adjustedStuckY + $sc->scrollTop;
-
-                        foreach ($node->children as $child) {
-                            $child->y += $dy;
-                        }
-
-                        $this->stickyStack[$scKey][] = [
-                            'stuckY' => $adjustedStuckY,
-                            'height' => $node->h,
-                        ];
-                    }
-
-                    // 鈹€鈹€ Horizontal sticky (left) with stacking 鈹€鈹€
-                    $stickyLeft = (int)($style?->left?->toPx() ?? 0);
-                    if ($stickyLeft !== 0) {
-                        $visualX = $node->x - $sc->scrollLeft;
-
-                        if (!isset($this->stickyStackX[$scKey])) {
-                            $this->stickyStackX[$scKey] = [];
-                        }
-
-                        $baseStuckX = $sc->x + $stickyLeft;
-                        $adjustedStuckX = $baseStuckX;
-                        foreach ($this->stickyStackX[$scKey] as $prev) {
-                            $adjustedStuckX = (int)max($adjustedStuckX, $prev['stuckX'] + $prev['width']);
-                        }
-
-                        if ($visualX < $adjustedStuckX) {
-                            $dx = $adjustedStuckX - $visualX;
-                            $node->x = $adjustedStuckX + $sc->scrollLeft;
-                            foreach ($node->children as $child) {
-                                $child->x += $dx;
-                            }
-
-                            $this->stickyStackX[$scKey][] = [
-                                'stuckX' => $adjustedStuckX,
-                                'width' => $node->w,
-                            ];
-                        }
-                    }
-
-                    break;
-                }
-            }
+        if ($position === 'sticky' and $style !== null) {
+$this->stickyProcessor->process($node, $style);
         }
 
-        // 鈹€鈹€ 娓呴櫎鑴忔爣璁?鈹€鈹€
         $node->layoutDirty = false;
 
         // 鈹€鈹€ 缁熶竴 scrollTop/scrollLeft clamp 鈹€鈹€
