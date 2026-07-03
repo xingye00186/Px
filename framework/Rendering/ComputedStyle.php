@@ -126,6 +126,7 @@ class ComputedStyle
     public readonly string $gridColumn;
     public readonly string $gridRow;
     public readonly string $gridTemplateAreas;
+    public readonly string $gridAutoFlow;
     public readonly string $objectFit;
     public readonly string $objectPosition;
     public readonly string $appearance;
@@ -267,6 +268,7 @@ class ComputedStyle
             'listStyleType' => '', 'listStylePosition' => '',
             'gridTemplateColumns' => '', 'gridTemplateRows' => '', 'gridAutoRows' => '',
             'gridColumn' => '', 'gridRow' => '', 'gridTemplateAreas' => '',
+            'gridAutoFlow' => 'row',
             'objectFit' => '', 'objectPosition' => '', 'appearance' => '',
             'borderSpacing' => '', 'tableLayout' => '', 'captionSide' => '',
             'fontStretch' => '', 'fontVariant' => '',
@@ -434,6 +436,7 @@ class ComputedStyle
                         'gridColumn' => $this->gridColumn = (string)$rv,
                         'gridRow' => $this->gridRow = (string)$rv,
                         'gridTemplateAreas' => $this->gridTemplateAreas = (string)$rv,
+                        'gridAutoFlow' => $this->gridAutoFlow = (string)$rv,
                         'objectFit' => $this->objectFit = (string)$rv,
                         'objectPosition' => $this->objectPosition = (string)$rv,
                         'appearance' => $this->appearance = (string)$rv,

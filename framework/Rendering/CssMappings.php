@@ -362,6 +362,7 @@ class CssMappings
         'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => ''],
         'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => ''],
         'grid-area'            => ['key' => 'gridArea',       'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',   'default' => ''],
+        'grid-auto-flow'       => ['key' => 'gridAutoFlow',    'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'row'],
         'grid-auto-rows'       => ['key' => 'gridAutoRows',    'parser' => 'Px\\Rendering\\CssValueParser::parsePixels',  'default' => 0],
         'grid-template-areas'  => ['key' => 'gridTemplateAreas','parser' => 'Px\\Rendering\\CssValueParser::parseIdent',   'default' => ''],
         'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'fill'],
