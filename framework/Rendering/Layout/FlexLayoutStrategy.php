@@ -45,10 +45,22 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
     {
         $parentX = $constraints->parentContentX;
         $parentY = $constraints->parentContentY;
-        $this->resolveFlexLayout($node, $parentX, $parentY, $style, $builder);
 
-        // 浣跨敤 FlexFragmentMapper 灏?FlexItem 鍧愭爣鍚屾鍒?Fragment锛屼繚鐣欏瓩瀛愰摼
-        $flexItems = $this->buildFlexItemsFromChildren($node);
+        // Pre-build FlexItem DTOs so algorithm can write to them
+        $flexItems = [];
+        foreach ($node->children as $child) {
+            $fi = new FlexItem($child);
+            $fi->x = $child->x;
+            $fi->y = $child->y;
+            $fi->w = $child->w;
+            $fi->h = $child->h;
+            $fi->visualW = $child->visualW;
+            $fi->visualH = $child->visualH;
+            $flexItems[] = $fi;
+        }
+        $this->resolveFlexLayout($node, $parentX, $parentY, $style, $builder, $flexItems);
+
+        // DTO path: map FlexItems to Fragments via FlexFragmentMapper
         $originalChildren = $builder->getChildren();
         $mappedFragments = FlexFragmentMapper::toFragments($flexItems, $originalChildren);
         $builder->replaceChildren($mappedFragments);
@@ -58,21 +70,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
      * flex 绠楁硶鎵ц鍚庯紝浠?$node->children 璇诲彇鍧愭爣鏋勫缓 FlexItem[]銆?
      * 鍚庣画鍙皢姝ゆ楠ゅ唴绉昏嚦 FlexItemCollector 瀹炵幇瀹屾暣 DTO 璺緞銆?
      */
-    private function buildFlexItemsFromChildren(RenderNode $node): array
-    {
-        $items = [];
-        foreach ($node->children as $child) {
-            $item = new FlexItem($child);
-            $item->x = $child->x;
-            $item->y = $child->y;
-            $item->w = $child->w;
-            $item->h = $child->h;
-            $item->visualW = $child->visualW;
-            $item->visualH = $child->visualH;
-            $items[] = $item;
-        }
-        return $items;
-    }
+    
 
     private LayoutResolver $resolver;
     private ?FlexItemCollector $collector = null;
@@ -94,7 +92,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         int           $parentX,
         int           $parentY,
         ?ComputedStyle $computedStyle,
-        ?FragmentBuilder $builder = null
+        ?FragmentBuilder $builder = null,
+        array &$flexItems = []
     ): void
     {
         // Local style array from ComputedStyle for algorithm body
@@ -563,6 +562,16 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
 
 
+        // ── Sync FlexItem DTOs from RenderNode children ──
+        foreach ($node->children as $idx => $ch) {
+            $flexItems[$idx]->x = $ch->x;
+            $flexItems[$idx]->y = $ch->y;
+            $flexItems[$idx]->w = $ch->w;
+            $flexItems[$idx]->h = $ch->h;
+            $flexItems[$idx]->visualW = $ch->visualW;
+            $flexItems[$idx]->visualH = $ch->visualH;
+        }
+
         // Set container's own visualW/visualH
         $node->visualW = $computedStyle?->visualWidth($node->w) ?? $node->w;
         $node->visualH = $computedStyle?->visualHeight($node->h) ?? $node->h;
@@ -581,117 +590,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
     /**
      * Apply flex-basis to children in a flex line.
      */
-    private function applyFlexBasis(array $children, array $flexItemData, bool $isRow, array $parentStyle = [], int $containerContentW = 0): void
-    {
-        foreach ($children as $idx => $ch) {
-            $data = $flexItemData[$idx];
-            $basis = $data['basis'];
-
-            // 鈹€鈹€ Percentage flex-basis: 妫€鏌ュ師濮?CSS 鍊兼槸鍚﹀惈 % 鈹€鈹€
-            $rawBasis = $ch->computedStyle?->flexBasis ?? $data['basis'] ?? '';
-            $isPercent = is_string($rawBasis) && str_ends_with($rawBasis, '%');
-
-            // 鈹€鈹€ Numeric basis (flex-basis: <length>|<percentage>) 鈹€鈹€
-            if (is_int($basis) && $basis >= 0) {
-                $resolvedBasis = $basis;
-                if ($isPercent && $containerContentW > 0) {
-                    // 瑙ｆ瀽鐧惧垎姣旓細flex-basis:30% 鈫?30% * containerContentW
-                    $pct = (int)$rawBasis;
-                    $resolvedBasis = (int)($containerContentW * $pct / 100);
-                }
-                if ($resolvedBasis > 0) {
-                    if ($isRow) {
-                        $ch->w = (int)max(0, $resolvedBasis);
-                        $ch->visualW = $ch->computedStyle?->visualWidth($ch->w) ?? $ch->w;
-                    } else {
-                        $ch->h = (int)max(0, $resolvedBasis);
-                        $ch->visualH = $ch->computedStyle?->visualHeight($ch->h) ?? $ch->h;
-                    }
-                }
-            // 鈹€鈹€ flex-basis: content 鈥攊gnore width/height, always use content size 鈹€鈹€
-            } elseif ($basis === 'content') {
-                $chText = $ch->content ?? '';
-                if (is_string($chText) && strlen($chText) > 0) {
-                    $fs = $ch->computedStyle?->fontSize ?? 16;
-                    $bd = (($ch->computedStyle?->bold) ?? false);
-                    $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($chText, $fs, $bd) : 0);
-                    if ($measured > 0) {
-                        if ($isRow) {
-                            $ch->w = $measured;
-                        } else {
-                            $lineH = $ch->computedStyle?->lineHeight ?? 0;
-                            if ($ch->h === 0 || $ch->h < $lineH) {
-                                $ch->h = $lineH;
-                            }
-                        }
-                    }
-                }
-            // 鈹€鈹€ flex-basis: auto (default) 鈥攗se width/height if set, else content 鈹€鈹€
-            } else {
-                $flexBasis = $ch->computedStyle?->getRaw('flexBasis') ?? 'auto';
-
-                if ($flexBasis !== 'auto') {
-                    $basisVal = (int)$flexBasis;
-
-                    if ($basisVal > 0) {
-                        if ($isRow) {
-                            $ch->w = (int)max(0, $basisVal);
-                                                        $ch->visualW = $ch->computedStyle?->visualWidth($ch->w) ?? $ch->w;
-                        } else {
-                            $ch->h = (int)max(0, $basisVal);
-                            $ch->visualH = $ch->computedStyle?->visualHeight($ch->h) ?? $ch->h;
-                        }
-                    }
-                }
-
-                // -- Text measurement for flex-basis:auto (basis=-1 or 'auto') --
-
-                $chText = $ch->content ?? '';
-
-                if ((is_string($chText) && strlen($chText) > 0)) {
-                    $fs = $ch->computedStyle?->fontSize ?? 16;
-                    $bd = ($ch->computedStyle?->bold) ?? false;
-
-                    $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($chText, $fs, $bd) : 0);
-
-                    if ($measured > 0) {
-                        if ($isRow) {
-                            // Row: text width = measured content width
-                            // Content-sized child (no explicit width, no flex-grow): always use text-measured
-                            $hasFlexW = $ch->computedStyle?->getRaw('width') !== null;
-                            if (!$hasFlexW && !$data['isFlexGrow']) {
-                                $ch->w = $measured;
-                            } elseif ($ch->w === 0 || $ch->w < $measured) {
-                                $ch->w = $measured;
-                            }
-                        } else {
-                            // Column: text height = line-height (based on font size)
-                            // CSS 2.2 搂10.8.1: 锟?flex 瀹瑰櫒缁ф壙 line-height
-                            $lineH = $ch->computedStyle?->lineHeight ?? 0;
-
-                            if ($ch->h === 0 || $ch->h < $lineH) {
-                                $ch->h = $lineH;
-                            }
-                        }
-                    }
-                } else {
-                    // 鈹€鈹€ Container element (no direct text): measure descendant text width 鈹€鈹€
-                    // This handles cases like header flex items where a <div> contains
-                    // <h1> and <p> children with text. Without this, container flex items
-                    // keep w=parentWidth (from block default stretch) and incorrectly wrap.
-                    $descW = $this->getMaxDescendantTextWidth($ch);
-                    if ($descW > 0) {
-                        $hasFlexW = $ch->computedStyle?->getRaw('width') !== null;
-                        if (!$hasFlexW && !$data['isFlexGrow']) {
-                            $ch->w = $descW;
-                        } elseif ($ch->w === 0 || $ch->w < $descW) {
-                            $ch->w = $descW;
-                        }
-                    }
-                }
-            }
-        }
-    }
+    
 
 
     /**
