@@ -346,6 +346,10 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         // ── Pass 1: 定位 + 内容高度探测 ──
         // 仅设置水平方向 stretch（宽度），不垂直 stretch——让 grid item
         // 保持自然高度，从而可以探测每行实际需要的行高。
+        $gridItems = [];
+        foreach ($children as $i2 => $c2) {
+            $gridItems[$i2] = new GridItem($c2);
+        }
         $rowContentHeights = [];
         $itemRowMap = [];
 
@@ -435,43 +439,47 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             }
             // Grid items: normal = stretch
             if ($justifySelf === 'normal' || $justifySelf === 'stretch' || $justifySelf === 'auto') {
-                $ch->x = $cellX;
-                $ch->w = $cellWFinal;
+                $gridItems[$idx]->x = $cellX;
+                $gridItems[$idx]->w = $cellWFinal;
             } elseif ($justifySelf === 'center') {
                 if ($explicitW > 0 && $explicitW < $cellWFinal) {
-                    $ch->x = $cellX + (int)(($cellWFinal - $explicitW) / 2);
-                    $ch->w = $explicitW;
+                    $gridItems[$idx]->x = $cellX + (int)(($cellWFinal - $explicitW) / 2);
+                    $gridItems[$idx]->w = $explicitW;
                 } else {
-                    $ch->x = $cellX;
-                    $ch->w = $cellWFinal;
+                    $gridItems[$idx]->x = $cellX;
+                    $gridItems[$idx]->w = $cellWFinal;
                 }
             } elseif ($justifySelf === 'end' || $justifySelf === 'flex-end') {
                 if ($explicitW > 0 && $explicitW < $cellWFinal) {
-                    $ch->x = $cellX + $cellWFinal - $explicitW;
-                    $ch->w = $explicitW;
+                    $gridItems[$idx]->x = $cellX + $cellWFinal - $explicitW;
+                    $gridItems[$idx]->w = $explicitW;
                 } else {
-                    $ch->x = $cellX;
-                    $ch->w = $cellWFinal;
+                    $gridItems[$idx]->x = $cellX;
+                    $gridItems[$idx]->w = $cellWFinal;
                 }
             } else {
                 // start / flex-start / other: keep explicit width
                 if ($explicitW > 0 && $explicitW < $cellWFinal) {
-                    $ch->w = $explicitW;
+                    $gridItems[$idx]->w = $explicitW;
                 }
-                $ch->x = $cellX;
+                $gridItems[$idx]->x = $cellX;
             }
             // align-self: 仅定位置 y，不强制高度
-            $ch->y = $cellY;
+            $gridItems[$idx]->y = $cellY;
             // NOTE: 不设置 $ch->h，保留 resolveNode 后的自然高度
 
             // min/max 约束（仅宽度）
-            $ch->w = (int)max(0, $ch->w);
+            $gridItems[$idx]->w = (int)max(0, $ch->w);
             { $__mnW = $ch->computedStyle?->minWidth?->resolveInContext($parentW) ?? 0; $__mxW = $ch->computedStyle?->maxWidth?->resolveInContext($parentW) ?? 0;
                 if ($__mnW > 0 && $__mxW > 0 && $__mnW > $__mxW) $__mxW = 0;
-                if ($__mnW > 0 && $ch->w < $__mnW) $ch->w = $__mnW;
-                if ($__mxW > 0 && $ch->w > $__mxW) $ch->w = $__mxW;
+                if ($__mnW > 0 && $ch->w < $__mnW) $gridItems[$idx]->w = $__mnW;
+                if ($__mxW > 0 && $ch->w > $__mxW) $gridItems[$idx]->w = $__mxW;
             }
             $ch->visualW = $ch->computedStyle?->visualWidth($ch->w) ?? $ch->w;
+            // ── sync GridItem x/w/y back to RenderNode ──
+            $ch->x = $gridItems[$idx]->x;
+            $ch->w = $gridItems[$idx]->w;
+            $ch->y = $gridItems[$idx]->y;
             // 高度不应用 min/max——等调整后得到自然内容高度
 
             // 调整子节点（重解析 flex/grid 的百分比尺寸）
