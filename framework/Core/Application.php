@@ -735,7 +735,7 @@ class Application
      * 导出布局快照到 JSON 文件。
      * 序列化 RenderNode 树的位置/尺寸/样式信息，用于分治测试和对比验证。
      */
-    public function dumpLayoutToFile(string $path): void
+    public function dumpLayoutToFile(string $path, bool $caseContentOnly = false): void
     {
         $root = $this->renderTreeManager->getRootRenderNode();
         if ($root === null) {
@@ -743,8 +743,46 @@ class Application
             return;
         }
         $serializer = new RenderNodeSerializer();
-        $data = $serializer->toArray($root);
+        $exportNode = $root;
+        if ($caseContentOnly) {
+            // 导出仅为测试内容子树：找到 data-px-anchor='tl' 的父节点
+            $tlParent = $this->findTestContentParent($root);
+            if ($tlParent !== null) {
+                $exportNode = $tlParent;
+            }
+        }
+        $data = $serializer->toArray($exportNode);
         file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * 在 RenderNode 树中查找测试内容根节点（即 data-px-anchor=tl 的父节点）。
+     */
+    private function findTestContentParent(RenderNode $node): ?RenderNode
+    {
+        // 递归搜索所有后代，找到包含 data-px-anchor='tl' 的任意子节点
+        // 然后返回该子节点的父节点
+        $tlNode = $this->findNodeByDataset($node, 'pxAnchor', 'tl');
+        if ($tlNode !== null && $tlNode->parent !== null) {
+            return $tlNode->parent;
+        }
+        return null;
+    }
+
+    /**
+     * 递归搜索 RenderNode 树，查找 dataset 中指定键值对的节点。
+     */
+    private function findNodeByDataset(RenderNode $node, string $key, string $value): ?RenderNode
+    {
+        $ds = $node->dataset ?? [];
+        if (isset($ds[$key]) && (string)$ds[$key] === $value) {
+            return $node;
+        }
+        foreach ($node->children as $child) {
+            $result = $this->findNodeByDataset($child, $key, $value);
+            if ($result !== null) return $result;
+        }
+        return null;
     }
 
     /**

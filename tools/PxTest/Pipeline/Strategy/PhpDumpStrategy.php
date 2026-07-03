@@ -200,7 +200,7 @@ class PhpDumpStrategy implements DumpStrategy
         // Step 10: 输出 layout JSON
         @mkdir($refDir, 0777, true);
         $outFile = $refDir . '/engine_layout.json';
-        $app->dumpLayoutToFile($outFile);
+        $app->dumpLayoutToFile($outFile, true);
 
         if (!file_exists($outFile)) {
             echo "  [PhpDumpStrategy] FAILED: $outFile not generated\n";
