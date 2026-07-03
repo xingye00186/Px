@@ -414,9 +414,23 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                                 if ($isRow) {
                                     $ch->h = $stretchedCross;
                                     $ch->visualH = $ch->computedStyle?->visualHeight($ch->h) ?? $ch->h;
+                                    // Sync stretch back to FlexItem so FlexFragmentMapper gets correct values
+                                    for ($_si = 0; $_si < count($node->children); $_si++) {
+                                        if ($node->children[$_si] === $ch) {
+                                            $flexItems[$_si]->h = $ch->h;
+                                            break;
+                                        }
+                                    }
                                 } else {
                                     $ch->w = $stretchedCross;
                                     $ch->visualW = $ch->computedStyle?->visualWidth($ch->w) ?? $ch->w;
+                                    // Sync stretch back to FlexItem so FlexFragmentMapper gets correct values
+                                    for ($_si = 0; $_si < count($node->children); $_si++) {
+                                        if ($node->children[$_si] === $ch) {
+                                            $flexItems[$_si]->w = $ch->w;
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                         }
