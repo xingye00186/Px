@@ -137,17 +137,6 @@ class LayoutResolver
     }
     
     /**
-     * 递归失效所有节点的 positioningAncestorValid 缓存
-     */
-    private function invalidatePositioningAncestors(RenderNode $node): void
-    {
-        $node->positioningAncestorValid = false;
-        foreach ($node->children as $child) {
-            $this->invalidatePositioningAncestors($child);
-        }
-    }
-
-    /**
      * 渚?FlexLayoutStrategy/GridLayoutStrategy 鍐呴儴绠楁硶浣撲娇鐢ㄧ殑瀛愯妭鐐硅В鏋愬叆鍙ｃ€?
      * 鏇夸唬 resolveNode() 鏂规硶锛岀洿鎺ヤ娇鐢ㄥ潗鏍囧弬鏁般€?
      */
@@ -375,29 +364,33 @@ class LayoutResolver
                 break;
         }
 
-        // 鈹€鈹€ 鏋勫缓 Fragment 骞跺師瀛愬洖鍐?RenderNode 鈹€鈹€
-        // Shift children by parent position delta (absolute coordinate system)
+        // Phase 1: shift children by parent delta + absolute positioning
+        // (strategy already updated node->x/y; children need to follow)
         $parentDx = $node->x - $oldNodeX;
         $parentDy = $node->y - $oldNodeY;
         if ($parentDx !== 0 || $parentDy !== 0) {
             foreach ($node->children as $ch) {
-                $ch->x += $parentDx;
-                $ch->y += $parentDy;
+                $chPos = $ch->computedStyle?->position?->value ?? 'static';
+                if ($chPos !== 'absolute' && $chPos !== 'fixed') {
+                    $ch->x += $parentDx;
+                    $ch->y += $parentDy;
+                }
             }
         }
-        $fragment = $builder->build($style);
-        $fragment->applyTo($node);
-
-        // Post-process: fix coordinates for position:absolute/fixed children
-        // These are skipped by strategies (out-of-flow), need AbsolutePositioning
         foreach ($node->children as $child) {
             $childPos = $child->computedStyle?->position?->value ?? 'static';
             if ($childPos === 'absolute' || $childPos === 'fixed') {
+                $child->positioningAncestorValid = false;
                 $this->absolutePositioning->resolveAbsolutePositioning(
                     $child, $constraints, $child->computedStyle, new FragmentBuilder()
                 );
             }
         }
+
+        // Phase 2: sync ground truth to fragment and persist
+        $this->rebuildChildFragments($builder, $node);
+        $fragment = $builder->build($style);
+        $fragment->applyTo($node);
 
         // 鈹€鈹€ 婊氬姩瀹瑰櫒鍚庡鐞嗭紙flex/grid display 妯″紡锛?鈹€鈹€
         if ($node->isScrollContainer

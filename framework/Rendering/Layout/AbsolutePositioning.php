@@ -146,16 +146,20 @@ class AbsolutePositioning implements AbsoluteStrategy
         $calcX = $ancestorX + $borderL + $leftVal + $marginLeft;
         $calcY = $ancestorY + $borderT + $topVal + $marginTop;
 
-        // right锛堝綋 left 鏈缃椂浣跨敤锛?
+        // right: when left is not set, position from padding box right edge
         if ($hasRight && !$hasLeft && ($ancestor !== null || $isFixed)) {
-            $rightEdge = $ancestorX + $borderL + $ancestorPaddingLeft + $cbW - $rightVal;
+            $rightEdge = $ancestorX + $borderL + $cbW - $rightVal;
             $calcX = $rightEdge - ($width > 0 ? $width : 0);
         }
-        // bottom锛堝綋 top 鏈缃椂浣跨敤锛?
+        // bottom: when top is not set, position from padding box bottom edge
         if ($hasBottom && !$hasTop && ($ancestor !== null || $isFixed)) {
-            $bottomEdge = $ancestorY + $ancestorH - $bottomVal;
+            $bottomEdge = $ancestorY + $borderT + $ancestorH - $bottomVal;
             $calcY = $bottomEdge - ($height > 0 ? $height : 0);
         }
+
+        // Sync absolute position back to RenderNode
+        $node->x = $calcX;
+        $node->y = $calcY;
 
         // translate
         $rawTX = $style?->getRaw('translateX');

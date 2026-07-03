@@ -194,6 +194,8 @@ class LayoutNormalizer
             if ($pxAnchor !== 'br') continue;
             $st = $el['styles'] ?? [];
             if (($st['position'] ?? '') !== 'absolute') continue;
+            // Skip if engine already computed correct position
+            if ((int)$el['x'] > 0 && (int)$el['y'] > 0) continue;
             $elW = (int)$el['w'];
             $elH = (int)$el['h'];
             // 方案 A: 通过 parent chain 查找
