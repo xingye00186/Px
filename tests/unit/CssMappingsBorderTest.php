@@ -16,6 +16,8 @@
 require_once __DIR__ . '/bootstrap.php';
 
 use Px\Rendering\CssMappings;
+use Px\Rendering\CssValueParser;
+use Px\Rendering\StyleResolver;
 
 echo "========================================\n";
 echo " CssMappings 边框属性解析测试\n";
@@ -61,18 +63,18 @@ test('只有宽度无颜色时颜色默认为 #000000', function () {
 echo "\n--- 2. parseInlineStyle() 内联 border 解析 ---\n";
 
 test('border-width: 2px; border-color: #FF0000', function () {
-    $result = CssMappings::parseInlineStyle('border-width:2px;border-color:#FF0000');
+    $result = StyleResolver::parseInlineStyle('border-width:2px;border-color:#FF0000');
     assert_eq($result['borderWidth'] ?? 0, 2, 'borderWidth 应为 2');
     assert_eq($result['borderColor'] ?? 0, 255, 'borderColor BGR 应为 255');
 });
 
 test('border-width: 0px 解析为 borderWidth=0', function () {
-    $result = CssMappings::parseInlineStyle('border-width:0px');
+    $result = StyleResolver::parseInlineStyle('border-width:0px');
     assert_eq($result['borderWidth'] ?? -1, 0, 'borderWidth 应为 0');
 });
 
 test('border 简写在内联样式中展开为 borderWidth 和 borderColor', function () {
-    $result = CssMappings::parseInlineStyle('border:1px solid #333333');
+    $result = StyleResolver::parseInlineStyle('border:1px solid #333333');
     // #333333 → BGR: R=0x33=51, G=0x33=51, B=0x33=51 → BGR = (51<<16)|(51<<8)|51 = 3355443+13056+51 = 3368550... 
     // Actually: B=0x33=51 → 51<<16 = 3342336, G=0x33=51 → 51<<8 = 13056, R=0x33=51 = 51 → total = 3355443
     assert_eq($result['borderWidth'] ?? 0, 1, 'borderWidth 应为 1');
@@ -80,7 +82,7 @@ test('border 简写在内联样式中展开为 borderWidth 和 borderColor', fun
 });
 
 test('同时使用 border 简写和独立 border-width 时独立属性覆盖', function () {
-    $result = CssMappings::parseInlineStyle('border:2px solid #FF0000;border-width:4px');
+    $result = StyleResolver::parseInlineStyle('border:2px solid #FF0000;border-width:4px');
     assert_eq($result['borderWidth'] ?? 0, 4, '独立 border-width 应覆盖简写值');
 });
 
@@ -124,16 +126,16 @@ test('style 块无 border 时 borderWidth 默认为 0', function () {
 echo "\n--- 4. hexToBgr / borderColor 辅助函数 ---\n";
 
 test('hexToBgr #FF0000 → 255 (B=255)', function () {
-    assert_eq(CssMappings::hexToBgr('#FF0000'), 255, '#FF0000 → BGR 255');
+    assert_eq(CssValueParser::hexToBgr('#FF0000'), 255, '#FF0000 → BGR 255');
 });
 
 test('hexToBgr #00FF00 → 65280 (G=255 << 8)', function () {
-    assert_eq(CssMappings::hexToBgr('#00FF00'), 65280, '#00FF00 → BGR 65280');
+    assert_eq(CssValueParser::hexToBgr('#00FF00'), 65280, '#00FF00 → BGR 65280');
 });
 
 test('borderColor 根据背景色提亮', function () {
     $bg = 0x333333; // dark gray
-    $border = CssMappings::borderColor($bg, 20);
+    $border = CssValueParser::borderColor($bg, 20);
     assert_true($border > $bg, 'border color 应比背景亮');
 });
 

@@ -5,14 +5,15 @@
  * Tests for ExpressionParser and expression type handlers.
  */
 
-require_once __DIR__ . '/../../framework/compiler/expression/ExpressionParserInterface.php';
-require_once __DIR__ . '/../../framework/compiler/expression/ExpressionTypeInterface.php';
-require_once __DIR__ . '/../../framework/compiler/expression/ExpressionType.php';
-require_once __DIR__ . '/../../framework/compiler/expression/TernaryExpression.php';
-require_once __DIR__ . '/../../framework/compiler/expression/ComparisonExpression.php';
-require_once __DIR__ . '/../../framework/compiler/expression/LogicalExpression.php';
-require_once __DIR__ . '/../../framework/compiler/expression/ExpressionParser.php';
-require_once __DIR__ . '/../../framework/compiler/expression/ConcatenationExpression.php';
+require_once __DIR__ . '/../../framework/autoload.php';
+require_once __DIR__ . '/../../framework/Compiler/expression/ExpressionParserInterface.php';
+require_once __DIR__ . '/../../framework/Compiler/expression/ExpressionTypeInterface.php';
+require_once __DIR__ . '/../../framework/Compiler/expression/ExpressionType.php';
+require_once __DIR__ . '/../../framework/Compiler/expression/TernaryExpression.php';
+require_once __DIR__ . '/../../framework/Compiler/expression/ComparisonExpression.php';
+require_once __DIR__ . '/../../framework/Compiler/expression/LogicalExpression.php';
+require_once __DIR__ . '/../../framework/Compiler/expression/ExpressionParser.php';
+require_once __DIR__ . '/../../framework/Compiler/expression/ConcatenationExpression.php';
 
 use Px\Compiler\Expression\ExpressionParser;
 

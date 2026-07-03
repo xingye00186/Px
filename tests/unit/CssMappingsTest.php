@@ -12,6 +12,7 @@
 require_once __DIR__ . '/bootstrap.php';
 
 use Px\Rendering\CssMappings;
+use Px\Rendering\StyleResolver;
 
 echo "========================================\n";
 echo " CssMappings 单元测试（CSS 属性解析）\n";
@@ -23,7 +24,7 @@ echo "========================================\n\n";
 echo "--- 1. Border 方向性简写 ---\n";
 
 test('border-bottom:1px solid #E3E5E7 产出 borderBottomWidth=1 和 borderBottomColor=0xE3E5E7', function () {
-    $result = CssMappings::parseInlineStyle('border-bottom:1px solid #E3E5E7');
+    $result = StyleResolver::parseInlineStyle('border-bottom:1px solid #E3E5E7');
     assert_true(isset($result['borderBottom']), 'borderBottom key exists');
     assert_contains($result['borderBottom'], '1|', 'borderBottom contains width=1 and color');
     // CSS 2.2 §8.6: 方向性 border 简写只设置该边属性，不设置通用 borderWidth
@@ -33,7 +34,7 @@ test('border-bottom:1px solid #E3E5E7 产出 borderBottomWidth=1 和 borderBotto
 });
 
 test('border-top:1px solid #F1F2F3 产出 borderTopWidth=1', function () {
-    $result = CssMappings::parseInlineStyle('border-top:1px solid #F1F2F3');
+    $result = StyleResolver::parseInlineStyle('border-top:1px solid #F1F2F3');
     assert_true(isset($result['borderTop']), 'borderTop key exists');
     assert_contains($result['borderTop'], '1|', 'borderTop contains width=1');
     // CSS 2.2 §8.6: 方向性 border 简写只设置该边属性，不设置通用 borderWidth
@@ -41,7 +42,7 @@ test('border-top:1px solid #F1F2F3 产出 borderTopWidth=1', function () {
 });
 
 test('border-left:1px solid #E3E5E7 产出 borderLeftWidth=1', function () {
-    $result = CssMappings::parseInlineStyle('border-left:1px solid #E3E5E7');
+    $result = StyleResolver::parseInlineStyle('border-left:1px solid #E3E5E7');
     assert_true(isset($result['borderLeft']), 'borderLeft key exists');
     assert_contains($result['borderLeft'], '1|', 'borderLeft contains width=1');
 });
@@ -52,7 +53,7 @@ test('border-left:1px solid #E3E5E7 产出 borderLeftWidth=1', function () {
 echo "\n--- 2. Padding/Margin 简写展开 ---\n";
 
 test('padding:0 24px 展开为 4 方向 (top=0, right=24, bottom=0, left=24)', function () {
-    $result = CssMappings::parseInlineStyle('padding:0 24px');
+    $result = StyleResolver::parseInlineStyle('padding:0 24px');
     assert_eq($result['paddingTop'] ?? null, 0, 'paddingTop = 0');
     assert_eq($result['paddingRight'] ?? null, 24, 'paddingRight = 24');
     assert_eq($result['paddingBottom'] ?? null, 0, 'paddingBottom = 0');
@@ -60,7 +61,7 @@ test('padding:0 24px 展开为 4 方向 (top=0, right=24, bottom=0, left=24)', f
 });
 
 test('padding:10px 20px 30px 40px 展开为 4 方向', function () {
-    $result = CssMappings::parseInlineStyle('padding:10px 20px 30px 40px');
+    $result = StyleResolver::parseInlineStyle('padding:10px 20px 30px 40px');
     assert_eq($result['paddingTop'] ?? null, 10, 'paddingTop = 10');
     assert_eq($result['paddingRight'] ?? null, 20, 'paddingRight = 20');
     assert_eq($result['paddingBottom'] ?? null, 30, 'paddingBottom = 30');
@@ -68,7 +69,7 @@ test('padding:10px 20px 30px 40px 展开为 4 方向', function () {
 });
 
 test('padding:10px 20px 展开为 2 值 (top=bottom=10, left=right=20)', function () {
-    $result = CssMappings::parseInlineStyle('padding:10px 20px');
+    $result = StyleResolver::parseInlineStyle('padding:10px 20px');
     assert_eq($result['paddingTop'] ?? null, 10, 'paddingTop = 10');
     assert_eq($result['paddingRight'] ?? null, 20, 'paddingRight = 20');
     assert_eq($result['paddingBottom'] ?? null, 10, 'paddingBottom = 10');
@@ -76,7 +77,7 @@ test('padding:10px 20px 展开为 2 值 (top=bottom=10, left=right=20)', functio
 });
 
 test('padding:10px 展开为单值 (所有方向 = 10)', function () {
-    $result = CssMappings::parseInlineStyle('padding:10px');
+    $result = StyleResolver::parseInlineStyle('padding:10px');
     assert_eq($result['paddingTop'] ?? null, 10, 'paddingTop = 10');
     assert_eq($result['paddingRight'] ?? null, 10, 'paddingRight = 10');
     assert_eq($result['paddingBottom'] ?? null, 10, 'paddingBottom = 10');
@@ -159,19 +160,19 @@ test('box-shadow:多阴影语法 第一个阴影被正确提取', function () {
 
 // ── rgba alpha → opacity 注入 ──
 test('rgba() alpha 被注入为 opacity', function () {
-    $result = CssMappings::parseInlineStyle('background:rgba(251,114,153,0.4)');
+    $result = StyleResolver::parseInlineStyle('background:rgba(251,114,153,0.4)');
     assert_eq($result['opacity'] ?? 1.0, 0.4, 'opacity injected from rgba alpha');
     // #FB7299 in BGR = (0x99 << 16) | (0x72 << 8) | 0xFB = 10056443
     assert_eq($result['bg'] ?? 0, 0x9972FB, 'BGR color correct');
 });
 
 test('显式 opacity:0.8 优先于 rgba() alpha', function () {
-    $result = CssMappings::parseInlineStyle('background:rgba(251,114,153,0.4);opacity:0.8');
+    $result = StyleResolver::parseInlineStyle('background:rgba(251,114,153,0.4);opacity:0.8');
     assert_eq($result['opacity'] ?? 1.0, 0.8, 'explicit opacity takes priority');
 });
 
 test('rgba(0,0,0,0.06) 带空格的 alpha 注入为 opacity=0.06', function () {
-    $result = CssMappings::parseInlineStyle('background:rgba(0, 0, 0, 0.06)');
+    $result = StyleResolver::parseInlineStyle('background:rgba(0, 0, 0, 0.06)');
     assert_eq($result['opacity'] ?? 1.0, 0.06, 'opacity = 0.06 with spaces');
 });
 
@@ -181,14 +182,14 @@ test('rgba(0,0,0,0.06) 带空格的 alpha 注入为 opacity=0.06', function () {
 echo "\n--- 6. Transform ---\n";
 
 test('transform:rotate(45deg) 通过 parseInlineStyle 产出 rotate=45', function () {
-    $result = CssMappings::parseInlineStyle('transform:rotate(45deg)');
+    $result = StyleResolver::parseInlineStyle('transform:rotate(45deg)');
     assert_eq($result['transform']['translateX'], 0, 'translateX = 0');
     assert_eq($result['transform']['translateY'], 0, 'translateY = 0');
     assert_eq($result['transform']['rotate'], 45, 'rotate = 45');
 });
 
 test('transform:translate(10px, 20px) 现有功能不受影响', function () {
-    $result = CssMappings::parseInlineStyle('transform:translate(10px, 20px)');
+    $result = StyleResolver::parseInlineStyle('transform:translate(10px, 20px)');
     assert_eq($result['transform']['translateX'], 10, 'translateX = 10');
     assert_eq($result['transform']['translateY'], 20, 'translateY = 20');
 });
@@ -207,7 +208,7 @@ test('grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)) 正确解析',
 });
 
 test('gap:16px 正确解析列间距', function () {
-    $result = CssMappings::parseInlineStyle('gap:16px');
+    $result = StyleResolver::parseInlineStyle('gap:16px');
     // gap 可能映射为 gap 或 columnGap
     assert_true(isset($result['gap']) || isset($result['columnGap']), 'gap key exists');
 });
@@ -218,17 +219,17 @@ test('gap:16px 正确解析列间距', function () {
 echo "\n--- 8. Overflow / Z-index ---\n";
 
 test('overflow-x:auto 产出 overflowX=auto', function () {
-    $result = CssMappings::parseInlineStyle('overflow-x:auto');
+    $result = StyleResolver::parseInlineStyle('overflow-x:auto');
     assert_eq($result['overflowX'] ?? '', 'auto', 'overflowX = auto');
 });
 
 test('overflow:auto 产出 overflow=auto', function () {
-    $result = CssMappings::parseInlineStyle('overflow:auto');
+    $result = StyleResolver::parseInlineStyle('overflow:auto');
     assert_eq($result['overflow'] ?? '', 'auto', 'overflow = auto');
 });
 
 test('z-index:10 产出 zIndex=10', function () {
-    $result = CssMappings::parseInlineStyle('z-index:10');
+    $result = StyleResolver::parseInlineStyle('z-index:10');
     assert_eq($result['zIndex'] ?? '', '10', 'zIndex = 10');
 });
 
@@ -238,13 +239,13 @@ test('z-index:10 产出 zIndex=10', function () {
 echo "\n--- 9. Background 简写展开 ---\n";
 
 test('background:url("img.png") 提取 backgroundImage', function () {
-    $result = CssMappings::parseInlineStyle('background:url("img.png")');
+    $result = StyleResolver::parseInlineStyle('background:url("img.png")');
     assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage = img.png');
     assert_eq($result['bg'] ?? 0, 0, 'bg = 0 (transparent default)');
 });
 
 test('background:url("img.png") no-repeat center/cover 提取 image+position+size', function () {
-    $result = CssMappings::parseInlineStyle('background:url("img.png") no-repeat center/cover');
+    $result = StyleResolver::parseInlineStyle('background:url("img.png") no-repeat center/cover');
     assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
     assert_eq($result['backgroundPosition'] ?? '', 'center', 'backgroundPosition = center');
     assert_eq($result['backgroundSize'] ?? '', 'cover', 'backgroundSize = cover');
@@ -252,7 +253,7 @@ test('background:url("img.png") no-repeat center/cover 提取 image+position+siz
 });
 
 test('background:#FB7299 url("img.png") center/cover no-repeat 全简写', function () {
-    $result = CssMappings::parseInlineStyle('background:#FB7299 url("img.png") center/cover no-repeat');
+    $result = StyleResolver::parseInlineStyle('background:#FB7299 url("img.png") center/cover no-repeat');
     // #FB7299: R=251, G=114, B=153 → BGR = (153<<16)|(114<<8)|251 = 0x9972FB
     assert_eq($result['bg'] ?? 0, 0x9972FB, 'bg color parsed correctly');
     assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
@@ -261,33 +262,33 @@ test('background:#FB7299 url("img.png") center/cover no-repeat 全简写', funct
 });
 
 test('background:rgba(251,114,153,0.4) url("img.png") 含 rgba 颜色', function () {
-    $result = CssMappings::parseInlineStyle('background:rgba(251,114,153,0.4) url("img.png")');
+    $result = StyleResolver::parseInlineStyle('background:rgba(251,114,153,0.4) url("img.png")');
     assert_eq($result['bg'] ?? 0, 0x9972FB, 'rgba bg color parsed');
     assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
     assert_eq($result['opacity'] ?? 1.0, 0.4, 'rgba alpha injected as opacity');
 });
 
 test('background:url("img.png") #FB7299 颜色在 url 之后', function () {
-    $result = CssMappings::parseInlineStyle('background:url("img.png") #FB7299');
+    $result = StyleResolver::parseInlineStyle('background:url("img.png") #FB7299');
     assert_eq($result['bg'] ?? 0, 0x9972FB, 'bg color parsed when after image');
     assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
 });
 
 test('background 简写不覆盖显式 background-image', function () {
-    $result = CssMappings::parseInlineStyle('background-image:url("explicit.png");background:#FB7299 url("shorthand.png")');
+    $result = StyleResolver::parseInlineStyle('background-image:url("explicit.png");background:#FB7299 url("shorthand.png")');
     // 显式 background-image 应保留，简写中的 image 不覆盖
     assert_eq($result['backgroundImage'] ?? '', 'explicit.png', 'explicit background-image preserved');
     assert_eq($result['bg'] ?? 0, 0x9972FB, 'bg from shorthand still parsed');
 });
 
 test('background:#FB7299 单一颜色不受简写展开影响', function () {
-    $result = CssMappings::parseInlineStyle('background:#FB7299');
+    $result = StyleResolver::parseInlineStyle('background:#FB7299');
     assert_eq($result['bg'] ?? 0, 0x9972FB, 'single hex color unchanged');
     assert_false(isset($result['backgroundImage']), 'no backgroundImage injected');
 });
 
 test('background:rgba(0,0,0,0.06) url("img.png") left bottom/auto 组合', function () {
-    $result = CssMappings::parseInlineStyle('background:rgba(0,0,0,0.06) url("img.png") left bottom/auto');
+    $result = StyleResolver::parseInlineStyle('background:rgba(0,0,0,0.06) url("img.png") left bottom/auto');
     assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
     assert_eq($result['backgroundPosition'] ?? '', 'left bottom', 'backgroundPosition = left bottom');
     assert_eq($result['backgroundSize'] ?? '', 'auto', 'backgroundSize = auto');

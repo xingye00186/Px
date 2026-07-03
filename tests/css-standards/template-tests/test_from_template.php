@@ -10,7 +10,8 @@
  */
 
 require_once __DIR__ . '/../CssTestBase.php';
-require_once __DIR__ . '/../../../framework/compiler/template-parser.php';
+require_once __DIR__ . '/../../../framework/autoload.php';
+require_once __DIR__ . '/../../../framework/Compiler/TemplateParser.php';
 
 /**
  * Parse HTML template via TemplateParser, then render through pipeline.

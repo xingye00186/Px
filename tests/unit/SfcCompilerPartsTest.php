@@ -12,7 +12,7 @@
  */
 
 require_once __DIR__ . '/bootstrap.php';
-require_once dirname(__DIR__, 2) . '/framework/compiler/sfc-compiler.php';
+require_once dirname(__DIR__, 2) . '/framework/Compiler/sfc-compiler.php';
 
 use Px\Rendering\VNode;
 

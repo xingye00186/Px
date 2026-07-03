@@ -9,14 +9,13 @@
  * Usage: php tests/parser-robustness-test.php
  */
 
-require_once __DIR__ . '/../framework/Rendering/VNode.php';
-require_once __DIR__ . '/../framework/Rendering/CssMappings.php';
-require_once __DIR__ . '/../framework/Rendering/CssValueParser.php';
-require_once __DIR__ . '/../framework/compiler/template-parser.php';
-require_once __DIR__ . '/../framework/compiler/component-registry.php';
+require_once __DIR__ . '/../framework/autoload.php';
+require_once __DIR__ . '/../framework/Compiler/TemplateParser.php';
+require_once __DIR__ . '/../framework/Compiler/ComponentRegistry.php';
 
 // Namespaced classes
 use Px\Rendering\CssMappings;
+use Px\Rendering\StyleResolver;
 
 $passed = 0;
 $failed = 0;
@@ -267,19 +266,19 @@ test('nested v-if: outer false → inner never evaluated', function () {
 echo "\n--- 6. CSS: Vendor Prefix & !important ---\n";
 
 test('parseInlineStyle: strips !important from value', function () {
-    $result = CssMappings::parseInlineStyle('width: 100px !important; height: 50px;');
+    $result = StyleResolver::parseInlineStyle('width: 100px !important; height: 50px;');
     // width should be parsed as 100px without "!important"
     assert(isset($result['width']), "width should be set");
     assert(strpos((string)$result['width'], 'important') === false, "width value should not contain 'important'");
 });
 
 test('parseInlineStyle: !important on known property', function () {
-    $result = CssMappings::parseInlineStyle('left: 20px !important;');
+    $result = StyleResolver::parseInlineStyle('left: 20px !important;');
     assert(isset($result['left']), "left should be set");
 });
 
 test('parseInlineStyle: vendor prefix -webkit- stored as raw', function () {
-    $result = CssMappings::parseInlineStyle('-webkit-appearance: none; width: 200px;');
+    $result = StyleResolver::parseInlineStyle('-webkit-appearance: none; width: 200px;');
     // -webkit-appearance is unknown, stored as raw string key
     assert(isset($result['-webkit-appearance']), "-webkit-appearance should be stored as raw");
     assert($result['-webkit-appearance'] === 'none', "should be 'none'");
@@ -287,18 +286,18 @@ test('parseInlineStyle: vendor prefix -webkit- stored as raw', function () {
 });
 
 test('parseInlineStyle: vendor prefix -moz- stored as raw', function () {
-    $result = CssMappings::parseInlineStyle('-moz-appearance: button; height: 100px;');
+    $result = StyleResolver::parseInlineStyle('-moz-appearance: button; height: 100px;');
     assert(isset($result['-moz-appearance']), "-moz-appearance should be stored as raw");
     assert(isset($result['height']), "height should still be parsed");
 });
 
 test('parseInlineStyle: no trailing semicolon', function () {
-    $result = CssMappings::parseInlineStyle('width: 100px');
+    $result = StyleResolver::parseInlineStyle('width: 100px');
     assert(isset($result['width']), "width should be set without trailing ;");
 });
 
 test('parseInlineStyle: multiple !important declarations', function () {
-    $result = CssMappings::parseInlineStyle('width: 200px !important; height: 100px !important; left: 0px;');
+    $result = StyleResolver::parseInlineStyle('width: 200px !important; height: 100px !important; left: 0px;');
     assert(isset($result['width']), "width should be set");
     assert(isset($result['height']), "height should be set");
     assert(isset($result['left']), "left should be set");

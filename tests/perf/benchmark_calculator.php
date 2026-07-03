@@ -35,8 +35,8 @@ if (!function_exists('any')) {
 $frameworkDir = dirname(__DIR__, 2) . '/framework';
 $appDir       = dirname(__DIR__, 2) . '/apps/calculator-ng';
 
-require_once $frameworkDir . '/interfaces/ComponentInterface.php';
-require_once $frameworkDir . '/interfaces/ReactiveComponentInterface.php';
+require_once $frameworkDir . '/Interfaces/ComponentInterface.php';
+require_once $frameworkDir . '/Interfaces/ReactiveComponentInterface.php';
 require_once $frameworkDir . '/Rendering/CssMappings.php';
 require_once $frameworkDir . '/Rendering/VNode.php';
 require_once $frameworkDir . '/Rendering/RenderNode.php';

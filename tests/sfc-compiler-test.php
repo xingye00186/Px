@@ -11,15 +11,16 @@
  *   4. Code generation: SFC compiler output
  */
 
-require_once __DIR__ . '/../framework/Rendering/VNode.php';
-require_once __DIR__ . '/../framework/Rendering/CssMappings.php';
-require_once __DIR__ . '/../framework/compiler/template-parser.php';
-require_once __DIR__ . '/../framework/compiler/aot-validator.php';
-require_once __DIR__ . '/../framework/compiler/component-registry.php';
-require_once __DIR__ . '/../framework/compiler/sfc-compiler.php';
+require_once __DIR__ . '/../framework/autoload.php';
+require_once __DIR__ . '/../framework/Compiler/TemplateParser.php';
+require_once __DIR__ . '/../framework/Compiler/AotValidator.php';
+require_once __DIR__ . '/../framework/Compiler/ComponentRegistry.php';
+require_once __DIR__ . '/../framework/Compiler/sfc-compiler.php';
 
 // Namespaced classes
 use Px\Rendering\CssMappings;
+use Px\Rendering\CssValueParser;
+use Px\Rendering\StyleResolver;
 use Px\Compiler\AotValidator;
 
 $passed = 0;
@@ -49,40 +50,40 @@ echo "=== SFC Compiler v6 Unit Tests (VNode Architecture) ===\n\n";
 echo "--- 1. CSS Mappings ---\n";
 
 test('hexToBgr: #1e1e1e → BGR int', function () {
-    $bgr = CssMappings::hexToBgr('#1e1e1e');
+    $bgr = CssValueParser::hexToBgr('#1e1e1e');
     assert($bgr === 1973790, "Expected 1973790, got $bgr");
 });
 
 test('hexToBgr: #ffffff → BGR int', function () {
-    $bgr = CssMappings::hexToBgr('#ffffff');
+    $bgr = CssValueParser::hexToBgr('#ffffff');
     assert($bgr === 16777215, "Expected 16777215, got $bgr");
 });
 
 test('hexToBgr: #ff9500 → BGR int', function () {
-    $bgr = CssMappings::hexToBgr('#ff9500');
+    $bgr = CssValueParser::hexToBgr('#ff9500');
     assert($bgr === 38399, "Expected 38399, got $bgr");
 });
 
 test('hexToBgr: shorthand #RGB (#1e1)', function () {
-    $bgr = CssMappings::hexToBgr('#1e1');
+    $bgr = CssValueParser::hexToBgr('#1e1');
     assert($bgr === 1175057, "Expected 1175057, got $bgr");
 });
 
 test('hexToBgr: invalid hex returns 0', function () {
-    $bgr = CssMappings::hexToBgr('#xyz123');
+    $bgr = CssValueParser::hexToBgr('#xyz123');
     assert($bgr === 0, "Expected 0 for invalid hex, got $bgr");
 });
 
 test('borderColor: lightens channels by +20', function () {
     $bg = 1973790; // #1e1e1e
-    $border = CssMappings::borderColor($bg);
+    $border = CssValueParser::borderColor($bg);
     $expected = (50 << 16) | (50 << 8) | 50;
     assert($border === $expected, "Expected $expected, got $border");
 });
 
 test('borderColor: clamps at 255', function () {
     $bg = 0xFFFFFF;
-    $border = CssMappings::borderColor($bg);
+    $border = CssValueParser::borderColor($bg);
     assert($border === 16777215, "Expected 16777215, got $border");
 });
 
@@ -109,7 +110,7 @@ test('PROPERTY_MAP: supports 8+ CSS properties', function () {
 });
 
 test('parseInlineStyle: parses width/height/left/top', function () {
-    $result = CssMappings::parseInlineStyle('width: 100px; height: 50px; left: 10px; top: 20px;');
+    $result = StyleResolver::parseInlineStyle('width: 100px; height: 50px; left: 10px; top: 20px;');
     assert($result['width'] === '100px', "width should be 100px, got {$result['width']}");
     assert($result['height'] === '50px', "height should be 50px, got {$result['height']}");
     assert($result['left'] === '10px', "left should be 10px, got {$result['left']}");
@@ -117,14 +118,14 @@ test('parseInlineStyle: parses width/height/left/top', function () {
 });
 
 test('parseInlineStyle: parses display and flex properties', function () {
-    $result = CssMappings::parseInlineStyle('display: flex; flex-direction: column; justify-content: center;');
+    $result = StyleResolver::parseInlineStyle('display: flex; flex-direction: column; justify-content: center;');
     assert($result['display'] === 'flex', "display should be flex");
     assert($result['flex-direction'] === 'column', "flex-direction should be column");
     assert($result['justify-content'] === 'center', "justify-content should be center");
 });
 
 test('parseInlineStyle: parses grid-template-columns', function () {
-    $result = CssMappings::parseInlineStyle('grid-template-columns: repeat(4, 80px);');
+    $result = StyleResolver::parseInlineStyle('grid-template-columns: repeat(4, 80px);');
     assert(isset($result['grid-template-columns']), "grid-template-columns should be set");
 });
 
@@ -160,7 +161,7 @@ test('Parser: parses flex container with CSS style', function () {
     assert($root->childCount() === 1, "Expected 1 child");
     
     $flex = $root->children[0];
-        $style = CssMappings::parseInlineStyle($flex->getProp('style'));
+        $style = StyleResolver::parseInlineStyle($flex->getProp('style'));
     assert($style['display'] === 'flex', "display should be flex");
     assert($style['flex-direction'] === 'column', "flex-direction should be column");
 });
