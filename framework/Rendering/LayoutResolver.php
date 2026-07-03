@@ -69,7 +69,7 @@ class LayoutResolver
         $this->inlineStrategy = new InlineLayoutStrategy($this);
         $this->tableStrategy = new TableLayoutStrategy($this);
         $this->multiColumnStrategy = new MultiColumnLayoutStrategy($this);
-        $this->stickyProcessor = new StickyPostProcessor($this->scrollContainers);
+        $this->stickyProcessor = new StickyPostProcessor();
     }
 
     public function getAbsolutePositioning(): AbsoluteStrategy
@@ -446,7 +446,7 @@ class LayoutResolver
 
         // 鈹€鈹€ position:sticky 澶勭悊 鈹€鈹€
         if ($position === 'sticky' and $style !== null) {
-$this->stickyProcessor->process($node, $style);
+$this->stickyProcessor->process($node, $style, $this->scrollContainers);
         }
 
         $node->layoutDirty = false;

@@ -30,9 +30,9 @@ class StickyPostProcessor
     /** @var array<string, array> 水平粘性堆叠追踪 */
     private array $stickyStackX = [];
 
-    public function __construct(array &$scrollContainers)
+    public function __construct(array $scrollContainers = [])
     {
-        $this->scrollContainers = &$scrollContainers;
+        $this->scrollContainers = $scrollContainers;
     }
 
     public function reset(): void
@@ -47,13 +47,13 @@ class StickyPostProcessor
      * @param RenderNode    $node  sticky 节点
      * @param ComputedStyle $style 节点的计算样式
      */
-    public function process(RenderNode $node, ComputedStyle $style): void
+    public function process(RenderNode $node, ComputedStyle $style, array $scrollContainers = []): void
     {
         $stickyTop = (int)($style->top?->toPx() ?? 0);
 
         // 查找最近的包含此节点的滚动容器
-        for ($i = count($this->scrollContainers) - 1; $i >= 0; $i--) {
-            $sc = $this->scrollContainers[$i];
+        for ($i = count($scrollContainers) - 1; $i >= 0; $i--) {
+            $sc = $scrollContainers[$i];
             if ($node->x >= $sc->x && $node->x < $sc->x + $sc->w &&
                 $node->y >= $sc->y && $node->y < $sc->y + $sc->h) {
 

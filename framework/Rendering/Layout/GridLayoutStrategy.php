@@ -99,9 +99,9 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         // Note: height:auto for grid containers is content-based (computed below)
 
-        $node->x = $left + $parentX;
+        $node->x = $leftPx + $parentX;
 
-        $node->y = $top + $parentY;
+        $node->y = $topPx + $parentY;
 
         // Apply translate from animatedStyle
 
