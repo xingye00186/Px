@@ -53,7 +53,7 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/compiler
+  - ../../framework/Compiler
   - ../../framework/aot-checker.php
 
 # 每次构建前清理编译缓存

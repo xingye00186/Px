@@ -16,5 +16,5 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/compiler
+  - ../../framework/Compiler
   - ../../framework/aot-checker.php

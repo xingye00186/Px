@@ -11,7 +11,7 @@ sources:
   - ../../framework
   - ../../stub
 ignore:
-  - ../../framework/compiler
+  - ../../framework/Compiler
   - ../../framework/aot-checker.php
 
 Px_clear_compilation_cache: true
