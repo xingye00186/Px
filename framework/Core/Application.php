@@ -748,6 +748,29 @@ class Application
             // 导出仅为测试内容子树：找到 data-px-anchor='tl' 的父节点
             $tlParent = $this->findTestContentParent($root);
             if ($tlParent !== null) {
+                // Recalculate content-based height (was stretched by flex)
+                $cs2 = $tlParent->computedStyle;
+                if ($cs2 !== null && $cs2->height->toPx() <= 0) {
+                    $maxB = 0;
+                    foreach ($tlParent->children as $ch2) {
+                        $p2 = $ch2->computedStyle?->position?->value;
+                        if ($p2 === "absolute" || $p2 === "fixed") continue;
+                        $b2 = $ch2->y + $ch2->visualH;
+                        if ($b2 > $maxB) $maxB = $b2;
+                    }
+                    $bt2 = $cs2->borderTopWidth ?? 0;
+                    $pb2 = $cs2->padding?->top->toPx() ?? 0;
+                    $ct2 = $bt2 + $pb2;
+                    if ($maxB > $ct2) {
+                        $ch2h = $maxB - $ct2;
+                        if ($cs2->boxSizing?->value === "border-box") {
+                            $ch2h += $cs2->padding?->bottom->toPx() + $cs2->borderBottomWidth;
+                        }
+                        $tlParent->h = $ch2h;
+                        $tlParent->visualH = $cs2->visualHeight($tlParent->h);
+                    }
+                }
+                $exportNode = $tlParent;
                 $exportNode = $tlParent;
             }
         }
