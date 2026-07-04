@@ -433,7 +433,7 @@ class CssValueParser
             if ($part !== '') $sizes[] = $part;
         }
         if (count($sizes) > 0) {
-            return ['type' => 'explicit', 'sizes' => $sizes];
+            return ['type' => 'explicit', 'list' => $sizes, 'sizes' => $sizes];
         }
         return ['type' => 'none'];
     }

@@ -33,12 +33,15 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $w = $s->width->toPx();
         if ($w <= 0) $w = $parentW;
         $h = $s->height->toPx();
-        $isRow = ($s->getRaw("flexDirection") !== "column");
+        $flexDir = $s->getRaw("flexDirection") ?? 'row';
+        $isRow = ($flexDir === 'row' || $flexDir === 'row-reverse');
+        $isReverse = ($flexDir === 'row-reverse' || $flexDir === 'column-reverse');
         $justify = $s->getRaw("justifyContent") ?? "flex-start";
         $align = $s->getRaw("alignItems") ?? "stretch";
         $alignContent = $s->alignContent?->value ?? 'stretch';
         $wrap = $s->getRaw("flexWrap");
         $isWrapping = ($wrap === "wrap" || $wrap === "wrap-reverse");
+        $isWrapReverse = ($wrap === "wrap-reverse");
         $gap = (int)($s->getRaw("gap") ?? 0);
         // Main-axis and cross-axis dimensions
         $containerMain = $isRow ? $w : $h;
@@ -87,14 +90,15 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // Sort by CSS order property (stable sort: equal order preserves source order)
         $indices = range(0, count($flexItems) - 1);
+        $originalIndices = $indices; // save for remapping results back to DOM order
         usort($indices, function($a, $b) use ($flexItemData) {
             $oa = (int)($flexItemData[$a]['order'] ?? 0);
             $ob = (int)($flexItemData[$b]['order'] ?? 0);
             if ($oa !== $ob) return $oa - $ob;
             return $a - $b; // stable: preserve source order for equal orders
         });
-        $flexItems = array_map(fn($i) => $flexItems[$i], $indices);
-        // Rebuild flexItemData in sorted order, and childResults mapping for FlexFragmentMapper
+        $reorder = []; foreach ($indices as $idx) { $reorder[] = $flexItems[$idx]; } $flexItems = $reorder;
+        // Rebuild flexItemData in sorted order
         $sortedData = []; $sortedResults = [];
         foreach ($indices as $i) { $sortedData[] = $flexItemData[$i]; $sortedResults[] = $childResults[$i]; }
         $flexItemData = $sortedData; $childResults = $sortedResults;
@@ -189,23 +193,42 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                     else $item->w = $lineMaxCross;
                 }
             }
-            // Recalculate maxCross after stretch
+            // Recalculate maxCross after stretch, keep containerCross for single-line (CSS §9.5.1)
             $lineMaxCross = 0;
             foreach ($lineItems as $item) {
                 $cross = $isRow ? $item->h : $item->w;
                 if ($cross > $lineMaxCross) $lineMaxCross = $cross;
             }
+            if ($totalLines === 1 && $containerCross > 0 && $lineMaxCross < $containerCross) {
+                $lineMaxCross = $containerCross;
+            }
 
             // 4f. Main-axis positioning (base on containerMain offset)
             $mainBase = $isRow ? $x : $y;
-            $cursorMain = $mainBase + (int)$mainStart;
-            foreach ($lineItems as $item) {
-                if ($isRow) {
-                    $item->x = (int)$cursorMain;
-                    $cursorMain += $item->w + (int)$spaceBetween + $gap;
-                } else {
-                    $item->y = (int)$cursorMain;
-                    $cursorMain += $item->h + (int)$spaceBetween + $gap;
+            if ($isReverse) {
+                // Reverse direction: main-start = right/bottom edge
+                $cursorMain = $mainBase + $containerMain - (int)$mainStart;
+                foreach ($lineItems as $item) {
+                    if ($isRow) {
+                        $cursorMain -= $item->w;
+                        $item->x = (int)$cursorMain;
+                        $cursorMain -= (int)$spaceBetween + $gap;
+                    } else {
+                        $cursorMain -= $item->h;
+                        $item->y = (int)$cursorMain;
+                        $cursorMain -= (int)$spaceBetween + $gap;
+                    }
+                }
+            } else {
+                $cursorMain = $mainBase + (int)$mainStart;
+                foreach ($lineItems as $item) {
+                    if ($isRow) {
+                        $item->x = (int)$cursorMain;
+                        $cursorMain += $item->w + (int)$spaceBetween + $gap;
+                    } else {
+                        $item->y = (int)$cursorMain;
+                        $cursorMain += $item->h + (int)$spaceBetween + $gap;
+                    }
                 }
             }
 
@@ -226,6 +249,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         if ($totalLines > 1 && $crossAvailable > $totalCross) {
             $extraCross = $crossAvailable - $totalCross;
             switch ($alignContent) {
+                case 'flex-start': case 'start':
+                    $offset = 0;
+                    foreach ($lineMaxCrosses as $i => $lmc) { $lineCrossOffsets[$i] = $offset; $offset += $lmc + $gap; }
+                    break;
                 case 'center':
                     $offset = $extraCross / 2;
                     foreach ($lineMaxCrosses as $i => $lmc) { $lineCrossOffsets[$i] = $offset; $offset += $lmc + $gap; }
@@ -266,12 +293,26 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // 5b. Per-item cross-axis positioning
         $crossBase = $isRow ? $y : $x;
+        if ($isWrapReverse) {
+            // wrap-reverse: cross-start = bottom/right edge
+            $totalUsedCross = 0;
+            foreach ($lineMaxCrosses as $lmc) { $totalUsedCross += $lmc + $gap; }
+            $totalUsedCross = max(0, $totalUsedCross - $gap);
+            $crossBase += ($containerCross - $totalUsedCross);
+        }
         foreach ($lineGroups as $lineIdx => $lineItems) {
             $lineCrossOffset = $lineCrossOffsets[$lineIdx];
             $lineMaxCross = $lineMaxCrosses[$lineIdx];
             foreach ($lineItems as $itemIdx => $item) {
                 $effAlign = $this->effectiveAlign($item, $align);
                 $crossSize = $isRow ? $item->h : $item->w;
+
+                // Stretch items to fill lineMaxCross
+                if ($effAlign === 'stretch' && !$item->isFlexGrow) {
+                    if ($isRow) $item->h = $lineMaxCross;
+                    else $item->w = $lineMaxCross;
+                    $crossSize = $lineMaxCross;
+                }
 
                 // Cross-axis offset within line
                 $crossItemOffset = 0;
@@ -289,8 +330,18 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             }
         }
 
-        // ── Step 6: Map results ──
+        // ── Step 6: Map results back to DOM order, re-resolve flex:1 ──
         $mappedResults = FlexFragmentMapper::toResults($flexItems, $childResults);
+        // Remap results to original DOM order (CSS §9.2: visual order ≠ DOM order)
+        $resultsByOriginalIndex = [];
+        foreach ($indices as $orderIdx => $domIdx) {
+            if (isset($mappedResults[$orderIdx])) {
+                $resultsByOriginalIndex[$domIdx] = $mappedResults[$orderIdx];
+            }
+        }
+        ksort($resultsByOriginalIndex);
+        $mappedResults = array_values($resultsByOriginalIndex);
+        // Re-resolve flex:1 nested containers (flex-grow changes child sizes)
         if ($h <= 0 && count($mappedResults) > 0) {
             $maxBottom = $y;
             foreach ($mappedResults as $cr) { $b = $cr->y + $cr->h; if ($b > $maxBottom) $maxBottom = $b; }

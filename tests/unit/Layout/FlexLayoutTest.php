@@ -649,8 +649,10 @@ test('row-reverse 子节点从右到左排列', function () {
 
     runResolver($root);
 
-    assert_eq($c1->x, 140, 'c1 x=300-80-80=140 (reversed)');
-    assert_eq($c2->x, 220, 'c2 x=140+80=220');
+    // CSS §9.2: row-reverse reverses main-axis direction, main-start = right edge
+    // First DOM item (c1) positioned at main-start (right), second (c2) to its left
+    assert_eq($c1->x, 220, 'c1 x=300-80=220 (first at right edge)');
+    assert_eq($c2->x, 140, 'c2 x=220-80=140 (second to left of first)');
 });
 
 test('column-reverse 子节点从下到上排列', function () {
@@ -663,8 +665,10 @@ test('column-reverse 子节点从下到上排列', function () {
 
     runResolver($root);
 
-    assert_eq($c1->y, 120, 'c1 y=200-40-40=120 (reversed)');
-    assert_eq($c2->y, 160, 'c2 y=120+40=160');
+    // CSS §9.2: column-reverse reverses main-axis, main-start = bottom edge
+    // First DOM item (c1) positioned at main-start (bottom), second (c2) above
+    assert_eq($c1->y, 160, 'c1 y=200-40=160 (first at bottom edge)');
+    assert_eq($c2->y, 120, 'c2 y=160-40=120 (second above first)');
 });
 
 

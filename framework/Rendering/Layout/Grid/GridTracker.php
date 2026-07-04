@@ -30,8 +30,23 @@ class GridTracker
         $repeatCount = 0;
         $repeatSize = null;
         if ($repeat !== null) {
-            $repeatCount = (int)($repeat['count'] ?? 1);
-            $repeatSize = $repeat['size'] ?? null;
+            if ($repeat === 'auto-fill' || $repeat === 'auto-fit') {
+                // auto-fill: compute number of columns that fit min size
+                $minSize = (int)($spec['min'] ?? 100);
+                $maxVal = (float)($spec['max'] ?? 1);
+                $maxUnit = $spec['maxTrack'] ?? 'fr';
+                $effectiveMin = $minSize + $gap;
+                if ($effectiveMin > 0) {
+                    $repeatCount = max(1, (int)(($containerSize + $gap) / $effectiveMin));
+                } else {
+                    $repeatCount = 1;
+                }
+                // Build spec string like '1fr' from parsed max
+                $repeatSize = $maxVal . $maxUnit;
+            } else {
+                $repeatCount = (int)($spec['count'] ?? 1);
+                $repeatSize = $spec['size'] ?? ($spec['track'] ?? null);
+            }
         }
 
         // Build track list (expand repeat)
@@ -64,10 +79,17 @@ class GridTracker
                     $t->frValue = $t->minmaxMaxFr;
                 } else {
                     $t->size = $t->minmaxMin;
-                    $usedSpace += $t->size;
+                    // Resolve percentage in minmax spec if size is 0
+                    if ($t->size <= 0 && $t->spec !== '' && str_contains($t->spec, '%')) {
+                        $t->size = max(1, self::resolveSize($t->spec, $containerSize));
+                    }
+                    $usedSpace += max(0, $t->size);
                 }
             } else {
-                // fixed size
+                // fixed size: resolve percentage if needed
+                if ($t->size <= 0 && $t->spec !== '' && str_ends_with(trim($t->spec), '%')) {
+                    $t->size = self::resolveSize($t->spec, $containerSize);
+                }
                 $usedSpace += max(0, $t->size);
             }
         }
@@ -151,12 +173,29 @@ class GridTracker
 
     /**
      * 将 CSS 长度字符串转为像素值。
+     * Parses px, %, and unitless values against containerSize for % resolution.
      */
     private static function parsePxValue(string $s): int
     {
         $s = trim($s);
         if (str_ends_with($s, 'px')) return (int)$s;
+        if (str_ends_with($s, '%')) return 0; // percentage resolved in computeTracks
         if (is_numeric($s)) return (int)$s;
+        return 0;
+    }
+
+    /**
+     * Resolve px/num/% value against container size.
+     */
+    private static function resolveSize(string $raw, int $containerSize): int
+    {
+        $raw = trim($raw);
+        if (str_ends_with($raw, '%')) {
+            $pct = (float)$raw;
+            return (int)($containerSize * $pct / 100);
+        }
+        if (str_ends_with($raw, 'px')) return (int)$raw;
+        if (is_numeric($raw)) return (int)$raw;
         return 0;
     }
 }

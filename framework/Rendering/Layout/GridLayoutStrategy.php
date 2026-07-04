@@ -138,6 +138,20 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $gridItems = [];
         $numCols = count($cols);
         $idx = 0;
+        // Ensure enough rows exist for all items
+        $totalItems = count($childResults);
+        $neededRows = $numCols > 0 ? (int)ceil($totalItems / $numCols) : $totalItems;
+        while (count($rows) < $neededRows) {
+            $t = new GridTrack();
+            $t->size = 50; // default auto row size
+            $t->start = count($rows) > 0 ? end($rows)->end + $gap : 0;
+            $t->end = $t->start + $t->size;
+            $rows[] = $t;
+        }
+        // Recompute row positions if we added rows
+        if (count($rows) > 0 && $neededRows > 0) {
+            $this->recomputeTrackPositions($rows, $gap);
+        }
         foreach ($childResults as $cr) {
             $gi = new GridItem();
             $gi->colStart = $idx % $numCols;

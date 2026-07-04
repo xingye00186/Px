@@ -285,15 +285,24 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 $childY = $stackY + $mTop;
             }
 
+            // Apply position:relative top/left offset (CSS §9.4.3)
+            $relTop = $childStyle?->top?->toPx() ?? 0;
+            $relLeft = $childStyle?->left?->toPx() ?? 0;
+            if ($childPosition === 'relative' || $childPosition === 'static') {
+                $childY += $relTop;
+            }
+
             $result[] = new LayoutResult(
-                x: $parentX + $padLeft, y: $childY,
+                x: $parentX + $padLeft + ($childPosition === 'relative' || $childPosition === 'static' ? $relLeft : 0), y: $childY,
                 w: $chW, h: $chH,
                 visualW: $chW, visualH: $chH,
                 layer: $cr->layer,
                 style: $childStyle,
                 children: $cr->children,
             );
-            $stackY = $childY + $chH + $mBottom;
+            // CSS §9.4.3: relative offset does NOT affect subsequent siblings.
+            // $stackY uses the un-offset position (childY - relTop).
+            $stackY = ($childY - $relTop) + $chH + $mBottom;
             $prevMarginBottom = $mBottom;
             $prevCollapsible = $isCollapsible;
         }
