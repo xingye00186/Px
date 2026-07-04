@@ -6,17 +6,9 @@ use native_types;
 
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\Layout\Flex\FlexItem;
-use Px\Rendering\Layout\Flex\FlexLineBreaker;
-use Px\Rendering\Layout\Flex\FlexDistributor;
 use Px\Rendering\Layout\Flex\FlexFragmentMapper;
 use Px\Rendering\CssLength;
 
-/**
- * FlexLayoutStrategy — Flex 布局策略
- *
- * Pure function 实现：layout(LayoutInput) → LayoutResult。
- * 不接收 RenderNode，不产生副作用。
- */
 class FlexLayoutStrategy implements LayoutStrategyInterface
 {
     public function layout(LayoutInput $input): LayoutResult
@@ -38,79 +30,100 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         if ($w <= 0) $w = $parentW;
         $h = $s->height->toPx();
 
-        $flexItems = [];
-        $flexItemData = [];
+        $isRow = ($s->getRaw("flexDirection") !== "column");
+        $justify = $s->getRaw("justifyContent") ?? "flex-start";
+        $wrap = $s->getRaw("flexWrap");
 
-        foreach ($childResults as $i => $cr) {
+        $flexItems = [];
+        foreach ($childResults as $cr) {
             $cs = $cr->style;
             if ($cs === null) continue;
-
-            $grow = (float)($cs->getRaw('flexGrow') ?? 0);
-            $shrink = (float)($cs->getRaw('flexShrink') ?? 1);
-            $rawBasis = $cs->getRaw('flexBasis');
+            $grow = (float)($cs->getRaw("flexGrow") ?? 0);
+            $shrink = (float)($cs->getRaw("flexShrink") ?? 1);
+            $rawBasis = $cs->getRaw("flexBasis");
             $basis = -1;
-            if ($rawBasis instanceof CssLength && !$rawBasis->isAuto()) {
-                $basis = $rawBasis->toPx();
-            }
-            $isFlexGrow = ($grow > 0);
-
-            $mL = $cs->margin?->left->toPx() ?? 0;
-            $mR = $cs->margin?->right->toPx() ?? 0;
-            $mT = $cs->margin?->top->toPx() ?? 0;
-            $mB = $cs->margin?->bottom->toPx() ?? 0;
-
+            if ($rawBasis instanceof CssLength && !$rawBasis->isAuto()) { $basis = $rawBasis->toPx(); }
             $item = new FlexItem();
             $item->grow = $grow;
             $item->shrink = $shrink;
             $item->basis = $basis;
-            $item->isFlexGrow = $isFlexGrow;
-            $item->marginBefore = 0;
-            $item->marginAfter = 0;
-            $item->marginCrossBefore = 0;
-            $item->marginCrossAfter = 0;
-            $item->hasExplicitCrossSize = false;
+            $item->isFlexGrow = ($grow > 0);
             $item->originalChildren = $cr->children;
-
+            $item->w = $cr->w; $item->h = $cr->h;
+            $item->visualW = $cr->visualW; $item->visualH = $cr->visualH;
             $flexItems[] = $item;
-            $flexItemData[] = [
-                'grow' => $grow,
-                'shrink' => $shrink,
-                'basis' => $basis,
-                'isFlexGrow' => $isFlexGrow,
-                'hasExplicitCrossSize' => false,
-                'crossAxisSized' => false,
-                'marginLeft' => $mL,
-                'marginRight' => $mR,
-                'marginTop' => $mT,
-                'marginBottom' => $mB,
-            ];
         }
 
-        $wrap = $s->getRaw('flexWrap');
-        $isWrapping = ($wrap === 'wrap' || $wrap === 'wrap-reverse');
-        $isRow = ($s->getRaw('flexDirection') !== 'column');
-        $breaker = new FlexLineBreaker();
-        $lines = $breaker->breakLines($flexItems, $flexItemData, $isWrapping, $isRow, $w, 0);
+        if (count($flexItems) === 0) {
+            return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s);
+        }
 
-        $distributor = new FlexDistributor();
-        // Simplified: apply results via mapper without full distribution
+        foreach ($flexItems as $item) {
+            if ($item->basis > 0) { if ($isRow) { $item->w = $item->basis; } else { $item->h = $item->basis; } }
+        }
+
+        $totalMain = 0;
+        foreach ($flexItems as $item) { $totalMain += $isRow ? $item->w : $item->h; }
+
+        if ($totalMain < $w && $totalMain > 0) {
+            $remaining = $w - $totalMain;
+            $growTotal = 0;
+            foreach ($flexItems as $item) { $growTotal += $item->grow; }
+            if ($growTotal > 0) {
+                foreach ($flexItems as $item) {
+                    if ($item->grow > 0) {
+                        $extra = (int)($remaining * $item->grow / $growTotal);
+                        if ($isRow) { $item->w += $extra; } else { $item->h += $extra; }
+                    }
+                }
+            }
+        }
+
+        if ($totalMain > $w) {
+            $overflow = $totalMain - $w;
+            $shrinkTotal = 0;
+            foreach ($flexItems as $item) { $shrinkTotal += $item->shrink; }
+            if ($shrinkTotal > 0) {
+                foreach ($flexItems as $item) {
+                    if ($item->shrink > 0) {
+                        $reduction = (int)($overflow * $item->shrink / $shrinkTotal);
+                        if ($isRow) { $item->w = max(0, $item->w - $reduction); } else { $item->h = max(0, $item->h - $reduction); }
+                    }
+                }
+            }
+        }
+
+        $totalFinal = 0;
+        foreach ($flexItems as $item) { $totalFinal += $isRow ? $item->w : $item->h; }
+        $mainStart = 0; $spaceBetween = 0;
+        $lineCount = count($flexItems);
+        if ($justify === "center") { $mainStart = ($w - $totalFinal) / 2; }
+        elseif ($justify === "flex-end") { $mainStart = $w - $totalFinal; }
+        elseif ($justify === "space-between" && $lineCount > 1) { $spaceBetween = ($w - $totalFinal) / ($lineCount - 1); }
+        elseif ($justify === "space-around") { $spaceBetween = ($w - $totalFinal) / $lineCount; $mainStart = $spaceBetween / 2; }
+        elseif ($justify === "space-evenly") { $spaceBetween = ($w - $totalFinal) / ($lineCount + 1); $mainStart = $spaceBetween; }
+
+        $cursorX = $x + (int)$mainStart;
+        $cursorY = $y + (int)$mainStart;
+
+        foreach ($flexItems as $item) {
+            if ($isRow) {
+                $item->x = (int)$cursorX; $item->y = $y;
+                $cursorX += $item->w + (int)$spaceBetween;
+            } else {
+                $item->y = (int)$cursorY; $item->x = $x;
+                $cursorY += $item->h + (int)$spaceBetween;
+            }
+        }
+
         $mappedResults = FlexFragmentMapper::toResults($flexItems, $childResults);
 
         if ($h <= 0 && count($mappedResults) > 0) {
             $maxBottom = $y;
-            foreach ($mappedResults as $cr) {
-                $bottom = $cr->y + $cr->h;
-                if ($bottom > $maxBottom) $maxBottom = $bottom;
-            }
+            foreach ($mappedResults as $cr) { $bottom = $cr->y + $cr->h; if ($bottom > $maxBottom) $maxBottom = $bottom; }
             $h = max(0, $maxBottom - $y);
         }
 
-        return new LayoutResult(
-            x: $x, y: $y, w: $w, h: $h,
-            visualW: $s->visualWidth($w),
-            visualH: $s->visualHeight($h),
-            style: $s,
-            children: $mappedResults,
-        );
+        return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s, children: $mappedResults);
     }
 }

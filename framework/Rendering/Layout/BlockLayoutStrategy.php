@@ -46,6 +46,49 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $displayVal = $s->display?->value ?? 'block';
         $stackedChildren = [];
         if (count($children) > 0 && $displayVal === 'block') {
+            // Check if any child has percent height and parent height is auto
+            $hasPercentChild = false;
+            foreach ($input->childNodes as $ch) {
+                $chH = $ch->computedStyle?->height;
+                if ($chH !== null && $chH->isPercent() && $h <= 0 && $input->reResolveChild !== null) {
+                    $hasPercentChild = true;
+                    break;
+                }
+            }
+
+            if ($hasPercentChild) {
+                // Pass 1: treat percent height as auto, compute parent height
+                $pass1 = $this->stackBlockChildren(
+                    $x, $y, $w, $s, $children, $textContent, $parentW
+                );
+                $computedH = $y;
+                foreach ($pass1 as $cr) {
+                    $bottom = $cr->y + $cr->h;
+                    if ($bottom > $computedH) $computedH = $bottom;
+                }
+                $computedH = max(0, $computedH - $y);
+
+                // Pass 2: re-resolve percent children with computed parent height
+                $reResolved = [];
+                foreach ($input->childNodes as $i => $ch) {
+                    $chH = $ch->computedStyle?->height;
+                    if ($chH !== null && $chH->isPercent() && $computedH > 0) {
+                        $newC = new LayoutConstraints(
+                            containerWidth: $c->containerWidth,
+                            containerHeight: $computedH,
+                            parentContentX: $c->parentContentX,
+                            parentContentY: $c->parentContentY,
+                            contentWidth: $c->contentWidth,
+                            contentHeight: $computedH,
+                        );
+                        $reResolved[] = ($input->reResolveChild)($ch, $newC);
+                    } else {
+                        $reResolved[] = $i < count($children) ? $children[$i] : null;
+                    }
+                }
+                $children = array_values(array_filter($reResolved));
+            }
+
             $stackedChildren = $this->stackBlockChildren(
                 $x, $y, $w, $s, $children, $textContent, $parentW
             );
