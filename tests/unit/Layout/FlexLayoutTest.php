@@ -450,6 +450,225 @@ test('align-self 覆盖 align-items', function () {
 });
 
 // ============================================================
+// Group 11: align-content (CSS standard: all 6 values)
+// ============================================================
+echo "\n--- Group 11: align-content ---\n";
+
+test('align-content:flex-start 多行靠上', function () {
+    $items = [];
+    for ($i = 0; $i < 4; $i++) {
+        $items[] = makeNode('div', ['width' => 80, 'height' => 40], [], 'item' . $i);
+    }
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row', 'flexWrap' => 'wrap',
+        'width' => 180, 'height' => 140, 'alignContent' => 'flex-start',
+    ], $items);
+
+    runResolver($root);
+
+    // row1 at y=0, row2 at y=40 (no extra space distributed above/below lines)
+    assert_eq($items[0]->y, 0, 'item0 y=0 (row1)');
+    assert_eq($items[2]->y, 40, 'item2 y=40 (row2, immediately below row1)');
+});
+
+test('align-content:flex-end 多行靠下', function () {
+    $items = [];
+    for ($i = 0; $i < 4; $i++) {
+        $items[] = makeNode('div', ['width' => 80, 'height' => 40], [], 'item' . $i);
+    }
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row', 'flexWrap' => 'wrap',
+        'width' => 180, 'height' => 140, 'alignContent' => 'flex-end',
+    ], $items);
+
+    runResolver($root);
+
+    // content takes 80px (2 lines * 40), container 140, extra=60
+    // row2 at bottom: first row = 140-80-40 = 20? Actually:
+    // total content = 80, available = 140, extra = 60, offset = 60
+    // Actually flex-end means lines packed at end: row1 y=60, row2 y=100
+    assert_eq($items[0]->y, 60, 'item0 y=60 (row1 at end)');
+    assert_eq($items[2]->y, 100, 'item2 y=100 (row2 below row1)');
+});
+
+test('align-content:center 多行居中', function () {
+    $items = [];
+    for ($i = 0; $i < 4; $i++) {
+        $items[] = makeNode('div', ['width' => 80, 'height' => 40], [], 'item' . $i);
+    }
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row', 'flexWrap' => 'wrap',
+        'width' => 180, 'height' => 140, 'alignContent' => 'center',
+    ], $items);
+
+    runResolver($root);
+
+    // content=80, avail=140, extra=60, offset=30
+    assert_eq($items[0]->y, 30, 'item0 y=30 (row1 centered)');
+    assert_eq($items[2]->y, 70, 'item2 y=70 (row2)');
+});
+
+test('align-content:space-between 多行均匀分布', function () {
+    $items = [];
+    for ($i = 0; $i < 4; $i++) {
+        $items[] = makeNode('div', ['width' => 80, 'height' => 40], [], 'item' . $i);
+    }
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row', 'flexWrap' => 'wrap',
+        'width' => 180, 'height' => 140, 'alignContent' => 'space-between',
+    ], $items);
+
+    runResolver($root);
+
+    // extra=60, 2 lines, gap=60/1=60
+    assert_eq($items[0]->y, 0, 'item0 y=0 (row1 at start)');
+    assert_eq($items[2]->y, 100, 'item2 y=100 (row2 at end)');
+    // row1=0..40, gap=60, row2=100..140
+});
+
+test('align-content:space-around 多行均匀环绕', function () {
+    $items = [];
+    for ($i = 0; $i < 4; $i++) {
+        $items[] = makeNode('div', ['width' => 80, 'height' => 40], [], 'item' . $i);
+    }
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row', 'flexWrap' => 'wrap',
+        'width' => 180, 'height' => 140, 'alignContent' => 'space-around',
+    ], $items);
+
+    runResolver($root);
+
+    // extra=60, 2 lines, space=60/2=30, each line gets half=15 on each side
+    assert_eq($items[0]->y, 15, 'item0 y=15');
+    assert_eq($items[2]->y, 85, 'item2 y=15+40+30=85');
+});
+
+test('align-content:space-evenly 多行等间距', function () {
+    $items = [];
+    for ($i = 0; $i < 4; $i++) {
+        $items[] = makeNode('div', ['width' => 80, 'height' => 40], [], 'item' . $i);
+    }
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row', 'flexWrap' => 'wrap',
+        'width' => 180, 'height' => 140, 'alignContent' => 'space-evenly',
+    ], $items);
+
+    runResolver($root);
+
+    // extra=60, 3 gaps, each=20
+    assert_eq($items[0]->y, 20, 'item0 y=20');
+    assert_eq($items[2]->y, 80, 'item2 y=20+40+20=80');
+});
+
+test('align-content:stretch 多行拉伸（CSS默认）', function () {
+    $items = [];
+    for ($i = 0; $i < 4; $i++) {
+        $items[] = makeNode('div', ['width' => 80], [], 'item' . $i);
+    }
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row', 'flexWrap' => 'wrap',
+        'width' => 180, 'height' => 140, 'alignContent' => 'stretch',
+    ], $items);
+
+    runResolver($root);
+
+    // each line stretched to 70 = 140/2
+    assert_eq($items[0]->y, 0, 'item0 y=0 (row1 at start)');
+    assert_eq($items[0]->h, 70, 'item0 h stretched to 70');
+    assert_eq($items[2]->y, 70, 'item2 y=70 (row2)');
+    assert_eq($items[2]->h, 70, 'item2 h stretched to 70');
+});
+
+// ============================================================
+// Group 12: justify-content in column direction (CSS §9.2)
+// ============================================================
+echo "\n--- Group 12: justify-content in column ---\n";
+
+test('column justify-content:center 垂直居中', function () {
+    $c1 = makeNode('div', ['height' => 30], [], 'c1');
+    $c2 = makeNode('div', ['height' => 30], [], 'c2');
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'column',
+        'width' => 200, 'height' => 200,
+        'justifyContent' => 'center',
+    ], [$c1, $c2]);
+
+    runResolver($root);
+
+    // total=60, main=200, extra=140, half=70
+    assert_eq($c1->y, 70, 'c1 y=70 (centered in column)');
+    assert_eq($c2->y, 100, 'c2 y=70+30=100');
+});
+
+test('column justify-content:flex-end 垂直靠下', function () {
+    $c1 = makeNode('div', ['height' => 30], [], 'c1');
+    $c2 = makeNode('div', ['height' => 30], [], 'c2');
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'column',
+        'width' => 200, 'height' => 200,
+        'justifyContent' => 'flex-end',
+    ], [$c1, $c2]);
+
+    runResolver($root);
+
+    // content=60, container=200, move by 140
+    assert_eq($c1->y, 140, 'c1 y=140 (at bottom)');
+    assert_eq($c2->y, 170, 'c2 y=170');
+});
+
+test('column justify-content:space-between', function () {
+    $c1 = makeNode('div', ['height' => 30], [], 'c1');
+    $c2 = makeNode('div', ['height' => 30], [], 'c2');
+    $c3 = makeNode('div', ['height' => 30], [], 'c3');
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'column',
+        'width' => 200, 'height' => 200,
+        'justifyContent' => 'space-between',
+    ], [$c1, $c2, $c3]);
+
+    runResolver($root);
+
+    // total=90, 3 items, gaps=2, space=110, gap=110/2=55
+    assert_eq($c1->y, 0, 'c1 y=0 (first)');
+    assert_eq($c3->y, 170, 'c3 y=170 (last)');
+    // Each gap = 55: c1=0..30, c2=85..115, c3=170..200
+});
+
+// ============================================================
+// Group 13: flex-direction: row-reverse / column-reverse
+// ============================================================
+echo "\n--- Group 13: flex-direction reverse ---\n";
+
+test('row-reverse 子节点从右到左排列', function () {
+    $c1 = makeNode('div', ['width' => 80, 'height' => 50], [], 'c1');
+    $c2 = makeNode('div', ['width' => 80, 'height' => 50], [], 'c2');
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'row-reverse',
+        'width' => 300, 'height' => 100,
+    ], [$c1, $c2]);
+
+    runResolver($root);
+
+    assert_eq($c1->x, 140, 'c1 x=300-80-80=140 (reversed)');
+    assert_eq($c2->x, 220, 'c2 x=140+80=220');
+});
+
+test('column-reverse 子节点从下到上排列', function () {
+    $c1 = makeNode('div', ['height' => 40], [], 'c1');
+    $c2 = makeNode('div', ['height' => 40], [], 'c2');
+    $root = makeNode('div', [
+        'display' => 'flex', 'flexDirection' => 'column-reverse',
+        'width' => 200, 'height' => 200,
+    ], [$c1, $c2]);
+
+    runResolver($root);
+
+    assert_eq($c1->y, 120, 'c1 y=200-40-40=120 (reversed)');
+    assert_eq($c2->y, 160, 'c2 y=120+40=160');
+});
+
+
+// ============================================================
 // Group 10: flex-shrink edge cases (infinite loop protection)
 // ============================================================
 echo "\n--- Group 10: flex-shrink edge cases (infinite loop protection) ---\n";
