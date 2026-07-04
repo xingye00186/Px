@@ -25,5 +25,6 @@ class FlexItem
     public int $marginCrossBefore = 0;
     public int $marginCrossAfter = 0;
     public bool $hasExplicitCrossSize = false;
+    public string $alignSelf = 'auto';
     public ?array $originalChildren = null;
 }
