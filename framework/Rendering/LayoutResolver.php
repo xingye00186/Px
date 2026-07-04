@@ -174,35 +174,43 @@ class LayoutResolver
 
         $posVal = $style?->position?->value ?? 'static';
         if ($position === 'absolute' || $position === 'fixed') {
-            // Find positioning ancestor
-            $parentNode = $node->parent;
-            while ($parentNode !== null) {
-                $pPos = $parentNode->computedStyle?->position?->value ?? 'static';
-                if ($pPos !== 'static') {
-                    $pCS = $parentNode->computedStyle;
-                    // Use parameter values for immediate parent (correct during recursion),
-                    // fall back to RenderNode values for deeper ancestors
-                    if ($parentNode === $node->parent && $parentResultX !== null) {
-                        $ancestorX = $parentResultX;
-                        $ancestorY = $parentResultY;
-                    } else {
-                        $ancestorX = $parentNode->x;
-                        $ancestorY = $parentNode->y;
-                    }
-                    $ancestorW = $parentNode->w;
-                    $ancestorH = $parentNode->h;
-                    $ancestorBL = $pCS?->borderLeftWidth ?? 0;
-                    $ancestorBT = $pCS?->borderTopWidth ?? 0;
-                    $ancestorPL = $pCS?->padding?->left->toPx() ?? 0;
-                    $ancestorPT = $pCS?->padding?->top->toPx() ?? 0;
-                    break;
-                }
-                $parentNode = $parentNode->parent;
-            }
-            // For fixed positioning, use viewport
             if ($position === 'fixed') {
-                $viewportW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0;
-                $viewportH = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0;
+                // CSS §9.3: fixed 包含块 = 视口，不查找定位祖先
+                $ancestorW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0;
+                $ancestorH = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0;
+                $ancestorX = 0;
+                $ancestorY = 0;
+                $viewportW = $ancestorW;
+                $viewportH = $ancestorH;
+            } else {
+                // absolute: 找最近定位祖先
+                $parentNode = $node->parent;
+                while ($parentNode !== null) {
+                    $pPos = $parentNode->computedStyle?->position?->value ?? 'static';
+                    if ($pPos !== 'static') {
+                        $pCS = $parentNode->computedStyle;
+                        if ($parentNode === $node->parent && $parentResultX !== null) {
+                            $ancestorX = $parentResultX;
+                            $ancestorY = $parentResultY;
+                        } else {
+                            $ancestorX = $parentNode->x;
+                            $ancestorY = $parentNode->y;
+                        }
+                        // Use ComputedStyle for parent dimensions (RenderNode.w is 0 during Phase A)
+                        $parentW = $pCS?->width?->toPx() ?? $parentNode->w;
+                        $parentH = $pCS?->height?->toPx() ?? $parentNode->h;
+                        if ($parentW <= 0) $parentW = $parentNode->w;
+                        if ($parentH <= 0) $parentH = $parentNode->h;
+                        $ancestorW = $parentW;
+                        $ancestorH = $parentH;
+                        $ancestorBL = $pCS?->borderLeftWidth ?? 0;
+                        $ancestorBT = $pCS?->borderTopWidth ?? 0;
+                        $ancestorPL = $pCS?->padding?->left->toPx() ?? 0;
+                        $ancestorPT = $pCS?->padding?->top->toPx() ?? 0;
+                        break;
+                    }
+                    $parentNode = $parentNode->parent;
+                }
             }
         }
 

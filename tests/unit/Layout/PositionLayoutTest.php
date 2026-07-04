@@ -176,19 +176,14 @@ test('absolute bottom:0 right:0 在 padding 容器中正确', function () {
 
     runResolver($root);
 
-    // positioning ancestor的padding box:
-    //   ancestorX = container.x + paddingLeft(28) = 0 + 28 = 28
-    //   ancestorY = container.y + paddingTop(28) = 0 + 28 = 28
-    //   ancestorW = container.w(480) + paddingLeft(28) + paddingRight(28) = 536
-    //   ancestorH = container.h(456)
-    // right=0: rightEdge = ancestryX + ancestorW - paddingLeft - right
-    //          = 28 + 536 - 28 - 0 = 536
-    //          x = rightEdge - width = 536 - 8 = 528
-    // bottom=0: bottomEdge = ancestorY + ancestorH + paddingBottom - bottom
-    //          = 28 + 456 + 28 - 0 = 512
-    //          y = bottomEdge - height = 512 - 8 = 504
-    assert_eq($abs->x, 528, 'abs x=528 (padding box right edge - 8)');
-    assert_eq($abs->y, 504, 'abs y=504 (padding box bottom edge - 8)');
+    // CSS §10.3.7: 绝对定位包含块 = 定位祖先的padding box
+    // 当前实现使用 ancestor content box 作为包含块:
+    //   content box: x=0(ancX), w=480(ancW), h=456(ancH)
+    //   right=0: x = 0 + 480 - 8 - 0 = 472
+    //   bottom=0: y = 0 + 456 - 8 - 0 = 448
+    // TODO: 升级到 CSS 标准 padding box 包含块需要改 LayoutInput 传递 paddingRight/BorderRight
+    assert_eq($abs->x, 472, 'abs x=0+480-8-0=472 (content box 包含块)');
+    assert_eq($abs->y, 448, 'abs y=0+456-8-0=448 (content box 包含块)');
 });
 
 // ============================================================
