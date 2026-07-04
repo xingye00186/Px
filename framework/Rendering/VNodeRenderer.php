@@ -1,1 +1,1405 @@
-﻿<?phpnamespace Px\Rendering;use native_types;use Px\Core\Config;use Px\Interfaces\ReactiveComponentInterface;use Px\ReactiveComponent;/** * VNodeRenderer 鈥?RenderNode 鏍戦亶鍘嗘覆鏌撳櫒 * * 涓ら樁娈垫覆鏌? *   1. Walk: 鏀堕泦鎵€鏈夐渶瑕佺粯鍒剁殑鍏冪礌 (鎸?layer 鍒嗙粍) *   2. Draw: 鎸?layer 椤哄簭璋冪敤 ctx->drawElement() * * 璁捐鍘熷垯: *   姣忎釜 RenderNode 鐢熸垚涓€涓厓绱犳弿杩般€傚鏉傜被鍨?(button, input, *   scroll-container) 鐢?GdiRenderContext::drawElement 鍐呴儴 *   澶氭璋冪敤 GDI 鍘熻瀹屾垚缁樺埗 鈥?涓嶅湪姝ゅ眰鍒嗚В涓哄涓厔寮熷浘鍏冦€? * *   鍛戒腑娴嬭瘯鍩轰簬 RenderNode 鏍戯紙鐢?RenderTreeManager 鎻愪緵锛夛紝 *   涓嶄緷璧栧厓绱犲垪琛ㄣ€? * * 澧為噺缁樺埗: *   浣跨敤 $currentPaintFrame 甯у彿 + RenderNode::needsPaint/markPainted *   鍒ゆ柇鑺傜偣鏄惁闇€瑕侀噸鏂扮敓鎴愬厓绱犳弿杩般€? */class VNodeRenderer{    private ReactiveComponentInterface $component;    private RenderContext $render_ctx;    /** @var int 褰撳墠缁樺埗甯у彿锛岄€掑浠ラ伩鍏嶅叏閲忛噸缃?*/    private int $currentPaintFrame = 0;    /** @var array Scroll context for offsetting children */    private array $scrollCtxStack = [];    /** @var array<ReactiveComponentInterface> Stack for correct bind value context */    private array $componentStack = [];    /** @var array<string, int> RenderNode render offsets */    private array $renderOffsetsX = [];    private array $renderOffsetsY = [];    private function setRenderOffsetX(RenderNode $node, int $value): void    {        $this->renderOffsetsX[spl_object_id($node)] = $value;    }    private function setRenderOffsetY(RenderNode $node, int $value): void    {        $this->renderOffsetsY[spl_object_id($node)] = $value;    }    private function getRenderOffsetX(RenderNode $node): int    {        return $this->renderOffsetsX[spl_object_id($node)] ?? 0;    }    private function getRenderOffsetY(RenderNode $node): int    {        return $this->renderOffsetsY[spl_object_id($node)] ?? 0;    }    public function __construct(ReactiveComponentInterface $component, RenderContext $render_ctx)    {        $this->component = $component;        $this->render_ctx = $render_ctx;    }    public function getRenderContext(): RenderContext    {        return $this->render_ctx;    }    /**     * 璁＄畻鑺傜偣鐨?padding-box 瑁佸壀鐭╁舰锛堢粺涓€鏂规硶锛夈€?     *     * CSS Overflow Module L3 搂3.2: clip region = padding box (excludes border).     * 浣跨敤娓叉煋鍧愭爣锛坙ayout + renderOffset锛夛紝涓庡瓙鍏冪礌鏂囨湰/item-clip     * 澶勪簬鍚屼竴鍧愭爣绌洪棿锛屼繚璇佸祵濂?clip 鐩镐氦璁＄畻涓€鑷淬€?     *     * @return array{x: int, y: int, w: int, h: int}     */    private static function computePaddingBoxClip(RenderNode $node): array    {        $cs = $node->computedStyle;        $bl = (int)($cs?->borderLeftWidth ?? 0);        $br = (int)($cs?->borderRightWidth ?? 0);        $bt = (int)($cs?->borderTopWidth ?? 0);        $bb = (int)($cs?->borderBottomWidth ?? 0);        // visualW/visualH 浼樺厛锛屾湭璁剧疆鏃跺洖閫€鍒?layout w/h        $vw = ($node->visualW > 0 ? $node->visualW : $node->w);        $vh = ($node->visualH > 0 ? $node->visualH : $node->h);        return [            'x' => $node->x + $this->getRenderOffsetX($node) + $bl,            'y' => $node->y + $this->getRenderOffsetY($node) + $bt,            'w' => max(0, $vw - $bl - $br),            'h' => max(0, $vh - $bt - $bb),        ];    }    /**     * 娓叉煋 RenderNode 鏍?     */    public function render(RenderNode $root): void    {        \Px\Core\PerfCounter::start('render_collect');        $this->render_ctx->beginFrame();        // 甯у彿婧㈠嚭淇濇姢        if ($this->currentPaintFrame === PHP_INT_MAX) {            $this->currentPaintFrame = 1;            $this->resetAllPaintFlags($root);        } else {            $this->currentPaintFrame++;        }        $elementsByLayer = [];        $maxLayer = 0;        $this->collectElements($root, $elementsByLayer, $maxLayer);        if (Config::get('debug_diag_enabled', false)) {            $totalElements = 0;            for ($l = 0; $l <= $maxLayer; $l++) {                $totalElements += count($elementsByLayer[$l] ?? []);            }            error_log('[DIAG] VNodeRenderer: collected ' . $totalElements . ' elements across ' . ($maxLayer + 1) . ' layers');        }        for ($l = 0; $l <= $maxLayer; $l++) {            $layerElements = $elementsByLayer[$l] ?? [];            foreach ($layerElements as $el) {                $this->render_ctx->drawElement($el);            }        }        $this->render_ctx->endFrame();        \Px\Core\PerfCounter::end('render_collect');    }    /**     * 閫掑綊鏀堕泦闇€瑕佺粯鍒剁殑鍏冪礌銆?     * 浣跨敤 needsPaint + markPainted 瀹炵幇澧為噺缁樺埗銆?     *     * @param RenderNode $node 褰撳墠鑺傜偣     * @param array &$elementsByLayer 鎸?layer 鍒嗙粍鐨勫厓绱?     * @param int &$maxLayer 鏈€澶?layer     * @param int $accumOffsetX 绁栧厛绾х疮璁℃粴鍔ㄥ亸绉?X锛圓1 閲嶆瀯锛氫笉鍦ㄥ竷灞€灞傛敼鍧愭爣锛?     * @param int $accumOffsetY 绁栧厛绾х疮璁℃粴鍔ㄥ亸绉?Y     */    private function collectElements(RenderNode $node, array &$elementsByLayer, int &$maxLayer, int $accumOffsetX = 0, int $accumOffsetY = 0): void    {        // 鈹€鈹€ A1 閲嶆瀯: 璁剧疆鑺傜偣鐨勬粴鍔ㄥ亸绉伙紙鐢ㄤ簬 renderNodeToElement锛夆攢鈹€        // position:fixed 鍏冪礌涓嶅彈浠讳綍绁栧厛婊氬姩褰卞搷        $isFixed = ($node->computedStyle?->position?->value ?? '') === 'fixed';        $this->setRenderOffsetX($node, $isFixed ? 0 : $accumOffsetX);        $this->setRenderOffsetY($node, $isFixed ? 0 : $accumOffsetY);        // 澧為噺缁樺埗锛氬鏋滆妭鐐逛笉闇€瑕佺粯鍒讹紝璺宠繃浣嗙户缁鐞嗗瓙鑺傜偣        if (!$node->needsPaint($this->currentPaintFrame)) {            // 浣嗗瓙鑺傜偣浠嶉渶浼犻€掓纭殑绱鍋忕Щ            $childOffsetX = $isFixed ? 0 : $accumOffsetX;            $childOffsetY = $isFixed ? 0 : $accumOffsetY;            if (!$isFixed && $node->isScrollContainer) {                $childOffsetX -= $node->scrollLeft;                $childOffsetY -= $node->scrollTop;            }            foreach ($node->children as $child) {                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);            }            return;        }        // debug:         // collectElements trace removed        // #root 涓嶄骇鐢熸覆鏌撳厓绱狅紝鐩存帴澶勭悊瀛愯妭鐐?        if ($node->type === '#root') {            $childOffsetX = $isFixed ? 0 : $accumOffsetX;            $childOffsetY = $isFixed ? 0 : $accumOffsetY;            if (!$isFixed && $node->isScrollContainer) {                $childOffsetX -= $node->scrollLeft;                $childOffsetY -= $node->scrollTop;            }            foreach ($node->children as $child) {                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);            }            return;        }        // 鏅€氬厓绱犺妭鐐癸細鐢熸垚鍏冪礌鎻忚堪        $el = $this->renderNodeToElement($node);        if ($el !== null) {            $layer = $node->layer;            if ($layer > $maxLayer) $maxLayer = $layer;            if (!isset($elementsByLayer[$layer])) {                $elementsByLayer[$layer] = [];            }            // Handle group type: expand children into their own layers            if (($el['type'] ?? '') === 'group' && isset($el['elements'])) {                foreach ($el['elements'] as $childEl) {                    $childLayer = $childEl['layer'] ?? $layer;                    if ($childLayer > $maxLayer) $maxLayer = $childLayer;                    if (!isset($elementsByLayer[$childLayer])) {                        $elementsByLayer[$childLayer] = [];                    }                    $elementsByLayer[$childLayer][] = $childEl;                }            } else {                $elementsByLayer[$layer][] = $el;            }        }        // 鈹€鈹€ 瑁佸垏鍖哄煙澶勭悊锛坈lip-push / clip-pop锛夆攢鈹€        // 婊氬姩瀹瑰櫒锛坥verflow:auto/scroll锛夊拰 overflow:hidden 閮介渶瑕佽鍒?        $pushedClip = false;        $isScrollNode = $node->isScrollContainer;        if ($isScrollNode) {            // CSS Overflow Module L3 搂3.2: clip region = padding box (excludes border)            $clip = self::computePaddingBoxClip($node);            $this->scrollCtxStack[] = [                'x' => $clip['x'], 'y' => $clip['y'],                'w' => $clip['w'], 'h' => $clip['h'],                'scrollTop' => $node->scrollTop,                'scrollLeft' => $node->scrollLeft,                'overflowX' => $node->computedStyle?->overflowX?->value ?? $node->computedStyle?->overflow?->value ?? 'visible',                'overflowY' => $node->computedStyle?->overflowY?->value ?? $node->computedStyle?->overflow?->value ?? 'visible',                'layer' => $node->layer,            ];            $pushedClip = true;        } else {            // 闈炴粴鍔ㄥ鍣細overflow:hidden 涔熼渶瑕佽鍒囧瓙鍏冪礌            $noX = $node->computedStyle?->overflowX?->value ?? $node->computedStyle?->overflow?->value ?? 'visible';            $noY = $node->computedStyle?->overflowY?->value ?? $node->computedStyle?->overflow?->value ?? 'visible';            if ($noX === 'hidden' || $noY === 'hidden') {                $pushedClip = true;            }        }        if ($pushedClip) {            $layer = $node->layer;            if ($layer > $maxLayer) $maxLayer = $layer;            if (!isset($elementsByLayer[$layer])) {                $elementsByLayer[$layer] = [];            }            // 浣跨敤缁熶竴鏂规硶璁＄畻 padding-box clip锛屽潗鏍囩郴涓?scrollCtxStack 涓€鑷?            $clip = self::computePaddingBoxClip($node);            $elementsByLayer[$layer][] = [                'type' => 'clip-push',                'x' => $clip['x'], 'y' => $clip['y'],                'w' => $clip['w'], 'h' => $clip['h'],                'layer' => $layer,            ];            // 婊氬姩瀹瑰櫒杩橀渶鍦?layer+1 鎺?clip 浠ヨ鍒囨枃瀛?(CSS Overflow L3 搂3.2)            if ($isScrollNode) {                $textLayer = $layer + 1;                if ($textLayer > $maxLayer) $maxLayer = $textLayer;                if (!isset($elementsByLayer[$textLayer])) {                    $elementsByLayer[$textLayer] = [];                }                $elementsByLayer[$textLayer][] = [                    'type' => 'clip-push',                    'x' => $clip['x'], 'y' => $clip['y'],                    'w' => $clip['w'], 'h' => $clip['h'],                    'layer' => $textLayer,                ];            }        }        // 鈹€鈹€ 璁＄畻瀛愯妭鐐圭殑绱婊氬姩鍋忕Щ 鈹€鈹€        // 褰撳墠鑺傜偣鐨?scroll 鍋忕Щ瀵瑰瓙鑺傜偣鐢熸晥        $childOffsetX = $isFixed ? 0 : $accumOffsetX;        $childOffsetY = $isFixed ? 0 : $accumOffsetY;        if (!$isFixed && $node->isScrollContainer) {            $childOffsetX -= $node->scrollLeft;            $childOffsetY -= $node->scrollTop;            error_log('[SCROLL_DBG] collect scrollContainer x=' . $node->x . ' y=' . $node->y . ' w=' . $node->w . ' h=' . $node->h . ' visualH=' . $node->visualH . ' scrollTop=' . $node->scrollTop . ' scrollLeft=' . $node->scrollLeft . ' childOffY=' . $childOffsetY . ' children=' . count($node->children));        }        // 閫掑綊澶勭悊瀛愯妭鐐癸紙button 绫诲瀷涓嶅睍寮€锛岀敱 GDI 灞傜粯鍒讹級        if ($node->type !== 'button') {            foreach ($node->children as $child) {                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);            }        }        if ($pushedClip) {            if ($isScrollNode) {                array_pop($this->scrollCtxStack);            }            $layer = $node->layer;            if ($layer > $maxLayer) $maxLayer = $layer;            if (!isset($elementsByLayer[$layer])) {                $elementsByLayer[$layer] = [];            }            $elementsByLayer[$layer][] = [                'type' => 'clip-pop',                'layer' => $layer,            ];            // 婊氬姩瀹瑰櫒鍦?layer+1 寮瑰搴?clip (涓庝笂鏂圭殑 textLayer push 閰嶅)            if ($isScrollNode) {                $textLayer = $layer + 1;                if ($textLayer > $maxLayer) $maxLayer = $textLayer;                if (!isset($elementsByLayer[$textLayer])) {                    $elementsByLayer[$textLayer] = [];                }                $elementsByLayer[$textLayer][] = [                    'type' => 'clip-pop',                    'layer' => $textLayer,                ];            }            // 婊氬姩瀹瑰櫒杩橀渶鍦?clip-pop 涔嬪悗缁樺埗婊氬姩鏉★紙纭繚鍦ㄩ《灞傦級            if ($isScrollNode) {                $scrollCtx = ['layer' => $node->layer];                ScrollbarEmitter::emit($node, $scrollCtx, $elementsByLayer, $maxLayer);            }        }        // 鏍囪鑺傜偣涓哄凡缁樺埗        $node->markPainted($this->currentPaintFrame);    }    /**     * 鏂囨湰瀹藉害娴嬮噺锛堜紭鍏堜娇鐢?C++ 绮剧‘娴嬮噺锛岄€€鍖栦娇鐢ㄤ及绠楋級銆?     */    private static function measureTextWidth(string $text, int $fontSize, bool $bold): int    {        static $hasNative = null;        if ($hasNative === null) {            $hasNative = function_exists('\\sk_measure_text_width')                && !getenv('PX_LAYOUT_TEST_FORCE_ESTIMATE');        }        if ($hasNative) {            return (int)\sk_measure_text_width($text, $fontSize, $bold);        }        $boldFactor = $bold ? 1.35 : 1.0;        $charW = (int)($fontSize * 0.6 * $boldFactor);        $cjkW  = (int)($fontSize * $boldFactor);        $len   = strlen($text);        $total = 0;        for ($i = 0; $i < $len;) {            $b = ord($text[$i]);            if ($b < 0x80) {                $total += $charW; $i++;            } elseif ($b < 0xC0) {                $i++;            } elseif ($b < 0xE0) {                $total += $cjkW; $i += 2;            } elseif ($b < 0xF0) {                $total += $cjkW; $i += 3;            } else {                $total += $cjkW; $i += 4;            }        }        return $total;    }    /**     * 娴嬮噺鏂囨湰鎬婚珮搴︼紙ascent + descent锛夛紝鐢ㄤ簬鍨傜洿灞呬腑銆?     * 浼樺厛浣跨敤 C++ sk_measure_text_height 绮剧‘娴嬮噺锛岄€€鍖栦娇鐢?fontSize + 2 浼扮畻銆?     */    /**     * CSS Text Module Level 3 搂2: text-transform     * uppercase / lowercase / capitalize / none     */    private static function applyTextTransform(string $text, string $transform): string    {        switch ($transform) {            case 'uppercase':                return mb_strtoupper($text, 'UTF-8');            case 'lowercase':                return mb_strtolower($text, 'UTF-8');            case 'capitalize':                $words = explode(' ', $text);                foreach ($words as &$w) {                    if ($w !== '') {                        $w = mb_strtoupper(mb_substr($w, 0, 1, 'UTF-8'), 'UTF-8')                           . mb_substr($w, 1, null, 'UTF-8');                    }                }                return implode(' ', $words);            default:                return $text;        }    }    /**     * 娴嬮噺鏂囨湰鎬婚珮搴︼紙ascent + descent锛夛紝鐢ㄤ簬鍨傜洿灞呬腑銆?     * 浼樺厛浣跨敤 C++ sk_measure_text_height 绮剧‘娴嬮噺锛岄€€鍖栦娇鐢?fontSize + 2 浼扮畻銆?     */    /**     * CSS Fonts Module Level 3 搂5: font-variant 鈥?small-caps 灏忓ぇ鍐?     * 灏嗗皬鍐欏瓧姣嶈浆涓哄ぇ鍐欙紝浣跨敤缂╁皬姣斾緥(0.7脳)鐨勫瓧鍙锋覆鏌?     * @return array{text:string, fontSize:int} 杞崲鍚庣殑鏂囨湰鍜屽瓧鍙?     */    private static function applyFontVariant(string $text, int $fontSize, string $variant): array    {        if ($variant === 'normal') {            return ['text' => $text, 'fontSize' => $fontSize];        }        // small-caps: lowercase鈫抲ppercase, font size鈫?.7脳        // all-small-caps: all鈫抲ppercase, font size鈫?.7脳        $result = ['text' => $text, 'fontSize' => $fontSize];        if ($variant === 'small-caps' || $variant === 'all-small-caps') {            // Use mb_strtoupper for proper Unicode uppercase conversion            if (function_exists('mb_strtoupper')) {                $result['text'] = mb_strtoupper($text, 'UTF-8');            } else {                $result['text'] = strtoupper($text);            }            // Reduce font size for small-caps rendering            $result['fontSize'] = max(6, (int)($fontSize * 0.7));        }        return $result;    }    /**     * CSS Fonts Module Level 搂4: font-stretch 鈥?瀛椾綋瀹藉害妯℃嫙     * 閫氳繃璋冩暣瀛楃闂磋窛杩戜技 condensed(绱х缉)/expanded(鎵╁睍)     */    private static function applyFontStretch(string $stretch): int    {        switch ($stretch) {            case 'condensed':            case 'semi-condensed':            case 'ultra-condensed':            case 'extra-condensed':                return -1;  // slight negative spacing            case 'expanded':            case 'semi-expanded':            case 'ultra-expanded':            case 'extra-expanded':                return 1;   // slight positive spacing            default:                return 0;        }    }    private static function measureTextHeight(int $fontSize, bool $bold): int    {        static $hasNative = null;        if ($hasNative === null) {            $hasNative = function_exists('\\sk_measure_text_height');        }        if ($hasNative) {            $h = (int)\sk_measure_text_height($fontSize, $bold ? 1 : 0);            if ($h > 0) return $h;        }        return $fontSize + 2;    }    /**     * CSS Images Level 3 搂5.6: 瑙ｆ瀽 object-position 鍊?     */    private static function resolveObjectPosition(string $value, int $containerSize, int $imageSize): int    {        $value = trim(strtolower($value));        if ($value === 'left' || $value === 'top') return 0;        if ($value === 'right' || $value === 'bottom') return $containerSize - $imageSize;        if ($value === 'center') return (int)(($containerSize - $imageSize) / 2);        if (str_ends_with($value, '%')) {            return (int)(($containerSize - $imageSize) * (float)$value / 100.0);        }        if (preg_match('/^-?\d+/', $value, $m)) return (int)$m[0];        return (int)(($containerSize - $imageSize) / 2);    }    /**     * 鑾峰彇褰撳墠娲昏穬鐨勭粍浠跺疄渚嬶紙鐢ㄤ簬瑙ｆ瀽 bind 鍊硷級銆?     * RenderNode 鏍戞棤 #component 鑺傜偣锛屾晠濮嬬粓杩斿洖鏍圭粍浠躲€?     */    private function currentComponent(): ReactiveComponent    {        $n = count($this->componentStack);        return $n > 0 ? $this->componentStack[$n - 1] : $this->component;    }    /**     * Convert a RenderNode to a single draw element descriptor.     *     * @return ?array element descriptor, or null if invisible     */    private function renderNodeToElement(RenderNode $node): ?array    {        // Pseudo-class overrides for element builders        $pseudoKeys = self::extractPseudoOverrides($node);        // CSS 2.2 搂9.2.4: display:none 鍏冪礌涓嶇敓鎴愮洅瀛愶紝涓嶅弬涓庢覆鏌?        if (($node->computedStyle?->display?->value ?? '') === 'none') {            return null;        }        // A1 閲嶆瀯: 甯冨眬鍧愭爣 + 缁樺埗鏃舵粴鍔ㄥ亸绉伙紙涓嶅湪甯冨眬灞備慨鏀瑰潗鏍囷級        $x = $node->x + $this->getRenderOffsetX($node);        $y = $node->y + $this->getRenderOffsetY($node);        $w = $node->visualW;        $h = $node->visualH;        // borderRadiusPercent is now resolved inline in element builders        $layer = $node->layer;        // 婊氬姩瑁佸垏锛坧osition:fixed 鍏冪礌涓嶅彈绁栧厛婊氬姩瀹瑰櫒褰卞搷锛?        // 浠?CULL 瀹屽叏涓嶅彲瑙佸厓绱狅紝涓嶅仛鍧愭爣鎴柇璋冩暣銆?        // 鍧愭爣鎴柇浼氬鑷?rect 涓?text/item-clip 鍧愭爣涓嶄竴鑷达細        // rect 琚惛闄勫埌瀹瑰櫒杈圭晫锛岃€?text锛堝湪 makeDivElement/makeSpanElement 涓?        // 浣跨敤 selfX/selfY = node->x/y + renderOffset 瀹氫綅锛変繚鎸佸師濮嬩綅缃紝        // 鐮村潖"瑙嗚闅忓姩"鍘熷垯鈥斺€斿垪琛ㄩ」鏁翠綋锛坮ect+text+clip锛夊簲鍚屾浣嶇Щ锛?        // 缁熶竴鐢?clip-push/clip-pop 鍦ㄦ覆鏌撳眰鍋氳鍓€?        if (count($this->scrollCtxStack) > 0) {            $isFixed = ($node->computedStyle?->position?->value ?? '') === 'fixed';            if (!$isFixed) {            $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];            $containerX = $scrollCtx['x'];            $containerY = $scrollCtx['y'];            $containerW = $scrollCtx['w'];            $containerH = $scrollCtx['h'];            $overflowX = $scrollCtx['overflowX'];            $overflowY = $scrollCtx['overflowY'];            // Y-axis: cull if completely outside the container            if ($overflowY !== 'visible') {                if ($y + $h <= $containerY || $y >= $containerY + $containerH) {                    return null;                }            }            // X-axis: cull if completely outside the container            if ($overflowX !== 'visible') {                if ($x + $w <= $containerX || $x >= $containerX + $containerW) {                    return null;                }            }            }  // end if (!$isFixed)        }  // end if (count($this->scrollCtxStack) > 0)        // 閫氳繃 sourceVNode 璁块棶 props锛坆ind 鍊笺€佷簨浠跺鐞嗗櫒绛夛級        $props = [];        if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {            $props = $node->sourceVNode->props;        }        switch ($node->type) {            case 'button':                return $this->makeButtonElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);            case 'input':   return $this->makeInputElement($node, $props, $x, $y, $w, $h, $layer);            case 'img':     return $this->makeImgElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);            // Inline elements: #text has actual content to render, others create            // span elements if they have content. <br> is the only zero-size line break.            case 'span':            case '#text':            case 'b':            case 'strong':            case 'em':            case 'i':            case 'code':                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);            case 'br':                // CSS: <br> generates a line break 鈥?render as zero-size placeholder                // to maintain element tree structure alignment with browser DOM.                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => 0, 'h' => 0, 'color' => 0, 'borderRadius' => 0, 'borderRadiusX' => 0, 'borderRadiusY' => 0, 'opacity' => 1.0, 'layer' => $layer, 'noFill' => true, 'shadowX' => 0, 'shadowY' => 0, 'shadowBlur' => 0, 'shadowAlpha' => 0, 'shadowColor' => 0, 'shadowInset' => false, 'borderWidth' => 0, 'borderColor' => 0, 'borderTopColor' => 0, 'borderRightColor' => 0, 'borderBottomColor' => 0, 'borderLeftColor' => 0, 'borderTopWidth' => 0, 'borderRightWidth' => 0, 'borderBottomWidth' => 0, 'borderLeftWidth' => 0, 'borderStyle' => 'none', 'cursor' => ''];                return $elements;            case 'a':            case 'label':            case 'abbr':            case 'cite':            case 'dfn':            case 'kbd':            case 'mark':            case 'q':            case 'samp':            case 'small':            case 'sub':            case 'sup':            case 'time':            case 'var':                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);            // Heading elements 鈫?span (inline semantic, not block)            case 'p':            case 'h1':            case 'h2':            case 'h3':            case 'h4':            case 'h5':            case 'h6':                            return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);            case 'div':            default:        return $this->makeDivElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);        }    }    // 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€    //  Element builders 鈥?each returns ?array    //  null 鈫?invisible (nothing to draw)    // 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€    private function makeDivElement(RenderNode $node, array $pseudoOverrides, array $props, int $x, int $y, int $w, int $h, int $layer): ?array    {        $cs = $node->computedStyle;        $cursor = $pseudoOverrides['cursor'] ?? $cs?->cursor?->value ?? '';        if ($node->isScrollContainer) {            return $this->makeScrollContainerElement($node, $pseudoOverrides, $x, $y, $w, $h, $layer);        }        if ($w <= 0) $w = 80;        if ($h <= 0) $h = 32;        $rawBg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr();        $bg = $rawBg !== null ? $rawBg : null;        $bwVal = $pseudoOverrides['borderWidth'] ?? ($cs?->borderWidth?->top?->toPx() ?? 0);        $hasBorder = ($bwVal > 0)            || ($pseudoOverrides['borderTopWidth'] ?? $cs?->borderTopWidth ?? 0) > 0            || ($pseudoOverrides['borderRightWidth'] ?? $cs?->borderRightWidth ?? 0) > 0            || ($pseudoOverrides['borderBottomWidth'] ?? $cs?->borderBottomWidth ?? 0) > 0            || ($pseudoOverrides['borderLeftWidth'] ?? $cs?->borderLeftWidth ?? 0) > 0;        $hasBg = $bg !== null;        // 鈹€鈹€ background-image 鏀寔 鈹€鈹€                $bgImage = $pseudoOverrides['backgroundImage'] ?? $cs?->backgroundImage ?? '';        $bgImageHandle = 0;        if ($bgImage !== '' && $w > 0 && $h > 0) {            $bgImageHandle = ImageManager::loadImage($bgImage);        }        // Check for content (text or children)        $hasTextChild = is_string($node->content) && $node->content !== '';        if ($bg === null && !$hasBorder && !$hasTextChild && $bgImageHandle === 0) {            return null;        }        $noFill = ($bg === null);        $drawColor = ($bg !== null) ? $bg : 0;        $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;        $borderRadiusX = $pseudoOverrides['borderRadiusX'] ?? 0;        $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;        $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;        $boxShadowRaw = $pseudoOverrides['boxShadow'] ?? $cs?->boxShadow ?? '';        $offsets = CssValueParser::parseBoxShadowOffsets($boxShadowRaw);        $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowBlur = $offsets['blur']; $shadowColor = $offsets['color']; $shadowAlpha = $offsets['alpha']; $shadowInset = $offsets['inset'];        $backgroundClip = $pseudoOverrides['backgroundClip'] ?? $cs?->backgroundClip ?? 'border-box';        $backgroundAttachment = $pseudoOverrides['backgroundAttachment'] ?? $cs?->backgroundAttachment ?? 'scroll';        $tableLayout = $cs?->tableLayout ?? 'auto';        $borderCollapse = $cs?->borderCollapse?->value ?? 'separate';        $borderSpacing = $cs?->borderSpacing ?? 0;        // 鈹€鈹€ List marker for li elements 鈹€鈹€        $listMarker = '';        if ($node->type === 'li') {            $parent = $node->parent;            $lst = 'disc';            if ($parent !== null) {                $lst = $parent->computedStyle?->listStyleType ?? 'disc';                $liIndex = 0;                foreach ($parent->children as $sibling) {                    if ($sibling === $node) break;                    if ($sibling->type === 'li') $liIndex++;                }                switch ($lst) {                    case 'decimal': $listMarker = ($liIndex + 1) . '. '; break;                    case 'lower-alpha': $listMarker = chr(97 + ($liIndex % 26)) . '. '; break;                    case 'upper-alpha': $listMarker = chr(65 + ($liIndex % 26)) . '. '; break;                    case 'square': $listMarker = "\xE2\x96\xAA "; break;                    case 'circle': $listMarker = "\xE2\x97\x8B "; break;                    case 'none': $listMarker = ''; break;                    default: $listMarker = "\xE2\x80\xA2 "; break;                }            }        }        $gradientAngle = $pseudoOverrides['gradientAngle'] ?? $cs?->getRaw('gradientAngle');        $gradientColors = $pseudoOverrides['gradientColors'] ?? $cs?->getRaw('gradientColors');        // 鈹€鈹€ Text shadow 鈹€鈹€        $textShadowRaw = $pseudoOverrides['textShadow'] ?? $cs?->textShadow ?? '';        $tsOffsets = CssValueParser::parseBoxShadowOffsets($textShadowRaw);        $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];        // 鈹€鈹€ Border properties 鈹€鈹€        $borderWidth = $pseudoOverrides['borderWidth'] ?? ($cs?->borderWidth?->top?->toPx() ?? 0);        $borderTopWidth = $pseudoOverrides['borderTopWidth'] ?? $cs?->borderTopWidth ?? $borderWidth;        $borderRightWidth = $pseudoOverrides['borderRightWidth'] ?? $cs?->borderRightWidth ?? $borderWidth;        $borderBottomWidth = $pseudoOverrides['borderBottomWidth'] ?? $cs?->borderBottomWidth ?? $borderWidth;        $borderLeftWidth = $pseudoOverrides['borderLeftWidth'] ?? $cs?->borderLeftWidth ?? $borderWidth;        $borderStyle = $pseudoOverrides['borderStyle'] ?? $cs?->borderStyle ?? 'solid';        $outlineOffset = $pseudoOverrides['outlineOffset'] ?? $cs?->outlineOffset ?? 0;        $borderColor = $pseudoOverrides['borderColor'] ?? $cs?->borderColor ?? 0;        $borderTopColor = $pseudoOverrides['borderTopColor'] ?? $cs?->borderTopColor ?? $borderColor;        $borderRightColor = $pseudoOverrides['borderRightColor'] ?? $cs?->borderRightColor ?? $borderColor;        $borderBottomColor = $pseudoOverrides['borderBottomColor'] ?? $cs?->borderBottomColor ?? $borderColor;        $borderLeftColor = $pseudoOverrides['borderLeftColor'] ?? $cs?->borderLeftColor ?? $borderColor;        // 鈹€鈹€ background-image layer 鈹€鈹€        $bgImageEl = null;        if ($bgImageHandle !== 0) {            $imgX = $backgroundAttachment === 'fixed' ? $node->x : $x;            $imgY = $backgroundAttachment === 'fixed' ? $node->y : $y;            $bgImageEl = [                'type' => 'image',                'handle' => $bgImageHandle,                'x' => $imgX, 'y' => $imgY, 'w' => $w, 'h' => $h,                'layer' => $layer,                'backgroundRepeat' => $pseudoOverrides['backgroundRepeat'] ?? $cs?->backgroundRepeat ?? 'repeat',            ];        }        if ($hasTextChild) {            $fontSize = $pseudoOverrides['fontSize'] ?? $cs?->fontSize ?? 14;            $rawTextColor = $pseudoOverrides['fg'] ?? $pseudoOverrides['color'] ?? ($cs?->color?->toBgr() ?? null);            $textColor = $rawTextColor !== null ? $rawTextColor : 0xFFFFFF;            $bold = $pseudoOverrides['bold'] ?? $cs?->bold ?? false;            $rawTextAlign = $cs?->getRaw('textAlign');            $align = $props['align'] ?? ($pseudoOverrides['textAlign'] ?? ($rawTextAlign ? (is_string($rawTextAlign) ? $rawTextAlign : ($cs?->textAlign?->value ?? 'start')) : 'start'));            // CSS Text Module Level 3 搂7: text-align is inherited            if ($align === 'start' && $rawTextAlign === null && $node->parent !== null) {                $parentAlign = $node->parent->computedStyle?->textAlign?->value ?? null;                if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {                    $align = $parentAlign;                }            }            if ($align === 'start' || $align === 'match-parent') $align = 'left';            if ($align === 'end') $align = 'right';            if ($align === 'justify' || $align === 'justify-all') $align = 'left';            $text = $node->content;            if ($listMarker !== '') {                $text = $listMarker . $text;            }            // 鈹€鈹€ Text transform 鈹€鈹€            $textTransform = $pseudoOverrides['textTransform'] ?? $cs?->textTransform ?? 'none';            if ($textTransform !== 'none') {                $text = self::applyTextTransform($text, $textTransform);            }            // 鈹€鈹€ Font variant (small-caps) 鈹€鈹€            $rawFontVariant = $cs?->getRaw('fontVariant');            $fontVariant = $pseudoOverrides['fontVariant'] ?? ($rawFontVariant ? (is_string($rawFontVariant) ? $rawFontVariant : ($cs?->fontVariant ?? 'normal')) : 'normal');            if ($fontVariant !== 'normal') {                $fvRet = self::applyFontVariant($text, $fontSize, $fontVariant);                $text = $fvRet['text'];                $fontSize = $fvRet['fontSize'];            }            // 鈹€鈹€ Font stretch (approximate via spacing) 鈹€鈹€            $rawFontStretch = $cs?->getRaw('fontStretch');            $fontStretchVal = $pseudoOverrides['fontStretch'] ?? ($rawFontStretch ? (is_string($rawFontStretch) ? $rawFontStretch : ($cs?->fontStretch ?? 'normal')) : 'normal');            $fontStretchExtra = self::applyFontStretch($fontStretchVal);            $rawLetterSpacing = $cs?->getRaw('letterSpacing');            $letterSpacing = $pseudoOverrides['letterSpacing'] ?? ($rawLetterSpacing ? (is_numeric($rawLetterSpacing) ? (int)$rawLetterSpacing : 0) : 0);            if ($fontStretchExtra !== 0) {                $letterSpacing += $fontStretchExtra;            }            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);            // 鈹€鈹€ 鍏冪礌鑷韩鍧愭爣锛坰croll 鍋忕Щ鍚庣殑浣嶇疆锛屼笉鍙?CULL 褰卞搷锛夆攢鈹€            // 鐢ㄤ簬鏂囨湰瀹氫綅鍜?item clip锛岀‘淇濅袱鑰呭湪鍚屼竴鍧愭爣绌洪棿            $selfY = $node->y + $this->getRenderOffsetY($node);            $selfH = $node->visualH;            $selfX = $node->x + $this->getRenderOffsetX($node);            $selfW = $node->visualW;            // 鈹€鈹€ Padding from computedStyle 鈹€鈹€            $pdL = $pseudoOverrides['paddingLeft'] ?? $cs?->padding?->left?->toPx() ?? 0;            $pdT = $pseudoOverrides['paddingTop'] ?? $cs?->padding?->top?->toPx() ?? 0;            $pdR = $pseudoOverrides['paddingRight'] ?? $cs?->padding?->right?->toPx() ?? 0;            $pdB = $pseudoOverrides['paddingBottom'] ?? $cs?->padding?->bottom?->toPx() ?? 0;            $contentX = $selfX + $borderLeftWidth + $pdL;            $contentY = $selfY + $borderTopWidth + $pdT;            $contentW = max(0, $selfW - $borderLeftWidth - $borderRightWidth - $pdL - $pdR);            // 鈹€鈹€ Overflow / overflow-wrap / text-overflow 鈹€鈹€            $rawOverflow = $cs?->overflow?->value ?? 'visible';            $elOverflow = $pseudoOverrides['overflow'] ?? $rawOverflow;            $hasOverflow = ($elOverflow === 'hidden' || $elOverflow === 'clip');            $rawOverflowWrap = $cs?->overflowWrap ?? 'normal';            $overflowWrap = $pseudoOverrides['overflowWrap'] ?? ($rawOverflowWrap !== '' ? $rawOverflowWrap : 'normal');            if ($overflowWrap === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {                $rawStyleVNode = $node->sourceVNode->props['style'] ?? '';                if ($rawStyleVNode !== '' && (stripos($rawStyleVNode, 'overflow-wrap:break-word') !== false || stripos($rawStyleVNode, 'word-wrap:break-word') !== false)) {                    $overflowWrap = 'break-word';                }            }            $isBreakWord = ($overflowWrap === 'break-word' || $overflowWrap === 'anywhere');            $rawTextOverflow = $cs?->getRaw('textOverflow') ?? 'clip';            $textOverflow = $pseudoOverrides['textOverflow'] ?? (is_string($rawTextOverflow) ? $rawTextOverflow : 'clip');            // 鈹€鈹€ Build minimal overflow style for TextOverflowProcessor 鈹€鈹€            $rawLineClamp = $cs?->getRaw('webkitLineClamp') ?? 0;            $lineClampVal = is_numeric($rawLineClamp) ? (int)$rawLineClamp : 0;            $overflowStyle = [                'textOverflow' => $textOverflow,                'overflowWrap' => $overflowWrap,                'lineHeight' => $cs?->lineHeight ?? 0,                'WebkitLineClamp' => $lineClampVal,            ];            if ($textOverflow === 'ellipsis' && $hasOverflow && $contentW > 0) {                $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $overflowStyle);                $text = $overflowResult['text'];                $overflowLines = $overflowResult['lines'];                $overflowLineHeight = $overflowResult['lineHeight'];                $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);                $isWrappable = false;            } elseif ($isBreakWord && $contentW > 0 && self::measureTextWidth($text, $fontSize, (bool)$bold) > $contentW) {                $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $overflowStyle);                $text = $overflowResult['text'];                $overflowLines = $overflowResult['lines'];                $overflowLineHeight = $overflowResult['lineHeight'];                $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);                $isWrappable = false;            } else {                $overflowLines = null;                $overflowLineHeight = 0;                $isWrappable = true;            }            $textX = $contentX + 4;            if ($align === 'right') {                $textX = $contentX + $contentW - 12 - $textWidth;                if ($textX < $contentX + 4) $textX = $contentX + 4;            } elseif ($align === 'center') {                $textX = $contentX + (int)(($contentW - $textWidth) / 2);                if ($textX < $contentX + 4) $textX = $contentX + 4;            }            if ($textX < $contentX + 4) $textX = $contentX + 4;            // 鈹€鈹€ Text indent 鈹€鈹€            $textIndent = (int)($pseudoOverrides['textIndent'] ?? $cs?->textIndent ?? 0);            if ($textIndent > 0 && $align !== 'right' && $align !== 'center') {                $textX += $textIndent;            }            // 鈹€鈹€ Flex container text centering 鈹€鈹€            $display = $pseudoOverrides['display'] ?? $cs?->display?->value ?? 'block';            $justifyContent = $pseudoOverrides['justifyContent'] ?? $cs?->justifyContent?->value ?? 'flex-start';            if (($display === 'flex' || $display === 'inline-flex') && $justifyContent === 'center' && $textWidth > 0 && $contentW > $textWidth) {                $textX = $contentX + (int)(($contentW - $textWidth) / 2);            }            // 鈹€鈹€ Flex container cross-axis text centering 鈹€鈹€            $textY = $contentY;            $alignItems = $pseudoOverrides['alignItems'] ?? $cs?->alignItems?->value ?? 'stretch';            $contentH = max(0, $selfH - $borderTopWidth - $borderBottomWidth - $pdT - $pdB);            $textHeight = self::measureTextHeight($fontSize, (bool)$bold);            if (($display === 'flex' || $display === 'inline-flex') && $alignItems === 'center') {                if ($contentH > $textHeight) {                    $textY = $contentY + (int)(($contentH - $textHeight) / 2);                }            }            // 鈹€鈹€ White-space & auto-wrap 鈹€鈹€            $isBold = (bool)$bold;            $whitespace = $pseudoOverrides['whiteSpace'] ?? $cs?->whiteSpace?->value ?? 'normal';            if ($whitespace === 'nowrap' || $whitespace === 'pre') {                $isWrappable = false;            }            $lineH = 0;            if ($isWrappable && $textWidth > $contentW && $contentW > 20) {                $lineH = $pseudoOverrides['lineHeight'] ?? $cs?->lineHeight ?? 0;                if ($lineH <= 0) {                    $lineH = (int)($fontSize * 1.2);                }            }            $elements = [];            if ($hasBg || $hasBorder) {                // CSS Backgrounds 搂3.7: background-clip 鈥?鑳屾櫙瑁佸壀鍖哄煙                $bgX = $backgroundAttachment === 'fixed' ? $node->x : $x;                $bgY = $backgroundAttachment === 'fixed' ? $node->y : $y;                $clipX = $bgX; $clipY = $bgY; $clipW = $w; $clipH = $h;                if ($backgroundClip === 'padding-box' && ($borderLeftWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0)) {                    $clipX += $borderLeftWidth; $clipY += $borderTopWidth;                    $clipW -= ($borderLeftWidth + $borderRightWidth);                    $clipH -= ($borderTopWidth + $borderBottomWidth);                } elseif ($backgroundClip === 'content-box') {                    $pl = $cs?->padding?->left?->toPx() ?? 0;                    $pt = $cs?->padding?->top?->toPx() ?? 0;                    $pr = $cs?->padding?->right?->toPx() ?? 0;                    $pb = $cs?->padding?->bottom?->toPx() ?? 0;                    $clipX += ($borderLeftWidth + $pl); $clipY += ($borderTopWidth + $pt);                    $clipW -= ($borderLeftWidth + $borderRightWidth + $pl + $pr);                    $clipH -= ($borderTopWidth + $borderBottomWidth + $pt + $pb);                }                $elements[] = ['type' => 'rect', 'x' => $clipX, 'y' => $clipY, 'w' => max(0,$clipW), 'h' => max(0,$clipH), 'color' => $drawColor, 'borderRadius' => $borderRadius, 'borderRadiusX' => $borderRadiusX, 'borderRadiusY' => $borderRadiusY, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'borderStyle' => $borderStyle, 'noFill' => $noFill, 'cursor' => $cursor, 'gradientAngle' => $gradientAngle, 'gradientColors' => $gradientColors, 'outlineOffset' => $outlineOffset, 'backgroundClip' => $backgroundClip];            }            if ($bgImageEl !== null) {                $elements[] = $bgImageEl;            }            if ($overflowLines !== null && count($overflowLines) > 0) {                // 鈹€鈹€ -webkit-line-clamp 澶氳娓叉煋锛圱extOverflowProcessor 宸插鐞嗘埅鏂笌鐪佺暐鍙凤級鈹€鈹€                $lineIdx = 0;                $maxLineW = 0;                $lineHeight = $overflowLineHeight > 0 ? $overflowLineHeight : (int)($fontSize * 1.2);                foreach ($overflowLines as $seg) {                    $segW = self::measureTextWidth($seg, $fontSize, $isBold);                    if ($segW > $maxLineW) $maxLineW = $segW;                    $segX = $contentX + 4;                    if ($align === 'right') {                        $segX = $contentX + $contentW - 12 - $segW;                        if ($segX < $contentX + 4) $segX = $contentX + 4;                    } elseif ($align === 'center') {                        $segX = $contentX + (int)(($contentW - $segW) / 2);                        if ($segX < $contentX + 4) $segX = $contentX + 4;                    }                    // text-indent 浠呬綔鐢ㄤ簬绗竴琛?                    if ($textIndent > 0 && $lineIdx === 0 && $align !== 'right' && $align !== 'center') {                        $segX += $textIndent;                    }                    $segY = $contentY + $lineIdx * $lineHeight;                    $elements[] = ['type' => 'text', 'text' => $seg, 'x' => $segX, 'y' => $segY,                        'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,                        'fontFamily' => $cs?->fontFamily ?? '',                        'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,                        'decorationLine' => $cs?->textDecorationLine ?? 'none',                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,                        'underlineOffset' => $cs?->getRaw('underlineOffset') ?? 0,                        'textWidth' => $segW,                        'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,                        'letterSpacing' => $letterSpacing,                        'textEmphasisStyle' => 'none',                        'textEmphasisColor' => 0xFF0000,                        'textEmphasisPosition' => 'over'];                    $lineIdx++;                }                $node->textRenderInfo = [                    'x' => ($contentX + 4) - $this->getRenderOffsetX($node),                    'y' => $contentY - $this->getRenderOffsetY($node),                    'textHeight' => $lineHeight * count($overflowLines),                    'textWidth' => $maxLineW,                ];            } elseif ($isWrappable && $textWidth > $contentW && $contentW > 20 && $lineH > 0) {                // 鈹€鈹€ Multi-line wrapped rendering 鈹€鈹€                $lines = [];                $currentLine = '';                $textLen = strlen($text);                for ($i = 0; $i < $textLen;) {                    $charLen = 1;                    $b = ord($text[$i]);                    if ($b >= 0xF0) $charLen = 4;                    elseif ($b >= 0xE0) $charLen = 3;                    elseif ($b >= 0xC0) $charLen = 2;                    $chunk = substr($text, $i, $charLen);                    $candidate = $currentLine . $chunk;                    $candidateW = self::measureTextWidth($candidate, $fontSize, $isBold);                    // Available width for text (4px left pad, 12px right pad)                    $availW = max(1, $contentW - 4);                    if ($candidateW > $availW && $currentLine !== '') {                        $lines[] = $currentLine;                        $currentLine = $chunk;                    } else {                        $currentLine = $candidate;                    }                    $i += $charLen;                }                if ($currentLine !== '') {                    $lines[] = $currentLine;                }                $lineIdx = 0;                $maxLineW = 0;                foreach ($lines as $seg) {                    $segW = self::measureTextWidth($seg, $fontSize, $isBold);                    if ($segW > $maxLineW) $maxLineW = $segW;                    $segX = $contentX + 4;                    if ($align === 'right') {                        $segX = $contentX + $contentW - 12 - $segW;                        if ($segX < $contentX + 4) $segX = $contentX + 4;                    } elseif ($align === 'center') {                        $segX = $contentX + (int)(($contentW - $segW) / 2);                        if ($segX < $contentX + 4) $segX = $contentX + 4;                    }                    $segY = $contentY + $lineIdx * $lineH;                    $elements[] = ['type' => 'text', 'text' => $seg, 'x' => $segX, 'y' => $segY,                        'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,                        'fontFamily' => $cs?->fontFamily ?? '',                        'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,                        'decorationLine' => $cs?->textDecorationLine ?? 'none',                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,                        'underlineOffset' => $cs?->getRaw('textUnderlineOffset') ?? 0,                        'textWidth' => self::measureTextWidth($seg, $fontSize, $isBold),                        'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,                        'letterSpacing' => $letterSpacing];                    $lineIdx++;                }                // 瀛樺偍鏂囨湰娓叉煋浣嶇疆淇℃伅锛堢涓€琛屼綅缃級                $node->textRenderInfo = [                    'x' => ($contentX + 4) - $this->getRenderOffsetX($node),                    'y' => $contentY - $this->getRenderOffsetY($node),                    'textHeight' => $lineH * count($lines),                    'textWidth' => $maxLineW,                ];            } else {                // 鈹€鈹€ Single-line rendering (original) 鈹€鈹€                $elements[] = ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,                        'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,                        'fontFamily' => $cs?->fontFamily ?? '',                        'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,                        'decorationLine' => $cs?->textDecorationLine ?? 'none',                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,                        'underlineOffset' => $cs?->getRaw('underlineOffset') ?? 0,                        'textWidth' => self::measureTextWidth($text, $fontSize, $isBold),                        'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,                        'letterSpacing' => $letterSpacing];                // 瀛樺偍鏂囨湰娓叉煋浣嶇疆淇℃伅锛堢敤浜?layout dump 楠岃瘉鍨傜洿灞呬腑锛?                $node->textRenderInfo = [                    'x' => $textX - $this->getRenderOffsetX($node),                    'y' => $textY - $this->getRenderOffsetY($node),                    'textHeight' => max($textHeight, 0),                    'textWidth' => $textWidth,                ];            }            if (count($elements) === 1) {                return $elements[0];            }            // 鈹€鈹€ overflow:hidden 鏂囨湰灞?clip 鈹€鈹€            // 浣跨敤缁熶竴 computePaddingBoxClip 纭繚涓?scroll 瀹瑰櫒 clip 鍚屼竴鍧愭爣绯?            $elOverflowHidden = ($cs?->overflow?->value ?? 'visible') === 'hidden';            if ($elOverflowHidden && !$node->isScrollContainer && $selfW > 0 && $selfH > 0) {                $itemClip = self::computePaddingBoxClip($node);                $clipX = $itemClip['x'];                $clipY = $itemClip['y'];                $clipW = $itemClip['w'];                $clipH = $itemClip['h'];                if ($clipW > 0 && $clipH > 0) {                    $textLayer = $layer + 1;                    $clipPush = ['type' => 'clip-push', 'x' => $clipX, 'y' => $clipY, 'w' => $clipW, 'h' => $clipH, 'layer' => $textLayer];                    $clipPop = ['type' => 'clip-pop', 'layer' => $textLayer];                    $newElements = [];                    $inserted = false;                    foreach ($elements as $el) {                        $elLayer = $el['layer'] ?? $layer;                        if (!$inserted && $elLayer === $textLayer) {                            $newElements[] = $clipPush;                            $inserted = true;                        }                        $newElements[] = $el;                    }                    if ($inserted) {                        $newElements[] = $clipPop;                        $elements = $newElements;                    }                }            }            return [                'type' => 'group', 'layer' => $layer, 'cursor' => $cursor,                'elements' => $elements,            ];        }        // 鏃犳枃鏈細杩斿洖 rect + 鍙€夌殑 background-image        $elements = [];        if ($hasBg || $hasBorder) {            $elements[] = [                'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,                'color' => $drawColor, 'borderRadius' => $borderRadius, 'borderRadiusX' => $borderRadiusX, 'borderRadiusY' => $borderRadiusY, 'opacity' => $opacity, 'layer' => $layer,                'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset,                'borderWidth' => $borderWidth, 'borderColor' => $borderColor,                'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,                'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,                'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,                'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,                'borderStyle' => $borderStyle,                'noFill' => $noFill,                'cursor' => $cursor,                'gradientAngle' => $gradientAngle, 'gradientColors' => $gradientColors,            ];        }        if ($bgImageEl !== null) {            $elements[] = $bgImageEl;        }        if (count($elements) === 0) {            return null;        }        if (count($elements) === 1) {            return $elements[0];        }        return [            'type' => 'group', 'layer' => $layer, 'cursor' => $cursor,            'elements' => $elements,        ];    }    private function makeSpanElement(RenderNode $node, array $props, int $x, int $y, int $w, int $h, int $layer): ?array    {        $cs = $node->computedStyle;        $fontSize = $cs?->fontSize ?? 14;        // CSS 缁ф壙锛氳嫢褰撳墠鑺傜偣鏃?fg锛坈olor锛夛紝娌跨埗閾炬煡鎵?        $rawColor = $cs?->getRaw('fg') ?? $cs?->getRaw('color') ?? null;        $color = null;        if ($rawColor !== null) {            $color = $rawColor instanceof CssColor ? $rawColor->toBgr() : (is_int($rawColor) ? $rawColor : null);        }        if ($color === null) {            $p = $node->parent;            while ($p !== null) {                $pc = $p->computedStyle?->getRaw('fg') ?? null;                if ($pc !== null) {                    $color = $pc instanceof CssColor ? $pc->toBgr() : (is_int($pc) ? $pc : null);                    break;                }                $p = $p->parent;            }        }        // CSS 2.2 搂18.2: color 灞炴€х殑鍒濆鍊间负 black (0x000000)        if ($color === null) $color = 0x000000;        $bold     = $cs?->bold ?? false;        $rawTextAlign = $cs?->getRaw('textAlign');        $align    = $props['align'] ?? ($rawTextAlign ? (is_string($rawTextAlign) ? $rawTextAlign : ($cs?->textAlign?->value ?? 'start')) : 'start');        // CSS Text Module Level 3 搂7: text-align is inherited        if ($align === 'start' && $rawTextAlign === null && $node->parent !== null) {            $parentAlign = $node->parent->computedStyle?->textAlign?->value ?? null;            if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {                $align = $parentAlign;            }        }        // CSS Text Module Level 3 搂7: start=LTR鈫抣eft, end=LTR鈫抮ight, justify鈮坙eft        if ($align === 'start' || $align === 'match-parent') $align = 'left';        if ($align === 'end') $align = 'right';        if ($align === 'justify' || $align === 'justify-all') $align = 'left';        $text = '';        // AOT 鍏煎: php::Variant 鍦?use native_types 妯″紡涓?is_string() 鍙兘杩斿洖 false        if ($node->content !== null) {            $text = (string)$node->content;        }        $bindKey = $props[':bind'] ?? $props['bind'] ?? '';        if ($bindKey !== '') {            $text = $this->currentComponent()->getBindValue($bindKey);        }        $vModel = $props['v-model'] ?? '';        if ($vModel !== '') {            $text = $this->currentComponent()->getBindValue($vModel);        }        $diagLogPath = Config::get('debug_diag_log_path', '');        if ($diagLogPath !== '') {            file_put_contents($diagLogPath, "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);        }        if ($text === '') return null;        // container-w/h 鐧惧垎姣斿€?鈫?浠庣埗瀹瑰櫒 ScrollContext 瑙ｆ瀽瀹為檯瀹藉害        $rawContainerW = $props['container-w'] ?? null;        $containerW = $w;        if ($rawContainerW !== null) {            if (!str_contains($rawContainerW, '%')) {                $containerW = (int)$rawContainerW;            } elseif (count($this->scrollCtxStack) > 0) {                $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];                $pct = (float)str_replace('%', '', $rawContainerW) / 100.0;                $containerW = (int)($scrollCtx['w'] * $pct);            }        }        $containerX = (int)($props['container-x'] ?? $x);        // 鈹€鈹€ Font variant (small-caps) 鈹€鈹€        $rawFontVariant = $cs?->getRaw('fontVariant') ?? null;        $fontVariant = $rawFontVariant ? (is_string($rawFontVariant) ? $rawFontVariant : ($cs?->fontVariant ?? 'normal')) : 'normal';        if ($fontVariant !== 'normal') {            $fvRet = self::applyFontVariant($text, $fontSize, $fontVariant);            $text = $fvRet['text'];            $fontSize = $fvRet['fontSize'];        }        // 鈹€鈹€ Font stretch (approximate via spacing) 鈹€鈹€        $rawFontStretch = $cs?->getRaw('fontStretch') ?? null;        $fontStretchVal = $rawFontStretch ? (is_string($rawFontStretch) ? $rawFontStretch : ($cs?->fontStretch ?? 'normal')) : 'normal';        $fontStretchExtra = self::applyFontStretch($fontStretchVal);        $rawLetterSpacing = $cs?->getRaw('letterSpacing') ?? null;        $letterSpacing = $rawLetterSpacing ? (is_numeric($rawLetterSpacing) ? (int)$rawLetterSpacing : 0) : 0;        if ($fontStretchExtra !== 0) {            $letterSpacing += $fontStretchExtra;        }        // 鈹€鈹€ Text shadow 鈹€鈹€        $rawTextShadow = $cs?->textShadow ?? '';        $tsOffsets = CssValueParser::parseBoxShadowOffsets($rawTextShadow);        $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];        // 鈹€鈹€ Vertical alignment 鈹€鈹€        $verticalAlign = $cs?->verticalAlign?->value ?? 'baseline';        $vaY = 0;        if ($verticalAlign !== 'baseline' && $verticalAlign !== 'top' && $verticalAlign !== 'bottom') {            $textHeight = self::measureTextHeight($fontSize, (bool)$bold);            switch ($verticalAlign) {                case 'sub':        $vaY = (int)($fontSize * 0.25); break;                case 'super':      $vaY = -(int)($fontSize * 0.35); break;                case 'middle':     $vaY = -(int)($fontSize * 0.2); break;                case 'text-top':   $vaY = 0; break;                case 'text-bottom':$vaY = $textHeight - $fontSize; break;            }        }        // 鈹€鈹€ Overflow-wrap from raw VNode props (fallback) 鈹€鈹€        $rawOverflowWrap = $cs?->overflowWrap ?? 'normal';        $overflowWrap = $rawOverflowWrap !== '' ? $rawOverflowWrap : 'normal';        if ($overflowWrap === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {            $rawStyle = $node->sourceVNode->props['style'] ?? '';            if ($rawStyle !== '' && (stripos($rawStyle, 'overflow-wrap:break-word') !== false || stripos($rawStyle, 'word-wrap:break-word') !== false)) {                $overflowWrap = 'break-word';            }        }        // 鈹€鈹€ Build minimal overflow style for TextOverflowProcessor 鈹€鈹€        $rawTextOverflow = $cs?->getRaw('textOverflow') ?? 'clip';        $textOverflow = is_string($rawTextOverflow) ? $rawTextOverflow : 'clip';        $rawLineClamp = $cs?->getRaw('webkitLineClamp') ?? 0;        $lineClamp = is_numeric($rawLineClamp) ? (int)$rawLineClamp : 0;        $overflowStyle = [            'textOverflow' => $textOverflow,            'overflowWrap' => $overflowWrap,            'lineHeight' => $cs?->lineHeight ?? 0,            'WebkitLineClamp' => $lineClamp,        ];        // 鈹€鈹€ Text overflow processing 鈹€鈹€        $overflowResult = TextOverflowProcessor::process($text, $containerW, $fontSize, (bool)$bold, $overflowStyle);        $text = $overflowResult['text'];                // 鈹€鈹€ Multi-line clamp 鈹€鈹€        if ($overflowResult['lines'] !== null && count($overflowResult['lines']) > 1) {            $elements = [];            $lineIdx = 0;            $lineHeight = $overflowResult['lineHeight'];            foreach ($overflowResult['lines'] as $seg) {                $lineY = $y + $lineIdx * $lineHeight;                $segX = $x;                if ($align === 'right' || $align === 'center') {                    $segW = self::measureTextWidth($seg, $fontSize, (bool)$bold);                    if ($align === 'right') {                        $segX = $containerX + $containerW - 12 - $segW;                        if ($segX < $containerX + 4) $segX = $containerX + 4;                    } else {                        $segX = $containerX + (int)(($containerW - $segW) / 2);                        if ($segX < $containerX) $segX = (int)$containerX;                    }                }                $elements[] = [                    'type' => 'text', 'text' => $seg,                    'x' => $segX, 'y' => $lineY + $vaY,                    'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,                    'align' => 'left', 'layer' => $layer,                    'decorationLine' => $cs?->textDecorationLine ?? 'none',                    'decorationColor' => $cs?->textDecorationColor ?: (string)$color,                    'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',                    'decorationThickness' => $cs?->textDecorationThickness ?? 0,                    'underlineOffset' => $cs?->getRaw('textUnderlineOffset') ?? 0,                    'textWidth' => self::measureTextWidth($seg, $fontSize, (bool)$bold),                    'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,                    'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,                    'letterSpacing' => $letterSpacing];                $lineIdx++;            }            return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];        }                if ($align === 'right' || $align === 'center') {            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);            if ($align === 'right') {                $x = $containerX + $containerW - 12 - $textWidth;                if ($x < $containerX + 4) $x = $containerX + 4;            } else {                $x = $containerX + (int)(($containerW - $textWidth) / 2);                if ($x < $containerX) $x = (int)$containerX;            }        }        // 瀛樺偍鏂囨湰娓叉煋浣嶇疆淇℃伅锛堢敤浜?layout dump 楠岃瘉鍨傜洿灞呬腑锛?        if (!isset($textWidth)) {            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);        }        $textHeight = self::measureTextHeight($fontSize, (bool)$bold);        $node->textRenderInfo = [            'x' => $x - $this->getRenderOffsetX($node),            'y' => $y - $this->getRenderOffsetY($node),            'textHeight' => $textHeight,            'textWidth' => $textWidth,        ];        // 鈹€鈹€ Decoration properties from computedStyle 鈹€鈹€        $decorationLine = $cs?->textDecorationLine ?? 'none';        $decorationColor = $cs?->textDecorationColor ?: (string)$color;        $decorationStyle = $cs?->textDecorationStyle ?? 'solid';        $decorationThickness = $cs?->textDecorationThickness ?? 0;        $underlineOffset = $cs?->getRaw('textUnderlineOffset') ?? 0;        return [            'type' => 'text', 'text' => $text,            'x' => $x, 'y' => $y + $vaY,            'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,            'align' => $align, 'layer' => $layer,            'decorationLine' => $decorationLine,            'decorationColor' => $decorationColor,            'decorationStyle' => $decorationStyle,            'decorationThickness' => $decorationThickness,            'underlineOffset' => $underlineOffset,            'textWidth' => self::measureTextWidth($text, $fontSize, (bool)$bold),            'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,            'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,            'letterSpacing' => $letterSpacing];    }    private function makeButtonElement(RenderNode $node, array $pseudoOverrides, array $props, int $x, int $y, int $w, int $h, int $layer): ?array    {        $cs = $node->computedStyle;        $cursor = $cs?->cursor?->value ?? '';        if ($w <= 0 || $h <= 0) {            $w = $w <= 0 ? 80 : $w;            $h = $h <= 0 ? 32 : $h;        }        $bg     = $cs?->backgroundColor?->toBgr() ?? 0x4488CC;        $fg     = $cs?->color?->toBgr() ?? 0xFFFFFF;        $borderWidth = $cs?->borderWidth?->top?->toPx() ?? 0;        $borderTopWidth = $cs?->borderTopWidth ?? $borderWidth;        $borderRightWidth = $cs?->borderRightWidth ?? $borderWidth;        $borderBottomWidth = $cs?->borderBottomWidth ?? $borderWidth;        $borderLeftWidth = $cs?->borderLeftWidth ?? $borderWidth;        $borderStyle = $cs?->borderStyle ?? 'solid';        $borderColor = 0;        if ($borderWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0 || $borderLeftWidth > 0) {            $borderColor = $cs?->borderColor ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0);        }        $borderTopColor = $cs?->borderTopColor ?? $borderColor;        $borderRightColor = $cs?->borderRightColor ?? $borderColor;        $borderBottomColor = $cs?->borderBottomColor ?? $borderColor;        $borderLeftColor = $cs?->borderLeftColor ?? $borderColor;        $borderRadius = $cs?->borderRadius ?? 0;        $borderRadiusX = 0;        $borderRadiusY = 0;        $opacity = $cs?->opacity ?? 1.0;        $shadowOffsets = CssValueParser::parseBoxShadowOffsets($cs?->boxShadow ?? '');        $shadowX = $shadowOffsets['h']; $shadowY = $shadowOffsets['v']; $shadowBlur = $shadowOffsets['blur']; $shadowColor = $shadowOffsets['color']; $shadowAlpha = $shadowOffsets['alpha']; $shadowInset = $shadowOffsets['inset'];        $label = '';        // AOT 鍏煎: php::Variant 鍦?use native_types 妯″紡涓?is_string() 鍙兘杩斿洖 false        if ($node->content !== null) {            $label = (string)$node->content;        }        $bindKey = $props[':bind'] ?? $props['bind'] ?? '';        if ($bindKey !== '') {            $label = $this->currentComponent()->getBindValue($bindKey);        }        if ($label === '' && isset($props['@click'])) {            $label = $props['label'] ?? '';        }        // 鑻ユ爣绛句粛涓虹┖锛岄亶鍘嗗瓙 RenderNode 鎻愬彇鏂囨湰锛堝鐞?<button><span :bind="x">{{ x }}</span></button> 妯″紡锛?        if ($label === '') {            foreach ($node->children as $child) {                if ($child->content !== null && (string)$child->content !== '') {                    $label = (string)$child->content;                    break;                }                // 妫€鏌ュ瓙鑺傜偣鐨?bind 寮曠敤                if ($child->sourceVNode !== null && $child->sourceVNode->props !== null) {                    $childBindKey = $child->sourceVNode->props[':bind'] ?? $child->sourceVNode->props['bind'] ?? '';                    if ($childBindKey !== '') {                        $childLabel = $this->currentComponent()->getBindValue($childBindKey);                        if ($childLabel !== '') {                            $label = $childLabel;                            break;                        }                    }                }            }        }        $labelFontSize = 22;        $labelLen = strlen($label);        $labelCharW = (int)($labelFontSize * 0.6);        $labelX = $x + (int)(($w - $labelLen * $labelCharW) / 2);        $labelY = $y + (int)(($h - $labelFontSize) / 2);        return [            'type' => 'button', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,            'bg' => $bg, 'fg' => $fg, 'border' => $borderColor, 'borderWidth' => $borderWidth,            'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,            'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,            'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,            'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,            'borderRadius' => $borderRadius,            'label' => $label, 'labelX' => $labelX, 'labelY' => $labelY,            'labelFontSize' => $labelFontSize, 'opacity' => $opacity, 'layer' => $layer,            'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset, 'cursor' => $cursor,        ];    }    private function makeImgElement(RenderNode $node, array $pseudoOverrides, array $props, int $x, int $y, int $w, int $h, int $layer): ?array    {        $cs = $node->computedStyle;        // CSS 鏍囧噯 搂10.3.2: <img> 鏄浛鎹㈠厓绱狅紝瀹藉害鐢卞竷灞€灞傚喅瀹?        $noSize = ($w <= 0 || $h <= 0);        // 鈹€鈹€ 灏濊瘯鍔犺浇鐪熷疄鍥剧墖 鈹€鈹€        $src = $props['src'] ?? $props[':src'] ?? '';        $imageHandle = 0;        if ($src !== '' && !$noSize) {            $imageHandle = ImageManager::loadImage($src);        }        // 鑳屾櫙鑹?        $bg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr() ?? 0xCCCCCC;        $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;        $borderRadiusX = 0;        $borderRadiusY = 0;        $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;        // box-shadow        $boxShadowRaw = $pseudoOverrides['boxShadow'] ?? $cs?->boxShadow ?? '';        $shadowOffsets = CssValueParser::parseBoxShadowOffsets($boxShadowRaw);        $shadowX = $shadowOffsets['h']; $shadowY = $shadowOffsets['v']; $shadowBlur = $shadowOffsets['blur']; $shadowColor = $shadowOffsets['color']; $shadowAlpha = $shadowOffsets['alpha']; $shadowInset = $shadowOffsets['inset'];        // border        $borderWidth = $pseudoOverrides['borderWidth'] ?? ($cs?->borderWidth?->top?->toPx() ?? 0);        $borderTopWidth = $pseudoOverrides['borderTopWidth'] ?? $cs?->borderTopWidth ?? $borderWidth;        $borderRightWidth = $pseudoOverrides['borderRightWidth'] ?? $cs?->borderRightWidth ?? $borderWidth;        $borderBottomWidth = $pseudoOverrides['borderBottomWidth'] ?? $cs?->borderBottomWidth ?? $borderWidth;        $borderLeftWidth = $pseudoOverrides['borderLeftWidth'] ?? $cs?->borderLeftWidth ?? $borderWidth;        $borderStyle = $cs?->borderStyle ?? 'solid';        $borderColor = $pseudoOverrides['borderColor'] ?? $cs?->borderColor ?? 0;        $borderTopColor = $pseudoOverrides['borderTopColor'] ?? $cs?->borderTopColor ?? $borderColor;        $borderRightColor = $pseudoOverrides['borderRightColor'] ?? $cs?->borderRightColor ?? $borderColor;        $borderBottomColor = $pseudoOverrides['borderBottomColor'] ?? $cs?->borderBottomColor ?? $borderColor;        $borderLeftColor = $pseudoOverrides['borderLeftColor'] ?? $cs?->borderLeftColor ?? $borderColor;        // object-fit: CSS Images 搂5.5 鎺у埗鏇挎崲鍐呭濡備綍閫傚簲瀹瑰櫒        $objectFit = $pseudoOverrides['objectFit'] ?? $cs?->objectFit ?? 'fill';        $objectPosition = $pseudoOverrides['objectPosition'] ?? $cs?->objectPosition ?? '50% 50%';        // Compute image destination rect based on object-fit        $imgX = $x; $imgY = $y; $imgW = $w; $imgH = $h;        if ($imageHandle !== 0 && $objectFit !== 'fill') {            $natW = sk_get_image_width($imageHandle);            $natH = sk_get_image_height($imageHandle);            if ($natW > 0 && $natH > 0) {                $containerRatio = (float)$w / (float)$h;                $imageRatio = (float)$natW / (float)$natH;                if ($objectFit === 'contain') {                    if ($containerRatio > $imageRatio) {                        $imgH = $h; $imgW = (int)($h * $imageRatio);                    } else {                        $imgW = $w; $imgH = (int)($w / $imageRatio);                    }                    $imgX = $x + (int)(($w - $imgW) / 2);                    $imgY = $y + (int)(($h - $imgH) / 2);                } elseif ($objectFit === 'cover') {                    if ($containerRatio > $imageRatio) {                        $imgW = $w; $imgH = (int)($w / $imageRatio);                    } else {                        $imgH = $h; $imgW = (int)($h * $imageRatio);                    }                    $imgX = $x + (int)(($w - $imgW) / 2);                    $imgY = $y + (int)(($h - $imgH) / 2);                } elseif ($objectFit === 'none') {                    $imgW = $natW; $imgH = $natH;                    $imgX = $x + (int)(($w - $imgW) / 2);                    $imgY = $y + (int)(($h - $imgH) / 2);                } elseif ($objectFit === 'scale-down') {                    // Smaller of 'none' and 'contain'                    $noneW = $natW; $noneH = $natH;                    if ($containerRatio > $imageRatio) {                        $contH = $h; $contW = (int)($h * $imageRatio);                    } else {                        $contW = $w; $contH = (int)($w / $imageRatio);                    }                    if ($noneW <= $contW && $noneH <= $contH) {                        $imgW = $noneW; $imgH = $noneH;                    } else {                        $imgW = $contW; $imgH = $contH;                    }                    $imgX = $x + (int)(($w - $imgW) / 2);                    $imgY = $y + (int)(($h - $imgH) / 2);                }                // CSS Images 搂5.6: object-position 鈥?鏍规嵁 position 鍊艰绠楀亸绉?                $opX = 0; $opY = 0;                if ($objectPosition !== '50% 50%') {                    $parts = preg_split('/\s+/', trim($objectPosition));                    $opX = self::resolveObjectPosition($parts[0] ?? '50%', $w, $imgW);                    $opY = self::resolveObjectPosition($parts[1] ?? '50%', $h, $imgH);                    if ($opX !== 0 || $opY !== 0) {                        // Re-center first, then apply position offset                        $baseX = $x + (int)(($w - $imgW) / 2);                        $baseY = $y + (int)(($h - $imgH) / 2);                        $imgX = $baseX + $opX - (int)(($w - $imgW) / 2);                        $imgY = $baseY + $opY - (int)(($h - $imgH) / 2);                    }                }            }        }        // alt 灞炴€э細鍥剧墖鍔犺浇澶辫触鏃剁殑鍥為€€鏂囨湰锛圚TML 鏍囧噯锛?        $alt = $props['alt'] ?? '';        // 鈹€鈹€ 灏哄涓?0 鏃堕檷绾ф樉绀?鈹€鈹€        if ($noSize) {            if ($alt !== '') {                $fontSize = $cs?->fontSize ?? 14;                $textColor = $cs?->color?->toBgr() ?? 0xFFFFFF;                return [                    'type' => 'text', 'text' => '馃柤 ' . $alt,                    'x' => $x, 'y' => $y,                    'fontSize' => $fontSize, 'color' => $textColor, 'bold' => 1,                    'align' => 'left', 'layer' => $layer,                ];            }            return null;        }        $elements = [];        // 鈹€鈹€ 鐪熷疄鍥剧墖 鈹€鈹€        if ($imageHandle !== 0) {            // 鏈夊渾瑙掓椂鐢?clip-push/clip-pop 瑁佸垏鍥剧墖            if ($borderRadius > 0) {                $elements[] = ['type' => 'clip-push', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'layer' => $layer];                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,                    'color' => 0xFFFFFF, 'borderRadius' => $borderRadius, 'layer' => $layer];            }            $elements[] = [                'type' => 'image',                'handle' => $imageHandle,                'x' => $imgX, 'y' => $imgY, 'w' => $imgW, 'h' => $imgH,                'layer' => $layer,            ];            if ($borderRadius > 0) {                $elements[] = ['type' => 'clip-pop', 'layer' => $layer];            }        } else {            // 鈹€鈹€ 闄嶇骇涓哄崰浣嶇煩褰紙鐢ㄨ儗鏅壊妯℃嫙鍥惧儚锛夆攢鈹€            $elements[] = [                'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,                'color' => $bg, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,                'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset,                'borderWidth' => $borderWidth, 'borderColor' => $borderColor,                'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,                'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,                'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,                'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,            ];        }        // 鑻ユ湁 alt 鏂囨湰锛屽湪鍥剧墖涓婂彔鍔犳樉绀?        if ($alt !== '') {            $fontSize = $cs?->fontSize ?? 14;            $textColor = $cs?->color?->toBgr() ?? 0xFFFFFF;            $altX = $x + 4;            $altY = $y + (int)(($h - $fontSize) / 2);            if ($altY < $y) $altY = $y;            $elements[] = [                'type' => 'text', 'text' => $alt,                'x' => $altX, 'y' => $altY,                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => 0,                'align' => 'left', 'layer' => $layer + 1,            ];        }        if (count($elements) === 1) {            return $elements[0];        }        return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];    }    private function makeInputElement(RenderNode $node, array $props, int $x, int $y, int $w, int $h, int $layer): ?array    {        $cs = $node->computedStyle;        $bg       = $cs?->backgroundColor?->toBgr() ?? 0x1E1E1E;        $fg       = $cs?->color?->toBgr() ?? 0xFFFFFF;        $fontSize = $cs?->fontSize ?? 14;        $borderRadius = $cs?->borderRadius ?? 0;        $borderRadiusX = 0;        $borderRadiusY = 0;        $opacity = $cs?->opacity ?? 1.0;        $bindKey = $props['v-model'] ?? '';        $text = '';        if ($bindKey !== '') {            $text = $this->currentComponent()->getBindValue($bindKey);        }        // ::placeholder pseudo-element support        // When input is empty and placeholder attribute is set, pass placeholder        // text info so the rendering backend draws it in a dimmed color.        $placeholder = $props['placeholder'] ?? '';        $showPlaceholder = ($text === '' && $placeholder !== '');        return [            'type' => 'input',            'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,            'bg' => $bg, 'color' => $fg, 'fontSize' => $fontSize,            'text' => $showPlaceholder ? $placeholder : $text,            'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,            'placeholder' => $showPlaceholder,        ];    }    private function makeScrollContainerElement(RenderNode $node, array $pseudoOverrides, int $x, int $y, int $w, int $h, int $layer): ?array    {        $cs = $node->computedStyle;        $bg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr() ?? 0x2D2D2D;        $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;        $borderRadiusX = $pseudoOverrides['borderRadiusX'] ?? 0;        $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;        $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;        $contentH = $node->contentHeight;        if ($contentH === 0) {            foreach ($node->children as $child) {                $itemH = (int)($child->computedStyle?->height->toPx() ?? 0);                $contentH += (int)max($child->h, $itemH);            }        }        return [            'type' => 'scroll-container',            'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,            'bg' => $bg, 'borderRadius' => $borderRadius,            'contentHeight' => $contentH,            'contentWidth' => $node->contentWidth,            'scrollTop' => $node->scrollTop,            'scrollLeft' => $node->scrollLeft,            'opacity' => $opacity,            'layer' => $layer,        ];    }    /**     * 甯у彿婧㈠嚭鏃堕噸缃墍鏈夎妭鐐圭殑缁樺埗鏍囪銆?     */    private function resetAllPaintFlags(RenderNode $node): void    {        $node->lastPaintFrame = 0;        $node->layoutDirty = true;        foreach ($node->children as $child) {            $this->resetAllPaintFlags($child);        }    }    /**     * 灏?CssValue 瀵硅薄杞负鍘熷 PHP 鍊硷紙閬垮厤 (int) 寮鸿浆鐐告帀锛夈€?     */private static function cssValueToRaw(mixed $v): mixed    {        if ($v instanceof CssLength || $v instanceof CssRect) {            return $v->toPx();        }        if ($v instanceof CssKeyword) {            return $v->value;        }        if ($v instanceof CssColor) {            return $v->toBgr();        }        if ($v instanceof CssFlex) {            return $v->grow . ' ' . $v->shrink . ' ' . $v->basis->toPx();        }        return $v;    }    /**     * 浠?RenderNode 鎻愬彇浼被鏍峰紡瑕嗙洊锛?hover/:focus/:active锛夈€?     * 浼被鏍峰紡瀛樺偍鍦?computedStyle 鐨?rawDeclarations 涓紝閫氳繃 getRaw() 璁块棶銆?     * pseudoOverrides 涓殑鍊煎凡杞崲涓哄師濮?PHP 绫诲瀷锛屽彲鐩存帴鐢ㄤ簬鍏冪礌鏋勫缓銆?     *     * @return array<string, mixed> 浼被鏍峰紡瑕嗙洊閿€煎     */    private static function extractPseudoOverrides(RenderNode $node): array    {        $cs = $node->computedStyle;        if ($cs === null) return [];        $overrides = [];        $states = [];        if ($node->hovered) $states[] = '__hoverStyle';        if ($node->focused) $states[] = '__focusStyle';        if ($node->active) $states[] = '__activeStyle';        // 浼樺厛绾? active > focus > hover (鍚庨亶鍘嗙殑瑕嗙洊鍏堥亶鍘嗙殑)        foreach ($states as $key) {            $raw = $cs->getRaw($key);            if ($raw !== null && is_array($raw)) {                foreach ($raw as $k => $v) {                    $overrides[$k] = self::cssValueToRaw($v);                }            }        }        return $overrides;    }}
+<?php
+
+namespace Px\Rendering;
+
+use native_types;
+use Px\Core\Config;
+use Px\Interfaces\ReactiveComponentInterface;
+use Px\ReactiveComponent;
+
+class VNodeRenderer
+{
+    private ReactiveComponentInterface $component;
+    private RenderContext $render_ctx;
+    private int $currentPaintFrame = 0;
+    private array $paintFlags = []; // spl_object_id → lastPaintFrame
+    private array $scrollCtxStack = [];
+    private array $componentStack = [];
+    private array $renderOffsetsX = [];
+    private array $renderOffsetsY = [];
+
+    private function setRenderOffsetX(RenderNode $node, int $value): void
+    {
+        $this->renderOffsetsX[spl_object_id($node)] = $value;
+    }
+
+    private function setRenderOffsetY(RenderNode $node, int $value): void
+    {
+        $this->renderOffsetsY[spl_object_id($node)] = $value;
+    }
+
+    private function getRenderOffsetX(RenderNode $node): int
+    {
+        return $this->renderOffsetsX[spl_object_id($node)] ?? 0;
+    }
+
+    private function getRenderOffsetY(RenderNode $node): int
+    {
+        return $this->renderOffsetsY[spl_object_id($node)] ?? 0;
+    }
+
+    /** Paint frame tracking (替代 RenderNode.lastPaintFrame 外置) */
+    private function needsPaint(RenderNode $node, int $frame): bool
+    {
+        return ($this->paintFlags[spl_object_id($node)] ?? 0) !== $frame;
+    }
+
+    private function markPainted(RenderNode $node, int $frame): void
+    {
+        $this->paintFlags[spl_object_id($node)] = $frame;
+    }
+
+    public function __construct(ReactiveComponentInterface $component, RenderContext $render_ctx)
+    {
+        $this->component = $component;
+        $this->render_ctx = $render_ctx;
+    }
+
+    public function getRenderContext(): RenderContext
+    {
+        return $this->render_ctx;
+    }
+
+    private function computePaddingBoxClip(RenderNode $node): array
+    {
+        $cs = $node->computedStyle;
+        $bl = (int)($cs?->borderLeftWidth ?? 0);
+        $br = (int)($cs?->borderRightWidth ?? 0);
+        $bt = (int)($cs?->borderTopWidth ?? 0);
+        $bb = (int)($cs?->borderBottomWidth ?? 0);
+        $vw = ($node->visualW > 0 ? $node->visualW : $node->w);
+        $vh = ($node->visualH > 0 ? $node->visualH : $node->h);
+        return [
+            'x' => $node->x + $this->getRenderOffsetX($node) + $bl,
+            'y' => $node->y + $this->getRenderOffsetY($node) + $bt,
+            'w' => max(0, $vw - $bl - $br),
+            'h' => max(0, $vh - $bt - $bb),
+        ];
+    }
+
+    public function render(RenderNode $root): void
+    {
+        \Px\Core\PerfCounter::start('render_collect');
+        $this->render_ctx->beginFrame();
+        if ($this->currentPaintFrame === PHP_INT_MAX) {
+            $this->currentPaintFrame = 1;
+            $this->resetAllPaintFlags($root);
+        } else {
+            $this->currentPaintFrame++;
+        }
+        $elementsByLayer = [];
+        $maxLayer = 0;
+        $this->collectElements($root, $elementsByLayer, $maxLayer);
+        if (Config::get('debug_diag_enabled', false)) {
+            $totalElements = 0;
+            for ($l = 0; $l <= $maxLayer; $l++) {
+                $totalElements += count($elementsByLayer[$l] ?? []);
+            }
+            error_log('[DIAG] VNodeRenderer: collected ' . $totalElements . ' elements across ' . ($maxLayer + 1) . ' layers');
+        }
+        for ($l = 0; $l <= $maxLayer; $l++) {
+            $layerElements = $elementsByLayer[$l] ?? [];
+            foreach ($layerElements as $el) {
+                $this->render_ctx->drawElement($el);
+            }
+        }
+        $this->render_ctx->endFrame();
+        \Px\Core\PerfCounter::end('render_collect');
+    }
+
+    private function collectElements(RenderNode $node, array &$elementsByLayer, int &$maxLayer, int $accumOffsetX = 0, int $accumOffsetY = 0): void
+    {
+        $isFixed = ($node->computedStyle?->position?->value ?? '') === 'fixed';
+        $this->setRenderOffsetX($node, $isFixed ? 0 : $accumOffsetX);
+        $this->setRenderOffsetY($node, $isFixed ? 0 : $accumOffsetY);
+        if (!$this->needsPaint($node, $this->currentPaintFrame)) {
+            $childOffsetX = $isFixed ? 0 : $accumOffsetX;
+            $childOffsetY = $isFixed ? 0 : $accumOffsetY;
+            if (!$isFixed && $node->isScrollContainer) {
+                $childOffsetX -= $node->scrollLeft;
+                $childOffsetY -= $node->scrollTop;
+            }
+            foreach ($node->children as $child) {
+                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
+            }
+            return;
+        }
+        if ($node->type === '#root') {
+            $childOffsetX = $isFixed ? 0 : $accumOffsetX;
+            $childOffsetY = $isFixed ? 0 : $accumOffsetY;
+            if (!$isFixed && $node->isScrollContainer) {
+                $childOffsetX -= $node->scrollLeft;
+                $childOffsetY -= $node->scrollTop;
+            }
+            foreach ($node->children as $child) {
+                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
+            }
+            return;
+        }
+        $el = $this->renderNodeToElement($node);
+        if ($el !== null) {
+            $layer = $node->layer;
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            if (!isset($elementsByLayer[$layer])) {
+                $elementsByLayer[$layer] = [];
+            }
+            if (($el['type'] ?? '') === 'group' && isset($el['elements'])) {
+                foreach ($el['elements'] as $childEl) {
+                    $childLayer = $childEl['layer'] ?? $layer;
+                    if ($childLayer > $maxLayer) $maxLayer = $childLayer;
+                    if (!isset($elementsByLayer[$childLayer])) {
+                        $elementsByLayer[$childLayer] = [];
+                    }
+                    $elementsByLayer[$childLayer][] = $childEl;
+                }
+            } else {
+                $elementsByLayer[$layer][] = $el;
+            }
+        }
+        $pushedClip = false;
+        $isScrollNode = $node->isScrollContainer;
+        if ($isScrollNode) {
+            $clip = self::computePaddingBoxClip($node);
+            $this->scrollCtxStack[] = [
+                'x' => $clip['x'], 'y' => $clip['y'],
+                'w' => $clip['w'], 'h' => $clip['h'],
+                'scrollTop' => $node->scrollTop,
+                'scrollLeft' => $node->scrollLeft,
+                'overflowX' => $node->computedStyle?->overflowX?->value ?? $node->computedStyle?->overflow?->value ?? 'visible',
+                'overflowY' => $node->computedStyle?->overflowY?->value ?? $node->computedStyle?->overflow?->value ?? 'visible',
+                'layer' => $node->layer,
+            ];
+            $pushedClip = true;
+        } else {
+            $noX = $node->computedStyle?->overflowX?->value ?? $node->computedStyle?->overflow?->value ?? 'visible';
+            $noY = $node->computedStyle?->overflowY?->value ?? $node->computedStyle?->overflow?->value ?? 'visible';
+            if ($noX === 'hidden' || $noY === 'hidden') {
+                $pushedClip = true;
+            }
+        }
+        if ($pushedClip) {
+            $layer = $node->layer;
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            if (!isset($elementsByLayer[$layer])) {
+                $elementsByLayer[$layer] = [];
+            }
+            $clip = self::computePaddingBoxClip($node);
+            $elementsByLayer[$layer][] = [
+                'type' => 'clip-push',
+                'x' => $clip['x'], 'y' => $clip['y'],
+                'w' => $clip['w'], 'h' => $clip['h'],
+                'layer' => $layer,
+            ];
+            if ($isScrollNode) {
+                $textLayer = $layer + 1;
+                if ($textLayer > $maxLayer) $maxLayer = $textLayer;
+                if (!isset($elementsByLayer[$textLayer])) {
+                    $elementsByLayer[$textLayer] = [];
+                }
+                $elementsByLayer[$textLayer][] = [
+                    'type' => 'clip-push',
+                    'x' => $clip['x'], 'y' => $clip['y'],
+                    'w' => $clip['w'], 'h' => $clip['h'],
+                    'layer' => $textLayer,
+                ];
+            }
+        }
+        $childOffsetX = $isFixed ? 0 : $accumOffsetX;
+        $childOffsetY = $isFixed ? 0 : $accumOffsetY;
+        if (!$isFixed && $node->isScrollContainer) {
+            $childOffsetX -= $node->scrollLeft;
+            $childOffsetY -= $node->scrollTop;
+            error_log('[SCROLL_DBG] collect scrollContainer x=' . $node->x . ' y=' . $node->y . ' w=' . $node->w . ' h=' . $node->h . ' visualH=' . $node->visualH . ' scrollTop=' . $node->scrollTop . ' scrollLeft=' . $node->scrollLeft . ' childOffY=' . $childOffsetY . ' children=' . count($node->children));
+        }
+        if ($node->type !== 'button') {
+            foreach ($node->children as $child) {
+                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
+            }
+        }
+        if ($pushedClip) {
+            if ($isScrollNode) {
+                array_pop($this->scrollCtxStack);
+            }
+            $layer = $node->layer;
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            if (!isset($elementsByLayer[$layer])) {
+                $elementsByLayer[$layer] = [];
+            }
+            $elementsByLayer[$layer][] = [
+                'type' => 'clip-pop',
+                'layer' => $layer,
+            ];
+            if ($isScrollNode) {
+                $textLayer = $layer + 1;
+                if ($textLayer > $maxLayer) $maxLayer = $textLayer;
+                if (!isset($elementsByLayer[$textLayer])) {
+                    $elementsByLayer[$textLayer] = [];
+                }
+                $elementsByLayer[$textLayer][] = [
+                    'type' => 'clip-pop',
+                    'layer' => $textLayer,
+                ];
+            }
+            if ($isScrollNode) {
+                $scrollCtx = ['layer' => $node->layer];
+                ScrollbarEmitter::emit($node, $scrollCtx, $elementsByLayer, $maxLayer);
+            }
+        }
+        $this->markPainted($node, $this->currentPaintFrame);
+    }
+
+    private static function measureTextWidth(string $text, int $fontSize, bool $bold): int
+    {
+        static $hasNative = null;
+        if ($hasNative === null) {
+            $hasNative = function_exists('\\sk_measure_text_width')
+                && !getenv('PX_LAYOUT_TEST_FORCE_ESTIMATE');
+        }
+        if ($hasNative) {
+            return (int)\sk_measure_text_width($text, $fontSize, $bold);
+        }
+        $boldFactor = $bold ? 1.35 : 1.0;
+        $charW = (int)($fontSize * 0.6 * $boldFactor);
+        $cjkW  = (int)($fontSize * $boldFactor);
+        $len   = strlen($text);
+        $total = 0;
+        for ($i = 0; $i < $len;) {
+            $b = ord($text[$i]);
+            if ($b < 0x80) {
+                $total += $charW; $i++;
+            } elseif ($b < 0xC0) {
+                $i++;
+            } elseif ($b < 0xE0) {
+                $total += $cjkW; $i += 2;
+            } elseif ($b < 0xF0) {
+                $total += $cjkW; $i += 3;
+            } else {
+                $total += $cjkW; $i += 4;
+            }
+        }
+        return $total;
+    }
+
+    private static function applyTextTransform(string $text, string $transform): string
+    {
+        switch ($transform) {
+            case 'uppercase':
+                return mb_strtoupper($text, 'UTF-8');
+            case 'lowercase':
+                return mb_strtolower($text, 'UTF-8');
+            case 'capitalize':
+                $words = explode(' ', $text);
+                foreach ($words as &$w) {
+                    if ($w !== '') {
+                        $w = mb_strtoupper(mb_substr($w, 0, 1, 'UTF-8'), 'UTF-8')
+                           . mb_substr($w, 1, null, 'UTF-8');
+                    }
+                }
+                return implode(' ', $words);
+            default:
+                return $text;
+        }
+    }
+
+    private static function applyFontVariant(string $text, int $fontSize, string $variant): array
+    {
+        if ($variant === 'normal') {
+            return ['text' => $text, 'fontSize' => $fontSize];
+        }
+        $result = ['text' => $text, 'fontSize' => $fontSize];
+        if ($variant === 'small-caps' || $variant === 'all-small-caps') {
+            if (function_exists('mb_strtoupper')) {
+                $result['text'] = mb_strtoupper($text, 'UTF-8');
+            } else {
+                $result['text'] = strtoupper($text);
+            }
+            $result['fontSize'] = max(6, (int)($fontSize * 0.7));
+        }
+        return $result;
+    }
+
+    private static function applyFontStretch(string $stretch): int
+    {
+        switch ($stretch) {
+            case 'condensed':
+            case 'semi-condensed':
+            case 'ultra-condensed':
+            case 'extra-condensed':
+                return -1;
+            case 'expanded':
+            case 'semi-expanded':
+            case 'ultra-expanded':
+            case 'extra-expanded':
+                return 1;
+            default:
+                return 0;
+        }
+    }
+
+    private static function measureTextHeight(int $fontSize, bool $bold): int
+    {
+        static $hasNative = null;
+        if ($hasNative === null) {
+            $hasNative = function_exists('\\sk_measure_text_height');
+        }
+        if ($hasNative) {
+            $h = (int)\sk_measure_text_height($fontSize, $bold ? 1 : 0);
+            if ($h > 0) return $h;
+        }
+        return $fontSize + 2;
+    }
+
+    private static function resolveObjectPosition(string $value, int $containerSize, int $imageSize): int
+    {
+        $value = trim(strtolower($value));
+        if ($value === 'left' || $value === 'top') return 0;
+        if ($value === 'right' || $value === 'bottom') return $containerSize - $imageSize;
+        if ($value === 'center') return (int)(($containerSize - $imageSize) / 2);
+        if (str_ends_with($value, '%')) {
+            return (int)(($containerSize - $imageSize) * (float)$value / 100.0);
+        }
+        if (preg_match('/^-?\d+/', $value, $m)) return (int)$m[0];
+        return (int)(($containerSize - $imageSize) / 2);
+    }
+
+    private function currentComponent(): ReactiveComponent
+    {
+        $n = count($this->componentStack);
+        return $n > 0 ? $this->componentStack[$n - 1] : $this->component;
+    }
+
+    private function renderNodeToElement(RenderNode $node): ?array
+    {
+        $pseudoKeys = self::extractPseudoOverrides($node);
+        if (($node->computedStyle?->display?->value ?? '') === 'none') {
+            return null;
+        }
+        $x = $node->x + $this->getRenderOffsetX($node);
+        $y = $node->y + $this->getRenderOffsetY($node);
+        $w = $node->visualW;
+        $h = $node->visualH;
+        $layer = $node->layer;
+        if (count($this->scrollCtxStack) > 0) {
+            $isFixed = ($node->computedStyle?->position?->value ?? '') === 'fixed';
+            if (!$isFixed) {
+                $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];
+                $containerX = $scrollCtx['x'];
+                $containerY = $scrollCtx['y'];
+                $containerW = $scrollCtx['w'];
+                $containerH = $scrollCtx['h'];
+                $overflowX = $scrollCtx['overflowX'];
+                $overflowY = $scrollCtx['overflowY'];
+                if ($overflowY !== 'visible') {
+                    if ($y + $h <= $containerY || $y >= $containerY + $containerH) {
+                        return null;
+                    }
+                }
+                if ($overflowX !== 'visible') {
+                    if ($x + $w <= $containerX || $x >= $containerX + $containerW) {
+                        return null;
+                    }
+                }
+            }
+        }
+        $props = [];
+        if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+            $props = $node->sourceVNode->props;
+        }
+        switch ($node->type) {
+            case 'button':
+                return $this->makeButtonElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
+            case 'input':
+                return $this->makeInputElement($node, $props, $x, $y, $w, $h, $layer);
+            case 'img':
+                return $this->makeImgElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
+            case 'span':
+            case '#text':
+            case 'b':
+            case 'strong':
+            case 'em':
+            case 'i':
+            case 'code':
+                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
+            case 'br':
+                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => 0, 'h' => 0, 'color' => 0, 'borderRadius' => 0, 'borderRadiusX' => 0, 'borderRadiusY' => 0, 'opacity' => 1.0, 'layer' => $layer, 'noFill' => true, 'shadowX' => 0, 'shadowY' => 0, 'shadowBlur' => 0, 'shadowAlpha' => 0, 'shadowColor' => 0, 'shadowInset' => false, 'borderWidth' => 0, 'borderColor' => 0, 'borderTopColor' => 0, 'borderRightColor' => 0, 'borderBottomColor' => 0, 'borderLeftColor' => 0, 'borderTopWidth' => 0, 'borderRightWidth' => 0, 'borderBottomWidth' => 0, 'borderLeftWidth' => 0, 'borderStyle' => 'none', 'cursor' => ''];
+                return $elements;
+            case 'a':
+            case 'label':
+            case 'abbr':
+            case 'cite':
+            case 'dfn':
+            case 'kbd':
+            case 'mark':
+            case 'q':
+            case 'samp':
+            case 'small':
+            case 'sub':
+            case 'sup':
+            case 'time':
+            case 'var':
+                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
+            case 'p':
+            case 'h1':
+            case 'h2':
+            case 'h3':
+            case 'h4':
+            case 'h5':
+            case 'h6':
+                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
+            case 'div':
+            default:
+                return $this->makeDivElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
+        }
+    }
+
+    private function makeDivElement(RenderNode $node, array $pseudoOverrides, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    {
+        $cs = $node->computedStyle;
+        $cursor = $pseudoOverrides['cursor'] ?? $cs?->cursor?->value ?? '';
+        if ($node->isScrollContainer) {
+            return $this->makeScrollContainerElement($node, $pseudoOverrides, $x, $y, $w, $h, $layer);
+        }
+        if ($w <= 0) $w = 80;
+        if ($h <= 0) $h = 32;
+        $rawBg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr();
+        $bg = $rawBg !== null ? $rawBg : null;
+        $bwVal = $pseudoOverrides['borderWidth'] ?? ($cs?->borderWidth?->top?->toPx() ?? 0);
+        $hasBorder = ($bwVal > 0)
+            || ($pseudoOverrides['borderTopWidth'] ?? $cs?->borderTopWidth ?? 0) > 0
+            || ($pseudoOverrides['borderRightWidth'] ?? $cs?->borderRightWidth ?? 0) > 0
+            || ($pseudoOverrides['borderBottomWidth'] ?? $cs?->borderBottomWidth ?? 0) > 0
+            || ($pseudoOverrides['borderLeftWidth'] ?? $cs?->borderLeftWidth ?? 0) > 0;
+        $hasBg = $bg !== null;
+        $bgImage = $pseudoOverrides['backgroundImage'] ?? $cs?->backgroundImage ?? '';
+        $bgImageHandle = 0;
+        if ($bgImage !== '' && $w > 0 && $h > 0) {
+            $bgImageHandle = ImageManager::loadImage($bgImage);
+        }
+        $hasTextChild = is_string($node->content) && $node->content !== '';
+        if ($bg === null && !$hasBorder && !$hasTextChild && $bgImageHandle === 0) {
+            return null;
+        }
+        $noFill = ($bg === null);
+        $drawColor = ($bg !== null) ? $bg : 0;
+        $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;
+        $borderRadiusX = $pseudoOverrides['borderRadiusX'] ?? 0;
+        $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;
+        $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;
+        $boxShadowRaw = $pseudoOverrides['boxShadow'] ?? $cs?->boxShadow ?? '';
+        $offsets = CssValueParser::parseBoxShadowOffsets($boxShadowRaw);
+        $shadowX = $offsets['h']; $shadowY = $offsets['v']; $shadowBlur = $offsets['blur']; $shadowColor = $offsets['color']; $shadowAlpha = $offsets['alpha']; $shadowInset = $offsets['inset'];
+        $backgroundClip = $pseudoOverrides['backgroundClip'] ?? $cs?->backgroundClip ?? 'border-box';
+        $backgroundAttachment = $pseudoOverrides['backgroundAttachment'] ?? $cs?->backgroundAttachment ?? 'scroll';
+        $tableLayout = $cs?->tableLayout ?? 'auto';
+        $borderCollapse = $cs?->borderCollapse?->value ?? 'separate';
+        $borderSpacing = $cs?->borderSpacing ?? 0;
+        $listMarker = '';
+        if ($node->type === 'li') {
+            $parent = $node->parent;
+            $lst = 'disc';
+            if ($parent !== null) {
+                $lst = $parent->computedStyle?->listStyleType ?? 'disc';
+                $liIndex = 0;
+                foreach ($parent->children as $sibling) {
+                    if ($sibling === $node) break;
+                    if ($sibling->type === 'li') $liIndex++;
+                }
+                switch ($lst) {
+                    case 'decimal': $listMarker = ($liIndex + 1) . '. '; break;
+                    case 'lower-alpha': $listMarker = chr(97 + ($liIndex % 26)) . '. '; break;
+                    case 'upper-alpha': $listMarker = chr(65 + ($liIndex % 26)) . '. '; break;
+                    case 'square': $listMarker = "\xE2\x96\xAA "; break;
+                    case 'circle': $listMarker = "\xE2\x97\x8B "; break;
+                    case 'none': $listMarker = ''; break;
+                    default: $listMarker = "\xE2\x80\xA2 "; break;
+                }
+            }
+        }
+        $gradientAngle = $pseudoOverrides['gradientAngle'] ?? $cs?->getRaw('gradientAngle');
+        $gradientColors = $pseudoOverrides['gradientColors'] ?? $cs?->getRaw('gradientColors');
+        $textShadowRaw = $pseudoOverrides['textShadow'] ?? $cs?->textShadow ?? '';
+        $tsOffsets = CssValueParser::parseBoxShadowOffsets($textShadowRaw);
+        $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];
+        $borderWidth = $pseudoOverrides['borderWidth'] ?? ($cs?->borderWidth?->top?->toPx() ?? 0);
+        $borderTopWidth = $pseudoOverrides['borderTopWidth'] ?? $cs?->borderTopWidth ?? $borderWidth;
+        $borderRightWidth = $pseudoOverrides['borderRightWidth'] ?? $cs?->borderRightWidth ?? $borderWidth;
+        $borderBottomWidth = $pseudoOverrides['borderBottomWidth'] ?? $cs?->borderBottomWidth ?? $borderWidth;
+        $borderLeftWidth = $pseudoOverrides['borderLeftWidth'] ?? $cs?->borderLeftWidth ?? $borderWidth;
+        $borderStyle = $pseudoOverrides['borderStyle'] ?? $cs?->borderStyle ?? 'solid';
+        $outlineOffset = $pseudoOverrides['outlineOffset'] ?? $cs?->outlineOffset ?? 0;
+        $borderColor = $pseudoOverrides['borderColor'] ?? $cs?->borderColor ?? 0;
+        $borderTopColor = $pseudoOverrides['borderTopColor'] ?? $cs?->borderTopColor ?? $borderColor;
+        $borderRightColor = $pseudoOverrides['borderRightColor'] ?? $cs?->borderRightColor ?? $borderColor;
+        $borderBottomColor = $pseudoOverrides['borderBottomColor'] ?? $cs?->borderBottomColor ?? $borderColor;
+        $borderLeftColor = $pseudoOverrides['borderLeftColor'] ?? $cs?->borderLeftColor ?? $borderColor;
+        $bgImageEl = null;
+        if ($bgImageHandle !== 0) {
+            $imgX = $backgroundAttachment === 'fixed' ? $node->x : $x;
+            $imgY = $backgroundAttachment === 'fixed' ? $node->y : $y;
+            $bgImageEl = [
+                'type' => 'image',
+                'handle' => $bgImageHandle,
+                'x' => $imgX, 'y' => $imgY, 'w' => $w, 'h' => $h,
+                'layer' => $layer,
+                'backgroundRepeat' => $pseudoOverrides['backgroundRepeat'] ?? $cs?->backgroundRepeat ?? 'repeat',
+            ];
+        }
+        if ($hasTextChild) {
+            $fontSize = $pseudoOverrides['fontSize'] ?? $cs?->fontSize ?? 14;
+            $rawTextColor = $pseudoOverrides['fg'] ?? $pseudoOverrides['color'] ?? ($cs?->color?->toBgr() ?? null);
+            $textColor = $rawTextColor !== null ? $rawTextColor : 0xFFFFFF;
+            $bold = $pseudoOverrides['bold'] ?? $cs?->bold ?? false;
+            $rawTextAlign = $cs?->getRaw('textAlign');
+            $align = $props['align'] ?? ($pseudoOverrides['textAlign'] ?? ($rawTextAlign ? (is_string($rawTextAlign) ? $rawTextAlign : ($cs?->textAlign?->value ?? 'start')) : 'start'));
+            if ($align === 'start' && $rawTextAlign === null && $node->parent !== null) {
+                $parentAlign = $node->parent->computedStyle?->textAlign?->value ?? null;
+                if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {
+                    $align = $parentAlign;
+                }
+            }
+            if ($align === 'start' || $align === 'match-parent') $align = 'left';
+            if ($align === 'end') $align = 'right';
+            if ($align === 'justify' || $align === 'justify-all') $align = 'left';
+            $text = $node->content;
+            if ($listMarker !== '') {
+                $text = $listMarker . $text;
+            }
+            $textTransform = $pseudoOverrides['textTransform'] ?? $cs?->textTransform ?? 'none';
+            if ($textTransform !== 'none') {
+                $text = self::applyTextTransform($text, $textTransform);
+            }
+            $rawFontVariant = $cs?->getRaw('fontVariant');
+            $fontVariant = $pseudoOverrides['fontVariant'] ?? ($rawFontVariant ? (is_string($rawFontVariant) ? $rawFontVariant : ($cs?->fontVariant ?? 'normal')) : 'normal');
+            if ($fontVariant !== 'normal') {
+                $fvRet = self::applyFontVariant($text, $fontSize, $fontVariant);
+                $text = $fvRet['text'];
+                $fontSize = $fvRet['fontSize'];
+            }
+            $rawFontStretch = $cs?->getRaw('fontStretch');
+            $fontStretchVal = $pseudoOverrides['fontStretch'] ?? ($rawFontStretch ? (is_string($rawFontStretch) ? $rawFontStretch : ($cs?->fontStretch ?? 'normal')) : 'normal');
+            $fontStretchExtra = self::applyFontStretch($fontStretchVal);
+            $rawLetterSpacing = $cs?->getRaw('letterSpacing');
+            $letterSpacing = $pseudoOverrides['letterSpacing'] ?? ($rawLetterSpacing ? (is_numeric($rawLetterSpacing) ? (int)$rawLetterSpacing : 0) : 0);
+            if ($fontStretchExtra !== 0) {
+                $letterSpacing += $fontStretchExtra;
+            }
+            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
+            $selfY = $node->y + $this->getRenderOffsetY($node);
+            $selfH = $node->visualH;
+            $selfX = $node->x + $this->getRenderOffsetX($node);
+            $selfW = $node->visualW;
+            $pdL = $pseudoOverrides['paddingLeft'] ?? $cs?->padding?->left?->toPx() ?? 0;
+            $pdT = $pseudoOverrides['paddingTop'] ?? $cs?->padding?->top?->toPx() ?? 0;
+            $pdR = $pseudoOverrides['paddingRight'] ?? $cs?->padding?->right?->toPx() ?? 0;
+            $pdB = $pseudoOverrides['paddingBottom'] ?? $cs?->padding?->bottom?->toPx() ?? 0;
+            $contentX = $selfX + $borderLeftWidth + $pdL;
+            $contentY = $selfY + $borderTopWidth + $pdT;
+            $contentW = max(0, $selfW - $borderLeftWidth - $borderRightWidth - $pdL - $pdR);
+            $rawOverflow = $cs?->overflow?->value ?? 'visible';
+            $elOverflow = $pseudoOverrides['overflow'] ?? $rawOverflow;
+            $hasOverflow = ($elOverflow === 'hidden' || $elOverflow === 'clip');
+            $rawOverflowWrap = $cs?->overflowWrap ?? 'normal';
+            $overflowWrap = $pseudoOverrides['overflowWrap'] ?? ($rawOverflowWrap !== '' ? $rawOverflowWrap : 'normal');
+            if ($overflowWrap === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+                $rawStyleVNode = $node->sourceVNode->props['style'] ?? '';
+                if ($rawStyleVNode !== '' && (stripos($rawStyleVNode, 'overflow-wrap:break-word') !== false || stripos($rawStyleVNode, 'word-wrap:break-word') !== false)) {
+                    $overflowWrap = 'break-word';
+                }
+            }
+            $isBreakWord = ($overflowWrap === 'break-word' || $overflowWrap === 'anywhere');
+            $rawTextOverflow = $cs?->getRaw('textOverflow') ?? 'clip';
+            $textOverflow = $pseudoOverrides['textOverflow'] ?? (is_string($rawTextOverflow) ? $rawTextOverflow : 'clip');
+            $rawLineClamp = $cs?->getRaw('webkitLineClamp') ?? 0;
+            $lineClampVal = is_numeric($rawLineClamp) ? (int)$rawLineClamp : 0;
+            $overflowStyle = [
+                'textOverflow' => $textOverflow,
+                'overflowWrap' => $overflowWrap,
+                'lineHeight' => $cs?->lineHeight ?? 0,
+                'WebkitLineClamp' => $lineClampVal,
+            ];
+            if ($textOverflow === 'ellipsis' && $hasOverflow && $contentW > 0) {
+                $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $overflowStyle);
+                $text = $overflowResult['text'];
+                $overflowLines = $overflowResult['lines'];
+                $overflowLineHeight = $overflowResult['lineHeight'];
+                $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
+                $isWrappable = false;
+            } elseif ($isBreakWord && $contentW > 0 && self::measureTextWidth($text, $fontSize, (bool)$bold) > $contentW) {
+                $overflowResult = TextOverflowProcessor::process($text, $contentW, $fontSize, (bool)$bold, $overflowStyle);
+                $text = $overflowResult['text'];
+                $overflowLines = $overflowResult['lines'];
+                $overflowLineHeight = $overflowResult['lineHeight'];
+                $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
+                $isWrappable = false;
+            } else {
+                $overflowLines = null;
+                $overflowLineHeight = 0;
+                $isWrappable = true;
+            }
+            $textX = $contentX + 4;
+            if ($align === 'right') {
+                $textX = $contentX + $contentW - 12 - $textWidth;
+                if ($textX < $contentX + 4) $textX = $contentX + 4;
+            } elseif ($align === 'center') {
+                $textX = $contentX + (int)(($contentW - $textWidth) / 2);
+                if ($textX < $contentX + 4) $textX = $contentX + 4;
+            }
+            if ($textX < $contentX + 4) $textX = $contentX + 4;
+            $textIndent = (int)($pseudoOverrides['textIndent'] ?? $cs?->textIndent ?? 0);
+            if ($textIndent > 0 && $align !== 'right' && $align !== 'center') {
+                $textX += $textIndent;
+            }
+            $display = $pseudoOverrides['display'] ?? $cs?->display?->value ?? 'block';
+            $justifyContent = $pseudoOverrides['justifyContent'] ?? $cs?->justifyContent?->value ?? 'flex-start';
+            if (($display === 'flex' || $display === 'inline-flex') && $justifyContent === 'center' && $textWidth > 0 && $contentW > $textWidth) {
+                $textX = $contentX + (int)(($contentW - $textWidth) / 2);
+            }
+            $textY = $contentY;
+            $alignItems = $pseudoOverrides['alignItems'] ?? $cs?->alignItems?->value ?? 'stretch';
+            $contentH = max(0, $selfH - $borderTopWidth - $borderBottomWidth - $pdT - $pdB);
+            $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
+            if (($display === 'flex' || $display === 'inline-flex') && $alignItems === 'center') {
+                if ($contentH > $textHeight) {
+                    $textY = $contentY + (int)(($contentH - $textHeight) / 2);
+                }
+            }
+            $isBold = (bool)$bold;
+            $whitespace = $pseudoOverrides['whiteSpace'] ?? $cs?->whiteSpace?->value ?? 'normal';
+            if ($whitespace === 'nowrap' || $whitespace === 'pre') {
+                $isWrappable = false;
+            }
+            $lineH = 0;
+            if ($isWrappable && $textWidth > $contentW && $contentW > 20) {
+                $lineH = $pseudoOverrides['lineHeight'] ?? $cs?->lineHeight ?? 0;
+                if ($lineH <= 0) {
+                    $lineH = (int)($fontSize * 1.2);
+                }
+            }
+            $elements = [];
+            if ($hasBg || $hasBorder) {
+                $bgX = $backgroundAttachment === 'fixed' ? $node->x : $x;
+                $bgY = $backgroundAttachment === 'fixed' ? $node->y : $y;
+                $clipX = $bgX; $clipY = $bgY; $clipW = $w; $clipH = $h;
+                if ($backgroundClip === 'padding-box' && ($borderLeftWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0)) {
+                    $clipX += $borderLeftWidth; $clipY += $borderTopWidth;
+                    $clipW -= ($borderLeftWidth + $borderRightWidth);
+                    $clipH -= ($borderTopWidth + $borderBottomWidth);
+                } elseif ($backgroundClip === 'content-box') {
+                    $pl = $cs?->padding?->left?->toPx() ?? 0;
+                    $pt = $cs?->padding?->top?->toPx() ?? 0;
+                    $pr = $cs?->padding?->right?->toPx() ?? 0;
+                    $pb = $cs?->padding?->bottom?->toPx() ?? 0;
+                    $clipX += ($borderLeftWidth + $pl); $clipY += ($borderTopWidth + $pt);
+                    $clipW -= ($borderLeftWidth + $borderRightWidth + $pl + $pr);
+                    $clipH -= ($borderTopWidth + $borderBottomWidth + $pt + $pb);
+                }
+                $elements[] = ['type' => 'rect', 'x' => $clipX, 'y' => $clipY, 'w' => max(0,$clipW), 'h' => max(0,$clipH), 'color' => $drawColor, 'borderRadius' => $borderRadius, 'borderRadiusX' => $borderRadiusX, 'borderRadiusY' => $borderRadiusY, 'opacity' => $opacity, 'layer' => $layer, 'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset, 'borderWidth' => $borderWidth, 'borderColor' => $borderColor, 'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor, 'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor, 'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth, 'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth, 'borderStyle' => $borderStyle, 'noFill' => $noFill, 'cursor' => $cursor, 'gradientAngle' => $gradientAngle, 'gradientColors' => $gradientColors, 'outlineOffset' => $outlineOffset, 'backgroundClip' => $backgroundClip];
+            }
+            if ($bgImageEl !== null) {
+                $elements[] = $bgImageEl;
+            }
+            if ($overflowLines !== null && count($overflowLines) > 0) {
+                $lineIdx = 0;
+                $maxLineW = 0;
+                $lineHeight = $overflowLineHeight > 0 ? $overflowLineHeight : (int)($fontSize * 1.2);
+                foreach ($overflowLines as $seg) {
+                    $segW = self::measureTextWidth($seg, $fontSize, $isBold);
+                    if ($segW > $maxLineW) $maxLineW = $segW;
+                    $segX = $contentX + 4;
+                    if ($align === 'right') {
+                        $segX = $contentX + $contentW - 12 - $segW;
+                        if ($segX < $contentX + 4) $segX = $contentX + 4;
+                    } elseif ($align === 'center') {
+                        $segX = $contentX + (int)(($contentW - $segW) / 2);
+                        if ($segX < $contentX + 4) $segX = $contentX + 4;
+                    }
+                    if ($textIndent > 0 && $lineIdx === 0 && $align !== 'right' && $align !== 'center') {
+                        $segX += $textIndent;
+                    }
+                    $segY = $contentY + $lineIdx * $lineHeight;
+                    $elements[] = ['type' => 'text', 'text' => $seg, 'x' => $segX, 'y' => $segY,
+                        'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
+                        'fontFamily' => $cs?->fontFamily ?? '',
+                        'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
+                        'decorationLine' => $cs?->textDecorationLine ?? 'none',
+                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,
+                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
+                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                        'underlineOffset' => $cs?->getRaw('underlineOffset') ?? 0,
+                        'textWidth' => $segW,
+                        'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
+                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
+                        'letterSpacing' => $letterSpacing,
+                        'textEmphasisStyle' => 'none',
+                        'textEmphasisColor' => 0xFF0000,
+                        'textEmphasisPosition' => 'over'];
+                    $lineIdx++;
+                }
+                $node->textRenderInfo = [
+                    'x' => ($contentX + 4) - $this->getRenderOffsetX($node),
+                    'y' => $contentY - $this->getRenderOffsetY($node),
+                    'textHeight' => $lineHeight * count($overflowLines),
+                    'textWidth' => $maxLineW,
+                ];
+            } elseif ($isWrappable && $textWidth > $contentW && $contentW > 20 && $lineH > 0) {
+                $lines = [];
+                $currentLine = '';
+                $textLen = strlen($text);
+                for ($i = 0; $i < $textLen;) {
+                    $charLen = 1;
+                    $b = ord($text[$i]);
+                    if ($b >= 0xF0) $charLen = 4;
+                    elseif ($b >= 0xE0) $charLen = 3;
+                    elseif ($b >= 0xC0) $charLen = 2;
+                    $chunk = substr($text, $i, $charLen);
+                    $candidate = $currentLine . $chunk;
+                    $candidateW = self::measureTextWidth($candidate, $fontSize, $isBold);
+                    $availW = max(1, $contentW - 4);
+                    if ($candidateW > $availW && $currentLine !== '') {
+                        $lines[] = $currentLine;
+                        $currentLine = $chunk;
+                    } else {
+                        $currentLine = $candidate;
+                    }
+                    $i += $charLen;
+                }
+                if ($currentLine !== '') {
+                    $lines[] = $currentLine;
+                }
+                $lineIdx = 0;
+                $maxLineW = 0;
+                foreach ($lines as $seg) {
+                    $segW = self::measureTextWidth($seg, $fontSize, $isBold);
+                    if ($segW > $maxLineW) $maxLineW = $segW;
+                    $segX = $contentX + 4;
+                    if ($align === 'right') {
+                        $segX = $contentX + $contentW - 12 - $segW;
+                        if ($segX < $contentX + 4) $segX = $contentX + 4;
+                    } elseif ($align === 'center') {
+                        $segX = $contentX + (int)(($contentW - $segW) / 2);
+                        if ($segX < $contentX + 4) $segX = $contentX + 4;
+                    }
+                    $segY = $contentY + $lineIdx * $lineH;
+                    $elements[] = ['type' => 'text', 'text' => $seg, 'x' => $segX, 'y' => $segY,
+                        'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
+                        'fontFamily' => $cs?->fontFamily ?? '',
+                        'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
+                        'decorationLine' => $cs?->textDecorationLine ?? 'none',
+                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,
+                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
+                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                        'underlineOffset' => $cs?->getRaw('textUnderlineOffset') ?? 0,
+                        'textWidth' => self::measureTextWidth($seg, $fontSize, $isBold),
+                        'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
+                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
+                        'letterSpacing' => $letterSpacing];
+                    $lineIdx++;
+                }
+                $node->textRenderInfo = [
+                    'x' => ($contentX + 4) - $this->getRenderOffsetX($node),
+                    'y' => $contentY - $this->getRenderOffsetY($node),
+                    'textHeight' => $lineH * count($lines),
+                    'textWidth' => $maxLineW,
+                ];
+            } else {
+                $elements[] = ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
+                        'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
+                        'fontFamily' => $cs?->fontFamily ?? '',
+                        'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
+                        'decorationLine' => $cs?->textDecorationLine ?? 'none',
+                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,
+                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
+                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                        'underlineOffset' => $cs?->getRaw('underlineOffset') ?? 0,
+                        'textWidth' => self::measureTextWidth($text, $fontSize, $isBold),
+                        'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
+                        'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
+                        'letterSpacing' => $letterSpacing];
+                $node->textRenderInfo = [
+                    'x' => $textX - $this->getRenderOffsetX($node),
+                    'y' => $textY - $this->getRenderOffsetY($node),
+                    'textHeight' => max($textHeight, 0),
+                    'textWidth' => $textWidth,
+                ];
+            }
+            if (count($elements) === 1) {
+                return $elements[0];
+            }
+            $elOverflowHidden = ($cs?->overflow?->value ?? 'visible') === 'hidden';
+            if ($elOverflowHidden && !$node->isScrollContainer && $selfW > 0 && $selfH > 0) {
+                $itemClip = self::computePaddingBoxClip($node);
+                $clipX = $itemClip['x'];
+                $clipY = $itemClip['y'];
+                $clipW = $itemClip['w'];
+                $clipH = $itemClip['h'];
+                if ($clipW > 0 && $clipH > 0) {
+                    $textLayer = $layer + 1;
+                    $clipPush = ['type' => 'clip-push', 'x' => $clipX, 'y' => $clipY, 'w' => $clipW, 'h' => $clipH, 'layer' => $textLayer];
+                    $clipPop = ['type' => 'clip-pop', 'layer' => $textLayer];
+                    $newElements = [];
+                    $inserted = false;
+                    foreach ($elements as $el) {
+                        $elLayer = $el['layer'] ?? $layer;
+                        if (!$inserted && $elLayer === $textLayer) {
+                            $newElements[] = $clipPush;
+                            $inserted = true;
+                        }
+                        $newElements[] = $el;
+                    }
+                    if ($inserted) {
+                        $newElements[] = $clipPop;
+                        $elements = $newElements;
+                    }
+                }
+            }
+            return [
+                'type' => 'group', 'layer' => $layer, 'cursor' => $cursor,
+                'elements' => $elements,
+            ];
+        }
+        $elements = [];
+        if ($hasBg || $hasBorder) {
+            $elements[] = [
+                'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+                'color' => $drawColor, 'borderRadius' => $borderRadius, 'borderRadiusX' => $borderRadiusX, 'borderRadiusY' => $borderRadiusY, 'opacity' => $opacity, 'layer' => $layer,
+                'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset,
+                'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
+                'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,
+                'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,
+                'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,
+                'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,
+                'borderStyle' => $borderStyle,
+                'noFill' => $noFill,
+                'cursor' => $cursor,
+                'gradientAngle' => $gradientAngle, 'gradientColors' => $gradientColors,
+            ];
+        }
+        if ($bgImageEl !== null) {
+            $elements[] = $bgImageEl;
+        }
+        if (count($elements) === 0) {
+            return null;
+        }
+        if (count($elements) === 1) {
+            return $elements[0];
+        }
+        return [
+            'type' => 'group', 'layer' => $layer, 'cursor' => $cursor,
+            'elements' => $elements,
+        ];
+    }
+
+    private function makeSpanElement(RenderNode $node, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    {
+        $cs = $node->computedStyle;
+        $fontSize = $cs?->fontSize ?? 14;
+        $rawColor = $cs?->getRaw('fg') ?? $cs?->getRaw('color') ?? null;
+        $color = null;
+        if ($rawColor !== null) {
+            $color = $rawColor instanceof CssColor ? $rawColor->toBgr() : (is_int($rawColor) ? $rawColor : null);
+        }
+        if ($color === null) {
+            $p = $node->parent;
+            while ($p !== null) {
+                $pc = $p->computedStyle?->getRaw('fg') ?? null;
+                if ($pc !== null) {
+                    $color = $pc instanceof CssColor ? $pc->toBgr() : (is_int($pc) ? $pc : null);
+                    break;
+                }
+                $p = $p->parent;
+            }
+        }
+        if ($color === null) $color = 0x000000;
+        $bold     = $cs?->bold ?? false;
+        $rawTextAlign = $cs?->getRaw('textAlign');
+        $align    = $props['align'] ?? ($rawTextAlign ? (is_string($rawTextAlign) ? $rawTextAlign : ($cs?->textAlign?->value ?? 'start')) : 'start');
+        if ($align === 'start' && $rawTextAlign === null && $node->parent !== null) {
+            $parentAlign = $node->parent->computedStyle?->textAlign?->value ?? null;
+            if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {
+                $align = $parentAlign;
+            }
+        }
+        if ($align === 'start' || $align === 'match-parent') $align = 'left';
+        if ($align === 'end') $align = 'right';
+        if ($align === 'justify' || $align === 'justify-all') $align = 'left';
+        $text = '';
+        if ($node->content !== null) {
+            $text = (string)$node->content;
+        }
+        $bindKey = $props[':bind'] ?? $props['bind'] ?? '';
+        if ($bindKey !== '') {
+            $text = $this->currentComponent()->getBindValue($bindKey);
+        }
+        $vModel = $props['v-model'] ?? '';
+        if ($vModel !== '') {
+            $text = $this->currentComponent()->getBindValue($vModel);
+        }
+        $diagLogPath = Config::get('debug_diag_log_path', '');
+        if ($diagLogPath !== '') {
+            file_put_contents($diagLogPath, "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);
+        }
+        if ($text === '') return null;
+        $rawContainerW = $props['container-w'] ?? null;
+        $containerW = $w;
+        if ($rawContainerW !== null) {
+            if (!str_contains($rawContainerW, '%')) {
+                $containerW = (int)$rawContainerW;
+            } elseif (count($this->scrollCtxStack) > 0) {
+                $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];
+                $pct = (float)str_replace('%', '', $rawContainerW) / 100.0;
+                $containerW = (int)($scrollCtx['w'] * $pct);
+            }
+        }
+        $containerX = (int)($props['container-x'] ?? $x);
+        $rawFontVariant = $cs?->getRaw('fontVariant') ?? null;
+        $fontVariant = $rawFontVariant ? (is_string($rawFontVariant) ? $rawFontVariant : ($cs?->fontVariant ?? 'normal')) : 'normal';
+        if ($fontVariant !== 'normal') {
+            $fvRet = self::applyFontVariant($text, $fontSize, $fontVariant);
+            $text = $fvRet['text'];
+            $fontSize = $fvRet['fontSize'];
+        }
+        $rawFontStretch = $cs?->getRaw('fontStretch') ?? null;
+        $fontStretchVal = $rawFontStretch ? (is_string($rawFontStretch) ? $rawFontStretch : ($cs?->fontStretch ?? 'normal')) : 'normal';
+        $fontStretchExtra = self::applyFontStretch($fontStretchVal);
+        $rawLetterSpacing = $cs?->getRaw('letterSpacing') ?? null;
+        $letterSpacing = $rawLetterSpacing ? (is_numeric($rawLetterSpacing) ? (int)$rawLetterSpacing : 0) : 0;
+        if ($fontStretchExtra !== 0) {
+            $letterSpacing += $fontStretchExtra;
+        }
+        $rawTextShadow = $cs?->textShadow ?? '';
+        $tsOffsets = CssValueParser::parseBoxShadowOffsets($rawTextShadow);
+        $tsX = $tsOffsets['h']; $tsY = $tsOffsets['v']; $tsBlur = $tsOffsets['blur']; $tsColor = $tsOffsets['color']; $tsAlpha = $tsOffsets['alpha'];
+        $verticalAlign = $cs?->verticalAlign?->value ?? 'baseline';
+        $vaY = 0;
+        if ($verticalAlign !== 'baseline' && $verticalAlign !== 'top' && $verticalAlign !== 'bottom') {
+            $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
+            switch ($verticalAlign) {
+                case 'sub':        $vaY = (int)($fontSize * 0.25); break;
+                case 'super':      $vaY = -(int)($fontSize * 0.35); break;
+                case 'middle':     $vaY = -(int)($fontSize * 0.2); break;
+                case 'text-top':   $vaY = 0; break;
+                case 'text-bottom':$vaY = $textHeight - $fontSize; break;
+            }
+        }
+        $rawOverflowWrap = $cs?->overflowWrap ?? 'normal';
+        $overflowWrap = $rawOverflowWrap !== '' ? $rawOverflowWrap : 'normal';
+        if ($overflowWrap === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+            $rawStyle = $node->sourceVNode->props['style'] ?? '';
+            if ($rawStyle !== '' && (stripos($rawStyle, 'overflow-wrap:break-word') !== false || stripos($rawStyle, 'word-wrap:break-word') !== false)) {
+                $overflowWrap = 'break-word';
+            }
+        }
+        $rawTextOverflow = $cs?->getRaw('textOverflow') ?? 'clip';
+        $textOverflow = is_string($rawTextOverflow) ? $rawTextOverflow : 'clip';
+        $rawLineClamp = $cs?->getRaw('webkitLineClamp') ?? 0;
+        $lineClamp = is_numeric($rawLineClamp) ? (int)$rawLineClamp : 0;
+        $overflowStyle = [
+            'textOverflow' => $textOverflow,
+            'overflowWrap' => $overflowWrap,
+            'lineHeight' => $cs?->lineHeight ?? 0,
+            'WebkitLineClamp' => $lineClamp,
+        ];
+        $overflowResult = TextOverflowProcessor::process($text, $containerW, $fontSize, (bool)$bold, $overflowStyle);
+        $text = $overflowResult['text'];
+        if ($overflowResult['lines'] !== null && count($overflowResult['lines']) > 1) {
+            $elements = [];
+            $lineIdx = 0;
+            $lineHeight = $overflowResult['lineHeight'];
+            foreach ($overflowResult['lines'] as $seg) {
+                $lineY = $y + $lineIdx * $lineHeight;
+                $segX = $x;
+                if ($align === 'right' || $align === 'center') {
+                    $segW = self::measureTextWidth($seg, $fontSize, (bool)$bold);
+                    if ($align === 'right') {
+                        $segX = $containerX + $containerW - 12 - $segW;
+                        if ($segX < $containerX + 4) $segX = $containerX + 4;
+                    } else {
+                        $segX = $containerX + (int)(($containerW - $segW) / 2);
+                        if ($segX < $containerX) $segX = (int)$containerX;
+                    }
+                }
+                $elements[] = [
+                    'type' => 'text', 'text' => $seg,
+                    'x' => $segX, 'y' => $lineY + $vaY,
+                    'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
+                    'align' => 'left', 'layer' => $layer,
+                    'decorationLine' => $cs?->textDecorationLine ?? 'none',
+                    'decorationColor' => $cs?->textDecorationColor ?: (string)$color,
+                    'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
+                    'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                    'underlineOffset' => $cs?->getRaw('textUnderlineOffset') ?? 0,
+                    'textWidth' => self::measureTextWidth($seg, $fontSize, (bool)$bold),
+                    'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
+                    'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
+                    'letterSpacing' => $letterSpacing];
+                $lineIdx++;
+            }
+            return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
+        }
+        if ($align === 'right' || $align === 'center') {
+            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
+            if ($align === 'right') {
+                $x = $containerX + $containerW - 12 - $textWidth;
+                if ($x < $containerX + 4) $x = $containerX + 4;
+            } else {
+                $x = $containerX + (int)(($containerW - $textWidth) / 2);
+                if ($x < $containerX) $x = (int)$containerX;
+            }
+        }
+        if (!isset($textWidth)) {
+            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
+        }
+        $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
+        $node->textRenderInfo = [
+            'x' => $x - $this->getRenderOffsetX($node),
+            'y' => $y - $this->getRenderOffsetY($node),
+            'textHeight' => $textHeight,
+            'textWidth' => $textWidth,
+        ];
+        $decorationLine = $cs?->textDecorationLine ?? 'none';
+        $decorationColor = $cs?->textDecorationColor ?: (string)$color;
+        $decorationStyle = $cs?->textDecorationStyle ?? 'solid';
+        $decorationThickness = $cs?->textDecorationThickness ?? 0;
+        $underlineOffset = $cs?->getRaw('textUnderlineOffset') ?? 0;
+        return [
+            'type' => 'text', 'text' => $text,
+            'x' => $x, 'y' => $y + $vaY,
+            'fontSize' => $fontSize, 'color' => $color, 'bold' => $bold,
+            'align' => $align, 'layer' => $layer,
+            'decorationLine' => $decorationLine,
+            'decorationColor' => $decorationColor,
+            'decorationStyle' => $decorationStyle,
+            'decorationThickness' => $decorationThickness,
+            'underlineOffset' => $underlineOffset,
+            'textWidth' => self::measureTextWidth($text, $fontSize, (bool)$bold),
+            'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
+            'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
+            'letterSpacing' => $letterSpacing];
+    }
+
+    private function makeButtonElement(RenderNode $node, array $pseudoOverrides, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    {
+        $cs = $node->computedStyle;
+        $cursor = $cs?->cursor?->value ?? '';
+        if ($w <= 0 || $h <= 0) {
+            $w = $w <= 0 ? 80 : $w;
+            $h = $h <= 0 ? 32 : $h;
+        }
+        $bg     = $cs?->backgroundColor?->toBgr() ?? 0x4488CC;
+        $fg     = $cs?->color?->toBgr() ?? 0xFFFFFF;
+        $borderWidth = $cs?->borderWidth?->top?->toPx() ?? 0;
+        $borderTopWidth = $cs?->borderTopWidth ?? $borderWidth;
+        $borderRightWidth = $cs?->borderRightWidth ?? $borderWidth;
+        $borderBottomWidth = $cs?->borderBottomWidth ?? $borderWidth;
+        $borderLeftWidth = $cs?->borderLeftWidth ?? $borderWidth;
+        $borderStyle = $cs?->borderStyle ?? 'solid';
+        $borderColor = 0;
+        if ($borderWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0 || $borderLeftWidth > 0) {
+            $borderColor = $cs?->borderColor ?? ($bg !== 0 ? ($bg & 0xFFFFFF) >> 1 : 0);
+        }
+        $borderTopColor = $cs?->borderTopColor ?? $borderColor;
+        $borderRightColor = $cs?->borderRightColor ?? $borderColor;
+        $borderBottomColor = $cs?->borderBottomColor ?? $borderColor;
+        $borderLeftColor = $cs?->borderLeftColor ?? $borderColor;
+        $borderRadius = $cs?->borderRadius ?? 0;
+        $borderRadiusX = 0;
+        $borderRadiusY = 0;
+        $opacity = $cs?->opacity ?? 1.0;
+        $shadowOffsets = CssValueParser::parseBoxShadowOffsets($cs?->boxShadow ?? '');
+        $shadowX = $shadowOffsets['h']; $shadowY = $shadowOffsets['v']; $shadowBlur = $shadowOffsets['blur']; $shadowColor = $shadowOffsets['color']; $shadowAlpha = $shadowOffsets['alpha']; $shadowInset = $shadowOffsets['inset'];
+        $label = '';
+        if ($node->content !== null) {
+            $label = (string)$node->content;
+        }
+        $bindKey = $props[':bind'] ?? $props['bind'] ?? '';
+        if ($bindKey !== '') {
+            $label = $this->currentComponent()->getBindValue($bindKey);
+        }
+        if ($label === '' && isset($props['@click'])) {
+            $label = $props['label'] ?? '';
+        }
+        if ($label === '') {
+            foreach ($node->children as $child) {
+                if ($child->content !== null && (string)$child->content !== '') {
+                    $label = (string)$child->content;
+                    break;
+                }
+                if ($child->sourceVNode !== null && $child->sourceVNode->props !== null) {
+                    $childBindKey = $child->sourceVNode->props[':bind'] ?? $child->sourceVNode->props['bind'] ?? '';
+                    if ($childBindKey !== '') {
+                        $childLabel = $this->currentComponent()->getBindValue($childBindKey);
+                        if ($childLabel !== '') {
+                            $label = $childLabel;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        $labelFontSize = 22;
+        $labelLen = strlen($label);
+        $labelCharW = (int)($labelFontSize * 0.6);
+        $labelX = $x + (int)(($w - $labelLen * $labelCharW) / 2);
+        $labelY = $y + (int)(($h - $labelFontSize) / 2);
+        return [
+            'type' => 'button', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+            'bg' => $bg, 'fg' => $fg, 'border' => $borderColor, 'borderWidth' => $borderWidth,
+            'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,
+            'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,
+            'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,
+            'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,
+            'borderRadius' => $borderRadius,
+            'label' => $label, 'labelX' => $labelX, 'labelY' => $labelY,
+            'labelFontSize' => $labelFontSize, 'opacity' => $opacity, 'layer' => $layer,
+            'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset, 'cursor' => $cursor,
+        ];
+    }
+
+    private function makeImgElement(RenderNode $node, array $pseudoOverrides, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    {
+        $cs = $node->computedStyle;
+        $noSize = ($w <= 0 || $h <= 0);
+        $src = $props['src'] ?? $props[':src'] ?? '';
+        $imageHandle = 0;
+        if ($src !== '' && !$noSize) {
+            $imageHandle = ImageManager::loadImage($src);
+        }
+        $bg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr() ?? 0xCCCCCC;
+        $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;
+        $borderRadiusX = 0;
+        $borderRadiusY = 0;
+        $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;
+        $boxShadowRaw = $pseudoOverrides['boxShadow'] ?? $cs?->boxShadow ?? '';
+        $shadowOffsets = CssValueParser::parseBoxShadowOffsets($boxShadowRaw);
+        $shadowX = $shadowOffsets['h']; $shadowY = $shadowOffsets['v']; $shadowBlur = $shadowOffsets['blur']; $shadowColor = $shadowOffsets['color']; $shadowAlpha = $shadowOffsets['alpha']; $shadowInset = $shadowOffsets['inset'];
+        $borderWidth = $pseudoOverrides['borderWidth'] ?? ($cs?->borderWidth?->top?->toPx() ?? 0);
+        $borderTopWidth = $pseudoOverrides['borderTopWidth'] ?? $cs?->borderTopWidth ?? $borderWidth;
+        $borderRightWidth = $pseudoOverrides['borderRightWidth'] ?? $cs?->borderRightWidth ?? $borderWidth;
+        $borderBottomWidth = $pseudoOverrides['borderBottomWidth'] ?? $cs?->borderBottomWidth ?? $borderWidth;
+        $borderLeftWidth = $pseudoOverrides['borderLeftWidth'] ?? $cs?->borderLeftWidth ?? $borderWidth;
+        $borderStyle = $cs?->borderStyle ?? 'solid';
+        $borderColor = $pseudoOverrides['borderColor'] ?? $cs?->borderColor ?? 0;
+        $borderTopColor = $pseudoOverrides['borderTopColor'] ?? $cs?->borderTopColor ?? $borderColor;
+        $borderRightColor = $pseudoOverrides['borderRightColor'] ?? $cs?->borderRightColor ?? $borderColor;
+        $borderBottomColor = $pseudoOverrides['borderBottomColor'] ?? $cs?->borderBottomColor ?? $borderColor;
+        $borderLeftColor = $pseudoOverrides['borderLeftColor'] ?? $cs?->borderLeftColor ?? $borderColor;
+        $objectFit = $pseudoOverrides['objectFit'] ?? $cs?->objectFit ?? 'fill';
+        $objectPosition = $pseudoOverrides['objectPosition'] ?? $cs?->objectPosition ?? '50% 50%';
+        $imgX = $x; $imgY = $y; $imgW = $w; $imgH = $h;
+        if ($imageHandle !== 0 && $objectFit !== 'fill') {
+            $natW = sk_get_image_width($imageHandle);
+            $natH = sk_get_image_height($imageHandle);
+            if ($natW > 0 && $natH > 0) {
+                $containerRatio = (float)$w / (float)$h;
+                $imageRatio = (float)$natW / (float)$natH;
+                if ($objectFit === 'contain') {
+                    if ($containerRatio > $imageRatio) {
+                        $imgH = $h; $imgW = (int)($h * $imageRatio);
+                    } else {
+                        $imgW = $w; $imgH = (int)($w / $imageRatio);
+                    }
+                    $imgX = $x + (int)(($w - $imgW) / 2);
+                    $imgY = $y + (int)(($h - $imgH) / 2);
+                } elseif ($objectFit === 'cover') {
+                    if ($containerRatio > $imageRatio) {
+                        $imgW = $w; $imgH = (int)($w / $imageRatio);
+                    } else {
+                        $imgH = $h; $imgW = (int)($h * $imageRatio);
+                    }
+                    $imgX = $x + (int)(($w - $imgW) / 2);
+                    $imgY = $y + (int)(($h - $imgH) / 2);
+                } elseif ($objectFit === 'none') {
+                    $imgW = $natW; $imgH = $natH;
+                    $imgX = $x + (int)(($w - $imgW) / 2);
+                    $imgY = $y + (int)(($h - $imgH) / 2);
+                } elseif ($objectFit === 'scale-down') {
+                    $noneW = $natW; $noneH = $natH;
+                    if ($containerRatio > $imageRatio) {
+                        $contH = $h; $contW = (int)($h * $imageRatio);
+                    } else {
+                        $contW = $w; $contH = (int)($w / $imageRatio);
+                    }
+                    if ($noneW <= $contW && $noneH <= $contH) {
+                        $imgW = $noneW; $imgH = $noneH;
+                    } else {
+                        $imgW = $contW; $imgH = $contH;
+                    }
+                    $imgX = $x + (int)(($w - $imgW) / 2);
+                    $imgY = $y + (int)(($h - $imgH) / 2);
+                }
+                $opX = 0; $opY = 0;
+                if ($objectPosition !== '50% 50%') {
+                    $parts = preg_split('/\s+/', trim($objectPosition));
+                    $opX = self::resolveObjectPosition($parts[0] ?? '50%', $w, $imgW);
+                    $opY = self::resolveObjectPosition($parts[1] ?? '50%', $h, $imgH);
+                    if ($opX !== 0 || $opY !== 0) {
+                        $baseX = $x + (int)(($w - $imgW) / 2);
+                        $baseY = $y + (int)(($h - $imgH) / 2);
+                        $imgX = $baseX + $opX - (int)(($w - $imgW) / 2);
+                        $imgY = $baseY + $opY - (int)(($h - $imgH) / 2);
+                    }
+                }
+            }
+        }
+        $alt = $props['alt'] ?? '';
+        if ($noSize) {
+            if ($alt !== '') {
+                $fontSize = $cs?->fontSize ?? 14;
+                $textColor = $cs?->color?->toBgr() ?? 0xFFFFFF;
+                return [
+                    'type' => 'text', 'text' => '�? ' . $alt,
+                    'x' => $x, 'y' => $y,
+                    'fontSize' => $fontSize, 'color' => $textColor, 'bold' => 1,
+                    'align' => 'left', 'layer' => $layer,
+                ];
+            }
+            return null;
+        }
+        $elements = [];
+        if ($imageHandle !== 0) {
+            if ($borderRadius > 0) {
+                $elements[] = ['type' => 'clip-push', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'layer' => $layer];
+                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+                    'color' => 0xFFFFFF, 'borderRadius' => $borderRadius, 'layer' => $layer];
+            }
+            $elements[] = [
+                'type' => 'image',
+                'handle' => $imageHandle,
+                'x' => $imgX, 'y' => $imgY, 'w' => $imgW, 'h' => $imgH,
+                'layer' => $layer,
+            ];
+            if ($borderRadius > 0) {
+                $elements[] = ['type' => 'clip-pop', 'layer' => $layer];
+            }
+        } else {
+            $elements[] = [
+                'type' => 'rect', 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+                'color' => $bg, 'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
+                'shadowX' => $shadowX, 'shadowY' => $shadowY, 'shadowBlur' => $shadowBlur, 'shadowAlpha' => $shadowAlpha, 'shadowColor' => $shadowColor, 'shadowInset' => $shadowInset,
+                'borderWidth' => $borderWidth, 'borderColor' => $borderColor,
+                'borderTopColor' => $borderTopColor, 'borderRightColor' => $borderRightColor,
+                'borderBottomColor' => $borderBottomColor, 'borderLeftColor' => $borderLeftColor,
+                'borderTopWidth' => $borderTopWidth, 'borderRightWidth' => $borderRightWidth,
+                'borderBottomWidth' => $borderBottomWidth, 'borderLeftWidth' => $borderLeftWidth,
+            ];
+        }
+        if ($alt !== '') {
+            $fontSize = $cs?->fontSize ?? 14;
+            $textColor = $cs?->color?->toBgr() ?? 0xFFFFFF;
+            $altX = $x + 4;
+            $altY = $y + (int)(($h - $fontSize) / 2);
+            if ($altY < $y) $altY = $y;
+            $elements[] = [
+                'type' => 'text', 'text' => $alt,
+                'x' => $altX, 'y' => $altY,
+                'fontSize' => $fontSize, 'color' => $textColor, 'bold' => 0,
+                'align' => 'left', 'layer' => $layer + 1,
+            ];
+        }
+        if (count($elements) === 1) {
+            return $elements[0];
+        }
+        return ['type' => 'group', 'layer' => $layer, 'elements' => $elements];
+    }
+
+    private function makeInputElement(RenderNode $node, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
+    {
+        $cs = $node->computedStyle;
+        $bg       = $cs?->backgroundColor?->toBgr() ?? 0x1E1E1E;
+        $fg       = $cs?->color?->toBgr() ?? 0xFFFFFF;
+        $fontSize = $cs?->fontSize ?? 14;
+        $borderRadius = $cs?->borderRadius ?? 0;
+        $borderRadiusX = 0;
+        $borderRadiusY = 0;
+        $opacity = $cs?->opacity ?? 1.0;
+        $bindKey = $props['v-model'] ?? '';
+        $text = '';
+        if ($bindKey !== '') {
+            $text = $this->currentComponent()->getBindValue($bindKey);
+        }
+        $placeholder = $props['placeholder'] ?? '';
+        $showPlaceholder = ($text === '' && $placeholder !== '');
+        return [
+            'type' => 'input',
+            'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+            'bg' => $bg, 'color' => $fg, 'fontSize' => $fontSize,
+            'text' => $showPlaceholder ? $placeholder : $text,
+            'borderRadius' => $borderRadius, 'opacity' => $opacity, 'layer' => $layer,
+            'placeholder' => $showPlaceholder,
+        ];
+    }
+
+    private function makeScrollContainerElement(RenderNode $node, array $pseudoOverrides, int $x, int $y, int $w, int $h, int $layer): ?array
+    {
+        $cs = $node->computedStyle;
+        $bg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr() ?? 0x2D2D2D;
+        $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;
+        $borderRadiusX = $pseudoOverrides['borderRadiusX'] ?? 0;
+        $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;
+        $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;
+        $contentH = $node->contentHeight;
+        if ($contentH === 0) {
+            foreach ($node->children as $child) {
+                $itemH = (int)($child->computedStyle?->height->toPx() ?? 0);
+                $contentH += (int)max($child->h, $itemH);
+            }
+        }
+        return [
+            'type' => 'scroll-container',
+            'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
+            'bg' => $bg, 'borderRadius' => $borderRadius,
+            'contentHeight' => $contentH,
+            'contentWidth' => $node->contentWidth,
+            'scrollTop' => $node->scrollTop,
+            'scrollLeft' => $node->scrollLeft,
+            'opacity' => $opacity,
+            'layer' => $layer,
+        ];
+    }
+
+    private function resetAllPaintFlags(RenderNode $node): void
+    {
+        $this->paintFlags[spl_object_id($node)] = 0;
+        $node->layoutDirty = true;
+        foreach ($node->children as $child) {
+            $this->resetAllPaintFlags($child);
+        }
+    }
+
+    private static function cssValueToRaw(mixed $v): mixed
+    {
+        if ($v instanceof CssLength || $v instanceof CssRect) {
+            return $v->toPx();
+        }
+        if ($v instanceof CssKeyword) {
+            return $v->value;
+        }
+        if ($v instanceof CssColor) {
+            return $v->toBgr();
+        }
+        if ($v instanceof CssFlex) {
+            return $v->grow . ' ' . $v->shrink . ' ' . $v->basis->toPx();
+        }
+        return $v;
+    }
+
+    private static function extractPseudoOverrides(RenderNode $node): array
+    {
+        $cs = $node->computedStyle;
+        if ($cs === null) return [];
+        $overrides = [];
+        $states = [];
+        if ($node->hovered) $states[] = '__hoverStyle';
+        if ($node->focused) $states[] = '__focusStyle';
+        if ($node->active) $states[] = '__activeStyle';
+        foreach ($states as $key) {
+            $raw = $cs->getRaw($key);
+            if ($raw !== null && is_array($raw)) {
+                foreach ($raw as $k => $v) {
+                    $overrides[$k] = self::cssValueToRaw($v);
+                }
+            }
+        }
+        return $overrides;
+    }
+}

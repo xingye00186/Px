@@ -28,8 +28,8 @@ use Px\Compiler\AotValidator;
  */
 
 // ---- Load autoloader + compiler modules ----
-$frameworkDir = dirname(__DIR__);
-require_once $frameworkDir . '/autoload.php';
+$frameworkDir = dirname(__DIR__, 2);
+require_once $frameworkDir . '/tests/bootstrap/autoload.php';
 
 // Compiler-specific files (not autoloaded since they define functions/constants at file scope)
 $compilerDir = __DIR__;

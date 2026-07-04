@@ -5,7 +5,7 @@
  * Tests for ExpressionParser and expression type handlers.
  */
 
-require_once __DIR__ . '/../../framework/autoload.php';
+require_once __DIR__ . '/../bootstrap/autoload.php';
 require_once __DIR__ . '/../../framework/Compiler/expression/ExpressionParserInterface.php';
 require_once __DIR__ . '/../../framework/Compiler/expression/ExpressionTypeInterface.php';
 require_once __DIR__ . '/../../framework/Compiler/expression/ExpressionType.php';

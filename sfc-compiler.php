@@ -9,5 +9,5 @@
 
 define('SFC_CLI_ENTRY', true);
 
-require_once __DIR__ . '/framework/autoload.php';
+require_once __DIR__ . '/tests/bootstrap/autoload.php';
 require_once __DIR__ . '/framework/Compiler/sfc-compiler.php';

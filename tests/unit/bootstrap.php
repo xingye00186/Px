@@ -51,7 +51,7 @@ if (!function_exists('str_ends_with')) {
 }
 
 // ---- PSR-4 Autoloader ----
-require_once dirname(__DIR__, 2) . '/framework/autoload.php';
+require_once dirname(__DIR__) . '/bootstrap/autoload.php';
 
 // ---- Stub 文件（C++ 原生函数声明，非类，不参与 PSR-4）----
 $stubDir = dirname(__DIR__, 2) . '/stub';

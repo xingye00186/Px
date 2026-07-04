@@ -9,7 +9,7 @@
  * Usage: php tests/parser-robustness-test.php
  */
 
-require_once __DIR__ . '/../framework/autoload.php';
+require_once __DIR__ . '/bootstrap/autoload.php';
 require_once __DIR__ . '/../framework/Compiler/TemplateParser.php';
 require_once __DIR__ . '/../framework/Compiler/ComponentRegistry.php';
 

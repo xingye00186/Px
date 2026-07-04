@@ -28,8 +28,8 @@ use Px\Rendering\CssMappings;
  * PHP 8.4: 使用 match 表达式分发标签类型。
  */
 
-$frameworkDir = dirname(__DIR__);
-require_once $frameworkDir . '/autoload.php';
+$frameworkDir = dirname(__DIR__, 2);
+require_once $frameworkDir . '/tests/bootstrap/autoload.php';
 require_once __DIR__ . '/ComponentRegistry.php';
 
 // ============================================================
