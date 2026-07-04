@@ -53,6 +53,13 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
         $perColumn = count($children) > 0 ? (int)ceil(count($children) / $columnCount) : 0;
         $colH = 0;
 
+        // ── 列平衡骨架（Iteration-aware）──
+        // TODO: 纯函数架构下 iteration 状态无法跨轮保持。要使多轮真正生效，
+        // 需要在 LayoutResult.children 中编码 pass-1 的内容度量结果，
+        // 并在 pass-2 中重新分配列内容以实现平衡。
+        // 当前实现使用单轮顺序填充。
+        $hasPrevPass = $input->iteration > 0;
+
         foreach ($children as $i => $cr) {
             $colIdx = $perColumn > 0 ? (int)($i / $perColumn) : 0;
             if ($colIdx >= $columnCount) $colIdx = $columnCount - 1;

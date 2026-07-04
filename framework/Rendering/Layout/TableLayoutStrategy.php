@@ -38,8 +38,15 @@ class TableLayoutStrategy implements LayoutStrategyInterface
         $stackedChildren = [];
         $currentY = $y;
 
+        // ── 多列宽协商骨架（Iteration-aware）──
+        // TODO: 纯函数架构下 iteration 状态无法跨轮保持。要使多轮真正生效，
+        // 需要在 LayoutResult.children 中编码 pass-1 的列宽测量结果，
+        // 并在 pass-2 从 childResults 读取它们来调整列宽分配。
+        // 当前实现仅使用单轮等分列宽。
         if ($display === 'table' || $display === 'table-caption') {
-            // Single-pass cell width calculation: distribute equal widths
+            // 收集前一轮的列宽（如有）用于区分 pass
+            $prevPassCollected = isset($input->childResults[0]) && $input->iteration > 0;
+
             foreach ($children as $cr) {
                 $crStyle = $cr->style;
                 $crDisplay = $crStyle?->display?->value ?? 'block';
