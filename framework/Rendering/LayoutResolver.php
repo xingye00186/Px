@@ -107,7 +107,7 @@ class LayoutResolver
      * 纯函数递归布局。
      * 不修改任何 RenderNode 字段，只读其 computedStyle/content/children。
      */
-    private function resolveFragment(RenderNode $node, LayoutConstraints $constraints): LayoutResult
+    private function resolveFragment(RenderNode $node, LayoutConstraints $constraints, int $inheritedLayer = 0, ?int $parentResultX = null, ?int $parentResultY = null): LayoutResult
     {
         $style = $node->computedStyle;
         $display = $style?->display?->value ?? 'block';
@@ -122,11 +122,10 @@ class LayoutResolver
             $this->scrollContainers[] = $node;
         }
 
-        // Layer inheritance: inherit from parent, override with own z-index
-        $nodeLayer = 0;
-        if ($node->parent !== null && $node->parent->layer > 0) {
-            $nodeLayer = $node->parent->layer;
-        }
+        // Layer inheritance: inherit from parent's computed layer (passed as parameter),
+        // override with own z-index. Uses inheritedLayer parameter instead of reading
+        // node->parent->layer (which is stale during recursive descent).
+        $nodeLayer = $inheritedLayer;
         $zIndex = $style?->zIndex ?? 0;
         if ($zIndex > $nodeLayer) {
             $nodeLayer = $zIndex;
@@ -157,7 +156,7 @@ class LayoutResolver
                 (int)max(0, $cbW),
                 (int)max(0, $cbH),
             );
-            $childResults[] = $this->resolveFragment($child, $childConstraints);
+            $childResults[] = $this->resolveFragment($child, $childConstraints, $nodeLayer, $node->x, $node->y);
         }
 
         // Build positioning ancestor info for absolute children
@@ -180,8 +179,15 @@ class LayoutResolver
                 $pPos = $parentNode->computedStyle?->position?->value ?? 'static';
                 if ($pPos !== 'static') {
                     $pCS = $parentNode->computedStyle;
-                    $ancestorX = $parentNode->x;
-                    $ancestorY = $parentNode->y;
+                    // Use parameter values for immediate parent (correct during recursion),
+                    // fall back to RenderNode values for deeper ancestors
+                    if ($parentNode === $node->parent && $parentResultX !== null) {
+                        $ancestorX = $parentResultX;
+                        $ancestorY = $parentResultY;
+                    } else {
+                        $ancestorX = $parentNode->x;
+                        $ancestorY = $parentNode->y;
+                    }
                     $ancestorW = $parentNode->w;
                     $ancestorH = $parentNode->h;
                     $ancestorBL = $pCS?->borderLeftWidth ?? 0;
