@@ -40,6 +40,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $wrap = $s->getRaw("flexWrap");
         $isWrapping = ($wrap === "wrap" || $wrap === "wrap-reverse");
         $gap = (int)($s->getRaw("gap") ?? 0);
+        // Main-axis and cross-axis dimensions
+        $containerMain = $isRow ? $w : $h;
+        $containerCross = $isRow ? $h : $w;
 
         // ── Step 1: Collect flex items ──
         $flexItems = [];
@@ -47,11 +50,16 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         foreach ($childResults as $cr) {
             $cs = $cr->style;
             if ($cs === null) continue;
-            $grow = (float)($cs->getRaw("flexGrow") ?? 0);
-            $shrink = (float)($cs->getRaw("flexShrink") ?? 1);
-            $rawBasis = $cs->getRaw("flexBasis");
+            // Use resolved flex shorthand as fallback when individual props not set
+            $grow = (float)($cs->getRaw("flexGrow") ?? $cs->flex->grow);
+            $shrink = (float)($cs->getRaw("flexShrink") ?? $cs->flex->shrink);
+            $order = (int)($cs->getRaw("order") ?? 0);
+            // flex-basis from resolved CssLength (not raw string from getRaw)
+            $basisVal = $cs->flexBasis;
             $basis = -1;
-            if ($rawBasis instanceof CssLength && !$rawBasis->isAuto()) { $basis = $rawBasis->toPx(); }
+            if ($basisVal instanceof CssLength && !$basisVal->isAuto() && $basisVal->toPx() > 0) {
+                $basis = $basisVal->toPx();
+            }
             $hasExplicitCross = $cs->getRaw($isRow ? 'height' : 'width') !== null;
             $alignSelfRaw = $cs->getRaw('alignSelf');
             $item = new FlexItem();
@@ -60,6 +68,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $item->basis = $basis;
             $item->isFlexGrow = ($grow > 0);
             $item->alignSelf = ($alignSelfRaw !== null && $alignSelfRaw !== 'auto') ? (string)$alignSelfRaw : 'auto';
+            $item->computedStyle = $cs;
+            $item->content = $cr->style?->getRaw('_content');
             $item->originalChildren = $cr->children;
             $item->w = $cr->w; $item->h = $cr->h;
             $item->visualW = $cr->visualW; $item->visualH = $cr->visualH;
@@ -67,13 +77,27 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $flexItemData[] = [
                 'grow' => $grow, 'shrink' => $shrink, 'basis' => $basis,
                 'isFlexGrow' => ($grow > 0), 'hasExplicitCrossSize' => $hasExplicitCross,
-                'crossAxisSized' => false,
+                'crossAxisSized' => false, 'order' => $order,
                 'marginLeft' => 0, 'marginRight' => 0, 'marginTop' => 0, 'marginBottom' => 0,
             ];
         }
         if (count($flexItems) === 0) {
             return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s);
         }
+
+        // Sort by CSS order property (stable sort: equal order preserves source order)
+        $indices = range(0, count($flexItems) - 1);
+        usort($indices, function($a, $b) use ($flexItemData) {
+            $oa = (int)($flexItemData[$a]['order'] ?? 0);
+            $ob = (int)($flexItemData[$b]['order'] ?? 0);
+            if ($oa !== $ob) return $oa - $ob;
+            return $a - $b; // stable: preserve source order for equal orders
+        });
+        $flexItems = array_map(fn($i) => $flexItems[$i], $indices);
+        // Rebuild flexItemData in sorted order, and childResults mapping for FlexFragmentMapper
+        $sortedData = []; $sortedResults = [];
+        foreach ($indices as $i) { $sortedData[] = $flexItemData[$i]; $sortedResults[] = $childResults[$i]; }
+        $flexItemData = $sortedData; $childResults = $sortedResults;
 
         // ── Step 2: Apply flex-basis ──
         foreach ($flexItems as $item) {
@@ -82,7 +106,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // ── Step 3: Break into lines (FlexLineBreaker) ──
         $breaker = new FlexLineBreaker();
-        $lines = $breaker->breakLines($flexItems, $flexItemData, $isWrapping, $isRow, $w, $gap);
+        $lines = $breaker->breakLines($flexItems, $flexItemData, $isWrapping, $isRow, $containerMain, $gap);
         $lineGroups = $lines[0];
         $lineData = $lines[1] ?? [];
         $totalLines = count($lineGroups);
@@ -93,24 +117,34 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $lineTotal = 0;
             foreach ($lineItems as $item) { $lineTotal += $isRow ? $item->w : $item->h; }
 
-            // 4a. Flex-grow
-            if ($lineTotal < $w && $lineTotal > 0) {
-                $remaining = $w - $lineTotal;
+            // 4a. Flex-grow (CSS spec: distribute remaining space; works when lineTotal==0 too)
+            if ($lineTotal < $containerMain) {
+                $remaining = $containerMain - $lineTotal;
                 $growTotal = 0;
                 foreach ($lineItems as $item) { $growTotal += $item->grow; }
                 if ($growTotal > 0) {
-                    foreach ($lineItems as $item) {
-                        if ($item->grow > 0) {
-                            $extra = (int)($remaining * $item->grow / $growTotal);
-                            if ($isRow) $item->w += $extra; else $item->h += $extra;
+                    // If lineTotal == 0 and all items are flex-grow, distribute full container size
+                    if ($lineTotal === 0) {
+                        foreach ($lineItems as $item) {
+                            if ($item->grow > 0) {
+                                $share = (int)($containerMain * $item->grow / $growTotal);
+                                if ($isRow) $item->w = $share; else $item->h = $share;
+                            }
+                        }
+                    } else {
+                        foreach ($lineItems as $item) {
+                            if ($item->grow > 0) {
+                                $extra = (int)($remaining * $item->grow / $growTotal);
+                                if ($isRow) $item->w += $extra; else $item->h += $extra;
+                            }
                         }
                     }
                 }
             }
 
             // 4b. Flex-shrink
-            if ($lineTotal > $w) {
-                $overflow = $lineTotal - $w;
+            if ($lineTotal > $containerMain) {
+                $overflow = $lineTotal - $containerMain;
                 $shrinkTotal = 0;
                 foreach ($lineItems as $item) { $shrinkTotal += $item->shrink; }
                 if ($shrinkTotal > 0) {
@@ -124,7 +158,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 }
             }
 
-            // 4c. Recalc line totals + max cross
+            // 4c. Recalc line totals + max cross (at least container cross for single-line)
             $lineFinal = 0;
             $lineMaxCross = 0;
             foreach ($lineItems as $item) {
@@ -132,21 +166,25 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 $cross = $isRow ? $item->h : $item->w;
                 if ($cross > $lineMaxCross) $lineMaxCross = $cross;
             }
+            // CSS: single-line flex uses container cross-size as stretch minimum
+            if ($totalLines === 1 && $containerCross > 0 && $lineMaxCross < $containerCross) {
+                $lineMaxCross = $containerCross;
+            }
 
-            // 4d. Justify-content
+            // 4d. Justify-content (uses containerMain)
             $mainStart = 0; $spaceBetween = 0;
             $itemCount = count($lineItems);
-            if ($justify === "center") { $mainStart = ($w - $lineFinal) / 2; }
-            elseif ($justify === "flex-end") { $mainStart = $w - $lineFinal; }
-            elseif ($justify === "space-between" && $itemCount > 1) { $spaceBetween = ($w - $lineFinal) / ($itemCount - 1); }
-            elseif ($justify === "space-around") { $spaceBetween = ($w - $lineFinal) / $itemCount; $mainStart = $spaceBetween / 2; }
-            elseif ($justify === "space-evenly") { $spaceBetween = ($w - $lineFinal) / ($itemCount + 1); $mainStart = $spaceBetween; }
+            if ($justify === "center") { $mainStart = ($containerMain - $lineFinal) / 2; }
+            elseif ($justify === "flex-end") { $mainStart = $containerMain - $lineFinal; }
+            elseif ($justify === "space-between" && $itemCount > 1) { $spaceBetween = ($containerMain - $lineFinal) / ($itemCount - 1); }
+            elseif ($justify === "space-around") { $spaceBetween = ($containerMain - $lineFinal) / $itemCount; $mainStart = $spaceBetween / 2; }
+            elseif ($justify === "space-evenly") { $spaceBetween = ($containerMain - $lineFinal) / ($itemCount + 1); $mainStart = $spaceBetween; }
 
-            // 4e. Apply stretch to fill line maxCross (not container cross)
+            // 4e. Apply stretch to fill line maxCross; allow from zero (CSS stretch spec)
             foreach ($lineItems as $item) {
                 $effAlign = $this->effectiveAlign($item, $align);
                 $crossSize = $isRow ? $item->h : $item->w;
-                if ($effAlign === 'stretch' && $crossSize < $lineMaxCross && $crossSize > 0) {
+                if ($effAlign === 'stretch' && $crossSize < $lineMaxCross) {
                     if ($isRow) $item->h = $lineMaxCross;
                     else $item->w = $lineMaxCross;
                 }
@@ -158,8 +196,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 if ($cross > $lineMaxCross) $lineMaxCross = $cross;
             }
 
-            // 4f. Main-axis positioning
-            $cursorMain = $x + (int)$mainStart;
+            // 4f. Main-axis positioning (base on containerMain offset)
+            $mainBase = $isRow ? $x : $y;
+            $cursorMain = $mainBase + (int)$mainStart;
             foreach ($lineItems as $item) {
                 if ($isRow) {
                     $item->x = (int)$cursorMain;
@@ -179,7 +218,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         foreach ($lineMaxCrosses as $lmc) { $totalCross += $lmc + $gap; }
         $totalCross = max(0, $totalCross - $gap);
 
-        $crossAvailable = $isRow ? $h : $w;
+        $crossAvailable = $containerCross;
         if ($crossAvailable <= 0) $crossAvailable = $totalCross;
 
         // align-content for multi-line

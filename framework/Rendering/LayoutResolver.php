@@ -356,10 +356,10 @@ class LayoutResolver
             if (!($display === 'flex' || $display === 'inline-flex' || $display === 'grid')) {
                 continue;
             }
-            $padT = (int)($cs?->paddingTop?->toPx() ?? $cs?->padding?->top?->toPx() ?? 0);
-            $padB = (int)($cs?->paddingBottom?->toPx() ?? $cs?->padding?->bottom?->toPx() ?? 0);
-            $padL = (int)($cs?->paddingLeft?->toPx() ?? $cs?->padding?->left?->toPx() ?? 0);
-            $padR = (int)($cs?->paddingRight?->toPx() ?? $cs?->padding?->right?->toPx() ?? 0);
+            $padT = (int)($cs?->padding?->top?->toPx() ?? 0);
+            $padB = (int)($cs?->padding?->bottom?->toPx() ?? 0);
+            $padL = (int)($cs?->padding?->left?->toPx() ?? 0);
+            $padR = (int)($cs?->padding?->right?->toPx() ?? 0);
 
             $childBaseY = $node->y + $padT;
             $maxBottom = $childBaseY;

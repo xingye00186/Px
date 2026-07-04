@@ -352,6 +352,8 @@ class ComputedStyle
                 $this->fontSize = (int)$fs;
             }
         }
+        // lineHeight: always assign (was never assigned before, causing typed property error)
+        $this->lineHeight = isset($d['lineHeight']) ? self::safeInt($d['lineHeight']) : 0;
         if (isset($d['fontWeight'])) {
             $this->fontWeight = self::safeInt($d['fontWeight'], 400);
             $this->bold = $this->fontWeight >= 600;

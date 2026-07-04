@@ -38,7 +38,7 @@ class GridTracker
         foreach ($list as $item) {
             $tracks[] = self::parseTrackSpec($item);
         }
-        if ($repeatCount > 0) {
+        if ($repeatCount > 0 && $repeatSize !== null) {
             for ($i = 0; $i < $repeatCount; $i++) {
                 $tracks[] = self::parseTrackSpec($repeatSize);
             }

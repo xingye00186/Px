@@ -4,6 +4,8 @@ namespace Px\Rendering\Layout\Flex;
 
 use native_types;
 
+use Px\Rendering\ComputedStyle;
+
 class FlexItem
 {
     public float $grow = 0.0;
@@ -26,5 +28,7 @@ class FlexItem
     public int $marginCrossAfter = 0;
     public bool $hasExplicitCrossSize = false;
     public string $alignSelf = 'auto';
+    public ?ComputedStyle $computedStyle = null;
+    public ?string $content = null;
     public ?array $originalChildren = null;
 }
