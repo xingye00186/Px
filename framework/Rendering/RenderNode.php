@@ -7,47 +7,24 @@ use native_types;
 use Px\Core\Config;
 
 /**
- * RenderNode — 渲染专用节点
+ * RenderNode — 渲染专用节点（瘦身版）
  *
- * 职责：持有布局结果和渲染数据，与 VNode（元素描述）分离。
- * 由 RenderTreeManager 从 VNode 树转换生成。
- *
- * @property-read string $type  元素类型（'div','span','button','input','text'）
+ * 已移除字段归属：
+ * - scrollTop/scrollLeft/lastScrollTop → ScrollState
+ * - renderOffsetX/renderOffsetY → VNodeRenderer 局部
+ * - hovered/focused/active → InteractionState
+ * - animatedStyle/isAnimating/lastX/lastY → AnimationManager
+ * - textRenderInfo → VNodeRenderer 局部
+ * - lastPaintFrame → VNodeRenderer SplObjectStorage
  */
 class RenderNode
 {
-    // ── 类型与内容 ──────────────────────────────────────
-
-    /** 元素类型: 'div','span','button','input','text' */
     public string $type;
-
-    /**
-     * 不可变样式快照（Phase 2 新增，替代 $style 数组）。
-     * 由 RenderTreeManager::updateFromVNode 在转换时设置。
-     */
     public ?ComputedStyle $computedStyle = null;
-
-    /**
-     * 伪类/伪元素样式，由 StyleResolver 在样式解析时填充。
-     * 键: 'hover', 'focus', 'active', 'before', 'after'
-     * VNodeRenderer 在渲染时按需合并。
-     */
     public array $pseudoStyles = [];
-
-    /** 文本内容（string）或子节点数组（通过 addChild 管理） */
     public mixed $content = null;
-
-    /** v-for key（用于复用匹配） */
     public ?string $key = null;
-
-    /**
-     * data-* attributes 的驼峰式 Map（如 px-id → pxId）。
-     * 由 RenderTreeManager::updateFromVNode 从 VNode props 复制。
-     * 用于测试锚点识别（pxAnchor）、元素对比匹配（pxId）等场景。
-     */
     public array $dataset = [];
-
-    // ── 布局结果（由 LayoutResolver 填入）────────────────
 
     public int $x = 0;
     public int $y = 0;
@@ -57,117 +34,19 @@ class RenderNode
     public int $visualH = 0;
     public int $layer = 0;
 
-    // ── 滚动容器专用字段 ─────────────────────────────────
-
     public bool $isScrollContainer = false;
-    public int $scrollTop = 0;
-    public int $scrollLeft = 0;
     public int $contentHeight = 0;
     public int $contentWidth = 0;
-    /** 上次渲染时的 scrollTop，用于快速滚动路径比较 */
-    public int $lastScrollTop = 0;
 
-    // ── 绘制偏移（由 VNodeRenderer 在绘制时叠加，布局阶段不变）──
-
-    /** 当前累计的祖先滚动偏移 X（用于绘制时坐标调整，非自身 scrollLeft） */
-    public int $renderOffsetX = 0;
-
-    /** 当前累计的祖先滚动偏移 Y（用于绘制时坐标调整，非自身 scrollTop） */
-    public int $renderOffsetY = 0;
-
-    // ── 动画专用字段 ────────────────────────────────────────
-
-    /**
-     * 动画叠加样式（优先级高于 style）。
-     * 由 AnimationManager 每帧更新，动画结束后由 LayoutResolver 合并。
-     * 使用对象池管理，null 表示无动画。
-     */
-    public ?array $animatedStyle = null;
-
-    /**
-     * 是否正在动画中。
-     * 由 AnimationManager 设置，用于 LayoutResolver 检测。
-     */
-    public bool $isAnimating = false;
-
-    /**
-     * 上次布局完成时的 X 坐标（用于 FLIP 算法）。
-     * 仅在 onUpdated 回调中更新，动画过程中保持不变。
-     */
-    public int $lastX = 0;
-
-    /**
-     * 上次布局完成时的 Y 坐标（用于 FLIP 算法）。
-     * 仅在 onUpdated 回调中更新，动画过程中保持不变。
-     */
-    public int $lastY = 0;
-
-    // ── 交互状态（用于伪类样式）─────────────────────────
-
-    /**
-     * 鼠标悬停状态（:hover 伪类）。
-     * 由 Application::handleMouseEvent 在 move 事件中更新。
-     * VNodeRenderer 根据此标志合并 :hover 样式。
-     */
-    public bool $hovered = false;
-
-    /**
-     * 聚焦状态（:focus 伪类）。
-     * 由 Application 在键盘/点击事件中更新。
-     */
-    public bool $focused = false;
-
-    /** 激活状态（:active 伪类，鼠标按下时） */
-    public bool $active = false;
-
-    // ── 脏标记（用于增量更新）──────────────────────────────
-
-    /** true → LayoutResolver 需重新计算此节点布局 */
     public bool $layoutDirty = true;
 
-    /** 最后绘制帧号（0 = 未绘制，用于 VNodeRenderer 增量绘制判断） */
-    public int $lastPaintFrame = 0;
-
-    // ── 树关系 ──────────────────────────────────────────
-
     public ?RenderNode $parent = null;
-
-    /**
-     * 定位祖先（position != static 的最近祖先）。
-     * 为 position:absolute/fixed 提供 containing block 参考系。
-     * 由 LayoutResolver.resolvePositioningAncestor() 按需计算并缓存。
-     */
     public ?RenderNode $positioningAncestor = null;
-
-    /**
-     * positioningAncestor 缓存是否有效。
-     * false 时将在下次布局时重新计算。
-     * 在 RenderTreeManager.updateFromVNode 中 parent 变化时递归失效。
-     */
     public bool $positioningAncestorValid = false;
-
-    /** 来源 VNode（用于 bind 值同步 / 事件路由访问 props） */
     public ?VNode $sourceVNode = null;
-
-    /** 子 RenderNode 数组 */
     public array $children = [];
 
-    // ── 文本渲染位置（由 VNodeRenderer 在绘制时填充，用于布局导出验证）──
-
-    /**
-     * 文本渲染位置信息，用于 layout dump 验证文本垂直居中。
-     * 格式: ['x'=>int, 'y'=>int, 'textHeight'=>int, 'textWidth'=>int]
-     * 其中 y 为 text-top 坐标，textHeight 为精确测量的文本总高度(ascent+descent)。
-     * 注意: 这是绘制时的逻辑坐标（包含滚动偏移），与布局坐标不一致时需自行调整。
-     */
-    public ?array $textRenderInfo = null;
-
-    // ── 组件关联 ─────────────────────────────────────────
-
-    /** 所属组件 ID（用于事件路由，从 sourceVNode.groupId 复制） */
     public ?string $groupId = null;
-
-    // ── 构造器 ──────────────────────────────────────────
 
     public function __construct(
         string $type,
@@ -181,26 +60,14 @@ class RenderNode
         $this->key           = $key;
     }
 
-    // ── 脏标记方法 ────
-
-    /**
-     * 标记布局脏。
-     *
-     * @param bool $propagateUp true 时向上传播给父节点（用于子树结构变化）
-     */
     public function markLayoutDirty(bool $propagateUp = true): void
     {
         $this->layoutDirty = true;
-
         if ($propagateUp && $this->parent !== null) {
             $this->parent->markLayoutDirty(true);
         }
     }
 
-    /**
-     * 标记子树为脏（不向上传播，用于滚动等场景）。
-     * 使用显式栈避免递归/闭包，兼容 AOT。
-     */
     public function markSubtreeDirty(): void
     {
         $stack = [$this];
@@ -213,39 +80,12 @@ class RenderNode
         }
     }
 
-    /**
-     * 判断是否需要绘制。
-     *
-     * @param int $currentFrame 当前帧号
-     * @return bool true=需要绘制
-     */
-    public function needsPaint(int $currentFrame): bool
-    {
-        return $this->layoutDirty || $this->lastPaintFrame < $currentFrame;
-    }
-
-    /**
-     * 标记为已绘制。
-     */
-    public function markPainted(int $currentFrame): void
-    {
-        $this->lastPaintFrame = $currentFrame;
-    }
-
-    // ── 树管理方法 ──────────────────────────────────────
-
-    /**
-     * 添加子节点，维护双向 parent 引用。
-     */
     public function addChild(RenderNode $child): void
     {
         $child->parent = $this;
         $this->children[] = $child;
     }
 
-    /**
-     * 清空子节点数组。
-     */
     public function clearChildren(): void
     {
         $this->children = [];

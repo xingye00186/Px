@@ -5,6 +5,7 @@ namespace Px\Core;
 use native_types;
 
 use Px\Rendering\RenderNode;
+use Px\Rendering\ScrollState;
 use Px\Interfaces\ReactiveComponentInterface;
 use Px\ReactiveComponent;
 use Px\Core\PerfCounter;
@@ -31,6 +32,44 @@ class ScrollManager
     
     /** @var callable 查找鼠标坐标下的滚动容器 */
     private ?\Closure $findScrollContainer = null;
+
+    // ── ScrollState 映射 ───────────────────────
+    /** @var array<string, ScrollState> */
+    private array $scrollStates = [];
+
+    private function getScrollState(RenderNode $node): ScrollState
+    {
+        $key = spl_object_id($node);
+        if (!isset($this->scrollStates[$key])) {
+            $this->scrollStates[$key] = new ScrollState();
+        }
+        return $this->scrollStates[$key];
+    }
+
+    private function writeScrollTop(RenderNode $node, int $value): void
+    {
+        $this->getScrollState($node)->scrollTop = $value;
+    }
+
+    private function readScrollTop(RenderNode $node): int
+    {
+        return $this->getScrollState($node)->scrollTop;
+    }
+
+    private function writeScrollLeft(RenderNode $node, int $value): void
+    {
+        $this->getScrollState($node)->scrollLeft = $value;
+    }
+
+    private function readScrollLeft(RenderNode $node): int
+    {
+        return $this->getScrollState($node)->scrollLeft;
+    }
+
+    public function getScrollStateForNode(RenderNode $node): ScrollState
+    {
+        return $this->getScrollState($node);
+    }
 
     // ── 拖拽状态 ──────────────────────────
     private ?RenderNode $scrollDragTarget = null;
@@ -87,21 +126,21 @@ class ScrollManager
                 $maxScroll = max($contentW - $containerW, 0);
                 if ($maxScroll <= 0) return;
 
-                $newScrollLeft = max(0, min($maxScroll, $scrollNode->scrollLeft - $scrollAmount));
-                if ($newScrollLeft !== $scrollNode->scrollLeft) {
+                $newScrollLeft = max(0, min($maxScroll, $this->readScrollLeft($scrollNode) - $scrollAmount));
+                if ($newScrollLeft !== $this->readScrollLeft($scrollNode)) {
                     $this->applyScrollLeft($scrollNode, $newScrollLeft, true);
                 }
             } else {
                 $contentH = $scrollNode->contentHeight;
                 $containerH = $scrollNode->h;
                 $maxScroll = max($contentH - $containerH, 0);
-                error_log('[SCROLL_DBG] wheel x=' . $event->getX() . ' y=' . $event->getY() . ' delta=' . $delta . ' sa=' . $scrollAmount . ' scrollTop=' . $scrollNode->scrollTop . ' contentH=' . $contentH . ' containerH=' . $containerH . ' maxScroll=' . $maxScroll);
+                error_log('[SCROLL_DBG] wheel x=' . $event->getX() . ' y=' . $event->getY() . ' delta=' . $delta . ' sa=' . $scrollAmount . ' scrollTop=' . $this->readScrollTop($scrollNode) . ' contentH=' . $contentH . ' containerH=' . $containerH . ' maxScroll=' . $maxScroll);
                 if ($maxScroll <= 0) return;
 
-                $newScrollTop = max(0, min($maxScroll, $scrollNode->scrollTop - $scrollAmount));
-                if ($newScrollTop !== $scrollNode->scrollTop) {
+                $newScrollTop = max(0, min($maxScroll, $this->readScrollTop($scrollNode) - $scrollAmount));
+                if ($newScrollTop !== $this->readScrollTop($scrollNode)) {
                     $this->applyScrollTop($scrollNode, $newScrollTop, true);
-                    error_log('[SCROLL_DBG] applied scrollTop=' . $newScrollTop . ' (old was ' . $scrollNode->scrollTop . ')');
+                    error_log('[SCROLL_DBG] applied scrollTop=' . $newScrollTop . ' (old was ' . $this->readScrollTop($scrollNode) . ')');
                 }
             }
         } finally {
@@ -141,7 +180,7 @@ class ScrollManager
                 $ratio = min($node->h / max($contentH, 1), 1.0);
                 $thumbH = max((int)($node->h * $ratio), 20);
                 $maxScroll = max($contentH - $node->h, 0);
-                $scrollRatio = $maxScroll > 0 ? $node->scrollTop / $maxScroll : 0.0;
+                $scrollRatio = $maxScroll > 0 ? $this->readScrollTop($node) / $maxScroll : 0.0;
                 $thumbY = $node->y + (int)(($node->h - $thumbH) * $scrollRatio);
 
                 if ($y >= $thumbY && $y <= $thumbY + $thumbH) {
@@ -162,7 +201,7 @@ class ScrollManager
                 $ratio = min($node->w / max($contentW, 1), 1.0);
                 $thumbW = max((int)($node->w * $ratio), 20);
                 $maxScroll = max($contentW - $node->w, 0);
-                $scrollRatio = $maxScroll > 0 ? $node->scrollLeft / $maxScroll : 0.0;
+                $scrollRatio = $maxScroll > 0 ? $this->readScrollLeft($node) / $maxScroll : 0.0;
                 $thumbX = $node->x + (int)(($node->w - $thumbW) * $scrollRatio);
 
                 if ($x >= $thumbX && $x <= $thumbX + $thumbW) {
@@ -201,7 +240,7 @@ class ScrollManager
                 $this->scrollDragTarget = $scrollNode;
                 $this->scrollDragStartX = $mouseX;
                 $this->scrollDragStartY = $mouseY;
-                $this->scrollDragStartScrollPos = $scrollNode->scrollLeft;
+                $this->scrollDragStartScrollPos = $this->readScrollLeft($scrollNode);
                 $this->scrollDragIsHorizontal = true;
             }
         } else {
@@ -223,7 +262,7 @@ class ScrollManager
                 $this->scrollDragTarget = $scrollNode;
                 $this->scrollDragStartX = $mouseX;
                 $this->scrollDragStartY = $mouseY;
-                $this->scrollDragStartScrollPos = $scrollNode->scrollTop;
+                $this->scrollDragStartScrollPos = $this->readScrollTop($scrollNode);
                 $this->scrollDragIsHorizontal = false;
             }
         }
@@ -253,7 +292,7 @@ class ScrollManager
             $scrollDx = (int)($maxScroll * $dx / max($trackW, 1));
             $newScrollLeft = max(0, min($maxScroll, $this->scrollDragStartScrollPos + $scrollDx));
 
-            if ($newScrollLeft !== $node->scrollLeft) {
+            if ($newScrollLeft !== $this->readScrollLeft($node)) {
                 $this->applyScrollLeft($node, $newScrollLeft, false);
             }
         } else {
@@ -270,7 +309,7 @@ class ScrollManager
             $scrollDy = (int)($maxScroll * $dy / max($trackH, 1));
             $newScrollTop = max(0, min($maxScroll, $this->scrollDragStartScrollPos + $scrollDy));
 
-            if ($newScrollTop !== $node->scrollTop) {
+            if ($newScrollTop !== $this->readScrollTop($node)) {
                 $this->applyScrollTop($node, $newScrollTop, false);
             }
         }
@@ -286,9 +325,9 @@ class ScrollManager
         if ($this->scrollDragTarget === null) return;
 
         if ($this->scrollDragIsHorizontal) {
-            $this->applyScrollLeft($this->scrollDragTarget, $this->scrollDragTarget->scrollLeft, true);
+            $this->applyScrollLeft($this->scrollDragTarget, $this->readScrollLeft($this->scrollDragTarget), true);
         } else {
-            $this->applyScrollTop($this->scrollDragTarget, $this->scrollDragTarget->scrollTop, true);
+            $this->applyScrollTop($this->scrollDragTarget, $this->readScrollTop($this->scrollDragTarget), true);
         }
         $this->scrollDragTarget = null;
     }
@@ -332,8 +371,8 @@ class ScrollManager
 
         $targetTop = $state['targetTop'];
         $targetLeft = $state['targetLeft'];
-        $startTop = $node->scrollTop;
-        $startLeft = $node->scrollLeft;
+        $startTop = $this->readScrollTop($node);
+        $startLeft = $this->readScrollLeft($node);
         // 使用原始目标重新计算每步位置，避免累积误差
         $origStartTop = $state['origStartTop'] ?? $startTop;
         $origStartLeft = $state['origStartLeft'] ?? $startLeft;
@@ -341,8 +380,8 @@ class ScrollManager
         $newTop = (int)($origStartTop + ($targetTop - $origStartTop) * $eased);
         $newLeft = (int)($origStartLeft + ($targetLeft - $origStartLeft) * $eased);
 
-        $node->scrollTop = $newTop;
-        $node->scrollLeft = $newLeft;
+        $this->writeScrollTop($node, $newTop);
+        $this->writeScrollLeft($node, $newLeft);
 
         // 更新状态
         $this->smoothScrollState['currentStep'] = $currentStep;
@@ -362,23 +401,23 @@ class ScrollManager
     public function applyScrollTop(RenderNode $node, int $newScrollTop, bool $persist): void
     {
         // 检查是否启用平滑滚动
-        if ($persist && $this->isSmoothScroll($node) && $newScrollTop !== $node->scrollTop) {
+        if ($persist && $this->isSmoothScroll($node) && $newScrollTop !== $this->readScrollTop($node)) {
             $steps = 10;
             $this->smoothScrollState = [
                 'smoothNode' => $node,
                 'targetTop' => $newScrollTop,
-                'targetLeft' => $node->scrollLeft,
+                'targetLeft' => $this->readScrollLeft($node),
                 'steps' => $steps,
                 'currentStep' => 0,
-                'origStartTop' => $node->scrollTop,
-                'origStartLeft' => $node->scrollLeft,
+                'origStartTop' => $this->readScrollTop($node),
+                'origStartLeft' => $this->readScrollLeft($node),
             ];
             // 立即执行第一步
             $this->smoothScrollStep();
             return;
         }
 
-        $node->scrollTop = $newScrollTop;
+        $this->writeScrollTop($node, $newScrollTop);
 
         if ($persist) {
             $bindKey = '';
@@ -402,22 +441,22 @@ class ScrollManager
     public function applyScrollLeft(RenderNode $node, int $newScrollLeft, bool $persist): void
     {
         // 检查是否启用平滑滚动
-        if ($persist && $this->isSmoothScroll($node) && $newScrollLeft !== $node->scrollLeft) {
+        if ($persist && $this->isSmoothScroll($node) && $newScrollLeft !== $this->readScrollLeft($node)) {
             $steps = 10;
             $this->smoothScrollState = [
                 'smoothNode' => $node,
-                'targetTop' => $node->scrollTop,
+                'targetTop' => $this->readScrollTop($node),
                 'targetLeft' => $newScrollLeft,
                 'steps' => $steps,
                 'currentStep' => 0,
-                'origStartTop' => $node->scrollTop,
-                'origStartLeft' => $node->scrollLeft,
+                'origStartTop' => $this->readScrollTop($node),
+                'origStartLeft' => $this->readScrollLeft($node),
             ];
             $this->smoothScrollStep();
             return;
         }
 
-        $node->scrollLeft = $newScrollLeft;
+        $this->writeScrollLeft($node, $newScrollLeft);
 
         if ($persist) {
             $bindKey = '';

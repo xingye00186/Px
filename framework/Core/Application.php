@@ -18,6 +18,7 @@ use Px\Rendering\VNode;
 use Px\Rendering\RenderNode;
 use Px\Rendering\VNodeRenderer;
 use Px\Rendering\LayoutResolver;
+use Px\Rendering\InteractionState;
 use Px\Rendering\CssMappings;
 use Px\Rendering\ImageManager;
 use Px\Rendering\RenderTreeManager;
@@ -59,6 +60,24 @@ class Application
 
     /** 当前 hover 的 RenderNode（用于 :hover 样式切换） */
     private ?RenderNode $hoveredNode = null;
+
+    // ── InteractionState 映射 ───────────────────────
+    /** @var array<string, InteractionState> */
+    private array $interactionStates = [];
+
+    private function getInteractionState(RenderNode $node): InteractionState
+    {
+        $key = spl_object_id($node);
+        if (!isset($this->interactionStates[$key])) {
+            $this->interactionStates[$key] = new InteractionState();
+        }
+        return $this->interactionStates[$key];
+    }
+
+    public function getInteractionStateForNode(RenderNode $node): InteractionState
+    {
+        return $this->getInteractionState($node);
+    }
 
     /** @var array<string, ReactiveComponentInterface> VNode.groupId → Component instance */
     private array $componentByGroupId = [];
@@ -223,11 +242,11 @@ class Application
                 if ($hoverNode !== $this->hoveredNode) {
                     // 清除旧节点的 hover 状态
                     if ($this->hoveredNode !== null) {
-                        $this->hoveredNode->hovered = false;
+                        $this->getInteractionState($this->hoveredNode)->hovered = false;
                     }
                     // 设置新节点的 hover 状态
                     if ($hoverNode !== null) {
-                        $hoverNode->hovered = true;
+                        $this->getInteractionState($hoverNode)->hovered = true;
                     }
                     $this->hoveredNode = $hoverNode;
                     // 请求渲染以应用 :hover 样式变化
@@ -236,7 +255,7 @@ class Application
             } else {
                 // 拖拽中：清除 hover 状态
                 if ($this->hoveredNode !== null) {
-                    $this->hoveredNode->hovered = false;
+                    $this->getInteractionState($this->hoveredNode)->hovered = false;
                     $this->hoveredNode = null;
                     // ⚠️ 拖拽中不触发 requestRender()，避免与 directRender() 竞争
                     // directRender() 已经处理了拖拽过程中的视觉更新
