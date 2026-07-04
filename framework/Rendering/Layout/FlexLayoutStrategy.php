@@ -254,8 +254,9 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         if ($crossAvailable <= 0) $crossAvailable = $totalCross;
 
         // align-content for multi-line
-        $lineCrossOffsets = [];
-        $lineMaxCrosses = $this->computeLineCrossOffsets($lineMaxCrosses, $totalLines, $totalCross, $crossAvailable, $alignContent, $gap);
+        $result = $this->computeLineCrossOffsets($lineMaxCrosses, $totalLines, $totalCross, $crossAvailable, $alignContent, $gap);
+        $lineCrossOffsets = $result[0];
+        $lineMaxCrosses = $result[1];
 
         // 5b. Per-item cross-axis positioning
         $crossBase = $isRow ? $y : $x;
@@ -382,6 +383,6 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $offset = 0;
             foreach ($lineMaxCrosses as $i => $lmc) { $offsets[$i] = $offset; $offset += (int)$lmc + $gap; }
         }
-        return $offsets;
+        return [$offsets, $lineMaxCrosses];
     }
 }
