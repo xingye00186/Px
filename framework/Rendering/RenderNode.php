@@ -48,6 +48,11 @@ class RenderNode
 
     public ?string $groupId = null;
 
+    /** @var array|null text rendering info (VNodeRenderer 缓存) */
+    public ?array $textRenderInfo = null;
+    /** Paint frame number for incremental rendering */
+    public int $lastPaintFrame = 0;
+
     public function __construct(
         string $type,
         ?ComputedStyle $computedStyle = null,

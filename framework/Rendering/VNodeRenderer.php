@@ -1247,7 +1247,7 @@ class VNodeRenderer
                 $fontSize = $cs?->fontSize ?? 14;
                 $textColor = $cs?->color?->toBgr() ?? 0xFFFFFF;
                 return [
-                    'type' => 'text', 'text' => '�? ' . $alt,
+                    'type' => 'text', 'text' => '[img] ' . $alt,
                     'x' => $x, 'y' => $y,
                     'fontSize' => $fontSize, 'color' => $textColor, 'bold' => 1,
                     'align' => 'left', 'layer' => $layer,
