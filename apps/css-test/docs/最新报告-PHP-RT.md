@@ -1,10 +1,10 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-04 19:43:55 | **总耗时**: 730.8s
+**运行时间**: 2026-07-05 00:35:55 | **总耗时**: 689.4s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| case-001-wrapper-x | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 43.2s |
+| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 465diff 🔴439 | ⏭️ | ❌ 失败 | 1.7s |
 | case-002-auto-height | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | 306diff 🔴281 | ⏭️ | ❌ 失败 | 4.4s |
 | case-003-basic-block | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | 346diff 🔴326 | ⏭️ | ❌ 失败 | 9.7s |
 | case-004-flex-layout | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 6issue | ⚠️ 2 | 368diff 🔴339 | ⏭️ | ❌ 失败 | 10.7s |
@@ -60,13 +60,17 @@
 | case-054-inline-block-nest | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 1issue | ✅ | 19diff 🔴13 | ⏭️ | ❌ 失败 | 7.8s |
 | case-055-sticky-multi | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 1issue | ⚠️ 3 | 25diff 🔴17 | ⏭️ | ❌ 失败 | 10.6s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 730.8s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 689.4s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop width diff 275->284
+> - prop width diff 275->290
+> - prop height diff 460->465
+> - case-001-wrapper-x geometry 449->453
+> - case-001-wrapper-x mismatch 5->12
+> - case-001-wrapper-x major 0->13
 > - case-003-basic-block critical 325->326
 > - case-004-flex-layout critical 338->339
 > - case-005-grid-layout geometry 0->186
@@ -130,8 +134,8 @@
 > - case-053-intrinsic-sizing critical 8->9
 > - case-054-inline-block-nest critical 12->13
 > - case-055-sticky-multi critical 16->17
-> - overflow 239->241
-> - time 9.1->730.8 (80.3x)
+> - overflow 239->244
+> - time 9.1->689.4 (75.8x)
 >
 > ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
 
@@ -139,26 +143,26 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 94.5% | 7833/8292 |
-| width | 96.6% | 8008/8292 |
-| position | 100% | 8292/8292 |
-| opacity | 100% | 8292/8292 |
-| background-color | 99.7% | 8239/8262 |
-| top | 100% | 8223/8223 |
-| left | 100% | 8223/8223 |
-| text-align | 100% | 8101/8101 |
-| display | 100% | 8024/8024 |
-| font-weight | 100% | 7306/7306 |
+| height | 94.5% | 8050/8515 |
+| width | 96.6% | 8225/8515 |
+| position | 100% | 8515/8515 |
+| opacity | 100% | 8515/8515 |
+| background-color | 99.7% | 8462/8485 |
+| top | 100% | 8445/8445 |
+| left | 100% | 8445/8445 |
+| text-align | 100% | 8324/8324 |
+| display | 100% | 8247/8247 |
+| font-weight | 100% | 7529/7529 |
 | color | 100% | 6011/6011 |
 | font-size | 100% | 243/243 |
-| margin-bottom | 100% | 196/196 |
-| padding-top | 100% | 186/186 |
+| margin-bottom | 100% | 197/197 |
+| padding-top | 100% | 187/187 |
 | padding-bottom | 100% | 185/185 |
 | border-radius | 100% | 172/172 |
 | padding-left | 100% | 147/147 |
 | padding-right | 100% | 147/147 |
 | border-width | 100% | 130/130 |
-| margin-top | 100% | 62/62 |
+| margin-top | 100% | 63/63 |
 | align-items | 100% | 57/57 |
 | justify-content | 100% | 48/48 |
 | gap | 88.4% | 38/43 |
@@ -199,7 +203,7 @@
 
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
-| case-001-wrapper-x | 0 | 0 | 0 | 0 | 0 | 0 |
+| case-001-wrapper-x | 0 | **439** | **13** | 12 | 0 | 3 |
 | case-002-auto-height | 0 | **281** | **13** | 10 | 0 | 0 |
 | case-003-basic-block | 0 | **326** | **10** | 5 | 0 | 0 |
 | case-004-flex-layout | 0 | **339** | **13** | 11 | 0 | 2 |
@@ -258,6 +262,12 @@
 ---
 
 ## Phase G 容器溢出详情
+
+### case-001-wrapper-x
+
+- child(type=p right=1075) overflows parent(type=div contentRight=1025) by 50px (w: child=750 parent=700)
+- child(type=p right=1075) overflows parent(type=div contentRight=1025) by 50px (w: child=750 parent=700)
+- child(type=p right=1075) overflows parent(type=div contentRight=1025) by 50px (w: child=750 parent=700)
 
 ### case-004-flex-layout
 

@@ -276,9 +276,13 @@ class LayoutDumpStep implements PipelineStepInterface
                 $cssContent = $sb[1];
                 // 提取每条 CSS 规则: selector { ... }
                 if (preg_match_all('/([^{]+)\{([^}]*)\}/', $cssContent, $cssRules, PREG_SET_ORDER)) {
-                    foreach ($rules[0] as $rule) {
-                        // Skip mandatory html,body baseline
-                        if (preg_match('/^\s*html\s*,\s*body/i', $rule)) continue;
+                    foreach ($cssRules as $match) {
+                        $rule = $match[0];
+                        // Skip mandatory html,body baseline (may have leading CSS comments)
+                        $ruleTrim = preg_replace('/\/\*.*?\*\//s', '', $rule);
+                        if (preg_match('/^\s*html\s*,\s*body/i', $ruleTrim)) continue;
+                        // Skip * universal selector baseline
+                        if (preg_match('/^\s*\*\s*\{/', $ruleTrim)) continue;
                         $checkResult = self::checkSingleStyle($rule, $source, '<style> block');
                         if ($checkResult !== null) $errors[] = $checkResult;
                     }

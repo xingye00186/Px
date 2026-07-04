@@ -243,10 +243,12 @@ class Application
                     // 清除旧节点的 hover 状态
                     if ($this->hoveredNode !== null) {
                         $this->getInteractionState($this->hoveredNode)->hovered = false;
+                        $this->hoveredNode->hovered = false;
                     }
                     // 设置新节点的 hover 状态
                     if ($hoverNode !== null) {
                         $this->getInteractionState($hoverNode)->hovered = true;
+                        $hoverNode->hovered = true;
                     }
                     $this->hoveredNode = $hoverNode;
                     // 请求渲染以应用 :hover 样式变化

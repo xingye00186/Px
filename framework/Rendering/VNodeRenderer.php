@@ -242,7 +242,8 @@ class VNodeRenderer
             }
             if ($isScrollNode) {
                 $scrollCtx = ['layer' => $node->layer];
-                ScrollbarEmitter::emit($node, $scrollCtx, $elementsByLayer, $maxLayer);
+                // TODO: ScrollbarEmitter 尚未实现，暂不发出滚动条元素
+                // ScrollbarEmitter::emit($node, $scrollCtx, $elementsByLayer, $maxLayer);
             }
         }
         $this->markPainted($node, $this->currentPaintFrame);
