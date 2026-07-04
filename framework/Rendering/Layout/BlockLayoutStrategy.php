@@ -25,6 +25,16 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
     public function layout(LayoutInput $input): LayoutResult
     {
+        // Intrinsic measurement mode: return natural content size
+        if ($input->constraints->isIntrinsicMeasurement) {
+            $s = $input->style;
+            $textContent = $input->textContent;
+            $fs = $s->fontSize > 0 ? $s->fontSize : 16;
+            $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, $s->bold) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
+            $h = strlen($textContent) > 0 ? ($s->lineHeight > 0 ? $s->lineHeight : (int)($fs * 1.2)) : 0;
+            return new LayoutResult(w: max(0, $w), h: max(0, $h), minContentWidth: max(0, $w), maxContentWidth: max(0, $w), preferredContentWidth: max(0, $w), minContentHeight: max(0, $h), maxContentHeight: max(0, $h), preferredContentHeight: max(0, $h));
+        }
+
         $c = $input->constraints;
         $s = $input->style;
         $children = $input->childResults;

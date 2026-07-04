@@ -13,6 +13,11 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 {
     public function layout(LayoutInput $input): LayoutResult
     {
+        // Intrinsic measurement mode
+        if ($input->constraints->isIntrinsicMeasurement) {
+            return new LayoutResult(w: 0, h: 0, minContentWidth: 0, maxContentWidth: 99999, preferredContentWidth: 0, minContentHeight: 0, maxContentHeight: 99999, preferredContentHeight: 0);
+        }
+
         $c = $input->constraints;
         $s = $input->style;
         $childResults = $input->childResults;
