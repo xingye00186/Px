@@ -151,7 +151,7 @@ class Application
                     $app->scheduler->flushMicrotasks();
                 }
             }
-            $app->dumpLayoutToFile($path);
+            $app->dumpLayoutToFile($path, true);
             return true;
         }
 

@@ -120,7 +120,7 @@ function main(): int
                 if ($hasDump) {
                     $dumpTo = $appDir . '/test_case/' . $tag . '/ref/engine_layout.json';
                     @mkdir(dirname($dumpTo), 0777, true);
-                    $app->dumpLayoutToFile($dumpTo);
+                    $app->dumpLayoutToFile($dumpTo, true);
                 }
 
                 if ($hasScreenshot) {
