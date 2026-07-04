@@ -37,15 +37,36 @@ class TableLayoutStrategy implements LayoutStrategyInterface
 
         $stackedChildren = [];
         $currentY = $y;
+        $needsMore = false;
 
-        // ── 多列宽协商骨架（Iteration-aware）──
-        // TODO: 纯函数架构下 iteration 状态无法跨轮保持。要使多轮真正生效，
-        // 需要在 LayoutResult.children 中编码 pass-1 的列宽测量结果，
-        // 并在 pass-2 从 childResults 读取它们来调整列宽分配。
-        // 当前实现仅使用单轮等分列宽。
+        // ── 多列宽协商：两轮迭代 ──
+        // Pass 0 (iteration=0): 等分列宽布局，收集每列最大内容宽度 → needsAnotherPass
+        // Pass 1 (iteration=1): 用收集到的最大宽度归一化列宽
         if ($display === 'table' || $display === 'table-caption') {
-            // 收集前一轮的列宽（如有）用于区分 pass
-            $prevPassCollected = isset($input->childResults[0]) && $input->iteration > 0;
+            $iteration = $input->iteration;
+
+            // Collect max per-column widths from already-resolved children
+            $maxColWidths = [];
+            $totalCols = 0;
+            foreach ($children as $cr) {
+                $crDisplay = $cr->style?->display?->value ?? 'block';
+                if ($crDisplay === 'table-row') {
+                    $colIdx = 0;
+                    foreach ($cr->children as $cell) {
+                        $cellW = $cell->w > 0 ? $cell->w : 80;
+                        if (!isset($maxColWidths[$colIdx]) || $cellW > $maxColWidths[$colIdx]) {
+                            $maxColWidths[$colIdx] = $cellW;
+                        }
+                        $colIdx++;
+                    }
+                    if ($colIdx > $totalCols) $totalCols = $colIdx;
+                }
+            }
+
+            // Request second pass for content-based normalization
+            if ($iteration === 0 && $totalCols > 0 && !empty($maxColWidths)) {
+                $needsMore = true;
+            }
 
             foreach ($children as $cr) {
                 $crStyle = $cr->style;
@@ -54,21 +75,52 @@ class TableLayoutStrategy implements LayoutStrategyInterface
                 if ($crDisplay === 'table-row') {
                     $cellChildren = [];
                     $cellCount = count($cr->children);
-                    $cellW = $cellCount > 0 ? (int)($w / $cellCount) : $w;
                     $lineH = 0;
 
-                    foreach ($cr->children as $cell) {
+                    // Determine column widths
+                    $colWidths = [];
+                    for ($ci = 0; $ci < $cellCount; $ci++) {
+                        if ($iteration > 0 && isset($maxColWidths[$ci])) {
+                            $colWidths[$ci] = $maxColWidths[$ci];
+                        } else {
+                            $colWidths[$ci] = $cellCount > 0 ? (int)($w / $cellCount) : $w;
+                        }
+                    }
+                    // Scale to fit container
+                    $totalColW = array_sum($colWidths);
+                    if ($totalColW > 0 && abs($totalColW - $w) > 1) {
+                        $scale = $w / $totalColW;
+                        foreach ($colWidths as $ci => $cw) {
+                            $colWidths[$ci] = (int)($cw * $scale);
+                        }
+                    }
+
+                    $colX = 0;
+                    foreach ($cr->children as $ci => $cell) {
                         $cellH = $cell->h;
-                        $cellChildren[] = new LayoutResult(x: 0, y: 0, w: $cellW, h: $cellH, visualW: $cellW, visualH: $cellH, layer: $cell->layer, style: $cell->style, children: $cell->children);
+                        $cellW = $colWidths[$ci] ?? ($cellCount > 0 ? (int)($w / $cellCount) : $w);
+                        $cellChildren[] = new LayoutResult(
+                            x: $colX, y: 0, w: $cellW, h: $cellH,
+                            visualW: $cellW, visualH: $cellH,
+                            layer: $cell->layer, style: $cell->style, children: $cell->children
+                        );
                         if ($cellH > $lineH) $lineH = $cellH;
+                        $colX += $cellW;
                     }
 
                     $normalizedCells = [];
                     foreach ($cellChildren as $cellFrag) {
-                        $normalizedCells[] = new LayoutResult(x: count($normalizedCells) * $cellW, y: $currentY, w: $cellW, h: $lineH, visualW: $cellW, visualH: $lineH, layer: $cellFrag->layer, style: $cellFrag->style, children: $cellFrag->children);
+                        $normalizedCells[] = new LayoutResult(
+                            x: $cellFrag->x, y: $currentY,
+                            w: $cellFrag->w, h: $lineH,
+                            visualW: $cellFrag->visualW, visualH: $lineH,
+                            layer: $cellFrag->layer, style: $cellFrag->style, children: $cellFrag->children
+                        );
                     }
 
-                    $stackedChildren[] = new LayoutResult(x: $x, y: $currentY, w: $w, h: $lineH, children: $normalizedCells);
+                    $stackedChildren[] = new LayoutResult(
+                        x: $x, y: $currentY, w: $w, h: $lineH, children: $normalizedCells
+                    );
                     $currentY += $lineH;
                 } else {
                     $stackedChildren[] = $cr;
@@ -81,6 +133,6 @@ class TableLayoutStrategy implements LayoutStrategyInterface
 
         if ($h <= 0) $h = max(0, $currentY - $y);
 
-        return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s, children: $stackedChildren);
+        return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s, children: $stackedChildren, needsAnotherPass: $needsMore);
     }
 }
