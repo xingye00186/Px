@@ -2,8 +2,6 @@
 
 namespace Px\Rendering\Layout;
 
-use native_types;
-
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\RenderNode;
 
@@ -73,24 +71,25 @@ class LayoutResult
         int $maxContentHeight = 0,
         int $preferredContentHeight = 0,
     ) {
-        $this->x             = $x;
-        $this->y             = $y;
-        $this->w             = $w;
-        $this->h             = $h;
-        $this->visualW       = $visualW > 0 ? $visualW : $w;
-        $this->visualH       = $visualH > 0 ? $visualH : $h;
-        $this->layer         = $layer;
-        $this->contentWidth  = $contentWidth;
-        $this->contentHeight = $contentHeight;
+        // Cast all int fields to ensure AOT php::Var→int conversion
+        $this->x             = (int)$x;
+        $this->y             = (int)$y;
+        $this->w             = (int)$w;
+        $this->h             = (int)$h;
+        $this->visualW       = (int)($visualW > 0 ? $visualW : $w);
+        $this->visualH       = (int)($visualH > 0 ? $visualH : $h);
+        $this->layer         = (int)$layer;
+        $this->contentWidth  = (int)$contentWidth;
+        $this->contentHeight = (int)$contentHeight;
         $this->style         = $style;
         $this->children      = $children;
         $this->needsAnotherPass      = $needsAnotherPass;
-        $this->minContentWidth       = $minContentWidth;
-        $this->maxContentWidth       = $maxContentWidth;
-        $this->preferredContentWidth = $preferredContentWidth;
-        $this->minContentHeight      = $minContentHeight;
-        $this->maxContentHeight      = $maxContentHeight;
-        $this->preferredContentHeight = $preferredContentHeight;
+        $this->minContentWidth       = (int)$minContentWidth;
+        $this->maxContentWidth       = (int)$maxContentWidth;
+        $this->preferredContentWidth = (int)$preferredContentWidth;
+        $this->minContentHeight      = (int)$minContentHeight;
+        $this->maxContentHeight      = (int)$maxContentHeight;
+        $this->preferredContentHeight = (int)$preferredContentHeight;
     }
 
     /**

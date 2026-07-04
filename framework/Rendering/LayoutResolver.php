@@ -144,18 +144,18 @@ class LayoutResolver
             $bT = $style?->borderTopWidth ?? 0;
             $bB = $style?->borderBottomWidth ?? 0;
 
-            $cbW = $node->w > 0 ? max(0, $node->w - $padL - $padR - $bL - $bR) : $constraints->contentWidth;
-            $cbH = $node->h > 0 ? max(0, $node->h - $padT - $padB - $bT - $bB) : $constraints->contentHeight;
+            $cbW = $node->w > 0 ? (int)max(0, (int)($node->w - $padL - $padR - $bL - $bR)) : (int)($constraints->contentWidth);
+            $cbH = $node->h > 0 ? (int)max(0, (int)($node->h - $padT - $padB - $bT - $bB)) : (int)($constraints->contentHeight);
             $childOffX = $node->x + $padL + $bL;
             $childOffY = $node->y + $padT + $bT;
 
             $childConstraints = new LayoutConstraints(
-                (int)max(0, $cbW),
-                (int)max(0, $cbH),
+                (int)$cbW,
+                (int)$cbH,
                 (int)($childOffX),
                 (int)($childOffY),
-                (int)max(0, $cbW),
-                (int)max(0, $cbH),
+                (int)$cbW,
+                (int)$cbH,
             );
             $childResults[] = $this->resolveFragment($child, $childConstraints, $nodeLayer, $node->x, $node->y);
         }

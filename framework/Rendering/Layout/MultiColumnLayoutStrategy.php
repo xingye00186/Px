@@ -69,10 +69,10 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
                 // Greedy: place in shortest column
                 $shortestCol = 0;
                 $shortestY = $colCurY[0];
-                for ($c = 1; $c < $columnCount; $c++) {
-                    if ($colCurY[$c] < $shortestY) {
-                        $shortestCol = $c;
-                        $shortestY = $colCurY[$c];
+                for ($ci = 1; $ci < $columnCount; $ci++) {
+                    if ($colCurY[$ci] < $shortestY) {
+                        $shortestCol = $ci;
+                        $shortestY = $colCurY[$ci];
                     }
                 }
                 $colIdx = $shortestCol;

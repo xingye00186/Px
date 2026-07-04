@@ -188,10 +188,10 @@ class GridLayoutStrategy implements LayoutStrategyInterface
 
         // Map to LayoutResult
         $mappedResults = [];
-        foreach ($gridItems as $gi) {
+        foreach ($gridItems as $gri) {
             $mappedResults[] = new LayoutResult(
-                x: $gi->x, y: $gi->y, w: $gi->w, h: $gi->h,
-                style: $gi->style, children: $gi->originalChildren ?? []
+                x: $gri->x, y: $gri->y, w: $gri->w, h: $gri->h,
+                style: $gri->style, children: $gri->originalChildren ?? []
             );
         }
 

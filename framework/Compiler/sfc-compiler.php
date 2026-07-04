@@ -33,10 +33,10 @@ require_once $frameworkDir . '/tests/bootstrap/autoload.php';
 
 // Compiler-specific files (not autoloaded since they define functions/constants at file scope)
 $compilerDir = __DIR__;
-require_once $frameworkDir . '/Rendering/VNode.php';
-require_once $frameworkDir . '/Rendering/CssValue.php';
-require_once $frameworkDir . '/Rendering/CssMappings.php';
-require_once $frameworkDir . '/Rendering/CssValueParser.php';
+require_once $frameworkDir . '/framework/Rendering/VNode.php';
+require_once $frameworkDir . '/framework/Rendering/CssValue.php';
+require_once $frameworkDir . '/framework/Rendering/CssMappings.php';
+require_once $frameworkDir . '/framework/Rendering/CssValueParser.php';
 require_once $compilerDir . '/TemplateParser.php';
 require_once $compilerDir . '/AotValidator.php';
 require_once $compilerDir . '/ScriptAnalyzer.php';

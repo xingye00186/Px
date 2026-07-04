@@ -79,11 +79,11 @@ class TableLayoutStrategy implements LayoutStrategyInterface
 
                     // Determine column widths
                     $colWidths = [];
-                    for ($ci = 0; $ci < $cellCount; $ci++) {
-                        if ($iteration > 0 && isset($maxColWidths[$ci])) {
-                            $colWidths[$ci] = $maxColWidths[$ci];
+                    for ($colI = 0; $colI < $cellCount; $colI++) {
+                        if ($iteration > 0 && isset($maxColWidths[$colI])) {
+                            $colWidths[$colI] = $maxColWidths[$colI];
                         } else {
-                            $colWidths[$ci] = $cellCount > 0 ? (int)($w / $cellCount) : $w;
+                            $colWidths[$colI] = $cellCount > 0 ? (int)($w / $cellCount) : $w;
                         }
                     }
                     // Scale to fit container
