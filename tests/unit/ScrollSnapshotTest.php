@@ -16,6 +16,7 @@
 require_once __DIR__ . '/bootstrap.php';
 
 use Px\Rendering\RenderNode;
+use Px\Rendering\ComputedStyle;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\RenderTreeManager;
 
@@ -29,7 +30,8 @@ echo "========================================\n\n";
 
 function makeScrollNode(string $type, array $style, array $children = [], ?string $key = null): RenderNode
 {
-    $node = new RenderNode($type, $style, null, $key);
+        $cs = !empty($style) ? new ComputedStyle($style) : null;
+    $node = new RenderNode($type, $cs, null, $key);
     foreach ($children as $child) {
         $node->addChild($child);
     }

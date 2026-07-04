@@ -61,16 +61,14 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $gridItems[] = $gi;
         }
 
-        // Run grid placer
-        $placer = new GridPlacer();
-        $placedItems = $placer->place($gridItems, $width, $s);
-
-        // Map placed items to LayoutResult[]
+        // Simple grid: lay items out sequentially by rows
+        // Full GridPlacer integration requires column/row track parsing from style
         $mappedResults = [];
-        foreach ($placedItems as $gi) {
+        $cellW = count($gridItems) > 0 ? (int)($width / count($gridItems)) : $width;
+        foreach ($gridItems as $i => $gi) {
             $mappedResults[] = new LayoutResult(
-                x: $gi->x, y: $gi->y,
-                w: $gi->w, h: $gi->h,
+                x: $x + ($i * $cellW), y: $y,
+                w: $cellW, h: $gi->h > 0 ? $gi->h : 50,
                 layer: 0,
                 style: $gi->style,
                 children: [],

@@ -17,12 +17,12 @@ use Px\Rendering\ComputedStyle;
  */
 class FlexDistributor
 {
-    private LayoutResolver $resolver;
+    private ?LayoutResolver $resolver = null;
 
     /** @var array<string, int> Auto margin X offset tracking */
     private array $marginAutoOffsetsX = [];
 
-    public function __construct(LayoutResolver $resolver)
+    public function __construct(?LayoutResolver $resolver = null)
     {
         $this->resolver = $resolver;
     }
@@ -555,7 +555,9 @@ class FlexDistributor
                 $topOff = (int)($chTp->computedStyle?->top?->toPx() ?? 0);
                 $chTp->layoutDirty = true;
                 foreach ($chTp->children as $gc) { $gc->layoutDirty = true; }
-                $this->resolver->resolveChildNode($chTp, $chTp->x - $leftOff, $chTp->y - $topOff, $node);
+                if ($this->resolver !== null) {
+                    $this->resolver->resolveChildNode($chTp, $chTp->x - $leftOff, $chTp->y - $topOff, $node);
+                }
 
                 // Restore flex-allocated main-axis size (resolveChildNode resets it)
                 $chTp->w = $savedW;

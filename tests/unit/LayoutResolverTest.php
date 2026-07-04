@@ -17,6 +17,7 @@
 require_once __DIR__ . '/bootstrap.php';
 
 use Px\Rendering\RenderNode;
+use Px\Rendering\ComputedStyle;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\CssMappings;
 
@@ -27,7 +28,8 @@ echo "========================================\n\n";
 // 辅助函数：构建 RenderNode 树
 function makeNode(string $type, array $style = [], array $children = [], ?string $content = null): RenderNode
 {
-    $node = new RenderNode($type, $style, $content);
+    $cs = !empty($style) ? new ComputedStyle($style) : null;
+    $node = new RenderNode($type, $cs, $content);
     foreach ($children as $child) {
         $node->addChild($child);
     }

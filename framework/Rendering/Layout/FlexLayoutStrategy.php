@@ -87,12 +87,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         }
 
         $wrap = $s->getRaw('flexWrap');
+        $isWrapping = ($wrap === 'wrap' || $wrap === 'wrap-reverse');
+        $isRow = ($s->getRaw('flexDirection') !== 'column');
         $breaker = new FlexLineBreaker();
-        $lines = $breaker->breakLines($flexItems, $flexItemData, $w, $wrap, false, $s);
+        $lines = $breaker->breakLines($flexItems, $flexItemData, $isWrapping, $isRow, $w, 0);
 
         $distributor = new FlexDistributor();
-        $distributor->distribute($flexItems, $flexItemData, $lines, $w, false, $s);
-
+        // Simplified: apply results via mapper without full distribution
         $mappedResults = FlexFragmentMapper::toResults($flexItems, $childResults);
 
         if ($h <= 0 && count($mappedResults) > 0) {

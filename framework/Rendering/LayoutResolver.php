@@ -122,6 +122,16 @@ class LayoutResolver
             $this->scrollContainers[] = $node;
         }
 
+        // Layer inheritance: inherit from parent, override with own z-index
+        $nodeLayer = 0;
+        if ($node->parent !== null && $node->parent->layer > 0) {
+            $nodeLayer = $node->parent->layer;
+        }
+        $zIndex = $style?->zIndex ?? 0;
+        if ($zIndex > $nodeLayer) {
+            $nodeLayer = $zIndex;
+        }
+
         // Recursively resolve children (pure)
         $childResults = [];
         foreach ($node->children as $child) {
@@ -194,7 +204,7 @@ class LayoutResolver
         $isAbsolute = ($position === 'absolute' || $position === 'fixed');
 
         if ($display === 'none') {
-            return new LayoutResult(0, 0, 0, 0, style: $style);
+            return $this->wrapWithLayer(new LayoutResult(0, 0, 0, 0, style: $style), $nodeLayer);
         }
 
         if ($isAbsolute) {
@@ -216,7 +226,7 @@ class LayoutResolver
                 viewportW: $viewportW,
                 viewportH: $viewportH,
             );
-            return $this->absolutePositioning->absoluteLayout($input);
+            return $this->wrapWithLayer($this->absolutePositioning->absoluteLayout($input), $nodeLayer);
         }
 
         // Select strategy based on display
@@ -228,7 +238,27 @@ class LayoutResolver
             childResults: $childResults,
             position: $position,
         );
-        return $strategy->layout($input);
+        return $this->wrapWithLayer($strategy->layout($input), $nodeLayer);
+    }
+
+    /**
+     * Override layer on LayoutResult, preserving all other fields.
+     */
+    private function wrapWithLayer(LayoutResult $result, int $layer): LayoutResult
+    {
+        if ($result->layer >= $layer) {
+            return $result;
+        }
+        return new LayoutResult(
+            x: $result->x, y: $result->y,
+            w: $result->w, h: $result->h,
+            visualW: $result->visualW, visualH: $result->visualH,
+            layer: $layer,
+            contentWidth: $result->contentWidth,
+            contentHeight: $result->contentHeight,
+            style: $result->style,
+            children: $result->children,
+        );
     }
 
     /**

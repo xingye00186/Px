@@ -14,12 +14,13 @@
 require_once __DIR__ . '/bootstrap.php';
 
 use Px\Rendering\RenderNode;
+use Px\Rendering\ComputedStyle;
 use Px\Rendering\VNode;
 
 // ─────────────────────────────────────────────
 // 1. 属性默认值
 // ─────────────────────────────────────────────
-$rn = new RenderNode('div', ['width' => 100, 'height' => 50]);
+$rn = new RenderNode('div', new ComputedStyle(['width' => 100, 'height' => 50]));
 assert($rn->type === 'div', 'type 应为 div');
 assert($rn->style === ['width' => 100, 'height' => 50], 'style 应等于传入值');
 assert($rn->x === 0, 'x 默认 0');
@@ -140,11 +141,11 @@ echo "[PASS] addChild/clearChildren 正常工作\n";
 // ─────────────────────────────────────────────
 // 7. 空 content 与 key
 // ─────────────────────────────────────────────
-$rn3 = new RenderNode('text', [], 'Hello');
+$rn3 = new RenderNode('text', null, 'Hello');
 assert($rn3->content === 'Hello', '文本内容应为 Hello');
 assert($rn3->key === null, 'key 应为 null');
 
-$rn4 = new RenderNode('div', [], null, 'item-1');
+$rn4 = new RenderNode('div', null, null, 'item-1');
 assert($rn4->key === 'item-1', 'key 应为 item-1');
 echo "[PASS] content 和 key 构造参数正确\n";
 

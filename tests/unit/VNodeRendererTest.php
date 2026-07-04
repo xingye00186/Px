@@ -15,6 +15,7 @@
 require_once __DIR__ . '/bootstrap.php';
 
 use Px\Rendering\RenderNode;
+use Px\Rendering\ComputedStyle;
 use Px\Rendering\VNode;
 use Px\Rendering\VNodeRenderer;
 use Px\Rendering\RenderContext;
@@ -79,7 +80,8 @@ function invokeCollectElements(VNodeRenderer $renderer, RenderNode $root): array
 // 辅助：创建 RenderNode
 function rn(string $type, array $style = [], array $children = [], ?string $content = null): RenderNode
 {
-    $node = new RenderNode($type, $style, $content);
+        $cs = !empty($style) ? new ComputedStyle($style) : null;
+    $node = new RenderNode($type, $cs, $content);
     foreach ($children as $child) {
         $node->addChild($child);
     }
