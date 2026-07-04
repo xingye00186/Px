@@ -52,28 +52,56 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
         $stackedChildren = [];
         $perColumn = count($children) > 0 ? (int)ceil(count($children) / $columnCount) : 0;
         $colH = 0;
+        $needsMore = false;
 
-        // ── 列平衡骨架（Iteration-aware）──
-        // TODO: 纯函数架构下 iteration 状态无法跨轮保持。要使多轮真正生效，
-        // 需要在 LayoutResult.children 中编码 pass-1 的内容度量结果，
-        // 并在 pass-2 中重新分配列内容以实现平衡。
-        // 当前实现使用单轮顺序填充。
-        $hasPrevPass = $input->iteration > 0;
+        // ── 列平衡：两轮迭代 ──
+        // Pass 0 (iteration=0): 等分布局，收集列高 → needsAnotherPass
+        // Pass 1 (iteration>0): 贪心重分配——每项放入当前最矮的列
+        $iteration = $input->iteration;
+
+        // Per-column tracking: current y offset
+        $colCurY = array_fill(0, $columnCount, $y);
+        // Per-column item count for pass 0
+        $colItemCounts = array_fill(0, $columnCount, 0);
 
         foreach ($children as $i => $cr) {
-            $colIdx = $perColumn > 0 ? (int)($i / $perColumn) : 0;
-            if ($colIdx >= $columnCount) $colIdx = $columnCount - 1;
-            $posInCol = $i % $perColumn;
+            if ($iteration > 0) {
+                // Greedy: place in shortest column
+                $shortestCol = 0;
+                $shortestY = $colCurY[0];
+                for ($c = 1; $c < $columnCount; $c++) {
+                    if ($colCurY[$c] < $shortestY) {
+                        $shortestCol = $c;
+                        $shortestY = $colCurY[$c];
+                    }
+                }
+                $colIdx = $shortestCol;
+            } else {
+                // Pass 0: sequential fill by fixed chunk size
+                $colIdx = $perColumn > 0 ? (int)($i / $perColumn) : 0;
+                if ($colIdx >= $columnCount) $colIdx = $columnCount - 1;
+                $colItemCounts[$colIdx]++;
+            }
 
             $cx = $x + $colIdx * ($colWidth + $colGap);
-            $cy = $y + $posInCol * $cr->h;
+            $cy = $colCurY[$colIdx];
 
-            $stackedChildren[] = new LayoutResult(x: $cx, y: $cy, w: $cr->w, h: $cr->h, visualW: $cr->visualW, visualH: $cr->visualH, layer: $cr->layer, style: $cr->style, children: $cr->children);
-            $colH = max($colH, $cy + $cr->h - $y);
+            $stackedChildren[] = new LayoutResult(
+                x: $cx, y: $cy, w: $cr->w, h: $cr->h,
+                visualW: $cr->visualW, visualH: $cr->visualH,
+                layer: $cr->layer, style: $cr->style, children: $cr->children
+            );
+            $colCurY[$colIdx] = $cy + $cr->h;
+            $colH = max($colH, $colCurY[$colIdx] - $y);
+        }
+
+        // Request second pass if columns are imbalanced (iteration 0 only)
+        if ($iteration === 0 && count($children) > $columnCount) {
+            $needsMore = true;
         }
 
         if ($h <= 0) $h = max(0, $colH);
 
-        return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s, children: $stackedChildren);
+        return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s, children: $stackedChildren, needsAnotherPass: $needsMore);
     }
 }
