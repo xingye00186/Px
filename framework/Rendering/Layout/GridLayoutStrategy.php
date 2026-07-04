@@ -49,30 +49,38 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $height = $s->height->resolveInContext($c->containerHeight);
         }
 
-        // Build GridItems from childResults
+        $rawCols = $s->getRaw('gridTemplateColumns');
+        $rawRows = $s->getRaw('gridTemplateRows');
+        $gap = (int)($s->getRaw('gap') ?? 0);
+        $cols = $this->parseTrackSizes($rawCols, $width, $gap);
+        $rows = $this->parseTrackSizes($rawRows, $height > 0 ? $height : 0, $gap);
+
+        if (empty($cols)) { $t = new \Px\Rendering\Layout\Grid\GridTrack(); $t->size = max(1, (int)($width / 2)); $t->start = 0; $t->end = $t->size; $cols = [$t]; }
+        if (empty($rows)) { $t = new \Px\Rendering\Layout\Grid\GridTrack(); $t->size = 50; $t->start = 0; $t->end = 50; $rows = [$t]; }
+
         $gridItems = [];
+        $numCols = count($cols);
+        $idx = 0;
         foreach ($childResults as $cr) {
             $gi = new GridItem();
-            $gi->x = $cr->x;
-            $gi->y = $cr->y;
-            $gi->w = $cr->w;
-            $gi->h = $cr->h;
+            $gi->colStart = $idx % $numCols;
+            $gi->colEnd = $gi->colStart + 1;
+            $gi->rowStart = (int)($idx / $numCols);
+            $gi->rowEnd = $gi->rowStart + 1;
+            $gi->w = $cols[$gi->colStart]->size;
+            $gi->h = $gi->rowStart < count($rows) ? $rows[$gi->rowStart]->size : 50;
             $gi->style = $cr->style;
+            $gi->originalChildren = $cr->children;
             $gridItems[] = $gi;
+            $idx++;
         }
 
-        // Simple grid: lay items out sequentially by rows
-        // Full GridPlacer integration requires column/row track parsing from style
+        $placer = new GridPlacer();
+        $placer->placeItems($gridItems, $cols, $rows, 'row', 0, 0, $x, $y, $width, $height, 'start', 'start', $gap, $gap);
+
         $mappedResults = [];
-        $cellW = count($gridItems) > 0 ? (int)($width / count($gridItems)) : $width;
-        foreach ($gridItems as $i => $gi) {
-            $mappedResults[] = new LayoutResult(
-                x: $x + ($i * $cellW), y: $y,
-                w: $cellW, h: $gi->h > 0 ? $gi->h : 50,
-                layer: 0,
-                style: $gi->style,
-                children: [],
-            );
+        foreach ($gridItems as $gi) {
+            $mappedResults[] = new LayoutResult(x: $gi->x, y: $gi->y, w: $gi->w, h: $gi->h, style: $gi->style, children: $gi->originalChildren ?? []);
         }
 
         // Auto-height from content
@@ -92,5 +100,44 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             style: $s,
             children: $mappedResults,
         );
+    }
+
+    private function parseTrackSizes(?string $raw, int $containerSize, int $gap = 0): array
+    {
+        if ($raw === null || trim($raw) === '') { return []; }
+        $raw = trim($raw);
+        $sizes = [];
+        if (preg_match('/^repeat\s*\(\s*(\d+)\s*,\s*(.+)\s*\)$/s', $raw, $m)) {
+            $count = (int)$m[1];
+            $sizeStr = trim($m[2]);
+            $px = 0;
+            if (preg_match('/^(\d+)px$/', $sizeStr, $sm)) { $px = (int)$sm[1]; }
+            elseif (preg_match('/^(\d+)%$/', $sizeStr, $sm) && $containerSize > 0) { $px = (int)($containerSize * (int)$sm[1] / 100); }
+            else { $px = (int)$sizeStr; }
+            for ($i = 0; $i < $count; $i++) { $sizes[] = $px; }
+        } else {
+            $parts = preg_split('/\s+/', $raw);
+            foreach ($parts as $p) {
+                $p = trim($p); if ($p === '') { continue; }
+                $px = 0;
+                if (preg_match('/^(\d+)px$/', $p, $m)) { $px = (int)$m[1]; }
+                elseif (preg_match('/^(\d+)%$/', $p, $m) && $containerSize > 0) { $px = (int)($containerSize * (int)$m[1] / 100); }
+                else { $px = (int)$p; }
+                if ($px > 0) { $sizes[] = $px; }
+            }
+        }
+        // Convert to GridTrack[] with gap baked into positions
+        $tracks = [];
+        $pos = 0;
+        foreach ($sizes as $sz) {
+            $t = new \Px\Rendering\Layout\Grid\GridTrack();
+            $t->size = $sz;
+            $t->start = $pos;
+            $pos += $sz;
+            $t->end = $pos;
+            $pos += $gap;
+            $tracks[] = $t;
+        }
+        return $tracks;
     }
 }
