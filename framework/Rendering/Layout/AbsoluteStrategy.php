@@ -2,38 +2,28 @@
 
 namespace Px\Rendering\Layout;
 
-use Px\Rendering\ComputedStyle;
-use Px\Rendering\RenderNode;
-
 /**
  * AbsoluteStrategy — 绝对/固定定位策略接口
  *
- * Phase 3: 签名改为使用 LayoutConstraints + ComputedStyle + FragmentBuilder。
+ * CSS Positioned Layout Module Level 3:
+ * - position:absolute 的 containing block = 最近定位祖先的 padding box
+ * - position:fixed 的 containing block = viewport (0,0)
+ *
+ * 终态：唯一协议为 absoluteLayout(LayoutInput): LayoutResult。
+ *
+ * AOT 兼容：接口方法返回类型明确，无引用参数。
  */
 interface AbsoluteStrategy
 {
     /**
-     * 对单个 RenderNode 执行绝对/固定定位布局计算。
+     * 纯函数绝对定位布局。
      *
-     * @param RenderNode         $node        当前布局节点
-     * @param LayoutConstraints  $constraints 布局约束
-     * @param ComputedStyle|null $style       样式快照
-     * @param FragmentBuilder    $builder     Fragment 构建器
-     */
-    public function resolveAbsolutePositioning(
-        RenderNode         $node,
-        LayoutConstraints  $constraints,
-        ?ComputedStyle     $style,
-        FragmentBuilder    $builder
-    ): void;
-
-    /**
-     * 解析 margin:auto 居中。
+     * 通过 LayoutInput 接收定位祖先坐标和 viewport 尺寸，
+     * 返回绝对定位节点的不可变布局结果。
+     * 不接收 RenderNode 引用，不产生副作用。
      *
-     * @param RenderNode    $node           当前节点
-     * @param ComputedStyle $style          样式快照
-     * @param int           $parentContentW 父内容区宽度
-     * @param int           $parentContentH 父内容区高度
+     * @param LayoutInput $input 纯函数输入（含定位祖先信息）
+     * @return LayoutResult 不可变布局输出
      */
-    public function resolveMarginAuto(RenderNode $node, ?ComputedStyle $style, int $parentContentW, int $parentContentH = 0): void;
+    public function absoluteLayout(LayoutInput $input): LayoutResult;
 }

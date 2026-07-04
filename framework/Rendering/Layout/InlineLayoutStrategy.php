@@ -4,193 +4,60 @@ namespace Px\Rendering\Layout;
 
 use native_types;
 
-use Px\Rendering\LayoutResolver;
-use Px\Rendering\RenderNode;
 use Px\Rendering\ComputedStyle;
 
 /**
  * InlineLayoutStrategy — 内联格式化上下文 (IFC) 布局策略
  *
- * 处理 display:inline 元素的布局，严格遵循 CSS 2.2 §9.4.2 (IFC) 和 §10.8.1 (vertical-align)。
- *
- * 核心功能：
- * 1. 行框模型：收集行内子元素，按行分组形成 line boxes
- * 2. 自动换行：当行内内容宽度超过容器宽度时自动折行
- * 3. vertical-align：支持 baseline|top|middle|bottom 对齐
- * 4. 行高计算：每行高度由最高子元素决定
+ * Pure function 实现：layout(LayoutInput) → LayoutResult。
+ * 不接收 RenderNode，不产生副作用。
  */
 class InlineLayoutStrategy implements LayoutStrategyInterface
 {
-    private LayoutResolver $resolver;
-
-    public function __construct(LayoutResolver $resolver)
+    public function layout(LayoutInput $input): LayoutResult
     {
-        $this->resolver = $resolver;
-    }
+        $c = $input->constraints;
+        $s = $input->style;
+        $children = $input->childResults;
+        $textContent = $input->textContent;
 
-    /**
-     * Pure FragmentBuilder 布局入口。
-     * 直接使用 LayoutConstraints + ComputedStyle。
-     */
-    public function resolveWithBuilder(
-        RenderNode         $node,
-        LayoutConstraints  $constraints,
-        ?ComputedStyle     $style,
-        FragmentBuilder    $builder
-    ): void
-    {
-        // 直接使用 constraints 获取容器信息
-        $parentX = $constraints->parentContentX;
-        $parentY = $constraints->parentContentY;
-        $parentW = $constraints->contentWidth;
-        $parentH = $constraints->contentHeight;
+        $left = $s->left?->toPx() ?? 0;
+        $top = $s->top?->toPx() ?? 0;
+        $parentW = $c->contentWidth;
 
-        $left = $style?->left?->toPx() ?? 0;
-        $top = $style?->top?->toPx() ?? 0;
-        $fs = $style?->fontSize ?? 16;
+        $x = $c->parentContentX + $left;
+        $y = $c->parentContentY + $top;
 
-        // 计算尺寸
-        $w = 0;
-        $h = 0;
-        if ($style !== null) {
-            $w = $style->width->toPx();
-            $h = $style->height->toPx();
+        $w = $s->width->toPx();
+        if ($w <= 0) $w = $parentW;
+        $h = $s->height->toPx();
+        if ($h <= 0 && strlen($textContent) > 0) {
+            $h = $s->lineHeight > 0 ? $s->lineHeight : (int)($s->fontSize * 1.2);
         }
 
-        // ── Text content measurement ──
-        if ($node->content !== null && is_string($node->content) && strlen($node->content) > 0) {
-            $bd = $style?->bold ?? false;
-            $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($node->content, $fs, $bd) : 0);
-            if ($measured > 0 && $w <= 0) {
-                $w = (int)$measured;
-            }
-
-            // Line height: use computedStyle->lineHeight if set, else font-size * 1.2
-            $lh = $style?->lineHeight ?? 0;
-            if ($lh <= 0) $lh = (int)($fs * 1.2);
-            if ($h < $lh) $h = $lh;
+        // IFC: arrange children in a single line
+        $stackedChildren = [];
+        $cursorX = $x;
+        foreach ($children as $cr) {
+            $stackedChildren[] = new LayoutResult(
+                x: $cursorX, y: $y,
+                w: $cr->w, h: $cr->h,
+                visualW: $cr->visualW, visualH: $cr->visualH,
+                layer: $cr->layer,
+                style: $cr->style,
+                children: $cr->children,
+            );
+            $cursorX += $cr->w;
         }
 
-        // ── Layout inline children into line boxes ──
-        if (count($node->children) > 0) {
-            $this->layoutLineBoxes($node, $style, $parentW);
-            // After line box layout, children positions are written to node
-            // Read back for our dimensions
-            $cursorY = 0;
-            $maxLineW = 0;
-            foreach ($node->children as $child) {
-                $bottom = $child->y + $child->h - $parentY;
-                if ($bottom > $cursorY) $cursorY = $bottom;
-                $right = $child->x + $child->w - $parentX;
-                if ($right > $maxLineW) $maxLineW = $right;
-            }
-            if ($cursorY > $h) $h = (int)$cursorY;
-            if ($maxLineW > $w) $w = (int)$maxLineW;
-        }
-
-        // ── Position ──
-        $pos = $style?->position?->value ?? 'static';
-        $x = ($pos === 'static' || $pos === 'relative') ? $parentX + $left : 0;
-        $y = ($pos === 'static' || $pos === 'relative') ? $parentY + $top : 0;
-
-        $builder
-            ->setPosition((int)$x, (int)$y)
-            ->setSize((int)max(0, $w), (int)max(0, $h), $style)
-            ->setLayer($node->layer);
-    }
-
-    /**
-     * Layout children into line boxes (IFC line box model).
-     *
-     * CSS 2.2 §9.4.2:
-     *   Inline elements are laid out in line boxes. When the total width of
-     *   inline elements on a line exceeds the container width, they wrap to
-     *   a new line. Each line box has a baseline for vertical alignment.
-     */
-    private function layoutLineBoxes(RenderNode $node, ?ComputedStyle $style, int $containerW): void
-    {
-        if ($containerW <= 0) {
-            $containerW = 640;
-        }
-
-        $lines = [];
-        $currentLine = [];
-        $currentLineW = 0;
-
-        $padL = $style?->padding?->left->toPx() ?? 0;
-        $padR = $style?->padding?->right->toPx() ?? 0;
-        $availW = $containerW - $padL - $padR;
-
-        foreach ($node->children as $child) {
-            $childW = (int)($child->visualW > 0 ? $child->visualW : $child->w);
-            if ($childW <= 0) $childW = 1;
-
-            if ($currentLineW + $childW > $availW && count($currentLine) > 0) {
-                $lineH = 0;
-                $lineBaseline = 0;
-                foreach ($currentLine as $clChild) {
-                    $ch = (int)($clChild->visualH > 0 ? $clChild->visualH : $clChild->h);
-                    if ($ch > $lineH) $lineH = (int)$ch;
-                    $cb = (int)($ch > 0 ? (int)($ch * 0.8) : 0);
-                    if ($cb > $lineBaseline) $lineBaseline = (int)$cb;
-                }
-                $lines[] = ['children' => $currentLine, 'width' => $currentLineW, 'height' => $lineH, 'baseline' => $lineBaseline];
-                $currentLine = [];
-                $currentLineW = 0;
-            }
-
-            $currentLine[] = $child;
-            $currentLineW += (int)$childW;
-        }
-
-        if (count($currentLine) > 0) {
-            $lineH = 0;
-            $lineBaseline = 0;
-            foreach ($currentLine as $clChild) {
-                $ch = (int)($clChild->visualH > 0 ? $clChild->visualH : $clChild->h);
-                if ($ch > $lineH) $lineH = (int)$ch;
-                $cb = (int)($ch > 0 ? (int)($ch * 0.8) : 0);
-                if ($cb > $lineBaseline) $lineBaseline = (int)$cb;
-            }
-            $lines[] = ['children' => $currentLine, 'width' => $currentLineW, 'height' => $lineH, 'baseline' => $lineBaseline];
-        }
-
-        $cursorY = 0;
-        $maxLineW = 0;
-
-        foreach ($lines as $line) {
-            $cursorX = $padL;
-            $lineH = (int)($line['height']);
-            $lineBaseline = (int)($line['baseline']);
-
-            foreach ($line['children'] as $child) {
-                $child->x = $node->x + $cursorX;
-                $child->y = $node->y + $cursorY;
-
-                $vaStyle = $child->computedStyle?->verticalAlign?->value ?? 'baseline';
-                $childH = $child->visualH > 0 ? $child->visualH : $child->h;
-
-                switch ($vaStyle) {
-                    case 'top':
-                        $child->y = $node->y + $cursorY;
-                        break;
-                    case 'bottom':
-                        $child->y = $node->y + $cursorY + $lineH - $childH;
-                        break;
-                    case 'middle':
-                        $child->y = $node->y + $cursorY + (int)(($lineH - $childH) / 2);
-                        break;
-                    default:
-                        $childBaseline = $childH > 0 ? (int)($childH * 0.8) : 0;
-                        $child->y = $node->y + $cursorY + ($lineBaseline - $childBaseline);
-                        break;
-                }
-
-                $cursorX += (int)($child->visualW > 0 ? $child->visualW : $child->w);
-            }
-
-            $maxLineW = (int)max($maxLineW, $cursorX);
-            $cursorY += (int)$lineH;
-        }
+        return new LayoutResult(
+            x: $x, y: $y, w: $w, h: $h,
+            visualW: $s->visualWidth($w),
+            visualH: $s->visualHeight($h),
+            style: $s,
+            children: $stackedChildren,
+        );
     }
 }
+
+

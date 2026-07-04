@@ -4,192 +4,61 @@ namespace Px\Rendering\Layout;
 
 use native_types;
 
-use Px\Rendering\LayoutResolver;
-use Px\Rendering\RenderNode;
 use Px\Rendering\ComputedStyle;
+use Px\Rendering\CssLength;
 
-/**
- * MultiColumnLayoutStrategy — CSS 多列布局（CSS Multi-column Layout Module Level 1）
- *
- * 简化实现：
- *   1. column-count 指定列数
- *   2. column-width 指定列宽（用于弹性列数）
- *   3. column-gap 指定列间距（默认 16px）
- *   4. 内容在列间流动（从上到下，再从左到右）
- *   5. 列高度由容器高度或内容高度决定
- *
- * Pure FragmentBuilder 实现，直接使用 LayoutConstraints + ComputedStyle。
- */
 class MultiColumnLayoutStrategy implements LayoutStrategyInterface
 {
-    private LayoutResolver $resolver;
-
-    public function __construct(LayoutResolver $resolver)
+    public function layout(LayoutInput $input): LayoutResult
     {
-        $this->resolver = $resolver;
-    }
+        $c = $input->constraints;
+        $s = $input->style;
+        $children = $input->childResults;
 
-    /**
-     * Pure FragmentBuilder 布局入口。
-     */
-    public function resolveWithBuilder(
-        RenderNode         $node,
-        LayoutConstraints  $constraints,
-        ?ComputedStyle     $style,
-        FragmentBuilder    $builder
-    ): void
-    {
-        $parentX = $constraints->parentContentX;
-        $parentY = $constraints->parentContentY;
+        $parentX = $c->parentContentX;
+        $parentY = $c->parentContentY;
 
-        $columnCount = $style?->columnCount ?? 0;
-        $rawColWidth = $style?->columnWidth;
-        $columnWidth = $rawColWidth instanceof \Px\Rendering\CssLength ? $rawColWidth->toPx() : (int)($rawColWidth ?? 0);
-        $rawColGap = $style?->columnGap;
-        $columnGap = $rawColGap instanceof \Px\Rendering\CssLength ? $rawColGap->toPx() : (int)($rawColGap ?? 0);
-        if ($columnGap <= 0) $columnGap = 16;
+        $left = $s->left?->toPx() ?? 0;
+        $top = $s->top?->toPx() ?? 0;
+        $x = $parentX + $left;
+        $y = $parentY + $top;
 
-        // fallback to block if not multi-column
-        if ($columnCount <= 0 && $columnWidth <= 0) {
-            $w = $style?->width->toPx() ?? 0;
-            $h = $style?->height->toPx() ?? 0;
-            $builder->setPosition($parentX, $parentY)->setSize($w, $h, $style)->setLayer($node->layer);
-            return;
-        }
+        $w = $s->width->toPx();
+        if ($w <= 0) $w = $c->contentWidth;
+        $h = $s->height->toPx();
 
-        // ── 容器尺寸 ──
-        $w = $style?->width->toPx() ?? 0;
-        $h = $style?->height->toPx() ?? 0;
+        $columnCount = $s->columnCount > 0 ? $s->columnCount : 1;
+        $rawColWidth = $s->columnWidth;
+        $colWidth = $rawColWidth instanceof CssLength ? $rawColWidth->toPx() : (int)($rawColWidth ?? 0);
+        $rawColGap = $s->columnGap;
+        $colGap = $rawColGap instanceof CssLength ? $rawColGap->toPx() : (int)($rawColGap ?? 0);
+        if ($colGap <= 0) $colGap = 16;
 
-        // 从父容器获取 content-box 宽度
-        $parent = $node->parent;
-        if ($w <= 0 && $parent !== null && $parent->computedStyle !== null) {
-            $ps = $parent->computedStyle;
-            $cpW = $parent->w - $ps->padding->left->toPx() - $ps->padding->right->toPx()
-                   - $ps->borderLeftWidth - $ps->borderRightWidth;
-            if ($cpW > $w) $w = $cpW;
-        }
-        if ($w <= 0) $w = $constraints->contentWidth;
-
-        // ── Padding ──
-        $padL = $style?->padding?->left->toPx() ?? 0;
-        $padR = $style?->padding?->right->toPx() ?? 0;
-        $padT = $style?->padding?->top->toPx() ?? 0;
-        $padB = $style?->padding?->bottom->toPx() ?? 0;
-        $contentW = max(0, $w - $padL - $padR);
-
-        // ── Column count/width ──
-        if ($columnCount > 0) {
-            $effectiveColW = max(1, (int)(($contentW - ($columnCount - 1) * $columnGap) / $columnCount));
-        } elseif ($columnWidth > 0) {
-            $effectiveColW = $columnWidth;
-            $columnCount = max(1, (int)(($contentW + $columnGap) / ($columnWidth + $columnGap)));
+        if ($colWidth <= 0) {
+            $colWidth = (int)(($w - ($columnCount - 1) * $colGap) / $columnCount);
         } else {
-            $effectiveColW = $contentW;
-            $columnCount = 1;
+            $columnCount = max(1, (int)(($w + $colGap) / ($colWidth + $colGap)));
+            $colWidth = (int)(($w - ($columnCount - 1) * $colGap) / $columnCount);
         }
 
-        // ── Layout children ──
-        $children = $node->children;
-        $childCount = count($children);
+        $stackedChildren = [];
+        $perColumn = count($children) > 0 ? (int)ceil(count($children) / $columnCount) : 0;
+        $colH = 0;
 
-        $baseX = $parentX + $padL;
-        $baseY = $parentY + $padT;
+        foreach ($children as $i => $cr) {
+            $colIdx = $perColumn > 0 ? (int)($i / $perColumn) : 0;
+            if ($colIdx >= $columnCount) $colIdx = $columnCount - 1;
+            $posInCol = $i % $perColumn;
 
-        if ($childCount === 0) {
-            $builder->setPosition($parentX, $parentY)->setSize($w, $h > 0 ? $h : 0, $style)->setLayer($node->layer);
-            return;
+            $cx = $x + $colIdx * ($colWidth + $colGap);
+            $cy = $y + $posInCol * $cr->h;
+
+            $stackedChildren[] = new LayoutResult(x: $cx, y: $cy, w: $cr->w, h: $cr->h, visualW: $cr->visualW, visualH: $cr->visualH, layer: $cr->layer, style: $cr->style, children: $cr->children);
+            $colH = max($colH, $cy + $cr->h - $y);
         }
 
-        if ($h > 0) {
-            // Fixed height: fill columns
-            $currentCol = 0;
-            $currentY = $baseY;
+        if ($h <= 0) $h = max(0, $colH);
 
-            foreach ($children as $child) {
-                $childX = $baseX + $currentCol * ($effectiveColW + $columnGap);
-                $child->x = $childX;
-                $child->y = $currentY;
-                $child->w = $effectiveColW;
-
-                $currentY += $child->h;
-
-                // Move to next column if overflowing
-                if ($currentY > $baseY + $h && $currentCol < $columnCount - 1) {
-                    $currentCol++;
-                    $currentY = $baseY;
-                }
-            }
-        } else {
-            // Auto height: distribute children evenly
-            if ($childCount <= $columnCount) {
-                $colIdx = 0;
-                foreach ($children as $child) {
-                    $child->x = $baseX + $colIdx * ($effectiveColW + $columnGap);
-                    $child->y = $baseY;
-                    $child->w = $effectiveColW;
-                    $colIdx++;
-                }
-            } else {
-                $baseCount = (int)($childCount / $columnCount);
-                $remainder = $childCount % $columnCount;
-                $startIdx = 0;
-
-                for ($colIdx = 0; $colIdx < $columnCount; $colIdx++) {
-                    $colChildCount = $baseCount + ($colIdx < $remainder ? 1 : 0);
-                    $colX = $baseX + $colIdx * ($effectiveColW + $columnGap);
-                    $colY = $baseY;
-
-                    for ($i = 0; $i < $colChildCount && $startIdx + $i < $childCount; $i++) {
-                        $child = $children[$startIdx + $i];
-                        $child->x = $colX;
-                        $child->y = $colY;
-                        $child->w = $effectiveColW;
-                        $colY += $child->h;
-                    }
-                    $startIdx += $colChildCount;
-                }
-            }
-        }
-
-        // ── Container height ──
-        if ($h <= 0) {
-            $maxColH = 0;
-            foreach ($children as $child) {
-                $childBottom = $child->y + $child->h;
-                $colH = $childBottom - $baseY;
-                if ($colH > $maxColH) $maxColH = $colH;
-            }
-            $h = $padT + $maxColH + $padB;
-        }
-
-        // ── Sync child coordinates to builder fragments ──
-        $originalChildren = $builder->getChildren();
-        $syncedChildren = [];
-        $_idx = 0;
-        foreach ($node->children as $ch) {
-            $orig = $originalChildren[$_idx] ?? null;
-            $syncedChildren[] = new LayoutFragment(
-                x: $ch->x,
-                y: $ch->y,
-                w: $ch->w,
-                h: $ch->h,
-                visualW: $ch->visualW,
-                visualH: $ch->visualH,
-                layer: $orig?->layer ?? 0,
-                contentWidth: $orig?->contentWidth ?? 0,
-                contentHeight: $orig?->contentHeight ?? 0,
-                style: $ch->computedStyle,
-                children: $orig?->children ?? [],
-            );
-            $_idx++;
-        }
-        $builder->replaceChildren($syncedChildren);
-
-        $builder
-            ->setPosition($parentX, $parentY)
-            ->setSize($w, $h, $style)
-            ->setLayer($node->layer)
-            ->setContentSize($contentW, $h);
+        return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s, children: $stackedChildren);
     }
 }
