@@ -120,6 +120,7 @@ class LayoutResolver
         $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
         if ($hasHScroll || $hasVScroll) {
             $this->scrollContainers[] = $node;
+            $node->isScrollContainer = true;
         }
 
         // Layer inheritance: inherit from parent's computed layer (passed as parameter),
@@ -352,10 +353,8 @@ class LayoutResolver
     {
         foreach ($this->scrollContainers as $node) {
             $cs = $node->computedStyle;
-            $display = $cs?->display?->value ?? 'block';
-            if (!($display === 'flex' || $display === 'inline-flex' || $display === 'grid')) {
-                continue;
-            }
+
+            // Compute contentHeight from children for all scroll containers, not just flex/grid
             $padT = (int)($cs?->padding?->top?->toPx() ?? 0);
             $padB = (int)($cs?->padding?->bottom?->toPx() ?? 0);
             $padL = (int)($cs?->padding?->left?->toPx() ?? 0);
@@ -369,14 +368,14 @@ class LayoutResolver
             }
             $node->contentHeight = (int)max(0, $maxBottom - $childBaseY) + $padB;
 
-            // scrollTop/scrollLeft moved to ScrollState (managed by ScrollManager)
-            // Best-effort clamp: only apply if the dynamic property still exists
+            // Clamp scrollTop (scrollLeft moved to ScrollState)
             if (property_exists($node, 'scrollTop')) {
                 $maxScroll = (int)max($node->contentHeight - $node->h, 0);
                 if ($node->scrollTop > $maxScroll) $node->scrollTop = $maxScroll;
             }
 
             // Horizontal scroll
+            $display = $cs?->display?->value ?? 'block';
             $overflowX2 = $cs?->overflowX?->value ?? $cs?->overflow?->value ?? 'visible';
             $hasHScroll2 = ($overflowX2 === 'auto' || $overflowX2 === 'scroll');
             if ($hasHScroll2) {

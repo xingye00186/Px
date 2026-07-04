@@ -64,3 +64,17 @@ if (file_exists($stubDir . '/skia.stub.php')) {
 
 // ---- 测试框架（全局计数器+test/assert函数+Jest风格扩展）----
 require_once __DIR__ . '/test-framework.php';
+
+// ---- PHP Runtime 模式（启用文本测量等 C++ 函数回退）----
+putenv('PX_PHP_RUNTIME=1');
+
+// ---- PxTest 自动加载器（GoldenTextWidth 等工具类）----
+$pxTestBootstrap = dirname(__DIR__, 2) . '/tools/PxTest/bootstrap.php';
+if (file_exists($pxTestBootstrap)) {
+    require_once $pxTestBootstrap;
+    // 设置黄金宽度表数据文件路径
+    $goldenFile = dirname(__DIR__, 2) . '/tools/PxTest/GoldenMeasure/golden_text_widths.json';
+    if (file_exists($goldenFile) && class_exists('\\PxTest\\Bootstrap\\GoldenTextWidth')) {
+        \PxTest\Bootstrap\GoldenTextWidth::setDataFile($goldenFile);
+    }
+}

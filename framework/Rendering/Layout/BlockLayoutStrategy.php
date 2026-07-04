@@ -167,15 +167,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
             $width = $autoW;
 
-            if (strlen($textContent) > 0) {
-                $fs = $s->fontSize;
-                $bd = $s->bold;
-                $measured = (function_exists('sk_measure_text_width')
-                    ? (int)\sk_measure_text_width($textContent, $fs, $bd) : 0);
-                if ($measured > 0) {
-                    $width = $measured;
-                }
-            }
+            // Text measurement only for inline-level elements, not block fill
+            // (type/text content detection is handled by the caller via style)
         }
 
         $minW = $s->minWidth?->toPx() ?? 0;
@@ -293,7 +286,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             }
 
             $result[] = new LayoutResult(
-                x: $parentX, y: $childY,
+                x: $parentX + $padLeft, y: $childY,
                 w: $chW, h: $chH,
                 visualW: $chW, visualH: $chH,
                 layer: $cr->layer,
