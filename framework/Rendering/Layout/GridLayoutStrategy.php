@@ -6,6 +6,8 @@ use native_types;
 
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\Layout\Grid\GridPlacer;
+use Px\Rendering\Layout\Grid\GridTrack;
+use Px\Rendering\Layout\Grid\GridTracker;
 use Px\Rendering\Layout\Grid\GridItem;
 use Px\Rendering\CssLength;
 use Px\Rendering\CssKeyword;
@@ -15,6 +17,11 @@ use Px\Rendering\CssKeyword;
  *
  * Pure function 实现：layout(LayoutInput) → LayoutResult。
  * 不接收 RenderNode，不产生副作用。
+ *
+ * 多阶段支持：
+ * - fr 轨道：GridTracker 确定性分配（容器剩余空间按比例）
+ * - auto 轨道：Pass 0 用默认尺寸布局，收集内容宽度 →
+ *   needsAnotherPass → Pass 1 以内容宽度重算轨道 → 重新布局
  */
 class GridLayoutStrategy implements LayoutStrategyInterface
 {
@@ -22,7 +29,6 @@ class GridLayoutStrategy implements LayoutStrategyInterface
     {
         // Intrinsic measurement mode
         if ($input->constraints->isIntrinsicMeasurement) {
-            // Grid intrinsic: aggregate children
             $totalW = 0; $maxH = 0;
             foreach ($input->childResults as $cr) { $totalW += $cr->w; if ($cr->h > $maxH) $maxH = $cr->h; }
             return new LayoutResult(w: $totalW, h: $maxH, minContentWidth: $totalW, maxContentWidth: $totalW, preferredContentWidth: $totalW, minContentHeight: $maxH, maxContentHeight: $maxH, preferredContentHeight: $maxH);
@@ -31,6 +37,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $c = $input->constraints;
         $s = $input->style;
         $childResults = $input->childResults;
+        $iteration = $input->iteration;
 
         $parentX = $c->parentContentX;
         $parentY = $c->parentContentY;
@@ -41,7 +48,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $x = $parentX + $left;
         $y = $parentY + $top;
 
-        // Compute width
+        // Compute container width
         $width = $s->width->toPx();
         if ($s->width->isPercent()) {
             $width = $s->width->resolveInContext($parentW);
@@ -51,7 +58,7 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         }
         $width = max(0, $width);
 
-        // Compute height
+        // Compute container height
         $height = $s->height->toPx();
         if ($s->height->isPercent()) {
             $height = $s->height->resolveInContext($c->containerHeight);
@@ -60,12 +67,74 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $rawCols = $s->getRaw('gridTemplateColumns');
         $rawRows = $s->getRaw('gridTemplateRows');
         $gap = (int)($s->getRaw('gap') ?? 0);
-        $cols = $this->parseTrackSizes($rawCols, $width, $gap);
-        $rows = $this->parseTrackSizes($rawRows, $height > 0 ? $height : 0, $gap);
 
-        if (empty($cols)) { $t = new \Px\Rendering\Layout\Grid\GridTrack(); $t->size = max(1, (int)($width / 2)); $t->start = 0; $t->end = $t->size; $cols = [$t]; }
-        if (empty($rows)) { $t = new \Px\Rendering\Layout\Grid\GridTrack(); $t->size = 50; $t->start = 0; $t->end = 50; $rows = [$t]; }
+        // Use GridTracker for full fr/auto/px/%/minmax support
+        $cols = $this->computeTracks($rawCols, $width, $gap);
+        $rows = $this->computeTracks($rawRows, $height > 0 ? $height : 0, $gap);
 
+        // Safe defaults
+        if (empty($cols)) {
+            $t = new GridTrack(); $t->size = max(1, (int)($width / 2)); $t->start = 0; $t->end = $t->size; $cols = [$t];
+        }
+        if (empty($rows)) {
+            $t = new GridTrack(); $t->size = 50; $t->start = 0; $t->end = 50; $rows = [$t];
+        }
+
+        // Detect auto tracks that need content-based sizing
+        $hasAutoCols = false;
+        foreach ($cols as $col) { if ($col->isAuto) { $hasAutoCols = true; break; } }
+        $hasAutoRows = false;
+        foreach ($rows as $row) { if ($row->isAuto) { $hasAutoRows = true; break; } }
+        $hasAuto = $hasAutoCols || $hasAutoRows;
+
+        // ── Content-based auto track override (pass > 0) ──
+        // On pass > 0, childResults have been re-resolved by LayoutResolver
+        // with proper content sizes. Use max per-column/row widths to override auto tracks.
+        $colContentWidths = [];
+        $rowContentHeights = [];
+        if ($hasAutoCols) {
+            $numCols = count($cols);
+            foreach ($childResults as $ci => $cr) {
+                $colIdx = $ci % $numCols;
+                if (!isset($colContentWidths[$colIdx]) || $cr->w > $colContentWidths[$colIdx]) {
+                    $colContentWidths[$colIdx] = $cr->w;
+                }
+            }
+        }
+        if ($hasAutoRows) {
+            $numCols = count($cols);
+            foreach ($childResults as $ri => $cr) {
+                $rowIdx = $numCols > 0 ? (int)($ri / $numCols) : 0;
+                if (!isset($rowContentHeights[$rowIdx]) || $cr->h > $rowContentHeights[$rowIdx]) {
+                    $rowContentHeights[$rowIdx] = $cr->h;
+                }
+            }
+        }
+
+        // On iteration > 0, apply content-based sizes to auto tracks
+        if ($iteration > 0) {
+            if ($hasAutoCols) {
+                foreach ($cols as $ci => $col) {
+                    if ($col->isAuto && isset($colContentWidths[$ci])) {
+                        $col->size = max(0, (int)$colContentWidths[$ci]);
+                        $col->start = 0; $col->end = $col->size; // positions recomputed below
+                    }
+                }
+            }
+            if ($hasAutoRows) {
+                foreach ($rows as $ri => $row) {
+                    if ($row->isAuto && isset($rowContentHeights[$ri])) {
+                        $row->size = max(0, (int)$rowContentHeights[$ri]);
+                        $row->start = 0; $row->end = $row->size;
+                    }
+                }
+            }
+            // Recompute track positions after size changes
+            $this->recomputeTrackPositions($cols, $gap);
+            $this->recomputeTrackPositions($rows, $gap);
+        }
+
+        // Build grid items
         $gridItems = [];
         $numCols = count($cols);
         $idx = 0;
@@ -83,12 +152,33 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             $idx++;
         }
 
+        // Place items
         $placer = new GridPlacer();
         $placer->placeItems($gridItems, $cols, $rows, 'row', 0, 0, $x, $y, $width, $height, 'start', 'start', $gap, $gap);
 
+        // Content-based auto track sizing (Pass 0 → Pass 1)
+        $needsMore = false;
+        if ($hasAuto && $iteration === 0) {
+            // Check if any auto column needs adjustment (content wider than default)
+            $needsAdjustment = false;
+            foreach ($cols as $ci => $col) {
+                if ($col->isAuto && isset($colContentWidths[$ci]) && $colContentWidths[$ci] > $col->size) {
+                    $needsAdjustment = true;
+                    break;
+                }
+            }
+            if ($needsAdjustment) {
+                $needsMore = true;
+            }
+        }
+
+        // Map to LayoutResult
         $mappedResults = [];
         foreach ($gridItems as $gi) {
-            $mappedResults[] = new LayoutResult(x: $gi->x, y: $gi->y, w: $gi->w, h: $gi->h, style: $gi->style, children: $gi->originalChildren ?? []);
+            $mappedResults[] = new LayoutResult(
+                x: $gi->x, y: $gi->y, w: $gi->w, h: $gi->h,
+                style: $gi->style, children: $gi->originalChildren ?? []
+            );
         }
 
         // Auto-height from content
@@ -107,45 +197,33 @@ class GridLayoutStrategy implements LayoutStrategyInterface
             visualH: $s->visualHeight($height),
             style: $s,
             children: $mappedResults,
+            needsAnotherPass: $needsMore,
         );
     }
 
-    private function parseTrackSizes(?string $raw, int $containerSize, int $gap = 0): array
+    /**
+     * Compute track sizes using GridTracker for full CSS Grid spec support.
+     */
+    private function computeTracks(?string $raw, int $containerSize, int $gap = 0): array
     {
-        if ($raw === null || trim($raw) === '') { return []; }
-        $raw = trim($raw);
-        $sizes = [];
-        if (preg_match('/^repeat\s*\(\s*(\d+)\s*,\s*(.+)\s*\)$/s', $raw, $m)) {
-            $count = (int)$m[1];
-            $sizeStr = trim($m[2]);
-            $px = 0;
-            if (preg_match('/^(\d+)px$/', $sizeStr, $sm)) { $px = (int)$sm[1]; }
-            elseif (preg_match('/^(\d+)%$/', $sizeStr, $sm) && $containerSize > 0) { $px = (int)($containerSize * (int)$sm[1] / 100); }
-            else { $px = (int)$sizeStr; }
-            for ($i = 0; $i < $count; $i++) { $sizes[] = $px; }
-        } else {
-            $parts = preg_split('/\s+/', $raw);
-            foreach ($parts as $p) {
-                $p = trim($p); if ($p === '') { continue; }
-                $px = 0;
-                if (preg_match('/^(\d+)px$/', $p, $m)) { $px = (int)$m[1]; }
-                elseif (preg_match('/^(\d+)%$/', $p, $m) && $containerSize > 0) { $px = (int)($containerSize * (int)$m[1] / 100); }
-                else { $px = (int)$p; }
-                if ($px > 0) { $sizes[] = $px; }
-            }
+        if ($raw === null || trim($raw) === '') {
+            return [];
         }
-        // Convert to GridTrack[] with gap baked into positions
-        $tracks = [];
+        return GridTracker::computeTracks(trim($raw), $containerSize, $gap);
+    }
+
+    /**
+     * Recompute start/end positions for tracks after size changes.
+     * @param GridTrack[] $tracks
+     */
+    private function recomputeTrackPositions(array &$tracks, int $gap): void
+    {
         $pos = 0;
-        foreach ($sizes as $sz) {
-            $t = new \Px\Rendering\Layout\Grid\GridTrack();
-            $t->size = $sz;
+        foreach ($tracks as $t) {
             $t->start = $pos;
-            $pos += $sz;
+            $pos += max(0, $t->size);
             $t->end = $pos;
             $pos += $gap;
-            $tracks[] = $t;
         }
-        return $tracks;
     }
 }
