@@ -35,6 +35,24 @@ class LayoutResult
     /** @var LayoutResult[] 子节点结果，顺序 = 输入子节点顺序 */
     public readonly array $children;
 
+    // ── 多阶段布局增强字段 ──
+
+    /** 是否需要额外迭代（Grid/Table 收敛使用） */
+    public readonly bool $needsAnotherPass;
+
+    /** 内在最小宽度 */
+    public readonly int $minContentWidth;
+    /** 内在最大宽度 */
+    public readonly int $maxContentWidth;
+    /** 首选宽度 */
+    public readonly int $preferredContentWidth;
+    /** 内在最小高度 */
+    public readonly int $minContentHeight;
+    /** 内在最大高度 */
+    public readonly int $maxContentHeight;
+    /** 首选高度 */
+    public readonly int $preferredContentHeight;
+
     public function __construct(
         int $x,
         int $y,
@@ -46,7 +64,14 @@ class LayoutResult
         int $contentWidth = 0,
         int $contentHeight = 0,
         ?ComputedStyle $style = null,
-        array $children = []
+        array $children = [],
+        bool $needsAnotherPass = false,
+        int $minContentWidth = 0,
+        int $maxContentWidth = 0,
+        int $preferredContentWidth = 0,
+        int $minContentHeight = 0,
+        int $maxContentHeight = 0,
+        int $preferredContentHeight = 0,
     ) {
         $this->x             = $x;
         $this->y             = $y;
@@ -59,6 +84,13 @@ class LayoutResult
         $this->contentHeight = $contentHeight;
         $this->style         = $style;
         $this->children      = $children;
+        $this->needsAnotherPass      = $needsAnotherPass;
+        $this->minContentWidth       = $minContentWidth;
+        $this->maxContentWidth       = $maxContentWidth;
+        $this->preferredContentWidth = $preferredContentWidth;
+        $this->minContentHeight      = $minContentHeight;
+        $this->maxContentHeight      = $maxContentHeight;
+        $this->preferredContentHeight = $preferredContentHeight;
     }
 
     /**

@@ -107,7 +107,7 @@ class LayoutResolver
      * 纯函数递归布局。
      * 不修改任何 RenderNode 字段，只读其 computedStyle/content/children。
      */
-    private function resolveFragment(RenderNode $node, LayoutConstraints $constraints, int $inheritedLayer = 0, ?int $parentResultX = null, ?int $parentResultY = null): LayoutResult
+    private function resolveFragment(RenderNode $node, LayoutConstraints $constraints, int $inheritedLayer = 0, ?int $parentResultX = null, ?int $parentResultY = null, int $iteration = 0): LayoutResult
     {
         $style = $node->computedStyle;
         $display = $style?->display?->value ?? 'block';
@@ -220,6 +220,10 @@ class LayoutResolver
                 style: $style,
                 textContent: $textContent,
                 childResults: $childResults,
+                childNodes: $node->children,
+                reResolveChild: \Closure::fromCallable([$this, 'reResolveChild']),
+                measureIntrinsic: \Closure::fromCallable([$this, 'measureIntrinsic']),
+                iteration: $iteration,
                 position: $position,
                 ancestorX: $ancestorX,
                 ancestorY: $ancestorY,
@@ -242,9 +246,36 @@ class LayoutResolver
             style: $style,
             textContent: $textContent,
             childResults: $childResults,
+            childNodes: $node->children,
+            reResolveChild: \Closure::fromCallable([$this, 'reResolveChild']),
+            measureIntrinsic: \Closure::fromCallable([$this, 'measureIntrinsic']),
+            iteration: $iteration,
             position: $position,
         );
-        return $this->wrapWithLayer($strategy->layout($input), $nodeLayer);
+        $result = $strategy->layout($input);
+        $result = $this->wrapWithLayer($result, $nodeLayer);
+
+        // Iteration loop: if strategy requests another pass and we haven't exceeded max
+        if ($result->needsAnotherPass && $iteration < 5) {
+            return $this->resolveFragment($node, $constraints, $inheritedLayer, $parentResultX, $parentResultY, $iteration + 1);
+        }
+
+        return $result;
+    }
+
+    public function reResolveChild(RenderNode $child, LayoutConstraints $newConstraints): LayoutResult
+    {
+        return $this->resolveFragment($child, $newConstraints, iteration: 1);
+    }
+
+    public function measureIntrinsic(RenderNode $node): LayoutResult
+    {
+        $constraints = new LayoutConstraints(
+            containerWidth: PHP_INT_MAX,
+            containerHeight: PHP_INT_MAX,
+            isIntrinsicMeasurement: true,
+        );
+        return $this->resolveFragment($node, $constraints, iteration: 1);
     }
 
     /**

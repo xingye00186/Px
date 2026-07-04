@@ -42,6 +42,9 @@ class LayoutConstraints
     /** 强制重算所有子节点（父容器尺寸变化时 Flex/Grid 必须置 true） */
     public readonly bool $forceRelayoutChildren;
 
+    /** 是否为内在尺寸测量模式（宽松约束下计算自然尺寸） */
+    public readonly bool $isIntrinsicMeasurement;
+
     public function __construct(
         int $containerWidth = 0,
         int $containerHeight = 0,
@@ -58,6 +61,7 @@ class LayoutConstraints
         int $borderBottom = 0,
         int $borderLeft = 0,
         bool $forceRelayoutChildren = false,
+        bool $isIntrinsicMeasurement = false,
     ) {
         $this->containerWidth  = $containerWidth;
         $this->containerHeight = $containerHeight;
@@ -74,6 +78,7 @@ class LayoutConstraints
         $this->borderBottom    = $borderBottom;
         $this->borderLeft      = $borderLeft;
         $this->forceRelayoutChildren = $forceRelayoutChildren;
+        $this->isIntrinsicMeasurement = $isIntrinsicMeasurement;
     }
 
     /**
