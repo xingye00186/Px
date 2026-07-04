@@ -2,6 +2,8 @@
 
 namespace Px\Rendering\Layout;
 
+use native_types;
+
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\RenderNode;
 

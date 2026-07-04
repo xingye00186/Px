@@ -2,6 +2,8 @@
 
 namespace Px\Rendering\Layout\Flex;
 
+use native_types;
+
 use Px\Rendering\ComputedStyle;
 
 class FlexItem

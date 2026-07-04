@@ -2,6 +2,7 @@
 
 namespace Px\Rendering\Layout;
 
+use native_types;
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\Layout\Flex\FlexItem;
 use Px\Rendering\Layout\Flex\FlexLineBreaker;
@@ -15,7 +16,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         if ($input->constraints->isIntrinsicMeasurement) {
             // Aggregate children natural sizes
             $totalW = 0; $maxH = 0;
-            foreach ($input->childResults as $cr) { $totalW += $cr->w; if ($cr->h > $maxH) $maxH = $cr->h; }
+            foreach ($input->childResults as $cr) {
+                if ($cr instanceof LayoutResult) { $cr = objval($cr, LayoutResult::class); }
+                $totalW += $cr->w; if ($cr->h > $maxH) $maxH = $cr->h;
+            }
             return new LayoutResult(w: $totalW, h: $maxH, minContentWidth: $totalW, maxContentWidth: $totalW, preferredContentWidth: $totalW, minContentHeight: $maxH, maxContentHeight: $maxH, preferredContentHeight: $maxH);
         }
         $c = $input->constraints;
@@ -50,7 +54,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $flexItems = [];
         $flexItemData = [];
         foreach ($childResults as $cr) {
-            $cr = objval($cr, LayoutResult::class);
+            if ($cr instanceof LayoutResult) { $cr = objval($cr, LayoutResult::class); }
             $cs = $cr->style;
             if ($cs === null) continue;
             // Use resolved flex shorthand as fallback when individual props not set
@@ -104,6 +108,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
         // ── Step 2: Apply flex-basis ──
         foreach ($sortedFlexItems as $fi) {
+            if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); }
             if ($fi->basis > 0) { if ($isRow) $fi->w = $fi->basis; else $fi->h = $fi->basis; }
         }
 
@@ -118,17 +123,18 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         $lineMaxCrosses = [];
         foreach ($lineGroups as $lineIdx => $lineItems) {
             $lineTotal = 0;
-            foreach ($lineItems as $fi) { $lineTotal += $isRow ? $fi->w : $fi->h; }
+            foreach ($lineItems as $fi) { if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); } $lineTotal += $isRow ? $fi->w : $fi->h; }
 
             // 4a. Flex-grow (CSS spec: distribute remaining space; works when lineTotal==0 too)
             if ($lineTotal < $containerMain) {
                 $remaining = $containerMain - $lineTotal;
                 $growTotal = 0;
-                foreach ($lineItems as $fi) { $growTotal += $fi->grow; }
+                foreach ($lineItems as $fi) { if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); } $growTotal += $fi->grow; }
                 if ($growTotal > 0) {
                     // If lineTotal == 0 and all items are flex-grow, distribute full container size
                     if ($lineTotal === 0) {
                         foreach ($lineItems as $fi) {
+                            if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); }
                             if ($fi->grow > 0) {
                                 $share = (int)($containerMain * $fi->grow / $growTotal);
                                 if ($isRow) $fi->w = $share; else $fi->h = $share;
@@ -136,6 +142,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                         }
                     } else {
                         foreach ($lineItems as $fi) {
+                            if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); }
                             if ($fi->grow > 0) {
                                 $extra = (int)($remaining * $fi->grow / $growTotal);
                                 if ($isRow) $fi->w += $extra; else $fi->h += $extra;
@@ -149,9 +156,10 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             if ($lineTotal > $containerMain) {
                 $overflow = $lineTotal - $containerMain;
                 $shrinkTotal = 0;
-                foreach ($lineItems as $fi) { $shrinkTotal += $fi->shrink; }
+                foreach ($lineItems as $fi) { if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); } $shrinkTotal += $fi->shrink; }
                 if ($shrinkTotal > 0) {
                     foreach ($lineItems as $fi) {
+                        if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); }
                         if ($fi->shrink > 0) {
                             $reduction = (int)($overflow * $fi->shrink / $shrinkTotal);
                             if ($isRow) $fi->w = max(0, $fi->w - $reduction);
@@ -165,6 +173,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $lineFinal = 0;
             $lineMaxCross = 0;
             foreach ($lineItems as $fi) {
+                if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); }
                 $lineFinal += $isRow ? (int)$fi->w : (int)$fi->h;
                 $cross = (int)($isRow ? $fi->h : $fi->w);
                 if ($cross > $lineMaxCross) $lineMaxCross = $cross;
@@ -185,6 +194,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
 
             // 4e. Apply stretch to fill line maxCross; allow from zero (CSS stretch spec)
             foreach ($lineItems as $fi) {
+                if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); }
                 $effAlign = $this->effectiveAlign($fi, $align);
                 $crossSize = $isRow ? $fi->h : $fi->w;
                 if ($effAlign === 'stretch' && $crossSize < $lineMaxCross) {
@@ -195,8 +205,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             // Recalculate maxCross after stretch, keep containerCross for single-line (CSS §9.5.1)
             $lineMaxCross = 0;
             foreach ($lineItems as $fi) {
+                if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); }
                 $cross = (int)($isRow ? $fi->h : $fi->w);
-                if (is_object($fi->h)) { trigger_error('DIAG_FIX fi h=' . get_class($fi->h) . CssKeyword . ' id=' . spl_object_id($fi->h), E_USER_WARNING); }
                 if ($cross > $lineMaxCross) $lineMaxCross = $cross;
             }
             if ($totalLines === 1 && (int)$containerCross > 0 && (int)$lineMaxCross < (int)$containerCross) {
@@ -209,6 +219,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 // Reverse direction: main-start = right/bottom edge
                 $cursorMain = $mainBase + $containerMain - (int)$mainStart;
                 foreach ($lineItems as $fi) {
+                    if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); }
                     if ($isRow) {
                         $cursorMain -= $fi->w;
                         $fi->x = (int)$cursorMain;
@@ -221,14 +232,14 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
                 }
             } else {
                 $cursorMain = $mainBase + (int)$mainStart;
-                for ($fiIdx = 0; $fiIdx < count($lineItems); $fiIdx++) {
-                    $fi = objval($lineItems[$fiIdx], FlexItem::class);
+                foreach ($lineItems as $fi) {
+                    if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); }
                     if ($isRow) {
                         $fi->x = (int)$cursorMain;
-                        $cursorMain += (int)$fi->w + (int)$spaceBetween + $gap;
+                        $cursorMain += $fi->w + (int)$spaceBetween + $gap;
                     } else {
                         $fi->y = (int)$cursorMain;
-                        $cursorMain += (int)$fi->h + (int)$spaceBetween + $gap;
+                        $cursorMain += $fi->h + (int)$spaceBetween + $gap;
                     }
                 }
             }
@@ -257,6 +268,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $lineCrossOffset = $lineCrossOffsets[$lineIdx];
             $lineMaxCross = $lineMaxCrosses[$lineIdx];
             foreach ($lineItems as $itemIdx => $fi) {
+                if ($fi instanceof FlexItem) { $fi = objval($fi, FlexItem::class); }
                 $effAlign = $this->effectiveAlign($fi, $align);
                 $crossSize = $isRow ? $fi->h : $fi->w;
 
@@ -297,7 +309,7 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         // Re-resolve flex:1 nested containers (flex-grow changes child sizes)
         if ($h <= 0 && count($mappedResults) > 0) {
             $maxBottom = $y;
-            foreach ($mappedResults as $cr) { $b = $cr->y + $cr->h; if ($b > $maxBottom) $maxBottom = $b; }
+            foreach ($mappedResults as $cr) { if ($cr instanceof LayoutResult) { $cr = objval($cr, LayoutResult::class); } $b = $cr->y + $cr->h; if ($b > $maxBottom) $maxBottom = $b; }
             $h = max(0, $maxBottom - $y);
         }
         return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s, children: $mappedResults);
