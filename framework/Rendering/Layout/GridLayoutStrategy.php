@@ -22,7 +22,10 @@ class GridLayoutStrategy implements LayoutStrategyInterface
     {
         // Intrinsic measurement mode
         if ($input->constraints->isIntrinsicMeasurement) {
-            return new LayoutResult(w: 0, h: 0, minContentWidth: 0, maxContentWidth: 99999, preferredContentWidth: 0, minContentHeight: 0, maxContentHeight: 99999, preferredContentHeight: 0);
+            // Grid intrinsic: aggregate children
+            $totalW = 0; $maxH = 0;
+            foreach ($input->childResults as $cr) { $totalW += $cr->w; if ($cr->h > $maxH) $maxH = $cr->h; }
+            return new LayoutResult(w: $totalW, h: $maxH, minContentWidth: $totalW, maxContentWidth: $totalW, preferredContentWidth: $totalW, minContentHeight: $maxH, maxContentHeight: $maxH, preferredContentHeight: $maxH);
         }
 
         $c = $input->constraints;

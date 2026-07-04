@@ -18,11 +18,10 @@ class InlineLayoutStrategy implements LayoutStrategyInterface
     {
         // Intrinsic measurement mode
         if ($input->constraints->isIntrinsicMeasurement) {
-            $s = $input->style;
             $text = $input->textContent;
-            $fs = $s->fontSize > 0 ? $s->fontSize : 16;
-            $w = strlen($text) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($text, $fs, $s->bold) : (int)(strlen($text) * $fs * 0.6)) : 0;
-            $h = strlen($text) > 0 ? ($s->lineHeight > 0 ? $s->lineHeight : (int)($fs * 1.2)) : 0;
+            $fs = $input->style->fontSize > 0 ? $input->style->fontSize : 16;
+            $w = strlen($text) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($text, $fs, $input->style->bold) : (int)(strlen($text) * $fs * 0.6)) : 0;
+            $h = strlen($text) > 0 ? ($input->style->lineHeight > 0 ? $input->style->lineHeight : (int)($fs * 1.2)) : 0;
             return new LayoutResult(w: max(0, $w), h: max(0, $h), minContentWidth: max(0, $w), maxContentWidth: max(0, $w), preferredContentWidth: max(0, $w), minContentHeight: max(0, $h), maxContentHeight: max(0, $h), preferredContentHeight: max(0, $h));
         }
 

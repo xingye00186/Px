@@ -13,7 +13,10 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
     {
         // Intrinsic measurement mode
         if ($input->constraints->isIntrinsicMeasurement) {
-            return new LayoutResult(w: 0, h: 0, minContentWidth: 0, maxContentWidth: 99999, preferredContentWidth: 0, minContentHeight: 0, maxContentHeight: 99999, preferredContentHeight: 0);
+            // MultiColumn intrinsic: aggregate children
+            $totalW = 0; $maxH = 0;
+            foreach ($input->childResults as $cr) { $totalW += $cr->w; if ($cr->h > $maxH) $maxH = $cr->h; }
+            return new LayoutResult(w: $totalW, h: $maxH, minContentWidth: $totalW, maxContentWidth: $totalW, preferredContentWidth: $totalW, minContentHeight: $maxH, maxContentHeight: $maxH, preferredContentHeight: $maxH);
         }
 
         $c = $input->constraints;
@@ -49,12 +52,6 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
         $stackedChildren = [];
         $perColumn = count($children) > 0 ? (int)ceil(count($children) / $columnCount) : 0;
         $colH = 0;
-        $needsMore = false;
-
-        // Multi-pass: first pass distributes, subsequent passes balance
-        if ($input->iteration === 0) {
-            $needsMore = true; // Request another pass for column balancing
-        }
 
         foreach ($children as $i => $cr) {
             $colIdx = $perColumn > 0 ? (int)($i / $perColumn) : 0;
@@ -70,6 +67,6 @@ class MultiColumnLayoutStrategy implements LayoutStrategyInterface
 
         if ($h <= 0) $h = max(0, $colH);
 
-        return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s, children: $stackedChildren, needsAnotherPass: $needsMore);
+        return new LayoutResult(x: $x, y: $y, w: $w, h: $h, visualW: $s->visualWidth($w), visualH: $s->visualHeight($h), style: $s, children: $stackedChildren);
     }
 }
