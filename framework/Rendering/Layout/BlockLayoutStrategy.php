@@ -103,17 +103,30 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 $x, $y, $w, $s, $children, $textContent, $parentW
             );
         } else {
+            // Also handle inline children in non-block display containers (e.g., <p>)
+            $inlineBufferPassthrough = [];
             foreach ($children as $cr) {
-                $stackedChildren[] = new LayoutResult(
-                    x: $cr->x, y: $cr->y,
-                    w: $cr->w, h: $cr->h,
-                    visualW: $cr->visualW, visualH: $cr->visualH,
-                    layer: $cr->layer,
-                    contentWidth: $cr->contentWidth,
-                    contentHeight: $cr->contentHeight,
-                    style: $cr->style,
-                    children: $cr->children,
-                );
+                $cDisplay = $cr->style?->display?->value ?? 'block';
+                if ($cDisplay === 'inline' || $cDisplay === 'inline-block') {
+                    $inlineBufferPassthrough[] = $cr;
+                } else {
+                    if (!empty($inlineBufferPassthrough)) {
+                        $this->flushInlineBuffer($inlineBufferPassthrough, $x, 0, $w, $y, $stackedChildren, $parentW);
+                    }
+                    $stackedChildren[] = new LayoutResult(
+                        x: $cr->x, y: $cr->y,
+                        w: $cr->w, h: $cr->h,
+                        visualW: $cr->visualW, visualH: $cr->visualH,
+                        layer: $cr->layer,
+                        contentWidth: $cr->contentWidth,
+                        contentHeight: $cr->contentHeight,
+                        style: $cr->style,
+                        children: $cr->children,
+                    );
+                }
+            }
+            if (!empty($inlineBufferPassthrough)) {
+                $this->flushInlineBuffer($inlineBufferPassthrough, $x, 0, $w, $y, $stackedChildren, $parentW);
             }
         }
 
@@ -224,6 +237,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $prevMarginBottom = 0;
         $prevCollapsible = false;
 
+        // ── IFC: inline formatting context buffer ──
+        // Collect consecutive inline/inline-block items and flush them as
+        // horizontally-wrapped lines (CSS §9.4.2 Inline formatting context).
+        $inlineBuffer = [];
+
         foreach ($childResults as $cr) {
             $childStyle = $cr->style;
             $childDisplay = $childStyle?->display?->value ?? 'block';
@@ -232,6 +250,18 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             if ($childPosition === 'absolute' || $childPosition === 'fixed' || $childDisplay === 'none') {
                 $result[] = $cr;
                 continue;
+            }
+
+            $isInline = ($childDisplay === 'inline' || $childDisplay === 'inline-block');
+
+            if ($isInline) {
+                $inlineBuffer[] = $cr;
+                continue;
+            }
+
+            // Block item: flush inline buffer first
+            if (!empty($inlineBuffer)) {
+                $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW);
             }
 
             $mTop = $childStyle?->margin?->top->toPx() ?? 0;
@@ -307,6 +337,105 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $prevCollapsible = $isCollapsible;
         }
 
+        // Flush remaining inline buffer at end of children
+        if (!empty($inlineBuffer)) {
+            $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW);
+        }
+
         return $result;
+    }
+
+    /**
+     * Layout inline/inline-block items in a horizontal flow with line wrapping.
+     *
+     * CSS §9.4.2: In inline formatting context, boxes are placed horizontally
+     * one after another. When the remaining space on a line is insufficient,
+     * a new line is started below.
+     *
+     * @param array $buffer Array of LayoutResult (inline items)
+     * @param int $parentX Absolute X of parent
+     * @param int $padLeft Parent padding-left
+     * @param int $containerW Container content width
+     * @param int $startY Starting Y position
+     * @return array ['items' => LayoutResult[], 'nextY' => int]
+     */
+    private function layoutInlineBuffer(array $buffer, int $parentX, int $padLeft, int $containerW, int $startY): array
+    {
+        error_log('[IFC_DEBUG] layoutInlineBuffer: buf=' . count($buffer) . ' pX=' . $parentX . ' pL=' . $padLeft . ' cW=' . $containerW . ' sY=' . $startY);
+        if (count($buffer) > 0) {
+            $first = $buffer[0];
+            error_log('[IFC_DEBUG] first item: w=' . $first->w . ' h=' . $first->h . ' display=' . ($first->style?->display?->value ?? '?'));
+        }
+        $availableW = $containerW;
+        $result = [];
+        $cursorX = $padLeft; // relative to parent content area
+        $cursorY = 0; // relative offset within inline block
+        $lineMaxH = 0;
+
+        foreach ($buffer as $i => $cr) {
+            $cStyle = $cr->style;
+            $mLeft = $cStyle?->margin?->left->toPx() ?? 0;
+            $mRight = $cStyle?->margin?->right->toPx() ?? 0;
+            $mTop = $cStyle?->margin?->top->toPx() ?? 0;
+            $mBottom = $cStyle?->margin?->bottom->toPx() ?? 0;
+
+            $itemTotalW = $cr->w + $mLeft + $mRight;
+            $itemH = $cr->h + $mTop + $mBottom;
+
+            // Check if item fits on current line (CSS Text §3: soft wrap break)
+            $wouldExceed = ($cursorX + $itemTotalW > $availableW);
+            if ($i < 5 || $i % 20 === 0) {
+                error_log('[IFC_DEBUG] item[' . $i . '] cursorX=' . $cursorX . ' itemW=' . $itemTotalW . ' exceed=' . ($wouldExceed ? 'YES' : 'no') . ' lineMaxH=' . $lineMaxH . ' cursorY=' . $cursorY);
+            }
+            if ($wouldExceed && $cursorX > $padLeft) {
+                // Wrap to next line
+                $cursorY += $lineMaxH;
+                $cursorX = $padLeft;
+                $lineMaxH = 0;
+                error_log('[IFC_DEBUG] WRAP to line: cursorY=' . $cursorY);
+            }
+
+            // Place item
+            $itemX = $parentX + $cursorX + $mLeft;
+            $itemY = $startY + $cursorY + $mTop;
+
+            $result[] = new LayoutResult(
+                x: $itemX,
+                y: $itemY,
+                w: $cr->w,
+                h: $cr->h,
+                visualW: $cr->visualW,
+                visualH: $cr->visualH,
+                layer: $cr->layer,
+                style: $cStyle,
+                children: $cr->children,
+            );
+
+            $cursorX += $itemTotalW;
+            if ($itemH > $lineMaxH) $lineMaxH = $itemH;
+        }
+
+        $nextY = $startY + $cursorY + $lineMaxH;
+
+        error_log('[IFC_DEBUG] result: items=' . count($result) . ' nextY=' . $nextY);
+
+        return ['items' => $result, 'nextY' => $nextY];
+    }
+
+    private function flushInlineBuffer(array &$inlineBuffer, int $parentX, int $padLeft, int $containerW, int &$stackY, array &$result, int $parentW): void
+    {
+        // containerW is the block's own computed width; for auto-width blocks with only
+        // inline children, this can be 0. Fall back to parentW (constraints containerWidth).
+        // If both are 0, use a generous fallback (inline items should at least fill one line).
+        $availW = $containerW;
+        if ($availW <= 0) $availW = $parentW;
+        if ($availW <= 0) $availW = 10000; // generous fallback: inline items on single line
+        error_log('[IFC_DEBUG2] flushInlineBuffer: buf=' . count($inlineBuffer) . ' containerW=' . $containerW . ' parentW=' . $parentW . ' availW=' . $availW);
+        $inlineResult = $this->layoutInlineBuffer($inlineBuffer, $parentX, $padLeft, $availW, $stackY);
+        foreach ($inlineResult['items'] as $item) $result[] = $item;
+        $stackY = $inlineResult['nextY'];
+        $inlineBuffer = [];
+        $prevMarginBottom = 0;
+        $prevCollapsible = false;
     }
 }
