@@ -67,6 +67,12 @@ class GridLayoutStrategy implements LayoutStrategyInterface
         $rawCols = $s->getRaw('gridTemplateColumns');
         $rawRows = $s->getRaw('gridTemplateRows');
         $gap = (int)($s->getRaw('gap') ?? 0);
+        if ($rawCols !== null && !is_string($rawCols)) {
+            $rawCols = $rawCols instanceof \Px\Rendering\CssKeyword ? $rawCols->value : (string)$rawCols;
+        }
+        if ($rawRows !== null && !is_string($rawRows)) {
+            $rawRows = $rawRows instanceof \Px\Rendering\CssKeyword ? $rawRows->value : (string)$rawRows;
+        }
 
         // Use GridTracker for full fr/auto/px/%/minmax support
         $cols = $this->computeTracks($rawCols, $width, $gap);
