@@ -1,14 +1,14 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-05 09:21:52 | **总耗时**: 670.6s
+**运行时间**: 2026-07-05 09:25:04 | **总耗时**: 631s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
 | case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 447diff 🔴442 | ⏭️ | ❌ 失败 | 2.8s |
 | case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 331diff 🔴229 | ⏭️ | ❌ 失败 | 1.7s |
-| case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 360diff 🔴313 | ⏭️ | ❌ 失败 | 1.8s |
+| case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 360diff 🔴313 | ⏭️ | ❌ 失败 | 1.7s |
 | case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 6issue | ⚠️ 2 | 372diff 🔴251 | ⏭️ | ❌ 失败 | 1.5s |
-| case-005-grid-layout | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | 201diff 🔴181 | ⏭️ | ❌ 失败 | 40.9s |
+| case-005-grid-layout | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.4s |
 | case-006-typography | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | 697diff 🔴659 | ⏭️ | ❌ 失败 | 8.9s |
 | case-007-border-styles | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 2issue | ✅ | 415diff 🔴364 | ⏭️ | ❌ 失败 | 4.8s |
 | case-008-box-shadow | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 3issue | ✅ | 117diff 🔴108 | ⏭️ | ❌ 失败 | 9.9s |
@@ -60,7 +60,7 @@
 | case-054-inline-block-nest | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 1issue | ✅ | 19diff 🔴13 | ⏭️ | ❌ 失败 | 7.8s |
 | case-055-sticky-multi | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 1issue | ⚠️ 3 | 25diff 🔴17 | ⏭️ | ❌ 失败 | 10.6s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 670.6s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 631s)
 
 ## 回归判定
 
@@ -73,10 +73,6 @@
 > - case-003-basic-block major 10->46
 > - case-004-flex-layout geometry 357->368
 > - case-004-flex-layout major 13->116
-> - case-005-grid-layout geometry 0->186
-> - case-005-grid-layout mismatch 0->15
-> - case-005-grid-layout critical 0->181
-> - case-005-grid-layout major 0->1
 > - case-006-typography critical 658->659
 > - case-007-border-styles critical 363->364
 > - case-008-box-shadow critical 107->108
@@ -135,7 +131,7 @@
 > - case-054-inline-block-nest critical 12->13
 > - case-055-sticky-multi critical 16->17
 > - overflow 239->244
-> - time 9.1->670.6 (73.7x)
+> - time 9.1->631 (69.3x)
 >
 > ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
 
@@ -143,29 +139,29 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 94.7% | 8061/8515 |
-| width | 96.8% | 8244/8515 |
-| position | 100% | 8515/8515 |
-| opacity | 100% | 8515/8515 |
-| background-color | 99.7% | 8462/8485 |
-| top | 100% | 8445/8445 |
-| left | 100% | 8445/8445 |
-| text-align | 100% | 8324/8324 |
-| display | 100% | 8247/8247 |
-| font-weight | 100% | 7529/7529 |
+| height | 94.6% | 7948/8398 |
+| width | 96.9% | 8136/8398 |
+| position | 100% | 8398/8398 |
+| opacity | 100% | 8398/8398 |
+| background-color | 99.7% | 8345/8368 |
+| top | 100% | 8329/8329 |
+| left | 100% | 8329/8329 |
+| text-align | 100% | 8207/8207 |
+| display | 100% | 8188/8188 |
+| font-weight | 100% | 7412/7412 |
 | color | 100% | 6011/6011 |
 | font-size | 100% | 243/243 |
-| margin-bottom | 100% | 197/197 |
+| margin-bottom | 100% | 193/193 |
 | padding-top | 100% | 187/187 |
 | padding-bottom | 100% | 185/185 |
-| border-radius | 100% | 172/172 |
+| border-radius | 100% | 165/165 |
 | padding-left | 100% | 147/147 |
 | padding-right | 100% | 147/147 |
 | border-width | 100% | 130/130 |
 | margin-top | 100% | 63/63 |
-| align-items | 100% | 57/57 |
-| justify-content | 100% | 48/48 |
-| gap | 88.4% | 38/43 |
+| align-items | 100% | 50/50 |
+| gap | 87.8% | 36/41 |
+| justify-content | 100% | 41/41 |
 | flex-direction | 100% | 22/22 |
 | margin-left | 73.7% | 14/19 |
 | margin-right | 68.8% | 11/16 |
@@ -173,7 +169,6 @@
 | text-decoration-line | 0% | 0/6 |
 | flex-wrap | 100% | 6/6 |
 | min-width | 100% | 3/3 |
-| grid-template-columns | 0% | 0/2 |
 | white-space | 100% | 2/2 |
 | text-decoration-color | 0% | 0/1 |
 | text-decoration-style | 0% | 0/1 |
@@ -207,7 +202,7 @@
 | case-002-auto-height | 0 | **229** | **99** | 3 | 0 | 0 |
 | case-003-basic-block | 0 | **313** | **46** | 0 | 0 | 0 |
 | case-004-flex-layout | 0 | **251** | **116** | 4 | 0 | 2 |
-| case-005-grid-layout | 0 | **181** | **1** | 15 | 0 | 0 |
+| case-005-grid-layout | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-006-typography | 0 | **659** | **23** | 7 | 0 | 0 |
 | case-007-border-styles | 0 | **364** | **11** | 31 | 0 | 0 |
 | case-008-box-shadow | 0 | **108** | **3** | 4 | 0 | 0 |

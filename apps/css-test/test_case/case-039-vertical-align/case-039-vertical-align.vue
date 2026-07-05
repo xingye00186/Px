@@ -17,7 +17,6 @@
 class Case039VerticalAlign extends ReactiveComponent {}
 </script>
 <style>
-* {margin:0; padding:0; box-sizing:border-box;}
 .bx-header {font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px;}
 .va-row {padding:16px; background:#f9f9f9; border-radius:6px; border:1px solid #e0e0e0; margin-bottom:16px;}
 .va-label {font-size:14px; color:#666; margin-bottom:8px;}

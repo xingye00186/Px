@@ -87,6 +87,18 @@ class LayoutDumpStep implements PipelineStepInterface
             }
         }
 
+        // ── * 选择器 line-height:0 强制检查（CssTest Layout Spec）──
+        // 所有测试用例的 * 选择器必须包含 line-height:0，以消除浏览器默认行高
+        // 对容器高度的干扰。缺少时阻断管道。
+        if (!empty($htmlFiles)) {
+            $html = @file_get_contents($htmlFiles[0]);
+            if ($html !== false && preg_match('/\*\s*\{[^}]*line-height\s*:\s*0[^}]*\}/s', $html) !== 1) {
+                echo "  [LH0_SPEC_FAIL] " . basename($htmlFiles[0]) . " missing 'line-height:0' in * selector.\n";
+                echo "    Add line-height:0 to * { margin:0; padding:0; box-sizing:border-box; line-height:0; }\n";
+                return StepResult::err('dump_layout', '* selector must include line-height:0');
+            }
+        }
+
         // ── 字体属性强制检查（CssTest Layout Spec）──
         // 测试用例中禁止任何字体属性。
         // 注意：旧测试用例(case-001~032)的<style>基线块含 font-size/font-family 等
