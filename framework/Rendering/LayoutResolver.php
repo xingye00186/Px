@@ -144,8 +144,14 @@ class LayoutResolver
             $bT = $style?->borderTopWidth ?? 0;
             $bB = $style?->borderBottomWidth ?? 0;
 
-            $effectiveW = $node->w > 0 ? $node->w : (int)($style?->width->toPx() ?? 0);
-            $cbW = $effectiveW > 0 ? (int)max(0, (int)($effectiveW - $padL - $padR - $bL - $bR)) : (int)($constraints->contentWidth);
+            $rawW = $node->w > 0 ? $node->w : (int)($style?->width->toPx() ?? 0);
+            // 百分比宽度不能用 toPx() 作为有效宽度
+            $effectiveW = ($rawW > 0 && !($style?->width?->isPercent() ?? false)) ? $rawW : 0;
+            // 子容器可用宽度：如果当前节点有显式/像素宽度，扣减 padding+border 后传递；
+            // 否则从约束链获取父容器内容宽度，再扣减当前节点的 padding+border
+            $cbW = $effectiveW > 0
+                ? (int)max(0, (int)($effectiveW - $padL - $padR - $bL - $bR))
+                : (int)max(0, (int)($constraints->contentWidth - $padL - $padR - $bL - $bR));
             $cbH = $node->h > 0 ? (int)max(0, (int)($node->h - $padT - $padB - $bT - $bB)) : (int)($constraints->contentHeight);
             $childOffX = $node->x + $padL + $bL;
             $childOffY = $node->y + $padT + $bT;

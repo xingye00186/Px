@@ -221,7 +221,7 @@ class ComputedStyle
             'overflow' => new CssKeyword('visible'),
             'overflowX' => new CssKeyword('visible'),
             'overflowY' => new CssKeyword('visible'),
-            'boxSizing' => new CssKeyword('content-box'),
+            'boxSizing' => new CssKeyword('border-box'),
             'flexDirection' => new CssKeyword('row'),
             'flexWrap' => new CssKeyword('nowrap'),
             'alignItems' => new CssKeyword('stretch'),
