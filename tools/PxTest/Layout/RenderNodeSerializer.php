@@ -206,6 +206,20 @@ class RenderNodeSerializer
             $style['height'] = $node->h;
         }
 
+        // border-box: 用布局 content 尺寸替换 CSS 尺寸（浏览器 getComputedStyle
+        // 对 border-box 元素返回 content-box 尺寸，见 CSS 2.2 §9.2.4）
+        if ($node->computedStyle !== null) {
+            $boxSizing = $exportData['boxSizing'] ?? 'content-box';
+            if ($boxSizing === 'border-box') {
+                if (isset($style['width']) && $style['width'] !== $node->w) {
+                    $style['width'] = $node->w;
+                }
+                if (isset($style['height']) && $style['height'] !== $node->h) {
+                    $style['height'] = $node->h;
+                }
+            }
+        }
+
         // bg 默认 -1 表示无显式背景/透明
         if (!isset($style['bg'])) {
             $style['bg'] = -1;
