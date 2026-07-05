@@ -1,13 +1,13 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-05 09:09:55 | **总耗时**: 687.6s
+**运行时间**: 2026-07-05 09:21:52 | **总耗时**: 670.6s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
 | case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 3 | 447diff 🔴442 | ⏭️ | ❌ 失败 | 2.8s |
-| case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 334diff 🔴230 | ⏭️ | ❌ 失败 | 1.6s |
-| case-003-basic-block | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | 346diff 🔴326 | ⏭️ | ❌ 失败 | 9.7s |
-| case-004-flex-layout | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 6issue | ⚠️ 2 | 368diff 🔴339 | ⏭️ | ❌ 失败 | 10.7s |
+| case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 331diff 🔴229 | ⏭️ | ❌ 失败 | 1.7s |
+| case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 360diff 🔴313 | ⏭️ | ❌ 失败 | 1.8s |
+| case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 6issue | ⚠️ 2 | 372diff 🔴251 | ⏭️ | ❌ 失败 | 1.5s |
 | case-005-grid-layout | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | 201diff 🔴181 | ⏭️ | ❌ 失败 | 40.9s |
 | case-006-typography | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | 697diff 🔴659 | ⏭️ | ❌ 失败 | 8.9s |
 | case-007-border-styles | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 2issue | ✅ | 415diff 🔴364 | ⏭️ | ❌ 失败 | 4.8s |
@@ -60,18 +60,19 @@
 | case-054-inline-block-nest | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 1issue | ✅ | 19diff 🔴13 | ⏭️ | ❌ 失败 | 7.8s |
 | case-055-sticky-multi | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ 1issue | ⚠️ 3 | 25diff 🔴17 | ⏭️ | ❌ 失败 | 10.6s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 687.6s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 670.6s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop width diff 275->278
 > - case-001-wrapper-x major 0->3
-> - case-002-auto-height geometry 296->330
-> - case-002-auto-height major 13->98
-> - case-003-basic-block critical 325->326
-> - case-004-flex-layout critical 338->339
+> - case-002-auto-height geometry 296->328
+> - case-002-auto-height major 13->99
+> - case-003-basic-block geometry 341->360
+> - case-003-basic-block major 10->46
+> - case-004-flex-layout geometry 357->368
+> - case-004-flex-layout major 13->116
 > - case-005-grid-layout geometry 0->186
 > - case-005-grid-layout mismatch 0->15
 > - case-005-grid-layout critical 0->181
@@ -134,7 +135,7 @@
 > - case-054-inline-block-nest critical 12->13
 > - case-055-sticky-multi critical 16->17
 > - overflow 239->244
-> - time 9.1->687.6 (75.6x)
+> - time 9.1->670.6 (73.7x)
 >
 > ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
 
@@ -142,8 +143,8 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 94.6% | 8055/8515 |
-| width | 96.7% | 8237/8515 |
+| height | 94.7% | 8061/8515 |
+| width | 96.8% | 8244/8515 |
 | position | 100% | 8515/8515 |
 | opacity | 100% | 8515/8515 |
 | background-color | 99.7% | 8462/8485 |
@@ -203,9 +204,9 @@
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
 | case-001-wrapper-x | 0 | **442** | **3** | 1 | 0 | 3 |
-| case-002-auto-height | 0 | **230** | **98** | 4 | 0 | 0 |
-| case-003-basic-block | 0 | **326** | **10** | 5 | 0 | 0 |
-| case-004-flex-layout | 0 | **339** | **13** | 11 | 0 | 2 |
+| case-002-auto-height | 0 | **229** | **99** | 3 | 0 | 0 |
+| case-003-basic-block | 0 | **313** | **46** | 0 | 0 | 0 |
+| case-004-flex-layout | 0 | **251** | **116** | 4 | 0 | 2 |
 | case-005-grid-layout | 0 | **181** | **1** | 15 | 0 | 0 |
 | case-006-typography | 0 | **659** | **23** | 7 | 0 | 0 |
 | case-007-border-styles | 0 | **364** | **11** | 31 | 0 | 0 |
