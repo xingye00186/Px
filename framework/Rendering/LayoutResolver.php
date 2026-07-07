@@ -135,20 +135,41 @@ class LayoutResolver
         // Recursively resolve children (pure)
         $childResults = [];
         foreach ($node->children as $child) {
-            $padL = $style?->padding?->left->toPx() ?? 0;
-            $padR = $style?->padding?->right->toPx() ?? 0;
-            $padT = $style?->padding?->top->toPx() ?? 0;
-            $padB = $style?->padding?->bottom->toPx() ?? 0;
-            $bL = $style?->borderLeftWidth ?? 0;
-            $bR = $style?->borderRightWidth ?? 0;
-            $bT = $style?->borderTopWidth ?? 0;
-            $bB = $style?->borderBottomWidth ?? 0;
+            $padL = (int)($style?->padding?->left->toPx() ?? 0);
+            $padR = (int)($style?->padding?->right->toPx() ?? 0);
+            $padT = (int)($style?->padding?->top->toPx() ?? 0);
+            $padB = (int)($style?->padding?->bottom->toPx() ?? 0);
+            $bL = (int)($style?->borderLeftWidth ?? 0);
+            $bR = (int)($style?->borderRightWidth ?? 0);
+            $bT = (int)($style?->borderTopWidth ?? 0);
+            $bB = (int)($style?->borderBottomWidth ?? 0);
 
-            $cbW = $node->w > 0
-                ? max(0, $node->w - $padL - $padR - $bL - $bR)
+            // Use ComputedStyle.width when node.w is 0 (Phase A: RenderNode not yet written)
+            // AOT-safe: $style->width is typed CssLength, always initialized
+            $nodeW = $node->w;
+            if ($nodeW <= 0 && $style !== null) {
+                $cssW = $style->width->toPx();
+                if ($cssW > 0) {
+                    $nodeW = $cssW;
+                } elseif ($style->width->isPercent()) {
+                    $nodeW = $style->width->resolveInContext($constraints->contentWidth);
+                }
+            }
+            $nodeH = $node->h;
+            if ($nodeH <= 0 && $style !== null) {
+                $cssH = $style->height->toPx();
+                if ($cssH > 0) {
+                    $nodeH = $cssH;
+                } elseif ($style->height->isPercent()) {
+                    $nodeH = $style->height->resolveInContext($constraints->contentHeight);
+                }
+            }
+
+            $cbW = $nodeW > 0
+                ? max(0, $nodeW - $padL - $padR - $bL - $bR)
                 : max(0, $constraints->contentWidth - $padL - $padR - $bL - $bR);
-            $cbH = $node->h > 0
-                ? max(0, $node->h - $padT - $padB - $bT - $bB)
+            $cbH = $nodeH > 0
+                ? max(0, $nodeH - $padT - $padB - $bT - $bB)
                 : max(0, $constraints->contentHeight - $padT - $padB - $bT - $bB);
             $childOffX = $node->x + $padL + $bL;
             $childOffY = $node->y + $padT + $bT;
