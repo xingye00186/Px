@@ -627,36 +627,36 @@ php apps/css-test/check_regression.php
 ---
 
 
-## 十三、布局架构经验�?026-07 沉淀�?
+## 十三、布局架构经验（2026-07 沉淀）
 
 ### 13.1 Phase 分层原则
 
 布局引擎采用三阶段架构：
 
-| Phase | 职责 | 产出 | 不可�?|
+| Phase | 职责 | 产出 | 不可做 |
 |-------|------|------|-------|
-| A | 纯计�?bottom-up | `LayoutResult`（不可变�?| �?RenderNode、调策略外部方法 |
+| A | 纯计算 bottom-up | `LayoutResult`（不可变） | 写 RenderNode、调策略外部方法 |
 | B | `applicator.apply` 回写 | RenderNode.x/y/w/h | 修改 LayoutResult |
-| C | 后处理（scroll clamp/sticky�?| RenderNode 辅助字段 | �?strategy->layout() |
+| C | 后处理（scroll clamp/sticky） | RenderNode 辅助字段 | 调 strategy->layout() |
 
-**铁律**：Phase 之间不可逆向流动。Phase B/C 发现坐标问题，只能在 B/C 内部修（如在 `applyTo` 中传 offset），不能回到 Phase A 重调策略�?
+**铁律**：Phase 之间不可逆向流动。Phase B/C 发现坐标问题，只能在 B/C 内部修（如在 `applyTo` 中传 offset），不能回到 Phase A 重调策略。
 
-### 13.2 坐标传播的正确模�?
+### 13.2 坐标传播的正确模式
 
-**问题**：Phase A �?先子后己"——子节点递归时父节点 `$node->x` 还是 0（LayoutResult 尚未回写），导致孙辈坐标缺少父节点偏移�?
+**问题**：Phase A 是"先子后己"——子节点递归时父节点 `$node->x` 还是 0（LayoutResult 尚未回写），导致孙辈坐标缺少父节点偏移。
 
-**错误方案**（`propagateCoords`）：Phase B 之后再调 `strategy->layout()`，用正确坐标重新布局�?�?重算尺寸覆盖多轮迭代结果，② `iteration:0` 破坏收敛�?
+**错误方案**（`propagateCoords`）：Phase B 之后再调 `strategy->layout()`，用正确坐标重新布局。① 重算尺寸覆盖多轮迭代结果，② `iteration:0` 破坏收敛。
 
-**正确方案**（`applyTo offset`）：�?Phase B 递归回写时，将已写入�?`$node->x` 作为 `$offsetX` 传给孙辈。结果：不碰策略层、不动尺寸、无迭代冲突�?09 �?�?2 行，测试通过�?+12%�?
+**正确方案**（`applyTo offset`）：在 Phase B 递归回写时，将已写入的 `$node->x` 作为 `$offsetX` 传给孙辈。结果：不碰策略层、不动尺寸、无迭代冲突。109 行 → 2 行，测试通过率 +12%。
 
 ### 13.3 多阶段迭代的收敛边界
 
-Grid auto 轨道、Table 列宽、MultiColumn 平衡均使�?`needsAnotherPass` 机制，收敛条件由 LayoutResolver 保证。跨 Phase 调用（如 propagateCoords 硬编�?`iteration=0`）直接破坏收敛�?
+Grid auto 轨道、Table 列宽、MultiColumn 平衡均使用 `needsAnotherPass` 机制，收敛条件由 LayoutResolver 保证。跨 Phase 调用（如 propagateCoords 硬编码 `iteration=0`）直接破坏收敛。
 
-### 13.4 纯函数策略契�?
+### 13.4 纯函数策略契约
 
-6 个策略全部实�?`LayoutStrategyInterface`：`layout(LayoutInput): LayoutResult`。禁止在策略内访�?RenderNode、写全局状态、调外部非纯函数�?
+6 个策略全部实现 `LayoutStrategyInterface`：`layout(LayoutInput): LayoutResult`。禁止在策略内访问 RenderNode、写全局状态、调外部非纯函数。
 
-### 13.5 废弃布局代码的清理原�?
+### 13.5 废弃布局代码的清理原则
 
-清理前确保无外部引用（grep 全项目），清理后 php -l 验证语法，跑全套布局测试确保无回归。已清理：FlexDistributor、FlexItemCollector、FlexLine、GridFragmentMapper、ScrollbarEmitter、TextOverflowProcessor、propagateCoords�?
+清理前确保无外部引用（grep 全项目），清理后 php -l 验证语法，跑全套布局测试确保无回归。已清理：FlexDistributor、FlexItemCollector、FlexLine、GridFragmentMapper、ScrollbarEmitter、TextOverflowProcessor、propagateCoords。
