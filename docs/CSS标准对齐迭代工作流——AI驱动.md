@@ -20,6 +20,20 @@
 | **不支持即实现** | CSS 特性缺失必须按规范实现，不得 SKIP。GDI 不支持的使用 Skia 后端 |
 | **不可绕过测试样例** | 任何情况下不得修改测试样例来绕过功能缺失 |
 
+### 架构七原则（2026-07 验证确立）
+
+以下七项原则在布局子系统重构中反复验证有效，是 CSS 标准对齐的根本架构保障：
+
+| # | 原则 | 核心要求 | 对应教训 |
+|---|------|---------|---------|
+| 1 | **零侵入契约** | 策略接口 `layout(LayoutInput): LayoutResult` 是不可变纯函数。坐标修复只能在不碰策略层完成 | `propagateCoords` 以 `iteration:0` 重调策略，覆盖 Grid 多轮收敛 |
+| 2 | **计算与副作用分离** | Phase A（纯计算→LayoutResult）→ Phase B（applicator.apply 回写）→ Phase C（后处理），严格单向 | `propagateCoords` 在 Phase B 后回到 Phase A——架构级违规 |
+| 3 | **标准优先于测试** | W3C CSS 规范 > 浏览器实际行为 > 实现逻辑 > 测试断言。每次修正前先查规范原文 | PositionLayoutTest `right:0` 预期值（x=528）既不符合 CSS 2.2 §10.1 也不符合实际实现 |
+| 4 | **归谬验证** | N 行新代码应修复 ≥ N/5 个测试失败。推进很少测试却引入大量代码 → 方向错了 | `propagateCoords` 109 行只推进 2-3 个测试；`applyTo offset` 2 行推进 11 个测试 |
+| 5 | **迭代不跨 Phase** | `needsAnotherPass` 必须在 Phase A 内闭环，由 `resolveFragment` 的 `$iteration` 控制。跨 Phase 共享状态必须通过 LayoutResult 元数据字段 | Grid auto 轨道在 Phase A 收敛后，被 Phase 2 的 `iteration:0` 调用覆盖 |
+| 6 | **等价替换** | 重构须保证相同输入产生相同输出。优秀重构更简洁 | `applyTo offset`（2 行）等价替代 `propagateCoords`（109 行）且更优 |
+| 7 | **AOT 优先** | 所有布局代码必须在 `css_test.exe` 中验证通过。避免深度空安全链（>2 层 `?->`），typed property 必须始终初始化 | `$style?->width?->isPercent()` AOT 下行为不一致导致 `null - int` 崩溃；`$lineHeight` 声明但从未赋值 |
+
 ### 决策优先级
 
 ```
@@ -348,6 +362,9 @@ comparePixels() 执行：
 | `$var ?? expr` | AOT 不支持 `??` | `$var !== null ? $var : expr` |
 | `$arr['key'] ?? default` | 部分 AOT 版本不支持 | `isset($arr['key']) ? $arr['key'] : default` |
 | 动态属性访问 | AOT 编译禁止 | 改为固定属性名 |
+| `$a?->b?->c->method()` | 超过 2 层空安全链 AOT 行为不一致 | 拆解为 `$tmp = $a?->b; $tmp?->c->method()` |
+| `$style?->width?->isPercent()` | CssLength/Bool 返回值在 AOT 空安全链中变为 null | 使用标量 fallback：`($cs->width->isPercent() ? … : …)` 外加 null 保护 |
+| typed property 声明但未初始化 | `public readonly int $lineHeight;` 赋值分支未覆盖全路径 | 必须始终初始化：`$this->lineHeight = $d['lineHeight'] ?? 0` |
 
 ---
 
@@ -607,3 +624,40 @@ php apps/css-test/check_regression.php
 - [ ] 截图差异是否从 <5% 上升到 >10%？
 - [ ] 问题清单是否已更新？
 - [ ] 分类提交：`fix(framework):` / `fix(css-test):` / `docs:` / `chore:`
+
+---
+
+
+## 十三、布局架构经验�?026-07 沉淀�?
+
+### 13.1 Phase 分层原则
+
+布局引擎采用三阶段架构：
+
+| Phase | 职责 | 产出 | 不可�?|
+|-------|------|------|-------|
+| A | 纯计�?bottom-up | `LayoutResult`（不可变�?| �?RenderNode、调策略外部方法 |
+| B | `applicator.apply` 回写 | RenderNode.x/y/w/h | 修改 LayoutResult |
+| C | 后处理（scroll clamp/sticky�?| RenderNode 辅助字段 | �?strategy->layout() |
+
+**铁律**：Phase 之间不可逆向流动。Phase B/C 发现坐标问题，只能在 B/C 内部修（如在 `applyTo` 中传 offset），不能回到 Phase A 重调策略�?
+
+### 13.2 坐标传播的正确模�?
+
+**问题**：Phase A �?先子后己"——子节点递归时父节点 `$node->x` 还是 0（LayoutResult 尚未回写），导致孙辈坐标缺少父节点偏移�?
+
+**错误方案**（`propagateCoords`）：Phase B 之后再调 `strategy->layout()`，用正确坐标重新布局�?�?重算尺寸覆盖多轮迭代结果，② `iteration:0` 破坏收敛�?
+
+**正确方案**（`applyTo offset`）：�?Phase B 递归回写时，将已写入�?`$node->x` 作为 `$offsetX` 传给孙辈。结果：不碰策略层、不动尺寸、无迭代冲突�?09 �?�?2 行，测试通过�?+12%�?
+
+### 13.3 多阶段迭代的收敛边界
+
+Grid auto 轨道、Table 列宽、MultiColumn 平衡均使�?`needsAnotherPass` 机制，收敛条件由 LayoutResolver 保证。跨 Phase 调用（如 propagateCoords 硬编�?`iteration=0`）直接破坏收敛�?
+
+### 13.4 纯函数策略契�?
+
+6 个策略全部实�?`LayoutStrategyInterface`：`layout(LayoutInput): LayoutResult`。禁止在策略内访�?RenderNode、写全局状态、调外部非纯函数�?
+
+### 13.5 废弃布局代码的清理原�?
+
+清理前确保无外部引用（grep 全项目），清理后 php -l 验证语法，跑全套布局测试确保无回归。已清理：FlexDistributor、FlexItemCollector、FlexLine、GridFragmentMapper、ScrollbarEmitter、TextOverflowProcessor、propagateCoords�?

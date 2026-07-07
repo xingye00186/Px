@@ -19,6 +19,20 @@
 | **回归防护** | 每次修复后验证已有归档 case 不退化 |
 | **分类提交** | `fix(framework):` / `fix(css-test):` / `docs:` / `chore:` 分开 commit |
 
+### 架构七原则（CSS 标准对齐核心守则）
+
+本书架七原则在整个重构过程中验证有效，是 CSS 标准对齐的根本保证。详见完整版文档。
+
+| # | 原则 | 一句话 |
+|---|------|--------|
+| 1 | **零侵入契约** | `layout()` 是不可变纯函数，不得绕过契约重调策略 |
+| 2 | **计算与副作用分离** | Phase A→B→C 严格单向，不可逆向 |
+| 3 | **标准优先于测试** | W3C CSS 规范 > 浏览器行为 > 实现 > 测试断言 |
+| 4 | **归谬验证** | 没你那行代码问题也能解决 → 方向错了 |
+| 5 | **迭代不跨 Phase** | `needsAnotherPass` 在 Phase A 内闭环 |
+| 6 | **等价替换** | 重构应无副作用，相同输入→相同输出 |
+| 7 | **AOT 优先** | 代码须在 `css_test.exe` 中验证通过 |
+
 ---
 
 ## 二、工具链
@@ -235,6 +249,9 @@ php apps/css-test/check_regression.php
 | `$var ?? expr` | AOT 不支持 `??` | `$var !== null ? $var : expr` |
 | `$var = null; if (...) $var = val;` 后 `$var ?? fallback` | `php::toBool(null)` 返回 false 而非 null | 显式 if/else 分支赋值 |
 | `$arr['key'] ?? default` | 部分 AOT 版本不支持 | `isset($arr['key']) ? $arr['key'] : default` |
+| `$a?->b?->c->method()` | 超过 2 层的空安全链 AOT 行为不一致 | 拆解为 `$tmp = $a?->b; $tmp?->c->method()` |
+| `$style?->width?->isPercent()` | `CssLength` 返回值在 AOT 中可能为 null | 使用标量 fallback：`($cs->width->isPercent() ? … : …)` 外加 null 保护 |
+| typed property 未初始化 | `public readonly int $lineHeight;` 声明但从未赋值 | 必须始终初始化：`$this->lineHeight = $d['lineHeight'] ?? 0` |
 
 ---
 
