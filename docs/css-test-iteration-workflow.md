@@ -105,7 +105,7 @@ Step E: MultiFrame（MultiFrameStep）
 
 Step G: BrowserRef（BrowserRefStep + BrowserRefStrategy）
   ├─ validateHtmlSpec() 校验 .html CSS 基线 + 结构
-  ├─ validateVueConsistency() 校验 .html vs .vue 一致性
+  ├─ validateVueSpec() 校验 .html vs .vue 一致性
   ├─ instrumentHtml() 仅注入 dump_layout.js（不修改 CSS）
   └─ EdgeDom 策略
 
@@ -144,7 +144,7 @@ php apps/css-test/test_pipeline.php --case=case-007 --force-build  # 单 case
 |------|------|------|
 | **全部 PASS** | 所有 case D/E/G/H/I 步骤均通过 | 运行 `check_regression.php` → 归档 → 提交 |
 | **FAIL 收敛** | 连续 2 次迭代 FAIL 数不变或增加 | 停止。报告"修复无效或引入新回归" |
-| **假阳性确认** | 所有 FAIL 均为 wrapper CSS 基线差异 | 修复 `buildCssTestWrapper()` → 重新生成 ref |
+| **假阳性确认** | 所有 FAIL 均为 wrapper CSS 基线差异 | 在 .html 中添加缺失的 CSS 基线声明 → 重新生成 ref |
 | **已知限制** | 所有剩余差异均为已知引擎限制 | 记录到问题清单 B-xxx 类，标注"已知限制" |
 | **迭代上限** | 同一 case 迭代超过 5 轮 | 停止。报告阻塞点，请求人工判断 |
 | **新回归** | `check_regression.php` 发现新 FAIL | 回滚本次修复，先修复回归 |
@@ -204,12 +204,12 @@ php apps/css-test/check_regression.php
 ```
 报告显示 FAIL
 ├─ 所有元素系统性偏移（同方向同量级）?
-│   └─ 视口不一致 → 检查 buildCssTestWrapper() 的 --window-size
+│   └─ 视口不一致 → 检查 .html CSS 基线中的 --window-size
 │
 ├─ 元素位置/尺寸偏差但样式值正确?
 │   ├─ 容器 auto-height 偏差 → BlockLayoutStrategy
 │   ├─ Grid/Flex 子元素宽度不对 → GridLayoutStrategy / FlexLayoutStrategy
-│   ├─ 文本高度偏差 → PercentResolver line-height
+│   ├─ 文本高度偏差 → BlockLayoutStrategy line-height
 │   └─ 绝对定位偏差 → AbsolutePositioning
 │
 ├─ 样式值不匹配?

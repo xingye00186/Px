@@ -125,7 +125,6 @@ tests/
   framework/Rendering/Layout/GridLayoutStrategy.php   Grid 布局
   framework/Rendering/Layout/InlineLayoutStrategy.php Inline 布局
   framework/Rendering/Layout/AbsolutePositioning.php  绝对/固定定位
-  framework/Rendering/Layout/Tools/PercentResolver.php 百分比+单位解析
   framework/Rendering/CssMappings.php                 CSS → 内部属性映射
   framework/Rendering/CssValueParser.php              CSS 值解析
   framework/Core/Application.php                      serializeRenderNode 白名单
@@ -225,13 +224,13 @@ php apps/css-test/test_pipeline.php --update-baseline   # 更新参考数据
 
 | 差异类型 | 典型原因 | 修复位置 |
 |----------|---------|---------|
-| **假阳性** | 浏览器 ref wrapper 引入非标准基线 | `BrowserRefStep.buildCssTestWrapper()` |
+| **假阳性** | 浏览器 ref wrapper 引入非标准基线 | 在 .html 中添加缺失的 CSS 基线声明 |
 | **位置偏差 (Δx/Δy > 1px)** | line-height 缺失/margin 折叠/padding 未计算 | `BlockLayoutStrategy` / `FlexLayoutStrategy` / `AbsolutePositioning` |
-| **容器 auto-height 偏差** | auto-height 未减 padding ，或未排除 absolute/fixed 子节点 | `BlockLayoutStrategy.resolveBlockLayout()` |
+| **容器 auto-height 偏差** | auto-height 未减 padding ，或未排除 absolute/fixed 子节点 | `BlockLayoutStrategy.layout()` |
 | **Grid/Flex 子元素 w=0** | GridLayoutStrategy 未设 style['width'] / BlockLayout 重解释 | `GridLayoutStrategy` / `BlockLayoutStrategy` |
 | **颜色不匹配** | GDI 颜色格式转换有误 | `CssMappings` |
 | **属性引擎缺失** | serializeRenderNode 白名单未添加 / CssMappings 未映射 | `Application.php` / `CssMappings` |
-| **尺寸偏差 (w/h)** | 盒模型假设不一致 / 百分比解析 | `PercentResolver` / `buildCssTestWrapper()` |
+| **尺寸偏差 (w/h)** | 盒模型假设不一致 / 百分比解析 | `.html` CSS 基线 / 盒模型检查 |
 | **STABILITY 问题** | 多帧间坐标或尺寸不稳定（auto-height 正反馈） | `BlockLayoutStrategy` auto-height 排除 absolute/fixed |
 | **截图差异 > 5%** | 字体渲染 / 抗锯齿 / 颜色差异 / 布局偏移 | 联合 JSON 对比+浏览器元素对比定位 |
 
@@ -240,11 +239,11 @@ php apps/css-test/test_pipeline.php --update-baseline   # 更新参考数据
 ```
 报告显示 FAIL
 ├─ 所有元素系统性偏移（同方向同量级）?
-│   └─ 视口不一致 → 检查 buildCssTestWrapper() 的 --window-size
+│   └─ 视口不一致 → 检查 .html CSS 基线中的 --window-size
 ├─ 元素位置/尺寸偏差但样式值正确?
 │   ├─ 容器 auto-height 偏差 → BlockLayoutStrategy
 │   ├─ Grid/Flex 子元素宽度不对 → GridLayoutStrategy / FlexLayoutStrategy
-│   ├─ 文本高度偏差 → PercentResolver line-height
+│   ├─ 文本高度偏差 → BlockLayoutStrategy line-height
 │   └─ 绝对定位偏差 → AbsolutePositioning
 ├─ 样式值不匹配?
 │   ├─ 字体/颜色差异 → CssMappings / Skia/GDI 渲染
@@ -531,7 +530,7 @@ AI 在运行测试→修复循环时必须检查以下条件，满足任一即�
 |------|------|------|
 | **全部 PASS** | 所有 case 的 D/E/G/H/I 步骤均通过 | 运行 `check_regression.php` → 归档 → 提交 |
 | **FAIL 收敛** | 连续 2 次迭代 FAIL 数不变或增加 | 停止。报告"修复无效或引入新回归"，附 diff |
-| **假阳性确认** | 所有 FAIL 均为 wrapper CSS 基线差异 | 修复 `buildCssTestWrapper()` → 重新生成 ref |
+| **假阳性确认** | 所有 FAIL 均为 wrapper CSS 基线差异 | 在 .html 中添加缺失的 CSS 基线声明 → 重新生成 ref |
 | **已知限制** | 所有剩余差异均为已知引擎限制（如字体差异） | 记录到问题清单 B-xxx 类，标注"已知限制" |
 | **迭代上限** | 同一 case 迭代超过 5 轮 | 停止。报告阻塞点，请求人工判断 |
 | **新回归** | `check_regression.php` 发现新 FAIL | 回滚本次修复，先修复回归 |
@@ -571,7 +570,7 @@ AI 在运行测试→修复循环时必须检查以下条件，满足任一即�
 
 pipeline `BrowserRefStep` 自动校验：
 1. `validateHtmlSpec()` — 检查 CSS 基线（viewport/font/color/background）和锚点
-2. `validateVueConsistency()` — 检查 .html vs .vue 锚点匹配、文本内容一致性
+2. `validateVueSpec()` — 检查 .html vs .vue 锚点匹配、文本内容一致性
 3. 校验不通过 → 终止并报 `[SPEC_FAIL]` / `[VUE_MISMATCH]`
 
 **pipeline 不再注入 CSS**，`buildCssTestWrapper()` 已移除。
@@ -590,9 +589,9 @@ pipeline `BrowserRefStep` 自动校验：
 
 | 症状 | 诊断 | 修复文件 | 关键代码 |
 |------|------|---------|---------|
-| Flex 子元素宽度=0，parent=null 时百分比失效 | 根容器无 parent，`PercentResolver` 返回 0 | `PercentResolver.php` | 无 parent 时退回 content-box 宽度 |
+| Flex 子元素宽度=0，parent=null 时百分比失效 | 根容器无 parent 宽度 | `GridLayoutStrategy` / `FlexLayoutStrategy` | 无 parent 时退回 content-box 宽度 |
 | 绝对定位 `bottom:0;right:0` 锚点位置错误 | `AbsolutePositioning` 未正确处理 bottom/right | `AbsolutePositioning.php` | 计算 y = parentH - nodeH |
-| auto-height 容器 Frame 2+ 高度漂移 | absolute 子节点被计入 auto-height 导致正反馈 | `BlockLayoutStrategy.php` | `resolveBlockLayout` 排除 absolute/fixed 子节点 |
+| auto-height 容器 Frame 2+ 高度漂移 | absolute 子节点被计入 auto-height 导致正反馈 | `BlockLayoutStrategy.layout()` | absolute 子节点不计入 auto-height |
 | 所有元素宽度系统性偏窄 90px | `.html` 有 wrapper padding 层而 `.vue` 无 | 修改 `.vue` 对齐 `.html` | 统一根元素结构 |
 | Skia 渲染的细矩形/分隔线膨胀 1-2px | Skia 抗锯齿导致 fillRect 边界外溢 | `skia_render.cc` | 禁用细矩形的抗锯齿或使用 integral 坐标 |
 | CSS 属性有值但 compareElement 报告缺失 | `RenderNodeSerializer` 白名单未包含该属性 | `Application.php` | 在 `serializeRenderNode` 的 `styleKeys` 中新增 |
@@ -628,36 +627,36 @@ php apps/css-test/check_regression.php
 ---
 
 
-## 十三、布局架构经验�?026-07 沉淀�?
+## 十三、布局架构经验�?026-07 沉淀�?
 
 ### 13.1 Phase 分层原则
 
 布局引擎采用三阶段架构：
 
-| Phase | 职责 | 产出 | 不可�?|
+| Phase | 职责 | 产出 | 不可�?|
 |-------|------|------|-------|
-| A | 纯计�?bottom-up | `LayoutResult`（不可变�?| �?RenderNode、调策略外部方法 |
+| A | 纯计�?bottom-up | `LayoutResult`（不可变�?| �?RenderNode、调策略外部方法 |
 | B | `applicator.apply` 回写 | RenderNode.x/y/w/h | 修改 LayoutResult |
-| C | 后处理（scroll clamp/sticky�?| RenderNode 辅助字段 | �?strategy->layout() |
+| C | 后处理（scroll clamp/sticky�?| RenderNode 辅助字段 | �?strategy->layout() |
 
-**铁律**：Phase 之间不可逆向流动。Phase B/C 发现坐标问题，只能在 B/C 内部修（如在 `applyTo` 中传 offset），不能回到 Phase A 重调策略�?
+**铁律**：Phase 之间不可逆向流动。Phase B/C 发现坐标问题，只能在 B/C 内部修（如在 `applyTo` 中传 offset），不能回到 Phase A 重调策略�?
 
-### 13.2 坐标传播的正确模�?
+### 13.2 坐标传播的正确模�?
 
-**问题**：Phase A �?先子后己"——子节点递归时父节点 `$node->x` 还是 0（LayoutResult 尚未回写），导致孙辈坐标缺少父节点偏移�?
+**问题**：Phase A �?先子后己"——子节点递归时父节点 `$node->x` 还是 0（LayoutResult 尚未回写），导致孙辈坐标缺少父节点偏移�?
 
-**错误方案**（`propagateCoords`）：Phase B 之后再调 `strategy->layout()`，用正确坐标重新布局�?�?重算尺寸覆盖多轮迭代结果，② `iteration:0` 破坏收敛�?
+**错误方案**（`propagateCoords`）：Phase B 之后再调 `strategy->layout()`，用正确坐标重新布局�?�?重算尺寸覆盖多轮迭代结果，② `iteration:0` 破坏收敛�?
 
-**正确方案**（`applyTo offset`）：�?Phase B 递归回写时，将已写入�?`$node->x` 作为 `$offsetX` 传给孙辈。结果：不碰策略层、不动尺寸、无迭代冲突�?09 �?�?2 行，测试通过�?+12%�?
+**正确方案**（`applyTo offset`）：�?Phase B 递归回写时，将已写入�?`$node->x` 作为 `$offsetX` 传给孙辈。结果：不碰策略层、不动尺寸、无迭代冲突�?09 �?�?2 行，测试通过�?+12%�?
 
 ### 13.3 多阶段迭代的收敛边界
 
-Grid auto 轨道、Table 列宽、MultiColumn 平衡均使�?`needsAnotherPass` 机制，收敛条件由 LayoutResolver 保证。跨 Phase 调用（如 propagateCoords 硬编�?`iteration=0`）直接破坏收敛�?
+Grid auto 轨道、Table 列宽、MultiColumn 平衡均使�?`needsAnotherPass` 机制，收敛条件由 LayoutResolver 保证。跨 Phase 调用（如 propagateCoords 硬编�?`iteration=0`）直接破坏收敛�?
 
-### 13.4 纯函数策略契�?
+### 13.4 纯函数策略契�?
 
-6 个策略全部实�?`LayoutStrategyInterface`：`layout(LayoutInput): LayoutResult`。禁止在策略内访�?RenderNode、写全局状态、调外部非纯函数�?
+6 个策略全部实�?`LayoutStrategyInterface`：`layout(LayoutInput): LayoutResult`。禁止在策略内访�?RenderNode、写全局状态、调外部非纯函数�?
 
-### 13.5 废弃布局代码的清理原�?
+### 13.5 废弃布局代码的清理原�?
 
-清理前确保无外部引用（grep 全项目），清理后 php -l 验证语法，跑全套布局测试确保无回归。已清理：FlexDistributor、FlexItemCollector、FlexLine、GridFragmentMapper、ScrollbarEmitter、TextOverflowProcessor、propagateCoords�?
+清理前确保无外部引用（grep 全项目），清理后 php -l 验证语法，跑全套布局测试确保无回归。已清理：FlexDistributor、FlexItemCollector、FlexLine、GridFragmentMapper、ScrollbarEmitter、TextOverflowProcessor、propagateCoords�?
