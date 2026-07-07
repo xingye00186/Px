@@ -187,7 +187,8 @@ class AotChecker
 
     /** 排除的目录 */
     private array $excludedDirs = [
-        'compiler',
+        'Compiler',
+        'DevTools',
     ];
 
     /** 检查结果 */
@@ -452,7 +453,8 @@ class AotChecker
     {
         $path = ltrim(str_replace('\\', '/', $path), '/');
         $dir = ltrim(str_replace('\\', '/', $dir), '/');
-        return str_starts_with($path, $dir . '/') || $path === $dir;
+        // Windows 不区分大小写
+        return strncasecmp($path, $dir . '/', strlen($dir) + 1) === 0 || strcasecmp($path, $dir) === 0;
     }
 
     /**
