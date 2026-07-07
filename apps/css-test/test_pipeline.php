@@ -43,6 +43,7 @@ $appName = (function() use ($argv) {
 })();
 $appDir = $projectRoot . '/apps/' . $appName;
 $title = $appName === 'php-rt-test' ? 'PHP RT Test Pipeline' : 'CSS Test Pipeline';
+putenv('PX_PHP_RUNTIME=' . (in_array('--php-runtime', $argv ?? []) ? '1' : ''));
 
 echo "═══════════════════════════════════════════════\n";
 echo "  $title — PxTest (D→E→G→H→I)\n";
