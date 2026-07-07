@@ -95,14 +95,6 @@ class LayoutResolver
         // Phase B: 回写
         $this->applicator->apply($result, $root);
 
-        // ━━ Phase 2: 自顶向下传播坐标 ━━
-        // 用已算出的 LayoutResult 替代 $node->x/y 构造子约束，
-        // 使所有节点坐标变为 viewport-absolute，从而消除 extractContentSubtree
-        // 归一化时深层嵌套元素（如 footer>span）的数百 px 偏差。
-        // 广度优先：先算父节点 LayoutResult，再用其 x/y 构造子约束。
-        $root->layoutDirty = true;
-        $this->propagateCoords($root, $result, $constraints);
-
         // Phase C: 后处理
         $this->postProcess($root, $result);
 

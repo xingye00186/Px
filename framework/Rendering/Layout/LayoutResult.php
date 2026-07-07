@@ -175,11 +175,15 @@ class LayoutResult
      * 原子回写 RenderNode。
      * RenderNode.x/y/w/h 的唯一写入通道。
      * 逐字段比较，仅写入变化的字段。
+     *
+     * 通过 $offsetX/$offsetY 累积父节点在递归回写中的实际坐标偏移，
+     * 确保孙辈节点的最终坐标正确（因为 Phase 1 中孙辈布局时
+     * 中间节点初始 x=0 尚未被父策略写入）。
      */
-    public function applyTo(RenderNode $node): void
+    public function applyTo(RenderNode $node, int $offsetX = 0, int $offsetY = 0): void
     {
-        $node->x        = $this->x;
-        $node->y        = $this->y;
+        $node->x        = $this->x + $offsetX;
+        $node->y        = $this->y + $offsetY;
         $node->w        = $this->w;
         $node->h        = $this->h;
         $node->visualW  = $this->visualW;
@@ -189,11 +193,11 @@ class LayoutResult
         if ($this->contentWidth > 0)  $node->contentWidth  = $this->contentWidth;
         if ($this->contentHeight > 0) $node->contentHeight = $this->contentHeight;
 
-        // 递归回写子节点
+        // 递归回写子节点（传递当前节点的实际坐标作为孙辈的累积偏移）
         if (count($this->children) > 0) {
             $childCount = min(count($this->children), count($node->children));
             for ($i = 0; $i < $childCount; $i++) {
-                $this->children[$i]->applyTo($node->children[$i]);
+                $this->children[$i]->applyTo($node->children[$i], $node->x, $node->y);
             }
         }
     }
