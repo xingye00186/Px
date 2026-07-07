@@ -171,8 +171,12 @@ class LayoutResolver
             $cbH = $nodeH > 0
                 ? max(0, $nodeH - $padT - $padB - $bT - $bB)
                 : max(0, $constraints->contentHeight - $padT - $padB - $bT - $bB);
-            $childOffX = $node->x + $padL + $bL;
-            $childOffY = $node->y + $padT + $bT;
+            // Use ComputedStyle-based x/y for child constraints (not $node->x which is 0 in Phase A)
+            // CSS position: static/relative elements sit at parentContentX + left + marginLeft
+            $selfX = $constraints->parentContentX + ($style?->left?->toPx() ?? 0) + ($style?->margin?->left?->toPx() ?? 0);
+            $selfY = $constraints->parentContentY + ($style?->top?->toPx() ?? 0) + ($style?->margin?->top?->toPx() ?? 0);
+            $childOffX = $selfX + $padL + $bL;
+            $childOffY = $selfY + $padT + $bT;
 
             $childConstraints = new LayoutConstraints(
                 (int)max(0, $cbW),
