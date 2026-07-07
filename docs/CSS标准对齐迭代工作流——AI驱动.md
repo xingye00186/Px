@@ -60,12 +60,14 @@
 
 | 工具 | 路径 | 用途 |
 |------|------|------|
-| **PxTest 编排器** | `php apps/css-test/test_pipeline.php` | Pipeline+Strategy D→I 全流程编排 |
+| **PxTest 编排器** | `php apps/css-test/test_pipeline.php` | Pipeline A→0→B→D→L→E→G→H→I 全流程编排 |
 | 构建脚本 | `.\build.bat css-test` | PHP → AOT exe（BuildStep 内部调用） |
 | 布局导出 | `bin/css_test.exe --headless --dump-layout` | → engine_layout.json（自动化流程必须加 --headless） |
-| 截图（显式触发） | `bin/css_test.exe --screenshot=out.png` | 离屏渲染 PNG（默认不截图） |
+| 截图（显式触发） | `bin/css_test.exe --screenshot=out.png` | 离屏渲染 PNG（`--screenshot` 参数启用截图） |
 | 多帧截图 | `--frame=5 --screenshot=out.png` | 渲染 N 帧后截图 |
-│ 浏览器 ref | `PxTest\Pipeline\Strategy\BrowserRefStep` | validateHtmlSpec + instrumentHtml（仅注入 dump_layout.js） |
+| 浏览器 ref | `PxTest\Pipeline\Strategy\BrowserRefStep` | validateHtmlSpec + instrumentHtml（仅注入 dump_layout.js） |
+| 批量浏览器 ref | `BatchBrowserRefStep`（全量模式自动启用） | 单次 Edge 启动为所有 case 生成 ref，快 20x |
+| PHP Runtime | `--php-runtime` | 跳过 AOT 编译，直接用 PHP 计算布局（调试用） |
 | 对比引擎 | `PxTest\Comparison\ComparatorRegistry` | 几何+样式+稳定性+像素 四维对比 |
 | 锚点对齐 | `PxTest\Pipeline\ScreenshotStep::detectColorAnchors()` | #FF00FF/#00FFFF 8×8 块三策略 |
 | 归档基线 | `php apps/css-test/archive_case.php` | case 通过后冻存基线 |
@@ -209,19 +211,19 @@ php apps/css-test/test_pipeline.php --case=case-xxx --force-build
 php apps/css-test/test_pipeline.php --format=md
 ```
 
-**六步流程（Step 0→I）**：
+**九步流程（Step A→I）**：
 
-| 步骤 | 内容 | 产出 |
-|------|------|------|
-| **Build** | 哈希缓存 + 进程锁(.build.lock) + proc_open + Ctrl+C | `css_test.exe` |
-| **D** | 布局导出（ExeDump/MockDump）+ REF_STALE 校验 | `ref/engine_layout.json` |
-| **E** | 多帧稳定性（5 帧逐节点 x/y/w/h 对比） | STABILITY 标记 |
-| **G** | 浏览器参考（validateHtmlSpec + instrumentHtml，仅注入 dump_layout.js） | `ref/browser_ref_level_0.json` |
-| **H** | 逐元素对比（几何+样式+稳定性 + Phase F 溢出检测） | PASS/FAIL/SKIP |
-| **I** | 截图对比（三层锚点对齐 + GD 像素 diff + diff 图 + 锚点校验） | 差异 % |
-| **V** | 布局校验（LayoutValidationStep） | 布局树合规性 |
-| **C** | 组件生命周期（ComponentLifecycleStep） | mount/unmount 测试 |
-| **X** | 交互测试（InteractionStep） | 点击/滚动测试 |
+| 步骤 | 内容 | 触发条件 |
+|------|------|---------|
+| **A** | data-px-id 全量预处理（PxIdGenerateStep） | 始终执行 |
+| **0** | 构建（BuildStep：哈希缓存+进程锁+proc_open+Ctrl+C） | 非 `--php-runtime` 模式 |
+| **B** | 批量浏览器 ref 生成（BatchBrowserRefStep） | 全量模式（无 `--case=xxx`）且 `--browser-engine-el-compare` 启用 |
+| **D** | 布局导出（LayoutDumpStep：ExeDump/MockDump 双轨） | 始终执行 |
+| **L** | 布局校验（LayoutValidationStep：CSS 布局断言） | 始终执行 |
+| **E** | 多帧稳定性（MultiFrameStep：5 帧逐节点 x/y/w/h） | ExeDump 模式 |
+| **G** | 浏览器参考（BrowserRefStep：validateHtmlSpec + instrumentHtml） | `--browser-engine-el-compare` 启用（默认开启） |
+| **H** | 逐元素对比（ElementCompareStep：几何+样式+稳定性+Phase F 溢出） | 同 G |
+| **I** | 截图对比（ScreenshotStep：三层锚点对齐+GD diff+锚点校验） | `--screenshot` 参数启用（默认跳过） |
 
 **自动告警**：REF_STALE · DOC_WARN（FAIL 不在问题清单）· 锚点可见性
 
@@ -231,8 +233,9 @@ php apps/css-test/test_pipeline.php --format=md
 php apps/css-test/test_pipeline.php                 # 全量
 php apps/css-test/test_pipeline.php --case=case-xxx # 单 case
 php apps/css-test/test_pipeline.php --skip-build    # 跳过编译
-php apps/css-test/test_pipeline.php --browser-engine-el-compare  # 启用浏览器元素对比
+php apps/css-test/test_pipeline.php --php-runtime   # PHP 模式（无需 exe）
 php apps/css-test/test_pipeline.php --update-baseline   # 更新参考数据
+php apps/css-test/test_pipeline.php --screenshot    # 启用截图对比
 ```
 
 ### Phase 3：分析测试报告
