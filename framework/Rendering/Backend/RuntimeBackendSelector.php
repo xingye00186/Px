@@ -46,7 +46,7 @@ class RuntimeBackendSelector
 
         foreach ($candidates as $cls) {
             /** @var IRenderBackend $backend */
-            $backend = new $cls();
+            $backend = $this->instantiateBackend($cls);
             $name    = $backend->getName();
             $pri     = $cls::getPriority();
 
@@ -82,6 +82,20 @@ class RuntimeBackendSelector
         throw new \RuntimeException(
             'No render backend available. Tried: ' . implode(', ', $this->failed + array_keys($this->unhealthy))
         );
+    }
+
+    /**
+     * 实例化后端（避免 new $cls() 动态类名 ZendVM dispatch）。
+     */
+    private function instantiateBackend(string $cls): IRenderBackend
+    {
+        if ($cls === \Px\Rendering\Backend\SkiaGraphiteDawnBackend::class) return new \Px\Rendering\Backend\SkiaGraphiteDawnBackend();
+        if ($cls === \Px\Rendering\Backend\SkiaGaneshD3D11Backend::class) return new \Px\Rendering\Backend\SkiaGaneshD3D11Backend();
+        if ($cls === \Px\Rendering\Backend\SkiaGaneshWGLBackend::class) return new \Px\Rendering\Backend\SkiaGaneshWGLBackend();
+        if ($cls === \Px\Rendering\Backend\SkiaCpuBackend::class) return new \Px\Rendering\Backend\SkiaCpuBackend();
+        if ($cls === \Px\Rendering\Backend\GdiDirect2DBackend::class) return new \Px\Rendering\Backend\GdiDirect2DBackend();
+        if ($cls === \Px\Rendering\Backend\GdiLegacyBackend::class) return new \Px\Rendering\Backend\GdiLegacyBackend();
+        throw new \InvalidArgumentException("Unknown backend class: {$cls}");
     }
 
     /**
@@ -164,7 +178,7 @@ class RuntimeBackendSelector
         // 强制：只保留指定后端
         $filtered = [];
         foreach ($all as $cls) {
-            $instance = new $cls();
+            $instance = $this->instantiateBackend($cls);
             if ($instance->getName() === $forced) {
                 $filtered[] = $cls;
             }

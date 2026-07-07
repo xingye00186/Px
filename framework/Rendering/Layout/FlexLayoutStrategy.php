@@ -100,18 +100,30 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
         }
 
         // Sort by CSS order property (stable sort: equal order preserves source order)
+        // Manual insertion sort avoids usort + closure ZendVM dispatch
         $indices = range(0, count($flexItems) - 1);
-        $originalIndices = $indices; // save for remapping results back to DOM order
-        usort($indices, function($a, $b) use ($flexItemData) {
-            $oa = (int)($flexItemData[$a]['order'] ?? 0);
-            $ob = (int)($flexItemData[$b]['order'] ?? 0);
-            if ($oa !== $ob) return $oa - $ob;
-            return $a - $b; // stable: preserve source order for equal orders
-        });
+        $originalIndices = $indices;
+        $n = count($indices);
+        for ($i = 1; $i < $n; $i++) {
+            $tmp = (int)($indices[$i]);
+            $otmp = (int)($flexItemData[$tmp]['order'] ?? 0);
+            $j = $i;
+            while ($j > 0) {
+                $k = (int)($indices[$j - 1]);
+                $ok = (int)($flexItemData[$k]['order'] ?? 0);
+                if ($otmp < $ok || ($otmp === $ok && $tmp < $k)) {
+                    $indices[$j] = $indices[$j - 1];
+                    $j--;
+                } else {
+                    break;
+                }
+            }
+            $indices[$j] = $tmp;
+        }
         $sortedFlexItems = []; foreach ($indices as $idx) { $sortedFlexItems[] = $flexItems[$idx]; }
         // Rebuild flexItemData in sorted order
         $sortedFlexItemData = []; $sortedChildResults = [];
-        foreach ($indices as $i) { $sortedFlexItemData[] = $flexItemData[$i]; $sortedChildResults[] = $childResults[$i]; }
+        foreach ($indices as $idx2) { $sortedFlexItemData[] = $flexItemData[$idx2]; $sortedChildResults[] = $childResults[$idx2]; }
 
         // ── Step 2: Apply flex-basis ──
         foreach ($sortedFlexItems as $fi) {

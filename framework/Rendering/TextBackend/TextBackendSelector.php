@@ -42,7 +42,7 @@ class TextBackendSelector
 
         foreach ($candidates as $cls) {
             /** @var ITextBackend $backend */
-            $backend = new $cls();
+            $backend = $this->instantiateTextBackend($cls);
             $name    = $backend->getName();
             $pri     = $cls::getPriority();
 
@@ -68,6 +68,17 @@ class TextBackendSelector
 
         error_log('[Px] No text backend available, falling back to C++ internal default');
         return null;
+    }
+
+    /**
+     * 实例化文本后端（避免 new $cls() 动态类名 ZendVM dispatch）。
+     */
+    private function instantiateTextBackend(string $cls): ITextBackend
+    {
+        if ($cls === \Px\Rendering\TextBackend\DWriteTextBackend::class) return new \Px\Rendering\TextBackend\DWriteTextBackend();
+        if ($cls === \Px\Rendering\TextBackend\SkiaTextBackend::class) return new \Px\Rendering\TextBackend\SkiaTextBackend();
+        if ($cls === \Px\Rendering\TextBackend\GdiTextBackend::class) return new \Px\Rendering\TextBackend\GdiTextBackend();
+        throw new \InvalidArgumentException("Unknown text backend class: {$cls}");
     }
 
     /**

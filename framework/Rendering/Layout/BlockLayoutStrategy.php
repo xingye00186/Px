@@ -98,7 +98,10 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                         $reResolved[] = $i < count($children) ? $children[$i] : null;
                     }
                 }
-                $children = array_values(array_filter($reResolved));
+                $children = [];
+                foreach ($reResolved as $cr) {
+                    if ($cr !== null) $children[] = $cr;
+                }
             }
 
             $stackedChildren = $this->stackBlockChildren(
