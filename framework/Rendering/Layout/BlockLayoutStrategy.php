@@ -182,16 +182,11 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
             // Text measurement only for inline-level elements, not block fill
             // (type/text content detection is handled by the caller via style)
-        } elseif ($width > 0 && ($s->boxSizing?->value ?? 'content-box') === 'border-box') {
-            // CSS 2.2 搂8.1: border-box explicit width includes padding+border.
-            // Content width = specified width - padding - border.
-            $padL = $s->padding?->left->toPx() ?? 0;
-            $padR = $s->padding?->right->toPx() ?? 0;
-            $bwL = $s->borderLeftWidth ?? 0;
-            $bwR = $s->borderRightWidth ?? 0;
-            $width = max(0, $width - $padL - $padR - $bwL - $bwR);
+        } else {
+            // border-box: CSS width is the total; content width = CSS width - padding - border,
+            // but we keep CSS width here and let $cbW subtraction handle it (consistent with Flex/Grid/etc).
         }
-
+        
         $minW = $s->minWidth?->toPx() ?? 0;
         $maxW = $s->maxWidth?->toPx() ?? 0;
         if ($minW > 0 && $width < $minW) $width = $minW;
