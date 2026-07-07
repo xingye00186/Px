@@ -51,9 +51,8 @@ class LayoutValidationStep implements PipelineStepInterface
             'total_issues' => count($this->issues),
             'issues' => $this->issues,
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        // 模式后缀：PHP Runtime 与 AOT 报告隔离
-        $isPhpRuntime = getenv('PX_PHP_RUNTIME') !== false && getenv('PX_PHP_RUNTIME') !== '';
-        $modeSuffix = $isPhpRuntime ? '_php' : '_aot';
+        // 模式后缀：从上下文读取（由 PipelineSteps 设置）
+        $modeSuffix = $ctx->get('mode_suffix', '_aot');
         file_put_contents("{$refDir}/layout_validation_report{$modeSuffix}.json", $jsonReport);
         $md = "# Phase L 布局断言报告: $caseName\n\n";
         $md .= "**生成时间**: " . date('Y-m-d H:i:s') . "\n\n";

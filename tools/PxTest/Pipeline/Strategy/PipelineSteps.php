@@ -131,9 +131,12 @@ class LayoutDumpStep implements PipelineStepInterface
         $modeSuffix = $isPhpRuntime ? '_php' : '_aot';
         $modeFile = dirname($engineFile) . '/engine_layout' . $modeSuffix . '.json';
         if (file_exists($engineFile)) {
-            copy($engineFile, $modeFile);
+            rename($engineFile, $modeFile); // 直接重命名，不保留原始 engine_layout.json
         }
         $result[1] = $modeFile; // update path for subsequent steps
+
+        // 写入上下文供下游步骤使用
+        $ctx->set('mode_suffix', $modeSuffix);
 
         // REF_STALE check: verify layout JSON contains test case key content
         $json = $result[0];

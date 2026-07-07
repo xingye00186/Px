@@ -516,7 +516,8 @@ class ElementCompareStep implements PipelineStepInterface
         $ctx->set('container_overflow_issues', $containerIssues);
 
         // ─── 保存报告文件 ───
-        $this->saveReport($structDiffs, $missingDiffs, $geoDiffs, $mismatchDiffs, $totalDiffs, $overflowIssues, $containerIssues);
+        $modeSuffix = $ctx->get('mode_suffix', '_aot');
+        $this->saveReport($structDiffs, $missingDiffs, $geoDiffs, $mismatchDiffs, $totalDiffs, $overflowIssues, $containerIssues, $modeSuffix);
 
         // MISSING（引擎未导出属性）不计入失败——工作流规则：仅引擎未导出属性时可通过
         $realDiffs = count($geoDiffs) + count($mismatchDiffs) + count($structDiffs) + $containerOverflowDiffs;
@@ -665,7 +666,7 @@ class ElementCompareStep implements PipelineStepInterface
      *   element_compare_report_{mode}.md   — 可读报告，供人工查阅
      *   {mode} = aot|php（由 PX_PHP_RUNTIME 环境变量决定）
      */
-    private function saveReport(array $structDiffs, array $missingDiffs, array $geoDiffs, array $mismatchDiffs, int $totalDiffs, array $overflowIssues = [], array $containerIssues = []): void
+    private function saveReport(array $structDiffs, array $missingDiffs, array $geoDiffs, array $mismatchDiffs, int $totalDiffs, array $overflowIssues = [], array $containerIssues = [], string $modeSuffix = '_aot'): void
     {
         if ($this->caseDir === '' || $this->caseName === '') return;
 
@@ -673,10 +674,6 @@ class ElementCompareStep implements PipelineStepInterface
         if (!is_dir($refDir)) {
             @mkdir($refDir, 0777, true);
         }
-
-        // 模式后缀：PHP Runtime 与 AOT 报告隔离
-        $isPhpRuntime = getenv('PX_PHP_RUNTIME') !== false && getenv('PX_PHP_RUNTIME') !== '';
-        $modeSuffix = $isPhpRuntime ? '_php' : '_aot';
 
         $counts = [
             'MISSING'  => count($missingDiffs),
