@@ -51,7 +51,10 @@ class LayoutValidationStep implements PipelineStepInterface
             'total_issues' => count($this->issues),
             'issues' => $this->issues,
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        file_put_contents("$refDir/layout_validation_report.json", $jsonReport);
+        // 模式后缀：PHP Runtime 与 AOT 报告隔离
+        $isPhpRuntime = getenv('PX_PHP_RUNTIME') !== false && getenv('PX_PHP_RUNTIME') !== '';
+        $modeSuffix = $isPhpRuntime ? '_php' : '_aot';
+        file_put_contents("{$refDir}/layout_validation_report{$modeSuffix}.json", $jsonReport);
         $md = "# Phase L 布局断言报告: $caseName\n\n";
         $md .= "**生成时间**: " . date('Y-m-d H:i:s') . "\n\n";
         if (!empty($this->issues)) {
@@ -64,7 +67,7 @@ class LayoutValidationStep implements PipelineStepInterface
         } else {
             $md .= "未发现 CSS 布局违规。\n";
         }
-        file_put_contents("$refDir/layout_validation_report.md", $md);
+        file_put_contents("{$refDir}/layout_validation_report{$modeSuffix}.md", $md);
 
         // Store issue count in context for summary report
         $ctx->set('layout_validation_issues', count($this->issues));

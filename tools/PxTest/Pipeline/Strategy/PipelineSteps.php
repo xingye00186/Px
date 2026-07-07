@@ -153,7 +153,7 @@ class LayoutDumpStep implements PipelineStepInterface
         try {
             $normalizer = new LayoutNormalizer(1600, 800);
             $normalizedJson = $normalizer->normalize($json);
-            $normalizedPath = "$refDir/engine_ref_level_0.json";
+            $normalizedPath = "{$refDir}/engine_ref_level_0{$modeSuffix}.json";
             file_put_contents($normalizedPath, $normalizedJson);
             $ctx->set('engine_ref', $normalizedJson);
         } catch (\Throwable $e) {

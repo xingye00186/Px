@@ -661,8 +661,9 @@ class ElementCompareStep implements PipelineStepInterface
     /**
      * 保存对比报告到 ref/ 目录。
      * 生成两份文件：
-     *   element_compare_report.json  — 结构化数据，供程序读取
-     *   element_compare_report.md    — 可读报告，供人工查阅
+     *   element_compare_report_{mode}.json — 结构化数据，供程序读取
+     *   element_compare_report_{mode}.md   — 可读报告，供人工查阅
+     *   {mode} = aot|php（由 PX_PHP_RUNTIME 环境变量决定）
      */
     private function saveReport(array $structDiffs, array $missingDiffs, array $geoDiffs, array $mismatchDiffs, int $totalDiffs, array $overflowIssues = [], array $containerIssues = []): void
     {
@@ -672,6 +673,10 @@ class ElementCompareStep implements PipelineStepInterface
         if (!is_dir($refDir)) {
             @mkdir($refDir, 0777, true);
         }
+
+        // 模式后缀：PHP Runtime 与 AOT 报告隔离
+        $isPhpRuntime = getenv('PX_PHP_RUNTIME') !== false && getenv('PX_PHP_RUNTIME') !== '';
+        $modeSuffix = $isPhpRuntime ? '_php' : '_aot';
 
         $counts = [
             'MISSING'  => count($missingDiffs),
@@ -697,8 +702,8 @@ class ElementCompareStep implements PipelineStepInterface
                 'CONTAINER_OVERFLOW' => $containerIssues,
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        file_put_contents("$refDir/element_compare_report.json", $jsonReport);
-
+        file_put_contents("{$refDir}/element_compare_report{$modeSuffix}.json", $jsonReport);
+        
         // ─── Markdown 报告（可读，人工用） ───
         $md = "# 元素对比报告: {$this->caseName}\n\n";
         $md .= "**生成时间**: " . date('Y-m-d H:i:s') . "\n\n";
@@ -770,9 +775,9 @@ class ElementCompareStep implements PipelineStepInterface
             $md .= "```\n\n";
         }
 
-        file_put_contents("$refDir/element_compare_report.md", $md);
-
-        echo "  [REPORT] saved to {$refDir}/element_compare_report.json + .md\n";
+        file_put_contents("{$refDir}/element_compare_report{$modeSuffix}.md", $md);
+        
+        echo "  [REPORT] saved to {$refDir}/element_compare_report{$modeSuffix}.json + .md\n";
     }
 
     /**
