@@ -40,17 +40,17 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $children = $input->childResults;
         $textContent = $input->textContent;
 
-        $left = $s->left?->toPx() ?? 0;
-        $top = $s->top?->toPx() ?? 0;
-        $marginLeft = $s->margin?->left->toPx() ?? 0;
-        $marginTop = $s->margin?->top->toPx() ?? 0;
+        $left = $s->left->toPx();
+        $top = $s->top->toPx();
+        $marginLeft = $s->margin->left->toPx();
+        $marginTop = $s->margin->top->toPx();
         $parentW = $c->containerWidth;
         $parentH = $c->containerHeight;
 
         $w = $this->computeBlockWidth($parentW, $s, $textContent);
         $h = $this->computeBlockHeight($parentH, $s, $textContent);
 
-        $positionVal = $s->position?->value ?? 'static';
+        $positionVal = $s->position->value;
         $isStaticOrRelative = ($positionVal === 'static' || $positionVal === 'relative');
         $x = $isStaticOrRelative ? ($c->parentContentX + $left + $marginLeft) : $c->parentContentX;
         $y = $isStaticOrRelative ? ($c->parentContentY + $top + $marginTop) : $c->parentContentY;

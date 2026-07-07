@@ -109,6 +109,9 @@ class LayoutResolver
      */
     private function resolveFragment(RenderNode $node, LayoutConstraints $constraints, int $inheritedLayer = 0, ?int $parentResultX = null, ?int $parentResultY = null, int $iteration = 0): LayoutResult
     {
+        // DEBUG helper
+        $nodeName = $node->type;
+
         $style = $node->computedStyle;
         $display = $style?->display?->value ?? 'block';
         $position = $style?->position?->value ?? 'static';
@@ -135,23 +138,24 @@ class LayoutResolver
         // Recursively resolve children (pure)
         $childResults = [];
         foreach ($node->children as $child) {
-            $padL = (int)($style?->padding?->left->toPx() ?? 0);
-            $padR = (int)($style?->padding?->right->toPx() ?? 0);
-            $padT = (int)($style?->padding?->top->toPx() ?? 0);
-            $padB = (int)($style?->padding?->bottom->toPx() ?? 0);
-            $bL = (int)($style?->borderLeftWidth ?? 0);
-            $bR = (int)($style?->borderRightWidth ?? 0);
-            $bT = (int)($style?->borderTopWidth ?? 0);
-            $bB = (int)($style?->borderBottomWidth ?? 0);
+            $padL = 0; $padR = 0; $padT = 0; $padB = 0;
+            $bL = 0; $bR = 0; $bT = 0; $bB = 0;
+            if ($style !== null) {
+                $padL = (int)$style->padding->left->toPx();
+                $padR = (int)$style->padding->right->toPx();
+                $padT = (int)$style->padding->top->toPx();
+                $padB = (int)$style->padding->bottom->toPx();
+                $bL = (int)$style->borderLeftWidth;
+                $bR = (int)$style->borderRightWidth;
+                $bT = (int)$style->borderTopWidth;
+                $bB = (int)$style->borderBottomWidth;
+            }
 
-            // Use ComputedStyle.width when node.w is 0 (Phase A: RenderNode not yet written)
-            // AOT-safe: $style->width is typed CssLength, always initialized
-            $nodeW = $node->w;
-            // 仅在非 flex/grid 父容器中使用 ComputedStyle.width（
-            // flex/grid item 的宽度由 flex/grid 算法决定，不应 auto-fill 父容器）
-            $parentDisplay = $node->computedStyle?->display?->value ?? 'block';
+            // AOT-safe: $node->computedStyle single ?-> check
+            $parentDisplay = $node->computedStyle !== null ? $node->computedStyle->display->value : 'block';
             $isFlexGridItem = ($parentDisplay === 'flex' || $parentDisplay === 'inline-flex'
                 || $parentDisplay === 'grid' || $parentDisplay === 'inline-grid');
+            $nodeW = (int)($node->w);
             if ($nodeW <= 0 && !$isFlexGridItem && $style !== null) {
                 $cssW = $style->width->toPx();
                 if ($cssW > 0) {
@@ -170,18 +174,35 @@ class LayoutResolver
                 }
             }
 
-            $cbW = $nodeW > 0
-                ? max(0, $nodeW - $padL - $padR - $bL - $bR)
-                : max(0, $constraints->contentWidth - $padL - $padR - $bL - $bR);
-            $cbH = $nodeH > 0
-                ? max(0, $nodeH - $padT - $padB - $bT - $bB)
-                : max(0, $constraints->contentHeight - $padT - $padB - $bT - $bB);
+            // AOT-safe: ($nodeW as int) then subtract
+            $cbW = 0;
+            $cbH = 0;
+            $nodeWInt = (int)($nodeW ?? 0);
+            $nodeHInt = (int)($nodeH ?? 0);
+            if ($nodeWInt > 0) {
+                $cbW = max(0, $nodeWInt - (int)($padL ?? 0) - (int)($padR ?? 0) - (int)($bL ?? 0) - (int)($bR ?? 0));
+            } else {
+                $cbW = max(0, (int)($constraints->contentWidth ?? 0) - (int)($padL ?? 0) - (int)($padR ?? 0) - (int)($bL ?? 0) - (int)($bR ?? 0));
+            }
+            if ($nodeHInt > 0) {
+                $cbH = max(0, $nodeHInt - (int)($padT ?? 0) - (int)($padB ?? 0) - (int)($bT ?? 0) - (int)($bB ?? 0));
+            } else {
+                $cbH = max(0, (int)($constraints->contentHeight ?? 0) - (int)($padT ?? 0) - (int)($padB ?? 0) - (int)($bT ?? 0) - (int)($bB ?? 0));
+            }
             // Use ComputedStyle-based x/y for child constraints (not $node->x which is 0 in Phase A)
             // CSS position: static/relative elements sit at parentContentX + left + marginLeft
-            $selfX = $constraints->parentContentX + ($style?->left?->toPx() ?? 0) + ($style?->margin?->left?->toPx() ?? 0);
-            $selfY = $constraints->parentContentY + ($style?->top?->toPx() ?? 0) + ($style?->margin?->top?->toPx() ?? 0);
-            $childOffX = $selfX + $padL + $bL;
-            $childOffY = $selfY + $padT + $bT;
+            // AOT-safe: use single ?-> chain depth, avoid $style?->left?->toPx() 3-level chain
+            $childLeft = 0; $childTop = 0; $childML = 0; $childMT = 0;
+            if ($style !== null) {
+                $childLeft = (int)$style->left->toPx();
+                $childTop = (int)$style->top->toPx();
+                $childML = (int)$style->margin->left->toPx();
+                $childMT = (int)$style->margin->top->toPx();
+            }
+            $selfX = (int)($constraints->parentContentX ?? 0) + (int)($childLeft ?? 0) + (int)($childML ?? 0);
+            $selfY = (int)($constraints->parentContentY ?? 0) + (int)($childTop ?? 0) + (int)($childMT ?? 0);
+            $childOffX = (int)($selfX ?? 0) + (int)($padL ?? 0) + (int)($bL ?? 0);
+            $childOffY = (int)($selfY ?? 0) + (int)($padT ?? 0) + (int)($bT ?? 0);
 
             $childConstraints = new LayoutConstraints(
                 (int)max(0, $cbW),
