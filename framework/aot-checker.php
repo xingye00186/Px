@@ -101,6 +101,41 @@ class AotChecker
             'message' => 'AOT: call_user_func 动态调用（AOT 不支持）',
         ],
 
+        // 11. Closure::fromCallable — 触发 eval 降级
+        'aot_from_callable' => [
+            'severity' => 'ERROR',
+            'pattern' => '/Closure::fromCallable\s*\(/',
+            'message' => 'AOT: Closure::fromCallable 使所在方法坠入 eval 模式，改用接口回调',
+        ],
+
+        // 12. new \$cls() — 动态类名实例化走 ZendVM dispatch
+        'aot_new_dynamic_class' => [
+            'severity' => 'WARN',
+            'pattern' => '/new\s+\$\w+/',
+            'message' => 'AOT: new \$cls() 动态类名走 ZendVM dispatch，改用 if/switch 工厂',
+        ],
+
+        // 13. array_filter/array_map/array_walk — 回调走 ZendVM dispatch
+        'aot_array_callback' => [
+            'severity' => 'WARN',
+            'pattern' => '/\b(array_filter|array_map|array_walk)\s*\(/',
+            'message' => 'AOT: 数组遍历函数 + 回调走 ZendVM dispatch，改用手写 foreach',
+        ],
+
+        // 14. usort/uasort/uksort — 回调走 ZendVM dispatch
+        'aot_usort_callback' => [
+            'severity' => 'WARN',
+            'pattern' => '/\b(usort|uasort|uksort)\s*\(/',
+            'message' => 'AOT: usort + 回调走 ZendVM dispatch，改写手写排序',
+        ],
+
+        // 15. preg_replace_callback — 回调走 ZendVM dispatch
+        'aot_preg_replace_callback' => [
+            'severity' => 'WARN',
+            'pattern' => '/\bpreg_replace_callback\s*\(/',
+            'message' => 'AOT: preg_replace_callback + closure 走 ZendVM dispatch，用 preg_match + str_replace 替代',
+        ],
+
         // ========== 资源所有权规则 ==========
 
         'hwnd_in_app' => [

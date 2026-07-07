@@ -93,7 +93,7 @@ class TextBackendSelector
         $currentName = $this->current?->getName() ?? '';
 
         foreach ($candidates as $cls) {
-            $instance     = new $cls();
+            $instance     = $this->instantiateTextBackend($cls);
             $instanceName = $instance->getName();
 
             // 跳过当前 + 已失败 + 不健康
@@ -154,7 +154,7 @@ class TextBackendSelector
         // 强制模式：只保留匹配的后端
         $filtered = [];
         foreach ($all as $cls) {
-            $instance = new $cls();
+            $instance = $this->instantiateTextBackend($cls);
             if ($instance->getName() === $forced) {
                 $filtered[] = $cls;
             }

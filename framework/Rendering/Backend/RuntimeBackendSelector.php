@@ -113,7 +113,7 @@ class RuntimeBackendSelector
         foreach ($candidates as $cls) {
             $name = $cls::getPriority() . '';
             // 实例化以获取名字
-            $instance = new $cls();
+            $instance = $this->instantiateBackend($cls);
             $instanceName = $instance->getName();
 
             // 跳过当前 + 已失败 + 不健康
