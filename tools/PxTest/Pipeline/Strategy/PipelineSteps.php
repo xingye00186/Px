@@ -130,7 +130,7 @@ class LayoutDumpStep implements PipelineStepInterface
         $engineFile = $result[1];
         $modeSuffix = $isPhpRuntime ? '_php' : '_aot';
         $modeFile = dirname($engineFile) . '/engine_layout' . $modeSuffix . '.json';
-        if (file_exists($engineFile) && !file_exists($modeFile)) {
+        if (file_exists($engineFile)) {
             copy($engineFile, $modeFile);
         }
         $result[1] = $modeFile; // update path for subsequent steps
