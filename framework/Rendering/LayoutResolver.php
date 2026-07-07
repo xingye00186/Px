@@ -144,22 +144,18 @@ class LayoutResolver
             $bT = $style?->borderTopWidth ?? 0;
             $bB = $style?->borderBottomWidth ?? 0;
 
-            $rawW = $node->w > 0 ? $node->w : (int)($style?->width->toPx() ?? 0);
-            $effectiveW = ($rawW > 0 && !($style?->width?->isPercent() ?? false)) ? $rawW : 0;
-            $cbW = $effectiveW > 0
-                ? (int)max(0, (int)($effectiveW - $padL - $padR - $bL - $bR))
-                : (int)max(0, (int)($constraints->contentWidth - $padL - $padR - $bL - $bR));
-            $cbH = $node->h > 0 ? (int)max(0, (int)($node->h - $padT - $padB - $bT - $bB)) : (int)($constraints->contentHeight);
+            $cbW = $node->w > 0 ? max(0, $node->w - $padL - $padR - $bL - $bR) : $constraints->contentWidth;
+            $cbH = $node->h > 0 ? max(0, $node->h - $padT - $padB - $bT - $bB) : $constraints->contentHeight;
             $childOffX = $node->x + $padL + $bL;
             $childOffY = $node->y + $padT + $bT;
 
             $childConstraints = new LayoutConstraints(
-                (int)$cbW,
-                (int)$cbH,
+                (int)max(0, $cbW),
+                (int)max(0, $cbH),
                 (int)($childOffX),
                 (int)($childOffY),
-                (int)$cbW,
-                (int)$cbH,
+                (int)max(0, $cbW),
+                (int)max(0, $cbH),
             );
             $childResults[] = $this->resolveFragment($child, $childConstraints, $nodeLayer, $node->x, $node->y);
         }
