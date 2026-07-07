@@ -8,10 +8,10 @@ use Px\Rendering\ComputedStyle;
 use Px\Rendering\CssLength;
 
 /**
- * BlockLayoutStrategy — Block 布局策略
+ * BlockLayoutStrategy 鈥?Block 甯冨眬绛栫暐
  *
- * Pure function 实现：layout(LayoutInput) → LayoutResult。
- * 不接收 RenderNode，不产生副作用。
+ * Pure function 瀹炵幇锛歭ayout(LayoutInput) 鈫?LayoutResult銆?
+ * 涓嶆帴鏀?RenderNode锛屼笉浜х敓鍓綔鐢ㄣ€?
  */
 class BlockLayoutStrategy implements LayoutStrategyInterface
 {
@@ -183,7 +183,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             // Text measurement only for inline-level elements, not block fill
             // (type/text content detection is handled by the caller via style)
         } elseif ($width > 0 && ($s->boxSizing?->value ?? 'content-box') === 'border-box') {
-            // CSS 2.2 §8.1: border-box explicit width includes padding+border.
+            // CSS 2.2 搂8.1: border-box explicit width includes padding+border.
             // Content width = specified width - padding - border.
             $padL = $s->padding?->left->toPx() ?? 0;
             $padR = $s->padding?->right->toPx() ?? 0;
@@ -245,9 +245,9 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $prevMarginBottom = 0;
         $prevCollapsible = false;
 
-        // ── IFC: inline formatting context buffer ──
+        // 鈹€鈹€ IFC: inline formatting context buffer 鈹€鈹€
         // Collect consecutive inline/inline-block items and flush them as
-        // horizontally-wrapped lines (CSS §9.4.2 Inline formatting context).
+        // horizontally-wrapped lines (CSS 搂9.4.2 Inline formatting context).
         $inlineBuffer = [];
 
         foreach ($childResults as $cr) {
@@ -323,7 +323,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 $childY = $stackY + $mTop;
             }
 
-            // Apply position:relative top/left offset (CSS §9.4.3)
+            // Apply position:relative top/left offset (CSS 搂9.4.3)
             $relTop = $childStyle?->top?->toPx() ?? 0;
             $relLeft = $childStyle?->left?->toPx() ?? 0;
             if ($childPosition === 'relative' || $childPosition === 'static') {
@@ -338,7 +338,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                 style: $childStyle,
                 children: $cr->children,
             );
-            // CSS §9.4.3: relative offset does NOT affect subsequent siblings.
+            // CSS 搂9.4.3: relative offset does NOT affect subsequent siblings.
             // $stackY uses the un-offset position (childY - relTop).
             $stackY = ($childY - $relTop) + $chH + $mBottom;
             $prevMarginBottom = $mBottom;
@@ -356,7 +356,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
     /**
      * Layout inline/inline-block items in a horizontal flow with line wrapping.
      *
-     * CSS §9.4.2: In inline formatting context, boxes are placed horizontally
+     * CSS 搂9.4.2: In inline formatting context, boxes are placed horizontally
      * one after another. When the remaining space on a line is insufficient,
      * a new line is started below.
      *
@@ -369,10 +369,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
      */
     private function layoutInlineBuffer(array $buffer, int $parentX, int $padLeft, int $containerW, int $startY): array
     {
-        error_log('[IFC_DEBUG] layoutInlineBuffer: buf=' . count($buffer) . ' pX=' . $parentX . ' pL=' . $padLeft . ' cW=' . $containerW . ' sY=' . $startY);
         if (count($buffer) > 0) {
             $first = $buffer[0];
-            error_log('[IFC_DEBUG] first item: w=' . $first->w . ' h=' . $first->h . ' display=' . ($first->style?->display?->value ?? '?'));
         }
         $availableW = $containerW;
         $result = [];
@@ -390,17 +388,15 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $itemTotalW = $cr->w + $mLeft + $mRight;
             $itemH = $cr->h + $mTop + $mBottom;
 
-            // Check if item fits on current line (CSS Text §3: soft wrap break)
+            // Check if item fits on current line (CSS Text 搂3: soft wrap break)
             $wouldExceed = ($cursorX + $itemTotalW > $availableW);
             if ($i < 5 || $i % 20 === 0) {
-                error_log('[IFC_DEBUG] item[' . $i . '] cursorX=' . $cursorX . ' itemW=' . $itemTotalW . ' exceed=' . ($wouldExceed ? 'YES' : 'no') . ' lineMaxH=' . $lineMaxH . ' cursorY=' . $cursorY);
             }
             if ($wouldExceed && $cursorX > $padLeft) {
                 // Wrap to next line
                 $cursorY += $lineMaxH;
                 $cursorX = $padLeft;
                 $lineMaxH = 0;
-                error_log('[IFC_DEBUG] WRAP to line: cursorY=' . $cursorY);
             }
 
             // Place item
@@ -425,7 +421,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         $nextY = $startY + $cursorY + $lineMaxH;
 
-        error_log('[IFC_DEBUG] result: items=' . count($result) . ' nextY=' . $nextY);
 
         return ['items' => $result, 'nextY' => $nextY];
     }
@@ -438,7 +433,6 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
         $availW = $containerW;
         if ($availW <= 0) $availW = $parentW;
         if ($availW <= 0) $availW = 10000; // generous fallback: inline items on single line
-        error_log('[IFC_DEBUG2] flushInlineBuffer: buf=' . count($inlineBuffer) . ' containerW=' . $containerW . ' parentW=' . $parentW . ' availW=' . $availW);
         $inlineResult = $this->layoutInlineBuffer($inlineBuffer, $parentX, $padLeft, $availW, $stackY);
         foreach ($inlineResult['items'] as $item) $result[] = $item;
         $stackY = $inlineResult['nextY'];

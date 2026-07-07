@@ -58,8 +58,13 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $cs = $cr->style;
             if ($cs === null) continue;
             // Use resolved flex shorthand as fallback when individual props not set
-            $grow = (float)($cs->getRaw("flexGrow") ?? $cs->flex->grow);
-            $shrink = (float)($cs->getRaw("flexShrink") ?? $cs->flex->shrink);
+            // (getRaw may return CssLength object which cannot be cast to float)
+            $grow = $cs->flex->grow;
+            $shrink = $cs->flex->shrink;
+            $rawGrow = $cs->getRaw("flexGrow");
+            $rawShrink = $cs->getRaw("flexShrink");
+            if (is_numeric($rawGrow)) $grow = (float)$rawGrow;
+            if (is_numeric($rawShrink)) $shrink = (float)$rawShrink;
             $order = (int)($cs->getRaw("order") ?? 0);
             // flex-basis from resolved CssLength (not raw string from getRaw)
             $basisVal = $cs->flexBasis;
