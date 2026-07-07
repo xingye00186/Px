@@ -145,10 +145,7 @@ class LayoutResolver
             $bB = $style?->borderBottomWidth ?? 0;
 
             $rawW = $node->w > 0 ? $node->w : (int)($style?->width->toPx() ?? 0);
-            // 百分比宽度不能用 toPx() 作为有效宽度
             $effectiveW = ($rawW > 0 && !($style?->width?->isPercent() ?? false)) ? $rawW : 0;
-            // 子容器可用宽度：如果当前节点有显式/像素宽度，扣减 padding+border 后传递；
-            // 否则从约束链获取父容器内容宽度，再扣减当前节点的 padding+border
             $cbW = $effectiveW > 0
                 ? (int)max(0, (int)($effectiveW - $padL - $padR - $bL - $bR))
                 : (int)max(0, (int)($constraints->contentWidth - $padL - $padR - $bL - $bR));
@@ -179,7 +176,6 @@ class LayoutResolver
         $viewportW = 0;
         $viewportH = 0;
 
-        $posVal = $style?->position?->value ?? 'static';
         if ($position === 'absolute' || $position === 'fixed') {
             if ($position === 'fixed') {
                 // CSS §9.3: fixed 包含块 = 视口，不查找定位祖先
@@ -230,7 +226,6 @@ class LayoutResolver
         }
 
         if ($isAbsolute) {
-            // Absolute positioning: prepare ancestor info
             $input = new LayoutInput(
                 constraints: $constraints,
                 style: $style,
@@ -277,109 +272,6 @@ class LayoutResolver
         }
 
        return $result;
-    }
-
-    /**
-     * Phase 2: 自顶向下传播 viewport-absolute 坐标。
-     *
-     * Phase 1 的 resolveFragment 是"先子后己"——子节点递归时父节点的
-     * LayoutResult 还未产生，导致 $childOffX = $node->x(首帧=0) + pad + border，
-     * 子节点坐标缺少父节点偏移，在 extractContentSubtree 中产生深层嵌套偏差。
-     *
-     * Phase 2 改为"先己后子"：先用 Phase 1 的 LayoutResult.x/y（现已正确）
-     * 构造子约束，再通过 strategy->layout() 让子节点获得 viewport-absolute 坐标。
-     */
-    private function propagateCoords(RenderNode $node, LayoutResult $result, LayoutConstraints $constraints, int $inheritedLayer = 0): void
-    {
-        $style = $node->computedStyle;
-        $display = $style?->display?->value ?? 'block';
-
-        if ($display === 'none') return;
-
-        // ── 用 Phase 1 的 LayoutResult.x/y 构造子约束 ──
-        $padL = $style?->padding?->left->toPx() ?? 0;
-        $padR = $style?->padding?->right->toPx() ?? 0;
-        $padT = $style?->padding?->top->toPx() ?? 0;
-        $padB = $style?->padding?->bottom->toPx() ?? 0;
-        $bL = $style?->borderLeftWidth ?? 0;
-        $bR = $style?->borderRightWidth ?? 0;
-        $bT = $style?->borderTopWidth ?? 0;
-        $bB = $style?->borderBottomWidth ?? 0;
-
-        $effectiveW = $result->w > 0 ? $result->w : (int)($style?->width->toPx() ?? 0);
-        $cbW = $effectiveW > 0 ? (int)max(0, $effectiveW - $padL - $padR - $bL - $bR) : (int)($constraints->contentWidth);
-
-        // ── 广度优先：先处理孩子，再用孩子的 x/y 传播到孙子 ──
-        for ($i = 0; $i < count($node->children) && $i < count($result->children); $i++) {
-            $child = $node->children[$i];
-            $childP1 = $result->children[$i];  // Phase 1 结果（孩子 xy 由父策略算出，正确）
-
-            // 使用孩子 Phase 1 的 x/y 而不是 $result->x + pad + border
-            // 因为对于 flex/grid 孩子，其 x 由父容器策略决定，不等于父的 content 偏移
-            $childCS = $child->computedStyle;
-            $cPadL = $childCS?->padding?->left->toPx() ?? 0;
-            $cPadR = $childCS?->padding?->right->toPx() ?? 0;
-            $cBwL = $childCS?->borderLeftWidth ?? 0;
-            $cBwR = $childCS?->borderRightWidth ?? 0;
-            $cPadT = $childCS?->padding?->top->toPx() ?? 0;
-            $cPadB = $childCS?->padding?->bottom->toPx() ?? 0;
-            $cBwT = $childCS?->borderTopWidth ?? 0;
-            $cBwB = $childCS?->borderBottomWidth ?? 0;
-
-            // 孙节点约束：孩子 Phase 1 x/y + 孩子 padding + 孩子 border
-            $grandOffX = $childP1->x + $cPadL + $cBwL;
-            $grandOffY = $childP1->y + $cPadT + $cBwT;
-            $grandW = $childP1->w > 0
-                ? (int)max(0, $childP1->w - $cPadL - $cPadR - $cBwL - $cBwR)
-                : $cbW;
-
-            $childConstraints = new LayoutConstraints(
-                $grandW, 0, $grandOffX, $grandOffY, $grandW, 0,
-            );
-
-            // 调用孩子自己的策略，用正确 parentContentX/Y 重算孙辈坐标
-            $strategy = $this->selectStrategy(
-                $childCS?->display?->value ?? 'block',
-                $childCS
-            );
-            $childText = is_string($child->content) ? $child->content : '';
-            $childPosition = $childCS?->position?->value ?? 'static';
-
-            if ($childPosition === 'absolute' || $childPosition === 'fixed') {
-                $absInput = new LayoutInput(
-                    constraints: $childConstraints,
-                    style: $childCS,
-                    textContent: $childText,
-                    childResults: $childP1->children,
-                    childNodes: $child->children,
-                    reResolveChild: \Closure::fromCallable([$this, 'reResolveChild']),
-                    measureIntrinsic: \Closure::fromCallable([$this, 'measureIntrinsic']),
-                    iteration: 0,
-                    position: $childPosition,
-                );
-                $newChild = $this->wrapWithLayer($this->absolutePositioning->absoluteLayout($absInput), $inheritedLayer);
-            } else {
-                $childInput = new LayoutInput(
-                    constraints: $childConstraints,
-                    style: $childCS,
-                    textContent: $childText,
-                    childResults: $childP1->children,  // 孙辈 Phase 1 结果（尺寸正确）
-                    childNodes: $child->children,
-                    reResolveChild: \Closure::fromCallable([$this, 'reResolveChild']),
-                    measureIntrinsic: \Closure::fromCallable([$this, 'measureIntrinsic']),
-                    iteration: 0,
-                    position: $childPosition,
-                );
-                $newChild = $strategy->layout($childInput);
-                $newChild = $this->wrapWithLayer($newChild, $inheritedLayer);
-            }
-
-            // 回写孩子的更新后坐标
-            $this->applicator->apply($newChild, $child);
-
-            // 递归：用孩子的新 LayoutResult 继续传播到孙辈
-            $this->propagateCoords($child, $newChild, $childConstraints, $inheritedLayer);
-        }
     }
 
     public function reResolveChild(RenderNode $child, LayoutConstraints $newConstraints): LayoutResult
@@ -493,7 +385,6 @@ class LayoutResolver
             }
 
             // Horizontal scroll
-            $display = $cs?->display?->value ?? 'block';
             $overflowX2 = $cs?->overflowX?->value ?? $cs?->overflow?->value ?? 'visible';
             $hasHScroll2 = ($overflowX2 === 'auto' || $overflowX2 === 'scroll');
             if ($hasHScroll2) {
