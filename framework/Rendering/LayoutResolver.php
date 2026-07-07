@@ -144,8 +144,12 @@ class LayoutResolver
             $bT = $style?->borderTopWidth ?? 0;
             $bB = $style?->borderBottomWidth ?? 0;
 
-            $cbW = $node->w > 0 ? max(0, $node->w - $padL - $padR - $bL - $bR) : $constraints->contentWidth;
-            $cbH = $node->h > 0 ? max(0, $node->h - $padT - $padB - $bT - $bB) : $constraints->contentHeight;
+            $cbW = $node->w > 0
+                ? max(0, $node->w - $padL - $padR - $bL - $bR)
+                : max(0, $constraints->contentWidth - $padL - $padR - $bL - $bR);
+            $cbH = $node->h > 0
+                ? max(0, $node->h - $padT - $padB - $bT - $bB)
+                : max(0, $constraints->contentHeight - $padT - $padB - $bT - $bB);
             $childOffX = $node->x + $padL + $bL;
             $childOffY = $node->y + $padT + $bT;
 
