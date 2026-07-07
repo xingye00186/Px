@@ -147,7 +147,12 @@ class LayoutResolver
             // Use ComputedStyle.width when node.w is 0 (Phase A: RenderNode not yet written)
             // AOT-safe: $style->width is typed CssLength, always initialized
             $nodeW = $node->w;
-            if ($nodeW <= 0 && $style !== null) {
+            // 仅在非 flex/grid 父容器中使用 ComputedStyle.width（
+            // flex/grid item 的宽度由 flex/grid 算法决定，不应 auto-fill 父容器）
+            $parentDisplay = $node->computedStyle?->display?->value ?? 'block';
+            $isFlexGridItem = ($parentDisplay === 'flex' || $parentDisplay === 'inline-flex'
+                || $parentDisplay === 'grid' || $parentDisplay === 'inline-grid');
+            if ($nodeW <= 0 && !$isFlexGridItem && $style !== null) {
                 $cssW = $style->width->toPx();
                 if ($cssW > 0) {
                     $nodeW = $cssW;

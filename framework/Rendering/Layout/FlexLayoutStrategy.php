@@ -59,12 +59,8 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             if ($cs === null) continue;
             // Use resolved flex shorthand as fallback when individual props not set
             // (getRaw may return CssLength object which cannot be cast to float)
-            $grow = $cs->flex->grow;
-            $shrink = $cs->flex->shrink;
-            $rawGrow = $cs->getRaw("flexGrow");
-            $rawShrink = $cs->getRaw("flexShrink");
-            if (is_numeric($rawGrow)) $grow = (float)$rawGrow;
-            if (is_numeric($rawShrink)) $shrink = (float)$rawShrink;
+            $grow = (float)($cs->getRaw("flexGrow") ?? $cs->flex->grow);
+            $shrink = (float)($cs->getRaw("flexShrink") ?? $cs->flex->shrink);
             $order = (int)($cs->getRaw("order") ?? 0);
             // flex-basis from resolved CssLength (not raw string from getRaw)
             $basisVal = $cs->flexBasis;
@@ -84,6 +80,12 @@ class FlexLayoutStrategy implements LayoutStrategyInterface
             $item->content = $cr->style?->getRaw('_content');
             $item->originalChildren = $cr->children;
             $item->w = (int)$cr->w; $item->h = (int)$cr->h;
+            // Flex items without explicit width/height: ignore block auto-fill
+            // (flex algorithm determines their main size)
+            $hasMainSize = $isRow ? ($cs->getRaw("width") !== null) : ($cs->getRaw("height") !== null);
+            if (!$hasMainSize && $basis <= 0) {
+                if ($isRow) $item->w = 0; else $item->h = 0;
+            }
             $item->visualW = (int)$cr->visualW; $item->visualH = (int)$cr->visualH;
             $flexItems[] = $item;
             $flexItemData[] = [
