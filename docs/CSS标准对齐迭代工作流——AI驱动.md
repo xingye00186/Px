@@ -80,7 +80,7 @@ apps/css-test/
 ├── test_pipeline.php         PxTest 编排器（入口）
 ├── main.php                  exe 入口（支持 --dump-layout/--screenshot）
 ├── App.vue                   根模板（自动加载 test_case 的组件）
-├── test_case/                所有测试用例（当前 32 个 case）
+├── test_case/                所有测试用例（当前 55 个 case）
 │   └── case-NNN-name/
 │       ├── CaseNnnName.vue   引擎端模板
 │       ├── CaseNnnName.html  浏览器参考 HTML
@@ -92,24 +92,38 @@ apps/css-test/
 ├── gen/                      SFC 编译器输出
 ├── bin/                      构建输出（css_test.exe）
 └── project.yml               构建配置
-
+```
+```
 tools/PxTest/
-├── Pipeline/                 Pipeline + Strategy 编排引擎
+├── Pipeline/                 Pipeline 编排引擎（15 个步骤文件）
 │   ├── PipelineBuilder/Orchestrator    CLI→Pipeline + 依赖拓扑
 │   ├── BuildStep                      构建（哈希缓存+进程锁+孤儿清理）
-│   ├── Strategy/DumpStrategy          ExeDump / MockDump 双轨
-│   ├── Strategy/BrowserRefStrategy    EdgeDom / EdgeScreenshot
-│   └── ScreenshotStep                 截图对比（锚点对齐+diff图+锚点校验）
-├── Comparison/               对比器（Geometry/Style/Stability/Pixel/RenderNode）
+│   ├── BrowserRefStep                 浏览器参考生成
+│   ├── LayoutDumpStep                 布局导出
+│   ├── MultiFrameStep                 多帧稳定性
+│   ├── ElementCompareStep             元素对比
+│   ├── ScreenshotStep                 截图对比（锚点对齐+diff图+锚点校验）
+│   ├── LayoutValidationStep           布局校验
+│   ├── ComponentLifecycleStep         组件生命周期
+│   ├── InteractionStep                交互测试
+│   └── Strategy/                      DumpStrategy / BrowserRefStrategy / PhpDumpStrategy
+├── Comparison/               对比器（8 个，含 Geometry/Style/Stability/Pixel/RenderNode）
 ├── Mock/                     测试双轨（MockPlatform/Component/EventSimulator）
 ├── Snapshot/                 快照管理器
-├── Reporting/                报告器（Console/Markdown/JSON/TAP/Summary）
+├── Reporting/                报告器（6 个，含 Console/Markdown/JSON/TAP/Summary）
 ├── Baseline/                 基线归档
-└── Builder/                  Fluent Builder（VNodeBuilder/RenderNodeBuilder）
+├── Builder/                  Fluent Builder（VNodeBuilder/RenderNodeBuilder）
+├── Infrastructure/           基础设施（BrowserLauncher/ExeDiscovery/FontProvider）
+├── Bootstrap/                运行时引导（GoldenTextWidth/PhpRuntimeBootstrap）
+├── Assertions/               断言（RenderAssertions）
+├── Contracts/                契约测试
+├── Core/                     核心工具
+├── GoldenMeasure/            黄金宽度表
+└── Layout/                   布局工具
 
 tests/
-├── unit/PxTest/              单元测试（11 模块）
-├── integration/              集成测试（7 跨模块协作）
+├── unit/PxTest/              13 模块单元测试
+├── integration/              7 跨模块集成测试
 ├── stress/                   压力测试
 ├── e2e/                      E2E 编排 + headless 脚本
 └── run_all.php               统一运行器
@@ -205,6 +219,9 @@ php apps/css-test/test_pipeline.php --format=md
 | **G** | 浏览器参考（validateHtmlSpec + instrumentHtml，仅注入 dump_layout.js） | `ref/browser_ref_level_0.json` |
 | **H** | 逐元素对比（几何+样式+稳定性 + Phase F 溢出检测） | PASS/FAIL/SKIP |
 | **I** | 截图对比（三层锚点对齐 + GD 像素 diff + diff 图 + 锚点校验） | 差异 % |
+| **V** | 布局校验（LayoutValidationStep） | 布局树合规性 |
+| **C** | 组件生命周期（ComponentLifecycleStep） | mount/unmount 测试 |
+| **X** | 交互测试（InteractionStep） | 点击/滚动测试 |
 
 **自动告警**：REF_STALE · DOC_WARN（FAIL 不在问题清单）· 锚点可见性
 

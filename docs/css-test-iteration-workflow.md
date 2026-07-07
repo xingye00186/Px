@@ -67,20 +67,35 @@
 
 ```
 tools/PxTest/
-├── Pipeline/              Pipeline + Strategy 编排引擎
+├── Pipeline/              Pipeline 编排引擎（15 个步骤文件）
 │   ├── PipelineBuilder         CLI→Pipeline 配置
 │   ├── PipelineOrchestrator    依赖拓扑排序
 │   ├── BuildStep              构建（哈希缓存+进程锁+孤儿清理）
+│   ├── BrowserRefStep         浏览器参考生成
+│   ├── LayoutDumpStep         布局导出
+│   ├── MultiFrameStep         多帧稳定性
+│   ├── ElementCompareStep     元素对比
+│   ├── ScreenshotStep         截图对比
+│   ├── LayoutValidationStep   布局校验
+│   ├── ComponentLifecycleStep 组件生命周期
+│   ├── InteractionStep        交互测试
 │   └── Strategy/              DumpStrategy / BrowserRefStrategy 双轨
-├── Comparison/            对比器（Geometry/Style/Stability/Pixel/RenderNode）
-├── Mock/                  测试双轨（无需 exe）
+├── Comparison/            对比器（8 个，含 Geometry/Style/Stability/Pixel）
+├── Mock/                  测试双轨（MockPlatform/Component/EventSimulator）
 ├── Snapshot/              快照管理
-├── Reporting/             报告器（Console/Markdown/JSON/TAP）
+├── Reporting/             报告器（6 个，含 Console/Markdown/JSON/TAP/Summary）
 ├── Baseline/              基线归档
-└── Builder/               Fluent Builder（VNodeBuilder/RenderNodeBuilder）
+├── Builder/               Fluent Builder（VNodeBuilder/RenderNodeBuilder）
+├── Infrastructure/        基础设施（BrowserLauncher/ExeDiscovery/FontProvider）
+├── Bootstrap/             运行时引导（GoldenTextWidth/PhpRuntimeBootstrap）
+├── Assertions/            断言（RenderAssertions）
+├── Contracts/             契约测试
+├── Core/                  核心工具
+├── GoldenMeasure/         黄金宽度表
+└── Layout/                布局工具
 
 tests/
-├── unit/PxTest/           11 模块单元测试
+├── unit/PxTest/           13 模块单元测试
 ├── integration/           7 跨模块集成测试
 ├── stress/                压力测试（500节点/200帧内存泄漏）
 ├── e2e/                   E2E 编排 + headless 脚本
