@@ -180,13 +180,13 @@ apps/css-test/test_case/case-NNN-name/
 - `.vue` 需要 `<script lang="php">class TestContent extends ReactiveComponent {}</script>`
 - 关键元素加 `id` 属性（便于 ElementCompare 精确匹配）
 
-### 锚点嵌入（截图对比必须）
+#### 锚点嵌入（截图对比必须 + ElementCompare 匹配依据）
 
-每个测试 case 的最外层卡片容器嵌入颜色锚点：
+每个测试 case 的最外层卡片容器上嵌入颜色锚点，并标记 `data-px-anchor` 属性：
 
 ```html
-<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
-<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div>
+<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
+<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;" data-px-anchor="br"></div>
 ```
 
 - TL 锚点 `top:0;left:0` → 卡片 padding-box 左上角
@@ -359,7 +359,7 @@ comparePixels() 执行：
 
 ## 六、对比维度
 
-`ComparatorRegistry::default()` 当前覆盖：
+`ComparatorRegistry::default()` 覆盖三维（几何+样式+稳定性）：
 
 | 类别 | 属性 |
 |------|------|
@@ -370,7 +370,8 @@ comparePixels() 执行：
 | 阴影/轮廓 | boxShadow, outline |
 | 布局 | display, flexDirection, flexWrap, gap, alignItems, justifyContent, boxSizing |
 
-> 70+ 样式属性已覆盖。`bg` 始终导出：未显式设置 → `-1`（透明），确保无背景元素也参与颜色对比。
+> 70+ 样式属性已覆盖。`ComparatorRegistry::full()` 额外注册 PixelComparator + RenderNodeComparator。
+> `bg` 始终导出：未显式设置 → `-1`（透明），确保无背景元素也参与颜色对比。
 
 ---
 
@@ -391,9 +392,11 @@ comparePixels() 执行：
 
 ```bash
 # 测试
-php apps/css-test/test_pipeline.php --skip-screenshot
+php apps/css-test/test_pipeline.php --skip-screenshot  # 默认已跳过截图
 php apps/css-test/test_pipeline.php --case=case-xxx --force-build
+php apps/css-test/test_pipeline.php --php-runtime     # PHP 模式（无需 exe）
 php apps/css-test/test_pipeline.php --format=md
+php apps/css-test/test_pipeline.php --screenshot      # 启用截图
 
 # 单元/集成/压力
 php tests/run_all.php
@@ -416,7 +419,7 @@ apps\css-test\bin\css_test.exe --frame=5 --screenshot=out.png
 php sfc-compiler.php apps/css-test/App.vue
 
 # Edge headless 手动截图
-msedge --headless --disable-gpu --window-size=1600,800 --screenshot=ref/browser_ref.png "file:///D:/Px/apps/css-test/test_case/case-NNN/wrapper.html"
+msedge --headless --disable-gpu --window-size=1600,800 --screenshot=ref/browser_ref.png "file:///D:/Px/apps/css-test/test_case/case-NNN-name/wrapper.html"
 
 # 回归（JSON 格式）
 php apps/css-test/check_regression.php --json
@@ -477,7 +480,7 @@ if ($label === '目标元素') {
 // test_case/case-NNN-name/CaseNnnName.vue
 <template>
   <div class="card" style="width:720px;margin:20px auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative">
-    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+    <div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
     <div class="header" style="font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;border-bottom:2px solid #e94560;padding-bottom:12px;">
       Test Title
     </div>
@@ -485,7 +488,7 @@ if ($label === '目标元素') {
     <div class="footer" style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:12px;color:#aaa;text-align:center;">
       case-NNN: Description
     </div>
-    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div>
+    <div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;" data-px-anchor="br"></div>
   </div>
 </template>
 <script lang="php">

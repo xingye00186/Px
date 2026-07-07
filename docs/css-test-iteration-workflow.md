@@ -104,35 +104,44 @@ tests/
 
 ---
 
-## 三、六步流程（Step 0→I）
+## 三、九步流程（Step A→I）
 
 ```
+Step A: PxIdGenerate（PxIdGenerateStep）
+  └─ data-px-id 全量预处理（先于构建，始终执行）
+
 Step 0: Build（BuildStep）
-  └─ 哈希缓存 + .build.lock 进程锁 + proc_open + 孤儿清理 + Ctrl+C
+  └─ 哈希缓存 + .build.lock 进程锁 + proc_open + 孤儿清理 + Ctrl+C（非 --php-runtime 模式）
+
+Step B: BatchBrowserRef（BatchBrowserRefStep）
+  └─ 批量浏览器 ref 生成（全量模式无 --case=xxx 时自动启用）
 
 Step D: LayoutDump（LayoutDumpStep + DumpStrategy）
   ├─ ExeDump: --headless --dump-layout（自动化流程必须加 --headless）
   ├─ MockDump: MockPlatform 降级（无需 exe）
   └─ REF_STALE: 验证导出 JSON 含测试用例文本
 
+Step L: LayoutValidation（LayoutValidationStep）
+  └─ CSS 布局树合规性断言
+
 Step E: MultiFrame（MultiFrameStep）
-  └─ 5 帧 x/y/w/h 逐节点稳定性
+  └─ 5 帧 x/y/w/h 逐节点稳定性（ExeDump 模式）
 
 Step G: BrowserRef（BrowserRefStep + BrowserRefStrategy）
   ├─ validateHtmlSpec() 校验 .html CSS 基线 + 结构
   ├─ validateVueSpec() 校验 .html vs .vue 一致性
   ├─ instrumentHtml() 仅注入 dump_layout.js（不修改 CSS）
-  └─ EdgeDom 策略
+  └─ EdgeDom 策略（默认开启，--browser-engine-el-compare 控制）
 
 Step H: ElementCompare（ElementCompareStep + ComparatorRegistry）
-  ├─ 几何 + 样式 + 稳定性 四维对比
+  ├─ 几何 + 样式 + 稳定性 三维对比
   └─ Phase F: textWidth vs contentW 溢出检测
 
 Step I: ScreenshotCompare（ScreenshotStep）
   ├─ exe + Edge headless 双截图（时间戳命名）
-  ├─ 三层锚点对齐（#FF00FF/#00FFFF 8×8 块检测）
+  ├─ 三层锚点对齐（#FF00FF/#00FFFF 8×8 块检测 + data-px-anchor 属性）
   ├─ GD 像素 diff + diff_{ts}.png 差异图
-  └─ main.php WINDOW_WIDTH/HEIGHT 锚点校验
+  └─ main.php WINDOW_WIDTH/HEIGHT 锚点校验（仅 --screenshot 启用，默认跳过）
 ```
 
 **自动告警**：REF_STALE · DOC_WARN（FAIL 不在问题清单）· 锚点可见性
@@ -289,13 +298,13 @@ apps/css-test/test_case/case-NNN-name/
 
 ### 锚点嵌入要求
 
-每个测试 case 的最外层卡片容器上嵌入颜色锚点：
+每个测试 case 的最外层卡片容器上嵌入颜色锚点，并标记 `data-px-anchor` 属性：
 
 ```html
 <!-- __PX_ANCHOR_TL__ 左上角（卡片 padding-box 左上角） -->
-<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;"></div>
+<div style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none;" data-px-anchor="tl"></div>
 <!-- __PX_ANCHOR_BR__ 右下角（卡片 padding-box 右下角） -->
-<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;"></div>
+<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;background:#00FFFF;pointer-events:none;" data-px-anchor="br"></div>
 ```
 
 - 锚点及卡片必须在 `main.php` 定义的 `WINDOW_WIDTH×WINDOW_HEIGHT` 视口内
