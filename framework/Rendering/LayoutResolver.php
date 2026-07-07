@@ -16,6 +16,7 @@ use Px\Rendering\Layout\TableLayoutStrategy;
 use Px\Rendering\Layout\MultiColumnLayoutStrategy;
 use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\LayoutResult;
+use Px\Rendering\Layout\LayoutCallbackInterface;
 use Px\Rendering\Layout\LayoutInput;
 use Px\Rendering\Layout\LayoutApplicator;
 use Px\Rendering\Layout\StickyPostProcessor;
@@ -31,7 +32,7 @@ use Px\Rendering\Layout\StickyPostProcessor;
  * 策略均以纯函数接口调用：strategy->layout(LayoutInput): LayoutResult。
  * 无 FragmentBuilder，无 resolveWithBuilder。
  */
-class LayoutResolver
+class LayoutResolver implements LayoutCallbackInterface
 {
     private LayoutApplicator $applicator;
     private AbsoluteStrategy $absolutePositioning;
@@ -283,8 +284,7 @@ class LayoutResolver
                 textContent: $textContent,
                 childResults: $childResults,
                 childNodes: $node->children,
-                reResolveChild: \Closure::fromCallable([$this, 'reResolveChild']),
-                measureIntrinsic: \Closure::fromCallable([$this, 'measureIntrinsic']),
+                layoutCallback: $this,
                 iteration: $iteration,
                 position: $position,
                 ancestorX: $ancestorX,
@@ -309,8 +309,7 @@ class LayoutResolver
             textContent: $textContent,
             childResults: $childResults,
             childNodes: $node->children,
-            reResolveChild: \Closure::fromCallable([$this, 'reResolveChild']),
-            measureIntrinsic: \Closure::fromCallable([$this, 'measureIntrinsic']),
+            layoutCallback: $this,
             iteration: $iteration,
             position: $position,
         );

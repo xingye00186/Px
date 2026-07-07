@@ -62,7 +62,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
             $hasPercentChild = false;
             foreach ($input->childNodes as $ch) {
                 $chH = $ch->computedStyle?->height;
-                if ($chH !== null && $chH->isPercent() && $h <= 0 && $input->reResolveChild !== null) {
+                if ($chH !== null && $chH->isPercent() && $h <= 0 && $input->layoutCallback !== null) {
                     $hasPercentChild = true;
                     break;
                 }
@@ -93,7 +93,7 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
                             contentWidth: $c->contentWidth,
                             contentHeight: $computedH,
                         );
-                        $reResolved[] = ($input->reResolveChild)($ch, $newC);
+                        $reResolved[] = $input->layoutCallback->reResolveChild($ch, $newC);
                     } else {
                         $reResolved[] = $i < count($children) ? $children[$i] : null;
                     }

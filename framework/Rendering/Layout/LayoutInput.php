@@ -5,7 +5,6 @@ namespace Px\Rendering\Layout;
 use native_types;
 
 use Px\Rendering\ComputedStyle;
-use Closure;
 
 /**
  * LayoutInput — 布局策略纯函数输入
@@ -25,8 +24,12 @@ class LayoutInput
 
     /** @var RenderNode[] 子节点引用 */
     public readonly array $childNodes;
-    public readonly ?Closure $reResolveChild;
-    public readonly ?Closure $measureIntrinsic;
+
+    /**
+     * 回调接口（替代 Closure，避免 AOT eval 模式）
+     */
+    public readonly ?LayoutCallbackInterface $layoutCallback;
+
     public readonly int $iteration;
 
     // ── 定位祖先信息 ──
@@ -59,8 +62,7 @@ class LayoutInput
         int $viewportW = 0,
         int $viewportH = 0,
         array $childNodes = [],
-        ?Closure $reResolveChild = null,
-        ?Closure $measureIntrinsic = null,
+        ?LayoutCallbackInterface $layoutCallback = null,
         int $iteration = 0,
     ) {
         $this->constraints        = $constraints;
@@ -79,8 +81,7 @@ class LayoutInput
         $this->viewportW          = $viewportW;
         $this->viewportH          = $viewportH;
         $this->childNodes         = $childNodes;
-        $this->reResolveChild     = $reResolveChild;
-        $this->measureIntrinsic   = $measureIntrinsic;
+        $this->layoutCallback     = $layoutCallback;
         $this->iteration          = $iteration;
     }
 }
