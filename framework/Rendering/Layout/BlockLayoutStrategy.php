@@ -42,6 +42,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         $left = $s->left?->toPx() ?? 0;
         $top = $s->top?->toPx() ?? 0;
+        $marginLeft = $s->margin?->left->toPx() ?? 0;
+        $marginTop = $s->margin?->top->toPx() ?? 0;
         $parentW = $c->containerWidth;
         $parentH = $c->containerHeight;
 
@@ -50,8 +52,8 @@ class BlockLayoutStrategy implements LayoutStrategyInterface
 
         $positionVal = $s->position?->value ?? 'static';
         $isStaticOrRelative = ($positionVal === 'static' || $positionVal === 'relative');
-        $x = $isStaticOrRelative ? ($c->parentContentX + $left) : $c->parentContentX;
-        $y = $isStaticOrRelative ? ($c->parentContentY + $top) : $c->parentContentY;
+        $x = $isStaticOrRelative ? ($c->parentContentX + $left + $marginLeft) : $c->parentContentX;
+        $y = $isStaticOrRelative ? ($c->parentContentY + $top + $marginTop) : $c->parentContentY;
 
         $displayVal = $s->display?->value ?? 'block';
         $stackedChildren = [];
