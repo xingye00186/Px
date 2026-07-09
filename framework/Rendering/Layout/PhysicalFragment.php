@@ -79,7 +79,7 @@ class PhysicalFragment
     }
 
     /** 从 LayoutResult 构造（适配器用） */
-    public static function fromLayoutResult(
+    public static function buildFromLayoutResult(
         LayoutResult $result,
         ?RenderNode $sourceNode = null,
         int $scrollTop = 0,
@@ -89,9 +89,9 @@ class PhysicalFragment
         $childFrags = [];
         foreach ($result->children as $i => $child) {
             $childRN = $sourceNode?->children[$i] ?? null;
-            $childFrags[] = self::fromLayoutResult($child, $childRN);
+            $childFrags[] = PhysicalFragment::buildFromLayoutResult($child, $childRN);
         }
-        return new self(
+        return new PhysicalFragment(
             x: $result->x,
             y: $result->y,
             w: $result->w,

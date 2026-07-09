@@ -546,18 +546,22 @@ class RenderTreeManager
                 return $result;
             }
 
-            // 普通元素节点 — 使用 StyleResolver 解析样式
+            // 普通元素节点 — 读取预计算的样式（由 StyleRecalcPass 写入 VNode）
             $pseudoStyles = [];
-            $computedStyle = StyleResolver::resolve(
-                inlineStyle: $vnode->props['style'] ?? '',
-                className: $vnode->props['class'] ?? '',
-                parentDeclarations: $parentStyle,
-                elementType: $vnode->type,
-                parentClassStr: $parentClassStr,
-                precedingSiblingClasses: [],
-                parentStyleDeclarations: $parentStyle,
-                pseudoStyles: $pseudoStyles
-            );
+            $computedStyle = $vnode->computedStyle;
+            if ($computedStyle === null) {
+                // 降级：StyleRecalcPass 未运行时内联解析
+                $computedStyle = StyleResolver::resolve(
+                    inlineStyle: $vnode->props['style'] ?? '',
+                    className: $vnode->props['class'] ?? '',
+                    parentDeclarations: $parentStyle,
+                    elementType: $vnode->type,
+                    parentClassStr: $parentClassStr,
+                    precedingSiblingClasses: [],
+                    parentStyleDeclarations: $parentStyle,
+                    pseudoStyles: $pseudoStyles
+                );
+            }
             $resolvedStyle = $computedStyle->toExportArray();
             $renderNode = null;
 

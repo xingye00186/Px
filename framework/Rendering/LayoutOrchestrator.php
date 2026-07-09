@@ -130,7 +130,7 @@ class LayoutOrchestrator
         $isOOF = ($position === 'absolute' || $position === 'fixed');
 
         if ($display === 'none') {
-            return new PhysicalFragment(0, 0, 0, 0, style: $style, sourceNode: $node);
+            return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $style, array(), $node);
         }
 
         // 递归处理子节点（OOF 子节点也递归，但会生成占位 Fragment）
@@ -192,11 +192,11 @@ class LayoutOrchestrator
                 position: $position,
             );
             $result = $algo->layout($input);
-            return PhysicalFragment::fromLayoutResult($result, $node);
+            $resultChildren = []; foreach ($result->children as $i => $child) { $childRN = $node->children[$i] ?? null; $resultChildren[] = new \Px\Rendering\Layout\PhysicalFragment($child->x, $child->y, $child->w, $child->h, $child->visualW, $child->visualH, $child->layer, $child->contentWidth, $child->contentHeight, $child->style, [], $childRN); } return new \Px\Rendering\Layout\PhysicalFragment($result->x, $result->y, $result->w, $result->h, $result->visualW, $result->visualH, $result->layer, $result->contentWidth, $result->contentHeight, $result->style, $resultChildren, $node);
         }
 
         // Fallback: should not reach here
-        return new PhysicalFragment(0, 0, 0, 0, style: $style, sourceNode: $node);
+        return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $style, array(), $node);
     }
 
     /**
@@ -216,10 +216,10 @@ class LayoutOrchestrator
         $bT = (int)($parentStyle?->borderTopWidth ?? 0);
         $bB = (int)($parentStyle?->borderBottomWidth ?? 0);
 
-        $cbW = max(0, $parentSpace->contentWidth - $padL - $padR - $bL - $bR);
-        $cbH = max(0, $parentSpace->contentHeight - $padT - $padB - $bT - $bB);
-        $offX = $parentSpace->parentContentX + $padL + $bL;
-        $offY = $parentSpace->parentContentY + $padT + $bT;
+        $cbW = max(0, (int)($parentSpace->contentWidth ?? 0) - $padL - $padR - $bL - $bR);
+        $cbH = max(0, (int)($parentSpace->contentHeight ?? 0) - $padT - $padB - $bT - $bB);
+        $offX = (int)((int)($parentSpace->parentContentX ?? 0) + $padL + $bL);
+        $offY = (int)((int)($parentSpace->parentContentY ?? 0) + $padT + $bT);
 
         $childStyle = $child->computedStyle;
         $percW = $childStyle?->width?->isPercent() ? $cbW : null;

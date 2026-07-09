@@ -145,19 +145,14 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         }
 
         // 重建 Fragment
+        $pfChildren = [];
+        foreach ($newChildren as $pfCh) { if ($pfCh !== null) $pfChildren[] = $pfCh; }
         return new PhysicalFragment(
-            x: $frag->x, y: $frag->y,
-            w: $frag->w, h: $frag->h,
-            visualW: $frag->visualW, visualH: $frag->visualH,
-            layer: $frag->layer,
-            contentWidth: $frag->contentWidth,
-            contentHeight: $frag->contentHeight,
-            style: $frag->style,
-            children: $newChildren,
-            sourceNode: $sourceRN,
-            scrollTop: $frag->scrollTop,
-            scrollLeft: $frag->scrollLeft,
-            isScrollContainer: $frag->isScrollContainer,
+            (int)$frag->x, (int)$frag->y, (int)$frag->w, (int)$frag->h,
+            (int)$frag->visualW, (int)$frag->visualH, (int)$frag->layer,
+            (int)$frag->contentWidth, (int)$frag->contentHeight,
+            $frag->style, $pfChildren, $sourceRN,
+            (int)$frag->scrollTop, (int)$frag->scrollLeft, (bool)$frag->isScrollContainer
         );
     }
 
@@ -209,15 +204,10 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $result = $this->absolutePositioning->absoluteLayout($input);
 
         return new PhysicalFragment(
-            x: $result->x, y: $result->y,
-            w: $result->w, h: $result->h,
-            visualW: $result->visualW, visualH: $result->visualH,
-            layer: $result->layer,
-            contentWidth: $result->contentWidth,
-            contentHeight: $result->contentHeight,
-            style: $cs,
-            children: $frag->children,
-            sourceNode: $sourceRN,
+            (int)$result->x, (int)$result->y, (int)$result->w, (int)$result->h,
+            (int)$result->visualW, (int)$result->visualH, (int)$result->layer,
+            (int)$result->contentWidth, (int)$result->contentHeight,
+            $cs, $frag->children, $sourceRN
         );
     }
 }

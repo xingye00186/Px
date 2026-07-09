@@ -909,8 +909,10 @@ class Application
         }
 
         // LayoutResolver/LayoutOrchestrator 处理 RenderNode
+        // 并收集 Fragment 树（Orchestrator 路径用 Fragment 渲染）
+        $fragmentTree = null;
         if ($this->useOrchestrator && $this->layoutOrchestrator !== null) {
-            $this->layoutOrchestrator->layout($rootRenderNode);
+            $fragmentTree = $this->layoutOrchestrator->layout($rootRenderNode);
         } else {
             $this->layoutResolver->resolve($rootRenderNode);
         }
@@ -920,7 +922,12 @@ class Application
         }
 
         // VNodeRenderer 处理 RenderNode（利用 paintDirty 增量）
-        $this->renderer->render($rootRenderNode);
+        // 当 Orchestrator 路径提供了 Fragment 树时，使用 Fragment 渲染
+        if ($fragmentTree !== null && method_exists($this->renderer, 'renderFromFragment')) {
+            $this->renderer->renderFromFragment($fragmentTree);
+        } else {
+            $this->renderer->render($rootRenderNode);
+        }
     }
 
     /**
