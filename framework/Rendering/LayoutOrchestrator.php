@@ -191,7 +191,17 @@ class LayoutOrchestrator
                 childNodes: $node->children,
                 position: $position,
             );
+            // Phase 4: 查 LayoutCache — 约束空间不变时跳过算法
+            $nodeId = spl_object_id($node);
+            $styleVer = spl_object_id($style ?? new \Px\Rendering\ComputedStyle([]));
+            $ckey = \Px\Rendering\Layout\LayoutCacheKey::fromSpace($space, $nodeId, $styleVer);
+            $cached = $this->cache->find($ckey);
+            if ($cached !== null) {
+                $resultChildren = []; foreach ($cached->children as $i => $ch) { $resultChildren[] = $ch; }
+                return new \Px\Rendering\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $resultChildren, $node);
+            }
             $result = $algo->layout($input);
+            $this->cache->set($ckey, \Px\Rendering\Layout\PhysicalFragment::buildFromLayoutResult($result, $node));
             $resultChildren = []; foreach ($result->children as $i => $child) { $childRN = $node->children[$i] ?? null; $resultChildren[] = new \Px\Rendering\Layout\PhysicalFragment($child->x, $child->y, $child->w, $child->h, $child->visualW, $child->visualH, $child->layer, $child->contentWidth, $child->contentHeight, $child->style, [], $childRN); } return new \Px\Rendering\Layout\PhysicalFragment($result->x, $result->y, $result->w, $result->h, $result->visualW, $result->visualH, $result->layer, $result->contentWidth, $result->contentHeight, $result->style, $resultChildren, $node);
         }
 

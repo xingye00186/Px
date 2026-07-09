@@ -47,15 +47,15 @@ class LayoutCacheKey
         int $nodeId,
         int $styleVersion = 0,
     ): self {
-        return new self(
-            nodeId: $nodeId,
-            contentWidth: $space->contentWidth,
-            contentHeight: $space->contentHeight,
-            percentageWidth: $space->percentageWidth,
-            percentageHeight: $space->percentageHeight,
-            isIntrinsicMeasurement: $space->isIntrinsicMeasurement,
-            spaceType: $space->spaceType,
-            styleVersion: $styleVersion,
+        return new LayoutCacheKey(
+            (int)$nodeId,
+            (int)$space->contentWidth,
+            (int)$space->contentHeight,
+            (int)($space->percentageWidth ?? 0),
+            (int)($space->percentageHeight ?? 0),
+            (bool)$space->isIntrinsicMeasurement,
+            (string)$space->spaceType,
+            (int)$styleVersion,
         );
     }
 

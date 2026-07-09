@@ -92,17 +92,10 @@ class PhysicalFragment
             $childFrags[] = PhysicalFragment::buildFromLayoutResult($child, $childRN);
         }
         return new PhysicalFragment(
-            x: $result->x,
-            y: $result->y,
-            w: $result->w,
-            h: $result->h,
-            visualW: $result->visualW,
-            visualH: $result->visualH,
-            layer: $result->layer,
-            contentWidth: $result->contentWidth,
-            contentHeight: $result->contentHeight,
-            style: $result->style,
-            children: $childFrags,
+            (int)$result->x, (int)$result->y, (int)$result->w, (int)$result->h,
+            (int)$result->visualW, (int)$result->visualH, (int)$result->layer,
+            (int)$result->contentWidth, (int)$result->contentHeight,
+            $result->style, $childFrags,
             sourceNode: $sourceNode,
             scrollTop: $scrollTop,
             scrollLeft: $scrollLeft,
