@@ -51,17 +51,9 @@ class RenderNode
     // ── 渲染数据（由布局引擎和渲染管线维护）──
 
     /** @var array|null text rendering info (VNodeRenderer 缓存) */
-    public ?array $textRenderInfo = null;
-    /** Paint frame number for incremental rendering */
-    public int $lastPaintFrame = 0;
+    /** @var array|null text rendering info (VNodeRenderer 缓存) — Phase 3 已迁移至 VNodeRenderer paintFlags */
 
-    /** 滚动偏移（布局引擎输出，渲染管线使用） */
-    public int $scrollTop = 0;
-    public int $scrollLeft = 0;
 
-    /** 渲染偏移（VNodeRenderer 维护，用于 absolute/fixed 坐标修正） */
-    public int $renderOffsetX = 0;
-    public int $renderOffsetY = 0;
 
     // ── 交互状态（Application 事件处理器维护，用于伪类样式判断）──
 
