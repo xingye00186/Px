@@ -77,47 +77,48 @@ class LayoutDumpStep implements PipelineStepInterface
             }
         }
 
-        // ─── HTML 根容器 position:relative 检查 ───
+        // ─── HTML 规范全面检查（一次性读取文件，避免重复 IO）───
         $htmlFiles = glob("$caseDir/*.html");
         if (!empty($htmlFiles)) {
-            $html = @file_get_contents($htmlFiles[0]);
+            $htmlPath = $htmlFiles[0];
+            $html = @file_get_contents($htmlPath);
+            
+            // 1) 根容器 position:relative 检查
             if ($html !== false && preg_match('/<body>\s*<div[^>]*style="[^"]*position:relative/i', $html) === 0) {
-                echo "  [HTML_SPEC_FAIL] " . basename($htmlFiles[0]) . " root container must have position:relative\n";
+                echo "  [HTML_SPEC_FAIL] " . basename($htmlPath) . " root container must have position:relative\n";
                 return StepResult::err('dump_layout', 'HTML spec validation failed');
             }
-        }
-
-        // ── * 选择器 line-height:0 强制检查（CssTest Layout Spec）──
-        // 所有测试用例的 * 选择器必须包含 line-height:0，以消除浏览器默认行高
-        // 对容器高度的干扰。缺少时阻断管道。
-        if (!empty($htmlFiles)) {
-            $html = @file_get_contents($htmlFiles[0]);
+            
+            // 2) * 选择器 line-height:0 强制检查
             if ($html !== false && preg_match('/\*\s*\{[^}]*line-height\s*:\s*0[^}]*\}/s', $html) !== 1) {
-                echo "  [LH0_SPEC_FAIL] " . basename($htmlFiles[0]) . " missing 'line-height:0' in * selector.\n";
+                echo "  [LH0_SPEC_FAIL] " . basename($htmlPath) . " missing 'line-height:0' in * selector.\n";
                 echo "    Add line-height:0 to * { margin:0; padding:0; box-sizing:border-box; line-height:0; }\n";
                 return StepResult::err('dump_layout', '* selector must include line-height:0');
             }
-        }
-
-        // ── 字体属性强制检查（CssTest Layout Spec）──
-        // 测试用例中禁止任何字体属性。
-        // 注意：旧测试用例(case-001~032)的<style>基线块含 font-size/font-family 等
-        // 必需基线属性。这些只发警告不阻断，但 inline style 中的字体属性仍阻断。
-        $inHtml = file_exists($htmlFiles[0]) ? file_get_contents($htmlFiles[0]) : '';
-        $fontErrors = self::checkFontPropertiesInHtml($inHtml, 'html');
-        if (!empty($fontErrors)) {
-            $hasInlineFont = false;
-            foreach ($fontErrors as $fe) {
-                if (str_contains($fe, 'inline style')) { $hasInlineFont = true; break; }
-            }
-            if ($hasInlineFont) {
-                echo "  [HTML_SPEC_FAIL] " . basename($htmlFiles[0]) . " has forbidden inline font properties:\n";
+            
+            // 3) 字体属性强制检查
+            $fontErrors = self::checkFontPropertiesInHtml($html, 'html');
+            if (!empty($fontErrors)) {
+                $hasInlineFont = false;
+                foreach ($fontErrors as $fe) {
+                    if (str_contains($fe, 'inline style')) { $hasInlineFont = true; break; }
+                }
+                if ($hasInlineFont) {
+                    echo "  [HTML_SPEC_FAIL] " . basename($htmlPath) . " has forbidden inline font properties:\n";
+                    foreach ($fontErrors as $e) { echo "    - $e\n"; }
+                    return StepResult::err('dump_layout', 'Inline font properties are forbidden in test case HTML');
+                }
+                echo "  [HTML_FONT_WARN] " . basename($htmlPath) . " has font properties in style blocks:\n";
                 foreach ($fontErrors as $e) { echo "    - $e\n"; }
-                return StepResult::err('dump_layout', 'Inline font properties are forbidden in test case HTML');
             }
-            // style block font properties: allow but warn (older cases use baseline CSS)
-            echo "  [HTML_FONT_WARN] " . basename($htmlFiles[0]) . " has font properties in style blocks (allowed for backward compat):\n";
-            foreach ($fontErrors as $e) { echo "    - $e\n"; }
+            
+            // 4) 完整 HTML 规范校验（DOCTYPE/CSS基线/锚点/body结构）
+            $specErrors = $this->validateHtmlSpec($htmlPath);
+            if (!empty($specErrors)) {
+                echo "  [HTML_SPEC_FAIL] " . basename($htmlPath) . " spec validation failed:\n";
+                foreach ($specErrors as $e) { echo "    - $e\n"; }
+                return StepResult::err('dump_layout', 'HTML spec validation failed');
+            }
         }
 
         $result = $this->strategy->dump($currentCase, $refDir);
@@ -137,6 +138,27 @@ class LayoutDumpStep implements PipelineStepInterface
 
         // 写入上下文供下游步骤使用
         $ctx->set('mode_suffix', $modeSuffix);
+
+        // ─── data-px-testroot 过滤：在 JSON 层提取测试内容子树 ───
+        // AOT 模式下 RenderNode 树的 dataset 搜索不可靠（$node->dataset 在 AOT 编译中行为不一致），
+        // 因此不在 AOT exe 内部做过滤，而是在 PHP 侧对 dump 输出的 JSON 做树修剪。
+        // PHP 模式下的 dumpLayoutToFile(true) 已正确过滤，跳过冗余处理。
+        if (!$isPhpRuntime) {
+            $filteredJson = file_get_contents($modeFile);
+            $treeData = json_decode($filteredJson, true);
+            if ($treeData !== null) {
+                $filteredTree = self::filterToTestRoot($treeData);
+                if ($filteredTree !== null) {
+                    $newJson = json_encode($filteredTree, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                    file_put_contents($modeFile, $newJson);
+                    $result = [0 => $newJson, 1 => $modeFile];
+                    if (!empty($result[0])) {
+                        $filteredJson = $result[0];
+                    }
+                    echo "  [px-testroot] filtered to test content only\n";
+                }
+            }
+        }
 
         // REF_STALE check: verify layout JSON contains test case key content
         $json = $result[0];
@@ -496,6 +518,29 @@ class LayoutDumpStep implements PipelineStepInterface
         }
 
         return $html;
+    }
+
+    /**
+     * 在 JSON 树中递归搜索 data-px-testroot 标记节点，提取其子树。
+     * 替换根节点为该节点，移除侧边栏等非测试内容。
+     * AOT exe 输出的完整树包含侧边栏，此过滤在 PHP 侧做树修剪。
+     *
+     * @param array $node JSON 树节点
+     * @return array|null 过滤后的树，或 null（未找到标记）
+     */
+    private static function filterToTestRoot(array $node): ?array
+    {
+        // 检查当前节点
+        $ds = $node['dataset'] ?? [];
+        if (isset($ds['pxTestroot']) && (string)$ds['pxTestroot'] === 'true') {
+            return $node;
+        }
+        // 递归搜索子节点
+        foreach ($node['children'] ?? [] as $child) {
+            $result = self::filterToTestRoot($child);
+            if ($result !== null) return $result;
+        }
+        return null;
     }
 }
 

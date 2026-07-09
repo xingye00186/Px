@@ -50,7 +50,7 @@ class BrowserLauncher
         if ($realPath === false) return false;
         $fileUrl = 'file:///' . str_replace('\\', '/', $realPath);
 
-        $cmd = sprintf('"%s" --headless --disable-gpu --virtual-time-budget=30000 --window-size=%d,%d --screenshot="%s" "%s" 2>&1',
+        $cmd = sprintf('"%s" --headless=new --disable-gpu --virtual-time-budget=30000 --window-size=%d,%d --window-position=-32000,-32000 --no-first-run --no-default-browser-check --disable-sync --screenshot="%s" "%s" 2>&1',
             $this->edgePath, $width, $height, $outputPath, $fileUrl);
         exec($cmd);
         return file_exists($outputPath) && filesize($outputPath) > 100;
@@ -67,7 +67,7 @@ class BrowserLauncher
         // batch 模式用 .bat.html 后缀识别（50 cases 需要更多时间）
         $timeout = strpos($htmlPath, 'batch_ref') !== false ? 120000 : 30000;
 
-        $cmd = sprintf('"%s" --headless --disable-gpu --virtual-time-budget=%d --window-size=%d,%d --dump-dom "%s" 2>&1',
+        $cmd = sprintf('"%s" --headless=new --disable-gpu --virtual-time-budget=%d --window-size=%d,%d --window-position=-32000,-32000 --no-first-run --no-default-browser-check --disable-sync --dump-dom "%s" 2>&1',
             $this->edgePath, $timeout, $width, $height, $fileUrl);
         $output = [];
         exec($cmd, $output);

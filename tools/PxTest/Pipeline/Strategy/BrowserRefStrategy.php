@@ -217,7 +217,7 @@ class EdgeScreenshotStrategy implements BrowserRefStrategy
     public function name(): string { return 'edge_screenshot'; }
     public function generate(string $htmlPath, string $refDir, string $caseName): bool
     {
-        return $this->browser->screenshot($htmlPath, "$refDir/browser_ref.png", 1280, 600);
+        return $this->browser->screenshot($htmlPath, "$refDir/browser_ref.png", 1600, 800);
     }
     public function generateBatch(array $cases): bool { return false; }
 }

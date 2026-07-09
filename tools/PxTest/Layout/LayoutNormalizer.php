@@ -261,7 +261,7 @@ class LayoutNormalizer
         // 提取当前节点的继承属性传给子节点
         $childInherited = $parentInherited;
         if ($element !== null && isset($element['styles'])) {
-            $inheritableKeys = ['text-align'];
+            $inheritableKeys = ['text-align', 'font-size'];
             foreach ($inheritableKeys as $key) {
                 if (isset($element['styles'][$key])) {
                     $childInherited[$key] = $element['styles'][$key];
@@ -371,10 +371,12 @@ class LayoutNormalizer
         // 文本内容
 
         // CSS 默认值补全：引擎不导出继承属性的默认值，补齐以消除 MISSING
+        // 注意：text-align 不在此补全——引擎可能使用非标准默认值（left vs start），
+        // 补全会掩盖引擎 bug。让 MISSING 如实上报引擎未导出的属性。
         $cssDefaults = [
             'font-weight'  => '400',
             'font-style'   => 'normal',
-            'text-align'   => 'start',
+            'font-size'    => '16px',
             'white-space'  => 'normal',
             'word-break'   => 'normal',
             'visibility'   => 'visible',
@@ -517,8 +519,9 @@ class LayoutNormalizer
     {
         // line-height 因子 → px：引擎存储原始因子(1.6)，浏览器导出计算值(22.4px)
         // 用元素自身的 font-size 计算以匹配浏览器格式
+        // 优先使用 fullStyle 中的 fontSize（引擎统一用 px），其次用规范默认值 16px
         if ($engineKey === 'lineHeight' && is_numeric($value) && (float)$value < 10) {
-            $fs = 16; // 默认 font-size
+            $fs = 16;
             if (isset($fullStyle['fontSize']) && is_numeric($fullStyle['fontSize'])) {
                 $fs = (int)$fullStyle['fontSize'];
             }

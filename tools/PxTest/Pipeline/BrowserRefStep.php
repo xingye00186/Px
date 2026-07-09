@@ -45,8 +45,7 @@ class BrowserRefStep implements PipelineStepInterface
         $htmlPath = $htmlFiles[0];
         $refDir = "$caseDir/ref";
 
-        $caseData = [['tag' => $currentCase, 'htmlPath' => $htmlPath, 'refDir' => $refDir]];
-        $ok = $this->strategy->generateBatch($caseData);
+        $ok = $this->strategy->generate($htmlPath, $refDir, $currentCase);
         $elapsed = (microtime(true) - $start) * 1000;
 
         if ($ok) {
