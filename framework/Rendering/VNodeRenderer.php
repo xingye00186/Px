@@ -4,6 +4,7 @@ namespace Px\Rendering;
 
 use native_types;
 use Px\Core\Config;
+use Px\Rendering\Layout\PhysicalFragment;
 use Px\Interfaces\ReactiveComponentInterface;
 use Px\ReactiveComponent;
 
@@ -105,6 +106,112 @@ class VNodeRenderer
         }
         $this->render_ctx->endFrame();
         \Px\Core\PerfCounter::end('render_collect');
+    }
+
+    /**
+     * Phase 3.5: 从 Fragment 树渲染（替代 RenderNode 树）。
+     * Fragment 自带 ComputedStyle 快照和绝对坐标，不需要 renderOffsetX/Y。
+     */
+    public function renderFromFragment(\Px\Rendering\Layout\PhysicalFragment $root): void
+    {
+        \Px\Core\PerfCounter::start('render_collect');
+        $this->render_ctx->beginFrame();
+        if ($this->currentPaintFrame === PHP_INT_MAX) {
+            $this->currentPaintFrame = 1;
+        } else {
+            $this->currentPaintFrame++;
+        }
+        $elementsByLayer = [];
+        $maxLayer = 0;
+        $this->collectElementsFromFragment($root, $elementsByLayer, $maxLayer);
+        for ($l = 0; $l <= $maxLayer; $l++) {
+            $layerElements = $elementsByLayer[$l] ?? [];
+            foreach ($layerElements as $el) {
+                $this->render_ctx->drawElement($el);
+            }
+        }
+        $this->render_ctx->endFrame();
+        \Px\Core\PerfCounter::end('render_collect');
+    }
+
+    /**
+     * Phase 3.5: 从 Fragment 树收集元素（替代 collectElements）。
+     * Fragment 坐标是绝对的，无需 accumOffsetX/Y。
+     */
+    private function collectElementsFromFragment(
+        \Px\Rendering\Layout\PhysicalFragment $frag,
+        array &$elementsByLayer,
+        int &$maxLayer,
+    ): void {
+        $node = $frag->sourceNode;
+        if ($node === null) return;
+
+        $el = $this->fragmentToElement($frag);
+        if ($el !== null) {
+            $layer = $frag->layer;
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            if (!isset($elementsByLayer[$layer])) {
+                $elementsByLayer[$layer] = [];
+            }
+            $elementsByLayer[$layer][] = $el;
+        }
+
+        // Scroll clip
+        $isScrollNode = $frag->isScrollContainer;
+        if ($isScrollNode && $frag->style !== null) {
+            $clip = [
+                'x' => $frag->x,
+                'y' => $frag->y,
+                'w' => $frag->w,
+                'h' => $frag->h,
+            ];
+            $this->scrollCtxStack[] = [
+                'x' => $clip['x'], 'y' => $clip['y'],
+                'w' => $clip['w'], 'h' => $clip['h'],
+                'scrollTop' => $frag->scrollTop,
+                'scrollLeft' => $frag->scrollLeft,
+                'overflowX' => $frag->style->overflowX?->value ?? $frag->style->overflow?->value ?? 'visible',
+                'overflowY' => $frag->style->overflowY?->value ?? $frag->style->overflow?->value ?? 'visible',
+                'layer' => $frag->layer,
+            ];
+        }
+
+        // 递归子 Fragment
+        foreach ($frag->children as $childFrag) {
+            $this->collectElementsFromFragment($childFrag, $elementsByLayer, $maxLayer);
+        }
+
+        if ($isScrollNode) {
+            array_pop($this->scrollCtxStack);
+        }
+    }
+
+    /**
+     * Phase 3.5: 将 Fragment 转为 drawElement 数组。
+     * 替代 renderNodeToElement，但使用 Fragment 自带的几何和样式。
+     */
+    private function fragmentToElement(\Px\Rendering\Layout\PhysicalFragment $frag): ?array
+    {
+        // 简化实现：通过 sourceNode 委托到现有 renderNodeToElement
+        // 后续可改为直接从 Fragment 构造元素数组
+        $node = $frag->sourceNode;
+        if ($node === null) return null;
+
+        $el = $this->renderNodeToElement($node);
+        if ($el === null) return null;
+
+        // 用 Fragment 的绝对坐标覆盖
+        $el['x'] = $frag->x;
+        $el['y'] = $frag->y;
+        $el['w'] = $frag->w;
+        $el['h'] = $frag->h;
+        $el['visualW'] = $frag->visualW;
+        $el['visualH'] = $frag->visualH;
+
+        // 移除 renderOffset（Fragment 坐标已经是绝对的）
+        unset($el['renderOffsetX'], $el['renderOffsetY']);
+
+        return $el;
     }
 
     private function collectElements(RenderNode $node, array &$elementsByLayer, int &$maxLayer, int $accumOffsetX = 0, int $accumOffsetY = 0): void

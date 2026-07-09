@@ -71,6 +71,59 @@ class ScrollManager
         return $this->getScrollState($node);
     }
 
+    public function setScrollContainer(RenderNode $node, bool $isContainer): void
+    {
+        $this->getScrollState($node)->isScrollContainer = $isContainer;
+    }
+
+    public function isScrollContainer(RenderNode $node): bool
+    {
+        return $this->getScrollState($node)->isScrollContainer;
+    }
+
+    public function getScrollTop(RenderNode $node): int
+    {
+        return $this->getScrollState($node)->scrollTop;
+    }
+
+    public function setScrollTop(RenderNode $node, int $value): void
+    {
+        $this->getScrollState($node)->scrollTop = $value;
+    }
+
+    public function getScrollLeft(RenderNode $node): int
+    {
+        return $this->getScrollState($node)->scrollLeft;
+    }
+
+    public function setScrollLeft(RenderNode $node, int $value): void
+    {
+        $this->getScrollState($node)->scrollLeft = $value;
+    }
+
+    /** 从 RenderNode 迁移滚动状态到 ScrollState Map */
+    public function migrateFromRenderNode(RenderNode $node): void
+    {
+        $ss = $this->getScrollState($node);
+        $ss->scrollTop = (int)($node->scrollTop ?? 0);
+        $ss->scrollLeft = (int)($node->scrollLeft ?? 0);
+        $ss->isScrollContainer = (bool)($node->isScrollContainer ?? false);
+        $ss->contentWidth = (int)($node->contentWidth ?? 0);
+        $ss->contentHeight = (int)($node->contentHeight ?? 0);
+    }
+
+    /** 回写迁移后的滚动状态到 RenderNode（旧消费者兼容） */
+    public function writeBackToRenderNode(RenderNode $node): void
+    {
+        if (!isset($this->scrollStates[spl_object_id($node)])) return;
+        $ss = $this->scrollStates[spl_object_id($node)];
+        if (property_exists($node, 'scrollTop')) $node->scrollTop = $ss->scrollTop;
+        if (property_exists($node, 'scrollLeft')) $node->scrollLeft = $ss->scrollLeft;
+        if (property_exists($node, 'isScrollContainer')) $node->isScrollContainer = $ss->isScrollContainer;
+        if (property_exists($node, 'contentWidth')) $node->contentWidth = $ss->contentWidth;
+        if (property_exists($node, 'contentHeight')) $node->contentHeight = $ss->contentHeight;
+    }
+
     // ── 拖拽状态 ──────────────────────────
     private ?RenderNode $scrollDragTarget = null;
     private int $scrollDragStartX = 0;
