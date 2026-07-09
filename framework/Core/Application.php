@@ -18,6 +18,7 @@ use Px\Rendering\VNode;
 use Px\Rendering\RenderNode;
 use Px\Rendering\VNodeRenderer;
 use Px\Rendering\LayoutResolver;
+use Px\Rendering\LayoutOrchestrator;
 use Px\Rendering\InteractionState;
 use Px\Rendering\CssMappings;
 use Px\Rendering\ImageManager;
@@ -48,6 +49,8 @@ class Application
     private Scheduler $scheduler;
     private ?VNodeRenderer $renderer = null;
     private LayoutResolver $layoutResolver;
+    private ?LayoutOrchestrator $layoutOrchestrator = null;
+    private bool $useOrchestrator = false;
     private RenderTreeManager $renderTreeManager;
 
     private ?ReactiveComponentInterface $rootComponent = null;
@@ -181,11 +184,19 @@ class Application
         Platform $platform,
         Scheduler $scheduler,
         ?LayoutResolver $layoutResolver = null,
-        ?RenderTreeManager $renderTreeManager = null
+        ?RenderTreeManager $renderTreeManager = null,
+        ?LayoutOrchestrator $layoutOrchestrator = null,
     ) {
         $this->platform  = $platform;
         $this->scheduler = $scheduler;
-        $this->layoutResolver = $layoutResolver ?? new LayoutResolver();
+        $this->layoutOrchestrator = $layoutOrchestrator;
+        if ($layoutOrchestrator !== null) {
+            $this->useOrchestrator = true;
+            $this->layoutResolver = $layoutResolver ?? new LayoutResolver();
+        } else {
+            $this->layoutResolver = $layoutResolver ?? new LayoutResolver();
+            $this->useOrchestrator = false;
+        }
         $this->renderTreeManager = $renderTreeManager ?? new RenderTreeManager();
         $this->scrollManager = new ScrollManager(
             $this->requestRender(...),
@@ -745,7 +756,11 @@ class Application
             error_log("[DIAG] directRender: type={$root->type} children=" . count($root->children));
         }
 
-        $this->layoutResolver->resolve($root);
+        if ($this->useOrchestrator && $this->layoutOrchestrator !== null) {
+            $this->layoutOrchestrator->layout($root);
+        } else {
+            $this->layoutResolver->resolve($root);
+        }
 
         if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] directRender AFTER');
@@ -893,8 +908,12 @@ class Application
             $this->logScrollContainerStates('[DIAG] render BEFORE');
         }
 
-        // LayoutResolver 处理 RenderNode（利用 layoutDirty 增量）
-        $this->layoutResolver->resolve($rootRenderNode);
+        // LayoutResolver/LayoutOrchestrator 处理 RenderNode
+        if ($this->useOrchestrator && $this->layoutOrchestrator !== null) {
+            $this->layoutOrchestrator->layout($rootRenderNode);
+        } else {
+            $this->layoutResolver->resolve($rootRenderNode);
+        }
 
         if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] render AFTER');
