@@ -49,7 +49,7 @@ class Application
     private Platform $platform;
     private Scheduler $scheduler;
     private ?VNodeRenderer $renderer = null;
-    private LayoutResolver $layoutResolver;
+    private ?LayoutResolver $layoutResolver = null;
     private ?LayoutOrchestrator $layoutOrchestrator = null;
     private bool $useOrchestrator = false;
     private RenderTreeManager $renderTreeManager;
@@ -192,7 +192,7 @@ class Application
         $this->scheduler = $scheduler;
         $this->layoutOrchestrator = $layoutOrchestrator ?? new LayoutOrchestrator();
         $this->useOrchestrator = true;
-        $this->layoutResolver = $layoutResolver ?? new LayoutResolver();
+        $this->layoutResolver = $layoutResolver;
         $this->renderTreeManager = $renderTreeManager ?? new RenderTreeManager();
         $this->scrollManager = new ScrollManager(
             $this->requestRender(...),

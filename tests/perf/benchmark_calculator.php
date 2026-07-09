@@ -41,8 +41,6 @@ require_once $frameworkDir . '/Rendering/CssMappings.php';
 require_once $frameworkDir . '/Rendering/VNode.php';
 require_once $frameworkDir . '/Rendering/RenderNode.php';
 require_once $frameworkDir . '/Rendering/RenderTreeManager.php';
-require_once $frameworkDir . '/Rendering/Layout/PercentResolver.php';
-require_once $frameworkDir . '/Rendering/Layout/ScrollHelper.php';
 require_once $frameworkDir . '/Rendering/Layout/AbsolutePositioning.php';
 require_once $frameworkDir . '/Rendering/Layout/LayoutStrategyInterface.php';
 require_once $frameworkDir . '/Rendering/Layout/BlockLayoutStrategy.php';
