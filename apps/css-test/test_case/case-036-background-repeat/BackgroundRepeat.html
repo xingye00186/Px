@@ -1,21 +1,19 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Background ― Repeat</title>
-<style>
-html,body { width:1600px; min-height:800px; height:auto; overflow:hidden; font-family:"Segoe UI","Noto Sans SC",sans-serif; font-size:16px; line-height:1.2; background:#fff; color:#000; }
-* { margin:0; padding:0; box-sizing:border-box; line-height:0;}
-body { background:#f0f2f5; font-family:sans-serif; padding:20px; }
-.bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
-.br-row { display:flex; flex-direction:column; gap:16px; margin-bottom:16px; }
-.br-item { padding:16px; border-radius:6px; border:1px solid #ccc; }
-.br-label { font-size:14px; color:#666; margin-bottom:6px; }
-.br-box { width:200px; height:60px; border-radius:4px; border:1px solid #ccc; }
-.br-repeat { background-color:#e3f2fd; background-image:linear-gradient(45deg,#90caf9 25%,transparent 25%,transparent 50%,#90caf9 50%,#90caf9 75%,transparent 75%); background-size:20px 20px; background-repeat:repeat; }
-.br-norepeat { background-color:#fff3e0; background-image:linear-gradient(45deg,#ffcc80 25%,transparent 25%,transparent 50%,#ffcc80 50%,#ffcc80 75%,transparent 75%); background-size:20px 20px; background-repeat:no-repeat; }
-.br-repeatx { background-color:#e8f5e9; background-image:linear-gradient(45deg,#a5d6a7 25%,transparent 25%,transparent 50%,#a5d6a7 50%,#a5d6a7 75%,transparent 75%); background-size:20px 20px; background-repeat:repeat-x; }
-.br-repeaty { background-color:#fce4ec; background-image:linear-gradient(45deg,#f48fb1 25%,transparent 25%,transparent 50%,#f48fb1 50%,#f48fb1 75%,transparent 75%); background-size:20px 20px; background-repeat:repeat-y; }
-.bx-footer { margin-top:16px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
-</style></head><body>
-<div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative">
+<style>html,body { width:1600px; min-height:800px; height:auto; overflow:hidden; font-family:"Segoe UI","Noto Sans SC",sans-serif; font-size:16px; line-height:1.2; background:#fff; color:#000;
+* { margin:0; padding:0; box-sizing:border-box; line-height:0;
+body { background:#f0f2f5; font-family:sans-serif; padding:20px;
+.bx-header{margin-bottom:20px;  border-bottom:2px solid #e94560; padding-bottom:12px;}
+.br-row{display:flex; flex-direction:column; gap:16px; margin-bottom:16px;}
+.br-item{padding:16px; border-radius:6px; border:1px solid #ccc;}
+.br-label{margin-bottom:6px;}
+.br-box{width:200px; height:60px; border-radius:4px; border:1px solid #ccc;}
+.br-repeat{background- background-image:linear-gradient(45deg,#90caf9 25%,transparent 25%,transparent 50%,#90caf9 50%,#90caf9 75%,transparent 75%); background-size:20px 20px; background-repeat:repeat;}
+.br-norepeat{background- background-image:linear-gradient(45deg,#ffcc80 25%,transparent 25%,transparent 50%,#ffcc80 50%,#ffcc80 75%,transparent 75%); background-size:20px 20px; background-repeat:no-repeat;}
+.br-repeatx{background- background-image:linear-gradient(45deg,#a5d6a7 25%,transparent 25%,transparent 50%,#a5d6a7 50%,#a5d6a7 75%,transparent 75%); background-size:20px 20px; background-repeat:repeat-x;}
+.br-repeaty{background- background-image:linear-gradient(45deg,#f48fb1 25%,transparent 25%,transparent 50%,#f48fb1 50%,#f48fb1 75%,transparent 75%); background-size:20px 20px; background-repeat:repeat-y;}
+.bx-footer{margin-top:16px; padding-top:14px; border-top:1px solid #eee;   text-align:center;}</style></head><body>
+<div data-px-testroot="true" style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative">
 <div data-px-anchor="tl" style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none"></div>
   <div class="bx-header"><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span></div>
   <div class="br-row">

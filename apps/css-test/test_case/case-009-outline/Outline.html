@@ -1,26 +1,20 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Box Model ― Outline</title>
-<style>
-/* PxTest baseline — mandatory: viewport + font + background */
-html,body {
-    width:1600px;
+<style>/* PxTest baseline — mandatory: viewport + font + background */
+html,body{width:1600px;
     height:800px;
     overflow:hidden;
-    font-family:"Segoe UI","Noto Sans SC",sans-serif;
-    font-size:16px;
+    
+    
     line-height:1.2;
-    background:#fff;
-    color:#000;
-}
-
-* { margin:0; padding:0; box-sizing:border-box; line-height:0;}
-body { background:#f0f2f5; font-family:sans-serif; padding:20px; }
-.bx-header { font-size:20px; font-weight:700; margin-bottom:20px; color:#1a1a2e; border-bottom:2px solid #e94560; padding-bottom:12px; }
-.bx-grid { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; margin-bottom:24px; }
-.o-box { width:160px; height:100px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; color:#444; background:#fff; }
-.bx-footer { margin-top:20px; padding-top:14px; border-top:1px solid #eee; font-size:12px; color:#aaa; text-align:center; }
-</style></head><body>
-<div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative">
+    background:#fff;}
+* { margin:0; padding:0; box-sizing:border-box; line-height:0;
+body { background:#f0f2f5; font-family:sans-serif; padding:20px;
+.bx-header{margin-bottom:20px;  border-bottom:2px solid #e94560; padding-bottom:12px;}
+.bx-grid{display:flex; gap:20px; flex-wrap:wrap; justify-content:center; margin-bottom:24px;}
+.o-box{width:160px; height:100px; border-radius:8px; display:flex; align-items:center; justify-content:center;   background:#fff;}
+.bx-footer{margin-top:20px; padding-top:14px; border-top:1px solid #eee;   text-align:center;}</style></head><body>
+<div data-px-testroot="true" style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative">
 <div data-px-anchor="tl" style="position:absolute;top:0;left:0;width:8px;height:8px;background:#FF00FF;pointer-events:none"></div>
   <div class="bx-header"><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span></div>
   <div class="bx-grid">

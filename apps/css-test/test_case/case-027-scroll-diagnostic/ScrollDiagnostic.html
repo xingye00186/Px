@@ -1,38 +1,31 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><title>Scrollbar Diagnostic</title>
-<style>
-/* PxTest baseline — mandatory: viewport + font + background */
-html,body {
-    width:1600px;
+<style>/* PxTest baseline — mandatory: viewport + font + background */
+html,body{width:1600px;
     min-height:800px;
     height:auto;
     overflow:hidden;
-    font-family:"Segoe UI","Noto Sans SC",sans-serif;
-    font-size:16px;
+    
+    
     line-height:1.2;
-    background:#fff;
-    color:#000;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; line-height:0;}
-body { background: #f5f5f5; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-.card { width:800px; margin:0 auto; background:#fff; border-radius:12px; padding:24px; border:1px solid #e0e0e0; box-shadow:0 2px 12px rgba(0,0,0,.08); position:relative; }
-.scroll-box { height:300px; overflow-y:auto; border:2px solid #455a64; border-radius:6px; background:#fafafa; }
-.item { height:36px; display:flex; align-items:center; padding:0 14px; font-size:13px; border-bottom:1px solid #e0e0e0; }
-.item:nth-child(6n+1) { background:#f5f7ff; }
-.item:nth-child(6n+2) { background:#ffffff; }
-.item:nth-child(6n+3) { background:#fff8e1; }
-.item:nth-child(6n+4) { background:#e8f5e9; }
-.item:nth-child(6n+5) { background:#fce4ec; }
-.item:nth-child(6n+6) { background:#f3e5f5; }
-.num { display:inline-block; width:36px; font-weight:700; color:#78909c; }
-.label { color:#37474f; }
-.hint { margin-left:10px; font-size:11px; color:#aaa; }
-</style>
+    background:#fff;}
+* { box-sizing: border-box; margin: 0; padding: 0; line-height:0;
+body { background: #f5f5f5; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+.card{width:800px; margin:0 auto; background:#fff; border-radius:12px; padding:24px; border:1px solid #e0e0e0; box-shadow:0 2px 12px rgba(0,0,0,.08); position:relative;}
+.scroll-box{height:300px; overflow-y:auto; border:2px solid #455a64; border-radius:6px; background:#fafafa;}
+.item{height:36px; display:flex; align-items:center; padding:0 14px;  border-bottom:1px solid #e0e0e0;}
+.item:nth-child(6n+1){background:#f5f7ff;}
+.item:nth-child(6n+2){background:#ffffff;}
+.item:nth-child(6n+3){background:#fff8e1;}
+.item:nth-child(6n+4){background:#e8f5e9;}
+.item:nth-child(6n+5){background:#fce4ec;}
+.item:nth-child(6n+6){background:#f3e5f5;}
+.num{display:inline-block; width:36px;}
+.hint{margin-left:10px;}</style>
 </head>
 <body>
-<div class="sandbox" style="position:relative">
+<div data-px-testroot="true" class="sandbox" style="position:relative">
   <div style="width:800px;box-sizing:border-box;background:#fff;border-radius:8px;padding:24px;border:1px solid #e0e0e0;position:relative">
     <div style="margin-bottom:10px"><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span><span style="display:inline-block;width:8px;height:25px;background:#b0b0b0"></span><span style="display:inline-block;width:8px;height:25px;background:#9a9a9a"></span><span style="display:inline-block;width:8px;height:25px;background:#a8a8a8"></span><span style="display:inline-block;width:8px;height:25px;background:#929292"></span></div>
     <div style="margin-bottom:14px;line-height:0;border-left:3px solid #ff9800;padding:10px 14px;background:#fff8e1;border-radius:4px">
