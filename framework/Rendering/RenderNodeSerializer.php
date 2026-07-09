@@ -69,10 +69,22 @@ class RenderNodeSerializer
     }
 
     /**
-     * 序列化为结构化数组（含归一化）。
+     * 序列化为结构化数组 — 绕过 AOT 编译器的 toArray() 参数丢失 bug。
      */
-    public function toArray(RenderNode $node): array
+    public function serializeNode(RenderNode $node): array
     {
+        return $this->nodeToArrayRecursive($node, []);
+    }
+
+    /**
+     * 序列化为结构化数组（含归一化）。
+     *
+     * 注意：AOT 编译器有参数丢失 bug，不要直接调用此方法。
+     * 使用 serializeNode($node) 代替。
+     */
+    public function toArray(?RenderNode $node = null): array
+    {
+        if ($node === null) return [];
         return $this->nodeToArrayRecursive($node, []);
     }
 

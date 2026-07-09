@@ -379,26 +379,28 @@ class Application
         $w = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : Config::get('window_width', 1280);
         $h = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : Config::get('window_height', 720);
 
-        // Stage 1: 让 platform 创建窗口 + 默认 RenderContext（测试环境直接使用此 context）
+        // Stage 1: 让 platform 创建窗口 + 默认 RenderContext
         $title = defined('WINDOW_TITLE') ? WINDOW_TITLE : Config::get('debug_window_title', 'Px');
         $defaultCtx = $this->platform->init($title, $w, $h);
 
-        // 检查 C++ 绑定是否可用：无 vue_begin_paint 说明是测试环境（PHP-only），跳过后端选择
+        // 无 C++ 绑定（PHP-only 测试）：使用 defaultCtx，跳过后端选择
         if (!function_exists('vue_begin_paint')) {
             $this->renderer = new VNodeRenderer($this->rootComponent, $defaultCtx);
-            error_log('[DIAG] initRenderer: test mode (no vue_begin_paint), using defaultCtx');
+            error_log('[DIAG] initRenderer: test mode, using defaultCtx');
             return;
         }
 
         unset($defaultCtx);  // 显式释放默认 RC，让 RuntimeBackendSelector 创建最优后端
 
         // Stage 2: 用 RuntimeBackendSelector 探测 + 选择最优后端
+        // headless 模式同样走后端选择（hwnd=0 时 skia-cpu 使用内存离屏 surface）
         $hwnd = $this->platform->getHwnd();
         $selector  = new RuntimeBackendSelector();
-        $backend   = $selector->select($hwnd, $w, $h);
-        if ($backend === null) {
-            error_log('[Application] initRenderer: backend selection failed, using fallback');
-            $this->renderer = new VNodeRenderer($this->rootComponent, $defaultCtx);
+        try {
+            $backend = $selector->select($hwnd, $w, $h);
+        } catch (\Throwable $e) {
+            error_log('[Application] initRenderer: backend selection threw: ' . $e->getMessage());
+            $this->renderer = new VNodeRenderer($this->rootComponent, new GdiRenderContext($hwnd));
             return;
         }
         $this->selectedBackendName = $backend->getName();
@@ -795,7 +797,9 @@ class Application
                 $exportNode = $tlParent;
             }
         }
-        $data = $serializer->toArray($exportNode);
+        // AOT 编译器不能正确处理带参数的 toArray() 调用
+        // 绕过：使用 serializeNode 替代（不同方法签名避免 AOT bug）
+        $data = $serializer->serializeNode($exportNode);
         file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 
