@@ -15,6 +15,8 @@ use Px\Rendering\Layout\InlineLayoutStrategy;
 use Px\Rendering\Layout\TableLayoutStrategy;
 use Px\Rendering\Layout\MultiColumnLayoutStrategy;
 use Px\Rendering\Layout\LayoutConstraints;
+use Px\Rendering\Layout\ConstraintSpace;
+use Px\Rendering\Layout\ConstraintSpaceBuilder;
 use Px\Rendering\Layout\LayoutResult;
 use Px\Rendering\Layout\LayoutCallbackInterface;
 use Px\Rendering\Layout\LayoutInput;
@@ -75,13 +77,14 @@ class LayoutResolver implements LayoutCallbackInterface
         $this->stickyStack = [];
         $this->stickyStackX = [];
 
-        $constraints = new LayoutConstraints(
-            $root->w,
-            $root->h,
-            0,
-            0,
-            $root->w,
-            $root->h,
+        $rootStyle = $root->computedStyle;
+        $rootW = (int)($root->w ?: ($rootStyle?->width?->toPx() ?: 0));
+        $rootH = (int)($root->h ?: ($rootStyle?->height?->toPx() ?: 0));
+        $constraints = new ConstraintSpace(
+            containerWidth:  $rootW,
+            containerHeight: $rootH,
+            contentWidth:    $rootW,
+            contentHeight:   $rootH,
         );
 
         // 脏标记判断在入口，不在递归内部
@@ -108,7 +111,7 @@ class LayoutResolver implements LayoutCallbackInterface
      * 纯函数递归布局。
      * 不修改任何 RenderNode 字段，只读其 computedStyle/content/children。
      */
-    private function resolveFragment(RenderNode $node, LayoutConstraints $constraints, int $inheritedLayer = 0, ?int $parentResultX = null, ?int $parentResultY = null, int $iteration = 0): LayoutResult
+    private function resolveFragment(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0, ?int $parentResultX = null, ?int $parentResultY = null, int $iteration = 0): LayoutResult
     {
         // DEBUG helper
         $nodeName = $node->type;
@@ -128,8 +131,7 @@ class LayoutResolver implements LayoutCallbackInterface
         }
 
         // Layer inheritance: inherit from parent's computed layer (passed as parameter),
-        // override with own z-index. Uses inheritedLayer parameter instead of reading
-        // node->parent->layer (which is stale during recursive descent).
+        // override with own z-index.
         $nodeLayer = $inheritedLayer;
         $zIndex = $style?->zIndex ?? 0;
         if ($zIndex > $nodeLayer) {
@@ -162,7 +164,14 @@ class LayoutResolver implements LayoutCallbackInterface
                 if ($cssW > 0) {
                     $nodeW = $cssW;
                 } elseif ($style->width->isPercent()) {
-                    $nodeW = $style->width->resolveInContext($constraints->contentWidth);
+                    // P3 修复：使用 ConstraintSpace.percentageWidth 而非回退到祖父
+                    $percW = $space->percentageWidth;
+                    if ($percW !== null) {
+                        $nodeW = $style->width->resolveInContext($percW);
+                    } else {
+                        // percentageWidth = null (Indefinite)：标记待定，用 intrinsic
+                        $nodeW = 0;
+                    }
                 }
             }
             $nodeH = $node->h;
@@ -171,7 +180,12 @@ class LayoutResolver implements LayoutCallbackInterface
                 if ($cssH > 0) {
                     $nodeH = $cssH;
                 } elseif ($style->height->isPercent()) {
-                    $nodeH = $style->height->resolveInContext($constraints->contentHeight);
+                    $percH = $space->percentageHeight;
+                    if ($percH !== null) {
+                        $nodeH = $style->height->resolveInContext($percH);
+                    } else {
+                        $nodeH = 0;
+                    }
                 }
             }
 
@@ -183,16 +197,14 @@ class LayoutResolver implements LayoutCallbackInterface
             if ($nodeWInt > 0) {
                 $cbW = max(0, $nodeWInt - (int)($padL ?? 0) - (int)($padR ?? 0) - (int)($bL ?? 0) - (int)($bR ?? 0));
             } else {
-                $cbW = max(0, (int)($constraints->contentWidth ?? 0) - (int)($padL ?? 0) - (int)($padR ?? 0) - (int)($bL ?? 0) - (int)($bR ?? 0));
+                $cbW = max(0, (int)($space->contentWidth ?? 0) - (int)($padL ?? 0) - (int)($padR ?? 0) - (int)($bL ?? 0) - (int)($bR ?? 0));
             }
             if ($nodeHInt > 0) {
                 $cbH = max(0, $nodeHInt - (int)($padT ?? 0) - (int)($padB ?? 0) - (int)($bT ?? 0) - (int)($bB ?? 0));
             } else {
-                $cbH = max(0, (int)($constraints->contentHeight ?? 0) - (int)($padT ?? 0) - (int)($padB ?? 0) - (int)($bT ?? 0) - (int)($bB ?? 0));
+                $cbH = max(0, (int)($space->contentHeight ?? 0) - (int)($padT ?? 0) - (int)($padB ?? 0) - (int)($bT ?? 0) - (int)($bB ?? 0));
             }
             // Use ComputedStyle-based x/y for child constraints (not $node->x which is 0 in Phase A)
-            // CSS position: static/relative elements sit at parentContentX + left + marginLeft
-            // AOT-safe: use single ?-> chain depth, avoid $style?->left?->toPx() 3-level chain
             $childLeft = 0; $childTop = 0; $childML = 0; $childMT = 0;
             if ($style !== null) {
                 $childLeft = (int)$style->left->toPx();
@@ -200,20 +212,24 @@ class LayoutResolver implements LayoutCallbackInterface
                 $childML = (int)$style->margin->left->toPx();
                 $childMT = (int)$style->margin->top->toPx();
             }
-            $selfX = (int)($constraints->parentContentX ?? 0) + (int)($childLeft ?? 0) + (int)($childML ?? 0);
-            $selfY = (int)($constraints->parentContentY ?? 0) + (int)($childTop ?? 0) + (int)($childMT ?? 0);
+            $selfX = (int)($space->parentContentX ?? 0) + (int)($childLeft ?? 0) + (int)($childML ?? 0);
+            $selfY = (int)($space->parentContentY ?? 0) + (int)($childTop ?? 0) + (int)($childMT ?? 0);
             $childOffX = (int)($selfX ?? 0) + (int)($padL ?? 0) + (int)($bL ?? 0);
             $childOffY = (int)($selfY ?? 0) + (int)($padT ?? 0) + (int)($bT ?? 0);
 
-            $childConstraints = new LayoutConstraints(
-                (int)max(0, $cbW),
-                (int)max(0, $cbH),
+            // 子节点百分比基准：使用 ConstraintSpace 的 percentageWidth/Height
+            $childPercW = $child->computedStyle?->width?->isPercent() ? $cbW : null;
+            $childPercH = $child->computedStyle?->height?->isPercent() ? $cbH : null;
+
+            $childSpace = ConstraintSpace::forChild(
                 (int)($childOffX),
                 (int)($childOffY),
                 (int)max(0, $cbW),
                 (int)max(0, $cbH),
+                percentageWidth: $childPercW,
+                percentageHeight: $childPercH,
             );
-            $childResults[] = $this->resolveFragment($child, $childConstraints, $nodeLayer, $node->x, $node->y);
+            $childResults[] = $this->resolveFragment($child, $childSpace, $nodeLayer, $node->x, $node->y);
         }
 
         // Build positioning ancestor info for absolute children
@@ -279,7 +295,7 @@ class LayoutResolver implements LayoutCallbackInterface
 
         if ($isAbsolute) {
             $input = new LayoutInput(
-                constraints: $constraints,
+                constraints: $space->toLegacy(),
                 style: $style,
                 textContent: $textContent,
                 childResults: $childResults,
@@ -304,7 +320,7 @@ class LayoutResolver implements LayoutCallbackInterface
         // Select strategy based on display
         $strategy = $this->selectStrategy($display, $style);
         $input = new LayoutInput(
-            constraints: $constraints,
+            constraints: $space->toLegacy(),
             style: $style,
             textContent: $textContent,
             childResults: $childResults,
@@ -318,25 +334,28 @@ class LayoutResolver implements LayoutCallbackInterface
 
         // Iteration loop: if strategy requests another pass and we haven't exceeded max
         if ($result->needsAnotherPass && $iteration < 5) {
-            return $this->resolveFragment($node, $constraints, $inheritedLayer, $parentResultX, $parentResultY, $iteration + 1);
+            return $this->resolveFragment($node, $space, $inheritedLayer, $parentResultX, $parentResultY, $iteration + 1);
         }
 
        return $result;
     }
 
-    public function reResolveChild(RenderNode $child, LayoutConstraints $newConstraints): LayoutResult
+    public function reResolveChild(RenderNode $child, LayoutConstraints $legacyConstraints): LayoutResult
     {
-        return $this->resolveFragment($child, $newConstraints, iteration: 1);
+        $space = ConstraintSpaceBuilder::fromLegacyConstraints($legacyConstraints)->build();
+        return $this->resolveFragment($child, $space, iteration: 1);
     }
 
     public function measureIntrinsic(RenderNode $node): LayoutResult
     {
-        $constraints = new LayoutConstraints(
+        $space = new ConstraintSpace(
             containerWidth: PHP_INT_MAX,
             containerHeight: PHP_INT_MAX,
+            contentWidth: PHP_INT_MAX,
+            contentHeight: PHP_INT_MAX,
             isIntrinsicMeasurement: true,
         );
-        return $this->resolveFragment($node, $constraints, iteration: 1);
+        return $this->resolveFragment($node, $space, iteration: 1);
     }
 
     /**
