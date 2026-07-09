@@ -222,9 +222,9 @@ class VNodeRenderer
         if (!$this->needsPaint($node, $this->currentPaintFrame)) {
             $childOffsetX = $isFixed ? 0 : $accumOffsetX;
             $childOffsetY = $isFixed ? 0 : $accumOffsetY;
-            if (!$isFixed && $node->isScrollContainer) {
-                $childOffsetX -= $node->scrollLeft;
-                $childOffsetY -= $node->scrollTop;
+            if (!$isFixed && (bool)($node->isScrollContainer ?? false)) {
+                $childOffsetX -= (int)($node->scrollLeft ?? 0);
+                $childOffsetY -= (int)($node->scrollTop ?? 0);
             }
             foreach ($node->children as $child) {
                 $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
@@ -234,9 +234,9 @@ class VNodeRenderer
         if ($node->type === '#root') {
             $childOffsetX = $isFixed ? 0 : $accumOffsetX;
             $childOffsetY = $isFixed ? 0 : $accumOffsetY;
-            if (!$isFixed && $node->isScrollContainer) {
-                $childOffsetX -= $node->scrollLeft;
-                $childOffsetY -= $node->scrollTop;
+            if (!$isFixed && (bool)($node->isScrollContainer ?? false)) {
+                $childOffsetX -= (int)($node->scrollLeft ?? 0);
+                $childOffsetY -= (int)($node->scrollTop ?? 0);
             }
             foreach ($node->children as $child) {
                 $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
@@ -245,7 +245,7 @@ class VNodeRenderer
         }
         $el = $this->renderNodeToElement($node);
         if ($el !== null) {
-            $layer = $node->layer;
+            $layer = (int)($node->layer ?? 0);
             if ($layer > $maxLayer) $maxLayer = $layer;
             if (!isset($elementsByLayer[$layer])) {
                 $elementsByLayer[$layer] = [];
@@ -264,14 +264,14 @@ class VNodeRenderer
             }
         }
         $pushedClip = false;
-        $isScrollNode = $node->isScrollContainer;
+        $isScrollNode = (bool)($node->isScrollContainer ?? false);
         if ($isScrollNode) {
             $clip = self::computePaddingBoxClip($node);
             $this->scrollCtxStack[] = [
                 'x' => $clip['x'], 'y' => $clip['y'],
                 'w' => $clip['w'], 'h' => $clip['h'],
-                'scrollTop' => $node->scrollTop,
-                'scrollLeft' => $node->scrollLeft,
+                'scrollTop' => (int)($node->scrollTop ?? 0),
+                'scrollLeft' => (int)($node->scrollLeft ?? 0),
                 'overflowX' => $node->computedStyle?->overflowX?->value ?? $node->computedStyle?->overflow?->value ?? 'visible',
                 'overflowY' => $node->computedStyle?->overflowY?->value ?? $node->computedStyle?->overflow?->value ?? 'visible',
                 'layer' => $node->layer,
@@ -285,7 +285,7 @@ class VNodeRenderer
             }
         }
         if ($pushedClip) {
-            $layer = $node->layer;
+            $layer = (int)($node->layer ?? 0);
             if ($layer > $maxLayer) $maxLayer = $layer;
             if (!isset($elementsByLayer[$layer])) {
                 $elementsByLayer[$layer] = [];
@@ -313,10 +313,10 @@ class VNodeRenderer
         }
         $childOffsetX = $isFixed ? 0 : $accumOffsetX;
         $childOffsetY = $isFixed ? 0 : $accumOffsetY;
-        if (!$isFixed && $node->isScrollContainer) {
-            $childOffsetX -= $node->scrollLeft;
-            $childOffsetY -= $node->scrollTop;
-            error_log('[SCROLL_DBG] collect scrollContainer x=' . $node->x . ' y=' . $node->y . ' w=' . $node->w . ' h=' . $node->h . ' visualH=' . $node->visualH . ' scrollTop=' . $node->scrollTop . ' scrollLeft=' . $node->scrollLeft . ' childOffY=' . $childOffsetY . ' children=' . count($node->children));
+        if (!$isFixed && (bool)($node->isScrollContainer ?? false)) {
+            $childOffsetX -= (int)($node->scrollLeft ?? 0);
+            $childOffsetY -= (int)($node->scrollTop ?? 0);
+            error_log('[SCROLL_DBG] collect scrollContainer x=' . (int)($node->x ?? 0) . ' y=' . (int)($node->y ?? 0) . ' w=' . (int)($node->w ?? 0) . ' h=' . (int)($node->h ?? 0) . ' visualH=' . (int)($node->visualH ?? 0) . ' scrollTop=' . (int)($node->scrollTop ?? 0) . ' scrollLeft=' . (int)($node->scrollLeft ?? 0) . ' childOffY=' . $childOffsetY . ' children=' . count($node->children));
         }
         if ($node->type !== 'button') {
             foreach ($node->children as $child) {
@@ -327,7 +327,7 @@ class VNodeRenderer
             if ($isScrollNode) {
                 array_pop($this->scrollCtxStack);
             }
-            $layer = $node->layer;
+            $layer = (int)($node->layer ?? 0);
             if ($layer > $maxLayer) $maxLayer = $layer;
             if (!isset($elementsByLayer[$layer])) {
                 $elementsByLayer[$layer] = [];
@@ -482,11 +482,11 @@ class VNodeRenderer
         if (($node->computedStyle?->display?->value ?? '') === 'none') {
             return null;
         }
-        $x = $node->x + $this->getRenderOffsetX($node);
-        $y = $node->y + $this->getRenderOffsetY($node);
-        $w = $node->visualW;
-        $h = $node->visualH;
-        $layer = $node->layer;
+        $x = (int)($node->x ?? 0) + $this->getRenderOffsetX($node);
+        $y = (int)($node->y ?? 0) + $this->getRenderOffsetY($node);
+        $w = (int)($node->visualW ?? 0);
+        $h = (int)($node->visualH ?? 0);
+        $layer = (int)($node->layer ?? 0);
         if (count($this->scrollCtxStack) > 0) {
             $isFixed = ($node->computedStyle?->position?->value ?? '') === 'fixed';
             if (!$isFixed) {
@@ -564,7 +564,7 @@ class VNodeRenderer
     {
         $cs = $node->computedStyle;
         $cursor = $pseudoOverrides['cursor'] ?? $cs?->cursor?->value ?? '';
-        if ($node->isScrollContainer) {
+        if ((bool)($node->isScrollContainer ?? false)) {
             return $this->makeScrollContainerElement($node, $pseudoOverrides, $x, $y, $w, $h, $layer);
         }
         if ($w <= 0) $w = 80;
@@ -934,7 +934,7 @@ class VNodeRenderer
                 return $elements[0];
             }
             $elOverflowHidden = ($cs?->overflow?->value ?? 'visible') === 'hidden';
-            if ($elOverflowHidden && !$node->isScrollContainer && $selfW > 0 && $selfH > 0) {
+            if ($elOverflowHidden && !(bool)($node->isScrollContainer ?? false) && $selfW > 0 && $selfH > 0) {
                 $itemClip = self::computePaddingBoxClip($node);
                 $clipX = $itemClip['x'];
                 $clipY = $itemClip['y'];
@@ -1445,7 +1445,7 @@ class VNodeRenderer
         $borderRadiusX = $pseudoOverrides['borderRadiusX'] ?? 0;
         $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;
         $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;
-        $contentH = $node->contentHeight;
+        $contentH = (int)($node->contentHeight ?? 0);
         if ($contentH === 0) {
             foreach ($node->children as $child) {
                 $itemH = (int)($child->computedStyle?->height->toPx() ?? 0);
@@ -1457,9 +1457,9 @@ class VNodeRenderer
             'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'bg' => $bg, 'borderRadius' => $borderRadius,
             'contentHeight' => $contentH,
-            'contentWidth' => $node->contentWidth,
-            'scrollTop' => $node->scrollTop,
-            'scrollLeft' => $node->scrollLeft,
+            'contentWidth' => (int)($node->contentWidth ?? 0),
+            'scrollTop' => (int)($node->scrollTop ?? 0),
+            'scrollLeft' => (int)($node->scrollLeft ?? 0),
             'opacity' => $opacity,
             'layer' => $layer,
         ];
