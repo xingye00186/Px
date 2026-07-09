@@ -29,7 +29,7 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     protected bool $isUpdating = false;
 
     /** @var callable|null 渲染请求回调（由 Application 注入） */
-    private ?\Closure $renderCallback = null;
+    protected ?\Closure $renderCallback = null;
 
     /** @var array<string, array<int, callable>> eventName => [handlerId => callback] */
     protected array $eventHandlers = [];
