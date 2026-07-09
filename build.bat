@@ -100,7 +100,7 @@ if not exist "%COMPILER_DIR%\" (
 
 :: Compiler paths
 set "PHP_CLI=%COMPILER_DIR%\php.exe"
-set "SWOOLE_COMPILER=%COMPILER_DIR%\swoole_compiler.exe"
+set "SWOOLE_COMPILER=%COMPILER_DIR%\tpc.exe"
 set "DLL_PHP=%COMPILER_DIR%\php8ts.dll"
 set "DLL_PHPX=%COMPILER_DIR%\phpx.dll"
 
