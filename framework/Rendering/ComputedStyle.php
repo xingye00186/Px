@@ -368,16 +368,19 @@ class ComputedStyle
             $this->borderRadius = $v instanceof CssLength ? $v->toPx() : self::safeInt($v);
         }
         if (isset($d['columnCount'])) {
-            $this->columnCount = (int)$d['columnCount'];
+            $v = $d['columnCount'];
+            $this->columnCount = $v instanceof CssLength ? max(0, (int)$v->toPx()) : (int)$v;
         }
         if (isset($d['columnWidth'])) {
-            $this->columnWidth = (int)$d['columnWidth'];
+            $v = $d['columnWidth'];
+            $this->columnWidth = $v instanceof CssLength ? max(0, (int)$v->toPx()) : (int)$v;
         }
         if (isset($d['opacity'])) {
             $this->opacity = (float)$d['opacity'];
         }
         if (isset($d['aspectRatio'])) {
-            $this->aspectRatio = (float)$d['aspectRatio'];
+            $v = $d['aspectRatio'];
+            $this->aspectRatio = $v instanceof CssLength ? $v->toPx() : (float)$v;
         }
 
         // ── 定位（CssLength，支持百分比解析） ──
