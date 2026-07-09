@@ -76,6 +76,12 @@ class VNode
      */
     public ?array $layoutOffset = null;
 
+    /**
+     * 由 StyleRecalcPass 填充的计算后样式（Phase 0.5 引入）。
+     * 后续 RenderTreeManager 直接从此读取，不再内联调用 StyleResolver。
+     */
+    public ?ComputedStyle $computedStyle = null;
+
     // ===== 构造器 =====
 
     /**
