@@ -7,5 +7,4 @@ entry: main.php
 Px_build_all_ignore: true
 sources:
   - main.php
-  - Data.php
 
