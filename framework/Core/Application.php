@@ -19,6 +19,7 @@ use Px\Rendering\RenderNode;
 use Px\Rendering\VNodeRenderer;
 use Px\Rendering\LayoutResolver;
 use Px\Rendering\LayoutOrchestrator;
+use Px\Rendering\StyleRecalcPass;
 use Px\Rendering\InteractionState;
 use Px\Rendering\CssMappings;
 use Px\Rendering\ImageManager;
@@ -189,14 +190,9 @@ class Application
     ) {
         $this->platform  = $platform;
         $this->scheduler = $scheduler;
-        $this->layoutOrchestrator = $layoutOrchestrator;
-        if ($layoutOrchestrator !== null) {
-            $this->useOrchestrator = true;
-            $this->layoutResolver = $layoutResolver ?? new LayoutResolver();
-        } else {
-            $this->layoutResolver = $layoutResolver ?? new LayoutResolver();
-            $this->useOrchestrator = false;
-        }
+        $this->layoutOrchestrator = $layoutOrchestrator ?? new LayoutOrchestrator();
+        $this->useOrchestrator = true;
+        $this->layoutResolver = $layoutResolver ?? new LayoutResolver();
         $this->renderTreeManager = $renderTreeManager ?? new RenderTreeManager();
         $this->scrollManager = new ScrollManager(
             $this->requestRender(...),
@@ -251,15 +247,13 @@ class Application
                 // ── :hover 伪类样式追踪 ──
                 // 当 hover 节点变化时，更新新旧节点的 hovered 标志并触发渲染
                 if ($hoverNode !== $this->hoveredNode) {
-                    // 清除旧节点的 hover 状态
+                    // 清除旧节点的 hover 状态（通过 InteractionState，不直接写 RenderNode）
                     if ($this->hoveredNode !== null) {
                         $this->getInteractionState($this->hoveredNode)->hovered = false;
-                        $this->hoveredNode->hovered = false;
                     }
                     // 设置新节点的 hover 状态
                     if ($hoverNode !== null) {
                         $this->getInteractionState($hoverNode)->hovered = true;
-                        $hoverNode->hovered = true;
                     }
                     $this->hoveredNode = $hoverNode;
                     // 请求渲染以应用 :hover 样式变化
@@ -872,6 +866,12 @@ class Application
         $frame = $this->debugFrameNumber;
 
         $this->rebuildVNodeTree();
+
+        // Phase 0.5: 独立 StyleRecalc 通行证（将样式解析从 RenderTreeManager 抽出）
+        if ($this->activeVNodeTree !== null) {
+            $styleRecalc = new StyleRecalcPass();
+            $styleRecalc->recalc($this->activeVNodeTree);
+        }
 
         // getRootRenderNodes() = 顶层 #root 所有旧子节点，作为 candidates 传递给 #root handler
         $oldRootChildren = $this->renderTreeManager->getRootRenderNodes();

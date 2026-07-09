@@ -4,6 +4,8 @@ namespace Px\Rendering\Layout;
 
 use native_types;
 
+use Px\Rendering\ComputedStyle;
+
 /**
  * LayoutAlgorithm — 布局算法抽象基类（对标 Blink LayoutAlgorithm）
  *

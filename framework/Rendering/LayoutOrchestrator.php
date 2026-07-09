@@ -8,7 +8,7 @@ use Px\Rendering\Layout\ConstraintSpace;
 use Px\Rendering\Layout\ConstraintSpaceBuilder;
 use Px\Rendering\Layout\PhysicalFragment;
 use Px\Rendering\Layout\LayoutResult;
-use Px\Rendering\Layout\LayoutAlgorithm;
+use Px\Rendering\Layout\LayoutStrategyInterface;
 use Px\Rendering\Layout\BlockLayoutStrategy;
 use Px\Rendering\Layout\FlexLayoutStrategy;
 use Px\Rendering\Layout\GridLayoutStrategy;
@@ -16,6 +16,8 @@ use Px\Rendering\Layout\InlineLayoutStrategy;
 use Px\Rendering\Layout\TableLayoutStrategy;
 use Px\Rendering\Layout\MultiColumnLayoutStrategy;
 use Px\Rendering\Layout\OOFLayoutAlgorithm;
+use Px\Rendering\Layout\LayoutCache;
+use Px\Rendering\Layout\LayoutCacheKey;
 use Px\Rendering\Layout\StickyPostProcessor;
 use Px\Core\Config;
 
@@ -32,13 +34,14 @@ use Px\Core\Config;
 class LayoutOrchestrator
 {
     private OOFLayoutAlgorithm $oofAlgorithm;
-    private LayoutAlgorithm $blockAlgorithm;
-    private LayoutAlgorithm $flexAlgorithm;
-    private LayoutAlgorithm $gridAlgorithm;
-    private LayoutAlgorithm $inlineAlgorithm;
-    private LayoutAlgorithm $tableAlgorithm;
-    private LayoutAlgorithm $multiColumnAlgorithm;
+    private LayoutStrategyInterface $blockStrategy;
+    private LayoutStrategyInterface $flexStrategy;
+    private LayoutStrategyInterface $gridStrategy;
+    private LayoutStrategyInterface $inlineStrategy;
+    private LayoutStrategyInterface $tableStrategy;
+    private LayoutStrategyInterface $multiColumnStrategy;
     private StickyPostProcessor $stickyProcessor;
+    private LayoutCache $cache;
 
     /** @var RenderNode[] 当前帧的滚动容器 */
     private array $scrollContainers = [];
@@ -46,14 +49,14 @@ class LayoutOrchestrator
     public function __construct()
     {
         $this->oofAlgorithm = new OOFLayoutAlgorithm();
-        // Phase 1 适配器：旧策略包装为 Algorithm
-        $this->blockAlgorithm = new BlockLayoutStrategy();      // TODO: 替换为 BlockAlgorithm
-        $this->flexAlgorithm = new FlexLayoutStrategy();        // TODO: 替换为 FlexAlgorithm
-        $this->gridAlgorithm = new GridLayoutStrategy();        // TODO: 替换为 GridAlgorithm
-        $this->inlineAlgorithm = new InlineLayoutStrategy();    // TODO: 替换为 InlineAlgorithm
-        $this->tableAlgorithm = new TableLayoutStrategy();      // TODO: 替换为 TableAlgorithm
-        $this->multiColumnAlgorithm = new MultiColumnLayoutStrategy(); // TODO: 替换为 MultiColumnAlgorithm
+        $this->blockStrategy = new BlockLayoutStrategy();
+        $this->flexStrategy = new FlexLayoutStrategy();
+        $this->gridStrategy = new GridLayoutStrategy();
+        $this->inlineStrategy = new InlineLayoutStrategy();
+        $this->tableStrategy = new TableLayoutStrategy();
+        $this->multiColumnStrategy = new MultiColumnLayoutStrategy();
         $this->stickyProcessor = new StickyPostProcessor();
+        $this->cache = new LayoutCache();
     }
 
     /**
@@ -192,9 +195,8 @@ class LayoutOrchestrator
             return PhysicalFragment::fromLayoutResult($result, $node);
         }
 
-        // 新 Algorithm 路径（直接调用）
-        $result = $algo->layout($inputSpace);
-        return $result;
+        // Fallback: should not reach here
+        return new PhysicalFragment(0, 0, 0, 0, style: $style, sourceNode: $node);
     }
 
     /**
@@ -232,29 +234,29 @@ class LayoutOrchestrator
     /**
      * 选择布局算法。
      */
-    private function selectAlgorithm(string $display, ?ComputedStyle $style): LayoutAlgorithm
+    private function selectAlgorithm(string $display, ?ComputedStyle $style): LayoutStrategyInterface
     {
         switch ($display) {
             case 'flex':
             case 'inline-flex':
-                return $this->flexAlgorithm;
+                return $this->flexStrategy;
             case 'grid':
-                return $this->gridAlgorithm;
+                return $this->gridStrategy;
             case 'inline':
             case 'inline-block':
-                return $this->inlineAlgorithm;
+                return $this->inlineStrategy;
             case 'table':
             case 'table-row':
             case 'table-cell':
             case 'table-caption':
-                return $this->tableAlgorithm;
+                return $this->tableStrategy;
             default:
                 $isMultiCol = ($style !== null
                     && ((int)$style->columnCount > 0 || (int)($style->columnWidth ?? 0) > 0));
                 if ($isMultiCol) {
-                    return $this->multiColumnAlgorithm;
+                    return $this->multiColumnStrategy;
                 }
-                return $this->blockAlgorithm;
+                return $this->blockStrategy;
         }
     }
 
@@ -336,13 +338,13 @@ class LayoutOrchestrator
 
     public function getBlockStrategy(): \Px\Rendering\Layout\BlockLayoutStrategy
     {
-        return $this->blockAlgorithm instanceof \Px\Rendering\Layout\BlockLayoutStrategy
-            ? $this->blockAlgorithm : new \Px\Rendering\Layout\BlockLayoutStrategy();
+        return $this->blockStrategy instanceof \Px\Rendering\Layout\BlockLayoutStrategy
+            ? $this->blockStrategy : new \Px\Rendering\Layout\BlockLayoutStrategy();
     }
 
     public function getFlexStrategy(): \Px\Rendering\Layout\FlexLayoutStrategy
     {
-        return $this->flexAlgorithm instanceof \Px\Rendering\Layout\FlexLayoutStrategy
-            ? $this->flexAlgorithm : new \Px\Rendering\Layout\FlexLayoutStrategy();
+        return $this->flexStrategy instanceof \Px\Rendering\Layout\FlexLayoutStrategy
+            ? $this->flexStrategy : new \Px\Rendering\Layout\FlexLayoutStrategy();
     }
 }
