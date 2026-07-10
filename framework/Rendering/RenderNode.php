@@ -34,15 +34,11 @@ class RenderNode
     public int $visualH = 0;
     public int $layer = 0;
 
-    public bool $isScrollContainer = false;
-    public int $contentHeight = 0;
-    public int $contentWidth = 0;
 
     public bool $layoutDirty = true;
 
     public ?RenderNode $parent = null;
-    public ?RenderNode $positioningAncestor = null;
-    public bool $positioningAncestorValid = false;
+
     public ?VNode $sourceVNode = null;
     public array $children = [];
 
@@ -57,9 +53,7 @@ class RenderNode
 
     // ── 交互状态（Application 事件处理器维护，用于伪类样式判断）──
 
-    public bool $hovered = false;
-    public bool $focused = false;
-    public bool $active = false;
+
 
     public function __construct(
         string $type,
