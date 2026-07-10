@@ -17,7 +17,7 @@ require_once __DIR__ . '/bootstrap.php';
 
 use Px\Rendering\RenderNode;
 use Px\Rendering\ComputedStyle;
-use Px\Rendering\Layout\LayoutOrchestrator;
+use Px\Rendering\LayoutOrchestrator;
 use Px\Rendering\RenderTreeManager;
 
 echo "========================================\n";
@@ -91,7 +91,7 @@ test('垂直滚动: auto-stack + contentHeight + auto-width', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $result = $resolver->layout($root);
+    $result = $frag = $orchestrator->layout($root);
 
     $sc = $result['scrollContainers'][0] ?? null;
     assert_not_null($sc, '应有 1 个 scroll container');
@@ -121,7 +121,7 @@ test('垂直滚动: dumpRenderTree 快照含滚动信息', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     $rtm = new RenderTreeManager();
     $snapshot = $rtm->dumpRenderTree($root, 1, [], 'normal');
@@ -152,7 +152,7 @@ test('scrollTop 偏移：内容溢出时子节点上移', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     // A1 重构: 布局坐标不再包含 scrollTop 偏移，偏移在 VNodeRenderer 绘制层叠加
     // scrollTop=30, maxScroll=140-100=40, 30≤40 → 不clamp
@@ -175,7 +175,7 @@ test('scrollTop clamp：内容不溢出时 clamp 到 0', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     assert_eq($scroll->scrollTop, 0, 'scrollTop clamped to 0');
     // A1 重构: 布局坐标不包含 scrollOffset，clamp 不影响 child.y
@@ -193,7 +193,7 @@ test('scrollTop clamp：超出 maxScroll 但仍有溢出', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     // A1 重构: scrollTop clamp 后，子节点布局坐标不变
     assert_eq($scroll->scrollTop, 50, 'scrollTop clamped to maxScroll=50');
@@ -217,7 +217,7 @@ test('padding 影响 childOffsetY 和 auto-width', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     // childOffsetY = scroll.y(0) + paddingTop(10) - scrollTop(0) = 10
     assert_eq($c1->y, 10, 'paddingTop=10 → c1.y=10');
@@ -242,7 +242,7 @@ test('padding + scrollTop 叠加（内容溢出）', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     // A1 重构: 布局坐标不包含 scrollTop 偏移
     // childOffsetY = 0 + 10 = 10 (no scroll subtraction)
@@ -266,7 +266,7 @@ test('横向滚动: overflow-x:auto → contentWidth', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     assert_true($scroll->isScrollContainer, 'overflow-x:auto → isScrollContainer=true');
     assert_eq($scroll->contentWidth, 500, 'contentWidth = child.w(500)');
@@ -284,7 +284,7 @@ test('横向滚动: scrollLeft 偏移', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     // A1 重构: 布局坐标不包含 scrollLeft 偏移
     assert_eq($wideChild->x, 0, 'scrollLeft=100 → child.x=0 (A1: 布局坐标不变)');
@@ -305,7 +305,7 @@ test('overflow:auto — 垂直+水平同时激活', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     assert_true($scroll->isScrollContainer, 'overflow:auto → isScrollContainer=true');
     assert_eq($scroll->contentWidth, 500, 'contentWidth=500');
@@ -336,7 +336,7 @@ test('两个独立滚动容器垂直堆叠', function () {
     $root->addChild($sc2);
 
     $orchestrator = new LayoutOrchestrator();
-    $result = $resolver->layout($root);
+    $result = $frag = $orchestrator->layout($root);
 
     assert_eq(count($result['scrollContainers']), 2, '应有 2 个 scroll containers');
 
@@ -368,7 +368,7 @@ test('两个滚动容器用 relative 并排', function () {
     $root->addChild($sc2);
 
     $orchestrator = new LayoutOrchestrator();
-    $result = $resolver->layout($root);
+    $result = $frag = $orchestrator->layout($root);
 
     assert_eq(count($result['scrollContainers']), 2, '应有 2 个 scroll containers');
     assert_true($sc2->x > $sc1->x, 'SC2 在 SC1 右侧 (flex)');
@@ -389,7 +389,7 @@ test('minimal 级别仅包含坐标和 scroll 摘要', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     $rtm = new RenderTreeManager();
     $snapshot = $rtm->dumpRenderTree($root, 1, [], 'minimal');
@@ -413,7 +413,7 @@ test('normal 级别包含 style/overflow/scroll 详情', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     $rtm = new RenderTreeManager();
     $snapshot = $rtm->dumpRenderTree($root, 1, [], 'normal');
@@ -429,7 +429,7 @@ test('verbose 级别包含 layer/gid', function () {
     $root->addChild($c1);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     $rtm = new RenderTreeManager();
     $snapshot = $rtm->dumpRenderTree($root, 1, [], 'verbose');
@@ -481,7 +481,7 @@ test('全量布局 + 滚动容器 + 快照正确性', function () {
     $root->addChild($footer);
 
     $orchestrator = new LayoutOrchestrator();
-    $result = $resolver->layout($root);
+    $result = $frag = $orchestrator->layout($root);
 
     assert_eq($header->y, 0, 'header 在顶部');
     assert_eq($scrollArea->y, 60, 'scrollArea.y = header.h(60)');
@@ -520,7 +520,7 @@ test('scrollTop 后子节点 y 为负值（内容溢出时）', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     // A1 重构: 子节点 y 不再为负（布局坐标不变，偏移在绘制层）
     assert_eq($item->y, 0, 'A1: 布局坐标不变, scrollOffset 在绘制层应用: ' . $item->y);
@@ -555,7 +555,7 @@ test('BUG DETECTION: 快照内容与布局一致', function () {
     $root->addChild($scrollList);
 
     $orchestrator = new LayoutOrchestrator();
-    $result = $resolver->layout($root);
+    $result = $frag = $orchestrator->layout($root);
 
     $sc = $result['scrollContainers'][0] ?? null;
     assert_not_null($sc, '应有 scroll container');
@@ -589,7 +589,7 @@ test('显式 width 的子节点不被 auto-width 覆盖', function () {
     $root->addChild($scroll);
 
     $orchestrator = new LayoutOrchestrator();
-    $resolver->layout($root);
+    $frag = $orchestrator->layout($root);
 
     assert_eq($c1->w, 150, '显式 width=150 保持不变');
     assert_eq($c1->y, 0, 'c1.y = childOffsetY');

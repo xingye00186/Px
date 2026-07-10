@@ -67,8 +67,8 @@ class LayoutOrchestrator
 
         // 构建根约束空间
         $rootStyle = $root->computedStyle;
-        $rootW = (int)($root->w ?: ($rootStyle?->width?->toPx() ?: 0));
-        $rootH = (int)($root->h ?: ($rootStyle?->height?->toPx() ?: 0));
+        $rootW = (int)(($root->w ?? 0) ?: ($rootStyle?->width?->toPx() ?: 0));
+        $rootH = (int)(($root->h ?? 0) ?: ($rootStyle?->height?->toPx() ?: 0));
         $space = new ConstraintSpace(
             containerWidth:  $rootW,
             containerHeight: $rootH,
@@ -232,6 +232,8 @@ class LayoutOrchestrator
      */
     private function applyFragmentToNode(PhysicalFragment $frag, RenderNode $node): void
     {
+
+        
                 
 
         $childCount = min(count($frag->children), count($node->children));
@@ -250,17 +252,17 @@ class LayoutOrchestrator
             $padT = (int)($cs?->padding?->top?->toPx() ?? 0);
             $padB = (int)($cs?->padding?->bottom?->toPx() ?? 0);
 
-            $childBaseY = $node->y + $padT;
+            $childBaseY = (int)($node->y ?? 0) + $padT;
             $maxBottom = $childBaseY;
             foreach ($node->children as $child) {
-                $bottom = (int)($child->y + $child->visualH);
+                $bottom = (int)(($child->y ?? 0) + ($child->visualH ?? 0));
                 if ($bottom > $maxBottom) $maxBottom = $bottom;
             }
             // contentHeight stored in Fragment, not RenderNode
 
             // Clamp scrollTop
             if (property_exists($node, 'scrollTop')) {
-                $maxScroll = (int)max(0, $node->h > 0 ? (int)($node->h - $node->y) : 0);
+                $maxScroll = (int)max(0, ($node->h ?? 0) > 0 ? (int)(($node->h ?? 0) - ($node->y ?? 0)) : 0);
                 if ($node->scrollTop > $maxScroll) $node->scrollTop = $maxScroll;
             }
 
