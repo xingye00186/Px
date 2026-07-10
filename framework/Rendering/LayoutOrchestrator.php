@@ -8,17 +8,20 @@ use Px\Rendering\Layout\ConstraintSpace;
 use Px\Rendering\Layout\ConstraintSpaceBuilder;
 use Px\Rendering\Layout\PhysicalFragment;
 use Px\Rendering\Layout\LayoutResult;
-use Px\Rendering\Layout\LayoutStrategyInterface;
-use Px\Rendering\Layout\BlockLayoutStrategy;
-use Px\Rendering\Layout\FlexLayoutStrategy;
-use Px\Rendering\Layout\GridLayoutStrategy;
-use Px\Rendering\Layout\InlineLayoutStrategy;
-use Px\Rendering\Layout\TableLayoutStrategy;
+use Px\Rendering\ComputedStyle;
+use Px\Rendering\RenderNode;
+use Px\Rendering\Layout\LayoutAlgorithm;
+use Px\Rendering\Layout\BlockAlgorithm;
+use Px\Rendering\Layout\FlexAlgorithm;
+use Px\Rendering\Layout\GridAlgorithm;
+use Px\Rendering\Layout\InlineAlgorithm;
+use Px\Rendering\Layout\TableAlgorithm;
 use Px\Rendering\Layout\MultiColumnLayoutStrategy;
-use Px\Rendering\Layout\OOFLayoutAlgorithm;
-use Px\Rendering\Layout\LayoutCache;
-use Px\Rendering\Layout\LayoutCacheKey;
 use Px\Rendering\Layout\StickyPostProcessor;
+use Px\Rendering\Layout\LayoutCache;
+use Px\Rendering\Layout\OOFLayoutAlgorithm;
+use Px\Rendering\Layout\LayoutCacheKey;
+
 use Px\Core\Config;
 
 /**
@@ -34,12 +37,12 @@ use Px\Core\Config;
 class LayoutOrchestrator
 {
     private OOFLayoutAlgorithm $oofAlgorithm;
-    private LayoutStrategyInterface $blockStrategy;
-    private LayoutStrategyInterface $flexStrategy;
-    private LayoutStrategyInterface $gridStrategy;
-    private LayoutStrategyInterface $inlineStrategy;
-    private LayoutStrategyInterface $tableStrategy;
-    private LayoutStrategyInterface $multiColumnStrategy;
+    private LayoutAlgorithm $blockAlgo;
+    private LayoutAlgorithm $flexAlgo;
+    private LayoutAlgorithm $gridAlgo;
+    private LayoutAlgorithm $inlineAlgo;
+    private LayoutAlgorithm $tableAlgo;
+    private LayoutAlgorithm $multiColumnAlgo;
     private StickyPostProcessor $stickyProcessor;
     private LayoutCache $cache;
 
@@ -49,12 +52,12 @@ class LayoutOrchestrator
     public function __construct()
     {
         $this->oofAlgorithm = new OOFLayoutAlgorithm();
-        $this->blockStrategy = new BlockLayoutStrategy();
-        $this->flexStrategy = new FlexLayoutStrategy();
-        $this->gridStrategy = new GridLayoutStrategy();
-        $this->inlineStrategy = new InlineLayoutStrategy();
-        $this->tableStrategy = new TableLayoutStrategy();
-        $this->multiColumnStrategy = new MultiColumnLayoutStrategy();
+        $this->blockAlgo = new BlockAlgorithm();
+        $this->flexAlgo = new FlexAlgorithm();
+        $this->gridAlgo = new GridAlgorithm();
+        $this->inlineAlgo = new InlineAlgorithm();
+        $this->tableAlgo = new TableAlgorithm();
+        $this->multiColumnAlgo = new MultiColumnLayoutStrategy();
         $this->stickyProcessor = new StickyPostProcessor();
         $this->cache = new LayoutCache();
     }
@@ -244,29 +247,29 @@ class LayoutOrchestrator
     /**
      * 选择布局算法。
      */
-    private function selectAlgorithm(string $display, ?ComputedStyle $style): LayoutStrategyInterface
+    private function selectAlgorithm(string $display, ?ComputedStyle $style): LayoutAlgorithm
     {
         switch ($display) {
             case 'flex':
             case 'inline-flex':
-                return $this->flexStrategy;
+                return $this->flexAlgo;
             case 'grid':
-                return $this->gridStrategy;
+                return $this->gridAlgo;
             case 'inline':
             case 'inline-block':
-                return $this->inlineStrategy;
+                return $this->inlineAlgo;
             case 'table':
             case 'table-row':
             case 'table-cell':
             case 'table-caption':
-                return $this->tableStrategy;
+                return $this->tableAlgo;
             default:
                 $isMultiCol = ($style !== null
                     && ((int)$style->columnCount > 0 || (int)($style->columnWidth ?? 0) > 0));
                 if ($isMultiCol) {
-                    return $this->multiColumnStrategy;
+                    return $this->multiColumnAlgo;
                 }
-                return $this->blockStrategy;
+                return $this->blockAlgo;
         }
     }
 
@@ -348,13 +351,11 @@ class LayoutOrchestrator
 
     public function getBlockStrategy(): \Px\Rendering\Layout\BlockLayoutStrategy
     {
-        return $this->blockStrategy instanceof \Px\Rendering\Layout\BlockLayoutStrategy
-            ? $this->blockStrategy : new \Px\Rendering\Layout\BlockLayoutStrategy();
+        return new \Px\Rendering\Layout\BlockLayoutStrategy();
     }
 
     public function getFlexStrategy(): \Px\Rendering\Layout\FlexLayoutStrategy
     {
-        return $this->flexStrategy instanceof \Px\Rendering\Layout\FlexLayoutStrategy
-            ? $this->flexStrategy : new \Px\Rendering\Layout\FlexLayoutStrategy();
+        return new \Px\Rendering\Layout\FlexLayoutStrategy();
     }
 }

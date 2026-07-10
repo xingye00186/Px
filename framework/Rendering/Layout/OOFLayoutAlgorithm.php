@@ -25,14 +25,14 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $this->absolutePositioning = new AbsolutePositioning();
     }
 
-    public function layout(ConstraintSpace $space, ?PhysicalFragment $inputFragment = null): PhysicalFragment
+    public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null): PhysicalFragment
     {
         // OOF 算法不在 mainLayout 路径中直接使用
         // 它通过 Orchestrator 的 oofLayout() 遍历 Fragment 树调用
         throw new \RuntimeException('OOFLayoutAlgorithm::layout() should not be called directly. Use Orchestrator::oofLayout().');
     }
 
-    public function intrinsicSize(ConstraintSpace $space): IntrinsicSizes
+    public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes
     {
         // OOF 元素不影响内在尺寸
         return new IntrinsicSizes();

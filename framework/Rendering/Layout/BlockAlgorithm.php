@@ -3,48 +3,75 @@
 namespace Px\Rendering\Layout;
 
 use native_types;
-
 use Px\Rendering\ComputedStyle;
+use Px\Rendering\Layout\ConstraintSpace;
+use Px\Rendering\Layout\PhysicalFragment;
+use Px\Rendering\Layout\LayoutInput;
+use Px\Rendering\Layout\LayoutResult;
+use Px\Rendering\Layout\IntrinsicSizes;
 
 /**
- * BlockAlgorithm — Block 布局算法（Phase 1）
+ * BlockAlgorithm — Block 布局算法（Phase 1 适配器）
  *
- * 对标 Blink BlockLayoutAlgorithm。
- * 当前为适配器实现，内部委托到 BlockLayoutStrategy。
- * 后续逐步将换行逻辑等内联到此算法。
+ * 内部委托到 BlockLayoutStrategy，通过 LayoutInput 桥接。
  */
 class BlockAlgorithm extends LayoutAlgorithm
 {
     private BlockLayoutStrategy $strategy;
+    public function __construct() { $this->strategy = new BlockLayoutStrategy(); }
 
-    public function __construct()
-    {
-        $this->strategy = new BlockLayoutStrategy();
-    }
-
-    public function layout(ConstraintSpace $space, ?PhysicalFragment $inputFragment = null): PhysicalFragment
-    {
-        // 适配器模式：通过旧策略执行布局
+    public function layout(
+        ConstraintSpace $space,
+        ?ComputedStyle $style = null,
+        string $textContent = '',
+        array $childNodes = [],
+        array $childFragments = [],
+        ?PhysicalFragment $inputFragment = null
+    ): PhysicalFragment {
+        $childResults = [];
+        foreach ($childFragments as $cf) {
+            $childResults[] = new LayoutResult(
+                (int)$cf->x, (int)$cf->y, (int)$cf->w, (int)$cf->h,
+                (int)$cf->visualW, (int)$cf->visualH, (int)$cf->layer,
+                (int)$cf->contentWidth, (int)$cf->contentHeight, $cf->style
+            );
+        }
         $input = new LayoutInput(
             constraints: $space->toLegacy(),
-            style: new ComputedStyle([]), // 由 Orchestrator 外部填充
+            style: $style ?? new ComputedStyle([]),
+            textContent: $textContent,
+            childResults: $childResults,
+            childNodes: $childNodes,
         );
         $result = $this->strategy->layout($input);
-        return PhysicalFragment::fromLayoutResult($result);
+        $resultChildren = [];
+        foreach ($result->children as $i => $ch) {
+            $resultChildren[] = new PhysicalFragment(
+                (int)$ch->x, (int)$ch->y, (int)$ch->w, (int)$ch->h,
+                (int)$ch->visualW, (int)$ch->visualH, (int)$ch->layer,
+                (int)$ch->contentWidth, (int)$ch->contentHeight, $ch->style,
+                [], null
+            );
+        }
+        return new PhysicalFragment(
+            (int)$result->x, (int)$result->y, (int)$result->w, (int)$result->h,
+            (int)$result->visualW, (int)$result->visualH, (int)$result->layer,
+            (int)$result->contentWidth, (int)$result->contentHeight, $result->style,
+            $resultChildren, null
+        );
     }
 
-    public function intrinsicSize(ConstraintSpace $space): IntrinsicSizes
+    public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes
     {
         $input = new LayoutInput(
             constraints: $space->toLegacy(),
-            style: new ComputedStyle([]),
+            style: $style ?? new ComputedStyle([]),
+            textContent: $textContent,
         );
         $result = $this->strategy->layout($input);
         return new IntrinsicSizes(
-            minContentWidth: $result->minContentWidth,
-            maxContentWidth: $result->maxContentWidth,
-            minContentHeight: $result->minContentHeight,
-            maxContentHeight: $result->maxContentHeight,
+            (int)$result->minContentWidth, (int)$result->maxContentWidth,
+            (int)$result->minContentHeight, (int)$result->maxContentHeight
         );
     }
 }
