@@ -192,7 +192,8 @@ class Application
         $this->scheduler = $scheduler;
         $this->layoutOrchestrator = $layoutOrchestrator ?? new LayoutOrchestrator();
         $this->useOrchestrator = true;
-        $this->layoutResolver = $layoutResolver;
+        $this->layoutResolver = $layoutResolver ?? new LayoutResolver();
+        // useOrchestrator 默认 true，可通过构造参数覆盖为 false 回退到旧 LayoutResolver
         $this->renderTreeManager = $renderTreeManager ?? new RenderTreeManager();
         $this->scrollManager = new ScrollManager(
             $this->requestRender(...),
