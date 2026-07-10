@@ -12,7 +12,7 @@ use Px\Core\Scheduler;
  * PhpDumpStrategy — 纯 PHP Runtime 布局导出策略
  *
  * 零编译开销：使用 MockPlatform + MockRenderContext 替代 Win32/Skia，
- * 纯 PHP 执行 VNode 树构建 → LayoutResolver 全流程。
+ * 纯 PHP 执行 VNode 树构建 → LayoutOrchestrator 全流程。
  * 文本测量优先查黄金宽度表获得与浏览器一致的测量值。
  *
  * 前置条件：
@@ -96,8 +96,7 @@ class PhpDumpStrategy implements DumpStrategy
             $fwDir . '/Rendering/ImageManager.php',
             $fwDir . '/Rendering/RenderTreeManager.php',
             $fwDir . '/Rendering/VNodeRenderer.php',
-            $fwDir . '/Rendering/LayoutResolver.php',
-            $fwDir . '/Rendering/Layout/LayoutStrategyInterface.php',
+            $fwDir . '/Rendering/LayoutOrchestrator.php',
             // Styling/Theme (Application::mount 需要)
             $fwDir . '/Styling/Theme/ColorScheme.php',
             $fwDir . '/Styling/Theme/ComponentTheme.php',
@@ -192,7 +191,7 @@ class PhpDumpStrategy implements DumpStrategy
         $app->getScheduler()->flushMicrotasks();
         $root->selectCase($caseName);
 
-        // Step 9: 渲染一帧（VNode → RenderNode → LayoutResolver 全流程）
+        // Step 9: 渲染一帧（VNode → RenderNode → LayoutOrchestrator 全流程）
         $app->getScheduler()->flushMicrotasks();
         $app->render();
 

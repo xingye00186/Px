@@ -791,9 +791,6 @@ function newInstanceWithoutApp(): Application
     $schedProp->setAccessible(true);
     $schedProp->setValue($app, $scheduler);
 
-    $lrProp = $refl->getProperty('layoutResolver');
-    $lrProp->setAccessible(true);
-    $lrProp->setValue($app, new \Px\Rendering\LayoutResolver());
 
     // 初始化 componentByGroupId 数组
     $regProp = $refl->getProperty('componentByGroupId');

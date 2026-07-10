@@ -15,7 +15,7 @@ require_once __DIR__ . '/bootstrap.php';
 
 use Px\Rendering\RenderNode;
 use Px\Rendering\ComputedStyle;
-use Px\Rendering\LayoutResolver;
+use Px\Rendering\Layout\LayoutOrchestrator;
 use Px\Rendering\CssMappings;
 
 echo "========================================\n";
@@ -53,8 +53,8 @@ test('Grid auto-fill: 容器 w=1392, gap=16, minmax(300px,1fr) → 4列, cellW=3
     }
     $root = makeNode('#root', ['width' => 1392, 'height' => 900], [$gridContainer]);
 
-    $resolver = new LayoutResolver();
-    $result = $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $result = $resolver->layout($root);
 
     // 验证列数：CSS 公式 floor((1392 + 16) / (300 + 16)) = floor(1408/316) = 4
     // 验证单元格宽度：(1392 - 16*3) / 4 = (1392-48)/4 = 336
@@ -107,8 +107,8 @@ test('Grid auto-fill: 容器 w=800, gap=16, minmax(300px,1fr) → 2列', functio
     }
     $root = makeNode('#root', ['width' => 800, 'height' => 900], [$gridContainer]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // CSS 规范公式：cols = floor((800 + 16) / (300 + 16)) = floor(816/316) = floor(2.582) = 2
     $actualCols = 0;
@@ -136,8 +136,8 @@ test('flex-shrink:0 的子元素不收缩，保持原始宽度', function () {
     ], [$child]);
     $root = makeNode('#root', ['width' => 1000, 'height' => 900], [$container]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($child->w, 1200, 'flex-shrink:0 不收缩，保持 1200');
 });
@@ -151,8 +151,8 @@ test('flex-shrink:1 的子元素按比例缩小以适应容器', function () {
     ], [$child1, $child2]);
     $root = makeNode('#root', ['width' => 1000, 'height' => 900], [$container]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // 总宽度 1200，容器 1000，溢出 200
     // 两个子项 shrink=1 相同权重，各收缩 100
@@ -175,8 +175,8 @@ test('scroll 容器 h=400, 内容 h=1200 → contentHeight=1200, scrollTop clamp
     ], [$content]);
     $root = makeNode('#root', ['width' => 400, 'height' => 900], [$scrollContainer]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_true($scrollContainer->contentHeight >= 1200, 'contentHeight >= 1200');
     assert_eq($scrollContainer->h, 400, '容器高度保持 400');
@@ -195,8 +195,8 @@ test('scroll 容器带 border:1px → contentHeight 不受 border 影响', funct
     ], [$content]);
     $root = makeNode('#root', ['width' => 400, 'height' => 900], [$scrollContainer]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // contentHeight 应代表内容区域高度，不受 border 影响
     assert_true($scrollContainer->contentHeight >= 800, 'contentHeight >= 800 (border not included)');
@@ -220,8 +220,8 @@ test('父 relative, 子 absolute left=10 top=20 → 子坐标相对于父', func
     ], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // parent at (50, 50), absolute child at (10, 20) relative to parent
     // expected child: x = 50 + 10 = 60, y = 50 + 20 = 70

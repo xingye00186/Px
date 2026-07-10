@@ -12,7 +12,7 @@
 
 use Px\Rendering\RenderNode;
 use Px\Rendering\ComputedStyle;
-use Px\Rendering\LayoutResolver;
+use Px\Rendering\Layout\LayoutOrchestrator;
 
 /**
  * 构建 RenderNode 树
@@ -30,10 +30,10 @@ function makeNode(string $type, array $style = [], array $children = [], ?string
 /**
  * 标准 LayoutResolver 包装
  */
-function runResolver(RenderNode $root): LayoutResolver
+function runResolver(RenderNode $root): LayoutOrchestrator
 {
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     return $resolver;
 }
 

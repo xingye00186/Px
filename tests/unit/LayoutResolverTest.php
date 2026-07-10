@@ -18,7 +18,7 @@ require_once __DIR__ . '/bootstrap.php';
 
 use Px\Rendering\RenderNode;
 use Px\Rendering\ComputedStyle;
-use Px\Rendering\LayoutResolver;
+use Px\Rendering\Layout\LayoutOrchestrator;
 use Px\Rendering\CssMappings;
 
 echo "========================================\n";
@@ -43,8 +43,8 @@ test('子节点继承父节点的 layer', function () {
     $parent = makeNode('div', ['zIndex' => 5, 'width' => 200, 'height' => 100], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($parent->layer, 5, '父节点 layer');
     assert_eq($child->layer, 5, '子节点应继承父节点的 layer');
@@ -55,8 +55,8 @@ test('父节点无 zIndex 时子节点保持 layer 0', function () {
     $parent = makeNode('div', ['width' => 200], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($parent->layer, 0, '父节点无 zIndex 时 layer 为 0');
     assert_eq($child->layer, 0, '子节点 layer 也为 0');
@@ -67,8 +67,8 @@ test('子节点自身的 zIndex 覆盖继承的 parent layer', function () {
     $parent = makeNode('div', ['zIndex' => 5, 'width' => 200], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($parent->layer, 5, '父节点 layer=5');
     assert_eq($child->layer, 10, '子节点自己的 zIndex=10 覆盖继承的 5');
@@ -79,8 +79,8 @@ test('子节点有更小 zIndex 时不覆盖 parent layer', function () {
     $parent = makeNode('div', ['zIndex' => 5, 'width' => 200], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($child->layer, 5, '子节点 zIndex=2 小于 parent layer=5，保持 parent layer');
 });
@@ -89,8 +89,8 @@ test('只有正数 zIndex 才影响 layer 属性', function () {
     $node = makeNode('div', ['zIndex' => 0, 'width' => 100]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($node->layer, 0, 'zIndex:0 不应改变 layer');
 });
@@ -101,8 +101,8 @@ test('block 布局：left/top 绝对定位', function () {
     $node = makeNode('div', ['position' => 'absolute', 'left' => 50, 'top' => 30, 'width' => 100, 'height' => 60]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($node->x, 50, 'x = left');
     assert_eq($node->y, 30, 'y = top');
@@ -115,8 +115,8 @@ test('子节点相对于父节点偏移', function () {
     $parent = makeNode('div', ['position' => 'relative', 'left' => 100, 'top' => 50, 'width' => 200, 'height' => 100], [$child]);
     $root = makeNode('#root', ['width' => 500, 'height' => 400], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($parent->x, 100, '父 x');
     assert_eq($parent->y, 50, '父 y');
@@ -128,8 +128,8 @@ test('无 style 节点 auto-stack 撑满父容器', function () {
     $node = makeNode('div', [], []);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // CSS normal flow: width:auto block 子节点撑满父容器 content 宽度
     // 父容器 #root w=400, 子节点无 padding → contentW = 400
@@ -158,8 +158,8 @@ test('flex 布局：子节点水平排列', function () {
 
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($flex->x, 10);
     assert_eq($flex->y, 10);
@@ -184,8 +184,8 @@ test('flex 布局：列排列', function () {
 
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($child1->y, 20, 'child1 y=flex y');
     assert_eq($child2->y, 20 + 30 + 5, 'child2 y = child1.y + child1.h + gap');
@@ -213,8 +213,8 @@ test('grid 布局：子节点按格子排列', function () {
 
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$grid]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // 第1个: 列0 行0 (gap:4)
     assert_eq($child1->x, 10, 'grid child1 col 0 (no leading gap)');
@@ -241,8 +241,8 @@ test('layoutDirty=true 时执行完整布局', function () {
 
     assert_true($node->layoutDirty, '新建节点 layoutDirty 应为 true');
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($node->x, 10, 'dirty 节点正确计算 x');
     assert_eq($node->y, 20, 'dirty 节点正确计算 y');
@@ -254,8 +254,8 @@ test('layoutDirty=false 时洁净路径仍传递父坐标', function () {
     $parent = makeNode('div', ['position' => 'relative', 'left' => 100, 'top' => 100, 'width' => 200, 'height' => 150], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_false($child->layoutDirty, '子节点布局后 layoutDirty 应为 false');
     assert_eq($child->x, 5 + 100, '洁净子节点 x = left + parentX');
@@ -275,8 +275,8 @@ test('洁净路径包含 margin 计算', function () {
     $parent = makeNode('div', ['position' => 'relative', 'left' => 50, 'top' => 50, 'width' => 200, 'height' => 150], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // 父坐标=50, child left=10, marginLeft=5 → x=50+10+5=65
     // 父坐标=50, child top=10, marginTop=3 → y=50+10+3=63
@@ -289,48 +289,48 @@ echo "\n--- 6. Min/Max 约束 ---\n";
 test('min-width 将宽度提升到最小值', function () {
     $node = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 30, 'minWidth' => 100, 'height' => 50]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($node->w, 100, 'min-width=100 将 width=30 提升到 100');
 });
 
 test('max-width 将宽度限制到最大值', function () {
     $node = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 200, 'maxWidth' => 100, 'height' => 50]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($node->w, 100, 'max-width=100 将 width=200 限制到 100');
 });
 
 test('min-height 将高度提升到最小值', function () {
     $node = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 50, 'height' => 20, 'minHeight' => 80]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($node->h, 80, 'min-height=80 将 height=20 提升到 80');
 });
 
 test('max-height 将高度限制到最大值', function () {
     $node = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 50, 'height' => 150, 'maxHeight' => 100]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($node->h, 100, 'max-height=100 将 height=150 限制到 100');
 });
 
 test('min > max 时 max 被忽略（CSS 规范）', function () {
     $node = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 200, 'minWidth' => 150, 'maxWidth' => 100, 'height' => 50]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($node->w, 200, 'min(150) > max(100) → max 被忽略, width=200 保持不变');
 });
 
 test('min/max 不影响未触及的值', function () {
     $node = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 100, 'minWidth' => 50, 'maxWidth' => 200, 'height' => 50]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$node]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($node->w, 100, 'width=100 在 min=50 和 max=200 之间保持不变');
 });
 
@@ -338,8 +338,8 @@ test('嵌套 min/max：子节点 min-width < 父节点 max-width', function () {
     $child = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 50, 'minWidth' => 80, 'height' => 30]);
     $parent = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 200, 'maxWidth' => 150, 'height' => 100], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($parent->w, 150, '父 max-width=150 限制父宽度');
     assert_eq($child->w, 80, '子 min-width=80 提升子宽度到 80');
 });
@@ -350,8 +350,8 @@ test('width:50% 解析为父宽度的 50%', function () {
     $node = makeNode('div', ['widthPercent' => 50.0, 'height' => 50]);
     $parent = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 200, 'height' => 100], [$node]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($node->w, 100, 'width=50% of 200 = 100');
 });
 
@@ -359,8 +359,8 @@ test('height:50% 解析为父高度的 50%', function () {
     $node = makeNode('div', ['heightPercent' => 50.0, 'width' => 50]);
     $parent = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 200, 'height' => 120], [$node]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($node->h, 60, 'height=50% of 120 = 60');
 });
 
@@ -368,8 +368,8 @@ test('百分比 + min/max 约束', function () {
     $node = makeNode('div', ['widthPercent' => 80.0, 'maxWidth' => 50, 'height' => 30]);
     $parent = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 200, 'height' => 100], [$node]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // 80% of 200 = 160, 但 maxWidth=50 → 限制到 50
     assert_eq($node->w, 50, '80% of 200 = 160 但 maxWidth=50 限制到 50');
 });
@@ -381,8 +381,8 @@ test('百分比在 flex 容器上生效', function () {
     ]);
     $parent = makeNode('div', ['left' => 0, 'top' => 0, 'width' => 400, 'height' => 200], [$flex]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($flex->w, 200, 'flex container width=50% of 400 = 200');
 });
 
@@ -395,8 +395,8 @@ test('position:relative + top 不禁止 auto-stack', function () {
         'overflow' => 'auto', 'left' => 0, 'top' => 0, 'width' => 200, 'height' => 200,
     ], [$child1, $child2]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$container]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // child1 auto-stacked at y=0 + relative top=5 → y=5
     assert_eq($child1->y, 5, 'position:relative child1 y = 0(stack) + 5(relative top) = 5');
     // child2 auto-stacked below child1 (不受 relative 影响)
@@ -410,8 +410,8 @@ test('position:relative + left 偏移不影响兄弟节点', function () {
         'overflow' => 'auto', 'left' => 0, 'top' => 0, 'width' => 200, 'height' => 200,
     ], [$child1, $child2]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$container]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($child1->x, 10, 'position:relative child1 x shift by left=10');
     // child2 的位置不受 child1 left 影响
 });
@@ -426,8 +426,8 @@ test('position:fixed 相对视口定位（不受滚动影响）', function () {
     ], [$child]);
     $root = makeNode('#root', ['width' => 500, 'height' => 400], [$scroll]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // fixed 元素相对视口（根节点）定位，不受父滚动影响
     assert_eq($child->x, 30, 'position:fixed x=30 相对视口');
@@ -439,8 +439,8 @@ test('margin:auto with position:absolute 垂直居中', function () {
     $parent = makeNode('div', ['position' => 'relative', 'width' => 300, 'height' => 200], [$child]);
     $root = makeNode('#root', ['width' => 400], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // 水平居中：(300-100)/2 = 100
     // 垂直居中：(200-50)/2 = 75
@@ -457,8 +457,8 @@ test('order 改变 flex 子节点顺序', function () {
     $c3 = makeNode('div', ['order' => 0, 'width' => 30, 'height' => 30], [], 'A');
     $flex = makeNode('div', ['display'=>'flex', 'width'=>200, 'height'=>50, 'left'=>0, 'top'=>0], [$c1, $c2, $c3]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // order 0, 1, 2 → A, B, C
     assert_eq($c3->x, 0, 'order=0 排最左 (A)');
     assert_eq($c2->x, 30, 'order=1 排第二 (B)');
@@ -470,8 +470,8 @@ test('同 order 值保持源顺序（稳定排序）', function () {
     $c2 = makeNode('div', ['order' => 1, 'width' => 30, 'height' => 30], [], 'B');
     $flex = makeNode('div', ['display'=>'flex', 'width'=>200, 'height'=>50, 'left'=>0, 'top'=>0], [$c1, $c2]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($c1->x, 0, '同 order=1, 源顺序排最左 (A)');
     assert_eq($c2->x, 30, '同 order=1, 源顺序排第二 (B)');
 });
@@ -483,8 +483,8 @@ test('flex-basis 设置 row 方向初始 main size', function () {
     $c2 = makeNode('div', ['width' => 30, 'height' => 30], [], 'B');
     $flex = makeNode('div', ['display'=>'flex', 'width'=>200, 'height'=>50, 'left'=>0, 'top'=>0], [$c1, $c2]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // c1 flex-basis=80 覆盖 width=30
     assert_eq($c1->w, 80, 'flex-basis=80 覆盖 width=30');
     assert_eq($c2->w, 30, '无 flex-basis 保持 width=30');
@@ -494,8 +494,8 @@ test('flex-basis:auto 回退到 width', function () {
     $c1 = makeNode('div', ['flexBasis' => 'auto', 'width' => 60, 'height' => 30], [], 'A');
     $flex = makeNode('div', ['display'=>'flex', 'width'=>200, 'height'=>50, 'left'=>0, 'top'=>0], [$c1]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($c1->w, 60, 'flex-basis:auto 回退到 width=60');
 });
 
@@ -504,8 +504,8 @@ test('flex-basis 在 column 方向影响 height', function () {
     $c2 = makeNode('div', ['width' => 50, 'height' => 30], [], 'B');
     $flex = makeNode('div', ['display'=>'flex', 'flexDirection'=>'column', 'width'=>100, 'height'=>200, 'left'=>0, 'top'=>0], [$c1, $c2]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($c1->h, 100, 'column: flex-basis=100 覆盖 height=20');
 });
 
@@ -516,8 +516,8 @@ test('flex-shrink 收缩溢出项', function () {
     $c2 = makeNode('div', ['width' => 100, 'height' => 30], [], 'B');
     $flex = makeNode('div', ['display'=>'flex', 'width'=>150, 'height'=>50, 'left'=>0, 'top'=>0], [$c1, $c2]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // 容器 150px, 子项 100+100=200, 溢出 50px
     // 每项 shrink=1 (默认), 等比收缩: 每项减 25
     assert_eq($c1->w, 75, 'flex-shrink: c1 从 100 收缩到 75');
@@ -529,8 +529,8 @@ test('flex-shrink:0 的项不收缩', function () {
     $c2 = makeNode('div', ['width' => 100, 'height' => 30], [], 'B');
     $flex = makeNode('div', ['display'=>'flex', 'width'=>150, 'height'=>50, 'left'=>0, 'top'=>0], [$c1, $c2]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // c1 shrink=0 不收缩 → 保持 100
     // c2 shrink=1 (默认) → 溢出 50px, 全部由 c2 承担: 100-50=50
     assert_eq($c1->w, 100, 'shrink:0 不收缩, 保持 100');
@@ -542,8 +542,8 @@ test('flex-shrink 按比例分配（flex 简写）', function () {
     $c2 = makeNode('div', ['flex' => '0 1', 'width' => 80, 'height' => 30], [], 'B');
     $flex = makeNode('div', ['display'=>'flex', 'width'=>120, 'height'=>50, 'left'=>0, 'top'=>0], [$c1, $c2]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // flex:0 2/0 1 均设 basis=0, totalShrinkWeight=0
     // CSS §9.7: 总权重为 0 时均分溢出空间
     // 各缩: 40/2 = 20, c1=80-20=60, c2=80-20=60
@@ -556,8 +556,8 @@ test('flex-shrink + min-width 约束', function () {
     $c2 = makeNode('div', ['width' => 100, 'height' => 30], [], 'B');
     $flex = makeNode('div', ['display'=>'flex', 'width'=>130, 'height'=>50, 'left'=>0, 'top'=>0], [$c1, $c2]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // 总 200, 容器 130, 溢出 70
     // 默认 shrink=1, 各缩 35
     // c1: 100-35=65, minWidth=60 → 65 (通过)
@@ -570,8 +570,8 @@ test('flex-shrink + min-width 约束', function () {
     $c4 = makeNode('div', ['width' => 100, 'height' => 30], [], 'D');
     $flex2 = makeNode('div', ['display'=>'flex', 'width'=>100, 'height'=>50, 'left'=>0, 'top'=>0], [$c3, $c4]);
     $root2 = makeNode('#root', ['width'=>400, 'height'=>300], [$flex2]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root2);
+    $orchestrator = new LayoutOrchestrator();
+    $orchestrator->layout($root2);
     // 总 200, 容器 100, 溢出 100
     // 各缩 50 → c3 触及 minWidth=70, 剩余 20 重新分配给 c4
     // c3: 100-50=50 < minWidth=70 → 保持 70
@@ -587,8 +587,8 @@ test('align-self:center 覆盖容器的 align-items', function () {
     $c2 = makeNode('div', ['width' => 50, 'height' => 20], [], 'B');
     $flex = makeNode('div', ['display'=>'flex', 'alignItems'=>'flex-start', 'width'=>200, 'height'=>100, 'left'=>0, 'top'=>0], [$c1, $c2]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // align-items:flex-start → c2 y=0
     // align-self:center → c1 y = (100-20)/2 = 40
     assert_eq($c1->y, 40, 'align-self:center → c1 y=40');
@@ -599,8 +599,8 @@ test('align-self:flex-end 在交叉轴底部', function () {
     $c1 = makeNode('div', ['width' => 50, 'height' => 30, 'alignSelf' => 'flex-end'], [], 'A');
     $flex = makeNode('div', ['display'=>'flex', 'width'=>200, 'height'=>100, 'left'=>0, 'top'=>0], [$c1]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // align-self:flex-end → c1 y = 100-30 = 70
     assert_eq($c1->y, 70, 'align-self:flex-end → y=100-30=70');
 });
@@ -609,8 +609,8 @@ test('align-self:auto 继承父级 align-items', function () {
     $c1 = makeNode('div', ['width' => 50, 'height' => 30, 'alignSelf' => 'auto'], [], 'A');
     $flex = makeNode('div', ['display'=>'flex', 'alignItems'=>'center', 'width'=>200, 'height'=>100, 'left'=>0, 'top'=>0], [$c1]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // auto → 继承 align-items:center → y=(100-30)/2=35
     assert_eq($c1->y, 35, 'align-self:auto 继承 align-items:center → y=35');
 });
@@ -621,8 +621,8 @@ test('混合 align-self 值', function () {
     $c3 = makeNode('div', ['width' => 40, 'height' => 40, 'alignSelf' => 'flex-end'], [], 'C');
     $flex = makeNode('div', ['display'=>'flex', 'width'=>300, 'height'=>100, 'left'=>0, 'top'=>0], [$c1, $c2, $c3]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$flex]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($c1->y, 0, 'flex-start → y=0');
     assert_eq($c2->y, (int)((100-30)/2), 'center → y=35');
     assert_eq($c3->y, 60, 'flex-end → y=60');
@@ -639,8 +639,8 @@ test('grid align-self:center 垂直居中', function () {
         'left' => 0, 'top' => 0, 'width' => 100, 'height' => 80,
     ], [$child]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$grid]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // 单元格高 80, gap=0, child h=20
     // center → (80-20)/2 = 30
     assert_eq($child->y, 30, 'grid align-self:center → y=(80-20)/2=30');
@@ -655,8 +655,8 @@ test('grid justify-self:center 水平居中', function () {
         'left' => 0, 'top' => 0, 'width' => 100, 'height' => 50,
     ], [$child]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$grid]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // 单元格宽 100, child w=40
     // center → (100-40)/2 = 30
     assert_eq($child->x, 30, 'grid justify-self:center → x=(100-40)/2=30');
@@ -671,8 +671,8 @@ test('grid justify-self:end 右对齐', function () {
         'left' => 0, 'top' => 0, 'width' => 100, 'height' => 50,
     ], [$child]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$grid]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // end → x = 100-40 = 60
     assert_eq($child->x, 60, 'grid justify-self:end → x=100-40=60');
 });
@@ -689,8 +689,8 @@ test('grid align-self 和 justify-self 独立生效', function () {
         'left' => 0, 'top' => 0, 'width' => 100, 'height' => 80,
     ], [$child]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$grid]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     assert_eq($child->x, 70, 'justify-self:end → x=100-30=70');
     assert_eq($child->y, 30, 'align-self:center → y=(80-20)/2=30');
 });
@@ -704,8 +704,8 @@ test('grid stretch 默认撑满单元格', function () {
         'left' => 0, 'top' => 0, 'width' => 100, 'height' => 60,
     ], [$child]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$grid]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // stretch 默认 → 子节点宽高被撑到单元格尺寸
     assert_eq($child->w, 100, 'stretch: child width=cell width=100');
     assert_eq($child->h, 60, 'stretch: child height=cell height=60');
@@ -720,8 +720,8 @@ test('grid 单元格 gap 保留对齐空间', function () {
         'gap' => 10, 'left' => 0, 'top' => 0, 'width' => 180, 'height' => 60,
     ], [$child]);
     $root = makeNode('#root', ['width'=>400, 'height'=>300], [$grid]);
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
     // 单元格1: cellW=80, gap=10, cellWFinal=80-20=60, child w=30
     // center → child.x = cellX + (60-30)/2 = 10 + 15 = 25
     assert_eq($child->x, 25, 'gap 保留: center 在单元格内居中');
@@ -736,8 +736,8 @@ test('auto-stack 多个 static 子节点', function () {
     $parent = makeNode('div', ['width' => 200, 'height' => 200], [$c1, $c2, $c3]);
     $root = makeNode('#root', ['width' => 400, 'height' => 400], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($c1->x, 0, 'c1 x=0');
     assert_eq($c1->y, 0, 'c1 y=0');
@@ -752,8 +752,8 @@ test('auto-stack with margin', function () {
     $parent = makeNode('div', ['width' => 200], [$c1, $c2]);
     $root = makeNode('#root', ['width' => 400], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     assert_eq($c1->y, 0, 'c1 y=0');
     // CSS 2.2 §8.3.1 margin collapsing: max(10,5)=10, c2.y=20(c1)+10(折叠后)=30
@@ -766,8 +766,8 @@ test('auto-stack 被 explicit top 禁用', function () {
     $parent = makeNode('div', ['width' => 200], [$c1, $c2]);
     $root = makeNode('#root', ['width' => 400], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // c1 has explicit top → E.1 auto-inject as absolute → skip auto-stack
     // c2 is static but auto-stack disabled by c1's explicit positioning\n    assert_eq($c1->y, 50, 'c1 absolute with top=50');
@@ -779,8 +779,8 @@ test('auto-stack relative child 偏移不影响后续', function () {
     $parent = makeNode('div', ['width' => 200], [$c1, $c2]);
     $root = makeNode('#root', ['width' => 400], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // c1 y=0 (static) + 5 (relative offset) = 5
     // c2 y=30 (c1 normal flow height, NOT c1.y+height)
@@ -796,8 +796,8 @@ test('position:absolute 找最近定位祖先', function () {
     $rel = makeNode('div', ['position' => 'relative', 'left' => 100, 'top' => 100, 'width' => 200, 'height' => 200], [$abs]);
     $root = makeNode('#root', ['width' => 400, 'height' => 400], [$rel]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // abs 找非 static 祖先 = rel (position:relative)
     // rel = root 子节点, auto-stack → rel.x=0, rel.y=0
@@ -814,8 +814,8 @@ test('position:absolute 无定位祖先退化到 (0,0)', function () {
     $abs = makeNode('div', ['position' => 'absolute', 'left' => 30, 'top' => 40, 'width' => 50, 'height' => 30], [], 'abs');
     $root = makeNode('#root', ['width' => 400, 'height' => 400], [$abs]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // root 是 static（默认）→ 不被视为定位祖先
     // 退化到 (0,0) → abs.x = 30, abs.y = 40
@@ -831,8 +831,8 @@ test('margin:auto with position:absolute 水平居中', function () {
     $parent = makeNode('div', ['position' => 'relative', 'width' => 300, 'height' => 100], [$child]);
     $root = makeNode('#root', ['width' => 400], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // parent w=300, child w=100, margin auto → (300-100)/2 = 100 each
     assert_eq($child->x, 100, 'margin:auto 居中：x=(300-100)/2=100');
@@ -846,8 +846,8 @@ test('position:absolute with right 锚定右边缘', function () {
     $rel = makeNode('div', ['position' => 'relative', 'width' => 300, 'height' => 200], [$abs]);
     $root = makeNode('#root', ['width' => 400], [$rel]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // abs.right=10, width=80, rel.w=300 → abs.x = rel.x + 300 - 80 - 10 = rel.x + 210
     // rel is auto-stacked in root → rel.x=0
@@ -859,8 +859,8 @@ test('position:absolute with bottom 锚定底边缘', function () {
     $rel = makeNode('div', ['position' => 'relative', 'width' => 200, 'height' => 150], [$abs]);
     $root = makeNode('#root', ['width' => 400], [$rel]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // abs.bottom=15, height=40, rel.h=150 → abs.y = rel.y + 150 - 40 - 15 = 0 + 95
     assert_eq($abs->y, 95, 'bottom:15 height:40 → y=150-40-15=95');
@@ -877,8 +877,8 @@ test('auto-height relative 容器 + absolute bottom:0 子节点 (two-pass)', fun
     ], [$normal, $abs]);
     $root = makeNode('#root', ['width' => 400], [$container]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // 第一遍: normal flow children 确定 container height (auto = 80)
     // 第二遍(absolute child): bottom=0, ancestorH=80, height=20
@@ -903,8 +903,8 @@ test('auto-height + padding + absolute right:0 bottom:0 (two-pass)', function ()
     ], [$normal, $abs]);
     $root = makeNode('#root', ['width' => 500], [$container]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // CSS 2.2 §10.6.3: auto-height = last child bottom - (container.y + paddingTop)
     // child.y = container.y + paddingTop = 0 + 10 = 10
@@ -930,15 +930,15 @@ test('auto-height + absolute bottom:0 多帧稳定性（Frame 2 不应膨胀）'
     ], [$normal, $abs]);
     $root = makeNode('#root', ['width' => 500], [$container]);
 
-    $resolver = new LayoutResolver();
+    $orchestrator = new LayoutOrchestrator();
 
     // Frame 1 resolve
-    $resolver->resolve($root);
+    $resolver->layout($root);
     $h1 = $container->h;
     $y1 = $abs->y;
 
     // Frame 2 resolve：模拟 run() 模式下第二帧，此时 abs 已有 Frame 1 的坐标
-    $resolver->resolve($root);
+    $resolver->layout($root);
 
     // CSS §10.6.3: auto-height 只算 normal flow 子节点，不受 absolute 子节点坐标影响
     // 因此 Frame 2 的 auto-height 应与 Frame 1 完全一致
@@ -972,20 +972,20 @@ test('auto-height + absolute bottom:0 多帧稳定性（含 padding, 模拟实�
     ], [$normal, $tl, $br]);
     $root = makeNode('#root', ['width' => 1800, 'height' => 1200], [$container]);
 
-    $resolver = new LayoutResolver();
+    $orchestrator = new LayoutOrchestrator();
 
     // Frame 1
-    $resolver->resolve($root);
+    $resolver->layout($root);
     $h1 = $container->h;
     $vh1 = $container->visualH;
 
     // Frame 2（关键：此时 absolute 子节点已有 Frame 1 的坐标）
-    $resolver->resolve($root);
+    $resolver->layout($root);
     $h2 = $container->h;
     $vh2 = $container->visualH;
 
     // Frame 3（验证完全收敛）
-    $resolver->resolve($root);
+    $resolver->layout($root);
     $h3 = $container->h;
     $vh3 = $container->visualH;
 
@@ -1013,8 +1013,8 @@ test('scroll container contentHeight', function () {
     ], [$c1, $c2]);
     $root = makeNode('#root', ['width' => 400, 'height' => 400], [$scroll]);
 
-    $resolver = new LayoutResolver();
-    $result = $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $result = $resolver->layout($root);
     $sc = $result['scrollContainers'][0];
 
     assert_eq($sc->contentHeight, 80, 'contentHeight = 30+50 = 80');
@@ -1031,8 +1031,8 @@ test('scroll container scrollTop clamp', function () {
     $scroll->scrollTop = 50; // 超出 maxScroll
     $root = makeNode('#root', ['width' => 400, 'height' => 400], [$scroll]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // contentHeight=80, container=100, maxScroll = 0 (content doesn't exceed container)\n    // Actually 80 < 100, so maxScroll=0, scrollTop clamped to 0
     assert_eq($scroll->scrollTop, 0, 'scrollTop clamped to 0 when content < container');
@@ -1054,8 +1054,8 @@ test('row flex 容器 auto-height 从子元素计算（含显式 width）', func
     ], [$child]);
     $root = makeNode('#root', ['width' => 400, 'height' => 500], [$flex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // flex 容器应 auto-height = child.h(32) + padding(5+5) = 42
     assert_eq($flex->h, 42, 'row flex auto-height from child + padding');
@@ -1075,8 +1075,8 @@ test('row flex 容器 auto-height 多个子元素取最大值', function () {
     ], [$c1, $c2, $c3]);
     $root = makeNode('#root', ['width' => 400, 'height' => 500], [$flex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // auto-height = max(c1.h,c2.h,c3.h) + padding = 40 + 5 + 5 = 50
     assert_eq($flex->h, 50, 'row flex auto-height = max child height + padding');
@@ -1095,8 +1095,8 @@ test('column flex 容器 auto-width 从子元素计算（含显式 height，flex
     $parent = makeNode('div', ['display'=>'flex', 'width'=>400, 'height'=>300, 'left'=>0, 'top'=>0], [$flex]);
     $root = makeNode('#root', ['width' => 400, 'height' => 500], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // auto-width = max(c1.w,c2.w) + padding = 120 + 10 + 10 = 140
     assert_eq($flex->w, 140, 'column flex auto-width = max child width + padding');
@@ -1114,8 +1114,8 @@ test('column flex 容器 auto-height 从子元素计算（主轴，含显式 wid
     $parent = makeNode('div', ['position'=>'absolute', 'left'=>0, 'top'=>0, 'width'=>400, 'height'=>300], [$flex]);
     $root = makeNode('#root', ['width' => 400, 'height' => 500], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // auto-height = c1.h(20) + gap(8) + c2.h(30) = 58
     assert_eq($flex->h, 58, 'column flex auto-height from children + gap');
@@ -1132,8 +1132,8 @@ test('justify-content:center 居中子元素', function () {
     ], [$c1]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // center: (200-60)/2 = 70
     assert_eq($c1->x, 70, 'justify-content:center → x=70');
@@ -1147,8 +1147,8 @@ test('justify-content:flex-end 子元素靠右', function () {
     ], [$c1]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // flex-end: 200-50 = 150
     assert_eq($c1->x, 150, 'justify-content:flex-end → x=150');
@@ -1164,8 +1164,8 @@ test('justify-content:space-between 均匀分布', function () {
     ], [$c1, $c2, $c3]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // 3 items * 40 = 120, container=300, remaining=180, gap=180/(3-1)=90
     assert_eq($c1->x, 0, 'space-between c1 x=0');
@@ -1186,8 +1186,8 @@ test('flex:1 分配剩余空间', function () {
     ], [$c1, $c2]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$flex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // c1=50 fixed, gap=10, container=200 → c2 = 200-50-10 = 140
     assert_eq($c1->w, 50, 'fixed child w=50');
@@ -1215,8 +1215,8 @@ test('flex:1 + justify-content:center 两步扫描渲染', function () {
     ], [$wrapper, $scroll]);
     $root = makeNode('#root', ['width' => 400, 'height' => 500], [$rootFlex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // wrapper auto-height = 32 + 10 = 42
     assert_eq($wrapper->h, 42, 'wrapper auto-height from button + padding');
@@ -1243,8 +1243,8 @@ test('两步扫描中嵌套 flex 容器 stretch + justify-content 正确', funct
     ], [$flexWrapper]);
     $root = makeNode('#root', ['width' => 400, 'height' => 300], [$outerFlex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // flexWrapper hasExplicitCrossSize=false (no height) -> stretched to 200
     assert_eq($flexWrapper->h, 200, 'flex wrapper stretched to 200 by align-items:stretch');
@@ -1268,8 +1268,8 @@ test('Flex 容器 auto-width 填充父容器宽度 (CSS Flexbox §4.1)', functio
     $container = makeNode('div', ['width' => 400, 'height' => 300, 'left' => 0, 'top' => 0], [$flex]);
     $root = makeNode('#root', ['width' => 400, 'height' => 500], [$container]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // auto-width = parent.w = 400
     assert_eq($flex->w, 400, 'block-level flex container auto-width = parent width');
@@ -1287,8 +1287,8 @@ test('Flex 容器 height:auto 基于内容而非填充父高度 (CSS Flexbox §9
     $container = makeNode('div', ['width' => 400, 'height' => 300, 'left' => 0, 'top' => 0], [$flex]);
     $root = makeNode('#root', ['width' => 400, 'height' => 500], [$container]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // row flex: height is cross-axis, content-based = max child h + padding = 50 + 5 + 5 = 60
     assert_eq($flex->w, 400, 'block-level flex container auto-width = parent width');
@@ -1307,8 +1307,8 @@ test('Block auto-stack 后 grid 子项内部子节点正确定位 (CSS §9.4.1)'
     $parent = makeNode('div', ['width' => 400, 'height' => 500, 'left' => 0, 'top' => 0], [$grid, $childA]);
     $root = makeNode('#root', ['width' => 400, 'height' => 600], [$parent]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // grid gets auto-width from auto-stack: w = containerW = 400
     assert_eq($grid->w, 400, 'grid auto-width from auto-stack = container width');
@@ -1340,8 +1340,8 @@ test('嵌套 flex→flex→grid 两层 auto-width 传递', function () {
     ], [$midFlex]);
     $root = makeNode('#root', ['width' => 400, 'height' => 500], [$outerFlex]);
 
-    $resolver = new LayoutResolver();
-    $resolver->resolve($root);
+    $orchestrator = new LayoutOrchestrator();
+    $resolver->layout($root);
 
     // midFlex is a flex item in a column flex parent -> no auto-width fill from parent
     // Its width is content-based (from innerGrid children)
@@ -1367,8 +1367,8 @@ describe('Text node auto-height', function () {
         $child = makeNode('div', ['fontSize' => 16], [], 'Hello World');
         $parent = makeNode('div', ['width' => 400], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         assert_true($child->h > 0, 'div text node should have height');
         assert_eq($child->h, (int)(16 * 1.2), 'div text height = line-height');
     });
@@ -1380,8 +1380,8 @@ describe('Text node auto-height', function () {
             'width' => 400,
         ], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         assert_true($child->h > 0, 'text div in flex column should have height');
         assert_eq($child->h, (int)(16 * 1.2), 'text height = line-height');
     });
@@ -1393,8 +1393,8 @@ describe('Text node auto-height', function () {
             'width' => 400,
         ], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         assert_true($child->w > 0, 'text child should have positive width');
         assert_true($child->w < 400, 'text child width should be < parent (content-sized)');
     });
@@ -1404,8 +1404,8 @@ describe('Text node auto-height', function () {
         $spanChild = makeNode('span', ['fontSize' => 14], [], 'span');
         $parent = makeNode('div', ['width' => 400], [$textChild, $spanChild]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         assert_eq($textChild->h, (int)(14 * 1.2), 'text type still gets height');
         assert_eq($spanChild->h, (int)(14 * 1.2), 'span type still gets height');
     });
@@ -1414,8 +1414,8 @@ describe('Text node auto-height', function () {
         $child = makeNode('div', ['fontSize' => 16, 'height' => 100], [], 'Hello');
         $parent = makeNode('div', ['width' => 400], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         assert_eq($child->h, 100, 'explicit height should be preserved');
     });
 
@@ -1434,8 +1434,8 @@ describe('box-sizing: border-box', function () {
             'height' => 100,
         ], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         // content width = 200 - 0 - 0 - 5*2 = 190
         assert_eq($child->w, 190, 'border-box border reduces child fill width');
     });
@@ -1449,8 +1449,8 @@ describe('box-sizing: border-box', function () {
             'height' => 100,
         ], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         // content width = 200 - 20 - 20 - 0 = 160
         assert_eq($child->w, 160, 'border-box padding reduces child fill width');
     });
@@ -1465,8 +1465,8 @@ describe('box-sizing: border-box', function () {
             'height' => 100,
         ], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         // content width = 200 - 10 - 10 - 3*2 = 174
         assert_eq($child->w, 174, 'border-box padding+border reduces child fill width');
     });
@@ -1479,8 +1479,8 @@ describe('box-sizing: border-box', function () {
             'height' => 100,
         ], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         // content-box: content width = 200 - 0 - 0 = 200
         assert_eq($child->w, 200, 'content-box border does not reduce child fill width');
     });
@@ -1495,8 +1495,8 @@ describe('line-height', function () {
         $child = makeNode('div', ['fontSize' => 16, 'lineHeight' => '30px'], [], 'Hello');
         $parent = makeNode('div', ['width' => 400], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         assert_eq($child->h, 30, 'line-height:30px should set height to 30');
     });
 
@@ -1504,8 +1504,8 @@ describe('line-height', function () {
         $child = makeNode('div', ['fontSize' => 16], [], 'Hello');
         $parent = makeNode('div', ['width' => 400], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         assert_eq($child->h, (int)(16 * 1.2), 'default line-height = fontSize * 1.2');
     });
 
@@ -1513,8 +1513,8 @@ describe('line-height', function () {
         $child = makeNode('div', ['fontSize' => 16, 'lineHeight' => 1.5], [], 'Hello');
         $parent = makeNode('div', ['width' => 400], [$child]);
         $root = makeNode('#root', ['width' => 400, 'height' => 300], [$parent]);
-        $resolver = new LayoutResolver();
-        $resolver->resolve($root);
+        $orchestrator = new LayoutOrchestrator();
+        $resolver->layout($root);
         assert_eq($child->h, (int)(16 * 1.5), 'line-height:1.5 should set height to 24');
     });
 
