@@ -1,34 +1,32 @@
 <?php
 /**
- * 纯函数布局测试框架
+ * 纯函数布局测试框架（Phase 5 更新版）
  *
- * 用于验证布局策略的纯函数接口 layout(LayoutInput): LayoutResult。
- * Phase 1 完成后，此处可以添加逐条 CSS 规范的纯函数测试。
+ * 使用 PhysicalFragment / ConstraintSpace 替代已删除的旧 DTO。
+ * Phase 5 前使用 layout(LayoutInput): LayoutResult，现使用 LayoutAlgorithm 接口。
  *
  * Usage: php tests/verify_layout_pure.php
  */
 
 require_once __DIR__ . '/unit/bootstrap.php';
 
-use Px\Rendering\Layout\LayoutResult;
-use Px\Rendering\Layout\LayoutInput;
-use Px\Rendering\Layout\LayoutConstraints;
-use Px\Rendering\ComputedStyle;
+use Px\Rendering\Layout\PhysicalFragment;
+use Px\Rendering\Layout\ConstraintSpace;
 
 $pass = 0;
 $fail = 0;
 
 /**
- * 断言 LayoutResult 字段值与期望一致。
+ * 断言 PhysicalFragment 字段值与期望一致。
  */
-function assertLayoutResult(string $label, LayoutResult $r, array $expected): void
+function assertFragment(string $label, PhysicalFragment $f, array $expected): void
 {
     global $pass, $fail;
     $ok = true;
     foreach ($expected as $k => $v) {
-        $actual = $r->$k;
+        $actual = $f->$k ?? null;
         if ($actual !== $v) {
-            echo "  [FAIL] $label.$k: expected $v, got $actual\n";
+            echo "  [FAIL] $label.$k: expected $v, got " . var_export($actual, true) . "\n";
             $ok = false;
         }
     }
@@ -41,40 +39,30 @@ function assertLayoutResult(string $label, LayoutResult $r, array $expected): vo
 }
 
 // ============================================================
-// 框架自检：LayoutResult 可构造
+// 框架自检：PhysicalFragment 可构造
 // ============================================================
 echo "--- 0. 框架自检 ---\n";
 
-// 空 LayoutResult
-$empty = new LayoutResult(0, 0, 0, 0);
-assertLayoutResult('empty result', $empty, [
+// 空 PhysicalFragment
+$empty = new PhysicalFragment(0, 0, 0, 0);
+assertFragment('empty fragment', $empty, [
     'x' => 0, 'y' => 0, 'w' => 0, 'h' => 0,
-    'visualW' => 0, 'visualH' => 0,
-    'layer' => 0,
-    'contentWidth' => 0, 'contentHeight' => 0,
 ]);
 
-// LayoutResult with children
-$child = new LayoutResult(10, 20, 100, 50);
-$parent = new LayoutResult(0, 0, 200, 100, children: [$child]);
-assertLayoutResult('parent w', $parent, ['w' => 200]);
-assertLayoutResult('child x', $parent->children[0], ['x' => 10, 'y' => 20, 'w' => 100]);
+// PhysicalFragment with children
+$child = new PhysicalFragment(10, 20, 100, 50);
+$parent = new PhysicalFragment(0, 0, 200, 100, 0, 0, 0, 0, 0, null, [$child]);
+assertFragment('parent w', $parent, ['w' => 200]);
+assertFragment('child x', $parent->children[0], ['x' => 10, 'y' => 20, 'w' => 100]);
 
-// toArray
-$arr = $empty->toArray();
-assert(is_array($arr), 'toArray returns array');
-assert(isset($arr['x']), 'toArray has x');
-assert(isset($arr['children']), 'toArray has children');
-
-// LayoutInput 可构造
-$constraints = new LayoutConstraints(containerWidth: 200, containerHeight: 100);
-$style = new ComputedStyle(['width' => '100%']);
-$input = new LayoutInput(
-    constraints: $constraints,
-    style: $style,
-    textContent: 'hello',
+// ConstraintSpace 可构造
+$space = new ConstraintSpace(
+    containerWidth: 200,
+    containerHeight: 100,
+    contentWidth: 200,
+    contentHeight: 100,
 );
-assertLayoutResult('LayoutInput constraints', new LayoutResult($input->constraints->containerWidth, 0, 0, 0), [
+assertFragment('ConstraintSpace width', new PhysicalFragment($space->contentWidth, 0, 0, 0), [
     'x' => 200,
 ]);
 
