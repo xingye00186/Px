@@ -79,31 +79,7 @@ class PhysicalFragment
     }
 
     /** 从 LayoutResult 构造（适配器用） */
-    public static function buildFromLayoutResult(
-        LayoutResult $result,
-        ?RenderNode $sourceNode = null,
-        int $scrollTop = 0,
-        int $scrollLeft = 0,
-        bool $isScrollContainer = false,
-    ): self {
-        $childFrags = [];
-        foreach ($result->children as $i => $child) {
-            $childRN = $sourceNode?->children[$i] ?? null;
-            $childFrags[] = PhysicalFragment::buildFromLayoutResult($child, $childRN);
-        }
-        return new PhysicalFragment(
-            (int)$result->x, (int)$result->y, (int)$result->w, (int)$result->h,
-            (int)$result->visualW, (int)$result->visualH, (int)$result->layer,
-            (int)$result->contentWidth, (int)$result->contentHeight,
-            $result->style, $childFrags,
-            sourceNode: $sourceNode,
-            scrollTop: $scrollTop,
-            scrollLeft: $scrollLeft,
-            isScrollContainer: $isScrollContainer,
-        );
-    }
-
-    /** 序列化为数组（测试/导出用） */
+        /** 序列化为数组（测试/导出用） */
     public function toArray(): array
     {
         $arr = [

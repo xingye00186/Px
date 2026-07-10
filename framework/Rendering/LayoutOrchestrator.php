@@ -7,7 +7,6 @@ use native_types;
 use Px\Rendering\Layout\ConstraintSpace;
 use Px\Rendering\Layout\ConstraintSpaceBuilder;
 use Px\Rendering\Layout\PhysicalFragment;
-use Px\Rendering\Layout\LayoutResult;
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\RenderNode;
 use Px\Rendering\Layout\LayoutAlgorithm;
@@ -16,7 +15,6 @@ use Px\Rendering\Layout\FlexAlgorithm;
 use Px\Rendering\Layout\GridAlgorithm;
 use Px\Rendering\Layout\InlineAlgorithm;
 use Px\Rendering\Layout\TableAlgorithm;
-use Px\Rendering\Layout\MultiColumnLayoutStrategy;
 use Px\Rendering\Layout\LayoutCache;
 use Px\Rendering\Layout\OOFLayoutAlgorithm;
 use Px\Rendering\Layout\LayoutCacheKey;
@@ -41,8 +39,7 @@ class LayoutOrchestrator
     private LayoutAlgorithm $gridAlgo;
     private LayoutAlgorithm $inlineAlgo;
     private LayoutAlgorithm $tableAlgo;
-    private LayoutAlgorithm $multiColumnAlgo;
-    private LayoutCache $cache;
+        private LayoutCache $cache;
 
     /** @var RenderNode[] 当前帧的滚动容器 */
     private array $scrollContainers = [];
@@ -55,8 +52,7 @@ class LayoutOrchestrator
         $this->gridAlgo = new GridAlgorithm();
         $this->inlineAlgo = new InlineAlgorithm();
         $this->tableAlgo = new TableAlgorithm();
-        $this->multiColumnAlgo = new MultiColumnLayoutStrategy();
-        $this->cache = new LayoutCache();
+                $this->cache = new LayoutCache();
     }
 
     /**
@@ -227,11 +223,6 @@ class LayoutOrchestrator
             case 'table-caption':
                 return $this->tableAlgo;
             default:
-                $isMultiCol = ($style !== null
-                    && ((int)$style->columnCount > 0 || (int)($style->columnWidth ?? 0) > 0));
-                if ($isMultiCol) {
-                    return $this->multiColumnAlgo;
-                }
                 return $this->blockAlgo;
         }
     }

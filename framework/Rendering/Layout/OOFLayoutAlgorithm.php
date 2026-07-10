@@ -5,6 +5,7 @@ namespace Px\Rendering\Layout;
 use native_types;
 
 use Px\Rendering\ComputedStyle;
+use Px\Rendering\CssLength;
 use Px\Rendering\RenderNode;
 
 /**
@@ -18,12 +19,10 @@ use Px\Rendering\RenderNode;
  */
 class OOFLayoutAlgorithm extends LayoutAlgorithm
 {
-    private AbsolutePositioning $absolutePositioning;
-
+    
     public function __construct()
     {
-        $this->absolutePositioning = new AbsolutePositioning();
-    }
+        }
 
     public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null): PhysicalFragment
     {
@@ -176,38 +175,88 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $cs = $frag->style;
         if ($cs === null) return $frag;
 
-        // 构造 LayoutInput 以复用现有 AbsolutePositioning
-        $input = new LayoutInput(
-            constraints: new LayoutConstraints(
-                containerWidth: $ancestorW,
-                containerHeight: $ancestorH,
-                contentWidth: $ancestorW,
-                contentHeight: $ancestorH,
-            ),
-            style: $cs,
-            textContent: $sourceRN->content ?? '',
-            position: $cs->position?->value ?? 'absolute',
-            ancestorX: $ancestorX,
-            ancestorY: $ancestorY,
-            ancestorW: $ancestorW,
-            ancestorH: $ancestorH,
-            ancestorBorderLeft: $ancestorBorderLeft,
-            ancestorBorderTop: $ancestorBorderTop,
-            ancestorPaddingLeft: $ancestorPaddingLeft,
-            ancestorPaddingTop: $ancestorPaddingTop,
-            viewportW: $viewportW,
-            viewportH: $viewportH,
-            childResults: [],
-            childNodes: $sourceRN->children,
-        );
+        // ── Absolute positioning (inlined from AbsolutePositioning::absoluteLayout) ──
+        $leftVal = (int)($cs->left?->toPx() ?? 0);
+        $topVal = (int)($cs->top?->toPx() ?? 0);
+        $rightVal = (int)($cs->right?->toPx() ?? 0);
+        $bottomVal = (int)($cs->bottom?->toPx() ?? 0);
 
-        $result = $this->absolutePositioning->absoluteLayout($input);
+        $ancW = $ancestorW;
+        $ancH = $ancestorH;
+        $ancX = $ancestorX;
+        $ancY = $ancestorY;
+        $bL = $ancestorBorderLeft;
+        $bT = $ancestorBorderTop;
+
+        $width = (int)($cs->width?->toPx() ?? 0);
+        $height = (int)($cs->height?->toPx() ?? 0);
+        if ($cs->width !== null && $cs->width->isPercent()) $width = $cs->width->resolveInContext($ancW);
+        if ($cs->height !== null && $cs->height->isPercent()) $height = $cs->height->resolveInContext($ancH);
+
+        $marginLeft = (int)($cs->margin?->left->toPx() ?? 0);
+        $marginTop = (int)($cs->margin?->top->toPx() ?? 0);
+        $marginRight = (int)($cs->margin?->right->toPx() ?? 0);
+        $marginBottom = (int)($cs->margin?->bottom->toPx() ?? 0);
+
+        if ($leftVal !== 0 && $rightVal !== 0 && $width <= 0) {
+            $width = max(0, $ancW - $leftVal - $rightVal - $marginLeft - $marginRight);
+        }
+        if ($topVal !== 0 && $bottomVal !== 0 && $height <= 0) {
+            $height = max(0, $ancH - $topVal - $bottomVal - $marginTop - $marginBottom);
+        }
+
+        $textContent = is_string($sourceRN->content) ? $sourceRN->content : '';
+        if (($width <= 0 || $height <= 0) && strlen($textContent) > 0) {
+            $fs = (int)($cs->fontSize ?? 14);
+            $bd = (int)($cs->bold ?? 0);
+            $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, $bd) : 0);
+            if ($measured > 0 && $width <= 0) {
+                $width = max(0, $measured + (int)($cs->padding?->left->toPx() ?? 0) + (int)($cs->padding?->right->toPx() ?? 0) + (int)($cs->borderLeftWidth ?? 0) + (int)($cs->borderRightWidth ?? 0));
+            }
+            if ($height <= 0) {
+                $height = max((int)($cs->lineHeight ?? (int)($fs * 1.2)), $height);
+            }
+        }
+
+        $hasLeft = ($cs->getRaw('left') !== null);
+        $hasRight = ($cs->getRaw('right') !== null);
+        $hasTop = ($cs->getRaw('top') !== null);
+        $hasBottom = ($cs->getRaw('bottom') !== null);
+
+        $cbOriginX = $ancX + $bL;
+        $cbOriginY = $ancY + $bT;
+
+        $calcX = $cbOriginX + $leftVal + $marginLeft;
+        if ($hasRight && !$hasLeft) {
+            $calcX = $cbOriginX + $ancW - $rightVal - ($width > 0 ? $width : 0) - $marginRight;
+        }
+
+        $calcY = $cbOriginY + $topVal + $marginTop;
+        if ($hasBottom && !$hasTop) {
+            $calcY = $cbOriginY + $ancH - $bottomVal - ($height > 0 ? $height : 0) - $marginBottom;
+        }
+
+        $rawTX = $cs->getRaw('translateX');
+        $rawTY = $cs->getRaw('translateY');
+        $calcX += $rawTX instanceof CssLength ? $rawTX->toPx() : (int)($rawTX ?? 0);
+        $calcY += $rawTY instanceof CssLength ? $rawTY->toPx() : (int)($rawTY ?? 0);
+
+        // Margin auto (simplified: only X-axis)
+        $autoOffsetX = 0;
+        if ($cs->margin !== null) {
+            $mLAuto = $cs->margin->left->isAuto();
+            $mRAuto = $cs->margin->right->isAuto();
+            if ($mLAuto && $mRAuto) {
+                $autoOffsetX = (int)(($ancW - $width) / 2);
+            } elseif ($mRAuto) {
+                $autoOffsetX = $ancW - $calcX - $width + $ancX;
+            }
+        }
+        $calcX += $autoOffsetX;
 
         return new PhysicalFragment(
-            (int)$result->x, (int)$result->y, (int)$result->w, (int)$result->h,
-            (int)$result->visualW, (int)$result->visualH, (int)$result->layer,
-            (int)$result->contentWidth, (int)$result->contentHeight,
-            $cs, $frag->children, $sourceRN
+            (int)$calcX, (int)$calcY, (int)max(0, $width), (int)max(0, $height),
+            (int)$cs->visualWidth($width), (int)$cs->visualHeight($height),
+            1, 0, 0, $cs, $frag->children, $sourceRN
         );
-    }
-}
+    }}
