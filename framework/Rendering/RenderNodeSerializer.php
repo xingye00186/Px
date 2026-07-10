@@ -114,7 +114,7 @@ class RenderNodeSerializer
         $lines = [];
 
         $coords = "({$node->x},{$node->y}) {$node->w}x{$node->h}";
-        $lines[] = "{$indent}[{$node->type}] {$coords} layer={$node->layer}";
+        $lines[] = "{$indent}[{$node->type}] {$coords} layer=" . ($node->layer ?? 0);
 
         if ($node->content !== null && $node->content !== '') {
             $content = is_string($node->content)
@@ -136,7 +136,7 @@ class RenderNodeSerializer
         }
 
         if ($node->isScrollContainer) {
-            $lines[] = "{$indent}  scroll: top={$node->scrollTop}, contentH={$node->contentHeight}";
+            $lines[] = "{$indent}  scroll: top=" . ($node->scrollTop ?? 0) . ", contentH=" . ($node->contentHeight ?? 0);
         }
 
         if ($node->layoutDirty) {
@@ -160,20 +160,20 @@ class RenderNodeSerializer
     {
         $result = [
             'type'             => $node->type,
-            'x'                => $node->x,
-            'y'                => $node->y,
-            'w'                => $node->w,
-            'h'                => $node->h,
-            'visualW'          => $node->visualW,
-            'visualH'          => $node->visualH,
-            'layer'            => $node->layer,
-            'isScrollContainer' => $node->isScrollContainer,
-            'scrollTop'        => $node->scrollTop,
-            'scrollLeft'       => $node->scrollLeft,
-            'contentHeight'    => $node->contentHeight,
-            'contentWidth'     => $node->contentWidth,
-            'renderOffsetX'    => $node->renderOffsetX,
-            'renderOffsetY'    => $node->renderOffsetY,
+            'x'                => $node->x ?? 0,
+            'y'                => $node->y ?? 0,
+            'w'                => $node->w ?? 0,
+            'h'                => $node->h ?? 0,
+            'visualW'          => $node->visualW ?? 0,
+            'visualH'          => $node->visualH ?? 0,
+            'layer'            => $node->layer ?? 0,
+            'isScrollContainer' => $node->isScrollContainer ?? false,
+            'scrollTop'        => $node->scrollTop ?? 0,
+            'scrollLeft'       => $node->scrollLeft ?? 0,
+            'contentHeight'    => $node->contentHeight ?? 0,
+            'contentWidth'     => $node->contentWidth ?? 0,
+            'renderOffsetX'    => $node->renderOffsetX ?? 0,
+            'renderOffsetY'    => $node->renderOffsetY ?? 0,
             'key'              => $node->key,
             'groupId'          => $node->groupId,
             'layoutDirty'      => $node->layoutDirty,
