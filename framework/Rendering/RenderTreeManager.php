@@ -655,7 +655,6 @@ class RenderTreeManager
                 $invalidateStack = [$renderNode];
                 while (count($invalidateStack) > 0) {
                     $n = array_pop($invalidateStack);
-                    $n->positioningAncestorValid = false;
                     foreach ($n->children as $c) {
                         $invalidateStack[] = $c;
                     }

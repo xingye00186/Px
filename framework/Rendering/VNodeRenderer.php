@@ -692,10 +692,10 @@ class VNodeRenderer
                 $letterSpacing += $fontStretchExtra;
             }
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
-            $selfY = $node->y + $this->getRenderOffsetY($node);
-            $selfH = $node->visualH;
-            $selfX = $node->x + $this->getRenderOffsetX($node);
-            $selfW = $node->visualW;
+            $selfY = (int)($node->y ?? 0) + $this->getRenderOffsetY($node);
+            $selfH = (int)($node->visualH ?? 0);
+            $selfX = (int)($node->x ?? 0) + $this->getRenderOffsetX($node);
+            $selfW = (int)($node->visualW ?? 0);
             $pdL = $pseudoOverrides['paddingLeft'] ?? $cs?->padding?->left?->toPx() ?? 0;
             $pdT = $pseudoOverrides['paddingTop'] ?? $cs?->padding?->top?->toPx() ?? 0;
             $pdR = $pseudoOverrides['paddingRight'] ?? $cs?->padding?->right?->toPx() ?? 0;

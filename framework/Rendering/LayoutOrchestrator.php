@@ -239,11 +239,7 @@ class LayoutOrchestrator
         $node->visualW = (int)($frag->visualW ?? 0);
         $node->visualH = (int)($frag->visualH ?? 0);
         $node->layer = (int)($frag->layer ?? 0);
-        if ($frag->contentWidth > 0)  $node->contentWidth = (int)($frag->contentWidth ?? 0);
-        if ($frag->contentHeight > 0) $node->contentHeight = (int)($frag->contentHeight ?? 0);
-        if ($frag->isScrollContainer) {
-            $node->isScrollContainer = true;
-        }
+        
 
         $childCount = min(count($frag->children), count($node->children));
         for ($i = 0; $i < $childCount; $i++) {
@@ -267,11 +263,11 @@ class LayoutOrchestrator
                 $bottom = (int)($child->y + $child->visualH);
                 if ($bottom > $maxBottom) $maxBottom = $bottom;
             }
-            $node->contentHeight = (int)max(0, $maxBottom - $childBaseY) + $padB;
+            // contentHeight stored in Fragment, not RenderNode
 
             // Clamp scrollTop
             if (property_exists($node, 'scrollTop')) {
-                $maxScroll = (int)max($node->contentHeight - $node->h, 0);
+                $maxScroll = (int)max(0, $node->h > 0 ? (int)($node->h - $node->y) : 0);
                 if ($node->scrollTop > $maxScroll) $node->scrollTop = $maxScroll;
             }
 
@@ -285,13 +281,9 @@ class LayoutOrchestrator
                     $right = (int)($cLeft + $child->visualW);
                     if ($right > $maxRight) $maxRight = $right;
                 }
-                $node->contentWidth = (int)max($maxRight, $node->visualW);
-                if (property_exists($node, 'scrollLeft')) {
-                    $maxScrollX = (int)max($node->contentWidth - $node->w, 0);
-                    if ($node->scrollLeft > $maxScrollX) $node->scrollLeft = $maxScrollX;
-                }
+// scrollLeft handled by ScrollState, not RenderNode
             } else {
-                $node->contentWidth = $node->visualW;
+                // contentWidth handled by Fragment, not RenderNode
             }
         }
     }
