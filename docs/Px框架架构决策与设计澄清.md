@@ -187,34 +187,56 @@ Px 是响应式声明渲染——`Component.render()` 每帧返回全新的 VNod
 - 结构描述（type/属性/事件）→ VNode（瞬态）
 - 伪类状态管理（:hover/:focus/:active）→ InteractionState Map
 
-### 4.3 Flutter 对标
+### 4.3 三国对照：Px vs Flutter vs Blink
 
-Px 与 Flutter 的声明式渲染模型高度一致：
+```
+                    Blink              Flutter              Px (当前)
+                    ─────              ───────              ─────────
+声明层              DOM Element        Widget               VNode
+样式层              StyleEngine        (内嵌 Widget)        StyleRecalcPass
+工作树              LayoutObject       RenderObject         RenderNode
+几何输出            PhysicalFragment   (内嵌 RenderBox)     PhysicalFragment
+绘制层              DisplayList        Canvas/Painting      VNodeRenderer+RC
 
-| Flutter | Px |
-|---------|-----|
-| Widget Tree（瞬态） | VNode Tree（瞬态） |
-| Element Tree（持久，复用） | Component Tree（持久） |
-| RenderObject Tree（持久） | RenderNode Tree（持久） |
-| ScrollPosition 由 ScrollController 持有 | ScrollState 由 ScrollManager 持有 |
-| RenderViewport 不存 pixels | RenderNode 不存 scrollTop |
+外置状态：
+  伪类             Element伪类        (State持有)          InteractionState（RN字段仍在迁移中）
+  滚动             ScrollableArea     ScrollPosition        ScrollManager + RN动态属性
+  缓存             NGLayoutCache      (无)                 LayoutCache
+```
+
+**关键差异**：
+- Px 缺少 DOM Element 层，伪类状态通过 InteractionState Map 承载（RN 字段仍在过渡中）
+- Flutter 没有独立的 Fragment 层——`RenderBox.size` 兼任几何输出
+- Blink 的 ScrollableArea 和 Flutter 的 ScrollPosition 都是外置独立对象，Px 的 ScrollManager 正朝此方向演进
 
 ---
 
-## 五、LayoutResult 是适配器过渡 DTO
+## 五、LayoutResult 的演进路径
 
-### 5.1 当前状态
-
-```
-旧策略: layout(LayoutInput) → LayoutResult → fromLayoutResult() → PhysicalFragment
-```
-
-多出 `LayoutResult` 这一层是因为旧策略接口 `layout(LayoutInput): LayoutResult` 是既成契约。Phase 1 通过适配器保持兼容。
-
-### 5.2 终态（P5 后）
+### 5.1 原始状态（重构前）
 
 ```
-新 Algorithm: layout(ConstraintSpace) → PhysicalFragment（直接产出，无中间 DTO）
+旧策略: layout(LayoutInput) → LayoutResult → LayoutApplicator → RenderNode
+```
+
+### 5.2 当前状态
+
+BlockAlgorithm 和 InlineAlgorithm 已直接产出 `PhysicalFragment`，**不经过 LayoutResult**。但 FlexAlgorithm 和 GridAlgorithm 内部仍走 `LayoutResult` 中转：
+
+```
+BlockAlgorithm/InlineAlgorithm/TableAlgorithm:
+  layout(ConstraintSpace, style, children) → PhysicalFragment（直接产出 ✅）
+
+FlexAlgorithm/GridAlgorithm:
+  layout(ConstraintSpace, style, children) → LayoutResult → buildFromLayoutResult() → PhysicalFragment（尚有中转 ⚠️）
+```
+
+Orchestrator 已切换到直接调用新 Algorithm（BlockAlgorithm/FlexAlgorithm/GridAlgorithm/InlineAlgorithm/TableAlgorithm），不再经过旧策略。
+
+### 5.3 终态（P5 后）
+
+```
+所有 Algorithm: layout(ConstraintSpace) → PhysicalFragment（直接产出，无 LayoutResult 中转）
 ```
 
 这与 Blink LayoutNG 一致——`NGLayoutAlgorithm::Layout()` 直接返回 `NGPhysicalBoxFragment`。
