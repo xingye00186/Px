@@ -7,7 +7,6 @@ use Px\Rendering\ComputedStyle;
 use Px\Rendering\CssKeyword;
 use Px\Rendering\Layout\ConstraintSpace;
 use Px\Rendering\Layout\PhysicalFragment;
-use Px\Rendering\Layout\LayoutResult;
 use Px\Rendering\Layout\IntrinsicSizes;
 use Px\Rendering\Layout\Grid\GridPlacer;
 use Px\Rendering\Layout\Grid\GridTrack;
@@ -32,8 +31,7 @@ class GridAlgorithm extends LayoutAlgorithm
                 $totalW += $cr->w;
                 if ($cr->h > $maxH) $maxH = $cr->h;
             }
-            $lr = new LayoutResult(w: $totalW, h: $maxH, minContentWidth: $totalW, maxContentWidth: $totalW, preferredContentWidth: $totalW, minContentHeight: $maxH, maxContentHeight: $maxH, preferredContentHeight: $maxH);
-            return PhysicalFragment::buildFromLayoutResult($lr);
+            return new PhysicalFragment((int)$totalW, (int)$maxH, 0, 0, null, null, 0, 0, 0, $style ?? new ComputedStyle([]));
         }
 
         $c = $space;
@@ -203,36 +201,24 @@ class GridAlgorithm extends LayoutAlgorithm
             }
         }
 
-        // ── Map grid items to child LayoutResults ──
-        $mappedResults = [];
+        // ── Map grid items to child PhysicalFragments ──
+        $mappedFragments = [];
         foreach ($gridItems as $gri) {
-            $mappedResults[] = new LayoutResult(
-                x: $gri->x, y: $gri->y, w: $gri->w, h: $gri->h,
-                style: $gri->style, children: $gri->originalChildren ?? []
-            );
+            $mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), (int)($gri->w ?? 0), (int)($gri->h ?? 0), null, null, 0, 0, 0, $gri->style, $gri->originalChildren ?? [], null);
         }
 
         // ── Auto-height from content ──
-        if ($height <= 0 && count($mappedResults) > 0) {
+        if ($height <= 0 && count($mappedFragments) > 0) {
             $maxBottom = $y;
-            foreach ($mappedResults as $cr) {
+            foreach ($mappedFragments as $cr) {
                 $bottom = $cr->y + $cr->h;
                 if ($bottom > $maxBottom) $maxBottom = $bottom;
             }
             $height = max(0, $maxBottom - $y);
         }
 
-        // ── Build LayoutResult and convert to PhysicalFragment ──
-        $lr = new LayoutResult(
-            x: $x, y: $y, w: $width, h: $height,
-            visualW: $s->visualWidth($width),
-            visualH: $s->visualHeight($height),
-            style: $s,
-            children: $mappedResults,
-            needsAnotherPass: $needsMore,
-        );
-
-        return PhysicalFragment::buildFromLayoutResult($lr);
+        // ── Build PhysicalFragment ──
+        return new PhysicalFragment((int)$x, (int)$y, (int)$width, (int)$height, (int)$s->visualWidth($width), (int)$s->visualHeight($height), 0, 0, 0, $s, $mappedFragments, null);
     }
 
     public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes

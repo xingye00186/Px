@@ -6,7 +6,6 @@ use native_types;
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\Layout\ConstraintSpace;
 use Px\Rendering\Layout\PhysicalFragment;
-use Px\Rendering\Layout\LayoutResult;
 use Px\Rendering\Layout\IntrinsicSizes;
 use Px\Rendering\Layout\Flex\FlexItem;
 use Px\Rendering\Layout\Flex\FlexLineBreaker;
@@ -20,15 +19,8 @@ class FlexAlgorithm extends LayoutAlgorithm
 {
     public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null): PhysicalFragment
     {
-        // Convert childFragments to LayoutResults for the inlined flex logic
-        $childResults = [];
-        foreach ($childFragments as $cf) {
-            $childResults[] = new LayoutResult(
-                (int)$cf->x, (int)$cf->y, (int)$cf->w, (int)$cf->h,
-                (int)$cf->visualW, (int)$cf->visualH, (int)$cf->layer,
-                (int)$cf->contentWidth, (int)$cf->contentHeight, $cf->style
-            );
-        }
+        // Use childFragments (PhysicalFragment[]) directly, no LayoutResult conversion needed
+        $childResults = $childFragments;
 
         $s = $style ?? new ComputedStyle([]);
 
@@ -36,8 +28,7 @@ class FlexAlgorithm extends LayoutAlgorithm
         if ($space->isIntrinsicMeasurement) {
             $totalW = 0; $maxH = 0;
             foreach ($childResults as $cr) {
-                $cr = objval($cr, LayoutResult::class);
-                $totalW += $cr->w; if ($cr->h > $maxH) $maxH = $cr->h;
+                $totalW += (int)($cr->w ?? 0); if ((int)($cr->h ?? 0) > $maxH) $maxH = (int)$cr->h;
             }
             return new PhysicalFragment(0, 0, $totalW, $maxH, $totalW, $maxH, 0, 0, 0, $s);
         }
@@ -71,7 +62,6 @@ class FlexAlgorithm extends LayoutAlgorithm
         $flexItems = [];
         $flexItemData = [];
         foreach ($childResults as $cr) {
-            $cr = objval($cr, LayoutResult::class);
             $cs = $cr->style;
             if ($cs === null) continue;
             // Use resolved flex shorthand as fallback when individual props not set
@@ -337,7 +327,7 @@ class FlexAlgorithm extends LayoutAlgorithm
         }
 
         // ── Step 6: Map results back to DOM order, re-resolve flex:1 ──
-        $mappedResults = FlexFragmentMapper::toResults($sortedFlexItems, $sortedChildResults);
+        $mappedResults = FlexFragmentMapper::toFragments($sortedFlexItems, $sortedChildResults);
         // Remap results to original DOM order (CSS §9.2: visual order ≠ DOM order)
         $resultsByOriginalIndex = [];
         foreach ($indices as $orderIdx => $domIdx) {
@@ -350,14 +340,14 @@ class FlexAlgorithm extends LayoutAlgorithm
         // Re-resolve flex:1 nested containers (flex-grow changes child sizes)
         if ($h <= 0 && count($mappedResults) > 0) {
             $maxBottom = $y;
-            foreach ($mappedResults as $cr) { $cr = objval($cr, LayoutResult::class); $b = $cr->y + $cr->h; if ($b > $maxBottom) $maxBottom = $b; }
+            foreach ($mappedResults as $cr) { $b = (int)($cr->y ?? 0) + (int)($cr->h ?? 0); if ($b > $maxBottom) $maxBottom = $b; }
             $h = max(0, $maxBottom - $y);
         }
 
         // Convert mapped LayoutResults to PhysicalFragment children
         $fragmentChildren = [];
         foreach ($mappedResults as $mr) {
-            $fragmentChildren[] = PhysicalFragment::buildFromLayoutResult($mr);
+            $fragmentChildren[] = $mr;
         }
 
         return new PhysicalFragment(
