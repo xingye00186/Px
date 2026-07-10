@@ -11,8 +11,8 @@ use Px\Rendering\Layout\FlexAlgorithm;
 use Px\Rendering\Layout\GridAlgorithm;
 use Px\Rendering\Layout\InlineAlgorithm;
 use Px\Rendering\Layout\AbsoluteStrategy;
-use Px\Rendering\Layout\TableLayoutStrategy;
 use Px\Rendering\Layout\MultiColumnLayoutStrategy;
+use Px\Rendering\Layout\TableAlgorithm;
 use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\ConstraintSpace;
 use Px\Rendering\Layout\ConstraintSpaceBuilder;
@@ -40,7 +40,7 @@ class LayoutResolver
     private $flexStrategy;
     private $gridStrategy;
     private $inlineStrategy;
-    private LayoutStrategyInterface $tableStrategy;
+    private $tableStrategy;
     private LayoutStrategyInterface $multiColumnStrategy;
 
     /** @var array<string, array> Per-scroll-container sticky stack */
@@ -57,7 +57,7 @@ class LayoutResolver
         $this->flexStrategy = new FlexAlgorithm();
         $this->gridStrategy = new GridAlgorithm();
         $this->inlineStrategy = new InlineAlgorithm();
-        $this->tableStrategy = new TableLayoutStrategy();
+        $this->tableStrategy = new TableAlgorithm();
         $this->multiColumnStrategy = new MultiColumnLayoutStrategy();
         $this->stickyProcessor = new StickyPostProcessor();
     }
