@@ -245,11 +245,11 @@ class LayoutOrchestrator
         $node->y = $frag->y;
         $node->w = $frag->w;
         $node->h = $frag->h;
-        $node->visualW = $frag->visualW;
-        $node->visualH = $frag->visualH;
-        $node->layer = $frag->layer;
-        if ($frag->contentWidth > 0)  $node->contentWidth = $frag->contentWidth;
-        if ($frag->contentHeight > 0) $node->contentHeight = $frag->contentHeight;
+        $node->visualW = (int)($frag->visualW ?? 0);
+        $node->visualH = (int)($frag->visualH ?? 0);
+        $node->layer = (int)($frag->layer ?? 0);
+        if ($frag->contentWidth > 0)  $node->contentWidth = (int)($frag->contentWidth ?? 0);
+        if ($frag->contentHeight > 0) $node->contentHeight = (int)($frag->contentHeight ?? 0);
         if ($frag->isScrollContainer) {
             $node->isScrollContainer = true;
         }
