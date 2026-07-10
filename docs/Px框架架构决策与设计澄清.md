@@ -190,24 +190,44 @@ Px 是响应式声明渲染——`Component.render()` 每帧返回全新的 VNod
 ### 4.3 三国对照：Px vs Flutter vs Blink
 
 ```
-                    Blink              Flutter              Px (当前)
-                    ─────              ───────              ─────────
-声明层              DOM Element        Widget               VNode
-样式层              StyleEngine        (内嵌 Widget)        StyleRecalcPass
-工作树              LayoutObject       RenderObject         RenderNode
-几何输出            PhysicalFragment   (内嵌 RenderBox)     PhysicalFragment
-绘制层              DisplayList        Canvas/Painting      VNodeRenderer+RC
+                         Blink                 Flutter                Px (当前)
+                         ─────                 ───────                ─────────
+组件层（持久）            (无独立概念)           Element Tree            Component Tree
+                          分散在DOM/JS中          复用旧Widget            mount/unmount/dirty
 
-外置状态：
-  伪类             Element伪类        (State持有)          InteractionState（RN字段仍在迁移中）
-  滚动             ScrollableArea     ScrollPosition        ScrollManager + RN动态属性
-  缓存             NGLayoutCache      (无)                 LayoutCache
+声明层（瞬态）            DOM Element            Widget Tree             VNode Tree
+                          持久，可命令式操作      每帧重建                每帧render()重建
+
+样式层（独立Pass）        StyleEngine            (内嵌于Widget)          StyleRecalcPass
+                          StyleRecalc            通过InheritedWidget     独立递归解析
+
+工作树（持久，复用）      LayoutObject           RenderObject            RenderNode
+                          持有dirty+样式         持有parentData+constraints  持有computedStyle+layoutDirty
+
+几何输出（瞬态/可缓存）   PhysicalFragment       (内嵌于RenderBox)       PhysicalFragment
+                          不可变，权威源          RenderBox.size兼任       不可变，权威源
+
+绘制层                    DisplayList            Canvas/Painting          VNodeRenderer+RC
+                          SkCanvas输出            Layer+Engine            消费Fragment绘制
+
+═══════════════════════════════════════════════════════════════════════════════
+外置状态（不存储在树上）：
+
+  伪类                    Element伪类           (State对象持有)          InteractionState
+                          :hover/:focus/:active  setState触发重建         Map<逻辑ID>（RN字段迁移中）
+
+  滚动                    ScrollableArea         ScrollPosition           ScrollManager
+                          LayoutBox指针访问      ScrollController持有     Map<逻辑ID>+RN动态属性
+
+  缓存                    NGLayoutCache          (无)                    LayoutCache
+                          Fragment跨帧复用        每帧重建RenderObject    Map<CacheKey, PhysicalFragment>
 ```
 
 **关键差异**：
-- Px 缺少 DOM Element 层，伪类状态通过 InteractionState Map 承载（RN 字段仍在过渡中）
-- Flutter 没有独立的 Fragment 层——`RenderBox.size` 兼任几何输出
-- Blink 的 ScrollableArea 和 Flutter 的 ScrollPosition 都是外置独立对象，Px 的 ScrollManager 正朝此方向演进
+- Blink 有完整的 DOM Element 层（浏览器暴露给 JS 的命令式 API），Px 和 Flutter 都没有——这是声明式框架的共性
+- Flutter 的 Element Tree（持久/复用）和 Widget Tree（瞬态）分离与 Px 的 Component Tree / VNode Tree 分离完全同构
+- Flutter 没有独立的 Fragment 层——`RenderBox.size` 兼任几何输出；Px 独立出 Fragment 层，与 Blink 一致
+- 三个框架的滚动状态都放在外层（非 RenderObject/RenderNode）——这是共识最佳实践
 
 ---
 
