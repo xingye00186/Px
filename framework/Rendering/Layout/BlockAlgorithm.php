@@ -202,9 +202,9 @@ class BlockAlgorithm extends LayoutAlgorithm
             $childY = ($isCollapsible && $prevCollapsible) ? ($stackY - $prevMarginBottom + max($prevMarginBottom > 0 ? $prevMarginBottom : 0, $mTop > 0 ? $mTop : 0) + min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0)) : ($stackY + $mTop);
             $relTop = $childStyle?->top?->toPx() ?? 0;
             $relLeft = $childStyle?->left?->toPx() ?? 0;
-            if ($childPosition === 'relative' || $childPosition === 'static') { $childY += $relTop; }
-            $result[] = new PhysicalFragment((int)($parentX + $padLeft + ($childPosition === 'relative' || $childPosition === 'static' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, null, null, (int)($cr->layer ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, null);
-            $stackY = ($childY - $relTop) + $chH + $mBottom;
+            if ($childPosition === 'relative') { $childY += $relTop; }
+            $result[] = new PhysicalFragment((int)($parentX + $padLeft + ($childPosition === 'relative' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, null, null, (int)($cr->layer ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, null);
+            $stackY = ($childY - ($childPosition === 'relative' ? $relTop : 0)) + $chH + $mBottom;
             $prevMarginBottom = $mBottom;
             $prevCollapsible = $isCollapsible;
         }
