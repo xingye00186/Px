@@ -71,7 +71,7 @@ class VNodeRenderer
         $vw = ($node->visualW > 0 ? $node->visualW : $node->w);
         $vh = ($node->visualH > 0 ? $node->visualH : $node->h);
         return [
-            'x' => $node->x + $this->getRenderOffsetX($node) + $bl,
+            'x' => (int)($node->x ?? 0) + $this->getRenderOffsetX($node) + (int)($bl ?? 0),
             'y' => $node->y + $this->getRenderOffsetY($node) + $bt,
             'w' => max(0, $vw - $bl - $br),
             'h' => max(0, $vh - $bt - $bb),
@@ -642,7 +642,7 @@ class VNodeRenderer
         $borderLeftColor = $pseudoOverrides['borderLeftColor'] ?? $cs?->borderLeftColor ?? $borderColor;
         $bgImageEl = null;
         if ($bgImageHandle !== 0) {
-            $imgX = $backgroundAttachment === 'fixed' ? $node->x : $x;
+            $imgX = $backgroundAttachment === 'fixed' ? (int)($node->x ?? 0) : $x;
             $imgY = $backgroundAttachment === 'fixed' ? $node->y : $y;
             $bgImageEl = [
                 'type' => 'image',
@@ -785,7 +785,7 @@ class VNodeRenderer
             }
             $elements = [];
             if ($hasBg || $hasBorder) {
-                $bgX = $backgroundAttachment === 'fixed' ? $node->x : $x;
+                $bgX = $backgroundAttachment === 'fixed' ? (int)($node->x ?? 0) : $x;
                 $bgY = $backgroundAttachment === 'fixed' ? $node->y : $y;
                 $clipX = $bgX; $clipY = $bgY; $clipW = $w; $clipH = $h;
                 if ($backgroundClip === 'padding-box' && ($borderLeftWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0)) {
@@ -1044,7 +1044,7 @@ class VNodeRenderer
         }
         $diagLogPath = Config::get('debug_diag_log_path', '');
         if ($diagLogPath !== '') {
-            file_put_contents($diagLogPath, "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={$node->x} y={$node->y} w={$node->w} h={$node->h}\n", FILE_APPEND);
+            file_put_contents($diagLogPath, "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={{(int)($node->x ?? 0)} y={(int)($node->y ?? 0)} w={(int)($node->w ?? 0)} h={(int)($node->h ?? 0)}\n", FILE_APPEND);
         }
         if ($text === '') return null;
         $rawContainerW = $props['container-w'] ?? null;

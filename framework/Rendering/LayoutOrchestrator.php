@@ -232,14 +232,7 @@ class LayoutOrchestrator
      */
     private function applyFragmentToNode(PhysicalFragment $frag, RenderNode $node): void
     {
-        $node->x = $frag->x;
-        $node->y = $frag->y;
-        $node->w = $frag->w;
-        $node->h = $frag->h;
-        $node->visualW = (int)($frag->visualW ?? 0);
-        $node->visualH = (int)($frag->visualH ?? 0);
-        $node->layer = (int)($frag->layer ?? 0);
-        
+                
 
         $childCount = min(count($frag->children), count($node->children));
         for ($i = 0; $i < $childCount; $i++) {

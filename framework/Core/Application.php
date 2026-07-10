@@ -744,13 +744,17 @@ class Application
             error_log("[DIAG] directRender: type={$root->type} children=" . count($root->children));
         }
 
-        $this->layoutOrchestrator->layout($root);
+        $fragmentTree = $this->layoutOrchestrator->layout($root);
 
         if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] directRender AFTER');
         }
 
-        $this->renderer->render($root);
+        if ($fragmentTree !== null && method_exists($this->renderer, 'renderFromFragment')) {
+            $this->renderer->renderFromFragment($fragmentTree);
+        } else {
+            $this->renderer->render($root);
+        }
     }
 
     /**
