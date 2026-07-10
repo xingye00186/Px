@@ -18,7 +18,6 @@ use Px\Rendering\Layout\LayoutConstraints;
 use Px\Rendering\Layout\ConstraintSpace;
 use Px\Rendering\Layout\ConstraintSpaceBuilder;
 use Px\Rendering\Layout\LayoutResult;
-use Px\Rendering\Layout\LayoutCallbackInterface;
 use Px\Rendering\Layout\LayoutInput;
 use Px\Rendering\Layout\LayoutApplicator;
 use Px\Rendering\Layout\StickyPostProcessor;
@@ -34,7 +33,7 @@ use Px\Rendering\Layout\StickyPostProcessor;
  * 策略均以纯函数接口调用：strategy->layout(LayoutInput): LayoutResult。
  * 无 FragmentBuilder，无 resolveWithBuilder。
  */
-class LayoutResolver implements LayoutCallbackInterface
+class LayoutResolver
 {
     private LayoutApplicator $applicator;
     private AbsoluteStrategy $absolutePositioning;

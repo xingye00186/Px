@@ -17,7 +17,6 @@ use Px\Rendering\Layout\GridAlgorithm;
 use Px\Rendering\Layout\InlineAlgorithm;
 use Px\Rendering\Layout\TableAlgorithm;
 use Px\Rendering\Layout\MultiColumnLayoutStrategy;
-use Px\Rendering\Layout\StickyPostProcessor;
 use Px\Rendering\Layout\LayoutCache;
 use Px\Rendering\Layout\OOFLayoutAlgorithm;
 use Px\Rendering\Layout\LayoutCacheKey;
@@ -43,7 +42,6 @@ class LayoutOrchestrator
     private LayoutAlgorithm $inlineAlgo;
     private LayoutAlgorithm $tableAlgo;
     private LayoutAlgorithm $multiColumnAlgo;
-    private StickyPostProcessor $stickyProcessor;
     private LayoutCache $cache;
 
     /** @var RenderNode[] 当前帧的滚动容器 */
@@ -58,7 +56,6 @@ class LayoutOrchestrator
         $this->inlineAlgo = new InlineAlgorithm();
         $this->tableAlgo = new TableAlgorithm();
         $this->multiColumnAlgo = new MultiColumnLayoutStrategy();
-        $this->stickyProcessor = new StickyPostProcessor();
         $this->cache = new LayoutCache();
     }
 
@@ -342,20 +339,5 @@ class LayoutOrchestrator
         }
     }
 
-    // ── 便捷访问器（旧兼容） ──
 
-    public function getAbsolutePositioning(): \Px\Rendering\Layout\AbsolutePositioning
-    {
-        return new \Px\Rendering\Layout\AbsolutePositioning();
-    }
-
-    public function getBlockStrategy(): \Px\Rendering\Layout\BlockLayoutStrategy
-    {
-        return new \Px\Rendering\Layout\BlockLayoutStrategy();
-    }
-
-    public function getFlexStrategy(): \Px\Rendering\Layout\FlexLayoutStrategy
-    {
-        return new \Px\Rendering\Layout\FlexLayoutStrategy();
-    }
 }
