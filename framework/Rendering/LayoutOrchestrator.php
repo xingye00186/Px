@@ -242,14 +242,6 @@ class LayoutOrchestrator
      */
     private function applyFragmentToNode(PhysicalFragment $frag, RenderNode $node): void
     {
-        // Write geometry back to RenderNode (dynamic props, works in PHP CLI)
-        $node->x = $frag->x;
-        $node->y = $frag->y;
-        $node->w = $frag->w;
-        $node->h = $frag->h;
-        $node->visualW = (int)($frag->visualW ?? 0);
-        $node->visualH = (int)($frag->visualH ?? 0);
-        $node->layer = (int)($frag->layer ?? 0);
 
 
         

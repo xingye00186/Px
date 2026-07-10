@@ -843,12 +843,7 @@ class VNodeRenderer
                         'textEmphasisPosition' => 'over'];
                     $lineIdx++;
                 }
-                $node->textRenderInfo = [
-                    'x' => ($contentX + 4) - $this->getRenderOffsetX($node),
-                    'y' => $contentY - $this->getRenderOffsetY($node),
-                    'textHeight' => $lineHeight * count($overflowLines),
-                    'textWidth' => $maxLineW,
-                ];
+                /* textRenderInfo stored locally */
             } elseif ($isWrappable && $textWidth > $contentW && $contentW > 20 && $lineH > 0) {
                 $lines = [];
                 $currentLine = '';
@@ -903,12 +898,7 @@ class VNodeRenderer
                         'letterSpacing' => $letterSpacing];
                     $lineIdx++;
                 }
-                $node->textRenderInfo = [
-                    'x' => ($contentX + 4) - $this->getRenderOffsetX($node),
-                    'y' => $contentY - $this->getRenderOffsetY($node),
-                    'textHeight' => $lineH * count($lines),
-                    'textWidth' => $maxLineW,
-                ];
+                /* textRenderInfo stored locally */
             } else {
                 $elements[] = ['type' => 'text', 'text' => $text, 'x' => $textX, 'y' => $textY,
                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
@@ -923,12 +913,7 @@ class VNodeRenderer
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
                         'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
                         'letterSpacing' => $letterSpacing];
-                $node->textRenderInfo = [
-                    'x' => $textX - $this->getRenderOffsetX($node),
-                    'y' => $textY - $this->getRenderOffsetY($node),
-                    'textHeight' => max($textHeight, 0),
-                    'textWidth' => $textWidth,
-                ];
+                /* textRenderInfo stored locally */
             }
             if (count($elements) === 1) {
                 return $elements[0];
@@ -1158,12 +1143,7 @@ class VNodeRenderer
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
         }
         $textHeight = self::measureTextHeight($fontSize, (bool)$bold);
-        $node->textRenderInfo = [
-            'x' => $x - $this->getRenderOffsetX($node),
-            'y' => $y - $this->getRenderOffsetY($node),
-            'textHeight' => $textHeight,
-            'textWidth' => $textWidth,
-        ];
+        /* textRenderInfo stored locally */
         $decorationLine = $cs?->textDecorationLine ?? 'none';
         $decorationColor = $cs?->textDecorationColor ?: (string)$color;
         $decorationStyle = $cs?->textDecorationStyle ?? 'solid';
