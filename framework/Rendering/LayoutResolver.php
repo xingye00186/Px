@@ -6,12 +6,11 @@ use native_types;
 
 use Px\Core\Config;
 use Px\Rendering\Layout\AbsolutePositioning;
+use Px\Rendering\Layout\BlockAlgorithm;
+use Px\Rendering\Layout\FlexAlgorithm;
+use Px\Rendering\Layout\GridAlgorithm;
+use Px\Rendering\Layout\InlineAlgorithm;
 use Px\Rendering\Layout\AbsoluteStrategy;
-use Px\Rendering\Layout\LayoutStrategyInterface;
-use Px\Rendering\Layout\BlockLayoutStrategy;
-use Px\Rendering\Layout\FlexLayoutStrategy;
-use Px\Rendering\Layout\GridLayoutStrategy;
-use Px\Rendering\Layout\InlineLayoutStrategy;
 use Px\Rendering\Layout\TableLayoutStrategy;
 use Px\Rendering\Layout\MultiColumnLayoutStrategy;
 use Px\Rendering\Layout\LayoutConstraints;
@@ -37,10 +36,10 @@ class LayoutResolver
 {
     private LayoutApplicator $applicator;
     private AbsoluteStrategy $absolutePositioning;
-    private LayoutStrategyInterface $blockStrategy;
-    private LayoutStrategyInterface $flexStrategy;
-    private LayoutStrategyInterface $gridStrategy;
-    private LayoutStrategyInterface $inlineStrategy;
+    private $blockStrategy;
+    private $flexStrategy;
+    private $gridStrategy;
+    private $inlineStrategy;
     private LayoutStrategyInterface $tableStrategy;
     private LayoutStrategyInterface $multiColumnStrategy;
 
@@ -54,10 +53,10 @@ class LayoutResolver
     {
         $this->applicator = new LayoutApplicator();
         $this->absolutePositioning = new AbsolutePositioning();
-        $this->blockStrategy = new BlockLayoutStrategy();
-        $this->flexStrategy = new FlexLayoutStrategy();
-        $this->gridStrategy = new GridLayoutStrategy();
-        $this->inlineStrategy = new InlineLayoutStrategy();
+        $this->blockStrategy = new BlockAlgorithm();
+        $this->flexStrategy = new FlexAlgorithm();
+        $this->gridStrategy = new GridAlgorithm();
+        $this->inlineStrategy = new InlineAlgorithm();
         $this->tableStrategy = new TableLayoutStrategy();
         $this->multiColumnStrategy = new MultiColumnLayoutStrategy();
         $this->stickyProcessor = new StickyPostProcessor();

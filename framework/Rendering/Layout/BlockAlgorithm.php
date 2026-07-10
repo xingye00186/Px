@@ -51,8 +51,8 @@ class BlockAlgorithm extends LayoutAlgorithm
 
         $positionVal = $s->position?->value ?? 'static';
         $isStaticOrRelative = ($positionVal === 'static' || $positionVal === 'relative');
-        $x = $isStaticOrRelative ? ($c->bfcOffsetX + $left + $marginLeft) : $c->bfcOffsetX;
-        $y = $isStaticOrRelative ? ($c->bfcOffsetY + $top + $marginTop) : $c->bfcOffsetY;
+        $x = $isStaticOrRelative ? ((int)($c->bfcOffsetX ?? 0) + (int)($left ?? 0) + (int)($marginLeft ?? 0)) : (int)($c->bfcOffsetX ?? 0);
+        $y = $isStaticOrRelative ? ((int)($c->bfcOffsetY ?? 0) + (int)($top ?? 0) + (int)($marginTop ?? 0)) : (int)($c->bfcOffsetY ?? 0);
 
         $displayVal = $s->display?->value ?? 'block';
         $stackedChildren = [];
