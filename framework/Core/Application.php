@@ -17,7 +17,6 @@ use Px\Rendering\TextBackend\ResilientTextBackendProxy;
 use Px\Rendering\VNode;
 use Px\Rendering\RenderNode;
 use Px\Rendering\VNodeRenderer;
-use Px\Rendering\LayoutResolver;
 use Px\Rendering\LayoutOrchestrator;
 use Px\Rendering\StyleRecalcPass;
 use Px\Rendering\InteractionState;
@@ -41,7 +40,7 @@ use Px\Rendering\RenderNodeSerializer;
  *
  * 渲染流程（重构后）：
  *   VNode 树重建 → RenderTreeManager::updateFromVNode（VNode → RenderNode + bind 值同步）
- *   → LayoutResolver::resolve（RenderNode 坐标计算）
+ *   → LayoutOrchestrator::layout（RenderNode → Fragment 坐标计算）
  *   → VNodeRenderer::render（RenderNode 树 → GDI 调用）
  */
 class Application
@@ -49,10 +48,8 @@ class Application
     private Platform $platform;
     private Scheduler $scheduler;
     private ?VNodeRenderer $renderer = null;
-    private ?LayoutResolver $layoutResolver = null;
-    private ?LayoutOrchestrator $layoutOrchestrator = null;
-    private bool $useOrchestrator = false;
-    private RenderTreeManager $renderTreeManager;
+        private ?LayoutOrchestrator $layoutOrchestrator = null;
+        private RenderTreeManager $renderTreeManager;
 
     private ?ReactiveComponentInterface $rootComponent = null;
     private ?VNode $activeVNodeTree = null;
@@ -184,16 +181,12 @@ class Application
     public function __construct(
         Platform $platform,
         Scheduler $scheduler,
-        ?LayoutResolver $layoutResolver = null,
         ?RenderTreeManager $renderTreeManager = null,
         ?LayoutOrchestrator $layoutOrchestrator = null,
     ) {
         $this->platform  = $platform;
         $this->scheduler = $scheduler;
         $this->layoutOrchestrator = $layoutOrchestrator ?? new LayoutOrchestrator();
-        $this->useOrchestrator = true;
-        $this->layoutResolver = $layoutResolver ?? new LayoutResolver();
-        // useOrchestrator 默认 true，可通过构造参数覆盖为 false 回退到旧 LayoutResolver
         $this->renderTreeManager = $renderTreeManager ?? new RenderTreeManager();
         $this->scrollManager = new ScrollManager(
             $this->requestRender(...),
@@ -751,11 +744,7 @@ class Application
             error_log("[DIAG] directRender: type={$root->type} children=" . count($root->children));
         }
 
-        if ($this->useOrchestrator && $this->layoutOrchestrator !== null) {
-            $this->layoutOrchestrator->layout($root);
-        } else {
-            $this->layoutResolver->resolve($root);
-        }
+        $this->layoutOrchestrator->layout($root);
 
         if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] directRender AFTER');
@@ -858,7 +847,7 @@ class Application
      * 完整渲染流程：
      *   1. 重建 VNode 树（含组件展开）
      *   2. RenderTreeManager::updateFromVNode 转换并同步 bind 值
-     *   3. LayoutResolver::resolve 计算坐标
+     *   3. LayoutOrchestrator::layout 计算坐标
      *   4. VNodeRenderer::render 生成 GDI 调用
      */
     public function render(): void
@@ -909,14 +898,8 @@ class Application
             $this->logScrollContainerStates('[DIAG] render BEFORE');
         }
 
-        // LayoutResolver/LayoutOrchestrator 处理 RenderNode
-        // 并收集 Fragment 树（Orchestrator 路径用 Fragment 渲染）
-        $fragmentTree = null;
-        if ($this->useOrchestrator && $this->layoutOrchestrator !== null) {
-            $fragmentTree = $this->layoutOrchestrator->layout($rootRenderNode);
-        } else {
-            $this->layoutResolver->resolve($rootRenderNode);
-        }
+        // LayoutOrchestrator 处理 RenderNode 并收集 Fragment 树
+        $fragmentTree = $this->layoutOrchestrator->layout($rootRenderNode);
 
         if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] render AFTER');
