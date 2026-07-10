@@ -166,9 +166,19 @@ class LayoutOrchestrator
         }
 
         // 调用 Algorithm::layout() 执行布局
-        $frag = $algo->layout($space, $style, $textContent, $node->children, $childFragments);
-        $this->cache->set($ckey, $frag);
-        return $frag;
+        $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments);
+
+        // 应用 layer 继承：Algorithm 返回的 Fragment 不包含 layer 信息，需要覆盖
+        if ($nodeLayer > $algoFrag->layer) {
+            $algoFrag = new \Px\Rendering\Layout\PhysicalFragment(
+                (int)$algoFrag->x, (int)$algoFrag->y, (int)$algoFrag->w, (int)$algoFrag->h,
+                (int)$algoFrag->visualW, (int)$algoFrag->visualH, (int)$nodeLayer,
+                (int)$algoFrag->contentWidth, (int)$algoFrag->contentHeight,
+                $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode
+            );
+        }
+        $this->cache->set($ckey, $algoFrag);
+        return $algoFrag;
     }
 
     /**
@@ -232,6 +242,15 @@ class LayoutOrchestrator
      */
     private function applyFragmentToNode(PhysicalFragment $frag, RenderNode $node): void
     {
+        // Write geometry back to RenderNode (dynamic props, works in PHP CLI)
+        $node->x = $frag->x;
+        $node->y = $frag->y;
+        $node->w = $frag->w;
+        $node->h = $frag->h;
+        $node->visualW = (int)($frag->visualW ?? 0);
+        $node->visualH = (int)($frag->visualH ?? 0);
+        $node->layer = (int)($frag->layer ?? 0);
+
 
         
                 

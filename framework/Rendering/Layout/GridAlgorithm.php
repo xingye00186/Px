@@ -204,7 +204,7 @@ class GridAlgorithm extends LayoutAlgorithm
         // ── Map grid items to child PhysicalFragments ──
         $mappedFragments = [];
         foreach ($gridItems as $gri) {
-            $mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), (int)($gri->w ?? 0), (int)($gri->h ?? 0), null, null, 0, 0, 0, $gri->style, $gri->originalChildren ?? [], null);
+            $mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), (int)($gri->w ?? 0), (int)($gri->h ?? 0), 0, 0, 0, 0, 0, $gri->style, $gri->originalChildren ?? [], null);
         }
 
         // ── Auto-height from content ──
