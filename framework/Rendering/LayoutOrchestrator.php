@@ -158,55 +158,21 @@ class LayoutOrchestrator
 
         // 正常流：选择 Algorithm 执行布局
         $algo = $this->selectAlgorithm($display, $style);
-        $inputSpace = $space;
+        $textContent = is_string($node->content) ? $node->content : '';
 
-        // 通过旧策略接口获取 LayoutResult，再转为 Fragment
-        // Phase 1 适配器模式：旧 Strategy 实现 Algorithm 接口
-        if ($algo instanceof \Px\Rendering\Layout\BlockLayoutStrategy
-            || $algo instanceof \Px\Rendering\Layout\FlexLayoutStrategy
-            || $algo instanceof \Px\Rendering\Layout\GridLayoutStrategy
-            || $algo instanceof \Px\Rendering\Layout\InlineLayoutStrategy
-            || $algo instanceof \Px\Rendering\Layout\TableLayoutStrategy
-            || $algo instanceof \Px\Rendering\Layout\MultiColumnLayoutStrategy) {
-            // 旧策略路径：通过 LayoutInput 适配
-            $textContent = is_string($node->content) ? $node->content : '';
-
-            // 从 childFragments 还原 LayoutResult 数组
-            $childResults = [];
-            foreach ($childFragments as $cf) {
-                $childResults[] = new LayoutResult(
-                    x: $cf->x, y: $cf->y, w: $cf->w, h: $cf->h,
-                    visualW: $cf->visualW, visualH: $cf->visualH,
-                    layer: $cf->layer,
-                    contentWidth: $cf->contentWidth, contentHeight: $cf->contentHeight,
-                    style: $cf->style,
-                );
-            }
-
-            $input = new \Px\Rendering\Layout\LayoutInput(
-                constraints: $space->toLegacy(),
-                style: $style,
-                textContent: $textContent,
-                childResults: $childResults,
-                childNodes: $node->children,
-                position: $position,
-            );
-            // Phase 4: 查 LayoutCache — 约束空间不变时跳过算法
-            $nodeId = spl_object_id($node);
-            $styleVer = spl_object_id($style ?? new \Px\Rendering\ComputedStyle([]));
-            $ckey = \Px\Rendering\Layout\LayoutCacheKey::fromSpace($space, $nodeId, $styleVer);
-            $cached = $this->cache->find($ckey);
-            if ($cached !== null) {
-                $resultChildren = []; foreach ($cached->children as $i => $ch) { $resultChildren[] = $ch; }
-                return new \Px\Rendering\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $resultChildren, $node);
-            }
-            $result = $algo->layout($input);
-            $this->cache->set($ckey, \Px\Rendering\Layout\PhysicalFragment::buildFromLayoutResult($result, $node));
-            $resultChildren = []; foreach ($result->children as $i => $child) { $childRN = $node->children[$i] ?? null; $resultChildren[] = new \Px\Rendering\Layout\PhysicalFragment($child->x, $child->y, $child->w, $child->h, $child->visualW, $child->visualH, $child->layer, $child->contentWidth, $child->contentHeight, $child->style, [], $childRN); } return new \Px\Rendering\Layout\PhysicalFragment($result->x, $result->y, $result->w, $result->h, $result->visualW, $result->visualH, $result->layer, $result->contentWidth, $result->contentHeight, $result->style, $resultChildren, $node);
+        // Phase 4: 查 LayoutCache — 约束空间不变时跳过算法
+        $nodeId = spl_object_id($node);
+        $styleVer = spl_object_id($style ?? new \Px\Rendering\ComputedStyle([]));
+        $ckey = LayoutCacheKey::fromSpace($space, $nodeId, $styleVer);
+        $cached = $this->cache->find($ckey);
+        if ($cached !== null) {
+            return new \Px\Rendering\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node);
         }
 
-        // Fallback: should not reach here
-        return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $style, array(), $node);
+        // 调用 Algorithm::layout() 执行布局
+        $frag = $algo->layout($space, $style, $textContent, $node->children, $childFragments);
+        $this->cache->set($ckey, $frag);
+        return $frag;
     }
 
     /**

@@ -1,24 +1,23 @@
 <?php
-
 namespace Px\Rendering\Layout;
-
 use native_types;
 use Px\Rendering\ComputedStyle;
-use Px\Rendering\Layout\ConstraintSpace;
-use Px\Rendering\Layout\PhysicalFragment;
-use Px\Rendering\Layout\LayoutInput;
-use Px\Rendering\Layout\LayoutResult;
-use Px\Rendering\Layout\IntrinsicSizes;
+use Px\Rendering\CssLength;
 
 /**
- * BlockAlgorithm — Block 布局算法（Phase 1 适配器）
+ * BlockAlgorithm — Block 布局算法（完全实现）
  *
- * 内部委托到 BlockLayoutStrategy，通过 LayoutInput 桥接。
+ * 取代 BlockLayoutStrategy，直接计算 Block 布局，
+ * 不再依赖旧策略层和旧 DTO。
  */
 class BlockAlgorithm extends LayoutAlgorithm
 {
-    private BlockLayoutStrategy $strategy;
-    public function __construct() { $this->strategy = new BlockLayoutStrategy(); }
+    private const INLINE_TYPES = ['#text','text','span','b','strong','em','i','code','br','a','label','abbr','cite','dfn','kbd','mark','q','samp','small','sub','sup','time','var'];
+
+    private static function isInlineType(string $type): bool
+    {
+        return in_array($type, self::INLINE_TYPES, true);
+    }
 
     public function layout(
         ConstraintSpace $space,
@@ -28,50 +27,229 @@ class BlockAlgorithm extends LayoutAlgorithm
         array $childFragments = [],
         ?PhysicalFragment $inputFragment = null
     ): PhysicalFragment {
-        $childResults = [];
-        foreach ($childFragments as $cf) {
-            $childResults[] = new LayoutResult(
-                (int)$cf->x, (int)$cf->y, (int)$cf->w, (int)$cf->h,
-                (int)$cf->visualW, (int)$cf->visualH, (int)$cf->layer,
-                (int)$cf->contentWidth, (int)$cf->contentHeight, $cf->style
-            );
+        $s = $style ?? new ComputedStyle([]);
+        $children = $childFragments;
+        $c = $space;
+
+        // Intrinsic measurement mode
+        if ($c->isIntrinsicMeasurement) {
+            $fs = $s->fontSize > 0 ? $s->fontSize : 16;
+            $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->bold ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
+            $h = strlen($textContent) > 0 ? ($s->lineHeight > 0 ? $s->lineHeight : (int)($fs * 1.2)) : 0;
+            return new PhysicalFragment((int)max(0, $w), (int)max(0, $h), 0, 0, null, null, 0, 0, 0, $s);
         }
-        $input = new LayoutInput(
-            constraints: $space->toLegacy(),
-            style: $style ?? new ComputedStyle([]),
-            textContent: $textContent,
-            childResults: $childResults,
-            childNodes: $childNodes,
-        );
-        $result = $this->strategy->layout($input);
-        $resultChildren = [];
-        foreach ($result->children as $i => $ch) {
-            $resultChildren[] = new PhysicalFragment(
-                (int)$ch->x, (int)$ch->y, (int)$ch->w, (int)$ch->h,
-                (int)$ch->visualW, (int)$ch->visualH, (int)$ch->layer,
-                (int)$ch->contentWidth, (int)$ch->contentHeight, $ch->style,
-                [], null
-            );
+
+        $left = $s->left?->toPx() ?? 0;
+        $top = $s->top?->toPx() ?? 0;
+        $marginLeft = $s->margin?->left->toPx() ?? 0;
+        $marginTop = $s->margin?->top->toPx() ?? 0;
+        $parentW = $c->contentWidth;
+        $parentH = $c->contentHeight;
+
+        $w = $this->computeBlockWidth($parentW, $s, $textContent);
+        $h = $this->computeBlockHeight($parentH, $s, $textContent);
+
+        $positionVal = $s->position?->value ?? 'static';
+        $isStaticOrRelative = ($positionVal === 'static' || $positionVal === 'relative');
+        $x = $isStaticOrRelative ? ($c->bfcOffsetX + $left + $marginLeft) : $c->bfcOffsetX;
+        $y = $isStaticOrRelative ? ($c->bfcOffsetY + $top + $marginTop) : $c->bfcOffsetY;
+
+        $displayVal = $s->display?->value ?? 'block';
+        $stackedChildren = [];
+        if (count($children) > 0 && ($displayVal === 'block' || $displayVal === 'flow-root')) {
+            // Check percent-height children
+            $hasPercentChild = false;
+            foreach ($childNodes as $ch) {
+                $chH = $ch->computedStyle?->height;
+                if ($chH !== null && $chH->isPercent() && $h <= 0) {
+                    $hasPercentChild = true; break;
+                }
+            }
+
+            if ($hasPercentChild) {
+                $pass1 = $this->stackBlockChildren($x, $y, $w, $s, $children, $textContent, $parentW);
+                $computedH = $y;
+                foreach ($pass1 as $cr) { $bottom = $cr->y + $cr->h; if ($bottom > $computedH) $computedH = $bottom; }
+                $computedH = max(0, $computedH - $y);
+
+                $reResolved = [];
+                foreach ($childNodes as $i => $ch) {
+                    $chH = $ch->computedStyle?->height;
+                    if ($chH !== null && $chH->isPercent() && $computedH > 0) {
+                        $newC = new ConstraintSpace($c->contentWidth, $computedH, $c->bfcOffsetX, $c->bfcOffsetY, percentageWidth: $c->percentageWidth, percentageHeight: $computedH);
+                        $reResolved[] = $this->reResolveChild($newC, $ch, $children[$i] ?? null);
+                    } else {
+                        $reResolved[] = $i < count($children) ? $children[$i] : null;
+                    }
+                }
+                $children = [];
+                foreach ($reResolved as $cr) { if ($cr !== null) $children[] = $cr; }
+            }
+
+            $stackedChildren = $this->stackBlockChildren($x, $y, $w, $s, $children, $textContent, $parentW);
+        } else {
+            // Handle inline + block children
+            $inlineBuffer = [];
+            foreach ($children as $cr) {
+                $cDisplay = $cr->style?->display?->value ?? 'block';
+                if ($cDisplay === 'inline' || $cDisplay === 'inline-block') {
+                    $inlineBuffer[] = $cr;
+                } else {
+                    if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $y, $stackedChildren, $parentW); }
+                    $stackedChildren[] = new PhysicalFragment((int)$cr->x, (int)$cr->y, (int)$cr->w, (int)$cr->h, null, null, (int)($cr->layer ?? 0), (int)($cr->contentWidth ?? 0), (int)($cr->contentHeight ?? 0), $cr->style, $cr->children, null);
+                }
+            }
+            if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $y, $stackedChildren, $parentW); }
         }
-        return new PhysicalFragment(
-            (int)$result->x, (int)$result->y, (int)$result->w, (int)$result->h,
-            (int)$result->visualW, (int)$result->visualH, (int)$result->layer,
-            (int)$result->contentWidth, (int)$result->contentHeight, $result->style,
-            $resultChildren, null
-        );
+
+        if ($h <= 0 && count($stackedChildren) > 0) {
+            $maxBottom = $y;
+            foreach ($stackedChildren as $cr) { $bottom = $cr->y + $cr->h; if ($bottom > $maxBottom) $maxBottom = $bottom; }
+            $h = max(0, $maxBottom - $y);
+        }
+
+        return new PhysicalFragment((int)$x, (int)$y, (int)$w, (int)$h, $s->visualWidth($w), $s->visualHeight($h), 0, (int)$w, (int)$h, $s, $stackedChildren, null);
     }
 
     public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes
     {
-        $input = new LayoutInput(
-            constraints: $space->toLegacy(),
-            style: $style ?? new ComputedStyle([]),
-            textContent: $textContent,
-        );
-        $result = $this->strategy->layout($input);
-        return new IntrinsicSizes(
-            (int)$result->minContentWidth, (int)$result->maxContentWidth,
-            (int)$result->minContentHeight, (int)$result->maxContentHeight
-        );
+        $s = $style ?? new ComputedStyle([]);
+        $fs = $s->fontSize > 0 ? $s->fontSize : 16;
+        $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->bold ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
+        $h = strlen($textContent) > 0 ? ($s->lineHeight > 0 ? $s->lineHeight : (int)($fs * 1.2)) : 0;
+        return new IntrinsicSizes(max(0, $w), max(0, $w), max(0, $h), max(0, $h));
+    }
+
+    private function computeBlockWidth(int $parentW, ComputedStyle $s, string $textContent): int
+    {
+        $width = $s->width?->toPx() ?? 0;
+        if ($s->width !== null && $s->width->isPercent()) { $width = $s->width->resolveInContext($parentW); }
+        if ($s->width !== null && $s->width->isIntrinsic() && strlen($textContent) > 0) {
+            $fs = $s->fontSize; $bd = $s->bold;
+            $width = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, $bd) : (int)(strlen($textContent) * $fs * 0.6));
+        }
+        if ($width <= 0) {
+            $ml = $s->margin?->left->toPx() ?? 0; $mr = $s->margin?->right->toPx() ?? 0;
+            $autoPadL = $s->padding?->left->toPx() ?? 0; $autoPadR = $s->padding?->right->toPx() ?? 0;
+            $autoBw = (int)($s->borderLeftWidth ?? 0) + (int)($s->borderRightWidth ?? 0);
+            $sizing = $s->boxSizing?->value ?? 'content-box';
+            $width = ($sizing === 'border-box') ? max(0, $parentW - $ml - $mr) : max(0, $parentW - $ml - $mr - $autoPadL - $autoPadR - $autoBw);
+        }
+        $minW = $s->minWidth?->toPx() ?? 0; $maxW = $s->maxWidth?->toPx() ?? 0;
+        if ($minW > 0 && $width < $minW) $width = $minW;
+        if ($maxW > 0 && $width > $maxW) $width = $maxW;
+        return (int)max(0, $width);
+    }
+
+    private function computeBlockHeight(int $parentH, ComputedStyle $s, string $textContent): int
+    {
+        $height = $s->height?->toPx() ?? 0;
+        if ($s->height !== null && $s->height->isPercent()) { $height = $s->height->resolveInContext($parentH); }
+        if ($s->height !== null && $s->height->isIntrinsic() && strlen($textContent) > 0) { $height = $s->lineHeight > 0 ? $s->lineHeight : (int)($s->fontSize * 1.2); }
+        if ($height <= 0 && strlen($textContent) > 0) { $height = $s->lineHeight > 0 ? $s->lineHeight : (int)($s->fontSize * 1.2); }
+        $ar = $s->aspectRatio ?? 0;
+        if ($ar > 0 && $height <= 0) { $height = (int)(($s->width?->toPx() ?? 0) / $ar); }
+        $minH = $s->minHeight?->toPx() ?? 0; $maxH = $s->maxHeight?->toPx() ?? 0;
+        if ($minH > 0 && $height < $minH) $height = $minH;
+        if ($maxH > 0 && $height > $maxH) $height = $maxH;
+        return (int)max(0, $height);
+    }
+
+    private function stackBlockChildren(int $parentX, int $parentY, int $containerW, ComputedStyle $s, array $childResults, string $textContent, int $parentW): array
+    {
+        $padTop = $s->padding?->top->toPx() ?? 0;
+        $padLeft = $s->padding?->left->toPx() ?? 0;
+        $borderTop = (int)($s->borderTopWidth ?? 0);
+        $stackY = $parentY + $borderTop + $padTop;
+        $result = [];
+        $prevMarginBottom = 0; $prevCollapsible = false;
+        $inlineBuffer = [];
+
+        foreach ($childResults as $cr) {
+            $childStyle = $cr->style;
+            $childDisplay = $childStyle?->display?->value ?? 'block';
+            $childPosition = $childStyle?->position?->value ?? 'static';
+            if ($childPosition === 'absolute' || $childPosition === 'fixed' || $childDisplay === 'none') { $result[] = $cr; continue; }
+            $isInline = ($childDisplay === 'inline' || $childDisplay === 'inline-block');
+            if ($isInline) { $inlineBuffer[] = $cr; continue; }
+            if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW); }
+
+            $mTop = $childStyle?->margin?->top->toPx() ?? 0;
+            $mBottom = $childStyle?->margin?->bottom->toPx() ?? 0;
+            $mLeft = $childStyle?->margin?->left->toPx() ?? 0;
+            $mRight = $childStyle?->margin?->right->toPx() ?? 0;
+            $chW = (int)($cr->w ?? 0);
+            if ($chW <= 0) {
+                $autoPadL = $childStyle?->padding?->left->toPx() ?? 0;
+                $autoPadR = $childStyle?->padding?->right->toPx() ?? 0;
+                $autoBw = (int)($childStyle?->borderLeftWidth ?? 0) + (int)($childStyle?->borderRightWidth ?? 0);
+                $cs = $childStyle?->boxSizing?->value ?? 'content-box';
+                $chW = ($cs === 'border-box') ? max(0, $containerW - $mLeft - $mRight) : max(0, $containerW - $mLeft - $mRight - $autoPadL - $autoPadR - $autoBw);
+            }
+            $chH = (int)($cr->h ?? 0);
+            if ($childStyle !== null) {
+                $typeFromStyle = $childStyle->getRaw('_type');
+                if (is_string($typeFromStyle) && self::isInlineType($typeFromStyle) && strlen($childStyle->getRaw('_content') ?? '') > 0) {
+                    $content = (string)($childStyle->getRaw('_content') ?? '');
+                    $fs = $childStyle->fontSize; $bd = $childStyle->bold;
+                    $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($content, $fs, $bd) : 0);
+                    if ($measured > 0) $chW = $measured;
+                    if ($chH <= 0) $chH = $childStyle->lineHeight > 0 ? $childStyle->lineHeight : (int)($fs * 1.2);
+                }
+            }
+            $overflowY = $childStyle?->overflowY?->value ?? $childStyle?->overflow?->value ?? 'visible';
+            $isCollapsible = ($childDisplay === 'block') && ($overflowY === 'visible');
+            $childY = ($isCollapsible && $prevCollapsible) ? ($stackY - $prevMarginBottom + max($prevMarginBottom > 0 ? $prevMarginBottom : 0, $mTop > 0 ? $mTop : 0) + min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0)) : ($stackY + $mTop);
+            $relTop = $childStyle?->top?->toPx() ?? 0;
+            $relLeft = $childStyle?->left?->toPx() ?? 0;
+            if ($childPosition === 'relative' || $childPosition === 'static') { $childY += $relTop; }
+            $result[] = new PhysicalFragment((int)($parentX + $padLeft + ($childPosition === 'relative' || $childPosition === 'static' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, null, null, (int)($cr->layer ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, null);
+            $stackY = ($childY - $relTop) + $chH + $mBottom;
+            $prevMarginBottom = $mBottom;
+            $prevCollapsible = $isCollapsible;
+        }
+        if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW); }
+        return $result;
+    }
+
+    private function layoutInlineBuffer(array $buffer, int $parentX, int $padLeft, int $containerW, int $startY): array
+    {
+        $availableW = $containerW; $result = []; $cursorX = $padLeft; $cursorY = 0; $lineMaxH = 0;
+        foreach ($buffer as $cr) {
+            $cStyle = $cr->style;
+            $mLeft = $cStyle?->margin?->left->toPx() ?? 0;
+            $mRight = $cStyle?->margin?->right->toPx() ?? 0;
+            $mTop = $cStyle?->margin?->top->toPx() ?? 0;
+            $mBottom = $cStyle?->margin?->bottom->toPx() ?? 0;
+            $itemTotalW = ($cr->w ?? 0) + $mLeft + $mRight;
+            $itemH = ($cr->h ?? 0) + $mTop + $mBottom;
+            if ($cursorX + $itemTotalW > $availableW && $cursorX > $padLeft) { $cursorY += $lineMaxH; $cursorX = $padLeft; $lineMaxH = 0; }
+            $result[] = new PhysicalFragment((int)($parentX + $cursorX + $mLeft), (int)($startY + $cursorY + $mTop), (int)($cr->w ?? 0), (int)($cr->h ?? 0), null, null, (int)($cr->layer ?? 0), (int)($cr->contentWidth ?? 0), (int)($cr->contentHeight ?? 0), $cStyle, $cr->children, null);
+            $cursorX += $itemTotalW;
+            if ($itemH > $lineMaxH) $lineMaxH = $itemH;
+        }
+        return ['items' => $result, 'nextY' => $startY + $cursorY + $lineMaxH];
+    }
+
+    private function flushInlineBuffer(array &$inlineBuffer, int $parentX, int $padLeft, int $containerW, int &$stackY, array &$result, int $parentW): void
+    {
+        $availW = $containerW; if ($availW <= 0) $availW = $parentW; if ($availW <= 0) $availW = 10000;
+        $ir = $this->layoutInlineBuffer($inlineBuffer, $parentX, $padLeft, $availW, $stackY);
+        foreach ($ir['items'] as $item) $result[] = $item;
+        $stackY = $ir['nextY'];
+        $inlineBuffer = [];
+    }
+
+    private function reResolveChild(ConstraintSpace $space, \Px\Rendering\RenderNode $child, ?PhysicalFragment $oldFrag): ?PhysicalFragment
+    {
+        if ($oldFrag === null) return null;
+        $childStyle = $child->computedStyle;
+        if ($childStyle === null) return $oldFrag;
+        $h = $childStyle->height?->toPx() ?? 0;
+        if ($childStyle->height !== null && $childStyle->height->isPercent()) { $h = $childStyle->height->resolveInContext($space->contentHeight); }
+        $minH = $childStyle->minHeight?->toPx() ?? 0; $maxH = $childStyle->maxHeight?->toPx() ?? 0;
+        if ($minH > 0 && $h < $minH) $h = $minH;
+        if ($maxH > 0 && $h > $maxH) $h = $maxH;
+        return new PhysicalFragment((int)$oldFrag->x, (int)$oldFrag->y, (int)$oldFrag->w, (int)max(0, $h), (int)$oldFrag->visualW, (int)$oldFrag->visualH, (int)$oldFrag->layer, (int)$oldFrag->contentWidth, (int)max(0, $h), $childStyle, $oldFrag->children, null);
     }
 }
