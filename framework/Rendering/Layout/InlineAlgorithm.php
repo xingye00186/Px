@@ -36,10 +36,10 @@ class InlineAlgorithm extends LayoutAlgorithm
         $y = ($space->bfcOffsetY ?? 0) + $top;
 
         $w = $s->width?->toPx() ?? 0;
-        if ($w <= 0) $w = $space->contentWidth;
+        if ($w <= 0) $w = (int)($space->contentWidth ?? 0);
         $h = $s->height?->toPx() ?? 0;
-        if ($h <= 0 && strlen($textContent) > 0) {
-            $h = $s->lineHeight > 0 ? $s->lineHeight : (int)($s->fontSize * 1.2);
+        if (strlen($textContent) > 0 && (int)($h ?? 0) <= 0) {
+            $h = ((int)($s->lineHeight ?? 0) > 0) ? (int)$s->lineHeight : (int)($s->fontSize * 1.2);
         }
 
         // IFC: arrange children in a single line
