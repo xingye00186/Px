@@ -80,16 +80,16 @@ pipeline 在 `browser_ref` 步骤会自动校验规范：
 FAIL
 ├─ [CONTAINER_OVERFLOW/ALIGNMENT] → 容器溢出/对齐偏差?
 │   └─ 查看 Phase G 输出，定位溢出的父容器和子项
-│   ├─ flex-wrap 宽度偏差? → FlexLayoutStrategy flex-grow/gap
-│   ├─ 容器 auto-width 错误? → BlockLayoutStrategy
-│   └─ justify-content 未生效? → FlexLayoutStrategy 对齐阶段
+│   ├─ flex-wrap 宽度偏差? → FlexAlgorithm flex-grow/gap
+│   ├─ 容器 auto-width 错误? → BlockAlgorithm
+│   └─ justify-content 未生效? → FlexAlgorithm 对齐阶段
 ├─ 系统性偏移（同方向同量级）?
 │   └─ 视口/容器宽度不一致
 ├─ 位置/尺寸偏差?
-│   ├─ auto-height → BlockLayoutStrategy
-│   ├─ Grid/Flex 子项宽度 → GridLayoutStrategy / FlexLayoutStrategy
-│   ├─ 文本高度 → PercentResolver line-height
-│   └─ 绝对定位 → AbsolutePositioning
+│   ├─ auto-height → BlockAlgorithm
+│   ├─ Grid/Flex 子项宽度 → GridAlgorithm / FlexAlgorithm
+│   ├─ 文本高度 → BlockAlgorithm line-height
+│   └─ 绝对定位 → OOFLayoutAlgorithm
 ├─ 样式值不匹配?
 │   ├─ 字体/颜色 → CssMappings / Skia/GDI
 │   └─ 边框/间距 → 盒模型
@@ -163,7 +163,7 @@ php apps/css-test/archive_case.php --force case-xxx  # 覆盖归档
 
 ```bash
 # 框架修复
-fix(framework): FlexLayoutStrategy flex-grow wrap...
+fix(framework): FlexAlgorithm flex-grow wrap...
 # 测试工具/对比逻辑/罗盘
 feat(css-test): SummaryReporter 自动汇总报告...
 fix(css-test): Phase F 容器溢出检测...

@@ -26,8 +26,8 @@
 
 | # | 原则 | 核心要求 | 对应教训 |
 |---|------|---------|---------|
-| 1 | **零侵入契约** | 策略接口 `layout(LayoutInput): LayoutResult` 是不可变纯函数。坐标修复只能在不碰策略层完成 | `propagateCoords` 以 `iteration:0` 重调策略，覆盖 Grid 多轮收敛 |
-| 2 | **计算与副作用分离** | Phase A（纯计算→LayoutResult）→ Phase B（applicator.apply 回写）→ Phase C（后处理），严格单向 | `propagateCoords` 在 Phase B 后回到 Phase A——架构级违规 |
+| 1 | **零侵入契约** | 算法接口 `layout(ConstraintSpace): PhysicalFragment` 是不可变纯函数。坐标修复只能在不碰策略层完成 | `propagateCoords` 以 `iteration:0` 重调策略，覆盖 Grid 多轮收敛 |
+| 2 | **计算与副作用分离** | Phase A（纯计算→PhysicalFragment）→ Phase B（applyFragmentToNode 回写）→ Phase C（后处理），严格单向 | `propagateCoords` 在 Phase B 后回到 Phase A——架构级违规 |
 | 3 | **标准优先于测试** | W3C CSS 规范 > 浏览器实际行为 > 实现逻辑 > 测试断言。每次修正前先查规范原文 | PositionLayoutTest `right:0` 预期值（x=528）既不符合 CSS 2.2 §10.1 也不符合实际实现 |
 | 4 | **归谬验证** | N 行新代码应修复 ≥ N/5 个测试失败。推进很少测试却引入大量代码 → 方向错了 | `propagateCoords` 109 行只推进 2-3 个测试；`applyTo offset` 2 行推进 11 个测试 |
 | 5 | **迭代不跨 Phase** | `needsAnotherPass` 必须在 Phase A 内闭环，由 `resolveFragment` 的 `$iteration` 控制。跨 Phase 共享状态必须通过 LayoutResult 元数据字段 | Grid auto 轨道在 Phase A 收敛后，被 Phase 2 的 `iteration:0` 调用覆盖 |
@@ -135,12 +135,12 @@ tests/
 
 ```
 布局引擎（差异定位→修复入口）
-  framework/Rendering/LayoutResolver.php             布局引擎调度入口
-  framework/Rendering/Layout/BlockLayoutStrategy.php  Block 布局 + auto-height
-  framework/Rendering/Layout/FlexLayoutStrategy.php   Flex 布局
-  framework/Rendering/Layout/GridLayoutStrategy.php   Grid 布局
-  framework/Rendering/Layout/InlineLayoutStrategy.php Inline 布局
-  framework/Rendering/Layout/AbsolutePositioning.php  绝对/固定定位
+  framework/Rendering/LayoutOrchestrator.php        布局引擎编排器（替代 LayoutResolver）
+  framework/Rendering/Layout/BlockAlgorithm.php           Block 布局算法
+  framework/Rendering/Layout/FlexAlgorithm.php            Flex 布局算法
+  framework/Rendering/Layout/GridAlgorithm.php            Grid 布局算法
+  framework/Rendering/Layout/InlineAlgorithm.php          Inline 布局算法
+  framework/Rendering/Layout/OOFLayoutAlgorithm.php      绝对/固定定位独立通行证
   framework/Rendering/CssMappings.php                 CSS → 内部属性映射
   framework/Rendering/CssValueParser.php              CSS 值解析
   framework/Core/Application.php                      serializeRenderNode 白名单
@@ -245,13 +245,13 @@ php apps/css-test/test_pipeline.php --screenshot    # 启用截图对比
 | 差异类型 | 典型原因 | 修复位置 |
 |----------|---------|---------|
 | **假阳性** | 浏览器 ref wrapper 引入非标准基线 | 在 .html 中添加缺失的 CSS 基线声明 |
-| **位置偏差 (Δx/Δy > 1px)** | line-height 缺失/margin 折叠/padding 未计算 | `BlockLayoutStrategy` / `FlexLayoutStrategy` / `AbsolutePositioning` |
-| **容器 auto-height 偏差** | auto-height 未减 padding ，或未排除 absolute/fixed 子节点 | `BlockLayoutStrategy.layout()` |
-| **Grid/Flex 子元素 w=0** | GridLayoutStrategy 未设 style['width'] / BlockLayout 重解释 | `GridLayoutStrategy` / `BlockLayoutStrategy` |
+| **位置偏差 (Δx/Δy > 1px)** | line-height 缺失/margin 折叠/padding 未计算 | `BlockAlgorithm` / `FlexAlgorithm` / `OOFLayoutAlgorithm` |
+| **容器 auto-height 偏差** | auto-height 未减 padding ，或未排除 absolute/fixed 子节点 | `BlockAlgorithm.layout()` |
+| **Grid/Flex 子元素 w=0** | GridLayoutStrategy 未设 style['width'] / BlockLayout 重解释 | `GridAlgorithm` / `BlockAlgorithm` |
 | **颜色不匹配** | GDI 颜色格式转换有误 | `CssMappings` |
 | **属性引擎缺失** | serializeRenderNode 白名单未添加 / CssMappings 未映射 | `Application.php` / `CssMappings` |
 | **尺寸偏差 (w/h)** | 盒模型假设不一致 / 百分比解析 | `.html` CSS 基线 / 盒模型检查 |
-| **STABILITY 问题** | 多帧间坐标或尺寸不稳定（auto-height 正反馈） | `BlockLayoutStrategy` auto-height 排除 absolute/fixed |
+| **STABILITY 问题** | 多帧间坐标或尺寸不稳定（auto-height 正反馈） | `BlockAlgorithm` auto-height 排除 absolute/fixed |
 | **截图差异 > 5%** | 字体渲染 / 抗锯齿 / 颜色差异 / 布局偏移 | 联合 JSON 对比+浏览器元素对比定位 |
 
 #### 3.2 根因定位决策树
@@ -261,10 +261,10 @@ php apps/css-test/test_pipeline.php --screenshot    # 启用截图对比
 ├─ 所有元素系统性偏移（同方向同量级）?
 │   └─ 视口不一致 → 检查 .html CSS 基线中的 --window-size
 ├─ 元素位置/尺寸偏差但样式值正确?
-│   ├─ 容器 auto-height 偏差 → BlockLayoutStrategy
-│   ├─ Grid/Flex 子元素宽度不对 → GridLayoutStrategy / FlexLayoutStrategy
-│   ├─ 文本高度偏差 → BlockLayoutStrategy line-height
-│   └─ 绝对定位偏差 → AbsolutePositioning
+│   ├─ 容器 auto-height 偏差 → BlockAlgorithm
+│   ├─ Grid/Flex 子元素宽度不对 → GridAlgorithm / FlexAlgorithm
+│   ├─ 文本高度偏差 → BlockAlgorithm line-height
+│   └─ 绝对定位偏差 → OOFLayoutAlgorithm
 ├─ 样式值不匹配?
 │   ├─ 字体/颜色差异 → CssMappings / Skia/GDI 渲染
 │   └─ 边框/间距差异 → 盒模型检查
@@ -273,7 +273,7 @@ php apps/css-test/test_pipeline.php --screenshot    # 启用截图对比
 ├─ 引擎无此属性（浏览器有）?
 │   └─ RenderNodeSerializer 白名单缺失 / CssMappings 未映射
 └─ STABILITY 标记?
-    └─ auto-height + absolute 子节点正反馈 → BlockLayoutStrategy
+    └─ auto-height + absolute 子节点正反馈 → BlockAlgorithm
 ```
 
 ### Phase 4：修复框架/应用缺陷
@@ -381,7 +381,7 @@ comparePixels() 执行：
 |------|------|------|
 | `$var ?? expr` | AOT 不支持 `??` | `$var !== null ? $var : expr` |
 | `$arr['key'] ?? default` | 部分 AOT 版本不支持 | `isset($arr['key']) ? $arr['key'] : default` |
-| 动态属性访问 | AOT 编译禁止 | 改为固定属性名 |
+| 动态属性创建 | AOT/PHP 8.2 禁止 | 状态外置到数组/SplObjectStorage |
 | `$a?->b?->c->method()` | 超过 2 层空安全链 AOT 行为不一致 | 拆解为 `$tmp = $a?->b; $tmp?->c->method()` |
 | `$style?->width?->isPercent()` | CssLength/Bool 返回值在 AOT 空安全链中变为 null | 使用标量 fallback：`($cs->width->isPercent() ? … : …)` 外加 null 保护 |
 | typed property 声明但未初始化 | `public readonly int $lineHeight;` 赋值分支未覆盖全路径 | 必须始终初始化：`$this->lineHeight = $d['lineHeight'] ?? 0` |
@@ -612,13 +612,13 @@ pipeline `BrowserRefStep` 自动校验：
 
 | 症状 | 诊断 | 修复文件 | 关键代码 |
 |------|------|---------|---------|
-| Flex 子元素宽度=0，parent=null 时百分比失效 | 根容器无 parent 宽度 | `GridLayoutStrategy` / `FlexLayoutStrategy` | 无 parent 时退回 content-box 宽度 |
-| 绝对定位 `bottom:0;right:0` 锚点位置错误 | `AbsolutePositioning` 未正确处理 bottom/right | `AbsolutePositioning.php` | 计算 y = parentH - nodeH |
-| auto-height 容器 Frame 2+ 高度漂移 | absolute 子节点被计入 auto-height 导致正反馈 | `BlockLayoutStrategy.layout()` | absolute 子节点不计入 auto-height |
+| Flex 子元素宽度=0，parent=null 时百分比失效 | 根容器无 parent 宽度 | `GridAlgorithm` / `FlexAlgorithm` | 无 parent 时退回 content-box 宽度 |
+| 绝对定位 `bottom:0;right:0` 锚点位置错误 | `OOFLayoutAlgorithm` 未正确处理 bottom/right | `OOFLayoutAlgorithm.php` | 计算 y = parentH - nodeH |
+| auto-height 容器 Frame 2+ 高度漂移 | absolute 子节点被计入 auto-height 导致正反馈 | `BlockAlgorithm.layout()` | absolute 子节点不计入 auto-height |
 | 所有元素宽度系统性偏窄 90px | `.html` 有 wrapper padding 层而 `.vue` 无 | 修改 `.vue` 对齐 `.html` | 统一根元素结构 |
 | Skia 渲染的细矩形/分隔线膨胀 1-2px | Skia 抗锯齿导致 fillRect 边界外溢 | `skia_render.cc` | 禁用细矩形的抗锯齿或使用 integral 坐标 |
 | CSS 属性有值但 compareElement 报告缺失 | `RenderNodeSerializer` 白名单未包含该属性 | `Application.php` | 在 `serializeRenderNode` 的 `styleKeys` 中新增 |
-| margin:auto 居中偏移 | 盒宽度计算未包含 padding+border | `BlockLayoutStrategy.php` | `availableSpace = parentW - nodeW - padding - border` |
+| margin:auto 居中偏移 | 盒宽度计算未包含 padding+border | `BlockAlgorithm.php` | `availableSpace = parentW - nodeW - padding - border` |
 | 引擎渲染黑色背景但 JSON 报告无背景色 | 渲染层默认填充黑色，布局层未导出 | `VNodeRenderer.php` | 无 `background-color` 时显式填充 `#fff` |
 
 ### 12.4 修复后自检清单
@@ -658,7 +658,7 @@ php apps/css-test/check_regression.php
 
 | Phase | 职责 | 产出 | 不可做 |
 |-------|------|------|-------|
-| A | 纯计算 bottom-up | `LayoutResult`（不可变） | 写 RenderNode、调策略外部方法 |
+| A | 纯计算 bottom-up | `PhysicalFragment`（不可变） | 写 RenderNode、调外部方法 |
 | B | `applicator.apply` 回写 | RenderNode.x/y/w/h | 修改 LayoutResult |
 | C | 后处理（scroll clamp/sticky） | RenderNode 辅助字段 | 调 strategy->layout() |
 

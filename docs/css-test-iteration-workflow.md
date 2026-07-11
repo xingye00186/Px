@@ -231,10 +231,10 @@ php apps/css-test/check_regression.php
 │   └─ 视口不一致 → 检查 .html CSS 基线中的 --window-size
 │
 ├─ 元素位置/尺寸偏差但样式值正确?
-│   ├─ 容器 auto-height 偏差 → BlockLayoutStrategy
-│   ├─ Grid/Flex 子元素宽度不对 → GridLayoutStrategy / FlexLayoutStrategy
-│   ├─ 文本高度偏差 → BlockLayoutStrategy line-height
-│   └─ 绝对定位偏差 → AbsolutePositioning
+│   ├─ 容器 auto-height 偏差 → BlockAlgorithm
+│   ├─ Grid/Flex 子元素宽度不对 → GridAlgorithm / FlexAlgorithm
+│   ├─ 文本高度偏差 → BlockAlgorithm line-height
+│   └─ 绝对定位偏差 → OOFLayoutAlgorithm
 │
 ├─ 样式值不匹配?
 │   ├─ 字体/颜色差异 → CssMappings / Skia/GDI 渲染
@@ -247,7 +247,7 @@ php apps/css-test/check_regression.php
 │   └─ RenderNodeSerializer 白名单缺失 / CssMappings 未映射
 │
 ├─ STABILITY 标记?
-│   └─ auto-height + absolute 子节点正反馈 → BlockLayoutStrategy
+│   └─ auto-height + absolute 子节点正反馈 → BlockAlgorithm
 │
 └─ wrapper 引入基线差异（.html 缺少 CSS 基线声明）?
     └─ 在 .html 中添加 html,body 基线声明
