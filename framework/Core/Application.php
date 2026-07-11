@@ -818,33 +818,30 @@ class Application
      */
     private function fragmentToArray(PhysicalFragment $frag): array
     {
-        $style = $frag->style !== null ? $this->fragmentStyleToArray($frag->style) : [];
+        // Use toArray() from PhysicalFragment for geometry (cross-class readonly
+        // access fails in AOT with use native_types; same-class access is correct)
+        $arr = $frag->toArray();
+
+        // Override children with full fragmentToArray (adds sourceNode fields)
         $children = [];
         foreach ($frag->children as $child) {
             $children[] = $this->fragmentToArray($child);
         }
-        $type = $frag->sourceNode !== null ? $frag->sourceNode->type : 'div';
-        $content = $frag->sourceNode !== null ? $frag->sourceNode->content : null;
-        $dataset = $frag->sourceNode !== null ? ($frag->sourceNode->dataset ?? []) : [];
-        $key = $frag->sourceNode !== null ? $frag->sourceNode->key : null;
-        $groupId = $frag->sourceNode !== null ? $frag->sourceNode->groupId : null;
+        $arr['children'] = $children;
 
-        return [
-            'type'       => $type,
-            'x'          => (int)$frag->x,
-            'y'          => (int)$frag->y,
-            'w'          => (int)$frag->w,
-            'h'          => (int)$frag->h,
-            'visualW'    => (int)($frag->visualW ?? 0),
-            'visualH'    => (int)($frag->visualH ?? 0),
-            'layer'      => (int)($frag->layer ?? 0),
-            'style'      => $style,
-            'content'    => $content,
-            'key'        => $key,
-            'groupId'    => $groupId,
-            'dataset'    => $dataset,
-            'children'   => $children,
-        ];
+        // Add sourceNode-derived fields not covered by toArray()
+        $arr['type'] = $frag->sourceNode !== null ? $frag->sourceNode->type : 'div';
+        $arr['content'] = $frag->sourceNode !== null ? $frag->sourceNode->content : null;
+        $arr['key'] = $frag->sourceNode !== null ? $frag->sourceNode->key : null;
+        $arr['groupId'] = $frag->sourceNode !== null ? $frag->sourceNode->groupId : null;
+        $arr['dataset'] = $frag->sourceNode !== null ? ($frag->sourceNode->dataset ?? []) : [];
+
+        // Style serialization
+        if ($frag->style !== null) {
+            $arr['style'] = $this->fragmentStyleToArray($frag->style);
+        }
+
+        return $arr;
     }
 
     /**

@@ -76,7 +76,7 @@ class BlockAlgorithm extends LayoutAlgorithm
                 foreach ($childNodes as $i => $ch) {
                     $chH = $ch->computedStyle?->height;
                     if ($chH !== null && $chH->isPercent() && $computedH > 0) {
-                        $newC = new ConstraintSpace($c->contentWidth, $computedH, $c->bfcOffsetX, $c->bfcOffsetY, percentageWidth: $c->percentageWidth, percentageHeight: $computedH);
+                        $newC = new ConstraintSpace($c->contentWidth, $computedH, $c->bfcOffsetX, $c->bfcOffsetY, 0, 0, $c->percentageWidth, $computedH);
                         $reResolved[] = $this->reResolveChild($newC, $ch, $children[$i] ?? null);
                     } else {
                         $reResolved[] = $i < count($children) ? $children[$i] : null;

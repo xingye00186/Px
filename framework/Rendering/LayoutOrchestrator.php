@@ -71,15 +71,10 @@ class LayoutOrchestrator
         $this->lastRootFragment = null;
 
         // 构建根约束空间
-        $rootStyle = $root->computedStyle;
-        $rootW = (int)(($root->w ?? 0) ?: ($rootStyle?->width?->toPx() ?: 0));
-        $rootH = (int)(($root->h ?? 0) ?: ($rootStyle?->height?->toPx() ?: 0));
-        $space = new ConstraintSpace(
-            containerWidth:  $rootW,
-            containerHeight: $rootH,
-            contentWidth:    $rootW,
-            contentHeight:   $rootH,
-        );
+        // 根容器尺寸来自视口（WINDOW_WIDTH/WINDOW_HEIGHT），而非 RenderNode 属性
+        $rootW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1600;
+        $rootH = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 800;
+        $space = new ConstraintSpace($rootW, $rootH, 0, 0, $rootW, $rootH);
 
         // Step 1: mainLayout — 正常流布局
         $rootFragment = $this->mainLayout($root, $space);
