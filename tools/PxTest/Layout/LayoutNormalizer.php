@@ -233,7 +233,7 @@ class LayoutNormalizer
      * 递归展平树并规范化每个节点。
      * 同时传播继承属性（text-align 等 CSS 继承属性）。
      */
-    private function flatten(array $node, int $depth, array $parentInherited = [], ?string $parentDisplay = null): array
+    private function flatten(array $node, int $depth, array $parentInherited = [], ?string $parentDisplay = null, int $parentOffsetX = 0, int $parentOffsetY = 0): array
     {
         $result = [];
 
@@ -245,8 +245,16 @@ class LayoutNormalizer
             return $result; // 跳过 #text 节点
         }
 
+        // 累加父偏移：引擎 Fragment 坐标是相对父节点的，浏览器 dump 是绝对坐标。
+        // 展平前将当前节点的偏移加到子节点上，使 flatten 输出与浏览器一致的绝对坐标。
+        $currentOffsetX = $parentOffsetX + (int)($node['x'] ?? 0);
+        $currentOffsetY = $parentOffsetY + (int)($node['y'] ?? 0);
+
         $element = $this->normalizeNode($node, $depth, $parentInherited, $parentDisplay);
         if ($element !== null) {
+            // 使用累加偏移覆盖 x/y（需在加入 result 之前赋值）
+            $element['x'] = $currentOffsetX;
+            $element['y'] = $currentOffsetY;
             $result[] = $element;
         }
 
@@ -291,7 +299,7 @@ class LayoutNormalizer
 
         foreach ($node['children'] ?? [] as $child) {
             if (is_array($child)) {
-                $result = array_merge($result, $this->flatten($child, $depth + 1, $childInherited, $childDisplay));
+                $result = array_merge($result, $this->flatten($child, $depth + 1, $childInherited, $childDisplay, $currentOffsetX, $currentOffsetY));
             }
         }
 
