@@ -16,7 +16,7 @@ require_once __DIR__ . '/../../tools/PxTest/bootstrap.php';
 use PxTest\Mock\MockPlatform;
 use PxTest\Mock\MockComponent;
 use PxTest\Builder\VNodeBuilder;
-use PxTest\Layout\RenderNodeSerializer;
+
 use PxTest\Layout\TreeFlattener;
 use PxTest\Comparison\GeometryComparator;
 use PxTest\Comparison\StyleComparator;
@@ -109,10 +109,10 @@ $root = $rtm->getRootRenderNode();
 check('Root RenderNode exists', $root !== null);
 check('Root has children', !empty($root->children));
 
-// ═══ Step 3: RenderNodeSerializer JSON 导出 ═══
+// ═══ Step 3: 布局 JSON 导出 ═══
 echo "\n--- Step 3: JSON Export ---\n";
-$serializer = new RenderNodeSerializer();
-$json = $serializer->toJson($root);
+$app->dumpLayoutToFile($tempDir . '/engine_layout.json');
+$json = file_get_contents($tempDir . '/engine_layout.json');
 $data = json_decode($json, true);
 check('JSON valid', $data !== null);
 

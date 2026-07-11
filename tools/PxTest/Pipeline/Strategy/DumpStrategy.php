@@ -48,12 +48,11 @@ class MockDumpStrategy implements DumpStrategy
         $rm = new \ReflectionMethod(\Px\Core\Application::class, 'render');
         $rm->setAccessible(true);
         $rm->invoke($app); $rm->invoke($app);
-        $root = $app->getRenderTreeManager()->getRootRenderNode();
-        if ($root === null) return null;
-        $json = (new \PxTest\Layout\RenderNodeSerializer())->toJson($root);
         @mkdir($refDir, 0777, true);
         $outFile = "$refDir/engine_layout.json";
-        file_put_contents($outFile, $json);
+        $app->dumpLayoutToFile($outFile);
+        $json = file_get_contents($outFile);
+        if ($json === false || $json === '') return null;
         return [$json, $outFile];
     }
 }
