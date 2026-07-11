@@ -49,12 +49,12 @@ class LayoutCacheKey
     ): self {
         return new LayoutCacheKey(
             (int)$nodeId,
-            (int)$space->contentWidth,
-            (int)$space->contentHeight,
-            (int)($space->percentageWidth ?? 0),
-            (int)($space->percentageHeight ?? 0),
-            (bool)$space->isIntrinsicMeasurement,
-            (string)$space->spaceType,
+            (int)$space->getContentWidth(),
+            (int)$space->getContentHeight(),
+            (int)($space->getPercentageWidth() ?? 0),
+            (int)($space->getPercentageHeight() ?? 0),
+            (bool)$space->getIsIntrinsicMeasurement(),
+            (string)$space->getSpaceType(),
             (int)$styleVersion,
         );
     }

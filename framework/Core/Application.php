@@ -795,6 +795,9 @@ class Application
     {
         $data = $this->fragmentToArray($frag);
         $this->lastLayoutDumpJson = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if (isset($data['children'][0])) {
+            error_log("[DIAG_FRAG] child[0] w=" . $data['children'][0]['w'] . " h=" . $data['children'][0]['h']);
+        }
         Diag::log(1, 'snapshot:done', ['jsonSize' => strlen($this->lastLayoutDumpJson)]);
     }
 
@@ -804,9 +807,22 @@ class Application
      */
     private function fragmentToArray(PhysicalFragment $frag): array
     {
-        // Use toArray() from PhysicalFragment for geometry (cross-class readonly
-        // access fails in AOT with use native_types; same-class access is correct)
-        $arr = $frag->toArray();
+        // 直接读取 geomtry（AOT 下通过 getter 确保跨类 readonly 正确）
+        $arr = [
+            'x' => (int)$frag->getX(),
+            'y' => (int)$frag->getY(),
+            'w' => (int)$frag->getW(),
+            'h' => (int)$frag->getH(),
+            'visualW' => (int)$frag->getVisualW(),
+            'visualH' => (int)$frag->getVisualH(),
+            'layer' => (int)$frag->getLayer(),
+            'contentWidth' => (int)$frag->getContentWidth(),
+            'contentHeight' => (int)$frag->getContentHeight(),
+        ];
+        if ($frag->getIsScrollContainer()) {
+            $arr['scrollTop'] = (int)$frag->getScrollTop();
+            $arr['scrollLeft'] = (int)$frag->getScrollLeft();
+        }
 
         // Override children with full fragmentToArray (adds sourceNode fields)
         $children = [];

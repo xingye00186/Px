@@ -93,8 +93,8 @@ class PhysicalFragment
     }
 
     /** 从 LayoutResult 构造（适配器用） */
-        /** 序列化为数组（测试/导出用） */
-    public function toArray(): array
+        /** 导出几何数组（AOT 下 toArray 方法名触发编译器 bug，改用 fragToArray） */
+    public function fragToArray(): array
     {
         $arr = [
             'x' => $this->x,
@@ -113,7 +113,7 @@ class PhysicalFragment
         }
         $childArr = [];
         foreach ($this->children as $child) {
-            $childArr[] = $child->toArray();
+            $childArr[] = $child->fragToArray();
         }
         if (!empty($childArr)) {
             $arr['children'] = $childArr;

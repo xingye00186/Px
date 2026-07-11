@@ -23,18 +23,18 @@ class TableAlgorithm extends LayoutAlgorithm
         $children = $childFragments;
 
         // Intrinsic measurement mode
-        if ($space->isIntrinsicMeasurement) {
+        if ($space->getIsIntrinsicMeasurement()) {
             $totalW = 0; $maxH = 0;
             foreach ($children as $cr) { $totalW += (int)($cr->w ?? 0); $ch = (int)($cr->h ?? 0); if ($ch > $maxH) $maxH = $ch; }
             return new PhysicalFragment((int)max(0, $totalW), (int)max(0, $maxH), 0, 0, null, null, 0, 0, 0, $s);
         }
 
         $display = $s->display?->value ?? 'table';
-        $x = ($space->bfcOffsetX ?? 0) + ((int)($s->left?->toPx() ?? 0));
-        $y = ($space->bfcOffsetY ?? 0) + ((int)($s->top?->toPx() ?? 0));
+        $x = ($space->getBfcOffsetX() ?? 0) + ((int)($s->left?->toPx() ?? 0));
+        $y = ($space->getBfcOffsetY() ?? 0) + ((int)($s->top?->toPx() ?? 0));
 
         $w = $s->width?->toPx() ?? 0;
-        if ($w <= 0) $w = $space->contentWidth;
+        if ($w <= 0) $w = $space->getContentWidth();
         $h = $s->height?->toPx() ?? 0;
 
         $stackedChildren = [];

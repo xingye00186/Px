@@ -32,7 +32,7 @@ class BlockAlgorithm extends LayoutAlgorithm
         $c = $space;
 
         // Intrinsic measurement mode
-        if ($c->isIntrinsicMeasurement) {
+        if ($c->getIsIntrinsicMeasurement()) {
             $fs = $s->fontSize > 0 ? $s->fontSize : 16;
             $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->bold ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
             $h = strlen($textContent) > 0 ? ($s->lineHeight > 0 ? $s->lineHeight : (int)($fs * 1.2)) : 0;
@@ -43,16 +43,16 @@ class BlockAlgorithm extends LayoutAlgorithm
         $top = $s->top?->toPx() ?? 0;
         $marginLeft = $s->margin?->left->toPx() ?? 0;
         $marginTop = $s->margin?->top->toPx() ?? 0;
-        $parentW = $c->contentWidth;
-        $parentH = $c->contentHeight;
+        $parentW = $c->getContentWidth();
+        $parentH = $c->getContentHeight();
 
         $w = $this->computeBlockWidth($parentW, $s, $textContent);
         $h = $this->computeBlockHeight($parentH, $s, $textContent);
 
         $positionVal = $s->position?->value ?? 'static';
         $isStaticOrRelative = ($positionVal === 'static' || $positionVal === 'relative');
-        $x = $isStaticOrRelative ? ((int)($c->bfcOffsetX ?? 0) + (int)($left ?? 0) + (int)($marginLeft ?? 0)) : (int)($c->bfcOffsetX ?? 0);
-        $y = $isStaticOrRelative ? ((int)($c->bfcOffsetY ?? 0) + (int)($top ?? 0) + (int)($marginTop ?? 0)) : (int)($c->bfcOffsetY ?? 0);
+        $x = $isStaticOrRelative ? ((int)($c->getBfcOffsetX() ?? 0) + (int)($left ?? 0) + (int)($marginLeft ?? 0)) : (int)($c->getBfcOffsetX() ?? 0);
+        $y = $isStaticOrRelative ? ((int)($c->getBfcOffsetY() ?? 0) + (int)($top ?? 0) + (int)($marginTop ?? 0)) : (int)($c->getBfcOffsetY() ?? 0);
 
         $displayVal = $s->display?->value ?? 'block';
         $stackedChildren = [];
@@ -76,7 +76,7 @@ class BlockAlgorithm extends LayoutAlgorithm
                 foreach ($childNodes as $i => $ch) {
                     $chH = $ch->computedStyle?->height;
                     if ($chH !== null && $chH->isPercent() && $computedH > 0) {
-                        $newC = new ConstraintSpace($c->contentWidth, $computedH, $c->bfcOffsetX, $c->bfcOffsetY, 0, 0, $c->percentageWidth, $computedH);
+                        $newC = new ConstraintSpace($c->getContentWidth(), $computedH, $c->getBfcOffsetX(), $c->getBfcOffsetY(), 0, 0, $c->getPercentageWidth(), $computedH);
                         $reResolved[] = $this->reResolveChild($newC, $ch, $children[$i] ?? null);
                     } else {
                         $reResolved[] = $i < count($children) ? $children[$i] : null;
@@ -246,7 +246,7 @@ class BlockAlgorithm extends LayoutAlgorithm
         $childStyle = $child->computedStyle;
         if ($childStyle === null) return $oldFrag;
         $h = $childStyle->height?->toPx() ?? 0;
-        if ($childStyle->height !== null && $childStyle->height->isPercent()) { $h = $childStyle->height->resolveInContext($space->contentHeight); }
+        if ($childStyle->height !== null && $childStyle->height->isPercent()) { $h = $childStyle->height->resolveInContext($space->getContentHeight()); }
         $minH = $childStyle->minHeight?->toPx() ?? 0; $maxH = $childStyle->maxHeight?->toPx() ?? 0;
         if ($minH > 0 && $h < $minH) $h = $minH;
         if ($maxH > 0 && $h > $maxH) $h = $maxH;

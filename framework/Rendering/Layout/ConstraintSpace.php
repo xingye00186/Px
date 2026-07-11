@@ -161,6 +161,7 @@ class ConstraintSpace
             $borderLeft,
             $force,
             false,
+            0, 0,
             $spaceType,
         );
     }
