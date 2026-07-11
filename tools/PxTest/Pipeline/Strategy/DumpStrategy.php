@@ -20,7 +20,7 @@ class ExeDumpStrategy implements DumpStrategy
     public function name(): string { return 'exe'; }
     public function dump(string $caseName, string $refDir): ?array
     {
-        $outFile = "$refDir/engine_layout.json";
+        $outFile = "$refDir/engine_layout_aot.json";
         $cmd = sprintf('"%s" --case=%s --headless --dump-layout 2>&1', $this->exePath, $caseName);
         exec($cmd, $output, $exitCode);
         if (!file_exists($outFile)) return null;
@@ -49,7 +49,7 @@ class MockDumpStrategy implements DumpStrategy
         $rm->setAccessible(true);
         $rm->invoke($app); $rm->invoke($app);
         @mkdir($refDir, 0777, true);
-        $outFile = "$refDir/engine_layout.json";
+        $outFile = "$refDir/engine_layout_mock.json";
         $app->dumpLayoutToFile($outFile);
         $json = file_get_contents($outFile);
         if ($json === false || $json === '') return null;

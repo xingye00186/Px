@@ -142,10 +142,11 @@ class Application
             }
         }
 
-        // Auto-default: --case=xxx → test_case/{xxx}/ref/engine_layout.json
+        // Auto-default: --case=xxx → test_case/{xxx}/ref/engine_layout_aot.json
+        // 直接运行 exe 即为 AOT 模式，使用 _aot 后缀
         if ($dumpTo === '') {
             if ($caseName !== '') {
-                $dumpTo = $appDir . '/test_case/' . $caseName . '/ref/engine_layout.json';
+                $dumpTo = $appDir . '/test_case/' . $caseName . '/ref/engine_layout_aot.json';
             } else {
                 $caseDirs = glob($appDir . '/test_case/case-*', GLOB_ONLYDIR);
                 if (!empty($caseDirs)) {
@@ -164,6 +165,12 @@ class Application
                 $path = $base . "_after_{$frame}frames.json";
             } else {
                 $path = $dumpTo;
+            }
+            // 确保文件名带 _aot 后缀（直接 exe 调用就是 AOT 模式）
+            if (!str_contains($path, '_aot.') && !str_contains($path, '_php.') && !str_contains($path, '_after_')) {
+                $ext = '.json';
+                $base = substr($path, 0, -strlen($ext));
+                $path = $base . '_aot' . $ext;
             }
             $dir = dirname($path);
             if (!is_dir($dir)) {
