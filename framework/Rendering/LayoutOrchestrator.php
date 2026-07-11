@@ -39,10 +39,8 @@ class LayoutOrchestrator
     private LayoutAlgorithm $gridAlgo;
     private LayoutAlgorithm $inlineAlgo;
     private LayoutAlgorithm $tableAlgo;
-        private LayoutCache $cache;
+    private LayoutCache $cache;
 
-    /** @var RenderNode[] 当前帧的滚动容器 */
-    private array $scrollContainers = [];
 
     public function __construct()
     {
@@ -52,7 +50,7 @@ class LayoutOrchestrator
         $this->gridAlgo = new GridAlgorithm();
         $this->inlineAlgo = new InlineAlgorithm();
         $this->tableAlgo = new TableAlgorithm();
-                $this->cache = new LayoutCache();
+        $this->cache = new LayoutCache();
     }
 
     /**
@@ -63,8 +61,7 @@ class LayoutOrchestrator
      */
     public function layout(RenderNode $root): PhysicalFragment
     {
-        $this->scrollContainers = [];
-
+        
         // 构建根约束空间
         $rootStyle = $root->computedStyle;
         $rootW = (int)(($root->w ?? 0) ?: ($rootStyle?->width?->toPx() ?: 0));
@@ -86,11 +83,7 @@ class LayoutOrchestrator
             $rootFragment, $root, $viewportW, $viewportH
         );
 
-        // Step 3: Phase B — 回写 RenderNode（旧消费者兼容）
-        $this->applyFragmentToNode($rootFragment, $root);
-
-        // Step 4: postProcess — 滚动 clamp / sticky
-        $this->postProcessScrollContainers($root);
+        // Fragment 树已完成，几何权威源。RenderNode 不再保留几何/滚动字段。
 
         return $rootFragment;
     }
@@ -112,8 +105,7 @@ class LayoutOrchestrator
         $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
         $isScroll = $hasHScroll || $hasVScroll;
         if ($isScroll) {
-            $this->scrollContainers[] = $node;
-        }
+                    }
 
         // Layer 继承
         $nodeLayer = $inheritedLayer;
@@ -253,46 +245,7 @@ class LayoutOrchestrator
         }
     }
 
-    /**
-     * 滚动容器后处理。
-     */
-    private function postProcessScrollContainers(RenderNode $root): void
-    {
-        foreach ($this->scrollContainers as $node) {
-            $cs = $node->computedStyle;
-            $padT = (int)($cs?->padding?->top?->toPx() ?? 0);
-            $padB = (int)($cs?->padding?->bottom?->toPx() ?? 0);
 
-            $childBaseY = (int)($node->y ?? 0) + $padT;
-            $maxBottom = $childBaseY;
-            foreach ($node->children as $child) {
-                $bottom = (int)(($child->y ?? 0) + ($child->visualH ?? 0));
-                if ($bottom > $maxBottom) $maxBottom = $bottom;
-            }
-            // contentHeight stored in Fragment, not RenderNode
-
-            // Clamp scrollTop
-            if (property_exists($node, 'scrollTop')) {
-                $maxScroll = (int)max(0, ($node->h ?? 0) > 0 ? (int)(($node->h ?? 0) - ($node->y ?? 0)) : 0);
-                if ($node->scrollTop > $maxScroll) $node->scrollTop = $maxScroll;
-            }
-
-            // Horizontal scroll
-            $overflowX2 = $cs?->overflowX?->value ?? $cs?->overflow?->value ?? 'visible';
-            $hasHScroll2 = ($overflowX2 === 'auto' || $overflowX2 === 'scroll');
-            if ($hasHScroll2) {
-                $maxRight = 0;
-                foreach ($node->children as $child) {
-                    $cLeft = $child->computedStyle?->left ?? 0;
-                    $right = (int)($cLeft + $child->visualW);
-                    if ($right > $maxRight) $maxRight = $right;
-                }
-// scrollLeft handled by ScrollState, not RenderNode
-            } else {
-                // contentWidth handled by Fragment, not RenderNode
-            }
-        }
-    }
 
 
 }
