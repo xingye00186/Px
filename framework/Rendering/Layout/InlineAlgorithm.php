@@ -23,10 +23,10 @@ class InlineAlgorithm extends LayoutAlgorithm
         $children = $childFragments;
 
         // Intrinsic measurement mode
-        if ($space->isIntrinsicMeasurement) {
-            $fs = $s->fontSize > 0 ? $s->fontSize : 16;
-            $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->bold ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
-            $h = strlen($textContent) > 0 ? ($s->lineHeight > 0 ? $s->lineHeight : (int)($fs * 1.2)) : 0;
+        if ($space->getIsIntrinsicMeasurement()) {
+            $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
+            $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->getBold() ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
+            $h = strlen($textContent) > 0 ? ($s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($fs * 1.2)) : 0;
             return new PhysicalFragment((int)max(0, $w), (int)max(0, $h), 0, 0, null, null, 0, 0, 0, $s);
         }
 
@@ -36,10 +36,10 @@ class InlineAlgorithm extends LayoutAlgorithm
         $y = ($space->bfcOffsetY ?? 0) + $top;
 
         $w = $s->width?->toPx() ?? 0;
-        if ($w <= 0) $w = (int)($space->contentWidth ?? 0);
+        if ($w <= 0) $w = (int)($space->getContentWidth() ?? 0);
         $h = $s->height?->toPx() ?? 0;
         if (strlen($textContent) > 0 && (int)($h ?? 0) <= 0) {
-            $h = ((int)($s->lineHeight ?? 0) > 0) ? (int)$s->lineHeight : (int)($s->fontSize * 1.2);
+            $h = ((int)($s->getLineHeight() ?? 0) > 0) ? (int)$s->getLineHeight() : (int)($s->getFontSize() * 1.2);
         }
 
         // IFC: arrange children in a single line
@@ -56,9 +56,9 @@ class InlineAlgorithm extends LayoutAlgorithm
     public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes
     {
         $s = $style ?? new ComputedStyle([]);
-        $fs = $s->fontSize > 0 ? $s->fontSize : 16;
-        $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->bold ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
-        $h = strlen($textContent) > 0 ? ($s->lineHeight > 0 ? $s->lineHeight : (int)($fs * 1.2)) : 0;
+        $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
+        $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->getBold() ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
+        $h = strlen($textContent) > 0 ? ($s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($fs * 1.2)) : 0;
         return new IntrinsicSizes((int)max(0, $w), (int)max(0, $w), (int)max(0, $h), (int)max(0, $h));
     }
 }

@@ -142,6 +142,30 @@ class ComputedStyle
     public readonly string $textTransform;
     public readonly string $wordWrap;
 
+    // ── int/bool/float getter（AOT 跨类 readonly 保护）──
+    public function getFontSize(): int { return $this->fontSize; }
+    public function getFontWeight(): int { return $this->fontWeight; }
+    public function getBold(): bool { return $this->bold; }
+    public function getZIndex(): int { return $this->zIndex; }
+    public function getBorderRadius(): int { return $this->borderRadius; }
+    public function getColumnCount(): int { return $this->columnCount; }
+    public function getColumnWidth(): int { return $this->columnWidth; }
+    public function getOpacity(): float { return $this->opacity; }
+    public function getAspectRatio(): float { return $this->aspectRatio; }
+    public function getLineHeight(): int { return $this->lineHeight; }
+    public function getTextIndent(): int { return $this->textIndent; }
+    public function getBorderTopWidth(): int { return $this->borderTopWidth; }
+    public function getBorderRightWidth(): int { return $this->borderRightWidth; }
+    public function getBorderBottomWidth(): int { return $this->borderBottomWidth; }
+    public function getBorderLeftWidth(): int { return $this->borderLeftWidth; }
+    public function getBorderColor(): int { return $this->borderColor; }
+    public function getBorderTopColor(): int { return $this->borderTopColor; }
+    public function getBorderRightColor(): int { return $this->borderRightColor; }
+    public function getBorderBottomColor(): int { return $this->borderBottomColor; }
+    public function getBorderLeftColor(): int { return $this->borderLeftColor; }
+    public function getTextDecorationThickness(): int { return $this->textDecorationThickness; }
+    public function getOutlineOffset(): int { return $this->outlineOffset; }
+
     // ── 原始声明存储（部分属性布局计算需要原始值） ──
     private array $rawDeclarations = [];
 

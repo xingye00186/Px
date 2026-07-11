@@ -33,9 +33,9 @@ class BlockAlgorithm extends LayoutAlgorithm
 
         // Intrinsic measurement mode
         if ($c->getIsIntrinsicMeasurement()) {
-            $fs = $s->fontSize > 0 ? $s->fontSize : 16;
-            $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->bold ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
-            $h = strlen($textContent) > 0 ? ($s->lineHeight > 0 ? $s->lineHeight : (int)($fs * 1.2)) : 0;
+            $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
+            $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->getBold() ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
+            $h = strlen($textContent) > 0 ? ($s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($fs * 1.2)) : 0;
             return new PhysicalFragment((int)max(0, $w), (int)max(0, $h), 0, 0, 0, 0, 0, 0, 0, $s);
         }
 
@@ -114,9 +114,9 @@ class BlockAlgorithm extends LayoutAlgorithm
     public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes
     {
         $s = $style ?? new ComputedStyle([]);
-        $fs = $s->fontSize > 0 ? $s->fontSize : 16;
-        $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->bold ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
-        $h = strlen($textContent) > 0 ? ($s->lineHeight > 0 ? $s->lineHeight : (int)($fs * 1.2)) : 0;
+        $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
+        $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->getBold() ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
+        $h = strlen($textContent) > 0 ? ($s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($fs * 1.2)) : 0;
         return new IntrinsicSizes(max(0, $w), max(0, $w), max(0, $h), max(0, $h));
     }
 
@@ -125,13 +125,13 @@ class BlockAlgorithm extends LayoutAlgorithm
         $width = $s->width?->toPx() ?? 0;
         if ($s->width !== null && $s->width->isPercent()) { $width = $s->width->resolveInContext($parentW); }
         if ($s->width !== null && $s->width->isIntrinsic() && strlen($textContent) > 0) {
-            $fs = $s->fontSize; $bd = $s->bold;
+            $fs = $s->getFontSize(); $bd = $s->getBold();
             $width = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, $bd) : (int)(strlen($textContent) * $fs * 0.6));
         }
         if ($width <= 0) {
             $ml = $s->margin?->left->toPx() ?? 0; $mr = $s->margin?->right->toPx() ?? 0;
             $autoPadL = $s->padding?->left->toPx() ?? 0; $autoPadR = $s->padding?->right->toPx() ?? 0;
-            $autoBw = (int)($s->borderLeftWidth ?? 0) + (int)($s->borderRightWidth ?? 0);
+            $autoBw = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
             $sizing = $s->boxSizing?->value ?? 'content-box';
             $width = ($sizing === 'border-box') ? max(0, $parentW - $ml - $mr) : max(0, $parentW - $ml - $mr - $autoPadL - $autoPadR - $autoBw);
         }
@@ -145,9 +145,9 @@ class BlockAlgorithm extends LayoutAlgorithm
     {
         $height = $s->height?->toPx() ?? 0;
         if ($s->height !== null && $s->height->isPercent()) { $height = $s->height->resolveInContext($parentH); }
-        if ($s->height !== null && $s->height->isIntrinsic() && strlen($textContent) > 0) { $height = $s->lineHeight > 0 ? $s->lineHeight : (int)($s->fontSize * 1.2); }
-        if ($height <= 0 && strlen($textContent) > 0) { $height = $s->lineHeight > 0 ? $s->lineHeight : (int)($s->fontSize * 1.2); }
-        $ar = $s->aspectRatio ?? 0;
+        if ($s->height !== null && $s->height->isIntrinsic() && strlen($textContent) > 0) { $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2); }
+        if ($height <= 0 && strlen($textContent) > 0) { $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2); }
+        $ar = $s->getAspectRatio() ?? 0;
         if ($ar > 0 && $height <= 0) { $height = (int)(($s->width?->toPx() ?? 0) / $ar); }
         $minH = $s->minHeight?->toPx() ?? 0; $maxH = $s->maxHeight?->toPx() ?? 0;
         if ($minH > 0 && $height < $minH) $height = $minH;
@@ -159,7 +159,7 @@ class BlockAlgorithm extends LayoutAlgorithm
     {
         $padTop = $s->padding?->top->toPx() ?? 0;
         $padLeft = $s->padding?->left->toPx() ?? 0;
-        $borderTop = (int)($s->borderTopWidth ?? 0);
+        $borderTop = (int)($s->getBorderTopWidth() ?? 0);
         $stackY = $parentY + $borderTop + $padTop;
         $result = [];
         $prevMarginBottom = 0; $prevCollapsible = false;
@@ -182,7 +182,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             if ($chW <= 0) {
                 $autoPadL = $childStyle?->padding?->left->toPx() ?? 0;
                 $autoPadR = $childStyle?->padding?->right->toPx() ?? 0;
-                $autoBw = (int)($childStyle?->borderLeftWidth ?? 0) + (int)($childStyle?->borderRightWidth ?? 0);
+                $autoBw = (int)($childStyle?->getBorderLeftWidth() ?? 0) + (int)($childStyle?->getBorderRightWidth() ?? 0);
                 $cs = $childStyle?->boxSizing?->value ?? 'content-box';
                 $chW = ($cs === 'border-box') ? max(0, $containerW - $mLeft - $mRight) : max(0, $containerW - $mLeft - $mRight - $autoPadL - $autoPadR - $autoBw);
             }
@@ -191,10 +191,10 @@ class BlockAlgorithm extends LayoutAlgorithm
                 $typeFromStyle = $childStyle->getRaw('_type');
                 if (is_string($typeFromStyle) && self::isInlineType($typeFromStyle) && strlen($childStyle->getRaw('_content') ?? '') > 0) {
                     $content = (string)($childStyle->getRaw('_content') ?? '');
-                    $fs = $childStyle->fontSize; $bd = $childStyle->bold;
+                    $fs = $childStyle->getFontSize(); $bd = $childStyle->getBold();
                     $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($content, $fs, $bd) : 0);
                     if ($measured > 0) $chW = $measured;
-                    if ($chH <= 0) $chH = $childStyle->lineHeight > 0 ? $childStyle->lineHeight : (int)($fs * 1.2);
+                    if ($chH <= 0) $chH = $childStyle->getLineHeight() > 0 ? $childStyle->getLineHeight() : (int)($fs * 1.2);
                 }
             }
             $overflowY = $childStyle?->overflowY?->value ?? $childStyle?->overflow?->value ?? 'visible';

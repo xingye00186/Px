@@ -96,8 +96,8 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
             $cbW = $frag->getW();
             $cbH = $frag->getH();
             // padding box 需要加 padding/border
-            $cbBL = $cs?->borderLeftWidth ?? 0;
-            $cbBT = $cs?->borderTopWidth ?? 0;
+            $cbBL = $cs?->getBorderLeftWidth() ?? 0;
+            $cbBT = $cs?->getBorderTopWidth() ?? 0;
             $cbPL = $cs?->padding?->left->toPx() ?? 0;
             $cbPT = $cs?->padding?->top->toPx() ?? 0;
         }
@@ -207,14 +207,14 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
 
         $textContent = is_string($sourceRN->content) ? $sourceRN->content : '';
         if (($width <= 0 || $height <= 0) && strlen($textContent) > 0) {
-            $fs = (int)($cs->fontSize ?? 14);
-            $bd = (int)($cs->bold ?? 0);
+            $fs = (int)($cs->getFontSize() ?? 14);
+            $bd = (int)($cs->getBold() ?? 0);
             $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, $bd) : 0);
             if ($measured > 0 && $width <= 0) {
-                $width = max(0, $measured + (int)($cs->padding?->left->toPx() ?? 0) + (int)($cs->padding?->right->toPx() ?? 0) + (int)($cs->borderLeftWidth ?? 0) + (int)($cs->borderRightWidth ?? 0));
+                $width = max(0, $measured + (int)($cs->padding?->left->toPx() ?? 0) + (int)($cs->padding?->right->toPx() ?? 0) + (int)($cs->getBorderLeftWidth() ?? 0) + (int)($cs->getBorderRightWidth() ?? 0));
             }
             if ($height <= 0) {
-                $height = max((int)($cs->lineHeight ?? (int)($fs * 1.2)), $height);
+                $height = max((int)($cs->getLineHeight() ?? (int)($fs * 1.2)), $height);
             }
         }
 
