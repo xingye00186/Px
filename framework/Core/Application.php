@@ -779,35 +779,7 @@ class Application
         file_put_contents($path, $this->lastLayoutDumpJson);
     }
 
-    /**
-     * 在 RenderNode 树中查找测试内容根节点（即 data-px-anchor=tl 的父节点）。
-     */
-    private function findTestContentParent(RenderNode $node): ?RenderNode
-    {
-        // 递归搜索所有后代，找到包含 data-px-anchor='tl' 的任意子节点
-        // 然后返回该子节点的父节点
-        $tlNode = $this->findNodeByDataset($node, 'pxAnchor', 'tl');
-        if ($tlNode !== null && $tlNode->parent !== null) {
-            return $tlNode->parent;
-        }
-        return null;
-    }
 
-    /**
-     * 递归搜索 RenderNode 树，查找 dataset 中指定键值对的节点。
-     */
-    private function findNodeByDataset(RenderNode $node, string $key, string $value): ?RenderNode
-    {
-        $ds = $node->dataset ?? [];
-        if (isset($ds[$key]) && (string)$ds[$key] === $value) {
-            return $node;
-        }
-        foreach ($node->children as $child) {
-            $result = $this->findNodeByDataset($child, $key, $value);
-            if ($result !== null) return $result;
-        }
-        return null;
-    }
 
     /**
      * 捕获 Fragment 快照为 JSON 字符串（与渲染使用同一 Fragment 树，保证一致性）。

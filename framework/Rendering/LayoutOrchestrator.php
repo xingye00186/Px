@@ -5,7 +5,6 @@ namespace Px\Rendering;
 use native_types;
 
 use Px\Rendering\Layout\ConstraintSpace;
-use Px\Rendering\Layout\ConstraintSpaceBuilder;
 use Px\Rendering\Layout\PhysicalFragment;
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\RenderNode;
@@ -41,9 +40,6 @@ class LayoutOrchestrator
     private LayoutAlgorithm $tableAlgo;
     private LayoutCache $cache;
 
-    /** @var PhysicalFragment|null 最近一次 layout() 根 Fragment（供 dumpLayout 读取几何） */
-    private ?PhysicalFragment $lastRootFragment = null;
-
     public function __construct()
     {
         $this->oofAlgorithm = new OOFLayoutAlgorithm();
@@ -61,15 +57,8 @@ class LayoutOrchestrator
      * @param RenderNode $root 根 RenderNode（原地回写 + 读 computedStyle）
      * @return PhysicalFragment 不可变 Fragment 树（几何权威源）
      */
-    public function getRootFragment(): ?PhysicalFragment
-    {
-        return $this->lastRootFragment;
-    }
-
     public function layout(RenderNode $root): PhysicalFragment
     {
-        $this->lastRootFragment = null;
-
         // 构建根约束空间
         // 根容器尺寸来自视口（WINDOW_WIDTH/WINDOW_HEIGHT），而非 RenderNode 属性
         $rootW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1600;
@@ -84,9 +73,6 @@ class LayoutOrchestrator
         $rootFragment = $this->oofAlgorithm->processOutOfFlow(
             $rootFragment, $root, $viewportW, $viewportH
         );
-        $this->lastRootFragment = $rootFragment;
-
-        // Fragment 树已完成，几何权威源。RenderNode 不再保留几何/滚动字段。
 
         return $rootFragment;
     }
@@ -234,18 +220,7 @@ class LayoutOrchestrator
     /**
      * 将 Fragment 树回写到 RenderNode（旧消费者兼容）。
      */
-    private function applyFragmentToNode(PhysicalFragment $frag, RenderNode $node): void
-    {
 
-
-        
-                
-
-        $childCount = min(count($frag->children), count($node->children));
-        for ($i = 0; $i < $childCount; $i++) {
-            $this->applyFragmentToNode($frag->children[$i], $node->children[$i]);
-        }
-    }
 
 
 

@@ -102,47 +102,7 @@ class ConstraintSpace
         $this->spaceType             = $spaceType;
     }
 
-    /** 从旧的 LayoutConstraints + ComputedStyle 构造 */
-    public static function fromLegacy(
-        LayoutConstraints $legacy,
-        ?ComputedStyle $style = null,
-        string $spaceType = 'block',
-    ): self {
-        $percW = null;
-        $percH = null;
-        if ($style !== null) {
-            // 百分比基准 = 父容器 contentWidth/Height（非内在测量时）
-            if (!$legacy->isIntrinsicMeasurement) {
-                if ($style->width?->isPercent()) {
-                    $percW = $legacy->contentWidth;
-                }
-                if ($style->height?->isPercent()) {
-                    $percH = $legacy->contentHeight;
-                }
-            }
-        }
-        return new self(
-            $legacy->containerWidth,
-            $legacy->containerHeight,
-            $legacy->parentContentX,
-            $legacy->parentContentY,
-            $legacy->contentWidth,
-            $legacy->contentHeight,
-            $percW,
-            $percH,
-            $legacy->paddingTop,
-            $legacy->paddingRight,
-            $legacy->paddingBottom,
-            $legacy->paddingLeft,
-            $legacy->borderTop,
-            $legacy->borderRight,
-            $legacy->borderBottom,
-            $legacy->borderLeft,
-            $legacy->forceRelayoutChildren,
-            $legacy->isIntrinsicMeasurement,
-            $spaceType,
-        );
-    }
+
 
     /** 从 RenderNode 和 ComputedStyle 创建子节点约束 */
     public static function forChild(
@@ -186,54 +146,7 @@ class ConstraintSpace
         );
     }
 
-    /** 使用新的 contentWidth 创建拷贝 */
-    public function withContentWidth(int $w): self
-    {
-        return new self(
-            $this->containerWidth,
-            $this->containerHeight,
-            $this->parentContentX,
-            $this->parentContentY,
-            $w,
-            $this->contentHeight,
-            $this->percentageWidth,
-            $this->percentageHeight,
-            $this->paddingTop,
-            $this->paddingRight,
-            $this->paddingBottom,
-            $this->paddingLeft,
-            $this->borderTop,
-            $this->borderRight,
-            $this->borderBottom,
-            $this->borderLeft,
-            $this->forceRelayoutChildren,
-            $this->isIntrinsicMeasurement,
-            $this->bfcOffsetX,
-            $this->bfcOffsetY,
-            $this->spaceType,
-        );
-    }
 
-    /** 转换为 LayoutConstraints（向后兼容） */
-    public function toLegacy(): LayoutConstraints
-    {
-        return new LayoutConstraints(
-            containerWidth:  $this->containerWidth,
-            containerHeight: $this->containerHeight,
-            parentContentX:  $this->parentContentX,
-            parentContentY:  $this->parentContentY,
-            contentWidth:    $this->contentWidth,
-            contentHeight:   $this->contentHeight,
-            paddingTop:      $this->paddingTop,
-            paddingRight:    $this->paddingRight,
-            paddingBottom:   $this->paddingBottom,
-            paddingLeft:     $this->paddingLeft,
-            borderTop:       $this->borderTop,
-            borderRight:     $this->borderRight,
-            borderBottom:    $this->borderBottom,
-            borderLeft:      $this->borderLeft,
-            forceRelayoutChildren: $this->forceRelayoutChildren,
-            isIntrinsicMeasurement: $this->isIntrinsicMeasurement,
-        );
-    }
+
+
 }
