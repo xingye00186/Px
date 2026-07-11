@@ -1,10 +1,10 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-11 07:58:57 | **总耗时**: 5.6s
+**运行时间**: 2026-07-11 11:11:54 | **总耗时**: 46.1s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 3.1s |
+| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1115diff 🔴448 | ⏭️ | ❌ 失败 | 43.7s |
 | case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 12 | 263diff 🔴166 | ⏭️ | ❌ 失败 | 0s |
 | case-003-basic-block | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 0s |
 | case-004-flex-layout | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 0s |
@@ -60,12 +60,18 @@
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 15diff 🔴9 | ⏭️ | ❌ 失败 | 0s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 22diff 🔴6 | ⏭️ | ❌ 失败 | 0s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 5.6s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 46.1s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
+> - prop width diff 6->469
+> - prop height diff 6->484
+> - prop position diff 0->15
+> - prop padding-top diff 0->165
+> - prop margin-top diff 0->45
+> - case-001-wrapper-x mismatch 12->663
 > - case-002-auto-height geometry 0->232
 > - case-002-auto-height mismatch 0->31
 > - case-002-auto-height critical 0->166
@@ -267,16 +273,20 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 96.4% | 7177/7444 |
-| width | 96.7% | 7197/7444 |
-| position | 99.8% | 7430/7444 |
-| font-weight | 100% | 7444/7444 |
-| opacity | 100% | 7444/7444 |
-| font-size | 100% | 7391/7391 |
-| top | 100% | 7380/7380 |
-| left | 100% | 7380/7380 |
+| height | 93.7% | 7183/7667 |
+| width | 93.9% | 7198/7667 |
+| position | 99.8% | 7652/7667 |
+| font-weight | 100% | 7667/7667 |
+| opacity | 100% | 7667/7667 |
+| font-size | 100% | 7614/7614 |
+| top | 100% | 7602/7602 |
+| left | 100% | 7602/7602 |
 | background-color | 100% | 7287/7288 |
-| display | 100% | 7151/7151 |
+| display | 100% | 7158/7158 |
+| border-radius | 100% | 247/247 |
+| text-decoration-thickness | 0% | 0/224 |
+| border-left-width | 100% | 223/223 |
+| border-left-color | 100% | 223/223 |
 | padding-top | 8.8% | 16/181 |
 | padding-left | 8.5% | 12/142 |
 | padding-right | 8.5% | 12/142 |
@@ -285,7 +295,6 @@
 | text-align | 100% | 90/90 |
 | margin-top | 27.4% | 17/62 |
 | gap | 8.6% | 3/35 |
-| border-radius | 100% | 24/24 |
 | flex-direction | 10.5% | 2/19 |
 | margin-left | 52.6% | 10/19 |
 | margin-right | 62.5% | 10/16 |
@@ -298,8 +307,16 @@
 | min-height | 0% | 0/1 |
 | text-decoration-color | 0% | 0/1 |
 | text-decoration-style | 0% | 0/1 |
-| text-decoration-thickness | 0% | 0/1 |
 | overflow-y | 100% | 1/1 |
+| font-family | 0% | 0/0 |
+| line-height | 0% | 0/0 |
+| border-top-width | 0% | 0/0 |
+| border-right-width | 0% | 0/0 |
+| border-bottom-width | 0% | 0/0 |
+| border-style | 0% | 0/0 |
+| border-top-color | 0% | 0/0 |
+| border-right-color | 0% | 0/0 |
+| border-bottom-color | 0% | 0/0 |
 | font-style | 0% | 0/0 |
 | white-space | 0% | 0/0 |
 | word-break | 0% | 0/0 |
@@ -307,11 +324,7 @@
 | cursor | 0% | 0/0 |
 | direction | 0% | 0/0 |
 | color | 0% | 0/0 |
-| border-left-width | 0% | 0/0 |
-| border-left-color | 0% | 0/0 |
 | border-color | 0% | 0/0 |
-| font-family | 0% | 0/0 |
-| line-height | 0% | 0/0 |
 | flex-grow | 0% | 0/0 |
 | flex-shrink | 0% | 0/0 |
 | overflow-x | 0% | 0/0 |
@@ -326,7 +339,7 @@
 
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
-| case-001-wrapper-x | 0 | 0 | 0 | 0 | 0 | 0 |
+| case-001-wrapper-x | 0 | **448** | **4** | 663 | 0 | 0 |
 | case-002-auto-height | 0 | **166** | **58** | 31 | 0 | 12 |
 | case-003-basic-block | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-004-flex-layout | 0 | 0 | 0 | 0 | 0 | 0 |

@@ -19,6 +19,7 @@ use Px\Rendering\RenderNode;
 use Px\Rendering\VNodeRenderer;
 use Px\Rendering\LayoutOrchestrator;
 use Px\Rendering\StyleRecalcPass;
+use Px\Rendering\Layout\PhysicalFragment;
 use Px\Rendering\InteractionState;
 use Px\Rendering\CssMappings;
 use Px\Rendering\ImageManager;
@@ -49,7 +50,7 @@ class Application
     private Scheduler $scheduler;
     private ?VNodeRenderer $renderer = null;
         private ?LayoutOrchestrator $layoutOrchestrator = null;
-        private RenderTreeManager $renderTreeManager;
+    private RenderTreeManager $renderTreeManager;
 
     private ?ReactiveComponentInterface $rootComponent = null;
     private ?VNode $activeVNodeTree = null;
@@ -768,41 +769,14 @@ class Application
             file_put_contents($path, '[]');
             return;
         }
-        $serializer = new RenderNodeSerializer();
-        $exportNode = $root;
-        if ($caseContentOnly) {
-            // 导出仅为测试内容子树：找到 data-px-anchor='tl' 的父节点
-            $tlParent = $this->findTestContentParent($root);
-            if ($tlParent !== null) {
-                // Recalculate content-based height (was stretched by flex)
-                $cs2 = $tlParent->computedStyle;
-                if ($cs2 !== null && $cs2->height->toPx() <= 0) {
-                    $maxB = 0;
-                    foreach ($tlParent->children as $ch2) {
-                        $p2 = $ch2->computedStyle?->position?->value;
-                        if ($p2 === "absolute" || $p2 === "fixed") continue;
-                        $b2 = $ch2->y + $ch2->visualH;
-                        if ($b2 > $maxB) $maxB = $b2;
-                    }
-                    $bt2 = $cs2->borderTopWidth ?? 0;
-                    $pb2 = $cs2->padding?->top->toPx() ?? 0;
-                    $ct2 = $bt2 + $pb2;
-                    if ($maxB > $ct2) {
-                        $ch2h = $maxB - $ct2;
-                        if ($cs2->boxSizing?->value === "border-box") {
-                            $ch2h += $cs2->padding?->bottom->toPx() + $cs2->borderBottomWidth;
-                        }
-                        $tlParent->h = $ch2h;
-                        $tlParent->visualH = $cs2->visualHeight($tlParent->h);
-                    }
-                }
-                $exportNode = $tlParent;
-                $exportNode = $tlParent;
-            }
+        // 使用已布局的 Fragment（render() 中已调用 layout()，结果存储在 Orchestrator）
+        $rootFragment = $this->layoutOrchestrator->getRootFragment();
+        if ($rootFragment === null) {
+            // fallback: 重新布局
+            $rootFragment = $this->layoutOrchestrator->layout($root);
         }
-        // AOT 编译器不能正确处理带参数的 toArray() 调用
-        // 绕过：使用 serializeNode 替代（不同方法签名避免 AOT bug）
-        $data = $serializer->serializeNode($exportNode);
+        $data = $this->fragmentToArray($rootFragment);
+
         file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 
@@ -831,6 +805,78 @@ class Application
         }
         foreach ($node->children as $child) {
             $result = $this->findNodeByDataset($child, $key, $value);
+            if ($result !== null) return $result;
+        }
+        return null;
+    }
+
+    /**
+     * PhysicalFragment 树 → 数组（与 RenderNodeSerializer 输出格式兼容）。
+     * 几何直接取自 Fragment，不需要 RenderNode 回写。
+     */
+    private function fragmentToArray(PhysicalFragment $frag): array
+    {
+        $style = $frag->style !== null ? $this->fragmentStyleToArray($frag->style) : [];
+        $children = [];
+        foreach ($frag->children as $child) {
+            $children[] = $this->fragmentToArray($child);
+        }
+        $type = $frag->sourceNode !== null ? $frag->sourceNode->type : 'div';
+        $content = $frag->sourceNode !== null ? $frag->sourceNode->content : null;
+        $dataset = $frag->sourceNode !== null ? ($frag->sourceNode->dataset ?? []) : [];
+        $key = $frag->sourceNode !== null ? $frag->sourceNode->key : null;
+        $groupId = $frag->sourceNode !== null ? $frag->sourceNode->groupId : null;
+
+        return [
+            'type'       => $type,
+            'x'          => (int)$frag->x,
+            'y'          => (int)$frag->y,
+            'w'          => (int)$frag->w,
+            'h'          => (int)$frag->h,
+            'visualW'    => (int)($frag->visualW ?? 0),
+            'visualH'    => (int)($frag->visualH ?? 0),
+            'layer'      => (int)($frag->layer ?? 0),
+            'style'      => $style,
+            'content'    => $content,
+            'key'        => $key,
+            'groupId'    => $groupId,
+            'dataset'    => $dataset,
+            'children'   => $children,
+        ];
+    }
+
+    /**
+     * ComputedStyle → 简单数组（与 RenderNodeSerializer 的 style flatten 兼容）。
+     * 只提取标量/简单值，跳过嵌套对象（CssLength/CssColor 等由正常化阶段处理）。
+     */
+    private function fragmentStyleToArray(\Px\Rendering\ComputedStyle $style): array
+    {
+        $result = [];
+        // 用 get_object_vars 绕过 AOT ReflectionObject 限制
+        $vars = get_object_vars($style);
+        foreach ($vars as $k => $v) {
+            if ($v !== null && $v !== '' && (is_scalar($v) || is_array($v))) {
+                $result[$k] = $v;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * 在数组树中查找 data-px-anchor='tl' 的父容器子树。
+     */
+    private function trimToTestContent(array $node): ?array
+    {
+        $ds = $node['dataset'] ?? [];
+        if (isset($ds['pxAnchor']) && $ds['pxAnchor'] === 'tl') {
+            return null; // 找到锚点节点自身，返回 null 表示应使用其父节点
+        }
+        foreach ($node['children'] ?? [] as $child) {
+            $childDs = $child['dataset'] ?? [];
+            if (isset($childDs['pxAnchor']) && $childDs['pxAnchor'] === 'tl') {
+                return $node; // 子节点是锚点，当前节点即父容器
+            }
+            $result = $this->trimToTestContent($child);
             if ($result !== null) return $result;
         }
         return null;

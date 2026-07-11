@@ -41,6 +41,8 @@ class LayoutOrchestrator
     private LayoutAlgorithm $tableAlgo;
     private LayoutCache $cache;
 
+    /** @var PhysicalFragment|null 最近一次 layout() 根 Fragment（供 dumpLayout 读取几何） */
+    private ?PhysicalFragment $lastRootFragment = null;
 
     public function __construct()
     {
@@ -59,9 +61,15 @@ class LayoutOrchestrator
      * @param RenderNode $root 根 RenderNode（原地回写 + 读 computedStyle）
      * @return PhysicalFragment 不可变 Fragment 树（几何权威源）
      */
+    public function getRootFragment(): ?PhysicalFragment
+    {
+        return $this->lastRootFragment;
+    }
+
     public function layout(RenderNode $root): PhysicalFragment
     {
-        
+        $this->lastRootFragment = null;
+
         // 构建根约束空间
         $rootStyle = $root->computedStyle;
         $rootW = (int)(($root->w ?? 0) ?: ($rootStyle?->width?->toPx() ?: 0));
@@ -75,13 +83,13 @@ class LayoutOrchestrator
 
         // Step 1: mainLayout — 正常流布局
         $rootFragment = $this->mainLayout($root, $space);
-
         // Step 2: oofLayout — OOF 独立通行证
         $viewportW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0;
         $viewportH = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0;
         $rootFragment = $this->oofAlgorithm->processOutOfFlow(
             $rootFragment, $root, $viewportW, $viewportH
         );
+        $this->lastRootFragment = $rootFragment;
 
         // Fragment 树已完成，几何权威源。RenderNode 不再保留几何/滚动字段。
 
