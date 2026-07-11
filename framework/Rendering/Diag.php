@@ -31,7 +31,7 @@ class Diag
         self::$level = max(0, $level);
         if (self::$logPath === null) {
             $env = getenv('PX_DIAG_LAYOUT_LOG');
-            self::$logPath = ($env !== false && $env !== '') ? $env : null;
+            self::$logPath = ($env !== false && $env !== '') ? (string)$env : null;
         }
     }
 
@@ -55,10 +55,8 @@ class Diag
         if (self::$level === -1) {
             // 首次调用：检测 project.yml 配置
             self::$level = (int)Config::get('diag_layout_level', 0);
-            self::$logPath = getenv('PX_DIAG_LAYOUT_LOG');
-            if (self::$logPath === false || self::$logPath === '') {
-                self::$logPath = null;
-            }
+            $env = getenv('PX_DIAG_LAYOUT_LOG');
+            self::$logPath = ($env !== false && $env !== '') ? (string)$env : null;
         }
         if ($level > self::$level) return;
 
