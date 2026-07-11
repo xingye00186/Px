@@ -30,8 +30,7 @@ class Diag
     {
         self::$level = max(0, $level);
         if (self::$logPath === null) {
-            $env = getenv('PX_DIAG_LAYOUT_LOG');
-            self::$logPath = ($env !== false && $env !== '') ? (string)$env : null;
+            self::$logPath = self::resolveLogPath();
         }
     }
 
@@ -44,6 +43,19 @@ class Diag
     }
 
     /**
+     * 安全读取环境变量，确保返回 string|null 而非 false。
+     * AOT 下 getenv() 返回 false 时直接赋值给 ?string 会抛 TypeError。
+     */
+    private static function resolveLogPath(): ?string
+    {
+        $env = getenv('PX_DIAG_LAYOUT_LOG');
+        if ($env === false || $env === '') {
+            return null;
+        }
+        return (string)$env;
+    }
+
+    /**
      * 输出诊断日志。
      *
      * @param int    $level  日志层级（1=入口/出口, 2=节点决策, 3=Fragment 参数）
@@ -53,10 +65,9 @@ class Diag
     public static function log(int $level, string $msg, array $ctx = []): void
     {
         if (self::$level === -1) {
-            // 首次调用：检测 project.yml 配置
+            // 首次调用：检测 project.yml 配置（lazy init 不读 getenv，避免 AOT 类型推断问题）
             self::$level = (int)Config::get('diag_layout_level', 0);
-            $env = getenv('PX_DIAG_LAYOUT_LOG');
-            self::$logPath = ($env !== false && $env !== '') ? (string)$env : null;
+            self::$logPath = null;
         }
         if ($level > self::$level) return;
 
