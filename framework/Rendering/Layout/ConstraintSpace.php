@@ -56,6 +56,25 @@ class ConstraintSpace
     /** 空间类型（block/flex/grid/inline） */
     public readonly string $spaceType;
 
+    /** getter 方法 — AOT 跨类 readonly 访问保护 */
+    public function getContainerWidth(): int { return $this->containerWidth; }
+    public function getContainerHeight(): int { return $this->containerHeight; }
+    public function getParentContentX(): int { return $this->parentContentX; }
+    public function getParentContentY(): int { return $this->parentContentY; }
+    public function getContentWidth(): int { return $this->contentWidth; }
+    public function getContentHeight(): int { return $this->contentHeight; }
+    public function getPercentageWidth(): ?int { return $this->percentageWidth; }
+    public function getPercentageHeight(): ?int { return $this->percentageHeight; }
+    public function getPaddingTop(): int { return $this->paddingTop; }
+    public function getPaddingRight(): int { return $this->paddingRight; }
+    public function getPaddingBottom(): int { return $this->paddingBottom; }
+    public function getPaddingLeft(): int { return $this->paddingLeft; }
+    public function getBfcOffsetX(): int { return $this->bfcOffsetX; }
+    public function getBfcOffsetY(): int { return $this->bfcOffsetY; }
+    public function getSpaceType(): string { return $this->spaceType; }
+    public function getForceRelayoutChildren(): bool { return $this->forceRelayoutChildren; }
+    public function getIsIntrinsicMeasurement(): bool { return $this->isIntrinsicMeasurement; }
+
     public function __construct(
         int $containerWidth = 0,
         int $containerHeight = 0,

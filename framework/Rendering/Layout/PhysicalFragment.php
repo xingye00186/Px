@@ -39,6 +39,20 @@ class PhysicalFragment
     /** 回引用 RenderNode（仅用于事件路由取 groupId） */
     public readonly ?RenderNode $sourceNode;
 
+    /** getter 方法 — AOT 跨类 readonly 访问保护 */
+    public function getX(): int { return $this->x; }
+    public function getY(): int { return $this->y; }
+    public function getW(): int { return $this->w; }
+    public function getH(): int { return $this->h; }
+    public function getVisualW(): int { return $this->visualW; }
+    public function getVisualH(): int { return $this->visualH; }
+    public function getLayer(): int { return $this->layer; }
+    public function getContentWidth(): int { return $this->contentWidth; }
+    public function getContentHeight(): int { return $this->contentHeight; }
+    public function getScrollTop(): int { return $this->scrollTop; }
+    public function getScrollLeft(): int { return $this->scrollLeft; }
+    public function getIsScrollContainer(): bool { return $this->isScrollContainer; }
+
     /** 滚动状态 */
     public readonly int $scrollTop;
     public readonly int $scrollLeft;

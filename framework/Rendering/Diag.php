@@ -29,10 +29,18 @@ class Diag
     public static function initFromCli(int $level): void
     {
         self::$level = max(0, $level);
-        self::$logPath = getenv('PX_DIAG_LAYOUT_LOG');
-        if (self::$logPath === false || self::$logPath === '') {
-            self::$logPath = null;
+        if (self::$logPath === null) {
+            $env = getenv('PX_DIAG_LAYOUT_LOG');
+            self::$logPath = ($env !== false && $env !== '') ? $env : null;
         }
+    }
+
+    /**
+     * 设置日志路径（由 --diag-log-path= 参数调用）。
+     */
+    public static function setLogPath(string $path): void
+    {
+        self::$logPath = $path !== '' ? $path : null;
     }
 
     /**

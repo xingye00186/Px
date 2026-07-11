@@ -76,7 +76,7 @@ class LayoutOrchestrator
             $rootFragment, $root, $viewportW, $viewportH
         );
 
-        Diag::log(1, 'layout:exit', ['rootW' => $rootFragment->w, 'rootH' => $rootFragment->h, 'children' => count($rootFragment->children)]);
+        Diag::log(1, 'layout:exit', ['rootW' => $rootFragment->getW(), 'rootH' => $rootFragment->getH(), 'children' => count($rootFragment->children)]);
         return $rootFragment;
     }
 
@@ -126,8 +126,8 @@ class LayoutOrchestrator
             $cs = $style;
             $w = $cs?->width?->toPx() ?? 0;
             $h = $cs?->height?->toPx() ?? 0;
-            if ($cs?->width?->isPercent()) $w = $cs->width->resolveInContext($space->contentWidth);
-            if ($cs?->height?->isPercent()) $h = $cs->height->resolveInContext($space->contentHeight);
+            if ($cs?->width?->isPercent()) $w = $cs->width->resolveInContext($space->getContentWidth());
+            if ($cs?->height?->isPercent()) $h = $cs->height->resolveInContext($space->getContentHeight());
             return new PhysicalFragment(
                 0, 0, max(0, $w), max(0, $h),
                 0, 0, $nodeLayer, 0, 0,
@@ -150,18 +150,18 @@ class LayoutOrchestrator
             return new \Px\Rendering\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node);
         }
 
-        Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->contentWidth, 'ch' => $space->contentHeight]);
+        Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->getContentWidth(), 'ch' => $space->getContentHeight()]);
 
         // 调用 Algorithm::layout() 执行布局
         $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments);
-        Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->x, 'y' => $algoFrag->y, 'w' => $algoFrag->w, 'h' => $algoFrag->h, 'algo' => get_class($algo)]);
+        Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->getX(), 'y' => $algoFrag->getY(), 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH(), 'algo' => get_class($algo)]);
 
         // 应用 layer 继承：Algorithm 返回的 Fragment 不包含 layer 信息，需要覆盖
-        if ($nodeLayer > $algoFrag->layer) {
+        if ($nodeLayer > $algoFrag->getLayer()) {
             $algoFrag = new \Px\Rendering\Layout\PhysicalFragment(
-                (int)$algoFrag->x, (int)$algoFrag->y, (int)$algoFrag->w, (int)$algoFrag->h,
-                (int)$algoFrag->visualW, (int)$algoFrag->visualH, (int)$nodeLayer,
-                (int)$algoFrag->contentWidth, (int)$algoFrag->contentHeight,
+                (int)$algoFrag->getX(), (int)$algoFrag->getY(), (int)$algoFrag->getW(), (int)$algoFrag->getH(),
+                (int)$algoFrag->getVisualW(), (int)$algoFrag->getVisualH(), (int)$nodeLayer,
+                (int)$algoFrag->getContentWidth(), (int)$algoFrag->getContentHeight(),
                 $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode
             );
         }
@@ -186,10 +186,10 @@ class LayoutOrchestrator
         $bT = (int)($parentStyle?->borderTopWidth ?? 0);
         $bB = (int)($parentStyle?->borderBottomWidth ?? 0);
 
-        $cbW = max(0, (int)($parentSpace->contentWidth ?? 0) - $padL - $padR - $bL - $bR);
-        $cbH = max(0, (int)($parentSpace->contentHeight ?? 0) - $padT - $padB - $bT - $bB);
-        $offX = (int)((int)($parentSpace->parentContentX ?? 0) + $padL + $bL);
-        $offY = (int)((int)($parentSpace->parentContentY ?? 0) + $padT + $bT);
+        $cbW = max(0, (int)($parentSpace->getContentWidth() ?? 0) - $padL - $padR - $bL - $bR);
+        $cbH = max(0, (int)($parentSpace->getContentHeight() ?? 0) - $padT - $padB - $bT - $bB);
+        $offX = (int)((int)($parentSpace->getParentContentX() ?? 0) + $padL + $bL);
+        $offY = (int)((int)($parentSpace->getParentContentY() ?? 0) + $padT + $bT);
 
         $childStyle = $child->computedStyle;
         $percW = $childStyle?->width?->isPercent() ? $cbW : null;

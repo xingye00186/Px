@@ -143,6 +143,8 @@ class Application
             } elseif (str_starts_with($arg, '--diag-layout=')) {
                 $diagLevel = max(0, (int)substr($arg, strlen('--diag-layout=')));
                 \Px\Rendering\Diag::initFromCli($diagLevel);
+            } elseif (str_starts_with($arg, '--diag-log-path=')) {
+                \Px\Rendering\Diag::setLogPath(substr($arg, strlen('--diag-log-path=')));
             }
         }
 
