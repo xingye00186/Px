@@ -350,6 +350,42 @@ function makeRelative(string $from, string $to): string
 }
 
 /**
+ * 检查 project.yml 是否显式声明了 C++ sources。
+ * 只在声明了 .cc 文件时才扫描 cpp/ 目录。
+ */
+function hasCppSources(string $projectYml): bool
+{
+    if (!file_exists($projectYml)) {
+        return false;
+    }
+    $lines = file($projectYml, FILE_IGNORE_NEW_LINES);
+    if ($lines === false) {
+        return false;
+    }
+    $inSources = false;
+    foreach ($lines as $line) {
+        $trimmed = trim($line);
+        if ($trimmed === 'sources:') {
+            $inSources = true;
+            continue;
+        }
+        if ($inSources) {
+            // 新顶层 key（非缩进行）或空行 → 退出 sources 节
+            if ($trimmed === '' || !str_starts_with($line, ' ')) {
+                $inSources = false;
+                continue;
+            }
+            // sources 条目：检查是否引用 .cc 文件
+            $entry = trim(ltrim($trimmed, '-'));
+            if (str_ends_with($entry, '.cc')) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
  * 自动扫描 cpp/ 目录下所有 .cc 文件
  *
  * @param string $cppDir      cpp 目录绝对路径
@@ -493,9 +529,12 @@ if (empty($GLOBALS['_TEST_MODE'])) {
                 }
             }
 
-            // 自动扫描 cpp/ 目录下所有 .cc 文件，无需手动注册
-            foreach (scanCppFiles($projectRoot . '/cpp', $projectRoot) as $ccFile) {
-                $cxxFiles[$ccFile] = true;
+            // 只在 project.yml 显式声明了 .cc sources 时才扫描 cpp/
+            $projectYml = $appDir . '/project.yml';
+            if (hasCppSources($projectYml)) {
+                foreach (scanCppFiles($projectRoot . '/cpp', $projectRoot) as $ccFile) {
+                    $cxxFiles[$ccFile] = true;
+                }
             }
 
             // 去重 + 排序
