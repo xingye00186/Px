@@ -1,19 +1,19 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-11 22:54:39 | **总耗时**: 6.7s
+**运行时间**: 2026-07-11 23:15:52 | **总耗时**: 21.3s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
 | case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 698diff 🟡41 | ⏭️ | ❌ 失败 | 3s |
-| case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 12 | 263diff 🔴166 | ⏭️ | ❌ 失败 | 0s |
-| case-003-basic-block | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.3s |
-| case-004-flex-layout | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 0s |
-| case-005-grid-layout | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 0s |
-| case-006-typography | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 0s |
-| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 7 | 307diff 🔴193 | ⏭️ | ❌ 失败 | 0s |
-| case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 88diff 🔴66 | ⏭️ | ❌ 失败 | 0s |
-| case-009-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 99diff 🔴69 | ⏭️ | ❌ 失败 | 0s |
-| case-010-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ❌ 1issue | ⚠️ 2 | 186diff 🔴137 | ⏭️ | ❌ 失败 | 0s |
+| case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 720diff 🔴224 | ⏭️ | ❌ 失败 | 1.2s |
+| case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 856diff 🔴312 | ⏭️ | ❌ 失败 | 4.8s |
+| case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 737diff 🔴174 | ⏭️ | ❌ 失败 | 1.4s |
+| case-005-grid-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 494diff 🔴140 | ⏭️ | ❌ 失败 | 1.2s |
+| case-006-typography | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1058diff | ⏭️ | ❌ 失败 | 2.1s |
+| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 858diff 🔴170 | ⏭️ | ❌ 失败 | 1.6s |
+| case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 274diff 🔴59 | ⏭️ | ❌ 失败 | 1.1s |
+| case-009-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 305diff 🔴73 | ⏭️ | ❌ 失败 | 1.1s |
+| case-010-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 469diff 🔴85 | ⏭️ | ❌ 失败 | 1.4s |
 | case-011-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 166diff 🔴114 | ⏭️ | ❌ 失败 | 0s |
 | case-012-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 15 | 181diff 🔴138 | ⏭️ | ❌ 失败 | 0s |
 | case-013-z-index | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 226diff 🔴167 | ⏭️ | ❌ 失败 | 0s |
@@ -60,35 +60,57 @@
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 15diff 🔴9 | ⏭️ | ❌ 失败 | 0s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 22diff 🔴6 | ⏭️ | ❌ 失败 | 0s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 6.7s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 21.3s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop width diff 222->463
-> - prop height diff 222->484
-> - prop position diff 1->15
-> - case-002-auto-height geometry 0->232
-> - case-002-auto-height mismatch 0->31
-> - case-002-auto-height critical 0->166
-> - case-002-auto-height major 0->58
-> - case-007-border-styles geometry 0->268
-> - case-007-border-styles mismatch 0->39
-> - case-007-border-styles critical 0->193
-> - case-007-border-styles major 0->74
-> - case-008-box-shadow geometry 0->74
-> - case-008-box-shadow mismatch 0->14
-> - case-008-box-shadow critical 0->66
-> - case-008-box-shadow major 0->7
-> - case-009-outline geometry 0->86
-> - case-009-outline mismatch 0->13
-> - case-009-outline critical 0->69
-> - case-009-outline major 0->16
-> - case-010-display-none geometry 0->173
-> - case-010-display-none mismatch 0->13
-> - case-010-display-none critical 0->137
-> - case-010-display-none major 0->35
+> - prop border-left-width diff 0->2
+> - prop border-left-color diff 0->8
+> - prop text-decoration-thickness diff 223->1665
+> - prop width diff 222->1815
+> - prop height diff 222->1827
+> - prop position diff 1->24
+> - case-002-auto-height geometry 0->234
+> - case-002-auto-height mismatch 0->486
+> - case-002-auto-height critical 0->224
+> - case-002-auto-height major 0->10
+> - case-003-basic-block geometry 0->312
+> - case-003-basic-block mismatch 0->544
+> - case-003-basic-block critical 0->312
+> - case-004-flex-layout geometry 0->202
+> - case-004-flex-layout mismatch 0->535
+> - case-004-flex-layout missing 0->3
+> - case-004-flex-layout critical 0->174
+> - case-004-flex-layout major 0->28
+> - case-005-grid-layout geometry 0->154
+> - case-005-grid-layout mismatch 0->340
+> - case-005-grid-layout missing 0->2
+> - case-005-grid-layout critical 0->140
+> - case-005-grid-layout major 0->8
+> - case-006-typography mismatch 0->1058
+> - case-007-border-styles geometry 0->304
+> - case-007-border-styles mismatch 0->554
+> - case-007-border-styles missing 0->1
+> - case-007-border-styles critical 0->170
+> - case-007-border-styles major 0->126
+> - case-008-box-shadow geometry 0->98
+> - case-008-box-shadow mismatch 0->176
+> - case-008-box-shadow missing 0->1
+> - case-008-box-shadow critical 0->59
+> - case-008-box-shadow major 0->39
+> - case-009-outline geometry 0->108
+> - case-009-outline mismatch 0->197
+> - case-009-outline missing 0->1
+> - case-009-outline critical 0->73
+> - case-009-outline major 0->35
+> - case-010-display-none geometry 0->136
+> - case-010-display-none mismatch 0->313
+> - case-010-display-none structure 0->20
+> - case-010-display-none missing 0->1
+> - case-010-display-none critical 0->85
+> - case-010-display-none major 0->51
 > - case-011-position-absolute geometry 0->128
 > - case-011-position-absolute mismatch 0->38
 > - case-011-position-absolute critical 0->114
@@ -262,7 +284,7 @@
 > - case-055-sticky-multi mismatch 0->4
 > - case-055-sticky-multi critical 0->6
 > - case-055-sticky-multi major 0->10
-> - overflow 0->222
+> - overflow 0->200
 >
 > ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
 
@@ -270,37 +292,37 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 93.7% | 7183/7667 |
-| width | 94% | 7204/7667 |
-| position | 99.8% | 7652/7667 |
-| font-weight | 100% | 7667/7667 |
-| opacity | 100% | 7667/7667 |
-| font-size | 100% | 7614/7614 |
-| top | 100% | 7602/7602 |
-| left | 100% | 7602/7602 |
-| background-color | 100% | 7287/7288 |
-| display | 100% | 7158/7158 |
-| border-radius | 100% | 247/247 |
-| text-decoration-thickness | 0% | 0/224 |
-| border-left-width | 100% | 223/223 |
-| border-left-color | 100% | 223/223 |
-| padding-top | 8.8% | 16/181 |
-| padding-left | 8.5% | 12/142 |
-| padding-right | 8.5% | 12/142 |
-| padding-bottom | 11.3% | 16/142 |
-| margin-bottom | 16.1% | 22/137 |
-| text-align | 100% | 90/90 |
-| margin-top | 27.4% | 17/62 |
-| gap | 8.6% | 3/35 |
+| height | 78.5% | 6670/8497 |
+| width | 78.6% | 6682/8497 |
+| position | 99.7% | 8473/8497 |
+| font-weight | 100% | 8497/8497 |
+| opacity | 100% | 8497/8497 |
+| top | 100% | 8428/8428 |
+| left | 100% | 8428/8428 |
+| font-size | 100% | 7418/7418 |
+| background-color | 100% | 6695/6696 |
+| display | 100% | 6692/6692 |
+| border-radius | 100% | 1675/1675 |
+| text-decoration-thickness | 0% | 0/1665 |
+| border-left-color | 99.5% | 1656/1664 |
+| border-left-width | 99.9% | 1662/1664 |
+| padding-top | 6.1% | 10/165 |
+| padding-left | 7.6% | 10/131 |
+| padding-right | 7.6% | 10/131 |
+| padding-bottom | 7.6% | 10/131 |
+| margin-bottom | 13.7% | 17/124 |
+| text-align | 100% | 58/58 |
+| margin-top | 20% | 10/50 |
+| gap | 7.5% | 3/40 |
 | flex-direction | 10.5% | 2/19 |
-| margin-left | 52.6% | 10/19 |
-| margin-right | 62.5% | 10/16 |
-| border-width | 100% | 10/10 |
-| align-items | 100% | 9/9 |
-| justify-content | 100% | 7/7 |
+| margin-left | 66.7% | 10/15 |
+| margin-right | 83.3% | 10/12 |
+| align-items | 100% | 8/8 |
 | text-decoration-line | 0% | 0/6 |
-| flex-wrap | 0% | 0/5 |
-| min-width | 0% | 0/3 |
+| justify-content | 100% | 6/6 |
+| border-width | 100% | 5/5 |
+| flex-wrap | 0% | 0/2 |
+| grid-template-columns | 0% | 0/2 |
 | min-height | 0% | 0/1 |
 | text-decoration-color | 0% | 0/1 |
 | text-decoration-style | 0% | 0/1 |
@@ -322,11 +344,12 @@
 | direction | 0% | 0/0 |
 | color | 0% | 0/0 |
 | border-color | 0% | 0/0 |
+| min-width | 0% | 0/0 |
 | flex-grow | 0% | 0/0 |
 | flex-shrink | 0% | 0/0 |
 | overflow-x | 0% | 0/0 |
-| pointer-events | 0% | 0/0 |
 | box-shadow | 0% | 0/0 |
+| pointer-events | 0% | 0/0 |
 | overflow | 0% | 0/0 |
 | max-height | 0% | 0/0 |
 
@@ -337,15 +360,15 @@
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
 | case-001-wrapper-x | 0 | 0 | **41** | 657 | 0 | 0 |
-| case-002-auto-height | 0 | **166** | **58** | 31 | 0 | 12 |
-| case-003-basic-block | 0 | 0 | 0 | 0 | 0 | 0 |
-| case-004-flex-layout | 0 | 0 | 0 | 0 | 0 | 0 |
-| case-005-grid-layout | 0 | 0 | 0 | 0 | 0 | 0 |
-| case-006-typography | 0 | 0 | 0 | 0 | 0 | 0 |
-| case-007-border-styles | 0 | **193** | **74** | 39 | 0 | 7 |
-| case-008-box-shadow | 0 | **66** | **7** | 14 | 0 | 1 |
-| case-009-outline | 0 | **69** | **16** | 13 | 0 | 0 |
-| case-010-display-none | 0 | **137** | **35** | 13 | 0 | 2 |
+| case-002-auto-height | 0 | **224** | **10** | 486 | 0 | 0 |
+| case-003-basic-block | 0 | **312** | 0 | 544 | 0 | 0 |
+| case-004-flex-layout | 3 | **174** | **28** | 535 | 0 | 0 |
+| case-005-grid-layout | 2 | **140** | **8** | 340 | 0 | 0 |
+| case-006-typography | 0 | 0 | 0 | 1058 | 0 | 0 |
+| case-007-border-styles | 1 | **170** | **126** | 554 | 0 | 0 |
+| case-008-box-shadow | 1 | **59** | **39** | 176 | 0 | 0 |
+| case-009-outline | 1 | **73** | **35** | 197 | 0 | 0 |
+| case-010-display-none | 1 | **85** | **51** | 313 | 20 | 0 |
 | case-011-position-absolute | 0 | **114** | **13** | 38 | 0 | 0 |
 | case-012-position-relative | 0 | **138** | **28** | 10 | 3 | 15 |
 | case-013-z-index | 0 | **167** | **43** | 15 | 0 | 0 |
@@ -395,40 +418,6 @@
 ---
 
 ## Phase G 容器溢出详情
-
-### case-002-auto-height
-
-- [FLEX-WIDTH] row flex items total width (168) exceeds container content width (66) by 102px (gap=${gap}px, children=21, wrap=nowrap)
-- child(type=span right=117) overflows parent(type=div contentRight=114) by 3px (w: child=4 parent=66)
-- child(type=span right=121) overflows parent(type=div contentRight=114) by 7px (w: child=4 parent=66)
-- [FLEX-WIDTH] row flex items total width (168) exceeds container content width (66) by 102px (gap=${gap}px, children=21, wrap=nowrap)
-- child(type=span right=117) overflows parent(type=div contentRight=114) by 3px (w: child=4 parent=66)
-- child(type=span right=121) overflows parent(type=div contentRight=114) by 7px (w: child=4 parent=66)
-- [FLEX-WIDTH] row flex items total width (168) exceeds container content width (66) by 102px (gap=${gap}px, children=21, wrap=nowrap)
-- child(type=span right=117) overflows parent(type=div contentRight=114) by 3px (w: child=4 parent=66)
-- child(type=span right=121) overflows parent(type=div contentRight=114) by 7px (w: child=4 parent=66)
-- [FLEX-WIDTH] row flex items total width (168) exceeds container content width (66) by 102px (gap=${gap}px, children=21, wrap=nowrap)
-- child(type=span right=117) overflows parent(type=div contentRight=114) by 3px (w: child=4 parent=66)
-- child(type=span right=121) overflows parent(type=div contentRight=114) by 7px (w: child=4 parent=66)
-
-### case-007-border-styles
-
-- [FLEX-WIDTH] row flex items total width (2282) exceeds container content width (750) by 1532px (gap=${gap}px, children=3, wrap=wrap)
-- [FLEX-WRAP-WIDTH] wrap container: items exceed row width by 1532px — items may be too wide for flex:1 distribution
-- child(type=div right=779) overflows parent(type=div contentRight=311) by 468px (w: child=718 parent=250)
-- child(type=div right=779) overflows parent(type=div contentRight=311) by 468px (w: child=718 parent=250)
-- child(type=div right=779) overflows parent(type=div contentRight=577) by 202px (w: child=718 parent=250)
-- child(type=div right=779) overflows parent(type=div contentRight=577) by 202px (w: child=718 parent=250)
-- child(type=div right=827) overflows parent(type=div contentRight=794) by 33px (w: child=250 parent=750)
-
-### case-008-box-shadow
-
-- child(type=div right=800) overflows parent(type=div contentRight=794) by 6px (w: child=160 parent=750)
-
-### case-010-display-none
-
-- [FLEX-WIDTH] row flex items total width (1516) exceeds container content width (750) by 766px (gap=${gap}px, children=2, wrap=nowrap)
-- child(type=div right=827) overflows parent(type=div contentRight=794) by 33px (w: child=250 parent=750)
 
 ### case-012-position-relative
 

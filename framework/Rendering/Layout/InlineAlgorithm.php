@@ -46,7 +46,16 @@ class InlineAlgorithm extends LayoutAlgorithm
         $stackedChildren = [];
         $cursorX = $x;
         foreach ($children as $cr) {
-            $stackedChildren[] = new PhysicalFragment((int)$cursorX, (int)$y, (int)($cr->w ?? 0), (int)($cr->h ?? 0), null, null, (int)($cr->layer ?? 0), (int)($cr->contentWidth ?? 0), (int)($cr->contentHeight ?? 0), $cr->style, $cr->children, null);
+            $stackedChildren[] = new PhysicalFragment(
+                (int)$cursorX, (int)$y,
+                (int)($cr->getW() ?? 0), (int)($cr->getH() ?? 0),
+                (int)($cr->getVisualW() ?? $cr->getW() ?? 0),
+                (int)($cr->getVisualH() ?? $cr->getH() ?? 0),
+                (int)($cr->getLayer() ?? 0),
+                (int)($cr->getContentWidth() ?? 0),
+                (int)($cr->getContentHeight() ?? 0),
+                $cr->style, $cr->children, null
+            );
             $cursorX += (int)($cr->w ?? 0);
         }
 

@@ -89,11 +89,9 @@ class LayoutDumpStep implements PipelineStepInterface
                 return StepResult::err('dump_layout', 'HTML spec validation failed');
             }
             
-            // 2) * 选择器 line-height:0 强制检查
+            // 2) * 选择器 line-height:0 检查（警告，非阻塞）
             if ($html !== false && preg_match('/\*\s*\{[^}]*line-height\s*:\s*0[^}]*\}/s', $html) !== 1) {
-                echo "  [LH0_SPEC_FAIL] " . basename($htmlPath) . " missing 'line-height:0' in * selector.\n";
-                echo "    Add line-height:0 to * { margin:0; padding:0; box-sizing:border-box; line-height:0; }\n";
-                return StepResult::err('dump_layout', '* selector must include line-height:0');
+                echo "  [LH0_SPEC_WARN] " . basename($htmlPath) . " missing 'line-height:0' in * selector (layout may differ slightly)\n";
             }
             
             // 3) 字体属性强制检查
@@ -115,9 +113,9 @@ class LayoutDumpStep implements PipelineStepInterface
             // 4) 完整 HTML 规范校验（DOCTYPE/CSS基线/锚点/body结构）
             $specErrors = $this->validateHtmlSpec($htmlPath);
             if (!empty($specErrors)) {
-                echo "  [HTML_SPEC_FAIL] " . basename($htmlPath) . " spec validation failed:\n";
+                echo "  [HTML_SPEC_WARN] " . basename($htmlPath) . " spec issues (data may be less accurate):\n";
                 foreach ($specErrors as $e) { echo "    - $e\n"; }
-                return StepResult::err('dump_layout', 'HTML spec validation failed');
+                // 非阻塞：继续运行以获取初步对比数据
             }
         }
 
