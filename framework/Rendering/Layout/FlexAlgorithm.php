@@ -28,15 +28,15 @@ class FlexAlgorithm extends LayoutAlgorithm
         if ($space->isIntrinsicMeasurement) {
             $totalW = 0; $maxH = 0;
             foreach ($childResults as $cr) {
-                $totalW += (int)($cr->w ?? 0); if ((int)($cr->h ?? 0) > $maxH) $maxH = (int)$cr->h;
+                $totalW += (int)($cr->getW() ?? 0); if ((int)($cr->getH() ?? 0) > $maxH) $maxH = (int)$cr->getH();
             }
             return new PhysicalFragment(0, 0, $totalW, $maxH, $totalW, $maxH, 0, 0, 0, $s);
         }
 
         $parentX = $space->parentContentX;
         $parentY = $space->parentContentY;
-        $parentW = $space->contentWidth;
-        $parentH = $space->contentHeight;
+        $parentW = $space->getContentWidth();
+        $parentH = $space->getContentHeight();
         $left = $s->left?->toPx() ?? 0;
         $top = $s->top?->toPx() ?? 0;
         $x = $parentX + $left;
@@ -86,14 +86,14 @@ class FlexAlgorithm extends LayoutAlgorithm
             $item->computedStyle = $cs;
             $item->content = $cr->style?->getRaw('_content');
             $item->originalChildren = $cr->children;
-            $item->w = (int)$cr->w; $item->h = (int)$cr->h;
+            $item->w = (int)$cr->getW(); $item->h = (int)$cr->getH();
             // Flex items without explicit width/height: ignore block auto-fill
             // (flex algorithm determines their main size)
             $hasMainSize = $isRow ? ($cs->getRaw("width") !== null) : ($cs->getRaw("height") !== null);
             if (!$hasMainSize && $basis <= 0) {
                 if ($isRow) $item->w = 0; else $item->h = 0;
             }
-            $item->visualW = (int)$cr->visualW; $item->visualH = (int)$cr->visualH;
+            $item->visualW = (int)$cr->getVisualW(); $item->visualH = (int)$cr->getVisualH();
             $flexItems[] = $item;
             $flexItemData[] = [
                 'grow' => $grow, 'shrink' => $shrink, 'basis' => $basis,
@@ -340,7 +340,7 @@ class FlexAlgorithm extends LayoutAlgorithm
         // Re-resolve flex:1 nested containers (flex-grow changes child sizes)
         if ($h <= 0 && count($mappedResults) > 0) {
             $maxBottom = $y;
-            foreach ($mappedResults as $cr) { $b = (int)($cr->y ?? 0) + (int)($cr->h ?? 0); if ($b > $maxBottom) $maxBottom = $b; }
+            foreach ($mappedResults as $cr) { $b = (int)($cr->getY() ?? 0) + (int)($cr->getH() ?? 0); if ($b > $maxBottom) $maxBottom = $b; }
             $h = max(0, $maxBottom - $y);
         }
 

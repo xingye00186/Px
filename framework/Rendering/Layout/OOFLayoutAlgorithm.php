@@ -91,10 +91,10 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         if ($isPositioned) {
             // 当前节点是定位祖先，子节点 absolute 以此为包含块
             // 包含块 = padding box = content box - padding
-            $cbX = $frag->x;
-            $cbY = $frag->y;
-            $cbW = $frag->w;
-            $cbH = $frag->h;
+            $cbX = $frag->getX();
+            $cbY = $frag->getY();
+            $cbW = $frag->getW();
+            $cbH = $frag->getH();
             // padding box 需要加 padding/border
             $cbBL = $cs?->borderLeftWidth ?? 0;
             $cbBT = $cs?->borderTopWidth ?? 0;
@@ -147,11 +147,11 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $pfChildren = [];
         foreach ($newChildren as $pfCh) { if ($pfCh !== null) $pfChildren[] = $pfCh; }
         return new PhysicalFragment(
-            (int)$frag->x, (int)$frag->y, (int)$frag->w, (int)$frag->h,
-            (int)$frag->visualW, (int)$frag->visualH, (int)$frag->layer,
-            (int)$frag->contentWidth, (int)$frag->contentHeight,
+            (int)$frag->getX(), (int)$frag->getY(), (int)$frag->getW(), (int)$frag->getH(),
+            (int)$frag->getVisualW(), (int)$frag->getVisualH(), (int)$frag->getLayer(),
+            (int)$frag->getContentWidth(), (int)$frag->getContentHeight(),
             $frag->style, $pfChildren, $sourceRN,
-            (int)$frag->scrollTop, (int)$frag->scrollLeft, (bool)$frag->isScrollContainer
+            (int)$frag->getScrollTop(), (int)$frag->getScrollLeft(), (bool)$frag->getIsScrollContainer()
         );
     }
 

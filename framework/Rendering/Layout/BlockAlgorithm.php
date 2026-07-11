@@ -69,7 +69,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             if ($hasPercentChild) {
                 $pass1 = $this->stackBlockChildren($x, $y, $w, $s, $children, $textContent, $parentW);
                 $computedH = $y;
-                foreach ($pass1 as $cr) { $bottom = $cr->y + $cr->h; if ($bottom > $computedH) $computedH = $bottom; }
+                foreach ($pass1 as $cr) { $bottom = $cr->getY() + $cr->getH(); if ($bottom > $computedH) $computedH = $bottom; }
                 $computedH = max(0, $computedH - $y);
 
                 $reResolved = [];
@@ -96,7 +96,7 @@ class BlockAlgorithm extends LayoutAlgorithm
                     $inlineBuffer[] = $cr;
                 } else {
                     if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $y, $stackedChildren, $parentW); }
-                    $stackedChildren[] = new PhysicalFragment((int)$cr->x, (int)$cr->y, (int)$cr->w, (int)$cr->h, 0, 0, (int)($cr->layer ?? 0), (int)($cr->contentWidth ?? 0), (int)($cr->contentHeight ?? 0), $cr->style, $cr->children, null);
+                    $stackedChildren[] = new PhysicalFragment((int)$cr->getX(), (int)$cr->getY(), (int)$cr->getW(), (int)$cr->getH(), 0, 0, (int)($cr->getLayer() ?? 0), (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0), $cr->style, $cr->children, null);
                 }
             }
             if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $y, $stackedChildren, $parentW); }
@@ -104,7 +104,7 @@ class BlockAlgorithm extends LayoutAlgorithm
 
         if ($h <= 0 && count($stackedChildren) > 0) {
             $maxBottom = $y;
-            foreach ($stackedChildren as $cr) { $bottom = $cr->y + $cr->h; if ($bottom > $maxBottom) $maxBottom = $bottom; }
+            foreach ($stackedChildren as $cr) { $bottom = $cr->getY() + $cr->getH(); if ($bottom > $maxBottom) $maxBottom = $bottom; }
             $h = max(0, $maxBottom - $y);
         }
 
@@ -178,7 +178,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             $mBottom = $childStyle?->margin?->bottom->toPx() ?? 0;
             $mLeft = $childStyle?->margin?->left->toPx() ?? 0;
             $mRight = $childStyle?->margin?->right->toPx() ?? 0;
-            $chW = (int)($cr->w ?? 0);
+            $chW = (int)($cr->getW() ?? 0);
             if ($chW <= 0) {
                 $autoPadL = $childStyle?->padding?->left->toPx() ?? 0;
                 $autoPadR = $childStyle?->padding?->right->toPx() ?? 0;
@@ -186,7 +186,7 @@ class BlockAlgorithm extends LayoutAlgorithm
                 $cs = $childStyle?->boxSizing?->value ?? 'content-box';
                 $chW = ($cs === 'border-box') ? max(0, $containerW - $mLeft - $mRight) : max(0, $containerW - $mLeft - $mRight - $autoPadL - $autoPadR - $autoBw);
             }
-            $chH = (int)($cr->h ?? 0);
+            $chH = (int)($cr->getH() ?? 0);
             if ($childStyle !== null) {
                 $typeFromStyle = $childStyle->getRaw('_type');
                 if (is_string($typeFromStyle) && self::isInlineType($typeFromStyle) && strlen($childStyle->getRaw('_content') ?? '') > 0) {
@@ -203,7 +203,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             $relTop = $childStyle?->top?->toPx() ?? 0;
             $relLeft = $childStyle?->left?->toPx() ?? 0;
             if ($childPosition === 'relative') { $childY += $relTop; }
-            $result[] = new PhysicalFragment((int)($parentX + $padLeft + ($childPosition === 'relative' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->layer ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, null);
+            $result[] = new PhysicalFragment((int)($parentX + $padLeft + ($childPosition === 'relative' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->getLayer() ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, null);
             $stackY = ($childY - ($childPosition === 'relative' ? $relTop : 0)) + $chH + $mBottom;
             $prevMarginBottom = $mBottom;
             $prevCollapsible = $isCollapsible;
@@ -221,10 +221,10 @@ class BlockAlgorithm extends LayoutAlgorithm
             $mRight = $cStyle?->margin?->right->toPx() ?? 0;
             $mTop = $cStyle?->margin?->top->toPx() ?? 0;
             $mBottom = $cStyle?->margin?->bottom->toPx() ?? 0;
-            $itemTotalW = ($cr->w ?? 0) + $mLeft + $mRight;
-            $itemH = ($cr->h ?? 0) + $mTop + $mBottom;
+            $itemTotalW = ($cr->getW() ?? 0) + $mLeft + $mRight;
+            $itemH = ($cr->getH() ?? 0) + $mTop + $mBottom;
             if ($cursorX + $itemTotalW > $availableW && $cursorX > $padLeft) { $cursorY += $lineMaxH; $cursorX = $padLeft; $lineMaxH = 0; }
-            $result[] = new PhysicalFragment((int)($parentX + $cursorX + $mLeft), (int)($startY + $cursorY + $mTop), (int)($cr->w ?? 0), (int)($cr->h ?? 0), 0, 0, (int)($cr->layer ?? 0), (int)($cr->contentWidth ?? 0), (int)($cr->contentHeight ?? 0), $cStyle, $cr->children, null);
+            $result[] = new PhysicalFragment((int)($parentX + $cursorX + $mLeft), (int)($startY + $cursorY + $mTop), (int)($cr->getW() ?? 0), (int)($cr->getH() ?? 0), 0, 0, (int)($cr->getLayer() ?? 0), (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0), $cStyle, $cr->children, null);
             $cursorX += $itemTotalW;
             if ($itemH > $lineMaxH) $lineMaxH = $itemH;
         }
