@@ -22,7 +22,7 @@ interface BrowserRefStrategy
  * Edge DOM dump 策略 — 注入 dump_layout.js 提取浏览器元素位置/样式。
  *
  * 工作流程:
- *   1. BrowserRefStep::buildCssTestWrapper() 已注入 dump_layout.js + <textarea id="layout-output">
+ *   1. instrumentHtml() 注入 dump_layout.js + <textarea id="layout-output">
  *   2. Edge headless --dump-dom 渲染页面，JS 自动执行
  *   3. dump_layout.js 遍历 DOM，用 getBoundingClientRect() + getComputedStyle() 提取元素数据
  *   4. JSON 写入 <textarea id="layout-output">，--dump-dom 输出完整 HTML
@@ -33,10 +33,23 @@ class EdgeDomStrategy implements BrowserRefStrategy
     private BrowserLauncher $browser;
     public function __construct(BrowserLauncher $b = null) { $this->browser = $b ?? new BrowserLauncher(); }
     public function name(): string { return 'edge_dom'; }
+
     public function generate(string $htmlPath, string $refDir, string $caseName): bool
     {
         if (!$this->browser->isAvailable()) return false;
-        $domOutput = $this->browser->dumpDom($htmlPath, 1600, 800);
+
+        // 注入 dump_layout.js + textarea（原始 .html 不包含这些基础设施）
+        $instrumented = $this->instrumentHtml($htmlPath);
+        if ($instrumented === null) {
+            echo "  [edge_dom] WARNING: instrumentHtml failed, falling back to raw HTML\n";
+            $domOutput = $this->browser->dumpDom($htmlPath, 1600, 800);
+        } else {
+            // 写入临时文件供 Edge 加载
+            $tempHtml = tempnam(sys_get_temp_dir(), 'px_html_') . '.html';
+            file_put_contents($tempHtml, $instrumented);
+            $domOutput = $this->browser->dumpDom($tempHtml, 1600, 800);
+            @unlink($tempHtml);
+        }
         if ($domOutput === null) return false;
 
         // Extract JSON from <textarea id="layout-output"> injected by dump_layout.js
@@ -153,22 +166,19 @@ class EdgeDomStrategy implements BrowserRefStrategy
 
         if ($domOutput === null) return false;
 
-        // 从 DOM 输出中提取 #layout-output（使用更健壮的方式）
-        // Edge --dump-dom 可能以不同方式序列化 textarea，用 strpos 定位更可靠
+        // 从 DOM 输出中提取 #layout-output
         $layoutMarker = 'id="layout-output"';
         $layoutPos = strpos($domOutput, $layoutMarker);
         if ($layoutPos === false) {
             echo "  [edge_dom] WARNING: batch layout-output id not found (raw output length=" . strlen($domOutput) . ")\n";
             return false;
         }
-        // 找到 textarea 开始标签的结束位置
         $tagEnd = strpos($domOutput, '>', $layoutPos);
         if ($tagEnd === false) {
             echo "  [edge_dom] WARNING: batch layout-output tag not closed\n";
             return false;
         }
         $contentStart = $tagEnd + 1;
-        // Edge --dump-dom 可能省略 </textarea>，需检测后续标签
         $contentEnd = strlen($domOutput);
         foreach (['</textarea>', '<script', '</body>', '</html>'] as $marker) {
             $pos = strpos($domOutput, $marker, $contentStart);
@@ -206,6 +216,49 @@ class EdgeDomStrategy implements BrowserRefStrategy
 
         echo "  [edge_dom] batch done: $count/" . count($cases) . " cases\n";
         return $count > 0;
+    }
+
+    /**
+     * 注入 dump_layout.js 和 textarea 到 HTML。
+     * 原始 .html 文件不含这些基础设施，需要在此注入。
+     */
+    private function instrumentHtml(string $htmlPath): ?string
+    {
+        $html = @file_get_contents($htmlPath);
+        if ($html === false) return null;
+
+        // data-px-id 注入（与 PipelineSteps::HtmlDataPxIdInjector 一致）
+        $injectorPath = dirname(__DIR__, 2) . '/HtmlDataPxIdInjector.php';
+        if (file_exists($injectorPath)) {
+            require_once $injectorPath;
+            $html = \PxTest\HtmlDataPxIdInjector::inject($html);
+        }
+
+        // Load dump_layout.js from tools/
+        $projectRoot = dirname(__DIR__, 4);
+        $dumpLayoutJsPath = $projectRoot . '/tools/dump_layout.js';
+        $dumpLayoutJs = '';
+        if (file_exists($dumpLayoutJsPath)) {
+            $dumpLayoutJs = @file_get_contents($dumpLayoutJsPath);
+        }
+        if (empty($dumpLayoutJs)) {
+            echo "  [edge_dom] WARNING: dump_layout.js not found at $dumpLayoutJsPath\n";
+        }
+
+        // Build injection: textarea + dump_layout.js (no CSS modification)
+        $injectJs = '<textarea id="layout-output" style="display:none;"></textarea>' . "\n";
+        if ($dumpLayoutJs !== '') {
+            $injectJs .= '<script>' . $dumpLayoutJs . '</script>';
+        }
+
+        // Inject before </body> so DOM is guaranteed to be ready
+        if (stripos($html, '</body>') !== false) {
+            $html = str_ireplace('</body>', $injectJs . '</body>', $html);
+        } else {
+            $html .= $injectJs;
+        }
+
+        return $html;
     }
 }
 
