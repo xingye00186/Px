@@ -767,23 +767,9 @@ class Application
      */
     public function dumpLayoutToFile(string $path, bool $caseContentOnly = false): void
     {
-        $root = $this->renderTreeManager->getRootRenderNode();
-        if ($root === null) {
-            file_put_contents($path, '[]');
-            return;
-        }
-        // 使用渲染时捕获的 Fragment 快照（render() 中已 layout，快照与渲染使用同一 Fragment）
-        if ($this->lastLayoutDumpJson !== '') {
-            file_put_contents($path, $this->lastLayoutDumpJson);
-        } else {
-            // fallback: 渲染未执行（如单元测试），临时布局
-            $frag = $this->layoutOrchestrator->getRootFragment();
-            if ($frag === null) {
-                $frag = $this->layoutOrchestrator->layout($root);
-            }
-            $data = $this->fragmentToArray($frag);
-            file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        }
+        // 快照由 render() 在每次 layout() 后通过 captureLayoutSnapshot() 写入
+        // 保证与渲染使用同一 Fragment 树，无需重算
+        file_put_contents($path, $this->lastLayoutDumpJson);
     }
 
     /**
