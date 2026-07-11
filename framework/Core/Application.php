@@ -20,6 +20,7 @@ use Px\Rendering\VNodeRenderer;
 use Px\Rendering\LayoutOrchestrator;
 use Px\Rendering\StyleRecalcPass;
 use Px\Rendering\Layout\PhysicalFragment;
+use Px\Rendering\Diag;
 use Px\Rendering\InteractionState;
 use Px\Rendering\CssMappings;
 use Px\Rendering\ImageManager;
@@ -139,6 +140,9 @@ class Application
                 $dumpTo = substr($arg, strlen('--dump-layout-to='));
             } elseif (str_starts_with($arg, '--case=')) {
                 $caseName = substr($arg, strlen('--case='));
+            } elseif (str_starts_with($arg, '--diag-layout=')) {
+                $diagLevel = max(0, (int)substr($arg, strlen('--diag-layout=')));
+                \Px\Rendering\Diag::initFromCli($diagLevel);
             }
         }
 
@@ -789,6 +793,7 @@ class Application
     {
         $data = $this->fragmentToArray($frag);
         $this->lastLayoutDumpJson = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        Diag::log(1, 'snapshot:done', ['jsonSize' => strlen($this->lastLayoutDumpJson)]);
     }
 
     /**
@@ -932,6 +937,8 @@ class Application
         if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] render AFTER');
         }
+
+        Diag::log(1, 'render:done', ['fragExists' => $fragmentTree !== null ? 'yes' : 'no']);
 
         // 捕获 Fragment 快照供 dumpLayoutToFile 读取（与渲染使用同一 Fragment，保证一致性）
         $this->captureLayoutSnapshot($fragmentTree);

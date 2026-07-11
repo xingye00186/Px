@@ -6,6 +6,7 @@ use native_types;
 
 use Px\Rendering\Layout\ConstraintSpace;
 use Px\Rendering\Layout\PhysicalFragment;
+use Px\Rendering\Diag;
 use Px\Rendering\ComputedStyle;
 use Px\Rendering\RenderNode;
 use Px\Rendering\Layout\LayoutAlgorithm;
@@ -61,6 +62,7 @@ class LayoutOrchestrator
     {
         // 构建根约束空间
         // 根容器尺寸来自视口（WINDOW_WIDTH/WINDOW_HEIGHT），而非 RenderNode 属性
+        Diag::log(1, 'layout:enter', ['rootType' => $root->type, 'children' => count($root->children)]);
         $rootW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1600;
         $rootH = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 800;
         $space = new ConstraintSpace($rootW, $rootH, 0, 0, $rootW, $rootH);
@@ -74,6 +76,7 @@ class LayoutOrchestrator
             $rootFragment, $root, $viewportW, $viewportH
         );
 
+        Diag::log(1, 'layout:exit', ['rootW' => $rootFragment->w, 'rootH' => $rootFragment->h, 'children' => count($rootFragment->children)]);
         return $rootFragment;
     }
 
@@ -134,6 +137,7 @@ class LayoutOrchestrator
 
         // 正常流：选择 Algorithm 执行布局
         $algo = $this->selectAlgorithm($display, $style);
+        Diag::log(2, 'process:node', ['type' => $node->type, 'display' => $display, 'pos' => $position, 'algo' => $algo !== null ? get_class($algo) : 'none']);
         $textContent = is_string($node->content) ? $node->content : '';
 
         // Phase 4: 查 LayoutCache — 约束空间不变时跳过算法
@@ -142,11 +146,15 @@ class LayoutOrchestrator
         $ckey = LayoutCacheKey::fromSpace($space, $nodeId, $styleVer);
         $cached = $this->cache->find($ckey);
         if ($cached !== null) {
+            Diag::log(2, 'cache:hit', ['type' => $node->type, 'w' => $cached->w, 'h' => $cached->h]);
             return new \Px\Rendering\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node);
         }
 
+        Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->contentWidth, 'ch' => $space->contentHeight]);
+
         // 调用 Algorithm::layout() 执行布局
         $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments);
+        Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->x, 'y' => $algoFrag->y, 'w' => $algoFrag->w, 'h' => $algoFrag->h, 'algo' => get_class($algo)]);
 
         // 应用 layer 继承：Algorithm 返回的 Fragment 不包含 layer 信息，需要覆盖
         if ($nodeLayer > $algoFrag->layer) {

@@ -91,13 +91,7 @@ class VNodeRenderer
         $elementsByLayer = [];
         $maxLayer = 0;
         $this->collectElements($root, $elementsByLayer, $maxLayer);
-        if (Config::get('debug_diag_enabled', false)) {
-            $totalElements = 0;
-            for ($l = 0; $l <= $maxLayer; $l++) {
-                $totalElements += count($elementsByLayer[$l] ?? []);
-            }
-            error_log('[DIAG] VNodeRenderer: collected ' . $totalElements . ' elements across ' . ($maxLayer + 1) . ' layers');
-        }
+        Diag::log(1, 'vnode:collect', ['elements' => array_sum(array_map('count', $elementsByLayer)), 'layers' => $maxLayer + 1]);
         for ($l = 0; $l <= $maxLayer; $l++) {
             $layerElements = $elementsByLayer[$l] ?? [];
             foreach ($layerElements as $el) {
@@ -316,7 +310,7 @@ class VNodeRenderer
         if (!$isFixed && (bool)($node->isScrollContainer ?? false)) {
             $childOffsetX -= (int)($node->scrollLeft ?? 0);
             $childOffsetY -= (int)($node->scrollTop ?? 0);
-            error_log('[SCROLL_DBG] collect scrollContainer x=' . (int)($node->x ?? 0) . ' y=' . (int)($node->y ?? 0) . ' w=' . (int)($node->w ?? 0) . ' h=' . (int)($node->h ?? 0) . ' visualH=' . (int)($node->visualH ?? 0) . ' scrollTop=' . (int)($node->scrollTop ?? 0) . ' scrollLeft=' . (int)($node->scrollLeft ?? 0) . ' childOffY=' . $childOffsetY . ' children=' . count($node->children));
+
         }
         if ($node->type !== 'button') {
             foreach ($node->children as $child) {
@@ -1027,10 +1021,7 @@ class VNodeRenderer
         if ($vModel !== '') {
             $text = $this->currentComponent()->getBindValue($vModel);
         }
-        $diagLogPath = Config::get('debug_diag_log_path', '');
-        if ($diagLogPath !== '') {
-            file_put_contents($diagLogPath, "makeSpanElement: node.type={$node->type} content_is_null=" . (int)($node->content===null) . " text='$text' bindKey='$bindKey' x={{(int)($node->x ?? 0)} y={(int)($node->y ?? 0)} w={(int)($node->w ?? 0)} h={(int)($node->h ?? 0)}\n", FILE_APPEND);
-        }
+
         if ($text === '') return null;
         $rawContainerW = $props['container-w'] ?? null;
         $containerW = $w;
