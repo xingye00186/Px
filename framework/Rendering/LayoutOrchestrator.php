@@ -191,6 +191,14 @@ class LayoutOrchestrator
         $offX = (int)((int)($parentSpace->getParentContentX() ?? 0) + $padL + $bL);
         $offY = (int)((int)($parentSpace->getParentContentY() ?? 0) + $padT + $bT);
 
+        // 当父元素有显式 CSS width 时，用它计算子约束空间（优先于约束空间传递的值）
+        // 测试卡片 width:800px 的场景：ConstraintSpace contentWidth=1510（来自祖父容器），
+        // 但卡片实际仅 800px，子元素应该用 800px 而非 1510 作为约束。
+        $parentExplicitW = $parentStyle?->width?->toPx();
+        if ($parentExplicitW !== null && $parentExplicitW > 0) {
+            $cbW = max(0, (int)$parentExplicitW - $padL - $padR - $bL - $bR);
+        }
+
         $childStyle = $child->computedStyle;
         $percW = $childStyle?->width?->isPercent() ? $cbW : null;
         $percH = $childStyle?->height?->isPercent() ? $cbH : null;
