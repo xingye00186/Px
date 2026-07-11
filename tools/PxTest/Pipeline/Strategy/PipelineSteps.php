@@ -530,6 +530,12 @@ class LayoutDumpStep implements PipelineStepInterface
         // 检查当前节点
         $ds = $node['dataset'] ?? [];
         if (isset($ds['pxTestroot']) && (string)$ds['pxTestroot'] === 'true') {
+            // 零化根节点坐标：filterToTestRoot 提取的子树中，根节点位置
+            // 偏移（来自 App.vue 布局的 content-body padding）应置零，
+            // 使子节点坐标正确反映其在测试内容中的相对位置。
+            // 否则 extractContentSubtree 的锚归一化会双重减去偏移。
+            $node['x'] = 0;
+            $node['y'] = 0;
             return $node;
         }
         // 递归搜索子节点
