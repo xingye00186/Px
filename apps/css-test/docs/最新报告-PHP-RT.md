@@ -1,19 +1,19 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-11 23:16:47 | **总耗时**: 16.8s
+**运行时间**: 2026-07-11 23:23:57 | **总耗时**: 17s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
 | case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 698diff 🟡41 | ⏭️ | ❌ 失败 | 1.6s |
 | case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 720diff 🔴224 | ⏭️ | ❌ 失败 | 1.4s |
-| case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 856diff 🔴312 | ⏭️ | ❌ 失败 | 1.5s |
-| case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 737diff 🔴174 | ⏭️ | ❌ 失败 | 1.6s |
-| case-005-grid-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 494diff 🔴140 | ⏭️ | ❌ 失败 | 1.3s |
+| case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 700diff 🟡156 | ⏭️ | ❌ 失败 | 1.5s |
+| case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 634diff 🔴97 | ⏭️ | ❌ 失败 | 1.6s |
+| case-005-grid-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 469diff 🔴113 | ⏭️ | ❌ 失败 | 1.3s |
 | case-006-typography | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1058diff | ⏭️ | ❌ 失败 | 2.1s |
-| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 858diff 🔴170 | ⏭️ | ❌ 失败 | 1.5s |
-| case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 274diff 🔴59 | ⏭️ | ❌ 失败 | 1.1s |
-| case-009-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 305diff 🔴73 | ⏭️ | ❌ 失败 | 1.2s |
-| case-010-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 469diff 🔴85 | ⏭️ | ❌ 失败 | 1.3s |
+| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 855diff 🔴238 | ⏭️ | ❌ 失败 | 1.6s |
+| case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 274diff 🔴63 | ⏭️ | ❌ 失败 | 1.1s |
+| case-009-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 305diff 🔴53 | ⏭️ | ❌ 失败 | 1.2s |
+| case-010-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 468diff 🔴92 | ⏭️ | ❌ 失败 | 1.4s |
 | case-011-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 166diff 🔴114 | ⏭️ | ❌ 失败 | 0s |
 | case-012-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 15 | 181diff 🔴138 | ⏭️ | ❌ 失败 | 0s |
 | case-013-z-index | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 226diff 🔴167 | ⏭️ | ❌ 失败 | 0s |
@@ -60,7 +60,7 @@
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 15diff 🔴9 | ⏭️ | ❌ 失败 | 0s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 22diff 🔴6 | ⏭️ | ❌ 失败 | 0s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 16.8s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 17s)
 
 ## 回归判定
 
@@ -76,41 +76,41 @@
 > - case-002-auto-height mismatch 0->486
 > - case-002-auto-height critical 0->224
 > - case-002-auto-height major 0->10
-> - case-003-basic-block geometry 0->312
+> - case-003-basic-block geometry 0->156
 > - case-003-basic-block mismatch 0->544
-> - case-003-basic-block critical 0->312
-> - case-004-flex-layout geometry 0->202
+> - case-003-basic-block major 0->156
+> - case-004-flex-layout geometry 0->99
 > - case-004-flex-layout mismatch 0->535
 > - case-004-flex-layout missing 0->3
-> - case-004-flex-layout critical 0->174
-> - case-004-flex-layout major 0->28
-> - case-005-grid-layout geometry 0->154
+> - case-004-flex-layout critical 0->97
+> - case-004-flex-layout major 0->2
+> - case-005-grid-layout geometry 0->129
 > - case-005-grid-layout mismatch 0->340
 > - case-005-grid-layout missing 0->2
-> - case-005-grid-layout critical 0->140
-> - case-005-grid-layout major 0->8
+> - case-005-grid-layout critical 0->113
+> - case-005-grid-layout major 0->9
 > - case-006-typography mismatch 0->1058
-> - case-007-border-styles geometry 0->304
+> - case-007-border-styles geometry 0->301
 > - case-007-border-styles mismatch 0->554
 > - case-007-border-styles missing 0->1
-> - case-007-border-styles critical 0->170
-> - case-007-border-styles major 0->126
+> - case-007-border-styles critical 0->238
+> - case-007-border-styles major 0->62
 > - case-008-box-shadow geometry 0->98
 > - case-008-box-shadow mismatch 0->176
 > - case-008-box-shadow missing 0->1
-> - case-008-box-shadow critical 0->59
-> - case-008-box-shadow major 0->39
+> - case-008-box-shadow critical 0->63
+> - case-008-box-shadow major 0->35
 > - case-009-outline geometry 0->108
 > - case-009-outline mismatch 0->197
 > - case-009-outline missing 0->1
-> - case-009-outline critical 0->73
-> - case-009-outline major 0->35
-> - case-010-display-none geometry 0->136
+> - case-009-outline critical 0->53
+> - case-009-outline major 0->55
+> - case-010-display-none geometry 0->135
 > - case-010-display-none mismatch 0->313
 > - case-010-display-none structure 0->20
 > - case-010-display-none missing 0->1
-> - case-010-display-none critical 0->85
-> - case-010-display-none major 0->51
+> - case-010-display-none critical 0->92
+> - case-010-display-none major 0->43
 > - case-011-position-absolute geometry 0->128
 > - case-011-position-absolute mismatch 0->38
 > - case-011-position-absolute critical 0->114
@@ -361,14 +361,14 @@
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
 | case-001-wrapper-x | 0 | 0 | **41** | 657 | 0 | 0 |
 | case-002-auto-height | 0 | **224** | **10** | 486 | 0 | 0 |
-| case-003-basic-block | 0 | **312** | 0 | 544 | 0 | 0 |
-| case-004-flex-layout | 3 | **174** | **28** | 535 | 0 | 0 |
-| case-005-grid-layout | 2 | **140** | **8** | 340 | 0 | 0 |
+| case-003-basic-block | 0 | 0 | **156** | 544 | 0 | 0 |
+| case-004-flex-layout | 3 | **97** | **2** | 535 | 0 | 0 |
+| case-005-grid-layout | 2 | **113** | **9** | 340 | 0 | 0 |
 | case-006-typography | 0 | 0 | 0 | 1058 | 0 | 0 |
-| case-007-border-styles | 1 | **170** | **126** | 554 | 0 | 0 |
-| case-008-box-shadow | 1 | **59** | **39** | 176 | 0 | 0 |
-| case-009-outline | 1 | **73** | **35** | 197 | 0 | 0 |
-| case-010-display-none | 1 | **85** | **51** | 313 | 20 | 0 |
+| case-007-border-styles | 1 | **238** | **62** | 554 | 0 | 0 |
+| case-008-box-shadow | 1 | **63** | **35** | 176 | 0 | 0 |
+| case-009-outline | 1 | **53** | **55** | 197 | 0 | 0 |
+| case-010-display-none | 1 | **92** | **43** | 313 | 20 | 0 |
 | case-011-position-absolute | 0 | **114** | **13** | 38 | 0 | 0 |
 | case-012-position-relative | 0 | **138** | **28** | 10 | 3 | 15 |
 | case-013-z-index | 0 | **167** | **43** | 15 | 0 | 0 |

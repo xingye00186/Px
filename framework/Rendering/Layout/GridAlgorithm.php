@@ -45,8 +45,9 @@ class GridAlgorithm extends LayoutAlgorithm
 
         $left = $s->left?->toPx() ?? 0;
         $top = $s->top?->toPx() ?? 0;
-        $x = $parentX + $left;
-        $y = $parentY + $top;
+        // 相对父容器，BlockAlgorithm::stackBlockChildren 处理堆叠
+        $x = $left;
+        $y = $top;
 
         // ── Container width ──
         $width = $s->width->toPx();

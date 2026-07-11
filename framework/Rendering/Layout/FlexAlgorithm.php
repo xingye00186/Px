@@ -33,14 +33,14 @@ class FlexAlgorithm extends LayoutAlgorithm
             return new PhysicalFragment(0, 0, $totalW, $maxH, $totalW, $maxH, 0, 0, 0, $s);
         }
 
-        $parentX = $space->parentContentX;
-        $parentY = $space->parentContentY;
         $parentW = $space->getContentWidth();
         $parentH = $space->getContentHeight();
         $left = $s->left?->toPx() ?? 0;
         $top = $s->top?->toPx() ?? 0;
-        $x = $parentX + $left;
-        $y = $parentY + $top;
+        // x/y 是相对于父容器的偏移，不应包含 parentContentY。
+        // BlockAlgorithm::stackBlockChildren 会单独处理堆叠偏移。
+        $x = $left;
+        $y = $top;
         $w = $s->width->toPx();
         if ($w <= 0) $w = $parentW;
         $h = $s->height->toPx();
