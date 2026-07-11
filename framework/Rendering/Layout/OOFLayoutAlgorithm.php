@@ -77,7 +77,7 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $position = $cs?->position?->value ?? 'static';
 
         // 该节点自身为定位祖先（非 static）时，传递给子节点
-        $isPositioned = ($position !== 'static' && $position !== 'relative');
+        $isPositioned = ($position !== 'static');
 
         $cbX = $containingBlockX;
         $cbY = $containingBlockY;
