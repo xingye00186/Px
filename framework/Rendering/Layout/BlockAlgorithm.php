@@ -106,6 +106,10 @@ class BlockAlgorithm extends LayoutAlgorithm
             $maxBottom = $y;
             foreach ($stackedChildren as $cr) { $bottom = $cr->getY() + $cr->getH(); if ($bottom > $maxBottom) $maxBottom = $bottom; }
             $h = max(0, $maxBottom - $y);
+            // CSS 2.2 $10.6.3: auto-height 应包含 padding-bottom + border-bottom
+            // 子元素 stack 到 maxBottom，下方 padding 和 border 应当计入高度
+            $h += (int)($s->padding?->bottom->toPx() ?? 0);
+            $h += (int)($s->getBorderBottomWidth() ?? 0);
         }
 
         return new PhysicalFragment((int)$x, (int)$y, (int)$w, (int)$h, $s->visualWidth($w), $s->visualHeight($h), 0, (int)$w, (int)$h, $s, $stackedChildren, null);
