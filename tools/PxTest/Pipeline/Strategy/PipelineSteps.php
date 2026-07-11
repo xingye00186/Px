@@ -140,23 +140,20 @@ class LayoutDumpStep implements PipelineStepInterface
         $ctx->set('mode_suffix', $modeSuffix);
 
         // ─── data-px-testroot 过滤：在 JSON 层提取测试内容子树 ───
-        // AOT 模式下 RenderNode 树的 dataset 搜索不可靠（$node->dataset 在 AOT 编译中行为不一致），
-        // 因此不在 AOT exe 内部做过滤，而是在 PHP 侧对 dump 输出的 JSON 做树修剪。
-        // PHP 模式下的 dumpLayoutToFile(true) 已正确过滤，跳过冗余处理。
-        if (!$isPhpRuntime) {
-            $filteredJson = file_get_contents($modeFile);
-            $treeData = json_decode($filteredJson, true);
-            if ($treeData !== null) {
-                $filteredTree = self::filterToTestRoot($treeData);
-                if ($filteredTree !== null) {
-                    $newJson = json_encode($filteredTree, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                    file_put_contents($modeFile, $newJson);
-                    $result = [0 => $newJson, 1 => $modeFile];
-                    if (!empty($result[0])) {
-                        $filteredJson = $result[0];
-                    }
-                    echo "  [px-testroot] filtered to test content only\n";
+        // AOT/PHP 模式均需过滤：AOT exe 内部不做过滤，PHP 的 dumpLayoutToFile 也未实现过滤。
+        // 在 PHP 侧对 dump 输出的 JSON 统一做树修剪。
+        $filteredJson = file_get_contents($modeFile);
+        $treeData = json_decode($filteredJson, true);
+        if ($treeData !== null) {
+            $filteredTree = self::filterToTestRoot($treeData);
+            if ($filteredTree !== null) {
+                $newJson = json_encode($filteredTree, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                file_put_contents($modeFile, $newJson);
+                $result = [0 => $newJson, 1 => $modeFile];
+                if (!empty($result[0])) {
+                    $filteredJson = $result[0];
                 }
+                echo "  [px-testroot] filtered to test content only\n";
             }
         }
 
