@@ -184,10 +184,9 @@ class RenderNodeSerializer
             $result['content'] = $node->content;
         }
 
-        // textRenderInfo
-        if ($node->textRenderInfo !== null) {
-            $result['textRenderInfo'] = $node->textRenderInfo;
-        }
+        // textRenderInfo (no longer on RenderNode, skip safely)
+        // Dynamic property access removed (textRenderInfo was migrated to VNodeRenderer paintFlags)
+
 
         // dataset: 从 RenderNode.dataset 读取（由 RenderTreeManager::updateFromVNode 同步）
         if (!empty($node->dataset)) {
