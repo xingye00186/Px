@@ -140,10 +140,9 @@ class LayoutOrchestrator
             if ($cs?->width?->isPercent()) $w = $cs->width->resolveInContext($space->contentWidth);
             if ($cs?->height?->isPercent()) $h = $cs->height->resolveInContext($space->contentHeight);
             return new PhysicalFragment(
-                x: 0, y: 0, w: max(0, $w), h: max(0, $h),
-                style: $style, children: $childFragments,
-                sourceNode: $node,
-                layer: $nodeLayer,
+                0, 0, max(0, $w), max(0, $h),
+                0, 0, $nodeLayer, 0, 0,
+                $style, $childFragments, $node,
             );
         }
 
@@ -204,7 +203,7 @@ class LayoutOrchestrator
 
         return ConstraintSpace::forChild(
             $offX, $offY, max(0, $cbW), max(0, $cbH),
-            percentageWidth: $percW, percentageHeight: $percH,
+            $percW, $percH,
         );
     }
 
