@@ -90,11 +90,11 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
 
         if ($isPositioned) {
             // 当前节点是定位祖先，子节点 absolute 以此为包含块
-            // 包含块 = padding box = content box - padding
+            // 包含块 = padding box = border-box - border
             $cbX = $frag->getX();
             $cbY = $frag->getY();
-            $cbW = $frag->getW();
-            $cbH = $frag->getH();
+            $cbW = $frag->getW() - ((int)($cs?->getBorderLeftWidth() ?? 0) + (int)($cs?->getBorderRightWidth() ?? 0));
+            $cbH = $frag->getH() - ((int)($cs?->getBorderTopWidth() ?? 0) + (int)($cs?->getBorderBottomWidth() ?? 0));
             // padding box 需要加 padding/border
             $cbBL = $cs?->getBorderLeftWidth() ?? 0;
             $cbBT = $cs?->getBorderTopWidth() ?? 0;
