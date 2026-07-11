@@ -32,7 +32,7 @@
 | 4 | **归谬验证** | N 行新代码应修复 ≥ N/5 个测试失败。推进很少测试却引入大量代码 → 方向错了 | `propagateCoords` 109 行只推进 2-3 个测试；`applyTo offset` 2 行推进 11 个测试 |
 | 5 | **迭代不跨 Phase** | `needsAnotherPass` 必须在 Phase A 内闭环，由 `resolveFragment` 的 `$iteration` 控制。跨 Phase 共享状态必须通过 LayoutResult 元数据字段 | Grid auto 轨道在 Phase A 收敛后，被 Phase 2 的 `iteration:0` 调用覆盖 |
 | 6 | **等价替换** | 重构须保证相同输入产生相同输出。优秀重构更简洁 | `applyTo offset`（2 行）等价替代 `propagateCoords`（109 行）且更优 |
-| 7 | **AOT 优先** | 所有布局代码必须在 `css_test.exe` 中验证通过。避免深度空安全链（>2 层 `?->`），typed property 必须始终初始化 | `$style?->width?->isPercent()` AOT 下行为不一致导致 `null - int` 崩溃；`$lineHeight` 声明但从未赋值 |
+| 7 | **AOT 优先** | 所有布局代码必须在 `css_test.exe` 中验证通过。跨 `use native_types` 类的 `public readonly int` 属性在 AOT 下返回 0，必须通过 getter 方法读取。避免深度空安全链（>2 层 `?->`），typed property 必须始终初始化 | `$style?->width?->isPercent()` AOT 下行为不一致导致 `null - int` 崩溃；`$lineHeight` 声明但从未赋值；`$space->contentWidth` 跨类返回 0 |
 
 ### 决策优先级
 
@@ -62,7 +62,7 @@
 |------|------|------|
 | **PxTest 编排器** | `php apps/css-test/test_pipeline.php` | Pipeline A→0→B→D→L→E→G→H→I 全流程编排 |
 | 构建脚本 | `.\build.bat css-test` | PHP → AOT exe（BuildStep 内部调用） |
-| 布局导出 | `bin/css_test.exe --headless --dump-layout` | → engine_layout.json（自动化流程必须加 --headless） |
+| 布局导出 | `bin/css_test.exe --case=xxx --headless --dump-layout` | → engine_layout_aot.json（自动化流程必须加 --headless） |
 | 截图（显式触发） | `bin/css_test.exe --screenshot=out.png` | 离屏渲染 PNG（`--screenshot` 参数启用截图） |
 | 多帧截图 | `--frame=5 --screenshot=out.png` | 渲染 N 帧后截图 |
 | 浏览器 ref | `PxTest\Pipeline\Strategy\BrowserRefStep` | validateHtmlSpec + instrumentHtml（仅注入 dump_layout.js） |
@@ -113,7 +113,7 @@ tools/PxTest/
 ├── Mock/                     测试双轨（MockPlatform/Component/EventSimulator）
 ├── Snapshot/                 快照管理器
 ├── Reporting/                报告器（6 个，含 Console/Markdown/JSON/TAP/Summary）
-├── Baseline/                 基线归档
+├── Baseline/ ← 已废弃（BaselineArchive 已删除）
 ├── Builder/                  Fluent Builder（VNodeBuilder/RenderNodeBuilder）
 ├── Infrastructure/           基础设施（BrowserLauncher/ExeDiscovery/FontProvider）
 ├── Bootstrap/                运行时引导（GoldenTextWidth/PhpRuntimeBootstrap）
@@ -121,7 +121,7 @@ tools/PxTest/
 ├── Contracts/                契约测试
 ├── Core/                     核心工具
 ├── GoldenMeasure/            黄金宽度表
-└── Layout/                   布局工具
+├── Layout/                   布局工具（已废弃 RenderNodeSerializer）
 
 tests/
 ├── unit/PxTest/              13 模块单元测试
@@ -135,7 +135,7 @@ tests/
 
 ```
 布局引擎（差异定位→修复入口）
-  framework/Rendering/LayoutOrchestrator.php        布局引擎编排器（替代 LayoutResolver）
+  framework/Rendering/LayoutOrchestrator.php        布局引擎编排器
   framework/Rendering/Layout/BlockAlgorithm.php           Block 布局算法
   framework/Rendering/Layout/FlexAlgorithm.php            Flex 布局算法
   framework/Rendering/Layout/GridAlgorithm.php            Grid 布局算法
@@ -385,6 +385,7 @@ comparePixels() 执行：
 | `$a?->b?->c->method()` | 超过 2 层空安全链 AOT 行为不一致 | 拆解为 `$tmp = $a?->b; $tmp?->c->method()` |
 | `$style?->width?->isPercent()` | CssLength/Bool 返回值在 AOT 空安全链中变为 null | 使用标量 fallback：`($cs->width->isPercent() ? … : …)` 外加 null 保护 |
 | typed property 声明但未初始化 | `public readonly int $lineHeight;` 赋值分支未覆盖全路径 | 必须始终初始化：`$this->lineHeight = $d['lineHeight'] ?? 0` |
+| **跨类 `public readonly int` 访问** | 在 `use native_types` 类中直接读另一个 `native_types` 类的 `readonly int` 属性返回空值 | 在源类中添加 getter，所有跨类访问改为 `->getXxx()` 调用 |
 
 ---
 
@@ -608,16 +609,15 @@ pipeline `BrowserRefStep` 自动校验：
 
 ### 12.3 典型修复案例
 
-以下是常见差异类型的诊断路径和修复位置，供 AI 参考：
+以下是常见差异类型的诊断路径和修复位置：
 
 | 症状 | 诊断 | 修复文件 | 关键代码 |
 |------|------|---------|---------|
-| Flex 子元素宽度=0，parent=null 时百分比失效 | 根容器无 parent 宽度 | `GridAlgorithm` / `FlexAlgorithm` | 无 parent 时退回 content-box 宽度 |
+| Flex 子元素宽度=0，parent=null 时百分比失效 | 根容器无 parent 宽度 | `BlockAlgorithm` / `FlexAlgorithm` | 无 parent 时退回 content-box 宽度 |
 | 绝对定位 `bottom:0;right:0` 锚点位置错误 | `OOFLayoutAlgorithm` 未正确处理 bottom/right | `OOFLayoutAlgorithm.php` | 计算 y = parentH - nodeH |
 | auto-height 容器 Frame 2+ 高度漂移 | absolute 子节点被计入 auto-height 导致正反馈 | `BlockAlgorithm.layout()` | absolute 子节点不计入 auto-height |
 | 所有元素宽度系统性偏窄 90px | `.html` 有 wrapper padding 层而 `.vue` 无 | 修改 `.vue` 对齐 `.html` | 统一根元素结构 |
 | Skia 渲染的细矩形/分隔线膨胀 1-2px | Skia 抗锯齿导致 fillRect 边界外溢 | `skia_render.cc` | 禁用细矩形的抗锯齿或使用 integral 坐标 |
-| CSS 属性有值但 compareElement 报告缺失 | `RenderNodeSerializer` 白名单未包含该属性 | `Application.php` | 在 `serializeRenderNode` 的 `styleKeys` 中新增 |
 | margin:auto 居中偏移 | 盒宽度计算未包含 padding+border | `BlockAlgorithm.php` | `availableSpace = parentW - nodeW - padding - border` |
 | 引擎渲染黑色背景但 JSON 报告无背景色 | 渲染层默认填充黑色，布局层未导出 | `VNodeRenderer.php` | 无 `background-color` 时显式填充 `#fff` |
 
@@ -678,8 +678,8 @@ Grid auto 轨道、Table 列宽、MultiColumn 平衡均使用 `needsAnotherPass`
 
 ### 13.4 纯函数策略契约
 
-6 个策略全部实现 `LayoutStrategyInterface`：`layout(LayoutInput): LayoutResult`。禁止在策略内访问 RenderNode、写全局状态、调外部非纯函数。
+每个算法实现 `layout(ConstraintSpace, ComputedStyle): PhysicalFragment`。禁止在算法内访问 RenderNode、写全局状态、调外部非纯函数。
 
 ### 13.5 废弃布局代码的清理原则
 
-清理前确保无外部引用（grep 全项目），清理后 php -l 验证语法，跑全套布局测试确保无回归。已清理：FlexDistributor、FlexItemCollector、FlexLine、GridFragmentMapper、ScrollbarEmitter、TextOverflowProcessor、propagateCoords。
+清理前确保无外部引用（grep 全项目），清理后 php -l 验证语法，跑全套布局测试确保无回归。已清理：RenderNodeSerializer、BaselineArchive、ConstraintSpaceBuilder、propagateCoords、FlexDistributor、FlexItemCollector、FlexLine。
