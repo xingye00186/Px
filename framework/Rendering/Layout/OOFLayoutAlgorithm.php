@@ -255,7 +255,7 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $calcX += $autoOffsetX;
 
         return new PhysicalFragment(
-            (int)$calcX, (int)$calcY, (int)max(0, $width), (int)max(0, $height),
+            (int)($calcX - $ancX), (int)($calcY - $ancY), (int)max(0, $width), (int)max(0, $height),
             (int)$cs->visualWidth($width), (int)$cs->visualHeight($height),
             1, 0, 0, $cs, $frag->children, $sourceRN
         );
