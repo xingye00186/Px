@@ -52,6 +52,9 @@ class Application
         private ?LayoutOrchestrator $layoutOrchestrator = null;
     private RenderTreeManager $renderTreeManager;
 
+    /** @var string 最近一次 layout 的 Fragment JSON 快照（供 dumpLayoutToFile 直接读取，避免重算） */
+    private string $lastLayoutDumpJson = '';
+
     private ?ReactiveComponentInterface $rootComponent = null;
     private ?VNode $activeVNodeTree = null;
     private bool $renderRequested = false;
@@ -769,15 +772,18 @@ class Application
             file_put_contents($path, '[]');
             return;
         }
-        // 使用已布局的 Fragment（render() 中已调用 layout()，结果存储在 Orchestrator）
-        $rootFragment = $this->layoutOrchestrator->getRootFragment();
-        if ($rootFragment === null) {
-            // fallback: 重新布局
-            $rootFragment = $this->layoutOrchestrator->layout($root);
+        // 使用渲染时捕获的 Fragment 快照（render() 中已 layout，快照与渲染使用同一 Fragment）
+        if ($this->lastLayoutDumpJson !== '') {
+            file_put_contents($path, $this->lastLayoutDumpJson);
+        } else {
+            // fallback: 渲染未执行（如单元测试），临时布局
+            $frag = $this->layoutOrchestrator->getRootFragment();
+            if ($frag === null) {
+                $frag = $this->layoutOrchestrator->layout($root);
+            }
+            $data = $this->fragmentToArray($frag);
+            file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         }
-        $data = $this->fragmentToArray($rootFragment);
-
-        file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 
     /**
@@ -808,6 +814,16 @@ class Application
             if ($result !== null) return $result;
         }
         return null;
+    }
+
+    /**
+     * 捕获 Fragment 快照为 JSON 字符串（与渲染使用同一 Fragment 树，保证一致性）。
+     * JSON 字符串存储在 Application 字段中，避免 AOT use native_types 对象引用无法持久化的问题。
+     */
+    private function captureLayoutSnapshot(PhysicalFragment $frag): void
+    {
+        $data = $this->fragmentToArray($frag);
+        $this->lastLayoutDumpJson = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -954,6 +970,9 @@ class Application
         if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] render AFTER');
         }
+
+        // 捕获 Fragment 快照供 dumpLayoutToFile 读取（与渲染使用同一 Fragment，保证一致性）
+        $this->captureLayoutSnapshot($fragmentTree);
 
         // VNodeRenderer 处理 RenderNode（利用 paintDirty 增量）
         // 当 Orchestrator 路径提供了 Fragment 树时，使用 Fragment 渲染
