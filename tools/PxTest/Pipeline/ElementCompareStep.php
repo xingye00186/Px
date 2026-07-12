@@ -192,10 +192,20 @@ class ElementCompareStep implements PipelineStepInterface
         }
 
         if (empty($eByPxId) || empty($bByPxId)) {
-            $err = 'data-px-id injection failed: engine=' . (empty($eByPxId) ? '0' : count($eByPxId))
-                . ' browser=' . (empty($bByPxId) ? '0' : count($bByPxId))
-                . ' — check that .html file exists and HtmlDataPxIdInjector ran successfully';
-            return StepResult::err('element_compare', $err);
+            if (empty($eByPxId) && empty($bByPxId)) {
+                // 两侧都没有 px-id：退回到索引匹配
+                echo "  [PXID_WARN] no px-id found on either side, using index-based matching\n";
+                for ($i = 0; $i < min($eCount, $bCount); $i++) {
+                    $matchPairs[] = ['eIdx' => $i, 'bIdx' => $i];
+                }
+                $eRemaining = [];
+                $bRemaining = [];
+            } else {
+                $err = 'data-px-id injection failed: engine=' . (empty($eByPxId) ? '0' : count($eByPxId))
+                    . ' browser=' . (empty($bByPxId) ? '0' : count($bByPxId))
+                    . ' — check that .html file exists and HtmlDataPxIdInjector ran successfully';
+                return StepResult::err('element_compare', $err);
+            }
         }
 
         $eUsed = []; $bUsed = [];
