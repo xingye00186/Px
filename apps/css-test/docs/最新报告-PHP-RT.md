@@ -1,6 +1,6 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-12 12:23:12 | **总耗时**: 16.9s
+**运行时间**: 2026-07-12 12:34:32 | **总耗时**: 18.5s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
@@ -10,7 +10,7 @@
 | case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 634diff 🔴97 | ⏭️ | ❌ 失败 | 1.4s |
 | case-005-grid-layout | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
 | case-006-typography | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2158diff | ⏭️ | ❌ 失败 | 2s |
-| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1488diff 🔴235 | ⏭️ | ❌ 失败 | 1.4s |
+| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1488diff 🔴214 | ⏭️ | ❌ 失败 | 2.9s |
 | case-008-box-shadow | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1s |
 | case-009-outline | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
 | case-010-display-none | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.2s |
@@ -60,7 +60,7 @@
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 15diff 🔴9 | ⏭️ | ❌ 失败 | 0s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 22diff 🔴6 | ⏭️ | ❌ 失败 | 0s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 16.9s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 18.5s)
 
 ## 回归判定
 
@@ -83,8 +83,8 @@
 > - case-006-typography mismatch 0->2158
 > - case-007-border-styles geometry 0->301
 > - case-007-border-styles mismatch 0->1187
-> - case-007-border-styles critical 0->235
-> - case-007-border-styles major 0->65
+> - case-007-border-styles critical 0->214
+> - case-007-border-styles major 0->63
 > - case-011-position-absolute geometry 0->128
 > - case-011-position-absolute mismatch 0->38
 > - case-011-position-absolute critical 0->114
@@ -343,7 +343,7 @@
 | case-004-flex-layout | 3 | **97** | **2** | 535 | 0 | 0 |
 | case-005-grid-layout | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-006-typography | 0 | 0 | 0 | 2158 | 0 | 0 |
-| case-007-border-styles | 0 | **235** | **65** | 1187 | 0 | 0 |
+| case-007-border-styles | 0 | **214** | **63** | 1187 | 0 | 0 |
 | case-008-box-shadow | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-009-outline | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-010-display-none | 0 | 0 | 0 | 0 | 0 | 0 |

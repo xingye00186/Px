@@ -162,11 +162,15 @@ class FlexAlgorithm extends LayoutAlgorithm
                 foreach ($lineItems as $fi) { $fi = objval($fi, FlexItem::class); $growTotal += $fi->grow; }
                 if ($growTotal > 0) {
                     // If lineTotal == 0 and all items are flex-grow, distribute full container size
+                    // CSS §9.5.1: gap 应从主轴可用空间扣除
                     if ($lineTotal === 0) {
+                        $itemsInLine = count($lineItems);
+                        $totalGap = ($itemsInLine - 1) * $gap;
+                        $available = max(0, $containerMain - $totalGap);
                         foreach ($lineItems as $fi) {
                             $fi = objval($fi, FlexItem::class);
                             if ($fi->grow > 0) {
-                                $share = (int)($containerMain * $fi->grow / $growTotal);
+                                $share = (int)($available * $fi->grow / $growTotal);
                                 if ($isRow) { $fi->w = $share; $fi->visualW = $share; } else $fi->h = $share;
                             }
                         }
