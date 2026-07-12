@@ -167,7 +167,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                             $fi = objval($fi, FlexItem::class);
                             if ($fi->grow > 0) {
                                 $share = (int)($containerMain * $fi->grow / $growTotal);
-                                if ($isRow) $fi->w = $share; else $fi->h = $share;
+                                if ($isRow) { $fi->w = $share; $fi->visualW = $share; } else $fi->h = $share;
                             }
                         }
                     } else {
@@ -175,7 +175,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                             $fi = objval($fi, FlexItem::class);
                             if ($fi->grow > 0) {
                                 $extra = (int)($remaining * $fi->grow / $growTotal);
-                                if ($isRow) $fi->w += $extra; else $fi->h += $extra;
+                                if ($isRow) { $fi->w += $extra; $fi->visualW += $extra; } else $fi->h += $extra;
                             }
                         }
                     }
@@ -192,7 +192,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                         $fi = objval($fi, FlexItem::class);
                         if ($fi->shrink > 0) {
                             $reduction = (int)($overflow * $fi->shrink / $shrinkTotal);
-                            if ($isRow) $fi->w = max(0, $fi->w - $reduction);
+                            if ($isRow) { $fi->w = max(0, $fi->w - $reduction); $fi->visualW = $fi->w; }
                             else $fi->h = max(0, $fi->h - $reduction);
                         }
                     }
@@ -304,7 +304,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $crossSize = $isRow ? $fi->h : $fi->w;
 
                 // Stretch items to fill lineMaxCross
-                if ($effAlign === 'stretch' && !$fi->isFlexGrow) {
+                if ($effAlign === 'stretch') {
                     if ($isRow) $fi->h = $lineMaxCross;
                     else $fi->w = $lineMaxCross;
                     $crossSize = $lineMaxCross;
