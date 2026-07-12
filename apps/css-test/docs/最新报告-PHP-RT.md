@@ -1,6 +1,6 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-12 10:48:13 | **总耗时**: 16.7s
+**运行时间**: 2026-07-12 11:16:55 | **总耗时**: 16.7s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
@@ -10,7 +10,7 @@
 | case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 634diff 🔴97 | ⏭️ | ❌ 失败 | 1.4s |
 | case-005-grid-layout | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
 | case-006-typography | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1058diff | ⏭️ | ❌ 失败 | 1.9s |
-| case-007-border-styles | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.4s |
+| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1488diff 🔴238 | ⏭️ | ❌ 失败 | 1.4s |
 | case-008-box-shadow | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1s |
 | case-009-outline | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
 | case-010-display-none | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.2s |
@@ -66,9 +66,10 @@
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop text-decoration-thickness diff 223->955
-> - prop width diff 222->1145
-> - prop height diff 222->1158
+> - prop border-left-color diff 0->4
+> - prop text-decoration-thickness diff 223->1146
+> - prop width diff 222->1158
+> - prop height diff 222->1171
 > - prop position diff 1->18
 > - case-003-basic-block geometry 0->156
 > - case-003-basic-block mismatch 0->544
@@ -79,6 +80,10 @@
 > - case-004-flex-layout critical 0->97
 > - case-004-flex-layout major 0->2
 > - case-006-typography mismatch 0->1058
+> - case-007-border-styles geometry 0->301
+> - case-007-border-styles mismatch 0->1187
+> - case-007-border-styles critical 0->238
+> - case-007-border-styles major 0->62
 > - case-011-position-absolute geometry 0->128
 > - case-011-position-absolute mismatch 0->38
 > - case-011-position-absolute critical 0->114
@@ -260,40 +265,45 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 85.1% | 6629/7787 |
-| width | 85.3% | 6642/7787 |
-| position | 99.8% | 7769/7787 |
-| font-weight | 100% | 7787/7787 |
-| opacity | 100% | 7787/7787 |
+| height | 85.3% | 6807/7978 |
+| width | 85.5% | 6820/7978 |
+| position | 99.8% | 7960/7978 |
+| font-weight | 100% | 7978/7978 |
+| opacity | 100% | 7978/7978 |
 | top | 100% | 7724/7724 |
 | left | 100% | 7724/7724 |
 | font-size | 100% | 7016/7016 |
-| background-color | 100% | 6695/6696 |
-| display | 100% | 6655/6655 |
-| border-radius | 100% | 973/973 |
-| text-decoration-thickness | 0% | 0/955 |
-| border-left-color | 99.9% | 953/954 |
-| border-left-width | 100% | 954/954 |
-| padding-top | 6.1% | 10/165 |
-| padding-left | 7.6% | 10/131 |
-| padding-right | 7.6% | 10/131 |
-| padding-bottom | 7.6% | 10/131 |
-| margin-bottom | 13.7% | 17/124 |
-| text-align | 100% | 58/58 |
-| margin-top | 20% | 10/50 |
-| gap | 8.8% | 3/34 |
-| flex-direction | 10.5% | 2/19 |
-| margin-left | 66.7% | 10/15 |
-| margin-right | 83.3% | 10/12 |
-| align-items | 100% | 8/8 |
+| background-color | 97.4% | 6695/6874 |
+| display | 100% | 6846/6846 |
+| border-radius | 100% | 1163/1163 |
+| text-decoration-thickness | 0% | 0/1146 |
+| border-left-color | 99.7% | 1141/1145 |
+| border-left-width | 99.9% | 1144/1145 |
+| padding-top | 56.5% | 201/356 |
+| padding-bottom | 62.1% | 200/322 |
+| padding-left | 62.4% | 201/322 |
+| padding-right | 62.4% | 201/322 |
+| margin-bottom | 65.7% | 207/315 |
+| text-align | 100% | 249/249 |
+| margin-top | 83.4% | 201/241 |
+| gap | 1.8% | 4/225 |
+| flex-direction | 91.9% | 193/210 |
+| margin-left | 95.6% | 197/206 |
+| margin-right | 97% | 197/203 |
+| flex-wrap | 99% | 191/193 |
+| min-height | 94.8% | 182/192 |
+| overflow-y | 100% | 192/192 |
+| align-self | 0% | 0/191 |
+| justify-items | 0% | 0/191 |
+| justify-self | 0% | 0/191 |
+| min-width | 96.9% | 185/191 |
+| overflow-x | 100% | 191/191 |
+| align-items | 100% | 9/9 |
+| justify-content | 100% | 8/8 |
 | text-decoration-line | 0% | 0/6 |
-| justify-content | 100% | 6/6 |
 | border-width | 100% | 5/5 |
-| flex-wrap | 0% | 0/2 |
-| min-height | 0% | 0/1 |
 | text-decoration-color | 0% | 0/1 |
 | text-decoration-style | 0% | 0/1 |
-| overflow-y | 100% | 1/1 |
 | font-family | 0% | 0/0 |
 | line-height | 0% | 0/0 |
 | border-top-width | 0% | 0/0 |
@@ -311,13 +321,14 @@
 | direction | 0% | 0/0 |
 | color | 0% | 0/0 |
 | border-color | 0% | 0/0 |
-| min-width | 0% | 0/0 |
 | flex-grow | 0% | 0/0 |
 | flex-shrink | 0% | 0/0 |
-| overflow-x | 0% | 0/0 |
-| pointer-events | 0% | 0/0 |
-| overflow | 0% | 0/0 |
+| max-width | 0% | 0/0 |
 | max-height | 0% | 0/0 |
+| overflow | 0% | 0/0 |
+| box-sizing | 0% | 0/0 |
+| align-content | 0% | 0/0 |
+| pointer-events | 0% | 0/0 |
 
 ---
 
@@ -331,7 +342,7 @@
 | case-004-flex-layout | 3 | **97** | **2** | 535 | 0 | 0 |
 | case-005-grid-layout | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-006-typography | 0 | 0 | 0 | 1058 | 0 | 0 |
-| case-007-border-styles | 0 | 0 | 0 | 0 | 0 | 0 |
+| case-007-border-styles | 0 | **238** | **62** | 1187 | 0 | 0 |
 | case-008-box-shadow | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-009-outline | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-010-display-none | 0 | 0 | 0 | 0 | 0 | 0 |

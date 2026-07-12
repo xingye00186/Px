@@ -43,14 +43,13 @@ class StyleResolver
         array &$pseudoStyles = []
     ): ComputedStyle {
         // 1. 解析内联样式为声明数组
-        $declarations = self::parseInlineStyle($inlineStyle);
+        $inlineDeclarations = self::parseInlineStyle($inlineStyle);
 
-        // 2. 合并 CSS class 样式
+        // 2. 合并 CSS class 样式（CSS 层叠：class 是 base，inline 覆盖）
         $classDeclarations = self::resolveClassStyles($className, $parentClassStr, $precedingSiblingClasses, $pseudoStyles);
-        foreach ($classDeclarations as $k => $v) {
-            if (!isset($declarations[$k])) {
-                $declarations[$k] = $v;
-            }
+        $declarations = $classDeclarations;
+        foreach ($inlineDeclarations as $k => $v) {
+            $declarations[$k] = $v;
         }
 
         // 3. 合并父元素声明（继承）

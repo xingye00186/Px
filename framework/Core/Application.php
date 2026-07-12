@@ -853,11 +853,25 @@ class Application
     private function fragmentStyleToArray(\Px\Rendering\ComputedStyle $style): array
     {
         $result = [];
-        // 用 get_object_vars 绕过 AOT ReflectionObject 限制
+        // CssKeyword/CssLength/CssColor/CssRect/CssFlex 对象导出其值
         $vars = get_object_vars($style);
         foreach ($vars as $k => $v) {
-            if ($v !== null && $v !== '' && (is_scalar($v) || is_array($v))) {
+            if ($v === null || $v === '') continue;
+            if (is_scalar($v) || is_array($v)) {
                 $result[$k] = $v;
+            } elseif ($v instanceof \Px\Rendering\CssKeyword) {
+                $result[$k] = $v->value;
+            } elseif ($v instanceof \Px\Rendering\CssLength) {
+                $result[$k] = $v->toPx();
+            } elseif ($v instanceof \Px\Rendering\CssColor) {
+                $result[$k] = $v->toBgr();
+            } elseif ($v instanceof \Px\Rendering\CssFlex) {
+                $result[$k] = $v->grow . ' ' . $v->shrink . ' ' . $v->basis->toPx();
+            } elseif ($v instanceof \Px\Rendering\CssRect) {
+                $result[$k . 'Top'] = $v->top->toPx();
+                $result[$k . 'Right'] = $v->right->toPx();
+                $result[$k . 'Bottom'] = $v->bottom->toPx();
+                $result[$k . 'Left'] = $v->left->toPx();
             }
         }
         return $result;
