@@ -475,47 +475,6 @@ class LayoutDumpStep implements PipelineStepInterface
      * Style strategy (inline vs class) is NOT compared — both are equivalent.
      */
     /**
-     * Inject dump_layout.js and textarea only (no CSS modification).
-     *
-     * The .html must already contain CSS baseline per validateHtmlSpec().
-     * This method ONLY adds the testing infrastructure: hidden textarea
-     * output container + dump_layout.js script before </body>.
-     */
-    private function instrumentHtml(string $htmlPath): string
-    {
-        $html = @file_get_contents($htmlPath);
-        if ($html === false) return '';
-
-        // ─── data-px-id 注入（与 LayoutDumpStep 相同的单源注入）───
-        // 使用相同的 HtmlDataPxIdInjector，确保浏览器端 data-px-id
-        // 与引擎端（由 HtmlToVueConverter 生成）完全一致。
-        require_once __DIR__ . '/../../HtmlDataPxIdInjector.php';
-        $html = \PxTest\HtmlDataPxIdInjector::inject($html);
-
-        // Load dump_layout.js from tools/
-        $projectRoot = dirname($this->appDir, 2);
-        $dumpLayoutJsPath = $projectRoot . '/tools/dump_layout.js';
-        $dumpLayoutJs = file_exists($dumpLayoutJsPath) ? @file_get_contents($dumpLayoutJsPath) : '';
-
-        // Build injection: textarea + dump_layout.js (no CSS, CSS must be in .html)
-        $injectJs = '<textarea id="layout-output" style="display:none;"></textarea>' . "\n";
-        if ($dumpLayoutJs !== '') {
-            $injectJs .= '<script>' . $dumpLayoutJs . '</script>';
-        } else {
-            echo "  [instrument] WARNING: dump_layout.js not found at $dumpLayoutJsPath\n";
-        }
-
-        // Inject before </body> so DOM is guaranteed to be ready
-        if (stripos($html, '</body>') !== false) {
-            $html = str_ireplace('</body>', $injectJs . '</body>', $html);
-        } else {
-            $html .= $injectJs;
-        }
-
-        return $html;
-    }
-
-    /**
      * 在 JSON 树中递归搜索 data-px-testroot 标记节点，提取其子树。
      * 替换根节点为该节点，移除侧边栏等非测试内容。
      * AOT exe 输出的完整树包含侧边栏，此过滤在 PHP 侧做树修剪。
@@ -633,7 +592,17 @@ class PxIdGenerateStep implements \PxTest\Pipeline\PipelineStepInterface
             $htmlContent = @file_get_contents($htmlFile);
             if ($htmlContent === false) continue;
 
+            // ── data-px-id 单源注入：直接写入 .html ──
+            // .html 是唯一事实源，所有下游消费者（Vue 生成、浏览器 instrument）
+            // 都从已注入 data-px-id 的 .html 读取，无需重复注入。
             $injectedHtml = \PxTest\HtmlDataPxIdInjector::inject($htmlContent);
+
+            // 仅在内容变化时回写 .html（避免无效 mtime 更新）
+            if ($injectedHtml !== $htmlContent) {
+                file_put_contents($htmlFile, $injectedHtml);
+            }
+
+            // 从已注入 data-px-id 的 HTML 生成 .vue
             $generatedVue = \PxTest\HtmlToVueConverter::convert($injectedHtml, $tag);
 
             // 确定 .vue 路径：优先覆盖已有 .vue，否则新建

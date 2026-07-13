@@ -93,12 +93,9 @@ class EdgeDomStrategy implements BrowserRefStrategy
             $html = file_get_contents($htmlPath);
             if ($html === false) continue;
 
-            // 注入 data-px-id（与 LayoutDumpStep/BrowserRefStep 一致）
-            $injectorPath = dirname(__DIR__, 2) . '/HtmlDataPxIdInjector.php';
-            if (file_exists($injectorPath)) {
-                require_once $injectorPath;
-                $html = \PxTest\HtmlDataPxIdInjector::inject($html);
-            }
+            // data-px-id 已由 PxIdGenerateStep 直接注入到 .html 文件中
+            // HtmlDataPxIdInjector::inject 会跳过已有 data-px-id 的元素（幂等）
+            // 无需在此重复注入。
 
             // ── CSS 作用域化：用 preg_replace_callback 逐条规则处理 ──
             $scope = '[data-case="'.$tag.'"]';
@@ -221,18 +218,15 @@ class EdgeDomStrategy implements BrowserRefStrategy
     /**
      * 注入 dump_layout.js 和 textarea 到 HTML。
      * 原始 .html 文件不含这些基础设施，需要在此注入。
+     * data-px-id 已由 PxIdGenerateStep 直接写入 .html，无需在此重复注入。
      */
     private function instrumentHtml(string $htmlPath): ?string
     {
         $html = @file_get_contents($htmlPath);
         if ($html === false) return null;
 
-        // data-px-id 注入（与 PipelineSteps::HtmlDataPxIdInjector 一致）
-        $injectorPath = dirname(__DIR__, 2) . '/HtmlDataPxIdInjector.php';
-        if (file_exists($injectorPath)) {
-            require_once $injectorPath;
-            $html = \PxTest\HtmlDataPxIdInjector::inject($html);
-        }
+        // data-px-id 已由 PxIdGenerateStep 注入到 .html 文件中（幂等，inject 会跳过已有 ID）
+        // 无需在此重复注入。
 
         // Load dump_layout.js from tools/
         $projectRoot = dirname(__DIR__, 4);
