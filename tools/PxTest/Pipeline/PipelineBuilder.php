@@ -35,6 +35,7 @@ class PipelineBuilder
     private ?string $caseName = null;
     private bool $skipBuild = false;
     private bool $forceBuild = false;
+    private bool $forceInit = false;
     private bool $usePhpRuntime = false;
     private bool $browserElCompare = true;
     private bool $skipScreenshot = true;
@@ -77,6 +78,7 @@ class PipelineBuilder
             elseif (str_starts_with($arg, '--app=')) { $this->setAppName(substr($arg, 6)); }
             elseif ($arg === '--skip-build') { $this->skipBuild = true; }
             elseif ($arg === '--force-build') { $this->forceBuild = true; }
+            elseif ($arg === '--force-init') { $this->forceInit = true; }
             elseif ($arg === '--php-runtime') { $this->usePhpRuntime = true; }
             elseif ($arg === '--browser-engine-el-compare') { $this->browserElCompare = true; }
             elseif ($arg === '--screenshot') { $this->skipScreenshot = false; }
@@ -203,5 +205,53 @@ class PipelineBuilder
         $dirs = glob($this->appDir . '/test_case/' . $this->casePrefix . '*', GLOB_ONLYDIR);
         sort($dirs);
         return array_map('basename', $dirs);
+    }
+
+    /** --force-init: 清理所有 case-* 目录下的生成文件，仅保留 .html 和 .bat */
+    public function isForceInit(): bool { return $this->forceInit; }
+
+    public function getCasePrefix(): string { return $this->casePrefix; }
+
+    public function getAppDir(): string { return $this->appDir; }
+
+    /**
+     * 执行 --force-init 清理：删除 case-* 下除 .html/.bat 外的所有文件，
+     * 以及 ref/ 和 baseline/ 子目录内容。
+     */
+    public function forceInitClean(): int
+    {
+        $caseDirs = glob($this->appDir . '/test_case/' . $this->casePrefix . '*', GLOB_ONLYDIR);
+        if (empty($caseDirs)) return 0;
+
+        $keepExtensions = ['html', 'bat'];
+        $cleanDirs = ['ref', 'baseline'];
+        $cleaned = 0;
+
+        foreach ($caseDirs as $dir) {
+            // 清理 ref/ 和 baseline/ 子目录内容
+            foreach ($cleanDirs as $sub) {
+                $subDir = "$dir/$sub";
+                if (is_dir($subDir)) {
+                    $files = glob("$subDir/*");
+                    foreach ($files as $f) {
+                        if (is_file($f)) { @unlink($f); $cleaned++; }
+                    }
+                }
+            }
+
+            // 删除非 .html/.bat 文件（含 .vue, .pxid_done, .json 等）
+            $entries = scandir($dir);
+            foreach ($entries as $entry) {
+                if ($entry === '.' || $entry === '..') continue;
+                $path = "$dir/$entry";
+                if (!is_file($path)) continue;
+                $ext = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
+                if (in_array($ext, $keepExtensions, true)) continue;
+                @unlink($path);
+                $cleaned++;
+            }
+        }
+
+        return $cleaned;
     }
 }

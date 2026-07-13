@@ -9,6 +9,7 @@
  *   php apps/css-test/test_pipeline.php --browser-engine-el-compare # 启用浏览器元素对比（默认跳过）
  *   php apps/css-test/test_pipeline.php --screenshot            # 启用截图对比（默认跳过）
  *   php apps/css-test/test_pipeline.php --format=md                  # Markdown 报告
+ *   php apps/css-test/test_pipeline.php --force-init                 # 强制清理生成文件（保留 .html/.bat）
  */
 
 $projectRoot = dirname(__DIR__, 2);
@@ -35,6 +36,14 @@ use PxTest\Core\TestSuite;
 // ─── Build Pipeline ───
 $builder = PipelineBuilder::create($projectRoot);
 $builder->parseCli($argv ?? []);
+
+// ─── --force-init: 强制清理 case-* 生成文件，仅保留 .html 和 .bat ───
+if ($builder->isForceInit()) {
+    $cleaned = $builder->forceInitClean();
+    echo "[force-init] Cleaned $cleaned generated files from case-* directories\n";
+    echo "[force-init] Only .html and .bat files retained\n\n";
+}
+
 $appName = (function() use ($argv) {
     foreach ($argv ?? [] as $a) {
         if (str_starts_with($a, '--app=')) return substr($a, 6);
