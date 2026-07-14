@@ -1,0 +1,8 @@
+name: aot-c4129-repro
+mode: bin
+no-console: false
+job: 8
+platform: win32
+entry: main.php
+sources:
+  - main.php
