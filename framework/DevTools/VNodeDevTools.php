@@ -5,6 +5,8 @@
  */
 
 namespace Px\DevTools;
+use Px\Render\RenderTreeManager;
+use Px\Render\RenderNode;
 
 use Px\Dom\VNode;
 

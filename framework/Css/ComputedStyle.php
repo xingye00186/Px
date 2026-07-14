@@ -1,6 +1,7 @@
 <?php
 
 namespace Px\Css;
+use Px\Render\RenderNode;
 
 use native_types;
 

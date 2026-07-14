@@ -1,6 +1,7 @@
 <?php
 
 namespace Px\Css;
+use Px\Dom\VNode;
 
 use native_types;
 

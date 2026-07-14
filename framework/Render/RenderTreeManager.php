@@ -1,6 +1,9 @@
 <?php
 
 namespace Px\Render;
+use Px\Css\StyleRecalcPass;
+use Px\Css\CssMappings;
+use Px\Css\ComputedStyle;
 
 use native_types;
 use Px\Dom\VNode;

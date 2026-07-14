@@ -1,6 +1,6 @@
 <?php
 
-namespace Px\Layout;
+namespace Px\Layout\Flex;
 
 use Px\Layout\PhysicalFragment;
 

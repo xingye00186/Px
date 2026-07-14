@@ -1,6 +1,7 @@
 <?php
 
 namespace Px\Paint;
+use Px\Render\RenderNode;
 
 use native_types;
 

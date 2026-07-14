@@ -1,6 +1,6 @@
 <?php
 
-namespace Px\Layout;
+namespace Px\Layout\Grid;
 
 /**
  * GridPlacer — 网格子项放置器

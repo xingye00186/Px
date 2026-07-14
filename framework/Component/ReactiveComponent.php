@@ -1,6 +1,7 @@
 <?php
 
 namespace Px\Component;
+use Px\Render\RenderTreeManager;
 
 use native_types;
 

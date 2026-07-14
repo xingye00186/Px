@@ -1,6 +1,7 @@
 <?php
 
 namespace Px\Core;
+use Px\Css\ComputedStyle;
 
 use native_types;
 

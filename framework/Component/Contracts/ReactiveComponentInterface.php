@@ -1,6 +1,7 @@
 <?php
 
 namespace Px\Component\Contracts;
+use Px\Component\ReactiveComponent;
 
 use Px\Core\Scheduler;
 use Px\Render\RenderNode;

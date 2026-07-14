@@ -1,6 +1,7 @@
 <?php
 
 namespace Px\Animation;
+use Px\Render\RenderTreeManager;
 
 use Px\Component\ReactiveComponent;
 use Px\Dom\VNode;

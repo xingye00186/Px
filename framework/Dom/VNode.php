@@ -1,6 +1,10 @@
 <?php
 
 namespace Px\Dom;
+use Px\Component\Contracts\ReactiveComponentInterface;
+use Px\Css\StyleRecalcPass;
+use Px\Css\StyleResolver;
+use Px\Render\RenderTreeManager;
 
 use native_types;
 use Px\Css\ComputedStyle;
