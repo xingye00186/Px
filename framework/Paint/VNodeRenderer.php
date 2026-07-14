@@ -10,6 +10,7 @@ use Px\Core\Config;
 use Px\Layout\PhysicalFragment;
 use Px\Component\Contracts\ReactiveComponentInterface;
 use Px\Component\ReactiveComponent;
+use Px\Css\CssColor;
 use Px\Layout\TextOverflowProcessor;
 
 class VNodeRenderer
