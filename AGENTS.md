@@ -15,61 +15,7 @@ Px 是一款 **PHP → 原生 exe** 的跨平台 GUI 框架，模板语法类似
 ```
 d:/Px/
 ├── framework/              核心框架（只读，所有应用共享）
-│   ├── Core/
-│   │   ├── Application.php     事件路由、组件注册、VNode 树展开、bind 解析
-│   │   ├── ScrollManager.php   滚动服务（状态管理、拖拽、滚轮、水平滚动）
-│   │   ├── Scheduler.php       微任务/宏任务调度器
-│   │   ├── Config.php          配置管理类（project.yml Px_debug_* 解析）
-│   │   └── PerfCounter.php     性能计数器（PX_PERF=1 启用，微秒计时）
-│   ├── Rendering/
-│   │   ├── VNode.php           虚拟 DOM 节点（元素描述 + 组件占位字段）
-│   │   ├── RenderNode.php      渲染专用节点（布局结果 + 脏标记 + 动画字段）
-│   │   ├── RenderTreeManager.php 渲染树管理（VNode → RenderNode 转换/差异更新/命中测试）
-│   │   ├── VNodeRenderer.php   树遍历 → 收集元素 → 按 layer 分组 → 调用 RenderContext
-│   │   ├── LayoutResolver.php  CSS 布局引擎入口（委派策略类）
-│   │   ├── CssMappings.php     CSS 属性 → GDI 属性映射
-│   │   ├── RenderContext.php   渲染上下文抽象基类（beginFrame/endFrame/drawElement/fillRect/drawText/drawButton）
-│   │   ├── GdiRenderContext.php Win32 GDI 绘制实现
-│   │   ├── SkiaRenderContext.php Skia 渲染实现（阶段三：CPU 离屏 + GDI 桥接）
-│   │   ├── ImageManager.php    图片缓存管理器（路径→句柄映射，自动释放）
-│   │   ├── Layout/             布局策略类（LayoutResolver 拆分产物）
-│   │   │   ├── AbsolutePositioning.php   绝对定位解析
-│   │   │   ├── BlockLayoutStrategy.php   Block 布局策略
-│   │   │   ├── FlexLayoutStrategy.php    Flex 布局策略
-│   │   │   ├── GridLayoutStrategy.php    Grid 布局策略
-│   │   │   ├── PercentResolver.php       百分比值解析
-│   │   │   └── ScrollHelper.php          滚动容器辅助
-│   │   └── Backend/            渲染后端系统（运行时自动探测+故障降级）
-│   │       ├── IRenderBackend.php            后端统一接口
-│   │       ├── BackendRegistry.php           后端注册表（6 个候选）
-│   │       ├── BackendCapability.php         探测结果描述
-│   │       ├── BackendInitException.php      初始化异常
-│   │       ├── RenderBackendFailedException.php 运行期异常
-│   │       ├── RuntimeBackendSelector.php    运行时选择器（probe+fallback）
-│   │       ├── ResilientRenderContext.php    故障降级代理（连续失败 N 次自动切换）
-│   │       ├── GdiLegacyBackend.php          GDI 传统后端（永远可用，优先级 10）
-│   │       ├── GdiDirect2DBackend.php        GDI Direct2D 后端（优先级 50）
-│   │       ├── SkiaCpuBackend.php            Skia CPU 后端（优先级 60）
-│   │       ├── SkiaGaneshD3D11Backend.php    Skia D3D11 后端（优先级 90）
-│   │       ├── SkiaGaneshWGLBackend.php      Skia WGL 后端（优先级 80）
-│   │       └── SkiaGraphiteDawnBackend.php   Skia Dawn 后端（优先级 100）
-│   ├── Platform/
-│   │   ├── Platform.php        平台抽象接口
-│   │   ├── Win32Platform.php    Win32 消息循环 + 事件解码
-│   │   ├── PlatformEvent.php   事件类型层级（Mouse/Keyboard/Window/Timer）
-│   │   ├── PlatformFactory.php 平台工厂
-│   │   └── WinMsg.php          Win32 消息常量
-│   ├── Styling/                主题/样式系统
-│   │   ├── Adapter/            平台适配器
-│   │   │   ├── PlatformAdapter.php    平台适配器工厂
-│   │   │   ├── PlatformStyling.php    平台样式接口
-│   │   │   ├── Win32Styling.php       Win32 主题适配
-│   │   │   ├── MacOSStyling.php       macOS 主题适配
-│   │   │   └── LinuxStyling.php       Linux 主题适配
-│   │   ├── Provider/ThemeProvider.php  主题提供者
-│   │   ├── Resolver/StyleResolver.php  样式解析器
-│   │   └── Theme/              主题数据（ColorScheme/ComponentTheme/TextTheme/ThemeData）
-│   ├── Animation/              动画系统
+│   ├── Animation/          动画系统
 │   │   ├── AnimationManager.php     动画管理器
 │   │   ├── CssAnimationParser.php   CSS 动画解析器
 │   │   ├── EasingFunctions.php      缓动函数
@@ -78,28 +24,101 @@ d:/Px/
 │   │   ├── TransitionComponent.php  过渡组件封装
 │   │   ├── TransitionController.php 过渡控制器
 │   │   └── TransitionGroupComponent.php 过渡组封装
-│   ├── interfaces/
-│   │   └── ComponentInterface.php  组件接口契约
-│   ├── DevTools/
-│   │   └── VNodeDevTools.php       VNode 树调试工具（快照/对比/搜索）
-│   ├── compiler/
+│   ├── Component/          组件系统
+│   │   ├── Contracts/      组件接口契约
+│   │   │   ├── ComponentInterface.php
+│   │   │   └── ReactiveComponentInterface.php
+│   │   ├── BaseComponent.php        组件基类（生命期 + 父子层级）
+│   │   └── ReactiveComponent.php    响应式组件基类（dirty + VNode 缓存 + $emit）
+│   ├── Compiler/           编译器
 │   │   ├── sfc-compiler.php    主编译器：.vue → PHP 代码生成
 │   │   ├── template-parser.php 模板解析器（HTML → VNode 树）
 │   │   ├── script-analyzer.php  脚本分析器（自动注入 markDirty）
 │   │   ├── component-registry.php 组件注册器
 │   │   ├── aot-validator.php    AOT 兼容性验证器
 │   │   └── expression/          表达式解析器（编译器内部）
-│   │       ├── ExpressionParser.php             表达式解析器入口
-│   │       ├── ExpressionParserInterface.php    解析器接口契约
-│   │       ├── ExpressionType.php               表达式类型枚举
-│   │       ├── ExpressionTypeInterface.php      类型接口契约
-│   │       ├── ComparisonExpression.php         比较表达式
-│   │       ├── ConcatenationExpression.php      连接表达式
-│   │       ├── LogicalExpression.php            逻辑表达式
-│   │       └── TernaryExpression.php            三元表达式
-│   ├── BaseComponent.php        组件基类（生命期 + 父子层级）
-│   ├── ReactiveComponent.php    响应式组件基类（dirty + VNode 缓存 + $emit）
-│   └── aot-checker.php          AOT 规则检查工具（20K 行）
+│   │       ├── ExpressionParser.php
+│   │       ├── ComparisonExpression.php
+│   │       ├── ConcatenationExpression.php
+│   │       ├── LogicalExpression.php
+│   │       └── TernaryExpression.php
+│   ├── Core/               核心
+│   │   ├── Application.php     事件路由、组件注册、VNode 树展开、bind 解析
+│   │   ├── ScrollManager.php   滚动服务（状态管理、拖拽、滚轮、水平滚动）
+│   │   ├── Scheduler.php       微任务/宏任务调度器
+│   │   ├── Config.php          配置管理类（project.yml Px_debug_* 解析）
+│   │   └── PerfCounter.php     性能计数器（PX_PERF=1 启用，微秒计时）
+│   ├── Css/                样式系统
+│   │   ├── ComputedStyle.php     计算样式
+│   │   ├── CssMappings.php       CSS 属性 → GDI 属性映射
+│   │   ├── CssValue.php          CSS 值对象
+│   │   ├── CssValueParser.php    CSS 值解析器
+│   │   ├── StyleRecalcPass.php   样式重算
+│   │   ├── StyleResolver.php     样式解析器
+│   │   └── PlatformAdapter.php    平台样式适配
+│   ├── DevTools/           VNode 调试工具
+│   │   └── VNodeDevTools.php
+│   ├── Dom/                DOM 抽象
+│   │   └── VNode.php           虚拟 DOM 节点（元素描述 + 组件占位字段）
+│   ├── Layout/             布局引擎
+│   │   ├── LayoutOrchestrator.php  布局编排器入口
+│   │   ├── LayoutAlgorithm.php     布局算法基类
+│   │   ├── ConstraintSpace.php     约束空间
+│   │   ├── PhysicalFragment.php    物理片段（布局结果不可变输出）
+│   │   ├── IntrinsicSizes.php      固有尺寸
+│   │   ├── LayoutCache.php         布局缓存
+│   │   ├── LayoutCacheKey.php      缓存键
+│   │   ├── BlockAlgorithm.php      Block 布局
+│   │   ├── FlexAlgorithm.php       Flex 布局
+│   │   ├── GridAlgorithm.php       Grid 布局
+│   │   ├── InlineAlgorithm.php     Inline 布局
+│   │   ├── OOFLayoutAlgorithm.php  OOF 定位
+│   │   ├── TableAlgorithm.php      Table 布局
+│   │   ├── TextOverflowProcessor.php 文本溢出处理
+│   │   ├── Flex/                    Flex 子模块
+│   │   │   ├── FlexItem.php
+│   │   │   ├── FlexLineBreaker.php
+│   │   │   └── FlexFragmentMapper.php
+│   │   └── Grid/                    Grid 子模块
+│   │       ├── GridItem.php
+│   │       ├── GridPlacer.php
+│   │       ├── GridTrack.php
+│   │       └── GridTracker.php
+│   ├── Paint/              绘制层
+│   │   ├── Backend/            渲染后端系统（运行时自动探测+故障降级）
+│   │   │   ├── IRenderBackend.php
+│   │   │   ├── BackendRegistry.php
+│   │   │   ├── BackendCapability.php
+│   │   │   ├── BackendInitException.php
+│   │   │   ├── RenderBackendFailedException.php
+│   │   │   ├── RuntimeBackendSelector.php
+│   │   │   ├── ResilientRenderContext.php
+│   │   │   ├── GdiLegacyBackend.php
+│   │   │   ├── GdiDirect2DBackend.php
+│   │   │   ├── SkiaCpuBackend.php
+│   │   │   ├── SkiaGaneshD3D11Backend.php
+│   │   │   ├── SkiaGaneshWGLBackend.php
+│   │   │   └── SkiaGraphiteDawnBackend.php
+│   │   ├── GdiRenderContext.php   Win32 GDI 绘制实现
+│   │   ├── SkiaRenderContext.php  Skia 渲染实现
+│   │   ├── RenderContext.php      渲染上下文抽象基类
+│   │   ├── VNodeRenderer.php      树遍历 → 收集元素 → 按 layer 分组 → 调用 RenderContext
+│   │   ├── ImageManager.php       图片缓存管理器
+│   │   └── InteractionState.php    交互状态
+│   ├── Platform/           跨平台抽象
+│   │   ├── Platform.php        平台抽象接口
+│   │   ├── Win32Platform.php    Win32 消息循环 + 事件解码
+│   │   ├── PlatformEvent.php   事件类型层级
+│   │   ├── PlatformFactory.php 平台工厂
+│   │   └── WinMsg.php          Win32 消息常量
+│   ├── Render/             渲染树管理
+│   │   ├── RenderNode.php        渲染专用节点
+│   │   ├── RenderTreeManager.php 渲染树管理
+│   │   └── ScrollState.php       滚动状态
+│   ├── Text/               文本渲染后端
+│   │   └── TextBackendSelector.php  文本后端选择器
+│   └── Theme/              主题数据
+│       └── ThemeProvider.php
 ├── apps/                  每个应用一个独立目录（共 11 个）
 │   ├── bilibili/             Bilibili 面板复刻应用
 │   ├── calculator-ng/        计算器演示（4 组件、CSS Grid 布局）
@@ -215,7 +234,7 @@ Application::handleMouseEvent / handleKeyboardEvent
 
 ## 四、关键类速查
 
-### 4.1 VNode（framework/Rendering/VNode.php）
+### 4.1 VNode（framework/Dom/VNode.php）
 
 **重要的字段**（按使用频率排序）：
 
@@ -245,7 +264,7 @@ VNode::hComponent('MyComponent', [...props], [...bindings])  // 子组件占位
 
 **常用辅助方法**：`getProp(name, default)`, `getClass()`, `getInlineStyle()`, `isRoot()`, `isComponent()`
 
-### 4.2 ReactiveComponent（framework/ReactiveComponent.php）
+### 4.2 ReactiveComponent（framework/Component/ReactiveComponent.php）
 
 **关键状态**：
 ```php
@@ -281,7 +300,7 @@ $this->emit('itemSelected', ['id' => 5]);
 $this->on($child, 'itemSelected', function($payload) { ... });
 ```
 
-### 4.3 RenderNode（framework/Rendering/RenderNode.php）
+### 4.3 RenderNode（framework/Render/RenderNode.php）
 
 **RenderNode 是渲染专用节点**，持有布局结果和渲染数据，与 VNode（元素描述）分离。由 RenderTreeManager 从 VNode 树转换生成。
 
@@ -341,7 +360,7 @@ array $children;
 - AOT 兼容：`use native_types`，静态 `$cache`/`$appDir`
 - 配置示例：`apps/bilibili/project.yml` 中的 `Px_debug_*` 项
 
-### 4.5 RenderTreeManager（framework/Rendering/RenderTreeManager.php）
+### 4.5 RenderTreeManager（framework/Render/RenderTreeManager.php）
 
 **职责**：渲染树管理，提供 VNode 树的脏路径追踪、差异比较、缓存快照管理。在 `Application::render()` 中协调 VNode 树的构建/重建/差异更新节奏。
 
@@ -410,7 +429,7 @@ VNode 树重建 → RenderTreeManager::updateFromVNode（VNode → RenderNode + 
 > **强制选择**：设置环境变量 `PX_RENDERER=skia-cpu|skia-d3d11|gdi-legacy` 跳过自动探测
 > **传统兼容**：仍支持 `const APP_RENDERER = 'skia'` 在 Win32Platform::init() 中直接选择 SkiaRenderContext（零侵入）
 
-### 4.7 ImageManager（framework/Rendering/ImageManager.php）
+### 4.7 ImageManager（framework/Paint/ImageManager.php）
 
 **ImageManager 是静态图片缓存管理器**，负责：
 - 缓存已加载的图片句柄（路径→句柄映射），避免重复加载
@@ -1353,7 +1372,7 @@ if ($distributedInPass <= 0) break;
 
 ### 10.8 Auto-height 绝对定位子节点正反馈循环（已修复 2026-06-10）
 
-**根因**：`BlockLayoutStrategy::resolveBlockLayout()` 的 auto-height 计算（[行 374-391](file:///f:/work/Px/framework/Rendering/Layout/BlockLayoutStrategy.php#L374-L391)）在遍历所有子节点取 `maxBottom` 时，没有排除 `position:absolute` 和 `position:fixed` 的子节点，违反了 CSS 2.2 §10.6.3（只有 normal flow 子节点参与 auto-height 计算）。
+**根因**：`BlockLayoutStrategy::resolveBlockLayout()` 的 auto-height 计算（[行 374-391](file:///f:/work/Px/framework/Layout/BlockLayoutStrategy.php#L374-L391)）在遍历所有子节点取 `maxBottom` 时，没有排除 `position:absolute` 和 `position:fixed` 的子节点，违反了 CSS 2.2 §10.6.3（只有 normal flow 子节点参与 auto-height 计算）。
 
 **正反馈链**：
 1. Frame 1: absolute 子节点尚未定位（y=0），auto-height 只取 normal flow 子节点 → computedH 正确 ✓
@@ -1752,7 +1771,7 @@ min-width/min-height 约束在收缩后应用（min-width 优先于 shrink）
 > **无限循环防护**：当 `(int)(remainingOverflow × shrinkWeight / totalSw)` 对所有活跃项都产生 0 时，
 > 循环立即终止（`if ($distributedInPass <= 0) break`）。这在剩余溢出量很小且分配比例均匀时发生，
 > 属于 CSS flex-shrink 规范中"分布式迭代收敛"的整数除零边界情况。
-> 见 [FlexLayoutStrategy.php](framework/Rendering/Layout/FlexLayoutStrategy.php) lines 560-562
+> 见 [FlexLayoutStrategy.php](framework/Layout/FlexLayoutStrategy.php) lines 560-562
 
 ### Grid 布局
 | 属性 | 说明 | 默认值 |
@@ -1824,7 +1843,7 @@ Application::initRenderer()
 
 > **GDI-Legacy 永远可用**：只要 Windows + user32/gdi32 存在，probe() 始终返回可用。作为最后兜底。
 
-### 15.3 BackendRegistry（framework/Rendering/Backend/BackendRegistry.php）
+### 15.3 BackendRegistry（framework/Paint/Backend/BackendRegistry.php）
 
 **静态后端注册表**，维护 6 个候选类名列表：
 
@@ -1852,7 +1871,7 @@ set PX_RENDERER_VERBOSE=1
 my_app.exe
 ```
 
-### 15.4 IRenderBackend 接口（framework/Rendering/Backend/IRenderBackend.php）
+### 15.4 IRenderBackend 接口（framework/Paint/Backend/IRenderBackend.php）
 
 所有渲染后端实现此接口：
 
@@ -1874,7 +1893,7 @@ probe() → [available] → initialize(hwnd, w, h) → getContext() → [use] �
     [skip, try next]
 ```
 
-### 15.5 RuntimeBackendSelector（framework/Rendering/Backend/RuntimeBackendSelector.php）
+### 15.5 RuntimeBackendSelector（framework/Paint/Backend/RuntimeBackendSelector.php）
 
 **运行时后端选择器**，负责启动选择 + 运行期降级：
 
@@ -1895,7 +1914,7 @@ foreach (candidates as cls) {
 throw \RuntimeException('No render backend available')
 ```
 
-### 15.6 ResilientRenderContext（framework/Rendering/Backend/ResilientRenderContext.php）
+### 15.6 ResilientRenderContext（framework/Paint/Backend/ResilientRenderContext.php）
 
 **故障降级代理**，继承 RenderContext，对 VNodeRenderer 透明：
 
@@ -1942,23 +1961,23 @@ safeCall(method, args):
 
 | 文件 | 说明 |
 |------|------|
-| `framework/Rendering/Backend/IRenderBackend.php` | 后端统一接口 |
-| `framework/Rendering/Backend/BackendRegistry.php` | 后端注册表（6 个候选） |
-| `framework/Rendering/Backend/BackendCapability.php` | 探测结果描述 |
-| `framework/Rendering/Backend/BackendInitException.php` | 初始化异常 |
-| `framework/Rendering/Backend/RenderBackendFailedException.php` | 运行期异常 |
-| `framework/Rendering/Backend/RuntimeBackendSelector.php` | 运行时选择器（probe+fallback） |
-| `framework/Rendering/Backend/ResilientRenderContext.php` | 故障降级代理 |
-| `framework/Rendering/Backend/GdiLegacyBackend.php` | GDI 传统后端（永远可用） |
-| `framework/Rendering/Backend/GdiDirect2DBackend.php` | GDI Direct2D（预留） |
-| `framework/Rendering/Backend/SkiaCpuBackend.php` | Skia CPU（阶段三） |
-| `framework/Rendering/Backend/SkiaGaneshD3D11Backend.php` | Skia D3D11（预留） |
-| `framework/Rendering/Backend/SkiaGaneshWGLBackend.php` | Skia WGL（预留） |
-| `framework/Rendering/Backend/SkiaGraphiteDawnBackend.php` | Skia Dawn（预留） |
+| `framework/Paint/Backend/IRenderBackend.php` | 后端统一接口 |
+| `framework/Paint/Backend/BackendRegistry.php` | 后端注册表（6 个候选） |
+| `framework/Paint/Backend/BackendCapability.php` | 探测结果描述 |
+| `framework/Paint/Backend/BackendInitException.php` | 初始化异常 |
+| `framework/Paint/Backend/RenderBackendFailedException.php` | 运行期异常 |
+| `framework/Paint/Backend/RuntimeBackendSelector.php` | 运行时选择器（probe+fallback） |
+| `framework/Paint/Backend/ResilientRenderContext.php` | 故障降级代理 |
+| `framework/Paint/Backend/GdiLegacyBackend.php` | GDI 传统后端（永远可用） |
+| `framework/Paint/Backend/GdiDirect2DBackend.php` | GDI Direct2D（预留） |
+| `framework/Paint/Backend/SkiaCpuBackend.php` | Skia CPU（阶段三） |
+| `framework/Paint/Backend/SkiaGaneshD3D11Backend.php` | Skia D3D11（预留） |
+| `framework/Paint/Backend/SkiaGaneshWGLBackend.php` | Skia WGL（预留） |
+| `framework/Paint/Backend/SkiaGraphiteDawnBackend.php` | Skia Dawn（预留） |
 | `cpp/skia_render.cc` | C++ 原生层 |
 | `stub/skia.stub.php` | stub 声明文件 |
-| `framework/Rendering/RenderContext.php` | 渲染上下文抽象基类 |
-| `framework/Rendering/GdiRenderContext.php` | GDI 绘制实现 |
+| `framework/Paint/RenderContext.php` | 渲染上下文抽象基类 |
+| `framework/Paint/GdiRenderContext.php` | GDI 绘制实现 |
 | `docs/skia-render-context-guide.md` | 实施指南 |
 
 ### 15.10 修改框架代码时的补充清单
