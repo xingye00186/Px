@@ -557,6 +557,12 @@ class ComputedStyle
 
         // border-width
         $bwRaw = $d['borderWidth'] ?? 0;
+        // CSS border shorthand 未展开时，从 border 值提取宽度
+        if ($bwRaw === 0 && isset($d['border']) && is_string($d['border'])) {
+            if (preg_match('/^(\d+(\.\d+)?(px|pt|em|rem|%)?)\b/', trim($d['border']), $bwM)) {
+                $bwRaw = (int)$bwM[1];
+            }
+        }
         if ($bwRaw instanceof CssRect) {
             $bw = $bwRaw->top->toPx();
         } elseif ($bwRaw instanceof CssLength) {
