@@ -128,7 +128,17 @@ class BlockAlgorithm extends LayoutAlgorithm
     private function computeBlockWidth(int $parentW, ComputedStyle $s, string $textContent): int
     {
         $width = $s->width?->toPx() ?? 0;
-        if ($s->width !== null && $s->width->isPercent()) { $width = $s->width->resolveInContext($parentW); }
+        $sizing = $s->boxSizing?->value ?? 'content-box';
+        if ($s->width !== null && $s->width->isPercent()) {
+            $width = $s->width->resolveInContext($parentW);
+            // CSS2.1 §10.2 + CSS-UI-3 §4.5: box-sizing:border-box时百分比width包含padding+border
+            if ($sizing === 'border-box') {
+                $padL = $s->padding?->left->toPx() ?? 0;
+                $padR = $s->padding?->right->toPx() ?? 0;
+                $bw = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
+                $width = max(0, $width - $padL - $padR - $bw);
+            }
+        }
         if ($s->width !== null && $s->width->isIntrinsic() && strlen($textContent) > 0) {
             $fs = $s->getFontSize(); $bd = $s->getBold();
             $width = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, $bd) : (int)(strlen($textContent) * $fs * 0.6));
@@ -137,7 +147,6 @@ class BlockAlgorithm extends LayoutAlgorithm
             $ml = $s->margin?->left->toPx() ?? 0; $mr = $s->margin?->right->toPx() ?? 0;
             $autoPadL = $s->padding?->left->toPx() ?? 0; $autoPadR = $s->padding?->right->toPx() ?? 0;
             $autoBw = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
-            $sizing = $s->boxSizing?->value ?? 'content-box';
             $width = ($sizing === 'border-box') ? max(0, $parentW - $ml - $mr) : max(0, $parentW - $ml - $mr - $autoPadL - $autoPadR - $autoBw);
         }
         $minW = $s->minWidth?->toPx() ?? 0; $maxW = $s->maxWidth?->toPx() ?? 0;
