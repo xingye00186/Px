@@ -105,7 +105,14 @@ class BlockAlgorithm extends LayoutAlgorithm
 
         if ($h <= 0 && count($stackedChildren) > 0) {
             $maxBottom = $y;
-            foreach ($stackedChildren as $cr) { $bottom = $cr->getY() + $cr->getH(); if ($bottom > $maxBottom) $maxBottom = $bottom; }
+            foreach ($stackedChildren as $cr) {
+                $bottom = $cr->getY() + $cr->getH();
+                // CSS 2.2 §10.6.3: auto-height 应包括最后一个正常流子元素的底边距
+                if ($cr->style !== null) {
+                    $bottom += (int)($cr->style->margin?->bottom->toPx() ?? 0);
+                }
+                if ($bottom > $maxBottom) $maxBottom = $bottom;
+            }
             $h = max(0, $maxBottom - $y);
             // CSS 2.2 $10.6.3: auto-height 应包含 padding-bottom + border-bottom
             // 子元素 stack 到 maxBottom，下方 padding 和 border 应当计入高度
@@ -143,6 +150,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             $fs = $s->getFontSize(); $bd = $s->getBold();
             $width = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, $bd) : (int)(strlen($textContent) * $fs * 0.6));
         }
+
         if ($width <= 0) {
             $ml = $s->margin?->left->toPx() ?? 0; $mr = $s->margin?->right->toPx() ?? 0;
             $autoPadL = $s->padding?->left->toPx() ?? 0; $autoPadR = $s->padding?->right->toPx() ?? 0;

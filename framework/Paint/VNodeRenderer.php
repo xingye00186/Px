@@ -1473,9 +1473,9 @@ class VNodeRenderer
         if ($cs === null) return [];
         $overrides = [];
         $states = [];
-        if ($node->hovered) $states[] = '__hoverStyle';
-        if ($node->focused) $states[] = '__focusStyle';
-        if ($node->active) $states[] = '__activeStyle';
+        if (isset($node->hovered) && $node->hovered) $states[] = '__hoverStyle';
+        if (isset($node->focused) && $node->focused) $states[] = '__focusStyle';
+        if (isset($node->active) && $node->active) $states[] = '__activeStyle';
         foreach ($states as $key) {
             $raw = $cs->getRaw($key);
             if ($raw !== null && is_array($raw)) {
