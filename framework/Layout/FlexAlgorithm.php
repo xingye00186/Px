@@ -250,13 +250,16 @@ class FlexAlgorithm extends LayoutAlgorithm
             }
 
             // 4d. Justify-content (uses containerMain)
+            // CSS Flexbox §9.5.1: gap 应从可用空间中扣除
             $mainStart = 0; $spaceBetween = 0;
             $itemCount = count($lineItems);
-            if ($justify === "center") { $mainStart = ($containerMain - $lineFinal) / 2; }
-            elseif ($justify === "flex-end") { $mainStart = $containerMain - $lineFinal; }
-            elseif ($justify === "space-between" && $itemCount > 1) { $spaceBetween = ($containerMain - $lineFinal) / ($itemCount - 1); }
-            elseif ($justify === "space-around") { $spaceBetween = ($containerMain - $lineFinal) / $itemCount; $mainStart = $spaceBetween / 2; }
-            elseif ($justify === "space-evenly") { $spaceBetween = ($containerMain - $lineFinal) / ($itemCount + 1); $mainStart = $spaceBetween; }
+            $totalGap = $itemCount > 1 ? ($itemCount - 1) * $gap : 0;
+            $availableMain = max(0, $containerMain - $totalGap);
+            if ($justify === "center") { $mainStart = ($availableMain - $lineFinal) / 2; }
+            elseif ($justify === "flex-end") { $mainStart = $availableMain - $lineFinal; }
+            elseif ($justify === "space-between" && $itemCount > 1) { $spaceBetween = ($availableMain - $lineFinal) / ($itemCount - 1); }
+            elseif ($justify === "space-around") { $spaceBetween = ($availableMain - $lineFinal) / $itemCount; $mainStart = $spaceBetween / 2; }
+            elseif ($justify === "space-evenly") { $spaceBetween = ($availableMain - $lineFinal) / ($itemCount + 1); $mainStart = $spaceBetween; }
 
             // 4e. Apply stretch to fill line maxCross; allow from zero (CSS stretch spec)
             foreach ($lineItems as $fi) {
