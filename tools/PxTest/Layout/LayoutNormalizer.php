@@ -333,7 +333,7 @@ class LayoutNormalizer
         // When visualW == w but element has border-box with padding/border, compute total box
         // from style values (physical fragment's visualW may not include padding+border)
         if ($normW > 0 && ($node['visualW'] ?? 0) === ($node['w'] ?? 0) && ($node['style']['paddingLeft'] ?? 0) > 0) {
-            $normW += (int)($node['style']['paddingLeft'] ?? 0) + (int)($node['style']['padding-right'] ?? 0)
+            $normW += (int)($node['style']['paddingLeft'] ?? 0) + (int)($node['style']['paddingRight'] ?? 0)
                     + (int)($node['style']['borderWidthLeft'] ?? 0) + (int)($node['style']['borderWidthRight'] ?? 0);
         }
         $element = [
