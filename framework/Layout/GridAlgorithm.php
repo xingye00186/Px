@@ -204,8 +204,37 @@ class GridAlgorithm extends LayoutAlgorithm
 
         // ── Map grid items to child PhysicalFragments ──
         $mappedFragments = [];
+        $giIdx = 0;
         foreach ($gridItems as $gri) {
-            $gh = max(0, (int)($gri->h ?? 0));$gw = max(0, (int)($gri->w ?? 0));$mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), $gw, $gh, (int)($gri->style?->visualWidth($gw) ?? $gw), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, 0, 0, $gri->style, $gri->originalChildren ?? [], null);
+            $gh = max(0, (int)($gri->h ?? 0));$gw = max(0, (int)($gri->w ?? 0));
+            // Adjust children positions when grid track width differs from original fragment width
+            $origFrag = $childResults[$giIdx] ?? null;
+            $oldW = $origFrag !== null ? (int)$origFrag->getW() : 0;
+            $newW = $gw;
+            $children = $gri->originalChildren ?? [];
+            if ($oldW > 0 && $newW > 0 && $oldW !== $newW && !empty($children)) {
+                $childJustify = $gri->style?->justifyContent?->value ?? 'flex-start';
+                $adjusted = [];
+                foreach ($children as $ch) {
+                    $chNewX = (int)$ch->getX();
+                    if ($childJustify === 'center') {
+                        $chNewX += (int)(($newW - $oldW) / 2);
+                    } elseif ($childJustify === 'flex-end' || $childJustify === 'end') {
+                        $chNewX += $newW - $oldW;
+                    }
+                    $adjusted[] = new PhysicalFragment(
+                        $chNewX, (int)$ch->getY(),
+                        (int)$ch->getW(), (int)$ch->getH(),
+                        (int)$ch->getVisualW(), (int)$ch->getVisualH(),
+                        (int)$ch->getLayer(),
+                        (int)$ch->getContentWidth(), (int)$ch->getContentHeight(),
+                        $ch->style, $ch->children ?? [], $ch->sourceNode
+                    );
+                }
+                $children = $adjusted;
+            }
+            $mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), $gw, $gh, (int)($gri->style?->visualWidth($gw) ?? $gw), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, 0, 0, $gri->style, $children, null);
+            $giIdx++;
         }
 
         // ── Auto-height from content ──
