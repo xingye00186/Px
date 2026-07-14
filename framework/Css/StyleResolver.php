@@ -45,8 +45,8 @@ class StyleResolver
         // 1. 解析内联样式为声明数组
         $inlineDeclarations = self::parseInlineStyle($inlineStyle);
 
-        // 2. 合并 CSS class 样式（CSS 层叠：class 是 base，inline 覆盖）
-        $classDeclarations = self::resolveClassStyles($className, $parentClassStr, $precedingSiblingClasses, $pseudoStyles);
+        // 2. 合并 CSS class 样式 + tag 选择器样式（CSS 层叠：class 是 base，inline 覆盖）
+        $classDeclarations = self::resolveClassStyles($className, $parentClassStr, $precedingSiblingClasses, $pseudoStyles, $elementType);
         $declarations = $classDeclarations;
         foreach ($inlineDeclarations as $k => $v) {
             $declarations[$k] = $v;
@@ -201,13 +201,27 @@ class StyleResolver
         string $className,
         string $parentClassStr,
         array $precedingSiblingClasses,
-        array &$pseudoStyles
+        array &$pseudoStyles,
+        string $elementType = 'div'
     ): array {
-        if ($className === '') return [];
-
         $allRegistered = ThemeProvider::getAllClassStyles();
-        $classNames = explode(' ', $className);
+        $classNames = $className !== '' ? explode(' ', $className) : [];
         $merged = [];
+
+        // 应用通用选择器 *（所有元素的最低基线样式）
+        foreach ($allRegistered as $compStyles) {
+            if (isset($compStyles['*'])) {
+                foreach ($compStyles['*'] as $k => $v) {
+                    $merged[$k] = $v;
+                }
+            }
+            // 应用 tag 选择器样式（如 body, html, p 等）
+            if (isset($compStyles[$elementType])) {
+                foreach ($compStyles[$elementType] as $k => $v) {
+                    $merged[$k] = $v;
+                }
+            }
+        }
 
         foreach ($classNames as $cn) {
             if ($cn === '') continue;
