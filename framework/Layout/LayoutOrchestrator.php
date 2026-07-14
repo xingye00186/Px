@@ -154,7 +154,7 @@ class LayoutOrchestrator
 
         // 调用 Algorithm::layout() 执行布局
         if (($GLOBALS["_LL"]??0) < 300) { $GLOBALS["_LL"] = ($GLOBALS["_LL"]??0) + 1; fwrite(STDERR, "MAINLAYOUT: type={$node->type} display=".($style?->display?->value??"?")." algo=".get_class($algo)." cw=".$space->getContentWidth()." ch=".$space->getContentHeight()." children=".count($node->children)."\n"); }
-        $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments);
+        $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached);
         Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->getX(), 'y' => $algoFrag->getY(), 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH(), 'algo' => get_class($algo)]);
 
         // 应用 layer 继承：Algorithm 返回的 Fragment 不包含 layer 信息，需要覆盖

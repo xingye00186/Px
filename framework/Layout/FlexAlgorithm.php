@@ -43,6 +43,11 @@ class FlexAlgorithm extends LayoutAlgorithm
         $y = $top;
         $w = $s->width->toPx();
         if ($w <= 0) $w = $parentW;
+        // For flex items whose actual width is set by parent flex (inputFragment),
+        // use the actual width instead of the constraint space parentW
+        if ($inputFragment !== null && $inputFragment->getW() > 0 && $w <= 0) {
+            $w = $inputFragment->getW();
+        }
         $h = $s->height->toPx();
 
         // Apply flex container padding: subtract from content area, add to offset
