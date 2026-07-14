@@ -176,7 +176,7 @@ class GridAlgorithm extends LayoutAlgorithm
             $gi->rowStart = (int)($idx / $numCols);
             $gi->rowEnd = $gi->rowStart + 1;
             $gi->w = $cols[$gi->colStart]->size;
-            $gi->h = $gi->rowStart < count($rows) ? $rows[$gi->rowStart]->size : 50;
+            $gi->h = max(1, $gi->rowStart < count($rows) ? $rows[$gi->rowStart]->size : 50);
             $gi->style = $cr->style;
             $gi->originalChildren = $cr->children;
             $gridItems[] = $gi;
