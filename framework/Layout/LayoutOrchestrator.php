@@ -153,6 +153,7 @@ class LayoutOrchestrator
         Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->getContentWidth(), 'ch' => $space->getContentHeight()]);
 
         // 调用 Algorithm::layout() 执行布局
+        if (($GLOBALS["_LL"]??0) < 300) { $GLOBALS["_LL"] = ($GLOBALS["_LL"]??0) + 1; fwrite(STDERR, "MAINLAYOUT: type={$node->type} display=".($style?->display?->value??"?")." algo=".get_class($algo)." cw=".$space->getContentWidth()." ch=".$space->getContentHeight()." children=".count($node->children)."\n"); }
         $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments);
         Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->getX(), 'y' => $algoFrag->getY(), 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH(), 'algo' => get_class($algo)]);
 
@@ -195,7 +196,9 @@ class LayoutOrchestrator
         // 测试卡片 width:800px 的场景：ConstraintSpace contentWidth=1510（来自祖父容器），
         // 但卡片实际仅 800px，子元素应该用 800px 而非 1510 作为约束。
         $parentExplicitW = $parentStyle?->width?->toPx();
-        if ($parentExplicitW !== null && $parentExplicitW > 0) {
+        // toPx() returns raw value for percent too (e.g. 100% -> 100). Exclude percent.
+        $isPct = $parentStyle?->width?->isPercent() ?? false;
+        if ($parentExplicitW !== null && $parentExplicitW > 0 && !$isPct) {
             $cbW = max(0, (int)$parentExplicitW - $padL - $padR - $bL - $bR);
         }
 
