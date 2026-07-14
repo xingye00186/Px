@@ -495,8 +495,16 @@ class LayoutDumpStep implements PipelineStepInterface
             // 提取 testroot 的子节点作为新的子树根节点，移除多余的 wrapper 层
             // 使引擎扁平化后的元素层级与浏览器一致（浏览器 batch ref 会提取 body 内内容，无此 wrapper）
             if (!empty($node['children'])) {
+                // 递归展开无意义的包装层：如果唯一子节点也没有 pxId 和 pxAnchor，继续深入
+                $child = $node['children'][0];
                 if (count($node['children']) === 1) {
-                    return $node['children'][0];
+                    // 检查子节点是否仍有意义：有 pxId 或 pxAnchor 则保留，否则递归深入
+                    while ($child !== null && count($child['children'] ?? []) === 1) {
+                        $ds2 = $child['dataset'] ?? [];
+                        if (isset($ds2['pxId']) || isset($ds2['pxAnchor'])) break;
+                        $child = $child['children'][0];
+                    }
+                    return $child;
                 }
                 return [
                     'type' => 'div', 'tag' => 'div',

@@ -315,6 +315,12 @@ class LayoutNormalizer
 
         // 跳过不可见和内部类型
         if ($type === '#root') return null;
+        
+        // 跳过无 pxId 且 w=0/h=0 的匿名包装层（引擎渲染产出的额外 wrapper，浏览器无对应元素）
+        $ds = $node['dataset'] ?? [];
+        if (empty($ds) && !isset($ds['pxId']) && (int)($node['w'] ?? 0) === 0 && (int)($node['h'] ?? 0) === 0) {
+            return null;
+        }
 
         // 映射 tag
         $tag = $this->typeToTag($type);
