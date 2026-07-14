@@ -79,6 +79,9 @@ class FlexAlgorithm extends LayoutAlgorithm
         foreach ($childResults as $cr) {
             $cs = $cr->style;
             if ($cs === null) continue;
+            // CSS §9.2: 跳过 display:none 的子项（不影响 flex 布局）
+            $childDisplay = $cs->display?->value ?? 'block';
+            if ($childDisplay === 'none') continue;
             // Use resolved flex shorthand as fallback when individual props not set
             // (getRaw may return CssLength object which cannot be cast to float)
             $grow = (float)$cs->flex->grow;
