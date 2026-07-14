@@ -147,7 +147,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             $ml = $s->margin?->left->toPx() ?? 0; $mr = $s->margin?->right->toPx() ?? 0;
             $autoPadL = $s->padding?->left->toPx() ?? 0; $autoPadR = $s->padding?->right->toPx() ?? 0;
             $autoBw = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
-            $width = ($sizing === 'border-box') ? max(0, $parentW - $ml - $mr) : max(0, $parentW - $ml - $mr - $autoPadL - $autoPadR - $autoBw);
+            $width = ($sizing === 'border-box') ? max(0, $parentW - $ml - $mr - $autoPadL - $autoPadR - $autoBw) : max(0, $parentW - $ml - $mr - $autoPadL - $autoPadR - $autoBw);
         }
         $minW = $s->minWidth?->toPx() ?? 0; $maxW = $s->maxWidth?->toPx() ?? 0;
         if ($minW > 0 && $width < $minW) $width = $minW;
