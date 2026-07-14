@@ -206,8 +206,8 @@ class FlexAlgorithm extends LayoutAlgorithm
                 }
             }
 
-            // 4b. Flex-shrink
-            if ($lineTotal > $containerMain) {
+            // 4b. Flex-shrink (skip when auto-height container: containerMain <= 0 means no constraint)
+            if ($lineTotal > $containerMain && $containerMain > 0) {
                 $overflow = $lineTotal - $containerMain;
                 $shrinkTotal = 0;
                 foreach ($lineItems as $fi) { $fi = objval($fi, FlexItem::class); $shrinkTotal += $fi->shrink; }
