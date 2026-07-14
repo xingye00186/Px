@@ -153,12 +153,12 @@ class CssMappings
         ],
         'text-align' => [
             'key'     => 'textAlign',
-            'parser'  => 'Px\Rendering\CssValueParser::parseTextAlign',
+            'parser'  => 'Px\Css\CssValueParser::parseTextAlign',
             'default' => 'left',
         ],
         'text-indent' => [
             'key'     => 'textIndent',
-            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
+            'parser'  => 'Px\Css\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'text-transform' => [
@@ -173,7 +173,7 @@ class CssMappings
         ],
         'line-height' => [
             'key'     => 'lineHeight',
-            'parser'  => 'Px\Rendering\CssValueParser::parseLineHeight',
+            'parser'  => 'Px\Css\CssValueParser::parseLineHeight',
             'default' => '',
         ],
         'font-family' => [
@@ -296,12 +296,12 @@ class CssMappings
         ],
         'opacity' => [
             'key'     => 'opacity',
-            'parser'  => 'Px\Rendering\CssValueParser::parseOpacity',
+            'parser'  => 'Px\Css\CssValueParser::parseOpacity',
             'default' => 1.0,
         ],
         'aspect-ratio' => [
             'key'     => 'aspectRatio',
-            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
+            'parser'  => 'Px\Css\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'scroll-behavior' => [
@@ -320,15 +320,15 @@ class CssMappings
         'overflow'         => ['key' => 'overflow',         'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'visible'],
         'overflow-x'       => ['key' => 'overflowX',        'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'visible'],
         'overflow-y'       => ['key' => 'overflowY',        'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'visible'],
-        'text-overflow'    => ['key' => 'textOverflow',      'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'clip'],
-        'white-space'      => ['key' => 'whiteSpace',       'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
-        'word-break'       => ['key' => 'wordBreak',        'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
-        'overflow-wrap'    => ['key' => 'overflowWrap',      'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
-        'word-wrap'        => ['key' => 'overflowWrap',      'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
-        'font-style'       => ['key' => 'fontStyle',        'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
-        'font-variant'     => ['key' => 'fontVariant',      'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
-        'font-stretch'     => ['key' => 'fontStretch',      'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
-        'appearance'       => ['key' => 'appearance',       'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'auto'],
+        'text-overflow'    => ['key' => 'textOverflow',      'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'clip'],
+        'white-space'      => ['key' => 'whiteSpace',       'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'normal'],
+        'word-break'       => ['key' => 'wordBreak',        'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'normal'],
+        'overflow-wrap'    => ['key' => 'overflowWrap',      'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'normal'],
+        'word-wrap'        => ['key' => 'overflowWrap',      'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'normal'],
+        'font-style'       => ['key' => 'fontStyle',        'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'normal'],
+        'font-variant'     => ['key' => 'fontVariant',      'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'normal'],
+        'font-stretch'     => ['key' => 'fontStretch',      'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'normal'],
+        'appearance'       => ['key' => 'appearance',       'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'auto'],
         'flex-direction'   => ['key' => 'flexDirection',    'parser' => 'PxRenderingCssValueParser::parseIdent',  'default' => 'row'],
         // ---- CSS Lists (CSS Lists L3 §3-4) ----
         'list-style-type'  => ['key' => 'listStyleType',    'parser' => 'PxRenderingCssValueParser::parseIdent', 'default' => 'disc'],
@@ -337,21 +337,21 @@ class CssMappings
         'justify-content'  => ['key' => 'justifyContent',   'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'flex-start'],
         'align-items'      => ['key' => 'alignItems',       'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'stretch'],
         'align-content'    => ['key' => 'alignContent',     'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'stretch'],
-        'gap'              => ['key' => 'gap',              'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
+        'gap'              => ['key' => 'gap',              'parser' => 'Px\Css\CssValueParser::parsePixels', 'default' => 0],
         // ---- CSS Tables (CSS 2.2 §17) ----
-        'border-collapse'  => ['key' => 'borderCollapse',   'parser' => 'Px\Rendering\CssValueParser::parseIdent', 'default' => 'separate'],
-        'border-spacing'   => ['key' => 'borderSpacing',    'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
-        'table-layout'     => ['key' => 'tableLayout',      'parser' => 'Px\Rendering\CssValueParser::parseIdent', 'default' => 'auto'],
-        'caption-side'     => ['key' => 'captionSide',       'parser' => 'Px\Rendering\CssValueParser::parseIdent', 'default' => 'top'],
+        'border-collapse'  => ['key' => 'borderCollapse',   'parser' => 'Px\Css\CssValueParser::parseIdent', 'default' => 'separate'],
+        'border-spacing'   => ['key' => 'borderSpacing',    'parser' => 'Px\Css\CssValueParser::parsePixels', 'default' => 0],
+        'table-layout'     => ['key' => 'tableLayout',      'parser' => 'Px\Css\CssValueParser::parseIdent', 'default' => 'auto'],
+        'caption-side'     => ['key' => 'captionSide',       'parser' => 'Px\Css\CssValueParser::parseIdent', 'default' => 'top'],
         'flex'             => ['key' => 'flex',              'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => ''],
-        'flex-grow'        => ['key' => 'flexGrow',    'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
-        'flex-basis'       => ['key' => 'flexBasis',    'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'auto'],
-        'flex-shrink'      => ['key' => 'flexShrink',   'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 1],
+        'flex-grow'        => ['key' => 'flexGrow',    'parser' => 'Px\Css\CssValueParser::parsePixels', 'default' => 0],
+        'flex-basis'       => ['key' => 'flexBasis',    'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'auto'],
+        'flex-shrink'      => ['key' => 'flexShrink',   'parser' => 'Px\Css\CssValueParser::parsePixels', 'default' => 1],
         'order'            => ['key' => 'order',        'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
         'align-self'       => ['key' => 'alignSelf',   'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => 'auto'],
-        'justify-self'     => ['key' => 'justifySelf', 'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'auto'],
-        'justify-items'    => ['key' => 'justifyItems', 'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
-        'min-width'        => ['key' => 'minWidth',  'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
+        'justify-self'     => ['key' => 'justifySelf', 'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'auto'],
+        'justify-items'    => ['key' => 'justifyItems', 'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'normal'],
+        'min-width'        => ['key' => 'minWidth',  'parser' => 'Px\Css\CssValueParser::parsePixels', 'default' => 0],
         'max-width'        => ['key' => 'maxWidth',  'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
         'min-height'       => ['key' => 'minHeight', 'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
         'max-height'       => ['key' => 'maxHeight', 'parser' => 'Px\\Rendering\\CssValueParser::parsePixels', 'default' => 0],
@@ -362,29 +362,29 @@ class CssMappings
         'grid-row'             => ['key' => 'gridRow',       'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => ''],
         'grid-column'          => ['key' => 'gridColumn',    'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',  'default' => ''],
         'grid-area'            => ['key' => 'gridArea',       'parser' => 'Px\\Rendering\\CssValueParser::parseIdent',   'default' => ''],
-        'grid-auto-flow'       => ['key' => 'gridAutoFlow',    'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'row'],
+        'grid-auto-flow'       => ['key' => 'gridAutoFlow',    'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'row'],
         'grid-auto-rows'       => ['key' => 'gridAutoRows',    'parser' => 'Px\\Rendering\\CssValueParser::parsePixels',  'default' => 0],
         'grid-template-areas'  => ['key' => 'gridTemplateAreas','parser' => 'Px\\Rendering\\CssValueParser::parseIdent',   'default' => ''],
-        'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'fill'],
-        'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Rendering\CssValueParser::parseBackgroundImage', 'default' => ''],
+        'object-fit'           => ['key' => 'objectFit',     'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'fill'],
+        'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Css\CssValueParser::parseBackgroundImage', 'default' => ''],
         'transform'            => ['key' => 'transform',       'parser' => 'Px\\Rendering\\CssValueParser::parseTransform', 'default' => ''],
-        'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => ''],
-        'direction'            => ['key' => 'direction',        'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'ltr'],
-        'unicode-bidi'         => ['key' => 'unicodeBidi',     'parser' => 'Px\Rendering\CssValueParser::parseIdent',  'default' => 'normal'],
-        'text-shadow'          => ['key' => 'textShadow',       'parser' => 'Px\Rendering\CssValueParser::parseIdent', 'default' => ''],
-        'letter-spacing'       => ['key' => 'letterSpacing',    'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
-        'word-spacing'         => ['key' => 'wordSpacing',      'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
+        'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => ''],
+        'direction'            => ['key' => 'direction',        'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'ltr'],
+        'unicode-bidi'         => ['key' => 'unicodeBidi',     'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'normal'],
+        'text-shadow'          => ['key' => 'textShadow',       'parser' => 'Px\Css\CssValueParser::parseIdent', 'default' => ''],
+        'letter-spacing'       => ['key' => 'letterSpacing',    'parser' => 'Px\Css\CssValueParser::parsePixels', 'default' => 0],
+        'word-spacing'         => ['key' => 'wordSpacing',      'parser' => 'Px\Css\CssValueParser::parsePixels', 'default' => 0],
             
         // ---- Text Decoration (CSS Text Decoration Module Level 3) ----
-        'text-decoration-line'      => ['key' => 'textDecorationLine',     'parser' => 'Px\Rendering\CssValueParser::parseIdent',     'default' => 'none'],
-        'text-decoration-color'     => ['key' => 'textDecorationColor',    'parser' => 'Px\Rendering\CssValueParser::parseHexColor',   'default' => 0xFFFFFF],
-        'text-decoration-style'     => ['key' => 'textDecorationStyle',    'parser' => 'Px\Rendering\CssValueParser::parseIdent',     'default' => 'solid'],
-        'text-decoration-thickness' => ['key' => 'textDecorationThickness','parser' => 'Px\Rendering\CssValueParser::parsePixels',    'default' => 0],
+        'text-decoration-line'      => ['key' => 'textDecorationLine',     'parser' => 'Px\Css\CssValueParser::parseIdent',     'default' => 'none'],
+        'text-decoration-color'     => ['key' => 'textDecorationColor',    'parser' => 'Px\Css\CssValueParser::parseHexColor',   'default' => 0xFFFFFF],
+        'text-decoration-style'     => ['key' => 'textDecorationStyle',    'parser' => 'Px\Css\CssValueParser::parseIdent',     'default' => 'solid'],
+        'text-decoration-thickness' => ['key' => 'textDecorationThickness','parser' => 'Px\Css\CssValueParser::parsePixels',    'default' => 0],
         // ---- Text Emphasis (CSS Text Decoration Module Level 3 §8) ----
-        'text-emphasis-style'    => ['key' => 'textEmphasisStyle',  'parser' => 'Px\Rendering\CssValueParser::parseIdent',   'default' => 'none'],
-        'text-emphasis-color'    => ['key' => 'textEmphasisColor',  'parser' => 'Px\Rendering\CssValueParser::parseHexColor', 'default' => 0xFF0000],
-        'text-emphasis-position' => ['key' => 'textEmphasisPosition','parser' => 'Px\Rendering\CssValueParser::parseIdent',   'default' => 'over'],
-        'text-underline-offset'     => ['key' => 'textUnderlineOffset',    'parser' => 'Px\Rendering\CssValueParser::parsePixels',    'default' => 0],
+        'text-emphasis-style'    => ['key' => 'textEmphasisStyle',  'parser' => 'Px\Css\CssValueParser::parseIdent',   'default' => 'none'],
+        'text-emphasis-color'    => ['key' => 'textEmphasisColor',  'parser' => 'Px\Css\CssValueParser::parseHexColor', 'default' => 0xFF0000],
+        'text-emphasis-position' => ['key' => 'textEmphasisPosition','parser' => 'Px\Css\CssValueParser::parseIdent',   'default' => 'over'],
+        'text-underline-offset'     => ['key' => 'textUnderlineOffset',    'parser' => 'Px\Css\CssValueParser::parsePixels',    'default' => 0],
     
         // CSS Inline Layout: vertical-align (CSS 2.2 §10.8.1)
         'vertical-align' => [
@@ -396,7 +396,7 @@ class CssMappings
         // CSS Basic User Interface Module Level 3: outline (不占布局空间)
         'outline-width' => [
             'key'     => 'outlineWidth',
-            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
+            'parser'  => 'Px\Css\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'outline-style' => [
@@ -406,34 +406,34 @@ class CssMappings
         ],
         'outline-color' => [
             'key'     => 'outlineColor',
-            'parser'  => 'Px\Rendering\CssValueParser::parseHexColor',
+            'parser'  => 'Px\Css\CssValueParser::parseHexColor',
             'default' => 0,
         ],
         'outline-offset' => [
             'key'     => 'outlineOffset',
-            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
+            'parser'  => 'Px\Css\CssValueParser::parsePixels',
             'default' => 0,
         ],
 
         // CSS Multi-column Layout Module Level 1
         'column-count' => [
             'key'     => 'columnCount',
-            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
+            'parser'  => 'Px\Css\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'column-width' => [
             'key'     => 'columnWidth',
-            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
+            'parser'  => 'Px\Css\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'column-gap' => [
             'key'     => 'columnGap',
-            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
+            'parser'  => 'Px\Css\CssValueParser::parsePixels',
             'default' => 16,
         ],
         'column-rule-width' => [
             'key'     => 'columnRuleWidth',
-            'parser'  => 'Px\Rendering\CssValueParser::parsePixels',
+            'parser'  => 'Px\Css\CssValueParser::parsePixels',
             'default' => 0,
         ],
         'column-rule-style' => [
@@ -443,7 +443,7 @@ class CssMappings
         ],
         'column-rule-color' => [
             'key'     => 'columnRuleColor',
-            'parser'  => 'Px\Rendering\CssValueParser::parseHexColor',
+            'parser'  => 'Px\Css\CssValueParser::parseHexColor',
             'default' => 0,
         ],
     ];
@@ -456,10 +456,10 @@ class CssMappings
      */
     const INLINE_PROPERTY_MAP = [
         // ---- 滚动条样式?(PROPERTY_MAP 中未包含, 其余布局属性从 PROPERTY_MAP 合并) ----
-        'scrollbar-width'        => ['key' => 'scrollbarWidth',      'parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 12],
-        'scrollbar-track-color'  => ['key' => 'scrollbarTrackColor', 'parser' => 'Px\Rendering\CssValueParser::parseHexColor', 'default' => 0x4A4A4A],
-        'scrollbar-thumb-color'  => ['key' => 'scrollbarThumbColor', 'parser' => 'Px\Rendering\CssValueParser::parseHexColor', 'default' => 0x888888],
-        'scrollbar-border-radius'=> ['key' => 'scrollbarBorderRadius','parser' => 'Px\Rendering\CssValueParser::parsePixels', 'default' => 0],
+        'scrollbar-width'        => ['key' => 'scrollbarWidth',      'parser' => 'Px\Css\CssValueParser::parsePixels', 'default' => 12],
+        'scrollbar-track-color'  => ['key' => 'scrollbarTrackColor', 'parser' => 'Px\Css\CssValueParser::parseHexColor', 'default' => 0x4A4A4A],
+        'scrollbar-thumb-color'  => ['key' => 'scrollbarThumbColor', 'parser' => 'Px\Css\CssValueParser::parseHexColor', 'default' => 0x888888],
+        'scrollbar-border-radius'=> ['key' => 'scrollbarBorderRadius','parser' => 'Px\Css\CssValueParser::parsePixels', 'default' => 0],
     ];
 
     // ============================================================

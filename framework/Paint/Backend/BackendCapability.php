@@ -1,20 +1,24 @@
-﻿<?php
+<?php
 
-namespace Px\Rendering\Backend;
+namespace Px\Paint\Backend;
 
 use native_types;
 
 /**
- * BackendCapability 鈥?鍚庣鎺㈡祴缁撴灉鍊煎璞? *
- * 鐢?IRenderBackend::probe() 杩斿洖锛屾弿杩帮細
- *  - 鏄惁鍙敤
- *  - 涓嶅彲鐢ㄦ椂鐨勫師鍥? *  - 鎺㈡祴璇︽儏锛堢敤浜?verbose 鏃ュ織锛? *
- * 閰嶅悎 RuntimeBackendSelector 鍦ㄩ€夋嫨闃舵蹇€熷垽鏂€? */
+ * BackendCapability — 后端探测结果值对象
+ *
+ * 由 IRenderBackend::probe() 返回，描述：
+ *  - 是否可用
+ *  - 不可用时的原因
+ *  - 探测详情（用于 verbose 日志）
+ *
+ * 配合 RuntimeBackendSelector 在选择阶段快速判断。
+ */
 class BackendCapability
 {
     public bool $available;
     public string $reason;
-    /** @var array<string,mixed> 鎺㈡祴璇︽儏锛堝 feature level / device name锛?*/
+    /** @var array<string,mixed> 探测详情（如 feature level / device name） */
     public array $details;
 
     public function __construct(bool $available, string $reason = '', array $details = [])

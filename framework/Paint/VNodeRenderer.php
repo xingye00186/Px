@@ -106,7 +106,7 @@ class VNodeRenderer
      * Phase 3.5: 从 Fragment 树渲染（替代 RenderNode 树）。
      * Fragment 自带 ComputedStyle 快照和绝对坐标，不需要 renderOffsetX/Y。
      */
-    public function renderFromFragment(\Px\Rendering\Layout\PhysicalFragment $root): void
+    public function renderFromFragment(\Px\Layout\PhysicalFragment $root): void
     {
         \Px\Core\PerfCounter::start('render_collect');
         $this->render_ctx->beginFrame();
@@ -133,7 +133,7 @@ class VNodeRenderer
      * Fragment 坐标是绝对的，无需 accumOffsetX/Y。
      */
     private function collectElementsFromFragment(
-        \Px\Rendering\Layout\PhysicalFragment $frag,
+        \Px\Layout\PhysicalFragment $frag,
         array &$elementsByLayer,
         int &$maxLayer,
     ): void {
@@ -184,7 +184,7 @@ class VNodeRenderer
      * Phase 3.5: 将 Fragment 转为 drawElement 数组。
      * 替代 renderNodeToElement，但使用 Fragment 自带的几何和样式。
      */
-    private function fragmentToElement(\Px\Rendering\Layout\PhysicalFragment $frag): ?array
+    private function fragmentToElement(\Px\Layout\PhysicalFragment $frag): ?array
     {
         // 简化实现：通过 sourceNode 委托到现有 renderNodeToElement
         // 后续可改为直接从 Fragment 构造元素数组

@@ -142,12 +142,12 @@ class LayoutOrchestrator
 
         // Phase 4: 查 LayoutCache — 约束空间不变时跳过算法
         $nodeId = spl_object_id($node);
-        $styleVer = spl_object_id($style ?? new \Px\Rendering\ComputedStyle([]));
+        $styleVer = spl_object_id($style ?? new \Px\Css\ComputedStyle([]));
         $ckey = LayoutCacheKey::fromSpace($space, $nodeId, $styleVer);
         $cached = $this->cache->find($ckey);
         if ($cached !== null) {
             Diag::log(2, 'cache:hit', ['type' => $node->type, 'w' => $cached->w, 'h' => $cached->h]);
-            return new \Px\Rendering\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node);
+            return new \Px\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node);
         }
 
         Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->getContentWidth(), 'ch' => $space->getContentHeight()]);
@@ -158,7 +158,7 @@ class LayoutOrchestrator
 
         // 应用 layer 继承：Algorithm 返回的 Fragment 不包含 layer 信息，需要覆盖
         if ($nodeLayer > $algoFrag->getLayer()) {
-            $algoFrag = new \Px\Rendering\Layout\PhysicalFragment(
+            $algoFrag = new \Px\Layout\PhysicalFragment(
                 (int)$algoFrag->getX(), (int)$algoFrag->getY(), (int)$algoFrag->getW(), (int)$algoFrag->getH(),
                 (int)$algoFrag->getVisualW(), (int)$algoFrag->getVisualH(), (int)$nodeLayer,
                 (int)$algoFrag->getContentWidth(), (int)$algoFrag->getContentHeight(),

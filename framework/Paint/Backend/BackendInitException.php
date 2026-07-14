@@ -1,14 +1,14 @@
 <?php
 
-namespace Px$1;
+namespace Px\Paint\Backend;
 
 use native_types;
 
 /**
- * BackendInitException 鈥?鍚庣鍒濆鍖栧け璐?
+ * BackendInitException — 后端初始化失败
  *
- * RuntimeBackendSelector 鍦?initialize() 鎶涙寮傚父鏃讹紝
- * 鑷姩闄嶇骇鍒颁笅涓€涓€欓€夊悗绔€?
+ * RuntimeBackendSelector 在 initialize() 抛此异常时，
+ * 自动降级到下一个候选后端。
  */
 class BackendInitException extends \RuntimeException
 {
@@ -20,4 +20,3 @@ class BackendInitException extends \RuntimeException
         $this->backendName = $backendName;
     }
 }
-

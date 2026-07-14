@@ -1,16 +1,16 @@
 <?php
 
-namespace Px$1;
+namespace Px\Paint\Backend;
 
 use native_types;
 use Px\Paint\GdiRenderContext;
 use Px\Paint\RenderContext;
 
 /**
- * GdiLegacyBackend 鈥?闃舵涓€/浜岋細鍘熺敓 GDI 娓叉煋
+ * GdiLegacyBackend — 阶段一/二：原生 GDI 渲染
  *
- * 姘歌繙鍙敤锛堝彧瑕?Windows + user32/gdi32 瀛樺湪锛夈€?
- * 鏃?GPU 鍔犻€燂紝鏃犳姉閿娇锛屼絾鍏煎鎬ф渶寮恒€?
+ * 永远可用（只要 Windows + user32/gdi32 存在）。
+ * 无 GPU 加速，无抗锯齿，但兼容性最强。
  */
 class GdiLegacyBackend implements IRenderBackend
 {
@@ -23,7 +23,7 @@ class GdiLegacyBackend implements IRenderBackend
 
     public static function getPriority(): int
     {
-        return 10;  // 鍏滃簳
+        return 10;  // 兜底
     }
 
     public function probe(): BackendCapability
@@ -49,4 +49,3 @@ class GdiLegacyBackend implements IRenderBackend
         $this->context = null;
     }
 }
-

@@ -1,19 +1,19 @@
 <?php
 
-namespace Px$1;
+namespace Px\Paint\Backend;
 
 use native_types;
 use Px\Paint\GdiRenderContext;
 use Px\Paint\RenderContext;
 
 /**
- * GdiDirect2DBackend 鈥?闃舵浜旓細鍘熺敓 GDI + Direct2D 鍔犻€?
+ * GdiDirect2DBackend — 阶段五：原生 GDI + Direct2D 加速
  *
- * 鎺㈡祴鏉′欢锛?
- *  - Windows 7+锛堣嚜甯?d2d1.dll锛?
- *  - 闃舵浜斿疄鐜?
+ * 探测条件：
+ *  - Windows 7+（自带 d2d1.dll）
+ *  - 阶段五实现
  *
- * 浼樺厛绾э細50锛堜粙浜?Skia-CPU 鍜?GDI-Legacy 涔嬮棿锛?
+ * 优先级：50（介于 Skia-CPU 和 GDI-Legacy 之间）
  */
 class GdiDirect2DBackend implements IRenderBackend
 {
@@ -31,7 +31,7 @@ class GdiDirect2DBackend implements IRenderBackend
 
     public function probe(): BackendCapability
     {
-        // 闃舵浜旀湭瀹炵幇
+        // 阶段五未实现
         if (!function_exists('d2d_probe')) {
             return BackendCapability::unavailable('d2d_probe not linked (D2D backend not compiled)');
         }
@@ -51,7 +51,7 @@ class GdiDirect2DBackend implements IRenderBackend
 
     public function initialize(int $hwnd, int $w, int $h): void
     {
-        // D2D 鍚庣涓嶅疄鐜版椂鐩存帴涓嶅彲鐢?
+        // D2D 后端不实现时直接不可用
         throw new BackendInitException($this->getName(), 'D2D backend not implemented yet');
     }
 
@@ -65,4 +65,3 @@ class GdiDirect2DBackend implements IRenderBackend
         $this->context = null;
     }
 }
-

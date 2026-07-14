@@ -1,6 +1,6 @@
 <?php
 
-namespace Px$1;
+namespace Px\Component\Contracts;
 
 use Px\Core\Scheduler;
 

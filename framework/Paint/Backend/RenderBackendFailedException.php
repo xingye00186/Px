@@ -1,14 +1,14 @@
 <?php
 
-namespace Px$1;
+namespace Px\Paint\Backend;
 
 use native_types;
 
 /**
- * RenderBackendFailedException 鈥?娓叉煋鍚庣杩愯鏃跺け璐?
+ * RenderBackendFailedException — 渲染后端运行时失败
  *
- * 鐢?RenderContext 瀛愮被鍦ㄨ繍琛屾椂鎶涘嚭锛圙PU 璁惧涓㈠け銆佹樉瀛樹笉瓒崇瓑锛夈€?
- * ResilientRenderContext 鎹曡幏鍚庤鏁帮紝杩炵画 N 娆¤Е鍙戦檷绾с€?
+ * 由 RenderContext 子类在运行时抛出（GPU 设备丢失、显存不足等）。
+ * ResilientRenderContext 捕获后计数，连续 N 次触发降级。
  */
 class RenderBackendFailedException extends \RuntimeException
 {
@@ -20,4 +20,3 @@ class RenderBackendFailedException extends \RuntimeException
         $this->backendName = $backendName;
     }
 }
-

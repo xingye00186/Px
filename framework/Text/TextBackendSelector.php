@@ -75,9 +75,9 @@ class TextBackendSelector
      */
     private function instantiateTextBackend(string $cls): ITextBackend
     {
-        if ($cls === \Px\Rendering\TextBackend\DWriteTextBackend::class) return new \Px\Rendering\TextBackend\DWriteTextBackend();
-        if ($cls === \Px\Rendering\TextBackend\SkiaTextBackend::class) return new \Px\Rendering\TextBackend\SkiaTextBackend();
-        if ($cls === \Px\Rendering\TextBackend\GdiTextBackend::class) return new \Px\Rendering\TextBackend\GdiTextBackend();
+        if ($cls === \Px\Text\DWriteTextBackend::class) return new \Px\Text\DWriteTextBackend();
+        if ($cls === \Px\Text\SkiaTextBackend::class) return new \Px\Text\SkiaTextBackend();
+        if ($cls === \Px\Text\GdiTextBackend::class) return new \Px\Text\GdiTextBackend();
         throw new \InvalidArgumentException("Unknown text backend class: {$cls}");
     }
 

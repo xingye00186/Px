@@ -1,89 +1,88 @@
 <?php
 
-namespace Px$1;
+namespace Px\Component\Contracts;
 
 use Px\Core\Scheduler;
 use Px\Render\RenderNode;
 use Px\Dom\VNode;
 
 /**
- * ReactiveComponentInterface 鈥?鍝嶅簲寮忕粍浠舵帴鍙?
+ * ReactiveComponentInterface — 响应式组件接口
  *
- * 瀹氫箟鍝嶅簲寮忕粍浠剁殑鍏叡濂戠害锛屽寘鎷覆鏌撱€佽剰鏍囪鏇存柊銆?
- * 浜嬩欢鍐掓场銆佺粦瀹氬€艰鍐欍€佺敓鍛藉懆鏈熺鐞嗐€?
+ * 定义响应式组件的公共契约，包括渲染、脏标记更新、
+ * 事件冒泡、绑定值读写、生命周期管理。
  *
  * @see \Px\ReactiveComponent
  */
 interface ReactiveComponentInterface
 {
-    // 鈹€鈹€ 娓叉煋 & 鏇存柊 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    // ── 渲染 & 更新 ─────────────────────────────
 
     /**
-     * 娉ㄥ叆娓叉煋璇锋眰鍥炶皟锛堢敱 Application 娉ㄥ叆锛夈€?
+     * 注入渲染请求回调（由 Application 注入）。
      */
     public function setRenderCallback(callable $callback): void;
 
     /**
-     * 鎵ц寮傛鏇存柊锛堝井浠诲姟涓皟鐢級銆?
+     * 执行异步更新（微任务中调用）。
      */
     public function performUpdate(): void;
 
     /**
-     * 鑾峰彇 VNode 鏍戯紙鎯版€ч噸寤猴級銆?
+     * 获取 VNode 树（惰性重建）。
      */
     public function getVNodeTree(): VNode;
 
     /**
-     * 娓叉煋褰撳墠缁勪欢鐨?VNode 鏍戙€?
+     * 渲染当前组件的 VNode 树。
      */
     public function render(): VNode;
 
-    // 鈹€鈹€ 鐢熷懡鍛ㄦ湡 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    // ── 生命周期 ─────────────────────────────────
 
     /**
-     * 鎸傝浇缁勪欢銆?
+     * 挂载组件。
      */
     public function mount(): void;
 
     /**
-     * 鍗歌浇缁勪欢銆?
+     * 卸载组件。
      */
     public function unmount(): void;
 
-    // 鈹€鈹€ 缁戝畾鍊?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    // ── 绑定值 ───────────────────────────────────
 
     /**
-     * 璁剧疆缁戝畾鍊笺€?
+     * 设置绑定值。
      */
     public function setBindValue(string $bindKey, string $value): void;
 
     /**
-     * 鑾峰彇缁戝畾鍊笺€?
+     * 获取绑定值。
      */
     public function getBindValue(string $bindKey): string;
 
-    // 鈹€鈹€ RenderNode 鏍戠姸鎬佺鐞?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    // ── RenderNode 树状态管理 ────────────────────
 
     /**
-     * 鑾峰彇涓婁竴甯х殑鏍?RenderNode锛岀敤浜庤法甯у尮閰嶅鐢ㄣ€?
+     * 获取上一帧的根 RenderNode，用于跨帧匹配复用。
      */
     public function getRootRenderNode(): ?RenderNode;
 
     /**
-     * 璁剧疆褰撳墠鏍?RenderNode锛屼緵涓嬩竴甯у尮閰嶅鐢ㄣ€?
+     * 设置当前根 RenderNode，供下一帧匹配复用。
      */
     public function setRootRenderNode(?RenderNode $node): void;
 
-    // 鈹€鈹€ 浜嬩欢鍒嗗彂 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    // ── 事件分发 ─────────────────────────────────
 
     /**
-     * 娌跨粍浠舵爲鍐掓场鐐瑰嚮浜嬩欢銆?
+     * 沿组件树冒泡点击事件。
      */
     public function dispatchClick(string $handler, ?string $arg = null): void;
 
     /**
-     * 娌跨粍浠舵爲鍐掓场閿洏浜嬩欢銆?
+     * 沿组件树冒泡键盘事件。
      */
     public function dispatchKey(string $handler, string $action, int $keyCode, string $char): void;
 }
-

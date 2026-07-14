@@ -1,19 +1,19 @@
 <?php
 
-namespace Px$1;
+namespace Px\Paint\Backend;
 
 use native_types;
 use Px\Paint\RenderContext;
 
 /**
- * SkiaGaneshWGLBackend 鈥?闃舵鍥涳細Skia Ganesh + WGL (Windows OpenGL)
+ * SkiaGaneshWGLBackend — 阶段四：Skia Ganesh + WGL (Windows OpenGL)
  *
- * 鎺㈡祴鏉′欢锛?
- *  - sk_wgl_probe() 瀛樺湪骞惰繑鍥?ok=true
- *  - C++ 绔?wglCreateContext + wglMakeCurrent 鎴愬姛
+ * 探测条件：
+ *  - sk_wgl_probe() 存在并返回 ok=true
+ *  - C++ 端 wglCreateContext + wglMakeCurrent 成功
  *
- * 鎬ц兘锛氱‖浠跺姞閫?OpenGL 娓叉煋銆?
- * 浼樺厛绾э細80
+ * 性能：硬件加速 OpenGL 渲染。
+ * 优先级：80
  */
 class SkiaGaneshWGLBackend implements IRenderBackend
 {
@@ -55,7 +55,7 @@ class SkiaGaneshWGLBackend implements IRenderBackend
         }
         try {
             sk_wgl_init($hwnd, $w, $h);
-            $this->context = new \Px\Rendering\SkiaRenderContext($hwnd, $w, $h);
+            $this->context = new \Px\Paint\SkiaRenderContext($hwnd, $w, $h);
         } catch (\Throwable $e) {
             throw new BackendInitException($this->getName(), $e->getMessage());
         }
@@ -77,4 +77,3 @@ class SkiaGaneshWGLBackend implements IRenderBackend
         $this->context = null;
     }
 }
-

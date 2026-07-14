@@ -17,7 +17,7 @@ use Px\Text\ResilientTextBackendProxy;
 use Px\Dom\VNode;
 use Px\Render\RenderNode;
 use Px\Paint\VNodeRenderer;
-use Px\Rendering\LayoutOrchestrator;
+use Px\Layout\LayoutOrchestrator;
 use Px\Css\StyleRecalcPass;
 use Px\Layout\PhysicalFragment;
 use Px\Core\Diag;
@@ -142,9 +142,9 @@ class Application
                 $caseName = substr($arg, strlen('--case='));
             } elseif (str_starts_with($arg, '--diag-layout=')) {
                 $diagLevel = max(0, (int)substr($arg, strlen('--diag-layout=')));
-                \Px\Rendering\Diag::initFromCli($diagLevel);
+                \Px\Core\Diag::initFromCli($diagLevel);
             } elseif (str_starts_with($arg, '--diag-log-path=')) {
-                \Px\Rendering\Diag::setLogPath(substr($arg, strlen('--diag-log-path=')));
+                \Px\Core\Diag::setLogPath(substr($arg, strlen('--diag-log-path=')));
             }
         }
 
@@ -850,7 +850,7 @@ class Application
      * ComputedStyle → 简单数组（与 RenderNodeSerializer 的 style flatten 兼容）。
      * 只提取标量/简单值，跳过嵌套对象（CssLength/CssColor 等由正常化阶段处理）。
      */
-    private function fragmentStyleToArray(\Px\Rendering\ComputedStyle $style): array
+    private function fragmentStyleToArray(\Px\Css\ComputedStyle $style): array
     {
         $result = [];
         // CssKeyword/CssLength/CssColor/CssRect/CssFlex 对象导出其值
@@ -859,15 +859,15 @@ class Application
             if ($v === null || $v === '') continue;
             if (is_scalar($v) || is_array($v)) {
                 $result[$k] = $v;
-            } elseif ($v instanceof \Px\Rendering\CssKeyword) {
+            } elseif ($v instanceof \Px\Css\CssKeyword) {
                 $result[$k] = $v->value;
-            } elseif ($v instanceof \Px\Rendering\CssLength) {
+            } elseif ($v instanceof \Px\Css\CssLength) {
                 $result[$k] = $v->toPx();
-            } elseif ($v instanceof \Px\Rendering\CssColor) {
+            } elseif ($v instanceof \Px\Css\CssColor) {
                 $result[$k] = $v->toBgr();
-            } elseif ($v instanceof \Px\Rendering\CssFlex) {
+            } elseif ($v instanceof \Px\Css\CssFlex) {
                 $result[$k] = $v->grow . ' ' . $v->shrink . ' ' . $v->basis->toPx();
-            } elseif ($v instanceof \Px\Rendering\CssRect) {
+            } elseif ($v instanceof \Px\Css\CssRect) {
                 $result[$k . 'Top'] = $v->top->toPx();
                 $result[$k . 'Right'] = $v->right->toPx();
                 $result[$k . 'Bottom'] = $v->bottom->toPx();

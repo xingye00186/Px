@@ -1,19 +1,19 @@
 <?php
 
-namespace Px$1;
+namespace Px\Paint\Backend;
 
 use native_types;
 use Px\Paint\RenderContext;
 
 /**
- * SkiaGraphiteDawnBackend 鈥?闃舵浜旓細Skia Graphite + Dawn (D3D12/WebGPU)
+ * SkiaGraphiteDawnBackend — 阶段五：Skia Graphite + Dawn (D3D12/WebGPU)
  *
- * 鎺㈡祴鏉′欢锛?
- *  - sk_dawn_probe() 瀛樺湪骞惰繑鍥?ok=true
- *  - C++ 绔?Dawn Device 鍒涘缓鎴愬姛锛圖3D12 backend锛?
+ * 探测条件：
+ *  - sk_dawn_probe() 存在并返回 ok=true
+ *  - C++ 端 Dawn Device 创建成功（D3D12 backend）
  *
- * 鎬ц兘锛歋kia 鏈€鏂?GPU 鏋舵瀯锛屾€ц兘鏈€楂樸€?
- * 浼樺厛绾э細100锛堟渶楂橈級
+ * 性能：Skia 最新 GPU 架构，性能最高。
+ * 优先级：100（最高）
  */
 class SkiaGraphiteDawnBackend implements IRenderBackend
 {
@@ -55,7 +55,7 @@ class SkiaGraphiteDawnBackend implements IRenderBackend
         }
         try {
             sk_dawn_init($hwnd, $w, $h);
-            $this->context = new \Px\Rendering\SkiaRenderContext($hwnd, $w, $h);
+            $this->context = new \Px\Paint\SkiaRenderContext($hwnd, $w, $h);
         } catch (\Throwable $e) {
             throw new BackendInitException($this->getName(), $e->getMessage());
         }
@@ -77,4 +77,3 @@ class SkiaGraphiteDawnBackend implements IRenderBackend
         $this->context = null;
     }
 }
-

@@ -1,6 +1,6 @@
 <?php
 
-namespace Px;
+namespace Px\Component;
 
 use native_types;
 

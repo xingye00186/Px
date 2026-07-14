@@ -1,25 +1,25 @@
 <?php
 
-namespace Px$1;
+namespace Px\Paint\Backend;
 
 use native_types;
 use Px\Paint\RenderContext;
 
 /**
- * ResilientRenderContext 鈥?鏁呴殰闄嶇骇浠ｇ悊
+ * ResilientRenderContext — 故障降级代理
  *
- * 鍖呰９涓€涓?RenderContext锛屽 VNodeRenderer 閫忔槑銆?
+ * 包裹一个 RenderContext，对 VNodeRenderer 透明。
  *
- * 宸ヤ綔鍘熺悊锛?
- *  - 榛樿鎵€鏈夋柟娉曞娲剧粰 delegate
- *  - delegate 鎶?RenderBackendFailedException 鏃惰鏁?
- *  - 鍚屼竴鍚庣杩炵画澶辫触 N 娆?鈫?瑙﹀彂闄嶇骇锛坰electNext锛?
- *  - 闄嶇骇鍚庣敤鏂?delegate 閲嶈瘯褰撳墠璋冪敤
+ * 工作原理：
+ *  - 默认所有方法委派给 delegate
+ *  - delegate 抛 RenderBackendFailedException 时计数
+ *  - 同一后端连续失败 N 次 → 触发降级（selectNext）
+ *  - 降级后用新 delegate 重试当前调用
  *
- * 杩欐牱涓婂眰锛圴NodeRenderer锛夊畬鍏ㄦ棤鎰熺煡锛?
- *  - 鍚姩鏃剁敱 RuntimeBackendSelector 閫夌涓€涓彲鐢ㄧ殑
- *  - 杩愯鏃舵寕鎺夋椂鑷姩鍒囧埌涓嬩竴涓?
- *  - 鐢ㄦ埛鏃犳劅锛孶I 涓嶅穿
+ * 这样上层（VNodeRenderer）完全无感知：
+ *  - 启动时由 RuntimeBackendSelector 选第一个可用的
+ *  - 运行时挂掉时自动切到下一个
+ *  - 用户无感，UI 不崩
  */
 class ResilientRenderContext extends RenderContext
 {
@@ -29,7 +29,7 @@ class ResilientRenderContext extends RenderContext
     private int $w;
     private int $h;
 
-    /** @var array<string,int> 鍚庣鍚?鈫?杩炵画澶辫触娆℃暟 */
+    /** @var array<string,int> 后端名 → 连续失败次数 */
     private array $failures = [];
 
     private int $failureThreshold = 3;
@@ -84,7 +84,7 @@ class ResilientRenderContext extends RenderContext
     }
 
     /**
-     * 瀹夊叏璋冪敤 delegate 鏂规硶锛屽け璐ヨ鏁?+ 瑙﹀彂闄嶇骇
+     * 安全调用 delegate 方法，失败计数 + 触发降级
      *
      * @param string $method
      * @param array<int,mixed> $args
@@ -93,7 +93,7 @@ class ResilientRenderContext extends RenderContext
     {
         $name = $this->delegate::class;
         try {
-            // AOT 鍏煎锛氱敤 match/switch 鑰岄潪 $this->delegate->$method(...)
+            // AOT 兼容：用 match/switch 而非 $this->delegate->$method(...)
             switch ($method) {
                 case 'beginFrame':
                     $this->delegate->beginFrame();
@@ -114,7 +114,7 @@ class ResilientRenderContext extends RenderContext
                     $this->delegate->drawButton($args[0], $args[1], $args[2], $args[3], $args[4], $args[5]);
                     break;
             }
-            $this->failures[$name] = 0;  // 鎴愬姛 鈫?閲嶇疆
+            $this->failures[$name] = 0;  // 成功 → 重置
         } catch (RenderBackendFailedException $e) {
             $this->failures[$name] = ($this->failures[$name] ?? 0) + 1;
             trigger_error(
@@ -124,14 +124,14 @@ class ResilientRenderContext extends RenderContext
 
             if ($this->failures[$name] >= $this->failureThreshold) {
                 $this->downgrade($name, $e);
-                // 鐢ㄦ柊鍚庣閲嶈瘯褰撳墠璋冪敤
+                // 用新后端重试当前调用
                 $this->safeCall($method, $args);
             }
         }
     }
 
     /**
-     * 瑙﹀彂闄嶇骇锛氬叧闂綋鍓嶅悗绔紝閫変笅涓€涓?
+     * 触发降级：关闭当前后端，选下一个
      */
     private function downgrade(string $failedName, \Throwable $cause): void
     {
@@ -140,16 +140,15 @@ class ResilientRenderContext extends RenderContext
             E_USER_WARNING
         );
 
-        // 閫氱煡 selector 澶辫触
+        // 通知 selector 失败
         $current = $this->selector->getCurrent();
         if ($current !== null) {
             $this->selector->markFailed($current);
         }
 
-        // 閫変笅涓€涓?
+        // 选下一个
         $next = $this->selector->selectNext($this->hwnd, $this->w, $this->h);
         $this->delegate = $next->getContext();
         $this->failures[$failedName] = 0;
     }
 }
-

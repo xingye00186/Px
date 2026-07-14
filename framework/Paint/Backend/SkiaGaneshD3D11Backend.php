@@ -1,19 +1,19 @@
 <?php
 
-namespace Px$1;
+namespace Px\Paint\Backend;
 
 use native_types;
 use Px\Paint\RenderContext;
 
 /**
- * SkiaGaneshD3D11Backend 鈥?闃舵鍥涳細Skia Ganesh + Direct3D 11
+ * SkiaGaneshD3D11Backend — 阶段四：Skia Ganesh + Direct3D 11
  *
- * 鎺㈡祴鏉′欢锛?
- *  - sk_d3d11_probe() 瀛樺湪骞惰繑鍥?ok=true
- *  - C++ 绔?D3D11CreateDevice 鎴愬姛锛坒eature level >= 11_0锛?
+ * 探测条件：
+ *  - sk_d3d11_probe() 存在并返回 ok=true
+ *  - C++ 端 D3D11CreateDevice 成功（feature level >= 11_0）
  *
- * 鎬ц兘锛氱‖浠跺姞閫熸覆鏌?+ 闆舵嫹璐?SwapChain 鎻愪氦銆?
- * 浼樺厛绾э細90
+ * 性能：硬件加速渲染 + 零拷贝 SwapChain 提交。
+ * 优先级：90
  */
 class SkiaGaneshD3D11Backend implements IRenderBackend
 {
@@ -31,7 +31,7 @@ class SkiaGaneshD3D11Backend implements IRenderBackend
 
     public function probe(): BackendCapability
     {
-        // 闃舵鍥涙湭瀹炵幇锛氭帰娴嬪嚱鏁版湭閾炬帴
+        // 阶段四未实现：探测函数未链接
         if (!function_exists('sk_d3d11_probe')) {
             return BackendCapability::unavailable('sk_d3d11_probe not linked (D3D11 backend not compiled)');
         }
@@ -59,7 +59,7 @@ class SkiaGaneshD3D11Backend implements IRenderBackend
         }
         try {
             sk_d3d11_init($hwnd, $w, $h);
-            $this->context = new \Px\Rendering\SkiaRenderContext($hwnd, $w, $h);
+            $this->context = new \Px\Paint\SkiaRenderContext($hwnd, $w, $h);
         } catch (\Throwable $e) {
             throw new BackendInitException($this->getName(), $e->getMessage());
         }
@@ -81,4 +81,3 @@ class SkiaGaneshD3D11Backend implements IRenderBackend
         $this->context = null;
     }
 }
-

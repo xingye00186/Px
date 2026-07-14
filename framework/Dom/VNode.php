@@ -3,6 +3,7 @@
 namespace Px\Dom;
 
 use native_types;
+use Px\Css\ComputedStyle;
 
 /**
  * VNode — Vue 3 兼容的虚拟 DOM 节点
@@ -51,7 +52,7 @@ class VNode
     public ?string $componentClass = null;
 
     /** 运行时的子组件实例 */
-    public ?\Px\Interfaces\ReactiveComponentInterface $componentInstance = null;
+    public ?\Px\Component\Contracts\ReactiveComponentInterface $componentInstance = null;
 
     /** bind 映射: ['childProp' => 'parentExpr']，运行时由 Application 展开 */
     public ?array $componentProps = null;

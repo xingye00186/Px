@@ -244,7 +244,7 @@ class BlockAlgorithm extends LayoutAlgorithm
         $inlineBuffer = [];
     }
 
-    private function reResolveChild(ConstraintSpace $space, \Px\Rendering\RenderNode $child, ?PhysicalFragment $oldFrag): ?PhysicalFragment
+    private function reResolveChild(ConstraintSpace $space, \Px\Render\RenderNode $child, ?PhysicalFragment $oldFrag): ?PhysicalFragment
     {
         if ($oldFrag === null) return null;
         $childStyle = $child->computedStyle;

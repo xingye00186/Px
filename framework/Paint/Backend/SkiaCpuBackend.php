@@ -1,19 +1,19 @@
 <?php
 
-namespace Px$1;
+namespace Px\Paint\Backend;
 
 use native_types;
 use Px\Paint\SkiaRenderContext;
 use Px\Paint\RenderContext;
 
 /**
- * SkiaCpuBackend 鈥?闃舵涓夛細Skia CPU 绂诲睆 + GDI 妗ユ帴
+ * SkiaCpuBackend — 阶段三：Skia CPU 离屏 + GDI 桥接
  *
- * 鎺㈡祴鏉′欢锛?
- *  - sk_create_window_context() 鍑芥暟瀛樺湪锛堥摼鎺ヤ簡 skia_render.cc + USE_SKIA锛?
- *  - skia_render.cc 宸插疄鐜伴樁娈典笁
+ * 探测条件：
+ *  - sk_create_window_context() 函数存在（链接了 skia_render.cc + USE_SKIA）
+ *  - skia_render.cc 已实现阶段三
  *
- * 鎶楅敮榻?+ 鍦嗚 + 瀛椾綋鍏夋爡鍖栬蛋 Skia锛屾渶缁堝儚绱犻€氳繃 SetDIBitsToDevice 杈撳嚭鍒?GDI DC銆?
+ * 抗锯齿 + 圆角 + 字体光栅化走 Skia，最终像素通过 SetDIBitsToDevice 输出到 GDI DC。
  */
 class SkiaCpuBackend implements IRenderBackend
 {
@@ -31,12 +31,12 @@ class SkiaCpuBackend implements IRenderBackend
 
     public function probe(): BackendCapability
     {
-        // 1. 绗﹀彿妫€娴嬶細sk_* 绯诲垪鍑芥暟鏄惁閾炬帴杩涙潵
+        // 1. 符号检测：sk_* 系列函数是否链接进来
         if (!function_exists('sk_create_window_context')) {
             return BackendCapability::unavailable('sk_create_window_context not linked (USE_SKIA=0?)');
         }
 
-        // 2. 骞冲彴妫€娴嬶細蹇呴』鏄?Windows
+        // 2. 平台检测：必须是 Windows
         if (PHP_OS_FAMILY !== 'Windows') {
             return BackendCapability::unavailable('Skia renderer requires Windows');
         }
@@ -69,9 +69,8 @@ class SkiaCpuBackend implements IRenderBackend
     public function shutdown(): void
     {
         if ($this->context !== null) {
-            // SkiaRenderContext 鐨?__destruct 璋?sk_destroy_context
+            // SkiaRenderContext 的 __destruct 调 sk_destroy_context
             $this->context = null;
         }
     }
 }
-

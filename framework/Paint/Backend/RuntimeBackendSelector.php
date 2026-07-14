@@ -1,26 +1,26 @@
 <?php
 
-namespace Px$1;
+namespace Px\Paint\Backend;
 
 use native_types;
 
 /**
- * RuntimeBackendSelector 鈥?杩愯鏃跺悗绔€夋嫨鍣?
+ * RuntimeBackendSelector — 运行时后端选择器
  *
- * 娴佺▼锛?
- *  1. 鏀堕泦鍊欓€夛紙鎸変紭鍏堢骇鎴栫敤鎴峰己鍒讹級
- *  2. 渚濇 probe()锛岃烦杩囦笉鍙敤鐨?
- *  3. 绗竴娆?initialize() 鎴愬姛 鈫?閫夊畾
- *  4. 鍏ㄩ儴澶辫触 鈫?鎶涘紓甯?
+ * 流程：
+ *  1. 收集候选（按优先级或用户强制）
+ *  2. 依次 probe()，跳过不可用的
+ *  3. 第一次 initialize() 成功 → 选定
+ *  4. 全部失败 → 抛异常
  *
- * 鍚屾椂缁存姢澶辫触鍒楄〃锛屾敮鎸?ResilientRenderContext 鐨勮繍琛屾椂闄嶇骇銆?
+ * 同时维护失败列表，支持 ResilientRenderContext 的运行时降级。
  */
 class RuntimeBackendSelector
 {
-    /** @var string[] 宸插け璐ュ苟璺宠繃鐨勫悗绔被鍚嶏紙鎸夊皾璇曢『搴忥級 */
+    /** @var string[] 已失败并跳过的后端类名（按尝试顺序） */
     private array $failed = [];
 
-    /** @var string[] 鎺㈡祴澶辫触鐨勫悗绔紙涓嶅仴搴凤紝璺宠繃锛?*/
+    /** @var string[] 探测失败的后端（不健康，跳过） */
     private array $unhealthy = [];
 
     private ?IRenderBackend $current = null;
@@ -30,10 +30,10 @@ class RuntimeBackendSelector
     }
 
     /**
-     * 绗竴娆￠€夋嫨锛堝簲鐢ㄥ惎鍔ㄦ椂璋冪敤锛?
+     * 第一次选择（应用启动时调用）
      *
-     * @return IRenderBackend 閫変腑鐨勫悗绔?
-     * @throws \RuntimeException 娌℃湁鍙敤鍚庣
+     * @return IRenderBackend 选中的后端
+     * @throws \RuntimeException 没有可用后端
      */
     public function select(int $hwnd, int $w, int $h): IRenderBackend
     {
@@ -64,7 +64,7 @@ class RuntimeBackendSelector
                 trigger_error("[Px] [OK ] {$name} pri={$pri} {$detailStr}", E_USER_NOTICE);
             }
 
-            // 鎺㈡祴閫氳繃 鈫?灏濊瘯鍒濆鍖?
+            // 探测通过 → 尝试初始化
             try {
                 $backend->initialize($hwnd, $w, $h);
                 $this->current = $backend;
@@ -85,25 +85,25 @@ class RuntimeBackendSelector
     }
 
     /**
-     * 瀹炰緥鍖栧悗绔紙閬垮厤 new $cls() 鍔ㄦ€佺被鍚?ZendVM dispatch锛夈€?
+     * 实例化后端（避免 new $cls() 动态类名 ZendVM dispatch）。
      */
     private function instantiateBackend(string $cls): IRenderBackend
     {
-        if ($cls === \Px\Rendering\Backend\SkiaGraphiteDawnBackend::class) return new \Px\Rendering\Backend\SkiaGraphiteDawnBackend();
-        if ($cls === \Px\Rendering\Backend\SkiaGaneshD3D11Backend::class) return new \Px\Rendering\Backend\SkiaGaneshD3D11Backend();
-        if ($cls === \Px\Rendering\Backend\SkiaGaneshWGLBackend::class) return new \Px\Rendering\Backend\SkiaGaneshWGLBackend();
-        if ($cls === \Px\Rendering\Backend\SkiaCpuBackend::class) return new \Px\Rendering\Backend\SkiaCpuBackend();
-        if ($cls === \Px\Rendering\Backend\GdiDirect2DBackend::class) return new \Px\Rendering\Backend\GdiDirect2DBackend();
-        if ($cls === \Px\Rendering\Backend\GdiLegacyBackend::class) return new \Px\Rendering\Backend\GdiLegacyBackend();
+        if ($cls === \Px\Paint\Backend\SkiaGraphiteDawnBackend::class) return new \Px\Paint\Backend\SkiaGraphiteDawnBackend();
+        if ($cls === \Px\Paint\Backend\SkiaGaneshD3D11Backend::class) return new \Px\Paint\Backend\SkiaGaneshD3D11Backend();
+        if ($cls === \Px\Paint\Backend\SkiaGaneshWGLBackend::class) return new \Px\Paint\Backend\SkiaGaneshWGLBackend();
+        if ($cls === \Px\Paint\Backend\SkiaCpuBackend::class) return new \Px\Paint\Backend\SkiaCpuBackend();
+        if ($cls === \Px\Paint\Backend\GdiDirect2DBackend::class) return new \Px\Paint\Backend\GdiDirect2DBackend();
+        if ($cls === \Px\Paint\Backend\GdiLegacyBackend::class) return new \Px\Paint\Backend\GdiLegacyBackend();
         throw new \InvalidArgumentException("Unknown backend class: {$cls}");
     }
 
     /**
-     * 杩愯鏃堕檷绾э細褰撳墠鍚庣杩炵画澶辫触鏃惰皟鐢?
-     * 閫変笅涓€涓湭澶辫触鐨勫悗绔紝鍒濆鍖栧苟鍒囨崲
+     * 运行时降级：当前后端连续失败时调用
+     * 选下一个未失败的后端，初始化并切换
      *
-     * @return IRenderBackend 鏂扮殑鍚庣
-     * @throws \RuntimeException 娌℃湁鍙檷绾х殑鍚庣
+     * @return IRenderBackend 新的后端
+     * @throws \RuntimeException 没有可降级的后端
      */
     public function selectNext(int $hwnd, int $w, int $h): IRenderBackend
     {
@@ -112,16 +112,16 @@ class RuntimeBackendSelector
 
         foreach ($candidates as $cls) {
             $name = $cls::getPriority() . '';
-            // 瀹炰緥鍖栦互鑾峰彇鍚嶅瓧
+            // 实例化以获取名字
             $instance = $this->instantiateBackend($cls);
             $instanceName = $instance->getName();
 
-            // 璺宠繃褰撳墠 + 宸插け璐?+ 涓嶅仴搴?
+            // 跳过当前 + 已失败 + 不健康
             if ($instanceName === $currentName) continue;
             if (in_array($instanceName, $this->failed, true)) continue;
             if (isset($this->unhealthy[$instanceName])) continue;
 
-            // 閲嶆柊鎺㈡祴
+            // 重新探测
             $cap = $instance->probe();
             if (!$cap->available) {
                 $this->unhealthy[$instanceName] = $cap->reason;
@@ -143,7 +143,7 @@ class RuntimeBackendSelector
     }
 
     /**
-     * 鏍囪褰撳墠鍚庣澶辫触锛堜緵 ResilientRenderContext 瑙﹀彂闄嶇骇鏃惰皟鐢級
+     * 标记当前后端失败（供 ResilientRenderContext 触发降级时调用）
      */
     public function markFailed(IRenderBackend $backend): void
     {
@@ -162,9 +162,9 @@ class RuntimeBackendSelector
     }
 
     /**
-     * 鏀堕泦鍊欓€夊悗绔紙鑰冭檻寮哄埗瑕嗙洊锛?
+     * 收集候选后端（考虑强制覆盖）
      *
-     * @return string[] 绫诲悕鏁扮粍
+     * @return string[] 类名数组
      */
     private function collectCandidates(): array
     {
@@ -175,7 +175,7 @@ class RuntimeBackendSelector
             return $all;
         }
 
-        // 寮哄埗锛氬彧淇濈暀鎸囧畾鍚庣
+        // 强制：只保留指定后端
         $filtered = [];
         foreach ($all as $cls) {
             $instance = $this->instantiateBackend($cls);
@@ -193,7 +193,7 @@ class RuntimeBackendSelector
     }
 
     /**
-     * 鏍煎紡鍖栨帰娴嬭鎯呬负鍗曡瀛楃涓?
+     * 格式化探测详情为单行字符串
      *
      * @param array<string,mixed> $details
      */
@@ -211,4 +211,3 @@ class RuntimeBackendSelector
         return '(' . implode(', ', $parts) . ')';
     }
 }
-

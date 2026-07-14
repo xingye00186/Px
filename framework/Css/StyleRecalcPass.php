@@ -4,6 +4,8 @@ namespace Px\Css;
 
 use native_types;
 
+use Px\Dom\VNode;
+
 use Px\Css\StyleResolver;
 
 /**
