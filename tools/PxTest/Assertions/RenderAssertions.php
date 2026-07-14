@@ -7,8 +7,8 @@
  * 由 bootstrap.php 自动 require。在 PHPUnit 环境中扩展 TestCase。
  */
 
-use Px\Rendering\RenderNode;
-use Px\Rendering\VNode;
+use Px\Render\RenderNode;
+use Px\Dom\VNode;
 
 if (!function_exists('assert_render_node_equals')) {
     /**

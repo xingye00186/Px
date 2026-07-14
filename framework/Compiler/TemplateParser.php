@@ -1,7 +1,7 @@
 <?php
 
-use Px\Rendering\VNode;
-use Px\Rendering\CssMappings;
+use Px\Dom\VNode;
+use Px\Css\CssMappings;
 
 /**
  * Recursive Descent Template Parser for PUI SFC

@@ -2,7 +2,7 @@
 
 namespace Px\Platform;
 
-use Px\Rendering\RenderContext;
+use Px\Paint\RenderContext;
 
 /**
  * Platform — 平台抽象接口

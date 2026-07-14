@@ -2,8 +2,8 @@
 
 namespace PxTest\Mock;
 
-use Px\ReactiveComponent;
-use Px\Rendering\VNode;
+use Px\Component\ReactiveComponent;
+use Px\Dom\VNode;
 use Px\Core\Application;
 use Px\Core\Scheduler;
 

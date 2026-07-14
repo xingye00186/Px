@@ -1,5 +1,5 @@
 <?php
-use Px\Rendering\RenderNode;
+use Px\Render\RenderNode;
 
 const APP_PLATFORM  = 'win32';
 const WINDOW_WIDTH  = 1600;

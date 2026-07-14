@@ -2,7 +2,7 @@
 
 namespace PxTest\Contracts;
 
-use Px\Rendering\RenderNode;
+use Px\Render\RenderNode;
 
 /**
  * 布局策略契约测试基类。

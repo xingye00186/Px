@@ -6,7 +6,7 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 
-use Px\Rendering\ImageManager;
+use Px\Paint\ImageManager;
 
 echo "========================================\n";
 echo "  ImageManager — Resource Lifecycle\n";

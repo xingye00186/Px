@@ -6,7 +6,7 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 
-use Px\Styling\Provider\ThemeProvider;
+use Px\Theme\ThemeProvider;
 
 echo "========================================\n";
 echo "  ThemeProvider Unit Test\n";

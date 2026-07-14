@@ -13,10 +13,10 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\RenderNode;
-use Px\Rendering\ComputedStyle;
+use Px\Render\RenderNode;
+use Px\Css\ComputedStyle;
 use Px\Rendering\LayoutOrchestrator;
-use Px\Rendering\CssMappings;
+use Px\Css\CssMappings;
 
 echo "========================================\n";
 echo " LayoutEngine 单元测试（布局计算）\n";

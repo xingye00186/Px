@@ -16,7 +16,7 @@ require_once __DIR__ . '/../../../tools/PxTest/bootstrap.php';
 use PxTest\Mock\MockComponent;
 use PxTest\Mock\MockPlatform;
 use PxTest\Builder\VNodeBuilder;
-use Px\Rendering\VNode;
+use Px\Dom\VNode;
 use Px\Core\Scheduler;
 
 echo "========================================\n";

@@ -8,7 +8,7 @@
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/LayoutBase.php';
 
-use Px\Rendering\RenderNode;
+use Px\Render\RenderNode;
 
 echo "========================================\n";
 echo " Grid 布局诊断测试\n";

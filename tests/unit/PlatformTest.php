@@ -16,7 +16,7 @@ require_once __DIR__ . '/bootstrap.php';
 use Px\Platform\Platform;
 use Px\Platform\PlatformEvent;
 use Px\Platform\MouseEvent;
-use Px\Rendering\RenderContext;
+use Px\Paint\RenderContext;
 
 echo "========================================\n";
 echo " Platform 接口单元测试\n";

@@ -15,10 +15,10 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\VNode;
+use Px\Dom\VNode;
 use Px\Core\Scheduler;
 use Px\Core\Application;
-use Px\ReactiveComponent;
+use Px\Component\ReactiveComponent;
 
 // ============================================================
 // Test Double Components

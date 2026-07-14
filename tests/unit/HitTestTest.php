@@ -17,9 +17,9 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\VNode;
-use Px\Rendering\RenderNode;
-use Px\Rendering\RenderTreeManager;
+use Px\Dom\VNode;
+use Px\Render\RenderNode;
+use Px\Render\RenderTreeManager;
 
 echo "========================================\n";
 echo " RenderTreeManager::hitTest 单元测试\n";

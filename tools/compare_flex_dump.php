@@ -178,7 +178,7 @@ $flexTests['align_self_end'] = function () {
 // ══════════════════════════════════════════════════════════
 
 // Fix treeToText to use computedStyle instead of $style array
-use Px\Rendering\RenderNode;
+use Px\Render\RenderNode;
 
 if (!function_exists('treeToTextFixed')) {
     function treeToTextFixed(RenderNode $node, int $depth = 0): string

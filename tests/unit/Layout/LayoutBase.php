@@ -10,8 +10,8 @@
  *   require_once __DIR__ . '/LayoutBase.php';
  */
 
-use Px\Rendering\RenderNode;
-use Px\Rendering\ComputedStyle;
+use Px\Render\RenderNode;
+use Px\Css\ComputedStyle;
 use Px\Rendering\LayoutOrchestrator;
 
 /**

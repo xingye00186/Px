@@ -6,8 +6,8 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 
-use Px\Rendering\CssMappings;
-use Px\Rendering\StyleResolver;
+use Px\Css\CssMappings;
+use Px\Css\StyleResolver;
 
 echo "========================================\n";
 echo "  CssMappings — Extended Tests\n";

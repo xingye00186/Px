@@ -77,7 +77,7 @@ if (!function_exists('vue_draw_button')) {
 $fw = dirname(__DIR__, 2) . '/framework';
 require_once $fw . '/Rendering/GdiRenderContext.php';
 
-use Px\Rendering\GdiRenderContext;
+use Px\Paint\GdiRenderContext;
 
 // ── 反射辅助 ───────────────────────────────────────────────
 function gdiGetClipStack(GdiRenderContext $ctx): array

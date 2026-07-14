@@ -2,7 +2,7 @@
 
 namespace Px\Animation;
 
-use Px\Rendering\RenderNode;
+use Px\Render\RenderNode;
 use Px\Animation\EasingFunctions;
 use Px\Animation\Interpolator;
 

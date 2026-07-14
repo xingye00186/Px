@@ -8,9 +8,9 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 
-use Px\Rendering\VNode;
-use Px\Rendering\RenderNode;
-use Px\Rendering\RenderTreeManager;
+use Px\Dom\VNode;
+use Px\Render\RenderNode;
+use Px\Render\RenderTreeManager;
 use Px\Core\Scheduler;
 
 require_once __DIR__ . '/../../../apps/bilibili/gen/ComponentFactory.php';
@@ -26,8 +26,8 @@ require_once __DIR__ . '/../../../apps/bilibili/gen/VcInputComponent.php';
 require_once __DIR__ . '/../../../apps/bilibili/gen/VcButtonComponent.php';
 require_once __DIR__ . '/../../../apps/bilibili/gen/VcAvatarComponent.php';
 
-use Px\Styling\Provider\ThemeProvider;
-use Px\Styling\Theme\ThemeData;
+use Px\Theme\ThemeProvider;
+use Px\Theme\ThemeData;
 
 echo "==========================================================\n";
 echo " Grid 全链路诊断 (App 级别)\n";

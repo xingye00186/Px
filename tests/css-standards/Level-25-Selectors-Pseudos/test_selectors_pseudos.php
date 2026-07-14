@@ -19,9 +19,9 @@
 
 require_once __DIR__ . '/../CssTestBase.php';
 
-use Px\Rendering\VNode;
-use Px\Rendering\CssMappings;
-use Px\Styling\Provider\ThemeProvider;
+use Px\Dom\VNode;
+use Px\Css\CssMappings;
+use Px\Theme\ThemeProvider;
 
 $tests = [];
 

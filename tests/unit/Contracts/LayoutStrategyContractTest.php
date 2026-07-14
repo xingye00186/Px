@@ -8,7 +8,7 @@ require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../../../tools/PxTest/bootstrap.php';
 
 use PxTest\Contracts\LayoutStrategyContract;
-use Px\Rendering\RenderNode;
+use Px\Render\RenderNode;
 
 echo "========================================\n";
 echo "  Layout Strategy Contract Test\n";

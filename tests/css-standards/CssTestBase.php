@@ -31,8 +31,8 @@ require_once __DIR__ . '/../unit/PipelineTestBase.php';
 
 use Px\Core\Scheduler;
 use Px\Core\Application;
-use Px\Rendering\RenderContext;
-use Px\Rendering\VNode;
+use Px\Paint\RenderContext;
+use Px\Dom\VNode;
 
 // ── 微型 RenderTree 构建器 ──
 // 跳过完整的应用管线，直接创建最小的 VNode→RenderNode→Layout→dump 流程

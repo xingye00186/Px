@@ -17,10 +17,10 @@ define('WINDOW_TITLE', '哔哩哔哩 - 热门视频');
 use Px\Core\Scheduler;
 use Px\Core\Application;
 use Px\Platform\Platform;
-use Px\Rendering\RenderContext;
-use Px\Rendering\VNodeRenderer;
-use Px\Rendering\RenderNode;
-use Px\Rendering\VNode;
+use Px\Paint\RenderContext;
+use Px\Paint\VNodeRenderer;
+use Px\Render\RenderNode;
+use Px\Dom\VNode;
 
 // 加载组件
 require_once __DIR__ . '/../../../apps/bilibili/gen/ComponentFactory.php';
@@ -115,8 +115,8 @@ class _InstMockPlatform implements Platform
     public function shouldClose(): bool { return $this->shouldClose; }
 }
 
-use Px\Styling\Provider\ThemeProvider;
-use Px\Styling\Theme\ThemeData;
+use Px\Theme\ThemeProvider;
+use Px\Theme\ThemeData;
 
 echo "==========================================================\n";
 echo " Grid 深度仪器化诊断\n";

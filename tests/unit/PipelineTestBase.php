@@ -21,7 +21,7 @@ require_once __DIR__ . '/bootstrap.php';
 use Px\Core\Scheduler;
 use Px\Core\Application;
 use Px\Platform\Platform;
-use Px\Rendering\RenderContext;
+use Px\Paint\RenderContext;
 
 // ---- 额外需要的框架文件（不在 bootstrap.php 中） ----
 $fw = dirname(__DIR__, 2) . '/framework';

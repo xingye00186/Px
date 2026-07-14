@@ -1,0 +1,249 @@
+<?php
+
+namespace Px\Dom;
+
+use native_types;
+
+/**
+ * VNode — Vue 3 兼容的虚拟 DOM 节点
+ *
+ * 全链路统一数据结构:
+ *   - 编译期: template-parser 产出 VNode 树 (AST)
+ *   - 运行时: 组件 render() 返回 VNode 树
+ *   - 渲染器: VNodeRenderer 遍历 VNode 树生成 GDI 调用
+ *
+ * 与 Vue 3 VNode 的对齐:
+ *   - type:  标签名 ('div','span','button','input','#text','#root') 或组件类名
+ *   - props: HTML 属性 + Vue 指令 (:bind, @click, v-if, v-for, v-model)
+ *   - children: 子 VNode 数组 或 文本字符串
+ *   - key:    v-for 场景的 diff 键
+ *
+ * PHP 8.4 兼容:
+ *   - 使用类型声明 (string, ?array, int, bool)
+ *   - h() 静态工厂方法返回 VNode (代替 new VNode(...))
+ *   - AOT 安全: 无动态属性访问, 无闭包递归
+ */
+class VNode
+{
+    // ===== Vue 3 核心字段 =====
+
+    /** 标签名: 'div','span','button','input','#text','#root', 组件类名 */
+    public string $type;
+
+    /** HTML 属性 + Vue 指令: ['class'=>'foo', 'style'=>'...', ':bind'=>'prop', '@click'=>'handler'] */
+    public ?array $props;
+
+    /** 子节点: VNode[] | string | null (#text 节点用 string, 组件用 null) */
+    public mixed $children;
+
+    /** v-for 场景的 key (用于 diff/diffChildren) */
+    public ?string $key;
+
+    /** 组件组 ID (默认 'app') */
+    public string $groupId = 'app';
+
+    // ===== 组件占位字段 =====
+
+    /** 是否为组件占位节点 (#component 类型) */
+    public bool $isComponent = false;
+
+    /** 组件类名: 'NumPadComponent' */
+    public ?string $componentClass = null;
+
+    /** 运行时的子组件实例 */
+    public ?\Px\Interfaces\ReactiveComponentInterface $componentInstance = null;
+
+    /** bind 映射: ['childProp' => 'parentExpr']，运行时由 Application 展开 */
+    public ?array $componentProps = null;
+
+    /**
+     * 预计算组件属性值（仅 v-for 循环使用）。
+     * 由 v-for render helper 在循环体内直接赋值，
+     * expandComponentNode 优先使用此值，绕开 bind key 查找。
+     * @var array<string, string>|null
+     */
+    public ?array $componentPropValues = null;
+
+    /**
+     * 父组件传递的定位偏移（仅 #component 节点使用）。
+     * 由 Application::expandComponentNode / matchComponentNode 设置，
+     * RenderTreeManager::updateFromVNode 消费。
+     * 存放 left/top 像素值，如 ['left' => 11, 'top' => 260]。
+     * 替代 transferComponentPositioning() 对子 VNode props['style'] 的直接修改，
+     * 使 VNode 保持不可变。
+     *
+     * @var array{left?:int, top?:int}|null
+     */
+    public ?array $layoutOffset = null;
+
+    /**
+     * 由 StyleRecalcPass 填充的计算后样式（Phase 0.5 引入）。
+     * 后续 RenderTreeManager 直接从此读取，不再内联调用 StyleResolver。
+     */
+    public ?ComputedStyle $computedStyle = null;
+
+    // ===== 构造器 =====
+
+    /**
+     * @param string $type      标签名
+     * @param array|null $props HTML 属性 + Vue 指令
+     * @param mixed $children   VNode[] | string | null
+     * @param string|null $key  v-for 键
+     */
+    public function __construct(
+        string $type,
+        ?array $props = null,
+        $children = null,
+        ?string $key = null
+    ) {
+        $this->type     = $type;
+        $this->props    = $props;
+        $this->children = $children;
+        $this->key      = $key;
+    }
+
+    // ===== 静态工厂方法 (Vue 3 h() 风格) =====
+
+    /**
+     * h('div', { class: 'foo' }, [child1, child2])
+     * h('span', { ':bind': 'title' }, 'Hello')
+     * h('#root', { title: 'App', style: 'width:400px;height:500px' }, [...])
+     *
+     * @param string $type      标签名
+     * @param array|null $props HTML 属性
+     * @param mixed $children   子节点
+     * @return VNode
+     */
+    public static function h(string $type, ?array $props = null, mixed $children = null): VNode
+    {
+        return new VNode($type, $props, $children, null);
+    }
+
+    /**
+     * hKey('div', { ':key': 'item-1' }, [...])
+     * 带显式 key 的工厂方法 (用于 v-for 场景)
+     */
+    public static function hKey(string $type, ?array $props, $children, string $key): VNode
+    {
+        return new VNode($type, $props, $children, $key);
+    }
+
+    /**
+     * hComponent('NumPadComponent', { style: '...' }, { value: 'display' })
+     *
+     * 创建组件占位节点。编译器生成此节点用于运行时展开。
+     *
+     * @param string $componentClass  组件类名
+     * @param array|null $props       常规 HTML 属性 (style, class, v-if 等)
+     * @param array|null $componentProps bind 映射: ['childProp' => 'parentExpr']
+     * @return VNode
+     */
+    public static function hComponent(
+        string $componentClass,
+        ?array $props = null,
+        ?array $componentProps = null
+    ): VNode {
+        $node = new VNode('#component', $props, null);
+        $node->isComponent = true;
+        $node->componentClass = $componentClass;
+        $node->componentProps = $componentProps;
+        return $node;
+    }
+
+    // ===== 属性读取辅助 =====
+
+    /**
+     * 从 props 中获取属性值
+     */
+    public function getProp(string $name, mixed $default = null): mixed
+    {
+        return $this->props[$name] ?? $default;
+    }
+
+    /**
+     * 检查 props 中是否存在某属性
+     */
+    public function hasProp(string $name): bool
+    {
+        return isset($this->props[$name]);
+    }
+
+    /**
+     * 获取 CSS class (从 props['class'])
+     */
+    public function getClass(): string
+    {
+        return $this->props['class'] ?? '';
+    }
+
+    // ===== 类型检查辅助 =====
+
+    /** 是否为文本节点 */
+    public function isText(): bool
+    {
+        return $this->type === '#text';
+    }
+
+    /** 是否为根节点 */
+    public function isRoot(): bool
+    {
+        return $this->type === '#root';
+    }
+
+    /** 是否为组件占位节点 */
+    public function isComponent(): bool
+    {
+        return $this->type === '#component';
+    }
+
+    /** 子节点是否为文本 (对 GDI 渲染: text 类型) */
+    public function hasTextChildren(): bool
+    {
+        return is_string($this->children);
+    }
+
+    /** 子节点是否为数组 */
+    public function hasArrayChildren(): bool
+    {
+        return is_array($this->children) || $this->children instanceof VNode;
+    }
+
+    /** 获取子节点数量 */
+    public function childCount(): int
+    {
+        if ($this->children instanceof VNode) {
+            return 1;
+        }
+        if (is_array($this->children)) {
+            return count($this->children);
+        }
+        return 0;
+    }
+
+    // ── 静态工具方法 ──────────────────────────
+
+    /**
+     * 将 VNode children 统一为 VNode 数组。
+     * 消除重复实现（Application + RenderTreeManager 各自维护了一份）。
+     *
+     * @param mixed $children VNode->children 值
+     * @return VNode[]
+     */
+    public static function childrenToArray(mixed $children): array
+    {
+        if ($children === null) return [];
+        if ($children instanceof VNode) return [$children];
+        if (is_array($children)) {
+            $result = [];
+            foreach ($children as $c) {
+                if ($c instanceof VNode) {
+                    $result[] = $c;
+                } elseif (is_string($c) && $c !== '') {
+                    $result[] = new VNode('#text', null, $c);
+                }
+            }
+            return $result;
+        }
+        return [];
+    }
+}

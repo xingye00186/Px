@@ -2,8 +2,8 @@
 
 namespace Px\Animation;
 
-use Px\Rendering\CssMappings;
-use Px\Rendering\StyleResolver;
+use Px\Css\CssMappings;
+use Px\Css\StyleResolver;
 
 /**
  * CssAnimationParser — CSS 动画解析器

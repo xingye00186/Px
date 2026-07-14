@@ -14,7 +14,7 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\VNode;
+use Px\Dom\VNode;
 
 // 加载编译器函数
 require_once dirname(__DIR__, 2) . '/framework/Compiler/sfc-compiler.php';

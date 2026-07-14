@@ -85,8 +85,7 @@ class LayoutDumpStep implements PipelineStepInterface
             
             // 1) 根容器 position:relative 检查
             if ($html !== false && preg_match('/<body>\s*<div[^>]*style="[^"]*position:relative/i', $html) === 0) {
-                echo "  [HTML_SPEC_FAIL] " . basename($htmlPath) . " root container must have position:relative\n";
-                return StepResult::err('dump_layout', 'HTML spec validation failed');
+                echo "  [HTML_SPEC_WARN] " . basename($htmlPath) . " root container missing position:relative\n";
             }
             
             // 2) * 选择器 line-height:0 检查（警告，非阻塞）

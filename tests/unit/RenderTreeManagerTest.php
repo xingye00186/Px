@@ -14,10 +14,10 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\VNode;
-use Px\Rendering\RenderNode;
-use Px\Rendering\RenderTreeManager;
-use Px\Styling\Provider\ThemeProvider;
+use Px\Dom\VNode;
+use Px\Render\RenderNode;
+use Px\Render\RenderTreeManager;
+use Px\Theme\ThemeProvider;
 
 // ─────────────────────────────────────────────
 // 辅助组件类

@@ -6,7 +6,7 @@
 
 namespace Px\DevTools;
 
-use Px\Rendering\VNode;
+use Px\Dom\VNode;
 
 class VNodeDevTools
 {

@@ -2,8 +2,8 @@
 
 namespace Px\Animation;
 
-use Px\Rendering\CssMappings;
-use Px\Rendering\RenderNode;
+use Px\Css\CssMappings;
+use Px\Render\RenderNode;
 use Px\Animation\Interpolator;
 
 /**

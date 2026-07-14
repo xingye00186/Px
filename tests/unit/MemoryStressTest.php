@@ -21,15 +21,15 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\VNode;
-use Px\Rendering\RenderNode;
-use Px\Rendering\RenderTreeManager;
-use Px\Styling\Provider\ThemeProvider;
+use Px\Dom\VNode;
+use Px\Render\RenderNode;
+use Px\Render\RenderTreeManager;
+use Px\Theme\ThemeProvider;
 use Px\Core\Scheduler;
 use Px\Core\Application;
 use Px\Core\ScrollManager;
-use Px\Rendering\VNodeRenderer;
-use Px\ReactiveComponent;
+use Px\Paint\VNodeRenderer;
+use Px\Component\ReactiveComponent;
 
 // ── 手动加载 bootstrap 未覆盖的模块 ──
 $fw = dirname(__DIR__, 2) . '/framework';

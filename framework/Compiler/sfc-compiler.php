@@ -1,7 +1,7 @@
 <?php
 
-use Px\Rendering\VNode;
-use Px\Rendering\CssMappings;
+use Px\Dom\VNode;
+use Px\Css\CssMappings;
 use Px\Compiler\Expression\ExpressionParser;
 use Px\Compiler\AotValidator;
 
@@ -33,10 +33,10 @@ require_once $frameworkDir . '/tests/bootstrap/autoload.php';
 
 // Compiler-specific files (not autoloaded since they define functions/constants at file scope)
 $compilerDir = __DIR__;
-require_once $frameworkDir . '/framework/Rendering/VNode.php';
-require_once $frameworkDir . '/framework/Rendering/CssValue.php';
-require_once $frameworkDir . '/framework/Rendering/CssMappings.php';
-require_once $frameworkDir . '/framework/Rendering/CssValueParser.php';
+require_once $frameworkDir . '/framework/Dom/VNode.php';
+require_once $frameworkDir . '/framework/Css/CssValue.php';
+require_once $frameworkDir . '/framework/Css/CssMappings.php';
+require_once $frameworkDir . '/framework/Css/CssValueParser.php';
 require_once $compilerDir . '/TemplateParser.php';
 require_once $compilerDir . '/AotValidator.php';
 require_once $compilerDir . '/ScriptAnalyzer.php';
@@ -2205,8 +2205,8 @@ use native_types;
  * Source: $baseName.vue
  */
 
-use Px\ReactiveComponent;
-use Px\Rendering\VNode;
+use Px\Component\ReactiveComponent;
+use Px\Dom\VNode;
 
 class {$className} extends ReactiveComponent
 {
@@ -2915,8 +2915,8 @@ use native_types;
  * Source: $baseName.vue
  */
 
-use Px\ReactiveComponent;
-use Px\Rendering\VNode;
+use Px\Component\ReactiveComponent;
+use Px\Dom\VNode;
 
 class {$componentClassName} extends ReactiveComponent
 {

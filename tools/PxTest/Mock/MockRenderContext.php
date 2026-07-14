@@ -2,7 +2,7 @@
 
 namespace PxTest\Mock;
 
-use Px\Rendering\RenderContext;
+use Px\Paint\RenderContext;
 
 /**
  * 可捕获绘制调用的 RenderContext 实现。

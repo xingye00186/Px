@@ -2,13 +2,13 @@
 
 namespace Px\Animation;
 
-use Px\ReactiveComponent;
-use Px\Rendering\VNode;
-use Px\Rendering\RenderNode;
+use Px\Component\ReactiveComponent;
+use Px\Dom\VNode;
+use Px\Render\RenderNode;
 use Px\Animation\AnimationManager;
 use Px\Animation\CssAnimationParser;
 use Px\Animation\Interpolator;
-use Px\Rendering\CssMappings;
+use Px\Css\CssMappings;
 
 /**
  * TransitionGroupComponent — 列表过渡组件

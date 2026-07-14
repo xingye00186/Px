@@ -13,7 +13,7 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\CssValueParser;
+use Px\Css\CssValueParser;
 
 echo "========================================\n";
 echo " CssValueParser 单元测试（新增功能）\n";

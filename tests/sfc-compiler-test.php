@@ -18,9 +18,9 @@ require_once __DIR__ . '/../framework/Compiler/ComponentRegistry.php';
 require_once __DIR__ . '/../framework/Compiler/sfc-compiler.php';
 
 // Namespaced classes
-use Px\Rendering\CssMappings;
-use Px\Rendering\CssValueParser;
-use Px\Rendering\StyleResolver;
+use Px\Css\CssMappings;
+use Px\Css\CssValueParser;
+use Px\Css\StyleResolver;
 use Px\Compiler\AotValidator;
 
 $passed = 0;

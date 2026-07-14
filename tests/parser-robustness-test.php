@@ -14,8 +14,8 @@ require_once __DIR__ . '/../framework/Compiler/TemplateParser.php';
 require_once __DIR__ . '/../framework/Compiler/ComponentRegistry.php';
 
 // Namespaced classes
-use Px\Rendering\CssMappings;
-use Px\Rendering\StyleResolver;
+use Px\Css\CssMappings;
+use Px\Css\StyleResolver;
 
 $passed = 0;
 $failed = 0;

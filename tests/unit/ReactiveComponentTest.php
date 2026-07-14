@@ -13,7 +13,7 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\VNode;
+use Px\Dom\VNode;
 
 echo "========================================\n";
 echo " ReactiveComponent 单元测试\n";

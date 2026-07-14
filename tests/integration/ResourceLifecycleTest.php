@@ -12,7 +12,7 @@ use PxTest\Mock\MockComponent;
 use PxTest\Builder\VNodeBuilder;
 use Px\Core\Application;
 use Px\Core\Scheduler;
-use Px\Rendering\ImageManager;
+use Px\Paint\ImageManager;
 
 if (!defined('APP_PLATFORM')) define('APP_PLATFORM', 'win32');
 if (!defined('WINDOW_WIDTH'))  define('WINDOW_WIDTH', 400);

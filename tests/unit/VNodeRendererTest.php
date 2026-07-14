@@ -14,11 +14,11 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\RenderNode;
-use Px\Rendering\ComputedStyle;
-use Px\Rendering\VNode;
-use Px\Rendering\VNodeRenderer;
-use Px\Rendering\RenderContext;
+use Px\Render\RenderNode;
+use Px\Css\ComputedStyle;
+use Px\Dom\VNode;
+use Px\Paint\VNodeRenderer;
+use Px\Paint\RenderContext;
 
 echo "========================================\n";
 echo " VNodeRenderer 单元测试（RenderNode）\n";

@@ -4,10 +4,10 @@ namespace Px\Core;
 
 use native_types;
 
-use Px\Rendering\RenderNode;
-use Px\Rendering\ScrollState;
-use Px\Interfaces\ReactiveComponentInterface;
-use Px\ReactiveComponent;
+use Px\Render\RenderNode;
+use Px\Render\ScrollState;
+use Px\Component\Contracts\ReactiveComponentInterface;
+use Px\Component\ReactiveComponent;
 use Px\Core\PerfCounter;
 
 /**

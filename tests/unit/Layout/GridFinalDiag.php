@@ -16,9 +16,9 @@ use Px\Core\Scheduler;
 use Px\Core\Application;
 use Px\Platform\Platform;
 use Px\Platform\MouseEvent;
-use Px\Rendering\RenderContext;
-use Px\Rendering\VNodeRenderer;
-use Px\Rendering\RenderNode;
+use Px\Paint\RenderContext;
+use Px\Paint\VNodeRenderer;
+use Px\Render\RenderNode;
 
 // 加载 bilibili 组件
 require_once __DIR__ . '/../../../apps/bilibili/gen/ComponentFactory.php';
@@ -75,8 +75,8 @@ class _GridDiagMockPlatform implements Platform
     public function shouldClose(): bool { return $this->shouldClose; }
 }
 
-use Px\Styling\Provider\ThemeProvider;
-use Px\Styling\Theme\ThemeData;
+use Px\Theme\ThemeProvider;
+use Px\Theme\ThemeData;
 
 echo "==========================================================\n";
 echo " Grid 最终诊断 — Application 级别\n";

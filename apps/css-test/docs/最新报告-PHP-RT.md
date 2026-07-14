@@ -1,16 +1,16 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-12 12:34:32 | **总耗时**: 18.5s
+**运行时间**: 2026-07-14 21:32:10 | **总耗时**: 17.9s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1385diff 🟡41 | ⏭️ | ❌ 失败 | 1.6s |
+| case-001-wrapper-x | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 2.6s |
 | case-002-auto-height | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.8s |
 | case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1583diff 🟡156 | ⏭️ | ❌ 失败 | 1.6s |
 | case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 634diff 🔴97 | ⏭️ | ❌ 失败 | 1.4s |
 | case-005-grid-layout | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.5s |
 | case-006-typography | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2158diff | ⏭️ | ❌ 失败 | 2s |
-| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1488diff 🔴214 | ⏭️ | ❌ 失败 | 2.9s |
+| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.3s |
 | case-008-box-shadow | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1s |
 | case-009-outline | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.1s |
 | case-010-display-none | ⏭️ | ❌ | ⏭️ | ✅ | ❌ | ❌ | ✅ | ✅ | ⏭️ | ❌ 失败 | 1.2s |
@@ -60,18 +60,16 @@
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ⚠️ 1 | 15diff 🔴9 | ⏭️ | ❌ 失败 | 0s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 22diff 🔴6 | ⏭️ | ❌ 失败 | 0s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 18.5s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 17.9s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop width diff 222->433
-> - prop height diff 222->441
+> - prop width diff 222->414
+> - prop height diff 222->422
 > - prop position diff 1->15
-> - prop border-left-color diff 0->4
-> - prop text-decoration-thickness diff 223->1146
-> - case-001-wrapper-x mismatch 668->1344
+> - prop text-decoration-thickness diff 223->732
 > - case-003-basic-block geometry 0->156
 > - case-003-basic-block mismatch 0->1427
 > - case-003-basic-block major 0->156
@@ -81,10 +79,6 @@
 > - case-004-flex-layout critical 0->97
 > - case-004-flex-layout major 0->2
 > - case-006-typography mismatch 0->2158
-> - case-007-border-styles geometry 0->301
-> - case-007-border-styles mismatch 0->1187
-> - case-007-border-styles critical 0->214
-> - case-007-border-styles major 0->63
 > - case-011-position-absolute geometry 0->128
 > - case-011-position-absolute mismatch 0->38
 > - case-011-position-absolute critical 0->114
@@ -266,42 +260,42 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| height | 94.5% | 7537/7978 |
-| width | 94.6% | 7545/7978 |
-| position | 99.8% | 7963/7978 |
-| font-weight | 100% | 7978/7978 |
-| opacity | 100% | 7978/7978 |
-| background-color | 87.8% | 6695/7626 |
-| display | 100% | 7594/7594 |
-| font-size | 100% | 7016/7016 |
+| height | 94.4% | 7142/7564 |
+| width | 94.5% | 7150/7564 |
+| position | 99.8% | 7549/7564 |
+| font-weight | 100% | 7564/7564 |
+| opacity | 100% | 7564/7564 |
+| background-color | 92.6% | 6695/7231 |
+| display | 100% | 7180/7180 |
 | left | 100% | 6961/6961 |
 | top | 100% | 6961/6961 |
-| border-radius | 100% | 1163/1163 |
-| text-decoration-thickness | 0% | 0/1146 |
-| border-left-color | 99.7% | 1141/1145 |
-| border-left-width | 99.9% | 1144/1145 |
-| padding-top | 86.2% | 967/1122 |
-| padding-bottom | 88.8% | 966/1088 |
-| padding-right | 88.9% | 967/1088 |
-| padding-left | 88.9% | 967/1088 |
-| margin-bottom | 90% | 973/1081 |
-| text-align | 100% | 1015/1015 |
-| margin-top | 96% | 967/1007 |
-| gap | 0.4% | 4/991 |
-| flex-direction | 98.3% | 959/976 |
-| margin-left | 99.1% | 963/972 |
-| margin-right | 99.4% | 963/969 |
-| flex-wrap | 99.8% | 957/959 |
-| min-height | 82.7% | 792/958 |
-| overflow-y | 100% | 958/958 |
-| align-self | 0% | 0/957 |
-| justify-items | 0% | 0/957 |
-| justify-self | 0% | 0/957 |
-| min-width | 83.1% | 795/957 |
-| overflow-x | 100% | 957/957 |
-| align-items | 100% | 13/13 |
-| justify-content | 100% | 8/8 |
+| font-size | 100% | 6793/6793 |
+| border-radius | 100% | 750/750 |
+| text-decoration-thickness | 0% | 0/732 |
+| border-left-color | 99.9% | 730/731 |
+| border-left-width | 100% | 731/731 |
+| padding-top | 78.1% | 553/708 |
+| padding-right | 82% | 553/674 |
+| padding-bottom | 82% | 553/674 |
+| padding-left | 82% | 553/674 |
+| margin-bottom | 84% | 560/667 |
+| text-align | 100% | 601/601 |
+| margin-top | 93.3% | 553/593 |
+| gap | 0.5% | 3/577 |
+| flex-direction | 97% | 545/562 |
+| margin-left | 99.1% | 553/558 |
+| margin-right | 99.6% | 553/555 |
+| flex-wrap | 99.6% | 543/545 |
+| min-height | 71.1% | 387/544 |
+| overflow-y | 100% | 544/544 |
+| align-self | 0% | 0/543 |
+| justify-items | 0% | 0/543 |
+| justify-self | 0% | 0/543 |
+| min-width | 71.3% | 387/543 |
+| overflow-x | 100% | 543/543 |
+| align-items | 100% | 12/12 |
 | text-decoration-line | 0% | 0/6 |
+| justify-content | 100% | 6/6 |
 | border-width | 100% | 5/5 |
 | text-decoration-color | 0% | 0/1 |
 | text-decoration-style | 0% | 0/1 |
@@ -337,13 +331,13 @@
 
 | 用例 | 缺失(MISSING) | 严重(>20px) | 中等(5-20px) | 值(MISMATCH) | 结构(STRUCTURE) | Phase G 溢出 |
 |------|:-------------:|:-----------:|:------------:|:-------------:|:---------------:|:------------:|
-| case-001-wrapper-x | 0 | 0 | **41** | 1344 | 0 | 0 |
+| case-001-wrapper-x | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-002-auto-height | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-003-basic-block | 0 | 0 | **156** | 1427 | 0 | 0 |
 | case-004-flex-layout | 3 | **97** | **2** | 535 | 0 | 0 |
 | case-005-grid-layout | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-006-typography | 0 | 0 | 0 | 2158 | 0 | 0 |
-| case-007-border-styles | 0 | **214** | **63** | 1187 | 0 | 0 |
+| case-007-border-styles | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-008-box-shadow | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-009-outline | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-010-display-none | 0 | 0 | 0 | 0 | 0 | 0 |

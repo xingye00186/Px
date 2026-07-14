@@ -19,7 +19,7 @@
 
 require_once __DIR__ . '/../CssTestBase.php';
 
-use Px\Rendering\VNode;
+use Px\Dom\VNode;
 
 $tests = [];
 

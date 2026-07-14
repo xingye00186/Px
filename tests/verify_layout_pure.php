@@ -10,8 +10,8 @@
 
 require_once __DIR__ . '/unit/bootstrap.php';
 
-use Px\Rendering\Layout\PhysicalFragment;
-use Px\Rendering\Layout\ConstraintSpace;
+use Px\Layout\PhysicalFragment;
+use Px\Layout\ConstraintSpace;
 
 $pass = 0;
 $fail = 0;

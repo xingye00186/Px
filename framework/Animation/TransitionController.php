@@ -2,7 +2,7 @@
 
 namespace Px\Animation;
 
-use Px\Rendering\RenderNode;
+use Px\Render\RenderNode;
 
 /**
  * TransitionController — 过渡控制器

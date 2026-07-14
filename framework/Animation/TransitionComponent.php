@@ -2,12 +2,12 @@
 
 namespace Px\Animation;
 
-use Px\ReactiveComponent;
-use Px\Rendering\VNode;
+use Px\Component\ReactiveComponent;
+use Px\Dom\VNode;
 use Px\Animation\AnimationManager;
 use Px\Animation\TransitionController;
-use Px\Rendering\RenderNode;
-use Px\Rendering\CssMappings;
+use Px\Render\RenderNode;
+use Px\Css\CssMappings;
 
 /**
  * TransitionComponent — 过渡组件

@@ -3,7 +3,7 @@
 namespace PxTest\Mock;
 
 use Px\Platform\Platform;
-use Px\Rendering\RenderContext;
+use Px\Paint\RenderContext;
 
 /**
  * 可捕获 RenderContext 操作和注入事件的测试平台。

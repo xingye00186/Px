@@ -4,9 +4,9 @@ namespace Px\Platform;
 
 use native_types;
 
-use Px\Rendering\RenderContext;
-use Px\Rendering\GdiRenderContext;
-use Px\Rendering\SkiaRenderContext;
+use Px\Paint\RenderContext;
+use Px\Paint\GdiRenderContext;
+use Px\Paint\SkiaRenderContext;
 
 class Win32Platform implements Platform
 {

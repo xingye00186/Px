@@ -12,9 +12,9 @@
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/LayoutBase.php';
 
-use Px\Rendering\VNode;
-use Px\Rendering\RenderNode;
-use Px\Rendering\RenderTreeManager;
+use Px\Dom\VNode;
+use Px\Render\RenderNode;
+use Px\Render\RenderTreeManager;
 
 require_once __DIR__ . '/../../../apps/bilibili/gen/ComponentFactory.php';
 require_once __DIR__ . '/../../../apps/bilibili/gen/VideoGridComponent.php';

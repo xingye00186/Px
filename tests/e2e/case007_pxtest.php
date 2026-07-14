@@ -24,7 +24,7 @@ use PxTest\Comparison\ComparisonResult;
 use PxTest\Core\ToleranceConfig;
 use Px\Core\Application;
 use Px\Core\Scheduler;
-use Px\Rendering\VNode;
+use Px\Dom\VNode;
 
 if (!defined('APP_PLATFORM')) define('APP_PLATFORM', 'win32');
 if (!defined('WINDOW_WIDTH'))  define('WINDOW_WIDTH', 1400);

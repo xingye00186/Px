@@ -15,10 +15,10 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\RenderNode;
-use Px\Rendering\ComputedStyle;
+use Px\Render\RenderNode;
+use Px\Css\ComputedStyle;
 use Px\Rendering\LayoutOrchestrator;
-use Px\Rendering\RenderTreeManager;
+use Px\Render\RenderTreeManager;
 
 echo "========================================\n";
 echo " 滚动渲染树快照测试\n";

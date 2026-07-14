@@ -19,10 +19,10 @@ use Px\Core\Scheduler;
 use Px\Core\Application;
 use Px\Platform\Platform;
 use Px\Platform\MouseEvent;
-use Px\Rendering\RenderContext;
-use Px\Rendering\VNodeRenderer;
-use Px\Rendering\RenderNode;
-use Px\Styling\Provider\ThemeProvider;
+use Px\Paint\RenderContext;
+use Px\Paint\VNodeRenderer;
+use Px\Render\RenderNode;
+use Px\Theme\ThemeProvider;
 
 // swoole_compiler PHP 可能缺少此常量
 if (!defined('JSON_SORT_KEYS')) {

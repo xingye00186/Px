@@ -2,8 +2,8 @@
 
 namespace PxTest\Builder;
 
-use Px\Rendering\VNode;
-use Px\Rendering\RenderNode;
+use Px\Dom\VNode;
+use Px\Render\RenderNode;
 
 /**
  * Fluent Builder: 链式构造 RenderNode 树（含模拟布局结果）。

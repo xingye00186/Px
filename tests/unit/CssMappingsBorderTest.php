@@ -15,9 +15,9 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\CssMappings;
-use Px\Rendering\CssValueParser;
-use Px\Rendering\StyleResolver;
+use Px\Css\CssMappings;
+use Px\Css\CssValueParser;
+use Px\Css\StyleResolver;
 
 echo "========================================\n";
 echo " CssMappings 边框属性解析测试\n";

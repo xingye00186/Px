@@ -13,9 +13,9 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Px\Rendering\RenderNode;
-use Px\Rendering\ComputedStyle;
-use Px\Rendering\VNode;
+use Px\Render\RenderNode;
+use Px\Css\ComputedStyle;
+use Px\Dom\VNode;
 
 // ─────────────────────────────────────────────
 // 1. 属性默认值
