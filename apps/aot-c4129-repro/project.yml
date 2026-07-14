@@ -6,3 +6,4 @@ platform: win32
 entry: main.php
 sources:
   - main.php
+  - DemoClass.php
