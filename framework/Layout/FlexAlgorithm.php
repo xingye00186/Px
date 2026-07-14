@@ -104,10 +104,15 @@ class FlexAlgorithm extends LayoutAlgorithm
             $item->w = (int)$cr->getW(); $item->h = (int)$cr->getH();
             // Flex items without explicit width/height: ignore block auto-fill
             // (flex algorithm determines their main size)
-            $hasMainSize = $isRow ? ($cs->getRaw("width") !== null) : ($cs->getRaw("height") !== null);
+            $hasMainSize = $isRow
+                ? ($cs->getRaw("width") !== null || $cs->width?->toPx() > 0)
+                : ($cs->getRaw("height") !== null || $cs->height?->toPx() > 0);
             if (!$hasMainSize && $basis <= 0) {
                 if ($isRow) $item->w = 0; else $item->h = 0;
             }
+            // Use visualW/H as fallback when content size is 0 (nested flex with explicit main size)
+            if ($item->w <= 0 && $isRow && $hasMainSize) $item->w = (int)$cr->getVisualW();
+            if ($item->h <= 0 && !$isRow && $hasMainSize) $item->h = (int)$cr->getVisualH();
             $item->visualW = (int)$cr->getVisualW(); $item->visualH = (int)$cr->getVisualH();
             $flexItems[] = $item;
             $flexItemData[] = [
@@ -359,7 +364,12 @@ class FlexAlgorithm extends LayoutAlgorithm
         // Re-resolve flex:1 nested containers (flex-grow changes child sizes)
         if ($h <= 0 && count($mappedResults) > 0) {
             $maxBottom = $y;
-            foreach ($mappedResults as $cr) { $b = (int)($cr->getY() ?? 0) + (int)($cr->getH() ?? 0); if ($b > $maxBottom) $maxBottom = $b; }
+            foreach ($mappedResults as $cr) {
+                $chH = (int)($cr->getH() ?? 0);
+                if ($chH <= 0) $chH = (int)($cr->getVisualH() ?? 0);
+                $b = (int)($cr->getY() ?? 0) + $chH;
+                if ($b > $maxBottom) $maxBottom = $b;
+            }
             $h = max(0, $maxBottom - $y);
         }
 
