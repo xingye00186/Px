@@ -107,6 +107,15 @@ class FlexAlgorithm extends LayoutAlgorithm
             $hasMainSize = $isRow
                 ? ($cs->getRaw("width") !== null || $cs->width?->toPx() > 0)
                 : ($cs->getRaw("height") !== null || $cs->height?->toPx() > 0);
+            // CSS flexbox §9.2: 有显式 CSS 主尺寸时用 CSS 值覆盖 BlockAlgorithm auto-fill
+            $rawW = $cs->getRaw("width");
+            $rawH = $cs->getRaw("height");
+            if ($isRow && $rawW !== null && $cs->width !== null && !$cs->width->isPercent()) {
+                $item->w = max(0, $cs->width->toPx());
+            }
+            if (!$isRow && $rawH !== null && $cs->height !== null && !$cs->height->isPercent()) {
+                $item->h = max(0, $cs->height->toPx());
+            }
             if (!$hasMainSize && $basis <= 0) {
                 if ($isRow) $item->w = 0; else $item->h = 0;
             }
