@@ -350,8 +350,8 @@ function makeRelative(string $from, string $to): string
 }
 
 /**
- * 检查 project.yml 是否显式声明了 C++ sources。
- * 只在声明了 .cc 文件时才扫描 cpp/ 目录。
+ * 检查 project.yml 是否引用了 C++ sources。
+ * 通过 sources 节中是否包含指向 cpp/ 目录的引用来判断。
  */
 function hasCppSources(string $projectYml): bool
 {
@@ -375,9 +375,9 @@ function hasCppSources(string $projectYml): bool
                 $inSources = false;
                 continue;
             }
-            // sources 条目：检查是否引用 .cc 文件
+            // sources 条目：检查是否引用 cpp/ 目录（如 ../../cpp）
             $entry = trim(ltrim($trimmed, '-'));
-            if (str_ends_with($entry, '.cc')) {
+            if (str_contains($entry, '/cpp') || $entry === 'cpp') {
                 return true;
             }
         }
