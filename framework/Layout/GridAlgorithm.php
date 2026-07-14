@@ -68,7 +68,7 @@ class GridAlgorithm extends LayoutAlgorithm
         // ── Grid template ──
         $rawCols = $s->getRaw('gridTemplateColumns');
         $rawRows = $s->getRaw('gridTemplateRows');
-        $gap = (int)($s->getRaw('gap') ?? 0);
+        $gap = (int)($s->gap?->toPx() ?? $s->getRaw('gap') ?? 0);
         if ($rawCols !== null && !is_string($rawCols)) {
             $rawCols = $rawCols instanceof CssKeyword ? $rawCols->value : (string)$rawCols;
         }
@@ -205,7 +205,7 @@ class GridAlgorithm extends LayoutAlgorithm
         // ── Map grid items to child PhysicalFragments ──
         $mappedFragments = [];
         foreach ($gridItems as $gri) {
-            $mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), (int)($gri->w ?? 0), (int)($gri->h ?? 0), 0, 0, 0, 0, 0, $gri->style, $gri->originalChildren ?? [], null);
+            $gh = max(0, (int)($gri->h ?? 0));$gw = max(0, (int)($gri->w ?? 0));$mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), $gw, $gh, (int)($gri->style?->visualWidth($gw) ?? $gw), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, 0, 0, $gri->style, $gri->originalChildren ?? [], null);
         }
 
         // ── Auto-height from content ──
@@ -265,5 +265,21 @@ class GridAlgorithm extends LayoutAlgorithm
             $t->end = $pos;
             $pos += $gap;
         }
+    }
+
+    /**
+     * Estimate auto row size from child fragment heights.
+     */
+    private function estimateAutoRowSize(array $childResults, int $numCols, int $rowIdx): int
+    {
+        $maxH = 50;
+        $start = $rowIdx * $numCols;
+        for ($i = $start; $i < $start + $numCols && $i < count($childResults); $i++) {
+            $cr = $childResults[$i];
+            $h = (int)($cr->getH() ?? 0);
+            if ($h <= 0) $h = (int)($cr->getVisualH() ?? 0);
+            if ($h > $maxH) $maxH = $h;
+        }
+        return max(1, $maxH);
     }
 }
