@@ -90,9 +90,9 @@ class GridAlgorithm extends LayoutAlgorithm
         }
         if (empty($rows)) {
             $t = new GridTrack();
-            $t->size = 50;
+            $t->size = $this->estimateAutoRowSize($childResults, count($cols), 0);
             $t->start = 0;
-            $t->end = 50;
+            $t->end = $t->size;
             $rows = [$t];
         }
 
@@ -161,7 +161,7 @@ class GridAlgorithm extends LayoutAlgorithm
         $neededRows = $numCols > 0 ? (int)ceil($totalItems / $numCols) : $totalItems;
         while (count($rows) < $neededRows) {
             $t = new GridTrack();
-            $t->size = 50;
+            $t->size = $this->estimateAutoRowSize($childResults, count($cols), 0);
             $t->start = count($rows) > 0 ? end($rows)->end + $gap : 0;
             $t->end = $t->start + $t->size;
             $rows[] = $t;
