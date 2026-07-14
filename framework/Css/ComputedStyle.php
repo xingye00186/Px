@@ -557,11 +557,17 @@ class ComputedStyle
 
         // border-width
         $bwRaw = $d['borderWidth'] ?? 0;
-        // CSS border shorthand 未展开时，从 border 值提取宽度
-        if ($bwRaw === 0 && isset($d['border']) && is_string($d['border'])) {
-            if (preg_match('/^(\d+(\.\d+)?(px|pt|em|rem|%)?)\b/', trim($d['border']), $bwM)) {
-                $bwRaw = (int)$bwM[1];
+        // CSS border/border-bottom/border-top/border-left/border-right 简写未展开时提取宽度
+        $borderFallback = function(string $key, string $camelKey = '') use ($d): int {
+            $v = $d[$key] ?? ($camelKey !== '' ? ($d[$camelKey] ?? null) : null);
+            if (is_string($v) && preg_match('/^(\d+(\.\d+)?(px|pt|em|rem|%)?)\b/', trim($v), $m)) {
+                $r = (int)$m[1];
+                return $r;
             }
+            return 0;
+        };
+        if ($bwRaw === 0 && $borderFallback('border')) {
+            $bwRaw = $borderFallback('border');
         }
         if ($bwRaw instanceof CssRect) {
             $bw = $bwRaw->top->toPx();
@@ -580,10 +586,12 @@ class ComputedStyle
         );
 
         // border per-side widths (int storage for layout)
-        $this->borderTopWidth = self::safeInt($d['borderTopWidth'] ?? $bw);
-        $this->borderRightWidth = self::safeInt($d['borderRightWidth'] ?? $bw);
-        $this->borderBottomWidth = self::safeInt($d['borderBottomWidth'] ?? $bw);
-        $this->borderLeftWidth = self::safeInt($d['borderLeftWidth'] ?? $bw);
+        // CSS §8.5: 支持 border-top/bottom/left/right 简写宽度提取
+        // 不直接用 ?? 因为 defaults 中 borderXxxWidth=0 会短路 fallback
+        $btw = $d['borderTopWidth'] ?? null; $this->borderTopWidth = self::safeInt(($btw !== null && $btw != 0) ? $btw : ($borderFallback('border-top', 'borderTop') ?: $bw));
+        $brw = $d['borderRightWidth'] ?? null; $this->borderRightWidth = self::safeInt(($brw !== null && $brw != 0) ? $brw : ($borderFallback('border-right', 'borderRight') ?: $bw));
+        $bbw = $d['borderBottomWidth'] ?? null; $this->borderBottomWidth = self::safeInt(($bbw !== null && $bbw != 0) ? $bbw : ($borderFallback('border-bottom', 'borderBottom') ?: $bw));
+        $blw = $d['borderLeftWidth'] ?? null; $this->borderLeftWidth = self::safeInt(($blw !== null && $blw != 0) ? $blw : ($borderFallback('border-left', 'borderLeft') ?: $bw));
 
         // border color
         $bc = self::safeInt($d['borderColor'] ?? 0);
