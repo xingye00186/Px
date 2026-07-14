@@ -749,10 +749,6 @@ class ComputedStyle
      */
     public function visualWidth(int $contentW): int
     {
-        $sizing = $this->boxSizing->value;
-        if ($sizing === 'border-box') {
-            return max(0, $contentW);
-        }
         return max(0, $contentW
             + $this->padding->left->toPx() + $this->padding->right->toPx()
             + $this->borderLeftWidth + $this->borderRightWidth);
@@ -763,10 +759,6 @@ class ComputedStyle
      */
     public function visualHeight(int $contentH): int
     {
-        $sizing = $this->boxSizing->value;
-        if ($sizing === 'border-box') {
-            return max(0, $contentH);
-        }
         return max(0, $contentH
             + $this->padding->top->toPx() + $this->padding->bottom->toPx()
             + $this->borderTopWidth + $this->borderBottomWidth);
