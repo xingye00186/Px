@@ -69,7 +69,7 @@ class LayoutNormalizer
         'paddingTop'       => 'padding-top',
         'paddingRight'     => 'padding-right',
         'paddingBottom'    => 'padding-bottom',
-        'paddingLeft'      => 'padding-left',
+        'paddingLeft'      => 'paddingLeft',
 
         // border
         'borderWidth'      => 'border-width',
@@ -77,11 +77,11 @@ class LayoutNormalizer
         'borderStyle'      => 'border-style',
         'borderTopWidth'   => 'border-top-width',
         'borderTopColor'   => 'border-top-color',
-        'borderRightWidth' => 'border-right-width',
+        'borderRightWidth' => 'borderWidthRight',
         'borderRightColor' => 'border-right-color',
         'borderBottomWidth'=> 'border-bottom-width',
         'borderBottomColor'=> 'border-bottom-color',
-        'borderLeftWidth'  => 'border-left-width',
+        'borderLeftWidth'  => 'borderWidthLeft',
         'borderLeftColor'  => 'border-left-color',
         'borderRadius'     => 'border-radius',
 
@@ -323,11 +323,18 @@ class LayoutNormalizer
         $text = $node['content'] ?? $node['text'] ?? '';
         if (is_array($text)) $text = '';
 
+        $normW = (int)($node['visualW'] ?? $node['w'] ?? 0);
+        // When visualW == w but element has border-box with padding/border, compute total box
+        // from style values (physical fragment's visualW may not include padding+border)
+        if ($normW > 0 && ($node['visualW'] ?? 0) === ($node['w'] ?? 0) && ($node['style']['paddingLeft'] ?? 0) > 0) {
+            $normW += (int)($node['style']['paddingLeft'] ?? 0) + (int)($node['style']['padding-right'] ?? 0)
+                    + (int)($node['style']['borderWidthLeft'] ?? 0) + (int)($node['style']['borderWidthRight'] ?? 0);
+        }
         $element = [
             'tag'     => $tag,
             'x'       => (int)($node['x'] ?? 0),
             'y'       => (int)($node['y'] ?? 0),
-            'w'       => (int)($node['visualW'] ?? $node['w'] ?? 0),
+            'w'       => $normW,
             'h'       => (int)($node['visualH'] ?? $node['h'] ?? 0),
             'depth'   => $depth,
             'dataset' => $node['dataset'] ?? [],
@@ -491,7 +498,7 @@ class LayoutNormalizer
 
         // ─── 统一 border-width: 同上逻辑 ───
         if (isset($normalized['border-width'])) {
-            $sides = ['border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width'];
+            $sides = ['border-top-width', 'borderWidthRight', 'border-bottom-width', 'borderWidthLeft'];
             $allSides = [];
             foreach ($sides as $side) {
                 if (isset($normalized[$side])) {
@@ -503,9 +510,9 @@ class LayoutNormalizer
             $unique = array_unique($allSides);
             $hasPerSideWidths = count(array_filter([
                 isset($normalized['border-top-width']),
-                isset($normalized['border-right-width']),
+                isset($normalized['borderWidthRight']),
                 isset($normalized['border-bottom-width']),
-                isset($normalized['border-left-width']),
+                isset($normalized['borderWidthLeft']),
             ])) > 0;
             if ($hasPerSideWidths) {
                 unset($normalized['border-width']);
@@ -561,9 +568,9 @@ class LayoutNormalizer
             // 对需要 px 单位的属性添加 px
             $pxProperties = [
                 'font-size', 'line-height', 'padding-top', 'padding-right',
-                'padding-bottom', 'padding-left', 'margin-top', 'margin-right',
+                'padding-bottom', 'paddingLeft', 'margin-top', 'margin-right',
                 'margin-bottom', 'margin-left', 'border-width', 'border-top-width',
-                'border-right-width', 'border-bottom-width', 'border-left-width',
+                'borderWidthRight', 'border-bottom-width', 'borderWidthLeft',
                 'border-radius', 'width', 'height', 'top', 'left', 'gap',
                 'min-width', 'min-height', 'max-width', 'max-height',
                 'outline-width', 'text-decoration-thickness',
