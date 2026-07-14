@@ -3,6 +3,8 @@
 namespace Px\Render;
 
 use native_types;
+use Px\Dom\VNode;
+use Px\Css\StyleResolver;
 
 use Px\Core\Config;
 use Px\Component\Contracts\ReactiveComponentInterface;

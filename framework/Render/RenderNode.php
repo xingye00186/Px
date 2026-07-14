@@ -3,6 +3,8 @@
 namespace Px\Render;
 
 use native_types;
+use Px\Dom\VNode;
+use Px\Css\ComputedStyle;
 
 use Px\Core\Config;
 
