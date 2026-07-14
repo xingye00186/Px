@@ -536,21 +536,23 @@ class ComputedStyle
 
     private function applyPaddingMarginBorder(array $d): void
     {
-        // padding
+        // padding — fallback from shorthand `padding` CssRect when individual keys missing
+        $padRect = ($d['padding'] ?? null) instanceof \Px\Css\CssRect ? $d['padding'] : null;
         $defaultPx = CssLength::px(0);
         $this->padding = new CssRect(
-            $this->cssLengthFromDecl($d, 'paddingTop', $defaultPx),
-            $this->cssLengthFromDecl($d, 'paddingRight', $defaultPx),
-            $this->cssLengthFromDecl($d, 'paddingBottom', $defaultPx),
-            $this->cssLengthFromDecl($d, 'paddingLeft', $defaultPx),
+            $this->cssLengthFromDecl($d, 'paddingTop', $padRect?->top ?? $defaultPx),
+            $this->cssLengthFromDecl($d, 'paddingRight', $padRect?->right ?? $defaultPx),
+            $this->cssLengthFromDecl($d, 'paddingBottom', $padRect?->bottom ?? $defaultPx),
+            $this->cssLengthFromDecl($d, 'paddingLeft', $padRect?->left ?? $defaultPx),
         );
 
-        // margin
+        // margin — same fallback from shorthand `margin` CssRect
+        $marginRect = ($d['margin'] ?? null) instanceof \Px\Css\CssRect ? $d['margin'] : null;
         $this->margin = new CssRect(
-            $this->cssLengthFromDecl($d, 'marginTop', $defaultPx),
-            $this->cssLengthFromDecl($d, 'marginRight', $defaultPx),
-            $this->cssLengthFromDecl($d, 'marginBottom', $defaultPx),
-            $this->cssLengthFromDecl($d, 'marginLeft', $defaultPx),
+            $this->cssLengthFromDecl($d, 'marginTop', $marginRect?->top ?? $defaultPx),
+            $this->cssLengthFromDecl($d, 'marginRight', $marginRect?->right ?? $defaultPx),
+            $this->cssLengthFromDecl($d, 'marginBottom', $marginRect?->bottom ?? $defaultPx),
+            $this->cssLengthFromDecl($d, 'marginLeft', $marginRect?->left ?? $defaultPx),
         );
 
         // border-width
