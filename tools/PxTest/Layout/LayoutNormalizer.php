@@ -69,7 +69,7 @@ class LayoutNormalizer
         'paddingTop'       => 'padding-top',
         'paddingRight'     => 'padding-right',
         'paddingBottom'    => 'padding-bottom',
-        'paddingLeft'      => 'paddingLeft',
+        'paddingLeft'      => 'padding-left',
 
         // border
         'borderWidth'      => 'border-width',
@@ -77,11 +77,11 @@ class LayoutNormalizer
         'borderStyle'      => 'border-style',
         'borderTopWidth'   => 'border-top-width',
         'borderTopColor'   => 'border-top-color',
-        'borderRightWidth' => 'borderWidthRight',
+        'borderRightWidth' => 'border-right-width',
         'borderRightColor' => 'border-right-color',
         'borderBottomWidth'=> 'border-bottom-width',
         'borderBottomColor'=> 'border-bottom-color',
-        'borderLeftWidth'  => 'borderWidthLeft',
+        'borderLeftWidth'  => 'border-left-width',
         'borderLeftColor'  => 'border-left-color',
         'borderRadius'     => 'border-radius',
 
