@@ -492,6 +492,19 @@ class LayoutDumpStep implements PipelineStepInterface
             // 否则 extractContentSubtree 的锚归一化会双重减去偏移。
             $node['x'] = 0;
             $node['y'] = 0;
+            // 提取 testroot 的子节点作为新的子树根节点，移除多余的 wrapper 层
+            // 使引擎扁平化后的元素层级与浏览器一致（浏览器 batch ref 会提取 body 内内容，无此 wrapper）
+            if (!empty($node['children'])) {
+                if (count($node['children']) === 1) {
+                    return $node['children'][0];
+                }
+                return [
+                    'type' => 'div', 'tag' => 'div',
+                    'x' => 0, 'y' => 0, 'w' => 0, 'h' => 0,
+                    'dataset' => [], 'styles' => [],
+                    'children' => $node['children'],
+                ];
+            }
             return $node;
         }
         // 递归搜索子节点

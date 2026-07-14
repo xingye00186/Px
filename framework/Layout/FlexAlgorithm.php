@@ -44,6 +44,16 @@ class FlexAlgorithm extends LayoutAlgorithm
         $w = $s->width->toPx();
         if ($w <= 0) $w = $parentW;
         $h = $s->height->toPx();
+
+        // Apply flex container padding: subtract from content area, add to offset
+        $flexPadL = $s->padding?->left->toPx() ?? 0;
+        $flexPadR = $s->padding?->right->toPx() ?? 0;
+        $flexPadT = $s->padding?->top->toPx() ?? 0;
+        $flexPadB = $s->padding?->bottom->toPx() ?? 0;
+        $x += $flexPadL;
+        $y += $flexPadT;
+        $w = max(0, $w - $flexPadL - $flexPadR);
+        $h = max(0, $h - $flexPadT - $flexPadB);
         $flexDir = $s->flexDirection !== null ? $s->flexDirection->value : 'row';
         $isRow = ($flexDir === 'row' || $flexDir === 'row-reverse');
         $isReverse = ($flexDir === 'row-reverse' || $flexDir === 'column-reverse');
