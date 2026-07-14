@@ -10,6 +10,7 @@ nul
 $null
 *.ilk
 *.pdb
+*.exp
 .idea/
 config.yml
 .qoder/
@@ -90,5 +91,5 @@ apps/css-test/test_case/*/*.vue
 /layout_new/
 .run_history_php_rt.json
 .case_data_php_rt.json
-apps/css-test/docs/×îÐÂ±¨¸æ-PHP-RT.md
-apps/css-test/docs/×îÐÂ±¨¸æ.md
+apps/css-test/docs/ï¿½ï¿½ï¿½Â±ï¿½ï¿½ï¿½-PHP-RT.md
+apps/css-test/docs/ï¿½ï¿½ï¿½Â±ï¿½ï¿½ï¿½.md
