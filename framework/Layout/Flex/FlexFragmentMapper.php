@@ -14,15 +14,23 @@ class FlexFragmentMapper
             $oldW = $orig !== null ? (int)$orig->getW() : 0;
             $newW = (int)$item->w;
             $children = $orig?->children ?? [];
-            // When flex resize changes item width, adjust children x positions
-            // to maintain their relative positions within the new container size
+            // When flex resize changes item width, recompute children x positions
+            // based on the flex item's own justify-content mode
             if ($oldW > 0 && $newW > 0 && $oldW !== $newW && !empty($children)) {
+                $childJustify = $orig?->style?->justifyContent?->value ?? 'flex-start';
                 $adjusted = [];
                 foreach ($children as $ch) {
-                    $newX = $oldW > 0 ? (int)($ch->getX() * $newW / $oldW) : $ch->getX();
-                    // Rebuild fragment with adjusted x
+                    $chNewX = (int)$ch->getX();
+                    if ($childJustify === 'center') {
+                        // Center: children were centered in oldW, recenter in newW
+                        $chNewX += (int)(($newW - $oldW) / 2);
+                    } elseif ($childJustify === 'flex-end' || $childJustify === 'end') {
+                        // flex-end: children shift by the full width change
+                        $chNewX += $newW - $oldW;
+                    }
+                    // flex-start: children x unchanged
                     $adjusted[] = new PhysicalFragment(
-                        $newX, (int)$ch->getY(),
+                        $chNewX, (int)$ch->getY(),
                         (int)$ch->getW(), (int)$ch->getH(),
                         (int)$ch->getVisualW(), (int)$ch->getVisualH(),
                         (int)$ch->getLayer(),
