@@ -93,8 +93,8 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
             // 包含块 = padding box = border-box - border
             $cbX = $frag->getX();
             $cbY = $frag->getY();
-            $cbW = $frag->getW() - ((int)($cs?->getBorderLeftWidth() ?? 0) + (int)($cs?->getBorderRightWidth() ?? 0));
-            $cbH = $frag->getH() - ((int)($cs?->getBorderTopWidth() ?? 0) + (int)($cs?->getBorderBottomWidth() ?? 0));
+            $cbW = $frag->getVisualW() - ((int)($cs?->getBorderLeftWidth() ?? 0) + (int)($cs?->getBorderRightWidth() ?? 0));
+            $cbH = $frag->getVisualH() - ((int)($cs?->getBorderTopWidth() ?? 0) + (int)($cs?->getBorderBottomWidth() ?? 0));
             // padding box 需要加 padding/border
             $cbBL = $cs?->getBorderLeftWidth() ?? 0;
             $cbBT = $cs?->getBorderTopWidth() ?? 0;
