@@ -1823,7 +1823,7 @@ function resolveComponentRefsRecursive(VNode $node, array &$classStyles, array &
 
         // Validate child styles (warnings only, no longer merge into parent scope)
         $childStyleWarnings = [];
-        \Px\Rendering\CssMappings::parseStyleBlock($childStyles, $childStyleWarnings);
+        \Px\Css\CssMappings::parseStyleBlock($childStyles, $childStyleWarnings);
         foreach ($childStyleWarnings as $w) {
             $warnings[] = "Component <{$tagName}> CSS: $w";
         }
@@ -2092,7 +2092,7 @@ function compileOneComponent(
 
     // Parse styles
     $styleWarnings = [];
-    $classStyles = \Px\Rendering\CssMappings::parseStyleBlock($styles, $styleWarnings);
+    $classStyles = \Px\Css\CssMappings::parseStyleBlock($styles, $styleWarnings);
 
         // Parse raw CSS for compile-time class style merge
     $rawClassStyles = \parseCssClassesForMerge($styles);
@@ -2735,7 +2735,7 @@ echo "  Style:    " . strlen($styles) . " bytes\n";
 
 // Step 2: Parse styles
 $styleWarnings = [];
-$classStyles = \Px\Rendering\CssMappings::parseStyleBlock($styles, $styleWarnings);
+$classStyles = \Px\Css\CssMappings::parseStyleBlock($styles, $styleWarnings);
 echo "  Classes:  " . count($classStyles) . " parsed\n";
 
 foreach ($styleWarnings as $w) {
@@ -3013,7 +3013,7 @@ $factoryContent = "<?php\n\n";
 $factoryContent .= "/**\n * ComponentFactory - 组件工厂类 (v9)\n";
 $factoryContent .= " * 由 SFC 编译器自动生成，使用 switch-case 创建组件实例。\n";
 $factoryContent .= " * v9: 仅包含实际使用的组件（按需编译）。\n */\n";
-$factoryContent .= "use Px\\Interfaces\\ComponentInterface;\n\n";
+$factoryContent .= "use Px\\Component\\Contracts\\ComponentInterface;\n\n";
 $factoryContent .= "class ComponentFactory\n{\n";
 $factoryContent .= "    public static function create(string \$className, array \$props = []): ComponentInterface\n";
 $factoryContent .= "    {\n";
