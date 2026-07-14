@@ -98,9 +98,19 @@ class GridTracker
         $remaining = max(0, $containerSize - $usedSpace);
         if ($totalFr > 0) {
             $frUnit = $remaining / $totalFr;
+            $usedSoFar = 0;
+            $frIdx = 0;
+            $frCount = 0;
+            foreach ($tracks as $t) { if ($t->isFr) $frCount++; }
             foreach ($tracks as $t) {
                 if ($t->isFr) {
-                    $t->size = (int)($t->frValue * $frUnit);
+                    $frIdx++;
+                    if ($frIdx < $frCount) {
+                        $t->size = (int)floor($t->frValue * $frUnit);
+                        $usedSoFar += $t->size;
+                    } else {
+                        $t->size = max(0, $remaining - $usedSoFar);
+                    }
                 }
             }
         } elseif (count($tracks) > 0) {
