@@ -18,23 +18,37 @@ class FlexFragmentMapper
             // based on the flex item's own justify-content mode
             if ($oldW > 0 && $newW > 0 && $oldW !== $newW && !empty($children)) {
                 $childJustify = $orig?->style?->justifyContent?->value ?? 'flex-start';
+                $parentPadL = (int)($orig?->style?->padding?->left->toPx() ?? 0);
+                $parentPadR = (int)($orig?->style?->padding?->right->toPx() ?? 0);
+                $oldContentW = max(0, $oldW - $parentPadL - $parentPadR);
+                $newContentW = max(0, $newW - $parentPadL - $parentPadR);
                 $adjusted = [];
                 foreach ($children as $ch) {
+                    $chW = (int)$ch->getW();
                     $chNewX = (int)$ch->getX();
+                    $chNewW = $chW;
+                    // 缩小子元素宽度：子元素 auto-fill 宽度接近旧 content W 时同步缩放
+                    $chPadL = (int)($ch->style?->padding?->left->toPx() ?? 0);
+                    $chPadR = (int)($ch->style?->padding?->right->toPx() ?? 0);
+                    $chBorderL = (int)($ch->style?->getBorderLeftWidth() ?? 0);
+                    $chBorderR = (int)($ch->style?->getBorderRightWidth() ?? 0);
+                    $chMarginL = (int)($ch->style?->margin?->left->toPx() ?? 0);
+                    $chMarginR = (int)($ch->style?->margin?->right->toPx() ?? 0);
+                    if ($chW > 0 && $chW >= $oldContentW && $oldContentW > 0) {
+                        // 子元素 auto-fill：直接约束到新父容器 content width
+                        $chNewW = max(1, $newContentW - $chPadL - $chPadR - $chBorderL - $chBorderR - $chMarginL - $chMarginR);
+                    }
                     if ($childJustify === 'center') {
-                        // Center: children were centered in oldW, recenter in newW
                         $chNewX += (int)(($newW - $oldW) / 2);
                     } elseif ($childJustify === 'flex-end' || $childJustify === 'end') {
-                        // flex-end: children shift by the full width change
                         $chNewX += $newW - $oldW;
                     }
-                    // flex-start: children x unchanged
                     $adjusted[] = new PhysicalFragment(
                         $chNewX, (int)$ch->getY(),
-                        (int)$ch->getW(), (int)$ch->getH(),
-                        (int)$ch->getVisualW(), (int)$ch->getVisualH(),
+                        $chNewW, (int)$ch->getH(),
+                        $chNewW, (int)$ch->getVisualH(),
                         (int)$ch->getLayer(),
-                        (int)$ch->getContentWidth(), (int)$ch->getContentHeight(),
+                        $chNewW, (int)$ch->getContentHeight(),
                         $ch->style, $ch->children ?? [], $ch->sourceNode
                     );
                 }
