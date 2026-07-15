@@ -492,10 +492,16 @@ class ComputedStyle
         }
     }
 
+    /** 将 camelCase 键转为 kebab-case（如 'minWidth' → 'min-width'）*/
+    private static function camelToKebab(string $key): string {
+        return strtolower(preg_replace('/([A-Z])/', '-$1', $key));
+    }
+
     private function resolveCssLength(string $key, array $d): ?CssLength
     {
-        if (!isset($d[$key])) return null;
-        $v = $d[$key];
+        // 优先 camelCase，fallback kebab-case
+        $v = $d[$key] ?? $d[self::camelToKebab($key)] ?? null;
+        if ($v === null) return null;
         if ($v instanceof CssLength) return $v;
         if ($v instanceof CssKeyword) return CssLength::fromString($v->value);
         if (is_numeric($v)) return CssLength::px((float)$v);
@@ -505,8 +511,8 @@ class ComputedStyle
 
     private function resolveColor(string $key, array $d): ?CssColor
     {
-        if (!isset($d[$key])) return null;
-        $v = $d[$key];
+        $v = $d[$key] ?? $d[self::camelToKebab($key)] ?? null;
+        if ($v === null) return null;
         if ($v instanceof CssColor) return $v;
         if (is_int($v)) return CssColor::fromArgb($v);
         if (is_string($v) && $v !== '') return CssColor::fromString($v);
@@ -515,8 +521,8 @@ class ComputedStyle
 
     private function resolveKeyword(string $key, array $d, string $default): CssKeyword
     {
-        if (!isset($d[$key])) return new CssKeyword($default);
-        $v = $d[$key];
+        $v = $d[$key] ?? $d[self::camelToKebab($key)] ?? null;
+        if ($v === null) return new CssKeyword($default);
         if ($v instanceof CssKeyword) return $v;
         if (is_string($v) && $v !== '') return new CssKeyword($v);
         return new CssKeyword($default);
