@@ -380,6 +380,15 @@ class FlexAlgorithm extends LayoutAlgorithm
             $orig = $sortedChildResults[$orderIdx] ?? null;
             $itemW = (int)$fi->w;
             $itemH = (int)$fi->h;
+            // CSS-UI-3 §4.5: border-box 下 flex-grow 宽度为总宽度，内容宽度需减 padding+border
+            $contentW = $itemW;
+            $chs = $orig?->style;
+            if ($chs?->boxSizing?->value === 'border-box') {
+                $padL = $chs->padding?->left->toPx() ?? 0;
+                $padR = $chs->padding?->right->toPx() ?? 0;
+                $bw = (int)($chs->getBorderLeftWidth() ?? 0) + (int)($chs->getBorderRightWidth() ?? 0);
+                $contentW = max(1, $itemW - $padL - $padR - $bw);
+            }
             $origW = $orig !== null ? (int)$orig->getW() : 0;
             $useOrig = ($origW > 0 && abs($origW - $itemW) <= 5);
             $children = $useOrig ? ($orig->children ?? []) : ($orig?->children ?? []);
@@ -387,9 +396,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                 ->x((int)$fi->x)->y((int)$fi->y)
                 ->w($itemW)->h($itemH)
                 ->vw((int)$fi->visualW)->vh((int)$fi->visualH)
-                ->layer((int)($orig?->layer ?? 0))
-                ->cw((int)($orig?->contentWidth ?? 0))
-                ->ch((int)($orig?->contentHeight ?? 0))
+                ->cw($contentW)->ch((int)($orig?->contentHeight ?? 0))
                 ->style($orig?->style)->children($children)
                 ->build();
         }
