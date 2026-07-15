@@ -320,10 +320,12 @@ class StyleResolver
             $r = $nums[1] ?? $t;
             $b = $nums[2] ?? $t;
             $l = $nums[3] ?? $r;
-            $raw[$prop . '-top'] = $t . 'px';
-            $raw[$prop . '-right'] = $r . 'px';
-            $raw[$prop . '-bottom'] = $b . 'px';
-            $raw[$prop . '-left'] = $l . 'px';
+            // CSS §3.3.7: 简写展开不应覆盖已存在的独立属性
+            // 例如 margin:0;margin-bottom:16px 中 margin-bottom:16px 优先
+            if (!isset($raw[$prop . '-top'])) $raw[$prop . '-top'] = $t . 'px';
+            if (!isset($raw[$prop . '-right'])) $raw[$prop . '-right'] = $r . 'px';
+            if (!isset($raw[$prop . '-bottom'])) $raw[$prop . '-bottom'] = $b . 'px';
+            if (!isset($raw[$prop . '-left'])) $raw[$prop . '-left'] = $l . 'px';
         }
         return $raw;
     }
