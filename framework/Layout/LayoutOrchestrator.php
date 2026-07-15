@@ -244,9 +244,29 @@ class LayoutOrchestrator implements ChildLayoutProvider
                         $newChildFragments[] = $ri < count($childFragments) ? $childFragments[$ri] : $childFragments[0];
                     }
                 }
-                // 用正确的子 fragment 重新执行父布局
+                // Step 1: 用 flex 算法重新布局子项
                 $childFragments = $newChildFragments;
                 $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached);
+                // Step 2: 合并 flex 权威宽度 + Phase C 修正子项，切断振荡循环
+                // 问题：Phase C 重布局产生 auto-fill(202)，flex 产出 234，
+                //       两者恒差 padding+border。algoFrag->children 宽度正确但内部子项
+                //       仍然来自 Phase B 的错误布局。
+                // 方案：用 flex 权威宽度覆盖 fragment w，保留 Phase C 重布局的正确子项
+                $merged = [];
+                for ($ri = 0; $ri < count($node->children); $ri++) {
+                    $reFrag = $ri < count($newChildFragments) ? $newChildFragments[$ri] : null;
+                    $flexFrag = $ri < count($algoFrag->children) ? $algoFrag->children[$ri] : null;
+                    if ($reFrag !== null && $flexFrag !== null) {
+                        $merged[] = (new PhysicalFragmentBuilder())
+                            ->from($reFrag)          // 保留 Phase C 的正确子项
+                            ->w((int)$flexFrag->getW())  // 覆盖为 flex 权威宽度
+                            ->h((int)$flexFrag->getH())  // 覆盖为 flex 权威高度
+                            ->build();
+                    } else {
+                        $merged[] = $reFrag ?? $flexFrag ?? $childFragments[0];
+                    }
+                }
+                $childFragments = $merged;
                 Diag::log(2, 'relayout:done', ['type' => $node->type, 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH()]);
             }
         }
