@@ -30,8 +30,9 @@ use Px\Core\Config;
  *   3. postProcess(): 滚动 clamp / sticky
  *
  * 对标 Blink LayoutNG 的 LayoutOrchestrator。
+ * 实现 ChildLayoutProvider 接口，使算法能自主调子项布局。
  */
-class LayoutOrchestrator
+class LayoutOrchestrator implements ChildLayoutProvider
 {
     private OOFLayoutAlgorithm $oofAlgorithm;
     private LayoutAlgorithm $blockAlgo;
@@ -50,6 +51,16 @@ class LayoutOrchestrator
         $this->inlineAlgo = new InlineAlgorithm();
         $this->tableAlgo = new TableAlgorithm();
         $this->cache = new LayoutCache();
+
+        // 注入 ChildLayoutProvider（使算法能自主调子项布局）
+        $algos = [$this->blockAlgo, $this->flexAlgo, $this->gridAlgo, $this->inlineAlgo, $this->tableAlgo];
+        foreach ($algos as $a) { $a->setChildLayoutProvider($this); }
+    }
+
+    /** ChildLayoutProvider: 以指定约束布局子项 */
+    public function layoutChild(RenderNode $child, ConstraintSpace $space, int $layer = 0): PhysicalFragment
+    {
+        return $this->mainLayout($child, $space, $layer);
     }
 
     /**
@@ -189,7 +200,11 @@ class LayoutOrchestrator
         Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->getContentWidth(), 'ch' => $space->getContentHeight()]);
 
         if (($GLOBALS["_LL"]??0) < 300) { $GLOBALS["_LL"] = ($GLOBALS["_LL"]??0) + 1; fwrite(STDERR, "ML: type={$node->type} disp={$display} algo=".get_class($algo)." cw=".$space->getContentWidth()." ch=".$space->getContentHeight()." kids=".count($node->children)."\n"); }
-        $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached);
+        $childConstraints = [];
+        foreach ($node->children as $ch) {
+            $childConstraints[] = $this->buildChildSpace($ch, $space, $style);
+        }
+        $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached, $childConstraints, $childIntrinsics);
         Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->getX(), 'y' => $algoFrag->getY(), 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH(), 'algo' => get_class($algo)]);
 
         // ─── Phase C: flex/grid 子项重布局（最多 self::MAX_RELAYOUT_ITERATIONS 轮）───

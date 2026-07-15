@@ -16,7 +16,7 @@ use Px\Css\CssLength;
  */
 class FlexAlgorithm extends LayoutAlgorithm
 {
-    public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null): PhysicalFragment
+    public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null, ?array $childConstraints = null, ?array $childIntrinsicSizes = null): PhysicalFragment
     {
         // Use childFragments (PhysicalFragment[]) directly, no LayoutResult conversion needed
         $childResults = $childFragments;

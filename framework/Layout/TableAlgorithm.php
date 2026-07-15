@@ -17,7 +17,9 @@ class TableAlgorithm extends LayoutAlgorithm
         string $textContent = '',
         array $childNodes = [],
         array $childFragments = [],
-        ?PhysicalFragment $inputFragment = null
+        ?PhysicalFragment $inputFragment = null,
+        ?array $childConstraints = null,
+        ?array $childIntrinsicSizes = null,
     ): PhysicalFragment {
         $s = $style ?? new ComputedStyle([]);
         $children = $childFragments;

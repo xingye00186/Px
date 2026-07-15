@@ -24,7 +24,7 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
     {
         }
 
-    public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null): PhysicalFragment
+    public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null, ?array $childConstraints = null, ?array $childIntrinsicSizes = null): PhysicalFragment
     {
         // OOF 算法不在 mainLayout 路径中直接使用
         // 它通过 Orchestrator 的 oofLayout() 遍历 Fragment 树调用

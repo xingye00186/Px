@@ -21,7 +21,7 @@ use Px\Layout\Grid\GridItem;
  */
 class GridAlgorithm extends LayoutAlgorithm
 {
-    public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null): PhysicalFragment
+    public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null, ?array $childConstraints = null, ?array $childIntrinsicSizes = null): PhysicalFragment
     {
         // ── Intrinsic measurement mode ──
         if ($space->isIntrinsicMeasurement) {
