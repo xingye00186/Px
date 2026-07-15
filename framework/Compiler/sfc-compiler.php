@@ -84,18 +84,40 @@ function parseCssClassesForMerge(string $css): array
             $result[$className] = $body;
         }
     }
+    // 提取 * 通用选择器规则
+    if (preg_match('/\*\s*\{([^}]*)\}/s', $css, $m)) {
+        $body = trim($m[1]);
+        $body = preg_replace('/\s+/', ' ', $body);
+        $body = rtrim($body, ';');
+        $result['*'] = $body;
+    }
+    // 提取 body 等 tag 选择器规则
+    if (preg_match('/(?:^|[\{\}])\s*(body|html)\s*\{([^}]*)\}/si', $css, $m)) {
+        $body = trim($m[2]);
+        $body = preg_replace('/\s+/', ' ', $body);
+        $body = rtrim($body, ';');
+        $result['_tag_' . strtolower($m[1])] = $body;
+    }
     return $result;
 }
 
 function mergeClassStylesIntoNode($node, array $rawStyles): void
 {
     if ($node === null) return;
+
+    // Step 1: 应用 * 通用选择器到每一个节点（作为基础样式）
+    $universalDecls = '';
+    if (isset($rawStyles['*'])) {
+        $universalDecls = $rawStyles['*'];
+    }
+
+    // Step 2: 应用类选择器
+    $classNormalDecls = [];
+    $classImportantDecls = [];
     if ($node->props !== null && isset($node->props['class']) && !isset($node->props[':class'])) {
         $classVal = $node->props['class'];
         if (is_string($classVal) && $classVal !== '') {
             $classNames = explode(' ', $classVal);
-            $normalDecls = [];
-            $importantDecls = [];
             foreach ($classNames as $cn) {
                 $cn = trim($cn);
                 if ($cn === '' || !isset($rawStyles[$cn])) continue;
@@ -104,22 +126,27 @@ function mergeClassStylesIntoNode($node, array $rawStyles): void
                     $decl = trim($decl);
                     if ($decl === '') continue;
                     if (stripos($decl, '!important') !== false) {
-                        $importantDecls[] = $decl;
+                        $classImportantDecls[] = $decl;
                     } else {
-                        $normalDecls[] = $decl;
+                        $classNormalDecls[] = $decl;
                     }
                 }
             }
-            if (!empty($normalDecls) || !empty($importantDecls)) {
-                $existing = $node->props['style'] ?? '';
-                $parts = [];
-                if (!empty($normalDecls)) $parts[] = implode(';', $normalDecls);
-                if ($existing !== '') $parts[] = $existing;
-                if (!empty($importantDecls)) $parts[] = implode(';', $importantDecls);
-                $node->props['style'] = implode(';', $parts);
-            }
         }
     }
+
+    // Step 3: 合并（* + class + inline，具有正确的层叠优先级）
+    if ($universalDecls !== '' || !empty($classNormalDecls) || !empty($classImportantDecls)) {
+        $existing = $node->props['style'] ?? '';
+        $parts = [];
+        if ($universalDecls !== '') $parts[] = $universalDecls;
+        if (!empty($classNormalDecls)) $parts[] = implode(';', $classNormalDecls);
+        if ($existing !== '') $parts[] = $existing;
+        if (!empty($classImportantDecls)) $parts[] = implode(';', $classImportantDecls);
+        $node->props['style'] = implode(';', $parts);
+    }
+
+    // Step 4: 递归子节点
     if (is_array($node->children)) {
         foreach ($node->children as $child) {
             if (is_object($child) && property_exists($child, 'props')) {
