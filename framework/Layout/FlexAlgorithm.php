@@ -9,7 +9,6 @@ use Px\Layout\PhysicalFragment;
 use Px\Layout\IntrinsicSizes;
 use Px\Layout\Flex\FlexItem;
 use Px\Layout\Flex\FlexLineBreaker;
-use Px\Layout\Flex\FlexFragmentMapper;
 use Px\Css\CssLength;
 
 /**
@@ -365,8 +364,26 @@ class FlexAlgorithm extends LayoutAlgorithm
             }
         }
 
-        // ── Step 6: Map results back to DOM order, re-resolve flex:1 ──
-        $mappedResults = FlexFragmentMapper::toFragments($sortedFlexItems, $sortedChildResults);
+        // ── Step 6: 将 FlexItem 结果映射回 PhysicalFragment ──
+        // 两阶段布局：Phase C 已用正确约束重布局，子 fragment 宽度与 item 宽度一致时直接使用
+        $mappedResults = [];
+        foreach ($sortedFlexItems as $orderIdx => $fi) {
+            $orig = $sortedChildResults[$orderIdx] ?? null;
+            $itemW = (int)$fi->w;
+            $itemH = (int)$fi->h;
+            $origW = $orig !== null ? (int)$orig->getW() : 0;
+            $useOrig = ($origW > 0 && abs($origW - $itemW) <= 5);
+            $children = $useOrig ? ($orig->children ?? []) : ($orig?->children ?? []);
+            $mappedResults[] = new PhysicalFragment(
+                (int)$fi->x, (int)$fi->y,
+                $itemW, $itemH,
+                (int)$fi->visualW, (int)$fi->visualH,
+                (int)($orig?->layer ?? 0),
+                (int)($orig?->contentWidth ?? 0),
+                (int)($orig?->contentHeight ?? 0),
+                $orig?->style, $children, null
+            );
+        }
         // Remap results to original DOM order (CSS §9.2: visual order ≠ DOM order)
         $resultsByOriginalIndex = [];
         foreach ($indices as $orderIdx => $domIdx) {
