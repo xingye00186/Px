@@ -7,6 +7,7 @@ use Px\Css\ComputedStyle;
 use Px\Layout\ConstraintSpace;
 use Px\Layout\PhysicalFragment;
 use Px\Layout\IntrinsicSizes;
+use Px\Layout\PhysicalFragmentBuilder;
 use Px\Layout\Flex\FlexItem;
 use Px\Layout\Flex\FlexLineBreaker;
 use Px\Css\CssLength;
@@ -18,18 +19,26 @@ class FlexAlgorithm extends LayoutAlgorithm
 {
     public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null, ?array $childConstraints = null, ?array $childIntrinsicSizes = null): PhysicalFragment
     {
-        // Use childFragments (PhysicalFragment[]) directly, no LayoutResult conversion needed
-        $childResults = $childFragments;
-
         $s = $style ?? new ComputedStyle([]);
 
-        // ── Intrinsic measurement mode ──
+        // ── Intrinsic measurement mode（由 intrinsicSize() 处理，此处不执行）──
         if ($space->isIntrinsicMeasurement) {
-            $totalW = 0; $maxH = 0;
-            foreach ($childResults as $cr) {
-                $totalW += (int)($cr->getW() ?? 0); if ((int)($cr->getH() ?? 0) > $maxH) $maxH = (int)$cr->getH();
+            return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $s);
+        }
+
+        // ── 用 ChildLayoutProvider 在正确约束下布局子项（对标 Blink LayoutChild()）──
+        if ($childConstraints !== null && count($childConstraints) > 0 && count($childNodes) > 0) {
+            $childResults = [];
+            foreach ($childNodes as $i => $ch) {
+                $chConstraint = $childConstraints[$i] ?? null;
+                if ($chConstraint !== null) {
+                    $childResults[] = $this->layoutChild($ch, $chConstraint);
+                } elseif ($i < count($childFragments)) {
+                    $childResults[] = $childFragments[$i];
+                }
             }
-            return new PhysicalFragment(0, 0, $totalW, $maxH, $totalW, $maxH, 0, 0, 0, $s);
+        } else {
+            $childResults = $childFragments;
         }
 
         $parentW = $space->getContentWidth();
@@ -374,15 +383,15 @@ class FlexAlgorithm extends LayoutAlgorithm
             $origW = $orig !== null ? (int)$orig->getW() : 0;
             $useOrig = ($origW > 0 && abs($origW - $itemW) <= 5);
             $children = $useOrig ? ($orig->children ?? []) : ($orig?->children ?? []);
-            $mappedResults[] = new PhysicalFragment(
-                (int)$fi->x, (int)$fi->y,
-                $itemW, $itemH,
-                (int)$fi->visualW, (int)$fi->visualH,
-                (int)($orig?->layer ?? 0),
-                (int)($orig?->contentWidth ?? 0),
-                (int)($orig?->contentHeight ?? 0),
-                $orig?->style, $children, null
-            );
+            $mappedResults[] = (new PhysicalFragmentBuilder())
+                ->x((int)$fi->x)->y((int)$fi->y)
+                ->w($itemW)->h($itemH)
+                ->vw((int)$fi->visualW)->vh((int)$fi->visualH)
+                ->layer((int)($orig?->layer ?? 0))
+                ->cw((int)($orig?->contentWidth ?? 0))
+                ->ch((int)($orig?->contentHeight ?? 0))
+                ->style($orig?->style)->children($children)
+                ->build();
         }
         // Remap results to original DOM order (CSS §9.2: visual order ≠ DOM order)
         $resultsByOriginalIndex = [];
