@@ -300,6 +300,139 @@ $this->renderOffsetsX[spl_object_id($node)] = $value;  // ✓
 
 ---
 
+## 十一、`count()` 在循环条件中类型冲突
+
+### 问题
+`count()` 在 AOT `use native_types` 模式下返回 `php::Var` 类型，
+而循环变量如 `$i`、`$ri` 被推断为 `php::Int`，两者比较时编译失败。
+
+```
+Fatal error: Cannot assign value to variable $ri of type php::Int with type php::Var
+in LayoutOrchestrator.php:223
+```
+
+### 解决方案
+将 `count()` 返回值预缓存为 `(int)` 变量，再用于循环条件：
+
+```php
+// 错误：count() 返回 php::Var
+for ($i = 0; $i < count($items); $i++) { ... }
+
+// 正确：预缓存为 (int)
+$itemCount = (int)count($items);
+for ($i = 0; $i < $itemCount; $i++) { ... }
+```
+
+同样适用于 `foreach` 中的数组索引比较：
+
+```php
+$itemCount = (int)count($items);
+for ($ri = 0; $ri < $itemCount; $ri++) {
+    $child = $items[$ri];
+    // ...
+}
+```
+
+### 影响范围
+- `LayoutOrchestrator` — Phase C 重布局循环
+- 所有使用 `count()` 在 `for`/`foreach` 条件中的热路径
+
+---
+
+## 十二、`$GLOBALS` 在 `use native_types` 类中编译失败
+
+### 问题
+在标记了 `use native_types` 的类中直接使用 `$GLOBALS["key"]`，
+AOT 编译器将其编译为 C++ 标识符 `$GLOBALS`，但该标识符在生成的
+C++ 代码中未声明，导致编译错误：
+
+```
+error C2065: '$GLOBALS': undeclared identifier
+```
+
+### 解决方案
+- **首选**：直接删除调试性全局变量使用（纯诊断日志无功能作用）
+- **替代**：使用 `static` 方法局部变量（AOT 兼容）
+
+```php
+// 错误：$GLOBALS 在 use native_types 类中编译失败
+if (($GLOBALS["_LL"]??0) < 300) { ... }
+
+// 正确 1：删除该行（纯调试日志时）
+
+// 正确 2：static 局部变量
+static $_ll = 0;
+if ($_ll < 300) { $_ll++; /* ... */ }
+```
+
+### 影响范围
+- `LayoutOrchestrator` — `$GLOBALS["_LL"]` 调试计数器（已移除）
+
+---
+
+## 十三、`foreach` 在未类型化 `array` 属性上的键类型推断失败
+
+### 问题
+当 `foreach` 遍历一个类型为 `array`（无元素类型标注）的类属性时，
+AOT 编译器无法推断键和值的类型。结合 `count()` 比较时触发类型冲突。
+
+```php
+// $children 声明为 array（无元素类型），AOT 无法推断
+foreach ($node->children as $ri => $child) {
+    if ($ri < count($items)) { ... }  // 类型冲突
+}
+```
+
+### 解决方案
+将 `foreach` 改为 `for` + 索引访问，避免键类型推断不确定性：
+
+```php
+$len = (int)count($node->children);
+for ($ri = 0; $ri < $len; $ri++) {
+    $child = $node->children[$ri];
+    // ...
+}
+```
+
+### 影响范围
+- `LayoutOrchestrator` — Phase C 中的 `foreach ($node->children as $ri => $child)`
+
+---
+
+## 十四、属性缺少类型标注导致编译中断
+
+### 问题
+在 `use native_types` 类中，未标注类型的属性（或仅标注为 `array` 无元素类型）
+导致 AOT 编译器在 `prepare` 阶段抛出 `TypePhp\CompilerBase->checkVar` 异常。
+
+```
+Fatal error: Cannot assign value to variable $ri of type php::Int with type php::Var
+```
+
+或表现为 `prepare` 阶段对 `foreach` 的 `checkVar` 调用失败。
+
+### 解决方案
+所有属性必须标注完整类型。特别关注：
+
+```php
+// 错误：缺少类型
+private $_sourceNode = null;
+
+// 正确
+private ?RenderNode $_sourceNode = null;
+
+// 错误：方法参数缺少类型
+public function sourceNode($v): self { ... }
+
+// 正确
+public function sourceNode(?RenderNode $v): self { ... }
+```
+
+### 影响范围
+- `PhysicalFragmentBuilder` — `$_sourceNode` 增加 `?RenderNode` 标注
+
+---
+
 ## 总结：AOT 编码规范
 
 | 规则 | 说明 |
@@ -313,3 +446,7 @@ $this->renderOffsetsX[spl_object_id($node)] = $value;  // ✓
 | **动态属性不可用** | 状态外置到 Map/Array/SplObjectStorage |
 | **读取加 `??` 保护** | `$node->x ?? 0` 而非 `$node->x` |
 | **避免 Builder 模式** | 直接构造 DTO，不链式调用 |
+| **`count()` 预缓存为 `(int)`** | 循环外 `$n = (int)count($arr)` 再用 `$n` 比较 |
+| **禁用 `$GLOBALS`** | 使用 `static` 局部变量或删除调试代码 |
+| **`foreach` 键类型问题** | 遍历 `array` 属性时用 `for` + 索引替代 |
+| **属性必须完整标注** | 所有属性和方法参数必须有类型声明 |
