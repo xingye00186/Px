@@ -199,7 +199,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
 
         Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->getContentWidth(), 'ch' => $space->getContentHeight()]);
 
-        if (($GLOBALS["_LL"]??0) < 300) { $GLOBALS["_LL"] = ($GLOBALS["_LL"]??0) + 1; fwrite(STDERR, "ML: type={$node->type} disp={$display} algo=".get_class($algo)." cw=".$space->getContentWidth()." ch=".$space->getContentHeight()." kids=".count($node->children)."\n"); }
+
         $childConstraints = [];
         foreach ($node->children as $ch) {
             $childConstraints[] = $this->buildChildSpace($ch, $space, $style);
@@ -220,9 +220,14 @@ class LayoutOrchestrator implements ChildLayoutProvider
             }
             if ($needsRelayout) {
                 $newChildFragments = [];
-                foreach ($node->children as $ri => $child) {
-                    $detW = $ri < count($algoFrag->children) ? (int)$algoFrag->children[$ri]->getW() : 0;
-                    if ($detW > 0 && $ri < count($childFragments) && abs((int)$childFragments[$ri]->getW() - $detW) > 5) {
+                $algoChildCount = (int)count($algoFrag->children);
+                $childFragCount = (int)count($childFragments);
+                $nodeChildArray = $node->children;
+                $nodeChildLen = (int)count($nodeChildArray);
+                for ($ri = 0; $ri < $nodeChildLen; $ri++) {
+                    $child = $nodeChildArray[$ri];
+                    $detW = $ri < $algoChildCount ? (int)$algoFrag->children[$ri]->getW() : 0;
+                    if ($detW > 0 && $ri < $childFragCount && abs((int)$childFragments[$ri]->getW() - $detW) > 5) {
                         // 子项宽度变化：用 flex 确定宽度重新约束，determinedPercentageWidth 用于子项百分比
                         $chBaseSpace = $this->buildChildSpace($child, $space, $style);
                         $detContentW = max(0, $detW - $chBaseSpace->getPaddingLeft() - $chBaseSpace->getPaddingRight() - $chBaseSpace->borderLeft - $chBaseSpace->borderRight);
@@ -241,7 +246,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
                         // 用 Phase C 确定的约束重布局子项，depth+1 限制当前容器自身迭代
                         $newChildFragments[] = $this->mainLayout($child, $relayoutSpace, $nodeLayer, $relayoutDepth + 1);
                     } else {
-                        $newChildFragments[] = $ri < count($childFragments) ? $childFragments[$ri] : $childFragments[0];
+                        $newChildFragments[] = $ri < $childFragCount ? $childFragments[$ri] : $childFragments[0];
                     }
                 }
                 // Step 1: 用 flex 算法重新布局子项
@@ -253,9 +258,12 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 //       仍然来自 Phase B 的错误布局。
                 // 方案：用 flex 权威宽度覆盖 fragment w，保留 Phase C 重布局的正确子项
                 $merged = [];
-                for ($ri = 0; $ri < count($node->children); $ri++) {
-                    $reFrag = $ri < count($newChildFragments) ? $newChildFragments[$ri] : null;
-                    $flexFrag = $ri < count($algoFrag->children) ? $algoFrag->children[$ri] : null;
+                $nodeChildCount = (int)count($node->children);
+                $newChildCount = (int)count($newChildFragments);
+                $algoChildCount2 = (int)count($algoFrag->children);
+                for ($ri = 0; $ri < $nodeChildCount; $ri++) {
+                    $reFrag = $ri < $newChildCount ? $newChildFragments[$ri] : null;
+                    $flexFrag = $ri < $algoChildCount2 ? $algoFrag->children[$ri] : null;
                     if ($reFrag !== null && $flexFrag !== null) {
                         $merged[] = (new PhysicalFragmentBuilder())
                             ->from($reFrag)          // 保留 Phase C 的正确子项

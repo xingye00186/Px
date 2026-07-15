@@ -4,6 +4,7 @@ namespace Px\Layout;
 
 use native_types;
 use Px\Css\ComputedStyle;
+use Px\Render\RenderNode;
 
 /**
  * PhysicalFragmentBuilder — Fragment 构建器（替代 10+ 参数构造函数）
@@ -27,7 +28,7 @@ class PhysicalFragmentBuilder
     private int $_ch = 0;
     private ?ComputedStyle $_style = null;
     private array $_children = [];
-    private $_sourceNode = null;
+    private ?RenderNode $_sourceNode = null;
 
     public function x(int $v): self { $this->_x = $v; return $this; }
     public function y(int $v): self { $this->_y = $v; return $this; }
@@ -40,7 +41,7 @@ class PhysicalFragmentBuilder
     public function ch(int $v): self { $this->_ch = $v; return $this; }
     public function style(?ComputedStyle $v): self { $this->_style = $v; return $this; }
     public function children(array $v): self { $this->_children = $v; return $this; }
-    public function sourceNode($v): self { $this->_sourceNode = $v; return $this; }
+    public function sourceNode(?RenderNode $v): self { $this->_sourceNode = $v; return $this; }
 
     /** 从现有 Fragment 拷贝属性 */
     public function from(PhysicalFragment $f): self
