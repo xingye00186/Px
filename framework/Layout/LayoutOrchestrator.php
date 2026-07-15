@@ -301,8 +301,15 @@ class LayoutOrchestrator implements ChildLayoutProvider
         $bT = (int)($parentStyle?->borderTopWidth ?? 0);
         $bB = (int)($parentStyle?->borderBottomWidth ?? 0);
 
-        $cbW = max(0, (int)($parentSpace->getContentWidth() ?? 0) - $padL - $padR - $bL - $bR);
-        $cbH = max(0, (int)($parentSpace->getContentHeight() ?? 0) - $padT - $padB - $bT - $bB);
+        // CSS-UI-3 §4.5: box-sizing 决定 padding+border 是否占用约束空间
+        // content-box: contentWidth 是内容宽度，不能减 padding+border
+        // border-box:  contentWidth 包含 padding+border，需减掉
+        $boxSizing = $parentStyle?->boxSizing?->value ?? 'content-box';
+        $deductW = ($boxSizing === 'border-box') ? $padL + $padR + $bL + $bR : 0;
+        $deductH = ($boxSizing === 'border-box') ? $padT + $padB + $bT + $bB : 0;
+
+        $cbW = max(0, (int)($parentSpace->getContentWidth() ?? 0) - $deductW);
+        $cbH = max(0, (int)($parentSpace->getContentHeight() ?? 0) - $deductH);
         $offX = (int)((int)($parentSpace->getParentContentX() ?? 0) + $padL + $bL);
         $offY = (int)((int)($parentSpace->getParentContentY() ?? 0) + $padT + $bT);
 
@@ -313,7 +320,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
         // toPx() returns raw value for percent too (e.g. 100% -> 100). Exclude percent.
         $isPct = $parentStyle?->width?->isPercent() ?? false;
         if ($parentExplicitW !== null && $parentExplicitW > 0 && !$isPct) {
-            $cbW = max(0, (int)$parentExplicitW - $padL - $padR - $bL - $bR);
+            $cbW = max(0, (int)$parentExplicitW - $deductW);
         }
 
         $childStyle = $child->computedStyle;
