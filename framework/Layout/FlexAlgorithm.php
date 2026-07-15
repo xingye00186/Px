@@ -404,8 +404,14 @@ class FlexAlgorithm extends LayoutAlgorithm
 
     public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes
     {
-        // No child fragments available during intrinsic measurement pass;
-        // return zeros as no children can be measured.
+        // 没有子 fragment 可用时，返回文本内在尺寸
+        if (strlen($textContent) > 0) {
+            $fs = $style?->getFontSize() > 0 ? $style->getFontSize() : 16;
+            $w = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($style?->getBold() ?? 0)) : (int)(strlen($textContent) * $fs * 0.6));
+            $h = $style?->getLineHeight() > 0 ? $style->getLineHeight() : (int)($fs * 1.2);
+            return new IntrinsicSizes($w, $w, $h, $h);
+        }
+        // flex 容器本身无文本内容时返回 0（尺寸由子项和约束决定）
         return new IntrinsicSizes(0, 0, 0, 0);
     }
 

@@ -33,6 +33,10 @@ class ConstraintSpace
     public readonly ?int $percentageWidth;
     public readonly ?int $percentageHeight;
 
+    /** 父 flex/grid 分配后的确定基准（用于子项百分比在 flex item 中正确解析） */
+    public readonly ?int $determinedPercentageWidth;
+    public readonly ?int $determinedPercentageHeight;
+
     /** 容器 padding */
     public readonly int $paddingTop;
     public readonly int $paddingRight;
@@ -67,6 +71,8 @@ class ConstraintSpace
     public function getContentHeight(): int { return $this->contentHeight; }
     public function getPercentageWidth(): ?int { return $this->percentageWidth; }
     public function getPercentageHeight(): ?int { return $this->percentageHeight; }
+    public function getDeterminedPercentageWidth(): ?int { return $this->determinedPercentageWidth; }
+    public function getDeterminedPercentageHeight(): ?int { return $this->determinedPercentageHeight; }
     public function getPaddingTop(): int { return $this->paddingTop; }
     public function getPaddingRight(): int { return $this->paddingRight; }
     public function getPaddingBottom(): int { return $this->paddingBottom; }
@@ -99,6 +105,8 @@ class ConstraintSpace
         int $bfcOffsetX = 0,
         int $bfcOffsetY = 0,
         string $spaceType = 'block',
+        ?int $determinedPercentageWidth = null,
+        ?int $determinedPercentageHeight = null,
     ) {
         $this->containerWidth        = $containerWidth;
         $this->containerHeight       = $containerHeight;
@@ -108,6 +116,8 @@ class ConstraintSpace
         $this->contentHeight         = $contentHeight > 0 ? $contentHeight : $containerHeight;
         $this->percentageWidth       = $percentageWidth;
         $this->percentageHeight      = $percentageHeight;
+        $this->determinedPercentageWidth  = $determinedPercentageWidth;
+        $this->determinedPercentageHeight = $determinedPercentageHeight;
         $this->paddingTop            = $paddingTop;
         $this->paddingRight          = $paddingRight;
         $this->paddingBottom         = $paddingBottom;

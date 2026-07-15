@@ -81,8 +81,8 @@ class LayoutOrchestrator
     }
 
     /**
-     * 正常流布局（mainLayout）。
-     * 递归遍历 RenderNode 树，委托 Algorithm 执行布局。
+     * 正常流布局（mainLayout）— 两阶段：先内在尺寸测量，再确定约束下布局。
+     * 对标 Blink LayoutNG 的 LayoutInput → LayoutResult 两阶段模型。
      */
     private function mainLayout(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0): PhysicalFragment
     {
@@ -95,9 +95,6 @@ class LayoutOrchestrator
         $overflowY = $style?->overflowY?->value ?? $style?->overflow?->value ?? 'visible';
         $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
         $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
-        $isScroll = $hasHScroll || $hasVScroll;
-        if ($isScroll) {
-                    }
 
         // Layer 继承
         $nodeLayer = $inheritedLayer;
@@ -113,16 +110,51 @@ class LayoutOrchestrator
             return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $style, array(), $node);
         }
 
-        // 递归处理子节点（OOF 子节点也递归，但会生成占位 Fragment）
+        // ─── Phase A: 收集子项 intrinsic 尺寸（flex/grid 需要先知道内容大小再分配）───
+        $isFlexOrGrid = ($display === 'flex' || $display === 'grid' || $display === 'inline-flex');
+        $childIntrinsics = [];
+        if ($isFlexOrGrid && count($node->children) > 0) {
+            $intrinsicSpace = new ConstraintSpace(
+                $space->getContentWidth(), $space->getContentHeight(),
+                0, 0, $space->getContentWidth(), $space->getContentHeight(),
+                null, null, 0, 0, 0, 0, 0, 0, 0, 0,
+                false, true, 0, 0, 'block'
+            );
+            foreach ($node->children as $ch) {
+                $chAlgo = $this->selectAlgorithm($ch->computedStyle?->display?->value ?? 'block', $ch->computedStyle);
+                $chIntrinsic = $chAlgo->intrinsicSize($intrinsicSpace, $ch->computedStyle, is_string($ch->content) ? $ch->content : '');
+                $childIntrinsics[] = $chIntrinsic;
+            }
+        }
+
+        // ─── Phase B: 递归处理子节点 ───
         $childFragments = [];
-        foreach ($node->children as $child) {
+        foreach ($node->children as $i => $child) {
             $childStyle = $child->computedStyle;
-            $childSpace = $this->buildChildSpace($child, $space, $style);
-            $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer);
+            if ($isFlexOrGrid && isset($childIntrinsics[$i])) {
+                // flex/grid 子项：用 intrinsic+分配结果构建约束，确保子项百分比用正确基准
+                $chPercW = $childStyle?->width?->isPercent() ? $space->getContentWidth() : null;
+                $chPercH = $childStyle?->height?->isPercent() ? $space->getContentHeight() : null;
+                $childSpace = $this->buildChildSpace($child, $space, $style);
+                // 将 intrinsic 收集信息传递通过 spaceType
+                $childSpace = ConstraintSpace::forChild(
+                    $childSpace->getParentContentX(), $childSpace->getParentContentY(),
+                    $childSpace->getContentWidth(), $childSpace->getContentHeight(),
+                    $chPercW, $chPercH,
+                    $childSpace->getPaddingTop(), $childSpace->getPaddingRight(),
+                    $childSpace->getPaddingBottom(), $childSpace->getPaddingLeft(),
+                    $childSpace->borderTop, $childSpace->borderRight,
+                    $childSpace->borderBottom, $childSpace->borderLeft,
+                    false, 'flex-item'
+                );
+                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer);
+            } else {
+                $childSpace = $this->buildChildSpace($child, $space, $style);
+                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer);
+            }
         }
 
         if ($isOOF) {
-            // OOF 节点：由 oofLayout 通行证计算位置，此处仅返回引用
             $cs = $style;
             $w = $cs?->width?->toPx() ?? 0;
             $h = $cs?->height?->toPx() ?? 0;
@@ -140,7 +172,7 @@ class LayoutOrchestrator
         Diag::log(2, 'process:node', ['type' => $node->type, 'display' => $display, 'pos' => $position, 'algo' => $algo !== null ? get_class($algo) : 'none']);
         $textContent = is_string($node->content) ? $node->content : '';
 
-        // Phase 4: 查 LayoutCache — 约束空间不变时跳过算法
+        // 查 LayoutCache — 约束空间不变时跳过算法
         $nodeId = spl_object_id($node);
         $styleVer = spl_object_id($style ?? new \Px\Css\ComputedStyle([]));
         $ckey = LayoutCacheKey::fromSpace($space, $nodeId, $styleVer);
@@ -152,12 +184,55 @@ class LayoutOrchestrator
 
         Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->getContentWidth(), 'ch' => $space->getContentHeight()]);
 
-        // 调用 Algorithm::layout() 执行布局
-        if (($GLOBALS["_LL"]??0) < 300) { $GLOBALS["_LL"] = ($GLOBALS["_LL"]??0) + 1; fwrite(STDERR, "MAINLAYOUT: type={$node->type} display=".($style?->display?->value??"?")." algo=".get_class($algo)." cw=".$space->getContentWidth()." ch=".$space->getContentHeight()." children=".count($node->children)."\n"); }
+        if (($GLOBALS["_LL"]??0) < 300) { $GLOBALS["_LL"] = ($GLOBALS["_LL"]??0) + 1; fwrite(STDERR, "ML: type={$node->type} disp={$display} algo=".get_class($algo)." cw=".$space->getContentWidth()." ch=".$space->getContentHeight()." kids=".count($node->children)."\n"); }
         $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached);
         Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->getX(), 'y' => $algoFrag->getY(), 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH(), 'algo' => get_class($algo)]);
 
-        // 应用 layer 继承：Algorithm 返回的 Fragment 不包含 layer 信息，需要覆盖
+        // ─── Phase C: flex/grid 子项重布局（flex 确定子项宽度后，用正确约束重新布局）───
+        if ($isFlexOrGrid && count($childFragments) > 0 && count($algoFrag->children) > 0) {
+            $needsRelayout = false;
+            $childCount = min(count($childFragments), count($algoFrag->children));
+            for ($ri = 0; $ri < $childCount; $ri++) {
+                $oldW = (int)$childFragments[$ri]->getW();
+                $newW = (int)$algoFrag->children[$ri]->getW();
+                if (($GLOBALS["_LL"]??0) < 300) { fwrite(STDERR, "RELAYOUT_CHECK: child[$ri] oldW=$oldW newW=$newW diff=".abs($oldW-$newW)."\n"); }
+                if ($oldW > 0 && $newW > 0 && abs($oldW - $newW) > 5) {
+                    $needsRelayout = true; break;
+                }
+            }
+            if ($needsRelayout) {
+                $newChildFragments = [];
+                foreach ($node->children as $ri => $child) {
+                    $detW = $ri < count($algoFrag->children) ? (int)$algoFrag->children[$ri]->getW() : 0;
+                    if ($detW > 0 && $ri < count($childFragments) && abs((int)$childFragments[$ri]->getW() - $detW) > 5) {
+                        // 子项宽度变化：用 flex 确定宽度重新约束，determinedPercentageWidth 用于子项百分比
+                        $chBaseSpace = $this->buildChildSpace($child, $space, $style);
+                        $detContentW = max(0, $detW - $chBaseSpace->getPaddingLeft() - $chBaseSpace->getPaddingRight() - $chBaseSpace->borderLeft - $chBaseSpace->borderRight);
+                        $relayoutSpace = new ConstraintSpace(
+                            $detW, $chBaseSpace->getContentHeight(),
+                            $chBaseSpace->getParentContentX(), $chBaseSpace->getParentContentY(),
+                            max(0, $detW), $chBaseSpace->getContentHeight(),
+                            $detContentW, $chBaseSpace->getPercentageHeight(),
+                            $chBaseSpace->getPaddingTop(), $chBaseSpace->getPaddingRight(),
+                            $chBaseSpace->getPaddingBottom(), $chBaseSpace->getPaddingLeft(),
+                            $chBaseSpace->borderTop, $chBaseSpace->borderRight,
+                            $chBaseSpace->borderBottom, $chBaseSpace->borderLeft,
+                            true, false, 0, 0, 'block',
+                            $detContentW, $chBaseSpace->getPercentageHeight(),
+                        );
+                        $newChildFragments[] = $this->mainLayout($child, $relayoutSpace, $nodeLayer);
+                    } else {
+                        $newChildFragments[] = $ri < count($childFragments) ? $childFragments[$ri] : $childFragments[0];
+                    }
+                }
+                // 用正确的子 fragment 重新执行父布局
+                $childFragments = $newChildFragments;
+                $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached);
+                Diag::log(2, 'relayout:done', ['type' => $node->type, 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH()]);
+            }
+        }
+
+        // 应用 layer 继承
         if ($nodeLayer > $algoFrag->getLayer()) {
             $algoFrag = new \Px\Layout\PhysicalFragment(
                 (int)$algoFrag->getX(), (int)$algoFrag->getY(), (int)$algoFrag->getW(), (int)$algoFrag->getH(),
