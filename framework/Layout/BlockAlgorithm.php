@@ -44,11 +44,14 @@ class BlockAlgorithm extends LayoutAlgorithm
         $top = $s->top?->toPx() ?? 0;
         $marginLeft = $s->margin?->left->toPx() ?? 0;
         $marginTop = $s->margin?->top->toPx() ?? 0;
+        // CSS 两阶段布局：优先使用 determinedPercentageWidth 作为百分比基准
         $parentW = $c->getContentWidth();
         $parentH = $c->getContentHeight();
+        $percBaseW = $c->getDeterminedPercentageWidth() ?? $parentW;
+        $percBaseH = $c->getDeterminedPercentageHeight() ?? $parentH;
 
-        $w = $this->computeBlockWidth($parentW, $s, $textContent);
-        $h = $this->computeBlockHeight($parentH, $s, $textContent);
+        $w = $this->computeBlockWidth($parentW, $s, $textContent, $percBaseW);
+        $h = $this->computeBlockHeight($parentH, $s, $textContent, $percBaseH);
 
         $positionVal = $s->position?->value ?? 'static';
         $isStaticOrRelative = ($positionVal === 'static' || $positionVal === 'relative');
@@ -132,12 +135,13 @@ class BlockAlgorithm extends LayoutAlgorithm
         return new IntrinsicSizes(max(0, $w), max(0, $w), max(0, $h), max(0, $h));
     }
 
-    private function computeBlockWidth(int $parentW, ComputedStyle $s, string $textContent): int
+    private function computeBlockWidth(int $parentW, ComputedStyle $s, string $textContent, int $percBaseW = 0): int
     {
         $width = $s->width?->toPx() ?? 0;
         $sizing = $s->boxSizing?->value ?? 'content-box';
         if ($s->width !== null && $s->width->isPercent()) {
-            $width = $s->width->resolveInContext($parentW);
+            $pw = $percBaseW > 0 ? $percBaseW : $parentW;
+            $width = $s->width->resolveInContext($pw);
             // CSS2.1 §10.2 + CSS-UI-3 §4.5: box-sizing:border-box时百分比width包含padding+border
             if ($sizing === 'border-box') {
                 $padL = $s->padding?->left->toPx() ?? 0;
@@ -163,10 +167,13 @@ class BlockAlgorithm extends LayoutAlgorithm
         return (int)max(0, $width);
     }
 
-    private function computeBlockHeight(int $parentH, ComputedStyle $s, string $textContent): int
+    private function computeBlockHeight(int $parentH, ComputedStyle $s, string $textContent, int $percBaseH = 0): int
     {
         $height = $s->height?->toPx() ?? 0;
-        if ($s->height !== null && $s->height->isPercent()) { $height = $s->height->resolveInContext($parentH); }
+        if ($s->height !== null && $s->height->isPercent()) {
+            $ph = $percBaseH > 0 ? $percBaseH : $parentH;
+            $height = $s->height->resolveInContext($ph);
+        }
         if ($s->height !== null && $s->height->isIntrinsic() && strlen($textContent) > 0) { $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2); }
         if ($height <= 0 && strlen($textContent) > 0) { $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2); }
         $ar = $s->getAspectRatio() ?? 0;

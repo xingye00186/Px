@@ -84,7 +84,10 @@ class LayoutOrchestrator
      * 正常流布局（mainLayout）— 两阶段：先内在尺寸测量，再确定约束下布局。
      * 对标 Blink LayoutNG 的 LayoutInput → LayoutResult 两阶段模型。
      */
-    private function mainLayout(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0): PhysicalFragment
+    /** 重布局迭代上限 */
+    private const MAX_RELAYOUT_ITERATIONS = 3;
+
+    private function mainLayout(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0, int $relayoutDepth = 0): PhysicalFragment
     {
         $style = $node->computedStyle;
         $display = $style?->display?->value ?? 'block';
@@ -147,10 +150,10 @@ class LayoutOrchestrator
                     $childSpace->borderBottom, $childSpace->borderLeft,
                     false, 'flex-item'
                 );
-                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer);
+                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, $relayoutDepth);
             } else {
                 $childSpace = $this->buildChildSpace($child, $space, $style);
-                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer);
+                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, $relayoutDepth);
             }
         }
 
@@ -188,14 +191,13 @@ class LayoutOrchestrator
         $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached);
         Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->getX(), 'y' => $algoFrag->getY(), 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH(), 'algo' => get_class($algo)]);
 
-        // ─── Phase C: flex/grid 子项重布局（flex 确定子项宽度后，用正确约束重新布局）───
-        if ($isFlexOrGrid && count($childFragments) > 0 && count($algoFrag->children) > 0) {
+        // ─── Phase C: flex/grid 子项重布局（最多 self::MAX_RELAYOUT_ITERATIONS 轮）───
+        if ($relayoutDepth < self::MAX_RELAYOUT_ITERATIONS && $isFlexOrGrid && count($childFragments) > 0 && count($algoFrag->children) > 0) {
             $needsRelayout = false;
             $childCount = min(count($childFragments), count($algoFrag->children));
             for ($ri = 0; $ri < $childCount; $ri++) {
                 $oldW = (int)$childFragments[$ri]->getW();
                 $newW = (int)$algoFrag->children[$ri]->getW();
-                if (($GLOBALS["_LL"]??0) < 300) { fwrite(STDERR, "RELAYOUT_CHECK: child[$ri] oldW=$oldW newW=$newW diff=".abs($oldW-$newW)."\n"); }
                 if ($oldW > 0 && $newW > 0 && abs($oldW - $newW) > 5) {
                     $needsRelayout = true; break;
                 }
@@ -220,7 +222,7 @@ class LayoutOrchestrator
                             true, false, 0, 0, 'block',
                             $detContentW, $chBaseSpace->getPercentageHeight(),
                         );
-                        $newChildFragments[] = $this->mainLayout($child, $relayoutSpace, $nodeLayer);
+                        $newChildFragments[] = $this->mainLayout($child, $relayoutSpace, $nodeLayer, $relayoutDepth + 1);
                     } else {
                         $newChildFragments[] = $ri < count($childFragments) ? $childFragments[$ri] : $childFragments[0];
                     }
