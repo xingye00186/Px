@@ -113,7 +113,7 @@ class LayoutOrchestrator
             return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $style, array(), $node);
         }
 
-        // ─── Phase A: 收集子项 intrinsic 尺寸（flex/grid 需要先知道内容大小再分配）───
+        // ─── Phase A: 子项 intrinsic 收集 ───
         $isFlexOrGrid = ($display === 'flex' || $display === 'grid' || $display === 'inline-flex');
         $childIntrinsics = [];
         if ($isFlexOrGrid && count($node->children) > 0) {
@@ -150,10 +150,11 @@ class LayoutOrchestrator
                     $childSpace->borderBottom, $childSpace->borderLeft,
                     false, 'flex-item'
                 );
-                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, $relayoutDepth);
+                // 子节点 Phase C 计数器独立：每个节点有自己的 3 轮上限
+                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, 0);
             } else {
                 $childSpace = $this->buildChildSpace($child, $space, $style);
-                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, $relayoutDepth);
+                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, 0);
             }
         }
 
@@ -222,6 +223,7 @@ class LayoutOrchestrator
                             true, false, 0, 0, 'block',
                             $detContentW, $chBaseSpace->getPercentageHeight(),
                         );
+                        // 用 Phase C 确定的约束重布局子项，depth+1 限制当前容器自身迭代
                         $newChildFragments[] = $this->mainLayout($child, $relayoutSpace, $nodeLayer, $relayoutDepth + 1);
                     } else {
                         $newChildFragments[] = $ri < count($childFragments) ? $childFragments[$ri] : $childFragments[0];

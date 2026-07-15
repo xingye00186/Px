@@ -18,6 +18,8 @@ class LayoutCacheKey
     public readonly int $contentHeight;
     public readonly ?int $percentageWidth;
     public readonly ?int $percentageHeight;
+    public readonly ?int $determinedPercentageWidth;
+    public readonly ?int $determinedPercentageHeight;
     public readonly bool $isIntrinsicMeasurement;
     public readonly string $spaceType;
     public readonly int $styleVersion;
@@ -31,12 +33,16 @@ class LayoutCacheKey
         bool $isIntrinsicMeasurement = false,
         string $spaceType = 'block',
         int $styleVersion = 0,
+        ?int $determinedPercentageWidth = null,
+        ?int $determinedPercentageHeight = null,
     ) {
         $this->nodeId                = $nodeId;
         $this->contentWidth          = $contentWidth;
         $this->contentHeight         = $contentHeight;
         $this->percentageWidth       = $percentageWidth;
         $this->percentageHeight      = $percentageHeight;
+        $this->determinedPercentageWidth  = $determinedPercentageWidth;
+        $this->determinedPercentageHeight = $determinedPercentageHeight;
         $this->isIntrinsicMeasurement = $isIntrinsicMeasurement;
         $this->spaceType             = $spaceType;
         $this->styleVersion          = $styleVersion;
@@ -57,6 +63,8 @@ class LayoutCacheKey
             (bool)$space->getIsIntrinsicMeasurement(),
             (string)$space->getSpaceType(),
             (int)$styleVersion,
+            (int)($space->getDeterminedPercentageWidth() ?? 0),
+            (int)($space->getDeterminedPercentageHeight() ?? 0),
         );
     }
 
@@ -68,6 +76,8 @@ class LayoutCacheKey
             && $this->contentHeight === $other->contentHeight
             && $this->percentageWidth === $other->percentageWidth
             && $this->percentageHeight === $other->percentageHeight
+            && $this->determinedPercentageWidth === $other->determinedPercentageWidth
+            && $this->determinedPercentageHeight === $other->determinedPercentageHeight
             && $this->isIntrinsicMeasurement === $other->isIntrinsicMeasurement
             && $this->spaceType === $other->spaceType
             && $this->styleVersion === $other->styleVersion;
