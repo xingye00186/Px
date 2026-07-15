@@ -84,10 +84,11 @@ function parseCssClassesForMerge(string $css): array
             $result[$className] = $body;
         }
     }
-    // 提取 * 通用选择器规则
+    // 提取 * 通用选择器规则（line-height 为继承属性，不逐元素内联）
     if (preg_match('/\*\s*\{([^}]*)\}/s', $css, $m)) {
         $body = trim($m[1]);
         $body = preg_replace('/\s+/', ' ', $body);
+        $body = preg_replace('/\bline-height\s*:\s*[^;]+;?\s*/i', '', $body);
         $body = rtrim($body, ';');
         $result['*'] = $body;
     }
