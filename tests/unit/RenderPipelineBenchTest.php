@@ -429,22 +429,20 @@ describe('候选池', function () use (&$results) {
         $v = $comp->getVNodeTree();
         (new StyleRecalcPass())->recalc($v);
         $rn = $rtm->updateFromVNode($v, null, $comp, ['app' => $comp], null, 'app');
-        $oldRoot = $rtm->getRootRenderNode();
         $oldIds = [];
-        if ($oldRoot !== null) {
-            foreach ($oldRoot->children as $ch) {
-                $oldIds[$ch->key ?? ''] = spl_object_id($ch);
-            }
+        foreach ($rtm->getRootRenderNodes() as $ch) {
+            $oldIds[$ch->key ?? ''] = spl_object_id($ch);
         }
 
-        // 第 2 帧: 头部插入 1 项 → 101 项
+        // 第 2 帧: 头部插入 1 项 → 101 项（传递全部旧根节点作为候选池）
         array_unshift($comp->items, 'item-NEW');
         $comp->invalidate();
         PerfCounter::start('bench:prepend_pool');
         $v2 = $comp->getVNodeTree();
         (new StyleRecalcPass())->recalc($v2);
+        $oldCandidates = $rtm->getRootRenderNodes();
         $rn2 = $rtm->updateFromVNode($v2, null, $comp, ['app' => $comp],
-            $oldRoot !== null ? [$oldRoot] : null, 'app');
+            !empty($oldCandidates) ? $oldCandidates : null, 'app');
         PerfCounter::end('bench:prepend_pool');
 
         $snap = PerfCounter::snapshot();
@@ -452,12 +450,10 @@ describe('候选池', function () use (&$results) {
 
         // 统计复用
         $reused = 0; $total = 0;
-        if ($rn2 !== null) {
-            foreach ($rn2->children as $ch) {
-                $total++;
-                $key = $ch->key ?? '';
-                if (isset($oldIds[$key]) && $oldIds[$key] === spl_object_id($ch)) $reused++;
-            }
+        foreach ($rtm->getRootRenderNodes() as $ch) {
+            $total++;
+            $key = $ch->key ?? '';
+            if (isset($oldIds[$key]) && $oldIds[$key] === spl_object_id($ch)) $reused++;
         }
         $pct = $total > 0 ? round($reused / $total * 100, 1) : 0;
         $results['prepend_pool'] = ['reused' => $reused, 'total' => $total, 'pct' => $pct, 'us' => $time];
@@ -579,6 +575,70 @@ describe('约束签名', function () use (&$results) {
         $results['constraint_sig'] = ['equals_us' => $tEq, 'string_us' => $tStr, 'pct' => $ratio];
         printf("  [BENCH] equals(): %.2f us  序列化: %.2f us  比例: %.1f%%\n", $tEq, $tStr, $ratio);
         echo "  [NOTE] equals() 应显著快于字符串序列化\n";
+    });
+
+});
+
+
+// 微基准 5: offsetOnly 布局平移 (P1-3)
+echo "\n========== 微基准 5: offsetOnly (P1-3) ==========\n";
+
+describe('offsetOnly', function () use ($frames, &$results) {
+
+    test('10层嵌套 padding 变化', function () use ($frames, &$results) {
+        $comp = new class extends \Px\Component\ReactiveComponent {
+            public int $containerPad = 10;
+            public function render(): VNode {
+                $inner = VNode::h('div', ['style' => 'width:100px;height:20px;'], 'leaf');
+                for ($i = 0; $i < 10; $i++) {
+                    $pad = ($i === 0) ? $this->containerPad : 4;
+                    $inner = VNode::h('div', [
+                        'style' => 'display:flex;padding:' . $pad . 'px;width:400px;',
+                    ], [$inner]);
+                }
+                return VNode::h('div', ['style' => 'width:500px;'], [$inner]);
+            }
+            public function setBindValue(string $k, string $v): void {}
+            public function getBindValue(string $k): string { return ''; }
+            public function onMount(): void {}
+            public function dispatchClick(string $h, ?string $a = null): void {}
+            public function invalidate(): void { $this->markDirty(); }
+        };
+        $sched = new Scheduler();
+        $comp->setScheduler($sched);
+        $rtm = new RenderTreeManager();
+        $lo = new LayoutOrchestrator();
+        $pl = new PaintPipeline($comp, new _SimpleRenderCtx());
+        $v = $comp->getVNodeTree();
+        (new StyleRecalcPass())->recalc($v);
+        $prev = $rtm->updateFromVNode($v, null, $comp, ['app' => $comp], null, 'app');
+        PerfCounter::start('bench:offset_stable');
+        for ($i = 0; $i < 5; $i++) {
+            $comp->invalidate();
+            $v = $comp->getVNodeTree();
+            (new StyleRecalcPass())->recalc($v);
+            $prev = $rtm->updateFromVNode($v, null, $comp, ['app' => $comp],
+                $prev !== null ? [$prev] : null, 'app');
+            if ($prev !== null) { $lo->layout($prev); $pl->render($lo->layout($prev)); }
+        }
+        PerfCounter::end('bench:offset_stable');
+        PerfCounter::start('bench:offset_padding');
+        for ($i = 0; $i < 5; $i++) {
+            $comp->containerPad = 10 + ($i % 4) * 2;
+            $comp->invalidate();
+            $v = $comp->getVNodeTree();
+            (new StyleRecalcPass())->recalc($v);
+            $prev = $rtm->updateFromVNode($v, null, $comp, ['app' => $comp],
+                $prev !== null ? [$prev] : null, 'app');
+            if ($prev !== null) { $lo->layout($prev); $pl->render($lo->layout($prev)); }
+        }
+        PerfCounter::end('bench:offset_padding');
+        $snap = PerfCounter::snapshot();
+        $stable = $snap['bench:offset_stable']['total'] ?? 0;
+        $pad = $snap['bench:offset_padding']['total'] ?? 0;
+        $ratio = $stable > 0 ? round($pad / $stable, 2) : 0;
+        $results['offset_padding'] = ['stable_us' => $stable, 'padding_us' => $pad, 'ratio' => $ratio];
+        printf("  [BENCH] 稳定: %d us  padding变化: %d us  比例: %.2fx\n", $stable, $pad, $ratio);
     });
 
 });
