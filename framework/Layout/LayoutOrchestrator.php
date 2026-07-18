@@ -189,6 +189,15 @@ class LayoutOrchestrator implements ChildLayoutProvider
         // ─── Phase B: 递归处理子节点 ───
         $childFragments = [];
         foreach ($node->children as $i => $child) {
+            // LayoutBoundary 子项：若洁净则跳过递归直接使用缓存
+            if ($child->isLayoutBoundary && !$child->layoutDirty && $child->cachedFragment !== null
+                && $child->cachedConstraintSpace !== null) {
+                $childBoundarySpace = $this->buildChildSpace($child, $space, $style);
+                if ($childBoundarySpace->equals($child->cachedConstraintSpace)) {
+                    $childFragments[] = $child->cachedFragment;
+                    continue;
+                }
+            }
             $childStyle = $child->computedStyle;
             if ($isFlexOrGrid && isset($childIntrinsics[$i])) {
                 // flex/grid 子项：用 intrinsic+分配结果构建约束，确保子项百分比用正确基准

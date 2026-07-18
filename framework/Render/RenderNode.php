@@ -61,6 +61,10 @@ class RenderNode
     public bool $focused = false;
     public bool $active = false;
 
+    // ── 布局边界 — layoutDirty=false 时父容器可跳过递归（对标 Flutter relayoutBoundary）──
+    // 在 updateFromVNode 中根据 computedStyle 设置：显式固定 width+height = true
+    public bool $isLayoutBoundary = false;
+
     public function __construct(
         string $type,
         ?ComputedStyle $computedStyle = null,

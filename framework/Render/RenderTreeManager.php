@@ -607,6 +607,17 @@ class RenderTreeManager
                 $computedStyle = new ComputedStyle($resolvedStyle);
             }
 
+            // 计算 LayoutBoundary 标记：显式固定 width+height → 布局可独立于父约束
+            $isLayoutBoundary = false;
+            if ($computedStyle !== null) {
+                $w = $computedStyle->width;
+                $h = $computedStyle->height;
+                $isLayoutBoundary = (
+                    $w !== null && !$w->isPercent() && !$w->isAuto() && $w->toPx() > 0
+                    && $h !== null && !$h->isPercent() && !$h->isAuto() && $h->toPx() > 0
+                );
+            }
+
             $renderNode = null;
 
             if ($candidates !== null) {
@@ -624,12 +635,14 @@ class RenderTreeManager
                 $renderNode->groupId = $groupId;
                 $renderNode->layoutDirty = true;
                 $renderNode->pseudoStyles = $pseudoStyles;
+                $renderNode->isLayoutBoundary = $isLayoutBoundary;
             } else {
                 $oldVNode = $renderNode->sourceVNode;
                 $renderNode->computedStyle = $computedStyle;
                 $renderNode->sourceVNode = $vnode;
                 $renderNode->groupId = $groupId;
                 $renderNode->pseudoStyles = $pseudoStyles;
+                $renderNode->isLayoutBoundary = $isLayoutBoundary;
 
                 $vnodeChildren = is_array($vnode->children)
                     ? VNode::childrenToArray($vnode->children)
