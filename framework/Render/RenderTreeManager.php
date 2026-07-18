@@ -569,6 +569,14 @@ class RenderTreeManager
                     pseudoStyles: $pseudoStyles
                 );
             }
+            // 补充 pseudoStyles：StyleRecalcPass 已运行时从 theme 提取伪类/伪元素定义
+            // （resolveClassStyles 通过 by-ref 填充，但 StyleRecalcPass 运行后不会进入降级分支）
+            if (empty($pseudoStyles)) {
+                $pseudoStyles = \Px\Css\StyleResolver::extractPseudoStyles(
+                    $vnode->props['class'] ?? '',
+                    $vnode->type
+                );
+            }
             $resolvedStyle = $computedStyle->toExportArray();
 
             // 合并 HTML align 属性到 textAlign（CSS text-align 优先）
@@ -612,9 +620,16 @@ class RenderTreeManager
                 $oldStyle = ($oldVNode !== null) ? $oldVNode->computedStyle : null;
                 if ($oldVNode !== null && $this->areVNodesEqual($vnode, $oldVNode)) {
                     // VNode 完全一致（含 style/class/bind）→ 完全洁净
-                    $renderNode->layoutDirty = false;
-                    $renderNode->paintDirty = false;
-                    $renderNode->styleDirty = false;
+                    // 注意：保留外部事件设置的 dirty bits（如鼠标 hover 调用的 markStyleDirty）
+                    // 外部设置的 styleDirty=true 不应被 VNode 比较结果覆盖
+                    if ($renderNode->layoutDirty || $renderNode->styleDirty) {
+                        // 外部 dirty 已存在：确保 paintDirty 同步
+                        $renderNode->paintDirty = true;
+                    } else {
+                        $renderNode->layoutDirty = false;
+                        $renderNode->paintDirty = false;
+                        $renderNode->styleDirty = false;
+                    }
                 } elseif ($oldStyle !== null) {
                     // 检查是否有几何关键属性变化（用 toExportArray 得到标量值）
                     $isGeometryChange = false;

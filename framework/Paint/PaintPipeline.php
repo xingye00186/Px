@@ -145,6 +145,10 @@ class PaintPipeline
         if (isset($frag->pseudoStyles['__hoverStyle']) && is_array($frag->pseudoStyles['__hoverStyle'])) $states[] = '__hoverStyle';
         if (isset($frag->pseudoStyles['__focusStyle']) && is_array($frag->pseudoStyles['__focusStyle'])) $states[] = '__focusStyle';
         if (isset($frag->pseudoStyles['__activeStyle']) && is_array($frag->pseudoStyles['__activeStyle'])) $states[] = '__activeStyle';
+        // 兼容 StyleResolver::resolveClassStyles 路径（key 为 hover/focus/active 不带 __）
+        if (isset($frag->pseudoStyles['hover']) && is_array($frag->pseudoStyles['hover'])) $states[] = 'hover';
+        if (isset($frag->pseudoStyles['focus']) && is_array($frag->pseudoStyles['focus'])) $states[] = 'focus';
+        if (isset($frag->pseudoStyles['active']) && is_array($frag->pseudoStyles['active'])) $states[] = 'active';
         foreach ($states as $key) {
             foreach ($frag->pseudoStyles[$key] as $k => $v) {
                 $pseudoOverrides[$k] = $v;
@@ -1265,33 +1269,39 @@ class PaintPipeline
     }
 
     
-    private function resolvePseudoFromFragment(array $pseudoStyles): array
-    {
-        $overrides = [];
-        $states = [];
-        if (isset($pseudoStyles['__hoverStyle']) && is_array($pseudoStyles['__hoverStyle'])) $states[] = '__hoverStyle';
-        if (isset($pseudoStyles['__focusStyle']) && is_array($pseudoStyles['__focusStyle'])) $states[] = '__focusStyle';
-        if (isset($pseudoStyles['__activeStyle']) && is_array($pseudoStyles['__activeStyle'])) $states[] = '__activeStyle';
-        foreach ($states as $key) {
-            foreach ($pseudoStyles[$key] as $k => $v) {
-                $overrides[$k] = self::cssValueToRaw($v);
-            }
-        }
-        return $overrides;
-    }
+
     private static function extractPseudoOverrides(RenderNode $node): array
     {
         $cs = $node->computedStyle;
         if ($cs === null) return [];
         $overrides = [];
         $states = [];
-        if (isset($node->hovered) && $node->hovered) $states[] = '__hoverStyle';
-        if (isset($node->focused) && $node->focused) $states[] = '__focusStyle';
-        if (isset($node->active) && $node->active) $states[] = '__activeStyle';
-        foreach ($states as $key) {
-            $raw = $cs->getRaw($key);
+        // 从 RenderNode 声明的交互状态读取（由 Application::handleMouseEvent 维护）
+        if ($node->hovered) $states[] = '__hoverStyle';
+        if ($node->focused) $states[] = '__focusStyle';
+        if ($node->active) $states[] = '__activeStyle';
+        foreach ($states as $stateKey) {
+            $applied = false;
+            // 路径 A: 从 $node->pseudoStyles 读取（StyleResolver::resolveClassStyles 产出，key 为 'hover'）
+            $lookup = ['__hoverStyle' => 'hover', '__focusStyle' => 'focus', '__activeStyle' => 'active'];
+            $pseudoKey = $lookup[$stateKey] ?? null;
+            if ($pseudoKey !== null && isset($node->pseudoStyles[$pseudoKey]) && is_array($node->pseudoStyles[$pseudoKey])) {
+                foreach ($node->pseudoStyles[$pseudoKey] as $k => $v) {
+                    $overrides[$k] = self::cssValueToRaw($v);
+                }
+                $applied = true;
+            }
+            // 路径 B: 从 ComputedStyle 读取（resolveNodeStyle 旧路径，key 为 '__hoverStyle'）
+            $raw = $cs->getRaw($stateKey);
             if ($raw !== null && is_array($raw)) {
                 foreach ($raw as $k => $v) {
+                    $overrides[$k] = self::cssValueToRaw($v);
+                }
+                $applied = true;
+            }
+            // 如果没有找到任何样式定义，尝试从 pseudoStyles 的 __hoverStyle key（fragmentToElement 传入的备用路径）
+            if (!$applied && isset($node->pseudoStyles[$stateKey]) && is_array($node->pseudoStyles[$stateKey])) {
+                foreach ($node->pseudoStyles[$stateKey] as $k => $v) {
                     $overrides[$k] = self::cssValueToRaw($v);
                 }
             }

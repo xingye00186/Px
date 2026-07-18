@@ -262,11 +262,13 @@ class Application
                     // 清除旧节点的 hover 状态
                     if ($this->hoveredNode !== null) {
                         $this->getInteractionState($this->hoveredNode)->hovered = false;
+                        $this->hoveredNode->hovered = false;
                         $this->hoveredNode->markStyleDirty();  // 使 cachedFragment 失效
                     }
                     // 设置新节点的 hover 状态
                     if ($hoverNode !== null) {
                         $this->getInteractionState($hoverNode)->hovered = true;
+                        $hoverNode->hovered = true;
                         $hoverNode->markStyleDirty();          // 使 cachedFragment 失效
                     }
                     $this->hoveredNode = $hoverNode;
@@ -277,6 +279,7 @@ class Application
                 // 拖拽中：清除 hover 状态
                 if ($this->hoveredNode !== null) {
                     $this->getInteractionState($this->hoveredNode)->hovered = false;
+                    $this->hoveredNode->hovered = false;
                     $this->hoveredNode = null;
                     // ⚠️ 拖拽中不触发 requestRender()，避免与 directRender() 竞争
                     // directRender() 已经处理了拖拽过程中的视觉更新
