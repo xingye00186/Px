@@ -9,15 +9,13 @@ use Px\Css\ComputedStyle;
 use Px\Core\Config;
 
 /**
- * RenderNode — 渲染专用节点（瘦身版）
+ * RenderNode — 渲染专用节点
  *
  * 已移除字段归属：
- * - scrollTop/scrollLeft/lastScrollTop → ScrollState
  * - renderOffsetX/renderOffsetY → VNodeRenderer 局部
- * - hovered/focused/active → InteractionState
- * - animatedStyle/isAnimating/lastX/lastY → AnimationManager
  * - textRenderInfo → VNodeRenderer 局部
  * - lastPaintFrame → VNodeRenderer SplObjectStorage
+ * - animatedStyle/isAnimating/lastX/lastY → AnimationManager
  */
 class RenderNode
 {
@@ -27,34 +25,41 @@ class RenderNode
     public mixed $content = null;
     public ?string $key = null;
 
-    
-
+    // ── 三级脏位 ──
     public bool $styleDirty = true;   // 仅视觉样式变化（颜色/背景/字体等，不触发布局）
     public bool $layoutDirty = true;  // 几何结构变化（宽高/flex/display，触发布局）
     public bool $paintDirty = true;   // 需要重绘（最终消费）
 
     public ?RenderNode $parent = null;
-
     public ?VNode $sourceVNode = null;
     public array $children = [];
-
     public ?string $groupId = null;
 
-    /** 缓存完整 Fragment 树（对标 Blink NGBlockNode） */
+    // ── 缓存 ──
     public ?\Px\Layout\PhysicalFragment $cachedFragment = null;
     public ?string $cachedConstraintSignature = null;
     public int $layoutCacheVersion = 0;
 
-    // ── 渲染数据（由布局引擎和渲染管线维护）──
+    // ── 布局结果（由 LayoutOrchestrator + fragmentToElement 维护）──
+    public int $x = 0;
+    public int $y = 0;
+    public int $w = 0;
+    public int $h = 0;
+    public int $visualW = 0;
+    public int $visualH = 0;
+    public int $layer = 0;
 
-    /** @var array|null text rendering info (VNodeRenderer 缓存) */
-    /** @var array|null text rendering info (VNodeRenderer 缓存) — Phase 3 已迁移至 VNodeRenderer paintFlags */
+    // ── 滚动 ──
+    public int $scrollTop = 0;
+    public int $scrollLeft = 0;
+    public int $contentWidth = 0;
+    public int $contentHeight = 0;
+    public bool $isScrollContainer = false;
 
-
-
-    // ── 交互状态（Application 事件处理器维护，用于伪类样式判断）──
-
-
+    // ── 交互状态（由 Application 事件处理器维护，用于伪类样式判断）──
+    public bool $hovered = false;
+    public bool $focused = false;
+    public bool $active = false;
 
     public function __construct(
         string $type,

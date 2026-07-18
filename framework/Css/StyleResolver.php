@@ -357,4 +357,48 @@ class StyleResolver
         }
         return $result;
     }
+
+    /**
+     * 提取伪类/伪元素样式定义（不执行完整样式解析）。
+     * 供 updateFromVNode 在 StyleRecalcPass 已运行场景下补充 pseudoStyles 数据。
+     *
+     * @param string $className CSS class 名称
+     * @param string $elementType 元素类型
+     * @return array key 为 'hover'/'focus'/'active'/'before'/'after'
+     */
+    public static function extractPseudoStyles(string $className, string $elementType = 'div'): array
+    {
+        $pseudoStyles = [];
+        if ($className === '') return $pseudoStyles;
+        $allRegistered = ThemeProvider::getAllClassStyles();
+        $classNames = explode(' ', $className);
+        foreach ($classNames as $cn) {
+            if ($cn === '') continue;
+            foreach ($allRegistered as $compStyles) {
+                foreach (['hover', 'focus', 'active'] as $pseudo) {
+                    $key = $cn . '__' . $pseudo;
+                    if (isset($compStyles[$key])) {
+                        if (!isset($pseudoStyles[$pseudo])) {
+                            $pseudoStyles[$pseudo] = [];
+                        }
+                        foreach ($compStyles[$key] as $k => $v) {
+                            $pseudoStyles[$pseudo][$k] = $v;
+                        }
+                    }
+                }
+                foreach (['before', 'after'] as $pel) {
+                    $key = $cn . '__' . $pel;
+                    if (isset($compStyles[$key])) {
+                        if (!isset($pseudoStyles[$pel])) {
+                            $pseudoStyles[$pel] = [];
+                        }
+                        foreach ($compStyles[$key] as $k => $v) {
+                            $pseudoStyles[$pel][$k] = $v;
+                        }
+                    }
+                }
+            }
+        }
+        return $pseudoStyles;
+    }
 }
