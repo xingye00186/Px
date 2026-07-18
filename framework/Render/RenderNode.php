@@ -41,6 +41,13 @@ class RenderNode
 
     public ?string $groupId = null;
 
+    /** 上次布局结果坐标缓存（供 cachedW 早退跳过算法） */
+    public int $cachedX = 0;
+    public int $cachedY = 0;
+    public int $cachedW = 0;
+    public int $cachedH = 0;
+    public int $cachedLayer = 0;
+
     // ── 渲染数据（由布局引擎和渲染管线维护）──
 
     /** @var array|null text rendering info (VNodeRenderer 缓存) */

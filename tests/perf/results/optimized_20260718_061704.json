@@ -1,0 +1,179 @@
+{
+    "meta": {
+        "timestamp": "2026-07-18 06:17:04",
+        "total_sec": 13.7831,
+        "php_version": "8.4.20",
+        "frames": 10,
+        "mode": "optimized"
+    },
+    "scenarios": {
+        "A_color": {
+            "tree_convert": {
+                "count": 11000,
+                "total": 179927.11,
+                "avg": 16.36,
+                "min": 9.78,
+                "max": 2887.96,
+                "elapsed_sec": 3.1057
+            },
+            "algo:BlockAlgorithm": {
+                "count": 11011,
+                "total": 1161324.98,
+                "avg": 105.47,
+                "min": 10.97,
+                "max": 10907.17,
+                "elapsed_sec": 3.0851
+            },
+            "algo:OOF": {
+                "count": 11,
+                "total": 38900.38,
+                "avg": 3536.4,
+                "min": 3108.98,
+                "max": 4744.05,
+                "elapsed_sec": 2.974
+            },
+            "stage:layout": {
+                "count": 11,
+                "total": 1352519.04,
+                "avg": 122956.28,
+                "min": 112316.85,
+                "max": 131364.11,
+                "elapsed_sec": 2.974
+            },
+            "render_collect": {
+                "count": 11,
+                "total": 289949.89,
+                "avg": 26359.08,
+                "min": 24913.07,
+                "max": 29838.8,
+                "elapsed_sec": 2.9486
+            }
+        },
+        "B_size": {
+            "tree_convert": {
+                "count": 11000,
+                "total": 189329.15,
+                "avg": 17.21,
+                "min": 10.97,
+                "max": 635.15,
+                "elapsed_sec": 3.3324
+            },
+            "algo:BlockAlgorithm": {
+                "count": 11011,
+                "total": 1208851.81,
+                "avg": 109.79,
+                "min": 69.86,
+                "max": 12024.16,
+                "elapsed_sec": 3.315
+            },
+            "algo:OOF": {
+                "count": 11,
+                "total": 37101.98,
+                "avg": 3372.91,
+                "min": 2685.07,
+                "max": 3801.11,
+                "elapsed_sec": 3.1896
+            },
+            "stage:layout": {
+                "count": 11,
+                "total": 1406368.73,
+                "avg": 127851.7,
+                "min": 120244.98,
+                "max": 140057.09,
+                "elapsed_sec": 3.1896
+            },
+            "render_collect": {
+                "count": 11,
+                "total": 304237.84,
+                "avg": 27657.99,
+                "min": 24281.02,
+                "max": 29033.9,
+                "elapsed_sec": 3.1627
+            }
+        },
+        "C_hover": {
+            "tree_convert": {
+                "count": 11000,
+                "total": 191624.88,
+                "avg": 17.42,
+                "min": 10.97,
+                "max": 391.01,
+                "elapsed_sec": 3.3324
+            },
+            "algo:BlockAlgorithm": {
+                "count": 11011,
+                "total": 1224123.72,
+                "avg": 111.17,
+                "min": 67.95,
+                "max": 10219.81,
+                "elapsed_sec": 3.3135
+            },
+            "algo:OOF": {
+                "count": 11,
+                "total": 38210.15,
+                "avg": 3473.65,
+                "min": 2666.95,
+                "max": 4003.05,
+                "elapsed_sec": 3.1863
+            },
+            "stage:layout": {
+                "count": 11,
+                "total": 1423898.94,
+                "avg": 129445.36,
+                "min": 118530.99,
+                "max": 139306.07,
+                "elapsed_sec": 3.1863
+            },
+            "render_collect": {
+                "count": 11,
+                "total": 307491.54,
+                "avg": 27953.78,
+                "min": 23273.94,
+                "max": 30776.98,
+                "elapsed_sec": 3.1583
+            }
+        },
+        "D_text": {
+            "tree_convert": {
+                "count": 11000,
+                "total": 196440.7,
+                "avg": 17.86,
+                "min": 10.97,
+                "max": 322.1,
+                "elapsed_sec": 3.4188
+            },
+            "algo:BlockAlgorithm": {
+                "count": 11011,
+                "total": 1354764.7,
+                "avg": 123.04,
+                "min": 72,
+                "max": 129861.12,
+                "elapsed_sec": 3.3974
+            },
+            "algo:OOF": {
+                "count": 11,
+                "total": 39994.96,
+                "avg": 3635.91,
+                "min": 2667.9,
+                "max": 4422.9,
+                "elapsed_sec": 3.2722
+            },
+            "stage:layout": {
+                "count": 11,
+                "total": 1559154.75,
+                "avg": 141741.34,
+                "min": 119150.88,
+                "max": 256768.94,
+                "elapsed_sec": 3.2722
+            },
+            "render_collect": {
+                "count": 11,
+                "total": 318254.47,
+                "avg": 28932.22,
+                "min": 24744.03,
+                "max": 34614.09,
+                "elapsed_sec": 3.2392
+            }
+        }
+    }
+}

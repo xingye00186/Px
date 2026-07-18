@@ -104,27 +104,18 @@ class LayoutOrchestrator implements ChildLayoutProvider
 
     private function mainLayout(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0, int $relayoutDepth = 0): PhysicalFragment
     {
-        // ── 洁净早退 ──
-        if (!$node->layoutDirty) {
-            // 几何不变，尝试复用缓存 Fragment
-            $cacheKey = LayoutCacheKey::fromSpace($space, spl_object_id($node), spl_object_id($node->computedStyle ?? new \Px\Css\ComputedStyle([])));
-            $cached = $this->cache->find($cacheKey);
-            // 1) 完全洁净（style 也没变）→ 直接复用
-            // 2) 仅样式变化（styleDirty=true）→ 复用几何 + 新样式快照
-            if ($cached !== null) {
-                $styleSnapshot = $node->computedStyle;
-                if (!$node->styleDirty) {
-                    Diag::log(2, 'cache:skip', ['type' => $node->type, 'w' => $cached->w, 'h' => $cached->h]);
-                    return new \Px\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node);
-                } else {
-                    // 仅样式变化：复用几何 + 更新样式快照
-                    $newChildren = [];
-                    foreach ($cached->children as $cc) {
-                        $newChildren[] = $cc;
-                    }
-                    return new \Px\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $styleSnapshot, $newChildren, $node);
-                }
-            }
+        // ── 洁净早退（基于缓存坐标）──
+        // 几何不变时跳过算法，直接复用上次缓存坐标。
+        // 首次布局（cachedW=0）走正常路径，后续帧受益。
+        if (!$node->layoutDirty && $node->cachedW > 0) {
+            Diag::log(2, 'layout:skip', ['type' => $node->type, 'w' => $node->cachedW, 'h' => $node->cachedH]);
+            return new \Px\Layout\PhysicalFragment(
+                $node->cachedX, $node->cachedY,
+                $node->cachedW, $node->cachedH,
+                $node->cachedW, $node->cachedH,
+                $node->cachedLayer, 0, 0,
+                $node->computedStyle, [], $node
+            );
         }
         $style = $node->computedStyle;
         $display = $style?->display?->value ?? 'block';
@@ -318,6 +309,14 @@ class LayoutOrchestrator implements ChildLayoutProvider
             );
         }
         $this->cache->set($ckey, $algoFrag);
+
+        // 缓存坐标供下帧洁净早退使用
+        $node->cachedX = (int)$algoFrag->getX();
+        $node->cachedY = (int)$algoFrag->getY();
+        $node->cachedW = (int)$algoFrag->getW();
+        $node->cachedH = (int)$algoFrag->getH();
+        $node->cachedLayer = (int)$algoFrag->getLayer();
+
         return $algoFrag;
     }
 

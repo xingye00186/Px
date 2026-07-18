@@ -61,15 +61,15 @@ class _BenchRenderContext extends RenderContext
     public function drawButton(int $x, int $y, int $w, int $h, int $bg, int $border): void {}
 }
 
-// ── Mock Component ───────────────────────────────────
+// ── Mock Component（1000 节点树）──────────────────────
 class _BenchComponent extends \Px\Component\ReactiveComponent
 {
-    public string $displayValue = '0';
-    public string $textColor = '#FFFFFF';
-    public int $boxWidth = 300;
-    public int $boxHeight = 200;
-    public string $label = 'Click Me';
+    public int $changedNodeIdx = -1;     // -1 = 无变化
+    public string $changedColor = '#FFFFFF';
+    public int $changedWidth = 50;
+    public string $changedText = 'static';
     public bool $hovered = false;
+    public int $staticNodeCount = 1000;   // 子节点总数
 
     public function __construct()
     {
@@ -83,23 +83,26 @@ class _BenchComponent extends \Px\Component\ReactiveComponent
 
     public function render(): VNode
     {
-        $style = 'width:' . $this->boxWidth . 'px;'
-               . 'height:' . $this->boxHeight . 'px;'
-               . 'color:' . $this->textColor . ';';
-        if ($this->hovered) {
-            $style .= 'background-color:#444444;';
-        } else {
-            $style .= 'background-color:#222222;';
+        // 生成 1000 个子节点，大部分是静态的
+        $children = [];
+        for ($i = 0; $i < $this->staticNodeCount; $i++) {
+            if ($i === $this->changedNodeIdx) {
+                // 变化的节点
+                $children[] = VNode::hKey('div',
+                    ['style' => 'width:' . $this->changedWidth . 'px;height:20px;color:' . $this->changedColor . ';'],
+                    $this->changedText,
+                    'item-' . $i
+                );
+            } else {
+                // 静态节点
+                $children[] = VNode::hKey('div',
+                    ['style' => 'width:50px;height:20px;color:#CCCCCC;background-color:#333333;'],
+                    'static',
+                    'item-' . $i
+                );
+            }
         }
-        if ($this->boxHeight > 200) {
-            $style .= 'font-size:18px;';
-        }
-
-        return VNode::h('div', ['style' => $style], [
-            VNode::h('span', ['style' => 'font-size:16px;'], $this->label),
-            VNode::h('div', ['style' => 'width:100%;height:1px;background:#666;']),
-            VNode::h('span', ['style' => 'font-size:14px;'], 'Display: ' . $this->displayValue),
-        ]);
+        return VNode::h('div', ['style' => 'width:900px;height:2000px;'], $children);
     }
 
     public function setBindValue(string $key, string $val): void {}
@@ -108,7 +111,7 @@ class _BenchComponent extends \Px\Component\ReactiveComponent
     public function dispatchClick(string $handler, ?string $arg = null): void {}
     public function dispatchKey(string $handler, string $action, int $keyCode, string $char): void {}
 
-    /** 公开的脏标记触发（供基准测试闭包调用） */
+    /** 公开的脏标记触发 */
     public function invalidate(): void
     {
         $this->markDirty();
@@ -120,7 +123,8 @@ function runOneFrame(
     RenderTreeManager $rtm,
     LayoutOrchestrator $lo,
     PaintPipeline $pipeline,
-): void {
+    ?array $prevCandidates = null,
+): ?RenderNode {
     // Step 1: 获取 VNode 树 (触发 render)
     $vnodeTree = $comp->getVNodeTree();
 
@@ -129,16 +133,21 @@ function runOneFrame(
     $styleRecalc->recalc($vnodeTree);
 
     // Step 3: VNode → RenderNode
+    // 传递上一帧的子节点列表作为 candidates，使 updateFromVNode 能按 key 跨帧匹配
     $rootRN = $rtm->updateFromVNode(
         $vnodeTree, null, $comp,
-        ['app' => $comp], null, 'app', '', []
+        ['app' => $comp], $prevCandidates, 'app', '', []
     );
+
+    if ($rootRN === null) return null;
 
     // Step 4: Layout
     $fragmentTree = $lo->layout($rootRN);
 
     // Step 5: Render (Fragment 路径)
     $pipeline->render($fragmentTree);
+
+    return $rootRN;
 }
 
 // ── 工具：运行场景并收集 PerfCounter ──────────────────
@@ -151,14 +160,15 @@ function runScenario(
     PaintPipeline $pipeline,
     callable $mutateFn,
 ): array {
-    // 跑一帧 warming
+    // 跑一帧 warming（无 candidates，首次布局）
     $mutateFn($comp, 0);
-    runOneFrame($comp, $rtm, $lo, $pipeline);
+    $prevRootRN = runOneFrame($comp, $rtm, $lo, $pipeline, null);
 
-    // 正式帧
+    // 正式帧（传递上一帧的子节点列表实现跨帧匹配）
     for ($i = 0; $i < $frames; $i++) {
+        $prevCandidates = $prevRootRN !== null ? [$prevRootRN] : null;
         $mutateFn($comp, $i);
-        runOneFrame($comp, $rtm, $lo, $pipeline);
+        $prevRootRN = runOneFrame($comp, $rtm, $lo, $pipeline, $prevCandidates);
     }
 
     $snapshot = PerfCounter::snapshot();
@@ -185,38 +195,51 @@ $rtm = new RenderTreeManager();
 $lo = new LayoutOrchestrator();
 $pipeline = new PaintPipeline($comp, new _BenchRenderContext());
 
-// ── 场景 A: 仅颜色变化 ──────────────────────────────
-echo "--- 场景 A: 仅颜色变化 ---\n";
+// ── 场景 A: 仅颜色变化（改变节点 0 的颜色）─────────────
+echo "--- 场景 A: 仅颜色变化（1000节点中1个节点变色）---\n";
 $allResults['A_color'] = runScenario('A', $frames, $comp, $rtm, $lo, $pipeline,
     function (_BenchComponent $c, int $i) {
-        $c->textColor = ($i % 2 === 0) ? '#FF0000' : '#00FF00';
+        $c->changedNodeIdx = 0;
+        $c->changedColor = ($i % 2 === 0) ? '#FF0000' : '#00FF00';
+        $c->changedWidth = 50;
+        $c->changedText = 'static';
         $c->invalidate();
     }
 );
 
-// ── 场景 B: 仅尺寸变化 ──────────────────────────────
-echo "--- 场景 B: 仅尺寸变化 ---\n";
+// ── 场景 B: 仅尺寸变化（改变节点 1 的宽度）─────────────
+echo "--- 场景 B: 仅尺寸变化（1000节点中1个节点变宽）---\n";
 $allResults['B_size'] = runScenario('B', $frames, $comp, $rtm, $lo, $pipeline,
     function (_BenchComponent $c, int $i) {
-        $c->boxWidth = 200 + ($i % 3) * 50;
+        $c->changedNodeIdx = 1;
+        $c->changedWidth = 60 + ($i % 5) * 10;
+        $c->changedColor = '#CCCCCC';
+        $c->changedText = 'static';
         $c->invalidate();
     }
 );
 
-// ── 场景 C: 悬停切换 ────────────────────────────────
-echo "--- 场景 C: 悬停切换 ---\n";
+// ── 场景 C: 悬停切换（节点 2 的背景色改变）────────────
+echo "--- 场景 C: 悬停切换（1000节点中1个节点hover）---\n";
 $allResults['C_hover'] = runScenario('C', $frames, $comp, $rtm, $lo, $pipeline,
     function (_BenchComponent $c, int $i) {
+        $c->changedNodeIdx = 2;
         $c->hovered = ($i % 2 === 0);
+        $c->changedColor = $c->hovered ? '#FF4444' : '#CCCCCC';
+        $c->changedWidth = 50;
+        $c->changedText = 'static';
         $c->invalidate();
     }
 );
 
-// ── 场景 D: 文本内容变化 ────────────────────────────
-echo "--- 场景 D: 文本内容变化 ---\n";
+// ── 场景 D: 文本内容变化（节点 3 的文本改变）───────────
+echo "--- 场景 D: 文本内容变化（1000节点中1个节点换文本）---\n";
 $allResults['D_text'] = runScenario('D', $frames, $comp, $rtm, $lo, $pipeline,
     function (_BenchComponent $c, int $i) {
-        $c->label = 'Item #' . ($i % 100);
+        $c->changedNodeIdx = 3;
+        $c->changedText = 'chg-' . ($i % 50);
+        $c->changedColor = '#CCCCCC';
+        $c->changedWidth = 50;
         $c->invalidate();
     }
 );

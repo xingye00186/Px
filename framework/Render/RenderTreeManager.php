@@ -607,17 +607,18 @@ class RenderTreeManager
                     $renderNode->paintDirty = false;
                     $renderNode->styleDirty = false;
                 } elseif ($oldStyle !== null) {
-                    // 检查是否有几何关键属性变化
+                    // 检查是否有几何关键属性变化（用 toExportArray 得到标量值）
                     $isGeometryChange = false;
+                    $oldDecl = $oldStyle->toExportArray();
                     $geoKeys = ['width','height','minWidth','maxWidth','minHeight','maxHeight',
                         'display','position','flex','flexDirection','flexWrap',
                         'alignItems','alignContent','justifyContent',
                         'boxSizing','overflow','overflowX','overflowY',
                         'padding','margin','borderWidth'];
                     foreach ($geoKeys as $k) {
-                        $oldV = $oldStyle->getRaw($k) ?? '';
-                        $newV = $computedStyle->getRaw($k) ?? '';
-                        if ($oldV !== $newV && !(is_object($oldV) && is_object($newV) && (string)$oldV === (string)$newV)) {
+                        $oldV = $oldDecl[$k] ?? null;
+                        $newV = $resolvedStyle[$k] ?? null;
+                        if ($oldV !== $newV) {
                             $isGeometryChange = true;
                             break;
                         }
