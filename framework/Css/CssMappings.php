@@ -370,6 +370,7 @@ class CssMappings
         'background-image'     => ['key' => 'backgroundImage', 'parser' => 'Px\Css\CssValueParser::parseBackgroundImage', 'default' => ''],
         'transform'            => ['key' => 'transform',       'parser' => 'Px\\Rendering\\CssValueParser::parseTransform', 'default' => ''],
         'pointer-events'       => ['key' => 'pointerEvents',   'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => ''],
+        'will-change'          => ['key' => 'willChange',      'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => ''],
         'direction'            => ['key' => 'direction',        'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'ltr'],
         'unicode-bidi'         => ['key' => 'unicodeBidi',     'parser' => 'Px\Css\CssValueParser::parseIdent',  'default' => 'normal'],
         'text-shadow'          => ['key' => 'textShadow',       'parser' => 'Px\Css\CssValueParser::parseIdent', 'default' => ''],

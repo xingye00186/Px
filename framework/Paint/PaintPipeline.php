@@ -21,6 +21,14 @@ class PaintPipeline
     private array $scrollCtxStack = [];
     private array $componentStack = [];
 
+    /** @var array<int, array> LayerCache: spl_object_id(frag) => drawElement[] */
+    private array $layerCache = [];
+
+    public function clearLayerCache(): void
+    {
+        $this->layerCache = [];
+    }
+
     public function __construct(ReactiveComponentInterface $component, RenderContext $render_ctx)
     {
         $this->component = $component;
@@ -99,6 +107,20 @@ class PaintPipeline
         }
         $node->paintDirty = false;
 
+        // 检测 LayerCache（will-change:transform）— 缓存子树绘制结果
+        $canCache = ($frag->style?->willChange?->value ?? '') === 'transform';
+        $fragId = spl_object_id($frag);
+        if ($canCache && !$node->paintDirty && isset($this->layerCache[$fragId])) {
+            // 缓存命中：直接复用缓存的 drawElement 数组
+            foreach ($this->layerCache[$fragId] as $cachedEl) {
+                $layer = $cachedEl['layer'] ?? $frag->layer;
+                if ($layer > $maxLayer) $maxLayer = $layer;
+                if (!isset($elementsByLayer[$layer])) $elementsByLayer[$layer] = [];
+                $elementsByLayer[$layer][] = $cachedEl;
+            }
+            return;
+        }
+
         $el = $this->fragmentToElement($frag);
         if ($el !== null) {
             $layer = $frag->layer;
@@ -107,6 +129,19 @@ class PaintPipeline
                 $elementsByLayer[$layer] = [];
             }
             $elementsByLayer[$layer][] = $el;
+        }
+
+        // 若该节点需要缓存，递归收集并缓存子节点结果
+        if ($canCache) {
+            $childElements = [];
+            // 收集子节点（递归调用但不缓存子层）
+            $subLayer = 0;
+            foreach ($frag->children as $childFrag) {
+                $this->collectElementsFromFragment($childFrag, $elementsByLayer, $maxLayer);
+            }
+            // 缓存当前节点对应 layer 的所有元素
+            $this->layerCache[$fragId] = $elementsByLayer[$layer] ?? [];
+            return;  // 子节点已通过上面的递归收集，不再进入下方循环
         }
 
         // Scroll clip
