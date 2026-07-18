@@ -257,15 +257,17 @@ class Application
                 }
 
                 // ── :hover 伪类样式追踪 ──
-                // 当 hover 节点变化时，更新新旧节点的 hovered 标志并触发渲染
+                // 当 hover 节点变化时，更新新旧节点的 hovered 标志、标记脏位、触发渲染
                 if ($hoverNode !== $this->hoveredNode) {
-                    // 清除旧节点的 hover 状态（通过 InteractionState，不直接写 RenderNode）
+                    // 清除旧节点的 hover 状态
                     if ($this->hoveredNode !== null) {
                         $this->getInteractionState($this->hoveredNode)->hovered = false;
+                        $this->hoveredNode->markStyleDirty();  // 使 cachedFragment 失效
                     }
                     // 设置新节点的 hover 状态
                     if ($hoverNode !== null) {
                         $this->getInteractionState($hoverNode)->hovered = true;
+                        $hoverNode->markStyleDirty();          // 使 cachedFragment 失效
                     }
                     $this->hoveredNode = $hoverNode;
                     // 请求渲染以应用 :hover 样式变化

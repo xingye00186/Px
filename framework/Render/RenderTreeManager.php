@@ -568,6 +568,13 @@ class RenderTreeManager
                 );
             }
             $resolvedStyle = $computedStyle->toExportArray();
+
+            // 合并 HTML align 属性到 textAlign（CSS text-align 优先）
+            if (($vnode->props['align'] ?? '') !== '' && empty($resolvedStyle['textAlign'])) {
+                $resolvedStyle['textAlign'] = $vnode->props['align'];
+                $computedStyle = new ComputedStyle($resolvedStyle);
+            }
+
             $renderNode = null;
 
             if ($candidates !== null) {
@@ -718,6 +725,18 @@ class RenderTreeManager
                 $renderNode->content = (string)$vnode->children;
             } else {
                 $childVNodes = VNode::childrenToArray($vnode->children);
+                // 如果无子 VNode，从 :bind / v-model 解析文本内容
+                if (empty($childVNodes) && $vnode->props !== null) {
+                    $component = $componentByGroupId[$currentGroupId] ?? $root;
+                    $bindKey = $vnode->props[':bind'] ?? $vnode->props['bind'] ?? '';
+                    if ($bindKey !== '') {
+                        $renderNode->content = $component->getBindValue($bindKey);
+                    }
+                    $vModel = $vnode->props['v-model'] ?? '';
+                    if ($vModel !== '') {
+                        $renderNode->content = $component->getBindValue($vModel);
+                    }
+                }
                 $consumed = [];
 
                 foreach ($childVNodes as $i => $childVNode) {

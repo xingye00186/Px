@@ -461,7 +461,7 @@ class PaintPipeline
             $textColor = $rawTextColor !== null ? $rawTextColor : 0xFFFFFF;
             $bold = $pseudoOverrides['bold'] ?? $cs?->bold ?? false;
             $rawTextAlign = $cs?->getRaw('textAlign');
-            $align = $props['align'] ?? ($pseudoOverrides['textAlign'] ?? ($rawTextAlign ? (is_string($rawTextAlign) ? $rawTextAlign : ($cs?->textAlign?->value ?? 'start')) : 'start'));
+            $align = $pseudoOverrides['textAlign'] ?? ($rawTextAlign ? (is_string($rawTextAlign) ? $rawTextAlign : ($cs?->textAlign?->value ?? '')) : ($cs?->textAlign?->value ?? 'start'));
             if ($align === 'start' && $rawTextAlign === null && $node->parent !== null) {
                 $parentAlign = $node->parent->computedStyle?->textAlign?->value ?? null;
                 if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {
@@ -509,14 +509,8 @@ class PaintPipeline
             $rawOverflow = $cs?->overflow?->value ?? 'visible';
             $elOverflow = $pseudoOverrides['overflow'] ?? $rawOverflow;
             $hasOverflow = ($elOverflow === 'hidden' || $elOverflow === 'clip');
-            $rawOverflowWrap = $cs?->overflowWrap ?? 'normal';
+            $rawOverflowWrap = $cs->overflowWrap ?? 'normal';
             $overflowWrap = $pseudoOverrides['overflowWrap'] ?? ($rawOverflowWrap !== '' ? $rawOverflowWrap : 'normal');
-            if ($overflowWrap === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
-                $rawStyleVNode = $node->sourceVNode->props['style'] ?? '';
-                if ($rawStyleVNode !== '' && (stripos($rawStyleVNode, 'overflow-wrap:break-word') !== false || stripos($rawStyleVNode, 'word-wrap:break-word') !== false)) {
-                    $overflowWrap = 'break-word';
-                }
-            }
             $isBreakWord = ($overflowWrap === 'break-word' || $overflowWrap === 'anywhere');
             $rawTextOverflow = $cs?->getRaw('textOverflow') ?? 'clip';
             $textOverflow = $pseudoOverrides['textOverflow'] ?? (is_string($rawTextOverflow) ? $rawTextOverflow : 'clip');
@@ -808,7 +802,7 @@ class PaintPipeline
         if ($color === null) $color = 0x000000;
         $bold     = $cs?->bold ?? false;
         $rawTextAlign = $cs?->getRaw('textAlign');
-        $align    = $props['align'] ?? ($rawTextAlign ? (is_string($rawTextAlign) ? $rawTextAlign : ($cs?->textAlign?->value ?? 'start')) : 'start');
+        $align    = $pseudoOverrides['textAlign'] ?? ($rawTextAlign ? (is_string($rawTextAlign) ? $rawTextAlign : ($cs?->textAlign?->value ?? '')) : ($cs?->textAlign?->value ?? 'start'));
         if ($align === 'start' && $rawTextAlign === null && $node->parent !== null) {
             $parentAlign = $node->parent->computedStyle?->textAlign?->value ?? null;
             if ($parentAlign !== null && $parentAlign !== 'start' && $parentAlign !== '') {
@@ -821,14 +815,6 @@ class PaintPipeline
         $text = '';
         if ($node->content !== null) {
             $text = (string)$node->content;
-        }
-        $bindKey = $props[':bind'] ?? $props['bind'] ?? '';
-        if ($bindKey !== '') {
-            $text = $this->currentComponent()->getBindValue($bindKey);
-        }
-        $vModel = $props['v-model'] ?? '';
-        if ($vModel !== '') {
-            $text = $this->currentComponent()->getBindValue($vModel);
         }
 
         if ($text === '') return null;
@@ -874,14 +860,8 @@ class PaintPipeline
                 case 'text-bottom':$vaY = $textHeight - $fontSize; break;
             }
         }
-        $rawOverflowWrap = $cs?->overflowWrap ?? 'normal';
+        $rawOverflowWrap = $cs->overflowWrap ?? 'normal';
         $overflowWrap = $rawOverflowWrap !== '' ? $rawOverflowWrap : 'normal';
-        if ($overflowWrap === 'normal' && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
-            $rawStyle = $node->sourceVNode->props['style'] ?? '';
-            if ($rawStyle !== '' && (stripos($rawStyle, 'overflow-wrap:break-word') !== false || stripos($rawStyle, 'word-wrap:break-word') !== false)) {
-                $overflowWrap = 'break-word';
-            }
-        }
         $rawTextOverflow = $cs?->getRaw('textOverflow') ?? 'clip';
         $textOverflow = is_string($rawTextOverflow) ? $rawTextOverflow : 'clip';
         $rawLineClamp = $cs?->getRaw('webkitLineClamp') ?? 0;
@@ -998,10 +978,6 @@ class PaintPipeline
         $label = '';
         if ($node->content !== null) {
             $label = (string)$node->content;
-        }
-        $bindKey = $props[':bind'] ?? $props['bind'] ?? '';
-        if ($bindKey !== '') {
-            $label = $this->currentComponent()->getBindValue($bindKey);
         }
         if ($label === '' && isset($props['@click'])) {
             $label = $props['label'] ?? '';
@@ -1203,7 +1179,7 @@ class PaintPipeline
         $bindKey = $props['v-model'] ?? '';
         $text = '';
         if ($bindKey !== '') {
-            $text = $this->currentComponent()->getBindValue($bindKey);
+            $text = (string)$node->content;
         }
         $placeholder = $props['placeholder'] ?? '';
         $showPlaceholder = ($text === '' && $placeholder !== '');
