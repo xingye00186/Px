@@ -48,6 +48,11 @@ class RenderNode
     public int $cachedH = 0;
     public int $cachedLayer = 0;
 
+    /** 缓存完整 Fragment 树（对标 Blink NGBlockNode） */
+    public ?\Px\Layout\PhysicalFragment $cachedFragment = null;
+    public ?string $cachedConstraintSignature = null;
+    public int $layoutCacheVersion = 0;
+
     // ── 渲染数据（由布局引擎和渲染管线维护）──
 
     /** @var array|null text rendering info (VNodeRenderer 缓存) */

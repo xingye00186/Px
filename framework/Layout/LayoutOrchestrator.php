@@ -104,17 +104,39 @@ class LayoutOrchestrator implements ChildLayoutProvider
 
     private function mainLayout(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0, int $relayoutDepth = 0): PhysicalFragment
     {
-        // ── 洁净早退（基于缓存坐标）──
-        // 几何不变时跳过算法，直接复用上次缓存坐标。
-        // 首次布局（cachedW=0）走正常路径，后续帧受益。
+        // ── 洁净早退（基于完整 cachedFragment + 约束空间签名）──
+        if (!$node->layoutDirty && $node->cachedFragment !== null) {
+            $currentSig = $this->computeConstraintSignature($space);
+            if ($currentSig === $node->cachedConstraintSignature) {
+                if ($node->styleDirty) {
+                    // 仅样式变化：复用缓存的 Fragment 子树，替换根节点样式快照
+                    $old = $node->cachedFragment;
+                    return new \Px\Layout\PhysicalFragment(
+                        $old->x, $old->y, $old->w, $old->h,
+                        $old->visualW, $old->visualH, $old->layer,
+                        $old->contentWidth, $old->contentHeight,
+                        $node->computedStyle,          // 新样式快照
+                        $old->children,                // 复用完整子 Fragment 树
+                        $node,
+                        $old->scrollTop, $old->scrollLeft, $old->isScrollContainer,
+                        $node->type, $node->content, $node->dataset, $node->pseudoStyles
+                    );
+                }
+                Diag::log(2, 'fragment:cache-hit', ['type' => $node->type, 'w' => $node->cachedFragment->w]);
+                return $node->cachedFragment;  // 完全洁净：零分配
+            }
+        }
+        // 不满足早退条件：回退到 cachedW（旧路径，逐步迁移中）
         if (!$node->layoutDirty && $node->cachedW > 0) {
-            Diag::log(2, 'layout:skip', ['type' => $node->type, 'w' => $node->cachedW, 'h' => $node->cachedH]);
+            Diag::log(2, 'layout:skip-w', ['type' => $node->type]);
             return new \Px\Layout\PhysicalFragment(
                 $node->cachedX, $node->cachedY,
                 $node->cachedW, $node->cachedH,
                 $node->cachedW, $node->cachedH,
                 $node->cachedLayer, 0, 0,
-                $node->computedStyle, [], $node
+                $node->computedStyle, [], $node,
+                0, 0, false,
+                $node->type, $node->content, $node->dataset, $node->pseudoStyles
             );
         }
         $style = $node->computedStyle;
@@ -138,7 +160,8 @@ class LayoutOrchestrator implements ChildLayoutProvider
         $isOOF = ($position === 'absolute' || $position === 'fixed');
 
         if ($display === 'none') {
-            return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $style, array(), $node);
+            return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $style, array(), $node, 0, 0, false,
+                $node->type, $node->content, $node->dataset, $node->pseudoStyles);
         }
 
         // ─── Phase A: 子项 intrinsic 收集 ───
@@ -192,11 +215,18 @@ class LayoutOrchestrator implements ChildLayoutProvider
             $h = $cs?->height?->toPx() ?? 0;
             if ($cs?->width?->isPercent()) $w = $cs->width->resolveInContext($space->getContentWidth());
             if ($cs?->height?->isPercent()) $h = $cs->height->resolveInContext($space->getContentHeight());
-            return new PhysicalFragment(
+            $frag = new PhysicalFragment(
                 0, 0, max(0, $w), max(0, $h),
                 0, 0, $nodeLayer, 0, 0,
-                $style, $childFragments, $node,
+                $style, $childFragments, $node, 0, 0, false,
+                $node->type, $node->content, $node->dataset, $node->pseudoStyles
             );
+            $node->cachedX = 0;
+            $node->cachedY = 0;
+            $node->cachedW = (int)$w;
+            $node->cachedH = (int)$h;
+            $node->cachedLayer = $nodeLayer;
+            return $frag;
         }
 
         // 正常流：选择 Algorithm 执行布局
@@ -213,7 +243,9 @@ class LayoutOrchestrator implements ChildLayoutProvider
         $cached = $this->cache->find($ckey);
         if ($cached !== null) {
             Diag::log(2, 'cache:hit', ['type' => $node->type, 'w' => $cached->w, 'h' => $cached->h]);
-            return new \Px\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node);
+            return new \Px\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node,
+                (int)$cached->getScrollTop(), (int)$cached->getScrollLeft(), $cached->getIsScrollContainer(),
+                $node->type, $node->content, $node->dataset, $node->pseudoStyles);
         }
 
         Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->getContentWidth(), 'ch' => $space->getContentHeight()]);
@@ -329,7 +361,28 @@ class LayoutOrchestrator implements ChildLayoutProvider
         $node->cachedH = (int)$algoFrag->getH();
         $node->cachedLayer = (int)$algoFrag->getLayer();
 
+        // 缓存完整 Fragment 树 + 约束空间签名（对标 Blink NGBlockNode）
+        $node->cachedFragment = $algoFrag;
+        $node->cachedConstraintSignature = $this->computeConstraintSignature($space);
+        $node->layoutCacheVersion++;
+
         return $algoFrag;
+    }
+
+    /**
+     * 计算 ConstraintSpace 签名，用于判断缓存有效性。
+     */
+    private function computeConstraintSignature(ConstraintSpace $space): string
+    {
+        return implode('|', [
+            $space->getContainerWidth(), $space->getContainerHeight(),
+            $space->getContentWidth(), $space->getContentHeight(),
+            $space->getPercentageWidth(), $space->getPercentageHeight(),
+            $space->getPaddingTop(), $space->getPaddingRight(),
+            $space->getPaddingBottom(), $space->getPaddingLeft(),
+            $space->getBfcOffsetX(), $space->getBfcOffsetY(),
+            $space->getSpaceType(),
+        ]);
     }
 
     /**

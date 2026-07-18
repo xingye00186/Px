@@ -361,6 +361,8 @@ class RenderTreeManager
         // 5. 断开引用（帮助 GC）
         $rn->sourceVNode = null;
         $rn->computedStyle = null;
+        $rn->cachedFragment = null;
+        $rn->cachedConstraintSignature = null;
     }
 
     /**
@@ -634,6 +636,9 @@ class RenderTreeManager
                         $renderNode->layoutDirty = true;
                         $renderNode->paintDirty = true;
                         $renderNode->styleDirty = false;
+                        $renderNode->cachedFragment = null;
+                        $renderNode->cachedConstraintSignature = null;
+                        $renderNode->layoutCacheVersion++;
                     } else {
                         // 仅样式/内容变化 → 跳过布局
                         $renderNode->layoutDirty = false;

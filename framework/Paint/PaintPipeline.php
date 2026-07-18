@@ -135,15 +135,29 @@ class PaintPipeline
      */
     private function fragmentToElement(\Px\Layout\PhysicalFragment $frag): ?array
     {
-        // 简化实现：通过 sourceNode 委托到现有 renderNodeToElement
-        // 后续可改为直接从 Fragment 构造元素数组
+        // 从 Fragment 自有字段构建 element，不再通过 sourceNode 回读
+        // 但有少量属性（src/alt/placeholder/container-w）尚未 resolve 到 Fragment，
+        // 暂时通过 sourceNode->sourceVNode->props 桥接（后续逐项修复后移除）
         $node = $frag->sourceNode;
         if ($node === null) return null;
 
-        $el = $this->renderNodeToElement($node);
+        // 用 Fragment 字段覆盖 adapter 的几何/样式/内容
+        $adapter = $node;
+        $adapter->x = $frag->x;
+        $adapter->y = $frag->y;
+        $adapter->w = $frag->w;
+        $adapter->h = $frag->h;
+        $adapter->visualW = $frag->visualW;
+        $adapter->visualH = $frag->visualH;
+        $adapter->layer = $frag->layer;
+        $adapter->computedStyle = $frag->style;
+        $adapter->content = $frag->content;
+        $adapter->pseudoStyles = $frag->pseudoStyles;
+
+        $el = $this->renderNodeToElement($adapter);
         if ($el === null) return null;
 
-        // 用 Fragment 的绝对坐标覆盖
+        // 用 Fragment 的绝对坐标覆盖（确保几何权威）
         $el['x'] = $frag->x;
         $el['y'] = $frag->y;
         $el['w'] = $frag->w;
@@ -151,7 +165,6 @@ class PaintPipeline
         $el['visualW'] = $frag->visualW;
         $el['visualH'] = $frag->visualH;
 
-        // 移除 renderOffset（Fragment 坐标已经是绝对的）
         unset($el['renderOffsetX'], $el['renderOffsetY']);
 
         return $el;
