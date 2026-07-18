@@ -97,21 +97,11 @@ class PaintPipeline
         $node = $frag->sourceNode;
         if ($node === null) return;
 
-        // 新增：paintDirty 子树跳过 — 非滚动容器的洁净子树无需遍历
-        // 注意：滚动容器的可见性子集变化不依赖 paintDirty
-        if (!$node->paintDirty && !$frag->isScrollContainer) {
-            // 但需确保该节点的 layer 占位（高 layer 的洁净节点可能遮盖下方脏节点）
-            $layer = $frag->layer;
-            if ($layer > $maxLayer) $maxLayer = $layer;
-            return;
-        }
-        $node->paintDirty = false;
-
-        // 检测 LayerCache（will-change:transform）— 缓存子树绘制结果
-        $canCache = ($frag->style?->willChange?->value ?? '') === 'transform';
+        $isCacheable = ($frag->style?->willChange?->value ?? '') === 'transform';
         $fragId = spl_object_id($frag);
-        if ($canCache && !$node->paintDirty && isset($this->layerCache[$fragId])) {
-            // 缓存命中：直接复用缓存的 drawElement 数组
+
+        // 路径 A: LayerCache 命中 — 可缓存且洁净的子树直接复用绘制结果
+        if ($isCacheable && !$node->paintDirty && isset($this->layerCache[$fragId])) {
             foreach ($this->layerCache[$fragId] as $cachedEl) {
                 $layer = $cachedEl['layer'] ?? $frag->layer;
                 if ($layer > $maxLayer) $maxLayer = $layer;
@@ -120,6 +110,17 @@ class PaintPipeline
             }
             return;
         }
+
+        // 路径 B: paintDirty 子树跳过 — 非缓存、非滚动容器的洁净子树无需遍历
+        if (!$node->paintDirty && !$frag->isScrollContainer && !$isCacheable) {
+            $layer = $frag->layer;
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            return;
+        }
+
+        // 路径 C: 正常收集（脏节点或缓存首次建立）
+        $wasPaintDirty = $node->paintDirty;
+        $node->paintDirty = false;
 
         $el = $this->fragmentToElement($frag);
         if ($el !== null) {
@@ -131,17 +132,13 @@ class PaintPipeline
             $elementsByLayer[$layer][] = $el;
         }
 
-        // 若该节点需要缓存，递归收集并缓存子节点结果
-        if ($canCache) {
-            $childElements = [];
-            // 收集子节点（递归调用但不缓存子层）
-            $subLayer = 0;
+        // 若可缓存且脏（首次收集或失效后重建），递归收集子节点并缓存
+        if ($isCacheable && $wasPaintDirty) {
             foreach ($frag->children as $childFrag) {
                 $this->collectElementsFromFragment($childFrag, $elementsByLayer, $maxLayer);
             }
-            // 缓存当前节点对应 layer 的所有元素
             $this->layerCache[$fragId] = $elementsByLayer[$layer] ?? [];
-            return;  // 子节点已通过上面的递归收集，不再进入下方循环
+            return;
         }
 
         // Scroll clip
