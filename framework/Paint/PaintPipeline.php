@@ -851,6 +851,7 @@ class PaintPipeline
 
     private function makeSpanElement(RenderNode $node, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
+        $pseudoOverrides = self::extractPseudoOverrides($node);
         $cs = $node->computedStyle;
         $fontSize = $cs?->fontSize ?? 14;
         $rawColor = $cs?->getRaw('fg') ?? $cs?->getRaw('color') ?? null;

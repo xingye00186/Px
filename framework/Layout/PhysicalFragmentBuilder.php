@@ -75,14 +75,14 @@ class PhysicalFragmentBuilder
         $this->_style = $f->style;
         $this->_children = $f->children;
         $this->_sourceNode = $f->sourceNode ?? null;
-        $this->_type = $f->type;
+        $this->_type = (string)$f->type;
         $this->_content = $f->content;
-        $this->_dataset = $f->dataset;
-        $this->_pseudoStyles = $f->pseudoStyles;
-        $this->_availableWidth = $f->availableWidth;
-        $this->_scrollTop = $f->scrollTop;
-        $this->_scrollLeft = $f->scrollLeft;
-        $this->_isScrollContainer = $f->isScrollContainer;
+        $this->_dataset = (array)$f->dataset;
+        $this->_pseudoStyles = (array)$f->pseudoStyles;
+        $this->_availableWidth = (int)$f->availableWidth;
+        $this->_scrollTop = (int)$f->scrollTop;
+        $this->_scrollLeft = (int)$f->scrollLeft;
+        $this->_isScrollContainer = (bool)$f->isScrollContainer;
         return $this;
     }
 
