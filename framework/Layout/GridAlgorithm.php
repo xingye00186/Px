@@ -233,7 +233,10 @@ class GridAlgorithm extends LayoutAlgorithm
                 }
                 $children = $adjusted;
             }
-            $mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), $gw, $gh, (int)($gri->style?->visualWidth($gw) ?? $gw), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, 0, 0, $gri->style, $children, null);
+            $firstChild = count($children) > 0 ? $children[0] : null;
+            $mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), $gw, $gh, (int)($gri->style?->visualWidth($gw) ?? $gw), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, 0, 0, $gri->style, $children, $firstChild?->sourceNode,
+                0, 0, false,
+                $firstChild?->type ?? '', $firstChild?->content, $firstChild?->dataset ?? [], $firstChild?->pseudoStyles ?? []);
             $giIdx++;
         }
 

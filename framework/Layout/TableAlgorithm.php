@@ -93,7 +93,10 @@ class TableAlgorithm extends LayoutAlgorithm
             $cf->scrollTop, $cf->scrollLeft, $cf->isScrollContainer,
             $cf->type, $cf->content, $cf->dataset, $cf->pseudoStyles);
                     }
-                    $stackedChildren[] = new PhysicalFragment((int)$x, (int)$currentY, (int)$w, (int)$lineH, null, null, 0, (int)$w, (int)$lineH, $crStyle, $normCells, null);
+$firstNorm = count($normCells) > 0 ? $normCells[0] : null;
+                    $stackedChildren[] = new PhysicalFragment((int)$x, (int)$currentY, (int)$w, (int)$lineH, null, null, 0, (int)$w, (int)$lineH, $crStyle, $normCells, $firstNorm?->sourceNode,
+                        0, 0, false,
+                        $firstNorm?->type ?? '', $firstNorm?->content ?? null, $firstNorm?->dataset ?? [], $firstNorm?->pseudoStyles ?? []);
                     $currentY += $lineH;
                 } else {
                     $stackedChildren[] = $cr;
