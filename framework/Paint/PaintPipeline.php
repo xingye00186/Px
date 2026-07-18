@@ -13,47 +13,13 @@ use Px\Component\ReactiveComponent;
 use Px\Css\CssColor;
 use Px\Layout\TextOverflowProcessor;
 
-class VNodeRenderer
+class PaintPipeline
 {
     private ReactiveComponentInterface $component;
     private RenderContext $render_ctx;
     private int $currentPaintFrame = 0;
-    private array $paintFlags = []; // spl_object_id → lastPaintFrame
     private array $scrollCtxStack = [];
     private array $componentStack = [];
-    private array $renderOffsetsX = [];
-    private array $renderOffsetsY = [];
-
-    private function setRenderOffsetX(RenderNode $node, int $value): void
-    {
-        $this->renderOffsetsX[spl_object_id($node)] = $value;
-    }
-
-    private function setRenderOffsetY(RenderNode $node, int $value): void
-    {
-        $this->renderOffsetsY[spl_object_id($node)] = $value;
-    }
-
-    private function getRenderOffsetX(RenderNode $node): int
-    {
-        return $this->renderOffsetsX[spl_object_id($node)] ?? 0;
-    }
-
-    private function getRenderOffsetY(RenderNode $node): int
-    {
-        return $this->renderOffsetsY[spl_object_id($node)] ?? 0;
-    }
-
-    /** Paint frame tracking (替代 RenderNode.lastPaintFrame 外置) */
-    private function needsPaint(RenderNode $node, int $frame): bool
-    {
-        return ($this->paintFlags[spl_object_id($node)] ?? 0) !== $frame;
-    }
-
-    private function markPainted(RenderNode $node, int $frame): void
-    {
-        $this->paintFlags[spl_object_id($node)] = $frame;
-    }
 
     public function __construct(ReactiveComponentInterface $component, RenderContext $render_ctx)
     {
@@ -76,42 +42,20 @@ class VNodeRenderer
         $vw = ($node->visualW > 0 ? $node->visualW : $node->w);
         $vh = ($node->visualH > 0 ? $node->visualH : $node->h);
         return [
-            'x' => (int)($node->x ?? 0) + $this->getRenderOffsetX($node) + (int)($bl ?? 0),
-            'y' => $node->y + $this->getRenderOffsetY($node) + $bt,
+            'x' => (int)($node->x ?? 0) + (int)($bl ?? 0),
+            'y' => $node->y + $bt,
             'w' => max(0, $vw - $bl - $br),
             'h' => max(0, $vh - $bt - $bb),
         ];
     }
 
-    public function render(RenderNode $root): void
-    {
-        \Px\Core\PerfCounter::start('render_collect');
-        $this->render_ctx->beginFrame();
-        if ($this->currentPaintFrame === PHP_INT_MAX) {
-            $this->currentPaintFrame = 1;
-            $this->resetAllPaintFlags($root);
-        } else {
-            $this->currentPaintFrame++;
-        }
-        $elementsByLayer = [];
-        $maxLayer = 0;
-        $this->collectElements($root, $elementsByLayer, $maxLayer);
-        Diag::log(1, 'vnode:collect', ['elements' => array_sum(array_map('count', $elementsByLayer)), 'layers' => $maxLayer + 1]);
-        for ($l = 0; $l <= $maxLayer; $l++) {
-            $layerElements = $elementsByLayer[$l] ?? [];
-            foreach ($layerElements as $el) {
-                $this->render_ctx->drawElement($el);
-            }
-        }
-        $this->render_ctx->endFrame();
-        \Px\Core\PerfCounter::end('render_collect');
-    }
+
 
     /**
-     * Phase 3.5: 从 Fragment 树渲染（替代 RenderNode 树）。
-     * Fragment 自带 ComputedStyle 快照和绝对坐标，不需要 renderOffsetX/Y。
+     * 渲染管线主线：从 Fragment 树收集元素，调用 RenderContext 绘制。
+     * Fragment 自带绝对坐标和 ComputedStyle 快照，消费方无需回读 RenderNode。
      */
-    public function renderFromFragment(\Px\Layout\PhysicalFragment $root): void
+    public function render(\Px\Layout\PhysicalFragment $root): void
     {
         \Px\Core\PerfCounter::start('render_collect');
         $this->render_ctx->beginFrame();
@@ -134,7 +78,7 @@ class VNodeRenderer
     }
 
     /**
-     * Phase 3.5: 从 Fragment 树收集元素（替代 collectElements）。
+     * 从 Fragment 树收集元素。
      * Fragment 坐标是绝对的，无需 accumOffsetX/Y。
      */
     private function collectElementsFromFragment(
@@ -186,8 +130,8 @@ class VNodeRenderer
     }
 
     /**
-     * Phase 3.5: 将 Fragment 转为 drawElement 数组。
-     * 替代 renderNodeToElement，但使用 Fragment 自带的几何和样式。
+     * 将 Fragment 转为 drawElement 数组。
+     * 使用 Fragment 自带的绝对几何覆盖 renderNodeToElement 的坐标。
      */
     private function fragmentToElement(\Px\Layout\PhysicalFragment $frag): ?array
     {
@@ -213,147 +157,7 @@ class VNodeRenderer
         return $el;
     }
 
-    private function collectElements(RenderNode $node, array &$elementsByLayer, int &$maxLayer, int $accumOffsetX = 0, int $accumOffsetY = 0): void
-    {
-        $isFixed = ($node->computedStyle?->position?->value ?? '') === 'fixed';
-        $this->setRenderOffsetX($node, $isFixed ? 0 : $accumOffsetX);
-        $this->setRenderOffsetY($node, $isFixed ? 0 : $accumOffsetY);
-        if (!$this->needsPaint($node, $this->currentPaintFrame)) {
-            $childOffsetX = $isFixed ? 0 : $accumOffsetX;
-            $childOffsetY = $isFixed ? 0 : $accumOffsetY;
-            if (!$isFixed && (bool)($node->isScrollContainer ?? false)) {
-                $childOffsetX -= (int)($node->scrollLeft ?? 0);
-                $childOffsetY -= (int)($node->scrollTop ?? 0);
-            }
-            foreach ($node->children as $child) {
-                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
-            }
-            return;
-        }
-        if ($node->type === '#root') {
-            $childOffsetX = $isFixed ? 0 : $accumOffsetX;
-            $childOffsetY = $isFixed ? 0 : $accumOffsetY;
-            if (!$isFixed && (bool)($node->isScrollContainer ?? false)) {
-                $childOffsetX -= (int)($node->scrollLeft ?? 0);
-                $childOffsetY -= (int)($node->scrollTop ?? 0);
-            }
-            foreach ($node->children as $child) {
-                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
-            }
-            return;
-        }
-        $el = $this->renderNodeToElement($node);
-        if ($el !== null) {
-            $layer = (int)($node->layer ?? 0);
-            if ($layer > $maxLayer) $maxLayer = $layer;
-            if (!isset($elementsByLayer[$layer])) {
-                $elementsByLayer[$layer] = [];
-            }
-            if (($el['type'] ?? '') === 'group' && isset($el['elements'])) {
-                foreach ($el['elements'] as $childEl) {
-                    $childLayer = $childEl['layer'] ?? $layer;
-                    if ($childLayer > $maxLayer) $maxLayer = $childLayer;
-                    if (!isset($elementsByLayer[$childLayer])) {
-                        $elementsByLayer[$childLayer] = [];
-                    }
-                    $elementsByLayer[$childLayer][] = $childEl;
-                }
-            } else {
-                $elementsByLayer[$layer][] = $el;
-            }
-        }
-        $pushedClip = false;
-        $isScrollNode = (bool)($node->isScrollContainer ?? false);
-        if ($isScrollNode) {
-            $clip = self::computePaddingBoxClip($node);
-            $this->scrollCtxStack[] = [
-                'x' => $clip['x'], 'y' => $clip['y'],
-                'w' => $clip['w'], 'h' => $clip['h'],
-                'scrollTop' => (int)($node->scrollTop ?? 0),
-                'scrollLeft' => (int)($node->scrollLeft ?? 0),
-                'overflowX' => $node->computedStyle?->overflowX?->value ?? $node->computedStyle?->overflow?->value ?? 'visible',
-                'overflowY' => $node->computedStyle?->overflowY?->value ?? $node->computedStyle?->overflow?->value ?? 'visible',
-                'layer' => $node->layer,
-            ];
-            $pushedClip = true;
-        } else {
-            $noX = $node->computedStyle?->overflowX?->value ?? $node->computedStyle?->overflow?->value ?? 'visible';
-            $noY = $node->computedStyle?->overflowY?->value ?? $node->computedStyle?->overflow?->value ?? 'visible';
-            if ($noX === 'hidden' || $noY === 'hidden') {
-                $pushedClip = true;
-            }
-        }
-        if ($pushedClip) {
-            $layer = (int)($node->layer ?? 0);
-            if ($layer > $maxLayer) $maxLayer = $layer;
-            if (!isset($elementsByLayer[$layer])) {
-                $elementsByLayer[$layer] = [];
-            }
-            $clip = self::computePaddingBoxClip($node);
-            $elementsByLayer[$layer][] = [
-                'type' => 'clip-push',
-                'x' => $clip['x'], 'y' => $clip['y'],
-                'w' => $clip['w'], 'h' => $clip['h'],
-                'layer' => $layer,
-            ];
-            if ($isScrollNode) {
-                $textLayer = $layer + 1;
-                if ($textLayer > $maxLayer) $maxLayer = $textLayer;
-                if (!isset($elementsByLayer[$textLayer])) {
-                    $elementsByLayer[$textLayer] = [];
-                }
-                $elementsByLayer[$textLayer][] = [
-                    'type' => 'clip-push',
-                    'x' => $clip['x'], 'y' => $clip['y'],
-                    'w' => $clip['w'], 'h' => $clip['h'],
-                    'layer' => $textLayer,
-                ];
-            }
-        }
-        $childOffsetX = $isFixed ? 0 : $accumOffsetX;
-        $childOffsetY = $isFixed ? 0 : $accumOffsetY;
-        if (!$isFixed && (bool)($node->isScrollContainer ?? false)) {
-            $childOffsetX -= (int)($node->scrollLeft ?? 0);
-            $childOffsetY -= (int)($node->scrollTop ?? 0);
 
-        }
-        if ($node->type !== 'button') {
-            foreach ($node->children as $child) {
-                $this->collectElements($child, $elementsByLayer, $maxLayer, $childOffsetX, $childOffsetY);
-            }
-        }
-        if ($pushedClip) {
-            if ($isScrollNode) {
-                array_pop($this->scrollCtxStack);
-            }
-            $layer = (int)($node->layer ?? 0);
-            if ($layer > $maxLayer) $maxLayer = $layer;
-            if (!isset($elementsByLayer[$layer])) {
-                $elementsByLayer[$layer] = [];
-            }
-            $elementsByLayer[$layer][] = [
-                'type' => 'clip-pop',
-                'layer' => $layer,
-            ];
-            if ($isScrollNode) {
-                $textLayer = $layer + 1;
-                if ($textLayer > $maxLayer) $maxLayer = $textLayer;
-                if (!isset($elementsByLayer[$textLayer])) {
-                    $elementsByLayer[$textLayer] = [];
-                }
-                $elementsByLayer[$textLayer][] = [
-                    'type' => 'clip-pop',
-                    'layer' => $textLayer,
-                ];
-            }
-            if ($isScrollNode) {
-                $scrollCtx = ['layer' => $node->layer];
-                // TODO: ScrollbarEmitter 尚未实现，暂不发出滚动条元素
-                // ScrollbarEmitter::emit($node, $scrollCtx, $elementsByLayer, $maxLayer);
-            }
-        }
-        $this->markPainted($node, $this->currentPaintFrame);
-    }
 
     private static function measureTextWidth(string $text, int $fontSize, bool $bold): int
     {
@@ -1441,14 +1245,7 @@ class VNodeRenderer
         ];
     }
 
-    private function resetAllPaintFlags(RenderNode $node): void
-    {
-        $this->paintFlags[spl_object_id($node)] = 0;
-        $node->layoutDirty = true;
-        foreach ($node->children as $child) {
-            $this->resetAllPaintFlags($child);
-        }
-    }
+
 
     private static function cssValueToRaw(mixed $v): mixed
     {

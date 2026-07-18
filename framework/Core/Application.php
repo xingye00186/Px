@@ -17,7 +17,7 @@ use Px\Text\TextBackendRegistry;
 use Px\Text\ResilientTextBackendProxy;
 use Px\Dom\VNode;
 use Px\Render\RenderNode;
-use Px\Paint\VNodeRenderer;
+use Px\Paint\PaintPipeline;
 use Px\Layout\LayoutOrchestrator;
 use Px\Css\StyleRecalcPass;
 use Px\Layout\PhysicalFragment;
@@ -44,13 +44,13 @@ use Px\Core\Config;
  * 渲染流程（重构后）：
  *   VNode 树重建 → RenderTreeManager::updateFromVNode（VNode → RenderNode + bind 值同步）
  *   → LayoutOrchestrator::layout（RenderNode → Fragment 坐标计算）
- *   → VNodeRenderer::render（RenderNode 树 → GDI 调用）
+ *   → PaintPipeline::render（Fragment 树 → GDI 调用）
  */
 class Application
 {
     private Platform $platform;
     private Scheduler $scheduler;
-    private ?VNodeRenderer $renderer = null;
+    private ?PaintPipeline $paintPipeline = null;
         private ?LayoutOrchestrator $layoutOrchestrator = null;
     private RenderTreeManager $renderTreeManager;
 
@@ -212,7 +212,7 @@ class Application
             $this->resolveComponentByGroupId(...),
             $this->renderTreeManager->findScrollContainerAt(...)
         );
-        // VNodeRenderer 依赖 RenderContext，在 initRenderer() 中初始化
+        // PaintPipeline 依赖 RenderContext，在 initRenderer() 中初始化
     }
 
     // ── 平台事件处理器 ─────────────────────────
@@ -402,7 +402,7 @@ class Application
 
         // 无 C++ 绑定（PHP-only 测试）：使用 defaultCtx，跳过后端选择
         if (!function_exists('vue_begin_paint')) {
-            $this->renderer = new VNodeRenderer($this->rootComponent, $defaultCtx);
+            $this->paintPipeline = new PaintPipeline($this->rootComponent, $defaultCtx);
             error_log('[DIAG] initRenderer: test mode, using defaultCtx');
             return;
         }
@@ -417,7 +417,7 @@ class Application
             $backend = $selector->select($hwnd, $w, $h);
         } catch (\Throwable $e) {
             error_log('[Application] initRenderer: backend selection threw: ' . $e->getMessage());
-            $this->renderer = new VNodeRenderer($this->rootComponent, new GdiRenderContext($hwnd));
+            $this->paintPipeline = new PaintPipeline($this->rootComponent, new GdiRenderContext($hwnd));
             return;
         }
         $this->selectedBackendName = $backend->getName();
@@ -429,7 +429,7 @@ class Application
         // Stage 4: 包一层 ResilientTextBackendProxy 支持文本引擎降级
         $renderCtx = new ResilientTextBackendProxy($baseCtx);
 
-        $this->renderer = new VNodeRenderer($this->rootComponent, $renderCtx);
+        $this->paintPipeline = new PaintPipeline($this->rootComponent, $renderCtx);
     }
 
     public function mount(ReactiveComponentInterface $root, string $appDir = ''): self
@@ -768,10 +768,8 @@ class Application
             $this->logScrollContainerStates('[DIAG] directRender AFTER');
         }
 
-        if ($fragmentTree !== null && method_exists($this->renderer, 'renderFromFragment')) {
-            $this->renderer->renderFromFragment($fragmentTree);
-        } else {
-            $this->renderer->render($root);
+        if ($fragmentTree !== null) {
+            $this->paintPipeline->render($fragmentTree);
         }
     }
 
@@ -904,8 +902,8 @@ class Application
      */
     public function saveScreenshot(string $path): void
     {
-        if ($this->renderer !== null && function_exists('sk_save_screenshot')) {
-            $this->renderer->getRenderContext()->saveScreenshot($path);
+        if ($this->paintPipeline !== null && function_exists('sk_save_screenshot')) {
+            $this->paintPipeline->getRenderContext()->saveScreenshot($path);
         }
     }
 
@@ -914,7 +912,7 @@ class Application
      *   1. 重建 VNode 树（含组件展开）
      *   2. RenderTreeManager::updateFromVNode 转换并同步 bind 值
      *   3. LayoutOrchestrator::layout 计算坐标
-     *   4. VNodeRenderer::render 生成 GDI 调用
+     *   4. PaintPipeline::render 生成 GDI 调用
      */
     public function render(): void
     {
@@ -976,13 +974,8 @@ class Application
         // 捕获 Fragment 快照供 dumpLayoutToFile 读取（与渲染使用同一 Fragment，保证一致性）
         $this->captureLayoutSnapshot($fragmentTree);
 
-        // VNodeRenderer 处理 RenderNode（利用 paintDirty 增量）
-        // 当 Orchestrator 路径提供了 Fragment 树时，使用 Fragment 渲染
-        if ($fragmentTree !== null && method_exists($this->renderer, 'renderFromFragment')) {
-            $this->renderer->renderFromFragment($fragmentTree);
-        } else {
-            $this->renderer->render($rootRenderNode);
-        }
+        // PaintPipeline 从 Fragment 树渲染（利用 paintDirty 增量）
+        $this->paintPipeline->render($fragmentTree);
     }
 
     /**
