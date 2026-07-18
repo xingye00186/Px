@@ -285,8 +285,8 @@ class PaintPipeline
         if (($node->computedStyle?->display?->value ?? '') === 'none') {
             return null;
         }
-        $x = (int)($node->x ?? 0) + $this->getRenderOffsetX($node);
-        $y = (int)($node->y ?? 0) + $this->getRenderOffsetY($node);
+        $x = (int)($node->x ?? 0);
+        $y = (int)($node->y ?? 0);
         $w = (int)($node->visualW ?? 0);
         $h = (int)($node->visualH ?? 0);
         $layer = (int)($node->layer ?? 0);
@@ -495,9 +495,9 @@ class PaintPipeline
                 $letterSpacing += $fontStretchExtra;
             }
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
-            $selfY = (int)($node->y ?? 0) + $this->getRenderOffsetY($node);
+            $selfY = (int)($node->y ?? 0);
             $selfH = (int)($node->visualH ?? 0);
-            $selfX = (int)($node->x ?? 0) + $this->getRenderOffsetX($node);
+            $selfX = (int)($node->x ?? 0);
             $selfW = (int)($node->visualW ?? 0);
             $pdL = $pseudoOverrides['paddingLeft'] ?? $cs?->padding?->left?->toPx() ?? 0;
             $pdT = $pseudoOverrides['paddingTop'] ?? $cs?->padding?->top?->toPx() ?? 0;

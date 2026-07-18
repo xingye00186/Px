@@ -4,6 +4,7 @@ namespace Px\Layout;
 
 use native_types;
 
+use Px\Core\PerfCounter;
 use Px\Layout\ConstraintSpace;
 use Px\Layout\PhysicalFragment;
 use Px\Core\Diag;
@@ -71,7 +72,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
      */
     public function layout(RenderNode $root): PhysicalFragment
     {
-        // 构建根约束空间
+        \Px\Core\PerfCounter::start('stage:layout');
         // 根容器尺寸来自视口（WINDOW_WIDTH/WINDOW_HEIGHT），而非 RenderNode 属性
         Diag::log(1, 'layout:enter', ['rootType' => $root->type, 'children' => count($root->children)]);
         $rootW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1600;
@@ -81,13 +82,16 @@ class LayoutOrchestrator implements ChildLayoutProvider
         // Step 1: mainLayout — 正常流布局
         $rootFragment = $this->mainLayout($root, $space);
         // Step 2: oofLayout — OOF 独立通行证
+        \Px\Core\PerfCounter::start('algo:OOF');
         $viewportW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 0;
         $viewportH = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 0;
         $rootFragment = $this->oofAlgorithm->processOutOfFlow(
             $rootFragment, $root, $viewportW, $viewportH
         );
+        \Px\Core\PerfCounter::end('algo:OOF');
 
         Diag::log(1, 'layout:exit', ['rootW' => $rootFragment->getW(), 'rootH' => $rootFragment->getH(), 'children' => count($rootFragment->children)]);
+        \Px\Core\PerfCounter::end('stage:layout');
         return $rootFragment;
     }
 
@@ -185,6 +189,8 @@ class LayoutOrchestrator implements ChildLayoutProvider
         // 正常流：选择 Algorithm 执行布局
         $algo = $this->selectAlgorithm($display, $style);
         Diag::log(2, 'process:node', ['type' => $node->type, 'display' => $display, 'pos' => $position, 'algo' => $algo !== null ? get_class($algo) : 'none']);
+        $algoName = $algo !== null ? (new \ReflectionClass($algo))->getShortName() : 'none';
+        \Px\Core\PerfCounter::start('algo:' . $algoName);
         $textContent = is_string($node->content) ? $node->content : '';
 
         // 查 LayoutCache — 约束空间不变时跳过算法
@@ -205,6 +211,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
             $childConstraints[] = $this->buildChildSpace($ch, $space, $style);
         }
         $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached, $childConstraints, $childIntrinsics);
+        \Px\Core\PerfCounter::end('algo:' . $algoName);
         Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->getX(), 'y' => $algoFrag->getY(), 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH(), 'algo' => get_class($algo)]);
 
         // ─── Phase C: flex/grid 子项重布局（最多 self::MAX_RELAYOUT_ITERATIONS 轮）───

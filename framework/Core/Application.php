@@ -916,6 +916,7 @@ class Application
      */
     public function render(): void
     {
+        \Px\Core\PerfCounter::start('stage:full_render');
         $this->debugFrameNumber++;
         $frame = $this->debugFrameNumber;
 
@@ -976,6 +977,7 @@ class Application
 
         // PaintPipeline 从 Fragment 树渲染（利用 paintDirty 增量）
         $this->paintPipeline->render($fragmentTree);
+        \Px\Core\PerfCounter::end('stage:full_render');
     }
 
     /**
