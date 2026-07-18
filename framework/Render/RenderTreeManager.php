@@ -384,7 +384,7 @@ class RenderTreeManager
         $rn->sourceVNode = null;
         $rn->computedStyle = null;
         $rn->cachedFragment = null;
-        $rn->cachedConstraintSignature = null;
+        $rn->cachedConstraintSpace = null;
     }
 
     /**
@@ -674,7 +674,7 @@ class RenderTreeManager
                         $renderNode->paintDirty = true;
                         $renderNode->styleDirty = false;
                         $renderNode->cachedFragment = null;
-                        $renderNode->cachedConstraintSignature = null;
+                        $renderNode->cachedConstraintSpace = null;
                         $renderNode->layoutCacheVersion++;
                     } else {
                         // 仅样式/内容变化 → 跳过布局

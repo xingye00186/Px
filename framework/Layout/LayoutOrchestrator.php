@@ -100,10 +100,9 @@ class LayoutOrchestrator implements ChildLayoutProvider
 
     private function mainLayout(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0, int $relayoutDepth = 0): PhysicalFragment
     {
-        // ── 洁净早退（基于完整 cachedFragment + 约束空间签名）──
+        // ── 洁净早退（基于完整 cachedFragment + 约束空间字段比较）──
         if (!$node->layoutDirty && $node->cachedFragment !== null) {
-            $currentSig = $this->computeConstraintSignature($space);
-            if ($currentSig === $node->cachedConstraintSignature) {
+            if ($node->cachedConstraintSpace !== null && $space->equals($node->cachedConstraintSpace)) {
                 if ($node->styleDirty) {
                     // 仅样式变化：复用缓存的 Fragment 子树，替换根节点样式快照
                     $old = $node->cachedFragment;
@@ -127,22 +126,19 @@ class LayoutOrchestrator implements ChildLayoutProvider
         }
         // 不满足早退条件：走正常布局
 
-        // ── 第三级早退：约束签名不匹配，但仅 BFC 偏移变化（padding/border 变化）──
-        // 此时子节点相对位置不变，仅绝对坐标需平移，跳过算法递归
+        // ── 第三级早退：约束签名不匹配，但仅 BFC 偏移变化──
         if ($node->cachedFragment !== null && !$node->layoutDirty && !$node->styleDirty) {
-            $old = $node->cachedFragment;
-            $oldSpace = $this->reconstructConstraintSignature($node->cachedConstraintSignature);
-            if ($oldSpace !== null
-                && $space->getContentWidth() === $oldSpace->getContentWidth()
-                && $space->getContentHeight() === $oldSpace->getContentHeight()
+            if ($node->cachedConstraintSpace !== null
+                && $space->getContentWidth() === $node->cachedConstraintSpace->getContentWidth()
+                && $space->getContentHeight() === $node->cachedConstraintSpace->getContentHeight()
             ) {
                 // 仅 bfcOffset 变化：平移整棵子树
-                $dx = $space->getBfcOffsetX() - $oldSpace->getBfcOffsetX();
-                $dy = $space->getBfcOffsetY() - $oldSpace->getBfcOffsetY();
+                $dx = $space->getBfcOffsetX() - $node->cachedConstraintSpace->getBfcOffsetX();
+                $dy = $space->getBfcOffsetY() - $node->cachedConstraintSpace->getBfcOffsetY();
                 if ($dx !== 0 || $dy !== 0) {
-                    $translated = $this->translateFragment($old, $dx, $dy);
+                    $translated = $this->translateFragment($node->cachedFragment, $dx, $dy);
                     $node->cachedFragment = $translated;
-                    $node->cachedConstraintSignature = $this->computeConstraintSignature($space);
+                    $node->cachedConstraintSpace = $space;
                     return $translated;
                 }
             }
@@ -347,9 +343,9 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
             );
         }
-        // 缓存完整 Fragment 树 + 约束空间签名（对标 Blink NGBlockNode）
+        // 缓存完整 Fragment 树 + 约束空间（对标 Blink NGBlockNode）
         $node->cachedFragment = $algoFrag;
-        $node->cachedConstraintSignature = $this->computeConstraintSignature($space);
+        $node->cachedConstraintSpace = $space;
         $node->layoutCacheVersion++;
 
         return $algoFrag;
@@ -372,41 +368,6 @@ class LayoutOrchestrator implements ChildLayoutProvider
             }
         }
         return $dataset;
-    }
-    private function computeConstraintSignature(ConstraintSpace $space): string
-    {
-        return implode('|', [
-            $space->getContainerWidth(), $space->getContainerHeight(),
-            $space->getContentWidth(), $space->getContentHeight(),
-            $space->getPercentageWidth(), $space->getPercentageHeight(),
-            $space->getPaddingTop(), $space->getPaddingRight(),
-            $space->getPaddingBottom(), $space->getPaddingLeft(),
-            $space->borderTop, $space->borderRight,
-            $space->borderBottom, $space->borderLeft,
-            $space->getBfcOffsetX(), $space->getBfcOffsetY(),
-            $space->getSpaceType(),
-        ]);
-    }
-
-    /**
-     * 从签名还原 ConstraintSpace（用于 offsetOnly 路径比较 bfcOffset）。
-     */
-    private function reconstructConstraintSignature(string $sig): ?ConstraintSpace
-    {
-        $parts = explode('|', $sig);
-        if (count($parts) < 17) return null;
-        return new ConstraintSpace(
-            (int)$parts[0], (int)$parts[1],  // container
-            0, 0,                              // parentContent (not stored in sig)
-            (int)$parts[2], (int)$parts[3],   // content
-            ($parts[4] !== '' ? (int)$parts[4] : null),
-            ($parts[5] !== '' ? (int)$parts[5] : null),
-            (int)$parts[6], (int)$parts[7], (int)$parts[8], (int)$parts[9],
-            (int)$parts[10], (int)$parts[11], (int)$parts[12], (int)$parts[13],
-            false, false,
-            (int)$parts[14], (int)$parts[15],  // bfcOffset
-            $parts[16],                         // spaceType
-        );
     }
 
     /**

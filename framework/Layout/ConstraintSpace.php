@@ -83,6 +83,35 @@ class ConstraintSpace
     public function getForceRelayoutChildren(): bool { return $this->forceRelayoutChildren; }
     public function getIsIntrinsicMeasurement(): bool { return $this->isIntrinsicMeasurement; }
 
+    /**
+     * 快速字段比较（替代字符串签名，避免 O(N) 序列化开销）。
+     * 仅比较影响布局输出的关键几何属性。
+     */
+    public function equals(ConstraintSpace $other): bool
+    {
+        return $this->contentWidth === $other->contentWidth
+            && $this->contentHeight === $other->contentHeight
+            && $this->percentageWidth === $other->percentageWidth
+            && $this->percentageHeight === $other->percentageHeight
+            && $this->determinedPercentageWidth === $other->determinedPercentageWidth
+            && $this->determinedPercentageHeight === $other->determinedPercentageHeight
+            && $this->isIntrinsicMeasurement === $other->isIntrinsicMeasurement
+            && $this->spaceType === $other->spaceType
+            && $this->paddingTop === $other->paddingTop
+            && $this->paddingRight === $other->paddingRight
+            && $this->paddingBottom === $other->paddingBottom
+            && $this->paddingLeft === $other->paddingLeft
+            && $this->borderTop === $other->borderTop
+            && $this->borderRight === $other->borderRight
+            && $this->borderBottom === $other->borderBottom
+            && $this->borderLeft === $other->borderLeft
+            && $this->bfcOffsetX === $other->bfcOffsetX
+            && $this->bfcOffsetY === $other->bfcOffsetY
+            && $this->containerWidth === $other->containerWidth
+            && $this->containerHeight === $other->containerHeight
+        ;
+    }
+
     public function __construct(
         int $containerWidth = 0,
         int $containerHeight = 0,

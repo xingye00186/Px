@@ -37,7 +37,7 @@ class RenderNode
 
     // ── 缓存 ──
     public ?\Px\Layout\PhysicalFragment $cachedFragment = null;
-    public ?string $cachedConstraintSignature = null;
+    public ?\Px\Layout\ConstraintSpace $cachedConstraintSpace = null;
     public int $layoutCacheVersion = 0;
 
     // ── 布局结果（由 LayoutOrchestrator + fragmentToElement 维护）──
