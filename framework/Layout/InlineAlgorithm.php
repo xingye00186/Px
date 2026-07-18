@@ -56,7 +56,9 @@ class InlineAlgorithm extends LayoutAlgorithm
                 (int)($cr->getLayer() ?? 0),
                 (int)($cr->getContentWidth() ?? 0),
                 (int)($cr->getContentHeight() ?? 0),
-                $cr->style, $cr->children, null
+                $cr->style, $cr->children, $cr->sourceNode,
+                $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
+                $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles
             );
             $cursorX += (int)($cr->w ?? 0);
         }

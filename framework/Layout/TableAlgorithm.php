@@ -80,14 +80,18 @@ class TableAlgorithm extends LayoutAlgorithm
                     foreach ($cr->children as $ci => $cell) {
                         $cellH = (int)($cell->h ?? 0);
                         $cellW = $colWidths[$ci] ?? ($cellCount > 0 ? (int)($w / $cellCount) : $w);
-                        $cellResults[] = new PhysicalFragment((int)$colX, 0, (int)$cellW, (int)$cellH, null, null, (int)($cell->layer ?? 0), (int)$cellW, (int)$cellH, $cell->style, $cell->children, null);
+                        $cellResults[] = new PhysicalFragment((int)$colX, 0, (int)$cellW, (int)$cellH, null, null, (int)($cell->layer ?? 0), (int)$cellW, (int)$cellH, $cell->style, $cell->children, $cell->sourceNode,
+            $cell->scrollTop, $cell->scrollLeft, $cell->isScrollContainer,
+            $cell->type, $cell->content, $cell->dataset, $cell->pseudoStyles);
                         if ($cellH > $lineH) $lineH = $cellH;
                         $colX += $cellW;
                     }
 
                     $normCells = [];
                     foreach ($cellResults as $cf) {
-                        $normCells[] = new PhysicalFragment((int)$cf->x, (int)$currentY, (int)$cf->w, (int)$lineH, null, null, (int)$cf->layer, (int)$cf->contentWidth, (int)$cf->contentHeight, $cf->style, $cf->children, null);
+                        $normCells[] = new PhysicalFragment((int)$cf->x, (int)$currentY, (int)$cf->w, (int)$lineH, null, null, (int)$cf->layer, (int)$cf->contentWidth, (int)$cf->contentHeight, $cf->style, $cf->children, $cf->sourceNode,
+            $cf->scrollTop, $cf->scrollLeft, $cf->isScrollContainer,
+            $cf->type, $cf->content, $cf->dataset, $cf->pseudoStyles);
                     }
                     $stackedChildren[] = new PhysicalFragment((int)$x, (int)$currentY, (int)$w, (int)$lineH, null, null, 0, (int)$w, (int)$lineH, $crStyle, $normCells, null);
                     $currentY += $lineH;
