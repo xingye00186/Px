@@ -39,6 +39,12 @@ class PhysicalFragment
     /** 回引用 RenderNode（仅用于事件路由取 groupId） */
     public readonly ?RenderNode $sourceNode;
 
+    /** 自包含元素元数据（paint 不依赖 sourceNode 读取） */
+    public readonly string $type;
+    public readonly mixed $content;
+    public readonly array $dataset;
+    public readonly array $pseudoStyles;
+
     /** getter 方法 — AOT 跨类 readonly 访问保护 */
     public function getX(): int { return $this->x; }
     public function getY(): int { return $this->y; }
@@ -74,6 +80,10 @@ class PhysicalFragment
         int $scrollTop = 0,
         int $scrollLeft = 0,
         bool $isScrollContainer = false,
+        string $type = '',
+        mixed $content = null,
+        array $dataset = [],
+        array $pseudoStyles = [],
     ) {
         $this->x               = (int)$x;
         $this->y               = (int)$y;
@@ -90,6 +100,10 @@ class PhysicalFragment
         $this->scrollTop       = (int)$scrollTop;
         $this->scrollLeft      = (int)$scrollLeft;
         $this->isScrollContainer = $isScrollContainer;
+        $this->type              = $type;
+        $this->content           = $content;
+        $this->dataset           = $dataset;
+        $this->pseudoStyles      = $pseudoStyles;
     }
 
     /** 从 LayoutResult 构造（适配器用） */
@@ -106,6 +120,8 @@ class PhysicalFragment
             'layer' => $this->layer,
             'contentWidth' => $this->contentWidth,
             'contentHeight' => $this->contentHeight,
+            'type' => $this->type,
+            'content' => $this->content,
         ];
         if ($this->isScrollContainer) {
             $arr['scrollTop'] = $this->scrollTop;

@@ -299,13 +299,25 @@ class LayoutOrchestrator implements ChildLayoutProvider
             }
         }
 
-        // 应用 layer 继承
+        // 应用 layer 继承 + 元数据打标
         if ($nodeLayer > $algoFrag->getLayer()) {
             $algoFrag = new \Px\Layout\PhysicalFragment(
                 (int)$algoFrag->getX(), (int)$algoFrag->getY(), (int)$algoFrag->getW(), (int)$algoFrag->getH(),
                 (int)$algoFrag->getVisualW(), (int)$algoFrag->getVisualH(), (int)$nodeLayer,
                 (int)$algoFrag->getContentWidth(), (int)$algoFrag->getContentHeight(),
-                $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode
+                $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
+                (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $algoFrag->getIsScrollContainer(),
+                $node->type, $node->content, $node->dataset, $node->pseudoStyles
+            );
+        } else {
+            // 无 layover 变化时，仍需要打标元数据
+            $algoFrag = new \Px\Layout\PhysicalFragment(
+                (int)$algoFrag->getX(), (int)$algoFrag->getY(), (int)$algoFrag->getW(), (int)$algoFrag->getH(),
+                (int)$algoFrag->getVisualW(), (int)$algoFrag->getVisualH(), (int)$algoFrag->getLayer(),
+                (int)$algoFrag->getContentWidth(), (int)$algoFrag->getContentHeight(),
+                $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
+                (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $algoFrag->getIsScrollContainer(),
+                $node->type, $node->content, $node->dataset, $node->pseudoStyles
             );
         }
         $this->cache->set($ckey, $algoFrag);
