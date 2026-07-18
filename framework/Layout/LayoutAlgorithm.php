@@ -36,7 +36,9 @@ abstract class LayoutAlgorithm
             return $this->childLayoutProvider->layoutChild($child, $space, $layer);
         }
         // 降级：无提供者时返回空 Fragment
-        return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $child->computedStyle ?? new ComputedStyle([]), [], $child);
+        return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $child->computedStyle ?? new ComputedStyle([]), [], $child,
+            0, 0, false,
+            $child->type, $child->content, [], $child->pseudoStyles);
     }
 
     /**

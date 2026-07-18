@@ -29,6 +29,15 @@ class PhysicalFragmentBuilder
     private ?ComputedStyle $_style = null;
     private array $_children = [];
     private ?RenderNode $_sourceNode = null;
+    // ── 新增：自包含元数据字段 ──
+    private string $_type = '';
+    private mixed $_content = null;
+    private array $_dataset = [];
+    private array $_pseudoStyles = [];
+    private int $_availableWidth = 0;
+    private int $_scrollTop = 0;
+    private int $_scrollLeft = 0;
+    private bool $_isScrollContainer = false;
 
     public function x(int $v): self { $this->_x = $v; return $this; }
     public function y(int $v): self { $this->_y = $v; return $this; }
@@ -42,6 +51,14 @@ class PhysicalFragmentBuilder
     public function style(?ComputedStyle $v): self { $this->_style = $v; return $this; }
     public function children(array $v): self { $this->_children = $v; return $this; }
     public function sourceNode(?RenderNode $v): self { $this->_sourceNode = $v; return $this; }
+    public function type(string $v): self { $this->_type = $v; return $this; }
+    public function content(mixed $v): self { $this->_content = $v; return $this; }
+    public function dataset(array $v): self { $this->_dataset = $v; return $this; }
+    public function pseudoStyles(array $v): self { $this->_pseudoStyles = $v; return $this; }
+    public function availableWidth(int $v): self { $this->_availableWidth = $v; return $this; }
+    public function scrollTop(int $v): self { $this->_scrollTop = $v; return $this; }
+    public function scrollLeft(int $v): self { $this->_scrollLeft = $v; return $this; }
+    public function isScrollContainer(bool $v): self { $this->_isScrollContainer = $v; return $this; }
 
     /** 从现有 Fragment 拷贝属性 */
     public function from(PhysicalFragment $f): self
@@ -58,6 +75,14 @@ class PhysicalFragmentBuilder
         $this->_style = $f->style;
         $this->_children = $f->children;
         $this->_sourceNode = $f->sourceNode ?? null;
+        $this->_type = $f->type;
+        $this->_content = $f->content;
+        $this->_dataset = $f->dataset;
+        $this->_pseudoStyles = $f->pseudoStyles;
+        $this->_availableWidth = $f->availableWidth;
+        $this->_scrollTop = $f->scrollTop;
+        $this->_scrollLeft = $f->scrollLeft;
+        $this->_isScrollContainer = $f->isScrollContainer;
         return $this;
     }
 
@@ -69,6 +94,9 @@ class PhysicalFragmentBuilder
             $this->_cw, $this->_ch,
             $this->_style, $this->_children,
             $this->_sourceNode,
+            $this->_scrollTop, $this->_scrollLeft, $this->_isScrollContainer,
+            $this->_type, $this->_content, $this->_dataset, $this->_pseudoStyles,
+            $this->_availableWidth,
         );
     }
 }

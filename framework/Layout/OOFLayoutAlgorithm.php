@@ -151,7 +151,8 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
             (int)$frag->getVisualW(), (int)$frag->getVisualH(), (int)$frag->getLayer(),
             (int)$frag->getContentWidth(), (int)$frag->getContentHeight(),
             $frag->style, $pfChildren, $sourceRN,
-            (int)$frag->getScrollTop(), (int)$frag->getScrollLeft(), (bool)$frag->getIsScrollContainer()
+            (int)$frag->getScrollTop(), (int)$frag->getScrollLeft(), (bool)$frag->getIsScrollContainer(),
+            $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles
         );
     }
 
@@ -257,6 +258,8 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         return new PhysicalFragment(
             (int)($calcX - $ancX), (int)($calcY - $ancY), (int)max(0, $width), (int)max(0, $height),
             (int)$cs->visualWidth($width), (int)$cs->visualHeight($height),
-            1, 0, 0, $cs, $frag->children, $sourceRN
+            1, 0, 0, $cs, $frag->children, $sourceRN,
+            0, 0, false,
+            $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles
         );
     }}
