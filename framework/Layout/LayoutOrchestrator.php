@@ -16,9 +16,7 @@ use Px\Layout\FlexAlgorithm;
 use Px\Layout\GridAlgorithm;
 use Px\Layout\InlineAlgorithm;
 use Px\Layout\TableAlgorithm;
-use Px\Layout\LayoutCache;
 use Px\Layout\OOFLayoutAlgorithm;
-use Px\Layout\LayoutCacheKey;
 
 use Px\Core\Config;
 
@@ -41,7 +39,6 @@ class LayoutOrchestrator implements ChildLayoutProvider
     private LayoutAlgorithm $gridAlgo;
     private LayoutAlgorithm $inlineAlgo;
     private LayoutAlgorithm $tableAlgo;
-    private LayoutCache $cache;
 
     public function __construct()
     {
@@ -51,7 +48,6 @@ class LayoutOrchestrator implements ChildLayoutProvider
         $this->gridAlgo = new GridAlgorithm();
         $this->inlineAlgo = new InlineAlgorithm();
         $this->tableAlgo = new TableAlgorithm();
-        $this->cache = new LayoutCache();
 
         // 注入 ChildLayoutProvider（使算法能自主调子项布局）
         $algos = [$this->blockAlgo, $this->flexAlgo, $this->gridAlgo, $this->inlineAlgo, $this->tableAlgo];
@@ -111,7 +107,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 if ($node->styleDirty) {
                     // 仅样式变化：复用缓存的 Fragment 子树，替换根节点样式快照
                     $old = $node->cachedFragment;
-                    return new \Px\Layout\PhysicalFragment(
+                    $newFrag = new \Px\Layout\PhysicalFragment(
                         $old->x, $old->y, $old->w, $old->h,
                         $old->visualW, $old->visualH, $old->layer,
                         $old->contentWidth, $old->contentHeight,
@@ -121,6 +117,9 @@ class LayoutOrchestrator implements ChildLayoutProvider
                         $old->scrollTop, $old->scrollLeft, $old->isScrollContainer,
                         $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
                     );
+                    $node->cachedFragment = $newFrag;   // 更新缓存为新 Fragment
+                    $node->styleDirty = false;           // 消费脏位
+                    return $newFrag;
                 }
                 Diag::log(2, 'fragment:cache-hit', ['type' => $node->type, 'w' => $node->cachedFragment->w]);
                 return $node->cachedFragment;  // 完全洁净：零分配
@@ -219,17 +218,8 @@ class LayoutOrchestrator implements ChildLayoutProvider
         \Px\Core\PerfCounter::start('algo:' . $algoName);
         $textContent = is_string($node->content) ? $node->content : '';
 
-        // 查 LayoutCache — 约束空间不变时跳过算法
-        $nodeId = spl_object_id($node);
-        $styleVer = spl_object_id($style ?? new \Px\Css\ComputedStyle([]));
-        $ckey = LayoutCacheKey::fromSpace($space, $nodeId, $styleVer);
-        $cached = $this->cache->find($ckey);
-        if ($cached !== null) {
-            Diag::log(2, 'cache:hit', ['type' => $node->type, 'w' => $cached->w, 'h' => $cached->h]);
-            return new \Px\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node,
-                (int)$cached->getScrollTop(), (int)$cached->getScrollLeft(), $cached->getIsScrollContainer(),
-                $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles);
-        }
+        // $cached = 上一帧布局结果（约束签名不匹配但几何仍可用，供 flex size hint）
+        $cached = $node->cachedFragment;
 
         Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->getContentWidth(), 'ch' => $space->getContentHeight()]);
 
@@ -335,8 +325,6 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
             );
         }
-        $this->cache->set($ckey, $algoFrag);
-
         // 缓存完整 Fragment 树 + 约束空间签名（对标 Blink NGBlockNode）
         $node->cachedFragment = $algoFrag;
         $node->cachedConstraintSignature = $this->computeConstraintSignature($space);
