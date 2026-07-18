@@ -31,6 +31,17 @@ use Px\Theme\ThemeProvider;
  */
 class RenderTreeManager
 {
+    /** @var array<callable> RenderNode 销毁回调（Application 注册用于清理 ScrollManager/InteractionState） */
+    private array $destroyCallbacks = [];
+
+    /**
+     * 注册 RenderNode 销毁回调。当节点被 destroyRenderNodeTree 销毁时触发。
+     * 用于清理 ScrollManager、InteractionState 等外部状态映射中的 orphan 条目。
+     */
+    public function onDestroyNode(callable $callback): void
+    {
+        $this->destroyCallbacks[] = $callback;
+    }
 
 /**
      * 递归生成 RenderNode 树的调试快照文本。
@@ -358,20 +369,9 @@ class RenderTreeManager
         // 3. 取消 AnimationManager 中的动画
         \Px\Animation\AnimationManager::getInstance()->cancelAllTransitions($rn);
 
-        // 3.5 清理 ScrollManager 和 InteractionState 中的 orphan 条目
-        try {
-            $app = \Px\Core\Application::getInstance();
-            if ($app !== null) {
-                $app->removeInteractionState($rn);
-                $ref = new \ReflectionProperty($app, 'scrollManager');
-                $ref->setAccessible(true);
-                $sm = $ref->getValue($app);
-                if ($sm !== null) {
-                    $sm->removeScrollState($rn);
-                }
-            }
-        } catch (\Throwable $e) {
-            // 测试环境下 Application::getInstance() 可能返回 null 或抛出异常
+        // 3.5 调用所有销毁回调（清理 ScrollManager/InteractionState 等外部映射）
+        foreach ($this->destroyCallbacks as $cb) {
+            $cb($rn);
         }
 
         // 4. 递归销毁子节点

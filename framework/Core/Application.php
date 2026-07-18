@@ -462,6 +462,12 @@ class Application
         // 初始化文本后端（渲染层管理：TextBackendRegistry）
         TextBackendRegistry::initialize();
 
+        // 注册 RenderNode 销毁回调（统一清理 ScrollManager/InteractionState orphan 条目）
+        $this->renderTreeManager->onDestroyNode(function (RenderNode $rn): void {
+            $this->removeInteractionState($rn);
+            $this->scrollManager->removeScrollState($rn);
+        });
+
         $this->initRenderer();
 
         // 初始化主题系统
