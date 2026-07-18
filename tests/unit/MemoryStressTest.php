@@ -12,7 +12,7 @@
  *   2. Scheduler          — 微任务/宏任务队列堆积
  *   3. Application        — 组件注册表生命周期
  *   4. ScrollManager      — 拖拽状态残留
- *   5. VNodeRenderer      — 帧号溢出 + 栈平衡
+ *   5. PaintPipeline      — 帧号溢出 + 栈平衡
  *   6. ReactiveComponent  — 事件处理器泄漏
  *   7. ThemeProvider      — 全局注册表增长
  *
@@ -28,7 +28,7 @@ use Px\Theme\ThemeProvider;
 use Px\Core\Scheduler;
 use Px\Core\Application;
 use Px\Core\ScrollManager;
-use Px\Paint\VNodeRenderer;
+use Px\Paint\PaintPipeline;
 use Px\Component\ReactiveComponent;
 
 // ── 手动加载 bootstrap 未覆盖的模块 ──
@@ -127,7 +127,7 @@ function callOn(ReactiveComponent $parent, ReactiveComponent $child, string $eve
     $m->invoke($parent, $child, $event, $cb);
 }
 
-function countRenderedElements(VNodeRenderer $r): int {
+function countRenderedElements(PaintPipeline $r): int {
     return reflectCount($r, 'currentPaintFrame');
 }
 
@@ -353,9 +353,9 @@ echo "     风险：RenderNode 树重建后指向悬空节点\n";
 echo "\n";
 
 // =============================================
-// 5. VNodeRenderer
+// 5. PaintPipeline
 // =============================================
-echo "═══ 5. VNodeRenderer ═══\n\n";
+echo "═══ 5. PaintPipeline ═══\n\n";
 
 echo "--- 5a. 帧号溢出重置 ---\n";
 // 模拟帧号接近 INT_MAX

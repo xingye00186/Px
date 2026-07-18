@@ -20,7 +20,7 @@ use Px\Core\Application;
 use Px\Platform\Platform;
 use Px\Platform\MouseEvent;
 use Px\Paint\RenderContext;
-use Px\Paint\VNodeRenderer;
+use Px\Paint\PaintPipeline;
 use Px\Render\RenderNode;
 use Px\Theme\ThemeProvider;
 
@@ -177,7 +177,7 @@ function getRenderContext(Application $app): _MockRenderContext
     $prop->setAccessible(true);
     $renderer = $prop->getValue($app);
 
-    $rrefl = new \ReflectionClass(VNodeRenderer::class);
+    $rrefl = new \ReflectionClass(PaintPipeline::class);
     $rprop = $rrefl->getProperty('render_ctx');
     $rprop->setAccessible(true);
     return $rprop->getValue($renderer);

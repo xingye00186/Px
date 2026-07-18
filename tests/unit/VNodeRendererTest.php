@@ -1,6 +1,6 @@
 <?php
 /**
- * VNodeRenderer 单元测试（RenderNode 版）
+ * PaintPipeline 单元测试（RenderNode 版）
  *
  * 测试目标:
  *   1. 元素按 layer 分组
@@ -17,11 +17,11 @@ require_once __DIR__ . '/bootstrap.php';
 use Px\Render\RenderNode;
 use Px\Css\ComputedStyle;
 use Px\Dom\VNode;
-use Px\Paint\VNodeRenderer;
+use Px\Paint\PaintPipeline;
 use Px\Paint\RenderContext;
 
 echo "========================================\n";
-echo " VNodeRenderer 单元测试（RenderNode）\n";
+echo " PaintPipeline 单元测试（RenderNode）\n";
 echo "========================================\n\n";
 
 // ---- 测试用 RenderContext mock ----
@@ -62,11 +62,11 @@ class _MockComponent extends \Px\ReactiveComponent
 }
 
 /**
- * 通过反射调用 private VNodeRenderer::collectElements()
+ * 通过反射调用 private PaintPipeline::collectElements()
  */
-function invokeCollectElements(VNodeRenderer $renderer, RenderNode $root): array
+function invokeCollectElements(PaintPipeline $renderer, RenderNode $root): array
 {
-    $refl = new \ReflectionClass(VNodeRenderer::class);
+    $refl = new \ReflectionClass(PaintPipeline::class);
     $method = $refl->getMethod('collectElements');
     $method->setAccessible(true);
 
@@ -104,7 +104,7 @@ test('同 layer 的元素在同一组', function () {
     $root = rn('#root', [], [$c1, $c2]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -124,7 +124,7 @@ test('不同 layer 的元素在不同组', function () {
     $root = rn('#root', [], [$c1, $c2]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     assert_eq(count($result['elements'][0] ?? []), 1, 'layer 0 应有 1 个元素');
@@ -143,7 +143,7 @@ test('button 类型生成 button 元素', function () {
     $root = rn('#root', [], [$btn]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 100;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $el = $result['elements'][0][0] ?? null;
@@ -164,7 +164,7 @@ test('button 有显式 border CSS 时生成正确边框值', function () {
     $root = rn('#root', [], [$btn]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 100;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $el = $result['elements'][0][0] ?? null;
@@ -182,7 +182,7 @@ test('span 类型生成 text 元素', function () {
     $root = rn('#root', [], [$span]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 100;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $el = $result['elements'][0][0] ?? null;
@@ -199,7 +199,7 @@ test('div 有背景色时生成 rect 元素', function () {
     $root = rn('#root', [], [$div]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $el = $result['elements'][0][0] ?? null;
@@ -216,7 +216,7 @@ test('div 无背景色时不生成元素', function () {
     $root = rn('#root', [], [$div]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -231,7 +231,7 @@ test('span 无文本内容时不生成元素', function () {
     $root = rn('#root', [], [$span]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 100;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -255,7 +255,7 @@ test('input 类型生成单个 input 元素 (不分解)', function () {
         }
     };
 
-    $renderer = new VNodeRenderer($comp, new _MockRenderContext());
+    $renderer = new PaintPipeline($comp, new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -279,7 +279,7 @@ test('scroll-container 类型生成单个描述元素', function () {
     $root = rn('#root', [], [$scroll]);
     $root->x = 0; $root->y = 0; $root->w = 400; $root->h = 300;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -309,7 +309,7 @@ test('render() 调用 beginFrame 和 endFrame', function () {
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 100;
 
     $ctx = new _MockRenderContext();
-    $renderer = new VNodeRenderer(new _MockComponent(), $ctx);
+    $renderer = new PaintPipeline(new _MockComponent(), $ctx);
     $renderer->render($root);
 
     assert_true($ctx->beginFrameCalled, 'beginFrame 应被调用');
@@ -321,7 +321,7 @@ test('空 RenderNode 树渲染不会崩溃', function () {
     $root->x = 0; $root->y = 0; $root->w = 400; $root->h = 300;
 
     $ctx = new _MockRenderContext();
-    $renderer = new VNodeRenderer(new _MockComponent(), $ctx);
+    $renderer = new PaintPipeline(new _MockComponent(), $ctx);
     $renderer->render($root);
 
     assert_true($ctx->beginFrameCalled, '空树也应 beginFrame');
@@ -346,7 +346,7 @@ test('渲染顺序遵循 layer 递增', function () {
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
 
     $ctx = new _MockRenderContext();
-    $renderer = new VNodeRenderer(new _MockComponent(), $ctx);
+    $renderer = new PaintPipeline(new _MockComponent(), $ctx);
     $renderer->render($root);
 
     assert_eq(count($ctx->drawnElements), 3, '应绘制 3 个元素');
@@ -364,7 +364,7 @@ test('button 无边框CSS时 render 元素不含边框', function () {
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 100;
 
     $ctx = new _MockRenderContext();
-    $renderer = new VNodeRenderer(new _MockComponent(), $ctx);
+    $renderer = new PaintPipeline(new _MockComponent(), $ctx);
     $renderer->render($root);
 
     assert_eq(count($ctx->drawnElements), 1, '应绘制 1 个元素');
@@ -383,7 +383,7 @@ test('button 有边框CSS时 render 元素携带 borderWidth', function () {
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 100;
 
     $ctx = new _MockRenderContext();
-    $renderer = new VNodeRenderer(new _MockComponent(), $ctx);
+    $renderer = new PaintPipeline(new _MockComponent(), $ctx);
     $renderer->render($root);
 
     assert_eq(count($ctx->drawnElements), 1, '应绘制 1 个元素');
@@ -405,7 +405,7 @@ test('needsPaint 控制节点是否生成元素', function () {
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
 
     $ctx = new _MockRenderContext();
-    $renderer = new VNodeRenderer(new _MockComponent(), $ctx);
+    $renderer = new PaintPipeline(new _MockComponent(), $ctx);
 
     // 第一次渲染：节点需要绘制
     $renderer->render($root);
@@ -413,7 +413,7 @@ test('needsPaint 控制节点是否生成元素', function () {
 
     // 标记为已绘制，再次渲染（节点 clean 状态）
     $ctx2 = new _MockRenderContext();
-    $renderer2 = new VNodeRenderer(new _MockComponent(), $ctx2);
+    $renderer2 = new PaintPipeline(new _MockComponent(), $ctx2);
 
     // 手动设置 lastPaintFrame 以模拟已绘制状态
     // 实际上 render() 递增了 currentPaintFrame，c1 的 lastPaintFrame 还是 0
@@ -432,7 +432,7 @@ test('needsPaint 控制节点是否生成元素', function () {
     $ctx2 = new _MockRenderContext();
 
     // 第一次 render → currentPaintFrame = 1, needsPaint(1) → lastPaintFrame(0) < 1 → true
-    $renderer2 = new VNodeRenderer(new _MockComponent(), $ctx2);
+    $renderer2 = new PaintPipeline(new _MockComponent(), $ctx2);
     $renderer2->render($root);
     assert_eq(count($ctx2->drawnElements), 1, 'clean 节点第一次渲染应绘制');
 
@@ -459,7 +459,7 @@ test('overflow:hidden 生成 clip-push/clip-pop', function () {
     $root = rn('#root', [], [$parent]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -496,7 +496,7 @@ test('overflow:hidden clip-push 在子元素之前且 clip-pop 在子元素之�
     $root = rn('#root', [], [$parent]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -527,7 +527,7 @@ test('overflow:visible 不触发 clip-push/clip-pop', function () {
     $root = rn('#root', [], [$parent]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -550,7 +550,7 @@ test('scroll-container 场景中 overflow:hidden 不额外生成 clip-push/clip-
     $root = rn('#root', [], [$scroll]);
     $root->x = 0; $root->y = 0; $root->w = 400; $root->h = 300;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -585,7 +585,7 @@ test('嵌套 overflow:hidden 父子各自生成 clip-push/clip-pop', function ()
     $root = rn('#root', [], [$parent]);
     $root->x = 0; $root->y = 0; $root->w = 200; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -631,7 +631,7 @@ test('多个兄弟 overflow:hidden 各自独立生成 clip-push/clip-pop', funct
     $root = rn('#root', [], [$parent]);
     $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -679,7 +679,7 @@ test('单行 text-overflow:ellipsis 超出容器宽度时追加…', function ()
     $root = rn('#root', [], [$span]);
     $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $el = $result['elements'][0][0] ?? null;
@@ -701,7 +701,7 @@ test('单行 text-overflow:ellipsis 文本可正常放入时不截断', function
     $root = rn('#root', [], [$span]);
     $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $el = $result['elements'][0][0] ?? null;
@@ -723,7 +723,7 @@ test('-webkit-line-clamp:2 超长文本拆分为两行', function () {
     $root = rn('#root', [], [$span]);
     $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -757,7 +757,7 @@ test('-webkit-line-clamp:2 + CJK 中文文本正确换行', function () {
     $root = rn('#root', [], [$span]);
     $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $layer0 = $result['elements'][0] ?? [];
@@ -785,7 +785,7 @@ test('-webkit-line-clamp:2 短文本不超过两行时不截断', function () {
     $root = rn('#root', [], [$span]);
     $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $el = $result['elements'][0][0] ?? null;
@@ -806,7 +806,7 @@ test('无 ellipsis 时 line-clamp 不生效（正常渲染）', function () {
     $root = rn('#root', [], [$span]);
     $root->x = 0; $root->y = 0; $root->w = 300; $root->h = 200;
 
-    $renderer = new VNodeRenderer(new _MockComponent(), new _MockRenderContext());
+    $renderer = new PaintPipeline(new _MockComponent(), new _MockRenderContext());
     $result = invokeCollectElements($renderer, $root);
 
     $el = $result['elements'][0][0] ?? null;
