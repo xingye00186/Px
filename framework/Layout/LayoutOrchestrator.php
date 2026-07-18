@@ -126,6 +126,28 @@ class LayoutOrchestrator implements ChildLayoutProvider
             }
         }
         // 不满足早退条件：走正常布局
+
+        // ── 第三级早退：约束签名不匹配，但仅 BFC 偏移变化（padding/border 变化）──
+        // 此时子节点相对位置不变，仅绝对坐标需平移，跳过算法递归
+        if ($node->cachedFragment !== null && !$node->layoutDirty && !$node->styleDirty) {
+            $old = $node->cachedFragment;
+            $oldSpace = $this->reconstructConstraintSignature($node->cachedConstraintSignature);
+            if ($oldSpace !== null
+                && $space->getContentWidth() === $oldSpace->getContentWidth()
+                && $space->getContentHeight() === $oldSpace->getContentHeight()
+            ) {
+                // 仅 bfcOffset 变化：平移整棵子树
+                $dx = $space->getBfcOffsetX() - $oldSpace->getBfcOffsetX();
+                $dy = $space->getBfcOffsetY() - $oldSpace->getBfcOffsetY();
+                if ($dx !== 0 || $dy !== 0) {
+                    $translated = $this->translateFragment($old, $dx, $dy);
+                    $node->cachedFragment = $translated;
+                    $node->cachedConstraintSignature = $this->computeConstraintSignature($space);
+                    return $translated;
+                }
+            }
+        }
+
         $style = $node->computedStyle;
         $display = $style?->display?->value ?? 'block';
         $position = $style?->position?->value ?? 'static';
@@ -364,6 +386,48 @@ class LayoutOrchestrator implements ChildLayoutProvider
             $space->getBfcOffsetX(), $space->getBfcOffsetY(),
             $space->getSpaceType(),
         ]);
+    }
+
+    /**
+     * 从签名还原 ConstraintSpace（用于 offsetOnly 路径比较 bfcOffset）。
+     */
+    private function reconstructConstraintSignature(string $sig): ?ConstraintSpace
+    {
+        $parts = explode('|', $sig);
+        if (count($parts) < 17) return null;
+        return new ConstraintSpace(
+            (int)$parts[0], (int)$parts[1],  // container
+            0, 0,                              // parentContent (not stored in sig)
+            (int)$parts[2], (int)$parts[3],   // content
+            ($parts[4] !== '' ? (int)$parts[4] : null),
+            ($parts[5] !== '' ? (int)$parts[5] : null),
+            (int)$parts[6], (int)$parts[7], (int)$parts[8], (int)$parts[9],
+            (int)$parts[10], (int)$parts[11], (int)$parts[12], (int)$parts[13],
+            false, false,
+            (int)$parts[14], (int)$parts[15],  // bfcOffset
+            $parts[16],                         // spaceType
+        );
+    }
+
+    /**
+     * 平移 Fragment 树的绝对坐标（offsetOnly 路径）。
+     */
+    private function translateFragment(PhysicalFragment $frag, int $dx, int $dy): PhysicalFragment
+    {
+        $translatedChildren = [];
+        foreach ($frag->children as $child) {
+            $translatedChildren[] = $this->translateFragment($child, $dx, $dy);
+        }
+        return new PhysicalFragment(
+            $frag->x + $dx, $frag->y + $dy,
+            $frag->w, $frag->h,
+            $frag->visualW, $frag->visualH, $frag->layer,
+            $frag->contentWidth, $frag->contentHeight,
+            $frag->style, $translatedChildren, $frag->sourceNode,
+            $frag->scrollTop, $frag->scrollLeft, $frag->isScrollContainer,
+            $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles,
+            $frag->availableWidth
+        );
     }
 
     private function buildChildSpace(

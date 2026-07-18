@@ -89,6 +89,16 @@ class PaintPipeline
         $node = $frag->sourceNode;
         if ($node === null) return;
 
+        // 新增：paintDirty 子树跳过 — 非滚动容器的洁净子树无需遍历
+        // 注意：滚动容器的可见性子集变化不依赖 paintDirty
+        if (!$node->paintDirty && !$frag->isScrollContainer) {
+            // 但需确保该节点的 layer 占位（高 layer 的洁净节点可能遮盖下方脏节点）
+            $layer = $frag->layer;
+            if ($layer > $maxLayer) $maxLayer = $layer;
+            return;
+        }
+        $node->paintDirty = false;
+
         $el = $this->fragmentToElement($frag);
         if ($el !== null) {
             $layer = $frag->layer;

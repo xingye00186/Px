@@ -72,6 +72,11 @@ class Application
     /** @var array<string, InteractionState> */
     private array $interactionStates = [];
 
+    public function removeInteractionState(RenderNode $node): void
+    {
+        unset($this->interactionStates[spl_object_id($node)]);
+    }
+
     private function getInteractionState(RenderNode $node): InteractionState
     {
         $key = spl_object_id($node);
@@ -698,6 +703,16 @@ class Application
             // 所有子 #component 节点的 $oldNode === $newNode → componentInstance 全为 null → 全部走 EXPAND。
             // 保存旧 children 可以保证子组件的匹配走正常的 REUSE 路径。
             $oldChildren = ($oldNode !== null) ? $oldNode->children : null;
+
+            // 新增：组件级子树跳过 — 若 props 未变且组件未 dirty，直接复用旧 VNode 树
+            $propsUnchanged = ($newNode->componentProps === ($oldNode?->componentProps ?? null));
+            if ($propsUnchanged && !$instance->dirty && $oldChildren !== null) {
+                $matched = clone $newNode;
+                $matched->componentInstance = $instance;
+                $matched->children = $oldChildren;
+                $this->registerComponent($instance->getId(), $instance);
+                return $matched;
+            }
 
             // ── B2 不可变性：克隆 VNode 再设置 children/componentInstance ──
             $matched = clone $newNode;

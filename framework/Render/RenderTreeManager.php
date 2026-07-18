@@ -254,14 +254,15 @@ class RenderTreeManager
      * @param int $index 在父级子节点中的位置（用于位置匹配）
      * @return RenderNode|null 匹配的旧 RenderNode，或 null
      */
-    private function findMatchingRenderNode(VNode $vnode, array $candidates, int $index): ?RenderNode
+    private function findMatchingRenderNode(VNode $vnode, array &$candidates, int $index): ?RenderNode
     {
         $key = $vnode->key;
 
         if ($key !== null) {
-            // key 匹配
-            foreach ($candidates as $candidate) {
+            // key 匹配 + 从候选池移除（防止后续索引匹配二次命中）
+            foreach ($candidates as $i => $candidate) {
                 if ($candidate->key === $key && $candidate->type === $vnode->type) {
+                    unset($candidates[$i]);
                     return $candidate;
                 }
             }
@@ -272,6 +273,7 @@ class RenderTreeManager
         if (isset($candidates[$index])) {
             $candidate = $candidates[$index];
             if ($candidate->key === null && $candidate->type === $vnode->type) {
+                unset($candidates[$index]);
                 return $candidate;
             }
         }
@@ -301,6 +303,10 @@ class RenderTreeManager
         if (($a->props['class'] ?? '') !== ($b->props['class'] ?? '')) return false;
         if (($a->props[':scroll-top'] ?? '') !== ($b->props[':scroll-top'] ?? '')) return false;
         if (($a->props[':scroll-left'] ?? '') !== ($b->props[':scroll-left'] ?? '')) return false;
+        // 新增：:bind / bind / v-model key 一致性检查（bind key 变 → 实际值可能变）
+        if (($a->props[':bind'] ?? '') !== ($b->props[':bind'] ?? '')) return false;
+        if (($a->props['bind'] ?? '') !== ($b->props['bind'] ?? '')) return false;
+        if (($a->props['v-model'] ?? '') !== ($b->props['v-model'] ?? '')) return false;
         return true;
     }
 
@@ -351,6 +357,22 @@ class RenderTreeManager
 
         // 3. 取消 AnimationManager 中的动画
         \Px\Animation\AnimationManager::getInstance()->cancelAllTransitions($rn);
+
+        // 3.5 清理 ScrollManager 和 InteractionState 中的 orphan 条目
+        try {
+            $app = \Px\Core\Application::getInstance();
+            if ($app !== null) {
+                $app->removeInteractionState($rn);
+                $ref = new \ReflectionProperty($app, 'scrollManager');
+                $ref->setAccessible(true);
+                $sm = $ref->getValue($app);
+                if ($sm !== null) {
+                    $sm->removeScrollState($rn);
+                }
+            }
+        } catch (\Throwable $e) {
+            // 测试环境下 Application::getInstance() 可能返回 null 或抛出异常
+        }
 
         // 4. 递归销毁子节点
         foreach ($rn->children as $child) {

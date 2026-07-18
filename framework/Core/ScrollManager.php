@@ -38,6 +38,14 @@ class ScrollManager
     /** @var array<string, ScrollState> */
     private array $scrollStates = [];
 
+    /**
+     * 销毁时清理 ScrollState（由 destroyRenderNodeTree 调用）。
+     */
+    public function removeScrollState(RenderNode $node): void
+    {
+        unset($this->scrollStates[spl_object_id($node)]);
+    }
+
     private function getScrollState(RenderNode $node): ScrollState
     {
         $key = spl_object_id($node);
