@@ -126,19 +126,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 return $node->cachedFragment;  // 完全洁净：零分配
             }
         }
-        // 不满足早退条件：回退到 cachedW（旧路径，逐步迁移中）
-        if (!$node->layoutDirty && $node->cachedW > 0) {
-            Diag::log(2, 'layout:skip-w', ['type' => $node->type]);
-            return new \Px\Layout\PhysicalFragment(
-                $node->cachedX, $node->cachedY,
-                $node->cachedW, $node->cachedH,
-                $node->cachedW, $node->cachedH,
-                $node->cachedLayer, 0, 0,
-                $node->computedStyle, [], $node,
-                0, 0, false,
-                $node->type, $node->content, $node->dataset, $node->pseudoStyles
-            );
-        }
+        // 不满足早退条件：走正常布局
         $style = $node->computedStyle;
         $display = $style?->display?->value ?? 'block';
         $position = $style?->position?->value ?? 'static';
@@ -221,11 +209,6 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 $style, $childFragments, $node, 0, 0, false,
                 $node->type, $node->content, $node->dataset, $node->pseudoStyles
             );
-            $node->cachedX = 0;
-            $node->cachedY = 0;
-            $node->cachedW = (int)$w;
-            $node->cachedH = (int)$h;
-            $node->cachedLayer = $nodeLayer;
             return $frag;
         }
 
@@ -354,13 +337,6 @@ class LayoutOrchestrator implements ChildLayoutProvider
         }
         $this->cache->set($ckey, $algoFrag);
 
-        // 缓存坐标供下帧洁净早退使用
-        $node->cachedX = (int)$algoFrag->getX();
-        $node->cachedY = (int)$algoFrag->getY();
-        $node->cachedW = (int)$algoFrag->getW();
-        $node->cachedH = (int)$algoFrag->getH();
-        $node->cachedLayer = (int)$algoFrag->getLayer();
-
         // 缓存完整 Fragment 树 + 约束空间签名（对标 Blink NGBlockNode）
         $node->cachedFragment = $algoFrag;
         $node->cachedConstraintSignature = $this->computeConstraintSignature($space);
@@ -380,6 +356,8 @@ class LayoutOrchestrator implements ChildLayoutProvider
             $space->getPercentageWidth(), $space->getPercentageHeight(),
             $space->getPaddingTop(), $space->getPaddingRight(),
             $space->getPaddingBottom(), $space->getPaddingLeft(),
+            $space->borderTop, $space->borderRight,
+            $space->borderBottom, $space->borderLeft,
             $space->getBfcOffsetX(), $space->getBfcOffsetY(),
             $space->getSpaceType(),
         ]);
