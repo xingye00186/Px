@@ -588,7 +588,6 @@ class RenderTreeManager
             } else {
                 $oldVNode = $renderNode->sourceVNode;
                 $renderNode->computedStyle = $computedStyle;
-                $renderNode->lastPaintFrame = 0;
                 $renderNode->sourceVNode = $vnode;
                 $renderNode->groupId = $groupId;
                 $renderNode->pseudoStyles = $pseudoStyles;
@@ -598,10 +597,46 @@ class RenderTreeManager
                     : [];
                 $isLeaf = count($vnodeChildren) === 0;
                 $hasExplicitTop = array_key_exists('top', $resolvedStyle);
-                if ($isLeaf && $hasExplicitTop && $oldVNode !== null && $this->areVNodesEqual($vnode, $oldVNode)) {
+
+                // ── 脏位分类判定 ────────────────────────────────────
+                // 优先走快速路径：VNode props 完全一致 → 完全洁净
+                $oldStyle = ($oldVNode !== null) ? $oldVNode->computedStyle : null;
+                if ($oldVNode !== null && $this->areVNodesEqual($vnode, $oldVNode)) {
+                    // VNode 完全一致（含 style/class/bind）→ 完全洁净
                     $renderNode->layoutDirty = false;
+                    $renderNode->paintDirty = false;
+                    $renderNode->styleDirty = false;
+                } elseif ($oldStyle !== null) {
+                    // 检查是否有几何关键属性变化
+                    $isGeometryChange = false;
+                    $geoKeys = ['width','height','minWidth','maxWidth','minHeight','maxHeight',
+                        'display','position','flex','flexDirection','flexWrap',
+                        'alignItems','alignContent','justifyContent',
+                        'boxSizing','overflow','overflowX','overflowY',
+                        'padding','margin','borderWidth'];
+                    foreach ($geoKeys as $k) {
+                        $oldV = $oldStyle->getRaw($k) ?? '';
+                        $newV = $computedStyle->getRaw($k) ?? '';
+                        if ($oldV !== $newV && !(is_object($oldV) && is_object($newV) && (string)$oldV === (string)$newV)) {
+                            $isGeometryChange = true;
+                            break;
+                        }
+                    }
+                    if ($isGeometryChange) {
+                        $renderNode->layoutDirty = true;
+                        $renderNode->paintDirty = true;
+                        $renderNode->styleDirty = false;
+                    } else {
+                        // 仅样式/内容变化 → 跳过布局
+                        $renderNode->layoutDirty = false;
+                        $renderNode->paintDirty = true;
+                        $renderNode->styleDirty = true;
+                    }
                 } else {
+                    // 无旧 VNode → 视为完全脏
                     $renderNode->layoutDirty = true;
+                    $renderNode->paintDirty = true;
+                    $renderNode->styleDirty = true;
                 }
 
                 if ($renderNode->type !== $vnode->type) {

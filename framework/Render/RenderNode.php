@@ -30,7 +30,9 @@ class RenderNode
 
     
 
-    public bool $layoutDirty = true;
+    public bool $styleDirty = true;   // 仅视觉样式变化（颜色/背景/字体等，不触发布局）
+    public bool $layoutDirty = true;  // 几何结构变化（宽高/flex/display，触发布局）
+    public bool $paintDirty = true;   // 需要重绘（最终消费）
 
     public ?RenderNode $parent = null;
 
@@ -65,8 +67,20 @@ class RenderNode
     public function markLayoutDirty(bool $propagateUp = true): void
     {
         $this->layoutDirty = true;
+        $this->paintDirty = true;
+        $this->styleDirty = false;
         if ($propagateUp && $this->parent !== null) {
             $this->parent->markLayoutDirty(true);
+        }
+    }
+
+    public function markStyleDirty(bool $propagateUp = true): void
+    {
+        $this->styleDirty = true;
+        $this->paintDirty = true;
+        $this->layoutDirty = false; // 关键：不触发布局
+        if ($propagateUp && $this->parent !== null) {
+            $this->parent->markStyleDirty(true);
         }
     }
 
@@ -76,6 +90,8 @@ class RenderNode
         while (count($stack) > 0) {
             $node = array_pop($stack);
             $node->layoutDirty = true;
+            $node->paintDirty = true;
+            $node->styleDirty = false;
             foreach ($node->children as $child) {
                 $stack[] = $child;
             }

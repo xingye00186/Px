@@ -104,6 +104,28 @@ class LayoutOrchestrator implements ChildLayoutProvider
 
     private function mainLayout(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0, int $relayoutDepth = 0): PhysicalFragment
     {
+        // ── 洁净早退 ──
+        if (!$node->layoutDirty) {
+            // 几何不变，尝试复用缓存 Fragment
+            $cacheKey = LayoutCacheKey::fromSpace($space, spl_object_id($node), spl_object_id($node->computedStyle ?? new \Px\Css\ComputedStyle([])));
+            $cached = $this->cache->find($cacheKey);
+            // 1) 完全洁净（style 也没变）→ 直接复用
+            // 2) 仅样式变化（styleDirty=true）→ 复用几何 + 新样式快照
+            if ($cached !== null) {
+                $styleSnapshot = $node->computedStyle;
+                if (!$node->styleDirty) {
+                    Diag::log(2, 'cache:skip', ['type' => $node->type, 'w' => $cached->w, 'h' => $cached->h]);
+                    return new \Px\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node);
+                } else {
+                    // 仅样式变化：复用几何 + 更新样式快照
+                    $newChildren = [];
+                    foreach ($cached->children as $cc) {
+                        $newChildren[] = $cc;
+                    }
+                    return new \Px\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $styleSnapshot, $newChildren, $node);
+                }
+            }
+        }
         $style = $node->computedStyle;
         $display = $style?->display?->value ?? 'block';
         $position = $style?->position?->value ?? 'static';

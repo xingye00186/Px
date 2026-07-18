@@ -1,0 +1,211 @@
+{
+    "meta": {
+        "timestamp": "2026-07-18 06:12:02",
+        "total_sec": 0.2876,
+        "php_version": "8.4.20",
+        "frames": 50,
+        "mode": "optimized"
+    },
+    "scenarios": {
+        "A_color": {
+            "tree_convert": {
+                "count": 153,
+                "total": 2454.28,
+                "avg": 16.04,
+                "min": 10.01,
+                "max": 47.92,
+                "elapsed_sec": 0.0508
+            },
+            "algo:InlineAlgorithm": {
+                "count": 102,
+                "total": 6135.94,
+                "avg": 60.16,
+                "min": 12.16,
+                "max": 1848.94,
+                "elapsed_sec": 0.0469
+            },
+            "algo:BlockAlgorithm": {
+                "count": 102,
+                "total": 6706.48,
+                "avg": 65.75,
+                "min": 20.98,
+                "max": 152.11,
+                "elapsed_sec": 0.0469
+            },
+            "algo:OOF": {
+                "count": 51,
+                "total": 1109.36,
+                "avg": 21.75,
+                "min": 12.87,
+                "max": 184.06,
+                "elapsed_sec": 0.0467
+            },
+            "stage:layout": {
+                "count": 51,
+                "total": 18616.2,
+                "avg": 365.02,
+                "min": 170.95,
+                "max": 3995.18,
+                "elapsed_sec": 0.0467
+            },
+            "render_collect": {
+                "count": 51,
+                "total": 5598.78,
+                "avg": 109.78,
+                "min": 67,
+                "max": 1158.95,
+                "elapsed_sec": 0.0455
+            }
+        },
+        "B_size": {
+            "tree_convert": {
+                "count": 153,
+                "total": 2648.59,
+                "avg": 17.31,
+                "min": 10.97,
+                "max": 53.88,
+                "elapsed_sec": 0.057
+            },
+            "algo:InlineAlgorithm": {
+                "count": 102,
+                "total": 9874.58,
+                "avg": 96.81,
+                "min": 61.99,
+                "max": 195.98,
+                "elapsed_sec": 0.0569
+            },
+            "algo:BlockAlgorithm": {
+                "count": 102,
+                "total": 11792.18,
+                "avg": 115.61,
+                "min": 67,
+                "max": 188.11,
+                "elapsed_sec": 0.0568
+            },
+            "algo:OOF": {
+                "count": 51,
+                "total": 893.83,
+                "avg": 17.53,
+                "min": 12.87,
+                "max": 34.09,
+                "elapsed_sec": 0.0566
+            },
+            "stage:layout": {
+                "count": 51,
+                "total": 25900.84,
+                "avg": 507.86,
+                "min": 351.19,
+                "max": 681.16,
+                "elapsed_sec": 0.0566
+            },
+            "render_collect": {
+                "count": 51,
+                "total": 4582.17,
+                "avg": 89.85,
+                "min": 68.9,
+                "max": 138.04,
+                "elapsed_sec": 0.0565
+            }
+        },
+        "C_hover": {
+            "tree_convert": {
+                "count": 153,
+                "total": 2707.24,
+                "avg": 17.69,
+                "min": 14.78,
+                "max": 42.92,
+                "elapsed_sec": 0.0625
+            },
+            "algo:InlineAlgorithm": {
+                "count": 102,
+                "total": 10311.37,
+                "avg": 101.09,
+                "min": 83.92,
+                "max": 193.12,
+                "elapsed_sec": 0.0624
+            },
+            "algo:BlockAlgorithm": {
+                "count": 102,
+                "total": 12742.04,
+                "avg": 124.92,
+                "min": 88.93,
+                "max": 409.13,
+                "elapsed_sec": 0.0623
+            },
+            "algo:OOF": {
+                "count": 51,
+                "total": 944.38,
+                "avg": 18.52,
+                "min": 15.97,
+                "max": 32.9,
+                "elapsed_sec": 0.062
+            },
+            "stage:layout": {
+                "count": 51,
+                "total": 27559.28,
+                "avg": 540.38,
+                "min": 456.09,
+                "max": 1116.99,
+                "elapsed_sec": 0.062
+            },
+            "render_collect": {
+                "count": 51,
+                "total": 5054.47,
+                "avg": 99.11,
+                "min": 81.06,
+                "max": 430.11,
+                "elapsed_sec": 0.0619
+            }
+        },
+        "D_text": {
+            "tree_convert": {
+                "count": 153,
+                "total": 2907.75,
+                "avg": 19,
+                "min": 10.01,
+                "max": 128.98,
+                "elapsed_sec": 0.0629
+            },
+            "algo:InlineAlgorithm": {
+                "count": 102,
+                "total": 11050.22,
+                "avg": 108.34,
+                "min": 71.05,
+                "max": 538.11,
+                "elapsed_sec": 0.0627
+            },
+            "algo:BlockAlgorithm": {
+                "count": 102,
+                "total": 13164.04,
+                "avg": 129.06,
+                "min": 77.01,
+                "max": 320.91,
+                "elapsed_sec": 0.0626
+            },
+            "algo:OOF": {
+                "count": 51,
+                "total": 978.23,
+                "avg": 19.18,
+                "min": 12.87,
+                "max": 38.15,
+                "elapsed_sec": 0.0624
+            },
+            "stage:layout": {
+                "count": 51,
+                "total": 28940.2,
+                "avg": 567.45,
+                "min": 394.11,
+                "max": 1070.98,
+                "elapsed_sec": 0.0624
+            },
+            "render_collect": {
+                "count": 51,
+                "total": 5106.45,
+                "avg": 100.13,
+                "min": 70.1,
+                "max": 189.07,
+                "elapsed_sec": 0.0623
+            }
+        }
+    }
+}
