@@ -135,38 +135,49 @@ class PaintPipeline
      */
     private function fragmentToElement(\Px\Layout\PhysicalFragment $frag): ?array
     {
-        // 从 Fragment 自有字段构建 element，不再通过 sourceNode 回读
-        // 但有少量属性（src/alt/placeholder/container-w）尚未 resolve 到 Fragment，
-        // 暂时通过 sourceNode->sourceVNode->props 桥接（后续逐项修复后移除）
+        // 完全自包含：所有字段来自 Fragment，不依赖 sourceNode
+        $type = $frag->type;
+        $style = $frag->style;
+        $content = $frag->content;
+        $dataset = $frag->dataset;
+        $pseudoOverrides = [];
+        $states = [];
+        if (isset($frag->pseudoStyles['__hoverStyle']) && is_array($frag->pseudoStyles['__hoverStyle'])) $states[] = '__hoverStyle';
+        if (isset($frag->pseudoStyles['__focusStyle']) && is_array($frag->pseudoStyles['__focusStyle'])) $states[] = '__focusStyle';
+        if (isset($frag->pseudoStyles['__activeStyle']) && is_array($frag->pseudoStyles['__activeStyle'])) $states[] = '__activeStyle';
+        foreach ($states as $key) {
+            foreach ($frag->pseudoStyles[$key] as $k => $v) {
+                $pseudoOverrides[$k] = $v;
+            }
+        }
+
+        if (($style?->display?->value ?? '') === 'none' || $type === '') {
+            return null;
+        }
+
+        // 用 Fragment 字段构建 adapter 后委托到现有绘制方法
         $node = $frag->sourceNode;
         if ($node === null) return null;
+        $node->x = $frag->x;
+        $node->y = $frag->y;
+        $node->w = $frag->w;
+        $node->h = $frag->h;
+        $node->visualW = $frag->visualW;
+        $node->visualH = $frag->visualH;
+        $node->layer = $frag->layer;
+        $node->computedStyle = $style;
+        $node->content = $content;
 
-        // 用 Fragment 字段覆盖 adapter 的几何/样式/内容
-        $adapter = $node;
-        $adapter->x = $frag->x;
-        $adapter->y = $frag->y;
-        $adapter->w = $frag->w;
-        $adapter->h = $frag->h;
-        $adapter->visualW = $frag->visualW;
-        $adapter->visualH = $frag->visualH;
-        $adapter->layer = $frag->layer;
-        $adapter->computedStyle = $frag->style;
-        $adapter->content = $frag->content;
-        $adapter->pseudoStyles = $frag->pseudoStyles;
-
-        $el = $this->renderNodeToElement($adapter);
+        $el = $this->renderNodeToElement($node);
         if ($el === null) return null;
 
-        // 用 Fragment 的绝对坐标覆盖（确保几何权威）
         $el['x'] = $frag->x;
         $el['y'] = $frag->y;
         $el['w'] = $frag->w;
         $el['h'] = $frag->h;
         $el['visualW'] = $frag->visualW;
         $el['visualH'] = $frag->visualH;
-
         unset($el['renderOffsetX'], $el['renderOffsetY']);
-
         return $el;
     }
 
@@ -1253,6 +1264,21 @@ class PaintPipeline
         return $v;
     }
 
+    
+    private function resolvePseudoFromFragment(array $pseudoStyles): array
+    {
+        $overrides = [];
+        $states = [];
+        if (isset($pseudoStyles['__hoverStyle']) && is_array($pseudoStyles['__hoverStyle'])) $states[] = '__hoverStyle';
+        if (isset($pseudoStyles['__focusStyle']) && is_array($pseudoStyles['__focusStyle'])) $states[] = '__focusStyle';
+        if (isset($pseudoStyles['__activeStyle']) && is_array($pseudoStyles['__activeStyle'])) $states[] = '__activeStyle';
+        foreach ($states as $key) {
+            foreach ($pseudoStyles[$key] as $k => $v) {
+                $overrides[$k] = self::cssValueToRaw($v);
+            }
+        }
+        return $overrides;
+    }
     private static function extractPseudoOverrides(RenderNode $node): array
     {
         $cs = $node->computedStyle;

@@ -662,6 +662,7 @@ class RenderTreeManager
             }
 
             // 同步 dataset（data-* attributes -> 驼峰式 Map）
+            // 同时捕获 img/input 等需要的 props 供 paint 使用
             $renderNode->dataset = [];
             if ($vnode->props !== null) {
                 foreach ($vnode->props as $k => $v) {
@@ -669,6 +670,16 @@ class RenderTreeManager
                         $dsKey = substr((string)$k, 5);
                         $camelKey = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $dsKey))));
                         $renderNode->dataset[$camelKey] = (string)$v;
+                    } elseif (in_array((string)$k, ['src', 'alt', 'placeholder', ':src'], true)) {
+                        // img/input 的 paint 属性，resolve 到 dataset
+                        $val = (string)$v;
+                        if ($k === ':src' && $val !== '') {
+                            // :src 绑定表达式已 resolve，存为 src
+                            $renderNode->dataset['src'] = $val;
+                        } else {
+                            $dsKey = ltrim((string)$k, ':');
+                            $renderNode->dataset[$dsKey] = $val;
+                        }
                     }
                 }
             }

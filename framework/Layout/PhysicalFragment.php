@@ -45,6 +45,9 @@ class PhysicalFragment
     public readonly array $dataset;
     public readonly array $pseudoStyles;
 
+    /** 容器可用宽度（供 span/inline 文本换行使用） */
+    public readonly int $availableWidth;
+
     /** getter 方法 — AOT 跨类 readonly 访问保护 */
     public function getX(): int { return $this->x; }
     public function getY(): int { return $this->y; }
@@ -84,6 +87,7 @@ class PhysicalFragment
         mixed $content = null,
         array $dataset = [],
         array $pseudoStyles = [],
+        int $availableWidth = 0,
     ) {
         $this->x               = (int)$x;
         $this->y               = (int)$y;
@@ -104,6 +108,7 @@ class PhysicalFragment
         $this->content           = $content;
         $this->dataset           = $dataset;
         $this->pseudoStyles      = $pseudoStyles;
+        $this->availableWidth    = (int)$availableWidth;
     }
 
     /** 从 LayoutResult 构造（适配器用） */
