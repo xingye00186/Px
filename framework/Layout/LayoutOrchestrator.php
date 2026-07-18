@@ -119,7 +119,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
                         $old->children,                // 复用完整子 Fragment 树
                         $node,
                         $old->scrollTop, $old->scrollLeft, $old->isScrollContainer,
-                        $node->type, $node->content, $node->dataset, $node->pseudoStyles
+                        $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
                     );
                 }
                 Diag::log(2, 'fragment:cache-hit', ['type' => $node->type, 'w' => $node->cachedFragment->w]);
@@ -149,7 +149,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
 
         if ($display === 'none') {
             return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $style, array(), $node, 0, 0, false,
-                $node->type, $node->content, $node->dataset, $node->pseudoStyles);
+                $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles);
         }
 
         // ─── Phase A: 子项 intrinsic 收集 ───
@@ -207,7 +207,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 0, 0, max(0, $w), max(0, $h),
                 0, 0, $nodeLayer, 0, 0,
                 $style, $childFragments, $node, 0, 0, false,
-                $node->type, $node->content, $node->dataset, $node->pseudoStyles
+                $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
             );
             return $frag;
         }
@@ -228,7 +228,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
             Diag::log(2, 'cache:hit', ['type' => $node->type, 'w' => $cached->w, 'h' => $cached->h]);
             return new \Px\Layout\PhysicalFragment($cached->x, $cached->y, $cached->w, $cached->h, $cached->visualW, $cached->visualH, $cached->layer, $cached->contentWidth, $cached->contentHeight, $cached->style, $cached->children, $node,
                 (int)$cached->getScrollTop(), (int)$cached->getScrollLeft(), $cached->getIsScrollContainer(),
-                $node->type, $node->content, $node->dataset, $node->pseudoStyles);
+                $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles);
         }
 
         Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->getContentWidth(), 'ch' => $space->getContentHeight()]);
@@ -322,7 +322,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 (int)$algoFrag->getContentWidth(), (int)$algoFrag->getContentHeight(),
                 $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
                 (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $algoFrag->getIsScrollContainer(),
-                $node->type, $node->content, $node->dataset, $node->pseudoStyles
+                $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
             );
         } else {
             // 无 layover 变化时，仍需要打标元数据
@@ -332,7 +332,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 (int)$algoFrag->getContentWidth(), (int)$algoFrag->getContentHeight(),
                 $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
                 (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $algoFrag->getIsScrollContainer(),
-                $node->type, $node->content, $node->dataset, $node->pseudoStyles
+                $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
             );
         }
         $this->cache->set($ckey, $algoFrag);
@@ -348,6 +348,21 @@ class LayoutOrchestrator implements ChildLayoutProvider
     /**
      * 计算 ConstraintSpace 签名，用于判断缓存有效性。
      */
+    
+    private function extractDataset(RenderNode $node): array
+    {
+        $dataset = [];
+        $vnode = $node->sourceVNode;
+        if ($vnode === null || $vnode->props === null) return $dataset;
+        foreach ($vnode->props as $k => $v) {
+            if (str_starts_with((string)$k, 'data-')) {
+                $dsKey = substr((string)$k, 5);
+                $camelKey = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $dsKey))));
+                $dataset[$camelKey] = (string)$v;
+            }
+        }
+        return $dataset;
+    }
     private function computeConstraintSignature(ConstraintSpace $space): string
     {
         return implode('|', [
@@ -363,9 +378,6 @@ class LayoutOrchestrator implements ChildLayoutProvider
         ]);
     }
 
-    /**
-     * 构建子节点约束空间。
-     */
     private function buildChildSpace(
         RenderNode $child,
         ConstraintSpace $parentSpace,

@@ -832,12 +832,12 @@ class Application
         }
         $arr['children'] = $children;
 
-        // Add sourceNode-derived fields not covered by toArray()
-        $arr['type'] = $frag->sourceNode !== null ? $frag->sourceNode->type : 'div';
-        $arr['content'] = $frag->sourceNode !== null ? $frag->sourceNode->content : null;
+        // Add Fragment-derived fields
+        $arr['type'] = $frag->type !== '' ? $frag->type : ($frag->sourceNode !== null ? $frag->sourceNode->type : 'div');
+        $arr['content'] = $frag->content !== null ? $frag->content : ($frag->sourceNode !== null ? $frag->sourceNode->content : null);
         $arr['key'] = $frag->sourceNode !== null ? $frag->sourceNode->key : null;
         $arr['groupId'] = $frag->sourceNode !== null ? $frag->sourceNode->groupId : null;
-        $arr['dataset'] = $frag->sourceNode !== null ? ($frag->sourceNode->dataset ?? []) : [];
+        $arr['dataset'] = $frag->dataset;
 
         // Style serialization
         if ($frag->style !== null) {

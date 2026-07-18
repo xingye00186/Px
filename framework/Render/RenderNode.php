@@ -26,7 +26,6 @@ class RenderNode
     public array $pseudoStyles = [];
     public mixed $content = null;
     public ?string $key = null;
-    public array $dataset = [];
 
     
 
