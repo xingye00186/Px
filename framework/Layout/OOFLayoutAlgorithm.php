@@ -206,7 +206,7 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
             $height = max(0, $ancH - $topVal - $bottomVal - $marginTop - $marginBottom);
         }
 
-        $textContent = is_string($sourceRN->content) ? $sourceRN->content : '';
+        $textContent = (string)($sourceRN->content ?? '');
         if (($width <= 0 || $height <= 0) && strlen($textContent) > 0) {
             $fs = (int)($cs->getFontSize() ?? 14);
             $bd = (int)($cs->getBold() ?? 0);

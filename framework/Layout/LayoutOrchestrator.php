@@ -181,7 +181,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
             );
             foreach ($node->children as $ch) {
                 $chAlgo = $this->selectAlgorithm($ch->computedStyle?->display?->value ?? 'block', $ch->computedStyle);
-                $chIntrinsic = $chAlgo->intrinsicSize($intrinsicSpace, $ch->computedStyle, is_string($ch->content) ? $ch->content : '');
+                $chIntrinsic = $chAlgo->intrinsicSize($intrinsicSpace, $ch->computedStyle, (string)($ch->content ?? ''));
                 $childIntrinsics[] = $chIntrinsic;
             }
         }
@@ -243,7 +243,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
         Diag::log(2, 'process:node', ['type' => $node->type, 'display' => $display, 'pos' => $position, 'algo' => $algo !== null ? get_class($algo) : 'none']);
         $algoName = $algo !== null ? (new \ReflectionClass($algo))->getShortName() : 'none';
         \Px\Core\PerfCounter::start('algo:' . $algoName);
-        $textContent = is_string($node->content) ? $node->content : '';
+        $textContent = (string)($node->content ?? '');
 
         // $cached = 上一帧布局结果（约束签名不匹配但几何仍可用，供 flex size hint）
         $cached = $node->cachedFragment;

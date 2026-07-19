@@ -243,8 +243,13 @@ class VNode
             foreach ($children as $c) {
                 if ($c instanceof VNode) {
                     $result[] = $c;
-                } elseif (is_string($c) && $c !== '') {
-                    $result[] = new VNode('#text', null, $c);
+                } elseif ($c !== null && $c !== false) {
+                    // AOT 兼容: php::Variant 上 is_string() 可能返回 false（#text 子节点丢失）
+                    // 改用 (string) 强制转换 + 非空检查
+                    $strVal = (string)$c;
+                    if ($strVal !== '') {
+                        $result[] = new VNode('#text', null, $strVal);
+                    }
                 }
             }
             return $result;

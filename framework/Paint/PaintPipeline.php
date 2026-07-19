@@ -443,6 +443,10 @@ class PaintPipeline
         if ($w <= 0) $w = 80;
         if ($h <= 0) $h = 32;
         $rawBg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr();
+        // 回退：从伪类覆盖中读取 bg（当 backgroundColor 为空时备用）
+        if (($rawBg === null || $rawBg === 0) && isset($pseudoOverrides['bg'])) {
+            $rawBg = $pseudoOverrides['bg'];
+        }
         $bg = $rawBg !== null ? $rawBg : null;
         $bwVal = $pseudoOverrides['borderWidth'] ?? ($cs?->borderWidth?->top?->toPx() ?? 0);
         $hasBorder = ($bwVal > 0)
@@ -456,7 +460,7 @@ class PaintPipeline
         if ($bgImage !== '' && $w > 0 && $h > 0) {
             $bgImageHandle = ImageManager::loadImage($bgImage);
         }
-        $hasTextChild = is_string($node->content) && $node->content !== '';
+        $hasTextChild = (string)($node->content ?? '') !== '';
         if ($bg === null && !$hasBorder && !$hasTextChild && $bgImageHandle === 0) {
             return null;
         }
