@@ -450,3 +450,133 @@ public function sourceNode(?RenderNode $v): self { ... }
 | **禁用 `$GLOBALS`** | 使用 `static` 局部变量或删除调试代码 |
 | **`foreach` 键类型问题** | 遍历 `array` 属性时用 `for` + 索引替代 |
 | **属性必须完整标注** | 所有属性和方法参数必须有类型声明 |
+
+---
+
+## 十五、Property Hook 触发 `set`：`setBindValue` 必须显式转型
+
+### 问题
+
+在 `use native_types` 模式下，`setBindValue(string $bindKey, string $value)` 将字符串直接赋值给 `int`/`bool` 类型的 Property Hook 属性，触发 AOT 类型错误：
+
+```
+Fatal error: Cannot assign string to property AppComponent::$counter of type int
+```
+
+### 根因
+
+SFC 编译器生成的 `setBindValue` 未根据属性的 PHP 类型添加显式转型。当父组件传递 `:counter="..."` 绑定值时，产生的 `$this->counter = $value` 赋值在 AOT 下被严格类型检查拦截。
+
+### 解决方案
+
+`generateSetBindValue()` 必须根据 `$reactiveProps` 中收集的属性类型添加转型：
+
+```php
+// generateSetBindValue 中的类型转型逻辑
+if (isset($reactiveTypes[$key])) {
+    $t = $reactiveTypes[$key];
+    if ($t === 'int')   { $cast = '(int)'; }
+    elseif ($t === 'bool')  { $cast = '(bool)'; }
+    elseif ($t === 'float') { $cast = '(float)'; }
+}
+// 生成: if ($this->counter !== (int)$value) { $this->counter = (int)$value; }
+```
+
+### 影响范围
+
+- `framework/Compiler/sfc-compiler.php` — `generateSetBindValue()` 函数
+- 所有带有 `#[Reactive] public int $prop` 声明且通过 `:prop="..."` 传递值的组件
+
+---
+
+## 十六、SFC 编译器：`extractReactiveProperties()` 必须在 `generateSetBindValue()` 之前调用
+
+### 问题
+
+`compileOneComponent()` 中 `generateSetBindValue()` 在第 2479 行调用，但 `extractReactiveProperties()` 在第 2489 行才执行。顺序倒置导致 `$reactiveProps` 为空，上文第 十五 节的类型转型代码无法生效，所有 int/bool 属性在 `setBindValue` 中缺少转型。
+
+```php
+// 错误顺序（SFC 编译器 v1）
+$setBindValue = generateSetBindValue($bindKeys, $arrayBindKeys, $reactiveProps ?? []);  // line 2479
+// ... 10 行代码 ...
+$reactiveProps = $analyzer->extractReactiveProperties($script);  // line 2489
+```
+
+### 解决方案
+
+调整代码顺序，确保 `extractReactiveProperties()` 在 `generateSetBindValue()` 之前执行：
+
+```php
+// 正确顺序（SFC 编译器 v2）
+$reactiveProps = $analyzer->extractReactiveProperties($script);  // 先提取
+$setBindValue = generateSetBindValue($bindKeys, $arrayBindKeys, $reactiveProps);  // 再生成（带转型）
+```
+
+### 影响范围
+
+- `framework/Compiler/sfc-compiler.php` — `compileOneComponent()` 函数内部代码重组（commit `dbf77691`）
+- 同样影响 inline pipeline 路径（`$reactiveProps` 提取在 3182 行，需验证顺序）
+
+---
+
+## 十七、`Effect::schedule()`：`dirty=true` 必须在 pending 防重入之前执行
+
+### 问题
+
+`Effect::schedule()` 中 `$this->pending` 防重入检查在 `$this->component->dirty = true` 之前，导致同一微任务中连续多次属性赋值只触发一次 dirty：
+
+```php
+// 错误顺序：pending 守卫在前
+public function schedule(): void {
+    if ($this->pending) { return; }  // 先防重入
+    $this->pending = true;
+    $this->component->dirty = true;   // 后标记 dirty
+    // 连续两次 set 时，第二次因 pending=true 直接 return，dirty 未被覆盖
+}
+```
+
+AOT 编译时此问题表现为：部分属性修改后不触发 VNode 重建，UI 状态停留在中间值。
+
+### 解决方案
+
+将 `dirty=true` 移到 pending 检查之前，确保每次 set 都覆盖 dirty 标记：
+
+```php
+public function schedule(): void {
+    // 同步失效 VNode 缓存 — 必须在 pending 检查之前执行
+    if ($this->component !== null) {
+        $this->component->dirty = true;
+    }
+    if ($this->pending) { return; }  // pending 仅控制微任务入队，不控制 dirty
+    $this->pending = true;
+    // ... 入队微任务 ...
+}
+```
+
+### 影响范围
+
+- `framework/Reactive/Effect.php` — `schedule()` 方法
+- `framework/Reactive/DependencyTracker.php` — `notify()` 调用 `schedule()` 的路径
+- 任何通过 Property Hook `set` → `DependencyTracker::notify()` → `Effect::schedule()` 的更新链
+
+---
+
+## 总结：AOT 编码规范（完整版）
+
+| 规则 | 说明 |
+|------|------|
+| **禁止命名参数** | 构造函数/方法始终使用位置参数 |
+| **禁止 `toArray()` 方法名** | 使用 `serializeNode()` 等替代名称 |
+| **抽象方法必须完整实现** | 每个子类必须显式实现所有抽象方法 |
+| **typed property 必须初始化** | `int $x = 0` 而非 `int $x` |
+| **深度空安全链拆解** | `?->` 不超过 2 层 |
+| **null 不能传给 `int` 参数** | 使用默认值 `0` 而非 `null` |
+| **动态属性不可用** | 状态外置到 Map/Array/SplObjectStorage |
+| **读取加 `??` 保护** | `$node->x ?? 0` 而非 `$node->x` |
+| **避免 Builder 模式** | 直接构造 DTO，不链式调用 |
+| **`count()` 预缓存为 `(int)`** | 循环外 `$n = (int)count($arr)` 再用 `$n` 比较 |
+| **禁用 `$GLOBALS`** | 使用 `static` 局部变量或删除调试代码 |
+| **`foreach` 键类型问题** | 遍历 `array` 属性时用 `for` + 索引替代 |
+| **属性必须完整标注** | 所有属性和方法参数必须有类型声明 |
+| **Property Hook `set` 转型** | `setBindValue` 中对 int/bool 属性加 `(int)`/`(bool)` 转型 |
+| **`dirty` 标记先于 pending 检查** | `Effect::schedule()` 中 `dirty=true` 必须在 `pending` 守卫之前 |
