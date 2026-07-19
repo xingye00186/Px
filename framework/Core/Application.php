@@ -920,12 +920,16 @@ class Application
         $this->debugFrameNumber++;
         $frame = $this->debugFrameNumber;
 
+        \Px\Core\PerfCounter::start('stage:vnode_tree');
         $this->rebuildVNodeTree();
+        \Px\Core\PerfCounter::end('stage:vnode_tree');
 
         // Phase 0.5: 独立 StyleRecalc 通行证（将样式解析从 RenderTreeManager 抽出）
         if ($this->activeVNodeTree !== null) {
+            \Px\Core\PerfCounter::start('stage:style_recalc');
             $styleRecalc = new StyleRecalcPass();
             $styleRecalc->recalc($this->activeVNodeTree);
+            \Px\Core\PerfCounter::end('stage:style_recalc');
         }
 
         // getRootRenderNodes() = 顶层 #root 所有旧子节点，作为 candidates 传递给 #root handler
@@ -937,6 +941,7 @@ class Application
 
         // VNode → RenderNode 转换 + bind 值同步（type+key 匹配复用）
         // 传递 'app' 作为根组件的 groupId（VNode.groupId 不再写入，依赖参数传播）
+        \Px\Core\PerfCounter::start('stage:update_from_vnode');
         $rootRenderNode = $this->renderTreeManager->updateFromVNode(
             $this->activeVNodeTree,
             null,
@@ -947,15 +952,16 @@ class Application
             '',
             []
         );
+        \Px\Core\PerfCounter::end('stage:update_from_vnode');
         if ($rootRenderNode === null) {
+            \Px\Core\PerfCounter::end('stage:full_render');
             return;
         }
 
-        // 恢复 scrollTop：根组件的直属子树（如 App.vue 中的 .case-list）
-        // 不经过 #component handler，因此不受 copyScrollTopFromOld 覆盖。
-        // 此处对根 RenderNode 整体执行一次 scrollTop 恢复。
         if ($oldRootRenderNode !== null) {
+            \Px\Core\PerfCounter::start('stage:scroll_restore');
             $this->renderTreeManager->copyScrollTopFromOld($rootRenderNode, $oldRootRenderNode);
+            \Px\Core\PerfCounter::end('stage:scroll_restore');
         }
 
         if (Config::get('debug_diag_enabled', false)) {
@@ -964,7 +970,9 @@ class Application
         }
 
         // LayoutOrchestrator 处理 RenderNode 并收集 Fragment 树
+        \Px\Core\PerfCounter::start('stage:layout');
         $fragmentTree = $this->layoutOrchestrator->layout($rootRenderNode);
+        \Px\Core\PerfCounter::end('stage:layout');
 
         if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] render AFTER');
@@ -972,11 +980,15 @@ class Application
 
         Diag::log(1, 'render:done', ['fragExists' => $fragmentTree !== null ? 'yes' : 'no']);
 
-        // 捕获 Fragment 快照供 dumpLayoutToFile 读取（与渲染使用同一 Fragment，保证一致性）
+        // 捕获 Fragment 快照
+        \Px\Core\PerfCounter::start('stage:capture_snapshot');
         $this->captureLayoutSnapshot($fragmentTree);
+        \Px\Core\PerfCounter::end('stage:capture_snapshot');
 
-        // PaintPipeline 从 Fragment 树渲染（利用 paintDirty 增量）
+        // PaintPipeline 从 Fragment 树渲染
+        \Px\Core\PerfCounter::start('stage:paint');
         $this->paintPipeline->render($fragmentTree);
+        \Px\Core\PerfCounter::end('stage:paint');
         \Px\Core\PerfCounter::end('stage:full_render');
     }
 
