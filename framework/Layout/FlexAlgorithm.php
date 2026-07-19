@@ -92,8 +92,10 @@ class FlexAlgorithm extends LayoutAlgorithm
             if ($childDisplay === 'none') continue;
             // Use resolved flex shorthand as fallback when individual props not set
             // (getRaw may return CssLength object which cannot be cast to float)
-            $grow = (float)$cs->flex->grow;
-            $shrink = (float)$cs->flex->shrink;
+            $rawGrow = $cs->getRaw('flexGrow');
+            $grow = $rawGrow !== null ? (float)$rawGrow : (float)$cs->flex->grow;
+            $rawShrink = $cs->getRaw('flexShrink');
+            $shrink = $rawShrink !== null ? (float)$rawShrink : (float)$cs->flex->shrink;
             $order = (int)($cs->getRaw("order") ?? 0);
             // flex-basis from resolved CssLength (not raw string from getRaw)
             $basisVal = $cs->flexBasis;
