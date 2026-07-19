@@ -398,6 +398,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                 ->vw((int)$fi->visualW)->vh((int)$fi->visualH)
                 ->cw($contentW)->ch((int)($orig?->contentHeight ?? 0))
                 ->style($orig?->style)->children($children)
+                ->type($orig?->type ?? '')->content($orig?->content)
                 ->build();
         }
         // Remap results to original DOM order (CSS §9.2: visual order ≠ DOM order)
