@@ -1,24 +1,4 @@
 <?php
-// PHP CLI 模式：加载框架和自动生成的组件
-$pxRoot = dirname(__DIR__, 2);
-require_once $pxRoot . '/tests/bootstrap/autoload.php';
-require_once $pxRoot . '/framework/Reactive/Reactive.php';
-require_once $pxRoot . '/framework/Reactive/DependentsMap.php';
-require_once $pxRoot . '/framework/Reactive/Effect.php';
-require_once $pxRoot . '/framework/Reactive/DependencyTracker.php';
-require_once $pxRoot . '/framework/Reactive/Notifier.php';
-require_once $pxRoot . '/framework/Component/BaseComponent.php';
-require_once $pxRoot . '/framework/Component/ReactiveComponent.php';
-require_once $pxRoot . '/framework/Dom/VNode.php';
-require_once $pxRoot . '/framework/Core/Scheduler.php';
-require_once __DIR__ . '/gen/AppComponent.php';
-require_once __DIR__ . '/gen/DeepTreeNodeComponent.php';
-require_once __DIR__ . '/gen/ComponentFactory.php';
-
-// AOT 原生函数 shim
-if (!function_exists('objval')) { function objval($v,$t){return $v;} }
-if (!function_exists('refval')) { function refval(&$v,$t){return $v;} }
-if (!function_exists('any')) { function any($v){return $v;} }
 
 /**
  * reactive-bench — AOT 响应式改造对比测试项目入口
@@ -71,9 +51,9 @@ function runCaseIntensive(
 
     // 切换到目标 case
     $root->selectCase($caseName);
-    $app->scheduler->flushMicrotasks();
+    $app->getScheduler()->flushMicrotasks();
     $app->render();
-    $app->scheduler->flushMicrotasks();
+    $app->getScheduler()->flushMicrotasks();
 
     $startAll = microtime(true);
 
@@ -94,17 +74,23 @@ function runCaseIntensive(
                 break;
 
             case 'DeepTree':
-                // 递归更新根节点 value → 级联传播
-                $root->runWorkloadCycle();
-                break;
-
             case 'MixedWorkload':
                 $root->runWorkloadCycle();
                 break;
+
+            case 'FormDashboard':
+                $root->runDashboardCycle();
+                break;
+
+            case 'ChatStream':
+                $root->runChatCycle();
+                break;
         }
 
-        // flush 微任务（触发 render pipeline）
-        $app->scheduler->flushMicrotasks();
+        // flush 微任务 → 执行完整的渲染管线
+        $app->getScheduler()->flushMicrotasks();
+        $app->render();
+        $metrics['renders']++;
 
         $metrics['phase_ms'][] = (microtime(true) - $phaseStart) * 1000;
     }
@@ -154,6 +140,21 @@ function main(): int
         if ($arg === '--cases-list')              $listCases = true;
     }
 
+    // 将相对路径解析为相对于应用目录的绝对路径
+    if ($dumpPath !== '' && !preg_match('#^(/|[A-Za-z]:)#', $dumpPath)) {
+        $dumpPath = __DIR__ . '/' . ltrim($dumpPath, '/');
+    }
+    // 归一化路径（去除 ../）
+    if ($dumpPath !== '') {
+        $parts = explode('/', str_replace('\\', '/', $dumpPath));
+        $resolved = [];
+        foreach ($parts as $p) {
+            if ($p === '..' && !empty($resolved)) { array_pop($resolved); }
+            elseif ($p !== '.' && $p !== '') { $resolved[] = $p; }
+        }
+        $dumpPath = implode('/', $resolved);
+    }
+
     if ($usePerf) {
         putenv('PX_PERF=1');
     }
@@ -165,7 +166,7 @@ function main(): int
     $app    = Application::create()->mount($root, $appDir);
 
     if ($listCases) {
-        $cases = ['SimpleCounter', 'ManyProps', 'DeepTree', 'MixedWorkload'];
+        $cases = ['SimpleCounter', 'ManyProps', 'DeepTree', 'MixedWorkload', 'FormDashboard', 'ChatStream'];
         $allResults = [];
         foreach ($cases as $c) {
             echo "[BENCH] Running case: {$c} cycles={$cycles}\n";
@@ -210,5 +211,3 @@ function main(): int
 
     return 0;
 }
-
-exit(main());

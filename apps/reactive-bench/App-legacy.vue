@@ -31,17 +31,31 @@
     public string $currentCase = 'SimpleCounter';
 
     // ── SimpleCounter ──
-    public int $counter = 0;
-    public function increment(): void { $this->counter++; $this->markDirty(); }
+    public string $counter = '0';
+    public function increment(): void
+    {
+        $this->counter = (string)((int)$this->counter + 1);
+        $this->markDirty();
+    }
 
     // ── ManyProps ──
-    public int $trackedProp = 0;
+    public string $trackedProp = '0';
     public int $changeCount = 0;
-    public function changeTracked(): void { $this->trackedProp++; $this->changeCount++; $this->markDirty(); }
-    public function changeUntracked(): void { $this->changeCount++; $this->markDirty(); }
+    public function changeTracked(): void
+    {
+        $this->trackedProp = (string)((int)$this->trackedProp + 1);
+        $this->changeCount++;
+        $this->markDirty();
+    }
+
+    public function changeUntracked(): void
+    {
+        $this->changeCount++;
+        $this->markDirty();
+    }
 
     // ── MixedWorkload ──
-    public int $scrollPos = 0;
+    public string $scrollPos = '0';
     public array $items = [];
 
     public function prepareItems(): void
@@ -55,7 +69,7 @@
 
     public function runWorkloadCycle(): void
     {
-        $this->scrollPos = ($this->scrollPos + 50) % 3000;
+        $this->scrollPos = (string)(((int)$this->scrollPos + 50) % 3000);
         $idx = $this->cycleCount % 100;
         $this->cycleCount++;
         $items = $this->items;
@@ -73,34 +87,12 @@
     {
         $this->currentCase = $case;
         if ($case === 'ManyProps') {
-            $this->trackedProp = 0;
+            $this->trackedProp = '0';
             $this->changeCount = 0;
         }
         if ($case === 'MixedWorkload') {
             $this->prepareItems();
         }
         $this->markDirty();
-    }
-
-    public function setBindValue(string $bindKey, string $value): void
-    {
-        switch ($bindKey) {
-            case 'currentCase': if ($this->currentCase !== $value) { $this->currentCase = $value; $this->markDirty(); } break;
-            case 'counter': if ($this->counter !== (int)$value) { $this->counter = (int)$value; $this->markDirty(); } break;
-            case 'trackedProp': if ($this->trackedProp !== (int)$value) { $this->trackedProp = (int)$value; $this->markDirty(); } break;
-            case 'scrollPos': if ($this->scrollPos !== (int)$value) { $this->scrollPos = (int)$value; $this->markDirty(); } break;
-            default: break;
-        }
-    }
-
-    public function getBindValue(string $bindKey): string
-    {
-        return match ($bindKey) {
-            'currentCase' => $this->currentCase,
-            'counter' => (string)$this->counter,
-            'trackedProp' => (string)$this->trackedProp,
-            'scrollPos' => (string)$this->scrollPos,
-            default => '',
-        };
     }
 </script>

@@ -1,3 +1,23 @@
+name: reactive-bench
+mode: bin
+no-console: false
+job: 8
+platform: win32
+entry: main.php
+cxx-flags:
+  - /utf-8
+
+sources:
+  - main.php
+  - ./gen
+  - ../../framework
+  - ../../stub
+  - ../../cpp
+ignore:
+  - ../../framework/Compiler
+  - ../../framework/aot-checker.php
+  - ../../framework/Reactive/tests
+
 # reactive-bench — AOT 响应式改造对比测试项目
 # 支持 `--case=xxx` 选择测试场景
 # 支持 `--perf` 启用 PerfCounter 计时
