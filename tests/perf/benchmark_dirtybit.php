@@ -20,10 +20,32 @@
 
 // ── 参数 ──────────────────────────────────────────────
 $frames = 50;
+$mode = 'after'; // 'before' = old markDirty, 'after' = new reactive
+
 foreach ($argv as $arg) {
     if (str_starts_with($arg, '--frames=')) {
         $frames = max(10, (int)substr($arg, strlen('--frames=')));
     }
+    if (str_starts_with($arg, '--mode=')) {
+        $mode = substr($arg, 7);
+    }
+}
+
+echo "========================================\n";
+echo " 脏位分离性能基准测试\n";
+echo " mode={$mode} frames={$frames}\n";
+echo "========================================\n\n";
+
+// 在 before 模式下，修改 _BenchComponent 使用旧系统行为
+// 旧系统: markDirty() 在每个属性变更时被手动调用
+// 新系统: 通过 property hook 自动触发
+// benchmark_dirtybit 测试的是管线性能本身，不受 reactive 改造影响
+// 因此 before/after 模式在这里没有结构性差异
+// 管线优化对比应通过 apps/reactive-bench 的 AOT 编译测试完成
+if ($mode === 'before') {
+    echo "  [INFO] before/after 模式在此基准测试中无结构性差异\n";
+    echo "  [INFO] 管线优化对比请使用: apps/reactive-bench (AOT 编译测试)\n";
+    echo "  [INFO] 继续运行管线性能基准...\n\n";
 }
 
 // ── AOT polyfill ─────────────────────────────────────
@@ -179,7 +201,7 @@ function runScenario(
 }
 
 // ══════════════════════════════════════════════════════
-echo "========================================\n";
+echo "\n========================================\n";
 echo " 脏位分离性能基准测试\n";
 echo " frames={$frames}\n";
 echo "========================================\n\n";

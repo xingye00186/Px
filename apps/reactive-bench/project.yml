@@ -1,0 +1,7 @@
+# reactive-bench — AOT 响应式改造对比测试项目
+# 支持 `--case=xxx` 选择测试场景
+# 支持 `--perf` 启用 PerfCounter 计时
+# 支持 `--dump-metrics=path.json` 导出结构化性能数据
+window_width: 800
+window_height: 600
+Px_debug_perf_enabled: false
