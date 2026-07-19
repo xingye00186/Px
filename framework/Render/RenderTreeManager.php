@@ -601,29 +601,6 @@ class RenderTreeManager
             }
             $resolvedStyle = $computedStyle->toExportArray();
 
-            // 合并 HTML align 属性到 textAlign（CSS text-align 优先）
-            if (($vnode->props['align'] ?? '') !== '' && empty($resolvedStyle['textAlign'])) {
-                $resolvedStyle['textAlign'] = $vnode->props['align'];
-                $computedStyle = new ComputedStyle($resolvedStyle);
-            }
-
-            // 合并 :style 动态绑定（StyleRecalcPass 只解析静态 style，丢弃 :style）
-            // 这修复了 :style='background:#a6e3a1;' 等动态样式不生效的问题
-            $dynamicStyle = $vnode->props[':style'] ?? '';
-            if ($dynamicStyle !== '') {
-                $dynamicParsed = \Px\Css\StyleResolver::parseInlineStyle($dynamicStyle);
-                if (!empty($dynamicParsed)) {
-                    // 重新导出当前样式，应用动态覆盖，重建 ComputedStyle
-                    $resolvedStyle = $computedStyle->toExportArray();
-                    foreach ($dynamicParsed as $k => $v) {
-                        $resolvedStyle[$k] = $v;
-                    }
-                    $computedStyle = new ComputedStyle($resolvedStyle);
-                    // 同步更新 resolvedStyle 用于后续 LayoutBoundary 判断
-                    $resolvedStyle = $computedStyle->toExportArray();
-                }
-            }
-
             // 计算 LayoutBoundary 标记：显式固定 width+height → 布局可独立于父约束
             $isLayoutBoundary = false;
             if ($computedStyle !== null) {
