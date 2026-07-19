@@ -118,7 +118,7 @@ Hdr "Step 3: Comparison"
 $bd = Get-Content $bj | ConvertFrom-Json
 $ad = Get-Content $aj | ConvertFrom-Json
 
-$cases = @('SimpleCounter','ManyProps','DeepTree','MixedWorkload','FormDashboard','ChatStream')
+$cases = @('SimpleCounter','ManyProps','DeepTree','MixedWorkload','FormDashboard','ChatStream','HoverGrid','DynamicList')
 
 # Header with FPS column
 Write-Host "`n  Case                        Before(ms)  After(ms)   Change    FPS-before FPS-after  Renders"

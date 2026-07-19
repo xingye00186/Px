@@ -51,9 +51,28 @@
     <!-- ChatStream: growing message list -->
     <div v-else-if="currentCase === 'ChatStream'" style="display:flex;flex-direction:column;padding:8px">
       <div style="font-size:12px;color:#8E8E93;padding:4px 0">Messages: {{ msgCount }}</div>
-      <div v-for="msg in messages" :key="msg.id" style="padding:4px 0;border-bottom:1px solid #2C2C2E;font-size:13px">
+     <div v-for="msg in messages" :key="msg.id" style="padding:4px 0;border-bottom:1px solid #2C2C2E;font-size:13px">
         <span style="color:#FF9F0A">{{ msg.author }}:</span>
         <span style="color:#FFF;margin-left:6px">{{ msg.text }}</span>
+      </div>
+    </div>
+
+    <!-- HoverGrid: 100-cell hover simulation -->
+    <div v-else-if="currentCase === 'HoverGrid'" style="display:flex;flex-direction:column;padding:8px;gap:4px">
+      <span style="font-size:12px;color:#8E8E93">HoverGrid: cycle={{ hoverCycle }} idx={{ hoveredIdx }}</span>
+      <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:4px">
+        <div v-for="cell in hoverCells" :key="cell.id"
+          :style="'height:18px;border-radius:3px;background:' + (cell.idx === hoveredIdx ? '#FF9F0A' : '#2C2C2E') + ';cursor:pointer'">
+        </div>
+      </div>
+    </div>
+
+    <!-- DynamicList: add/remove widgets each cycle -->
+    <div v-else-if="currentCase === 'DynamicList'" style="display:flex;flex-direction:column;padding:8px;gap:2px">
+      <span style="font-size:12px;color:#8E8E93">DynamicList: count={{ dynaCount }}</span>
+      <div v-for="wd in dynaWidgets" :key="wd.id"
+        style="height:14px;display:flex;align-items:center;padding:0 4px;background:#2C2C2E;font-size:11px;color:#CCC">
+        <span>{{ wd.label }}</span>
       </div>
     </div>
 
@@ -194,6 +213,60 @@
         $this->messages = $msgs;
     }
 
+    // ── HoverGrid ──
+    #[Reactive]
+    public int $hoveredIdx = -1;
+
+    #[Reactive]
+    public int $hoverCycle = 0;
+
+    #[Reactive]
+    public array $hoverCells = [];
+
+    public function initHoverGrid(): void
+    {
+        $cells = [];
+        for ($i = 0; $i < 100; $i++) {
+            $cells[] = ['id' => 'h' . $i, 'idx' => $i];
+        }
+        $this->hoverCells = $cells;
+        $this->hoveredIdx = -1;
+        $this->hoverCycle = 0;
+    }
+
+    public function runHoverCycle(): void
+    {
+        $this->hoverCycle++;
+        $this->hoveredIdx = $this->hoverCycle % 100;
+    }
+
+    // ── DynamicList ──
+    #[Reactive]
+    public array $dynaWidgets = [];
+
+    #[Reactive]
+    public int $dynaCount = 0;
+
+    public function initDynamicList(): void
+    {
+        $w = [];
+        for ($i = 0; $i < 50; $i++) {
+            $w[] = ['id' => 'dl-' . $i, 'label' => 'W' . $i];
+        }
+        $this->dynaWidgets = $w;
+        $this->dynaCount = 50;
+    }
+
+    public function runDynamicCycle(): void
+    {
+        $w = $this->dynaWidgets;
+        array_shift($w);
+        $idx = $this->dynaCount;
+        $w[] = ['id' => 'dl-' . $idx, 'label' => 'W' . $idx];
+        $this->dynaCount = $idx + 1;
+        $this->dynaWidgets = $w;
+    }
+
     // ── Case switching ──
     public function selectCase(string $case): void
     {
@@ -206,5 +279,7 @@
         if ($case === 'MixedWorkload') { $this->prepareItems(); }
         if ($case === 'FormDashboard') { $this->initFormDashboard(); }
         if ($case === 'ChatStream') { $this->initChatStream(); }
+        if ($case === 'HoverGrid') { $this->initHoverGrid(); }
+        if ($case === 'DynamicList') { $this->initDynamicList(); }
     }
 </script>

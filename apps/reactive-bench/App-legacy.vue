@@ -51,6 +51,25 @@
       </div>
     </div>
 
+    <!-- HoverGrid -->
+    <div v-else-if="currentCase === 'HoverGrid'" style="display:flex;flex-direction:column;padding:8px;gap:4px">
+      <span style="font-size:12px;color:#8E8E93">HoverGrid: cycle={{ hoverCycle }} idx={{ hoveredIdx }}</span>
+      <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:4px">
+        <div v-for="cell in hoverCells" :key="cell.id"
+          :style="'height:18px;border-radius:3px;background:' + (cell.idx === (int)$this->hoveredIdx ? '#FF9F0A' : '#2C2C2E') + ';cursor:pointer'">
+        </div>
+      </div>
+    </div>
+
+    <!-- DynamicList -->
+    <div v-else-if="currentCase === 'DynamicList'" style="display:flex;flex-direction:column;padding:8px;gap:2px">
+      <span style="font-size:12px;color:#8E8E93">DynamicList: count={{ dynaCount }}</span>
+      <div v-for="wd in dynaWidgets" :key="wd.id"
+        style="height:14px;display:flex;align-items:center;padding:0 4px;background:#2C2C2E;font-size:11px;color:#CCC">
+        <span>{{ wd.label }}</span>
+      </div>
+    </div>
+
     <div v-else style="padding:20px">
       <span style="font-size:18px;color:#FF4444">Unknown case: {{ currentCase }}</span>
     </div>
@@ -173,6 +192,56 @@
         $this->markDirty();
     }
 
+    // ── HoverGrid ──
+    public string $hoveredIdx = '-1';
+    public string $hoverCycle = '0';
+    public array $hoverCells = [];
+
+    public function initHoverGrid(): void
+    {
+        $cells = [];
+        for ($i = 0; $i < 100; $i++) {
+            $cells[] = ['id' => 'h' . $i, 'idx' => $i];
+        }
+        $this->hoverCells = $cells;
+        $this->hoveredIdx = '-1';
+        $this->hoverCycle = '0';
+        $this->markDirty();
+    }
+
+    public function runHoverCycle(): void
+    {
+        $this->hoverCycle = (string)((int)$this->hoverCycle + 1);
+        $this->hoveredIdx = (string)((int)$this->hoverCycle % 100);
+        $this->markDirty();
+    }
+
+    // ── DynamicList ──
+    public array $dynaWidgets = [];
+    public string $dynaCount = '0';
+
+    public function initDynamicList(): void
+    {
+        $w = [];
+        for ($i = 0; $i < 50; $i++) {
+            $w[] = ['id' => 'dl-' . $i, 'label' => 'W' . $i];
+        }
+        $this->dynaWidgets = $w;
+        $this->dynaCount = '50';
+        $this->markDirty();
+    }
+
+    public function runDynamicCycle(): void
+    {
+        $w = $this->dynaWidgets;
+        array_shift($w);
+        $idx = (int)$this->dynaCount;
+        $w[] = ['id' => 'dl-' . $idx, 'label' => 'W' . $idx];
+        $this->dynaCount = (string)($idx + 1);
+        $this->dynaWidgets = $w;
+        $this->markDirty();
+    }
+
     // ── Case switching ──
     public function selectCase(string $case): void
     {
@@ -186,6 +255,8 @@
         if ($case === 'MixedWorkload') { $this->prepareItems(); }
         if ($case === 'FormDashboard') { $this->initFormDashboard(); }
         if ($case === 'ChatStream') { $this->initChatStream(); }
+        if ($case === 'HoverGrid') { $this->initHoverGrid(); }
+        if ($case === 'DynamicList') { $this->initDynamicList(); }
         $this->markDirty();
     }
 </script>
