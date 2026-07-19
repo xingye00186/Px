@@ -172,12 +172,43 @@ Step 3: 对比报告
 ```powershell
 param(
     [int]$Cycles        = 100,      # 每个 case 的循环次数
-    [string]$BeforeCommit = 'ed332332',  # 改造前 git commit
-    [string]$AfterCommit  = 'HEAD'       # 改造后 git commit
+    [string]$BeforeCommit = 'pre-reactive',  # 改造前 git tag（pre-reactive = ed332332）
+    [string]$AfterCommit  = 'HEAD'          # 改造后 git commit
 )
 ```
 
-### 5.5 依赖检查
+### 5.5 Git Tag 说明
+
+改造前版本已打标签 `pre-reactive`（指向 commit `ed332332`）：
+
+```bash
+git tag -a "pre-reactive" ed332332 -m "AOT reactive system baseline"
+```
+
+脚本默认使用此标签而非硬编码 hash，语义更清晰。如果有新的改造前基线，更新标签即可：
+
+```bash
+git tag -f "pre-reactive" <new-before-commit>
+```
+
+### 5.6 管线分阶段计时（--perf）
+
+脚本默认启用 `--perf` 参数，在 exe 运行时会设置 `PX_PERF=1` 环境变量。此时 `Application::render()` 内部会对各管线阶段计时：
+
+| 阶段名 | 对应步骤 | 说明 |
+|--------|---------|------|
+| `stage:vnode_tree` | VNode 树重建 | rebuildVNodeTree() |
+| `stage:style_recalc` | 样式重算 | StyleRecalcPass |
+| `stage:update_from_vnode` | VNode→RenderNode 转换 | updateFromVNode() + bind 同步 |
+| `stage:scroll_restore` | 滚动位置恢复 | copyScrollTopFromOld |
+| `stage:layout` | 布局 | LayoutOrchestrator::layout |
+| `stage:capture_snapshot` | 布局快照 | captureLayoutSnapshot |
+| `stage:paint` | 绘制 | PaintPipeline::render |
+| `stage:full_render` | 完整管线 | 以上各阶段总和 |
+
+计时数据保存在 `results/before.json` / `results/after.json` 每个 case 的 `perf_snapshot` 字段中，可用于细粒度分析管线瓶颈。
+
+### 5.7 依赖检查
 
 - `git` — 必须安装且可全局调用
 - `php` — 必须安装（用于 SFC 编译）

@@ -13,7 +13,7 @@
 #>
 param(
     [int]$Cycles        = 100,
-    [string]$BeforeCommit = 'ed332332',
+    [string]$BeforeCommit = 'pre-reactive',
     [string]$AfterCommit  = 'HEAD'
 )
 
@@ -101,14 +101,14 @@ if (!(Test-Path $e1) -or !(Test-Path $e2)) { Write-Error "exe not found"; exit 1
 
 Log "Before ..." "Yellow"
 $null = New-Item -ItemType Directory -Path "$Before\apps\reactive-bench\results" -Force
-& $e1 --cases-list --cycles=$Cycles --dump-metrics=results/before.json 2>$null | Out-Null
+& $e1 --cases-list --cycles=$Cycles --perf --dump-metrics=results/before.json 2>$null | Out-Null
 $bj = "$Before\apps\reactive-bench\results\before.json"
 if (!(Test-Path $bj)) { Write-Error "before result not found"; exit 1 }
 Log "  OK" "Green"
 
 Log "After ..." "Yellow"
 $null = New-Item -ItemType Directory -Path "$After\apps\reactive-bench\results" -Force
-& $e2 --cases-list --cycles=$Cycles --dump-metrics=results/after.json 2>$null | Out-Null
+& $e2 --cases-list --cycles=$Cycles --perf --dump-metrics=results/after.json 2>$null | Out-Null
 $aj = "$After\apps\reactive-bench\results\after.json"
 if (!(Test-Path $aj)) { Write-Error "after result not found"; exit 1 }
 Log "  OK" "Green"
