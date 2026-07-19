@@ -400,10 +400,7 @@ class FlexAlgorithm extends LayoutAlgorithm
             if (($dx !== 0 || $dy !== 0) && count($children) > 0) {
                 $translated = [];
                 foreach ($children as $ch) {
-                    $translated[] = (new PhysicalFragmentBuilder())
-                        ->from($ch)
-                        ->x((int)$ch->getX() + $dx)->y((int)$ch->getY() + $dy)
-                        ->build();
+                    $translated[] = self::translateFragmentTree($ch, $dx, $dy);
                 }
                 $children = $translated;
             }
@@ -532,5 +529,27 @@ class FlexAlgorithm extends LayoutAlgorithm
             foreach ($lineMaxCrosses as $i => $lmc) { $offsets[$i] = $offset; $offset += (int)$lmc + $gap; }
         }
         return [$offsets, $lineMaxCrosses];
+    }
+
+    /**
+     * 递归翻译 Fragment 子树：flex 重定位后，所有后代绝对坐标同步偏移 (dx,dy)
+     * 对标 LayoutOrchestrator::translateFragment
+     */
+    private static function translateFragmentTree(\Px\Layout\PhysicalFragment $frag, int $dx, int $dy): \Px\Layout\PhysicalFragment
+    {
+        $translatedChildren = [];
+        foreach ($frag->children as $child) {
+            $translatedChildren[] = self::translateFragmentTree($child, $dx, $dy);
+        }
+        return new \Px\Layout\PhysicalFragment(
+            $frag->x + $dx, $frag->y + $dy,
+            $frag->w, $frag->h,
+            $frag->visualW, $frag->visualH, $frag->layer,
+            $frag->contentWidth, $frag->contentHeight,
+            $frag->style, $translatedChildren, $frag->sourceNode,
+            $frag->scrollTop, $frag->scrollLeft, $frag->isScrollContainer,
+            $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles,
+            $frag->availableWidth
+        );
     }
 }
