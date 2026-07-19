@@ -118,6 +118,21 @@ function runCaseIntensive(
     $metrics['p50_ms'] = round(percentile($phases, 0.50), 4);
     $metrics['p95_ms'] = round(percentile($phases, 0.95), 4);
     $metrics['p99_ms'] = round(percentile($phases, 0.99), 4);
+
+    // 首帧 vs 稳态分离
+    $metrics['warmup_ms'] = round($phases[0], 4);
+    if (count($phases) > 1) {
+        $steady = array_slice($phases, 1);
+        $metrics['steady_avg_ms'] = round(array_sum($steady) / count($steady), 4);
+        $metrics['steady_min_ms'] = round(min($steady), 4);
+        $metrics['steady_max_ms'] = round(max($steady), 4);
+        $metrics['steady_fps'] = round(($cycles - 1) / ($metrics['total_sec'] - $phases[0] / 1000), 1);
+    } else {
+        $metrics['steady_avg_ms'] = $metrics['avg_ms'];
+        $metrics['steady_min_ms'] = $metrics['min_ms'];
+        $metrics['steady_max_ms'] = $metrics['max_ms'];
+        $metrics['steady_fps'] = $metrics['fps'];
+    }
     unset($metrics['phase_ms']);
 
     return $metrics;
