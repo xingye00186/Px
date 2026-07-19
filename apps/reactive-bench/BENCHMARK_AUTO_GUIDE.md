@@ -135,7 +135,7 @@ public function runDynamicCycle(): void {
 
 | 指标 | 说明 | 单位 |
 |------|------|------|
-| `avg_ms` | 每个 cycle 的平均耗时 | ms |
+| `avg_ms` | 每个 cycle 的平均耗时（含首帧） | ms |
 | `min_ms` | 最快 cycle | ms |
 | `max_ms` | 最慢 cycle (含首次渲染) | ms |
 | `p50_ms` | 中位耗时 | ms |
@@ -144,8 +144,14 @@ public function runDynamicCycle(): void {
 | `fps` | `cycles / total_sec`，等效帧率 | FPS |
 | `renders` | 实际渲染次数 | count |
 | `total_sec` | 全部 cycles 总耗时 | s |
+| `warmup_ms` | **首帧耗时**（第 1 个 cycle） | ms |
+| `steady_avg_ms` | **稳态平均耗时**（第 2~N cycle 平均） | ms |
+| `steady_min_ms` | 稳态最快 cycle | ms |
+| `steady_max_ms` | 稳态最慢 cycle | ms |
+| `steady_fps` | 稳态等效帧率（不含首帧） | FPS |
 
 **FPS 是最直观的指标**：它把 ms 转换为人们更熟悉的"每秒能更新多少次"。
+**warmup vs steady 分离**用于分析冷启动开销（框架初始化、首次 VNode 构建）与稳态运行时性能的差异。
 
 ## 5. 全自动对比脚本
 
@@ -240,7 +246,37 @@ git tag -f "pre-reactive" <new-before-commit>
 
 计时数据保存在 `results/before.json` / `results/after.json` 每个 case 的 `perf_snapshot` 字段中，可用于细粒度分析管线瓶颈。
 
-### 5.7 依赖检查
+### 5.7 AOT vs PHP CLI 双模式对比
+
+脚本在 Step 2（AOT 基准）之后，自动执行 Step 3：通过 `php cli_run.php` 运行改造后版本的 PHP CLI 基准。
+
+对比意义：
+- **AOT 模式** — 编译为 exe，无 PHP 解释器开销，函数调用已内联优化
+- **PHP CLI 模式** — 通过 `tests/bootstrap/autoload.php` 加载框架，反映原始 PHP 执行性能
+- **差异 = AOT 编译优化收益**（通常 10~50%）
+
+输出表格：
+```
+-- Mode Comparison: AOT vs PHP CLI (after, avg) --
+  Case                        AOT(ms)     CLI(ms)    Change    FPS-AOT   FPS-CLI   Renders
+  ------------------------------------------------------------------------------------------
+  MixedWorkload                  4.120ms   42.800ms ▼ -90.4%      216.9      21.0    50/50
+```
+
+### 5.8 首帧 vs 稳态分离
+
+每个 case 输出 `warmup_ms`（第 1 cycle）和 `steady_avg_ms`（第 2~N cycle 平均），在脚本的 Step 2 中以独立表格展示：
+
+```
+-- AOT: Before vs After (warmup / steady) --
+  Case                        Warmup-bf  Warmup-af  Steady-bf  Steady-af  Change%   Renders
+  -------------------------------------------------------------------------------------------
+  MixedWorkload              812.000ms    8.000ms  663.000ms    4.000ms ▼ -99.4%   50/50
+```
+
+首帧较慢的原因：首次 VNode 树构建、框架内部缓存冷启动、操作系统页面缓存。稳态数据更具可比性。
+
+### 5.9 依赖检查
 
 - `git` — 必须安装且可全局调用
 - `php` — 必须安装（用于 SFC 编译）
