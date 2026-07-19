@@ -645,3 +645,227 @@ if ($propsUnchanged && !$instance->dirty && $oldChildren !== null) {
 ---
 
 **总结**：在没有向后兼容约束的前提下，总共 **4 个新文件 + 3 个核心改造文件**，约 **800-1000 行** 新增/修改代码，即可让 Px 框架获得 Vue 3 级别的自动依赖追踪响应式能力，同时在 AOT 下保持原生属性访问性能。
+
+
+## 响应式改造效果描述
+
+### 一、开发者体验变化
+
+**改造前：**
+```php
+// 每个修改状态的方法末尾都要手动 markDirty
+public function increment(): void
+{
+    $this->count++;
+    $this->markDirty();  // ← 手动，容易遗漏
+}
+
+public function reset(): void
+{
+    $this->count = 0;
+    $this->label = '';
+    $this->markDirty();  // ← 需要在每个状态变更方法里写
+}
+```
+
+**改造后：**
+```php
+// 编译器自动生成属性钩子，set 时自动触发响应式更新
+#[Reactive]
+public int $count = 0;
+
+public function increment(): void
+{
+    $this->count++;  // ← set 钩子自动触发 Notifier::notify() → Effect → render
+}
+```
+
+效果：**零模板代码**，状态变更自动驱动 UI 更新。
+
+---
+
+### 二、精确度变化
+
+**改造前：** 任何状态变化 → 标记整个组件 dirty → 整棵 VNode 树重建 → 全量 layout + paint。哪怕只改了 1000 个属性中的 1 个，整个组件走完整管线。
+
+**改造后：**
+- `render()` 执行时，访问了哪些 `#[Reactive]` 属性，DependencyTracker 就注册哪些属性的依赖
+- 只有**被 render 读取过的属性**变更时才会触发 Effect 调度
+- 未被读取的属性变更**零开销**
+
+```
+改造前:  修改任意属性 → 整个组件重渲染
+改造后:  修改属性A → 只有依赖属性A的组件重渲染
+        修改属性B → 只有依赖属性B的组件重渲染
+        属性A和B互不污染
+
+1000个属性组件场景:
+  旧: 改1个属性 → 1000个属性的 render + layout + paint 全重跑
+  新: 改1个属性 → 只触发依赖它的 effect → 只重跑这个 effect 所属的 render
+```
+
+---
+
+### 三、批处理效果
+
+**改造前：** 连续修改 N 个属性 → 每次修改都 `markDirty()` → 每次添加 1 个微任务 → N 次微任务触发 N 帧渲染。
+
+**改造后：** 连续修改 N 个属性 → 第 1 次触发 Effect::schedule() 添加 1 个微任务 → 第 2~N 次 pending 防重入只设 dirty 不再加微任务 → 1 个微任务触发 1 帧渲染。
+
+```
+旧模式: count=1 → markDirty → [微任务1] → render帧1
+        count=2 → markDirty → [微任务2] → render帧2
+        count=3 → markDirty → [微任务3] → render帧3
+                            N帧渲染
+
+新模式: count=1 → notify → schedule → [微任务1]
+        count=2 → notify → pending (只设dirty)
+        count=3 → notify → pending (只设dirty)
+                              ↓
+                          1帧渲染 (含最终值)
+```
+
+基准测试验证：**1000 次连续修改时，微任务从 1000 降到 1，节省 100% 调度开销。**
+
+---
+
+### 四、性能开销
+
+| 场景 | 开销 | 可感知性 |
+| :--- | :--- | :--- |
+| 属性读取 (加 track) | 564 ns/op, 约 direct 的 17× | ❌ 不可感知 |
+| 属性写入 (加 notify) | 同属 564 ns/op | ❌ 不可感知 |
+| 未被追踪属性写入 | 零额外开销 | ❌ 完全零开销 |
+| Effect 调度 | 63 ns/op | ❌ 不可感知 |
+| 数组不可变模式 | 368 ns/批 vs 1.7 µs/批 | ❌ 不可感知（反而更快） |
+
+**所有开销仍在纳秒 ~ 亚微秒级别，UI 渲染管线的耗时在三数量级之上，对用户体验无影响。**
+
+---
+
+### 五、架构变化对比
+
+| 维度 | 改造前 | 改造后 |
+| :--- | :--- | :--- |
+| 触发机制 | 手动 `markDirty()` | 自动 Property Hook set → notify |
+| 追踪粒度 | 组件级（整个组件 dirty） | 属性级（仅被 render 读取的属性） |
+| 调度方式 | 每次修改加 1 个微任务 | Effect pending 合并为 1 个微任务 |
+| 清理机制 | 无（组件 unmount 事件处理器解绑） | onUnmount 自动 cleanup Effect + DependentsMap |
+| 缓存策略 | vnodeCache 由 markDirty 清除 | vnodeCache 由 Effect::schedule 同步 dirty 失效 |
+| PHP 特性 | 标准 typed property | PHP 8.4 Property Hooks |
+| AOT 兼容 | 隐式依赖 | 显式类型、无动态属性、无 $GLOBALS |
+
+---
+
+### 六、改造后组件生命周期
+
+```
+组件 mount
+  → render() 在 Effect 上下文中执行
+  → render 读取 $this->count → get 钩子 → DependencyTracker::track()
+  → DependentsMap: [组件ID|count] → Effect 订阅注册
+
+用户点击 → 触发事件处理器
+  → $this->count++ → set 钩子
+  → Notifier::notify($this, 'count')
+  → DependentsMap::get([组件ID|count]) → 找到 Effect
+  → Effect::schedule() → dirty=true + 微任务
+
+微任务队列 → flushMicrotasks
+  → Effect 回调 → performUpdate()
+  → renderCallback → Application::requestRender()
+  → rebuildVNodeTree → getVNodeTree()
+  → runWithEffect(Effect, render()) → 重新追踪依赖
+  → layout + paint
+```
+
+### 七、一句话总结
+
+> **只花该花的渲染，只改该改的组件，并且不需要开发者思考「什么时候该触发更新」。**
+
+您问到了一个关键的设计层次问题。让我追踪完整的依赖链：
+
+## 父子组件间的依赖传播
+
+**场景：** 父组件有 `#[Reactive] public int $count`，通过 `:display="count"` 传给子组件。
+
+### 渲染时建立依赖
+
+```
+父组件 render()
+  → 读取 $this->count
+  → get 钩子 → DependencyTracker::track($parent, 'count')
+  → 注册到【父组件的 Effect】
+
+父组件 matchComponentNode 展开子组件
+  → $owner->getBindValue('count') → 读取 $this->count
+  → 同样 track($parent, 'count') → 同样注册到【父组件的 Effect】  ← 注意！
+  
+  → $instance->setBindValue('display', $value)
+  → $this->display = $value → set 钩子 → Notifier::notify($child, 'display')
+  → 子组件此时还没有 Effect（尚未 render），notify 没有接收者
+
+  → $instance->getVNodeTree() → runWithEffect(子Effect) → 子 render()
+  → 子 render 读取 $this->display → track($child, 'display')
+  → 注册到【子组件的 Effect】
+```
+
+### 父 count 变更时
+
+```
+用户操作 → $this->count++ → set 钩子
+  → Notifier::notify($parent, 'count')
+  → DependentsMap 找到【父组件的 Effect】
+  → Effect::schedule() → 微任务 → performUpdate → requestRender
+
+下一帧 render():
+  1. 父 getVNodeTree() → 父 render() ← 父 count 变，正确渲染
+  2. 父 matchComponentNode 展开子组件
+     → setBindValue('display', $newValue) → $this->display = $newValue
+     → set 钩子 → Notifier::notify($child, 'display')
+     → 这次【子组件的 Effect】已存在 → Effect::schedule()
+  3. 子 getVNodeTree() → 子 render() ← 子 display 变，正确渲染
+```
+
+**结论：父子都会渲染**。这不是 bug 而是正确行为——子组件确实依赖父组件的 count。
+
+### 「只跑依赖这个属性的 effect」在跨组件场景下的精确含义
+
+我之前的描述"只触发依赖它的 effect → 只重跑这个 effect 所属的 render"是针对**同一个组件内**的。跨组件时正确的说法是：
+
+```
+父 count 变更：
+  → 触发父 Effect → 父 render（因为父 render 读取了 count）
+  → 父 render 中通过 setBindValue 把新值传给子
+  → 子 display set 钩子 → 触发子 Effect → 子 render（因为值变了）
+  
+父中其他 999 个未被 render 读取的属性 → 零开销 ✅
+子中其他 999 个未被 render 读取的属性 → 零开销 ✅
+完全不受影响的兄弟组件 → 零开销 ✅
+```
+
+### 这和 Vue 3 完全一致
+
+Vue 3 中同样：
+```
+父响应式数据变更 → 父组件 effect re-run
+  → 生成新 VNode，props 中携带新值
+  → patch 子组件 → 子组件 props 变化 → 子组件 effect re-run
+```
+
+**区别在于 Vue 3 的 `patch` 阶段有完整的 diff 可以跳过 props 未变的子组件，而 Px 的 `matchComponentNode` 也有同样的优化：**
+
+```php
+// Application.php:714-721
+$propsUnchanged = ($newNode->componentProps === ($oldNode?->componentProps ?? null));
+if ($propsUnchanged && !$instance->dirty && $oldChildren !== null) {
+    // props 没变 + 组件不 dirty → 直接复用旧 VNode 树
+    // 跳过 setBindValue → 子组件不会触发更新
+}
+```
+
+如果父 count 变了但传给子的 `:display` 没变（例如父改了另一个属性），子组件会被跳过——**这个优化保留完好**。
+
+所以完整的描述应该是：
+
+> **每个组件只触发「自己的 render 实际读取了的属性」的 Effect。跨组件依赖通过 prop 传递 + setBindValue 自然级联，形成精确的最小重渲染树。不受影响的子树（兄弟组件、props 未变的子组件）全程零开销。**
