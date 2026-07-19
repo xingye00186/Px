@@ -653,6 +653,12 @@ class RenderTreeManager
                 $renderNode->layoutDirty = true;
                 $renderNode->pseudoStyles = $pseudoStyles;
                 $renderNode->isLayoutBoundary = $isLayoutBoundary;
+                // 从 computedStyle 检测滚动容器
+                $ovX = $computedStyle?->overflowX?->value ?? $computedStyle?->overflow?->value ?? '';
+                $ovY = $computedStyle?->overflowY?->value ?? $computedStyle?->overflow?->value ?? '';
+                if ($ovX === 'auto' || $ovX === 'scroll' || $ovY === 'auto' || $ovY === 'scroll') {
+                    $renderNode->isScrollContainer = true;
+                }
             } else {
                 $oldVNode = $renderNode->sourceVNode;
                 $renderNode->computedStyle = $computedStyle;

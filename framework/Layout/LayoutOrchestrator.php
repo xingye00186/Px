@@ -153,6 +153,9 @@ class LayoutOrchestrator implements ChildLayoutProvider
         $overflowY = $style?->overflowY?->value ?? $style?->overflow?->value ?? 'visible';
         $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
         $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
+        if ($hasHScroll || $hasVScroll) {
+            $node->isScrollContainer = true;
+        }
 
         // Layer 继承
         $nodeLayer = $inheritedLayer;
