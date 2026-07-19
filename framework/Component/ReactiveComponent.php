@@ -12,22 +12,29 @@ use Px\Render\RenderNode;
 use Px\Dom\VNode;
 
 /**
- * ReactiveComponent — 响应式组件基类
+ * ReactiveComponent — 响应式组件基类 (v10 Reactive)
  *
- *  - 响应式属性 + dirty 标记
- *  - 异步更新队列（via Scheduler microtask）
+ *  - 响应式属性通过 #[Reactive] + Property Hooks 自动追踪
+ *  - 属性变更自动触发 Effect 调度 → 微任务 → 组件更新
  *  - $emit() 子→父事件通信（对标 Vue 3）
- *  - unmount 自动清理事件处理器
+ *  - unmount 自动清理 Effect 订阅 + 事件处理器
+ *
+ * 注意:
+ *   - markDirty() 已移除 — 由 Property Hook 的 set → Notifier::notify() → Effect 自动处理
+ *   - 子类仍可手动调用 performUpdate() 强制更新
+ *   - 兼容 Application::matchComponentNode() 的 $instance->dirty 检查
  *
  * AOT：闭包调用合法，默认值传递。
  */
 abstract class ReactiveComponent extends BaseComponent implements ComponentInterface, ReactiveComponentInterface
 {
-    // AOT: 使用 protected 而非 private，确保子类 + objval() 闭包可访问
-    protected bool $hasPendingUpdate = false;
+    /** @var bool 缓存脏标记 — 由 performUpdate() 设置，getVNodeTree() 清除 */
     public bool $dirty = false;
-    protected bool $isMounted = false;
+
+    /** @var bool 防止 performUpdate() 重入 */
     protected bool $isUpdating = false;
+
+    protected bool $isMounted = false;
 
     /** @var callable|null 渲染请求回调（由 Application 注入） */
     protected ?\Closure $renderCallback = null;
@@ -41,12 +48,20 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     private int $nextHandlerId = 1;
 
     /**
-     * VNode 树缓存 — Vue 3 风格惰性重建：
-     *  - 状态未变时复用缓存，避免整树重建
-     *  - markDirty() 清缓存（状态已变，旧树失效）
-     *  - getVNodeTree() 仅在 dirty 时调用 render()
+     * VNode 树缓存
+     *
+     * Vue 3 风格惰性重建：
+     *   状态未变时复用缓存，避免整树重建
+     *   performUpdate() 将 dirty 设为 true → getVNodeTree() 重新执行 render()
      */
     protected ?VNode $vnodeCache = null;
+
+    /**
+     * 响应式 Effect（由编译器生成的子类初始化）
+     * 通过 DependencyTracker::runWithEffect() 包裹 render()
+     * 自动追踪 render() 期间读取的 #[Reactive] 属性
+     */
+    protected ?\Px\Reactive\Effect $_px_effect = null;
 
     /**
      * 上一帧的根 RenderNode，用于跨帧匹配复用。
@@ -73,34 +88,12 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     }
 
     /**
-     * 标记脏状态，触发异步更新。
-     * 立即清除 VNode 缓存 — 状态已变更，旧树失效。
-     */
-    protected function markDirty(): void
-    {
-        $this->vnodeCache = null;
-        $this->scheduleUpdate();
-    }
-
-    /**
-     * 异步更新（微任务队列）
-     * AOT 支持闭包 $fn() 调用
-     */
-    protected function scheduleUpdate(): void
-    {
-        if ($this->hasPendingUpdate) {
-            return;
-        }
-        $this->hasPendingUpdate = true;
-
-        $this->scheduler->addMicrotask(function () {
-            $this->hasPendingUpdate = false;
-            $this->performUpdate();
-        });
-    }
-
-    /**
-     * 执行更新 (AOT: public 以便闭包回调中可通过 objval() 引用访问)
+     * 执行更新 (由 Effect::schedule() 的微任务回调调用)
+     *
+     * 触发渲染管线：
+     *   Effect::schedule() → microtask → performUpdate()
+     *   → renderCallback → Application::requestRender()
+     *   → rebuildVNodeTree() → getVNodeTree() → render()
      */
     public function performUpdate(): void
     {
@@ -114,12 +107,14 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
             $this->onBeforeUpdate();
         }
 
+        // 清除 VNode 缓存 — 强制下次 getVNodeTree() 重新执行 render()
+        $this->vnodeCache = null;
+        $this->dirty = true;
+
         // 通过注入的回调请求 Application 重渲染
         if ($this->renderCallback !== null) {
             ($this->renderCallback)();
         }
-
-        $this->dirty = true;
 
         if ($this->isMounted) {
             $this->onUpdated();
@@ -129,14 +124,13 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     }
 
     /**
-     * 获取 VNode 树 — Vue 3 风格惰性重建。
+     * 获取 VNode 树 — 惰性重建。
      *
      * 仅在 dirty 时调用 render() 重建并缓存；
-     * 状态未变时直接返回上次缓存的树，跳过整树重建。
+     * 状态未变时直接返回上次缓存的树。
      *
-     * 这相当于 Vue 3 的 component effect：
-     *   dirty === true  → re-run render() → cache → dirty = false
-     *   dirty === false → return cached VNode
+     * 子类若使用了 #[Reactive] 属性，编译器会自动覆盖此方法
+     * 并包裹在 DependencyTracker::runWithEffect() 中。
      */
     public function getVNodeTree(): VNode
     {
