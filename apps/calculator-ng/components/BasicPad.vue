@@ -29,6 +29,7 @@
 </template>
 
 <script lang="php">
+    #[Reactive]
     public string $acLabel = 'AC';
 </script>
 

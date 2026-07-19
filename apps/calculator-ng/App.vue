@@ -24,15 +24,17 @@
 
 <script lang="php">
     /** 当前显示值 */
+    #[Reactive]
     public string $display = '0';
 
     /** 表达式文本 */
+    #[Reactive]
     public string $expression = '';
 
     /** 第一个操作数 */
     public string $operand1 = '';
 
-    /** 当前运算符 (+, −, ×, ÷) */
+    /** 当前运算符 (+, -, ×, ÷) */
     public string $operator = '';
 
     /** 是否开始新输入 */
@@ -42,21 +44,26 @@
     public bool $hasDecimal = false;
 
     /** AC/C 标签 */
+    #[Reactive]
     public string $acLabel = 'AC';
 
     /** 记忆值 */
     public string $memory = '';
 
     /** 是否有记忆 */
+    #[Reactive]
     public bool $hasMemory = false;
 
     /** 是否显示历史面板 */
+    #[Reactive]
     public bool $showHistory = false;
 
     /** 历史面板箭头 */
+    #[Reactive]
     public string $arrowText = '>';
 
     /** 历史记录列表 */
+    #[Reactive]
     public array $historyItems = [];
 
     /** 历史记录计数器 */

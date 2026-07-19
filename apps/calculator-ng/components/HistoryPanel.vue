@@ -6,6 +6,7 @@
 </template>
 
 <script lang="php">
+    #[Reactive]
     public string $arrow = '>';
 </script>
 

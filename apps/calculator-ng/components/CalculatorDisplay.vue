@@ -7,8 +7,11 @@
 </template>
 
 <script lang="php">
+    #[Reactive]
     public string $display = '0';
+    #[Reactive]
     public string $expression = '';
+    #[Reactive]
     public string $hasMemory = '0';
 </script>
 
