@@ -26,7 +26,7 @@ apps/reactive-bench/
 
 > `gen/`、`bin/`、`results/` 为构建/运行生成物，不提交 git。
 
-## 3. 6 个测试用例详解
+## 3. 8 个测试用例详解
 
 每个 case 模拟不同的组件负载模式，覆盖响应式系统的各个维度：
 
@@ -96,6 +96,38 @@ public string $version = '';
 - 初始 0 条 → 最终 150 条
 - 测量：**数组增长 + 脏路径传播**在无序扩张时的表现
 - 典型结果：162ms → 159ms（接近，新增 VNode 无法缓存）
+
+### HoverGrid — 悬停交互模拟（hover 状态传播）
+
+```php
+#[Reactive] public int $hoveredIdx = -1;
+public function runHoverCycle(): void {
+    $this->hoverCycle++;
+    $this->hoveredIdx = $this->hoverCycle % 100;
+}
+```
+
+- 100 格 CSS Grid，每 cycle 切换 `hoveredIdx`
+- 触发 `markStyleDirty()` → `cachedFragment` 失效 → styleDirty 传播
+- 测量：**:hover 样式的脏传播 + InteractionState 查询**开销
+- 期望：改造后 markStyleDirty() 精确失效而非全量重算
+
+### DynamicList — 动态增删子组件（组件生命周期）
+
+```php
+#[Reactive] public array $dynaWidgets = [];
+public function runDynamicCycle(): void {
+    $w = $this->dynaWidgets;
+    array_shift($w); // 删除首项 → 触发 onDestroyNode 回调
+    $w[] = ['id' => 'dl-'.$idx, 'label' => 'W'.$idx];
+    $this->dynaWidgets = $w;
+}
+```
+
+- 50 widget 列表，每 cycle 删除首项 + 追加新项
+- 触发 `onDestroyNode` → `removeInteractionState()` + `removeScrollState()`
+- 测量：**组件销毁时状态清理 + VNode key 匹配**效率
+- 期望：改造后销毁回调零泄漏，跨帧匹配复用新旧子项
 
 ## 4. 基准测试指标说明
 
