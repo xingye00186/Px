@@ -1367,9 +1367,9 @@ function generateSetBindValue(array $bindKeys, array $arrayBindKeys = []): strin
         if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $key)) continue;
         if (isset($arrayBindKeys[$key])) {
             // Array-typed property: json_decode before compare/assign
-            $cases[] = "            case '" . addslashes($key) . "': \$decoded = json_decode(\$value, true); if (is_array(\$decoded) && \$this->{$key} !== \$decoded) { \$this->{$key} = \$decoded; \$this->markDirty(); } break;";
+            $cases[] = "            case '" . addslashes($key) . "': \$decoded = json_decode(\$value, true); if (is_array(\$decoded) && \$this->{$key} !== \$decoded) { \$this->{$key} = \$decoded; } break;";
         } else {
-            $cases[] = "            case '" . addslashes($key) . "': if (\$this->{$key} !== \$value) { \$this->{$key} = \$value; \$this->markDirty(); } break;";
+            $cases[] = "            case '" . addslashes($key) . "': if (\$this->{$key} !== \$value) { \$this->{$key} = \$value; } break;";
         }
     }
     if (count($cases) === 0) {
@@ -2080,6 +2080,282 @@ function saveDepCache(string $genDir, array $compiledSet): void
 }
 
 // ============================================================
+// Reactive Property Hook Code Generation (v10)
+// ============================================================
+
+/**
+ * Remove original #[Reactive] property declarations from class body.
+ * These will be replaced by generated property hooks.
+ *
+ * Removes lines like:
+ *   #[Reactive]
+ *   public int $count = 0;
+ *
+ * @param string $classBody ScriptAnalyzer output (class body without class decl)
+ * @param array{name:string, type:string, default:string}[] $reactiveProps
+ * @return string Cleaned class body
+ */
+function removeReactiveDeclarations(string $classBody, array $reactiveProps): string
+{
+    if (empty($reactiveProps)) {
+        return $classBody;
+    }
+    // 移除 #[Reactive] 属性标记、其前的注释行、及其下一行的 public 声明
+    foreach ($reactiveProps as $prop) {
+        $name = preg_quote($prop['name'], '/');
+        // 匹配可选的注释行 + #[Reactive] + public 声明
+        $classBody = preg_replace(
+            '/^\s*\/\*\*[^*]*\*+\/\s*\n\s*#\[Reactive\]\s*\n\s*public\s+\w+\s+\$' . $name . '\s*[=;][^;]*;\s*\n?/m',
+            '',
+            $classBody
+        );
+        // 降级: 如果注释不在, 只移除 #[Reactive] + 声明
+        $classBody = preg_replace(
+            '/^\s*#\[Reactive\]\s*\n\s*public\s+\w+\s+\$' . $name . '\s*[=;][^;]*;\s*\n?/m',
+            '',
+            $classBody
+        );
+    }
+    return $classBody;
+}
+
+/**
+ * Generate $_px_react_storage array declaration.
+ *
+ * Stores all #[Reactive] property values in a single array.
+ * The get hooks read from here, set hooks write to here.
+ *
+ * @param array{name:string, type:string, default:string}[] $reactiveProps
+ * @return string PHP code for the storage array
+ */
+function generateReactiveStorageCode(array $reactiveProps): string
+{
+    if (empty($reactiveProps)) {
+        return '';
+    }
+    $entries = [];
+    foreach ($reactiveProps as $prop) {
+        $name = $prop['name'];
+        $default = $prop['default'];
+        $entries[] = "            '{$name}' => {$default}";
+    }
+    return "    private array \$_px_react_storage = [\n"
+         . implode(",\n", $entries) . ",\n    ];\n";
+}
+
+/**
+ * Generate Property Hook code for each #[Reactive] property.
+ *
+ * PHP 8.4 syntax:
+ *   public int $count {
+ *       get { track($this, 'count'); return $this->_px_react_storage['count']; }
+ *       set (int $value) { if ($old !== $value) { store = $value; notify($this, 'count'); } }
+ *   }
+ *
+ * @param array{name:string, type:string, default:string}[] $reactiveProps
+ * @return string PHP code for all property hooks
+ */
+function generateReactiveHookCode(array $reactiveProps): string
+{
+    if (empty($reactiveProps)) {
+        return '';
+    }
+    $code = '';
+    foreach ($reactiveProps as $prop) {
+        $name    = $prop['name'];
+        $type    = $prop['type'];
+        $default = $prop['default'];
+
+        $code .= "    public {$type} \${$name} {\n";
+
+        // ── get 钩子 ──
+        $code .= "        get {\n";
+        $code .= "            \\Px\\Reactive\\DependencyTracker::track(\$this, '{$name}');\n";
+        $code .= "            return \$this->_px_react_storage['{$name}'] ?? {$default};\n";
+        $code .= "        }\n";
+
+        // ── set 钩子 ──
+        // 注意: PHP 的 $this->arr[] = $val 不会触发 set 钩子
+        // 数组属性应使用不可变更新: $this->arr = [...$this->arr, $val]
+            $code .= "        set ({$type} \$value) {\n";
+            $code .= "            if (\$this->_px_react_storage['{$name}'] !== \$value) {\n";
+            $code .= "                \$this->_px_react_storage['{$name}'] = \$value;\n";
+            $code .= "                \\Px\\Reactive\\Notifier::notify(\$this, '{$name}');\n";
+            $code .= "            }\n";
+            $code .= "        }\n";
+
+        $code .= "    }\n\n";
+    }
+    return $code;
+}
+
+/**
+ * Generate $_px_effect field declaration.
+ */
+function generateEffectFieldCode(): string
+{
+    return "    protected ?\\Px\\Reactive\\Effect \$_px_effect = null;\n";
+}
+
+/**
+ * Generate getVNodeTree() override — wraps render() in Effect tracking.
+ */
+function generateGetVNodeTreeOverride(): string
+{
+    return "    public function getVNodeTree(): \\Px\\Dom\\VNode\n"
+         . "    {\n"
+         . "        if (!\$this->dirty && \$this->vnodeCache !== null) {\n"
+         . "            return \$this->vnodeCache;\n"
+         . "        }\n"
+         . "        if (\$this->_px_effect === null) {\n"
+         . "            \$this->_px_effect = new \\Px\\Reactive\\Effect(\$this);\n"
+         . "        }\n"
+         . "        return \\Px\\Reactive\\DependencyTracker::runWithEffect(\n"
+         . "            \$this->_px_effect,\n"
+         . "            function(): \\Px\\Dom\\VNode {\n"
+         . "                return parent::getVNodeTree();\n"
+         . "            }\n"
+         . "        );\n"
+         . "    }\n";
+}
+
+/**
+ * Generate onUnmount() override — cleans up Effect subscriptions.
+ */
+function generateOnUnmountWithCleanup(): string
+{
+    return "    public function onUnmount(): void\n"
+         . "    {\n"
+         . "        if (\$this->_px_effect !== null) {\n"
+         . "            \$this->_px_effect->cleanup();\n"
+         . "            \$this->_px_effect = null;\n"
+         . "        }\n"
+         . "    }\n";
+}
+
+/**
+ * 检测并注入数组变异触发通知 (v10 Reactive)
+ *
+ * PHP 的 $this->arr[] = $val 不触发 Property Hook 的 set,
+ * 因此需要手动注入 \\Px\\Reactive\\Notifier::notify() 调用,
+ * 让依赖追踪系统感知数组内容已变化。
+ *
+ * 对每个检测到数组变异的方法, 在方法体末尾追加 notify 调用。
+ * 状态机解析方法边界（跟踪花括号深度）。
+ *
+ * @param string $classBody 类体文本
+ * @param ScriptAnalyzer $analyzer 已提取 reactive props 的分析器
+ * @return string 注入通知后的类体
+ */
+function injectArrayMutationTriggers(string $classBody, ScriptAnalyzer $analyzer): string
+{
+    $lines   = explode("\n", $classBody);
+    $output  = [];
+    $state   = 'outside';
+    $buffer  = [];
+    $braceDepth = 0;
+    $methodName = '';
+    $headerLines = [];
+
+    foreach ($lines as $line) {
+        if ($state === 'outside') {
+            if (preg_match('/^\s*(public\s+)?function\s+(\w+)\s*\(/', $line, $m)) {
+                $methodName  = $m[2];
+                $state       = 'header';
+                $headerLines = [$line];
+                $braceDepth  = 0;
+                $buffer      = [];
+
+                $opens  = substr_count($line, '{');
+                $closes = substr_count($line, '}');
+                $braceDepth = $opens - $closes;
+
+                if ($braceDepth > 0) {
+                    $bracePos = strrpos($line, '{');
+                    $headerPart = substr($line, 0, $bracePos + 1);
+                    $bodyPart   = substr($line, $bracePos + 1);
+                    $headerLines = [$headerPart];
+                    if (trim($bodyPart) !== '') {
+                        $buffer[] = $bodyPart;
+                    }
+                    $state = 'body';
+                }
+            } else {
+                $output[] = $line;
+            }
+        } elseif ($state === 'header') {
+            $headerLines[] = $line;
+            $opens  = substr_count($line, '{');
+            $closes = substr_count($line, '}');
+            $braceDepth += ($opens - $closes);
+
+            if ($braceDepth > 0) {
+                $bracePos = strrpos($line, '{');
+                $headerPart = substr($line, 0, $bracePos + 1);
+                $bodyPart   = substr($line, $bracePos + 1);
+                $headerLines[count($headerLines) - 1] = $headerPart;
+                if (trim($bodyPart) !== '') {
+                    $buffer[] = $bodyPart;
+                }
+                $state = 'body';
+            }
+        } elseif ($state === 'body') {
+            $opens  = substr_count($line, '{');
+            $closes = substr_count($line, '}');
+            $braceDepth += ($opens - $closes);
+
+            if ($braceDepth <= 0) {
+                $closeIndent = '';
+                if (preg_match('/^(\s*)/', $line, $m)) {
+                    $closeIndent = $m[1];
+                }
+                $closeBracePos = strrpos($line, '}');
+                $bodyLastPart  = substr($line, strlen($closeIndent), $closeBracePos - strlen($closeIndent));
+
+                if (trim($bodyLastPart) !== '') {
+                    $buffer[] = $bodyLastPart;
+                }
+
+                $methodBody = implode("\n", $buffer);
+                $mutatedProps = $analyzer->detectArrayMutation($methodBody);
+
+                // 输出: header + body (可能包含注入) + closing brace
+                foreach ($headerLines as $hl) {
+                    $output[] = $hl;
+                }
+                $lastIdx = count($output) - 1;
+
+                if (!empty($mutatedProps)) {
+                    $notifyLines = [];
+                    foreach ($mutatedProps as $propName) {
+                        $notifyLines[] = $closeIndent . '        \\Px\\Reactive\\Notifier::notify($this, \'' . $propName . '\');';
+                    }
+                    $injectedNotify = implode("\n", $notifyLines);
+                    if ($methodBody !== '') {
+                        $output[$lastIdx] .= "\n" . $methodBody . "\n" . $injectedNotify;
+                    } else {
+                        $output[$lastIdx] .= "\n" . $injectedNotify;
+                    }
+                } elseif ($methodBody !== '') {
+                    $output[$lastIdx] .= "\n" . $methodBody;
+                }
+
+                $output[] = $closeIndent . '}';
+
+                $state    = 'outside';
+                $buffer   = [];
+                $headerLines = [];
+                $methodName = '';
+            } else {
+                $buffer[] = $line;
+            }
+        }
+    }
+
+    return implode("\n", $output);
+}
+
+// ============================================================
 // Compile a single .vue file to Component PHP class
 // (v9: extracted from compileChildComponents for on-demand BFS)
 // ============================================================
@@ -2192,9 +2468,26 @@ function compileOneComponent(
     // v-for helpers
     $vForHelpers = generateVForHelpers($loops);
 
-    // Script analysis
+    // ── Reactive Property Support ────────────────────────────────
+    // Extract #[Reactive] marked properties for hook generation
     $analyzer = new ScriptAnalyzer();
+    $reactiveProps = $analyzer->extractReactiveProperties($script);
+    $hasReactive = !empty($reactiveProps);
+    // Build name lookup for dynamic props exclusion
+    $reactivePropsByName = [];
+    foreach ($reactiveProps as $rp) { $reactivePropsByName[$rp['name']] = true; }
+
+    // Script analysis — in reactive mode, injectDirty() is a pass-through
     $classBody = $analyzer->injectDirty($script);
+
+    // Remove original #[Reactive] declarations from class body
+    // (replaced by generated property hooks below)
+    if ($hasReactive) {
+        $classBody = removeReactiveDeclarations($classBody, $reactiveProps);
+        // 注入数组变异触发 — 检测 $this->arr[] = $val 并追加 Notifier::notify()
+        // 解决 PHP 8.4 Property Hook 的 set 在数组变异时不被调用的限制
+        $classBody = injectArrayMutationTriggers($classBody, $analyzer);
+    }
 
     // Extract int property names and wrap assignments for AOT compatibility
     // This prevents C2440 errors in the AOT compiler when assigning Variant to Int
@@ -2208,10 +2501,13 @@ function compileOneComponent(
     }
 
     // Dynamic property declarations
+    // Skip: empty keys, numeric keys, properties already in original script,
+    // and #[Reactive] properties (generated as property hooks)
     $dynamicPropsDeclaration = '';
     foreach ($bindKeys as $key => $_) {
         if ($key === '') continue;
-        if (is_numeric($key)) continue; // Skip numeric keys
+        if (is_numeric($key)) continue;
+        if (isset($reactivePropsByName[$key])) continue;
         if (preg_match('/public\s+\w+\s+\$' . preg_quote($key, '/') . '\s*[=;]/', $script)) {
             continue;
         }
@@ -2222,13 +2518,28 @@ function compileOneComponent(
         $dynamicPropsDeclaration .= "    public string \${$key} = '';\n";
     }
 
+    // ── Generate reactive property code ──
+    $reactiveStorageCode = '';
+    $reactiveHookCode = '';
+    $effectFieldCode = '';
+    $getVNodeTreeOverride = '';
+    $onUnmountWithCleanup = '';
+
+    if ($hasReactive) {
+        $reactiveStorageCode = generateReactiveStorageCode($reactiveProps);
+        $reactiveHookCode = generateReactiveHookCode($reactiveProps);
+        $effectFieldCode = generateEffectFieldCode();
+        $getVNodeTreeOverride = generateGetVNodeTreeOverride();
+        $onUnmountWithCleanup = generateOnUnmountWithCleanup();
+    }
+
     $classContent = <<<PHP
 <?php
 
 use native_types;
 
 /**
- * AUTO-GENERATED by SFC Compiler v9 — DO NOT EDIT
+ * AUTO-GENERATED by SFC Compiler v10 (Reactive) — DO NOT EDIT
  * Source: $baseName.vue
  */
 
@@ -2237,8 +2548,14 @@ use Px\Dom\VNode;
 
 class {$className} extends ReactiveComponent
 {
+{$reactiveStorageCode}
 {$classBody}
 {$dynamicPropsDeclaration}
+
+{$reactiveHookCode}
+{$effectFieldCode}
+{$getVNodeTreeOverride}
+{$onUnmountWithCleanup}
 
     public function render(): VNode
     {
@@ -2279,13 +2596,6 @@ class {$className} extends ReactiveComponent
         }
         return \$className . 'Component';
     }
-
-    /**
-     * 返回编译后的 CSS class styles（从 <style> 块编译）。
-     * 由 ThemeProvider::registerClassStyles() 在 mount 时读取并注册。
-     */
-
-
 
     public function __construct(?string \$componentId = null)
     {
@@ -2853,7 +3163,20 @@ $dispatchKeyBody = generateDispatchKey($keyHandlers);
 
 // Script analysis (must run BEFORE bind generation to detect array-typed properties)
 $analyzer = new ScriptAnalyzer();
+$reactiveProps = $analyzer->extractReactiveProperties($script);
+$hasReactive = !empty($reactiveProps);
+// Build name lookup for dynamic props exclusion
+$reactivePropsByName = [];
+foreach ($reactiveProps as $rp) { $reactivePropsByName[$rp['name']] = true; }
 $classBody = $analyzer->injectDirty($script);
+
+// Remove original #[Reactive] declarations from class body
+// (replaced by generated property hooks below)
+if ($hasReactive) {
+    $classBody = removeReactiveDeclarations($classBody, $reactiveProps);
+    // 注入数组变异触发 (同 compileOneComponent)
+    $classBody = injectArrayMutationTriggers($classBody, $analyzer);
+}
 
 // Extract int property names and wrap assignments for AOT compatibility
 $intPropNames = [];
@@ -2889,10 +3212,27 @@ foreach ($bindKeys as $key => $_) {
     if ($key !== '' && !str_contains($classBody, "\${$key}")) {
         // Skip numeric keys - they can't be valid PHP variable names
         if (is_numeric($key)) continue;
+        // Skip #[Reactive] properties (generated as hooks)
+        if (isset($reactivePropsByName[$key])) continue;
         // Validate key is a valid PHP variable name
         if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $key)) continue;
         $dynamicPropsDeclaration .= "    public string \${$key} = '';\n";
     }
+}
+
+// ── Generate reactive property code ──
+$reactiveStorageCode = '';
+$reactiveHookCode = '';
+$effectFieldCode = '';
+$getVNodeTreeOverride = '';
+$onUnmountWithCleanup = '';
+
+if ($hasReactive) {
+    $reactiveStorageCode = generateReactiveStorageCode($reactiveProps);
+    $reactiveHookCode = generateReactiveHookCode($reactiveProps);
+    $effectFieldCode = generateEffectFieldCode();
+    $getVNodeTreeOverride = generateGetVNodeTreeOverride();
+    $onUnmountWithCleanup = generateOnUnmountWithCleanup();
 }
 
 // Build components export (for v-if dynamic component management)
@@ -2929,7 +3269,7 @@ $defaultOnUnmount = '';
 if (!str_contains($classBody, 'function onMount')) {
     $defaultOnMount = "    public function onMount(): void\n    {\n    }\n\n";
 }
-if (!str_contains($classBody, 'function onUnmount')) {
+if (!$hasReactive && !str_contains($classBody, 'function onUnmount')) {
     $defaultOnUnmount = "    public function onUnmount(): void\n    {\n    }\n";
 }
 $classContent = <<<PHP
@@ -2938,7 +3278,7 @@ $classContent = <<<PHP
 use native_types;
 
 /**
- * AUTO-GENERATED by SFC Compiler v9 — DO NOT EDIT
+ * AUTO-GENERATED by SFC Compiler v10 (Reactive) — DO NOT EDIT
  * Source: $baseName.vue
  */
 
@@ -2947,8 +3287,14 @@ use Px\Dom\VNode;
 
 class {$componentClassName} extends ReactiveComponent
 {
+{$reactiveStorageCode}
 {$classBody}
 {$dynamicPropsDeclaration}
+
+{$reactiveHookCode}
+{$effectFieldCode}
+{$getVNodeTreeOverride}
+{$onUnmountWithCleanup}
     /**
      * 渲染组件，返回 VNode 树
      */
