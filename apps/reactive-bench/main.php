@@ -104,6 +104,7 @@ function runCaseIntensive(
     // 统计
     $phases = $metrics['phase_ms'];
     $metrics['avg_ms'] = round(array_sum($phases) / count($phases), 4);
+    $metrics['fps'] = round($cycles / $metrics['total_sec'], 1);
     $metrics['min_ms'] = round(min($phases), 4);
     $metrics['max_ms'] = round(max($phases), 4);
     $metrics['p50_ms'] = round(percentile($phases, 0.50), 4);

@@ -3,44 +3,64 @@
   Px AOT reactive-bench full automated benchmark
 .DESCRIPTION
   One-click pipeline: git clone before/after -> SFC compile -> AOT build -> run benchmark -> comparison report
+  Paths are relative to the script location, works on any machine.
 .PARAMETER Cycles
-  Number of cycles per test case
+  Number of cycles per test case (default: 100)
+.PARAMETER BeforeCommit
+  Git commit for the "before" version (default: ed332332)
+.PARAMETER AfterCommit
+  Git commit for the "after" version (default: HEAD)
 #>
-param([int]$Cycles = 100)
+param(
+    [int]$Cycles        = 100,
+    [string]$BeforeCommit = 'ed332332',
+    [string]$AfterCommit  = 'HEAD'
+)
 
 $ErrorActionPreference = 'SilentlyContinue'
 $totalStart = Get-Date
-$Px = "F:\work\Px"
-$Before = "F:\Px_before"
-$After  = "F:\Px_after"
+
+# ── Path resolution: relative to script location ──
+$ScriptHome = Split-Path -Parent $PSCommandPath
+# Px root = script's ../../
+$Px = Split-Path -Parent (Split-Path -Parent $ScriptHome)
+# Px_before/Px_after at the same level as Px's parent
+$PxParent = Split-Path -Parent $Px
+$Before = "$PxParent\Px_before"
+$After  = "$PxParent\Px_after"
 
 function Log($m, $c) { Write-Host ("[{0:HH:mm:ss}] $m" -f (Get-Date)) -ForegroundColor $c }
 function Hdr($t)  { Write-Host "`n======== $t ========" -ForegroundColor Cyan }
 
 foreach ($c in @('git','php')) {
     if (!(Get-Command $c -ErrorAction SilentlyContinue)) {
-        Write-Error "Missing: $c"
-        exit 1
+        Write-Error "Missing: $c"; exit 1
     }
 }
-if (!(Test-Path "$Px\.git")) { Write-Error "Px repo not found: $Px"; exit 1 }
+if (!(Test-Path "$Px\.git")) {
+    Write-Error "Px repo not found at: $Px"
+    Write-Error "Expected script at: Px\apps\reactive-bench\run_full_benchmark.ps1"
+    exit 1
+}
 
 Hdr "Px AOT reactive comparison"
-Log "Cycles: $Cycles" "Cyan"
+Log "Px:      $Px" "Cyan"
+Log "Before:  $Before ($BeforeCommit)" "Cyan"
+Log "After:   $After ($AfterCommit)" "Cyan"
+Log "Cycles:  $Cycles" "Cyan"
 
+# ── Step 0: Clean and clone ──
 foreach ($d in @($Before, $After)) {
     if (Test-Path $d) { Remove-Item $d -Recurse -Force }
 }
 
-$commitBefore = 'ed332332'; $commitAfter = 'HEAD'
-
-Log "Clone Px_before ($commitBefore) ..." "Yellow"
+Log "Clone Px_before ($BeforeCommit) ..." "Yellow"
 git clone $Px $Before 2>$null | Out-Null
-Push-Location $Before; git checkout $commitBefore 2>$null | Out-Null; Pop-Location
+Push-Location $Before; git checkout $BeforeCommit 2>$null | Out-Null; Pop-Location
 
-Log "Clone Px_after ($commitAfter) ..." "Yellow"
+Log "Clone Px_after ($AfterCommit) ..." "Yellow"
 git clone $Px $After 2>$null | Out-Null
-Push-Location $After; git checkout $commitAfter 2>$null | Out-Null; Pop-Location
+Push-Location $After; git checkout $AfterCommit 2>$null | Out-Null; Pop-Location
 
 foreach ($d in @($Before, $After)) {
     if (Test-Path "$Px\vendor") { Copy-Item "$Px\vendor" "$d\" -Recurse -Force }
@@ -48,6 +68,7 @@ foreach ($d in @($Before, $After)) {
 }
 Log "Clone done" "Green"
 
+# ── Step 1: Build ──
 function BuildVer($td, $label, $legacy) {
     $ad = "$td\apps\reactive-bench"
     if (Test-Path $ad) { Remove-Item $ad -Recurse -Force }
@@ -72,6 +93,7 @@ $ok1 = BuildVer $Before "before" $true
 $ok2 = BuildVer $After "after" $false
 if (!$ok1 -or !$ok2) { Write-Error "Build failed"; exit 1 }
 
+# ── Step 2: Benchmark ──
 Hdr "Step 2: Benchmark"
 $e1 = "$Before\apps\reactive-bench\bin\reactive_bench.exe"
 $e2 = "$After\apps\reactive-bench\bin\reactive_bench.exe"
@@ -91,39 +113,58 @@ $aj = "$After\apps\reactive-bench\results\after.json"
 if (!(Test-Path $aj)) { Write-Error "after result not found"; exit 1 }
 Log "  OK" "Green"
 
+# ── Step 3: Comparison ──
 Hdr "Step 3: Comparison"
 $bd = Get-Content $bj | ConvertFrom-Json
 $ad = Get-Content $aj | ConvertFrom-Json
 
 $cases = @('SimpleCounter','ManyProps','DeepTree','MixedWorkload','FormDashboard','ChatStream')
-Write-Host "`n  Case                        Before(ms)  After(ms)   Change    Renders"
-Write-Host ("  " + ("-" * 68))
+
+# Header with FPS column
+Write-Host "`n  Case                        Before(ms)  After(ms)   Change    FPS-before FPS-after  Renders"
+Write-Host ("  " + ("-" * 90))
 
 $rows = @()
-$tb = 0.0; $ta = 0.0
+$tb = 0.0; $ta = 0.0; $tfb = 0.0; $tfa = 0.0
 foreach ($c in $cases) {
     $b = $bd.results.$c; $a = $ad.results.$c
     if (!$b -or !$a) { continue }
-    $bm = [math]::Round($b.total_sec * 1000 / [math]::Max($b.cycles,1), 3)
-    $am = [math]::Round($a.total_sec * 1000 / [math]::Max($a.cycles,1), 3)
-    $tb += $bm; $ta += $am
+
+    $bm = [math]::Round($b.avg_ms, 3)
+    $am = [math]::Round($a.avg_ms, 3)
+    $bf = [math]::Round($b.fps, 1)
+    $af = [math]::Round($a.fps, 1)
+    $tb += $bm; $ta += $am; $tfb += $bf; $tfa += $af
+
     $ch = if ($bm -gt 0) { [math]::Round(($am - $bm) / $bm * 100, 1) } else { 0 }
     if ($ch -lt -5) { $ar = "VV"; $cl = "Green" }
     elseif ($ch -gt 5) { $ar = "AA"; $cl = "Red" }
     else { $ar = "  "; $cl = "White" }
-    Write-Host ("  {0,-25} {1,10:F3}ms {2,10:F3}ms {3}{4,7:F1}% {5,4}/{6,-4}" -f $c,$bm,$am,$ar,$ch,$b.renders,$a.renders) -ForegroundColor $cl
-    $rows += @{case=$c;beforeMs=$bm;afterMs=$am;change=$ch}
-}
-Write-Host ("  " + ("-" * 68))
-$tc = if ($tb -gt 0) { [math]::Round(($ta - $tb) / $tb * 100, 1) } else { 0 }
-Write-Host ("  {0,-25} {1,10:F3}ms {2,10:F3}ms {3}{4,7:F1}%  TOTAL" -f "total",$tb,$ta," ",$tc) -ForegroundColor Cyan
 
+    Write-Host ("  {0,-25} {1,10:F3}ms {2,10:F3}ms {3}{4,7:F1}% {5,10}  {6,9}  {7,4}/{8,-4}" -f $c,$bm,$am,$ar,$ch,$bf,$af,$b.renders,$a.renders) -ForegroundColor $cl
+    $rows += @{
+        case      = $c
+        beforeMs  = $bm;   afterMs   = $am
+        change    = $ch
+        beforeFps = $bf;   afterFps  = $af
+    }
+}
+Write-Host ("  " + ("-" * 90))
+$tc = if ($tb -gt 0) { [math]::Round(($ta - $tb) / $tb * 100, 1) } else { 0 }
+Write-Host ("  {0,-25} {1,10:F3}ms {2,10:F3}ms {3}{4,7:F1}% {5,10}  {6,9}  TOTAL" -f "total",$tb,$ta," ",$tc,[math]::Round($tfb,1),[math]::Round($tfa,1)) -ForegroundColor Cyan
+
+# ── Save report ──
 $ts = Get-Date -Format 'yyyyMMdd_HHmmss'
-$rf = "$Px\apps\reactive-bench\results\comparison_$ts.json"
-$null = New-Item -ItemType Directory -Path "$Px\apps\reactive-bench\results" -Force
+$reportDir = "$Px\apps\reactive-bench\results"
+$null = New-Item -ItemType Directory -Path $reportDir -Force
+$rf = "$reportDir\comparison_$ts.json"
 $report = @{
     timestamp    = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
     cycles       = $Cycles
+    beforeCommit = $BeforeCommit
+    afterCommit  = $AfterCommit
+    beforeDir    = $Before
+    afterDir     = $After
     totalBefore  = [math]::Round($tb,3)
     totalAfter   = [math]::Round($ta,3)
     totalChange  = $tc
