@@ -394,6 +394,19 @@ class FlexAlgorithm extends LayoutAlgorithm
             $origW = $orig !== null ? (int)$orig->getW() : 0;
             $useOrig = ($origW > 0 && abs($origW - $itemW) <= 5);
             $children = $useOrig ? ($orig->children ?? []) : ($orig?->children ?? []);
+            // 翻译子 Fragment 坐标：flex 重定位后，子项绝对坐标需同步偏移
+            $dx = $orig !== null ? ((int)$fi->x - (int)$orig->getX()) : 0;
+            $dy = $orig !== null ? ((int)$fi->y - (int)$orig->getY()) : 0;
+            if (($dx !== 0 || $dy !== 0) && count($children) > 0) {
+                $translated = [];
+                foreach ($children as $ch) {
+                    $translated[] = (new PhysicalFragmentBuilder())
+                        ->from($ch)
+                        ->x((int)$ch->getX() + $dx)->y((int)$ch->getY() + $dy)
+                        ->build();
+                }
+                $children = $translated;
+            }
             $mappedResults[] = (new PhysicalFragmentBuilder())
                 ->x((int)$fi->x)->y((int)$fi->y)
                 ->w($itemW)->h($itemH)
