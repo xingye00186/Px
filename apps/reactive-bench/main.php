@@ -144,16 +144,6 @@ function main(): int
     if ($dumpPath !== '' && !preg_match('#^(/|[A-Za-z]:)#', $dumpPath)) {
         $dumpPath = __DIR__ . '/' . ltrim($dumpPath, '/');
     }
-    // 归一化路径（去除 ../）
-    if ($dumpPath !== '') {
-        $parts = explode('/', str_replace('\\', '/', $dumpPath));
-        $resolved = [];
-        foreach ($parts as $p) {
-            if ($p === '..' && !empty($resolved)) { array_pop($resolved); }
-            elseif ($p !== '.' && $p !== '') { $resolved[] = $p; }
-        }
-        $dumpPath = implode('/', $resolved);
-    }
 
     if ($usePerf) {
         putenv('PX_PERF=1');

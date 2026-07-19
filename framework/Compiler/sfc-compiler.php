@@ -1352,8 +1352,14 @@ function generateDispatchKey(array $handlers): string
  * @param array $bindKeys Map of bind key → true
  * @param array $arrayBindKeys Map of bind key → true for array-typed properties
  */
-function generateSetBindValue(array $bindKeys, array $arrayBindKeys = []): string
+function generateSetBindValue(array $bindKeys, array $arrayBindKeys = [], array $reactiveProps = []): string
 {
+    // Build reactive type lookup
+    $reactiveTypes = [];
+    foreach ($reactiveProps as $rp) {
+        $reactiveTypes[$rp['name']] = $rp['type'];
+    }
+
     $binds = array_keys($bindKeys);
     if (count($binds) === 0) {
         return "        // No bind keys defined";
@@ -1369,7 +1375,15 @@ function generateSetBindValue(array $bindKeys, array $arrayBindKeys = []): strin
             // Array-typed property: json_decode before compare/assign
             $cases[] = "            case '" . addslashes($key) . "': \$decoded = json_decode(\$value, true); if (is_array(\$decoded) && \$this->{$key} !== \$decoded) { \$this->{$key} = \$decoded; } break;";
         } else {
-            $cases[] = "            case '" . addslashes($key) . "': if (\$this->{$key} !== \$value) { \$this->{$key} = \$value; } break;";
+            // Add explicit type cast for reactive properties with non-string types
+            $cast = '';
+            if (isset($reactiveTypes[$key])) {
+                $t = $reactiveTypes[$key];
+                if ($t === 'int')   { $cast = '(int)'; }
+                elseif ($t === 'bool')  { $cast = '(bool)'; }
+                elseif ($t === 'float') { $cast = '(float)'; }
+            }
+            $cases[] = "            case '" . addslashes($key) . "': if (\$this->{$key} !== {$cast}\$value) { \$this->{$key} = {$cast}\$value; } break;";
         }
     }
     if (count($cases) === 0) {
@@ -2462,17 +2476,20 @@ function compileOneComponent(
         }
     }
 
-    $setBindValue = generateSetBindValue($bindKeys, $arrayBindKeys);
+    // ── Reactive Property Support ────────────────────────────────
+    // Extract #[Reactive] marked properties for hook generation
+    $analyzer = new ScriptAnalyzer();
+    /** @var array $reactiveProps 确保变量始终定义 */
+    $reactiveProps = $analyzer->extractReactiveProperties($script);
+    if (!is_array($reactiveProps)) { $reactiveProps = []; }
+    $hasReactive = !empty($reactiveProps);
+
+    $setBindValue = generateSetBindValue($bindKeys, $arrayBindKeys, $reactiveProps);
     $getBindValue = generateGetBindValue($bindKeys, $arrayBindKeys);
 
     // v-for helpers
     $vForHelpers = generateVForHelpers($loops);
 
-    // ── Reactive Property Support ────────────────────────────────
-    // Extract #[Reactive] marked properties for hook generation
-    $analyzer = new ScriptAnalyzer();
-    $reactiveProps = $analyzer->extractReactiveProperties($script);
-    $hasReactive = !empty($reactiveProps);
     // Build name lookup for dynamic props exclusion
     $reactivePropsByName = [];
     foreach ($reactiveProps as $rp) { $reactivePropsByName[$rp['name']] = true; }
@@ -3196,7 +3213,7 @@ if (preg_match_all('/public\s+array\s+\$(\w+)/', $classBody, $arrayProps)) {
 }
 
 // Generate setBindValue (with array-type awareness)
-$setBindValueBody = generateSetBindValue($bindKeys, $arrayBindKeys);
+$setBindValueBody = generateSetBindValue($bindKeys, $arrayBindKeys, $reactiveProps ?? []);
 
 // Generate getBindValue (with array-type awareness)
 $getBindValueBody = generateGetBindValue($bindKeys, $arrayBindKeys);
