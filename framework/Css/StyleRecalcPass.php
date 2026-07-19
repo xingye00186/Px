@@ -23,23 +23,7 @@ class StyleRecalcPass
             return;
         }
 
-        // 合并静态 style + 动态 :style（:style 优先级高于 style，对标 Vue 3 模板语义）
         $inlineStyle = $root->props['style'] ?? '';
-        $dynamicStyle = $root->props[':style'] ?? '';
-        if ($dynamicStyle !== '') {
-            // :style 是 CSS 字符串（SFC 编译器已将其编译为 'background:#a6e3a1;' 格式）
-            // 拼接后 CSS 层叠序确保 :style 覆盖同名的静态 style 属性
-            $inlineStyle = $inlineStyle !== ''
-                ? $inlineStyle . ';' . $dynamicStyle
-                : $dynamicStyle;
-        }
-
-        // 合并 HTML align 属性到 inlineStyle
-        // CSS 2.2 §7.1: text-align 可被 HTML align 属性设置，但 CSS 显式声明优先
-        if (($root->props['align'] ?? '') !== '') {
-            $inlineStyle .= ';text-align:' . $root->props['align'];
-        }
-
         $className = $root->props['class'] ?? '';
 
         $pseudoStyles = [];
