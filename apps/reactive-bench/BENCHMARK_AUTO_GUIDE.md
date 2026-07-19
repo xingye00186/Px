@@ -179,10 +179,10 @@ param(
 
 ### 5.5 Git Tag 说明
 
-改造前版本已打标签 `pre-reactive`（指向 commit `ed332332`）：
+改造前版本已打标签 `pre-reactive`（指向 commit `6c6aa71`=脏位分离前置基线，比 `ed332332` 更纯净——不含后续 24 个管线杂项修复）：
 
 ```bash
-git tag -a "pre-reactive" ed332332 -m "AOT reactive system baseline"
+git tag -a "pre-reactive" 6c6aa71 -m "AOT reactive system baseline"
 ```
 
 脚本默认使用此标签而非硬编码 hash，语义更清晰。如果有新的改造前基线，更新标签即可：
