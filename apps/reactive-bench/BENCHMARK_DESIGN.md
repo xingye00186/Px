@@ -35,19 +35,27 @@ git checkout ed332332
 
 ### 编译与运行
 
+> **提示**：AOT 编译需要在 **Visual Studio Developer Command Prompt** 中执行（需要 cl.exe）。
+> 以下步骤已在沙箱中验证 SFC 编译通过，AOT 编译需要完整 MSVC 环境。
+
 ```powershell
+# 先初始化 MSVC 环境（如果不在 Developer Prompt 中）
+# 方法 1: 直接从开始菜单打开 "Developer Command Prompt for VS 2022"
+# 方法 2: 在 PowerShell 中执行：
+& "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
+
 # 改造前
 cd F:\Px_before
 php framework/Compiler/sfc-compiler.php apps/reactive-bench/App.vue
 # AOT 编译
-.\build.bat apps/reactive-bench
+.\build.bat reactive-bench
 # 运行采集
 .\apps\reactive-bench\bin\reactive-bench.exe --cases-list --cycles=500 --perf --dump-metrics=before.json
 
 # 改造后
 cd F:\Px_after
 php framework/Compiler/sfc-compiler.php apps/reactive-bench/App.vue
-.\build.bat apps/reactive-bench
+.\build.bat reactive-bench
 .\apps\reactive-bench\bin\reactive-bench.exe --cases-list --cycles=500 --perf --dump-metrics=after.json
 
 # 对比
