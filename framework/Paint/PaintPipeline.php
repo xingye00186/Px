@@ -892,7 +892,14 @@ class PaintPipeline
             $text = (string)$node->content;
         }
 
-        if ($text === '') return null;
+        if ($text === '') {
+            // 空 span 但可能带背景色（如 display:inline-block 的纯装饰 span）
+            $bgColor = $pseudoOverrides['bg'] ?? ($cs?->backgroundColor?->toBgr() ?? 0);
+            if ($bgColor !== 0 && $w > 0 && $h > 0) {
+                return ['type'=>'rect','x'=>$x,'y'=>$y,'w'=>$w,'h'=>$h,'color'=>$bgColor,'borderRadius'=>0,'borderRadiusX'=>0,'borderRadiusY'=>0,'opacity'=>1.0,'layer'=>$layer,'noFill'=>false,'shadowX'=>0,'shadowY'=>0,'shadowBlur'=>0,'shadowAlpha'=>0,'shadowColor'=>0,'shadowInset'=>false,'borderWidth'=>0,'borderColor'=>0,'borderTopColor'=>0,'borderRightColor'=>0,'borderBottomColor'=>0,'borderLeftColor'=>0,'borderTopWidth'=>0,'borderRightWidth'=>0,'borderBottomWidth'=>0,'borderLeftWidth'=>0,'borderStyle'=>'none','cursor'=>''];
+            }
+            return null;
+        }
         $rawContainerW = $props['container-w'] ?? null;
         $containerW = $w;
         if ($rawContainerW !== null) {
