@@ -259,6 +259,21 @@ class LayoutOrchestrator implements ChildLayoutProvider
         \Px\Core\PerfCounter::end('algo:' . $algoName);
         Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->getX(), 'y' => $algoFrag->getY(), 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH(), 'algo' => get_class($algo)]);
 
+        // 修复算法（BlockAlgorithm 等）未传递 type/content 到 Fragment 的问题
+        // 当节点有文本内容但 Fragment 丢弃了文本时，重建 Fragment 带上内容
+        if ($textContent !== '' && ($algoFrag->getW() > 0 || $algoFrag->getH() > 0)
+            && ($algoFrag->type ?? '') === '' && ($algoFrag->content ?? null) === null
+        ) {
+            $algoFrag = new \Px\Layout\PhysicalFragment(
+                $algoFrag->x, $algoFrag->y, $algoFrag->w, $algoFrag->h,
+                $algoFrag->visualW, $algoFrag->visualH, $algoFrag->layer,
+                $algoFrag->contentWidth, $algoFrag->contentHeight,
+                $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
+                $algoFrag->scrollTop, $algoFrag->scrollLeft, $algoFrag->isScrollContainer,
+                $node->type, $textContent, $algoFrag->dataset, $algoFrag->pseudoStyles
+            );
+        }
+
         // ─── Phase C: flex/grid 子项重布局（最多 self::MAX_RELAYOUT_ITERATIONS 轮）───
         if ($relayoutDepth < self::MAX_RELAYOUT_ITERATIONS && $isFlexOrGrid && count($childFragments) > 0 && count($algoFrag->children) > 0) {
             $needsRelayout = false;
