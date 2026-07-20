@@ -54,8 +54,10 @@ ReactiveComponent.render() → VNode 树（瞬态语义）
 | 布局脏模型 | layoutDirty 传播 | relayoutBoundary | **三级脏位** + isLayoutBoundary（注释明示对标 Flutter） | 优 |
 | 布局缓存 | LayoutResult 缓存（命中稀有） | constraints 相同即跳过 | cachedFragment + 约束签名比较，洁净零分配 | 优 |
 | 平移优化 | 交合成器 | 无视口平移 | **translateFragment 整树平移**（BFC 偏移早退，Px 独有） | 优 |
-| 文本测量 | Canvas 2D 测量路径有缓存 | Skia measure cached 按需 | **零缓存**，23 处调用点重复 sk_measure_text_width | 差 |
+| 文本测量 | Canvas 2D 测量路径有缓存 | Skia measure cached 按需 | **LRU 缓存已落地**：TextHeavy 实测 22,787 hit / 109 miss = **99.5% 命中率** | 已修 |
 | 绘制模式 | 保留 display list + 部分失效 | 保留 Layer Tree | **立即模式**每帧全量 collect，PhysicalFragment 无对象池每帧 1000+ 次 new | 差 |
+| `:style` 载体 | 编译期转为 **JS 对象**（零解析） | JS 对象（零解析） | **字符串**（每帧 `:style` 触发 regex 解析） | 差 |
+| VNode 生命周期 | **patch 复用**跨帧 | **Fiber 复用**跨帧 | **每帧全量 `new VNode`**（含静态子树） | 差 |
 | 光栅/合成 | cc 合成层 + GPU 光栅 | Layer 光栅缓存 + Raster 线程 | LayerCache 仅 willChange:transform 特判 | 差 |
 | 滚动 | 合成器平移零布局 | 视口平移 + 缓存 | **布局内重定位 + 全量重绘** | 差 |
 | 帧调度 | BeginFrame/rAF + 帧预算 | SchedulerBinding + vsync | 微任务 + renderRequested 标志，无帧概念 | 缺 |
@@ -85,11 +87,12 @@ Float、Multi-column、书写模式、分页碎片化、Ruby、CSS 计数器、B
 
 ### 2.2 差距 = 机会（"计算层"优化 + 微观缓存复用，ROI 排序）
 
-1. **文本测量零缓存 → TextMeasureCache（最高吞吐优化）**：`sk_measure_text_width` 在布局算法（BlockAlgorithm/FlexAlgorithm/InlineAlgorithm/TextOverflowProcessor）和绘制阶段（PaintPipeline）共 23 处调用点，对同一字符串 `(text, fontSize, bold)` 每帧重复调用。加一层静态 `Map` 即可将重复测量归零。**无副作用，最低 ROI 最高**。
+1. ~~**文本测量零缓存 → TextMeasureCache（最高吞吐优化）**~~ **P0-5 已实施**：sk_measure_text_width 在布局算法和绘制阶段共 14 处调用点。已加 LRU 双向链表缓存（1024 容量，`PX_TEXT_MEASURE_CACHE=0` 切换开关）。TextHeavy 实测 22,787 hit / 109 miss = **99.5% 命中率**。
 2. **静态样式编译期对象化**：静态 style 字符串目前每帧 `preg_match_all` + `array_merge`（见 StyleResolver.php）。编译期应解析为 PHP 数组字面量，运行时零 regex。
 3. **静态 VNode 子树提升（Static Hoisting）**：gen 代码如 `calculator-ng` 的 `render()` 每次全量 `new VNode`（含纯静态骨架）。无绑定子树提升为类常量/静态属性，跨帧零分配，零副作用。
 4. **patchFlag 式脏检查短路**：编译期标记含动态绑定的节点，areVNodesEqual 对无标节点直接跳过子树，diff 从 O(全树属性比较) 降到 O(动态节点数)。
 5. **v-for key 编译期注入**：见 §四 P0-2，正确性 + 性能双收益。
+6. **`:style` 解析结果帧间缓存（新发现）**：`:style` 动态绑定在 StyleRecalcPass 中被跳过，只能在 updateFromVNode 中二次 regex 解析 + new ComputedStyle。TextHeavy 实测 400 节点每 cycle 触发 662ms。加一层 `hash(:style字符串) → parsedDeclarations` 可规避重复解析，预期 `update_from_vnode` 从 662ms 降至 ~50ms。
 
 **自洽性说明**（消除表面矛盾）：样式评估中批评的"class→style 内联化"，其**方向是编译期优化的正确实践**（运行时零选择器匹配），错在实现方式——字符串拍平破坏层叠权重、丢弃伪类。正确做法不是放弃编译期拍平，而是升级为**结构化分层产物**（见 §五设计）。编译期优化与语义正确可以也必须兼得。
 
@@ -258,7 +261,8 @@ ThemeData ──启动/切换时拍平──> :root 变量表
 | P0-2 | v-for 组件 key 编译期丢失 → 位置匹配退化 | 编译期/身份 | 正确性 bug | 无 |
 | P0-3 | 伪类样式链路断裂（registry 空 + 编译期 regex 不认） | 样式 | 正确性 bug | 无 |
 | P0-4 | 每帧无条件 captureLayoutSnapshot JSON 序列化 | 绘制 | 性能浪费 | 无 |
-| **P0-5** | **文本测量零缓存（sk_measure_text_width 23 处调用，无重复命中检查）** | 布局/绘制 | 性能浪费 | 无 |
+| **P0-5** | **已实施：文本测量缓存（LRU 双向链表，1024 容量，TextHeavy 实测 99.5% 命中率）** | 布局/绘制 | **已修复** | — |
+| **P0-6** | **`:style` 动态绑定在 updateFromVNode 中二次 regex 解析（StyleRecalcPass 跳过 `:style`），400 节点 TextHeavy 触发 662ms/cycle** | 样式 | 性能浪费 | 无 |
 | P1-1 | 组件边界硬切断 → 组件内缓存失效/滚动抢救错位/hover 丢失 | 身份/布局/性能 | 结构性 | **依赖 P0-1、P0-2 先修** |
 | P1-2 | 几何双权威源（RenderNode.x vs Fragment.x） | 布局 | 结构债 | 无 |
 | P1-3 | 滚动布局内重定位 | 绘制 | 性能差距最大单点 | 可借 P1-1 修复后的缓存 |
@@ -280,7 +284,7 @@ ThemeData ──启动/切换时拍平──> :root 变量表
 ## 十、统一演进路线图（四阶段，按依赖序）
 
 **阶段 0 · 止血（正确性 + 无副作用微观缓存，互不依赖，可并行）**
-P0-1 matchComponentNode 补 componentPropValues 回写 → P0-2 编译器组件 v-for 透传 keyExpr → P0-3 伪类编译期导出+注册 → P0-4 captureLayoutSnapshot 加开关默认关 → **P0-5 TextMeasureCache：建静态 Map，key=md5(text.fs.bold)，布局/绘制中 23 处调用点加缓存查询** → **P3-2a 静态 VNode 子树提升：编译期将无绑定子树转为类常量，零分配** → **P2-4a 样式编译期对象化：style 字符串编译期解析为数组字面量，运行时零 regex**。（后三项零副作用、可独立落地，且实测收益覆盖全树，不应等远期。）
+P0-1 matchComponentNode 补 componentPropValues 回写 → P0-2 编译器组件 v-for 透传 keyExpr → P0-3 伪类编译期导出+注册 → P0-4 captureLayoutSnapshot 加开关默认关 → **P0-5 已实施：TextMeasureCache（LRU 双向链表，14 处调用点，实测 99.5% 命中率）** → **P0-6 `:style` 解析结果帧间缓存：updateFromVNode 中对 `:style` 的 parseInlineStyle 结果加 `hash(:style字符串) → parsedDeclarations` 映射，同一字符串跨帧复用解析结果（预估 662ms → ~50ms，约 10 行改动）** → **P3-2a 静态 VNode 子树提升：编译期将无绑定子树转为类常量，零分配** → **P2-4a 样式编译期对象化：style 字符串编译期解析为数组字面量，运行时零 regex**。（后三项零副作用、可独立落地，且实测收益覆盖全树，不应等远期。）
 
 **阶段 1 · 结构修复（正确性驱动的性能释放）**
 P1-1 恢复组件边界跨帧 RenderNode 复用（type+key+groupId 三重匹配；copyScrollTopFromOld 加 type 对齐检查）→ 三级脏位/Fragment 缓存覆盖组件内部；**P1-5 PhysicalFragment 对象池（复用 AnimationManager acquireStyleArray 模式，借助阶段 1 复用恢复后的高命中率，布局分配归零）**；P1-2 RenderNode 几何字段退役、hitTest 走 Fragment 树；P1-4 样式三层设计落地（统一解析器 + 层叠分层 + 去内联化）。
