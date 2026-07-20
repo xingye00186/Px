@@ -26,7 +26,7 @@ Px 拥有 SFC 编译器 + Swoole AOT **两道编译关卡**，比 Vue（仅模�
 .vue SFC ──编译──> gen/*Component.php ──运行时──>
 ReactiveComponent.render() → VNode 树（瞬态语义）
 → StyleRecalcPass（样式重算）→ RenderTreeManager::updateFromVNode（diff 复用）→ RenderNode 树（持久）
-→ LayoutOrchestrator::layout（mainLayout / oofLayout / postProcess）→ PhysicalFragment 树（不可变几何）
+→ LayoutOrchestrator::layout（mainLayout / oofLayout / postProcess）→ PhysicalFragment 树（不可变几何，postProcess 写入 displayText/textWidth）
 → PaintPipeline::render（按 layer 收集）→ RenderContext（GDI/Skia 后端）
 ```
 
@@ -217,6 +217,7 @@ ThemeData ──启动/切换时拍平──> :root 变量表
 - **三级脏位**（styleDirty/layoutDirty/paintDirty）：解决"改颜色触发全量重排"；项目内 1000 节点树、1 节点变化、10 帧实测 **stage:layout 耗时降幅 90%+**。等价物：Blink paint invalidation 分层 + Flutter markNeedsPaint。
 - **Fragment 缓存三级早退**（framework/Layout/LayoutOrchestrator.php L104-145）：完全洁净→零分配直接返回 cachedFragment；仅样式脏→克隆根复用子树；仅 BFC 偏移→**translateFragment 整树平移（Px 独有**，Blink/Flutter 靠合成器实现同等效果，路径更重）。
 - **isLayoutBoundary**：显式固定宽高子树跳过递归，Flutter relayoutBoundary 直接对标。
+- **postProcess 完整实施**：TextOverflowProcessor 从 paint 移入 layout 阶段，自底向上遍历 Fragment 树执行文本截断，结果写入 `frag->displayText`。paint 直接消费，不再重复截断。
 - **OOF 独立通行证**（mainLayout/oofLayout/postProcess 三阶段）+ ConstraintSpace 不可变约束传递 + ChildLayoutProvider 算法自主调子项——LayoutNG 核心架构对齐。
 - **MAX_RELAYOUT_ITERATIONS=3** 防 flex/grid 重布局震荡。
 
@@ -233,6 +234,7 @@ ThemeData ──启动/切换时拍平──> :root 变量表
 
 - **后端可插拔 + 运行时降级**：6 后端（Skia Graphite Dawn / Ganesh D3D11 / Ganesh WGL / CPU、GDI Direct2D / Legacy）探测 + ResilientRenderContext 连续失败自动降级 + 文本后端独立降级（ResilientTextBackendProxy）——超出 Blink cc 与 Flutter Impeller 的编译期绑定，Win32 桌面碎片化环境的务实增量。
 - **directRender 快速路径**：Application::directRender（framework/Core/Application.php L776）让拖拽滚动跳过 VNode 重建/样式重算/diff，只跑 layout+paint——浏览器 scroll-only 路径雏形，方向正确。
+- **renderNodeToElement 已消除**：paint 层原桥梁方法已删除，geometry 不再倒写 RenderNode；`fragmentToElement` 直读 `PhysicalFragment` 字段。
 - **LayerCache 雏形**：willChange:transform 子树 display list 缓存 + paintDirty 洁净子树跳过。
 
 ### 7.2 问题（ROI 排序）

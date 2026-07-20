@@ -173,6 +173,15 @@ $width = (int)($s->width?->toPx() ?? 0);
 - `ConstraintSpace` 属性访问
 - `PhysicalFragment` 创建时的 null 参数问题
 
+### 编译器更新
+最新 Swoole Compiler 已解决以下相关问题：
+- **`readonly` 属性带默认值**：`public readonly int $val = 0;` 直接编译通过（PHP 8.4 原生语法不允许，编译器已放宽限制）。
+- **跨类 `readonly` 直接访问**：`use native_types` 类的 `readonly` 属性在另一 `native_types` 类中直接读取正常（无需 getter）。
+
+验证方式：
+- `apps/aot-cross-readonly/` — exe 运行输出"所有方式正常 ✅"
+- `apps/aot-syntax-test/` G17 — `public readonly int $intVal = 42` 4/4 PASS
+
 ---
 
 ## 六、空安全链（`?->`）深度限制
