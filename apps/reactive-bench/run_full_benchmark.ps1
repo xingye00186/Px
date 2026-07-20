@@ -61,15 +61,12 @@ foreach ($d in @($Before, $After)) {
 Log "Clone done" "Green"
 
 # ── Step 1: Build ──
-function BuildVer($td, $label, $legacy) {
+function BuildVer($td, $label) {
     $ad = "$td\apps\reactive-bench"
     if (Test-Path $ad) { Remove-Item $ad -Recurse -Force }
     Copy-Item "$Px\apps\reactive-bench" "$td\apps\" -Recurse -Force
     Remove-Item "$ad\gen" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item "$ad\bin" -Recurse -Force -ErrorAction SilentlyContinue
-    if ($legacy -and (Test-Path "$ad\App-legacy.vue")) {
-        Copy-Item "$ad\App-legacy.vue" "$ad\App.vue" -Force
-    }
     Log "  [$label] SFC ..." "Yellow"
     php "$td\framework\Compiler\sfc-compiler.php" "$ad\App.vue" 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { Write-Error "SFC failed"; return $false }
@@ -81,8 +78,8 @@ function BuildVer($td, $label, $legacy) {
 }
 
 Hdr "Step 1: Build"
-$ok1 = BuildVer $Before "before" $false
-$ok2 = BuildVer $After "after" $false
+$ok1 = BuildVer $Before "before"
+$ok2 = BuildVer $After "after"
 if (!$ok1 -or !$ok2) { Write-Error "Build failed"; exit 1 }
 
 # ── Helper: run benchmark and return JSON path ──
