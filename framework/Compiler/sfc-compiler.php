@@ -856,6 +856,55 @@ function tryConvertStyleToArray(string $resolved): ?string
     return '[' . implode(',', $entries) . ']';
 }
 
+/** @var int 静态 VNode 计数器（跨帧复用） */
+$staticNodeCounter = 0;
+
+/** @var array 静态 VNode 初始化代码（渲染函数顶部） */
+$staticNodeInitCode = [];
+
+/** @var array 静态 VNode 声明代码（类级别） */
+$staticNodeDeclarations = [];
+
+/**
+ * 判断 VNode 子树是否完全静态（无任何动态绑定）。
+ * 完全静态的子树可以跨帧复用同一对象，无需每帧重建。
+ */
+function isFullyStatic(VNode $node): bool
+{
+    if ($node->isComponent) return false;
+
+    $props = $node->props;
+    if ($props !== null) {
+        foreach ($props as $k => $v) {
+            if (str_starts_with($k, '__')) continue;
+            if (str_starts_with($k, ':')) return false;
+            if (str_starts_with($k, '@')) return false;
+            if (str_starts_with($k, 'v-')) return false;
+        }
+    }
+
+    if (is_array($node->children)) {
+        foreach ($node->children as $child) {
+            if ($child instanceof VNode && !isFullyStatic($child)) {
+                return false;
+            }
+        }
+    } elseif ($node->children instanceof VNode) {
+        if (!isFullyStatic($node->children)) {
+            return false;
+        }
+    } elseif (is_string($node->children) && $node->children !== '') {
+        // 文本内容含变量引用 → 动态
+        if (str_contains($node->children, '$this->')
+            || str_contains($node->children, '$item')
+            || str_contains($node->children, "' . ")) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 /**
  * Generate a PHP expression for a single VNode as VNode::h() call.
  *
@@ -1426,10 +1475,23 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
     }
 
     $propsOut = '[' . implode(',', $propsStr) . ']';
-    if ($childrenExpr === 'null') {
-        return "VNode::h('{$tag}', {$propsOut})";
+    $expr = $childrenExpr === 'null'
+        ? "VNode::h('{$tag}', {$propsOut})"
+        : "VNode::h('{$tag}', {$propsOut}, {$childrenExpr})";
+
+    // 静态 VNode 提升：仅在没有 v-for 循环时（$loopInfo===null）生效，
+    // 避免跨方法作用域问题。
+    if ($tag !== '#component' && $node !== null && !$node->isComponent
+        && $loopInfo === null && isFullyStatic($node)) {
+        global $staticNodeCounter, $staticNodeInitCode, $staticNodeDeclarations;
+        $varName = '__s' . ($staticNodeCounter++);
+        // 类级别静态属性：self::$__sN ??= <expr>;（闭包内仍可访问，且跨帧复用）
+        $staticNodeDeclarations[] = "    private static ?\\Px\\Dom\\VNode \${$varName} = null;";
+        $staticNodeInitCode[] = "self::\${$varName} ??= {$expr};";
+        return "self::\${$varName}";
     }
-    return "VNode::h('{$tag}', {$propsOut}, {$childrenExpr})";
+
+    return $expr;
 }
 
 /**
@@ -2633,7 +2695,14 @@ function compileOneComponent(
     collectVForLoops($root, $loops, $loopCtr);
 
     // Generate render() body
+    global $staticNodeCounter, $staticNodeInitCode, $staticNodeDeclarations;
+    $staticNodeCounter = 0;
+    $staticNodeInitCode = [];
+    $staticNodeDeclarations = [];
     $renderExpr = generateVNodeExpr($root, null, 1);
+    $staticNodePrefix = !empty($staticNodeInitCode)
+        ? implode("\n        ", $staticNodeInitCode) . "\n        "
+        : '';
 
     // Generate dispatch methods
     $dispatchClick = generateDispatchClick($clickHandlers);
@@ -2721,6 +2790,10 @@ function compileOneComponent(
         $onUnmountWithCleanup = generateOnUnmountWithCleanup();
     }
 
+    $staticNodeDeclCode = !empty($staticNodeDeclarations)
+        ? implode("\n", $staticNodeDeclarations) . "\n"
+        : '';
+
     $classContent = <<<PHP
 <?php
 
@@ -2739,6 +2812,7 @@ class {$className} extends ReactiveComponent
 {$reactiveStorageCode}
 {$classBody}
 {$dynamicPropsDeclaration}
+{$staticNodeDeclCode}
 
 {$reactiveHookCode}
 {$effectFieldCode}
@@ -2747,7 +2821,8 @@ class {$className} extends ReactiveComponent
 
     public function render(): VNode
     {
-        return {$renderExpr};
+        // 静态 VNode 跨帧复用
+        {$staticNodePrefix}return {$renderExpr};
     }
 
     public function dispatchClick(string \$handler, ?string \$arg = null): void
