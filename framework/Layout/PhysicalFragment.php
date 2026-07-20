@@ -48,6 +48,12 @@ class PhysicalFragment
     /** 容器可用宽度（供 span/inline 文本换行使用） */
     public readonly int $availableWidth;
 
+    /**
+     * 文本像素宽度（layout 阶段预计算，paint 阶段零测量）
+     * 0 = 未设置/非文本节点，paint 应 fallback 到 measureTextWidth
+     */
+    public readonly int $textWidth;
+
     /** getter 方法 — AOT 跨类 readonly 访问保护 */
     public function getX(): int { return $this->x; }
     public function getY(): int { return $this->y; }
@@ -61,6 +67,8 @@ class PhysicalFragment
     public function getScrollTop(): int { return $this->scrollTop; }
     public function getScrollLeft(): int { return $this->scrollLeft; }
     public function getIsScrollContainer(): bool { return $this->isScrollContainer; }
+    public function getAvailableWidth(): int { return $this->availableWidth; }
+    public function getTextWidth(): int { return $this->textWidth; }
 
     /** 滚动状态 */
     public readonly int $scrollTop;
@@ -88,6 +96,7 @@ class PhysicalFragment
         array $dataset = [],
         array $pseudoStyles = [],
         int $availableWidth = 0,
+        int $textWidth = 0,
     ) {
         $this->x               = (int)$x;
         $this->y               = (int)$y;
@@ -109,6 +118,7 @@ class PhysicalFragment
         $this->dataset           = $dataset;
         $this->pseudoStyles      = $pseudoStyles;
         $this->availableWidth    = (int)$availableWidth;
+        $this->textWidth          = (int)$textWidth;
     }
 
     /** 从 LayoutResult 构造（适配器用） */

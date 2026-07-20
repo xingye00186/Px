@@ -213,6 +213,7 @@ class PaintPipeline
         $node->layer = $frag->layer;
         $node->computedStyle = $style;
         $node->content = $content;
+        $node->textWidth = $frag->textWidth;
 
         $el = $this->renderNodeToElement($node);
         if ($el === null) return null;
@@ -541,7 +542,7 @@ class PaintPipeline
             if ($fontStretchExtra !== 0) {
                 $letterSpacing += $fontStretchExtra;
             }
-            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
+            $textWidth = $node->textWidth > 0 ? $node->textWidth : self::measureTextWidth($text, $fontSize, (bool)$bold);
             $selfY = (int)($node->y ?? 0);
             $selfH = (int)($node->visualH ?? 0);
             $selfX = (int)($node->x ?? 0);
