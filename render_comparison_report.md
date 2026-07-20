@@ -73,8 +73,7 @@ foreach ($this->hoverCells as $cell) {
 | 文件 | 说明 |
 |---|---|
 | `apps/reactive-bench/results/before_perfbaseline_20260721_010045.json` | Before 基线 (perf_baseline tag)，mode=PHP-CLI(实际AOT) |
-| `apps/reactive-bench/results/after_patchflag_20260721_011259.json` | After (patchFlag + VNode patch + 诊断修复)，mode=AOT |
-| `apps/reactive-bench/results/after_vnodepatch_20260721_005159.json` | 中间版本 (仅 VNode patch 无 patchFlag)，mode=AOT |
+| `apps/reactive-bench/results/after_patchflag_20260721_012101.json` | After (patchFlag + VNode patch + 诊断修复 + TextMeasureCache)，mode=AOT，note字段含改进说明 |
 
 ---
 

@@ -109,6 +109,16 @@ class VNode
      */
     public int $patchFlags = 0;
 
+    /**
+     * Fluent setter for patchFlags（编译器生成的代码使用）。
+     * 返回 $this 以支持链式调用：VNode::h('div', [...])->withPatchFlags(1)
+     */
+    public function withPatchFlags(int $flags): self
+    {
+        $this->patchFlags = $flags;
+        return $this;
+    }
+
     // ===== 构造器 =====
 
     /**

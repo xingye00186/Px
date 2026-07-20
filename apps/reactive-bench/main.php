@@ -163,6 +163,7 @@ function main(): int
     $usePerf     = false;
     $dumpPath    = '';
     $listCases   = false;
+    $note        = '';
 
     foreach ($argv as $arg) {
         if (str_starts_with($arg, '--case='))    $caseName = substr($arg, 7);
@@ -170,7 +171,7 @@ function main(): int
         if ($arg === '--perf')                    $usePerf  = true;
         if (str_starts_with($arg, '--dump-metrics=')) $dumpPath = substr($arg, 15);
         if ($arg === '--cases-list')              $listCases = true;
-    }
+        if (str_starts_with($arg, '--note='))     $note     = substr($arg, 7);    }
 
     // 将相对路径解析为相对于应用目录的绝对路径
     if ($dumpPath !== '' && !preg_match('#^(/|[A-Za-z]:)#', $dumpPath)) {
@@ -200,6 +201,7 @@ function main(): int
                 'timestamp'    => date('Y-m-d H:i:s'),
                 'php_version'  => PHP_VERSION,
                 'mode'         => function_exists('sk_measure_text_width') ? 'AOT' : 'PHP-CLI',
+                'note'         => $note !== '' ? $note : null,
             ],
             'results' => $allResults,
         ];
@@ -224,6 +226,7 @@ function main(): int
                 'timestamp'   => date('Y-m-d H:i:s'),
                 'php_version' => PHP_VERSION,
                 'mode'        => function_exists('sk_measure_text_width') ? 'AOT' : 'PHP-CLI',
+                'note'        => $note !== '' ? $note : null,
             ],
             'results' => [$caseName => $result],
         ];

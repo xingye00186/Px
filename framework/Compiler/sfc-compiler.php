@@ -906,6 +906,30 @@ function isFullyStatic(VNode $node): bool
 }
 
 /**
+ * 检测 VNode props 中的动态绑定类型，返回 patchFlag 位掩码。
+ */
+function detectPatchFlags(?array $props): int
+{
+    $flags = 0;
+    if ($props === null) return 0;
+    if (isset($props[':style'])) $flags |= 1;
+    if (isset($props[':class'])) $flags |= 2;
+    foreach ($props as $k => $v) {
+        if (str_starts_with($k, '@')) { $flags |= 4; break; }
+    }
+    return $flags;
+}
+
+/**
+ * 如果 $flags > 0，在 VNode 表达式后追加 ->withPatchFlags(N) 链式调用。
+ */
+function wrapWithPatchFlags(string $expr, int $flags): string
+{
+    if ($flags === 0) return $expr;
+    return "({$expr})->withPatchFlags({$flags})";
+}
+
+/**
  * Generate a PHP expression for a single VNode as VNode::h() call.
  *
  * @param VNode $node The VNode
@@ -992,10 +1016,10 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
             $dynamicExpr = $node->props['__dynamicIs'] ?? '';
             $parser = new ExpressionParser();
             $parsedExpr = $parser->parse($dynamicExpr, $loopInfo);
-            return "VNode::hComponent(\$this->resolveComponent({$parsedExpr}), {$propsOut}, {$compPropsOut})";
+            return wrapWithPatchFlags("VNode::hComponent(\$this->resolveComponent({$parsedExpr}), {$propsOut}, {$compPropsOut})", detectPatchFlags($node->props));
         }
 
-        return "VNode::hComponent('{$node->componentClass}', {$propsOut}, {$compPropsOut})";
+        return wrapWithPatchFlags("VNode::hComponent('{$node->componentClass}', {$propsOut}, {$compPropsOut})", detectPatchFlags($node->props));
     }
 
     // Element node
@@ -1491,7 +1515,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
         return "self::\${$varName}";
     }
 
-    return $expr;
+    $flags = detectPatchFlags($node->props);
+    return wrapWithPatchFlags($expr, $flags);
 }
 
 /**
@@ -1860,6 +1885,8 @@ PHP;
                     $bindingParts[] = var_export($propKey, true) . '=>$' . $item . "['" . addslashes($fieldName) . "']";
                 }
                 $bindingExpr = '[' . implode(',', $bindingParts) . ']';
+                $compFlags = detectPatchFlags($elementProps);
+                $compFlagsCode = $compFlags !== 0 ? "\n            \$_comp->patchFlags = {$compFlags};" : '';
 
                 if ($parentItem !== null) {
                     $out .= <<<PHP
@@ -1872,7 +1899,7 @@ PHP;
     {
         \$children = [];
         foreach ({$iterExpr} as {$foreachAs}) {
-            \$_comp = VNode::hComponent('{$componentClass}', {$propsExpr}, []);
+            \$_comp = VNode::hComponent('{$componentClass}', {$propsExpr}, []);{$compFlagsCode}
             \$_comp->componentPropValues = {$bindingExpr};
             \$children[] = \$_comp;
         }
@@ -1890,7 +1917,7 @@ PHP;
     {
         \$children = [];
         foreach ({$iterExpr} as {$foreachAs}) {
-            \$_comp = VNode::hComponent('{$componentClass}', {$propsExpr}, []);
+            \$_comp = VNode::hComponent('{$componentClass}', {$propsExpr}, []);{$compFlagsCode}
             \$_comp->componentPropValues = {$bindingExpr};
             \$children[] = \$_comp;
         }
