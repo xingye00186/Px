@@ -40,7 +40,7 @@
 
 using namespace php;
 
-#define SK_TRACE_ENABLED
+// #define SK_TRACE_ENABLED
 #ifdef SK_TRACE_ENABLED
 #define SK_TRACE(...) fprintf(stderr, __VA_ARGS__)
 #else

@@ -87,6 +87,34 @@
       </div>
     </div>
 
+    <!-- StaticTemplate: static header/nav/footer + dynamic body -->
+    <div v-else-if="currentCase === 'StaticTemplate'" style="display:flex;flex-direction:column;width:100%;height:100%;background:#1C1C1E">
+      <!-- 静态 header — 应被 SFC 编译器 hoist -->
+      <div style="display:flex;align-items:center;padding:10px 16px;background:#2C2C2E;border-bottom:1px solid #38383A">
+        <span style="font-size:15px;color:#FF9F0A;font-weight:bold">Px Framework</span>
+        <span style="margin-left:10px;font-size:11px;color:#8E8E93">v{{ stCycle }}</span>
+      </div>
+      <!-- 静态导航 tabs — 应被 SFC 编译器 hoist -->
+      <div style="display:flex;gap:6px;padding:6px 16px;background:#1C1C1E;border-bottom:1px solid #2C2C2E">
+        <span style="padding:3px 14px;background:#3A3A3C;border-radius:4px;font-size:12px;color:#FFF">Dashboard</span>
+        <span style="padding:3px 14px;background:#3A3A3C;border-radius:4px;font-size:12px;color:#FFF">Analytics</span>
+        <span style="padding:3px 14px;background:#FF9F0A;border-radius:4px;font-size:12px;color:#000">Settings</span>
+      </div>
+      <!-- 动态内容体 — 不被 hoist -->
+      <div style="flex:1;display:flex;flex-direction:column;padding:8px 16px;gap:3px;overflow-y:scroll">
+        <span style="font-size:12px;color:#8E8E93">StaticTemplate: cycle={{ stCycle }} items={{ stCount }}</span>
+        <div v-for="item in stItems" :key="item.id"
+          :style="'padding:6px 12px;background:' + (item.active ? '#FF9F0A' : '#2C2C2E') + ';border-radius:4px;cursor:pointer'"
+          @click="stToggle(item.id)">
+          <span :style="'font-size:12px;color:' + (item.active ? '#000' : '#CCC')">{{ item.label }}</span>
+        </div>
+      </div>
+      <!-- 静态 footer — 应被 SFC 编译器 hoist -->
+      <div style="padding:6px 16px;background:#2C2C2E;border-top:1px solid #38383A;text-align:center">
+        <span style="font-size:10px;color:#48484A">© Px Framework — static footer</span>
+      </div>
+    </div>
+
     <div v-else style="padding:20px">
       <span style="font-size:18px;color:#FF4444">Unknown case: {{ currentCase }}</span>
     </div>
@@ -278,6 +306,49 @@
         $this->dynaWidgets = $w;
     }
 
+    // ── StaticTemplate ──
+    #[Reactive]
+    public array $stItems = [];
+
+    #[Reactive]
+    public int $stCycle = 0;
+
+    #[Reactive]
+    public int $stCount = 0;
+
+    public function initStaticTemplate(): void
+    {
+        $items = [];
+        $labels = ['Alpha','Beta','Gamma','Delta','Epsilon','Zeta','Eta','Theta','Iota','Kappa'];
+        for ($i = 0; $i < 50; $i++) {
+            $items[] = ['id' => 'st-' . $i, 'label' => $labels[$i % 10] . ' #' . $i, 'active' => false];
+        }
+        $this->stItems = $items;
+        $this->stCycle = 0;
+        $this->stCount = 50;
+    }
+
+    public function runStaticCycle(): void
+    {
+        $this->stCycle++;
+        $items = $this->stItems;
+        for ($i = 0; $i < 5; $i++) {
+            $idx = abs(crc32((string)($this->stCycle * 10 + $i))) % count($items);
+            $items[$idx]['active'] = !$items[$idx]['active'];
+        }
+        $this->stItems = $items;
+        $this->stCount = count($items);
+    }
+
+    public function stToggle(string $id): void
+    {
+        $items = $this->stItems;
+        foreach ($items as &$it) {
+            if ($it['id'] === $id) { $it['active'] = !$it['active']; break; }
+        }
+        $this->stItems = $items;
+    }
+
     // ── TextHeavy ──
     #[Reactive]
     public int $textCycle = 0;
@@ -321,6 +392,7 @@
         if ($case === 'ChatStream') { $this->initChatStream(); }
         if ($case === 'HoverGrid') { $this->initHoverGrid(); }
         if ($case === 'DynamicList') { $this->initDynamicList(); }
+        if ($case === 'StaticTemplate') { $this->initStaticTemplate(); }
         if ($case === 'TextHeavy') { $this->initTextHeavy(); }
     }
 </script>

@@ -94,6 +94,10 @@ function runCaseIntensive(
                 $root->runDynamicCycle();
                 break;
 
+            case 'StaticTemplate':
+                $root->runStaticCycle();
+                break;
+
             case 'TextHeavy':
                 $root->runTextCycle();
                 break;
@@ -184,7 +188,7 @@ function main(): int
     $app    = Application::create()->mount($root, $appDir);
 
     if ($listCases) {
-        $cases = ['SimpleCounter', 'ManyProps', 'DeepTree', 'MixedWorkload', 'FormDashboard', 'ChatStream', 'HoverGrid', 'DynamicList'];
+        $cases = ['SimpleCounter', 'ManyProps', 'DeepTree', 'MixedWorkload', 'FormDashboard', 'ChatStream', 'HoverGrid', 'DynamicList', 'StaticTemplate', 'TextHeavy'];
         $allResults = [];
         foreach ($cases as $c) {
             echo "[BENCH] Running case: {$c} cycles={$cycles}\n";

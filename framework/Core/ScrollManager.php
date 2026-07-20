@@ -175,7 +175,9 @@ class ScrollManager
         try {
             $scrollNode = ($this->findScrollContainer)($event->getX(), $event->getY());
             if ($scrollNode === null) {
-                error_log('[SCROLL_DBG] no scroll container at x=' . $event->getX() . ' y=' . $event->getY());
+                if (\Px\Core\Config::get('debug_diag_enabled', false)) {
+                    error_log('[SCROLL_DBG] no scroll container at x=' . $event->getX() . ' y=' . $event->getY());
+                }
                 return;
             }
 
@@ -196,13 +198,17 @@ class ScrollManager
                 $contentH = $scrollNode->contentHeight;
                 $containerH = $scrollNode->h;
                 $maxScroll = max($contentH - $containerH, 0);
-                error_log('[SCROLL_DBG] wheel x=' . $event->getX() . ' y=' . $event->getY() . ' delta=' . $delta . ' sa=' . $scrollAmount . ' scrollTop=' . $this->readScrollTop($scrollNode) . ' contentH=' . $contentH . ' containerH=' . $containerH . ' maxScroll=' . $maxScroll);
+                if (\Px\Core\Config::get('debug_diag_enabled', false)) {
+                    error_log('[SCROLL_DBG] wheel x=' . $event->getX() . ' y=' . $event->getY() . ' delta=' . $delta . ' sa=' . $scrollAmount . ' scrollTop=' . $this->readScrollTop($scrollNode) . ' contentH=' . $contentH . ' containerH=' . $containerH . ' maxScroll=' . $maxScroll);
+                }
                 if ($maxScroll <= 0) return;
 
                 $newScrollTop = max(0, min($maxScroll, $this->readScrollTop($scrollNode) - $scrollAmount));
                 if ($newScrollTop !== $this->readScrollTop($scrollNode)) {
                     $this->applyScrollTop($scrollNode, $newScrollTop, true);
-                    error_log('[SCROLL_DBG] applied scrollTop=' . $newScrollTop . ' (old was ' . $this->readScrollTop($scrollNode) . ')');
+                    if (\Px\Core\Config::get('debug_diag_enabled', false)) {
+                        error_log('[SCROLL_DBG] applied scrollTop=' . $newScrollTop . ' (old was ' . $this->readScrollTop($scrollNode) . ')');
+                    }
                 }
             }
         } finally {

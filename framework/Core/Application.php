@@ -1006,9 +1006,11 @@ class Application
 
         Diag::log(1, 'render:done', ['fragExists' => $fragmentTree !== null ? 'yes' : 'no']);
 
-        // 捕获 Fragment 快照
+        // 捕获 Fragment 快照（仅调试模式）
         \Px\Core\PerfCounter::start('stage:capture_snapshot');
-        $this->captureLayoutSnapshot($fragmentTree);
+        if (Config::get('debug_diag_enabled', false)) {
+            $this->captureLayoutSnapshot($fragmentTree);
+        }
         \Px\Core\PerfCounter::end('stage:capture_snapshot');
 
         // PaintPipeline 从 Fragment 树渲染
@@ -1050,9 +1052,13 @@ class Application
 
     private function doFirstRender(): void
     {
-        error_log('[DIAG] doFirstRender: Frame 1 start');
+        if (Config::get('debug_diag_enabled', false)) {
+            error_log('[DIAG] doFirstRender: Frame 1 start');
+        }
         $this->render();
-        error_log('[DIAG] doFirstRender: Frame 1 done');
+        if (Config::get('debug_diag_enabled', false)) {
+            error_log('[DIAG] doFirstRender: Frame 1 done');
+        }
 
         if (Config::get('debug_diag_enabled', false)) {
             $rootRN = $this->renderTreeManager->getRootRenderNode();

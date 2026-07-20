@@ -202,10 +202,12 @@ class ComputedStyle
         string $elementType = 'div'
     ) {
         $this->rawDeclarations = $declarations;
-        // ── DIAG: 检测 rawDeclarations 中是否有 CssRect 残留 ──
-        foreach ($declarations as $dk => $dv) {
-            if ($dv instanceof CssRect) {
-                error_log('[DIAG_RAW] CssRect in rawDeclarations key=' . $dk);
+        // ── DIAG: 检测 rawDeclarations 中是否有 CssRect 残留（仅调试模式）──
+        if (\Px\Core\Config::get('debug_diag_enabled', false)) {
+            foreach ($declarations as $dk => $dv) {
+                if ($dv instanceof CssRect) {
+                    error_log('[DIAG_RAW] CssRect in rawDeclarations key=' . $dk);
+                }
             }
         }
 
