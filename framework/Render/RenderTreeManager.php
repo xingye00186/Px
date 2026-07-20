@@ -34,6 +34,9 @@ class RenderTreeManager
     /** @var array<callable> RenderNode 销毁回调（Application 注册用于清理 ScrollManager/InteractionState） */
     private array $destroyCallbacks = [];
 
+    /** @var array<string, array> :style 字符串 → 解析结果缓存（方案1：同一字符串不重复 regex） */
+    private static array $styleParseCache = [];
+
     /**
      * 注册 RenderNode 销毁回调。当节点被 destroyRenderNodeTree 销毁时触发。
      * 用于清理 ScrollManager、InteractionState 等外部状态映射中的 orphan 条目。
@@ -610,20 +613,33 @@ class RenderTreeManager
             }
 
             // 合并 :style 动态绑定（StyleRecalcPass 只解析静态 style，丢弃 :style）
-            // 这修复了 :style='background:#a6e3a1;' 等动态样式不生效的问题
+            // 支持字符串（正则解析）和数组（零正则合并，Vue 3 对象语法风格）
             $dynamicStyle = $vnode->props[':style'] ?? '';
             if ($dynamicStyle !== '') {
                 \Px\Core\PerfCounter::start('sub:style_dynamic');
-                $dynamicParsed = \Px\Css\StyleResolver::parseInlineStyle($dynamicStyle);
-                if (!empty($dynamicParsed)) {
-                    // 重新导出当前样式，应用动态覆盖，重建 ComputedStyle
+                if (is_array($dynamicStyle)) {
+                    // 数组模式：直接数组合并，零 regex（方案2）
                     $resolvedStyle = $computedStyle->toExportArray();
-                    foreach ($dynamicParsed as $k => $v) {
+                    foreach ($dynamicStyle as $k => $v) {
                         $resolvedStyle[$k] = $v;
                     }
                     $computedStyle = new ComputedStyle($resolvedStyle);
-                    // 同步更新 resolvedStyle 用于后续 LayoutBoundary 判断
                     $resolvedStyle = $computedStyle->toExportArray();
+                } else {
+                    // 字符串模式：正则解析 + 缓存（同一字符串不重复 regex）
+                    $styleStr = (string)$dynamicStyle;
+                    if (!isset(self::$styleParseCache[$styleStr])) {
+                        self::$styleParseCache[$styleStr] = \Px\Css\StyleResolver::parseInlineStyle($styleStr);
+                    }
+                    $dynamicParsed = self::$styleParseCache[$styleStr];
+                    if (!empty($dynamicParsed)) {
+                        $resolvedStyle = $computedStyle->toExportArray();
+                        foreach ($dynamicParsed as $k => $v) {
+                            $resolvedStyle[$k] = $v;
+                        }
+                        $computedStyle = new ComputedStyle($resolvedStyle);
+                        $resolvedStyle = $computedStyle->toExportArray();
+                    }
                 }
                 \Px\Core\PerfCounter::end('sub:style_dynamic');
             }

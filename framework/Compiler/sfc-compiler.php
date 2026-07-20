@@ -767,6 +767,96 @@ function resolveStyleExpr(string $expr, ?array $loopInfo): string
 }
 
 /**
+ * 尝试将 :style 的字符串拼接表达式转换为 PHP 数组表达式。
+ *
+ * 输入：'color:red;font-size:' . $size . 'px'
+ * 输出：['color'=>'red','font-size'=>$size . 'px']
+ *
+ * 转换失败时返回 null（表达式过于复杂，保留原字符串路径）。
+ */
+function tryConvertStyleToArray(string $resolved): ?string
+{
+    // 按 `.` 拆分为顶层拼接片段（不拆括号/引号内的 `.`）
+    $parts = [];
+    $len = strlen($resolved);
+    $inSingle = false;
+    $inDouble = false;
+    $depth = 0;
+    $current = '';
+    for ($i = 0; $i < $len; $i++) {
+        $ch = $resolved[$i];
+        if ($ch === "'" && !$inDouble) { $inSingle = !$inSingle; $current .= $ch; continue; }
+        if ($ch === '"' && !$inSingle) { $inDouble = !$inDouble; $current .= $ch; continue; }
+        if (!$inSingle && !$inDouble) {
+            if ($ch === '(' || $ch === '[') { $depth++; $current .= $ch; continue; }
+            if ($ch === ')' || $ch === ']') { $depth--; $current .= $ch; continue; }
+            if ($ch === '.' && $depth === 0) {
+                $trimmed = trim($current);
+                if ($trimmed !== '') $parts[] = $trimmed;
+                $current = '';
+                continue;
+            }
+        }
+        $current .= $ch;
+    }
+    $trimmed = trim($current);
+    if ($trimmed !== '') $parts[] = $trimmed;
+
+    if (count($parts) === 0) return null;
+
+    $entries = [];      // ['prop' => 'valueExpr', ...]
+    $pendingProp = null; // 上一个未完成的 CSS 属性名
+
+    foreach ($parts as $part) {
+        $isString = (str_starts_with($part, "'") && str_ends_with($part, "'"))
+                  || (str_starts_with($part, '"') && str_ends_with($part, '"'));
+
+        if ($isString) {
+            // 去掉引号
+            $strContent = substr($part, 1, -1);
+            // 按 ; 拆分为 CSS 声明
+            $decls = explode(';', $strContent);
+            foreach ($decls as $decl) {
+                $decl = trim($decl);
+                if ($decl === '') continue;
+                $colonPos = strpos($decl, ':');
+                if ($colonPos === false) {
+                    // 没有冒号：整个字符串是值的一部分（追加到上一个属性）
+                    // 这种情况很少见，回退
+                    return null;
+                }
+                $prop = trim(substr($decl, 0, $colonPos));
+                $val = trim(substr($decl, $colonPos + 1));
+
+                if ($val === '') {
+                    // 值在下一个动态片段中
+                    $pendingProp = $prop;
+                } else {
+                    // 完整声明
+                    $entries[] = var_export($prop, true) . '=>' . var_export($val, true);
+                    $pendingProp = null;
+                }
+            }
+        } else {
+            // 动态表达式
+            if ($pendingProp !== null) {
+                // 作为上一个 CSS 属性的值
+                $entries[] = var_export($pendingProp, true) . '=>' . $part;
+                $pendingProp = null;
+            } else {
+                // 没有待补全属性：可能是危险的动态 CSS，保留字符串路径
+                return null;
+            }
+        }
+    }
+
+    // 还有未完成的属性 → 回退
+    if ($pendingProp !== null) return null;
+
+    return '[' . implode(',', $entries) . ']';
+}
+
+/**
  * Generate a PHP expression for a single VNode as VNode::h() call.
  *
  * @param VNode $node The VNode
@@ -883,9 +973,28 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
             }
 
             // Handle :style directive: resolve bare identifiers in expression
+            // Supports both CSS string (default) and PHP array (Vue 3 object syntax style)
             if ($k === ':style') {
-                $resolvedStyle = resolveStyleExpr($v, $loopInfo);
-                $propsStr[] = var_export(':style', true) . '=>' . $resolvedStyle;
+                $trimmed = trim($v);
+                $isArrayStyle = str_starts_with($trimmed, '[') || str_starts_with($trimmed, 'array(');
+                if ($isArrayStyle) {
+                    // 数组模式：仅做循环变量替换，不做 bare identifier 前缀（保持 PHP 数组语法）
+                    $resolved = $v;
+                    if ($loopInfo !== null) {
+                        $item = $loopInfo['item'] ?? '';
+                        if ($item !== '') {
+                            $resolved = preg_replace('/\b(' . preg_quote($item, '/') . ')\.(\w+)\b/', '\$' . $item . "['\$2']", $resolved);
+                        }
+                        $index = $loopInfo['index'] ?? '';
+                        if ($index !== '') {
+                            $resolved = preg_replace('/\b' . preg_quote($index, '/') . '\b/', '\$' . $index, $resolved);
+                        }
+                    }
+                    $propsStr[] = var_export(':style', true) . '=>' . $resolved;
+                } else {
+                    $resolvedStyle = resolveStyleExpr($v, $loopInfo);
+                    $propsStr[] = var_export(':style', true) . '=>' . $resolvedStyle;
+                }
                 continue;
             }
 
@@ -1452,9 +1561,33 @@ function generateLoopItemPropsExpr(array $props, ?array $loopInfo): string
         if (str_starts_with($k, '__')) continue;
 
         // Handle :style directive: resolve bare identifiers in expression
+        // Supports both CSS string (default) and PHP array (Vue 3 object syntax style)
         if ($k === ':style') {
-            $resolvedStyle = resolveStyleExpr($v, $loopInfo);
-            $parts[] = var_export(':style', true) . '=>' . $resolvedStyle;
+            $trimmed = trim($v);
+            if (str_starts_with($trimmed, '[') || str_starts_with($trimmed, 'array(')) {
+                // 数组模式：仅做循环变量替换
+                $resolved = $v;
+                if ($loopInfo !== null) {
+                    $item = $loopInfo['item'] ?? '';
+                    if ($item !== '') {
+                        $resolved = preg_replace('/\b(' . preg_quote($item, '/') . ')\.(\w+)\b/', '\$' . $item . "['\$2']", $resolved);
+                    }
+                    $index = $loopInfo['index'] ?? '';
+                    if ($index !== '') {
+                        $resolved = preg_replace('/\b' . preg_quote($index, '/') . '\b/', '\$' . $index, $resolved);
+                    }
+                }
+                $parts[] = var_export(':style', true) . '=>' . $resolved;
+            } else {
+                // 字符串模式：先 resolve 变量再尝试转为数组
+                $resolvedStyle = resolveStyleExpr($v, $loopInfo);
+                $arrayStyle = tryConvertStyleToArray($resolvedStyle);
+                if ($arrayStyle !== null) {
+                    $parts[] = var_export(':style', true) . '=>' . $arrayStyle;
+                } else {
+                    $parts[] = var_export(':style', true) . '=>' . $resolvedStyle;
+                }
+            }
             continue;
         }
 

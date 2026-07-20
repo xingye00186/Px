@@ -1283,6 +1283,33 @@ function group16_lru_self_ref(): string
     return $s;
 }
 
+// ================================================================
+// GROUP 17 — readonly 属性默认值 (Readonly Property Default)
+// ================================================================
+
+class ReadonlyDefaultTest
+{
+    public readonly int $intVal = 42;
+    public readonly string $strVal = 'hello';
+    public readonly bool $boolVal = true;
+}
+
+function group17_readonly_default(): string
+{
+    $s = "";
+    $s .= "\n--- G17: readonly 属性默认值 ---\n";
+
+    $obj = new ReadonlyDefaultTest();
+    $s .= assertIntEq("T17-01: readonly int default 42", $obj->intVal, 42);
+    $s .= assertStrEq("T17-02: readonly string default 'hello'", $obj->strVal, "hello");
+    $s .= assertBool("T17-03: readonly bool default true", $obj->boolVal, true);
+
+    $obj2 = new ReadonlyDefaultTest();
+    $s .= assertIntEq("T17-04: readonly int still 42", $obj2->intVal, 42);
+
+    return $s;
+}
+
 function group15_large_arrays(): string
 {
     $s = "";
@@ -1322,7 +1349,7 @@ function buildReport(string $group1, string $group2, string $group3,
                      string $group7, string $group8, string $group9,
                      string $group10, string $group11, string $group12,
                      string $group13, string $group14, string $group15,
-                     string $group16): string
+                     string $group16, string $group17): string
 {
     $report = "";
     $report .= "+----------------------------------------------------------------------+\n";
@@ -1374,6 +1401,7 @@ function buildReport(string $group1, string $group2, string $group3,
     $report .= $group15;
 
     $report .= $group16;
+    $report .= $group17;
 
     // 测试分组说明
     $report .= "\n";
@@ -1394,6 +1422,7 @@ function buildReport(string $group1, string $group2, string $group3,
     $report .= "  G14: 闭包边界测试 (Closure Boundaries)\n";
     $report .= "  G15: 大数组字面量测试 (Large Array Literals)\n";
     $report .= "  G16: LRU 自引用类 (?self 类型属性)\n";
+    $report .= "  G17: readonly 属性默认值 (Readonly Default)\n";
     $report .= "\n";
 
     // 编译限制说明
@@ -1505,12 +1534,13 @@ function main(): int
     $g15 = group15_large_arrays();
 
     $g16 = group16_lru_self_ref();
+    $g17 = group17_readonly_default();
 
     // 生成报告
     $report = buildReport(
         $g1, $g2, $g3, $g4, $g5, $g6,
         $g7, $g8, $g9, $g10, $g11, $g12, $g13, $g14, $g15,
-        $g16
+        $g16, $g17
     );
 
     echo $report;
