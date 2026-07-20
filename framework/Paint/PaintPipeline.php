@@ -201,30 +201,85 @@ class PaintPipeline
             return null;
         }
 
-        // 用 Fragment 字段构建 adapter 后委托到现有绘制方法
+        // Fragment 主线：直接消费 Fragment 字段，不再倒写 RenderNode
         $node = $frag->sourceNode;
         if ($node === null) return null;
-        $node->x = $frag->x;
-        $node->y = $frag->y;
-        $node->w = $frag->w;
-        $node->h = $frag->h;
-        $node->visualW = $frag->visualW;
-        $node->visualH = $frag->visualH;
-        $node->layer = $frag->layer;
         $node->computedStyle = $style;
         $node->content = $content;
 
-        $el = $this->renderNodeToElement($node);
-        if ($el === null) return null;
+        // ── viewport culling ──
+        $x = (int)$frag->x;
+        $y = (int)$frag->y;
+        $w = $frag->visualW > 0 ? (int)$frag->visualW : (int)$frag->w;
+        $h = $frag->visualH > 0 ? (int)$frag->visualH : (int)$frag->h;
+        $layer = (int)$frag->layer;
+        if (count($this->scrollCtxStack) > 0) {
+            $isFixed = ($style?->position?->value ?? '') === 'fixed';
+            if (!$isFixed) {
+                $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];
+                if (($scrollCtx['overflowY'] ?? 'visible') !== 'visible') {
+                    if ($y + $h <= $scrollCtx['y'] || $y >= $scrollCtx['y'] + $scrollCtx['h']) {
+                        return null;
+                    }
+                }
+                if (($scrollCtx['overflowX'] ?? 'visible') !== 'visible') {
+                    if ($x + $w <= $scrollCtx['x'] || $x >= $scrollCtx['x'] + $scrollCtx['w']) {
+                        return null;
+                    }
+                }
+            }
+        }
 
-        $el['x'] = $frag->x;
-        $el['y'] = $frag->y;
-        $el['w'] = $frag->w;
-        $el['h'] = $frag->h;
-        $el['visualW'] = $frag->visualW;
-        $el['visualH'] = $frag->visualH;
-        unset($el['renderOffsetX'], $el['renderOffsetY']);
-        return $el;
+        // ── 由 type 分发到具体的 make*Element ──
+        $pseudoKeys = self::extractPseudoOverrides($node);
+        $props = [];
+        if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+            $props = $node->sourceVNode->props;
+        }
+        switch ($frag->type) {
+            case 'button':
+                return $this->makeButtonElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
+            case 'input':
+                return $this->makeInputElement($node, $props, $x, $y, $w, $h, $layer);
+            case 'img':
+                return $this->makeImgElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
+            case 'span':
+            case '#text':
+            case 'b':
+            case 'strong':
+            case 'em':
+            case 'i':
+            case 'code':
+                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
+            case 'br':
+                return [['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => 0, 'h' => 0, 'color' => 0, 'borderRadius' => 0, 'borderRadiusX' => 0, 'borderRadiusY' => 0, 'opacity' => 1.0, 'layer' => $layer, 'noFill' => true, 'shadowX' => 0, 'shadowY' => 0, 'shadowBlur' => 0, 'shadowAlpha' => 0, 'shadowColor' => 0, 'shadowInset' => false, 'borderWidth' => 0, 'borderColor' => 0, 'borderTopColor' => 0, 'borderRightColor' => 0, 'borderBottomColor' => 0, 'borderLeftColor' => 0, 'borderTopWidth' => 0, 'borderRightWidth' => 0, 'borderBottomWidth' => 0, 'borderLeftWidth' => 0, 'borderStyle' => 'none', 'cursor' => '']];
+            case 'a':
+            case 'label':
+            case 'abbr':
+            case 'cite':
+            case 'dfn':
+            case 'kbd':
+            case 'mark':
+            case 'q':
+            case 'samp':
+            case 'small':
+            case 'sub':
+            case 'sup':
+            case 'time':
+            case 'var':
+                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
+            case 'p':
+            case 'h1':
+            case 'h2':
+            case 'h3':
+            case 'h4':
+            case 'h5':
+            case 'h6':
+                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
+            case 'div':
+            default:
+                return $this->makeDivElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
+        }
     }
 
 
@@ -320,94 +375,6 @@ class PaintPipeline
     {
         $n = count($this->componentStack);
         return $n > 0 ? $this->componentStack[$n - 1] : $this->component;
-    }
-
-    /**
-     * @deprecated 应直接消费 Fragment 数据。当前由 fragmentToElement 写回 geometry 后代理到此方法，
-     * 未来应将这些逻辑内联到 fragmentToElement 中直接使用 $frag 字段。
-     */
-    private function renderNodeToElement(RenderNode $node): ?array
-    {
-        $pseudoKeys = self::extractPseudoOverrides($node);
-        if (($node->computedStyle?->display?->value ?? '') === 'none') {
-            return null;
-        }
-        $x = (int)($node->x ?? 0);
-        $y = (int)($node->y ?? 0);
-        $w = (int)($node->visualW ?? 0);
-        $h = (int)($node->visualH ?? 0);
-        $layer = (int)($node->layer ?? 0);
-        if (count($this->scrollCtxStack) > 0) {
-            $isFixed = ($node->computedStyle?->position?->value ?? '') === 'fixed';
-            if (!$isFixed) {
-                $scrollCtx = $this->scrollCtxStack[count($this->scrollCtxStack) - 1];
-                $containerX = $scrollCtx['x'];
-                $containerY = $scrollCtx['y'];
-                $containerW = $scrollCtx['w'];
-                $containerH = $scrollCtx['h'];
-                $overflowX = $scrollCtx['overflowX'];
-                $overflowY = $scrollCtx['overflowY'];
-                if ($overflowY !== 'visible') {
-                    if ($y + $h <= $containerY || $y >= $containerY + $containerH) {
-                        return null;
-                    }
-                }
-                if ($overflowX !== 'visible') {
-                    if ($x + $w <= $containerX || $x >= $containerX + $containerW) {
-                        return null;
-                    }
-                }
-            }
-        }
-        $props = [];
-        if ($node->sourceVNode !== null && $node->sourceVNode->props !== null) {
-            $props = $node->sourceVNode->props;
-        }
-        switch ($node->type) {
-            case 'button':
-                return $this->makeButtonElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
-            case 'input':
-                return $this->makeInputElement($node, $props, $x, $y, $w, $h, $layer);
-            case 'img':
-                return $this->makeImgElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
-            case 'span':
-            case '#text':
-            case 'b':
-            case 'strong':
-            case 'em':
-            case 'i':
-            case 'code':
-                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
-            case 'br':
-                $elements[] = ['type' => 'rect', 'x' => $x, 'y' => $y, 'w' => 0, 'h' => 0, 'color' => 0, 'borderRadius' => 0, 'borderRadiusX' => 0, 'borderRadiusY' => 0, 'opacity' => 1.0, 'layer' => $layer, 'noFill' => true, 'shadowX' => 0, 'shadowY' => 0, 'shadowBlur' => 0, 'shadowAlpha' => 0, 'shadowColor' => 0, 'shadowInset' => false, 'borderWidth' => 0, 'borderColor' => 0, 'borderTopColor' => 0, 'borderRightColor' => 0, 'borderBottomColor' => 0, 'borderLeftColor' => 0, 'borderTopWidth' => 0, 'borderRightWidth' => 0, 'borderBottomWidth' => 0, 'borderLeftWidth' => 0, 'borderStyle' => 'none', 'cursor' => ''];
-                return $elements;
-            case 'a':
-            case 'label':
-            case 'abbr':
-            case 'cite':
-            case 'dfn':
-            case 'kbd':
-            case 'mark':
-            case 'q':
-            case 'samp':
-            case 'small':
-            case 'sub':
-            case 'sup':
-            case 'time':
-            case 'var':
-                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
-            case 'p':
-            case 'h1':
-            case 'h2':
-            case 'h3':
-            case 'h4':
-            case 'h5':
-            case 'h6':
-                return $this->makeSpanElement($node, $props, $x, $y, $w, $h, $layer);
-            case 'div':
-            default:
-                return $this->makeDivElement($node, $pseudoKeys, $props, $x, $y, $w, $h, $layer);
-        }
     }
 
     private function makeDivElement(RenderNode $node, array $pseudoOverrides, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
