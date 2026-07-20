@@ -210,7 +210,7 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         if (($width <= 0 || $height <= 0) && strlen($textContent) > 0) {
             $fs = (int)($cs->getFontSize() ?? 14);
             $bd = (int)($cs->getBold() ?? 0);
-            $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, $bd) : 0);
+            $measured = TextMeasureCache::measure($textContent, $fs, (bool)$bd);
             if ($measured > 0 && $width <= 0) {
                 $width = max(0, $measured + (int)($cs->padding?->left->toPx() ?? 0) + (int)($cs->padding?->right->toPx() ?? 0) + (int)($cs->getBorderLeftWidth() ?? 0) + (int)($cs->getBorderRightWidth() ?? 0));
             }

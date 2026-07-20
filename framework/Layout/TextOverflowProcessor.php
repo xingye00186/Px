@@ -27,9 +27,7 @@ class TextOverflowProcessor
         $lineClamp = (int)($style['WebkitLineClamp'] ?? 0);
 
         // 测量文本宽度（依赖 skia C++ 函数）
-        $textW = function_exists('sk_measure_text_width')
-            ? (int)\sk_measure_text_width($text, $fontSize, $bold)
-            : (int)(strlen($text) * $fontSize * 0.6);
+        $textW = TextMeasureCache::measure($text, $fontSize, (bool)$bold);
 
         // 如果文本不溢出，直接返回
         if ($textW <= $containerW && $lineClamp <= 0) {
@@ -45,9 +43,7 @@ class TextOverflowProcessor
 
         foreach ($words as $word) {
             $testLine = $currentLine === '' ? $word : $currentLine . ' ' . $word;
-            $testW = function_exists('sk_measure_text_width')
-                ? (int)\sk_measure_text_width($testLine, $fontSize, $bold)
-                : (int)(strlen($testLine) * $fontSize * 0.6);
+            $testW = TextMeasureCache::measure($testLine, $fontSize, (bool)$bold);
             if ($testW <= $containerW) {
                 $currentLine = $testLine;
             } else {
@@ -56,14 +52,10 @@ class TextOverflowProcessor
                 }
                 $currentLine = $word;
                 // 如果单个词超宽，强制截断
-                $wordW = function_exists('sk_measure_text_width')
-                    ? (int)\sk_measure_text_width($word, $fontSize, $bold)
-                    : (int)(strlen($word) * $fontSize * 0.6);
+                $wordW = TextMeasureCache::measure($word, $fontSize, (bool)$bold);
                 while ($wordW > $containerW && strlen($currentLine) > 0) {
                     $currentLine = substr($currentLine, 0, -1);
-                    $wordW = function_exists('sk_measure_text_width')
-                        ? (int)\sk_measure_text_width($currentLine, $fontSize, $bold)
-                        : (int)(strlen($currentLine) * $fontSize * 0.6);
+                    $wordW = TextMeasureCache::measure($currentLine, $fontSize, (bool)$bold);
                 }
             }
         }

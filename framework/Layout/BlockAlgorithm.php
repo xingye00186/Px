@@ -37,7 +37,7 @@ class BlockAlgorithm extends LayoutAlgorithm
         // Intrinsic measurement mode
         if ($c->getIsIntrinsicMeasurement()) {
             $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
-            $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->getBold() ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
+            $w = strlen($textContent) > 0 ? TextMeasureCache::measure($textContent, $fs, (bool)($s->getBold() ?? false)) : 0;
             $h = strlen($textContent) > 0 ? ($s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($fs * 1.2)) : 0;
             return new PhysicalFragment((int)max(0, $w), (int)max(0, $h), 0, 0, 0, 0, 0, 0, 0, $s);
         }
@@ -134,7 +134,7 @@ class BlockAlgorithm extends LayoutAlgorithm
     {
         $s = $style ?? new ComputedStyle([]);
         $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
-        $w = strlen($textContent) > 0 ? (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($s->getBold() ?? 0)) : (int)(strlen($textContent) * $fs * 0.6)) : 0;
+        $w = strlen($textContent) > 0 ? TextMeasureCache::measure($textContent, $fs, (bool)($s->getBold() ?? false)) : 0;
         $h = strlen($textContent) > 0 ? ($s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($fs * 1.2)) : 0;
         return new IntrinsicSizes(max(0, $w), max(0, $w), max(0, $h), max(0, $h));
     }
@@ -156,7 +156,7 @@ class BlockAlgorithm extends LayoutAlgorithm
         }
         if ($s->width !== null && $s->width->isIntrinsic() && strlen($textContent) > 0) {
             $fs = $s->getFontSize(); $bd = $s->getBold();
-            $width = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, $bd) : (int)(strlen($textContent) * $fs * 0.6));
+            $width = TextMeasureCache::measure($textContent, $fs, (bool)$bd);
         }
 
         if ($width <= 0) {
@@ -230,7 +230,7 @@ class BlockAlgorithm extends LayoutAlgorithm
                 if (is_string($typeFromStyle) && self::isInlineType($typeFromStyle) && strlen($childStyle->getRaw('_content') ?? '') > 0) {
                     $content = (string)($childStyle->getRaw('_content') ?? '');
                     $fs = $childStyle->getFontSize(); $bd = $childStyle->getBold();
-                    $measured = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($content, $fs, $bd) : 0);
+                    $measured = TextMeasureCache::measure($content, $fs, (bool)$bd);
                     if ($measured > 0) $chW = $measured;
                     if ($chH <= 0) $chH = $childStyle->getLineHeight() > 0 ? $childStyle->getLineHeight() : (int)($fs * 1.2);
                 }

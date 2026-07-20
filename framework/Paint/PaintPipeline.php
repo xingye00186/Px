@@ -231,34 +231,7 @@ class PaintPipeline
 
     private static function measureTextWidth(string $text, int $fontSize, bool $bold): int
     {
-        static $hasNative = null;
-        if ($hasNative === null) {
-            $hasNative = function_exists('\\sk_measure_text_width')
-                && !getenv('PX_LAYOUT_TEST_FORCE_ESTIMATE');
-        }
-        if ($hasNative) {
-            return (int)\sk_measure_text_width($text, $fontSize, $bold);
-        }
-        $boldFactor = $bold ? 1.35 : 1.0;
-        $charW = (int)($fontSize * 0.6 * $boldFactor);
-        $cjkW  = (int)($fontSize * $boldFactor);
-        $len   = strlen($text);
-        $total = 0;
-        for ($i = 0; $i < $len;) {
-            $b = ord($text[$i]);
-            if ($b < 0x80) {
-                $total += $charW; $i++;
-            } elseif ($b < 0xC0) {
-                $i++;
-            } elseif ($b < 0xE0) {
-                $total += $cjkW; $i += 2;
-            } elseif ($b < 0xF0) {
-                $total += $cjkW; $i += 3;
-            } else {
-                $total += $cjkW; $i += 4;
-            }
-        }
-        return $total;
+        return \Px\Layout\TextMeasureCache::measure($text, $fontSize, $bold);
     }
 
     private static function applyTextTransform(string $text, string $transform): string

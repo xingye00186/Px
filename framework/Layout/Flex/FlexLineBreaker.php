@@ -65,7 +65,7 @@ class FlexLineBreaker
                 if (is_string($chText) && strlen($chText) > 0 && $minMain <= 0) {
                     $fs = $chCS?->fontSize ?? 14;
                     $bd = $chCS?->bold ?? false;
-                    $textW = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($chText, $fs, $bd) : 0);
+                    $textW = TextMeasureCache::measure($chText, $fs, (bool)$bd);
                     if ($isRow) {
                         $minMain = max(0, $textW);
                     }

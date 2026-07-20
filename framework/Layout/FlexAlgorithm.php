@@ -453,7 +453,7 @@ class FlexAlgorithm extends LayoutAlgorithm
         // 没有子 fragment 可用时，返回文本内在尺寸
         if (strlen($textContent) > 0) {
             $fs = $style?->getFontSize() > 0 ? $style->getFontSize() : 16;
-            $w = (function_exists('sk_measure_text_width') ? (int)\sk_measure_text_width($textContent, $fs, (int)($style?->getBold() ?? 0)) : (int)(strlen($textContent) * $fs * 0.6));
+            $w = TextMeasureCache::measure($textContent, $fs, (bool)($style?->getBold() ?? false));
             $h = $style?->getLineHeight() > 0 ? $style->getLineHeight() : (int)($fs * 1.2);
             return new IntrinsicSizes($w, $w, $h, $h);
         }
