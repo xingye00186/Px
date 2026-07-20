@@ -1156,6 +1156,133 @@ class PropToPropAssignTest
     }
 }
 
+// ================================================================
+// GROUP 16 — LRU 自引用类 (Self-referencing LRU Node)
+// ================================================================
+
+/**
+ * 双向链表节点 — 测试 AOT 对 ?self 类型属性的兼容性
+ *
+ * 模式：
+ *   - public ?LruNode $prev / $next（自引用对象类型属性）
+ *   - $node->prev->key（跨对象属性访问链）
+ *   - $node->getPrev()->getKey()（getter 方法链）
+ *   - 头部插入/移除操作（链表修改变动 $prev/$next）
+ */
+class LruNode
+{
+    public string $key = '';
+    public int $value = 0;
+    public ?LruNode $prev = null;
+    public ?LruNode $next = null;
+
+    public function __construct(string $key, int $value)
+    {
+        $this->key   = $key;
+        $this->value = $value;
+    }
+
+    public function getKey(): string { return $this->key; }
+    public function getValue(): int { return $this->value; }
+    public function getPrev(): ?LruNode { return $this->prev; }
+    public function getNext(): ?LruNode { return $this->next; }
+}
+
+/**
+ * LRU 缓存 — 测试链表操作在 AOT 下的正确性
+ */
+class LruCache
+{
+    private int $capacity;
+    private int $size = 0;
+    private ?LruNode $head = null;
+    private ?LruNode $tail = null;
+
+    public function __construct(int $capacity)
+    {
+        $this->capacity = $capacity;
+    }
+
+    /** 头部插入（新节点或移动到头部） */
+    public function addToHead(LruNode $node): void
+    {
+        $node->prev = null;
+        $node->next = $this->head;
+        if ($this->head !== null) {
+            $this->head->prev = $node;
+        }
+        $this->head = $node;
+        if ($this->tail === null) {
+            $this->tail = $node;
+        }
+        $this->size++;
+    }
+
+    /** 移除尾部节点（淘汰） */
+    public function removeTail(): string
+    {
+        if ($this->tail === null) return '';
+        $key = $this->tail->key;
+        $this->tail = $this->tail->prev;
+        if ($this->tail !== null) {
+            $this->tail->next = null;
+        } else {
+            $this->head = null;
+        }
+        $this->size--;
+        return $key;
+    }
+
+    public function getHead(): ?LruNode { return $this->head; }
+    public function getTail(): ?LruNode { return $this->tail; }
+    public function getSize(): int { return $this->size; }
+}
+
+function group16_lru_self_ref(): string
+{
+    $s = "";
+    $s .= "\n--- G16: LRU 自引用类 (?self 类型属性) ---\n";
+
+    // T16-01: 创建节点，串联为双向链表 A<->B<->C
+    $a = new LruNode("alpha", 100);
+    $b = new LruNode("beta", 200);
+    $c = new LruNode("gamma", 300);
+    $a->next = $b;  $b->prev = $a;
+    $b->next = $c;  $c->prev = $b;
+
+    // 自引用属性跨对象访问链：$b->prev->key（核心验证点）
+    $s .= assertStrEq("T16-01: a->next->key (object->?self->string)", $a->next->key, "beta");
+    $s .= assertIntEq("T16-02: c->prev->value (object->?self->int)", $c->prev->value, 200);
+    $s .= assertStrEq("T16-03: b->prev->key", $b->prev->key, "alpha");
+    $s .= assertBool("T16-04: a === b->prev", ($a === $b->prev), true);
+
+    // Getter 方法链（类型接续路径）
+    $s .= assertStrEq("T16-05: a->getNext()->getKey()", $a->getNext()->getKey(), "beta");
+    $s .= assertIntEq("T16-06: a->getNext()->getValue()", $a->getNext()->getValue(), 200);
+
+    // 空引用安全
+    $s .= assertBool("T16-07: $a->prev === null", ($a->prev === null), true);
+    $s .= assertBool("T16-08: $c->next === null", ($c->next === null), true);
+
+    // LRU 缓存操作
+    $cache = new LruCache(3);
+    $cache->addToHead(new LruNode("x", 10));
+    $cache->addToHead(new LruNode("y", 20));
+    $cache->addToHead(new LruNode("z", 30));
+    $s .= assertIntEq("T16-09: cache size 3", $cache->getSize(), 3);
+    $s .= assertStrEq("T16-10: head->key", $cache->getHead()->key, "z");
+    $s .= assertStrEq("T16-11: tail->key via getter", $cache->getTail()->getKey(), "x");
+
+    // 淘汰
+    $evicted = $cache->removeTail();
+    $s .= assertStrEq("T16-12: evicted key", $evicted, "x");
+    $s .= assertIntEq("T16-13: size after evict", $cache->getSize(), 2);
+    $s .= assertStrEq("T16-14: new tail key", $cache->getTail()->getKey(), "y");
+    $s .= assertBool("T16-15: new tail->next === null", ($cache->getTail()->next === null), true);
+
+    return $s;
+}
+
 function group15_large_arrays(): string
 {
     $s = "";
@@ -1194,7 +1321,8 @@ function buildReport(string $group1, string $group2, string $group3,
                      string $group4, string $group5, string $group6,
                      string $group7, string $group8, string $group9,
                      string $group10, string $group11, string $group12,
-                     string $group13, string $group14, string $group15): string
+                     string $group13, string $group14, string $group15,
+                     string $group16): string
 {
     $report = "";
     $report .= "+----------------------------------------------------------------------+\n";
@@ -1245,6 +1373,8 @@ function buildReport(string $group1, string $group2, string $group3,
     $report .= $group14;
     $report .= $group15;
 
+    $report .= $group16;
+
     // 测试分组说明
     $report .= "\n";
     $report .= "=== 测试分组说明 ===\n";
@@ -1263,6 +1393,7 @@ function buildReport(string $group1, string $group2, string $group3,
     $report .= "  G13: match 表达式 (Match Expression)\n";
     $report .= "  G14: 闭包边界测试 (Closure Boundaries)\n";
     $report .= "  G15: 大数组字面量测试 (Large Array Literals)\n";
+    $report .= "  G16: LRU 自引用类 (?self 类型属性)\n";
     $report .= "\n";
 
     // 编译限制说明
@@ -1373,10 +1504,13 @@ function main(): int
     $g14 = group14_closures();
     $g15 = group15_large_arrays();
 
+    $g16 = group16_lru_self_ref();
+
     // 生成报告
     $report = buildReport(
         $g1, $g2, $g3, $g4, $g5, $g6,
-        $g7, $g8, $g9, $g10, $g11, $g12, $g13, $g14, $g15
+        $g7, $g8, $g9, $g10, $g11, $g12, $g13, $g14, $g15,
+        $g16
     );
 
     echo $report;
