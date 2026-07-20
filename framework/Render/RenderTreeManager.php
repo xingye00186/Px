@@ -618,13 +618,12 @@ class RenderTreeManager
             if ($dynamicStyle !== '') {
                 \Px\Core\PerfCounter::start('sub:style_dynamic');
                 if (is_array($dynamicStyle)) {
-                    // 数组模式：直接数组合并，零 regex（方案2）
+                    // 数组模式：直接数组合并，零 regex，零额外 ComputedStyle 构造
                     $resolvedStyle = $computedStyle->toExportArray();
                     foreach ($dynamicStyle as $k => $v) {
                         $resolvedStyle[$k] = $v;
                     }
                     $computedStyle = new ComputedStyle($resolvedStyle);
-                    $resolvedStyle = $computedStyle->toExportArray();
                 } else {
                     // 字符串模式：正则解析 + 缓存（同一字符串不重复 regex）
                     $styleStr = (string)$dynamicStyle;
@@ -638,7 +637,6 @@ class RenderTreeManager
                             $resolvedStyle[$k] = $v;
                         }
                         $computedStyle = new ComputedStyle($resolvedStyle);
-                        $resolvedStyle = $computedStyle->toExportArray();
                     }
                 }
                 \Px\Core\PerfCounter::end('sub:style_dynamic');

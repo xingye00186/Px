@@ -26,6 +26,13 @@ class StyleRecalcPass
         $inlineStyle = $root->props['style'] ?? '';
         $className = $root->props['class'] ?? '';
 
+        // #text 节点无样式，用父样式直接构造最小 ComputedStyle，跳过 StyleResolver
+        if ($root->type === '#text') {
+            $root->computedStyle = new ComputedStyle($parentStyle);
+            \Px\Core\PerfCounter::inc('style_recalc_text_skip');
+            return;
+        }
+
         $pseudoStyles = [];
         $computedStyle = StyleResolver::resolve(
             inlineStyle: $inlineStyle,
