@@ -87,6 +87,28 @@ class VNode
      */
     public ?ComputedStyle $computedStyle = null;
 
+    // ===== Vue 3 patchFlag 兼容（编译器级动态绑定标记）=====
+
+    /** 无动态绑定（完全静态） */
+    public const PATCH_NONE  = 0;
+    /** :style 动态绑定 */
+    public const PATCH_STYLE = 1;
+    /** :class 动态绑定 */
+    public const PATCH_CLASS = 2;
+    /** @ 事件动态绑定 */
+    public const PATCH_EVENT = 4;
+    /** v-for / v-if 结构动态 */
+    public const PATCH_STRUCT = 8;
+    /** 全部动态（默认，未优化） */
+    public const PATCH_ALL   = 15;
+
+    /**
+     * 编译器标记的 patch flags（Vue 3 patchFlag 兼容语义）。
+     * 0 = 完全静态；非零 = 标记位表示的属性可能变化。
+     * 运行时 patchVNodeTree 据此选择性更新，跳过未标记的属性。
+     */
+    public int $patchFlags = 0;
+
     // ===== 构造器 =====
 
     /**

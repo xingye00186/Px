@@ -1900,6 +1900,12 @@ PHP;
                 }
             } else {
                 // Regular element v-for
+                // 检测编译器级 patchFlags
+                $patchFlags = 0;
+                if (isset($elementProps[':style'])) $patchFlags |= 1;
+                if (isset($elementProps[':class'])) $patchFlags |= 2;
+                if (isset($elementProps['@click']) || isset($elementProps['@keydown']) || isset($elementProps['@keyup'])) $patchFlags |= 4;
+
                 if (count($childExprs) > 0) {
                     $childBlock = "[\n                    " . implode(",\n                    ", $childExprs) . "\n                ]";
                     if (!empty($info['keyExpr'])) {
@@ -1918,6 +1924,10 @@ PHP;
                 }
 
                 if ($parentItem !== null) {
+                    // patchFlags 赋值语句
+                    $assignFlags = ($patchFlags !== 0)
+                        ? "\n        \$__v = {$innerExpr};\n        \$__v->patchFlags = {$patchFlags};\n        \$children[] = \$__v;"
+                        : "\n            \$children[] = {$innerExpr};";
                     $out .= <<<PHP
 
     /**
@@ -1927,13 +1937,15 @@ PHP;
     private function {$name}({$paramDecl}): array
     {
         \$children = [];
-        foreach ({$iterExpr} as {$foreachAs}) {
-            \$children[] = {$innerExpr};
+        foreach ({$iterExpr} as {$foreachAs}) {{$assignFlags}
         }
         return \$children;
     }
 PHP;
                 } else {
+                    $assignFlags = ($patchFlags !== 0)
+                        ? "\n        \$__v = {$innerExpr};\n        \$__v->patchFlags = {$patchFlags};\n        \$children[] = \$__v;"
+                        : "\n            \$children[] = {$innerExpr};";
                     $out .= <<<PHP
 
     /**
@@ -1943,8 +1955,7 @@ PHP;
     private function {$name}(): array
     {
         \$children = [];
-        foreach ({$iterExpr} as {$foreachAs}) {
-            \$children[] = {$innerExpr};
+        foreach ({$iterExpr} as {$foreachAs}) {{$assignFlags}
         }
         return \$children;
     }
