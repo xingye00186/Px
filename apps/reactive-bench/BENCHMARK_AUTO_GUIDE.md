@@ -2,18 +2,17 @@
 
 ## 1. 项目定位
 
-reactive-bench 是 Px 框架 **AOT 原生响应式系统**（PHP 8.4 Property Hooks + 依赖追踪）的对比性能基准测试项目。
+reactive-bench 是 Px 框架 **性能优化收益验证**的基准测试项目。
 
-它通过**改造前（markDirty 手动标记）**和**改造后（#[Reactive] 自动追踪）**两套编译产物的 AOT 运行对比，量化响应式改造的实际性能收益。
+它通过 **perf_baseline tag（无 TextMeasureCache/编译器优化/ paint 重构）**和 **HEAD（全部优化）**两套 AOT 产物的运行对比，量化各优化点的实际性能收益。
 
 ## 2. 目录结构
 
 ```
 apps/reactive-bench/
-├── App.vue                       # 改造后源码（#[Reactive] + Property Hooks）
-├── App-legacy.vue                # 改造前源码（手动 markDirty）
+├── App.vue                       # 源码（所有测试用例）
 ├── main.php                      # 基准测试入口（CLI + 参数解析 + 指标输出）
-├── run_full_benchmark.ps1        # 全自动对比脚本
+├── run_full_benchmark.ps1        # 全自动对比脚本（默认 Before=perf_baseline, After=HEAD）
 ├── project.yml                   # AOT 构建配置
 ├── components/
 │   ├── DeepTreeNode.vue          # 深层递归组件（级联更新测试）
@@ -26,9 +25,9 @@ apps/reactive-bench/
 
 > `gen/`、`bin/`、`results/` 为构建/运行生成物，不提交 git。
 
-## 3. 8 个测试用例详解
+## 3. 10 个测试用例详解
 
-每个 case 模拟不同的组件负载模式，覆盖响应式系统的各个维度：
+每个 case 模拟不同的真实负载场景，覆盖渲染管线各维度：
 
 ### SimpleCounter — 单组件单属性（baseline）
 
@@ -112,22 +111,19 @@ public function runHoverCycle(): void {
 - 测量：**:hover 样式的脏传播 + InteractionState 查询**开销
 - 期望：改造后 markStyleDirty() 精确失效而非全量重算
 
-### DynamicList — 动态增删子组件（组件生命周期）
+### TextHeavy — 文本密集测量（TextMeasureCache 验证）
 
-```php
-#[Reactive] public array $dynaWidgets = [];
-public function runDynamicCycle(): void {
-    $w = $this->dynaWidgets;
-    array_shift($w); // 删除首项 → 触发 onDestroyNode 回调
-    $w[] = ['id' => 'dl-'.$idx, 'label' => 'W'.$idx];
-    $this->dynaWidgets = $w;
-}
-```
+- 20×20=400 格 Grid，只 20 个唯一字符串重复 20 次
+- 每 cycle 高亮 10 个格子（触发 :style 重绑定）
+- 测量：**TextMeasureCache 命中率**（预期 99.5%+）、GridAlgorithm 耗时
+- 典型结果：321k text_measure_hit / 20 miss
 
-- 50 widget 列表，每 cycle 删除首项 + 追加新项
-- 触发 `onDestroyNode` → `removeInteractionState()` + `removeScrollState()`
-- 测量：**组件销毁时状态清理 + VNode key 匹配**效率
-- 期望：改造后销毁回调零泄漏，跨帧匹配复用新旧子项
+### StaticTemplate — 静态 VNode 提升验证
+
+- 静态 header + 导航 tabs + 底部 footer（应被 SFC 编译器 hoist）
+- 50 项动态列表（:style + @click 每 cycle 重建）
+- 测量：**VNode hoisting 收益**——静态区零分配复用 vs 全重建
+- 典型结果：layout 71% 瓶颈
 
 ## 4. 基准测试指标说明
 
@@ -169,22 +165,19 @@ cd apps\reactive-bench
 Step 0: 克隆
   ├─ 删除 F:\Px_before（如存在）
   ├─ 从当前 Px 目录 git clone → F:\Px_before
-  ├─ git checkout ed332332（改造前 commit）
+  ├─ git checkout perf_baseline（优化前基线 tag）
   ├─ 删除 F:\Px_after（如存在）
   ├─ 从当前 Px 目录 git clone → F:\Px_after
-  └─ git checkout HEAD（改造后 commit）
+  └─ git checkout HEAD（全部优化）
 
 Step 1: 编译
-  ├─ [before] 复制 reactive-bench 到 F:\Px_before
-  │   ├─ 复制 App-legacy.vue → App.vue（替换为 markDirty 模式）
-  │   ├─ php sfc-compiler.php（SFC 编译）
-  │   └─ build.bat（AOT 编译）
-  └─ [after] 同上，但保留 App.vue（#[Reactive] 模式）
+  ├─ [before] 复制 reactive-bench + SFC 编译 + AOT 编译
+  └─ [after] 同上
 
 Step 2: 基准测试
-  ├─ F:\Px_before\bin\reactive_bench.exe --cases-list --cycles=N
+  ├─ F:\Px_before\bin\reactive_bench.exe --cases-list --cycles=N --perf
   │   └─ 输出 results/before.json
-  └─ F:\Px_after\bin\reactive_bench.exe --cases-list --cycles=N
+  └─ F:\Px_after\bin\reactive_bench.exe --cases-list --cycles=N --perf
       └─ 输出 results/after.json
 
 Step 3: 对比报告
@@ -210,24 +203,26 @@ Step 3: 对比报告
 ```powershell
 param(
     [int]$Cycles        = 100,      # 每个 case 的循环次数
-    [string]$BeforeCommit = 'pre-reactive',  # 改造前 git tag（pre-reactive = ed332332）
-    [string]$AfterCommit  = 'HEAD'          # 改造后 git commit
+    [string]$BeforeCommit = 'perf_baseline',  # 基线 git tag（无 TextMeasureCache/编译优化/paint 重构）
+    [string]$AfterCommit  = 'HEAD'          # 优化后 git commit
 )
 ```
 
 ### 5.5 Git Tag 说明
 
-改造前版本已打标签 `pre-reactive`（指向 commit `6c6aa71`=脏位分离前置基线，比 `ed332332` 更纯净——不含后续 24 个管线杂项修复）：
+基线版本已打标签 `perf_baseline`（从 HEAD 依次 revert 7 个优化 commit 得到）：
 
-```bash
-git tag -a "pre-reactive" 6c6aa71 -m "AOT reactive system baseline"
-```
+| Reverted commit | 优化 |
+|---|---|
+| `3d4cdd06` | TextMeasureCache LRU 实现 |
+| `663bc0bc` | 替换 14 处文本测量调用为 TextMeasureCache |
+| `33a86df1` | PhysicalFragment.textWidth — paint 零测量 |
+| `faac8ce8` | 移除 RenderNode.textWidth |
+| `10d48bd4` | 消除 renderNodeToElement |
+| `8ddcec87` | 静态 VNode 子树提升 + :class 数组拆分 |
+| `717eb76c` | :style 编译期转为数组 |
 
-脚本默认使用此标签而非硬编码 hash，语义更清晰。如果有新的改造前基线，更新标签即可：
-
-```bash
-git tag -f "pre-reactive" <new-before-commit>
-```
+保留：诊断配置开关（captureLayoutSnapshot/SK_TRACE/error_log 默认关闭）、PerfCounter 子阶段插桩、所有测试用例。
 
 ### 5.6 管线分阶段计时（--perf）
 
@@ -319,14 +314,15 @@ git tag -f "pre-reactive" <new-before-commit>
 ## 7. 周期性运行建议
 
 ```powershell
-# 完整质量门禁（每次响应式系统改动后）
-.\run_full_benchmark.ps1 -Cycles 200
+# 完整质量门禁（每次关键优化后）
+cd apps\reactive-bench
+.\run_full_benchmark.ps1 -Cycles 100
 
 # 快速验证（开发过程中）
 .\run_full_benchmark.ps1 -Cycles 50
 
 # 自定义 git commit 对比
-.\run_full_benchmark.ps1 -BeforeCommit abc123 -AfterCommit def456
+.\run_full_benchmark.ps1 -BeforeCommit perf_baseline -AfterCommit HEAD
 ```
 
 ## 8. 添加新的测试用例
@@ -339,16 +335,14 @@ git tag -f "pre-reactive" <new-before-commit>
 3. 在 `main.php` 的 `runCaseIntensive()` 的 `switch` 中添加新的 `case`
 4. 在 `main.php` 的 `$cases` 数组中添加新名称（`--cases-list` 遍历）
 5. 在 `run_full_benchmark.ps1` 的 `$cases` 数组中同步添加
-6. 同步更新 `App-legacy.vue` 的对应部分（使用 `markDirty()` 模式）
 
-## 9. 改造前/后差异本质
+## 9. Before/After 差异本质
 
-| 维度 | 改造前 (App-legacy.vue) | 改造后 (App.vue) |
-|------|------------------------|------------------|
-| 属性声明 | `public int $counter = 0` | `#[Reactive] public int $counter = 0` |
-| 更新触发 | 方法末尾 `$this->markDirty()` | Property Hook `set` → `Notifier::notify()` |
-| 编译器注入 | ScriptAnalyzer 插入 markDirty | 提取 #[Reactive] → 生成 Property Hook |
-| 组件基类 | `ReactiveComponent`（VNode 缓存） | 相同基类 + Effect 依赖追踪 |
-| 渲染触发 | markDirty → Scheduler → full re-render | Effect.schedule() → 精准触发相关组件的 render |
+| 维度 | Before (perf_baseline) | After (HEAD) |
+|------|----------------------|-------------|
+| TextMeasureCache | 无，每帧直调 sk_measure_text_width | LRU 双向链表缓存 + 99.5%+ 命中率 |
+| Paint 管线 | textWidth 从 RenderNode 读取 | textWidth 预计算存 PhysicalFragment，paint 零测量 |
+| SFC 编译器 | 无 :style/:class 数组化，无 VNode hoisting | :style 编译期转数组、:class 字符串拆分、静态 VNode 提升 |
+| 诊断输出 | 无（perf_baseline 已关闭 SK_TRACE/captureLayoutSnapshot） | 同左 |
 
-**核心结论**：改造后的增量更新在 v-for 大量子节点场景下收益最显著（90%+），单组件/简单场景下零额外负担。
+**核心结论**：优化的总收益约 7-53%（按 case 不同），其中 TextMeasureCache + paint 重构贡献最大（TextHeavy paint 降 53%）。当前唯一瓶颈是 Layout（占帧时间 55-67%）。

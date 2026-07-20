@@ -617,14 +617,8 @@ class RenderTreeManager
             $dynamicStyle = $vnode->props[':style'] ?? '';
             if ($dynamicStyle !== '') {
                 \Px\Core\PerfCounter::start('sub:style_dynamic');
-<<<<<<< HEAD
                 if (is_array($dynamicStyle)) {
                     // 数组模式：直接数组合并，零 regex（方案2）
-=======
-                $dynamicParsed = \Px\Css\StyleResolver::parseInlineStyle($dynamicStyle);
-                if (!empty($dynamicParsed)) {
-                    // 重新导出当前样式，应用动态覆盖，重建 ComputedStyle
->>>>>>> 33baa645 (﻿perf: updateFromVNode 增加 PerfCounter 子阶段插桩)
                     $resolvedStyle = $computedStyle->toExportArray();
                     foreach ($dynamicStyle as $k => $v) {
                         $resolvedStyle[$k] = $v;
