@@ -93,6 +93,10 @@ function runCaseIntensive(
             case 'DynamicList':
                 $root->runDynamicCycle();
                 break;
+
+            case 'TextHeavy':
+                $root->runTextCycle();
+                break;
         }
 
         // flush 微任务 → 执行完整的渲染管线

@@ -125,7 +125,7 @@ function Show-Table($title, $bd, $ad, $useSteady) {
         Write-Host "  Case                        Before(ms)  After(ms)   Change    FPS-before FPS-after  Renders"
         Write-Host ("  " + ("-" * 90))
     }
-    $cases = @('SimpleCounter','ManyProps','DeepTree','MixedWorkload','FormDashboard','ChatStream','HoverGrid','DynamicList')
+    $cases = @('SimpleCounter','ManyProps','DeepTree','MixedWorkload','FormDashboard','ChatStream','HoverGrid','DynamicList','TextHeavy')
     $rows = @(); $tb = 0.0; $ta = 0.0
     foreach ($c in $cases) {
         $b = $bd.results.$c; $a = $ad.results.$c

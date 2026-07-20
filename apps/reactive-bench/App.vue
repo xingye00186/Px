@@ -67,6 +67,17 @@
       </div>
     </div>
 
+    <!-- TextHeavy: 20x20 text grid, 20 unique strings repeat 20 times -->
+    <div v-else-if="currentCase === 'TextHeavy'" style="display:flex;flex-direction:column;padding:8px;gap:4px">
+      <span style="font-size:12px;color:#8E8E93">TextHeavy: cycle={{ textCycle }} cells=400 unique=20</span>
+      <div style="display:grid;grid-template-columns:repeat(20,1fr);gap:2px;margin-top:4px">
+        <div v-for="cell in textItems" :key="cell.id"
+          :style="'padding:2px 0;font-size:11px;text-align:center;border-radius:2px;background:' + (cell.highlighted ? '#FF9F0A' : '#2C2C2E') + ';color:' + (cell.highlighted ? '#000' : '#CCC')">
+          {{ cell.label }}
+        </div>
+      </div>
+    </div>
+
     <!-- DynamicList: add/remove widgets each cycle -->
     <div v-else-if="currentCase === 'DynamicList'" style="display:flex;flex-direction:column;padding:8px;gap:2px">
       <span style="font-size:12px;color:#8E8E93">DynamicList: count={{ dynaCount }}</span>
@@ -267,6 +278,35 @@
         $this->dynaWidgets = $w;
     }
 
+    // ── TextHeavy ──
+    #[Reactive]
+    public int $textCycle = 0;
+
+    #[Reactive]
+    public array $textItems = [];
+
+    public function initTextHeavy(): void
+    {
+        $names = ['Alpha','Beta','Gamma','Delta','Epsilon','Zeta','Eta','Theta','Iota','Kappa','Lambda','Mu','Nu','Xi','Omicron','Pi','Rho','Sigma','Tau','Upsilon'];
+        $items = [];
+        for ($i = 0; $i < 400; $i++) {
+            $items[] = ['id' => 't' . $i, 'label' => $names[$i % 20], 'highlighted' => false];
+        }
+        $this->textItems = $items;
+        $this->textCycle = 0;
+    }
+
+    public function runTextCycle(): void
+    {
+        $this->textCycle++;
+        $items = $this->textItems;
+        for ($i = 0; $i < 10; $i++) {
+            $idx = abs(crc32((string)($this->textCycle * 10 + $i))) % 400;
+            $items[$idx]['highlighted'] = !$items[$idx]['highlighted'];
+        }
+        $this->textItems = $items;
+    }
+
     // ── Case switching ──
     public function selectCase(string $case): void
     {
@@ -281,5 +321,6 @@
         if ($case === 'ChatStream') { $this->initChatStream(); }
         if ($case === 'HoverGrid') { $this->initHoverGrid(); }
         if ($case === 'DynamicList') { $this->initDynamicList(); }
+        if ($case === 'TextHeavy') { $this->initTextHeavy(); }
     }
 </script>
