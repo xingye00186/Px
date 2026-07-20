@@ -579,6 +579,7 @@ class RenderTreeManager
             $pseudoStyles = [];
             $computedStyle = $vnode->computedStyle;
             if ($computedStyle === null) {
+                \Px\Core\PerfCounter::start('sub:style_fallback');
                 // 降级：StyleRecalcPass 未运行时内联解析
                 $computedStyle = StyleResolver::resolve(
                     inlineStyle: $vnode->props['style'] ?? '',
@@ -590,6 +591,7 @@ class RenderTreeManager
                     parentStyleDeclarations: $parentStyle,
                     pseudoStyles: $pseudoStyles
                 );
+                \Px\Core\PerfCounter::end('sub:style_fallback');
             }
             // 补充 pseudoStyles：StyleRecalcPass 已运行时从 theme 提取伪类/伪元素定义
             // （resolveClassStyles 通过 by-ref 填充，但 StyleRecalcPass 运行后不会进入降级分支）
@@ -611,6 +613,7 @@ class RenderTreeManager
             // 这修复了 :style='background:#a6e3a1;' 等动态样式不生效的问题
             $dynamicStyle = $vnode->props[':style'] ?? '';
             if ($dynamicStyle !== '') {
+                \Px\Core\PerfCounter::start('sub:style_dynamic');
                 $dynamicParsed = \Px\Css\StyleResolver::parseInlineStyle($dynamicStyle);
                 if (!empty($dynamicParsed)) {
                     // 重新导出当前样式，应用动态覆盖，重建 ComputedStyle
@@ -622,6 +625,7 @@ class RenderTreeManager
                     // 同步更新 resolvedStyle 用于后续 LayoutBoundary 判断
                     $resolvedStyle = $computedStyle->toExportArray();
                 }
+                \Px\Core\PerfCounter::end('sub:style_dynamic');
             }
 
             // 计算 LayoutBoundary 标记：显式固定 width+height → 布局可独立于父约束
@@ -809,6 +813,7 @@ class RenderTreeManager
                 }
                 $consumed = [];
 
+                \Px\Core\PerfCounter::start('sub:children_walk');
                 foreach ($childVNodes as $i => $childVNode) {
                     $matchedOld = null;
                     $matchedIdx = null;
@@ -845,6 +850,7 @@ class RenderTreeManager
                         $resolvedStyle
                     );
                 }
+                \Px\Core\PerfCounter::end('sub:children_walk');
 
                 foreach ($oldChildren as $pos => $oldRN) {
                     if (!in_array($pos, $consumed, true)) {
