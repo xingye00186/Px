@@ -248,21 +248,21 @@ class LayoutOrchestrator implements ChildLayoutProvider
         $algo = $this->selectAlgorithm($display, $style);
         Diag::log(2, 'process:node', ['type' => $node->type, 'display' => $display, 'pos' => $position, 'algo' => $algo !== null ? get_class($algo) : 'none']);
         $algoName = $algo !== null ? (new \ReflectionClass($algo))->getShortName() : 'none';
-        \Px\Core\PerfCounter::start('algo:' . $algoName);
+
+        \Px\Core\PerfCounter::start('algo:setup');
         $textContent = (string)($node->content ?? '');
-
-        // $cached = 上一帧布局结果（约束签名不匹配但几何仍可用，供 flex size hint）
         $cached = $node->cachedFragment;
-
-        Diag::log(2, 'algo:layout', ['type' => $node->type, 'algo' => get_class($algo), 'cw' => $space->getContentWidth(), 'ch' => $space->getContentHeight()]);
-
-
         $childConstraints = [];
         foreach ($node->children as $ch) {
             $childConstraints[] = $this->buildChildSpace($ch, $space, $style);
         }
+        \Px\Core\PerfCounter::end('algo:setup');
+
+        \Px\Core\PerfCounter::start('algo:' . $algoName);
         $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached, $childConstraints, $childIntrinsics);
         \Px\Core\PerfCounter::end('algo:' . $algoName);
+
+        \Px\Core\PerfCounter::start('algo:teardown');
         Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->getX(), 'y' => $algoFrag->getY(), 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH(), 'algo' => get_class($algo)]);
 
         // 修复算法（BlockAlgorithm 等）未传递 type/content 到 Fragment 的问题
@@ -377,6 +377,8 @@ class LayoutOrchestrator implements ChildLayoutProvider
         $node->cachedFragment = $algoFrag;
         $node->cachedConstraintSpace = $space;
         $node->layoutCacheVersion++;
+
+        \Px\Core\PerfCounter::end('algo:teardown');
 
         return $algoFrag;
     }
