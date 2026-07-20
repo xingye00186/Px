@@ -1057,6 +1057,25 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 }
             }
             // Generate prop entry: handle PHP expressions (starting with $) as raw
+            // Static style string → 编译期解析为数组（零运行时 regex）
+            if ($k === 'style' && is_string($v) && $v !== '' && $v[0] !== '$') {
+                $decls = explode(';', $v);
+                $pairs = [];
+                $valid = true;
+                foreach ($decls as $decl) {
+                    $decl = trim($decl);
+                    if ($decl === '') continue;
+                    $colonPos = strpos($decl, ':');
+                    if ($colonPos === false) { $valid = false; break; }
+                    $prop = trim(substr($decl, 0, $colonPos));
+                    $val = trim(substr($decl, $colonPos + 1));
+                    $pairs[] = var_export($prop, true) . '=>' . var_export($val, true);
+                }
+                if ($valid && !empty($pairs)) {
+                    $propsStr[] = var_export('style', true) . '=>[' . implode(',', $pairs) . ']';
+                    continue;
+                }
+            }
             if (is_string($v) && strlen($v) > 0 && $v[0] === '$') {
                 $propsStr[] = var_export($k, true) . '=>' . $v;
             } else {
@@ -1622,6 +1641,25 @@ function generateLoopItemPropsExpr(array $props, ?array $loopInfo): string
             }
         }
         // Handle PHP expressions (starting with $ or () as raw
+        // Static style string → 编译期解析为数组（零运行时 regex）
+        if ($k === 'style' && is_string($v) && $v !== '' && $v[0] !== '$' && $v[0] !== '(') {
+            $decls = explode(';', $v);
+            $pairs = [];
+            $valid = true;
+            foreach ($decls as $decl) {
+                $decl = trim($decl);
+                if ($decl === '') continue;
+                $colonPos = strpos($decl, ':');
+                if ($colonPos === false) { $valid = false; break; }
+                $prop = trim(substr($decl, 0, $colonPos));
+                $val = trim(substr($decl, $colonPos + 1));
+                $pairs[] = var_export($prop, true) . '=>' . var_export($val, true);
+            }
+            if ($valid && !empty($pairs)) {
+                $parts[] = var_export('style', true) . '=>[' . implode(',', $pairs) . ']';
+                continue;
+            }
+        }
         if (is_string($v) && strlen($v) > 0 && $v[0] === '$') {
             $parts[] = var_export($k, true) . '=>' . $v;
         } elseif (is_string($v) && strlen($v) > 0 && $v[0] === '(') {

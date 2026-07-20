@@ -33,7 +33,7 @@ class StyleResolver
      * @return ComputedStyle
      */
     public static function resolve(
-        string $inlineStyle = '',
+        string|array $inlineStyle = '',
         string $className = '',
         ?array $parentDeclarations = null,
         string $elementType = 'div',
@@ -42,8 +42,8 @@ class StyleResolver
         array $parentStyleDeclarations = [],
         array &$pseudoStyles = []
     ): ComputedStyle {
-        // 1. 解析内联样式为声明数组
-        $inlineDeclarations = self::parseInlineStyle($inlineStyle);
+        // 1. 解析内联样式为声明数组（支持编译期预解析的数组）
+        $inlineDeclarations = is_array($inlineStyle) ? $inlineStyle : self::parseInlineStyle($inlineStyle);
 
         // 2. 合并 CSS class 样式 + tag 选择器样式（CSS 层叠：class 是 base，inline 覆盖）
         $classDeclarations = self::resolveClassStyles($className, $parentClassStr, $precedingSiblingClasses, $pseudoStyles, $elementType);
