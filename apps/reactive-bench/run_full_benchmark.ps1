@@ -8,13 +8,13 @@
 .PARAMETER Cycles
   Number of cycles per test case (default: 100)
 .PARAMETER BeforeCommit
-  Git tag/commit for the "before" version (default: pre-reactive)
+  Git tag/commit for the "before" version (default: perf_baseline)
 .PARAMETER AfterCommit
   Git commit for the "after" version (default: HEAD)
 #>
 param(
     [int]$Cycles        = 100,
-    [string]$BeforeCommit = 'pre-reactive',
+    [string]$BeforeCommit = 'perf_baseline',
     [string]$AfterCommit  = 'HEAD'
 )
 
@@ -81,7 +81,7 @@ function BuildVer($td, $label, $legacy) {
 }
 
 Hdr "Step 1: Build"
-$ok1 = BuildVer $Before "before" $true
+$ok1 = BuildVer $Before "before" $false
 $ok2 = BuildVer $After "after" $false
 if (!$ok1 -or !$ok2) { Write-Error "Build failed"; exit 1 }
 
