@@ -32,7 +32,7 @@
 | 4 | **归谬验证** | N 行新代码应修复 ≥ N/5 个测试失败。推进很少测试却引入大量代码 → 方向错了 | `propagateCoords` 109 行只推进 2-3 个测试；`applyTo offset` 2 行推进 11 个测试 |
 | 5 | **迭代不跨 Phase** | `needsAnotherPass` 必须在 Phase A 内闭环，由 `resolveFragment` 的 `$iteration` 控制。跨 Phase 共享状态必须通过 LayoutResult 元数据字段 | Grid auto 轨道在 Phase A 收敛后，被 Phase 2 的 `iteration:0` 调用覆盖 |
 | 6 | **等价替换** | 重构须保证相同输入产生相同输出。优秀重构更简洁 | `applyTo offset`（2 行）等价替代 `propagateCoords`（109 行）且更优 |
-| 7 | **AOT 优先** | 所有布局代码必须在 `css_test.exe` 中验证通过。跨 `use native_types` 类的 `public readonly int` 属性在 AOT 下返回 0，必须通过 getter 方法读取。避免深度空安全链（>2 层 `?->`），typed property 必须始终初始化 | `$style?->width?->isPercent()` AOT 下行为不一致导致 `null - int` 崩溃；`$lineHeight` 声明但从未赋值；`$space->contentWidth` 跨类返回 0 |
+| 7 | **AOT 优先** | 所有布局代码必须在 `css_test.exe` 中验证通过。~~跨 `use native_types` 类的 `public readonly int` 属性在 AOT 下返回 0，必须通过 getter 方法读取。~~✅ **已解决**：`public readonly int $val = 0;` 跨类直接访问正常，无需 getter（验证见 `apps/aot-cross-readonly/`）。避免深度空安全链（>2 层 `?->`），typed property 必须始终初始化 | `$style?->width?->isPercent()` AOT 下行为不一致导致 `null - int` 崩溃；`$lineHeight` 声明但从未赋值；`$space->contentWidth` 跨类返回 0 |
 
 ### 决策优先级
 
@@ -385,7 +385,7 @@ comparePixels() 执行：
 | `$a?->b?->c->method()` | 超过 2 层空安全链 AOT 行为不一致 | 拆解为 `$tmp = $a?->b; $tmp?->c->method()` |
 | `$style?->width?->isPercent()` | CssLength/Bool 返回值在 AOT 空安全链中变为 null | 使用标量 fallback：`($cs->width->isPercent() ? … : …)` 外加 null 保护 |
 | typed property 声明但未初始化 | `public readonly int $lineHeight;` 赋值分支未覆盖全路径 | 必须始终初始化：`$this->lineHeight = $d['lineHeight'] ?? 0` |
-| **跨类 `public readonly int` 访问** | 在 `use native_types` 类中直接读另一个 `native_types` 类的 `readonly int` 属性返回空值 | 在源类中添加 getter，所有跨类访问改为 `->getXxx()` 调用 |
+| **跨类 `public readonly int` 访问** | ~~在 `use native_types` 类中直接读另一个 `native_types` 类的 `readonly int` 属性返回空值~~ | **已解决**（最新 Swoole Compiler）：直接属性访问正常，无需 getter。验证见 `apps/aot-cross-readonly/`（exe 运行通过）和 `apps/aot-syntax-test/` G17（readonly 默认值 4/4 PASS）。|
 
 ---
 

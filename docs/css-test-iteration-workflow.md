@@ -31,7 +31,7 @@
 | 4 | **归谬验证** | 没你那行代码问题也能解决 → 方向错了 |
 | 5 | **迭代不跨 Phase** | `needsAnotherPass` 在 Phase A 内闭环 |
 | 6 | **等价替换** | 重构应无副作用，相同输入→相同输出 |
-| 7 | **AOT 优先** | 代码须在 `css_test.exe` 中验证通过。跨 `use native_types` 类的 `public readonly int` 属性在 AOT 下返回 0，必须通过 getter 方法读取 |
+| 7 | **AOT 优先** | 代码须在 `css_test.exe` 中验证通过。~~跨 `use native_types` 类的 `public readonly int` 属性在 AOT 下返回 0，必须通过 getter 方法读取~~ | **已解决**（最新 Swoole Compiler）：`public readonly int $val = 0;` 直接跨类访问正常，无需 getter。验证见 `apps/aot-cross-readonly/`。|
 
 ---
 
@@ -276,7 +276,7 @@ php apps/css-test/check_regression.php
 | `$a?->b?->c->method()` | 超过 2 层的空安全链 AOT 行为不一致 | 拆解为 `$tmp = $a?->b; $tmp?->c->method()` |
 | `$style?->width?->isPercent()` | `CssLength` 返回值在 AOT 中可能为 null | 使用标量 fallback：`($cs->width->isPercent() ? … : …)` 外加 null 保护 |
 | typed property 未初始化 | `public readonly int $lineHeight;` 声明但从未赋值 | 必须始终初始化：`$this->lineHeight = $d['lineHeight'] ?? 0` |
-| **跨类 `public readonly int` 访问** | 在 `use native_types` 类中直接读另一个 `native_types` 类的 `readonly int` 属性返回空值 | 在源类中添加 getter，所有跨类访问改为 `->getXxx()` 调用 |
+| **跨类 `public readonly int` 访问** | ~~在 `use native_types` 类中直接读另一个 `native_types` 类的 `readonly int` 属性返回空值~~ | **已解决**（最新 Swoole Compiler）：直接属性访问正常，无需 getter。验证见 `apps/aot-cross-readonly/`（exe 运行通过）和 `apps/aot-syntax-test/` G17（readonly 默认值 4/4 PASS）。|
 
 ---
 
