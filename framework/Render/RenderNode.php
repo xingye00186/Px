@@ -49,9 +49,6 @@ class RenderNode
     public int $visualH = 0;
     public int $layer = 0;
 
-    /** 由 fragmentToElement 写回（消费 Fragment 预计算的 textWidth） */
-    public int $textWidth = 0;
-
     // ── 滚动 ──
     public int $scrollTop = 0;
     public int $scrollLeft = 0;

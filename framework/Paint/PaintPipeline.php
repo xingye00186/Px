@@ -213,7 +213,6 @@ class PaintPipeline
         $node->layer = $frag->layer;
         $node->computedStyle = $style;
         $node->content = $content;
-        $node->textWidth = $frag->textWidth;
 
         $el = $this->renderNodeToElement($node);
         if ($el === null) return null;
@@ -323,6 +322,10 @@ class PaintPipeline
         return $n > 0 ? $this->componentStack[$n - 1] : $this->component;
     }
 
+    /**
+     * @deprecated 应直接消费 Fragment 数据。当前由 fragmentToElement 写回 geometry 后代理到此方法，
+     * 未来应将这些逻辑内联到 fragmentToElement 中直接使用 $frag 字段。
+     */
     private function renderNodeToElement(RenderNode $node): ?array
     {
         $pseudoKeys = self::extractPseudoOverrides($node);
@@ -542,7 +545,7 @@ class PaintPipeline
             if ($fontStretchExtra !== 0) {
                 $letterSpacing += $fontStretchExtra;
             }
-            $textWidth = $node->textWidth > 0 ? $node->textWidth : self::measureTextWidth($text, $fontSize, (bool)$bold);
+            $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
             $selfY = (int)($node->y ?? 0);
             $selfH = (int)($node->visualH ?? 0);
             $selfX = (int)($node->x ?? 0);
