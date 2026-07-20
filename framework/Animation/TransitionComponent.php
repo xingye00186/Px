@@ -150,8 +150,6 @@ class TransitionComponent extends ReactiveComponent
             // 隐藏 → 离开动画
             $this->controller->leave();
         }
-
-        $this->markDirty();
     }
 
     /**
