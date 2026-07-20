@@ -107,8 +107,8 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
             $this->onBeforeUpdate();
         }
 
-        // 清除 VNode 缓存 — 强制下次 getVNodeTree() 重新执行 render()
-        $this->vnodeCache = null;
+        // 不清空 vnodeCache —— 保留旧 VNode 树，patchVNodeTree 会原地更新属性。
+        // 旧 VNode 存活 → computedStyle 保留 → RenderNode 匹配命中 → Fragment 缓存命中。
         $this->dirty = true;
 
         // 通过注入的回调请求 Application 重渲染
@@ -138,9 +138,108 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
             return $this->vnodeCache;
         }
 
+        $oldCache = $this->vnodeCache;
         $this->vnodeCache = $this->render();
         $this->dirty = false;
+
+        // 有旧缓存时，用新树 patche 旧树，复用旧 VNode 对象
+        // 旧 VNode 存活 → computedStyle 保留 → RenderNode 不重建 → Fragment 缓存命中
+        if ($oldCache !== null) {
+            $this->patchVNodeTree($oldCache, $this->vnodeCache);
+            $this->vnodeCache = $oldCache;
+        }
+
         return $this->vnodeCache;
+    }
+
+    /**
+     * 递归 patche VNode 树：用新树属性更新旧树对象，复用旧 VNode 保留 computedStyle。
+     * 匹配策略：先按 key，再按 type+index。
+     */
+    private function patchVNodeTree(VNode $old, VNode $new): void
+    {
+        // type + key 联合匹配：key 不同或 type 不同 → 替换整个节点
+        if ($old->type !== $new->type || $old->key !== $new->key) {
+            $this->replaceVNode($old, $new);
+            return;
+        }
+
+        // 更新 props（原地覆盖，保留 computedStyle）
+        $old->props = $new->props;
+
+        // 更新组件实例引用
+        $old->componentInstance = $new->componentInstance;
+        $old->componentPropValues = $new->componentPropValues;
+        $old->layoutOffset = $new->layoutOffset;
+
+        // children 分类型处理
+        if ($old->children instanceof VNode && $new->children instanceof VNode) {
+            // 单子节点：递归 patche
+            $this->patchVNodeTree($old->children, $new->children);
+        } elseif (is_array($old->children) && is_array($new->children)) {
+            // 多子节点：按 key 匹配 patche
+            $old->children = $this->patchChildrenArray($old->children, $new->children);
+        } else {
+            // 简单类型（string/null）或类型不一致：直接替换
+            $old->children = $new->children;
+        }
+    }
+
+    /**
+     * 按 key+type 匹配新旧子节点数组，复用旧对象。
+     */
+    private function patchChildrenArray(array $oldChildren, array $newChildren): array
+    {
+        $result = [];
+
+        // 建立旧子节点的 key→node 映射
+        /** @var array<string, VNode> */
+        $oldByKey = [];
+        foreach ($oldChildren as $ch) {
+            if ($ch instanceof VNode && $ch->key !== null) {
+                $oldByKey[$ch->key] = $ch;
+            }
+        }
+
+        foreach ($newChildren as $newCh) {
+            if (!($newCh instanceof VNode)) {
+                $result[] = $newCh;
+                continue;
+            }
+
+            // 尝试 key 匹配
+            if ($newCh->key !== null && isset($oldByKey[$newCh->key])) {
+                $oldCh = $oldByKey[$newCh->key];
+                unset($oldByKey[$newCh->key]); // 已消费
+                $this->patchVNodeTree($oldCh, $newCh);
+                $result[] = $oldCh;
+            } else {
+                // 无匹配：新节点
+                $result[] = $newCh;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * 整体替换 VNode（type/key 不匹配时）。
+     */
+    private function replaceVNode(VNode $old, VNode $new): void
+    {
+        $old->type = $new->type;
+        $old->props = $new->props;
+        $old->children = $new->children;
+        $old->key = $new->key;
+        $old->groupId = $new->groupId;
+        $old->isComponent = $new->isComponent;
+        $old->componentClass = $new->componentClass;
+        $old->componentInstance = $new->componentInstance;
+        $old->componentProps = $new->componentProps;
+        $old->componentPropValues = $new->componentPropValues;
+        $old->layoutOffset = $new->layoutOffset;
+        // computedStyle 被新值覆盖（结构变了，旧样式不可用）
+        $old->computedStyle = $new->computedStyle;
     }
 
     // ── 事件处理器注册（内部） ──────────────────

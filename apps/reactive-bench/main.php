@@ -199,7 +199,7 @@ function main(): int
             'meta' => [
                 'timestamp'    => date('Y-m-d H:i:s'),
                 'php_version'  => PHP_VERSION,
-                'mode'         => defined('SWOOLE_COMPILER_VERSION') ? 'AOT' : 'PHP-CLI',
+                'mode'         => function_exists('sk_measure_text_width') ? 'AOT' : 'PHP-CLI',
             ],
             'results' => $allResults,
         ];
@@ -223,7 +223,7 @@ function main(): int
             'meta' => [
                 'timestamp'   => date('Y-m-d H:i:s'),
                 'php_version' => PHP_VERSION,
-                'mode'        => defined('SWOOLE_COMPILER_VERSION') ? 'AOT' : 'PHP-CLI',
+                'mode'        => function_exists('sk_measure_text_width') ? 'AOT' : 'PHP-CLI',
             ],
             'results' => [$caseName => $result],
         ];
