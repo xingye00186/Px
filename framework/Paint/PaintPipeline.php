@@ -180,7 +180,7 @@ class PaintPipeline
         // 完全自包含：所有字段来自 Fragment，不依赖 sourceNode
         $type = $frag->type;
         $style = $frag->style;
-        $content = $frag->content;
+        $content = $frag->displayText !== '' ? $frag->displayText : $frag->content;
         $dataset = $frag->dataset;
         $pseudoOverrides = [];
         $states = [];

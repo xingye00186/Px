@@ -86,6 +86,9 @@ class LayoutOrchestrator implements ChildLayoutProvider
         );
         \Px\Core\PerfCounter::end('algo:OOF');
 
+        // Step 3: postProcess — 文本截断处理
+        $this->postProcess($rootFragment);
+
         Diag::log(1, 'layout:exit', ['rootW' => $rootFragment->getW(), 'rootH' => $rootFragment->getH(), 'children' => count($rootFragment->children)]);
         \Px\Core\PerfCounter::end('stage:layout');
         return $rootFragment;
@@ -486,6 +489,79 @@ class LayoutOrchestrator implements ChildLayoutProvider
             default:
                 return $this->blockAlgo;
         }
+    }
+
+    // ── Phase 3: postProcess — 文本截断处理 ──
+
+    /**
+     * 遍历 Fragment 树，对文本节点执行溢出截断。
+     * 将截断结果写入 frag->displayText，paint 直接消费。
+     */
+    private function postProcess(PhysicalFragment $rootFrag): void
+    {
+        \Px\Core\PerfCounter::start('algo:postProcess');
+        $this->postProcessRecursive($rootFrag);
+        \Px\Core\PerfCounter::end('algo:postProcess');
+    }
+
+    private function postProcessRecursive(PhysicalFragment $frag): void
+    {
+        // 先处理子节点（自底向上，子节点截断后父节点 layout 已完成不受影响）
+        foreach ($frag->children as $child) {
+            $this->postProcessRecursive($child);
+        }
+
+        // 仅处理有文本内容且非空容器
+        $content = $frag->content;
+        if ($content === null || (is_string($content) && $content === '')) {
+            return;
+        }
+        $textContent = (string)$content;
+        if ($textContent === '') return;
+
+        $style = $frag->style;
+        if ($style === null) return;
+
+        // 计算 content box 宽度
+        $bl = (int)($style->borderLeftWidth ?? 0);
+        $br = (int)($style->borderRightWidth ?? 0);
+        $pl = (int)($style->padding?->left->toPx() ?? 0);
+        $pr = (int)($style->padding?->right->toPx() ?? 0);
+        $containerW = max(0, $frag->w - $bl - $br - $pl - $pr);
+
+        // 读取溢出样式配置
+        $rawOverflow = $style->overflow?->value ?? 'visible';
+        $textOverflow = $style->getRaw('textOverflow') ?: 'clip';
+        if (!is_string($textOverflow)) { $textOverflow = 'clip'; }
+        $overflowWrap = $style->overflowWrap ?? 'normal';
+        if ($overflowWrap === '') { $overflowWrap = 'normal'; }
+        $lineClampVal = $style->webkitLineClamp ?? 0;
+        if (!is_numeric($lineClampVal)) { $lineClampVal = 0; }
+        $lineClamp = (int)$lineClampVal;
+        $fontSize = $style->fontSize ?? 16;
+        if ($fontSize <= 0) { $fontSize = 16; }
+        $bold = (bool)($style->bold ?? false);
+
+        // 只有 overflow=hidden/scroll 且 text-overflow=ellipsis 才需要截断
+        $needsTruncation = ($rawOverflow === 'hidden' || $rawOverflow === 'clip')
+            && ($textOverflow === 'ellipsis' || $lineClamp > 0)
+            && $containerW > 0;
+        if (!$needsTruncation) {
+            $frag->displayText = $textContent;
+            return;
+        }
+
+        $overflowStyle = [
+            'textOverflow' => $textOverflow,
+            'overflowWrap' => $overflowWrap,
+            'lineHeight' => $style->lineHeight ?? 0,
+            'WebkitLineClamp' => $lineClamp,
+        ];
+
+        $result = TextOverflowProcessor::process(
+            $textContent, $containerW, $fontSize, $bold, $overflowStyle
+        );
+        $frag->displayText = $result['text'];
     }
 
     /**

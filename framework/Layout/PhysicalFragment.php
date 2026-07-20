@@ -52,7 +52,14 @@ class PhysicalFragment
      * 文本像素宽度（layout 阶段预计算，paint 阶段零测量）
      * 0 = 未设置/非文本节点，paint 应 fallback 到 measureTextWidth
      */
-    public readonly int $textWidth;
+    public readonly int $textWidth = 0;
+
+    /**
+     * 实际绘制文本（postProcess 阶段由 TextOverflowProcessor 截断）。
+     * 非 readonly 以便 postProcess 修改。paint 优先消费此字段。
+     * 为空时使用 content 原值。
+     */
+    public string $displayText = '';
 
     /** getter 方法 — AOT 跨类 readonly 访问保护 */
     public function getX(): int { return $this->x; }
@@ -68,7 +75,6 @@ class PhysicalFragment
     public function getScrollLeft(): int { return $this->scrollLeft; }
     public function getIsScrollContainer(): bool { return $this->isScrollContainer; }
     public function getAvailableWidth(): int { return $this->availableWidth; }
-    public function getTextWidth(): int { return $this->textWidth; }
 
     /** 滚动状态 */
     public readonly int $scrollTop;
