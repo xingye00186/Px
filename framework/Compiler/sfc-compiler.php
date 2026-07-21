@@ -89,15 +89,6 @@ class StaticNodeContext {
 }
 
 /**
- * 如果 $flags > 0，在 VNode 表达式后追加 ->withPatchFlags(N) 链式调用。
- */
-function wrapWithPatchFlags(string $expr, int $flags): string
-{
-    if ($flags === 0) return $expr;
-    return "({$expr})->withPatchFlags({$flags})";
-}
-
-/**
  * Generate a PHP expression for a single VNode as VNode::h() call.
  *
  * @param VNode $node The VNode
@@ -428,10 +419,7 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     // First child IS conditional: use IfElseChain builder
                     // v8: IfElseChain-based builder for v-if/v-else-if/v-else support
                     // Uses ExpressionParser for condition expressions
-                    static $ifElseExprParser = null;
-                    if ($ifElseExprParser === null) {
-                        $ifElseExprParser = new ExpressionParser();
-                    }
+                    $ifElseExprParser = new ExpressionParser();
 
                     $stmts = [];
                     $stmts[] = "\$c = [];";
@@ -651,7 +639,11 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
         }
     }
 
-    return wrapWithPatchFlags($expr, $flags);
+    // 内联 wrapWithPatchFlags
+    if ($flags === 0) {
+        return $expr;
+    }
+    return "({$expr})->withPatchFlags({$flags})";
 }
 
 
@@ -739,341 +731,26 @@ function generateComponentExpr(VNode $node, ?array $loopInfo): string
         $dynamicExpr = $node->props['__dynamicIs'] ?? '';
         $parser = new ExpressionParser();
         $parsedExpr = $parser->parse($dynamicExpr, $loopInfo);
-        return wrapWithPatchFlags("VNode::hComponent(\$this->resolveComponent({$parsedExpr}), {$propsOut}, {$compPropsOut})", $node->__patchFlags ?? 0);
+        $pf = $node->__patchFlags ?? 0;
+        if ($pf === 0) {
+            return "VNode::hComponent(\$this->resolveComponent({$parsedExpr}), {$propsOut}, {$compPropsOut})";
+        }
+        return "(VNode::hComponent(\$this->resolveComponent({$parsedExpr}), {$propsOut}, {$compPropsOut}))->withPatchFlags({$pf})";
     }
 
     // 静态组件：同样从 transform 读取标注
     // 原则同前——缺少标注应在 PatchFlagTransform 中修复
-    return wrapWithPatchFlags("VNode::hComponent('{$node->componentClass}', {$propsOut}, {$compPropsOut})", $node->__patchFlags ?? 0);
+    $pf = $node->__patchFlags ?? 0;
+    if ($pf === 0) {
+        return "VNode::hComponent('{$node->componentClass}', {$propsOut}, {$compPropsOut})";
+    }
+    return "(VNode::hComponent('{$node->componentClass}', {$propsOut}, {$compPropsOut}))->withPatchFlags({$pf})";
 }
 
 /**
  * Generate a PHP array expression for element props within a v-for loop.
  * Mirrors the prop-mapping logic of generateVNodeExpr() but returns just the array string.
  */
-function generateLoopItemPropsExpr(array $props, ?array $loopInfo): string
-{
-    $parts = [];
-    foreach ($props as $k => $v) {
-        if (str_starts_with($k, '__')) continue;
-
-        // Handle :style directive: resolve bare identifiers in expression
-        // Supports both CSS string (default) and PHP array (Vue 3 object syntax style)
-        if ($k === ':style') {
-            $trimmed = trim($v);
-            if (str_starts_with($trimmed, '[') || str_starts_with($trimmed, 'array(')) {
-                // 数组模式：仅做循环变量替换
-                $resolved = $v;
-                if ($loopInfo !== null) {
-                    $item = $loopInfo['item'] ?? '';
-                    if ($item !== '') {
-                        $resolved = preg_replace('/\b(' . preg_quote($item, '/') . ')\.(\w+)\b/', '\$' . $item . "['\$2']", $resolved);
-                    }
-                    $index = $loopInfo['index'] ?? '';
-                    if ($index !== '') {
-                        $resolved = preg_replace('/\b' . preg_quote($index, '/') . '\b/', '\$' . $index, $resolved);
-                    }
-                }
-                $parts[] = var_export(':style', true) . '=>' . $resolved;
-            } else {
-                // 字符串模式：先 resolve 变量再尝试转为数组
-                $resolvedStyle = resolveStyleExpr($v, $loopInfo);
-                $arrayStyle = tryConvertStyleToArray($resolvedStyle);
-                if ($arrayStyle !== null) {
-                    $parts[] = var_export(':style', true) . '=>' . $arrayStyle;
-                } else {
-                    $parts[] = var_export(':style', true) . '=>' . $resolvedStyle;
-                }
-            }
-            continue;
-        }
-
-        // Map v-for expressions to PHP foreach variables
-        if ($loopInfo !== null) {
-            if ($k === ':bind' || $k === 'bind' || $k === 'v-model') {
-                if (str_starts_with($v, $loopInfo['item'] . '.')) {
-                    $propName = substr($v, strlen($loopInfo['item']) + 1);
-                    $v = "\${$loopInfo['item']}['{$propName}']";
-                } elseif ($v === $loopInfo['item']) {
-                    $v = "\${$loopInfo['item']}";
-                } elseif (!empty($loopInfo['index']) && $v === $loopInfo['index']) {
-                    $v = "\${$loopInfo['index']}";
-                } else {
-                    $v = "\$this->{$v}";
-                }
-            } elseif ($k === ':click-arg' || $k === 'click-arg') {
-                if (str_starts_with($v, $loopInfo['item'] . '.')) {
-                    $propName = substr($v, strlen($loopInfo['item']) + 1);
-                    $v = "\${$loopInfo['item']}['{$propName}']";
-                } elseif ($v === $loopInfo['item']) {
-                    $v = "\${$loopInfo['item']}";
-                } elseif (!empty($loopInfo['index']) && $v === $loopInfo['index']) {
-                    // Bare index variable: resolve and cast to string
-                    $v = '(string)(' . resolveStyleExpr($v, $loopInfo) . ')';
-                } elseif (!empty($loopInfo['index']) && str_contains($v, $loopInfo['index'])) {
-                    // Expression containing index: resolve and cast to string
-                    $v = '(string)(' . resolveStyleExpr($v, $loopInfo) . ')';
-                } else {
-                    $v = var_export($v, true);
-                }
-            }
-        }
-        // Handle PHP expressions (starting with $ or () as raw
-        // Static style string → 编译期解析为数组（零运行时 regex）
-        if ($k === 'style' && is_string($v) && $v !== '' && $v[0] !== '$' && $v[0] !== '(') {
-            $decls = explode(';', $v);
-            $pairs = [];
-            $valid = true;
-            foreach ($decls as $decl) {
-                $decl = trim($decl);
-                if ($decl === '') continue;
-                $colonPos = strpos($decl, ':');
-                if ($colonPos === false) { $valid = false; break; }
-                $prop = trim(substr($decl, 0, $colonPos));
-                $val = trim(substr($decl, $colonPos + 1));
-                $pairs[] = var_export($prop, true) . '=>' . var_export($val, true);
-            }
-            if ($valid && !empty($pairs)) {
-                $parts[] = var_export('style', true) . '=>[' . implode(',', $pairs) . ']';
-                continue;
-            }
-        }
-        if (is_string($v) && strlen($v) > 0 && $v[0] === '$') {
-            $parts[] = var_export($k, true) . '=>' . $v;
-        } elseif (is_string($v) && strlen($v) > 0 && $v[0] === '(') {
-            // Expression wrapped in () like (string)($idx) - output as raw
-            $parts[] = var_export($k, true) . '=>' . $v;
-        } else {
-            $parts[] = var_export($k, true) . '=>' . var_export($v, true);
-        }
-    }
-    return '[' . implode(',', $parts) . ']';
-}
-
-/**
- * Resolve a v-for :key expression to a PHP expression string.
- * Maps item.field → $item['field'], item → $item, index → $index.
- */
-
-/**
- * Generate v-for helper methods (render_N).
- *
- * Template v-for (<template v-for="item in items">):
- *   Only children repeat — template is transparent.
- *
- * Element v-for (<div v-for="item in items">) — Vue 3 style:
- *   The element itself repeats with its children.
- */
-function generateVForHelpers(array $loops, ?StaticNodeContext &$ctx = null): string
-{
-    if (count($loops) === 0) return '';
-
-    $out = '';
-    foreach ($loops as $name => $info) {
-        $source = $info['source'];
-        $item = $info['item'];
-        $index = $info['index'] ?? '';
-        $children = $info['children'] ?? [];
-        $isTemplate = $info['isTemplate'] ?? true;
-        $parentItem = $info['parentItem'] ?? null;
-        $innerSource = $info['innerSource'] ?? $source;
-
-        if ($source === '' || $item === '') continue;
-
-        $loopInfo = ['source' => $source, 'item' => $item, 'index' => $index];
-
-        // Build foreach expression with optional index
-        if ($index !== '') {
-            $foreachAs = "\${$index} => \${$item}";
-        } else {
-            $foreachAs = "\${$item}";
-        }
-
-        $childExprs = [];
-        foreach ($children as $child) {
-            if ($child instanceof VNode) {
-                $childExprs[] = generateVNodeExpr($child, $loopInfo, 2, $ctx);
-            }
-        }
-
-        // Determine the iteration expression
-        if ($parentItem !== null) {
-            // Nested v-for: iterate on $parentVar['innerSource'] (passed as parameter)
-            $iterExpr = "\${$parentItem}['{$innerSource}']";
-            $paramDecl = "array \${$parentItem}";
-        } else {
-            $iterExpr = "\$this->{$source}";
-            $paramDecl = '';
-        }
-
-        if ($isTemplate) {
-            // === Template v-for: children repeat directly ===
-            if (count($childExprs) === 0) continue;
-            $childBlock = implode(",\n                ", $childExprs);
-
-            if ($parentItem !== null) {
-                $out .= <<<PHP
-
-    /**
-     * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
-     * @return VNode[]
-     */
-    private function {$name}({$paramDecl}): array
-    {
-        \$children = [];
-        foreach ({$iterExpr} as {$foreachAs}) {
-            \$children[] = {$childBlock};
-        }
-        return \$children;
-    }
-PHP;
-            } else {
-                $out .= <<<PHP
-
-    /**
-     * v-for render helper: {$item} in {$source}
-     * @return VNode[]
-     */
-    private function {$name}(): array
-    {
-        \$children = [];
-        foreach ({$iterExpr} as {$foreachAs}) {
-            \$children[] = {$childBlock};
-        }
-        return \$children;
-    }
-PHP;
-            }
-        } else {
-            // === Element v-for (Vue 3 style): element repeats ===
-            $elementType = $info['elementType'] ?? 'div';
-            $elementProps = $info['elementProps'] ?? [];
-            $propsExpr = generateLoopItemPropsExpr($elementProps, $loopInfo);
-
-            // Component v-for: use VNode::hComponent() with direct prop values
-            if ($info['isComponent'] ?? false) {
-                $componentClass = $info['componentClass'] ?? '';
-                $bindings = $info['componentBindings'] ?? [];
-                $bindingParts = [];
-                foreach ($bindings as $propKey => $fieldName) {
-                    $bindingParts[] = var_export($propKey, true) . '=>$' . $item . "['" . addslashes($fieldName) . "']";
-                }
-                $bindingExpr = '[' . implode(',', $bindingParts) . ']';
-                // 编译期计算 v-for 组件元素的 patch flags（$elementProps 是数组，不是 VNode）
-                $compFlags = 0;
-                if (isset($elementProps[':style'])) $compFlags |= 1;
-                if (isset($elementProps[':class'])) $compFlags |= 2;
-                foreach ($elementProps as $k => $v) {
-                    if (str_starts_with($k, '@')) { $compFlags |= 4; break; }
-                }
-                $compFlagsCode = $compFlags !== 0 ? "\n            \$_comp->patchFlags = {$compFlags};" : '';
-
-                if ($parentItem !== null) {
-                    $out .= <<<PHP
-
-    /**
-     * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
-     * @return VNode[]
-     */
-    private function {$name}({$paramDecl}): array
-    {
-        \$children = [];
-        foreach ({$iterExpr} as {$foreachAs}) {
-            \$_comp = VNode::hComponent('{$componentClass}', {$propsExpr}, []);{$compFlagsCode}
-            \$_comp->componentPropValues = {$bindingExpr};
-            \$children[] = \$_comp;
-        }
-        return \$children;
-    }
-PHP;
-                } else {
-                    $out .= <<<PHP
-
-    /**
-     * v-for render helper: {$item} in {$source}
-     * @return VNode[]
-     */
-    private function {$name}(): array
-    {
-        \$children = [];
-        foreach ({$iterExpr} as {$foreachAs}) {
-            \$_comp = VNode::hComponent('{$componentClass}', {$propsExpr}, []);{$compFlagsCode}
-            \$_comp->componentPropValues = {$bindingExpr};
-            \$children[] = \$_comp;
-        }
-        return \$children;
-    }
-PHP;
-                }
-            } else {
-                // Regular element v-for
-                // 检测编译器级 patchFlags
-                $patchFlags = 0;
-                if (isset($elementProps[':style'])) $patchFlags |= 1;
-                if (isset($elementProps[':class'])) $patchFlags |= 2;
-                if (isset($elementProps['@click']) || isset($elementProps['@keydown']) || isset($elementProps['@keyup'])) $patchFlags |= 4;
-
-                if (count($childExprs) > 0) {
-                    $childBlock = "[\n                    " . implode(",\n                    ", $childExprs) . "\n                ]";
-                    if (!empty($info['keyExpr'])) {
-                        $keyValue = resolveVForKeyExpr($info['keyExpr'], $loopInfo);
-                        $innerExpr = "VNode::hKey('{$elementType}', {$propsExpr}, {$childBlock}, {$keyValue})";
-                    } else {
-                        $innerExpr = "VNode::h('{$elementType}', {$propsExpr}, {$childBlock})";
-                    }
-                } else {
-                    if (!empty($info['keyExpr'])) {
-                        $keyValue = resolveVForKeyExpr($info['keyExpr'], $loopInfo);
-                        $innerExpr = "VNode::hKey('{$elementType}', {$propsExpr}, null, {$keyValue})";
-                    } else {
-                        $innerExpr = "VNode::h('{$elementType}', {$propsExpr})";
-                    }
-                }
-
-                if ($parentItem !== null) {
-                    // patchFlags 赋值语句
-                    $assignFlags = ($patchFlags !== 0)
-                        ? "\n        \$__v = {$innerExpr};\n        \$__v->patchFlags = {$patchFlags};\n        \$children[] = \$__v;"
-                        : "\n            \$children[] = {$innerExpr};";
-                    $out .= <<<PHP
-
-    /**
-     * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
-     * @return VNode[]
-     */
-    private function {$name}({$paramDecl}): array
-    {
-        \$children = [];
-        foreach ({$iterExpr} as {$foreachAs}) {{$assignFlags}
-        }
-        return \$children;
-    }
-PHP;
-                } else {
-                    $assignFlags = ($patchFlags !== 0)
-                        ? "\n        \$__v = {$innerExpr};\n        \$__v->patchFlags = {$patchFlags};\n        \$children[] = \$__v;"
-                        : "\n            \$children[] = {$innerExpr};";
-                    $out .= <<<PHP
-
-    /**
-     * v-for render helper: {$item} in {$source}
-     * @return VNode[]
-     */
-    private function {$name}(): array
-    {
-        \$children = [];
-        foreach ({$iterExpr} as {$foreachAs}) {{$assignFlags}
-        }
-        return \$children;
-    }
-PHP;
-                }
-            }
-        }
-    }
-
-    return $out;
-}
 
 // ============================================================
 // Compile a single .vue file to Component PHP class
