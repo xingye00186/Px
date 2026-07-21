@@ -208,6 +208,18 @@ class LayoutOrchestrator implements ChildLayoutProvider
                     continue;
                 }
             }
+
+            // 通用洁净子树跳过（dirty 传播后的非 LayoutBoundary 节点）：
+            // 子树全洁净时直接复用 cachedFragment，不递归 mainLayout
+            if (!$child->layoutDirty && $child->cachedFragment !== null
+                && $child->cachedConstraintSpace !== null) {
+                $childBoundarySpace = $this->buildChildSpace($child, $space, $style);
+                if ($childBoundarySpace->equals($child->cachedConstraintSpace)) {
+                    $childFragments[] = $child->cachedFragment;
+                    continue;
+                }
+            }
+
             $childStyle = $child->computedStyle;
             if ($isFlexOrGrid && isset($childIntrinsics[$i])) {
                 // flex/grid 子项：用 intrinsic+分配结果构建约束，确保子项百分比用正确基准

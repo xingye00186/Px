@@ -983,6 +983,11 @@ class Application
             return;
         }
 
+        // Dirty 传播：自底向上标记父链（确保布局不跳过有脏子树的父节点）
+        \Px\Core\PerfCounter::start('sub:dirty_propagate');
+        $this->renderTreeManager->propagateLayoutDirty($rootRenderNode);
+        \Px\Core\PerfCounter::end('sub:dirty_propagate');
+
         // 恢复 scrollTop
         if ($oldRootRenderNode !== null) {
             \Px\Core\PerfCounter::start('stage:scroll_restore');

@@ -955,6 +955,27 @@ class RenderTreeManager
     // ── 命中测试 ──────────────────────────
 
     /**
+     * Dirty 传播：子节点脏了父链全标记。
+     * Blink markNeedsLayout() 向上传播的等价实现——
+     * updateFromVNode 是自上而下处理的，父节点不知道子节点是否变脏。
+     * 此方法自底向上传播 layoutDirty，确保布局阶段不会跳过有脏子树的父节点。
+     */
+    public function propagateLayoutDirty(RenderNode $node): void
+    {
+        // 先递归子节点（DFS 自底向上）
+        foreach ($node->children as $child) {
+            $this->propagateLayoutDirty($child);
+        }
+        // 子节点中有任何脏的 → 标记自己（同时向上传播到根）
+        foreach ($node->children as $child) {
+            if ($child->layoutDirty || $child->styleDirty) {
+                $node->markLayoutDirty(true);
+                break;
+            }
+        }
+    }
+
+    /**
      * 在 RenderNode 树上执行命中测试。
      * 返回命中的最上层可交互元素（有 @click 的 RenderNode）。
      */
