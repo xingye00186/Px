@@ -34,9 +34,6 @@ class RenderTreeManager
     /** @var array<callable> RenderNode 销毁回调（Application 注册用于清理 ScrollManager/InteractionState） */
     private array $destroyCallbacks = [];
 
-    /** @var array<string, array> :style 字符串 → 解析结果缓存（方案1：同一字符串不重复 regex） */
-    private static array $styleParseCache = [];
-
     /**
      * 注册 RenderNode 销毁回调。当节点被 destroyRenderNodeTree 销毁时触发。
      * 用于清理 ScrollManager、InteractionState 等外部状态映射中的 orphan 条目。
@@ -526,8 +523,8 @@ class RenderTreeManager
 
                 // Vue 3 标准：父组件 props['style'] 全部透传合并到子组件根元素
                 // 子组件自身 style 为基准，父组件 style 覆盖（CSS 标准层叠规则）
-                $placeholderStyle = $vnode->props['style'] ?? '';
-                if ($placeholderStyle !== '') {
+                $placeholderStyle = $vnode->props['style'] ?? [];
+                if (!empty($placeholderStyle)) {
                     $targetRN = null;
                     if ($parent !== null && $beforeCount < count($parent->children)) {
                         // 常规情况：通过 parent->children 定位新创建的 RN
@@ -542,7 +539,9 @@ class RenderTreeManager
                     }
 
                     if ($targetRN !== null) {
-                        $parsedDecls = StyleResolver::parseInlineStyle($placeholderStyle);
+                        $parsedDecls = is_string($placeholderStyle)
+                            ? \Px\Css\StyleResolver::parseInlineStyle($placeholderStyle)
+                            : $placeholderStyle;
                         $targetRN->computedStyle = new ComputedStyle($parsedDecls, $targetRN->computedStyle?->toExportArray() ?? []);
                         $targetRN->layoutDirty = true;
                     }
@@ -608,7 +607,7 @@ class RenderTreeManager
                 \Px\Core\PerfCounter::start('sub:style_fallback');
                 // 降级：StyleRecalcPass 未运行时内联解析
                 $computedStyle = StyleResolver::resolve(
-                    inlineStyle: $vnode->props['style'] ?? '',
+                    inlineStyle: $vnode->props['style'] ?? [],
                     className: $vnode->props['class'] ?? '',
                     parentDeclarations: $parentStyle,
                     elementType: $vnode->type,
@@ -629,9 +628,6 @@ class RenderTreeManager
             }
             $resolvedStyle = $computedStyle->toExportArray();
 
-            // 提前声明 $renderNode 供 :style 缓存使用（AOT 编译需要声明在引用前）
-            $renderNode = null;
-
             // 合并 HTML align 属性到 textAlign（CSS text-align 优先）
             if (($vnode->props['align'] ?? '') !== '' && empty($resolvedStyle['textAlign'])) {
                 $resolvedStyle['textAlign'] = $vnode->props['align'];
@@ -639,44 +635,15 @@ class RenderTreeManager
             }
 
             // 合并 :style 动态绑定（StyleRecalcPass 只解析静态 style，丢弃 :style）
-            // 支持字符串（正则解析）和数组（零正则合并，Vue 3 对象语法风格）
-            $dynamicStyle = $vnode->props[':style'] ?? '';
-            if ($dynamicStyle !== '') {
+            // 编译期已数组化，直接合并零 regex
+            $dynamicStyle = $vnode->props[':style'] ?? [];
+            if (!empty($dynamicStyle) && is_array($dynamicStyle)) {
                 \Px\Core\PerfCounter::start('sub:style_dynamic');
-                if (is_array($dynamicStyle)) {
-                    // 数组模式：直接数组合并，零 regex，零额外 ComputedStyle 构造
-                    $resolvedStyle = $computedStyle->toExportArray();
-                    foreach ($dynamicStyle as $k => $v) {
-                        $resolvedStyle[$k] = $v;
-                    }
-                    $computedStyle = new ComputedStyle($resolvedStyle);
-                } else {
-                    // 字符串模式：复用 RenderNode 级缓存（同一 :style 值重复时不重新合并）
-                    $styleStr = (string)$dynamicStyle;
-                    if ($renderNode !== null
-                        && $renderNode->cachedDynamicStyleStr === $styleStr
-                        && $renderNode->cachedDynamicStyle !== null) {
-                        // 帧间缓存命中：:style 值相同，合并结果可直接复用
-                        $computedStyle = $renderNode->cachedDynamicStyle;
-                    } else {
-                        if (!isset(self::$styleParseCache[$styleStr])) {
-                            self::$styleParseCache[$styleStr] = \Px\Css\StyleResolver::parseInlineStyle($styleStr);
-                        }
-                        $dynamicParsed = self::$styleParseCache[$styleStr];
-                        if (!empty($dynamicParsed)) {
-                            $resolvedStyle = $computedStyle->toExportArray();
-                            foreach ($dynamicParsed as $k => $v) {
-                                $resolvedStyle[$k] = $v;
-                            }
-                            $computedStyle = new ComputedStyle($resolvedStyle);
-                        }
-                        // 缓存到 RenderNode 供下帧复用
-                        if ($renderNode !== null) {
-                            $renderNode->cachedDynamicStyleStr = $styleStr;
-                            $renderNode->cachedDynamicStyle = $computedStyle;
-                        }
-                    }
+                $resolvedStyle = $computedStyle->toExportArray();
+                foreach ($dynamicStyle as $k => $v) {
+                    $resolvedStyle[$k] = $v;
                 }
+                $computedStyle = new ComputedStyle($resolvedStyle);
                 \Px\Core\PerfCounter::end('sub:style_dynamic');
             }
 
@@ -745,9 +712,6 @@ class RenderTreeManager
                         $renderNode->styleDirty = false;
                     }
                 } elseif ($oldStyle !== null) {
-                    // :style 缓存失效：基础样式已变化
-                    $renderNode->cachedDynamicStyleStr = null;
-                    $renderNode->cachedDynamicStyle = null;
                     // 检查是否有几何关键属性变化（用 toExportArray 得到标量值）
                     $isGeometryChange = false;
                     $oldDecl = $oldStyle->toExportArray();
@@ -782,9 +746,6 @@ class RenderTreeManager
                     $renderNode->layoutDirty = true;
                     $renderNode->paintDirty = true;
                     $renderNode->styleDirty = true;
-                    // 新节点无 :style 缓存
-                    $renderNode->cachedDynamicStyleStr = null;
-                    $renderNode->cachedDynamicStyle = null;
                 }
 
                 if ($renderNode->type !== $vnode->type) {

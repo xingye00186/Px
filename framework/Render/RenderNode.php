@@ -41,8 +41,6 @@ class RenderNode
     public ?PhysicalFragment $cachedFragment = null;
     public ?ConstraintSpace $cachedConstraintSpace = null;
     public int $layoutCacheVersion = 0;
-    public ?string $cachedDynamicStyleStr = null;
-    public ?ComputedStyle $cachedDynamicStyle = null;
 
     // ── 布局结果（由 LayoutOrchestrator + fragmentToElement 维护）──
     public int $x = 0;
