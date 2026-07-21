@@ -5,6 +5,8 @@ namespace Px\Render;
 use native_types;
 use Px\Dom\VNode;
 use Px\Css\ComputedStyle;
+use Px\Layout\PhysicalFragment;
+use Px\Layout\ConstraintSpace;
 
 use Px\Core\Config;
 
@@ -36,9 +38,11 @@ class RenderNode
     public ?string $groupId = null;
 
     // ── 缓存 ──
-    public ?\Px\Layout\PhysicalFragment $cachedFragment = null;
-    public ?\Px\Layout\ConstraintSpace $cachedConstraintSpace = null;
+    public ?PhysicalFragment $cachedFragment = null;
+    public ?ConstraintSpace $cachedConstraintSpace = null;
     public int $layoutCacheVersion = 0;
+    public ?string $cachedDynamicStyleStr = null;
+    public ?ComputedStyle $cachedDynamicStyle = null;
 
     // ── 布局结果（由 LayoutOrchestrator + fragmentToElement 维护）──
     public int $x = 0;

@@ -626,6 +626,9 @@ class RenderTreeManager
             }
             $resolvedStyle = $computedStyle->toExportArray();
 
+            // 提前声明 $renderNode 供 :style 缓存使用（AOT 编译需要声明在引用前）
+            $renderNode = null;
+
             // 合并 HTML align 属性到 textAlign（CSS text-align 优先）
             if (($vnode->props['align'] ?? '') !== '' && empty($resolvedStyle['textAlign'])) {
                 $resolvedStyle['textAlign'] = $vnode->props['align'];
@@ -645,18 +648,30 @@ class RenderTreeManager
                     }
                     $computedStyle = new ComputedStyle($resolvedStyle);
                 } else {
-                    // 字符串模式：正则解析 + 缓存（同一字符串不重复 regex）
+                    // 字符串模式：复用 RenderNode 级缓存（同一 :style 值重复时不重新合并）
                     $styleStr = (string)$dynamicStyle;
-                    if (!isset(self::$styleParseCache[$styleStr])) {
-                        self::$styleParseCache[$styleStr] = \Px\Css\StyleResolver::parseInlineStyle($styleStr);
-                    }
-                    $dynamicParsed = self::$styleParseCache[$styleStr];
-                    if (!empty($dynamicParsed)) {
-                        $resolvedStyle = $computedStyle->toExportArray();
-                        foreach ($dynamicParsed as $k => $v) {
-                            $resolvedStyle[$k] = $v;
+                    if ($renderNode !== null
+                        && $renderNode->cachedDynamicStyleStr === $styleStr
+                        && $renderNode->cachedDynamicStyle !== null) {
+                        // 帧间缓存命中：:style 值相同，合并结果可直接复用
+                        $computedStyle = $renderNode->cachedDynamicStyle;
+                    } else {
+                        if (!isset(self::$styleParseCache[$styleStr])) {
+                            self::$styleParseCache[$styleStr] = \Px\Css\StyleResolver::parseInlineStyle($styleStr);
                         }
-                        $computedStyle = new ComputedStyle($resolvedStyle);
+                        $dynamicParsed = self::$styleParseCache[$styleStr];
+                        if (!empty($dynamicParsed)) {
+                            $resolvedStyle = $computedStyle->toExportArray();
+                            foreach ($dynamicParsed as $k => $v) {
+                                $resolvedStyle[$k] = $v;
+                            }
+                            $computedStyle = new ComputedStyle($resolvedStyle);
+                        }
+                        // 缓存到 RenderNode 供下帧复用
+                        if ($renderNode !== null) {
+                            $renderNode->cachedDynamicStyleStr = $styleStr;
+                            $renderNode->cachedDynamicStyle = $computedStyle;
+                        }
                     }
                 }
                 \Px\Core\PerfCounter::end('sub:style_dynamic');
@@ -727,6 +742,9 @@ class RenderTreeManager
                         $renderNode->styleDirty = false;
                     }
                 } elseif ($oldStyle !== null) {
+                    // :style 缓存失效：基础样式已变化
+                    $renderNode->cachedDynamicStyleStr = null;
+                    $renderNode->cachedDynamicStyle = null;
                     // 检查是否有几何关键属性变化（用 toExportArray 得到标量值）
                     $isGeometryChange = false;
                     $oldDecl = $oldStyle->toExportArray();
@@ -761,6 +779,9 @@ class RenderTreeManager
                     $renderNode->layoutDirty = true;
                     $renderNode->paintDirty = true;
                     $renderNode->styleDirty = true;
+                    // 新节点无 :style 缓存
+                    $renderNode->cachedDynamicStyleStr = null;
+                    $renderNode->cachedDynamicStyle = null;
                 }
 
                 if ($renderNode->type !== $vnode->type) {
