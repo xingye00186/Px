@@ -298,13 +298,12 @@ class RenderTreeManager
     /**
      * 比较两个 VNode 的布局相关属性是否相等。
      *
-     * 用于叶子节点（无 VNode 子节点）的洁净路径判断：
-     *   - type, key
-     *   - props['style'], props['class']
-     *   - props[':scroll-top'], props[':scroll-left']
-     *
-     * 注意：非叶子节点即使在 type+key+props 一致的情况下也必须走脏路径，
-     * 因为父节点的 auto-stack、contentHeight 等依赖子节点全量重算。
+     * 消费 patchFlags 跳过不必要的比较：
+     *   - PATCH_NONE: 完全静态，直接返回 true（编译器保证无变化）
+     *   - 仅 PATCH_EVENT: 事件不影响布局，跳过 style/class 比较
+     *   - PATCH_STYLE: 比较 :style 和 style
+     *   - PATCH_CLASS: 比较 class
+     *   - 始终比较 scroll/bind（布局强相关）
      *
      * @return bool true=布局相关属性完全一致，可走洁净路径
      */
@@ -312,12 +311,25 @@ class RenderTreeManager
     {
         if ($a->type !== $b->type) return false;
         if ($a->key !== $b->key) return false;
-        if (($a->props['style'] ?? '') !== ($b->props['style'] ?? '')) return false;
-        if (($a->props[':style'] ?? '') !== ($b->props[':style'] ?? '')) return false;
-        if (($a->props['class'] ?? '') !== ($b->props['class'] ?? '')) return false;
+
+        // patchFlag 快速路径：完全静态节点跳过所有 props 比较
+        $flags = $a->patchFlags;
+        if ($flags === VNode::PATCH_NONE) {
+            return true;
+        }
+
+        // 仅比较 patchFlag 标记的动态属性
+        if (($flags & VNode::PATCH_STYLE) !== 0) {
+            if (($a->props['style'] ?? '') !== ($b->props['style'] ?? '')) return false;
+            if (($a->props[':style'] ?? '') !== ($b->props[':style'] ?? '')) return false;
+        }
+        if (($flags & VNode::PATCH_CLASS) !== 0) {
+            if (($a->props['class'] ?? '') !== ($b->props['class'] ?? '')) return false;
+        }
+
+        // scroll/bind 始终比较（布局强相关，不受 patchFlag 控制）
         if (($a->props[':scroll-top'] ?? '') !== ($b->props[':scroll-top'] ?? '')) return false;
         if (($a->props[':scroll-left'] ?? '') !== ($b->props[':scroll-left'] ?? '')) return false;
-        // 新增：:bind / bind / v-model key 一致性检查（bind key 变 → 实际值可能变）
         if (($a->props[':bind'] ?? '') !== ($b->props[':bind'] ?? '')) return false;
         if (($a->props['bind'] ?? '') !== ($b->props['bind'] ?? '')) return false;
         if (($a->props['v-model'] ?? '') !== ($b->props['v-model'] ?? '')) return false;
