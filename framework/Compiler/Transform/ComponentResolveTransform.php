@@ -1,0 +1,194 @@
+<?php
+
+use Px\Dom\VNode;
+
+/**
+ * ComponentResolveTransform — 组件引用解析变换
+ *
+ * 将 VNode 树中的组件引用（<child-comp>）替换为 #component 占位符。
+ * 解析子组件样式、自动绑定 interpolated 变量、提取事件处理器。
+ *
+ * 提取自 sfc-compiler.php 的 resolveComponentRefs() / resolveComponentRefsRecursive() / remapChildBindProps()。
+ */
+class ComponentResolveTransform implements TransformInterface
+{
+    /** @var array 解析出的子组件信息 */
+    private array $childComponents = [];
+
+    /** @var string[] 解析警告 */
+    private array $warnings = [];
+
+    public function transform(VNode $root, array &$metadata): void
+    {
+        $this->childComponents = [];
+        $this->warnings = [];
+
+        // 注意: 不能在 transform 阶段直接替换组件节点（compileOneComponent 需要 childComponents 元数据）
+        // 因此此方法仅作为提取后的容器，实际调用由 compileOneComponent 通过下方的 resolve() 方法完成
+    }
+
+    /**
+     * 执行组件引用解析。
+     * 替换组件 ref VNode 为 #component 占位符。
+     *
+     * @param VNode $root  VNode 树根节点
+     * @param array &$classStyles CSS 类样式（用于子组件样式验证）
+     * @return array ['warnings' => string[], 'children' => array]
+     */
+    public function resolve(VNode $root, array &$classStyles): array
+    {
+        $this->warnings = [];
+        $this->childComponents = [];
+        $this->resolveRecursive($root, $classStyles);
+        return [
+            'warnings' => $this->warnings,
+            'children' => $this->childComponents,
+        ];
+    }
+
+    /**
+     * 递归解析组件引用。
+     */
+    private function resolveRecursive(VNode $node, array &$classStyles): void
+    {
+        if (!is_array($node->children)) return;
+
+        $resolvedChildren = [];
+
+        foreach ($node->children as $child) {
+            if (!$child instanceof VNode) {
+                $resolvedChildren[] = $child;
+                continue;
+            }
+
+            // Dynamic component: <component :is="expr" /> — Vue 3 style
+            if ($child->type === 'component' && isset($child->props[':is'])) {
+                $isExpr = $child->props[':is'];
+                unset($child->props[':is']);
+                $child->props['__dynamicIs'] = $isExpr;
+                $child->type = '#component';
+                $child->isComponent = true;
+                $child->componentClass = '__dynamic__';
+                $child->children = null;
+                $resolvedChildren[] = $child;
+                continue;
+            }
+
+            // Check for component ref (has __componentFile prop)
+            $compFile = $child->props['__componentFile'] ?? '';
+            if ($compFile === '') {
+                // Not a component ref — recurse into its children
+                $this->resolveRecursive($child, $classStyles);
+                $resolvedChildren[] = $child;
+                continue;
+            }
+
+            $tagName = $child->type;
+
+            $childSource = @file_get_contents($compFile);
+            if ($childSource === false) {
+                $this->warnings[] = "Cannot read component file: {$compFile}";
+                $resolvedChildren[] = $child;
+                continue;
+            }
+
+            // Extract child styles only (template is NOT parsed for inlining)
+            $childStyles = '';
+            if (preg_match('#<style[^>]*>(.*?)</style>#s', $childSource, $m)) {
+                $childStyles = $m[1];
+            }
+
+            // Validate child styles (warnings only, no longer merge into parent scope)
+            $childStyleWarnings = [];
+            \Px\Css\CssMappings::parseStyleBlock($childStyles, $childStyleWarnings);
+            foreach ($childStyleWarnings as $w) {
+                $this->warnings[] = "Component <{$tagName}> CSS: $w";
+            }
+
+            // Parse child template to find text interpolations for auto-binding
+            $childTemplate = '';
+            if (preg_match('#<template(?![^>]*v-for)[^>]*>(.*?)</template>#s', $childSource, $m)) {
+                $childTemplate = $m[1];
+            }
+
+            // Collect dynamic bind props from component ref (e.g., :value="display")
+            $bindProps = [];
+            foreach ($child->props as $k => $v) {
+                if ($k === '__componentFile') continue;
+                if (strlen($k) > 0 && $k[0] === ':') {
+                    $propName = substr($k, 1);
+                    $bindProps[$propName] = $v;
+                } elseif ($k !== 'style' && $k !== '@click' && !str_starts_with($k, '@') && !str_starts_with($k, ':')) {
+                    $bindProps[$k] = 'static:' . $v;
+                }
+            }
+
+            // Auto-bind interpolated variables from child template
+            if ($childTemplate !== '') {
+                if (preg_match_all('/{{\s*(\w+)\s*}}/', $childTemplate, $tplMatches)) {
+                    foreach ($tplMatches[1] as $varName) {
+                        if (!isset($bindProps[$varName]) && !isset($child->props[$varName])) {
+                            $bindProps[$varName] = $varName;
+                        }
+                    }
+                }
+            }
+
+            // Extract child click handlers from template for parent dispatch merging
+            $childClickHandlers = [];
+            $childKeyHandlers = [];
+            if ($childTemplate !== '') {
+                if (preg_match_all('/@click\s*=\s*"(\w+)(?:\s*\(\s*([^)]*)\s*\))?\s*"/', $childTemplate, $clickMatches)) {
+                    foreach ($clickMatches[1] as $i => $h) {
+                        $arg = $clickMatches[2][$i] ?? '';
+                        $childClickHandlers[$h] = ($arg !== '') ? $arg : null;
+                    }
+                }
+                foreach (['@keyup', '@keydown', '@enter'] as $evt) {
+                    if (preg_match_all('/' . preg_quote($evt) . '\s*=\s*"(\w+)"/', $childTemplate, $km)) {
+                        foreach ($km[1] as $h) {
+                            $childKeyHandlers[$h] = true;
+                        }
+                    }
+                }
+            }
+
+            // Convert child VNode to #component placeholder
+            $childComponentName = componentTagToComponentName($tagName);
+            $child->type = '#component';
+            $child->isComponent = true;
+            $child->componentClass = $childComponentName;
+
+            // Slot support: extract text children as 'text' bind prop
+            $slotText = extractSlotText($child->children);
+            if ($slotText !== null && !isset($bindProps['text'])) {
+                $bindProps['text'] = $slotText;
+            }
+
+            $child->componentProps = count($bindProps) > 0 ? $bindProps : null;
+
+            if ($child->componentProps !== null) {
+                unset($child->componentProps['__componentFile']);
+            }
+            unset($child->props['__componentFile']);
+            foreach ($bindProps as $propName => $_) {
+                unset($child->props[':' . $propName]);
+            }
+
+            $child->children = null;
+            $resolvedChildren[] = $child;
+
+            $this->childComponents[] = [
+                'tagName' => $tagName,
+                'componentClass' => $childComponentName,
+                'offsetX' => 0,
+                'offsetY' => 0,
+                'bindProps' => $bindProps,
+                'clickHandlers' => $childClickHandlers,
+                'keyHandlers' => $childKeyHandlers,
+            ];
+        }
+
+        $node->children = $resolvedChildren;
+    }
+}
