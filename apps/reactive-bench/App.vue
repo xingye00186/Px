@@ -110,8 +110,65 @@
         </div>
       </div>
       <!-- 静态 footer — 应被 SFC 编译器 hoist -->
-      <div style="padding:6px 16px;background:#2C2C2E;border-top:1px solid #38383A;text-align:center">
+     <div style="padding:6px 16px;background:#2C2C2E;border-top:1px solid #38383A;text-align:center">
         <span style="font-size:10px;color:#48484A">© Px Framework — static footer</span>
+      </div>
+    </div>
+
+    <!-- LiveDashboard: IDE with sparse updates -->
+    <div v-else-if="currentCase === 'LiveDashboard'" style="display:flex;flex-direction:column;width:100%;height:100%;background:#1C1C1E;font-size:12px;color:#CCC;font-family:monospace">
+      <!-- Menu bar — 纯静态，hoist -->
+      <div style="display:flex;align-items:center;height:24px;padding:0 8px;background:#2C2C2E;border-bottom:1px solid #38383A;gap:12px;font-size:11px;color:#8E8E93">
+        <span>File</span><span>Edit</span><span>View</span><span>Tools</span><span>Help</span>
+      </div>
+
+      <div style="flex:1;display:flex;min-height:0">
+        <!-- Sidebar — 项目文件树，纯静态 -->
+        <div style="width:160px;background:#252526;border-right:1px solid #38383A;display:flex;flex-direction:column;padding:4px 0;overflow-y:scroll">
+          <div style="padding:2px 8px;font-size:10px;color:#8E8E93;text-transform:uppercase">EXPLORER</div>
+          <div v-for="item in ideSidebar" :key="item.id" style="padding:2px 8px 2px 16px;display:flex;align-items:center;gap:4px;color:#CCC;font-size:11px">
+            <span>{{ item.icon }}</span><span>{{ item.label }}</span>
+          </div>
+        </div>
+
+        <!-- Main content -->
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+          <!-- Editor tabs — 纯静态 -->
+          <div style="display:flex;align-items:center;height:24px;background:#252526;border-bottom:1px solid #38383A;padding:0 4px;gap:2px;font-size:11px">
+            <span style="padding:2px 10px;background:#1C1C1E;border-radius:2px 2px 0 0;color:#FFF">main.cpp</span>
+            <span style="padding:2px 10px;color:#8E8E93">header.h</span>
+            <span style="padding:2px 10px;color:#8E8E93">Makefile</span>
+          </div>
+
+          <!-- Editor 代码行 — 稀疏更新（每帧改 1-2 行） -->
+          <div style="flex:1;overflow-y:scroll;padding:4px 0;background:#1C1C1E">
+            <div v-for="line in ideEditorLines" :key="line.id" style="display:flex;height:18px;line-height:18px">
+              <span style="width:40px;text-align:right;padding-right:12px;color:#48484A;user-select:none;font-size:11px">{{ line.num }}</span>
+              <span :style="'flex:1;padding-left:4px;font-size:12px;color:' + (line.highlighted ? '#FF9F0A' : '#CCC') + ';background:' + (line.highlighted ? 'rgba(255,159,10,0.1)' : 'transparent') + ';white-space:pre'">{{ line.text }}</span>
+            </div>
+          </div>
+
+          <!-- Console 面板— 稀疏追加（每帧 2-3 条） -->
+          <div style="height:130px;background:#1E1E1E;border-top:1px solid #38383A;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;height:20px;padding:0 8px;background:#252526;border-bottom:1px solid #38383A;font-size:10px;color:#8E8E93">
+              <span style="color:#FF9F0A">■</span><span style="margin-left:4px">Console</span><span style="margin-left:auto">{{ ideLogCount }} lines</span>
+            </div>
+            <div style="flex:1;overflow-y:scroll;padding:2px 4px;font-size:11px">
+              <div v-for="log in ideConsoleLog" :key="log.id" style="padding:1px 0;display:flex;gap:6px">
+                <span :style="'color:' + log.levelColor">[{{ log.level }}]</span>
+                <span style="color:#CCC">{{ log.text }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status bar — 少量动态 -->
+      <div style="display:flex;align-items:center;height:20px;padding:0 8px;background:#007ACC;font-size:11px;color:#FFF;gap:12px">
+        <span>Ln {{ cursorLine }}, Col {{ cursorCol }}</span>
+        <span style="color:rgba(255,255,255,0.6)">UTF-8</span>
+        <span style="color:rgba(255,255,255,0.6)">Git: {{ gitBranch }}</span>
+        <span style="margin-left:auto">Lint: {{ lintWarnings }} warnings</span>
       </div>
     </div>
 
@@ -378,6 +435,127 @@
         $this->textItems = $items;
     }
 
+    // ── LiveDashboard ──
+    #[Reactive]
+    public int $ideCount = 0;
+
+    #[Reactive]
+    public int $cursorLine = 1;
+
+    #[Reactive]
+    public int $cursorCol = 1;
+
+    #[Reactive]
+    public string $gitBranch = 'main';
+
+    #[Reactive]
+    public int $lintWarnings = 0;
+
+    #[Reactive]
+    public int $ideScroll = 0;
+
+    #[Reactive]
+    public array $ideSidebar = [];
+
+    #[Reactive]
+    public array $ideEditorLines = [];
+
+    #[Reactive]
+    public array $ideConsoleLog = [];
+
+    #[Reactive]
+    public int $ideLogCount = 0;
+
+    public function initIde(): void
+    {
+        $folders = ['src','include','lib','docs','tests'];
+        $files = [
+            ['icon'=>'📁','label'=>'src'],
+            ['icon'=>'  📄','label'=>'main.cpp'],
+            ['icon'=>'  📄','label'=>'utils.cpp'],
+            ['icon'=>'📁','label'=>'include'],
+            ['icon'=>'  📄','label'=>'header.h'],
+            ['icon'=>'📁','label'=>'lib'],
+            ['icon'=>'  📄','label'=>'core.cpp'],
+            ['icon'=>'  📄','label'=>'renderer.cpp'],
+            ['icon'=>'📁','label'=>'docs'],
+            ['icon'=>'  📄','label'=>'README.md'],
+            ['icon'=>'📁','label'=>'tests'],
+            ['icon'=>'  📄','label'=>'test_main.cpp'],
+            ['icon'=>'📄','label'=>'Makefile'],
+            ['icon'=>'📄','label'=>'.gitignore'],
+            ['icon'=>'📄','label'=>'build.sh'],
+        ];
+        $this->ideSidebar = $files;
+
+        // 50 行代码
+        $codeSnippets = [
+            '#include <iostream>','using namespace std;','','int main() {',
+            '    auto x = 42;','    auto y = x * 2;','    cout << x << endl;',
+            '    for (int i = 0; i < 10; i++) {',"        cout << i << endl;",
+            '    }','    return 0;','}','','void helper() {',
+            '    vector<int> v;','    v.push_back(1);','    v.push_back(2);',
+            '    for (auto& val : v) {','        val *= 2;','    }',
+            '}','','class MyClass {','public:',
+            '    MyClass() = default;','    ~MyClass() = default;',
+            '    void doSomething() {','        // TODO: implement',
+            '    }','private:',
+            '    int m_value = 0;','    string m_name;','};',
+        ];
+        $lines = [];
+        for ($i = 0; $i < 50; $i++) {
+            $lines[] = ['id' => 'el-'.$i, 'num' => $i + 1, 'text' => $codeSnippets[$i % count($codeSnippets)], 'highlighted' => false];
+        }
+        $this->ideEditorLines = $lines;
+
+        // 初始控制台输出
+        $logs = [
+            ['id' => 'log-0', 'text' => 'Build system initialized', 'level' => 'INFO', 'levelColor' => '#30D158'],
+            ['id' => 'log-1', 'text' => 'Compiler: g++ (Ubuntu 11.4.0)', 'level' => 'INFO', 'levelColor' => '#30D158'],
+            ['id' => 'log-2', 'text' => 'Configuration: Release', 'level' => 'INFO', 'levelColor' => '#30D158'],
+        ];
+        $this->ideConsoleLog = $logs;
+        $this->ideLogCount = 3;
+
+        $this->cursorLine = 1;
+        $this->cursorCol = 1;
+        $this->gitBranch = 'main';
+        $this->lintWarnings = 0;
+        $this->ideCount = 0;
+        $this->ideScroll = 0;
+    }
+
+    public function runIdeCycle(): void
+    {
+        $this->ideCount++;
+
+        // 1. 更新 1 行编辑器高亮（PATCH_STYLE）
+        $lines = $this->ideEditorLines;
+        $idx = $this->ideCount % 50;
+        $lines[$idx]['highlighted'] = !$lines[$idx]['highlighted'];
+        $this->ideEditorLines = $lines;
+
+        // 2. 追加 2 条控制台日志（PATCH_TEXT），上限 60 条
+        $logs = $this->ideConsoleLog;
+        $levels = [['INFO','#30D158'],['WARN','#FF9F0A'],['ERROR','#FF4444']];
+        for ($i = 0; $i < 2; $i++) {
+            $id = 'log-' . $this->ideLogCount;
+            $lv = $levels[abs(crc32((string)$this->ideLogCount)) % 3];
+            $logs[] = ['id' => $id, 'text' => 'Cycle ' . $this->ideCount . ' step ' . $i, 'level' => $lv[0], 'levelColor' => $lv[1]];
+            $this->ideLogCount++;
+        }
+        // 保持上限，防止无限增长
+        if (count($logs) > 60) {
+            $logs = array_slice($logs, -60);
+        }
+        $this->ideConsoleLog = $logs;
+
+        // 3. 改变光标位置（少量动态文本）
+        $this->cursorLine = ($this->ideCount % 50) + 1;
+        $this->cursorCol = ($this->ideCount % 80) + 1;
+        $this->lintWarnings = $this->ideCount % 10;
+    }
+
     // ── Case switching ──
     public function selectCase(string $case): void
     {
@@ -394,5 +572,6 @@
         if ($case === 'DynamicList') { $this->initDynamicList(); }
         if ($case === 'StaticTemplate') { $this->initStaticTemplate(); }
         if ($case === 'TextHeavy') { $this->initTextHeavy(); }
+        if ($case === 'LiveDashboard') { $this->initIde(); }
     }
 </script>

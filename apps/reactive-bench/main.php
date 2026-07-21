@@ -101,6 +101,10 @@ function runCaseIntensive(
             case 'TextHeavy':
                 $root->runTextCycle();
                 break;
+
+            case 'LiveDashboard':
+                $root->runIdeCycle();
+                break;
         }
 
         // flush 微任务 → 执行完整的渲染管线
@@ -189,7 +193,7 @@ function main(): int
     $app    = Application::create()->mount($root, $appDir);
 
     if ($listCases) {
-        $cases = ['SimpleCounter', 'ManyProps', 'DeepTree', 'MixedWorkload', 'FormDashboard', 'ChatStream', 'HoverGrid', 'DynamicList', 'StaticTemplate', 'TextHeavy'];
+        $cases = ['SimpleCounter', 'ManyProps', 'DeepTree', 'MixedWorkload', 'FormDashboard', 'ChatStream', 'HoverGrid', 'DynamicList', 'StaticTemplate', 'TextHeavy', 'LiveDashboard'];
         $allResults = [];
         foreach ($cases as $c) {
             echo "[BENCH] Running case: {$c} cycles={$cycles}\n";
