@@ -492,9 +492,12 @@ class RenderTreeManager
                 // （替代已废弃的 setGroupIdRecursive 对 VNode.groupId 的写入）
                 $childGroupId = $instance->getId();
                 
-                // ⚠️ 不传递跨帧 candidates：#component VNode 类型无法与旧 RenderNode 直接匹配。
-                // 使用 rootRenderNode 作为 candidate 会错误复用不再匹配的子树，导致显示异常。
-                // scrollTop 保留改为在创建新子树后通过 copyScrollTopFromOld() 安全复制。
+                // 传递子组件自己的旧根 RenderNode 作为 candidates，
+                // 使 updateFromVNode 能通过 type+key 匹配复用子树，
+                // 恢复三级脏位/Fragment 缓存/patchFlag 对组件内部节点生效。
+                // findMatchingRenderNode 已做 type+key 双条件匹配：
+                // v-if 形状变化时类型不匹配→匹配失败→建新，不会错误复用。
+                // 未消耗的旧节点由普通元素分支的 consumed-pos tracking 自动清理。
                 $oldRootRN = $instance->getRootRenderNode();
 
                 $childRN = $this->updateFromVNode(
@@ -502,7 +505,7 @@ class RenderTreeManager
                     $parent,
                     $root,
                     $componentByGroupId,
-                    $candidates,
+                    $oldRootRN !== null ? [$oldRootRN] : null,
                     $childGroupId,
                     $vnode->props['class'] ?? '',
                     $parentStyle
