@@ -880,6 +880,9 @@ function isFullyStatic(VNode $node): bool
             if (str_starts_with($k, ':')) return false;
             if (str_starts_with($k, '@')) return false;
             if (str_starts_with($k, 'v-')) return false;
+            // {{ }} 插值：parts 和 bind 表示动态文本内容
+            if ($k === 'parts') return false;
+            if ($k === 'bind') return false;
         }
     }
 
@@ -3455,8 +3458,17 @@ echo "  Handlers: " . (count($clickHandlers) + count($keyHandlers)) . "\n";
 echo "  BindKeys: " . count($bindKeys) . "\n";
 echo "  V-For Loops: " . count($loops) . "\n";
 
-// Generate render() expression
+// Generate render() expression (with static hoist support)
+$staticNodeCounter = 0;
+$staticNodeInitCode = [];
+$staticNodeDeclarations = [];
 $renderExpr = generateVNodeExpr($root, null, 1);
+$staticNodePrefix = !empty($staticNodeInitCode)
+    ? implode("\n        ", $staticNodeInitCode) . "\n        "
+    : '';
+$staticNodeDeclCode = !empty($staticNodeDeclarations)
+    ? implode("\n", $staticNodeDeclarations) . "\n"
+    : '';
 
 // Generate dispatch methods
 $dispatchClickBody = generateDispatchClick($clickHandlers);
@@ -3591,6 +3603,7 @@ class {$componentClassName} extends ReactiveComponent
 {$reactiveStorageCode}
 {$classBody}
 {$dynamicPropsDeclaration}
+{$staticNodeDeclCode}
 
 {$reactiveHookCode}
 {$effectFieldCode}
@@ -3601,7 +3614,8 @@ class {$componentClassName} extends ReactiveComponent
      */
     public function render(): VNode
     {
-        return {$renderExpr};
+        // 静态 VNode 跨帧复用
+        {$staticNodePrefix}return {$renderExpr};
     }
 
     /**
