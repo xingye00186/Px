@@ -474,7 +474,7 @@ class RenderTreeManager
     ): ?RenderNode {
         \Px\Core\PerfCounter::start('tree_convert');
         try {
-            // 组件占位节点：递归处理子组件树，$candidates 透传
+            // 组件占位节点：递归处理子组件树，传递旧根 RenderNode 作为候选
             // Vue 3 标准：父组件 props['style'] 全部透传合并到子组件根元素
             if ($vnode->isComponent()) {
                 $instance = $vnode->componentInstance;
