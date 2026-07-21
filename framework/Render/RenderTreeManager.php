@@ -930,6 +930,7 @@ class RenderTreeManager
         // 子节点中有几何变化的 → 传播 layoutDirty（父链全量布局）
         foreach ($node->children as $child) {
             if ($child->layoutDirty) {
+                $node->childrenNeedLayout = true;
                 $node->markLayoutDirty(true);
                 return;
             }
@@ -937,10 +938,13 @@ class RenderTreeManager
         // 子节点中只有视觉变化的 → 传播 styleDirty（仅重绘，不布局）
         foreach ($node->children as $child) {
             if ($child->styleDirty) {
+                $node->childrenNeedLayout = true;
                 $node->markStyleDirty(true);
                 return;
             }
         }
+        // 所有子节点洁净 → 清除 childrenNeedLayout
+        $node->childrenNeedLayout = false;
     }
 
     /**

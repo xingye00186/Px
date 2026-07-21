@@ -67,6 +67,10 @@ class RenderNode
     // 在 updateFromVNode 中根据 computedStyle 设置：显式固定 width+height = true
     public bool $isLayoutBoundary = false;
 
+    // ── Blink 对齐：子节点脏标志 —— propagateLayoutDirty 在子节点脏时设置此位
+    // mainLayout 先读此位，false 则跳过整个子项循环（对标 Blink ChildNeedsLayout）
+    public bool $childrenNeedLayout = true;
+
     public function __construct(
         string $type,
         ?ComputedStyle $computedStyle = null,

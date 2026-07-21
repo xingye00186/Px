@@ -198,7 +198,14 @@ class LayoutOrchestrator implements ChildLayoutProvider
 
         // ─── Phase B: 递归处理子节点 ───
         $childFragments = [];
-        foreach ($node->children as $i => $child) {
+
+        // Blink SimplifiedLayout 路径：childrenNeedLayout=false 时跳过子项循环
+        // 父约束变化但所有子项洁净时，直接使用缓存的子 Fragment 树
+        if (!$node->childrenNeedLayout && $node->cachedFragment !== null) {
+            $childFragments = $node->cachedFragment->children ?? [];
+        } else {
+            // 正常循环处理子节点
+            foreach ($node->children as $i => $child) {
             // LayoutBoundary 子项：若洁净则跳过递归直接使用缓存
             if ($child->isLayoutBoundary && !$child->layoutDirty && $child->cachedFragment !== null
                 && $child->cachedConstraintSpace !== null) {
@@ -244,6 +251,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, 0);
             }
         }
+        }   // end else (childrenNeedLayout)
 
         if ($isOOF) {
             $cs = $style;
