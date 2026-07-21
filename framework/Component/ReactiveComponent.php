@@ -153,8 +153,15 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     }
 
     /**
-     * 递归 patche VNode 树：用新树属性更新旧树对象，复用旧 VNode 保留 computedStyle。
+     * 递归 patch VNode 树：用新树属性更新旧树对象，复用旧 VNode 保留 computedStyle。
      * 匹配策略：先按 key，再按 type+index。
+     *
+     * patchFlag 消费逻辑（Vue 3 对标）：
+     *   - PATCH_STRUCT (8) 或 PATCH_ALL (15)：全量替换 props（结构变化）
+     *   - PATCH_STYLE (1)：仅更新 ':style' 键
+     *   - PATCH_CLASS (2)：仅更新 'class' 键
+     *   - PATCH_EVENT  (4)：仅更新 '@*' 键
+     *   - PATCH_NONE (0)：跳过 props 更新（完全静态）
      */
     private function patchVNodeTree(VNode $old, VNode $new): void
     {
@@ -164,8 +171,46 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
             return;
         }
 
-        // 更新 props（原地覆盖，保留 computedStyle）
-        $old->props = $new->props;
+        // patchFlag 选择性更新 props
+        $flags = $old->patchFlags;
+        if ($flags === VNode::PATCH_NONE) {
+            // 完全静态：跳过 props 更新
+        } elseif (($flags & VNode::PATCH_STRUCT) !== 0 || $flags === VNode::PATCH_ALL) {
+            // 结构变化或未细化标记：全量替换
+            $old->props = $new->props;
+        } else {
+            // 选择性更新：只复制 patchFlag 标记的动态键
+            if ($old->props === null) {
+                $old->props = $new->props;
+            } elseif ($new->props !== null) {
+                if (($flags & VNode::PATCH_STYLE) !== 0) {
+                    if (isset($new->props[':style'])) {
+                        $old->props[':style'] = $new->props[':style'];
+                    } elseif (isset($old->props[':style'])) {
+                        unset($old->props[':style']);
+                    }
+                    // 动态 style 可能影响静态 style 合并
+                    if (isset($new->props['style'])) {
+                        $old->props['style'] = $new->props['style'];
+                    }
+                }
+                if (($flags & VNode::PATCH_CLASS) !== 0) {
+                    if (isset($new->props['class'])) {
+                        $old->props['class'] = $new->props['class'];
+                    } elseif (isset($old->props['class'])) {
+                        unset($old->props['class']);
+                    }
+                }
+                if (($flags & VNode::PATCH_EVENT) !== 0) {
+                    // 复制所有 @ 开头的键
+                    foreach ($new->props as $k => $v) {
+                        if (str_starts_with($k, '@')) {
+                            $old->props[$k] = $v;
+                        }
+                    }
+                }
+            }
+        }
 
         // 更新组件实例引用
         $old->componentInstance = $new->componentInstance;
@@ -174,10 +219,10 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
 
         // children 分类型处理
         if ($old->children instanceof VNode && $new->children instanceof VNode) {
-            // 单子节点：递归 patche
+            // 单子节点：递归 patch
             $this->patchVNodeTree($old->children, $new->children);
         } elseif (is_array($old->children) && is_array($new->children)) {
-            // 多子节点：按 key 匹配 patche
+            // 多子节点：按 key 匹配 patch
             $old->children = $this->patchChildrenArray($old->children, $new->children);
         } else {
             // 简单类型（string/null）或类型不一致：直接替换

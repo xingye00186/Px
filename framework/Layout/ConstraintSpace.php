@@ -112,6 +112,40 @@ class ConstraintSpace
         ;
     }
 
+    /**
+     * 布局等价比较（对标 Blink ConstraintSpace 核心字段）。
+     *
+     * 排除不影响布局结构结果的字段：
+     *   - bfcOffsetX/Y：仅影响绝对位置偏移，不影响子项尺寸/相对布局
+     *   - parentContentX/Y：绝对坐标，不影响布局计算
+     *   - forceRelayoutChildren：外部控制标志，非约束本身
+     *
+     * 当 layoutEquals() 为 true 时，Fragment 缓存可安全命中，
+     * 即使 equals() 因 BFC 偏移不同而返回 false。
+     */
+    public function layoutEquals(ConstraintSpace $other): bool
+    {
+        return $this->contentWidth === $other->contentWidth
+            && $this->contentHeight === $other->contentHeight
+            && $this->percentageWidth === $other->percentageWidth
+            && $this->percentageHeight === $other->percentageHeight
+            && $this->determinedPercentageWidth === $other->determinedPercentageWidth
+            && $this->determinedPercentageHeight === $other->determinedPercentageHeight
+            && $this->isIntrinsicMeasurement === $other->isIntrinsicMeasurement
+            && $this->spaceType === $other->spaceType
+            && $this->paddingTop === $other->paddingTop
+            && $this->paddingRight === $other->paddingRight
+            && $this->paddingBottom === $other->paddingBottom
+            && $this->paddingLeft === $other->paddingLeft
+            && $this->borderTop === $other->borderTop
+            && $this->borderRight === $other->borderRight
+            && $this->borderBottom === $other->borderBottom
+            && $this->borderLeft === $other->borderLeft
+            && $this->containerWidth === $other->containerWidth
+            && $this->containerHeight === $other->containerHeight
+        ;
+    }
+
     public function __construct(
         int $containerWidth = 0,
         int $containerHeight = 0,

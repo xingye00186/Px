@@ -129,21 +129,25 @@ class LayoutOrchestrator implements ChildLayoutProvider
         }
         // 不满足早退条件：走正常布局
 
-        // ── 第三级早退：约束签名不匹配，但仅 BFC 偏移变化──
+        // ── 第二级早退：布局等价但 BFC/位置偏移变化 → 平移子树 ──
+        // 使用 layoutEquals() 排除 bfcOffset/parentContent 噪音，
+        // 比旧版 contentWidth/Height 比较覆盖更广（含 padding/border 一致的情况）
         if ($node->cachedFragment !== null && !$node->layoutDirty && !$node->styleDirty) {
             if ($node->cachedConstraintSpace !== null
-                && $space->getContentWidth() === $node->cachedConstraintSpace->getContentWidth()
-                && $space->getContentHeight() === $node->cachedConstraintSpace->getContentHeight()
+                && $space->layoutEquals($node->cachedConstraintSpace)
             ) {
-                // 仅 bfcOffset 变化：平移整棵子树
+                // 仅 BFC 偏移或 parentContent 位置变化：平移整棵子树
                 $dx = $space->getBfcOffsetX() - $node->cachedConstraintSpace->getBfcOffsetX();
                 $dy = $space->getBfcOffsetY() - $node->cachedConstraintSpace->getBfcOffsetY();
                 if ($dx !== 0 || $dy !== 0) {
                     $translated = $this->translateFragment($node->cachedFragment, $dx, $dy);
                     $node->cachedFragment = $translated;
                     $node->cachedConstraintSpace = $space;
+                    Diag::log(2, 'fragment:bfc-translate', ['type' => $node->type, 'dx' => $dx, 'dy' => $dy]);
                     return $translated;
                 }
+                // layoutEquals 为 true 且 BFC 也相同 → 完全等价（应已被 equals 捕获）
+                return $node->cachedFragment;
             }
         }
 
