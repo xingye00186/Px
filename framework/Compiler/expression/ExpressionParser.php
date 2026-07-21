@@ -3,6 +3,18 @@
 namespace Px\Compiler\Expression;
 
 /**
+ * ExpressionParser Interface
+ *
+ * Expression parser for Vue-like template expressions.
+ * Converts template expressions to PHP executable code.
+ */
+interface ExpressionParserInterface
+{
+    public function parse(string $expression, ?array $loopInfo = null): string;
+    public function getSupportedOperators(): array;
+}
+
+/**
  * ExpressionParser - Main Facade
  *
  * Main entry point for parsing template expressions.

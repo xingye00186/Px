@@ -3,6 +3,18 @@
 namespace Px\Compiler\Expression;
 
 /**
+ * ExpressionType Interface
+ *
+ * Base interface for expression type handlers.
+ * Each expression type (ternary, comparison, logical) implements this interface.
+ */
+interface ExpressionTypeInterface
+{
+    public function matches(string $expression): bool;
+    public function parse(string $expression, ?array $loopInfo = null): string;
+}
+
+/**
  * ExpressionType Abstract Base Class
  *
  * Base class for expression type handlers.

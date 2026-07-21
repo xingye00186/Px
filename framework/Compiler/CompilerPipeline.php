@@ -50,9 +50,7 @@ class CompilerPipeline
      */
     public function registerDefaultTransforms(): void
     {
-        // StyleArrayTransform temporarily excluded — it modifies VNode props['style']
-        // which conflicts with the inline style-to-array conversion in generateVNodeExpr().
-        // Once codegen is updated to read transform annotations, it can be re-enabled.
+        $this->addTransform(new StyleArrayTransform());
         $this->addTransform(new StaticHoistTransform());
         $this->addTransform(new PatchFlagTransform());
     }

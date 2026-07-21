@@ -19,30 +19,29 @@ class PatchFlagTransform implements TransformInterface
 
     private function walk(VNode $node): void
     {
-        // 跳过 v-for 元素（其 patch flags 在 v-for helper 中处理）
-        if (isset($node->props['v-for'])) {
-            return;
-        }
+        // v-for 元素本身被替换为 render_N() helper 调用，无需 patch flags
+        // 但必须递归处理子节点（它们会被 generateVForHelpers 单独调用 generateVNodeExpr）
+        if (!isset($node->props['v-for'])) {
+            $node->__patchFlags = $this->detectPatchFlags($node->props);
 
-        $node->__patchFlags = $this->detectPatchFlags($node->props);
-
-        // PATCH_TEXT: 检测子节点是否含动态文本插值 ({{ }})
-        if (is_array($node->children)) {
-            foreach ($node->children as $ch) {
-                if ($ch instanceof VNode && $ch->type === '#text'
-                    && (isset($ch->props['parts']) || isset($ch->props['bind']))) {
+            // PATCH_TEXT: 检测子节点是否含动态文本插值 ({{ }})
+            if (is_array($node->children)) {
+                foreach ($node->children as $ch) {
+                    if ($ch instanceof VNode && $ch->type === '#text'
+                        && (isset($ch->props['parts']) || isset($ch->props['bind']))) {
+                        $node->__patchFlags |= 32;
+                        break;
+                    }
+                }
+            } elseif ($node->children instanceof VNode) {
+                $ch = $node->children;
+                if ($ch->type === '#text' && (isset($ch->props['parts']) || isset($ch->props['bind']))) {
                     $node->__patchFlags |= 32;
-                    break;
                 }
             }
-        } elseif ($node->children instanceof VNode) {
-            $ch = $node->children;
-            if ($ch->type === '#text' && (isset($ch->props['parts']) || isset($ch->props['bind']))) {
-                $node->__patchFlags |= 32;
-            }
         }
 
-        // 递归子节点
+        // 递归子节点（即使当前节点是 v-for，子节点也需要 patch flags）
         if ($node->isComponent) return;
 
         if (is_array($node->children)) {
