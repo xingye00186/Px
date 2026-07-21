@@ -43,13 +43,11 @@ require_once $compilerDir . '/ScriptAnalyzer.php';
 require_once $compilerDir . '/ComponentRegistry.php';
 
 // ---- Load expression and directive modules (v8) ----
-require_once $compilerDir . '/expression/ExpressionParserInterface.php';
-require_once $compilerDir . '/expression/ExpressionTypeInterface.php';
 require_once $compilerDir . '/expression/ExpressionType.php';
+require_once $compilerDir . '/expression/ExpressionParser.php';
 require_once $compilerDir . '/expression/TernaryExpression.php';
 require_once $compilerDir . '/expression/ComparisonExpression.php';
 require_once $compilerDir . '/expression/LogicalExpression.php';
-require_once $compilerDir . '/expression/ExpressionParser.php';
 require_once $compilerDir . '/expression/ConcatenationExpression.php';
 
 // ---- Load Helper modules (extracted utilities) ----
@@ -88,81 +86,6 @@ class StaticNodeContext {
     public int $counter = 0;
     public array $initCode = [];
     public array $declarations = [];
-}
-
-/**
- * 判断 VNode 子树是否完全静态（无任何动态绑定）。
- * 完全静态的子树可以跨帧复用同一对象，无需每帧重建。
- */
-function isFullyStatic(VNode $node): bool
-{
-    if ($node->isComponent) return false;
-
-    $props = $node->props;
-    if ($props !== null) {
-        foreach ($props as $k => $v) {
-            if (str_starts_with($k, '__')) continue;
-            if (str_starts_with($k, ':')) return false;
-            if (str_starts_with($k, '@')) return false;
-            if (str_starts_with($k, 'v-')) return false;
-            // {{ }} 插值：parts 和 bind 表示动态文本内容
-            if ($k === 'parts') return false;
-            if ($k === 'bind') return false;
-        }
-    }
-
-    if (is_array($node->children)) {
-        foreach ($node->children as $child) {
-            if ($child instanceof VNode && !isFullyStatic($child)) {
-                return false;
-            }
-        }
-    } elseif ($node->children instanceof VNode) {
-        if (!isFullyStatic($node->children)) {
-            return false;
-        }
-    } elseif (is_string($node->children) && $node->children !== '') {
-        // 文本内容含变量引用 → 动态
-        if (str_contains($node->children, '$this->')
-            || str_contains($node->children, '$item')
-            || str_contains($node->children, "' . ")) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-/**
- * 检测 VNode props 中的动态绑定类型，返回 patchFlag 位掩码。
- */
-function detectPatchFlags(?array $props): int
-{
-    $flags = 0;
-    if ($props === null) return 0;
-    if (isset($props[':style'])) $flags |= 1;
-    if (isset($props[':class'])) $flags |= 2;
-    foreach ($props as $k => $v) {
-        if (str_starts_with($k, '@')) { $flags |= 4; break; }
-    }
-    // PATCH_PROPS: :value, :disabled, :src, :href 等动态属性
-    $dynamicPropKeys = [':value', ':disabled', ':checked', ':selected',
-                         ':src', ':href', ':placeholder', ':readonly', ':title'];
-    foreach ($dynamicPropKeys as $dk) {
-        if (isset($props[$dk])) { $flags |= 16; break; }
-    }
-    // 通用检测 - 任何以 : 开头且不是 :style/:class 的绑定
-    if (($flags & 16) === 0) {
-        foreach ($props as $k => $v) {
-            if (str_starts_with($k, ':') && $k !== ':style' && $k !== ':class'
-                && $k !== ':scroll-top' && $k !== ':scroll-left'
-                && $k !== ':bind' && $k !== ':key') {
-                $flags |= 16;
-                break;
-            }
-        }
-    }
-    return $flags;
 }
 
 /**
@@ -320,6 +243,11 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
             // Generate prop entry: handle PHP expressions (starting with $) as raw
             // Static style string → 编译期解析为数组（零运行时 regex）
             if ($k === 'style' && is_string($v) && $v !== '' && $v[0] !== '$') {
+                // 已被 StyleArrayTransform 预处理为数组格式 → 直接透传
+                if ($v[0] === '[') {
+                    $propsStr[] = var_export('style', true) . '=>' . $v;
+                    continue;
+                }
                 $decls = explode(';', $v);
                 $pairs = [];
                 $valid = true;
@@ -691,44 +619,35 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
         ? "VNode::h('{$tag}', {$propsOut})"
         : "VNode::h('{$tag}', {$propsOut}, {$childrenExpr})";
 
-    // 静态 VNode 提升：仅在没有 v-for 循环时（$loopInfo===null）生效，
-    // 避免跨方法作用域问题。
-    // 优先使用 StaticHoistTransform 的标注（$node->__staticVarName），
-    // 若不存在则回退到内联 isFullyStatic() 计算。
+    // 静态 VNode 提升：仅从 transform 标注读取
+    //
+    // 原则：transform 遍历整棵 VNode 树并标注完全静态的子树（__staticVarName）。
+    // codegen 只读取标注，不重复计算。如果某个节点应该是静态的但缺少标注，
+    // 应在 StaticHoistTransform 中修复，而不是在此处加 fallback。
     if (isset($node->__staticVarName) && $ctx !== null) {
         $ctx->initCode[] = "self::\${$node->__staticVarName} ??= {$expr};";
         return "self::\${$node->__staticVarName}";
     }
-    if ($tag !== '#component' && $node !== null && !$node->isComponent
-        && $loopInfo === null && $ctx !== null && isFullyStatic($node)) {
-        $varName = '__s' . ($ctx->counter++);
-        // 类级别静态属性：self::$__sN ??= <expr>;（闭包内仍可访问，且跨帧复用）
-        $ctx->declarations[] = "    private static ?\\Px\\Dom\\VNode \${$varName} = null;";
-        $ctx->initCode[] = "self::\${$varName} ??= {$expr};";
-        return "self::\${$varName}";
-    }
 
-    // 优先使用 PatchFlagTransform 的标注，否则内联计算
-    $flags = $node->__patchFlags ?? detectPatchFlags($node->props);
+    // 优先读取 PatchFlagTransform 标注，无标注则默认 0（无动态绑定）
+    //
+    // 原则：transform 标注所有节点的动态绑定类型。如果某节点缺少 __patchFlags，
+    // 应在 PatchFlagTransform 中修复其遍历逻辑，而不是在此处加 fallback 计算。
+    $flags = $node->__patchFlags ?? 0;
 
     // PATCH_TEXT: 检测子节点是否含动态文本插值 ({{ }})
-    // 仅当 __patchFlags 来自内联计算（非 transform）时才需要 PATCH_TEXT 检测
-    // 因为 PatchFlagTransform 已经包含了此逻辑
-    if (!isset($node->__patchFlags)) {
-        // 未使用 transform，内联补充 PATCH_TEXT 检测
-        if (is_array($node->children)) {
-            foreach ($node->children as $ch) {
-                if ($ch instanceof VNode && $ch->type === '#text'
-                    && (isset($ch->props['parts']) || isset($ch->props['bind']))) {
-                    $flags |= 32; // PATCH_TEXT
-                    break;
-                }
+    if (is_array($node->children)) {
+        foreach ($node->children as $ch) {
+            if ($ch instanceof VNode && $ch->type === '#text'
+                && (isset($ch->props['parts']) || isset($ch->props['bind']))) {
+                $flags |= 32; // PATCH_TEXT
+                break;
             }
-        } elseif ($node->children instanceof VNode) {
-            $ch = $node->children;
-            if ($ch->type === '#text' && (isset($ch->props['parts']) || isset($ch->props['bind']))) {
-                $flags |= 32;
-            }
+        }
+    } elseif ($node->children instanceof VNode) {
+        $ch = $node->children;
+        if ($ch->type === '#text' && (isset($ch->props['parts']) || isset($ch->props['bind']))) {
+            $flags |= 32;
         }
     }
 
@@ -820,10 +739,12 @@ function generateComponentExpr(VNode $node, ?array $loopInfo): string
         $dynamicExpr = $node->props['__dynamicIs'] ?? '';
         $parser = new ExpressionParser();
         $parsedExpr = $parser->parse($dynamicExpr, $loopInfo);
-        return wrapWithPatchFlags("VNode::hComponent(\$this->resolveComponent({$parsedExpr}), {$propsOut}, {$compPropsOut})", $node->__patchFlags ?? detectPatchFlags($node->props));
+        return wrapWithPatchFlags("VNode::hComponent(\$this->resolveComponent({$parsedExpr}), {$propsOut}, {$compPropsOut})", $node->__patchFlags ?? 0);
     }
 
-    return wrapWithPatchFlags("VNode::hComponent('{$node->componentClass}', {$propsOut}, {$compPropsOut})", $node->__patchFlags ?? detectPatchFlags($node->props));
+    // 静态组件：同样从 transform 读取标注
+    // 原则同前——缺少标注应在 PatchFlagTransform 中修复
+    return wrapWithPatchFlags("VNode::hComponent('{$node->componentClass}', {$propsOut}, {$compPropsOut})", $node->__patchFlags ?? 0);
 }
 
 /**
@@ -1038,7 +959,13 @@ PHP;
                     $bindingParts[] = var_export($propKey, true) . '=>$' . $item . "['" . addslashes($fieldName) . "']";
                 }
                 $bindingExpr = '[' . implode(',', $bindingParts) . ']';
-                $compFlags = detectPatchFlags($elementProps);
+                // 编译期计算 v-for 组件元素的 patch flags（$elementProps 是数组，不是 VNode）
+                $compFlags = 0;
+                if (isset($elementProps[':style'])) $compFlags |= 1;
+                if (isset($elementProps[':class'])) $compFlags |= 2;
+                foreach ($elementProps as $k => $v) {
+                    if (str_starts_with($k, '@')) { $compFlags |= 4; break; }
+                }
                 $compFlagsCode = $compFlags !== 0 ? "\n            \$_comp->patchFlags = {$compFlags};" : '';
 
                 if ($parentItem !== null) {
@@ -1230,12 +1157,6 @@ function compileOneComponent(
         }
     }
 
-// Build class styles export (for runtime LayoutResolver)
-    $classStylesExport = '[]';
-    if (count($classStyles) > 0) {
-        $classStylesExport = varExportShort($classStyles);
-    }
-
     // Parse template → VNode tree
     $parser = new TemplateParser($registry);
     $root = $parser->parse($template);
@@ -1258,9 +1179,13 @@ function compileOneComponent(
     \mergeClassStylesIntoNode($root, $rawClassStyles);
 
     // ---- CompilerPipeline: run transform passes on the VNode tree ----
-    // Transforms annotate the VNode tree with optimization metadata.
-    // Currently, codegen still computes these inline (for backward compat),
-    // so transforms are informational at this stage.
+    //
+    // 架构原则：所有 VNode 树的分析/标注/优化由 transform 在此阶段完成。
+    // 后续的 codegen（generateVNodeExpr 等）只读取 transform 设置的标注，
+    // 不重复计算。如果 codegen 需要新的标注信息，应新增 transform 趟，
+    // 而不是在 codegen 中加内联计算。
+    //
+    // 目前默认注册：StyleArrayTransform → StaticHoistTransform → PatchFlagTransform
     $pipeline = new CompilerPipeline();
     $pipeline->registerDefaultTransforms();
     $pipeline->runTransforms($root);
@@ -1373,7 +1298,8 @@ function compileOneComponent(
     $getBindValue = $bindValGen->generateGet($bindKeys, $arrayBindKeys);
 
     // v-for helpers
-    $vForHelpers = generateVForHelpers($loops, $staticCtx);
+    $vForHelperGen = new VForHelperGenerator();
+    $vForHelpers = $vForHelperGen->generateHelpers($loops, $staticCtx);
 
     // Build name lookup for dynamic props exclusion
     $reactivePropsByName = [];
@@ -1452,89 +1378,29 @@ function compileOneComponent(
         }
     }
 
-    $classContent = <<<PHP
-<?php
-
-use native_types;
-
-/**
- * AUTO-GENERATED by SFC Compiler v10 (Reactive) — DO NOT EDIT
- * Source: $baseName.vue
- */
-
-use Px\Component\ReactiveComponent;
-use Px\Dom\VNode;
-
-class {$className} extends ReactiveComponent
-{
-{$reactiveStorageCode}
-{$classBody}
-{$dynamicPropsDeclaration}
-{$staticNodeDeclCode}
-
-{$reactiveHookCode}
-{$effectFieldCode}
-{$getVNodeTreeOverride}
-{$onUnmountWithCleanup}
-    /**
-     * 渲染组件，返回 VNode 树
-     */
-    public function render(): VNode
-    {
-        // 静态 VNode 跨帧复用
-        {$staticNodePrefix}return {$renderExpr};
-    }
-
-    /**
-     * 事件分发 (PHP 8.4 match 表达式)
-     */
-    public function dispatchClick(string \$handler, ?string \$arg = null): void
-    {
-{$dispatchClick}
-    }
-
-    /**
-     * 键盘事件分发
-     */
-    public function dispatchKey(string \$handler, string \$action, int \$keyCode, string \$char): void
-    {
-{$dispatchKey}
-    }
-
-    /**
-     * 动态绑定值设置
-     */
-    public function setBindValue(string \$bindKey, string \$value): void
-    {
-{$setBindValue}
-    }
-
-    /**
-     * 读取绑定值 (AOT-compatible switch)
-     */
-    public function getBindValue(string \$bindKey): string
-    {
-{$getBindValue}
-    }
-{$vForHelpers}
-
-    /**
-     * 解析动态组件: kebab-case → PascalCase 类名
-     * e.g. "case-011-position-absolute" → "Case011PositionAbsoluteComponent"
-     */
-    public function resolveComponent(string \$tag): string
-    {
-        \$parts = explode('-', \$tag);
-        \$className = '';
-        foreach (\$parts as \$p) {
-            \$className .= ucfirst(\$p);
-        }
-        return \$className . 'Component';
-    }
-
-
-{$defaultOnMount}{$defaultOnUnmount}{$defaultConstruct}}
-PHP;
+    $assembler = new ClassAssembler();
+    $classContent = $assembler->assemble([
+        'reactiveStorageCode' => $reactiveStorageCode,
+        'classBody' => $classBody,
+        'dynamicPropsDeclaration' => $dynamicPropsDeclaration,
+        'staticNodeDeclCode' => $staticNodeDeclCode,
+        'reactiveHookCode' => $reactiveHookCode,
+        'effectFieldCode' => $effectFieldCode,
+        'getVNodeTreeOverride' => $getVNodeTreeOverride,
+        'onUnmountWithCleanup' => $onUnmountWithCleanup,
+        'staticNodePrefix' => $staticNodePrefix,
+        'renderExpr' => $renderExpr,
+        'dispatchClick' => $dispatchClick,
+        'dispatchKey' => $dispatchKey,
+        'setBindValue' => $setBindValue,
+        'getBindValue' => $getBindValue,
+        'vForHelpers' => $vForHelpers,
+        'defaultOnMount' => $defaultOnMount,
+        'defaultOnUnmount' => $defaultOnUnmount,
+        'defaultConstruct' => $defaultConstruct,
+        'className' => $className,
+        'baseName' => $baseName,
+    ]);
 
     $classPath = $outDir . DIRECTORY_SEPARATOR . $className . '.php';
     $validator = new AotValidator();
