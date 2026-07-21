@@ -927,11 +927,18 @@ class RenderTreeManager
         foreach ($node->children as $child) {
             $this->propagateLayoutDirty($child);
         }
-        // 子节点中有任何脏的 → 标记自己（同时向上传播到根）
+        // 子节点中有几何变化的 → 传播 layoutDirty（父链全量布局）
         foreach ($node->children as $child) {
-            if ($child->layoutDirty || $child->styleDirty) {
+            if ($child->layoutDirty) {
                 $node->markLayoutDirty(true);
-                break;
+                return;
+            }
+        }
+        // 子节点中只有视觉变化的 → 传播 styleDirty（仅重绘，不布局）
+        foreach ($node->children as $child) {
+            if ($child->styleDirty) {
+                $node->markStyleDirty(true);
+                return;
             }
         }
     }
