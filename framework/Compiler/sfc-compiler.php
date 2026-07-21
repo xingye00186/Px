@@ -1085,8 +1085,14 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     }
                     $propsStr[] = var_export(':style', true) . '=>' . $resolved;
                 } else {
+                    // 字符串模式：先 resolve 变量再尝试转为数组（零运行时 regex）
                     $resolvedStyle = resolveStyleExpr($v, $loopInfo);
-                    $propsStr[] = var_export(':style', true) . '=>' . $resolvedStyle;
+                    $arrayStyle = tryConvertStyleToArray($resolvedStyle);
+                    if ($arrayStyle !== null) {
+                        $propsStr[] = var_export(':style', true) . '=>' . $arrayStyle;
+                    } else {
+                        $propsStr[] = var_export(':style', true) . '=>' . $resolvedStyle;
+                    }
                 }
                 continue;
             }
