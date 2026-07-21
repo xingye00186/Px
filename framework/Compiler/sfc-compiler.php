@@ -1021,6 +1021,25 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
             foreach ($node->props as $k => $v) {
                 if (str_starts_with($k, '__')) continue;
                 if ($k === 'v-if') continue; // handled by closure builder
+                // Static style string → 编译期数组化（零运行时 regex）
+                if ($k === 'style' && is_string($v) && $v !== '' && $v[0] !== '$') {
+                    $decls = explode(';', $v);
+                    $pairs = [];
+                    $valid = true;
+                    foreach ($decls as $decl) {
+                        $decl = trim($decl);
+                        if ($decl === '') continue;
+                        $colonPos = strpos($decl, ':');
+                        if ($colonPos === false) { $valid = false; break; }
+                        $prop = trim(substr($decl, 0, $colonPos));
+                        $val = trim(substr($decl, $colonPos + 1));
+                        $pairs[] = var_export($prop, true) . '=>' . var_export($val, true);
+                    }
+                    if ($valid && !empty($pairs)) {
+                        $propsStr[] = var_export('style', true) . '=>[' . implode(',', $pairs) . ']';
+                        continue;
+                    }
+                }
                 if (is_string($v) && strlen($v) > 0 && $v[0] === '$') {
                     $propsStr[] = var_export($k, true) . '=>' . $v;
                 } else {
