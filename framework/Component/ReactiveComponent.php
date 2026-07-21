@@ -157,10 +157,12 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
      * 匹配策略：先按 key，再按 type+index。
      *
      * patchFlag 消费逻辑（Vue 3 对标）：
-     *   - PATCH_STRUCT (8) 或 PATCH_ALL (15)：全量替换 props（结构变化）
+     *   - PATCH_STRUCT (8) 或 PATCH_ALL (63)：全量替换 props（结构变化）
      *   - PATCH_STYLE (1)：仅更新 ':style' 键
      *   - PATCH_CLASS (2)：仅更新 'class' 键
      *   - PATCH_EVENT  (4)：仅更新 '@*' 键
+     *   - PATCH_PROPS (16)：仅更新 ':key' 动态属性（非 style/class）
+     *   - PATCH_TEXT  (32)：动态文本内容（由 children 递归处理）
      *   - PATCH_NONE (0)：跳过 props 更新（完全静态）
      */
     private function patchVNodeTree(VNode $old, VNode $new): void
@@ -205,6 +207,14 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
                     // 复制所有 @ 开头的键
                     foreach ($new->props as $k => $v) {
                         if (str_starts_with($k, '@')) {
+                            $old->props[$k] = $v;
+                        }
+                    }
+                }
+                if (($flags & VNode::PATCH_PROPS) !== 0) {
+                    // 复制所有 : 开头的动态属性（排除已处理的 :style/:class）
+                    foreach ($new->props as $k => $v) {
+                        if (str_starts_with($k, ':') && $k !== ':style' && $k !== ':class') {
                             $old->props[$k] = $v;
                         }
                     }

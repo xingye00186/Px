@@ -99,8 +99,12 @@ class VNode
     public const PATCH_EVENT = 4;
     /** v-for / v-if 结构动态 */
     public const PATCH_STRUCT = 8;
+    /** :value, :disabled, :src 等动态属性（非 style/class） */
+    public const PATCH_PROPS = 16;
+    /** {{ }} 动态文本内容 */
+    public const PATCH_TEXT  = 32;
     /** 全部动态（默认，未优化） */
-    public const PATCH_ALL   = 15;
+    public const PATCH_ALL   = 63;
 
     /**
      * 编译器标记的 patch flags（Vue 3 patchFlag 兼容语义）。

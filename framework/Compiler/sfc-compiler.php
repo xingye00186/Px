@@ -920,6 +920,23 @@ function detectPatchFlags(?array $props): int
     foreach ($props as $k => $v) {
         if (str_starts_with($k, '@')) { $flags |= 4; break; }
     }
+    // PATCH_PROPS: :value, :disabled, :src, :href 等动态属性
+    $dynamicPropKeys = [':value', ':disabled', ':checked', ':selected',
+                         ':src', ':href', ':placeholder', ':readonly', ':title'];
+    foreach ($dynamicPropKeys as $dk) {
+        if (isset($props[$dk])) { $flags |= 16; break; }
+    }
+    // 通用检测 - 任何以 : 开头且不是 :style/:class 的绑定
+    if (($flags & 16) === 0) {
+        foreach ($props as $k => $v) {
+            if (str_starts_with($k, ':') && $k !== ':style' && $k !== ':class'
+                && $k !== ':scroll-top' && $k !== ':scroll-left'
+                && $k !== ':bind' && $k !== ':key') {
+                $flags |= 16;
+                break;
+            }
+        }
+    }
     return $flags;
 }
 
@@ -1519,6 +1536,23 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
     }
 
     $flags = detectPatchFlags($node->props);
+
+    // PATCH_TEXT: 检测子节点是否含动态文本插值 ({{ }})
+    if (is_array($node->children)) {
+        foreach ($node->children as $ch) {
+            if ($ch instanceof VNode && $ch->type === '#text'
+                && (isset($ch->props['parts']) || isset($ch->props['bind']))) {
+                $flags |= 32; // PATCH_TEXT
+                break;
+            }
+        }
+    } elseif ($node->children instanceof VNode) {
+        $ch = $node->children;
+        if ($ch->type === '#text' && (isset($ch->props['parts']) || isset($ch->props['bind']))) {
+            $flags |= 32;
+        }
+    }
+
     return wrapWithPatchFlags($expr, $flags);
 }
 

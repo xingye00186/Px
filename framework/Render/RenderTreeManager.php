@@ -326,6 +326,14 @@ class RenderTreeManager
         if (($flags & VNode::PATCH_CLASS) !== 0) {
             if (($a->props['class'] ?? '') !== ($b->props['class'] ?? '')) return false;
         }
+        if (($flags & VNode::PATCH_PROPS) !== 0) {
+            // 比较所有 : 开头的动态属性（排除已处理的 :style/:class）
+            foreach ($a->props as $k => $v) {
+                if (str_starts_with($k, ':') && $k !== ':style' && $k !== ':class') {
+                    if (($a->props[$k] ?? '') !== ($b->props[$k] ?? '')) return false;
+                }
+            }
+        }
 
         // scroll/bind 始终比较（布局强相关，不受 patchFlag 控制）
         if (($a->props[':scroll-top'] ?? '') !== ($b->props[':scroll-top'] ?? '')) return false;
