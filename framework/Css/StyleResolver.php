@@ -21,25 +21,24 @@ class StyleResolver
     private static array $classStylesCache = [];
 
     /**
-     * 解析元素样式为 ComputedStyle。
+     * 解析元素样式为 ComputedStyle（走 StylePool Flyweight 池）。
      *
-     * @param string $inlineStyle 内联样式字符串（style="..."）
-     * @param string $className CSS class 名称
-     * @param array|null $parentDeclarations 父元素声明（用于继承）
-     * @param string $elementType 元素类型（如 'div', 'span'）
-     * @param string $parentClassStr 父元素 class 字符串
-     * @param array $precedingSiblingClasses 前面的兄弟元素 class
-     * @param array $parentStyleDeclarations 父元素完整声明（用于伪类合并）
-     * @return ComputedStyle
+     * @param array           $inlineStyle       内联样式数组（编译期已解析）
+     * @param string          $className         CSS class 名称
+     * @param ?ComputedStyle  $parentCS          父元素 ComputedStyle（用于继承 + 池 key 组成的稳定身份）
+     * @param string          $elementType       元素类型（如 'div', 'span'）
+     * @param string          $parentClassStr    父元素 class 字符串
+     * @param array           $precedingSiblingClasses 前面的兄弟元素 class
+     * @param array           $pseudoStyles      伪类/伪元素样式输出（by-ref）
+     * @return ComputedStyle 池化实例（同输入必返同一指针）
      */
     public static function resolve(
         array $inlineStyle = [],
         string $className = '',
-        ?array $parentDeclarations = null,
+        ?ComputedStyle $parentCS = null,
         string $elementType = 'div',
         string $parentClassStr = '',
         array $precedingSiblingClasses = [],
-        array $parentStyleDeclarations = [],
         array &$pseudoStyles = []
     ): ComputedStyle {
         // 防御：空 string → []（编译期未覆盖的空 style 路径）
@@ -55,11 +54,17 @@ class StyleResolver
             $declarations[$k] = $v;
         }
 
-        // 3. 合并父元素声明（继承）
-        $parentDecls = $parentDeclarations ?? [];
-
-        // 4. 构建 ComputedStyle
-        return new ComputedStyle($declarations, $parentDecls, $elementType);
+        // 3. 走 StylePool：池命中则返回复用实例（identity 稳定）；未命中则构造入池。
+        // Key 组成：$className | $elementType | inline指纹 | spl_object_id($parentCS)
+        // → 父身份代替父内容，避开序列化父数组的 O(depth) 开销。
+        // 注：pseudoStyles 由 resolveClassStyles 通过 by-ref 写入，不影响池 key。
+        return StylePool::intern(
+            $declarations,
+            $parentCS,
+            $elementType,
+            StylePool::fingerprintInline($inlineStyle),
+            $className
+        );
     }
 
     /**

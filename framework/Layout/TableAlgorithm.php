@@ -21,7 +21,7 @@ class TableAlgorithm extends LayoutAlgorithm
         ?array $childConstraints = null,
         ?array $childIntrinsicSizes = null,
     ): PhysicalFragment {
-        $s = $style ?? new ComputedStyle([]);
+        $s = $style ?? \Px\Css\StylePool::empty();
         $children = $childFragments;
 
         // Intrinsic measurement mode

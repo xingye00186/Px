@@ -16,7 +16,7 @@ use Px\Css\StyleResolver;
  */
 class StyleRecalcPass
 {
-    public function recalc(VNode $root, array $parentStyle = [], string $parentClassStr = ''): void
+    public function recalc(VNode $root, ?ComputedStyle $parentCS = null, string $parentClassStr = ''): void
     {
         if ($root->isComponent) {
             // Component 节点不直接渲染，展开后由子组件管理
@@ -28,9 +28,10 @@ class StyleRecalcPass
         if (!is_array($inlineStyle)) { $inlineStyle = []; }
         $className = $root->props['class'] ?? '';
 
-        // #text 节点无样式，用父样式直接构造最小 ComputedStyle，跳过 StyleResolver
+        // #text 节点无自身样式：直接复用父 ComputedStyle（identity 稳定，避开估算开销）
+        // 若无父（顶层预防护理论上不该发生），够用 empty 单例兑底
         if ($root->type === '#text') {
-            $root->computedStyle = new ComputedStyle($parentStyle);
+            $root->computedStyle = $parentCS ?? StylePool::empty();
             \Px\Core\PerfCounter::inc('style_recalc_text_skip');
             return;
         }
@@ -39,21 +40,20 @@ class StyleRecalcPass
         $computedStyle = StyleResolver::resolve(
             inlineStyle: $inlineStyle,
             className: $className,
-            parentDeclarations: $parentStyle,
+            parentCS: $parentCS,
             elementType: $root->type,
             parentClassStr: $parentClassStr,
             precedingSiblingClasses: [],
-            parentStyleDeclarations: $parentStyle,
             pseudoStyles: $pseudoStyles
         );
 
         $root->computedStyle = $computedStyle;
-        $resolvedStyle = $computedStyle->toExportArray();
 
         $children = is_array($root->children) ? $root->children : [];
         foreach ($children as $child) {
             if ($child instanceof VNode) {
-                $this->recalc($child, $resolvedStyle, $className);
+                // 递归直接传父 ComputedStyle 对象（O(1) 身份），不再传 toExportArray()
+                $this->recalc($child, $computedStyle, $className);
             }
         }
     }

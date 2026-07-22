@@ -19,7 +19,7 @@ class FlexAlgorithm extends LayoutAlgorithm
 {
     public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], array $childFragments = [], ?PhysicalFragment $inputFragment = null, ?array $childConstraints = null, ?array $childIntrinsicSizes = null): PhysicalFragment
     {
-        $s = $style ?? new ComputedStyle([]);
+        $s = $style ?? \Px\Css\StylePool::empty();
 
         // ── Intrinsic measurement mode（由 intrinsicSize() 处理，此处不执行）──
         if ($space->isIntrinsicMeasurement) {

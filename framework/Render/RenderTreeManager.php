@@ -528,7 +528,14 @@ class RenderTreeManager
                             }
                         }
                         if ($styleChanged) {
-                            $oldRootRN->computedStyle = new ComputedStyle($parsedDecls, $oldRootRN->computedStyle?->toExportArray() ?? []);
+                            // 组件 style 透传合并—走 StylePool 池化（以旧 CS 为父身份）
+                            $oldRootRN->computedStyle = \Px\Css\StylePool::intern(
+                                $parsedDecls,
+                                $oldRootRN->computedStyle,
+                                $oldRootRN->type,
+                                \Px\Css\StylePool::fingerprintInline($parsedDecls),
+                                ''
+                            );
                             $oldRootRN->layoutDirty = true;
                         }
                     }
@@ -599,7 +606,14 @@ class RenderTreeManager
                         $parsedDecls = is_string($placeholderStyle)
                             ? \Px\Css\StyleResolver::parseInlineStyle($placeholderStyle)
                             : $placeholderStyle;
-                        $targetRN->computedStyle = new ComputedStyle($parsedDecls, $targetRN->computedStyle?->toExportArray() ?? []);
+                        // 父组件 style 透传到子组件根—走 StylePool 池化（以子根 RN 当前 CS 为父身份）
+                        $targetRN->computedStyle = \Px\Css\StylePool::intern(
+                            $parsedDecls,
+                            $targetRN->computedStyle,
+                            $targetRN->type,
+                            \Px\Css\StylePool::fingerprintInline($parsedDecls),
+                            ''
+                        );
                         $targetRN->layoutDirty = true;
                     }
                 }
@@ -666,14 +680,15 @@ class RenderTreeManager
                 // 防御：style 可能为 string（编译期未覆盖路径）→ 强制 array
                 $rawInlineStyle = $vnode->props['style'] ?? [];
                 $inlineStyleForResolve = is_array($rawInlineStyle) ? $rawInlineStyle : [];
+                // 降级路径下构造一次性临时父 CS（仅供 StyleResolver 接口），不入池避免污染
+                $tempParentCS = !empty($parentStyle) ? new ComputedStyle($parentStyle) : null;
                 $computedStyle = StyleResolver::resolve(
                     inlineStyle: $inlineStyleForResolve,
                     className: $vnode->props['class'] ?? '',
-                    parentDeclarations: $parentStyle,
+                    parentCS: $tempParentCS,
                     elementType: $vnode->type,
                     parentClassStr: $parentClassStr,
                     precedingSiblingClasses: [],
-                    parentStyleDeclarations: $parentStyle,
                     pseudoStyles: $pseudoStyles
                 );
                 \Px\Core\PerfCounter::end('sub:style_fallback');
@@ -688,22 +703,27 @@ class RenderTreeManager
             }
             $resolvedStyle = $computedStyle->toExportArray();
 
-            // 合并 HTML align 属性到 textAlign（CSS text-align 优先）
+            // 合并 HTML align 属性到 textAlign（CSS text-align 优先）—走 StylePool::withOverride 池化派生
             if (($vnode->props['align'] ?? '') !== '' && empty($resolvedStyle['textAlign'])) {
-                $resolvedStyle['textAlign'] = $vnode->props['align'];
-                $computedStyle = new ComputedStyle($resolvedStyle);
+                $computedStyle = \Px\Css\StylePool::withOverride(
+                    $computedStyle,
+                    ['textAlign' => $vnode->props['align']],
+                    $vnode->type
+                );
+                $resolvedStyle = $computedStyle->toExportArray();
             }
 
             // 合并 :style 动态绑定（StyleRecalcPass 只解析静态 style，丢弃 :style）
-            // 编译期已数组化，直接合并零 regex
+            // 编译期已数组化，直接合并零 regex；走 StylePool::withOverride 池化派生
             $dynamicStyle = $vnode->props[':style'] ?? [];
             if (!empty($dynamicStyle) && is_array($dynamicStyle)) {
                 \Px\Core\PerfCounter::start('sub:style_dynamic');
+                $computedStyle = \Px\Css\StylePool::withOverride(
+                    $computedStyle,
+                    $dynamicStyle,
+                    $vnode->type
+                );
                 $resolvedStyle = $computedStyle->toExportArray();
-                foreach ($dynamicStyle as $k => $v) {
-                    $resolvedStyle[$k] = $v;
-                }
-                $computedStyle = new ComputedStyle($resolvedStyle);
                 \Px\Core\PerfCounter::end('sub:style_dynamic');
             }
 
@@ -914,7 +934,14 @@ class RenderTreeManager
             // Create ::before pseudo-element RenderNode if defined
             $beforeStyle = $renderNode->pseudoStyles['before'] ?? null;
             if ($beforeStyle !== null && is_array($beforeStyle) && isset($beforeStyle['content']) && $beforeStyle['content'] !== '') {
-                $beforeCS = new ComputedStyle($beforeStyle);
+                // 伪元素走 StylePool 池化（以宿主 RN 当前 CS 为父身份）
+                $beforeCS = \Px\Css\StylePool::intern(
+                    $beforeStyle,
+                    $renderNode->computedStyle,
+                    'span',
+                    \Px\Css\StylePool::fingerprintInline($beforeStyle),
+                    '::before'
+                );
                 $beforeRN = new RenderNode('span', $beforeCS, $beforeStyle['content']);
                 $beforeRN->parent = $renderNode;
                 $beforeRN->groupId = $renderNode->groupId;
@@ -925,7 +952,14 @@ class RenderTreeManager
             // Create ::after pseudo-element RenderNode if defined
             $afterStyle = $renderNode->pseudoStyles['after'] ?? null;
             if ($afterStyle !== null && is_array($afterStyle) && isset($afterStyle['content']) && $afterStyle['content'] !== '') {
-                $afterCS = new ComputedStyle($afterStyle);
+                // 伪元素走 StylePool 池化（以宿主 RN 当前 CS 为父身份）
+                $afterCS = \Px\Css\StylePool::intern(
+                    $afterStyle,
+                    $renderNode->computedStyle,
+                    'span',
+                    \Px\Css\StylePool::fingerprintInline($afterStyle),
+                    '::after'
+                );
                 $afterRN = new RenderNode('span', $afterCS, $afterStyle['content']);
                 $afterRN->parent = $renderNode;
                 $afterRN->groupId = $renderNode->groupId;

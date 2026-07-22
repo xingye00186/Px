@@ -31,11 +31,11 @@ class GridAlgorithm extends LayoutAlgorithm
                 $totalW += $cr->w;
                 if ($cr->h > $maxH) $maxH = $cr->h;
             }
-            return new PhysicalFragment((int)$totalW, (int)$maxH, 0, 0, null, null, 0, 0, 0, $style ?? new ComputedStyle([]));
+            return new PhysicalFragment((int)$totalW, (int)$maxH, 0, 0, null, null, 0, 0, 0, $style ?? \Px\Css\StylePool::empty());
         }
 
         $c = $space;
-        $s = $style ?? new ComputedStyle([]);
+        $s = $style ?? \Px\Css\StylePool::empty();
         $childResults = $childFragments;
         $iteration = 0;
 
@@ -260,7 +260,7 @@ class GridAlgorithm extends LayoutAlgorithm
             return new IntrinsicSizes(0, 0, 0, 0);
         }
         // Return style-derived dimensions as intrinsic sizes
-        $s = $style ?? new ComputedStyle([]);
+        $s = $style ?? \Px\Css\StylePool::empty();
         $parentW = $space->containerWidth;
         $width = $s->width->toPx();
         if ($s->width->isPercent()) {
