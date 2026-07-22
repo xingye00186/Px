@@ -346,3 +346,211 @@ cd apps\reactive-bench
 | 诊断输出 | 无（perf_baseline 已关闭 SK_TRACE/captureLayoutSnapshot） | 同左 |
 
 **核心结论**：优化的总收益约 7-53%（按 case 不同），其中 TextMeasureCache + paint 重构贡献最大（TextHeavy paint 降 53%）。当前唯一瓶颈是 Layout（占帧时间 55-67%）。
+
+---
+
+## 10. 轻量级手工 A/B 对比工作流（compare_bench.ps1）
+
+相对于 Section 5 的 `run_full_benchmark.ps1` 全自动流程（~10 分钟、需要两个 git 工作区），本节描述**轻量级对比**：只需要两份已经存在的 metrics JSON 快照，适用于：
+
+- 已经手动跑过 before/after 两个 exe（例如本地已有 baseline exe 备份）
+- 想对比任意两个历史 metrics 快照（commit 已存档）
+- 想针对某个 case 做 **PerfCounter 逐项 delta 钻取**
+
+### 10.1 工件列表
+
+| 文件 | 用途 | 存档 |
+|---|---|---|
+| `tests/perf/compare_bench.ps1` | A/B 对比与 delta drilldown 工具 | □ 入库 |
+| `tests/perf/bench_before.json` | 本轮基线（阶段 A/B 前） | □ 入库 |
+| `tests/perf/bench_after.json` | 本轮 after（阶段 A + B-Phase 1 后） | □ 入库 |
+
+> 不与 `apps/reactive-bench/results/` 目录冲突：后者是 `run_full_benchmark.ps1` 自动产出（git-ignored），前者是手工提交的基线存档。
+
+### 10.2 制作快照
+
+直接用 `main.php` 已支持的 `--dump-metrics=<path>` 参数（参 Section 4）：
+
+```powershell
+# 先备份当前 exe 作为 baseline（可选）
+Copy-Item apps\reactive-bench\bin\reactive_bench.exe apps\reactive-bench\bin\reactive_bench_before.exe -Force
+
+# 修改代码 → 重编
+.\build.bat reactive-bench
+
+# 跑 before 快照
+.\apps\reactive-bench\bin\reactive_bench_before.exe `
+    --cases-list --cycles=100 --perf `
+    --dump-metrics=..\..\tests\perf\bench_before.json --note=before_X
+
+# 跑 after 快照
+.\apps\reactive-bench\bin\reactive_bench.exe `
+    --cases-list --cycles=100 --perf `
+    --dump-metrics=..\..\tests\perf\bench_after.json --note=after_X
+```
+
+> 注：`--dump-metrics` 的相对路径基于 `apps/reactive-bench/` 目录（[main.php#L181-L183](file:///f:/work/Px/apps/reactive-bench/main.php#L181-L183)），所以写 `..\..\tests\perf\...` 才能到项目根下。
+
+### 10.3 运行对比工具
+
+```powershell
+# 默认读取 tests/perf/bench_before.json vs bench_after.json
+powershell -File tests\perf\compare_bench.ps1
+
+# 单 case 深潜（完整展开该 case 所有 PerfCounter delta）
+powershell -File tests\perf\compare_bench.ps1 -DetailCase ChatStream
+
+# 提高噪音阈值，只看变化 20% 以上的项；每 case 限 5 行
+powershell -File tests\perf\compare_bench.ps1 -MinDeltaPct 20 -Top 5
+
+# 对比其他快照（例如历史基线）
+powershell -File tests\perf\compare_bench.ps1 -Before path\to\old.json -After path\to\new.json
+```
+
+### 10.4 参数
+
+```powershell
+param(
+    [string]$Before      = "tests\perf\bench_before.json",
+    [string]$After       = "tests\perf\bench_after.json",
+    [string]$DetailCase  = "",   # 只钻取某个 case（默认: 全部 case 汇总）
+    [int]   $Top         = 10,   # 每个 case 只显示变化最大的前 N 个 PerfCounter 项
+    [double]$MinDeltaPct = 5.0   # 变化幅度 < 此值（%）的 counter 视为噪音跳过
+)
+```
+
+### 10.5 输出结构（3 节）
+
+**第一节 —— case 级总览**：
+```
+case             avg(ms)b   avg(ms)a   delta%    p95 b   p95 a  stFPS b  stFPS a   fps%
+----------------------------------------------------------------------------------------
+StaticTemplate      2.000      1.000   -50.0%    2.000   1.000    426      699    +64.1%
+ChatStream          3.930      2.090   -46.8%    7.000   3.000    222      383    +72.5%
+...
+Mean delta:  avg_ms  -39.28%    steady_fps  +47.01%
+```
+
+**第二节 —— hot keys 汇总**（专看 Style Pool / Block Tree 探针）：
+```
+[SimpleCounter    ] style_pool_hit=200  style_pool_miss=5
+[ManyProps        ] style_pool_hit=202
+```
+
+**第三节 —— per-case PerfCounter Delta drilldown**（本工具的核心价值）：
+```
+counter                       b.total    a.total   delta%   b.cnt  a.cnt  b.avg   a.avg
+stage:style_recalc            17623.0     1676.0  -90.5%    101    101   174.5    16.6
+sub:style_fallback            12546.0     2109.0  -83.2%    104    104   120.6    20.3
+tree_convert                  19660.0     5218.0  -73.5%    102    102   192.8    51.2
+style_pool_hit                    0.0        0.0    NEW        0    200     0.0     0.0
+```
+- `NEW` = after 独有的探针（包含新引入的 hit/miss 计数器）
+- `REMOVED` = before 独有（探针被删除，需要关注）
+- 其余按 `|delta%|` 降序，根据 `-Top N` 截断
+- 颜色：绿色 = 同名探针 total 下降（好），红色 = 上升（需要关注）
+
+### 10.6 为什么不能直接逐行 diff 两份 JSON？
+
+两份快照文本上看似只差几行，实际尚有四个结构性障碍：
+
+1. **meta 全变**：`timestamp` / `note` 每次都不同，伪差异开头就污染 diff。
+2. **绝对时间飘动**：微秒计时器均值/max/min 每次 run 都在飘，逐行 diff 会显示“2100 行全部变了”，信号埋到噪音里。
+3. **key 集合不同**：after 可能多出 `style_pool_hit`、`block_fastpath_hit` 等新 counter → 前相同后错位，diff 工具从此行行都“变了”。
+4. **JSON 键无序**：目前两侧 PHP 遵循相同插入顺序才肯对齐，一旦其中一侧代码重排探针，逐行 diff 彻底崩块。
+
+所以对比必须“按语义对齐，算百分比，剔除噪音”——这就是 `compare_bench.ps1` 存在的原因。
+
+---
+
+## 11. PerfCounter 打桩机制与开关
+
+`framework/Core/PerfCounter.php` 是框架长期保留的轻量化探针设施。已经埋点且今后新增的探针都会长期存在以用于回归监控，**不会因为“本轮优化完了”就被清理**。
+
+### 11.1 开关
+
+| 状态 | 触发方式 | 运行时代价 |
+|------|----------|-----------|
+| 关闭（默认） | 不设 env | 每处埋点 = 1 次 `bool` 比较 + 早返回（AOT 编译后 < 10 ns） |
+| 开启 | `set PX_PERF=1` 或 `$env:PX_PERF=1` | 记录 count/total/min/max（约 200–500 ns/次） |
+
+实现核心（[PerfCounter.php#L30-L36](file:///f:/work/Px/framework/Core/PerfCounter.php#L30-L36) + 每个 public 方法首行 `if (!self::$enabled) return;`）：
+
+```php
+private static function ensureInit(): void {
+    if (!self::$initialized) {
+        self::$enabled = (getenv('PX_PERF') === '1');
+        self::$initialized = true;
+    }
+}
+```
+
+### 11.2 在 reactive-bench 里自动开启
+
+`main.php` 看到 `--perf` 参数时自动 `putenv('PX_PERF=1')`（[main.php#L185-L187](file:///f:/work/Px/apps/reactive-bench/main.php#L185-L187)）。所以在 `--cases-list --perf` 下命中率全部探针会被采集到 `perf_snapshot`。
+
+### 11.3 主要探针分类
+
+| 类型 | 探针名前缀 | 语义 | API |
+|------|------------|------|-----|
+| 阶段计时 | `stage:` | 渲染管线主阶段（参 Section 5.6） | `start/end` |
+| 子阶段计时 | `sub:` | 比 stage 更细的内部步骤 | `start/end` |
+| 命中统计 | `style_pool_hit / _miss` 等 | Flyweight 池命中率、Block Tree fast-path 命中率 | `inc` |
+| 业务计数器 | 任意名 | Vue 侧内部监控 | `inc` |
+
+> `inc()` 或 `start/end` 调用位点目前共 43 个（可在 `bench_after.json` 的任意 `perf_snapshot` 节看到完整列表）。
+
+### 11.4 已知小问题
+
+`project.yml` / `config.yml` 已存在 `Px_debug_perf_enabled` 键（例如 [reactive-bench/project.yml#L27](file:///f:/work/Px/apps/reactive-bench/project.yml#L27)），但 `PerfCounter::ensureInit()` 当前**只读 env 不读 Config**，所以那个开关目前是死键。待后续拉通（不影响本小节使用方式，现阶段一律使用 env var）。
+
+---
+
+## 12. 本轮 A/B 基线锚点（阶段 A + B-Phase 1）
+
+`tests/perf/bench_before.json` 与 `tests/perf/bench_after.json` 作为后续优化的**固定参照锥**，提供以下基线（AOT skia-cpu 后端，11 case × 100 cycles）：
+
+### 12.1 case 级均值
+
+| 指标 | 均值变化 |
+|------|----------|
+| avg_ms | **-39.28%** |
+| steady_fps | **+47.01%** |
+
+### 12.2 颠峰收益 case
+
+| case | avg ms（b → a） | Δ | steady_fps（b → a） |
+|---|---|---|---|
+| StaticTemplate | 2.000 → 1.000 | **-50.0%** | 426 → 699 (+64.1%) |
+| HoverGrid | 2.000 → 1.000 | **-50.0%** | 435 → 645 (+48.2%) |
+| ChatStream | 3.93 → 2.09 | -46.8% | 222 → 383 (**+72.5%**) |
+| ManyProps | 1.000 → 0.540 | -46.0% | 745 → 1000 (+34.2%) |
+| LiveDashboard | 3.41 → 2.00 | -41.3% | 254 → 404 (+58.9%) |
+| DynamicList | 1.69 → 1.00 | -40.8% | 477 → 714 (+49.7%) |
+| TextHeavy | 5.01 → 3.00 | -40.1% | 189 → 309 (+63.2%) |
+
+### 12.3 收益归因（SimpleCounter 深潜）
+
+```
+counter                       b.total    a.total   delta%   
+stage:style_recalc            17623.0     1676.0  -90.5%    ← 阶段 A 核心
+sub:style_fallback            12546.0     2109.0  -83.2%
+tree_convert                  19660.0     5218.0  -73.5%
+stage:update_from_vnode       22432.0     8041.0  -64.2%
+stage:full_render            139776.0   109046.0  -22.0%    ← 端到端
+style_pool_hit                    0.0        0.0     NEW    (200/case)
+style_pool_miss                   0.0        0.0     NEW    (5/case)
+```
+
+**核心结论**：本轮 -39% 均值收益几乎全部来自阶段 A 的 ComputedStyle Flyweight 池（`style_pool_hit ≈ 200/case`，miss ≤ 5）。B-Phase 1 埋点的 `block_fastpath_hit/miss` 均未出现，确认 fast-path 尚未被激活（`dynamicChildren` 字段恒为 null）——这部分收益需 B-Phase 2 编译器 codegen 完成后才会释放。
+
+### 12.4 基线版本定位
+
+| commit | 说明 |
+|---|---|
+| `1c7d2697` | 阶段 A commit 1（ComputedStyle Flyweight 池） |
+| `d72972d2` | 阶段 A commit 2 |
+| `19ffcff7` | B-Phase 1（Block Tree 运行时 fast-path 基础设施） |
+| `b99e4596` | 本节 A/B 工件入库 |
+
+后续阶段（B-Phase 2 / 其他）完工后可直接重新跑 after 快照覆盖 `tests/perf/bench_after.json`，`bench_before.json` 作为长期不变的 pre-A/B 锥存档。
