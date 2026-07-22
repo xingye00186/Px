@@ -28,6 +28,9 @@ tests/screenshot/output/*.png
 tests/anomaly/
 tests/screenshot/output/
 
+# perf pipeline benchmarks 自动产出的时间戳快照（benchmark_*.php 生成）
+tests/perf/results/
+
 # 测试输出目录（递归）
 apps/**/test_log/
 
