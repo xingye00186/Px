@@ -123,6 +123,37 @@ class VNode
         return $this;
     }
 
+    // ===== Vue 3 Block Tree 兼容（编译器级扁平动态子孙数组）=====
+
+    /**
+     * Block Tree — 扁平化的动态子孙节点数组（Vue 3 openBlock/createBlock 语义）。
+     *
+     * 语义:
+     *   - null       = 不是 block root（走 patchVNodeTree 原始递归 diff）
+     *   - 非 null    = 是 block root，patchVNodeTree 走快速路径迭代此数组，跳过静态子树递归
+     *   - 空数组 []  = 是 block root 且无动态子孙（跳过所有子节点 diff）
+     *
+     * 收集规则:
+     *   - 只收集 patchFlags != 0 或 isComponent 的子孙（跳过完全静态的中间层）
+     *   - Block 边界: 组件根、v-if 分支根、v-for 循环元素（各自独立 block）
+     *   - v-if 切换分支时，dynamicChildren 数组长度可能变化 → 快速路径需在此情况下降级到全 diff
+     *
+     * @var VNode[]|null
+     */
+    public ?array $dynamicChildren = null;
+
+    /**
+     * Fluent setter for dynamicChildren（编译器生成的代码使用）。
+     * 返回 $this 以支持链式调用。
+     *
+     * @param VNode[] $children
+     */
+    public function withDynamicChildren(array $children): self
+    {
+        $this->dynamicChildren = $children;
+        return $this;
+    }
+
     // ===== 构造器 =====
 
     /**

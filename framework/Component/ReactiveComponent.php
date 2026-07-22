@@ -194,6 +194,67 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
             return;
         }
 
+        // ===== Block Tree 快速路径 (Vue 3 patchBlockChildren 语义) =====
+        // 新旧都是 block root 且 dynamicChildren 长度一致 → 迭代动态子孙数组，
+        // 跳过静态中间层递归。长度不一致（v-if 切换分支/v-for 长度变化）
+        // 直接降级到全 diff，正确性优先。
+        if ($old->dynamicChildren !== null
+            && $new->dynamicChildren !== null
+            && count($old->dynamicChildren) === count($new->dynamicChildren)) {
+            // 本节点 props 仍需 patch（本节点自身也可能有 patchFlags）
+            $this->patchProps($old, $new);
+
+            // 同步 organizational 字段（与递归路径保持一致）
+            $old->componentInstance = $new->componentInstance;
+            $old->componentPropValues = $new->componentPropValues;
+            $old->layoutOffset = $new->layoutOffset;
+
+            // 迭代动态子孙数组，直接 patch
+            $oldDyn = $old->dynamicChildren;
+            $newDyn = $new->dynamicChildren;
+            $n = count($oldDyn);
+            for ($i = 0; $i < $n; $i++) {
+                if ($oldDyn[$i] instanceof VNode && $newDyn[$i] instanceof VNode) {
+                    $this->patchVNodeTree($oldDyn[$i], $newDyn[$i]);
+                }
+            }
+
+            \Px\Core\PerfCounter::inc('block_fastpath_hit');
+            return;
+        }
+
+        if ($old->dynamicChildren !== null || $new->dynamicChildren !== null) {
+            // 单侧 block 或长度变化 → 降级全 diff，量化用
+            \Px\Core\PerfCounter::inc('block_fastpath_miss');
+        }
+
+        // ===== 全 diff 路径 =====
+        $this->patchProps($old, $new);
+
+        // 更新组件实例引用
+        $old->componentInstance = $new->componentInstance;
+        $old->componentPropValues = $new->componentPropValues;
+        $old->layoutOffset = $new->layoutOffset;
+
+        // children 分类型处理
+        if ($old->children instanceof VNode && $new->children instanceof VNode) {
+            // 单子节点：递归 patch
+            $this->patchVNodeTree($old->children, $new->children);
+        } elseif (is_array($old->children) && is_array($new->children)) {
+            // 多子节点：按 key 匹配 patch
+            $old->children = $this->patchChildrenArray($old->children, $new->children);
+        } else {
+            // 简单类型（string/null）或类型不一致：直接替换
+            $old->children = $new->children;
+        }
+    }
+
+    /**
+     * patch 单个节点的 props（基于 patchFlags 选择性更新）。
+     * 从 patchVNodeTree 抽取，供 block fast-path 与全 diff 共享。
+     */
+    private function patchProps(VNode $old, VNode $new): void
+    {
         // patchFlag 选择性更新 props
         $flags = $old->patchFlags;
         if ($flags === VNode::PATCH_NONE) {
@@ -241,23 +302,6 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
                     }
                 }
             }
-        }
-
-        // 更新组件实例引用
-        $old->componentInstance = $new->componentInstance;
-        $old->componentPropValues = $new->componentPropValues;
-        $old->layoutOffset = $new->layoutOffset;
-
-        // children 分类型处理
-        if ($old->children instanceof VNode && $new->children instanceof VNode) {
-            // 单子节点：递归 patch
-            $this->patchVNodeTree($old->children, $new->children);
-        } elseif (is_array($old->children) && is_array($new->children)) {
-            // 多子节点：按 key 匹配 patch
-            $old->children = $this->patchChildrenArray($old->children, $new->children);
-        } else {
-            // 简单类型（string/null）或类型不一致：直接替换
-            $old->children = $new->children;
         }
     }
 
