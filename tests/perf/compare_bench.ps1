@@ -3,7 +3,8 @@ param(
     [string]$After       = "tests\perf\bench_after.json",
     [string]$DetailCase  = "",   # 只钻取某个 case（默认: 全部 case 汇总）
     [int]   $Top         = 10,     # 每个 case 只显示变化最大的前 N 个 PerfCounter 项
-    [double]$MinDeltaPct = 5.0     # 变化幅度 < 此值（%）的 counter 视为噪音跳过
+    [double]$MinDeltaPct = 5.0,    # 变化幅度 < 此值（%）的 counter 视为噪音跳过
+    [string]$Stages      = "stage:full_render,stage:vnode_tree,stage:update_from_vnode,stage:layout,stage:paint"  # 需展示的 μs 级 stage 列表
 )
 
 $b = Get-Content $Before -Raw | ConvertFrom-Json
@@ -64,6 +65,79 @@ if ($totalAvgDelta.Count -gt 0) {
     Write-Host "Mean delta:  avg_ms " ("{0:+0.00;-0.00;0.00}%" -f $meanAvg) "   steady_fps " ("{0:+0.00;-0.00;0.00}%" -f $meanFps) -ForegroundColor Cyan
     Write-Host ""
 }
+
+# ================================================================
+# Stage Timing (μs) — 更精细的信号，穿透 ms 级抖动
+#   avg_ms 到 0.1-0.2ms 时单个 μs 波动就能造成 50% delta（不可靠）
+#   直接对比 PerfCounter 里的 stage:full_render.total (μs) 等累计值，
+#   可以看到真实计算耗时的方向（不受 microtime 分辨率影响）。
+# ================================================================
+Write-Host "===============================================================" -ForegroundColor Cyan
+Write-Host " Stage Timing (μs) - end-to-end + key sub-stages"                  -ForegroundColor Cyan
+Write-Host "===============================================================" -ForegroundColor Cyan
+
+$stageList = @($Stages -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+
+$stFmt = "{0,-18}  {1,-26}  {2,12}  {3,12}  {4,10}"
+Write-Host ($stFmt -f 'case', 'stage', 'before(μs)', 'after(μs)', 'delta%') -ForegroundColor Yellow
+Write-Host ("-" * 88)
+
+$stageTotals = @{}
+foreach ($c in $cases) {
+    $rb = $bResults.$c
+    $ra = $aResults.$c
+    if ($null -eq $rb -or $null -eq $ra) { continue }
+    if ($null -eq $rb.perf_snapshot -or $null -eq $ra.perf_snapshot) { continue }
+
+    $bSnap = $rb.perf_snapshot
+    $aSnap = $ra.perf_snapshot
+    $keysB = @($bSnap.PSObject.Properties.Name)
+    $keysA = @($aSnap.PSObject.Properties.Name)
+
+    $caseHasAny = $false
+    foreach ($stage in $stageList) {
+        if (-not ($keysB -contains $stage) -or -not ($keysA -contains $stage)) { continue }
+        $bV = [double]$bSnap.$stage.total
+        $aV = [double]$aSnap.$stage.total
+        if ($bV -le 0 -and $aV -le 0) { continue }
+
+        $delta = if ($bV -gt 0) { (($aV - $bV) / $bV) * 100 } else { 0 }
+        $color = if ($delta -lt -2) { 'Green' } elseif ($delta -gt 2) { 'Red' } else { 'Gray' }
+
+        $caseTag = if ($caseHasAny) { '' } else { $c }
+        Write-Host ($stFmt -f `
+            $caseTag, $stage,
+            ("{0:F0}" -f $bV),
+            ("{0:F0}" -f $aV),
+            ("{0:+0.0;-0.0;0.0}%" -f $delta)
+        ) -ForegroundColor $color
+        $caseHasAny = $true
+
+        # 累计到 stage 总和
+        if (-not $stageTotals.ContainsKey($stage)) { $stageTotals[$stage] = @{ b = 0.0; a = 0.0 } }
+        $stageTotals[$stage].b += $bV
+        $stageTotals[$stage].a += $aV
+    }
+}
+
+Write-Host ("-" * 88)
+Write-Host ""
+Write-Host " Stage Summary (sum across all cases, μs):" -ForegroundColor Yellow
+foreach ($stage in $stageList) {
+    if (-not $stageTotals.ContainsKey($stage)) { continue }
+    $bT = $stageTotals[$stage].b
+    $aT = $stageTotals[$stage].a
+    if ($bT -le 0) { continue }
+    $delta = (($aT - $bT) / $bT) * 100
+    $color = if ($delta -lt -2) { 'Green' } elseif ($delta -gt 2) { 'Red' } else { 'Gray' }
+    Write-Host ("  {0,-26}  before {1,12}  after {2,12}   {3,10}" -f `
+        $stage,
+        ("{0:F0}" -f $bT),
+        ("{0:F0}" -f $aT),
+        ("{0:+0.00;-0.00;0.00}%" -f $delta)
+    ) -ForegroundColor $color
+}
+Write-Host ""
 
 # ================================================================
 # PerfCounter 关键项汇总（仅显示 after 独有的埋点）
