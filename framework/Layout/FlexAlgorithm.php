@@ -26,20 +26,10 @@ class FlexAlgorithm extends LayoutAlgorithm
             return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $s);
         }
 
-        // ── 用 ChildLayoutProvider 在正确约束下布局子项（对标 Blink LayoutChild()）──
-        if ($childConstraints !== null && count($childConstraints) > 0 && count($childNodes) > 0) {
-            $childResults = [];
-            foreach ($childNodes as $i => $ch) {
-                $chConstraint = $childConstraints[$i] ?? null;
-                if ($chConstraint !== null) {
-                    $childResults[] = $this->layoutChild($ch, $chConstraint);
-                } elseif ($i < count($childFragments)) {
-                    $childResults[] = $childFragments[$i];
-                }
-            }
-        } else {
-            $childResults = $childFragments;
-        }
+        // ── 直接使用 mainLayout Phase B 预计算的 childFragments ──
+        // 对标 Blink NGFlexLayoutAlgorithm：算法接收父节点 LayoutChild() 预计算的 fragment，
+        // 不重新布局子项。Phase B 已用正确约束（含 flex-item spaceType）完成布局。
+        $childResults = $childFragments;
 
         $parentW = $space->getContentWidth();
         $parentH = $space->getContentHeight();

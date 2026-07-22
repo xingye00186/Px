@@ -179,33 +179,20 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles);
         }
 
-        // ─── Phase A: 子项 intrinsic 收集 ───
+        // Phase A 已移除：intrinsicSize() 收集结果从未被任何算法消费
+        // （isset($childIntrinsics[$i]) 仅作标志位使用，已改为 $isFlexOrGrid 直接判断）
+        // 对标 Blink：NGBlockNode::IntrinsicSize() 仅在 SimplifiedLayout 内部按需调用，
+        // 不在父节点 Layout() 入口处全量预收集
         $isFlexOrGrid = ($display === 'flex' || $display === 'grid' || $display === 'inline-flex');
-        $childIntrinsics = [];
-        if ($isFlexOrGrid && count($node->children) > 0) {
-            $intrinsicSpace = new ConstraintSpace(
-                $space->getContentWidth(), $space->getContentHeight(),
-                0, 0, $space->getContentWidth(), $space->getContentHeight(),
-                null, null, 0, 0, 0, 0, 0, 0, 0, 0,
-                false, true, 0, 0, 'block'
-            );
-            foreach ($node->children as $ch) {
-                $chAlgo = $this->selectAlgorithm($ch->computedStyle?->display?->value ?? 'block', $ch->computedStyle);
-                $chIntrinsic = $chAlgo->intrinsicSize($intrinsicSpace, $ch->computedStyle, (string)($ch->content ?? ''));
-                $childIntrinsics[] = $chIntrinsic;
-            }
-        }
 
         // ─── Phase B: 递归处理子节点 ───
+        // 对标 Blink LayoutNG：逐子项检查 layoutDirty + 约束空间变化
+        //   - 子项洁净 AND 约束未变 → 复用 cachedFragment（零递归）
+        //   - 子项脏 OR 约束变 → 递归 mainLayout
+        // 注意：不能用 childrenNeedLayout 整体跳过——Px 先处理子项再跑算法
+        //       （与 Blink 相反），父样式/约束变化时子项约束可能变，必须逐项检查
         $childFragments = [];
-
-        // Blink SimplifiedLayout 路径：childrenNeedLayout=false 时跳过子项循环
-        // 父约束变化但所有子项洁净时，直接使用缓存的子 Fragment 树
-        if (!$node->childrenNeedLayout && $node->cachedFragment !== null) {
-            $childFragments = $node->cachedFragment->children ?? [];
-        } else {
-            // 正常循环处理子节点
-            foreach ($node->children as $i => $child) {
+        foreach ($node->children as $i => $child) {
             // LayoutBoundary 子项：若洁净则跳过递归直接使用缓存
             if ($child->isLayoutBoundary && !$child->layoutDirty && $child->cachedFragment !== null
                 && $child->cachedConstraintSpace !== null) {
@@ -228,7 +215,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
             }
 
             $childStyle = $child->computedStyle;
-            if ($isFlexOrGrid && isset($childIntrinsics[$i])) {
+            if ($isFlexOrGrid) {
                 // flex/grid 子项：用 intrinsic+分配结果构建约束，确保子项百分比用正确基准
                 $chPercW = $childStyle?->width?->isPercent() ? $space->getContentWidth() : null;
                 $chPercH = $childStyle?->height?->isPercent() ? $space->getContentHeight() : null;
@@ -251,7 +238,6 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, 0);
             }
         }
-        }   // end else (childrenNeedLayout)
 
         if ($isOOF) {
             $cs = $style;
@@ -276,14 +262,12 @@ class LayoutOrchestrator implements ChildLayoutProvider
         \Px\Core\PerfCounter::start('algo:setup');
         $textContent = (string)($node->content ?? '');
         $cached = $node->cachedFragment;
-        $childConstraints = [];
-        foreach ($node->children as $ch) {
-            $childConstraints[] = $this->buildChildSpace($ch, $space, $style);
-        }
+        // childConstraints 已移除：所有算法均直接使用 Phase B 预计算的 childFragments
+        // （对标 Blink：算法接收父 LayoutChild() 预计算的 fragment，不重新布局子项）
         \Px\Core\PerfCounter::end('algo:setup');
 
         \Px\Core\PerfCounter::start('algo:' . $algoName);
-        $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached, $childConstraints, $childIntrinsics);
+        $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached, null, null);
         \Px\Core\PerfCounter::end('algo:' . $algoName);
 
         \Px\Core\PerfCounter::start('algo:teardown');
