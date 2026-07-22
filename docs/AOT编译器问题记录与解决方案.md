@@ -570,7 +570,134 @@ public function schedule(): void {
 
 ---
 
+## 十八、`ComputedStyle` 150+ readonly 属性构造成本（性能约束，非 bug）
+
+### 现象
+
+L4「分离 Style Recalc」尝试中，将 `:style` 合并 + `new ComputedStyle` 从 RenderTreeManager 上提到 SRP，使得 400 cell/frame（TextHeavy）每帧全部走 `new ComputedStyle`，观察到帧时长从 baseline 0.7s 涨至 3.0s（4x 回归）。
+
+### 根因
+
+`ComputedStyle` 在 `use native_types` 下：
+- 150+ readonly 属性 + CssValue 封装的构造函数
+- 每个属性带类型断言与默认值初始化
+- 单次 `new ComputedStyle` 在 AOT 下 ≈ 250μs（相比 PHP 原生 ~50μs 有 ~5x 开销，因每个 readonly 属性都走一次类型检查 + memory-fence 写）
+- 400 cell × 250μs ≈ 100ms/frame
+
+### 编码约束
+
+1. **`ComputedStyle` 不宜在每帧热路径批量构造**——单实例开销固定不可优化，唯一路径是 Flyweight 复用（按 `(className, inlineStyleHash, parentStyleHash)` memoize）
+2. **不要把 lazy 合并路径提升为 eager 全量**——baseline 只在有 inline `:style` 的 cell 才构造新 `ComputedStyle`，SRP 层走 class cache 命中直接复用；反之全量构造会击穿 lazy 分工
+3. **不要在 `ComputedStyle` 上再套一层 pass 缓存**——只会增加分支/字段访问开销，而不减少构造本身
+
+### 影响范围
+
+- `framework/Css/StyleResolver.php` — L62 无条件 `new ComputedStyle(...)`（当前 baseline 已通过 class cache 缩小到必要的 cell）
+- 任何试图「先构造再比较是否需要更新」的路径都会触发此约束——**先比较后构造**才是正确顺序
+
+---
+
+## 十九、PHP 数组 `===` 结构化比较在 `use native_types` 类中的 O(n) 成本
+
+### 现象
+
+L4 脏门控方案中，在 SRP 出口对新旧 `:style` 数组（typically 6-10 键）做 `if ($newStyle === $oldStyle) skip`，实测 skip 路径 5-6μs/node，**高于 baseline 完整 `StyleResolver::resolve()` 本身的 0.44μs/node**（class cache 命中情形），反而拉高总耗时。
+
+> **先行辨析**：本节 O(n) 仅限 **PHP 数组** `===`（结构化递归比较）。**PHP 对象** `===` 本身就是 O(1) 指针比较，AOT `use native_types` 下与 C++ pointer 比较等价。L4 需对数组而非对象做门控，是因为当前 `StyleResolver::resolve()` 每次 `new ComputedStyle` 产新指针，无规范对象身份可供门控，只能退回到输入侧数组。详见 `docs/Vue3_Blink_融合架构决策追踪.md` §4.4。
+
+### 根因
+
+PHP 数组 `===` 是结构化比较：
+- 对 array 的 key 与 value 逐项递归比较（O(n)，n = 键数）
+- AOT `use native_types` 下每项走类型断言 + php::Var 桥接
+- 6-10 键 `:style` array 每次 `===` ≈ 1μs
+- 加上 PerfCounter::inc 递归开销 + 分支预测失效 ≈ 5-6μs/node
+
+### 编码约束
+
+1. **对小数组（<50 键）的 `===` 门控不划算**——门控成本可能超过被门控的原始成本，L4 postmortem 已确认
+2. **区分 PHP 数组与 PHP 对象**：对象 `===` 是 O(1) 指针比较（与 C++ 等价），可安全用于热路径门控；仅数组 `===` 是 O(n)。优先把门控层从数组上移到对象，而非避开 `===`
+3. **门控前先估算 baseline 单节点成本**：若 baseline ≤ 5μs/node，加任何形式的数组 `===` 门控都会回归
+4. **改用 hash 比较**：若必须对数组门控，用 `spl_object_hash` 或 pre-computed integer hash（O(1)），而非结构化 `===`
+5. **优先复用引用（Flyweight）**：让上游产出引用等价的对象（如 ComputedStyle Flyweight），门控从「对输入侧数组 O(n) 比较」升级为「对输出侧对象 O(1) `===`」，此时才有正收益
+
+### 影响范围
+
+- 任何形如 `if ($newProps === $oldProps) { skip }` 的热路径门控——`patchVNodeTree` / `patchKeyedChildren` / `updateFromVNode` 内部都不采用此模式，改用 `patchFlags` 位标记跳过
+- `Effect::schedule()` 中的重入检查用 `bool $pending`（O(1)），不用数组比较
+
+---
+
+## 二十、`PerfCounter::inc` 在 `use native_types` 递归函数中的调用开销
+
+### 现象
+
+L4 postmortem 分析中确认 `PerfCounter::inc` / `PerfCounter::start` / `PerfCounter::end` 在递归 layout / DFS 遍历中每次调用 ≈ 0.3-0.5μs（含 `PX_PERF` 检查 + 数组写 + microtime 调用）。在 400 cell × 5 hook（enter/exit each phase）= 2000 次/frame 场景下 ≈ 600μs-1ms/frame，非零开销。
+
+### 根因
+
+- `PerfCounter::inc` 内部走 `$counters[$name] ??= 0; $counters[$name]++;` 数组访问（php::Var → int 转换 + 数组桥接）
+- `PerfCounter::start/end` 附加 `microtime(true)` 系统调用（几百 ns）
+- `use native_types` 类中调用静态方法有轻微 vtable 开销
+
+### 编码约束
+
+1. **热路径（>100 次/frame）避免 unconditional `PerfCounter::inc`**——用 `if (PX_PERF) PerfCounter::inc(...)` 或包在 debug 分支
+2. **PerfCounter 不要放在深递归中每节点触发**——放在 phase 级（enter/exit BlockAlgorithm 一次）而非 node 级（enter/exit each child）
+3. **诊断阶段用完立即拆除**：`PerfCounter` 是诊断工具，不是永久监控。L4 postmortem 揭示 debug 桩埋在热路径会掩盖真实 baseline，必要时改用 `PX_PERF=1` 环境变量门控整个诊断代码块
+4. **避免在 recursive `use native_types` 类中打点**：`LayoutOrchestrator` / `StyleRecalcPass` / `PaintPipeline` 的递归 DFS 内不打 node 级 PerfCounter；只在 top-level 入口打 stage 级
+
+### 影响范围
+
+- 所有 `framework/Layout/*Algorithm.php` — layout() 递归内不放 PerfCounter（只在 orchestrator 入口）
+- `framework/Css/StyleRecalcPass.php` — DFS 内不放 PerfCounter（只在入口）
+- `framework/Reactive/Effect.php` — schedule() 是高频入口，任何 hook 都需评估
+
+---
+
+## 二十一、低成本项优化的通用铁律（L4 postmortem 归纳）
+
+### 铁律
+
+**当一个 stage/pass 的 baseline < 200μs/frame 时，任何形式的门控/缓存/Flyweight 都需先验证「门控开销 < 被跳过部分开销」**，否则触发 3-50x 回归。
+
+### 根因（AOT 下三条系统性开销）
+
+1. **PHP 数组 `===` O(n) 比较** — 见 §十九
+2. **`PerfCounter::inc` 递归调用开销** — 见 §二十
+3. **CPU pipeline / I-cache 破坏** — baseline 简单线性 walk 对 I-cache / branch predictor 最友好；引入分支 + 字段访问 + 自定义缓存字段的门控代码反而使 IPC 下降
+
+### 已验证会触发回归的模式
+
+| 模式 | 试验对象 | 回归幅度 |
+|---|---|---|
+| SRP 出口按 `:style` 数组 `===` 门控 | L4 v3/v4/v5 | +330% (0.7s → 3.0s) |
+| `patchChildrenArray` 无 key 位置匹配（对齐 Vue 3 patchUnkeyedChildren） | ReactiveComponent | +25~48% (6 case 全回归) |
+| Node 级 PerfCounter 在 layout 递归内 | L4 诊断桩 | +30~60% |
+
+### 已验证不触发回归的模式（正例）
+
+| 模式 | 试验对象 | 收益 |
+|---|---|---|
+| 组件级 dirty 门控（skip 整棵 RN 子树 rebuild） | L1 (`fb05d4bb`) | -30~80% |
+| Keyed children O(n) diff（head/tail 双端 + key map） | L3 (`ba49097c`) | -20~50% |
+
+### 决策规则
+
+1. **门控设计要覆盖粗粒度**：至少覆盖 100+ node 的子树才划算，node 级门控几乎必回归
+2. **门控 key 必须 O(1)**：整型 hash / bool flag / patchFlag 位，而非数组 `===` / string 比较
+3. **门控在 baseline 数据支持下才做**：先测 baseline < 200μs 的 stage，直接放弃门控路线；转向 Flyweight（-125μs style_recalc）或结构改造（Block Tree -1500μs vnode_tree）
+
+### 影响范围
+
+- 所有热路径（>100 次/frame）的优化提案必须先经过 baseline 测量与门控成本估算
+- `docs/rendering-optimization-strategy.md` §八四大恒定地板 已按此规则筛选后续优化方向
+
+---
+
 ## 总结：AOT 编码规范（完整版）
+
+### 正确性规则（触发编译错误或运行时错误）
 
 | 规则 | 说明 |
 |------|------|
@@ -589,3 +716,14 @@ public function schedule(): void {
 | **属性必须完整标注** | 所有属性和方法参数必须有类型声明 |
 | **Property Hook `set` 转型** | `setBindValue` 中对 int/bool 属性加 `(int)`/`(bool)` 转型 |
 | **`dirty` 标记先于 pending 检查** | `Effect::schedule()` 中 `dirty=true` 必须在 `pending` 守卫之前 |
+
+### 性能规则（触发 3-50x 回归但不报错）
+
+| 规则 | 说明 | 相关章节 |
+|------|------|------|
+| **热路径不批量 `new ComputedStyle`** | 250μs/次 × 400 cell = 100ms/frame；只在必要 cell 走 lazy 合并；跨节点 memoize | §十八 |
+| **热路径不用数组 `===` 做门控** | 6-10 键 array `===` ≈ 1μs，加桩后 5-6μs/node，高于 baseline 0.44μs/node；必要时用整型 hash 或 `patchFlags` | §十九 |
+| **递归函数内不放 node 级 `PerfCounter`** | 0.3-0.5μs/次 × 2000 次 = 600μs-1ms/frame；只在 stage/phase 入口打点 | §二十 |
+| **baseline <200μs 的 stage 不加门控** | 门控开销可能大于被跳过部分；优先 Flyweight 或结构改造 | §二十一 |
+| **门控粒度 ≥ 100 node** | 组件级/子树级门控（L1/L3 已验证）；node 级门控几乎必回归 | §二十一 |
+| **`ComputedStyle` 层要 Flyweight 化** | 按 `(className, inlineStyleHash, parentStyleHash)` memoize，让 `===` 门控退化为 O(1) 引用比较 | §十八, §十九 |
