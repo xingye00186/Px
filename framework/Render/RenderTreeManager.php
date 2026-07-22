@@ -331,6 +331,12 @@ class RenderTreeManager
                 }
             }
         }
+        if (($flags & VNode::PATCH_TEXT) !== 0) {
+            // {{ }} 动态文本内容比较
+            $aText = is_string($a->children) ? $a->children : '';
+            $bText = is_string($b->children) ? $b->children : '';
+            if ($aText !== $bText) return false;
+        }
 
         // scroll/bind 始终比较（布局强相关，不受 patchFlag 控制）
         if (($a->props[':scroll-top'] ?? '') !== ($b->props[':scroll-top'] ?? '')) return false;
@@ -713,6 +719,9 @@ class RenderTreeManager
             }
 
             $renderNode = null;
+            // ── 跟踪父 VNode 是否变化（用于 patchKeyedChildren head/tail sync 门控）──
+            // 对标 Blink ChildNeedsStyleRecalc：父 style 变化时子节点可能受 CSS 继承影响
+            $parentVNodeChanged = true;
 
             if ($candidates !== null) {
                 $matched = $this->findMatchingRenderNode($vnode, $candidates, 0);
@@ -755,6 +764,7 @@ class RenderTreeManager
                 $oldStyle = ($oldVNode !== null) ? $oldVNode->computedStyle : null;
                 if ($oldVNode !== null && $this->areVNodesEqual($vnode, $oldVNode)) {
                     // VNode 完全一致（含 style/class/bind）→ 完全洁净
+                    $parentVNodeChanged = false;
                     // 注意：保留外部事件设置的 dirty bits（如鼠标 hover 调用的 markStyleDirty）
                     // 外部设置的 styleDirty=true 不应被 VNode 比较结果覆盖
                     if ($renderNode->layoutDirty || $renderNode->styleDirty) {
@@ -884,58 +894,20 @@ class RenderTreeManager
                         $renderNode->content = $component->getBindValue($vModel);
                     }
                 }
-                $consumed = [];
 
                 \Px\Core\PerfCounter::start('sub:children_walk');
-                foreach ($childVNodes as $i => $childVNode) {
-                    $matchedOld = null;
-                    $matchedIdx = null;
-                    $key = $childVNode->key;
-
-                    if ($key !== null) {
-                        foreach ($oldChildren as $pos => $oldRN) {
-                            if (!in_array($pos, $consumed, true)
-                                && $oldRN->key === $key
-                                && $oldRN->type === $childVNode->type) {
-                                $matchedOld = $oldRN;
-                                $matchedIdx = $pos;
-                                break;
-                            }
-                        }
-                    } elseif (isset($oldChildren[$i]) && !in_array($i, $consumed, true)) {
-                        $oldRN = $oldChildren[$i];
-                        if ($oldRN->key === null && $oldRN->type === $childVNode->type) {
-                            $matchedOld = $oldRN;
-                            $matchedIdx = $i;
-                        }
-                    }
-
-                    if ($matchedIdx !== null) {
-                        $consumed[] = $matchedIdx;
-                    }
-
-                    $childCandidates = $matchedOld !== null ? [$matchedOld] : null;
-
-                    $childRN = $this->updateFromVNode(
-                        $childVNode, $renderNode, $root, $componentByGroupId, $childCandidates,
-                        $currentGroupId,
-                        $vnode->props['class'] ?? '',
-                        $resolvedStyle
-                    );
-                }
+                $this->patchKeyedChildren(
+                    $renderNode, $childVNodes, $oldChildren,
+                    $root, $componentByGroupId, $currentGroupId,
+                    $vnode->props['class'] ?? '', $resolvedStyle,
+                    $parentVNodeChanged
+                );
                 \Px\Core\PerfCounter::end('sub:children_walk');
-
-                foreach ($oldChildren as $pos => $oldRN) {
-                    if (!in_array($pos, $consumed, true)) {
-                        $this->destroyRenderNodeTree($oldRN);
-                    }
-                }
 
                 if ($isGrid) {
                     error_log('[DIAG] RTM grid AFTER: renderNode=' . spl_object_hash($renderNode)
                         . ' children=' . count($renderNode->children)
-                        . ' consumed=' . count($consumed)
-                        . ' destroyed=' . (count($oldChildren) - count($consumed)));
+                        . ' oldChildren=' . count($oldChildren));
                 }
             }
 
@@ -999,6 +971,193 @@ class RenderTreeManager
         }
         // 所有子节点洁净 → 清除 childrenNeedLayout
         $node->childrenNeedLayout = false;
+    }
+
+    /**
+     * Vue 3 patchKeyedChildren 适配 — 增量 children 更新
+     *
+     * 替代 clearChildren + rebuild + O(N×M) 线性 key 扫描。
+     *
+     * 算法（对标 Vue 3 patchKeyedChildren + Blink LayoutTreeBuilder）：
+     *   Phase 1: Head sync — 从头匹配 areVNodesEqual=true 的节点，完全跳过
+     *   Phase 2: Tail sync — 从尾匹配 areVNodesEqual=true 的节点，完全跳过
+     *   Phase 3: Mount — 旧节点全消耗，挂载剩余新节点
+     *   Phase 4: Unmount — 新节点全消耗，卸载剩余旧节点
+     *   Phase 5: Keyed diff — key→index Map O(1) 查找 + 未消耗旧节点卸载
+     *
+     * head/tail sync 的跳过路径（对标 Blink ChildNeedsStyleRecalc = false）：
+     *   - 不构建 ComputedStyle、不递归 children、不传播脏标记
+     *   - 仅同步 bind 值（scroll-top / scroll-left / :bind / v-model）
+     *   - 注册 groupId、更新 sourceVNode
+     *
+     * parentStyleChanged 门控（对标 Blink ChildNeedsStyleRecalc）：
+     *   - 父 VNode 变化时，子节点可能受 CSS 继承影响
+     *   - 此时禁用 head/tail sync，所有子节点走完整 updateFromVNode
+     */
+    private function patchKeyedChildren(
+        RenderNode $parent,
+        array $newVNodes,
+        array $oldChildren,
+        ReactiveComponentInterface $root,
+        array $componentByGroupId,
+        string $currentGroupId,
+        string $parentClassStr,
+        array $parentStyle,
+        bool $parentStyleChanged
+    ): void {
+        $e1 = count($oldChildren) - 1;
+        $e2 = count($newVNodes) - 1;
+        $i = 0;
+
+        $component = $componentByGroupId[$currentGroupId] ?? $root;
+
+        // Phase 1: Head sync — 从头匹配未变节点，O(1) 跳过
+        while ($i <= $e1 && $i <= $e2) {
+            $oldRN = $oldChildren[$i];
+            $newVN = $newVNodes[$i];
+            if ($oldRN->type === $newVN->type
+                && $oldRN->key === $newVN->key
+                && !$parentStyleChanged
+                && $oldRN->sourceVNode !== null
+                && $this->areVNodesEqual($newVN, $oldRN->sourceVNode)) {
+                // ✅ 完全跳过 — 不构建 ComputedStyle、不递归 children
+                $oldRN->parent = $parent;
+                $parent->children[] = $oldRN;
+                $oldRN->sourceVNode = $newVN;
+                $this->syncBindValues($oldRN, $newVN, $component);
+                if ($oldRN->groupId !== null) {
+                    $this->groupIdToRenderNodeMap[$oldRN->groupId][] = $oldRN;
+                }
+                \Px\Core\PerfCounter::inc('child_skip');
+                $i++;
+            } else {
+                break;
+            }
+        }
+
+        // Phase 2: Tail sync — 从尾匹配未变节点，O(1) 跳过
+        $tailSynced = [];
+        while ($i <= $e1 && $i <= $e2) {
+            $oldRN = $oldChildren[$e1];
+            $newVN = $newVNodes[$e2];
+            if ($oldRN->type === $newVN->type
+                && $oldRN->key === $newVN->key
+                && !$parentStyleChanged
+                && $oldRN->sourceVNode !== null
+                && $this->areVNodesEqual($newVN, $oldRN->sourceVNode)) {
+                array_unshift($tailSynced, $oldRN);
+                $oldRN->sourceVNode = $newVN;
+                $this->syncBindValues($oldRN, $newVN, $component);
+                \Px\Core\PerfCounter::inc('child_skip');
+                $e1--;
+                $e2--;
+            } else {
+                break;
+            }
+        }
+
+        // Phase 3: Mount — 旧节点全消耗，挂载剩余新节点
+        if ($i > $e1) {
+            for (; $i <= $e2; $i++) {
+                $this->updateFromVNode(
+                    $newVNodes[$i], $parent, $root, $componentByGroupId, null,
+                    $currentGroupId, $parentClassStr, $parentStyle
+                );
+            }
+        }
+        // Phase 4: Unmount — 新节点全消耗，卸载剩余旧节点
+        elseif ($i > $e2) {
+            for (; $i <= $e1; $i++) {
+                $this->destroyRenderNodeTree($oldChildren[$i], false);
+            }
+        }
+        // Phase 5: Keyed diff — key→index Map O(1) 查找
+        else {
+            $keyToOldIndex = [];
+            for ($k = $i; $k <= $e1; $k++) {
+                $key = $oldChildren[$k]->key;
+                if ($key !== null) {
+                    $keyToOldIndex[$key] = $k;
+                }
+            }
+
+            $consumed = [];
+            for ($k = $i; $k <= $e2; $k++) {
+                $newVN = $newVNodes[$k];
+                $key = $newVN->key;
+                $matchedOld = null;
+
+                if ($key !== null && isset($keyToOldIndex[$key])) {
+                    $oldIdx = $keyToOldIndex[$key];
+                    if (!in_array($oldIdx, $consumed, true)
+                        && $oldChildren[$oldIdx]->type === $newVN->type) {
+                        $matchedOld = $oldChildren[$oldIdx];
+                        $consumed[] = $oldIdx;
+                    }
+                } elseif ($key === null) {
+                    // 无 key 节点：位置匹配
+                    for ($j = $i; $j <= $e1; $j++) {
+                        if (!in_array($j, $consumed, true)
+                            && $oldChildren[$j]->key === null
+                            && $oldChildren[$j]->type === $newVN->type) {
+                            $matchedOld = $oldChildren[$j];
+                            $consumed[] = $j;
+                            break;
+                        }
+                    }
+                }
+
+                $childCandidates = $matchedOld !== null ? [$matchedOld] : null;
+                $this->updateFromVNode(
+                    $newVN, $parent, $root, $componentByGroupId, $childCandidates,
+                    $currentGroupId, $parentClassStr, $parentStyle
+                );
+            }
+
+            // 卸载未消耗的旧节点
+            for ($k = $i; $k <= $e1; $k++) {
+                if (!in_array($k, $consumed, true)) {
+                    $this->destroyRenderNodeTree($oldChildren[$k], false);
+                }
+            }
+        }
+
+        // 追加 tail-synced 节点（已按正序排列）
+        foreach ($tailSynced as $rn) {
+            $rn->parent = $parent;
+            $parent->children[] = $rn;
+            if ($rn->groupId !== null) {
+                $this->groupIdToRenderNodeMap[$rn->groupId][] = $rn;
+            }
+        }
+    }
+
+    /**
+     * 同步 bind 值（scroll-top / scroll-left / :bind / v-model）
+     * 用于 head/tail sync 跳过路径——bind key 不变但 value 可能已变
+     */
+    private function syncBindValues(RenderNode $rn, VNode $vn, ReactiveComponentInterface $component): void
+    {
+        $scrollBindKey = $vn->props[':scroll-top'] ?? '';
+        if ($scrollBindKey !== '') {
+            $rn->scrollTop = (int) $component->getBindValue($scrollBindKey);
+        }
+        $scrollLeftBindKey = $vn->props[':scroll-left'] ?? '';
+        if ($scrollLeftBindKey !== '') {
+            $rn->scrollLeft = (int) $component->getBindValue($scrollLeftBindKey);
+        }
+        // 叶子节点 content bind
+        $childVNodes = is_array($vn->children) ? VNode::childrenToArray($vn->children) : [];
+        if (empty($childVNodes) && $vn->props !== null) {
+            $bindKey = $vn->props[':bind'] ?? $vn->props['bind'] ?? '';
+            if ($bindKey !== '') {
+                $rn->content = $component->getBindValue($bindKey);
+            }
+            $vModel = $vn->props['v-model'] ?? '';
+            if ($vModel !== '') {
+                $rn->content = $component->getBindValue($vModel);
+            }
+        }
     }
 
     /**
