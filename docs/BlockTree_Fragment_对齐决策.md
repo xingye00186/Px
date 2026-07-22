@@ -22,6 +22,55 @@
 - 与 layout `PhysicalFragment` 、CSS Block 、vc-ui 组件名称完全隔离
 - patchFlag 相应命名：`PATCH_STABLE_LIST` / `PATCH_KEYED_LIST` / `PATCH_UNKEYED_LIST`（数值仍 64/128/256，与 Vue 3 一致便于对齐）
 
+### 0.1 `#list` 命名的正面语义基础 — 与 Blink DisplayItemList 异曲同工
+
+`#list` 不只是"避免与 Fragment 碰撞"的兼底选择 — 它与 Chromium/Blink 渲染流水线里的 **DisplayItemList** 是同一种设计模式在不同抽象层的实例。
+
+**Blink DisplayItemList**（[参 Blink Paint Design](https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/platform/graphics/paint/README.md)）
+是 paint 与 raster 之间的关键中间产物：
+
+```
+Layout Tree → PaintController → DisplayItemList → Compositor/Rasterizer
+                                 (Vec<DisplayItem>)
+```
+
+- **扁平化**：从 paint tree 递归输出为 `Vec<DisplayItem>` 一维数组
+- **顺序稳定**：按 paint order 严格插入，跨帧稳定
+- **跨帧复用**：PaintController 通过 invalidation 判定复用未变项
+- **消费方极简**：rasterizer 只需迭代 vector 顺序执行
+- **Skia SkPicture / SkDisplayList** 是同类实现（Px [SkiaGaneshD3D11Backend](file:///f:/work/Px/framework/Paint/Backend/SkiaGaneshD3D11Backend.php) 就依赖该机制）
+
+**结构同构性对照**：
+
+| 属性 | Blink DisplayItemList | Px `#list` VNode |
+|---|---|---|
+| 上游 | paint tree（结构化） | v-for 表达式（结构化） |
+| 形态 | 扁平数组 `Vec<DisplayItem>` | 扁平 children 数组 `VNode[]` |
+| 顺序语义 | paint order 稳定 | v-for iteration order 稳定 |
+| 跨阶段传递 | paint → raster | codegen → patchChildrenArray |
+| 稳定性标记 | invalidation flags | `PATCH_STABLE_LIST` / `KEYED` / `UNKEYED` |
+| 跨帧复用机制 | cached items | 旧 VNode 复用（keyed diff） |
+| 消费者 | rasterizer 迭代执行 | patch 逻辑迭代 diff |
+
+**共通设计模式**：**用扁平的、有稳定顺序的中间列表，把生产者（复杂树/表达式）与消费者（逐项处理）解耦，让消费方可以 O(n) 顺序处理 + 增量复用**。
+
+**严格的层次差异**（句子同构 ≠ 意义同等）：
+
+| 层次 | Blink DisplayItemList | Px `#list` |
+|---|---|---|
+| 抽象层 | **渲染指令**（drawRect / drawText / drawPicture） | **UI 描述**（VNode 容器） |
+| 位置 | paint 输出 → raster 输入 | codegen 输出 → patch 输入 |
+| 元素 | GPU-friendly draw command | UI 描述节点 |
+| 触发 | 重绘 invalidate | 状态变化 rerender |
+
+**一个在 paint 阶段、一个在 VNode 阶段**——不同抽象层的同构结构。
+
+**于是 `#list` 命名的依据不再只是"适合退而选其次"**：
+
+> `#list` 是"VNode 层的 DisplayItemList" —— 编译期扁平化，运行时按稳定顺序增量 patch。
+
+这也解释了为什么 Vue 3 需要 Fragment / Blink 需要 DisplayItemList / Skia 需要 SkPicture —— 四个不同层面的渲染系统**独立收敛到同一个设计模式**上，Px 采用它不是模仿 Vue 3，而是向一个已被满少 renderer管线验证过的成熟模式对齐。
+
 ## 1. 触发问题
 
 B-Phase 2（编译期 dynamicChildren codegen）实施后，reactive-bench A/B 数据显示：
@@ -261,3 +310,4 @@ Fragment 在 Px 里只需要在 `patchVNodeTree` 里加一个分支：**遇到 `
 
 - 2026-07-22 初次归档（B-Phase 2 完成后，B-Phase 2.5 启动前）
 - 2026-07-22 新增 §0 术语说明：Px 侧采用 `#list` 而非 Fragment，避免与 layout `PhysicalFragment` 术语碰撞（191 处引用）
+- 2026-07-22 新增 §0.1：`#list` 命名的正面语义基础 — 与 Blink DisplayItemList / Skia SkPicture 同构，向成熟渲染管线设计模式对齐
