@@ -900,9 +900,14 @@ function compileOneComponent(
     }
     if (preg_match('#<script[^>]*lang=["\']php["\'][^>]*>(.*?)</script>#s', $source, $m)) {
         $script = trim($m[1]);
-    } elseif ($verbose) {
-        $blockErrors[] = "No <script lang=\"php\"> block found in $vueFile";
     }
+    // <script> 缺失或内容为空 = template-only 组件（Vue 3 标准支持的 UI 元件形式）
+    //   静默通过，$script = ''，$hasScript = false，下游以空脚本处理：
+    //     - 无自定义方法（classBody 为空）
+    //     - 无 Reactive props（reactiveProps 为空）
+    //     - onMount / onUnmount 默认空实现（已有 default 生成分支）
+    //     - dispatchClick / dispatchKey 默认冒泡到 parent
+    //     - setBindValue / getBindValue 无 case 空 switch
     if (preg_match('#<style[^>]*>(.*?)</style>#s', $source, $m)) {
         $styles = $m[1];
     }
