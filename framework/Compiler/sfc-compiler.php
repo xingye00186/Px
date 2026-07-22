@@ -488,6 +488,7 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     $childCount = count($node->children);
                     $i = 0;
                     $chainStarted = false;   // Have we started an if-else chain?
+                    $hasElseBranch = false;  // L3: 链末尾是否已有 v-else（否则需补 comment else 保长度稳定）
                     $inConditionalBlock = false;  // Are we currently inside a conditional branch?
                     $chainClosed = false;   // Has the chain ended (past v-else)?
 
@@ -522,6 +523,7 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                             $chainStarted = true;
                             $isElseBranch = ($branchType === 'else');
                             $isElseIfBranch = ($branchType === 'else-if');
+                            if ($isElseBranch) { $hasElseBranch = true; }
 
                             // For v-if without following else-if/else:
                             // Generate if block with its child, then close it
@@ -595,9 +597,18 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                             $stmts[] = "{$ind}        \$c[] = {$childExpr};";
                                         }
                                     }
+                                    // L3: 补 else comment placeholder 保持长度稳定
+                                    //   孤立 v-if（无 v-else/v-else-if）要保证 true/false 每侧都产出相同数量 VNode
+                                    //   每个 sameIfChild 在 if 分支 push 1 个（无论普通还是 vForHelper#list），else 也 push 相同数目的 hComment
+                                    $stmts[] = "{$ind}    } else {";
+                                    $nSame = count($sameIfChildren);
+                                    for ($k = 0; $k < $nSame; $k++) {
+                                        $stmts[] = "{$ind}        \$c[] = VNode::hComment();";
+                                    }
                                     $stmts[] = "{$ind}    }";
                                     $i += count($sameIfChildren);
                                     $chainStarted = false;
+                                    $hasElseBranch = false;
                                     continue;
                                 }
                             }
@@ -676,15 +687,24 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     // Close the if-else chain - always exactly 1 closing brace
                     // regardless of how many elseif/else branches exist
                     if ($chainStarted) {
+                        // L3: 链末尾无 v-else 时补 comment placeholder保长度稳定
+                        if (!$hasElseBranch) {
+                            $stmts[] = "{$ind}    } else {";
+                            $stmts[] = "{$ind}        \$c[] = VNode::hComment();";
+                        }
                         $stmts[] = "{$ind}    }";
                     }
                     $stmts[] = "{$ind}    return \$c;";
 
                     // Wrap as immediately-invoked closure → single expression
                     $childrenExpr = "(function() {\n" . implode("\n", $stmts) . "\n{$ind}    })()";
-                    // B-Phase 2: IIFE 内部已主动传 null 阻断提取（避免跨作用域引用），
-                    //   但 IIFE 内可能含未扣取的动态子孙，mark unsafe 避免 root wrap
-                    if ($block !== null) { $block->unsafe = true; }
+                    // L3: IIFE 内部现在保证长度稳定（v-if 假分支补 comment placeholder），
+                    //   不再 mark unsafe。外层 block 可安全地 wrap dynamicChildren，
+                    //   patchVNodeTree 不会因长度失配而降级到全 diff。
+                    //   历史总结：
+                    //     - B-Phase 2 时引入 unsafe mark 作为保守兼底（IIFE 内未提取的动态子孙 + v-if 局度不稳定）
+                    //     - L3 后 v-if 局度已稳定，IIFE 内部未提取的动态子孙已由分支本地 block wrap 处理
+                    //     - 因此 unsafe mark 不再需要
                 }
             }
         }

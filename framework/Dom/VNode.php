@@ -254,6 +254,23 @@ class VNode
         return $node;
     }
 
+    /**
+     * hComment() —— v-if 假分支占位符（对齐 Vue 3 createCommentVNode('v-if', true)））
+     *
+     * 作用：保持父级 dynamicChildren / children 长度稳定，让 patchVNodeTree
+     * 能命中 block fast-path。v-if 从真变假时，dynamicChildren 内对应位置就变
+     * comment 占位（反之亦然）——长度不变，fast-path 无需降级。
+     *
+     * 语义：
+     *   - `type = '#comment'`，无 props / children
+     *   - layout / paint 层直接忽略（childrenToArray 展平时跳过）
+     *   - patchVNodeTree 遇到双侧都是 #comment 直接 return（无 op）
+     */
+    public static function hComment(): VNode
+    {
+        return new VNode('#comment', null, null);
+    }
+
     // ===== 属性读取辅助 =====
 
     /**
@@ -345,6 +362,10 @@ class VNode
             if ($children->type === '#list') {
                 return self::childrenToArray($children->children);
             }
+            // #comment 透传：v-if 占位符，layout / paint 层看不到
+            if ($children->type === '#comment') {
+                return [];
+            }
             return [$children];
         }
         if (is_array($children)) {
@@ -356,6 +377,9 @@ class VNode
                         foreach (self::childrenToArray($c->children) as $sub) {
                             $result[] = $sub;
                         }
+                    } elseif ($c->type === '#comment') {
+                        // #comment 透传：直接跳过（layout 层不存在）
+                        continue;
                     } else {
                         $result[] = $c;
                     }

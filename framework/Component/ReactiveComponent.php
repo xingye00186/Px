@@ -194,6 +194,11 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
             return;
         }
 
+        // #comment: v-if 占位符，无 op（类型不匹配日月 replaceVNode 上面已 handle）
+        if ($old->type === '#comment') {
+            return;
+        }
+
         // ===== B-Phase 2.5: #list VNode 专属分支 =====
         // v-for helper 返回 #list VNode（包含 iteration 子节点），
         // 直接用 patchChildrenArray patch 其 children，无需递归到普通全 diff 路径。
