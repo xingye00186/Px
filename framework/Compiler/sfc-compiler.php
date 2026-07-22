@@ -142,13 +142,21 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
 
     // Handle element with v-for → replace with render_N() helper call
     if (isset($node->vForHelper)) {
-        // B-Phase 2: v-for helper 返回的是 VNode[] 数组，无法作为单个 $_dN 提取
-        //   mark unsafe 让外层 root 回避 wrap，避免 fast-path 错误跳过 v-for iteration
-        if ($block !== null) { $block->unsafe = true; }
+        // B-Phase 2.5: helper 现在返回 #list VNode（不再是数组），可作为单个
+        //   dynamic child 提取到外层 block 的 dynamicChildren——不再 mark unsafe
         if (isset($node->vForParentItem)) {
-            return "\$this->{$node->vForHelper}(\${$node->vForParentItem})";
+            $helperCall = "\$this->{$node->vForHelper}(\${$node->vForParentItem})";
+        } else {
+            $helperCall = "\$this->{$node->vForHelper}()";
         }
-        return "\$this->{$node->vForHelper}()";
+        // 提取为 $_dN（如当前处于 block 收集上下文且非 block root）
+        if ($block !== null && !$skipExtract) {
+            $var = $block->allocVar();
+            $block->stmts[] = "{$var} = {$helperCall};";
+            $block->refs[] = $var;
+            return $var;
+        }
+        return $helperCall;
     }
 
     // Handle #text nodes within v-for context
@@ -422,9 +430,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     foreach ($node->children as $child) {
                         if ($child instanceof VNode) {
                             $expr = $childExprs[$childIdx];
-                            if (isset($child->vForHelper)) {
-                                $expr = '...' . $expr;
-                            }
+                            // B-Phase 2.5: v-for helper 现在返回单个 #list VNode，不再需要 spread
+                            // ($expr 本身就是单个 VNode 表达式，直接入数组）
                             $spreadExprs[] = $expr;
                             $childIdx++;
                         }
@@ -463,9 +470,7 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                         foreach ($node->children as $child) {
                             if ($child instanceof VNode) {
                                 $expr = $childExprs[$childIdx];
-                                if (isset($child->vForHelper)) {
-                                    $expr = '...' . $expr;
-                                }
+                                // B-Phase 2.5: v-for helper 现在返回单个 #list VNode，不再 spread
                                 $spreadExprs[] = $expr;
                                 $childIdx++;
                             }
@@ -574,7 +579,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                         }
 
                                         if (isset($sameIfChild->vForHelper)) {
-                                            $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
+                                            // B-Phase 2.5: helper 返回单个 #list VNode，直接入 children，不再展开
+                                            $stmts[] = "{$ind}        \$c[] = {$childExpr};";
                                         } else {
                                             // B-Phase 2: stmts 必须无条件 emit（一旦提取后 $_dN 被 childExpr 引用）
                                             if (!empty($branchBlock->stmts)) {
@@ -628,7 +634,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
 
                             // VNode statement: inside the if block at indent+1
                             if (isset($child->vForHelper)) {
-                                $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
+                                // B-Phase 2.5: helper 返回单个 #list VNode，直接入 children，不再展开
+                                $stmts[] = "{$ind}        \$c[] = {$childExpr};";
                             } else {
                                 // B-Phase 2: stmts 必须无条件 emit（一旦提取后 $_dN 被 childExpr 引用）
                                 if (!empty($branchBlock->stmts)) {
@@ -648,7 +655,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                 // Inside an if/else-if/else branch - add inside the block
                                 $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx, null, false);
                                 if (isset($child->vForHelper)) {
-                                    $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
+                                    // B-Phase 2.5: helper 返回单个 #list VNode，直接入 children
+                                    $stmts[] = "{$ind}        \$c[] = {$childExpr};";
                                 } else {
                                     $stmts[] = "{$ind}        \$c[] = {$childExpr};";
                                 }
@@ -656,7 +664,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                 // Outside any conditional block - add at top level (siblings to if-else chain)
                                 $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx, null, false);
                                 if (isset($child->vForHelper)) {
-                                    $stmts[] = "{$ind}    array_push(\$c, ...{$childExpr});";
+                                    // B-Phase 2.5: helper 返回单个 #list VNode，直接入 children
+                                    $stmts[] = "{$ind}    \$c[] = {$childExpr};";
                                 } else {
                                     $stmts[] = "{$ind}    \$c[] = {$childExpr};";
                                 }

@@ -103,6 +103,15 @@ class VNode
     public const PATCH_PROPS = 16;
     /** {{ }} 动态文本内容 */
     public const PATCH_TEXT  = 32;
+
+    // ===== B-Phase 2.5: #list VNode 专属 patchFlag（对齐 Vue 3 FRAGMENT flag 数值）=====
+    /** #list 子节点顺序与长度均在编译期确定（多根组件 / v-for 常量 source） */
+    public const PATCH_STABLE_LIST   = 64;
+    /** #list 子节点带 :key，需走 keyed diff */
+    public const PATCH_KEYED_LIST    = 128;
+    /** #list 子节点无 :key，需走 unkeyed diff */
+    public const PATCH_UNKEYED_LIST  = 256;
+
     /** 全部动态（默认，未优化） */
     public const PATCH_ALL   = 63;
 
@@ -222,6 +231,29 @@ class VNode
         return $node;
     }
 
+    /**
+     * hList([$child1, $child2, ...], VNode::PATCH_KEYED_LIST)
+     *
+     * 创建 #list VNode（B-Phase 2.5）—— v-for helper 返回产物 / 多根组件层容器，
+     * 语义与 Vue 3 Fragment 对齐，命名为 `#list` 避免与 Px layout `PhysicalFragment` 碰撞。
+     *
+     * 语义：
+     *   - `type = '#list'`
+     *   - `patchFlags` 为 PATCH_STABLE_LIST / PATCH_KEYED_LIST / PATCH_UNKEYED_LIST 之一
+     *   - `children` 数组包含真实子节点
+     *   - layout / paint 层看不到 #list（childrenToArray 会展平）
+     *   - patchVNodeTree 看到 #list 走 patchChildrenArray（按 patchFlag 分流）
+     *
+     * @param VNode[] $children
+     * @param int $listFlag PATCH_STABLE_LIST / PATCH_KEYED_LIST / PATCH_UNKEYED_LIST
+     */
+    public static function hList(array $children, int $listFlag): VNode
+    {
+        $node = new VNode('#list', null, $children);
+        $node->patchFlags = $listFlag;
+        return $node;
+    }
+
     // ===== 属性读取辅助 =====
 
     /**
@@ -298,18 +330,35 @@ class VNode
      * 将 VNode children 统一为 VNode 数组。
      * 消除重复实现（Application + RenderTreeManager 各自维护了一份）。
      *
+     * B-Phase 2.5：遇到 `#list` VNode 时会**递归展平其 children**，
+     * 让 layout / paint 层看不到 #list 层（transparent container）。
+     * 而 patchVNodeTree 直接访问 `$vnode->children` 原始值，仍能看到 #list 走 fast-path。
+     *
      * @param mixed $children VNode->children 值
      * @return VNode[]
      */
     public static function childrenToArray(mixed $children): array
     {
         if ($children === null) return [];
-        if ($children instanceof VNode) return [$children];
+        if ($children instanceof VNode) {
+            // #list 透传：展平其 children
+            if ($children->type === '#list') {
+                return self::childrenToArray($children->children);
+            }
+            return [$children];
+        }
         if (is_array($children)) {
             $result = [];
             foreach ($children as $c) {
                 if ($c instanceof VNode) {
-                    $result[] = $c;
+                    if ($c->type === '#list') {
+                        // #list 透传：递归展平其 children 到本层结果
+                        foreach (self::childrenToArray($c->children) as $sub) {
+                            $result[] = $sub;
+                        }
+                    } else {
+                        $result[] = $c;
+                    }
                 } elseif ($c !== null && $c !== false) {
                     // AOT 兼容: php::Variant 上 is_string() 可能返回 false（#text 子节点丢失）
                     // 改用 (string) 强制转换 + 非空检查

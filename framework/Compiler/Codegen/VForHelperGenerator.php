@@ -47,6 +47,11 @@ class VForHelperGenerator
                 }
             }
 
+            // B-Phase 2.5: v-for helper 返回 #list VNode 而非 VNode[]（日式 Fragment 语义站平呼）
+            //   有 keyExpr → PATCH_KEYED_LIST，无 keyExpr → PATCH_UNKEYED_LIST
+            //   source 尚未做编译期常量检测，不 emit STABLE_LIST（将来可以额外优化）
+            $listFlag = !empty($info['keyExpr']) ? 'PATCH_KEYED_LIST' : 'PATCH_UNKEYED_LIST';
+
             if ($parentItem !== null) {
                 $iterExpr = "\${$parentItem}['{$innerSource}']";
                 $paramDecl = "array \${$parentItem}";
@@ -64,15 +69,15 @@ class VForHelperGenerator
 
     /**
      * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
-     * @return VNode[]
+     * @return VNode  #list VNode (B-Phase 2.5)
      */
-    private function {$name}({$paramDecl}): array
+    private function {$name}({$paramDecl}): VNode
     {
         \$children = [];
         foreach ({$iterExpr} as {$foreachAs}) {
             \$children[] = {$childBlock};
         }
-        return \$children;
+        return VNode::hList(\$children, VNode::{$listFlag});
     }
 PHP;
                 } else {
@@ -80,15 +85,15 @@ PHP;
 
     /**
      * v-for render helper: {$item} in {$source}
-     * @return VNode[]
+     * @return VNode  #list VNode (B-Phase 2.5)
      */
-    private function {$name}(): array
+    private function {$name}(): VNode
     {
         \$children = [];
         foreach ({$iterExpr} as {$foreachAs}) {
             \$children[] = {$childBlock};
         }
-        return \$children;
+        return VNode::hList(\$children, VNode::{$listFlag});
     }
 PHP;
                 }
@@ -118,9 +123,9 @@ PHP;
 
     /**
      * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
-     * @return VNode[]
+     * @return VNode  #list VNode (B-Phase 2.5)
      */
-    private function {$name}({$paramDecl}): array
+    private function {$name}({$paramDecl}): VNode
     {
         \$children = [];
         foreach ({$iterExpr} as {$foreachAs}) {
@@ -128,7 +133,7 @@ PHP;
             \$_comp->componentPropValues = {$bindingExpr};
             \$children[] = \$_comp;
         }
-        return \$children;
+        return VNode::hList(\$children, VNode::{$listFlag});
     }
 PHP;
                     } else {
@@ -136,9 +141,9 @@ PHP;
 
     /**
      * v-for render helper: {$item} in {$source}
-     * @return VNode[]
+     * @return VNode  #list VNode (B-Phase 2.5)
      */
-    private function {$name}(): array
+    private function {$name}(): VNode
     {
         \$children = [];
         foreach ({$iterExpr} as {$foreachAs}) {
@@ -146,7 +151,7 @@ PHP;
             \$_comp->componentPropValues = {$bindingExpr};
             \$children[] = \$_comp;
         }
-        return \$children;
+        return VNode::hList(\$children, VNode::{$listFlag});
     }
 PHP;
                     }
@@ -181,14 +186,14 @@ PHP;
 
     /**
      * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
-     * @return VNode[]
+     * @return VNode  #list VNode (B-Phase 2.5)
      */
-    private function {$name}({$paramDecl}): array
+    private function {$name}({$paramDecl}): VNode
     {
         \$children = [];
         foreach ({$iterExpr} as {$foreachAs}) {{$assignFlags}
         }
-        return \$children;
+        return VNode::hList(\$children, VNode::{$listFlag});
     }
 PHP;
                     } else {
@@ -199,14 +204,14 @@ PHP;
 
     /**
      * v-for render helper: {$item} in {$source}
-     * @return VNode[]
+     * @return VNode  #list VNode (B-Phase 2.5)
      */
-    private function {$name}(): array
+    private function {$name}(): VNode
     {
         \$children = [];
         foreach ({$iterExpr} as {$foreachAs}) {{$assignFlags}
         }
-        return \$children;
+        return VNode::hList(\$children, VNode::{$listFlag});
     }
 PHP;
                     }

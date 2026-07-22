@@ -194,6 +194,25 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
             return;
         }
 
+        // ===== B-Phase 2.5: #list VNode 专属分支 =====
+        // v-for helper 返回 #list VNode（包含 iteration 子节点），
+        // 直接用 patchChildrenArray patch 其 children，无需递归到普通全 diff 路径。
+        // patchFlags 区分：
+        //   PATCH_KEYED_LIST   → keyed diff（patchChildrenArray 里的 keyed 分支）
+        //   PATCH_UNKEYED_LIST → index+type 匹配（patchChildrenArray 里的无 key fallback）
+        //   PATCH_STABLE_LIST  → 顶畬按顺序 patch（本次同上）
+        if ($old->type === '#list') {
+            $oldCh = is_array($old->children) ? $old->children : [];
+            $newCh = is_array($new->children) ? $new->children : [];
+            // #list unkeyed / stable 下，应保证 index+type 匹配也能 patch（不受
+            // B-Phase 2 selective 限制——因为 #list 编译期保证了 child type均一致）
+            $aggressive = ($new->patchFlags & (VNode::PATCH_UNKEYED_LIST | VNode::PATCH_STABLE_LIST)) !== 0;
+            $old->children = $this->patchChildrenArray($oldCh, $newCh, $aggressive);
+            $old->patchFlags = $new->patchFlags;  // 保留新 list 的 flag
+            \Px\Core\PerfCounter::inc('list_patch');
+            return;
+        }
+
         // ===== Block Tree 快速路径 (Vue 3 patchBlockChildren 语义) =====
         // 新旧都是 block root 且 dynamicChildren 长度一致 → 迭代动态子孙数组，
         // 跳过静态中间层递归。长度不一致（v-if 切换分支/v-for 长度变化）
@@ -308,8 +327,11 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     /**
      * 按 key 匹配新旧子节点数组，无 key 时回避到 index+type 匹配（Vue 3 默认行为）。
      * 无 key patch 多多为 v-if 分支根 / 静态列表等位置稳定的子节点，可保持旧对象复用。
+     *
+     * @param bool $aggressiveUnkeyed  true = 无 key 时只要 type 一致就 patch（#list unkeyed 场景）
+     *                                  false = 十匹配双方都是 block root 且长度一致时才 patch（默认保守保护）
      */
-    private function patchChildrenArray(array $oldChildren, array $newChildren): array
+    private function patchChildrenArray(array $oldChildren, array $newChildren, bool $aggressiveUnkeyed = false): array
     {
         $result = [];
 
@@ -351,14 +373,18 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
                 }
             } else {
                 // 无 key：严格限定走 patch 的条件，避免回归
-                //   仅当旧首项 type 一致 && 双方都是 block root && dynamicChildren 长度相同时才 patch
-                //   → 确保 fast-path 会 hit，赚到 patch 成本；否则保持旧行为“直接换新节点”（O(1)）
-                //   避免为了少数 fast-path 命中而引入 v-if 无 block 分支的深递归开销
-                $canFastPathPatch = ($noKeyIdx < $noKeyLen)
-                    && $oldNoKey[$noKeyIdx]->type === $newCh->type
-                    && $oldNoKey[$noKeyIdx]->dynamicChildren !== null
-                    && $newCh->dynamicChildren !== null
-                    && count($oldNoKey[$noKeyIdx]->dynamicChildren) === count($newCh->dynamicChildren);
+                //   默认（保守）：仅当旧首项 type 一致 && 双方都是 block root && dynamicChildren 长度相同时才 patch
+                //   $aggressiveUnkeyed=true (#list unkeyed)：仅需 type 一致即 patch（编译期保证 type 稳定）
+                //   → 避免为了少数 fast-path 命中而引入 v-if 无 block 分支的深递归开销
+                $typeMatch = ($noKeyIdx < $noKeyLen) && $oldNoKey[$noKeyIdx]->type === $newCh->type;
+                $canFastPathPatch = $typeMatch && (
+                    $aggressiveUnkeyed
+                    || (
+                        $oldNoKey[$noKeyIdx]->dynamicChildren !== null
+                        && $newCh->dynamicChildren !== null
+                        && count($oldNoKey[$noKeyIdx]->dynamicChildren) === count($newCh->dynamicChildren)
+                    )
+                );
 
                 if ($canFastPathPatch) {
                     $oldCh = $oldNoKey[$noKeyIdx];

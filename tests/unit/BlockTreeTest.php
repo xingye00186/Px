@@ -280,6 +280,126 @@ test('block root PATCH_NONE → 只跳过 root props，子孙仍 patch', functio
     assert_eq($oldDyn->props[':style'], 'y', '子孙 :style 应更新');
 });
 
+echo "\n--- 5. B-Phase 2.5: #list VNode fast-path ---\n";
+
+test('hList 工厂方法创建 #list VNode', function () {
+    $c1 = VNode::h('div', null, 'a');
+    $c2 = VNode::h('div', null, 'b');
+    $list = VNode::hList([$c1, $c2], VNode::PATCH_KEYED_LIST);
+
+    assert_eq($list->type, '#list', '#list VNode type 应为 #list');
+    assert_eq($list->patchFlags, VNode::PATCH_KEYED_LIST, 'patchFlags 应为 PATCH_KEYED_LIST');
+    assert_true(is_array($list->children) && count($list->children) === 2, 'children 应为两元数组');
+});
+
+test('childrenToArray 展平 #list 子节点（layout 透明）', function () {
+    $a = VNode::h('span', null, 'A');
+    $b = VNode::h('span', null, 'B');
+    $c = VNode::h('span', null, 'C');
+    $list = VNode::hList([$a, $b], VNode::PATCH_KEYED_LIST);
+
+    // 父节点包含 [static, #list([a,b]), static]
+    $result = VNode::childrenToArray([$c, $list, $a]);
+
+    assert_eq(count($result), 4, '#list 展平后共 4 个真实子节点（c + a + b + a）');
+    assert_eq($result[0]->children, 'C', '首项 = c');
+    assert_eq($result[1]->children, 'A', '第二项 = #list 展平第一项 a');
+    assert_eq($result[2]->children, 'B', '第三项 = #list 展平第二项 b');
+});
+
+test('childrenToArray 单个 #list children 也展平', function () {
+    $a = VNode::h('span', null, 'A');
+    $b = VNode::h('span', null, 'B');
+    $list = VNode::hList([$a, $b], VNode::PATCH_UNKEYED_LIST);
+
+    // 父节点的 children 字段 = 单个 #list VNode
+    $result = VNode::childrenToArray($list);
+
+    assert_eq(count($result), 2, '单 #list 展平为 2 个子节点');
+    assert_eq($result[0]->children, 'A', '首项 a');
+    assert_eq($result[1]->children, 'B', '第二项 b');
+});
+
+test('patchVNodeTree 遇到 #list 走 patchChildrenArray（keyed diff）', function () {
+    $comp = new _BlockTestComponent();
+
+    // 旧 #list: [key=1 A, key=2 B]
+    $oldA = VNode::hKey('div', null, 'A', '1');
+    $oldB = VNode::hKey('div', null, 'B', '2');
+    $oldList = VNode::hList([$oldA, $oldB], VNode::PATCH_KEYED_LIST);
+
+    // 新 #list: [key=2 B*, key=1 A*] — 交换顺序，内容更新
+    $newA = VNode::hKey('div', null, 'A_new', '1');
+    $newB = VNode::hKey('div', null, 'B_new', '2');
+    $newList = VNode::hList([$newB, $newA], VNode::PATCH_KEYED_LIST);
+
+    $comp->callPatch($oldList, $newList);
+
+    // list_patch 计数器递增
+    $snap = PerfCounter::snapshot();
+    $lp = $snap['list_patch']['count'] ?? 0;
+    assert_true($lp >= 1, 'list_patch 计数器应递增 (got ' . $lp . ')');
+
+    // 旧 list 的 children 已重新排列：首项 = key=2 的旧对象 (B_new)，次项 = key=1 的旧对象 (A_new)
+    $ch = $oldList->children;
+    assert_true(is_array($ch) && count($ch) === 2, '#list children 应仍为 2 元');
+    assert_eq($ch[0]->key, '2', '首项 key = 2');
+    assert_eq($ch[0]->children, 'B_new', '首项 content 更新为 B_new');
+    assert_eq($ch[1]->key, '1', '次项 key = 1');
+    assert_eq($ch[1]->children, 'A_new', '次项 content 更新为 A_new');
+    // 旧对象复用：$ch[0] === $oldB，$ch[1] === $oldA
+    assert_true($ch[0] === $oldB, '#list keyed diff 应复用旧 VNode (key=2)');
+    assert_true($ch[1] === $oldA, '#list keyed diff 应复用旧 VNode (key=1)');
+});
+
+test('patchVNodeTree #list unkeyed 按 index+type 匹配', function () {
+    // 先重置 counter
+    PerfCounter::snapshot();
+
+    $comp = new _BlockTestComponent();
+
+    $oldA = VNode::h('span', ['class' => 'a'], 'A');
+    $oldB = VNode::h('span', ['class' => 'b'], 'B');
+    $oldList = VNode::hList([$oldA, $oldB], VNode::PATCH_UNKEYED_LIST);
+
+    $newA = VNode::h('span', ['class' => 'a2'], 'A2');
+    $newB = VNode::h('span', ['class' => 'b2'], 'B2');
+    $newList = VNode::hList([$newA, $newB], VNode::PATCH_UNKEYED_LIST);
+
+    $comp->callPatch($oldList, $newList);
+
+    $snap = PerfCounter::snapshot();
+    assert_true(($snap['list_patch']['count'] ?? 0) >= 1, 'list_patch 计数器应递增');
+
+    // 旧 list 的 children 保留旧对象但 content 更新
+    $ch = $oldList->children;
+    assert_true($ch[0] === $oldA, 'unkeyed 首项应复用旧 VNode a');
+    assert_true($ch[1] === $oldB, 'unkeyed 次项应复用旧 VNode b');
+    assert_eq($ch[0]->children, 'A2', '首项 content 更新');
+    assert_eq($ch[1]->children, 'B2', '次项 content 更新');
+});
+
+test('patchVNodeTree #list 长度变化（新增/删除项）', function () {
+    PerfCounter::snapshot();
+    $comp = new _BlockTestComponent();
+
+    $oldA = VNode::hKey('div', null, 'A', '1');
+    $oldB = VNode::hKey('div', null, 'B', '2');
+    $oldList = VNode::hList([$oldA, $oldB], VNode::PATCH_KEYED_LIST);
+
+    // 新增 key=3，删除 key=1
+    $newB = VNode::hKey('div', null, 'B_new', '2');
+    $newC = VNode::hKey('div', null, 'C', '3');
+    $newList = VNode::hList([$newB, $newC], VNode::PATCH_KEYED_LIST);
+
+    $comp->callPatch($oldList, $newList);
+
+    $ch = $oldList->children;
+    assert_eq(count($ch), 2, 'children 长度应为 2');
+    assert_true($ch[0] === $oldB, '首项応复用旧 key=2 VNode');
+    assert_eq($ch[1]->key, '3', '次项应为新 key=3 VNode');
+});
+
 echo "\n";
 $exitCode = print_summary();
 exit($exitCode);
