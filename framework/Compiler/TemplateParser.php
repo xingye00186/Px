@@ -338,7 +338,10 @@ class TemplateParser
         $styleParts = [];
         if ($width > 0) $styleParts[] = "width:{$width}px";
         if ($height > 0) $styleParts[] = "height:{$height}px";
-        $rootProps['style'] = implode(';', $styleParts);
+        $styleStr = implode(';', $styleParts);
+        if ($styleStr !== '') {
+            $rootProps['style'] = $styleStr;
+        }
 
         $root = VNode::h('#root', $rootProps, []);
         $root->w = $width ?: 0;

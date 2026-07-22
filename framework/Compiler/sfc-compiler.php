@@ -256,6 +256,10 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     continue;
                 }
             }
+            // 空 style → 跳过（运行时用 ?? [] 兜底）
+            if ($k === 'style' && $v === '') {
+                continue;
+            }
             if (is_string($v) && strlen($v) > 0 && $v[0] === '$') {
                 $propsStr[] = var_export($k, true) . '=>' . $v;
             } else {
@@ -700,6 +704,11 @@ function generateComponentExpr(VNode $node, ?array $loopInfo): string
             if (str_starts_with($k, '__')) continue;
             if ($k === 'v-if') continue;
             if ($k === 'style' && is_string($v) && $v !== '' && $v[0] !== '$') {
+                // StyleArrayTransform 已预处理为数组格式 → 直接透传
+                if ($v[0] === '[') {
+                    $propsStr[] = var_export('style', true) . '=>' . $v;
+                    continue;
+                }
                 $decls = explode(';', $v);
                 $pairs = [];
                 $valid = true;
@@ -716,6 +725,10 @@ function generateComponentExpr(VNode $node, ?array $loopInfo): string
                     $propsStr[] = var_export('style', true) . '=>[' . implode(',', $pairs) . ']';
                     continue;
                 }
+            }
+            // 空 style → 跳过
+            if ($k === 'style' && $v === '') {
+                continue;
             }
             if (is_string($v) && strlen($v) > 0 && $v[0] === '$') {
                 $propsStr[] = var_export($k, true) . '=>' . $v;

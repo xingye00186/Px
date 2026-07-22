@@ -24,6 +24,8 @@ class StyleRecalcPass
         }
 
         $inlineStyle = $root->props['style'] ?? [];
+        // 编译期数组化未覆盖的路径：空 string → []
+        if (!is_array($inlineStyle)) { $inlineStyle = []; }
         $className = $root->props['class'] ?? '';
 
         // #text 节点无样式，用父样式直接构造最小 ComputedStyle，跳过 StyleResolver

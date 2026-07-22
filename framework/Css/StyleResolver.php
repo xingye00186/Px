@@ -42,6 +42,10 @@ class StyleResolver
         array $parentStyleDeclarations = [],
         array &$pseudoStyles = []
     ): ComputedStyle {
+        // 防御：空 string → []（编译期未覆盖的空 style 路径）
+        if (!is_array($inlineStyle)) {
+            $inlineStyle = [];
+        }
         // 1. 内联样式已经是编译期数组，直接使用
 
         // 2. 合并 CSS class 样式 + tag 选择器样式（CSS 层叠：class 是 base，inline 覆盖）

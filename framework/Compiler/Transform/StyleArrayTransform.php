@@ -27,15 +27,21 @@ class StyleArrayTransform implements TransformInterface
 
         $props = &$node->props;
 
-        // 转换静态 style: "color:red;font-size:14px" → ['color'=>'red','font-size'=>'14px']
-        if (isset($props['style']) && is_string($props['style']) && $props['style'] !== '') {
-            $style = $props['style'];
-            // 已经是 PHP 表达式（以 $ 开头）则不转换
-            if ($style[0] !== '$' && $style[0] !== '(') {
-                $converted = $this->convertStaticStyle($style);
-                if ($converted !== null) {
-                    $props['style'] = $converted;
+       // 转换静态 style: "color:red;font-size:14px" → ['color'=>'red','font-size'=>'14px']
+        if (isset($props['style'])) {
+            if (is_string($props['style']) && $props['style'] !== '') {
+                $style = $props['style'];
+                // 已经是 PHP 表达式（以 $ 开头）则不转换
+                if ($style[0] !== '$' && $style[0] !== '(') {
+                    $converted = $this->convertStaticStyle($style);
+                    if ($converted !== null) {
+                        $props['style'] = $converted;
+                    }
                 }
+            }
+            // 空 style → 删除（运行时用 ?? [] 兜底，避免传 string 给 StyleResolver）
+            if ($props['style'] === '' || $props['style'] === []) {
+                unset($props['style']);
             }
         }
 

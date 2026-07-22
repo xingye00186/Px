@@ -281,6 +281,11 @@ PHP;
                 }
             }
             if ($k === 'style' && is_string($v) && $v !== '' && $v[0] !== '$' && $v[0] !== '(') {
+                // StyleArrayTransform 已预处理为数组格式 → 直接透传（不 var_export）
+                if ($v[0] === '[') {
+                    $parts[] = var_export('style', true) . '=>' . $v;
+                    continue;
+                }
                 $decls = explode(';', $v);
                 $pairs = [];
                 $valid = true;
