@@ -1125,6 +1125,26 @@ function compileOneComponent(
     /** @var array $reactiveProps 确保变量始终定义 */
     $reactiveProps = $analyzer->extractReactiveProperties($script);
     if (!is_array($reactiveProps)) { $reactiveProps = []; }
+
+    // L2: template-only 组件的 implicit props 推断
+    //   当 <script> 缺失时（!$hasScript），模板里出现的 {{ xxx }} / :xxx / v-if="xxx"
+    //   变量自动推断为 implicit Reactive string props。对齐 Vue 3 template-only UI
+    //   元件的实际使用：
+    //     <Button.vue> 无 script，<template><button :style="'bg:'+color">{{label}}</button></template>
+    //     → 自动写入 public string $color / $label，注入 setBindValue case，父传值正常
+    //   不在 $hasScript 时启用，避免影响已有组件（它们变量已在 script 里声明）
+    if (!$hasScript && !empty($bindKeys)) {
+        $existingNames = [];
+        foreach ($reactiveProps as $rp) { $existingNames[$rp['name']] = true; }
+        foreach ($bindKeys as $key => $_) {
+            // 只取合法 PHP 标识符（避免带点的表达式、数字、特殊符号）
+            if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $key)) continue;
+            if (isset($existingNames[$key])) continue;
+            $reactiveProps[] = ['name' => $key, 'type' => 'string', 'default' => "''"];
+            $existingNames[$key] = true;
+        }
+    }
+
     $hasReactive = !empty($reactiveProps);
 
     $bindValGen = new BindValueGenerator();
