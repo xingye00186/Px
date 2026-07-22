@@ -125,6 +125,32 @@ VNode props/style 可能已经变了
 
 这意味着 `layoutDirty=false` **不代表 VNode 没有变化**，只代表"影响布局的那部分没有变化"。
 
+### 2.7 ❌ 不可行：`markLayoutDirty` 直接设 `parent->childrenNeedLayout` 替代 `propagateLayoutDirty`
+
+**动机**：`RenderNode::$childrenNeedLayout`（L73）已存在，但仅由 `propagateLayoutDirty` 的全树 DFS 设置；假设在 `markLayoutDirty` 沿父链传播时直接设 `parent->childrenNeedLayout=true`，可消除后置 DFS。
+
+**核查结论**：
+
+1. `childrenNeedLayout` 是 **write-only 死信号**——`LayoutOrchestrator::mainLayout` L192-193 明确注释「不能用 `childrenNeedLayout` 整体跳过——Px 先处理子项再跑算法（与 Blink 相反），父样式/约束变化时子项约束可能变，必须逐项检查」。无消费者。
+2. `propagateLayoutDirty` 的**真实职责不是设 `childrenNeedLayout`**，而是修正 `updateFromVNode` 5 处直接写 `layoutDirty=true` 后的 ancestor 层缺口（RenderTreeManager L532/603/739/796/810 均不走 `markLayoutDirty`，父链未被自动传播）。改 `markLayoutDirty` 无法覆盖这 5 处。
+3. `sub:dirty_propagate` 实测 5μs/frame（噪声级），占比 0.1–0.4%，**它自身不是成本**。真正成本在其后果：父链 `layoutDirty=true` → 父节点走不到 L107 早退 → 必须跑算法本体 340μs。
+
+**结论**：不做。零风险清理路径可选——删 `childrenNeedLayout` 字段与相关注释（纯 lint 级），减少心智负担。
+
+### 2.8 ❌ 不可行：VNode 层无 key 子节点位置匹配（对齐 Vue 3 `patchUnkeyedChildren`）
+
+**动机**：假设「无 key 子节点每帧新 VNode → `computedStyle=null` → 走 full 重算」，参照 Vue 3 `patchUnkeyedChildren` 按 index 位置对齐加以修正。
+
+**试验**（`ReactiveComponent::patchChildrenArray` 加按位置索引消费 unkeyed 旧节点分支）：TextHeavy +48% / LiveDashboard +35% / ChatStream +29% / StaticTemplate +25% 六个 case 全面回归。
+
+**根因**：
+
+1. **前提被证伪**：`sub:style_fallback count` 在 baseline 与 fix 后均为 51/case（每帧 1 次），"无 key → computedStyle=null → 全量重算"根本没发生。真实机制：`ReactiveComponent::patchChildrenArray` L280-296 baseline 已分层处理——**keyed 子节点走 `patchVNodeTree` 递归保 identity**（旧 VNode 存活 → `computedStyle` 缓存跨帧保留 → 下游 RenderNode 匹配命中），**unkeyed 子节点走 `$result[] = $newCh` O(1) 替换**。业务里 unkeyed 只发生在结构性 wrapper 上（`<div class=grid>`、`<template v-for>` 外壳，约 51/case），wrapper 本身无跨帧状态可保，整体替换无损。
+2. **重复劳动**：fix 后对 unkeyed wrapper 强制递归 patch，一路走进 wrapper 内 400 keyed cells，VNode 层做一次 400 keyed match、RenderTreeManager 层又做一次，`stage:vnode_tree` 从 2066μs 涨到 3763μs（+82%）。且未带来 identity 复用增益——keyed cells 本来就通过 wrapper 内 keyed diff 复用。
+3. **fast-path 破坏**：baseline `$result[] = $newCh` 是 O(1) 指针赋值，跳过整个 wrapper 子树递归；改为 `patchVNodeTree` 后失去短路。
+
+**结论**：VNode 层的无 key 位置匹配在本框架下**多余且有害**——baseline 已通过 keyed VNode 复用在 VNode 层保 identity（VNode 上的 `computedStyle` 缓存正是跨层复用 cascade 的锚点）；unkeyed wrapper 无 stateful 字段可保，走 O(1) 整体替换是正确策略。**并非“Px 不依赖 VNode identity”**——Vue 3 与 Px 都靠 keyed VNode 复用维持下游身份 cascade，差别只在 unkeyed 默认策略（Vue 3 按 index 保守复用，Px 走整体替换）。**未来若引入依赖 unkeyed 节点 identity 的机制**（Composition API `ref` 挂 unkeyed 节点 / DOM 引用 / v-model 焦点绑 unkeyed 元素）再重新评估；届时需额外 fast-path（仅在检测到 stateful unkeyed 子节点时才递归）。
+
 ---
 
 ## 三、信号等价性对照表
@@ -300,3 +326,37 @@ if ($gridHasFrTracks) {
 | Grid fr 子项是否能跳过分配？ | ❌ 不能 | fr 值传染，一个子项变化影响所有 |
 | Flex wrap 场景是否可局部跳过？ | ❌ 不能 | wrap 重构整行布局，无法局部化 |
 | 脏传播后的 layoutDirty=false 是否可信？ | ✅ 可信 | propagateLayoutDirty 保证（已修复 styleDirty 误传播） |
+| `markLayoutDirty` 可否直接设 `parent->childrenNeedLayout` 替代全树 DFS？ | ❌ 不可 | `childrenNeedLayout` 无消费者（LayoutOrchestrator L192 明确拒绝）；`propagateLayoutDirty` 真实职责是修正 `updateFromVNode` 5 处直接写 |
+| VNode 层无 key 子节点位置匹配是否必要？ | ❌ 不必要 | baseline 已通过 keyed 分支在 VNode 层复用真正 stateful 的子节点；unkeyed wrapper 无跨帧状态可保，强制递归 patch 与下游重复劳动，实验触发 +17~48% 回归 |
+| `propagateLayoutDirty` 自身成本需不需要继续优化？ | ❌ 不需 | 实测 5μs/frame，占比 0.1–0.4%（噪声级）；成本在其后果而非自身 |
+
+---
+
+## 八、地板与信号系统的关系（2026-07 实测补充）
+
+L1 + L3 交付后，reactive-bench 50 cycle 稳态暴露四条 case-无关的固定成本地板：
+
+| stage | 地板 | 与信号系统的关系 |
+|---|---:|---|
+| **vnode_tree** | 2108μs (TextHeavy) | patchFlag 仅能减少属性比较，无法跳过整棵子树——**缺 Vue 3 Block Tree**（dynamicChildren），时间复杂度固定为 O(全树)而非 O(动态节点数） |
+| **layout** | 475μs 全场 | `propagateLayoutDirty` 把父链全标 dirty，mainLayout L107 早退失效，必须跑算法本体 340μs——使用 `styleDirty` 区分影响/不影响布局的属性，但 §2.4 证伪 |
+| **paint** | 400–475μs | Path B `!paintDirty` 分支 return 但不产 element；功能上依赖 backbuffer 持久化（未验证）——信号 `paintDirty` 已齐备，但后端层未开启脏区域 |
+| **style_recalc** | 175μs 全场 | 无信号局部化——SRP 无条件全树 DFS，无 Flyweight；可在 `StyleResolver::resolve()` 出口按 (className, inlineStyleHash, parentStyleHash) memoize。**不仅是引用等价优化**——已建立的规范 `ComputedStyle` 对象身份会反哺到 layout 地板的信号系统：与 L4 `ChildNeedsStyleRecalc` 尝试回归相关（无锚点 → 门控退到输入侧数组 O(n)），Flyweight 建立后门控上移到对象层（O(1) 对象 `===`），打开 L4 重做窗口 |
+
+**信号系统对地板的边界认识**：
+
+- 地板 **vnode_tree 与 style_recalc** 属于「信号能改善但需新编译期信号」——前者要 Block Tree 的静态/动态分区信号，后者不需信号仅需引用等价。
+- 地板 **layout** 属于「信号已齐备但语义安全封锁」——`styleDirty` 存在但不能单独依赖（§2.4），行为安全地使用需附带「属性影响分类」子信号。
+- 地板 **paint** 属于「信号完备但下游未消费」——`paintDirty` 信号已在脏分类中产出，但 backend 层无脏区域裁切机制。
+
+**归纳到信号层级**：四条地板不能单靠现有信号优化。新信号需来自编译期（Block Tree、属性影响分类）或后端能力升级（脏区域 paint），而非在现有信号上新增脏门控（L4 postmortem 证实面临 CPU pipeline / 比较开销反转风险）。
+
+### 8.1 锚点身份与门控层（L4 postmortem 提炼）
+
+面向 Blink `ChildNeedsStyleRecalc` 式脏位传播时，信号能否落地不取决于信号本身，而取决于**是否存在可供门控的规范对象身份**：
+
+- **Blink 侧**：`SharedStyleData` 令相同样式的节点共享同一个 `ComputedStyle*`，`ChildNeedsStyleRecalc` 只需比较指针即可（O(1)）。
+- **Px 当前**：每次 `new ComputedStyle` 产新指针，无锚点，任何门控只能退回到输入侧 PHP 数组 `===`（O(n) 结构化比较，非 PHP 对象 `===` 的 O(1) 指针比较）。L4 回归的根本病灶就在此一——门控层错了（输入侧数组 vs 输出侧对象）。
+
+**信号优化前置铁律**：任何参照 Blink 脏位传播的优化，需先确认目标层存在可门控的规范对象——若无，需先建立（如 ComputedStyle Flyweight），而非直接上新信号。参见 `docs/Vue3_Blink_融合架构决策追踪.md` §4.4 与 §6.2。
+

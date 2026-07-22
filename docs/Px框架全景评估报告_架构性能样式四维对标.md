@@ -93,8 +93,12 @@ Float、Multi-column、书写模式、分页碎片化、Ruby、CSS 计数器、B
 4. **patchFlag 式脏检查短路**：编译期标记含动态绑定的节点，areVNodesEqual 对无标节点直接跳过子树，diff 从 O(全树属性比较) 降到 O(动态节点数)。
 5. **v-for key 编译期注入**：见 §四 P0-2，正确性 + 性能双收益。
 6. **`:style` 解析结果帧间缓存（新发现）**：`:style` 动态绑定在 StyleRecalcPass 中被跳过，只能在 updateFromVNode 中二次 regex 解析 + new ComputedStyle。TextHeavy 实测 400 节点每 cycle 触发 662ms。加一层 `hash(:style字符串) → parsedDeclarations` 可规避重复解析，预期 `update_from_vnode` 从 662ms 降至 ~50ms。
+7. **【新增 P0-7】ComputedStyle Flyweight（内存 + 构造双优）**：`StyleResolver::resolve()` 出口按 `(className, inlineStyleHash, parentStyleHash)` 三元组 memoize，key 稳定且引用等价性天然成立。L1 + L3 交付后 style_recalc 地板 175μs/frame 仅能由此降低（预估 → <80μs）；与信号传递无关，纯引用层优化，**风险可控 + 单点可交付 + 收益可测**。
+8. **【新增 P0-8】Block Tree / dynamicChildren（最高 ROI）**：plan `patchFlag_Vue3_对齐_task-1d0.md` L8 已显式回避（"本期不做"），但 L1 + L3 交付后 vnode_tree 地板 2108μs（TextHeavy）揭示 **patchFlag 仅能减少属性比较无法跳过整棵子树**，时间复杂度固定 O(全树)。Vue 3 `openBlock/createBlock/dynamicChildren` 将其降到 O(动态节点数)，预估 TextHeavy total 176ms → <100ms（-1500~2000μs/frame）。
 
 **自洽性说明**（消除表面矛盾）：样式评估中批评的"class→style 内联化"，其**方向是编译期优化的正确实践**（运行时零选择器匹配），错在实现方式——字符串拍平破坏层叠权重、丢弃伪类。正确做法不是放弃编译期拍平，而是升级为**结构化分层产物**（见 §五设计）。编译期优化与语义正确可以也必须兼得。
+
+**低成本项优化风险提示（L4 postmortem 教训）**：已验证的 **低地板级成本项（<200μs/frame）上做脏门控优化会触发 3-50x 回归**（L4 `styleDirty` 脏门控 baseline 0.7s → v5 3.0s；patchChildrenArray 无 key 位置匹配 TextHeavy +48%）。根因是新引入的分支与缓存访问破坏 CPU pipeline / I-cache 友好性，且 PHP 数组 `===` 结构化比较（O(n)）本身成本高于 baseline 完整 resolve。**不要在低成本项上做细粒度门控**；新信号应来自编译期（Block Tree、属性影响分类）或后端能力升级（脏区域 paint）。
 
 ---
 
@@ -225,6 +229,7 @@ ThemeData ──启动/切换时拍平──> :root 变量表
 
 - **P1：几何双权威源**。RenderNode 仍持有可变 x/y/w/h（layout 注释"原地回写"），与 PhysicalFragment"唯一权威源"声明并存。Blink 用十年剥离此双写——一旦某条路径只更新其一，绘制与命中测试不一致。**修复：RenderNode 几何字段降级为调试镜像或删除，hitTest 改走 Fragment 树**——对齐 Blink 的"最后一公里"。
 - **P1：组件边界缓存失效**（见 §4.3，依赖身份匹配修复后恢复跨帧复用）。
+- **P2：475μs 地板使缓存早退失效（2026-07 实测补充）**。`propagateLayoutDirty` 把父链全标 `layoutDirty=true`，mainLayout L107 早退（`!layoutDirty && cachedFragment && space->equals`）**对非叶节点完全失效**，必须跑算法本体（BlockAlgorithm 116μs + FlexAlgorithm 89μs + teardown 63μs = 340μs 固定）。优化需 fine-grained 判定「父样式变化是否影响 layout」（基于 `styleDirty` 的路径已由 `Px跨层信号融合策略分析.md` §2.4 证伪），属高危区，建议等 Block Tree + 属性影响分类信号就位后重新评估。`propagateLayoutDirty` 自身实测 5μs/frame（噪声级），不是优化点。
 
 ---
 
@@ -242,6 +247,7 @@ ThemeData ──启动/切换时拍平──> :root 变量表
 - **P0：每帧无条件全树 JSON 序列化（最大单笔浪费）**。render() 主线（Application.php L1010）`captureLayoutSnapshot($fragmentTree)` 无 diag 开关：每帧递归 fragmentToArray + `json_encode(JSON_PRETTY_PRINT)`，1000 节点树 = 每帧全树递归 + 大字符串分配，而产物只为测试场景 dumpLayoutToFile 服务。Blink tracing 是编译期宏、Flutter debugDump 仅 debug 模式——渲染主线不应无条件付此成本。**修复：加 Config 开关默认关闭，一行级改动**。
 - **P1：滚动 = 布局内重定位，帧成本 O(内容高度)**。滚动 → scrollTop 变化 → layout 重算子节点坐标 → 全量重绘。Blink 滚动是合成器平移（布局不跑、光栅复用）；Flutter 视口偏移。**大列表滚动是与两家差距最大的单点场景**。路径：滚动容器子树 Fragment 缓存 + 视口偏移裁剪重绘（directRender 已铺好快车道，差"内容不动只平移"一步）。
 - **P2：立即模式无保留 display list**。每帧 collectElementsFromFragment 全树遍历重建元素数组 + 按 layer 排序。演进：以 paintDirty 子树为单元泛化 LayerCache，等价 Blink cc 层缓存 / Flutter RepaintBoundary。
+- **P2：Path B 语义存疑（2026-07 新发现）**：`PaintPipeline::collectElementsFromFragment` 路径 B（L114-L118）对 `!paintDirty && !isScrollContainer && !isCacheable` 直接 `return`，**不产出任何 drawElement**。这在两种前提下才正确：（1）`beginFrame()` 不清屏，backbuffer 持久保留；（2）有脏区域裁切只重绘变化矩形。实测 `stage:paint = 400-475μs/frame` 全场恒定，说明 Path B 在 reactive-bench 从未触发（因 mainLayout 每次重设 `paintDirty=true`），无法从数据侧面判定 bug 是否存在。需专项诊断：先厘清 `sk_begin_frame` / `vue_begin_paint` 的 backbuffer 语义，再确定 Path B 是 bug 修复还是脏区域新特性的入口。
 - **P2：hitTest 高频分配**。hitTestRecursive（RenderTreeManager.php L905）每个递归层级都建 layerGroups 映射 + krsort，即使全层 layer=0；WM_MOUSEMOVE 洪水路径上 O(每级 children log) 分配。修复：无分层快速路径直接逆序遍历，零分配。
 - **P3：文本测量同步在布局热路径**（DirectWrite/Skia measure），可考虑缓存。
 
@@ -265,6 +271,9 @@ ThemeData ──启动/切换时拍平──> :root 变量表
 | P0-4 | 每帧无条件 captureLayoutSnapshot JSON 序列化 | 绘制 | 性能浪费 | 无 |
 | **P0-5** | **已实施：文本测量缓存（LRU 双向链表，1024 容量，TextHeavy 实测 99.5% 命中率）** | 布局/绘制 | **已修复** | — |
 | **P0-6** | **`:style` 动态绑定在 updateFromVNode 中二次 regex 解析（StyleRecalcPass 跳过 `:style`），400 节点 TextHeavy 触发 662ms/cycle** | 样式 | 性能浪费 | 无 |
+| **P0-7（新）** | **ComputedStyle 无 Flyweight，SRP 全树 DFS 无条件 `new ComputedStyle`，style_recalc 地板 175μs/frame** | 样式 | 性能（地板） | 无依赖，可独立交付 |
+| **P0-8（新）** | **无 Block Tree 导致 vnode_tree 地板 2108μs (TextHeavy)：patchFlag 仅能减少属性比较，无法跳过整棵子树** | 编译期/运行时 | 性能（最高 ROI） | plan L8 已回避，需重新建项 |
+| **P0-9（新）** | **Path B 路径 return without emit 语义存疑（PaintPipeline L114-118）：依赖未验证的 backbuffer 持久化假设** | 绘制 | 待诊断 | 无 |
 | P1-1 | 组件边界硬切断 → 组件内缓存失效/滚动抢救错位/hover 丢失 | 身份/布局/性能 | 结构性 | **依赖 P0-1、P0-2 先修** |
 | P1-2 | 几何双权威源（RenderNode.x vs Fragment.x） | 布局 | 结构债 | 无 |
 | P1-3 | 滚动布局内重定位 | 绘制 | 性能差距最大单点 | 可借 P1-1 修复后的缓存 |
