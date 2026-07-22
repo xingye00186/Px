@@ -271,16 +271,16 @@ Fragment 在 Px 里只需要在 `patchVNodeTree` 里加一个分支：**遇到 `
 - "Fragment 会让 diff 算法必须重写" —— 事实上 patchFragment 复用既有 keyed/unkeyed diff
 - "STABLE_FRAGMENT 主要用于多根组件" —— 部分对，多根组件用 STABLE_FRAGMENT，但 v-for 也 emit 它（当 source 是编译期常量时）
 
-## 6. Px 落地决策
+## 6. Px 落地决策 ✅ 已实施（2026-07-22 验证）
 
 ### 6.1 采用 Vue 3 的核心设计（术语本地化）
 
-- 新增 `#list` VNode type（Vue 3 对应 Fragment，为避免与 Px `PhysicalFragment` 冲突而采用 List、参 §0）
-- 扩展 `patchFlags`：`PATCH_STABLE_LIST` / `PATCH_KEYED_LIST` / `PATCH_UNKEYED_LIST`（数值 64/128/256，与 Vue 3 一致）
-- v-for helper 返回 `#list` VNode（不是 VNode 数组）
-- `#list` VNode 作为父 block dynamicChildren 里的一个位置（**长度稳定 = 1**）
-- v-for helper 内部**不用** BlockCollector 上报到外层（等效 Vue 3 的 disableTracking）
-- patchVNodeTree 遇到 `#list` 走 patchChildrenArray（按 keyed/unkeyed flag 分流）
+- ✅ 新增 `#list` VNode type（`VNode::hList()` 工厂方法，VNode.php L250）
+- ✅ 扩展 `patchFlags`：`PATCH_STABLE_LIST = 64` / `PATCH_KEYED_LIST = 128` / `PATCH_UNKEYED_LIST = 256`（VNode.php L109-113）
+- ✅ v-for helper 返回 `#list` VNode（VForHelperGenerator 所有路径均 `return VNode::hList($children, VNode::{$listFlag})`）
+- ✅ `#list` VNode 作为父 block dynamicChildren 里的一个位置（**长度稳定 = 1**）
+- ✅ v-for helper 内部**不用** BlockCollector 上报到外层（等效 Vue 3 的 disableTracking）
+- ✅ patchVNodeTree 遇到 `#list` 走 patchChildrenArray（ReactiveComponent.php L197-209，按 keyed/unkeyed/stable flag 分流）
 
 ### 6.2 不采用 Vue 3 的部分
 
@@ -288,10 +288,11 @@ Fragment 在 Px 里只需要在 `patchVNodeTree` 里加一个分支：**遇到 `
 - 不做 transition-group 兼容（Px 用独立 Animation 系统）
 - 不做 ref 多根语义（Px 无 ref API）
 
-### 6.3 分阶段
+### 6.3 分阶段 ✅ 已完成
 
-- **B-Phase 2.5** = 引入 `#list` VNode 语义 + v-for helper 改用 `#list` 输出
-- 打开 6 个 v-for 密集 case（TextHeavy / DynamicList / ChatStream / HoverGrid / StaticTemplate / LiveDashboard）的 fast-path 通路
+- ✅ **B-Phase 2.5** = 引入 `#list` VNode 语义 + v-for helper 改用 `#list` 输出
+- ✅ 打开 6 个 v-for 密集 case（TextHeavy / DynamicList / ChatStream / HoverGrid / StaticTemplate / LiveDashboard）的 fast-path 通路
+- ✅ patchChildrenArray 增加 `$aggressiveUnkeyed` 参数（#list unkeyed 场景下仅需 type 一致即 patch）
 
 ### 6.4 预期收益
 
@@ -311,3 +312,4 @@ Fragment 在 Px 里只需要在 `patchVNodeTree` 里加一个分支：**遇到 `
 - 2026-07-22 初次归档（B-Phase 2 完成后，B-Phase 2.5 启动前）
 - 2026-07-22 新增 §0 术语说明：Px 侧采用 `#list` 而非 Fragment，避免与 layout `PhysicalFragment` 术语碰撞（191 处引用）
 - 2026-07-22 新增 §0.1：`#list` 命名的正面语义基础 — 与 Blink DisplayItemList / Skia SkPicture 同构，向成熟渲染管线设计模式对齐
+- 2026-07-22 §6 标注为已实施：代码验证确认 VNode::hList() / VForHelperGenerator / patchVNodeTree #list 分支 / patchChildrenArray aggressiveUnkeyed 均已落地

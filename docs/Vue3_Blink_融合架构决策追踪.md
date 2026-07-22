@@ -286,10 +286,10 @@ ReactiveComponent::patchVNodeTree (keyed VNode 复用 → identity 稳定)
 | **组件级 skip** | ReactiveEffect / React.memo | LayoutObject::needsLayout | ✅ L1 dirty gate | 已交付 |
 | **子节点 keyed diff** | patchKeyedChildren | — | ✅ L3 head/tail + key map | 已交付 |
 | **子节点 unkeyed diff** | patchUnkeyedChildren | — | ❌ 回归 +25~48% | 放弃 |
-| **动态节点扁平化** | Block Tree / dynamicChildren | — | ❌ 全树 DFS 无 block | **中期首选** |
+| **动态节点扁平化** | Block Tree / dynamicChildren | — | ✅ B-Phase 2 已交付（BlockCollector + dynamicChildren + fast-path） | 已交付 2026-07 |
 | **属性级 patch 位** | patchFlag | — | ✅ PATCH_STYLE/CLASS/EVENT/PROPS/TEXT | 已交付（v-for 覆盖） |
 | **样式脏位向下传播** | — | ChildNeedsStyleRecalc | ❌ L4 回归 3-5x | 需前置 6.2 |
-| **样式实例共享** | — | SharedStyleData | ❌ 无 Flyweight | **短期首选** |
+| **样式实例共享** | — | SharedStyleData | ✅ StylePool LRU 512 池（StyleResolver::resolve → StylePool::intern） | 已交付 2026-07 |
 | **布局脏位向上传播** | — | markNeedsLayout() up-traversal | ✅ propagateLayoutDirty | 已交付 |
 | **子项布局携带位** | — | LayoutObject::childrenNeedLayout | ⚠️ write-only 死信号 | 建议清理 |
 | **绘制脏区域** | — | PaintInvalidator + dirty rect | ⚠️ paintDirty 信号在但 backend 未消费 | 独立课题 |
@@ -303,15 +303,15 @@ ReactiveComponent::patchVNodeTree (keyed VNode 复用 → identity 稳定)
 
 按风险调整 ROI 排序（已在 `docs/rendering-optimization-strategy.md` §十 与《AOT 问题记录》§二十一 铁律下筛选）：
 
-### 优先级 1 — ComputedStyle Flyweight（-125μs，中风险，1-2 天）
-- 实施：`StyleResolver::resolve()` 出口按 `(className, inlineStyleHash, parentStyleHash)` memoize
-- 验收：`style_recalc` 全 case 降至 <80μs
-- 附加收益：建立规范 `ComputedStyle` 身份锚点，让 §四 L4 门控层从输入侧数组（O(n) 结构化比较）上移到输出侧对象（O(1) 对象 `===`）
+### 优先级 1 — ComputedStyle Flyweight ✅ 已交付（2026-07）
+- 实施：`StylePool.php` LRU 512 池，`StyleResolver::resolve()` → `StylePool::intern()`
+- Key 组成：`className|elementType|inlineStyleFp|spl_object_id(parentCS)`
+- 附加收益已兑现：规范 `ComputedStyle` 对象身份锚点已建立，L4 门控窗口已打开
 
-### 优先级 2 — Block Tree / dynamicChildren（-1500~2000μs，中风险，5-10 天）
-- 前置：只读原型验证 vnode_tree 能否压到 <100μs
-- 实施：编译器增加 `openBlock/createBlock/dynamicChildren` 语义；`patchVNodeTree` 走 dynamicChildren 数组
-- 验收：TextHeavy total < 100ms（当前 176ms）
+### 优先级 2 — Block Tree / dynamicChildren ✅ 已交付（2026-07，B-Phase 2 + 2.5）
+- 实施：`BlockCollector` 编译期收集 + `VNode::$dynamicChildren` + `patchVNodeTree` block fast-path
+- 追加：`#list` VNode（B-Phase 2.5）解决 v-for 与 block 相容问题（`VNode::hList()` + PATCH_STABLE/KEYED/UNKEYED_LIST）
+- 验收：v-for 密集 case fast-path 命中率从 0 → 预期 80%+
 
 ### 优先级 3 — Path B 语义诊断（前置任务）
 - 目标：厘清 `PaintPipeline` L114-118 return without emit 是 bug 还是特性
@@ -320,10 +320,12 @@ ReactiveComponent::patchVNodeTree (keyed VNode 复用 → identity 稳定)
 - 收益上限（若打通）：-350μs
 
 ### 优先级 4 — 已否定路径（不做）
-- ❌ L4 Style Recalc 分离（除非先完成优先级 1 Flyweight）
+- ❌ L4 Style Recalc 分离（前置 Flyweight 已完成，但 L4 仍需重新 benchmark 验证收益）
 - ❌ patchUnkeyedChildren 位置匹配
 - ❌ 父层 layout skip 基于 styleDirty
 - ❌ markLayoutDirty → childrenNeedLayout 短路
+- ❌ FlexAlgorithm 子项级跳过（2026-07-22 证伪：grow/shrink 是全局约束求解，与 Grid fr 传染同构）
+- ❌ changeSignal 枚举（与三级脏位语义重叠，不产生新能力）
 
 ---
 
@@ -396,7 +398,7 @@ ReactiveComponent::patchVNodeTree (keyed VNode 复用 → identity 稳定)
 以下情况出现时需重新评估本文决策：
 
 1. **业务场景变化**：若引入依赖 **unkeyed 节点 identity** 的机制（Composition API `ref` 挂 unkeyed 节点 / DOM 引用指向 unkeyed wrapper / v-model 焦点绑 unkeyed `<input>`）→ §5.2 结论中的"unkeyed wrapper 无状态可保"前提不再成立，需重新评估（可能需 fast-path 版 patchUnkeyedChildren：仅对含 stateful 字段的 unkeyed 子节点递归 patch）。keyed VNode identity 已在 baseline 稳定，不需重新评估。
-2. **ComputedStyle Flyweight 完工**：§四 L4 Style Recalc 分离的 O(n) `===` 门控成本降至 O(1) → 可重启 L4 v6 试验
+2. **ComputedStyle Flyweight 完工**：✅ **已触发（2026-07）**——StylePool 已交付，§四 L4 门控层可从输入侧数组上移到输出侧对象（O(1) 对象 `===`），L4 v6 试验窗口已打开
 3. **backend 层升级**：若接入 Direct2D / Skia GPU 后端具备原生 dirty rect 支持 → §6.3 脏区域 paint 从"独立课题"降为"可实施项"
 4. **AOT 编译器优化**：若 Swoole Compiler 新版本让 `new ComputedStyle` 的 250μs → <50μs → §6.2 Flyweight 收益缩减，可能不再是首选
 5. **新 case 暴露的地板**：若引入新 benchmark case 暴露非四大地板之外的成本 → 需扩展 `stage:*` 打点重新分析
@@ -404,3 +406,55 @@ ReactiveComponent::patchVNodeTree (keyed VNode 复用 → identity 稳定)
 ---
 
 *本文档为 task-1d0 决策线的历史备查文件。未来变更请以增量方式追加决策节，保留时间线不可变。*
+
+---
+
+## 十二、2026-07-22 状态更新
+
+### 12.1 已交付项（本文写作后完成）
+
+| 项目 | 交付内容 | 对应本文章节 |
+|---|---|---|
+| Block Tree / dynamicChildren | `BlockCollector` + `VNode::$dynamicChildren` + `patchVNodeTree` block fast-path | §6.1 / §七 / §八优先级 2 |
+| `#list` VNode (B-Phase 2.5) | `VNode::hList()` + `PATCH_STABLE_LIST/KEYED_LIST/UNKEYED_LIST` (64/128/256) | 新增（本文未覆盖） |
+| ComputedStyle Flyweight | `StylePool.php` LRU 512 + `StyleResolver::resolve()` → `StylePool::intern()` | §6.2 / §七 / §八优先级 1 |
+
+### 12.2 新增否定路径（2026-07-22 代码验证）
+
+| 路径 | 裁定 | 证明 |
+|---|---|---|
+| FlexAlgorithm 子项级跳过 | ❌ 不可行 | `FlexAlgorithm::layout()` L190-218：`remaining = containerMain - lineTotal`，lineTotal 依赖 ALL items basis 之和，任一子项变 → 全行分配变（与 Grid fr 传染同构） |
+| `changeSignal` 枚举 | ❌ 不划算 | 与 `layoutDirty/styleDirty/paintDirty` 语义完全重叠；TEXT vs GEOMETRY 需测量后才知道，编译期无法预判 |
+| 属性级精确脏位 | ❌ 当前不划算 | 依赖图在 v-for/v-if/组件 props 下极复杂；收益被 Block Tree fast-path 覆盖 |
+
+### 12.3 地板数据更新
+
+本文 §10.3 的 baseline 数据已被 B-Phase 2 + StylePool 改变，需重新 benchmark：
+
+| stage | 本文数据 (2026-07 初) | 预期变化 |
+|---|---|---|
+| vnode_tree | 2108μs (TextHeavy) | ↓ Block Tree fast-path 命中后大幅压缩 |
+| style_recalc | 175μs 全场 | ↓ StylePool 命中后消除重复 `new ComputedStyle` |
+| layout | 475μs 全场 | → 未变（算法本体无新优化） |
+| paint | 400-475μs | → 未变（Path B 语义仍未解决） |
+
+### 12.4 后续优先级修正
+
+| 优先级 | 方向 | 状态 |
+|---|---|---|
+| 1 | ~~ComputedStyle Flyweight~~ | ✅ 已交付 |
+| 2 | ~~Block Tree / dynamicChildren~~ | ✅ 已交付 |
+| 3 | Path B 语义诊断 | ⚠️ 未做（PaintPipeline L114-118 仍存在） |
+| 4 | L4 v6 重启（Flyweight 前置已满足） | 待评估 |
+| 5 | `isFullyStatic` Level 0 早退（排除百分比/flex/auto-width） | 待做（~30μs，零风险） |
+| 6 | 脏区域 paint（依赖 backend 升级） | 独立课题 |
+
+### 12.5 核心认识补充
+
+1. **Flex grow/shrink 与 Grid fr 同为全局约束求解**——算法内部不存在子项级跳过空间（详见 `docs/Px跨层信号融合策略分析.md` §9.3）
+2. **真正有效的跳过已在 LayoutOrchestrator 容器级早退实现**（L107 + Phase B 逐子项），算法本体只做不可再分的全局求解
+3. **后续收益来源**：编译期信号（isFullyStatic 待做）+ 后端能力升级（脏区域 paint）+ L4 重启评估，而非算法内部新增脏门控
+
+---
+
+*2026-07-22 追加：§十二 状态更新，标注已交付项、新增否定路径、地板数据变化、优先级修正。*

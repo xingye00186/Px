@@ -362,3 +362,98 @@ L1 + L3 交付后，reactive-bench 50 cycle 稳态暴露四条 case-无关的固
 
 **信号优化前置铁律**：任何参照 Blink 脏位传播的优化，需先确认目标层存在可门控的规范对象——若无，需先建立（如 ComputedStyle Flyweight），而非直接上新信号。参见 `docs/Vue3_Blink_融合架构决策追踪.md` §4.4 与 §6.2。
 
+---
+
+## 九、§六 实施路线可行性终判（2026-07-22 补充）
+
+> 基于 FlexAlgorithm / GridAlgorithm / LayoutOrchestrator 当前代码逐行验证，对§六各阶段做最终可行性裁定。
+
+### 9.1 已验证的前置变化
+
+§六写作时的两个核心前提已发生变化：
+
+| 前提 | 写作时 | 2026-07-22 实况 |
+|---|---|---|
+| vnode_tree 地板 2108μs（缺 Block Tree） | 未做 | ✅ B-Phase 2 已交付（`dynamicChildren` + block fast-path） |
+| style_recalc 无 Flyweight | 未做 | ✅ StylePool 已交付（LRU 512 池 + `StyleResolver::resolve()` → `StylePool::intern()`） |
+| `#list` VNode（v-for 包裹） | 未做 | ✅ B-Phase 2.5 已交付（`VNode::hList()` + `PATCH_STABLE_LIST/KEYED_LIST/UNKEYED_LIST`） |
+
+### 9.2 可行性终判表
+
+| 阶段 | 项目 | 裁定 | 理由 |
+|---|---|---|---|
+| 1.1-1.2 | `changeSignal` 枚举 + RenderNode 字段 | ❌ 不划算 | 与 `layoutDirty/styleDirty/paintDirty` 语义完全重叠，不产生新能力；TEXT vs GEOMETRY 区分需测量后才知道（§2.3 已证），编译期无法预判 |
+| 1.3 | FlexAlgorithm 消费 `layoutDirty=false` 跳过子项 | ❌ **不可行** | Flex grow/shrink 是全局约束求解（见 §9.3 证明） |
+| 1.4 | GridAlgorithm 跳过 non-fr 子项 | ⚠️ 严格子集可行 | 仅当 ALL 轨道为固定 px 时可跳过；fr/auto 轨道不可（§5.2 fr 传染已证）；Px 业务 Grid 多用 `repeat(N, 1fr)`，命中率极低 |
+| 2.5 | `isFullyStatic` → Level 0 早退 | ✅ 可行（需约束） | 必须排除百分比尺寸/flex-grow/auto-width 节点；收益 ~30μs（省 `space.equals()` 比较），零风险纯加法 |
+| 2.6 | PATCH_TEXT 先测量后比较 | ⚠️ 限固定容器 | 仅固定宽高容器 + overflow:hidden 场景安全；`width:auto` / flex-basis:auto 不可；需编译期标注容器类型 |
+| 3 | 属性级精确脏位 | ❌ 当前不划算 | 依赖图在 v-for/v-if/组件 props 下极复杂；收益被 Block Tree fast-path 覆盖 |
+
+### 9.3 Flex 子项跳过不可行的代码证明
+
+`FlexAlgorithm::layout()` L190-218（Step 4a grow 分配）：
+
+```php
+$remaining = $containerMain - $lineTotal;  // lineTotal = ALL items 主轴尺寸之和
+foreach ($lineItems as $fi) {
+    $extra = (int)($remaining * $fi->grow / $growTotal);
+    $fi->w += $extra;
+}
+```
+
+`remaining` 取决于**所有子项 basis 之和**。任何一个子项 intrinsic size 变化 → `lineTotal` 变 → `remaining` 变 → **所有子项 grow 分配全变**。
+
+这与 Grid fr 传染是**同构问题**：
+
+```
+Flex:  item₁ basis 变 → lineTotal 变 → remaining 变 → item₂₋₅₀ grow 分配全变
+Grid:  item₁ intrinsic 变 → free space 变 → fr 值变 → item₂₋₅₀ 尺寸全变
+```
+
+§2.1 声称 "LiveDashboard 850ms → ~50ms（49/50 跳过）" 的预估**不成立**——Flex 分配不存在子项级跳过空间。
+
+**唯一例外**：所有子项 `flex-grow:0 + flex-shrink:0`（纯固定尺寸），此时无需 grow/shrink 计算，算法已是 O(1)/item，无优化空间。
+
+### 9.4 真正有效的跳过已在哪里
+
+当前增量布局的跳过发生在 **LayoutOrchestrator 容器级**（非算法内部）：
+
+```
+LayoutOrchestrator::mainLayout L107:
+  !layoutDirty + cachedFragment + space.equals → 零分配返回 cachedFragment
+
+LayoutOrchestrator Phase B L194-215:
+  逐子项: !child->layoutDirty + cachedConstraintSpace.equals → 复用 cachedFragment
+```
+
+**容器整体洁净时**（所有子项 + 自身均无变化），L107 早退已实现零开销。
+**容器脏但部分子项洁净时**，Phase B 逐子项跳过已避免洁净子项的 `mainLayout` 递归。
+
+算法内部（FlexAlgorithm/GridAlgorithm）收到的是 Phase B 预计算的 `childFragments` 数组——**跳过决策已在 Phase B 完成**，算法本体只做不可再分的全局约束求解。
+
+### 9.5 后续优化方向修正
+
+基于 §9.2 终判，§六路线修正为：
+
+| 优先级 | 方向 | 预期收益 | 前置条件 |
+|---|---|---|---|
+| 1 | `isFullyStatic` Level 0 早退（排除百分比/flex/auto-width） | ~30μs/frame | 编译器 `StaticHoistTransform` 扩展排除条件 |
+| 2 | Grid 固定轨道跳过（`!hasFr && !hasAuto`） | 极低（命中率低） | GridAlgorithm 入口加判断 |
+| 3 | PATCH_TEXT 固定容器路径 | 中（需量化测量成本） | 编译期标注 + 文本测量 API |
+| — | ~~Flex 子项跳过~~ | ~~不可行~~ | — |
+| — | ~~changeSignal 枚举~~ | ~~不划算~~ | — |
+| — | ~~属性级脏位~~ | ~~被 Block Tree 覆盖~~ | — |
+
+### 9.6 核心认识更新
+
+§2.1 的 Flex 子项跳过是本文档**最大误判**。修正后的认识：
+
+1. **Flex grow/shrink 与 Grid fr 同为全局约束求解**，不存在子项级跳过空间
+2. **真正有效的跳过已在 LayoutOrchestrator 容器级早退实现**（L107 + Phase B 逐子项）
+3. 算法内部进一步优化空间极为有限——全局约束求解是不可再分的最小计算单元
+4. 后续性能收益应来自**编译期信号**（Block Tree 已交付、isFullyStatic 待做）和**后端能力升级**（脏区域 paint），而非在算法内部新增脏门控
+
+---
+
+*2026-07-22 追加：§九 基于 FlexAlgorithm/GridAlgorithm 代码逐行验证的可行性终判。*
+
