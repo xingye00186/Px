@@ -1133,13 +1133,39 @@ function compileOneComponent(
     //     <Button.vue> 无 script，<template><button :style="'bg:'+color">{{label}}</button></template>
     //     → 自动写入 public string $color / $label，注入 setBindValue case，父传值正常
     //   不在 $hasScript 时启用，避免影响已有组件（它们变量已在 script 里声明）
-    if (!$hasScript && !empty($bindKeys)) {
+    //
+    // L2a（基本）：从 $bindKeys 提取单 identifier 绑定（{{}} / :bind / v-if 等）
+    // L2b（本次扩展）：额外扫描 :style / :class / :xxx 复杂表达式里的 identifier（
+    //   由 CollectorHelper::collectImplicitIdentifiersFromTemplate + scanExpressionIdentifiers 实现）
+    if (!$hasScript) {
         $existingNames = [];
         foreach ($reactiveProps as $rp) { $existingNames[$rp['name']] = true; }
-        foreach ($bindKeys as $key => $_) {
+
+        // L2b: 收集 v-for loop items，用于排除循环局部变量
+        $loopItems = [];
+        foreach ($loops as $loopInfo) {
+            if (isset($loopInfo['item']) && $loopInfo['item'] !== '') {
+                $loopItems[$loopInfo['item']] = true;
+            }
+            if (isset($loopInfo['index']) && $loopInfo['index'] !== '') {
+                $loopItems[$loopInfo['index']] = true;
+            }
+        }
+
+        // L2b: 扫描复杂表达式里的 identifier（:style / :class 等）
+        $complexIdentifiers = [];
+        collectImplicitIdentifiersFromTemplate($root, $complexIdentifiers, $loopItems);
+
+        // 合并两个数据源：$bindKeys 与 $complexIdentifiers
+        $allImplicitKeys = [];
+        foreach ($bindKeys as $k => $_) { $allImplicitKeys[$k] = true; }
+        foreach ($complexIdentifiers as $k => $_) { $allImplicitKeys[$k] = true; }
+
+        foreach ($allImplicitKeys as $key => $_) {
             // 只取合法 PHP 标识符（避免带点的表达式、数字、特殊符号）
             if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $key)) continue;
             if (isset($existingNames[$key])) continue;
+            if (isset($loopItems[$key])) continue;
             $reactiveProps[] = ['name' => $key, 'type' => 'string', 'default' => "''"];
             $existingNames[$key] = true;
         }

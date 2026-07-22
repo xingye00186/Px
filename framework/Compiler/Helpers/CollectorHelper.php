@@ -165,6 +165,185 @@ function collectVNodeBindKeys(VNode $node, array &$bindKeys): void
 }
 
 /**
+ * L2b: Quote-aware identifier scanner.
+ *
+ * 从表达式字符串提取所有合法 PHP 标识符（字母/下划线开头 + 字母数字下划线），
+ * 但跳过引号包围的字符串字面量、PHP 内置关键字/字面量（true/false/null/array/控制流等）。
+ *
+ * 用法：提取 template-only 组件中 :style / :class / :foo="bar + '.' + baz"
+ * 等复杂表达式里的 identifier，作为 implicit props 推断的数据源。
+ *
+ * 例：
+ *   scanExpressionIdentifiers("'bg:' + color") → ['color']
+ *   scanExpressionIdentifiers("prefix + '.' + suffix") → ['prefix', 'suffix']
+ *   scanExpressionIdentifiers("count > 0 ? label : 'none'") → ['count', 'label']
+ *
+ * @param string $expr 表达式字符串（可能为空）
+ * @return string[] 去重后的 identifier 列表
+ */
+function scanExpressionIdentifiers(string $expr): array
+{
+    if ($expr === '') return [];
+
+    static $keywords = [
+        // 字面量
+        'true' => true, 'false' => true, 'null' => true,
+        // 逻辑
+        'and' => true, 'or' => true, 'xor' => true, 'not' => true,
+        // 控制流
+        'if' => true, 'else' => true, 'elseif' => true,
+        'while' => true, 'for' => true, 'foreach' => true, 'as' => true, 'in' => true,
+        'switch' => true, 'case' => true, 'default' => true,
+        'break' => true, 'continue' => true, 'return' => true,
+        // 类型
+        'array' => true, 'string' => true, 'int' => true, 'integer' => true,
+        'float' => true, 'double' => true, 'bool' => true, 'boolean' => true,
+        // 特殊
+        'this' => true, 'self' => true, 'static' => true, 'parent' => true,
+        'new' => true, 'clone' => true, 'instanceof' => true,
+        'function' => true, 'fn' => true,
+    ];
+
+    $result = [];
+    $seen = [];
+    $len = strlen($expr);
+    $i = 0;
+    $inQuote = '';  // '' | '"' | "'"
+
+    while ($i < $len) {
+        $ch = $expr[$i];
+
+        // 引号内部：直接跳过（支持反斜杠转义）
+        if ($inQuote !== '') {
+            if ($ch === '\\' && $i + 1 < $len) {
+                $i += 2;
+                continue;
+            }
+            if ($ch === $inQuote) {
+                $inQuote = '';
+            }
+            $i++;
+            continue;
+        }
+
+        // 引号开启
+        if ($ch === '"' || $ch === "'") {
+            $inQuote = $ch;
+            $i++;
+            continue;
+        }
+
+        // 尝试 match identifier
+        if (($ch >= 'a' && $ch <= 'z') || ($ch >= 'A' && $ch <= 'Z') || $ch === '_') {
+            $start = $i;
+            while ($i < $len) {
+                $c = $expr[$i];
+                if (($c >= 'a' && $c <= 'z') || ($c >= 'A' && $c <= 'Z')
+                    || ($c >= '0' && $c <= '9') || $c === '_') {
+                    $i++;
+                } else {
+                    break;
+                }
+            }
+            $id = substr($expr, $start, $i - $start);
+            $lower = strtolower($id);
+            if (!isset($keywords[$lower]) && !isset($seen[$id])) {
+                $result[] = $id;
+                $seen[$id] = true;
+            }
+            continue;
+        }
+
+        $i++;
+    }
+
+    return $result;
+}
+
+/**
+ * L2b: 从 VNode 树递归收集 template-only 组件的 implicit prop 候选 identifier。
+ *
+ * 覆盖范围（在 collectVNodeBindKeys 的基础上扩展）：
+ *   - :style / :class 表达式内 identifier（collectVNodeBindKeys 明确排除）
+ *   - 其他 :xxx 属性的复杂表达式（不是单一 identifier）
+ *   - v-if / v-else-if / v-show 复杂表达式（已有的 collector 只取单 identifier）
+ *
+ * 自动排除：
+ *   - PHP 关键字 / 字面量（scanExpressionIdentifiers 内部处理）
+ *   - v-for loop items（循环局部变量，不该为组件 prop）
+ *   - v-for 子树不递归（循环作用域内字段归属循环）
+ *
+ * @param VNode $node 当前节点
+ * @param array<string, true> &$identifiers 收集到的 identifier 集合（入参/出参）
+ * @param array<string, true> $loopItems v-for loop items 集合（需排除）
+ */
+function collectImplicitIdentifiersFromTemplate(VNode $node, array &$identifiers, array $loopItems): void
+{
+    // v-for 作用域：不递归（内部变量不归属 template-only 组件）
+    if (isset($node->props['v-for'])) {
+        return;
+    }
+
+    // 组件占位节点：子树不可知，componentProps 已由 collectVNodeBindKeys 处理
+    if ($node->isComponent) {
+        return;
+    }
+
+    if ($node->props !== null) {
+        foreach ($node->props as $key => $val) {
+            if (!is_string($val)) continue;
+            if ($val === '') continue;
+            // 只扫索引入 identifier 的属性：
+            //   - :xxx 动态绑定（含 :style / :class / :foo）
+            //   - v-if / v-else-if / v-show / v-model（支持复杂表达式的总为组）
+            //   - parts 里的 bind expr（{{ }} 插值）— 已由 collectVNodeBindKeys 处理，这里仅处理复杂表达式
+            if ($key === 'parts') {
+                // parts 是结构化数组（{'type':'text'|'bind','expr':...}），掉到上面到不会组。collectVNodeBindKeys L101-L107 已处理
+                continue;
+            }
+            $shouldScan = false;
+            if ($key === 'v-if' || $key === 'v-else-if' || $key === 'v-show' || $key === 'v-model') {
+                $shouldScan = true;
+            } elseif (strlen($key) > 0 && $key[0] === ':') {
+                $shouldScan = true;
+            }
+            if (!$shouldScan) continue;
+
+            foreach (scanExpressionIdentifiers($val) as $id) {
+                // 排除 v-for loop items
+                if (isset($loopItems[$id])) continue;
+                $identifiers[$id] = true;
+            }
+        }
+
+        // parts 里的 bind expr 已由 collectVNodeBindKeys 处理单 identifier；
+        // 如果 parts 里的 expr 是复杂表达式（实际很少见，{{ }} 通常单 var），这里补扫一次
+        if (isset($node->props['parts']) && is_array($node->props['parts'])) {
+            foreach ($node->props['parts'] as $part) {
+                if (isset($part['type']) && $part['type'] === 'bind'
+                    && isset($part['expr']) && is_string($part['expr'])) {
+                    foreach (scanExpressionIdentifiers($part['expr']) as $id) {
+                        if (isset($loopItems[$id])) continue;
+                        $identifiers[$id] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    // 递归子节点
+    if ($node->children instanceof VNode) {
+        collectImplicitIdentifiersFromTemplate($node->children, $identifiers, $loopItems);
+    } elseif (is_array($node->children)) {
+        foreach ($node->children as $child) {
+            if ($child instanceof VNode) {
+                collectImplicitIdentifiersFromTemplate($child, $identifiers, $loopItems);
+            }
+        }
+    }
+}
+
+/**
  * 递归收集所有 v-for 循环定义。
  *
  * @return array ['render_0' => ['source'=>'todoItems', 'item'=>'item', 'children'=>VNode[]], ...]
