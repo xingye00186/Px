@@ -216,7 +216,7 @@ class TemplateParser
                     $tokens[] = new Token(TOK_TEXT_CONTENT, $flushedText, $textLine);
                 }
 
-                $end = strpos($template, '>', $i);
+                $end = $this->findTagEnd($template, $i);
                 if ($end === false) {
                     $this->error('Unclosed tag starting with "<"', $line);
                     break;
@@ -254,6 +254,44 @@ class TemplateParser
 
         $tokens[] = new Token(TOK_EOF, '', $line);
         return $tokens;
+    }
+
+    /**
+     * Quote-aware tag end finder.
+     *
+     * 从 $start（首个 '<' 位置）扫描到相匹配的 '>'，
+     * 但跳过属性值内引号包围的字符串（一直试 v-if="depth > 0" 里的 '>' 会被误语为标签闭合符）。
+     *
+     * 支持：
+     *   - 双引号 "..." 包围（最常见的 HTML 属性值形式）
+     *   - 单引号 '...' 包围（也合法，典型例：`:label="label + '.child'"` 内层）
+     *   - 引号可跨行
+     *
+     * @return int|false '>' 的位置，或 false（未找到閄合）
+     */
+    private function findTagEnd(string $template, int $start): int|false
+    {
+        $len = strlen($template);
+        $inQuote = '';  // '' 未进引号 / '"' 双引号 / "'" 单引号
+        for ($i = $start; $i < $len; $i++) {
+            $ch = $template[$i];
+            if ($inQuote !== '') {
+                // 已在引号内部 — 只关心匹配的闭合引号
+                if ($ch === $inQuote) {
+                    $inQuote = '';
+                }
+                continue;
+            }
+            // 不在引号内——遇到引号开启、遇到 '>' 闭合
+            if ($ch === '"' || $ch === "'") {
+                $inQuote = $ch;
+                continue;
+            }
+            if ($ch === '>') {
+                return $i;
+            }
+        }
+        return false;
     }
 
     // ============================================================
