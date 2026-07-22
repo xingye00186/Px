@@ -89,19 +89,62 @@ class StaticNodeContext {
 }
 
 /**
+ * BlockCollector — Vue 3 Block Tree 编译期收集器（B-Phase 2）。
+ *
+ * 纯编译期方案：在 generateVNodeExpr 递归时，将每个 patchFlags != 0
+ * 或 isComponent 的子孙提为临时变量 `$_dN`，收集到 refs 数组，
+ * 最终在 render() 主体以 `->withDynamicChildren([$_d0, $_d1, ...])` 结尾，
+ * 供运行时 ReactiveComponent::patchVNodeTree 走 block fast-path。
+ *
+ * 语义:
+ *   - stmts: ["$_d0 = VNode::h(...);", "$_d1 = ...;"]  —— render() 主体前置语句
+ *   - refs:  ["$_d0", "$_d1"]                        —— dynamicChildren 数组引用
+ *
+ * 边界:
+ *   - v-if IIFE / v-for helper 内部 — 不跨作用域提取（递归时传 null 阻断）
+ *   - 静态提升节点（self::$sN） — 早返回，不会到提取点
+ *   - #root 本身 — skipExtract=true 不提取自己
+ */
+class BlockCollector {
+    /** @var string[] 临时变量赋值语句 */
+    public array $stmts = [];
+    /** @var string[] 临时变量引用（正好对应一个 $_dN） */
+    public array $refs = [];
+    /** @var int 临时变量计数器 */
+    public int $counter = 0;
+
+    /**
+     * 当前汇总中包含无法提取的动态子孙（v-if IIFE / v-for helper 返回的数组）
+     *   true = root wrap 时不能 wrap withDynamicChildren（否则 fast-path 会错误跳过内部 patch）
+     *   仅回避正确性风险；性能上退化为全 diff。
+     */
+    public bool $unsafe = false;
+
+    public function allocVar(): string
+    {
+        return '$_d' . ($this->counter++);
+    }
+}
+
+/**
  * Generate a PHP expression for a single VNode as VNode::h() call.
  *
  * @param VNode $node The VNode
  * @param array $loopInfo If inside a v-for: ['item'=>'item', 'source'=>'todoItems']
  * @param int $indent Indentation level
+ * @param ?BlockCollector $block  — B-Phase 2 收集器：非 null 时将动态子孙提为 $_dN 临时变量
+ * @param bool $skipExtract       — true = 不对当前节点自身提取（仅 block root 层为 true）
  * @return string PHP code
  */
-function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0, ?StaticNodeContext &$ctx = null): string
+function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0, ?StaticNodeContext &$ctx = null, ?BlockCollector $block = null, bool $skipExtract = false): string
 {
     $ind = str_repeat('        ', max($indent, 0));
 
     // Handle element with v-for → replace with render_N() helper call
     if (isset($node->vForHelper)) {
+        // B-Phase 2: v-for helper 返回的是 VNode[] 数组，无法作为单个 $_dN 提取
+        //   mark unsafe 让外层 root 回避 wrap，避免 fast-path 错误跳过 v-for iteration
+        if ($block !== null) { $block->unsafe = true; }
         if (isset($node->vForParentItem)) {
             return "\$this->{$node->vForHelper}(\${$node->vForParentItem})";
         }
@@ -115,7 +158,15 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
 
     // Handle #component placeholder — VNode::hComponent() call
     if ($node->isComponent) {
-        return generateComponentExpr($node, $loopInfo);
+        $componentExpr = generateComponentExpr($node, $loopInfo);
+        // B-Phase 2: 组件占位节点总是动态（无论 patchFlags），提取入 dynamicChildren
+        if ($block !== null && !$skipExtract) {
+            $var = $block->allocVar();
+            $block->stmts[] = "{$var} = {$componentExpr};";
+            $block->refs[] = $var;
+            return $var;
+        }
+        return $componentExpr;
     }
 
     // Element node
@@ -359,7 +410,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 $childExprs = [];
                 foreach ($node->children as $child) {
                     if ($child instanceof VNode) {
-                        $childExprs[] = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx);
+                        // B-Phase 2: 普通子节点 — 传 $block 收集提取
+                        $childExprs[] = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx, $block, false);
                     }
                 }
                 if (count($childExprs) === 1) {
@@ -399,7 +451,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     $childExprs = [];
                     foreach ($node->children as $child) {
                         if ($child instanceof VNode) {
-                            $childExprs[] = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx);
+                            // B-Phase 2: 普通子节点 — 传 $block 收集提取
+                            $childExprs[] = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx, $block, false);
                         }
                     }
                     if (count($childExprs) === 1) {
@@ -513,7 +566,9 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                                 unset($sameIfChild->props[$propKey]);
                                             }
                                         }
-                                        $childExpr = generateVNodeExpr($sameIfChild, $loopInfo, $indent + 1);
+                                        // B-Phase 2: 分支根自己开新 block（与外层 collector 隔离）
+                                        $branchBlock = new BlockCollector();
+                                        $childExpr = generateVNodeExpr($sameIfChild, $loopInfo, $indent + 1, $ctx, $branchBlock, /* skipExtract */ true);
                                         foreach ($savedProps as $propKey => $propVal) {
                                             $sameIfChild->props[$propKey] = $propVal;
                                         }
@@ -521,6 +576,16 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                         if (isset($sameIfChild->vForHelper)) {
                                             $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
                                         } else {
+                                            // B-Phase 2: stmts 必须无条件 emit（一旦提取后 $_dN 被 childExpr 引用）
+                                            if (!empty($branchBlock->stmts)) {
+                                                foreach ($branchBlock->stmts as $s) {
+                                                    $stmts[] = "{$ind}        {$s}";
+                                                }
+                                            }
+                                            if (!$branchBlock->unsafe && !empty($branchBlock->refs)) {
+                                                $dynArr = '[' . implode(', ', $branchBlock->refs) . ']';
+                                                $childExpr = "({$childExpr})->withDynamicChildren({$dynArr})";
+                                            }
                                             $stmts[] = "{$ind}        \$c[] = {$childExpr};";
                                         }
                                     }
@@ -554,7 +619,9 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                     unset($child->props[$propKey]);
                                 }
                             }
-                            $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx);
+                            // B-Phase 2: 分支根自己开新 block（与外层 collector 隔离）
+                            $branchBlock = new BlockCollector();
+                            $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx, $branchBlock, /* skipExtract */ true);
                             foreach ($savedProps as $propKey => $propVal) {
                                 $child->props[$propKey] = $propVal;
                             }
@@ -563,13 +630,23 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                             if (isset($child->vForHelper)) {
                                 $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
                             } else {
+                                // B-Phase 2: stmts 必须无条件 emit（一旦提取后 $_dN 被 childExpr 引用）
+                                if (!empty($branchBlock->stmts)) {
+                                    foreach ($branchBlock->stmts as $s) {
+                                        $stmts[] = "{$ind}        {$s}";
+                                    }
+                                }
+                                if (!$branchBlock->unsafe && !empty($branchBlock->refs)) {
+                                    $dynArr = '[' . implode(', ', $branchBlock->refs) . ']';
+                                    $childExpr = "({$childExpr})->withDynamicChildren({$dynArr})";
+                                }
                                 $stmts[] = "{$ind}        \$c[] = {$childExpr};";
                             }
                         } else {
                             // Non-conditional child
                             if ($inConditionalBlock) {
                                 // Inside an if/else-if/else branch - add inside the block
-                                $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx);
+                                $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx, null, false);
                                 if (isset($child->vForHelper)) {
                                     $stmts[] = "{$ind}        array_push(\$c, ...{$childExpr});";
                                 } else {
@@ -577,7 +654,7 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                                 }
                             } else {
                                 // Outside any conditional block - add at top level (siblings to if-else chain)
-                                $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx);
+                                $childExpr = generateVNodeExpr($child, $loopInfo, $indent + 1, $ctx, null, false);
                                 if (isset($child->vForHelper)) {
                                     $stmts[] = "{$ind}    array_push(\$c, ...{$childExpr});";
                                 } else {
@@ -596,6 +673,9 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
 
                     // Wrap as immediately-invoked closure → single expression
                     $childrenExpr = "(function() {\n" . implode("\n", $stmts) . "\n{$ind}    })()";
+                    // B-Phase 2: IIFE 内部已主动传 null 阻断提取（避免跨作用域引用），
+                    //   但 IIFE 内可能含未扣取的动态子孙，mark unsafe 避免 root wrap
+                    if ($block !== null) { $block->unsafe = true; }
                 }
             }
         }
@@ -644,10 +724,18 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
     }
 
     // 内联 wrapWithPatchFlags
-    if ($flags === 0) {
-        return $expr;
+    $finalExpr = ($flags === 0) ? $expr : "({$expr})->withPatchFlags({$flags})";
+
+    // B-Phase 2: block fast-path 提取
+    //   仅当 $block 非空、当前节点非 block root、且有动态标记时提取
+    //   静态提升节点 (`self::$sN`) 已在上文早返回，不会到达此处
+    if ($block !== null && !$skipExtract && $flags > 0) {
+        $var = $block->allocVar();
+        $block->stmts[] = "{$var} = {$finalExpr};";
+        $block->refs[] = $var;
+        return $var;
     }
-    return "({$expr})->withPatchFlags({$flags})";
+    return $finalExpr;
 }
 
 
@@ -957,7 +1045,29 @@ function compileOneComponent(
     $staticCtx->initCode = $pipeline->getMetadata()['staticNodeInitCode'] ?? [];
     if (!is_array($staticCtx->initCode)) { $staticCtx->initCode = []; }
     $staticCtx->counter = $pipeline->getMetadata()['staticNodeCounter'] ?? 0;
-    $renderExpr = generateVNodeExpr($root, null, 1, $staticCtx);
+
+    // B-Phase 2: 启用 Block Tree 编译期收集
+    //   root 传 skipExtract=true（不提取自己），子孙递归时传 false
+    //   收集完成后在 renderExpr 尾部拼 withDynamicChildren([...])
+    //   静态提升 root（self::$sN）无需 wrap（无动态子孙 + 避免污染共享节点）
+    $blockCollector = new BlockCollector();
+    $renderExpr = generateVNodeExpr($root, null, 1, $staticCtx, $blockCollector, /* skipExtract */ true);
+
+    $blockDynStmts = '';
+    $isStaticRootExpr = str_starts_with($renderExpr, 'self::$');
+    // B-Phase 2:
+    //   ① stmts 必须无条件 emit——一旦提取后 $_dN 已被 renderExpr 引用，避免悬空
+    //   ② withDynamicChildren 包裹仅在安全前提下做：非静态提升 + 未 mark unsafe + refs 非空
+    //   unsafe 但 refs 非空：表示频提取了部分子孙（如 div 整体），但内部含 IIFE/v-for helper，
+    //   则保留临时变量声明但不 wrap —— patchVNodeTree 自然退化到全 diff，正确性不受影响
+    if (!empty($blockCollector->stmts)) {
+        $blockDynStmts = implode("\n        ", $blockCollector->stmts) . "\n        ";
+    }
+    $canWrapBlock = !$isStaticRootExpr && !$blockCollector->unsafe && !empty($blockCollector->refs);
+    if ($canWrapBlock) {
+        $dynArrayLiteral = '[' . implode(', ', $blockCollector->refs) . ']';
+        $renderExpr = "({$renderExpr})->withDynamicChildren({$dynArrayLiteral})";
+    }
     $staticNodePrefix = !empty($staticCtx->initCode)
         ? implode("\n        ", $staticCtx->initCode) . "\n        "
         : '';
@@ -1079,6 +1189,7 @@ function compileOneComponent(
         'getVNodeTreeOverride' => $getVNodeTreeOverride,
         'onUnmountWithCleanup' => $onUnmountWithCleanup,
         'staticNodePrefix' => $staticNodePrefix,
+        'blockDynStmts' => $blockDynStmts,
         'renderExpr' => $renderExpr,
         'dispatchClick' => $dispatchClick,
         'dispatchKey' => $dispatchKey,

@@ -27,6 +27,7 @@ class ClassAssembler
         $getVNodeTreeOverride  = $p['getVNodeTreeOverride'] ?? '';
         $onUnmountWithCleanup  = $p['onUnmountWithCleanup'] ?? '';
         $staticNodePrefix      = $p['staticNodePrefix'] ?? '';
+        $blockDynStmts         = $p['blockDynStmts'] ?? '';
         $renderExpr            = $p['renderExpr'] ?? '';
         $dispatchClick         = $p['dispatchClick'] ?? '';
         $dispatchKey           = $p['dispatchKey'] ?? '';
@@ -68,8 +69,8 @@ class {$className} extends ReactiveComponent
      */
     public function render(): VNode
     {
-        // 静态 VNode 跨帧复用
-        {$staticNodePrefix}return {$renderExpr};
+        // 静态 VNode 跨帧复用 + Block Tree 动态子孙提取（B-Phase 2）
+        {$staticNodePrefix}{$blockDynStmts}return {$renderExpr};
     }
 
     /**

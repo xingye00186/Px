@@ -306,20 +306,31 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     }
 
     /**
-     * 按 key+type 匹配新旧子节点数组，复用旧对象。
+     * 按 key 匹配新旧子节点数组，无 key 时回避到 index+type 匹配（Vue 3 默认行为）。
+     * 无 key patch 多多为 v-if 分支根 / 静态列表等位置稳定的子节点，可保持旧对象复用。
      */
     private function patchChildrenArray(array $oldChildren, array $newChildren): array
     {
         $result = [];
 
-        // 建立旧子节点的 key→node 映射
+        // 建立旧子节点的 key→node 映射与无 key 队列
         /** @var array<string, VNode> */
         $oldByKey = [];
+        /** @var VNode[] */
+        $oldNoKey = [];
         foreach ($oldChildren as $ch) {
-            if ($ch instanceof VNode && $ch->key !== null) {
-                $oldByKey[$ch->key] = $ch;
+            if ($ch instanceof VNode) {
+                if ($ch->key !== null) {
+                    $oldByKey[$ch->key] = $ch;
+                } else {
+                    $oldNoKey[] = $ch;
+                }
             }
         }
+
+        // 无 key 旧节点消费指针（按输入顺序前推）
+        $noKeyIdx = 0;
+        $noKeyLen = count($oldNoKey);
 
         foreach ($newChildren as $newCh) {
             if (!($newCh instanceof VNode)) {
@@ -327,18 +338,40 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
                 continue;
             }
 
-            // 尝试 key 匹配
-            if ($newCh->key !== null && isset($oldByKey[$newCh->key])) {
-                $oldCh = $oldByKey[$newCh->key];
-                unset($oldByKey[$newCh->key]); // 已消费
-                $this->patchVNodeTree($oldCh, $newCh);
-                $result[] = $oldCh;
+            if ($newCh->key !== null) {
+                // 尝试 key 匹配
+                if (isset($oldByKey[$newCh->key])) {
+                    $oldCh = $oldByKey[$newCh->key];
+                    unset($oldByKey[$newCh->key]); // 已消费
+                    $this->patchVNodeTree($oldCh, $newCh);
+                    $result[] = $oldCh;
+                } else {
+                    // 无匹配：新节点
+                    $result[] = $newCh;
+                }
             } else {
-                // 无匹配：新节点
-                $result[] = $newCh;
+                // 无 key：严格限定走 patch 的条件，避免回归
+                //   仅当旧首项 type 一致 && 双方都是 block root && dynamicChildren 长度相同时才 patch
+                //   → 确保 fast-path 会 hit，赚到 patch 成本；否则保持旧行为“直接换新节点”（O(1)）
+                //   避免为了少数 fast-path 命中而引入 v-if 无 block 分支的深递归开销
+                $canFastPathPatch = ($noKeyIdx < $noKeyLen)
+                    && $oldNoKey[$noKeyIdx]->type === $newCh->type
+                    && $oldNoKey[$noKeyIdx]->dynamicChildren !== null
+                    && $newCh->dynamicChildren !== null
+                    && count($oldNoKey[$noKeyIdx]->dynamicChildren) === count($newCh->dynamicChildren);
+
+                if ($canFastPathPatch) {
+                    $oldCh = $oldNoKey[$noKeyIdx];
+                    $noKeyIdx++;
+                    $this->patchVNodeTree($oldCh, $newCh);
+                    $result[] = $oldCh;
+                } else {
+                    // 失变中：直接采用新节点（保持旧 patchChildrenArray 行为，无 regression）
+                    $result[] = $newCh;
+                    if ($noKeyIdx < $noKeyLen) { $noKeyIdx++; }
+                }
             }
         }
-
         return $result;
     }
 
