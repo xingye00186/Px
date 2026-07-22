@@ -53,5 +53,4 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/Compiler
-  - ../../framework/aot-checker.php
+  - ../../framework/Compiler

@@ -51,8 +51,7 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/Compiler
-  - ../../framework/aot-checker.php
+  - ../../framework/Compiler
 
 # 每次构建前清理编译缓存
 Px_clear_compilation_cache: true

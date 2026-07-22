@@ -14,9 +14,7 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/Compiler
-  - ../../framework/aot-checker.php
-  - ../../framework/Reactive/tests
+  - ../../framework/Compiler
 
 # reactive-bench — AOT 响应式改造对比测试项目
 # 支持 `--case=xxx` 选择测试场景

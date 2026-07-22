@@ -14,8 +14,7 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/Compiler
-  - ../../framework/aot-checker.php
+  - ../../framework/Compiler
 
 # ========================================================================
 # Runtime debug config (read by framework/Core/Config.php via Px_debug_ prefix)
