@@ -2,6 +2,26 @@
 
 > **归档背景**：本文档记录 B-Phase 2 v-for 优化路径的设计决策讨论。核心命题是"能不能像 Vue 3 一样用 Fragment VNode 包裹 v-for 结果"，讨论中先后经历三次事实核查修正，最终把 Vue 3 实际做法、其落地代价、以及 Px 场景下的适配可行性讲清楚，作为后续 B-Phase 2.5 及以后 v-for block 落地时的参考基线。
 
+## 0. 术语说明（重要）
+
+本文档同时描述两个层面的事实：
+
+| 上下文 | 术语 | 含义 |
+|---|---|---|
+| Vue 3 源码、文档引用 | **Fragment** | Vue 3 官方术语，本文档引用时均**保留原词** |
+| Px 方案、实施层 | **`#list` / VList** | Px 侧采用的名字，避免与 Px [`PhysicalFragment`](file:///f:/work/Px/framework/Layout/PhysicalFragment.php)（W3C CSS 布局片段）术语碰撞 |
+
+**为什么不在 Px 侧也叫 Fragment**：
+- `Fragment` 在 Px [framework/Layout/](file:///f:/work/Px/framework/Layout/) 下的使用已达 **191 处**，横跨 LayoutOrchestrator（75）/ FlexAlgorithm（27）/ OOFLayoutAlgorithm（22）/ GridAlgorithm（15）/ LayoutAlgorithm（13）/ BlockAlgorithm（11）等 11 个核心文件
+- `PhysicalFragment` 是 W3C CSS Layout 术语，指布局输出的不可变原子单位（一个 element 可能因分栏/分页被拆成多个 Fragment），与 Vue 3 VNode Fragment（多子节点无根容器）是完全不同的概念
+- 在 VNode / codegen 层再用 Fragment 将创造难以成受的术语二义性
+
+**术语选择过程**：候选 Block（与 [BlockAlgorithm](file:///f:/work/Px/framework/Layout/BlockAlgorithm.php) 冲突）、Container（与 [Container.vue](file:///f:/work/Px/library/vc-ui/Container.vue) 冲突）、Group（与 CheckboxGroup/RadioGroup 弱冲突）、Bundle（抽象）均排除，**最终选 `#list`**：
+- 沿用 Px VNode type 的 `#` 前缀约定（`#root` / `#text` / `#component` → `#list`）
+- v-for 编译产物直白就叫 "list"（Vue 3 `renderList` 也用这个词）
+- 与 layout `PhysicalFragment` 、CSS Block 、vc-ui 组件名称完全隔离
+- patchFlag 相应命名：`PATCH_STABLE_LIST` / `PATCH_KEYED_LIST` / `PATCH_UNKEYED_LIST`（数值仍 64/128/256，与 Vue 3 一致便于对齐）
+
 ## 1. 触发问题
 
 B-Phase 2（编译期 dynamicChildren codegen）实施后，reactive-bench A/B 数据显示：
@@ -146,9 +166,9 @@ VNode → RenderTreeManager::updateFromVNode → RenderNode 树
 - **没有"节点插入位置"概念**，布局引擎每帧从 children 数组重新算坐标
 - v-for 增删项 = children 数组增减元素，无需锚点
 
-**Fragment 在 Px 里只是一个 VNode → RenderNode 转换层的"扁平化标记"**：
-- `RenderTreeManager::updateFromVNode` 遇到 `#fragment` 时，把它的 children 展平到父 RenderNode 的 children 数组
-- Layout engine 完全看不到 Fragment 层（透明的）
+**Fragment 在 Px 里对应 `#list` VNode**（参 §0 术语说明），只是一个 VNode → RenderNode 转换层的"扁平化标记"：
+- `RenderTreeManager::updateFromVNode` 遇到 `#list` 时，把它的 children 展平到父 RenderNode 的 children 数组
+- Layout engine 完全看不到 `#list` 层（透明的）
 
 ### 4.2 无 transition-group / ref / 第三方 DOM 库负担
 
@@ -174,8 +194,8 @@ Fragment 在 Px 里只需要在 `patchVNodeTree` 里加一个分支：**遇到 `
 
 | 项 | Vue 3 实际改动量（估算） | Px 预估 |
 |---|---|---|
-| Fragment VNode type | ~50 lines | ~10 lines（加一个 `#fragment` type + 工厂方法） |
-| FRAGMENT patchFlag | ~30 lines | ~5 lines（扩展 3 个位掩码常量） |
+| Fragment VNode type / `#list` VNode type | ~50 lines | ~10 lines（加一个 `#list` type + 工厂方法） |
+| FRAGMENT patchFlag / LIST patchFlag | ~30 lines | ~5 lines（扩展 3 个位掩码常量） |
 | Compiler emit | ~150 lines（vFor.ts 相关） | ~80 lines（VForHelperGenerator + sfc-compiler.php） |
 | Runtime patch 分支 | ~200 lines（含 anchor） | ~30 lines（无 anchor，只在 patchVNodeTree 加分支） |
 | **anchor / nextSibling / hydration** | ~500+ lines | **0 lines（不需要）** |
@@ -204,14 +224,14 @@ Fragment 在 Px 里只需要在 `patchVNodeTree` 里加一个分支：**遇到 `
 
 ## 6. Px 落地决策
 
-### 6.1 采用 Vue 3 的核心设计
+### 6.1 采用 Vue 3 的核心设计（术语本地化）
 
-- 新增 `#fragment` VNode type
-- 扩展 `patchFlags`：`PATCH_STABLE_FRAGMENT` / `PATCH_KEYED_FRAGMENT` / `PATCH_UNKEYED_FRAGMENT`
-- v-for helper 返回 Fragment VNode（不是 VNode 数组）
-- Fragment VNode 作为父 block dynamicChildren 里的一个位置（**长度稳定 = 1**）
-- v-for helper 内部**不用** BlockCollector 上报到外层（等效 disableTracking）
-- patchVNodeTree 遇到 `#fragment` 走 patchChildrenArray（按 keyed/unkeyed flag 分流）
+- 新增 `#list` VNode type（Vue 3 对应 Fragment，为避免与 Px `PhysicalFragment` 冲突而采用 List、参 §0）
+- 扩展 `patchFlags`：`PATCH_STABLE_LIST` / `PATCH_KEYED_LIST` / `PATCH_UNKEYED_LIST`（数值 64/128/256，与 Vue 3 一致）
+- v-for helper 返回 `#list` VNode（不是 VNode 数组）
+- `#list` VNode 作为父 block dynamicChildren 里的一个位置（**长度稳定 = 1**）
+- v-for helper 内部**不用** BlockCollector 上报到外层（等效 Vue 3 的 disableTracking）
+- patchVNodeTree 遇到 `#list` 走 patchChildrenArray（按 keyed/unkeyed flag 分流）
 
 ### 6.2 不采用 Vue 3 的部分
 
@@ -221,7 +241,7 @@ Fragment 在 Px 里只需要在 `patchVNodeTree` 里加一个分支：**遇到 `
 
 ### 6.3 分阶段
 
-- **B-Phase 2.5** = 引入 Fragment 语义 + v-for helper 改用 Fragment 输出
+- **B-Phase 2.5** = 引入 `#list` VNode 语义 + v-for helper 改用 `#list` 输出
 - 打开 6 个 v-for 密集 case（TextHeavy / DynamicList / ChatStream / HoverGrid / StaticTemplate / LiveDashboard）的 fast-path 通路
 
 ### 6.4 预期收益
@@ -240,3 +260,4 @@ Fragment 在 Px 里只需要在 `patchVNodeTree` 里加一个分支：**遇到 `
 ## 8. 更新历史
 
 - 2026-07-22 初次归档（B-Phase 2 完成后，B-Phase 2.5 启动前）
+- 2026-07-22 新增 §0 术语说明：Px 侧采用 `#list` 而非 Fragment，避免与 layout `PhysicalFragment` 术语碰撞（191 处引用）
