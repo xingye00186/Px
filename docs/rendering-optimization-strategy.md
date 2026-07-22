@@ -180,6 +180,8 @@ after:   old VNode patched → computedStyle 保留 → RenderNode 匹配命中
 
 **结论**：VNode 层的无 key 位置匹配在本框架下**多余且有害**——baseline 已通过 keyed VNode 复用在 VNode 层保 identity（VNode 上的 `computedStyle` 缓存正是§五 cascade 的锚点）；unkeyed wrapper 无 stateful 字段可保，走 O(1) 整体替换是正确策略。**并非“Px 不依赖 VNode identity”**——Vue 3 与 Px 都靠 keyed VNode 复用维持下游身份 cascade，差别只在 unkeyed 默认策略（Vue 3 按 index 保守复用，Px 走整体替换）。**未来若引入依赖 unkeyed 节点 identity 的机制**（Composition API `ref` 挂 unkeyed 节点 / DOM 引用 / v-model 焦点绑 unkeyed 元素）再重新评估；届时需额外 fast-path（仅在检测到 stateful unkeyed 子节点时才递归）。
 
+> **完整级联链路**：keyed VNode identity 稳定驱动四段下游洁净分类——① `areVNodesEqual` 自比较（`RenderTreeManager.php` L307-339，`PATCH_NONE` 零比较）→ ② `parentVNodeChanged=false` + 清 dirty bits（L724 / L765-777，对标 Blink `ChildNeedsStyleRecalc`）→ ③ head/tail sync **不构 ComputedStyle、不递归 children**（L1014-1055）→ ④ Fragment cache hit **零分配返回 cachedFragment**（`LayoutOrchestrator.php` L107-127）。fix 后对 unkeyed wrapper 强制递归 patch 的真实代价不在 wrapper 层的 O(1) 丢失，而在**强制下钻到 keyed cells 层重复已完成的 keyed diff**。
+
 ### 9.2 `markLayoutDirty` 直接设 `parent->childrenNeedLayout`
 
 **动机**：`RenderNode::$childrenNeedLayout`（L73）已存在，但仅由 `propagateLayoutDirty` 的 DFS 设置；假设在 `markLayoutDirty` 中直接设可消除全树 DFS。

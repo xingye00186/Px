@@ -172,6 +172,34 @@
 
 > **注意区分**：并非"Px 不依赖 VNode identity"——VNode 上的 `computedStyle` 缓存正是 Px 跨层复用 cascade 的锚点，keyed VNode 稳定至关重要。只是 unkeyed wrapper 恰好落在「无 stateful 锚点」象限。**未来若引入依赖 unkeyed 节点 identity 的机制**（Composition API `ref` 挂 unkeyed 节点 / DOM 引用 / v-model 焦点绑 unkeyed 元素）再重新评估；届时需额外 fast-path（仅检测到 stateful unkeyed 子节点时才递归）。
 
+#### 5.2.1 identity 稳定驱动的完整级联链路（代码验证）
+
+keyed VNode identity 稳定不是孤立局部优化，而是驱动下游全链路洁净分类的引擎，**四段级联**：
+
+| 阶段 | 代码位置 | 机制 |
+|---|---|---|
+| **① `areVNodesEqual` 自比较** | `RenderTreeManager.php` L307-339 | 布局相关属性完全一致的判定；含 patchFlag 快速路径（`PATCH_NONE` → 零比较）。identity 稳定时所有 field 比较必然命中 |
+| **② `parentVNodeChanged = false`** | `RenderTreeManager.php` L724 / L765-777 | 命中 → 清 `layoutDirty/paintDirty/styleDirty`；对标 Blink `ChildNeedsStyleRecalc` 的 CSS 继承脏位下传门控 |
+| **③ head/tail sync 完全跳过 child** | `RenderTreeManager.php` L1014-1055 | 对每个 head/tail child 再做 `areVNodesEqual($newVN, $oldRN->sourceVNode)`；命中 → **不构建 ComputedStyle、不递归 children** + `PerfCounter::inc('child_skip')` |
+| **④ Fragment cache hit** | `LayoutOrchestrator.php` L107-127 | 前置：`!layoutDirty && cachedFragment !== null && space->equals(cachedConstraintSpace)`；命中 → **零分配返回 cachedFragment** |
+
+完整 pipeline：
+
+```
+ReactiveComponent::patchVNodeTree (keyed VNode 复用 → identity 稳定)
+  → updateFromVNode L765 areVNodesEqual($vnode, $oldVNode) = true
+    → parentVNodeChanged = false + 清 dirty bits
+      → patchKeyedChildren L1022 每 child areVNodesEqual 再命中
+        → 完全跳过 (不构 ComputedStyle、不递归)
+          → LayoutOrchestrator L107 洁净早退
+            → 零分配返回 cachedFragment (L127)
+              → VNodeRenderer paintDirty=false 短路
+```
+
+每一步都以上一步 identity 稳定为前置。identity 稳定不是锦上添花，而是**驱动这条 pipeline 从入口到出口全程洁净的引擎**。
+
+**回到 patchUnkeyedChildren 回归的本质**：baseline 对 keyed nodes 保 identity、对 unkeyed wrappers 丢 identity是有意的最优策略——**不是"不依赖 identity"，而是"在不关心 identity 的位点故意跳过 identity preservation 以避免冗余工作"**。fix 后对 unkeyed wrapper 强制递归 patch 直接破坏了这一分层策略——wrapper 本身不需要 identity、但强制下钻到 keyed cells 层重复已完成的 keyed diff。
+
 ### 5.3 `styleDirty` 直接跳过布局
 
 **动机**：`layoutDirty=true` 覆盖过广（`color` 变化也标 layout dirty），假设用 `styleDirty=true && !layoutDirty` 表示"仅视觉变化，不触发布局"。
@@ -309,6 +337,7 @@
 6. **Vue 3 机制的差异不在「层数」而在「unkeyed 默认策略」**：
    - Vue 3 与 Px 架构本质一致——都靠 keyed VNode 复用维持下游身份 cascade（Vue 3: VNode ↔ DOM via `vnode.el`；Px: VNode ↔ RenderNode via `computedStyle` 缓存 + `VNode.key`）。
    - 差别只在 unkeyed 场景：Vue 3 按 index 保守复用（DOM 重建代价高），Px 走 O(1) 整体替换（RenderNode 重建代价相对低 + unkeyed 通常是无状态 wrapper）。
+   - Px 渲染管线深度依赖 keyed VNode identity 驱动下游全链路洁净分类（§5.2.1 四段级联：`areVNodesEqual` 自比较 → `parentVNodeChanged=false` → head/tail sync 完全跳过 → Fragment cache hit）；baseline 对 unkeyed 位点故意跳过 identity preservation 是有意为之的分层策略，不是"无依赖"。
    - 移植 Vue 3 机制的判据：**依赖 keyed identity** 的（patchFlag / Block Tree / static hoist / template refs 挂 keyed 节点）直接可移植；**依赖 unkeyed identity** 的（`patchUnkeyedChildren` / 焦点绑 unkeyed 元素）需 Px 层额外 fast-path 机制
 
 ---

@@ -151,6 +151,8 @@ VNode props/style 可能已经变了
 
 **结论**：VNode 层的无 key 位置匹配在本框架下**多余且有害**——baseline 已通过 keyed VNode 复用在 VNode 层保 identity（VNode 上的 `computedStyle` 缓存正是跨层复用 cascade 的锚点）；unkeyed wrapper 无 stateful 字段可保，走 O(1) 整体替换是正确策略。**并非“Px 不依赖 VNode identity”**——Vue 3 与 Px 都靠 keyed VNode 复用维持下游身份 cascade，差别只在 unkeyed 默认策略（Vue 3 按 index 保守复用，Px 走整体替换）。**未来若引入依赖 unkeyed 节点 identity 的机制**（Composition API `ref` 挂 unkeyed 节点 / DOM 引用 / v-model 焦点绑 unkeyed 元素）再重新评估；届时需额外 fast-path（仅在检测到 stateful unkeyed 子节点时才递归）。
 
+> **完整级联链路**：keyed VNode identity 稳定驱动四段下游洁净分类——① `areVNodesEqual` 自比较（`RenderTreeManager.php` L307-339，`PATCH_NONE` 零比较）→ ② `parentVNodeChanged=false` + 清 dirty bits（L724 / L765-777，对标 Blink `ChildNeedsStyleRecalc`）→ ③ head/tail sync **不构 ComputedStyle、不递归 children**（L1014-1055）→ ④ Fragment cache hit **零分配返回**（`LayoutOrchestrator.php` L107-127）。每一步都以上一步 identity 稳定为前置。**baseline 对 unkeyed 位点故意跳过 identity preservation 是有意为之的分层策略**，不是"无依赖"——仅在不关心 identity 的位点跳过 preservation 以避免冗余工作。
+
 ---
 
 ## 三、信号等价性对照表
