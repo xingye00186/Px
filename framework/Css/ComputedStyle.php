@@ -173,6 +173,10 @@ class ComputedStyle
     /** 冻结标记 */
     private bool $frozen = false;
 
+    // ── toExportArray() 惰性缓存（对象已 frozen，输出稳定，首次计算后复用）──
+    private array $exportCache = [];
+    private bool $exportCached = false;
+
     /** 继承属性列表 */
     private const INHERITED_KEYS = [
         'fg', 'fontFamily', 'fontSize', 'fontWeight', 'bold', 'fontStyle',
@@ -737,9 +741,12 @@ class ComputedStyle
 
     /**
      * 导出为数组（供 serializeRenderNode 使用）。
+     * 惰性缓存：对象已 frozen，输出稳定，首次构建后复用。
+     * 取消 O(120) key 遍历 + 类型转换，非首次调用 O(1)。
      */
     public function toExportArray(): array
     {
+        if ($this->exportCached) return $this->exportCache;
         $result = [];
         foreach (self::EXPORT_KEYS as $k) {
             $v = $this->rawDeclarations[$k] ?? null;
@@ -761,6 +768,8 @@ class ComputedStyle
                 }
             }
         }
+        $this->exportCache = $result;
+        $this->exportCached = true;
         return $result;
     }
 
