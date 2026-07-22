@@ -41,11 +41,26 @@ class VForHelperGenerator
             }
 
             $childExprs = [];
+            // B-Phase 2.6: iteration 体内部开 block，提取动态子孙为 $_dN 临时变量
+            //   iteration root wrap ->dynamicChildren 后，patchVNodeTree 对每个
+            //   iteration 只 patch 动态子孙（跳过 static 部分，对大 v-for + 少变化场景收益巨大）
+            $iterBlock = new BlockCollector();
             foreach ($children as $child) {
                 if ($child instanceof VNode) {
-                    $childExprs[] = generateVNodeExpr($child, $loopInfo, 2, $ctx);
+                    $childExprs[] = generateVNodeExpr($child, $loopInfo, 2, $ctx, $iterBlock, /* skipExtract */ false);
                 }
             }
+
+            // 前置临时变量声明（每次 iteration 内 emit 一次）
+            $iterStmts = '';
+            if (!empty($iterBlock->stmts)) {
+                $iterStmts = "\n        " . implode("\n        ", $iterBlock->stmts);
+            }
+            // 安全时 wrap iteration root 的 dynamicChildren（漏接 v-if IIFE / 嵌套 v-for helper 时 unsafe）
+            $canWrapIter = !$iterBlock->unsafe && !empty($iterBlock->refs);
+            $iterDynAssign = $canWrapIter
+                ? "\n        \$__v->dynamicChildren = [" . implode(', ', $iterBlock->refs) . "];"
+                : '';
 
             // B-Phase 2.5: v-for helper 返回 #list VNode 而非 VNode[]（日式 Fragment 语义站平呼）
             //   有 keyExpr → PATCH_KEYED_LIST，无 keyExpr → PATCH_UNKEYED_LIST
@@ -64,6 +79,8 @@ class VForHelperGenerator
                 if (count($childExprs) === 0) continue;
                 $childBlock = implode(",\n                ", $childExprs);
 
+                // B-Phase 2.6: template v-for 不 wrap iteration root（可能有多个顶层节点），
+                //   但仍需 emit iteration 内 stmts，否则 $_dN 引用悬空
                 if ($parentItem !== null) {
                     $out .= <<<PHP
 
@@ -74,7 +91,7 @@ class VForHelperGenerator
     private function {$name}({$paramDecl}): VNode
     {
         \$children = [];
-        foreach ({$iterExpr} as {$foreachAs}) {
+        foreach ({$iterExpr} as {$foreachAs}) {{$iterStmts}
             \$children[] = {$childBlock};
         }
         return VNode::hList(\$children, VNode::{$listFlag});
@@ -90,7 +107,7 @@ PHP;
     private function {$name}(): VNode
     {
         \$children = [];
-        foreach ({$iterExpr} as {$foreachAs}) {
+        foreach ({$iterExpr} as {$foreachAs}) {{$iterStmts}
             \$children[] = {$childBlock};
         }
         return VNode::hList(\$children, VNode::{$listFlag});
@@ -178,15 +195,25 @@ PHP;
                         }
                     }
 
+                    // B-Phase 2.6: iteration root 需要 $__v 变量的情况：有 patchFlags 或 dynamicChildren
+                    $needVar = ($patchFlags !== 0) || $canWrapIter;
+                    $patchLine = ($patchFlags !== 0) ? "\n        \$__v->patchFlags = {$patchFlags};" : '';
+
+                    if ($needVar) {
+                        // 需要中间变量（emit stmts + \$__v = ... + patchFlags/dynamicChildren + push）
+                        $assignFlags = "{$iterStmts}\n        \$__v = {$innerExpr};{$patchLine}{$iterDynAssign}\n        \$children[] = \$__v;";
+                    } else {
+                        // 无需中间变量，但仍需 emit iteration stmts（若有）
+                        $assignFlags = "{$iterStmts}\n            \$children[] = {$innerExpr};";
+                    }
+
+                    // Emit helper 代码块（区分嵌套 v-for parentItem 与顶层两种签名）
                     if ($parentItem !== null) {
-                        $assignFlags = ($patchFlags !== 0)
-                            ? "\n        \$__v = {$innerExpr};\n        \$__v->patchFlags = {$patchFlags};\n        \$children[] = \$__v;"
-                            : "\n            \$children[] = {$innerExpr};";
                         $out .= <<<PHP
 
     /**
      * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
-     * @return VNode  #list VNode (B-Phase 2.5)
+     * @return VNode  #list VNode (B-Phase 2.5/2.6)
      */
     private function {$name}({$paramDecl}): VNode
     {
@@ -197,14 +224,11 @@ PHP;
     }
 PHP;
                     } else {
-                        $assignFlags = ($patchFlags !== 0)
-                            ? "\n        \$__v = {$innerExpr};\n        \$__v->patchFlags = {$patchFlags};\n        \$children[] = \$__v;"
-                            : "\n            \$children[] = {$innerExpr};";
                         $out .= <<<PHP
 
     /**
      * v-for render helper: {$item} in {$source}
-     * @return VNode  #list VNode (B-Phase 2.5)
+     * @return VNode  #list VNode (B-Phase 2.5/2.6)
      */
     private function {$name}(): VNode
     {
