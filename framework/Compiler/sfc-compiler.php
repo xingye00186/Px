@@ -1104,7 +1104,7 @@ function compileOneComponent(
 
     $bindValGen = new BindValueGenerator();
     $setBindValue = $bindValGen->generateSet($bindKeys, $arrayBindKeys, $reactiveProps);
-    $getBindValue = $bindValGen->generateGet($bindKeys, $arrayBindKeys);
+    $getBindValue = $bindValGen->generateGet($bindKeys, $arrayBindKeys, $reactiveProps);
 
     // v-for helpers
     $vForHelperGen = new VForHelperGenerator();

@@ -115,6 +115,10 @@ class ComponentResolveTransform implements TransformInterface
             $bindProps = [];
             foreach ($child->props as $k => $v) {
                 if ($k === '__componentFile') continue;
+                // 排除 v-* 指令（v-if / v-else / v-else-if / v-for / v-show / v-model 等）
+                //   这些已由 codegen 级处理（生成 if 分支 / foreach / 条件样式），
+                //   不应作为组件 prop 传递给子组件
+                if (str_starts_with($k, 'v-')) continue;
                 if (strlen($k) > 0 && $k[0] === ':') {
                     $propName = substr($k, 1);
                     $bindProps[$propName] = $v;

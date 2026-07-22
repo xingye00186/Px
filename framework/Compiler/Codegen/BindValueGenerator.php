@@ -18,13 +18,21 @@ class BindValueGenerator
      */
     public function generateSet(array $bindKeys, array $arrayBindKeys = [], array $reactiveProps = []): string
     {
-        // Build reactive type lookup
+        // Build reactive type lookup + reactive names
         $reactiveTypes = [];
+        $reactiveNames = [];
         foreach ($reactiveProps as $rp) {
             $reactiveTypes[$rp['name']] = $rp['type'];
+            $reactiveNames[$rp['name']] = true;
         }
 
-        $binds = array_keys($bindKeys);
+        // 合并：模板扫描出的 bindKeys + 所有 Reactive prop 名
+        //   原因：父组件可能传任意 Reactive prop（即使模板内未插值引用），
+        //   setBindValue 需能路由到对应字段。例如递归组件中：
+        //     <deep-tree-node :depth="depth - 1"> 传递 depth，但自身模板只
+        //     在 v-if="depth > 0" 条件里用 depth，不会被 collectVNodeBindKeys 扫到。
+        //   无 Reactive props 时降级为旧行为。
+        $binds = array_keys(array_merge($bindKeys, $reactiveNames));
         if (count($binds) === 0) {
             return "        // No bind keys defined";
         }
@@ -63,9 +71,14 @@ class BindValueGenerator
      * @param array $arrayBindKeys [bindKey => true] 数组类型的 bind key
      * @return string PHP 代码
      */
-    public function generateGet(array $bindKeys, array $arrayBindKeys = []): string
+    public function generateGet(array $bindKeys, array $arrayBindKeys = [], array $reactiveProps = []): string
     {
-        $binds = array_keys($bindKeys);
+        // 同样合并 Reactive prop 名（与 generateSet 保持一致）
+        $reactiveNames = [];
+        foreach ($reactiveProps as $rp) {
+            $reactiveNames[$rp['name']] = true;
+        }
+        $binds = array_keys(array_merge($bindKeys, $reactiveNames));
         if (count($binds) === 0) {
             return "        return '';";
         }
