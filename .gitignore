@@ -31,6 +31,9 @@ tests/screenshot/output/
 # perf pipeline benchmarks 自动产出的时间戳快照（benchmark_*.php 生成）
 tests/perf/results/
 
+# perf 下下划线开头的临时产物（_aot_<app>.log / _build_*.log / 临时 bench_*.json 等）
+tests/perf/_*
+
 # 测试输出目录（递归）
 apps/**/test_log/
 
