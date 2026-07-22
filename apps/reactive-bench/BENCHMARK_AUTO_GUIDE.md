@@ -405,6 +405,9 @@ powershell -File tests\perf\compare_bench.ps1 -MinDeltaPct 20 -Top 5
 
 # 对比其他快照（例如历史基线）
 powershell -File tests\perf\compare_bench.ps1 -Before path\to\old.json -After path\to\new.json
+
+# 自定义 μs 级 stage 列表（参 §13）
+powershell -File tests\perf\compare_bench.ps1 -Stages "stage:full_render,stage:paint"
 ```
 
 ### 10.4 参数
@@ -415,7 +418,8 @@ param(
     [string]$After       = "tests\perf\bench_after.json",
     [string]$DetailCase  = "",   # 只钻取某个 case（默认: 全部 case 汇总）
     [int]   $Top         = 10,   # 每个 case 只显示变化最大的前 N 个 PerfCounter 项
-    [double]$MinDeltaPct = 5.0   # 变化幅度 < 此值（%）的 counter 视为噪音跳过
+    [double]$MinDeltaPct = 5.0,  # 变化幅度 < 此值（%）的 counter 视为噪音跳过
+    [string]$Stages      = "stage:full_render,stage:vnode_tree,stage:update_from_vnode,stage:layout,stage:paint"  # 需展示的 μs 级 stage 列表
 )
 ```
 
@@ -552,5 +556,105 @@ style_pool_miss                   0.0        0.0     NEW    (5/case)
 | `d72972d2` | 阶段 A commit 2 |
 | `19ffcff7` | B-Phase 1（Block Tree 运行时 fast-path 基础设施） |
 | `b99e4596` | 本节 A/B 工件入库 |
+| `a528f713` | B-Phase 2（编译期 dynamicChildren codegen + v-if 分支 block wrap） |
+| `749a5487` | B-Phase 2.5（#list VNode + v-for helper 输出 Fragment 语义） |
+| `66f1aaef` | B-Phase 2.6（iteration root wrap dynamicChildren） |
+| `b187891a` | compare_bench.ps1 新增 μs 级 stage 时序对比表 |
 
 后续阶段（B-Phase 2 / 其他）完工后可直接重新跑 after 快照覆盖 `tests/perf/bench_after.json`，`bench_before.json` 作为长期不变的 pre-A/B 锥存档。
+
+### 12.5 后续里程碑（B-Phase 2 → 2.5 → 2.6，vs pre-A/B baseline）
+
+自本文档初次归档后，B-Phase 系列又行进了三个里程碑。均以 `tests/perf/bench_before.json` 作为不变 baseline 对比：
+
+**avg_ms 总改善**（绝对时间，越低越快）：
+
+| Case | pre-A/B → B-2.6 | 总改善 |
+|---|---|---|
+| SimpleCounter | 1.000 → 0.190 ms | **-81%** |
+| ManyProps | 1.000 → 0.150 ms | **-85%** |
+| DeepTree | 1.000 → 0.060 ms | **-94%** |
+| MixedWorkload | 1.000 → 0.190 ms | **-81%** |
+| FormDashboard | 1.000 → 0.120 ms | **-88%** |
+| StaticTemplate | 2.000 → 1.050 ms | -47% |
+| HoverGrid | 2.000 → 1.170 ms | -41% |
+| DynamicList | 1.690 → 1.010 ms | -40% |
+| ChatStream | 3.930 → 2.690 ms | -32% |
+| TextHeavy | 5.010 → 3.760 ms | -25% |
+| LiveDashboard | 3.410 → 2.600 ms | -24% |
+
+**μs 级 stage 总和**（11 case 累计，本文档 §13 工具首次输出）：
+
+| stage | before (μs) | after (μs) | delta |
+|---|---|---|---|
+| `stage:full_render` | 2,709,260 | 2,036,494 | **-24.83%** |
+| `stage:vnode_tree` | 1,227,805 | 1,054,469 | -14.12% |
+| `stage:update_from_vnode` | 246,344 | 76,473 | **-68.96%** |
+| `stage:layout` | 约持平 | 约持平 | -0.6% ~ +3.4% 噪音带 |
+| `stage:paint` | 各 case | 各 case | -21% ~ -41% |
+
+**收益归因**（从 μs 级信号看）：
+- **近 70% 改善集中在 `stage:update_from_vnode`**（VNode → RenderNode 转换）：阶段 A 的 ComputedStyle Flyweight + B-Phase 2/2.5/2.6 的 Block Tree fast-path 联合效果
+- **确证 fast-path 已广泛命中**：B-2.6 阶段 `block_fastpath_hit` 数量已达平均 100-10116 次/case（9/11 case）
+- `stage:layout` 未受本轮优化影响，作为下一个优化战场候选
+
+## 13. 测量精度陷阱与 μs 级验证方法
+
+### 13.1 现象：ms 精度失灵的临界点
+
+B-Phase 系列完工后多数 case 的 `avg_ms` 已降到 **0.1-0.3 ms** 级别。在这个量级上：
+
+- PHP `microtime(true)` 在 Windows 上实际分辨率约 **1 μs**
+- 单个 `foreach` 循环迲代、一次 GC、OS 调度切换都可轻易造成 **±50-100 μs 抖动**
+- 对一个 avg_ms=0.15 ms 的 case，±100 μs = ±67% 相对波动
+
+→ **avg_ms 已不能可靠反映微观优化（每处优化只值几十纳秒）的方向**。
+
+### 13.2 教训案例：B-Phase 2.7 fast-path 瞦身实验
+
+本文档 §12 B-Phase 2.6 完工后，LiveDashboard 相对 B-2.5 出现 ≈12pp 回退（`block_fastpath_hit` 新高至 10116/cycles=100，深递归开销累积）。一次尝试的 B-Phase 2.7：
+
+- **假设**：fast-path 内部无条件调用 `patchProps` 造成空函数开销，应早返回
+- **改动**：`if ($old->patchFlags !== 0) $this->patchProps(...)` 条件跳过 + organizational 字段惰性赋值
+- **avg_ms 级测量**：
+  - 第一次跑：LiveDashboard 2.600 → **2.330** (-10.4%)—"修复了"
+  - 第二次跑（仅回滚 organizational）：LiveDashboard 2.600 → **2.780** (+6.9%)—"变差了"
+  - 两次结果相差 450 μs，波动方向相反—**avg_ms 波动将信号完全淹没**
+- **μs 级验证**（当时尚未建属工具，手工从 perf_snapshot 看 `stage:full_render.total`）：
+  - LiveDashboard `stage:full_render` **298,112 → 304,173 = +2.0%**（略负）
+  - 真相：**分支判断开销略高于它节省的空函数调用开销**
+  - 原先诊断错：LiveDashboard 慢的根本原因不是 patchProps 空调用，而是多层嵌套 v-for 下 **fast-path 递归深度本身**的 O(1) 固定开销累积（10116 次 × ±100 ns ≈ 1 ms）
+- **处置**：B-Phase 2.7 整个回滚，代码保持 B-2.6 状态（无 commit）
+
+### 13.3 修复：compare_bench.ps1 新增 μs 级 stage 时序对比表（commit `b187891a`）
+
+直接展示 `stage:*.total` 的 before/after 累计 μs 值，不受 microtime 分辨率影响：
+
+```powershell
+powershell -File tests\perf\compare_bench.ps1
+```
+
+默认展示 5 个关键 stage：
+- `stage:full_render` — 端到端渲染管线总耗时
+- `stage:vnode_tree` — VNode 树重建
+- `stage:update_from_vnode` — VNode → RenderNode 转换
+- `stage:layout` — 布局
+- `stage:paint` — 绘制
+
+可自定义：
+```powershell
+powershell -File tests\perf\compare_bench.ps1 -Stages "stage:full_render,stage:paint"
+```
+
+### 13.4 方法论：什么时候必须走 μs 级验证
+
+| 情境 | 适用信号 | 備注 |
+|------|---------|------|
+| **宏观重构**（例：引入 Flyweight 池、Block Tree fast-path） | `avg_ms` / `steady_fps` 即可 | 改善幅度大于噪音带 |
+| **中型优化**（例：codegen 新增 patchFlag 分支、新探针） | `avg_ms` + `stage:full_render` 互相验证 | 一致方向才信 |
+| **微观优化**（例：fast-path 瞦身、新分支判断、字段惰性赋值） | 仅信 `stage:*.total` μs | avg_ms 噪音会淹没信号 |
+| **亚-μs 优化**（例：内联小函数、避免一次数组拷贝） | 需 CPU sampling profiler 或 cycles=1000+ | 本项目目前没到此量级 |
+
+**经验公式**：当优化目标的**单次命中值**小于 `avg_ms` 的 5%（即单位优化 < baseline 的 5%）时，avg_ms 不能作为判断依据，必须走 `stage:*.total`。
+
+**课后练**：B-Phase 2.7 中每次方法调用约 ±50 ns（深递归 hit=10116 累计约 500 μs），而 LiveDashboard avg_ms 在2.6 ms。优化目标/baseline = 500μs / 2600μs = 19% — 看似在可靠区，但它比 microtime 分辨率（±1 μs × 100 cycles = 100μs）仅大 5 倍，噪音同量级。已处于上表的"微观优化"行，必须走 μs 级验证。
