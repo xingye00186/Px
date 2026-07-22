@@ -489,14 +489,65 @@ class RenderTreeManager
                 // （替代已废弃的 setGroupIdRecursive 对 VNode.groupId 的写入）
                 $childGroupId = $instance->getId();
                 
-                // 传递子组件自己的旧根 RenderNode 作为 candidates，
-                // 使 updateFromVNode 能通过 type+key 匹配复用子树，
-                // 恢复三级脏位/Fragment 缓存/patchFlag 对组件内部节点生效。
-                // findMatchingRenderNode 已做 type+key 双条件匹配：
-                // v-if 形状变化时类型不匹配→匹配失败→建新，不会错误复用。
-                // 未消耗的旧节点由普通元素分支的 consumed-pos tracking 自动清理。
                 $oldRootRN = $instance->getRootRenderNode();
 
+                // ── Vue 3 × Blink 融合点：组件级 RenderNode 子树跳过 ──
+                // Vue 3: !$instance->renderDirty → vnodeCache 复用 → VNode 树未变
+                // Blink: ChildNeedsStyleRecalc = false → O(1) 跳过子树
+                // 融合：组件未 dirty → VNode 树是缓存对象 → RenderNode 树也不需要重建
+                //       直接复用旧 RN 子树，跳过 O(N) 递归遍历
+                // 注意：用 renderDirty 而非 dirty——dirty 在 getVNodeTree() 中已被清除
+                $wasRenderDirty = $instance->isRenderDirty();
+                $instance->clearRenderDirty();
+                if (!$wasRenderDirty && $oldRootRN !== null) {
+                    // 1. 重新挂接到父节点（每帧 parent->children 被清空重建）
+                    $oldRootRN->parent = $parent;
+                    if ($parent !== null) {
+                        $parent->children[] = $oldRootRN;
+                    }
+
+                    // 2. 父驱动 style 透传（仅当 placeholder style 变化时更新）
+                    $placeholderStyle = $vnode->props['style'] ?? [];
+                    if (!empty($placeholderStyle)) {
+                        $parsedDecls = is_string($placeholderStyle)
+                            ? \Px\Css\StyleResolver::parseInlineStyle($placeholderStyle)
+                            : $placeholderStyle;
+                        // 检测 style 是否实际变化，避免不必要的 layoutDirty
+                        $currentArr = $oldRootRN->computedStyle?->toExportArray() ?? [];
+                        $styleChanged = false;
+                        foreach ($parsedDecls as $sk => $sv) {
+                            if (($currentArr[$sk] ?? null) !== $sv) {
+                                $styleChanged = true;
+                                break;
+                            }
+                        }
+                        if ($styleChanged) {
+                            $oldRootRN->computedStyle = new ComputedStyle($parsedDecls, $oldRootRN->computedStyle?->toExportArray() ?? []);
+                            $oldRootRN->layoutDirty = true;
+                        }
+                    }
+
+                    // 3. 注册 groupId（仅根节点，内部节点已在首帧注册且 groupId 不变）
+                    if ($oldRootRN->groupId !== null) {
+                        $this->groupIdToRenderNodeMap[$oldRootRN->groupId][] = $oldRootRN;
+                    }
+
+                    // 4. 同步 scroll bind 值（父组件可能更新了绑定值）
+                    $component = $componentByGroupId[$childGroupId] ?? $root;
+                    $scrollBindKey = $vnode->props[':scroll-top'] ?? '';
+                    if ($scrollBindKey !== '') {
+                        $oldRootRN->scrollTop = (int) $component->getBindValue($scrollBindKey);
+                    }
+                    $scrollLeftBindKey = $vnode->props[':scroll-left'] ?? '';
+                    if ($scrollLeftBindKey !== '') {
+                        $oldRootRN->scrollLeft = (int) $component->getBindValue($scrollLeftBindKey);
+                    }
+
+                    \Px\Core\PerfCounter::inc('component_skip');
+                    return $oldRootRN;
+                }
+
+                // 组件 dirty → 走原有递归路径
                 $childRN = $this->updateFromVNode(
                     $instance->getVNodeTree(),
                     $parent,
@@ -606,8 +657,11 @@ class RenderTreeManager
             if ($computedStyle === null) {
                 \Px\Core\PerfCounter::start('sub:style_fallback');
                 // 降级：StyleRecalcPass 未运行时内联解析
+                // 防御：style 可能为 string（编译期未覆盖路径）→ 强制 array
+                $rawInlineStyle = $vnode->props['style'] ?? [];
+                $inlineStyleForResolve = is_array($rawInlineStyle) ? $rawInlineStyle : [];
                 $computedStyle = StyleResolver::resolve(
-                    inlineStyle: $vnode->props['style'] ?? [],
+                    inlineStyle: $inlineStyleForResolve,
                     className: $vnode->props['class'] ?? '',
                     parentDeclarations: $parentStyle,
                     elementType: $vnode->type,

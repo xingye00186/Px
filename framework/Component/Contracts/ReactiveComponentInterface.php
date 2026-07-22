@@ -75,6 +75,17 @@ interface ReactiveComponentInterface
      */
     public function setRootRenderNode(?RenderNode $node): void;
 
+    /**
+     * 检查本轮渲染周期内组件是否重渲染过（用于 updateFromVNode 组件级跳过）。
+     * renderDirty 在 performUpdate 中设置，在 updateFromVNode 组件处理中清除。
+     */
+    public function isRenderDirty(): bool;
+
+    /**
+     * 清除渲染脏标记（在 updateFromVNode 处理完组件后调用）。
+     */
+    public function clearRenderDirty(): void;
+
     // ── 事件分发 ─────────────────────────────────
 
     /**

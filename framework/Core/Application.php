@@ -584,15 +584,21 @@ class Application
                 $instance->setBindValue($childKey, $value);
             }
         } elseif ($node->componentProps !== null && $owner !== null) {
+            // 常规组件路径：求值表达式并存储到 componentPropValues
+            // 以便下一帧 matchComponentNode 能比对求值后的值（而非表达式字符串）
+            $evaluatedValues = [];
             foreach ($node->componentProps as $childKey => $parentExpr) {
                 if (is_string($parentExpr) && substr($parentExpr, 0, 7) === 'static:') {
                     $staticValue = substr($parentExpr, 7);
                     $instance->setBindValue($childKey, $staticValue);
+                    $evaluatedValues[$childKey] = $staticValue;
                 } else {
                     $parentValue = $owner->getBindValue($parentExpr);
                     $instance->setBindValue($childKey, $parentValue);
+                    $evaluatedValues[$childKey] = $parentValue;
                 }
             }
+            $node->componentPropValues = $evaluatedValues;
         }
 
         // 编译时 class→style 合并已完成，此处不再需要 getClassStyles()
@@ -691,16 +697,6 @@ class Application
         if ($instance !== null) {
             $instance->setParent($owner);
 
-            if ($newNode->componentProps !== null) {
-                foreach ($newNode->componentProps as $childKey => $parentExpr) {
-                    if (is_string($parentExpr) && substr($parentExpr, 0, 7) === 'static:') {
-                        $instance->setBindValue($childKey, substr($parentExpr, 7));
-                    } else {
-                        $instance->setBindValue($childKey, $owner->getBindValue($parentExpr));
-                    }
-                }
-            }
-
             // ── 方案 A：VNode 树身份修复 ──
             // 当 oldNode === newNode（根 VNode 树缓存命中，同一对象）时，
             // 必须在替换 children 之前保存旧 children 引用，
@@ -710,14 +706,45 @@ class Application
             // 保存旧 children 可以保证子组件的匹配走正常的 REUSE 路径。
             $oldChildren = ($oldNode !== null) ? $oldNode->children : null;
 
-            // 新增：组件级子树跳过 — 若 props 未变且组件未 dirty，直接复用旧 VNode 树
-            $propsUnchanged = ($newNode->componentProps === ($oldNode?->componentProps ?? null));
-            if ($propsUnchanged && !$instance->dirty && $oldChildren !== null) {
+            // ── 组件级跳过：props 求值未变且组件未 dirty → 直接复用旧 VNode 树 ──
+            // Vue 3 对标：hasChanged 检查在 trigger 之前；Px 在此预求值并比对。
+            // 关键：setBindValue 必须在此检查之后调用，否则会触发响应式系统
+            // 将子组件标记为 dirty（renderDirty=true），导致 updateFromVNode 无法跳过。
+            // componentProps 存储的是表达式字符串（每帧相同），不能直接用于判断值是否变化；
+            // 必须求值后与上一帧的 componentPropValues 比对。
+            $newPropValues = null;
+            if ($newNode->componentPropValues !== null) {
+                // v-for 预计算值路径
+                $newPropValues = $newNode->componentPropValues;
+            } elseif ($newNode->componentProps !== null) {
+                $newPropValues = [];
+                foreach ($newNode->componentProps as $childKey => $parentExpr) {
+                    if (is_string($parentExpr) && substr($parentExpr, 0, 7) === 'static:') {
+                        $newPropValues[$childKey] = substr($parentExpr, 7);
+                    } else {
+                        $newPropValues[$childKey] = $owner->getBindValue($parentExpr);
+                    }
+                }
+            }
+            $oldPropValues = $oldNode?->componentPropValues ?? null;
+            $propsChanged = ($newPropValues !== $oldPropValues);
+
+            // 存储求值后的 props 供下一帧比对
+            $newNode->componentPropValues = $newPropValues;
+
+            if (!$propsChanged && !$instance->dirty && $oldChildren !== null) {
                 $matched = clone $newNode;
                 $matched->componentInstance = $instance;
                 $matched->children = $oldChildren;
                 $this->registerComponent($instance->getId(), $instance);
                 return $matched;
+            }
+
+            // props 已变更或组件 dirty → 传递新 props 值到子组件实例
+            if ($newPropValues !== null) {
+                foreach ($newPropValues as $childKey => $value) {
+                    $instance->setBindValue($childKey, $value);
+                }
             }
 
             // ── B2 不可变性：克隆 VNode 再设置 children/componentInstance ──

@@ -57,6 +57,16 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     protected ?VNode $vnodeCache = null;
 
     /**
+     * 渲染脏标记 — 跨 patchComponentTree → updateFromVNode 两阶段持久。
+     *
+     * dirty 在 getVNodeTree() 中被清除（供 patchComponentTree 判断），
+     * 但 updateFromVNode 需要知道组件本轮是否重渲染过，
+     * 以决定是否跳过 RenderNode 子树遍历（对标 Blink ChildNeedsStyleRecalc）。
+     * renderDirty 在 performUpdate 中设置，在 updateFromVNode 组件处理中清除。
+     */
+    public bool $renderDirty = false;
+
+    /**
      * 响应式 Effect（由编译器生成的子类初始化）
      * 通过 DependencyTracker::runWithEffect() 包裹 render()
      * 自动追踪 render() 期间读取的 #[Reactive] 属性
@@ -77,6 +87,16 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     public function setRootRenderNode(?RenderNode $node): void
     {
         $this->rootRenderNode = $node;
+    }
+
+    public function isRenderDirty(): bool
+    {
+        return $this->renderDirty;
+    }
+
+    public function clearRenderDirty(): void
+    {
+        $this->renderDirty = false;
     }
 
     /**
@@ -110,6 +130,7 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
         // 不清空 vnodeCache —— 保留旧 VNode 树，patchVNodeTree 会原地更新属性。
         // 旧 VNode 存活 → computedStyle 保留 → RenderNode 匹配命中 → Fragment 缓存命中。
         $this->dirty = true;
+        $this->renderDirty = true;
 
         // 通过注入的回调请求 Application 重渲染
         if ($this->renderCallback !== null) {
