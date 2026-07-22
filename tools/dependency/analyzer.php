@@ -13,7 +13,7 @@
  *   php tools/dependency/analyzer.php --app=D:/Px/apps/calculator-ng
  */
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
 use PhpParser\Node;
 use PhpParser\NodeTraverser;

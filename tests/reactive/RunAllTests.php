@@ -3,7 +3,7 @@
  * Px 框架 AOT 原生响应式系统 — 全量测试套件
  *
  * 从单元测试到集成测试，逐层验证响应式系统正确性。
- * 运行方式: php framework/Reactive/tests/RunAllTests.php
+ * 运行方式: php tests/reactive/RunAllTests.php
  */
 
 // ── 测试基础设施 ─────────────────────────────────
@@ -33,15 +33,15 @@ function test_group(string $name, callable $fn): void
 
 // ── 加载框架 ────────────────────────────────────
 
-require_once __DIR__ . '/../../../tests/bootstrap/autoload.php';
-require_once __DIR__ . '/../Reactive.php';
-require_once __DIR__ . '/../DependentsMap.php';
-require_once __DIR__ . '/../Effect.php';
-require_once __DIR__ . '/../DependencyTracker.php';
-require_once __DIR__ . '/../Notifier.php';
-require_once __DIR__ . '/../../../framework/Component/BaseComponent.php';
-require_once __DIR__ . '/../../../framework/Component/ReactiveComponent.php';
-require_once __DIR__ . '/../../../framework/Dom/VNode.php';
+require_once __DIR__ . '/../bootstrap/autoload.php';
+require_once __DIR__ . '/../../framework/Reactive/Reactive.php';
+require_once __DIR__ . '/../../framework/Reactive/DependentsMap.php';
+require_once __DIR__ . '/../../framework/Reactive/Effect.php';
+require_once __DIR__ . '/../../framework/Reactive/DependencyTracker.php';
+require_once __DIR__ . '/../../framework/Reactive/Notifier.php';
+require_once __DIR__ . '/../../framework/Component/BaseComponent.php';
+require_once __DIR__ . '/../../framework/Component/ReactiveComponent.php';
+require_once __DIR__ . '/../../framework/Dom/VNode.php';
 
 // AOT 原生函数 shim（测试环境不加载 C++ 绑定）
 if (!function_exists('objval')) {
@@ -374,7 +374,7 @@ test_group('T4: 模拟编译组件 — 属性钩子+响应式联动', function()
 // ════════════════════════════════════════════════════
 
 test_group('T5: SFC编译器端到端', function() {
-    $testDir = __DIR__ . '/../../../apps/reactive-test';
+    $testDir = __DIR__ . '/../../apps/reactive-test';
     if (!is_dir($testDir)) {
         mkdir($testDir, 0755, true);
         mkdir($testDir . '/gen', 0755, true);
@@ -418,7 +418,7 @@ VUE;
     $output = [];
     $returnCode = 0;
     $cmd = sprintf('php "%s" "%s" 2>&1',
-        __DIR__ . '/../../../framework/Compiler/sfc-compiler.php',
+        __DIR__ . '/../../framework/Compiler/sfc-compiler.php',
         $testDir . '/App.vue'
     );
     exec($cmd, $output, $returnCode);

@@ -250,7 +250,7 @@ echo ========================================
 echo.
 
 cd /d "%FRAMEWORK_ROOT%"
-"%PHP_CLI%" framework\aot-checker.php --project "%APP_DIR%" --skip direct_cpp_call
+"%PHP_CLI%" tools\aot-checker.php --project "%APP_DIR%" --skip direct_cpp_call
 set "CHECK_EXIT=!errorlevel!"
 if !CHECK_EXIT! neq 0 (
     echo.
@@ -362,7 +362,7 @@ echo.
 
 cd /d "%FRAMEWORK_ROOT%"
 if exist "%APP_DIR%\gen" (
-    "%PHP_CLI%" framework\aot-checker.php "%APP_DIR%\gen" --skip direct_cpp_call
+    "%PHP_CLI%" tools\aot-checker.php "%APP_DIR%\gen" --skip direct_cpp_call
     set "GEN_CHECK_EXIT=!errorlevel!"
     if !GEN_CHECK_EXIT! neq 0 (
         echo [ERROR] AOT Checker found issues in generated code, aborting build
