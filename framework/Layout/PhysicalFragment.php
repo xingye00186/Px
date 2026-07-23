@@ -56,11 +56,11 @@ class PhysicalFragment
     public readonly int $textWidth;
 
     /**
-     * 实际绘制文本（postProcess 阶段由 TextOverflowProcessor 截断）。
-     * 非 readonly 以便 postProcess 修改。paint 优先消费此字段。
+     * 实际绘制文本（布局阶段由 TextOverflowProcessor 截断）。
+     * readonly 保证不可变性。paint 优先消费此字段。
      * 为空时使用 content 原值。
      */
-    public string $displayText = '';
+    public readonly string $displayText;
 
     /** getter 方法 — AOT 跨类 readonly 访问保护 */
     public function getX(): int { return $this->x; }
@@ -104,6 +104,7 @@ class PhysicalFragment
         array $pseudoStyles = [],
         int $availableWidth = 0,
         int $textWidth = 0,
+        string $displayText = '',
     ) {
         $this->x               = (int)$x;
         $this->y               = (int)$y;
@@ -126,6 +127,21 @@ class PhysicalFragment
         $this->pseudoStyles      = $pseudoStyles;
         $this->availableWidth    = (int)$availableWidth;
         $this->textWidth          = (int)$textWidth;
+        $this->displayText        = $displayText;
+    }
+
+    /** 返回带截断文本的新 Fragment（不可变重建） */
+    public function withDisplayText(string $text): self
+    {
+        return new self(
+            $this->x, $this->y, $this->w, $this->h,
+            $this->visualW, $this->visualH, $this->layer,
+            $this->contentWidth, $this->contentHeight,
+            $this->style, $this->children, $this->sourceNode,
+            $this->scrollTop, $this->scrollLeft, $this->isScrollContainer,
+            $this->type, $this->content, $this->dataset, $this->pseudoStyles,
+            $this->availableWidth, $this->textWidth, $text
+        );
     }
 
     /** 从 LayoutResult 构造（适配器用） */

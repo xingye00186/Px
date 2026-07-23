@@ -83,8 +83,8 @@ class LayoutOrchestrator
         );
         \Px\Core\PerfCounter::end('algo:OOF');
 
-        // Step 3: postProcess — 文本截断处理
-        $this->postProcess($rootFragment);
+        // Step 3: postProcess — 文本截断处理（不可变重建）
+        $rootFragment = $this->postProcess($rootFragment);
 
         Diag::log(1, 'layout:exit', ['rootW' => $rootFragment->getW(), 'rootH' => $rootFragment->getH(), 'children' => count($rootFragment->children)]);
         \Px\Core\PerfCounter::end('stage:layout');
@@ -434,36 +434,53 @@ class LayoutOrchestrator
         }
     }
 
-    // ── Phase 3: postProcess — 文本截断处理 ──
+    // ── Phase 3: postProcess — 文本截断处理（不可变重建） ──
 
     /**
      * 遍历 Fragment 树，对文本节点执行溢出截断。
-     * 将截断结果写入 frag->displayText，paint 直接消费。
+     * 对标 Blink：Fragment 不可变，截断后重建新 Fragment。
      */
-    private function postProcess(PhysicalFragment $rootFrag): void
+    private function postProcess(PhysicalFragment $rootFrag): PhysicalFragment
     {
         \Px\Core\PerfCounter::start('algo:postProcess');
-        $this->postProcessRecursive($rootFrag);
+        $result = $this->postProcessRecursive($rootFrag);
         \Px\Core\PerfCounter::end('algo:postProcess');
+        return $result;
     }
 
-    private function postProcessRecursive(PhysicalFragment $frag): void
+    private function postProcessRecursive(PhysicalFragment $frag): PhysicalFragment
     {
-        // 先处理子节点（自底向上，子节点截断后父节点 layout 已完成不受影响）
-        foreach ($frag->children as $child) {
-            $this->postProcessRecursive($child);
+        // 先处理子节点（自底向上）
+        $newChildren = [];
+        $childrenChanged = false;
+        foreach ($frag->children as $i => $child) {
+            $newChild = $this->postProcessRecursive($child);
+            $newChildren[$i] = $newChild;
+            if ($newChild !== $child) $childrenChanged = true;
+        }
+        // 如果子节点有变化，重建父节点
+        if ($childrenChanged) {
+            $frag = new PhysicalFragment(
+                $frag->x, $frag->y, $frag->w, $frag->h,
+                $frag->visualW, $frag->visualH, $frag->layer,
+                $frag->contentWidth, $frag->contentHeight,
+                $frag->style, $newChildren, $frag->sourceNode,
+                $frag->scrollTop, $frag->scrollLeft, $frag->isScrollContainer,
+                $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles,
+                $frag->availableWidth, $frag->textWidth, $frag->displayText
+            );
         }
 
         // 仅处理有文本内容且非空容器
         $content = $frag->content;
         if ($content === null || (is_string($content) && $content === '')) {
-            return;
+            return $frag;
         }
         $textContent = (string)$content;
-        if ($textContent === '') return;
+        if ($textContent === '') return $frag;
 
         $style = $frag->style;
-        if ($style === null) return;
+        if ($style === null) return $frag;
 
         // 计算 content box 宽度
         $bl = (int)($style->borderLeftWidth ?? 0);
@@ -490,8 +507,7 @@ class LayoutOrchestrator
             && ($textOverflow === 'ellipsis' || $lineClamp > 0)
             && $containerW > 0;
         if (!$needsTruncation) {
-            $frag->displayText = $textContent;
-            return;
+            return $frag->withDisplayText($textContent);
         }
 
         $overflowStyle = [
@@ -504,7 +520,7 @@ class LayoutOrchestrator
         $result = TextOverflowProcessor::process(
             $textContent, $containerW, $fontSize, $bold, $overflowStyle
         );
-        $frag->displayText = $result['text'];
+        return $frag->withDisplayText($result['text']);
     }
 
     /**
