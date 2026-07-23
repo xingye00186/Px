@@ -291,7 +291,6 @@ class LayoutOrchestrator
         // 缓存完整 Fragment 树 + 约束空间（对标 Blink NGBlockNode）
         $node->cachedFragment = $algoFrag;
         $node->cachedConstraintSpace = $space;
-        $node->layoutCacheVersion++;
 
         \Px\Core\PerfCounter::end('algo:teardown');
 
