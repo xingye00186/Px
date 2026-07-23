@@ -366,8 +366,30 @@ class FlexAlgorithm extends LayoutAlgorithm
             }
         }
 
+        // ── Pass 2: 用 flex 确定的尺寸重新布局子项（对标 Blink FlexAlgorithm 两阶段） ──
+        // Blink: flex 分配后用确定宽度重新 LayoutChild
+        foreach ($sortedFlexItems as $p2Idx => $p2Fi) {
+            $p2Fi = objval($p2Fi, FlexItem::class);
+            $p2Orig = $sortedChildResults[$p2Idx] ?? null;
+            $p2ItemW = (int)$p2Fi->w;
+            $p2OrigW = $p2Orig !== null ? (int)$p2Orig->getW() : 0;
+            // 宽度变化超过 5px 时重新布局（对标旧 Phase C 阈值）
+            if ($p2OrigW > 0 && $p2ItemW > 0 && abs($p2OrigW - $p2ItemW) > 5 && $p2Idx < count($childNodes)) {
+                $p2Space = new ConstraintSpace(
+                    $p2ItemW, (int)$p2Fi->h > 0 ? (int)$p2Fi->h : $space->getContentHeight(),
+                    $space->getParentContentX(), $space->getParentContentY(),
+                    $p2ItemW, (int)$p2Fi->h > 0 ? (int)$p2Fi->h : $space->getContentHeight(),
+                    $p2ItemW, $space->getPercentageHeight(),
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    true, false, 0, 0, 'block',
+                    $p2ItemW, $space->getPercentageHeight(),
+                );
+                $reFrag = $this->layoutChild($childNodes[$p2Idx], $p2Space);
+                $sortedChildResults[$p2Idx] = $reFrag;
+            }
+        }
+
         // ── Step 6: 将 FlexItem 结果映射回 PhysicalFragment ──
-        // 两阶段布局：Phase C 已用正确约束重布局，子 fragment 宽度与 item 宽度一致时直接使用
         $mappedResults = [];
         foreach ($sortedFlexItems as $orderIdx => $fi) {
             $orig = $sortedChildResults[$orderIdx] ?? null;
