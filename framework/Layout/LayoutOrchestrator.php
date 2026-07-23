@@ -267,14 +267,15 @@ class LayoutOrchestrator
         // P2/P3: Phase C 已删除——算法通过 layoutChild() 按需布局，无需外部重布局补丁
         // 对标 Blink：算法内部处理两阶段布局（measure → distribute → re-layout）
 
-        // 应用 layer 继承 + 元数据打标
+        // 应用 layer 继承 + 元数据打标 + 滚动容器同步
+        $isScroll = $node->isScrollContainer || $algoFrag->getIsScrollContainer();
         if ($nodeLayer > $algoFrag->getLayer()) {
             $algoFrag = new \Px\Layout\PhysicalFragment(
                 (int)$algoFrag->getX(), (int)$algoFrag->getY(), (int)$algoFrag->getW(), (int)$algoFrag->getH(),
                 (int)$algoFrag->getVisualW(), (int)$algoFrag->getVisualH(), (int)$nodeLayer,
                 (int)$algoFrag->getContentWidth(), (int)$algoFrag->getContentHeight(),
                 $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
-                (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $algoFrag->getIsScrollContainer(),
+                (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $isScroll,
                 $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
             );
         } else {
@@ -284,7 +285,7 @@ class LayoutOrchestrator
                 (int)$algoFrag->getVisualW(), (int)$algoFrag->getVisualH(), (int)$algoFrag->getLayer(),
                 (int)$algoFrag->getContentWidth(), (int)$algoFrag->getContentHeight(),
                 $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
-                (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $algoFrag->getIsScrollContainer(),
+                (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $isScroll,
                 $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
             );
         }

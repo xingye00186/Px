@@ -216,6 +216,13 @@ class RenderTreeManager
         if ($dsp !== 'block' && $dsp !== 'flex' && $dsp !== 'grid') {
             $output .= " [dsp=$dsp]";
         }
+        // 滚动容器标注（对标测试期望：scroll ch=X cw=Y maxScroll=Z）
+        if ($frag->isScrollContainer) {
+            $ch = $frag->contentHeight;
+            $cw = $frag->contentWidth;
+            $maxScroll = max(0, $ch - $frag->h);
+            $output .= " scroll ch=$ch cw=$cw maxScroll=$maxScroll";
+        }
 
         if ($frag->content !== null && $frag->content !== "") {
             $content = (string)$frag->content;
