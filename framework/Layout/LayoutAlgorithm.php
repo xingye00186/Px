@@ -43,15 +43,13 @@ abstract class LayoutAlgorithm
 
     /**
      * 执行布局，返回不可变 Fragment。
+     * 对标 Blink LayoutAlgorithm：接收约束空间 + 样式 + 子节点，通过 layoutChild() 按需布局子项。
      *
      * @param ConstraintSpace $space 约束空间
      * @param ComputedStyle|null $style 元素计算样式
      * @param string $textContent 文本内容
-     * @param array $childNodes 子 RenderNode 节点
-     * @param PhysicalFragment[] $childFragments 预计算子 fragment（即将废弃，改用 layoutChild）
+     * @param array $childNodes 子 RenderNode 节点（通过 layoutChild 按需布局）
      * @param PhysicalFragment|null $inputFragment 可选输入 Fragment（缓存命中时）
-     * @param ConstraintSpace[]|null $childConstraints 子项约束空间（layoutChild 模式）
-     * @param IntrinsicSizes[]|null $childIntrinsicSizes 子项内在尺寸（Phase A 收集）
      * @return PhysicalFragment 布局结果
      */
     abstract public function layout(
@@ -59,10 +57,7 @@ abstract class LayoutAlgorithm
         ?ComputedStyle $style = null,
         string $textContent = '',
         array $childNodes = [],
-        array $childFragments = [],
         ?PhysicalFragment $inputFragment = null,
-        ?array $childConstraints = null,
-        ?array $childIntrinsicSizes = null,
     ): PhysicalFragment;
 
     /**

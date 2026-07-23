@@ -249,7 +249,7 @@ class LayoutOrchestrator
         \Px\Core\PerfCounter::end('algo:setup');
 
         \Px\Core\PerfCounter::start('algo:' . $algoName);
-        $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached, null, null);
+        $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $cached);
         \Px\Core\PerfCounter::end('algo:' . $algoName);
 
         \Px\Core\PerfCounter::start('algo:teardown');

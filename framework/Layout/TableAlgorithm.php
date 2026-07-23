@@ -16,10 +16,7 @@ class TableAlgorithm extends LayoutAlgorithm
         ?ComputedStyle $style = null,
         string $textContent = '',
         array $childNodes = [],
-        array $childFragments = [],
         ?PhysicalFragment $inputFragment = null,
-        ?array $childConstraints = null,
-        ?array $childIntrinsicSizes = null,
     ): PhysicalFragment {
         $s = $style ?? \Px\Css\StylePool::empty();
         // P2: 按需布局子项
