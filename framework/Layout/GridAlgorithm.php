@@ -41,7 +41,8 @@ class GridAlgorithm extends LayoutAlgorithm
 
         $parentX = $c->parentContentX;
         $parentY = $c->parentContentY;
-        $parentW = $c->containerWidth;
+        // 对标 Blink：使用 contentWidth（子项可用约束宽度），与 Flex/Block 一致
+        $parentW = $c->getContentWidth();
 
         $left = $s->left?->toPx() ?? 0;
         $top = $s->top?->toPx() ?? 0;
