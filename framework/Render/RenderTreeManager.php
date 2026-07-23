@@ -233,6 +233,11 @@ class RenderTreeManager
         if ($ov !== 'visible') {
             $output .= " ov=$ov";
         }
+        // flex-grow 标注（对标测试期望：fg=1）
+        $fg = $frag->style?->getRaw('flexGrow') ?? $frag->style?->flex?->grow ?? 0;
+        if (is_numeric($fg) && (int)$fg > 0) {
+            $output .= " fg=" . (int)$fg;
+        }
 
         if ($frag->content !== null && $frag->content !== "") {
             $content = (string)$frag->content;
