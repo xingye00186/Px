@@ -269,11 +269,25 @@ class LayoutOrchestrator
 
         // 应用 layer 继承 + 元数据打标 + 滚动容器同步
         $isScroll = $node->isScrollContainer || $algoFrag->getIsScrollContainer();
+        // 对标 Blink: 滚动容器的 contentWidth/Height = 子项最大范围
+        $contentW = (int)$algoFrag->getContentWidth();
+        $contentH = (int)$algoFrag->getContentHeight();
+        if ($isScroll && count($algoFrag->children) > 0) {
+            $maxRight = 0; $maxBottom = 0;
+            foreach ($algoFrag->children as $ch) {
+                $chRight = (int)$ch->getX() + (int)$ch->getW();
+                $chBottom = (int)$ch->getY() + (int)$ch->getH();
+                if ($chRight > $maxRight) $maxRight = $chRight;
+                if ($chBottom > $maxBottom) $maxBottom = $chBottom;
+            }
+            if ($maxRight > $contentW) $contentW = $maxRight;
+            if ($maxBottom > $contentH) $contentH = $maxBottom;
+        }
         if ($nodeLayer > $algoFrag->getLayer()) {
             $algoFrag = new \Px\Layout\PhysicalFragment(
                 (int)$algoFrag->getX(), (int)$algoFrag->getY(), (int)$algoFrag->getW(), (int)$algoFrag->getH(),
                 (int)$algoFrag->getVisualW(), (int)$algoFrag->getVisualH(), (int)$nodeLayer,
-                (int)$algoFrag->getContentWidth(), (int)$algoFrag->getContentHeight(),
+                $contentW, $contentH,
                 $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
                 (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $isScroll,
                 $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
@@ -283,7 +297,7 @@ class LayoutOrchestrator
             $algoFrag = new \Px\Layout\PhysicalFragment(
                 (int)$algoFrag->getX(), (int)$algoFrag->getY(), (int)$algoFrag->getW(), (int)$algoFrag->getH(),
                 (int)$algoFrag->getVisualW(), (int)$algoFrag->getVisualH(), (int)$algoFrag->getLayer(),
-                (int)$algoFrag->getContentWidth(), (int)$algoFrag->getContentHeight(),
+                $contentW, $contentH,
                 $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
                 (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $isScroll,
                 $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
