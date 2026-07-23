@@ -270,77 +270,8 @@ class LayoutOrchestrator
             );
         }
 
-        // ─── Phase C: flex/grid 子项重布局（最多 self::MAX_RELAYOUT_ITERATIONS 轮）───
-        if ($relayoutDepth < self::MAX_RELAYOUT_ITERATIONS && $isFlexOrGrid && count($childFragments) > 0 && count($algoFrag->children) > 0) {
-            $needsRelayout = false;
-            $childCount = min(count($childFragments), count($algoFrag->children));
-            for ($ri = 0; $ri < $childCount; $ri++) {
-                $oldW = (int)$childFragments[$ri]->getW();
-                $newW = (int)$algoFrag->children[$ri]->getW();
-                if ($oldW > 0 && $newW > 0 && abs($oldW - $newW) > 5) {
-                    $needsRelayout = true; break;
-                }
-            }
-            if ($needsRelayout) {
-                $newChildFragments = [];
-                $algoChildCount = (int)count($algoFrag->children);
-                $childFragCount = (int)count($childFragments);
-                $nodeChildArray = $node->children;
-                $nodeChildLen = (int)count($nodeChildArray);
-                for ($ri = 0; $ri < $nodeChildLen; $ri++) {
-                    $child = $nodeChildArray[$ri];
-                    $detW = $ri < $algoChildCount ? (int)$algoFrag->children[$ri]->getW() : 0;
-                    if ($detW > 0 && $ri < $childFragCount && abs((int)$childFragments[$ri]->getW() - $detW) > 5) {
-                        // 子项宽度变化：用 flex 确定宽度重新约束，determinedPercentageWidth 用于子项百分比
-                        $chBaseSpace = $this->buildChildSpace($child, $space, $style);
-                        $detContentW = max(0, $detW - $chBaseSpace->getPaddingLeft() - $chBaseSpace->getPaddingRight() - $chBaseSpace->borderLeft - $chBaseSpace->borderRight);
-                        $relayoutSpace = new ConstraintSpace(
-                            $detW, $chBaseSpace->getContentHeight(),
-                            $chBaseSpace->getParentContentX(), $chBaseSpace->getParentContentY(),
-                            max(0, $detW), $chBaseSpace->getContentHeight(),
-                            $detContentW, $chBaseSpace->getPercentageHeight(),
-                            $chBaseSpace->getPaddingTop(), $chBaseSpace->getPaddingRight(),
-                            $chBaseSpace->getPaddingBottom(), $chBaseSpace->getPaddingLeft(),
-                            $chBaseSpace->borderTop, $chBaseSpace->borderRight,
-                            $chBaseSpace->borderBottom, $chBaseSpace->borderLeft,
-                            true, false, 0, 0, 'block',
-                            $detContentW, $chBaseSpace->getPercentageHeight(),
-                        );
-                        // 用 Phase C 确定的约束重布局子项，depth+1 限制当前容器自身迭代
-                        $newChildFragments[] = $this->mainLayout($child, $relayoutSpace, $nodeLayer, $relayoutDepth + 1);
-                    } else {
-                        $newChildFragments[] = $ri < $childFragCount ? $childFragments[$ri] : $childFragments[0];
-                    }
-                }
-                // Step 1: 用 flex 算法重新布局子项
-                $childFragments = $newChildFragments;
-                $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $childFragments, $cached);
-                // Step 2: 合并 flex 权威宽度 + Phase C 修正子项，切断振荡循环
-                // 问题：Phase C 重布局产生 auto-fill(202)，flex 产出 234，
-                //       两者恒差 padding+border。algoFrag->children 宽度正确但内部子项
-                //       仍然来自 Phase B 的错误布局。
-                // 方案：用 flex 权威宽度覆盖 fragment w，保留 Phase C 重布局的正确子项
-                $merged = [];
-                $nodeChildCount = (int)count($node->children);
-                $newChildCount = (int)count($newChildFragments);
-                $algoChildCount2 = (int)count($algoFrag->children);
-                for ($ri = 0; $ri < $nodeChildCount; $ri++) {
-                    $reFrag = $ri < $newChildCount ? $newChildFragments[$ri] : null;
-                    $flexFrag = $ri < $algoChildCount2 ? $algoFrag->children[$ri] : null;
-                    if ($reFrag !== null && $flexFrag !== null) {
-                        $merged[] = (new PhysicalFragmentBuilder())
-                            ->from($reFrag)          // 保留 Phase C 的正确子项
-                            ->w((int)$flexFrag->getW())  // 覆盖为 flex 权威宽度
-                            ->h((int)$flexFrag->getH())  // 覆盖为 flex 权威高度
-                            ->build();
-                    } else {
-                        $merged[] = $reFrag ?? $flexFrag ?? $childFragments[0];
-                    }
-                }
-                $childFragments = $merged;
-                Diag::log(2, 'relayout:done', ['type' => $node->type, 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH()]);
-            }
-        }
+        // P2/P3: Phase C 已删除——算法通过 layoutChild() 按需布局，无需外部重布局补丁
+        // 对标 Blink：算法内部处理两阶段布局（measure → distribute → re-layout）
 
         // 应用 layer 继承 + 元数据打标
         if ($nodeLayer > $algoFrag->getLayer()) {
