@@ -487,10 +487,10 @@ class ComputedStyle
                         'overflowWrap' => $this->overflowWrap = (string)$rv,
                         'textTransform' => $this->textTransform = (string)$rv,
                         'wordWrap' => $this->wordWrap = (string)$rv,
-                        'textDecorationLine' => $this->textDecorationLine = (string)$rv,
-                        'textDecorationColor' => $this->textDecorationColor = (string)$rv,
-                        'textDecorationStyle' => $this->textDecorationStyle = (string)$rv,
-                        'textDecorationThickness' => $this->textDecorationThickness = (int)$rv,
+                        'textDecorationLine' => $this->textDecorationLine = is_object($rv) ? (string)($rv->value ?? 'none') : (string)$rv,
+                        'textDecorationColor' => $this->textDecorationColor = is_object($rv) ? (string)($rv->value ?? '') : (string)$rv,
+                        'textDecorationStyle' => $this->textDecorationStyle = is_object($rv) ? (string)($rv->value ?? 'solid') : (string)$rv,
+                        'textDecorationThickness' => $this->textDecorationThickness = is_object($rv) ? (int)($rv->toPx() ?? 0) : (int)$rv,
                         default => null,
                     };
                 }
