@@ -175,9 +175,15 @@ class LayoutOrchestrator
         $display = $style?->display?->value ?? 'block';
         $position = $style?->position?->value ?? 'static';
 
-        // 检测滚动容器
-        $overflowX = $style?->overflowX?->value ?? $style?->overflow?->value ?? 'visible';
-        $overflowY = $style?->overflowY?->value ?? $style?->overflow?->value ?? 'visible';
+        // 检测滚动容器（对标 CSS：overflow 简写设置两轴，除非 overflow-x/y 显式覆盖）
+        $rawOX = $style?->getRaw('overflowX');
+        $rawOY = $style?->getRaw('overflowY');
+        $rawO = $style?->getRaw('overflow');
+        $ovXVal = $rawOX !== null ? (is_object($rawOX) ? $rawOX->value : $rawOX) : null;
+        $ovYVal = $rawOY !== null ? (is_object($rawOY) ? $rawOY->value : $rawOY) : null;
+        $ovVal = $rawO !== null ? (is_object($rawO) ? $rawO->value : $rawO) : null;
+        $overflowX = $ovXVal ?? $ovVal ?? 'visible';
+        $overflowY = $ovYVal ?? $ovVal ?? 'visible';
         $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
         $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
         if ($hasHScroll || $hasVScroll) {
