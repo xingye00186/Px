@@ -234,7 +234,16 @@ class BlockAlgorithm extends LayoutAlgorithm
             $relTop = $childStyle?->top?->toPx() ?? 0;
             $relLeft = $childStyle?->left?->toPx() ?? 0;
             if ($childPosition === 'relative') { $childY += $relTop; }
-            $result[] = new PhysicalFragment((int)($parentX + $padLeft + ($childPosition === 'relative' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->getLayer() ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, $cr->sourceNode,
+            // CSS 2.2 §10.3.3: margin auto 水平居中
+            $marginLeftAuto = $childStyle?->margin?->left?->isAuto() ?? false;
+            $marginRightAuto = $childStyle?->margin?->right?->isAuto() ?? false;
+            $xOffset = $mLeft;
+            if ($marginLeftAuto && $marginRightAuto) {
+                $xOffset = max(0, (int)(($containerW - $chW) / 2));
+            } elseif ($marginLeftAuto) {
+                $xOffset = max(0, $containerW - $chW - $mRight);
+            }
+            $result[] = new PhysicalFragment((int)($parentX + $padLeft + $xOffset + ($childPosition === 'relative' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->getLayer() ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, $cr->sourceNode,
                     $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
                     $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
             $stackY = ($childY - ($childPosition === 'relative' ? $relTop : 0)) + $chH + $mBottom;
