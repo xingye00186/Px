@@ -1,4 +1,4 @@
-@generated 2026-07-23 19:05:25
+@generated 2026-07-23 19:33:16
 === Test: 后代选择器 .ancestor .child 匹配 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100)
@@ -37,6 +37,13 @@ OK
 
 === Test: ::after 伪元素 content 解析 ===
 OK
+---
+
+=== Test: scroll-behavior:smooth 属性解析 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) scroll ch=300 cw=200 maxScroll=200 ov=auto
+  div (0,0 50x300) text="Tall content"
+
 ---
 
 === Test: 相邻兄弟选择器匹配 ===

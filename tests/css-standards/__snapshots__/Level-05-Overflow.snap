@@ -1,4 +1,4 @@
-@generated 2026-07-23 19:05:24
+@generated 2026-07-23 19:33:15
 === Test: overflow:hidden 子元素超出容器 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100) ov=hidden
@@ -16,10 +16,26 @@ div (0,0 300x150) scroll ch=200 cw=300 maxScroll=50
 
 ---
 
+=== Test: overflow:auto 双轴滚动 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x200) scroll ch=400 cw=500 maxScroll=200 ov=auto
+  div (0,0 500x400) text="Large content"
+
+---
+
 === Test: overflow visible 默认超出可见 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x60)
   div (0,0 400x50) text="Overflowing content visible"
+
+---
+
+=== Test: scroll 容器 padding 影响子项 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x150) scroll ch=150 cw=310 maxScroll=0
+  div (10,10 300x40) text="Item 1"
+  div (10,58 300x40) text="Item 2"
+  div (10,106 300x40) text="Item 3"
 
 ---
 

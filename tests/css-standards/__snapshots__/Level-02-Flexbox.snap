@@ -1,4 +1,4 @@
-@generated 2026-07-23 19:05:23
+@generated 2026-07-23 19:33:15
 === Test: flex row 三个子项水平排列 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x60)
@@ -61,6 +61,15 @@ Frame #1 events=0 detail=normal
 div (0,0 300x80)
   div (0,0 60x80) text="A"
   div (60,0 60x80) text="B"
+
+---
+
+=== Test: order 属性改变视觉顺序 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (200,0 100x50) text="Third"
+  div (100,0 100x50) text="Second"
+  div (0,0 100x50) text="First"
 
 ---
 

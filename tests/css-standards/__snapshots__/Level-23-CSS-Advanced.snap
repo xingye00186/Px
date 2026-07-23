@@ -1,4 +1,4 @@
-@generated 2026-07-23 19:05:25
+@generated 2026-07-23 19:33:16
 === Test: outline-width:3px 解析 ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50) text="Outlined"
@@ -28,6 +28,20 @@ div (0,0 200x100) ov=hidden
 Frame #1 events=0 detail=normal
 div (0,0 200x100) bw=5 ov=hidden
   div (0,5 400x50) text="Oversized"
+
+---
+
+=== Test: overflow:auto 滚动容器 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) scroll ch=200 cw=400 maxScroll=100 ov=auto
+  div (0,0 400x200) text="Large content"
+
+---
+
+=== Test: overflow:scroll 强制滚动条 ===
+Frame #1 events=0 detail=normal
+div (0,0 150x80) scroll ch=80 cw=150 maxScroll=0 ov=scroll
+  div (0,0 100x40) text="Small"
 
 ---
 
