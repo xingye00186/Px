@@ -286,8 +286,10 @@ class LayoutOrchestrator
                 if ($chRight > $maxRight) $maxRight = $chRight;
                 if ($chBottom > $maxBottom) $maxBottom = $chBottom;
             }
-            if ($maxRight > $contentW) $contentW = $maxRight;
-            if ($maxBottom > $contentH) $contentH = $maxBottom;
+            // 对标 Blink: contentWidth/Height = 实际内容范围（子项最大边界）
+            // maxScroll = max(0, contentH - containerH)
+            if ($maxRight > 0) $contentW = $maxRight;
+            if ($maxBottom > 0) $contentH = $maxBottom;
         }
         if ($nodeLayer > $algoFrag->getLayer()) {
             $algoFrag = new \Px\Layout\PhysicalFragment(
