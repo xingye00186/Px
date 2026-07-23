@@ -393,6 +393,12 @@ class LayoutOrchestrator
         if ($parentExplicitW !== null && $parentExplicitW > 0 && !$isPct) {
             $cbW = max(0, (int)$parentExplicitW - $deductW);
         }
+        // 同理：父元素有显式 CSS height 时，用它计算子约束空间高度
+        $parentExplicitH = $parentStyle?->height?->toPx();
+        $isPctH = $parentStyle?->height?->isPercent() ?? false;
+        if ($parentExplicitH !== null && $parentExplicitH > 0 && !$isPctH) {
+            $cbH = max(0, (int)$parentExplicitH - $deductH);
+        }
 
         $childStyle = $child->computedStyle;
         $percW = $childStyle?->width?->isPercent() ? $cbW : null;
