@@ -91,13 +91,16 @@ class RenderTreeManager
             $output .= "[" . $node->key . "]";
         }
         $output .= " (";
-        $output .= (string)$node->x;
+        // 几何优先取自 cachedFragment（Phase 5 几何权威源）；
+        // RenderNode.x/y/w/h 在当前架构下可能未回填，直接读会得 0x0
+        $geom = $node->cachedFragment;
+        $output .= (string)($geom !== null ? $geom->getX() : $node->x);
         $output .= ",";
-        $output .= (string)$node->y;
+        $output .= (string)($geom !== null ? $geom->getY() : $node->y);
         $output .= " ";
-        $output .= (string)$node->w;
+        $output .= (string)($geom !== null ? $geom->getW() : $node->w);
         $output .= "x";
-        $output .= (string)$node->h;
+        $output .= (string)($geom !== null ? $geom->getH() : $node->h);
         $output .= ")";
 
         // ── scroll info（所有级别） ──
@@ -677,9 +680,14 @@ class RenderTreeManager
             if ($computedStyle === null) {
                 \Px\Core\PerfCounter::start('sub:style_fallback');
                 // 降级：StyleRecalcPass 未运行时内联解析
-                // 防御：style 可能为 string（编译期未覆盖路径）→ 强制 array
+                // style 可能为 string（运行时动态构建的 VNode，如测试 harness）→ 解析为声明数组；
+                // 编译期数组化路径已是 array，直接使用。必须解析而非丢弃，否则 width/height 等要素丢失
                 $rawInlineStyle = $vnode->props['style'] ?? [];
-                $inlineStyleForResolve = is_array($rawInlineStyle) ? $rawInlineStyle : [];
+                $inlineStyleForResolve = is_array($rawInlineStyle)
+                    ? $rawInlineStyle
+                    : (is_string($rawInlineStyle) && $rawInlineStyle !== ''
+                        ? \Px\Css\StyleResolver::parseInlineStyle($rawInlineStyle)
+                        : []);
                 // 降级路径下构造一次性临时父 CS（仅供 StyleResolver 接口），不入池避免污染
                 $tempParentCS = !empty($parentStyle) ? new ComputedStyle($parentStyle) : null;
                 $computedStyle = StyleResolver::resolve(

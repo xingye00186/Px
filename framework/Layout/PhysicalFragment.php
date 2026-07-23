@@ -51,8 +51,9 @@ class PhysicalFragment
     /**
      * 文本像素宽度（layout 阶段预计算，paint 阶段零测量）
      * 0 = 未设置/非文本节点，paint 应 fallback 到 measureTextWidth
+     * 注：默认值由构造函数参数提供（readonly 属性不可带默认值，PHP 8.4 CLI 兼容）
      */
-    public readonly int $textWidth = 0;
+    public readonly int $textWidth;
 
     /**
      * 实际绘制文本（postProcess 阶段由 TextOverflowProcessor 截断）。

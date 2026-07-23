@@ -26,9 +26,9 @@ use Px\Paint\RenderContext;
 // ---- 额外需要的框架文件（不在 bootstrap.php 中） ----
 $fw = dirname(__DIR__, 2) . '/framework';
 require_once $fw . '/Core/ScrollManager.php';
-require_once $fw . '/Styling/Adapter/PlatformStyling.php';
-require_once $fw . '/Styling/Adapter/Win32Styling.php';
-require_once $fw . '/Styling/Adapter/PlatformAdapter.php';
+require_once $fw . '/Theme/PlatformStyling.php';
+require_once $fw . '/Theme/Win32Styling.php';
+require_once $fw . '/Theme/PlatformAdapter.php';
 
 // ──────────────────────────────────────────────────
 // StubPlatform：替代 Win32Platform，无窗口环境

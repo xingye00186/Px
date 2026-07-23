@@ -103,6 +103,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
 
     private function mainLayout(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0, int $relayoutDepth = 0): PhysicalFragment
     {
+        \Px\Core\PerfCounter::inc('layout_enter');
         // ── 洁净早退（基于完整 cachedFragment + 约束空间字段比较）──
         if (!$node->layoutDirty && $node->cachedFragment !== null) {
             if ($node->cachedConstraintSpace !== null && $space->equals($node->cachedConstraintSpace)) {
@@ -121,9 +122,11 @@ class LayoutOrchestrator implements ChildLayoutProvider
                     );
                     $node->cachedFragment = $newFrag;   // 更新缓存为新 Fragment
                     $node->styleDirty = false;           // 消费脏位
+                    \Px\Core\PerfCounter::inc('layout_hit_style');
                     return $newFrag;
                 }
                 Diag::log(2, 'fragment:cache-hit', ['type' => $node->type, 'w' => $node->cachedFragment->w]);
+                \Px\Core\PerfCounter::inc('layout_hit_clean');
                 return $node->cachedFragment;  // 完全洁净：零分配
             }
         }
@@ -144,13 +147,16 @@ class LayoutOrchestrator implements ChildLayoutProvider
                     $node->cachedFragment = $translated;
                     $node->cachedConstraintSpace = $space;
                     Diag::log(2, 'fragment:bfc-translate', ['type' => $node->type, 'dx' => $dx, 'dy' => $dy]);
+                    \Px\Core\PerfCounter::inc('layout_hit_translate');
                     return $translated;
                 }
                 // layoutEquals 为 true 且 BFC 也相同 → 完全等价（应已被 equals 捕获）
+                \Px\Core\PerfCounter::inc('layout_hit_clean');
                 return $node->cachedFragment;
             }
         }
 
+        \Px\Core\PerfCounter::inc('layout_miss');
         $style = $node->computedStyle;
         $display = $style?->display?->value ?? 'block';
         $position = $style?->position?->value ?? 'static';
@@ -198,6 +204,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 && $child->cachedConstraintSpace !== null) {
                 $childBoundarySpace = $this->buildChildSpace($child, $space, $style);
                 if ($childBoundarySpace->equals($child->cachedConstraintSpace)) {
+                    \Px\Core\PerfCounter::inc('layout_child_skip');
                     $childFragments[] = $child->cachedFragment;
                     continue;
                 }
@@ -209,6 +216,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
                 && $child->cachedConstraintSpace !== null) {
                 $childBoundarySpace = $this->buildChildSpace($child, $space, $style);
                 if ($childBoundarySpace->equals($child->cachedConstraintSpace)) {
+                    \Px\Core\PerfCounter::inc('layout_child_skip');
                     $childFragments[] = $child->cachedFragment;
                     continue;
                 }

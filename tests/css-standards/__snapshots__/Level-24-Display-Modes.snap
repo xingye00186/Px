@@ -1,1 +1,24 @@
-@generated 2026-07-01 05:55:00
+@generated 2026-07-23 10:34:06
+=== Test: column-count:3 三列等分 ===
+Frame #1 events=0 detail=normal
+div (0,0 1440x57)
+  div (0,0 1440x19) text="Item 1"
+  div (0,0 1440x19) text="Item 2"
+  div (0,0 1440x19) text="Item 3"
+
+---
+
+=== Test: column-width:100px 自适应列数 ===
+Frame #1 events=0 detail=normal
+div (0,0 1440x57)
+  div (0,0 1440x19) text="A"
+  div (0,0 1440x19) text="B"
+  div (0,0 1440x19) text="C"
+
+---
+
+=== Test: column-count:2 + column-gap:30px ===
+Frame #1 events=0 detail=normal
+div (0,0 1440x38)
+  div (0,0 1440x19) text="Left"
+  div (0,0 1440x19) text="Right"

@@ -59,7 +59,7 @@ function run_minimal_pipeline(VNode $vnode, int $width = 1440, int $height = 900
     $app = new Application($platform, $scheduler);
 
     // 创建根组件（render() 必须返回 #root 类型，否则 updateFromVNode 不会设置 rootRenderNode）
-    $root = new class($vnode, $app, $scheduler) extends \Px\ReactiveComponent {
+    $root = new class($vnode, $app, $scheduler) extends \Px\Component\ReactiveComponent {
         private VNode $vnode;
         public function __construct(VNode $vnode, $app, $scheduler) {
             parent::__construct('Root');
@@ -177,7 +177,7 @@ function run_css_tests(string $suiteName, string $snapFile, array $tests): void
 
 // ── Capturing RenderContext for rendering element verification ──
 
-class _CssCaptureRenderContext extends \Px\Rendering\RenderContext
+class _CssCaptureRenderContext extends \Px\Paint\RenderContext
 {
     public array $drawnElements = [];
 
@@ -201,7 +201,7 @@ class _CssCapturePlatform implements \Px\Platform\Platform
         $this->renderContext = new _CssCaptureRenderContext();
     }
 
-    public function init(string $title, int $width, int $height): \Px\Rendering\RenderContext {
+    public function init(string $title, int $width, int $height): \Px\Paint\RenderContext {
         return $this->renderContext;
     }
     public function getHwnd(): int { return 0; }
@@ -261,7 +261,7 @@ function format_render_element(array $el): string
  *   assert_contains($result, 'decorationLine=underline');
  *   return $result;
  */
-function run_render_pipeline(\Px\Rendering\VNode $vnode, int $width = 1440, int $height = 900): string
+function run_render_pipeline(\Px\Dom\VNode $vnode, int $width = 1440, int $height = 900): string
 {
     if (!defined('APP_PLATFORM')) define('APP_PLATFORM', 'win32');
     if (!defined('WINDOW_WIDTH'))  define('WINDOW_WIDTH', $width);
@@ -272,9 +272,9 @@ function run_render_pipeline(\Px\Rendering\VNode $vnode, int $width = 1440, int 
     $scheduler = new \Px\Core\Scheduler();
     $app = new \Px\Core\Application($platform, $scheduler);
 
-    $root = new class($vnode, $app, $scheduler) extends \Px\ReactiveComponent {
-        private \Px\Rendering\VNode $vnode;
-        public function __construct(\Px\Rendering\VNode $vnode, $app, $scheduler) {
+    $root = new class($vnode, $app, $scheduler) extends \Px\Component\ReactiveComponent {
+        private \Px\Dom\VNode $vnode;
+        public function __construct(\Px\Dom\VNode $vnode, $app, $scheduler) {
             parent::__construct('Root');
             $this->vnode = $vnode;
             $this->setScheduler($scheduler);
@@ -284,7 +284,7 @@ function run_render_pipeline(\Px\Rendering\VNode $vnode, int $width = 1440, int 
                 $rm->invoke($app);
             });
         }
-        public function render(): \Px\Rendering\VNode { return \Px\Rendering\VNode::h('#root', [], $this->vnode); }
+        public function render(): \Px\Dom\VNode { return \Px\Dom\VNode::h('#root', [], $this->vnode); }
         public function setBindValue(string $k, string $v): void {}
         public function getBindValue(string $k): string { return ''; }
         public function onMount(): void {}

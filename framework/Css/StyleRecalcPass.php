@@ -24,8 +24,14 @@ class StyleRecalcPass
         }
 
         $inlineStyle = $root->props['style'] ?? [];
-        // 编译期数组化未覆盖的路径：空 string → []
-        if (!is_array($inlineStyle)) { $inlineStyle = []; }
+        // 运行时 style 字符串（动态构建的 VNode，如测试 harness）需解析为声明数组；
+        // 编译期数组化路径（SFC 组件）已是数组，直接使用。与 RenderTreeManager
+        // 处理 placeholder style 的 is_string ? parseInlineStyle : ... 逻辑一致。
+        if (is_string($inlineStyle)) {
+            $inlineStyle = $inlineStyle !== '' ? StyleResolver::parseInlineStyle($inlineStyle) : [];
+        } elseif (!is_array($inlineStyle)) {
+            $inlineStyle = [];
+        }
         $className = $root->props['class'] ?? '';
 
         // #text 节点无自身样式：直接复用父 ComputedStyle（identity 稳定，避开估算开销）
