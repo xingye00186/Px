@@ -237,8 +237,14 @@ class BlockAlgorithm extends LayoutAlgorithm
             $relLeft = $childStyle?->left?->toPx() ?? 0;
             if ($childPosition === 'relative') { $childY += $relTop; }
             // CSS 2.2 §10.3.3: margin auto 水平居中
-            $marginLeftAuto = $childStyle?->margin?->left?->isAuto() ?? false;
-            $marginRightAuto = $childStyle?->margin?->right?->isAuto() ?? false;
+            // margin auto 检测：从 getRaw 读取（typed 属性的 isAuto() 在默认值上不可靠）
+            $rawML = $childStyle?->getRaw('marginLeft');
+            $rawMR = $childStyle?->getRaw('marginRight');
+            $marginLeftAuto = ($rawML !== null && (is_object($rawML) ? ($rawML->isAuto ?? false) : ($rawML === 'auto')));
+            $marginRightAuto = ($rawMR !== null && (is_object($rawMR) ? ($rawMR->isAuto ?? false) : ($rawMR === 'auto')));
+            // 也检查 StyleResolver 计算的 auto 标志
+            if (!$marginLeftAuto) { $marginLeftAuto = (bool)($childStyle?->getRaw('marginLeftAuto') ?? false); }
+            if (!$marginRightAuto) { $marginRightAuto = (bool)($childStyle?->getRaw('marginRightAuto') ?? false); }
             $xOffset = $mLeft;
             if ($marginLeftAuto && $marginRightAuto) {
                 $xOffset = max(0, (int)(($containerW - $chW) / 2));
