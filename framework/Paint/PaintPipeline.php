@@ -651,10 +651,10 @@ class PaintPipeline
                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
                         'fontFamily' => $cs?->fontFamily ?? '',
                         'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
-                        'decorationLine' => $cs?->textDecorationLine ?? 'none',
-                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,
-                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
-                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                        'decorationLine' => self::safeDecoVal($cs?->getRaw('textDecorationLine'), 'none'),
+                        'decorationColor' => self::safeDecoVal($cs?->getRaw('textDecorationColor'), (string)$textColor),
+                        'decorationStyle' => self::safeDecoVal($cs?->getRaw('textDecorationStyle'), 'solid'),
+                        'decorationThickness' => self::safeDecoVal($cs?->getRaw('textDecorationThickness'), 0),
                         'underlineOffset' => $cs?->getRaw('underlineOffset') ?? 0,
                         'textWidth' => $segW,
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
@@ -709,10 +709,10 @@ class PaintPipeline
                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
                         'fontFamily' => $cs?->fontFamily ?? '',
                         'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
-                        'decorationLine' => $cs?->textDecorationLine ?? 'none',
-                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,
-                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
-                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                        'decorationLine' => self::safeDecoVal($cs?->getRaw('textDecorationLine'), 'none'),
+                        'decorationColor' => self::safeDecoVal($cs?->getRaw('textDecorationColor'), (string)$textColor),
+                        'decorationStyle' => self::safeDecoVal($cs?->getRaw('textDecorationStyle'), 'solid'),
+                        'decorationThickness' => self::safeDecoVal($cs?->getRaw('textDecorationThickness'), 0),
                         'underlineOffset' => $cs?->getRaw('textUnderlineOffset') ?? 0,
                         'textWidth' => self::measureTextWidth($seg, $fontSize, $isBold),
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
@@ -726,10 +726,10 @@ class PaintPipeline
                         'fontSize' => $fontSize, 'color' => $textColor, 'bold' => $isBold,
                         'fontFamily' => $cs?->fontFamily ?? '',
                         'align' => $align, 'layer' => $layer + 1, 'cursor' => $cursor,
-                        'decorationLine' => $cs?->textDecorationLine ?? 'none',
-                        'decorationColor' => $cs?->textDecorationColor ?: (string)$textColor,
-                        'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
-                        'decorationThickness' => $cs?->textDecorationThickness ?? 0,
+                        'decorationLine' => self::safeDecoVal($cs?->getRaw('textDecorationLine'), 'none'),
+                        'decorationColor' => self::safeDecoVal($cs?->getRaw('textDecorationColor'), (string)$textColor),
+                        'decorationStyle' => self::safeDecoVal($cs?->getRaw('textDecorationStyle'), 'solid'),
+                        'decorationThickness' => self::safeDecoVal($cs?->getRaw('textDecorationThickness'), 0),
                         'underlineOffset' => $cs?->getRaw('underlineOffset') ?? 0,
                         'textWidth' => self::measureTextWidth($text, $fontSize, $isBold),
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
@@ -1312,5 +1312,13 @@ class PaintPipeline
             }
         }
         return $overrides;
+    }
+
+    /** 安全提取 text-decoration 值（处理 CssKeyword/CssLength 对象） */
+    private static function safeDecoVal(mixed $val, mixed $default): mixed
+    {
+        if ($val === null) return $default;
+        if (is_object($val)) return $val->value ?? $default;
+        return $val;
     }
 }
