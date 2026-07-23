@@ -100,7 +100,7 @@ class FlexAlgorithm extends LayoutAlgorithm
             $item->shrink = $shrink;
             $item->basis = $basis;
             $item->isFlexGrow = ($grow > 0);
-            $item->alignSelf = ($alignSelfRaw !== null && $alignSelfRaw !== 'auto') ? (string)$alignSelfRaw : 'auto';
+            $item->alignSelf = ($alignSelfRaw !== null && $alignSelfRaw !== 'auto') ? (is_object($alignSelfRaw) ? ($alignSelfRaw->value ?? 'auto') : (string)$alignSelfRaw) : 'auto';
             $item->computedStyle = $cs;
             $item->content = $cr->style?->getRaw('_content');
             $item->originalChildren = $cr->children;
