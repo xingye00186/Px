@@ -199,12 +199,40 @@ PHP;
                     $needVar = ($patchFlags !== 0) || $canWrapIter;
                     $patchLine = ($patchFlags !== 0) ? "\n        \$__v->patchFlags = {$patchFlags};" : '';
 
-                    if ($needVar) {
-                        // 需要中间变量（emit stmts + \$__v = ... + patchFlags/dynamicChildren + push）
-                        $assignFlags = "{$iterStmts}\n        \$__v = {$innerExpr};{$patchLine}{$iterDynAssign}\n        \$children[] = \$__v;";
+                    // Path A: keyed v-for iteration 级 VNode 缓存（双缓冲）
+                    //   仅 PATCH_KEYED_LIST（有稳定 :key）启用。item 未变（=== 值命中）→ 复用
+                    //   缓存 VNode 跳过构建，直击 vnode_tree 瓶颈（重载 case 的主导成本）。
+                    //   对标 Flutter Element 复用 + Vue 3 v-once 的自动化版本。
+                    $cacheEnabled = !empty($info['keyExpr']);
+                    $itemVar = '$' . $item;
+
+                    if ($cacheEnabled) {
+                        $needVar = true;  // 缓存需 $__v 中间变量统一承接 hit/miss 两路结果
+                        $assignFlags = "\n        \$ck = {$keyValue};"
+                            . "\n        if (isset(\$this->_vforCache['{$name}'][\$ck]) && \$this->_vforItem['{$name}'][\$ck] === {$itemVar}) {"
+                            . "\n            \$__v = \$this->_vforCache['{$name}'][\$ck];"
+                            . "\n            \\Px\\Core\\PerfCounter::inc('iter_cache_hit');"
+                            . "\n        } else {"
+                            . $iterStmts
+                            . "\n            \$__v = {$innerExpr};{$patchLine}{$iterDynAssign}"
+                            . "\n            \\Px\\Core\\PerfCounter::inc('iter_cache_miss');"
+                            . "\n        }"
+                            . "\n        \$newCache[\$ck] = \$__v;"
+                            . "\n        \$newItem[\$ck] = {$itemVar};"
+                            . "\n        \$children[] = \$__v;";
+                        $cacheInit = "\n        \$newCache = []; \$newItem = [];";
+                        $cacheSwap = "\n        \$this->_vforCache['{$name}'] = \$newCache;"
+                            . "\n        \$this->_vforItem['{$name}'] = \$newItem;";
                     } else {
-                        // 无需中间变量，但仍需 emit iteration stmts（若有）
-                        $assignFlags = "{$iterStmts}\n            \$children[] = {$innerExpr};";
+                        if ($needVar) {
+                            // 需要中间变量（emit stmts + \$__v = ... + patchFlags/dynamicChildren + push）
+                            $assignFlags = "{$iterStmts}\n        \$__v = {$innerExpr};{$patchLine}{$iterDynAssign}\n        \$children[] = \$__v;";
+                        } else {
+                            // 无需中间变量，但仍需 emit iteration stmts（若有）
+                            $assignFlags = "{$iterStmts}\n            \$children[] = {$innerExpr};";
+                        }
+                        $cacheInit = '';
+                        $cacheSwap = '';
                     }
 
                     // Emit helper 代码块（区分嵌套 v-for parentItem 与顶层两种签名）
@@ -213,13 +241,13 @@ PHP;
 
     /**
      * v-for render helper: {$item} in {$source} (nested, depends on \${$parentItem})
-     * @return VNode  #list VNode (B-Phase 2.5/2.6)
+     * @return VNode  #list VNode (B-Phase 2.5/2.6 + Path A cache)
      */
     private function {$name}({$paramDecl}): VNode
     {
-        \$children = [];
+        \$children = [];{$cacheInit}
         foreach ({$iterExpr} as {$foreachAs}) {{$assignFlags}
-        }
+        }{$cacheSwap}
         return VNode::hList(\$children, VNode::{$listFlag});
     }
 PHP;
@@ -228,13 +256,13 @@ PHP;
 
     /**
      * v-for render helper: {$item} in {$source}
-     * @return VNode  #list VNode (B-Phase 2.5/2.6)
+     * @return VNode  #list VNode (B-Phase 2.5/2.6 + Path A cache)
      */
     private function {$name}(): VNode
     {
-        \$children = [];
+        \$children = [];{$cacheInit}
         foreach ({$iterExpr} as {$foreachAs}) {{$assignFlags}
-        }
+        }{$cacheSwap}
         return VNode::hList(\$children, VNode::{$listFlag});
     }
 PHP;

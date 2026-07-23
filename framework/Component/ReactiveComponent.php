@@ -74,6 +74,25 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     protected ?\Px\Reactive\Effect $_px_effect = null;
 
     /**
+     * v-for iteration 级 VNode 缓存（Path A，对标 Flutter Element 复用 + Vue 3 v-once 自动化）
+     *
+     * 双缓冲机制：每帧构建 $newCache，帧末整体交换旧缓存，
+     * 防止 item 移除导致的缓存残留/内存泄漏。
+     * 仅 keyed v-for（PATCH_KEYED_LIST，有稳定 :key）使用。
+     * @var array<string, array<string, VNode>> helperName => (itemKey => VNode)
+     */
+    protected array $_vforCache = [];
+
+    /**
+     * v-for iteration item 快照（Path A）
+     * 存储上一帧每个 item 的数组值，用于 === 值比较检测变化：
+     *   item 未变（=== 命中）→ 复用缓存 VNode，跳过构建
+     *   item 变化（=== 未命中）→ 重建 VNode
+     * @var array<string, array<string, array>> helperName => (itemKey => item数组)
+     */
+    protected array $_vforItem = [];
+
+    /**
      * 上一帧的根 RenderNode，用于跨帧匹配复用。
      * 由 RenderTreeManager::updateFromVNode 在 #component 处理器中设置。
      */
@@ -188,6 +207,12 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
      */
     private function patchVNodeTree(VNode $old, VNode $new): void
     {
+        // Path A: 同一 VNode 对象（iteration 缓存命中复用）→ 真 O(1) no-op
+        //   缓存命中时新旧是同一实例，所有字段已一致，无需任何 patch/遍历
+        if ($old === $new) {
+            return;
+        }
+
         // type + key 联合匹配：key 不同或 type 不同 → 替换整个节点
         if ($old->type !== $new->type || $old->key !== $new->key) {
             $this->replaceVNode($old, $new);
