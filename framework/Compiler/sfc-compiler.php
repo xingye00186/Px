@@ -1137,24 +1137,15 @@ function compileOneComponent(
     // L2a（基本）：从 $bindKeys 提取单 identifier 绑定（{{}} / :bind / v-if 等）
     // L2b（本次扩展）：额外扫描 :style / :class / :xxx 复杂表达式里的 identifier（
     //   由 CollectorHelper::collectImplicitIdentifiersFromTemplate + scanExpressionIdentifiers 实现）
+    //   递归进入 v-for 子树、组件占位子树，只过滤 v-for 局部变量（item/index）
     if (!$hasScript) {
         $existingNames = [];
         foreach ($reactiveProps as $rp) { $existingNames[$rp['name']] = true; }
 
-        // L2b: 收集 v-for loop items，用于排除循环局部变量
-        $loopItems = [];
-        foreach ($loops as $loopInfo) {
-            if (isset($loopInfo['item']) && $loopInfo['item'] !== '') {
-                $loopItems[$loopInfo['item']] = true;
-            }
-            if (isset($loopInfo['index']) && $loopInfo['index'] !== '') {
-                $loopItems[$loopInfo['index']] = true;
-            }
-        }
-
         // L2b: 扫描复杂表达式里的 identifier（:style / :class 等）
+        //   v-for loop items 由 collectImplicitIdentifiersFromTemplate 内部解析，无需外部传
         $complexIdentifiers = [];
-        collectImplicitIdentifiersFromTemplate($root, $complexIdentifiers, $loopItems);
+        collectImplicitIdentifiersFromTemplate($root, $complexIdentifiers, []);
 
         // 合并两个数据源：$bindKeys 与 $complexIdentifiers
         $allImplicitKeys = [];
@@ -1165,7 +1156,6 @@ function compileOneComponent(
             // 只取合法 PHP 标识符（避免带点的表达式、数字、特殊符号）
             if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $key)) continue;
             if (isset($existingNames[$key])) continue;
-            if (isset($loopItems[$key])) continue;
             $reactiveProps[] = ['name' => $key, 'type' => 'string', 'default' => "''"];
             $existingNames[$key] = true;
         }

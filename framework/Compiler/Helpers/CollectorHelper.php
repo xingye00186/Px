@@ -247,7 +247,9 @@ function scanExpressionIdentifiers(string $expr): array
             }
             $id = substr($expr, $start, $i - $start);
             $lower = strtolower($id);
-            if (!isset($keywords[$lower]) && !isset($seen[$id])) {
+            // 跳过属性访问（前一个字符是 '.'）— 如 item.label 里的 label 不是独立变量
+            $isPropAccess = ($start > 0 && $expr[$start - 1] === '.');
+            if (!$isPropAccess && !isset($keywords[$lower]) && !isset($seen[$id])) {
                 $result[] = $id;
                 $seen[$id] = true;
             }
@@ -279,30 +281,42 @@ function scanExpressionIdentifiers(string $expr): array
  */
 function collectImplicitIdentifiersFromTemplate(VNode $node, array &$identifiers, array $loopItems): void
 {
-    // v-for 作用域：不递归（内部变量不归属 template-only 组件）
+    // 收集当前节点的 v-for 局部变量（叠加到 $loopItems 上）
+    // 子树扫描时过滤掉它们，但循环结束（返回上一层）时不能影响上层
+    $localLoopItems = $loopItems;
     if (isset($node->props['v-for'])) {
-        return;
+        $vFor = $node->props['v-for'];
+        if (preg_match('/^(\w+)\s+in\s+(\w+)$/', $vFor, $m)) {
+            $localLoopItems[$m[1]] = true;  // item
+        } elseif (preg_match('/^\((\w+)\s*,\s*(\w+)\)\s+in\s+(\w+)$/', $vFor, $m)) {
+            $localLoopItems[$m[1]] = true;  // item
+            $localLoopItems[$m[2]] = true;  // index
+        }
+        // v-for source 表达式里的 identifier 属于父作用域
+        // 只扫 "in" 后面的 source 部分（"item in items" → 只扫 "items"）
+        // 避免把 iteration variable（item）误收集为 prop
+        if (preg_match('/\s+in\s+(.+)$/s', $vFor, $srcMatch)) {
+            foreach (scanExpressionIdentifiers(trim($srcMatch[1])) as $id) {
+                if (isset($loopItems[$id])) continue;
+                $identifiers[$id] = true;
+            }
+        }
     }
 
-    // 组件占位节点：子树不可知，componentProps 已由 collectVNodeBindKeys 处理
-    if ($node->isComponent) {
-        return;
-    }
+    // 组件占位节点：componentProps 已由 collectVNodeBindKeys 处理，
+    // 但子树里的 identifier（slot 内容、v-if 等）可能来自父作用域，需递归扫描
 
     if ($node->props !== null) {
         foreach ($node->props as $key => $val) {
             if (!is_string($val)) continue;
             if ($val === '') continue;
-            // 只扫索引入 identifier 的属性：
-            //   - :xxx 动态绑定（含 :style / :class / :foo）
-            //   - v-if / v-else-if / v-show / v-model（支持复杂表达式的总为组）
-            //   - parts 里的 bind expr（{{ }} 插值）— 已由 collectVNodeBindKeys 处理，这里仅处理复杂表达式
-            if ($key === 'parts') {
-                // parts 是结构化数组（{'type':'text'|'bind','expr':...}），掉到上面到不会组。collectVNodeBindKeys L101-L107 已处理
+            if ($key === 'parts' || $key === 'v-for' || $key === ':key') {
                 continue;
             }
             $shouldScan = false;
-            if ($key === 'v-if' || $key === 'v-else-if' || $key === 'v-show' || $key === 'v-model') {
+            if ($key === 'v-if' || $key === 'v-else-if' || $key === 'v-show' || $key === 'v-model'
+                || $key === 'bind') {
+                // bind（不带 :）= 纯 {{ }} 插值绑定，identifier 属于父作用域
                 $shouldScan = true;
             } elseif (strlen($key) > 0 && $key[0] === ':') {
                 $shouldScan = true;
@@ -310,20 +324,19 @@ function collectImplicitIdentifiersFromTemplate(VNode $node, array &$identifiers
             if (!$shouldScan) continue;
 
             foreach (scanExpressionIdentifiers($val) as $id) {
-                // 排除 v-for loop items
-                if (isset($loopItems[$id])) continue;
+                // 用本层 localLoopItems（含本层 v-for 的 item/index）过滤
+                if (isset($localLoopItems[$id])) continue;
                 $identifiers[$id] = true;
             }
         }
 
-        // parts 里的 bind expr 已由 collectVNodeBindKeys 处理单 identifier；
-        // 如果 parts 里的 expr 是复杂表达式（实际很少见，{{ }} 通常单 var），这里补扫一次
+        // parts 里的 bind expr（{{ }} 插值）也需扫复杂表达式
         if (isset($node->props['parts']) && is_array($node->props['parts'])) {
             foreach ($node->props['parts'] as $part) {
                 if (isset($part['type']) && $part['type'] === 'bind'
                     && isset($part['expr']) && is_string($part['expr'])) {
                     foreach (scanExpressionIdentifiers($part['expr']) as $id) {
-                        if (isset($loopItems[$id])) continue;
+                        if (isset($localLoopItems[$id])) continue;
                         $identifiers[$id] = true;
                     }
                 }
@@ -331,13 +344,13 @@ function collectImplicitIdentifiersFromTemplate(VNode $node, array &$identifiers
         }
     }
 
-    // 递归子节点
+    // 递归子节点（v-for 子树、组件占位子树都递归）
     if ($node->children instanceof VNode) {
-        collectImplicitIdentifiersFromTemplate($node->children, $identifiers, $loopItems);
+        collectImplicitIdentifiersFromTemplate($node->children, $identifiers, $localLoopItems);
     } elseif (is_array($node->children)) {
         foreach ($node->children as $child) {
             if ($child instanceof VNode) {
-                collectImplicitIdentifiersFromTemplate($child, $identifiers, $loopItems);
+                collectImplicitIdentifiersFromTemplate($child, $identifiers, $localLoopItems);
             }
         }
     }
