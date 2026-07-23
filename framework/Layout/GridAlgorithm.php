@@ -198,8 +198,43 @@ class GridAlgorithm extends LayoutAlgorithm
             // Adjust children positions when grid track width differs from original fragment width
             $origFrag = $childResults[$giIdx] ?? null;
             $oldW = $origFrag !== null ? (int)$origFrag->getW() : 0;
+            $oldH = $origFrag !== null ? (int)$origFrag->getH() : 0;
             $newW = $gw;
             $children = $gri->originalChildren ?? [];
+
+            // 对标 Blink: justify-self 控制子项在 grid area 内的内联轴对齐
+            $itemX = (int)($gri->x ?? 0);
+            $itemW = $gw; // 默认用轨道宽度
+            $justifySelf = $gri->style?->justifySelf?->value ?? 'auto';
+            if ($justifySelf === 'auto') {
+                $justifySelf = $s->getRaw('justifyItems') ?? 'stretch';
+                if (!is_string($justifySelf)) { $justifySelf = 'stretch'; }
+            }
+            // 从子项样式读取显式宽度（对标 Blink：justify-self 基于子项自身尺寸）
+            $explicitW = 0;
+            if ($gri->style !== null) {
+                $wVal = $gri->style->width;
+                if ($wVal !== null && !$wVal->isPercent() && $wVal->toPx() > 0) {
+                    $explicitW = (int)$wVal->toPx();
+                }
+            }
+            // 当子项有显式宽度且小于轨道时，应用 justify-self
+            if ($explicitW > 0 && $explicitW < $gw && $justifySelf !== 'stretch') {
+                $itemW = $explicitW;
+                if ($justifySelf === 'center') {
+                    $itemX += (int)(($gw - $explicitW) / 2);
+                } elseif ($justifySelf === 'end' || $justifySelf === 'flex-end') {
+                    $itemX += ($gw - $explicitW);
+                }
+            } elseif ($oldW > 0 && $oldW < $gw && $justifySelf !== 'stretch') {
+                $itemW = $oldW;
+                if ($justifySelf === 'center') {
+                    $itemX += (int)(($gw - $oldW) / 2);
+                } elseif ($justifySelf === 'end' || $justifySelf === 'flex-end') {
+                    $itemX += ($gw - $oldW);
+                }
+            }
+
             if ($oldW > 0 && $newW > 0 && $oldW !== $newW && !empty($children)) {
                 $childJustify = $gri->style?->justifyContent?->value ?? 'flex-start';
                 $adjusted = [];
@@ -225,7 +260,7 @@ class GridAlgorithm extends LayoutAlgorithm
             // grid cell fragment 代表原 div，元数据（type/content/sourceNode/dataset/pseudoStyles）
             // 取自原 fragment（$origFrag）而非第一个子节点——文本型 div 的内容存在
             // $origFrag->content（无子 fragment），取 firstChild 会丢失 content。
-            $mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), $gw, $gh, (int)($gri->style?->visualWidth($gw) ?? $gw), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, 0, 0, $gri->style, $children, $origFrag?->sourceNode,
+            $mappedFragments[] = new PhysicalFragment($itemX, (int)($gri->y ?? 0), $itemW, $gh, (int)($gri->style?->visualWidth($itemW) ?? $itemW), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, 0, 0, $gri->style, $children, $origFrag?->sourceNode,
                 0, 0, false,
                 $origFrag?->type ?? '', $origFrag?->content, $origFrag?->dataset ?? [], $origFrag?->pseudoStyles ?? []);
             $giIdx++;
