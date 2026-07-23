@@ -57,9 +57,10 @@ class BlockAlgorithm extends LayoutAlgorithm
         $h = $this->computeBlockHeight($parentH, $s, $textContent, $percBaseH);
 
         $positionVal = $s->position?->value ?? 'static';
-        $isStaticOrRelative = ($positionVal === 'static' || $positionVal === 'relative');
-        $x = $isStaticOrRelative ? ((int)($c->getBfcOffsetX() ?? 0) + (int)($left ?? 0) + (int)($marginLeft ?? 0)) : (int)($c->getBfcOffsetX() ?? 0);
-        $y = $isStaticOrRelative ? ((int)($c->getBfcOffsetY() ?? 0) + (int)($top ?? 0) + (int)($marginTop ?? 0)) : (int)($c->getBfcOffsetY() ?? 0);
+        // 对标 Blink/CSS 规范：left/top 仅对定位元素（relative）生效，static 元素忽略
+        $isRelative = ($positionVal === 'relative');
+        $x = (int)($c->getBfcOffsetX() ?? 0) + (int)($marginLeft ?? 0) + ($isRelative ? (int)($left ?? 0) : 0);
+        $y = (int)($c->getBfcOffsetY() ?? 0) + (int)($marginTop ?? 0) + ($isRelative ? (int)($top ?? 0) : 0);
 
         $displayVal = $s->display?->value ?? 'block';
         $stackedChildren = [];
