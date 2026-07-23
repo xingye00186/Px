@@ -235,6 +235,23 @@ class FlexAlgorithm extends LayoutAlgorithm
                 }
             }
 
+            // 4b+. Clamp to min/max constraints (CSS Flexbox §4.5: min/max main/cross size)
+            foreach ($lineItems as $fi) {
+                $fi = objval($fi, FlexItem::class);
+                $fcs = $fi->computedStyle;
+                if ($fcs === null) continue;
+                $maxW = $fcs->maxWidth?->toPx() ?? 0;
+                $minW = $fcs->minWidth?->toPx() ?? 0;
+                $maxH = $fcs->maxHeight?->toPx() ?? 0;
+                $minH = $fcs->minHeight?->toPx() ?? 0;
+                if ($maxW > 0 && $fi->w > $maxW) $fi->w = $maxW;
+                if ($minW > 0 && $fi->w < $minW) $fi->w = $minW;
+                if ($maxH > 0 && $fi->h > $maxH) $fi->h = $maxH;
+                if ($minH > 0 && $fi->h < $minH) $fi->h = $minH;
+                $fi->visualW = $fi->w;
+                $fi->visualH = $fi->h;
+            }
+
             // 4c. Recalc line totals + max cross (at least container cross for single-line)
             $lineFinal = 0;
             $lineMaxCross = 0;
