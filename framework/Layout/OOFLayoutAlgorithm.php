@@ -171,10 +171,14 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         if ($cs === null) return $frag;
 
         // ── Absolute positioning (inlined from AbsolutePositioning::absoluteLayout) ──
-        $leftVal = (int)($cs->left?->toPx() ?? 0);
-        $topVal = (int)($cs->top?->toPx() ?? 0);
-        $rightVal = (int)($cs->right?->toPx() ?? 0);
-        $bottomVal = (int)($cs->bottom?->toPx() ?? 0);
+        $rawLeft = $cs->getRaw('left');
+        $leftVal = $rawLeft !== null ? (is_object($rawLeft) ? (int)$rawLeft->toPx() : (int)$rawLeft) : 0;
+        $rawTop = $cs->getRaw('top');
+        $topVal = $rawTop !== null ? (is_object($rawTop) ? (int)$rawTop->toPx() : (int)$rawTop) : 0;
+        $rawRight = $cs->getRaw('right');
+        $rightVal = $rawRight !== null ? (is_object($rawRight) ? (int)$rawRight->toPx() : (int)$rawRight) : 0;
+        $rawBottom = $cs->getRaw('bottom');
+        $bottomVal = $rawBottom !== null ? (is_object($rawBottom) ? (int)$rawBottom->toPx() : (int)$rawBottom) : 0;
 
         $ancW = $ancestorW;
         $ancH = $ancestorH;
