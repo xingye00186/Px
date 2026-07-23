@@ -243,7 +243,10 @@ class ScrollManager
             if ($result !== null) return $result;
         }
 
-        if (!$node->isScrollContainer) return null;
+        // 对标 Blink: 从 Fragment 读取滚动容器标志
+        $hsFrag = $node->cachedFragment;
+        $hsIsScroll = $hsFrag !== null ? $hsFrag->getIsScrollContainer() : $node->isScrollContainer;
+        if (!$hsIsScroll) return null;
 
         // 对标 Blink：从 PhysicalFragment 读取几何（cachedFragment = LayoutObject.physical_fragment_）
         $geom = $node->cachedFragment;
