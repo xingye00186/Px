@@ -1037,7 +1037,39 @@ class CssMappings
      */
     public static function parseGridTemplateValue(string $val): array
     {
-        return CssValueParser::parseGridTemplateValue($val);
+        $result = ['list' => [], 'repeat' => null, 'count' => 0, 'size' => null, 'min' => 100, 'max' => 1, 'maxTrack' => 'fr'];
+        $val = trim($val);
+        if ($val === '') return $result;
+
+        // 检测 repeat() 函数
+        if (preg_match('/^repeat\(\s*(.+?)\s*,\s*(.+?)\s*\)$/i', $val, $m)) {
+            $countOrKeyword = trim($m[1]);
+            $trackSpec = trim($m[2]);
+            if ($countOrKeyword === 'auto-fill' || $countOrKeyword === 'auto-fit') {
+                $result['repeat'] = $countOrKeyword;
+                if (preg_match('/minmax\(\s*(.+?)\s*,\s*(.+?)\s*\)/i', $trackSpec, $mm)) {
+                    $result['min'] = (int)preg_replace('/[^0-9]/', '', $mm[1]);
+                    $maxStr = trim($mm[2]);
+                    if (preg_match('/^([\d.]+)\s*(fr|px|%)/', $maxStr, $mx)) {
+                        $result['max'] = (float)$mx[1];
+                        $result['maxTrack'] = $mx[2];
+                    }
+                }
+            } else {
+                $result['repeat'] = 'count';
+                $result['count'] = max(1, (int)$countOrKeyword);
+                $result['size'] = $trackSpec;
+            }
+            return $result;
+        }
+
+        // 普通空格分隔的轨道列表
+        $parts = preg_split('/\s+/', $val);
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if ($part !== '') $result['list'][] = $part;
+        }
+        return $result;
     }
 
     // ============================================================
