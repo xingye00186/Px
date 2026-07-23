@@ -852,7 +852,13 @@ class RenderTreeManager
                         'display','position','flex','flexDirection','flexWrap',
                         'alignItems','alignContent','justifyContent',
                         'boxSizing','overflow','overflowX','overflowY',
-                        'padding','margin','borderWidth'];
+                        'padding','margin','borderWidth',
+                        // P1 补全：对标 Blink，所有影响布局的属性必须触发重算
+                        'fontSize','lineHeight','gap','rowGap','columnGap',
+                        'flexBasis','flexGrow','flexShrink',
+                        'gridTemplateColumns','gridTemplateRows',
+                        'left','top','right','bottom',
+                        'columnCount','columnWidth'];
                     foreach ($geoKeys as $k) {
                         $oldV = $oldDecl[$k] ?? null;
                         $newV = $resolvedStyle[$k] ?? null;
