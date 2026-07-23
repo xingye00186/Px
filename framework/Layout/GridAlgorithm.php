@@ -27,16 +27,21 @@ class GridAlgorithm extends LayoutAlgorithm
         if ($space->isIntrinsicMeasurement) {
             $totalW = 0;
             $maxH = 0;
-            foreach ($childFragments as $cr) {
-                $totalW += $cr->w;
-                if ($cr->h > $maxH) $maxH = $cr->h;
+            for ($gxi = 0, $gxlen = count($childNodes); $gxi < $gxlen; $gxi++) {
+                $icr = $this->layoutChild($childNodes[$gxi]);
+                $totalW += $icr->w;
+                if ($icr->h > $maxH) $maxH = $icr->h;
             }
             return new PhysicalFragment((int)$totalW, (int)$maxH, 0, 0, null, null, 0, 0, 0, $style ?? \Px\Css\StylePool::empty());
         }
 
         $c = $space;
         $s = $style ?? \Px\Css\StylePool::empty();
-        $childResults = $childFragments;
+        // P2: 按需布局子项（对标 Blink：算法通过 LayoutChild 布局子项）
+        $childResults = [];
+        for ($gxi = 0, $gxlen = count($childNodes); $gxi < $gxlen; $gxi++) {
+            $childResults[] = $this->layoutChild($childNodes[$gxi]);
+        }
         $iteration = 0;
 
         $parentX = $c->parentContentX;

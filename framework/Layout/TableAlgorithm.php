@@ -22,7 +22,11 @@ class TableAlgorithm extends LayoutAlgorithm
         ?array $childIntrinsicSizes = null,
     ): PhysicalFragment {
         $s = $style ?? \Px\Css\StylePool::empty();
-        $children = $childFragments;
+        // P2: 按需布局子项
+        $children = [];
+        for ($ti = 0, $tlen = count($childNodes); $ti < $tlen; $ti++) {
+            $children[] = $this->layoutChild($childNodes[$ti]);
+        }
 
         // Intrinsic measurement mode
         if ($space->getIsIntrinsicMeasurement()) {

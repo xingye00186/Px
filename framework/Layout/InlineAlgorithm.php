@@ -22,7 +22,11 @@ class InlineAlgorithm extends LayoutAlgorithm
         ?array $childIntrinsicSizes = null,
     ): PhysicalFragment {
         $s = $style ?? \Px\Css\StylePool::empty();
-        $children = $childFragments;
+        // P2: 按需布局子项
+        $children = [];
+        for ($ii = 0, $ilen = count($childNodes); $ii < $ilen; $ii++) {
+            $children[] = $this->layoutChild($childNodes[$ii]);
+        }
 
         // Intrinsic measurement mode
         if ($space->getIsIntrinsicMeasurement()) {
