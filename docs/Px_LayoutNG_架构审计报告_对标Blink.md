@@ -66,26 +66,22 @@ $frag->displayText = $result['text'];  // 违反不可变契约
 
 ---
 
-### 2.3 LayoutAlgorithm 纯函数接口 — ⚠️ 隐性状态依赖
+### 2.3 LayoutAlgorithm 纯函数接口 — ✅ 已修复（save/restore）
 
-**现状**：`LayoutAlgorithm`（framework/Layout/LayoutAlgorithm.php）通过 setter 注入 `ChildLayoutProvider`：
+**现状**：`LayoutAlgorithm`（framework/Layout/LayoutAlgorithm.php）通过 setter 注入 `ChildLayoutProvider`，但 `mainLayout()` 现在使用 **save/restore 模式**防止嵌套布局状态污染：
 
 ```php
-private ?ChildLayoutProvider $childLayoutProvider = null;  // 可变状态
-public function setChildLayoutProvider(?ChildLayoutProvider $p): void { ... }
+$savedProvider = $algo->getChildLayoutProvider();  // save
+$algo->setChildLayoutProvider($provider);
+$algoFrag = $algo->layout(...);
+$algo->setChildLayoutProvider($savedProvider);  // restore
 ```
 
-且算法实例在 `LayoutOrchestrator` 构造函数（L43-52）中**单例复用**：
-```php
-$this->blockAlgo = new BlockAlgorithm();  // 所有 block 节点共享同一实例
-$this->flexAlgo = new FlexAlgorithm();    // 所有 flex 节点共享同一实例
-```
+**Blink 对标**：Blink 的 `LayoutAlgorithm` 是无状态的，`LayoutChild()` 通过 `NGLayoutInputNode` 传递。Px 的 save/restore 等价保证了每次算法调用使用自己的 provider。
 
-**问题**：`mainLayout()` 递归调用时，父节点的 `setChildLayoutProvider()` 会被子节点覆盖。当 FlexAlgorithm 的 Pass 2 调用 `layoutChild()` 触发子节点的 `mainLayout()` 时，子节点的算法调用会覆盖父算法的 provider 引用。
+**修复 commit**：`9626b35a`
 
-**Blink 对标**：Blink 的 `LayoutAlgorithm` 是无状态的，`LayoutChild()` 通过 `NGLayoutInputNode` 传递，不存储在算法对象上。
-
-**优先级**：P0
+**优先级**：~~P0~~ → ✅ 已修复
 
 ---
 
@@ -105,26 +101,15 @@ if ($parentExplicitW !== null && $parentExplicitW > 0 && !$isPct) {
 
 ---
 
-### 2.5 两阶段 IntrinsicSizing — ❌ 未实现
+### 2.5 两阶段 IntrinsicSizing — ✅ 已清理（死代码删除）
 
-**现状**：`IntrinsicSizes`（framework/Layout/IntrinsicSizes.php）类存在，`intrinsicSize()` 抽象方法已声明，但 **LayoutOrchestrator 从未调用它**：
+**现状**：`IntrinsicSizes.php` 类和 `intrinsicSize()` 抽象方法已删除（commit `f3cddb1b` + `309026ad`）。
 
-```php
-// Phase A 已移除：intrinsicSize() 收集结果从未被任何算法消费
-// （isset($childIntrinsics[$i]) 仅作标志位使用，已改为 $isFlexOrGrid 直接判断）
-```
+内在尺寸通过 `layout()` 的 `isIntrinsicMeasurement` 模式处理（对标 Blink SimplifiedLayout 内部按需调用）。
 
-**Blink 对标**：Blink 的 `NGBlockNode::Layout()` 内部按需调用 `IntrinsicSize()`，用于：
-- shrink-to-fit 宽度计算（`width: auto` + `float`）
-- min/max-width 约束裁剪
-- flex-basis: content 解析
-- grid auto track 尺寸
+**Blink 对标**：Blink 的 `NGBlockNode::Layout()` 内部按需调用 `ComputeIntrinsicSize()`，而非外部预收集。Px 的 `isIntrinsicMeasurement` 模式等价。
 
-**当前替代**：Flex/Grid 的 auto 尺寸通过"先布局子项再回推"的 Pass 2 模式实现，这是 `needsAnotherPass` 的变体，而非 Blink 的 IntrinsicSizing 两阶段。
-
-**补充证据**：GridAlgorithm L221-232 中 `$needsMore` 变量被设置后**从未被消费**，是 NeedsAnotherPass 信号的残留死代码。
-
-**优先级**：P1
+**优先级**：~~P1~~ → ✅ 已清理
 
 ---
 
@@ -146,25 +131,13 @@ if ($parentExplicitW !== null && $parentExplicitW > 0 && !$isPct) {
 
 ---
 
-### 3.2 算法实例共享导致的状态污染 — 🔴 严重
+### 3.2 算法实例共享导致的状态污染 — ✅ 已修复
 
-如 2.3 所述，算法单例 + setter 注入 provider 模式，在递归布局时存在状态覆盖风险：
+如 2.3 所述，算法单例 + setter 注入 provider 模式，在递归布局时存在状态覆盖风险。
 
-```
-mainLayout(flexContainer)
-  → flexAlgo.setChildLayoutProvider(providerA)
-  → flexAlgo.layout()
-    → layoutChild(blockChild)
-      → mainLayout(blockChild)
-        → blockAlgo.setChildLayoutProvider(providerB)  // 覆盖 blockAlgo 的 provider
-    → layoutChild(flexChild)
-      → mainLayout(flexChild)
-        → flexAlgo.setChildLayoutProvider(providerC)  // 覆盖 flexAlgo 的 provider！
-```
+**修复**：mainLayout 使用 save/restore 模式（commit `9626b35a`），保证每次算法调用使用自己的 provider，嵌套调用不会污染父级。
 
-当 Flex Pass 2 再次调用 `layoutChild()` 时，`flexAlgo` 的 provider 可能已被嵌套调用覆盖。
-
-**优先级**：P0
+**优先级**：~~P0~~ → ✅ 已修复
 
 ---
 
@@ -390,10 +363,10 @@ $node->content = $content;      // 违反单向数据流
 |------|---------|------|------|
 | 1.1 | RenderNode/Fragment/Consumer 分离 | ⚠️ 部分 | RenderNode 保留 12 个几何/滚动字段 |
 | 1.2 | PhysicalFragment 不可变性 | ⚠️ 部分 | displayText 非 readonly |
-| 1.3 | LayoutAlgorithm 纯函数接口 | ⚠️ 部分 | setter 注入 + 单例复用 |
+| 1.3 | LayoutAlgorithm 纯函数接口 | ✅ 已修复 | save/restore 防止嵌套污染 |
 | 1.4 | ConstraintSpace 百分比解析 | ✅ 正确 | 双层 percentage + determined 机制 |
-| 1.5 | IntrinsicSizing 两阶段 | ❌ 未实现 | intrinsicSize() 从未被调用 |
-| 2.1 | 算法间干扰/覆盖 | 🔴 严重 | 单例 provider 嵌套覆盖 |
+| 1.5 | IntrinsicSizing 两阶段 | ✅ 已清理 | 死代码删除，isIntrinsicMeasurement 模式等价 |
+| 2.1 | 算法间干扰/覆盖 | ✅ 已修复 | save/restore 模式 |
 | 2.2 | 三重布局问题 | ✅ 已消除 | Phase B/C 已删除 |
 | 2.3 | 算法状态污染 | ⚠️ 部分 | GridPlacer 修改传入 Track |
 | 2.4 | LayoutResult 中转 | ✅ 已消除 | 全局无 LayoutResult 类 |
@@ -418,12 +391,12 @@ $node->content = $content;      // 违反单向数据流
 
 | 优先级 | 问题 | 影响 |
 |--------|------|------|
-| **P0** | 算法单例 + setter 注入 → 嵌套布局 provider 覆盖 | 嵌套 flex/grid 布局错误 |
+| ~~**P0**~~ | ~~算法单例 + setter 注入 → 嵌套布局 provider 覆盖~~ | ✅ 已修复 (9626b35a) save/restore |
 | **P0** | RenderNode 几何字段未移除 + hitTest 双源真值 | 缓存失效时 hitTest 错误 |
 | **P0** | PaintPipeline 12 处读 RenderNode 几何 | paint 坐标与 Fragment 不一致 |
 | **P0** | PaintPipeline 回写 RenderNode | 破坏单向数据流 |
 | **P1** | PhysicalFragment.displayText 可变 | Fragment 不可变契约被破坏 |
-| **P1** | IntrinsicSizing 两阶段未实现 | shrink-to-fit/min-max 缺失 |
+| ~~**P1**~~ | ~~IntrinsicSizing 两阶段未实现~~ | ✅ 已清理 (f3cddb1b) 死代码删除 |
 | **P1** | contentWidth 语义混淆 | 滚动 maxScroll 计算错误 |
 | **P1** | BFC/FFC/GFC 格式化上下文未隔离 | margin collapse 穿透 |
 | **P1** | 滚动/交互状态未外置 | RenderNode 职责过重 |

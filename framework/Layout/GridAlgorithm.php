@@ -41,7 +41,6 @@ class GridAlgorithm extends LayoutAlgorithm
         for ($gxi = 0, $gxlen = count($childNodes); $gxi < $gxlen; $gxi++) {
             $childResults[] = $this->layoutChild($childNodes[$gxi]);
         }
-        $iteration = 0;
 
         $parentX = $c->parentContentX;
         $parentY = $c->parentContentY;
@@ -110,7 +109,6 @@ class GridAlgorithm extends LayoutAlgorithm
         foreach ($rows as $row) {
             if ($row->isAuto) { $hasAutoRows = true; break; }
         }
-        $hasAuto = $hasAutoCols || $hasAutoRows;
 
         // ── Content-based auto track override (pass > 0) ──
         $colContentWidths = [];
@@ -132,30 +130,6 @@ class GridAlgorithm extends LayoutAlgorithm
                     $rowContentHeights[$rowIdx] = $cr->h;
                 }
             }
-        }
-
-        // ── Apply content-based sizes to auto tracks (iteration > 0) ──
-        if ($iteration > 0) {
-            if ($hasAutoCols) {
-                foreach ($cols as $ci => $col) {
-                    if ($col->isAuto && isset($colContentWidths[$ci])) {
-                        $col->size = max(0, (int)$colContentWidths[$ci]);
-                        $col->start = 0;
-                        $col->end = $col->size;
-                    }
-                }
-            }
-            if ($hasAutoRows) {
-                foreach ($rows as $ri => $row) {
-                    if ($row->isAuto && isset($rowContentHeights[$ri])) {
-                        $row->size = max(0, (int)$rowContentHeights[$ri]);
-                        $row->start = 0;
-                        $row->end = $row->size;
-                    }
-                }
-            }
-            $this->recomputeTrackPositions($cols, $gap);
-            $this->recomputeTrackPositions($rows, $gap);
         }
 
         // ── Build grid items ──
@@ -215,21 +189,6 @@ class GridAlgorithm extends LayoutAlgorithm
         // ── Place items ──
         $placer = new GridPlacer();
         $placer->placeItems($gridItems, $cols, $rows, 'row', 0, 0, $x, $y, $width, $height, 'start', 'start', $gap, $gap);
-
-        // ── Needs another pass? (Pass 0 → Pass 1 for auto tracks) ──
-        $needsMore = false;
-        if ($hasAuto && $iteration === 0) {
-            $needsAdjustment = false;
-            foreach ($cols as $ci => $col) {
-                if ($col->isAuto && isset($colContentWidths[$ci]) && $colContentWidths[$ci] > $col->size) {
-                    $needsAdjustment = true;
-                    break;
-                }
-            }
-            if ($needsAdjustment) {
-                $needsMore = true;
-            }
-        }
 
         // ── Map grid items to child PhysicalFragments ──
         $mappedFragments = [];
