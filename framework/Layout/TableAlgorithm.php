@@ -112,9 +112,4 @@ $firstNorm = count($normCells) > 0 ? $normCells[0] : null;
 
         return new PhysicalFragment((int)$x, (int)$y, (int)$w, (int)$h, $s->visualWidth($w), $s->visualHeight($h), 0, (int)$w, (int)$h, $s, $stackedChildren, null);
     }
-
-    public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes
-    {
-        return new IntrinsicSizes(0, 0, 0, 0);
-    }
 }

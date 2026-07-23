@@ -7,14 +7,13 @@ use native_types;
 use Px\Css\ComputedStyle;
 use Px\Layout\ConstraintSpace;
 use Px\Layout\PhysicalFragment;
-use Px\Layout\IntrinsicSizes;
 use Px\Render\RenderNode;
 
 /**
  * LayoutAlgorithm — 布局算法抽象基类（对标 Blink LayoutAlgorithm）
  *
  * 纯函数接口：layout() 接收约束，返回不可变 Fragment。
- * intrinsicSize() 提供两阶段内在尺寸测量。
+ * 内在尺寸通过 layout() 的 isIntrinsicMeasurement 模式处理（对标 Blink SimplifiedLayout）。
  *
  * AOT 兼容：所有子类必须 use native_types。
  */
@@ -59,10 +58,5 @@ abstract class LayoutAlgorithm
         array $childNodes = [],
         ?PhysicalFragment $inputFragment = null,
     ): PhysicalFragment;
-
-    /**
-     * 测量内在尺寸（两阶段 IntrinsicSizing 的 Pass 1）。
-     */
-    abstract public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes;
 }
 

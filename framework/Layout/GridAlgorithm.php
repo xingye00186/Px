@@ -7,7 +7,6 @@ use Px\Css\ComputedStyle;
 use Px\Css\CssKeyword;
 use Px\Layout\ConstraintSpace;
 use Px\Layout\PhysicalFragment;
-use Px\Layout\IntrinsicSizes;
 use Px\Layout\Grid\GridPlacer;
 use Px\Layout\Grid\GridTrack;
 use Px\Layout\Grid\GridTracker;
@@ -285,25 +284,6 @@ class GridAlgorithm extends LayoutAlgorithm
 
         // ── Build PhysicalFragment ──
         return new PhysicalFragment((int)$x, (int)$y, (int)$width, (int)$height, (int)$s->visualWidth($width), (int)$s->visualHeight($height), 0, 0, 0, $s, $mappedFragments, null);
-    }
-
-    public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes
-    {
-        if ($space->isIntrinsicMeasurement) {
-            return new IntrinsicSizes(0, 0, 0, 0);
-        }
-        // Return style-derived dimensions as intrinsic sizes
-        $s = $style ?? \Px\Css\StylePool::empty();
-        $parentW = $space->containerWidth;
-        $width = $s->width->toPx();
-        if ($s->width->isPercent()) {
-            $width = $s->width->resolveInContext($parentW);
-        }
-        if ($width <= 0) {
-            $width = $parentW;
-        }
-        $width = max(0, $width);
-        return new IntrinsicSizes($width, $width, 0, 0);
     }
 
     /**

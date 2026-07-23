@@ -31,12 +31,6 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         throw new \RuntimeException('OOFLayoutAlgorithm::layout() should not be called directly. Use Orchestrator::oofLayout().');
     }
 
-    public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes
-    {
-        // OOF 元素不影响内在尺寸
-        return new IntrinsicSizes();
-    }
-
     /**
      * 对 Fragment 树执行 OOF 通行证。
      * 遍历 Fragment 树，为每个 position:absolute/fixed 的元素

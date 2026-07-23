@@ -6,7 +6,6 @@ use native_types;
 use Px\Css\ComputedStyle;
 use Px\Layout\ConstraintSpace;
 use Px\Layout\PhysicalFragment;
-use Px\Layout\IntrinsicSizes;
 use Px\Layout\PhysicalFragmentBuilder;
 use Px\Layout\Flex\FlexItem;
 use Px\Layout\Flex\FlexLineBreaker;
@@ -459,19 +458,6 @@ class FlexAlgorithm extends LayoutAlgorithm
             0, 0, 0, $s,
             $fragmentChildren
         );
-    }
-
-    public function intrinsicSize(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = ''): IntrinsicSizes
-    {
-        // 没有子 fragment 可用时，返回文本内在尺寸
-        if (strlen($textContent) > 0) {
-            $fs = $style?->getFontSize() > 0 ? $style->getFontSize() : 16;
-            $w = TextMeasureCache::measure($textContent, $fs, (bool)($style?->getBold() ?? false));
-            $h = $style?->getLineHeight() > 0 ? $style->getLineHeight() : (int)($fs * 1.2);
-            return new IntrinsicSizes($w, $w, $h, $h);
-        }
-        // flex 容器本身无文本内容时返回 0（尺寸由子项和约束决定）
-        return new IntrinsicSizes(0, 0, 0, 0);
     }
 
     /** Resolve effective align value: align-self overrides align-items */
