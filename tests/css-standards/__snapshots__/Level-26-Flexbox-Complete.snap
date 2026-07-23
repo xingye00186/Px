@@ -1,10 +1,10 @@
-@generated 2026-07-23 11:49:54
+@generated 2026-07-23 19:05:25
 === Test: flex row-reverse 反向水平排列 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x60)
-  div (300,0 100x60) text="A"
-  div (200,0 100x60) text="B"
-  div (100,0 100x60) text="C"
+  div (300,0 100x40) text="A"
+  div (200,0 100x40) text="B"
+  div (100,0 100x40) text="C"
 
 ---
 
@@ -19,33 +19,49 @@ div (0,0 200x200)
 === Test: flex wrap-reverse 反向换行 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x120)
-  div (0,4 90x56) text="A"
-  div (94,4 90x56) text="B"
-  div (0,64 90x56) text="C"
-  div (94,64 90x56) text="D"
+  div (0,4 90x40) text="A"
+  div (94,4 90x40) text="B"
+  div (0,64 90x40) text="C"
+  div (94,64 90x40) text="D"
+
+---
+
+=== Test: align-self:flex-end 子项底部对齐 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100)
+  div (0,30 80x40) text="Center"
+  div (80,60 80x40) text="Bottom"
+
+---
+
+=== Test: align-self:center 子项居中覆盖 stretch ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100)
+  div (0,0 80x40) text="Stretched"
+  div (80,40 80x19) text="Centered"
 
 ---
 
 === Test: order:2 和 order:-1 重排序 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x50)
-  div (0,0 80x50) text="A"
-  div (80,0 80x50) text="B"
-  div (160,0 80x50) text="C"
-  div (240,0 80x50) text="D"
+  div (0,0 80x40) text="A"
+  div (80,0 80x40) text="B"
+  div (160,0 80x40) text="C"
+  div (240,0 80x40) text="D"
 
 ---
 
 === Test: flex-shrink:0 禁止收缩 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x50)
-  div (0,0 200x50) text="Fixed"
-  div (200,0 100x50) text="Shrink"
+  div (0,0 200x40) text="Fixed"
+  div (200,0 100x40) fg=1 text="Shrink"
 
 ---
 
 === Test: flex-basis:200px 固定基准 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x50)
-  div (0,0 200x50) text="Basis"
-  div (200,0 200x50) text="Flex"
+  div (0,0 200x40) fg=1 text="Basis"
+  div (200,0 200x40) fg=1 text="Flex"

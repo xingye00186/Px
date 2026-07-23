@@ -1,1 +1,57 @@
-@generated 2026-07-23 11:49:52
+@generated 2026-07-23 19:05:23
+=== Test: position:relative left=10 top=5 ===
+Frame #1 events=0 detail=normal
+div (10,5 100x50) [pos=relative] text="Relative"
+
+---
+
+=== Test: relative 容器内 absolute 子元素 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x300) [pos=relative]
+  div (50,30 100x80) [pos=absolute] text="Child"
+
+---
+
+=== Test: border 对布局的影响 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) bw=2 text="Bordered"
+
+---
+
+=== Test: z-index 层级顺序 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x200) [pos=relative]
+  div (0,0 200x100) [pos=absolute] text="Top"
+  div (20,20 200x100) [pos=absolute] text="Bottom"
+
+---
+
+=== Test: absolute right=20 bottom=10 从右下角定位 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x300) [pos=relative]
+  div (280,240 100x50) [pos=absolute] text="BR"
+
+---
+
+=== Test: 多 absolute 叠加 z-index 控制层级 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x300) [pos=relative]
+  div (10,10 200x100) [pos=absolute] text="Top"
+  div (30,30 200x100) [pos=absolute] text="Bottom"
+  div (50,50 200x100) [pos=absolute] text="Front"
+
+---
+
+=== Test: relative 负偏移 left=-10 top=-5 不影响流 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x120)
+  div (0,0 400x40) text="Normal 1"
+  div (-10,35 400x40) [pos=relative] text="Relative"
+  div (0,80 400x40) text="Normal 2"
+
+---
+
+=== Test: overflow:hidden + border-radius 裁切子元素 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) ov=hidden
+  div (0,0 400x200) text="Overflowing content"

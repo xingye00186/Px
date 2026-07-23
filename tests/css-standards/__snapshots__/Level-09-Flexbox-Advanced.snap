@@ -1,4 +1,4 @@
-@generated 2026-07-23 11:49:52
+@generated 2026-07-23 19:05:24
 === Test: align-items flex-start 顶部对齐 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x100)
@@ -56,3 +56,43 @@ div (0,0 200x200)
   div (0,29 80x40) text="A"
   div (84,29 80x40) text="B"
   div (0,127 80x40) text="C"
+
+---
+
+=== Test: align-self center 单个居中覆盖 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x100)
+  div (0,0 60x30) text="A"
+  div (60,30 60x40) text="Center"
+
+---
+
+=== Test: align-self flex-end 单个底部覆盖 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x100)
+  div (0,0 60x30) text="A"
+  div (60,60 60x40) text="Bottom"
+
+---
+
+=== Test: justify-self center 单个水平居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x50)
+  div (0,0 80x30) text="A"
+  div (80,0 80x30) text="Center"
+
+---
+
+=== Test: flex-basis 200px 固定基础尺寸 ===
+Frame #1 events=0 detail=normal
+div (0,0 500x50)
+  div (0,0 200x30) text="Basis 200"
+  div (200,0 300x30) fg=1 text="Flex 1"
+
+---
+
+=== Test: flex-basis auto 回退到 width ===
+Frame #1 events=0 detail=normal
+div (0,0 500x50)
+  div (0,0 400x30) fg=1 text="W 150 + f1"
+  div (400,0 100x30) text="W 100"

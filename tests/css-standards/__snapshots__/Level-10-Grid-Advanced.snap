@@ -1,4 +1,4 @@
-@generated 2026-07-23 11:49:52
+@generated 2026-07-23 19:05:24
 === Test: grid-row span 2 跨越两行 ===
 Frame #1 events=0 detail=normal
 div (0,0 204x104)
@@ -14,6 +14,15 @@ div (0,0 500x60)
   div (0,0 161x60) text="A"
   div (169,0 161x60) text="B"
   div (338,0 162x60) text="C"
+
+---
+
+=== Test: grid repeat(3, 1fr) 三列等宽 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x80)
+  div (0,0 194x60) text="A"
+  div (202,0 194x60) text="B"
+  div (404,0 196x60) text="C"
 
 ---
 

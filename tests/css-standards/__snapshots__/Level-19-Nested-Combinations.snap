@@ -1,1 +1,16 @@
-@generated 2026-07-23 11:49:53
+@generated 2026-07-23 19:05:24
+=== Test: Flex 内 absolute 定位元素 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100) [pos=relative]
+  div (0,0 80x40) text="Item"
+  div (290,10 100x50) [pos=absolute] text="Absolute"
+
+---
+
+=== Test: Grid cell 内 position:absolute ===
+Frame #1 events=0 detail=normal
+div (0,0 400x120)
+  div (0,0 200x80) [pos=relative]
+    div (130,10 60x30) [pos=absolute] text="Badge"
+    div (0,0 200x40) text="Content"
+  div (208,0 200x80) text="Normal"

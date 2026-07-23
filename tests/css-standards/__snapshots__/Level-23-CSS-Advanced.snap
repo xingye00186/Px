@@ -1,4 +1,10 @@
-@generated 2026-07-23 11:49:54
+@generated 2026-07-23 19:05:25
+=== Test: outline-width:3px 解析 ===
+Frame #1 events=0 detail=normal
+div (0,0 100x50) text="Outlined"
+
+---
+
 === Test: outline-style:dashed 不影响布局 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x80) text="Dashed"
@@ -11,6 +17,20 @@ div (0,0 150x60) text="Double outline"
 
 ---
 
+=== Test: overflow:hidden 溢出裁剪 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) ov=hidden
+  div (0,0 300x50) text="Wide content"
+
+---
+
+=== Test: overflow:hidden + border clip region 偏移 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) bw=5 ov=hidden
+  div (0,5 400x50) text="Oversized"
+
+---
+
 === Test: input placeholder 文本 ===
 Frame #1 events=0 detail=normal
 input (0,0 200x36)
@@ -20,3 +40,10 @@ input (0,0 200x36)
 === Test: 空 input 无 placeholder 不显示 ===
 Frame #1 events=0 detail=normal
 input (0,0 200x36)
+
+---
+
+=== Test: overflow clip 不受 border-radius 影响 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) ov=hidden
+  div (0,0 300x150) text="Overflowing"

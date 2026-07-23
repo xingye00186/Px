@@ -1,4 +1,46 @@
-@generated 2026-07-23 11:49:52
+@generated 2026-07-23 19:05:24
+=== Test: color:#FF0000 红色文字 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x30) text="Red text"
+
+---
+
+=== Test: font-size 32px 大字 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x50) text="Big text"
+
+---
+
+=== Test: font-weight bold 加粗 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x30) text="Bold text"
+
+---
+
+=== Test: text-align right 右对齐 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x30) text="Right aligned"
+
+---
+
+=== Test: text-align center 居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x30) text="Center aligned"
+
+---
+
 === Test: white-space nowrap 不折行 ===
 Frame #1 events=0 detail=normal
-div (10,10 80x30) text="Long text that should not wrap"
+div (0,0 80x30) text="Long text that should not wrap"
+
+---
+
+=== Test: text-overflow ellipsis 省略号 ===
+Frame #1 events=0 detail=normal
+div (0,0 80x30) ov=hidden text="Very long text clipped"
+
+---
+
+=== Test: 字体属性组合 (color+font-size+bold) ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50) text="Styled text"

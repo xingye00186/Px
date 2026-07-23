@@ -1,4 +1,4 @@
-@generated 2026-07-23 11:49:54
+@generated 2026-07-23 19:05:25
 === Test: box-sizing:border-box 内容区缩小 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x80)
@@ -10,6 +10,20 @@ div (0,0 200x80)
 Frame #1 events=0 detail=normal
 div (0,0 200x80)
   div (20,20 200x30) text="Child"
+
+---
+
+=== Test: min-width:300px 覆盖 width:100px ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60)
+  div (0,0 300x40) text="Min"
+
+---
+
+=== Test: max-width:150px 覆盖 width:300px ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60)
+  div (0,0 150x40) text="Max"
 
 ---
 

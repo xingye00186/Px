@@ -1,10 +1,37 @@
-@generated 2026-07-23 11:49:53
+@generated 2026-07-23 19:05:24
+=== Test: display:none 不渲染 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x80)
+  div (0,0 200x40) text="Visible"
+  div (0,0 0x0) [dsp=none] text="Hidden"
+  div (0,40 200x40) text="After"
+
+---
+
 === Test: visibility:hidden 隐藏但占位 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x120)
   div (0,0 300x40) text="Item 1"
   div (0,40 300x40) text="Hidden but space"
   div (0,80 300x40) text="Item 3"
+
+---
+
+=== Test: display:inline 行内并排 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x57)
+  span (0,0 300x19) [dsp=inline] text="Red "
+  span (0,19 300x19) [dsp=inline] text="Blue "
+  span (0,38 300x19) [dsp=inline] text="Green"
+
+---
+
+=== Test: display:inline-block 行内块布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x80)
+  div (0,0 100x60) [dsp=inline-block] text="A"
+  div (100,0 100x80) [dsp=inline-block] text="B"
+  div (200,0 100x50) [dsp=inline-block] text="C"
 
 ---
 

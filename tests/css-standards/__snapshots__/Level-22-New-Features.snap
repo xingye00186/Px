@@ -1,4 +1,4 @@
-@generated 2026-07-23 11:49:54
+@generated 2026-07-23 19:05:25
 === Test: 外边距折叠 正+正 margin-bottom:20 + margin-top:30 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x90)
@@ -26,5 +26,5 @@ div (0,0 200x100)
 
 === Test: padding容器 + absolute bottom:0 right:0 右下角 ===
 Frame #1 events=0 detail=normal
-div (0,0 480x456)
-  div (528,504 8x8)
+div (0,0 480x456) [pos=relative]
+  div (528,504 8x8) [pos=absolute]

@@ -1,4 +1,10 @@
-@generated 2026-07-23 11:49:51
+@generated 2026-07-23 19:05:23
+=== Test: 绝对定位 div (left=10, top=20, w=100, h=50) ===
+Frame #1 events=0 detail=normal
+div (0,0 100x50) text="Hello"
+
+---
+
 === Test: Auto-stack 两个 div 垂直排列 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x70)
@@ -43,6 +49,14 @@ div (0,0 800x100)
 
 ---
 
+=== Test: margin-left 负值左移 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x60)
+  div (0,0 100x30) text="Item 1"
+  div (-20,30 100x30) text="Item 2"
+
+---
+
 === Test: 宽度 auto 填充包含块 (无显式 width) ===
 Frame #1 events=0 detail=normal
 div (0,0 500x100)
@@ -56,3 +70,9 @@ div (0,0 300x90)
   div (0,0 300x20) text="A"
   div (0,20 300x30) text="B"
   div (0,50 300x40) text="C"
+
+---
+
+=== Test: border 增加外尺寸 ===
+Frame #1 events=0 detail=normal
+div (0,0 100x50) bw=2 text="Border"

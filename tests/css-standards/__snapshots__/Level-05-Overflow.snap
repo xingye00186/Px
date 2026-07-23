@@ -1,4 +1,21 @@
-@generated 2026-07-23 11:49:52
+@generated 2026-07-23 19:05:24
+=== Test: overflow:hidden 子元素超出容器 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) ov=hidden
+  div (0,0 400x50) text="Wide content"
+
+---
+
+=== Test: overflow-y:auto 滚动容器 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x150) scroll ch=200 cw=300 maxScroll=50
+  div (0,0 280x50) text="Item 1"
+  div (0,50 280x50) text="Item 2"
+  div (0,100 280x50) text="Item 3"
+  div (0,150 280x50) text="Item 4"
+
+---
+
 === Test: overflow visible 默认超出可见 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x60)
@@ -8,7 +25,7 @@ div (0,0 200x60)
 
 === Test: 滚动容器中元素定位 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x150)
+div (0,0 300x150) scroll ch=150 cw=300 maxScroll=0
   div (0,0 280x50) text="Start"
   div (0,50 280x50) text="Middle"
   div (0,100 280x50) text="End"
