@@ -336,24 +336,23 @@ $geoKeys = ['width','height','minWidth','maxWidth','minHeight','maxHeight',
 
 ---
 
-## 七、PaintPipeline 双源真值问题 — 🔴 P0
+## 七、PaintPipeline 双源真值问题 — ✅ 已修复
 
-`PaintPipeline::fragmentToElement()`（framework/Paint/PaintPipeline.php L178-283）存在严重架构违规：
+`PaintPipeline::fragmentToElement()`（framework/Paint/PaintPipeline.php）已修复：
 
-**违规 1：Paint 阶段回写 RenderNode**（L207-208）
-```php
-$node->computedStyle = $style;  // paint 阶段修改布局输入！
-$node->content = $content;      // 违反单向数据流
-```
+**修复 1：移除 Paint 阶段回写 RenderNode**（commit `29770dd4`）
+- 删除 `$node->computedStyle = $style` 和 `$node->content = $content`
+- 对标 Blink：paint 不修改 LayoutObject，单向数据流
 
-**违规 2：12 处直接读取 RenderNode 几何字段**
+**修复 2：12 处直接读取 RenderNode 几何字段 → 改读 cachedFragment**
+- `computePaddingBoxClip()`: 从 cachedFragment 读几何
+- `background-attachment:fixed`: 使用 fragment 几何（局部变量）
+- 伪类文本定位: 从 cachedFragment 读几何
+- 背景图 fixed: 使用 fragment 几何
 
-| 位置 | 读取字段 | 用途 |
-|------|---------|------|
-| L50-54 `computePaddingBoxClip()` | node->visualW/w/x/y/visualH/h | padding-box 裁切 |
-| L466-467 | node->x/y | background-attachment:fixed 定位 |
-| L516-519 | node->y/visualH/x/visualW | 伪类文本定位 |
-| L603-604 | node->x/y | 背景图 fixed 定位 |
+所有读取现在使用 `geom !== null ? fragment : fallback` 模式（null 安全）。
+
+**优先级**：~~P0~~ → ✅ 已修复
 
 ---
 
@@ -392,9 +391,9 @@ $node->content = $content;      // 违反单向数据流
 | 优先级 | 问题 | 影响 |
 |--------|------|------|
 | ~~**P0**~~ | ~~算法单例 + setter 注入 → 嵌套布局 provider 覆盖~~ | ✅ 已修复 (9626b35a) save/restore |
-| **P0** | RenderNode 几何字段未移除 + hitTest 双源真值 | 缓存失效时 hitTest 错误 |
-| **P0** | PaintPipeline 12 处读 RenderNode 几何 | paint 坐标与 Fragment 不一致 |
-| **P0** | PaintPipeline 回写 RenderNode | 破坏单向数据流 |
+| ~~**P0**~~ | ~~RenderNode 几何字段未移除 + hitTest 双源真值~~ | ✅ hitTest/ScrollManager/PaintPipeline 均从 cachedFragment 读 |
+| ~~**P0**~~ | ~~PaintPipeline 12 处读 RenderNode 几何~~ | ✅ 已修复 (29770dd4) 改读 cachedFragment |
+| ~~**P0**~~ | ~~PaintPipeline 回写 RenderNode~~ | ✅ 已修复 (29770dd4) 移除回写 |
 | **P1** | PhysicalFragment.displayText 可变 | Fragment 不可变契约被破坏 |
 | ~~**P1**~~ | ~~IntrinsicSizing 两阶段未实现~~ | ✅ 已清理 (f3cddb1b) 死代码删除 |
 | **P1** | contentWidth 语义混淆 | 滚动 maxScroll 计算错误 |
