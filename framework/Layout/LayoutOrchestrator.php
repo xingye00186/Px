@@ -199,12 +199,6 @@ class LayoutOrchestrator
                 $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles);
         }
 
-        // Phase A 已移除：intrinsicSize() 收集结果从未被任何算法消费
-        // （isset($childIntrinsics[$i]) 仅作标志位使用，已改为 $isFlexOrGrid 直接判断）
-        // 对标 Blink：NGBlockNode::IntrinsicSize() 仅在 SimplifiedLayout 内部按需调用，
-        // 不在父节点 Layout() 入口处全量预收集
-        $isFlexOrGrid = ($display === 'flex' || $display === 'grid' || $display === 'inline-flex');
-
         // P2: Phase B 已删除——算法通过 ChildLayoutProvider.layoutChild() 按需布局子项
         // OOF 元素仍需预布局子项（OOF 路径不经过算法）
         $childFragments = [];
