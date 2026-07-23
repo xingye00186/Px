@@ -57,8 +57,9 @@ class ChildLayoutProvider
             return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, null, [], $child);
         }
 
-        // 缓存命中：已布局过
-        if (isset($this->laidOutChildren[$index])) {
+        // 缓存命中：已布局过（仅在无 override 约束时使用缓存）
+        // 对标 Blink：算法用不同约束调用 LayoutChild 时必须重新布局
+        if ($overrideSpace === null && isset($this->laidOutChildren[$index])) {
             return $this->laidOutChildren[$index];
         }
 

@@ -189,6 +189,30 @@ class GridAlgorithm extends LayoutAlgorithm
             $idx++;
         }
 
+        // ── Pass 2: 用确定的轨道约束重新布局子项（对标 Blink GridAlgorithm 两阶段） ──
+        // Blink: 轨道尺寸确定后，用 track size 作为子项约束重新 LayoutChild
+        $idx2 = 0;
+        foreach ($gridItems as $gri2) {
+            $trackW = max(0, (int)($gri2->w ?? 0));
+            $trackH = max(0, (int)($gri2->h ?? 0));
+            if ($trackW > 0 && $idx2 < count($childNodes)) {
+                // 构建轨道约束：用 track width 作为子项可用宽度
+                $trackSpace = new ConstraintSpace(
+                    $trackW, $trackH > 0 ? $trackH : $c->getContentHeight(),
+                    $c->getParentContentX(), $c->getParentContentY(),
+                    $trackW, $trackH > 0 ? $trackH : $c->getContentHeight(),
+                    $trackW, $c->getPercentageHeight(),
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    true, false, 0, 0, 'block',
+                    $trackW, $c->getPercentageHeight(),
+                );
+                $reFrag = $this->layoutChild($childNodes[$idx2], $trackSpace);
+                $childResults[$idx2] = $reFrag;
+                $gri2->originalChildren = $reFrag->children;
+            }
+            $idx2++;
+        }
+
         // ── Place items ──
         $placer = new GridPlacer();
         $placer->placeItems($gridItems, $cols, $rows, 'row', 0, 0, $x, $y, $width, $height, 'start', 'start', $gap, $gap);
