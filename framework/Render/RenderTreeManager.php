@@ -1262,6 +1262,27 @@ class RenderTreeManager
             return null;
         }
 
+        // 对标 Blink：HitTest 从 LayoutObject 的 PhysicalFragment 读取几何
+        // Px 等价：RenderNode.cachedFragment = Blink LayoutObject.physical_fragment_
+        $geom = $node->cachedFragment;
+        $nodeX = $geom !== null ? $geom->getX() : $node->x;
+        $nodeY = $geom !== null ? $geom->getY() : $node->y;
+        $nodeW = $geom !== null ? $geom->getW() : $node->w;
+        $nodeH = $geom !== null ? $geom->getH() : $node->h;
+
+        // 对标 Blink overflow clip：点不在 clip 容器边界内则跳过整个子树
+        // Blink: HitTestResult 在遍历子节点前检查 overflow clip region
+        $overflow = $node->computedStyle?->overflow?->value ?? 'visible';
+        $overflowX = $node->computedStyle?->overflowX?->value ?? $overflow;
+        $overflowY = $node->computedStyle?->overflowY?->value ?? $overflow;
+        $isClipContainer = ($overflowX === 'hidden' || $overflowX === 'scroll' || $overflowX === 'auto'
+            || $overflowY === 'hidden' || $overflowY === 'scroll' || $overflowY === 'auto');
+        if ($isClipContainer && $nodeW > 0 && $nodeH > 0) {
+            if ($x < $nodeX || $x > $nodeX + $nodeW || $y < $nodeY || $y > $nodeY + $nodeH) {
+                return null;  // 点在 clip 区域外，跳过整个子树
+            }
+        }
+
         // CSSOM View §7.1: 滚动容器内，将视口坐标转换为文档坐标
         // 子文档坐标 = 视口坐标 + scrollLeft/scrollTop
         $childX = $x;
@@ -1297,10 +1318,11 @@ class RenderTreeManager
         }
 
         // 检查自身是否可点击且在命中区域内（含 transform 偏移）
+        // 几何从 cachedFragment 读取（对标 Blink HitTest 从 PhysicalFragment 读几何）
         if ($node->sourceVNode !== null
             && isset($node->sourceVNode->props['@click'])
-            && $x >= $node->x + $hitOffX && $x <= $node->x + $node->w + $hitOffX
-            && $y >= $node->y + $hitOffY && $y <= $node->y + $node->h + $hitOffY) {
+            && $x >= $nodeX + $hitOffX && $x <= $nodeX + $nodeW + $hitOffX
+            && $y >= $nodeY + $hitOffY && $y <= $nodeY + $nodeH + $hitOffY) {
             return $node;
         }
 
@@ -1361,9 +1383,15 @@ class RenderTreeManager
         }
 
         // 检查自身是否为滚动容器且坐标命中（含 transform 偏移）
+        // 对标 Blink：从 PhysicalFragment 读取几何
+        $geom = $node->cachedFragment;
+        $nodeX = $geom !== null ? $geom->getX() : $node->x;
+        $nodeY = $geom !== null ? $geom->getY() : $node->y;
+        $nodeW = $geom !== null ? $geom->getW() : $node->w;
+        $nodeH = $geom !== null ? $geom->getH() : $node->h;
         if ($node->isScrollContainer
-            && $x >= $node->x + $hitOffX && $x <= $node->x + $node->w + $hitOffX
-            && $y >= $node->y + $hitOffY && $y <= $node->y + $node->h + $hitOffY) {
+            && $x >= $nodeX + $hitOffX && $x <= $nodeX + $nodeW + $hitOffX
+            && $y >= $nodeY + $hitOffY && $y <= $nodeY + $nodeH + $hitOffY) {
             return $node;
         }
 

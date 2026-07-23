@@ -185,8 +185,9 @@ class ScrollManager
             $scrollAmount = (int)($delta / 3);
 
             if ($event->isShiftDown()) {
-                $contentW = $scrollNode->contentWidth;
-                $containerW = $scrollNode->w;
+                $geom = $scrollNode->cachedFragment;
+                $contentW = $geom !== null ? $geom->getContentWidth() : $scrollNode->contentWidth;
+                $containerW = $geom !== null ? $geom->getW() : $scrollNode->w;
                 $maxScroll = max($contentW - $containerW, 0);
                 if ($maxScroll <= 0) return;
 
@@ -195,8 +196,9 @@ class ScrollManager
                     $this->applyScrollLeft($scrollNode, $newScrollLeft, true);
                 }
             } else {
-                $contentH = $scrollNode->contentHeight;
-                $containerH = $scrollNode->h;
+                $geom = $scrollNode->cachedFragment;
+                $contentH = $geom !== null ? $geom->getContentHeight() : $scrollNode->contentHeight;
+                $containerH = $geom !== null ? $geom->getH() : $scrollNode->h;
                 $maxScroll = max($contentH - $containerH, 0);
                 if (\Px\Core\Config::get('debug_diag_enabled', false)) {
                     error_log('[SCROLL_DBG] wheel x=' . $event->getX() . ' y=' . $event->getY() . ' delta=' . $delta . ' sa=' . $scrollAmount . ' scrollTop=' . $this->readScrollTop($scrollNode) . ' contentH=' . $contentH . ' containerH=' . $containerH . ' maxScroll=' . $maxScroll);
@@ -234,22 +236,30 @@ class ScrollManager
 
         if (!$node->isScrollContainer) return null;
 
+        // 对标 Blink：从 PhysicalFragment 读取几何（cachedFragment = LayoutObject.physical_fragment_）
+        $geom = $node->cachedFragment;
+        $nodeX = $geom !== null ? $geom->getX() : $node->x;
+        $nodeY = $geom !== null ? $geom->getY() : $node->y;
+        $nodeW = $geom !== null ? $geom->getW() : $node->w;
+        $nodeH = $geom !== null ? $geom->getH() : $node->h;
+        $contentH = $geom !== null ? $geom->getContentHeight() : $node->contentHeight;
+        $contentW = $geom !== null ? $geom->getContentWidth() : $node->contentWidth;
+
         // 从节点 style 读取可配置的滚动条宽度
         $sbWidth = $node->computedStyle?->getRaw('scrollbarWidth') ?? 12;
 
         // ── 竖滚动条（右侧）──
-        $contentH = $node->contentHeight;
-        if ($contentH > $node->h) {
+        if ($contentH > $nodeH) {
             $sbW = $sbWidth;
-            $sbX = $node->x + $node->w - $sbW;
+            $sbX = $nodeX + $nodeW - $sbW;
 
             if ($x >= $sbX && $x <= $sbX + $sbW
-                && $y >= $node->y && $y <= $node->y + $node->h) {
-                $ratio = min($node->h / max($contentH, 1), 1.0);
-                $thumbH = max((int)($node->h * $ratio), 20);
-                $maxScroll = max($contentH - $node->h, 0);
+                && $y >= $nodeY && $y <= $nodeY + $nodeH) {
+                $ratio = min($nodeH / max($contentH, 1), 1.0);
+                $thumbH = max((int)($nodeH * $ratio), 20);
+                $maxScroll = max($contentH - $nodeH, 0);
                 $scrollRatio = $maxScroll > 0 ? $this->readScrollTop($node) / $maxScroll : 0.0;
-                $thumbY = $node->y + (int)(($node->h - $thumbH) * $scrollRatio);
+                $thumbY = $nodeY + (int)(($nodeH - $thumbH) * $scrollRatio);
 
                 if ($y >= $thumbY && $y <= $thumbY + $thumbH) {
                     return ['scrollNode' => $node, 'type' => 'thumb', 'isHorizontal' => false];
@@ -259,18 +269,17 @@ class ScrollManager
         }
 
         // ── 横滚动条（底部）──
-        $contentW = $node->contentWidth;
-        if ($contentW > $node->w) {
+        if ($contentW > $nodeW) {
             $sbH = $sbWidth;
-            $sbY = $node->y + $node->h - $sbH;
+            $sbY = $nodeY + $nodeH - $sbH;
 
             if ($y >= $sbY && $y <= $sbY + $sbH
-                && $x >= $node->x && $x <= $node->x + $node->w) {
-                $ratio = min($node->w / max($contentW, 1), 1.0);
-                $thumbW = max((int)($node->w * $ratio), 20);
-                $maxScroll = max($contentW - $node->w, 0);
+                && $x >= $nodeX && $x <= $nodeX + $nodeW) {
+                $ratio = min($nodeW / max($contentW, 1), 1.0);
+                $thumbW = max((int)($nodeW * $ratio), 20);
+                $maxScroll = max($contentW - $nodeW, 0);
                 $scrollRatio = $maxScroll > 0 ? $this->readScrollLeft($node) / $maxScroll : 0.0;
-                $thumbX = $node->x + (int)(($node->w - $thumbW) * $scrollRatio);
+                $thumbX = $nodeX + (int)(($nodeW - $thumbW) * $scrollRatio);
 
                 if ($x >= $thumbX && $x <= $thumbX + $thumbW) {
                     return ['scrollNode' => $node, 'type' => 'thumb', 'isHorizontal' => true];
@@ -289,18 +298,25 @@ class ScrollManager
      */
     public function handleScrollbarDown(RenderNode $scrollNode, string $type, int $mouseX, int $mouseY, bool $isHorizontal): void
     {
+        // 对标 Blink：从 PhysicalFragment 读取几何
+        $geom = $scrollNode->cachedFragment;
+        $nodeX = $geom !== null ? $geom->getX() : $scrollNode->x;
+        $nodeY = $geom !== null ? $geom->getY() : $scrollNode->y;
+        $nodeW = $geom !== null ? $geom->getW() : $scrollNode->w;
+        $nodeH = $geom !== null ? $geom->getH() : $scrollNode->h;
+        $contentW = $geom !== null ? $geom->getContentWidth() : $scrollNode->contentWidth;
+        $contentH = $geom !== null ? $geom->getContentHeight() : $scrollNode->contentHeight;
+
         if ($isHorizontal) {
-            $contentW = $scrollNode->contentWidth;
-            $containerW = $scrollNode->w;
-            $maxScroll = max($contentW - $containerW, 0);
+            $maxScroll = max($contentW - $nodeW, 0);
             if ($maxScroll <= 0) return;
 
-            $ratio = min($containerW / max($contentW, 1), 1.0);
-            $thumbW = max((int)($containerW * $ratio), 20);
-            $trackW = $containerW - $thumbW;
+            $ratio = min($nodeW / max($contentW, 1), 1.0);
+            $thumbW = max((int)($nodeW * $ratio), 20);
+            $trackW = $nodeW - $thumbW;
 
             if ($type === 'track') {
-                $clickOffset = $mouseX - $scrollNode->x - (int)($thumbW / 2);
+                $clickOffset = $mouseX - $nodeX - (int)($thumbW / 2);
                 $newScrollLeft = (int)($maxScroll * $clickOffset / max($trackW, 1));
                 $newScrollLeft = (int)max(0, min($maxScroll, $newScrollLeft));
                 $this->applyScrollLeft($scrollNode, $newScrollLeft, true);
@@ -312,17 +328,15 @@ class ScrollManager
                 $this->scrollDragIsHorizontal = true;
             }
         } else {
-            $contentH = $scrollNode->contentHeight;
-            $containerH = $scrollNode->h;
-            $maxScroll = max($contentH - $containerH, 0);
+            $maxScroll = max($contentH - $nodeH, 0);
             if ($maxScroll <= 0) return;
 
-            $ratio = min($containerH / max($contentH, 1), 1.0);
-            $thumbH = max((int)($containerH * $ratio), 20);
-            $trackH = $containerH - $thumbH;
+            $ratio = min($nodeH / max($contentH, 1), 1.0);
+            $thumbH = max((int)($nodeH * $ratio), 20);
+            $trackH = $nodeH - $thumbH;
 
             if ($type === 'track') {
-                $clickOffset = $mouseY - $scrollNode->y - (int)($thumbH / 2);
+                $clickOffset = $mouseY - $nodeY - (int)($thumbH / 2);
                 $newScrollTop = (int)($maxScroll * $clickOffset / max($trackH, 1));
                 $newScrollTop = (int)max(0, min($maxScroll, $newScrollTop));
                 $this->applyScrollTop($scrollNode, $newScrollTop, true);
@@ -347,8 +361,9 @@ class ScrollManager
         if ($node === null) return;
 
         if ($this->scrollDragIsHorizontal) {
-            $contentW = $node->contentWidth;
-            $containerW = $node->w;
+            $geom = $node->cachedFragment;
+            $contentW = $geom !== null ? $geom->getContentWidth() : $node->contentWidth;
+            $containerW = $geom !== null ? $geom->getW() : $node->w;
             $maxScroll = max($contentW - $containerW, 0);
             if ($maxScroll <= 0) return;
 
@@ -364,8 +379,9 @@ class ScrollManager
                 $this->applyScrollLeft($node, $newScrollLeft, false);
             }
         } else {
-            $contentH = $node->contentHeight;
-            $containerH = $node->h;
+            $geom = $node->cachedFragment;
+            $contentH = $geom !== null ? $geom->getContentHeight() : $node->contentHeight;
+            $containerH = $geom !== null ? $geom->getH() : $node->h;
             $maxScroll = max($contentH - $containerH, 0);
             if ($maxScroll <= 0) return;
 
