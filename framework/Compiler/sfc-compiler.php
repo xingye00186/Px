@@ -180,8 +180,27 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
     // Element node
     $tag = $node->type;
 
-    // Map old PUI tags to HTML (handled by parser, but double-check)
-    // Already done in parser - type should be 'div','span','button','input'
+    // Vue 3: <template v-if/v-else-if/v-else> 不产出 DOM 元素，子节点展开。
+    //   编译为 VNode::hList([...], PATCH_STABLE_LIST) —— childrenToArray 自动展平，
+    //   v-if 计数不变（each side 1 个 VNode：#list 或 #comment）。
+    //   注意：带 v-for 的 template 已走 vForHelper 分支（L144），不会到这里。
+    if ($tag === 'template') {
+        $childExprs = [];
+        if (is_array($node->children)) {
+            foreach ($node->children as $templateChild) {
+                if ($templateChild instanceof VNode) {
+                    $childExprs[] = generateVNodeExpr($templateChild, $loopInfo, $indent + 1, $ctx, $block, false);
+                }
+            }
+        } elseif ($node->children instanceof VNode) {
+            $childExprs[] = generateVNodeExpr($node->children, $loopInfo, $indent + 1, $ctx, $block, false);
+        }
+        if (count($childExprs) === 0) {
+            return "VNode::hComment()";
+        }
+        $childList = implode(", ", $childExprs);
+        return "VNode::hList([{$childList}], VNode::PATCH_STABLE_LIST)";
+    }
 
     // Props
     $propsStr = [];

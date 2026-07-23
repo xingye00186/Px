@@ -999,7 +999,12 @@ class TemplateParser
 
     /**
      * <template v-for="item in items" :key="item.id">...</template>
-     * → VNode('template', ['v-for'=>'item in items', ':key'=>'item.id'], [...])
+     * <template v-if="condition">...</template>
+     * <template v-else-if="otherCond">...</template>
+     * <template v-else>...</template>
+     *
+     * Vue 3 语义：<template> 作为不渲染的透明容器，支持 v-for/v-if/v-else-if/v-else。
+     * 子节点直接展开到父节点（不产出 DOM 元素）。
      */
     private function parseTemplateNode(Token $openTok): VNode
     {
@@ -1008,14 +1013,21 @@ class TemplateParser
 
         $vFor = $attrs['v-for'] ?? '';
         $keyExpr = $attrs[':key'] ?? '';
+        $vIf = $attrs['v-if'] ?? '';
+        $vElseIf = $attrs['v-else-if'] ?? '';
+        $vElse = isset($attrs['v-else']);
 
-        if ($vFor === '') {
-            $this->error('<template> missing v-for attribute', $openTok->line);
+        // Vue 3: <template> 必须有 v-for、v-if、v-else-if 或 v-else 之一
+        if ($vFor === '' && $vIf === '' && $vElseIf === '' && !$vElse) {
+            $this->error('<template> requires v-for, v-if, v-else-if, or v-else attribute', $openTok->line);
         }
 
         $props = [];
         if ($vFor !== '') $props['v-for'] = $vFor;
         if ($keyExpr !== '') $props[':key'] = $keyExpr;
+        if ($vIf !== '') $props['v-if'] = $vIf;
+        if ($vElseIf !== '') $props['v-else-if'] = $vElseIf;
+        if ($vElse) $props['v-else'] = '';
 
         $children = $this->parseChildrenUntil('template');
 
