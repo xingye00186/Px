@@ -41,22 +41,6 @@ class RenderNode
     public ?PhysicalFragment $cachedFragment = null;
     public ?ConstraintSpace $cachedConstraintSpace = null;
 
-    // ── 布局结果（由 LayoutOrchestrator + fragmentToElement 维护）──
-    public int $x = 0;
-    public int $y = 0;
-    public int $w = 0;
-    public int $h = 0;
-    public int $visualW = 0;
-    public int $visualH = 0;
-    public int $layer = 0;
-
-    // ── 滚动 ──
-    public int $scrollTop = 0;
-    public int $scrollLeft = 0;
-    public int $contentWidth = 0;
-    public int $contentHeight = 0;
-    public bool $isScrollContainer = false;
-
     // ── 交互状态（由 Application 事件处理器维护，用于伪类样式判断）──
     public bool $hovered = false;
     public bool $focused = false;

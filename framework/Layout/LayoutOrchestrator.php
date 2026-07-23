@@ -186,9 +186,7 @@ class LayoutOrchestrator
         $overflowY = $ovYVal ?? $ovVal ?? 'visible';
         $hasHScroll = ($overflowX === 'auto' || $overflowX === 'scroll');
         $hasVScroll = ($overflowY === 'auto' || $overflowY === 'scroll');
-        if ($hasHScroll || $hasVScroll) {
-            $node->isScrollContainer = true;
-        }
+        $nodeIsScrollContainer = ($hasHScroll || $hasVScroll);
 
         // Layer 继承
         $nodeLayer = $inheritedLayer;
@@ -274,7 +272,7 @@ class LayoutOrchestrator
         // 对标 Blink：算法内部处理两阶段布局（measure → distribute → re-layout）
 
         // 应用 layer 继承 + 元数据打标 + 滚动容器同步
-        $isScroll = $node->isScrollContainer || $algoFrag->getIsScrollContainer();
+        $isScroll = $nodeIsScrollContainer || $algoFrag->getIsScrollContainer();
         // 对标 Blink: 滚动容器的 contentWidth/Height = 子项最大范围
         $contentW = (int)$algoFrag->getContentWidth();
         $contentH = (int)$algoFrag->getContentHeight();

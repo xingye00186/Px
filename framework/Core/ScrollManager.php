@@ -122,24 +122,18 @@ class ScrollManager
             $ss->contentWidth = $frag->getContentWidth();
             $ss->contentHeight = $frag->getContentHeight();
         } else {
-            $ss->scrollTop = (int)($node->scrollTop ?? 0);
-            $ss->scrollLeft = (int)($node->scrollLeft ?? 0);
-            $ss->isScrollContainer = (bool)($node->isScrollContainer ?? false);
-            $ss->contentWidth = (int)($node->contentWidth ?? 0);
-            $ss->contentHeight = (int)($node->contentHeight ?? 0);
+            $ss->scrollTop = 0;
+            $ss->scrollLeft = 0;
+            $ss->isScrollContainer = false;
+            $ss->contentWidth = 0;
+            $ss->contentHeight = 0;
         }
     }
 
-    /** 回写迁移后的滚动状态到 RenderNode（旧消费者兼容） */
+    /** 回写迁移后的滚动状态到 RenderNode（已废弃：字段已移除，保留接口兼容） */
     public function writeBackToRenderNode(RenderNode $node): void
     {
-        if (!isset($this->scrollStates[spl_object_id($node)])) return;
-        $ss = $this->scrollStates[spl_object_id($node)];
-        if (property_exists($node, 'scrollTop')) $node->scrollTop = $ss->scrollTop;
-        if (property_exists($node, 'scrollLeft')) $node->scrollLeft = $ss->scrollLeft;
-        if (property_exists($node, 'isScrollContainer')) $node->isScrollContainer = $ss->isScrollContainer;
-        if (property_exists($node, 'contentWidth')) $node->contentWidth = $ss->contentWidth;
-        if (property_exists($node, 'contentHeight')) $node->contentHeight = $ss->contentHeight;
+        // RenderNode 滚动字段已移除，滚动状态统一由 cachedFragment 持有
     }
 
     // ── 拖拽状态 ──────────────────────────
@@ -195,8 +189,8 @@ class ScrollManager
 
             if ($event->isShiftDown()) {
                 $geom = $scrollNode->cachedFragment;
-                $contentW = $geom !== null ? $geom->getContentWidth() : $scrollNode->contentWidth;
-                $containerW = $geom !== null ? $geom->getW() : $scrollNode->w;
+                $contentW = $geom !== null ? $geom->getContentWidth() : 0;
+                $containerW = $geom !== null ? $geom->getW() : 0;
                 $maxScroll = max($contentW - $containerW, 0);
                 if ($maxScroll <= 0) return;
 
@@ -206,8 +200,8 @@ class ScrollManager
                 }
             } else {
                 $geom = $scrollNode->cachedFragment;
-                $contentH = $geom !== null ? $geom->getContentHeight() : $scrollNode->contentHeight;
-                $containerH = $geom !== null ? $geom->getH() : $scrollNode->h;
+                $contentH = $geom !== null ? $geom->getContentHeight() : 0;
+                $containerH = $geom !== null ? $geom->getH() : 0;
                 $maxScroll = max($contentH - $containerH, 0);
                 if (\Px\Core\Config::get('debug_diag_enabled', false)) {
                     error_log('[SCROLL_DBG] wheel x=' . $event->getX() . ' y=' . $event->getY() . ' delta=' . $delta . ' sa=' . $scrollAmount . ' scrollTop=' . $this->readScrollTop($scrollNode) . ' contentH=' . $contentH . ' containerH=' . $containerH . ' maxScroll=' . $maxScroll);
@@ -245,17 +239,17 @@ class ScrollManager
 
         // 对标 Blink: 从 Fragment 读取滚动容器标志
         $hsFrag = $node->cachedFragment;
-        $hsIsScroll = $hsFrag !== null ? $hsFrag->getIsScrollContainer() : $node->isScrollContainer;
+        $hsIsScroll = $hsFrag !== null ? $hsFrag->getIsScrollContainer() : false;
         if (!$hsIsScroll) return null;
 
         // 对标 Blink：从 PhysicalFragment 读取几何（cachedFragment = LayoutObject.physical_fragment_）
         $geom = $node->cachedFragment;
-        $nodeX = $geom !== null ? $geom->getX() : $node->x;
-        $nodeY = $geom !== null ? $geom->getY() : $node->y;
-        $nodeW = $geom !== null ? $geom->getW() : $node->w;
-        $nodeH = $geom !== null ? $geom->getH() : $node->h;
-        $contentH = $geom !== null ? $geom->getContentHeight() : $node->contentHeight;
-        $contentW = $geom !== null ? $geom->getContentWidth() : $node->contentWidth;
+        $nodeX = $geom !== null ? $geom->getX() : 0;
+        $nodeY = $geom !== null ? $geom->getY() : 0;
+        $nodeW = $geom !== null ? $geom->getW() : 0;
+        $nodeH = $geom !== null ? $geom->getH() : 0;
+        $contentH = $geom !== null ? $geom->getContentHeight() : 0;
+        $contentW = $geom !== null ? $geom->getContentWidth() : 0;
 
         // 从节点 style 读取可配置的滚动条宽度
         $sbWidth = $node->computedStyle?->getRaw('scrollbarWidth') ?? 12;
@@ -312,10 +306,10 @@ class ScrollManager
     {
         // 对标 Blink：从 PhysicalFragment 读取几何
         $geom = $scrollNode->cachedFragment;
-        $nodeX = $geom !== null ? $geom->getX() : $scrollNode->x;
-        $nodeY = $geom !== null ? $geom->getY() : $scrollNode->y;
-        $nodeW = $geom !== null ? $geom->getW() : $scrollNode->w;
-        $nodeH = $geom !== null ? $geom->getH() : $scrollNode->h;
+        $nodeX = $geom !== null ? $geom->getX() : 0;
+        $nodeY = $geom !== null ? $geom->getY() : 0;
+        $nodeW = $geom !== null ? $geom->getW() : 0;
+        $nodeH = $geom !== null ? $geom->getH() : 0;
         $contentW = $geom !== null ? $geom->getContentWidth() : $scrollNode->contentWidth;
         $contentH = $geom !== null ? $geom->getContentHeight() : $scrollNode->contentHeight;
 
@@ -374,8 +368,8 @@ class ScrollManager
 
         if ($this->scrollDragIsHorizontal) {
             $geom = $node->cachedFragment;
-            $contentW = $geom !== null ? $geom->getContentWidth() : $node->contentWidth;
-            $containerW = $geom !== null ? $geom->getW() : $node->w;
+            $contentW = $geom !== null ? $geom->getContentWidth() : 0;
+            $containerW = $geom !== null ? $geom->getW() : 0;
             $maxScroll = max($contentW - $containerW, 0);
             if ($maxScroll <= 0) return;
 
@@ -392,8 +386,8 @@ class ScrollManager
             }
         } else {
             $geom = $node->cachedFragment;
-            $contentH = $geom !== null ? $geom->getContentHeight() : $node->contentHeight;
-            $containerH = $geom !== null ? $geom->getH() : $node->h;
+            $contentH = $geom !== null ? $geom->getContentHeight() : 0;
+            $containerH = $geom !== null ? $geom->getH() : 0;
             $maxScroll = max($contentH - $containerH, 0);
             if ($maxScroll <= 0) return;
 

@@ -94,25 +94,25 @@ class RenderTreeManager
         // 几何优先取自 cachedFragment（Phase 5 几何权威源）；
         // RenderNode.x/y/w/h 在当前架构下可能未回填，直接读会得 0x0
         $geom = $node->cachedFragment;
-        $output .= (string)($geom !== null ? $geom->getX() : $node->x);
+        $output .= (string)($geom !== null ? $geom->getX() : 0);
         $output .= ",";
-        $output .= (string)($geom !== null ? $geom->getY() : $node->y);
+        $output .= (string)($geom !== null ? $geom->getY() : 0);
         $output .= " ";
-        $output .= (string)($geom !== null ? $geom->getW() : $node->w);
+        $output .= (string)($geom !== null ? $geom->getW() : 0);
         $output .= "x";
-        $output .= (string)($geom !== null ? $geom->getH() : $node->h);
+        $output .= (string)($geom !== null ? $geom->getH() : 0);
         $output .= ")";
 
         // ── scroll info（所有级别）—— 对标 Blink: 从 Fragment 读取 ──
         $scrollFrag = $node->cachedFragment;
-        $isScroll = $scrollFrag !== null ? $scrollFrag->getIsScrollContainer() : $node->isScrollContainer;
+        $isScroll = $scrollFrag !== null ? $scrollFrag->getIsScrollContainer() : false;
         if ($isScroll) {
             $output .= " scroll";
-            $fragCH = $scrollFrag !== null ? $scrollFrag->getContentHeight() : $node->contentHeight;
-            $fragCW = $scrollFrag !== null ? $scrollFrag->getContentWidth() : $node->contentWidth;
-            $fragH = $scrollFrag !== null ? $scrollFrag->getH() : $node->h;
-            $fragST = $scrollFrag !== null ? $scrollFrag->getScrollTop() : $node->scrollTop;
-            $fragSL = $scrollFrag !== null ? $scrollFrag->getScrollLeft() : $node->scrollLeft;
+            $fragCH = $scrollFrag !== null ? $scrollFrag->getContentHeight() : 0;
+            $fragCW = $scrollFrag !== null ? $scrollFrag->getContentWidth() : 0;
+            $fragH = $scrollFrag !== null ? $scrollFrag->getH() : 0;
+            $fragST = $scrollFrag !== null ? $scrollFrag->getScrollTop() : 0;
+            $fragSL = $scrollFrag !== null ? $scrollFrag->getScrollLeft() : 0;
             if ($detail !== 'minimal') {
                 $output .= " ch=";
                 $output .= (string)$fragCH;
@@ -159,7 +159,7 @@ class RenderTreeManager
                 $output .= " DIRTY";
             }
             $output .= " layer=";
-            $output .= (string)$node->layer;
+            $output .= (string)($geom !== null ? $geom->getLayer() : 0);
         }
 
         // content / text
@@ -1322,10 +1322,10 @@ class RenderTreeManager
         // 对标 Blink：HitTest 从 LayoutObject 的 PhysicalFragment 读取几何
         // Px 等价：RenderNode.cachedFragment = Blink LayoutObject.physical_fragment_
         $geom = $node->cachedFragment;
-        $nodeX = $geom !== null ? $geom->getX() : $node->x;
-        $nodeY = $geom !== null ? $geom->getY() : $node->y;
-        $nodeW = $geom !== null ? $geom->getW() : $node->w;
-        $nodeH = $geom !== null ? $geom->getH() : $node->h;
+        $nodeX = $geom !== null ? $geom->getX() : 0;
+        $nodeY = $geom !== null ? $geom->getY() : 0;
+        $nodeW = $geom !== null ? $geom->getW() : 0;
+        $nodeH = $geom !== null ? $geom->getH() : 0;
 
         // 对标 Blink overflow clip：点不在 clip 容器边界内则跳过整个子树
         // Blink: HitTestResult 在遍历子节点前检查 overflow clip region
@@ -1345,16 +1345,17 @@ class RenderTreeManager
         $childX = $x;
         $childY = $y;
         $hitFrag = $node->cachedFragment;
-        $hitIsScroll = $hitFrag !== null ? $hitFrag->getIsScrollContainer() : $node->isScrollContainer;
+        $hitIsScroll = $hitFrag !== null ? $hitFrag->getIsScrollContainer() : false;
         if ($hitIsScroll) {
-            $childX += $hitFrag !== null ? $hitFrag->getScrollLeft() : $node->scrollLeft;
-            $childY += $hitFrag !== null ? $hitFrag->getScrollTop() : $node->scrollTop;
+            $childX += $hitFrag !== null ? $hitFrag->getScrollLeft() : 0;
+            $childY += $hitFrag !== null ? $hitFrag->getScrollTop() : 0;
         }
 
         // Layer-aware: 按 layer 递减遍历子节点（高 layer 优先命中）
         $layerGroups = [];
         foreach ($node->children as $i => $child) {
-            $layerGroups[$child->layer][] = $i;
+            $childLayer = $child->cachedFragment !== null ? $child->cachedFragment->getLayer() : 0;
+            $layerGroups[$childLayer][] = $i;
         }
         krsort($layerGroups);
         foreach ($layerGroups as $indices) {
@@ -1412,16 +1413,17 @@ class RenderTreeManager
         $childX = $x;
         $childY = $y;
         $scFrag = $node->cachedFragment;
-        $scIsScroll = $scFrag !== null ? $scFrag->getIsScrollContainer() : $node->isScrollContainer;
+        $scIsScroll = $scFrag !== null ? $scFrag->getIsScrollContainer() : false;
         if ($scIsScroll) {
-            $childX += $scFrag !== null ? $scFrag->getScrollLeft() : $node->scrollLeft;
-            $childY += $scFrag !== null ? $scFrag->getScrollTop() : $node->scrollTop;
+            $childX += $scFrag !== null ? $scFrag->getScrollLeft() : 0;
+            $childY += $scFrag !== null ? $scFrag->getScrollTop() : 0;
         }
 
         // Layer-aware: 按 layer 递减遍历子节点
         $layerGroups = [];
         foreach ($node->children as $i => $child) {
-            $layerGroups[$child->layer][] = $i;
+            $childLayer2 = $child->cachedFragment !== null ? $child->cachedFragment->getLayer() : 0;
+            $layerGroups[$childLayer2][] = $i;
         }
         krsort($layerGroups);
         foreach ($layerGroups as $indices) {
@@ -1446,11 +1448,11 @@ class RenderTreeManager
         // 检查自身是否为滚动容器且坐标命中（含 transform 偏移）
         // 对标 Blink：从 PhysicalFragment 读取几何
         $geom = $node->cachedFragment;
-        $nodeX = $geom !== null ? $geom->getX() : $node->x;
-        $nodeY = $geom !== null ? $geom->getY() : $node->y;
-        $nodeW = $geom !== null ? $geom->getW() : $node->w;
-        $nodeH = $geom !== null ? $geom->getH() : $node->h;
-        if (($geom !== null ? $geom->getIsScrollContainer() : $node->isScrollContainer)
+        $nodeX = $geom !== null ? $geom->getX() : 0;
+        $nodeY = $geom !== null ? $geom->getY() : 0;
+        $nodeW = $geom !== null ? $geom->getW() : 0;
+        $nodeH = $geom !== null ? $geom->getH() : 0;
+        if (($geom !== null ? $geom->getIsScrollContainer() : false)
             && $x >= $nodeX + $hitOffX && $x <= $nodeX + $nodeW + $hitOffX
             && $y >= $nodeY + $hitOffY && $y <= $nodeY + $nodeH + $hitOffY) {
             return $node;
