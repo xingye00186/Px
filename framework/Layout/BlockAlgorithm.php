@@ -152,7 +152,9 @@ class BlockAlgorithm extends LayoutAlgorithm
             $width = TextMeasureCache::measure($textContent, $fs, (bool)$bd);
         }
 
-        if ($width <= 0) {
+        // CSS 2.2 §10.2: 仅当 width 为 auto 时才用可用空间填充，显式 width:0 应尊重
+        $hasExplicitWidth = ($s->width !== null && !$s->width->isAuto() && !$s->width->isPercent() && !$s->width->isIntrinsic());
+        if ($width <= 0 && !$hasExplicitWidth) {
             $ml = $s->margin?->left->toPx() ?? 0; $mr = $s->margin?->right->toPx() ?? 0;
             $autoPadL = $s->padding?->left->toPx() ?? 0; $autoPadR = $s->padding?->right->toPx() ?? 0;
             $autoBw = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
