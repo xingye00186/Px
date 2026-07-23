@@ -86,7 +86,8 @@ class FlexAlgorithm extends LayoutAlgorithm
             $grow = $rawGrow !== null ? (float)$rawGrow : (float)$cs->flex->grow;
             $rawShrink = $cs->getRaw('flexShrink');
             $shrink = $rawShrink !== null ? (float)$rawShrink : (float)$cs->flex->shrink;
-            $order = (int)($cs->getRaw("order") ?? 0);
+            $rawOrder = $cs->getRaw("order");
+            $order = $rawOrder !== null ? (is_object($rawOrder) ? (int)$rawOrder->toPx() : (int)$rawOrder) : 0;
             // flex-basis from resolved CssLength (not raw string from getRaw)
             $basisVal = $cs->flexBasis;
             $basis = -1;

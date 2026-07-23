@@ -381,8 +381,8 @@ $geoKeys = ['width','height','minWidth','maxWidth','minHeight','maxHeight',
 | 5.1 | ComputedStyle 归一化快照 | ✅ 正确 | readonly + frozen |
 | 5.2 | StylePool Flyweight | ✅ 正确 | LRU 512 池化 |
 | 5.3 | Fragment 树独立遍历 | ✅ 正确 | PaintPipeline.render(Fragment) |
-| 5.4 | 脏标记传播/局部重算 | ⚠️ 部分 | geoKeys 列表不完整 |
-| 5.5 | RenderNode 瘦身 | ❌ 未达标 | 132 行，目标 60 行 |
+| 5.4 | 脏标记传播/局部重算 | ✅ 已修复 | geoKeys 补全 14 个属性 (7b749899) |
+| 5.5 | RenderNode 瘦身 | ⚠️ 部分 | 字段保留为 fallback，消费者已统一读 cachedFragment |
 
 ---
 
@@ -409,7 +409,7 @@ $geoKeys = ['width','height','minWidth','maxWidth','minHeight','maxHeight',
 | **P2** | bfcOffset 死字段 | 概念不对齐 |
 | **P2** | ChildLayoutProvider 用 equals 而非 layoutEquals | 缓存不命中 |
 | **P3** | FlexLineBreaker docblock 类型错误 | 文档误导 |
-| **P3** | layoutCacheVersion 未消费 | 死代码 |
+| ~~**P3**~~ | ~~layoutCacheVersion 未消费~~ | ✅ 已删除 (4bee0a73) |
 | **P3** | StylePool key 依赖 object_id | LRU 淘汰后命中率下降 |
 
 ---
