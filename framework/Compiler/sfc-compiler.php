@@ -1152,11 +1152,24 @@ function compileOneComponent(
         foreach ($bindKeys as $k => $_) { $allImplicitKeys[$k] = true; }
         foreach ($complexIdentifiers as $k => $_) { $allImplicitKeys[$k] = true; }
 
+        // 收集 v-for source 名，用于类型推断：v-for source 必须是 array
+        $vForSources = [];
+        foreach ($loops as $loopInfo) {
+            if (isset($loopInfo['source']) && $loopInfo['source'] !== '') {
+                $vForSources[$loopInfo['source']] = true;
+            }
+        }
+
         foreach ($allImplicitKeys as $key => $_) {
             // 只取合法 PHP 标识符（避免带点的表达式、数字、特殊符号）
             if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $key)) continue;
             if (isset($existingNames[$key])) continue;
-            $reactiveProps[] = ['name' => $key, 'type' => 'string', 'default' => "''"];
+            // v-for source 推断为 array（foreach 需要），其他推断为 string
+            if (isset($vForSources[$key])) {
+                $reactiveProps[] = ['name' => $key, 'type' => 'array', 'default' => '[]'];
+            } else {
+                $reactiveProps[] = ['name' => $key, 'type' => 'string', 'default' => "''"];
+            }
             $existingNames[$key] = true;
         }
     }
