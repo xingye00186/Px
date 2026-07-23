@@ -211,6 +211,11 @@ class RenderTreeManager
         if ($pos !== 'static') {
             $output .= " [pos=$pos]";
         }
+        // display 标注（对标测试期望：[dsp=none] / [dsp=inline] / [dsp=inline-block]）
+        $dsp = $frag->style?->display?->value ?? 'block';
+        if ($dsp !== 'block' && $dsp !== 'flex' && $dsp !== 'grid') {
+            $output .= " [dsp=$dsp]";
+        }
 
         if ($frag->content !== null && $frag->content !== "") {
             $content = (string)$frag->content;
