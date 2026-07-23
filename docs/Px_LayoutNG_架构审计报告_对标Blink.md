@@ -1,8 +1,58 @@
 # Px LayoutNG 架构审计报告 — 对标 Blink LayoutNG
 
 > 审计日期：2026-07-24
+> 复核日期：2026-07-24（拉取最新代码后重新核查）
 > 审计范围：framework/Layout、framework/Render、framework/Css、framework/Paint、framework/Core
 > 对标目标：Blink LayoutNG（NGBlockNode / NGFlexLayoutAlgorithm / NGGridLayoutAlgorithm / NGPhysicalFragment / ConstraintSpace）
+
+---
+
+## 〇、复核更新（2026-07-24 最新代码）
+
+拉取最新代码后重新核查，以下问题**已修复**：
+
+| 原优先级 | 问题 | 修复方式 |
+|---------|------|----------|
+| ~~P0~~ | 算法单例 provider 嵌套覆盖 | LayoutOrchestrator L239-253 增加 save/restore 模式 |
+| ~~P0~~ | PaintPipeline 回写 RenderNode | `$node->computedStyle = $style` / `$node->content = $content` 已移除 |
+| ~~P0~~ | PaintPipeline background-fixed 读 node->x/y | 改为使用 Fragment 参数 $x/$y |
+| ~~P1~~ | geoKeys 列表不完整 | 补全 fontSize/lineHeight/gap/flexBasis/flexGrow/flexShrink/gridTemplate/left/top/right/bottom/columnCount/columnWidth |
+| ~~P1~~ | contentWidth = w 语义错误 | 滚动容器现在计算子项最大范围作为 contentWidth/Height（LayoutOrchestrator L278-291） |
+| ~~P1~~ | ScrollManager 双写模式 | syncToNode/syncFromNode 已移除，统一通过 ScrollState 管理 |
+| ~~P3~~ | layoutCacheVersion 死代码 | 已从 RenderNode 移除 |
+| ~~P3~~ | IntrinsicSizes 类残留 | 已删除，改为 isIntrinsicMeasurement 模式 |
+| — | LayoutAlgorithm 签名冗余 | 从 8 参数简化为 5 参数（移除 childFragments/childConstraints/childIntrinsicSizes） |
+
+以下问题**部分修复**：
+
+| 原优先级 | 问题 | 当前状态 |
+|---------|------|----------|
+| P0→P2 | PaintPipeline 读 RenderNode 几何 | 从 12 处减至 8 处，全部改为 cachedFragment 优先 + RenderNode fallback |
+
+以下问题**仍未修复**（更新后优先级）：
+
+| 优先级 | 问题 | 说明 |
+|--------|------|------|
+| **P0** | RenderNode 几何字段未移除 | x/y/w/h/visualW/visualH/layer 仍在 L45-51（131 行） |
+| **P1** | PhysicalFragment.displayText 可变 | L63 仍为非 readonly |
+| **P1** | BFC/FFC/GFC 未隔离 | spaceType 仅为标签 |
+| **P1** | 滚动/交互状态未外置 | RenderNode L54-63 仍有字段（但双写已消除） |
+| **P2** | ChildLayoutProvider 实质全量预布局 | 所有算法入口仍全量调用 layoutChild |
+| **P2** | OOF 子树双重布局 | LayoutOrchestrator L211-216 仍预布局 |
+| **P2** | Flex Pass 2 启发式阈值 | 5px 阈值 |
+| **P2** | GridPlacer 原地修改 GridTrack | space-between 分支 |
+| **P2** | bfcOffset 死字段 | forChild() 始终 0 |
+| **P3** | FlexLineBreaker docblock 类型错误 | 声明 RenderNode[] 实际 FlexItem[] |
+| **P3** | StylePool key 依赖 object_id | LRU 淘汰后命中率下降 |
+
+### 更新后问题统计
+
+| 优先级 | 数量 | 说明 |
+|--------|------|------|
+| P0 严重 | **1** | RenderNode 几何字段未移除（原 4 项已修复 3 项） |
+| P1 重要 | **3** | displayText 可变 / BFC 未隔离 / 状态未外置（原 7 项已修复 4 项） |
+| P2 中等 | **6** | 性能与精度（原 7 项，PaintPipeline 降级为 P2） |
+| P3 轻微 | **2** | 文档/命中率（原 3 项已修复 1 项） |
 
 ---
 
@@ -10,7 +60,7 @@
 
 本次审计严格对标 Blink LayoutNG 架构设计，对 Px 框架布局引擎进行全面架构审查，覆盖 **5 大维度、25 个子项**，每项均有代码行级证据。共审查 **28 个核心源文件**。
 
-### 问题统计
+### 原始问题统计（首次审计）
 
 | 优先级 | 数量 | 说明 |
 |--------|------|------|
