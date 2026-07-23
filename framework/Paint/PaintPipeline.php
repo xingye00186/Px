@@ -47,11 +47,15 @@ class PaintPipeline
         $br = (int)($cs?->borderRightWidth ?? 0);
         $bt = (int)($cs?->borderTopWidth ?? 0);
         $bb = (int)($cs?->borderBottomWidth ?? 0);
-        $vw = ($node->visualW > 0 ? $node->visualW : $node->w);
-        $vh = ($node->visualH > 0 ? $node->visualH : $node->h);
+        // 对标 Blink：从 Fragment 读几何（不从 RenderNode 读）
+        $geom = $node->cachedFragment;
+        $vw = $geom !== null ? ($geom->visualW > 0 ? $geom->visualW : $geom->w) : ($node->visualW > 0 ? $node->visualW : $node->w);
+        $vh = $geom !== null ? ($geom->visualH > 0 ? $geom->visualH : $geom->h) : ($node->visualH > 0 ? $node->visualH : $node->h);
+        $nx = $geom !== null ? $geom->x : $node->x;
+        $ny = $geom !== null ? $geom->y : $node->y;
         return [
-            'x' => (int)($node->x ?? 0) + (int)($bl ?? 0),
-            'y' => $node->y + $bt,
+            'x' => (int)$nx + (int)($bl ?? 0),
+            'y' => (int)$ny + $bt,
             'w' => max(0, $vw - $bl - $br),
             'h' => max(0, $vh - $bt - $bb),
         ];
@@ -201,11 +205,10 @@ class PaintPipeline
             return null;
         }
 
-        // Fragment 主线：直接消费 Fragment 字段，不再倒写 RenderNode
+        // Fragment 主线：直接消费 Fragment 字段，不倒写 RenderNode
+        // 对标 Blink：paint 不修改 LayoutObject，单向数据流
         $node = $frag->sourceNode;
         if ($node === null) return null;
-        $node->computedStyle = $style;
-        $node->content = $content;
 
         // ── viewport culling ──
         $x = (int)$frag->x;
@@ -463,8 +466,9 @@ class PaintPipeline
         $borderLeftColor = $pseudoOverrides['borderLeftColor'] ?? $cs?->borderLeftColor ?? $borderColor;
         $bgImageEl = null;
         if ($bgImageHandle !== 0) {
-            $imgX = $backgroundAttachment === 'fixed' ? (int)($node->x ?? 0) : $x;
-            $imgY = $backgroundAttachment === 'fixed' ? $node->y : $y;
+            // 对标 Blink：从 Fragment 读几何（$x/$y 已来自 fragment）
+            $imgX = $backgroundAttachment === 'fixed' ? $x : $x;
+            $imgY = $backgroundAttachment === 'fixed' ? $y : $y;
             $bgImageEl = [
                 'type' => 'image',
                 'handle' => $bgImageHandle,
@@ -513,10 +517,12 @@ class PaintPipeline
                 $letterSpacing += $fontStretchExtra;
             }
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
-            $selfY = (int)($node->y ?? 0);
-            $selfH = (int)($node->visualH ?? 0);
-            $selfX = (int)($node->x ?? 0);
-            $selfW = (int)($node->visualW ?? 0);
+            // 对标 Blink：从 Fragment 读几何
+            $geom = $node->cachedFragment;
+            $selfY = $geom !== null ? (int)$geom->y : (int)($node->y ?? 0);
+            $selfH = $geom !== null ? (int)$geom->visualH : (int)($node->visualH ?? 0);
+            $selfX = $geom !== null ? (int)$geom->x : (int)($node->x ?? 0);
+            $selfW = $geom !== null ? (int)$geom->visualW : (int)($node->visualW ?? 0);
             $pdL = $pseudoOverrides['paddingLeft'] ?? $cs?->padding?->left?->toPx() ?? 0;
             $pdT = $pseudoOverrides['paddingTop'] ?? $cs?->padding?->top?->toPx() ?? 0;
             $pdR = $pseudoOverrides['paddingRight'] ?? $cs?->padding?->right?->toPx() ?? 0;
@@ -600,8 +606,9 @@ class PaintPipeline
             }
             $elements = [];
             if ($hasBg || $hasBorder) {
-                $bgX = $backgroundAttachment === 'fixed' ? (int)($node->x ?? 0) : $x;
-                $bgY = $backgroundAttachment === 'fixed' ? $node->y : $y;
+                // 对标 Blink：从 Fragment 读几何（$x/$y 已来自 fragment）
+                $bgX = $backgroundAttachment === 'fixed' ? $x : $x;
+                $bgY = $backgroundAttachment === 'fixed' ? $y : $y;
                 $clipX = $bgX; $clipY = $bgY; $clipW = $w; $clipH = $h;
                 if ($backgroundClip === 'padding-box' && ($borderLeftWidth > 0 || $borderTopWidth > 0 || $borderRightWidth > 0 || $borderBottomWidth > 0)) {
                     $clipX += $borderLeftWidth; $clipY += $borderTopWidth;
