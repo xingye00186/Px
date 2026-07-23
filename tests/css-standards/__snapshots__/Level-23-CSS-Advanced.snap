@@ -1,10 +1,22 @@
-@generated 2026-07-23 10:34:06
+@generated 2026-07-23 11:49:54
+=== Test: outline-style:dashed 不影响布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x80) text="Dashed"
+
+---
+
+=== Test: outline 多属性不影响布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 150x60) text="Double outline"
+
+---
+
 === Test: input placeholder 文本 ===
 Frame #1 events=0 detail=normal
-input (0,0 1440x0)
+input (0,0 200x36)
 
 ---
 
 === Test: 空 input 无 placeholder 不显示 ===
 Frame #1 events=0 detail=normal
-input (0,0 1440x0)
+input (0,0 200x36)

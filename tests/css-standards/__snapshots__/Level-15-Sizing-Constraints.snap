@@ -1,1 +1,47 @@
-@generated 2026-07-23 10:34:05
+@generated 2026-07-23 11:49:53
+=== Test: min-height 在 flex column 中 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x200)
+  div (0,0 300x200) text="Min 80px"
+
+---
+
+=== Test: min-width 在 flex row 中 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (0,0 400x50) text="Min 150px"
+
+---
+
+=== Test: min-height 50% 百分比 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200)
+  div (0,0 100x50) text="Min 50%"
+
+---
+
+=== Test: max-height 50% 百分比 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200)
+  div (0,0 100x50) text="Max 50%"
+
+---
+
+=== Test: height auto 在 flex column 中子项撑开 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x170)
+  div (0,0 300x50) text="Header"
+  div (0,50 300x80) text="Body"
+  div (0,130 300x40) text="Footer"
+
+---
+
+=== Test: min-height 大于 height 时取 min-height ===
+Frame #1 events=0 detail=normal
+div (10,10 200x80) text="Min 80 > h 30"
+
+---
+
+=== Test: max-height 小于 height 时取 max-height ===
+Frame #1 events=0 detail=normal
+div (10,10 200x60) text="Max 60 < h 150"

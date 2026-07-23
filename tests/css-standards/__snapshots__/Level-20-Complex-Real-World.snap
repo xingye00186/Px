@@ -1,1 +1,9 @@
-@generated 2026-07-23 10:34:05
+@generated 2026-07-23 11:49:53
+=== Test: Dashboard 侧边栏+头部+主内容 ===
+Frame #1 events=0 detail=normal
+div (0,0 900x600)
+  div (0,0 200x60) text="Sidebar"
+  div (200,0 700x60) text="Header"
+  div (0,60 200x540)
+    div (16,16 101x19)
+    div (133,16 50x19)

@@ -1,34 +1,34 @@
-@generated 2026-07-23 10:34:05
+@generated 2026-07-23 11:49:53
 === Test: border-top 顶部边框 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Top border"
+div (10,10 200x80) text="Top border"
 
 ---
 
 === Test: border-bottom 底部边框 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Bottom border"
+div (10,10 200x80) text="Bottom border"
 
 ---
 
 === Test: border-left 左边框 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Left border"
+div (10,10 200x80) text="Left border"
 
 ---
 
 === Test: border-right 右边框 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Right border"
+div (10,10 200x80) text="Right border"
 
 ---
 
 === Test: 四方向不同颜色边框组合 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Multi border"
+div (10,10 200x100) text="Multi border"
 
 ---
 
 === Test: per-side border-color 不同颜色 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Per-side colors"
+div (10,10 200x80) text="Per-side colors"

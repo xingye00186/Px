@@ -1,1 +1,32 @@
-@generated 2026-07-23 10:34:04
+@generated 2026-07-23 11:49:52
+=== Test: margin-top auto 在 flex column 底推 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200)
+  div (0,0 200x40) text="Top"
+  div (0,40 200x40) text="Bottom"
+
+---
+
+=== Test: margin auto 在 grid cell 居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100)
+  div (0,0 200x80) text="Center"
+  div (200,0 200x80) text="Normal"
+
+---
+
+=== Test: margin 在滚动容器中 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x150)
+  div (0,0 300x40) text="Item 1"
+  div (0,52 300x40) text="Item 2"
+  div (0,104 300x40) text="Item 3"
+
+---
+
+=== Test: margin + relative 偏移组合 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x136)
+  div (0,0 400x40) text="Normal"
+  div (20,58 400x40) text="Rel margin"
+  div (0,96 400x40) text="After"

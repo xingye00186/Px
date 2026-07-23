@@ -1,41 +1,41 @@
-@generated 2026-07-23 10:34:06
+@generated 2026-07-23 11:49:54
 === Test: grid-template-areas header-main-footer 三行布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x76)
-  div (0,0 1440x19) text="Header"
-  div (0,0 1440x19) text="Main"
-  div (0,0 1440x19) text="Sidebar"
-  div (0,0 1440x19) text="Footer"
+div (0,0 600x300)
+  div (0,0 198x60) text="Header"
+  div (202,0 398x60) text="Main"
+  div (0,64 198x192) text="Sidebar"
+  div (202,64 398x192) text="Footer"
 
 ---
 
 === Test: justify-self:end grid子项右对齐 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="Start"
-  div (0,0 1440x19) text="End"
+div (0,0 400x100)
+  div (0,0 200x50) text="Start"
+  div (204,0 200x50) text="End"
 
 ---
 
 === Test: justify-self:start grid子项左对齐 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="Right"
-  div (0,0 1440x19) text="Start"
+div (0,0 400x100)
+  div (0,0 200x50) text="Right"
+  div (204,0 200x50) text="Start"
 
 ---
 
 === Test: justify-self:stretch grid子项拉伸 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="Auto"
-  div (0,0 1440x19) text="Stretch"
+div (0,0 400x100)
+  div (0,0 200x50) text="Auto"
+  div (204,0 200x50) text="Stretch"
 
 ---
 
 === Test: grid-area header 跨两列 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x57)
-  div (0,0 1440x19) text="Header"
-  div (0,0 1440x19) text="Main"
-  div (0,0 1440x19) text="Sidebar"
+div (0,0 400x200)
+  div (0,0 198x50) text="Header"
+  div (202,0 198x50) text="Main"
+  div (0,54 198x146) text="Sidebar"

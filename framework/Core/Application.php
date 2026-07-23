@@ -57,6 +57,9 @@ class Application
     /** @var string 最近一次 layout 的 Fragment JSON 快照（供 dumpLayoutToFile 直接读取，避免重算） */
     private string $lastLayoutDumpJson = '';
 
+    /** @var PhysicalFragment|null 最近一次 layout 的 Fragment 树（paint 儿何权威源，供测试 dump） */
+    private ?PhysicalFragment $lastFragmentTree = null;
+
     private ?ReactiveComponentInterface $rootComponent = null;
     private ?VNode $activeVNodeTree = null;
     private bool $renderRequested = false;
@@ -837,6 +840,29 @@ class Application
         file_put_contents($path, $this->lastLayoutDumpJson);
     }
 
+    /**
+     * 以文本格式 dump 最近一次 layout 的 Fragment 树（供 css-test harness 对比）。
+     * 格式与 RenderTreeManager::dumpRenderTree 一致，但几何取自 Fragment 树
+     * （paint 实际渲染的权威源），避免 RenderNode.cachedFragment 的 Phase B 预布局偏差。
+     */
+    public function dumpFragmentTreeForTest(): string
+    {
+        if ($this->lastFragmentTree === null) {
+            return '';
+        }
+        $output = "Frame #1 events=0 detail=normal\n";
+        $root = $this->lastFragmentTree;
+        // #root 节点不产生元素，展示子节点（与 dumpRenderTree 行为一致）
+        if ($root->type === '#root') {
+            foreach ($root->children as $child) {
+                $output .= $this->renderTreeManager->dumpFragmentTree($child, '');
+            }
+        } else {
+            $output .= $this->renderTreeManager->dumpFragmentTree($root, '');
+        }
+        return $output;
+    }
+
 
 
     /**
@@ -1030,6 +1056,7 @@ class Application
         // LayoutOrchestrator 处理 RenderNode 并收集 Fragment 树
         \Px\Core\PerfCounter::start('stage:layout');
         $fragmentTree = $this->layoutOrchestrator->layout($rootRenderNode);
+        $this->lastFragmentTree = $fragmentTree;
         \Px\Core\PerfCounter::end('stage:layout');
 
         if (Config::get('debug_diag_enabled', false)) {

@@ -1,67 +1,51 @@
-@generated 2026-07-23 10:34:06
+@generated 2026-07-23 11:49:54
 === Test: flex row-reverse 反向水平排列 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x57)
-  div (0,0 1440x19) text="A"
-  div (0,0 1440x19) text="B"
-  div (0,0 1440x19) text="C"
+div (0,0 400x60)
+  div (300,0 100x60) text="A"
+  div (200,0 100x60) text="B"
+  div (100,0 100x60) text="C"
 
 ---
 
 === Test: flex column-reverse 反向垂直排列 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="A"
-  div (0,0 1440x19) text="B"
+div (0,0 200x200)
+  div (0,160 200x40) text="A"
+  div (0,120 200x40) text="B"
 
 ---
 
 === Test: flex wrap-reverse 反向换行 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x76)
-  div (0,0 1440x19) text="A"
-  div (0,0 1440x19) text="B"
-  div (0,0 1440x19) text="C"
-  div (0,0 1440x19) text="D"
-
----
-
-=== Test: align-self:flex-end 子项底部对齐 ===
-Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="Center"
-  div (0,0 1440x19) text="Bottom"
-
----
-
-=== Test: align-self:center 子项居中覆盖 stretch ===
-Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="Stretched"
-  div (0,0 1440x19) text="Centered"
+div (0,0 200x120)
+  div (0,4 90x56) text="A"
+  div (94,4 90x56) text="B"
+  div (0,64 90x56) text="C"
+  div (94,64 90x56) text="D"
 
 ---
 
 === Test: order:2 和 order:-1 重排序 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x76)
-  div (0,0 1440x19) text="A"
-  div (0,0 1440x19) text="B"
-  div (0,0 1440x19) text="C"
-  div (0,0 1440x19) text="D"
+div (0,0 400x50)
+  div (0,0 80x50) text="A"
+  div (80,0 80x50) text="B"
+  div (160,0 80x50) text="C"
+  div (240,0 80x50) text="D"
 
 ---
 
 === Test: flex-shrink:0 禁止收缩 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="Fixed"
-  div (0,0 1440x19) text="Shrink"
+div (0,0 300x50)
+  div (0,0 200x50) text="Fixed"
+  div (200,0 100x50) text="Shrink"
 
 ---
 
 === Test: flex-basis:200px 固定基准 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="Basis"
-  div (0,0 1440x19) text="Flex"
+div (0,0 400x50)
+  div (0,0 200x50) text="Basis"
+  div (200,0 200x50) text="Flex"

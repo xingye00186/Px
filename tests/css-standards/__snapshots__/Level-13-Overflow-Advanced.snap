@@ -1,5 +1,13 @@
-@generated 2026-07-23 10:34:05
+@generated 2026-07-23 11:49:52
+=== Test: overflow-y:auto 在 grid cell 中 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x150)
+  div (0,0 200x60) text="Normal"
+  div (208,0 200x60) text="Normal 2"
+
+---
+
 === Test: text-overflow ellipsis 在 flex item 中 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19)
-  div (0,0 1440x19) text="Very long text that should be clipped wi..."
+div (0,0 200x40)
+  div (0,0 0x40) text="Very long text that should be clipped wi..."

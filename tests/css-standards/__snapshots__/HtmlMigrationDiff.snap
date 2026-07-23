@@ -1,152 +1,160 @@
-@generated 2026-07-23 10:34:06
+@generated 2026-07-23 11:49:53
+=== Test: Flex row + gap 两列等宽 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x200)
+  div (0,0 292x200) text="Card1"
+  div (308,0 292x200) text="Card2"
+
+---
+
 === Test: Grid 3列等宽 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x57)
-  div (0,0 1440x19) text="C1"
-  div (0,0 1440x19) text="C2"
-  div (0,0 1440x19) text="C3"
+div (0,0 600x50)
+  div (0,0 192x50) text="C1"
+  div (204,0 192x50) text="C2"
+  div (408,0 192x50) text="C3"
 
 ---
 
 === Test: border-left 彩色左边框 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Accent"
+div (0,0 400x100) text="Accent"
 
 ---
 
 === Test: border-radius 圆角 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Rounded"
+div (0,0 200x100) text="Rounded"
 
 ---
 
 === Test: 嵌套 flex 模拟 CSS columns ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x76)
-  div (0,0 1440x19) text="Item 1"
-  div (0,0 1440x19) text="Item 2"
-  div (0,0 1440x19) text="Item 3"
-  div (0,0 1440x19) text="Item 4"
+div (0,0 600x48)
+  div (0,0 290x20) text="Item 1"
+  div (298,0 290x20) text="Item 2"
+  div (0,28 290x20) text="Item 3"
+  div (298,28 290x20) text="Item 4"
 
 ---
 
 === Test: flex-shrink:0 固定宽度 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="1"
+div (0,0 28x28) text="1"
 
 ---
 
 === Test: flex row + align-items:center ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19)
-  div (0,0 1440x0)
-  span (0,0 1440x19) text="Title"
+div (0,0 400x40)
+  div (0,6 28x28)
+  span (36,12 0x16) text="Title"
 
 ---
 
 === Test: overflow-y:auto 滚动容器 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x76)
-  div (0,0 1440x19) text="Line1"
-  div (0,0 1440x19) text="Line2"
-  div (0,0 1440x19) text="Line3"
-  div (0,0 1440x19) text="Line4"
+div (0,0 300x100)
+  div (0,0 300x50) text="Line1"
+  div (0,50 300x50) text="Line2"
+  div (0,100 300x50) text="Line3"
+  div (0,150 300x50) text="Line4"
 
 ---
 
 === Test: flex row 模拟表格 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="Column"
-  div (0,0 1440x19) text="Value"
+div (0,0 600x15)
+  div (0,0 200x15) text="Column"
+  div (200,0 400x15) text="Value"
 
 ---
 
 === Test: 深色背景前景色文本 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Dark theme text"
+div (0,0 400x30) text="Dark theme text"
 
 ---
 
 === Test: 多层嵌套卡片 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x38)
-    div (0,0 1440x19) text="Card Title"
-    div (0,0 1440x19) text="Card content text"
+div (0,0 500x146)
+  div (32,32 394x82)
+    div (20,21 394x16) text="Card Title"
+    div (20,45 394x16) text="Card content text"
 
 ---
 
 === Test: badge 标签样式 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="Active"
-  span (0,0 1440x19) text="v5 M3"
+div (0,0 200x24)
+  div (0,5 0x13) text="Active"
+  span (6,4 0x16) text="v5 M3"
 
 ---
 
 === Test: 代码块 white-space:pre ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19)
-  div (0,0 1440x19) text="abstract class RenderContext {
+div (0,0 500x48)
+  div (20,17 458x14) text="abstract class RenderContext {
     abst..."
 
 ---
 
 === Test: timeline 里程碑 flex row ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x0)
-  div (0,0 1440x38)
-    div (0,0 1440x19) text="v5 M3: Flat + Layer"
-    div (0,0 1440x19) text="~100 行 / 7 文件"
+div (0,0 600x34)
+  div (0,0 24x24)
+  div (32,0 576x34)
+    div (32,0 576x16) text="v5 M3: Flat + Layer"
+    div (32,20 576x14) text="~100 行 / 7 文件"
 
 ---
 
 === Test: rgba 颜色背景 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Rgba bg"
+div (0,0 400x40) text="Rgba bg"
 
 ---
 
 === Test: text-align:center 居中 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19) text="Centered footer text"
+div (0,0 600x30) text="Centered footer text"
 
 ---
 
 === Test: dep-box 分区布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x38)
-  div (0,0 1440x19) text="v5 M3: Flat + Layer"
-  div (0,0 1440x19)
-    div (0,0 1440x19) text="框架提供:"
+div (0,0 500x56)
+  div (0,1 470x15) text="v5 M3: Flat + Layer"
+  div (0,16 470x39)
+    div (14,12 470x15) text="框架提供:"
 
 ---
 
 === Test: flex-wrap 标签云 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x95)
-  div (0,0 1440x19) text="rect"
-  div (0,0 1440x19) text="text"
-  div (0,0 1440x19) text="button"
-  div (0,0 1440x19) text="grid"
-  div (0,0 1440x19) text="label"
+div (0,0 400x81)
+  div (0,0 0x13) text="rect"
+  div (0,17 0x13) text="text"
+  div (0,34 0x13) text="button"
+  div (0,51 0x13) text="grid"
+  div (0,68 0x13) text="label"
 
 ---
 
 === Test: overflow-x:auto 水平滚动 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19)
-  div (0,0 1440x19) text="Wide content"
+div (0,0 300x40)
+  div (0,0 800x40) text="Wide content"
 
 ---
 
 === Test: 完整卡片行组合场景 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x76)
-  div (0,0 1440x19) text="Title"
-  div (0,0 1440x19) text="Subtitle text"
-  div (0,0 1440x38)
-    div (0,0 1440x19) text="Danger Card"
-    div (0,0 1440x19) text="Success Card"
+div (0,0 1100x900)
+  div (32,32 1036x33) text="Title"
+  div (32,69 1036x18) text="Subtitle text"
+  div (32,111 1036x19)
+    div (0,0 510x19) text="Danger Card"
+    div (526,0 510x19) text="Success Card"

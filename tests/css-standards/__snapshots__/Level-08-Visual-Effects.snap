@@ -1,1 +1,4 @@
-@generated 2026-07-23 10:34:04
+@generated 2026-07-23 11:49:52
+=== Test: background 简写 #3366FF + center/cover ===
+Frame #1 events=0 detail=normal
+div (0,0 100x50) text="shorthand"

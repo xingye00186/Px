@@ -234,9 +234,12 @@ class GridAlgorithm extends LayoutAlgorithm
                 $children = $adjusted;
             }
             $firstChild = count($children) > 0 ? $children[0] : null;
-            $mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), $gw, $gh, (int)($gri->style?->visualWidth($gw) ?? $gw), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, 0, 0, $gri->style, $children, $firstChild?->sourceNode,
+            // grid cell fragment 代表原 div，元数据（type/content/sourceNode/dataset/pseudoStyles）
+            // 取自原 fragment（$origFrag）而非第一个子节点——文本型 div 的内容存在
+            // $origFrag->content（无子 fragment），取 firstChild 会丢失 content。
+            $mappedFragments[] = new PhysicalFragment((int)($gri->x ?? 0), (int)($gri->y ?? 0), $gw, $gh, (int)($gri->style?->visualWidth($gw) ?? $gw), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, 0, 0, $gri->style, $children, $origFrag?->sourceNode,
                 0, 0, false,
-                $firstChild?->type ?? '', $firstChild?->content, $firstChild?->dataset ?? [], $firstChild?->pseudoStyles ?? []);
+                $origFrag?->type ?? '', $origFrag?->content, $origFrag?->dataset ?? [], $origFrag?->pseudoStyles ?? []);
             $giIdx++;
         }
 

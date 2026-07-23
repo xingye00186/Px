@@ -1,1 +1,58 @@
-@generated 2026-07-23 10:34:04
+@generated 2026-07-23 11:49:52
+=== Test: align-items flex-start 顶部对齐 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x100)
+  div (0,0 60x30) text="A"
+  div (60,0 60x50) text="B"
+
+---
+
+=== Test: align-items flex-end 底部对齐 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x100)
+  div (0,70 60x30) text="A"
+  div (60,50 60x50) text="B"
+
+---
+
+=== Test: align-items stretch 拉伸 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x100)
+  div (0,0 60x100) text="A"
+  div (60,0 60x100) text="B"
+
+---
+
+=== Test: align-content center 多行垂直居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200)
+  div (0,58 80x40) text="A"
+  div (84,58 80x40) text="B"
+  div (0,102 80x40) text="C"
+
+---
+
+=== Test: align-content flex-end 多行底部 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200)
+  div (0,116 80x40) text="A"
+  div (84,116 80x40) text="B"
+  div (0,160 80x40) text="C"
+
+---
+
+=== Test: align-content space-between 等距 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200)
+  div (0,0 80x40) text="A"
+  div (84,0 80x40) text="B"
+  div (0,156 80x40) text="C"
+
+---
+
+=== Test: align-content space-around 均匀分布 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200)
+  div (0,29 80x40) text="A"
+  div (84,29 80x40) text="B"
+  div (0,127 80x40) text="C"

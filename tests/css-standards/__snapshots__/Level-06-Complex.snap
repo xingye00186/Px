@@ -1,1 +1,55 @@
-@generated 2026-07-23 10:34:04
+@generated 2026-07-23 11:49:52
+=== Test: Banner + 视频网格组合 ===
+Frame #1 events=0 detail=normal
+div (0,0 964x391)
+  div (0,0 964x200) text="Banner"
+  div (0,216 964x0)
+    div (0,216 310x175)
+      div (0,216 310x140) text="Cover"
+      div (0,356 310x0) text="Title"
+    div (326,216 310x175)
+      div (0,216 310x140) text="Cover"
+      div (0,356 310x0) text="Title"
+
+---
+
+=== Test: 侧边栏 + 主内容 flex row ===
+Frame #1 events=0 detail=normal
+div (0,0 1440x900)
+  div (0,0 240x900)
+    div (16,16 208x40) text="Nav 1"
+    div (16,64 208x40) text="Nav 2"
+  div (240,0 1200x900)
+    div (256,16 1168x200) text="Main Content"
+
+---
+
+=== Test: 全屏遮罩 + 居中弹窗 (fixed overlay) ===
+Frame #1 events=0 detail=normal
+div (0,0 1440x900)
+  div (0,0 1440x900)
+  div (-150,-100 400x300) text="Modal"
+
+---
+
+=== Test: grid + flex:1 链式填充 ===
+Frame #1 events=0 detail=normal
+div (0,0 800x300)
+  div (0,0 392x79)
+    div (0,0 392x40) text="Header"
+    div (0,40 392x0) text="Fill"
+  div (408,0 392x79)
+    div (0,0 392x60) text="Header"
+    div (0,60 392x0) text="Fill"
+
+---
+
+=== Test: flex column flex:1 + overflow 填充 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x400)
+  div (0,0 600x50) text="Header"
+  div (0,50 600x320)
+    div (0,50 600x80) text="Item 1"
+    div (0,130 600x80) text="Item 2"
+    div (0,210 600x80) text="Item 3"
+  div (0,370 600x30) text="Footer"

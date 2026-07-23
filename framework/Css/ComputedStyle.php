@@ -682,10 +682,13 @@ class ComputedStyle
 
     /**
      * 获取原始声明中的指定 key 值。
+     * 与 resolveKeyword/resolveCssLength/resolveColor 一致：camelCase key 未命中时
+     * fallback 到 kebab-case（兼容运行时 style 字符串解析产物的 kebab key，
+     * 如 grid-template-columns）。修复 Grid 等算法读驼峰 key 得 NULL 的数据要素错乱。
      */
     public function getRaw(string $key): mixed
     {
-        return $this->rawDeclarations[$key] ?? null;
+        return $this->rawDeclarations[$key] ?? $this->rawDeclarations[self::camelToKebab($key)] ?? null;
     }
 
     /**

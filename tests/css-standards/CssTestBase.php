@@ -86,12 +86,9 @@ function run_minimal_pipeline(VNode $vnode, int $width = 1440, int $height = 900
     $rm->setAccessible(true);
     $rm->invoke($app);
 
-    // 获取 dump
-    $rtm = $app->getRenderTreeManager();
-    $rootNode = $rtm->getRootRenderNode();
-    if ($rootNode === null) return '';
-
-    return $rtm->dumpRenderTree($rootNode, 1, []);
+    // 获取 dump：从 Fragment 树（paint 实际渲染的几何权威源）
+    // 不用 dumpRenderTree（读 RenderNode.cachedFragment，grid 等算法的放置结果不在那里）
+    return $app->dumpFragmentTreeForTest();
 }
 
 /**

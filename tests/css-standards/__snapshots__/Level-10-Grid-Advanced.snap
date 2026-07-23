@@ -1,1 +1,34 @@
-@generated 2026-07-23 10:34:04
+@generated 2026-07-23 11:49:52
+=== Test: grid-row span 2 跨越两行 ===
+Frame #1 events=0 detail=normal
+div (0,0 204x104)
+  div (0,0 100x50) text="A"
+  div (104,0 100x50) text="B span 2"
+  div (0,54 100x50) text="C"
+
+---
+
+=== Test: grid auto-fit repeat(autofit, minmax(150px,1fr)) ===
+Frame #1 events=0 detail=normal
+div (0,0 500x60)
+  div (0,0 161x60) text="A"
+  div (169,0 161x60) text="B"
+  div (338,0 162x60) text="C"
+
+---
+
+=== Test: column-gap 16px row-gap 8px 分开 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x140)
+  div (0,0 200x60) text="A"
+  div (200,0 200x60) text="B"
+  div (0,60 200x60) text="C"
+  div (200,60 200x60) text="D"
+
+---
+
+=== Test: grid cell 内 margin auto 居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x120)
+  div (0,0 200x80) text="Center"
+  div (208,0 200x80) text="Normal"

@@ -183,6 +183,47 @@ class RenderTreeManager
         return $output;
     }
 
+    /**
+     * 递归输出 PhysicalFragment 树（paint 实际渲染的几何权威源）。
+     * 格式与 dumpNode 一致，供 css-test harness 对比——paint 从 fragment 树渲染，
+     * 而非 RenderNode.cachedFragment（grid 等算法的放置结果在 fragment 树，
+     * 子 RenderNode.cachedFragment 仅为 Phase B 预布局，几何不一致）。
+     */
+    public function dumpFragmentTree(?\Px\Layout\PhysicalFragment $frag, string $prefix = ''): string
+    {
+        if ($frag === null) {
+            return "";
+        }
+        $output = $prefix;
+        $output .= $frag->type !== '' ? $frag->type : 'div';
+        $output .= " (";
+        $output .= (string)$frag->getX();
+        $output .= ",";
+        $output .= (string)$frag->getY();
+        $output .= " ";
+        $output .= (string)$frag->getW();
+        $output .= "x";
+        $output .= (string)$frag->getH();
+        $output .= ")";
+
+        if ($frag->content !== null && $frag->content !== "") {
+            $content = (string)$frag->content;
+            if (strlen($content) > 40) {
+                $content = substr($content, 0, 40) . "...";
+            }
+            $output .= ' text="';
+            $output .= $content;
+            $output .= '"';
+        }
+        $output .= "\n";
+
+        $childPrefix = $prefix . "  ";
+        foreach ($frag->children as $child) {
+            $output .= $this->dumpFragmentTree($child, $childPrefix);
+        }
+        return $output;
+    }
+
     private ?RenderNode $rootRenderNode = null;
 
     /** @var RenderNode[] 顶层 #root 的所有直接子节点（用于跨帧 candidates 传递） */

@@ -1,15 +1,15 @@
-@generated 2026-07-23 10:34:06
+@generated 2026-07-23 11:49:54
 === Test: 后代选择器 .ancestor .child 匹配 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19)
-  div (0,0 160x19) text="Descendant"
+div (0,0 200x100)
+  div (0,0 160x30) text="Descendant"
 
 ---
 
 === Test: 子代选择器 .parent > .direct-child 匹配 ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x19)
-  div (0,0 1440x19) text="Direct"
+div (0,0 200x100)
+  div (0,0 200x25) text="Direct"
 
 ---
 

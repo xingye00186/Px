@@ -1,1 +1,39 @@
-@generated 2026-07-23 10:34:04
+@generated 2026-07-23 11:49:51
+=== Test: flex column 三个子项垂直排列 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200)
+  div (0,0 200x40) text="A"
+  div (0,40 200x40) text="B"
+
+---
+
+=== Test: flex row with gap=16px ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (0,0 100x50) text="A"
+  div (116,0 100x50) text="B"
+
+---
+
+=== Test: flex-wrap 子项超出折行 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x98)
+  div (0,0 100x30) text="A"
+  div (0,34 100x30) text="B"
+  div (0,68 100x30) text="C"
+
+---
+
+=== Test: align-items center 交叉轴居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x80)
+  div (0,25 60x30) text="A"
+  div (60,20 60x40) text="B"
+
+---
+
+=== Test: align-items stretch 交叉轴拉伸 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x80)
+  div (0,0 60x80) text="A"
+  div (60,0 60x80) text="B"
