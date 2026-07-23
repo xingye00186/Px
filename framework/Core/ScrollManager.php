@@ -110,15 +110,24 @@ class ScrollManager
         $this->getScrollState($node)->scrollLeft = $value;
     }
 
-    /** 从 RenderNode 迁移滚动状态到 ScrollState Map */
+    /** 从 cachedFragment 迁移滚动状态到 ScrollState Map（对标 Blink: fragment 为几何权威源） */
     public function migrateFromRenderNode(RenderNode $node): void
     {
         $ss = $this->getScrollState($node);
-        $ss->scrollTop = (int)($node->scrollTop ?? 0);
-        $ss->scrollLeft = (int)($node->scrollLeft ?? 0);
-        $ss->isScrollContainer = (bool)($node->isScrollContainer ?? false);
-        $ss->contentWidth = (int)($node->contentWidth ?? 0);
-        $ss->contentHeight = (int)($node->contentHeight ?? 0);
+        $frag = $node->cachedFragment;
+        if ($frag !== null) {
+            $ss->scrollTop = $frag->getScrollTop();
+            $ss->scrollLeft = $frag->getScrollLeft();
+            $ss->isScrollContainer = $frag->getIsScrollContainer();
+            $ss->contentWidth = $frag->getContentWidth();
+            $ss->contentHeight = $frag->getContentHeight();
+        } else {
+            $ss->scrollTop = (int)($node->scrollTop ?? 0);
+            $ss->scrollLeft = (int)($node->scrollLeft ?? 0);
+            $ss->isScrollContainer = (bool)($node->isScrollContainer ?? false);
+            $ss->contentWidth = (int)($node->contentWidth ?? 0);
+            $ss->contentHeight = (int)($node->contentHeight ?? 0);
+        }
     }
 
     /** 回写迁移后的滚动状态到 RenderNode（旧消费者兼容） */
