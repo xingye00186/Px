@@ -29,9 +29,9 @@ use Px\Core\Config;
  *   3. postProcess(): 滚动 clamp / sticky
  *
  * 对标 Blink LayoutNG 的 LayoutOrchestrator。
- * 实现 ChildLayoutProvider 接口，使算法能自主调子项布局。
+ * 通过 ChildLayoutProvider 使算法能自主调子项布局。
  */
-class LayoutOrchestrator implements ChildLayoutProvider
+class LayoutOrchestrator
 {
     private OOFLayoutAlgorithm $oofAlgorithm;
     private LayoutAlgorithm $blockAlgo;
@@ -48,10 +48,7 @@ class LayoutOrchestrator implements ChildLayoutProvider
         $this->gridAlgo = new GridAlgorithm();
         $this->inlineAlgo = new InlineAlgorithm();
         $this->tableAlgo = new TableAlgorithm();
-
-        // 注入 ChildLayoutProvider（使算法能自主调子项布局）
-        $algos = [$this->blockAlgo, $this->flexAlgo, $this->gridAlgo, $this->inlineAlgo, $this->tableAlgo];
-        foreach ($algos as $a) { $a->setChildLayoutProvider($this); }
+        // P2: ChildLayoutProvider 现在在 mainLayout 中按节点创建并注入（每个节点有自己的 parentSpace/parentStyle）
     }
 
     /** ChildLayoutProvider: 以指定约束布局子项 */
@@ -283,6 +280,12 @@ class LayoutOrchestrator implements ChildLayoutProvider
         $algo = $this->selectAlgorithm($display, $style);
         Diag::log(2, 'process:node', ['type' => $node->type, 'display' => $display, 'pos' => $position, 'algo' => $algo !== null ? get_class($algo) : 'none']);
         $algoName = $algo !== null ? (new \ReflectionClass($algo))->getShortName() : 'none';
+
+        // P2: 注入 ChildLayoutProvider（对标 Blink：算法通过 LayoutChild 按需布局子项）
+        // 当前兼容模式：Phase B 仍预计算 childFragments，算法可选择用 layoutChild() 替代
+        // 待所有算法迁移完成后删除 Phase B
+        $provider = new ChildLayoutProvider($this, $node, $space, $style, $nodeLayer);
+        $algo->setChildLayoutProvider($provider);
 
         \Px\Core\PerfCounter::start('algo:setup');
         $textContent = (string)($node->content ?? '');

@@ -29,8 +29,8 @@ abstract class LayoutAlgorithm
         $this->childLayoutProvider = $p;
     }
 
-    /** 布局子项（替代码中直接使用 $childFragments[$i] 的模式） */
-    protected function layoutChild(RenderNode $child, ConstraintSpace $space, int $layer = 0): PhysicalFragment
+    /** 布局子项（对标 Blink LayoutChild）：传 null 由 Provider 自动构建约束，传具体 space 为算法确定的约束 */
+    protected function layoutChild(RenderNode $child, ?ConstraintSpace $space = null, int $layer = 0): PhysicalFragment
     {
         if ($this->childLayoutProvider !== null) {
             return $this->childLayoutProvider->layoutChild($child, $space, $layer);
