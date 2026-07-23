@@ -945,15 +945,20 @@ class CssMappings
      */
     public static function expandTextDecorationShorthand(array $raw): array
     {
-        if (!isset($raw['text-decoration']) || $raw['text-decoration'] === '') {
+        // 兼容 kebab-case 和 camelCase key（P1 归一化后可能为 camelCase）
+        $tdVal = $raw['text-decoration'] ?? $raw['textDecoration'] ?? null;
+        if ($tdVal === null || $tdVal === '') {
             return $raw;
         }
-        $expanded = self::expandTextDecorationValue(trim($raw['text-decoration']));
+        $expanded = self::expandTextDecorationValue(trim((string)$tdVal));
         foreach ($expanded as $key => $val) {
-            // Convert camelCase back to kebab-case for the raw CSS property array
+            // 同时存储 camelCase 和 kebab-case（确保两种读取方式都能找到）
             $cssKey = strtolower(preg_replace('/([A-Z])/', '-$1', $key));
             if (!isset($raw[$cssKey])) {
                 $raw[$cssKey] = $val;
+            }
+            if (!isset($raw[$key])) {
+                $raw[$key] = $val;
             }
         }
         return $raw;

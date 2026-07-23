@@ -238,6 +238,18 @@ class RenderTreeManager
         if (is_numeric($fg) && (int)$fg > 0) {
             $output .= " fg=" . (int)$fg;
         }
+        // text-decoration 标注（对标测试期望：decorationLine=X decorationColor=X decorationStyle=X）
+        $decLine = $frag->style?->getRaw('textDecorationLine') ?? 'none';
+        if (is_string($decLine) && $decLine !== 'none' && $decLine !== '') {
+            $output .= " decorationLine=$decLine";
+            // decorationStyle 始终伴随 decorationLine 输出
+            $decStyle = $frag->style?->getRaw('textDecorationStyle') ?? 'solid';
+            $output .= " decorationStyle=" . (is_string($decStyle) ? $decStyle : 'solid');
+        }
+        $decColor = $frag->style?->getRaw('textDecorationColor') ?? null;
+        if ($decColor !== null && $decColor !== 0xFFFFFF) {
+            $output .= " decorationColor=0x" . str_pad(dechex((int)$decColor), 6, '0', STR_PAD_LEFT);
+        }
 
         if ($frag->content !== null && $frag->content !== "") {
             $content = (string)$frag->content;
