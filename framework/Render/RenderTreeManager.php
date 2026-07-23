@@ -103,21 +103,28 @@ class RenderTreeManager
         $output .= (string)($geom !== null ? $geom->getH() : $node->h);
         $output .= ")";
 
-        // ── scroll info（所有级别） ──
-        if ($node->isScrollContainer) {
+        // ── scroll info（所有级别）—— 对标 Blink: 从 Fragment 读取 ──
+        $scrollFrag = $node->cachedFragment;
+        $isScroll = $scrollFrag !== null ? $scrollFrag->getIsScrollContainer() : $node->isScrollContainer;
+        if ($isScroll) {
             $output .= " scroll";
+            $fragCH = $scrollFrag !== null ? $scrollFrag->getContentHeight() : $node->contentHeight;
+            $fragCW = $scrollFrag !== null ? $scrollFrag->getContentWidth() : $node->contentWidth;
+            $fragH = $scrollFrag !== null ? $scrollFrag->getH() : $node->h;
+            $fragST = $scrollFrag !== null ? $scrollFrag->getScrollTop() : $node->scrollTop;
+            $fragSL = $scrollFrag !== null ? $scrollFrag->getScrollLeft() : $node->scrollLeft;
             if ($detail !== 'minimal') {
                 $output .= " ch=";
-                $output .= (string)$node->contentHeight;
+                $output .= (string)$fragCH;
                 $output .= " cw=";
-                $output .= (string)$node->contentWidth;
+                $output .= (string)$fragCW;
                 $output .= " maxScroll=";
-                $output .= (string)max($node->contentHeight - $node->h, 0);
+                $output .= (string)max($fragCH - $fragH, 0);
             }
             $output .= " st=";
-            $output .= (string)$node->scrollTop;
+            $output .= (string)$fragST;
             $output .= " sl=";
-            $output .= (string)$node->scrollLeft;
+            $output .= (string)$fragSL;
         }
 
         // ── normal/verbose 级别附加信息 ──
@@ -1337,9 +1344,11 @@ class RenderTreeManager
         // 子文档坐标 = 视口坐标 + scrollLeft/scrollTop
         $childX = $x;
         $childY = $y;
-        if ($node->isScrollContainer) {
-            $childX += $node->scrollLeft;
-            $childY += $node->scrollTop;
+        $hitFrag = $node->cachedFragment;
+        $hitIsScroll = $hitFrag !== null ? $hitFrag->getIsScrollContainer() : $node->isScrollContainer;
+        if ($hitIsScroll) {
+            $childX += $hitFrag !== null ? $hitFrag->getScrollLeft() : $node->scrollLeft;
+            $childY += $hitFrag !== null ? $hitFrag->getScrollTop() : $node->scrollTop;
         }
 
         // Layer-aware: 按 layer 递减遍历子节点（高 layer 优先命中）
@@ -1402,9 +1411,11 @@ class RenderTreeManager
         // CSSOM View §7.1: 滚动容器内，将视口坐标转换为文档坐标
         $childX = $x;
         $childY = $y;
-        if ($node->isScrollContainer) {
-            $childX += $node->scrollLeft;
-            $childY += $node->scrollTop;
+        $scFrag = $node->cachedFragment;
+        $scIsScroll = $scFrag !== null ? $scFrag->getIsScrollContainer() : $node->isScrollContainer;
+        if ($scIsScroll) {
+            $childX += $scFrag !== null ? $scFrag->getScrollLeft() : $node->scrollLeft;
+            $childY += $scFrag !== null ? $scFrag->getScrollTop() : $node->scrollTop;
         }
 
         // Layer-aware: 按 layer 递减遍历子节点
@@ -1439,7 +1450,7 @@ class RenderTreeManager
         $nodeY = $geom !== null ? $geom->getY() : $node->y;
         $nodeW = $geom !== null ? $geom->getW() : $node->w;
         $nodeH = $geom !== null ? $geom->getH() : $node->h;
-        if ($node->isScrollContainer
+        if (($geom !== null ? $geom->getIsScrollContainer() : $node->isScrollContainer)
             && $x >= $nodeX + $hitOffX && $x <= $nodeX + $nodeW + $hitOffX
             && $y >= $nodeY + $hitOffY && $y <= $nodeY + $nodeH + $hitOffY) {
             return $node;

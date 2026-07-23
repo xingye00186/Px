@@ -384,7 +384,9 @@ class PaintPipeline
     {
         $cs = $node->computedStyle;
         $cursor = $pseudoOverrides['cursor'] ?? $cs?->cursor?->value ?? '';
-        if ((bool)($node->isScrollContainer ?? false)) {
+        // 对标 Blink: 从 Fragment 读取滚动容器标志（而非 RenderNode）
+        $nodeFrag = $node->cachedFragment;
+        if ($nodeFrag !== null && $nodeFrag->getIsScrollContainer()) {
             return $this->makeScrollContainerElement($node, $pseudoOverrides, $x, $y, $w, $h, $layer);
         }
         if ($w <= 0) $w = 80;
@@ -741,7 +743,8 @@ class PaintPipeline
                 return $elements[0];
             }
             $elOverflowHidden = ($cs?->overflow?->value ?? 'visible') === 'hidden';
-            if ($elOverflowHidden && !(bool)($node->isScrollContainer ?? false) && $selfW > 0 && $selfH > 0) {
+            $isScrollCont = ($node->cachedFragment !== null && $node->cachedFragment->getIsScrollContainer());
+            if ($elOverflowHidden && !$isScrollCont && $selfW > 0 && $selfH > 0) {
                 $itemClip = self::computePaddingBoxClip($node);
                 $clipX = $itemClip['x'];
                 $clipY = $itemClip['y'];
@@ -1234,11 +1237,15 @@ class PaintPipeline
         $borderRadiusX = $pseudoOverrides['borderRadiusX'] ?? 0;
         $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;
         $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;
-        $contentH = (int)($node->contentHeight ?? 0);
+        // 对标 Blink: 从 Fragment 读取滚动状态（而非 RenderNode）
+        $scrollFrag = $node->cachedFragment;
+        $contentH = $scrollFrag !== null ? $scrollFrag->getContentHeight() : (int)($node->contentHeight ?? 0);
         if ($contentH === 0) {
             foreach ($node->children as $child) {
                 $itemH = (int)($child->computedStyle?->height->toPx() ?? 0);
-                $contentH += (int)max($child->h, $itemH);
+                $childFrag = $child->cachedFragment;
+                $childH = $childFrag !== null ? $childFrag->getH() : (int)($child->h ?? 0);
+                $contentH += (int)max($childH, $itemH);
             }
         }
         return [
@@ -1246,9 +1253,9 @@ class PaintPipeline
             'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'bg' => $bg, 'borderRadius' => $borderRadius,
             'contentHeight' => $contentH,
-            'contentWidth' => (int)($node->contentWidth ?? 0),
-            'scrollTop' => (int)($node->scrollTop ?? 0),
-            'scrollLeft' => (int)($node->scrollLeft ?? 0),
+            'contentWidth' => $scrollFrag !== null ? $scrollFrag->getContentWidth() : (int)($node->contentWidth ?? 0),
+            'scrollTop' => $scrollFrag !== null ? $scrollFrag->getScrollTop() : (int)($node->scrollTop ?? 0),
+            'scrollLeft' => $scrollFrag !== null ? $scrollFrag->getScrollLeft() : (int)($node->scrollLeft ?? 0),
             'opacity' => $opacity,
             'layer' => $layer,
         ];
