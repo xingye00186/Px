@@ -28,6 +28,12 @@ abstract class LayoutAlgorithm
         $this->childLayoutProvider = $p;
     }
 
+    /** 获取当前 provider（用于 save/restore 防止嵌套布局状态污染） */
+    public function getChildLayoutProvider(): ?ChildLayoutProvider
+    {
+        return $this->childLayoutProvider;
+    }
+
     /** 布局子项（对标 Blink LayoutChild）：传 null 由 Provider 自动构建约束，传具体 space 为算法确定的约束 */
     protected function layoutChild(RenderNode $child, ?ConstraintSpace $space = null, int $layer = 0): PhysicalFragment
     {

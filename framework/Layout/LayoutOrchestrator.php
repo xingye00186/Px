@@ -230,21 +230,21 @@ class LayoutOrchestrator
         $algoName = $algo !== null ? (new \ReflectionClass($algo))->getShortName() : 'none';
 
         // P2: 注入 ChildLayoutProvider（对标 Blink：算法通过 LayoutChild 按需布局子项）
-        // 当前兼容模式：Phase B 仍预计算 childFragments，算法可选择用 layoutChild() 替代
-        // 待所有算法迁移完成后删除 Phase B
+        // P0 修复：save/restore 防止嵌套布局时算法单例的 provider 被覆盖
         $provider = new ChildLayoutProvider($this, $node, $space, $style, $nodeLayer);
+        $savedProvider = $algo->getChildLayoutProvider();
         $algo->setChildLayoutProvider($provider);
 
         \Px\Core\PerfCounter::start('algo:setup');
         $textContent = (string)($node->content ?? '');
         $cached = $node->cachedFragment;
-        // childConstraints 已移除：所有算法均直接使用 Phase B 预计算的 childFragments
-        // （对标 Blink：算法接收父 LayoutChild() 预计算的 fragment，不重新布局子项）
         \Px\Core\PerfCounter::end('algo:setup');
 
         \Px\Core\PerfCounter::start('algo:' . $algoName);
         $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $cached);
         \Px\Core\PerfCounter::end('algo:' . $algoName);
+        // P0: 恢复父级 provider（防止嵌套布局状态污染）
+        $algo->setChildLayoutProvider($savedProvider);
 
         \Px\Core\PerfCounter::start('algo:teardown');
         Diag::log(2, 'algo:result', ['type' => $node->type, 'x' => $algoFrag->getX(), 'y' => $algoFrag->getY(), 'w' => $algoFrag->getW(), 'h' => $algoFrag->getH(), 'algo' => get_class($algo)]);
