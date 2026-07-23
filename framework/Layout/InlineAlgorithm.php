@@ -78,4 +78,56 @@ class InlineAlgorithm extends LayoutAlgorithm
         $h = strlen($textContent) > 0 ? ($s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($fs * 1.2)) : 0;
         return new IntrinsicSizes((int)max(0, $w), (int)max(0, $w), (int)max(0, $h), (int)max(0, $h));
     }
+
+    /**
+     * IFC 内联运行布局（支持换行）—— 对标 Blink NGInlineLayoutAlgorithm。
+     *
+     * 由 BlockAlgorithm 委派调用：块容器内的内联子项通过此方法布局，
+     * 而非在 BlockAlgorithm 内部处理（抽象层次分离）。
+     *
+     * @param PhysicalFragment[] $items 内联子项 fragment
+     * @param int $availableW 可用宽度
+     * @param int $startX 起始 X
+     * @param int $startY 起始 Y
+     * @param int $padLeft 左 padding
+     * @return array{items: PhysicalFragment[], nextY: int}
+     */
+    public static function layoutInlineRun(array $items, int $availableW, int $startX, int $startY, int $padLeft = 0): array
+    {
+        $result = [];
+        $cursorX = $padLeft;
+        $cursorY = 0;
+        $lineMaxH = 0;
+
+        foreach ($items as $cr) {
+            $cStyle = $cr->style;
+            $mLeft = $cStyle?->margin?->left->toPx() ?? 0;
+            $mRight = $cStyle?->margin?->right->toPx() ?? 0;
+            $mTop = $cStyle?->margin?->top->toPx() ?? 0;
+            $mBottom = $cStyle?->margin?->bottom->toPx() ?? 0;
+            $itemTotalW = ($cr->getW() ?? 0) + $mLeft + $mRight;
+            $itemH = ($cr->getH() ?? 0) + $mTop + $mBottom;
+
+            // 换行：当前行剩余空间不足时换到下一行
+            if ($cursorX + $itemTotalW > $availableW && $cursorX > $padLeft) {
+                $cursorY += $lineMaxH;
+                $cursorX = $padLeft;
+                $lineMaxH = 0;
+            }
+
+            $result[] = new PhysicalFragment(
+                (int)($startX + $cursorX + $mLeft), (int)($startY + $cursorY + $mTop),
+                (int)($cr->getW() ?? 0), (int)($cr->getH() ?? 0),
+                0, 0, (int)($cr->getLayer() ?? 0),
+                (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0),
+                $cStyle, $cr->children, $cr->sourceNode,
+                $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
+                $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles
+            );
+            $cursorX += $itemTotalW;
+            if ($itemH > $lineMaxH) $lineMaxH = $itemH;
+        }
+
+        return ['items' => $result, 'nextY' => $startY + $cursorY + $lineMaxH];
+    }
 }

@@ -256,31 +256,11 @@ class BlockAlgorithm extends LayoutAlgorithm
         return $result;
     }
 
-    private function layoutInlineBuffer(array $buffer, int $parentX, int $padLeft, int $containerW, int $startY): array
-    {
-        $availableW = $containerW; $result = []; $cursorX = $padLeft; $cursorY = 0; $lineMaxH = 0;
-        foreach ($buffer as $cr) {
-            $cStyle = $cr->style;
-            $mLeft = $cStyle?->margin?->left->toPx() ?? 0;
-            $mRight = $cStyle?->margin?->right->toPx() ?? 0;
-            $mTop = $cStyle?->margin?->top->toPx() ?? 0;
-            $mBottom = $cStyle?->margin?->bottom->toPx() ?? 0;
-            $itemTotalW = ($cr->getW() ?? 0) + $mLeft + $mRight;
-            $itemH = ($cr->getH() ?? 0) + $mTop + $mBottom;
-            if ($cursorX + $itemTotalW > $availableW && $cursorX > $padLeft) { $cursorY += $lineMaxH; $cursorX = $padLeft; $lineMaxH = 0; }
-            $result[] = new PhysicalFragment((int)($parentX + $cursorX + $mLeft), (int)($startY + $cursorY + $mTop), (int)($cr->getW() ?? 0), (int)($cr->getH() ?? 0), 0, 0, (int)($cr->getLayer() ?? 0), (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0), $cStyle, $cr->children, $cr->sourceNode,
-                    $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
-                    $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
-            $cursorX += $itemTotalW;
-            if ($itemH > $lineMaxH) $lineMaxH = $itemH;
-        }
-        return ['items' => $result, 'nextY' => $startY + $cursorY + $lineMaxH];
-    }
-
     private function flushInlineBuffer(array &$inlineBuffer, int $parentX, int $padLeft, int $containerW, int &$stackY, array &$result, int $parentW): void
     {
+        // P4: 委派给 InlineAlgorithm（对标 Blink：块算法将 IFC 委派给内联算法）
         $availW = $containerW; if ($availW <= 0) $availW = $parentW; if ($availW <= 0) $availW = 10000;
-        $ir = $this->layoutInlineBuffer($inlineBuffer, $parentX, $padLeft, $availW, $stackY);
+        $ir = InlineAlgorithm::layoutInlineRun($inlineBuffer, $availW, $parentX, $stackY, $padLeft);
         foreach ($ir['items'] as $item) $result[] = $item;
         $stackY = $ir['nextY'];
         $inlineBuffer = [];
