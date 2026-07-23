@@ -81,7 +81,7 @@ class TableAlgorithm extends LayoutAlgorithm
                     foreach ($cr->children as $ci => $cell) {
                         $cellH = (int)($cell->h ?? 0);
                         $cellW = $colWidths[$ci] ?? ($cellCount > 0 ? (int)($w / $cellCount) : $w);
-                        $cellResults[] = new PhysicalFragment((int)$colX, 0, (int)$cellW, (int)$cellH, null, null, (int)($cell->layer ?? 0), (int)$cellW, (int)$cellH, $cell->style, $cell->children, $cell->sourceNode,
+                        $cellResults[] = new PhysicalFragment((int)$colX, 0, (int)$cellW, (int)$cellH, (int)$cellW, (int)$cellH, (int)($cell->layer ?? 0), (int)$cellW, (int)$cellH, $cell->style, $cell->children, $cell->sourceNode,
             $cell->scrollTop, $cell->scrollLeft, $cell->isScrollContainer,
             $cell->type, $cell->content, $cell->dataset, $cell->pseudoStyles);
                         if ($cellH > $lineH) $lineH = $cellH;
