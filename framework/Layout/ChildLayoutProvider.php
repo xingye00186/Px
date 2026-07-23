@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Px\Layout;
 
+use native_types;
+
 use Px\Render\RenderNode;
 
 /**
@@ -61,7 +63,29 @@ class ChildLayoutProvider
         }
 
         // 构建子项约束空间
-        $childSpace = $overrideSpace ?? $this->orchestrator->buildChildSpacePublic($child, $this->parentSpace, $this->parentStyle);
+        if ($overrideSpace !== null) {
+            $childSpace = $overrideSpace;
+        } else {
+            $childSpace = $this->orchestrator->buildChildSpacePublic($child, $this->parentSpace, $this->parentStyle);
+            // 对标 Phase B：flex/grid 子项需要百分比基准 + spaceType='flex-item'
+            $parentDisplay = $this->parentStyle?->display?->value ?? 'block';
+            $isFlexOrGrid = ($parentDisplay === 'flex' || $parentDisplay === 'grid' || $parentDisplay === 'inline-flex');
+            if ($isFlexOrGrid) {
+                $childStyle = $child->computedStyle;
+                $chPercW = $childStyle?->width?->isPercent() ? $this->parentSpace->getContentWidth() : null;
+                $chPercH = $childStyle?->height?->isPercent() ? $this->parentSpace->getContentHeight() : null;
+                $childSpace = ConstraintSpace::forChild(
+                    $childSpace->getParentContentX(), $childSpace->getParentContentY(),
+                    $childSpace->getContentWidth(), $childSpace->getContentHeight(),
+                    $chPercW, $chPercH,
+                    $childSpace->getPaddingTop(), $childSpace->getPaddingRight(),
+                    $childSpace->getPaddingBottom(), $childSpace->getPaddingLeft(),
+                    $childSpace->borderTop, $childSpace->borderRight,
+                    $childSpace->borderBottom, $childSpace->borderLeft,
+                    false, 'flex-item'
+                );
+            }
+        }
 
         // 洁净跳过（对标 Blink：约束未变 + 非脏 → 复用缓存）
         if (!$child->layoutDirty && $child->cachedFragment !== null

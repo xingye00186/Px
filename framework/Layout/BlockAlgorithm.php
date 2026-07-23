@@ -31,7 +31,11 @@ class BlockAlgorithm extends LayoutAlgorithm
         ?array $childIntrinsicSizes = null,
     ): PhysicalFragment {
         $s = $style ?? \Px\Css\StylePool::empty();
-        $children = $childFragments;
+        // P2: 按需布局子项（对标 Blink：算法通过 LayoutChild 布局子项）
+        $children = [];
+        for ($ci = 0, $clen = count($childNodes); $ci < $clen; $ci++) {
+            $children[] = $this->layoutChild($childNodes[$ci]);
+        }
         $c = $space;
 
         // Intrinsic measurement mode
