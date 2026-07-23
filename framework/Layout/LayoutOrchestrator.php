@@ -205,57 +205,11 @@ class LayoutOrchestrator
         // 不在父节点 Layout() 入口处全量预收集
         $isFlexOrGrid = ($display === 'flex' || $display === 'grid' || $display === 'inline-flex');
 
-        // ─── Phase B: 递归处理子节点 ───
-        // 对标 Blink LayoutNG：逐子项检查 layoutDirty + 约束空间变化
-        //   - 子项洁净 AND 约束未变 → 复用 cachedFragment（零递归）
-        //   - 子项脏 OR 约束变 → 递归 mainLayout
-        // 注意：不能用 childrenNeedLayout 整体跳过——Px 先处理子项再跑算法
-        //       （与 Blink 相反），父样式/约束变化时子项约束可能变，必须逐项检查
+        // P2: Phase B 已删除——算法通过 ChildLayoutProvider.layoutChild() 按需布局子项
+        // OOF 元素仍需预布局子项（OOF 路径不经过算法）
         $childFragments = [];
-        foreach ($node->children as $i => $child) {
-            // LayoutBoundary 子项：若洁净则跳过递归直接使用缓存
-            if ($child->isLayoutBoundary && !$child->layoutDirty && $child->cachedFragment !== null
-                && $child->cachedConstraintSpace !== null) {
-                $childBoundarySpace = $this->buildChildSpace($child, $space, $style);
-                if ($childBoundarySpace->equals($child->cachedConstraintSpace)) {
-                    \Px\Core\PerfCounter::inc('layout_child_skip');
-                    $childFragments[] = $child->cachedFragment;
-                    continue;
-                }
-            }
-
-            // 通用洁净子树跳过（dirty 传播后的非 LayoutBoundary 节点）：
-            // 子树全洁净时直接复用 cachedFragment，不递归 mainLayout
-            if (!$child->layoutDirty && $child->cachedFragment !== null
-                && $child->cachedConstraintSpace !== null) {
-                $childBoundarySpace = $this->buildChildSpace($child, $space, $style);
-                if ($childBoundarySpace->equals($child->cachedConstraintSpace)) {
-                    \Px\Core\PerfCounter::inc('layout_child_skip');
-                    $childFragments[] = $child->cachedFragment;
-                    continue;
-                }
-            }
-
-            $childStyle = $child->computedStyle;
-            if ($isFlexOrGrid) {
-                // flex/grid 子项：用 intrinsic+分配结果构建约束，确保子项百分比用正确基准
-                $chPercW = $childStyle?->width?->isPercent() ? $space->getContentWidth() : null;
-                $chPercH = $childStyle?->height?->isPercent() ? $space->getContentHeight() : null;
-                $childSpace = $this->buildChildSpace($child, $space, $style);
-                // 将 intrinsic 收集信息传递通过 spaceType
-                $childSpace = ConstraintSpace::forChild(
-                    $childSpace->getParentContentX(), $childSpace->getParentContentY(),
-                    $childSpace->getContentWidth(), $childSpace->getContentHeight(),
-                    $chPercW, $chPercH,
-                    $childSpace->getPaddingTop(), $childSpace->getPaddingRight(),
-                    $childSpace->getPaddingBottom(), $childSpace->getPaddingLeft(),
-                    $childSpace->borderTop, $childSpace->borderRight,
-                    $childSpace->borderBottom, $childSpace->borderLeft,
-                    false, 'flex-item'
-                );
-                // 子节点 Phase C 计数器独立：每个节点有自己的 3 轮上限
-                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, 0);
-            } else {
+        if ($isOOF) {
+            foreach ($node->children as $child) {
                 $childSpace = $this->buildChildSpace($child, $space, $style);
                 $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, 0);
             }
