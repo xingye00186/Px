@@ -223,6 +223,11 @@ class RenderTreeManager
             $maxScroll = max(0, $ch - $frag->h);
             $output .= " scroll ch=$ch cw=$cw maxScroll=$maxScroll";
         }
+        // 边框宽度标注（对标测试期望：bw=X）
+        $bw = (int)($frag->style?->borderTopWidth ?? 0);
+        if ($bw > 0) {
+            $output .= " bw=$bw";
+        }
 
         if ($frag->content !== null && $frag->content !== "") {
             $content = (string)$frag->content;

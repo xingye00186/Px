@@ -600,10 +600,10 @@ class ComputedStyle
         // border per-side widths (int storage for layout)
         // CSS §8.5: 支持 border-top/bottom/left/right 简写宽度提取
         // 不直接用 ?? 因为 defaults 中 borderXxxWidth=0 会短路 fallback
-        $btw = $d['borderTopWidth'] ?? null; $this->borderTopWidth = self::safeInt(($btw !== null && $btw != 0) ? $btw : ($borderFallback('border-top', 'borderTop') ?: $bw));
-        $brw = $d['borderRightWidth'] ?? null; $this->borderRightWidth = self::safeInt(($brw !== null && $brw != 0) ? $brw : ($borderFallback('border-right', 'borderRight') ?: $bw));
-        $bbw = $d['borderBottomWidth'] ?? null; $this->borderBottomWidth = self::safeInt(($bbw !== null && $bbw != 0) ? $bbw : ($borderFallback('border-bottom', 'borderBottom') ?: $bw));
-        $blw = $d['borderLeftWidth'] ?? null; $this->borderLeftWidth = self::safeInt(($blw !== null && $blw != 0) ? $blw : ($borderFallback('border-left', 'borderLeft') ?: $bw));
+        $btw = $d['borderTopWidth'] ?? null; $btwV = $btw !== null ? self::safeInt($btw) : 0; $this->borderTopWidth = $btwV !== 0 ? $btwV : self::safeInt($borderFallback('border-top', 'borderTop') ?: $bw);
+        $brw = $d['borderRightWidth'] ?? null; $brwV = $brw !== null ? self::safeInt($brw) : 0; $this->borderRightWidth = $brwV !== 0 ? $brwV : self::safeInt($borderFallback('border-right', 'borderRight') ?: $bw);
+        $bbw = $d['borderBottomWidth'] ?? null; $bbwV = $bbw !== null ? self::safeInt($bbw) : 0; $this->borderBottomWidth = $bbwV !== 0 ? $bbwV : self::safeInt($borderFallback('border-bottom', 'borderBottom') ?: $bw);
+        $blw = $d['borderLeftWidth'] ?? null; $blwV = $blw !== null ? self::safeInt($blw) : 0; $this->borderLeftWidth = $blwV !== 0 ? $blwV : self::safeInt($borderFallback('border-left', 'borderLeft') ?: $bw);
 
         // border color
         $bc = self::safeInt($d['borderColor'] ?? 0);
