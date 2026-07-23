@@ -613,13 +613,18 @@ class ComputedStyle
         $this->borderBottomColor = self::safeInt($d['borderBottomColor'] ?? $bc);
         $this->borderLeftColor = self::safeInt($d['borderLeftColor'] ?? $bc);
 
-        // border style
-        $bs = (string)($d['borderStyle'] ?? '');
+        // border style (handle CssKeyword objects from parseIdent)
+        $bsRaw = $d['borderStyle'] ?? '';
+        $bs = is_object($bsRaw) ? ($bsRaw->value ?? 'none') : (string)$bsRaw;
         $this->borderStyle = $bs;
-        $this->borderTopStyle = (string)($d['borderTopStyle'] ?? $bs);
-        $this->borderRightStyle = (string)($d['borderRightStyle'] ?? $bs);
-        $this->borderBottomStyle = (string)($d['borderBottomStyle'] ?? $bs);
-        $this->borderLeftStyle = (string)($d['borderLeftStyle'] ?? $bs);
+        $btsRaw = $d['borderTopStyle'] ?? $bs;
+        $this->borderTopStyle = is_object($btsRaw) ? ($btsRaw->value ?? $bs) : (string)$btsRaw;
+        $brsRaw = $d['borderRightStyle'] ?? $bs;
+        $this->borderRightStyle = is_object($brsRaw) ? ($brsRaw->value ?? $bs) : (string)$brsRaw;
+        $bbsRaw = $d['borderBottomStyle'] ?? $bs;
+        $this->borderBottomStyle = is_object($bbsRaw) ? ($bbsRaw->value ?? $bs) : (string)$bbsRaw;
+        $blsRaw = $d['borderLeftStyle'] ?? $bs;
+        $this->borderLeftStyle = is_object($blsRaw) ? ($blsRaw->value ?? $bs) : (string)$blsRaw;
     }
 
     private function cssLengthFromDecl(array $d, string $key, CssLength $default): CssLength
