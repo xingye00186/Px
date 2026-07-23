@@ -206,6 +206,12 @@ class RenderTreeManager
         $output .= (string)$frag->getH();
         $output .= ")";
 
+        // 位置标注（对标测试期望：[pos=relative] / [pos=absolute] / [pos=fixed]）
+        $pos = $frag->style?->position?->value ?? 'static';
+        if ($pos !== 'static') {
+            $output .= " [pos=$pos]";
+        }
+
         if ($frag->content !== null && $frag->content !== "") {
             $content = (string)$frag->content;
             if (strlen($content) > 40) {
