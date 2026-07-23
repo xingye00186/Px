@@ -283,7 +283,13 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $fi = objval($fi, FlexItem::class);
                 $effAlign = $this->effectiveAlign($fi, $align);
                 $crossSize = $isRow ? $fi->h : $fi->w;
-                if ($effAlign === 'stretch' && $crossSize < $lineMaxCross) {
+                // CSS Flexbox §8.3: stretch 仅应用于交叉轴尺寸为 auto 的子项
+                $hasExplicitCross = false;
+                if ($fi->computedStyle !== null) {
+                    $crossProp = $isRow ? $fi->computedStyle->height : $fi->computedStyle->width;
+                    $hasExplicitCross = ($crossProp !== null && !$crossProp->isPercent() && $crossProp->toPx() > 0);
+                }
+                if ($effAlign === 'stretch' && !$hasExplicitCross && $crossSize < $lineMaxCross) {
                     if ($isRow) $fi->h = $lineMaxCross;
                     else $fi->w = $lineMaxCross;
                 }
@@ -359,8 +365,13 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $effAlign = $this->effectiveAlign($fi, $align);
                 $crossSize = $isRow ? $fi->h : $fi->w;
 
-                // Stretch items to fill lineMaxCross
-                if ($effAlign === 'stretch') {
+                // Stretch items to fill lineMaxCross (CSS §8.3: 仅 auto 交叉轴尺寸)
+                $hasExplicitCross2 = false;
+                if ($fi->computedStyle !== null) {
+                    $crossProp2 = $isRow ? $fi->computedStyle->height : $fi->computedStyle->width;
+                    $hasExplicitCross2 = ($crossProp2 !== null && !$crossProp2->isPercent() && $crossProp2->toPx() > 0);
+                }
+                if ($effAlign === 'stretch' && !$hasExplicitCross2) {
                     if ($isRow) $fi->h = $lineMaxCross;
                     else $fi->w = $lineMaxCross;
                     $crossSize = $lineMaxCross;
