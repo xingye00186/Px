@@ -46,7 +46,7 @@ class ChildLayoutProvider
      * @param ConstraintSpace|null $overrideSpace 可选的约束覆盖（flex/grid 确定的宽度）
      * @return PhysicalFragment 子项布局结果
      */
-    public function layoutChild(RenderNode $child, ?ConstraintSpace $overrideSpace = null): PhysicalFragment
+    public function layoutChild(RenderNode $child, ?ConstraintSpace $overrideSpace = null, int $layer = 0): PhysicalFragment
     {
         // 查找子项索引
         $index = $this->findChildIndex($child);
