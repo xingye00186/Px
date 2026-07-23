@@ -219,16 +219,17 @@ class FlexAlgorithm extends LayoutAlgorithm
                 }
             }
 
-            // 4b. Flex-shrink (skip when auto-height container: containerMain <= 0 means no constraint)
+            // 4b. Flex-shrink (CSS Flexbox §9.7: 按 width×shrink 加权收缩)
             if ($lineTotal > $containerMain && $containerMain > 0) {
                 $overflow = $lineTotal - $containerMain;
                 $shrinkTotal = 0;
-                foreach ($lineItems as $fi) { $fi = objval($fi, FlexItem::class); $shrinkTotal += $fi->shrink; }
+                foreach ($lineItems as $fi) { $fi = objval($fi, FlexItem::class); $shrinkTotal += ($isRow ? $fi->w : $fi->h) * $fi->shrink; }
                 if ($shrinkTotal > 0) {
                     foreach ($lineItems as $fi) {
                         $fi = objval($fi, FlexItem::class);
                         if ($fi->shrink > 0) {
-                            $reduction = (int)($overflow * $fi->shrink / $shrinkTotal);
+                            $itemSize = $isRow ? $fi->w : $fi->h;
+                            $reduction = (int)($overflow * $itemSize * $fi->shrink / $shrinkTotal);
                             if ($isRow) { $fi->w = max(0, $fi->w - $reduction); $fi->visualW = $fi->w; }
                             else $fi->h = max(0, $fi->h - $reduction);
                         }
