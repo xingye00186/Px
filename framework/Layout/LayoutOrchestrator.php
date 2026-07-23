@@ -95,6 +95,23 @@ class LayoutOrchestrator implements ChildLayoutProvider
     }
 
     /**
+     * ChildLayoutProvider 专用：公开的 mainLayout 入口。
+     * 对标 Blink：算法通过 LayoutChild() 按需布局子项。
+     */
+    public function mainLayoutPublic(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0, int $relayoutDepth = 0): PhysicalFragment
+    {
+        return $this->mainLayout($node, $space, $inheritedLayer, $relayoutDepth);
+    }
+
+    /**
+     * ChildLayoutProvider 专用：公开的 buildChildSpace 入口。
+     */
+    public function buildChildSpacePublic(RenderNode $child, ConstraintSpace $parentSpace, ?\Px\Css\ComputedStyle $parentStyle): ConstraintSpace
+    {
+        return $this->buildChildSpace($child, $parentSpace, $parentStyle);
+    }
+
+    /**
      * 正常流布局（mainLayout）— 两阶段：先内在尺寸测量，再确定约束下布局。
      * 对标 Blink LayoutNG 的 LayoutInput → LayoutResult 两阶段模型。
      */
