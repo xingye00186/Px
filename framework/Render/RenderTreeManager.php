@@ -228,6 +228,11 @@ class RenderTreeManager
         if ($bw > 0) {
             $output .= " bw=$bw";
         }
+        // overflow 标注（对标测试期望：ov=hidden / ov=auto / ov=scroll）
+        $ov = $frag->style?->overflow?->value ?? 'visible';
+        if ($ov !== 'visible') {
+            $output .= " ov=$ov";
+        }
 
         if ($frag->content !== null && $frag->content !== "") {
             $content = (string)$frag->content;
