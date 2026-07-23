@@ -87,6 +87,9 @@ class StyleArrayTransform implements TransformInterface
             if ($colonPos === false) { $valid = false; break; }
             $prop = trim(substr($decl, 0, $colonPos));
             $val = trim(substr($decl, $colonPos + 1));
+            // 治本：编译期将 CSS 属性名统一为规范 key（camelCase），
+            // 与 parseStyleBlock/parseInlineStyle 一致，消除 rawDeclarations 的 kebab/camel 二义
+            $prop = \Px\Css\CssMappings::canonicalStyleKey($prop);
             $pairs[] = var_export($prop, true) . '=>' . var_export($val, true);
         }
         if ($valid && !empty($pairs)) {

@@ -187,6 +187,9 @@ function tryConvertStyleToArray(string $resolved): ?string
                     return null;
                 }
                 $prop = trim(substr($decl, 0, $colonPos));
+                // 治本：编译期将 CSS 属性名统一为规范 key（camelCase），
+                // 与 parseStyleBlock/parseInlineStyle 一致（同时覆盖 pendingProp 与直接存储两路径）
+                $prop = \Px\Css\CssMappings::canonicalStyleKey($prop);
                 $val = trim(substr($decl, $colonPos + 1));
 
                 if ($val === '') {

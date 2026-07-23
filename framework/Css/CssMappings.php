@@ -643,6 +643,33 @@ class CssMappings
     }
 
     /**
+     * 将 CSS 属性名（kebab-case）映射为规范 key（治本：编译期统一 key 大小写）。
+     *
+     * 与 parseStyleBlock/parseInlineStyle 产出一致：
+     *   - 优先查 PROPERTY_MAP/INLINE_PROPERTY_MAP 的 'key'（含 'background-color'→'bg'、
+     *     'color'→'fg' 等特殊映射）
+     *   - 未命中则 kebab→camelCase（与 StyleResolver::kebabToCamelCase 一致）
+     *
+     * 供编译期 style 数组化（convertStaticStyle/tryConvertStyleToArray）调用，
+     * 使 SFC 产出的 style 数组 key 与 parseStyleBlock/parseInlineStyle 统一为 camelCase，
+     * 消除 rawDeclarations 的 kebab/camel 二义（根除 getRaw 需 fallback 的源头）。
+     */
+    public static function canonicalStyleKey(string $cssProp): string
+    {
+        $map = self::PROPERTY_MAP[$cssProp] ?? self::INLINE_PROPERTY_MAP[$cssProp] ?? null;
+        if ($map !== null && isset($map['key'])) {
+            return $map['key'];
+        }
+        // 未映射属性：kebab → camelCase（与 StyleResolver::kebabToCamelCase 一致）
+        $parts = explode('-', $cssProp);
+        $result = array_shift($parts);
+        foreach ($parts as $part) {
+            $result .= ucfirst($part);
+        }
+        return $result;
+    }
+
+    /**
      * AOT-compatible parser dispatcher.
      * Replaces call_user_func() which is not supported by AOT.
      */
