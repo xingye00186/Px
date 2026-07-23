@@ -394,12 +394,12 @@ $geoKeys = ['width','height','minWidth','maxWidth','minHeight','maxHeight',
 | ~~**P0**~~ | ~~RenderNode 几何字段未移除 + hitTest 双源真值~~ | ✅ hitTest/ScrollManager/PaintPipeline 均从 cachedFragment 读 |
 | ~~**P0**~~ | ~~PaintPipeline 12 处读 RenderNode 几何~~ | ✅ 已修复 (29770dd4) 改读 cachedFragment |
 | ~~**P0**~~ | ~~PaintPipeline 回写 RenderNode~~ | ✅ 已修复 (29770dd4) 移除回写 |
-| **P1** | PhysicalFragment.displayText 可变 | Fragment 不可变契约被破坏 |
+| **P1** | PhysicalFragment.displayText 可变 | Fragment 不可变契约被破坏（需将截断移入布局阶段） |
 | ~~**P1**~~ | ~~IntrinsicSizing 两阶段未实现~~ | ✅ 已清理 (f3cddb1b) 死代码删除 |
 | **P1** | contentWidth 语义混淆 | 滚动 maxScroll 计算错误 |
 | **P1** | BFC/FFC/GFC 格式化上下文未隔离 | margin collapse 穿透 |
 | **P1** | 滚动/交互状态未外置 | RenderNode 职责过重 |
-| **P1** | 脏标记 geoKeys 不完整 | 布局属性变化不触发重算 |
+| ~~**P1**~~ | ~~脏标记 geoKeys 不完整~~ | ✅ 已修复 (7b749899) 补全 14 个属性 |
 | **P1** | RenderNode 未瘦身 | 132 行，目标 60 行 |
 | **P2** | ChildLayoutProvider 实质全量预布局 | 性能浪费 |
 | **P2** | OOF 子树双重布局 | 性能浪费 |
