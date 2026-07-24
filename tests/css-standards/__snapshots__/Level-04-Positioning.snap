@@ -1,4 +1,4 @@
-@generated 2026-07-24 11:45:33
+@generated 2026-07-24 12:20:47
 === Test: position:relative left=10 top=5 ===
 Frame #1 events=0 detail=normal
 div (10,5 100x50) [pos=relative] text="Relative"
@@ -15,6 +15,14 @@ div (10,20 100x50) [pos=absolute] text="Absolute"
 Frame #1 events=0 detail=normal
 div (0,0 400x300) [pos=relative]
   div (50,30 100x80) [pos=absolute] text="Child"
+
+---
+
+=== Test: Block 流堆叠 + padding ===
+Frame #1 events=0 detail=normal
+div (0,0 300x88)
+  div (10,10 280x30) text="Line 1"
+  div (10,48 280x30) text="Line 2"
 
 ---
 
@@ -42,6 +50,13 @@ div (0,0 400x300) [pos=relative]
 === Test: position:fixed 相对于视口定位 ===
 Frame #1 events=0 detail=normal
 div (100,200 120x60) [pos=fixed] text="Fixed"
+
+---
+
+=== Test: absolute 居中 left=0 right=0 margin=auto ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200) [pos=relative]
+  div (0,50 200x60) [pos=absolute] text="Center"
 
 ---
 

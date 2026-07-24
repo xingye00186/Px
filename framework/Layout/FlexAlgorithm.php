@@ -131,6 +131,11 @@ class FlexAlgorithm extends LayoutAlgorithm
             // - 百分比：基于容器**主轴尺寸**解析（CSS Flexbox §7.1.1）
             // - 长度（含 0）: 使用具体值。修复旧 bug：toPx()>0 将 flex-basis:0 错误归为 auto。
             $basisVal = $cs->flexBasis;
+            // CSS Flexbox §7.1：flex 简写（如 flex:1）未展开为独立 flexBasis key，导致 $cs->flexBasis 仍为 auto。
+            // 回退到 $cs->flex->basis（CssFlex 对象，由 flex 简写解析生成）。
+            if (($basisVal === null || $basisVal->isAuto()) && $cs->flex !== null && $cs->flex->basis !== null && !$cs->flex->basis->isAuto()) {
+                $basisVal = $cs->flex->basis;
+            }
             $basis = -1;
             if ($basisVal instanceof CssLength && !$basisVal->isAuto() && !$basisVal->isContent() && !$basisVal->isIntrinsic()) {
                 // 百分比 / calc 需基于容器主轴尺寸解析；其他长度（px 等）直接 toPx
@@ -253,7 +258,9 @@ class FlexAlgorithm extends LayoutAlgorithm
         // ── Step 2: Apply flex-basis ──
         foreach ($sortedFlexItems as $fi) {
             $fi = objval($fi, FlexItem::class);
-            if ($fi->basis > 0) { if ($isRow) $fi->w = $fi->basis; else $fi->h = $fi->basis; }
+            // CSS Flexbox §9.3: hypothetical main size = basis（包括 0）。
+            // basis=-1 表示 auto/content（保留 layoutChild 结果）；basis>=0 则显式设定。
+            if ($fi->basis >= 0) { if ($isRow) $fi->w = $fi->basis; else $fi->h = $fi->basis; }
         }
 
         // ── Step 3: Break into lines (FlexLineBreaker) ──
@@ -270,21 +277,21 @@ class FlexAlgorithm extends LayoutAlgorithm
             foreach ($lineItems as $fi) { $fi = objval($fi, FlexItem::class); $lineTotal += $isRow ? $fi->w : $fi->h; }
 
             // 4a. Flex-grow (CSS spec: distribute remaining space; works when lineTotal==0 too)
-            if ($lineTotal < $containerMain) {
-                $remaining = $containerMain - $lineTotal;
+            // CSS §9.5.1: gap 应从主轴可用空间扣除
+            $itemsInLine = count($lineItems);
+            $totalGap = ($itemsInLine - 1) * $gap;
+            $availableAfterGap = max(0, $containerMain - $totalGap);
+            if ($lineTotal < $availableAfterGap) {
+                $remaining = $availableAfterGap - $lineTotal;
                 $growTotal = 0;
                 foreach ($lineItems as $fi) { $fi = objval($fi, FlexItem::class); $growTotal += $fi->grow; }
                 if ($growTotal > 0) {
-                    // If lineTotal == 0 and all items are flex-grow, distribute full container size
-                    // CSS §9.5.1: gap 应从主轴可用空间扣除
+                    // If lineTotal == 0 and all items are flex-grow, distribute full available
                     if ($lineTotal === 0) {
-                        $itemsInLine = count($lineItems);
-                        $totalGap = ($itemsInLine - 1) * $gap;
-                        $available = max(0, $containerMain - $totalGap);
                         foreach ($lineItems as $fi) {
                             $fi = objval($fi, FlexItem::class);
                             if ($fi->grow > 0) {
-                                $share = (int)($available * $fi->grow / $growTotal);
+                                $share = (int)($availableAfterGap * $fi->grow / $growTotal);
                                 if ($isRow) { $fi->w = $share; $fi->visualW = $share; } else $fi->h = $share;
                             }
                         }
@@ -332,8 +339,14 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $minH = $fcs->minHeight?->toPx() ?? 0;
                 // min-width: auto 处理（仅对主轴方向，其他方向尚无 min-content 课题）
                 if ($isRow && $minW === 0 && $fcs->minWidth !== null && $fcs->minWidth->isAuto()) {
-                    // 代理 min-content: 使用子项 basis 尺寸或 visual（防止 shrink 到 0）
-                    $minW = max((int)$fi->visualW, (int)$fi->basis > 0 ? (int)$fi->basis : 0);
+                    // CSS-Sizing-3 §5.2: flex-basis:0 时 min-content 约束不应使用原始 visual width；
+                    // basis=0 显式意味着“忽略内容尺寸，全量由 grow/shrink 决定”。
+                    if ($fi->basis === 0) {
+                        $minW = 0;
+                    } else {
+                        // 代理 min-content: 使用子项 basis 尺寸或 visual（防止 shrink 到 0）
+                        $minW = max((int)$fi->visualW, (int)$fi->basis > 0 ? (int)$fi->basis : 0);
+                    }
                 }
                 if (!$isRow && $minH === 0 && $fcs->minHeight !== null && $fcs->minHeight->isAuto()) {
                     $minH = max((int)$fi->visualH, (int)$fi->basis > 0 ? (int)$fi->basis : 0);

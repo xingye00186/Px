@@ -50,7 +50,7 @@ $tests['margin-top auto 在 flex column 底推'] = function() {
             VNode::h('div', ['style' => 'height:40px;margin-top:auto'], 'Bottom'),
         ])
     );
-    assert_contains($result, 'div (0,40 200x40) text="Bottom"', 'margin-top:auto pushes Bottom below Top h=40');
+    assert_contains($result, 'div (0,160 200x40) text="Bottom"', 'margin-top:auto pushes Bottom to bottom: y=200-40=160');
     return $result;
 };
 

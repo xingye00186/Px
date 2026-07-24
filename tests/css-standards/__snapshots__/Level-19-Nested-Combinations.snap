@@ -1,4 +1,17 @@
-@generated 2026-07-24 11:45:34
+@generated 2026-07-24 12:20:48
+=== Test: Flex Row 内 Grid 布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x120) [dsp=flex]
+  div (0,0 197x120) [dsp=grid] fg=1
+    div (0,0 96x50) text="1"
+    div (100,0 97x50) text="2"
+  div (205,0 394x120) [dsp=grid] fg=2
+    div (205,0 128x50) text="3"
+    div (337,0 128x50) text="4"
+    div (469,0 130x50) text="5"
+
+---
+
 === Test: Flex Column 内 Flex Row 嵌套 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x200) [dsp=flex]

@@ -1,4 +1,4 @@
-@generated 2026-07-24 11:45:34
+@generated 2026-07-24 12:20:48
 === Test: Flex row + gap 两列等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
@@ -105,7 +105,7 @@ div (0,0 500x34) bw=1
 Frame #1 events=0 detail=normal
 div (0,0 600x24) [dsp=flex]
   div (0,0 24x24) bw=2
-  div (32,0 576x4) fg=1
+  div (32,0 568x4) fg=1
     div (32,0 0x0) text="v5 M3: Flat + Layer"
     div (32,4 0x0) text="~100 行 / 7 文件"
 

@@ -1,4 +1,4 @@
-@generated 2026-07-24 11:45:33
+@generated 2026-07-24 12:20:48
 === Test: margin:0 auto 水平居中 block ===
 Frame #1 events=0 detail=normal
 div (0,0 600x82)
@@ -11,6 +11,14 @@ Frame #1 events=0 detail=normal
 div (0,0 400x50) [dsp=flex]
   div (0,0 80x30) text="Left"
   div (300,0 100x30) text="Right"
+
+---
+
+=== Test: margin-top auto 在 flex column 底推 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x200) [dsp=flex]
+  div (0,0 200x40) text="Top"
+  div (0,160 200x40) text="Bottom"
 
 ---
 

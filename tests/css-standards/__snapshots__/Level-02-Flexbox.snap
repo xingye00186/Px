@@ -1,4 +1,4 @@
-@generated 2026-07-24 11:45:33
+@generated 2026-07-24 12:20:47
 === Test: flex row 三个子项水平排列 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x60) [dsp=flex]
@@ -36,6 +36,16 @@ div (0,0 400x50) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 400x60) [dsp=flex]
   div (160,0 80x40) text="Center"
+
+---
+
+=== Test: 嵌套 flex (row > column) ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100) [dsp=flex]
+  div (0,0 292x100) [dsp=flex] fg=1
+    div (0,0 292x40) text="Top"
+    div (0,40 292x40) text="Bottom"
+  div (300,0 100x100) text="Side"
 
 ---
 
