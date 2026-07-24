@@ -160,6 +160,35 @@ $tests['CSS §7.1 flex-basis:min-content 关键字'] = function() {
     return $result;
 };
 
+// ── Test 11: CSS Flexbox §7.1.1 flex-basis 百分比基于主轴 ──
+$tests['CSS §7.1.1 flex-basis:50% 百分比解析'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'display:flex;width:400px;height:60px'], [
+            VNode::h('div', ['style' => 'flex-basis:50%;flex-shrink:0;height:40px'], 'A'),
+            VNode::h('div', ['style' => 'flex-basis:25%;flex-shrink:0;height:40px'], 'B'),
+        ])
+    );
+    // 400 * 50% = 200, 400 * 25% = 100
+    assert_contains($result, 'div (0,0 200x40) text="A"', 'flex-basis:50% 基于主轴 400 = 200');
+    assert_contains($result, 'div (200,0 100x40) text="B"', 'flex-basis:25% 基于主轴 400 = 100');
+    return $result;
+};
+
+// ── Test 12: CSS Flexbox §4.1 absolute flex items 不占主轴空间 ──
+$tests['CSS §4.1 absolute flex items 不占主轴空间'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'display:flex;position:relative;width:400px;height:100px'], [
+            VNode::h('div', ['style' => 'flex:1;height:40px'], 'A'),
+            VNode::h('div', ['style' => 'position:absolute;left:10px;top:10px;width:50px;height:50px'], 'ABS'),
+            VNode::h('div', ['style' => 'flex:1;height:40px'], 'B'),
+        ])
+    );
+    assert_contains($result, 'div (0,0 200x40) fg=1 text="A"', 'flex:1 A 占 200（absolute 不占空间）');
+    assert_contains($result, 'div (200,0 200x40) fg=1 text="B"', 'flex:1 B 占 200 @ x=200');
+    assert_contains($result, '[pos=absolute] text="ABS"', 'absolute 子项保留且 passthrough');
+    return $result;
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-26-Flexbox-Complete.snap';
 run_css_tests('Level 26 - Flexbox Complete', $snapFile, $tests);
 

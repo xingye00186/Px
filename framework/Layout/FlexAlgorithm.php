@@ -87,6 +87,9 @@ class FlexAlgorithm extends LayoutAlgorithm
         $flexItemData = [];
         // 建立 $flexItems 索引到 $childResults 原始索引的映射（display:none skip 后索引错位）
         $flexItemOrigIdx = [];
+        // CSS Flexbox §4.1：position:absolute/fixed flex items 仅参与 static position 计算，
+        // 不占主轴空间。收集后直接追加到最终 fragmentChildren，不参与 flex 分配。
+        $absoluteFlexItemsPassthrough = [];
         for ($crI = 0, $crLen = count($childResults); $crI < $crLen; $crI++) {
             $cr = $childResults[$crI];
             $cs = $cr->style;
@@ -94,6 +97,12 @@ class FlexAlgorithm extends LayoutAlgorithm
             // CSS §9.2: 跳过 display:none 的子项（不影响 flex 布局）
             $childDisplay = $cs->display?->value ?? 'block';
             if ($childDisplay === 'none') continue;
+            // CSS Flexbox §4.1: absolute/fixed flex items 不参与主轴分配，直通到输出
+            $childPos = $cs->position?->value ?? 'static';
+            if ($childPos === 'absolute' || $childPos === 'fixed') {
+                $absoluteFlexItemsPassthrough[] = $cr;
+                continue;
+            }
             $flexItemOrigIdx[] = $crI;
             // Use resolved flex shorthand as fallback when individual props not set
             // (getRaw may return CssLength object which cannot be cast to float)
@@ -119,12 +128,18 @@ class FlexAlgorithm extends LayoutAlgorithm
             // CSS Flexbox §7.1：flex-basis 取值可为长度/百分比/auto/content/min-content/max-content/fit-content。
             // - auto/content: 使用子项 content size (basis=-1 fallback 到 child.w/h)
             // - min-content/max-content/fit-content: Px 无完整 intrinsic 计算，降级为 content size 代理（同 auto）
-            // - 长度/百分比（包括 0）: 使用具体值。修复旧 bug：toPx()>0 将 flex-basis:0 错误归为 auto。
+            // - 百分比：基于容器**主轴尺寸**解析（CSS Flexbox §7.1.1）
+            // - 长度（含 0）: 使用具体值。修复旧 bug：toPx()>0 将 flex-basis:0 错误归为 auto。
             $basisVal = $cs->flexBasis;
             $basis = -1;
             if ($basisVal instanceof CssLength && !$basisVal->isAuto() && !$basisVal->isContent() && !$basisVal->isIntrinsic()) {
-                // 具体长度得到具体值（包括 0）——不以 >0 为条件
-                $basis = $basisVal->toPx();
+                // 百分比 / calc 需基于容器主轴尺寸解析；其他长度（px 等）直接 toPx
+                if ($basisVal->isPercent() || $basisVal->isCalc()) {
+                    $basis = $basisVal->resolveInContext($containerMain);
+                } else {
+                    // 具体长度得到具体值（包括 0）——不以 >0 为条件
+                    $basis = $basisVal->toPx();
+                }
                 if ($basis < 0) $basis = 0;
             }
             $hasExplicitCross = $cs->getRaw($isRow ? 'height' : 'width') !== null;
@@ -599,6 +614,11 @@ class FlexAlgorithm extends LayoutAlgorithm
         $fragmentChildren = [];
         foreach ($mappedResults as $mr) {
             $fragmentChildren[] = $mr;
+        }
+        // CSS Flexbox §4.1: absolute/fixed flex items 直通到输出，不受 flex 分配影响。
+        // OOFLayoutAlgorithm 会在后续通行证中处理它们的实际坐标。
+        foreach ($absoluteFlexItemsPassthrough as $abs) {
+            $fragmentChildren[] = $abs;
         }
 
         return new PhysicalFragment(
