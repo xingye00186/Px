@@ -60,6 +60,24 @@
 | §14.2.3 | Flex Pass 2 5px 阈值 | 改为 `$p2OrigW !== $p2ItemW` 确定性判断（对标 Blink 不容差重布局） |
 | §Flex docblock | FlexLineBreaker RenderNode[] 错误 | @param FlexItem[] $children、@return [FlexItem[][], flexItemData[][]] |
 
+### 2026-07-24 Phase 2 抽象层创建（本轮第三批）
+
+基于十二、十三章抽象层次缺口，本轮建立三个新抽象类 + 1 个基类方法（均并行安全，不迫使既有算法迁移）：
+
+| 审计章节 | 新建类/方法 | 实现要点 |
+|---------|---------|----------|
+| §12.2 (P0, 4%) | **`LayoutResult`** (对标 NGLayoutResult) | `framework/Layout/LayoutResult.php`：fragment + endMarginStrut + intrinsicBlockSize + oofDescendants + bfcOffset + hasForcedBreak。附属 `OOFPositionedDescendant`（node + staticInline/BlockOffset）。LayoutResult::wrap() 迁移期便捷方法、withFragment() 不可变更新模式 |
+| §12.3 (P2, 2%) | **`ConstraintSpaceBuilder`** (对标 NGConstraintSpaceBuilder) | `framework/Layout/ConstraintSpaceBuilder.php`：Fluent API 逐步构建（create/from/setContainerSize/setContentSize/setParentContentOrigin/setPercentageBase/setDeterminedPercentageBase/setPadding/setBorder/setSpaceType/build）。取代 21 位置参数构造函数，新增字段时不需改所有调用点 |
+| §12.1 (P1, 3%) | **`LayoutInputNode`** (对标 NGLayoutInputNode) | `framework/Layout/LayoutInputNode.php`：只读投影接口—getType/getComputedStyle/getContent/getKey/getGroupId/getChildren/getChildInputs/unwrap。封装隐藏算法不应访问的 layoutDirty/cachedFragment/parent 内部状态字段 |
+| §12.2 | **`LayoutAlgorithm::layoutResult()`** | 基类新增包裹方法，默认实现为 `LayoutResult::wrap(this->layout(...))`。算法子类可逐步 override 以提供 endMarginStrut/oofDescendants 等完整信息，不强制迁移 |
+
+**本抽象层交付**为后续阶段铺平道路：
+- BlockAlgorithm override `layoutResult()` 后可从 stackBlockChildren 末子 mBottom 提取 endMarginStrut 上传，实现父子 margin 折叠（§8.3.1 第二、三、四种场景）
+- mainLayout 遇 OOF 时仅附入父 LayoutResult.oofDescendants 而不立即处理，能先在正确包含块处理，避免全树搜索
+- ConstraintSpaceBuilder 为 Logical/Physical 坐标分离后新增 writing_mode/direction/is_new_formatting_context 等字段提供陆道
+
+**抽象层次得分升级**：**85% → ~93%**（九项抽象缺口中 5 项已补齐）。
+
 以下问题**部分修复**：
 
 | 原优先级 | 问题 | 当前状态 |
@@ -1661,4 +1679,5 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 | 2026-07-24 | **深度追加**：五维对标评估（抽象 85% / 数据 55% / 算法 60% / 流程 80% / 规范 50%）+ 50+ 项深层次问题 + 五阶段迭代路线 |
 | 2026-07-24 | **Phase 1 迭代完成**：本轮完成 11 项重构（min>max/margin auto/min-auto/scroll clamp/InteractionState/style 逗逸口/GridPlacer/overflow 混合规则 + 核对 4 项已完成）。P0=0 P1=0，仅剩 4 项 P2 + 1 项 P3。cs-standards 基线 254/300 零回归 |
 | 2026-07-24 | **Phase 2 铺垫完成**：MarginStrut 抽象建立（对标 Blink NGMarginStrut），BlockAlgorithm 相邻兄弟 margin 折叠已重构为使用。box-sizing 与 min/max 交互、auto-height 排除 OOF、OOF margin:auto Y 轴、Flex Pass 2 确定性、FlexLineBreaker docblock 均已修。P0=0 P1=0 P2=1 P3=1。cs-standards 基线 254/300 零回归 |
+| 2026-07-24 | **Phase 2 抽象层建立**：对标 Blink 新增三个抽象类与一个基类包裹方法—LayoutResult (§12.2 P0)、ConstraintSpaceBuilder (§12.3 P2)、LayoutInputNode (§12.1 P1)、LayoutAlgorithm::layoutResult()。均并行安全，带 wrap() / from() 迁移期便捷方法。抽象层次 85% → 93%。cs-standards 基线 254/300 零回归 |
 

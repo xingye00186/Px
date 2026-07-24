@@ -64,5 +64,25 @@ abstract class LayoutAlgorithm
         array $childNodes = [],
         ?PhysicalFragment $inputFragment = null,
     ): PhysicalFragment;
+
+    /**
+     * 执行布局并返回完整 LayoutResult（对标 Blink NGLayoutAlgorithm::Layout()）。
+     *
+     * 默认实现为包裹 layout() 返回的 PhysicalFragment——无 endMarginStrut / oofDescendants。
+     * 算法子类可选择 override 以提供完整信息（未来迁移目标）。
+     *
+     * 本方法提供与旧 layout() 并行的迁移路径：新消费者可逐步改为使用 LayoutResult，
+     * 旧代码仍可直接调用 layout() 仅取 Fragment。
+     */
+    public function layoutResult(
+        ConstraintSpace $space,
+        ?ComputedStyle $style = null,
+        string $textContent = '',
+        array $childNodes = [],
+        ?PhysicalFragment $inputFragment = null,
+    ): LayoutResult {
+        $frag = $this->layout($space, $style, $textContent, $childNodes, $inputFragment);
+        return LayoutResult::wrap($frag);
+    }
 }
 
