@@ -6,6 +6,42 @@
 
 ---
 
+## 〇-C：浏览器 Ground-Truth 验证发现（2026-07-25）
+
+### 结构性阻塞：css-standards 断言基线编码非 Blink 行为
+
+用真实 Chromium 浏览器（getBoundingClientRect）对以下用例取权威 Blink 几何：
+
+```
+grid: display:grid; grid-template-columns:1fr 1fr; width:500px; height:100px; gap:8px
+  子项 flex（无显式高度）
+
+Blink 真值：
+  grid: 0,0 500x100
+  f1(flex): 0,0 246x100   ← 行 stretch 到容器高度 100px
+  f2(flex): 254,0 246x100
+```
+
+**验证结论**：
+1. CSS Grid §12.3 align-content:stretch（默认）——无 grid-template-rows 的隐式行在显式容器高度下 **stretch 到 100px**（Blink 权威）。
+2. 当前引擎输出 246x30（内容高），**错误**。
+3. css-standards 测试断言 246x60，**也错误**（既非 Blink 也非引擎当前值）。
+
+### 阻塞性质
+- 实现 Blink 正确的行 stretch（即使精确守卫仅纯内容 auto 行）会使 css-standards 278→269（~9 测试回归）。
+- 这 ~9 个测试的断言编码了**非 Blink 的内容行高度**期望。
+- 同类已验证案例：block 文本 auto-height（CSS §10.6，Blink 正确但 -11.9% 性能 + 无测试收益）。
+
+### 协调重写前置条件（推进 Blink 对齐的唯一正确路径）
+1. 对每个受影响测试用浏览器取 Blink ground truth（getBoundingClientRect）
+2. 重写断言为 Blink 真值
+3. 实现引擎的 auto-track-only stretch（GridTrack.isAuto 已有字段，隐式行需标记）
+4. 重建快照 + 每步 reactive-bench 验证性能
+
+**禁止**：单方面改引擎（破坏基线）或用引擎输出反填断言（循环论证）。
+
+---
+
 ## 维度一：核心数据要素映射（Blink → Px）
 
 ### 1.1 映射关系表
