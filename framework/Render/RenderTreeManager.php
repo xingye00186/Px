@@ -34,6 +34,15 @@ class RenderTreeManager
     /** @var array<callable> RenderNode 销毁回调（Application 注册用于清理 ScrollManager/InteractionState） */
     private array $destroyCallbacks = [];
 
+    /** ScrollManager 引用（scroll bind 路由目标） */
+    private ?\Px\Core\ScrollManager $scrollManager = null;
+
+    /** 注入 ScrollManager（由 Application::mount 调用） */
+    public function setScrollManager(\Px\Core\ScrollManager $sm): void
+    {
+        $this->scrollManager = $sm;
+    }
+
     /**
      * 注册 RenderNode 销毁回调。当节点被 destroyRenderNodeTree 销毁时触发。
      * 用于清理 ScrollManager、InteractionState 等外部状态映射中的 orphan 条目。
@@ -724,15 +733,15 @@ class RenderTreeManager
                         $this->groupIdToRenderNodeMap[$oldRootRN->groupId][] = $oldRootRN;
                     }
 
-                    // 4. 同步 scroll bind 值（父组件可能更新了绑定值）
+                    // 4. 同步 scroll bind 值（路由至 ScrollManager，不写 RenderNode）
                     $component = $componentByGroupId[$childGroupId] ?? $root;
                     $scrollBindKey = $vnode->props[':scroll-top'] ?? '';
-                    if ($scrollBindKey !== '') {
-                        $oldRootRN->scrollTop = (int) $component->getBindValue($scrollBindKey);
+                    if ($scrollBindKey !== '' && $this->scrollManager !== null) {
+                        $this->scrollManager->setScrollTop($oldRootRN, (int) $component->getBindValue($scrollBindKey));
                     }
                     $scrollLeftBindKey = $vnode->props[':scroll-left'] ?? '';
-                    if ($scrollLeftBindKey !== '') {
-                        $oldRootRN->scrollLeft = (int) $component->getBindValue($scrollLeftBindKey);
+                    if ($scrollLeftBindKey !== '' && $this->scrollManager !== null) {
+                        $this->scrollManager->setScrollLeft($oldRootRN, (int) $component->getBindValue($scrollLeftBindKey));
                     }
 
                     \Px\Core\PerfCounter::inc('component_skip');
@@ -751,10 +760,7 @@ class RenderTreeManager
                     $parentStyle
                 );
 
-                // 保留 scrollTop 值：从旧子树复制到新子树（仅 scroll containers）
-                if ($oldRootRN !== null && $childRN !== null) {
-                    $this->copyScrollTopFromOld($childRN, $oldRootRN);
-                }
+
 
                 // 清理旧框架组件根节点：旧帧残留的 RenderNode 树不再需要
                 if ($oldRootRN !== null && $oldRootRN !== $childRN) {
@@ -1034,15 +1040,15 @@ class RenderTreeManager
             // 同时捕获 img/input 等需要的 props 供 paint 使用
             // dataset 已在 Fragment 自包含路径中由 LayoutOrchestrator 从 sourceVNode 构建
 
-            // 同步 scroll bind 值
+            // 同步 scroll bind 值（路由至 ScrollManager）
             $component = $componentByGroupId[$groupId] ?? $root;
             $scrollBindKey = $vnode->props[':scroll-top'] ?? '';
-            if ($scrollBindKey !== '') {
-                $renderNode->scrollTop = (int) $component->getBindValue($scrollBindKey);
+            if ($scrollBindKey !== '' && $this->scrollManager !== null) {
+                $this->scrollManager->setScrollTop($renderNode, (int) $component->getBindValue($scrollBindKey));
             }
             $scrollLeftBindKey = $vnode->props[':scroll-left'] ?? '';
-            if ($scrollLeftBindKey !== '') {
-                $renderNode->scrollLeft = (int) $component->getBindValue($scrollLeftBindKey);
+            if ($scrollLeftBindKey !== '' && $this->scrollManager !== null) {
+                $this->scrollManager->setScrollLeft($renderNode, (int) $component->getBindValue($scrollLeftBindKey));
             }
 
             if ($renderNode->groupId === null) {
@@ -1545,32 +1551,8 @@ class RenderTreeManager
     /**
      * 从 VNode.props 解析内联样式。
      * 支持 style（静态）和 :style（动态绑定）同时存在时合并，
+    /**
      * :style 覆盖 style，符合 Vue 3 模板语义。
      */
-    /**
-     * 从旧 RenderNode 子树向新子树安全复制 scrollTop 值。
-     *
-     * 由于 #component 节点类型无法与旧 RenderNode 直接匹配，
-     * updateFromVNode 每次为组件创建全新的子树，scrollTop 丢失。
-     * 此方法在创建新子树后，遍历新旧子树并复制 scrollTop（仅限 scroll containers）。
-     *
-     * 遍历策略：同时 DFS 两棵树，按位置匹配子节点（与 updateFromVNode 的 key-less 匹配算法一致）。
-     */
-    public function copyScrollTopFromOld(RenderNode $newNode, RenderNode $oldNode): void
-    {
-        if ($oldNode->isScrollContainer) {
-            $newNode->scrollTop = $oldNode->scrollTop;
-            $newNode->scrollLeft = $oldNode->scrollLeft;
-        }
-
-        $newChildren = $newNode->children;
-        $oldChildren = $oldNode->children;
-        $minCount = min(count($newChildren), count($oldChildren));
-
-        for ($i = 0; $i < $minCount; $i++) {
-            $this->copyScrollTopFromOld($newChildren[$i], $oldChildren[$i]);
-        }
-    }
-
 
 }

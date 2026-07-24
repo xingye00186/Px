@@ -220,6 +220,8 @@ class Application
             $this->resolveComponentByGroupId(...),
             $this->renderTreeManager->findScrollContainerAt(...)
         );
+        // 注入 ScrollManager 到 RenderTreeManager（scroll bind 路由）
+        $this->renderTreeManager->setScrollManager($this->scrollManager);
         // PaintPipeline 依赖 RenderContext，在 initRenderer() 中初始化
     }
 
