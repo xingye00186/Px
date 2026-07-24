@@ -1,4 +1,4 @@
-@generated 2026-07-24 12:20:48
+@generated 2026-07-24 12:25:50
 === Test: width:0 height:0 零尺寸元素 ===
 Frame #1 events=0 detail=normal
 div (0,0 0x0) ov=hidden text="Zero"

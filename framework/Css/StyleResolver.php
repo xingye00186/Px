@@ -139,6 +139,11 @@ class StyleResolver
         // Expand shorthand padding/margin to individual values
         $raw = self::expandBoxShorthand($raw);
 
+        // Note: flex shorthand expansion (flex:1 → flex-grow:1 + flex-shrink:1 + flex-basis:0px)
+        // 暂不在此阶段展开——展开后 basis=0 会绕过 min-width:auto 的 content-size 保护，
+        // 导致无完整 min-content 计算时大量回归。待 Phase 5 完整 min-content 计算就绪后启用。
+        // FlexAlgorithm 中通过 $cs->flex->basis 回退机制处理。
+
         // Apply PROPERTY_MAP parsers
         $lookup = array_merge(CssMappings::getPropertyMap(), CssMappings::getInlinePropertyMap());
 
