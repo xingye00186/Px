@@ -233,7 +233,16 @@ class BlockAlgorithm extends LayoutAlgorithm
                 }
             }
             $overflowY = $childStyle?->overflowY?->value ?? $childStyle?->overflow?->value ?? 'visible';
-            $isCollapsible = ($childDisplay === 'block') && ($overflowY === 'visible');
+            // CSS 2.2 §9.4.1: BFC 边界检测——以下情况创建新 BFC，阻断 margin 折叠
+            $childFloat = $childStyle?->getRaw('float') ?? 'none';
+            $childFloatVal = is_object($childFloat) ? ($childFloat->value ?? 'none') : (string)$childFloat;
+            $createsBFC = ($overflowY !== 'visible')
+                || ($childPosition === 'absolute' || $childPosition === 'fixed')
+                || ($childFloatVal !== 'none')
+                || ($childDisplay === 'inline-block' || $childDisplay === 'table-cell'
+                    || $childDisplay === 'flex' || $childDisplay === 'grid'
+                    || $childDisplay === 'flow-root');
+            $isCollapsible = ($childDisplay === 'block') && !$createsBFC;
             $childY = ($isCollapsible && $prevCollapsible) ? ($stackY - $prevMarginBottom + max($prevMarginBottom > 0 ? $prevMarginBottom : 0, $mTop > 0 ? $mTop : 0) + min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0)) : ($stackY + $mTop);
             $relTop = $childStyle?->top?->toPx() ?? 0;
             $relLeft = $childStyle?->left?->toPx() ?? 0;
