@@ -350,6 +350,10 @@ class FlexAlgorithm extends LayoutAlgorithm
 
         // ── Step 4: Per-line grow/shrink + main-axis positioning ──
         // Phase 4D: CSS Flexbox §9.7.4 clamp rerun 循环（对标 Blink ResolveFlexibleLengths）
+        // CSS Flexbox §9.7: 主轴尺寸不定（column+height:auto 或 row+width:auto）时不 shrink，
+        // 容器应增长到内容尺寸而非压缩子项（对标 Blink NGFlexLayoutAlgorithm 的 definite main size 判断）。
+        $mainRaw = $isRow ? $s->getRaw('width') : $s->getRaw('height');
+        $mainSizeIsDefinite = ($mainRaw !== null) && $containerMain > 0;
         $lineMaxCrosses = [];
         foreach ($lineGroups as $lineIdx => $lineItems) {
             // §9.7: Resolving Flexible Lengths (frozen loop)
@@ -410,8 +414,8 @@ class FlexAlgorithm extends LayoutAlgorithm
                         $extra = (int)($freeSpace * $fi->grow / $unfrozenGrowTotal);
                         if ($isRow) { $fi->w += $extra; $fi->visualW += $extra; } else $fi->h += $extra;
                     }
-                } else if ($freeSpace < 0 && $unfrozenShrinkWeightTotal > 0) {
-                    // Shrink
+                } else if ($freeSpace < 0 && $unfrozenShrinkWeightTotal > 0 && $mainSizeIsDefinite) {
+                    // Shrink（仅主轴尺寸 definite 时；CSS Flexbox §9.7）
                     $overflow = -$freeSpace;
                     foreach ($lineItems as $fi) {
                         $fi = objval($fi, FlexItem::class);

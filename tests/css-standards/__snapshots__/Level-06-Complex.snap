@@ -1,4 +1,4 @@
-@generated 2026-07-24 17:59:55
+@generated 2026-07-24 22:58:21
 === Test: NavBar 水平导航栏 (flex row) ===
 Frame #1 events=0 detail=normal
 div (0,0 1440x56) [dsp=flex]
@@ -18,19 +18,6 @@ div (700,400 48x48) [pos=fixed] text="Top"
 
 ---
 
-=== Test: 视频卡片 (封面+信息) flex column ===
-Frame #1 events=0 detail=normal
-div (0,0 300x0) [dsp=flex] ov=hidden
-  div (0,0 300x0)
-  div (0,0 300x0) [dsp=flex]
-    div (8,8 284x0) text="视频标题最多两行"
-    div (8,12 284x0) [dsp=flex]
-      div (8,12 268x0) [dsp=flex] text="UP主名称"
-      div (284,12 0x0) text="·"
-      div (292,12 0x0) text="1.2万"
-
----
-
 === Test: Bilibili 顶层 flex column 布局 ===
 Frame #1 events=0 detail=normal
 div (0,0 1440x900) [dsp=flex]
@@ -45,6 +32,20 @@ div (0,0 1440x900) [dsp=flex]
   div (0,100 1440x800) scroll ch=216 cw=1408 maxScroll=0 st=0 sl=0 ov=auto fg=1
     div (16,116 0x200) text="Content Area"
   div (700,400 48x48) [pos=fixed]
+
+---
+
+=== Test: Banner + 视频网格组合 ===
+Frame #1 events=0 detail=normal
+div (0,0 964x356) [dsp=flex]
+  div (0,0 964x200) text="Banner"
+  div (0,216 964x140) [dsp=grid]
+    div (0,216 310x140) [dsp=flex]
+      div (0,216 310x140) text="Cover"
+      div (0,356 310x0) text="Title"
+    div (326,216 310x140) [dsp=flex]
+      div (0,216 310x140) text="Cover"
+      div (0,356 310x0) text="Title"
 
 ---
 
@@ -70,12 +71,12 @@ div (0,0 1440x900) [pos=relative]
 === Test: grid + flex:1 链式填充 ===
 Frame #1 events=0 detail=normal
 div (0,0 800x300) [dsp=grid]
-  div (0,0 392x1) [dsp=flex]
-    div (0,0 392x0) text="Header"
-    div (0,0 392x0) fg=1 text="Fill"
-  div (408,0 392x1) [dsp=flex]
-    div (0,0 392x0) text="Header"
-    div (0,0 392x0) fg=1 text="Fill"
+  div (0,0 392x60) [dsp=flex]
+    div (0,0 392x40) text="Header"
+    div (0,40 392x0) fg=1 text="Fill"
+  div (408,0 392x60) [dsp=flex]
+    div (0,0 392x60) text="Header"
+    div (0,60 392x0) fg=1 text="Fill"
 
 ---
 
@@ -93,10 +94,10 @@ div (0,0 964x316) [dsp=grid]
 Frame #1 events=0 detail=normal
 div (0,0 800x200) [dsp=flex]
   div (8,8 576x184) [dsp=flex] fg=1
-    div (8,8 576x0) [dsp=flex]
+    div (8,8 576x40) [dsp=flex]
       div (8,8 286x40) fg=1 text="A"
       div (298,8 286x40) fg=1 text="B"
-    div (8,12 576x0) fg=1 text="C"
+    div (8,52 576x0) fg=1 text="C"
   div (592,8 200x184) text="Side"
 
 ---

@@ -1,4 +1,4 @@
-@generated 2026-07-24 17:59:55
+@generated 2026-07-24 22:58:21
 === Test: grid 四列等宽 (1fr 1fr 1fr 1fr) ===
 Frame #1 events=0 detail=normal
 div (0,0 800x100) [dsp=grid]
@@ -89,6 +89,16 @@ div (0,0 600x168) [dsp=grid]
   div (404,0 196x80) text="C"
   div (0,88 194x80) text="D"
   div (202,88 194x80) text="E"
+
+---
+
+=== Test: grid item 内部 flex column ===
+Frame #1 events=0 detail=normal
+div (0,0 400x80) [dsp=grid]
+  div (0,0 196x80) [dsp=flex]
+    div (0,0 196x40) text="Top"
+    div (0,40 196x30) text="Bottom"
+  div (204,0 196x80) text="Side"
 
 ---
 
