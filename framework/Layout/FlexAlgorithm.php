@@ -344,8 +344,13 @@ class FlexAlgorithm extends LayoutAlgorithm
                     if ($fi->basis === 0) {
                         $minW = 0;
                     } else {
-                        // 代理 min-content: 使用子项 basis 尺寸或 visual（防止 shrink 到 0）
-                        $minW = max((int)$fi->visualW, (int)$fi->basis > 0 ? (int)$fi->basis : 0);
+                        // Phase 4A: 真实 min-content（对标 Blink ComputeMinMaxSizes）
+                        $blockAlgo = new BlockAlgorithm();
+                        $childContent = (string)($fi->node->content ?? '');
+                        $childChildren = $fi->node->children ?? [];
+                        if (!is_array($childChildren)) $childChildren = [];
+                        $sizes = $blockAlgo->computeMinMaxSizes($space, $fcs, $childContent, $childChildren);
+                        $minW = $sizes->minContent;
                     }
                 }
                 if (!$isRow && $minH === 0 && $fcs->minHeight !== null && $fcs->minHeight->isAuto()) {

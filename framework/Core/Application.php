@@ -1041,12 +1041,7 @@ class Application
         $this->renderTreeManager->propagateLayoutDirty($rootRenderNode);
         \Px\Core\PerfCounter::end('sub:dirty_propagate');
 
-        // 恢复 scrollTop
-        if ($oldRootRenderNode !== null) {
-            \Px\Core\PerfCounter::start('stage:scroll_restore');
-            $this->renderTreeManager->copyScrollTopFromOld($rootRenderNode, $oldRootRenderNode);
-            \Px\Core\PerfCounter::end('stage:scroll_restore');
-        }
+        // scroll 状态已通过 ScrollManager 管理，无需复制（copyScrollTopFromOld 已删除）
 
         if (Config::get('debug_diag_enabled', false)) {
             error_log('[DIAG] render() frame=' . $frame . ' BEFORE resolve');
