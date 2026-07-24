@@ -10,7 +10,56 @@
 
 ---
 
-## 〇、复核更新（2026-07-24 最新代码）
+## 〇、二次复核更新（2026-07-24 HEAD=1e9d5348）
+
+本轮新发现的十多次提交包含 P1/P2/P3 多项修复：
+
+### 新增完成（二次复核）
+
+| 原优先级 | 问题 | 修复根据 |
+|---------|------|----------|
+| ~~P0~~ | RenderNode 几何字段未移除 | **commit e16bc915**：移除 x/y/w/h/visualW/visualH/layer/scrollTop/scrollLeft/contentWidth/contentHeight/isScrollContainer 共 12 个字段，RenderNode 从 131 行减至 120 行 |
+| ~~P1~~ | PhysicalFragment.displayText 可变 | 已改为 readonly（L64），新增 `withDisplayText()` 不可变重建方法（L148-159） |
+| ~~P2~~ | Flex Pass 2 5px 启发式阈值 | FlexAlgorithm L547-548：改为 `$p2OrigW !== $p2ItemW` 确定性判断（对标 Blink NGFlexLayoutAlgorithm Pass 2 CSS §9.7） |
+| ~~P2~~ | GridPlacer 原地修改 GridTrack | GridPlacer L110-122, L133-145：改用临时 `$colOffsets` / `$rowOffsets` 数组，不再修改 track 对象 |
+| ~~P2~~ | bfcOffset 死字段 | ConstraintSpace L58-60：`bfcOffsetX/Y` 字段已完全删除，注释明确“不引入死字段” |
+
+### 新增架构基础设施（未完成但方向正确）
+
+| 新增类 | 对标 Blink | 当前状态 |
+|--------|-----------|----------|
+| `LayoutResult` | NGLayoutResult | 已定义，多字段（endMarginStrut / intrinsicBlockSize / oofDescendants / bfcOffset / hasForcedBreak）readonly。`LayoutAlgorithm::layoutResult()` 默认实现包裹 layout() 返回值。**算法子类尚未 override**，未真正传递 endMarginStrut/OOF 冒泡 |
+| `MarginStrut` | NGMarginStrut | 已实现完整折叠算法（CSS §8.3.1 正最大+负最负）。**未集成到 BlockAlgorithm/LayoutOrchestrator**，父子 margin 折叠仍未生效 |
+| `LayoutInputNode` | NGLayoutInputNode | 已定义，未介绍到算法接口 |
+| `ConstraintSpaceBuilder` | NGConstraintSpaceBuilder | 已定义，部分调用点已迁移 |
+| `PhysicalFragment.baseline` | NGPhysicalFragment::FirstBaseline | **已完成**（commit 1e9d5348 InlineAlgorithm 完成） |
+
+### 新发现破损代码 🔴
+
+**RenderNode 字段删除后遗留的写入代码**：RenderNode 中不再声明 `scrollTop / scrollLeft / isScrollContainer`字段，但以下代码仍尝试写入：
+
+| 位置 | 代码 | 风险 |
+|------|------|------|
+| RenderTreeManager L731 | `$oldRootRN->scrollTop = ...` | native_types AOT 下写入不存在字段，产生动态属性告警/编译错误 |
+| RenderTreeManager L735 | `$oldRootRN->scrollLeft = ...` | 同上 |
+| RenderTreeManager L950 | `$renderNode->isScrollContainer = true` | 同上 |
+| RenderTreeManager L1041 | `$renderNode->scrollTop = ...` | 同上 |
+| RenderTreeManager L1045 | `$renderNode->scrollLeft = ...` | 同上 |
+| RenderTreeManager L1561-1563 | `$oldNode->isScrollContainer` / `$newNode->scrollTop = $oldNode->scrollTop` | 同上 |
+| PaintPipeline L52-55 | `$node->visualW/visualH/x/y` fallback | RenderNode 已无这些字段，fallback 路径什么也读不到 |
+| PaintPipeline L524-527 | `$node->y/visualH/x/visualW` fallback | 同上 |
+| PaintPipeline L1242-1258 | `$node->contentHeight/contentWidth/scrollTop/scrollLeft` fallback | 同上 |
+
+**根因**：commit e16bc915 的 commit message 声称“All consumers now read exclusively from cachedFragment”，实际仅改造了读取路径，写入路径（`:scroll-top` bind 同步）和部分遗留 fallback 路径未同步删除。
+
+**修复方向**：
+1. RenderTreeManager 的 scroll bind 同步应直接写入 `ScrollManager::setScrollTop(node, value)`，而非 RenderNode 字段
+2. `copyScrollTopFromOld()` 应改为 `ScrollManager::copyStateBetween(oldNode, newNode)`
+3. PaintPipeline 所有 `$node->x` / `$node->scrollTop` 之类 fallback 代码均删除，null cachedFragment 直接返回 0
+
+---
+
+## 〇、首次复核更新（2026-07-24 首次拉取后）
 
 拉取最新代码后重新核查，以下问题**已修复**：
 
@@ -149,6 +198,102 @@
 | P3 轻微 | **1** | StylePool key（FlexLineBreaker docblock 已修） |
 
 原 25 项审计中，**24 项已修复/取消**，仅剩 1 项 P2（需 Phase 3 深度改造）+ 1 项 P3。
+
+---
+
+## 〇-B、第二次复核（2026-07-24 HEAD=1e9d5348）
+
+再次拉取代码并逐文件核查（`git log --oneline` 显示 Phase 2/3/4 共 10 余次提交），发现：
+
+### 🔴 新发现破损代码（P0）
+
+**RenderNode.php 已确认瘦身完成**（120 行，第一次复核显示 114 行系估算偏差），所有几何字段（x/y/w/h/visualW/visualH/layer）和滚动字段（scrollTop/scrollLeft/contentWidth/contentHeight/isScrollContainer）均已删除。commit `e16bc915` 明确记录移除 12 字段。
+
+**但存在字段删除后未同步清理的写入/读取代码**：
+
+| 位置 | 代码 | 问题类型 |
+|------|------|----------|
+| RenderTreeManager L731 | `$oldRootRN->scrollTop = (int) $component->getBindValue(...)` | 写入已删除字段 |
+| RenderTreeManager L735 | `$oldRootRN->scrollLeft = (int) $component->getBindValue(...)` | 写入已删除字段 |
+| RenderTreeManager L950 | `$renderNode->isScrollContainer = true` | 写入已删除字段 |
+| RenderTreeManager L1041 | `$renderNode->scrollTop = (int) $component->getBindValue(...)` | 写入已删除字段 |
+| RenderTreeManager L1045 | `$renderNode->scrollLeft = (int) $component->getBindValue(...)` | 写入已删除字段 |
+| RenderTreeManager L1361-1366 | `$rn->scrollTop = ...` / `$rn->scrollLeft = ...` | 写入已删除字段 |
+| RenderTreeManager L1561-1563 | `$oldNode->isScrollContainer` / `$newNode->scrollTop = $oldNode->scrollTop` | 读写已删除字段（`copyScrollTopFromOld` 整个方法失效） |
+| PaintPipeline L52-55 | `$node->visualW / $node->visualH / $node->x / $node->y` fallback | 读已删除字段（fallback 分支永远读不到值） |
+| PaintPipeline L524-527 | `$node->y / $node->visualH / $node->x / $node->visualW` fallback | 同上 |
+| PaintPipeline L1242-1258 | `$node->contentHeight / contentWidth / scrollTop / scrollLeft` fallback | 同上 |
+
+**根因**：commit `e16bc915` 的 commit message 声称"All consumers now read exclusively from cachedFragment"，实际仅同步改造了主消费路径（hitTest、collectElements、ScrollManager 读取），未清理：
+1. **写入路径**：`:scroll-top` / `:scroll-left` bind 值同步仍写 RenderNode 字段（3 处入口，共 7 行）
+2. **fallback 路径**：PaintPipeline 三处 `$geom !== null ? $geom->x : $node->x` 表达式的 fallback 侧
+3. **辅助方法**：`copyScrollTopFromOld()` 整个方法及其调用点（读写 4 字段）
+
+**运行时行为**：
+- 非 native_types PHP：写入创建动态属性（PHP 8.2+ 发 deprecation warning），读取动态属性返回 null；`(int)null === 0`
+- native_types AOT：编译期若类未声明 `#[AllowDynamicProperties]`，则应报错；若允许，运行时可能崩溃
+- 实际影响：`:scroll-top` bind 完全失效（写入永不生效，ScrollManager 从 cachedFragment 读取初始 0）
+
+**修复方向**（P0，需 Phase 4 补齐）：
+1. RenderTreeManager 所有 `$node->scrollTop = X` 改为 `$scrollManager->setScrollTop($node, $X)`
+2. 删除 `copyScrollTopFromOld()`，改为 `ScrollManager::inheritStateFromOld($newNode, $oldNode)`
+3. PaintPipeline 所有 `$node->x` fallback 路径改为直接 `0` 或严格断言 `cachedFragment !== null`
+4. `isScrollContainer` 写入应通过 ScrollManager，或从 computedStyle 派生（本轮 Phase 1 已改为 LayoutOrchestrator 派生）
+
+### 已完成项确认
+
+本轮再次核查证实以下项确实已完成（覆盖首次复核声明）：
+
+| 项 | 证据 |
+|---|---|
+| RenderNode 瘦身 | RenderNode.php 120 行，无 x/y/w/h/scrollTop 等字段 |
+| PhysicalFragment.displayText readonly | PhysicalFragment.php L64 `public readonly string $displayText`，配 withDisplayText() L148 |
+| IntrinsicSizes.php 删除 | `Glob framework/Layout/IntrinsicSizes.php` 返回 0 结果 |
+| ConstraintSpace.bfcOffsetX/Y 删除 | ConstraintSpace.php L58-60 注释确认不引入死字段 |
+| GridPlacer 副作用消除 | GridPlacer.php L110-122, L134-145 改用临时 offsets 数组 |
+| Flex Pass 2 阈值 | FlexAlgorithm.php L547-548 `!==` 严格判断 |
+| geoKeys 扩展 | RenderTreeManager.php L896-906 包含 14 个新增键 |
+| LayoutAlgorithm 签名简化 | LayoutAlgorithm.php L60-66 五参数 |
+| MarginStrut 类新增 | MarginStrut.php 完整实现 append/resolve/appendStrut |
+| LayoutResult 类新增 | LayoutResult.php 完整对标 NGLayoutResult |
+| LayoutInputNode 类新增 | LayoutInputNode.php 只读投影接口 |
+| ConstraintSpaceBuilder 新增 | ConstraintSpaceBuilder.php 存在 |
+| PhysicalFragment.baseline | PhysicalFragment.php L67-76 + commit 1e9d5348 InlineAlgorithm 完成 baseline 覆盖 |
+| InteractionState 双写消除 | ScrollManager 从 cachedFragment 读取，无 syncToNode |
+
+### 尚未完成或需澄清
+
+| 优先级 | 问题 | 说明 |
+|--------|------|------|
+| **P0** | 破损代码（本轮新发现） | 详见上文表格，10 处代码写/读已删除字段 |
+| **P1** | MarginStrut 未真正集成 | LayoutResult.endMarginStrut 结构就绪但 BlockAlgorithm/LayoutOrchestrator **未消费**——BlockAlgorithm::extractEndMarginStrut 方法产出但 mainLayout 未调用；父子 margin 折叠 §8.3.1 场景 3 未生效（虽文档 §〇 Phase 3 声称已实施于 stackBlockChildren，需实测验证）|
+| **P1** | RenderNode.hovered/focused/active 交互状态未外置 | InteractionState 类存在但 RenderNode 仍保留 L45-47 三个字段作为单一权威源 |
+| **P2** | ChildLayoutProvider 入口仍全量 | BlockAlgorithm/FlexAlgorithm/GridAlgorithm/InlineAlgorithm/TableAlgorithm 均在入口 for 循环全量调 layoutChild，与旧 Phase B 等价 |
+| **P2** | LayoutResult.oofDescendants 未集成 | OOFLayoutAlgorithm 仍在 mainLayout 后独立通行证遍历 Fragment 树，未通过 LayoutResult 冒泡 |
+| **P3** | StylePool key 依赖 object_id | StylePool.php L63 未修 |
+
+### 第二次复核后问题统计
+
+| 优先级 | 数量 | 说明 |
+|--------|------|------|
+| P0 严重 | **1** | 破损代码（RenderNode 字段删除后 10 处未同步清理） |
+| P1 重要 | **2** | MarginStrut 未集成消费 / 交互状态未外置 |
+| P2 中等 | **2** | ChildLayoutProvider 全量 / LayoutResult.oofDescendants 未集成 |
+| P3 轻微 | **1** | StylePool key |
+
+**首次复核声称 24/25 已修复，仅剩 1 P2 + 1 P3；第二次复核修正为：实际剩余 1 P0 + 2 P1 + 2 P2 + 1 P3 = 6 项**
+
+首次复核结论过于乐观，未识别：
+1. "RenderNode 已瘦身" 但消费者未完全同步（新 P0）
+2. "MarginStrut 已创建" 但未真正消费（新 P1）
+3. "BlockAlgorithm::layoutResult() 真实 override" 但 LayoutOrchestrator 仍调 layout() 不调 layoutResult()（新 P1）
+
+### Phase 4 建议行动清单
+
+1. **[P0]** 清理 10 处破损代码：将 scroll bind 写入路由至 ScrollManager，删除 PaintPipeline fallback 分支，删除 copyScrollTopFromOld
+2. **[P1]** LayoutOrchestrator::mainLayout 改为调用 `$algo->layoutResult()`，从返回值中读取 endMarginStrut 传递给父层
+3. **[P1]** RenderNode.hovered/focused/active 移到 InteractionState，Application 事件处理器改写
+4. **[P2]** 算法内改造为按需 layoutChild：flex 先测量 basis 再 layoutChild 分配
 
 ---
 
