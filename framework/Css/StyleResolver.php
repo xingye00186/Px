@@ -138,7 +138,7 @@ class StyleResolver
 
         // Expand shorthand padding/margin to individual values
         // 使用统一展开类（与 SFC 编译器共用同一套展开逻辑）
-        // flex 简写展开暂禁用：嵌套 flex + column 方向 basis=0 处理需 Phase 5 修复
+        // flex 简写展开暂禁用：不定主轴 shrink 已修但仍有 3 个边缘 case 回归（278>275）
         $raw = CssShorthandExpander::expandAll($raw, false);
 
         // Note: flex shorthand expansion (flex:1 → flex-grow:1 + flex-shrink:1 + flex-basis:0px)
