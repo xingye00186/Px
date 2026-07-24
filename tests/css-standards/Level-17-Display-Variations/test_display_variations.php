@@ -81,8 +81,11 @@ $tests['display:none 在 flex row 中'] = function() {
             VNode::h('div', ['style' => 'width:80px;height:30px;background:#00F'], 'C'),
         ])
     );
-    assert_contains($result, 'dsp=none', 'display:none in flex marked as dsp=none');
-    assert_contains($result, 'text="C"', 'third flex child present');
+    // CSS 2.2 §9.2.4: display:none 不生成盒子，不应出现在 fragment 树中
+    if (strpos($result, 'text="Hidden"') !== false) {
+        throw new \AssertionError('display:none element should NOT appear in fragment tree (CSS 2.2 §9.2.4)');
+    }
+    assert_contains($result, 'text="C"', 'third flex child present after hidden sibling');
     return $result;
 };
 
