@@ -100,7 +100,11 @@ class InlineAlgorithm extends LayoutAlgorithm
             $cursorX += (int)($cr->w ?? 0);
         }
 
-        return new PhysicalFragment((int)$x, (int)$y, (int)$w, (int)$h, $s->visualWidth($w), $s->visualHeight($h), 0, (int)$w, (int)$h, $s, $stackedChildren, null);
+        // Baseline：inline/inline-block 元素的 first-baseline = ascent ≈ fontSize * 0.8
+        $inlineBaseline = (int)(($s->getFontSize() > 0 ? $s->getFontSize() : 16) * 0.8);
+
+        return new PhysicalFragment((int)$x, (int)$y, (int)$w, (int)$h, $s->visualWidth($w), $s->visualHeight($h), 0, (int)$w, (int)$h, $s, $stackedChildren, null,
+            0, 0, false, '', null, [], [], 0, '', $inlineBaseline);
     }
 
     /**
