@@ -267,6 +267,7 @@ new PhysicalFragment($x, $y, $w, $h, 0, 0, ...);
 - `BlockAlgorithm::stackBlockChildren()` — 子节点 Fragment 创建
 - `GridAlgorithm` — grid 单元格 Fragment 创建
 - `InlineAlgorithm` — IFC 子节点 Fragment 创建
+- `TableAlgorithm::layout()` (L94, L99) — 行/单元格中间层 Fragment 创建（旧 signature 留下 `null, null` visualW/H，修复后 Level-24 6/10 → 10/10 +4 pass）
 
 ---
 
@@ -695,6 +696,224 @@ L4 postmortem 分析中确认 `PerfCounter::inc` / `PerfCounter::start` / `PerfC
 
 ---
 
+## 二十二、类型多态的 raw 属性值：`(string)` / `(float)` / `(int)` 强转陷阱
+
+### 现象
+
+`ComputedStyle::getRaw()` 返回 `mixed`，实际可能为以下三种之一（取决于 CSS mappings 的 parser）：
+- `CssLength` 对象（parser=parsePixels）
+- `CssKeyword` 对象（parser=parseIdent）
+- 原始 `string` / `int` / `float`（无 parser 包装时）
+
+对对象直接强转时，AOT `use native_types` 内行为：
+
+```
+PHP Warning: Object of class Px\Css\CssLength could not be converted to float in FlexAlgorithm.php:99
+PHP Notice: Object of class Px\Css\CssKeyword could not be converted to string
+```
+
+CssLength/CssKeyword 未实现 `__toString`，`(string)$obj` / `(float)$obj` 会抛 Notice，后续变量取到空字符串/0，导致统计不等于仅提醒。
+
+### 典型错误代码
+
+```php
+// FlexAlgorithm 错误实现：rawGrow 可能为 CssLength
+$rawGrow = $cs->getRaw('flexGrow');
+$grow = $rawGrow !== null ? (float)$rawGrow : (float)$cs->flex->grow;
+// → rawGrow 为 CssLength(1, 'px') 时，(float)$rawGrow = 0.0 + Warning
+
+// RenderTreeManager dump 错误实现：decLine 可能为 CssKeyword
+$decLine = $frag->style?->getRaw('textDecorationLine') ?? 'none';
+if (is_string($decLine) && $decLine !== 'none') {
+    $output .= " decorationLine=$decLine";
+    // → rawDeclarations 存的是 CssKeyword('underline')，is_string=false，分支从不进入
+}
+```
+
+### 解决方案
+
+**统一多态提取模式：`instanceof` 优先，回退 `is_string` / `is_numeric`**：
+
+```php
+// ✅ 正确：CssLength 提取为 float
+$rawGrow = $cs->getRaw('flexGrow');
+if ($rawGrow instanceof CssLength) {
+    $grow = (float)$rawGrow->toPx();
+} else if ($rawGrow !== null) {
+    $grow = (float)$rawGrow;
+} else {
+    $grow = (float)$cs->flex->grow;
+}
+
+// ✅ 正确：CssKeyword 提取为 string（读 ->value 字段）
+$decLineRaw = $frag->style?->getRaw('textDecorationLine');
+$decLine = 'none';
+if ($decLineRaw !== null) {
+    if (is_object($decLineRaw) && isset($decLineRaw->value)) {
+        $decLine = (string)$decLineRaw->value;
+    } else if (is_string($decLineRaw)) {
+        $decLine = $decLineRaw;
+    }
+}
+
+// ✅ 正确：亦可写为同时兼容 CssLength / CssKeyword / 数字 / 字符串
+$rawAutoRows = $s->getRaw('gridAutoRows');
+$autoRowSize = 0;
+if ($rawAutoRows instanceof CssLength) {
+    $autoRowSize = (int)$rawAutoRows->toPx();
+} else if ($rawAutoRows instanceof CssKeyword) {
+    $autoRowSize = 0;  // auto/min-content/max-content 降级到内容基础
+} else if (is_numeric($rawAutoRows)) {
+    $autoRowSize = (int)$rawAutoRows;
+} else if (is_string($rawAutoRows)) {
+    $r = trim($rawAutoRows);
+    if (str_ends_with($r, 'px')) $autoRowSize = (int)substr($r, 0, -2);
+    else if (ctype_digit($r)) $autoRowSize = (int)$r;
+}
+```
+
+### 注意事项
+
+1. **`instanceof CssLength` 需完整命名空间** — `\Px\Css\CssLength` 或对应 `use Px\Css\CssLength;`（AOT 下命名空间解析不容错）
+2. **`method_exists($obj, 'toPx')` 不建议** — vtable 遍历开销高于 `instanceof` 单次指针比较。尤其在递归布局/dump 热路径中
+3. **CssKeyword `->value` 字段直接读** — `use native_types` 下 readonly public 属性可直接读（无需 getter）
+4. **fallback 为 `?? 'none' / ?? 0`** — 道路未命中任何分支时需有默认值，避免未初始化变量
+
+### 影响范围
+
+- `framework/Layout/FlexAlgorithm.php` — flexGrow / flexShrink / order 提取（L96-115）
+- `framework/Layout/GridAlgorithm.php` — gridAutoRows / gridAutoFlow / justifySelf 提取（L74-91）
+- `framework/Render/RenderTreeManager.php` — dump 中 text-decoration / overflow / display 提取（L221-303）
+- `framework/Css/ComputedStyle.php` — `applyDeclarations()` 内 typed 属性赋值（L465-475 borderStyle/textDecoration 等）：`(string)$rv` 迫使 `$rv->value` 提取
+
+### 自保常量
+
+任何从 `$style->getRaw(...)` 取值到非 mixed 类型时，先以 `instanceof` 判对象。本轮审计报告中追加 4 项修复（GridAutoRows / GridAutoFlow / FlexGrowShrink / TextDecorationDump）都因未处理对象形式而役，总共影响 **+15 pass**（Level-07 8→19 +11、Grid-Auto-Rows +2、FlexGrow warning 消除）。
+
+---
+
+## 二十三、修改构造函数参数列表的连锁影响
+
+### 现象
+
+从中间位置删除 `ConstraintSpace` 构造参数（删除 `bfcOffsetX` / `bfcOffsetY` 两个 `int` 参数）后，**未同步修改**具体位置实参的调用点，导致后续参数错位。AOT 不会报错（因为都是 `int`），但行为静默错误：spaceType 位置返回 `0`（本应 `'block'`），determinedPercentageWidth/Height 能拿到错误值。
+
+```php
+// 旧构造器 signature（包含 bfcOffsetX/Y）
+__construct(
+    ..., bool $forceRelayoutChildren, bool $isIntrinsicMeasurement,
+    int $bfcOffsetX, int $bfcOffsetY,  // ← 删除了这两个
+    string $spaceType, ?int $determinedPercentageWidth, ?int $determinedPercentageHeight,
+)
+
+// 旧调用点（GridAlgorithm.php L179 / FlexAlgorithm.php L413）
+new ConstraintSpace(
+    ..., true, false, 0, 0, 'block',
+    //   ↑    ↑   ↑  ↑    ↑
+    // force intr bfcX bfcY spaceType
+    $trackW, $c->getPercentageHeight(),
+);
+
+// 删除 bfcOffsetX/Y 后仍保留参数：位置 3 = spaceType (旧 bfcOffsetX)，值为 0 → spaceType 变为 int 0
+// 后续 位置 4 = determinedPercentageWidth (旧 bfcOffsetY)，值为 0
+// 后续 位置 5 = determinedPercentageHeight (旧 spaceType)，值为 'block' → int 参数但传 string（强转 0）
+// → spaceType='block' 变为 spaceType=0，determinedPercentageWidth 回到 $trackW，完全错位
+```
+
+### 解决方案
+
+1. **修改构造参数列表时必须审计全部位置实参调用**（grep `new ClassName\(`）
+2. **优先选择尾部删除**而非中间删除（尾部删除时旧调用点可能仍合法，仅丢弃多余参数）
+3. **若必需从中间删除**，同时为旧调用点提供命名参数 → 位置参数转换（但 AOT 禁用命名参数 → 则必须手工修正每个调用点）
+4. **提供静态 factory** — `ConstraintSpace::forChild()` 隐藏位置参数细节，仅需 factory 内部同步修正
+
+### 本轮实际修复（提交 `a455dfe7` E9）
+
+```php
+// GridAlgorithm.php 修后
+new ConstraintSpace(
+    ..., true, false, 'block',  // ← 移除 0, 0 两个 bfc 位置
+    $trackW, $c->getPercentageHeight(),
+);
+
+// FlexAlgorithm.php 同一修正
+```
+
+### 影响范围
+
+- `framework/Layout/ConstraintSpace.php` — 构造器修改时需 grep 全局 `new ConstraintSpace(`
+- `framework/Layout/GridAlgorithm.php` L179 、`framework/Layout/FlexAlgorithm.php` L413 — P2 pass 重布局子项时构造 trackSpace/p2Space
+- 任何将来删除中间位置参数的 refactor 都需遵循此规则
+
+---
+
+## 二十四、Fragment 构造中新增中间字段时的 mapping fragment 同步
+
+### 现象
+
+`GridAlgorithm` / `FlexAlgorithm` 内部对子层结果重建 mapping fragment（将子递归 layout 结果重新定位到 grid cell / flex item 最终位置）。若重建时**硬编码传 `0, 0, false`** 作为 scrollTop/Left/isScrollContainer 位置参数，**会重置子项的滚动状态**，导致 grid/flex cell 内 `overflow:auto` 子项失去滚动能力（dump 输出失去 `scroll ch=X cw=Y ...` 标记）。
+
+```php
+// GridAlgorithm.php 错误实现（L286）
+$mappedFragments[] = new PhysicalFragment(
+    $itemX, ..., $gri->style, $children, $origFrag?->sourceNode,
+    0, 0, false,  // ← 硬编码！子项如果本身是 scroll container，重置为非-scroll
+    $origFrag?->type ?? '', $origFrag?->content, $origFrag?->dataset ?? [], $origFrag?->pseudoStyles ?? [],
+);
+
+// FlexAlgorithm.php 同样问题（L474 Builder 方式）
+$mappedResults[] = (new PhysicalFragmentBuilder())
+    ->x(...)->y(...)->w(...)->h(...)
+    ->style($orig?->style)->children($children)
+    // ← 未调用 ->isScrollContainer(...) → Builder 默认 false
+    ->build();
+```
+
+### 根因
+
+`PhysicalFragment` 构造器向后兼容新增字段（readonly 不可变性 P1），但新增字段的 mapping 层必须手工同步，否则沉默重置为默认值（int=0 / bool=false）。
+
+### 解决方案
+
+从 `$origFrag` 提取全部行为字段传递：
+
+```php
+// ✅ GridAlgorithm.php 修后
+$origIsScroll = $origFrag?->isScrollContainer ?? false;
+$origScrollTop = (int)($origFrag?->scrollTop ?? 0);
+$origScrollLeft = (int)($origFrag?->scrollLeft ?? 0);
+$origContentW = (int)($origFrag?->contentWidth ?? 0);
+$origContentH = (int)($origFrag?->contentHeight ?? 0);
+$mappedFragments[] = new PhysicalFragment(
+    $itemX, ..., $gri->style, $children, $origFrag?->sourceNode,
+    $origScrollTop, $origScrollLeft, $origIsScroll,  // ← 保留原行为
+    ...
+);
+
+// ✅ FlexAlgorithm.php 修后（Builder 方式）
+(new PhysicalFragmentBuilder())
+    ->x(...)->y(...)->w(...)->h(...)
+    ->style($orig?->style)->children($children)
+    ->isScrollContainer((bool)($orig?->isScrollContainer ?? false))
+    ->scrollTop((int)($orig?->scrollTop ?? 0))
+    ->scrollLeft((int)($orig?->scrollLeft ?? 0))
+    ->build();
+```
+
+### 通用规则
+
+1. **任何 mapping/wrap 层 fragment 重建都应从 `$origFrag` 提取全部行为字段**，仅覆盖真正需要重定位/重尺寸的字段（x/y/w/h）
+2. **`fromFragment($orig)` 工厂方法**：`PhysicalFragmentBuilder` 提供一键拷贝方法，新字段自动同步，避免遗漏
+3. **当 `PhysicalFragment` 新增 readonly 字段时**，同时审计 `Builder::fromFragment()` 与所有 mapping 路径
+
+### 影响范围
+
+- `framework/Layout/GridAlgorithm.php` — L286 mappedFragment 重建（+1 pass Level-19 Grid 与 overflow 滚动容器）
+- `framework/Layout/FlexAlgorithm.php` — L474 mappedResults Builder 链（+0 pass 但修复了预期外行为）
+- `framework/Layout/TableAlgorithm.php` — L85, L94 同样对齐原子项行为
+
+---
+
 ## 总结：AOT 编码规范（完整版）
 
 ### 正确性规则（触发编译错误或运行时错误）
@@ -716,6 +935,9 @@ L4 postmortem 分析中确认 `PerfCounter::inc` / `PerfCounter::start` / `PerfC
 | **属性必须完整标注** | 所有属性和方法参数必须有类型声明 |
 | **Property Hook `set` 转型** | `setBindValue` 中对 int/bool 属性加 `(int)`/`(bool)` 转型 |
 | **`dirty` 标记先于 pending 检查** | `Effect::schedule()` 中 `dirty=true` 必须在 `pending` 守卫之前 |
+| **`getRaw()` 取值先 `instanceof`** | 不直接 `(string)` / `(float)` / `(int)` 强转 CssLength/CssKeyword；遵 CssLength→toPx / CssKeyword→->value / is_string / is_numeric 多态分支（§二十二） |
+| **修改构造参数需审计全部位置调用** | 删除中间 int/bool 参数不报错但静默错位；grep `new ClassName\(` 全局确认，优先尾部删除（§二十三） |
+| **Fragment mapping 层保留 orig 行为字段** | Grid/Flex/Table mapping 重建 fragment 时从 `$origFrag` 提取 isScrollContainer/scrollTop/scrollLeft/contentWidth/contentHeight，避免硬编码 0/false（§二十四） |
 
 ### 性能规则（触发 3-50x 回归但不报错）
 
