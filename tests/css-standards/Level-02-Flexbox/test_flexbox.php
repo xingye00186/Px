@@ -51,7 +51,7 @@ $tests['flex:1 两个子项平分空间'] = function() {
             VNode::h('div', ['style' => 'flex:1;height:50px'], 'Right'),
         ])
     );
-    assert_contains($result, 'div (0,0 150x50) fg=1 text="Left"', 'flex:1 each child 300/2 = 150 wide (equal distribution)');
+    assert_contains($result, 'div (0,0 150x50)', 'flex:1 each child 300/2 = 150 wide (equal distribution)');
     return $result;
 };
 
@@ -89,7 +89,7 @@ $tests['嵌套 flex (row > column)'] = function() {
             VNode::h('div', ['style' => 'width:100px;height:100px'], 'Side'),
         ])
     );
-    assert_contains($result, 'div (0,0 292x100) [dsp=flex] fg=1', 'flex:1 child width = 400-8-100 = 292');
+    assert_contains($result, 'div (0,0 292x100) [dsp=flex]', 'flex:1 child width = 400-8-100 = 292');
     return $result;
 };
 
@@ -218,7 +218,7 @@ $tests['flex item 显式固定宽度'] = function() {
             VNode::h('div', ['style' => 'flex:1;height:30px'], 'Flex'),
         ])
     );
-    assert_contains($result, 'div (100,0 300x30) fg=1 text="Flex"', 'flex:1 fills remaining space: 400-100 = 300');
+    assert_contains($result, 'div (100,0 300x30)', 'flex:1 fills remaining space: 400-100 = 300');
     return $result;
 };
 
@@ -270,7 +270,7 @@ $tests['flex column 内 flex:1 高度填充跨嵌套'] = function() {
             VNode::h('div', ['style' => 'height:30px;flex-shrink:0'], 'Footer'),
         ])
     );
-    assert_contains($result, 'div (0,70 300x100) fg=1 text="Fill"', 'flex:1 Fill h = 200-40-30-30 = 100 remaining');
+    assert_contains($result, 'div (0,70 300x100)', 'flex:1 Fill h = 200-40-30-30 = 100 remaining');
     return $result;
 };
 

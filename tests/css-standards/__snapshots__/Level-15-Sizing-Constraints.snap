@@ -1,4 +1,4 @@
-@generated 2026-07-24 17:47:09
+@generated 2026-07-24 17:51:57
 === Test: min-height 在 flex column 中 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x200) [dsp=flex]

@@ -100,7 +100,7 @@ class StyleTransform implements TransformInterface
         if (empty($raw)) return null;
 
         // 强制关卡：与 StyleResolver 运行时共用同一套展开逻辑
-        // flex 简写展开暂禁用（待 FlexAlgorithm 重构读 longhand 后启用）
+        // flex 简写展开暂禁用（待 Phase 5 修复嵌套 flex column basis=0）
         $raw = \Px\Css\CssShorthandExpander::expandAll($raw, false);
 
         $pairs = [];
