@@ -11,6 +11,60 @@ use Px\Css\ComputedStyle;
  */
 class InlineAlgorithm extends LayoutAlgorithm
 {
+    /**
+     * 计算 Inline 元素的内在尺寸（对标 Blink NGInlineNode::ComputeMinMaxSizes）。
+     *
+     * min-content: 最长不可断词宽度（当前简化为单字符宽度 — 因 Px 无 word break 算法）
+     * max-content: 全文本单行宽度（不换行）
+     */
+    public function computeMinMaxSizes(
+        ConstraintSpace $space,
+        ?\Px\Css\ComputedStyle $style = null,
+        string $textContent = '',
+        array $childNodes = [],
+    ): MinMaxSizes {
+        $s = $style ?? \Px\Css\StylePool::empty();
+        $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
+        $bold = (bool)($s->getBold() ?? false);
+
+        if (strlen($textContent) > 0) {
+            // max-content = 全文本不换行宽度
+            $maxW = TextMeasureCache::measure($textContent, $fs, $bold);
+            // min-content = 最长不可断词宽度
+            // 简化：取文本测量宽度（同 max-content，因无 word-break 算法）
+            // 未来可改为按空格/连字符断开取最长片段
+            $minW = $maxW;
+            return new MinMaxSizes($minW, $maxW);
+        }
+
+        // 有子项时：累加子项宽度作为 max-content，取单个最大子项作为 min-content
+        $minC = 0;
+        $maxC = 0;
+        foreach ($childNodes as $child) {
+            $cw = 0;
+            if ($child instanceof \Px\Render\RenderNode) {
+                $childStyle = $child->computedStyle;
+                $explicitW = $childStyle?->width?->toPx() ?? 0;
+                if ($explicitW > 0) {
+                    $cw = (int)$explicitW;
+                } else {
+                    $childContent = (string)($child->content ?? '');
+                    if (strlen($childContent) > 0) {
+                        $cfs = $childStyle?->getFontSize() ?? $fs;
+                        $cbd = (bool)($childStyle?->getBold() ?? false);
+                        $cw = TextMeasureCache::measure($childContent, $cfs, $cbd);
+                    }
+                }
+            } else if ($child instanceof PhysicalFragment) {
+                $cw = (int)$child->getW();
+            }
+            if ($cw > $minC) $minC = $cw;
+            $maxC += $cw;
+        }
+
+        return new MinMaxSizes($minC, $maxC);
+    }
+
     public function layout(
         ConstraintSpace $space,
         ?ComputedStyle $style = null,

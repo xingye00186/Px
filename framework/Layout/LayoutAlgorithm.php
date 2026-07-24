@@ -84,5 +84,38 @@ abstract class LayoutAlgorithm
         $frag = $this->layout($space, $style, $textContent, $childNodes, $inputFragment);
         return LayoutResult::wrap($frag);
     }
+
+    /**
+     * 计算元素的内在尺寸（对标 Blink NGBlockNode::ComputeMinMaxSizes）。
+     *
+     * CSS Sizing Level 3 §4：
+     *   - min-content: 元素在不溢出的前提下能容纳内容的最小宽度
+     *   - max-content: 元素在不换行/不压缩的前提下的自然宽度
+     *
+     * 默认实现：返回 {minContent: 0, maxContent: space.contentWidth}（兼容旧行为）。
+     * 算法子类应逐步 override 提供精确值。
+     *
+     * 用于：
+     *   - shrink-to-fit: width = min(maxContent, max(minContent, available))
+     *   - min-width:auto 在 flex/grid item 上 = minContent
+     *   - table auto-width
+     *   - flex-basis:content
+     *
+     * @param ConstraintSpace $space 约束空间（提供可用宽度作为 maxContent 上限）
+     * @param ComputedStyle|null $style 元素计算样式
+     * @param string $textContent 文本内容
+     * @param array $childNodes 子节点
+     * @return MinMaxSizes 内在尺寸结果
+     */
+    public function computeMinMaxSizes(
+        ConstraintSpace $space,
+        ?ComputedStyle $style = null,
+        string $textContent = '',
+        array $childNodes = [],
+    ): MinMaxSizes {
+        // 默认实现：兼容旧行为（minContent=0，maxContent=约束宽度）
+        // 算法子类应逐步 override 以提供精确值
+        return new MinMaxSizes(0, $space->getContentWidth());
+    }
 }
 

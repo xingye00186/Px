@@ -21,6 +21,86 @@ class BlockAlgorithm extends LayoutAlgorithm
     }
 
     /**
+     * 计算 Block 元素的内在尺寸（对标 Blink NGBlockNode::ComputeMinMaxSizes）。
+     *
+     * min-content: 所有 in-flow block 子项的 min-content 的最大值（或文本测量）
+     * max-content: 文本不换行宽度 / 子项 max-content 的最大值
+     */
+    public function computeMinMaxSizes(
+        ConstraintSpace $space,
+        ?\Px\Css\ComputedStyle $style = null,
+        string $textContent = '',
+        array $childNodes = [],
+    ): MinMaxSizes {
+        $s = $style ?? \Px\Css\StylePool::empty();
+        $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
+        $bold = (bool)($s->getBold() ?? false);
+
+        // 文本节点：min-content = max-content = 文本测量宽度
+        if (strlen($textContent) > 0) {
+            $textW = TextMeasureCache::measure($textContent, $fs, $bold);
+            $padL = (int)($s->padding?->left->toPx() ?? 0);
+            $padR = (int)($s->padding?->right->toPx() ?? 0);
+            $bwLR = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
+            $total = $textW + $padL + $padR + $bwLR;
+            return new MinMaxSizes($total, $total);
+        }
+
+        // 容器节点：遍历子项的 min/max-content
+        $minC = 0;
+        $maxC = 0;
+        foreach ($childNodes as $child) {
+            $childStyle = $child->computedStyle;
+            $childDisplay = $childStyle?->display?->value ?? 'block';
+            $childPos = $childStyle?->position?->value ?? 'static';
+            // OOF 不参与内在尺寸计算
+            if ($childPos === 'absolute' || $childPos === 'fixed') continue;
+            if ($childDisplay === 'none') continue;
+
+            // 若子项有显式 width，直接用其值
+            $childW = $childStyle?->width?->toPx() ?? 0;
+            if ($childW > 0 && !($childStyle?->width?->isPercent() ?? false) && !($childStyle?->width?->isAuto() ?? true)) {
+                $childMin = (int)$childW;
+                $childMax = (int)$childW;
+            } else {
+                // 递归计算子项 min/max-content
+                $childContent = (string)($child->content ?? '');
+                $algo = $this->selectChildAlgorithm($childDisplay);
+                $childSizes = $algo->computeMinMaxSizes($space, $childStyle, $childContent, $child->children);
+                $childMin = $childSizes->minContent;
+                $childMax = $childSizes->maxContent;
+            }
+
+            // 加 margin
+            $ml = (int)($childStyle?->margin?->left->toPx() ?? 0);
+            $mr = (int)($childStyle?->margin?->right->toPx() ?? 0);
+            $childMin += $ml + $mr;
+            $childMax += $ml + $mr;
+
+            // Block 容器：min-content 取子项 min 的最大值
+            if ($childMin > $minC) $minC = $childMin;
+            if ($childMax > $maxC) $maxC = $childMax;
+        }
+
+        // 加自身 padding+border
+        $padL = (int)($s->padding?->left->toPx() ?? 0);
+        $padR = (int)($s->padding?->right->toPx() ?? 0);
+        $bwLR = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
+        $minC += $padL + $padR + $bwLR;
+        $maxC += $padL + $padR + $bwLR;
+
+        return new MinMaxSizes($minC, $maxC);
+    }
+
+    /** 根据 display 选择子项算法（用于递归 computeMinMaxSizes） */
+    private function selectChildAlgorithm(string $display): LayoutAlgorithm
+    {
+        // 当前简化：所有子项用 BlockAlgorithm 自身递归
+        // 未来可扩展为根据 display 选择不同算法
+        return $this;
+    }
+
+    /**
      * 启用了 endMarginStrut 上传的 LayoutResult。
      *
      * 对标 Blink NGBlockLayoutAlgorithm::Layout()：末尾未消耗的 margin strut 作为 end_margin_strut_
