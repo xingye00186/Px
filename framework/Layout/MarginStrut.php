@@ -50,8 +50,11 @@ class MarginStrut
     /** 追加另一个 MarginStrut（例如父吸收子的 endMarginStrut） */
     public function appendStrut(MarginStrut $other): void
     {
-        if ($other->positiveMargin > $this->positiveMargin) $this->positiveMargin = $other->positiveMargin;
-        if ($other->negativeMargin < $this->negativeMargin) $this->negativeMargin = $other->negativeMargin;
+        // AOT 兼容：跨对象属性读取需显式 (int) cast
+        $otherPos = (int)$other->positiveMargin;
+        $otherNeg = (int)$other->negativeMargin;
+        if ($otherPos > $this->positiveMargin) $this->positiveMargin = $otherPos;
+        if ($otherNeg < $this->negativeMargin) $this->negativeMargin = $otherNeg;
     }
 
     /** 解析为最终 margin 值：正最大 + 负最负（正常场景仅一者非零） */
@@ -77,8 +80,9 @@ class MarginStrut
     public function copy(): MarginStrut
     {
         $s = new MarginStrut();
-        $s->positiveMargin = $this->positiveMargin;
-        $s->negativeMargin = $this->negativeMargin;
+        // AOT 兼容：跨对象赋值需显式 (int) cast
+        $s->positiveMargin = (int)$this->positiveMargin;
+        $s->negativeMargin = (int)$this->negativeMargin;
         return $s;
     }
 }
