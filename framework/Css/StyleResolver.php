@@ -146,7 +146,12 @@ class StyleResolver
         // FlexAlgorithm 中通过 $cs->flex->basis 回退机制处理。
 
         // Apply PROPERTY_MAP parsers
-        $lookup = array_merge(CssMappings::getPropertyMap(), CssMappings::getInlinePropertyMap());
+        // 静态缓存合并结果（避免每元素/帧重复 array_merge 两个 const 数组）
+        static $lookupCache = null;
+        if ($lookupCache === null) {
+            $lookupCache = array_merge(CssMappings::getPropertyMap(), CssMappings::getInlinePropertyMap());
+        }
+        $lookup = $lookupCache;
 
         // text-decoration 已由 CssShorthandExpander::expandAll 内部处理，无需再单独调用
 
@@ -363,11 +368,16 @@ class StyleResolver
 
     private static function kebabToCamelCase(string $str): string
     {
+        // 静态查表缓存（避免每属性每帧重复 explode+ucfirst）
+        static $cache = [];
+        if (isset($cache[$str])) return $cache[$str];
         $parts = explode('-', $str);
         $result = array_shift($parts);
         foreach ($parts as $part) {
             $result .= ucfirst($part);
         }
+        // 容量限制 256（防止不常见属性名累积）
+        if (count($cache) < 256) $cache[$str] = $result;
         return $result;
     }
 
