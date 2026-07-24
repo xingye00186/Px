@@ -104,21 +104,16 @@ class FlexAlgorithm extends LayoutAlgorithm
                 continue;
             }
             $flexItemOrigIdx[] = $crI;
-            // Use resolved flex shorthand as fallback when individual props not set
-            // (getRaw may return CssLength object which cannot be cast to float)
+            // Phase 4D: 优先读 longhand（启用 flex 展开后可用），回退到 $cs->flex 短手对象
             $rawGrow = $cs->getRaw('flexGrow');
-            if ($rawGrow instanceof CssLength) {
-                $grow = (float)$rawGrow->toPx();
-            } else if ($rawGrow !== null) {
-                $grow = (float)$rawGrow;
+            if ($rawGrow !== null) {
+                $grow = (float)(is_object($rawGrow) ? ($rawGrow instanceof CssLength ? $rawGrow->toPx() : ($rawGrow->value ?? 0)) : $rawGrow);
             } else {
                 $grow = (float)$cs->flex->grow;
             }
             $rawShrink = $cs->getRaw('flexShrink');
-            if ($rawShrink instanceof CssLength) {
-                $shrink = (float)$rawShrink->toPx();
-            } else if ($rawShrink !== null) {
-                $shrink = (float)$rawShrink;
+            if ($rawShrink !== null) {
+                $shrink = (float)(is_object($rawShrink) ? ($rawShrink instanceof CssLength ? $rawShrink->toPx() : ($rawShrink->value ?? 1)) : $rawShrink);
             } else {
                 $shrink = (float)$cs->flex->shrink;
             }
@@ -159,6 +154,8 @@ class FlexAlgorithm extends LayoutAlgorithm
             // 对标 Blink：从 Fragment 直接读取 content（非从 ComputedStyle 逗逸口取）
             $item->content = $cr->content !== null ? (string)$cr->content : null;
             $item->originalChildren = $cr->children;
+            // Phase 4D: 保存源 RenderNode 用于 computeMinMaxSizes 递归
+            $item->node = ($crI < count($childNodes)) ? $childNodes[$crI] : null;
             $item->w = (int)$cr->getW(); $item->h = (int)$cr->getH();
             // Flex items without explicit width/height: ignore block auto-fill
             // (flex algorithm determines their main size)
@@ -271,98 +268,124 @@ class FlexAlgorithm extends LayoutAlgorithm
         $totalLines = count($lineGroups);
 
         // ── Step 4: Per-line grow/shrink + main-axis positioning ──
+        // Phase 4D: CSS Flexbox §9.7.4 clamp rerun 循环（对标 Blink ResolveFlexibleLengths）
         $lineMaxCrosses = [];
         foreach ($lineGroups as $lineIdx => $lineItems) {
-            $lineTotal = 0;
-            foreach ($lineItems as $fi) { $fi = objval($fi, FlexItem::class); $lineTotal += $isRow ? $fi->w : $fi->h; }
-
-            // 4a. Flex-grow (CSS spec: distribute remaining space; works when lineTotal==0 too)
-            // CSS §9.5.1: gap 应从主轴可用空间扣除
+            // §9.7: Resolving Flexible Lengths (frozen loop)
             $itemsInLine = count($lineItems);
             $totalGap = ($itemsInLine - 1) * $gap;
             $availableAfterGap = max(0, $containerMain - $totalGap);
-            if ($lineTotal < $availableAfterGap) {
-                $remaining = $availableAfterGap - $lineTotal;
-                $growTotal = 0;
-                foreach ($lineItems as $fi) { $fi = objval($fi, FlexItem::class); $growTotal += $fi->grow; }
-                if ($growTotal > 0) {
-                    // If lineTotal == 0 and all items are flex-grow, distribute full available
-                    if ($lineTotal === 0) {
-                        foreach ($lineItems as $fi) {
-                            $fi = objval($fi, FlexItem::class);
-                            if ($fi->grow > 0) {
-                                $share = (int)($availableAfterGap * $fi->grow / $growTotal);
-                                if ($isRow) { $fi->w = $share; $fi->visualW = $share; } else $fi->h = $share;
-                            }
-                        }
-                    } else {
-                        foreach ($lineItems as $fi) {
-                            $fi = objval($fi, FlexItem::class);
-                            if ($fi->grow > 0) {
-                                $extra = (int)($remaining * $fi->grow / $growTotal);
-                                if ($isRow) { $fi->w += $extra; $fi->visualW += $extra; } else $fi->h += $extra;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 4b. Flex-shrink (CSS Flexbox §9.7: 按 width×shrink 加权收缩)
-            if ($lineTotal > $containerMain && $containerMain > 0) {
-                $overflow = $lineTotal - $containerMain;
-                $shrinkTotal = 0;
-                foreach ($lineItems as $fi) { $fi = objval($fi, FlexItem::class); $shrinkTotal += ($isRow ? $fi->w : $fi->h) * $fi->shrink; }
-                if ($shrinkTotal > 0) {
-                    foreach ($lineItems as $fi) {
-                        $fi = objval($fi, FlexItem::class);
-                        if ($fi->shrink > 0) {
-                            $itemSize = $isRow ? $fi->w : $fi->h;
-                            $reduction = (int)($overflow * $itemSize * $fi->shrink / $shrinkTotal);
-                            if ($isRow) { $fi->w = max(0, $fi->w - $reduction); $fi->visualW = $fi->w; }
-                            else $fi->h = max(0, $fi->h - $reduction);
-                        }
-                    }
-                }
-            }
-
-            // 4b+. Clamp to min/max constraints (CSS Flexbox §4.5: min/max main/cross size)
-            // CSS-Sizing-3 §5.2: flex item 上 `min-width: auto` 等同 `min-content`
-            //   → 推导后的 min = content-based min-size（防止 shrink 到内容频宁下固）
-            // 既无完整 min-content 计算，采取保守回退：使用子项初始尺寸（$fi->w 或 hypothetical basis）作为 min-content 代理。
+        
+            // 初始化 frozen 状态 + 预计算 min-width:auto 缓存（避免循环内重复计算）
             foreach ($lineItems as $fi) {
                 $fi = objval($fi, FlexItem::class);
+                $fi->frozen = false;
+                // 预计算 min-width:auto 值（只算一次，缓存到 FlexItem）
                 $fcs = $fi->computedStyle;
-                if ($fcs === null) continue;
-                $maxW = $fcs->maxWidth?->toPx() ?? 0;
-                $minW = $fcs->minWidth?->toPx() ?? 0;
-                $maxH = $fcs->maxHeight?->toPx() ?? 0;
-                $minH = $fcs->minHeight?->toPx() ?? 0;
-                // min-width: auto 处理（仅对主轴方向，其他方向尚无 min-content 课题）
-                if ($isRow && $minW === 0 && $fcs->minWidth !== null && $fcs->minWidth->isAuto()) {
-                    // CSS-Sizing-3 §5.2: flex-basis:0 时 min-content 约束不应使用原始 visual width；
-                    // basis=0 显式意味着“忽略内容尺寸，全量由 grow/shrink 决定”。
+                if ($fcs !== null && $isRow && ($fcs->minWidth?->toPx() ?? 0) === 0 && $fcs->minWidth !== null && $fcs->minWidth->isAuto()) {
                     if ($fi->basis === 0) {
-                        $minW = 0;
+                        $fi->cachedMinW = 0;
                     } else {
-                        // Phase 4A: 真实 min-content（对标 Blink ComputeMinMaxSizes）
                         $blockAlgo = new BlockAlgorithm();
                         $childContent = (string)($fi->node->content ?? '');
                         $childChildren = $fi->node->children ?? [];
                         if (!is_array($childChildren)) $childChildren = [];
                         $sizes = $blockAlgo->computeMinMaxSizes($space, $fcs, $childContent, $childChildren);
-                        $minW = $sizes->minContent;
+                        $fi->cachedMinW = $sizes->minContent;
+                    }
+                } else {
+                    $fi->cachedMinW = -1; // -1 = 未设置
+                }
+            }
+        
+            // Clamp rerun loop (max 5 iterations to prevent infinite loop)
+            for ($rerunIter = 0; $rerunIter < 5; $rerunIter++) {
+                // 计算未冻结项的总尺寸和 grow/shrink 总量
+                $unfrozenTotal = 0;
+                $unfrozenGrowTotal = 0;
+                $unfrozenShrinkWeightTotal = 0;
+                $frozenTotal = 0;
+                foreach ($lineItems as $fi) {
+                    $fi = objval($fi, FlexItem::class);
+                    $sz = $isRow ? $fi->w : $fi->h;
+                    if ($fi->frozen) {
+                        $frozenTotal += $sz;
+                    } else {
+                        $unfrozenTotal += $sz;
+                        $unfrozenGrowTotal += $fi->grow;
+                        $unfrozenShrinkWeightTotal += $sz * $fi->shrink;
                     }
                 }
-                if (!$isRow && $minH === 0 && $fcs->minHeight !== null && $fcs->minHeight->isAuto()) {
-                    $minH = max((int)$fi->visualH, (int)$fi->basis > 0 ? (int)$fi->basis : 0);
+        
+                $totalUsed = $frozenTotal + $unfrozenTotal;
+                $freeSpace = $availableAfterGap - $totalUsed;
+        
+                // 分配空间
+                if ($freeSpace > 0 && $unfrozenGrowTotal > 0) {
+                    // Grow
+                    foreach ($lineItems as $fi) {
+                        $fi = objval($fi, FlexItem::class);
+                        if ($fi->frozen || $fi->grow <= 0) continue;
+                        $extra = (int)($freeSpace * $fi->grow / $unfrozenGrowTotal);
+                        if ($isRow) { $fi->w += $extra; $fi->visualW += $extra; } else $fi->h += $extra;
+                    }
+                } else if ($freeSpace < 0 && $unfrozenShrinkWeightTotal > 0) {
+                    // Shrink
+                    $overflow = -$freeSpace;
+                    foreach ($lineItems as $fi) {
+                        $fi = objval($fi, FlexItem::class);
+                        if ($fi->frozen || $fi->shrink <= 0) continue;
+                        $sz = $isRow ? $fi->w : $fi->h;
+                        $reduction = (int)($overflow * $sz * $fi->shrink / $unfrozenShrinkWeightTotal);
+                        if ($isRow) { $fi->w = max(0, $fi->w - $reduction); $fi->visualW = $fi->w; }
+                        else $fi->h = max(0, $fi->h - $reduction);
+                    }
                 }
-                // CSS 2.2 §10.4：min > max 时先令 max := min
-                if ($minW > 0 && $maxW > 0 && $minW > $maxW) $maxW = $minW;
-                if ($minH > 0 && $maxH > 0 && $minH > $maxH) $maxH = $minH;
-                if ($maxW > 0 && $fi->w > $maxW) $fi->w = $maxW;
-                if ($minW > 0 && $fi->w < $minW) $fi->w = $minW;
-                if ($maxH > 0 && $fi->h > $maxH) $fi->h = $maxH;
-                if ($minH > 0 && $fi->h < $minH) $fi->h = $minH;
+        
+                // Clamp + freeze 检测
+                $anyFrozen = false;
+                foreach ($lineItems as $fi) {
+                    $fi = objval($fi, FlexItem::class);
+                    if ($fi->frozen) continue;
+                    $fcs = $fi->computedStyle;
+                    if ($fcs === null) continue;
+                    $maxW = $fcs->maxWidth?->toPx() ?? 0;
+                    $minW = $fcs->minWidth?->toPx() ?? 0;
+                    $maxH = $fcs->maxHeight?->toPx() ?? 0;
+                    $minH = $fcs->minHeight?->toPx() ?? 0;
+                    // min-width:auto 处理（使用预计算缓存）
+                    if ($isRow && $minW === 0 && $fcs->minWidth !== null && $fcs->minWidth->isAuto()) {
+                        $minW = $fi->cachedMinW >= 0 ? $fi->cachedMinW : 0;
+                    }
+                    if (!$isRow && $minH === 0 && $fcs->minHeight !== null && $fcs->minHeight->isAuto()) {
+                        $minH = max((int)$fi->visualH, (int)$fi->basis > 0 ? (int)$fi->basis : 0);
+                    }
+                    if ($minW > 0 && $maxW > 0 && $minW > $maxW) $maxW = $minW;
+                    if ($minH > 0 && $maxH > 0 && $minH > $maxH) $maxH = $minH;
+        
+                    $clamped = false;
+                    if ($isRow) {
+                        if ($maxW > 0 && $fi->w > $maxW) { $fi->w = $maxW; $clamped = true; }
+                        if ($minW > 0 && $fi->w < $minW) { $fi->w = $minW; $clamped = true; }
+                    } else {
+                        if ($maxH > 0 && $fi->h > $maxH) { $fi->h = $maxH; $clamped = true; }
+                        if ($minH > 0 && $fi->h < $minH) { $fi->h = $minH; $clamped = true; }
+                    }
+                    if ($clamped) {
+                        $fi->frozen = true;
+                        $fi->visualW = $fi->w;
+                        $fi->visualH = $fi->h;
+                        $anyFrozen = true;
+                    }
+                }
+        
+                // 无新冻结项 → 退出循环
+                if (!$anyFrozen) break;
+            }
+        
+            // 最终确认 visual 尺寸
+            foreach ($lineItems as $fi) {
+                $fi = objval($fi, FlexItem::class);
                 $fi->visualW = $fi->w;
                 $fi->visualH = $fi->h;
             }

@@ -34,4 +34,10 @@ class FlexItem
     public ?ComputedStyle $computedStyle = null;
     public ?string $content = null;
     public ?array $originalChildren = null;
+    /** §9.7.4 clamp rerun: 已被 min/max 限制的 item 标记为 frozen，不再参与下一轮分配 */
+    public bool $frozen = false;
+    /** 布局源 RenderNode（computeMinMaxSizes 需要读取子节点） */
+    public ?\Px\Render\RenderNode $node = null;
+    /** 缓存的 min-width:auto 值（-1=未设置，避免 clamp loop 内重复计算） */
+    public int $cachedMinW = -1;
 }
