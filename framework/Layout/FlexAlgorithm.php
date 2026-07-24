@@ -116,10 +116,16 @@ class FlexAlgorithm extends LayoutAlgorithm
             $rawOrder = $cs->getRaw("order");
             $order = $rawOrder !== null ? (is_object($rawOrder) ? (int)$rawOrder->toPx() : (int)$rawOrder) : 0;
             // flex-basis from resolved CssLength (not raw string from getRaw)
+            // CSS Flexbox §7.1：flex-basis 取值可为长度/百分比/auto/content/min-content/max-content/fit-content。
+            // - auto/content: 使用子项 content size (basis=-1 fallback 到 child.w/h)
+            // - min-content/max-content/fit-content: Px 无完整 intrinsic 计算，降级为 content size 代理（同 auto）
+            // - 长度/百分比（包括 0）: 使用具体值。修复旧 bug：toPx()>0 将 flex-basis:0 错误归为 auto。
             $basisVal = $cs->flexBasis;
             $basis = -1;
-            if ($basisVal instanceof CssLength && !$basisVal->isAuto() && $basisVal->toPx() > 0) {
+            if ($basisVal instanceof CssLength && !$basisVal->isAuto() && !$basisVal->isContent() && !$basisVal->isIntrinsic()) {
+                // 具体长度得到具体值（包括 0）——不以 >0 为条件
                 $basis = $basisVal->toPx();
+                if ($basis < 0) $basis = 0;
             }
             $hasExplicitCross = $cs->getRaw($isRow ? 'height' : 'width') !== null;
             $alignSelfRaw = $cs->getRaw('alignSelf');

@@ -127,6 +127,39 @@ $tests['flex-basis:200px 固定基准'] = function() {
     return $result;
 };
 
+// ── Test 9: CSS Flexbox §7.1 flex-basis:0 与 grow 分配 ──
+// 旧 bug：toPx() > 0 将 flex-basis:0 错误归为 auto → 使用 child.w 作 fallback
+// 修复后：basis=0 顯式设置，3 个 flex:1 1 0 子项各占 300/3=100
+$tests['CSS §7.1 flex:1 1 0 三均分布'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'display:flex;width:300px;height:60px'], [
+            VNode::h('div', ['style' => 'flex:1 1 0;height:40px'], 'A'),
+            VNode::h('div', ['style' => 'flex:1 1 0;height:40px'], 'B'),
+            VNode::h('div', ['style' => 'flex:1 1 0;height:40px'], 'C'),
+        ])
+    );
+    // 每个子项 basis=0，grow=1 → 300/3=100
+    assert_contains($result, 'div (0,0 100x40)', 'flex:1 1 0 首项宽 100');
+    assert_contains($result, 'div (100,0 100x40)', 'flex:1 1 0 中项宽 100 @ x=100');
+    assert_contains($result, 'div (200,0 100x40)', 'flex:1 1 0 末项宽 100 @ x=200');
+    return $result;
+};
+
+// ── Test 10: CSS Flexbox §7.1 flex-basis 关键字 min-content ──
+// min-content/max-content/fit-content 读为 intrinsic，降级为 content size 代理
+$tests['CSS §7.1 flex-basis:min-content 关键字'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'display:flex;width:300px;height:60px'], [
+            VNode::h('div', ['style' => 'flex-basis:min-content;height:40px;width:80px'], 'A'),
+            VNode::h('div', ['style' => 'flex:1;height:40px'], 'B'),
+        ])
+    );
+    // A basis=intrinsic 降级到 child.w=80，B flex:1 占剩余 220
+    assert_contains($result, 'div (0,0 80x40) text="A"', 'flex-basis:min-content 降级到 content size = 80');
+    assert_contains($result, 'div (80,0 220x40)', 'flex:1 B 占剩余 220 @ x=80');
+    return $result;
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-26-Flexbox-Complete.snap';
 run_css_tests('Level 26 - Flexbox Complete', $snapFile, $tests);
 
