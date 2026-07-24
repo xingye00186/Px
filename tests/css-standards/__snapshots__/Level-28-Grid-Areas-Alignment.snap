@@ -1,4 +1,4 @@
-@generated 2026-07-24 17:51:59
+@generated 2026-07-24 17:59:57
 === Test: grid-template-areas header-main-footer 三行布局 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x300) [dsp=grid]

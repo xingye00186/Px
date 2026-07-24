@@ -534,13 +534,11 @@ class BlockAlgorithm extends LayoutAlgorithm
                     || $childDisplay === 'flow-root');
             $isCollapsible = ($childDisplay === 'block') && !$createsBFC;
             // ── CSS 2.2 §8.3.1 margin 折叠 (对标 Blink NGMarginStrut) ──
-            // 相邻兄弟 block 且两侧均不创建新 BFC 时，将前章 mBottom 与当前 mTop 折叠：
-            //   正值取 max，负值取 min（最负），两者相加 = MarginStrut.resolve()
+            // 相邻兄弟 block 且两侧均不创建新 BFC 时，将前章 mBottom 与当前 mTop 折叠
             if ($isCollapsible && $prevCollapsible) {
                 $strut = new MarginStrut();
                 $strut->append($prevMarginBottom);
                 $strut->append($mTop);
-                // 撤销上一子项已加的 mBottom（包含在 $stackY），重新导入折叠后的值
                 $childY = $stackY - $prevMarginBottom + $strut->resolve();
             } else {
                 $childY = $stackY + $mTop;

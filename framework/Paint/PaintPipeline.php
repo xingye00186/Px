@@ -47,12 +47,12 @@ class PaintPipeline
         $br = (int)($cs?->borderRightWidth ?? 0);
         $bt = (int)($cs?->borderTopWidth ?? 0);
         $bb = (int)($cs?->borderBottomWidth ?? 0);
-        // 对标 Blink：从 Fragment 读几何（不从 RenderNode 读）
+        // 对标 Blink：从 Fragment 读几何（RenderNode 无几何字段）
         $geom = $node->cachedFragment;
-        $vw = $geom !== null ? ($geom->visualW > 0 ? $geom->visualW : $geom->w) : ($node->visualW > 0 ? $node->visualW : $node->w);
-        $vh = $geom !== null ? ($geom->visualH > 0 ? $geom->visualH : $geom->h) : ($node->visualH > 0 ? $node->visualH : $node->h);
-        $nx = $geom !== null ? $geom->x : $node->x;
-        $ny = $geom !== null ? $geom->y : $node->y;
+        $vw = $geom !== null ? ($geom->visualW > 0 ? $geom->visualW : $geom->w) : 0;
+        $vh = $geom !== null ? ($geom->visualH > 0 ? $geom->visualH : $geom->h) : 0;
+        $nx = $geom !== null ? $geom->x : 0;
+        $ny = $geom !== null ? $geom->y : 0;
         return [
             'x' => (int)$nx + (int)($bl ?? 0),
             'y' => (int)$ny + $bt,
@@ -519,12 +519,12 @@ class PaintPipeline
                 $letterSpacing += $fontStretchExtra;
             }
             $textWidth = self::measureTextWidth($text, $fontSize, (bool)$bold);
-            // 对标 Blink：从 Fragment 读几何
+            // 对标 Blink：从 Fragment 读几何（RenderNode 无几何字段）
             $geom = $node->cachedFragment;
-            $selfY = $geom !== null ? (int)$geom->y : (int)($node->y ?? 0);
-            $selfH = $geom !== null ? (int)$geom->visualH : (int)($node->visualH ?? 0);
-            $selfX = $geom !== null ? (int)$geom->x : (int)($node->x ?? 0);
-            $selfW = $geom !== null ? (int)$geom->visualW : (int)($node->visualW ?? 0);
+            $selfY = $geom !== null ? (int)$geom->y : 0;
+            $selfH = $geom !== null ? (int)$geom->visualH : 0;
+            $selfX = $geom !== null ? (int)$geom->x : 0;
+            $selfW = $geom !== null ? (int)$geom->visualW : 0;
             $pdL = $pseudoOverrides['paddingLeft'] ?? $cs?->padding?->left?->toPx() ?? 0;
             $pdT = $pseudoOverrides['paddingTop'] ?? $cs?->padding?->top?->toPx() ?? 0;
             $pdR = $pseudoOverrides['paddingRight'] ?? $cs?->padding?->right?->toPx() ?? 0;
@@ -1237,9 +1237,9 @@ class PaintPipeline
         $borderRadiusX = $pseudoOverrides['borderRadiusX'] ?? 0;
         $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;
         $opacity = $pseudoOverrides['opacity'] ?? $cs?->opacity ?? 1.0;
-        // 对标 Blink: 从 Fragment 读取滚动状态（而非 RenderNode）
+        // 对标 Blink: 从 Fragment 读取滚动状态（RenderNode 无滚动字段）
         $scrollFrag = $node->cachedFragment;
-        $contentH = $scrollFrag !== null ? $scrollFrag->getContentHeight() : (int)($node->contentHeight ?? 0);
+        $contentH = $scrollFrag !== null ? $scrollFrag->getContentHeight() : 0;
         if ($contentH === 0) {
             foreach ($node->children as $child) {
                 $itemH = (int)($child->computedStyle?->height->toPx() ?? 0);

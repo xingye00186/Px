@@ -251,7 +251,9 @@ class LayoutOrchestrator
         \Px\Core\PerfCounter::end('algo:setup');
 
         \Px\Core\PerfCounter::start('algo:' . $algoName);
-        $algoFrag = $algo->layout($space, $style, $textContent, $node->children, $cached);
+        // Phase 5: 调 layoutResult() 而非 layout()，启用 endMarginStrut/oofDescendants 消费
+        $algoResult = $algo->layoutResult($space, $style, $textContent, $node->children, $cached);
+        $algoFrag = $algoResult->fragment;
         \Px\Core\PerfCounter::end('algo:' . $algoName);
         // P0: 恢复父级 provider（防止嵌套布局状态污染）
         $algo->setChildLayoutProvider($savedProvider);
