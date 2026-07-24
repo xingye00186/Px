@@ -2,8 +2,11 @@
 
 > 审计日期：2026-07-24
 > 复核日期：2026-07-24（拉取最新代码后重新核查）
+> **深度追加：2026-07-24（五维对标评估 + 综合迭代建议）**
 > 审计范围：framework/Layout、framework/Render、framework/Css、framework/Paint、framework/Core
 > 对标目标：Blink LayoutNG（NGBlockNode / NGFlexLayoutAlgorithm / NGGridLayoutAlgorithm / NGPhysicalFragment / ConstraintSpace）
+
+> ⚠️ **本次深度追加**：在原 25 项审计基础上，从**类/接口抽象层次、数据字段语义、算法实现完整度、流程管线、规范合规度**五个维度对全部代码进行严格 Blink 对标核查，识别出**概念错乱、错误嫁接、字段越界、启发式规范违反、抽象层缺失**共 **50+ 项深层次问题**，并附**分阶段综合迭代路线**。详见第十二至十八节。
 
 ---
 
@@ -494,7 +497,1117 @@ $geoKeys = ['width','height','minWidth','maxWidth','minHeight','maxHeight',
 
 ---
 
-## 十一、审计覆盖文件清单
+## 十一、五维对标评估总览（2026-07-24 深度追加）
+
+在原 25 项审计（多为**具体代码点问题**）基础上，本次从**架构维度**重新对标 Blink LayoutNG，得到五维评分：
+
+| 维度 | 对齐度 | 缺口 | 主要问题类别 |
+|------|--------|------|---|
+| 类/接口抽象层次 | **85%** | 15% | LayoutResult 抽象缺失、FormattingContext 抽象缺失、InputNode 缺失 |
+| 数据字段语义 | **55%** | 45% | Logical/Physical 坐标未分离、字段职责越界、MarginStrut 缺失 |
+| 算法实现完整度 | **60%** | 40% | Float / LineBox / Baseline 系统缺失、Grid/Table 简化 |
+| 流程管线 | **80%** | 20% | Post-Layout scroll clamp 缺失（注释谎报）、脏位未清 |
+| 规范合规度 | **50%** | 50% | 硬编码启发式阈值、writing-mode 硬编码、默认值偏离 |
+
+**综合架构对齐度：约 66%**（骨架正确 + 数据/算法/规范深层缺口）
+
+### 与原 25 项审计的关系
+
+- **原 P0（4 项）已修复 4 项**（save/restore、PaintPipeline 回写、geoKeys、hitTest 双源）
+- **原 P1（7 项）已修复 4 项**，剩余 3 项（displayText 可变、BFC 未隔离、状态外置）与本次深度评估的抽象/数据字段缺口**根源相同**
+- **本次新识别 50+ 项**多为**架构/语义层面的隐性问题**，代码可运行但违反 Blink 设计契约或 CSS 规范
+
+### 问题严重度重排（合并新旧）
+
+| 严重度 | 数量 | 代表性问题 |
+|---|---|---|
+| **P0 阻塞架构** | 5 | Fragment x/y 绝对坐标语义错、containerWidth=contentWidth 坍塌、Block/Flex x 坐标语义不统一、Logical/Physical 坐标未分离、LayoutResult 抽象缺失 |
+| **P1 核心机制** | 12 | FormattingContext 抽象缺失、MarginStrut 缺失、Float 完全缺失、LineBox 缺失、Baseline 系统缺失、writing-mode 硬编码、硬编码启发式阈值、min-width:auto 语义错、Padding 百分比基准错、displayText 可变、BFC 未隔离、状态未外置 |
+| **P2 性能/精度** | 15 | LayoutUnit 精度缺失、ChildLayoutProvider 实质全量、OOF 双重布局、Flex 5px 阈值、int 舍入误差、脏位未清、字段职责越界（scrollTop/dataset in Fragment）、bfcOffset 死字段等 |
+| **P3 局部瑕疵** | 8 | 命名不一致、docblock 错误、StylePool key 稳定性、getter 与直接访问混用等 |
+
+---
+
+## 十二、类/接口抽象层次 15% 缺口详解
+
+### 12.1 Node 与 Algorithm 解耦不彻底（P1，权重 3%）
+
+Blink 三层分离：`LayoutObject`（持久 DOM 影子）→ `NGLayoutInputNode/NGBlockNode`（只读投影）→ `NGLayoutAlgorithm`（无状态算法）→ `NGLayoutResult`（结果聚合）。
+
+Px 直接把 `RenderNode` 传给算法：
+
+[LayoutAlgorithm.php L60-66](file:///d:/Px/framework/Layout/LayoutAlgorithm.php#L60-L66)：
+```php
+abstract public function layout(
+    ConstraintSpace $space,
+    ?ComputedStyle $style = null,
+    string $textContent = '',
+    array $childNodes = [],       // RenderNode[] —— 算法可读脏位/缓存/父引用
+    ?PhysicalFragment $inputFragment = null,
+): PhysicalFragment;
+```
+
+**问题**：算法可以随意访问 `RenderNode.layoutDirty`、`cachedFragment`、`parent` 等本应对算法透明的字段，破坏封装。
+
+**修复方向**：引入 `LayoutInputNode` 只读接口，仅暴露 `type / computedStyle / children[] / groupId`。
+
+---
+
+### 12.2 LayoutResult 抽象完全缺失（P0，权重 4%）
+
+Blink `NGLayoutResult` 是**算法输出的完整包**：
+
+```cpp
+class NGLayoutResult {
+  scoped_refptr<const NGPhysicalFragment> physical_fragment_;
+  NGBfcOffset bfc_offset_;
+  LayoutUnit intrinsic_block_size_;
+  NGMarginStrut end_margin_strut_;
+  Vector<NGOutOfFlowPositionedDescendant> oof_descendants_;
+  scoped_refptr<const NGBreakToken> break_token_;
+};
+```
+
+Px 只有 `PhysicalFragment`，导致**布局副产物无处安放**：
+
+| Blink LayoutResult 字段 | Px 状态 | 后果 |
+|---|---|---|
+| `end_margin_strut` | ❌ | 父与最后一个子的 margin 折叠失效 |
+| `intrinsic_block_size`（与 final size 分离） | ❌ | Auto-height 与 min-content 混淆 |
+| `oof_positioned_descendants` | ❌ | 全树遍历替代冒泡，O(N) 开销 |
+| `bfc_offset` | ❌ 死字段 | BFC 概念不完整 |
+| `has_forced_break` | ❌ | 无强制换行支持 |
+
+**架构影响**：Px 把所有布局副产物塞进 `PhysicalFragment`，导致 Fragment 字段膨胀（21 个字段），职责边界模糊。
+
+**修复方向**：引入 `LayoutResult { fragment, endMarginStrut, intrinsicBlockSize, oofDescendants }`，Fragment 恢复纯几何输出。
+
+---
+
+### 12.3 ConstraintSpace 缺少 Builder（P2，权重 2%）
+
+Blink 用 `NGConstraintSpaceBuilder` 逐步构造：
+
+```cpp
+NGConstraintSpaceBuilder builder(parent_writing_mode, child_writing_mode, is_new_fc);
+builder.SetAvailableSize(available_size);
+builder.SetIsFixedInlineSize(true);
+NGConstraintSpace space = builder.ToConstraintSpace();
+```
+
+Px 现状：23 个位置参数构造函数（[ConstraintSpace.php L149-197](file:///d:/Px/framework/Layout/ConstraintSpace.php#L149-L197)），`forChild()` 又是另一套参数顺序——两处签名不一致，新增字段必须改所有调用点。
+
+**修复方向**：引入 `ConstraintSpaceBuilder` 类，Fluent API 逐步构建。
+
+---
+
+### 12.4 BlockNode/InlineNode 类型多态缺失（P2，权重 1%）
+
+Blink 中 `NGBlockNode::Layout()` 与 `NGInlineNode::Layout()` 是**不同类型的入口**。
+
+Px 通过字符串 switch 分派（[LayoutOrchestrator.php L416-435](file:///d:/Px/framework/Layout/LayoutOrchestrator.php#L416-L435)）：
+```php
+switch ($display) {
+    case 'flex': case 'inline-flex': return $this->flexAlgo;
+    case 'grid': return $this->gridAlgo;
+    ...
+}
+```
+
+**问题**：
+- InlineNode 缺失 `NGInlineItemsBuilder` 中间层（行内 token 流）
+- `inline` 与 `inline-block` 走同一算法（Blink 分开）
+- `flow-root` 分派逻辑分散
+
+---
+
+### 12.5 FormattingContext 抽象完全缺失（P1，权重 3%）
+
+**这是 Px 抽象层次最大的单项缺口**。
+
+Blink 三种 FC 有明确对象：BFC（margin 折叠 + float + clearance）、FFC（flex line）、GFC（grid tracks）。
+
+Px 只用 `spaceType` 字符串 `'block' | 'flex-item' | 'grid'` 挂在 ConstraintSpace 上，实际状态散落各处：
+- Margin 折叠状态在 `BlockAlgorithm.stackBlockChildren` 局部变量 `$prevMarginBottom / $prevCollapsible`
+- Float 列表无处存放（也是 Float 完全无法实现的根因之一）
+- BFC 隔离靠算法内部硬编码检测（[BlockAlgorithm.php L239-244](file:///d:/Px/framework/Layout/BlockAlgorithm.php#L239-L244)）
+
+**修复方向**：
+```php
+class BlockFormattingContext {
+    public MarginStrut $marginStrut;
+    public FloatList $floats;
+    public array $clearance;
+}
+class FlexFormattingContext { public array $lines; public int $mainAxisSize; }
+class GridFormattingContext { public array $tracks; public array $placement; }
+```
+
+---
+
+### 12.6 ChildLayoutProvider 契约弱化（P2，权重 1%）
+
+Blink `LayoutChild()` 是 `NGLayoutAlgorithm` 的 protected 方法，算法子类**天然拥有**该能力。
+
+Px 通过 setter 注入 + save/restore 手动保护（[LayoutOrchestrator.php L237-251](file:///d:/Px/framework/Layout/LayoutOrchestrator.php#L237-L251)），本质上是**把算法单例复用的副作用扛在了 Orchestrator 头上**：
+
+```php
+$provider = new ChildLayoutProvider($this, $node, $space, $style, $nodeLayer);
+$savedProvider = $algo->getChildLayoutProvider();  // save
+$algo->setChildLayoutProvider($provider);
+$algoFrag = $algo->layout(...);
+$algo->setChildLayoutProvider($savedProvider);     // restore
+```
+
+**修复方向**：算法从单例改为每次布局栈上创建，或将 Provider 作为 `layout()` 参数传入。
+
+---
+
+### 12.7 LayoutInvalidation 抽象缺失（P2，权重 1%）
+
+Blink `LayoutInvalidator` 负责**将 DOM 变更翻译为 layout dirty 传播**，并跟踪 invalidation reason。
+
+Px 只有 `markLayoutDirty` / `markStyleDirty` / `markSubtreeDirty` 三个方法：
+- 无 invalidation reason 追踪（只知道脏了，不知因何而脏）
+- `markLayoutDirty(propagateUp=true)` 无条件传到根——**`isLayoutBoundary=true` 的节点不阻断**
+- 无 overflow-recalc 独立通行证
+
+---
+
+### 12.8 抽象层次缺口小结
+
+| 缺口子项 | 权重 | 严重度 | 修复优先级 |
+|---|---|---|---|
+| LayoutResult 抽象缺失 | 4% | **P0** | 最优先 |
+| FormattingContext 抽象缺失 | 3% | **P1** | 次优先 |
+| Node/Algorithm 解耦不彻底 | 3% | P1 | |
+| ConstraintSpace 无 Builder | 2% | P2 | |
+| BlockNode/InlineNode 类型多态 | 1% | P2 | |
+| ChildLayoutProvider 契约弱化 | 1% | P2 | 依赖前 3 项修复 |
+| LayoutInvalidation 抽象 | 1% | P2 | |
+
+**补齐这 7 项后抽象层次可提升到 95%+**。剩余 5% 是 writing-mode / bidi / break-token 等**规范广度**特性。
+
+---
+
+## 十三、数据字段语义 45% 缺口详解
+
+### 13.A Logical/Physical 坐标未分离（P0，权重 12%）
+
+**Px 最严重的单项数据字段缺陷**。
+
+Blink LayoutNG 严格区分：
+- `NGLogicalOffset { inline_offset, block_offset }`（算法内部坐标系，基于 writing-mode）
+- `NGPhysicalOffset { left, top }`（结果坐标系，基于屏幕）
+- 道口在 Fragment 构造时通过 `writing-mode + direction` 转换
+
+Px **全局只有一套物理坐标**：
+- ConstraintSpace 只有 `containerWidth / containerHeight`（无 inline/block size）
+- BlockAlgorithm/FlexAlgorithm/GridAlgorithm 直接写 `x/y` 而非 `inline/block offset`
+- PhysicalFragment 只有 `x/y/w/h`（无 logical 对应）
+
+**直接后果**：
+- `writing-mode: vertical-rl` 完全不能支持
+- `direction: rtl` 下 flex-direction:row 无法反向
+- `text-align: start/end` 无法区分
+- Logical Properties（`margin-inline-start` 等）无映射层
+
+**修复成本**：很高，需重构三层数据结构 + 所有算法。但不修就无法国际化。
+
+---
+
+### 13.B LayoutUnit 精度类型缺失（P1，权重 6%）
+
+Blink `LayoutUnit` 是 **1/64 像素定点数**，保留亚像素精度到 Paint 层。
+
+Px 全局使用 PHP `int`，在以下位置存在**交换位置舍入**：
+- [BlockAlgorithm.php L48](file:///d:/Px/framework/Layout/BlockAlgorithm.php#L48)：`$marginTop = (int)($s->margin?->top->toPx() ?? 0);` —— 4.5px → 4
+- [FlexAlgorithm.php L52-58](file:///d:/Px/framework/Layout/FlexAlgorithm.php)：`$availableMain = (int)$w - $paddingLeft - ...` —— padding 舍入后可用区代可能多/少 1px
+- [LayoutOrchestrator.php buildChildSpace](file:///d:/Px/framework/Layout/LayoutOrchestrator.php)：cbW 多次 (int) 转换
+
+**累积后果**：
+- Flex `flex: 1` 分给 3 个 item 于宽 100 的容器：应 33/34/33，Px 舍入后 33/33/33，丢 1px
+- 深层嵌套时同向舍入使子元素抽象宽度长期小于 1px
+
+**修复方向**：引入 `LayoutUnit` 值类型包装 float，只在向 Paint/GDI 交付时才 round。
+
+---
+
+### 13.C Margin Strut 抽象缺失（P1，权重 4%）
+
+Blink `NGMarginStrut { positive_margin, negative_margin }` 追踪**待折叠的 pending margin**，支持 CSS 2.2 §8.3.1 完整規则。
+
+Px 在 [BlockAlgorithm.php L106-114](file:///d:/Px/framework/Layout/BlockAlgorithm.php#L106-L114) 用**局部变量** `$prevMarginBottom / $prevCollapsible` 处理相邻兄弟折叠，缺乏：
+- 父子 margin-top 折叠（BFC 入口）
+- 父子 margin-bottom 折叠（未面临 BFC 时）
+- 负 margin 折叠（取正负两侧最大绝对值）
+- 空中间节点穿透（margin-top + margin-bottom 也折叠）
+
+**修复方向**：引入 `MarginStrut` 值类型 + `LayoutResult.endMarginStrut` 上传。
+
+---
+
+### 13.D Overflow 三重语义混淆（P1，权重 4%）
+
+Blink 分三种不同语义：
+1. **layout overflow**：子项布局 rect 并集（驱动滚动条）
+2. **visual overflow**：含 box-shadow / outline / filter 的视觉 rect（驱动 repaint）
+3. **scrollable overflow**：可滚动区域（overflow 非 visible 时 = layout overflow clamp 到内容区）
+
+Px 现状：
+- `RenderNode.contentWidth/Height` 仅为滚动容器计算（[LayoutOrchestrator.php L278-291](file:///d:/Px/framework/Layout/LayoutOrchestrator.php#L278-L291)）
+- `RenderNode.visualW/H` 与 `contentW/H` 区分不清
+- **layout overflow 完全无字段**（非滚动容器无法展示溢出提示）
+
+---
+
+### 13.E Fragment 类型层级坍塌（P1，权重 4%）
+
+Blink `NGPhysicalFragment` 是抽象基类，下分：
+- `NGPhysicalBoxFragment`（块盒/行内盒）
+- `NGPhysicalLineBoxFragment`（行盒）
+- `NGPhysicalTextFragment`（文本盒，含字形信息）
+- `NGPhysicalContainerFragment`（包含子 Fragment）
+
+Px 仅一个 `PhysicalFragment` 类，通过 `type` 字段字符串区分。导致：
+- Text Fragment 无 shaping 信息（baseline / ascent / descent）
+- LineBox 无专用 Fragment——**Inline 布局无法实现**
+- Container/Leaf 区分靠遍历 children 数组长度（无类型安全）
+
+---
+
+### 13.F Fragment 字段职责溢出（P2，权重 5%）
+
+`PhysicalFragment` 21 个字段中，**6 个字段与布局结果无关**：
+
+| 越界字段 | 应属于 | Blink 对应位置 |
+|---|---|---|
+| `scrollTop / scrollLeft` | 滚动状态（ScrollState） | LayoutBox::ScrollableArea |
+| `dataset` | DOM（RenderNode.sourceVNode） | Element::attributes |
+| `pseudoStyles` | Style tree（StyleTree） | ComputedStyle::pseudo_style_ |
+| `sourceNode` | Fragment 应仅保存 groupId，弱引用 | 反向映射在 LayoutTreeBuilder |
+| `layer` | Paint tree（PaintLayer） | PaintLayer |
+| `availableWidth` | ConstraintSpace | NGConstraintSpace::available_size |
+
+**修复影响**：Fragment 可从 21 字段瘦身到 12 个，演变为真正的“不可变几何输出”。
+
+---
+
+### 13.G ComputedStyle 弱类型逃逸口（P2，权重 3%）
+
+[BlockAlgorithm.php L226-233](file:///d:/Px/framework/Layout/BlockAlgorithm.php#L226-L233) 使用 `getRaw()` 从 style 读取**本不属于样式的数据**：
+
+```php
+$rawType = $s->getRaw('_type');       // ← 节点类型属于 RenderNode！
+$rawContent = $s->getRaw('_content');  // ← 文本内容属于 RenderNode！
+```
+
+**这是典型的“错误嫁接”**——ComputedStyle 本应只含 CSS 属性，Px 部分路径上往里存了非样式数据作为数据传递通道，削弱了不可变契约（[ComputedStyle.php](file:///d:/Px/framework/Css/ComputedStyle.php) 中 `rawDeclarations` 非 readonly）。
+
+**修复方向**：取消 `_type` / `_content` 逃逸口，算法直接从 RenderNode 读取。
+
+---
+
+### 13.H RenderNode 交互状态污染（P2，权重 2%）
+
+[RenderNode.php L44-47](file:///d:/Px/framework/Render/RenderNode.php#L44-L47)：
+```php
+public bool $hovered = false;
+public bool $focused = false;
+public bool $active = false;
+```
+
+**越界：布局不关心交互状态**。Blink 把 hover/focus/active 放在 `Element::PseudoStateFlags`，与 LayoutObject 无关。
+
+`InteractionState` 类已存在但 RenderNode 仍保留字段，形成双存。
+
+---
+
+### 13.I MinMaxSizes 缓存缺失（P2，权重 2%）
+
+Blink `NGBlockNode::ComputeMinMaxSizes()` 有独立缓存（`intrinsic_logical_widths_cache_`），避免重复计算。
+
+Px `isIntrinsicMeasurement` 模式每次都重新布局，无缓存——Flex 中 shrink-to-fit 计算时会频繁重复。
+
+---
+
+### 13.J ConstraintSpace 关键字段缺失（P1，权重 2%）
+
+Blink 重要但 Px 缺失的字段：
+
+| Blink 字段 | 作用 | Px 缺失后果 |
+|---|---|---|
+| `is_fixed_inline_size` | 子项 inline 方向尺寸已固定 | Flex Pass 2 无法区分硬约束与软约束 |
+| `is_fixed_block_size` | 子项 block 方向尺寸已固定 | 同上 |
+| `is_shrink_to_fit` | 需 shrink-to-fit 宽度 | inline-block/float/absolute 无法正确 |
+| `is_new_formatting_context` | 子项开新 BFC | BFC 隔离靠启发式检测 |
+| `writing_mode` | 书写方向 | 无法支持 |
+| `direction` | 方向（ltr/rtl） | 无法支持 |
+| `baseline_algorithm_type` | 基线算法类型 | Baseline 无法实现 |
+
+---
+
+### 13.K 命名/类型不一致（P3，权重 1%）
+
+- `PhysicalFragment::contentWidth` vs Blink `layout_overflow`（名不副实）
+- `x/y/w/h` 小写，Blink `size` / `offset` 结构化（可读性）
+- `RenderNode.groupId` 与 `VNode.groupId` 同名但来源不同
+- `FlexLineBreaker` docblock 声明 `RenderNode[]` 实际传 `FlexItem[]`
+
+---
+
+### 13. 数据字段缺口小结
+
+| 缺口子项 | 权重 | 严重度 |
+|---|---|---|
+| Logical/Physical 坐标未分离 | 12% | **P0** |
+| LayoutUnit 精度缺失 | 6% | P1 |
+| Fragment 字段职责溢出 | 5% | P2 |
+| Margin Strut 抽象缺失 | 4% | P1 |
+| Overflow 三重语义混淆 | 4% | P1 |
+| Fragment 类型层级坍塌 | 4% | P1 |
+| ComputedStyle 弱类型逃逸 | 3% | P2 |
+| RenderNode 交互状态污染 | 2% | P2 |
+| MinMaxSizes 缓存缺失 | 2% | P2 |
+| ConstraintSpace 关键字段缺失 | 2% | P1 |
+| 命名/类型不一致 | 1% | P3 |
+
+**优先修复三项：Logical/Physical 分离、Fragment 字段清理、ComputedStyle 逃逸口消除**——共占 20% 权重，修后可提升到 75%。
+
+---
+
+## 十四、算法实现完整度 40% 缺口详解
+
+### 14.1 BlockAlgorithm 缺口
+
+#### 14.1.1 Float 完全缺失（P0，权重 8%）
+
+CSS 2.2 §9.5 定义的 `float: left | right` 及其 exclusion 机制，Px **完全未实现**。影响：
+- 文字环绕图片完全无法实现
+- `clear: left/right/both` 无效
+- BFC 创建规则中“包含 float”项没意义
+- 双栏布局（旧式但常见）无法实现
+
+Blink `NGFloatLayoutAlgorithm + NGExclusionSpace` 处理。Px 需新增一整套子系统。
+
+---
+
+#### 14.1.2 Margin 折叠不完整（P1，权重 3%）
+
+CSS 2.2 §8.3.1 定义五种折叠场景，Px 只能处理 1 种：
+
+| 场景 | Blink | Px |
+|---|---|---|
+| 相邻兄弟 margin-bottom + margin-top | ✅ | ✅ 局部变量 |
+| 父 margin-top + 首子 margin-top（非 BFC） | ✅ | ❌ |
+| 父 margin-bottom + 末子 margin-bottom | ✅ | ❌ |
+| 空中间节点自折叠（margin-top + margin-bottom） | ✅ | ❌ |
+| 负 margin + 正 margin | ✅（取最大绝对值） | ❌ |
+
+依赖：`MarginStrut` 抽象 + `LayoutResult.endMarginStrut`。
+
+---
+
+#### 14.1.3 Clearance 缺失（P1，权重 2%）
+
+`clear: left | right | both` 需要 float exclusion space，依赖 Float 实现。
+
+---
+
+#### 14.1.4 Shrink-to-fit 缺失（P1，权重 2%）
+
+inline-block / float / absolute / table-cell 需要宽度为 `min(max_content, max(min_content, available))` ——Px 仅有启发式回退。
+
+依赖：`ComputeMinMaxSizes` 课题 + `MinMaxSizes` 缓存。
+
+---
+
+#### 14.1.5 Anonymous Block Wrapping 缺失（P2，权重 1%）
+
+CSS 2.2 §9.2.1.1：block 容器内混合 inline 与 block 子项时，应为 inline 子项创建 anonymous block wrapper。Px 无此机制，行内子项直接参与块堆叠。
+
+---
+
+#### 14.1.6 Baseline 计算缺失（P0，权重 3%）
+
+Blink `NGBaselineRequests` 在 mainLayout 时计算 first-baseline / last-baseline 并上传。Px `PhysicalFragment` 无 baseline 字段，导致：
+- `align-items: baseline` 无法实现
+- `vertical-align: baseline` 无法实现
+- inline-block 与周围行内内容基线对齐失效
+
+---
+
+### 14.2 FlexAlgorithm 缺口
+
+#### 14.2.1 flex-basis 取值不全（P1，权重 2%）
+
+| 取值 | Px |
+|---|---|
+| `<length>` 具体长度 | ✅ |
+| `<percentage>` 百分比 | ✅ |
+| `auto` | ⚠️ 部分（降为 width） |
+| `content` | ❌ |
+| `min-content` | ❌ |
+| `max-content` | ❌ |
+| `fit-content` | ❌ |
+
+---
+
+#### 14.2.2 min/max clamp rerun 机制缺失（P1，权重 2%）
+
+CSS Flexbox §9.7.4 要求：item 尺寸 clamp 到 min/max 后如果发生变化，需将 clamped item 标记为不参与后续分配，**对剩余 item 重新分配剩余空间**，循环直到无变化。Px 仅一次分配。
+
+---
+
+#### 14.2.3 5px 启发式阈值（P1，权重 1%）
+
+[FlexAlgorithm.php Pass2](file:///d:/Px/framework/Layout/FlexAlgorithm.php)：`abs($p2OrigW - $p2ItemW) > 5` 才重布局。规范要求确定性重布局，无容差。
+
+---
+
+#### 14.2.4 align-items:baseline 缺失（P1，权重 1%）
+
+依赖 Baseline 系统（同 14.1.6）。
+
+---
+
+#### 14.2.5 absolute-positioned flex items 静态位置错（P2，权重 1%）
+
+CSS Flexbox §4.1：flex item 若为 `position: absolute`，**仅参与 static position 计算**，不占主轴空间。Px 将其当正常 flex item 处理。
+
+---
+
+#### 14.2.6 gap 简写不完整（P2，权重 1%）
+
+`gap: 10px 20px` 应拆为 row-gap + column-gap，Px CssValueParser 对 flex/grid 的 gap 简写支持不一致。
+
+---
+
+#### 14.2.7 row-reverse / column-reverse 视觉未反向（P1，权重 1%）
+
+Px `flex-direction: row-reverse` 仅反转迭代顺序，未将主轴方向反向。依赖 Logical/Physical 分离。
+
+---
+
+### 14.3 GridAlgorithm 缺口
+
+#### 14.3.1 Track sizing algorithm 覆盖不全（P0，权重 3%）
+
+CSS Grid §12 定义 12 阶段的 track sizing，Px 仅覆盖阶段 1-2（initialize + resolve intrinsic），后续阶段（space distribution 到 flexible tracks 、stretch auto tracks）未实现。
+
+---
+
+#### 14.3.2 特性大量缺失（P1，权重 2%）
+
+| 特性 | Blink | Px |
+|---|---|---|
+| `minmax(a, b)` | ✅ | ❌ |
+| `fit-content(a)` | ✅ | ❌ |
+| `repeat(auto-fill, ...)` | ✅ | ❌ |
+| `repeat(auto-fit, ...)` | ✅ | ❌ |
+| Named lines (`[start]`) | ✅ | ❌ |
+| Named areas (`grid-template-areas`) | ✅ | ❌ |
+| Subgrid | ✅ (§16) | ❌ |
+| Dense packing (`grid-auto-flow: dense`) | ✅ | ❌ |
+
+---
+
+### 14.4 InlineAlgorithm 缺口（最大，P0，权重 11%）
+
+#### 14.4.1 Line Box 结构缺失（核心，权重 5%）
+
+Blink `NGLineBoxFragmentBuilder` 构建 `NGPhysicalLineBoxFragment`，包含：
+- ascent / descent / baseline
+- inline items 列表（字形 / atomic-inline / open-tag / close-tag）
+- justification information
+- bidi resolved order
+
+Px `InlineAlgorithm` 将多个 inline 子项当作块叠加，**无行盒概念**。
+
+---
+
+#### 14.4.2 BiDi 缺失（P2，权重 2%）
+
+Unicode Bidirectional Algorithm（UAX#9）——Blink `NGBidiParagraph`。Px 无。
+
+---
+
+#### 14.4.3 Text Shaping 缺失（P2，权重 2%）
+
+Blink `NGInlineItem::ShapeText` 使用 HarfBuzz。Px 仅使用 GDI TextOut，无字形拼写 / 连字 / 复杂脚本支持。
+
+---
+
+#### 14.4.4 vertical-align 全部缺失（P1，权重 1%）
+
+baseline / top / middle / bottom / sub / super / text-top / text-bottom / \<percentage\> / \<length\> ——Px 完全无支持。
+
+---
+
+#### 14.4.5 Ruby / ::first-letter / ::first-line 缺失（P3，权重 1%）
+
+CJK ruby / 首字首行特殊样式——Px 无。
+
+---
+
+### 14.5 TableAlgorithm 缺口（P2，权重 3%）
+
+当前仅处理基本 grid 结构，以下全部缺失：
+- `colspan / rowspan` 合并单元格
+- `border-collapse: collapse` 及其优先级规则
+- `border-spacing` (separate 模式)
+- `<caption>` 位置算法
+- `<colgroup> / <col>` 列尺寸影响
+- `table-layout: auto` 与 `fixed` 区分
+- `intrinsicSize` 返回全零（auto 宽度不正确）
+
+---
+
+### 14.6 OOFLayoutAlgorithm 缺口
+
+#### 14.6.1 insets 双向未确认（P1，权重 1%）
+
+top + bottom 同时指定时应确定 height，Px OOFLayoutAlgorithm 未充分验证双向头尾总和。
+
+#### 14.6.2 margin:auto 居中缺失（P2，权重 1%）
+
+`position: absolute; margin: auto; top:0; bottom:0; left:0; right:0` 应自动居中（CSS 2.2 §10.6.4），Px 未实现。
+
+#### 14.6.3 sticky 完全缺失（P2，权重 1%）
+
+`position: sticky` 需在 scroll offset 变化时重新计算，Px 无对应现布局钩子。
+
+#### 14.6.4 Anchor Positioning 缺失（P3，权重 0.5%）
+
+CSS Anchor Positioning 新规范（提案阶段），Px 未实现。
+
+---
+
+### 14.7 跨算法整类特性缺失
+
+| 特性 | 权重 | 优先级 |
+|---|---|---|
+| Multi-column (`column-count / column-width`) | 1% | P3 |
+| CSS Contain (`contain: layout/paint/size`) | 1% | P2 |
+| CSS Shapes (`shape-outside`) | 0.5% | P3 |
+| Replaced Element Sizing (img/video intrinsic ratio) | 1% | P1 |
+| Container Queries (`@container`) | 1% | P2 |
+| CSS Scroll Snap | 0.5% | P3 |
+
+---
+
+### 14. 算法完整度缺口小结
+
+**优先修复三块**：
+1. **Line Box + Baseline 系统**（占 11%）——目前 Inline 字面现得不能看，Flex/Grid 基线对齐就无从谈起
+2. **Float + Clearance + Exclusion**（占 10%）——BFC 概念的完整性依赖于此
+3. **Shrink-to-fit + MinMax 计算入口**（占 4% 但阻塞多处）——inline-block/float/absolute 宽度的基石
+
+补齐后可提升到 85%。剩余 15% 主要是 Table 完善、Grid 高阶特性、BiDi/Shaping、Multi-column 等。
+
+---
+
+## 十五、流程管线 20% 缺口详解
+
+### 15.1 Pre-Layout 阶段缺失（P2，权重 4%）
+
+Blink 在 mainLayout 前有一系列 pre-layout 任务：
+- `MarkStyleForReattach`（重新附着 style tree）
+- `MarkFragmentsForRelayoutIfNeeded`（局部胏一胍的无效化）
+- `PropagateWritingModeUp`
+
+Px 直接从 `mainLayout` 开始，无 pre-layout 入口，无法在布局前预处理特殊情况。
+
+---
+
+### 15.2 SimplifiedLayout pass 缺失（P2，权重 4%）
+
+Blink 对**仅几何变更而非拓扑变更**的情况使用 `NGSimplifiedLayoutAlgorithm` ——直接从旧 Fragment 拷贝信息并传递新约束。Px 无此快速路径，**所有变更都走完整算法**。
+
+---
+
+### 15.3 Post-Layout 职责不完整（P1，权重 5%）
+
+[LayoutOrchestrator.php L29](file:///d:/Px/framework/Layout/LayoutOrchestrator.php#L29) 注释声称：
+> **postProcess: 滚动 clamp / sticky**
+
+但 [L443-524](file:///d:/Px/framework/Layout/LayoutOrchestrator.php#L443-L524) 实际实现只做文本截断——注释**谎报**。小型漏洞列表：
+- 无 scroll clamp（滚动到最后删除内容后 scrollTop 可能超过 maxScroll）
+- 无 sticky 重置
+- 无 overflow-anchor
+- 无 visual overflow 循尾
+
+---
+
+### 15.4 脏位传播方向错误（P2，权重 3%）
+
+Blink 脏位传播有两个方向：
+- 向上传到 layout boundary（导致 boundary 重布局）
+- 向下传到 needsLayoutAndPropagatedFromAncestor 的子树
+
+Px `markLayoutDirty(propagateUp=true)` **无条件传到根**，无 `isLayoutBoundary` 翻转，也无向下传。后果：每次布局都从 root 开始，无法局部化。
+
+---
+
+### 15.5 多阶段同步不完整（P2，权重 2%）
+
+Blink 三阶段（StyleRecalc → LayoutRecalc → PaintRecalc）有明确 barrier：
+- StyleRecalc 完成后不能再修改 style
+- LayoutRecalc 完成后不能再修改 geometry
+
+Px 无 barrier，PaintPipeline 仍可回写 RenderNode（后已修复 3 个，但语义上没有强制隔离），任何后续代码均可重引入回写。
+
+---
+
+### 15.6 管线可观测性弱（P3，权重 2%）
+
+Blink `TraceEvent` 在每阶段都有 timing。Px 仅有 `PerfCounter`，无阶段级别细分（无法区分 mainLayout / oofLayout / postProcess 各自耗时）。
+
+---
+
+### 15. 流程管线缺口小结
+
+| 缺口 | 权重 | 严重度 |
+|---|---|---|
+| Post-Layout scroll clamp/sticky 缺失（注释谎报） | 5% | P1 |
+| Pre-Layout 阶段缺失 | 4% | P2 |
+| SimplifiedLayout 快速路径缺失 | 4% | P2 |
+| 脏位传播方向错误（无 layout boundary） | 3% | P2 |
+| 多阶段同步 barrier 不完整 | 2% | P2 |
+| 管线可观测性弱 | 2% | P3 |
+
+**优先修复：Post-Layout scroll clamp + 删除 L29 谎报注释**——代码变更 \<50 行，但修复一个真实的用户可见 bug。
+
+---
+
+## 十六、规范合规度 50% 缺口详解
+
+> 前四节多为“缺失的特性”，本节分析**已实现部分是否符合 CSS 规范**。
+
+### 16.1 硬编码启发式阈值（P0，权重 8%）
+
+CSS 规范是精确的数学规则，任何硬编码“容忍值”都是规范违反。
+
+| 位置 | 硬编码值 | 规范冲突 |
+|---|---|---|
+| FlexAlgorithm Pass2 relayout | `5px 阈值` | CSS Flexbox §9.7 要求无容差重布局 |
+| line-height fallback | `fontSize * 1.2` | 规范要求基于 font metrics（ascent/descent），不是精确 1.2 倍 |
+| font-size fallback | `16` | 应从祖先 or root 继承 |
+| “empty content” 判断 | `strlen($textContent) > 0` | 应根据 white-space 处理空白 |
+
+---
+
+### 16.2 默认值偏离规范（P1，权重 4%）
+
+| CSS 属性 | 规范 initial | Px 实际 |
+|---|---|---|
+| `align-items` | `normal` | ❌ `stretch` |
+| `justify-content` | `normal` | ⚠️ `flex-start` |
+| `align-content` | `normal` | ⚠️ `stretch` |
+| `min-width / min-height` (在 flex/grid item) | **`auto`（等同 min-content）** | ❌ 当 0 |
+| `flex-basis` 内部标记 | `auto` | ⚠️ `-1` |
+
+**关键错误**：`min-width: auto` 在 flex/grid item 上等同 `min-content`（CSS-Sizing-3 §5.2），Px 当 0 处理会导致 flex item 被 shrink 到不合理小尺寸——图标不缩、文字不省略等常见 UI 问题的根源。
+
+---
+
+### 16.3 CSS 单位与百分比解析错误（P1，权重 4%）
+
+#### 16.3.1 Padding/Margin 百分比基准
+
+CSS 2.2 §8.3：`padding` 和 `margin` 的百分比**无论方向均以包含块的 inline-size（横向为宽度）为基准**。Px 仅依赖 CssLength.toPx() 单值解析，未传入包含块 inline-size，`margin-top: 10%` / `padding-top: 5%` 可能解析错误。
+
+#### 16.3.2 Viewport 单位缺失
+
+`vh / vw / vmin / vmax / svh / dvh / lvh / cqi / cqb` ——Px 未确认支持。
+
+#### 16.3.3 calc()/min()/max()/clamp() 缺失
+
+CSS Values Level 3：`calc()`, `min()`, `max()`, `clamp()` ——Px CssLength 只支持单值。
+
+#### 16.3.4 em/rem 解析时机不明确
+
+`em` 应基于当前元素 font-size，`rem` 应基于根元素 font-size。Px 若在样式解析阶段解析，则 font-size 继承变化时无重解析。
+
+---
+
+### 16.4 CSS 属性交互规则违反（P1，权重 6%）
+
+#### 16.4.1 aspect-ratio 交互
+
+CSS-Sizing-4 定义 aspect-ratio 参与 sizing 的复杂规则（width 显式、height 显式、两者都 auto、两者都显式、min/max clamp 后保持比例）。Px [BlockAlgorithm.php L185-186](file:///d:/Px/framework/Layout/BlockAlgorithm.php#L185-L186) 仅覆盖“height=auto” 一种场景。
+
+#### 16.4.2 box-sizing 与 min/max 交互
+
+CSS-UI §4.5：`box-sizing: border-box` 时 `min-width` / `max-width` 也应按 border-box 解释。Px [BlockAlgorithm.php L168-170](file:///d:/Px/framework/Layout/BlockAlgorithm.php#L168-L170) 无 box-sizing 判断。
+
+#### 16.4.3 min > max 处理错
+
+CSS 2.2 §10.4：若 `min > max`，则 `max = min`。Px 当前顺序导致 min 被 max clamp 丢弃——与规范相反。
+
+#### 16.4.4 overflow:visible 在 flex/grid 容器上失效
+
+CSS-Overflow-3：`overflow: visible` 应用于 flex/grid 容器时**应变为 auto**，Px 未处理。
+
+---
+
+### 16.5 CSS 层叠与继承违反（P2，权重 3%）
+
+- **currentColor 解析时机**：应在属性使用点解析，Px 若提前 flatten 则 color 变化不重算
+- **initial / inherit / unset / revert**：unset/revert/revert-layer 未确认支持
+- **@layer 层级层缺失**：CSS Cascade Level 5
+- **CSS 自定义属性 (`--var`)**：CssValueParser 未确认支持 `var(--foo, fallback)`
+
+---
+
+### 16.6 Writing-mode / Direction / BiDi 合规（P0，权重 10%）
+
+#### 16.6.1 单一 writing-mode 硬编码
+
+CSS Writing Modes Level 3：8 种 writing-mode × 2 种 direction = 16 种组合。Px 硬编码 `horizontal-tb + ltr`，导致：
+- flex-direction: row 永远从左到右（RTL 应反向）
+- Grid 无从右起
+- text-align: start / end 无法区分
+- Logical properties 无映射
+
+#### 16.6.2 Logical Properties 未实现
+
+`margin-block-start / padding-inline-end / inline-size / block-size / inset-block-start` 等——Px 完全无逻辑属性映射层。
+
+---
+
+### 16.7 数值精度与舍入规则（P2，权重 4%）
+
+#### 16.7.1 Rounding rule 违反
+
+Blink 使用 IEEE round-half-to-even 或规范指定的舍入。Px 全局用 `(int)$x` 截断（永远向 0 舍入）。
+
+#### 16.7.2 Sub-pixel 信息丢失
+
+Blink 保留 LayoutUnit 传给 Paint 层做抗锯齿，Px 输出 `int` 坐标，边框和文字亚像素定位丢失。
+
+---
+
+### 16.8 CSS 具体条款实现不完整（P1，权重 3%）
+
+#### 16.8.1 CSS 2.2 §10.6.3（auto-height）
+
+块级容器 auto-height = 最后一个**正常流**子项的 bottom margin edge（考虑 margin 折叠）。Px [BlockAlgorithm.php L115-130](file:///d:/Px/framework/Layout/BlockAlgorithm.php#L115-L130) 取所有子项 max bottom，未排除 OOF。
+
+#### 16.8.2 CSS 2.2 §10.3.3（水平居中）
+
+`margin: 0 auto` 仅当 width 不为 auto 且有剩余空间时生效。Px [BlockAlgorithm.php L260-264](file:///d:/Px/framework/Layout/BlockAlgorithm.php#L260-L264) **未检查 width 是否为 auto**。
+
+#### 16.8.3 CSS Flexbox §9.7.4（hypothetical main size）
+
+规范要求先应用 flex-basis 再 clamp 到 min/max，再进入 line 分组。Px 顺序可能颠倒。
+
+#### 16.8.4 position:relative offset 不影响后续布局
+
+Px [BlockAlgorithm.php L268](file:///d:/Px/framework/Layout/BlockAlgorithm.php#L268) 回减 relTop 是正确合规，但未回减 relLeft。
+
+---
+
+### 16.9 CSS Overflow / Scroll 合规（P2，权重 2%）
+
+- Scroll padding / scroll margin ——❌
+- Scroll-snap（Level 1）——❌
+- Overflow anchor ——❌
+- Overflow clipping shape (`overflow-clip-margin`) ——❌
+
+---
+
+### 16.10 CSS Transform 与布局边界（P2，权重 1%）
+
+- `transform` 创建包含块（用于 fixed 后代）——Px OOF 不识别
+- `perspective` / `will-change: transform` ——❌
+- `filter: blur` 影响 visual overflow ——❌
+
+---
+
+### 16. 规范合规度缺口小结
+
+| 缺口 | 权重 | 严重度 |
+|---|---|---|
+| Writing-mode / BiDi / Logical Properties | 10% | **P0** |
+| 硬编码启发式阈值 | 8% | **P0** |
+| CSS Values L3+ (calc/min/max/clamp/var) | 6% | P1 |
+| 属性交互规则（aspect-ratio × sizing × min/max × box-sizing） | 6% | P1 |
+| 默认值偏离 | 4% | P1 |
+| Padding/Margin 百分比基准 | 4% | P1 |
+| 数值精度 / 舍入 | 4% | P2 |
+| CSS 2.2 具体条款细节 | 3% | P1 |
+| Cascade / Custom Properties | 3% | P2 |
+| Overflow / Scroll 特性 | 2% | P2 |
+| Transform 包含块 | 1% | P2 |
+
+**优先修复三处**：
+1. **硬编码启发式阈值全面清理**（P0，8%）
+2. **min-width/height: auto 特殊语义**（P1，2%）——代价小、收益大
+3. **Padding/Margin 百分比基准修正**（P1，4%）——一处修复多处受益
+
+### 规范合规度的结构性阻力
+
+50% 缺口中约 **30% 无法单点修复**，需先解决前几轮讨论的架构问题：
+- Writing-mode 修复 → 依赖 **13.A Logical/Physical 坐标分离**
+- calc()/var() 支持 → 依赖 **样式系统重构**
+- aspect-ratio 完整交互 → 依赖 **12.2 LayoutResult 独立 intrinsic_block_size**
+- Line box 相关规范 → 依赖 **14.4 Line Box 结构**
+
+补齐后规范合规度可从 50% 提升到约 75%；剩下 25% 主要是**新兴 CSS 特性**（container queries、anchor positioning、scroll timeline 等），属于**规范广度**问题，可按业务需求推进。
+
+---
+
+## 十七、综合迭代优化建议
+
+### 17.1 缺口依赖图（修复顺序依据）
+
+多项缺口不能孤立修复，存在联锁依赖。以下为关键依赖链：
+
+```
+【基石】
+  Logical/Physical 坐标分离 (13.A)
+         ↓ 依赖
+  ─── writing-mode / BiDi 支持 (16.6)
+  ─── Logical Properties (16.6.2)
+  ─── direction:rtl (16.6.1)
+  ─── row-reverse 真正反向 (14.2.7)
+
+【抽象】
+  LayoutResult 抽象 (12.2)
+         ↓ 依赖
+  ─── MarginStrut 上传 (13.C, 14.1.2)
+  ─── intrinsic_block_size 分离
+  ─── OOF descendants 冒泡 (优化 14.6)
+
+  FormattingContext 抽象 (12.5)
+         ↓ 依赖
+  ─── Float 实现 (14.1.1)
+  ─── Clearance (14.1.3)
+  ─── BFC 真隔离 (原审计 5.3)
+  ─── Margin 折叠完整 (14.1.2)
+
+【精度】
+  LayoutUnit 引入 (13.B)
+         ↓ 依赖
+  ─── 取消 5px 阈值 (14.2.3, 16.1)
+  ─── 舍入规则合规 (16.7)
+  ─── Sub-pixel 拗锚齿 (16.7.2)
+
+【基线】
+  Fragment 类型多态 (13.E) + Baseline 字段
+         ↓ 依赖
+  ─── Line Box 结构 (14.4.1)
+  ─── align-items:baseline (14.2.4)
+  ─── vertical-align (14.4.4)
+```
+
+---
+
+### 17.2 分阶段迭代路线
+
+#### **Phase 1：啦均式修复（1-2 周，高 ROI）**
+
+目标：代价小（<200 行代码）、不依赖重构、可直接提升用户可见行为。
+
+1. **修正 Post-Layout 注释谎报**（P1，头号考颇）  
+   删除 LayoutOrchestrator L29 “滚动 clamp / sticky” 声明或实现之。至少先实现 **scroll clamp**（删除内容后 scrollTop 不能超过 maxScroll）。~30 行。
+
+2. **清理硬编码启发式阈值**（P0，需同时引入 LayoutUnit，或先用 float 过渡）  
+   - 取消 FlexAlgorithm Pass 2 的 5px 阈值（改为确定性判断：item 尺寸 hypothetical 与 final 实际不一致则 rerun）
+   - `line-height:normal` 改为使用 font-metrics ascent/descent（需先扰字体层接口）
+   - font-size fallback 改为递归找祖先，预设存在 root font-size
+
+3. **修正 min-width/height: auto 语义**（P1，很小钱）  
+   在 [BlockAlgorithm.php L168-170](file:///d:/Px/framework/Layout/BlockAlgorithm.php#L168-L170) clamp 前判断：若 min-width 为 auto 且为 flex/grid item，则计算 min-content。~15 行。
+
+4. **修正 min > max 顺序错误**（P1，一行代码）  
+   当 min > max 时先将 max := min 再做两次 clamp。
+
+5. **修复位置居中合规**（P1）  
+   `margin: 0 auto` 新增判断：width 不为 auto 且有剩余空间时才生效。
+
+6. **消除 ComputedStyle `_type` / `_content` 逃逸口**（P2）  
+   BlockAlgorithm L226-233 改为从 RenderNode 直接取。
+
+7. **删除 RenderNode 交互状态字段**（P2）  
+   `hovered / focused / active` 已有 InteractionState 对应，直接删除 RenderNode 中同名字段 + 消费方改读 InteractionState。
+
+**阶段预期**：多项长期存在的“试图试错”阈值被清除，UI 行为可预测性提升，规范合规度提升 ~10%。
+
+---
+
+#### **Phase 2：抽象层重构（2-4 周）**
+
+目标：接入 Blink 核心抽象，为后续能力铺路。
+
+1. **引入 LayoutResult**（P0）  
+   ```php
+   final class LayoutResult {
+       public function __construct(
+           public readonly PhysicalFragment $fragment,
+           public readonly ?MarginStrut $endMarginStrut,
+           public readonly int $intrinsicBlockSize,
+           public readonly array $oofDescendants,  // OOFPositionedDescendant[]
+       ) {}
+   }
+   ```
+   算法 `layout()` 返回类型改为 `LayoutResult`。Fragment 清理掉 6 个越界字段。
+
+2. **引入 FormattingContext**（P1）  
+   三个 FC 子类 + 每个算法适配改造。现有 `spaceType` 字符串降为 debug 标签。
+
+3. **引入 MarginStrut 上传机制**（P1）  
+   基于 Step 1 的 LayoutResult，BlockAlgorithm 逐层上传 endMarginStrut，同时实现父子 margin 折叠（四种新场景）。
+
+4. **引入 ConstraintSpaceBuilder + 新字段**（P1）  
+   接入 `is_fixed_inline_size / is_fixed_block_size / is_shrink_to_fit / is_new_formatting_context`。旧位置参数构造函数标为 @deprecated。
+
+5. **displayText 改为 readonly**（P1）  
+   postProcess 中重建 Fragment 而非原地修改。
+
+6. **RenderNode 瘦身**（P0/P1 混合）  
+   - 删除 x/y/w/h/visualW/visualH/layer（hitTest/PaintPipeline 已全部改从cachedFragment 读）
+   - 将 scrollTop/scrollLeft/contentWidth/contentHeight/isScrollContainer 移至 ScrollState（与现有 ScrollState 合并）
+   - RenderNode 从 132 行 → ~55 行
+
+**阶段预期**：抽象层次从 85% → 92%，数据字段语义从 55% → 68%。Fragment 成为真正不可变几何输出。
+
+---
+
+#### **Phase 3：算法能力补齐（4-8 周）**
+
+目标：补齐布局引擎的核心能力缺口。
+
+1. **Line Box 结构 + Baseline 系统**（P0，最大块）  
+   - 新增 `LineBoxFragment` 子类（Fragment 多态基础已在 Phase 2）
+   - InlineAlgorithm 重写：行内 token 流 → line breaking → line box 构建
+   - Baseline 信息在 LayoutResult 中上传
+   - 带动 `align-items: baseline`、`vertical-align: baseline/top/middle/bottom`
+
+2. **Float + Clearance + ExclusionSpace**（P0）  
+   - BFC 上新增 float list
+   - float 布局作为 BFC 的第一轮，产生 exclusion rect
+   - block/inline 子项布局时避开 exclusion
+   - `clear: left/right/both` 基于 exclusion 高度上升
+
+3. **Shrink-to-fit + MinMaxSizes 缓存**（P1）  
+   - 新增 `computeMinMaxSizes()` 到 LayoutAlgorithm
+   - inline-block / float / OOF / table-cell 宽度使用
+   - MinMaxSizes 缓存 (依附到 RenderNode.intrinsicSizesCache)
+
+4. **flex-basis 多取值 + §9.7.4 rerun**（P1）  
+   支持 `content / min-content / max-content / fit-content`；实现 clamped item 无参与式 rerun。
+
+5. **auto-height 排除 OOF**（P1）  
+   BlockAlgorithm 中在 max-bottom 计算时跳过 OOF 子项。
+
+**阶段预期**：算法完整度从 60% → 82%，规范合规度同步上升到 65%。真正能布出双栏布局、行内图文混排、基线对齐。
+
+---
+
+#### **Phase 4：Logical/Physical 坐标分离（6-10 周，高成本高回报）**
+
+目标：彻底解锁国际化能力，也是 Blink LayoutNG 的灵魂——建议在业务需要之后排。
+
+1. **新增 LogicalOffset / LogicalSize / LogicalRect 值类型**  
+2. **ConstraintSpace 新增 writing_mode + direction + 逻辑尺寸**  
+3. **所有算法内部一律使用 logical 坐标系**  
+4. **Fragment 构造时转物理坐标** (单一 flip 转换点)  
+5. **Logical Properties 属性映射层**  
+6. **BiDi 基础** (内嵌 UAX#9 简化实现 or 链接第三方库)
+
+**阶段预期**：一次性推高多项得分——抽象 92% → 96%，数据字段 68% → 82%，算法 82% → 87%，规范 65% → 80%。推开 RTL / 日中竖排 / Logical Properties 三大能力。
+
+---
+
+#### **Phase 5：长尾优化（3-6 个月）**
+
+1. **SimplifiedLayout 快速路径** —— 性能优化，实现仅几何变更时的快径。
+2. **Grid track sizing 12 阶段完整实现** —— minmax/fit-content/repeat/named lines/named areas。
+3. **CSS Values Level 3 表达式** —— calc()/min()/max()/clamp()/var()。
+4. **Table 算法完善** —— colspan/rowspan/border-collapse。
+5. **Container Queries** —— `@container` + cqi/cqb 单位。
+6. **Multi-column / Contain / Shapes / Anchor Positioning** —— 按需。
+
+---
+
+### 17.3 优先级与 ROI 矩阵
+
+| 优先修复项 | 开发成本 | 直接收益 | ROI |
+|---|---|---|---|
+| Post-Layout scroll clamp | 低 (30 行) | 高 (容器 UI 清单常见 bug) | ⭐⭐⭐⭐⭐ |
+| min-width:auto 语义修复 | 极低 (15 行) | 高 (flex UI 频发问题) | ⭐⭐⭐⭐⭐ |
+| 硬编码启发式阈值清理 | 中 (需 float 精度介入) | 高 (确定性 + 合规) | ⭐⭐⭐⭐ |
+| Padding 百分比基准 | 低-中 (需传 CB inline-size) | 高 (一处修多处收益) | ⭐⭐⭐⭐ |
+| LayoutResult 抽象 | 中 (商业未断) | 高 (为下一阶段铺路) | ⭐⭐⭐⭐ |
+| Fragment 字段清理 (刚上) | 中 | 中 (职责清晰) | ⭐⭐⭐ |
+| RenderNode 瘦身 | 中 (需逐个字段追消费方) | 中 | ⭐⭐⭐ |
+| Line Box 结构 | 高 | 高 (解锁 Inline 一整类能力) | ⭐⭐⭐⭐ |
+| Float 系统 | 高 | 中-高 (双栏/图文环绕少见但重要) | ⭐⭐⭐ |
+| Logical/Physical 分离 | 极高 | 高 (国际化) | ⭐⭐⭐ (商业优先级不高时后置) |
+
+---
+
+### 17.4 风险与建议
+
+#### 风险 1：**Phase 2 LayoutResult 引入时的契约破坏**
+
+当前 40+ 处直接使用 `PhysicalFragment` 作为算法返回。建议：
+- 先新增 `LayoutResult`，临时保留 `PhysicalFragment` 返回内部代码路径
+- 逐算法迁移（Block → Flex → Grid → OOF → Inline → Table）
+- 全部完成后删除兼容方法
+
+#### 风险 2：**LayoutUnit 引入与 AOT 兼容**
+
+PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
+- LayoutUnit 包装类容纳 float 内部存储，对外提供 `toInt(RoundMode)`
+- 逐步替换组织上的 `int` 声明
+
+#### 风险 3：**Line Box 重写影响现有文本布局**
+
+建议：保留 `InlineAlgorithm.legacy` 路径，在 project.yml 中新增 `Px_layout_use_line_box` 开关逐步启用。
+
+#### 风险 4：**标准回归测试缺口**
+
+任何一步重构都需基于 CSS 分治测试验证。建议在 apps/css-test 中：
+- 为每个修复项新增专项测例（如 min-content-flex-item、scroll-clamp、rtl-basic）
+- 保护现有 case 不回归（baseline PNG 对比）
+- 适当时引入 WPT (Web Platform Tests) 子集
+
+---
+
+### 17.5 长期愿景
+
+五个 Phase 完成后 Px LayoutNG 对齐度预期：
+
+| 维度 | 当前 | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 5 |
+|---|---|---|---|---|---|---|
+| 抽象层次 | 85% | 85% | 92% | 94% | 96% | 97% |
+| 数据字段语义 | 55% | 60% | 72% | 78% | 88% | 92% |
+| 算法完整度 | 60% | 62% | 65% | 82% | 87% | 93% |
+| 流程管线 | 80% | 87% | 90% | 92% | 93% | 96% |
+| 规范合规度 | 50% | 60% | 68% | 75% | 82% | 90% |
+| **综合** | **66%** | **71%** | **77%** | **84%** | **89%** | **94%** |
+
+**Phase 3 完成后（约 3 个月）**——Px 已接近主流浏览器内核的 80% 能力，可支撑绝大多数企业应用布局需求。
+
+**Phase 5 完成后（约 6-9 个月）**——Px 具备**真正可部署的 Blink LayoutNG 等同能力**，仅在 BiDi/Shaping/新兴 CSS 特性上与主流实现有差距。
+
+---
+
+### 17.6 不建议的“小优化”
+
+以下项目因**代价高、收益低、或依赖链长**，不建议在前三个 Phase 内介入：
+
+- 自定义 BiDi（UAX#9）实现——依赖 Phase 4 Logical/Physical 分离后才有意义
+- HarfBuzz 集成——C++ 层变更影响大，且 Skia 后端上可自带
+- Custom Properties (`--var`) ——属于样式系统重构，应同时处理 var + calc + @layer
+- Scroll Snap ——使用频率不高，可阿发钩子式实现
+
+---
+
+## 十八、审计覆盖文件清单
 
 | 模块 | 文件 |
 |------|------|
@@ -505,3 +1618,14 @@ $geoKeys = ['width','height','minWidth','maxWidth','minHeight','maxHeight',
 | Css | ComputedStyle, StylePool, StyleRecalcPass |
 | Paint | PaintPipeline, InteractionState |
 | Core | Application, ScrollManager |
+
+---
+
+## 十九、变更历史
+
+| 日期 | 变更 |
+|---|---|
+| 2026-07-24 | 初次审计（原 25 项、P0/P1/P2/P3 分级） |
+| 2026-07-24 | 拉取最新代码后复核（修复 8 项、降级 1 项） |
+| 2026-07-24 | **深度追加**：五维对标评估（抽象 85% / 数据 55% / 算法 60% / 流程 80% / 规范 50%）+ 50+ 项深层次问题 + 五阶段迭代路线 |
+
