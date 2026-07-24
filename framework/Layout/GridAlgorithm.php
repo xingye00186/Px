@@ -203,7 +203,7 @@ class GridAlgorithm extends LayoutAlgorithm
             $gi->rowEnd = $gi->rowStart + 1;
             $safeCol = min($gi->colStart, max(0, $numCols - 1));
             $gi->w = $numCols > 0 ? $cols[$safeCol]->size : 0;
-            $gi->h = max(1, $gi->rowStart < $numRows ? $rows[$gi->rowStart]->size : ($autoRowSize > 0 ? $autoRowSize : 50));
+            $gi->h = max(1, $gi->rowStart < $numRows ? $rows[$gi->rowStart]->size : ($autoRowSize > 0 ? $autoRowSize : max(1, (int)($cr->getH() ?? 0))));
             $gi->style = $cr->style;
             $gi->originalChildren = $cr->children;
             $gridItems[] = $gi;
@@ -365,7 +365,8 @@ class GridAlgorithm extends LayoutAlgorithm
      */
     private function estimateAutoRowSize(array $childResults, int $numCols, int $rowIdx): int
     {
-        $maxH = 50;
+        // CSS Grid §12.4: auto track size = max-content of items in that track
+        $maxH = 0;
         $start = $rowIdx * $numCols;
         for ($i = $start; $i < $start + $numCols && $i < count($childResults); $i++) {
             $cr = $childResults[$i];

@@ -1,4 +1,4 @@
-@generated 2026-07-24 17:40:20
+@generated 2026-07-24 17:43:46
 === Test: Flex row + gap 两列等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
@@ -9,10 +9,10 @@ div (0,0 600x200) [dsp=flex]
 
 === Test: Grid 3列等宽 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x50) [dsp=grid]
-  div (0,0 192x50) text="C1"
-  div (204,0 192x50) text="C2"
-  div (408,0 192x50) text="C3"
+div (0,0 600x32) [dsp=grid]
+  div (0,0 192x32) text="C1"
+  div (204,0 192x32) text="C2"
+  div (408,0 192x32) text="C3"
 
 ---
 
