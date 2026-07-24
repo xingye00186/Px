@@ -40,13 +40,13 @@ class ConstraintSpaceBuilder
     private int $parentContentX = 0;
     private int $parentContentY = 0;
 
-    // 百分比基准
-    private ?int $percentageWidth = null;
-    private ?int $percentageHeight = null;
+    // 百分比基准（-1 = null/未设置，AOT 兼容：避免 ?int 编译为 php::Variant）
+    private int $percentageWidth = -1;
+    private int $percentageHeight = -1;
 
     // 父 flex/grid 已确定的百分比基准
-    private ?int $determinedPercentageWidth = null;
-    private ?int $determinedPercentageHeight = null;
+    private int $determinedPercentageWidth = -1;
+    private int $determinedPercentageHeight = -1;
 
     // 容器 padding
     private int $paddingTop = 0;
@@ -75,27 +75,28 @@ class ConstraintSpaceBuilder
     public static function from(ConstraintSpace $parent): ConstraintSpaceBuilder
     {
         $b = new ConstraintSpaceBuilder();
-        $b->containerWidth               = $parent->containerWidth;
-        $b->containerHeight              = $parent->containerHeight;
-        $b->contentWidth                 = $parent->contentWidth;
-        $b->contentHeight                = $parent->contentHeight;
-        $b->parentContentX               = $parent->parentContentX;
-        $b->parentContentY               = $parent->parentContentY;
-        $b->percentageWidth              = $parent->percentageWidth;
-        $b->percentageHeight             = $parent->percentageHeight;
-        $b->determinedPercentageWidth    = $parent->determinedPercentageWidth;
-        $b->determinedPercentageHeight   = $parent->determinedPercentageHeight;
-        $b->paddingTop                   = $parent->paddingTop;
-        $b->paddingRight                 = $parent->paddingRight;
-        $b->paddingBottom                = $parent->paddingBottom;
-        $b->paddingLeft                  = $parent->paddingLeft;
-        $b->borderTop                    = $parent->borderTop;
-        $b->borderRight                  = $parent->borderRight;
-        $b->borderBottom                 = $parent->borderBottom;
-        $b->borderLeft                   = $parent->borderLeft;
-        $b->forceRelayoutChildren        = $parent->forceRelayoutChildren;
-        $b->isIntrinsicMeasurement       = $parent->isIntrinsicMeasurement;
-        $b->spaceType                    = $parent->spaceType;
+        // AOT 兼容：跨对象 readonly 属性访问必须通过 getter（避免 Variant 转换错误）
+        $b->containerWidth               = (int)$parent->getContainerWidth();
+        $b->containerHeight              = (int)$parent->getContainerHeight();
+        $b->contentWidth                 = (int)$parent->getContentWidth();
+        $b->contentHeight                = (int)$parent->getContentHeight();
+        $b->parentContentX               = (int)$parent->getParentContentX();
+        $b->parentContentY               = (int)$parent->getParentContentY();
+        $b->percentageWidth              = $parent->getPercentageWidth() !== null ? (int)$parent->getPercentageWidth() : -1;
+        $b->percentageHeight             = $parent->getPercentageHeight() !== null ? (int)$parent->getPercentageHeight() : -1;
+        $b->determinedPercentageWidth    = $parent->getDeterminedPercentageWidth() !== null ? (int)$parent->getDeterminedPercentageWidth() : -1;
+        $b->determinedPercentageHeight   = $parent->getDeterminedPercentageHeight() !== null ? (int)$parent->getDeterminedPercentageHeight() : -1;
+        $b->paddingTop                   = (int)$parent->getPaddingTop();
+        $b->paddingRight                 = (int)$parent->getPaddingRight();
+        $b->paddingBottom                = (int)$parent->getPaddingBottom();
+        $b->paddingLeft                  = (int)$parent->getPaddingLeft();
+        $b->borderTop                    = (int)$parent->borderTop;
+        $b->borderRight                  = (int)$parent->borderRight;
+        $b->borderBottom                 = (int)$parent->borderBottom;
+        $b->borderLeft                   = (int)$parent->borderLeft;
+        $b->forceRelayoutChildren        = (bool)$parent->getForceRelayoutChildren();
+        $b->isIntrinsicMeasurement       = (bool)$parent->getIsIntrinsicMeasurement();
+        $b->spaceType                    = (string)$parent->getSpaceType();
         return $b;
     }
 
@@ -122,15 +123,15 @@ class ConstraintSpaceBuilder
 
     public function setPercentageBase(?int $w, ?int $h): ConstraintSpaceBuilder
     {
-        $this->percentageWidth = $w;
-        $this->percentageHeight = $h;
+        $this->percentageWidth = $w !== null ? (int)$w : -1;
+        $this->percentageHeight = $h !== null ? (int)$h : -1;
         return $this;
     }
 
     public function setDeterminedPercentageBase(?int $w, ?int $h): ConstraintSpaceBuilder
     {
-        $this->determinedPercentageWidth = $w;
-        $this->determinedPercentageHeight = $h;
+        $this->determinedPercentageWidth = $w !== null ? (int)$w : -1;
+        $this->determinedPercentageHeight = $h !== null ? (int)$h : -1;
         return $this;
     }
 
@@ -173,6 +174,11 @@ class ConstraintSpaceBuilder
     /** 构建最终 ConstraintSpace */
     public function build(): ConstraintSpace
     {
+        // AOT 兼容：sentinel -1 转回 null（ConstraintSpace 构造器接受 ?int）
+        $pw = $this->percentageWidth >= 0 ? $this->percentageWidth : null;
+        $ph = $this->percentageHeight >= 0 ? $this->percentageHeight : null;
+        $dpw = $this->determinedPercentageWidth >= 0 ? $this->determinedPercentageWidth : null;
+        $dph = $this->determinedPercentageHeight >= 0 ? $this->determinedPercentageHeight : null;
         return new ConstraintSpace(
             $this->containerWidth,
             $this->containerHeight,
@@ -180,8 +186,8 @@ class ConstraintSpaceBuilder
             $this->parentContentY,
             $this->contentWidth,
             $this->contentHeight,
-            $this->percentageWidth,
-            $this->percentageHeight,
+            $pw,
+            $ph,
             $this->paddingTop,
             $this->paddingRight,
             $this->paddingBottom,
@@ -193,8 +199,8 @@ class ConstraintSpaceBuilder
             $this->forceRelayoutChildren,
             $this->isIntrinsicMeasurement,
             $this->spaceType,
-            $this->determinedPercentageWidth,
-            $this->determinedPercentageHeight,
+            $dpw,
+            $dph,
         );
     }
 }

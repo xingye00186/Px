@@ -140,15 +140,21 @@ class CssLength extends CssValue
             $inner = substr($lower, 6, -1);
             $parts = explode(',', $inner);
             if (count($parts) === 3) {
-                $extract = function(string $s): ?array {
-                    $t = trim($s);
-                    if (preg_match('/^(-?\d+(?:\.\d+)?)px$/i', $t, $m)) return [(float)$m[1], 'px'];
-                    if (preg_match('/^(-?\d+(?:\.\d+)?)%$/', $t, $m)) return [(float)$m[1], '%'];
-                    return null;
-                };
-                $minP = $extract($parts[0]);
-                $valP = $extract($parts[1]);
-                $maxP = $extract($parts[2]);
+                // AOT 兼容：不使用闭包，直接内联解析每个部分
+                $clampResults = [];
+                for ($ci = 0; $ci < 3; $ci++) {
+                    $ct = trim($parts[$ci]);
+                    if (preg_match('/^(-?\d+(?:\.\d+)?)px$/i', $ct, $cm)) {
+                        $clampResults[$ci] = [(float)$cm[1], 'px'];
+                    } else if (preg_match('/^(-?\d+(?:\.\d+)?)%$/', $ct, $cm)) {
+                        $clampResults[$ci] = [(float)$cm[1], '%'];
+                    } else {
+                        $clampResults[$ci] = null;
+                    }
+                }
+                $minP = $clampResults[0] ?? null;
+                $valP = $clampResults[1] ?? null;
+                $maxP = $clampResults[2] ?? null;
                 if ($minP !== null && $valP !== null && $maxP !== null) {
                     // 均同单位时才 clamp（混合单位需上下文）
                     if ($minP[1] === $valP[1] && $valP[1] === $maxP[1]) {
