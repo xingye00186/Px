@@ -153,10 +153,13 @@ class InlineAlgorithm extends LayoutAlgorithm
     }
 
     /**
-     * IFC 内联运行布局（支持换行）—— 对标 Blink NGInlineLayoutAlgorithm。
+     * IFC 内联运行布局（支持换行 + 基线对齐）—— 对标 Blink NGInlineLayoutAlgorithm。
      *
-     * 由 BlockAlgorithm 委派调用：块容器内的内联子项通过此方法布局，
-     * 而非在 BlockAlgorithm 内部处理（抽象层次分离）。
+     * Phase 4B: 使用 InlineItem + LineBreaker + LineBox 架构。
+     * 代替旧的简单光标累加模式，实现：
+     *   - 每行独立的 ascent/descent/line-height 计算
+     *   - vertical-align: baseline 对齐（同行内项对齐到行基线）
+     *   - CSS 2.2 §10.8.1 half-leading 模型
      *
      * @param PhysicalFragment[] $items 内联子项 fragment
      * @param int $availableW 可用宽度
@@ -167,44 +170,77 @@ class InlineAlgorithm extends LayoutAlgorithm
      */
     public static function layoutInlineRun(array $items, int $availableW, int $startX, int $startY, int $padLeft = 0): array
     {
-        $result = [];
-        $cursorX = $padLeft;
-        $cursorY = 0;
-        $lineMaxH = 0;
+        if (empty($items)) return ['items' => [], 'nextY' => $startY];
 
+        // Step 1: 构建 InlineItem 序列（对标 Blink InlineItemsBuilder）
+        $inlineItems = [];
         foreach ($items as $cr) {
             $cStyle = $cr->style;
-            $mLeft = $cStyle?->margin?->left->toPx() ?? 0;
-            $mRight = $cStyle?->margin?->right->toPx() ?? 0;
-            $mTop = $cStyle?->margin?->top->toPx() ?? 0;
-            $mBottom = $cStyle?->margin?->bottom->toPx() ?? 0;
-            $itemTotalW = ($cr->getW() ?? 0) + $mLeft + $mRight;
-            $itemH = ($cr->getH() ?? 0) + $mTop + $mBottom;
+            $fs = $cStyle?->getFontSize() ?? 16;
+            if ($fs <= 0) $fs = 16;
+            $mLeft = (int)($cStyle?->margin?->left->toPx() ?? 0);
+            $mRight = (int)($cStyle?->margin?->right->toPx() ?? 0);
+            $mTop = (int)($cStyle?->margin?->top->toPx() ?? 0);
+            $mBottom = (int)($cStyle?->margin?->bottom->toPx() ?? 0);
 
-            // 换行：当前行剩余空间不足时换到下一行
-            if ($cursorX + $itemTotalW > $availableW && $cursorX > $padLeft) {
-                $cursorY += $lineMaxH;
-                $cursorX = $padLeft;
-                $lineMaxH = 0;
-            }
+            // atomic inline 的 ascent/descent：
+            // CSS 2.2 §10.8.1: 替换元素/inline-block 的 content-box 高度作为 ascent
+            // margin 单独处理（贡献行高但不影响基线计算）
+            $itemH = (int)($cr->getH() ?? 0);
+            $itemAscent = $itemH + $mTop + $mBottom; // 行盒贡献 = margin-box
+            $itemDescent = 0;
 
-            $result[] = new PhysicalFragment(
-                (int)($startX + $cursorX + $mLeft), (int)($startY + $cursorY + $mTop),
-                (int)($cr->getW() ?? 0), (int)($cr->getH() ?? 0),
-                0, 0, (int)($cr->getLayer() ?? 0),
-                (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0),
-                $cStyle, $cr->children, $cr->sourceNode,
-                $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
-                $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles,
-                // textWidth + displayText（保留原值）
-                (int)$cr->textWidth, (string)$cr->displayText,
-                // Baseline（对标 Blink NGPhysicalLineBoxFragment）：inline item 基线 = ascent ≈ fontSize * 0.8
-                $cr->getBaseline() > 0 ? $cr->getBaseline() : (int)(($cStyle?->getFontSize() ?? 16) * 0.8)
+            $inlineItems[] = new InlineItem(
+                InlineItem::TYPE_ATOMIC,
+                (int)($cr->getW() ?? 0),
+                $itemAscent,
+                $itemDescent,
+                $cr,
+                '',
+                $cStyle,
+                $mLeft,
+                $mRight
             );
-            $cursorX += $itemTotalW;
-            if ($itemH > $lineMaxH) $lineMaxH = $itemH;
         }
 
-        return ['items' => $result, 'nextY' => $startY + $cursorY + $lineMaxH];
+        // Step 2: 行断裂（对标 Blink NGLineBreaker）
+        $effectiveAvail = max(1, $availableW - $padLeft);
+        $defaultLH = 19; // 16 * 1.2 ≈ 19
+        $lines = LineBreaker::breakLines($inlineItems, $effectiveAvail, $defaultLH);
+
+        // Step 3: 按行放置（对标 Blink NGPhysicalLineBoxFragment 布局）
+        $result = [];
+        $cursorY = 0;
+
+        foreach ($lines as $line) {
+            $cursorX = $padLeft;
+            foreach ($line->items as $item) {
+                $cr = $item->fragment;
+                if ($cr === null) continue;
+
+                // vertical-align: baseline — 对齐到行基线
+                $itemY = $cursorY + ($line->baseline - $item->ascent);
+                if ($itemY < $cursorY) $itemY = $cursorY;
+                // 加回 margin-top（margin 包含在 ascent 行高计算中，但 Fragment 定位需显式偏移）
+                $mTop = $item->fragment->style?->margin?->top->toPx() ?? 0;
+
+                $result[] = new PhysicalFragment(
+                    (int)($startX + $cursorX + $item->marginLeft),
+                    (int)($startY + $itemY + $mTop),
+                    (int)($cr->getW() ?? 0), (int)($cr->getH() ?? 0),
+                    0, 0, (int)($cr->getLayer() ?? 0),
+                    (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0),
+                    $cr->style, $cr->children, $cr->sourceNode,
+                    $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
+                    $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles,
+                    (int)$cr->textWidth, (string)$cr->displayText,
+                    $item->ascent
+                );
+                $cursorX += $item->totalWidth();
+            }
+            $cursorY += $line->height();
+        }
+
+        return ['items' => $result, 'nextY' => $startY + $cursorY];
     }
 }
