@@ -3,14 +3,25 @@
 use Px\Dom\VNode;
 
 /**
- * StyleArrayTransform — 样式数组化变换
+ * StyleTransform — 样式处理强制关卡（SFC 编译管线唯一 style 处理入口）
  *
- * 遍历 VNode 树，将静态的 style 字符串和动态 :style 表达式
- * 转换为 PHP 数组格式，减少运行时解析开销。
+ * 架构原则：
+ *   所有 style 产出在离开编译器前**必须且仅需**经过此 Transform。
+ *   一次遍历完成三项职责：
+ *     1. 静态 style 字符串 → PHP 数组字面量（消除运行时 regex 解析）
+ *     2. CssShorthandExpander::expandAll（简写展开：padding→4方向、border、overflow、gap 等）
+ *     3. CssMappings::canonicalStyleKey（key 归一化：kebab→camelCase）
  *
- * 提取自 sfc-compiler.php 的 tryConvertStyleToArray() + generateVNodeExpr() 中的内联 style→array 转换。
+ *   与 StyleResolver 运行时共用同一套展开逻辑（CssShorthandExpander），保证：
+ *     - 编译期产出 = 运行时解析产出（行为一致性）
+ *     - 新增 codegen 路径无需记得调展开（此 Transform 保底覆盖）
+ *     - 一套代码，两处调用（SFC 编译期 + StyleResolver 运行时）
+ *
+ * 对标 Blink: CSSParser 内部强制展开所有简写，下游拿到的永远是 longhand。
+ *
+ * 前身：StyleArrayTransform + StyleNormalizeTransform（已合并为单一关卡）
  */
-class StyleArrayTransform implements TransformInterface
+class StyleTransform implements TransformInterface
 {
     public function transform(VNode $root, array &$metadata): void
     {
@@ -20,43 +31,38 @@ class StyleArrayTransform implements TransformInterface
     private function walk(VNode $node): void
     {
         if ($node->props === null) {
-            // 仍需要递归子节点（即使 props 为 null）
             $this->walkChildren($node);
             return;
         }
 
         $props = &$node->props;
 
-       // 转换静态 style: "color:red;font-size:14px" → ['color'=>'red','font-size'=>'14px']
+        // 转换静态 style: "color:red;font-size:14px" → ['fg'=>'red','fontSize'=>'14px']
         if (isset($props['style'])) {
             if (is_string($props['style']) && $props['style'] !== '') {
                 $style = $props['style'];
-                // 已经是 PHP 表达式（以 $ 开头）则不转换
+                // PHP 表达式（$ 或 ( 开头）保持不变——运行时由 StyleResolver 处理
                 if ($style[0] !== '$' && $style[0] !== '(') {
-                    $converted = $this->convertStaticStyle($style);
+                    $converted = $this->compileStaticStyle($style);
                     if ($converted !== null) {
                         $props['style'] = $converted;
                     }
                 }
             }
-            // 空 style → 删除（运行时用 ?? [] 兜底，避免传 string 给 StyleResolver）
+            // 空 style 删除（运行时用 ?? [] 兜底）
             if ($props['style'] === '' || $props['style'] === []) {
                 unset($props['style']);
             }
         }
 
-        // 对组件占位符也做 style 数组化
+        // 组件占位符不需要递归子节点
         if ($node->isComponent) {
-            // 不需要递归子节点
             return;
         }
 
         $this->walkChildren($node);
     }
 
-    /**
-     * 递归处理子节点。
-     */
     private function walkChildren(VNode $node): void
     {
         if (is_array($node->children)) {
@@ -71,32 +77,33 @@ class StyleArrayTransform implements TransformInterface
     }
 
     /**
-     * 将静态 CSS 字符串转换为 PHP 数组表达式字符串。
-     * 输入: "color:red;font-size:14px"
-     * 输出: ['color'=>'red','font-size'=>'14px']
+     * 编译静态 style 字符串为已展开+归一化的 PHP 数组字面量。
+     *
+     * 输入: "padding:10px;flex-direction:row"
+     * 输出: "['paddingTop'=>'10px','paddingRight'=>'10px','paddingBottom'=>'10px','paddingLeft'=>'10px','flexDirection'=>'row']"
+     *
+     * 步骤：解析 → CssShorthandExpander::expandAll → canonicalStyleKey → 输出数组字面量
      */
-    private function convertStaticStyle(string $style): ?string
+    private function compileStaticStyle(string $style): ?string
     {
         $decls = explode(';', $style);
         $raw = [];
-        $valid = true;
         foreach ($decls as $decl) {
             $decl = trim($decl);
             if ($decl === '') continue;
             $colonPos = strpos($decl, ':');
-            if ($colonPos === false) { $valid = false; break; }
+            if ($colonPos === false) return null;
             $prop = strtolower(trim(substr($decl, 0, $colonPos)));
             $val = trim(substr($decl, $colonPos + 1));
             $raw[$prop] = $val;
         }
-        if (!$valid || empty($raw)) return null;
+        if (empty($raw)) return null;
 
-        // 一套代码，两处使用：与 StyleResolver 运行时共用同一套简写展开 + key 归一化
+        // 强制关卡：与 StyleResolver 运行时共用同一套展开逻辑
         $raw = \Px\Css\CssShorthandExpander::expandAll($raw, false);
 
         $pairs = [];
         foreach ($raw as $prop => $val) {
-            // 统一 key 归一化（kebab → camelCase）
             $canonicalKey = \Px\Css\CssMappings::canonicalStyleKey($prop);
             $pairs[] = var_export($canonicalKey, true) . '=>' . var_export($val, true);
         }

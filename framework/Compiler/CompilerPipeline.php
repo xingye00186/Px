@@ -50,11 +50,11 @@ class CompilerPipeline
      */
     public function registerDefaultTransforms(): void
     {
-        $this->addTransform(new StyleArrayTransform());
+        // StyleTransform 是样式处理的唯一入口（强制关卡）：
+        // 解析 + 简写展开 + key 归一化，一次遍历完成
+        $this->addTransform(new StyleTransform());
         $this->addTransform(new StaticHoistTransform());
         $this->addTransform(new PatchFlagTransform());
-        // 强制关卡（最后一步）：所有 style 产出必须经过归一化，不可绕过
-        $this->addTransform(new StyleNormalizeTransform());
     }
 
     // ============================================================
