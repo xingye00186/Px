@@ -54,6 +54,12 @@ class CssShorthandExpander
             $raw = self::expandFlex($raw);
         }
 
+        // 8. background → color/image/position/size/repeat/attachment
+        $raw = self::expandBackground($raw);
+
+        // 9. text-decoration → line/style/color/thickness
+        $raw = self::expandTextDecoration($raw);
+
         return $raw;
     }
 
@@ -197,6 +203,81 @@ class CssShorthandExpander
             } else {
                 $raw['flex-basis'] = ((int)$cf->basis->toPx()) . 'px';
             }
+        }
+        return $raw;
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // background 简写展开（从 CssMappings::expandBackgroundShorthand 迁移）
+    // ──────────────────────────────────────────────────────────────────
+    private static function expandBackground(array $raw): array
+    {
+        if (!isset($raw['background']) || $raw['background'] === '') return $raw;
+        $value = trim($raw['background']);
+        // 单色值（hex/rgb/gradient/transparent/none）——不展开
+        if (preg_match('/^#[\da-fA-F]{3,8}$/', $value) ||
+            preg_match('/^rgba?\s*\([^)]*\)$/i', $value) ||
+            preg_match('/^linear-gradient\s*\([^)]*\)$/i', $value) ||
+            strtolower($value) === 'transparent' || strtolower($value) === 'none') {
+            return $raw;
+        }
+        // 无 url() 且无 position/size 分隔符——非多值简写
+        if (!preg_match('/url\s*\(/i', $value) && !str_contains($value, '/')) {
+            return $raw;
+        }
+        $rest = $value;
+        $bgColor = ''; $bgImage = ''; $bgPosition = ''; $bgSize = ''; $bgRepeat = '';
+        // 提取颜色
+        if (preg_match('/#[\da-fA-F]{3,8}\b/', $rest, $m)) { $bgColor = $m[0]; $rest = trim(str_replace($m[0], '', $rest)); }
+        if (preg_match('/rgba?\s*\([^)]*\)/i', $rest, $m)) { $bgColor = $m[0]; $rest = trim(str_replace($m[0], '', $rest)); }
+        if (preg_match('/linear-gradient\s*\([^)]*\)/i', $rest, $m)) { $bgColor = $m[0]; $rest = trim(str_replace($m[0], '', $rest)); }
+        // 提取 url
+        if (preg_match('/url\s*\(\s*["\']?([^"\')]+)["\']?\s*\)/i', $rest, $m)) { $bgImage = trim($m[1]); $rest = trim(str_replace($m[0], '', $rest)); }
+        // 提取 /size
+        if (preg_match('#/\s*(\S+)#', $rest, $m)) { $bgSize = trim($m[1]); $rest = trim(str_replace($m[0], '', $rest)); }
+        // 提取 repeat
+        foreach (['repeat-x', 'repeat-y', 'no-repeat', 'repeat', 'space', 'round'] as $kw) {
+            if (stripos($rest, $kw) !== false) { $bgRepeat = $kw; $rest = trim(str_ireplace($kw, '', $rest)); break; }
+        }
+        // 提取 attachment
+        foreach (['scroll', 'fixed', 'local'] as $kw) {
+            if (stripos($rest, $kw) !== false) { $rest = trim(str_ireplace($kw, '', $rest)); break; }
+        }
+        $rest = trim(preg_replace('/\s+/', ' ', $rest));
+        if ($bgSize !== '' && $rest !== '') { $bgPosition = $rest; }
+        // 写入子属性
+        if ($bgImage !== '' && !isset($raw['background-image'])) $raw['background-image'] = 'url("' . $bgImage . '")';
+        if ($bgPosition !== '' && !isset($raw['background-position'])) $raw['background-position'] = $bgPosition;
+        if ($bgSize !== '' && !isset($raw['background-size'])) $raw['background-size'] = $bgSize;
+        if ($bgRepeat !== '' && !isset($raw['background-repeat'])) $raw['background-repeat'] = $bgRepeat;
+        if ($bgColor !== '') $raw['background'] = $bgColor;
+        else $raw['background'] = 'transparent';
+        return $raw;
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // text-decoration 简写展开（从 CssMappings::expandTextDecorationShorthand 迁移）
+    // ──────────────────────────────────────────────────────────────────
+    public static function expandTextDecoration(array $raw): array
+    {
+        $tdVal = $raw['text-decoration'] ?? $raw['textDecoration'] ?? null;
+        if ($tdVal === null || $tdVal === '') return $raw;
+        $parts = preg_split('/\s+/', trim((string)$tdVal));
+        $lineParts = []; $hasLine = false;
+        $result = [];
+        foreach ($parts as $part) {
+            if ($part === '') continue;
+            $lower = strtolower($part);
+            if (in_array($lower, ['underline', 'overline', 'line-through', 'none', 'blink'], true)) { $lineParts[] = $lower; $hasLine = true; continue; }
+            if (in_array($lower, ['solid', 'double', 'dotted', 'dashed', 'wavy'], true)) { $result['textDecorationStyle'] = $lower; continue; }
+            if (str_starts_with($part, '#') || preg_match('/^rgba?\s*\(/i', $part)) { $result['textDecorationColor'] = $part; continue; }
+            if (preg_match('/^\d+(\.\d+)?(px)?$/', $part)) { $result['textDecorationThickness'] = $part; continue; }
+        }
+        if ($hasLine) $result['textDecorationLine'] = implode(' ', $lineParts);
+        foreach ($result as $key => $val) {
+            $cssKey = strtolower(preg_replace('/([A-Z])/', '-$1', $key));
+            if (!isset($raw[$cssKey])) $raw[$cssKey] = $val;
+            if (!isset($raw[$key])) $raw[$key] = $val;
         }
         return $raw;
     }
