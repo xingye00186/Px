@@ -47,6 +47,19 @@
 | §16.4.4 | overflow 混合规则 | CSS-Overflow-3 §3.3：overflow-x/y 一方 visible + 另一方非 visible → visible 列 used value = auto。在 ComputedStyle::apply* 中实施 |
 | — | RenderNode 矮身确认 | 当前 114 行（目标 60 行未达但 P0 几何/滚动字段已全部删除） |
 
+### 2026-07-24 Phase 2 架构铺垫（本轮第二批）
+
+基于十七章 Phase 2 建议，本轮完成以下微重构（均未破坏 css-standards 基线）：
+
+| 审计章节 | 修复项 | 实现要点 |
+|---------|---------|----------|
+| §13.C | **MarginStrut 抽象创建** | 新增 `framework/Layout/MarginStrut.php`（对标 Blink NGMarginStrut）：positiveMargin + negativeMargin + append/resolve/isEmpty/copy/appendStrut。BlockAlgorithm.stackBlockChildren 相邻兄弟 margin 折叠已重构为使用 MarginStrut，行为等价。未来 LayoutResult 引入时可自然作为 endMarginStrut 上传实现父子折叠 |
+| §16.4.2 | box-sizing 与 min/max 交互 | BlockAlgorithm computeBlockWidth/Height 中，若 box-sizing:border-box，则 min/max width/height 需减去 padding+border 到 content-box 尺度后再与 $width/$height clamp |
+| §16.8.1 | auto-height 排除 OOF | if ($h <= 0) 循环计算 maxBottom 时跳过 position:absolute/fixed 子项 |
+| §14.6.2 | OOF margin:auto 居中 | calculateOOFPosition 新增 Y 轴处理 + 主轴两端声明时使用中间区域居中公式（free / 2） |
+| §14.2.3 | Flex Pass 2 5px 阈值 | 改为 `$p2OrigW !== $p2ItemW` 确定性判断（对标 Blink 不容差重布局） |
+| §Flex docblock | FlexLineBreaker RenderNode[] 错误 | @param FlexItem[] $children、@return [FlexItem[][], flexItemData[][]] |
+
 以下问题**部分修复**：
 
 | 原优先级 | 问题 | 当前状态 |
@@ -57,23 +70,23 @@
 
 | 优先级 | 问题 | 说明 |
 |--------|------|------|
-| **P2** | ChildLayoutProvider 实质全量预布局 | 所有算法入口仍全量调用 layoutChild |
-| **P2** | OOF 子树双重布局 | LayoutOrchestrator L211-216 仍预布局 |
-| **P2** | Flex Pass 2 启发式阈值 | 5px 阈值 |
-| **P2** | bfcOffset 死字段 | 已从 ConstraintSpace 删除（上轮） |
-| **P3** | FlexLineBreaker docblock 类型错误 | 声明 RenderNode[] 实际 FlexItem[] |
-| **P3** | StylePool key 依赖 object_id | LRU 淘汰后命中率下降 |
+| **P2** | ChildLayoutProvider 实质全量预布局 | 所有算法入口仍全量调用 layoutChild（需深度重写） |
+| **P2** | OOF 子树双重布局 | 核对后发现描述失准—mainLayout 预布局子项为**唯一**布局路径，OOF pass 仅重定位无重新 layout。取消 |
+| ~~**P2**~~ | ~~Flex Pass 2 启发式阈值~~ | ✅ 本轮已修正为 `!==` |
+| ~~**P2**~~ | ~~bfcOffset 死字段~~ | 已从 ConstraintSpace 删除（上轮） |
+| ~~**P3**~~ | ~~FlexLineBreaker docblock 类型错误~~ | ✅ 本轮已修正 |
+| **P3** | StylePool key 依赖 object_id | LRU 淘汰后命中率下降（尚未修） |
 
 ### 更新后问题统计
 
 | 优先级 | 数量 | 说明 |
 |--------|------|------|
 | P0 严重 | **0** | 已全部修复 |
-| P1 重要 | **0** | 本轮 Phase 1 完成：displayText readonly 发现已修/BFC 边界检测已完整/滚动外置已完成/RenderNode 十二字段已删除 |
-| P2 中等 | **4** | Provider 全量预布局 / OOF 双重 / Flex 5px / StylePool key（GridPlacer 本轮已修） |
-| P3 轻微 | **1** | FlexLineBreaker docblock |
+| P1 重要 | **0** | Phase 1 + Phase 2 已完成 |
+| P2 中等 | **1** | 仅剩 ChildLayoutProvider 全量预布局（OOF 双重描述失准已取消；GridPlacer/Flex 5px/bfcOffset 已修） |
+| P3 轻微 | **1** | StylePool key（FlexLineBreaker docblock 已修） |
 
-原 25 项审计中，**23 项已修复/部分修复**，仅剩 4 项 P2 与 1 项 P3 未处理。
+原 25 项审计中，**24 项已修复/取消**，仅剩 1 项 P2（需 Phase 3 深度改造）+ 1 项 P3。
 
 ---
 
@@ -1647,4 +1660,5 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 | 2026-07-24 | 拉取最新代码后复核（修复 8 项、降级 1 项） |
 | 2026-07-24 | **深度追加**：五维对标评估（抽象 85% / 数据 55% / 算法 60% / 流程 80% / 规范 50%）+ 50+ 项深层次问题 + 五阶段迭代路线 |
 | 2026-07-24 | **Phase 1 迭代完成**：本轮完成 11 项重构（min>max/margin auto/min-auto/scroll clamp/InteractionState/style 逗逸口/GridPlacer/overflow 混合规则 + 核对 4 项已完成）。P0=0 P1=0，仅剩 4 项 P2 + 1 项 P3。cs-standards 基线 254/300 零回归 |
+| 2026-07-24 | **Phase 2 铺垫完成**：MarginStrut 抽象建立（对标 Blink NGMarginStrut），BlockAlgorithm 相邻兄弟 margin 折叠已重构为使用。box-sizing 与 min/max 交互、auto-height 排除 OOF、OOF margin:auto Y 轴、Flex Pass 2 确定性、FlexLineBreaker docblock 均已修。P0=0 P1=0 P2=1 P3=1。cs-standards 基线 254/300 零回归 |
 

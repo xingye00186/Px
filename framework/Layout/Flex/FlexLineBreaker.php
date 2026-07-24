@@ -16,13 +16,13 @@ class FlexLineBreaker
     /**
      * 将 flex 子项分割为行。
      *
-     * @param RenderNode[] $children       有序子节点列表
+     * @param FlexItem[]   $children       有序 flex item 列表（已排序为 visual order，非原 RenderNode[]）
      * @param array        $flexItemData   flex 元数据（from FlexItemCollector）
      * @param bool         $isWrapping     flex-wrap:wrap?
      * @param bool         $isRow          flex-direction:row?
      * @param int          $containerMain  容器主轴 content 尺寸
      * @param int          $gap            主轴 gap
-     * @return array 每行的 RenderNode[]   [$lines, $lineFlexData]
+     * @return array 结果为 [FlexItem[][], flexItemData[][]] 两个平行数组
      */
     public static function breakLines(
         array $children,

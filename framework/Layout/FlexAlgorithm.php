@@ -506,8 +506,10 @@ class FlexAlgorithm extends LayoutAlgorithm
             $p2Orig = $sortedChildResults[$p2Idx] ?? null;
             $p2ItemW = (int)$p2Fi->w;
             $p2OrigW = $p2Orig !== null ? (int)$p2Orig->getW() : 0;
-            // 宽度变化超过 5px 时重新布局（对标旧 Phase C 阈值）
-            if ($p2OrigW > 0 && $p2ItemW > 0 && abs($p2OrigW - $p2ItemW) > 5 && $p2Idx < count($childNodes)) {
+            // 对标 Blink NGFlexLayoutAlgorithm Pass 2（CSS Flexbox §9.7）：
+            // 阅览约束确定后子项新尺寸 ≠ hypothetical时，必须重新布局。
+            // 旧阈值 abs(diff) > 5 为启发式规范违反——现严格使用 !== 确定性判断。
+            if ($p2OrigW > 0 && $p2ItemW > 0 && $p2OrigW !== $p2ItemW && $p2Idx < count($childNodes)) {
                 $p2Space = new ConstraintSpace(
                     $p2ItemW, (int)$p2Fi->h > 0 ? (int)$p2Fi->h : $space->getContentHeight(),
                     $space->getParentContentX(), $space->getParentContentY(),

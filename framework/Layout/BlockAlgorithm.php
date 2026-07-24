@@ -116,6 +116,9 @@ class BlockAlgorithm extends LayoutAlgorithm
         if ($h <= 0 && count($stackedChildren) > 0) {
             $maxBottom = $y;
             foreach ($stackedChildren as $cr) {
+                // CSS 2.2 §10.6.3: auto-height 仅基于**正常流**子元素计算 — OOF (position:absolute/fixed) 不参与
+                $chPos = $cr->style?->position?->value ?? 'static';
+                if ($chPos === 'absolute' || $chPos === 'fixed') continue;
                 $bottom = $cr->getY() + $cr->getH();
                 // CSS 2.2 §10.6.3: auto-height 应包括最后一个正常流子元素的底边距
                 if ($cr->style !== null) {
@@ -168,6 +171,16 @@ class BlockAlgorithm extends LayoutAlgorithm
                 : max(0, $parentW - $ml - $mr);
         }
         $minW = $s->minWidth?->toPx() ?? 0; $maxW = $s->maxWidth?->toPx() ?? 0;
+        // CSS-UI-3 §4.5: box-sizing:border-box 时 min-width/max-width 也按 border-box 解释
+        // → 需减 padding+border 得到 content-box 下的可比较值（与 $width 尺度坐标一致）
+        if ($sizing === 'border-box') {
+            $padL = $s->padding?->left->toPx() ?? 0;
+            $padR = $s->padding?->right->toPx() ?? 0;
+            $bw = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
+            $deduct = $padL + $padR + $bw;
+            if ($minW > 0) $minW = max(0, $minW - $deduct);
+            if ($maxW > 0) $maxW = max(0, $maxW - $deduct);
+        }
         // CSS 2.2 §10.4：若 min > max，则先令 max := min（征集中优先保障 min）
         if ($minW > 0 && $maxW > 0 && $minW > $maxW) $maxW = $minW;
         if ($maxW > 0 && $width > $maxW) $width = $maxW;
@@ -197,6 +210,15 @@ class BlockAlgorithm extends LayoutAlgorithm
         $ar = $s->getAspectRatio() ?? 0;
         if ($ar > 0 && $height <= 0) { $height = (int)(($s->width?->toPx() ?? 0) / $ar); }
         $minH = $s->minHeight?->toPx() ?? 0; $maxH = $s->maxHeight?->toPx() ?? 0;
+        // CSS-UI-3 §4.5: box-sizing:border-box 时 min-height/max-height 也按 border-box 解释
+        if ($sizing === 'border-box') {
+            $padT = $s->padding?->top->toPx() ?? 0;
+            $padB = $s->padding?->bottom->toPx() ?? 0;
+            $bwv = (int)($s->getBorderTopWidth() ?? 0) + (int)($s->getBorderBottomWidth() ?? 0);
+            $deductV = $padT + $padB + $bwv;
+            if ($minH > 0) $minH = max(0, $minH - $deductV);
+            if ($maxH > 0) $maxH = max(0, $maxH - $deductV);
+        }
         // CSS 2.2 §10.4：若 min > max，则先令 max := min（优先保障 min）
         if ($minH > 0 && $maxH > 0 && $minH > $maxH) $maxH = $minH;
         if ($maxH > 0 && $height > $maxH) $height = $maxH;
@@ -258,7 +280,18 @@ class BlockAlgorithm extends LayoutAlgorithm
                     || $childDisplay === 'flex' || $childDisplay === 'grid'
                     || $childDisplay === 'flow-root');
             $isCollapsible = ($childDisplay === 'block') && !$createsBFC;
-            $childY = ($isCollapsible && $prevCollapsible) ? ($stackY - $prevMarginBottom + max($prevMarginBottom > 0 ? $prevMarginBottom : 0, $mTop > 0 ? $mTop : 0) + min($prevMarginBottom < 0 ? $prevMarginBottom : 0, $mTop < 0 ? $mTop : 0)) : ($stackY + $mTop);
+            // ── CSS 2.2 §8.3.1 margin 折叠 (对标 Blink NGMarginStrut) ──
+            // 相邻兄弟 block 且两侧均不创建新 BFC 时，将前章 mBottom 与当前 mTop 折叠：
+            //   正值取 max，负值取 min（最负），两者相加 = MarginStrut.resolve()
+            if ($isCollapsible && $prevCollapsible) {
+                $strut = new MarginStrut();
+                $strut->append($prevMarginBottom);
+                $strut->append($mTop);
+                // 撤销上一子项已加的 mBottom（包含在 $stackY），重新导入折叠后的值
+                $childY = $stackY - $prevMarginBottom + $strut->resolve();
+            } else {
+                $childY = $stackY + $mTop;
+            }
             $relTop = $childStyle?->top?->toPx() ?? 0;
             $relLeft = $childStyle?->left?->toPx() ?? 0;
             if ($childPosition === 'relative') { $childY += $relTop; }

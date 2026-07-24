@@ -253,18 +253,40 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $calcX += $rawTX instanceof CssLength ? $rawTX->toPx() : (int)($rawTX ?? 0);
         $calcY += $rawTY instanceof CssLength ? $rawTY->toPx() : (int)($rawTY ?? 0);
 
-        // Margin auto (simplified: only X-axis)
+        // CSS 2.2 §10.6.4: margin auto 居中——需同时满足：
+        //   1. width 不为 auto（有确定尺寸）
+        //   2. 主轴相对两端都有声明（left+right 同时或 top+bottom 同时，且非 auto）
+        //   3. margin-* 两端同为 auto
+        // → 则把剩余空间均分为两侧。
         $autoOffsetX = 0;
+        $autoOffsetY = 0;
         if ($cs->margin !== null) {
             $mLAuto = $cs->margin->left->isAuto();
             $mRAuto = $cs->margin->right->isAuto();
-            if ($mLAuto && $mRAuto) {
+            $mTAuto = $cs->margin->top->isAuto();
+            $mBAuto = $cs->margin->bottom->isAuto();
+            if ($mLAuto && $mRAuto && $hasLeft && $hasRight && $width > 0) {
+                // 主轴 X 居中：cbOriginX + left + (ancW - left - right - width) / 2
+                $free = $ancW - $leftVal - $rightVal - $width;
+                if ($free > 0) $autoOffsetX = (int)($free / 2);
+            } elseif ($mLAuto && $mRAuto) {
+                // fallback 仅 width 确定时居中于包含块
                 $autoOffsetX = (int)(($ancW - $width) / 2);
             } elseif ($mRAuto) {
                 $autoOffsetX = $ancW - $calcX - $width + $ancX;
             }
+            // Y 方向（国际化 lacks writing-mode，仅作普通处理）
+            if ($mTAuto && $mBAuto && $hasTop && $hasBottom && $height > 0) {
+                $freeV = $ancH - $topVal - $bottomVal - $height;
+                if ($freeV > 0) $autoOffsetY = (int)($freeV / 2);
+            } elseif ($mTAuto && $mBAuto) {
+                $autoOffsetY = (int)(($ancH - $height) / 2);
+            } elseif ($mBAuto) {
+                $autoOffsetY = $ancH - $calcY - $height + $ancY;
+            }
         }
         $calcX += $autoOffsetX;
+        $calcY += $autoOffsetY;
 
         // 对标 Px 中 Fragment.x/y 语义：绝对坐标（相对 layout 根，不累加）。
         // 因此使用 $calcX / $calcY 直接作为 Fragment 坐标（旧代码错误地减去 ancX/ancY 将其变为相对偏移）。
