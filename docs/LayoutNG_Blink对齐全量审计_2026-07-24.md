@@ -2,7 +2,7 @@
 
 > 审计基准：HEAD = c198f8a8 (Phase 4A Step 4-5, 274/314)
 > 对标：Chromium Blink LayoutNG (chromium/src/third_party/blink/renderer/core/layout/)
-> 覆盖范围：数据要素 / 算法 / 流程 / 抽象层次 / 能力差距，共 5 维度 40 子项
+> 覆盖范围：数据要素 / 算法 / 流程 / 内部实现正确性 / 能力差距 / 破损代码，共 **7 维度 52 子项**
 
 ---
 
@@ -131,7 +131,128 @@
 
 ---
 
-## 维度三：流程管线对齐
+## 维度三：几何/样式概念对齐
+
+### 3.1 contentWidth ≠ width ≠ visualW 语义区分
+
+| 字段 | Blink 语义 | Px 实现 | 状态 |
+|---|---|---|---|
+| w | NGPhysicalFragment::Size().width（border-box 宽度） | PhysicalFragment.$w | ✅ 正确 |
+| visualW | border-box 视觉宽度（含 padding+border） | ComputedStyle::visualWidth($w) 计算 | ✅ 正确 |
+| contentWidth | NGScrollableOverflowCalculator 输出（子项最大范围，用于 scrollbar maxScroll） | LayoutOrchestrator L281-291 计算子项 maxRight/maxBottom | ✅ 正确（Phase 3 已修复） |
+
+✅ 三者语义已正确区分。早期审计发现的 `contentWidth = w` 问题已修复。
+
+### 3.2 Fragment.x 坐标与 ConstraintSpace 坐标语义
+
+| 概念 | Blink 语义 | Px 实现 | 状态 |
+|---|---|---|---|
+| Fragment.x/y | 相对于父 Fragment 的偏移（累加后得到绝对坐标） | Px Fragment.x/y 已包含**绝对坐标**（相对于根） | ⚠️ 偏差：Blink 用相对坐标，Px 用绝对 |
+| ConstraintSpace.parentContentX/Y | Blink bfc_offset (已删除) | 父 content-box 左上角绝对坐标 | ✅ 功能等价（Px 算法输出绝对坐标，无需 bfcOffset 累加） |
+| ConstraintSpace.contentWidth/Height | NGConstraintSpace::AvailableSize() | 子项可用约束宽度 | ✅ 正确 |
+| ConstraintSpace.percentageWidth/Height | NGConstraintSpace::PercentageResolutionSize() | 百分比解析基准（null = Indefinite） | ✅ 正确 |
+| ConstraintSpace.determinedPercentageWidth | Blink 无直接对应（flex/grid 算法内部处理） | 父 flex/grid 分配后的确定基准 | ✅ Px 特有补充（解决 flex item 百分比解析） |
+
+**坐标系偏差说明**：Blink Fragment 存储相对父的偏移，累加树得到绝对坐标。Px Fragment 直接存绝对坐标。这是设计决策而非错误——Px 不需要 Blink 的 `MapToPhysicalOffset()` 流程，但导致缓存复用时需 translateFragment 平移。
+
+### 3.3 百分比基准传递路径验证
+
+| 场景 | Blink 机制 | Px 实现 | 状态 |
+|---|---|---|---|
+| Block 子项 width:50% | ConstraintSpace.PercentageResolutionSize.width | buildChildSpace 传入 percentageWidth = cbW | ✅ 正确 |
+| Block 子项 height:50% | ConstraintSpace.PercentageResolutionSize.height | buildChildSpace 传入 percentageHeight = cbH | ✅ 正确 |
+| Flex item width:50% | 父 flex 分配后大小作基准 | determinedPercentageWidth = 父 contentWidth | ✅ 正确 |
+| 父有显式 width 时子项百分比基准 | 父 width 作为 containing block width | buildChildSpace 优先用 parentExplicitW | ✅ 正确 |
+| Indefinite (父 auto-width) | percentageSize = kIndefinite | percentageWidth = null | ✅ 正确 |
+
+### 3.4 格式化上下文（BFC/FFC/GFC）隔离
+
+| 上下文 | Blink 实现 | Px 实现 | 状态 |
+|---|---|---|---|
+| BFC 创建条件检测 | NGBlockNode::CreatesNewBFC() | extractEndMarginStrut 内 6 条件检测 | ✅ 条件完整 |
+| BFC 作为独立对象 | NGBlockFormattingContext + ExclusionSpace | ❌ 无独立 BFC 对象 | ❌ 未实现 |
+| FFC 隔离 | NGFlexLayoutAlgorithm 不调用 Block stacking | FlexAlgorithm 不调用 stackBlockChildren | ✅ 算法自然隔离 |
+| GFC 隔离 | NGGridLayoutAlgorithm 独立处理 | GridAlgorithm 独立处理 | ✅ 算法自然隔离 |
+| Margin collapse 穿透阻断 | BFC 创建者阻断 margin 穿透 | extractEndMarginStrut 在 BFC 创建者处返回 null | ✅ 正确 |
+
+---
+
+## 维度四：内部实现正确性验证
+
+### 4.1 ComputedStyle 归一化和快照机制
+
+| 检查点 | Blink 对标 | Px 实现 | 状态 |
+|---|---|---|---|
+| 构造后冻结 | ComputedStyle 不可变 | `$this->frozen = true`，所有公开属性 readonly | ✅ 正确 |
+| 继承属性传递 | 父元素 ComputedStyle 继承 | INHERITED_KEYS 数组，父未设置时从 parentDeclarations 继承 | ✅ 正确 |
+| 简写展开 | CSS 简写 → 独立属性 | CssShorthandExpander + StyleTransform 统一处理 | ✅ 正确 |
+| 默认值填充 | 所有属性有明确默认 | getDefaultsArray(elementType) 全覆盖 | ✅ 正确 |
+| rawDeclarations 保留 | Blink 无直接对应 | getRaw(key) 支持算法读取原始声明（如判断是否显式设置） | ✅ Px 特有补充 |
+| toExportArray 惰性缓存 | Blink 无对应（C++ 无序列化需求） | 首次调用后缓存，后续 O(1) | ✅ 性能优化 |
+
+### 4.2 StylePool Flyweight 模式
+
+| 检查点 | Blink 对标 | Px 实现 | 状态 |
+|---|---|---|---|
+| 缓存池 | MatchedPropertiesCache | StylePool 静态池 | ✅ 正确 |
+| Key 构建 | 属性组合指纹 | className\|elementType\|inlineStyleFp\|parentObjId | ✅ 正确 |
+| LRU 淘汰 | 内存压力触发 GC | 双向链表 LRU，容量 512 | ✅ 正确 |
+| 身份稳定性 | 同输入必返同指针 | spl_object_id 保证生命周期内稳定 | ✅ 正确 |
+| withOverride 派生 | Blink 无直接对应 | StylePool::withOverride() 基于 base 派生新 CS，池化 | ✅ Px 特有 |
+| 缺陷：LRU 淘汰后父 CS 身份变 | — | spl_object_id 随对象销毁变化，相同语义输入可能生成不同 key | ⚠️ 命中率下降（P3） |
+
+### 4.3 脱标传播和局部重算机制
+
+| 检查点 | Blink 对标 | Px 实现 | 状态 |
+|---|---|---|---|
+| layoutDirty vs styleDirty 分离 | SetNeedsLayout vs SetNeedsStyleRecalc | markLayoutDirty() / markStyleDirty() 双级脱位 | ✅ 正确 |
+| 几何属性变化触发 layoutDirty | Blink diff 新旧 ComputedStyle | geoKeys 列表 diff（含 fontSize/lineHeight/gap/flexBasis/gridTemplate/left/top 等 30+ 键） | ✅ 正确（Phase 3 已补全） |
+| 仅视觉属性变化跳过布局 | Blink SetNeedsStyleRecalc 不触发 layout | markStyleDirty 设 layoutDirty=false | ✅ 正确 |
+| isLayoutBoundary 阻断上传 | Flutter relayoutBoundary | 固定 width+height 时 markLayoutDirty 不向上传播 | ✅ 正确 |
+| paintDirty 同步 | Blink SetNeedsPaintInvalidation | layoutDirty/styleDirty 均同时设 paintDirty=true | ✅ 正确 |
+
+### 4.4 缓存机制（Fragment 缓存 + 约束签名）
+
+| 检查点 | Blink 对标 | Px 实现 | 状态 |
+|---|---|---|---|
+| 缓存存储 | NGBlockNode::cached_layout_result_ | RenderNode.cachedFragment + cachedConstraintSpace | ✅ 正确 |
+| 全匹配命中 (equals) | 约束空间完全相同 | ConstraintSpace.equals() 比较 18 个字段 | ✅ 正确 |
+| 布局等价命中 (layoutEquals) | 排除仅位置偏移变化 | layoutEquals() 排除 parentContentX/Y | ✅ 正确 |
+| BFC 平移快速路径 | Simplified offset-only | translateFragment(dx, dy) 递归平移 | ✅ 正确 |
+| 仅样式变化复用子树 | Blink style-only invalidation | styleDirty 时复制旧 Fragment 替换样式快照 | ✅ 正确 |
+| 缓存失效触发 | layoutDirty=true 或 styleDirty=true | 同上 + cachedFragment=null | ✅ 正确 |
+
+### 4.5 PhysicalFragment 不可变性验证
+
+| 检查点 | 状态 | 证据 |
+|---|---|---|
+| 所有字段 readonly | ✅ | PhysicalFragment.php L21-96 全部 `public readonly` |
+| displayText 不可变 | ✅ | L64 `public readonly string $displayText`，通过 withDisplayText() 不可变重建 |
+| postProcess 不修改原 Fragment | ✅ | LayoutOrchestrator.postProcess() 返回新 Fragment（`$rootFragment = $this->postProcess($rootFragment)`） |
+| 无 setter 方法 | ✅ | PhysicalFragment 无任何修改方法，仅 withDisplayText() 返回新实例 |
+
+### 4.6 Fragment 树独立遍历验证
+
+| 检查点 | 状态 | 证据 |
+|---|---|---|
+| PaintPipeline 从 Fragment 树读几何 | ✅ | render($root) 接收 PhysicalFragment，collectElementsFromFragment 递归遍历 |
+| fragmentToElement 从 Fragment 读坐标 | ✅ | L211-215 `$x = (int)$frag->x; $y = (int)$frag->y` |
+| HitTest 从 cachedFragment 读 | ✅ | RenderTreeManager hitTest 优先读 cachedFragment |
+| PaintPipeline 残留 fallback 读 RenderNode | ⚠️ | L52-55 仍有 `$node->x` fallback（8 处死代码，见维度七） |
+
+### 4.7 RenderNode 瘦身验证
+
+| 检查点 | 状态 | 证据 |
+|---|---|---|
+| 几何字段移除 | ✅ | x/y/w/h/visualW/visualH/layer 已删除 |
+| 滚动字段移除 | ✅ | scrollTop/scrollLeft/contentWidth/contentHeight/isScrollContainer 已删除 |
+| 当前行数 | 120 行 | 从原始 131 行瘦身至 120 行 |
+| 剩余字段合理性 | ✅ | type/computedStyle/pseudoStyles/content/key/脱位/树结构/缓存/交互/isLayoutBoundary 均属 RenderNode 职责 |
+| 交互状态未外置 | ⚠️ | hovered/focused/active 仍在 RenderNode（InteractionState 类存在但未替代） |
+
+---
+
+## 维度五：流程管线对齐
 
 ### 3.1 Blink 管线 vs Px 管线
 
@@ -167,7 +288,7 @@
 
 ---
 
-## 维度四：能力差距（Blink 有 / Px 无）
+## 维度六：能力差距（Blink 有 / Px 无）
 
 | # | Blink 能力 | CSS 规范 | 影响 | 优先级建议 |
 |---|---|---|---|---|
@@ -186,7 +307,7 @@
 
 ---
 
-## 维度五：破损代码与遗留问题
+## 维度七：破损代码与遗留问题
 
 ### 5.1 RenderNode 字段删除后未同步清理（P0）
 
@@ -229,11 +350,13 @@ LayoutAlgorithm::layoutResult() 和 BlockAlgorithm override 已就绪，但 Layo
 
 | 维度 | 得分 | 说明 |
 |------|------|------|
-| 数据要素映射正确性 | 88% | 16 项中 10 项完全正确，4 项已定义未集成，2 项越界但有替代 |
-| 算法对齐程度 | 72% | Block 80% / Flex 75% / Grid 60% / Inline 45% / OOF 85% / Table 30% |
-| 流程管线对齐 | 92% | 主路径完全正确，layoutResult 消费缺失为唯一短板 |
-| 能力差距 | 12 项 | Float(P2) / LineBox(P1) / FlexClamp(P1) / Logical(P3) / MarginCollapse 2项(P2) / Grid areas(P3) / Table(P3) / MinMaxSizes 2项(P2) / PaintLayer(P3) / OOF冒泡(P2) |
-| 破损代码 | 4 类 | 字段删除未同步(P0) / 交互状态双源(P2) / LayoutResult未消费(P1) / 全量预布局(P3) |
+| 一：数据要素映射 | 88% | 16 项中 10 项完全正确，4 项已定义未集成，2 项越界但有替代 |
+| 二：算法对齐 | 72% | Block 80% / Flex 75% / Grid 60% / Inline 45% / OOF 85% / Table 30% |
+| 三：几何/样式概念 | 95% | 坐标语义/百分比/格式化上下文均正确，仅坐标系偏差为设计决策 |
+| 四：内部实现正确性 | 93% | ComputedStyle/StylePool/脱标/缓存/Fragment不可变/RenderNode瘦身 均正确，仅交互状态未外置 |
+| 五：流程管线 | 92% | 主路径完全正确，layoutResult 消费缺失为唯一短板 |
+| 六：能力差距 | 12 项 | Float(P2) / LineBox(P1) / FlexClamp(P1) / Logical(P3) / MarginCollapse×2(P2) / Grid(P3) / Table(P3) / MinMax×2(P2) / PaintLayer(P3) / OOF冒泡(P2) |
+| 七：破损/遗留 | 4 类 | 字段删除未同步(P0) / 交互双源(P2) / LayoutResult未消费(P1) / 全量预布局(P3) |
 
 ### 优先级汇总
 
