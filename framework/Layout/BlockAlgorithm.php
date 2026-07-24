@@ -434,7 +434,8 @@ class BlockAlgorithm extends LayoutAlgorithm
         }
         if ($s->height !== null && $s->height->isIntrinsic() && strlen($textContent) > 0) { $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2); }
         // CSS 2.2 §10.6: 仅当 height 为 auto 时才用内容高度，显式 height:0 应尊重
-        $hasExplicitHeight = ($s->height !== null && !$s->height->isAuto() && !$s->height->isPercent() && !$s->height->isIntrinsic());
+        // 根因修复：default height = CssLength::px(0)（非 auto），须用 getRaw('height') 区分“显式声明 height:0”与“未声明（默认 px0）”
+        $hasExplicitHeight = ($s->getRaw('height') !== null && $s->height !== null && !$s->height->isAuto() && !$s->height->isPercent() && !$s->height->isIntrinsic());
         if ($height <= 0 && !$hasExplicitHeight && strlen($textContent) > 0) { $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2); }
         $ar = $s->getAspectRatio() ?? 0;
         if ($ar > 0 && $height <= 0) { $height = (int)(($s->width?->toPx() ?? 0) / $ar); }
