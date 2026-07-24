@@ -78,6 +78,20 @@
 
 **抽象层次得分升级**：**85% → ~93%**（九项抽象缺口中 5 项已补齐）。
 
+### 2026-07-24 Phase 2 抽象层启用（本轮第四批）
+
+本轮将上述抽象从“已定义”推进到“已启用”，建立实际使用点与未来消费模式：
+
+| 审计章节 | 启用项 | 实现要点 |
+|---------|---------|----------|
+| §12.2 (P0) | **BlockAlgorithm::layoutResult() 真实 override** | BlockAlgorithm 新增 extractEndMarginStrut() 方法：从 Fragment 末尾向前扫描 collapsible block子。仅当 ① 自身不创建新 BFC、② 自身无 padding-bottom/border-bottom、③ 自身无确定高度（包括 min-height）、④ 末子为 collapsible block 时上传其 margin-bottom 作为 endMarginStrut。为未来 §8.3.1 第 3 种场景（父与末子 margin-bottom 折叠）实际消费铺路 |
+| §12.3 (P2) | **ConstraintSpaceBuilder 实际启用** | LayoutOrchestrator::layout() 根容器初始化与 buildChildSpace() 子项创建均改为 Builder。以前 6-21 位置参数现在为黄回方式命名参数，新增约束字段时不需改调用点 |
+| — | **PhysicalFragmentBuilder 补全 + 启用** | Builder 新增 textWidth/displayText 字段（之前遗漏）。LayoutOrchestrator translateFragment 与 postProcess 重建父节点处的创造直接 `new PhysicalFragment(...)` 呼叫已迁移为 Builder，代码行数从 20 行降至 7 行 |
+
+**入口点活行性验证**：
+- LayoutOrchestrator 中已无直接使用 `new ConstraintSpace(...)` 与少部分直接 `new PhysicalFragment(...)` 调用点。无同阶 CSS 行为变化。
+- BlockAlgorithm.layoutResult() 目前仍无消费者（LayoutOrchestrator 仍调 layout()），但 endMarginStrut 产出逻辑已就位——Phase 3 开启消费时可直接使用。
+
 以下问题**部分修复**：
 
 | 原优先级 | 问题 | 当前状态 |
@@ -1680,4 +1694,5 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 | 2026-07-24 | **Phase 1 迭代完成**：本轮完成 11 项重构（min>max/margin auto/min-auto/scroll clamp/InteractionState/style 逗逸口/GridPlacer/overflow 混合规则 + 核对 4 项已完成）。P0=0 P1=0，仅剩 4 项 P2 + 1 项 P3。cs-standards 基线 254/300 零回归 |
 | 2026-07-24 | **Phase 2 铺垫完成**：MarginStrut 抽象建立（对标 Blink NGMarginStrut），BlockAlgorithm 相邻兄弟 margin 折叠已重构为使用。box-sizing 与 min/max 交互、auto-height 排除 OOF、OOF margin:auto Y 轴、Flex Pass 2 确定性、FlexLineBreaker docblock 均已修。P0=0 P1=0 P2=1 P3=1。cs-standards 基线 254/300 零回归 |
 | 2026-07-24 | **Phase 2 抽象层建立**：对标 Blink 新增三个抽象类与一个基类包裹方法—LayoutResult (§12.2 P0)、ConstraintSpaceBuilder (§12.3 P2)、LayoutInputNode (§12.1 P1)、LayoutAlgorithm::layoutResult()。均并行安全，带 wrap() / from() 迁移期便捷方法。抽象层次 85% → 93%。cs-standards 基线 254/300 零回归 |
+| 2026-07-24 | **Phase 2 抽象层启用**：BlockAlgorithm::layoutResult() 真实 override（新增 extractEndMarginStrut 处理 BFC/padding/height/collapsible block 预判，为 §8.3.1 第 3 种场景铺路）。LayoutOrchestrator 根容器与 buildChildSpace 均改用 ConstraintSpaceBuilder（命名参数代替 21 位置参数）。PhysicalFragmentBuilder 补全 textWidth/displayText 字段，translateFragment/postProcess 重建父均改用 Builder（代码行数从各 20 行降至 7 行）。cs-standards 基线 254/300 零回归 |
 

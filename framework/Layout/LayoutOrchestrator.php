@@ -72,7 +72,11 @@ class LayoutOrchestrator
         Diag::log(1, 'layout:enter', ['rootType' => $root->type, 'children' => count($root->children)]);
         $rootW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1600;
         $rootH = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 800;
-        $space = new ConstraintSpace($rootW, $rootH, 0, 0, $rootW, $rootH);
+        // 使用 ConstraintSpaceBuilder (§12.3)：取代 21 位置参数构造函数，新增字段不需改调用点
+        $space = ConstraintSpaceBuilder::create()
+            ->setContainerSize($rootW, $rootH)
+            ->setContentSize($rootW, $rootH)
+            ->build();
 
         // Step 1: mainLayout — 正常流布局
         $rootFragment = $this->mainLayout($root, $space);
@@ -364,16 +368,13 @@ class LayoutOrchestrator
         foreach ($frag->children as $child) {
             $translatedChildren[] = $this->translateFragment($child, $dx, $dy);
         }
-        return new PhysicalFragment(
-            $frag->x + $dx, $frag->y + $dy,
-            $frag->w, $frag->h,
-            $frag->visualW, $frag->visualH, $frag->layer,
-            $frag->contentWidth, $frag->contentHeight,
-            $frag->style, $translatedChildren, $frag->sourceNode,
-            $frag->scrollTop, $frag->scrollLeft, $frag->isScrollContainer,
-            $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles,
-            $frag->availableWidth
-        );
+        // 使用 PhysicalFragmentBuilder：从原 fragment 拷贝字段，仅重写偏移后的 x/y + 新子树
+        return (new PhysicalFragmentBuilder())
+            ->from($frag)
+            ->x($frag->x + $dx)
+            ->y($frag->y + $dy)
+            ->children($translatedChildren)
+            ->build();
     }
 
     private function buildChildSpace(
@@ -422,10 +423,17 @@ class LayoutOrchestrator
         $percW = $childStyle?->width?->isPercent() ? $cbW : null;
         $percH = $childStyle?->height?->isPercent() ? $cbH : null;
 
-        return ConstraintSpace::forChild(
-            $offX, $offY, max(0, $cbW), max(0, $cbH),
-            $percW, $percH,
-        );
+        // 使用 ConstraintSpaceBuilder (§12.3)：从父继承常见字段，重写子需要的字段
+        return ConstraintSpaceBuilder::from($parentSpace)
+            ->setContainerSize(max(0, $cbW), max(0, $cbH))
+            ->setContentSize(max(0, $cbW), max(0, $cbH))
+            ->setParentContentOrigin($offX, $offY)
+            ->setPercentageBase($percW, $percH)
+            ->setDeterminedPercentageBase(null, null)
+            ->setSpaceType('block')
+            ->setForceRelayoutChildren(false)
+            ->setIntrinsicMeasurement(false)
+            ->build();
     }
 
     /**
@@ -492,17 +500,14 @@ class LayoutOrchestrator
         }
         $scrollChanged = ($newScrollTop !== (int)$frag->scrollTop) || ($newScrollLeft !== (int)$frag->scrollLeft);
 
-        // 如果子节点或滚动位置有变化，重建父节点
+        // 如果子节点或滚动位置有变化，重建父节点（使用 Builder）
         if ($childrenChanged || $scrollChanged) {
-            $frag = new PhysicalFragment(
-                $frag->x, $frag->y, $frag->w, $frag->h,
-                $frag->visualW, $frag->visualH, $frag->layer,
-                $frag->contentWidth, $frag->contentHeight,
-                $frag->style, $newChildren, $frag->sourceNode,
-                $newScrollTop, $newScrollLeft, $frag->isScrollContainer,
-                $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles,
-                $frag->availableWidth, $frag->textWidth, $frag->displayText
-            );
+            $frag = (new PhysicalFragmentBuilder())
+                ->from($frag)
+                ->children($newChildren)
+                ->scrollTop($newScrollTop)
+                ->scrollLeft($newScrollLeft)
+                ->build();
         }
 
         // 仅处理有文本内容且非空容器

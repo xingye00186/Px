@@ -20,6 +20,95 @@ class BlockAlgorithm extends LayoutAlgorithm
         return in_array($type, self::INLINE_TYPES, true);
     }
 
+    /**
+     * 启用了 endMarginStrut 上传的 LayoutResult。
+     *
+     * 对标 Blink NGBlockLayoutAlgorithm::Layout()：末尾未消耗的 margin strut 作为 end_margin_strut_
+     * 上传给父，以支持 CSS 2.2 §8.3.1 第 3 种场景：父与末子 margin-bottom 折叠。
+     *
+     * 条件（保守）：
+     *   1. 自身不创建新 BFC（overflow visible + 非 float/OOF + 非 flex/grid 容器...）
+     *   2. 自身无 padding-bottom + border-bottom（否则不能穿透）
+     *   3. 自身无确定高度（否则 margin 不能逸出）
+     *   4. 末子为 collapsible block（非 OOF、非创新 BFC）
+     *
+     * 未满足则 endMarginStrut 为 null，消费方需回退到“不折叠”行为。
+     */
+    public function layoutResult(
+        ConstraintSpace $space,
+        ?ComputedStyle $style = null,
+        string $textContent = '',
+        array $childNodes = [],
+        ?PhysicalFragment $inputFragment = null,
+    ): LayoutResult {
+        $frag = $this->layout($space, $style, $textContent, $childNodes, $inputFragment);
+        $endStrut = $this->extractEndMarginStrut($frag, $style);
+        // intrinsicBlockSize 尚无独立追踪，暂与 fragment.h 一致
+        return new LayoutResult($frag, $endStrut, (int)$frag->getH());
+    }
+
+    /**
+     * 从 Fragment 末子提取 endMarginStrut，仅父子边界可穿透时非 null。
+     * 对标 Blink 处理 "unresolved bottom margin"：父 padding-bottom/border-bottom/height 均为 0 且未创建新 BFC。
+     */
+    private function extractEndMarginStrut(PhysicalFragment $frag, ?ComputedStyle $selfStyle): ?MarginStrut
+    {
+        if ($selfStyle === null) return null;
+        // 1. 自身创建新 BFC 则阻断穿透
+        $selfOverflowY = $selfStyle->overflowY?->value ?? $selfStyle->overflow?->value ?? 'visible';
+        $selfDisplay = $selfStyle->display?->value ?? 'block';
+        $selfPosition = $selfStyle->position?->value ?? 'static';
+        $selfFloat = $selfStyle->getRaw('float') ?? 'none';
+        $selfFloatVal = is_object($selfFloat) ? ($selfFloat->value ?? 'none') : (string)$selfFloat;
+        $createsNewBFC = ($selfOverflowY !== 'visible')
+            || ($selfPosition === 'absolute' || $selfPosition === 'fixed')
+            || ($selfFloatVal !== 'none')
+            || ($selfDisplay === 'inline-block' || $selfDisplay === 'table-cell'
+                || $selfDisplay === 'flex' || $selfDisplay === 'grid'
+                || $selfDisplay === 'flow-root');
+        if ($createsNewBFC) return null;
+
+        // 2. 自身有 padding-bottom 或 border-bottom 则不可穿透
+        $padB = (int)($selfStyle->padding?->bottom->toPx() ?? 0);
+        $bwB = (int)($selfStyle->getBorderBottomWidth() ?? 0);
+        if ($padB !== 0 || $bwB !== 0) return null;
+
+        // 3. 自身有确定高度则不可穿透（min-height 也拦截）
+        $selfH = $selfStyle->height;
+        if ($selfH !== null && !$selfH->isAuto() && !$selfH->isIntrinsic() && $selfH->toPx() > 0) return null;
+        $selfMinH = $selfStyle->minHeight;
+        if ($selfMinH !== null && !$selfMinH->isAuto() && $selfMinH->toPx() > 0) return null;
+
+        // 4. 逐个向后扫描末尾非 OOF collapsible block 子，提取其 margin-bottom
+        for ($i = count($frag->children) - 1; $i >= 0; $i--) {
+            $child = $frag->children[$i];
+            $chStyle = $child->style;
+            if ($chStyle === null) continue;
+            $chDisp = $chStyle->display?->value ?? 'block';
+            if ($chDisp === 'none') continue;
+            $chPos = $chStyle->position?->value ?? 'static';
+            if ($chPos === 'absolute' || $chPos === 'fixed') continue;
+            // 遇到创建新 BFC 的子：阻断穿透
+            $chOverflowY = $chStyle->overflowY?->value ?? $chStyle->overflow?->value ?? 'visible';
+            $chFloat = $chStyle->getRaw('float') ?? 'none';
+            $chFloatVal = is_object($chFloat) ? ($chFloat->value ?? 'none') : (string)$chFloat;
+            $chCreatesBFC = ($chOverflowY !== 'visible')
+                || ($chFloatVal !== 'none')
+                || ($chDisp === 'inline-block' || $chDisp === 'table-cell'
+                    || $chDisp === 'flex' || $chDisp === 'grid'
+                    || $chDisp === 'flow-root');
+            if ($chCreatesBFC) return null;
+            if ($chDisp !== 'block') return null;
+
+            $chMBottom = (int)($chStyle->margin?->bottom->toPx() ?? 0);
+            if ($chMBottom === 0) return null;
+            $strut = new MarginStrut();
+            $strut->append($chMBottom);
+            return $strut;
+        }
+        return null;
+    }
+
     public function layout(
         ConstraintSpace $space,
         ?ComputedStyle $style = null,
