@@ -123,7 +123,17 @@ class InlineAlgorithm extends LayoutAlgorithm
         }
         $h = $s->height?->toPx() ?? 0;
         if (strlen($textContent) > 0 && (int)($h ?? 0) <= 0) {
-            $h = ((int)($s->getLineHeight() ?? 0) > 0) ? (int)$s->getLineHeight() : (int)($s->getFontSize() * 1.2);
+            // CSS 2.2 §10.8: 行高计算
+            // line-height: <length> → 绝对值
+            // line-height: <number> → fontSize * number
+            // line-height: normal  → fontSize * 1.2（待 Phase 5 接入字体度量后改为 ascent+descent）
+            $declaredLH = (int)($s->getLineHeight() ?? 0);
+            if ($declaredLH > 0) {
+                $h = $declaredLH;
+            } else {
+                $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
+                $h = (int)($fs * 1.2);
+            }
         }
 
         // IFC: arrange children in a single line
@@ -218,15 +228,40 @@ class InlineAlgorithm extends LayoutAlgorithm
                 $cr = $item->fragment;
                 if ($cr === null) continue;
 
-                // vertical-align: baseline — 对齐到行基线
-                $itemY = $cursorY + ($line->baseline - $item->ascent);
-                if ($itemY < $cursorY) $itemY = $cursorY;
-                // 加回 margin-top（margin 包含在 ascent 行高计算中，但 Fragment 定位需显式偏移）
-                $mTop = $item->fragment->style?->margin?->top->toPx() ?? 0;
+                // vertical-align 实现（对标 Blink NGInlineLayoutAlgorithm::PlaceItems）
+                $va = $item->style?->verticalAlign?->value ?? 'baseline';
+                $lineH = $line->height();
+                $itemContentH = (int)($cr->getH() ?? 0);
+                $mTop = (int)($item->fragment->style?->margin?->top->toPx() ?? 0);
+
+                switch ($va) {
+                    case 'top':
+                        // CSS 2.2 §10.8.1: 对齐行盒顶部
+                        $itemY = $cursorY;
+                        break;
+                    case 'bottom':
+                        // CSS 2.2 §10.8.1: 对齐行盒底部
+                        $itemY = $cursorY + ($lineH - $itemContentH - $mTop);
+                        break;
+                    case 'middle':
+                        // CSS 2.2 §10.8.1: 对齐行盒中线 (x-height/2 + baseline)
+                        $itemY = $cursorY + (int)(($lineH - $itemContentH) / 2);
+                        break;
+                    default: // baseline
+                        $itemY = $cursorY + ($line->baseline - $item->ascent);
+                        if ($itemY < $cursorY) $itemY = $cursorY;
+                        // baseline 模式加 margin-top 偏移
+                        $itemY += $mTop;
+                        break;
+                }
+                // top/bottom/middle 不加 mTop（已在计算中考虑）
+                $finalY = ($va === 'baseline') ? $itemY : (int)($itemY + $mTop);
+                if ($va === 'baseline') $finalY = $itemY; // 已在 switch 内加过
+                else $finalY = (int)$itemY;
 
                 $result[] = new PhysicalFragment(
                     (int)($startX + $cursorX + $item->marginLeft),
-                    (int)($startY + $itemY + $mTop),
+                    (int)($startY + $finalY),
                     (int)($cr->getW() ?? 0), (int)($cr->getH() ?? 0),
                     0, 0, (int)($cr->getLayer() ?? 0),
                     (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0),
