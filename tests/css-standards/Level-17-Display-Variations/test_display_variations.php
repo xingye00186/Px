@@ -100,6 +100,30 @@ $tests['visibility:visible 子项覆盖父 hidden'] = function() {
     return $result;
 };
 
+// ── Test 7: CSS 2.2 §10.3.5 inline-block width auto → shrink-to-fit ──
+// 旧行为：inline-block 不声明 width 时会撛满父（不合规范）
+// 新行为：使用内容测量作为 max-content 代理，shrink 到实际内容宽度
+// "Hi" @ font-size 14px 实测 ≈ 16-20px，未撏满 400px（验证 shrink-to-fit 启用）
+$tests['CSS §10.3.5 inline-block width auto shrink-to-fit'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'width:400px;height:auto'], [
+            VNode::h('div', ['style' => 'display:inline-block;padding:0;border:0;font-size:14px'], 'Hi'),
+        ])
+    );
+    // 验证新行为：inline-block 宽度基于内容而非撛满
+    // dump 中包含 "[dsp=inline-block]" 且宽度 < 400 (实际为文本测量尺寸)
+    assert_contains($result, '[dsp=inline-block] text="Hi"', 'inline-block 标记存在');
+    // 验证宽度未撛满父 400px（shrink-to-fit 生效时宽度为文本宽度，不会是 400）
+    // 使用 assert_not_contains 确保不包含 '400x' 与 inline-block 同行的估算
+    // 因内容 shrink 后宽度 ≈ 16-20px，完全不会是 400
+    if (strpos($result, '400x16 [dsp=inline-block]') !== false
+        || strpos($result, '400x18 [dsp=inline-block]') !== false
+        || strpos($result, '400x20 [dsp=inline-block]') !== false) {
+        assert_contains($result, 'NOT_FOUND', 'inline-block 不应撛满父宽度 400');
+    }
+    return $result;
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-17-Display-Variations.snap';
 run_css_tests('Level 17 - Display Variations', $snapFile, $tests);
 

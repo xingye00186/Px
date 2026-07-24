@@ -130,6 +130,51 @@ $tests['max-height 小于 height 时取 max-height'] = function() {
     return $result;
 };
 
+// ── CSS-Sizing-4 §5：aspect-ratio 反向推导 H→W ──
+// height 显式声明 + aspect-ratio + width auto → width = height * ratio
+$tests['aspect-ratio 反向推导 H→W'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'width:400px;height:auto'], [
+            VNode::h('div', ['style' => 'aspect-ratio:2;height:100px'], 'AR'),
+        ])
+    );
+    // ratio=2, height=100 → width=200
+    assert_contains($result, 'div (0,0 200x100) text="AR"', 'CSS-Sizing-4 §5：H=100 * ratio=2 = W=200');
+    return $result;
+};
+
+// ── CSS Values L3 §10.4: min() / max() / clamp() 表达式 ──
+$tests['CSS Values L3 min() 取较小值'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'width:400px;height:auto'], [
+            VNode::h('div', ['style' => 'width:min(300px, 200px);height:50px'], 'Min'),
+        ])
+    );
+    assert_contains($result, 'div (0,0 200x50) text="Min"', 'min(300px, 200px) = 200px');
+    return $result;
+};
+
+$tests['CSS Values L3 max() 取较大值'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'width:400px;height:auto'], [
+            VNode::h('div', ['style' => 'width:max(150px, 250px);height:50px'], 'Max'),
+        ])
+    );
+    assert_contains($result, 'div (0,0 250x50) text="Max"', 'max(150px, 250px) = 250px');
+    return $result;
+};
+
+$tests['CSS Values L3 clamp(MIN, VAL, MAX)'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'width:400px;height:auto'], [
+            VNode::h('div', ['style' => 'width:clamp(100px, 250px, 200px);height:50px'], 'Clamp'),
+        ])
+    );
+    // clamp(100, 250, 200) = min(max(250,100), 200) = min(250, 200) = 200
+    assert_contains($result, 'div (0,0 200x50) text="Clamp"', 'clamp(100px, 250px, 200px) = 200px');
+    return $result;
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-15-Sizing-Constraints.snap';
 run_css_tests('Level 15 - Sizing Constraints', $snapFile, $tests);
 

@@ -1,4 +1,4 @@
-@generated 2026-07-24 07:19:40
+@generated 2026-07-24 09:32:02
 === Test: display:none 不渲染 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x80)
@@ -41,3 +41,10 @@ div (0,0 300x60)
   div (0,0 300x60)
     div (0,0 0x30) text="Hidden parent"
     div (0,30 0x30) text="Visible child"
+
+---
+
+=== Test: CSS §10.3.5 inline-block width auto shrink-to-fit ===
+Frame #1 events=0 detail=normal
+div (0,0 400x16)
+  div (0,0 16x16) [dsp=inline-block] text="Hi"

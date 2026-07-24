@@ -141,6 +141,21 @@ $tests['position:absolute left:0 right:0 margin:auto 水平居中'] = function()
     return $result;
 };
 
+// ── Test 11: CSS 2.2 §10.3.7 OOF insets 双向声明推导 width ──
+// 旧 bug：`$leftVal !== 0 && $rightVal !== 0` 无法区分 left:0（声明）与 left:auto（未声明）
+// 修复后：`$rawLeft !== null && $rawRight !== null` 完整声明判断
+// left:0 right:0 width auto → width 应从 ancW 推导 为 400
+$tests['CSS §10.3.7 OOF left:0 right:0 width 推导'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'position:relative;width:400px;height:100px'], [
+            VNode::h('div', ['style' => 'position:absolute;left:0;right:0;height:40px'], 'Stretched'),
+        ])
+    );
+    // 双向声明后 width = ancW - 0 - 0 = 400
+    assert_contains($result, 'div (0,0 400x40) [pos=absolute] text="Stretched"', 'CSS §10.3.7 OOF 双向 left:0/right:0 → width=400');
+    return $result;
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-12-Positioning-Advanced.snap';
 run_css_tests('Level 12 - Positioning Advanced', $snapFile, $tests);
 

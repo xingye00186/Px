@@ -115,6 +115,25 @@ $tests['margin 四方向不同值 10 20 30 40'] = function() {
     return $result;
 };
 
+// ── Test 9: CSS 2.2 §8.3.1 场景 3 — 父吸收末孙 margin-bottom ──
+// A: 父（无 padding-bottom, 无 border-bottom, 无 height, normal block）——允许 endMarginStrut 上传
+// B: A 的末子（margin-bottom:30 上传给 A）
+// D: A 的兄弟（margin-top:20 与 A 的 effectiveMBottom 相邻折叠）
+// 启用前：D.y = 90（未吸收途径 — A 基于 B.mBottom 撑高，然后用 A.mBottom 与 D.mTop 折叠）
+// 启用后：D.y = 70（A 吸收 B.mBottom=30，effectiveMBottom = max(10, 30) = 30，与 D.mTop=20 折叠 = 30）
+$tests['CSS §8.3.1 场景 3：父吸收末孙 margin-bottom'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'width:400px;height:auto'], [
+            VNode::h('div', ['style' => 'margin-bottom:10px;width:200px'], [
+                VNode::h('div', ['style' => 'height:40px;margin-bottom:30px'], 'Inner'),
+            ]),
+            VNode::h('div', ['style' => 'height:30px;margin-top:20px'], 'Sibling'),
+        ])
+    );
+    assert_contains($result, 'div (0,70 400x30) text="Sibling"', 'CSS §8.3.1 场景 3：A 吸收 B.mBottom=30→effectiveMBottom=30→与 D.mTop=20 折叠=30→D.y=70');
+    return $result;
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-11-Margin-Contexts.snap';
 run_css_tests('Level 11 - Margin Contexts', $snapFile, $tests);
 

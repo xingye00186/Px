@@ -1,4 +1,4 @@
-@generated 2026-07-24 07:19:40
+@generated 2026-07-24 09:32:02
 === Test: min-height 在 flex column 中 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x200) [dsp=flex]
@@ -59,3 +59,31 @@ div (0,0 200x80) text="Min 80 > h 30"
 === Test: max-height 小于 height 时取 max-height ===
 Frame #1 events=0 detail=normal
 div (0,0 200x60) text="Max 60 < h 150"
+
+---
+
+=== Test: aspect-ratio 反向推导 H→W ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100)
+  div (0,0 200x100) text="AR"
+
+---
+
+=== Test: CSS Values L3 min() 取较小值 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (0,0 200x50) text="Min"
+
+---
+
+=== Test: CSS Values L3 max() 取较大值 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (0,0 250x50) text="Max"
+
+---
+
+=== Test: CSS Values L3 clamp(MIN, VAL, MAX) ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50)
+  div (0,0 200x50) text="Clamp"

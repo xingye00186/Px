@@ -1,4 +1,4 @@
-@generated 2026-07-24 07:19:40
+@generated 2026-07-24 09:32:02
 === Test: margin:0 auto 水平居中 block ===
 Frame #1 events=0 detail=normal
 div (0,0 600x82)
@@ -52,3 +52,12 @@ div (0,0 400x136)
 Frame #1 events=0 detail=normal
 div (0,0 300x80)
   div (40,10 200x40) text="All margins"
+
+---
+
+=== Test: CSS §8.3.1 场景 3：父吸收末孙 margin-bottom ===
+Frame #1 events=0 detail=normal
+div (0,0 400x100)
+  div (0,0 200x70)
+    div (0,0 200x40) text="Inner"
+  div (0,70 400x30) text="Sibling"
