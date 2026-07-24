@@ -683,15 +683,12 @@ class FlexAlgorithm extends LayoutAlgorithm
         foreach ($frag->children as $child) {
             $translatedChildren[] = self::translateFragmentTree($child, $dx, $dy);
         }
-        return new \Px\Layout\PhysicalFragment(
-            $frag->x + $dx, $frag->y + $dy,
-            $frag->w, $frag->h,
-            $frag->visualW, $frag->visualH, $frag->layer,
-            $frag->contentWidth, $frag->contentHeight,
-            $frag->style, $translatedChildren, $frag->sourceNode,
-            $frag->scrollTop, $frag->scrollLeft, $frag->isScrollContainer,
-            $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles,
-            $frag->availableWidth
-        );
+        // 使用 Builder 代替位置参数构造，已删除 availableWidth（审计 §13.F）
+        return (new \Px\Layout\PhysicalFragmentBuilder())
+            ->from($frag)
+            ->x($frag->x + $dx)
+            ->y($frag->y + $dy)
+            ->children($translatedChildren)
+            ->build();
     }
 }

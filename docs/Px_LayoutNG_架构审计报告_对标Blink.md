@@ -92,6 +92,22 @@
 - LayoutOrchestrator 中已无直接使用 `new ConstraintSpace(...)` 与少部分直接 `new PhysicalFragment(...)` 调用点。无同阶 CSS 行为变化。
 - BlockAlgorithm.layoutResult() 目前仍无消费者（LayoutOrchestrator 仍调 layout()），但 endMarginStrut 产出逻辑已就位——Phase 3 开启消费时可直接使用。
 
+### 2026-07-24 Phase 3 启动：Fragment 字段清理 + endMarginStrut 消费（本轮第五批）
+
+将 Phase 2 已启用的抽象下推至真实功能层，并启动 Fragment 字段矮身：
+
+| 审计章节 | 修复项 | 实现要点 |
+|---------|---------|----------|
+| §13.F (P2) | **Fragment.availableWidth 字段完全删除** | 该字段属 Blink NGConstraintSpace::available_size，历史消费者仅在 mapping/translate 时照传递，无实际布局语义使用。PhysicalFragment/PhysicalFragmentBuilder/FlexAlgorithm.translateFragmentTree/BlockAlgorithm intrinsic path/unit test 均同步清理。Fragment 从 21 字段→ 20。 |
+| §14.6.1 | OOF insets 双向判断 bug | 旧 `$leftVal !== 0 && $rightVal !== 0` 无法区分 `left:0`（声明为 0）与 `left:auto`（未声明）。改为完整声明判断 `$rawLeft !== null && $rawRight !== null`，修复 CSS 2.2 §10.3.7/10.6.4 OOF 宽/高推导 |
+| §8.3.1 (P0) | **endMarginStrut 消费启用**（场景 3） | stackBlockChildren 内新增：对每个子 collapsible block，调用 extractEndMarginStrut 探测子的 endMarginStrut（末孙 mBottom）。若非 null，将子自己的 mBottom 与 endMarginStrut 折叠为 effectiveMBottom，同时从 stackY 中减去子 fragment.h 中已包含的 endMarginStrut 部分（避免双计）。实现 CSS 2.2 §8.3.1 第 3 种 margin 折叠场景（父吸收末孙 margin-bottom） |
+
+**Phase 2 抽象层已完成循环启动**：
+- BlockAlgorithm::layoutResult() 产出 endMarginStrut（上轮）→ stackBlockChildren 消费 endMarginStrut（本轮）→ CSS §8.3.1 场景 3 实施
+- 虽未在 css-standards 新增通过项（现测例集无直接覆盖场景 3），但功能已就位，可在实际布局验证
+
+**数据字段语义得分升级**：**~62% → ~64%**（Fragment 字段职责溢出 6 项缺口本轮处理 1 项）。
+
 以下问题**部分修复**：
 
 | 原优先级 | 问题 | 当前状态 |
@@ -1695,4 +1711,4 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 | 2026-07-24 | **Phase 2 铺垫完成**：MarginStrut 抽象建立（对标 Blink NGMarginStrut），BlockAlgorithm 相邻兄弟 margin 折叠已重构为使用。box-sizing 与 min/max 交互、auto-height 排除 OOF、OOF margin:auto Y 轴、Flex Pass 2 确定性、FlexLineBreaker docblock 均已修。P0=0 P1=0 P2=1 P3=1。cs-standards 基线 254/300 零回归 |
 | 2026-07-24 | **Phase 2 抽象层建立**：对标 Blink 新增三个抽象类与一个基类包裹方法—LayoutResult (§12.2 P0)、ConstraintSpaceBuilder (§12.3 P2)、LayoutInputNode (§12.1 P1)、LayoutAlgorithm::layoutResult()。均并行安全，带 wrap() / from() 迁移期便捷方法。抽象层次 85% → 93%。cs-standards 基线 254/300 零回归 |
 | 2026-07-24 | **Phase 2 抽象层启用**：BlockAlgorithm::layoutResult() 真实 override（新增 extractEndMarginStrut 处理 BFC/padding/height/collapsible block 预判，为 §8.3.1 第 3 种场景铺路）。LayoutOrchestrator 根容器与 buildChildSpace 均改用 ConstraintSpaceBuilder（命名参数代替 21 位置参数）。PhysicalFragmentBuilder 补全 textWidth/displayText 字段，translateFragment/postProcess 重建父均改用 Builder（代码行数从各 20 行降至 7 行）。cs-standards 基线 254/300 零回归 |
-
+| 2026-07-24 | **Phase 3 启动**：Fragment 字段矮身—availableWidth 完全删除（21 → 20 字段）。OOF insets 双向判断 bug 修复（审计 §14.6.1）。**endMarginStrut 消费启用**：stackBlockChildren 提取子的 endMarginStrut 与子 margin-bottom 折叠，实施 CSS §8.3.1 场景 3（父吸收末孙 margin-bottom）。cs-standards 基线 254/300 零回归 |

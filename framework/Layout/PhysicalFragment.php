@@ -45,8 +45,9 @@ class PhysicalFragment
     public readonly array $dataset;
     public readonly array $pseudoStyles;
 
-    /** 容器可用宽度（供 span/inline 文本换行使用） */
-    public readonly int $availableWidth;
+    // 已删除 availableWidth 字段（审计 §13.F）：该字段属于 ConstraintSpace 而非布局输出，
+    // 对标 Blink NGConstraintSpace::available_size。历史消费者仅在 mapping 时照抜传递，
+    // 无实际布局语义使用，故完全删除。
 
     /**
      * 文本像素宽度（layout 阶段预计算，paint 阶段零测量）
@@ -75,7 +76,6 @@ class PhysicalFragment
     public function getScrollTop(): int { return $this->scrollTop; }
     public function getScrollLeft(): int { return $this->scrollLeft; }
     public function getIsScrollContainer(): bool { return $this->isScrollContainer; }
-    public function getAvailableWidth(): int { return $this->availableWidth; }
 
     /** 滚动状态 */
     public readonly int $scrollTop;
@@ -102,9 +102,9 @@ class PhysicalFragment
         mixed $content = null,
         array $dataset = [],
         array $pseudoStyles = [],
-        int $availableWidth = 0,
         int $textWidth = 0,
         string $displayText = '',
+        // 已删除位置参数 availableWidth（审计 §13.F）：非布局输出，属 ConstraintSpace 职责
     ) {
         $this->x               = (int)$x;
         $this->y               = (int)$y;
@@ -125,7 +125,6 @@ class PhysicalFragment
         $this->content           = $content;
         $this->dataset           = $dataset;
         $this->pseudoStyles      = $pseudoStyles;
-        $this->availableWidth    = (int)$availableWidth;
         $this->textWidth          = (int)$textWidth;
         $this->displayText        = $displayText;
     }
@@ -140,7 +139,7 @@ class PhysicalFragment
             $this->style, $this->children, $this->sourceNode,
             $this->scrollTop, $this->scrollLeft, $this->isScrollContainer,
             $this->type, $this->content, $this->dataset, $this->pseudoStyles,
-            $this->availableWidth, $this->textWidth, $text
+            $this->textWidth, $text
         );
     }
 

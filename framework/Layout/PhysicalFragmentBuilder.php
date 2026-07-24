@@ -34,7 +34,7 @@ class PhysicalFragmentBuilder
     private mixed $_content = null;
     private array $_dataset = [];
     private array $_pseudoStyles = [];
-    private int $_availableWidth = 0;
+    // 已删除 _availableWidth（审计 §13.F）：非布局输出。
     private int $_scrollTop = 0;
     private int $_scrollLeft = 0;
     private bool $_isScrollContainer = false;
@@ -57,7 +57,7 @@ class PhysicalFragmentBuilder
     public function content(mixed $v): self { $this->_content = $v; return $this; }
     public function dataset(array $v): self { $this->_dataset = $v; return $this; }
     public function pseudoStyles(array $v): self { $this->_pseudoStyles = $v; return $this; }
-    public function availableWidth(int $v): self { $this->_availableWidth = $v; return $this; }
+    // 已删除 availableWidth() setter（审计 §13.F）：非布局输出。
     public function scrollTop(int $v): self { $this->_scrollTop = $v; return $this; }
     public function scrollLeft(int $v): self { $this->_scrollLeft = $v; return $this; }
     public function isScrollContainer(bool $v): self { $this->_isScrollContainer = $v; return $this; }
@@ -83,7 +83,7 @@ class PhysicalFragmentBuilder
         $this->_content = $f->content;
         $this->_dataset = (array)$f->dataset;
         $this->_pseudoStyles = (array)$f->pseudoStyles;
-        $this->_availableWidth = (int)$f->availableWidth;
+        // 已删除 _availableWidth 拷贝行（审计 §13.F）
         $this->_scrollTop = (int)$f->scrollTop;
         $this->_scrollLeft = (int)$f->scrollLeft;
         $this->_isScrollContainer = (bool)$f->isScrollContainer;
@@ -102,7 +102,6 @@ class PhysicalFragmentBuilder
             $this->_sourceNode,
             $this->_scrollTop, $this->_scrollLeft, $this->_isScrollContainer,
             $this->_type, $this->_content, $this->_dataset, $this->_pseudoStyles,
-            $this->_availableWidth,
             $this->_textWidth,
             $this->_displayText,
         );

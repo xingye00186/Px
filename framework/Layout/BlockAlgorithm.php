@@ -129,7 +129,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
             $w = strlen($textContent) > 0 ? TextMeasureCache::measure($textContent, $fs, (bool)($s->getBold() ?? false)) : 0;
             $h = strlen($textContent) > 0 ? ($s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($fs * 1.2)) : 0;
-            return new PhysicalFragment((int)max(0, $w), (int)max(0, $h), 0, 0, 0, 0, 0, 0, 0, $s, [], null, 0, 0, false, '', null, [], [], 0, (int)max(0, $w));
+            return new PhysicalFragment((int)max(0, $w), (int)max(0, $h), 0, 0, 0, 0, 0, 0, 0, $s, [], null, 0, 0, false, '', null, [], [], (int)max(0, $w));
         }
 
         $left = $s->left?->toPx() ?? 0;
@@ -409,8 +409,23 @@ class BlockAlgorithm extends LayoutAlgorithm
             $result[] = new PhysicalFragment((int)($parentX + $borderLeft + $padLeft + $xOffset + ($childPosition === 'relative' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->getLayer() ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, $cr->sourceNode,
                     $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
                     $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
-            $stackY = ($childY - ($childPosition === 'relative' ? $relTop : 0)) + $chH + $mBottom;
-            $prevMarginBottom = $mBottom;
+            // ── endMarginStrut 消费（CSS 2.2 §8.3.1 场景 3）──
+            // 若子允许 endMarginStrut 上传（子无 padding-bottom/border-bottom/height + 末孙为 collapsible），
+            // 则将子自己的 margin-bottom 与子的 endMarginStrut 折叠，作为 effectiveMBottom。
+            // 代替 $prevMarginBottom，使得相邻兄弟折叠与后续 stackY 基于折叠后的值。
+            $childEndStrut = $isCollapsible ? $this->extractEndMarginStrut($cr, $childStyle) : null;
+            $effectiveMBottom = $mBottom;
+            $absorbedBottom = 0;
+            if ($childEndStrut !== null) {
+                $strut = new MarginStrut();
+                $strut->append($mBottom);
+                $strut->appendStrut($childEndStrut);
+                $effectiveMBottom = $strut->resolve();
+                // 子 fragment 的 h 已包含末孙 mBottom（auto-height 下），需从 stackY 中减去。
+                $absorbedBottom = $childEndStrut->resolve();
+            }
+            $stackY = ($childY - ($childPosition === 'relative' ? $relTop : 0)) + $chH - $absorbedBottom + $effectiveMBottom;
+            $prevMarginBottom = $effectiveMBottom;
             $prevCollapsible = $isCollapsible;
         }
         if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW); }

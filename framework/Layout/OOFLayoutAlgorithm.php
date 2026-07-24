@@ -210,10 +210,17 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $marginRight = (int)($cs->margin?->right->toPx() ?? 0);
         $marginBottom = (int)($cs->margin?->bottom->toPx() ?? 0);
 
-        if ($leftVal !== 0 && $rightVal !== 0 && $width <= 0) {
+        // CSS 2.2 §10.3.7/10.6.4：OOF 子项 left+right 同时声明且 width auto 时，推导 width；
+        // top+bottom 同时声明且 height auto 时，推导 height。
+        // 旧 `!== 0` 判断无法区分 left:0 (声明为 0) 与 left:auto (未声明)，改为完整声明判断。
+        $hasLeftDecl = ($rawLeft !== null);
+        $hasRightDecl = ($rawRight !== null);
+        $hasTopDecl = ($rawTop !== null);
+        $hasBottomDecl = ($rawBottom !== null);
+        if ($hasLeftDecl && $hasRightDecl && $width <= 0) {
             $width = max(0, $ancW - $leftVal - $rightVal - $marginLeft - $marginRight);
         }
-        if ($topVal !== 0 && $bottomVal !== 0 && $height <= 0) {
+        if ($hasTopDecl && $hasBottomDecl && $height <= 0) {
             $height = max(0, $ancH - $topVal - $bottomVal - $marginTop - $marginBottom);
         }
 

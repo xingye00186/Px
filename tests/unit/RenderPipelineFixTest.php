@@ -39,7 +39,6 @@ describe('PhysicalFragmentBuilder', function () {
             ->content('hello world')
             ->dataset(['pxAnchor' => 'tl'])
             ->pseudoStyles(['hover' => ['bg' => 0xFF0000]])
-            ->availableWidth(300)
             ->scrollTop(5)->scrollLeft(10)
             ->isScrollContainer(true)
             ->build();
@@ -47,7 +46,7 @@ describe('PhysicalFragmentBuilder', function () {
         assert($frag->content === 'hello world', "content 不匹配");
         assert(($frag->dataset['pxAnchor'] ?? '') === 'tl', "dataset 不匹配");
         assert(($frag->pseudoStyles['hover']['bg'] ?? 0) === 0xFF0000, "pseudoStyles 不匹配");
-        assert($frag->availableWidth === 300, "availableWidth 不匹配");
+        // availableWidth 已删除（审计 §13.F）：非布局输出，属 ConstraintSpace 职责
         assert($frag->scrollTop === 5, "scrollTop 不匹配");
         assert($frag->isScrollContainer === true, "isScrollContainer 应为 true");
     });
