@@ -151,6 +151,48 @@ class RenderTreeManager
                 $output .= " fg=";
                 $output .= (string)$fg;
             }
+
+            // text-decoration 标注（对标测试期望）
+            // 注：rawDeclarations 中可能以 CssKeyword/CssLength/string 形式存储
+            $decLineRaw = $cs?->getRaw('textDecorationLine');
+            $decLine = 'none';
+            if ($decLineRaw !== null) {
+                if (is_object($decLineRaw) && isset($decLineRaw->value)) $decLine = (string)$decLineRaw->value;
+                else if (is_string($decLineRaw)) $decLine = $decLineRaw;
+            }
+            if ($decLine !== 'none' && $decLine !== '') {
+                $output .= " decorationLine=$decLine";
+                $decStyleRaw = $cs?->getRaw('textDecorationStyle');
+                $decStyle = 'solid';
+                if ($decStyleRaw !== null) {
+                    if (is_object($decStyleRaw) && isset($decStyleRaw->value)) $decStyle = (string)$decStyleRaw->value;
+                    else if (is_string($decStyleRaw)) $decStyle = $decStyleRaw;
+                }
+                $output .= " decorationStyle=$decStyle";
+                $decThickRaw = $cs?->getRaw('textDecorationThickness');
+                $decThick = 0;
+                if ($decThickRaw !== null) {
+                    if (is_object($decThickRaw) && method_exists($decThickRaw, 'toPx')) $decThick = (int)$decThickRaw->toPx();
+                    else if (is_numeric($decThickRaw)) $decThick = (int)$decThickRaw;
+                }
+                if ($decThick > 0) $output .= " decorationThickness=$decThick";
+                $offsetRaw = $cs?->getRaw('textUnderlineOffset');
+                $offset = 0;
+                if ($offsetRaw !== null) {
+                    if (is_object($offsetRaw) && method_exists($offsetRaw, 'toPx')) $offset = (int)$offsetRaw->toPx();
+                    else if (is_numeric($offsetRaw)) $offset = (int)$offsetRaw;
+                }
+                if ($offset > 0) $output .= " underlineOffset=$offset";
+            }
+            $decColorRaw = $cs?->getRaw('textDecorationColor');
+            $decColor = null;
+            if ($decColorRaw !== null) {
+                if (is_numeric($decColorRaw)) $decColor = (int)$decColorRaw;
+                else if (is_object($decColorRaw) && isset($decColorRaw->value) && is_numeric($decColorRaw->value)) $decColor = (int)$decColorRaw->value;
+            }
+            if ($decColor !== null && $decColor !== 0xFFFFFF) {
+                $output .= " decorationColor=0x" . strtoupper(str_pad(dechex((int)$decColor), 6, '0', STR_PAD_LEFT));
+            }
         }
 
         // ── verbose 级别：完整 style 和脏标记 ──
@@ -218,17 +260,18 @@ class RenderTreeManager
         if ($pos !== 'static') {
             $output .= " [pos=$pos]";
         }
-        // display 标注（对标测试期望：[dsp=none] / [dsp=inline] / [dsp=inline-block]）
+        // display 标注（对标测试期望：[dsp=flex] / [dsp=grid] / [dsp=none] / [dsp=inline] / [dsp=inline-block] / [dsp=table*]）
+        // 仅默认的 block 不输出标记
         $dsp = $frag->style?->display?->value ?? 'block';
-        if ($dsp !== 'block' && $dsp !== 'flex' && $dsp !== 'grid') {
+        if ($dsp !== 'block') {
             $output .= " [dsp=$dsp]";
         }
-        // 滚动容器标注（对标测试期望：scroll ch=X cw=Y maxScroll=Z）
+        // 滚动容器标注（对标测试期望：scroll ch=X cw=Y maxScroll=Z st=A sl=B）
         if ($frag->isScrollContainer) {
             $ch = $frag->contentHeight;
             $cw = $frag->contentWidth;
             $maxScroll = max(0, $ch - $frag->h);
-            $output .= " scroll ch=$ch cw=$cw maxScroll=$maxScroll";
+            $output .= " scroll ch=$ch cw=$cw maxScroll=$maxScroll st=" . (int)$frag->scrollTop . " sl=" . (int)$frag->scrollLeft;
         }
         // 边框宽度标注（对标测试期望：bw=X）
         $bw = (int)($frag->style?->borderTopWidth ?? 0);
@@ -236,7 +279,16 @@ class RenderTreeManager
             $output .= " bw=$bw";
         }
         // overflow 标注（对标测试期望：ov=hidden / ov=auto / ov=scroll）
+        // 当 overflow-x/y 单独声明时，overshorthand 未声明，需从 x/y 推导
         $ov = $frag->style?->overflow?->value ?? 'visible';
+        if ($ov === 'visible') {
+            $ovx = $frag->style?->overflowX?->value ?? 'visible';
+            $ovy = $frag->style?->overflowY?->value ?? 'visible';
+            // 任一方向 hidden → ov=hidden；任一方向非 visible → 取非 visible 的那个值
+            if ($ovx === 'hidden' || $ovy === 'hidden') $ov = 'hidden';
+            else if ($ovx !== 'visible') $ov = $ovx;
+            else if ($ovy !== 'visible') $ov = $ovy;
+        }
         if ($ov !== 'visible') {
             $output .= " ov=$ov";
         }
@@ -245,17 +297,48 @@ class RenderTreeManager
         if (is_numeric($fg) && (int)$fg > 0) {
             $output .= " fg=" . (int)$fg;
         }
-        // text-decoration 标注（对标测试期望：decorationLine=X decorationColor=X decorationStyle=X）
-        $decLine = $frag->style?->getRaw('textDecorationLine') ?? 'none';
-        if (is_string($decLine) && $decLine !== 'none' && $decLine !== '') {
-            $output .= " decorationLine=$decLine";
-            // decorationStyle 始终伴随 decorationLine 输出
-            $decStyle = $frag->style?->getRaw('textDecorationStyle') ?? 'solid';
-            $output .= " decorationStyle=" . (is_string($decStyle) ? $decStyle : 'solid');
+        // text-decoration 标注（对标测试期望：decorationLine=X decorationColor=X decorationStyle=X decorationThickness=X underlineOffset=X）
+        // 注：rawDeclarations 中该系列属性可能以 CssKeyword/CssLength/string 形式存储，需统一提取值
+        $decLineRaw = $frag->style?->getRaw('textDecorationLine');
+        $decLine = 'none';
+        if ($decLineRaw !== null) {
+            if (is_object($decLineRaw) && isset($decLineRaw->value)) $decLine = (string)$decLineRaw->value;
+            else if (is_string($decLineRaw)) $decLine = $decLineRaw;
         }
-        $decColor = $frag->style?->getRaw('textDecorationColor') ?? null;
+        if ($decLine !== 'none' && $decLine !== '') {
+            $output .= " decorationLine=$decLine";
+            $decStyleRaw = $frag->style?->getRaw('textDecorationStyle');
+            $decStyle = 'solid';
+            if ($decStyleRaw !== null) {
+                if (is_object($decStyleRaw) && isset($decStyleRaw->value)) $decStyle = (string)$decStyleRaw->value;
+                else if (is_string($decStyleRaw)) $decStyle = $decStyleRaw;
+            }
+            $output .= " decorationStyle=$decStyle";
+            // decoration-thickness
+            $decThickRaw = $frag->style?->getRaw('textDecorationThickness');
+            $decThick = 0;
+            if ($decThickRaw !== null) {
+                if (is_object($decThickRaw) && method_exists($decThickRaw, 'toPx')) $decThick = (int)$decThickRaw->toPx();
+                else if (is_numeric($decThickRaw)) $decThick = (int)$decThickRaw;
+            }
+            if ($decThick > 0) $output .= " decorationThickness=$decThick";
+            // text-underline-offset
+            $offsetRaw = $frag->style?->getRaw('textUnderlineOffset');
+            $offset = 0;
+            if ($offsetRaw !== null) {
+                if (is_object($offsetRaw) && method_exists($offsetRaw, 'toPx')) $offset = (int)$offsetRaw->toPx();
+                else if (is_numeric($offsetRaw)) $offset = (int)$offsetRaw;
+            }
+            if ($offset > 0) $output .= " underlineOffset=$offset";
+        }
+        $decColorRaw = $frag->style?->getRaw('textDecorationColor');
+        $decColor = null;
+        if ($decColorRaw !== null) {
+            if (is_numeric($decColorRaw)) $decColor = (int)$decColorRaw;
+            else if (is_object($decColorRaw) && isset($decColorRaw->value) && is_numeric($decColorRaw->value)) $decColor = (int)$decColorRaw->value;
+        }
         if ($decColor !== null && $decColor !== 0xFFFFFF) {
-            $output .= " decorationColor=0x" . str_pad(dechex((int)$decColor), 6, '0', STR_PAD_LEFT);
+            $output .= " decorationColor=0x" . strtoupper(str_pad(dechex((int)$decColor), 6, '0', STR_PAD_LEFT));
         }
 
         if ($frag->content !== null && $frag->content !== "") {
@@ -1096,7 +1179,6 @@ class RenderTreeManager
         // 子节点中有几何变化的 → 传播 layoutDirty（父链全量布局）
         foreach ($node->children as $child) {
             if ($child->layoutDirty) {
-                $node->childrenNeedLayout = true;
                 $node->markLayoutDirty(true);
                 return;
             }
@@ -1104,13 +1186,10 @@ class RenderTreeManager
         // 子节点中只有视觉变化的 → 传播 styleDirty（仅重绘，不布局）
         foreach ($node->children as $child) {
             if ($child->styleDirty) {
-                $node->childrenNeedLayout = true;
                 $node->markStyleDirty(true);
                 return;
             }
         }
-        // 所有子节点洁净 → 清除 childrenNeedLayout
-        $node->childrenNeedLayout = false;
     }
 
     /**

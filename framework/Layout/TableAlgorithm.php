@@ -33,8 +33,9 @@ class TableAlgorithm extends LayoutAlgorithm
         }
 
         $display = $s->display?->value ?? 'table';
-        $x = ($space->getBfcOffsetX() ?? 0) + ((int)($s->left?->toPx() ?? 0));
-        $y = ($space->getBfcOffsetY() ?? 0) + ((int)($s->top?->toPx() ?? 0));
+        // 对标 Blink NGTableLayoutAlgorithm：存放相对于约束根的坐标，bfc_offset 在 Px 中未启用
+        $x = (int)($s->left?->toPx() ?? 0);
+        $y = (int)($s->top?->toPx() ?? 0);
 
         $w = $s->width?->toPx() ?? 0;
         if ($w <= 0) $w = $space->getContentWidth();
@@ -90,12 +91,12 @@ class TableAlgorithm extends LayoutAlgorithm
 
                     $normCells = [];
                     foreach ($cellResults as $cf) {
-                        $normCells[] = new PhysicalFragment((int)$cf->x, (int)$currentY, (int)$cf->w, (int)$lineH, null, null, (int)$cf->layer, (int)$cf->contentWidth, (int)$cf->contentHeight, $cf->style, $cf->children, $cf->sourceNode,
+                        $normCells[] = new PhysicalFragment((int)$cf->x, (int)$currentY, (int)$cf->w, (int)$lineH, (int)$cf->w, (int)$lineH, (int)$cf->layer, (int)$cf->contentWidth, (int)$cf->contentHeight, $cf->style, $cf->children, $cf->sourceNode,
             $cf->scrollTop, $cf->scrollLeft, $cf->isScrollContainer,
             $cf->type, $cf->content, $cf->dataset, $cf->pseudoStyles);
                     }
 $firstNorm = count($normCells) > 0 ? $normCells[0] : null;
-                    $stackedChildren[] = new PhysicalFragment((int)$x, (int)$currentY, (int)$w, (int)$lineH, null, null, 0, (int)$w, (int)$lineH, $crStyle, $normCells, $firstNorm?->sourceNode,
+                    $stackedChildren[] = new PhysicalFragment((int)$x, (int)$currentY, (int)$w, (int)$lineH, (int)$w, (int)$lineH, 0, (int)$w, (int)$lineH, $crStyle, $normCells, $firstNorm?->sourceNode,
                         0, 0, false,
                         $firstNorm?->type ?? '', $firstNorm?->content ?? null, $firstNorm?->dataset ?? [], $firstNorm?->pseudoStyles ?? []);
                     $currentY += $lineH;

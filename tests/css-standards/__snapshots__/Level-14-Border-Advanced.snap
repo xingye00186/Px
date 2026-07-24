@@ -1,4 +1,4 @@
-@generated 2026-07-23 19:33:16
+@generated 2026-07-24 06:02:48
 === Test: border-top 顶部边框 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x80) bw=2 text="Top border"
@@ -44,6 +44,12 @@ div (0,0 100x50) text="No border"
 === Test: border-width 独立设置 6px ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50) bw=6 text="Border width"
+
+---
+
+=== Test: border-style 显式设置 dashed ===
+Frame #1 events=0 detail=normal
+div (0,0 100x50) bw=2 text="Dashed border"
 
 ---
 

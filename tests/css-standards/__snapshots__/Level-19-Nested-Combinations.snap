@@ -1,15 +1,46 @@
-@generated 2026-07-23 19:33:16
+@generated 2026-07-24 06:02:49
+=== Test: Flex Column 内 Flex Row 嵌套 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200) [dsp=flex]
+  div (0,0 400x40) [dsp=flex]
+    div (0,0 130x40) fg=1 text="A"
+    div (138,0 261x40) fg=2 text="B"
+  div (0,48 400x40) [dsp=flex]
+    div (70,48 60x40) text="C"
+    div (270,48 60x40) text="D"
+
+---
+
+=== Test: Grid 内 overflow 滚动容器 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x150) [dsp=grid]
+  div (0,0 200x80) text="Normal"
+  div (208,0 200x80) scroll ch=80 cw=0 maxScroll=0 st=0 sl=0 ov=auto text="Scroll"
+
+---
+
 === Test: Flex 内 absolute 定位元素 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x100) [pos=relative]
+div (0,0 400x100) [pos=relative] [dsp=flex]
   div (0,0 80x40) text="Item"
   div (290,10 100x50) [pos=absolute] text="Absolute"
 
 ---
 
+=== Test: Scroll 容器内 Grid 布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x150) scroll ch=128 cw=300 maxScroll=0 st=0 sl=0 ov=auto
+  div (0,0 300x128) [dsp=grid]
+    div (0,0 146x60) text="A"
+    div (154,0 146x60) text="B"
+    div (0,68 146x60) text="C"
+    div (154,68 146x60) text="D"
+
+---
+
 === Test: Grid cell 内 position:absolute ===
 Frame #1 events=0 detail=normal
-div (0,0 400x120)
+div (0,0 400x120) [dsp=grid]
   div (0,0 200x80) [pos=relative]
     div (130,10 60x30) [pos=absolute] text="Badge"
     div (0,0 0x40) text="Content"

@@ -38,8 +38,8 @@ $tests['box-sizing:border-box 边框进一步缩小内容'] = function() {
             VNode::h('div', ['style' => 'width:100%;height:30px;background:#0F0'], 'Inner'),
         ])
     );
-    // content width = 200 - 10*2 - 2*2 = 176, child placed at padding offset (10,10)
-    assert_contains($result, '(10,10 176x30)', 'border-box: child width 176 after 10px padding + 2px border');
+    // content width = 200 - 10*2 - 2*2 = 176, child placed at (border-left + padding-left, border-top + padding-top) = (12, 12)
+    assert_contains($result, '(12,12 176x30)', 'border-box: child at (12,12) width 176 after 2px border + 10px padding');
     return $result;
 };
 

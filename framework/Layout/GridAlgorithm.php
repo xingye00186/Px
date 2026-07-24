@@ -80,6 +80,27 @@ class GridAlgorithm extends LayoutAlgorithm
             $rawRows = $rawRows instanceof CssKeyword ? $rawRows->value : (string)$rawRows;
         }
 
+        // ── grid-auto-rows / grid-auto-columns（对标 Blink NGGridLayoutAlgorithm）──
+        // Spec CSS Grid §12.4：隐式行/列尺寸由 grid-auto-rows/columns 控制，
+        // 未声明时为 auto（基于内容 max）。
+        // 注：css-mappings 中 parser=parsePixels → rawDeclarations 中存储为 CssLength 对象。
+        $autoRowSize = 0;
+        $rawAutoRows = $s->getRaw('gridAutoRows');
+        if ($rawAutoRows !== null) {
+            if ($rawAutoRows instanceof \Px\Css\CssLength) {
+                $autoRowSize = (int)$rawAutoRows->toPx();
+            } else if ($rawAutoRows instanceof CssKeyword) {
+                // auto/min-content/max-content 等关键字 → 降级到内容基础
+                $autoRowSize = 0;
+            } else if (is_numeric($rawAutoRows)) {
+                $autoRowSize = (int)$rawAutoRows;
+            } else if (is_string($rawAutoRows)) {
+                $r = trim($rawAutoRows);
+                if (str_ends_with($r, 'px')) $autoRowSize = (int)substr($r, 0, -2);
+                else if (ctype_digit($r)) $autoRowSize = (int)$r;
+            }
+        }
+
         // ── Compute tracks ──
         $cols = $this->computeTracks($rawCols, $width, $gap);
         $rows = $this->computeTracks($rawRows, $height > 0 ? $height : 0, $gap);
@@ -94,7 +115,8 @@ class GridAlgorithm extends LayoutAlgorithm
         }
         if (empty($rows)) {
             $t = new GridTrack();
-            $t->size = $this->estimateAutoRowSize($childResults, count($cols), 0);
+            // 隐式行尺寸：优先 grid-auto-rows，否则基于内容 max
+            $t->size = $autoRowSize > 0 ? $autoRowSize : $this->estimateAutoRowSize($childResults, count($cols), 0);
             $t->start = 0;
             $t->end = $t->size;
             $rows = [$t];
@@ -137,10 +159,27 @@ class GridAlgorithm extends LayoutAlgorithm
         $numCols = count($cols);
         $idx = 0;
         $totalItems = count($childResults);
-        $neededRows = $numCols > 0 ? (int)ceil($totalItems / $numCols) : $totalItems;
+        // 对标 CSS Grid §10.4: grid-auto-flow 控制隐式子项摆放方向
+        $rawAutoFlow = $s->getRaw('gridAutoFlow');
+        $autoFlowVal = 'row';
+        if ($rawAutoFlow !== null) {
+            if ($rawAutoFlow instanceof CssKeyword) $autoFlowVal = (string)$rawAutoFlow->value;
+            else if (is_string($rawAutoFlow)) $autoFlowVal = $rawAutoFlow;
+        }
+        $isColumnFlow = (str_contains($autoFlowVal, 'column'));
+        // column-flow 需基于行数确定尺寸（确保至少一行）
+        $numRowsInit = max(1, count($rows));
+        $neededRows = $isColumnFlow
+            ? $numRowsInit
+            : ($numCols > 0 ? (int)ceil($totalItems / $numCols) : $totalItems);
+        // 列优先下：需要的隐式列数 = ceil(totalItems / numRows)
+        $neededColsForColumnFlow = $isColumnFlow && $numRowsInit > 0
+            ? (int)ceil($totalItems / $numRowsInit)
+            : $numCols;
         while (count($rows) < $neededRows) {
             $t = new GridTrack();
-            $t->size = $this->estimateAutoRowSize($childResults, count($cols), 0);
+            // 隐式行尺寸：优先 grid-auto-rows，否则基于内容 max
+            $t->size = $autoRowSize > 0 ? $autoRowSize : $this->estimateAutoRowSize($childResults, count($cols), count($rows));
             $t->start = count($rows) > 0 ? end($rows)->end + $gap : 0;
             $t->end = $t->start + $t->size;
             $rows[] = $t;
@@ -148,14 +187,23 @@ class GridAlgorithm extends LayoutAlgorithm
         if (count($rows) > 0 && $neededRows > 0) {
             $this->recomputeTrackPositions($rows, $gap);
         }
+        $numRows = count($rows);
         foreach ($childResults as $cr) {
             $gi = new GridItem();
-            $gi->colStart = $idx % $numCols;
+            if ($isColumnFlow && $numRows > 0) {
+                // column-first placement: fill top-to-bottom, then next column
+                $gi->colStart = (int)($idx / $numRows);
+                $gi->rowStart = $idx % $numRows;
+            } else {
+                // row-first (default)
+                $gi->colStart = $numCols > 0 ? ($idx % $numCols) : 0;
+                $gi->rowStart = $numCols > 0 ? (int)($idx / $numCols) : 0;
+            }
             $gi->colEnd = $gi->colStart + 1;
-            $gi->rowStart = (int)($idx / $numCols);
             $gi->rowEnd = $gi->rowStart + 1;
-            $gi->w = $cols[$gi->colStart]->size;
-            $gi->h = max(1, $gi->rowStart < count($rows) ? $rows[$gi->rowStart]->size : 50);
+            $safeCol = min($gi->colStart, max(0, $numCols - 1));
+            $gi->w = $numCols > 0 ? $cols[$safeCol]->size : 0;
+            $gi->h = max(1, $gi->rowStart < $numRows ? $rows[$gi->rowStart]->size : ($autoRowSize > 0 ? $autoRowSize : 50));
             $gi->style = $cr->style;
             $gi->originalChildren = $cr->children;
             $gridItems[] = $gi;
@@ -176,7 +224,7 @@ class GridAlgorithm extends LayoutAlgorithm
                     $trackW, $trackH > 0 ? $trackH : $c->getContentHeight(),
                     $trackW, $c->getPercentageHeight(),
                     0, 0, 0, 0, 0, 0, 0, 0,
-                    true, false, 0, 0, 'block',
+                    true, false, 'block',
                     $trackW, $c->getPercentageHeight(),
                 );
                 $reFrag = $this->layoutChild($childNodes[$idx2], $trackSpace);
@@ -260,8 +308,14 @@ class GridAlgorithm extends LayoutAlgorithm
             // grid cell fragment 代表原 div，元数据（type/content/sourceNode/dataset/pseudoStyles）
             // 取自原 fragment（$origFrag）而非第一个子节点——文本型 div 的内容存在
             // $origFrag->content（无子 fragment），取 firstChild 会丢失 content。
-            $mappedFragments[] = new PhysicalFragment($itemX, (int)($gri->y ?? 0), $itemW, $gh, (int)($gri->style?->visualWidth($itemW) ?? $itemW), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, 0, 0, $gri->style, $children, $origFrag?->sourceNode,
-                0, 0, false,
+            // 对标 Blink NGGridLayoutAlgorithm：mapping fragment 需保留原子项的滚动状态与内容尺寸
+            $origIsScroll = $origFrag?->isScrollContainer ?? false;
+            $origScrollTop = (int)($origFrag?->scrollTop ?? 0);
+            $origScrollLeft = (int)($origFrag?->scrollLeft ?? 0);
+            $origContentW = (int)($origFrag?->contentWidth ?? 0);
+            $origContentH = (int)($origFrag?->contentHeight ?? 0);
+            $mappedFragments[] = new PhysicalFragment($itemX, (int)($gri->y ?? 0), $itemW, $gh, (int)($gri->style?->visualWidth($itemW) ?? $itemW), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, $origContentW, $origContentH, $gri->style, $children, $origFrag?->sourceNode,
+                $origScrollTop, $origScrollLeft, $origIsScroll,
                 $origFrag?->type ?? '', $origFrag?->content, $origFrag?->dataset ?? [], $origFrag?->pseudoStyles ?? []);
             $giIdx++;
         }

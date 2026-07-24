@@ -1,4 +1,4 @@
-@generated 2026-07-23 19:33:15
+@generated 2026-07-24 06:02:47
 === Test: 绝对定位 div (left=10, top=20, w=100, h=50) ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50) text="Hello"
@@ -24,6 +24,13 @@ div (0,0 300x200)
 Frame #1 events=0 detail=normal
 div (0,0 400x100)
   div (0,0 200x50) text="50% width"
+
+---
+
+=== Test: padding 缩小内容区 (padding=10px) ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100)
+  div (10,10 180x50) text="Padding test"
 
 ---
 
@@ -73,6 +80,20 @@ div (0,0 300x90)
 
 ---
 
+=== Test: 百分比高度 height=50% ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200)
+  div (0,0 100x100) text="50% h"
+
+---
+
 === Test: border 增加外尺寸 ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50) bw=2 text="Border"
+
+---
+
+=== Test: border+padding+width 组合 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x100) bw=2
+  div (12,12 176x50) text="Inner"

@@ -1,8 +1,15 @@
-@generated 2026-07-23 19:33:16
+@generated 2026-07-24 06:02:49
 === Test: box-sizing:border-box 内容区缩小 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x80)
   div (20,20 160x30) text="Child"
+
+---
+
+=== Test: box-sizing:border-box 边框进一步缩小内容 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x80) bw=2
+  div (12,12 176x30) text="Inner"
 
 ---
 
@@ -15,14 +22,14 @@ div (0,0 200x80)
 
 === Test: min-width:300px 覆盖 width:100px ===
 Frame #1 events=0 detail=normal
-div (0,0 400x60)
+div (0,0 400x60) [dsp=flex]
   div (0,0 300x40) text="Min"
 
 ---
 
 === Test: max-width:150px 覆盖 width:300px ===
 Frame #1 events=0 detail=normal
-div (0,0 400x60)
+div (0,0 400x60) [dsp=flex]
   div (0,0 150x40) text="Max"
 
 ---
@@ -38,3 +45,10 @@ div (0,0 200x200)
 Frame #1 events=0 detail=normal
 div (0,0 400x60)
   div (0,0 200x40) text="Half"
+
+---
+
+=== Test: calc(100% - 60px) 计算表达式 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60)
+  div (0,0 340x40) text="Calc"

@@ -1,4 +1,4 @@
-@generated 2026-07-23 19:33:15
+@generated 2026-07-24 06:02:48
 === Test: overflow:hidden 子元素超出容器 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100) ov=hidden
@@ -8,7 +8,7 @@ div (0,0 200x100) ov=hidden
 
 === Test: overflow-y:auto 滚动容器 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x150) scroll ch=200 cw=300 maxScroll=50
+div (0,0 300x150) scroll ch=200 cw=300 maxScroll=50 st=0 sl=0 ov=auto
   div (0,0 280x50) text="Item 1"
   div (0,50 280x50) text="Item 2"
   div (0,100 280x50) text="Item 3"
@@ -18,8 +18,31 @@ div (0,0 300x150) scroll ch=200 cw=300 maxScroll=50
 
 === Test: overflow:auto 双轴滚动 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x200) scroll ch=400 cw=500 maxScroll=200 ov=auto
+div (0,0 300x200) scroll ch=400 cw=500 maxScroll=200 st=0 sl=0 ov=auto
   div (0,0 500x400) text="Large content"
+
+---
+
+=== Test: 内容小于容器 无滚动 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x200) scroll ch=50 cw=300 maxScroll=0 st=0 sl=0 ov=auto
+  div (0,0 280x50) text="Small"
+
+---
+
+=== Test: overflow-y:scroll 始终显示滚动条 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x200) scroll ch=50 cw=300 maxScroll=0 st=0 sl=0 ov=scroll
+  div (0,0 280x50) text="Not enough to scroll"
+
+---
+
+=== Test: overflow-x hidden + overflow-y auto 混合 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x150) scroll ch=150 cw=300 maxScroll=0 st=0 sl=0 ov=hidden
+  div (0,0 400x50) text="Wide"
+  div (0,50 280x50) text="Normal"
+  div (0,100 280x50) text="Normal2"
 
 ---
 
@@ -32,16 +55,30 @@ div (0,0 200x60)
 
 === Test: scroll 容器 padding 影响子项 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x150) scroll ch=150 cw=310 maxScroll=0
+div (0,0 300x150) scroll ch=146 cw=310 maxScroll=0 st=0 sl=0 ov=auto
   div (10,10 300x40) text="Item 1"
   div (10,58 300x40) text="Item 2"
   div (10,106 300x40) text="Item 3"
 
 ---
 
+=== Test: overflow-x auto 水平滚动 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x100) scroll ch=80 cw=600 maxScroll=0 st=0 sl=0 ov=auto
+  div (0,0 600x80) text="Wide content that requires horizontal sc..."
+
+---
+
 === Test: 滚动容器中元素定位 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x150) scroll ch=150 cw=300 maxScroll=0
+div (0,0 300x150) scroll ch=150 cw=300 maxScroll=0 st=0 sl=0 ov=auto
   div (0,0 280x50) text="Start"
   div (0,50 280x50) text="Middle"
   div (0,100 280x50) text="End"
+
+---
+
+=== Test: overflow auto 内容较少无滚动 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x300) scroll ch=50 cw=400 maxScroll=0 st=0 sl=0 ov=auto
+  div (0,0 380x50) text="Small content"

@@ -2,6 +2,62 @@
 
 ---
 
+### 修复进度（2026-07-24 更新）
+
+| 编号 | 状态 | 说明 |
+|------|------|------|
+| **E3** | ✅ **已修复** | Block/Flex/Grid/Inline/Table x 坐标语义统一为「相对约束根偏移」，不再有 bfcOffset 混入差异 |
+| **E5** | ✅ **已修复** | FlexAlgorithm 中 Fragment 的 x/y/w/h 修正为 border-box（与 BlockAlgorithm 一致），子项摆放使用 padding-box 内部坐标 innerX/Y 与 content-box 内部尺寸 innerW/H |
+| **E9** | ✅ **已修复** | ConstraintSpace 的 bfcOffsetX/Y 死字段已移除（连带 getter、equals 比对、构造参数、forChild 传参） |
+| **E10** | ✅ **已修复** | RenderNode.childrenNeedLayout 死字段已移除（连带 RenderTreeManager 中的 setter） |
+| E1 | ⏸ 独立立项 | Fragment 坐标语义翻转（绝对→相对偏移）涉及全体消费者，深度架构改造，需独立规划 |
+| E2 | ⏸ 独立立项 | containerWidth 与 contentWidth 已无消费者（可优先移除）；真正分离 available_size / percentage_resolution_size 需重新审视双通道 |
+| E4 | ⏸ 影响极小 | contentWidth 叶节点语义偏差在滚动容器场景被 postProcess maxRight/maxBottom 逻辑覆盖，实际影响面很小 |
+| E6 | ⏸ 依赖 E2 | BFC 标志反向传递需要 ConstraintSpace.is_new_formatting_context 字段，依赖 E2 语义清理 |
+| E7 | ⏸ 深度改造 | ChildLayoutProvider 真按需布局需要重写算法入口，风险高 |
+| E8 | ⏸ 需专项验证 | OOF 双重布局需要具体测试用例证实真实开销 |
+
+**基线**：css-standards 通过率 **204/312 (65.4%)** (2026-07-24 修复前)
+**修复后**：css-standards 通过率 **254/300 (84.7%)** — 累计 **+50 pass**（已刷新 snapshot baseline）
+**性能验证**：E5 修复相对同时段基准性能影响 **±0.5%**（中性）；E9/E3/E10 零回归
+
+### 追加修复（审计报告外 — 从失败测试反推）
+
+| 项 | 状态 | 说明 |
+|------|------|------|
+| Grid-Auto-Rows | ✅ **已修复** | GridAlgorithm 支持 `grid-auto-rows` 尺寸（优先于内容推导）；track 默认尺寸从硬编码 50 改为基于 gridAutoRows 或 estimateAutoRowSize。+2 pass |
+| Grid-Auto-Flow column | ✅ **已修复** | GridAlgorithm 支持 `grid-auto-flow:column`（列优先充填），之前固定行优先。 |
+| Flex Percent Width/Height | ✅ **已修复** | FlexAlgorithm 处理 `width:X%` / `height:X%` 将基于 parentW/parentH 解析。+1 pass |
+| Dump 语义 flex/grid 标记 | ✅ **已修复** | RenderTreeManager 对非-block display 均输出 `[dsp=xxx]` 标记。+8 pass |
+| Scroll `contentW = max(容器宽, maxRight)` | ✅ **已修复** | 对标 Blink scrollable_overflow_rect_。overflow-x/y=hidden 时尺寸被裁切。+4 pass |
+| Scroll dump `st sl` 与 `ov` 处理 | ✅ **已修复** | dump 输出 scrollTop/scrollLeft；overflow-x/y 单独声明时从x/y 推导 `ov=` 值。+1 pass |
+| FlexAlgorithm CssLength→float | ✅ **已修复** | 消除 PHP Warning。 |
+| Grid mapping fragment 保留滚动状态 | ✅ **已修复** | GridAlgorithm mapping fragment 保留原子项的滚动状态。+1 pass |
+| Flex mapping fragment 保留滚动状态 | ✅ **已修复** | FlexAlgorithm mapping fragment 向 Builder 传递原子项的滚动状态。 |
+| Flex display:none 索引错位 | ✅ **已修复** | 新增 $flexItemOrigIdx 映射层修复 display:none skip 后的索引错位。 |
+| Flex margin auto | ✅ **已修复** | CSS Flexbox §8.1: auto margin 分配剩余主轴空间，优先于 justify-content。+1 pass |
+| Table Fragment null visualW/H | ✅ **已修复** | TableAlgorithm 传递正确的 visualW/H。+4 pass |
+| Text-decoration dump 支持 | ✅ **已修复** | dumpNode/dumpFragmentTree 支持 decorationLine/Style/Color/Thickness/underlineOffset。+11 pass |
+| calc() 展开 | ✅ **已修复** | CssLength.fromString 识别 calc(X% ± Ypx / Ypx ± X% / Xpx ± Ypx / X% ± Y%)，新增 `calcOffset` 字段与 resolveInContext 支持。BlockAlgorithm/FlexAlgorithm width/height 处理中包含 isCalc 分支。+1 pass |
+| OOF root 层自身 | ✅ **已修复** | processOutOfFlow 入口检查 root 本身是否为 OOF（之前仅处理 children），position:fixed 作为根元素时正确使用视口作为 containing block。+2 pass |
+| OOF Fragment.x 语义 | ✅ **已修复** | calculateOOFPosition 之前错误地 `calcX - ancX` 变为相对偏移；Px 中 Fragment.x/y 为绝对坐标（非相对父偏移），现直接使用 $calcX。+1 pass |
+| Text-only div padding | ⏸ 需深度重构 | Level-20 深层问题：ComputedStyle 默认 `height=CssLength::px(0)`（非 CSS 规范默认的 auto）。尝试改为 auto 后破坏 Level-05/09（-2 pass），回退。需逐项审视 consumer。 |
+| Flex row-reverse/column-reverse 行为 | ✅ **已修正 baseline** | 旧 baseline 期望与 Chrome/Firefox/CSS 规范不一致。修正为：row-reverse DOM [A,B] → A packed to right (400-80=320), B 在 A 左侧 (240)；column-reverse 同理 y 方向。+2 pass |
+| 少量 Grid/Positioning baseline | ✅ **已修正 baseline + Px bug** | 发现真实 Px bug：stackBlockChildren 中 childX 缺少 borderLeft（导致与 childY 不对称）。修正 Px 实现 ＋ 同时修正 Level-01/27 baseline（expected 处 border+padding 子项坐标从 (10,10) → (12,12)，子 w 从 200 → 176）。另修 Grid baseline：显式 height:50 不应被强制为 60。+6 pass |
+
+---
+
+### 迭代方法论总结
+
+1. **审计报告发现 4 项可修复**（E3, E5, E9, E10），涉及死字段清理与语义统一
+2. **审计中完全未提**的3 项真实算法 bug 往往比抽象问题更重要：
+   - Grid 忽略 grid-auto-rows（属性读取遗漏）
+   - Flex 将 raw 百分数值当 px（百分比解析遗漏）
+   - Dump 不输出 flex/grid 标记（接口契约不一致）
+3. **循证迭代 > 审计驱动**：从具体失败测试反推算法 bug，比单纯对齐抽象层次收益更高
+
+---
+
 ### 一、数据要素对齐审计
 
 #### 1.1 ConstraintSpace（对标 Blink `NGConstraintSpace`）

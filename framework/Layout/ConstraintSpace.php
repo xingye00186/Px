@@ -55,9 +55,9 @@ class ConstraintSpace
     /** 是否为内在尺寸测量模式 */
     public readonly bool $isIntrinsicMeasurement;
 
-    /** BFC 偏移 */
-    public readonly int $bfcOffsetX;
-    public readonly int $bfcOffsetY;
+    // 注：Blink NGConstraintSpace 有 bfc_offset 字段跟踪 BFC 根偏移，
+    // Px 从未真正启用该机制（forChild 始终传 0），故不引入死字段。
+    // 所有算法输出的 Fragment.x/y 已包含最终坐标，无需 bfcOffset 累加。
 
     /** 空间类型（block/flex/grid/inline） */
     public readonly string $spaceType;
@@ -77,8 +77,6 @@ class ConstraintSpace
     public function getPaddingRight(): int { return $this->paddingRight; }
     public function getPaddingBottom(): int { return $this->paddingBottom; }
     public function getPaddingLeft(): int { return $this->paddingLeft; }
-    public function getBfcOffsetX(): int { return $this->bfcOffsetX; }
-    public function getBfcOffsetY(): int { return $this->bfcOffsetY; }
     public function getSpaceType(): string { return $this->spaceType; }
     public function getForceRelayoutChildren(): bool { return $this->forceRelayoutChildren; }
     public function getIsIntrinsicMeasurement(): bool { return $this->isIntrinsicMeasurement; }
@@ -105,8 +103,6 @@ class ConstraintSpace
             && $this->borderRight === $other->borderRight
             && $this->borderBottom === $other->borderBottom
             && $this->borderLeft === $other->borderLeft
-            && $this->bfcOffsetX === $other->bfcOffsetX
-            && $this->bfcOffsetY === $other->bfcOffsetY
             && $this->containerWidth === $other->containerWidth
             && $this->containerHeight === $other->containerHeight
         ;
@@ -116,12 +112,10 @@ class ConstraintSpace
      * 布局等价比较（对标 Blink ConstraintSpace 核心字段）。
      *
      * 排除不影响布局结构结果的字段：
-     *   - bfcOffsetX/Y：仅影响绝对位置偏移，不影响子项尺寸/相对布局
      *   - parentContentX/Y：绝对坐标，不影响布局计算
      *   - forceRelayoutChildren：外部控制标志，非约束本身
      *
-     * 当 layoutEquals() 为 true 时，Fragment 缓存可安全命中，
-     * 即使 equals() 因 BFC 偏移不同而返回 false。
+     * 当 layoutEquals() 为 true 时，Fragment 缓存可安全命中。
      */
     public function layoutEquals(ConstraintSpace $other): bool
     {
@@ -165,8 +159,6 @@ class ConstraintSpace
         int $borderLeft = 0,
         bool $forceRelayoutChildren = false,
         bool $isIntrinsicMeasurement = false,
-        int $bfcOffsetX = 0,
-        int $bfcOffsetY = 0,
         string $spaceType = 'block',
         ?int $determinedPercentageWidth = null,
         ?int $determinedPercentageHeight = null,
@@ -191,8 +183,6 @@ class ConstraintSpace
         $this->borderLeft            = $borderLeft;
         $this->forceRelayoutChildren = $forceRelayoutChildren;
         $this->isIntrinsicMeasurement = $isIntrinsicMeasurement;
-        $this->bfcOffsetX            = $bfcOffsetX;
-        $this->bfcOffsetY            = $bfcOffsetY;
         $this->spaceType             = $spaceType;
     }
 
@@ -236,7 +226,6 @@ class ConstraintSpace
             $borderLeft,
             $force,
             false,
-            0, 0,
             $spaceType,
         );
     }

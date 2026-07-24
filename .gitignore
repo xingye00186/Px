@@ -100,3 +100,9 @@ apps/css-test/test_case/*/*.vue
 .case_data_php_rt.json
 apps/css-test/docs/���±���-PHP-RT.md
 apps/css-test/docs/���±���.md
+
+# 临时 bench 数据与分析脚本
+tests/perf/bench_*.json
+tests/perf/compare_*.php
+tests/perf/analyze_*.php
+tests/perf/noise_*.php

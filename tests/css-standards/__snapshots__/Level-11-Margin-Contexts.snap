@@ -1,23 +1,38 @@
-@generated 2026-07-23 19:33:16
-=== Test: margin-top auto 在 flex column 底推 ===
+@generated 2026-07-24 06:02:48
+=== Test: margin:0 auto 水平居中 block ===
 Frame #1 events=0 detail=normal
-div (0,0 200x200)
-  div (0,0 200x40) text="Top"
-  div (0,40 200x40) text="Bottom"
+div (0,0 600x82)
+  div (216,16 200x50) text="Centered"
+
+---
+
+=== Test: margin-left auto 在 flex row 右推 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50) [dsp=flex]
+  div (0,0 80x30) text="Left"
+  div (300,0 100x30) text="Right"
 
 ---
 
 === Test: margin auto 在 grid cell 居中 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x100)
+div (0,0 400x100) [dsp=grid]
   div (0,0 200x80) text="Center"
   div (200,0 200x80) text="Normal"
 
 ---
 
+=== Test: margin-left 负值在 flex row 中 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x50) [dsp=flex]
+  div (0,0 100x30) text="Item 1"
+  div (80,0 100x30) text="Item 2"
+
+---
+
 === Test: margin 在滚动容器中 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x150) scroll ch=150 cw=300 maxScroll=0
+div (0,0 300x150) scroll ch=144 cw=300 maxScroll=0 st=0 sl=0 ov=auto
   div (0,0 300x40) text="Item 1"
   div (0,52 300x40) text="Item 2"
   div (0,104 300x40) text="Item 3"

@@ -11,11 +11,17 @@ class CssLength extends CssValue
 {
     public readonly float $value;
     public readonly string $unit;
+    // calc() 支持：unit='calc' 时 value=percent（可为 0 代表纯 px），calcOffset=px 偏移
+    // 例：calc(100% - 60px) → unit='calc', value=100, calcOffset=-60
+    //       calc(50% + 20px)  → unit='calc', value=50, calcOffset=20
+    //       calc(100px + 20px) → unit='px', value=120, calcOffset=0（直接合并）
+    public readonly int $calcOffset;
 
-    private function __construct(float $value, string $unit)
+    private function __construct(float $value, string $unit, int $calcOffset = 0)
     {
         $this->value = $value;
         $this->unit  = $unit;
+        $this->calcOffset = $calcOffset;
     }
 
     public static function px(float $value): self { return new self($value, 'px'); }
@@ -27,6 +33,8 @@ class CssLength extends CssValue
     public static function auto(): self { return new self(0, 'auto'); }
     public static function content(): self { return new self(0, 'content'); }
     public static function none(): self { return new self(0, 'none'); }
+    /** CSS calc(<percent>% ± <px>px) — percent 基于上下文解析，再叠加 calcOffset */
+    public static function calc(float $percent, int $offsetPx): self { return new self($percent, 'calc', $offsetPx); }
 
     public static function fromString(string $raw): self
     {
@@ -37,6 +45,41 @@ class CssLength extends CssValue
         if ($lower === 'min-content') return new self(0, 'min-content');
         if ($lower === 'max-content') return new self(0, 'max-content');
         if ($lower === 'fit-content') return new self(0, 'fit-content');
+
+        // calc() 支持（对标 CSS Values Level 4 §10）
+        // 支持常见模式：calc(X% ± Ypx), calc(Ypx ± X%), calc(Xpx ± Ypx), calc(X% ± Y%)
+        if (str_starts_with($lower, 'calc(') && str_ends_with($lower, ')')) {
+            $inner = substr($lower, 5, -1);
+            // Pattern 1: X% ± Ypx
+            if (preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*%\s*([+\-])\s*(\d+(?:\.\d+)?)\s*px\s*$/i', $inner, $m)) {
+                $percent = (float)$m[1];
+                $offset = ($m[2] === '-' ? -1 : 1) * (int)round((float)$m[3]);
+                return self::calc($percent, $offset);
+            }
+            // Pattern 2: Ypx ± X%
+            if (preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*px\s*([+\-])\s*(\d+(?:\.\d+)?)\s*%\s*$/i', $inner, $m)) {
+                $offset = (int)round((float)$m[1]);
+                $percent = ($m[2] === '-' ? -1 : 1) * (float)$m[3];
+                return self::calc($percent, $offset);
+            }
+            // Pattern 3: Xpx ± Ypx → 直接合并
+            if (preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*px\s*([+\-])\s*(\d+(?:\.\d+)?)\s*px\s*$/i', $inner, $m)) {
+                $a = (float)$m[1];
+                $b = (float)$m[3];
+                $result = $m[2] === '-' ? $a - $b : $a + $b;
+                return self::px($result);
+            }
+            // Pattern 4: X% ± Y% → 合并为单一 percent
+            if (preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*%\s*([+\-])\s*(\d+(?:\.\d+)?)\s*%\s*$/i', $inner, $m)) {
+                $a = (float)$m[1];
+                $b = (float)$m[3];
+                $result = $m[2] === '-' ? $a - $b : $a + $b;
+                return self::percent($result);
+            }
+            // Fallback: 无法解析 → 提取首个数字作为 px
+            $num = (float)preg_replace('/[^-\d.]/', '', $inner);
+            return self::px($num);
+        }
 
         if (str_ends_with($lower, '%')) {
             $num = (float)substr($lower, 0, -1);
@@ -72,12 +115,13 @@ class CssLength extends CssValue
 
     public function isAuto(): bool { return $this->unit === 'auto'; }
     public function isPercent(): bool { return $this->unit === '%'; }
+    public function isCalc(): bool { return $this->unit === 'calc'; }
     public function isContent(): bool { return $this->unit === 'content'; }
     public function isNone(): bool { return $this->unit === 'none'; }
     public function isIntrinsic(): bool { return in_array($this->unit, ['min-content', 'max-content', 'fit-content'], true); }
     public function isRelative(): bool
     {
-        return in_array($this->unit, ['%', 'em', 'rem', 'vw', 'vh', 'vmin', 'vmax'], true);
+        return in_array($this->unit, ['%', 'em', 'rem', 'vw', 'vh', 'vmin', 'vmax', 'calc'], true);
     }
 
     public function resolveInContext(
@@ -90,6 +134,7 @@ class CssLength extends CssValue
         return match ($this->unit) {
             'px'      => (int)$this->value,
             '%'       => $containerSize > 0 ? (int)($containerSize * $this->value / 100.0) : (int)$this->value,
+            'calc'    => $containerSize > 0 ? ((int)($containerSize * $this->value / 100.0) + $this->calcOffset) : $this->calcOffset,
             'em'      => (int)($this->value * $parentFontSize),
             'rem'     => (int)($this->value * $rootFontSize),
             'vw'      => (int)($this->value * $viewportW / 100.0),

@@ -1,4 +1,43 @@
-@generated 2026-07-23 19:33:16
+@generated 2026-07-24 06:02:49
+=== Test: display:table 基本容器 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x0) [dsp=table]
+  div (0,0 400x0) [dsp=table-row] text="Cell1"
+    div (0,0 200x0) [dsp=table-cell] text="Cell1"
+    div (200,0 200x0) [dsp=table-cell] text="Cell2"
+
+---
+
+=== Test: display:table 2x2 网格布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x0) [dsp=table]
+  div (0,0 300x0) [dsp=table-row] text="R1C1"
+    div (0,0 150x0) [dsp=table-cell] text="R1C1"
+    div (150,0 150x0) [dsp=table-cell] text="R1C2"
+  div (0,0 300x0) [dsp=table-row] text="R2C1"
+    div (0,0 150x0) [dsp=table-cell] text="R2C1"
+    div (150,0 150x0) [dsp=table-cell] text="R2C2"
+
+---
+
+=== Test: table-cell 嵌套 block 内容 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x0) [dsp=table]
+  div (0,0 400x0) [dsp=table-row]
+    div (0,0 400x0) [dsp=table-cell]
+      div (0,0 390x30) text="Nested"
+
+---
+
+=== Test: display:table-caption 标题 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x0) [dsp=table]
+  div (0,0 300x0) [dsp=table-caption] text="Caption"
+  div (0,0 300x0) [dsp=table-row] text="Data"
+    div (0,0 300x0) [dsp=table-cell] text="Data"
+
+---
+
 === Test: column-count:3 三列等分 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x120)

@@ -1,13 +1,32 @@
-@generated 2026-07-23 19:33:15
+@generated 2026-07-24 06:02:48
+=== Test: NavBar 水平导航栏 (flex row) ===
+Frame #1 events=0 detail=normal
+div (0,0 1440x56) [dsp=flex]
+  div (24,16 23x24)
+  div (63,28 1296x0) [dsp=flex] fg=1
+    div (63,28 0x0) text="Bilibili"
+    div (87,28 0x0) text="推荐"
+    div (111,28 0x0) text="热门"
+    div (135,28 0x0) text="关注"
+  div (1359,12 75x32)
+
+---
+
+=== Test: 浮动按钮 (position:fixed) ===
+Frame #1 events=0 detail=normal
+div (700,400 48x48) [pos=fixed] text="Top"
+
+---
+
 === Test: Banner + 视频网格组合 ===
 Frame #1 events=0 detail=normal
-div (0,0 964x216)
+div (0,0 964x356) [dsp=flex]
   div (0,0 964x200) text="Banner"
-  div (0,216 964x0)
-    div (0,216 310x140)
+  div (0,216 964x140) [dsp=grid]
+    div (0,216 310x140) [dsp=flex]
       div (0,216 310x140) text="Cover"
       div (0,356 310x0) text="Title"
-    div (326,216 310x140)
+    div (326,216 310x140) [dsp=flex]
       div (0,216 310x140) text="Cover"
       div (0,356 310x0) text="Title"
 
@@ -15,11 +34,11 @@ div (0,0 964x216)
 
 === Test: 侧边栏 + 主内容 flex row ===
 Frame #1 events=0 detail=normal
-div (0,0 1440x900)
+div (0,0 1440x900) [dsp=flex]
   div (0,0 240x900)
     div (16,16 240x40) text="Nav 1"
     div (16,64 240x40) text="Nav 2"
-  div (240,0 1200x900) fg=1
+  div (240,0 1200x900) scroll ch=216 cw=1168 maxScroll=0 st=0 sl=0 ov=auto fg=1
     div (256,16 0x200) text="Main Content"
 
 ---
@@ -34,21 +53,50 @@ div (0,0 1440x900) [pos=relative]
 
 === Test: grid + flex:1 链式填充 ===
 Frame #1 events=0 detail=normal
-div (0,0 800x300)
-  div (0,0 392x60)
+div (0,0 800x300) [dsp=grid]
+  div (0,0 392x60) [dsp=flex]
     div (0,0 392x40) text="Header"
     div (0,40 392x0) fg=1 text="Fill"
-  div (408,0 392x60)
+  div (408,0 392x60) [dsp=flex]
     div (0,0 392x60) text="Header"
     div (0,60 392x0) fg=1 text="Fill"
 
 ---
 
+=== Test: 响应式网格 不同卡片高度 auto-fill ===
+Frame #1 events=0 detail=normal
+div (0,0 964x316) [dsp=grid]
+  div (0,0 310x200) text="Tall"
+  div (326,0 310x200) text="Medium"
+  div (652,0 312x200) text="Taller"
+  div (0,216 310x100) text="Short"
+
+---
+
+=== Test: 三层嵌套 flex row>column>row ===
+Frame #1 events=0 detail=normal
+div (0,0 800x200) [dsp=flex]
+  div (8,8 625x184) [dsp=flex] fg=1
+    div (8,8 625x40) [dsp=flex]
+      div (8,8 310x40) fg=1 text="A"
+      div (322,8 310x40) fg=1 text="B"
+    div (8,52 625x0) fg=1 text="C"
+  div (641,8 160x184) text="Side"
+
+---
+
+=== Test: margin auto 水平居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x92)
+  div (166,16 300x60) text="Centered"
+
+---
+
 === Test: flex column flex:1 + overflow 填充 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x400)
+div (0,0 600x400) [dsp=flex]
   div (0,0 600x50) text="Header"
-  div (0,50 600x320) fg=1
+  div (0,50 600x320) scroll ch=240 cw=600 maxScroll=0 st=0 sl=0 ov=auto fg=1
     div (0,50 0x80) text="Item 1"
     div (0,130 0x80) text="Item 2"
     div (0,210 0x80) text="Item 3"

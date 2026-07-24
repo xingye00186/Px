@@ -1,7 +1,7 @@
-@generated 2026-07-23 19:33:16
+@generated 2026-07-24 06:02:48
 === Test: position:sticky top:0 粘性定位 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x600) scroll ch=850 cw=400 maxScroll=250
+div (0,0 400x600) scroll ch=850 cw=400 maxScroll=250 st=0 sl=0 ov=auto
   div (0,0 400x200) text="Scroll 1"
   div (0,200 400x50) [pos=sticky] text="Sticky"
   div (0,250 400x600) text="Scroll 2"
@@ -10,7 +10,7 @@ div (0,0 400x600) scroll ch=850 cw=400 maxScroll=250
 
 === Test: position:sticky bottom:0 底部粘性 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x500) scroll ch=500 cw=400 maxScroll=0
+div (0,0 400x500) scroll ch=450 cw=400 maxScroll=0 st=0 sl=0 ov=auto
   div (0,0 400x400) text="Large space"
   div (0,400 400x50) [pos=sticky] text="Sticky Bottom"
 

@@ -1,4 +1,4 @@
-@generated 2026-07-23 19:33:16
+@generated 2026-07-24 06:02:49
 === Test: 外边距折叠 正+正 margin-bottom:20 + margin-top:30 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x90)
@@ -15,9 +15,52 @@ div (0,0 300x80)
 
 ---
 
+=== Test: Flex align-content:stretch 多行填充 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x200) [dsp=flex]
+  div (0,0 140x50) text="Item1"
+  div (140,0 140x50) text="Item2"
+  div (0,100 140x50) text="Item3"
+
+---
+
+=== Test: Flex align-content:center 多行居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x200) [dsp=flex]
+  div (0,50 140x50) text="C1"
+  div (140,50 140x50) text="C2"
+  div (0,100 140x50) text="C3"
+
+---
+
+=== Test: Flex-basis:content 两行不等宽 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x40) [dsp=flex]
+  div (0,0 0x40) text="HelloWorld"
+  div (0,0 0x40) text="Short"
+
+---
+
+=== Test: Grid auto-rows:80 行高≥80 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x160) [dsp=grid]
+  div (0,0 100x80) text="A"
+  div (100,0 100x80) text="B"
+  div (0,80 100x80) text="C"
+
+---
+
+=== Test: Grid minmax(100px,1fr) minmax(50px,2fr) ===
+Frame #1 events=0 detail=normal
+div (0,0 300x100) [dsp=grid]
+  div (0,0 100x50) text="Left"
+  div (100,0 200x50) text="Right"
+
+---
+
 === Test: Grid template-areas 命名区域 placement ===
 Frame #1 events=0 detail=normal
-div (0,0 200x100)
+div (0,0 200x100) [dsp=grid]
   div (0,0 100x50) text="Header"
   div (100,0 100x50) text="Nav"
   div (0,50 100x50) text="Main"

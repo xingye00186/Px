@@ -192,7 +192,8 @@ $tests['flex-direction row-reverse 反向行'] = function() {
             VNode::h('div', ['style' => 'width:80px;height:30px'], 'B'),
         ])
     );
-    assert_contains($result, 'div (0,0 80x30) text="B"', 'row-reverse: children order reversed, B first visually');
+        assert_contains($result, 'div (320,0 80x30) text="A"', 'row-reverse: A 包 main-start=right → A.x=400-80=320 (Chrome/CSS Flexbox §5.3)');
+        assert_contains($result, 'div (240,0 80x30) text="B"', 'row-reverse: B 在 A 左侧 → B.x=320-80=240');
     return $result;
 };
 
@@ -204,7 +205,8 @@ $tests['flex-direction column-reverse 反向列'] = function() {
             VNode::h('div', ['style' => 'width:100%;height:40px'], 'B'),
         ])
     );
-    assert_contains($result, 'div (0,0 200x40) text="B"', 'column-reverse: last child renders first at y=0');
+        assert_contains($result, 'div (0,160 200x40) text="A"', 'column-reverse: A 包 main-start=bottom → A.y=200-40=160 (Chrome/CSS Flexbox §5.3)');
+        assert_contains($result, 'div (0,120 200x40) text="B"', 'column-reverse: B 在 A 上方 → B.y=160-40=120');
     return $result;
 };
 

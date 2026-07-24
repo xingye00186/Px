@@ -1,7 +1,13 @@
-@generated 2026-07-23 19:33:15
+@generated 2026-07-24 06:02:48
 === Test: position:relative left=10 top=5 ===
 Frame #1 events=0 detail=normal
 div (10,5 100x50) [pos=relative] text="Relative"
+
+---
+
+=== Test: position:absolute left=10 top=20 ===
+Frame #1 events=0 detail=normal
+div (10,20 100x50) [pos=absolute] text="Absolute"
 
 ---
 
@@ -33,6 +39,12 @@ div (0,0 400x300) [pos=relative]
 
 ---
 
+=== Test: position:fixed 相对于视口定位 ===
+Frame #1 events=0 detail=normal
+div (100,200 120x60) [pos=fixed] text="Fixed"
+
+---
+
 === Test: 多 absolute 叠加 z-index 控制层级 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x300) [pos=relative]
@@ -48,6 +60,14 @@ div (0,0 400x120)
   div (0,0 400x40) text="Normal 1"
   div (-10,35 400x40) [pos=relative] text="Relative"
   div (0,80 400x40) text="Normal 2"
+
+---
+
+=== Test: 多级 relative 嵌套 absolute 深度 ===
+Frame #1 events=0 detail=normal
+div (0,0 500x400) [pos=relative]
+  div (20,20 400x300) [pos=relative]
+    div (30,30 100x80) [pos=absolute] text="Deep"
 
 ---
 

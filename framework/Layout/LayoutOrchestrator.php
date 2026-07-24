@@ -146,25 +146,25 @@ class LayoutOrchestrator
         }
         // 不满足早退条件：走正常布局
 
-        // ── 第二级早退：布局等价但 BFC/位置偏移变化 → 平移子树 ──
-        // 使用 layoutEquals() 排除 bfcOffset/parentContent 噪音，
-        // 比旧版 contentWidth/Height 比较覆盖更广（含 padding/border 一致的情况）
+        // ── 第二级早退：布局等价但 parentContent 位置变化 → 平移子树 ──
+        // Blink NGLayoutResult 重用的关键优化：仅坐标变化时 O(N) 平移，
+        // 避免重新展开 layout 算法。
         if ($node->cachedFragment !== null && !$node->layoutDirty && !$node->styleDirty) {
             if ($node->cachedConstraintSpace !== null
                 && $space->layoutEquals($node->cachedConstraintSpace)
             ) {
-                // 仅 BFC 偏移或 parentContent 位置变化：平移整棵子树
-                $dx = $space->getBfcOffsetX() - $node->cachedConstraintSpace->getBfcOffsetX();
-                $dy = $space->getBfcOffsetY() - $node->cachedConstraintSpace->getBfcOffsetY();
+                // 仅 parentContent 位置变化（上层堆叠重置）：平移整棵子树
+                $dx = $space->getParentContentX() - $node->cachedConstraintSpace->getParentContentX();
+                $dy = $space->getParentContentY() - $node->cachedConstraintSpace->getParentContentY();
                 if ($dx !== 0 || $dy !== 0) {
                     $translated = $this->translateFragment($node->cachedFragment, $dx, $dy);
                     $node->cachedFragment = $translated;
                     $node->cachedConstraintSpace = $space;
-                    Diag::log(2, 'fragment:bfc-translate', ['type' => $node->type, 'dx' => $dx, 'dy' => $dy]);
+                    Diag::log(2, 'fragment:offset-translate', ['type' => $node->type, 'dx' => $dx, 'dy' => $dy]);
                     \Px\Core\PerfCounter::inc('layout_hit_translate');
                     return $translated;
                 }
-                // layoutEquals 为 true 且 BFC 也相同 → 完全等价（应已被 equals 捕获）
+                // layoutEquals 为 true 且 parentContent 也相同 → 完全等价（应已被 equals 捕获）
                 \Px\Core\PerfCounter::inc('layout_hit_clean');
                 return $node->cachedFragment;
             }
@@ -273,7 +273,12 @@ class LayoutOrchestrator
 
         // 应用 layer 继承 + 元数据打标 + 滚动容器同步
         $isScroll = $nodeIsScrollContainer || $algoFrag->getIsScrollContainer();
-        // 对标 Blink: 滚动容器的 contentWidth/Height = 子项最大范围
+        // 对标 Blink NGPhysicalBoxFragment.scrollable_overflow_rect_：
+        // scrollable overflow = union(padding-box, 子项块 bounding box)
+        // → contentWidth/Height 至少为容器 border-box（padding-box 包含在内），
+        // 子项溢出时才取 max(容器尺寸, 子项边界)。
+        $containerW = (int)$algoFrag->getW();
+        $containerH = (int)$algoFrag->getH();
         $contentW = (int)$algoFrag->getContentWidth();
         $contentH = (int)$algoFrag->getContentHeight();
         if ($isScroll && count($algoFrag->children) > 0) {
@@ -284,10 +289,21 @@ class LayoutOrchestrator
                 if ($chRight > $maxRight) $maxRight = $chRight;
                 if ($chBottom > $maxBottom) $maxBottom = $chBottom;
             }
-            // 对标 Blink: contentWidth/Height = 实际内容范围（子项最大边界）
-            // maxScroll = max(0, contentH - containerH)
-            if ($maxRight > 0) $contentW = $maxRight;
-            if ($maxBottom > 0) $contentH = $maxBottom;
+            // 对标 Blink NGPhysicalBoxFragment.scrollable_overflow_rect_：
+            //   contentWidth = max(容器宽, 子项最大右边界) — 子项未溢出时为容器宽（非 0）
+            //   contentHeight = maxBottom — y 方向保持子项实际高度以支持滚动需求判断
+            //   overflow-x/y = hidden|clip 时对应方向溢出被裁切，不计入 scrollable overflow
+            $overflowX = $node->computedStyle?->overflowX?->value
+                ?? $node->computedStyle?->overflow?->value
+                ?? 'visible';
+            $overflowY = $node->computedStyle?->overflowY?->value
+                ?? $node->computedStyle?->overflow?->value
+                ?? 'visible';
+            $xClips = ($overflowX === 'hidden' || $overflowX === 'clip');
+            $yClips = ($overflowY === 'hidden' || $overflowY === 'clip');
+            $contentW = $xClips ? $containerW : max($containerW, $maxRight);
+            if (!$yClips && $maxBottom > 0) $contentH = $maxBottom;
+            else if ($yClips) $contentH = $containerH;
         }
         if ($nodeLayer > $algoFrag->getLayer()) {
             $algoFrag = new \Px\Layout\PhysicalFragment(

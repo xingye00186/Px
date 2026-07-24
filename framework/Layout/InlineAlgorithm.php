@@ -35,8 +35,9 @@ class InlineAlgorithm extends LayoutAlgorithm
 
         $left = $s->left?->toPx() ?? 0;
         $top = $s->top?->toPx() ?? 0;
-        $x = ($space->bfcOffsetX ?? 0) + $left;
-        $y = ($space->bfcOffsetY ?? 0) + $top;
+        // 对标 Blink NGInlineLayoutAlgorithm：存放相对于约束根的坐标，bfc_offset 在 Px 中未启用
+        $x = $left;
+        $y = $top;
 
         $w = $s->width?->toPx() ?? 0;
         if ($w <= 0) $w = (int)($space->getContentWidth() ?? 0);

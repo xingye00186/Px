@@ -59,8 +59,9 @@ class BlockAlgorithm extends LayoutAlgorithm
         $positionVal = $s->position?->value ?? 'static';
         // 对标 Blink/CSS 规范：left/top 仅对定位元素（relative）生效，static 元素忽略
         $isRelative = ($positionVal === 'relative');
-        $x = (int)($c->getBfcOffsetX() ?? 0) + (int)($marginLeft ?? 0) + ($isRelative ? (int)($left ?? 0) : 0);
-        $y = (int)($c->getBfcOffsetY() ?? 0) + (int)($marginTop ?? 0) + ($isRelative ? (int)($top ?? 0) : 0);
+        // 坐标为相对坐标（约束根）。Blink NGConstraintSpace 的 bfc_offset 在 Px 中未启用，此处仅使用 margin+left/top。
+        $x = (int)($marginLeft ?? 0) + ($isRelative ? (int)($left ?? 0) : 0);
+        $y = (int)($marginTop ?? 0) + ($isRelative ? (int)($top ?? 0) : 0);
 
         $displayVal = $s->display?->value ?? 'block';
         $stackedChildren = [];
@@ -84,7 +85,7 @@ class BlockAlgorithm extends LayoutAlgorithm
                 foreach ($childNodes as $i => $ch) {
                     $chH = $ch->computedStyle?->height;
                     if ($chH !== null && $chH->isPercent() && $computedH > 0) {
-                        $newC = new ConstraintSpace($c->getContentWidth(), $computedH, $c->getBfcOffsetX(), $c->getBfcOffsetY(), 0, 0, $c->getPercentageWidth(), $computedH);
+                        $newC = new ConstraintSpace($c->getContentWidth(), $computedH, $c->getParentContentX(), $c->getParentContentY(), 0, 0, $c->getPercentageWidth(), $computedH);
                         $reResolved[] = $this->reResolveChild($newC, $ch, $children[$i] ?? null);
                     } else {
                         $reResolved[] = $i < count($children) ? $children[$i] : null;
@@ -136,7 +137,8 @@ class BlockAlgorithm extends LayoutAlgorithm
     {
         $width = $s->width?->toPx() ?? 0;
         $sizing = $s->boxSizing?->value ?? 'content-box';
-        if ($s->width !== null && $s->width->isPercent()) {
+        // 百分比或 calc() 均需基于包含块解析
+        if ($s->width !== null && ($s->width->isPercent() || $s->width->isCalc())) {
             $pw = $percBaseW > 0 ? $percBaseW : $parentW;
             $width = $s->width->resolveInContext($pw);
             // CSS2.1 §10.2 + CSS-UI-3 §4.5: box-sizing:border-box时百分比width包含padding+border
@@ -174,9 +176,17 @@ class BlockAlgorithm extends LayoutAlgorithm
     private function computeBlockHeight(int $parentH, ComputedStyle $s, string $textContent, int $percBaseH = 0): int
     {
         $height = $s->height?->toPx() ?? 0;
-        if ($s->height !== null && $s->height->isPercent()) {
+        $sizing = $s->boxSizing?->value ?? 'content-box';
+        if ($s->height !== null && ($s->height->isPercent() || $s->height->isCalc())) {
             $ph = $percBaseH > 0 ? $percBaseH : $parentH;
             $height = $s->height->resolveInContext($ph);
+            // CSS-UI-3 §4.5: border-box 时百分比 height 包含 padding+border
+            if ($sizing === 'border-box') {
+                $padT = $s->padding?->top->toPx() ?? 0;
+                $padB = $s->padding?->bottom->toPx() ?? 0;
+                $bwv = (int)($s->getBorderTopWidth() ?? 0) + (int)($s->getBorderBottomWidth() ?? 0);
+                $height = max(0, $height - $padT - $padB - $bwv);
+            }
         }
         if ($s->height !== null && $s->height->isIntrinsic() && strlen($textContent) > 0) { $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2); }
         // CSS 2.2 §10.6: 仅当 height 为 auto 时才用内容高度，显式 height:0 应尊重
@@ -195,6 +205,7 @@ class BlockAlgorithm extends LayoutAlgorithm
         $padTop = $s->padding?->top->toPx() ?? 0;
         $padLeft = $s->padding?->left->toPx() ?? 0;
         $borderTop = (int)($s->getBorderTopWidth() ?? 0);
+        $borderLeft = (int)($s->getBorderLeftWidth() ?? 0);
         $stackY = $parentY + $borderTop + $padTop;
         $result = [];
         $prevMarginBottom = 0; $prevCollapsible = false;
@@ -262,7 +273,9 @@ class BlockAlgorithm extends LayoutAlgorithm
             } elseif ($marginLeftAuto) {
                 $xOffset = max(0, $containerW - $chW - $mRight);
             }
-            $result[] = new PhysicalFragment((int)($parentX + $padLeft + $xOffset + ($childPosition === 'relative' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->getLayer() ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, $cr->sourceNode,
+            // CSS 2.2 §10.6.3：子项从父的 padding-box 左上角开始（= parent origin + border-left + padding-left）
+            // 之前 childX 缺少 borderLeft 导致与 childY 不对称 bug
+            $result[] = new PhysicalFragment((int)($parentX + $borderLeft + $padLeft + $xOffset + ($childPosition === 'relative' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->getLayer() ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, $cr->sourceNode,
                     $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
                     $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
             $stackY = ($childY - ($childPosition === 'relative' ? $relTop : 0)) + $chH + $mBottom;

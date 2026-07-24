@@ -50,10 +50,9 @@ class RenderNode
     // 在 updateFromVNode 中根据 computedStyle 设置：显式固定 width+height = true
     public bool $isLayoutBoundary = false;
 
-    // ── 诊断标志：propagateLayoutDirty 在子节点脏时设置此位
-    // 注意：Px 先处理子项再跑算法（与 Blink 相反），此位不能用于跳过子项循环
-    // mainLayout 改用逐子项 layoutDirty + 约束空间 equals 检查（对标 Blink NGBlockNode）
-    public bool $childrenNeedLayout = true;
+    // 注：Blink LayoutObject 有 ChildNeedsLayout 位用于短路子树遍历。
+    // Px 先处理子项再跑算法（与 Blink 相反），无法短路子项循环；
+    // 注入五个迭代中都无消费者引用。为避免死字段干扰思路，此处不引入。
 
     public function __construct(
         string $type,

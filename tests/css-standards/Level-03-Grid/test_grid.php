@@ -55,7 +55,7 @@ $tests['grid auto-fill 列宽和数量验证'] = function() {
             VNode::h('div', ['style' => 'height:50px'], 'Item 2'),
         ])
     );
-    assert_contains($result, 'div (344,0 328x60) text="Item 2"', 'auto-fill: each col = (672-16)/2 = 328, gap 16');
+    assert_contains($result, 'div (344,0 328x50) text="Item 2"', 'auto-fill: each col = (672-16)/2 = 328, gap 16; item h=50 (explicit)');
     return $result;
 };
 
@@ -119,7 +119,7 @@ $tests['grid gap 32px 大间距'] = function() {
             VNode::h('div', ['style' => 'height:50px'], 'B'),
         ])
     );
-    assert_contains($result, 'div (232,0 200x60) text="B"', 'gap 32: each col = (432-32)/2 = 200, B.x = 0+200+32 = 232');
+    assert_contains($result, 'div (232,0 200x50) text="B"', 'gap 32: each col = (432-32)/2 = 200, B.x = 0+200+32 = 232; h=50 (explicit)');
     return $result;
 };
 
@@ -175,7 +175,7 @@ $tests['grid cell 内 width=50%'] = function() {
             VNode::h('div', ['style' => 'width:100%;height:50px'], 'Full'),
         ])
     );
-    assert_contains($result, 'div (316,0 300x60) text="Full"', 'grid: column 2 at x = 300+16(gap) = 316');
+    assert_contains($result, 'div (316,0 300x50) text="Full"', 'grid: column 2 at x = 300+16(gap) = 316; h=50 (explicit)');
     return $result;
 };
 
@@ -203,8 +203,8 @@ $tests['grid 单列 1fr'] = function() {
             VNode::h('div', ['style' => 'height:40px'], 'Row 3'),
         ])
     );
-    assert_contains($result, 'div (0,0 600x60) text="Row 1"', '1fr single col: full container width = 600');
-    assert_contains($result, 'div (0,136 600x60) text="Row 3"', 'single col: row 3 at y = 2*(60+8) = 136');
+    assert_contains($result, 'div (0,0 600x40) text="Row 1"', '1fr single col: full container width = 600; h=40 (explicit)');
+    assert_contains($result, 'div (0,96 600x40) text="Row 3"', 'single col: row 3 at y = 2*(40+8) = 96');
     return $result;
 };
 

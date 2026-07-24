@@ -40,23 +40,34 @@ class FlexAlgorithm extends LayoutAlgorithm
         $x = $left;
         $y = $top;
         $w = $s->width->toPx();
-        if ($w <= 0) $w = $parentW;
+        // 对标 Blink NGFlexLayoutAlgorithm：width:X% 需基于 parentW 解析（而非直接使用 raw 百分数值）
+        if ($s->width !== null && $s->width->isPercent()) {
+            $w = $s->width->resolveInContext($parentW);
+        } else if ($w <= 0) {
+            $w = $parentW;
+        }
         // For flex items whose actual width is set by parent flex (inputFragment),
         // use the actual width instead of the constraint space parentW
         if ($inputFragment !== null && $inputFragment->getW() > 0 && $w <= 0) {
             $w = $inputFragment->getW();
         }
         $h = $s->height->toPx();
+        // 同理：height:X% 基于 parentH 解析
+        if ($s->height !== null && $s->height->isPercent() && $parentH > 0) {
+            $h = $s->height->resolveInContext($parentH);
+        }
 
-        // Apply flex container padding: subtract from content area, add to offset
+        // ── E5 修复（对标 Blink NGPhysicalBoxFragment）：
+        // Fragment 的 x/y/w/h 为 border-box 位置与尺寸（与 BlockAlgorithm 一致），
+        // 子项摆放使用 padding-box 内部坐标 innerX/Y 与 content-box 内部尺寸 innerW/H。
         $flexPadL = $s->padding?->left->toPx() ?? 0;
         $flexPadR = $s->padding?->right->toPx() ?? 0;
         $flexPadT = $s->padding?->top->toPx() ?? 0;
         $flexPadB = $s->padding?->bottom->toPx() ?? 0;
-        $x += $flexPadL;
-        $y += $flexPadT;
-        $w = max(0, $w - $flexPadL - $flexPadR);
-        $h = max(0, $h - $flexPadT - $flexPadB);
+        $innerX = $x + $flexPadL;   // padding-box 左上角（子项摆放起点）
+        $innerY = $y + $flexPadT;
+        $innerW = max(0, $w - $flexPadL - $flexPadR);  // content-box 宽（子项可用主轴长度）
+        $innerH = max(0, $h - $flexPadT - $flexPadB);
         $flexDir = $s->flexDirection !== null ? $s->flexDirection->value : 'row';
         $isRow = ($flexDir === 'row' || $flexDir === 'row-reverse');
         $isReverse = ($flexDir === 'row-reverse' || $flexDir === 'column-reverse');
@@ -67,25 +78,41 @@ class FlexAlgorithm extends LayoutAlgorithm
         $isWrapping = ($wrap === "wrap" || $wrap === "wrap-reverse");
         $isWrapReverse = ($wrap === "wrap-reverse");
         $gap = $s->gap !== null ? $s->gap->toPx() : 0;
-        // Main-axis and cross-axis dimensions
-        $containerMain = (int)($isRow ? $w : $h);
-        $containerCross = (int)($isRow ? $h : $w);
+        // Main-axis and cross-axis dimensions — 子项分配基于 content-box 内部尺寸
+        $containerMain = (int)($isRow ? $innerW : $innerH);
+        $containerCross = (int)($isRow ? $innerH : $innerW);
 
         // ── Step 1: Collect flex items ──
         $flexItems = [];
         $flexItemData = [];
-        foreach ($childResults as $cr) {
+        // 建立 $flexItems 索引到 $childResults 原始索引的映射（display:none skip 后索引错位）
+        $flexItemOrigIdx = [];
+        for ($crI = 0, $crLen = count($childResults); $crI < $crLen; $crI++) {
+            $cr = $childResults[$crI];
             $cs = $cr->style;
             if ($cs === null) continue;
             // CSS §9.2: 跳过 display:none 的子项（不影响 flex 布局）
             $childDisplay = $cs->display?->value ?? 'block';
             if ($childDisplay === 'none') continue;
+            $flexItemOrigIdx[] = $crI;
             // Use resolved flex shorthand as fallback when individual props not set
             // (getRaw may return CssLength object which cannot be cast to float)
             $rawGrow = $cs->getRaw('flexGrow');
-            $grow = $rawGrow !== null ? (float)$rawGrow : (float)$cs->flex->grow;
+            if ($rawGrow instanceof CssLength) {
+                $grow = (float)$rawGrow->toPx();
+            } else if ($rawGrow !== null) {
+                $grow = (float)$rawGrow;
+            } else {
+                $grow = (float)$cs->flex->grow;
+            }
             $rawShrink = $cs->getRaw('flexShrink');
-            $shrink = $rawShrink !== null ? (float)$rawShrink : (float)$cs->flex->shrink;
+            if ($rawShrink instanceof CssLength) {
+                $shrink = (float)$rawShrink->toPx();
+            } else if ($rawShrink !== null) {
+                $shrink = (float)$rawShrink;
+            } else {
+                $shrink = (float)$cs->flex->shrink;
+            }
             $rawOrder = $cs->getRaw("order");
             $order = $rawOrder !== null ? (is_object($rawOrder) ? (int)$rawOrder->toPx() : (int)$rawOrder) : 0;
             // flex-basis from resolved CssLength (not raw string from getRaw)
@@ -121,12 +148,38 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $item->h = max(0, $cs->height->toPx());
             }
             if (!$hasMainSize && $basis <= 0) {
-                if ($isRow) $item->w = 0; else $item->h = 0;
+                // 对标 Blink NGFlexLayoutAlgorithm: basis=auto 无显式主尺寸时 → 使用子项 content 尺寸作为 basis（而非重置为 0）
+                // 仅当子项 fragment 本身也无主尺寸时才重置为 0
+                if ($isRow) {
+                    if ($item->w <= 0) $item->w = 0;
+                } else {
+                    if ($item->h <= 0) $item->h = 0;
+                }
             }
             // Use visualW/H as fallback when content size is 0 (nested flex with explicit main size)
             if ($item->w <= 0 && $isRow && $hasMainSize) $item->w = (int)$cr->getVisualW();
             if ($item->h <= 0 && !$isRow && $hasMainSize) $item->h = (int)$cr->getVisualH();
             $item->visualW = (int)$cr->getVisualW(); $item->visualH = (int)$cr->getVisualH();
+            // 读取主轴 margin（包含 auto 标志）— CSS Flexbox §8.1: margin auto 分配剩余主轴空间
+            $mLeft = $cs->margin?->left ?? null;
+            $mRight = $cs->margin?->right ?? null;
+            $mTop = $cs->margin?->top ?? null;
+            $mBottom = $cs->margin?->bottom ?? null;
+            if ($isRow) {
+                $item->marginBefore = ($mLeft !== null && !$mLeft->isAuto()) ? (int)$mLeft->toPx() : 0;
+                $item->marginAfter = ($mRight !== null && !$mRight->isAuto()) ? (int)$mRight->toPx() : 0;
+                $item->marginAutoBefore = ($mLeft !== null && $mLeft->isAuto());
+                $item->marginAutoAfter = ($mRight !== null && $mRight->isAuto());
+                $item->marginCrossBefore = ($mTop !== null && !$mTop->isAuto()) ? (int)$mTop->toPx() : 0;
+                $item->marginCrossAfter = ($mBottom !== null && !$mBottom->isAuto()) ? (int)$mBottom->toPx() : 0;
+            } else {
+                $item->marginBefore = ($mTop !== null && !$mTop->isAuto()) ? (int)$mTop->toPx() : 0;
+                $item->marginAfter = ($mBottom !== null && !$mBottom->isAuto()) ? (int)$mBottom->toPx() : 0;
+                $item->marginAutoBefore = ($mTop !== null && $mTop->isAuto());
+                $item->marginAutoAfter = ($mBottom !== null && $mBottom->isAuto());
+                $item->marginCrossBefore = ($mLeft !== null && !$mLeft->isAuto()) ? (int)$mLeft->toPx() : 0;
+                $item->marginCrossAfter = ($mRight !== null && !$mRight->isAuto()) ? (int)$mRight->toPx() : 0;
+            }
             $flexItems[] = $item;
             $flexItemData[] = [
                 'grow' => $grow, 'shrink' => $shrink, 'basis' => $basis,
@@ -166,8 +219,14 @@ class FlexAlgorithm extends LayoutAlgorithm
         }
         $sortedFlexItems = []; foreach ($indices as $idx) { $sortedFlexItems[] = $flexItems[$idx]; }
         // Rebuild flexItemData in sorted order
-        $sortedFlexItemData = []; $sortedChildResults = [];
-        foreach ($indices as $idx2) { $sortedFlexItemData[] = $flexItemData[$idx2]; $sortedChildResults[] = $childResults[$idx2]; }
+        // 使用 $flexItemOrigIdx 映射到 childResults 原始索引（避免 display:none skip 后错位）
+        $sortedFlexItemData = []; $sortedChildResults = []; $sortedOrigIdx = [];
+        foreach ($indices as $idx2) {
+            $sortedFlexItemData[] = $flexItemData[$idx2];
+            $origIdx = $flexItemOrigIdx[$idx2] ?? $idx2;
+            $sortedChildResults[] = $childResults[$origIdx];
+            $sortedOrigIdx[] = $origIdx;
+        }
 
         // ── Step 2: Apply flex-basis ──
         foreach ($sortedFlexItems as $fi) {
@@ -280,6 +339,25 @@ class FlexAlgorithm extends LayoutAlgorithm
             elseif ($justify === "space-around") { $spaceBetween = ($availableMain - $lineFinal) / $itemCount; $mainStart = $spaceBetween / 2; }
             elseif ($justify === "space-evenly") { $spaceBetween = ($availableMain - $lineFinal) / ($itemCount + 1); $mainStart = $spaceBetween; }
 
+            // 4d+. CSS Flexbox §8.1: auto margin 优先于 justify-content 分配剩余主轴空间
+            // 当行内存在 auto margin（包含 item 内项总和一使用完剩余后），则：
+            //   1. justify-content 被 override 为 flex-start (mainStart=0, spaceBetween=0)
+            //   2. remaining space 平均分配给行内所有 auto margins
+            $autoMarginCount = 0;
+            foreach ($lineItems as $fi) {
+                $fi = objval($fi, FlexItem::class);
+                if ($fi->marginAutoBefore) $autoMarginCount++;
+                if ($fi->marginAutoAfter) $autoMarginCount++;
+            }
+            $autoMarginSpace = 0;
+            if ($autoMarginCount > 0) {
+                $remaining = max(0, $availableMain - $lineFinal);
+                $autoMarginSpace = (int)($remaining / $autoMarginCount);
+                // 有 auto margin 时重置 justify-content 分配
+                $mainStart = 0;
+                $spaceBetween = 0;
+            }
+
             // 4e. Apply stretch to fill line maxCross; allow from zero (CSS stretch spec)
             foreach ($lineItems as $fi) {
                 $fi = objval($fi, FlexItem::class);
@@ -308,19 +386,26 @@ class FlexAlgorithm extends LayoutAlgorithm
             }
 
             // 4f. Main-axis positioning (base on containerMain offset)
-            $mainBase = $isRow ? $x : $y;
+            // 子项从 padding-box 内部坐标起点摆放
+            $mainBase = $isRow ? $innerX : $innerY;
             if ($isReverse) {
                 // Reverse direction: main-start = right/bottom edge
                 $cursorMain = $mainBase + $containerMain - (int)$mainStart;
                 foreach ($lineItems as $fi) {
                     $fi = objval($fi, FlexItem::class);
+                    $mBefore = $fi->marginBefore + ($fi->marginAutoBefore ? $autoMarginSpace : 0);
+                    $mAfter = $fi->marginAfter + ($fi->marginAutoAfter ? $autoMarginSpace : 0);
                     if ($isRow) {
+                        $cursorMain -= $mAfter;
                         $cursorMain -= $fi->w;
                         $fi->x = (int)$cursorMain;
+                        $cursorMain -= $mBefore;
                         $cursorMain -= (int)$spaceBetween + $gap;
                     } else {
+                        $cursorMain -= $mAfter;
                         $cursorMain -= $fi->h;
                         $fi->y = (int)$cursorMain;
+                        $cursorMain -= $mBefore;
                         $cursorMain -= (int)$spaceBetween + $gap;
                     }
                 }
@@ -328,12 +413,15 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $cursorMain = $mainBase + (int)$mainStart;
                 foreach ($lineItems as $fi) {
                     $fi = objval($fi, FlexItem::class);
+                    $mBefore = $fi->marginBefore + ($fi->marginAutoBefore ? $autoMarginSpace : 0);
+                    $mAfter = $fi->marginAfter + ($fi->marginAutoAfter ? $autoMarginSpace : 0);
+                    $cursorMain += $mBefore;
                     if ($isRow) {
                         $fi->x = (int)$cursorMain;
-                        $cursorMain += $fi->w + (int)$spaceBetween + $gap;
+                        $cursorMain += $fi->w + $mAfter + (int)$spaceBetween + $gap;
                     } else {
                         $fi->y = (int)$cursorMain;
-                        $cursorMain += $fi->h + (int)$spaceBetween + $gap;
+                        $cursorMain += $fi->h + $mAfter + (int)$spaceBetween + $gap;
                     }
                 }
             }
@@ -353,7 +441,8 @@ class FlexAlgorithm extends LayoutAlgorithm
         $lineMaxCrosses = $result[1];
 
         // 5b. Per-item cross-axis positioning
-        $crossBase = $isRow ? $y : $x;
+        // Cross-axis 基准也使用 padding-box 内部坐标
+        $crossBase = $isRow ? $innerY : $innerX;
         if ($isWrapReverse) {
             // wrap-reverse: cross-start = bottom/right edge
             $totalUsedCross = $this->sumLineMaxCrosses($lineMaxCrosses, $gap);
@@ -410,7 +499,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                     $p2ItemW, (int)$p2Fi->h > 0 ? (int)$p2Fi->h : $space->getContentHeight(),
                     $p2ItemW, $space->getPercentageHeight(),
                     0, 0, 0, 0, 0, 0, 0, 0,
-                    true, false, 0, 0, 'block',
+                    true, false, 'block',
                     $p2ItemW, $space->getPercentageHeight(),
                 );
                 $reFrag = $this->layoutChild($childNodes[$p2Idx], $p2Space);
@@ -453,27 +542,34 @@ class FlexAlgorithm extends LayoutAlgorithm
                 ->cw($contentW)->ch((int)($orig?->contentHeight ?? 0))
                 ->style($orig?->style)->children($children)
                 ->type($orig?->type ?? '')->content($orig?->content)
+                // 对标 Blink NGFlexLayoutAlgorithm：mapping fragment 需保留原子项的滚动状态
+                ->isScrollContainer((bool)($orig?->isScrollContainer ?? false))
+                ->scrollTop((int)($orig?->scrollTop ?? 0))
+                ->scrollLeft((int)($orig?->scrollLeft ?? 0))
                 ->build();
         }
         // Remap results to original DOM order (CSS §9.2: visual order ≠ DOM order)
+        // 使用 $flexItemOrigIdx 映射回 childResults 原始 DOM 索引（避免 display:none skip 后错位）
         $resultsByOriginalIndex = [];
-        foreach ($indices as $orderIdx => $domIdx) {
+        foreach ($indices as $orderIdx => $flexIdx) {
             if (isset($mappedResults[$orderIdx])) {
-                $resultsByOriginalIndex[$domIdx] = $mappedResults[$orderIdx];
+                $origDomIdx = $flexItemOrigIdx[$flexIdx] ?? $flexIdx;
+                $resultsByOriginalIndex[$origDomIdx] = $mappedResults[$orderIdx];
             }
         }
         ksort($resultsByOriginalIndex);
         $mappedResults = array_values($resultsByOriginalIndex);
         // Re-resolve flex:1 nested containers (flex-grow changes child sizes)
         if ($h <= 0 && count($mappedResults) > 0) {
-            $maxBottom = $y;
+            $maxBottom = $innerY;
             foreach ($mappedResults as $cr) {
                 $chH = (int)($cr->getH() ?? 0);
                 if ($chH <= 0) $chH = (int)($cr->getVisualH() ?? 0);
                 $b = (int)($cr->getY() ?? 0) + $chH;
                 if ($b > $maxBottom) $maxBottom = $b;
             }
-            $h = max(0, $maxBottom - $y);
+            // 子项 max bottom → padding-box 高度；加回 padding-bottom 得 border-box 高度
+            $h = max(0, $maxBottom - $innerY) + $flexPadT + $flexPadB;
         }
 
         // Convert mapped LayoutResults to PhysicalFragment children

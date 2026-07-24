@@ -48,6 +48,19 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         int $viewportW = 0,
         int $viewportH = 0,
     ): PhysicalFragment {
+        // 根本身为 OOF（测试直接 position:fixed/absolute 元素作根、或包装组件直接 unwrap后发现 root 本身 OOF）：
+        // 使用视口作为 containing block 先处理根，再递归处理 children。
+        // 对标 Blink NGOutOfFlowLayoutPart：root layout box 本身也可能是 OOF。
+        $rootCS = $root->style;
+        $rootPos = $rootCS?->position?->value ?? 'static';
+        if ($rootPos === 'fixed' || $rootPos === 'absolute') {
+            $root = $this->calculateOOFPosition(
+                $root, $rootRN,
+                0, 0, $viewportW, $viewportH,
+                0, 0, 0, 0,
+                $viewportW, $viewportH
+            );
+        }
         // OOF 通行证：在当前 Fragment 树上一遍扫描 + 回填
         // 由于 PhysicalFragment 不可变，需要重建树
         return $this->processFragment($root, $rootRN, $viewportW, $viewportH);
@@ -253,8 +266,10 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         }
         $calcX += $autoOffsetX;
 
+        // 对标 Px 中 Fragment.x/y 语义：绝对坐标（相对 layout 根，不累加）。
+        // 因此使用 $calcX / $calcY 直接作为 Fragment 坐标（旧代码错误地减去 ancX/ancY 将其变为相对偏移）。
         return new PhysicalFragment(
-            (int)($calcX - $ancX), (int)($calcY - $ancY), (int)max(0, $width), (int)max(0, $height),
+            (int)$calcX, (int)$calcY, (int)max(0, $width), (int)max(0, $height),
             (int)$cs->visualWidth($width), (int)$cs->visualHeight($height),
             1, 0, 0, $cs, $frag->children, $sourceRN,
             0, 0, false,

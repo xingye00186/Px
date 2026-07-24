@@ -26,6 +26,9 @@ class FlexItem
     public int $marginAfter = 0;
     public int $marginCrossBefore = 0;
     public int $marginCrossAfter = 0;
+    // CSS Flexbox §8.1: auto margin 分配剩余主轴空间
+    public bool $marginAutoBefore = false;
+    public bool $marginAutoAfter = false;
     public bool $hasExplicitCrossSize = false;
     public string $alignSelf = 'auto';
     public ?ComputedStyle $computedStyle = null;

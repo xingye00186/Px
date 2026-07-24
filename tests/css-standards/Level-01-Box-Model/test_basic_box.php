@@ -81,8 +81,10 @@ $tests['padding 缩小内容区 (padding=10px)'] = function() {
         ])
     );
     // padding=10 → 子元素从 padding-box 的 (10,10) 开始
-    // CSS: width:100% 相对于包含块内容宽度，content-box 下内容宽度=200
-    assert_contains($result, 'div (10,10 200x50) text="Padding test"', 'padding=10 → child 从 (10,10) 开始');
+    // CSS: Px 默认 box-sizing:border-box → width:200px 包含 padding
+    //      content-box 内容宽度 = 200 - 20(padding) = 180
+    //      子 width:100% = 180
+    assert_contains($result, 'div (10,10 180x50) text="Padding test"', 'padding=10 → child 从 (10,10) 开始, w=180 (200 - 20 padding)');
     return $result;
 };
 
@@ -204,11 +206,12 @@ $tests['border+padding+width 组合'] = function() {
             VNode::h('div', ['style' => 'width:100%;height:50px'], 'Inner'),
         ])
     );
-    // padding=10 → 子元素从 padding-box 的 (10,10) 开始
-    // CSS: width:100% 相对于包含块内容宽度，content-box 下内容宽度=200
-    // border=2 在 padding 外围
+    // Px 默认 box-sizing:border-box：width:200px = border-box
+    //   content-box = 200 - 4(border) - 20(padding) = 176
+    //   子 width:100% = 176
+    // 子位置 = parent origin + border-left(2) + padding-left(10) = (12, 12)
     assert_contains($result, 'div (0,0 200x100) bw=2', '父容器 200x100 + bw=2');
-    assert_contains($result, 'div (10,10 200x50) text="Inner"', 'padding=10 → 子元素从 (10,10) 开始');
+    assert_contains($result, 'div (12,12 176x50) text="Inner"', '子位置 = border(2)+padding(10) = (12,12), w=200-4-20=176');
     return $result;
 };
 
