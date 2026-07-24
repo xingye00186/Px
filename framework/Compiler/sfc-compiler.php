@@ -336,7 +336,9 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                     // flex 简写暂不展开（待 min-content 计算就绪）
                     $rawForExpand = \Px\Css\CssShorthandExpander::expandAll($rawForExpand, false);
                     foreach ($rawForExpand as $prop => $val) {
-                        $pairs[] = var_export($prop, true) . '=>' . var_export($val, true);
+                        // 统一 key 归一化（与 StyleArrayTransform 一致：kebab → camelCase）
+                        $canonicalKey = \Px\Css\CssMappings::canonicalStyleKey($prop);
+                        $pairs[] = var_export($canonicalKey, true) . '=>' . var_export($val, true);
                     }
                     $propsStr[] = var_export('style', true) . '=>[' . implode(',', $pairs) . ']';
                     continue;

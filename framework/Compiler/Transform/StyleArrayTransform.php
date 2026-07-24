@@ -78,21 +78,29 @@ class StyleArrayTransform implements TransformInterface
     private function convertStaticStyle(string $style): ?string
     {
         $decls = explode(';', $style);
-        $pairs = [];
+        $raw = [];
         $valid = true;
         foreach ($decls as $decl) {
             $decl = trim($decl);
             if ($decl === '') continue;
             $colonPos = strpos($decl, ':');
             if ($colonPos === false) { $valid = false; break; }
-            $prop = trim(substr($decl, 0, $colonPos));
+            $prop = strtolower(trim(substr($decl, 0, $colonPos)));
             $val = trim(substr($decl, $colonPos + 1));
-            // 治本：编译期将 CSS 属性名统一为规范 key（camelCase），
-            // 与 parseStyleBlock/parseInlineStyle 一致，消除 rawDeclarations 的 kebab/camel 二义
-            $prop = \Px\Css\CssMappings::canonicalStyleKey($prop);
-            $pairs[] = var_export($prop, true) . '=>' . var_export($val, true);
+            $raw[$prop] = $val;
         }
-        if ($valid && !empty($pairs)) {
+        if (!$valid || empty($raw)) return null;
+
+        // 一套代码，两处使用：与 StyleResolver 运行时共用同一套简写展开 + key 归一化
+        $raw = \Px\Css\CssShorthandExpander::expandAll($raw, false);
+
+        $pairs = [];
+        foreach ($raw as $prop => $val) {
+            // 统一 key 归一化（kebab → camelCase）
+            $canonicalKey = \Px\Css\CssMappings::canonicalStyleKey($prop);
+            $pairs[] = var_export($canonicalKey, true) . '=>' . var_export($val, true);
+        }
+        if (!empty($pairs)) {
             return '[' . implode(',', $pairs) . ']';
         }
         return null;
