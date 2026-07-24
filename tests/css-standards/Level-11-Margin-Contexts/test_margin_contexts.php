@@ -134,6 +134,32 @@ $tests['CSS §8.3.1 场景 3：父吸收末孙 margin-bottom'] = function() {
     return $result;
 };
 
+// ── Test 10: CSS 2.2 §8.3 margin-top 百分比基于包含块宽度 ──
+// 旧行为：margin-top:10% 直接 toPx() → 10 像素（混淆百分比与绝对值）
+// 修复后：margin 百分比基于包含块 inline-size（宽度），即 400 * 10% = 40
+$tests['CSS §8.3 margin-top 百分比基于包含块宽度'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'width:400px;height:auto'], [
+            VNode::h('div', ['style' => 'margin-top:10%;height:30px'], 'A'),
+        ])
+    );
+    // margin-top:10% → 400 * 10% = 40
+    assert_contains($result, 'div (0,40 400x30) text="A"', 'CSS §8.3: margin-top 10% * cbW 400 = 40');
+    return $result;
+};
+
+// ── Test 11: CSS 2.2 §8.3 margin-left 百分比基于包含块宽度 ──
+$tests['CSS §8.3 margin-left 百分比基于包含块宽度'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'width:500px;height:auto'], [
+            VNode::h('div', ['style' => 'margin-left:20%;width:100px;height:30px'], 'A'),
+        ])
+    );
+    // margin-left:20% → 500 * 20% = 100
+    assert_contains($result, 'div (100,0 100x30) text="A"', 'CSS §8.3: margin-left 20% * cbW 500 = 100');
+    return $result;
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-11-Margin-Contexts.snap';
 run_css_tests('Level 11 - Margin Contexts', $snapFile, $tests);
 

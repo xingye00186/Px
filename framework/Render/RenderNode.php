@@ -71,6 +71,12 @@ class RenderNode
         $this->layoutDirty = true;
         $this->paintDirty = true;
         $this->styleDirty = false;
+        // 对标 Blink 脉络 Flutter relayoutBoundary：到达 layout boundary 节点时阻断上传。
+        // 一旦一个节点声明固定 width+height（isLayoutBoundary=true），其子树内部布局变化
+        // 不会影响父的尺寸，故无需递归请父重算。避免无意义上传到 root 导致全量布局。
+        if ($this->isLayoutBoundary) {
+            return;
+        }
         if ($propagateUp && $this->parent !== null) {
             $this->parent->markLayoutDirty(true);
         }

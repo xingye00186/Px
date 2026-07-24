@@ -134,8 +134,11 @@ class BlockAlgorithm extends LayoutAlgorithm
 
         $left = $s->left?->toPx() ?? 0;
         $top = $s->top?->toPx() ?? 0;
-        $marginLeft = $s->margin?->left->toPx() ?? 0;
-        $marginTop = $s->margin?->top->toPx() ?? 0;
+        // CSS 2.2 §8.3：margin 百分比基于**包含块的宽度**（inline-size），不论方向。
+        // 使用 resolveBoxPercent($c->getContentWidth()) 而非直接 toPx() 以保证百分比正确解析。
+        $cbW = $c->getContentWidth();
+        $marginLeft = $s->margin?->left->resolveBoxPercent($cbW) ?? 0;
+        $marginTop = $s->margin?->top->resolveBoxPercent($cbW) ?? 0;
         // CSS 两阶段布局：优先使用 determinedPercentageWidth 作为百分比基准
         $parentW = $c->getContentWidth();
         $parentH = $c->getContentHeight();
@@ -336,8 +339,11 @@ class BlockAlgorithm extends LayoutAlgorithm
 
     private function stackBlockChildren(int $parentX, int $parentY, int $containerW, ComputedStyle $s, array $childResults, string $textContent, int $parentW): array
     {
-        $padTop = $s->padding?->top->toPx() ?? 0;
-        $padLeft = $s->padding?->left->toPx() ?? 0;
+        // CSS 2.2 §8.3：padding/margin 百分比均基于包含块的宽度（inline-size）。
+        // 父自身的 padding：基于祖父的 width，但此处无导入；使用 $parentW（父的约束宽）作为基准。
+        // 子的 padding/margin：基于父的 content-width = $containerW。
+        $padTop = $s->padding?->top->resolveBoxPercent($parentW) ?? 0;
+        $padLeft = $s->padding?->left->resolveBoxPercent($parentW) ?? 0;
         $borderTop = (int)($s->getBorderTopWidth() ?? 0);
         $borderLeft = (int)($s->getBorderLeftWidth() ?? 0);
         $stackY = $parentY + $borderTop + $padTop;
@@ -354,14 +360,15 @@ class BlockAlgorithm extends LayoutAlgorithm
             if ($isInline) { $inlineBuffer[] = $cr; continue; }
             if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW); }
 
-            $mTop = $childStyle?->margin?->top->toPx() ?? 0;
-            $mBottom = $childStyle?->margin?->bottom->toPx() ?? 0;
-            $mLeft = $childStyle?->margin?->left->toPx() ?? 0;
-            $mRight = $childStyle?->margin?->right->toPx() ?? 0;
+            // 子的 margin/padding 百分比基准 = 父的 content-width ($containerW)
+            $mTop = $childStyle?->margin?->top->resolveBoxPercent($containerW) ?? 0;
+            $mBottom = $childStyle?->margin?->bottom->resolveBoxPercent($containerW) ?? 0;
+            $mLeft = $childStyle?->margin?->left->resolveBoxPercent($containerW) ?? 0;
+            $mRight = $childStyle?->margin?->right->resolveBoxPercent($containerW) ?? 0;
             $chW = (int)($cr->getW() ?? 0);
             if ($chW <= 0) {
-                $autoPadL = $childStyle?->padding?->left->toPx() ?? 0;
-                $autoPadR = $childStyle?->padding?->right->toPx() ?? 0;
+                $autoPadL = $childStyle?->padding?->left->resolveBoxPercent($containerW) ?? 0;
+                $autoPadR = $childStyle?->padding?->right->resolveBoxPercent($containerW) ?? 0;
                 $autoBw = (int)($childStyle?->getBorderLeftWidth() ?? 0) + (int)($childStyle?->getBorderRightWidth() ?? 0);
                 $cs = $childStyle?->boxSizing?->value ?? 'content-box';
                 $chW = ($cs === 'border-box') ? max(0, $containerW - $mLeft - $mRight) : max(0, $containerW - $mLeft - $mRight - $autoPadL - $autoPadR - $autoBw);
