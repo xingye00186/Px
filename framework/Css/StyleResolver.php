@@ -138,6 +138,8 @@ class StyleResolver
 
         // Expand shorthand padding/margin to individual values
         // 使用统一展开类（与 SFC 编译器共用同一套展开逻辑）
+        // flex 简写展开暂禁用：FlexAlgorithm 内部仍读 $cs->flex 短手对象，
+        // 需先重构为读 longhand (flexGrow/flexShrink/flexBasis) 后才能启用。
         $raw = CssShorthandExpander::expandAll($raw, false);
 
         // Note: flex shorthand expansion (flex:1 → flex-grow:1 + flex-shrink:1 + flex-basis:0px)
