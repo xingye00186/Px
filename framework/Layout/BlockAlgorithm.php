@@ -244,7 +244,33 @@ class BlockAlgorithm extends LayoutAlgorithm
             $h += (int)($s->getBorderBottomWidth() ?? 0);
         }
 
-        return new PhysicalFragment((int)$x, (int)$y, (int)$w, (int)$h, $s->visualWidth($w), $s->visualHeight($h), 0, (int)$w, (int)$h, $s, $stackedChildren, null);
+        // ── Baseline 计算（对标 Blink NGPhysicalFragment::FirstBaseline）──
+        // First baseline = 第一个 in-flow block child 的 baseline（递归）——
+        // 若自身含文本（textContent 非空），则 baseline = ascent ≈ fontSize * 0.8
+        // 若子项有 baseline，取第一个子项的 (child.y - y) + child.baseline
+        $fragBaseline = 0;
+        $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
+        if (strlen($textContent) > 0) {
+            // 文本节点自身有基线
+            $fragBaseline = (int)($fs * 0.8);
+        } else if (count($stackedChildren) > 0) {
+            // 从第一个 in-flow child 查找 baseline（对标 Blink first-baseline 算法）
+            foreach ($stackedChildren as $child) {
+                $chPos = $child->style?->position?->value ?? 'static';
+                if ($chPos === 'absolute' || $chPos === 'fixed') continue;
+                $chBaseline = $child->getBaseline();
+                if ($chBaseline > 0) {
+                    $fragBaseline = (int)($child->getY() - $y) + $chBaseline;
+                } else {
+                    // 子项无 baseline：估算为子项底边（保守估算）
+                    $fragBaseline = (int)($child->getY() - $y) + (int)$child->getH();
+                }
+                break;
+            }
+        }
+
+        return new PhysicalFragment((int)$x, (int)$y, (int)$w, (int)$h, $s->visualWidth($w), $s->visualHeight($h), 0, (int)$w, (int)$h, $s, $stackedChildren, null,
+            0, 0, false, '', null, [], [], 0, '', $fragBaseline);
     }
 
     private function computeBlockWidth(int $parentW, ComputedStyle $s, string $textContent, int $percBaseW = 0): int

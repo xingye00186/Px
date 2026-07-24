@@ -63,6 +63,18 @@ class PhysicalFragment
      */
     public readonly string $displayText;
 
+    /**
+     * First baseline offset（对标 Blink NGPhysicalFragment::FirstBaseline）。
+     *
+     * 距离 Fragment 顶边的行基线位置（像素）。用于：
+     *   - vertical-align: baseline 对齐参考点
+     *   - align-items: baseline 在 flex/grid 中的子项对齐
+     *   - Inline text 基线位置计算
+     *
+     * 0 表示未计算（消费方应 fallback 到 ascent 估算）。
+     */
+    public readonly int $baseline;
+
     /** getter 方法 — AOT 跨类 readonly 访问保护 */
     public function getX(): int { return $this->x; }
     public function getY(): int { return $this->y; }
@@ -76,6 +88,7 @@ class PhysicalFragment
     public function getScrollTop(): int { return $this->scrollTop; }
     public function getScrollLeft(): int { return $this->scrollLeft; }
     public function getIsScrollContainer(): bool { return $this->isScrollContainer; }
+    public function getBaseline(): int { return $this->baseline; }
 
     /** 滚动状态 */
     public readonly int $scrollTop;
@@ -104,6 +117,7 @@ class PhysicalFragment
         array $pseudoStyles = [],
         int $textWidth = 0,
         string $displayText = '',
+        int $baseline = 0,
         // 已删除位置参数 availableWidth（审计 §13.F）：非布局输出，属 ConstraintSpace 职责
     ) {
         $this->x               = (int)$x;
@@ -127,6 +141,7 @@ class PhysicalFragment
         $this->pseudoStyles      = $pseudoStyles;
         $this->textWidth          = (int)$textWidth;
         $this->displayText        = $displayText;
+        $this->baseline           = (int)$baseline;
     }
 
     /** 返回带截断文本的新 Fragment（不可变重建） */
@@ -139,7 +154,7 @@ class PhysicalFragment
             $this->style, $this->children, $this->sourceNode,
             $this->scrollTop, $this->scrollLeft, $this->isScrollContainer,
             $this->type, $this->content, $this->dataset, $this->pseudoStyles,
-            $this->textWidth, $text
+            $this->textWidth, $text, $this->baseline
         );
     }
 

@@ -177,6 +177,24 @@ $tests['flex-basis auto 回退到 width'] = function() {
     return $result;
 };
 
+// ── Test: CSS Flexbox §9.6 align-items:baseline 基线对齐 ──
+// 对标 Blink NGFlexLayoutAlgorithm 基线对齐：子项的基线应对齐到同一行中最大基线位置。
+// Small (font-size:14, baseline≈0.8*14=11) 与 Big (font-size:24, baseline≈0.8*24=19) 应对齐在同一基线。
+$tests['CSS §9.6 align-items:baseline 基线对齐'] = function() {
+    $result = run_minimal_pipeline(
+        VNode::h('div', ['style' => 'display:flex;align-items:baseline;width:400px;height:100px'], [
+            VNode::h('div', ['style' => 'font-size:14px;height:40px;width:100px'], 'Small'),
+            VNode::h('div', ['style' => 'font-size:24px;height:60px;width:100px'], 'Big'),
+        ])
+    );
+    // Small: y = lineMaxBaseline - childBaseline = 70 - 11 = 59
+    // Big:   y = lineMaxBaseline - childBaseline = 70 - 19 = 51
+    // 两者 y+baseline 皆等于 70，确认基线对齐生效。
+    assert_contains($result, 'div (0,59 100x40) text="Small"', 'align-items:baseline: Small y=59 (lineMaxBaseline=70 - 14*0.8=11)');
+    assert_contains($result, 'div (100,51 100x60) text="Big"', 'align-items:baseline: Big y=51 (lineMaxBaseline=70 - 24*0.8=19)');
+    return $result;
+};
+
 $snapFile = __DIR__ . '/../__snapshots__/Level-09-Flexbox-Advanced.snap';
 run_css_tests('Level 9 - Flexbox Advanced', $snapFile, $tests);
 

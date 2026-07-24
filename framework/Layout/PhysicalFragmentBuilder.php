@@ -40,6 +40,7 @@ class PhysicalFragmentBuilder
     private bool $_isScrollContainer = false;
     private int $_textWidth = 0;
     private string $_displayText = '';
+    private int $_baseline = 0;
 
     public function x(int $v): self { $this->_x = $v; return $this; }
     public function y(int $v): self { $this->_y = $v; return $this; }
@@ -63,6 +64,7 @@ class PhysicalFragmentBuilder
     public function isScrollContainer(bool $v): self { $this->_isScrollContainer = $v; return $this; }
     public function textWidth(int $v): self { $this->_textWidth = $v; return $this; }
     public function displayText(string $v): self { $this->_displayText = $v; return $this; }
+    public function baseline(int $v): self { $this->_baseline = $v; return $this; }
 
     /** 从现有 Fragment 拷贝属性 */
     public function from(PhysicalFragment $f): self
@@ -89,6 +91,7 @@ class PhysicalFragmentBuilder
         $this->_isScrollContainer = (bool)$f->isScrollContainer;
         $this->_textWidth = (int)$f->textWidth;
         $this->_displayText = (string)$f->displayText;
+        $this->_baseline = (int)$f->baseline;
         return $this;
     }
 
@@ -104,6 +107,7 @@ class PhysicalFragmentBuilder
             $this->_type, $this->_content, $this->_dataset, $this->_pseudoStyles,
             $this->_textWidth,
             $this->_displayText,
+            $this->_baseline,
         );
     }
 }

@@ -146,7 +146,11 @@ class InlineAlgorithm extends LayoutAlgorithm
                 (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0),
                 $cStyle, $cr->children, $cr->sourceNode,
                 $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
-                $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles
+                $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles,
+                // textWidth + displayText（保留原值）
+                (int)$cr->textWidth, (string)$cr->displayText,
+                // Baseline（对标 Blink NGPhysicalLineBoxFragment）：inline item 基线 = ascent ≈ fontSize * 0.8
+                $cr->getBaseline() > 0 ? $cr->getBaseline() : (int)(($cStyle?->getFontSize() ?? 16) * 0.8)
             );
             $cursorX += $itemTotalW;
             if ($itemH > $lineMaxH) $lineMaxH = $itemH;

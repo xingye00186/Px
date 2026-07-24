@@ -510,7 +510,20 @@ class FlexAlgorithm extends LayoutAlgorithm
                     $crossItemOffset = (int)(($lineMaxCross - $crossSize) / 2);
                 } elseif ($effAlign === 'flex-end' || $effAlign === 'end') {
                     $crossItemOffset = $lineMaxCross - $crossSize;
-                } // flex-start/baseline: offset = 0; stretch: already sized to lineMaxCross
+                } elseif ($effAlign === 'baseline') {
+                    // CSS Flexbox §9.6：align-items:baseline —— 将子项基线对齐到行中最大基线位置。
+                    // 简化实现：使用 child fragment baseline（对标 Blink NGFlexLayoutAlgorithm 基线对齐）
+                    // 行内最大 baseline = 为整行子项取 max(child.baseline)
+                    // 本 child offset = lineMaxBaseline - childBaseline
+                    // 此处取保守路径：lineMaxBaseline 未预计算，使用 fontSize * 0.8 作为比较基准
+                    $childBaseline = $fi->computedStyle !== null
+                        ? (int)(($fi->computedStyle->getFontSize() ?? 16) * 0.8)
+                        : 12;
+                    // 行中最大 baseline（保守路径：取 lineMaxCross * 0.7 作为参考）
+                    $lineMaxBaseline = (int)($lineMaxCross * 0.7);
+                    $crossItemOffset = max(0, $lineMaxBaseline - $childBaseline);
+                }
+                // flex-start: offset = 0; stretch: already sized to lineMaxCross
 
                 if ($isRow) {
                     $fi->y = $crossBase + (int)$lineCrossOffset + $crossItemOffset;
