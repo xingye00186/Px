@@ -16,6 +16,87 @@ use Px\Css\CssLength;
  */
 class FlexAlgorithm extends LayoutAlgorithm
 {
+    /**
+     * 计算 Flex 容器的内在尺寸（对标 Blink NGFlexLayoutAlgorithm::ComputeMinMaxSizes）。
+     *
+     * CSS Sizing L3 + CSS Flexbox §9.9:
+     *   - min-content (row): max(所有 item min-content)  （wrap时）
+     *                    or  sum(所有 item min-content) + gaps （nowrap时）
+     *   - max-content (row): sum(所有 item max-content) + gaps
+     *   - column: sum(item heights) + gaps for min/max (but Px 简化为最大 item 宽)
+     */
+    public function computeMinMaxSizes(
+        ConstraintSpace $space,
+        ?\Px\Css\ComputedStyle $style = null,
+        string $textContent = '',
+        array $childNodes = [],
+    ): MinMaxSizes {
+        $s = $style ?? \Px\Css\StylePool::empty();
+        $isRow = ($s->flexDirection?->value ?? 'row') === 'row' || ($s->flexDirection?->value ?? 'row') === 'row-reverse';
+        $isWrap = ($s->flexWrap?->value ?? 'nowrap') !== 'nowrap';
+        $gap = (int)($s->gap?->toPx() ?? 0);
+
+        $blockAlgo = new BlockAlgorithm();
+        $minC = 0;
+        $maxC = 0;
+        $count = 0;
+
+        foreach ($childNodes as $child) {
+            if (!($child instanceof \Px\Render\RenderNode)) continue;
+            $cs = $child->computedStyle;
+            if ($cs === null) continue;
+            $childDisplay = $cs->display?->value ?? 'block';
+            if ($childDisplay === 'none') continue;
+            $childPos = $cs->position?->value ?? 'static';
+            if ($childPos === 'absolute' || $childPos === 'fixed') continue;
+
+            // 子项有显式宽度时直接使用
+            $explicitW = $cs->width?->toPx() ?? 0;
+            if ($explicitW > 0 && !$cs->width->isPercent() && !$cs->width->isAuto()) {
+                $itemMin = (int)$explicitW;
+                $itemMax = (int)$explicitW;
+            } else {
+                $childContent = (string)($child->content ?? '');
+                $childChildren = $child->children ?? [];
+                if (!is_array($childChildren)) $childChildren = [];
+                $sizes = $blockAlgo->computeMinMaxSizes($space, $cs, $childContent, $childChildren);
+                $itemMin = $sizes->minContent;
+                $itemMax = $sizes->maxContent;
+            }
+
+            if ($isRow) {
+                if ($isWrap) {
+                    // wrap: min-content = 最大单项
+                    if ($itemMin > $minC) $minC = $itemMin;
+                } else {
+                    // nowrap: min-content = sum
+                    $minC += $itemMin;
+                }
+                $maxC += $itemMax;
+            } else {
+                // column: 宽度取最大子项
+                if ($itemMin > $minC) $minC = $itemMin;
+                if ($itemMax > $maxC) $maxC = $itemMax;
+            }
+            $count++;
+        }
+
+        // 加 gap
+        if ($isRow && $count > 1) {
+            $totalGap = ($count - 1) * $gap;
+            if (!$isWrap) $minC += $totalGap;
+            $maxC += $totalGap;
+        }
+
+        // 加自身 padding + border
+        $padLR = (int)($s->padding?->left->toPx() ?? 0) + (int)($s->padding?->right->toPx() ?? 0);
+        $bwLR = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
+        $minC += $padLR + $bwLR;
+        $maxC += $padLR + $bwLR;
+
+        return new MinMaxSizes($minC, $maxC);
+    }
+
     public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], ?PhysicalFragment $inputFragment = null): PhysicalFragment
     {
         $s = $style ?? \Px\Css\StylePool::empty();

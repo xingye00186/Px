@@ -50,6 +50,14 @@ class BlockAlgorithm extends LayoutAlgorithm
         $minC = 0;
         $maxC = 0;
         foreach ($childNodes as $child) {
+            // §11.3: 缓存命中栩——避免复杂嵌套下 O(n²) 重复计算
+            if ($child instanceof \Px\Render\RenderNode && $child->cachedMinMaxSizes !== null && !$child->layoutDirty) {
+                $childMin = $child->cachedMinMaxSizes->minContent;
+                $childMax = $child->cachedMinMaxSizes->maxContent;
+                if ($childMin > $minC) $minC = $childMin;
+                if ($childMax > $maxC) $maxC = $childMax;
+                continue;
+            }
             $childStyle = $child->computedStyle;
             $childDisplay = $childStyle?->display?->value ?? 'block';
             $childPos = $childStyle?->position?->value ?? 'static';
@@ -69,6 +77,10 @@ class BlockAlgorithm extends LayoutAlgorithm
                 $childSizes = $algo->computeMinMaxSizes($space, $childStyle, $childContent, $child->children);
                 $childMin = $childSizes->minContent;
                 $childMax = $childSizes->maxContent;
+                // §11.3: 存入缓存
+                if ($child instanceof \Px\Render\RenderNode) {
+                    $child->cachedMinMaxSizes = $childSizes;
+                }
             }
 
             // 加 margin

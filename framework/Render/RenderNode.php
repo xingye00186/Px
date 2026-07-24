@@ -40,6 +40,8 @@ class RenderNode
     // ── 缓存 ──
     public ?PhysicalFragment $cachedFragment = null;
     public ?ConstraintSpace $cachedConstraintSpace = null;
+    /** computeMinMaxSizes 缓存（避免复杂嵌套下 O(n²) 重复计算） */
+    public ?\Px\Layout\MinMaxSizes $cachedMinMaxSizes = null;
 
     // ── 交互状态（由 Application 事件处理器维护，用于伪类样式判断）──
     public bool $hovered = false;

@@ -20,6 +20,62 @@ use Px\Layout\Grid\GridItem;
  */
 class GridAlgorithm extends LayoutAlgorithm
 {
+    /**
+     * 计算 Grid 容器的内在尺寸（对标 Blink NGGridLayoutAlgorithm::ComputeMinMaxSizes）。
+     *
+     * CSS Sizing L3 + CSS Grid L1 §12.4:
+     *   - min-content: 所有轨道 min-content 之和 + gaps
+     *   - max-content: 所有轨道 max-content 之和 + gaps
+     *   简化：未解析 grid-template-columns 轨道定义，使用子项贡献估算
+     */
+    public function computeMinMaxSizes(
+        ConstraintSpace $space,
+        ?\Px\Css\ComputedStyle $style = null,
+        string $textContent = '',
+        array $childNodes = [],
+    ): MinMaxSizes {
+        $s = $style ?? \Px\Css\StylePool::empty();
+        $gap = (int)($s->gap?->toPx() ?? 0);
+        $blockAlgo = new BlockAlgorithm();
+
+        $minC = 0;
+        $maxC = 0;
+        $count = 0;
+
+        foreach ($childNodes as $child) {
+            if (!($child instanceof \Px\Render\RenderNode)) continue;
+            $cs = $child->computedStyle;
+            if ($cs === null) continue;
+            if (($cs->display?->value ?? 'block') === 'none') continue;
+
+            $explicitW = $cs->width?->toPx() ?? 0;
+            if ($explicitW > 0 && !$cs->width->isPercent() && !$cs->width->isAuto()) {
+                $itemMin = (int)$explicitW;
+                $itemMax = (int)$explicitW;
+            } else {
+                $childContent = (string)($child->content ?? '');
+                $childChildren = $child->children ?? [];
+                if (!is_array($childChildren)) $childChildren = [];
+                $sizes = $blockAlgo->computeMinMaxSizes($space, $cs, $childContent, $childChildren);
+                $itemMin = $sizes->minContent;
+                $itemMax = $sizes->maxContent;
+            }
+
+            // Grid: min/max-content = 最大子项（简化—实际应基于轨道定义）
+            if ($itemMin > $minC) $minC = $itemMin;
+            if ($itemMax > $maxC) $maxC = $itemMax;
+            $count++;
+        }
+
+        // 加自身 padding + border
+        $padLR = (int)($s->padding?->left->toPx() ?? 0) + (int)($s->padding?->right->toPx() ?? 0);
+        $bwLR = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
+        $minC += $padLR + $bwLR;
+        $maxC += $padLR + $bwLR;
+
+        return new MinMaxSizes($minC, $maxC);
+    }
+
     public function layout(ConstraintSpace $space, ?ComputedStyle $style = null, string $textContent = '', array $childNodes = [], ?PhysicalFragment $inputFragment = null): PhysicalFragment
     {
         // ── Intrinsic measurement mode ──
