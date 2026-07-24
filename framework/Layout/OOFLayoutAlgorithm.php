@@ -237,6 +237,22 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
             }
         }
 
+        // CSS 2.2 §10.3.7 shrink-to-fit：若 OOF width 仍为 0 且无双向声明，使用子项总宽作为 max-content 代理（clamp 到 ancW）。
+        // 仅当无文本（上面未命中）且有子项时生效，避免与既有测量逻辑重叠。
+        if ($width <= 0 && count($frag->children) > 0) {
+            $childrenMaxRight = 0;
+            foreach ($frag->children as $ch) {
+                $chRight = (int)$ch->getX() + (int)$ch->getW();
+                if ($chRight > $childrenMaxRight) $childrenMaxRight = $chRight;
+            }
+            if ($childrenMaxRight > 0) {
+                $padLR = (int)($cs->padding?->left->toPx() ?? 0) + (int)($cs->padding?->right->toPx() ?? 0);
+                $bwLR = (int)($cs->getBorderLeftWidth() ?? 0) + (int)($cs->getBorderRightWidth() ?? 0);
+                $maxContent = $childrenMaxRight + $padLR + $bwLR;
+                $width = min($maxContent, $ancW > 0 ? $ancW : $maxContent);
+            }
+        }
+
         $hasLeft = ($cs->getRaw('left') !== null);
         $hasRight = ($cs->getRaw('right') !== null);
         $hasTop = ($cs->getRaw('top') !== null);

@@ -108,6 +108,20 @@
 
 **数据字段语义得分升级**：**~62% → ~64%**（Fragment 字段职责溢出 6 项缺口本轮处理 1 项）。
 
+### 2026-07-24 Phase 3 推进：shrink-to-fit + aspect-ratio + CSS Values L3（本轮第六批）
+
+继续修补算法完整度与规范合规度中的 P1 项：
+
+| 审计章节 | 修复项 | 实现要点 |
+|---------|---------|----------|
+| §14.1.4 (P1) | **shrink-to-fit for inline-block** (CSS 2.2 §10.3.5) | InlineAlgorithm.layout() 新增：当 display=inline-block 且 width auto 时，使用文本测量 + 子项总宽作为 max-content 代理，clamp 到 available。box-sizing:border-box 时统一处理。min-width 声明时额外 clamp |
+| §14.1.4 (P1) | **shrink-to-fit for OOF** (CSS 2.2 §10.3.7) | OOFLayoutAlgorithm.calculateOOFPosition() 新增：若 width 仍为 0 且无完整双向声明，使用子项最大右边界作为 max-content 代理，clamp 到 ancW。仅当无文本且有子项时生效，避免与既有测量重叠 |
+| §16.4.1 (P1) | **aspect-ratio 反向推导** (CSS-Sizing-4 §5) | BlockAlgorithm.layout() 新增：若声明 aspect-ratio、raw width 未声明、height 显式声明，则推导 `width = height * ratio`，并 clamp 到 min/max width。补充旧版仅支持的 W→H 推导 |
+| §16.3.3 (P1) | **CSS Values L3：min()/max()/clamp()** | CssLength::fromString 新增三个表达式解析分支。min(A,B,…) / max(A,B,…)：同单位 (纯 px 或纯 %) 直接取 min/max，混合单位后退到首个数字。clamp(MIN,VAL,MAX)：同单位时 `min(max(VAL,MIN),MAX)`，混合时后退取 VAL。不支持嵌套 calc 与混合单位上下文解析（需 Phase 4+）|
+
+**算法完整度得分升级**：**~66% → ~70%**（shrink-to-fit 2 个位点 + aspect-ratio 2/5 场景 + CSS Values L3 3 个函数）。
+**规范合规度得分升级**：**~66% → ~68%**（§16.3.3/16.4.1/14.1.4 一并推进）。
+
 以下问题**部分修复**：
 
 | 原优先级 | 问题 | 当前状态 |
@@ -1712,3 +1726,4 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 | 2026-07-24 | **Phase 2 抽象层建立**：对标 Blink 新增三个抽象类与一个基类包裹方法—LayoutResult (§12.2 P0)、ConstraintSpaceBuilder (§12.3 P2)、LayoutInputNode (§12.1 P1)、LayoutAlgorithm::layoutResult()。均并行安全，带 wrap() / from() 迁移期便捷方法。抽象层次 85% → 93%。cs-standards 基线 254/300 零回归 |
 | 2026-07-24 | **Phase 2 抽象层启用**：BlockAlgorithm::layoutResult() 真实 override（新增 extractEndMarginStrut 处理 BFC/padding/height/collapsible block 预判，为 §8.3.1 第 3 种场景铺路）。LayoutOrchestrator 根容器与 buildChildSpace 均改用 ConstraintSpaceBuilder（命名参数代替 21 位置参数）。PhysicalFragmentBuilder 补全 textWidth/displayText 字段，translateFragment/postProcess 重建父均改用 Builder（代码行数从各 20 行降至 7 行）。cs-standards 基线 254/300 零回归 |
 | 2026-07-24 | **Phase 3 启动**：Fragment 字段矮身—availableWidth 完全删除（21 → 20 字段）。OOF insets 双向判断 bug 修复（审计 §14.6.1）。**endMarginStrut 消费启用**：stackBlockChildren 提取子的 endMarginStrut 与子 margin-bottom 折叠，实施 CSS §8.3.1 场景 3（父吸收末孙 margin-bottom）。cs-standards 基线 254/300 零回归 |
+| 2026-07-24 | **Phase 3 推进**：shrink-to-fit 实现（inline-block 在 InlineAlgorithm + OOF 在 OOFLayoutAlgorithm，CSS 2.2 §10.3.5/10.3.7）。aspect-ratio 反向推导（H→W，CSS-Sizing-4 §5）。CSS Values L3：min()/max()/clamp() 表达式解析（同单位直接计算）。算法完整度 66%→70%，规范合规度 66%→68%。cs-standards 基线 254/300 零回归 |

@@ -40,7 +40,42 @@ class InlineAlgorithm extends LayoutAlgorithm
         $y = $top;
 
         $w = $s->width?->toPx() ?? 0;
-        if ($w <= 0) $w = (int)($space->getContentWidth() ?? 0);
+        // CSS 2.2 §10.3.5：inline-block 且 width auto 时应采用 shrink-to-fit：
+        //   width = min(preferred_width, max(preferred_min_width, available))
+        // Px 无完整 min-content/max-content 计算，以内容测量（文本宽 + 子项总宽）代理 max-content。
+        $isInlineBlock = (($s->display?->value ?? 'inline') === 'inline-block');
+        if ($w <= 0) {
+            $availableW = (int)($space->getContentWidth() ?? 0);
+            if ($isInlineBlock) {
+                // 文本 max-content 代理（不换行宽度）
+                $fs = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
+                $textW = strlen($textContent) > 0
+                    ? TextMeasureCache::measure($textContent, $fs, (bool)($s->getBold() ?? false))
+                    : 0;
+                // 子项总宽（已 layoutChild 产出）作为额外 max-content 信息
+                $childrenW = 0;
+                foreach ($children as $cr) {
+                    $childrenW += (int)($cr->getW() ?? 0);
+                }
+                $contentW = max($textW, $childrenW);
+                // 加 padding+border（包括在 shrink-to-fit 后的尺寸）
+                $padLR = (int)($s->padding?->left->toPx() ?? 0) + (int)($s->padding?->right->toPx() ?? 0);
+                $bwLR = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
+                $sizing = $s->boxSizing?->value ?? 'content-box';
+                if ($sizing === 'border-box') {
+                    $w = min($contentW + $padLR + $bwLR, $availableW);
+                } else {
+                    // content-box: available 含 padding+border，但 fragment.w 仅内容区
+                    $w = min($contentW, max(0, $availableW - $padLR - $bwLR));
+                }
+                // min-width clamp（如 min-width 声明）
+                $minW = $s->minWidth?->toPx() ?? 0;
+                if ($minW > 0 && $w < $minW) $w = $minW;
+            } else {
+                // inline / 其他：保持旧行为（fill available）
+                $w = $availableW;
+            }
+        }
         $h = $s->height?->toPx() ?? 0;
         if (strlen($textContent) > 0 && (int)($h ?? 0) <= 0) {
             $h = ((int)($s->getLineHeight() ?? 0) > 0) ? (int)$s->getLineHeight() : (int)($s->getFontSize() * 1.2);

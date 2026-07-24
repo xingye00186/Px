@@ -144,6 +144,25 @@ class BlockAlgorithm extends LayoutAlgorithm
 
         $w = $this->computeBlockWidth($parentW, $s, $textContent, $percBaseW);
         $h = $this->computeBlockHeight($parentH, $s, $textContent, $percBaseH);
+        // CSS-Sizing-4 §5 aspect-ratio 反向推导（H 显式 + W auto）：
+        //   仅当宽度由默认 auto-fill 得到 (== parentW - margins) 且 height 显式声明时，
+        //   尝试使用 aspect-ratio 推导 宽度 = 高度 * ratio。
+        //   需避免与显式 width 冲突—仅当 raw width 未声明（getRaw('width') === null）时生效。
+        $rawW = $s->getRaw('width');
+        $arVal = $s->getAspectRatio() ?? 0;
+        $hExplicit = ($s->height !== null && !$s->height->isAuto() && !$s->height->isIntrinsic() && $s->height->toPx() > 0);
+        if ($arVal > 0 && $rawW === null && $hExplicit && $h > 0) {
+            $derivedW = (int)($h * $arVal);
+            if ($derivedW > 0) {
+                // clamp 到 min/max width（同 computeBlockWidth）
+                $minWc = $s->minWidth?->toPx() ?? 0;
+                $maxWc = $s->maxWidth?->toPx() ?? 0;
+                if ($minWc > 0 && $maxWc > 0 && $minWc > $maxWc) $maxWc = $minWc;
+                if ($maxWc > 0 && $derivedW > $maxWc) $derivedW = $maxWc;
+                if ($minWc > 0 && $derivedW < $minWc) $derivedW = $minWc;
+                $w = $derivedW;
+            }
+        }
 
         $positionVal = $s->position?->value ?? 'static';
         // 对标 Blink/CSS 规范：left/top 仅对定位元素（relative）生效，static 元素忽略

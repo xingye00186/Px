@@ -81,6 +81,88 @@ class CssLength extends CssValue
             return self::px($num);
         }
 
+        // CSS Values Level 3 §10.4: min() / max() / clamp() 简化支持
+        // 仅处理纯 px 或纯 % 简单形式（不混合单位、不嵌套 calc）。
+        // 完整实现需上下文解析（百分比 vs 像素交互），本处取保守路径。
+        if (str_starts_with($lower, 'min(') && str_ends_with($lower, ')')) {
+            $inner = substr($lower, 4, -1);
+            $parts = explode(',', $inner);
+            $values = [];
+            $allPx = true;
+            $allPct = true;
+            foreach ($parts as $p) {
+                $t = trim($p);
+                if (preg_match('/^(-?\d+(?:\.\d+)?)px$/i', $t, $m)) {
+                    $values[] = (float)$m[1];
+                    $allPct = false;
+                } else if (preg_match('/^(-?\d+(?:\.\d+)?)%$/', $t, $m)) {
+                    $values[] = (float)$m[1];
+                    $allPx = false;
+                } else {
+                    // 后退：包含未支持单位/嵌套，取首个数字当 px
+                    $n = (float)preg_replace('/[^-\d.]/', '', $t);
+                    if ($n > 0) return self::px($n);
+                    return self::px(0);
+                }
+            }
+            $v = min($values);
+            if ($allPx) return self::px($v);
+            if ($allPct) return self::percent($v);
+            return self::px($v);
+        }
+        if (str_starts_with($lower, 'max(') && str_ends_with($lower, ')')) {
+            $inner = substr($lower, 4, -1);
+            $parts = explode(',', $inner);
+            $values = [];
+            $allPx = true;
+            $allPct = true;
+            foreach ($parts as $p) {
+                $t = trim($p);
+                if (preg_match('/^(-?\d+(?:\.\d+)?)px$/i', $t, $m)) {
+                    $values[] = (float)$m[1];
+                    $allPct = false;
+                } else if (preg_match('/^(-?\d+(?:\.\d+)?)%$/', $t, $m)) {
+                    $values[] = (float)$m[1];
+                    $allPx = false;
+                } else {
+                    $n = (float)preg_replace('/[^-\d.]/', '', $t);
+                    if ($n > 0) return self::px($n);
+                    return self::px(0);
+                }
+            }
+            $v = max($values);
+            if ($allPx) return self::px($v);
+            if ($allPct) return self::percent($v);
+            return self::px($v);
+        }
+        // clamp(MIN, VAL, MAX) → min(max(VAL, MIN), MAX)
+        if (str_starts_with($lower, 'clamp(') && str_ends_with($lower, ')')) {
+            $inner = substr($lower, 6, -1);
+            $parts = explode(',', $inner);
+            if (count($parts) === 3) {
+                $extract = function(string $s): ?array {
+                    $t = trim($s);
+                    if (preg_match('/^(-?\d+(?:\.\d+)?)px$/i', $t, $m)) return [(float)$m[1], 'px'];
+                    if (preg_match('/^(-?\d+(?:\.\d+)?)%$/', $t, $m)) return [(float)$m[1], '%'];
+                    return null;
+                };
+                $minP = $extract($parts[0]);
+                $valP = $extract($parts[1]);
+                $maxP = $extract($parts[2]);
+                if ($minP !== null && $valP !== null && $maxP !== null) {
+                    // 均同单位时才 clamp（混合单位需上下文）
+                    if ($minP[1] === $valP[1] && $valP[1] === $maxP[1]) {
+                        $clamped = min($maxP[0], max($valP[0], $minP[0]));
+                        return $valP[1] === 'px' ? self::px($clamped) : self::percent($clamped);
+                    }
+                    // 混合：取中间值（后退）
+                    return $valP[1] === 'px' ? self::px($valP[0]) : self::percent($valP[0]);
+                }
+            }
+            $n = (float)preg_replace('/[^-\d.]/', '', $inner);
+            return self::px($n);
+        }
+
         if (str_ends_with($lower, '%')) {
             $num = (float)substr($lower, 0, -1);
             return self::percent($num);
