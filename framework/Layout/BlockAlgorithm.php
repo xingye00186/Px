@@ -563,6 +563,20 @@ class BlockAlgorithm extends LayoutAlgorithm
                 && !$childStyle->width->isAuto()
                 && $childStyle->width->toPx() > 0);
             $xOffset = $mLeft;
+            // Phase 4C: Normal flow 避让浮动排除区域
+            // CSS 2.2 §9.5: 正常流 block 子项宽度应缩窄以避开同行的浮动元素
+            if (!$exclusionSpace->isEmpty() && !$chHasExplicitW) {
+                $relY = (int)$childY - ($parentY + $borderTop + $padTop);
+                $avail = $exclusionSpace->findAvailableSpace($relY, $chH);
+                $availLeft = $avail['left'];
+                $availRight = $avail['right'];
+                $effectiveW = $availRight - $availLeft;
+                if ($effectiveW < $containerW && $effectiveW > 0) {
+                    $chW = min($chW, $effectiveW - $mLeft - $mRight);
+                    if ($chW < 0) $chW = 0;
+                    $xOffset = $availLeft + $mLeft;
+                }
+            }
             if ($marginLeftAuto && $marginRightAuto && $chHasExplicitW && $chW < $containerW) {
                 $xOffset = max(0, (int)(($containerW - $chW) / 2));
             } elseif ($marginLeftAuto && $chHasExplicitW && $chW < $containerW) {
