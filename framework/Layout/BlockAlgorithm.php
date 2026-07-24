@@ -446,8 +446,6 @@ class BlockAlgorithm extends LayoutAlgorithm
     private function stackBlockChildren(int $parentX, int $parentY, int $containerW, ComputedStyle $s, array $childResults, string $textContent, int $parentW): array
     {
         // CSS 2.2 §8.3：padding/margin 百分比均基于包含块的宽度（inline-size）。
-        // 父自身的 padding：基于祖父的 width，但此处无导入；使用 $parentW（父的约束宽）作为基准。
-        // 子的 padding/margin：基于父的 content-width = $containerW。
         $padTop = $s->padding?->top->resolveBoxPercent($parentW) ?? 0;
         $padLeft = $s->padding?->left->resolveBoxPercent($parentW) ?? 0;
         $borderTop = (int)($s->getBorderTopWidth() ?? 0);
@@ -456,6 +454,11 @@ class BlockAlgorithm extends LayoutAlgorithm
         $result = [];
         $prevMarginBottom = 0; $prevCollapsible = false;
         $inlineBuffer = [];
+
+        // Phase 4C: ExclusionSpace 用于管理浮动元素排除区域
+        $exclusionSpace = new ExclusionSpace($containerW);
+        // 收集浮动元素片段（从正常流抽出，单独放置）
+        $floatFragments = [];
 
         foreach ($childResults as $cr) {
             $childStyle = $cr->style;
@@ -494,6 +497,35 @@ class BlockAlgorithm extends LayoutAlgorithm
             // CSS 2.2 §9.4.1: BFC 边界检测——以下情况创建新 BFC，阻断 margin 折叠
             $childFloat = $childStyle?->getRaw('float') ?? 'none';
             $childFloatVal = is_object($childFloat) ? ($childFloat->value ?? 'none') : (string)$childFloat;
+            // Phase 4C: float 子项从正常流抽出，通过 ExclusionSpace 放置
+            if ($childFloatVal === 'left' || $childFloatVal === 'right') {
+                $floatW = (int)($cr->getW() ?? 0);
+                $floatH = (int)($cr->getH() ?? 0);
+                if ($floatW <= 0) $floatW = (int)$chW;
+                if ($floatH <= 0) $floatH = 20; // fallback
+                $pos = $exclusionSpace->placeFloat($childFloatVal, $floatW, $floatH, $stackY - ($parentY + $borderTop + $padTop));
+                $exclusionSpace->addFloat($childFloatVal, $pos['x'], $pos['y'], $floatW, $floatH);
+                // 将浮动元素放置在绝对坐标
+                $floatX = $parentX + $borderLeft + $padLeft + $pos['x'];
+                $floatY = $parentY + $borderTop + $padTop + $pos['y'];
+                $floatFragments[] = new PhysicalFragment(
+                    (int)$floatX, (int)$floatY, (int)$floatW, (int)$floatH,
+                    0, 0, (int)($cr->getLayer() ?? 0),
+                    (int)$floatW, (int)$floatH,
+                    $childStyle, $cr->children, $cr->sourceNode,
+                    $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
+                    $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles
+                );
+                continue; // float 不占据正常流空间
+            }
+            // Phase 4C: clear 处理
+            $clearVal = $childStyle?->getRaw('clear');
+            $clearStr = is_object($clearVal) ? ($clearVal->value ?? 'none') : (string)($clearVal ?? 'none');
+            if ($clearStr !== 'none' && $clearStr !== '' && !$exclusionSpace->isEmpty()) {
+                $relStackY = $stackY - ($parentY + $borderTop + $padTop);
+                $clearedY = $exclusionSpace->getClearY($clearStr, $relStackY);
+                $stackY = $parentY + $borderTop + $padTop + $clearedY;
+            }
             $createsBFC = ($overflowY !== 'visible')
                 || ($childPosition === 'absolute' || $childPosition === 'fixed')
                 || ($childFloatVal !== 'none')
@@ -561,6 +593,8 @@ class BlockAlgorithm extends LayoutAlgorithm
             $prevCollapsible = $isCollapsible;
         }
         if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW); }
+        // Phase 4C: 追加浮动元素到结果（在正常流子项之后）
+        foreach ($floatFragments as $ff) { $result[] = $ff; }
         return $result;
     }
 
