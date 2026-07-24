@@ -133,7 +133,7 @@ $tests['grid-template-rows 固定行高'] = function() {
             VNode::h('div', ['style' => ''], 'Short2'),
         ])
     );
-    assert_contains($result, 'div (0,68 196x60) text="Short"', 'grid-template-rows: Short in row 2, y = row1_height(100) - child_h + gap(8)...');
+    assert_contains($result, 'div (0,108 196x60) text="Short"', 'grid-template-rows: row2 y = row1(100px) + gap(8px) = 108');
     return $result;
 };
 

@@ -1,4 +1,4 @@
-@generated 2026-07-24 17:23:11
+@generated 2026-07-24 17:40:19
 === Test: align-items flex-start 顶部对齐 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x100) [dsp=flex]

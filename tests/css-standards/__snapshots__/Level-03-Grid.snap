@@ -1,4 +1,4 @@
-@generated 2026-07-24 17:23:10
+@generated 2026-07-24 17:40:18
 === Test: grid 四列等宽 (1fr 1fr 1fr 1fr) ===
 Frame #1 events=0 detail=normal
 div (0,0 800x100) [dsp=grid]
@@ -68,6 +68,16 @@ Frame #1 events=0 detail=normal
 div (0,0 432x80) [dsp=grid]
   div (0,0 200x50) text="A"
   div (232,0 200x50) text="B"
+
+---
+
+=== Test: grid-template-rows 固定行高 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200) [dsp=grid]
+  div (0,0 196x100) text="Tall"
+  div (204,0 196x100) text="Tall2"
+  div (0,108 196x60) text="Short"
+  div (204,108 196x60) text="Short2"
 
 ---
 

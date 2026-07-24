@@ -1,4 +1,4 @@
-@generated 2026-07-24 17:23:11
+@generated 2026-07-24 17:40:18
 === Test: color:#FF0000 红色文字 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x30) text="Red text"
