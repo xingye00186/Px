@@ -1,0 +1,60 @@
+# 编码约定与修改检查清单
+
+> **何时加载**：修改框架代码前必读此文档。包含 PHP/VNode 编码规范和 22 条检查清单。
+
+---
+
+## 十一、编码约定
+
+### 11.1 PHP 版本要求
+
+- 源文件：PHP 8.0+（使用 `match` 表达式）
+- AOT 编译：swoole_compiler 内置 PHP 8.x
+- **系统 PATH 中的 PHP 可以是 7.4，仅用于开发调试，不能用于编译**
+
+### 11.2 代码风格
+
+- 使用 4 空格缩进
+- 类属性使用 `protected` 或 `private`（AOT 友好）
+- `public` 属性用于组件状态（由 SFC 编译器生成）
+- 方法用 camelCase
+- VNode factory 统一使用 `VNode::h()` 和 `VNode::hComponent()`
+
+### 11.3 VNode 树规范
+
+- 每个组件的 `render()` 返回以 `#root` 为根的 VNode 树
+- `#root` 的 style 设置 `width` 和 `height`
+- `#component` 是运行时展开的占位节点，不产生渲染
+- `#text` 用于纯文本节点
+- children 可以是 `null`、`string`、`VNode`、`VNode[]`
+
+---
+
+## 十三、修改框架代码时的检查清单
+
+1. **PHP 语法检查**：`D:\swoole_compiler\php.exe -l <file>`
+2. **AOT 兼容**：无 `->$var`、无动态调用
+3. **布局职责**：LayoutResolver 管位置、VNodeRenderer 管裁切，互不越界
+4. **负高度防护**：LayoutResolver 中所有 `$node->w`/`$node->h` 赋值用 `max(0, (int)$val)`
+5. **GDI 调用保护**：GdiRenderContext 中所有 GDI 调用前检查 `$w > 0 && $h > 0`
+6. **drawText clip 基线**：所有 text 绘制必须经过 `drawText()`（含 `clipStack` 追踪 + 粗体感知），禁止直接调 `vue_draw_text()`。截断公式：`charWidth = (int)(fontSize * 0.6 * ($bold ? 1.35 : 1.0))`
+7. **clip 栈平衡**：clip-push/clip-pop 必须成对出现，每帧结束时 clip 栈应为空
+8. **Mock clip 追踪**：修改 `_MockRenderContext` 时必须同步 clip 栈追踪 + `applyClipTruncation()`
+9. **overflow:hidden 裁切**：需要裁切子内容的容器必须设置 `overflow:hidden`
+10. **数字输入限制**：所有数值输入方法必须有 15 字符长度限制
+11. **Bind 同步**：新增 bind 属性后在组件中声明 `public string`
+12. **事件冒泡**：子组件 dispatchClick 的 default 分支调用 `parent::dispatchClick`
+13. **SFC 编译**：仅编译根组件 App.vue；不手动编辑 gen/*.php
+14. **构建验证**：`build.bat <app-name>` 全流程通过
+15. **测试完整闭环**：管道测试覆盖完整用户操作链（大量操作 → 清除 → 验证 UI 完整）
+16. **按钮标签提取**：`makeButtonElement()` 需遍历子节点提取标签
+17. **LayoutResolver 洁净路由**：auto-stacked 子节点保留脏路径位置，仅 `shiftChildrenY` 平移
+18. **`$` 前缀表达式意识**：模板中 `$variable` 需组件有对应 `public` 属性
+19. **LayoutResolver 洁净路径保护**：`$node->x = ($style['left'] ?? 0) + $parentX` 需 `array_key_exists` 守卫
+20. **RenderTreeManager 集成**：新增渲染树管理类时同步更新 `Application::render()`
+21. **auto-height 排除 absolute/fixed**：CSS 2.2 §10.6.3
+22. **多帧稳定性验证**：连续 2 次 `LayoutResolver::resolve()` 结果须一致
+23. **新增 sk_* 原生函数**：需同时更新 stub + PHP 层 + C++ 层
+24. **修改 RenderContext 抽象方法**：同步更新所有后端实现
+25. **新增后端**：实现 `IRenderBackend` → 注册 `BackendRegistry::CANDIDATES` → 处理 `PX_RENDERER` 映射
+26. **迭代分布循环无进度保护**：while/for 中 `(int)` 截断计算须检查 `if ($progress <= 0) break;`
