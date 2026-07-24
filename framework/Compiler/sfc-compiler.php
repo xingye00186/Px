@@ -320,16 +320,24 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 $decls = explode(';', $v);
                 $pairs = [];
                 $valid = true;
+                $rawForExpand = [];
                 foreach ($decls as $decl) {
                     $decl = trim($decl);
                     if ($decl === '') continue;
                     $colonPos = strpos($decl, ':');
                     if ($colonPos === false) { $valid = false; break; }
-                    $prop = trim(substr($decl, 0, $colonPos));
+                    $prop = strtolower(trim(substr($decl, 0, $colonPos)));
                     $val = trim(substr($decl, $colonPos + 1));
-                    $pairs[] = var_export($prop, true) . '=>' . var_export($val, true);
+                    $rawForExpand[$prop] = $val;
                 }
-                if ($valid && !empty($pairs)) {
+                if ($valid && !empty($rawForExpand)) {
+                    // ── 编译期简写展开（对标 Blink: 所有简写在 parse 阶段展开为 longhand）──
+                    // 与 StyleResolver 运行时共用同一套展开逻辑（CssShorthandExpander）
+                    // flex 简写暂不展开（待 min-content 计算就绪）
+                    $rawForExpand = \Px\Css\CssShorthandExpander::expandAll($rawForExpand, false);
+                    foreach ($rawForExpand as $prop => $val) {
+                        $pairs[] = var_export($prop, true) . '=>' . var_export($val, true);
+                    }
                     $propsStr[] = var_export('style', true) . '=>[' . implode(',', $pairs) . ']';
                     continue;
                 }

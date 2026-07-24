@@ -1,0 +1,203 @@
+<?php
+
+namespace Px\Css;
+
+/**
+ * CssShorthandExpander — CSS 简写属性统一展开（SFC 编译器 + StyleResolver 运行时共用）
+ *
+ * 对标 Blink: style resolution 阶段展开所有简写为 longhand。
+ * SFC 编译器在构建期调用（零运行时开销），StyleResolver 在运行时对动态样式调用。
+ *
+ * 覆盖：
+ *   - padding / margin → 4 方向
+ *   - border-width / border-color / border-style → 4 方向
+ *   - overflow → overflow-x + overflow-y（2 值场景）
+ *   - gap → row-gap + column-gap（2 值场景）
+ *   - place-items → align-items + justify-items
+ *   - place-content → align-content + justify-content
+ *   - inset → top + right + bottom + left
+ *   - flex → flex-grow + flex-shrink + flex-basis（gated: 暂不启用，待 min-content）
+ *
+ * 规则：显式声明的 longhand 优先于简写展开（CSS Cascade 规则 §6.4.3）
+ */
+class CssShorthandExpander
+{
+    /**
+     * 展开所有支持的 CSS 简写属性。
+     *
+     * @param array $raw kebab-case CSS 属性名 → 值 的声明数组
+     * @param bool $expandFlex 是否展开 flex 简写（默认 false，待 min-content 就绪后开启）
+     * @return array 展开后的声明数组（原始简写保留，longhand 追加）
+     */
+    public static function expandAll(array $raw, bool $expandFlex = false): array
+    {
+        // 1. padding / margin → 4 方向
+        $raw = self::expandBoxModel($raw);
+
+        // 2. border-width / border-color / border-style → 4 方向
+        $raw = self::expandBorderBox($raw);
+
+        // 3. overflow → overflow-x + overflow-y
+        $raw = self::expandOverflow($raw);
+
+        // 4. gap → row-gap + column-gap
+        $raw = self::expandGap($raw);
+
+        // 5. place-items / place-content / place-self
+        $raw = self::expandPlace($raw);
+
+        // 6. inset → top + right + bottom + left
+        $raw = self::expandInset($raw);
+
+        // 7. flex → flex-grow + flex-shrink + flex-basis (gated)
+        if ($expandFlex) {
+            $raw = self::expandFlex($raw);
+        }
+
+        return $raw;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // padding / margin (1-4 value)
+    // ──────────────────────────────────────────────────────────────
+    private static function expandBoxModel(array $raw): array
+    {
+        foreach (['padding', 'margin'] as $prop) {
+            if (!isset($raw[$prop]) || $raw[$prop] === '') continue;
+            // margin 含 auto 不展开——margin:auto 有独立的特殊处理路径（StyleResolver marginAutoFlags）
+            if ($prop === 'margin' && stripos($raw[$prop], 'auto') !== false) continue;
+            $parts = preg_split('/\s+/', trim($raw[$prop]));
+            $count = count($parts);
+            if ($count === 0) continue;
+            $t = $parts[0];
+            $r = $parts[1] ?? $t;
+            $b = $parts[2] ?? $t;
+            $l = $parts[3] ?? $r;
+            // 保留原始单位（不强制 px）
+            if (!isset($raw[$prop . '-top']))    $raw[$prop . '-top'] = $t;
+            if (!isset($raw[$prop . '-right']))  $raw[$prop . '-right'] = $r;
+            if (!isset($raw[$prop . '-bottom'])) $raw[$prop . '-bottom'] = $b;
+            if (!isset($raw[$prop . '-left']))   $raw[$prop . '-left'] = $l;
+        }
+        return $raw;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // border-width / border-color / border-style (1-4 value)
+    // ──────────────────────────────────────────────────────────────
+    private static function expandBorderBox(array $raw): array
+    {
+        $map = [
+            'border-width' => ['border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width'],
+            'border-color' => ['border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color'],
+            'border-style' => ['border-top-style', 'border-right-style', 'border-bottom-style', 'border-left-style'],
+        ];
+        foreach ($map as $shorthand => $longhands) {
+            if (!isset($raw[$shorthand]) || $raw[$shorthand] === '') continue;
+            $parts = preg_split('/\s+/', trim($raw[$shorthand]));
+            $count = count($parts);
+            if ($count < 1) continue;
+            $t = $parts[0];
+            $r = $parts[1] ?? $t;
+            $b = $parts[2] ?? $t;
+            $l = $parts[3] ?? $r;
+            $vals = [$t, $r, $b, $l];
+            for ($i = 0; $i < 4; $i++) {
+                if (!isset($raw[$longhands[$i]])) $raw[$longhands[$i]] = $vals[$i];
+            }
+        }
+        return $raw;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // overflow → overflow-x + overflow-y (CSS Overflow Module Level 3 §3)
+    // ──────────────────────────────────────────────────────────────
+    private static function expandOverflow(array $raw): array
+    {
+        if (!isset($raw['overflow']) || $raw['overflow'] === '') return $raw;
+        $parts = preg_split('/\s+/', trim($raw['overflow']));
+        // 仅 2 值时展开（单值由 ComputedStyle 内部 CSS-Overflow-3 §3.3 混合规则处理）
+        if (count($parts) === 2) {
+            if (!isset($raw['overflow-x'])) $raw['overflow-x'] = $parts[0];
+            if (!isset($raw['overflow-y'])) $raw['overflow-y'] = $parts[1];
+        }
+        return $raw;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // gap → row-gap + column-gap (CSS Box Alignment §8)
+    // ──────────────────────────────────────────────────────────────
+    private static function expandGap(array $raw): array
+    {
+        if (!isset($raw['gap']) || $raw['gap'] === '') return $raw;
+        $parts = preg_split('/\s+/', trim($raw['gap']));
+        if (count($parts) === 2) {
+            if (!isset($raw['row-gap']))    $raw['row-gap'] = $parts[0];
+            if (!isset($raw['column-gap'])) $raw['column-gap'] = $parts[1];
+        }
+        // 单值 gap 保留原样（row-gap = column-gap = gap 值，由 PROPERTY_MAP 直接映射）
+        return $raw;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // place-items / place-content / place-self (CSS Box Alignment §6)
+    // ──────────────────────────────────────────────────────────────
+    private static function expandPlace(array $raw): array
+    {
+        $placeMap = [
+            'place-items'   => ['align-items', 'justify-items'],
+            'place-content' => ['align-content', 'justify-content'],
+            'place-self'    => ['align-self', 'justify-self'],
+        ];
+        foreach ($placeMap as $shorthand => $longhands) {
+            if (!isset($raw[$shorthand]) || $raw[$shorthand] === '') continue;
+            $parts = preg_split('/\s+/', trim($raw[$shorthand]));
+            $block = $parts[0];
+            $inline = $parts[1] ?? $block;
+            if (!isset($raw[$longhands[0]])) $raw[$longhands[0]] = $block;
+            if (!isset($raw[$longhands[1]])) $raw[$longhands[1]] = $inline;
+        }
+        return $raw;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // inset → top + right + bottom + left (CSS Logical Properties)
+    // ──────────────────────────────────────────────────────────────
+    private static function expandInset(array $raw): array
+    {
+        if (!isset($raw['inset']) || $raw['inset'] === '') return $raw;
+        $parts = preg_split('/\s+/', trim($raw['inset']));
+        $count = count($parts);
+        $t = $parts[0];
+        $r = $parts[1] ?? $t;
+        $b = $parts[2] ?? $t;
+        $l = $parts[3] ?? $r;
+        if (!isset($raw['top']))    $raw['top'] = $t;
+        if (!isset($raw['right']))  $raw['right'] = $r;
+        if (!isset($raw['bottom'])) $raw['bottom'] = $b;
+        if (!isset($raw['left']))   $raw['left'] = $l;
+        return $raw;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // flex → flex-grow + flex-shrink + flex-basis (CSS Flexbox §7.1)
+    // ⚠️ Gated: 仅在 expandAll($raw, expandFlex=true) 时激活
+    // ──────────────────────────────────────────────────────────────
+    private static function expandFlex(array $raw): array
+    {
+        if (!isset($raw['flex']) || $raw['flex'] === '') return $raw;
+        $cf = CssFlex::fromString($raw['flex']);
+        if (!isset($raw['flex-grow']))   $raw['flex-grow'] = (string)$cf->grow;
+        if (!isset($raw['flex-shrink'])) $raw['flex-shrink'] = (string)$cf->shrink;
+        if (!isset($raw['flex-basis'])) {
+            if ($cf->basis->isAuto()) {
+                $raw['flex-basis'] = 'auto';
+            } else if ($cf->basis->isPercent()) {
+                $raw['flex-basis'] = $cf->basis->value . '%';
+            } else {
+                $raw['flex-basis'] = ((int)$cf->basis->toPx()) . 'px';
+            }
+        }
+        return $raw;
+    }
+}

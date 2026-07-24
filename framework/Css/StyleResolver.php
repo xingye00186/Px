@@ -137,7 +137,8 @@ class StyleResolver
         }
 
         // Expand shorthand padding/margin to individual values
-        $raw = self::expandBoxShorthand($raw);
+        // 使用统一展开类（与 SFC 编译器共用同一套展开逻辑）
+        $raw = CssShorthandExpander::expandAll($raw, false);
 
         // Note: flex shorthand expansion (flex:1 → flex-grow:1 + flex-shrink:1 + flex-basis:0px)
         // 暂不在此阶段展开——展开后 basis=0 会绕过 min-width:auto 的 content-size 保护，

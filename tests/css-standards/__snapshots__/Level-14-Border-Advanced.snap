@@ -1,4 +1,4 @@
-@generated 2026-07-24 12:25:50
+@generated 2026-07-24 13:30:42
 === Test: border-top 顶部边框 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x80) bw=2 text="Top border"
@@ -61,4 +61,4 @@ div (0,0 200x80) bw=2 text="Per-side colors"
 
 === Test: border-width 多值 2px 6px ===
 Frame #1 events=0 detail=normal
-div (0,0 100x50) bw=26 text="Multi width"
+div (0,0 100x50) bw=2 text="Multi width"
