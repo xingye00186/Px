@@ -2,7 +2,7 @@
 
 > 审计基准：HEAD = c198f8a8 (Phase 4A Step 4-5, 274/314)
 > 对标：Chromium Blink LayoutNG (chromium/src/third_party/blink/renderer/core/layout/)
-> 覆盖范围：数据要素 / 算法 / 流程 / 抽象层次 / 数据字段语义 / 几何概念 / 内部实现 / 能力差距 / 规范合规 / 破损代码，共 **10 维度 62 子项**
+> 覆盖范围：数据要素 / 算法 / 流程 / 抽象层次 / 数据字段语义 / 几何概念 / 内部实现 / 能力差距 / 规范合规 / 性能模型 / 破损代码，共 **11 维度 68 子项**
 
 ---
 
@@ -476,6 +476,82 @@ LayoutAlgorithm::layoutResult() 和 BlockAlgorithm override 已就绪，但 Layo
 - Float 0% × 中等权重 = 显著拉低
 - Inline 35% × 高权重 = 显著拉低
 - Writing Modes 0% × 低权重 = 轻微影响
+
+---
+
+## 维度十一：性能模型对齐
+
+对标 Blink LayoutNG 的性能架构设计，检查 Px 是否实现了等价的性能优化机制。
+
+### 11.1 布局缓存与增量重算
+
+| Blink 机制 | Px 实现 | 状态 | 证据 |
+|---|---|---|---|
+| NGBlockNode::cached_layout_result_ | RenderNode.cachedFragment + cachedConstraintSpace | ✅ | LayoutOrchestrator L127-151：约束未变 + 非脏 → 零分配返回 |
+| 约束签名比较（全匹配） | ConstraintSpace.equals() 18 字段比较 | ✅ | ConstraintSpace L88-108 |
+| 布局等价比较（仅位置变） | ConstraintSpace.layoutEquals() | ✅ | LayoutOrchestrator L160：排除 parentContentX/Y，仅偏移变时平移而非重算 |
+| Simplified offset-only relayout | translateFragment(dx, dy) 递归平移 | ✅ | LayoutOrchestrator L166：O(N) 平移代替 O(N) 重布局 |
+| Style-only invalidation | styleDirty 路径复用子 Fragment 树 | ✅ | LayoutOrchestrator L130-146：仅替换样式快照，子树零拷贝 |
+| 子项洁净跳过 | ChildLayoutProvider 内部缓存 | ✅ | ChildLayoutProvider L92-97：约束未变 + 非脏 → 跳过 |
+
+### 11.2 布局边界与脏标记传播
+
+| Blink 机制 | Px 实现 | 状态 | 证据 |
+|---|---|---|---|
+| LayoutBoundary（固定尺寸节点阻断上传） | RenderNode.isLayoutBoundary | ✅ | RenderNode L77-79：`if ($this->isLayoutBoundary) return;` 阻断 markLayoutDirty 上传 |
+| NeedsLayout 向上传播 | markLayoutDirty(propagateUp=true) | ✅ | RenderNode L80-82：递归向 parent 传播 |
+| ChildNeedsLayout 短路 | Px 无对应（设计决策） | — | RenderNode L53-55 注释说明：Px 先处理子项再跑算法，无法短路 |
+| Paint Invalidation 跳过洁净子树 | PaintPipeline 路径 B | ✅ | PaintPipeline L118-119：`!$node->paintDirty && !$frag->isScrollContainer` → 跳过子树 |
+
+### 11.3 内在尺寸计算性能
+
+| Blink 机制 | Px 实现 | 状态 | 证据 |
+|---|---|---|---|
+| ComputeMinMaxSizes 缓存 (cached_min_max_sizes_) | ❌ 无缓存 | ❌ | grep `cachedMinMax` 返回 0 结果——每次 shrink-to-fit 均重新递归 |
+| 递归深度保护 | MAX_RELAYOUT_ITERATIONS = 3 | ✅ | LayoutOrchestrator L122 |
+| computeMinMaxSizes 快速路径（叶子节点直接返回） | Block/Inline 文本测量直接返回 | ✅ | BlockAlgorithm L40-43：叶子无子项时 O(1) |
+
+### 11.4 绘制缓存
+
+| Blink 机制 | Px 实现 | 状态 | 证据 |
+|---|---|---|---|
+| PaintLayer 缓存（will-change 触发） | PaintPipeline.layerCache | ✅ | PaintPipeline L24-25：`spl_object_id(frag) => drawElement[]` |
+| 缓存命中→复用绘制结果 | 路径 A: `!paintDirty && isset(layerCache)` | ✅ | PaintPipeline L108-111 |
+| 缓存失效重建 | `wasPaintDirty` 时重建并存入 | ✅ | PaintPipeline L136-144 |
+
+### 11.5 布局 Pass 次数控制
+
+| Blink 机制 | Px 实现 | 状态 | 证据 |
+|---|---|---|---|
+| 每节点最多 1 次 layout pass（缓存命中时 0 次） | 缓存命中 = 0 pass，否则 1 pass | ✅ | mainLayout 缓存早退 |
+| Flex/Grid: 2 pass（measure + distribute + re-layout） | Flex Pass 2 `$p2OrigW !== $p2ItemW` / Grid Pass 2 | ✅ | FlexAlgorithm L574：确定性判断重布局 |
+| computeMinMaxSizes: 额外 1 pass per shrink-to-fit | 无缓存，每次额外递归 | ⚠️ | 缺 computeMinMaxSizes 缓存，复杂嵌套可能产生 O(n²) |
+| OOF: 1 独立通行证 | processOutOfFlow 单遍扫描 | ✅ | LayoutOrchestrator L87-90 |
+
+### 11.6 内存效率
+
+| Blink 机制 | Px 实现 | 状态 | 说明 |
+|---|---|---|---|
+| Fragment Arena 分配 | ❌ 无（PHP GC 管理） | ❌ 不适用 | PHP 无 Arena，无法对标 |
+| ComputedStyle 池化复用 | StylePool LRU 512 | ✅ | 同输入复用同实例 |
+| Fragment 对象复用 | ❌ 每次布局新建 Fragment | ⚠️ | PHP readonly 不可变 = 无法原地修改，必须新建（设计局限） |
+| TextMeasureCache | TextMeasureCache LRU | ✅ | 文本测量缓存避免重复 GDI/DirectWrite 调用 |
+
+### 11.7 性能模型综合得分
+
+| 分类 | 检查项 | 通过 | 未通过 | 得分 |
+|---|---|---|---|---|
+| 布局缓存 | 6 | 6 | 0 | 100% |
+| 脏标记/边界 | 4 | 3 | 0 (+1 N/A) | 100% |
+| 内在尺寸 | 3 | 2 | 1 | 67% |
+| 绘制缓存 | 3 | 3 | 0 | 100% |
+| Pass 次数 | 4 | 3 | 1 | 75% |
+| 内存效率 | 4 | 2 | 2 | 50% |
+| **综合** | **24** | **19** | **4** (+1 N/A) | **~83%** |
+
+主要失分：
+- **computeMinMaxSizes 无缓存**（P2）：复杂嵌套下每次 shrink-to-fit 重新递归计算
+- **Fragment 对象无复用**（P3/设计局限）：PHP readonly + 不可变 = 必须新建，无法仿 Blink Arena
 
 ### 优先级汇总
 
