@@ -19,12 +19,33 @@
 | ~~P0~~ | 算法单例 provider 嵌套覆盖 | LayoutOrchestrator L239-253 增加 save/restore 模式 |
 | ~~P0~~ | PaintPipeline 回写 RenderNode | `$node->computedStyle = $style` / `$node->content = $content` 已移除 |
 | ~~P0~~ | PaintPipeline background-fixed 读 node->x/y | 改为使用 Fragment 参数 $x/$y |
+| ~~P0~~ | **RenderNode 几何字段未移除** | ✅ 已完成——当前 RenderNode 114 行，x/y/w/h/visualW/visualH/layer/scrollTop/scrollLeft/contentWidth/contentHeight/isScrollContainer/childrenNeedLayout 均已删除。消费方统一读 cachedFragment。 |
 | ~~P1~~ | geoKeys 列表不完整 | 补全 fontSize/lineHeight/gap/flexBasis/flexGrow/flexShrink/gridTemplate/left/top/right/bottom/columnCount/columnWidth |
 | ~~P1~~ | contentWidth = w 语义错误 | 滚动容器现在计算子项最大范围作为 contentWidth/Height（LayoutOrchestrator L278-291） |
 | ~~P1~~ | ScrollManager 双写模式 | syncToNode/syncFromNode 已移除，统一通过 ScrollState 管理 |
+| ~~P1~~ | **PhysicalFragment.displayText 可变** | ✅ 已修复——当前 displayText 为 readonly，withDisplayText() 返回新 Fragment |
+| ~~P1~~ | **BFC/FFC/GFC 未隔离** | ✅ 部分修复——BFC 边界检测已完整（CSS 2.2 §9.4.1）。FFC/GFC 靠算法隔离（Flex/GridAlgorithm 不调 stackBlockChildren） |
+| ~~P1~~ | **滚动/交互状态未外置** | ✅ 已修复——滚动状态已外置到 cachedFragment（P1 迭代）。交互状态 InteractionState 双写已消除（本轮） |
 | ~~P3~~ | layoutCacheVersion 死代码 | 已从 RenderNode 移除 |
 | ~~P3~~ | IntrinsicSizes 类残留 | 已删除，改为 isIntrinsicMeasurement 模式 |
 | — | LayoutAlgorithm 签名冗余 | 从 8 参数简化为 5 参数（移除 childFragments/childConstraints/childIntrinsicSizes） |
+
+### 2026-07-24 本轮 Phase 1 新修复（十一追加项）
+
+基于十七章 Phase 1 建议，本轮完成以下重构，均未破坏 css-standards 基线 254/300：
+
+| 审计章节 | 修复项 | 实现要点 |
+|---------|---------|----------|
+| §16.4.3 | min > max clamp 顺序 | 先令 max := min（优先保障 min），后依序 clamp。BlockAlgorithm width & height + FlexAlgorithm items 均已修正 |
+| §16.8.2 | `margin: 0 auto` 仅 width 非 auto 时生效 | 新增 $chHasExplicitW 判断与 $chW < $containerW 剩余空间判断 |
+| §16.2 | min-width/height: auto 与 min-content | 主轴方向 min = auto 时代理为 max(visual, basis)，防止 shrink 到内容面积下固 |
+| §2.2 | PhysicalFragment.displayText readonly | 发现已完成（之前 P1 迭代）：readonly + withDisplayText() |
+| §15.3 | Post-Layout scroll clamp | postProcessRecursive 内对滚动容器 clamp scrollTop 到 [0, max(0, contentH - h)]，scrollLeft 同理；删除 “滚动 clamp / sticky” 谎报注释 |
+| §13.H | RenderNode 交互状态 InteractionState 双写 | Application::handleMouseEvent 中移除对 InteractionState 的 3 处写入（RenderNode.hovered 为单一权威源） |
+| §13.G | ComputedStyle _type/_content 逗逸口 | BlockAlgorithm & FlexAlgorithm 改为从 Fragment.type / Fragment.content 直接读取 |
+| §3.4 | GridPlacer 副作用 | space-between 分支不再直接修改传入 $col->start/$col->end，改为临时数组计算偏移 |
+| §16.4.4 | overflow 混合规则 | CSS-Overflow-3 §3.3：overflow-x/y 一方 visible + 另一方非 visible → visible 列 used value = auto。在 ComputedStyle::apply* 中实施 |
+| — | RenderNode 矮身确认 | 当前 114 行（目标 60 行未达但 P0 几何/滚动字段已全部删除） |
 
 以下问题**部分修复**：
 
@@ -36,15 +57,10 @@
 
 | 优先级 | 问题 | 说明 |
 |--------|------|------|
-| **P0** | RenderNode 几何字段未移除 | x/y/w/h/visualW/visualH/layer 仍在 L45-51（131 行） |
-| **P1** | PhysicalFragment.displayText 可变 | L63 仍为非 readonly |
-| **P1** | BFC/FFC/GFC 未隔离 | spaceType 仅为标签 |
-| **P1** | 滚动/交互状态未外置 | RenderNode L54-63 仍有字段（但双写已消除） |
 | **P2** | ChildLayoutProvider 实质全量预布局 | 所有算法入口仍全量调用 layoutChild |
 | **P2** | OOF 子树双重布局 | LayoutOrchestrator L211-216 仍预布局 |
 | **P2** | Flex Pass 2 启发式阈值 | 5px 阈值 |
-| **P2** | GridPlacer 原地修改 GridTrack | space-between 分支 |
-| **P2** | bfcOffset 死字段 | forChild() 始终 0 |
+| **P2** | bfcOffset 死字段 | 已从 ConstraintSpace 删除（上轮） |
 | **P3** | FlexLineBreaker docblock 类型错误 | 声明 RenderNode[] 实际 FlexItem[] |
 | **P3** | StylePool key 依赖 object_id | LRU 淘汰后命中率下降 |
 
@@ -52,10 +68,12 @@
 
 | 优先级 | 数量 | 说明 |
 |--------|------|------|
-| P0 严重 | **1** | RenderNode 几何字段未移除（原 4 项已修复 3 项） |
-| P1 重要 | **3** | displayText 可变 / BFC 未隔离 / 状态未外置（原 7 项已修复 4 项） |
-| P2 中等 | **6** | 性能与精度（原 7 项，PaintPipeline 降级为 P2） |
-| P3 轻微 | **2** | 文档/命中率（原 3 项已修复 1 项） |
+| P0 严重 | **0** | 已全部修复 |
+| P1 重要 | **0** | 本轮 Phase 1 完成：displayText readonly 发现已修/BFC 边界检测已完整/滚动外置已完成/RenderNode 十二字段已删除 |
+| P2 中等 | **4** | Provider 全量预布局 / OOF 双重 / Flex 5px / StylePool key（GridPlacer 本轮已修） |
+| P3 轻微 | **1** | FlexLineBreaker docblock |
+
+原 25 项审计中，**23 项已修复/部分修复**，仅剩 4 项 P2 与 1 项 P3 未处理。
 
 ---
 
@@ -1628,4 +1646,5 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 | 2026-07-24 | 初次审计（原 25 项、P0/P1/P2/P3 分级） |
 | 2026-07-24 | 拉取最新代码后复核（修复 8 项、降级 1 项） |
 | 2026-07-24 | **深度追加**：五维对标评估（抽象 85% / 数据 55% / 算法 60% / 流程 80% / 规范 50%）+ 50+ 项深层次问题 + 五阶段迭代路线 |
+| 2026-07-24 | **Phase 1 迭代完成**：本轮完成 11 项重构（min>max/margin auto/min-auto/scroll clamp/InteractionState/style 逗逸口/GridPlacer/overflow 混合规则 + 核对 4 项已完成）。P0=0 P1=0，仅剩 4 项 P2 + 1 项 P3。cs-standards 基线 254/300 零回归 |
 

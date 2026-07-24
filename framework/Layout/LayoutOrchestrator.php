@@ -23,10 +23,12 @@ use Px\Core\Config;
 /**
  * LayoutOrchestrator — 布局编排器（替代 LayoutResolver）
  *
- * Phase 2 产物。三阶段管线：
+ * Phase 2 产物。多阶段管线：
  *   1. mainLayout(): 正常流布局 → Fragment 树
  *   2. oofLayout(): OOF 独立通行证 → 补充 Fragment 坐标
- *   3. postProcess(): 滚动 clamp / sticky
+ *   3. postProcess():
+ *      - 文本截断（不可变重建）
+ *      - 滚动 clamp（scrollTop <= max(0, contentHeight - h)，防内容变短后滚动位置溢出）
  *
  * 对标 Blink LayoutNG 的 LayoutOrchestrator。
  * 通过 ChildLayoutProvider 使算法能自主调子项布局。
@@ -474,14 +476,30 @@ class LayoutOrchestrator
             $newChildren[$i] = $newChild;
             if ($newChild !== $child) $childrenChanged = true;
         }
-        // 如果子节点有变化，重建父节点
-        if ($childrenChanged) {
+
+        // ── 滚动 clamp（对标 Blink post-layout scroll clamp）──
+        // CSS Overflow §2.4：内容变短后 scrollTop 应 clamp 到 [0, max(0, contentH - h)]，
+        // scrollLeft 同理。避免删除子项后滚动位置溢出、露出空区域。
+        $newScrollTop = (int)$frag->scrollTop;
+        $newScrollLeft = (int)$frag->scrollLeft;
+        if ($frag->isScrollContainer) {
+            $maxScrollY = max(0, (int)$frag->contentHeight - (int)$frag->h);
+            $maxScrollX = max(0, (int)$frag->contentWidth - (int)$frag->w);
+            if ($newScrollTop > $maxScrollY) $newScrollTop = $maxScrollY;
+            if ($newScrollTop < 0) $newScrollTop = 0;
+            if ($newScrollLeft > $maxScrollX) $newScrollLeft = $maxScrollX;
+            if ($newScrollLeft < 0) $newScrollLeft = 0;
+        }
+        $scrollChanged = ($newScrollTop !== (int)$frag->scrollTop) || ($newScrollLeft !== (int)$frag->scrollLeft);
+
+        // 如果子节点或滚动位置有变化，重建父节点
+        if ($childrenChanged || $scrollChanged) {
             $frag = new PhysicalFragment(
                 $frag->x, $frag->y, $frag->w, $frag->h,
                 $frag->visualW, $frag->visualH, $frag->layer,
                 $frag->contentWidth, $frag->contentHeight,
                 $frag->style, $newChildren, $frag->sourceNode,
-                $frag->scrollTop, $frag->scrollLeft, $frag->isScrollContainer,
+                $newScrollTop, $newScrollLeft, $frag->isScrollContainer,
                 $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles,
                 $frag->availableWidth, $frag->textWidth, $frag->displayText
             );

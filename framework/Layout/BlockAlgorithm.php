@@ -168,8 +168,10 @@ class BlockAlgorithm extends LayoutAlgorithm
                 : max(0, $parentW - $ml - $mr);
         }
         $minW = $s->minWidth?->toPx() ?? 0; $maxW = $s->maxWidth?->toPx() ?? 0;
-        if ($minW > 0 && $width < $minW) $width = $minW;
+        // CSS 2.2 §10.4：若 min > max，则先令 max := min（征集中优先保障 min）
+        if ($minW > 0 && $maxW > 0 && $minW > $maxW) $maxW = $minW;
         if ($maxW > 0 && $width > $maxW) $width = $maxW;
+        if ($minW > 0 && $width < $minW) $width = $minW;
         return (int)max(0, $width);
     }
 
@@ -195,8 +197,10 @@ class BlockAlgorithm extends LayoutAlgorithm
         $ar = $s->getAspectRatio() ?? 0;
         if ($ar > 0 && $height <= 0) { $height = (int)(($s->width?->toPx() ?? 0) / $ar); }
         $minH = $s->minHeight?->toPx() ?? 0; $maxH = $s->maxHeight?->toPx() ?? 0;
-        if ($minH > 0 && $height < $minH) $height = $minH;
+        // CSS 2.2 §10.4：若 min > max，则先令 max := min（优先保障 min）
+        if ($minH > 0 && $maxH > 0 && $minH > $maxH) $maxH = $minH;
         if ($maxH > 0 && $height > $maxH) $height = $maxH;
+        if ($minH > 0 && $height < $minH) $height = $minH;
         return (int)max(0, $height);
     }
 
@@ -233,15 +237,15 @@ class BlockAlgorithm extends LayoutAlgorithm
                 $chW = ($cs === 'border-box') ? max(0, $containerW - $mLeft - $mRight) : max(0, $containerW - $mLeft - $mRight - $autoPadL - $autoPadR - $autoBw);
             }
             $chH = (int)($cr->getH() ?? 0);
-            if ($childStyle !== null) {
-                $typeFromStyle = $childStyle->getRaw('_type');
-                if (is_string($typeFromStyle) && self::isInlineType($typeFromStyle) && strlen($childStyle->getRaw('_content') ?? '') > 0) {
-                    $content = (string)($childStyle->getRaw('_content') ?? '');
-                    $fs = $childStyle->getFontSize(); $bd = $childStyle->getBold();
-                    $measured = TextMeasureCache::measure($content, $fs, (bool)$bd);
-                    if ($measured > 0) $chW = $measured;
-                    if ($chH <= 0) $chH = $childStyle->getLineHeight() > 0 ? $childStyle->getLineHeight() : (int)($fs * 1.2);
-                }
+            // 对标 Blink：从 Fragment 直接读取 type/content（非从 ComputedStyle 逗逸口取）
+            // 之前使用 $childStyle->getRaw('_type' / '_content') 从 ComputedStyle 逗逸靠样式传递非样式数据，弱化不可变契约。
+            $childType = (string)$cr->type;
+            $childContent = (string)($cr->content ?? '');
+            if (self::isInlineType($childType) && strlen($childContent) > 0 && $childStyle !== null) {
+                $fs = $childStyle->getFontSize(); $bd = $childStyle->getBold();
+                $measured = TextMeasureCache::measure($childContent, $fs, (bool)$bd);
+                if ($measured > 0) $chW = $measured;
+                if ($chH <= 0) $chH = $childStyle->getLineHeight() > 0 ? $childStyle->getLineHeight() : (int)($fs * 1.2);
             }
             $overflowY = $childStyle?->overflowY?->value ?? $childStyle?->overflow?->value ?? 'visible';
             // CSS 2.2 §9.4.1: BFC 边界检测——以下情况创建新 BFC，阻断 margin 折叠
@@ -267,10 +271,15 @@ class BlockAlgorithm extends LayoutAlgorithm
             // 也检查 StyleResolver 计算的 auto 标志
             if (!$marginLeftAuto) { $marginLeftAuto = (bool)($childStyle?->getRaw('marginLeftAuto') ?? false); }
             if (!$marginRightAuto) { $marginRightAuto = (bool)($childStyle?->getRaw('marginRightAuto') ?? false); }
+            // CSS 2.2 §10.3.3：`margin: 0 auto` 仅当 width 不为 auto 且有剩余空间时生效
+            // 若 width 为 auto（chW 已满 containerW），auto margin 均作 0 处理
+            $chHasExplicitW = ($childStyle?->width !== null
+                && !$childStyle->width->isAuto()
+                && $childStyle->width->toPx() > 0);
             $xOffset = $mLeft;
-            if ($marginLeftAuto && $marginRightAuto) {
+            if ($marginLeftAuto && $marginRightAuto && $chHasExplicitW && $chW < $containerW) {
                 $xOffset = max(0, (int)(($containerW - $chW) / 2));
-            } elseif ($marginLeftAuto) {
+            } elseif ($marginLeftAuto && $chHasExplicitW && $chW < $containerW) {
                 $xOffset = max(0, $containerW - $chW - $mRight);
             }
             // CSS 2.2 §10.6.3：子项从父的 padding-box 左上角开始（= parent origin + border-left + padding-left）

@@ -266,16 +266,15 @@ class Application
 
                 // ── :hover 伪类样式追踪 ──
                 // 当 hover 节点变化时，更新新旧节点的 hovered 标志、标记脏位、触发渲染
+                // 对标 Blink Element::PseudoStateFlags：RenderNode.hovered 作为单一权威源（不再双写 InteractionState）
                 if ($hoverNode !== $this->hoveredNode) {
                     // 清除旧节点的 hover 状态
                     if ($this->hoveredNode !== null) {
-                        $this->getInteractionState($this->hoveredNode)->hovered = false;
                         $this->hoveredNode->hovered = false;
                         $this->hoveredNode->markStyleDirty();  // 使 cachedFragment 失效
                     }
                     // 设置新节点的 hover 状态
                     if ($hoverNode !== null) {
-                        $this->getInteractionState($hoverNode)->hovered = true;
                         $hoverNode->hovered = true;
                         $hoverNode->markStyleDirty();          // 使 cachedFragment 失效
                     }
@@ -286,7 +285,6 @@ class Application
             } else {
                 // 拖拽中：清除 hover 状态
                 if ($this->hoveredNode !== null) {
-                    $this->getInteractionState($this->hoveredNode)->hovered = false;
                     $this->hoveredNode->hovered = false;
                     $this->hoveredNode = null;
                     // ⚠️ 拖拽中不触发 requestRender()，避免与 directRender() 竞争

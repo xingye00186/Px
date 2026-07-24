@@ -130,7 +130,8 @@ class FlexAlgorithm extends LayoutAlgorithm
             $item->isFlexGrow = ($grow > 0);
             $item->alignSelf = ($alignSelfRaw !== null && $alignSelfRaw !== 'auto') ? (is_object($alignSelfRaw) ? ($alignSelfRaw->value ?? 'auto') : (string)$alignSelfRaw) : 'auto';
             $item->computedStyle = $cs;
-            $item->content = $cr->style?->getRaw('_content');
+            // 对标 Blink：从 Fragment 直接读取 content（非从 ComputedStyle 逗逸口取）
+            $item->content = $cr->content !== null ? (string)$cr->content : null;
             $item->originalChildren = $cr->children;
             $item->w = (int)$cr->getW(); $item->h = (int)$cr->getH();
             // Flex items without explicit width/height: ignore block auto-fill
@@ -297,6 +298,9 @@ class FlexAlgorithm extends LayoutAlgorithm
             }
 
             // 4b+. Clamp to min/max constraints (CSS Flexbox §4.5: min/max main/cross size)
+            // CSS-Sizing-3 §5.2: flex item 上 `min-width: auto` 等同 `min-content`
+            //   → 推导后的 min = content-based min-size（防止 shrink 到内容频宁下固）
+            // 既无完整 min-content 计算，采取保守回退：使用子项初始尺寸（$fi->w 或 hypothetical basis）作为 min-content 代理。
             foreach ($lineItems as $fi) {
                 $fi = objval($fi, FlexItem::class);
                 $fcs = $fi->computedStyle;
@@ -305,6 +309,17 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $minW = $fcs->minWidth?->toPx() ?? 0;
                 $maxH = $fcs->maxHeight?->toPx() ?? 0;
                 $minH = $fcs->minHeight?->toPx() ?? 0;
+                // min-width: auto 处理（仅对主轴方向，其他方向尚无 min-content 课题）
+                if ($isRow && $minW === 0 && $fcs->minWidth !== null && $fcs->minWidth->isAuto()) {
+                    // 代理 min-content: 使用子项 basis 尺寸或 visual（防止 shrink 到 0）
+                    $minW = max((int)$fi->visualW, (int)$fi->basis > 0 ? (int)$fi->basis : 0);
+                }
+                if (!$isRow && $minH === 0 && $fcs->minHeight !== null && $fcs->minHeight->isAuto()) {
+                    $minH = max((int)$fi->visualH, (int)$fi->basis > 0 ? (int)$fi->basis : 0);
+                }
+                // CSS 2.2 §10.4：min > max 时先令 max := min
+                if ($minW > 0 && $maxW > 0 && $minW > $maxW) $maxW = $minW;
+                if ($minH > 0 && $maxH > 0 && $minH > $maxH) $maxH = $minH;
                 if ($maxW > 0 && $fi->w > $maxW) $fi->w = $maxW;
                 if ($minW > 0 && $fi->w < $minW) $fi->w = $minW;
                 if ($maxH > 0 && $fi->h > $maxH) $fi->h = $maxH;

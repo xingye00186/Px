@@ -333,8 +333,23 @@ class ComputedStyle
         $this->display = $this->resolveKeyword('display', $d, 'block');
         $this->position = $this->resolveKeyword('position', $d, 'static');
         $this->overflow = $this->resolveKeyword('overflow', $d, 'visible');
-        $this->overflowX = $this->resolveKeyword('overflowX', $d, 'visible');
-        $this->overflowY = $this->resolveKeyword('overflowY', $d, 'visible');
+        // CSS-Overflow-3 §3.3：当 overflow-x 与 overflow-y 一方为 visible 而另一方不是 visible 时，
+        // 那个 visible 列的 used value 变为 auto。仅当两方都为 visible 时才保留 visible。
+        // → 先解析原始 value，再应用混合规则。
+        $rawOX = $this->resolveKeyword('overflowX', $d, 'visible');
+        $rawOY = $this->resolveKeyword('overflowY', $d, 'visible');
+        $oxVal = $rawOX->value;
+        $oyVal = $rawOY->value;
+        if ($oxVal === 'visible' && $oyVal !== 'visible') {
+            $this->overflowX = new CssKeyword('auto');
+            $this->overflowY = $rawOY;
+        } else if ($oyVal === 'visible' && $oxVal !== 'visible') {
+            $this->overflowX = $rawOX;
+            $this->overflowY = new CssKeyword('auto');
+        } else {
+            $this->overflowX = $rawOX;
+            $this->overflowY = $rawOY;
+        }
         $this->boxSizing = $this->resolveKeyword('boxSizing', $d, 'content-box');
         $this->flexDirection = $this->resolveKeyword('flexDirection', $d, 'row');
         $this->flexWrap = $this->resolveKeyword('flexWrap', $d, 'nowrap');
