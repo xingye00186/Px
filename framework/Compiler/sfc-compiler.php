@@ -63,6 +63,7 @@ require_once $compilerDir . '/Transform/TransformPipeline.php';
 require_once $compilerDir . '/Transform/StaticHoistTransform.php';
 require_once $compilerDir . '/Transform/StyleArrayTransform.php';
 require_once $compilerDir . '/Transform/PatchFlagTransform.php';
+require_once $compilerDir . '/Transform/StyleNormalizeTransform.php';
 require_once $compilerDir . '/Transform/ComponentResolveTransform.php';
 require_once $compilerDir . '/CompilerPipeline.php';
 

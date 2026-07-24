@@ -53,6 +53,8 @@ class CompilerPipeline
         $this->addTransform(new StyleArrayTransform());
         $this->addTransform(new StaticHoistTransform());
         $this->addTransform(new PatchFlagTransform());
+        // 强制关卡（最后一步）：所有 style 产出必须经过归一化，不可绕过
+        $this->addTransform(new StyleNormalizeTransform());
     }
 
     // ============================================================
