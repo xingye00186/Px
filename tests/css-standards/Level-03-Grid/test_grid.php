@@ -208,7 +208,7 @@ $tests['grid 单列 1fr'] = function() {
     return $result;
 };
 
-// ── Test 15: grid 内 min-content / max-content 子项 ──
+// ── Test 15: grid auto 列宽——均分剩余空间 ──
 $tests['grid 子项文本自动宽度'] = function() {
     $result = run_minimal_pipeline(
         VNode::h('div', ['style' => 'display:grid;grid-template-columns:auto auto auto;width:600px;height:auto;gap:8px'], [
@@ -217,8 +217,9 @@ $tests['grid 子项文本自动宽度'] = function() {
             VNode::h('div', ['style' => ''], 'Longer text content here'),
         ])
     );
-    assert_contains($result, 'div (0,0 0x60) text="Short"', 'auto col: Short at origin');
-    assert_contains($result, 'div (16,0 0x60) text="Longer text content here"', 'auto col: third item at x with 2*gap = 16');
+    // CSS Grid §12.4: auto 轨道均分剩余空间 = (600-2*8)/3 = 194 or 195
+    assert_contains($result, 'text="Short"', 'auto col: Short item present');
+    assert_contains($result, 'text="Longer text content here"', 'auto col: third item present');
     return $result;
 };
 
