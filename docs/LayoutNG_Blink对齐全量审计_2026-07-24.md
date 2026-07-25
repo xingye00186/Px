@@ -3,8 +3,88 @@
 # Px LayoutNG 全量对标审计报告
 
 > 审计基准：HEAD = c198f8a8 (Phase 4A Step 4-5, 274/314)
+> 三次复核：HEAD = 03e5610c (Phase 4A-4D 全完成 + Ground-Truth 对齐批次, **css-standards 324/324 100%**)
 > 对标：Chromium Blink LayoutNG (chromium/src/third_party/blink/renderer/core/layout/)
 > 覆盖范围：数据要素 / 算法 / 流程 / 抽象层次 / 数据字段语义 / 几何概念 / 内部实现 / 能力差距 / 规范合规 / 性能模型 / 破损代码，共 **11 维度 68 子项**
+
+---
+
+## ★ 第三次复核（2026-07-28 HEAD=03e5610c）—— 各维度状态全量刷新
+
+自上次审计（c198f8a8）后，Phase 4A/4B/4C/4D + Ground-Truth 对齐批次 + 100% 里程碑已全部落地。逐文件重新核查后，以下为最新状态（**本节为全文状态权威，覆盖下方各维度旧评估**）。
+
+### A. 原能力差距 12 项 → 已修复 8 项
+
+| # | 原差距 | 状态 | 证据（最新代码） |
+|---|---|---|---|
+| G1 | Float 系统 | ✅ **已实现** | `ExclusionSpace.php`（177 行，对标 NGExclusionSpace）：addFloat/findAvailableSpace/getClearY/placeFloat。BlockAlgorithm L584-636 float 抽出+放置+避让。Level-29-Float 5/5 Blink 真值验证首次全过 |
+| G2 | Line Box 模型 | ✅ **已实现** | `InlineItem.php`（NGInlineItem：text/atomic/open/close）+ `LineBox.php`（half-leading 基线模型 §10.8.1）+ `LineBreaker.php`（NGLineBreaker 贪心断行）。vertical-align top/middle/bottom 已实现（InlineAlgorithm L231-234） |
+| G3 | Flex §9.7.4 freeze/rerun | ✅ **已实现** | FlexAlgorithm L406-453：frozen 状态 + clamp rerun 循环（max 5 迭代，对标 ResolveFlexibleLengths），含 definite main size 判断 |
+| G5 | Margin collapse 父与首子 | ✅ **结构就绪** | BlockAlgorithm L274 `extractPreMarginStrut()`。T1 collapse-through（空元素穿透）为已知局限（子绝对位置与 Blink 一致，仅盒归属差异，Level-30 4/5） |
+| G9 | FlexAlgorithm.computeMinMaxSizes | ✅ **已实现** | FlexAlgorithm L28-65：row 方向 sum/max 聚合 |
+| G10 | GridAlgorithm.computeMinMaxSizes | ✅ **已实现** | GridAlgorithm L31-60 |
+| G12部分 | Grid justify-items/justify-self | ✅ **已实现** | GridAlgorithm L352-386：justifySelf auto→justifyItems 级联 + center/end/stretch |
+| — | LayoutResult 未消费（原 P1） | ✅ **已修复** | LayoutOrchestrator L254-256：`$algo->layoutResult()` 替代 layout()，endMarginStrut/oofDescendants 消费链打通 |
+
+### B. 新增 Blink 对齐基础设施（本批次新产出）
+
+| 新增 | 对标 Blink | 说明 |
+|---|---|---|
+| `ConstraintSpace.isFixedBlockSize` | is_fixed_block_size | 全链传递：grid stretch item→flex definite main；修复 flex→grid→flex 高度塔陷；已入 equals/layoutEquals 缓存键 |
+| `ConstraintSpace.isFormattingContextRoot` | is_new_formatting_context | BFC 根标记传递 |
+| `ComputedStyle::hasExplicitLength()` | Length::IsFixed + 声明检查 | 根治“默认 px(0) vs auto”5 次复发陷阱的抽象层 API；已迁移 4 核心守卫点 |
+| `RenderNode.cachedMinMaxSizes` | cached_min_max_sizes_ | 修复原性能维度 11.3 失分项（computeMinMaxSizes 无缓存） |
+| flex 交叉轴非 stretch→fit-content / 主轴 auto→max-content | §9.2.3.E | Blink 真值验证对齐 |
+| grid auto-margin 吸收剩余空间 | CSS Grid §10.1 | 读 marginXxxAuto 标志非 CssLength::auto |
+| Ground-Truth 测试体系 | — | Level-29-Float/Level-30-Margin-Collapse：Blink getBoundingClientRect 真值断言；BFC 隔离测量方法论固化 |
+
+### C. 原破损代码 → 部分修复（剩余 4 处）
+
+| 位置 | 状态 |
+|---|---|
+| ~~copyScrollTopFromOld() 全树 DFS~~ | ✅ 已删除（commit “P0 scroll bind 热修复”） |
+| ~~PaintPipeline L52-55 / L524-527 fallback~~ | ✅ 已清理 |
+| RenderTreeManager L956 `$renderNode->isScrollContainer = true` | ⚠️ **仍存在**（写已删除字段） |
+| RenderTreeManager L1368/1372 `$rn->scrollTop/scrollLeft = …`（syncBindValues） | ⚠️ **仍存在**（scroll bind 在 head/tail sync 路径仍写已删除字段） |
+| PaintPipeline L1256-1258 `$node->contentWidth/scrollTop/scrollLeft` fallback | ⚠️ **仍存在**（1 处，原 3 处） |
+
+### D. 仍未修复项（最新优先级）
+
+| 优先级 | 项 | 说明 |
+|---|---|---|
+| **P1** | RenderTreeManager 3 处 + PaintPipeline 1 处残留破损写/读 | syncBindValues 路径 scroll bind 失效风险（主路径已修，head/tail sync 跳过路径漏网） |
+| **P2** | T1 preMarginStrut collapse-through 回传链 | 空元素 margin 穿透盒归属（子绝对位置已一致）；验收标准已固化在测试注里，不盲实现 |
+| **P2** | 交互状态 hovered/focused/active 未外置 | RenderNode L47-49 仍为权威源 |
+| **P3** | LayoutInputNode 无消费者 | 定义完整但算法仍直接接收 RenderNode |
+| **P3** | ChildLayoutProvider 入口全量 | 行为等效（Provider 内缓存保护），仅性能非正确性 |
+| **P3** | StylePool key 依赖 object_id | LRU 淘汰后命中率下降 |
+| **P3** | Grid named areas / subgrid / Table 高级 | 不常用项，按需排期 |
+| **延后** | G4 Logical/Physical 坐标（writing-mode/RTL） | 业务需求明确后排期（Phase 4E） |
+
+### E. 三次复核后综合评分
+
+| 维度 | 二次复核（c198f8a8） | **三次复核（03e5610c）** | 变化主因 |
+|------|------|------|------|
+| 一：数据要素映射 | 88% | **~94%** | ExclusionSpace/InlineItem/LineBox/LineBreaker 实现，LayoutResult 消费打通 |
+| 二：算法对齐 | 72% | **~88%** | Inline 45→80（LineBox）/ Flex 75→90（clamp rerun+minmax）/ Grid 60→75（justify-self+minmax）/ Block 80→88（float+preMarginStrut） |
+| 三：几何/样式概念 | 95% | **~97%** | isFixedBlockSize 补齐 definite size 语义 |
+| 四：内部实现正确性 | 93% | **~95%** | hasExplicitLength 根治陷阱类；交互状态仍未外置 |
+| 五：流程管线 | 92% | **~97%** | layoutResult 消费短板已修复 |
+| 六：能力差距 | 12 项 | **4 项** | G1/G2/G3/G5/G9/G10/部分G12 已修；剩 G4(Logical)/G7(named areas)/G8(Table)/G11(PaintLayer) |
+| 七：破损/遗留 | 4 类 10 处 | **4 处** | copyScrollTopFromOld 删除，PaintPipeline 2/3 清理 |
+| 八：抽象层次 | ~93% | **~97%** | ExclusionSpace/InlineItem/LineBox/LineBreaker 4 项缺失抽象补齐 |
+| 九：数据字段语义 | ~72% | **~78%** | isFixedBlockSize/isFormattingContextRoot 语义对齐；Fragment scrollTop/layer 越界仍在 |
+| 十：规范合规度 | ~76% | **~90%** | css-standards 324/324 (100%)；Float 0→85 / Inline 35→75 / MarginCollapse 50→80 / Flexbox 80→95 |
+| 十一：性能模型 | ~83% | **~92%** | cachedMinMaxSizes 补齐；bench 全节点执行零负优化（+3%~+12% FPS 多批次） |
+| **综合** | ~80% | **~91%** | |
+
+### F. 下一步行动（优先级序）
+
+1. **[P1]** 清理最后 4 处破损代码：syncBindValues 改路由 ScrollManager；L956 isScrollContainer 删除（LayoutOrchestrator 已在 Fragment 标记）；PaintPipeline L1256-1258 fallback 删除
+2. **[P2]** 交互状态外置至 InteractionState（Application 事件处理器改写）
+3. **[P2]** T1 preMarginStrut 回传链（严格按测试内验收标准，避免盲实现回滚重演）
+4. **[P3]** LayoutInputNode 消费者迁移（算法签名改接收 LayoutInputNode）
+5. **[延后]** Phase 4E Logical/Physical（业务驱动）
 
 ---
 
