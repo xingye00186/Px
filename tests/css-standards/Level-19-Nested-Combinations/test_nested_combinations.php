@@ -37,7 +37,7 @@ $tests['Grid 内 Flex Row 排列'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 500x100) [dsp=grid]', 'Grid container 500x100 with 2-column track');
-    assert_contains($result, 'div (0,0 246x60) [dsp=flex]', 'Flex row fills first grid cell (246px = 250-4 implicit)');
+    assert_contains($result, 'div (0,0 246x100) [dsp=flex]', 'Flex row fills first grid cell, stretched to container height 100 (Blink-verified align-content:stretch)');
     return $result;
 };
 
@@ -76,7 +76,7 @@ $tests['Grid 内 Grid 嵌套'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 500x150) [dsp=grid]', 'Outer grid 500x150 with 2-column track');
-    assert_contains($result, 'div (254,0 246x60) [dsp=grid]', 'Second nested grid at x=254 after 8px gap');
+    assert_contains($result, 'div (254,0 246x100) [dsp=grid]', 'Second nested grid at x=254 after 8px gap, stretched to 100 (Blink-verified stretch)');
     return $result;
 };
 
@@ -138,7 +138,7 @@ $tests['Grid 内 Flex Column 嵌套'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 600x150) [dsp=grid]', 'Grid 600x150 with 1fr/2fr columns');
-    assert_contains($result, 'div (205,0 197x78) [dsp=flex]', 'Second flex column at x=205 (1fr=197 + 8 gap)');
+    assert_contains($result, 'div (205,0 197x150) [dsp=flex]', 'Second flex column at x=205 (1fr=197 + 8 gap), stretched to grid row height 150 (Blink-verified)');
     return $result;
 };
 
@@ -160,7 +160,7 @@ $tests['三层嵌套 Grid > Flex > Grid'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 500x200) [dsp=grid]', 'Outer grid 500x200 containing flex');
-    assert_contains($result, 'div (0,68 500x60) [dsp=grid]', 'Second nested grid at y=68 (60px+8px gap) inside flex');
+    assert_contains($result, 'div (0,48 500x40) [dsp=grid]', 'Second nested grid at y=48 (40px+8px gap) inside flex column, content-height rows (no stretch, height:auto flex column)');
     return $result;
 };
 
@@ -191,7 +191,7 @@ $tests['Flex > Grid > Flex 链式嵌套'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (254,0 246x60) [dsp=flex] text="Center 2"', 'Nested flex in second grid cell (x=246+8=254)');
+    assert_contains($result, 'div (254,0 246x200) [dsp=flex] text="Center 2"', 'Nested flex in second grid cell (x=254), stretched to grid height 200 via is_fixed_block_size chain (Blink-verified 246x200)');
     return $result;
 };
 

@@ -1,4 +1,15 @@
-@generated 2026-07-25 10:54:13
+@generated 2026-07-25 11:06:44
+=== Test: Grid 内 Flex Row 排列 ===
+Frame #1 events=0 detail=normal
+div (0,0 500x100) [dsp=grid]
+  div (0,0 246x100) [dsp=flex]
+    div (0,0 40x30) text="A"
+    div (40,0 40x30) text="B"
+  div (254,0 246x100) [dsp=flex]
+    div (103,0 40x30) text="C"
+
+---
+
 === Test: Flex Row 内 Grid 布局 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x120) [dsp=flex]
@@ -37,6 +48,20 @@ Frame #1 events=0 detail=normal
 div (0,0 400x100) [pos=relative] [dsp=flex]
   div (0,0 80x40) text="Item"
   div (290,10 100x50) [pos=absolute] text="Absolute"
+
+---
+
+=== Test: 三层嵌套 Grid > Flex > Grid ===
+Frame #1 events=0 detail=normal
+div (0,0 500x200) [dsp=grid]
+  div (0,0 500x200) [dsp=flex]
+    div (0,0 500x40) [dsp=grid]
+      div (0,0 248x40) text="A"
+      div (252,0 248x40) text="B"
+    div (0,48 500x40) [dsp=grid]
+      div (0,48 164x40) text="C"
+      div (168,48 164x40) text="D"
+      div (336,48 164x40) text="E"
 
 ---
 

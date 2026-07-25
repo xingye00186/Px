@@ -1,4 +1,4 @@
-@generated 2026-07-25 10:54:13
+@generated 2026-07-25 11:06:44
 === Test: [Template] absolute positioned div ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
@@ -399,9 +399,9 @@ div (0,0 200x50) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 400x40) [dsp=flex]
   div (200,0 100x40)
-    #text (200,0 100x19) [dsp=inline] text="A"
+    #text (200,0 200x19) [dsp=inline] text="B"
   div (0,0 200x40)
-    #text (0,0 200x19) [dsp=inline] text="B"
+    #text (0,0 100x19) [dsp=inline] text="A"
   div (300,0 100x40)
     #text (300,0 100x19) [dsp=inline] text="C"
 
@@ -411,9 +411,9 @@ div (0,0 400x40) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 500x40) [dsp=flex]
   div (0,0 200x40)
-    #text (0,0 500x19) [dsp=inline] text="Basis 200"
+    #text (0,0 200x19) [dsp=inline] text="Basis 200"
   div (200,0 300x40) fg=1
-    #text (200,0 500x19) [dsp=inline] text="Fill"
+    #text (200,0 300x19) [dsp=inline] text="Fill"
 
 ---
 
@@ -853,9 +853,9 @@ div (0,0 900x600) [dsp=grid]
     #text (16,16 668x19) [dsp=inline] text="Header"
   div (0,60 200x540) [dsp=flex]
     div (16,16 101x508) fg=2
-      #text (32,32 136x19) [dsp=inline] text="Main Content"
+      #text (32,32 69x19) [dsp=inline] text="Main Content"
     div (133,16 50x508) fg=1
-      #text (149,32 136x19) [dsp=inline] text="Side Panel"
+      #text (149,32 18x19) [dsp=inline] text="Side Panel"
 
 ---
 
@@ -866,7 +866,7 @@ div (0,0 800x102)
     #text (0,16 800x19) [dsp=inline] text="Article Title"
   div (0,51 800x51) [dsp=flex]
     div (0,0 585x51) fg=3
-      #text (0,0 800x19) [dsp=inline] text="Article content paragraph here."
+      #text (0,0 585x19) [dsp=inline] text="Article content paragraph here."
     div (605,0 195x51) fg=1
       #text (621,16 768x19) [dsp=inline] text="Sidebar Widget"
 
@@ -876,7 +876,7 @@ div (0,0 800x102)
 Frame #1 events=0 detail=normal
 div (0,0 800x400) [dsp=flex] bw=1
   div (0,0 265x400) scroll ch=35 cw=233 maxScroll=0 st=0 sl=0 ov=auto fg=1
-    #text (16,16 766x19) [dsp=inline] text="Left Panel"
+    #text (16,16 233x19) [dsp=inline] text="Left Panel"
   div (265,0 4x400)
   div (269,0 530x400) scroll ch=35 cw=498 maxScroll=0 st=0 sl=0 ov=auto fg=2
-    #text (285,16 766x19) [dsp=inline] text="Right Panel"
+    #text (285,16 498x19) [dsp=inline] text="Right Panel"

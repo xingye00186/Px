@@ -687,7 +687,17 @@ class FlexAlgorithm extends LayoutAlgorithm
             // 对标 Blink NGFlexLayoutAlgorithm Pass 2（CSS Flexbox §9.7）：
             // 阅览约束确定后子项新尺寸 ≠ hypothetical时，必须重新布局。
             // 旧阈值 abs(diff) > 5 为启发式规范违反——现严格使用 !== 确定性判断。
-            if ($p2OrigW > 0 && $p2ItemW > 0 && $p2OrigW !== $p2ItemW && $p2Idx < count($childNodes)) {
+            // 对标 Blink is_fixed_block_size：交叉轴 stretch 改变了子项高度（row 方向）时，
+            // 子项必须在固定块轴尺寸下重新布局（否则 grid/flex 子项内部永远看不到 stretch 高度）。
+            $p2ItemH = (int)$p2Fi->h;
+            $p2OrigH = $p2Orig !== null ? (int)$p2Orig->getH() : 0;
+            $p2HasExplicitH = false;
+            if ($p2Fi->computedStyle !== null) {
+                $p2HProp = $p2Fi->computedStyle->height;
+                $p2HasExplicitH = ($p2Fi->computedStyle->getRaw('height') !== null && $p2HProp !== null && !$p2HProp->isPercent() && $p2HProp->toPx() > 0);
+            }
+            $heightStretched = $isRow && !$p2HasExplicitH && $p2ItemH > 0 && $p2OrigH !== $p2ItemH;
+            if ((($p2OrigW > 0 && $p2ItemW > 0 && $p2OrigW !== $p2ItemW) || $heightStretched) && $p2Idx < count($childNodes)) {
                 $p2Space = new ConstraintSpace(
                     $p2ItemW, (int)$p2Fi->h > 0 ? (int)$p2Fi->h : $space->getContentHeight(),
                     $space->getParentContentX(), $space->getParentContentY(),
@@ -696,6 +706,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                     0, 0, 0, 0, 0, 0, 0, 0,
                     true, false, 'block',
                     $p2ItemW, $space->getPercentageHeight(),
+                    $heightStretched,
                 );
                 $reFrag = $this->layoutChild($childNodes[$p2Idx], $p2Space);
                 $sortedChildResults[$p2Idx] = $reFrag;

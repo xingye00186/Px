@@ -1,4 +1,4 @@
-@generated 2026-07-25 10:54:11
+@generated 2026-07-25 11:06:42
 === Test: flex row 三个子项水平排列 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x60) [dsp=flex]

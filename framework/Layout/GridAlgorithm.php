@@ -124,6 +124,13 @@ class GridAlgorithm extends LayoutAlgorithm
         if ($s->height->isPercent()) {
             $height = $s->height->resolveInContext($c->containerHeight);
         }
+        // 对标 Blink is_fixed_block_size：父（如 flex/grid stretch）强制固定块轴尺寸时，
+        // height:auto 的 grid 容器使用父给定的 contentHeight（使内部行能 stretch 填充）。
+        $gridBlockSizeForced = false;
+        if ($height <= 0 && $c->getIsFixedBlockSize() && $c->getContentHeight() > 0) {
+            $height = $c->getContentHeight();
+            $gridBlockSizeForced = true;
+        }
 
         // ── Grid template ──
         $rawCols = $s->getRaw('gridTemplateColumns');
@@ -253,7 +260,7 @@ class GridAlgorithm extends LayoutAlgorithm
         $alignContentRaw = $s->getRaw('alignContent');
         $alignContentVal = is_object($alignContentRaw) ? ($alignContentRaw->value ?? 'stretch') : ((string)($alignContentRaw ?? 'stretch'));
         if ($alignContentVal === '' || $alignContentVal === 'normal') $alignContentVal = 'stretch';
-        $heightIsExplicit = ($s->getRaw('height') !== null && $height > 0);
+        $heightIsExplicit = ($s->getRaw('height') !== null && $height > 0) || $gridBlockSizeForced;
         if ($heightIsExplicit && $rawRows === null && $autoRowSize === 0
             && $alignContentVal === 'stretch' && count($rows) > 0) {
             $padTB = (int)($s->padding?->top->toPx() ?? 0) + (int)($s->padding?->bottom->toPx() ?? 0);
