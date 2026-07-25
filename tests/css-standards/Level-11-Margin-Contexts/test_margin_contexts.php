@@ -62,7 +62,8 @@ $tests['margin auto 在 grid cell 居中'] = function() {
             VNode::h('div', ['style' => 'width:180px;height:80px'], 'Normal'),
         ])
     );
-    assert_contains($result, 'div (0,0 200x80) text="Center"', 'margin:auto centers in 200px grid cell');
+    // Blink 真值：margin:auto 双轴居中 100x50 于 200x100 grid cell → (50,25)
+    assert_contains($result, 'div (50,25 100x50) text="Center"', 'margin:auto centers 100x50 in 200x100 grid cell: x=(200-100)/2=50, y=(100-50)/2=25');
     return $result;
 };
 

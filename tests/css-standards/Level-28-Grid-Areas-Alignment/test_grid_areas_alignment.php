@@ -43,7 +43,7 @@ $tests['justify-self:center grid子项居中'] = function() {
         ])
     );
     assert_contains($result, 'text="Center"', 'justify-self:center child present');
-    assert_contains($result, '(264,0 80x60)', 'justify-self:center: cell_x=204 + (200-80)/2 = 264');
+    assert_contains($result, '(264,0 80x40)', 'justify-self:center: cell_x=204 + (200-80)/2 = 264; height 40 explicit (not stretched)');
     return $result;
 };
 

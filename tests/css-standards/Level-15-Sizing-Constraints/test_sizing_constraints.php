@@ -108,7 +108,7 @@ $tests['width auto 在 grid cell 中'] = function() {
             VNode::h('div', ['style' => 'width:100%;height:40px'], 'Full'),
         ])
     );
-    assert_contains($result, '(0,0 200x60)', 'first grid cell 200px width');
+    assert_contains($result, '(0,0 196x60)', 'first grid cell 1fr=(400-8gap)/2=196, height stretch to container 60');
     return $result;
 };
 

@@ -28,7 +28,7 @@ $tests['overflow-x:scroll 在 flex row 中'] = function() {
             VNode::h('div', ['style' => 'width:200px;height:60px;flex-shrink:0;background:#00F'], 'Item 3'),
         ])
     );
-    assert_contains($result, 'scroll ch=60 cw=300', 'overflow-x:scroll creates scroll container cw=300 > ch=60');
+    assert_contains($result, 'scroll ch=60 cw=600', 'overflow-x:scroll: scrollWidth 600 (3x200), container stays 300');
     return $result;
 };
 
