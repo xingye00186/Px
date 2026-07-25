@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:53:40
+@generated 2026-07-25 12:04:29
 === Test: Flex row + gap 两列等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
@@ -80,8 +80,8 @@ div (0,0 400x30) text="Dark theme text"
 Frame #1 events=0 detail=normal
 div (0,0 500x146)
   div (32,32 500x82) bw=1
-    div (21,21 0x16) text="Card Title"
-    div (21,45 0x16) text="Card content text"
+    div (53,53 0x16) text="Card Title"
+    div (53,77 0x16) text="Card content text"
 
 ---
 
@@ -128,7 +128,7 @@ Frame #1 events=0 detail=normal
 div (0,0 500x73) bw=1 ov=hidden
   div (1,1 500x32) text="v5 M3: Flat + Layer"
   div (1,33 500x39)
-    div (14,12 0x15) text="框架提供:"
+    div (15,45 0x15) text="框架提供:"
 
 ---
 
@@ -156,5 +156,5 @@ div (0,0 1100x900)
   div (32,32 1100x33) text="Title"
   div (32,69 1100x18) text="Subtitle text"
   div (32,111 1036x61) [dsp=flex]
-    div (0,0 510x61) bw=1 fg=1 text="Danger Card"
-    div (526,0 510x61) bw=1 fg=1 text="Success Card"
+    div (32,111 510x61) bw=1 fg=1 text="Danger Card"
+    div (558,111 510x61) bw=1 fg=1 text="Success Card"

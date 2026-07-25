@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:53:40
+@generated 2026-07-25 12:04:29
 === Test: [Template] absolute positioned div ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
@@ -28,7 +28,7 @@ div (0,0 200x70)
   div (0,0 200x30)
     #text (0,0 200x19) [dsp=inline] text="Item 1"
   div (0,40 200x30)
-    #text (0,10 200x19) [dsp=inline] text="Item 2"
+    #text (0,40 200x19) [dsp=inline] text="Item 2"
 
 ---
 
@@ -183,9 +183,9 @@ div (0,0 300x130)
   div (0,0 300x40)
     #text (0,0 300x19) [dsp=inline] text="Normal"
   div (20,50 300x50) [pos=relative]
-    #text (20,10 300x19) [dsp=inline] text="Relative"
+    #text (20,50 300x19) [dsp=inline] text="Relative"
   div (0,90 300x40)
-    #text (0,0 300x19) [dsp=inline] text="After"
+    #text (0,90 300x19) [dsp=inline] text="After"
 
 ---
 
@@ -289,7 +289,7 @@ div (0,0 80x30)
 Frame #1 events=0 detail=normal
 div (0,0 600x82)
   div (216,16 200x50)
-    #text (0,0 200x19) [dsp=inline] text="Centered"
+    #text (216,16 200x19) [dsp=inline] text="Centered"
 
 ---
 
@@ -343,7 +343,7 @@ div (0,0 200x60)
   div (0,0 100x30)
     #text (0,0 100x19) [dsp=inline] text="Item 1"
   div (-20,30 100x30)
-    #text (-20,0 100x19) [dsp=inline] text="Item 2"
+    #text (-20,30 100x19) [dsp=inline] text="Item 2"
 
 ---
 
@@ -361,7 +361,7 @@ div (0,0 200x55)
   div (0,0 200x20)
     #text (0,0 200x19) [dsp=inline] text="A"
   div (0,35 200x20)
-    #text (0,15 200x19) [dsp=inline] text="B"
+    #text (0,35 200x19) [dsp=inline] text="B"
 
 ---
 
@@ -371,9 +371,9 @@ div (0,0 300x90)
   div (0,0 300x20)
     #text (0,0 300x19) [dsp=inline] text="A"
   div (0,20 300x30)
-    #text (0,0 300x19) [dsp=inline] text="B"
+    #text (0,20 300x19) [dsp=inline] text="B"
   div (0,50 300x40)
-    #text (0,0 300x19) [dsp=inline] text="C"
+    #text (0,50 300x19) [dsp=inline] text="C"
 
 ---
 
@@ -523,7 +523,7 @@ div (0,0 300x150)
   div (20,20 150x80) [pos=relative]
     #text (20,20 150x19) [dsp=inline] text="Layer 1"
   div (60,60 150x80) [pos=relative]
-    #text (60,-20 150x19) [dsp=inline] text="Layer 2"
+    #text (60,60 150x19) [dsp=inline] text="Layer 2"
 
 ---
 
@@ -541,9 +541,9 @@ div (0,0 200x120)
   div (0,0 200x40)
     #text (0,0 200x19) [dsp=inline] text="A"
   div (0,50 200x40) [pos=relative]
-    #text (0,10 200x19) [dsp=inline] text="B"
+    #text (0,50 200x19) [dsp=inline] text="B"
   div (0,80 200x40)
-    #text (0,0 200x19) [dsp=inline] text="C"
+    #text (0,80 200x19) [dsp=inline] text="C"
 
 ---
 
@@ -618,9 +618,9 @@ div (0,0 300x120)
   div (0,0 300x40)
     #text (0,0 300x19) [dsp=inline] text="Visible"
   div (0,40 300x40)
-    #text (0,0 300x19) [dsp=inline] text="Hidden"
+    #text (0,40 300x19) [dsp=inline] text="Hidden"
   div (0,80 300x40)
-    #text (0,0 300x19) [dsp=inline] text="After"
+    #text (0,80 300x19) [dsp=inline] text="After"
 
 ---
 
@@ -767,7 +767,7 @@ div (0,0 300x60)
     div (0,0 0x30)
       #text (0,0 300x19) [dsp=inline] text="Hidden parent"
     div (0,30 0x30)
-      #text (0,0 300x19) [dsp=inline] text="Visible child"
+      #text (0,30 300x19) [dsp=inline] text="Visible child"
 
 ---
 
@@ -777,7 +777,7 @@ div (0,0 300x90)
   div (0,0 300x50)
     #text (0,0 300x19) [dsp=inline] text="Bottom -10"
   div (0,40 300x50)
-    #text (0,-10 300x19) [dsp=inline] text="Top -10"
+    #text (0,40 300x19) [dsp=inline] text="Top -10"
 
 ---
 
@@ -798,7 +798,7 @@ div (0,0 200x40)
 Frame #1 events=0 detail=normal
 div (0,0 400x100)
   div (150,0 100x50)
-    #text (0,0 100x19) [dsp=inline] text="Only child"
+    #text (150,0 100x19) [dsp=inline] text="Only child"
 
 ---
 
@@ -865,10 +865,10 @@ div (0,0 800x102)
   div (0,0 800x51)
     #text (0,16 800x19) [dsp=inline] text="Article Title"
   div (0,51 800x51) [dsp=flex]
-    div (0,0 585x51) fg=3
-      #text (0,0 800x19) [dsp=inline] text="Article content paragraph here."
-    div (605,0 195x51) fg=1
-      #text (621,16 768x19) [dsp=inline] text="Sidebar Widget"
+    div (0,51 585x51) fg=3
+      #text (0,51 800x19) [dsp=inline] text="Article content paragraph here."
+    div (605,51 195x51) fg=1
+      #text (621,67 768x19) [dsp=inline] text="Sidebar Widget"
 
 ---
 

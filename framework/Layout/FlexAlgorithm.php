@@ -926,7 +926,7 @@ class FlexAlgorithm extends LayoutAlgorithm
      * 递归翻译 Fragment 子树：flex 重定位后，所有后代绝对坐标同步偏移 (dx,dy)
      * 对标 LayoutOrchestrator::translateFragment
      */
-    private static function translateFragmentTree(\Px\Layout\PhysicalFragment $frag, int $dx, int $dy): \Px\Layout\PhysicalFragment
+    public static function translateFragmentTree(\Px\Layout\PhysicalFragment $frag, int $dx, int $dy): \Px\Layout\PhysicalFragment
     {
         $translatedChildren = [];
         foreach ($frag->children as $child) {

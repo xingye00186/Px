@@ -601,7 +601,19 @@ class BlockAlgorithm extends LayoutAlgorithm
             }
             // CSS 2.2 §10.6.3：子项从父的 padding-box 左上角开始（= parent origin + border-left + padding-left）
             // 之前 childX 缺少 borderLeft 导致与 childY 不对称 bug
-            $result[] = new PhysicalFragment((int)($parentX + $borderLeft + $padLeft + $xOffset + ($childPosition === 'relative' ? $relLeft : 0)), (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->getLayer() ?? 0), (int)($chW), (int)($chH), $childStyle, $cr->children, $cr->sourceNode,
+            $stkX = (int)($parentX + $borderLeft + $padLeft + $xOffset + ($childPosition === 'relative' ? $relLeft : 0));
+            // 对标 Blink：Fragment 子树坐标随父堆叠偏移平移（此前仅平移子本身，孙子树丢失偏移）
+            $stkChildren = $cr->children;
+            $stkDx = $stkX - (int)$cr->getX();
+            $stkDy = (int)$childY - (int)$cr->getY();
+            if (($stkDx !== 0 || $stkDy !== 0) && is_array($stkChildren) && count($stkChildren) > 0) {
+                $stkTranslated = [];
+                foreach ($stkChildren as $stkCh) {
+                    $stkTranslated[] = FlexAlgorithm::translateFragmentTree($stkCh, $stkDx, $stkDy);
+                }
+                $stkChildren = $stkTranslated;
+            }
+            $result[] = new PhysicalFragment($stkX, (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->getLayer() ?? 0), (int)($chW), (int)($chH), $childStyle, $stkChildren, $cr->sourceNode,
                     $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
                     $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
             // ── endMarginStrut 消费（CSS 2.2 §8.3.1 场景 3）──

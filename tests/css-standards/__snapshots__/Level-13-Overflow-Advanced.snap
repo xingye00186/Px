@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:53:40
+@generated 2026-07-25 12:04:28
 === Test: overflow-y:auto 在 grid cell 中 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x150) [dsp=grid]
@@ -37,7 +37,7 @@ Frame #1 events=0 detail=normal
 div (0,0 300x200) scroll ch=400 cw=300 maxScroll=200 st=0 sl=0 ov=auto
   div (0,0 300x100) text="Header"
   div (0,100 250x100) scroll ch=100 cw=250 maxScroll=0 st=0 sl=0 ov=scroll
-    div (0,0 500x80) text="Horizontal scroll content"
+    div (0,100 500x80) text="Horizontal scroll content"
   div (0,200 300x200) text="Footer"
 
 ---
