@@ -1,6 +1,6 @@
 # Px LayoutNG × Blink 对齐迭代总指南（权威入口）
 
-> **版本**：2026-07-28 ｜ **状态基线**：css-standards **324/324 (100%)**，git dev @ `967406b0`
+> **版本**：2026-07-28 ｜ **状态基线**：css-standards **330/330 (100%)**（33 套件，Level-31 新增），git dev @ `3f56927d`
 > **本文档定位**：跨机器/跨会话续作的**唯一入口**。融合并取代以下 5 份文档的"导航职责"（原文档保留作深度参考）：
 >
 > | 原文档 | 角色 | 时效 |
@@ -249,6 +249,12 @@ $env:PX_PERF="1"; apps\reactive-bench\bin\reactive_bench.exe --cases-list --cycl
  overflow 简写 BFC 检测绕过。真值新结论：显式 height 不阻断 top 穿透；穿透 strut 参与兄弟 max 折叠；
  多级递归；负 margin 穿透。324/324，bench 方差带。
 
+**flex 简写展开批次（2026-07-25 本机，@3f56927d，台账同名条目）**：原 §9.2 清单项 ✅。
+三处开关启用；规范保真：CssFlex 单值 basis=0%（非 0px，§7.1.1）+ expandFlex 关键字序列化保真；
+真值治本：hypothetical main size = clamp(basis, automatic minimum, max)（§9.3+§4.5）——历史
+“basis=0 绕过保护”双回滚机制本体根除；dump 端 fg 标注解包 CssKeyword。新 Level-31 套件 6/6，
+run_all 补全 29-31。330/330，SFC 基线 PASSED，bench 方差带（新工具 tests/perf/bench_compare.php）。
+
 **全量审计文档（2026-07-24）状态覆盖**：其 §2 算法差距、§5 破损代码、G1-G10 能力项**均已完成**；仅存 §8 下述待推进项。
 
 ---
@@ -258,7 +264,7 @@ $env:PX_PERF="1"; apps\reactive-bench\bin\reactive_bench.exe --cases-list --cycl
 | # | 项 | 依据/验收 | 预估 |
 |---|---|---|---|
 | ~~1~~ | ~~preMarginStrut 父-首子 margin 穿透~~ | ✅ **已完成 2026-07-25 @357e8189**（见 §8 + 台账）：T1 验收达标，实现链改走“生产端剥离入自身 y + 消费端重提取”（与 endMarginStrut 对称，非 LayoutResult 字段回传）；快照仅 Level-11 T8 一处归属修正；bench 方差带 | — |
-| 2 | flex 简写展开启用 | 曾两次回滚（column basis=0 边缘 3 例）；is_fixed_block_size 就位后重验。开关点：StyleResolver/StyleTransform `expandAll($raw, true)` | 1 轮验证 |
+| ~~2~~ | ~~flex 简写展开启用~~ | ✅ **已完成 2026-07-25 @3f56927d**（见 §8 + 台账）：三开关同步启用；历史双回滚根因（basis=0 绕过 automatic minimum）按 §9.3+§4.5 clamp 治本；Level-31 真值护栏 6/6；330/330；bench 方差带 | — |
 | 3 | 特性面扩测（P1 playbook） | float+行盒环绕、word-break/overflow-wrap、table 深水、position:sticky 边缘 | 每套 1 轮 |
 | 4 | Phase 4E Logical/Physical 坐标 | 路线图原文；待业务需求（RTL/竖排），6-10 周独立工程 | 延后 |
 | 5 | CssLength 默认值真治本（px(0)→auto） | 全算法行为反转，仅在大版本窗口考虑；当前 hasExplicitLength 已消除症状 | 延后 |
