@@ -446,15 +446,10 @@ class BlockAlgorithm extends LayoutAlgorithm
         $ar = $s->getAspectRatio() ?? 0;
         if ($ar > 0 && $height <= 0) { $height = (int)(($s->width?->toPx() ?? 0) / $ar); }
         $minH = $s->minHeight?->toPx() ?? 0; $maxH = $s->maxHeight?->toPx() ?? 0;
-        // CSS-UI-3 §4.5: box-sizing:border-box 时 min-height/max-height 也按 border-box 解释
-        if ($sizing === 'border-box') {
-            $padT = $s->padding?->top->toPx() ?? 0;
-            $padB = $s->padding?->bottom->toPx() ?? 0;
-            $bwv = (int)($s->getBorderTopWidth() ?? 0) + (int)($s->getBorderBottomWidth() ?? 0);
-            $deductV = $padT + $padB + $bwv;
-            if ($minH > 0) $minH = max(0, $minH - $deductV);
-            if ($maxH > 0) $maxH = max(0, $maxH - $deductV);
-        }
+        // 引擎事实语义：$height 全程为 border-box（文本分支=行高+padding+border；显式 height 直接作为
+        // border-box 使用，快照基线均如此）。对标 Blink：min/max-height 与 used height 在同一 box 语义下
+        // clamp（CSS 2.2 §10.7）——此前 border-box 分支对 minH 扣 padding 属语义嫁接错误：
+        // clamp 后的 content 值被直接当 border-box 输出，导致 min-height:123+padding:20 → 83。
         // CSS 2.2 §10.4：若 min > max，则先令 max := min（优先保障 min）
         if ($minH > 0 && $maxH > 0 && $minH > $maxH) $maxH = $minH;
         if ($maxH > 0 && $height > $maxH) $height = $maxH;

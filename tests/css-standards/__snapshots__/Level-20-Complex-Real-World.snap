@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:26:31
+@generated 2026-07-25 12:32:27
 === Test: Dashboard 侧边栏+头部+主内容 ===
 Frame #1 events=0 detail=normal
 div (0,0 900x600) [dsp=grid]
@@ -17,6 +17,17 @@ div (0,0 800x116)
   div (0,65 800x51) [dsp=flex]
     div (0,65 585x51) fg=3 text="Article content paragraph here."
     div (605,65 195x51) fg=1 text="Sidebar Widget"
+
+---
+
+=== Test: Tab 切换组件 标签页头+内容 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x141)
+  div (0,0 600x41) [dsp=flex]
+    div (0,0 85x41) text="Tab 1"
+    div (85,0 85x41) text="Tab 2"
+    div (170,0 85x41) text="Tab 3"
+  div (0,41 600x100) text="Tab Content 1"
 
 ---
 

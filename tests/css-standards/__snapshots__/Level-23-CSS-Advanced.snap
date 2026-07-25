@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:26:32
+@generated 2026-07-25 12:32:28
 === Test: outline-width:3px 解析 ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50) text="Outlined"

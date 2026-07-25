@@ -68,7 +68,7 @@ $tests['Tab 切换组件 标签页头+内容'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 600x41) [dsp=flex]', 'Tab header flex row: height 41 = padding 10*2 + line-height 19 + 2px border-bottom (Tab1); row takes max item height');
-    assert_contains($result, 'div (0,42 600x100) text="Tab Content 1"', 'Tab content area 600x100 below header (y=42 = 40+2px border)');
+    assert_contains($result, 'div (0,41 600x100) text="Tab Content 1"', 'Tab content 600x100 (min-height) at y=41 = flex row height (41 already includes Tab1 border-bottom; old 42 double-counted border)');
     return $result;
 };
 
