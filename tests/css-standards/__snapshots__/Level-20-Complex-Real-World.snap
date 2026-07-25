@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:42:15
+@generated 2026-07-25 11:46:51
 === Test: Dashboard 侧边栏+头部+主内容 ===
 Frame #1 events=0 detail=normal
 div (0,0 900x600) [dsp=grid]
@@ -7,3 +7,12 @@ div (0,0 900x600) [dsp=grid]
   div (0,60 200x540) [dsp=flex]
     div (16,16 101x508) fg=2 text="Main Content"
     div (133,16 50x508) fg=1 text="Side Panel"
+
+---
+
+=== Test: 垂直居中 Hero Section ===
+Frame #1 events=0 detail=normal
+div (0,0 800x400) [dsp=flex]
+  div (312,131 175x50) text="Welcome"
+  div (323,181 154x45) text="Subtitle here"
+  div (318,226 163x43) text="Get Started"

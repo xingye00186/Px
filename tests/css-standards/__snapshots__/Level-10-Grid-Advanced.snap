@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:42:14
+@generated 2026-07-25 11:46:50
 === Test: grid-column span 2 跨越两列 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x60) [dsp=grid]

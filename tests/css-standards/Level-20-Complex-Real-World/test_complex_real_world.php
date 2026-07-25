@@ -99,7 +99,9 @@ $tests['垂直居中 Hero Section'] = function() {
             VNode::h('div', ['style' => 'padding:12px 32px;background:#00F;color:#FFF;border-radius:8px;cursor:pointer'], 'Get Started'),
         ])
     );
-    assert_contains($result, 'div (0,151 800x56) text="Welcome"', 'Welcome centered at y=151 in 400px column with justify-content:center');
+    // Blink 真值（浏览器 getBoundingClientRect 验证机制）：align-items:center → fit-content 宽（非全宽 800）；
+    // 42px 字体行高 50；三子项总高 138 → y=(400-138)/2=131
+    assert_contains($result, 'div (312,131 175x50) text="Welcome"', 'Hero: Welcome fit-content 175x50 centered (x=(800-175)/2=312, y=131) per align-items:center + justify-content:center');
     return $result;
 };
 
