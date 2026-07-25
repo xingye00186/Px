@@ -324,8 +324,7 @@ class BlockAlgorithm extends LayoutAlgorithm
 
         // CSS 2.2 §10.6.3：仅 height:auto 时从子项累加；显式 height:0 应尊重（getRaw 区分，与 width/height 同源陷阱）
         // 性能：短路顺序——先廉价 h<=0 && 有子，再 getRaw（bench 验证前置 getRaw 每容器执行致 -2.7%）
-        if ($h <= 0 && count($stackedChildren) > 0
-            && !($s->getRaw('height') !== null && $s->height !== null && !$s->height->isAuto() && !$s->height->isPercent() && !$s->height->isIntrinsic())) {
+        if ($h <= 0 && count($stackedChildren) > 0 && !$s->hasExplicitLength('height')) {
             $maxBottom = $y;
             foreach ($stackedChildren as $cr) {
                 // CSS 2.2 §10.6.3: auto-height 仅基于**正常流**子元素计算 — OOF (position:absolute/fixed) 不参与
@@ -398,7 +397,7 @@ class BlockAlgorithm extends LayoutAlgorithm
         // CSS 2.2 §10.2: 仅当 width 为 auto 时才用可用空间填充，显式 width:0 应尊重。
         // 对标 Blink：default width = px(0)（非 auto），须用 getRaw('width') 区分
         // “显式声明 width:0”与“未声明（默认 px0）”——与 computeBlockHeight 同源修复。
-        $hasExplicitWidth = ($s->getRaw('width') !== null && $s->width !== null && !$s->width->isAuto() && !$s->width->isPercent() && !$s->width->isIntrinsic());
+        $hasExplicitWidth = $s->hasExplicitLength('width');
         if ($width <= 0 && !$hasExplicitWidth) {
             $ml = $s->margin?->left->toPx() ?? 0; $mr = $s->margin?->right->toPx() ?? 0;
             $autoPadL = $s->padding?->left->toPx() ?? 0; $autoPadR = $s->padding?->right->toPx() ?? 0;
@@ -447,7 +446,7 @@ class BlockAlgorithm extends LayoutAlgorithm
         // CSS 2.2 §10.6: 仅当 height 为 auto 时才用内容高度，显式 height:0 应尊重。
         // 对标 Blink：default height = px(0)（非 auto），须用 getRaw('height') 区分
         // “显式声明 height:0”与“未声明（默认 px0）”——含文本的 div 未声明高度时 = line-height。
-        $hasExplicitHeight = ($s->getRaw('height') !== null && $s->height !== null && !$s->height->isAuto() && !$s->height->isPercent() && !$s->height->isIntrinsic());
+        $hasExplicitHeight = $s->hasExplicitLength('height');
         if ($height <= 0 && !$hasExplicitHeight && strlen($textContent) > 0) {
             $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2);
             // border-box 高 = 行高 + padding + border（与 FlexAlgorithm 文本快速路径同源语义，杜绝双路径分叉）

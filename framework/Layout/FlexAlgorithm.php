@@ -741,7 +741,7 @@ class FlexAlgorithm extends LayoutAlgorithm
             $p2HasExplicitH = false;
             if ($p2Fi->computedStyle !== null) {
                 $p2HProp = $p2Fi->computedStyle->height;
-                $p2HasExplicitH = ($p2Fi->computedStyle->getRaw('height') !== null && $p2HProp !== null && !$p2HProp->isPercent() && $p2HProp->toPx() > 0);
+                $p2HasExplicitH = $p2Fi->computedStyle->hasExplicitLength('height');
             }
             $heightStretched = $isRow && !$p2HasExplicitH && $p2ItemH > 0 && $p2OrigH !== $p2ItemH;
             // 对标 Blink：column 方向主轴 grow/shrink 分配后的 used main size 同样是 definite

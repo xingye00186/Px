@@ -712,6 +712,32 @@ class ComputedStyle
     }
 
     /**
+     * 尺寸属性是否为“显式确定长度”（对标 Blink Length::IsFixed + 声明检查）。
+     *
+     * 背景：Px 默认 width/height = CssLength::px(0)（非 Blink 的 auto），单用
+     * isAuto()/toPx() 无法区分“显式声明 :0”与“未声明（默认 px0）”——该陷阱已
+     * 在 height/width/margin/auto-height 等 5+ 处复发。本 API 为唯一判定入口：
+     *   显式 = getRaw 有声明 && 非 auto && 非百分比 && 非 intrinsic（min/max-content 等）。
+     * 百分比/intrinsic 需调用方自行按包含块/内容解析，不属“确定长度”。
+     */
+    public function hasExplicitLength(string $prop): bool
+    {
+        if ($this->getRaw($prop) === null) return false;
+        $len = match ($prop) {
+            'width' => $this->width,
+            'height' => $this->height,
+            'minWidth' => $this->minWidth,
+            'minHeight' => $this->minHeight,
+            'maxWidth' => $this->maxWidth,
+            'maxHeight' => $this->maxHeight,
+            'flexBasis' => $this->flexBasis,
+            default => null,
+        };
+        if ($len === null) return false;
+        return !$len->isAuto() && !$len->isPercent() && !$len->isIntrinsic();
+    }
+
+    /**
      * 获取 CSSValue 类型的属性值。
      */
     public function get(string $key): ?CssValue
