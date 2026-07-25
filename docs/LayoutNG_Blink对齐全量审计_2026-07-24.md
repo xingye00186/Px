@@ -1,3 +1,5 @@
+﻿> [!IMPORTANT] 本文档的导航/状态职责已由《docs/Px_LayoutNG_Blink对齐迭代总指南.md》接管（2026-07-28）。续作请从总指南入口开始；本文保留作深度参考，其中待办项状态以总指南 §8/§9 为准。
+
 # Px LayoutNG 全量对标审计报告
 
 > 审计基准：HEAD = c198f8a8 (Phase 4A Step 4-5, 274/314)
@@ -625,3 +627,4 @@ LayoutAlgorithm::layoutResult() 和 BlockAlgorithm override 已就绪，但 Layo
 - **[G4/P3]** Logical/Physical 坐标分离
 - **[G7/G8/P3]** Grid named areas / Table border-collapse
 - **[G11/P3]** PaintLayer 独立抽象
+
