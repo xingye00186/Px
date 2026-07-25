@@ -217,6 +217,7 @@ $env:PX_PERF="1"; apps\reactive-bench\bin\reactive_bench.exe --cases-list --cycl
 | 陷阱 | 一句话规避 |
 |---|---|
 | 默认 px(0) 非 auto | 显式尺寸判定只用 `hasExplicitLength()`；margin:auto 读 `marginXxxAuto` 标志 |
+| overflow 简写被绕过 | typed `overflowY` 默认 'visible' 非 null，`overflowY?->value ?? overflow?->value` 恒取默认值；BFC/滚动判定必须 getRaw 链（BlockAlgorithm::effectiveOverflowY） |
 | 真值测量污染 | float/margin 的 `_gt_*.html` 容器必须 `overflow:hidden` |
 | bench 单次读数 | 超噪声必复测；乐观读数同样要复核 |
 | 快照 total 膨胀 | 引擎几何变化后先 `run_all.php --update-snapshots` 再统计 |
@@ -242,6 +243,12 @@ $env:PX_PERF="1"; apps\reactive-bench\bin\reactive_bench.exe --cases-list --cycl
 - 流程：Fragment 子树平移、contentW/H 保留、min/max 同 box clamp、文本高度双路径统一、expandTextDecoration 单通道
 - 测试：324/324（32 套件），Level-29/30 新建，断言真值化 30+
 
+**preMarginStrut 穿透批次（2026-07-25 本机，@357e8189，台账同名条目）**：原 §9.1 清单首项 ✅。
+`ConstraintSpace::isFormattingContextRoot`（对标 is_new_formatting_context）全链 + BlockAlgorithm
+生产端 firstChildTopStrut / 消费端 extractPreMarginStrut（与 endMarginStrut 对称）；附带根修
+ overflow 简写 BFC 检测绕过。真值新结论：显式 height 不阻断 top 穿透；穿透 strut 参与兄弟 max 折叠；
+ 多级递归；负 margin 穿透。324/324，bench 方差带。
+
 **全量审计文档（2026-07-24）状态覆盖**：其 §2 算法差距、§5 破损代码、G1-G10 能力项**均已完成**；仅存 §8 下述待推进项。
 
 ---
@@ -250,7 +257,7 @@ $env:PX_PERF="1"; apps\reactive-bench\bin\reactive_bench.exe --cases-list --cycl
 
 | # | 项 | 依据/验收 | 预估 |
 |---|---|---|---|
-| 1 | **preMarginStrut 父-首子 margin 穿透** | 验收已固化（Level-30 头注+记忆）：T1 父 `(0,20 300x30)`、子相对 `(0,0)`，子绝对 y=20 不变。实现链：BlockAlgorithm 检测可穿透（无 pad/border-top、非 BFC、首 in-flow block）→ margin 写 `LayoutResult::preMarginStrut` → 父端消费定位。⚠️ 快照大面积变化逐项核对"归属修正 vs 位移错误"；完整 bench | 1-2 轮 |
+| ~~1~~ | ~~preMarginStrut 父-首子 margin 穿透~~ | ✅ **已完成 2026-07-25 @357e8189**（见 §8 + 台账）：T1 验收达标，实现链改走“生产端剥离入自身 y + 消费端重提取”（与 endMarginStrut 对称，非 LayoutResult 字段回传）；快照仅 Level-11 T8 一处归属修正；bench 方差带 | — |
 | 2 | flex 简写展开启用 | 曾两次回滚（column basis=0 边缘 3 例）；is_fixed_block_size 就位后重验。开关点：StyleResolver/StyleTransform `expandAll($raw, true)` | 1 轮验证 |
 | 3 | 特性面扩测（P1 playbook） | float+行盒环绕、word-break/overflow-wrap、table 深水、position:sticky 边缘 | 每套 1 轮 |
 | 4 | Phase 4E Logical/Physical 坐标 | 路线图原文；待业务需求（RTL/竖排），6-10 周独立工程 | 延后 |
