@@ -361,12 +361,21 @@ class LayoutNormalizer
         // 浏览器将这些作为 CSS 属性，所以补全以消除 MISSING
         // 仅当引擎 style 中没导出时补全，避免覆盖引擎已有值
         // CSS 2.2 §10.3.1: 内联元素的 width/height 默认值为 'auto'
+        // getComputedStyle 语义：width/height 返回 **used value**（像素化）——
+        // 引擎导出的声明维度 '0px'（默认 px(0) 非显式）与 used 维度混淆，
+        // 几何 w/h>0 时以 used 几何为准（显式 width:0 元素几何也为 0，无冲突）。
         $isInline = in_array($tag, self::INLINE_TAGS, true);
+        $usedW = (int)($node['visualW'] ?? $node['w'] ?? 0);
+        $usedH = (int)($node['visualH'] ?? $node['h'] ?? 0);
         if (!isset($element['styles']['width'])) {
-            $element['styles']['width'] = $isInline ? 'auto' : (int)($node['visualW'] ?? $node['w'] ?? 0) . 'px';
+            $element['styles']['width'] = $isInline ? 'auto' : $usedW . 'px';
+        } elseif ($element['styles']['width'] === '0px' && $usedW > 0) {
+            $element['styles']['width'] = $usedW . 'px';
         }
         if (!isset($element['styles']['height'])) {
-            $element['styles']['height'] = $isInline ? 'auto' : (int)($node['visualH'] ?? $node['h'] ?? 0) . 'px';
+            $element['styles']['height'] = $isInline ? 'auto' : $usedH . 'px';
+        } elseif ($element['styles']['height'] === '0px' && $usedH > 0) {
+            $element['styles']['height'] = $usedH . 'px';
         }
         // CSS 2.2 §9.3.2: static 定位元素的 top/left 默认值为 'auto'
         $nodePos = $node['style']['position'] ?? 'static';
@@ -506,7 +515,7 @@ class LayoutNormalizer
 
         // ─── 统一 border-width: 同上逻辑 ───
         if (isset($normalized['border-width'])) {
-            $sides = ['border-top-width', 'borderWidthRight', 'border-bottom-width', 'borderWidthLeft'];
+            $sides = ['border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width'];
             $allSides = [];
             foreach ($sides as $side) {
                 if (isset($normalized[$side])) {
@@ -518,9 +527,9 @@ class LayoutNormalizer
             $unique = array_unique($allSides);
             $hasPerSideWidths = count(array_filter([
                 isset($normalized['border-top-width']),
-                isset($normalized['borderWidthRight']),
+                isset($normalized['border-right-width']),
                 isset($normalized['border-bottom-width']),
-                isset($normalized['borderWidthLeft']),
+                isset($normalized['border-left-width']),
             ])) > 0;
             if ($hasPerSideWidths) {
                 unset($normalized['border-width']);
@@ -528,6 +537,30 @@ class LayoutNormalizer
                 $normalized['border-width'] = count($unique) === 1
                     ? $unique[0]
                     : implode(' ', $allSides);
+            }
+        }
+
+        // ─── CSS 初始值丢弃（对标浏览器采集契约：dump_layout.js 不导出初始值）───
+        // 引擎 ComputedStyle 无条件导出全部属性（含默认），造成 engine-only 噪声；
+        // 丢弃与 CSS 初始值完全相等的导出（显式声明同初始值时丢弃不影响对比语义）。
+        // min-width/min-height：引擎默认 px(0) 导出 '0px'，与浏览器 'auto'（flex item）/
+        // '0px'（block）的 used-value 语义等价（CSS2.2 §10.4 初始约束无效果）——同丢。
+        $cssInitialValues = [
+            'gap' => '0px',
+            'align-self' => 'auto',
+            'justify-self' => 'auto',
+            'justify-items' => 'stretch',
+            'align-content' => 'stretch',
+            'text-decoration-thickness' => '0px',
+            'min-width' => '0px',
+            'min-height' => '0px',
+            'order' => '0',
+            'flex-grow' => '0',
+            'flex-shrink' => '1',
+        ];
+        foreach ($cssInitialValues as $ik => $iv) {
+            if (isset($normalized[$ik]) && (string)$normalized[$ik] === $iv) {
+                unset($normalized[$ik]);
             }
         }
 
@@ -554,8 +587,11 @@ class LayoutNormalizer
         }
         // bg/fg/borderColor: engine 用 0x00BBGGRR (COLORREF/GDI 格式)，转 rgb() 字符串
         // CssValueParser::hexToBgr 存储为 (b<<16)|(g<<8)|r 即 0x00BBGGRR
-        if (in_array($engineKey, ['bg', 'fg', 'borderColor', 'borderTopColor', 'borderRightColor',
-            'borderBottomColor', 'borderLeftColor', 'scrollbarTrackColor', 'scrollbarThumbColor'], true)
+        // 注：ComputedStyle 导出属性名为 backgroundColor/color（CssColor->toBgr int），
+        // 此前列表仅含旧键 bg/fg → backgroundColor 的 BGR int 直接泄漏到对比层。
+        if (in_array($engineKey, ['bg', 'fg', 'backgroundColor', 'color', 'borderColor', 'borderTopColor', 'borderRightColor',
+            'borderBottomColor', 'borderLeftColor', 'outlineColor', 'textDecorationColor',
+            'scrollbarTrackColor', 'scrollbarThumbColor'], true)
             && is_int($value)
         ) {
             if ($value === -1) return 'rgba(0, 0, 0, 0)'; // 透明 sentinel
@@ -573,12 +609,14 @@ class LayoutNormalizer
 
         // 直接数值 → 加 px（某些 CSS 属性需要）
         if (is_int($value) || is_float($value)) {
-            // 对需要 px 单位的属性添加 px
+            // 对需要 px 单位的属性添加 px（全部为 cssKey/kebab 形态——此前混入
+            // camel 键 'paddingLeft'/'borderWidthRight'/'borderWidthLeft' 属概念错乱，
+            // 导致 padding-left/border-left-width 等永不加单位：'0' vs 浏览器 '0px'）
             $pxProperties = [
                 'font-size', 'line-height', 'padding-top', 'padding-right',
-                'padding-bottom', 'paddingLeft', 'margin-top', 'margin-right',
+                'padding-bottom', 'padding-left', 'margin-top', 'margin-right',
                 'margin-bottom', 'margin-left', 'border-width', 'border-top-width',
-                'borderWidthRight', 'border-bottom-width', 'borderWidthLeft',
+                'border-right-width', 'border-bottom-width', 'border-left-width',
                 'border-radius', 'width', 'height', 'top', 'left', 'gap',
                 'min-width', 'min-height', 'max-width', 'max-height',
                 'outline-width', 'text-decoration-thickness',
