@@ -1,4 +1,4 @@
-@generated 2026-07-25 13:35:16
+@generated 2026-07-25 13:43:54
 === Test: min-height 在 flex column 中 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x200) [dsp=flex]
@@ -47,6 +47,14 @@ div (0,0 300x170) [dsp=flex]
   div (0,0 300x50) text="Header"
   div (0,50 300x80) text="Body"
   div (0,130 300x40) text="Footer"
+
+---
+
+=== Test: width auto 在 grid cell 中 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60) [dsp=grid]
+  div (0,0 200x40) text="Auto"
+  div (208,0 200x40) text="Full"
 
 ---
 

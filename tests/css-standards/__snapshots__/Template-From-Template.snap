@@ -1,4 +1,4 @@
-@generated 2026-07-25 13:35:16
+@generated 2026-07-25 13:43:55
 === Test: [Template] absolute positioned div ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
@@ -771,6 +771,13 @@ div (0,0 300x60)
 
 ---
 
+=== Test: [Template] width:0 height:0 零尺寸元素 ===
+Frame #1 events=0 detail=normal
+div (0,0 0x0) ov=hidden
+  #text (0,0 1440x19) [dsp=inline] text="Zero"
+
+---
+
 === Test: [Template] margin 负值重叠 上负下负 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x90)
@@ -785,6 +792,14 @@ div (0,0 300x90)
 Frame #1 events=0 detail=normal
 div (0,0 10000x30)
   #text (0,0 10000x19) [dsp=inline] text="Very wide element"
+
+---
+
+=== Test: [Template] overflow:hidden 零尺寸容器 ===
+Frame #1 events=0 detail=normal
+div (0,0 0x0) ov=hidden
+  div (0,0 200x100)
+    #text (0,0 200x19) [dsp=inline] text="Hidden content"
 
 ---
 
@@ -810,7 +825,7 @@ div (0,0 0x0) bw=2 ov=hidden
 
 === Test: [Template] padding 在零尺寸元素上 ===
 Frame #1 events=0 detail=normal
-div (0,0 0x39) ov=hidden
+div (0,0 0x0) ov=hidden
   #text (10,10 1420x19) [dsp=inline] text="Pad"
 
 ---

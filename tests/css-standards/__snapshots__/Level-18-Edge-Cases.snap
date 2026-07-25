@@ -1,4 +1,4 @@
-@generated 2026-07-25 13:35:16
+@generated 2026-07-25 13:43:55
 === Test: width:0 height:0 零尺寸元素 ===
 Frame #1 events=0 detail=normal
 div (0,0 0x0) ov=hidden text="Zero"
@@ -16,6 +16,13 @@ div (0,0 300x90)
 === Test: width:10000px 极大宽度 裁边 ===
 Frame #1 events=0 detail=normal
 div (0,0 10000x30) text="Very wide element"
+
+---
+
+=== Test: overflow:hidden 零尺寸容器 ===
+Frame #1 events=0 detail=normal
+div (0,0 0x0) ov=hidden
+  div (0,0 200x100) text="Hidden content"
 
 ---
 
