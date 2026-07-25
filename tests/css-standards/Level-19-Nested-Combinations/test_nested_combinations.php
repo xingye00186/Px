@@ -76,7 +76,7 @@ $tests['Grid 内 Grid 嵌套'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 500x150) [dsp=grid]', 'Outer grid 500x150 with 2-column track');
-    assert_contains($result, 'div (254,0 246x100) [dsp=grid]', 'Second nested grid at x=254 after 8px gap, stretched to 100 (Blink-verified stretch)');
+    assert_contains($result, 'div (254,0 246x150) [dsp=grid]', 'Second nested grid at x=254 after 8px gap, stretched to container height 150 (Blink-verified stretch)');
     return $result;
 };
 
@@ -138,7 +138,7 @@ $tests['Grid 内 Flex Column 嵌套'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 600x150) [dsp=grid]', 'Grid 600x150 with 1fr/2fr columns');
-    assert_contains($result, 'div (205,0 197x150) [dsp=flex]', 'Second flex column at x=205 (1fr=197 + 8 gap), stretched to grid row height 150 (Blink-verified)');
+    assert_contains($result, 'div (205,0 395x150) [dsp=flex]', 'Second flex column in 2fr track: x=205 (1fr=197+8 gap), width=2fr=395, stretched to row height 150 (Blink-verified)');
     return $result;
 };
 
@@ -229,7 +229,7 @@ $tests['Grid auto-fill 嵌套 Flex 项目'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 161x76) [dsp=flex]', 'First auto-fill item at 161px width (minmax(150,1fr))');
-    assert_contains($result, 'div (338,0 161x76) [dsp=flex]', 'Third auto-fill item at x=338 (161+8+161+8=338)');
+    assert_contains($result, 'div (338,0 162x76) [dsp=flex]', 'Third auto-fill item at x=338 (161+8+161+8); width 162 = integer remainder to last col (Blink subpixel 161.33)');
     return $result;
 };
 

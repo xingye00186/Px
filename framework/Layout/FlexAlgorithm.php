@@ -697,7 +697,15 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $p2HasExplicitH = ($p2Fi->computedStyle->getRaw('height') !== null && $p2HProp !== null && !$p2HProp->isPercent() && $p2HProp->toPx() > 0);
             }
             $heightStretched = $isRow && !$p2HasExplicitH && $p2ItemH > 0 && $p2OrigH !== $p2ItemH;
-            if ((($p2OrigW > 0 && $p2ItemW > 0 && $p2OrigW !== $p2ItemW) || $heightStretched) && $p2Idx < count($childNodes)) {
+            // 对标 Blink：column 方向主轴 grow/shrink 分配后的 used main size 同样是 definite
+            // （CSS Flexbox §9.4.3）——子项（如 grid）必须在固定块轴尺寸下重新布局。
+            $mainHeightAssigned = !$isRow && !$p2HasExplicitH && $p2ItemH > 0 && $p2OrigH !== $p2ItemH;
+            // 性能守卫：仅 flex/grid 子项的内部布局消费 definite 块轴尺寸（stretch/行分配）；
+            // 纯文本/block 子项重布局无收益（bench 验证：无守卫时 LiveDashboard -12.6%/TextHeavy -13.2%）。
+            $p2Display = $p2Fi->computedStyle?->display?->value ?? 'block';
+            $p2ConsumesBlockSize = ($p2Display === 'flex' || $p2Display === 'grid' || $p2Display === 'inline-flex' || $p2Display === 'inline-grid');
+            $blockSizeIsFixed = ($heightStretched || $mainHeightAssigned) && $p2ConsumesBlockSize;
+            if ((($p2OrigW > 0 && $p2ItemW > 0 && $p2OrigW !== $p2ItemW) || $blockSizeIsFixed) && $p2Idx < count($childNodes)) {
                 $p2Space = new ConstraintSpace(
                     $p2ItemW, (int)$p2Fi->h > 0 ? (int)$p2Fi->h : $space->getContentHeight(),
                     $space->getParentContentX(), $space->getParentContentY(),
@@ -706,7 +714,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                     0, 0, 0, 0, 0, 0, 0, 0,
                     true, false, 'block',
                     $p2ItemW, $space->getPercentageHeight(),
-                    $heightStretched,
+                    $blockSizeIsFixed,
                 );
                 $reFrag = $this->layoutChild($childNodes[$p2Idx], $p2Space);
                 $sortedChildResults[$p2Idx] = $reFrag;

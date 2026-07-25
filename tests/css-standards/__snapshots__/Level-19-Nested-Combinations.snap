@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:06:44
+@generated 2026-07-25 11:13:18
 === Test: Grid 内 Flex Row 排列 ===
 Frame #1 events=0 detail=normal
 div (0,0 500x100) [dsp=grid]
@@ -20,6 +20,18 @@ div (0,0 600x120) [dsp=flex]
     div (205,0 128x40) text="3"
     div (337,0 128x40) text="4"
     div (469,0 130x40) text="5"
+
+---
+
+=== Test: Grid 内 Grid 嵌套 ===
+Frame #1 events=0 detail=normal
+div (0,0 500x150) [dsp=grid]
+  div (0,0 246x150) [dsp=grid]
+    div (0,0 121x40) text="A"
+    div (125,0 121x40) text="B"
+  div (254,0 246x150) [dsp=grid]
+    div (0,0 123x48) text="C"
+    div (0,52 123x98) text="D"
 
 ---
 
@@ -51,6 +63,18 @@ div (0,0 400x100) [pos=relative] [dsp=flex]
 
 ---
 
+=== Test: Grid 内 Flex Column 嵌套 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x150) [dsp=grid]
+  div (0,0 197x150) [dsp=flex]
+    div (0,0 197x40) text="Top"
+    div (0,44 197x72) fg=1 text="Fill"
+    div (0,120 197x30) text="Bottom"
+  div (205,0 395x150) [dsp=flex]
+    div (157,50 80x50) text="Center"
+
+---
+
 === Test: 三层嵌套 Grid > Flex > Grid ===
 Frame #1 events=0 detail=normal
 div (0,0 500x200) [dsp=grid]
@@ -76,6 +100,15 @@ div (0,0 300x150) scroll ch=128 cw=300 maxScroll=0 st=0 sl=0 ov=auto
 
 ---
 
+=== Test: Flex > Grid > Flex 链式嵌套 ===
+Frame #1 events=0 detail=normal
+div (0,0 500x200) [dsp=flex]
+  div (0,0 500x200) [dsp=grid] fg=1
+    div (0,0 246x200) [dsp=flex] text="Center 1"
+    div (254,0 246x200) [dsp=flex] text="Center 2"
+
+---
+
 === Test: Grid cell 内 position:absolute ===
 Frame #1 events=0 detail=normal
 div (0,0 400x120) [dsp=grid]
@@ -83,3 +116,18 @@ div (0,0 400x120) [dsp=grid]
     div (130,10 60x30) [pos=absolute] text="Badge"
     div (0,0 0x40) text="Content"
   div (208,0 200x80) text="Normal"
+
+---
+
+=== Test: Grid auto-fill 嵌套 Flex 项目 ===
+Frame #1 events=0 detail=normal
+div (0,0 500x76) [dsp=grid]
+  div (0,0 161x76) [dsp=flex]
+    div (60,8 40x40) text="Icon"
+    div (58,48 45x20) text="Label"
+  div (169,0 161x76) [dsp=flex]
+    div (60,8 40x40) text="Icon"
+    div (58,48 45x20) text="Label"
+  div (338,0 162x76) [dsp=flex]
+    div (61,8 40x40) text="Icon"
+    div (58,48 45x20) text="Label"
