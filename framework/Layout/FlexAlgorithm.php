@@ -817,17 +817,18 @@ class FlexAlgorithm extends LayoutAlgorithm
                 }
                 $children = $translated;
             }
-            $mappedResults[] = (new PhysicalFragmentBuilder())
+            // 对标 Blink NGFlexLayoutAlgorithm：mapping fragment 以原子项为基底（from），
+            // 仅覆写 flex 分配后的几何——元数据（dataset/pseudoStyles/sourceNode/baseline 等）
+            // 全量保留。此前逐字段手抄丢失 dataset，导致 css-test data-px-id 在 flex 容器内
+            // 全部丢失（匹配率 30/186）——B 类双通道分叉（BlockAlgorithm 传递 / Flex 丢弃）。
+            $mfb = new PhysicalFragmentBuilder();
+            if ($orig !== null) $mfb->from($orig);
+            $mappedResults[] = $mfb
                 ->x((int)$fi->x)->y((int)$fi->y)
                 ->w($itemW)->h($itemH)
                 ->vw((int)$fi->visualW)->vh((int)$fi->visualH)
                 ->cw($contentW)->ch((int)($orig?->contentHeight ?? 0))
-                ->style($orig?->style)->children($children)
-                ->type($orig?->type ?? '')->content($orig?->content)
-                // 对标 Blink NGFlexLayoutAlgorithm：mapping fragment 需保留原子项的滚动状态
-                ->isScrollContainer((bool)($orig?->isScrollContainer ?? false))
-                ->scrollTop((int)($orig?->scrollTop ?? 0))
-                ->scrollLeft((int)($orig?->scrollLeft ?? 0))
+                ->children($children)
                 ->build();
         }
         // Remap results to original DOM order (CSS §9.2: visual order ≠ DOM order)

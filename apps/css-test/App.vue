@@ -94,7 +94,7 @@ class AppComponent extends ReactiveComponent
                 break;
             }
         }
-        $this->markDirty();
+        // markDirty() 已移除：#[Reactive] 属性赋值由 Property Hook → Notifier → Effect 自动调度
     }
 
     public function refreshCases(): void
@@ -130,8 +130,6 @@ class AppComponent extends ReactiveComponent
             $this->caseName = $list[0]['tag'];
             $this->currentTitle = $list[0]['title'];
         }
-
-        $this->markDirty();
     }
 }
 </script>

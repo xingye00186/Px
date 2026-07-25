@@ -508,8 +508,11 @@ class LayoutDumpStep implements PipelineStepInterface
                 }
                 return [
                     'type' => 'div', 'tag' => 'div',
-                    'x' => 0, 'y' => 0, 'w' => 0, 'h' => 0,
-                    'dataset' => [], 'styles' => [],
+                    // 保留 testroot 自身几何（w/h）与 dataset/styles：此前硬编码 0x0 丢失容器尺寸，
+                    // 导致根对比/锚点跨度校验失真（容器 0x0）。x/y 仍置零（坐标归一化）。
+                    'x' => 0, 'y' => 0,
+                    'w' => (int)($node['w'] ?? 0), 'h' => (int)($node['h'] ?? 0),
+                    'dataset' => $node['dataset'] ?? [], 'styles' => $node['styles'] ?? [],
                     'children' => $node['children'],
                 ];
             }

@@ -12,6 +12,10 @@ use Px\Dom\VNode;
  */
 function parseCssClassesForMerge(string $css): array
 {
+    // CSS Syntax §4（对标 Blink CSSTokenizer）：注释在 tokenize 阶段移除，绝不参与规则匹配。
+    // 此前未剥离：注释文案中的 `* { ... }` 被拓为幽灵 universal 规则 '...'，
+    // 污染所有节点 style（含 <component> 占位 → 透传路径覆盖子组件根样式）。
+    $css = preg_replace('#/\*.*?\*/#s', '', $css);
     $result = [];
     if (preg_match_all('#\.([a-zA-Z0-9_-]+)\s*\{([^}]*)\}#s', $css, $rules, PREG_SET_ORDER)) {
         foreach ($rules as $rule) {
@@ -46,9 +50,16 @@ function mergeClassStylesIntoNode($node, array $rawStyles): void
 {
     if ($node === null) return;
 
-    // Step 1: 应用 * 通用选择器到每一个节点（作为基础样式）
+    // #component 占位是抽象出口（对标 Vue：最终渲染为子组件根元素），非真实元素：
+    // universal * 样式在子组件自身编译时已按层叠应用，若合并到占位会经
+    // 透传路径以“父覆盖”错误优先级二次施加（覆盖子根 inline 声明）。
+    $isComponentPlaceholder = (($node->type ?? '') === '#component')
+        || (($node->type ?? '') === 'component')
+        || (property_exists($node, 'isComponent') && $node->isComponent);
+
+    // Step 1: 应用 * 通用选择器到每一个真实元素节点（作为基础样式）
     $universalDecls = '';
-    if (isset($rawStyles['*'])) {
+    if (isset($rawStyles['*']) && !$isComponentPlaceholder) {
         $universalDecls = $rawStyles['*'];
     }
 

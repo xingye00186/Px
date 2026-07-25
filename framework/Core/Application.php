@@ -835,8 +835,12 @@ class Application
      */
     public function dumpLayoutToFile(string $path, bool $caseContentOnly = false): void
     {
-        // 快照由 render() 在每次 layout() 后通过 captureLayoutSnapshot() 写入
-        // 保证与渲染使用同一 Fragment 树，无需重算
+        // 快照由 render() 在每次 layout() 后通过 captureLayoutSnapshot() 写入（仅 debug_diag 模式）。
+        // 非 diag 模式下按需从 lastFragmentTree 捕获（同一 Fragment 树，几何权威源一致）——
+        // 此前恒写空字符串导致 css-test dump 产物 0 字节（测试基础设施缺陷）。
+        if ($this->lastLayoutDumpJson === '' && $this->lastFragmentTree !== null) {
+            $this->captureLayoutSnapshot($this->lastFragmentTree);
+        }
         file_put_contents($path, $this->lastLayoutDumpJson);
     }
 

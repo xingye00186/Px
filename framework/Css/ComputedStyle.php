@@ -390,13 +390,22 @@ class ComputedStyle
         $this->applyPaddingMarginBorder($d);
 
         // ── 数值属性 ──
+        // fontSize 分支必须穷尽（readonly 静默跳过 = 半初始化对象，后续 getFontSize()
+        // 致命——与下方 lineHeight 历史缺陷同型）：字符串形态（'18px'，未经
+        // PROPERTY_MAP 预解析的声明）走 CssLength::fromString 解析而非丢弃。
         if (isset($d['fontSize'])) {
             $fs = $d['fontSize'];
             if ($fs instanceof CssLength) {
                 $this->fontSize = $fs->toPx();
             } elseif (is_numeric($fs)) {
                 $this->fontSize = (int)$fs;
+            } elseif (is_string($fs) && $fs !== '') {
+                $this->fontSize = (int)CssLength::fromString($fs)->toPx();
+            } else {
+                $this->fontSize = self::DEFAULT_FONT_SIZE;
             }
+        } else {
+            $this->fontSize = self::DEFAULT_FONT_SIZE;
         }
         // lineHeight: always assign (was never assigned before, causing typed property error)
         $this->lineHeight = isset($d['lineHeight']) ? self::safeInt($d['lineHeight']) : 0;

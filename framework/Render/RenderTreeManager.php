@@ -720,13 +720,13 @@ class RenderTreeManager
                             }
                         }
                         if ($styleChanged) {
-                            // 组件 style 透传合并—走 StylePool 池化（以旧 CS 为父身份）
-                            $oldRootRN->computedStyle = \Px\Css\StylePool::intern(
+                            // 组件 style 透传合并——Vue 3 语义是**层叠覆盖**（子根 style 为基准，父 style 覆盖），
+                            // 必须用 withOverride（与 :style 动态合并同源语义）。此前误用 intern(旧cs作父)
+                            // 把层叠错嫁接为 CSS 继承——非继承属性（width/padding/border 等）全部丢失。
+                            $oldRootRN->computedStyle = \Px\Css\StylePool::withOverride(
+                                $oldRootRN->computedStyle ?? \Px\Css\StylePool::empty(),
                                 $parsedDecls,
-                                $oldRootRN->computedStyle,
-                                $oldRootRN->type,
-                                \Px\Css\StylePool::fingerprintInline($parsedDecls),
-                                ''
+                                $oldRootRN->type
                             );
                             $oldRootRN->layoutDirty = true;
                         }
@@ -795,13 +795,14 @@ class RenderTreeManager
                         $parsedDecls = is_string($placeholderStyle)
                             ? \Px\Css\StyleResolver::parseInlineStyle($placeholderStyle)
                             : $placeholderStyle;
-                        // 父组件 style 透传到子组件根—走 StylePool 池化（以子根 RN 当前 CS 为父身份）
-                        $targetRN->computedStyle = \Px\Css\StylePool::intern(
+                        // 父组件 style 透传到子组件根——Vue 3 语义是**层叠覆盖**（子根 style 为基准，
+                        // 父 style 覆盖），必须用 withOverride（与 :style 动态合并同源语义）。此前误用
+                        // intern(子根cs作父)把层叠错嫁接为 CSS 继承：非继承属性（width/padding/
+                        // border/position 等）全丢——css-test testroot width:800px 失效的直接根因。
+                        $targetRN->computedStyle = \Px\Css\StylePool::withOverride(
+                            $targetRN->computedStyle ?? \Px\Css\StylePool::empty(),
                             $parsedDecls,
-                            $targetRN->computedStyle,
-                            $targetRN->type,
-                            \Px\Css\StylePool::fingerprintInline($parsedDecls),
-                            ''
+                            $targetRN->type
                         );
                         $targetRN->layoutDirty = true;
                     }

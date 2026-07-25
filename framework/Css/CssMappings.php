@@ -1095,6 +1095,9 @@ class CssMappings
      */
     public static function parseStyleBlock(string $styleCss, array &$warnings = []): array
     {
+        // CSS Syntax §4（对标 Blink CSSTokenizer）：注释在 tokenize 阶段移除，
+        // 否则注释文案中的 `* { ... }` / `.foo { ... }` 会被拓为幽灵规则。
+        $styleCss = preg_replace('#/\*.*?\*/#s', '', $styleCss);
         $classStyles = [];
 
         // Extract :root custom properties for var() resolution

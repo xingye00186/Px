@@ -61,6 +61,7 @@ class EdgeDomStrategy implements BrowserRefStrategy
                 $htmlHash = md5_file($htmlPath);
                 $decoded['_html_hash'] = $htmlHash;
                 $layoutJson = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+                if (!is_dir($refDir)) @mkdir($refDir, 0777, true);
                 file_put_contents("$refDir/browser_ref_level_0.json", $layoutJson);
                 echo "  [edge_dom] extracted " . count($decoded['elements']) . " elements from browser DOM\n";
                 return true;
