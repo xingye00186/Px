@@ -184,14 +184,12 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         if ($cs === null) return $frag;
 
         // ── Absolute positioning (inlined from AbsolutePositioning::absoluteLayout) ──
+        // 百分比 inset 需基于包含块尺寸解析：left/right 基于 ancW，top/bottom 基于 ancH
+        // （对标 CSS 2.2 §10.3.7/§10.6.4；此前直接 toPx() 对百分比返回原始数值，如 25% → 25）
         $rawLeft = $cs->getRaw('left');
-        $leftVal = $rawLeft !== null ? (is_object($rawLeft) ? (int)$rawLeft->toPx() : (int)$rawLeft) : 0;
         $rawTop = $cs->getRaw('top');
-        $topVal = $rawTop !== null ? (is_object($rawTop) ? (int)$rawTop->toPx() : (int)$rawTop) : 0;
         $rawRight = $cs->getRaw('right');
-        $rightVal = $rawRight !== null ? (is_object($rawRight) ? (int)$rawRight->toPx() : (int)$rawRight) : 0;
         $rawBottom = $cs->getRaw('bottom');
-        $bottomVal = $rawBottom !== null ? (is_object($rawBottom) ? (int)$rawBottom->toPx() : (int)$rawBottom) : 0;
 
         $ancW = $ancestorW;
         $ancH = $ancestorH;
@@ -199,6 +197,11 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $ancY = $ancestorY;
         $bL = $ancestorBorderLeft;
         $bT = $ancestorBorderTop;
+
+        $leftVal = $this->resolveInset($cs->left, $rawLeft, $ancW);
+        $topVal = $this->resolveInset($cs->top, $rawTop, $ancH);
+        $rightVal = $this->resolveInset($cs->right, $rawRight, $ancW);
+        $bottomVal = $this->resolveInset($cs->bottom, $rawBottom, $ancH);
 
         $width = (int)($cs->width?->toPx() ?? 0);
         $height = (int)($cs->height?->toPx() ?? 0);
@@ -315,4 +318,25 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
             0, 0, false,
             $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles
         );
-    }}
+    }
+
+    /**
+     * 解析 OOF inset 值（left/right/top/bottom）。
+     * 百分比基于包含块对应轴尺寸（CSS 2.2 §9.8.4）；其余直接 px。
+     */
+    private function resolveInset(?\Px\Css\CssLength $len, mixed $raw, int $base): int
+    {
+        if ($raw === null) return 0;
+        if ($len !== null) {
+            if ($len->isPercent() || $len->isCalc()) return (int)$len->resolveInContext($base);
+            return (int)$len->toPx();
+        }
+        if (is_object($raw)) {
+            if ($raw instanceof \Px\Css\CssLength) {
+                return ($raw->isPercent() || $raw->isCalc()) ? (int)$raw->resolveInContext($base) : (int)$raw->toPx();
+            }
+            return (int)($raw->toPx() ?? 0);
+        }
+        return (int)$raw;
+    }
+}

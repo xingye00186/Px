@@ -125,7 +125,7 @@ $tests['scroll 容器 padding 影响子项'] = function() {
             VNode::h('div', ['style' => 'height:40px;margin-top:8px'], 'Item 3'),
         ])
     );
-    assert_contains($result, 'div (10,10 300x40) text="Item 1"', 'scroll container padding: first child at (10,10)');
+    assert_contains($result, 'div (10,10 280x40) text="Item 1"', 'scroll padding: first child at (10,10), width 280 = 300 - 2*10 padding (content-box)');
     return $result;
 };
 

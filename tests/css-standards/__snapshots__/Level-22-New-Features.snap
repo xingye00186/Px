@@ -1,4 +1,18 @@
-@generated 2026-07-25 13:19:14
+@generated 2026-07-25 13:26:01
+=== Test: 绝对定位 left:25% top:20% ===
+Frame #1 events=0 detail=normal
+div (0,0 400x300) [pos=relative]
+  div (100,60 100x50) [pos=absolute] text="abs"
+
+---
+
+=== Test: 绝对定位 right:10% bottom:15% ===
+Frame #1 events=0 detail=normal
+div (0,0 400x300) [pos=relative]
+  div (280,215 80x40) [pos=absolute] text="rb"
+
+---
+
 === Test: 外边距折叠 正+正 margin-bottom:20 + margin-top:30 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x90)
