@@ -541,6 +541,17 @@ class FlexAlgorithm extends LayoutAlgorithm
                 if ($effAlign === 'stretch' && !$hasExplicitCross && $crossSize < $lineMaxCross) {
                     if ($isRow) $fi->h = $lineMaxCross;
                     else $fi->w = $lineMaxCross;
+                } else if (!$isRow && $effAlign !== 'stretch' && !$hasExplicitCross && $crossSize <= 0) {
+                    // 对标 Blink：非 stretch 对齐下交叉轴 auto 尺寸 = fit-content
+                    // （浏览器 ground truth：column+align-items:center 的文本子项宽 = 内容宽 180，非 0/全宽）
+                    // fit-content = min(max-content, max(min-content, available))（CSS 2.2 §10.3.5）
+                    $fcAlgo = new BlockAlgorithm();
+                    $fcContent = (string)($fi->content ?? '');
+                    $fcChildren = $fi->node?->children ?? [];
+                    if (!is_array($fcChildren)) $fcChildren = [];
+                    $fcSizes = $fcAlgo->computeMinMaxSizes($space, $fi->computedStyle, $fcContent, $fcChildren);
+                    $fitW = $fcSizes->shrinkToFit((int)$containerCross);
+                    if ($fitW > 0) $fi->w = $fitW;
                 }
             }
             // Recalculate maxCross after stretch, keep containerCross for single-line (CSS §9.5.1)

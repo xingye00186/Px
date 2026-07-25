@@ -1,4 +1,4 @@
-@generated 2026-07-25 10:44:42
+@generated 2026-07-25 10:54:11
 === Test: position:relative left=10 top=5 ===
 Frame #1 events=0 detail=normal
 div (10,5 100x50) [pos=relative] text="Relative"
