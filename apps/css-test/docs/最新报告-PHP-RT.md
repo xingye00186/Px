@@ -1,6 +1,6 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-26 04:19:03 | **总耗时**: 94s
+**运行时间**: 2026-07-26 04:30:09 | **总耗时**: 95.2s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
@@ -14,7 +14,7 @@
 | case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 73diff 🔴32 | ⏭️ | ❌ 失败 | 0.1s |
 | case-009-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 69diff 🔴29 | ⏭️ | ❌ 失败 | 0.1s |
 | case-010-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 167diff 🔴60 | ⏭️ | ❌ 失败 | 0.1s |
-| case-011-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 162diff 🔴135 | ⏭️ | ❌ 失败 | 0.1s |
+| case-011-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 156diff 🔴127 | ⏭️ | ❌ 失败 | 1.3s |
 | case-012-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 213diff 🔴157 | ⏭️ | ❌ 失败 | 0.2s |
 | case-013-z-index | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 150diff 🔴113 | ⏭️ | ❌ 失败 | 0.1s |
 | case-014-overflow-hidden | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 184diff 🔴156 | ⏭️ | ❌ 失败 | 0.2s |
@@ -60,25 +60,13 @@
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff 🔴10 | ⏭️ | ❌ 失败 | 0.1s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 20diff 🔴3 | ⏭️ | ❌ 失败 | 0.1s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 94s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 95.2s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop height diff 300->309
-> - case-010-display-none structure 19->26
-> - case-012-position-relative geometry 185->189
-> - case-012-position-relative critical 147->157
-> - case-018-opacity major 2->10
-> - case-019-visibility geometry 329->333
-> - case-019-visibility critical 213->219
-> - case-024-font-weight geometry 253->265
-> - case-024-font-weight mismatch 46->50
-> - case-024-font-weight critical 124->140
-> - case-026-font-style geometry 168->182
-> - case-026-font-style mismatch 23->29
-> - case-026-font-style major 2->26
+> - case-011-position-absolute major 5->10
 >
 > ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
 
@@ -87,7 +75,7 @@
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
 | width | 93.6% | 7949/8491 |
-| height | 96.4% | 8182/8491 |
+| height | 96.4% | 8186/8491 |
 | padding-bottom | 98.2% | 8339/8491 |
 | padding-top | 98.2% | 8340/8491 |
 | margin-bottom | 98.4% | 8352/8491 |
@@ -111,7 +99,7 @@
 | background-color | 100% | 7990/7993 |
 | font-size | 100% | 7412/7412 |
 | text-align | 100% | 7091/7091 |
-| font-family | 100% | 2437/2437 |
+| font-family | 100% | 2536/2536 |
 | align-items | 93.3% | 42/45 |
 | gap | 30% | 12/40 |
 | justify-content | 100% | 34/34 |
@@ -165,7 +153,7 @@
 | case-008-box-shadow | 0 | **32** | **34** | 3 | 0 | 0 |
 | case-009-outline | 0 | **29** | **31** | 5 | 0 | 0 |
 | case-010-display-none | 0 | **60** | **60** | 17 | 26 | 0 |
-| case-011-position-absolute | 0 | **135** | **5** | 17 | 0 | 0 |
+| case-011-position-absolute | 0 | **127** | **10** | 13 | 0 | 0 |
 | case-012-position-relative | 0 | **157** | **23** | 21 | 3 | 0 |
 | case-013-z-index | 0 | **113** | **11** | 21 | 0 | 0 |
 | case-014-overflow-hidden | 0 | **156** | **3** | 21 | 0 | 0 |

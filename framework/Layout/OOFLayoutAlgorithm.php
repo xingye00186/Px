@@ -236,23 +236,53 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
                 $width = max(0, $measured + (int)($cs->padding?->left->toPx() ?? 0) + (int)($cs->padding?->right->toPx() ?? 0) + (int)($cs->getBorderLeftWidth() ?? 0) + (int)($cs->getBorderRightWidth() ?? 0));
             }
             if ($height <= 0) {
-                $height = max((int)($cs->getLineHeight() ?? (int)($fs * 1.2)), $height);
+                // 行高取值必须用 <=0 判定（getLineHeight 默认返回 0 非 null，`??` 永不触发——
+                // A 类默认值陷阱变体，此前 OOF 文本高恒塔 0）；border-box 高 = 行高 +
+                // padding + border（与 BlockAlgorithm::computeBlockHeight 文本分支同源语义）。
+                $lh = (int)($cs->getLineHeight() ?? 0);
+                if ($lh <= 0) $lh = (int)($fs * 1.2);
+                $height = $lh
+                    + (int)($cs->padding?->top->toPx() ?? 0) + (int)($cs->padding?->bottom->toPx() ?? 0)
+                    + (int)($cs->getBorderTopWidth() ?? 0) + (int)($cs->getBorderBottomWidth() ?? 0);
             }
         }
 
         // CSS 2.2 §10.3.7 shrink-to-fit：若 OOF width 仍为 0 且无双向声明，使用子项总宽作为 max-content 代理（clamp 到 ancW）。
         // 仅当无文本（上面未命中）且有子项时生效，避免与既有测量逻辑重叠。
         if ($width <= 0 && count($frag->children) > 0) {
+            // 子项坐标为绝对系（LayoutNG Fragment 语义）：max-content 代理 =
+            // 最大右缘 - 最小左缘（子项包围盒宽）。此前直接用绝对右缘当宽度属
+            // 坐标系错乱（外层容器绝对偏移混入，case-011 w=360 vs Blink 44）。
             $childrenMaxRight = 0;
+            $childrenMinLeft = PHP_INT_MAX;
             foreach ($frag->children as $ch) {
-                $chRight = (int)$ch->getX() + (int)$ch->getW();
+                $chX = (int)$ch->getX();
+                $chRight = $chX + (int)$ch->getW();
                 if ($chRight > $childrenMaxRight) $childrenMaxRight = $chRight;
+                if ($chX < $childrenMinLeft) $childrenMinLeft = $chX;
             }
-            if ($childrenMaxRight > 0) {
+            if ($childrenMaxRight > 0 && $childrenMinLeft !== PHP_INT_MAX) {
                 $padLR = (int)($cs->padding?->left->toPx() ?? 0) + (int)($cs->padding?->right->toPx() ?? 0);
                 $bwLR = (int)($cs->getBorderLeftWidth() ?? 0) + (int)($cs->getBorderRightWidth() ?? 0);
-                $maxContent = $childrenMaxRight + $padLR + $bwLR;
+                $maxContent = max(0, $childrenMaxRight - $childrenMinLeft) + $padLR + $bwLR;
                 $width = min($maxContent, $ancW > 0 ? $ancW : $maxContent);
+            }
+        }
+        // OOF auto height 从子项包围盒推导（CSS 2.2 §10.6.4 → §10.6.3 auto 高）：
+        // 无文本、无双向声明、有子项时，高 = 子项包围盒高 + padding + border。
+        if ($height <= 0 && count($frag->children) > 0) {
+            $childrenMaxBottom = 0;
+            $childrenMinTop = PHP_INT_MAX;
+            foreach ($frag->children as $ch) {
+                $chY = (int)$ch->getY();
+                $chBottom = $chY + (int)$ch->getH();
+                if ($chBottom > $childrenMaxBottom) $childrenMaxBottom = $chBottom;
+                if ($chY < $childrenMinTop) $childrenMinTop = $chY;
+            }
+            if ($childrenMaxBottom > 0 && $childrenMinTop !== PHP_INT_MAX) {
+                $padTB = (int)($cs->padding?->top->toPx() ?? 0) + (int)($cs->padding?->bottom->toPx() ?? 0);
+                $bwTB = (int)($cs->getBorderTopWidth() ?? 0) + (int)($cs->getBorderBottomWidth() ?? 0);
+                $height = max(0, $childrenMaxBottom - $childrenMinTop) + $padTB + $bwTB;
             }
         }
 
