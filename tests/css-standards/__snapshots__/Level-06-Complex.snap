@@ -1,4 +1,15 @@
-@generated 2026-07-25 12:32:26
+@generated 2026-07-25 12:54:40
+=== Test: Grid 内嵌 flex 实现卡片网格 ===
+Frame #1 events=0 detail=normal
+div (0,0 964x192) [dsp=grid]
+  div (0,0 310x192) [dsp=flex]
+    div (0,0 310x140) text="Cover"
+    div (0,140 310x52) [dsp=flex]
+      div (8,148 36x36)
+      div (52,148 250x36) fg=1 text="Title text"
+
+---
+
 === Test: NavBar 水平导航栏 (flex row) ===
 Frame #1 events=0 detail=normal
 div (0,0 1440x56) [dsp=flex]
@@ -15,6 +26,45 @@ div (0,0 1440x56) [dsp=flex]
 === Test: 浮动按钮 (position:fixed) ===
 Frame #1 events=0 detail=normal
 div (700,400 48x48) [pos=fixed] text="Top"
+
+---
+
+=== Test: CategoryTabs 可滚动标签栏 ===
+Frame #1 events=0 detail=normal
+div (0,0 1440x44) [dsp=flex] scroll ch=36 cw=1440 maxScroll=0 st=0 sl=0 ov=auto
+  div (16,8 70x28) text="推荐"
+  div (98,8 70x28) text="热门"
+  div (180,8 70x28) text="游戏"
+  div (262,8 70x28) text="科技"
+  div (344,8 70x28) text="生活"
+
+---
+
+=== Test: 视频卡片 (封面+信息) flex column ===
+Frame #1 events=0 detail=normal
+div (0,0 300x227) [dsp=flex] ov=hidden
+  div (0,0 300x168)
+  div (0,168 300x59) [dsp=flex]
+    div (8,176 284x20) text="视频标题最多两行"
+    div (8,200 284x19) [dsp=flex]
+      div (8,200 284x19) [dsp=flex] text="UP主名称"
+      div (300,200 18x19) text="·"
+      div (326,200 54x19) text="1.2万"
+
+---
+
+=== Test: 视频网格 3列 auto-fill 混合布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 964x172) [dsp=grid]
+  div (0,0 310x172) [dsp=flex]
+    div (0,0 310x140) text="Cover"
+    div (0,140 310x32) text="Video 1"
+  div (326,0 310x172) [dsp=flex]
+    div (0,0 310x140) text="Cover"
+    div (0,140 310x32) text="Video 2"
+  div (652,0 312x172) [dsp=flex]
+    div (0,0 312x140) text="Cover"
+    div (0,140 312x32) text="Video 3"
 
 ---
 

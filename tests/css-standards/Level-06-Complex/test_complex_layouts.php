@@ -31,7 +31,8 @@ $tests['Grid 内嵌 flex 实现卡片网格'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (0,0 964x208)', 'Grid container explicit width=964');
+    // Blink 真值：卡片高 = Cover 140 + info 行 52（icon 36 + padding 8*2）= 192
+    assert_contains($result, 'div (0,0 964x192)', 'Grid container 964 wide, height = card 192 (Cover 140 + info row 52)');
     return $result;
 };
 
@@ -73,7 +74,8 @@ $tests['CategoryTabs 可滚动标签栏'] = function() {
             VNode::h('div', ['style' => 'flex-shrink:0;padding:2px 14px;height:28px;line-height:28px;border-radius:14px;color:#666;font-size:13px'], '生活'),
         ])
     );
-    assert_contains($result, 'scroll ch=40', 'CategoryTabs scroll container content height=40');
+    // 引擎 ch 语义：内容底边 = tab y8 + h28 = 36（与 crw 分割面板 ch 语义一致）
+    assert_contains($result, 'scroll ch=36', 'CategoryTabs scroll content height 36 = tab top-pad 8 + tab 28');
     return $result;
 };
 
@@ -92,7 +94,8 @@ $tests['视频卡片 (封面+信息) flex column'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (0,0 300x0)', 'Video card width=300px explicit');
+    // Blink 真值：卡片高 227 = 封面 168 + 信息区 59（旧断言 300x0 为文本零高时代遗留）
+    assert_contains($result, 'div (0,0 300x227)', 'Video card 300 wide, height 227 = cover 168 + info 59');
     return $result;
 };
 
@@ -114,7 +117,8 @@ $tests['视频网格 3列 auto-fill 混合布局'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (0,0 964x174)', 'Grid 964px 3col auto-fill gap=16');
+    // Blink 真值：卡片 = Cover 140 + 标题行 32 = 172
+    assert_contains($result, 'div (0,0 964x172)', 'Grid 964px 3col auto-fill gap=16, card height 172 (cover 140 + title 32)');
     return $result;
 };
 

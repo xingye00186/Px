@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:32:27
+@generated 2026-07-25 12:54:41
 === Test: Flex row + gap 两列等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]

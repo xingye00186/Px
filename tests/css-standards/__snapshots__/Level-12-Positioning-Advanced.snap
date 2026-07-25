@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:32:26
+@generated 2026-07-25 12:54:40
 === Test: position:sticky top:0 粘性定位 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x600) scroll ch=850 cw=400 maxScroll=250 st=0 sl=0 ov=auto
@@ -13,6 +13,13 @@ Frame #1 events=0 detail=normal
 div (0,0 400x500) scroll ch=450 cw=400 maxScroll=0 st=0 sl=0 ov=auto
   div (0,0 400x400) text="Large space"
   div (0,400 400x50) [pos=sticky] text="Sticky Bottom"
+
+---
+
+=== Test: position:absolute 居中 通过 margin:auto ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200) [pos=relative]
+  div (125,60 150x80) [pos=absolute] text="Center"
 
 ---
 
@@ -62,6 +69,13 @@ div (0,0 300x130)
 Frame #1 events=0 detail=normal
 div (0,0 400x200) [pos=relative]
   div (10,10 370x170) [pos=absolute] text="Stretch"
+
+---
+
+=== Test: position:absolute left:0 right:0 margin:auto 水平居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 500x100) [pos=relative]
+  div (150,0 200x60) [pos=absolute] text="Auto Center"
 
 ---
 

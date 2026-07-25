@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:32:26
+@generated 2026-07-25 12:54:40
 === Test: position:relative left=10 top=5 ===
 Frame #1 events=0 detail=normal
 div (10,5 100x50) [pos=relative] text="Relative"
@@ -56,7 +56,7 @@ div (100,200 120x60) [pos=fixed] text="Fixed"
 === Test: absolute 居中 left=0 right=0 margin=auto ===
 Frame #1 events=0 detail=normal
 div (0,0 400x200) [pos=relative]
-  div (0,50 200x60) [pos=absolute] text="Center"
+  div (100,50 200x60) [pos=absolute] text="Center"
 
 ---
 

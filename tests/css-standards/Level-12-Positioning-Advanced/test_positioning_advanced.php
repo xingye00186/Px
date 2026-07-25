@@ -53,7 +53,9 @@ $tests['position:absolute 居中 通过 margin:auto'] = function() {
             VNode::h('div', ['style' => 'position:absolute;left:0;right:0;top:0;bottom:0;width:150px;height:80px;margin:auto;background:#F00'], 'Center'),
         ])
     );
-    assert_contains($result, 'div (375,180 150x80) [pos=absolute]', 'absolute centered via directional constraints + margin:auto');
+    // Blink 真值（CSS 2.2 §10.3.7/10.6.4）：inset 全 0 + margin:auto → 双轴居中
+    // x=(400-150)/2=125, y=(200-80)/2=60（旧断言 375,180 越界 375+150>400，几何矛盾）
+    assert_contains($result, 'div (125,60 150x80) [pos=absolute]', 'absolute inset:0 + margin:auto centers both axes: x=(400-150)/2, y=(200-80)/2');
     return $result;
 };
 
@@ -137,7 +139,8 @@ $tests['position:absolute left:0 right:0 margin:auto 水平居中'] = function()
             VNode::h('div', ['style' => 'position:absolute;left:0;right:0;width:200px;height:60px;margin:0 auto;background:#090'], 'Auto Center'),
         ])
     );
-    assert_contains($result, 'div (450,0 200x60) [pos=absolute]', 'absolute left:0 right:0 margin:auto horizontal center in 500px');
+    // Blink 真值：left:0 right:0 + margin:0 auto → x=(500-200)/2=150（旧断言 450+200>500 越界）
+    assert_contains($result, 'div (150,0 200x60) [pos=absolute]', 'absolute left:0 right:0 margin:0 auto centers: x=(500-200)/2=150');
     return $result;
 };
 

@@ -284,28 +284,23 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $autoOffsetX = 0;
         $autoOffsetY = 0;
         if ($cs->margin !== null) {
-            $mLAuto = $cs->margin->left->isAuto();
-            $mRAuto = $cs->margin->right->isAuto();
-            $mTAuto = $cs->margin->top->isAuto();
-            $mBAuto = $cs->margin->bottom->isAuto();
+            // margin:auto 存储为 marginXxxAuto 标志（StyleResolver 独立路径），
+            // CssLength::isAuto() 对 margin 恒为 false（已知陷阱，与 grid auto-margin 同源修复）
+            $mLAuto = (bool)($cs->getRaw('marginLeftAuto') ?? false) || $cs->margin->left->isAuto();
+            $mRAuto = (bool)($cs->getRaw('marginRightAuto') ?? false) || $cs->margin->right->isAuto();
+            $mTAuto = (bool)($cs->getRaw('marginTopAuto') ?? false) || $cs->margin->top->isAuto();
+            $mBAuto = (bool)($cs->getRaw('marginBottomAuto') ?? false) || $cs->margin->bottom->isAuto();
             if ($mLAuto && $mRAuto && $hasLeft && $hasRight && $width > 0) {
                 // 主轴 X 居中：cbOriginX + left + (ancW - left - right - width) / 2
                 $free = $ancW - $leftVal - $rightVal - $width;
                 if ($free > 0) $autoOffsetX = (int)($free / 2);
-            } elseif ($mLAuto && $mRAuto) {
-                // fallback 仅 width 确定时居中于包含块
-                $autoOffsetX = (int)(($ancW - $width) / 2);
-            } elseif ($mRAuto) {
-                $autoOffsetX = $ancW - $calcX - $width + $ancX;
             }
+            // CSS 2.2 §10.3.7/10.6.4：仅双向 inset 均声明时 auto margin 才吸收剩余空间；
+            // 否则 auto margin 解为 0（旧 fallback 无声明也居中属越权，Blink 不如此）。
             // Y 方向（国际化 lacks writing-mode，仅作普通处理）
             if ($mTAuto && $mBAuto && $hasTop && $hasBottom && $height > 0) {
                 $freeV = $ancH - $topVal - $bottomVal - $height;
                 if ($freeV > 0) $autoOffsetY = (int)($freeV / 2);
-            } elseif ($mTAuto && $mBAuto) {
-                $autoOffsetY = (int)(($ancH - $height) / 2);
-            } elseif ($mBAuto) {
-                $autoOffsetY = $ancH - $calcY - $height + $ancY;
             }
         }
         $calcX += $autoOffsetX;

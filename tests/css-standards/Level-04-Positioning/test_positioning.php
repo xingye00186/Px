@@ -111,8 +111,8 @@ $tests['absolute 居中 left=0 right=0 margin=auto'] = function() {
             VNode::h('div', ['style' => 'position:absolute;left:0;right:0;top:50px;width:200px;height:60px;margin:auto'], 'Center'),
         ])
     );
-    // TODO: 待 CssValueParser margin 简写分解修复后，期望 x=(400-200)/2=100
-    assert_contains($result, 'div (0,50 200x60) [pos=absolute] text="Center"', 'absolute left:0 right:0 top:50 (margin:auto x-center pending CssValueParser fix)');
+    // margin:auto 已修复（OOF 读 marginXxxAuto 标志）：x=(400-200)/2=100，y=top:50（仅单向 top 不垂直居中）
+    assert_contains($result, 'div (100,50 200x60) [pos=absolute] text="Center"', 'absolute left:0 right:0 top:50 margin:auto x-centers: x=(400-200)/2=100');
     return $result;
 };
 
