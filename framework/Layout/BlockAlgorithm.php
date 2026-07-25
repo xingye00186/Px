@@ -323,8 +323,9 @@ class BlockAlgorithm extends LayoutAlgorithm
         }
 
         // CSS 2.2 §10.6.3：仅 height:auto 时从子项累加；显式 height:0 应尊重（getRaw 区分，与 width/height 同源陷阱）
-        $hDeclaredExplicit = ($s->getRaw('height') !== null && $s->height !== null && !$s->height->isAuto() && !$s->height->isPercent() && !$s->height->isIntrinsic());
-        if ($h <= 0 && !$hDeclaredExplicit && count($stackedChildren) > 0) {
+        // 性能：短路顺序——先廉价 h<=0 && 有子，再 getRaw（bench 验证前置 getRaw 每容器执行致 -2.7%）
+        if ($h <= 0 && count($stackedChildren) > 0
+            && !($s->getRaw('height') !== null && $s->height !== null && !$s->height->isAuto() && !$s->height->isPercent() && !$s->height->isIntrinsic())) {
             $maxBottom = $y;
             foreach ($stackedChildren as $cr) {
                 // CSS 2.2 §10.6.3: auto-height 仅基于**正常流**子元素计算 — OOF (position:absolute/fixed) 不参与
