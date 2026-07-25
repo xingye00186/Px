@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:13:17
+@generated 2026-07-25 11:24:21
 === Test: grid-column span 2 跨越两列 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x60) [dsp=grid]
@@ -14,6 +14,25 @@ div (0,0 204x104) [dsp=grid]
   div (0,0 100x50) text="A"
   div (104,0 100x50) text="B span 2"
   div (0,54 100x50) text="C"
+
+---
+
+=== Test: grid-auto-flow column 列优先 ===
+Frame #1 events=0 detail=normal
+div (0,0 200x104) [dsp=grid]
+  div (0,0 100x50) text="A"
+  div (0,54 100x50) text="B"
+  div (104,0 100x50) text="C"
+
+---
+
+=== Test: grid 百分比行高 25% ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200) [dsp=grid]
+  div (0,0 196x50) text="Top 25%"
+  div (204,0 196x50) text="Top R"
+  div (0,58 196x150) text="Bottom 75%"
+  div (204,58 196x150) text="Bottom R"
 
 ---
 
@@ -44,6 +63,18 @@ div (0,0 700x60) [dsp=grid]
 
 ---
 
+=== Test: grid cell 内 flex column 高度填充 ===
+Frame #1 events=0 detail=normal
+div (0,0 600x200) [dsp=grid]
+  div (0,0 296x200) [dsp=flex]
+    div (0,0 296x40) text="Header"
+    div (0,40 296x160) fg=1 text="Fill"
+  div (304,0 296x200) [dsp=flex]
+    div (0,0 296x60) text="Header"
+    div (0,60 296x140) fg=1 text="Fill"
+
+---
+
 === Test: column-gap 16px row-gap 8px 分开 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x140) [dsp=grid]
@@ -51,3 +82,11 @@ div (0,0 400x140) [dsp=grid]
   div (200,0 200x60) text="B"
   div (0,60 200x60) text="C"
   div (200,60 200x60) text="D"
+
+---
+
+=== Test: grid cell 内 margin auto 居中 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x120) [dsp=grid]
+  div (50,35 100x50) text="Center"
+  div (208,0 200x80) text="Normal"

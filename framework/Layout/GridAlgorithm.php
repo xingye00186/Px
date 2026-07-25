@@ -362,8 +362,15 @@ class GridAlgorithm extends LayoutAlgorithm
                     $explicitW = (int)$wVal->toPx();
                 }
             }
-            // 当子项有显式宽度且小于轨道时，应用 justify-self
-            if ($explicitW > 0 && $explicitW < $gw && $justifySelf !== 'stretch') {
+            // 对标 Blink（CSS Grid §10.1）：auto margin 先于 box alignment 吸收 grid area 剩余空间
+            // margin:auto 存储为 marginXxxAuto 标志（StyleResolver 独立路径，非 CssLength::auto）
+            $marginAutoH = (bool)($gri->style?->getRaw('marginLeftAuto') ?? false) && (bool)($gri->style?->getRaw('marginRightAuto') ?? false);
+            $marginAutoV = (bool)($gri->style?->getRaw('marginTopAuto') ?? false) && (bool)($gri->style?->getRaw('marginBottomAuto') ?? false);
+            // 当子项有显式宽度且小于轨道时，应用 justify-self / auto margin
+            if ($marginAutoH && $explicitW > 0 && $explicitW < $gw) {
+                $itemW = $explicitW;
+                $itemX += (int)(($gw - $explicitW) / 2);
+            } elseif ($explicitW > 0 && $explicitW < $gw && $justifySelf !== 'stretch') {
                 $itemW = $explicitW;
                 if ($justifySelf === 'center') {
                     $itemX += (int)(($gw - $explicitW) / 2);
@@ -424,7 +431,12 @@ class GridAlgorithm extends LayoutAlgorithm
             if ($explicitH > 0 && $explicitH < $gh) {
                 $itemH = $explicitH;
             }
-            $mappedFragments[] = new PhysicalFragment($itemX, (int)($gri->y ?? 0), $itemW, $itemH, (int)($gri->style?->visualWidth($itemW) ?? $itemW), (int)($gri->style?->visualHeight($itemH) ?? $itemH), 0, $origContentW, $origContentH, $gri->style, $children, $origFrag?->sourceNode,
+            // CSS Grid §10.1：垂直 auto margin 居中（先于 align-self）
+            $itemY = (int)($gri->y ?? 0);
+            if ($marginAutoV && $itemH > 0 && $itemH < $gh) {
+                $itemY += (int)(($gh - $itemH) / 2);
+            }
+            $mappedFragments[] = new PhysicalFragment($itemX, $itemY, $itemW, $itemH, (int)($gri->style?->visualWidth($itemW) ?? $itemW), (int)($gri->style?->visualHeight($itemH) ?? $itemH), 0, $origContentW, $origContentH, $gri->style, $children, $origFrag?->sourceNode,
                 $origScrollTop, $origScrollLeft, $origIsScroll,
                 $origFrag?->type ?? '', $origFrag?->content, $origFrag?->dataset ?? [], $origFrag?->pseudoStyles ?? []);
             $giIdx++;

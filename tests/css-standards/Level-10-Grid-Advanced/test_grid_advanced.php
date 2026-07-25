@@ -56,7 +56,7 @@ $tests['grid-auto-flow column 列优先'] = function() {
             VNode::h('div', ['style' => ''], 'C'),
         ])
     );
-    assert_contains($result, 'div (0,64 100x60) text="C"', 'C flows to row2 col1, y=60(row1)+4(gap)=64');
+    assert_contains($result, 'div (104,0 100x50) text="C"', 'auto-flow:column: A r1c1, B r2c1, C flows to r1c2 x=100+4(gap)=104, row height 50px (explicit template-rows)');
     return $result;
 };
 
@@ -70,7 +70,7 @@ $tests['grid 百分比行高 25%'] = function() {
             VNode::h('div', ['style' => ''], 'Bottom R'),
         ])
     );
-    assert_contains($result, 'div (0,0 196x60) text="Top 25%"', '1fr col=(400-8)/2=196 with gap=8');
+    assert_contains($result, 'div (0,0 196x50) text="Top 25%"', '1fr col=(400-8)/2=196; row height 25% of 200 = 50');
     return $result;
 };
 
@@ -127,7 +127,7 @@ $tests['grid cell 内 flex column 高度填充'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (0,40 296x20) fg=1', 'Flex fill: remaining cell h=60 - header 40 = 20');
+    assert_contains($result, 'div (0,40 296x160) fg=1', 'Flex fill: implicit row stretches to container 200 (Blink-verified), Fill = 200 - header 40 = 160');
     return $result;
 };
 
@@ -153,7 +153,8 @@ $tests['grid cell 内 margin auto 居中'] = function() {
             VNode::h('div', ['style' => 'width:180px;height:80px'], 'Normal'),
         ])
     );
-    assert_contains($result, 'div (0,0 200x80) text="Center"', 'margin:auto centers within 200px grid cell');
+    // Blink 真值：隐式行 stretch 到 120，margin:auto 居中 100x50 于 200x120 cell → (50,35)
+    assert_contains($result, 'div (50,35 100x50) text="Center"', 'margin:auto centers 100x50 within 200x120 grid area: x=(200-100)/2=50, y=(120-50)/2=35');
     return $result;
 };
 
