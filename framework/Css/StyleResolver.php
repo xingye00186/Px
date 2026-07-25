@@ -138,13 +138,9 @@ class StyleResolver
 
         // Expand shorthand padding/margin to individual values
         // 使用统一展开类（与 SFC 编译器共用同一套展开逻辑）
-        // flex 简写展开暂禁用：不定主轴 shrink 已修但仍有 3 个边缘 case 回归（278>275）
-        $raw = CssShorthandExpander::expandAll($raw, false);
-
-        // Note: flex shorthand expansion (flex:1 → flex-grow:1 + flex-shrink:1 + flex-basis:0px)
-        // 暂不在此阶段展开——展开后 basis=0 会绕过 min-width:auto 的 content-size 保护，
-        // 导致无完整 min-content 计算时大量回归。待 Phase 5 完整 min-content 计算就绪后启用。
-        // FlexAlgorithm 中通过 $cs->flex->basis 回退机制处理。
+        // flex 简写展开已启用（§9.2）：basis 按 §7.1.1 展开为 0%（非 0px），
+        // is_fixed_block_size + min-content 链路就位后重验；FlexAlgorithm 保留 $cs->flex 回退兼容。
+        $raw = CssShorthandExpander::expandAll($raw, true);
 
         // Apply PROPERTY_MAP parsers
         // 静态缓存合并结果（避免每元素/帧重复 array_merge 两个 const 数组）

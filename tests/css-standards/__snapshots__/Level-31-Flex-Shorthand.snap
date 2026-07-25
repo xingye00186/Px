@@ -1,0 +1,52 @@
+@generated 2026-07-25 17:05:47
+=== Test: flex:1 definite column 填满 ===
+Frame #1 events=0 detail=normal
+div (0,0 320x200) ov=hidden
+  div (0,0 300x200) [dsp=flex]
+    div (0,0 300x150) fg=1 text="A"
+    div (0,150 300x50) text="B"
+
+---
+
+=== Test: flex:1 indefinite column 保 content 高 ===
+Frame #1 events=0 detail=normal
+div (0,0 320x69) ov=hidden
+  div (0,0 300x69) [dsp=flex]
+    div (0,0 300x19) fg=1 text="A"
+    div (0,19 300x50) text="B"
+
+---
+
+=== Test: flex:1 1 0px indefinite column 同保护 ===
+Frame #1 events=0 detail=normal
+div (0,0 320x69) ov=hidden
+  div (0,0 300x69) [dsp=flex]
+    div (0,0 300x19) fg=1 text="A"
+    div (0,19 300x50) text="B"
+
+---
+
+=== Test: flex:1 row 吸收剩余宽 ===
+Frame #1 events=0 detail=normal
+div (0,0 320x19) ov=hidden
+  div (0,0 300x19) [dsp=flex]
+    div (0,0 200x19) fg=1 text="A"
+    div (200,0 100x19) text="B"
+
+---
+
+=== Test: flex:none 与 flex:auto 关键字 ===
+Frame #1 events=0 detail=normal
+div (0,0 320x19) ov=hidden
+  div (0,0 300x19) [dsp=flex]
+    div (0,0 80x19) text="A"
+    div (80,0 220x19) fg=1 text="B"
+
+---
+
+=== Test: flex 三值简写按权重分配 ===
+Frame #1 events=0 detail=normal
+div (0,0 320x19) ov=hidden
+  div (0,0 300x19) [dsp=flex]
+    div (0,0 183x19) fg=2 text="A"
+    div (183,0 116x19) fg=1 text="B"

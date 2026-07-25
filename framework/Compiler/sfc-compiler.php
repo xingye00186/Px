@@ -333,8 +333,8 @@ function generateVNodeExpr(VNode $node, ?array $loopInfo = null, int $indent = 0
                 if ($valid && !empty($rawForExpand)) {
                     // ── 编译期简写展开（对标 Blink: 所有简写在 parse 阶段展开为 longhand）──
                     // 与 StyleResolver 运行时共用同一套展开逻辑（CssShorthandExpander）
-                    // flex 简写暂不展开（待 min-content 计算就绪）
-                    $rawForExpand = \Px\Css\CssShorthandExpander::expandAll($rawForExpand, false);
+                    // flex 简写展开已启用（§9.2，与 StyleResolver/StyleTransform 开关同步）
+                    $rawForExpand = \Px\Css\CssShorthandExpander::expandAll($rawForExpand, true);
                     foreach ($rawForExpand as $prop => $val) {
                         // 统一 key 归一化（与 StyleArrayTransform 一致：kebab → camelCase）
                         $canonicalKey = \Px\Css\CssMappings::canonicalStyleKey($prop);

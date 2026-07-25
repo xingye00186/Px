@@ -196,8 +196,14 @@ class CssShorthandExpander
         if (!isset($raw['flex-grow']))   $raw['flex-grow'] = (string)$cf->grow;
         if (!isset($raw['flex-shrink'])) $raw['flex-shrink'] = (string)$cf->shrink;
         if (!isset($raw['flex-basis'])) {
+            // 序列化必须保真（CSS Flexbox §7.1.1）：auto/content/intrinsic 关键字不可塔陷为 0px，
+            // percent（含 flex:1 的 0%）与长度在 indefinite 主轴下语义不同。
             if ($cf->basis->isAuto()) {
                 $raw['flex-basis'] = 'auto';
+            } else if ($cf->basis->isContent()) {
+                $raw['flex-basis'] = 'content';
+            } else if ($cf->basis->isIntrinsic()) {
+                $raw['flex-basis'] = $cf->basis->unit;
             } else if ($cf->basis->isPercent()) {
                 $raw['flex-basis'] = $cf->basis->value . '%';
             } else {

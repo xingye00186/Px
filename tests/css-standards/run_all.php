@@ -63,6 +63,10 @@ $scripts = [
     'Level-26-Flexbox-Complete'      => 'test_flexbox_complete.php',
     'Level-27-Box-Sizing-Units'      => 'test_box_sizing_units.php',
     'Level-28-Grid-Areas-Alignment'  => 'test_grid_areas_alignment.php',
+    // Ground-Truth 批次新增 Level 29-31（Blink getBoundingClientRect 真值套件）
+    'Level-29-Float'                 => 'test_float.php',
+    'Level-30-Margin-Collapse'       => 'test_margin_collapse.php',
+    'Level-31-Flex-Shorthand'        => 'test_flex_shorthand.php',
 ];
 
 $analyzeMode = false;

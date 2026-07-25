@@ -195,8 +195,9 @@ class BlockAlgorithm extends LayoutAlgorithm
      * 陷阱：typed overflowY 默认 'visible' 非 null，`overflowY?->value ?? overflow?->value`
      * 链恒取 overflowY 默认值——简写 overflow:hidden 被绕过（A 类默认值语义陷阱）。
      * 必须用 getRaw 区分声明（与 LayoutOrchestrator 滚动容器检测同源语义）。
+     * public：FlexAlgorithm automatic-minimum-size 判定复用（单一判定通道）。
      */
-    private static function effectiveOverflowY(ComputedStyle $s): string
+    public static function effectiveOverflowY(ComputedStyle $s): string
     {
         $rawOY = $s->getRaw('overflowY');
         if ($rawOY !== null) return is_object($rawOY) ? (string)($rawOY->value ?? 'visible') : (string)$rawOY;

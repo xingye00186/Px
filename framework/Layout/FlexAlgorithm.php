@@ -390,9 +390,29 @@ class FlexAlgorithm extends LayoutAlgorithm
         // ── Step 2: Apply flex-basis ──
         foreach ($sortedFlexItems as $fi) {
             $fi = objval($fi, FlexItem::class);
-            // CSS Flexbox §9.3: hypothetical main size = basis（包括 0）。
+            // CSS Flexbox §9.3: hypothetical main size = clamp(flex base size, min, max)。
             // basis=-1 表示 auto/content（保留 layoutChild 结果）；basis>=0 则显式设定。
-            if ($fi->basis >= 0) { if ($isRow) $fi->w = $fi->basis; else $fi->h = $fi->basis; }
+            if ($fi->basis >= 0) {
+                if ($isRow) {
+                    $fi->w = $fi->basis;
+                } else {
+                    // CSS Flexbox §4.5 automatic minimum size：column 主轴 min-height:auto
+                    //（未显式声明 min-height 且非滚动容器）→ min = content 高（apply basis 前的 fi->h，
+                    // 即 layoutChild/文本行高守卫结果）。Blink-measured（_gt_flexshorthand F2/F3）：
+                    // flex:1（0%）与 flex:1 1 0px 在 indefinite column 下均保 content 高而非 0；
+                    // 此前 basis=0 直接覆盖 fi->h 即“basis=0 绕过保护”历史回滚的机制本体。
+                    $fbContentH = (int)$fi->h;
+                    $fbH = $fi->basis;
+                    $fbCs = $fi->computedStyle;
+                    $fbAutoMin = true;
+                    if ($fbCs !== null) {
+                        if ($fbCs->hasExplicitLength('minHeight')) $fbAutoMin = false;
+                        else if (BlockAlgorithm::effectiveOverflowY($fbCs) !== 'visible') $fbAutoMin = false;
+                    }
+                    if ($fbAutoMin && $fbContentH > $fbH) $fbH = $fbContentH;
+                    $fi->h = $fbH;
+                }
+            }
         }
 
         // ── Step 3: Break into lines (FlexLineBreaker) ──

@@ -154,7 +154,9 @@ class RenderTreeManager
             }
 
             // flex grow/shrink
+            // raw 可能为 CssKeyword 对象（flex 简写展开后 parseIdent 产物）或字符串
             $flexGrowRaw = $cs?->getRaw('flexGrow');
+            if (is_object($flexGrowRaw)) $flexGrowRaw = $flexGrowRaw->value ?? null;
             $fg = is_numeric($flexGrowRaw) ? (string)$flexGrowRaw : '';
             if ($fg !== '' && $fg !== 0) {
                 $output .= " fg=";
@@ -302,7 +304,9 @@ class RenderTreeManager
             $output .= " ov=$ov";
         }
         // flex-grow 标注（对标测试期望：fg=1）
+        // raw 可能为 CssKeyword 对象（flex 简写展开后 parseIdent 产物）或字符串
         $fg = $frag->style?->getRaw('flexGrow') ?? $frag->style?->flex?->grow ?? 0;
+        if (is_object($fg)) $fg = $fg->value ?? 0;
         if (is_numeric($fg) && (int)$fg > 0) {
             $output .= " fg=" . (int)$fg;
         }

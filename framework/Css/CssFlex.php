@@ -36,7 +36,10 @@ class CssFlex extends CssValue
         $grow   = isset($parts[0]) ? (float)$parts[0] : 0.0;
         $shrink = isset($parts[1]) ? (float)$parts[1] : 1.0;
 
-        $basis = CssLength::px(0);
+        // CSS Flexbox §7.1.1：`flex: <number> [<number>]` 的 basis 为 **0%**（非 0px）。
+        // 对标 Blink StyleBuilderConverter：percent basis 在主轴包含块不定时 used value = content，
+        // 而长度 0px 恒为 0——两者在 indefinite 主轴下语义不同，不可混同。
+        $basis = CssLength::percent(0);
         if (isset($parts[2]) && $parts[2] !== '') {
             $b = strtolower(trim($parts[2]));
             if ($b === 'auto') {
