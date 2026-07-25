@@ -762,6 +762,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                     true, false, 'block',
                     $p2ItemW, $space->getPercentageHeight(),
                     $blockSizeIsFixed,
+                    true,  // flex item 建立新格式化上下文（阻断 margin 穿透）
                 );
                 $reFrag = $this->layoutChild($childNodes[$p2Idx], $p2Space);
                 $sortedChildResults[$p2Idx] = $reFrag;

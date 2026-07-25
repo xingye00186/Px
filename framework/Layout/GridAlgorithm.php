@@ -322,6 +322,7 @@ class GridAlgorithm extends LayoutAlgorithm
                     true, false, 'block',
                     $trackW, $c->getPercentageHeight(),
                     $itemStretches,
+                    true,  // grid item 建立新格式化上下文（阻断 margin 穿透）
                 );
                 $reFrag = $this->layoutChild($childNodes[$idx2], $trackSpace);
                 $childResults[$idx2] = $reFrag;

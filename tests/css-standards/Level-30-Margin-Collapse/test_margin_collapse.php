@@ -5,11 +5,11 @@
  * 断言值来自真实 Chromium/Blink getBoundingClientRect（_gt_mc.html，BFC 隔离测量）。
  * 引擎与 Blink 逐项对比结论：
  *   T2 border 阻断 / T3 兄弟 max / T4 负值 / T5 BFC 阻断 —— 完全一致 ✅
- *   T1 父-首子穿透：子**绝对位置**一致（y=20）；差异仅在盒归属——
- *     Blink 将 margin 穿透到父外（父 y=20,h=30；子相对 y=0），
- *     Px 当前 margin 留在父内（父 y=0,h=50；子相对 y=20）。
- *     已知限制：真穿透需 LayoutResult preMarginStrut 回传链（父盒背景范围有别），
- *     此处按两引擎一致的**子绝对坐标**断言。
+ *   T1 父-首子穿透：preMarginStrut 穿透链已实现（2026-07-25，BlockAlgorithm
+ *     firstChildTopStrut/extractPreMarginStrut + ConstraintSpace::isFormattingContextRoot）：
+ *     margin 穿出父外，父 (0,20 300x30)、子相对 y=0、子绝对 y=20 —— 与 Blink 盒归属完全一致 ✅
+ *     真值补充（_gt_premargin.html，Blink-measured）：显式 height 不阻断 top 穿透；
+ *     多级穿透递归；穿透 strut 参与前兄弟 margin-bottom 折叠（max 语义）。
  */
 
 require_once __DIR__ . '/../CssTestBase.php';
@@ -18,7 +18,7 @@ use Px\Dom\VNode;
 
 $tests = [];
 
-// ── Test 1: 父-首子 margin-top（子绝对位置断言；父盒归属差异见文件头注记） ──
+// ── Test 1: 父-首子 margin-top 穿透（盒归属与 Blink 完全对齐）──
 $tests['父-首子 margin-top 子绝对位置'] = function() {
     $result = run_minimal_pipeline(
         VNode::h('div', ['style' => 'width:320px;overflow:hidden'], [
@@ -27,8 +27,9 @@ $tests['父-首子 margin-top 子绝对位置'] = function() {
             ]),
         ])
     );
-    // Blink 与 Px 一致的子绝对坐标：y=20（Blink: 父20+子0；Px: 父0+子20）
-    assert_contains($result, 'div (0,20 300x30) text="A"', 'first-child margin-top: child absolute y=20 (Blink-consistent; box attribution differs, see header note)');
+    // Blink-measured：margin 穿出父外 → 父 y=20、h=30（不含 margin）；子相对父 y=0，绝对 y=20
+    assert_contains($result, 'div (0,20 300x30)', 'first-child margin-top collapses through: parent shifted to y=20, h=30 (Blink-measured)');
+    assert_contains($result, 'div (0,20 300x30) text="A"', 'first-child margin-top: child absolute y=20, relative y=0 (Blink-measured)');
     return $result;
 };
 

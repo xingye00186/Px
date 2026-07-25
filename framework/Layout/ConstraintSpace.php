@@ -69,6 +69,13 @@ class ConstraintSpace
      */
     public readonly bool $isFixedBlockSize;
 
+    /**
+     * 元素在此约束下建立新的格式化上下文（对标 Blink ConstraintSpace::is_new_formatting_context）。
+     * 场景：flex item、grid item（CSS Flexbox §4 / Grid §6.1：item 建立独立格式化上下文）。
+     * 为 true 时，子算法禁止 margin 穿透（CSS 2.2 §8.3.1：新 BFC 阻断父-首子 margin 折叠）。
+     */
+    public readonly bool $isFormattingContextRoot;
+
     /** getter 方法 — AOT 跨类 readonly 访问保护 */
     public function getContainerWidth(): int { return $this->containerWidth; }
     public function getContainerHeight(): int { return $this->containerHeight; }
@@ -88,6 +95,7 @@ class ConstraintSpace
     public function getForceRelayoutChildren(): bool { return $this->forceRelayoutChildren; }
     public function getIsIntrinsicMeasurement(): bool { return $this->isIntrinsicMeasurement; }
     public function getIsFixedBlockSize(): bool { return $this->isFixedBlockSize; }
+    public function getIsFormattingContextRoot(): bool { return $this->isFormattingContextRoot; }
 
     /**
      * 快速字段比较（替代字符串签名，避免 O(N) 序列化开销）。
@@ -103,6 +111,7 @@ class ConstraintSpace
             && $this->determinedPercentageHeight === $other->determinedPercentageHeight
             && $this->isIntrinsicMeasurement === $other->isIntrinsicMeasurement
             && $this->isFixedBlockSize === $other->isFixedBlockSize
+            && $this->isFormattingContextRoot === $other->isFormattingContextRoot
             && $this->spaceType === $other->spaceType
             && $this->paddingTop === $other->paddingTop
             && $this->paddingRight === $other->paddingRight
@@ -136,6 +145,7 @@ class ConstraintSpace
             && $this->determinedPercentageHeight === $other->determinedPercentageHeight
             && $this->isIntrinsicMeasurement === $other->isIntrinsicMeasurement
             && $this->isFixedBlockSize === $other->isFixedBlockSize
+            && $this->isFormattingContextRoot === $other->isFormattingContextRoot
             && $this->spaceType === $other->spaceType
             && $this->paddingTop === $other->paddingTop
             && $this->paddingRight === $other->paddingRight
@@ -173,6 +183,7 @@ class ConstraintSpace
         ?int $determinedPercentageWidth = null,
         ?int $determinedPercentageHeight = null,
         bool $isFixedBlockSize = false,
+        bool $isFormattingContextRoot = false,
     ) {
         $this->containerWidth        = $containerWidth;
         $this->containerHeight       = $containerHeight;
@@ -196,6 +207,7 @@ class ConstraintSpace
         $this->isIntrinsicMeasurement = $isIntrinsicMeasurement;
         $this->spaceType             = $spaceType;
         $this->isFixedBlockSize      = $isFixedBlockSize;
+        $this->isFormattingContextRoot = $isFormattingContextRoot;
     }
 
 
@@ -218,6 +230,7 @@ class ConstraintSpace
         int $borderLeft = 0,
         bool $force = false,
         string $spaceType = 'block',
+        bool $isFormattingContextRoot = false,
     ): self {
         return new self(
             $contentWidth,
@@ -239,6 +252,10 @@ class ConstraintSpace
             $force,
             false,
             $spaceType,
+            null,
+            null,
+            false,
+            $isFormattingContextRoot,
         );
     }
 

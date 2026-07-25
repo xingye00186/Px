@@ -65,6 +65,7 @@ class ConstraintSpaceBuilder
     private bool $isIntrinsicMeasurement = false;
     private string $spaceType = 'block';
     private bool $isFixedBlockSize = false;
+    private bool $isFormattingContextRoot = false;
 
     /** 工厂：创建全新 Builder */
     public static function create(): ConstraintSpaceBuilder
@@ -99,6 +100,7 @@ class ConstraintSpaceBuilder
         $b->isIntrinsicMeasurement       = (bool)$parent->getIsIntrinsicMeasurement();
         $b->spaceType                    = (string)$parent->getSpaceType();
         $b->isFixedBlockSize             = (bool)$parent->getIsFixedBlockSize();
+        $b->isFormattingContextRoot      = (bool)$parent->getIsFormattingContextRoot();
         return $b;
     }
 
@@ -180,6 +182,13 @@ class ConstraintSpaceBuilder
         return $this;
     }
 
+    /** 元素建立新格式化上下文（对标 Blink is_new_formatting_context） */
+    public function setFormattingContextRoot(bool $v): ConstraintSpaceBuilder
+    {
+        $this->isFormattingContextRoot = $v;
+        return $this;
+    }
+
     /** 构建最终 ConstraintSpace */
     public function build(): ConstraintSpace
     {
@@ -211,6 +220,7 @@ class ConstraintSpaceBuilder
             $dpw,
             $dph,
             $this->isFixedBlockSize,
+            $this->isFormattingContextRoot,
         );
     }
 }

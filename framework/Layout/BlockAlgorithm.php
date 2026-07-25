@@ -147,18 +147,7 @@ class BlockAlgorithm extends LayoutAlgorithm
     {
         if ($selfStyle === null) return null;
         // 1. 自身创建新 BFC 则阻断穿透
-        $selfOverflowY = $selfStyle->overflowY?->value ?? $selfStyle->overflow?->value ?? 'visible';
-        $selfDisplay = $selfStyle->display?->value ?? 'block';
-        $selfPosition = $selfStyle->position?->value ?? 'static';
-        $selfFloat = $selfStyle->getRaw('float') ?? 'none';
-        $selfFloatVal = is_object($selfFloat) ? ($selfFloat->value ?? 'none') : (string)$selfFloat;
-        $createsNewBFC = ($selfOverflowY !== 'visible')
-            || ($selfPosition === 'absolute' || $selfPosition === 'fixed')
-            || ($selfFloatVal !== 'none')
-            || ($selfDisplay === 'inline-block' || $selfDisplay === 'table-cell'
-                || $selfDisplay === 'flex' || $selfDisplay === 'grid'
-                || $selfDisplay === 'flow-root');
-        if ($createsNewBFC) return null;
+        if ($this->createsBlockFormattingContext($selfStyle)) return null;
 
         // 2. 自身有 padding-bottom 或 border-bottom 则不可穿透
         $padB = (int)($selfStyle->padding?->bottom->toPx() ?? 0);
@@ -180,8 +169,8 @@ class BlockAlgorithm extends LayoutAlgorithm
             if ($chDisp === 'none') continue;
             $chPos = $chStyle->position?->value ?? 'static';
             if ($chPos === 'absolute' || $chPos === 'fixed') continue;
-            // 遇到创建新 BFC 的子：阻断穿透
-            $chOverflowY = $chStyle->overflowY?->value ?? $chStyle->overflow?->value ?? 'visible';
+            // 遇到创建新 BFC 的子：阻断穿透（overflow 简写陷阱：用 effectiveOverflowY）
+            $chOverflowY = self::effectiveOverflowY($chStyle);
             $chFloat = $chStyle->getRaw('float') ?? 'none';
             $chFloatVal = is_object($chFloat) ? ($chFloat->value ?? 'none') : (string)$chFloat;
             $chCreatesBFC = ($chOverflowY !== 'visible')
@@ -199,6 +188,99 @@ class BlockAlgorithm extends LayoutAlgorithm
             return $strut;
         }
         return null;
+    }
+
+    /**
+     * 有效 overflow-y（对标 CSS Overflow §3：简写设两轴，除非 overflow-y 显式覆盖）。
+     * 陷阱：typed overflowY 默认 'visible' 非 null，`overflowY?->value ?? overflow?->value`
+     * 链恒取 overflowY 默认值——简写 overflow:hidden 被绕过（A 类默认值语义陷阱）。
+     * 必须用 getRaw 区分声明（与 LayoutOrchestrator 滚动容器检测同源语义）。
+     */
+    private static function effectiveOverflowY(ComputedStyle $s): string
+    {
+        $rawOY = $s->getRaw('overflowY');
+        if ($rawOY !== null) return is_object($rawOY) ? (string)($rawOY->value ?? 'visible') : (string)$rawOY;
+        $rawO = $s->getRaw('overflow');
+        if ($rawO !== null) return is_object($rawO) ? (string)($rawO->value ?? 'visible') : (string)$rawO;
+        return 'visible';
+    }
+
+    /**
+     * 自身是否创建新 BFC（CSS 2.2 §9.4.1）——pre/end margin 穿透的共享阻断判定。
+     */
+    private function createsBlockFormattingContext(ComputedStyle $s): bool
+    {
+        $selfOverflowY = self::effectiveOverflowY($s);
+        $selfDisplay = $s->display?->value ?? 'block';
+        $selfPosition = $s->position?->value ?? 'static';
+        $selfFloat = $s->getRaw('float') ?? 'none';
+        $selfFloatVal = is_object($selfFloat) ? ($selfFloat->value ?? 'none') : (string)$selfFloat;
+        return ($selfOverflowY !== 'visible')
+            || ($selfPosition === 'absolute' || $selfPosition === 'fixed')
+            || ($selfFloatVal !== 'none')
+            || ($selfDisplay === 'inline-block' || $selfDisplay === 'table-cell'
+                || $selfDisplay === 'flex' || $selfDisplay === 'grid'
+                || $selfDisplay === 'flow-root');
+    }
+
+    /**
+     * 自身顶部边界是否可被首子 margin-top 穿透（CSS 2.2 §8.3.1 父-首子折叠）。
+     * 与 end 版不同：显式 height 不阻断 top 穿透（Blink-measured：父 height:50 时
+     * 首子 margin-top 仍穿出，父盒整体下移）；仅 padding-top/border-top/BFC 阻断。
+     */
+    private function isSelfTopPenetrable(ComputedStyle $s): bool
+    {
+        if ((int)($s->padding?->top->toPx() ?? 0) !== 0) return false;
+        if ((int)($s->getBorderTopWidth() ?? 0) !== 0) return false;
+        return !$this->createsBlockFormattingContext($s);
+    }
+
+    /**
+     * 从子 Fragment 列表提取首个 in-flow collapsible 子的顶部 margin strut
+     * （含其内部继续穿透的孙辈 strut，递归）。无可穿透首子时返回 null。
+     */
+    private function firstChildTopStrut(array $childFragments): ?MarginStrut
+    {
+        foreach ($childFragments as $cr) {
+            $chStyle = $cr->style;
+            if ($chStyle === null) return null;
+            $chDisp = $chStyle->display?->value ?? 'block';
+            if ($chDisp === 'none') continue;
+            $chPos = $chStyle->position?->value ?? 'static';
+            if ($chPos === 'absolute' || $chPos === 'fixed') continue;
+            // 首个 in-flow 子：必须为 collapsible block（非 BFC、非 inline/float）才可穿透
+            if ($chDisp !== 'block') return null;
+            if ($this->createsBlockFormattingContext($chStyle)) return null;
+            // 百分比 margin-top 依赖包含块宽解析，提取端无容器宽——宁窄勿宽：不穿透
+            if ($chStyle->margin?->top->isPercent() ?? false) return null;
+            $chMTop = (int)($chStyle->margin?->top->toPx() ?? 0);
+            $strut = new MarginStrut();
+            $strut->append($chMTop);
+            // 递归：首子自身内部的首孙穿透链（两级以上穿透，Blink-measured P3）
+            $sub = $this->extractPreMarginStrut($cr, $chStyle);
+            if ($sub !== null) $strut->appendStrut($sub);
+            if ($strut->isEmpty()) return null;
+            return $strut;
+        }
+        return null;
+    }
+
+    /**
+     * 从子容器 Fragment 提取 preMarginStrut（对标 Blink margin strut 穿透，
+     * 与 extractEndMarginStrut 对称的消费端重提取模式）。
+     * 非 null 时：该容器首子的 margin-top（含递归链）穿出到容器外，
+     * 需由父端与容器自身 margin-top / 前兄弟 margin-bottom 折叠。
+     */
+    private function extractPreMarginStrut(PhysicalFragment $frag, ?ComputedStyle $selfStyle): ?MarginStrut
+    {
+        // 性能：廉价条件前置（叶子 div 最常见，直接短路）
+        if (count($frag->children) === 0) return null;
+        if ($selfStyle === null) return null;
+        // 容器自身含 inline 内容（IFC）：首子前有行盒，阻断穿透
+        $selfContent = (string)($frag->content ?? '');
+        if ($selfContent !== '') return null;
+        if (!$this->isSelfTopPenetrable($selfStyle)) return null;
+        return $this->firstChildTopStrut($frag->children);
     }
 
     public function layout(
@@ -273,6 +355,24 @@ class BlockAlgorithm extends LayoutAlgorithm
         $y = (int)($marginTop ?? 0) + ($isRelative ? (int)($top ?? 0) : 0);
 
         $displayVal = $s->display?->value ?? 'block';
+        // ── CSS 2.2 §8.3.1 父-首子 margin-top 穿透（生产端，对标 Blink margin strut 穿透）──
+        // 自身可穿透且首子有可折叠 margin-top 链时：该 strut 逸出父外，与自身 margin-top
+        // 折叠后并入自身 y（等效 margin），首子在父内不再施加（stackBlockChildren 消费 $escapedTop）。
+        // 守卫：flex/grid item（formatting context root）不穿透（CSS Flexbox §4 / Grid §6.1）。
+        $escapedTop = false;
+        if (count($children) > 0 && $displayVal === 'block' && strlen($textContent) === 0
+            && !$c->getIsFormattingContextRoot() && $c->getSpaceType() !== 'flex-item'
+            && $this->isSelfTopPenetrable($s)) {
+            $escapedStrut = $this->firstChildTopStrut($children);
+            if ($escapedStrut !== null) {
+                // 自身 margin-top 与逸出的首子 strut 相邻折叠（CSS 2.2 §8.3.1）
+                $penStrut = new MarginStrut();
+                $penStrut->append((int)($marginTop ?? 0));
+                $penStrut->appendStrut($escapedStrut);
+                $y = $penStrut->resolve() + ($isRelative ? (int)($top ?? 0) : 0);
+                $escapedTop = true;
+            }
+        }
         $stackedChildren = [];
         if (count($children) > 0 && ($displayVal === 'block' || $displayVal === 'flow-root')) {
             // Check percent-height children
@@ -285,7 +385,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             }
 
             if ($hasPercentChild) {
-                $pass1 = $this->stackBlockChildren($x, $y, $w, $s, $children, $textContent, $parentW);
+                $pass1 = $this->stackBlockChildren($x, $y, $w, $s, $children, $textContent, $parentW, $escapedTop);
                 $computedH = $y;
                 foreach ($pass1 as $cr) { $bottom = $cr->getY() + $cr->getH(); if ($bottom > $computedH) $computedH = $bottom; }
                 $computedH = max(0, $computedH - $y);
@@ -304,7 +404,7 @@ class BlockAlgorithm extends LayoutAlgorithm
                 foreach ($reResolved as $cr) { if ($cr !== null) $children[] = $cr; }
             }
 
-            $stackedChildren = $this->stackBlockChildren($x, $y, $w, $s, $children, $textContent, $parentW);
+            $stackedChildren = $this->stackBlockChildren($x, $y, $w, $s, $children, $textContent, $parentW, $escapedTop);
         } else {
             // Handle inline + block children
             $inlineBuffer = [];
@@ -467,7 +567,7 @@ class BlockAlgorithm extends LayoutAlgorithm
         return (int)max(0, $height);
     }
 
-    private function stackBlockChildren(int $parentX, int $parentY, int $containerW, ComputedStyle $s, array $childResults, string $textContent, int $parentW): array
+    private function stackBlockChildren(int $parentX, int $parentY, int $containerW, ComputedStyle $s, array $childResults, string $textContent, int $parentW, bool $escapedTop = false): array
     {
         // CSS 2.2 §8.3：padding/margin 百分比均基于包含块的宽度（inline-size）。
         $padTop = $s->padding?->top->resolveBoxPercent($parentW) ?? 0;
@@ -477,6 +577,8 @@ class BlockAlgorithm extends LayoutAlgorithm
         $stackY = $parentY + $borderTop + $padTop;
         $result = [];
         $prevMarginBottom = 0; $prevCollapsible = false;
+        // 首个 in-flow 子追踪（用于 $escapedTop：首子 margin-top 已逸出到父自身 y，不再施加）
+        $isFirstInFlow = true;
         $inlineBuffer = [];
 
         // Phase 4C: ExclusionSpace 用于管理浮动元素排除区域
@@ -490,7 +592,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             $childPosition = $childStyle?->position?->value ?? 'static';
             if ($childPosition === 'absolute' || $childPosition === 'fixed' || $childDisplay === 'none') { $result[] = $cr; continue; }
             $isInline = ($childDisplay === 'inline' || $childDisplay === 'inline-block');
-            if ($isInline) { $inlineBuffer[] = $cr; continue; }
+            if ($isInline) { $inlineBuffer[] = $cr; $isFirstInFlow = false; continue; }
             if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW); }
 
             // 子的 margin/padding 百分比基准 = 父的 content-width ($containerW)
@@ -517,7 +619,7 @@ class BlockAlgorithm extends LayoutAlgorithm
                 if ($measured > 0) $chW = $measured;
                 if ($chH <= 0) $chH = $childStyle->getLineHeight() > 0 ? $childStyle->getLineHeight() : (int)($fs * 1.2);
             }
-            $overflowY = $childStyle?->overflowY?->value ?? $childStyle?->overflow?->value ?? 'visible';
+            $overflowY = $childStyle !== null ? self::effectiveOverflowY($childStyle) : 'visible';
             // CSS 2.2 §9.4.1: BFC 边界检测——以下情况创建新 BFC，阻断 margin 折叠
             $childFloat = $childStyle?->getRaw('float') ?? 'none';
             $childFloatVal = is_object($childFloat) ? ($childFloat->value ?? 'none') : (string)$childFloat;
@@ -540,6 +642,7 @@ class BlockAlgorithm extends LayoutAlgorithm
                     $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
                     $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles
                 );
+                $isFirstInFlow = false;
                 continue; // float 不占据正常流空间
             }
             // Phase 4C: clear 处理
@@ -557,15 +660,29 @@ class BlockAlgorithm extends LayoutAlgorithm
                     || $childDisplay === 'flex' || $childDisplay === 'grid'
                     || $childDisplay === 'flow-root');
             $isCollapsible = ($childDisplay === 'block') && !$createsBFC;
+            // 子容器内部首孙穿透出来的 strut（CSS 2.2 §8.3.1，消费端重提取，与 endMarginStrut 对称）
+            $childPre = $isCollapsible ? $this->extractPreMarginStrut($cr, $childStyle) : null;
             // ── CSS 2.2 §8.3.1 margin 折叠 (对标 Blink NGMarginStrut) ──
             // 相邻兄弟 block 且两侧均不创建新 BFC 时，将前章 mBottom 与当前 mTop 折叠
-            if ($isCollapsible && $prevCollapsible) {
+            if ($isFirstInFlow && $isCollapsible && $escapedTop) {
+                // 首子 margin-top（含内部穿透链）已逸出并入父自身 y，父内不再施加
+                $childY = $stackY;
+            } elseif ($isCollapsible && $prevCollapsible) {
                 $strut = new MarginStrut();
                 $strut->append($prevMarginBottom);
                 $strut->append($mTop);
+                if ($childPre !== null) $strut->appendStrut($childPre);
                 $childY = $stackY - $prevMarginBottom + $strut->resolve();
             } else {
-                $childY = $stackY + $mTop;
+                $topAdj = $mTop;
+                if ($childPre !== null) {
+                    // 子内部穿透 strut 与子自身 margin-top 相邻折叠（Blink-measured P5：max(5,20)=20）
+                    $strut = new MarginStrut();
+                    $strut->append($mTop);
+                    $strut->appendStrut($childPre);
+                    $topAdj = $strut->resolve();
+                }
+                $childY = $stackY + $topAdj;
             }
             $relTop = $childStyle?->top?->toPx() ?? 0;
             $relLeft = $childStyle?->left?->toPx() ?? 0;
@@ -644,6 +761,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             $stackY = ($childY - ($childPosition === 'relative' ? $relTop : 0)) + $chH - $absorbedBottom + $effectiveMBottom;
             $prevMarginBottom = $effectiveMBottom;
             $prevCollapsible = $isCollapsible;
+            $isFirstInFlow = false;
         }
         if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW); }
         // Phase 4C: 追加浮动元素到结果（在正常流子项之后）

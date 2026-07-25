@@ -435,6 +435,8 @@ class LayoutOrchestrator
             ->setSpaceType('block')
             ->setForceRelayoutChildren(false)
             ->setIntrinsicMeasurement(false)
+            // 普通 block 子约束不继承父的 formatting-context-root 位（该位仅描述直接持有者）
+            ->setFormattingContextRoot(false)
             ->build();
     }
 

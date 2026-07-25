@@ -83,7 +83,8 @@ class ChildLayoutProvider
                     $childSpace->getPaddingBottom(), $childSpace->getPaddingLeft(),
                     $childSpace->borderTop, $childSpace->borderRight,
                     $childSpace->borderBottom, $childSpace->borderLeft,
-                    false, 'flex-item'
+                    false, 'flex-item',
+                    true  // flex/grid item 建立新格式化上下文（阻断 margin 穿透）
                 );
             }
         }
