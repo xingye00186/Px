@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:33:19
+@generated 2026-07-25 11:42:13
 === Test: 绝对定位 div (left=10, top=20, w=100, h=50) ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50) text="Hello"

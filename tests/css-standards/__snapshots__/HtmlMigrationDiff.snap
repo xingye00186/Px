@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:33:20
+@generated 2026-07-25 11:42:15
 === Test: Flex row + gap 两列等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
@@ -64,9 +64,9 @@ div (0,0 300x100) scroll ch=200 cw=300 maxScroll=100 st=0 sl=0 ov=auto
 
 === Test: flex row 模拟表格 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x0) [dsp=flex]
-  div (0,0 200x0) text="Column"
-  div (200,0 400x0) fg=1 text="Value"
+div (0,0 600x31) [dsp=flex]
+  div (0,0 200x31) text="Column"
+  div (200,0 400x31) fg=1 text="Value"
 
 ---
 
@@ -88,7 +88,7 @@ div (0,0 500x114)
 === Test: badge 标签样式 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x24) [dsp=flex]
-  div (0,12 41x0) text="Active"
+  div (0,3 41x17) text="Active"
   span (47,4 154x16) [dsp=inline] text="v5 M3"
 
 ---
@@ -134,12 +134,12 @@ div (0,0 500x26) bw=1 ov=hidden
 
 === Test: flex-wrap 标签云 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x0) [dsp=flex]
-  div (0,0 36x0) text="rect"
-  div (40,0 36x0) text="text"
-  div (80,0 48x0) text="button"
-  div (132,0 36x0) text="grid"
-  div (172,0 42x0) text="label"
+div (0,0 400x17) [dsp=flex]
+  div (0,0 36x17) text="rect"
+  div (40,0 36x17) text="text"
+  div (80,0 48x17) text="button"
+  div (132,0 36x17) text="grid"
+  div (172,0 42x17) text="label"
 
 ---
 
@@ -155,6 +155,6 @@ Frame #1 events=0 detail=normal
 div (0,0 1100x900)
   div (32,32 1100x0) text="Title"
   div (32,36 1100x0) text="Subtitle text"
-  div (32,60 1036x0) [dsp=flex]
-    div (0,0 510x0) bw=1 fg=1 text="Danger Card"
-    div (526,0 510x0) bw=1 fg=1 text="Success Card"
+  div (32,60 1036x61) [dsp=flex]
+    div (0,0 510x61) bw=1 fg=1 text="Danger Card"
+    div (526,0 510x61) bw=1 fg=1 text="Success Card"

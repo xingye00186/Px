@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:33:21
+@generated 2026-07-25 11:42:16
 === Test: flex row-reverse 反向水平排列 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x60) [dsp=flex]
@@ -38,7 +38,7 @@ div (0,0 400x100) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 400x100) [dsp=flex]
   div (0,0 80x40) text="Stretched"
-  div (80,50 80x0) text="Centered"
+  div (80,40 80x19) text="Centered"
 
 ---
 

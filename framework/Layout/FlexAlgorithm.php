@@ -296,6 +296,25 @@ class FlexAlgorithm extends LayoutAlgorithm
                     if ($item->h <= 0) $item->h = 0;
                 }
             }
+            // 对标 Blink：flex item 含文本且高度 auto 时，内容高 = line-height（CSS 2.2 §10.6.3）。
+            // 精准化守卫：仅 flex item 路径（不改 BlockAlgorithm 热路径，避免全局文本 auto-height 的 -11.9% 代价）。
+            // 此前文本子项高度塔陷为 0（row 交叉轴 / column 主轴均受影响）。
+            if ($item->h <= 0) {
+                $thContent = (string)($item->content ?? '');
+                $thChildren = $item->node?->children ?? [];
+                $thHasChildren = is_array($thChildren) && count($thChildren) > 0;
+                if ($thContent !== '' && !$thHasChildren) {
+                    $thLH = (int)($cs->getLineHeight() ?? 0);
+                    if ($thLH <= 0) {
+                        $thFs = $cs->getFontSize() > 0 ? $cs->getFontSize() : 16;
+                        $thLH = (int)($thFs * 1.2);
+                    }
+                    // border-box 高 = 行高 + padding + border（与主轴 max-content 快速路径同源语义）
+                    $thLH += (int)($cs->padding?->top->toPx() ?? 0) + (int)($cs->padding?->bottom->toPx() ?? 0)
+                           + (int)($cs->getBorderTopWidth() ?? 0) + (int)($cs->getBorderBottomWidth() ?? 0);
+                    $item->h = $thLH;
+                }
+            }
             // Use visualW/H as fallback when content size is 0 (nested flex with explicit main size)
             if ($item->w <= 0 && $isRow && $hasMainSize) $item->w = (int)$cr->getVisualW();
             if ($item->h <= 0 && !$isRow && $hasMainSize) $item->h = (int)$cr->getVisualH();
