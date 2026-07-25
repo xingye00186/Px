@@ -331,19 +331,19 @@ class LayoutNormalizer
         $text = $node['content'] ?? $node['text'] ?? '';
         if (is_array($text)) $text = '';
 
-        $normW = (int)($node['visualW'] ?? $node['w'] ?? 0);
-        // When visualW == w but element has border-box with padding/border, compute total box
-        // from style values (physical fragment's visualW may not include padding+border)
-        if ($normW > 0 && ($node['visualW'] ?? 0) === ($node['w'] ?? 0) && ($node['style']['paddingLeft'] ?? 0) > 0) {
-            $normW += (int)($node['style']['paddingLeft'] ?? 0) + (int)($node['style']['paddingRight'] ?? 0)
-                    + (int)($node['style']['borderWidthLeft'] ?? 0) + (int)($node['style']['borderWidthRight'] ?? 0);
-        }
+        // 尺寸数据要素对齐：browser 侧 w/h = getBoundingClientRect = **border-box**；
+        // 引擎 Fragment.w/h 同为 border-box（css-standards dump 契约：h=border-box）。
+        // 此前优先取 visualW（绘制层 visual-box 语义）并在 visualW==w 时另行
+        // 补加 padding+border，属旧 content-box 时代语义错嫁接——border-box Fragment
+        // 被双重膨胀（case-003 flex 容器 750→784 假差异的直接根因）。
+        $normW = (int)($node['w'] ?? 0);
+        $normH = (int)($node['h'] ?? 0);
         $element = [
             'tag'     => $tag,
             'x'       => (int)($node['x'] ?? 0),
             'y'       => (int)($node['y'] ?? 0),
             'w'       => $normW,
-            'h'       => (int)($node['visualH'] ?? $node['h'] ?? 0),
+            'h'       => $normH,
             'depth'   => $depth,
             'dataset' => $node['dataset'] ?? [],
         ];
@@ -365,8 +365,9 @@ class LayoutNormalizer
         // 引擎导出的声明维度 '0px'（默认 px(0) 非显式）与 used 维度混淆，
         // 几何 w/h>0 时以 used 几何为准（显式 width:0 元素几何也为 0，无冲突）。
         $isInline = in_array($tag, self::INLINE_TAGS, true);
-        $usedW = (int)($node['visualW'] ?? $node['w'] ?? 0);
-        $usedH = (int)($node['visualH'] ?? $node['h'] ?? 0);
+        // used value 同样取 border-box w/h（与上方 normW/normH 同源，杜绝 visualW 嵌入）
+        $usedW = $normW;
+        $usedH = $normH;
         if (!isset($element['styles']['width'])) {
             $element['styles']['width'] = $isInline ? 'auto' : $usedW . 'px';
         } elseif ($element['styles']['width'] === '0px' && $usedW > 0) {
