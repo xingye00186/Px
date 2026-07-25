@@ -10,6 +10,10 @@
 > | `Phase_4_架构重构路线_task-1d0.md` | Phase 4A-4E 路线图 | ⚠️ 4A-4D 已完成，4E 延后，以本指南 §9 为准 |
 > | `Px 框架 LayoutNG 严格对标 Blink 审计报告.md` | 早期六维差距分析 | ⚠️ 历史参考 |
 > | `Px Reactive-Bench 迭代对照分析报告2026-07-24 1058.md` | bench 指标体系与历史读数 | ✅ 指标定义仍有效 |
+> | `迭代备忘录.md` | 会话级问题修复记录（含 tools/PxTest 浏览器对照管线演进） | ✅ 追加式沉淀 |
+> | `经验.md` | 滚动/渲染管线职责边界经验图 | ✅ 参考 |
+
+> **⚠️ 指南自足原则**：AI 助手的长期记忆库**不跨机器/不跨账号**（已实证：新环境记忆为空）。因此本指南必须自足——任何仅存于记忆或对话上下文的关键结论（验收标准、API 契约、陷阱）都必须在本文档或审计台账中有落点。新会话**不要假设记忆可用**，以本指南 + 审计台账 §十九 + 各测试文件头注记为完整事实源。
 
 ---
 
@@ -174,6 +178,12 @@ $env:PX_PERF="1"; apps\reactive-bench\bin\reactive_bench.exe --cases-list --cycl
 3. 引擎首跑：全过 ⇒ 固化（Blink 验证证书）；有差 ⇒ 走 §5 决策树
 4. 纯测试新增无需 bench
 
+**真值测量操作细则**：
+- `_gt_*.html` 模板必须 `body{margin:0}`（浏览器默认 body margin:8px 会污染所有坐标）；float/margin 场景外层容器 `overflow:hidden` 建 BFC
+- 测量：browser-use MCP `navigate_page` 打开 `file:///<abs>/_gt_x.html` → `evaluate_script` 执行 `[...document.querySelectorAll('[data-t]')].map(e=>({t:e.dataset.t,...e.getBoundingClientRect().toJSON()}))` 取 JSON
+- 批量自动对照可用 `tools/PxTest` 管线（dump_layout.js 注入 + Edge headless → browser_ref json + LayoutNormalizer 平坦化对比，见 `迭代备忘录.md` 2026-06-17 条目）；另有 `css-test-workflow` skill（`.qoder/skills/`）
+- 测量值与断言：Blink 返回浮点（如 161.33），Px 为整数——亚像素差按 §5 决策树"一致维度断言"处理
+
 ### P2 失败测试修复
 探针最小复现 → 判定断言 or 引擎（§5）→ 修复 → 全量+快照 → 引擎变更则 bench
 
@@ -191,6 +201,17 @@ $env:PX_PERF="1"; apps\reactive-bench\bin\reactive_bench.exe --cases-list --cycl
 
 ---
 
+## 6.5 css-standards 测试编写契约（新建套件必读，API 均已存在勿重复造）
+
+- **骨架**：`require_once __DIR__.'/../CssTestBase.php'` → `$tests['中文用例名'] = function() {...}` → `run_css_tests('Level NN - X (CSS x.y)', $snapFile, $tests)` → `exit(print_summary())`；快照在 `tests/css-standards/__snapshots__/Level-NN-*.snap`
+- **`run_minimal_pipeline(VNode, w=1440, h=900): string`**：StubPlatform + 匿名根组件 + 反射 mount/render，无需真窗口；dump 取自 `Application::dumpFragmentTreeForTest()`
+- ⚠️ **dump 权威源**：必须是 **Fragment 树**（paint 实际渲染的几何源）；`dumpRenderTree` 读 `RenderNode.cachedFragment`，grid 等算法放置结果**不在其中**（历史坑）
+- **断言 API**：`assert_contains($result, $needle, $msg)` / `print_summary()` 定义于 `tests/unit/test-framework.php`（CssTestBase require 链带入）
+- **dump 行格式**：元素 `div (x,y wxh) text="..."`（x/y 绝对坐标，w/h 为 border-box）；文本 `type=text text=... fontSize=... color=0x??????`；**颜色是 BGR int**（parseHexColor 产物，`#F88`→`0x8888FF`）；滚动容器附 `cw/ch`=scrollWidth/Height
+- 每条断言**必须带算术推导注释**（如 `// y=60=30+max(30,20)`）与来源标记（`Blink-measured`）
+
+---
+
 ## 7. 陷阱速查卡（新会话必读）
 
 | 陷阱 | 一句话规避 |
@@ -203,6 +224,11 @@ $env:PX_PERF="1"; apps\reactive-bench\bin\reactive_bench.exe --cases-list --cycl
 | PowerShell | 分隔用 `;`；`php -r` 内 `\` 转义易炸 ⇒ 复杂探针写临时文件 |
 | SearchReplace "save failed" | 常为误报，Read 复核实际已写入 |
 | dump 语义 | `ch/cw`=scrollWidth/Height（内容含 padding 顶）；`h`=border-box |
+| _gt_ 模板 body margin | 必须 `body{margin:0}`，否则全部坐标偏移 8px |
+| dump 权威源 | 断言只对 `dumpFragmentTreeForTest()` 输出；勿用 dumpRenderTree（缺 grid 放置） |
+| 颜色断言 | 内部 int 是 **BGR**（`#F88`→`0x8888FF`）；简写展开仅写 kebab 键防字符串覆盖 |
+| 记忆不可跨机 | 关键结论必须落文档/测试头注记；新会话勿假设记忆存在 |
+| 终端中文乱码 | PowerShell 输出 mojibake 属显示问题，文件本体 UTF-8 无损；校验用 `Get-Content -Encoding UTF8` |
 
 ---
 
