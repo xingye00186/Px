@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:46:50
+@generated 2026-07-25 11:53:39
 === Test: grid 四列等宽 (1fr 1fr 1fr 1fr) ===
 Frame #1 events=0 detail=normal
 div (0,0 800x100) [dsp=grid]
@@ -131,10 +131,10 @@ div (0,0 600x136) [dsp=grid]
 
 === Test: grid 子项文本自动宽度 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x1) [dsp=grid]
-  div (0,0 194x1) text="Short"
-  div (202,0 194x1) text="Medium text here"
-  div (404,0 194x1) text="Longer text content here"
+div (0,0 600x19) [dsp=grid]
+  div (0,0 194x19) text="Short"
+  div (202,0 194x19) text="Medium text here"
+  div (404,0 194x19) text="Longer text content here"
 
 ---
 

@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:46:52
+@generated 2026-07-25 11:53:40
 === Test: Flex row + gap 两列等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
@@ -9,10 +9,10 @@ div (0,0 600x200) [dsp=flex]
 
 === Test: Grid 3列等宽 ===
 Frame #1 events=0 detail=normal
-div (0,0 600x32) [dsp=grid]
-  div (0,0 192x32) text="C1"
-  div (204,0 192x32) text="C2"
-  div (408,0 192x32) text="C3"
+div (0,0 600x51) [dsp=grid]
+  div (0,0 192x51) text="C1"
+  div (204,0 192x51) text="C2"
+  div (408,0 192x51) text="C3"
 
 ---
 
@@ -78,10 +78,10 @@ div (0,0 400x30) text="Dark theme text"
 
 === Test: 多层嵌套卡片 ===
 Frame #1 events=0 detail=normal
-div (0,0 500x114)
-  div (32,32 500x50) bw=1
-    div (21,21 0x0) text="Card Title"
-    div (21,29 0x0) text="Card content text"
+div (0,0 500x146)
+  div (32,32 500x82) bw=1
+    div (21,21 0x16) text="Card Title"
+    div (21,45 0x16) text="Card content text"
 
 ---
 
@@ -95,19 +95,19 @@ div (0,0 200x24) [dsp=flex]
 
 === Test: 代码块 white-space:pre ===
 Frame #1 events=0 detail=normal
-div (0,0 500x34) bw=1
-  div (21,17 500x0) text="abstract class RenderContext {
+div (0,0 500x48) bw=1
+  div (21,17 500x14) text="abstract class RenderContext {
     abst..."
 
 ---
 
 === Test: timeline 里程碑 flex row ===
 Frame #1 events=0 detail=normal
-div (0,0 600x24) [dsp=flex]
+div (0,0 600x34) [dsp=flex]
   div (0,0 24x24) bw=2
-  div (32,0 568x4) fg=1
-    div (32,0 0x0) text="v5 M3: Flat + Layer"
-    div (32,4 0x0) text="~100 行 / 7 文件"
+  div (32,0 568x34) fg=1
+    div (32,0 0x16) text="v5 M3: Flat + Layer"
+    div (32,20 0x14) text="~100 行 / 7 文件"
 
 ---
 
@@ -125,10 +125,10 @@ div (0,0 600x30) text="Centered footer text"
 
 === Test: dep-box 分区布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 500x26) bw=1 ov=hidden
-  div (1,1 500x0) text="v5 M3: Flat + Layer"
-  div (1,1 500x24)
-    div (14,12 0x0) text="框架提供:"
+div (0,0 500x73) bw=1 ov=hidden
+  div (1,1 500x32) text="v5 M3: Flat + Layer"
+  div (1,33 500x39)
+    div (14,12 0x15) text="框架提供:"
 
 ---
 
@@ -153,8 +153,8 @@ div (0,0 300x40) scroll ch=40 cw=800 maxScroll=0 st=0 sl=0 ov=auto
 === Test: 完整卡片行组合场景 ===
 Frame #1 events=0 detail=normal
 div (0,0 1100x900)
-  div (32,32 1100x0) text="Title"
-  div (32,36 1100x0) text="Subtitle text"
-  div (32,60 1036x61) [dsp=flex]
+  div (32,32 1100x33) text="Title"
+  div (32,69 1100x18) text="Subtitle text"
+  div (32,111 1036x61) [dsp=flex]
     div (0,0 510x61) bw=1 fg=1 text="Danger Card"
     div (526,0 510x61) bw=1 fg=1 text="Success Card"

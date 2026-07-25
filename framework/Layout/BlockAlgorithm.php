@@ -433,9 +433,16 @@ class BlockAlgorithm extends LayoutAlgorithm
             }
         }
         if ($s->height !== null && $s->height->isIntrinsic() && strlen($textContent) > 0) { $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2); }
-        // CSS 2.2 §10.6: 仅当 height 为 auto 时才用内容高度，显式 height:0 应尊重
-        $hasExplicitHeight = ($s->height !== null && !$s->height->isAuto() && !$s->height->isPercent() && !$s->height->isIntrinsic());
-        if ($height <= 0 && !$hasExplicitHeight && strlen($textContent) > 0) { $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2); }
+        // CSS 2.2 §10.6: 仅当 height 为 auto 时才用内容高度，显式 height:0 应尊重。
+        // 对标 Blink：default height = px(0)（非 auto），须用 getRaw('height') 区分
+        // “显式声明 height:0”与“未声明（默认 px0）”——含文本的 div 未声明高度时 = line-height。
+        $hasExplicitHeight = ($s->getRaw('height') !== null && $s->height !== null && !$s->height->isAuto() && !$s->height->isPercent() && !$s->height->isIntrinsic());
+        if ($height <= 0 && !$hasExplicitHeight && strlen($textContent) > 0) {
+            $height = $s->getLineHeight() > 0 ? $s->getLineHeight() : (int)($s->getFontSize() * 1.2);
+            // border-box 高 = 行高 + padding + border（与 FlexAlgorithm 文本快速路径同源语义，杜绝双路径分叉）
+            $height += (int)($s->padding?->top->toPx() ?? 0) + (int)($s->padding?->bottom->toPx() ?? 0)
+                     + (int)($s->getBorderTopWidth() ?? 0) + (int)($s->getBorderBottomWidth() ?? 0);
+        }
         $ar = $s->getAspectRatio() ?? 0;
         if ($ar > 0 && $height <= 0) { $height = (int)(($s->width?->toPx() ?? 0) / $ar); }
         $minH = $s->minHeight?->toPx() ?? 0; $maxH = $s->maxHeight?->toPx() ?? 0;
