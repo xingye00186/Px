@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:04:29
+@generated 2026-07-25 12:26:31
 === Test: Dashboard 侧边栏+头部+主内容 ===
 Frame #1 events=0 detail=normal
 div (0,0 900x600) [dsp=grid]
@@ -10,9 +10,93 @@ div (0,0 900x600) [dsp=grid]
 
 ---
 
+=== Test: Article 页面 标题+内容+侧边栏 ===
+Frame #1 events=0 detail=normal
+div (0,0 800x116)
+  div (0,0 800x65) text="Article Title"
+  div (0,65 800x51) [dsp=flex]
+    div (0,65 585x51) fg=3 text="Article content paragraph here."
+    div (605,65 195x51) fg=1 text="Sidebar Widget"
+
+---
+
+=== Test: Pricing Card 价格卡片 ===
+Frame #1 events=0 detail=normal
+div (0,0 700x218) [dsp=flex]
+  div (20,20 322x178) bw=1 fg=1
+    div (45,45 0x24) text="Basic"
+    div (45,69 0x67) text="$9"
+    div (45,136 0x35) text="Sign Up"
+  div (358,20 322x178) bw=2 fg=1
+    div (384,46 0x24) text="Pro"
+    div (384,70 0x67) text="$29"
+    div (384,137 0x35) text="Sign Up"
+
+---
+
 === Test: 垂直居中 Hero Section ===
 Frame #1 events=0 detail=normal
 div (0,0 800x400) [dsp=flex]
   div (312,131 175x50) text="Welcome"
   div (323,181 154x45) text="Subtitle here"
   div (318,226 163x43) text="Get Started"
+
+---
+
+=== Test: 响应式卡片网格 auto-fill ===
+Frame #1 events=0 detail=normal
+div (0,0 800x53) [dsp=grid]
+  div (0,0 256x53) bw=1 text="Card 1"
+  div (272,0 256x53) bw=1 text="Card 2"
+  div (544,0 256x53) bw=1 text="Card 3"
+
+---
+
+=== Test: 工具栏+内容区 flex 布局 ===
+Frame #1 events=0 detail=normal
+div (0,0 800x500) [dsp=flex]
+  div (0,0 800x49) [dsp=flex]
+    div (16,14 50x21) text="Title"
+    div (74,24 538x0) fg=1
+    div (620,9 68x31) text="Save"
+    div (696,8 88x33) bw=1 text="Cancel"
+  div (0,49 800x451) scroll ch=51 cw=768 maxScroll=0 st=0 sl=0 ov=auto fg=1 text="Content area with scroll."
+
+---
+
+=== Test: 表单布局 label+input 两列 ===
+Frame #1 events=0 detail=normal
+div (0,0 500x378) [dsp=grid]
+  div (0,0 120x31) text="Username:"
+  input (248,0 252x31) bw=1
+  div (0,159 120x31) text="Password:"
+  input (248,159 252x31) bw=1
+  div (0,318 120x60) text="Bio:"
+  textarea (248,318 252x60) bw=1
+
+---
+
+=== Test: 通知列表 icon+text+time ===
+Frame #1 events=0 detail=normal
+div (0,0 400x136) [dsp=flex]
+  div (0,0 400x64) [dsp=flex]
+    div (12,12 40x40)
+    div (64,15 270x33) fg=1
+      div (64,15 0x19) text="Notification title"
+      div (64,34 0x14) text="Notification description text."
+    div (346,25 42x14) text="2m ago"
+  div (0,72 400x64) [dsp=flex]
+    div (12,84 40x40)
+    div (64,87 270x33) fg=1
+      div (64,87 0x19) text="Another notification"
+      div (64,106 0x14) text="Some longer description here."
+    div (346,97 42x14) text="1h ago"
+
+---
+
+=== Test: 分割面板 left+right 拖拽分隔 ===
+Frame #1 events=0 detail=normal
+div (0,0 800x400) [dsp=flex] bw=1
+  div (0,0 265x400) scroll ch=51 cw=233 maxScroll=0 st=0 sl=0 ov=auto fg=1 text="Left Panel"
+  div (265,0 4x400)
+  div (269,0 530x400) scroll ch=51 cw=498 maxScroll=0 st=0 sl=0 ov=auto fg=2 text="Right Panel"

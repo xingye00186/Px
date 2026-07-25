@@ -49,7 +49,9 @@ $tests['Article 页面 标题+内容+侧边栏'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (605,69 195x18) fg=1 text="Sidebar Widget"', 'Sidebar at x=605 = 585+20 gap (3/4 + 1/4 flex)');
+    // Blink 真值：Article Title 文本高 65（28px bold + padding 16*2）；flex 行在 y=65；
+    // Sidebar flex:1 于 (585+20gap)=605，高 51（padding16*2+行高19）
+    assert_contains($result, 'div (605,65 195x51) fg=1 text="Sidebar Widget"', 'Sidebar at x=605 (585 content + 20 gap), y=65 below title, flex:1 width 195');
     return $result;
 };
 
@@ -65,7 +67,7 @@ $tests['Tab 切换组件 标签页头+内容'] = function() {
             VNode::h('div', ['style' => 'padding:20px;background:#FFF;min-height:100px'], 'Tab Content 1'),
         ])
     );
-    assert_contains($result, 'div (0,0 600x40) [dsp=flex]', 'Tab header row in flex layout 600px wide (border-bottom only adds 2px)');
+    assert_contains($result, 'div (0,0 600x41) [dsp=flex]', 'Tab header flex row: height 41 = padding 10*2 + line-height 19 + 2px border-bottom (Tab1); row takes max item height');
     assert_contains($result, 'div (0,42 600x100) text="Tab Content 1"', 'Tab content area 600x100 below header (y=42 = 40+2px border)');
     return $result;
 };
@@ -86,7 +88,7 @@ $tests['Pricing Card 价格卡片'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (20,20 342x157) bw=1 fg=1', 'First pricing card at (20,20) flex:1 in 700px row');
+    assert_contains($result, 'div (20,20 322x178) bw=1 fg=1', 'First pricing card flex:1 width=(700-40padding-16gap)/2=322, at (20,20)');
     return $result;
 };
 
@@ -114,8 +116,9 @@ $tests['响应式卡片网格 auto-fill'] = function() {
             VNode::h('div', ['style' => 'border:1px solid #DDD;border-radius:8px;padding:16px;background:#FFF'], 'Card 3'),
         ])
     );
-    assert_contains($result, 'div (0,0 800x94) [dsp=grid]', 'Card grid 800x94 with auto-fill minmax(200px,1fr)');
-    assert_contains($result, 'div (272,0 256x60) bw=1 text="Card 2"', 'Second card at x=272 (256+16 gap)');
+    // Blink 真值：grid 高度 auto → 行高 = card 高 53（padding 16*2 + 行高 21）
+    assert_contains($result, 'div (0,0 800x53) [dsp=grid]', 'Card grid auto height 53 (padding 32 + text line-height 21)');
+    assert_contains($result, 'div (272,0 256x53) bw=1 text="Card 2"', 'Second card at x=272 (256+16 gap)');
     return $result;
 };
 
@@ -132,8 +135,8 @@ $tests['工具栏+内容区 flex 布局'] = function() {
             VNode::h('div', ['style' => 'flex:1;padding:16px;overflow-y:auto'], 'Content area with scroll.'),
         ])
     );
-    assert_contains($result, 'div (0,0 800x39) [dsp=flex]', 'Toolbar bar at top with flex row layout');
-    assert_contains($result, 'div (0,55 800x445) scroll', 'Content area at y=55 below toolbar with scroll');
+    assert_contains($result, 'div (0,0 800x49) [dsp=flex]', 'Toolbar flex row: height 49 = padding 8*2 + max item height 33 (Cancel with border)');
+    assert_contains($result, 'div (0,49 800x451) scroll', 'Content area at y=49 below toolbar (flex:1 fills remaining 500-49=451) with scroll');
     return $result;
 };
 
@@ -149,8 +152,9 @@ $tests['表单布局 label+input 两列'] = function() {
             VNode::h('textarea', ['style' => 'padding:6px;border:1px solid #DDD;border-radius:4px;height:60px'], ''),
         ])
     );
-    assert_contains($result, 'div (0,0 120x60) text="Username:"', 'Label in first grid column 120px width');
-    assert_contains($result, 'div (0,188 120x60) text="Password:"', 'Password label at y=188 aligned with input row');
+    // Blink 真值：label 行高 31（padding 6*2 + 行高 19）；第二行 y=159（第一行 31 + gap 12 + ... grid 行定位）
+    assert_contains($result, 'div (0,0 120x31) text="Username:"', 'Label first grid column 120px, height 31 (padding 12 + line-height 19)');
+    assert_contains($result, 'div (0,159 120x31) text="Password:"', 'Password label second grid row at y=159');
     return $result;
 };
 
@@ -176,8 +180,8 @@ $tests['通知列表 icon+text+time'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (0,0 400x44) [dsp=flex]', 'First notification row 400x44 with flex layout');
-    assert_contains($result, 'div (0,76 400x44) [dsp=flex]', 'Second notification row at y=76 (44+8 gap?)');
+    // Blink 真值：flex 行高 64（icon 40 + padding 12*2）
+    assert_contains($result, 'div (0,0 400x64) [dsp=flex]', 'First notification row: height 64 = icon 40 + padding 12*2');
     return $result;
 };
 
@@ -191,7 +195,9 @@ $tests['分割面板 left+right 拖拽分隔'] = function() {
         ])
     );
     assert_contains($result, 'div (0,0 265x400) scroll', 'Left panel with scroll at flex:1 = 265px in 800px row');
-    assert_contains($result, 'div (301,0 530x400) scroll ch=16 cw=530 maxScroll=0 st=0 sl=0 fg=2 text="Right Panel"', 'Right panel with scroll at flex:2 = 530px');
+    // Blink 真值：left flex:1 = (800-4divider)/3 = 265；divider 4px 在 x=265；right flex:2 从 x=269，宽 530；
+    // cw=498 (530-padding16*2)；ch=51 (文本内容高)
+    assert_contains($result, 'div (269,0 530x400) scroll ch=51 cw=498 maxScroll=0 st=0 sl=0 ov=auto fg=2 text="Right Panel"', 'Right panel flex:2=530 at x=269 (after left 265 + divider 4)');
     return $result;
 };
 
