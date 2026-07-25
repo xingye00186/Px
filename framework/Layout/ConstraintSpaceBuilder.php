@@ -64,6 +64,7 @@ class ConstraintSpaceBuilder
     private bool $forceRelayoutChildren = false;
     private bool $isIntrinsicMeasurement = false;
     private string $spaceType = 'block';
+    private bool $isFixedBlockSize = false;
 
     /** 工厂：创建全新 Builder */
     public static function create(): ConstraintSpaceBuilder
@@ -97,6 +98,7 @@ class ConstraintSpaceBuilder
         $b->forceRelayoutChildren        = (bool)$parent->getForceRelayoutChildren();
         $b->isIntrinsicMeasurement       = (bool)$parent->getIsIntrinsicMeasurement();
         $b->spaceType                    = (string)$parent->getSpaceType();
+        $b->isFixedBlockSize             = (bool)$parent->getIsFixedBlockSize();
         return $b;
     }
 
@@ -171,6 +173,13 @@ class ConstraintSpaceBuilder
         return $this;
     }
 
+    /** 块轴尺寸强制固定（对标 Blink is_fixed_block_size） */
+    public function setFixedBlockSize(bool $v): ConstraintSpaceBuilder
+    {
+        $this->isFixedBlockSize = $v;
+        return $this;
+    }
+
     /** 构建最终 ConstraintSpace */
     public function build(): ConstraintSpace
     {
@@ -201,6 +210,7 @@ class ConstraintSpaceBuilder
             $this->spaceType,
             $dpw,
             $dph,
+            $this->isFixedBlockSize,
         );
     }
 }

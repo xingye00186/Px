@@ -1,4 +1,4 @@
-@generated 2026-07-24 23:19:13
+@generated 2026-07-25 10:44:43
 === Test: Flex Row 内 Grid 布局 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x120) [dsp=flex]
@@ -27,7 +27,7 @@ div (0,0 400x200) [dsp=flex]
 === Test: Grid 内 overflow 滚动容器 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x150) [dsp=grid]
-  div (0,0 200x80) text="Normal"
+  div (0,0 200x60) text="Normal"
   div (208,0 200x80) scroll ch=80 cw=0 maxScroll=0 st=0 sl=0 ov=auto text="Scroll"
 
 ---

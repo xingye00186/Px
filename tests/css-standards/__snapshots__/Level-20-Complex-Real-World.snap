@@ -1,9 +1,9 @@
-@generated 2026-07-24 23:19:13
+@generated 2026-07-25 10:44:43
 === Test: Dashboard 侧边栏+头部+主内容 ===
 Frame #1 events=0 detail=normal
 div (0,0 900x600) [dsp=grid]
   div (0,0 200x60) text="Sidebar"
   div (200,0 700x60) text="Header"
   div (0,60 200x540) [dsp=flex]
-    div (16,16 101x0) fg=2 text="Main Content"
-    div (133,16 50x0) fg=1 text="Side Panel"
+    div (16,16 101x508) fg=2 text="Main Content"
+    div (133,16 50x508) fg=1 text="Side Panel"

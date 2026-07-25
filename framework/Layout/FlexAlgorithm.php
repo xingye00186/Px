@@ -137,6 +137,13 @@ class FlexAlgorithm extends LayoutAlgorithm
         if ($s->height !== null && $s->height->isPercent() && $parentH > 0) {
             $h = $s->height->resolveInContext($parentH);
         }
+        // 对标 Blink ConstraintSpace::is_fixed_block_size：父（如 grid stretch）强制固定块轴尺寸时，
+        // height:auto 的 flex 容器使用父给定的 contentHeight 作为 definite 高度。
+        $blockSizeForced = false;
+        if ($h <= 0 && $space->getIsFixedBlockSize() && $parentH > 0) {
+            $h = $parentH;
+            $blockSizeForced = true;
+        }
 
         // ── E5 修复（对标 Blink NGPhysicalBoxFragment）：
         // Fragment 的 x/y/w/h 为 border-box 位置与尺寸（与 BlockAlgorithm 一致），
@@ -353,7 +360,7 @@ class FlexAlgorithm extends LayoutAlgorithm
         // CSS Flexbox §9.7: 主轴尺寸不定（column+height:auto 或 row+width:auto）时不 shrink，
         // 容器应增长到内容尺寸而非压缩子项（对标 Blink NGFlexLayoutAlgorithm 的 definite main size 判断）。
         $mainRaw = $isRow ? $s->getRaw('width') : $s->getRaw('height');
-        $mainSizeIsDefinite = ($mainRaw !== null) && $containerMain > 0;
+        $mainSizeIsDefinite = (($mainRaw !== null) || (!$isRow && $blockSizeForced)) && $containerMain > 0;
         $lineMaxCrosses = [];
         foreach ($lineGroups as $lineIdx => $lineItems) {
             // §9.7: Resolving Flexible Lengths (frozen loop)

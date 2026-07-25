@@ -1,4 +1,4 @@
-@generated 2026-07-24 23:19:14
+@generated 2026-07-25 10:44:44
 === Test: [Template] absolute positioned div ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
@@ -150,6 +150,18 @@ div (0,0 600x80) [dsp=grid]
     #text (0,0 194x19) [dsp=inline] text="B"
   div (404,0 196x60)
     #text (0,0 196x19) [dsp=inline] text="C"
+
+---
+
+=== Test: [Template] grid mixed fr px auto ===
+Frame #1 events=0 detail=normal
+div (0,0 700x60) [dsp=grid]
+  div (0,0 484x60)
+    #text (0,0 484x19) [dsp=inline] text="Flex"
+  div (492,0 200x60)
+    #text (0,0 200x19) [dsp=inline] text="Fixed"
+  div (700,0 0x60)
+    #text (0,0 700x19) [dsp=inline] text="Auto"
 
 ---
 
@@ -450,6 +462,26 @@ Frame #1 events=0 detail=normal
 div (0,0 300x100) [dsp=flex]
   div (0,0 300x100) fg=1
     #text (0,0 300x19) [dsp=inline] text="Stretch"
+
+---
+
+=== Test: [Template] grid fixed fr mixed ===
+Frame #1 events=0 detail=normal
+div (0,0 600x60) [dsp=grid]
+  div (0,0 200x60)
+    #text (0,0 200x19) [dsp=inline] text="Fixed"
+  div (208,0 392x60)
+    #text (0,0 392x19) [dsp=inline] text="Flex"
+
+---
+
+=== Test: [Template] grid percentage columns ===
+Frame #1 events=0 detail=normal
+div (0,0 600x60) [dsp=grid]
+  div (0,0 300x60)
+    #text (0,0 300x19) [dsp=inline] text="Left"
+  div (308,0 300x60)
+    #text (0,0 300x19) [dsp=inline] text="Right"
 
 ---
 
@@ -820,9 +852,9 @@ div (0,0 900x600) [dsp=grid]
   div (200,0 700x60)
     #text (16,16 668x19) [dsp=inline] text="Header"
   div (0,60 200x540) [dsp=flex]
-    div (16,16 101x51) fg=2
+    div (16,16 101x508) fg=2
       #text (32,32 136x19) [dsp=inline] text="Main Content"
-    div (133,16 50x51) fg=1
+    div (133,16 50x508) fg=1
       #text (149,32 136x19) [dsp=inline] text="Side Panel"
 
 ---

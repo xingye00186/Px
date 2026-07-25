@@ -1,4 +1,4 @@
-@generated 2026-07-24 23:19:12
+@generated 2026-07-25 10:44:42
 === Test: NavBar 水平导航栏 (flex row) ===
 Frame #1 events=0 detail=normal
 div (0,0 1440x56) [dsp=flex]
@@ -71,20 +71,20 @@ div (0,0 1440x900) [pos=relative]
 === Test: grid + flex:1 链式填充 ===
 Frame #1 events=0 detail=normal
 div (0,0 800x300) [dsp=grid]
-  div (0,0 392x60) [dsp=flex]
+  div (0,0 392x300) [dsp=flex]
     div (0,0 392x40) text="Header"
-    div (0,40 392x0) fg=1 text="Fill"
-  div (408,0 392x60) [dsp=flex]
+    div (0,40 392x260) fg=1 text="Fill"
+  div (408,0 392x300) [dsp=flex]
     div (0,0 392x60) text="Header"
-    div (0,60 392x0) fg=1 text="Fill"
+    div (0,60 392x240) fg=1 text="Fill"
 
 ---
 
 === Test: 响应式网格 不同卡片高度 auto-fill ===
 Frame #1 events=0 detail=normal
 div (0,0 964x316) [dsp=grid]
-  div (0,0 310x200) text="Tall"
-  div (326,0 310x200) text="Medium"
+  div (0,0 310x180) text="Tall"
+  div (326,0 310x120) text="Medium"
   div (652,0 312x200) text="Taller"
   div (0,216 310x100) text="Short"
 

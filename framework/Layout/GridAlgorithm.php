@@ -243,6 +243,33 @@ class GridAlgorithm extends LayoutAlgorithm
         if (count($rows) > 0 && $neededRows > 0) {
             $this->recomputeTrackPositions($rows, $gap);
         }
+        // ── CSS Grid §12.3 align-content:stretch（默认）——纯内容 auto 行 stretch 填充显式容器高度 ──
+        // 浏览器 ground truth 三案例验证（getBoundingClientRect）：
+        //   A) 隐式行 + height:200 + 2行30px内容 → 每行 96 = 30 + (200-68)/2（剩余空间均分）✅ stretch
+        //   B) height:auto → 行保持内容高 30 ✅ 不 stretch
+        //   C) grid-auto-rows:60px + height:200 → 行保持 60 ✅ 不 stretch
+        // 守卫：仅当无显式 grid-template-rows（$rawRows===null）且无 grid-auto-rows 固定值
+        // （$autoRowSize===0）且容器高度显式声明时才 stretch。对标 Blink NGGridLayoutAlgorithm 轨道对齐。
+        $alignContentRaw = $s->getRaw('alignContent');
+        $alignContentVal = is_object($alignContentRaw) ? ($alignContentRaw->value ?? 'stretch') : ((string)($alignContentRaw ?? 'stretch'));
+        if ($alignContentVal === '' || $alignContentVal === 'normal') $alignContentVal = 'stretch';
+        $heightIsExplicit = ($s->getRaw('height') !== null && $height > 0);
+        if ($heightIsExplicit && $rawRows === null && $autoRowSize === 0
+            && $alignContentVal === 'stretch' && count($rows) > 0) {
+            $padTB = (int)($s->padding?->top->toPx() ?? 0) + (int)($s->padding?->bottom->toPx() ?? 0);
+            $borderTB = (int)($s->getBorderTopWidth() ?? 0) + (int)($s->getBorderBottomWidth() ?? 0);
+            $availH = $height - $padTB - $borderTB;
+            $rowsTotal = 0;
+            foreach ($rows as $r) { $rowsTotal += $r->size; }
+            $rowsTotal += $gap * (count($rows) - 1);
+            $freeSpace = $availH - $rowsTotal;
+            if ($freeSpace > 0) {
+                // Blink 验证：剩余空间均分到每行（96 = 30 + 132/2）
+                $extra = intdiv($freeSpace, count($rows));
+                foreach ($rows as $r) { $r->size += $extra; }
+                $this->recomputeTrackPositions($rows, $gap);
+            }
+        }
         $numRows = count($rows);
         foreach ($childResults as $cr) {
             $gi = new GridItem();
@@ -273,6 +300,11 @@ class GridAlgorithm extends LayoutAlgorithm
             $trackW = max(0, (int)($gri2->w ?? 0));
             $trackH = max(0, (int)($gri2->h ?? 0));
             if ($trackW > 0 && $idx2 < count($childNodes)) {
+                // 对标 Blink：align-items:stretch（默认）下 height:auto 的 grid item 被拉伸到
+                // 轨道高度，其 ConstraintSpace 带 is_fixed_block_size 位——子算法（如 flex column）
+                // 将块轴尺寸视为 definite（Blink ground truth：flex:1 在 stretch cell 内填充剩余）。
+                $itemStyleH = $gri2->style?->getRaw('height');
+                $itemStretches = ($itemStyleH === null) && $trackH > 0;
                 // 构建轨道约束：用 track width 作为子项可用宽度
                 $trackSpace = new ConstraintSpace(
                     $trackW, $trackH > 0 ? $trackH : $c->getContentHeight(),
@@ -282,6 +314,7 @@ class GridAlgorithm extends LayoutAlgorithm
                     0, 0, 0, 0, 0, 0, 0, 0,
                     true, false, 'block',
                     $trackW, $c->getPercentageHeight(),
+                    $itemStretches,
                 );
                 $reFrag = $this->layoutChild($childNodes[$idx2], $trackSpace);
                 $childResults[$idx2] = $reFrag;
@@ -370,7 +403,21 @@ class GridAlgorithm extends LayoutAlgorithm
             $origScrollLeft = (int)($origFrag?->scrollLeft ?? 0);
             $origContentW = (int)($origFrag?->contentWidth ?? 0);
             $origContentH = (int)($origFrag?->contentHeight ?? 0);
-            $mappedFragments[] = new PhysicalFragment($itemX, (int)($gri->y ?? 0), $itemW, $gh, (int)($gri->style?->visualWidth($itemW) ?? $itemW), (int)($gri->style?->visualHeight($gh) ?? $gh), 0, $origContentW, $origContentH, $gri->style, $children, $origFrag?->sourceNode,
+            // 对标 Blink: align-self/align-items 控制子项在 grid area 内的块轴尺寸——
+            // stretch 仅拉伸 auto 高度子项；显式 height 子项保持自身高度（Blink ground truth：
+            // 子项 height:50 在 stretch 后的 80px 轨道中仍为 50）。
+            $itemH = $gh;
+            $explicitH = 0;
+            if ($gri->style !== null && $gri->style->getRaw('height') !== null) {
+                $hVal = $gri->style->height;
+                if ($hVal !== null && !$hVal->isPercent() && !$hVal->isAuto() && $hVal->toPx() > 0) {
+                    $explicitH = (int)$hVal->toPx();
+                }
+            }
+            if ($explicitH > 0 && $explicitH < $gh) {
+                $itemH = $explicitH;
+            }
+            $mappedFragments[] = new PhysicalFragment($itemX, (int)($gri->y ?? 0), $itemW, $itemH, (int)($gri->style?->visualWidth($itemW) ?? $itemW), (int)($gri->style?->visualHeight($itemH) ?? $itemH), 0, $origContentW, $origContentH, $gri->style, $children, $origFrag?->sourceNode,
                 $origScrollTop, $origScrollLeft, $origIsScroll,
                 $origFrag?->type ?? '', $origFrag?->content, $origFrag?->dataset ?? [], $origFrag?->pseudoStyles ?? []);
             $giIdx++;

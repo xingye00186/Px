@@ -248,7 +248,9 @@ $tests['grid cell 内 flex column 高度填充'] = function() {
             ]),
         ])
     );
-    assert_contains($result, 'div (0,30 296x30) fg=1 text="Fill"', 'grid+flex: fill remaining 60-30 = 30');
+    // Blink ground truth：隐式行 stretch 到容器高 200（align-content:stretch），
+    // flex 容器被 align-items:stretch 拉伸到 200（is_fixed_block_size），Fill = 200-30 = 170
+    assert_contains($result, 'div (0,30 296x170) fg=1 text="Fill"', 'grid+flex: fill remaining 200-30 = 170 (Blink-verified stretch)');
     return $result;
 };
 

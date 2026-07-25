@@ -1,4 +1,4 @@
-@generated 2026-07-24 23:19:12
+@generated 2026-07-25 10:44:43
 === Test: grid-column span 2 跨越两列 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x60) [dsp=grid]
@@ -35,6 +35,15 @@ div (0,0 600x80) [dsp=grid]
 
 ---
 
+=== Test: grid 混合 1fr 200px auto ===
+Frame #1 events=0 detail=normal
+div (0,0 700x60) [dsp=grid]
+  div (0,0 484x60) text="Flex"
+  div (492,0 200x60) text="Fixed"
+  div (700,0 0x60) text="Auto"
+
+---
+
 === Test: column-gap 16px row-gap 8px 分开 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x140) [dsp=grid]
@@ -42,11 +51,3 @@ div (0,0 400x140) [dsp=grid]
   div (200,0 200x60) text="B"
   div (0,60 200x60) text="C"
   div (200,60 200x60) text="D"
-
----
-
-=== Test: grid cell 内 margin auto 居中 ===
-Frame #1 events=0 detail=normal
-div (0,0 400x120) [dsp=grid]
-  div (0,0 200x80) text="Center"
-  div (208,0 200x80) text="Normal"

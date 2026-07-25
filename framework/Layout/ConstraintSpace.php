@@ -62,6 +62,13 @@ class ConstraintSpace
     /** 空间类型（block/flex/grid/inline） */
     public readonly string $spaceType;
 
+    /**
+     * 块轴尺寸被父强制固定（对标 Blink ConstraintSpace::is_fixed_block_size）。
+     * 场景：grid align-items:stretch 拉伸的 item、flex align-items:stretch 交叉轴。
+     * 为 true 时，子算法应将 contentHeight 视为 definite 块轴尺寸（即使 style height 为 auto）。
+     */
+    public readonly bool $isFixedBlockSize;
+
     /** getter 方法 — AOT 跨类 readonly 访问保护 */
     public function getContainerWidth(): int { return $this->containerWidth; }
     public function getContainerHeight(): int { return $this->containerHeight; }
@@ -80,6 +87,7 @@ class ConstraintSpace
     public function getSpaceType(): string { return $this->spaceType; }
     public function getForceRelayoutChildren(): bool { return $this->forceRelayoutChildren; }
     public function getIsIntrinsicMeasurement(): bool { return $this->isIntrinsicMeasurement; }
+    public function getIsFixedBlockSize(): bool { return $this->isFixedBlockSize; }
 
     /**
      * 快速字段比较（替代字符串签名，避免 O(N) 序列化开销）。
@@ -94,6 +102,7 @@ class ConstraintSpace
             && $this->determinedPercentageWidth === $other->determinedPercentageWidth
             && $this->determinedPercentageHeight === $other->determinedPercentageHeight
             && $this->isIntrinsicMeasurement === $other->isIntrinsicMeasurement
+            && $this->isFixedBlockSize === $other->isFixedBlockSize
             && $this->spaceType === $other->spaceType
             && $this->paddingTop === $other->paddingTop
             && $this->paddingRight === $other->paddingRight
@@ -126,6 +135,7 @@ class ConstraintSpace
             && $this->determinedPercentageWidth === $other->determinedPercentageWidth
             && $this->determinedPercentageHeight === $other->determinedPercentageHeight
             && $this->isIntrinsicMeasurement === $other->isIntrinsicMeasurement
+            && $this->isFixedBlockSize === $other->isFixedBlockSize
             && $this->spaceType === $other->spaceType
             && $this->paddingTop === $other->paddingTop
             && $this->paddingRight === $other->paddingRight
@@ -162,6 +172,7 @@ class ConstraintSpace
         string $spaceType = 'block',
         ?int $determinedPercentageWidth = null,
         ?int $determinedPercentageHeight = null,
+        bool $isFixedBlockSize = false,
     ) {
         $this->containerWidth        = $containerWidth;
         $this->containerHeight       = $containerHeight;
@@ -184,6 +195,7 @@ class ConstraintSpace
         $this->forceRelayoutChildren = $forceRelayoutChildren;
         $this->isIntrinsicMeasurement = $isIntrinsicMeasurement;
         $this->spaceType             = $spaceType;
+        $this->isFixedBlockSize      = $isFixedBlockSize;
     }
 
 
