@@ -1,4 +1,4 @@
-@generated 2026-07-25 13:43:54
+@generated 2026-07-25 13:53:12
 === Test: color:#FF0000 红色文字 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x30) text="Red text"
@@ -130,5 +130,13 @@ div (0,0 200x30) decorationLine=underline decorationStyle=solid underlineOffset=
 === Test: text-decoration: underline overline 多线组合 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x30) decorationLine=underline overline decorationStyle=solid text="Underline and overline"
+=== render ===
+  (no elements)
+
+---
+
+=== Test: text-decoration 简写 (underline wavy #FF0000 2px) ===
+Frame #1 events=0 detail=normal
+div (0,0 200x30) decorationLine=underline decorationStyle=wavy decorationThickness=2 decorationColor=0x0000FF text="Shorthand text"
 === render ===
   (no elements)

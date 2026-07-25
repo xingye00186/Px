@@ -276,8 +276,10 @@ class CssShorthandExpander
         if ($hasLine) $result['textDecorationLine'] = implode(' ', $lineParts);
         foreach ($result as $key => $val) {
             $cssKey = strtolower(preg_replace('/([A-Z])/', '-$1', $key));
+            // 仅写 kebab：运行时 PROPERTY_MAP dispatch 唯一入口（parseHexColor→BGR int 等）；
+            // SFC 编译期由 canonicalStyleKey 统一转 camel。此前双写 camel 键会绕过
+            // dispatch 以字符串覆盖解析产物（decorationColor 丢失 BGR 转换的根因）。
             if (!isset($raw[$cssKey])) $raw[$cssKey] = $val;
-            if (!isset($raw[$key])) $raw[$key] = $val;
         }
         return $raw;
     }
