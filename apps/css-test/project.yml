@@ -15,6 +15,10 @@ cxx-flags:
   # 阶段三 / 四需要的宏定义（即便当前不是 OpenGL 路径）
   - /DGR_GL_FUNCTION_TYPE=__stdcall
 ld-flags:
+  # AOT 转译后 PHP 函数栈帧远大于 Zend VM 虚拟栈，默认 1MB 链接栈在大 case
+  # （case-029: 1210 节点/254 兄弟）触发 0xC00000FD STACK_OVERFLOW。
+  # 对齐 PHP CLI 栈规格 8MB（php.exe /STACK 同档）——编译期治本。
+  - /STACK:8388608
   # Skia 静态库（按链接依赖顺序，依赖者在前）
   - cpp/skia/out/Release-x64/skia.lib
   - cpp/skia/out/Release-x64/skunicode_icu.lib
@@ -53,7 +57,8 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/Compiler
+  - ../../framework/Compiler
+
 
 # 每次构建前清理编译缓存
 Px_clear_compilation_cache: true
