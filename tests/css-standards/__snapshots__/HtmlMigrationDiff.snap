@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:24:22
+@generated 2026-07-25 11:33:20
 === Test: Flex row + gap 两列等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
@@ -88,8 +88,8 @@ div (0,0 500x114)
 === Test: badge 标签样式 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x24) [dsp=flex]
-  div (0,12 0x0) text="Active"
-  span (6,4 194x16) [dsp=inline] text="v5 M3"
+  div (0,12 41x0) text="Active"
+  span (47,4 154x16) [dsp=inline] text="v5 M3"
 
 ---
 
@@ -135,11 +135,11 @@ div (0,0 500x26) bw=1 ov=hidden
 === Test: flex-wrap 标签云 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x0) [dsp=flex]
-  div (0,0 0x0) text="rect"
-  div (4,0 0x0) text="text"
-  div (8,0 0x0) text="button"
-  div (12,0 0x0) text="grid"
-  div (16,0 0x0) text="label"
+  div (0,0 36x0) text="rect"
+  div (40,0 36x0) text="text"
+  div (80,0 48x0) text="button"
+  div (132,0 36x0) text="grid"
+  div (172,0 42x0) text="label"
 
 ---
 

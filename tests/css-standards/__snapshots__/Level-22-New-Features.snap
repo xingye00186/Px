@@ -1,4 +1,4 @@
-@generated 2026-07-25 11:24:22
+@generated 2026-07-25 11:33:21
 === Test: 外边距折叠 正+正 margin-bottom:20 + margin-top:30 ===
 Frame #1 events=0 detail=normal
 div (0,0 300x90)
@@ -36,8 +36,8 @@ div (0,0 300x200) [dsp=flex]
 === Test: Flex-basis:content 两行不等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x40) [dsp=flex]
-  div (0,0 0x40) text="HelloWorld"
-  div (0,0 0x40) text="Short"
+  div (0,0 90x40) text="HelloWorld"
+  div (90,0 45x40) text="Short"
 
 ---
 

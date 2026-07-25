@@ -263,7 +263,35 @@ class FlexAlgorithm extends LayoutAlgorithm
                 // 对标 Blink NGFlexLayoutAlgorithm: basis=auto 无显式主尺寸时 → 使用子项 content 尺寸作为 basis（而非重置为 0）
                 // 仅当子项 fragment 本身也无主尺寸时才重置为 0
                 if ($isRow) {
-                    if ($item->w <= 0) $item->w = 0;
+                    if ($item->w <= 0) {
+                        // CSS Flexbox §9.2.3.E：flex-basis:auto + 主尺寸 auto → max-content size
+                        // （与交叉轴 fit-content 同源；此前文本子项主轴宽塔陷为 0）
+                        $mcContent = (string)($item->content ?? '');
+                        $mcChildren = $item->node?->children ?? [];
+                        if (!is_array($mcChildren)) $mcChildren = [];
+                        if ($mcContent !== '' && count($mcChildren) === 0) {
+                            // 纯文本快速路径：直接 TextMeasureCache（避免每帧 BlockAlgorithm 分配，bench 验证 LiveDashboard -6.6%）
+                            $mcFs = $cs->getFontSize() > 0 ? $cs->getFontSize() : 16;
+                            $mcW = TextMeasureCache::measure($mcContent, $mcFs, (bool)($cs->getBold() ?? false));
+                            // border-box 主尺寸 = 文本宽 + padding + border（与 computeMinMaxSizes 一致）
+                            $mcW += (int)($cs->padding?->left->toPx() ?? 0) + (int)($cs->padding?->right->toPx() ?? 0)
+                                  + (int)($cs->getBorderLeftWidth() ?? 0) + (int)($cs->getBorderRightWidth() ?? 0);
+                            if ($mcW > 0) $item->w = min($mcW, (int)$containerMain);
+                        } else if (count($mcChildren) > 0) {
+                            // 容器子项：复用 RenderNode.cachedMinMaxSizes（§11.3 缓存）
+                            $mcNode = $item->node;
+                            if ($mcNode !== null && $mcNode->cachedMinMaxSizes !== null && !$mcNode->layoutDirty) {
+                                $mcSizes = $mcNode->cachedMinMaxSizes;
+                            } else {
+                                $mcAlgo = new BlockAlgorithm();
+                                $mcSizes = $mcAlgo->computeMinMaxSizes($space, $cs, $mcContent, $mcChildren);
+                                if ($mcNode !== null) $mcNode->cachedMinMaxSizes = $mcSizes;
+                            }
+                            if ($mcSizes->maxContent > 0) {
+                                $item->w = min($mcSizes->maxContent, (int)$containerMain);
+                            }
+                        }
+                    }
                 } else {
                     if ($item->h <= 0) $item->h = 0;
                 }

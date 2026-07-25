@@ -1,13 +1,13 @@
-@generated 2026-07-25 11:24:21
+@generated 2026-07-25 11:33:19
 === Test: NavBar 水平导航栏 (flex row) ===
 Frame #1 events=0 detail=normal
 div (0,0 1440x56) [dsp=flex]
   div (24,16 24x24)
   div (64,28 1288x0) [dsp=flex] fg=1
-    div (64,28 0x0) text="Bilibili"
-    div (88,28 0x0) text="推荐"
-    div (112,28 0x0) text="热门"
-    div (136,28 0x0) text="关注"
+    div (64,28 72x0) text="Bilibili"
+    div (160,28 54x0) text="推荐"
+    div (238,28 54x0) text="热门"
+    div (316,28 54x0) text="关注"
   div (1352,12 80x32)
 
 ---
@@ -24,11 +24,11 @@ div (0,0 1440x900) [dsp=flex]
   div (0,0 1440x56) [dsp=flex]
     div (24,16 24x24)
     div (48,28 1368x0) [dsp=flex] fg=1
-      div (48,28 0x0) text="Bilibili"
-      div (72,28 0x0) text="推荐"
+      div (48,28 72x0) text="Bilibili"
+      div (144,28 54x0) text="推荐"
   div (0,56 1440x44) [dsp=flex] scroll ch=22 cw=1408 maxScroll=0 st=0 sl=0 ov=auto
-    div (16,78 0x0) text="推荐"
-    div (28,78 0x0) text="热门"
+    div (16,78 82x0) text="推荐"
+    div (110,78 82x0) text="热门"
   div (0,100 1440x800) scroll ch=216 cw=1408 maxScroll=0 st=0 sl=0 ov=auto fg=1
     div (16,116 0x200) text="Content Area"
   div (700,400 48x48) [pos=fixed]
