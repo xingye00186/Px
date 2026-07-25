@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:54:40
+@generated 2026-07-25 13:19:13
 === Test: Grid 内嵌 flex 实现卡片网格 ===
 Frame #1 events=0 detail=normal
 div (0,0 964x192) [dsp=grid]
@@ -80,7 +80,7 @@ div (0,0 1440x900) [dsp=flex]
     div (16,66 82x23) text="推荐"
     div (110,66 82x23) text="热门"
   div (0,100 1440x800) scroll ch=216 cw=1408 maxScroll=0 st=0 sl=0 ov=auto fg=1
-    div (16,116 0x200) text="Content Area"
+    div (16,116 1408x200) text="Content Area"
   div (700,400 48x48) [pos=fixed]
 
 ---
@@ -103,10 +103,10 @@ div (0,0 964x391) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 1440x900) [dsp=flex]
   div (0,0 240x900)
-    div (16,16 240x40) text="Nav 1"
-    div (16,64 240x40) text="Nav 2"
+    div (16,16 208x40) text="Nav 1"
+    div (16,64 208x40) text="Nav 2"
   div (240,0 1200x900) scroll ch=216 cw=1168 maxScroll=0 st=0 sl=0 ov=auto fg=1
-    div (256,16 0x200) text="Main Content"
+    div (256,16 1408x200) text="Main Content"
 
 ---
 
@@ -164,7 +164,7 @@ Frame #1 events=0 detail=normal
 div (0,0 600x400) [dsp=flex]
   div (0,0 600x50) text="Header"
   div (0,50 600x320) scroll ch=240 cw=600 maxScroll=0 st=0 sl=0 ov=auto fg=1
-    div (0,50 0x80) text="Item 1"
-    div (0,130 0x80) text="Item 2"
-    div (0,210 0x80) text="Item 3"
+    div (0,50 600x80) text="Item 1"
+    div (0,130 600x80) text="Item 2"
+    div (0,210 600x80) text="Item 3"
   div (0,370 600x30) text="Footer"

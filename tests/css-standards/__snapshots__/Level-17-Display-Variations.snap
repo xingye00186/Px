@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:54:41
+@generated 2026-07-25 13:19:14
 === Test: display:none 不渲染 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x80)
@@ -47,8 +47,8 @@ div (0,0 400x50) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 300x60)
   div (0,0 300x60)
-    div (0,0 0x30) text="Hidden parent"
-    div (0,30 0x30) text="Visible child"
+    div (0,0 300x30) text="Hidden parent"
+    div (0,30 300x30) text="Visible child"
 
 ---
 

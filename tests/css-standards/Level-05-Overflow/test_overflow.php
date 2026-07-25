@@ -174,7 +174,8 @@ $tests['flex row overflow-x auto 不撑大容器'] = function() {
             VNode::h('div', ['style' => 'flex-shrink:0;width:120px;height:30px'], 'Tab 4'),
         ])
     );
-    assert_contains($result, 'scroll ch=30 cw=300', 'flex+overflow-x: container width stays 300, overflow creates scroll');
+    // cw=scrollWidth 语义（与 T10 cw=600 断言一致）：4×120+3×8gap=504；容器保持 300
+    assert_contains($result, 'div (0,0 300x50) [dsp=flex] scroll ch=30 cw=504', 'flex+overflow-x: container 300, scrollWidth 504 (4 tabs + gaps)');
     return $result;
 };
 

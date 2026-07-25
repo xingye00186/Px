@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:54:41
+@generated 2026-07-25 13:19:14
 === Test: Grid 内 Flex Row 排列 ===
 Frame #1 events=0 detail=normal
 div (0,0 500x100) [dsp=grid]
@@ -51,7 +51,7 @@ div (0,0 400x200) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 400x150) [dsp=grid]
   div (0,0 200x60) text="Normal"
-  div (208,0 200x80) scroll ch=80 cw=0 maxScroll=0 st=0 sl=0 ov=auto text="Scroll"
+  div (208,0 200x80) scroll ch=80 cw=200 maxScroll=0 st=0 sl=0 ov=auto text="Scroll"
 
 ---
 
@@ -114,7 +114,7 @@ Frame #1 events=0 detail=normal
 div (0,0 400x120) [dsp=grid]
   div (0,0 200x80) [pos=relative]
     div (130,10 60x30) [pos=absolute] text="Badge"
-    div (0,0 0x40) text="Content"
+    div (0,0 200x40) text="Content"
   div (208,0 200x80) text="Normal"
 
 ---

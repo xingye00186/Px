@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:54:41
+@generated 2026-07-25 13:19:14
 === Test: Flex row + gap 两列等宽 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x200) [dsp=flex]
@@ -79,9 +79,9 @@ div (0,0 400x30) text="Dark theme text"
 === Test: 多层嵌套卡片 ===
 Frame #1 events=0 detail=normal
 div (0,0 500x146)
-  div (32,32 500x82) bw=1
-    div (53,53 0x16) text="Card Title"
-    div (53,77 0x16) text="Card content text"
+  div (32,32 394x82) bw=1
+    div (53,53 394x16) text="Card Title"
+    div (53,77 394x16) text="Card content text"
 
 ---
 
@@ -96,7 +96,7 @@ div (0,0 200x24) [dsp=flex]
 === Test: 代码块 white-space:pre ===
 Frame #1 events=0 detail=normal
 div (0,0 500x48) bw=1
-  div (21,17 500x14) text="abstract class RenderContext {
+  div (21,17 458x14) text="abstract class RenderContext {
     abst..."
 
 ---
@@ -106,8 +106,8 @@ Frame #1 events=0 detail=normal
 div (0,0 600x34) [dsp=flex]
   div (0,0 24x24) bw=2
   div (32,0 568x34) fg=1
-    div (32,0 0x16) text="v5 M3: Flat + Layer"
-    div (32,20 0x14) text="~100 行 / 7 文件"
+    div (32,0 600x16) text="v5 M3: Flat + Layer"
+    div (32,20 600x14) text="~100 行 / 7 文件"
 
 ---
 
@@ -126,9 +126,9 @@ div (0,0 600x30) text="Centered footer text"
 === Test: dep-box 分区布局 ===
 Frame #1 events=0 detail=normal
 div (0,0 500x73) bw=1 ov=hidden
-  div (1,1 500x32) text="v5 M3: Flat + Layer"
-  div (1,33 500x39)
-    div (15,45 0x15) text="框架提供:"
+  div (1,1 470x32) text="v5 M3: Flat + Layer"
+  div (1,33 470x39)
+    div (15,45 470x15) text="框架提供:"
 
 ---
 
@@ -153,8 +153,8 @@ div (0,0 300x40) scroll ch=40 cw=800 maxScroll=0 st=0 sl=0 ov=auto
 === Test: 完整卡片行组合场景 ===
 Frame #1 events=0 detail=normal
 div (0,0 1100x900)
-  div (32,32 1100x33) text="Title"
-  div (32,69 1100x18) text="Subtitle text"
+  div (32,32 1036x33) text="Title"
+  div (32,69 1036x18) text="Subtitle text"
   div (32,111 1036x61) [dsp=flex]
     div (32,111 510x61) bw=1 fg=1 text="Danger Card"
     div (558,111 510x61) bw=1 fg=1 text="Success Card"

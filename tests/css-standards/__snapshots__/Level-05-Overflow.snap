@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:54:40
+@generated 2026-07-25 13:19:13
 === Test: overflow:hidden 子元素超出容器 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100) ov=hidden
@@ -46,19 +46,23 @@ div (0,0 300x150) scroll ch=150 cw=300 maxScroll=0 st=0 sl=0 ov=hidden
 
 ---
 
+=== Test: 嵌套滚动容器 (外内均滚动) ===
+Frame #1 events=0 detail=normal
+div (0,0 400x200) scroll ch=270 cw=400 maxScroll=70 st=0 sl=0 ov=auto
+  div (0,0 400x60) text="Header"
+  div (0,60 400x150) scroll ch=200 cw=400 maxScroll=50 st=0 sl=0 ov=auto
+    div (0,60 400x50) text="Inner 1"
+    div (0,110 400x50) text="Inner 2"
+    div (0,160 400x50) text="Inner 3"
+    div (0,210 400x50) text="Inner 4"
+  div (0,210 400x60) text="Footer"
+
+---
+
 === Test: overflow visible 默认超出可见 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x60)
   div (0,0 400x50) text="Overflowing content visible"
-
----
-
-=== Test: scroll 容器 padding 影响子项 ===
-Frame #1 events=0 detail=normal
-div (0,0 300x150) scroll ch=146 cw=310 maxScroll=0 st=0 sl=0 ov=auto
-  div (10,10 300x40) text="Item 1"
-  div (10,58 300x40) text="Item 2"
-  div (10,106 300x40) text="Item 3"
 
 ---
 
@@ -82,3 +86,13 @@ div (0,0 300x150) scroll ch=150 cw=300 maxScroll=0 st=0 sl=0 ov=auto
 Frame #1 events=0 detail=normal
 div (0,0 400x300) scroll ch=50 cw=400 maxScroll=0 st=0 sl=0 ov=auto
   div (0,0 380x50) text="Small content"
+
+---
+
+=== Test: flex row overflow-x auto 不撑大容器 ===
+Frame #1 events=0 detail=normal
+div (0,0 300x50) [dsp=flex] scroll ch=30 cw=504 maxScroll=0 st=0 sl=0 ov=auto
+  div (0,0 120x30) text="Tab 1"
+  div (128,0 120x30) text="Tab 2"
+  div (256,0 120x30) text="Tab 3"
+  div (384,0 120x30) text="Tab 4"

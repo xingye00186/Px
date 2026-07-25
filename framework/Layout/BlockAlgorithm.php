@@ -238,6 +238,12 @@ class BlockAlgorithm extends LayoutAlgorithm
         $percBaseH = $c->getDeterminedPercentageHeight() ?? $parentH;
 
         $w = $this->computeBlockWidth($parentW, $s, $textContent, $percBaseW);
+        // 对标 Blink：flex/grid item 的 auto 宽不做 block auto-fill（尺寸由 flex/grid 算法
+        // 在交叉轴 stretch/fit-content 阶段决定）——消费 ChildLayoutProvider 的 spaceType='flex-item'。
+        if ($c->getSpaceType() === 'flex-item' && $s->getRaw('width') === null
+            && ($s->width === null || $s->width->isAuto() || $s->width->toPx() <= 0)) {
+            $w = 0;
+        }
         $h = $this->computeBlockHeight($parentH, $s, $textContent, $percBaseH);
         // CSS-Sizing-4 §5 aspect-ratio 反向推导（H 显式 + W auto）：
         //   仅当宽度由默认 auto-fill 得到 (== parentW - margins) 且 height 显式声明时，
@@ -386,8 +392,10 @@ class BlockAlgorithm extends LayoutAlgorithm
             $width = TextMeasureCache::measure($textContent, $fs, (bool)$bd);
         }
 
-        // CSS 2.2 §10.2: 仅当 width 为 auto 时才用可用空间填充，显式 width:0 应尊重
-        $hasExplicitWidth = ($s->width !== null && !$s->width->isAuto() && !$s->width->isPercent() && !$s->width->isIntrinsic());
+        // CSS 2.2 §10.2: 仅当 width 为 auto 时才用可用空间填充，显式 width:0 应尊重。
+        // 对标 Blink：default width = px(0)（非 auto），须用 getRaw('width') 区分
+        // “显式声明 width:0”与“未声明（默认 px0）”——与 computeBlockHeight 同源修复。
+        $hasExplicitWidth = ($s->getRaw('width') !== null && $s->width !== null && !$s->width->isAuto() && !$s->width->isPercent() && !$s->width->isIntrinsic());
         if ($width <= 0 && !$hasExplicitWidth) {
             $ml = $s->margin?->left->toPx() ?? 0; $mr = $s->margin?->right->toPx() ?? 0;
             $autoPadL = $s->padding?->left->toPx() ?? 0; $autoPadR = $s->padding?->right->toPx() ?? 0;
@@ -608,7 +616,12 @@ class BlockAlgorithm extends LayoutAlgorithm
                 }
                 $stkChildren = $stkTranslated;
             }
-            $result[] = new PhysicalFragment($stkX, (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->getLayer() ?? 0), (int)($chW), (int)($chH), $childStyle, $stkChildren, $cr->sourceNode,
+            $result[] = new PhysicalFragment($stkX, (int)$childY, (int)$chW, (int)$chH, 0, 0, (int)($cr->getLayer() ?? 0),
+                    // 保留子的 contentWidth/Height（滚动数据要素）：此前硬编码为 chW/chH
+                    // 会丢弃嵌套 scroll 容器的 scrollable overflow（ch 200→150 断裂根因）
+                    (int)($cr->getContentWidth() > 0 ? $cr->getContentWidth() : $chW),
+                    (int)($cr->getContentHeight() > 0 ? $cr->getContentHeight() : $chH),
+                    $childStyle, $stkChildren, $cr->sourceNode,
                     $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
                     $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
             // ── endMarginStrut 消费（CSS 2.2 §8.3.1 场景 3）──

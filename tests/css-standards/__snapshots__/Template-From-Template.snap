@@ -1,4 +1,4 @@
-@generated 2026-07-25 12:54:41
+@generated 2026-07-25 13:19:14
 === Test: [Template] absolute positioned div ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
@@ -764,9 +764,9 @@ div (0,0 400x80)
 Frame #1 events=0 detail=normal
 div (0,0 300x60)
   div (0,0 300x60)
-    div (0,0 0x30)
+    div (0,0 300x30)
       #text (0,0 300x19) [dsp=inline] text="Hidden parent"
-    div (0,30 0x30)
+    div (0,30 300x30)
       #text (0,30 300x19) [dsp=inline] text="Visible child"
 
 ---
@@ -831,31 +831,16 @@ div (0,0 300x50) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 200x100)
   div (0,0 200x10)
-    div (0,0 0x10)
-      div (0,0 0x10)
-        div (0,0 0x10)
-          div (0,0 0x10)
-            div (0,0 0x10)
-              div (0,0 0x10)
-                div (0,0 0x10)
-                  div (0,0 0x10)
+    div (0,0 200x10)
+      div (0,0 200x10)
+        div (0,0 200x10)
+          div (0,0 200x10)
+            div (0,0 200x10)
+              div (0,0 200x10)
+                div (0,0 200x10)
+                  div (0,0 200x10)
                     div (0,0 10x10)
                       #text (0,0 10x19) [dsp=inline] text="Deep"
-
----
-
-=== Test: [Template] Dashboard 侧边栏+头部+主内容 ===
-Frame #1 events=0 detail=normal
-div (0,0 900x600) [dsp=grid]
-  div (0,0 200x60)
-    #text (16,16 168x19) [dsp=inline] text="Sidebar"
-  div (200,0 700x60)
-    #text (16,16 668x19) [dsp=inline] text="Header"
-  div (0,60 200x540) [dsp=flex]
-    div (16,16 101x508) fg=2
-      #text (32,32 136x19) [dsp=inline] text="Main Content"
-    div (133,16 50x508) fg=1
-      #text (149,32 136x19) [dsp=inline] text="Side Panel"
 
 ---
 
