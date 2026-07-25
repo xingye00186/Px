@@ -260,13 +260,13 @@ class GridAlgorithm extends LayoutAlgorithm
             $borderTB = (int)($s->getBorderTopWidth() ?? 0) + (int)($s->getBorderBottomWidth() ?? 0);
             $availH = $height - $padTB - $borderTB;
             $rowsTotal = 0;
-            foreach ($rows as $r) { $rowsTotal += $r->size; }
+            foreach ($rows as $stRow) { $stRow = objval($stRow, GridTrack::class); $rowsTotal += (int)$stRow->size; }
             $rowsTotal += $gap * (count($rows) - 1);
             $freeSpace = $availH - $rowsTotal;
             if ($freeSpace > 0) {
                 // Blink 验证：剩余空间均分到每行（96 = 30 + 132/2）
                 $extra = intdiv($freeSpace, count($rows));
-                foreach ($rows as $r) { $r->size += $extra; }
+                foreach ($rows as $stRow2) { $stRow2 = objval($stRow2, GridTrack::class); $stRow2->size += $extra; }
                 $this->recomputeTrackPositions($rows, $gap);
             }
         }
