@@ -1,4 +1,4 @@
-@generated 2026-07-25 13:53:13
+@generated 2026-07-25 19:31:32
 === Test: Dashboard 侧边栏+头部+主内容 ===
 Frame #1 events=0 detail=normal
 div (0,0 900x600) [dsp=grid]
@@ -35,13 +35,13 @@ div (0,0 600x141)
 Frame #1 events=0 detail=normal
 div (0,0 700x218) [dsp=flex]
   div (20,20 322x178) bw=1 fg=1
-    div (45,45 610x24) text="Basic"
-    div (45,69 610x67) text="$9"
-    div (45,136 594x35) text="Sign Up"
+    div (45,45 272x24) text="Basic"
+    div (45,69 272x67) text="$9"
+    div (45,136 256x35) text="Sign Up"
   div (358,20 322x178) bw=2 fg=1
-    div (384,46 608x24) text="Pro"
-    div (384,70 608x67) text="$29"
-    div (384,137 592x35) text="Sign Up"
+    div (384,46 270x24) text="Pro"
+    div (384,70 270x67) text="$29"
+    div (384,137 254x35) text="Sign Up"
 
 ---
 
@@ -93,14 +93,14 @@ div (0,0 400x136) [dsp=flex]
   div (0,0 400x64) [dsp=flex]
     div (12,12 40x40)
     div (64,15 270x33) fg=1
-      div (64,15 376x19) text="Notification title"
-      div (64,34 376x14) text="Notification description text."
+      div (64,15 270x19) text="Notification title"
+      div (64,34 270x14) text="Notification description text."
     div (346,25 42x14) text="2m ago"
   div (0,72 400x64) [dsp=flex]
     div (12,84 40x40)
     div (64,87 270x33) fg=1
-      div (64,87 376x19) text="Another notification"
-      div (64,106 376x14) text="Some longer description here."
+      div (64,87 270x19) text="Another notification"
+      div (64,106 270x14) text="Some longer description here."
     div (346,97 42x14) text="1h ago"
 
 ---

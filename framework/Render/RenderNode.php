@@ -40,6 +40,14 @@ class RenderNode
     // ── 缓存 ──
     public ?PhysicalFragment $cachedFragment = null;
     public ?ConstraintSpace $cachedConstraintSpace = null;
+    /**
+     * 第二缓存槽（对标 Blink NGBlockNode measure/layout 双结果缓存）：
+     * flex/grid 两阶段布局中，首轮（measure，flex-item 约束）与 pass2（layout，
+     * definite 约束）交替命中同一节点——单槽互相驱逐致每帧零命中（cache thrash，
+     * bench 实测 +27.7%）。双槽各自匹配自己的约束类型。
+     */
+    public ?PhysicalFragment $cachedFragment2 = null;
+    public ?ConstraintSpace $cachedConstraintSpace2 = null;
     /** computeMinMaxSizes 缓存（避免复杂嵌套下 O(n²) 重复计算） */
     public ?\Px\Layout\MinMaxSizes $cachedMinMaxSizes = null;
 

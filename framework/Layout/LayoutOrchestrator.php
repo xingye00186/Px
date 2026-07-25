@@ -149,6 +149,20 @@ class LayoutOrchestrator
                 \Px\Core\PerfCounter::inc('layout_hit_clean');
                 return $node->cachedFragment;  // 完全洁净：零分配
             }
+            // ── 槽 2 命中（对标 Blink measure/layout 双结果缓存）：flex/grid 两阶段
+            // 交替约束下，另一类约束的结果住槽 2——命中则与槽 1 互换（MRU）。
+            if (!$node->styleDirty && $node->cachedConstraintSpace2 !== null
+                && $node->cachedFragment2 !== null
+                && $space->equals($node->cachedConstraintSpace2)) {
+                $hitFrag = $node->cachedFragment2;
+                $hitSpace = $node->cachedConstraintSpace2;
+                $node->cachedFragment2 = $node->cachedFragment;
+                $node->cachedConstraintSpace2 = $node->cachedConstraintSpace;
+                $node->cachedFragment = $hitFrag;
+                $node->cachedConstraintSpace = $hitSpace;
+                \Px\Core\PerfCounter::inc('layout_hit_clean');
+                return $hitFrag;
+            }
         }
         // 不满足早退条件：走正常布局
 
@@ -333,7 +347,10 @@ class LayoutOrchestrator
                 $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
             );
         }
-        // 缓存完整 Fragment 树 + 约束空间（对标 Blink NGBlockNode）
+        // 缓存完整 Fragment 树 + 约束空间（对标 Blink NGBlockNode，双槽 MRU：
+        // 旧主槽下沉槽 2，新结果入主槽——两阶段交替约束不再互相驱逐）
+        $node->cachedFragment2 = $node->cachedFragment;
+        $node->cachedConstraintSpace2 = $node->cachedConstraintSpace;
         $node->cachedFragment = $algoFrag;
         $node->cachedConstraintSpace = $space;
 

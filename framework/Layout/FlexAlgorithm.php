@@ -772,7 +772,17 @@ class FlexAlgorithm extends LayoutAlgorithm
             $p2Display = $p2Fi->computedStyle?->display?->value ?? 'block';
             $p2ConsumesBlockSize = ($p2Display === 'flex' || $p2Display === 'grid' || $p2Display === 'inline-flex' || $p2Display === 'inline-grid');
             $blockSizeIsFixed = ($heightStretched || $mainHeightAssigned) && $p2ConsumesBlockSize;
-            if ((($p2OrigW > 0 && $p2ItemW > 0 && $p2OrigW !== $p2ItemW) || $blockSizeIsFixed) && $p2Idx < count($childNodes)) {
+            // 主轴宽重布局判定（CSS Flexbox §9.7 / Blink：used main size 确定后以 definite
+            // inline size 重新 LayoutChild）：p2OrigW==0 是首轮 flex-item 空间契约（auto 宽置 0
+            // 待 pass2 定宽），但子孙首轮已按容器 content 宽（innerW）布局——仅当分配后
+            // used 宽 ≠ innerW（真正多列分配，case-007 240≠720）且含子树时才需重布局。
+            // 精确守卫（bench 验证：无 innerW 条件时满宽单列 item 每帧全量 pass2，+30%）：
+            // 满宽 item（p2ItemW==innerW）子孙首轮布局已正确，跳过。
+            $p2Node = ($p2Idx < count($childNodes)) ? $childNodes[$p2Idx] : null;
+            $p2HasChildTree = $p2Node !== null && is_array($p2Node->children) && count($p2Node->children) > 0;
+            $mainWidthAssigned = $isRow && $p2ItemW > 0 && $p2OrigW !== $p2ItemW
+                && $p2ItemW !== (int)$innerW && $p2HasChildTree;
+            if ((($p2OrigW > 0 && $p2ItemW > 0 && $p2OrigW !== $p2ItemW) || $mainWidthAssigned || $blockSizeIsFixed) && $p2Idx < count($childNodes)) {
                 $p2Space = new ConstraintSpace(
                     $p2ItemW, (int)$p2Fi->h > 0 ? (int)$p2Fi->h : $space->getContentHeight(),
                     $space->getParentContentX(), $space->getParentContentY(),

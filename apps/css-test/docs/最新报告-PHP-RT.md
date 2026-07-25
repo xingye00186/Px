@@ -1,6 +1,6 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-26 03:15:02 | **总耗时**: 93.6s
+**运行时间**: 2026-07-26 03:51:19 | **总耗时**: 95.8s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
@@ -10,7 +10,7 @@
 | case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 15diff | ⏭️ | ❌ 失败 | 0.2s |
 | case-005-grid-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 71diff 🔴51 | ⏭️ | ❌ 失败 | 0.1s |
 | case-006-typography | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 73diff 🔴3 | ⏭️ | ❌ 失败 | 0.3s |
-| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 281diff 🔴206 | ⏭️ | ❌ 失败 | 0.2s |
+| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 275diff 🔴200 | ⏭️ | ❌ 失败 | 2.4s |
 | case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 73diff 🔴32 | ⏭️ | ❌ 失败 | 0.1s |
 | case-009-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 69diff 🔴29 | ⏭️ | ❌ 失败 | 0.1s |
 | case-010-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 170diff 🔴66 | ⏭️ | ❌ 失败 | 0.1s |
@@ -60,32 +60,11 @@
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff 🔴10 | ⏭️ | ❌ 失败 | 0.1s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 20diff 🔴3 | ⏭️ | ❌ 失败 | 0.1s |
 
-**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 93.6s)
+**汇总**: 0 ✅ / 55 ❌ / 55 总计 (总耗时: 95.8s)
 
 ## 回归判定
 
-> 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
->
-> - prop height diff 298->300
-> - case-006-typography critical 2->3
-> - case-012-position-relative geometry 183->185
-> - case-012-position-relative mismatch 19->21
-> - case-012-position-relative critical 144->147
-> - case-014-overflow-hidden critical 155->156
-> - case-015-min-max-height critical 189->190
-> - case-016-margin-collapse critical 144->147
-> - case-017-negative-margin critical 125->126
-> - case-019-visibility critical 212->213
-> - case-020-text-align critical 99->102
-> - case-022-white-space critical 147->149
-> - case-024-font-weight critical 123->124
-> - case-025-english-text critical 147->150
-> - case-039-vertical-align critical 172->174
-> - case-052-flow-root critical 0->1
-> - case-054-inline-block-nest critical 9->10
-> - case-055-sticky-multi major 7->8
->
-> ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
+> ✅ **无回归** — 与上一次运行相比，各项指标均未恶化。
 
 ## 样式属性统计
 
@@ -166,7 +145,7 @@
 | case-004-flex-layout | 0 | 0 | 0 | 7 | 0 | 0 |
 | case-005-grid-layout | 0 | **51** | 0 | 14 | 0 | 0 |
 | case-006-typography | 0 | **3** | **51** | 11 | 0 | 0 |
-| case-007-border-styles | 0 | **206** | **33** | 35 | 0 | 0 |
+| case-007-border-styles | 0 | **200** | **33** | 35 | 0 | 0 |
 | case-008-box-shadow | 0 | **32** | **34** | 3 | 0 | 0 |
 | case-009-outline | 0 | **29** | **31** | 5 | 0 | 0 |
 | case-010-display-none | 0 | **66** | **60** | 21 | 19 | 0 |

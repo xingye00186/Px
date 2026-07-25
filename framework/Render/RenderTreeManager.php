@@ -603,6 +603,8 @@ class RenderTreeManager
         $rn->computedStyle = null;
         $rn->cachedFragment = null;
         $rn->cachedConstraintSpace = null;
+        $rn->cachedFragment2 = null;
+        $rn->cachedConstraintSpace2 = null;
     }
 
     /**
@@ -1019,6 +1021,9 @@ class RenderTreeManager
                         $renderNode->styleDirty = false;
                         $renderNode->cachedFragment = null;
                         $renderNode->cachedConstraintSpace = null;
+                        // 双槽缓存同步失效（几何变化后槽 2 的旧约束结果同样作废）
+                        $renderNode->cachedFragment2 = null;
+                        $renderNode->cachedConstraintSpace2 = null;
                     } else {
                         // 仅样式/内容变化 → 跳过布局
                         $renderNode->layoutDirty = false;
