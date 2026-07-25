@@ -341,10 +341,23 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
 
         // 对标 Px 中 Fragment.x/y 语义：绝对坐标（相对 layout 根，不累加）。
         // 因此使用 $calcX / $calcY 直接作为 Fragment 坐标（旧代码错误地减去 ancX/ancY 将其变为相对偏移）。
+        // 子树必须随定位平移（LayoutNG Fragment 树全绝对坐标）：此前 children 原样
+        // 传递，孙辈保留预布局旧坐标（case-011 子树 x=24 vs 定位后应 744+，
+        // 与 stackBlockChildren 的 translateFragmentTree 历史坑 C1 同族，复用同一平移函数）。
+        $oofDx = (int)$calcX - (int)$frag->getX();
+        $oofDy = (int)$calcY - (int)$frag->getY();
+        $oofChildren = $frag->children;
+        if (($oofDx !== 0 || $oofDy !== 0) && is_array($oofChildren) && count($oofChildren) > 0) {
+            $translated = [];
+            foreach ($oofChildren as $oofCh) {
+                $translated[] = \Px\Layout\FlexAlgorithm::translateFragmentTree($oofCh, $oofDx, $oofDy);
+            }
+            $oofChildren = $translated;
+        }
         return new PhysicalFragment(
             (int)$calcX, (int)$calcY, (int)max(0, $width), (int)max(0, $height),
             (int)$cs->visualWidth($width), (int)$cs->visualHeight($height),
-            1, 0, 0, $cs, $frag->children, $sourceRN,
+            1, 0, 0, $cs, $oofChildren, $sourceRN,
             0, 0, false,
             $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles
         );
