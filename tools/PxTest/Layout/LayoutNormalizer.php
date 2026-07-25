@@ -245,10 +245,12 @@ class LayoutNormalizer
             return $result; // 跳过 #text 节点
         }
 
-        // 累加父偏移：引擎 Fragment 坐标是相对父节点的，浏览器 dump 是绝对坐标。
-        // 展平前将当前节点的偏移加到子节点上，使 flatten 输出与浏览器一致的绝对坐标。
-        $currentOffsetX = $parentOffsetX + (int)($node['x'] ?? 0);
-        $currentOffsetY = $parentOffsetY + (int)($node['y'] ?? 0);
+        // 引擎 Fragment 树坐标已是**绝对坐标**（LayoutNG 语义：算法输出的
+        // Fragment.x/y 包含最终坐标，见 ConstraintSpace 头注）——直接使用，
+        // 不做父偏移累加。此前按旧相对坐标体系累加父链属错误嫁接，
+        // 导致双重累加（系统性 x 偏差 624px 类失真）。
+        $currentOffsetX = (int)($node['x'] ?? 0);
+        $currentOffsetY = (int)($node['y'] ?? 0);
 
         $element = $this->normalizeNode($node, $depth, $parentInherited, $parentDisplay);
         if ($element !== null) {

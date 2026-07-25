@@ -486,12 +486,10 @@ class LayoutDumpStep implements PipelineStepInterface
         // 检查当前节点
         $ds = $node['dataset'] ?? [];
         if (isset($ds['pxTestroot']) && (string)$ds['pxTestroot'] === 'true') {
-            // 零化根节点坐标：filterToTestRoot 提取的子树中，根节点位置
-            // 偏移（来自 App.vue 布局的 content-body padding）应置零，
-            // 使子节点坐标正确反映其在测试内容中的相对位置。
-            // 否则 extractContentSubtree 的锚归一化会双重减去偏移。
-            $node['x'] = 0;
-            $node['y'] = 0;
+            // 坐标保持**绝对**（LayoutNG 语义：Fragment 树全绝对坐标）——不再置零根 x/y：
+            // 此前置零仅改根不改子孙，制造根(0,0)+子孙绝对的混杂坐标系，
+            // 导致对比端父锚点归一化（extractContentSubtree 减父容器坐标）失真。
+            // 归一化职责归对比端单通道，过滤层只修剪树。
             // 提取 testroot 的子节点作为新的子树根节点，移除多余的 wrapper 层
             // 使引擎扁平化后的元素层级与浏览器一致（浏览器 batch ref 会提取 body 内内容，无此 wrapper）
             if (!empty($node['children'])) {
@@ -508,9 +506,8 @@ class LayoutDumpStep implements PipelineStepInterface
                 }
                 return [
                     'type' => 'div', 'tag' => 'div',
-                    // 保留 testroot 自身几何（w/h）与 dataset/styles：此前硬编码 0x0 丢失容器尺寸，
-                    // 导致根对比/锚点跨度校验失真（容器 0x0）。x/y 仍置零（坐标归一化）。
-                    'x' => 0, 'y' => 0,
+                    // 合成 wrapper 保留 testroot 自身几何（绝对坐标）与 dataset/styles。
+                    'x' => (int)($node['x'] ?? 0), 'y' => (int)($node['y'] ?? 0),
                     'w' => (int)($node['w'] ?? 0), 'h' => (int)($node['h'] ?? 0),
                     'dataset' => $node['dataset'] ?? [], 'styles' => $node['styles'] ?? [],
                     'children' => $node['children'],
