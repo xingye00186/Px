@@ -2,7 +2,7 @@
 
 > 基于 `LayoutNG架构迭代路线图_task-1d0100.md` + `LayoutNG 架构审查报告.md` + `Px 框架 LayoutNG 严格对标 Blink 审计报告.md` 对照当前代码审计，记录所有尚未解决的问题。
 > 审计时间：2026-07-26
-> 最后更新：2026-07-29（**四次真实性核验** @ HEAD=2dd2cdd9：逐项对照最新代码验证 24 项——**21 项真实有效、1 项已过时关闭（2.9）、2 项部分过时需修正描述（2.4/3.1）**；行号漂移同步；新增 3 项最新提交暴露的待办）
+> 最后更新：2026-07-29（**五次真实性核验** @ HEAD=8edf533b：独立抽查纠错——**2.11 已过时关闭**（四次核验只看 expandAll 默认参数 false，未看调用点：StyleTransform L104/StyleResolver L143/sfc-compiler L337 三处全传 true，@3f56927d 已启用）；另确认 LayoutOrchestrator L268 注释"启用 endMarginStrut/oofDescendants 消费"与代码不符（仍仅读 fragment，5.3 真实性加强）；补录 3 项遗漏靶点 6.4-6.6）
 
 ---
 
@@ -13,6 +13,7 @@
 | 编号 | 原描述 | 关闭理由（代码证据） |
 |---|---|---|
 | **2.9** | Flex Pass 2 性能回归 +400% | ❌ **已不真实**。commit `deb1ea36` 已治本：① 精确守卫 `$mainWidthAssigned = $isRow && $p2ItemW>0 && $p2OrigW!==$p2ItemW && $p2ItemW!==(int)$innerW && $p2HasChildTree`（FlexAlgorithm L783-784）——满宽单列 item 跳过（无守卫版本 +30% 回归已在批内捕获并修复）；② 双槽 Fragment 缓存（RenderNode.cachedFragment2/cachedConstraintSpace2 L49-50，对标 Blink NGBlockNode measure/layout cache pair）消除两阶段约束交替驱逐（cache thrash 实测 +27.7% 已消除）；③ bench 两轮验证 run1 AVG -0.04% / run2 +1.34%，方差带内通过。“+400% 回归待修复”状态不再成立 |
+| **2.11** | flex 简写展开仍被门控（expandFlex=false） | ❌ **已不真实**（五次核验纠错）。`expandAll()` 默认参数仍为 false，但**全部三处调用点均显式传 true**：StyleTransform L104、StyleResolver L143、sfc-compiler L337（commit `3f56927d` 三开关同步启用 + Level-31 真值护栏 6/6 + basis=0% 规范保真）。四次核验误将"默认参数 false"当作"仍门控"，属概念错乱（默认值≠实际生效值）。默认参数收敛为可选清理项归入 5.1 同批 |
 
 ### 部分过时项（描述需修正，核心仍有效）
 
@@ -45,6 +46,9 @@
 | **6.1** | 容器宽度/文本测量基础缺陷：text-align 标准化居中后 28 个 text-heavy case 净 diff 增加（误差重分布非回归，但暴露存量缺陷） | commit 2dd2cdd9 NOTE |
 | **6.2** | OOF 后代时序问题：case-011 真实结构含更深 OOF-descendant timing，35082a32 仅部分修复 | commit 35082a32 |
 | **6.3** | T1 preMarginStrut collapse-through 回传链：空元素 margin 穿透盒归属（Level-30 4/5，验收标准已固化在测试注） | commit 97468d08 |
+| **6.4** | case-012 `<br>` 后 inline-block 序列逐个断行：容器宽被算成单 span 宽（8px）→ 后续 span 每个单独一行（y 阶梯 25px 步进）；与 6.1 同族（IFC 容器宽度族） | 会话 2026-07-26 case-012 实证 |
+| **6.5** | case-005 grid 51 CRITICAL + 全局 2px 组件根 border round-trip（CS toExportArray↔构造器 border 丢失，elem[0].w engine=752 vs browser=750） | css-test 全量报告 |
+| **6.6** | css-standards 覆盖盲区：全部用内联 style + 叶子结构，不走 sfc-compiler/层叠链——样式系统层缺陷（注释剥离/透传/复合选择器/transform%）全部漏测；需补全管线用例 + OOF 带子节点 + text-align×inline-block 护栏 | 会话 2026-07-26 盲区分析 |
 
 ---
 
@@ -597,11 +601,11 @@
 | 状态 | 数量 | 编号 |
 |------|------|------|
 | ❌ 未实现 | 8 | 1.1, 1.2, 1.4, 2.1, 2.4(仅 5px 半边), 2.5, 5.1, 5.2 |
-| ⚠️ 部分实现 | 15 | 1.3, 2.2, 2.3, 2.6, 2.7, 2.8, 2.10, 2.11, 2.12, 2.13, 4.1, 5.3, 5.4, 5.5, 5.6 |
-| ✅ 已关闭 | 1 | 2.9（deb1ea36 治本，bench 验证通过） |
+| ⚠️ 部分实现 | 14 | 1.3, 2.2, 2.3, 2.6, 2.7, 2.8, 2.10, 2.12, 2.13, 4.1, 5.3, 5.4, 5.5, 5.6 |
+| ✅ 已关闭 | 2 | 2.9（deb1ea36 治本）、2.11（3f56927d 三调用点已启用，四次核验误判） |
 | 🔽 降级观察 | 1 | 3.1（双槽缓存已实现 Blink measure/layout pair 等价语义） |
-| 🆕 新增 | 3 | 6.1(容器宽/文本测量), 6.2(OOF 时序), 6.3(T1 preMarginStrut) |
-| **有效待解决合计** | **26**（23 存量 + 3 新增） | |
+| 🆕 新增 | 6 | 6.1(容器宽/文本测量), 6.2(OOF 时序), 6.3(T1 preMarginStrut), 6.4(br 断行/IFC 容器宽), 6.5(grid+border round-trip), 6.6(css-standards 盲区) |
+| **有效待解决合计** | **28**（22 存量 + 6 新增） | |
 
 ## 建议修复优先级
 
@@ -625,7 +629,7 @@
 | P11 | 2.7 / E7 | ChildLayoutProvider 真按需 | 深度改造，风险高 |
 | ~~P12~~ | ~~3.1 / P6~~ | ~~cachedFragment 缓存语义重构~~ | 🔽 **降级观察**（双槽已实现 Blink measure/layout pair 等价） |
 | P13 | 2.10 | Fragment 越界字段清理 | 不可变语义纯洁性 + 内存优化 |
-| P14 | 2.11 | flex 简写展开门控开启 | Phase 4A 已就绪，开启即可 |
+| ~~P14~~ | ~~2.11~~ | ~~flex 简写展开门控开启~~ | ✅ **已关闭**（五次核验：三调用点全传 true @3f56927d） |
 | P15 | 4.1 / P1 | style key 存储层归一化 | 运行时 fallback 已覆盖 |
 | P17 | 5.3 | LayoutResult 副产物未消费 | endMarginStrut/oofDescendants 消费链未打通 |
 | P18 | 5.4 | 交互状态未外置 | 双权威源隐患 |

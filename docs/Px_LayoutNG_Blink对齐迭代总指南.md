@@ -1,6 +1,7 @@
 # Px LayoutNG × Blink 对齐迭代总指南（权威入口）
 
-> **版本**：2026-07-28 ｜ **状态基线**：css-standards **330/330 (100%)**（33 套件，Level-31 新增），git dev @ `3f56927d`
+> **版本**：2026-07-29 ｜ **状态基线**：css-standards **330/330 (100%)**（33 套件）+ css-test 双模式 **CLI≡AOT 55/55**，git dev @ `8edf533b`
+> **待办清单权威源**：`LayoutNG_待解决问题清单.md`（五次核验，28 项有效）；本指南 §9 是其**执行排序视图**（批次化 + 验收标准），两者冲突时以清单真实性核验为准。
 > **本文档定位**：跨机器/跨会话续作的**唯一入口**。融合并取代以下 5 份文档的"导航职责"（原文档保留作深度参考）：
 >
 > | 原文档 | 角色 | 时效 |
@@ -22,11 +23,11 @@
 ```powershell
 cd <workspace>\Px
 git pull origin dev
-# ① 验证测试基线（预期 324/324；耗时 ~3min）
+# ① 验证测试基线（预期 330/330；耗时 ~3min）
 $extDir = (Split-Path (Get-Command php).Source) + "\ext"
 $files = Get-ChildItem tests\css-standards\Level-*\test_*.php; $total=0;$pass=0
 foreach ($f in $files) { $out = php -d extension_dir=$extDir $f.FullName 2>&1 | Select-String "Results:" | Select-Object -First 1; if ($out -match "Results: (\d+)/(\d+)") { $pass+=[int]$Matches[1]; $total+=[int]$Matches[2] } }
-"BASELINE: $pass/$total"   # 必须 = 324/324，否则先排查环境
+"BASELINE: $pass/$total"   # 必须 = 330/330，否则先排查环境
 # ② 验证 AOT 编译链
 .\build.bat reactive-bench   # 预期 "Build succeeded"
 # ③ 验证 bench 基线（与 tests/perf/bench_phase4_complete.json 对比，预期 ±3% 内）
@@ -257,17 +258,69 @@ run_all 补全 29-31。330/330，SFC 基线 PASSED，bench 方差带（新工具
 
 **全量审计文档（2026-07-24）状态覆盖**：其 §2 算法差距、§5 破损代码、G1-G10 能力项**均已完成**；仅存 §8 下述待推进项。
 
+**css-test 双模式对齐与真值迭代周期（2026-07-26，6 批次 11 commits，台账 §十九两条目）**：
+- 管线：PHP CLI（~94s）↔ AOT exe（~107s）↔ 浏览器三方对照；CLI≡AOT **55/55 逐元素一致**（compare_php_aot.php）；STACK_OVERFLOW 治本 /STACK:8388608
+- 框架/引擎根治 11 项：注释剥离、universal 误并、withOverride 透传、fontSize 穷尽、映射器 dataset、flex Pass2 定宽重布局+双槽缓存、OOF auto 尺寸三处（35082a32）、OOF 子树平移（13ed1238）、OOF transform translate %（19e6990d）、text-align IFC ApplyTextAlign + 编译期复合选择器（2dd2cdd9）
+- 对比链概念错乱根治 6 项（坐标双累加/px 单位/BGR/初始值/used-value/border-box）
+- 效果：case-003 2172→11、case-012 CRITICAL 179→112；css-standards 全程 330/330；★bench 8 节点全纪律（含一次 +30% 真回归当场治理）
+- 关键经验：**text-align 标准化暴露 28 case 容器宽/文本测量存量缺陷**（误差重分布非回归）；**运行时 ThemeProvider 无组件 scope**，裸 tag subject 规则必须走编译期通道
+
 ---
 
-## 9. 待推进清单（优先级降序 + 验收标准）
+## 9. 全盘对齐迭代计划（批次化，2026-07-29 重排）
 
-| # | 项 | 依据/验收 | 预估 |
-|---|---|---|---|
-| ~~1~~ | ~~preMarginStrut 父-首子 margin 穿透~~ | ✅ **已完成 2026-07-25 @357e8189**（见 §8 + 台账）：T1 验收达标，实现链改走“生产端剥离入自身 y + 消费端重提取”（与 endMarginStrut 对称，非 LayoutResult 字段回传）；快照仅 Level-11 T8 一处归属修正；bench 方差带 | — |
-| ~~2~~ | ~~flex 简写展开启用~~ | ✅ **已完成 2026-07-25 @3f56927d**（见 §8 + 台账）：三开关同步启用；历史双回滚根因（basis=0 绕过 automatic minimum）按 §9.3+§4.5 clamp 治本；Level-31 真值护栏 6/6；330/330；bench 方差带 | — |
-| 3 | 特性面扩测（P1 playbook） | float+行盒环绕、word-break/overflow-wrap、table 深水、position:sticky 边缘 | 每套 1 轮 |
-| 4 | Phase 4E Logical/Physical 坐标 | 路线图原文；待业务需求（RTL/竖排），6-10 周独立工程 | 延后 |
-| 5 | CssLength 默认值真治本（px(0)→auto） | 全算法行为反转，仅在大版本窗口考虑；当前 hasExplicitLength 已消除症状 | 延后 |
+> 排序原则：正确性破损 > 真值可验证的布局缺陷 > 语义正名（影响面广的基础） > 规范完备性 > 架构抽象 > 清理。
+> 每批次：探针→真值→三方对比→修复→全量 330 门→★bench（引擎变更）→css-test 双模式复验（样式/布局变更）→提交→台账+记忆。编号 = 待解决清单编号。
+
+### T1：正确性破损修复（P0，立即）
+
+| 项 | 内容 | 验收 |
+|---|---|---|
+| **5.2** | scroll bind 破损：RTM L963/L1378/L1382 写 RenderNode 已删字段（动态属性死路）→ 改 ScrollManager::setScrollTop/Left；PP L1256-1258 fallback 读已删字段 → null cachedFragment 直接 0 | multi-scroll app 滚动绑定实测 + 330 门 + bench |
+| **5.1** | MAX_RELAYOUT_ITERATIONS 死代码删除；顺手：expandAll 默认参数收敛（2.11 尾工）、L268 误导注释修正 | 纯清理，330 门 |
+
+### T2：css-test 真值迭代延续（通道已就绪，~94s/轮）
+
+| 项 | 内容 | 验收 |
+|---|---|---|
+| **6.4/6.1** | IFC 容器宽度族：case-012 `<br>` 后 span 逐个断行（容器宽被算成 8px）；28 个 text-heavy case 容器宽基数错 | case-012 y 阶梯族消除；text-heavy 净 diff 回落 |
+| **6.1b** | 文本测量/行高族：case-007 锚点跨度 474 vs 513（浏览器真值对照逐层归因） | case-007 CRITICAL 大幅回落 |
+| **6.2** | OOF 后代时序（case-011 残留）：OOF 子树内孙辈坐标在定位前已固化 | case-011 剩余 GEOMETRY 回落 |
+| **6.5** | case-005 grid 51C + 2px 组件根 border round-trip（toExportArray↔构造器） | case-005 CRITICAL→0；全局 752→750 |
+
+### T3：css-standards 盲区补强（6.6，护栏工程，与 T2 交替）
+
+- 全管线用例套件（走 sfc-compiler + 层叠链，非内联 style）：覆盖注释剥离/透传/复合选择器/特异性序
+- OOF 带子节点几何护栏（子树平移 + auto 尺寸包围盒 + transform%）
+- text-align × inline-block 行级偏移护栏（本批修复无 css-standards 用例）
+- 验收：新套件全过且能在回退实验中捕获已修缺陷（注入历史 bug 验证抦截力）
+
+### T4：语义正名链（E2 主线，高风险需真值+bench 双门，分小批）
+
+| 项 | 内容 | 依赖 |
+|---|---|---|
+| **1.1** | ConstraintSpace containerWidth（border-box）/contentWidth（包含块）正名：对标 Blink available_size/percentage_size 分离 | 先行 |
+| **1.2** | Fragment contentWidth = w - padding - border（对标 NGPhysicalBoxFragment::ContentWidth） | 1.1 后 |
+| **1.3** | buildChildSpace offX/offY 与 parentExplicitW 同步 | 1.1 后 |
+| **2.13** | flex-basis 关键字（min-content/max-content 用 computeMinMaxSizes 对应值） | 可独立插入 |
+
+### T5：margin 折叠完备 + BFC 正向传递
+
+| 项 | 内容 |
+|---|---|
+| **2.8+6.3** | empty block 自折叠（is_self_collapsing，§8.3.1 场景 2）+ T1 preMarginStrut 回传链（严格按 Level-30 测例内固化验收标准，避免盲实现回滚） |
+| **2.5** | BFC 标志正向传递：createsBFC 子项逆向检测 → 父经 isFormattingContextRoot 告知（链已在 357e8189 铺设）；补 contain 检测 |
+
+### T6：架构收敛（每项独立小批，低优先稳步推进）
+
+2.1 relative 独立 post-process → 5.3+5.6 LayoutResult 副产物消费链（endMarginStrut/oofDescendants 冒泡） → 2.2 percent-height 统一两阶段 → 2.3 inline 胶水收敛 → 2.4 useOrig 5px 启发式清理 → 5.4 InteractionState 外置 → 2.10 Fragment 越界字段 → 4.1 style key 归一化 → 5.5 StylePool key
+
+### 长期独立立项（不入常规批次）
+
+- **1.4/E1** Fragment 相对坐标翻转（深度架构，translateFragmentTree 去留随本项；2.6 OOF 双重布局、2.7 真按需与之关联）
+- **2.12** FormattingContext 独立抽象（与 2.5/2.8 统一设计，建议在 T5 完成后评估）
+- **Phase 4E** Logical/Physical（待 RTL/竖排需求）；**CssLength px(0)→auto 真治本**（大版本窗口）
+- 特性面扩测（float 行盒环绕/word-break/table 深水/sticky 边缘）按 P1 playbook 穿插
 
 ---
 
