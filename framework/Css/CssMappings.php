@@ -540,9 +540,9 @@ class CssMappings
         if (preg_match('/^(\d+(\.\d+)?)$/', $value, $m)) {
             return $m[1];
         }
-        // px value
+        // px 保留单位后缀（与 CssValueParser::parseLineHeight 同语义，区分 number/length）
         if (str_ends_with($value, 'px')) {
-            return (string)(int)$value;
+            return ((string)(int)$value) . 'px';
         }
         // em value: return multiplier (CSS: line-height:1.6em = 1.6 × font-size)
         if (str_ends_with($value, 'em')) {

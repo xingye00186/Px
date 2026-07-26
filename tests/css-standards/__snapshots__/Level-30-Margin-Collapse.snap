@@ -1,0 +1,38 @@
+@generated 2026-07-26 15:36:54
+=== Test: 父-首子 margin-top 子绝对位置 ===
+Frame #1 events=0 detail=normal
+div (0,0 320x50) ov=hidden
+  div (0,20 300x30)
+    div (0,20 300x30) text="A"
+
+---
+
+=== Test: border-top 阻断父子折叠 ===
+Frame #1 events=0 detail=normal
+div (0,0 320x51) ov=hidden
+  div (0,0 300x51) bw=1
+    div (0,21 300x30) text="B"
+
+---
+
+=== Test: 兄弟 margin 折叠 max(30,20) ===
+Frame #1 events=0 detail=normal
+div (0,0 320x90) ov=hidden
+  div (0,0 320x30) text="C"
+  div (0,60 320x30) text="D"
+
+---
+
+=== Test: 负 margin 折叠 30+(-10) ===
+Frame #1 events=0 detail=normal
+div (0,0 320x80) ov=hidden
+  div (0,0 320x30) text="E"
+  div (0,50 320x30) text="F"
+
+---
+
+=== Test: BFC 阻断父-首子穿透 ===
+Frame #1 events=0 detail=normal
+div (0,0 320x50) ov=hidden
+  div (0,0 300x50) ov=hidden
+    div (0,20 300x30) text="G"

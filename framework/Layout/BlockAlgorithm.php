@@ -15,6 +15,14 @@ class BlockAlgorithm extends LayoutAlgorithm
 {
     private const INLINE_TYPES = ['#text','text','span','b','strong','em','i','code','br','a','label','abbr','cite','dfn','kbd','mark','q','samp','small','sub','sup','time','var'];
 
+    /**
+     * 最近一次 stackBlockChildren 的 IFC 流末端（行盒下沿绝对 y）。
+     * 对标 Blink：行盒本身是 fragment 参与 intrinsic block size；Px 行盒非
+     * fragment（strut 擑高的空间不在 item 子 fragment 几何内），auto-height
+     * 需额外消费此流末端，否则 strut 撑高被丢弃（_gt_linestrut T2/T3）。
+     */
+    private int $lastInlineFlowEnd = 0;
+
     private static function isInlineType(string $type): bool
     {
         return in_array($type, self::INLINE_TYPES, true);
@@ -375,6 +383,9 @@ class BlockAlgorithm extends LayoutAlgorithm
             }
         }
         $stackedChildren = [];
+        // 重置 IFC 流末端（子项预布局已在上方完成，此后 stack/flush 均属本层；
+        // 防共享算法实例上次布局的残留值污染本容器 auto-height）。
+        $this->lastInlineFlowEnd = 0;
         if (count($children) > 0 && ($displayVal === 'block' || $displayVal === 'flow-root')) {
             // Check percent-height children
             $hasPercentChild = false;
@@ -438,6 +449,9 @@ class BlockAlgorithm extends LayoutAlgorithm
                 }
                 if ($bottom > $maxBottom) $maxBottom = $bottom;
             }
+            // IFC 流末端（行盒下沿）参与：行盒 strut 擑高的空间不在 item 子
+            // fragment 内（Blink 行盒是 fragment，Px 的等价消费通道）。
+            if ($this->lastInlineFlowEnd > $maxBottom) $maxBottom = $this->lastInlineFlowEnd;
             $h = max(0, $maxBottom - $y);
             // CSS 2.2 $10.6.3: auto-height 应包含 padding-bottom + border-bottom
             // 子元素 stack 到 maxBottom，下方 padding 和 border 应当计入高度
@@ -775,11 +789,17 @@ class BlockAlgorithm extends LayoutAlgorithm
         // P4: 委派给 InlineAlgorithm（对标 Blink：块算法将 IFC 委派给内联算法）
         $availW = $containerW; if ($availW <= 0) $availW = $parentW; if ($availW <= 0) $availW = 10000;
         // text-align 取 IFC 容器样式（继承属性，ComputedStyle 已层叠），
-        // 传入 InlineAlgorithm 行级 ApplyTextAlign（CSS 2.2 §16.2 含 inline-block）。
+        // 传入 InlineAlgorithm 行级 ApplyTextAlign（CSS 2.2 §16.2 含 inline-block）；
+        // 容器样式同时供行盒 root strut 字体 metrics（§10.8.1）。
         $ta = $s?->textAlign?->value ?? 'start';
-        $ir = InlineAlgorithm::layoutInlineRun($inlineBuffer, $availW, $parentX, $stackY, $padLeft, $ta);
+        $ir = InlineAlgorithm::layoutInlineRun($inlineBuffer, $availW, $parentX, $stackY, $padLeft, $ta, $s);
         foreach ($ir['items'] as $item) $result[] = $item;
         $stackY = $ir['nextY'];
+        // 记录 IFC 流末端（行盒下沿）供 auto-height 消费：strut 擑高的行盒空间
+        // 不在 item 子 fragment 几何内（Blink 行盒是 fragment，此为 Px 等价通道）。
+        // AOT：by-ref int 参数赋 typed 属性必须显式 (int) 强转。
+        $flowEnd = (int)$stackY;
+        if ($flowEnd > $this->lastInlineFlowEnd) $this->lastInlineFlowEnd = $flowEnd;
         $inlineBuffer = [];
     }
 

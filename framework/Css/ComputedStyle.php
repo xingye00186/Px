@@ -285,7 +285,7 @@ class ComputedStyle
             'aspectRatio' => 0.0,
             'left' => CssLength::px(0), 'top' => CssLength::px(0), 'right' => CssLength::px(0), 'bottom' => CssLength::px(0),
             'fontFamily' => 'Segoe UI',
-            'lineHeight' => 0,
+            'lineHeight' => -1,
             'textIndent' => 0,
             'borderTopWidth' => 0, 'borderRightWidth' => 0, 'borderBottomWidth' => 0, 'borderLeftWidth' => 0,
             'borderColor' => 0, 'borderStyle' => 'none',
@@ -407,8 +407,33 @@ class ComputedStyle
         } else {
             $this->fontSize = self::DEFAULT_FONT_SIZE;
         }
-        // lineHeight: always assign (was never assigned before, causing typed property error)
-        $this->lineHeight = isset($d['lineHeight']) ? self::safeInt($d['lineHeight']) : 0;
+        // lineHeight: used value 解析（对标 Blink ComputedLineHeight）：
+        //   '24px' → 24；'1.5'（number，×fontSize）→ round(1.5*fs)；'' (normal) → -1 哨兵。
+        // 哨兵必须 -1 非 0：显式 line-height:0 与 normal 必须可区分（Blink 三态
+        // normal|number|length），且继承链只传 int used 值——raw 声明不随继承传播，
+        // 0 哨兵会使继承的显式 0 被误判 normal（css-test 全局 *{line-height:0}）。
+        // 此前 safeInt('1.5')→1px、'24px'/'24' 形态不分 —— 倍数行高全部塔陷。
+        if (isset($d['lineHeight'])) {
+            $lhRaw = $d['lineHeight'];
+            if (is_string($lhRaw) && $lhRaw !== '') {
+                if (str_ends_with($lhRaw, 'px')) {
+                    $this->lineHeight = (int)$lhRaw;
+                } elseif (is_numeric($lhRaw)) {
+                    // 无单位倍数（含 em/% 已归一为倍数）：used = number × font-size
+                    $this->lineHeight = (int)round((float)$lhRaw * $this->fontSize);
+                } else {
+                    $this->lineHeight = self::safeInt($lhRaw, -1);
+                }
+            } elseif (is_int($lhRaw) || is_float($lhRaw)) {
+                // 继承/round-trip 已解析值（含 -1 normal 哨兵）直接保留
+                $this->lineHeight = (int)$lhRaw;
+            } else {
+                // '' (normal 声明) → 哨兵
+                $this->lineHeight = -1;
+            }
+        } else {
+            $this->lineHeight = -1;
+        }
         if (isset($d['fontWeight'])) {
             $this->fontWeight = self::safeInt($d['fontWeight'], 400);
             $this->bold = $this->fontWeight >= 600;

@@ -365,8 +365,11 @@ class CssValueParser
         if (preg_match('/^(\d+(\.\d+)?)$/', $value, $m)) {
             return $m[1];
         }
+        // px 保留单位后缀：与无单位倍数形态区分（CSS §10.8.1 number vs length
+        // 语义不同；此前 '24px'→'24' 与 'line-height:24' 无法区分，单位语义丢失，
+        // ComputedStyle 端 safeInt 再把 '1.5' 截成 1px —— 双重数据要素破坏）。
         if (str_ends_with($value, 'px')) {
-            return (string)(int)$value;
+            return ((string)(int)$value) . 'px';
         }
         if (str_ends_with($value, 'em')) {
             return (string)(float)$value;

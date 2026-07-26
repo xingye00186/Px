@@ -1,0 +1,40 @@
+@generated 2026-07-26 15:36:54
+=== Test: float:left 后续 block 盒 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60) ov=hidden
+  div (100,0 300x30) text="B"
+  div (0,0 100x60) text="F"
+
+---
+
+=== Test: float left+right 同行 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x60) ov=hidden
+  div (0,0 100x60) text="L"
+  div (320,0 80x40) text="R"
+
+---
+
+=== Test: clear:both 下移到 float 底 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x80) ov=hidden
+  div (0,60 400x20) text="C"
+  div (0,0 100x60) text="F"
+
+---
+
+=== Test: 两个 float:left 并排 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x80) ov=hidden
+  div (0,60 400x20)
+  div (0,0 100x60) text="A"
+  div (100,0 100x60) text="B"
+
+---
+
+=== Test: float 超宽换到下一行 ===
+Frame #1 events=0 detail=normal
+div (0,0 400x140) ov=hidden
+  div (0,120 400x20)
+  div (0,0 250x60) text="A"
+  div (0,60 250x60) text="B"

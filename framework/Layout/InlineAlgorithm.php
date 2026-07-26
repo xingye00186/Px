@@ -176,11 +176,38 @@ class InlineAlgorithm extends LayoutAlgorithm
      * @param int $startX 起始 X
      * @param int $startY 起始 Y
      * @param int $padLeft 左 padding
+     * @param string $textAlign 容器 text-align（行级 ApplyTextAlign）
+     * @param ComputedStyle|null $containerStyle IFC 容器样式（strut 字体 metrics 源）
      * @return array{items: PhysicalFragment[], nextY: int}
      */
-    public static function layoutInlineRun(array $items, int $availableW, int $startX, int $startY, int $padLeft = 0, string $textAlign = 'start'): array
+    public static function layoutInlineRun(array $items, int $availableW, int $startX, int $startY, int $padLeft = 0, string $textAlign = 'start', ?ComputedStyle $containerStyle = null): array
     {
         if (empty($items)) return ['items' => [], 'nextY' => $startY];
+
+        // 行盒 root inline box strut（对标 Blink NGInlineBoxState 根盒，CSS 2.2
+        // §10.8.1：每个行盒含容器字体 strut，即使行内只有 atomic inline）。
+        // 字体 metrics 用 Segoe UI 实比（asc≈0.919×em-box、全高 1.363×fs，真值
+        // _gt_linestrut T1-T7 反解）；half-leading = (lineHeight - fontHeight)/2 可负，
+        // 负分量在 LineBreaker 的 item max 中自然淘汰（line-height:0 → 行高=item 高）。
+        $strutA = 0;
+        $strutD = 0;
+        if ($containerStyle !== null) {
+            $lhUsed = (int)$containerStyle->getLineHeight();
+            // 守卫（宁窄勿宽）：仅容器**显式** line-height > 0 时注入 strut。
+            // normal(-1)/显式 0 不注入：normal 情形目前被"universal 豁免 #component
+            // 占位"存量缺陷污染（组件根未受 *{line-height:0} 而误判 normal，
+            // strut descent 泄漏 +3/4px 链，case-003 实测）；normal strut 待 universal
+            // 层叠序治本后解锁（清单 6.1 子项）。显式值情形（.bx-desc line-height:1.5）
+            // 按 CSS 2.2 §10.8.1 完整 half-leading 模型，_gt_linestrut T2/T5/T8 精确。
+            if ($lhUsed > 0) {
+                $cfs = (int)($containerStyle->getFontSize() ?: 16);
+                $fontAscent = (int)round($cfs * 1.088);   // Segoe UI ascent/em
+                $fontDescent = (int)round($cfs * 0.275);  // Segoe UI descent/em
+                $halfLeading = (int)round(($lhUsed - ($fontAscent + $fontDescent)) / 2);
+                $strutA = $fontAscent + $halfLeading;
+                $strutD = $fontDescent + $halfLeading;
+            }
+        }
 
         // Step 1: 构建 InlineItem 序列（对标 Blink InlineItemsBuilder）
         $inlineItems = [];
@@ -216,7 +243,7 @@ class InlineAlgorithm extends LayoutAlgorithm
         // Step 2: 行断裂（对标 Blink NGLineBreaker）
         $effectiveAvail = max(1, $availableW - $padLeft);
         $defaultLH = 19; // 16 * 1.2 ≈ 19
-        $lines = LineBreaker::breakLines($inlineItems, $effectiveAvail, $defaultLH);
+        $lines = LineBreaker::breakLines($inlineItems, $effectiveAvail, $defaultLH, $strutA, $strutD);
 
         // Step 3: 按行放置（对标 Blink NGPhysicalLineBoxFragment 布局）
         $result = [];

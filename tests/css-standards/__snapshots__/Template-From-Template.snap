@@ -1,4 +1,4 @@
-@generated 2026-07-25 13:53:14
+@generated 2026-07-26 15:36:53
 === Test: [Template] absolute positioned div ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
@@ -81,11 +81,11 @@ div (0,0 200x300) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 600x50) [dsp=flex]
   div (0,0 150x30) fg=1
-    #text (0,0 600x19) [dsp=inline] text="A"
+    #text (0,0 150x19) [dsp=inline] text="A"
   div (150,0 150x30) fg=1
-    #text (150,0 600x19) [dsp=inline] text="B"
+    #text (150,0 150x19) [dsp=inline] text="B"
   div (300,0 300x30) fg=2
-    #text (300,0 600x19) [dsp=inline] text="C"
+    #text (300,0 300x19) [dsp=inline] text="C"
 
 ---
 
@@ -193,7 +193,7 @@ div (0,0 300x130)
 Frame #1 events=0 detail=normal
 div (0,0 400x200) [pos=relative]
   div (125,60 150x80) [pos=absolute]
-    #text (0,0 150x19) [dsp=inline] text="Center"
+    #text (125,60 150x19) [dsp=inline] text="Center"
 
 ---
 
@@ -201,9 +201,9 @@ div (0,0 400x200) [pos=relative]
 Frame #1 events=0 detail=normal
 div (0,0 300x150) [pos=relative]
   div (20,20 150x80) [pos=absolute]
-    #text (0,0 150x19) [dsp=inline] text="Layer 1"
+    #text (20,20 150x19) [dsp=inline] text="Layer 1"
   div (60,50 150x80) [pos=absolute]
-    #text (0,0 150x19) [dsp=inline] text="Layer 2"
+    #text (60,50 150x19) [dsp=inline] text="Layer 2"
 
 ---
 
@@ -411,9 +411,9 @@ div (0,0 400x40) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 500x40) [dsp=flex]
   div (0,0 200x40)
-    #text (0,0 500x19) [dsp=inline] text="Basis 200"
+    #text (0,0 200x19) [dsp=inline] text="Basis 200"
   div (200,0 300x40) fg=1
-    #text (200,0 500x19) [dsp=inline] text="Fill"
+    #text (200,0 300x19) [dsp=inline] text="Fill"
 
 ---
 
@@ -501,7 +501,7 @@ div (0,0 224x128) [dsp=grid]
 Frame #1 events=0 detail=normal
 div (0,0 200x200)
   div (30,40 100x50) [pos=fixed]
-    #text (0,0 100x19) [dsp=inline] text="Fixed"
+    #text (30,40 100x19) [dsp=inline] text="Fixed"
   div (0,0 200x40)
     #text (0,0 200x19) [dsp=inline] text="Normal"
 
@@ -511,9 +511,9 @@ div (0,0 200x200)
 Frame #1 events=0 detail=normal
 div (0,0 400x300) [pos=relative]
   div (50,50 200x150) [pos=absolute]
-    #text (0,0 200x19) [dsp=inline] text="Abs"
+    #text (50,50 200x19) [dsp=inline] text="Abs"
   div (100,100 100x80) [pos=absolute]
-    #text (0,0 100x19) [dsp=inline] text="Abs2"
+    #text (100,100 100x19) [dsp=inline] text="Abs2"
 
 ---
 
@@ -531,7 +531,7 @@ div (0,0 300x150)
 Frame #1 events=0 detail=normal
 div (0,0 500x400)
   div (-120,-90 100x60) [pos=absolute]
-    #text (0,0 100x19) [dsp=inline] text="Abs"
+    #text (-120,-90 100x19) [dsp=inline] text="Abs"
 
 ---
 
@@ -644,7 +644,7 @@ div (0,0 300x50) [dsp=flex]
   div (0,0 100x30)
     #text (0,0 300x19) [dsp=inline] text="Min"
   div (100,0 200x30) fg=1
-    #text (100,0 300x19) [dsp=inline] text="Fill"
+    #text (100,0 200x19) [dsp=inline] text="Fill"
 
 ---
 
@@ -654,7 +654,7 @@ div (0,0 500x50) [dsp=flex]
   div (0,0 200x30)
     #text (0,0 500x19) [dsp=inline] text="Max"
   div (200,0 300x30) fg=1
-    #text (200,0 500x19) [dsp=inline] text="Fill"
+    #text (200,0 300x19) [dsp=inline] text="Fill"
 
 ---
 
@@ -866,9 +866,9 @@ div (0,0 800x102)
     #text (0,16 800x19) [dsp=inline] text="Article Title"
   div (0,51 800x51) [dsp=flex]
     div (0,51 585x51) fg=3
-      #text (0,51 800x19) [dsp=inline] text="Article content paragraph here."
+      #text (0,52 585x19) [dsp=inline] text="Article content paragraph here."
     div (605,51 195x51) fg=1
-      #text (621,67 768x19) [dsp=inline] text="Sidebar Widget"
+      #text (621,67 163x19) [dsp=inline] text="Sidebar Widget"
 
 ---
 
@@ -876,7 +876,7 @@ div (0,0 800x102)
 Frame #1 events=0 detail=normal
 div (0,0 800x400) [dsp=flex] bw=1
   div (0,0 265x400) scroll ch=35 cw=233 maxScroll=0 st=0 sl=0 ov=auto fg=1
-    #text (16,16 766x19) [dsp=inline] text="Left Panel"
+    #text (16,16 233x19) [dsp=inline] text="Left Panel"
   div (265,0 4x400)
   div (269,0 530x400) scroll ch=35 cw=498 maxScroll=0 st=0 sl=0 ov=auto fg=2
-    #text (285,16 766x19) [dsp=inline] text="Right Panel"
+    #text (285,16 498x19) [dsp=inline] text="Right Panel"
