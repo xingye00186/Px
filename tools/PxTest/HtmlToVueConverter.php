@@ -71,6 +71,10 @@ class HtmlToVueConverter
         // 提取所有 <style> 块的内容
         if (preg_match_all('/<style[^>]*>([\s\S]*?)<\/style>/i', $html, $matches)) {
             foreach ($matches[1] as $css) {
+                // CSS Syntax §4：注释在 tokenize 前剥离（否则注释前缀混入下一规则的
+                // selector，使 html,body 基线过滤失效、baseline 泄漏进 .vue，且破坏
+                // 后续 * reset 识别——asset-parity 丢失根因）。
+                $css = preg_replace('#/\*[\s\S]*?\*/#', '', $css);
                 // 按规则拆分
                 $rules = preg_split('/\}/', $css);
                 foreach ($rules as $rule) {
@@ -83,14 +87,12 @@ class HtmlToVueConverter
                         $declarations = trim($rm[2]);
 
                         // 从 html,body 基线提取 font-family（用于 .vue 无 html 的环境）
-                        if (preg_match('/^(html|body|\*)\s*(,\s*(html|body|\*)\s*)*$/i', $selector)) {
+                        if (preg_match('/^(html|body)\s*(,\s*(html|body)\s*)*$/i', $selector)) {
                             if (preg_match('/font-family\s*:\s*([^;}]+)/i', $declarations, $ffm)) {
                                 $fontFamily = trim($ffm[1]);
                             }
-                            // 检查是否包含 baseline 属性
-                            if (preg_match('/\b(width|height|font-size|background)\s*:/i', $declarations)) {
-                                continue; // 跳过 html,body 基线
-                            }
+                            // html,body 视口基线永远跳过（引擎无 html/body 语义）
+                            continue;
                         }
 
                         $styles[] = $selector . ' {' . $declarations . '}';
