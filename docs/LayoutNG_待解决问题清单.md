@@ -49,6 +49,7 @@
 | **6.4** | case-012 `<br>` 后 inline-block 序列逐个断行：容器宽被算成单 span 宽（8px）→ 后续 span 每个单独一行（y 阶梯 25px 步进）；与 6.1 同族（IFC 容器宽度族） | 会话 2026-07-26 case-012 实证 |
 | **6.5** | case-005 grid 51 CRITICAL + 全局 2px 组件根 border round-trip（CS toExportArray↔构造器 border 丢失，elem[0].w engine=752 vs browser=750） | css-test 全量报告 |
 | **6.6** | css-standards 覆盖盲区：全部用内联 style + 叶子结构，不走 sfc-compiler/层叠链——样式系统层缺陷（注释剥离/透传/复合选择器/transform%）全部漏测；需补全管线用例 + OOF 带子节点 + text-align×inline-block 护栏 | 会话 2026-07-26 盲区分析 |
+| **6.7** | 全量 vs 单跑结果不一致（case-012: 211/269、case-014: 174/223）：同进程连续渲染 55 case 时 patch 路径与首渲路径几何不同——增量布局一致性缺陷（gen 全烘焙无运行时样式注册，已排除 ThemeProvider 污染；疑 RenderNode 复用/双槽缓存/脏位跨 case 残留） | 会话 2026-07-26 双跑实证 |
 
 ---
 
