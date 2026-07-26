@@ -285,7 +285,9 @@ class ComputedStyle
             'aspectRatio' => 0.0,
             'left' => CssLength::px(0), 'top' => CssLength::px(0), 'right' => CssLength::px(0), 'bottom' => CssLength::px(0),
             'fontFamily' => 'Segoe UI',
-            'lineHeight' => -1,
+            // lineHeight 故意不设默认：normal 哨兵 -1 只存在于 typed 属性（else 分支），
+            // 若放 defaults 会随 merged 进 rawDeclarations → 导出/round-trip/归一化链
+            // 把 -1 当 number 声明（×fontSize=-16px）且 AOT Variant 分支分叉（双模式破裂）。
             'textIndent' => 0,
             'borderTopWidth' => 0, 'borderRightWidth' => 0, 'borderBottomWidth' => 0, 'borderLeftWidth' => 0,
             'borderColor' => 0, 'borderStyle' => 'none',
