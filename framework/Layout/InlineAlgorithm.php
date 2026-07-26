@@ -197,15 +197,18 @@ class InlineAlgorithm extends LayoutAlgorithm
             //   显式值（>0 含 px/number）→ half-leading 模型；
             //   normal（-1 哨兵）→ 字体自然高（half-leading=0）；
             //   显式 0 → strut 负分量被 item max 淘汰（行高=item 高）。
-            // （历史守卫"normal 不注入"已解除：根因是 6 个 case 资产 HTML→vue
-            // 转换丢失 *{line-height:0} reset 造成输入不对等，已补齐资产）。
+            // 整数确定性算术（对标 Blink LayoutUnit 定点思想）：不依赖 round()
+            // 库语义——PHP round 与 AOT Variant 链的半数/浮点行为分叉曾造成
+            // 双模式 ≤3px 行盒级残差（compare_php_aot 20 case）。
             $cfs = (int)($containerStyle->getFontSize() ?: 16);
-            $fontAscent = (int)round($cfs * 1.088);   // Segoe UI ascent/em
-            $fontDescent = (int)round($cfs * 0.275);  // Segoe UI descent/em
+            $fontAscent = intdiv($cfs * 1088 + 500, 1000);   // Segoe UI ascent/em ≈1.088
+            $fontDescent = intdiv($cfs * 275 + 500, 1000);   // Segoe UI descent/em ≈0.275
             if ($lhUsed < 0) {
                 $lhUsed = $fontAscent + $fontDescent; // normal = 字体自然高
             }
-            $halfLeading = (int)round(($lhUsed - ($fontAscent + $fontDescent)) / 2);
+            // round-half-away-from-zero 的纯整数形式：round(num/2)
+            $hlNum = $lhUsed - ($fontAscent + $fontDescent);
+            $halfLeading = intdiv($hlNum >= 0 ? $hlNum + 1 : $hlNum - 1, 2);
             $strutA = $fontAscent + $halfLeading;
             $strutD = $fontDescent + $halfLeading;
         }

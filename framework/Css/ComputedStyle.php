@@ -421,8 +421,11 @@ class ComputedStyle
                 if (str_ends_with($lhRaw, 'px')) {
                     $this->lineHeight = (int)$lhRaw;
                 } elseif (is_numeric($lhRaw)) {
-                    // 无单位倍数（含 em/% 已归一为倍数）：used = number × font-size
-                    $this->lineHeight = (int)round((float)$lhRaw * $this->fontSize);
+                    // 无单位倍数（含 em/% 已归一为倍数）：used = number × font-size。
+                    // 整数确定性算术（milli 定点）：不依赖 round() 库语义——
+                    // PHP/AOT Variant 的 round 半数行为分叉曾造成双模式行盒残差。
+                    $lhMilli = (int)((float)$lhRaw * 1000 + 0.5);
+                    $this->lineHeight = intdiv($lhMilli * $this->fontSize + 500, 1000);
                 } else {
                     $this->lineHeight = self::safeInt($lhRaw, -1);
                 }
