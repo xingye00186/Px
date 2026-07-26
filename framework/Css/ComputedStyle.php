@@ -622,7 +622,15 @@ class ComputedStyle
         );
 
         // border-width
+        // A 类默认值陷阱：defaults 的 borderWidth=CssRect(0,0,0,0) 使 $bwRaw 非 0（对象），
+        // 短路 border 简写 fallback——编译期烘焙数组不走 parseInlineStyle 展开链，
+        // border:1px solid 不会产出 borderWidth 显式键，导致 mc-container 等 auto 宽
+        // 未扣 border（E 712 vs Blink 740，case-016 实测）。仅当 borderWidth 是
+        // 非零显式值时才阻断 fallback。
         $bwRaw = $d['borderWidth'] ?? 0;
+        $bwRawIsZeroDefault = ($bwRaw instanceof CssRect)
+            && (float)$bwRaw->top->toPx() === 0.0 && (float)$bwRaw->right->toPx() === 0.0
+            && (float)$bwRaw->bottom->toPx() === 0.0 && (float)$bwRaw->left->toPx() === 0.0;
         // CSS border/border-bottom/border-top/border-left/border-right 简写未展开时提取宽度
         $borderFallback = function(string $key, string $camelKey = '') use ($d): int {
             $v = $d[$key] ?? ($camelKey !== '' ? ($d[$camelKey] ?? null) : null);
@@ -632,7 +640,7 @@ class ComputedStyle
             }
             return 0;
         };
-        if ($bwRaw === 0 && $borderFallback('border')) {
+        if (($bwRaw === 0 || $bwRawIsZeroDefault) && $borderFallback('border')) {
             $bwRaw = $borderFallback('border');
         }
         if ($bwRaw instanceof CssRect) {
@@ -659,8 +667,17 @@ class ComputedStyle
         $bbw = $d['borderBottomWidth'] ?? null; $bbwV = $bbw !== null ? self::safeInt($bbw) : 0; $this->borderBottomWidth = $bbwV !== 0 ? $bbwV : self::safeInt($borderFallback('border-bottom', 'borderBottom') ?: $bw);
         $blw = $d['borderLeftWidth'] ?? null; $blwV = $blw !== null ? self::safeInt($blw) : 0; $this->borderLeftWidth = $blwV !== 0 ? $blwV : self::safeInt($borderFallback('border-left', 'borderLeft') ?: $bw);
 
-        // border color
+        // border color（同样支持从简写提取：defaults borderColor=0 短路同族陷阱）
         $bc = self::safeInt($d['borderColor'] ?? 0);
+        if ($bc === 0 && isset($d['border']) && is_string($d['border'])) {
+            $bShortC = $d['border'];
+            if (preg_match('/^\d+\|(\d+)\|\w+$/', $bShortC, $bcm)) {
+                $bc = (int)$bcm[1]; // 管道编码 width|color|style
+            } elseif (preg_match('/#([0-9a-fA-F]{3,8})\b/', $bShortC, $bcm2)) {
+                $cl = CssValueParser::parseHexColor('#' . $bcm2[1]);
+                $bc = is_numeric($cl) ? (int)$cl : $bc;
+            }
+        }
         $this->borderColor = $bc;
         $this->borderTopColor = self::safeInt($d['borderTopColor'] ?? $bc);
         $this->borderRightColor = self::safeInt($d['borderRightColor'] ?? $bc);
@@ -668,8 +685,19 @@ class ComputedStyle
         $this->borderLeftColor = self::safeInt($d['borderLeftColor'] ?? $bc);
 
         // border style (handle CssKeyword objects from parseIdent)
+        // CSS §8.5.4：border 简写设置 width/style/color 三分量——未展开时从简写
+        // 提取 style（'1px solid #xxx' 或管道编码 '1|色|solid'），否则 borderStyle
+        // 恒 'none' 与宽度提取不自洽（导出/paint 层分歧）。
         $bsRaw = $d['borderStyle'] ?? '';
         $bs = is_object($bsRaw) ? ($bsRaw->value ?? 'none') : (string)$bsRaw;
+        if (($bs === '' || $bs === 'none') && isset($d['border']) && is_string($d['border'])) {
+            $bShort = $d['border'];
+            if (preg_match('/\b(solid|dashed|dotted|double|groove|ridge|inset|outset)\b/i', $bShort, $bsm)) {
+                $bs = strtolower($bsm[1]);
+            } elseif (preg_match('/^\d+\|\d+\|(\w+)$/', $bShort, $bsm2)) {
+                $bs = strtolower($bsm2[1]); // 管道编码 width|color|style
+            }
+        }
         $this->borderStyle = $bs;
         $btsRaw = $d['borderTopStyle'] ?? $bs;
         $this->borderTopStyle = is_object($btsRaw) ? ($btsRaw->value ?? $bs) : (string)$btsRaw;
