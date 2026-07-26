@@ -1363,6 +1363,43 @@ class CssMappings
             }
         }
 
+        // --- Third pass: class + type-selector subject (CSS Selectors L3)：
+        //   .first <comb> tag { }（如 .rel-row div）。subject 为类型选择器，
+        //   特异性 (0,0,1,1) 低于类选择器，匹配端在 class 规则前合并。
+        //   tag 侧限小写字母开头（排除 .cls/:pseudo/#id）。
+        if (preg_match_all('#\.([a-zA-Z0-9_-]+)\s*([>+~ ])\s*([a-z][a-z0-9]*)\s*\{([^}]*)\}#s', $styleCss, $tagRules, PREG_SET_ORDER)) {
+            foreach ($tagRules as $rule) {
+                $firstClass = $rule[1];
+                $combinator = trim($rule[2]);
+                $secondTag = $rule[3];
+                $body = $rule[4];
+                $props = [];
+
+                foreach (self::PROPERTY_MAP as $cssProp => $map) {
+                    $pattern = '~' . preg_quote($cssProp, '~') . '\s*:\s*([^;]+)~';
+                    if (preg_match($pattern, $body, $m)) {
+                        $value = trim($m[1]);
+                        if (count($variables) > 0) {
+                            $value = CssValueParser::resolveCSSVariables($value, $variables);
+                        }
+                        $props[$map['key']] = self::dispatchParser($map['parser'], $value);
+                    }
+                }
+                if (count($props) === 0) continue;
+
+                $complexKey = '__complex__' . $complexIdx;
+                $classStyles[$complexKey] = [
+                    'firstClass'  => $firstClass,
+                    'combinator'  => $combinator === '' ? ' ' : $combinator,
+                    'secondClass' => '',
+                    'secondTag'   => $secondTag,
+                    'props'       => $props,
+                    'specificity' => self::calculateSpecificity('.' . $firstClass . ' ' . $secondTag),
+                ];
+                $complexIdx++;
+            }
+        }
+
         return $classStyles;
     }
 
@@ -1471,7 +1508,16 @@ class CssMappings
         if (!in_array($secondClass, $childClasses, true)) {
             return false;
         }
+        return self::matchComplexFirstSide($combinator, $firstClass, $parentClassStr, $parentSiblings);
+    }
 
+    /**
+     * 复合选择器 first 侧（祖先/兄弟）匹配 —— subject 侧已由调用方判定
+     * （class subject 走 matchComplexSelector，type subject 直接比对 elementType）。
+     * 单通道：两类 subject 共用同一 combinator 语义（CSS Selectors L3）。
+     */
+    public static function matchComplexFirstSide(string $combinator, string $firstClass, string $parentClassStr, array $parentSiblings = []): bool
+    {
         $parentClasses = explode(' ', $parentClassStr);
 
         switch ($combinator) {

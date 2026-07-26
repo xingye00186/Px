@@ -414,13 +414,13 @@ class BlockAlgorithm extends LayoutAlgorithm
                 if ($cDisplay === 'inline' || $cDisplay === 'inline-block') {
                     $inlineBuffer[] = $cr;
                 } else {
-                    if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $y, $stackedChildren, $parentW); }
+                    if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $y, $stackedChildren, $parentW, $s); }
                     $stackedChildren[] = new PhysicalFragment((int)$cr->getX(), (int)$cr->getY(), (int)$cr->getW(), (int)$cr->getH(), 0, 0, (int)($cr->getLayer() ?? 0), (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0), $cr->style, $cr->children, $cr->sourceNode,
                     $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
                     $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
                 }
             }
-            if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $y, $stackedChildren, $parentW); }
+            if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $y, $stackedChildren, $parentW, $s); }
         }
 
         // CSS 2.2 §10.6.3：仅 height:auto 时从子项累加；显式 height:0 应尊重（getRaw 区分，与 width/height 同源陷阱）
@@ -594,7 +594,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             if ($childPosition === 'absolute' || $childPosition === 'fixed' || $childDisplay === 'none') { $result[] = $cr; continue; }
             $isInline = ($childDisplay === 'inline' || $childDisplay === 'inline-block');
             if ($isInline) { $inlineBuffer[] = $cr; $isFirstInFlow = false; continue; }
-            if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW); }
+            if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW, $s); }
 
             // 子的 margin/padding 百分比基准 = 父的 content-width ($containerW)
             $mTop = $childStyle?->margin?->top->resolveBoxPercent($containerW) ?? 0;
@@ -764,17 +764,20 @@ class BlockAlgorithm extends LayoutAlgorithm
             $prevCollapsible = $isCollapsible;
             $isFirstInFlow = false;
         }
-        if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW); }
+        if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW, $s); }
         // Phase 4C: 追加浮动元素到结果（在正常流子项之后）
         foreach ($floatFragments as $ff) { $result[] = $ff; }
         return $result;
     }
 
-    private function flushInlineBuffer(array &$inlineBuffer, int $parentX, int $padLeft, int $containerW, int &$stackY, array &$result, int $parentW): void
+    private function flushInlineBuffer(array &$inlineBuffer, int $parentX, int $padLeft, int $containerW, int &$stackY, array &$result, int $parentW, ?ComputedStyle $s = null): void
     {
         // P4: 委派给 InlineAlgorithm（对标 Blink：块算法将 IFC 委派给内联算法）
         $availW = $containerW; if ($availW <= 0) $availW = $parentW; if ($availW <= 0) $availW = 10000;
-        $ir = InlineAlgorithm::layoutInlineRun($inlineBuffer, $availW, $parentX, $stackY, $padLeft);
+        // text-align 取 IFC 容器样式（继承属性，ComputedStyle 已层叠），
+        // 传入 InlineAlgorithm 行级 ApplyTextAlign（CSS 2.2 §16.2 含 inline-block）。
+        $ta = $s?->textAlign?->value ?? 'start';
+        $ir = InlineAlgorithm::layoutInlineRun($inlineBuffer, $availW, $parentX, $stackY, $padLeft, $ta);
         foreach ($ir['items'] as $item) $result[] = $item;
         $stackY = $ir['nextY'];
         $inlineBuffer = [];

@@ -178,7 +178,7 @@ class InlineAlgorithm extends LayoutAlgorithm
      * @param int $padLeft 左 padding
      * @return array{items: PhysicalFragment[], nextY: int}
      */
-    public static function layoutInlineRun(array $items, int $availableW, int $startX, int $startY, int $padLeft = 0): array
+    public static function layoutInlineRun(array $items, int $availableW, int $startX, int $startY, int $padLeft = 0, string $textAlign = 'start'): array
     {
         if (empty($items)) return ['items' => [], 'nextY' => $startY];
 
@@ -223,7 +223,17 @@ class InlineAlgorithm extends LayoutAlgorithm
         $cursorY = 0;
 
         foreach ($lines as $line) {
-            $cursorX = $padLeft;
+            // text-align 行级偏移（对标 Blink NGInlineLayoutAlgorithm::ApplyTextAlign，
+            // CSS 2.2 §16.2：作用于行盒内全部 inline-level box，含 inline-block）。
+            // free 可为负（溢出行）：Blink 不 clamp，center 两侧均溢。
+            $alignFree = $effectiveAvail - $line->width;
+            $alignOffset = 0;
+            if ($textAlign === 'center') {
+                $alignOffset = (int)($alignFree / 2);
+            } elseif ($textAlign === 'right' || $textAlign === 'end') {
+                $alignOffset = $alignFree;
+            }
+            $cursorX = $padLeft + $alignOffset;
             foreach ($line->items as $item) {
                 $cr = $item->fragment;
                 if ($cr === null) continue;

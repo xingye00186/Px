@@ -236,6 +236,10 @@ class StyleResolver
                     $merged[$k] = $v;
                 }
             }
+            // 注意：复合选择器 type subject（.first <comb> tag）不在运行时通道消费。
+            // ThemeProvider 注册表无组件 scope，subject 为裸 tag 时会跨组件波及所有
+            // 同名元素（同名类规则互污染）；该语义由编译期
+            // mergeClassStylesIntoNode（有 scope 隔离）单通道实现。
         }
 
         foreach ($classNames as $cn) {
@@ -270,10 +274,10 @@ class StyleResolver
                         }
                     }
                 }
-                // Complex selectors
+                // Complex selectors（class subject：secondClass 非空；type subject 已在前置循环处理）
                 foreach ($compStyles as $styleKey => $styleValue) {
                     if (str_starts_with((string)$styleKey, '__complex__') && is_array($styleValue)) {
-                        if ($styleValue['secondClass'] === $cn) {
+                        if ($styleValue['secondClass'] !== '' && $styleValue['secondClass'] === $cn) {
                             $matches = CssMappings::matchComplexSelector(
                                 $styleValue['combinator'],
                                 $styleValue['firstClass'],

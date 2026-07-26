@@ -40,13 +40,41 @@ function parseCssClassesForMerge(string $css): array
         $body = rtrim($body, ';');
         $result['_tag_' . strtolower($m[1])] = $body;
     }
+    // 提取复合选择器（CSS Selectors L3）：.first <comb> (.second | tag) { }
+    // 如 .rel-row div{flex:1}、.a > .b{...}。subject 为类或类型选择器；
+    // 在 mergeClassStylesIntoNode 递归时携带祖先/前兄弟上下文匹配。
+    $complexRules = [];
+    if (preg_match_all('#\.([a-zA-Z0-9_-]+)\s*([>+~ ])\s*(?:\.([a-zA-Z0-9_-]+)|([a-z][a-z0-9]*))\s*\{([^}]*)\}#s', $css, $crs, PREG_SET_ORDER)) {
+        foreach ($crs as $cr) {
+            $body = trim($cr[5]);
+            $body = preg_replace('/\s+/', ' ', $body);
+            $body = rtrim($body, ';');
+            if ($body === '') continue;
+            $complexRules[] = [
+                'first'       => $cr[1],
+                'comb'        => trim($cr[2]) === '' ? ' ' : trim($cr[2]),
+                'secondClass' => $cr[3] !== '' ? $cr[3] : null,
+                'secondTag'   => (isset($cr[4]) && $cr[4] !== '') ? $cr[4] : null,
+                'decls'       => $body,
+            ];
+        }
+    }
+    if (count($complexRules) > 0) {
+        $result['__complex_rules__'] = $complexRules;
+    }
     return $result;
 }
 
 /**
- * 递归地将解析后的 CSS 类样式（* 通用 + 类选择器）按级联优先级合并到 VNode 内联样式中。
+ * 递归地将解析后的 CSS 类样式（* 通用 + 类选择器 + 复合选择器）按级联优先级合并到 VNode 内联样式中。
+ *
+ * 层叠序（CSS Cascade L4 特异性升序）：
+ *   * (0,0,0,0) → 简单类 (0,0,1,0) → .a tag (0,0,1,1) → .a .b (0,0,2,0) → inline → !important
+ *
+ * @param array $ancestorClassLists 每层祖先的 class 名数组列表（根在前，直接父在尾）
+ * @param array $precedingSiblingClasses 前序兄弟的 class 字符串列表（文档序）
  */
-function mergeClassStylesIntoNode($node, array $rawStyles): void
+function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassLists = [], array $precedingSiblingClasses = []): void
 {
     if ($node === null) return;
 
@@ -87,6 +115,68 @@ function mergeClassStylesIntoNode($node, array $rawStyles): void
         }
     }
 
+    // Step 2.5: 复合选择器（.first <comb> (.second|tag)）：subject 匹配自身，
+    // first 侧按组合子匹配祖先/前兄弟。按特异性序：tag-subject (0,0,1,1) 先、
+    // class-subject (0,0,2,0) 后，均追加在简单类之后（高特异性覆盖）。
+    $ownClasses = [];
+    if ($node->props !== null && isset($node->props['class']) && is_string($node->props['class'])) {
+        foreach (explode(' ', $node->props['class']) as $oc) {
+            $oc = trim($oc);
+            if ($oc !== '') $ownClasses[] = $oc;
+        }
+    }
+    if (isset($rawStyles['__complex_rules__']) && !$isComponentPlaceholder) {
+        $nodeType = (string)($node->type ?? '');
+        $tagSubjectDecls = [];
+        $classSubjectDecls = [];
+        foreach ($rawStyles['__complex_rules__'] as $rule) {
+            // subject 侧
+            $isTagSubject = ($rule['secondTag'] !== null);
+            if ($isTagSubject) {
+                if ($nodeType !== $rule['secondTag']) continue;
+            } else {
+                if (!in_array($rule['secondClass'], $ownClasses, true)) continue;
+            }
+            // first 侧（组合子语义，CSS Selectors L3）
+            $firstOk = false;
+            switch ($rule['comb']) {
+                case ' ': // 后代：任意祖先层含 first
+                    foreach ($ancestorClassLists as $aList) {
+                        if (in_array($rule['first'], $aList, true)) { $firstOk = true; break; }
+                    }
+                    break;
+                case '>': // 子：直接父层含 first
+                    $direct = count($ancestorClassLists) > 0 ? $ancestorClassLists[count($ancestorClassLists) - 1] : [];
+                    $firstOk = in_array($rule['first'], $direct, true);
+                    break;
+                case '+': // 紧邻前兄弟
+                    $prev = count($precedingSiblingClasses) > 0 ? $precedingSiblingClasses[count($precedingSiblingClasses) - 1] : '';
+                    $firstOk = in_array($rule['first'], explode(' ', $prev), true);
+                    break;
+                case '~': // 任意前兄弟
+                    foreach ($precedingSiblingClasses as $sib) {
+                        if (in_array($rule['first'], explode(' ', $sib), true)) { $firstOk = true; break; }
+                    }
+                    break;
+            }
+            if (!$firstOk) continue;
+            foreach (explode(';', $rule['decls']) as $decl) {
+                $decl = trim($decl);
+                if ($decl === '') continue;
+                if (stripos($decl, '!important') !== false) {
+                    $classImportantDecls[] = $decl;
+                } elseif ($isTagSubject) {
+                    $tagSubjectDecls[] = $decl;
+                } else {
+                    $classSubjectDecls[] = $decl;
+                }
+            }
+        }
+        // 特异性升序追加：简单类已在 $classNormalDecls，tag-subject → class-subject
+        foreach ($tagSubjectDecls as $d) $classNormalDecls[] = $d;
+        foreach ($classSubjectDecls as $d) $classNormalDecls[] = $d;
+    }
+
     // Step 3: 合并（* + class + inline，具有正确的层叠优先级）
     if ($universalDecls !== '' || !empty($classNormalDecls) || !empty($classImportantDecls)) {
         $existing = $node->props['style'] ?? '';
@@ -98,11 +188,15 @@ function mergeClassStylesIntoNode($node, array $rawStyles): void
         $node->props['style'] = implode(';', $parts);
     }
 
-    // Step 4: 递归子节点
+    // Step 4: 递归子节点（携带祖先 class 链与前序兄弟上下文）
     if (is_array($node->children)) {
+        $childAncestors = $ancestorClassLists;
+        $childAncestors[] = $ownClasses;
+        $siblingAcc = [];
         foreach ($node->children as $child) {
             if (is_object($child) && property_exists($child, 'props')) {
-                mergeClassStylesIntoNode($child, $rawStyles);
+                mergeClassStylesIntoNode($child, $rawStyles, $childAncestors, $siblingAcc);
+                $siblingAcc[] = (string)($child->props['class'] ?? '');
             }
         }
     }
