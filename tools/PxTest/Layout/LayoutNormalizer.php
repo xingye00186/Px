@@ -245,6 +245,13 @@ class LayoutNormalizer
             return $result; // 跳过 #text 节点
         }
 
+        // testroot 自身不导出（对齐浏览器采集契约：browser_ref elements[]
+        // 仅含 testroot 的后代，depth 以其子级为 0）。filterToTestRoot 的
+        // 多子分支合成 wrapper 时携带 testroot dataset，若作为元素导出会
+        // 使按索引对齐的比较器全序列错位 1（48/55 case 幻影 GEOMETRY）。
+        $dsNode = $node['dataset'] ?? [];
+        $isTestroot = is_array($dsNode) && (string)($dsNode['pxTestroot'] ?? '') === 'true';
+
         // 引擎 Fragment 树坐标已是**绝对坐标**（LayoutNG 语义：算法输出的
         // Fragment.x/y 包含最终坐标，见 ConstraintSpace 头注）——直接使用，
         // 不做父偏移累加。此前按旧相对坐标体系累加父链属错误嫁接，
@@ -253,7 +260,7 @@ class LayoutNormalizer
         $currentOffsetY = (int)($node['y'] ?? 0);
 
         $element = $this->normalizeNode($node, $depth, $parentInherited, $parentDisplay);
-        if ($element !== null) {
+        if ($element !== null && !$isTestroot) {
             // 使用累加偏移覆盖 x/y（需在加入 result 之前赋值）
             $element['x'] = $currentOffsetX;
             $element['y'] = $currentOffsetY;
@@ -289,7 +296,7 @@ class LayoutNormalizer
                 }
             }
         }
-        if ($mergedText !== '' && $element !== null && empty($element['text'])) {
+        if ($mergedText !== '' && $element !== null && !$isTestroot && empty($element['text'])) {
             $element['text'] = mb_strlen($mergedText) > 200
                 ? mb_substr($mergedText, 0, 200)
                 : (string)$mergedText;
@@ -301,7 +308,9 @@ class LayoutNormalizer
 
         foreach ($node['children'] ?? [] as $child) {
             if (is_array($child)) {
-                $result = array_merge($result, $this->flatten($child, $depth + 1, $childInherited, $childDisplay, $currentOffsetX, $currentOffsetY));
+                // testroot 被跳过时子级 depth 不递增（浏览器契约：testroot 子级 = depth 0），
+                // 其继承链（text-align/font-size）仍照常下传。
+                $result = array_merge($result, $this->flatten($child, $isTestroot ? $depth : $depth + 1, $childInherited, $childDisplay, $currentOffsetX, $currentOffsetY));
             }
         }
 
