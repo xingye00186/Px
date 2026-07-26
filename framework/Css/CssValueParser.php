@@ -463,6 +463,45 @@ class CssValueParser
         return $result;
     }
 
+    /**
+     * 解析 transform 中的 translate 分量为已用像素值（CSS Transforms §6）。
+     * 百分比参照自身 border box 尺寸（对标 Blink TransformOperations::Apply(border_box_size)，
+     * 必须在 used size 已知后调用）。parseTransform() 把 % 误当 px，仅适用于纯 px 动画链，
+     * 布局侧一律走本函数。
+     *
+     * @return array{0:int,1:int} [tx, ty]
+     */
+    public static function resolveTranslate(string $value, int $selfW, int $selfH): array
+    {
+        $tx = 0;
+        $ty = 0;
+        $value = trim($value);
+        if ($value === '' || $value === 'none') return [0, 0];
+        if (preg_match('/translate\s*\(\s*([^,)]+)\s*(?:,\s*([^,)]+))?\s*\)/i', $value, $m)) {
+            $tx = self::resolveTranslateComponent($m[1], $selfW);
+            if (isset($m[2]) && $m[2] !== '') $ty = self::resolveTranslateComponent($m[2], $selfH);
+            return [$tx, $ty];
+        }
+        if (preg_match('/translateX\s*\(\s*([^)]+)\s*\)/i', $value, $m)) {
+            $tx = self::resolveTranslateComponent($m[1], $selfW);
+        }
+        if (preg_match('/translateY\s*\(\s*([^)]+)\s*\)/i', $value, $m)) {
+            $ty = self::resolveTranslateComponent($m[1], $selfH);
+        }
+        return [$tx, $ty];
+    }
+
+    /** 单分量：% 基于自身尺寸，否则取数值（'30px' → 30，(float) 忽略尾部单位）。AOT 兼容：不用闭包。 */
+    private static function resolveTranslateComponent(string $raw, int $base): int
+    {
+        $raw = trim($raw);
+        if ($raw === '') return 0;
+        if (str_ends_with($raw, '%')) {
+            return (int)round((float)substr($raw, 0, -1) / 100.0 * $base);
+        }
+        return (int)round((float)$raw);
+    }
+
     public static function buildTransformString(array $transform): string
     {
         $parts = [];

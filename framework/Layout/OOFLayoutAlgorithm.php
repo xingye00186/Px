@@ -304,10 +304,28 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
             $calcY = $cbOriginY + $ancH - $bottomVal - ($height > 0 ? $height : 0) - $marginBottom;
         }
 
-        $rawTX = $cs->getRaw('translateX');
-        $rawTY = $cs->getRaw('translateY');
-        $calcX += $rawTX instanceof CssLength ? $rawTX->toPx() : (int)($rawTX ?? 0);
-        $calcY += $rawTY instanceof CssLength ? $rawTY->toPx() : (int)($rawTY ?? 0);
+        // CSS Transforms §6：translate 百分比参照自身 border box（Blink
+        // TransformOperations::Apply(border_box_size)，在 used size 已知后解析）。
+        // transform 两种形态：parseStyleBlock 链产出数组（translateX/Y 为 CssLength，
+        // % 单位保留）；直传链为原始字符串。此前仅读 getRaw('translateX')（动画链
+        // 专属键，恒 NULL）—— abs-center 居中族全失效。
+        $tfRaw = $cs->getRaw('transform');
+        $selfW = (int)max(0, $width);
+        $selfH = (int)max(0, $height);
+        if (is_array($tfRaw)) {
+            $calcX += $this->resolveTransformComponent($tfRaw['translateX'] ?? 0, $selfW);
+            $calcY += $this->resolveTransformComponent($tfRaw['translateY'] ?? 0, $selfH);
+        } elseif (is_string($tfRaw) && $tfRaw !== '') {
+            [$tfTx, $tfTy] = \Px\Css\CssValueParser::resolveTranslate($tfRaw, $selfW, $selfH);
+            $calcX += $tfTx;
+            $calcY += $tfTy;
+        } else {
+            // 动画链直写的纯 px translateX/translateY（KeyframeResolver 产出）
+            $rawTX = $cs->getRaw('translateX');
+            $rawTY = $cs->getRaw('translateY');
+            $calcX += $rawTX instanceof CssLength ? $rawTX->toPx() : (int)($rawTX ?? 0);
+            $calcY += $rawTY instanceof CssLength ? $rawTY->toPx() : (int)($rawTY ?? 0);
+        }
 
         // CSS 2.2 §10.6.4: margin auto 居中——需同时满足：
         //   1. width 不为 auto（有确定尺寸）
@@ -361,6 +379,18 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
             0, 0, false,
             $frag->type, $frag->content, $frag->dataset, $frag->pseudoStyles
         );
+    }
+
+    /**
+     * transform 数组形态单分量解析：CssLength 百分比基于自身尺寸（CSS Transforms §6），
+     * 其余 px 直取。
+     */
+    private function resolveTransformComponent(mixed $v, int $selfBase): int
+    {
+        if ($v instanceof \Px\Css\CssLength) {
+            return $v->isPercent() ? (int)$v->resolveInContext($selfBase) : (int)$v->toPx();
+        }
+        return (int)($v ?? 0);
     }
 
     /**
