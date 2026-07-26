@@ -193,20 +193,21 @@ class InlineAlgorithm extends LayoutAlgorithm
         $strutD = 0;
         if ($containerStyle !== null) {
             $lhUsed = (int)$containerStyle->getLineHeight();
-            // 守卫（宁窄勿宽）：仅容器**显式** line-height > 0 时注入 strut。
-            // normal(-1)/显式 0 不注入：normal 情形目前被"universal 豁免 #component
-            // 占位"存量缺陷污染（组件根未受 *{line-height:0} 而误判 normal，
-            // strut descent 泄漏 +3/4px 链，case-003 实测）；normal strut 待 universal
-            // 层叠序治本后解锁（清单 6.1 子项）。显式值情形（.bx-desc line-height:1.5）
-            // 按 CSS 2.2 §10.8.1 完整 half-leading 模型，_gt_linestrut T2/T5/T8 精确。
-            if ($lhUsed > 0) {
-                $cfs = (int)($containerStyle->getFontSize() ?: 16);
-                $fontAscent = (int)round($cfs * 1.088);   // Segoe UI ascent/em
-                $fontDescent = (int)round($cfs * 0.275);  // Segoe UI descent/em
-                $halfLeading = (int)round(($lhUsed - ($fontAscent + $fontDescent)) / 2);
-                $strutA = $fontAscent + $halfLeading;
-                $strutD = $fontDescent + $halfLeading;
+            // 完整 strut 模型（CSS 2.2 §10.8.1 / Blink NGInlineBoxState）：
+            //   显式值（>0 含 px/number）→ half-leading 模型；
+            //   normal（-1 哨兵）→ 字体自然高（half-leading=0）；
+            //   显式 0 → strut 负分量被 item max 淘汰（行高=item 高）。
+            // （历史守卫"normal 不注入"已解除：根因是 6 个 case 资产 HTML→vue
+            // 转换丢失 *{line-height:0} reset 造成输入不对等，已补齐资产）。
+            $cfs = (int)($containerStyle->getFontSize() ?: 16);
+            $fontAscent = (int)round($cfs * 1.088);   // Segoe UI ascent/em
+            $fontDescent = (int)round($cfs * 0.275);  // Segoe UI descent/em
+            if ($lhUsed < 0) {
+                $lhUsed = $fontAscent + $fontDescent; // normal = 字体自然高
             }
+            $halfLeading = (int)round(($lhUsed - ($fontAscent + $fontDescent)) / 2);
+            $strutA = $fontAscent + $halfLeading;
+            $strutD = $fontDescent + $halfLeading;
         }
 
         // Step 1: 构建 InlineItem 序列（对标 Blink InlineItemsBuilder）

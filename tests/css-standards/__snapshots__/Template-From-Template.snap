@@ -1,4 +1,4 @@
-@generated 2026-07-26 15:36:53
+@generated 2026-07-26 15:51:45
 === Test: [Template] absolute positioned div ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50)
@@ -260,7 +260,7 @@ div (0,0 200x30)
 === Test: [Template] font-size large ===
 Frame #1 events=0 detail=normal
 div (0,0 200x50)
-  #text (0,0 200x19) [dsp=inline] text="Big text"
+  #text (0,16 200x19) [dsp=inline] text="Big text"
 
 ---
 
@@ -608,7 +608,7 @@ div (0,0 200x30) decorationLine=underline decorationStyle=solid
 === Test: [Template] font-family serif ===
 Frame #1 events=0 detail=normal
 div (0,0 300x40)
-  #text (0,0 300x19) [dsp=inline] text="Serif text"
+  #text (0,1 300x19) [dsp=inline] text="Serif text"
 
 ---
 
@@ -738,19 +738,19 @@ div (0,0 100x50)
 
 === Test: [Template] display:inline 行内并排 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x0)
-  div (0,0 300x0) [dsp=inline]
+div (0,0 300x63)
+  div (0,17 300x0) [dsp=inline]
     #text (0,0 300x19) [dsp=inline] text="Red"
-  div (0,0 300x0) [dsp=inline]
+  div (0,38 300x0) [dsp=inline]
     #text (0,0 300x19) [dsp=inline] text="Blue"
-  div (0,0 300x0) [dsp=inline]
+  div (0,59 300x0) [dsp=inline]
     #text (0,0 300x19) [dsp=inline] text="Green"
 
 ---
 
 === Test: [Template] display:inline-block 行内块布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x80)
+div (0,0 400x84)
   div (0,20 100x60) [dsp=inline-block]
     #text (0,0 100x19) [dsp=inline] text="A"
   div (100,0 100x80) [dsp=inline-block]
@@ -861,14 +861,14 @@ div (0,0 200x100)
 
 === Test: [Template] Article 页面 标题+内容+侧边栏 ===
 Frame #1 events=0 detail=normal
-div (0,0 800x102)
-  div (0,0 800x51)
-    #text (0,16 800x19) [dsp=inline] text="Article Title"
-  div (0,51 800x51) [dsp=flex]
-    div (0,51 585x51) fg=3
-      #text (0,52 585x19) [dsp=inline] text="Article content paragraph here."
-    div (605,51 195x51) fg=1
-      #text (621,67 163x19) [dsp=inline] text="Sidebar Widget"
+div (0,0 800x125)
+  div (0,0 800x70)
+    #text (0,27 800x19) [dsp=inline] text="Article Title"
+  div (0,70 800x55) [dsp=flex]
+    div (0,70 585x55) fg=3
+      #text (0,71 585x19) [dsp=inline] text="Article content paragraph here."
+    div (605,70 195x55) fg=1
+      #text (621,86 163x19) [dsp=inline] text="Sidebar Widget"
 
 ---
 

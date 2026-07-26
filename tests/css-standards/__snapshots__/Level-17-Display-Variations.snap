@@ -1,4 +1,4 @@
-@generated 2026-07-26 15:36:53
+@generated 2026-07-26 15:51:45
 === Test: display:none 不渲染 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x80)
@@ -19,16 +19,16 @@ div (0,0 300x120)
 
 === Test: display:inline 行内并排 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x57)
+div (0,0 300x69)
   span (0,0 300x19) [dsp=inline] text="Red "
-  span (0,19 300x19) [dsp=inline] text="Blue "
-  span (0,38 300x19) [dsp=inline] text="Green"
+  span (0,23 300x19) [dsp=inline] text="Blue "
+  span (0,46 300x19) [dsp=inline] text="Green"
 
 ---
 
 === Test: display:inline-block 行内块布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x80)
+div (0,0 400x84)
   div (0,20 100x60) [dsp=inline-block] text="A"
   div (100,0 100x80) [dsp=inline-block] text="B"
   div (200,30 100x50) [dsp=inline-block] text="C"
@@ -54,5 +54,5 @@ div (0,0 300x60)
 
 === Test: CSS §10.3.5 inline-block width auto shrink-to-fit ===
 Frame #1 events=0 detail=normal
-div (0,0 400x16)
-  div (0,0 16x16) [dsp=inline-block] text="Hi"
+div (0,0 400x21)
+  div (0,1 16x16) [dsp=inline-block] text="Hi"

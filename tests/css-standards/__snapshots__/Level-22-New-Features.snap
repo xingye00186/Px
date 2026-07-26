@@ -1,4 +1,4 @@
-@generated 2026-07-26 15:36:53
+@generated 2026-07-26 15:51:45
 === Test: 绝对定位 left:25% top:20% ===
 Frame #1 events=0 detail=normal
 div (0,0 400x300) [pos=relative]
