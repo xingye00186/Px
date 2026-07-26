@@ -118,9 +118,6 @@ class LayoutOrchestrator
      * 正常流布局（mainLayout）— 两阶段：先内在尺寸测量，再确定约束下布局。
      * 对标 Blink LayoutNG 的 LayoutInput → LayoutResult 两阶段模型。
      */
-    /** 重布局迭代上限 */
-    private const MAX_RELAYOUT_ITERATIONS = 3;
-
     private function mainLayout(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0, int $relayoutDepth = 0): PhysicalFragment
     {
         \Px\Core\PerfCounter::inc('layout_enter');
@@ -265,7 +262,8 @@ class LayoutOrchestrator
         \Px\Core\PerfCounter::end('algo:setup');
 
         \Px\Core\PerfCounter::start('algo:' . $algoName);
-        // Phase 5: 调 layoutResult() 而非 layout()，启用 endMarginStrut/oofDescendants 消费
+        // 调 layoutResult() 获得完整 LayoutResult；当前仅消费 fragment，
+        // endMarginStrut/oofDescendants/intrinsicBlockSize 副产物消费链待打通（清单 5.3）。
         $algoResult = $algo->layoutResult($space, $style, $textContent, $node->children, $cached);
         $algoFrag = $algoResult->fragment;
         \Px\Core\PerfCounter::end('algo:' . $algoName);

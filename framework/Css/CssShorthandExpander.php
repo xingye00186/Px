@@ -26,10 +26,11 @@ class CssShorthandExpander
      * 展开所有支持的 CSS 简写属性。
      *
      * @param array $raw kebab-case CSS 属性名 → 值 的声明数组
-     * @param bool $expandFlex 是否展开 flex 简写（默认 false，待 min-content 就绪后开启）
+     * @param bool $expandFlex 是否展开 flex 简写（默认 true，@3f56927d 全量启用；
+     *                         历史门控已经 Level-31 真值护栏 + basis=0% 规范保真治本）
      * @return array 展开后的声明数组（原始简写保留，longhand 追加）
      */
-    public static function expandAll(array $raw, bool $expandFlex = false): array
+    public static function expandAll(array $raw, bool $expandFlex = true): array
     {
         // 1. padding / margin → 4 方向
         $raw = self::expandBoxModel($raw);

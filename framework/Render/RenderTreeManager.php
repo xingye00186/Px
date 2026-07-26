@@ -956,11 +956,12 @@ class RenderTreeManager
                 $renderNode->layoutDirty = true;
                 $renderNode->pseudoStyles = $pseudoStyles;
                 $renderNode->isLayoutBoundary = $isLayoutBoundary;
-                // 从 computedStyle 检测滚动容器
+                // 从 computedStyle 检测滚动容器（路由至 ScrollManager；RenderNode 已无
+                // isScrollContainer 字段，旧写入是动态属性死路）
                 $ovX = $computedStyle?->overflowX?->value ?? $computedStyle?->overflow?->value ?? '';
                 $ovY = $computedStyle?->overflowY?->value ?? $computedStyle?->overflow?->value ?? '';
                 if ($ovX === 'auto' || $ovX === 'scroll' || $ovY === 'auto' || $ovY === 'scroll') {
-                    $renderNode->isScrollContainer = true;
+                    $this->scrollManager?->setScrollContainer($renderNode, true);
                 }
             } else {
                 $oldVNode = $renderNode->sourceVNode;
@@ -1374,12 +1375,15 @@ class RenderTreeManager
     private function syncBindValues(RenderNode $rn, VNode $vn, ReactiveComponentInterface $component): void
     {
         $scrollBindKey = $vn->props[':scroll-top'] ?? '';
-        if ($scrollBindKey !== '') {
-            $rn->scrollTop = (int) $component->getBindValue($scrollBindKey);
+        if ($scrollBindKey !== '' && $this->scrollManager !== null) {
+            // 路由至 ScrollManager（与 mount/patch 主路径 L745/L1056 同源）：
+            // RenderNode 已无 scrollTop/scrollLeft 字段，旧写入是动态属性死路，
+            // head/tail-sync 跳过路径上的 scroll bind 因此失效。
+            $this->scrollManager->setScrollTop($rn, (int) $component->getBindValue($scrollBindKey));
         }
         $scrollLeftBindKey = $vn->props[':scroll-left'] ?? '';
-        if ($scrollLeftBindKey !== '') {
-            $rn->scrollLeft = (int) $component->getBindValue($scrollLeftBindKey);
+        if ($scrollLeftBindKey !== '' && $this->scrollManager !== null) {
+            $this->scrollManager->setScrollLeft($rn, (int) $component->getBindValue($scrollLeftBindKey));
         }
         // 叶子节点 content bind
         $childVNodes = is_array($vn->children) ? VNode::childrenToArray($vn->children) : [];

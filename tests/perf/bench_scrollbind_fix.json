@@ -1,0 +1,2556 @@
+{
+    "meta": {
+        "timestamp": "2026-07-26 14:53:12",
+        "php_version": "8.4.20",
+        "mode": "AOT",
+        "note": null
+    },
+    "results": {
+        "SimpleCounter": {
+            "case": "SimpleCounter",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.071,
+            "perf_snapshot": {
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 5940,
+                    "avg": 116.47,
+                    "min": 104,
+                    "max": 283,
+                    "elapsed_sec": 0.0781
+                },
+                "style_pool_miss": {
+                    "count": 5,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0778
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 957,
+                    "avg": 18.76,
+                    "min": 11,
+                    "max": 289,
+                    "elapsed_sec": 0.0778
+                },
+                "sub:style_fallback": {
+                    "count": 54,
+                    "total": 1833,
+                    "avg": 33.94,
+                    "min": 10,
+                    "max": 402,
+                    "elapsed_sec": 0.0775
+                },
+                "tree_convert": {
+                    "count": 52,
+                    "total": 3056,
+                    "avg": 58.77,
+                    "min": 41,
+                    "max": 396,
+                    "elapsed_sec": 0.0765
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 1332,
+                    "avg": 26.12,
+                    "min": 9,
+                    "max": 798,
+                    "elapsed_sec": 0.0761
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 5064,
+                    "avg": 99.29,
+                    "min": 63,
+                    "max": 1672,
+                    "elapsed_sec": 0.0761
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 239,
+                    "avg": 4.69,
+                    "min": 3,
+                    "max": 8,
+                    "elapsed_sec": 0.0761
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.076
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.076
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 32,
+                    "avg": 0.16,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.076
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 1676,
+                    "avg": 32.86,
+                    "min": 29,
+                    "max": 76,
+                    "elapsed_sec": 0.0757
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 3870,
+                    "avg": 18.97,
+                    "min": 12,
+                    "max": 133,
+                    "elapsed_sec": 0.0757
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 3758,
+                    "avg": 73.69,
+                    "min": 66,
+                    "max": 123,
+                    "elapsed_sec": 0.0755
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 35606,
+                    "avg": 698.16,
+                    "min": 649,
+                    "max": 1221,
+                    "elapsed_sec": 0.0749
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 1852,
+                    "avg": 36.31,
+                    "min": 34,
+                    "max": 61,
+                    "elapsed_sec": 0.0749
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 2816,
+                    "avg": 55.22,
+                    "min": 51,
+                    "max": 87,
+                    "elapsed_sec": 0.0748
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 43833,
+                    "avg": 859.47,
+                    "min": 801,
+                    "max": 1429,
+                    "elapsed_sec": 0.0748
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 6,
+                    "avg": 0.12,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.0748
+                },
+                "text_measure_miss": {
+                    "count": 1,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.074
+                },
+                "text_measure_hit": {
+                    "count": 1,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0725
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 20339,
+                    "avg": 398.8,
+                    "min": 300,
+                    "max": 3791,
+                    "elapsed_sec": 0.071
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 20588,
+                    "avg": 403.69,
+                    "min": 304,
+                    "max": 3807,
+                    "elapsed_sec": 0.071
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 77554,
+                    "avg": 1520.67,
+                    "min": 1323,
+                    "max": 7290,
+                    "elapsed_sec": 0.071
+                },
+                "block_fastpath_hit": {
+                    "count": 50,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0707
+                },
+                "style_pool_hit": {
+                    "count": 100,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0706
+                },
+                "child_skip": {
+                    "count": 50,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0705
+                }
+            },
+            "avg_ms": 1.02,
+            "fps": 704.2,
+            "min_ms": 1,
+            "max_ms": 2,
+            "p50_ms": 1,
+            "p95_ms": 1,
+            "p99_ms": 2,
+            "warmup_ms": 2,
+            "steady_avg_ms": 1,
+            "steady_min_ms": 1,
+            "steady_max_ms": 1,
+            "steady_fps": 710.1
+        },
+        "ManyProps": {
+            "case": "ManyProps",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.0742,
+            "perf_snapshot": {
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 4090,
+                    "avg": 80.2,
+                    "min": 18,
+                    "max": 202,
+                    "elapsed_sec": 0.0755
+                },
+                "style_pool_hit": {
+                    "count": 102,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0755
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 733,
+                    "avg": 14.37,
+                    "min": 11,
+                    "max": 36,
+                    "elapsed_sec": 0.0754
+                },
+                "sub:style_fallback": {
+                    "count": 51,
+                    "total": 613,
+                    "avg": 12.02,
+                    "min": 10,
+                    "max": 26,
+                    "elapsed_sec": 0.0754
+                },
+                "child_skip": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0754
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 604,
+                    "avg": 11.84,
+                    "min": 10,
+                    "max": 34,
+                    "elapsed_sec": 0.0754
+                },
+                "tree_convert": {
+                    "count": 51,
+                    "total": 2522,
+                    "avg": 49.45,
+                    "min": 42,
+                    "max": 72,
+                    "elapsed_sec": 0.0754
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 3689,
+                    "avg": 72.33,
+                    "min": 62,
+                    "max": 102,
+                    "elapsed_sec": 0.0754
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 254,
+                    "avg": 4.98,
+                    "min": 3,
+                    "max": 7,
+                    "elapsed_sec": 0.0754
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0754
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0754
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 35,
+                    "avg": 0.17,
+                    "min": 0,
+                    "max": 2,
+                    "elapsed_sec": 0.0753
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 1739,
+                    "avg": 34.1,
+                    "min": 29,
+                    "max": 79,
+                    "elapsed_sec": 0.0752
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 3950,
+                    "avg": 19.36,
+                    "min": 12,
+                    "max": 62,
+                    "elapsed_sec": 0.0751
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 3760,
+                    "avg": 73.73,
+                    "min": 66,
+                    "max": 113,
+                    "elapsed_sec": 0.075
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 37158,
+                    "avg": 728.59,
+                    "min": 643,
+                    "max": 1078,
+                    "elapsed_sec": 0.0747
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 1958,
+                    "avg": 38.39,
+                    "min": 33,
+                    "max": 66,
+                    "elapsed_sec": 0.0746
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 2965,
+                    "avg": 58.14,
+                    "min": 51,
+                    "max": 88,
+                    "elapsed_sec": 0.0746
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 45723,
+                    "avg": 896.53,
+                    "min": 798,
+                    "max": 1325,
+                    "elapsed_sec": 0.0746
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 9,
+                    "avg": 0.18,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.0746
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 19123,
+                    "avg": 374.96,
+                    "min": 300,
+                    "max": 830,
+                    "elapsed_sec": 0.0742
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 19371,
+                    "avg": 379.82,
+                    "min": 306,
+                    "max": 834,
+                    "elapsed_sec": 0.0742
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 74888,
+                    "avg": 1468.39,
+                    "min": 1247,
+                    "max": 2265,
+                    "elapsed_sec": 0.0742
+                },
+                "block_fastpath_hit": {
+                    "count": 25,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0741
+                }
+            },
+            "avg_ms": 1.06,
+            "fps": 673.9,
+            "min_ms": 1,
+            "max_ms": 2,
+            "p50_ms": 1,
+            "p95_ms": 2,
+            "p99_ms": 2,
+            "warmup_ms": 1,
+            "steady_avg_ms": 1.0612,
+            "steady_min_ms": 1,
+            "steady_max_ms": 2,
+            "steady_fps": 669.4
+        },
+        "DeepTree": {
+            "case": "DeepTree",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.0834,
+            "perf_snapshot": {
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 1929,
+                    "avg": 37.82,
+                    "min": 24,
+                    "max": 231,
+                    "elapsed_sec": 0.0849
+                },
+                "style_pool_hit": {
+                    "count": 102,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0849
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 878,
+                    "avg": 17.22,
+                    "min": 12,
+                    "max": 28,
+                    "elapsed_sec": 0.0849
+                },
+                "sub:style_fallback": {
+                    "count": 51,
+                    "total": 729,
+                    "avg": 14.29,
+                    "min": 10,
+                    "max": 46,
+                    "elapsed_sec": 0.0849
+                },
+                "child_skip": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0849
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 633,
+                    "avg": 12.41,
+                    "min": 10,
+                    "max": 47,
+                    "elapsed_sec": 0.0849
+                },
+                "tree_convert": {
+                    "count": 51,
+                    "total": 2839,
+                    "avg": 55.67,
+                    "min": 42,
+                    "max": 118,
+                    "elapsed_sec": 0.0849
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 4100,
+                    "avg": 80.39,
+                    "min": 63,
+                    "max": 154,
+                    "elapsed_sec": 0.0848
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 265,
+                    "avg": 5.2,
+                    "min": 3,
+                    "max": 9,
+                    "elapsed_sec": 0.0848
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0848
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0848
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 50,
+                    "avg": 0.25,
+                    "min": 0,
+                    "max": 2,
+                    "elapsed_sec": 0.0848
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 2001,
+                    "avg": 39.24,
+                    "min": 30,
+                    "max": 97,
+                    "elapsed_sec": 0.0846
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 4599,
+                    "avg": 22.54,
+                    "min": 12,
+                    "max": 113,
+                    "elapsed_sec": 0.0846
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 4293,
+                    "avg": 84.18,
+                    "min": 68,
+                    "max": 142,
+                    "elapsed_sec": 0.0844
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 41675,
+                    "avg": 817.16,
+                    "min": 653,
+                    "max": 1442,
+                    "elapsed_sec": 0.0841
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 2072,
+                    "avg": 40.63,
+                    "min": 34,
+                    "max": 63,
+                    "elapsed_sec": 0.084
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 3305,
+                    "avg": 64.8,
+                    "min": 51,
+                    "max": 111,
+                    "elapsed_sec": 0.0839
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 51293,
+                    "avg": 1005.75,
+                    "min": 806,
+                    "max": 1668,
+                    "elapsed_sec": 0.0839
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 16,
+                    "avg": 0.31,
+                    "min": 0,
+                    "max": 2,
+                    "elapsed_sec": 0.0839
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 24164,
+                    "avg": 473.8,
+                    "min": 308,
+                    "max": 1019,
+                    "elapsed_sec": 0.0835
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 24501,
+                    "avg": 480.41,
+                    "min": 312,
+                    "max": 1032,
+                    "elapsed_sec": 0.0835
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 84076,
+                    "avg": 1648.55,
+                    "min": 1258,
+                    "max": 2944,
+                    "elapsed_sec": 0.0835
+                }
+            },
+            "avg_ms": 1.2,
+            "fps": 599.5,
+            "min_ms": 1,
+            "max_ms": 2,
+            "p50_ms": 1,
+            "p95_ms": 2,
+            "p99_ms": 2,
+            "warmup_ms": 1,
+            "steady_avg_ms": 1.2041,
+            "steady_min_ms": 1,
+            "steady_max_ms": 2,
+            "steady_fps": 594.7
+        },
+        "MixedWorkload": {
+            "case": "MixedWorkload",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.0711,
+            "perf_snapshot": {
+                "block_fastpath_hit": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0725
+                },
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 6722,
+                    "avg": 131.8,
+                    "min": 124,
+                    "max": 165,
+                    "elapsed_sec": 0.0725
+                },
+                "style_pool_hit": {
+                    "count": 102,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0724
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 631,
+                    "avg": 12.37,
+                    "min": 11,
+                    "max": 21,
+                    "elapsed_sec": 0.0724
+                },
+                "sub:style_fallback": {
+                    "count": 51,
+                    "total": 550,
+                    "avg": 10.78,
+                    "min": 10,
+                    "max": 29,
+                    "elapsed_sec": 0.0724
+                },
+                "child_skip": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0724
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 520,
+                    "avg": 10.2,
+                    "min": 9,
+                    "max": 13,
+                    "elapsed_sec": 0.0724
+                },
+                "tree_convert": {
+                    "count": 51,
+                    "total": 2285,
+                    "avg": 44.8,
+                    "min": 41,
+                    "max": 63,
+                    "elapsed_sec": 0.0724
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 3367,
+                    "avg": 66.02,
+                    "min": 62,
+                    "max": 87,
+                    "elapsed_sec": 0.0724
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 229,
+                    "avg": 4.49,
+                    "min": 3,
+                    "max": 6,
+                    "elapsed_sec": 0.0724
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0723
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0723
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 32,
+                    "avg": 0.16,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.0723
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 1660,
+                    "avg": 32.55,
+                    "min": 29,
+                    "max": 87,
+                    "elapsed_sec": 0.0721
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 3732,
+                    "avg": 18.29,
+                    "min": 12,
+                    "max": 95,
+                    "elapsed_sec": 0.0721
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 3677,
+                    "avg": 72.1,
+                    "min": 66,
+                    "max": 94,
+                    "elapsed_sec": 0.072
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 34772,
+                    "avg": 681.8,
+                    "min": 642,
+                    "max": 785,
+                    "elapsed_sec": 0.0716
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 1818,
+                    "avg": 35.65,
+                    "min": 33,
+                    "max": 48,
+                    "elapsed_sec": 0.0716
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 2766,
+                    "avg": 54.24,
+                    "min": 51,
+                    "max": 67,
+                    "elapsed_sec": 0.0715
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 42731,
+                    "avg": 837.86,
+                    "min": 790,
+                    "max": 955,
+                    "elapsed_sec": 0.0715
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 5,
+                    "avg": 0.1,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.0715
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 16846,
+                    "avg": 330.31,
+                    "min": 302,
+                    "max": 735,
+                    "elapsed_sec": 0.0712
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 17057,
+                    "avg": 334.45,
+                    "min": 306,
+                    "max": 738,
+                    "elapsed_sec": 0.0711
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 71702,
+                    "avg": 1405.92,
+                    "min": 1338,
+                    "max": 1824,
+                    "elapsed_sec": 0.0711
+                },
+                "list_patch": {
+                    "count": 50,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.071
+                }
+            },
+            "avg_ms": 1,
+            "fps": 703.2,
+            "min_ms": 1,
+            "max_ms": 1,
+            "p50_ms": 1,
+            "p95_ms": 1,
+            "p99_ms": 1,
+            "warmup_ms": 1,
+            "steady_avg_ms": 1,
+            "steady_min_ms": 1,
+            "steady_max_ms": 1,
+            "steady_fps": 699
+        },
+        "FormDashboard": {
+            "case": "FormDashboard",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.0713,
+            "perf_snapshot": {
+                "iter_cache_miss": {
+                    "count": 16,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0729
+                },
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 4058,
+                    "avg": 79.57,
+                    "min": 65,
+                    "max": 363,
+                    "elapsed_sec": 0.0726
+                },
+                "style_pool_hit": {
+                    "count": 102,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0726
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 736,
+                    "avg": 14.43,
+                    "min": 12,
+                    "max": 27,
+                    "elapsed_sec": 0.0726
+                },
+                "sub:style_fallback": {
+                    "count": 51,
+                    "total": 577,
+                    "avg": 11.31,
+                    "min": 10,
+                    "max": 24,
+                    "elapsed_sec": 0.0726
+                },
+                "child_skip": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0726
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 766,
+                    "avg": 15.02,
+                    "min": 13,
+                    "max": 26,
+                    "elapsed_sec": 0.0726
+                },
+                "tree_convert": {
+                    "count": 51,
+                    "total": 2528,
+                    "avg": 49.57,
+                    "min": 46,
+                    "max": 77,
+                    "elapsed_sec": 0.0726
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 3700,
+                    "avg": 72.55,
+                    "min": 66,
+                    "max": 125,
+                    "elapsed_sec": 0.0725
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 241,
+                    "avg": 4.73,
+                    "min": 3,
+                    "max": 8,
+                    "elapsed_sec": 0.0725
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0725
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0725
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 38,
+                    "avg": 0.19,
+                    "min": 0,
+                    "max": 4,
+                    "elapsed_sec": 0.0725
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 1644,
+                    "avg": 32.24,
+                    "min": 28,
+                    "max": 53,
+                    "elapsed_sec": 0.0723
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 3839,
+                    "avg": 18.82,
+                    "min": 12,
+                    "max": 41,
+                    "elapsed_sec": 0.0723
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 3827,
+                    "avg": 75.04,
+                    "min": 66,
+                    "max": 116,
+                    "elapsed_sec": 0.0722
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 36317,
+                    "avg": 712.1,
+                    "min": 642,
+                    "max": 1280,
+                    "elapsed_sec": 0.0718
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 1974,
+                    "avg": 38.71,
+                    "min": 33,
+                    "max": 111,
+                    "elapsed_sec": 0.0718
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 2906,
+                    "avg": 56.98,
+                    "min": 51,
+                    "max": 123,
+                    "elapsed_sec": 0.0717
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 44589,
+                    "avg": 874.29,
+                    "min": 790,
+                    "max": 1519,
+                    "elapsed_sec": 0.0717
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 10,
+                    "avg": 0.2,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.0717
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 17543,
+                    "avg": 343.98,
+                    "min": 302,
+                    "max": 560,
+                    "elapsed_sec": 0.0713
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 17788,
+                    "avg": 348.78,
+                    "min": 305,
+                    "max": 571,
+                    "elapsed_sec": 0.0713
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 72032,
+                    "avg": 1412.39,
+                    "min": 1289,
+                    "max": 2267,
+                    "elapsed_sec": 0.0713
+                },
+                "iter_cache_hit": {
+                    "count": 10,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0712
+                },
+                "block_fastpath_hit": {
+                    "count": 4,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0711
+                },
+                "list_patch": {
+                    "count": 2,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0711
+                }
+            },
+            "avg_ms": 1.04,
+            "fps": 701.3,
+            "min_ms": 1,
+            "max_ms": 2,
+            "p50_ms": 1,
+            "p95_ms": 1,
+            "p99_ms": 2,
+            "warmup_ms": 1,
+            "steady_avg_ms": 1.0408,
+            "steady_min_ms": 1,
+            "steady_max_ms": 2,
+            "steady_fps": 697
+        },
+        "ChatStream": {
+            "case": "ChatStream",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.091,
+            "perf_snapshot": {
+                "list_patch": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0923
+                },
+                "block_fastpath_hit": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0923
+                },
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 26672,
+                    "avg": 522.98,
+                    "min": 161,
+                    "max": 900,
+                    "elapsed_sec": 0.0922
+                },
+                "style_pool_hit": {
+                    "count": 102,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0922
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 637,
+                    "avg": 12.49,
+                    "min": 11,
+                    "max": 14,
+                    "elapsed_sec": 0.0922
+                },
+                "sub:style_fallback": {
+                    "count": 51,
+                    "total": 548,
+                    "avg": 10.75,
+                    "min": 10,
+                    "max": 13,
+                    "elapsed_sec": 0.0922
+                },
+                "child_skip": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0922
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 522,
+                    "avg": 10.24,
+                    "min": 10,
+                    "max": 13,
+                    "elapsed_sec": 0.0922
+                },
+                "tree_convert": {
+                    "count": 51,
+                    "total": 2289,
+                    "avg": 44.88,
+                    "min": 42,
+                    "max": 67,
+                    "elapsed_sec": 0.0922
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 3394,
+                    "avg": 66.55,
+                    "min": 63,
+                    "max": 88,
+                    "elapsed_sec": 0.0921
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 241,
+                    "avg": 4.73,
+                    "min": 3,
+                    "max": 7,
+                    "elapsed_sec": 0.0921
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0921
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0921
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 46,
+                    "avg": 0.23,
+                    "min": 0,
+                    "max": 15,
+                    "elapsed_sec": 0.0921
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 1580,
+                    "avg": 30.98,
+                    "min": 29,
+                    "max": 46,
+                    "elapsed_sec": 0.0919
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 3708,
+                    "avg": 18.18,
+                    "min": 12,
+                    "max": 40,
+                    "elapsed_sec": 0.0919
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 3738,
+                    "avg": 73.29,
+                    "min": 67,
+                    "max": 99,
+                    "elapsed_sec": 0.0918
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 34738,
+                    "avg": 681.14,
+                    "min": 656,
+                    "max": 766,
+                    "elapsed_sec": 0.0914
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 1807,
+                    "avg": 35.43,
+                    "min": 33,
+                    "max": 74,
+                    "elapsed_sec": 0.0914
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 2773,
+                    "avg": 54.37,
+                    "min": 49,
+                    "max": 82,
+                    "elapsed_sec": 0.0913
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 42708,
+                    "avg": 837.41,
+                    "min": 808,
+                    "max": 922,
+                    "elapsed_sec": 0.0913
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 8,
+                    "avg": 0.16,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.0913
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 16186,
+                    "avg": 317.37,
+                    "min": 301,
+                    "max": 418,
+                    "elapsed_sec": 0.091
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 16413,
+                    "avg": 321.82,
+                    "min": 306,
+                    "max": 424,
+                    "elapsed_sec": 0.091
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 90994,
+                    "avg": 1784.2,
+                    "min": 1405,
+                    "max": 2151,
+                    "elapsed_sec": 0.091
+                },
+                "iter_cache_miss": {
+                    "count": 150,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0909
+                },
+                "iter_cache_hit": {
+                    "count": 3675,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0894
+                }
+            },
+            "avg_ms": 1.24,
+            "fps": 549.5,
+            "min_ms": 1,
+            "max_ms": 2,
+            "p50_ms": 1,
+            "p95_ms": 2,
+            "p99_ms": 2,
+            "warmup_ms": 1,
+            "steady_avg_ms": 1.2449,
+            "steady_min_ms": 1,
+            "steady_max_ms": 2,
+            "steady_fps": 544.4
+        },
+        "HoverGrid": {
+            "case": "HoverGrid",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.0934,
+            "perf_snapshot": {
+                "iter_cache_miss": {
+                    "count": 100,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0954
+                },
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 25107,
+                    "avg": 492.29,
+                    "min": 433,
+                    "max": 754,
+                    "elapsed_sec": 0.0947
+                },
+                "style_pool_hit": {
+                    "count": 102,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0947
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 704,
+                    "avg": 13.8,
+                    "min": 11,
+                    "max": 20,
+                    "elapsed_sec": 0.0947
+                },
+                "sub:style_fallback": {
+                    "count": 51,
+                    "total": 579,
+                    "avg": 11.35,
+                    "min": 10,
+                    "max": 16,
+                    "elapsed_sec": 0.0947
+                },
+                "child_skip": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0946
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 579,
+                    "avg": 11.35,
+                    "min": 10,
+                    "max": 24,
+                    "elapsed_sec": 0.0946
+                },
+                "tree_convert": {
+                    "count": 51,
+                    "total": 2459,
+                    "avg": 48.22,
+                    "min": 42,
+                    "max": 72,
+                    "elapsed_sec": 0.0946
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 3617,
+                    "avg": 70.92,
+                    "min": 63,
+                    "max": 102,
+                    "elapsed_sec": 0.0946
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 245,
+                    "avg": 4.8,
+                    "min": 3,
+                    "max": 7,
+                    "elapsed_sec": 0.0946
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0946
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0946
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 43,
+                    "avg": 0.21,
+                    "min": 0,
+                    "max": 17,
+                    "elapsed_sec": 0.0946
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 1732,
+                    "avg": 33.96,
+                    "min": 29,
+                    "max": 67,
+                    "elapsed_sec": 0.0944
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 3984,
+                    "avg": 19.53,
+                    "min": 12,
+                    "max": 55,
+                    "elapsed_sec": 0.0944
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 3863,
+                    "avg": 75.75,
+                    "min": 66,
+                    "max": 103,
+                    "elapsed_sec": 0.0942
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 37113,
+                    "avg": 727.71,
+                    "min": 648,
+                    "max": 1066,
+                    "elapsed_sec": 0.0939
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 1891,
+                    "avg": 37.08,
+                    "min": 33,
+                    "max": 51,
+                    "elapsed_sec": 0.0938
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 2983,
+                    "avg": 58.49,
+                    "min": 51,
+                    "max": 97,
+                    "elapsed_sec": 0.0938
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 45653,
+                    "avg": 895.16,
+                    "min": 806,
+                    "max": 1317,
+                    "elapsed_sec": 0.0938
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 10,
+                    "avg": 0.2,
+                    "min": 0,
+                    "max": 2,
+                    "elapsed_sec": 0.0938
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 17949,
+                    "avg": 351.94,
+                    "min": 300,
+                    "max": 494,
+                    "elapsed_sec": 0.0934
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 18204,
+                    "avg": 356.94,
+                    "min": 305,
+                    "max": 501,
+                    "elapsed_sec": 0.0934
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 94557,
+                    "avg": 1854.06,
+                    "min": 1666,
+                    "max": 2653,
+                    "elapsed_sec": 0.0934
+                },
+                "iter_cache_hit": {
+                    "count": 5000,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0933
+                },
+                "list_patch": {
+                    "count": 50,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0931
+                },
+                "block_fastpath_hit": {
+                    "count": 50,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0931
+                }
+            },
+            "avg_ms": 1.14,
+            "fps": 535.3,
+            "min_ms": 1,
+            "max_ms": 2,
+            "p50_ms": 1,
+            "p95_ms": 2,
+            "p99_ms": 2,
+            "warmup_ms": 1,
+            "steady_avg_ms": 1.1429,
+            "steady_min_ms": 1,
+            "steady_max_ms": 2,
+            "steady_fps": 530.3
+        },
+        "DynamicList": {
+            "case": "DynamicList",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.0812,
+            "perf_snapshot": {
+                "iter_cache_miss": {
+                    "count": 100,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.083
+                },
+                "list_patch": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0826
+                },
+                "block_fastpath_hit": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0826
+                },
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 17717,
+                    "avg": 347.39,
+                    "min": 327,
+                    "max": 556,
+                    "elapsed_sec": 0.0825
+                },
+                "style_pool_hit": {
+                    "count": 102,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0825
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 646,
+                    "avg": 12.67,
+                    "min": 11,
+                    "max": 25,
+                    "elapsed_sec": 0.0825
+                },
+                "sub:style_fallback": {
+                    "count": 51,
+                    "total": 575,
+                    "avg": 11.27,
+                    "min": 10,
+                    "max": 25,
+                    "elapsed_sec": 0.0824
+                },
+                "child_skip": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0824
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 519,
+                    "avg": 10.18,
+                    "min": 9,
+                    "max": 16,
+                    "elapsed_sec": 0.0824
+                },
+                "tree_convert": {
+                    "count": 51,
+                    "total": 2299,
+                    "avg": 45.08,
+                    "min": 42,
+                    "max": 60,
+                    "elapsed_sec": 0.0824
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 3433,
+                    "avg": 67.31,
+                    "min": 62,
+                    "max": 80,
+                    "elapsed_sec": 0.0824
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 246,
+                    "avg": 4.82,
+                    "min": 3,
+                    "max": 6,
+                    "elapsed_sec": 0.0824
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0824
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0824
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 44,
+                    "avg": 0.22,
+                    "min": 0,
+                    "max": 13,
+                    "elapsed_sec": 0.0823
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 1579,
+                    "avg": 30.96,
+                    "min": 30,
+                    "max": 41,
+                    "elapsed_sec": 0.0822
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 3800,
+                    "avg": 18.63,
+                    "min": 12,
+                    "max": 63,
+                    "elapsed_sec": 0.0822
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 3675,
+                    "avg": 72.06,
+                    "min": 67,
+                    "max": 92,
+                    "elapsed_sec": 0.082
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 34861,
+                    "avg": 683.55,
+                    "min": 653,
+                    "max": 839,
+                    "elapsed_sec": 0.0817
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 1821,
+                    "avg": 35.71,
+                    "min": 33,
+                    "max": 49,
+                    "elapsed_sec": 0.0816
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 2752,
+                    "avg": 53.96,
+                    "min": 51,
+                    "max": 66,
+                    "elapsed_sec": 0.0816
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 42744,
+                    "avg": 838.12,
+                    "min": 802,
+                    "max": 995,
+                    "elapsed_sec": 0.0815
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 7,
+                    "avg": 0.14,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.0815
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 16145,
+                    "avg": 316.57,
+                    "min": 298,
+                    "max": 350,
+                    "elapsed_sec": 0.0812
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 16366,
+                    "avg": 320.9,
+                    "min": 302,
+                    "max": 355,
+                    "elapsed_sec": 0.0812
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 82093,
+                    "avg": 1609.67,
+                    "min": 1559,
+                    "max": 1812,
+                    "elapsed_sec": 0.0812
+                },
+                "iter_cache_hit": {
+                    "count": 2450,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.0811
+                }
+            },
+            "avg_ms": 1,
+            "fps": 615.8,
+            "min_ms": 1,
+            "max_ms": 1,
+            "p50_ms": 1,
+            "p95_ms": 1,
+            "p99_ms": 1,
+            "warmup_ms": 1,
+            "steady_avg_ms": 1,
+            "steady_min_ms": 1,
+            "steady_max_ms": 1,
+            "steady_fps": 611
+        },
+        "StaticTemplate": {
+            "case": "StaticTemplate",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.1029,
+            "perf_snapshot": {
+                "iter_cache_miss": {
+                    "count": 282,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1047
+                },
+                "list_patch": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1043
+                },
+                "block_fastpath_hit": {
+                    "count": 2107,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1043
+                },
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 35713,
+                    "avg": 700.25,
+                    "min": 440,
+                    "max": 956,
+                    "elapsed_sec": 0.1042
+                },
+                "style_pool_hit": {
+                    "count": 102,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1042
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 688,
+                    "avg": 13.49,
+                    "min": 11,
+                    "max": 20,
+                    "elapsed_sec": 0.1042
+                },
+                "sub:style_fallback": {
+                    "count": 51,
+                    "total": 595,
+                    "avg": 11.67,
+                    "min": 10,
+                    "max": 17,
+                    "elapsed_sec": 0.1041
+                },
+                "child_skip": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1041
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 532,
+                    "avg": 10.43,
+                    "min": 9,
+                    "max": 14,
+                    "elapsed_sec": 0.1041
+                },
+                "tree_convert": {
+                    "count": 51,
+                    "total": 2389,
+                    "avg": 46.84,
+                    "min": 43,
+                    "max": 61,
+                    "elapsed_sec": 0.1041
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 3533,
+                    "avg": 69.27,
+                    "min": 64,
+                    "max": 87,
+                    "elapsed_sec": 0.1041
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 251,
+                    "avg": 4.92,
+                    "min": 4,
+                    "max": 7,
+                    "elapsed_sec": 0.1041
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1041
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1041
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 35,
+                    "avg": 0.17,
+                    "min": 0,
+                    "max": 3,
+                    "elapsed_sec": 0.104
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 1680,
+                    "avg": 32.94,
+                    "min": 29,
+                    "max": 99,
+                    "elapsed_sec": 0.1039
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 3820,
+                    "avg": 18.73,
+                    "min": 12,
+                    "max": 40,
+                    "elapsed_sec": 0.1038
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 3777,
+                    "avg": 74.06,
+                    "min": 67,
+                    "max": 106,
+                    "elapsed_sec": 0.1037
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 36122,
+                    "avg": 708.27,
+                    "min": 661,
+                    "max": 1115,
+                    "elapsed_sec": 0.1033
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 1851,
+                    "avg": 36.29,
+                    "min": 33,
+                    "max": 51,
+                    "elapsed_sec": 0.1033
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 2852,
+                    "avg": 55.92,
+                    "min": 51,
+                    "max": 72,
+                    "elapsed_sec": 0.1032
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 44398,
+                    "avg": 870.55,
+                    "min": 812,
+                    "max": 1283,
+                    "elapsed_sec": 0.1032
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 5,
+                    "avg": 0.1,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.1032
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 17685,
+                    "avg": 346.76,
+                    "min": 305,
+                    "max": 593,
+                    "elapsed_sec": 0.1029
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 17948,
+                    "avg": 351.92,
+                    "min": 309,
+                    "max": 600,
+                    "elapsed_sec": 0.1029
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 103517,
+                    "avg": 2029.75,
+                    "min": 1688,
+                    "max": 2624,
+                    "elapsed_sec": 0.1029
+                },
+                "iter_cache_hit": {
+                    "count": 2268,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1028
+                }
+            },
+            "avg_ms": 1.78,
+            "fps": 485.9,
+            "min_ms": 1,
+            "max_ms": 2,
+            "p50_ms": 2,
+            "p95_ms": 2,
+            "p99_ms": 2,
+            "warmup_ms": 1,
+            "steady_avg_ms": 1.7959,
+            "steady_min_ms": 1,
+            "steady_max_ms": 2,
+            "steady_fps": 480.9
+        },
+        "TextHeavy": {
+            "case": "TextHeavy",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.173,
+            "perf_snapshot": {
+                "iter_cache_miss": {
+                    "count": 900,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1767
+                },
+                "list_patch": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1751
+                },
+                "block_fastpath_hit": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.175
+                },
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 105466,
+                    "avg": 2067.96,
+                    "min": 1520,
+                    "max": 2440,
+                    "elapsed_sec": 0.1745
+                },
+                "style_pool_hit": {
+                    "count": 102,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1745
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 768,
+                    "avg": 15.06,
+                    "min": 12,
+                    "max": 25,
+                    "elapsed_sec": 0.1745
+                },
+                "sub:style_fallback": {
+                    "count": 51,
+                    "total": 581,
+                    "avg": 11.39,
+                    "min": 10,
+                    "max": 27,
+                    "elapsed_sec": 0.1745
+                },
+                "child_skip": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1745
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 568,
+                    "avg": 11.14,
+                    "min": 10,
+                    "max": 20,
+                    "elapsed_sec": 0.1745
+                },
+                "tree_convert": {
+                    "count": 51,
+                    "total": 2487,
+                    "avg": 48.76,
+                    "min": 43,
+                    "max": 70,
+                    "elapsed_sec": 0.1745
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 3685,
+                    "avg": 72.25,
+                    "min": 64,
+                    "max": 102,
+                    "elapsed_sec": 0.1744
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 337,
+                    "avg": 6.61,
+                    "min": 4,
+                    "max": 79,
+                    "elapsed_sec": 0.1744
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1744
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1744
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 59,
+                    "avg": 0.29,
+                    "min": 0,
+                    "max": 33,
+                    "elapsed_sec": 0.1744
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 1797,
+                    "avg": 35.24,
+                    "min": 30,
+                    "max": 55,
+                    "elapsed_sec": 0.1742
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 3841,
+                    "avg": 18.83,
+                    "min": 12,
+                    "max": 43,
+                    "elapsed_sec": 0.1741
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 3777,
+                    "avg": 74.06,
+                    "min": 68,
+                    "max": 89,
+                    "elapsed_sec": 0.174
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 35982,
+                    "avg": 705.53,
+                    "min": 655,
+                    "max": 763,
+                    "elapsed_sec": 0.1736
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 1903,
+                    "avg": 37.31,
+                    "min": 34,
+                    "max": 52,
+                    "elapsed_sec": 0.1736
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 2899,
+                    "avg": 56.84,
+                    "min": 52,
+                    "max": 72,
+                    "elapsed_sec": 0.1735
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 44492,
+                    "avg": 872.39,
+                    "min": 812,
+                    "max": 928,
+                    "elapsed_sec": 0.1735
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 7,
+                    "avg": 0.14,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.1735
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 19116,
+                    "avg": 374.82,
+                    "min": 309,
+                    "max": 478,
+                    "elapsed_sec": 0.173
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 19385,
+                    "avg": 380.1,
+                    "min": 313,
+                    "max": 484,
+                    "elapsed_sec": 0.173
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 175223,
+                    "avg": 3435.75,
+                    "min": 2899,
+                    "max": 3905,
+                    "elapsed_sec": 0.173
+                },
+                "iter_cache_hit": {
+                    "count": 19500,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1729
+                }
+            },
+            "avg_ms": 2.96,
+            "fps": 289,
+            "min_ms": 2,
+            "max_ms": 3,
+            "p50_ms": 3,
+            "p95_ms": 3,
+            "p99_ms": 3,
+            "warmup_ms": 2,
+            "steady_avg_ms": 2.9796,
+            "steady_min_ms": 2,
+            "steady_max_ms": 3,
+            "steady_fps": 286.5
+        },
+        "LiveDashboard": {
+            "case": "LiveDashboard",
+            "cycles": 50,
+            "renders": 50,
+            "microtasks": 0,
+            "dirty_sets": 0,
+            "total_sec": 0.1237,
+            "perf_snapshot": {
+                "iter_cache_miss": {
+                    "count": 968,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.126
+                },
+                "stage:vnode_tree": {
+                    "count": 51,
+                    "total": 55212,
+                    "avg": 1082.59,
+                    "min": 732,
+                    "max": 1353,
+                    "elapsed_sec": 0.1251
+                },
+                "style_pool_hit": {
+                    "count": 102,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1251
+                },
+                "stage:style_recalc": {
+                    "count": 51,
+                    "total": 722,
+                    "avg": 14.16,
+                    "min": 12,
+                    "max": 25,
+                    "elapsed_sec": 0.1251
+                },
+                "sub:style_fallback": {
+                    "count": 51,
+                    "total": 597,
+                    "avg": 11.71,
+                    "min": 10,
+                    "max": 25,
+                    "elapsed_sec": 0.125
+                },
+                "child_skip": {
+                    "count": 51,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.125
+                },
+                "sub:children_walk": {
+                    "count": 51,
+                    "total": 582,
+                    "avg": 11.41,
+                    "min": 9,
+                    "max": 51,
+                    "elapsed_sec": 0.125
+                },
+                "tree_convert": {
+                    "count": 51,
+                    "total": 2477,
+                    "avg": 48.57,
+                    "min": 43,
+                    "max": 88,
+                    "elapsed_sec": 0.125
+                },
+                "stage:update_from_vnode": {
+                    "count": 51,
+                    "total": 3645,
+                    "avg": 71.47,
+                    "min": 64,
+                    "max": 110,
+                    "elapsed_sec": 0.1249
+                },
+                "sub:dirty_propagate": {
+                    "count": 51,
+                    "total": 253,
+                    "avg": 4.96,
+                    "min": 3,
+                    "max": 15,
+                    "elapsed_sec": 0.1249
+                },
+                "layout_enter": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1249
+                },
+                "layout_miss": {
+                    "count": 204,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1249
+                },
+                "algo:setup": {
+                    "count": 204,
+                    "total": 32,
+                    "avg": 0.16,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.1249
+                },
+                "algo:InlineAlgorithm": {
+                    "count": 51,
+                    "total": 1759,
+                    "avg": 34.49,
+                    "min": 30,
+                    "max": 62,
+                    "elapsed_sec": 0.1247
+                },
+                "algo:teardown": {
+                    "count": 204,
+                    "total": 3835,
+                    "avg": 18.8,
+                    "min": 12,
+                    "max": 30,
+                    "elapsed_sec": 0.1247
+                },
+                "algo:BlockAlgorithm": {
+                    "count": 51,
+                    "total": 3750,
+                    "avg": 73.53,
+                    "min": 67,
+                    "max": 97,
+                    "elapsed_sec": 0.1245
+                },
+                "algo:FlexAlgorithm": {
+                    "count": 51,
+                    "total": 35854,
+                    "avg": 703.02,
+                    "min": 656,
+                    "max": 806,
+                    "elapsed_sec": 0.1242
+                },
+                "algo:OOF": {
+                    "count": 51,
+                    "total": 1840,
+                    "avg": 36.08,
+                    "min": 33,
+                    "max": 44,
+                    "elapsed_sec": 0.1241
+                },
+                "algo:postProcess": {
+                    "count": 51,
+                    "total": 2859,
+                    "avg": 56.06,
+                    "min": 51,
+                    "max": 87,
+                    "elapsed_sec": 0.1241
+                },
+                "stage:layout": {
+                    "count": 51,
+                    "total": 44178,
+                    "avg": 866.24,
+                    "min": 813,
+                    "max": 1032,
+                    "elapsed_sec": 0.1241
+                },
+                "stage:capture_snapshot": {
+                    "count": 51,
+                    "total": 8,
+                    "avg": 0.16,
+                    "min": 0,
+                    "max": 1,
+                    "elapsed_sec": 0.1241
+                },
+                "render_collect": {
+                    "count": 51,
+                    "total": 18391,
+                    "avg": 360.61,
+                    "min": 302,
+                    "max": 581,
+                    "elapsed_sec": 0.1237
+                },
+                "stage:paint": {
+                    "count": 51,
+                    "total": 18655,
+                    "avg": 365.78,
+                    "min": 306,
+                    "max": 586,
+                    "elapsed_sec": 0.1237
+                },
+                "stage:full_render": {
+                    "count": 51,
+                    "total": 123700,
+                    "avg": 2425.49,
+                    "min": 1971,
+                    "max": 2825,
+                    "elapsed_sec": 0.1237
+                },
+                "iter_cache_hit": {
+                    "count": 4566,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1235
+                },
+                "list_patch": {
+                    "count": 150,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1233
+                },
+                "block_fastpath_hit": {
+                    "count": 1325,
+                    "total": 0,
+                    "avg": 0,
+                    "min": 0,
+                    "max": 0,
+                    "elapsed_sec": 0.1233
+                }
+            },
+            "avg_ms": 2,
+            "fps": 404.2,
+            "min_ms": 2,
+            "max_ms": 2,
+            "p50_ms": 2,
+            "p95_ms": 2,
+            "p99_ms": 2,
+            "warmup_ms": 2,
+            "steady_avg_ms": 2,
+            "steady_min_ms": 2,
+            "steady_max_ms": 2,
+            "steady_fps": 402.6
+        }
+    }
+}

@@ -1253,9 +1253,11 @@ class PaintPipeline
             'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h,
             'bg' => $bg, 'borderRadius' => $borderRadius,
             'contentHeight' => $contentH,
-            'contentWidth' => $scrollFrag !== null ? $scrollFrag->getContentWidth() : (int)($node->contentWidth ?? 0),
-            'scrollTop' => $scrollFrag !== null ? $scrollFrag->getScrollTop() : (int)($node->scrollTop ?? 0),
-            'scrollLeft' => $scrollFrag !== null ? $scrollFrag->getScrollLeft() : (int)($node->scrollLeft ?? 0),
+            // RenderNode 已无 contentWidth/scrollTop/scrollLeft 字段，旧 fallback 读
+            // 动态属性恒为 null→0；cachedFragment 缺失时直接 0（语义等价且无死路）。
+            'contentWidth' => $scrollFrag !== null ? $scrollFrag->getContentWidth() : 0,
+            'scrollTop' => $scrollFrag !== null ? $scrollFrag->getScrollTop() : 0,
+            'scrollLeft' => $scrollFrag !== null ? $scrollFrag->getScrollLeft() : 0,
             'opacity' => $opacity,
             'layer' => $layer,
         ];
