@@ -217,6 +217,16 @@ class InlineAlgorithm extends LayoutAlgorithm
         $inlineItems = [];
         foreach ($items as $cr) {
             $cStyle = $cr->style;
+            // <br> → 强制断行项（对标 Blink NGInlineItem forced break）：忽略其
+            // 预布局几何（block 预布局给了容器宽 0 高，属错误契约），宽 0、
+            // 不贡献 ascent/descent（行高由 strut/同行项决定，§10.8.1）。
+            if (($cr->type ?? '') === 'br') {
+                $inlineItems[] = new InlineItem(
+                    InlineItem::TYPE_FORCED_BREAK,
+                    0, 0, 0, $cr, '', $cStyle, 0, 0
+                );
+                continue;
+            }
             $fs = $cStyle?->getFontSize() ?? 16;
             if ($fs <= 0) $fs = 16;
             $mLeft = (int)($cStyle?->margin?->left->toPx() ?? 0);
@@ -268,6 +278,21 @@ class InlineAlgorithm extends LayoutAlgorithm
             foreach ($line->items as $item) {
                 $cr = $item->fragment;
                 if ($cr === null) continue;
+
+                // <br> 放置：0 宽 × 行高盒（对齐 Blink br getBoundingClientRect：
+                // 宽 0、高 = 行高），保留 dataset/sourceNode 供 px-id 对比。
+                if ($item->type === InlineItem::TYPE_FORCED_BREAK) {
+                    $result[] = new PhysicalFragment(
+                        (int)($startX + $cursorX), (int)($startY + $cursorY),
+                        0, (int)$line->height(),
+                        0, 0, (int)($cr->getLayer() ?? 0),
+                        0, (int)$line->height(),
+                        $cr->style, [], $cr->sourceNode,
+                        0, 0, false,
+                        $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles
+                    );
+                    continue;
+                }
 
                 // vertical-align 实现（对标 Blink NGInlineLayoutAlgorithm::PlaceItems）
                 $va = $item->style?->verticalAlign?->value ?? 'baseline';

@@ -43,6 +43,18 @@ class LineBreaker
         $currentDescent = $strutDescent;
 
         foreach ($items as $item) {
+            // 强制断行（<br>，对标 Blink forced break）：br 归入当前行后立即收行；
+            // br 不贡献宽度；空行（连续 br）高度由 strut 支撑（CSS 2.2 §10.8.1）。
+            if ($item->type === InlineItem::TYPE_FORCED_BREAK) {
+                $currentItems[] = $item;
+                $lh = self::computeLineHeight($currentAscent, $currentDescent, $currentItems, $defaultLineHeight);
+                $lines[] = new LineBox($currentItems, max(0, $currentAscent), max(0, $currentDescent), $currentWidth, $lh);
+                $currentItems = [];
+                $currentWidth = 0;
+                $currentAscent = $strutAscent;
+                $currentDescent = $strutDescent;
+                continue;
+            }
             $itemW = $item->totalWidth();
 
             // 换行判断：当前行放不下且已有内容（第一项永不单独换行）

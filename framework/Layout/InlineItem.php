@@ -24,6 +24,8 @@ class InlineItem
     public const TYPE_ATOMIC = 'atomic';
     public const TYPE_OPEN_TAG = 'open';
     public const TYPE_CLOSE_TAG = 'close';
+    /** 强制断行（<br>，对标 Blink NGInlineItem kControl \n forced break） */
+    public const TYPE_FORCED_BREAK = 'br';
 
     public readonly string $type;
     public readonly int $width;
