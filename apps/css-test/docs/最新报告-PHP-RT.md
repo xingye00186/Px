@@ -1,10 +1,10 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-27 04:16:52 | **总耗时**: 46.7s
+**运行时间**: 2026-07-27 05:12:42 | **总耗时**: 46.7s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 40.3s |
+| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 40.4s |
 | case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff 🔴1 | ⏭️ | ❌ 失败 | 0.1s |
 | case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
@@ -31,7 +31,7 @@
 | case-025-english-text | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 9diff 🔴3 | ⏭️ | ❌ 失败 | 0.1s |
 | case-026-font-style | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 115diff 🔴6 | ⏭️ | ❌ 失败 | 0.1s |
 | case-027-scroll-diagnostic | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.3s |
-| case-028-scroll-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.4s |
+| case-028-scroll-block | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.3s |
 | case-029-scroll-flex-col | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 0.4s |
 | case-030-scroll-flex-row | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🟡1 | ⏭️ | ❌ 失败 | 0.2s |
 | case-031-scroll-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.4s |
@@ -43,7 +43,7 @@
 | case-037-direction-rtl | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 92diff 🔴56 | ⏭️ | ❌ 失败 | 0.1s |
 | case-038-list-style | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 53diff 🔴10 | ⏭️ | ❌ 失败 | 0.1s |
 | case-039-vertical-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 248diff 🔴174 | ⏭️ | ❌ 失败 | 0.1s |
-| case-040-word-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 145diff 🔴18 | ⏭️ | ❌ 失败 | 0.1s |
+| case-040-word-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 145diff 🔴18 | ⏭️ | ❌ 失败 | 0.2s |
 | case-041-background-clip | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 82diff 🟡42 | ⏭️ | ❌ 失败 | 0.1s |
 | case-042-font-variant | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 50diff 🟡45 | ⏭️ | ❌ 失败 | 0.1s |
 | case-043-resize | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 68diff 🟡44 | ⏭️ | ❌ 失败 | 0.1s |
@@ -64,20 +64,7 @@
 
 ## 回归判定
 
-> 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
->
-> - case-008-box-shadow critical 0->34
-> - case-009-outline critical 0->31
-> - case-019-visibility geometry 245->253
-> - case-021-line-height geometry 93->134
-> - case-021-line-height critical 0->30
-> - case-035-text-indent major 57->69
-> - case-039-vertical-align critical 96->174
-> - case-046-appearance geometry 200->235
-> - case-046-appearance critical 87->144
-> - case-050-text-emphasis major 50->147
->
-> ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
+> ✅ **无回归** — 与上一次运行相比，各项指标均未恶化。
 
 ## 样式属性统计
 

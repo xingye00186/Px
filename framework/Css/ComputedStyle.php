@@ -651,13 +651,6 @@ class ComputedStyle
             $bw = (int)$bwRaw;
         }
         $bw = $bw < 0 ? 0 : $bw;
-        $bwCl = CssLength::px($bw);
-        $this->borderWidth = new CssRect(
-            $this->cssLengthFromDecl($d, 'borderTopWidth', $bwCl),
-            $this->cssLengthFromDecl($d, 'borderRightWidth', $bwCl),
-            $this->cssLengthFromDecl($d, 'borderBottomWidth', $bwCl),
-            $this->cssLengthFromDecl($d, 'borderLeftWidth', $bwCl),
-        );
 
         // border per-side widths (int storage for layout)
         // CSS §8.5: 支持 border-top/bottom/left/right 简写宽度提取
@@ -666,6 +659,17 @@ class ComputedStyle
         $brw = $d['borderRightWidth'] ?? null; $brwV = $brw !== null ? self::safeInt($brw) : 0; $this->borderRightWidth = $brwV !== 0 ? $brwV : self::safeInt($borderFallback('border-right', 'borderRight') ?: $bw);
         $bbw = $d['borderBottomWidth'] ?? null; $bbwV = $bbw !== null ? self::safeInt($bbw) : 0; $this->borderBottomWidth = $bbwV !== 0 ? $bbwV : self::safeInt($borderFallback('border-bottom', 'borderBottom') ?: $bw);
         $blw = $d['borderLeftWidth'] ?? null; $blwV = $blw !== null ? self::safeInt($blw) : 0; $this->borderLeftWidth = $blwV !== 0 ? $blwV : self::safeInt($borderFallback('border-left', 'borderLeft') ?: $bw);
+
+        // borderWidth Rect 从 int 四边派生（单源化：int 四边是唯一权威）。
+        // 此前 Rect 用 cssLengthFromDecl 独立取值，defaults 的 borderXxxWidth=0 int
+        // 短路 $bwCl 兜底 → 简写场景 Rect 恒 0 而 int 四边正确（双源分叉），
+        // Paint 层 4 处 + RTM 1 处读 Rect → 边框宽度对但不绘制。
+        $this->borderWidth = new CssRect(
+            CssLength::px($this->borderTopWidth),
+            CssLength::px($this->borderRightWidth),
+            CssLength::px($this->borderBottomWidth),
+            CssLength::px($this->borderLeftWidth),
+        );
 
         // border color（同样支持从简写提取：defaults borderColor=0 短路同族陷阱）
         $bc = self::safeInt($d['borderColor'] ?? 0);
