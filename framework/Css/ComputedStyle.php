@@ -254,8 +254,16 @@ class ComputedStyle
 
     private static function getDefaultsArray(string $elementType): array
     {
-        $defaultDisplay = self::TABLE_DISPLAY_MAP[$elementType]
-            ?? (in_array($elementType, self::INLINE_TYPES, true) ? 'inline' : 'block');
+        // 表单控件 UA 特例（对标 Blink menulist）：<select> 是替换控件
+        //（inline-block 盒）；<option>/<optgroup> 子树不产生常规布局盒——
+        // 零盒化在布局层（LayoutOrchestrator）处理而非 display:none
+        //（none 会被导出层丢弃破坏元素集合同构：浏览器导出 0 盒）。
+        if ($elementType === 'select') {
+            $defaultDisplay = 'inline-block';
+        } else {
+            $defaultDisplay = self::TABLE_DISPLAY_MAP[$elementType]
+                ?? (in_array($elementType, self::INLINE_TYPES, true) ? 'inline' : 'block');
+        }
         return [
             'width' => CssLength::px(0),
             'height' => CssLength::px(0),

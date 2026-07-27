@@ -107,6 +107,22 @@ class LayoutOrchestrator
     }
 
     /**
+     * menulist 子树零盒递归（option/optgroup 及其后代）：全部 (0,0,0,0)，
+     * 保留 type/dataset/content 供导出层元素集合同构（px-id 匹配）。
+     */
+    private function zeroBoxSubtree(RenderNode $node): PhysicalFragment
+    {
+        $kids = [];
+        foreach ($node->children as $ch) {
+            if ($ch instanceof RenderNode) $kids[] = $this->zeroBoxSubtree($ch);
+        }
+        return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0,
+            $node->computedStyle, $kids, $node,
+            0, 0, false,
+            $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles);
+    }
+
+    /**
      * ChildLayoutProvider 专用：公开的 buildChildSpace 入口。
      */
     public function buildChildSpacePublic(RenderNode $child, ConstraintSpace $parentSpace, ?\Px\Css\ComputedStyle $parentStyle): ConstraintSpace
@@ -121,6 +137,13 @@ class LayoutOrchestrator
     private function mainLayout(RenderNode $node, ConstraintSpace $space, int $inheritedLayer = 0, int $relayoutDepth = 0): PhysicalFragment
     {
         \Px\Core\PerfCounter::inc('layout_enter');
+        // ── menulist 子树零盒（对标 Blink：<select> 为替换控件，<option>/
+        // <optgroup> 在 style tree 但不入 layout tree，getBoundingClientRect
+        // 全 0；true-真值实锤 case-046 B 侧 option/内 span 全 (0,0 0x0)）。
+        // 零盒递归保留子树结构（dataset 导出同构），不走常规算法。
+        if ($node->type === 'option' || $node->type === 'optgroup') {
+            return $this->zeroBoxSubtree($node);
+        }
         // ── 洁净早退（基于完整 cachedFragment + 约束空间字段比较）──
         if (!$node->layoutDirty && $node->cachedFragment !== null) {
             if ($node->cachedConstraintSpace !== null && $space->equals($node->cachedConstraintSpace)) {
