@@ -1,4 +1,4 @@
-@generated 2026-07-27 09:42:55
+@generated 2026-07-27 11:05:06
 === Test: display:table 基本容器 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x39) [dsp=table]
@@ -66,10 +66,10 @@ div (0,0 230x30)
 
 === Test: display:inline 三个行内元素并排 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x63)
-  span (0,1 400x16) [dsp=inline] text="AA "
-  span (0,22 400x16) [dsp=inline] text="BB "
-  span (0,43 400x16) [dsp=inline] text="CC"
+div (0,0 400x21)
+  span (0,1 24x16) [dsp=inline] text="AA "
+  span (24,1 24x16) [dsp=inline] text="BB "
+  span (48,1 16x16) [dsp=inline] text="CC"
 
 ---
 
@@ -85,5 +85,5 @@ div (0,0 400x64)
 === Test: display:inline 溢出换行 ===
 Frame #1 events=0 detail=normal
 div (0,0 120x42)
-  span (0,1 120x16) [dsp=inline] text="LongTextA"
-  span (0,22 120x16) [dsp=inline] text=" LongTextB"
+  span (0,1 72x16) [dsp=inline] text="LongTextA"
+  span (0,22 80x16) [dsp=inline] text=" LongTextB"

@@ -135,8 +135,16 @@ class InlineAlgorithm extends LayoutAlgorithm
                     $padLR2 = (int)($s->padding?->left->toPx() ?? 0) + (int)($s->padding?->right->toPx() ?? 0);
                     $bwLR2 = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
                     $w = $sumW + $padLR2 + $bwLR2;
+                } elseif (strlen($textContent) > 0) {
+                    // 纯文本 inline（CSS 2.2 §10.3.1 内容宽）：文本测量 + 水平边缘。
+                    // 此前 fill-available 使伪元素/文本 span 在 IFC 中独占行
+                    //（case-050 ::before 716×19 挤断后续 spans 实锤）。
+                    $fs2 = $s->getFontSize() > 0 ? $s->getFontSize() : 16;
+                    $padLR2 = (int)($s->padding?->left->toPx() ?? 0) + (int)($s->padding?->right->toPx() ?? 0);
+                    $bwLR2 = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
+                    $w = TextMeasureCache::measure($textContent, $fs2, (bool)($s->getBold() ?? false)) + $padLR2 + $bwLR2;
                 } else {
-                    // inline / 其他：保持旧行为（fill available）
+                    // 空 inline：保持旧行为（fill available，窄口径）
                     $w = $availableW;
                 }
             }

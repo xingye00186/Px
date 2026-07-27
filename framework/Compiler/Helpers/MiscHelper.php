@@ -99,6 +99,22 @@ function parseCssClassesForMerge(string $css): array
     if (count($complexRules) > 0) {
         $result['__complex_rules__'] = $complexRules;
     }
+    // 提取 ::before/::after 伪元素规则（CSS Pseudo-Elements L4 §4）：
+    // 烘焙模式无运行时 class 注册（extractPseudoStyles 永空），编译期
+    // 合成真 span 子节点（对标 Blink：伪元素是样式系统生成的匿名盒；
+    // 与 tbody 合成同层次——树构建器职责）。
+    $pseudoEls = [];
+    if (preg_match_all('#\.([a-zA-Z0-9_-]+)::(before|after)\s*\{([^}]*)\}#s', $css, $pes, PREG_SET_ORDER)) {
+        foreach ($pes as $pe) {
+            $body = trim(preg_replace('/\s+/', ' ', $pe[3]));
+            $body = rtrim($body, ';');
+            if ($body === '') continue;
+            $pseudoEls[$pe[1]][$pe[2]] = $body;
+        }
+    }
+    if (count($pseudoEls) > 0) {
+        $result['__pseudo_els__'] = $pseudoEls;
+    }
     return $result;
 }
 
@@ -257,18 +273,67 @@ function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassL
         $node->props['style'] = implode(';', $parts);
     }
 
+    // Step 3.5: ::before/::after 伪元素合成（CSS Pseudo-Elements L4 §4）：
+    // 命中自身 class 的规则合成 span 子（before 插首/after 追尾）。
+    // content 支持字面量与 attr(x)（取宿主属性，§4.1）；none/空不生盒。
+    // 在递归前插入使其参与后续层叠/布局；伪元素非元素，不计入
+    // :first-child 兄弟计数（插入在预扫与 siblingAcc 之前不影响——
+    // 它们无 class 且子层递归仅以元素计数，before span 会被计为首元素子；
+    // Selectors §6.6.5 以 DOM 元素计，伪元素不在 DOM——故标记 _pxPseudo
+    // 供兄弟计数跳过）。
+    if (isset($rawStyles['__pseudo_els__']) && !$isComponentPlaceholder && count($ownClasses) > 0) {
+        foreach ($ownClasses as $oc2) {
+            $pel = $rawStyles['__pseudo_els__'][$oc2] ?? null;
+            if ($pel === null) continue;
+            foreach (['before', 'after'] as $which) {
+                if (!isset($pel[$which])) continue;
+                $decls = $pel[$which];
+                // 提取 content（字面量/attr()），余下声明作为 span style
+                $contentVal = null;
+                if (preg_match('~content\s*:\s*("([^"]*)"|\'([^\']*)\'|attr\(([a-zA-Z0-9_-]+)\)|[^;]+)~', $decls, $cm)) {
+                    if (isset($cm[4]) && $cm[4] !== '') {
+                        $contentVal = (string)($node->props[$cm[4]] ?? ($node->props['data-' . preg_replace('/^data-/', '', $cm[4])] ?? ''));
+                        if ($contentVal === '' && isset($node->props[$cm[4]])) $contentVal = (string)$node->props[$cm[4]];
+                    } elseif (isset($cm[3]) && $cm[3] !== '') {
+                        $contentVal = $cm[3];
+                    } elseif (isset($cm[2]) && $cm[2] !== '') {
+                        $contentVal = $cm[2];
+                    } else {
+                        $lit = trim($cm[1], "\"' ");
+                        $contentVal = ($lit === 'none' || $lit === 'normal') ? null : $lit;
+                    }
+                }
+                if ($contentVal === null || $contentVal === '') continue;
+                $restDecls = trim(preg_replace('~content\s*:\s*[^;]+;?~', '', $decls), "; ");
+                $pseudoNode = \Px\Dom\VNode::h('span', $restDecls !== '' ? ['style' => $restDecls, '_pxPseudo' => '1'] : ['_pxPseudo' => '1'], $contentVal);
+                if (!is_array($node->children)) $node->children = [];
+                if ($which === 'before') {
+                    array_unshift($node->children, $pseudoNode);
+                } else {
+                    $node->children[] = $pseudoNode;
+                }
+            }
+        }
+    }
+
     // Step 4: 递归子节点（携带祖先 class 链、前序兄弟与末子标记）
     if (is_array($node->children)) {
         $childAncestors = $ancestorClassLists;
         $childAncestors[] = $ownClasses;
-        // 预扫末元素子索引（:last-child 判定，Selectors L3 §6.6.5）
+        // 预扫末元素子索引（:last-child 判定，Selectors L3 §6.6.5；
+        // 伪元素合成节点 _pxPseudo 不计入元素兄弟集）
         $lastElemIdx = -1;
         foreach ($node->children as $ci => $child) {
-            if (is_object($child) && property_exists($child, 'props')) $lastElemIdx = $ci;
+            if (is_object($child) && property_exists($child, 'props') && !isset($child->props['_pxPseudo'])) $lastElemIdx = $ci;
         }
         $siblingAcc = [];
         foreach ($node->children as $ci => $child) {
             if (is_object($child) && property_exists($child, 'props')) {
+                if (isset($child->props['_pxPseudo'])) {
+                    // 伪元素子：仅应用 universal/tag 层叠（递归但不计入 siblingAcc）
+                    mergeClassStylesIntoNode($child, $rawStyles, $childAncestors, $siblingAcc, false);
+                    continue;
+                }
                 mergeClassStylesIntoNode($child, $rawStyles, $childAncestors, $siblingAcc, $ci === $lastElemIdx);
                 $siblingAcc[] = (string)($child->props['class'] ?? '');
             }
