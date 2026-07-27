@@ -25,6 +25,12 @@ class BlockAlgorithm extends LayoutAlgorithm
      */
     private int $lastInlineFlowEnd = 0;
 
+    /** 看门狗：AOT 挂死定位用——flushInlineBuffer 调用总数超阈値（正常
+     * 一帧数百次，cycles 数千次）即落盘 backtrace + 中断，打破无限
+     * 循环/递归暴露 AOT 特有分叉调用栈（CLI headless 同 case 秒过已
+     * 确认纯 AOT 转译层问题）。阈値足够高不影响正常多帧渲染。 */
+    private static int $_flushWatchdog = 0;
+
     private static function isInlineType(string $type): bool
     {
         return in_array($type, self::INLINE_TYPES, true);
@@ -944,6 +950,18 @@ class BlockAlgorithm extends LayoutAlgorithm
 
     private function flushInlineBuffer(array &$inlineBuffer, int $parentX, int $padLeft, int $containerW, int &$stackY, array &$result, int $parentW, ?ComputedStyle $s = null): void
     {
+        // 看门狗（AOT 挂死定位）：超阈値即 inline 路径无限循环/递归。
+        self::$_flushWatchdog++;
+        if (self::$_flushWatchdog > 5000000) {
+            $bt = function_exists('debug_backtrace')
+                ? print_r(array_slice(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 30), 0, 30), true)
+                : 'no-backtrace';
+            @file_put_contents('f:/work/Px/_aot_watchdog.log',
+                'flushInlineBuffer watchdog tripped @' . self::$_flushWatchdog
+                . ' containerW=' . $containerW . ' parentW=' . $parentW
+                . ' bufN=' . count($inlineBuffer) . "\n" . $bt . "\n");
+            throw new \RuntimeException('AOT-watchdog: flushInlineBuffer exceeded ' . self::$_flushWatchdog);
+        }
         // P4: 委派给 InlineAlgorithm（对标 Blink：块算法将 IFC 委派给内联算法）
         // IFC 可用宽 = 容器 content 宽（CSS 2.2 §10.1）：此前两调用点传
         // border-box 宽且仅扣左 padding（右 padding+双 border 全漏，且 else
