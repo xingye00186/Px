@@ -1,0 +1,4 @@
+# 快照/基线文件必须以 LF checkout：CssTestBase 按 "\n" 逐行比较，
+# core.autocrlf=true 的机器若转成 CRLF 会导致全量虚假 snapshot mismatch。
+*.snap text eol=lf
+tests/css-standards/__snapshots__/** text eol=lf
