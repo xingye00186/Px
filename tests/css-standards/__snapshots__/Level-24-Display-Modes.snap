@@ -1,4 +1,4 @@
-@generated 2026-07-27 11:05:06
+@generated 2026-07-27 12:15:45
 === Test: display:table 基本容器 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x39) [dsp=table]
@@ -31,10 +31,10 @@ div (0,0 400x35) [dsp=table]
 
 === Test: display:table-caption 标题 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x19) [dsp=table]
-  div (0,0 300x0) [dsp=table-caption] text="Caption"
-  div (0,0 300x19) [dsp=table-row]
-    div (0,0 300x19) [dsp=table-cell] text="Data"
+div (0,0 300x38) [dsp=table]
+  div (0,0 300x19) [dsp=table-caption] text="Caption"
+  div (0,19 300x19) [dsp=table-row]
+    div (0,19 300x19) [dsp=table-cell] text="Data"
 
 ---
 

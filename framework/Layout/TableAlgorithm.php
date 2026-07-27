@@ -57,6 +57,11 @@ class TableAlgorithm extends LayoutAlgorithm
         $currentY = $y;
         $needsMore = false;
 
+        // CSS 2.2 §17.6.1 分离边框模型：border-spacing 作用于 cell 间及
+        // 表内容边缘与 cell 之间；collapse 模型（§17.6.2）下 spacing 无效。
+        $isCollapse = ($s->borderCollapse?->value ?? 'separate') === 'collapse';
+        $spacing = $isCollapse ? 0 : max(0, (int)($s->borderSpacing ?? 0));
+
         if ($display === 'table' || $display === 'table-caption') {
             // ── 第一遍：收集列宽（下探 row-group 层，对标 Blink 列约束收集）──
             $maxColWidths = []; $totalCols = 0;
@@ -86,7 +91,8 @@ class TableAlgorithm extends LayoutAlgorithm
                 $crStyle = $cr->style;
                 $crDisplay = $crStyle?->display?->value ?? 'block';
                 if ($crDisplay === 'table-row') {
-                    $stackedChildren[] = $this->layoutRow($cr, $x, $currentY, $w, $maxColWidths);
+                    $currentY += $spacing; // 行前竖向 spacing（首行=表边缘间距）
+                    $stackedChildren[] = $this->layoutRow($cr, $x, $currentY, $w, $maxColWidths, $spacing);
                     $currentY += (int)$stackedChildren[count($stackedChildren) - 1]->getH();
                 } elseif (in_array($crDisplay, self::ROW_GROUP_DISPLAYS, true)) {
                     // row-group（thead/tbody/tfoot）：包裹行，自身几何 = 行并集
@@ -95,7 +101,8 @@ class TableAlgorithm extends LayoutAlgorithm
                     $groupRows = [];
                     foreach ($cr->children as $g) {
                         if (($g->style?->display?->value ?? '') === 'table-row') {
-                            $rowFrag = $this->layoutRow($g, $x, $currentY, $w, $maxColWidths);
+                            $currentY += $spacing;
+                            $rowFrag = $this->layoutRow($g, $x, $currentY, $w, $maxColWidths, $spacing);
                             $groupRows[] = $rowFrag;
                             $currentY += (int)$rowFrag->getH();
                         } else {
@@ -116,7 +123,11 @@ class TableAlgorithm extends LayoutAlgorithm
                         0, 0, false,
                         $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
                 } else {
-                    $stackedChildren[] = $cr;
+                    // caption 等非行子：盒与内容平移到当前流位置（CSS 2.2 §17.4；
+                    // 预布局坐标残留同 cell 族缺陷）。
+                    $dxE = (int)$x - (int)($cr->x ?? 0);
+                    $dyE = (int)$currentY - (int)($cr->y ?? 0);
+                    $stackedChildren[] = ($dxE !== 0 || $dyE !== 0) ? FlexAlgorithm::translateFragmentTree($cr, $dxE, $dyE) : $cr;
                     $currentY += (int)($cr->h ?? 0);
                 }
             }
@@ -124,7 +135,7 @@ class TableAlgorithm extends LayoutAlgorithm
             $stackedChildren = $children;
         }
 
-        if ($h <= 0) $h = max(0, $currentY - $y);
+        if ($h <= 0) $h = max(0, $currentY + $spacing - $y); // 尾部边缘 spacing 计入表高
 
         return new PhysicalFragment((int)$x, (int)$y, (int)$w, (int)$h, $s->visualWidth($w), $s->visualHeight($h), 0, (int)$w, (int)$h, $s, $stackedChildren, null);
     }
@@ -132,33 +143,45 @@ class TableAlgorithm extends LayoutAlgorithm
     /**
      * 单行放置：列宽归一（缩放到表宽）+ cell 等高（CSS 2.2 §17.5.3）。
      */
-    private function layoutRow(PhysicalFragment $row, int $x, int $currentY, int $w, array $maxColWidths): PhysicalFragment
+    private function layoutRow(PhysicalFragment $row, int $x, int $currentY, int $w, array $maxColWidths, int $spacing = 0): PhysicalFragment
     {
         $cellCount = count($row->children);
         $lineH = 0;
         $colWidths = [];
+        // 横向可用宽 = 表宽 − (n+1)×spacing（两端边缘 + cell 间隙，§17.6.1）
+        $availW = max(0, $w - ($cellCount + 1) * $spacing);
         for ($colI = 0; $colI < $cellCount; $colI++) {
-            $colWidths[$colI] = isset($maxColWidths[$colI]) ? $maxColWidths[$colI] : ($cellCount > 0 ? intdiv($w, $cellCount) : $w);
+            $colWidths[$colI] = isset($maxColWidths[$colI]) ? $maxColWidths[$colI] : ($cellCount > 0 ? intdiv($availW, $cellCount) : $availW);
         }
         $totalColW = array_sum($colWidths);
-        if ($totalColW > 0 && abs($totalColW - $w) > 1) {
+        if ($totalColW > 0 && abs($totalColW - $availW) > 1) {
             // 列宽归一缩放：纯整数确定性算术（对标 Blink LayoutUnit 定点思想）。
             // 此前 $scale = $w/$totalColW 浮点中间值 + (int) 截断——PHP 与 AOT
             // Variant 链浮点精度分叉（compare_php_aot case-048 geo18+style12 实锤，
             // round 语义分叉同族）。
-            foreach ($colWidths as $ci => $cw) { $colWidths[$ci] = intdiv($cw * $w, $totalColW); }
+            foreach ($colWidths as $ci => $cw) { $colWidths[$ci] = intdiv($cw * $availW, $totalColW); }
         }
 
         $cellResults = [];
-        $colX = 0;
+        $colX = $spacing;
         foreach ($row->children as $ci => $cell) {
             $cellH = (int)($cell->h ?? 0);
-            $cellW = $colWidths[$ci] ?? ($cellCount > 0 ? intdiv($w, $cellCount) : $w);
-            $cellResults[] = new PhysicalFragment((int)$colX, 0, (int)$cellW, (int)$cellH, (int)$cellW, (int)$cellH, (int)($cell->layer ?? 0), (int)$cellW, (int)$cellH, $cell->style, $cell->children, $cell->sourceNode,
+            $cellW = $colWidths[$ci] ?? ($cellCount > 0 ? intdiv($availW, $cellCount) : $availW);
+            // cell 内容随 cell 盒平移（Px Fragment 绝对坐标契约；对标 Blink
+            // cell 内容坐标相对 cell）：此前 children 携带预布局坐标不动，
+            // 第二列起内容停留行首（case-048 x≈366 族）、下方行内容 y 错位
+            //（y=110 族 48 条）实锤。dx/dy = 目标盒原点 − 预布局盒原点。
+            $dx = (int)$colX - (int)($cell->x ?? 0);
+            $dy = (int)$currentY - (int)($cell->y ?? 0);
+            $movedKids = [];
+            foreach ($cell->children as $ck) {
+                $movedKids[] = ($dx !== 0 || $dy !== 0) ? FlexAlgorithm::translateFragmentTree($ck, $dx, $dy) : $ck;
+            }
+            $cellResults[] = new PhysicalFragment((int)$colX, 0, (int)$cellW, (int)$cellH, (int)$cellW, (int)$cellH, (int)($cell->layer ?? 0), (int)$cellW, (int)$cellH, $cell->style, $movedKids, $cell->sourceNode,
                 $cell->scrollTop, $cell->scrollLeft, $cell->isScrollContainer,
                 $cell->type, $cell->content, $cell->dataset, $cell->pseudoStyles);
             if ($cellH > $lineH) $lineH = $cellH;
-            $colX += $cellW;
+            $colX += $cellW + $spacing;
         }
 
         $normCells = [];
