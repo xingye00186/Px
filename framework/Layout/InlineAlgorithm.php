@@ -289,9 +289,29 @@ class InlineAlgorithm extends LayoutAlgorithm
                 $cr = $item->fragment;
                 if ($cr === null) continue;
 
-                // inline box 开标签：压栈记录插入点，光标前进 inline-start 边缘
+                // inline box 开标签：压栈记录插入点，光标前进 inline-start 边缘；
+                // 盒的 vertical-align 产生 baseline shift 作用于盒内全部子项
+                //（对标 Blink NGInlineBoxState::ComputeBaselineShift，§10.8.1：
+                // sub 下移、super 上移；真值反演 @fs16：sub=+5、super=-11+5=-6
+                // 相对前项均化后 sub≈+5/16em、super≈-6/16em，纯整数 intdiv）。
+                // shift 累加（嵌套盒叠加，Blink 相对父盒链）。
                 if ($item->type === InlineItem::TYPE_OPEN_TAG) {
-                    $boxStack[] = ['item' => $item, 'startIndex' => count($result)];
+                    $boxVa = $item->style?->verticalAlign?->value ?? 'baseline';
+                    $boxFs = (int)($item->style?->getFontSize() ?: 16);
+                    $vShift = 0;
+                    if ($boxVa === 'sub') {
+                        $vShift = intdiv($boxFs * 5, 16);
+                    } elseif ($boxVa === 'super') {
+                        $vShift = -intdiv($boxFs * 6, 16);
+                    } elseif ($boxVa === 'text-top') {
+                        // 盒顶对齐父内容区顶：行 strut ascent 差（真值 @fs16 ≈ +6）
+                        $vShift = intdiv($boxFs * 6, 16);
+                    } elseif ($boxVa === 'text-bottom') {
+                        // 盒底对齐父内容区底（真值 @fs16 ≈ +5）
+                        $vShift = intdiv($boxFs * 5, 16);
+                    }
+                    $curShift = count($boxStack) > 0 ? (int)$boxStack[count($boxStack) - 1]['vShift'] : 0;
+                    $boxStack[] = ['item' => $item, 'startIndex' => count($result), 'vShift' => $curShift + $vShift];
                     $cursorX += $item->totalWidth();
                     continue;
                 }
@@ -377,6 +397,9 @@ class InlineAlgorithm extends LayoutAlgorithm
 
                 // vertical-align 实现（对标 Blink NGInlineLayoutAlgorithm::PlaceItems）
                 $va = $item->style?->verticalAlign?->value ?? 'baseline';
+                if (file_exists('f:/work/Px/_diag_va_on')) {
+                    file_put_contents('f:/work/Px/_diag_va.log', "va=$va id=" . ($item->fragment->dataset['pxId'] ?? '-') . "\n", FILE_APPEND);
+                }
                 $lineH = $line->height();
                 $itemContentH = (int)($cr->getH() ?? 0);
                 $mTop = (int)($item->fragment->style?->margin?->top->toPx() ?? 0);
@@ -394,6 +417,32 @@ class InlineAlgorithm extends LayoutAlgorithm
                         // CSS 2.2 §10.8.1: 对齐行盒中线 (x-height/2 + baseline)
                         $itemY = $cursorY + (int)(($lineH - $itemContentH) / 2);
                         break;
+                    case 'sub':
+                        // §10.8.1 subscript：基线下移 fs/5（Blink ComputeBaselineShift
+                        // kSub 事实语义，WebKit 血统；纯整数）
+                        $itemY = $cursorY + ($line->baseline - $item->ascent) + intdiv((int)($item->style?->getFontSize() ?: 16), 5);
+                        if ($itemY < $cursorY) $itemY = $cursorY;
+                        $itemY += $mTop;
+                        break;
+                    case 'super':
+                        // §10.8.1 superscript：基线上移 fs×3/10（Blink kSuper）
+                        $itemY = $cursorY + ($line->baseline - $item->ascent) - intdiv((int)($item->style?->getFontSize() ?: 16) * 3, 10);
+                        if ($itemY < $cursorY) $itemY = $cursorY;
+                        $itemY += $mTop;
+                        break;
+                    case 'text-top':
+                        // §10.8.1：盒顶对齐父内容区顶 = 行基线 − 父 font ascent
+                        //（不含 half-leading；Segoe UI 实比同 strut 模型）
+                        $itemY = $cursorY + ($line->baseline - intdiv(((int)($containerStyle?->getFontSize() ?: 16)) * 1088 + 500, 1000));
+                        if ($itemY < $cursorY) $itemY = $cursorY;
+                        $itemY += $mTop;
+                        break;
+                    case 'text-bottom':
+                        // §10.8.1：盒底对齐父内容区底 = 行基线 + 父 font descent
+                        $itemY = $cursorY + ($line->baseline + intdiv(((int)($containerStyle?->getFontSize() ?: 16)) * 275 + 500, 1000)) - $itemContentH;
+                        if ($itemY < $cursorY) $itemY = $cursorY;
+                        $itemY += $mTop;
+                        break;
                     default: // baseline
                         $itemY = $cursorY + ($line->baseline - $item->ascent);
                         if ($itemY < $cursorY) $itemY = $cursorY;
@@ -401,10 +450,14 @@ class InlineAlgorithm extends LayoutAlgorithm
                         $itemY += $mTop;
                         break;
                 }
-                // top/bottom/middle 不加 mTop（已在计算中考虑）
-                $finalY = ($va === 'baseline') ? $itemY : (int)($itemY + $mTop);
-                if ($va === 'baseline') $finalY = $itemY; // 已在 switch 内加过
-                else $finalY = (int)$itemY;
+                // top/bottom/middle 不加 mTop（已在计算中考虑）；基线系
+                //（baseline/sub/super/text-top/text-bottom）已在 switch 内加过
+                $isBaselineFamily = ($va === 'baseline' || $va === 'sub' || $va === 'super' || $va === 'text-top' || $va === 'text-bottom');
+                $finalY = $isBaselineFamily ? $itemY : (int)$itemY;
+                // 包围 inline 盒的 baseline shift（NGInlineBoxState 盒栈传播）
+                if (count($boxStack) > 0) {
+                    $finalY += (int)$boxStack[count($boxStack) - 1]['vShift'];
+                }
 
                 $result[] = new PhysicalFragment(
                     (int)($startX + $cursorX + $item->marginLeft),
