@@ -2,7 +2,36 @@
 
 > 基于 `LayoutNG架构迭代路线图_task-1d0100.md` + `LayoutNG 架构审查报告.md` + `Px 框架 LayoutNG 严格对标 Blink 审计报告.md` 对照当前代码审计，记录所有尚未解决的问题。
 > 审计时间：2026-07-26
-> 最后更新：2026-07-29（**五次真实性核验** @ HEAD=8edf533b：独立抽查纠错——**2.11 已过时关闭**（四次核验只看 expandAll 默认参数 false，未看调用点：StyleTransform L104/StyleResolver L143/sfc-compiler L337 三处全传 true，@3f56927d 已启用）；另确认 LayoutOrchestrator L268 注释"启用 endMarginStrut/oofDescendants 消费"与代码不符（仍仅读 fragment，5.3 真实性加强）；补录 3 项遗漏靶点 6.4-6.6）
+> 最后更新：2026-07-29（**六次真实性核验** @ HEAD=bc18b9d6，见下方增量节；此前五次核验 @8edf533b：独立抽查纠错——**2.11 已过时关闭**（四次核验只看 expandAll 默认参数 false，未看调用点：StyleTransform L104/StyleResolver L143/sfc-compiler L337 三处全传 true，@3f56927d 已启用）；另确认 LayoutOrchestrator L268 注释“启用 endMarginStrut/oofDescendants 消费”与代码不符（仍仅读 fragment，5.3 真实性加强）；补录 3 项遗漏靶点 6.4-6.6）
+
+---
+
+## ★ 六次核验增量（2026-07-29 HEAD=bc18b9d6，完整证据见审计台账 §二十）
+
+### 状态变化
+
+| 编号 | 变化 | 证据 |
+|---|---|---|
+| **5.1** | ✅ **关闭** | MAX_RELAYOUT_ITERATIONS 已删除（grep 零命中，@18769d38 T1 批次） |
+| **5.2** | ✅ **关闭** | RTM/PP 写已删字段代码全清；RTM 仅剩 `$frag->isScrollContainer`（读 Fragment 合法）；PP 无任何 node 几何 fallback |
+| **2.3** | ⚠️ 描述修正 | INLINE_TYPES 已单源化至 `ComputedStyle::INLINE_TYPES`（209ff22c，Blink UA html.css 对齐）；剩余靶点收窄为“Block 内 inline 胶水路径” |
+| **2.5** | ⚠️ 描述修正 | `createsBlockFormattingContext()` 单一方法已抽出（BlockAlgorithm L222）；剩余靶点收窄为“stackBlockChildren L673-679 内联硬编码副本未收敛 + N2（见 6.8）同批” |
+| **2.7** | ⚠️ 描述修正 | ChildLayoutProvider 已落地且 Phase B 全量预布局已删除（Orchestrator L223 注释自证）；剩余靶点收窄为“仅 OOF 路径仍预布局（与 2.6 合并追踪）” |
+| **2.12** | ⚠️ 描述修正 | isFormattingContextRoot 位已全链（@357e8189）；但普通 block 链恒 false（见 6.8） |
+| **4.1** | ⚠️ 接近关闭 | canonicalStyleKey 已接入编译链全部 4 处；待下次核验确认运行时残余双写点后关闭 |
+| 其余 | ✅ 真实性确认 | 1.1-1.4/2.1/2.2/2.4/2.6/2.10/2.13/5.3/5.4/5.5 逐项 grep 确认仍存在（行号见台账 §20.1） |
+
+### 新增待办
+
+| 新编号 | 问题 | 来源 |
+|---|---|---|
+| **6.8** | Orchestrator L454 恒 `setFormattingContextRoot(false)`：FCR 位仅 flex-item/grid pass2 置位，普通 block 链（overflow 非 visible/float 等）从未置 true，BFC 判定双源（ConstraintSpace 位 + BlockAlgorithm 重复计算）——与 2.5 胶水副本同族宜同批收敛 | 六次核验 N2 |
+
+### 已根治（test-infra，非引擎）
+
+- **跨机器 EOL 环境陷阱**：core.autocrlf=true 机器 checkout 快照成 CRLF → css-standards 虚假 330/360 全量失配（diff 肉眼相同）。双保险修复：CssTestBase 双侧 EOL 归一化 + `.gitattributes` `*.snap text eol=lf`。修复后 330/330 + Level-21 31/31。新机器若基线异常且 diff 肉眼相同，先排查 EOL。
+
+> 六次核验后有效待解决：**25 项**（26 - 5.1/5.2 关闭确认已计 + 新增 6.8；4.1 待确认关闭）。
 
 ---
 
