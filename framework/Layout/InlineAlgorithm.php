@@ -421,9 +421,6 @@ class InlineAlgorithm extends LayoutAlgorithm
 
                 // vertical-align 实现（对标 Blink NGInlineLayoutAlgorithm::PlaceItems）
                 $va = $item->style?->verticalAlign?->value ?? 'baseline';
-                if (file_exists('f:/work/Px/_diag_va_on')) {
-                    file_put_contents('f:/work/Px/_diag_va.log', "va=$va id=" . ($item->fragment->dataset['pxId'] ?? '-') . "\n", FILE_APPEND);
-                }
                 $lineH = $line->height();
                 $itemContentH = (int)($cr->getH() ?? 0);
                 $mTop = (int)($item->fragment->style?->margin?->top->toPx() ?? 0);
