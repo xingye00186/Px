@@ -676,6 +676,53 @@ class FlexAlgorithm extends LayoutAlgorithm
             $lineMaxCrosses[$lineIdx] = $lineMaxCross;
         }
 
+        // ── Pass 1.5（Blink 序，CSS Flexbox §9.4.7）：used main size 确定后，
+        // row 方向 auto 高含子树 item 以定宽重布局取 hypothetical cross size。
+        // 原 pass2（align 之后）回填过晚——折行增高被首轮 fi->h 覆盖
+        //（case-019 容器 59vs84、item 内 spans 不折行实锤）。重布局后
+        // 重算行交叉，Step5 stretch/align/容器高消费新值。
+        if ($isRow) {
+            $needRecalc15 = false;
+            foreach ($sortedFlexItems as $k15 => $fi15) {
+                $fi15 = objval($fi15, FlexItem::class);
+                $orig15 = $sortedChildResults[$k15] ?? null;
+                $origW15 = $orig15 !== null ? (int)$orig15->getW() : 0;
+                $oi15 = (int)($sortedOrigIdx[$k15] ?? $k15);
+                $node15 = ($oi15 < count($childNodes)) ? $childNodes[$oi15] : null;
+                $hasKids15 = $node15 !== null && is_array($node15->children) && count($node15->children) > 0;
+                $hasExplH15 = $fi15->computedStyle !== null && $fi15->computedStyle->hasExplicitLength('height');
+                // 窄口径：仅 block/IFC 容器子项（折行受益者）；flex/grid 子项的
+                // hypothetical cross 首轮已正确（L19 grid 394×120→394×40 真回归实锤），
+                // 仍走原 pass2 definite 尺寸路径。
+                $disp15 = $fi15->computedStyle?->display?->value ?? 'block';
+                $isBlockLike15 = ($disp15 === 'block' || $disp15 === 'inline-block' || $disp15 === 'inline');
+                if ($isBlockLike15 && $fi15->w > 0 && $origW15 !== $fi15->w && $fi15->w !== (int)$innerW && $hasKids15 && !$hasExplH15) {
+                    $s15 = new ConstraintSpace(
+                        $fi15->w, $space->getContentHeight(),
+                        $space->getParentContentX(), $space->getParentContentY(),
+                        $fi15->w, $space->getContentHeight(),
+                        $fi15->w, $space->getPercentageHeight(),
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        true, false, 'block',
+                        $fi15->w, $space->getPercentageHeight(),
+                        false,
+                        true,  // flex item 建立新格式化上下文
+                    );
+                    $re15 = $this->layoutChild($node15, $s15);
+                    $sortedChildResults[$k15] = $re15;
+                    $newH15 = (int)$re15->getH();
+                    if ($newH15 !== (int)$fi15->h) { $fi15->h = $newH15; $fi15->visualH = $newH15; $needRecalc15 = true; }
+                }
+            }
+            if ($needRecalc15) {
+                foreach ($lineGroups as $lgIdx => $lgItems) {
+                    $lm15 = 0;
+                    foreach ($lgItems as $fiL) { $fiL = objval($fiL, FlexItem::class); if ((int)$fiL->h > $lm15) $lm15 = (int)$fiL->h; }
+                    $lineMaxCrosses[$lgIdx] = $lm15;
+                }
+            }
+        }
+
         // ── Step 5: Cross-axis alignment (align-items/align-self per-item + align-content) ──
         // 5a. Calculate total cross size and align-content offsets
         $totalCross = $this->sumLineMaxCrosses($lineMaxCrosses, $gap);
@@ -778,7 +825,7 @@ class FlexAlgorithm extends LayoutAlgorithm
             // used 宽 ≠ innerW（真正多列分配，case-007 240≠720）且含子树时才需重布局。
             // 精确守卫（bench 验证：无 innerW 条件时满宽单列 item 每帧全量 pass2，+30%）：
             // 满宽 item（p2ItemW==innerW）子孙首轮布局已正确，跳过。
-            $p2Node = ($p2Idx < count($childNodes)) ? $childNodes[$p2Idx] : null;
+            $p2Node = ($p2Idx < count($childNodes)) ? $childNodes[(int)($sortedOrigIdx[$p2Idx] ?? $p2Idx)] : null;
             $p2HasChildTree = $p2Node !== null && is_array($p2Node->children) && count($p2Node->children) > 0;
             $mainWidthAssigned = $isRow && $p2ItemW > 0 && $p2OrigW !== $p2ItemW
                 && $p2ItemW !== (int)$innerW && $p2HasChildTree;
@@ -794,7 +841,7 @@ class FlexAlgorithm extends LayoutAlgorithm
                     $blockSizeIsFixed,
                     true,  // flex item 建立新格式化上下文（阻断 margin 穿透）
                 );
-                $reFrag = $this->layoutChild($childNodes[$p2Idx], $p2Space);
+                $reFrag = $this->layoutChild($childNodes[(int)($sortedOrigIdx[$p2Idx] ?? $p2Idx)], $p2Space);
                 $sortedChildResults[$p2Idx] = $reFrag;
             }
         }
