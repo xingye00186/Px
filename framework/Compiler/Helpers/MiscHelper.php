@@ -40,6 +40,39 @@ function parseCssClassesForMerge(string $css): array
         $body = rtrim($body, ';');
         $result['_tag_' . strtolower($m[1])] = $body;
     }
+    // 提取纯类型（tag）选择器规则（CSS Selectors L3 type selector，特异性 (0,0,1)）：
+    // code{}/span{} 等。此前无烘焙通道——code{background;padding} 整条丢失
+    //（case-019 实锤）。锚定规则边界（^或 {}）避免误捕复合选择器尾部 tag；
+    // body/html 走专用基线通道，排除。同 tag 多条规则按源序追加（后来者居上）。
+    $tagRules = [];
+    if (preg_match_all('#(?:^|[\{\}])\s*([a-z][a-z0-9]*)\s*\{([^}]*)\}#s', $css, $trs, PREG_SET_ORDER)) {
+        foreach ($trs as $tr) {
+            $tag = strtolower($tr[1]);
+            if ($tag === 'body' || $tag === 'html') continue;
+            $body = trim($tr[2]);
+            $body = preg_replace('/\s+/', ' ', $body);
+            $body = rtrim($body, ';');
+            if ($body === '') continue;
+            $tagRules[$tag] = isset($tagRules[$tag]) ? ($tagRules[$tag] . ';' . $body) : $body;
+        }
+    }
+    if (count($tagRules) > 0) {
+        $result['__tag_rules__'] = $tagRules;
+    }
+    // 提取 id 选择器规则（特异性 (1,0,0)，高于类低于 inline）：#vis-hidden{} 等。
+    $idRules = [];
+    if (preg_match_all('#\#([a-zA-Z][a-zA-Z0-9_-]*)\s*\{([^}]*)\}#s', $css, $irs, PREG_SET_ORDER)) {
+        foreach ($irs as $ir) {
+            $body = trim($ir[2]);
+            $body = preg_replace('/\s+/', ' ', $body);
+            $body = rtrim($body, ';');
+            if ($body === '') continue;
+            $idRules[$ir[1]] = isset($idRules[$ir[1]]) ? ($idRules[$ir[1]] . ';' . $body) : $body;
+        }
+    }
+    if (count($idRules) > 0) {
+        $result['__id_rules__'] = $idRules;
+    }
     // 提取复合选择器（CSS Selectors L3）：.first <comb> (.second | tag) { }
     // 如 .rel-row div{flex:1}、.a > .b{...}。subject 为类或类型选择器；
     // 在 mergeClassStylesIntoNode 递归时携带祖先/前兄弟上下文匹配。
@@ -89,6 +122,15 @@ function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassL
     $universalDecls = '';
     if (isset($rawStyles['*']) && !$isComponentPlaceholder) {
         $universalDecls = $rawStyles['*'];
+    }
+
+    // Step 1.5: 纯类型（tag）选择器（特异性 (0,0,1)：universal 之后、类之前）
+    $tagDecls = '';
+    if (isset($rawStyles['__tag_rules__']) && !$isComponentPlaceholder) {
+        $nt = strtolower((string)($node->type ?? ''));
+        if ($nt !== '' && isset($rawStyles['__tag_rules__'][$nt])) {
+            $tagDecls = $rawStyles['__tag_rules__'][$nt];
+        }
     }
 
     // Step 2: 应用类选择器
@@ -177,11 +219,29 @@ function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassL
         foreach ($classSubjectDecls as $d) $classNormalDecls[] = $d;
     }
 
-    // Step 3: 合并（* + class + inline，具有正确的层叠优先级）
-    if ($universalDecls !== '' || !empty($classNormalDecls) || !empty($classImportantDecls)) {
+    // Step 2.7: id 选择器（特异性 (1,0,0)：高于全部类/复合，低于 inline）
+    if (isset($rawStyles['__id_rules__']) && !$isComponentPlaceholder
+        && $node->props !== null && isset($node->props['id']) && is_string($node->props['id'])) {
+        $nid = trim($node->props['id']);
+        if ($nid !== '' && isset($rawStyles['__id_rules__'][$nid])) {
+            foreach (explode(';', $rawStyles['__id_rules__'][$nid]) as $decl) {
+                $decl = trim($decl);
+                if ($decl === '') continue;
+                if (stripos($decl, '!important') !== false) {
+                    $classImportantDecls[] = $decl;
+                } else {
+                    $classNormalDecls[] = $decl; // 追加在最后：同数组内后来者居上
+                }
+            }
+        }
+    }
+
+    // Step 3: 合并（* + tag + class + inline，具有正确的层叠优先级）
+    if ($universalDecls !== '' || $tagDecls !== '' || !empty($classNormalDecls) || !empty($classImportantDecls)) {
         $existing = $node->props['style'] ?? '';
         $parts = [];
         if ($universalDecls !== '') $parts[] = $universalDecls;
+        if ($tagDecls !== '') $parts[] = $tagDecls;
         if (!empty($classNormalDecls)) $parts[] = implode(';', $classNormalDecls);
         if ($existing !== '') $parts[] = $existing;
         if (!empty($classImportantDecls)) $parts[] = implode(';', $classImportantDecls);

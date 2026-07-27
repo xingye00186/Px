@@ -213,46 +213,10 @@ class InlineAlgorithm extends LayoutAlgorithm
             $strutD = $fontDescent + $halfLeading;
         }
 
-        // Step 1: 构建 InlineItem 序列（对标 Blink InlineItemsBuilder）
+        // Step 1: 构建 InlineItem 序列（对标 Blink InlineItemsBuilder，含
+        // inline box 递归展开 kOpenTag/kCloseTag）
         $inlineItems = [];
-        foreach ($items as $cr) {
-            $cStyle = $cr->style;
-            // <br> → 强制断行项（对标 Blink NGInlineItem forced break）：忽略其
-            // 预布局几何（block 预布局给了容器宽 0 高，属错误契约），宽 0、
-            // 不贡献 ascent/descent（行高由 strut/同行项决定，§10.8.1）。
-            if (($cr->type ?? '') === 'br') {
-                $inlineItems[] = new InlineItem(
-                    InlineItem::TYPE_FORCED_BREAK,
-                    0, 0, 0, $cr, '', $cStyle, 0, 0
-                );
-                continue;
-            }
-            $fs = $cStyle?->getFontSize() ?? 16;
-            if ($fs <= 0) $fs = 16;
-            $mLeft = (int)($cStyle?->margin?->left->toPx() ?? 0);
-            $mRight = (int)($cStyle?->margin?->right->toPx() ?? 0);
-            $mTop = (int)($cStyle?->margin?->top->toPx() ?? 0);
-            $mBottom = (int)($cStyle?->margin?->bottom->toPx() ?? 0);
-
-            // atomic inline 的 ascent/descent：
-            // CSS 2.2 §10.8.1: 替换元素/inline-block 的 content-box 高度作为 ascent
-            // margin 单独处理（贡献行高但不影响基线计算）
-            $itemH = (int)($cr->getH() ?? 0);
-            $itemAscent = $itemH + $mTop + $mBottom; // 行盒贡献 = margin-box
-            $itemDescent = 0;
-
-            $inlineItems[] = new InlineItem(
-                InlineItem::TYPE_ATOMIC,
-                (int)($cr->getW() ?? 0),
-                $itemAscent,
-                $itemDescent,
-                $cr,
-                '',
-                $cStyle,
-                $mLeft,
-                $mRight
-            );
-        }
+        self::buildInlineItems($items, $inlineItems);
 
         // Step 2: 行断裂（对标 Blink NGLineBreaker）
         $effectiveAvail = max(1, $availableW - $padLeft);
@@ -262,6 +226,11 @@ class InlineAlgorithm extends LayoutAlgorithm
         // Step 3: 按行放置（对标 Blink NGPhysicalLineBoxFragment 布局）
         $result = [];
         $cursorY = 0;
+        // inline box 盒栈（对标 Blink NGInlineBoxState 栈）：open 时记录 result
+        // 插入点，close 时将其间子 fragment 聚合为盒 fragment（union 几何，
+        // 对齐 getBoundingClientRect 跨行包围盒语义），子项作为其 children
+        //（保持与浏览器 DOM 同构的导出顺序：盒在前、子在后）。盒可跨行。
+        $boxStack = [];
 
         foreach ($lines as $line) {
             // text-align 行级偏移（对标 Blink NGInlineLayoutAlgorithm::ApplyTextAlign，
@@ -278,6 +247,77 @@ class InlineAlgorithm extends LayoutAlgorithm
             foreach ($line->items as $item) {
                 $cr = $item->fragment;
                 if ($cr === null) continue;
+
+                // inline box 开标签：压栈记录插入点，光标前进 inline-start 边缘
+                if ($item->type === InlineItem::TYPE_OPEN_TAG) {
+                    $boxStack[] = ['item' => $item, 'startIndex' => count($result)];
+                    $cursorX += $item->totalWidth();
+                    continue;
+                }
+                // inline box 闭标签：弹栈，union 盒内子 fragment 生成盒 fragment
+                if ($item->type === InlineItem::TYPE_CLOSE_TAG) {
+                    $cursorX += $item->totalWidth();
+                    if (empty($boxStack)) continue; // 防御：栈失衡不崩溃
+                    $st = array_pop($boxStack);
+                    $openItem = $st['item'];
+                    $kids = array_slice($result, (int)$st['startIndex']);
+                    $result = array_slice($result, 0, (int)$st['startIndex']);
+                    $bStyle = $openItem->style;
+                    $bPadL = (int)($bStyle?->padding?->left->toPx() ?? 0);
+                    $bPadR = (int)($bStyle?->padding?->right->toPx() ?? 0);
+                    $bPadT = (int)($bStyle?->padding?->top->toPx() ?? 0);
+                    $bPadB = (int)($bStyle?->padding?->bottom->toPx() ?? 0);
+                    $bbL = (int)($bStyle?->getBorderLeftWidth() ?? 0);
+                    $bbR = (int)($bStyle?->getBorderRightWidth() ?? 0);
+                    $minX = 0; $minY = 0; $maxX = 0; $maxY = 0; $first = true;
+                    foreach ($kids as $k) {
+                        $kx1 = (int)$k->getX(); $ky1 = (int)$k->getY();
+                        $kx2 = $kx1 + (int)$k->getW(); $ky2 = $ky1 + (int)$k->getH();
+                        if ($first) { $minX = $kx1; $minY = $ky1; $maxX = $kx2; $maxY = $ky2; $first = false; }
+                        else {
+                            if ($kx1 < $minX) $minX = $kx1;
+                            if ($ky1 < $minY) $minY = $ky1;
+                            if ($kx2 > $maxX) $maxX = $kx2;
+                            if ($ky2 > $maxY) $maxY = $ky2;
+                        }
+                    }
+                    $bFrag = $openItem->fragment;
+                    if ($first) {
+                        // 空盒（防御，正常不可达：仅非空 children 才展开）
+                        $minX = (int)($startX + $cursorX); $minY = (int)($startY + $cursorY);
+                        $maxX = $minX; $maxY = $minY;
+                    }
+                    // 横向：union + 自身 padding/border 边缘（getBoundingClientRect border-box）。
+                    // 纵向（CSS §10.6.1：非替换 inline 高度由 font 决定，不含 atomic 子
+                    // 溢出部分）：content 高 = em box（fontSize），基线锤定——atomic 子
+                    // baseline 对齐后 bottom=行基线（margin 0 时），据此反推：
+                    //   top = 首行基线 - ascent_em - padT，bottom = 末行基线 + descent_em + padB
+                    // ascent_em = fs×1088/1363（Segoe UI 实比，整数确定性算术）。
+                    // 真值支撑：case-019 code B(225,h20) vs 公式(226,h20)，±1px 入 tol。
+                    $bfs2 = (int)($bStyle?->getFontSize() ?? 16);
+                    if ($bfs2 <= 0) $bfs2 = 16;
+                    $ascEm = intdiv($bfs2 * 1088 + 681, 1363);
+                    $descEm = $bfs2 - $ascEm;
+                    $firstKidBaseline = $minY; $lastKidBaseline = $maxY;
+                    if (!$first) {
+                        // atomic 子 bottom ≈ 所在行基线（baseline 对齐、margin 0）
+                        $firstKidBaseline = (int)$kids[0]->getY() + (int)$kids[0]->getH();
+                        $lastKidBaseline = $maxY;
+                    }
+                    $bx = $minX - $bPadL - $bbL;
+                    $by = $firstKidBaseline - $ascEm - $bPadT;
+                    $bw = ($maxX + $bPadR + $bbR) - $bx;
+                    $bh = ($lastKidBaseline + $descEm + $bPadB) - $by;
+                    $result[] = new PhysicalFragment(
+                        (int)$bx, (int)$by, (int)$bw, (int)$bh,
+                        0, 0, (int)($bFrag?->getLayer() ?? 0),
+                        (int)max(0, $bw - $bPadL - $bPadR - $bbL - $bbR), (int)max(0, $bh - $bPadT - $bPadB),
+                        $bStyle, $kids, $bFrag?->sourceNode,
+                        0, 0, false,
+                        (string)($bFrag?->type ?? ''), $bFrag?->content, $bFrag?->dataset ?? [], $bFrag?->pseudoStyles ?? []
+                    );
+                    continue;
+                }
 
                 // <br> 放置：0 宽 × 行高盒（对齐 Blink br getBoundingClientRect：
                 // 宽 0、高 = 行高），保留 dataset/sourceNode 供 px-id 对比。
@@ -343,5 +383,77 @@ class InlineAlgorithm extends LayoutAlgorithm
         }
 
         return ['items' => $result, 'nextY' => $startY + $cursorY];
+    }
+
+    /**
+     * 递归构建 InlineItem 序列（对标 Blink NGInlineItemsBuilder）。
+     *
+     * 非原子 inline box（display:inline 且含元素子节点，如 code/span 嵌套）
+     * 展开为 kOpenTag + 子项 + kCloseTag：子项与兄弟同一 line breaker 序列
+     *（可在盒内断行，CSS 2.2 §9.4.2）。此前该类盒被当 atomic 携带 block
+     * 预布局几何（容器宽）独占行——后续兄弟全部错位（case-019/050 x 大偏移族）。
+     *
+     * open tag 携带 inline-start 边缘宽（margin/border/padding-left）与盒自身
+     * 字体 strut（§10.8.1：inline box 以其 line-height 贡献行高，即使无文本；
+     * 公式同 root strut，整数确定性算术）；close tag 携带 inline-end 边缘宽。
+     *
+     * @param PhysicalFragment[] $frags
+     * @param InlineItem[] $out 输出序列（引用累积）
+     */
+    private static function buildInlineItems(array $frags, array &$out): void
+    {
+        foreach ($frags as $cr) {
+            $cStyle = $cr->style;
+            // <br> → 强制断行项（对标 Blink NGInlineItem forced break）：忽略其
+            // 预布局几何（block 预布局给了容器宽 0 高，属错误契约），宽 0、
+            // 不贡献 ascent/descent（行高由 strut/同行项决定，§10.8.1）。
+            if (($cr->type ?? '') === 'br') {
+                $out[] = new InlineItem(
+                    InlineItem::TYPE_FORCED_BREAK,
+                    0, 0, 0, $cr, '', $cStyle, 0, 0
+                );
+                continue;
+            }
+            $mLeft = (int)($cStyle?->margin?->left->toPx() ?? 0);
+            $mRight = (int)($cStyle?->margin?->right->toPx() ?? 0);
+            $disp = $cStyle?->display?->value ?? 'inline';
+            if ($disp === 'inline' && !empty($cr->children)) {
+                $padL = (int)($cStyle?->padding?->left->toPx() ?? 0);
+                $padR = (int)($cStyle?->padding?->right->toPx() ?? 0);
+                $bL = (int)($cStyle?->getBorderLeftWidth() ?? 0);
+                $bR = (int)($cStyle?->getBorderRightWidth() ?? 0);
+                // 盒自身 strut（同 root strut 公式；line-height 三态，-1=normal）
+                $bfs = (int)($cStyle?->getFontSize() ?? 16);
+                if ($bfs <= 0) $bfs = 16;
+                $fa = intdiv($bfs * 1088 + 500, 1000);
+                $fd = intdiv($bfs * 275 + 500, 1000);
+                $blh = (int)($cStyle?->getLineHeight() ?? -1);
+                if ($blh < 0) $blh = $fa + $fd;
+                $hlN = $blh - ($fa + $fd);
+                $hl = intdiv($hlN >= 0 ? $hlN + 1 : $hlN - 1, 2);
+                $out[] = new InlineItem(InlineItem::TYPE_OPEN_TAG, $padL + $bL, $fa + $hl, $fd + $hl, $cr, '', $cStyle, $mLeft, 0);
+                self::buildInlineItems($cr->children, $out);
+                $out[] = new InlineItem(InlineItem::TYPE_CLOSE_TAG, $padR + $bR, 0, 0, $cr, '', $cStyle, 0, $mRight);
+                continue;
+            }
+
+            // atomic inline（inline-block/替换元素/文本载体）的 ascent/descent：
+            // CSS 2.2 §10.8.1: content-box 高度作为 ascent，margin 单独处理
+            //（贡献行高但不影响基线计算）
+            $mTop = (int)($cStyle?->margin?->top->toPx() ?? 0);
+            $mBottom = (int)($cStyle?->margin?->bottom->toPx() ?? 0);
+            $itemH = (int)($cr->getH() ?? 0);
+            $out[] = new InlineItem(
+                InlineItem::TYPE_ATOMIC,
+                (int)($cr->getW() ?? 0),
+                $itemH + $mTop + $mBottom, // 行盒贡献 = margin-box
+                0,
+                $cr,
+                '',
+                $cStyle,
+                $mLeft,
+                $mRight
+            );
+        }
     }
 }

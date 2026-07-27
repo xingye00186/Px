@@ -603,7 +603,11 @@ class ComputedStyle
     private function applyPaddingMarginBorder(array $d): void
     {
         // padding — fallback from shorthand `padding` CssRect when individual keys missing
-        $padRect = ($d['padding'] ?? null) instanceof \Px\Css\CssRect ? $d['padding'] : null;
+        // 编译期烘焙声明（tag/class 规则）不走 parseInlineStyle 展开链，
+        // 简写可能以字符串（'2px 6px'）/数值形态抵达——CSS §8.4 1-4 值展开
+        //（与 border 简写族同源：A 类陷阱的字符串变体，此前非 CssRect 直接丢弃）。
+        $padRaw = $d['padding'] ?? null;
+        $padRect = $padRaw instanceof \Px\Css\CssRect ? $padRaw : self::rectFromShorthand($padRaw);
         $defaultPx = CssLength::px(0);
         $this->padding = new CssRect(
             $this->cssLengthFromDecl($d, 'paddingTop', $padRect?->top ?? $defaultPx),
@@ -612,8 +616,9 @@ class ComputedStyle
             $this->cssLengthFromDecl($d, 'paddingLeft', $padRect?->left ?? $defaultPx),
         );
 
-        // margin — same fallback from shorthand `margin` CssRect
-        $marginRect = ($d['margin'] ?? null) instanceof \Px\Css\CssRect ? $d['margin'] : null;
+        // margin — same fallback from shorthand `margin` CssRect（含字符串/数值展开，CSS §8.3）
+        $marginRaw = $d['margin'] ?? null;
+        $marginRect = $marginRaw instanceof \Px\Css\CssRect ? $marginRaw : self::rectFromShorthand($marginRaw);
         $this->margin = new CssRect(
             $this->cssLengthFromDecl($d, 'marginTop', $marginRect?->top ?? $defaultPx),
             $this->cssLengthFromDecl($d, 'marginRight', $marginRect?->right ?? $defaultPx),
@@ -683,10 +688,34 @@ class ComputedStyle
             }
         }
         $this->borderColor = $bc;
-        $this->borderTopColor = self::safeInt($d['borderTopColor'] ?? $bc);
-        $this->borderRightColor = self::safeInt($d['borderRightColor'] ?? $bc);
-        $this->borderBottomColor = self::safeInt($d['borderBottomColor'] ?? $bc);
-        $this->borderLeftColor = self::safeInt($d['borderLeftColor'] ?? $bc);
+        // per-side color：defaults 含 borderTopColor=0 四边键使 `?? $bc` 永不触发
+        //（A 类默认值陷阱第三例，与 borderWidth int/CssRect 同族）——简写提取的
+        // 颜色从不到达 per-side，导出/paint 恒黑。CSS §8.5.4：per-side 未显式
+        // 声明时 = 简写展开值（Blink parse 期 longhand 展开）。非 0 显式值用之，
+        // 否则从 per-side 简写（border-top: 1px solid #x）提取，再回落 $bc。
+        // 已知权衡（与 width 修复一致）：显式声明纯黑 per-side 会被回落覆盖，
+        // 因 merged 后无法区分默认 0 与显式 black（哨兵冲突已录台账）。
+        $sideColorFromShort = function(string $key, string $camelKey) use ($d): int {
+            $v = $d[$key] ?? ($d[$camelKey] ?? null);
+            if (is_string($v)) {
+                if (preg_match('/^\d+\|(\d+)\|\w+$/', $v, $m)) {
+                    return (int)$m[1]; // 管道编码 width|color|style
+                }
+                if (preg_match('/#([0-9a-fA-F]{3,8})\b/', $v, $m)) {
+                    $cl = CssValueParser::parseHexColor('#' . $m[1]);
+                    return is_numeric($cl) ? (int)$cl : 0;
+                }
+            }
+            return 0;
+        };
+        $btc = self::safeInt($d['borderTopColor'] ?? 0);
+        $this->borderTopColor = $btc !== 0 ? $btc : (self::safeInt($sideColorFromShort('border-top', 'borderTop') ?: $bc));
+        $brc = self::safeInt($d['borderRightColor'] ?? 0);
+        $this->borderRightColor = $brc !== 0 ? $brc : (self::safeInt($sideColorFromShort('border-right', 'borderRight') ?: $bc));
+        $bbc = self::safeInt($d['borderBottomColor'] ?? 0);
+        $this->borderBottomColor = $bbc !== 0 ? $bbc : (self::safeInt($sideColorFromShort('border-bottom', 'borderBottom') ?: $bc));
+        $blc = self::safeInt($d['borderLeftColor'] ?? 0);
+        $this->borderLeftColor = $blc !== 0 ? $blc : (self::safeInt($sideColorFromShort('border-left', 'borderLeft') ?: $bc));
 
         // border style (handle CssKeyword objects from parseIdent)
         // CSS §8.5.4：border 简写设置 width/style/color 三分量——未展开时从简写
@@ -703,14 +732,33 @@ class ComputedStyle
             }
         }
         $this->borderStyle = $bs;
-        $btsRaw = $d['borderTopStyle'] ?? $bs;
-        $this->borderTopStyle = is_object($btsRaw) ? ($btsRaw->value ?? $bs) : (string)$btsRaw;
-        $brsRaw = $d['borderRightStyle'] ?? $bs;
-        $this->borderRightStyle = is_object($brsRaw) ? ($brsRaw->value ?? $bs) : (string)$brsRaw;
-        $bbsRaw = $d['borderBottomStyle'] ?? $bs;
-        $this->borderBottomStyle = is_object($bbsRaw) ? ($bbsRaw->value ?? $bs) : (string)$bbsRaw;
-        $blsRaw = $d['borderLeftStyle'] ?? $bs;
-        $this->borderLeftStyle = is_object($blsRaw) ? ($blsRaw->value ?? $bs) : (string)$blsRaw;
+        // per-side style：同族陷阱第四例——defaults 含 borderTopStyle='none' 四边键，
+        // `?? $bs` 永不触发，简写场景 per-side 恒 'none' 与全局 $bs=solid 分叉。
+        // 显式非 none 用之，否则从 per-side 简写提取，再回落 $bs。
+        $sideStyleFromShort = function(string $key, string $camelKey) use ($d): string {
+            $v = $d[$key] ?? ($d[$camelKey] ?? null);
+            if (is_string($v)) {
+                if (preg_match('/\b(solid|dashed|dotted|double|groove|ridge|inset|outset)\b/i', $v, $m)) {
+                    return strtolower($m[1]);
+                }
+                if (preg_match('/^\d+\|\d+\|(\w+)$/', $v, $m)) {
+                    return strtolower($m[1]); // 管道编码 width|color|style
+                }
+            }
+            return '';
+        };
+        $btsRaw = $d['borderTopStyle'] ?? '';
+        $bts = is_object($btsRaw) ? ($btsRaw->value ?? '') : (string)$btsRaw;
+        $this->borderTopStyle = ($bts !== '' && $bts !== 'none') ? $bts : (string)($sideStyleFromShort('border-top', 'borderTop') ?: $bs);
+        $brsRaw = $d['borderRightStyle'] ?? '';
+        $brs = is_object($brsRaw) ? ($brsRaw->value ?? '') : (string)$brsRaw;
+        $this->borderRightStyle = ($brs !== '' && $brs !== 'none') ? $brs : (string)($sideStyleFromShort('border-right', 'borderRight') ?: $bs);
+        $bbsRaw = $d['borderBottomStyle'] ?? '';
+        $bbs = is_object($bbsRaw) ? ($bbsRaw->value ?? '') : (string)$bbsRaw;
+        $this->borderBottomStyle = ($bbs !== '' && $bbs !== 'none') ? $bbs : (string)($sideStyleFromShort('border-bottom', 'borderBottom') ?: $bs);
+        $blsRaw = $d['borderLeftStyle'] ?? '';
+        $bls = is_object($blsRaw) ? ($blsRaw->value ?? '') : (string)$blsRaw;
+        $this->borderLeftStyle = ($bls !== '' && $bls !== 'none') ? $bls : (string)($sideStyleFromShort('border-left', 'borderLeft') ?: $bs);
     }
 
     private function cssLengthFromDecl(array $d, string $key, CssLength $default): CssLength
@@ -721,6 +769,30 @@ class ComputedStyle
         if (is_numeric($v)) return CssLength::px((float)$v);
         if (is_string($v) && $v !== '') return CssLength::fromString($v);
         return $default;
+    }
+
+    /**
+     * 字符串/数值简写 → CssRect（CSS §8.3/8.4：1 值全边；2 值 [上下,左右]；
+     * 3 值 [上,左右,下]；4 值 [上,右,下,左]）。非简写形态返 null。
+     */
+    private static function rectFromShorthand(mixed $v): ?CssRect
+    {
+        if (is_numeric($v)) {
+            $l = CssLength::px((float)$v);
+            return new CssRect($l, $l, $l, $l);
+        }
+        if (!is_string($v) || trim($v) === '') return null;
+        $parts = preg_split('/\s+/', trim($v));
+        if ($parts === false || count($parts) < 1 || count($parts) > 4) return null;
+        $ls = [];
+        foreach ($parts as $p) {
+            $ls[] = CssLength::fromString($p);
+        }
+        $n = count($ls);
+        if ($n === 1) return new CssRect($ls[0], $ls[0], $ls[0], $ls[0]);
+        if ($n === 2) return new CssRect($ls[0], $ls[1], $ls[0], $ls[1]);
+        if ($n === 3) return new CssRect($ls[0], $ls[1], $ls[2], $ls[1]);
+        return new CssRect($ls[0], $ls[1], $ls[2], $ls[3]);
     }
 
     // ════════════════════════════════════════════════════════════════
