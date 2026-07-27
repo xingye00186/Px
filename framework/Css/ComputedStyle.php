@@ -190,9 +190,14 @@ class ComputedStyle
     // ── 默认字体大小 ──
     private const DEFAULT_FONT_SIZE = 16;
 
-    // ── 内联元素类型 ──
-    private const INLINE_TYPES = [
-        'span', '#text', 'b', 'strong', 'em', 'i', 'code', 'a', 'label', 'br',
+    // ── 内联元素类型（UA 默认 display:inline，对标 Blink UA stylesheet html.css）──
+    // 权威单源（public）：BlockAlgorithm 等布局侧引用此常量。此前三处各自
+    // 维护且本表为短版（缺 q/kbd/mark 等）→ q 默认 display 误判 block
+    //（case-050 E 716×25 vs Blink inline 48×24）。
+    public const INLINE_TYPES = [
+        'span', '#text', 'text', 'b', 'strong', 'em', 'i', 'code', 'a', 'label', 'br',
+        'abbr', 'cite', 'dfn', 'kbd', 'mark', 'q', 'samp', 'small', 'sub',
+        'sup', 'time', 'var', 'u', 's',
     ];
 
     /**

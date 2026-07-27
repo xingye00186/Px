@@ -13,7 +13,9 @@ use Px\Css\CssLength;
  */
 class BlockAlgorithm extends LayoutAlgorithm
 {
-    private const INLINE_TYPES = ['#text','text','span','b','strong','em','i','code','br','a','label','abbr','cite','dfn','kbd','mark','q','samp','small','sub','sup','time','var'];
+    // UA inline 元素集单源化：权威在 ComputedStyle::INLINE_TYPES（对标 Blink UA
+    // stylesheet）——此前三处各自维护短长不一致（q/kbd/mark 等误判 block）。
+    private const INLINE_TYPES = \Px\Css\ComputedStyle::INLINE_TYPES;
 
     /**
      * 最近一次 stackBlockChildren 的 IFC 流末端（行盒下沿绝对 y）。

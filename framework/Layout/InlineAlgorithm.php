@@ -117,11 +117,44 @@ class InlineAlgorithm extends LayoutAlgorithm
                 $minW = $s->minWidth?->toPx() ?? 0;
                 if ($minW > 0 && $w < $minW) $w = $minW;
             } else {
-                // inline / 其他：保持旧行为（fill available）
-                $w = $availableW;
+                // inline（非 inline-block）：
+                // CSS 2.2 §10.3.1 非替换 inline 宽度由内容决定——含元素子时
+                // 宽 = 子 margin-box 之和 + 自身水平边缘（单行内容宽）。
+                // 此前 fill-available 属错误契约：flex/grid 容器消费该预布局
+                // 宽时 item 占满容器（E 716 vs Blink fit-content 64，case-024
+                // 行内 x 累加 3350 溢出族；Blink flex item blockify + §9.2 auto
+                // 主轴 = fit-content）。IFC 盒栈路径不消费预布局宽，不受影响。
+                // 无子纯文本/空 inline 保持旧行为（窄口径，避免宽面回归）。
+                if (count($children) > 0) {
+                    $sumW = 0;
+                    foreach ($children as $cw) {
+                        $sumW += (int)($cw->getW() ?? 0)
+                            + (int)($cw->style?->margin?->left->toPx() ?? 0)
+                            + (int)($cw->style?->margin?->right->toPx() ?? 0);
+                    }
+                    $padLR2 = (int)($s->padding?->left->toPx() ?? 0) + (int)($s->padding?->right->toPx() ?? 0);
+                    $bwLR2 = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
+                    $w = $sumW + $padLR2 + $bwLR2;
+                } else {
+                    // inline / 其他：保持旧行为（fill available）
+                    $w = $availableW;
+                }
             }
         }
         $h = $s->height?->toPx() ?? 0;
+        // 含元素子的 inline 盒 auto 高：内容行高（子 margin-box 高 max）。
+        // 此前恒 0（无文本分支不覆盖）——flex 容器交叉轴尺寸/align-items 消费
+        // item 高时塌陷（case-024 px-36 容器 h=0 vs Blink 25）。
+        if ($h <= 0 && count($children) > 0) {
+            $maxChH = 0;
+            foreach ($children as $chh) {
+                $chTot = (int)($chh->getH() ?? 0)
+                    + (int)($chh->style?->margin?->top->toPx() ?? 0)
+                    + (int)($chh->style?->margin?->bottom->toPx() ?? 0);
+                if ($chTot > $maxChH) $maxChH = $chTot;
+            }
+            $h = $maxChH + (int)($s->padding?->top->toPx() ?? 0) + (int)($s->padding?->bottom->toPx() ?? 0);
+        }
         if (strlen($textContent) > 0 && (int)($h ?? 0) <= 0) {
             // CSS 2.2 §10.8: 行高计算
             // line-height: <length> → 绝对值
