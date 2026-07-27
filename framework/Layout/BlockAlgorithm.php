@@ -80,14 +80,16 @@ class BlockAlgorithm extends LayoutAlgorithm
         $colW = intdiv($innerW - ($n - 1) * $colGap, $n);
         if ($colW < 1) { $n = 1; $colW = $innerW; }
 
-        // ② 窄约束单列流（容器级属性仍由外层负责：这里用无 margin/定位影响
-        // 的内容流约束，产出 (0,0) 基坐标的内容 fragment 树）
+        // ② 窄约束单列流：流宽 = colW + 自身水平边缘（内层 layout 会再施加 $s
+        // 盒模型，补偿后列**内容**可用宽精确 = colW，对标 fragmentainer
+        // 无自身盒模型的抽象；不补偿时列内容宽被二次扣边缘）。
+        $flowW = $colW + $padL + $padR + $bL + $bR;
         $flowSpace = ConstraintSpaceBuilder::from($space)
-            ->setContainerSize($colW, 0)
-            ->setContentSize($colW, 0)
+            ->setContainerSize($flowW, 0)
+            ->setContentSize($flowW, 0)
             ->setParentContentOrigin(0, 0)
             ->setPercentageBase(null, null)
-            ->setDeterminedPercentageBase($colW, null)
+            ->setDeterminedPercentageBase($flowW, null)
             ->setSpaceType('block')
             ->setFormattingContextRoot(true)
             ->build();
@@ -116,30 +118,38 @@ class BlockAlgorithm extends LayoutAlgorithm
             $flowChildren[] = $fk;
         }
 
-        // greedy 分桶：列内累积流高超 targetH 换列（顶层子原子不可分）
+        // greedy 分桶：分片单元 = **行盒**（对标 Blink：fragmentainer 断点在行盒
+        // 间，§5.2 行盒原子）。IFC flush 产物是 span 级平铺，按 fkY 聚行组
+        //（同行 span 同 y）；若按 span 分桶会每 span 独立换列且 dy 重置→
+        // 多行折列同 y（探针实锤 64 span 单 y 平铺）。块级子自成单组。
         $x = (int)($s->margin?->left->resolveBoxPercent($parentW) ?? 0);
         $y = (int)($s->margin?->top->resolveBoxPercent($parentW) ?? 0);
         $contentX = $x + $padL + $bL;
         $contentY = $y + $padT + $bT;
+        // 按 y 聚行组（保持流序：ksort 后逐组）
+        $lineGroups = [];
+        foreach ($flowChildren as $fk) {
+            $lineGroups[(int)$fk->getY()][] = $fk;
+        }
+        ksort($lineGroups);
         $col = 0;
-        // colStartFlowY 从 0 起（非首子锤定）：流坐标含内容基点偏移（边缘），
-        // 从 0 起算使列内保留该偏移——与浏览器列内容顶部形态实测一致
-        //（锤定版实验 336 vs 本版 275，真值判决）。
-        $colStartFlowY = 0;
-        $colBottom = 0;
+        $colStartFlowY = PHP_INT_MIN;
         $maxColUsedH = 0;
         $newChildren = [];
-        foreach ($flowChildren as $fk) {
-            $fkY = (int)$fk->getY();
-            $fkH = (int)$fk->getH();
-            if ($col < $n - 1 && ($fkY + $fkH - $colStartFlowY) > $targetH && $fkY > $colStartFlowY) {
+        foreach ($lineGroups as $gY => $group) {
+            $gH = 0;
+            foreach ($group as $fk) { $fkH2 = (int)$fk->getH(); if ($fkH2 > $gH) $gH = $fkH2; }
+            if ($colStartFlowY === PHP_INT_MIN) $colStartFlowY = $gY;
+            if ($col < $n - 1 && ($gY + $gH - $colStartFlowY) > $targetH && $gY > $colStartFlowY) {
                 $col++;
-                $colStartFlowY = $fkY;
+                $colStartFlowY = $gY;
             }
             $dx = $contentX + $col * ($colW + $colGap) - $flowOriginX;
             $dy = $contentY - $colStartFlowY;
-            $newChildren[] = FlexAlgorithm::translateFragmentTree($fk, $dx, $dy);
-            $usedH = $fkY + $fkH - $colStartFlowY;
+            foreach ($group as $fk) {
+                $newChildren[] = FlexAlgorithm::translateFragmentTree($fk, $dx, $dy);
+            }
+            $usedH = $gY + $gH - $colStartFlowY;
             if ($usedH > $maxColUsedH) $maxColUsedH = $usedH;
         }
         foreach ($oofChildren as $ok) { $newChildren[] = $ok; }
@@ -656,14 +666,14 @@ class BlockAlgorithm extends LayoutAlgorithm
         $hasExplicitWidth = $s->hasExplicitLength('width');
         if ($width <= 0 && !$hasExplicitWidth) {
             $ml = $s->margin?->left->toPx() ?? 0; $mr = $s->margin?->right->toPx() ?? 0;
-            $autoPadL = $s->padding?->left->toPx() ?? 0; $autoPadR = $s->padding?->right->toPx() ?? 0;
-            $autoBw = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
-            // CSS-UI-3 §4.5: box-sizing 影响 auto-fill 宽度的计算
-            // content-box: width = 可用空间 - 外边距 (padding+border 在外面追加)
-            // border-box:  width = 可用空间 - 外边距 - 内边距 - 边框 (全部在盒内)
-            $width = ($sizing === 'border-box')
-                ? max(0, $parentW - $ml - $mr - $autoPadL - $autoPadR - $autoBw)
-                : max(0, $parentW - $ml - $mr);
+            // CSS 2.2 §10.3.3：auto 宽的 used 值满足 margin+border+padding+width
+            // = 包含块宽 → border-box 尺寸恒 = parentW - margins。
+            // box-sizing（CSS-UI-3 §4.5）只影响**显式 width 声明**的解释，
+            // 不影响 auto 的 used 值——此前 border-box 分支另扣 padding+border
+            // 属声明解释规则错嫁接（引擎 Fragment.w 事实语义全程 border-box，
+            // computeBlockHeight 注释自证）：padding:8+border:1 容器双扣 18px，
+            // 跨 case 共性 698 vs Blink 716（049/046/039 真值实锤）。
+            $width = max(0, $parentW - $ml - $mr);
         }
         $minW = $s->minWidth?->toPx() ?? 0; $maxW = $s->maxWidth?->toPx() ?? 0;
         // CSS-UI-3 §4.5: box-sizing:border-box 时 min-width/max-width 也按 border-box 解释

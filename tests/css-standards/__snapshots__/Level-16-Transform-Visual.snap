@@ -1,4 +1,4 @@
-@generated 2026-07-26 15:51:45
+@generated 2026-07-27 09:42:55
 === Test: transform translateX(30px) 水平偏移 ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50) text="Translate X"
