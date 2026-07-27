@@ -862,6 +862,13 @@ class BlockAlgorithm extends LayoutAlgorithm
             // 也检查 StyleResolver 计算的 auto 标志
             if (!$marginLeftAuto) { $marginLeftAuto = (bool)($childStyle?->getRaw('marginLeftAuto') ?? false); }
             if (!$marginRightAuto) { $marginRightAuto = (bool)($childStyle?->getRaw('marginRightAuto') ?? false); }
+            // 简写回落（'10px auto 0' 等：per-side raw 为 NULL，插桩实锤 106 条）：
+            // margin CssRect 由简写展开，显式 auto 的 unit='auto' 可靠；
+            // defaults 为 px(0) 不误报（A 类陷阱免疫：仅在简写声明存在时回落）。
+            if (!$marginLeftAuto && !$marginRightAuto && $childStyle?->getRaw('margin') !== null) {
+                $marginLeftAuto = (bool)($childStyle->margin?->left->isAuto() ?? false);
+                $marginRightAuto = (bool)($childStyle->margin?->right->isAuto() ?? false);
+            }
             // CSS 2.2 §10.3.3：`margin: 0 auto` 仅当 width 不为 auto 且有剩余空间时生效
             // 若 width 为 auto（chW 已满 containerW），auto margin 均作 0 处理
             $chHasExplicitW = ($childStyle?->width !== null
