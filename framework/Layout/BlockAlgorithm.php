@@ -30,6 +30,131 @@ class BlockAlgorithm extends LayoutAlgorithm
         return in_array($type, self::INLINE_TYPES, true);
     }
 
+    /** multicol 内层单列流标志：防 layoutMultiColumn → layout 无限递归 */
+    private bool $inMulticolFlow = false;
+
+    /**
+     * multi-column 容器布局（对标 Blink NGColumnLayoutAlgorithm）。
+     *
+     * 两阶段：① CSS Multicol §3.4 伪算法定列数 N/列宽 colW（整数确定性
+     * 算术）；② 以 colW 为约束做单列流布局（复用本算法 block 路径，对标
+     * Blink fragmentainer 内容流），再按列平衡目标高 targetH=ceil(H/N)
+     *（Blink balanced 初始猜测）greedy 分桶：顶层子不可分割（行盒/块盒
+     * 原子），超出目标高换列，子树整体平移 (k*(colW+gap), -列首偏移)。
+     * column-rule 仅影响绘制不影响几何（§4.3），本层不处理。
+     */
+    private function layoutMultiColumn(ConstraintSpace $space, ComputedStyle $s, string $textContent, array $childNodes): PhysicalFragment
+    {
+        $parentW = $space->getContentWidth();
+        $w = $this->computeBlockWidth($parentW, $s, $textContent, $space->getDeterminedPercentageWidth() ?? $parentW);
+        $padL = (int)($s->padding?->left->toPx() ?? 0);
+        $padR = (int)($s->padding?->right->toPx() ?? 0);
+        $padT = (int)($s->padding?->top->toPx() ?? 0);
+        $padB = (int)($s->padding?->bottom->toPx() ?? 0);
+        $bL = (int)($s->getBorderLeftWidth() ?? 0);
+        $bR = (int)($s->getBorderRightWidth() ?? 0);
+        $bT = (int)($s->getBorderTopWidth() ?? 0);
+        $bB = (int)($s->getBorderBottomWidth() ?? 0);
+        $innerW = max(1, $w - $padL - $padR - $bL - $bR);
+
+        // 列间距：column-gap 未声明时 normal = 1em（CSS Multicol §4.1/Align §8.3；
+        // 真值：浏览器 'normal 16px'）。引擎 columnGap 默认 px(0) 无法区分
+        // 显式 0，用 getRaw 区分声明（A 类默认值陷阱同源防范）。
+        $gapRaw = $s->getRaw('columnGap');
+        if ($gapRaw !== null) {
+            $colGap = (int)($s->columnGap?->toPx() ?? 0);
+        } else {
+            $colGap = (int)($s->getFontSize() > 0 ? $s->getFontSize() : 16);
+        }
+
+        // CSS Multicol §3.4 伪算法（整数确定性）
+        $specCount = (int)($s->getColumnCount() ?? 0);
+        $specWidth = (int)($s->getColumnWidth() ?? 0);
+        if ($specWidth > 0 && $specCount > 0) {
+            $n = min($specCount, max(1, intdiv($innerW + $colGap, $specWidth + $colGap)));
+        } elseif ($specWidth > 0) {
+            $n = max(1, intdiv($innerW + $colGap, $specWidth + $colGap));
+        } else {
+            $n = max(1, $specCount);
+        }
+        $colW = intdiv($innerW - ($n - 1) * $colGap, $n);
+        if ($colW < 1) { $n = 1; $colW = $innerW; }
+
+        // ② 窄约束单列流（容器级属性仍由外层负责：这里用无 margin/定位影响
+        // 的内容流约束，产出 (0,0) 基坐标的内容 fragment 树）
+        $flowSpace = ConstraintSpaceBuilder::from($space)
+            ->setContainerSize($colW, 0)
+            ->setContentSize($colW, 0)
+            ->setParentContentOrigin(0, 0)
+            ->setPercentageBase(null, null)
+            ->setDeterminedPercentageBase($colW, null)
+            ->setSpaceType('block')
+            ->setFormattingContextRoot(true)
+            ->build();
+        $this->inMulticolFlow = true;
+        // 单列流复用容器 style（IFC strut/textAlign/字体上下文必须保留；
+        // 空 style 匿名流实验导致行盒上下文丢失劣化 275→325 已回退），
+        // 容器边缘在分桶平移时从流坐标中扣除（见 flowOriginX/Y）。
+        $flowStyleFrag = $this->layout($flowSpace, $s, $textContent, $childNodes, null);
+        $this->inMulticolFlow = false;
+        $flowKids = $flowStyleFrag->children;
+        // 内容总高（单列流 content 高，去容器自身边缘）
+        $flowH = max(0, (int)$flowStyleFrag->getH() - $padT - $padB - $bT - $bB);
+        // 单列流内容基点（子坐标含流内容器边缘与 margin，分桶时扣除后叠加本层基点）
+        $flowOriginX = (int)$flowStyleFrag->getX() + $padL + $bL;
+        $flowOriginY = (int)$flowStyleFrag->getY() + $padT + $bT;
+        // 列平衡目标高（Blink balanced 初始猜测：ceil 纯整数）
+        $targetH = $n > 0 ? intdiv($flowH + $n - 1, $n) : $flowH;
+        if ($targetH < 1) $targetH = 1;
+
+        // 排序顶层子按流序（y 升序；同 y 保持原序），OOF 不参与分列（§2）
+        $flowChildren = [];
+        $oofChildren = [];
+        foreach ($flowKids as $fk) {
+            $fkPos = $fk->style?->position?->value ?? 'static';
+            if ($fkPos === 'absolute' || $fkPos === 'fixed') { $oofChildren[] = $fk; continue; }
+            $flowChildren[] = $fk;
+        }
+
+        // greedy 分桶：列内累积流高超 targetH 换列（顶层子原子不可分）
+        $x = (int)($s->margin?->left->resolveBoxPercent($parentW) ?? 0);
+        $y = (int)($s->margin?->top->resolveBoxPercent($parentW) ?? 0);
+        $contentX = $x + $padL + $bL;
+        $contentY = $y + $padT + $bT;
+        $col = 0;
+        // colStartFlowY 从 0 起（非首子锤定）：流坐标含内容基点偏移（边缘），
+        // 从 0 起算使列内保留该偏移——与浏览器列内容顶部形态实测一致
+        //（锤定版实验 336 vs 本版 275，真值判决）。
+        $colStartFlowY = 0;
+        $colBottom = 0;
+        $maxColUsedH = 0;
+        $newChildren = [];
+        foreach ($flowChildren as $fk) {
+            $fkY = (int)$fk->getY();
+            $fkH = (int)$fk->getH();
+            if ($col < $n - 1 && ($fkY + $fkH - $colStartFlowY) > $targetH && $fkY > $colStartFlowY) {
+                $col++;
+                $colStartFlowY = $fkY;
+            }
+            $dx = $contentX + $col * ($colW + $colGap) - $flowOriginX;
+            $dy = $contentY - $colStartFlowY;
+            $newChildren[] = FlexAlgorithm::translateFragmentTree($fk, $dx, $dy);
+            $usedH = $fkY + $fkH - $colStartFlowY;
+            if ($usedH > $maxColUsedH) $maxColUsedH = $usedH;
+        }
+        foreach ($oofChildren as $ok) { $newChildren[] = $ok; }
+
+        // 容器高：显式高优先，auto = 最高列 + 边缘（CSS Multicol §3.3）
+        $h = $this->computeBlockHeight($space->getContentHeight(), $s, $textContent, $space->getDeterminedPercentageHeight() ?? 0);
+        if ($h <= 0 && !$s->hasExplicitLength('height')) {
+            $h = $maxColUsedH + $padT + $padB + $bT + $bB;
+        }
+
+        return new PhysicalFragment((int)$x, (int)$y, (int)$w, (int)$h,
+            $s->visualWidth($w), $s->visualHeight($h), 0, (int)max(0, $w - $padL - $padR - $bL - $bR), (int)max(0, $h - $padT - $padB - $bT - $bB),
+            $s, $newChildren, null);
+    }
+
     /**
      * 计算 Block 元素的内在尺寸（对标 Blink NGBlockNode::ComputeMinMaxSizes）。
      *
@@ -302,6 +427,14 @@ class BlockAlgorithm extends LayoutAlgorithm
         ?PhysicalFragment $inputFragment = null,
     ): PhysicalFragment {
         $s = $style ?? \Px\Css\StylePool::empty();
+        // ── multi-column 容器（对标 Blink NGColumnLayoutAlgorithm）──
+        // column-count/column-width 声明时走分列路径：窄约束单列流 +
+        // 列平衡分桶平移（intrinsic 测量模式除外）。前置于子预布局：
+        // 子需以列宽为约束重新布局（非容器宽）。
+        if (!$space->getIsIntrinsicMeasurement() && !$this->inMulticolFlow
+            && ((int)($s->getColumnCount() ?? 0) > 0 || (int)($s->getColumnWidth() ?? 0) > 0)) {
+            return $this->layoutMultiColumn($space, $s, $textContent, $childNodes);
+        }
         // P2: 按需布局子项（对标 Blink：算法通过 LayoutChild 布局子项）
         $children = [];
         for ($ci = 0, $clen = count($childNodes); $ci < $clen; $ci++) {

@@ -1,4 +1,4 @@
-@generated 2026-07-27 04:51:43
+@generated 2026-07-27 08:13:14
 === Test: display:table 基本容器 ===
 Frame #1 events=0 detail=normal
 div (0,0 400x39) [dsp=table]
@@ -24,7 +24,7 @@ div (0,0 300x38) [dsp=table]
 Frame #1 events=0 detail=normal
 div (0,0 400x35) [dsp=table]
   div (0,0 400x35) [dsp=table-row]
-    div (0,0 399x35) [dsp=table-cell]
+    div (0,0 400x35) [dsp=table-cell]
       div (0,0 390x30) text="Nested"
 
 ---
@@ -40,27 +40,27 @@ div (0,0 300x19) [dsp=table]
 
 === Test: column-count:3 三列等分 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x120)
+div (0,0 300x40)
   div (0,0 300x40) text="Item 1"
-  div (0,40 300x40) text="Item 2"
-  div (0,80 300x40) text="Item 3"
+  div (105,0 300x40) text="Item 2"
+  div (210,0 300x40) text="Item 3"
 
 ---
 
 === Test: column-width:100px 自适应列数 ===
 Frame #1 events=0 detail=normal
-div (0,0 350x90)
+div (0,0 350x30)
   div (0,0 350x30) text="A"
-  div (0,30 350x30) text="B"
-  div (0,60 350x30) text="C"
+  div (122,0 350x30) text="B"
+  div (244,0 350x30) text="C"
 
 ---
 
 === Test: column-count:2 + column-gap:30px ===
 Frame #1 events=0 detail=normal
-div (0,0 230x60)
+div (0,0 230x30)
   div (0,0 230x30) text="Left"
-  div (0,30 230x30) text="Right"
+  div (130,0 230x30) text="Right"
 
 ---
 
