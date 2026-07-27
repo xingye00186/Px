@@ -47,7 +47,7 @@ class TableAlgorithm extends LayoutAlgorithm
         $w = 0;
         if ($s->width !== null && !$s->width->isAuto()) {
             $w = $s->width->isPercent()
-                ? (int)($s->width->toPx() * $space->getContentWidth() / 100)
+                ? intdiv((int)$s->width->toPx() * $space->getContentWidth(), 100)
                 : (int)$s->width->toPx();
         }
         if ($w <= 0) $w = $space->getContentWidth();
@@ -138,19 +138,22 @@ class TableAlgorithm extends LayoutAlgorithm
         $lineH = 0;
         $colWidths = [];
         for ($colI = 0; $colI < $cellCount; $colI++) {
-            $colWidths[$colI] = isset($maxColWidths[$colI]) ? $maxColWidths[$colI] : ($cellCount > 0 ? (int)($w / $cellCount) : $w);
+            $colWidths[$colI] = isset($maxColWidths[$colI]) ? $maxColWidths[$colI] : ($cellCount > 0 ? intdiv($w, $cellCount) : $w);
         }
         $totalColW = array_sum($colWidths);
         if ($totalColW > 0 && abs($totalColW - $w) > 1) {
-            $scale = $w / $totalColW;
-            foreach ($colWidths as $ci => $cw) { $colWidths[$ci] = (int)($cw * $scale); }
+            // 列宽归一缩放：纯整数确定性算术（对标 Blink LayoutUnit 定点思想）。
+            // 此前 $scale = $w/$totalColW 浮点中间值 + (int) 截断——PHP 与 AOT
+            // Variant 链浮点精度分叉（compare_php_aot case-048 geo18+style12 实锤，
+            // round 语义分叉同族）。
+            foreach ($colWidths as $ci => $cw) { $colWidths[$ci] = intdiv($cw * $w, $totalColW); }
         }
 
         $cellResults = [];
         $colX = 0;
         foreach ($row->children as $ci => $cell) {
             $cellH = (int)($cell->h ?? 0);
-            $cellW = $colWidths[$ci] ?? ($cellCount > 0 ? (int)($w / $cellCount) : $w);
+            $cellW = $colWidths[$ci] ?? ($cellCount > 0 ? intdiv($w, $cellCount) : $w);
             $cellResults[] = new PhysicalFragment((int)$colX, 0, (int)$cellW, (int)$cellH, (int)$cellW, (int)$cellH, (int)($cell->layer ?? 0), (int)$cellW, (int)$cellH, $cell->style, $cell->children, $cell->sourceNode,
                 $cell->scrollTop, $cell->scrollLeft, $cell->isScrollContainer,
                 $cell->type, $cell->content, $cell->dataset, $cell->pseudoStyles);

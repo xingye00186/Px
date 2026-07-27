@@ -1,10 +1,10 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-27 12:46:19 | **总耗时**: 52.8s
+**运行时间**: 2026-07-27 15:31:58 | **总耗时**: 53.2s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 41.6s |
+| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 41.9s |
 | case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff 🔴1 | ⏭️ | ❌ 失败 | 0.1s |
 | case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
@@ -45,10 +45,10 @@
 | case-039-vertical-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 169diff 🔴2 | ⏭️ | ❌ 失败 | 0.2s |
 | case-040-word-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 139diff 🔴18 | ⏭️ | ❌ 失败 | 0.3s |
 | case-041-background-clip | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 74diff 🟡42 | ⏭️ | ❌ 失败 | 0.2s |
-| case-042-font-variant | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🟡45 | ⏭️ | ❌ 失败 | 0.2s |
+| case-042-font-variant | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🟡45 | ⏭️ | ❌ 失败 | 0.3s |
 | case-043-resize | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 63diff 🟡44 | ⏭️ | ❌ 失败 | 0.2s |
 | case-044-background-attachment | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 44diff 🟡35 | ⏭️ | ❌ 失败 | 0.2s |
-| case-045-text-decoration | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🟡34 | ⏭️ | ❌ 失败 | 0.2s |
+| case-045-text-decoration | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🟡34 | ⏭️ | ❌ 失败 | 0.3s |
 | case-046-appearance | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 237diff 🔴189 | ⏭️ | ❌ 失败 | 0.2s |
 | case-047-object-fit | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 46diff 🟡30 | ⏭️ | ❌ 失败 | 0.2s |
 | case-048-table-props | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 287diff 🔴102 | ⏭️ | ❌ 失败 | 0.2s |
@@ -60,38 +60,13 @@
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 17diff 🔴9 | ⏭️ | ❌ 失败 | 0.1s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 18diff 🔴4 | ⏭️ | ❌ 失败 | 0.1s |
 
-**汇总**: 4 ✅ / 51 ❌ / 55 总计 (总耗时: 52.8s)
+**汇总**: 4 ✅ / 51 ❌ / 55 总计 (总耗时: 53.2s)
 
 ## 回归判定
 
 > 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
 >
-> - prop width diff 145->169
-> - prop height diff 108->128
-> - prop border-left-color diff 2->4
-> - case-012-position-relative geometry 35->37
-> - case-012-position-relative mismatch 3->5
-> - case-012-position-relative major 34->35
-> - case-015-min-max-height geometry 85->91
-> - case-015-min-max-height mismatch 20->32
-> - case-015-min-max-height major 34->40
-> - case-019-visibility geometry 219->221
-> - case-019-visibility mismatch 12->14
-> - case-019-visibility critical 144->145
-> - case-019-visibility major 53->54
-> - case-021-line-height geometry 106->114
-> - case-021-line-height mismatch 10->26
-> - case-021-line-height critical 0->4
-> - case-021-line-height major 106->110
-> - case-035-text-indent geometry 127->129
-> - case-035-text-indent mismatch 8->12
-> - case-035-text-indent major 52->54
-> - case-046-appearance geometry 205->210
-> - case-046-appearance mismatch 22->27
-> - case-046-appearance critical 185->189
-> - case-046-appearance major 12->13
-> - case-048-table-props mismatch 46->54
-> - case-048-table-props major 3->103
+> - case-048-table-props major 99->103
 >
 > ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
 
