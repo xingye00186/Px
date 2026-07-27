@@ -1305,8 +1305,10 @@ class CssMappings
         // CSS Selectors Level 3: supported combinators:
         //   ' ' (descendant), '>' (child), '+' (adjacent sibling), '~' (general sibling)
         // Match .parent .child { }, .parent > .child { }, .sibling + .sibling { }, etc.
+        // $complexIdx 在两遍共用：初始化必须在 if 外（第二遍无匹配时
+        // 第三遍引用未定义变量——AOT/CLI 编译警告实锤）。
+        $complexIdx = 0;
         if (preg_match_all('#\.([a-zA-Z0-9_-]+)\s*([>+~ ])\s*\.([a-zA-Z0-9_-]+)\s*\{([^}]*)\}#s', $styleCss, $complexRules, PREG_SET_ORDER)) {
-            $complexIdx = 0;
             foreach ($complexRules as $rule) {
                 $firstClass = $rule[1];
                 $combinator = trim($rule[2]);
