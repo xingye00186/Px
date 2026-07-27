@@ -73,13 +73,16 @@ function parseCssClassesForMerge(string $css): array
     if (count($idRules) > 0) {
         $result['__id_rules__'] = $idRules;
     }
-    // 提取复合选择器（CSS Selectors L3）：.first <comb> (.second | tag) { }
-    // 如 .rel-row div{flex:1}、.a > .b{...}。subject 为类或类型选择器；
-    // 在 mergeClassStylesIntoNode 递归时携带祖先/前兄弟上下文匹配。
+    // 提取复合选择器（CSS Selectors L3）：.first <comb> (.second | tag[:pseudo]) { }
+    // 如 .rel-row div{flex:1}、.a > .b{...}、.lh-card div:first-child{...}。
+    // subject 为类或类型选择器，可带结构伪类 :first-child/:last-child
+    //（Selectors L3 §6.6.5）；在 mergeClassStylesIntoNode 递归时携带
+    // 祖先/前兄弟/兄弟序上下文匹配。此前 :first-child 尾部使正则整条
+    // 不匹配（case-021 mb:8 丢失，卡片高 130vs138 族实锤）。
     $complexRules = [];
-    if (preg_match_all('#\.([a-zA-Z0-9_-]+)\s*([>+~ ])\s*(?:\.([a-zA-Z0-9_-]+)|([a-z][a-z0-9]*))\s*\{([^}]*)\}#s', $css, $crs, PREG_SET_ORDER)) {
+    if (preg_match_all('#\.([a-zA-Z0-9_-]+)\s*([>+~ ])\s*(?:\.([a-zA-Z0-9_-]+)|([a-z][a-z0-9]*))(:first-child|:last-child)?\s*\{([^}]*)\}#s', $css, $crs, PREG_SET_ORDER)) {
         foreach ($crs as $cr) {
-            $body = trim($cr[5]);
+            $body = trim($cr[6]);
             $body = preg_replace('/\s+/', ' ', $body);
             $body = rtrim($body, ';');
             if ($body === '') continue;
@@ -88,6 +91,7 @@ function parseCssClassesForMerge(string $css): array
                 'comb'        => trim($cr[2]) === '' ? ' ' : trim($cr[2]),
                 'secondClass' => $cr[3] !== '' ? $cr[3] : null,
                 'secondTag'   => (isset($cr[4]) && $cr[4] !== '') ? $cr[4] : null,
+                'pseudo'      => (isset($cr[5]) && $cr[5] !== '') ? substr($cr[5], 1) : null,
                 'decls'       => $body,
             ];
         }
@@ -107,7 +111,7 @@ function parseCssClassesForMerge(string $css): array
  * @param array $ancestorClassLists 每层祖先的 class 名数组列表（根在前，直接父在尾）
  * @param array $precedingSiblingClasses 前序兄弟的 class 字符串列表（文档序）
  */
-function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassLists = [], array $precedingSiblingClasses = []): void
+function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassLists = [], array $precedingSiblingClasses = [], bool $isLastChild = false): void
 {
     if ($node === null) return;
 
@@ -179,6 +183,11 @@ function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassL
             } else {
                 if (!in_array($rule['secondClass'], $ownClasses, true)) continue;
             }
+            // 结构伪类（Selectors L3 §6.6.5）：:first-child = 无前序元素兄弟；
+            // :last-child = 父层传入末子标记。
+            $rulePseudo = $rule['pseudo'] ?? null;
+            if ($rulePseudo === 'first-child' && count($precedingSiblingClasses) > 0) continue;
+            if ($rulePseudo === 'last-child' && !$isLastChild) continue;
             // first 侧（组合子语义，CSS Selectors L3）
             $firstOk = false;
             switch ($rule['comb']) {
@@ -248,14 +257,19 @@ function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassL
         $node->props['style'] = implode(';', $parts);
     }
 
-    // Step 4: 递归子节点（携带祖先 class 链与前序兄弟上下文）
+    // Step 4: 递归子节点（携带祖先 class 链、前序兄弟与末子标记）
     if (is_array($node->children)) {
         $childAncestors = $ancestorClassLists;
         $childAncestors[] = $ownClasses;
+        // 预扫末元素子索引（:last-child 判定，Selectors L3 §6.6.5）
+        $lastElemIdx = -1;
+        foreach ($node->children as $ci => $child) {
+            if (is_object($child) && property_exists($child, 'props')) $lastElemIdx = $ci;
+        }
         $siblingAcc = [];
-        foreach ($node->children as $child) {
+        foreach ($node->children as $ci => $child) {
             if (is_object($child) && property_exists($child, 'props')) {
-                mergeClassStylesIntoNode($child, $rawStyles, $childAncestors, $siblingAcc);
+                mergeClassStylesIntoNode($child, $rawStyles, $childAncestors, $siblingAcc, $ci === $lastElemIdx);
                 $siblingAcc[] = (string)($child->props['class'] ?? '');
             }
         }
