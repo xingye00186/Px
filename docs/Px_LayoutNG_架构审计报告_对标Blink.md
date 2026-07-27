@@ -1,4 +1,4 @@
-﻿> [!IMPORTANT] 本文档的导航/状态职责已由《docs/Px_LayoutNG_Blink对齐迭代总指南.md》接管（2026-07-28）。续作请从总指南入口开始；本文保留作深度参考，其中待办项状态以总指南 §8/§9 为准。
+> [!IMPORTANT] 本文档的导航/状态职责已由《docs/Px_LayoutNG_Blink对齐迭代总指南.md》接管（2026-07-28）。续作请从总指南入口开始；本文保留作深度参考，其中待办项状态以总指南 §8/§9 为准。
 
 # Px LayoutNG 架构审计报告 — 对标 Blink LayoutNG
 
@@ -1899,4 +1899,76 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 | 2026-07-27 | **结构伪类 :first-child/:last-child 编译通道（5fadef38，Selectors L3 §6.6.5）**：行高 130vs138 族（case-021 主导，6 处卡片）探针链归因：卡片差 8px ← label div 的 margin-bottom:8 丢失 ← `.lh-card div:first-child{...}` 被复合选择器正则整条拒匹配（:first-child 尾部不在模式内）——非行盒模型问题，属级联通道缺口（与 tag/id 通道同系列第三例）。实现：正则尾部可选 (:first-child|:last-child) 捕获入 rule.pseudo；匹配端 first-child = 前序元素兄弟数为 0（既有 precedingSiblingClasses 通道），last-child = 父层预扫末元素子索引下传标记。排障插曲：签名编辑一度未落盘（save-failed 真丢）致 pseudo 判定缺失而 px-46 误得 mb——gen 产物实锤后补齐。效果：case-021 **140→54 (-61%)**（卡片高 138=138 精确），:first-child 为批量页通用 label 模式——全量 **3532→3291 (-241) 零劣化**，31/32 保持；编译期一次性执行运行时零开销，bench 免跑（纪律：引擎热路径变更才跑） |
 | 2026-07-27 | **::before/::after 生成内容烘焙通道 + 纯文本 inline 内容宽（d50e934e）**：case-050 x=88 常量族归因：`.te-content::before{content:attr(data-label)}` 生成内容缺失——解析（CssMappings __before）与消费（RTM 生成 span RN）链存在，但烘焙模式无运行时 class 注册 → extractPseudoStyles 永空（gen 产物实锤无 __before）。治本（CSS Pseudo-Elements L4 §4，与 tbody 合成同层——Blink 伪元素是样式系统生成的匿名盒）：编译期合成 span 子（before 插首/after 追尾），content 支持字面量与 attr(x) 取宿主属性（§4.1）；_pxPseudo 标记排除于 :first-child/:last-child 元素兄弟计数（Selectors §6.6.5 以 DOM 元素计）。连带：**纯文本 inline 宽 = 文本测量**（CSS 2.2 §10.3.1；fill-available 使伪元素/文本 span 在 IFC 独占行，::before 716×19 挤断后续 spans 实锤）——inline 预布局三态齐备：含元素子=子和、含文本=测量、空=fill（窄口径）。效果：050 结构族根除（残差转字体度量族 E144vsB88，长期项）、026 -6，全量 3293 净持平零劣化；L17/L24 断言全绿定向重基线后 31/32；★bench vs 上批 -7.48% 全线负偏，三角回溤 vs multicol 稳定基线 = 两批净 **AVG -6.28% worst +0.06%** 无回归放行（json 入库 @384921a9） |
 | 2026-07-27 | **menulist 控件契约对齐（ea635ec2，case-046 异常真值案结）**：报告 browser=-37149 族 8 条初疑采集污染，探针对账真值文件无异常值——实为**归一化后的 0-锚点**：Blink 中 <select> 是替换控件（menulist），<option>/<optgroup> 在 style tree 但不入 layout tree，getBoundingClientRect 全 (0,0,0,0)（真值实锤 option/内 span 全 0 盒）；而 engine 把 option 当块级布局 698×25——真值权威性成立，错在引擎。治本：① select UA display=inline-block（替换控件盒）；② option/optgroup 子树在 mainLayout 入口零盒递归（保留 type/dataset 供导出同构）——否决 display:none 方案（导出层丢弃 none 破坏元素集合同构：浏览器导出 0 盒）。局限记清单：listbox 模式（multiple/size>1）会渲染 option。效果：046 **239→222**，全量 **3293→3276 零劣化**，31/32；★bench run1/run2 稳定 +3.18%（vs multicol）/+3.75%（vs table）——**形态矛盾判环境态**：若为上批 text-measure 开销应集中 TextHeavy，实则 TextHeavy 最低 +3.65% 而 DeepTree 最高 +5.28%（与代码路径零关联；menulist 分支对无 select 场景仅两次字符串比较），放行并标记下批复核（json×2 入库 @c59b69aa） |
+| 2026-07-29 | **第六次真实性核验 @ HEAD=bc18b9d6（详见 §二十）**：逐项 grep 代码证据复核待解决清单——确认仍真实 12 项（1.1-1.4/2.1/2.2/2.4/2.6/2.10/2.13/5.3/5.4/5.5）；确认已关闭 2 项（5.1/5.2 @18769d38）；确认改进 5 项（2.3 INLINE_TYPES 单源化、2.5 createsBFC 单一方法已抽出但胶水副本仍在、2.7 ChildLayoutProvider 落地+Phase B 删除、2.12 isFormattingContextRoot 位全链、4.1 canonicalStyleKey 全接入）。**新发现并根治：跨机器 EOL 环境陷阱**（core.autocrlf=true 机器 checkout 快照成 CRLF → 虚假 330/360 全量失配；CssTestBase 双侧 EOL 归一化 + .gitattributes *.snap eol=lf，修复后 330/330 + Level-21 全过）。新发现 N2：Orchestrator setFormattingContextRoot(false) 硬编码，普通 block 链 FCR 位未启用。五维评分更新：综合 66% → **~80%**（抽象 94/数据 68/算法 80/流程 88/规范 72） |
+
+---
+
+## 二十、第六次真实性核验（2026-07-29 HEAD=bc18b9d6）
+
+> 核验方法：不轻信文档声明，逐项 Grep/Read 抽样代码证据（历史教训：首次复核过于乐观、四次核验误判 2.11）。
+> 范围：04da119f..bc18b9d6 共 9 提交（含 ad4d0458 四项根治、209ff22c inline-with-children、87d57997 比较器修复）。
+> 基线验证：css-standards **330/330 + Level-21 31/31**（EOL 环境陷阱修复后，见 §20.3）。本次为纯审计 + test-infra 修复，引擎零改动，按纪律免跑 bench/AOT。
+
+### 20.1 待解决清单逐项核验结论
+
+| 编号 | 状态 | 代码证据（行号同步 bc18b9d6） |
+|---|---|---|
+| 1.1 | ✅ 仍真实 | ConstraintSpace::forChild L216-241 containerWidth/contentWidth 传同一 `$contentWidth`；Orchestrator L445-446 setContainerSize/setContentSize 同值 |
+| 1.2 | ✅ 仍真实 | BlockAlgorithm L489 `(int)$w,(int)$h` 同时传 w/h 和 contentWidth/contentHeight |
+| 1.3 | ✅ 仍真实 | Orchestrator L420-421 offX/offY 未用 parentExplicitW 修正（补丁在 L429-431） |
+| 1.4 | ✅ 仍真实 | FlexAlgorithm translateFragmentTree L823-826/L961 仍在（与 E1 绑定，合法单一平移通道定性不变） |
+| 2.1 | ✅ 仍真实 | relative 处理内嵌 stackBlockChildren（L706/L743/L778 三处加减） |
+| 2.2 | ✅ 仍真实 | percent-height 多 pass / reResolveChild L411/L808 仍在 |
+| 2.3 | ⚠️ 改进 | INLINE_TYPES 单源化至 `ComputedStyle::INLINE_TYPES`（209ff22c，Blink UA html.css 对齐）；Block 内 inline 胶水路径仍在 |
+| 2.4 | ✅ 仍真实 | FlexAlgorithm L818 `abs($origW - $itemW) <= 5` 启发式仍在 |
+| 2.5 | ⚠️ 改进 | `createsBlockFormattingContext()` 单一方法已抽出（L222，pre/end 穿透共享）；但 stackBlockChildren L673-679 仍有内联硬编码副本未收敛到该方法 |
+| 2.6 | ✅ 仍真实 | OOF 双重布局：mainLayout L226-231 预布局 OOF 子项 + oofLayout 独立通行证 |
+| 2.7 | ⚠️ 大幅改进 | **ChildLayoutProvider 已落地**（对标 Blink LayoutChild，含洁净复用/按需递归），Phase B 全量预布局已删除（Orchestrator L223 注释自证）；仅 OOF 路径仍预布局 |
+| 2.10 | ✅ 仍真实 | PhysicalFragment 越界字段仍在：layer L27、sourceNode L40、dataset/pseudoStyles L45-46、scrollTop/scrollLeft/isScrollContainer L94-96 |
+| 2.12 | ⚠️ 部分 | 无独立 FormattingContext 类，但 `ConstraintSpace::isFormattingContextRoot` 位已全链（getter/equals/Builder/forChild）；**新发现 N2**：Orchestrator L454 恒 `setFormattingContextRoot(false)`，普通 block 链该位从未置 true，BFC 判定仍靠 BlockAlgorithm 内部重复计算 |
+| 2.13 | ✅ 仍真实 | FlexAlgorithm L223 flex-basis 关键字（content/min-content/max-content/fit-content）全跳过 |
+| 4.1 | ⚠️ 接近关闭 | `CssMappings::canonicalStyleKey` 已存在并接入编译链全部 4 处（sfc-compiler L340/StyleTransform L108/StyleExprHelper L192 + CssShorthandExpander 契约注释）；建议清单方复验后关闭 |
+| 5.1 | ✅ 已关闭 | MAX_RELAYOUT_ITERATIONS 已删除（grep 零命中） |
+| 5.2 | ✅ 已关闭 | RTM/PP 写已删字段代码全清；RTM 仅剩 `$frag->isScrollContainer`（读 Fragment，合法）；PP 无任何 `$node->x/y/scrollTop` fallback |
+| 5.3 | ✅ 仍真实 | Orchestrator L265-268 注释自证“当前仅消费 fragment”；副产物链未打通。注：margin 折叠已经由**消费端重提取**（extractEnd/PreMarginStrut 对称模式）实现场景 2/3，功能上部分替代了副产物链，但 O(子树) 重提取 vs O(1) 上传的架构差距仍在 |
+| 5.4 | ✅ 仍真实 | RenderNode L55-57 hovered/focused/active 仍在 |
+| 5.5 | ✅ 仍真实 | StylePool L63/L107/L159/L177 spl_object_id 作池 key |
+| 3.1 | 🔽 观察项 | 双槽缓存 cachedFragment2/cachedConstraintSpace2（RenderNode L49-50）定性为 Blink measure/layout cache pair 等价实现不变 |
+
+### 20.2 本轮新提交的架构增量（对标 Blink 新落地项）
+
+| 新能力 | 对标 Blink | 代码证据 |
+|---|---|---|
+| **Inline Box 开闭标签体系** | NGInlineItemsBuilder kOpenTag/kCloseTag + NGInlineBoxState 盒栈 | InlineAlgorithm L249-252 buildInlineItems、L285-293 盒栈 push/pop、L436-470 递归展开（open 携边缘宽+字体 strut，close 携 inline-end） |
+| **`<br>` 强制断行** | NGInlineItem kControl forced-break | InlineItem::TYPE_FORCED_BREAK（L443-448 识别、L357-360 放置 0宽×行高盒） |
+| **margin 折叠场景 2/3** | NGMarginStrut 穿透/上传 | BlockAlgorithm layoutResult() 真实 override（L139-149）+ extractEndMarginStrut/extractPreMarginStrut/firstChildTopStrut 对称模式（含递归孙链、% margin 宁窄勿宽守卫） |
+| **ExclusionSpace 浮动** | NGExclusionSpace | ExclusionSpace.php（177 行，left/right floats + clear，Level-29 真值 5/5） |
+| **ChildLayoutProvider** | LayoutChild 按需布局 | ChildLayoutProvider.php（151 行，缓存命中/洁净跳过/递归布局三层）；Phase B 全量预布局已删除 |
+| **CSS 级联特异性通道** | Blink parse 期 cascade 序 | 编译期 * → tag → class/复合 → id → inline 四通道（ad4d0458） |
+| **整数确定性算术** | LayoutUnit 定点思想 | font metrics milli 定点 intdiv、half-leading 纯整数 round-half-away（f8c6730e，双模式 55/55 identical） |
+
+### 20.3 新发现：跨机器 EOL 环境陷阱（本次审计实锤并根治）
+
+- **症状**：总指南 §1 Checklist 基线验证得 **330/360**，30 个测试文件各 +1 失败、Level-21 全失配，diff 输出 expected/actual 肉眼完全相同。
+- **根因**：本机 `git core.autocrlf=true` 把 `__snapshots__/*.snap` checkout 成 CRLF（实测 Level-01 CRLF=99/LF=0），而 CssTestBase 用 `explode("\n")` 硬分行——基线每行尾多 `\r` 逐行全失配；Level-21 反向同族：测试 PHP 文件自身 CRLF 使多行字符串字面量嵌入 `\r` 流入引擎输出侧。
+- **定性**：环境陷阱非引擎回归（单个快照转 LF 后 14/14 立即全过）。与总指南“指南自足原则/跨机器续作”直接相关：新机器第一步就会撞上。
+- **根治（双保险，本次提交）**：① CssTestBase 基线侧 + 输出侧对称 `str_replace("\r\n","\n")` 归一化；② 新增 `.gitattributes`：`*.snap text eol=lf`。修复后 **330/330 + Level-21 31/31 全过，零回归确认**。
+
+### 20.4 五维评分更新（66% → ~80%）
+
+| 维度 | 前值 | 新值 | 主要依据 |
+|---|---|---|---|
+| 抽象层次 | 93% | **94%** | LayoutResult/CSBuilder/LayoutInputNode/MarginStrut/MinMaxSizes/ChildLayoutProvider/ExclusionSpace/InlineItem/LineBox/LineBreaker 全部落地；扣分：副产物消费链未打通（5.3）、FCR 位未启用（N2） |
+| 数据字段语义 | 55% | **68%** | borderWidth 单源化、lineHeight 哨兵隔离、contentW/H 保留修复；扣分：1.1/1.2 语义坠落、2.10 Fragment 越界字段、1.4 绝对坐标 |
+| 算法完整度 | 60% | **80%** | inline box 开闭标签、br 强制断行、float ExclusionSpace、margin 折叠场景 1/2/3、flex clamp rerun、shrink-to-fit、aspect-ratio、min()/max()/clamp()；扣分：flex-basis 关键字、useOrig 启发式、table/multi-col 缺口 |
+| 流程管线 | 80% | **88%** | Phase B 删除、ChildLayoutProvider、双槽缓存、真值三方对照管线、CLI≡AOT 55/55 确定性契约；扣分：OOF 双重布局、percent-height 多 pass |
+| 规范合规度 | 50% | **72%** | 330/330 全绱 Blink 真值护栏、CLI 全量 diff 14814→4519 (-70%)、级联特异性序；扣分：启发式残留、BiDi/writing-mode 空白 |
+| **综合** | **66%** | **~80%** | — |
+
+### 20.5 遗留缺口（供待解决清单同步）
+
+1. **N2（建议入清单 6.8）**：Orchestrator L454 恒 `setFormattingContextRoot(false)`——FCR 位仅在 flex-item/grid pass2 置位，普通 block 链（overflow 非 visible/float 等）未置，BFC 判定双源（ConstraintSpace 位 + BlockAlgorithm 重复计算），与 2.5 胶水副本同族，宜同批收敛。
+2. 核心未动项优先级不变：1.1 语义坠落（清单排序 T6 首位 2.1→5.3 之前置）、5.3 副产物链（消费端重提取已覆盖功能面，架构面 O(子树) → O(1) 仍待）、2.10 Fragment 越界字段。
+3. 总指南 §1 Checklist 建议补一行：“若基线异常且 diff 输出 expected/actual 肉眼相同 → 排查 core.autocrlf/EOL（已双保险修复，但旧 checkout 需 renormalize）”。
+
 

@@ -143,11 +143,17 @@ function run_css_tests(string $suiteName, string $snapFile, array $tests): void
 
     // Strip @generated metadata lines before comparison
     $baseline = file_get_contents($snapFile);
+    // EOL 归一化：git core.autocrlf=true 的机器会把 .snap checkout 成 CRLF，
+    // 而快照/引擎输出均为 LF——不归一会产生全行虚假失配（跨机器环境陷阱）。
+    $baseline = str_replace("\r\n", "\n", $baseline);
     $baseline = preg_replace('/^@generated[^\n]*\n?/m', '', $baseline);
 
     $combined = implode("\n---\n\n", array_map(function($name, $snap) {
         return "=== Test: $name ===\n$snap";
     }, array_keys($snapshots), $snapshots));
+    // 对称归一化：测试文件自身若被 checkout 成 CRLF，多行字符串字面量会嵌入 \r
+    // 流入引擎输出（如 Level-21 多行 text 内容），与 LF 基线产生虚假失配。
+    $combined = str_replace("\r\n", "\n", $combined);
 
     if ($combined !== $baseline) {
         $bLines = explode("\n", $baseline);
