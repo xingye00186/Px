@@ -938,12 +938,24 @@ class BlockAlgorithm extends LayoutAlgorithm
     private function flushInlineBuffer(array &$inlineBuffer, int $parentX, int $padLeft, int $containerW, int &$stackY, array &$result, int $parentW, ?ComputedStyle $s = null): void
     {
         // P4: 委派给 InlineAlgorithm（对标 Blink：块算法将 IFC 委派给内联算法）
-        $availW = $containerW; if ($availW <= 0) $availW = $parentW; if ($availW <= 0) $availW = 10000;
+        // IFC 可用宽 = 容器 content 宽（CSS 2.2 §10.1）：此前两调用点传
+        // border-box 宽且仅扣左 padding（右 padding+双 border 全漏，且 else
+        // 分支连 padLeft 都传 0）——折行点每行多放 1 span（case-040 实锤
+        // E 行宽 192 vs B 186）。边缘计算单源化于此（传入 padLeft 弃用）。
+        $padL = (int)($s?->padding?->left->toPx() ?? 0);
+        $padR = (int)($s?->padding?->right->toPx() ?? 0);
+        $bL = (int)($s?->getBorderLeftWidth() ?? 0);
+        $bR = (int)($s?->getBorderRightWidth() ?? 0);
+        $availW = $containerW - $padL - $padR - $bL - $bR;
+        if ($availW <= 0) $availW = $containerW;
+        if ($availW <= 0) $availW = $parentW;
+        if ($availW <= 0) $availW = 10000;
+        $startX = $parentX + $padL + $bL;
         // text-align 取 IFC 容器样式（继承属性，ComputedStyle 已层叠），
         // 传入 InlineAlgorithm 行级 ApplyTextAlign（CSS 2.2 §16.2 含 inline-block）；
         // 容器样式同时供行盒 root strut 字体 metrics（§10.8.1）。
         $ta = $s?->textAlign?->value ?? 'start';
-        $ir = InlineAlgorithm::layoutInlineRun($inlineBuffer, $availW, $parentX, $stackY, $padLeft, $ta, $s);
+        $ir = InlineAlgorithm::layoutInlineRun($inlineBuffer, $availW, $startX, $stackY, 0, $ta, $s);
         foreach ($ir['items'] as $item) $result[] = $item;
         $stackY = $ir['nextY'];
         // 记录 IFC 流末端（行盒下沿）供 auto-height 消费：strut 擑高的行盒空间
