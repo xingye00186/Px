@@ -86,10 +86,20 @@ class TableAlgorithm extends LayoutAlgorithm
                 }
             }
 
-            // ── 第二遍：按组/行放置 ──
+            // ── 第二遍：按组/行放置；caption-side:bottom 几何延后但**文档序不变**
+            //（CSS 2.2 §17.4.1；导出序=DOM 序是按索引比较器的同构前提契约，
+            // 若挖到尾部会造成 4 元素序列错位——比较器自盲家族）：
+            // 先占位记录索引，行全部放置后回填平移到尾部 y。──
+            $bottomCaptionSlots = [];
             foreach ($children as $cr) {
                 $crStyle = $cr->style;
                 $crDisplay = $crStyle?->display?->value ?? 'block';
+                if ($crDisplay === 'table-caption'
+                    && (($crStyle?->captionSide ?? '') === 'bottom')) {
+                    $bottomCaptionSlots[count($stackedChildren)] = $cr;
+                    $stackedChildren[] = $cr; // 占位（保文档序），回填时替换
+                    continue;
+                }
                 if ($crDisplay === 'table-row') {
                     $currentY += $spacing; // 行前竖向 spacing（首行=表边缘间距）
                     $stackedChildren[] = $this->layoutRow($cr, $x, $currentY, $w, $maxColWidths, $spacing);
@@ -123,13 +133,20 @@ class TableAlgorithm extends LayoutAlgorithm
                         0, 0, false,
                         $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
                 } else {
-                    // caption 等非行子：盒与内容平移到当前流位置（CSS 2.2 §17.4；
+                    // caption（top）等非行子：盒与内容平移到当前流位置（CSS 2.2 §17.4；
                     // 预布局坐标残留同 cell 族缺陷）。
                     $dxE = (int)$x - (int)($cr->x ?? 0);
                     $dyE = (int)$currentY - (int)($cr->y ?? 0);
                     $stackedChildren[] = ($dxE !== 0 || $dyE !== 0) ? FlexAlgorithm::translateFragmentTree($cr, $dxE, $dyE) : $cr;
                     $currentY += (int)($cr->h ?? 0);
                 }
+            }
+            // bottom caption 几何回填：平移到全部行之后（§17.4.1），替换占位
+            foreach ($bottomCaptionSlots as $slotIdx => $cr) {
+                $dxE = (int)$x - (int)($cr->x ?? 0);
+                $dyE = (int)$currentY - (int)($cr->y ?? 0);
+                $stackedChildren[$slotIdx] = ($dxE !== 0 || $dyE !== 0) ? FlexAlgorithm::translateFragmentTree($cr, $dxE, $dyE) : $cr;
+                $currentY += (int)($cr->h ?? 0);
             }
         } else {
             $stackedChildren = $children;
