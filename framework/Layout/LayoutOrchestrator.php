@@ -470,10 +470,18 @@ class LayoutOrchestrator
             case 'inline-block':
                 return $this->inlineAlgo;
             case 'table':
-            case 'table-row':
-            case 'table-cell':
             case 'table-caption':
                 return $this->tableAlgo;
+            // table-cell/row/row-group 内容预布局走 block 容器语义
+            //（对标 Blink NGTableCellLayoutAlgorithm 内部复用 block 布局；
+            // 行/组/格的表格几何由父 table 的 TableAlgorithm 重排）。
+            // 若路由到 tableAlgo 会落入无内容布局的 else 分支→ cell h=0 塌陷。
+            case 'table-row':
+            case 'table-cell':
+            case 'table-row-group':
+            case 'table-header-group':
+            case 'table-footer-group':
+                return $this->blockAlgo;
             default:
                 return $this->blockAlgo;
         }

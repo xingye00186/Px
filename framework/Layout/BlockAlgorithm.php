@@ -421,19 +421,25 @@ class BlockAlgorithm extends LayoutAlgorithm
             $stackedChildren = $this->stackBlockChildren($x, $y, $w, $s, $children, $textContent, $parentW, $escapedTop);
         } else {
             // Handle inline + block children
+            // 注：flushInlineBuffer 的 $stackY 为 by-ref 推进——必须用局部游标，
+            // 若直传 $y 会被推到行末，下方 auto-height 的 maxBottom-$y 恒 0
+            //（table-cell 等非 block 容器含 inline 子高度塌陷至纯边缘，
+            // case-048 td h=7 插桩实锤）。内容流起点含 padding/border-top
+            //（CSS 2.2 §8.1 content edge；auto-height 尾部只补 bottom 边缘）。
+            $flowY = $y + (int)($s->padding?->top->toPx() ?? 0) + (int)($s->getBorderTopWidth() ?? 0);
             $inlineBuffer = [];
             foreach ($children as $cr) {
                 $cDisplay = $cr->style?->display?->value ?? 'block';
                 if ($cDisplay === 'inline' || $cDisplay === 'inline-block') {
                     $inlineBuffer[] = $cr;
                 } else {
-                    if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $y, $stackedChildren, $parentW, $s); }
+                    if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $flowY, $stackedChildren, $parentW, $s); }
                     $stackedChildren[] = new PhysicalFragment((int)$cr->getX(), (int)$cr->getY(), (int)$cr->getW(), (int)$cr->getH(), 0, 0, (int)($cr->getLayer() ?? 0), (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0), $cr->style, $cr->children, $cr->sourceNode,
                     $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
                     $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
                 }
             }
-            if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $y, $stackedChildren, $parentW, $s); }
+            if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $x, 0, $w, $flowY, $stackedChildren, $parentW, $s); }
         }
 
         // CSS 2.2 §10.6.3：仅 height:auto 时从子项累加；显式 height:0 应尊重（getRaw 区分，与 width/height 同源陷阱）

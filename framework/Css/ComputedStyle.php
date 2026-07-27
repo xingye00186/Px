@@ -236,9 +236,26 @@ class ComputedStyle
         $this->frozen = true;
     }
 
+    // ── 表格族 UA display 映射（对标 Blink UA stylesheet html.css §15.3.2）──
+    // 此前表格族全部默认 block → TableAlgorithm 永不触发（td 块级垂直
+    // 堆叠，case-048 x 偏移 361 族）。
+    public const TABLE_DISPLAY_MAP = [
+        'table'    => 'table',
+        'caption'  => 'table-caption',
+        'colgroup' => 'table-column-group',
+        'col'      => 'table-column',
+        'thead'    => 'table-header-group',
+        'tbody'    => 'table-row-group',
+        'tfoot'    => 'table-footer-group',
+        'tr'       => 'table-row',
+        'td'       => 'table-cell',
+        'th'       => 'table-cell',
+    ];
+
     private static function getDefaultsArray(string $elementType): array
     {
-        $defaultDisplay = in_array($elementType, self::INLINE_TYPES, true) ? 'inline' : 'block';
+        $defaultDisplay = self::TABLE_DISPLAY_MAP[$elementType]
+            ?? (in_array($elementType, self::INLINE_TYPES, true) ? 'inline' : 'block');
         return [
             'width' => CssLength::px(0),
             'height' => CssLength::px(0),

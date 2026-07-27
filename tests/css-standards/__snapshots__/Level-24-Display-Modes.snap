@@ -1,40 +1,40 @@
-@generated 2026-07-26 15:51:46
+@generated 2026-07-27 04:51:43
 === Test: display:table 基本容器 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x0) [dsp=table]
-  div (0,0 400x0) [dsp=table-row] text="Cell1"
-    div (0,0 200x0) [dsp=table-cell] text="Cell1"
-    div (200,0 200x0) [dsp=table-cell] text="Cell2"
+div (0,0 400x39) [dsp=table]
+  div (0,0 400x39) [dsp=table-row]
+    div (0,0 200x39) [dsp=table-cell] text="Cell1"
+    div (200,0 200x39) [dsp=table-cell] text="Cell2"
 
 ---
 
 === Test: display:table 2x2 网格布局 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x0) [dsp=table]
-  div (0,0 300x0) [dsp=table-row] text="R1C1"
-    div (0,0 150x0) [dsp=table-cell] text="R1C1"
-    div (150,0 150x0) [dsp=table-cell] text="R1C2"
-  div (0,0 300x0) [dsp=table-row] text="R2C1"
-    div (0,0 150x0) [dsp=table-cell] text="R2C1"
-    div (150,0 150x0) [dsp=table-cell] text="R2C2"
+div (0,0 300x38) [dsp=table]
+  div (0,0 300x19) [dsp=table-row]
+    div (0,0 150x19) [dsp=table-cell] text="R1C1"
+    div (150,0 150x19) [dsp=table-cell] text="R1C2"
+  div (0,19 300x19) [dsp=table-row]
+    div (0,19 150x19) [dsp=table-cell] text="R2C1"
+    div (150,19 150x19) [dsp=table-cell] text="R2C2"
 
 ---
 
 === Test: table-cell 嵌套 block 内容 ===
 Frame #1 events=0 detail=normal
-div (0,0 400x0) [dsp=table]
-  div (0,0 400x0) [dsp=table-row]
-    div (0,0 400x0) [dsp=table-cell]
+div (0,0 400x35) [dsp=table]
+  div (0,0 400x35) [dsp=table-row]
+    div (0,0 399x35) [dsp=table-cell]
       div (0,0 390x30) text="Nested"
 
 ---
 
 === Test: display:table-caption 标题 ===
 Frame #1 events=0 detail=normal
-div (0,0 300x0) [dsp=table]
+div (0,0 300x19) [dsp=table]
   div (0,0 300x0) [dsp=table-caption] text="Caption"
-  div (0,0 300x0) [dsp=table-row] text="Data"
-    div (0,0 300x0) [dsp=table-cell] text="Data"
+  div (0,0 300x19) [dsp=table-row]
+    div (0,0 300x19) [dsp=table-cell] text="Data"
 
 ---
 

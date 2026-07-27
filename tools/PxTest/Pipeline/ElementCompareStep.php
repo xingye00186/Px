@@ -224,6 +224,30 @@ class ElementCompareStep implements PipelineStepInterface
         for ($i = 0; $i < $eCount; $i++) { if (!isset($eUsed[$i])) $eRemaining[] = $i; }
         for ($i = 0; $i < $bCount; $i++) { if (!isset($bUsed[$i])) $bRemaining[] = $i; }
 
+        // ── 二次结构匹配：无 pxId 的合成节点（tbody/col 等）──
+        // 树构建器合成节点（HTML §13.2.6：浏览器 HTMLTreeBuilder 与 engine
+        // TemplateParser 各自插入 tbody）不在源文本中，pxId 注入器触不到——
+        // 两侧永无 pxId。同 tag 按文档序配对（合成序由各自树构建器保证
+        // 同构），避免对称存在节点被误报 engine/browser-only。
+        $eByTag2 = [];
+        foreach ($eRemaining as $eIdx2) { $eByTag2[$engineSubset[$eIdx2]['tag'] ?? '?'][] = $eIdx2; }
+        $bByTag2 = [];
+        foreach ($bRemaining as $bIdx2) { $bByTag2[$browserSubset[$bIdx2]['tag'] ?? '?'][] = $bIdx2; }
+        foreach ($eByTag2 as $tg2 => $eIdxs2) {
+            if (!isset($bByTag2[$tg2])) continue;
+            $n2 = min(count($eIdxs2), count($bByTag2[$tg2]));
+            for ($i2 = 0; $i2 < $n2; $i2++) {
+                $matchPairs[] = ['eIdx' => $eIdxs2[$i2], 'bIdx' => $bByTag2[$tg2][$i2]];
+                $eUsed[$eIdxs2[$i2]] = true;
+                $bUsed[$bByTag2[$tg2][$i2]] = true;
+            }
+        }
+        usort($matchPairs, function(array $a, array $b): int { return $a['eIdx'] - $b['eIdx']; });
+        $eRemaining = [];
+        $bRemaining = [];
+        for ($i = 0; $i < $eCount; $i++) { if (!isset($eUsed[$i])) $eRemaining[] = $i; }
+        for ($i = 0; $i < $bCount; $i++) { if (!isset($bUsed[$i])) $bRemaining[] = $i; }
+
         echo "  [MATCH] px-id=" . count($matchPairs)
             . " engine_extra=" . count($eRemaining)
             . " browser_extra=" . count($bRemaining) . "\n";

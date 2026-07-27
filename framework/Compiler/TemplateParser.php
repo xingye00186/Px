@@ -532,7 +532,7 @@ class TemplateParser
             'main'      => $this->parseGenericElement($tok, 'main'),
             'section'   => $this->parseGenericElement($tok, 'section'),
             'aside'     => $this->parseGenericElement($tok, 'aside'),
-            'table'     => $this->parseGenericElement($tok, 'table'),
+            'table'     => $this->parseTableElement($tok),
             'thead'     => $this->parseGenericElement($tok, 'thead'),
             'tbody'     => $this->parseGenericElement($tok, 'tbody'),
             'tfoot'     => $this->parseGenericElement($tok, 'tfoot'),
@@ -576,6 +576,40 @@ class TemplateParser
     // ============================================================
     // Element-specific parsers (all return VNode)
     // ============================================================
+
+    /**
+     * <table>：先按通用元素解析，再对直接 tr 子做 tbody 合成。
+     *
+     * 对标 HTML 解析规范 §13.2.6（Blink HTMLTreeBuilder "in table" 插入模式）：
+     * tr 直接位于 table 下时树构建器自动插入 tbody——浏览器 DOM 永远含
+     * tbody，engine 树若缺层则导出序列与浏览器错位（按索引比较器前提
+     * 契约，case-048 自盲实锤）且 row-group 层级的布局语义缺失。
+     * 连续 tr 段合入同一合成 tbody；caption/colgroup/thead/tbody/tfoot 保持原位。
+     */
+    private function parseTableElement(Token $tok): VNode
+    {
+        $node = $this->parseGenericElement($tok, 'table');
+        if (!is_array($node->children) || count($node->children) === 0) return $node;
+        $newChildren = [];
+        $pendingRows = [];
+        foreach ($node->children as $ch) {
+            $chType = is_object($ch) ? (string)($ch->type ?? '') : '';
+            if ($chType === 'tr') {
+                $pendingRows[] = $ch;
+                continue;
+            }
+            if (count($pendingRows) > 0) {
+                $newChildren[] = VNode::h('tbody', [], $pendingRows);
+                $pendingRows = [];
+            }
+            $newChildren[] = $ch;
+        }
+        if (count($pendingRows) > 0) {
+            $newChildren[] = VNode::h('tbody', [], $pendingRows);
+        }
+        $node->children = $newChildren;
+        return $node;
+    }
 
     /**
      * <rect x="10" y="10" w="100" h="30" class="foo" @click="handler">
