@@ -30,13 +30,15 @@ class LineBreaker
      * @param int $strutDescent 同上 descent 分量
      * @return LineBox[] 断裂后的行盒序列
      */
-    public static function breakLines(array $items, int $availableWidth, int $defaultLineHeight, int $strutAscent = 0, int $strutDescent = 0): array
+    public static function breakLines(array $items, int $availableWidth, int $defaultLineHeight, int $strutAscent = 0, int $strutDescent = 0, int $textIndent = 0): array
     {
         if (empty($items)) return [];
 
         $lines = [];
         $currentItems = [];
-        $currentWidth = 0;
+        // text-indent（CSS 2.2 §16.1）：块容器首行缩进——首行可用宽减缩进
+        //（缩进占据行内空间，放置側同步 +indent 起点）。
+        $currentWidth = $textIndent;
         // 每行以 strut 开始（CSS 2.2 §10.8.1：每个行盒都含容器字体 strut，
         // 即使行内只有 atomic inline）；负 strut 分量被 item max 自然覆盖。
         $currentAscent = $strutAscent;

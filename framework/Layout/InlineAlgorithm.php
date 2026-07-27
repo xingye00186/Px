@@ -259,10 +259,31 @@ class InlineAlgorithm extends LayoutAlgorithm
         $inlineItems = [];
         self::buildInlineItems($items, $inlineItems);
 
-        // Step 2: 行断裂（对标 Blink NGLineBreaker）
+        // Step 2: 行断裂（对标 Blink NGLineBreaker）；text-indent 首行缩进（§16.1）
         $effectiveAvail = max(1, $availableW - $padLeft);
         $defaultLH = 19; // 16 * 1.2 ≈ 19
-        $lines = LineBreaker::breakLines($inlineItems, $effectiveAvail, $defaultLH, $strutA, $strutD);
+        $tiRaw = $containerStyle?->getRaw('textIndent');
+        // getRaw 安全通道：部分构造路径（pseudo/轻量 CS）textIndent typed
+        // 属性未初始化，直读 getter 抛 Error（L17 回归实锤）。
+        // 烘焙声明为字符串（'40px'/'2em'，插桩实锤）：em 按容器 fontSize
+        // 解析（CSS 2.2 §4.3.2；(int)'2em'=2 致 x=30 族）。
+        $tIndent = 0;
+        if ($tiRaw !== null) {
+            if (is_object($tiRaw)) {
+                $tIndent = (($tiRaw->unit ?? '') === 'em')
+                    ? (int)($tiRaw->value * ($containerStyle?->getFontSize() ?: 16))
+                    : (int)$tiRaw->toPx();
+            } else {
+                $tiStr = (string)$tiRaw;
+                if (str_ends_with($tiStr, 'em')) {
+                    $tIndent = (int)((float)$tiStr * ($containerStyle?->getFontSize() ?: 16));
+                } else {
+                    $tIndent = (int)$tiStr;
+                }
+            }
+            if ($tIndent < 0) $tIndent = 0;
+        }
+        $lines = LineBreaker::breakLines($inlineItems, $effectiveAvail, $defaultLH, $strutA, $strutD, $tIndent);
 
         // Step 3: 按行放置（对标 Blink NGPhysicalLineBoxFragment 布局）
         $result = [];
@@ -273,6 +294,7 @@ class InlineAlgorithm extends LayoutAlgorithm
         //（保持与浏览器 DOM 同构的导出顺序：盒在前、子在后）。盒可跨行。
         $boxStack = [];
 
+        $isFirstLine = true;
         foreach ($lines as $line) {
             // text-align 行级偏移（对标 Blink NGInlineLayoutAlgorithm::ApplyTextAlign，
             // CSS 2.2 §16.2：作用于行盒内全部 inline-level box，含 inline-block）。
@@ -285,6 +307,8 @@ class InlineAlgorithm extends LayoutAlgorithm
                 $alignOffset = $alignFree;
             }
             $cursorX = $padLeft + $alignOffset;
+            // text-indent 仅首行（CSS 2.2 §16.1；LineBreaker 首行宽已同步预留）
+            if ($isFirstLine) { $cursorX += $tIndent; $isFirstLine = false; }
             foreach ($line->items as $item) {
                 $cr = $item->fragment;
                 if ($cr === null) continue;
