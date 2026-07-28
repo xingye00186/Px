@@ -2066,3 +2066,12 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 **实现**：① BlockAlgorithm auto-height 计算尾部补 min/max clamp（border-box 语义，$h 已含 pad/border；min>max 时 max:=min）；② FlexAlgorithm 容器 auto 高 clamp + 抬高时 row 容器按 align-items 对子交叉轴补偿平移（center=intdiv(Δ,2)/flex-end=Δ，Blink 两遍布局的等价平移）——mm-min align-items:center 子居中真值精确命中（167/100/80 三值全中）。
 
 **剩余 29**：精度族 + 注记类（下轮顺带）。
+
+### 25. 目标模式三连批：013 OOF / 005 grid / 015 clamp（本轮）
+
+**成果链**：632→520→469（三批累计 -163，各批零 case 回归，31/32 保持）。
+- **case-013 84→0 全清 @3fdb2703**（+011 31→3 顺带）：Orchestrator 对 absolute/fixed 只产占位 Fragment（子逐个 mainLayout 原样塞入，盒自身算法从不运行）→ OOF flex 盒内 spans 全重叠盒原点。治本 = OOF 节点照常走 selectAlgorithm（Blink 模型：OOF 按 static-position 预布局内容，定位由 OOF 通行证差分平移，天然与预布局原点无关）。
+- **case-005 55→4 @0733d1a1**：grid item mapped fragment 的 children 携带预布局坐标未平移（历史坑 C1 同族）——item 盒全对、内容滞留首列/首行（x=382/566 族 51 CRITICAL）。治本 = children 按 (itemX−origX, itemY−origY) translateFragmentTree。**门捕定性**：L03/L06/L10/L19/L20 五处快照 diff 全为滞留 bug 态的固化（断言全 PASS），重生成基线。
+- **case-015 86→29 @3992d7dd**：min/max-height 只在显式高路径 clamp，auto 路径整体绕过；Block/Flex 两处补 clamp + flex 容器抬高时按 align-items 交叉轴补偿平移。
+
+**平移完备性阶段结论**：stackBlockChildren（C1）→ table cell（22 批）→ OOF（25 批）→ grid item（25 批）四大放置点的"子树随盒平移"已全部收口——**任何算法把预布局 fragment 定位到新位置时必须整树平移**，此不变量已在全部布局算法中成立。
