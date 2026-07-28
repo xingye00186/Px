@@ -489,14 +489,19 @@ class InlineAlgorithm extends LayoutAlgorithm
                     continue;
                 }
 
-                // <br> 放置：0 宽 × 行高盒（对齐 Blink br getBoundingClientRect：
-                // 宽 0、高 = 行高），保留 dataset/sourceNode 供 px-id 对比。
+                // <br> 放置：0 宽 × 字体行盒（Blink br getBoundingClientRect：非替换
+                // inline 高 = 字体行盒 asc+desc，非行盒高；B 真值 @fs16 asc19/
+                // desc5 h=24、top=基线-19（019 br E h=32=行高 vs B 24 实锤）），
+                // 保留 dataset/sourceNode 供 px-id 对比。
                 if ($item->type === InlineItem::TYPE_FORCED_BREAK) {
+                    $brFs = (int)($cr->style?->getFontSize() ?: 16);
+                    $brAsc = intdiv($brFs * 19 + 8, 16);
+                    $brDesc = intdiv($brFs * 5 + 8, 16);
                     $result[] = new PhysicalFragment(
-                        (int)($startX + $cursorX), (int)($startY + $cursorY),
-                        0, (int)$line->height(),
+                        (int)($startX + $cursorX), (int)($startY + $cursorY + max(0, $line->baseline - $brAsc)),
+                        0, (int)($brAsc + $brDesc),
                         0, 0, (int)($cr->getLayer() ?? 0),
-                        0, (int)$line->height(),
+                        0, (int)($brAsc + $brDesc),
                         $cr->style, [], $cr->sourceNode,
                         0, 0, false,
                         $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles
