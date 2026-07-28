@@ -460,6 +460,16 @@ class LayoutOrchestrator
         $isPct = $parentStyle?->width?->isPercent() ?? false;
         if ($parentExplicitW !== null && $parentExplicitW > 0 && !$isPct) {
             $cbW = max(0, (int)$parentExplicitW - $deductW);
+        } else {
+            // 父 auto 宽（块级 auto-fill，CSS 2.2 §10.3.3）：父 used content 宽
+            // = 约束宽 − 父自身 margins——此前子约束直传祖先宽，父被
+            // margin 收窄后子仍携宽约束（038 ul margin-left:24 → li
+            // 预布局 716 vs 应 692 实锤；Blink 先定自身尺寸再造子约束）。
+            $pml = (int)($parentStyle?->margin?->left->toPx() ?? 0);
+            $pmr = (int)($parentStyle?->margin?->right->toPx() ?? 0);
+            if ($pml !== 0 || $pmr !== 0) {
+                $cbW = max(0, $cbW - $pml - $pmr);
+            }
         }
         // 同理：父元素有显式 CSS height 时，用它计算子约束空间高度
         $parentExplicitH = $parentStyle?->height?->toPx();
