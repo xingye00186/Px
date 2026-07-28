@@ -61,6 +61,9 @@ class CssShorthandExpander
         // 9. text-decoration → line/style/color/thickness
         $raw = self::expandTextDecoration($raw);
 
+        // 10. text-emphasis → text-emphasis-style + text-emphasis-color
+        $raw = self::expandTextEmphasis($raw);
+
         return $raw;
     }
 
@@ -286,6 +289,39 @@ class CssShorthandExpander
             // 仅写 kebab：运行时 PROPERTY_MAP dispatch 唯一入口（parseHexColor→BGR int 等）；
             // SFC 编译期由 canonicalStyleKey 统一转 camel。此前双写 camel 键会绕过
             // dispatch 以字符串覆盖解析产物（decorationColor 丢失 BGR 转换的根因）。
+            if (!isset($raw[$cssKey])) $raw[$cssKey] = $val;
+        }
+        return $raw;
+    }
+
+    /**
+     * text-emphasis 简写 → text-emphasis-style + text-emphasis-color
+     * （css-text-decor-3 §8.3；position 不属本简写）。
+     * fill(filled/open) 与 shape(dot/circle/double-circle/triangle/sesame) 归
+     * text-emphasis-style；颜色（#/rgb/命名色）归 text-emphasis-color。
+     */
+    public static function expandTextEmphasis(array $raw): array
+    {
+        $teVal = $raw['text-emphasis'] ?? $raw['textEmphasis'] ?? null;
+        if ($teVal === null || $teVal === '') return $raw;
+        $parts = preg_split('/\s+/', trim((string)$teVal));
+        $styleParts = []; $result = [];
+        foreach ($parts as $part) {
+            if ($part === '') continue;
+            $lower = strtolower($part);
+            if (in_array($lower, ['filled', 'open', 'dot', 'circle', 'double-circle', 'triangle', 'sesame', 'none'], true)) {
+                $styleParts[] = $lower; continue;
+            }
+            if (str_starts_with($part, '#') || preg_match('/^rgba?\s*\(/i', $part)) {
+                $result['textEmphasisColor'] = $part; continue;
+            }
+            // 其余（引号内自定义字符串 / 命名色）：引号字符串归 style，否则归 color
+            if (preg_match('/^["\']/', $part)) { $styleParts[] = $part; }
+            else { $result['textEmphasisColor'] = $part; }
+        }
+        if (!empty($styleParts)) $result['textEmphasisStyle'] = implode(' ', $styleParts);
+        foreach ($result as $key => $val) {
+            $cssKey = strtolower(preg_replace('/([A-Z])/', '-$1', $key));
             if (!isset($raw[$cssKey])) $raw[$cssKey] = $val;
         }
         return $raw;

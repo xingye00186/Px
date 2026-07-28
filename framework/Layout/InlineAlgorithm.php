@@ -296,6 +296,18 @@ class InlineAlgorithm extends LayoutAlgorithm
         $boxStack = [];
 
         $isFirstLine = true;
+        // text-emphasis 注解占位（对标 Blink NGInlineBoxState emphasis annotation +
+        // css-text-decor-3 §8.4）：emphasis marks 以 0.5em 渲染（§8.1），绘于行 over
+        // 侧行间空隙；line-height 空隙不足时行盒 over 侧增高 mark 尺寸。行高:0
+        // 时空隙为 0 → 全额加 0.5em（intdiv 半数向上），文本下移让出 over 注解带。
+        // 继承属性：容器 textEmphasisStyle 非空/非 none 即生效（inline 内容全体）。
+        $emphExtra = 0;
+        $teStyle = $containerStyle?->getRaw('textEmphasisStyle');
+        $teStr = is_object($teStyle) ? (string)($teStyle->value ?? '') : (string)($teStyle ?? '');
+        if ($teStr !== '' && strpos($teStr, 'none') === false) {
+            $efs = (int)($containerStyle?->getFontSize() ?: 16);
+            $emphExtra = intdiv($efs + 1, 2); // 0.5em，round-half-up 纯整数
+        }
         // RTL 基方向（对标 Blink NGLineBreaker::ComputeBaseDirection + bidi 重排，
         // CSS 2.2 §9.10）：中性内容在 RTL 段落基底 level 1 下视觉逆序、从行
         // inline-start（右端）起排——实现为行级镜像 x' = L+R-(x+w)（等价全逆序）。
@@ -498,7 +510,7 @@ class InlineAlgorithm extends LayoutAlgorithm
 
                 $result[] = new PhysicalFragment(
                     (int)($startX + $cursorX + $item->marginLeft),
-                    (int)($startY + $finalY),
+                    (int)($startY + $finalY + $emphExtra),
                     (int)($cr->getW() ?? 0), (int)($cr->getH() ?? 0),
                     0, 0, (int)($cr->getLayer() ?? 0),
                     (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0),
@@ -518,7 +530,7 @@ class InlineAlgorithm extends LayoutAlgorithm
                     $result[$ri] = self::mirrorFragmentX($result[$ri], $mirrorAxisSum);
                 }
             }
-            $cursorY += $line->height();
+            $cursorY += $line->height() + $emphExtra;
         }
 
         return ['items' => $result, 'nextY' => $startY + $cursorY];
