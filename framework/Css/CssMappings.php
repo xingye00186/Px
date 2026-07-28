@@ -302,7 +302,7 @@ class CssMappings
         ],
         'aspect-ratio' => [
             'key'     => 'aspectRatio',
-            'parser'  => 'Px\Css\CssValueParser::parsePixels',
+            'parser'  => 'Px\Css\CssValueParser::parseAspectRatio',
             'default' => 0,
         ],
         'scroll-behavior' => [

@@ -343,6 +343,24 @@ class CssValueParser
         return new CssKeyword($value);
     }
 
+    /**
+     * aspect-ratio 解析（CSS-Sizing-4 §5）：'a/b' 比例语法 → a÷b，
+     * 单数 'r' → r。此前误用 parsePixels，'16/9' 被截成 16
+     *（case-051 h=200/16.67≈12 vs B 112.5 实锤）。
+     */
+    public static function parseAspectRatio(string $value): float
+    {
+        $v = trim(strtolower($value));
+        if ($v === '' || $v === 'auto') return 0.0;
+        $slash = strpos($v, '/');
+        if ($slash !== false) {
+            $num = (float)trim(substr($v, 0, $slash));
+            $den = (float)trim(substr($v, $slash + 1));
+            return $den > 0 ? $num / $den : 0.0;
+        }
+        return max(0.0, (float)$v);
+    }
+
     /** Legacy: return raw string for backward compat */
     public static function parseIdentRaw(string $value): string
     {

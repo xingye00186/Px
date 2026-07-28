@@ -137,6 +137,17 @@ class FlexAlgorithm extends LayoutAlgorithm
         if ($s->height !== null && $s->height->isPercent() && $parentH > 0) {
             $h = $s->height->resolveInContext($parentH);
         }
+        // CSS-Sizing-4 §5 aspect-ratio（flex 容器自身，双向）：一轴定一轴
+        // auto 时由比例推导（case-051 三容器均 flex+ratio，E h=25 内容高
+        // vs B 112.5/160/133 实锤；BlockAlgorithm 仅反向且不覆盖 flex 路由）。
+        $arFlex = (float)($s->getAspectRatio() ?? 0);
+        if ($arFlex > 0) {
+            if ($h <= 0 && $w > 0) {
+                $h = (int)($w / $arFlex);
+            } elseif ($w <= 0 && $h > 0 && !$s->hasExplicitLength('width')) {
+                $w = (int)($h * $arFlex);
+            }
+        }
         // 对标 Blink ConstraintSpace::is_fixed_block_size：父（如 grid stretch）强制固定块轴尺寸时，
         // height:auto 的 flex 容器使用父给定的 contentHeight 作为 definite 高度。
         $blockSizeForced = false;
