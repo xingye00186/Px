@@ -765,7 +765,11 @@ class BlockAlgorithm extends LayoutAlgorithm
             if ($childPosition === 'absolute' || $childPosition === 'fixed' || $childDisplay === 'none') { $result[] = $cr; continue; }
             $isInline = ($childDisplay === 'inline' || $childDisplay === 'inline-block');
             if ($isInline) { $inlineBuffer[] = $cr; $isFirstInFlow = false; continue; }
-            if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW, $s); }
+            if (!empty($inlineBuffer)) {
+                $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW, $s);
+                // 行盒隔断兄弟折叠（§8.3.1 adjoining 要求相邻盒间无 line box）
+                $prevCollapsible = false; $prevMarginBottom = 0;
+            }
 
             // 子的 margin/padding 百分比基准 = 父的 content-width ($containerW)
             $mTop = $childStyle?->margin?->top->resolveBoxPercent($containerW) ?? 0;
@@ -832,14 +836,21 @@ class BlockAlgorithm extends LayoutAlgorithm
                     || $childDisplay === 'flex' || $childDisplay === 'grid'
                     || $childDisplay === 'flow-root');
             $isCollapsible = ($childDisplay === 'block') && !$createsBFC;
+            // 兄弟折叠资格（CSS 2.2 §8.3.1 adjoining，与穿透资格 $isCollapsible 是
+            // 两个独立概念）：in-flow block-level 盒自身 margin 均与兄弟折叠——
+            // 自身建 BFC（flex/grid/overflow≠visible）只禁止**内部子穿透**，
+            // 不禁止自身与兄弟折叠（Flexbox §4 亦仅禁内容侧；case-037 B 真值
+            // footer 499=483+16 折叠实锤）。能到达此处的子均已排除
+            // inline/inline-block/float/absolute，均为 block-level in-flow。
+            $selfCollapses = true;
             // 子容器内部首孙穿透出来的 strut（CSS 2.2 §8.3.1，消费端重提取，与 endMarginStrut 对称）
             $childPre = $isCollapsible ? $this->extractPreMarginStrut($cr, $childStyle) : null;
             // ── CSS 2.2 §8.3.1 margin 折叠 (对标 Blink NGMarginStrut) ──
-            // 相邻兄弟 block 且两侧均不创建新 BFC 时，将前章 mBottom 与当前 mTop 折叠
+            // 相邻兄弟 block（均 in-flow block-level）前章 mBottom 与当前 mTop 折叠
             if ($isFirstInFlow && $isCollapsible && $escapedTop) {
                 // 首子 margin-top（含内部穿透链）已逸出并入父自身 y，父内不再施加
                 $childY = $stackY;
-            } elseif ($isCollapsible && $prevCollapsible) {
+            } elseif ($selfCollapses && $prevCollapsible) {
                 $strut = new MarginStrut();
                 $strut->append($prevMarginBottom);
                 $strut->append($mTop);
@@ -939,7 +950,9 @@ class BlockAlgorithm extends LayoutAlgorithm
             }
             $stackY = ($childY - ($childPosition === 'relative' ? $relTop : 0)) + $chH - $absorbedBottom + $effectiveMBottom;
             $prevMarginBottom = $effectiveMBottom;
-            $prevCollapsible = $isCollapsible;
+            // prev 侧兄弟折叠资格 = selfCollapses（block-level in-flow 均参与，
+            // 非旧 isCollapsible 穿透资格——flex/grid/overflow 容器后的兄弟照常折叠）
+            $prevCollapsible = $selfCollapses;
             $isFirstInFlow = false;
         }
         if (!empty($inlineBuffer)) { $this->flushInlineBuffer($inlineBuffer, $parentX, $padLeft, $containerW, $stackY, $result, $parentW, $s); }
