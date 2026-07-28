@@ -603,7 +603,7 @@ class InlineAlgorithm extends LayoutAlgorithm
                 // OOF/grid 之外的 IFC atomic 点；case-054 inline-block 含块子
                 // 内容滞留预布局原点 x=84/y=40 族实锤）。
                 $atomX = (int)($startX + $cursorX + $item->marginLeft);
-                $atomY = (int)($startY + $finalY + $emphExtra);
+                $atomY = (int)($startY + $finalY + intdiv($emphExtra + 1, 2));
                 $atomKids = $cr->children;
                 $atomDx = $atomX - (int)$cr->getX();
                 $atomDy = $atomY - (int)$cr->getY();
