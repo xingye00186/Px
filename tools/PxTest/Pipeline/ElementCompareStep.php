@@ -357,6 +357,15 @@ class ElementCompareStep implements PipelineStepInterface
                     }
                 } elseif ((string)$evs !== (string)$bvs) {
                     // 跳过已知噪音：
+                    // 0. px 数值容差：双方均为纯 px 数值时数值化比较，|Δ|≤1
+                    //    视为匹配（取整/半像素序列化差：B 357.5 vs E 358、715 vs
+                    //    716 族，case-048 注记 20 项实锤；几何已有 tol 同源语义）。
+                    if (preg_match('/^-?[\d.]+px$/', (string)$evs) && preg_match('/^-?[\d.]+px$/', (string)$bvs)) {
+                        if (abs((float)$evs - (float)$bvs) <= 1.0) {
+                            $perPropStats[$k]['match']++;
+                            continue;
+                        }
+                    }
                     // 1. top/left 已在 GEOMETRY 中比较（x/y），style 中的 top/left 是不同维度
                     if (in_array($k, ['top', 'left'], true)) continue;
                     // 2. background-color: 引擎从 linear-gradient 提取首色作为 bg，

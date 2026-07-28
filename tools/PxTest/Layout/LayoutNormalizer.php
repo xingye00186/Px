@@ -383,16 +383,6 @@ class LayoutNormalizer
         // used value 同样取 border-box w/h（与上方 normW/normH 同源，杜绝 visualW 嵌入）
         $usedW = $normW;
         $usedH = $normH;
-        if (!isset($element['styles']['width'])) {
-            $element['styles']['width'] = $isInline ? 'auto' : $usedW . 'px';
-        } elseif ($element['styles']['width'] === '0px' && $usedW > 0) {
-            $element['styles']['width'] = $usedW . 'px';
-        }
-        if (!isset($element['styles']['height'])) {
-            $element['styles']['height'] = $isInline ? 'auto' : $usedH . 'px';
-        } elseif ($element['styles']['height'] === '0px' && $usedH > 0) {
-            $element['styles']['height'] = $usedH . 'px';
-        }
         // CSS 2.2 §9.3.2: static 定位元素的 top/left 默认值为 'auto'
         $nodePos = $node['style']['position'] ?? 'static';
         if (!isset($element['styles']['top'])) {
@@ -415,6 +405,16 @@ class LayoutNormalizer
         if ($parentDisplay !== null && in_array($parentDisplay, $flexGridDisplays, true)) {
             $element['styles']['display'] = 'block';
         }
+
+        // 同源化（置于 display 补全/flex-blockify 之后）：getComputedStyle 的
+        // width/height —— 非替换 **display:inline** 元素恒为 'auto'（B 语义），
+        // 其余盒（含 inline-block/blockified flex 子）恒为 used px。引擎导出的
+        // **声明**维度与 used 不同源不可比（case-048 table width:100%
+        // E'100px' vs B'716px'；case-021/039 inline 盒 E'64px' vs B'auto' 注记族
+        // 同源）；判据用 display 非 tag（inline-block span 误伤 452 爆炸实锤）。
+        $usedAuto = ((string)($element['styles']['display'] ?? 'block') === 'inline');
+        $element['styles']['width'] = $usedAuto ? 'auto' : $usedW . 'px';
+        $element['styles']['height'] = $usedAuto ? 'auto' : $usedH . 'px';
 
         // 文本内容
 
