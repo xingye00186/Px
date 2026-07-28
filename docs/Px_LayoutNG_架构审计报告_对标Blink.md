@@ -2161,3 +2161,18 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 **方法论**：解析器修复必须沿"值的全部入口"验收——StyleResolver（class 样式）与 VNode 烘焙串（inline 样式）是两条独立入口，后者绕过 mappings parser 直达 ComputedStyle 构造器；构造器消费点是两路汇聚的最后闸门，语法敏感属性（a/b、多值简写）在该闸门兜底解析最稳。
 
 **剩余榜（162）**：048(26)/050(25) 精度+固有差；044+055(24) classic 滚动条族；019(9)/007(8)/015(8)/021(8)/045(8)/047(8)/046(7)/053(7) 精度长尾；043(4)/014(4)/054(3) 尾差；051(1)/052(1)/011(1)/012(1)/026(1) 近清零。
+
+### 32. case-048 col 列区回填治本 + border-color:inherit 归因储备（2026-07-29）
+
+**批次**：048 col 批（全量 162→157，-5；048 26→21；31/32 gates）
+
+**治本（col 大值族全清）**：
+- elem[159]/[160]（col1/col2）E w=710/710 vs B 60/648@x106。插桩实锤：sfc-compiler 把 void `<col>` 解析为 **colgroup 的兄弟**（table 直接子，探针 disp=[table-column-group,table-column,table-column,table-row-group]），TableAlgorithm 的 columnSlots 回填循环只遍历 `$cr->children`（colgroup 情形），单独 table-column（children 空）落入 else 路径回填**整行并集** 710。
+- 修复：回填段对单独 table-column slot 直接以列序取首行 cell rect（60/648）；列序 `$colSeq` 跨 slot 连续（colgroup 内外 col 同属一列序，§17.2.1）。fixed 列宽收集侧本就双路径兼容（table-column elseif），cell 几何一直正确——错的只是 col 元素自身 rect。
+
+**归因储备（border-left-color 4 项，实验已全回退零残留）**：
+- 症状：B tbody blc=#a5d6a7/#ffcc80（Chrome UA `tbody{border-color:inherit}` 从 table 继承色分量）vs E 恒黑。
+- 三层插桩链实锤：① 消费点实现 UA 继承规则零效果 → ② parentDeclarations 无 borderColor（toExportArray 不含 'border' 原始串键）→ ③ StylePool 补道仍零效果 → ④ 终极实锤：存在 **et=NULL 的再构造链**（toExportArray 全量键序 + elementType 丢失 + border 键第二次构造即消失），tbody 拿到的父 CS 是再构造产物 bc=0。
+- 定性：治本点在序列化重构路径（elementType 与简写键双丢失），非样式解析主链——4 项 MISMATCH 为色注记（非几何），性价比低，储备待重构批。**方法论**：本储备再次验证 §31"值的全部入口"论——再构造链是第三条入口（class/inline 之外），toExportArray→new ComputedStyle 回灌会丢一切非 EXPORT_KEYS 键。
+
+**剩余榜（157）**：050(25) 精度+固有差；048(21) 色注记+精度；044+055(24) classic 滚动条族；019(9)/007/015/021/045/047(各8)/046/053(各7) 精度长尾；043/014(4)/054(3) 尾差；051/052/011/012/026(各1) 近清零。

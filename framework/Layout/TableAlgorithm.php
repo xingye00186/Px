@@ -206,12 +206,27 @@ class TableAlgorithm extends LayoutAlgorithm
                         if (count($firstRowCells) > 0) break;
                     }
                 }
+                $colSeq = 0; // 列序跨 slot 连续（colgroup 内外 col 同属一列序，§17.2.1）
                 foreach ($columnSlots as $slotIdx => $cr) {
+                    // 单独 table-column（sfc 把 void <col> 解为 colgroup 兄弟，
+                    // children 空）：rect = 对应列区（B 真值 col1 60 / col2 x106×648，
+                    // 此前回填整行并集 710 实锤）。
+                    if (($cr->style?->display?->value ?? '') === 'table-column') {
+                        $cellF = $firstRowCells[$colSeq] ?? null;
+                        $ccx = $cellF !== null ? (int)$cellF->getX() : $colRectX;
+                        $ccw = $cellF !== null ? (int)$cellF->getW() : 0;
+                        $stackedChildren[$slotIdx] = new PhysicalFragment($ccx, (int)$firstRowTop, $ccw, $colRectH,
+                            $ccw, $colRectH, 0, $ccw, $colRectH,
+                            $cr->style, [], $cr->sourceNode,
+                            0, 0, false,
+                            $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles);
+                        $colSeq++;
+                        continue;
+                    }
                     // 重建 col children 为列区 rect（文档序对位列序）
                     $colKids = [];
-                    $colIdx2 = 0;
                     foreach ($cr->children as $colF) {
-                        $cellF = $firstRowCells[$colIdx2] ?? null;
+                        $cellF = $firstRowCells[$colSeq] ?? null;
                         $ccx = $cellF !== null ? (int)$cellF->getX() : $colRectX;
                         $ccw = $cellF !== null ? (int)$cellF->getW() : 0;
                         $colKids[] = new PhysicalFragment($ccx, (int)$firstRowTop, $ccw, $colRectH,
@@ -219,7 +234,7 @@ class TableAlgorithm extends LayoutAlgorithm
                             $colF->style, [], $colF->sourceNode,
                             0, 0, false,
                             $colF->type, $colF->content, $colF->dataset, $colF->pseudoStyles);
-                        $colIdx2++;
+                        $colSeq++;
                     }
                     $stackedChildren[$slotIdx] = new PhysicalFragment($colRectX, (int)$firstRowTop, $colRectW, $colRectH,
                         $colRectW, $colRectH, 0, $colRectW, $colRectH,
