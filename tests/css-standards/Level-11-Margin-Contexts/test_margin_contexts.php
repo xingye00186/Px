@@ -26,7 +26,11 @@ $tests['margin:0 auto 水平居中 block'] = function() {
             VNode::h('div', ['style' => 'width:200px;height:50px;margin:0 auto'], 'Centered'),
         ])
     );
-    assert_contains($result, 'div (216,16 200x50) text="Centered"', 'margin:0 auto centers block horizontally: x=(600-200)/2=200? actual=216 within padding');
+    // Px UA 默认 box-sizing:border-box（框架决策，异于 Chrome content-box）：
+    // 容器 600 含 pad16×2 → content 568 → x = 16 + (568-200)/2 = 200。
+    // 旧基线 216 是“居中基准误用 border-box 宽” bug 在 border-box 默认下
+    // 恰好凑出 content-box 正解的巧合值（007 批基准修正后更新）。
+    assert_contains($result, 'div (200,16 200x50) text="Centered"', 'margin:0 auto centers block horizontally: border-box content 568 -> x=16+184=200');
     return $result;
 };
 

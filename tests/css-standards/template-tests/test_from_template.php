@@ -418,7 +418,9 @@ $tests['[Template] margin 0 auto block center'] = function () {
         '<div style="width:200px;height:50px;margin:0 auto">Centered</div>' .
         '</div>'
     );
-    assert_contains($result, 'div (216,16 200x50)', 'Margin 0 auto centers 200px in 600px parent (content-box: x=16+(600-200)/2=216)');
+    // Px UA border-box：content 568 → x=16+184=200（旧 216 为基准误用
+    // border-box 宽的巧合值，007 批修正）
+    assert_contains($result, 'div (200,16 200x50)', 'Margin 0 auto centers 200px in 600px parent (border-box: x=16+(568-200)/2=200)');
     return $result;
 };
 

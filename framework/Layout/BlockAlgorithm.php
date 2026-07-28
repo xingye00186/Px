@@ -929,9 +929,16 @@ class BlockAlgorithm extends LayoutAlgorithm
                 }
             }
             if ($marginLeftAuto && $marginRightAuto && $chHasExplicitW && $chW < $containerW) {
-                $xOffset = max(0, (int)(($containerW - $chW) / 2));
+                // CSS 2.2 §10.3.3：居中基准 = 包含块 **content 宽**（非 border-box；
+                // 007 真值：testroot 800 → B margin 225=(750-300)/2，E 误用 800
+                // → 250 实锤）；纯整数 intdiv。
+                $ctW = $containerW - $padLeft - (int)($s->padding?->right->resolveBoxPercent($parentW) ?? 0)
+                    - $borderLeft - (int)($s->getBorderRightWidth() ?? 0);
+                $xOffset = max(0, intdiv($ctW - $chW, 2));
             } elseif ($marginLeftAuto && $chHasExplicitW && $chW < $containerW) {
-                $xOffset = max(0, $containerW - $chW - $mRight);
+                $ctW = $containerW - $padLeft - (int)($s->padding?->right->resolveBoxPercent($parentW) ?? 0)
+                    - $borderLeft - (int)($s->getBorderRightWidth() ?? 0);
+                $xOffset = max(0, $ctW - $chW - $mRight);
             }
             // CSS 2.2 §10.6.3：子项从父的 padding-box 左上角开始（= parent origin + border-left + padding-left）
             // 之前 childX 缺少 borderLeft 导致与 childY 不对称 bug

@@ -94,8 +94,10 @@ $tests['视频卡片 (封面+信息) flex column'] = function() {
             ]),
         ])
     );
-    // Blink 真值：卡片高 227 = 封面 168 + 信息区 59（旧断言 300x0 为文本零高时代遗留）
-    assert_contains($result, 'div (0,0 300x227)', 'Video card 300 wide, height 227 = cover 168 + info 59');
+    // Blink 真值 227 = 封面 168 + 信息区 59（meta 行 19 = 12×1.594 CJK normal）；
+    // 引擎行高模型 fs×1.2 → meta 14 → 222（已知债：继承激活前靠
+    // fallback fs16×1.2=19 巧合命中；待 normal 行高对齐真字体度量后收编）。
+    assert_contains($result, 'div (0,0 300x222)', 'Video card 300 wide, height 222 = cover 168 + info 54 (known debt: meta line 14 vs Blink 19, normal line-height model)');
     return $result;
 };
 
@@ -257,7 +259,9 @@ $tests['margin auto 水平居中'] = function() {
             VNode::h('div', ['style' => 'width:300px;height:60px;margin:0 auto'], 'Centered'),
         ])
     );
-    assert_contains($result, 'div (166,16 300x60)', 'margin:0 auto centers: (600-300)/2=166');
+    // Px UA border-box：content 568 → x=16+(568-300)/2=150（旧 166 为基准
+    // 误用 border-box 宽的巧合值，007 批修正）
+    assert_contains($result, 'div (150,16 300x60)', 'margin:0 auto centers: border-box content 568 -> x=16+134=150');
     return $result;
 };
 

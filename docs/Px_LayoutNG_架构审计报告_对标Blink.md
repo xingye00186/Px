@@ -2037,3 +2037,20 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 **踩坑（L24 门捕）**：首版 UA 2px 在 TableAlgorithm 内用 getRaw null 判"未声明→2px"——判据过宽，`div[display:table]`（无 table 元素）也吃到 UA 值 → L24 快照 4 处 diff。UA 样式是**元素选择器**语义，正确注入点 = ComputedStyle getDefaultsArray 按 elementType（typed 通道，显式声明照常覆盖）。教训：UA 默认值一律走 defaults 按元素注入，禁止在算法层按"属性未声明"猜 UA。
 
 **剩余 45**：MISMATCH 注记为主（table width:100% 导出 100px vs B 716px = 导出层百分比归一化域）+ 少量 x=3/w=4 精度（cell border 计入列宽的半开区间）。
+
+### 23. case-007 双根因批：继承通道复活 + margin:auto 居中基准（本批）
+
+**成果**：case-007 92→18（GEOMETRY 74→**0**，剩余全注记）；014 顺带 25→4；全量 **784→689（-95）零 case 回归**；gates 31/32（L06/L11 四处旧巧合基线修正后恢复）。
+
+**根因 ①（全局级）：ComputedStyle 继承通道整体死路**。构造器 `!isset($merged[$key])` 判据——defaults 已先行占位 merged，条件恒假 → INHERITED_KEYS 循环是死代码；继承全靠上游烘焙声明，未烘焙链路（如 flex item 内匿名 wrapper）一律回落 defaults。探针实锤：父 center 子 start。修复 = 判据改 `!isset($declarations[$key])`（CSS 级联：声明 > 继承 > UA 默认）。**激活前必须修剪 INHERITED_KEYS**：旧表死代码时期误收非继承键（opacity/verticalAlign/backgroundAttachment/outlineOffset/tableLayout），直接激活会错继承（va 双重位移）。
+
+**根因 ②：margin:auto 居中基准误用父 border-box 宽**（CSS 2.2 §10.3.3 应为包含块 content 宽）。真值：testroot 800 pad24 border1 → B margin 225=(750-300)/2，E 误 250=(800-300)/2。修复 = stackBlockChildren xOffset 基准扣 pad/border（intdiv 纯整数）。
+
+**门捕定性（4 处基线为旧巧合值，非真回归）**：
+- L11/L06/template「margin auto 居中」期望 216/166：是"基准误用 border-box 宽" bug 在 Px UA border-box 默认下**恰好凑出 content-box 正解**的巧合值；Px 语义正解 = 200/150（content 568）。基线+断言同步修正。
+- L06 视频卡片 227→222：**已知债显形**——Blink meta 行 19=12×1.594（CJK normal），引擎行高模型 fs×1.2 → 14；继承激活前靠 fallback fs16×1.2=19 巧合命中。断言暂记 222 + 债注记（与 050 y=4 族同源：normal 行高未对齐真字体度量）。
+- Template-From-Template.snap 为既有失败 suite 基线，本批不重写（已回退）。
+
+**遗留债（行高模型，两处同源）**：normal 行高 fs×1.2 vs 真字体（CJK ≈1.594em、Segoe ≈1.363em 已有 strut 通道但文本 fragment 高通道未接）——收编时 L06 222→227 与 050 y=4 族应同批清。
+
+**探针纪律补充**：报告尾部「样式属性统计」表重列全部 case 行，逐 case 解析必须取首张主表（覆写陷阱，与 22 批工具陷阱同源）。

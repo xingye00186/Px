@@ -177,14 +177,16 @@ class ComputedStyle
     private array $exportCache = [];
     private bool $exportCached = false;
 
-    /** 继承属性列表 */
+    /** 继承属性列表（仅真 CSS 继承属性；激活通道前已剔除非继承键
+     * opacity/verticalAlign/backgroundAttachment/outlineOffset/tableLayout——
+     * 旧表是死代码时期的误收，激活后会造成 va 双重位移等错继承） */
     private const INHERITED_KEYS = [
         'fg', 'fontFamily', 'fontSize', 'fontWeight', 'bold', 'fontStyle',
         'lineHeight', 'textAlign', 'textIndent', 'whiteSpace', 'wordBreak',
-        'visibility', 'opacity', 'cursor', 'direction', 'textShadow',
-        'letterSpacing', 'wordSpacing', 'verticalAlign', 'fontVariant',
-        'fontStretch', 'backgroundAttachment', 'outlineOffset',
-        'borderCollapse', 'borderSpacing', 'tableLayout', 'captionSide',
+        'visibility', 'cursor', 'direction', 'textShadow',
+        'letterSpacing', 'wordSpacing', 'fontVariant',
+        'fontStretch',
+        'borderCollapse', 'borderSpacing', 'captionSide',
     ];
 
     // ── 默认字体大小 ──
@@ -225,9 +227,13 @@ class ComputedStyle
         foreach ($declarations as $k => $v) {
             $merged[$k] = $v;
         }
-        // 父元素继承：仅当子元素未显式设置时
+        // 父元素继承：仅当子元素未显式声明时（CSS 级联：声明 > 继承 > UA
+        // 默认）。判据必须是 **$declarations**（显式声明）而非 $merged——
+        // defaults 已先行占位 merged，旧判 !isset($merged) 恒假 → 继承通道
+        // 整体死路（007 flex-item 内 wrapper text-align:center 断链实锤；
+        // 此前继承全靠上游烘焙声明，未烘焙链路一律回落 defaults）。
         foreach (self::INHERITED_KEYS as $key) {
-            if (!isset($merged[$key]) && isset($parentDeclarations[$key])) {
+            if (!isset($declarations[$key]) && isset($parentDeclarations[$key])) {
                 $merged[$key] = $parentDeclarations[$key];
             }
         }

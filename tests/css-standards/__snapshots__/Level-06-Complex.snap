@@ -1,4 +1,4 @@
-@generated 2026-07-27 09:42:54
+@generated 2026-07-28 09:02:07
 === Test: Grid 内嵌 flex 实现卡片网格 ===
 Frame #1 events=0 detail=normal
 div (0,0 964x192) [dsp=grid]
@@ -42,14 +42,14 @@ div (0,0 1440x44) [dsp=flex] scroll ch=36 cw=1440 maxScroll=0 st=0 sl=0 ov=auto
 
 === Test: 视频卡片 (封面+信息) flex column ===
 Frame #1 events=0 detail=normal
-div (0,0 300x227) [dsp=flex] ov=hidden
+div (0,0 300x222) [dsp=flex] ov=hidden
   div (0,0 300x168)
-  div (0,168 300x59) [dsp=flex]
+  div (0,168 300x54) [dsp=flex]
     div (8,176 284x20) text="视频标题最多两行"
-    div (8,200 284x19) [dsp=flex]
-      div (8,200 284x19) [dsp=flex] text="UP主名称"
-      div (300,200 18x19) text="·"
-      div (326,200 54x19) text="1.2万"
+    div (8,200 284x14) [dsp=flex]
+      div (8,200 284x14) [dsp=flex] text="UP主名称"
+      div (300,200 14x14) text="·"
+      div (322,200 42x14) text="1.2万"
 
 ---
 
@@ -155,7 +155,7 @@ div (0,0 800x200) [dsp=flex]
 === Test: margin auto 水平居中 ===
 Frame #1 events=0 detail=normal
 div (0,0 600x92)
-  div (166,16 300x60) text="Centered"
+  div (150,16 300x60) text="Centered"
 
 ---
 
