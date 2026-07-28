@@ -140,21 +140,36 @@ class BlockAlgorithm extends LayoutAlgorithm
         ksort($lineGroups);
         $col = 0;
         $colStartFlowY = PHP_INT_MIN;
+        $colLines = 0;
         $maxColUsedH = 0;
         $newChildren = [];
         foreach ($lineGroups as $gY => $group) {
             $gH = 0;
             foreach ($group as $fk) { $fkH2 = (int)$fk->getH(); if ($fkH2 > $gH) $gH = $fkH2; }
             if ($colStartFlowY === PHP_INT_MIN) $colStartFlowY = $gY;
-            if ($col < $n - 1 && ($gY + $gH - $colStartFlowY) > $targetH && $gY > $colStartFlowY) {
+            // 断列约束（对标 Blink NGColumnLayoutAlgorithm break 规则）：
+            // 行盒组受 orphans/widows 初始值 2 约束（CSS 2.2 §13.3.3，
+            // 定义域为**段落内行盒**；列断点适用）：断点前段尾至少
+            // 2 行；块级盒间断点不受此限（L24 块子分列 1+1+1 真值）。
+            // 真值实锤 case-049：3 行内容 column-count:3 → B 分布 2+1+0
+            //（非均衡 1+1+1），末列不足 widows 豁免（Chrome 实测）。
+            $isLineGroup = false;
+            foreach ($group as $fk) {
+                $fkDisp = $fk->style?->display?->value ?? 'block';
+                if ($fkDisp === 'inline' || $fkDisp === 'inline-block' || self::isInlineType((string)$fk->type)) { $isLineGroup = true; break; }
+            }
+            $widowsOk = !$isLineGroup || $colLines >= 2;
+            if ($col < $n - 1 && $widowsOk && ($gY + $gH - $colStartFlowY) > $targetH && $gY > $colStartFlowY) {
                 $col++;
                 $colStartFlowY = $gY;
+                $colLines = 0;
             }
             $dx = $contentX + $col * ($colW + $colGap) - $flowOriginX;
             $dy = $contentY - $colStartFlowY;
             foreach ($group as $fk) {
                 $newChildren[] = FlexAlgorithm::translateFragmentTree($fk, $dx, $dy);
             }
+            $colLines++;
             $usedH = $gY + $gH - $colStartFlowY;
             if ($usedH > $maxColUsedH) $maxColUsedH = $usedH;
         }
