@@ -628,6 +628,13 @@ class LayoutNormalizer
             }
         }
 
+        // text-decoration 族采集口径同构：全库 55 case 的 browser_ref 恒 0 个
+        // text-decoration-* 键（dump_layout.js 不采集该族），E 导出侧恒报
+        // engine-only MISMATCH（case-045 全部 8 项实锤）——同 textarea 口径豁免。
+        unset($normalized['text-decoration-line'], $normalized['text-decoration-color'],
+            $normalized['text-decoration-style'], $normalized['text-decoration-thickness'],
+            $normalized['text-decoration']);
+
         return $normalized;
     }
 
