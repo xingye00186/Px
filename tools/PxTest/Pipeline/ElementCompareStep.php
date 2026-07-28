@@ -400,17 +400,27 @@ class ElementCompareStep implements PipelineStepInterface
             }
         }
 
-        // ─── 未匹配元素报告 ───
+        // ─── 未匹配元素报告（零盒豁免：display:none 祖先的后代 computed
+        // display 仍非 none，B dump 导出为全零 rect 残留，case-010 18 span
+        // 实锤；零盒无布局语义不计结构差，与匹配阶段双零盒豁免同源）───
+        $realERemaining = 0;
         foreach ($eRemaining as $eIdx) {
+            $eEl2 = $engineSubset[$eIdx];
+            if ((int)($eEl2['w'] ?? 0) === 0 && (int)($eEl2['h'] ?? 0) === 0) continue;
             $structDiffs[] = "elem[engine_only_$eIdx]: engine-only element (tag={$engineSubset[$eIdx]['tag']})";
+            $realERemaining++;
         }
+        $realBRemaining = 0;
         foreach ($bRemaining as $bIdx) {
+            $bEl2 = $browserSubset[$bIdx];
+            if ((int)($bEl2['w'] ?? 0) === 0 && (int)($bEl2['h'] ?? 0) === 0) continue;
             $structDiffs[] = "elem[browser_only_$bIdx]: browser-only element (tag={$browserSubset[$bIdx]['tag']})";
+            $realBRemaining++;
         }
 
-        // 更新元素计数（使用匹配对数量替代 min 截断）
+        // 更新元素计数（使用匹配对数量替代 min 截断；零盒豁免后的有效余量）
         $matchedCount = count($matchPairs);
-        if ($matchedCount !== $eCount || $matchedCount !== $bCount) {
+        if ($realERemaining > 0 || $realBRemaining > 0) {
             $structDiffs[] = "content_element_count: engine=$eCount browser=$bCount matched=$matchedCount";
         }
 

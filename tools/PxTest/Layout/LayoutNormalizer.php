@@ -306,6 +306,13 @@ class LayoutNormalizer
             }
         }
 
+        // 替换/控件元素（textarea/input/select）后代不产布局盒（HTML
+        // 替换元素语义，B dump 不下探其内部；case-043 E 多导 18 项
+        // textarea 内 span 实锤）——跳过子递归保持元素集合同构。
+        $nodeTypeForKids = (string)($node['type'] ?? '');
+        if ($nodeTypeForKids === 'textarea' || $nodeTypeForKids === 'input' || $nodeTypeForKids === 'select') {
+            return $result;
+        }
         foreach ($node['children'] ?? [] as $child) {
             if (is_array($child)) {
                 // testroot 被跳过时子级 depth 不递增（浏览器契约：testroot 子级 = depth 0），
