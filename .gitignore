@@ -110,3 +110,4 @@ tests/perf/noise_*.php
 _build_corrupted_bak/
 _build_*.log
 _aot_watchdog.log
+_aot_run.log
