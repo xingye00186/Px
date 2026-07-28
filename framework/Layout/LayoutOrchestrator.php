@@ -235,37 +235,16 @@ class LayoutOrchestrator
             $nodeLayer = $zIndex;
         }
 
-        // OOF 元素在 mainLayout 中产生占位 Fragment（不含几何）
+        // OOF 元素：内容照常走自身 display 对应算法布局（对标 Blink：OOF
+        // 先按 static-position 约束预布局内容，定位由 OOF 通行证差分平移）。
+        // 此前只产占位 Fragment（子逐个 mainLayout 后原样塞入，不跑算法）
+        // → flex/IFC 内部排列从未发生，OOF flex 盒内 spans 全重叠盒原点
+        //（case-013 x 阶梯族 84 实锤：E 恒 44 vs B 行内步进 138..242）。
         $isOOF = ($position === 'absolute' || $position === 'fixed');
 
         if ($display === 'none') {
             return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $style, array(), $node, 0, 0, false,
                 $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles);
-        }
-
-        // P2: Phase B 已删除——算法通过 ChildLayoutProvider.layoutChild() 按需布局子项
-        // OOF 元素仍需预布局子项（OOF 路径不经过算法）
-        $childFragments = [];
-        if ($isOOF) {
-            foreach ($node->children as $child) {
-                $childSpace = $this->buildChildSpace($child, $space, $style);
-                $childFragments[] = $this->mainLayout($child, $childSpace, $nodeLayer, 0);
-            }
-        }
-
-        if ($isOOF) {
-            $cs = $style;
-            $w = $cs?->width?->toPx() ?? 0;
-            $h = $cs?->height?->toPx() ?? 0;
-            if ($cs?->width?->isPercent()) $w = $cs->width->resolveInContext($space->getContentWidth());
-            if ($cs?->height?->isPercent()) $h = $cs->height->resolveInContext($space->getContentHeight());
-            $frag = new PhysicalFragment(
-                0, 0, max(0, $w), max(0, $h),
-                0, 0, $nodeLayer, 0, 0,
-                $style, $childFragments, $node, 0, 0, false,
-                $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
-            );
-            return $frag;
         }
 
         // 正常流：选择 Algorithm 执行布局
