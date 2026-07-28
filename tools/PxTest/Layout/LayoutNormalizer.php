@@ -510,6 +510,20 @@ class LayoutNormalizer
             unset($normalized['background-color']);
         }
 
+        // overflow 简写展开（CSS-Overflow-3 §3.1：简写同时置两轴）：引擎
+        // overflowX/Y 通道未从简写展开恒 visible（014 E ox=visible vs
+        // B hidden，而 E overflow=hidden 实锤）——两轴为缺省 visible 时用
+        // 简写值覆盖（显式声明的轴值优先）。
+        $ovShort = (string)($normalized['overflow'] ?? '');
+        if ($ovShort !== '' && $ovShort !== 'visible') {
+            if ((string)($normalized['overflow-x'] ?? 'visible') === 'visible') {
+                $normalized['overflow-x'] = $ovShort;
+            }
+            if ((string)($normalized['overflow-y'] ?? 'visible') === 'visible') {
+                $normalized['overflow-y'] = $ovShort;
+            }
+        }
+
         // ─── 统一 border-color: 从 per-side 颜色构建完整值 ───
         // 引擎同时导出 borderColor(单色) 和 borderTopColor 等(四边)，
         // 浏览器 border-color 包含全部四边值。
