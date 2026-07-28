@@ -980,7 +980,11 @@ class BlockAlgorithm extends LayoutAlgorithm
         // 传入 InlineAlgorithm 行级 ApplyTextAlign（CSS 2.2 §16.2 含 inline-block）；
         // 容器样式同时供行盒 root strut 字体 metrics（§10.8.1）。
         $ta = $s?->textAlign?->value ?? 'start';
-        $ir = InlineAlgorithm::layoutInlineRun($inlineBuffer, $availW, $startX, $stackY, 0, $ta, $s);
+        // direction 继承链已层叠（CssMappings 'direction'，默认 ltr）：
+        // 无 typed property，getRaw 通道取值（CSS 2.2 §9.10 IFC 基方向）。
+        $dirRaw = $s?->getRaw('direction');
+        $dir = is_string($dirRaw) ? strtolower(trim($dirRaw)) : 'ltr';
+        $ir = InlineAlgorithm::layoutInlineRun($inlineBuffer, $availW, $startX, $stackY, 0, $ta, $s, $dir);
         foreach ($ir['items'] as $item) $result[] = $item;
         $stackY = $ir['nextY'];
         // 记录 IFC 流末端（行盒下沿）供 auto-height 消费：strut 擑高的行盒空间

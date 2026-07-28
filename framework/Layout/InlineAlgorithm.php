@@ -219,9 +219,10 @@ class InlineAlgorithm extends LayoutAlgorithm
      * @param int $padLeft 左 padding
      * @param string $textAlign 容器 text-align（行级 ApplyTextAlign）
      * @param ComputedStyle|null $containerStyle IFC 容器样式（strut 字体 metrics 源）
+     * @param string $direction 容器 direction（ltr/rtl，CSS 2.2 §9.10）
      * @return array{items: PhysicalFragment[], nextY: int}
      */
-    public static function layoutInlineRun(array $items, int $availableW, int $startX, int $startY, int $padLeft = 0, string $textAlign = 'start', ?ComputedStyle $containerStyle = null): array
+    public static function layoutInlineRun(array $items, int $availableW, int $startX, int $startY, int $padLeft = 0, string $textAlign = 'start', ?ComputedStyle $containerStyle = null, string $direction = 'ltr'): array
     {
         if (empty($items)) return ['items' => [], 'nextY' => $startY];
 
@@ -295,7 +296,16 @@ class InlineAlgorithm extends LayoutAlgorithm
         $boxStack = [];
 
         $isFirstLine = true;
+        // RTL 基方向（对标 Blink NGLineBreaker::ComputeBaseDirection + bidi 重排，
+        // CSS 2.2 §9.10）：中性内容在 RTL 段落基底 level 1 下视觉逆序、从行
+        // inline-start（右端）起排——实现为行级镜像 x' = L+R-(x+w)（等价全逆序）。
+        // 镜像轴 = 行 content 区 [L, R]；text-align 逻辑值在镜像前预翻转（镜像后
+        // 净效果：rtl+start=右 ✓ rtl+end=左 ✓ 物理 left/right 保持 ✓ center 不变 ✓）。
+        // 限制：嵌套 inline 盒内部子序未逆序（完整 bidi level 栈范畴，children 平移）。
+        $isRtl = ($direction === 'rtl');
+        $mirrorAxisSum = 2 * ($startX + $padLeft) + $effectiveAvail;
         foreach ($lines as $line) {
+            $lineStartIdx = count($result);
             // text-align 行级偏移（对标 Blink NGInlineLayoutAlgorithm::ApplyTextAlign，
             // CSS 2.2 §16.2：作用于行盒内全部 inline-level box，含 inline-block）。
             // free 可为负（溢出行）：Blink 不 clamp，center 两侧均溢。
@@ -303,6 +313,12 @@ class InlineAlgorithm extends LayoutAlgorithm
             $alignOffset = 0;
             if ($textAlign === 'center') {
                 $alignOffset = (int)($alignFree / 2);
+            } elseif ($isRtl) {
+                // RTL 预翻转（配合行尾镜像）：end/物理 left → 排右镜像后落左；
+                // start/物理 right → 排左镜像后落右
+                if ($textAlign === 'end' || $textAlign === 'left') {
+                    $alignOffset = $alignFree;
+                }
             } elseif ($textAlign === 'right' || $textAlign === 'end') {
                 $alignOffset = $alignFree;
             }
@@ -494,10 +510,47 @@ class InlineAlgorithm extends LayoutAlgorithm
                 );
                 $cursorX += $item->totalWidth();
             }
+            // RTL 行尾镜像：本行新增顶层 fragment 统一 x' = axisSum-(x+w)，
+            // children 随顶层平移（atomic 内部是独立 BFC，不参与 IFC 逆序）。
+            if ($isRtl) {
+                $n = count($result);
+                for ($ri = $lineStartIdx; $ri < $n; $ri++) {
+                    $result[$ri] = self::mirrorFragmentX($result[$ri], $mirrorAxisSum);
+                }
+            }
             $cursorY += $line->height();
         }
 
         return ['items' => $result, 'nextY' => $startY + $cursorY];
+    }
+
+    /**
+     * RTL 镜像重建（不可变 fragment）：顶层 x' = axisSum-(x+w)，children 递归
+     * 平移 dx（保持内部相对布局：atomic 内部是独立 BFC，CSS 2.2 §9.10 仅
+     * IFC 同层参与基方向逆序）。
+     */
+    private static function mirrorFragmentX(PhysicalFragment $f, int $axisSum): PhysicalFragment
+    {
+        $oldX = (int)$f->getX();
+        $newX = $axisSum - $oldX - (int)$f->getW();
+        return self::shiftFragmentX($f, $newX - $oldX);
+    }
+
+    /** 水平平移重建（递归 children，dx=0 时直接复用原 fragment） */
+    private static function shiftFragmentX(PhysicalFragment $f, int $dx): PhysicalFragment
+    {
+        if ($dx === 0) return $f;
+        $kids = [];
+        foreach ($f->children as $k) $kids[] = self::shiftFragmentX($k, $dx);
+        return new PhysicalFragment(
+            (int)($f->getX() + $dx), (int)$f->getY(), (int)$f->getW(), (int)$f->getH(),
+            (int)$f->getVisualW(), (int)$f->getVisualH(), (int)$f->getLayer(),
+            (int)$f->getContentWidth(), (int)$f->getContentHeight(),
+            $f->style, $kids, $f->sourceNode,
+            (int)$f->getScrollTop(), (int)$f->getScrollLeft(), $f->getIsScrollContainer(),
+            (string)$f->type, $f->content, $f->dataset, $f->pseudoStyles,
+            (int)$f->textWidth, (string)$f->displayText, (int)$f->getBaseline()
+        );
     }
 
     /**
