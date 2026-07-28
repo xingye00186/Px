@@ -244,6 +244,12 @@ class LayoutNormalizer
         if ($nodeType === '#text') {
             return $result; // 跳过 #text 节点
         }
+        // textarea 本体不导出（采集口径同构：全库 55 case B 侧 textarea
+        // 恒 0 个，E 导 3 个→ case-043 engine-only STRUCT 族实锤；其后代
+        // 跳过已有，本体同步对齐）。
+        if ($nodeType === 'textarea') {
+            return $result;
+        }
 
         // testroot 自身不导出（对齐浏览器采集契约：browser_ref elements[]
         // 仅含 testroot 的后代，depth 以其子级为 0）。filterToTestRoot 的
