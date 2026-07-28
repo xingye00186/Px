@@ -900,6 +900,7 @@ class FlexAlgorithm extends LayoutAlgorithm
         ksort($resultsByOriginalIndex);
         $mappedResults = array_values($resultsByOriginalIndex);
         // Re-resolve flex:1 nested containers (flex-grow changes child sizes)
+        $hWasAuto = ($h <= 0);
         if ($h <= 0 && count($mappedResults) > 0) {
             $maxBottom = $innerY;
             foreach ($mappedResults as $cr) {
@@ -910,6 +911,31 @@ class FlexAlgorithm extends LayoutAlgorithm
             }
             // 子项 max bottom → padding-box 高度；加回 padding-bottom 得 border-box 高度
             $h = max(0, $maxBottom - $innerY) + $flexPadT + $flexPadB;
+        }
+        // CSS 2.2 §10.7：flex 容器 auto 高同受 min/max-height 约束（015
+        // min-height:100 容器 E 45 vs B 100 实锤）；border-box 语义。
+        // 抬高后交叉轴（row 容器）按 align-items 补偿子位置（center 居中，
+        // Blink 两遍布局的等价平移；纯整数 intdiv）。
+        if ($hWasAuto) {
+            $minHC = (int)($s->minHeight?->toPx() ?? 0);
+            $maxHC = (int)($s->maxHeight?->toPx() ?? 0);
+            if ($minHC > 0 && $maxHC > 0 && $minHC > $maxHC) $maxHC = $minHC;
+            $hClamped = $h;
+            if ($maxHC > 0 && $hClamped > $maxHC) $hClamped = $maxHC;
+            if ($minHC > 0 && $hClamped < $minHC) $hClamped = $minHC;
+            if ($hClamped !== $h) {
+                $deltaH = $hClamped - $h;
+                $h = $hClamped;
+                $alignIt = $s->alignItems?->value ?? 'stretch';
+                if ($isRow && $deltaH > 0 && ($alignIt === 'center' || $alignIt === 'flex-end' || $alignIt === 'end')) {
+                    $dyA = ($alignIt === 'center') ? intdiv($deltaH, 2) : $deltaH;
+                    if ($dyA !== 0) {
+                        $shifted = [];
+                        foreach ($mappedResults as $cr) { $shifted[] = self::translateFragmentTree($cr, 0, $dyA); }
+                        $mappedResults = $shifted;
+                    }
+                }
+            }
         }
 
         // Convert mapped LayoutResults to PhysicalFragment children

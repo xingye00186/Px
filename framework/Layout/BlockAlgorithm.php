@@ -636,6 +636,15 @@ class BlockAlgorithm extends LayoutAlgorithm
             // 子元素 stack 到 maxBottom，下方 padding 和 border 应当计入高度
             $h += (int)($s->padding?->bottom->toPx() ?? 0);
             $h += (int)($s->getBorderBottomWidth() ?? 0);
+            // CSS 2.2 §10.7：auto-height 同样受 min/max-height 约束（此前仅
+            // computeBlockHeight 显式高路径 clamp，auto 路径绕过 → 015
+            // max-height:80 容器 E 195 vs B 80 实锤）；border-box 语义（UA
+            // 默认，$h 此刻已含 pad/border）；min>max 时 max:=min（§10.7）。
+            $minHA = (int)($s->minHeight?->toPx() ?? 0);
+            $maxHA = (int)($s->maxHeight?->toPx() ?? 0);
+            if ($minHA > 0 && $maxHA > 0 && $minHA > $maxHA) $maxHA = $minHA;
+            if ($maxHA > 0 && $h > $maxHA) $h = $maxHA;
+            if ($minHA > 0 && $h < $minHA) $h = $minHA;
         }
 
         // ── Baseline 计算（对标 Blink NGPhysicalFragment::FirstBaseline）──

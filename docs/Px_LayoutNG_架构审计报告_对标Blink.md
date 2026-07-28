@@ -2054,3 +2054,15 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 **遗留债（行高模型，两处同源）**：normal 行高 fs×1.2 vs 真字体（CJK ≈1.594em、Segoe ≈1.363em 已有 strut 通道但文本 fragment 高通道未接）——收编时 L06 222→227 与 050 y=4 族应同批清。
 
 **探针纪律补充**：报告尾部「样式属性统计」表重列全部 case 行，逐 case 解析必须取首张主表（覆写陷阱，与 22 批工具陷阱同源）。
+
+### 24. case-015 min/max-height auto 路径 clamp 批（本批）
+
+**成果**：case-015 86→29（-66%，CRITICAL 51→0 族清）；全量 **689→632（-57）零 case 回归**；gates 31/32。
+
+**根因（B 真值整数锚定）**：CSS 2.2 §10.7 min/max-height 约束只在 computeBlockHeight 显式高路径 clamp，**auto-height 路径整体绕过**：
+- block 容器 max-height:80 + overflow:hidden → E 195（内容全高）vs B 80；
+- flex 容器 min-height:100 → E 45（内容高 25+pad20）vs B 100。
+
+**实现**：① BlockAlgorithm auto-height 计算尾部补 min/max clamp（border-box 语义，$h 已含 pad/border；min>max 时 max:=min）；② FlexAlgorithm 容器 auto 高 clamp + 抬高时 row 容器按 align-items 对子交叉轴补偿平移（center=intdiv(Δ,2)/flex-end=Δ，Blink 两遍布局的等价平移）——mm-min align-items:center 子居中真值精确命中（167/100/80 三值全中）。
+
+**剩余 29**：精度族 + 注记类（下轮顺带）。
