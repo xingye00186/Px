@@ -2020,3 +2020,20 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 - 050 critical 7→50 为跨轮遗留态（推送前快照已同值），非本批引入；run_history 回归判定与「HEAD 基线逐 case 对比」结论可不一致，以后者为准。
 
 **遗留债**：文本行 strut descent 低估由含文本 inline 盒 union 补偿（050 y=4 族）——待行高模型对齐真实字体度量后统一收编；top/bottom 盒超行高的二阶段扩行未实现（当前无真值需求）。
+
+### 22. case-048 table 六根因批（本批）
+
+**成果**：case-048 190→45（-76%，CRITICAL 19→3）；全量 **929→784（-145）零 case 回归**；gates 31/32（L24 首轮门捕已修，见下）。
+
+**真值反演（B 整数级，tb-fixed/tb-caption 两表全验）**：
+- UA `table { border-spacing:2px }`（Blink html.css 元素选择器）：tb-fixed 未声明 spacing → B tr x=表+3=border1+spacing2；表 h=41=1+2+35+2+1。
+- 表自身 border 计入内容 origin 与表高（§17.6.1 表盒模型）；行 rect = 表内容区横向收缩 [表+bL+spacing, w−边缘−2×spacing]（B tr [表+3,710]）。
+- table-layout:fixed `<col>` 宽消费（§17.5.2.1）：声明列锁定、auto 列均分剩余（B 60/648 精确）。
+- colgroup/col rect = 行区并集（B colgroup [表+3,710,35] 与 tr 同 rect，非 h=0）。
+- caption 属 table wrapper box（§17.4）：在表盒外不受 border/spacing 内缩，y=行底+spacing+下border、x/w=表全宽；UA `caption{text-align:center}`（B 内容居中实锤）。
+
+**实现**：TableAlgorithm（spacing/border 内缩 + fixed 列宽 + colgroup 占位回填 + bottom caption 补 spacing/bB）+ ComputedStyle defaults 两处 UA 注入（table→borderSpacing '2'、caption→textAlign center）。
+
+**踩坑（L24 门捕）**：首版 UA 2px 在 TableAlgorithm 内用 getRaw null 判"未声明→2px"——判据过宽，`div[display:table]`（无 table 元素）也吃到 UA 值 → L24 快照 4 处 diff。UA 样式是**元素选择器**语义，正确注入点 = ComputedStyle getDefaultsArray 按 elementType（typed 通道，显式声明照常覆盖）。教训：UA 默认值一律走 defaults 按元素注入，禁止在算法层按"属性未声明"猜 UA。
+
+**剩余 45**：MISMATCH 注记为主（table width:100% 导出 100px vs B 716px = 导出层百分比归一化域）+ 少量 x=3/w=4 精度（cell border 计入列宽的半开区间）。

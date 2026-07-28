@@ -295,7 +295,9 @@ class ComputedStyle
             'justifySelf' => new CssKeyword('auto'),
             'whiteSpace' => new CssKeyword('normal'),
             'wordBreak' => new CssKeyword('normal'),
-            'textAlign' => new CssKeyword('start'),
+            // caption UA 居中（Blink html.css caption{text-align:center}，
+            // case-048 B 真值 caption 内容居中实锤）；显式声明/继承链照常覆盖。
+            'textAlign' => new CssKeyword($elementType === 'caption' ? 'center' : 'start'),
             'verticalAlign' => new CssKeyword('baseline'),
             'visibility' => new CssKeyword('visible'),
             'cursor' => new CssKeyword('auto'),
@@ -335,7 +337,10 @@ class ComputedStyle
             'gridColumn' => '', 'gridRow' => '', 'gridTemplateAreas' => '',
             'gridAutoFlow' => 'row',
             'objectFit' => '', 'objectPosition' => '', 'appearance' => '',
-            'borderSpacing' => '', 'tableLayout' => '', 'captionSide' => '',
+            // UA border-spacing:2px 仅 <table> 元素（Blink html.css 元素选择器，
+            // div[display:table] 不适用——L24 实锤）；typed 通道携带，显式
+            // 声明覆盖；非 table 元素空串 = 未声明（旧语义保持）。
+            'borderSpacing' => $elementType === 'table' ? '2' : '', 'tableLayout' => '', 'captionSide' => '',
             'fontStretch' => '', 'fontVariant' => '',
             'textShadow' => '', 'letterSpacing' => '', 'wordSpacing' => '',
             'overflowWrap' => '', 'textTransform' => '', 'wordWrap' => '',
