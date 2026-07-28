@@ -332,6 +332,12 @@ class LayoutNormalizer
         if (empty($ds) && !isset($ds['pxId']) && (int)($node['w'] ?? 0) === 0 && (int)($node['h'] ?? 0) === 0) {
             return null;
         }
+        // 伪元素合成节点（::before/::after 烘焙 span，dataset.pxPseudo）：
+        // 不在 DOM（Selectors §7），浏览器 getBoundingClientRect 导出不含——
+        // 跳过导出保持元素集合同构（布局影响已在几何中体现）。
+        if (is_array($ds) && (string)($ds['pxPseudo'] ?? '') !== '') {
+            return null;
+        }
 
         // 映射 tag
         $tag = $this->typeToTag($type);

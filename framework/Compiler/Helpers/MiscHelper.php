@@ -305,7 +305,12 @@ function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassL
                 }
                 if ($contentVal === null || $contentVal === '') continue;
                 $restDecls = trim(preg_replace('~content\s*:\s*[^;]+;?~', '', $decls), "; ");
-                $pseudoNode = \Px\Dom\VNode::h('span', $restDecls !== '' ? ['style' => $restDecls, '_pxPseudo' => '1'] : ['_pxPseudo' => '1'], $contentVal);
+                // data-px-pseudo → dataset.pxPseudo：伪元素不在 DOM（Selectors §7），
+                // 浏览器导出不含它们——导出层（LayoutNormalizer）据此跳过，
+                // 但布局照常参与（否则合成 span 泄漏致元素集合错位，case-050）。
+                $pProps = ['_pxPseudo' => '1', 'data-px-pseudo' => '1'];
+                if ($restDecls !== '') $pProps['style'] = $restDecls;
+                $pseudoNode = \Px\Dom\VNode::h('span', $pProps, $contentVal);
                 if (!is_array($node->children)) $node->children = [];
                 if ($which === 'before') {
                     array_unshift($node->children, $pseudoNode);

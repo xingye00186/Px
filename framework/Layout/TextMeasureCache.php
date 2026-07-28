@@ -50,7 +50,13 @@ class TextMeasureCache
         }
         if (!self::$hasNative) {
             $boldFactor = $bold ? 1.35 : 1.0;
-            return (int)(strlen($text) * $fontSize * 0.6 * $boldFactor);
+            // 按字符类度量（非按字节）：ASCII ≈ 0.6em/字符，多字节字符（CJK 等）
+            // ≈ 1.0em/字（旧 strlen 字节计把 CJK 算 3×0.6=1.8em/字，系统性高估
+            // ~80%：case-050 伪元素 CJK 宽 E144 vs B≈84，x=60 族实锤）。
+            $asciiOnly = preg_replace('/[\x80-\xFF]+/', '', $text);
+            $asciiLen = strlen($asciiOnly !== null ? $asciiOnly : $text);
+            $multiLen = max(0, mb_strlen($text, 'UTF-8') - $asciiLen);
+            return (int)(($asciiLen * $fontSize * 0.6 + $multiLen * $fontSize) * $boldFactor);
         }
 
         // 环境变量开关：PX_TEXT_MEASURE_CACHE=0 跳过缓存（AB 测试）
