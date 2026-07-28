@@ -149,10 +149,25 @@ class InlineAlgorithm extends LayoutAlgorithm
             }
         }
         $h = $s->height?->toPx() ?? 0;
+        // inline-block 是 BFC 根（CSS 2.2 §9.2.2/§9.4.1）：内部 block 级子竖排
+        // 堆叠而非 IFC 单行横排。窄口径：全部子均 block 级才走竖排（混合
+        // 内容需匿名块盒，另行处理）。此前恒横排：case-054 px-9 两 block
+        // 子并排（E h28/第二块 x=196 vs B h52/同 x 竖排实锤）。
+        $allBlockKids = false;
+        if ($isInlineBlock && count($children) > 0) {
+            $allBlockKids = true;
+            foreach ($children as $cbk) {
+                $cbd = (string)($cbk->style?->display?->value ?? 'block');
+                if ($cbd !== 'block' && $cbd !== 'flex' && $cbd !== 'grid' && $cbd !== 'table') {
+                    $allBlockKids = false;
+                    break;
+                }
+            }
+        }
         // 含元素子的 inline 盒 auto 高：内容行高（子 margin-box 高 max）。
         // 此前恒 0（无文本分支不覆盖）——flex 容器交叉轴尺寸/align-items 消费
         // item 高时塌陷（case-024 px-36 容器 h=0 vs Blink 25）。
-        if ($h <= 0 && count($children) > 0) {
+        if ($h <= 0 && count($children) > 0 && !$allBlockKids) {
             $maxChH = 0;
             foreach ($children as $chh) {
                 $chTot = (int)($chh->getH() ?? 0)
@@ -186,6 +201,31 @@ class InlineAlgorithm extends LayoutAlgorithm
             $kidOffY = (int)($s->padding?->top->toPx() ?? 0) + (int)($s->getBorderTopWidth() ?? 0);
         }
         $stackedChildren = [];
+        if ($allBlockKids) {
+            // 竖排堆叠（块层叠放 + 兄弟 margin 折叠 max(mb,mt)，CSS 2.2 §8.3.1；
+            // BFC 根阻断父子穿透折叠，首子 margin-top 保留在内）。
+            $cursorYv = $y + $kidOffY;
+            $prevMb = null;
+            foreach ($children as $cr) {
+                $vmt = (int)($cr->style?->margin?->top->toPx() ?? 0);
+                $vmb = (int)($cr->style?->margin?->bottom->toPx() ?? 0);
+                $vml = (int)($cr->style?->margin?->left->toPx() ?? 0);
+                $cursorYv += ($prevMb === null) ? $vmt : max($prevMb, $vmt);
+                // 整树平移（平移完备性不变量：孙辈不得滞留预布局原点）
+                $stackedChildren[] = FlexAlgorithm::translateFragmentTree(
+                    $cr,
+                    (int)($x + $kidOffX + $vml) - (int)$cr->getX(),
+                    (int)$cursorYv - (int)$cr->getY()
+                );
+                $cursorYv += (int)($cr->getH() ?? 0);
+                $prevMb = $vmb;
+            }
+            if ($h <= 0) {
+                $h = ($cursorYv + (int)($prevMb ?? 0)) - ($y + $kidOffY)
+                    + (int)($s->padding?->top->toPx() ?? 0) + (int)($s->padding?->bottom->toPx() ?? 0)
+                    + (int)($s->getBorderTopWidth() ?? 0) + (int)($s->getBorderBottomWidth() ?? 0);
+            }
+        } else {
         $cursorX = $x + $kidOffX;
         foreach ($children as $cr) {
             $stackedChildren[] = new PhysicalFragment(
@@ -201,6 +241,7 @@ class InlineAlgorithm extends LayoutAlgorithm
                 $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles
             );
             $cursorX += (int)($cr->w ?? 0);
+        }
         }
 
         // Baseline：inline/inline-block 元素的 first-baseline = ascent ≈ fontSize * 0.8
