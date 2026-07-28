@@ -1,66 +1,66 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-28 19:11:28 | **总耗时**: 52s
+**运行时间**: 2026-07-28 19:17:53 | **总耗时**: 44.7s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 39.8s |
-| case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff 🔴1 | ⏭️ | ❌ 失败 | 0.2s |
-| case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
-| case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
+| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 38s |
+| case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff 🔴1 | ⏭️ | ❌ 失败 | 0.1s |
+| case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
+| case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-005-grid-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 4diff | ⏭️ | ❌ 失败 | 0.1s |
-| case-006-typography | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
-| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 18diff | ⏭️ | ❌ 失败 | 0.2s |
-| case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
+| case-006-typography | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
+| case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 18diff | ⏭️ | ❌ 失败 | 0.1s |
+| case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0s |
 | case-009-outline | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-010-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 22diff | ⏭️ | ❌ 失败 | 0.1s |
 | case-011-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff | ⏭️ | ❌ 失败 | 0.1s |
-| case-012-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 5diff | ⏭️ | ❌ 失败 | 0.2s |
+| case-012-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 5diff | ⏭️ | ❌ 失败 | 0.1s |
 | case-013-z-index | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
-| case-014-overflow-hidden | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 4diff | ⏭️ | ❌ 失败 | 0.2s |
-| case-015-min-max-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 29diff 🟡6 | ⏭️ | ❌ 失败 | 0.2s |
-| case-016-margin-collapse | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 0.2s |
+| case-014-overflow-hidden | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 4diff | ⏭️ | ❌ 失败 | 0.1s |
+| case-015-min-max-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 29diff 🟡6 | ⏭️ | ❌ 失败 | 0.1s |
+| case-016-margin-collapse | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 0.1s |
 | case-017-negative-margin | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 0.1s |
 | case-018-opacity | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
-| case-019-visibility | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 20diff 🟡2 | ⏭️ | ❌ 失败 | 0.2s |
+| case-019-visibility | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 20diff 🟡2 | ⏭️ | ❌ 失败 | 0.1s |
 | case-020-text-align | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
-| case-021-line-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 24diff 🟡8 | ⏭️ | ❌ 失败 | 0.2s |
-| case-022-white-space | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff | ⏭️ | ❌ 失败 | 0.2s |
-| case-023-word-break | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
-| case-024-font-weight | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
-| case-025-english-text | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
+| case-021-line-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 24diff 🟡8 | ⏭️ | ❌ 失败 | 0.1s |
+| case-022-white-space | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff | ⏭️ | ❌ 失败 | 0.1s |
+| case-023-word-break | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
+| case-024-font-weight | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
+| case-025-english-text | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-026-font-style | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 10diff | ⏭️ | ❌ 失败 | 0.1s |
-| case-027-scroll-diagnostic | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.6s |
-| case-028-scroll-block | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.7s |
-| case-029-scroll-flex-col | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.8s |
-| case-030-scroll-flex-row | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.4s |
-| case-031-scroll-grid | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.7s |
-| case-032-scroll-relative | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.8s |
-| case-033-text-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
+| case-027-scroll-diagnostic | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.4s |
+| case-028-scroll-block | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.4s |
+| case-029-scroll-flex-col | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.4s |
+| case-030-scroll-flex-row | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
+| case-031-scroll-grid | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.4s |
+| case-032-scroll-relative | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.4s |
+| case-033-text-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-034-letter-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
-| case-035-text-indent | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🟡2 | ⏭️ | ❌ 失败 | 0.3s |
-| case-036-background-repeat | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
-| case-037-direction-rtl | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
-| case-038-list-style | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 20diff 🔴10 | ⏭️ | ❌ 失败 | 0.2s |
-| case-039-vertical-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 18diff | ⏭️ | ❌ 失败 | 0.2s |
-| case-040-word-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.3s |
+| case-035-text-indent | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🟡2 | ⏭️ | ❌ 失败 | 0.1s |
+| case-036-background-repeat | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
+| case-037-direction-rtl | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
+| case-038-list-style | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 20diff 🔴10 | ⏭️ | ❌ 失败 | 0.1s |
+| case-039-vertical-align | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 18diff | ⏭️ | ❌ 失败 | 0.1s |
+| case-040-word-wrap | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
 | case-041-background-clip | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
-| case-042-font-variant | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.3s |
-| case-043-resize | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff | ⏭️ | ❌ 失败 | 0.2s |
-| case-044-background-attachment | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🟡3 | ⏭️ | ❌ 失败 | 0.2s |
-| case-045-text-decoration | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 8diff | ⏭️ | ❌ 失败 | 0.3s |
-| case-046-appearance | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 53diff 🔴33 | ⏭️ | ❌ 失败 | 0.2s |
-| case-047-object-fit | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 16diff | ⏭️ | ❌ 失败 | 0.2s |
-| case-048-table-props | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🔴3 | ⏭️ | ❌ 失败 | 0.2s |
-| case-049-multi-column | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.3s |
-| case-050-text-emphasis | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 31diff 🔴7 | ⏭️ | ❌ 失败 | 0.2s |
-| case-051-aspect-ratio | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴9 | ⏭️ | ❌ 失败 | 0.1s |
-| case-052-flow-root | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.1s |
-| case-053-intrinsic-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 7diff 🔴4 | ⏭️ | ❌ 失败 | 0.1s |
-| case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 15diff 🔴8 | ⏭️ | ❌ 失败 | 0.1s |
-| case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴4 | ⏭️ | ❌ 失败 | 0.1s |
+| case-042-font-variant | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
+| case-043-resize | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 19diff | ⏭️ | ❌ 失败 | 0.1s |
+| case-044-background-attachment | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🟡3 | ⏭️ | ❌ 失败 | 0.1s |
+| case-045-text-decoration | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 8diff | ⏭️ | ❌ 失败 | 0.1s |
+| case-046-appearance | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 31diff 🔴17 | ⏭️ | ❌ 失败 | 0.1s |
+| case-047-object-fit | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 16diff | ⏭️ | ❌ 失败 | 0.1s |
+| case-048-table-props | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 45diff 🔴3 | ⏭️ | ❌ 失败 | 0.1s |
+| case-049-multi-column | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
+| case-050-text-emphasis | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 31diff 🔴7 | ⏭️ | ❌ 失败 | 0.1s |
+| case-051-aspect-ratio | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴9 | ⏭️ | ❌ 失败 | 0s |
+| case-052-flow-root | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0s |
+| case-053-intrinsic-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 7diff 🔴4 | ⏭️ | ❌ 失败 | 0s |
+| case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 15diff 🔴8 | ⏭️ | ❌ 失败 | 0s |
+| case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴4 | ⏭️ | ❌ 失败 | 0s |
 
-**汇总**: 26 ✅ / 29 ❌ / 55 总计 (总耗时: 52s)
+**汇总**: 26 ✅ / 29 ❌ / 55 总计 (总耗时: 44.7s)
 
 ## 回归判定
 
@@ -70,35 +70,35 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| width | 98.6% | 8408/8524 |
-| height | 99.1% | 8450/8524 |
-| overflow-x | 99.9% | 8513/8524 |
-| overflow-y | 99.9% | 8513/8524 |
-| margin-right | 99.9% | 8519/8524 |
-| margin-left | 99.9% | 8519/8524 |
-| border-left-color | 100% | 8520/8524 |
-| color | 100% | 8524/8524 |
-| position | 100% | 8524/8524 |
-| flex-direction | 100% | 8524/8524 |
-| flex-wrap | 100% | 8524/8524 |
-| padding-top | 100% | 8524/8524 |
-| padding-right | 100% | 8524/8524 |
-| padding-bottom | 100% | 8524/8524 |
-| padding-left | 100% | 8524/8524 |
-| margin-top | 100% | 8524/8524 |
-| margin-bottom | 100% | 8524/8524 |
-| font-weight | 100% | 8524/8524 |
-| opacity | 100% | 8524/8524 |
-| border-left-width | 100% | 8524/8524 |
-| text-align | 100% | 8517/8517 |
-| border-radius | 100% | 8318/8318 |
-| display | 100% | 8273/8273 |
-| background-color | 100% | 8124/8127 |
+| width | 98.7% | 8402/8516 |
+| height | 99.2% | 8444/8516 |
+| overflow-x | 99.9% | 8505/8516 |
+| overflow-y | 99.9% | 8505/8516 |
+| margin-right | 99.9% | 8511/8516 |
+| margin-left | 99.9% | 8511/8516 |
+| border-left-color | 100% | 8512/8516 |
+| color | 100% | 8516/8516 |
+| position | 100% | 8516/8516 |
+| flex-direction | 100% | 8516/8516 |
+| flex-wrap | 100% | 8516/8516 |
+| padding-top | 100% | 8516/8516 |
+| padding-right | 100% | 8516/8516 |
+| padding-bottom | 100% | 8516/8516 |
+| padding-left | 100% | 8516/8516 |
+| margin-top | 100% | 8516/8516 |
+| margin-bottom | 100% | 8516/8516 |
+| font-weight | 100% | 8516/8516 |
+| opacity | 100% | 8516/8516 |
+| border-left-width | 100% | 8516/8516 |
+| text-align | 100% | 8509/8509 |
+| border-radius | 100% | 8310/8310 |
+| display | 100% | 8265/8265 |
+| background-color | 100% | 8118/8121 |
 | font-size | 100% | 7474/7474 |
-| align-items | 95.3% | 61/64 |
+| align-items | 98.4% | 61/62 |
 | justify-content | 100% | 52/52 |
 | white-space | 100% | 52/52 |
-| gap | 88.4% | 38/43 |
+| gap | 92.7% | 38/41 |
 | top | 100% | 12/12 |
 | min-width | 100% | 12/12 |
 | left | 100% | 11/11 |
@@ -184,7 +184,7 @@
 | case-043-resize | 0 | 0 | 0 | 0 | 19 | 0 |
 | case-044-background-attachment | 0 | 0 | **3** | 9 | 0 | 0 |
 | case-045-text-decoration | 0 | 0 | 0 | 8 | 0 | 0 |
-| case-046-appearance | 2 | **33** | 0 | 20 | 0 | 0 |
+| case-046-appearance | 0 | **17** | 0 | 14 | 0 | 0 |
 | case-047-object-fit | 0 | 0 | 0 | 16 | 0 | 0 |
 | case-048-table-props | 0 | **3** | **3** | 33 | 0 | 0 |
 | case-049-multi-column | 3 | 0 | 0 | 0 | 0 | 0 |

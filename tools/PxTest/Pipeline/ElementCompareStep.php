@@ -282,6 +282,19 @@ class ElementCompareStep implements PipelineStepInterface
             }
 
             // 几何（锚点归一化坐标）
+            // 双方零盒豁免：w=h=0 的元素（Chrome 关闭态 select 的 option
+            // 返回全零 rect；引擎零盒契约坐标锶定宿主）——零盒无几何
+            // 语义，x/y 不可比（case-046 option 族 16 项实锤）；弹层 UA
+            // 样式同理豁免。集合同构/tag 比较保留。
+            $eZero = ((int)($e['w'] ?? 0) === 0 && (int)($e['h'] ?? 0) === 0);
+            $bZero = ((int)($b['w'] ?? 0) === 0 && (int)($b['h'] ?? 0) === 0);
+            if ($eZero && $bZero) {
+                continue;
+            }
+            // Chrome 屏外弹层坐标（历史抓取 y≈-37000）同源豁免
+            if (abs($bRX) > 5000 || abs($bRY) > 5000) {
+                continue;
+            }
             $geoChecks = [
                 'x' => [$eRX, $bRX],
                 'y' => [$eRY, $bRY],
