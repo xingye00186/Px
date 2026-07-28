@@ -508,7 +508,14 @@ class ComputedStyle
         }
         if (isset($d['aspectRatio'])) {
             $v = $d['aspectRatio'];
-            $this->aspectRatio = $v instanceof CssLength ? $v->toPx() : (float)$v;
+            // VNode 内联 style 烘焙为原始串（'16/9'）直达此处，不经
+            // StyleResolver parser：(float)'16/9'=16 → h=w/16（051 E h=12 vs
+            // B 112.5 实锤）。字符串一律走 a/b 语法解析（CSS-Sizing-4 §5）。
+            if (is_string($v)) {
+                $this->aspectRatio = CssValueParser::parseAspectRatio($v);
+            } else {
+                $this->aspectRatio = $v instanceof CssLength ? $v->toPx() : (float)$v;
+            }
         }
 
         // ── 定位（CssLength，支持百分比解析） ──
