@@ -2083,3 +2083,16 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 - **case-046 53→31 @3468b824（比较器零盒豁免）**：Chrome 关闭态 select 的 option 返回全零 rect，引擎零盒契约坐标锚定宿主——双方 w=h=0 时 x/y 无几何语义不可比（幻影 diff 16 项）。比较器对双零盒跳过几何+样式检查（tag/集合同构保留）+ 屏外弹层坐标（|coord|>5000）同源豁免。
 
 **剩余榜（404）**：046(31：appearance 控件族 x+33/y+55 链待归因)、048(45：导出注记为主)、050(31)、015(29)、021(24)、010(22)、019/038(20)、长尾精度族。
+
+### 27. case-048 三根因横扫批（本轮续）@bcec3753
+
+**成果**：case-048 45→26；**横扫全量 404→255（-149，-37%，17 case 改善零回归，039/016/017 清零）**；31/32。
+
+**三根因**：
+- **used-value 归一化（横扫主力）**：LayoutNormalizer 对 width/height 只在缺失/'0px' 时补 used，导致引擎导出的**声明**维度（width:100%→toPx '100px'、inline 盒 '64px'）与 B 的 getComputedStyle used px 不同源乱比。治本 = 非替换 display:inline 恒 'auto'（B 语义），其余盒（含 inline-block/blockified flex 子）恒以 used px 覆盖。**判据必须 display 非 tag**：首版按 tag 判 inline 使 inline-block span 误判 'auto' → MISMATCH 452 爆炸；且须置于 display 补全/flex-blockify **之后**。
+- **px 数值容差**：比较器对双方纯 px 值做数值化 |Δ|≤1 容差（B 357.5/715 vs E 358/716 半像素/取整序列化差，几何早有 tol 同源语义）。
+- **col 列区 rect**：TableAlgorithm col 元素回填为**列区** rect（取首行 cell 几何 col1 60×行高 / col2 648×行高），此前误给整行宽。
+
+**教训**：归一化层"仅缺失时补全"的惰性策略掩盖了声明/used 维度错源——used-value 语义必须无条件覆盖（getComputedStyle 恒 used）。这是 39/021/019/015 等多 case 注记族的共同根因，一改横扫。
+
+**剩余榜（255）**：048(26)、050(25)、046(23)、010(19)、038(20?)、019(9)、长尾精度族——余量以真值精度/字体度量固有差为主。
