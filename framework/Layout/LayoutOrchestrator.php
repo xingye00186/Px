@@ -314,6 +314,36 @@ class LayoutOrchestrator
         // P2/P3: Phase C 已删除——算法通过 layoutChild() 按需布局，无需外部重布局补丁
         // 对标 Blink：算法内部处理两阶段布局（measure → distribute → re-layout）
 
+        // 表单控件 UA 内在尺寸兑底（对标 Blink LayoutTheme control metrics，
+        // 真值反演 case-046：text input 默认 size≈20ch → 179×25；select 空盒
+        // UA 最小 18×10）：仅当无显式尺寸且算法产出塌缩/铺满时修正——
+        // 控件是替换元素，尺寸由 UA 而非内容流决定（HTML §15.3）。
+        $ntType = (string)$node->type;
+        if ($ntType === 'input' || $ntType === 'select' || $ntType === 'textarea'
+            || $ntType === 'progress' || $ntType === 'meter') {
+            $uaW = 0; $uaH = 0;
+            if ($ntType === 'input') { $uaW = 179; $uaH = 25; }
+            elseif ($ntType === 'select') { $uaW = 18; $uaH = 10; }
+            elseif ($ntType === 'textarea') { $uaW = 179; $uaH = 50; }
+            elseif ($ntType === 'progress' || $ntType === 'meter') { $uaW = 160; $uaH = 16; }
+            $hasExplW = $style !== null && $style->hasExplicitLength('width');
+            $hasExplH = $style !== null && $style->hasExplicitLength('height');
+            $fw = (int)$algoFrag->getW(); $fh = (int)$algoFrag->getH();
+            // 无显式宽且铺满父（block 旧契约残留）或塌 0 → UA 宽；高同理
+            $newW = (!$hasExplW && ($fw <= 0 || $fw >= (int)$space->getContentWidth())) ? $uaW : $fw;
+            $newH = (!$hasExplH && $fh < $uaH) ? $uaH : $fh;
+            if (($newW !== $fw || $newH !== $fh) && $uaW > 0) {
+                $algoFrag = new \Px\Layout\PhysicalFragment(
+                    $algoFrag->x, $algoFrag->y, (int)$newW, (int)$newH,
+                    (int)$newW, (int)$newH, $algoFrag->layer,
+                    (int)$newW, (int)$newH,
+                    $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
+                    $algoFrag->scrollTop, $algoFrag->scrollLeft, $algoFrag->isScrollContainer,
+                    $algoFrag->type !== '' ? $algoFrag->type : $ntType, $algoFrag->content, $algoFrag->dataset, $algoFrag->pseudoStyles
+                );
+            }
+        }
+
         // 应用 layer 继承 + 元数据打标 + 滚动容器同步
         $isScroll = $nodeIsScrollContainer || $algoFrag->getIsScrollContainer();
         // 对标 Blink NGPhysicalBoxFragment.scrollable_overflow_rect_：

@@ -254,11 +254,13 @@ class ComputedStyle
 
     private static function getDefaultsArray(string $elementType): array
     {
-        // 表单控件 UA 特例（对标 Blink menulist）：<select> 是替换控件
-        //（inline-block 盒）；<option>/<optgroup> 子树不产生常规布局盒——
-        // 零盒化在布局层（LayoutOrchestrator）处理而非 display:none
+        // 表单控件 UA 特例（对标 Blink UA html.css）：替换/控件类元素
+        // 均为 inline-block 盒（input/textarea/button/progress/meter/select）；
+        // <option>/<optgroup> 子树不产生常规布局盒——零盒化在布局层
+        //（LayoutOrchestrator）处理而非 display:none
         //（none 会被导出层丢弃破坏元素集合同构：浏览器导出 0 盒）。
-        if ($elementType === 'select') {
+        if ($elementType === 'select' || $elementType === 'input' || $elementType === 'textarea'
+            || $elementType === 'button' || $elementType === 'progress' || $elementType === 'meter') {
             $defaultDisplay = 'inline-block';
         } else {
             $defaultDisplay = self::TABLE_DISPLAY_MAP[$elementType]

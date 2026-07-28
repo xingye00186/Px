@@ -1,17 +1,17 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-27 21:46:35 | **总耗时**: 43.8s
+**运行时间**: 2026-07-28 08:30:54 | **总耗时**: 41.4s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 36.6s |
+| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 34.3s |
 | case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff 🔴1 | ⏭️ | ❌ 失败 | 0.1s |
 | case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-005-grid-layout | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 55diff 🔴51 | ⏭️ | ❌ 失败 | 0.1s |
 | case-006-typography | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-007-border-styles | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 92diff 🔴48 | ⏭️ | ❌ 失败 | 0.1s |
-| case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff 🟡34 | ⏭️ | ❌ 失败 | 0s |
+| case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 34diff 🟡34 | ⏭️ | ❌ 失败 | 0.1s |
 | case-009-outline | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 31diff 🟡31 | ⏭️ | ❌ 失败 | 0.1s |
 | case-010-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 22diff | ⏭️ | ❌ 失败 | 0.1s |
 | case-011-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 31diff 🔴3 | ⏭️ | ❌ 失败 | 0.1s |
@@ -34,7 +34,7 @@
 | case-028-scroll-block | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.4s |
 | case-029-scroll-flex-col | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 0.5s |
 | case-030-scroll-flex-row | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 0.2s |
-| case-031-scroll-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 0.5s |
+| case-031-scroll-grid | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 0.4s |
 | case-032-scroll-relative | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.4s |
 | case-033-text-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 30diff 🟡30 | ⏭️ | ❌ 失败 | 0.1s |
 | case-034-letter-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 38diff 🟡38 | ⏭️ | ❌ 失败 | 0.1s |
@@ -49,18 +49,18 @@
 | case-043-resize | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 63diff 🟡44 | ⏭️ | ❌ 失败 | 0.1s |
 | case-044-background-attachment | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 47diff 🟡38 | ⏭️ | ❌ 失败 | 0.1s |
 | case-045-text-decoration | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 42diff 🟡34 | ⏭️ | ❌ 失败 | 0.2s |
-| case-046-appearance | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 220diff 🔴36 | ⏭️ | ❌ 失败 | 0.1s |
+| case-046-appearance | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 132diff 🔴73 | ⏭️ | ❌ 失败 | 0.1s |
 | case-047-object-fit | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 46diff 🟡30 | ⏭️ | ❌ 失败 | 0.1s |
-| case-048-table-props | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 190diff 🔴19 | ⏭️ | ❌ 失败 | 0.1s |
+| case-048-table-props | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 190diff 🔴19 | ⏭️ | ❌ 失败 | 0.2s |
 | case-049-multi-column | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 315diff 🔴308 | ⏭️ | ❌ 失败 | 0.2s |
-| case-050-text-emphasis | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 278diff 🔴50 | ⏭️ | ❌ 失败 | 0.1s |
+| case-050-text-emphasis | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 278diff 🔴50 | ⏭️ | ❌ 失败 | 0.2s |
 | case-051-aspect-ratio | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 12diff 🔴9 | ⏭️ | ❌ 失败 | 0s |
 | case-052-flow-root | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0s |
 | case-053-intrinsic-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 7diff 🔴4 | ⏭️ | ❌ 失败 | 0s |
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 15diff 🔴8 | ⏭️ | ❌ 失败 | 0s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 16diff 🔴4 | ⏭️ | ❌ 失败 | 0s |
 
-**汇总**: 8 ✅ / 47 ❌ / 55 总计 (总耗时: 43.8s)
+**汇总**: 8 ✅ / 47 ❌ / 55 总计 (总耗时: 41.4s)
 
 ## 回归判定
 
@@ -69,7 +69,7 @@
 > - case-007-border-styles major 23->26
 > - case-044-background-attachment geometry 35->38
 > - case-044-background-attachment major 35->38
-> - case-046-appearance major 13->117
+> - case-046-appearance major 13->34
 > - case-050-text-emphasis structure 0->2
 >
 > ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
@@ -78,8 +78,8 @@
 
 | 属性 | 通过率 | 通过/总 |
 |------|--------|--------|
-| width | 98.5% | 8393/8524 |
-| height | 98.7% | 8414/8524 |
+| width | 98.5% | 8395/8524 |
+| height | 98.7% | 8417/8524 |
 | overflow-x | 99.9% | 8513/8524 |
 | overflow-y | 99.9% | 8513/8524 |
 | margin-right | 99.9% | 8519/8524 |
@@ -100,7 +100,7 @@
 | border-left-width | 100% | 8524/8524 |
 | text-align | 100% | 8517/8517 |
 | border-radius | 100% | 8318/8318 |
-| display | 100% | 8271/8271 |
+| display | 100% | 8273/8273 |
 | background-color | 100% | 8124/8127 |
 | font-size | 100% | 7474/7474 |
 | align-items | 95.3% | 61/64 |
@@ -192,7 +192,7 @@
 | case-043-resize | 0 | 0 | **44** | 0 | 19 | 0 |
 | case-044-background-attachment | 0 | 0 | **38** | 9 | 0 | 0 |
 | case-045-text-decoration | 0 | 0 | **34** | 8 | 0 | 0 |
-| case-046-appearance | 2 | **36** | **117** | 27 | 0 | 0 |
+| case-046-appearance | 2 | **73** | **34** | 22 | 0 | 0 |
 | case-047-object-fit | 0 | 0 | **30** | 16 | 0 | 0 |
 | case-048-table-props | 0 | **19** | **31** | 47 | 0 | 0 |
 | case-049-multi-column | 3 | **308** | 0 | 7 | 0 | 0 |

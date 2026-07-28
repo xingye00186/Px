@@ -1,4 +1,4 @@
-@generated 2026-07-27 09:42:55
+@generated 2026-07-28 00:35:04
 === Test: outline-width:3px 解析 ===
 Frame #1 events=0 detail=normal
 div (0,0 100x50) text="Outlined"
@@ -47,13 +47,13 @@ div (0,0 150x80) scroll ch=40 cw=150 maxScroll=0 st=0 sl=0 ov=scroll
 
 === Test: input placeholder 文本 ===
 Frame #1 events=0 detail=normal
-input (0,0 200x36)
+input (0,0 200x36) [dsp=inline-block]
 
 ---
 
 === Test: 空 input 无 placeholder 不显示 ===
 Frame #1 events=0 detail=normal
-input (0,0 200x36)
+input (0,0 200x36) [dsp=inline-block]
 
 ---
 

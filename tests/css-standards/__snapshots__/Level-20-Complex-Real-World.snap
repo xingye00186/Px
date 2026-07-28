@@ -1,4 +1,4 @@
-@generated 2026-07-27 09:42:55
+@generated 2026-07-28 00:35:04
 === Test: Dashboard 侧边栏+头部+主内容 ===
 Frame #1 events=0 detail=normal
 div (0,0 900x600) [dsp=grid]
@@ -79,11 +79,11 @@ div (0,0 800x500) [dsp=flex]
 Frame #1 events=0 detail=normal
 div (0,0 500x378) [dsp=grid]
   div (0,0 120x31) text="Username:"
-  input (248,0 252x31) bw=1
+  input (248,0 252x31) [dsp=inline-block] bw=1
   div (0,159 120x31) text="Password:"
-  input (248,159 252x31) bw=1
+  input (248,159 252x31) [dsp=inline-block] bw=1
   div (0,318 120x60) text="Bio:"
-  textarea (248,318 252x60) bw=1
+  textarea (248,318 252x60) [dsp=inline-block] bw=1
 
 ---
 
