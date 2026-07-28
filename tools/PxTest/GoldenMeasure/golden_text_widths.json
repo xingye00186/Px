@@ -167,6 +167,8 @@
     {"text": "Table area", "fontSize": 14, "bold": true, "width": 76},
     {"text": "Row 1 data", "fontSize": 13, "bold": false, "width": 64},
     {"text": "Row 2 data", "fontSize": 13, "bold": false, "width": 64},
-    {"text": "Row 3 data", "fontSize": 13, "bold": false, "width": 64}
+    {"text": "Row 3 data", "fontSize": 13, "bold": false, "width": 64},
+
+    {"text": "★ 生成内容", "fontSize": 16, "bold": false, "width": 84}
   ]
 }

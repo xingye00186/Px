@@ -1,4 +1,4 @@
-@generated 2026-07-28 09:43:34
+@generated 2026-07-28 11:10:19
 === Test: Grid 内嵌 flex 实现卡片网格 ===
 Frame #1 events=0 detail=normal
 div (0,0 964x192) [dsp=grid]
@@ -16,9 +16,9 @@ div (0,0 1440x56) [dsp=flex]
   div (24,16 24x24)
   div (64,18 1288x19) [dsp=flex] fg=1
     div (64,18 72x19) text="Bilibili"
-    div (160,18 54x19) text="推荐"
-    div (238,18 54x19) text="热门"
-    div (316,18 54x19) text="关注"
+    div (160,18 32x19) text="推荐"
+    div (216,18 32x19) text="热门"
+    div (272,18 32x19) text="关注"
   div (1352,12 80x32)
 
 ---
@@ -32,11 +32,11 @@ div (700,400 48x48) [pos=fixed] text="Top"
 === Test: CategoryTabs 可滚动标签栏 ===
 Frame #1 events=0 detail=normal
 div (0,0 1440x44) [dsp=flex] scroll ch=36 cw=1440 maxScroll=0 st=0 sl=0 ov=auto
-  div (16,8 70x28) text="推荐"
-  div (98,8 70x28) text="热门"
-  div (180,8 70x28) text="游戏"
-  div (262,8 70x28) text="科技"
-  div (344,8 70x28) text="生活"
+  div (16,8 54x28) text="推荐"
+  div (82,8 54x28) text="热门"
+  div (148,8 54x28) text="游戏"
+  div (214,8 54x28) text="科技"
+  div (280,8 54x28) text="生活"
 
 ---
 
@@ -48,8 +48,8 @@ div (0,0 300x222) [dsp=flex] ov=hidden
     div (8,176 284x20) text="视频标题最多两行"
     div (8,200 284x14) [dsp=flex]
       div (8,200 284x14) [dsp=flex] text="UP主名称"
-      div (300,200 14x14) text="·"
-      div (322,200 42x14) text="1.2万"
+      div (300,200 12x14) text="·"
+      div (320,200 33x14) text="1.2万"
 
 ---
 
@@ -75,10 +75,10 @@ div (0,0 1440x900) [dsp=flex]
     div (24,16 24x24)
     div (48,18 1368x19) [dsp=flex] fg=1
       div (48,18 72x19) text="Bilibili"
-      div (144,18 54x19) text="推荐"
+      div (144,18 32x19) text="推荐"
   div (0,56 1440x44) [dsp=flex] scroll ch=33 cw=1408 maxScroll=0 st=0 sl=0 ov=auto
-    div (16,66 82x23) text="推荐"
-    div (110,66 82x23) text="热门"
+    div (16,66 60x23) text="推荐"
+    div (88,66 60x23) text="热门"
   div (0,100 1440x800) scroll ch=216 cw=1408 maxScroll=0 st=0 sl=0 ov=auto fg=1
     div (16,116 1408x200) text="Content Area"
   div (700,400 48x48) [pos=fixed]

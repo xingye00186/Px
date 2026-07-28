@@ -39,10 +39,15 @@ function sk_measure_text_width(string $text, int $fontSize, int $bold): int {
     if (getenv('PX_PHP_RUNTIME') && class_exists('\\PxTest\\Bootstrap\\GoldenTextWidth')) {
         $w = \PxTest\Bootstrap\GoldenTextWidth::measure($text, $fontSize, $bold !== 0);
         if ($w !== null) return $w;
-        // Fallback: simple per-char estimation (avg char width ~0.6 * fontSize)
+        // Fallback: per-charclass estimation - ASCII keeps legacy per-char floor
+        // ((int)(0.6em) per char, snapshot-stable), multibyte/CJK ~1.0em/char
+        // (old strlen-bytes counted CJK as 3x0.6=1.8em/char; case-050 pseudo
+        // ::before E144 vs B84 x=60 family root cause: stub shadowed engine fix)
         $charWidth = (int)($fontSize * 0.6);
-        $estimated = $charWidth * strlen($text);
-        return $estimated;
+        $asciiOnly = preg_replace('/[\x80-\xFF]+/', '', $text);
+        $asciiLen = strlen($asciiOnly !== null ? $asciiOnly : $text);
+        $multiLen = max(0, mb_strlen($text, 'UTF-8') - $asciiLen);
+        return $asciiLen * $charWidth + $multiLen * $fontSize;
     }
     return 0;
 }
