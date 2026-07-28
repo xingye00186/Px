@@ -537,13 +537,26 @@ class InlineAlgorithm extends LayoutAlgorithm
                     }
                 }
 
+                // 子树随 atomic 放置平移（平移完备性不变量第五处：stack/table/
+                // OOF/grid 之外的 IFC atomic 点；case-054 inline-block 含块子
+                // 内容滞留预布局原点 x=84/y=40 族实锤）。
+                $atomX = (int)($startX + $cursorX + $item->marginLeft);
+                $atomY = (int)($startY + $finalY + $emphExtra);
+                $atomKids = $cr->children;
+                $atomDx = $atomX - (int)$cr->getX();
+                $atomDy = $atomY - (int)$cr->getY();
+                if (($atomDx !== 0 || $atomDy !== 0) && is_array($atomKids) && count($atomKids) > 0) {
+                    $atomMoved = [];
+                    foreach ($atomKids as $atomCh) { $atomMoved[] = FlexAlgorithm::translateFragmentTree($atomCh, $atomDx, $atomDy); }
+                    $atomKids = $atomMoved;
+                }
                 $result[] = new PhysicalFragment(
-                    (int)($startX + $cursorX + $item->marginLeft),
-                    (int)($startY + $finalY + $emphExtra),
+                    $atomX,
+                    $atomY,
                     (int)($cr->getW() ?? 0), (int)($cr->getH() ?? 0),
                     0, 0, (int)($cr->getLayer() ?? 0),
                     (int)($cr->getContentWidth() ?? 0), (int)($cr->getContentHeight() ?? 0),
-                    $cr->style, $cr->children, $cr->sourceNode,
+                    $cr->style, $atomKids, $cr->sourceNode,
                     $cr->scrollTop, $cr->scrollLeft, $cr->isScrollContainer,
                     $cr->type, $cr->content, $cr->dataset, $cr->pseudoStyles,
                     (int)$cr->textWidth, (string)$cr->displayText,
