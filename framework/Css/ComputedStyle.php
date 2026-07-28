@@ -237,6 +237,20 @@ class ComputedStyle
                 $merged[$key] = $parentDeclarations[$key];
             }
         }
+        // Chrome UA 表格系：tbody/thead/tfoot/tr/td/th { border-color: inherit }
+        //（非真继承属性，不入 INHERITED_KEYS）：仅色分量从父提取，
+        // 宽/样式不继承（tbody 无自身 border 仍报父色，048 B tbody
+        // blc=#a5d6a7/#ffcc80 vs E 恒黑实锤；父色由 toExportArray 出口
+        // 闸门补真值道供给）。
+        if (in_array($elementType, ['tbody', 'thead', 'tfoot', 'tr', 'td', 'th'], true)
+            && !isset($declarations['borderColor']) && !isset($declarations['border'])
+            && !isset($declarations['borderTopColor']) && !isset($declarations['borderLeftColor'])
+            && isset($parentDeclarations['borderColor'])) {
+            $pbc = self::safeInt($parentDeclarations['borderColor']);
+            if ($pbc !== 0) {
+                $merged['borderColor'] = $pbc;
+            }
+        }
 
         $this->applyDeclarations($merged);
         $this->frozen = true;
@@ -1011,6 +1025,14 @@ class ComputedStyle
             }
         }
         $this->exportCache = $result;
+        // 出口闸门补真值：border 简写场景 raw 无 borderColor 键（管道串在
+        // 'border'，不在 EXPORT_KEYS）→ 再构造链（patch 降级路径 toExportArray
+        // 回灌 new ComputedStyle）永久丢色，UA 表格系 border-color:inherit
+        // 无源可继（048 tbody 恒黑 backtrace 实锤）。用已解析属性补。
+        if (!isset($result['borderColor']) && $this->borderColor !== 0) {
+            $result['borderColor'] = $this->borderColor;
+            $this->exportCache = $result;
+        }
         $this->exportCached = true;
         return $result;
     }

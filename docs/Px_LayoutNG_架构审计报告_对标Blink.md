@@ -2217,3 +2217,21 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 **储备（014 余 2）**：margin:auto used 值导出——引擎 dump 中 marginLeft 已是 0（auto 哨兵在布局侧被消费为 0 写回 style 导出），Normalizer 无从判 auto；治本需引擎导出层保留 auto 声明哨兵或导出 used margin（与 §32 再构造链同属序列化改造批）。
 
 **剩余榜（114，累计 4500→114 = -97.5%，22 case 清零）**：050(25)/048(21) 精度+固有差+再构造链储备；055(12)+044(6) 滚动条族余部；007/045(各8)、046/053(各7)、019(7 右对齐 x±2) 长尾；054(3)、002/005/014(2)、011/026/051/052(1) 尾差。
+
+### 36. 048 border-color:inherit 储备兑现：再构造链双闸门治本（2026-07-29）
+
+**批次**：序列化改造批第一击（全量 114→110，-4；048 21→17；31/32 gates）
+
+**归因（§32 储备 backtrace 实锤收口）**：
+- debug_backtrace 探针锁定再构造链：`patchKeyedChildren`（Phase 3 Mount，RenderTreeManager:1298）沿链传 `$resolvedStyle`（toExportArray 数组）作 `$parentStyle` → L881 降级路径 `new ComputedStyle($parentStyle)` 重构临时父 CS。toExportArray 只出 EXPORT_KEYS，border 管道串键丢失 → 临时父 bc=0 → tbody 无色可继。
+- 上轮"UA 继承规则零效果"的真因即此：消费点实现正确，但父声明供给链断在 toExportArray 出口。
+
+**治本（双闸门）**：
+1. **出口闸门**（toExportArray）：raw 无 borderColor 键且已解析 `$this->borderColor≠0` 时补真值入导出数组——一次修复覆盖所有 toExportArray 消费方（StylePool parentDecls / patch 降级路径 / withOverride）。
+2. **消费闸门**（构造器）：Chrome UA 表格系 `tbody/thead/tfoot/tr/td/th { border-color:inherit }`（非真继承属性，不入 INHERITED_KEYS）——自身无 border 系声明且父有 borderColor 时取父色分量。
+
+**结果**：048 border-left-color 4 项全清（21→17），全量 114→110 零回归，31/32。
+
+**方法论**：储备归因的"三层否定"（消费点 → parentDecls → StylePool 补道）全部正确但都不在断点上——backtrace 一击即中断链真位。供给链问题先 backtrace 定构造现场，再决定修哪个闸门。
+
+**剩余榜（110）**：050(25)/048(17 精度) 固有差+精度；055(12)+044(6) 滚动条族；007/045(各8)、046/053(各7)、019(7) 长尾；054(3)、002/005/014(各2)、011/026/051/052(各1) 尾差。
