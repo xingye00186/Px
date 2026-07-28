@@ -606,8 +606,16 @@ class FlexAlgorithm extends LayoutAlgorithm
                     $hasExplicitCross = ($crossProp !== null && !$crossProp->isPercent() && $crossProp->toPx() > 0);
                 }
                 if ($effAlign === 'stretch' && !$hasExplicitCross && $crossSize < $lineMaxCross) {
-                    if ($isRow) $fi->h = $lineMaxCross;
-                    else $fi->w = $lineMaxCross;
+                    // §9.4.11：stretch used size = 行交叉尺寸 − 交叉轴 margin
+                    //（038 ul margin-left:24 → E 716 vs B 692 实锤）
+                    $mCrossA = 0;
+                    if ($fi->computedStyle !== null) {
+                        $mCrossA = $isRow
+                            ? (int)($fi->computedStyle->margin?->top->toPx() ?? 0) + (int)($fi->computedStyle->margin?->bottom->toPx() ?? 0)
+                            : (int)($fi->computedStyle->margin?->left->toPx() ?? 0) + (int)($fi->computedStyle->margin?->right->toPx() ?? 0);
+                    }
+                    if ($isRow) $fi->h = max(0, $lineMaxCross - $mCrossA);
+                    else $fi->w = max(0, $lineMaxCross - $mCrossA);
                 } else if (!$isRow && $effAlign !== 'stretch' && !$hasExplicitCross && $crossSize <= 0) {
                     // 对标 Blink：非 stretch 对齐下交叉轴 auto 尺寸 = fit-content
                     // （浏览器 ground truth：column+align-items:center 的文本子项宽 = 内容宽 180，非 0/全宽）
@@ -757,9 +765,16 @@ class FlexAlgorithm extends LayoutAlgorithm
                     $hasExplicitCross2 = ($crossProp2 !== null && !$crossProp2->isPercent() && $crossProp2->toPx() > 0);
                 }
                 if ($effAlign === 'stretch' && !$hasExplicitCross2) {
-                    if ($isRow) $fi->h = $lineMaxCross;
-                    else $fi->w = $lineMaxCross;
-                    $crossSize = $lineMaxCross;
+                    // §9.4.11：stretch used size = 行交叉尺寸 − 交叉轴 margin（同 4e）
+                    $mCrossB = 0;
+                    if ($fi->computedStyle !== null) {
+                        $mCrossB = $isRow
+                            ? (int)($fi->computedStyle->margin?->top->toPx() ?? 0) + (int)($fi->computedStyle->margin?->bottom->toPx() ?? 0)
+                            : (int)($fi->computedStyle->margin?->left->toPx() ?? 0) + (int)($fi->computedStyle->margin?->right->toPx() ?? 0);
+                    }
+                    if ($isRow) $fi->h = max(0, $lineMaxCross - $mCrossB);
+                    else $fi->w = max(0, $lineMaxCross - $mCrossB);
+                    $crossSize = $isRow ? $fi->h : $fi->w;
                 }
 
                 // Cross-axis offset within line
