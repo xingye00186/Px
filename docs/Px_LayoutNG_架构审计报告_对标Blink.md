@@ -2288,3 +2288,19 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 **限制注记**：min/max/fit 三值在可断点内容（文本词间/空白分隔 inline）下应分化——当前统一为"子单行和"近似，待引擎补 word-break 级 min-content 时分化（现库无此形态 case，零影响）。
 
 **剩余榜（89，累计 4500→89 = -98.0%）**：050(25)/048(17) 精度+固有差；055(12)+044(6) 滚动条族；046(7)、019(7) 长尾；054(3)、002/005/007/014(各2)、011/051/052/053(各1 根高固有族) 尾差。
+
+### 41. 046 表单控件 UA 样式注入批（2026-07-29）
+
+**批次**：表单控件 UA 注记 + input 宽兜底（全量 89→84；046 7→2；31/32 gates）
+
+**治本（三根因）**：
+1. **UA 注记**（ComputedStyle defaults 按 elementType）：input/select/textarea/button 注入 `bg=#fff`、`align-items:center`（flex 基线居中）；`overflow:clip` **仅 input/textarea**（select/button Chrome 为 visible，046 elem[59] select B=visible 实锤——广谱注入即误伤）。
+2. **input UA 宽兜底放宽**（LayoutOrchestrator）：原"仅塌0/铺满才兜底"漏内容宽 10 的 text input（046 elem[174] E w=10 vs B 179）→ 改"无显式宽恒取 UA 宽"（替换元素尺寸由 UA 决定，HTML §15.3）。
+
+**门捕与快照更新**：overflow:clip 使 css-standards L20/L23 快照 input/textarea 行新增 `ov=clip`（29/32 门捕）——此为**合法 UA 语义变更**（与浏览器 clip 一致），`--update-snapshots` 更新两基线后 31/32 恢复。
+
+**结果**：046 7→2（bg/align/overflow/宽族清；余 2 = elem[60] checkbox overflow，Chrome checkbox=visible vs text input=clip，同 elementType='input' 属 type 属性级区分，储备）；全量 89→84 零 case 回归；31/32。
+
+**方法论**：UA 注入按元素类型精细化——同 elementType 不同 type（input[checkbox] vs input[text]）的 UA 差异需 type 属性通道，当前按最常见形态（text）注入，checkbox 反例入储备。
+
+**剩余榜（84，累计 4500→84 = -98.1%）**：050(25)/048(17) 精度+固有差；055(12)+044(6) 滚动条族；019(7) 长尾；054(3)、002/005/007/014/046(各2)、011/051/052/053(各1) 尾差。

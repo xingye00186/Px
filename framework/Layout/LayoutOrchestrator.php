@@ -308,8 +308,10 @@ class LayoutOrchestrator
             $hasExplW = $style !== null && $style->hasExplicitLength('width');
             $hasExplH = $style !== null && $style->hasExplicitLength('height');
             $fw = (int)$algoFrag->getW(); $fh = (int)$algoFrag->getH();
-            // 无显式宽且铺满父（block 旧契约残留）或塌 0 → UA 宽；高同理
-            $newW = (!$hasExplW && ($fw <= 0 || $fw >= (int)$space->getContentWidth())) ? $uaW : $fw;
+            // 无显式宽 → 恒 UA 宽（替换元素尺寸由 UA 而非内容流决定，
+            // HTML §15.3；此前仅塌 0/铺满才兜底，内容宽 10 漏网——
+            // 046 input E w=10 vs B 179 实锤）；高同理保持下限兜底。
+            $newW = !$hasExplW ? $uaW : $fw;
             $newH = (!$hasExplH && $fh < $uaH) ? $uaH : $fh;
             if (($newW !== $fw || $newH !== $fh) && $uaW > 0) {
                 $algoFrag = new \Px\Layout\PhysicalFragment(

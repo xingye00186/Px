@@ -286,6 +286,14 @@ class ComputedStyle
             $defaultDisplay = self::TABLE_DISPLAY_MAP[$elementType]
                 ?? (in_array($elementType, self::INLINE_TYPES, true) ? 'inline' : 'block');
         }
+        // Chrome UA 表单控件样式注记（html.css/LayoutTheme，按元素选择器
+        // 注入——L24 门捕教训：div[display:inline-block] 不适用）：
+        // bg=white、align-items:center、overflow:clip（046 B 真值实锤）。
+        $isFormControl = ($elementType === 'select' || $elementType === 'input'
+            || $elementType === 'textarea' || $elementType === 'button');
+        // overflow:clip 仅 input/textarea（Chrome UA：select/button 为 visible，
+            // 046 elem[59] select B=visible 实锤）。
+        $isClipControl = ($elementType === 'input' || $elementType === 'textarea');
         return [
             'width' => CssLength::px(0),
             'height' => CssLength::px(0),
@@ -297,17 +305,17 @@ class ComputedStyle
             'gap' => CssLength::px(0),
             'columnGap' => CssLength::px(0),
             'rowGap' => CssLength::px(0),
-            'bg' => CssColor::transparent(),
+            'bg' => $isFormControl ? CssColor::fromString('#ffffff') : CssColor::transparent(),
             'fg' => CssColor::transparent(),
             'display' => new CssKeyword($defaultDisplay),
             'position' => new CssKeyword('static'),
-            'overflow' => new CssKeyword('visible'),
-            'overflowX' => new CssKeyword('visible'),
-            'overflowY' => new CssKeyword('visible'),
+            'overflow' => new CssKeyword($isClipControl ? 'clip' : 'visible'),
+            'overflowX' => new CssKeyword($isClipControl ? 'clip' : 'visible'),
+            'overflowY' => new CssKeyword($isClipControl ? 'clip' : 'visible'),
             'boxSizing' => new CssKeyword('border-box'),
             'flexDirection' => new CssKeyword('row'),
             'flexWrap' => new CssKeyword('nowrap'),
-            'alignItems' => new CssKeyword('stretch'),
+            'alignItems' => new CssKeyword($isFormControl ? 'center' : 'stretch'),
             'alignContent' => new CssKeyword('stretch'),
             'alignSelf' => new CssKeyword('auto'),
             'justifyContent' => new CssKeyword('flex-start'),
