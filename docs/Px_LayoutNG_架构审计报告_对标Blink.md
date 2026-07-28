@@ -2109,3 +2109,21 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 3. **046 ap-pointer 宽 64 vs 96（fit-content 漏 pad）**：InlineAlgorithm shrink-to-fit 与 FlexAlgorithm fit-content 两处补边缘均零效果（第三条宽路径未定位）+ L20 门捕，双回退。046 剩余 x+16/y+9 链待第三路径归因。
 
 **剩余榜（196）**：048(26)/050(25)/046(23) 精度+固有差；054(12)/051-y(10)/044+055(24) 结构储备；长尾 12 case ≤10。累计 4500→196（-95.6%），14 case 完全清零。
+
+### 29. case-046 第三宽路径实锤：inline-block shrink-to-fit 丢自身边缘（2026-07-29）
+
+**批次**：046 inline-block used-width 批（全量 196→180，-16；046 23→7；31/32 gates）
+
+**归因（插桩实锤，推翻前轮"零效果"否定结论）**：
+- ap-pointer（px-92，inline-block + padding:8px 16px + border-box）E w=64 vs B 96（差 32 = padLR）。
+- 前轮"shrink-to-fit 补边缘"实验补错了消费点 → 零效果被误判为"非此路径"。本轮 `PX_046_PROBE` 插桩在 `InlineAlgorithm::layout` inline-block 分支直接命中：`w=64 padLR=32 bwLR=0 sizing=border-box`——**该分支就是第三宽路径**。
+- 双根因：
+  1. **宽**：border-box 分支 `$w = $sizes->shrinkToFit($availableW)` 直取 content 内在宽。shrink-to-fit 的 min/max-content 恒为 content 尺寸，fragment w 恒为 border-box used width（CSS 2.2 §10.3.5；box-sizing 对 auto 宽无别义）→ 统一为 `shrinkToFit(contentAvail) + padLR + bwLR`，原 border-box/content-box 双分支合一。
+  2. **子起点**：单行排列 `$cursorX = $x`、`y` 未偏移自身 padding/border → 子 x 缺 16（padding-left）、y 缺 8+1（padding-top + strut 半差）。inline-block 时起点加 `padL+bL / padT+bT`（第五处 atomic 平移整树搬运该相对结构，B 子 x+16/y+9 族随宽修复一并全清）。
+
+**结果**：046 GEOMETRY 17→1、总 23→7（余 MISMATCH 6 为 background-color/align-items/overflow 样式注记 + w 精度 1 项）；全量 196→180 零 case 回归；31/32。
+
+**方法论沉淀（否定结论的可推翻性）**：
+- "补边缘零效果"类否定结论只证明**改动点不在消费链上**，不证明"根因不在该算法"。复查同一算法的**其他消费分支**（本例：border-box 分支绕过了 content-box 分支的补边缘逻辑）必须以插桩实锤为准，不得沿用历史否定直接跳过。
+
+**剩余榜（180）**：048(26)/050(25) 精度+固有差；054(12) inline-block 含块子竖排储备；044+055(24) classic 滚动条族；051(10) y 链；046(7)/047(8)/045(8)/019(9)/021(8)/015(8)/007(8) 精度长尾。

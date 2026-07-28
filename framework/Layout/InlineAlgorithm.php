@@ -105,14 +105,13 @@ class InlineAlgorithm extends LayoutAlgorithm
                 $sizes = $this->computeMinMaxSizes($space, $s, $textContent, $childNodes);
                 $padLR = (int)($s->padding?->left->toPx() ?? 0) + (int)($s->padding?->right->toPx() ?? 0);
                 $bwLR = (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
-                $sizing = $s->boxSizing?->value ?? 'content-box';
-                if ($sizing === 'border-box') {
-                    $w = $sizes->shrinkToFit($availableW);
-                } else {
-                    // content-box: shrink-to-fit 在内容区域内计算
-                    $contentAvail = max(0, $availableW - $padLR - $bwLR);
-                    $w = $sizes->shrinkToFit($contentAvail);
-                }
+                // shrink-to-fit 的 min/max-content 是 content 尺寸；fragment w 恒为
+                // border-box used width（CSS 2.2 §10.3.5 + box-sizing 对 auto 宽
+                // 无别义）：在 content 可用区 shrink 后加回自身 padding/border。
+                // 此前 border-box 分支直取 content 宽（ap-pointer E w=64 vs
+                // B 96 = 64+padLR32，case-046 第三宽路径插桩实锤）。
+                $contentAvail = max(0, $availableW - $padLR - $bwLR);
+                $w = $sizes->shrinkToFit($contentAvail) + $padLR + $bwLR;
                 // min-width clamp
                 $minW = $s->minWidth?->toPx() ?? 0;
                 if ($minW > 0 && $w < $minW) $w = $minW;
@@ -178,11 +177,19 @@ class InlineAlgorithm extends LayoutAlgorithm
         }
 
         // IFC: arrange children in a single line
+        // inline-block（atomic）子坐标为最终相对结构（第五处平移整树搬运保留
+        // 相对布局）：起点须偏移自身 padding/border（B 子 x+16/y+8 族实锤）。
+        $kidOffX = 0;
+        $kidOffY = 0;
+        if ($isInlineBlock) {
+            $kidOffX = (int)($s->padding?->left->toPx() ?? 0) + (int)($s->getBorderLeftWidth() ?? 0);
+            $kidOffY = (int)($s->padding?->top->toPx() ?? 0) + (int)($s->getBorderTopWidth() ?? 0);
+        }
         $stackedChildren = [];
-        $cursorX = $x;
+        $cursorX = $x + $kidOffX;
         foreach ($children as $cr) {
             $stackedChildren[] = new PhysicalFragment(
-                (int)$cursorX, (int)$y,
+                (int)$cursorX, (int)($y + $kidOffY),
                 (int)($cr->getW() ?? 0), (int)($cr->getH() ?? 0),
                 (int)($cr->getVisualW() ?? $cr->getW() ?? 0),
                 (int)($cr->getVisualH() ?? $cr->getH() ?? 0),
