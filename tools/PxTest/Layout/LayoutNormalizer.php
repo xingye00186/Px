@@ -233,7 +233,7 @@ class LayoutNormalizer
      * 递归展平树并规范化每个节点。
      * 同时传播继承属性（text-align 等 CSS 继承属性）。
      */
-    private function flatten(array $node, int $depth, array $parentInherited = [], ?string $parentDisplay = null, int $parentOffsetX = 0, int $parentOffsetY = 0): array
+    private function flatten(array $node, int $depth, array $parentInherited = [], ?string $parentDisplay = null, int $parentOffsetX = 0, int $parentOffsetY = 0, ?array $parentContent = null): array
     {
         $result = [];
 
@@ -270,6 +270,17 @@ class LayoutNormalizer
             // 使用累加偏移覆盖 x/y（需在加入 result 之前赋值）
             $element['x'] = $currentOffsetX;
             $element['y'] = $currentOffsetY;
+            // margin:auto used 值（getComputedStyle 报 used px，CSS 2.2 §10.3.3）：
+            // 以引擎 dump 哨兵（marginLeftAuto/RightAuto，序列化层从 CssRect
+            // 导出）为门禁 + 父 content 区 rect 反推——纯几何等隙推断已否定
+            //（误伤恰好居中的非 auto 块，台账 §37）。
+            $stAuto = $node['style'] ?? [];
+            if ($parentContent !== null && (!empty($stAuto['marginLeftAuto']) || !empty($stAuto['marginRightAuto']))) {
+                $lg = max(0, (int)$currentOffsetX - (int)$parentContent[0]);
+                $rg = max(0, (int)$parentContent[1] - ((int)$currentOffsetX + (int)($element['w'] ?? 0)));
+                if (!empty($stAuto['marginLeftAuto'])) { $element['styles']['margin-left'] = $lg . 'px'; }
+                if (!empty($stAuto['marginRightAuto'])) { $element['styles']['margin-right'] = $rg . 'px'; }
+            }
             $result[] = $element;
         }
 
@@ -323,7 +334,17 @@ class LayoutNormalizer
             if (is_array($child)) {
                 // testroot 被跳过时子级 depth 不递增（浏览器契约：testroot 子级 = depth 0），
                 // 其继承链（text-align/font-size）仍照常下传。
-                $result = array_merge($result, $this->flatten($child, $isTestroot ? $depth : $depth + 1, $childInherited, $childDisplay, $currentOffsetX, $currentOffsetY));
+                // 本节点 content 区供子的 auto-margin used 反推；仅已导出元素与
+                // testroot（真实 CB）更新，未导出的引擎匿名 wrapper 穿透传上游
+                //（014 全窗宽 wrapper 致 used 275 vs B 250 实锤）。
+                $childContent = $parentContent;
+                if ($element !== null || $isTestroot) {
+                    $stN = $node['style'] ?? [];
+                    $ccx = $currentOffsetX + (int)($stN['paddingLeft'] ?? 0) + (int)($stN['borderLeftWidth'] ?? 0);
+                    $ccr = $currentOffsetX + (int)($node['w'] ?? 0) - (int)($stN['paddingRight'] ?? 0) - (int)($stN['borderRightWidth'] ?? 0);
+                    $childContent = [$ccx, $ccr];
+                }
+                $result = array_merge($result, $this->flatten($child, $isTestroot ? $depth : $depth + 1, $childInherited, $childDisplay, $currentOffsetX, $currentOffsetY, $childContent));
             }
         }
 

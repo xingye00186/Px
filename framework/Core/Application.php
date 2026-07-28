@@ -954,6 +954,13 @@ class Application
                 $result[$k . 'Right'] = $v->right->toPx();
                 $result[$k . 'Bottom'] = $v->bottom->toPx();
                 $result[$k . 'Left'] = $v->left->toPx();
+                // margin:auto 哨兵（toPx 把 auto 打成 0，used 值导出侧无从
+                // 判别；007/014 B 报 used px vs E 0px，几何推断已否定）：
+                // Normalizer 据此 + rect 反推 used margin。
+                if ($k === 'margin') {
+                    if ($v->left->isAuto()) { $result['marginLeftAuto'] = true; }
+                    if ($v->right->isAuto()) { $result['marginRightAuto'] = true; }
+                }
             }
         }
         return $result;
