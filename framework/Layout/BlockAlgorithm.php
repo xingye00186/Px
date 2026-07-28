@@ -501,6 +501,23 @@ class BlockAlgorithm extends LayoutAlgorithm
         //   尝试使用 aspect-ratio 推导 宽度 = 高度 * ratio。
         //   需避免与显式 width 冲突—仅当 raw width 未声明（getRaw('width') === null）时生效。
         $rawW = $s->getRaw('width');
+        // CSS-Sizing-3 §4：width:min-content/max-content/fit-content 含元素子时
+        // 收缩为内容内在宽（此前 isIntrinsic 仅文本分支覆盖，含子落
+        // auto-fill：053 E 750 vs B 136/216/176 实锤）。连续 inline-block
+        // 序列无断点 → min=max=fit=子 margin-box 宽和（子已预布局），
+        // 加自身 padding/border（fragment w 恒 border-box）。
+        if ($s->width !== null && $s->width->isIntrinsic() && count($children) > 0) {
+            $sumIW = 0;
+            foreach ($children as $iwc) {
+                $sumIW += (int)($iwc->getW() ?? 0)
+                    + (int)($iwc->style?->margin?->left->toPx() ?? 0)
+                    + (int)($iwc->style?->margin?->right->toPx() ?? 0);
+            }
+            if ($sumIW > 0) {
+                $w = $sumIW + (int)($s->padding?->left->toPx() ?? 0) + (int)($s->padding?->right->toPx() ?? 0)
+                    + (int)($s->getBorderLeftWidth() ?? 0) + (int)($s->getBorderRightWidth() ?? 0);
+            }
+        }
         $arVal = $s->getAspectRatio() ?? 0;
         $hExplicit = ($s->height !== null && !$s->height->isAuto() && !$s->height->isIntrinsic() && $s->height->toPx() > 0);
         if ($arVal > 0 && $rawW === null && $hExplicit && $h > 0) {

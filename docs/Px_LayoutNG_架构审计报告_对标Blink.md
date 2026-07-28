@@ -2270,3 +2270,21 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 **结果**：045 8→0 **全清**、026 font-style 1→0 **全清**（同族噪声）；全量 104→95 零回归；31/32；**24/55 case 完全清零，39/55 管线通过**。
 
 **剩余榜（95，累计 4500→95 = -97.9%）**：050(25)/048(17) 精度+固有差；055(12)+044(6) 滚动条族；046/053(各7)、019(7 右对齐 x±2) 长尾；054(3)、002/005/007/014(各2)、011/051/052(各1) 尾差。
+
+### 40. 053 内在尺寸关键字消费批（2026-07-29）
+
+**批次**：width:min/max/fit-content 批（全量 95→89；053 7→1；31/32 gates）
+
+**归因**：
+- 053 三盒（width:min-content/max-content/fit-content + inline-block spans 子）E w=750（auto-fill）vs B 136/216/176。
+- 双断点：① BlockAlgorithm 的 isIntrinsic 分支仅覆盖纯文本（含子时 width=0 → hasExplicitLength=false → auto-fill）；② FlexAlgorithm stretch 判据 `toPx()>0` 对 intrinsic 关键字（toPx=0）判 false → flex column stretch 又拉满。
+
+**治本（双点）**：
+1. **BlockAlgorithm**：intrinsic 宽 + 有子时收缩为子 margin-box 宽和 + 自身 padding/border（连续 inline-block 无断点 → min=max=fit 同值，CSS-Sizing-3 §4；子已预布局直取）。
+2. **FlexAlgorithm**（两处 stretch 判据）：`toPx()>0 || isIntrinsic()` —— intrinsic 关键字非 auto 不 stretch（§8.3）。
+
+**结果**：053 7→1（B 136/216/176 全对齐；余 1 = br 锚点根高固有族，与 051/052/011 同族）；全量 95→89 零回归；31/32。
+
+**限制注记**：min/max/fit 三值在可断点内容（文本词间/空白分隔 inline）下应分化——当前统一为"子单行和"近似，待引擎补 word-break 级 min-content 时分化（现库无此形态 case，零影响）。
+
+**剩余榜（89，累计 4500→89 = -98.0%）**：050(25)/048(17) 精度+固有差；055(12)+044(6) 滚动条族；046(7)、019(7) 长尾；054(3)、002/005/007/014(各2)、011/051/052/053(各1 根高固有族) 尾差。

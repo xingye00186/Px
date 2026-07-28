@@ -611,10 +611,13 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $effAlign = $this->effectiveAlign($fi, $align);
                 $crossSize = $isRow ? $fi->h : $fi->w;
                 // CSS Flexbox §8.3: stretch 仅应用于交叉轴尺寸为 auto 的子项
+                //（内在尺寸关键字 min/max/fit-content 也非 auto，不 stretch：
+                // 053 flex column 把 width:min-content 项拉成 750 实锤）
                 $hasExplicitCross = false;
                 if ($fi->computedStyle !== null) {
                     $crossProp = $isRow ? $fi->computedStyle->height : $fi->computedStyle->width;
-                    $hasExplicitCross = ($crossProp !== null && !$crossProp->isPercent() && $crossProp->toPx() > 0);
+                    $hasExplicitCross = ($crossProp !== null && !$crossProp->isPercent()
+                        && ($crossProp->toPx() > 0 || $crossProp->isIntrinsic()));
                 }
                 if ($effAlign === 'stretch' && !$hasExplicitCross && $crossSize < $lineMaxCross) {
                     // §9.4.11：stretch used size = 行交叉尺寸 − 交叉轴 margin
@@ -769,11 +772,13 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $effAlign = $this->effectiveAlign($fi, $align);
                 $crossSize = $isRow ? $fi->h : $fi->w;
 
-                // Stretch items to fill lineMaxCross (CSS §8.3: 仅 auto 交叉轴尺寸)
+                // Stretch items to fill lineMaxCross (CSS §8.3: 仅 auto 交叉轴尺寸；
+                // intrinsic 关键字同排除，同 4e)
                 $hasExplicitCross2 = false;
                 if ($fi->computedStyle !== null) {
                     $crossProp2 = $isRow ? $fi->computedStyle->height : $fi->computedStyle->width;
-                    $hasExplicitCross2 = ($crossProp2 !== null && !$crossProp2->isPercent() && $crossProp2->toPx() > 0);
+                    $hasExplicitCross2 = ($crossProp2 !== null && !$crossProp2->isPercent()
+                        && ($crossProp2->toPx() > 0 || $crossProp2->isIntrinsic()));
                 }
                 if ($effAlign === 'stretch' && !$hasExplicitCross2) {
                     // §9.4.11：stretch used size = 行交叉尺寸 − 交叉轴 margin（同 4e）
