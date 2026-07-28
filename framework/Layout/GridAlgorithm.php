@@ -437,6 +437,17 @@ class GridAlgorithm extends LayoutAlgorithm
             if ($marginAutoV && $itemH > 0 && $itemH < $gh) {
                 $itemY += (int)(($gh - $itemH) / 2);
             }
+            // 子树随 item 定位平移（历史坑 C1 同族，复用同一平移函数）：
+            // 此前 children 携带预布局坐标原样入 mapped fragment，内容滞留
+            // 首列/首行位置（case-005 x=382/566 大族 51 CRITICAL 实锤：
+            // item 盒坐标全对、spans 全堆第一列）。
+            $gdDx = (int)$itemX - (int)($origFrag?->getX() ?? 0);
+            $gdDy = (int)$itemY - (int)($origFrag?->getY() ?? 0);
+            if (($gdDx !== 0 || $gdDy !== 0) && count($children) > 0) {
+                $gdMoved = [];
+                foreach ($children as $gdCh) { $gdMoved[] = FlexAlgorithm::translateFragmentTree($gdCh, $gdDx, $gdDy); }
+                $children = $gdMoved;
+            }
             $mappedFragments[] = new PhysicalFragment($itemX, $itemY, $itemW, $itemH, (int)($gri->style?->visualWidth($itemW) ?? $itemW), (int)($gri->style?->visualHeight($itemH) ?? $itemH), 0, $origContentW, $origContentH, $gri->style, $children, $origFrag?->sourceNode,
                 $origScrollTop, $origScrollLeft, $origIsScroll,
                 $origFrag?->type ?? '', $origFrag?->content, $origFrag?->dataset ?? [], $origFrag?->pseudoStyles ?? []);

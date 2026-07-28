@@ -1,4 +1,4 @@
-@generated 2026-07-28 09:02:07
+@generated 2026-07-28 09:43:34
 === Test: Grid 内嵌 flex 实现卡片网格 ===
 Frame #1 events=0 detail=normal
 div (0,0 964x192) [dsp=grid]
@@ -60,11 +60,11 @@ div (0,0 964x172) [dsp=grid]
     div (0,0 310x140) text="Cover"
     div (0,140 310x32) text="Video 1"
   div (326,0 310x172) [dsp=flex]
-    div (0,0 310x140) text="Cover"
-    div (0,140 310x32) text="Video 2"
+    div (326,0 310x140) text="Cover"
+    div (326,140 310x32) text="Video 2"
   div (652,0 312x172) [dsp=flex]
-    div (0,0 312x140) text="Cover"
-    div (0,140 312x32) text="Video 3"
+    div (652,0 312x140) text="Cover"
+    div (652,140 312x32) text="Video 3"
 
 ---
 
@@ -94,8 +94,8 @@ div (0,0 964x391) [dsp=flex]
       div (0,216 310x140) text="Cover"
       div (0,356 310x35) text="Title"
     div (326,216 310x175) [dsp=flex]
-      div (0,216 310x140) text="Cover"
-      div (0,356 310x35) text="Title"
+      div (326,216 310x140) text="Cover"
+      div (326,356 310x35) text="Title"
 
 ---
 
@@ -125,8 +125,8 @@ div (0,0 800x300) [dsp=grid]
     div (0,0 392x40) text="Header"
     div (0,40 392x260) fg=1 text="Fill"
   div (408,0 392x300) [dsp=flex]
-    div (0,0 392x60) text="Header"
-    div (0,60 392x240) fg=1 text="Fill"
+    div (408,0 392x60) text="Header"
+    div (408,60 392x240) fg=1 text="Fill"
 
 ---
 
