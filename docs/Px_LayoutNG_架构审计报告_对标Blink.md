@@ -1996,3 +1996,27 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 3. 总指南 §1 Checklist 建议补一行：“若基线异常且 diff 输出 expected/actual 肉眼相同 → 排查 core.autocrlf/EOL（已双保险修复，但旧 checkout 需 renormalize）”。
 
 
+
+### 21. case-039 vertical-align 盒栈四模式批（本批）
+
+**成果**：case-039 162→18（GEOMETRY 142→**0**，剩余 18 全为 width/height=auto 注记类 MISMATCH）；全量 **1340→929（-411，-30.7%）零 case 回归**；8 case 改善：035 68→12、046 132→53、050 202→74、4 个 scroll case 清零；css-standards 31/32（template-tests 既有）。
+
+**真值反演（B 整数级锁定，px-63/143 两行 + 八盒全验）**：
+- 行盒扩展：super 上探 → ascent 25→31；middle/sub 下探 → descent 0→8；行1 高 25→39（B 57-18=39 ✓）；行2 descent 6 → 高 31（B 49-18=31 ✓）。
+- middle 放置 = 基线锚定 `top = baseline − (fs/4 + ⌈h/2⌉)`（xh/2 = fs/4 @Segoe，offset 14 精确）；top/bottom = 行盒顶/底对齐。
+- 非替换 inline 盒 rect（atomic-kid 族）= 字体盒 `asc=19/16em、desc=5/16em、h=1.5em`（八盒整数精确）；monospace UA 族（code/kbd/samp/tt/pre）与含文本 kid 沿用 em-box 反推（019 code B h20 实锤，字体盒 ≈1.2em 非 1.5em）。
+- auto-height：IFC 内容以**行盒下沿**计高——va 位移盒/无文本盒 rect 超行底部分是溢出不扩容器（B 实锤 sub 盒超行底 +2 不计高）；含文本 baseline 盒保留 union（既有 strut descent 低估补偿道，050 y=4 族回归实锤，遗留债）。
+- text-emphasis 注解占位修正 0.5em→**0.625em**（mark 字形 0.5em 搭载自身字体行盒 ×1.25；B 每行 +10 @fs16，旧值 8 短 2——此前被无文本盒 union 掩蔽，union 通道收窄后显形，顺带根治）。
+
+**实现（对标 Blink NGInlineBoxState）**：
+1. `LineBreaker::boxBaselineShift` 共享单源（sub +5/16、super -6/16、text-top +6/16、text-bottom +5/16 em）；
+2. `LineBreaker::breakLines` 维护盒栈 va 上下文：shift 族被包含项 aEff=a-cum/dEff=d+cum；middle 盒内 atomic 按基线锚定公式；top/bottom 不扩行（Blink 二阶段仅超行高才扩，保守略）；
+3. `InlineAlgorithm` 放置：盒栈新增 va 模式，middle/top/bottom 覆盖 finalY（与扩行同式）；OPEN_TAG shift 计算收编至共享 helper；
+4. CLOSE_TAG 盒 rect 双模型（判据：subtreeHasText 递归 + monospace UA tag）。
+
+**踩坑记录**：
+- auto-height 跳过口径三轮收敛：全 inline+inline-block 跳过 → 010/019/050 回归（+28）；仅无文本盒跳过不足（039 sub 盒有隐性文本路径？否——回归实为 union 补偿道被砍）；终态 = va≠baseline 盒 ∪ 无文本盒跳过、含文本 baseline 盒保留 union。
+- 探针陷阱：报告尾部「样式属性统计」表重列全部 case 行（无 diff 字样），逐 case 解析若不取首张主表会被覆写为 0。
+- 050 critical 7→50 为跨轮遗留态（推送前快照已同值），非本批引入；run_history 回归判定与「HEAD 基线逐 case 对比」结论可不一致，以后者为准。
+
+**遗留债**：文本行 strut descent 低估由含文本 inline 盒 union 补偿（050 y=4 族）——待行高模型对齐真实字体度量后统一收编；top/bottom 盒超行高的二阶段扩行未实现（当前无真值需求）。

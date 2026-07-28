@@ -608,6 +608,19 @@ class BlockAlgorithm extends LayoutAlgorithm
                 // CSS 2.2 §10.6.3: auto-height 仅基于**正常流**子元素计算 — OOF (position:absolute/fixed) 不参与
                 $chPos = $cr->style?->position?->value ?? 'static';
                 if ($chPos === 'absolute' || $chPos === 'fixed') continue;
+                // CSS 2.2 §10.6.3：IFC 内容以**行盒下沿**计高（lastInlineFlowEnd
+                // 通道）——跳过 union 的 inline 盒两类（rect 超行底部分是溢出
+                // 不扩容器，case-039 B 真值：sub/text-bottom 盒超行底 +2/+5
+                // 均不计高）：① va 位移盒（vertical-align≠baseline）；② 无文本
+                // 盒（字体盒 desc 下探，035/046 实锤）。含文本 baseline 盒保留
+                // union（行高低估场景的既有补偿道，050 y=4 族回归实锤：
+                // 文本盒底超行底恰补 strut descent 低估，遗留债待行高
+                // 模型对齐后再收）。
+                $chDispAh = $cr->style?->display?->value ?? 'block';
+                if ($this->lastInlineFlowEnd > 0 && $chDispAh === 'inline') {
+                    $chVaAh = $cr->style?->verticalAlign?->value ?? 'baseline';
+                    if ($chVaAh !== 'baseline' || !self::subtreeHasText($cr)) continue;
+                }
                 $bottom = $cr->getY() + $cr->getH();
                 // CSS 2.2 §10.6.3: auto-height 应包括最后一个正常流子元素的底边距
                 if ($cr->style !== null) {
@@ -968,6 +981,16 @@ class BlockAlgorithm extends LayoutAlgorithm
         // Phase 4C: 追加浮动元素到结果（在正常流子项之后）
         foreach ($floatFragments as $ff) { $result[] = $ff; }
         return $result;
+    }
+
+    /** 子树含文本探测（auto-height 跳过判据：递归，文本可在孙层） */
+    private static function subtreeHasText(PhysicalFragment $f): bool
+    {
+        if ((string)$f->displayText !== '' || strlen((string)($f->content ?? '')) > 0) return true;
+        foreach ($f->children as $k) {
+            if (self::subtreeHasText($k)) return true;
+        }
+        return false;
     }
 
     private function flushInlineBuffer(array &$inlineBuffer, int $parentX, int $padLeft, int $containerW, int &$stackY, array &$result, int $parentW, ?ComputedStyle $s = null): void

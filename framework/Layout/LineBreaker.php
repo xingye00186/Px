@@ -43,6 +43,12 @@ class LineBreaker
         // 即使行内只有 atomic inline）；负 strut 分量被 item max 自然覆盖。
         $currentAscent = $strutAscent;
         $currentDescent = $strutDescent;
+        // 盒栈 va 上下文（对标 Blink NGInlineBoxState 栈）：va 在内联盒上而
+        // 非 atomic 项上（OPEN_TAG 携带），位移必须传播到被包含项的有效
+        // ascent/descent 才能扩展行盒（§10.8.1：super 上探扩 ascent、sub/
+        // text-top 下探扩 descent；per-item 假设已否定——子项自身 va 均为
+        // baseline）。每项：['va' => 盒 va, 'cum' => 累计 baseline shift]。
+        $vaStack = [];
 
         foreach ($items as $item) {
             // 强制断行（<br>，对标 Blink forced break）：br 归入当前行后立即收行；
@@ -56,6 +62,17 @@ class LineBreaker
                 $currentAscent = $strutAscent;
                 $currentDescent = $strutDescent;
                 continue;
+            }
+            // 盒栈维护：open 压栈（累加嵌套 shift），close 弹栈；盒可跨行，
+            // 栈不随换行重置（Blink 盒状态跨 fragmentainer 延续）。
+            if ($item->type === InlineItem::TYPE_OPEN_TAG) {
+                $pCum = count($vaStack) > 0 ? (int)$vaStack[count($vaStack) - 1]['cum'] : 0;
+                $vaStack[] = [
+                    'va' => (string)($item->style?->verticalAlign?->value ?? 'baseline'),
+                    'cum' => $pCum + self::boxBaselineShift($item->style),
+                ];
+            } elseif ($item->type === InlineItem::TYPE_CLOSE_TAG) {
+                if (count($vaStack) > 0) array_pop($vaStack);
             }
             $itemW = $item->totalWidth();
 
@@ -71,8 +88,32 @@ class LineBreaker
 
             $currentItems[] = $item;
             $currentWidth += $itemW;
-            if ($item->ascent > $currentAscent) $currentAscent = $item->ascent;
-            if ($item->descent > $currentDescent) $currentDescent = $item->descent;
+            // 有效 ascent/descent（对标 Blink NGInlineBoxState 行盒扩展）：
+            //   shift 族（sub/super/text-top/text-bottom 盒）：上移扩 ascent、
+            //     下移扩 descent（a-=cum / d+=cum，cum 可负）；
+            //   middle 盒内 atomic：盒中点锚基线+x-height/2（x≈0.5em → xh/2=fs/4，
+            //     B 真值 @fs16 asc17/desc8 整数精确）；
+            //   top/bottom 盒：行相对对齐不因位移扩行（Blink 二阶段仅超
+            //     行高才扩，保守贡献原值）。
+            $aEff = $item->ascent;
+            $dEff = $item->descent;
+            if (count($vaStack) > 0) {
+                $tva = (string)$vaStack[count($vaStack) - 1]['va'];
+                $tCum = (int)$vaStack[count($vaStack) - 1]['cum'];
+                if ($tva === 'middle' && $item->type === InlineItem::TYPE_ATOMIC) {
+                    $mfs = (int)($item->style?->getFontSize() ?: 16);
+                    $ih = (int)$item->height();
+                    $aEff = intdiv($mfs, 4) + intdiv($ih + 1, 2);
+                    $dEff = $ih - $aEff;
+                } elseif ($tva === 'top' || $tva === 'bottom') {
+                    // 行相对：贡献原值（不扩、也不缩）
+                } elseif ($tCum !== 0) {
+                    $aEff -= $tCum;
+                    $dEff += $tCum;
+                }
+            }
+            if ($aEff > $currentAscent) $currentAscent = $aEff;
+            if ($dEff > $currentDescent) $currentDescent = $dEff;
         }
 
         // 最后一行
@@ -82,6 +123,25 @@ class LineBreaker
         }
 
         return $lines;
+    }
+
+    /**
+     * 内联盒 vertical-align 基线位移（共享单源：LineBreaker 行盒扩展 +
+     * InlineAlgorithm 放置均消费，对标 Blink NGInlineBoxState::ComputeBaselineShift）。
+     *
+     * §10.8.1：sub 下移、super 上移；真值反演 @fs16：sub=+5、super=-6、
+     * text-top=+6、text-bottom=+5（相对前项均化，纯整数 intdiv 比例）。
+     * 正值 = 下移。middle/top/bottom 非 shift 族（需行/盒度量，返回 0）。
+     */
+    public static function boxBaselineShift(?\Px\Css\ComputedStyle $style): int
+    {
+        $va = $style?->verticalAlign?->value ?? 'baseline';
+        $fs = (int)($style?->getFontSize() ?: 16);
+        if ($va === 'sub') return intdiv($fs * 5, 16);
+        if ($va === 'super') return -intdiv($fs * 6, 16);
+        if ($va === 'text-top') return intdiv($fs * 6, 16);
+        if ($va === 'text-bottom') return intdiv($fs * 5, 16);
+        return 0;
     }
 
     /**

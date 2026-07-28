@@ -306,7 +306,9 @@ class InlineAlgorithm extends LayoutAlgorithm
         $teStr = is_object($teStyle) ? (string)($teStyle->value ?? '') : (string)($teStyle ?? '');
         if ($teStr !== '' && strpos($teStr, 'none') === false) {
             $efs = (int)($containerStyle?->getFontSize() ?: 16);
-            $emphExtra = intdiv($efs + 1, 2); // 0.5em，round-half-up 纯整数
+            // mark 字形 0.5em（§8.1）搭载自身字体行盒（×1.25）→ 占位 0.625em；
+            // B 真值 @fs16 每行 +10（旧 0.5em=8 短 2，050 y=4 族实锤）。
+            $emphExtra = intdiv($efs * 5 + 4, 8); // 0.625em，round-half-up 纯整数
         }
         // RTL 基方向（对标 Blink NGLineBreaker::ComputeBaseDirection + bidi 重排，
         // CSS 2.2 §9.10）：中性内容在 RTL 段落基底 level 1 下视觉逆序、从行
@@ -343,27 +345,15 @@ class InlineAlgorithm extends LayoutAlgorithm
 
                 // inline box 开标签：压栈记录插入点，光标前进 inline-start 边缘；
                 // 盒的 vertical-align 产生 baseline shift 作用于盒内全部子项
-                //（对标 Blink NGInlineBoxState::ComputeBaselineShift，§10.8.1：
-                // sub 下移、super 上移；真值反演 @fs16：sub=+5、super=-11+5=-6
-                // 相对前项均化后 sub≈+5/16em、super≈-6/16em，纯整数 intdiv）。
-                // shift 累加（嵌套盒叠加，Blink 相对父盒链）。
+                //（对标 Blink NGInlineBoxState::ComputeBaselineShift，§10.8.1；
+                // shift 值单源于 LineBreaker::boxBaselineShift，行盒扩展与放置
+                // 同式同值）。shift 累加（嵌套盒叠加，Blink 相对父盒链）；
+                // va 本体入栈供 middle/top/bottom 行/盒度量模式放置消费。
                 if ($item->type === InlineItem::TYPE_OPEN_TAG) {
-                    $boxVa = $item->style?->verticalAlign?->value ?? 'baseline';
-                    $boxFs = (int)($item->style?->getFontSize() ?: 16);
-                    $vShift = 0;
-                    if ($boxVa === 'sub') {
-                        $vShift = intdiv($boxFs * 5, 16);
-                    } elseif ($boxVa === 'super') {
-                        $vShift = -intdiv($boxFs * 6, 16);
-                    } elseif ($boxVa === 'text-top') {
-                        // 盒顶对齐父内容区顶：行 strut ascent 差（真值 @fs16 ≈ +6）
-                        $vShift = intdiv($boxFs * 6, 16);
-                    } elseif ($boxVa === 'text-bottom') {
-                        // 盒底对齐父内容区底（真值 @fs16 ≈ +5）
-                        $vShift = intdiv($boxFs * 5, 16);
-                    }
+                    $boxVa = (string)($item->style?->verticalAlign?->value ?? 'baseline');
+                    $vShift = LineBreaker::boxBaselineShift($item->style);
                     $curShift = count($boxStack) > 0 ? (int)$boxStack[count($boxStack) - 1]['vShift'] : 0;
-                    $boxStack[] = ['item' => $item, 'startIndex' => count($result), 'vShift' => $curShift + $vShift];
+                    $boxStack[] = ['item' => $item, 'startIndex' => count($result), 'vShift' => $curShift + $vShift, 'va' => $boxVa];
                     $cursorX += $item->totalWidth();
                     continue;
                 }
@@ -409,8 +399,27 @@ class InlineAlgorithm extends LayoutAlgorithm
                     // 真值支撑：case-019 code B(225,h20) vs 公式(226,h20)，±1px 入 tol。
                     $bfs2 = (int)($bStyle?->getFontSize() ?? 16);
                     if ($bfs2 <= 0) $bfs2 = 16;
-                    $ascEm = intdiv($bfs2 * 1088 + 681, 1363);
-                    $descEm = $bfs2 - $ascEm;
+                    // 双模型（kid 底边语义 + 字体族不同）：
+                    //   含文本 kid 或 monospace UA 族（code/kbd/samp/tt/pre，字体
+                    //     盒≈1.2em 非 1.5em，019 code B h20 实锤）：沿用 em-box
+                    //     反推（case-019 code B(225,h20) ±1px 实锤）；
+                    //   纯 atomic kid 普通族：kid 底 = 基线（baseline 对齐、margin 0），
+                    //     盒 rect = 字体盒 asc/desc（getBoundingClientRect 非替换
+                    //     inline 高 = 字体行盒；B 真值 @fs16 asc19/desc5、h=1.5em，
+                    //     case-039 八盒整数精确）。
+                    $hasTextKid = false;
+                    foreach ($kids as $k) {
+                        if (self::subtreeHasText($k)) { $hasTextKid = true; break; }
+                    }
+                    $bTag = strtolower((string)($bFrag?->type ?? ''));
+                    $isMonoUa = ($bTag === 'code' || $bTag === 'kbd' || $bTag === 'samp' || $bTag === 'tt' || $bTag === 'pre');
+                    if ($hasTextKid || $isMonoUa) {
+                        $ascEm = intdiv($bfs2 * 1088 + 681, 1363);
+                        $descEm = $bfs2 - $ascEm;
+                    } else {
+                        $ascEm = intdiv($bfs2 * 19 + 8, 16);
+                        $descEm = intdiv($bfs2 * 5 + 8, 16);
+                    }
                     $firstKidBaseline = $minY; $lastKidBaseline = $maxY;
                     if (!$first) {
                         // atomic 子 bottom ≈ 所在行基线（baseline 对齐、margin 0）
@@ -503,9 +512,29 @@ class InlineAlgorithm extends LayoutAlgorithm
                 //（baseline/sub/super/text-top/text-bottom）已在 switch 内加过
                 $isBaselineFamily = ($va === 'baseline' || $va === 'sub' || $va === 'super' || $va === 'text-top' || $va === 'text-bottom');
                 $finalY = $isBaselineFamily ? $itemY : (int)$itemY;
-                // 包围 inline 盒的 baseline shift（NGInlineBoxState 盒栈传播）
+                // 包围 inline 盒的 va 上下文（NGInlineBoxState 盒栈传播）：
+                //   shift 族：累计 baseline shift 叠加；
+                //   middle/top/bottom 盒：行/盒度量模式覆盖（与 LineBreaker
+                //   行盒扩展同式，B 真值行1 子项 offset 14/0/14 整数精确）。
                 if (count($boxStack) > 0) {
-                    $finalY += (int)$boxStack[count($boxStack) - 1]['vShift'];
+                    $enclVa = (string)$boxStack[count($boxStack) - 1]['va'];
+                    if ($enclVa === 'middle') {
+                        // §10.8.1 middle：盒中点 = 父基线 + x-height/2（x≈0.5em →
+                        // xh/2=fs/4）；等效 childTop = 基线 − (fs/4 + ⌈h/2⌉)
+                        $mfs2 = (int)($item->style?->getFontSize() ?: 16);
+                        $aEffM = intdiv($mfs2, 4) + intdiv((int)$item->height() + 1, 2);
+                        $finalY = $cursorY + ($line->baseline - $aEffM) + $mTop;
+                    } elseif ($enclVa === 'top') {
+                        // §10.8.1 top：盒内子贴行盒顶
+                        $finalY = $cursorY + $mTop;
+                    } elseif ($enclVa === 'bottom') {
+                        // §10.8.1 bottom：盒内子贴行盒底（margin-box 贴底）
+                        $ibH = (int)($cr->getH() ?? 0);
+                        $mBot2 = (int)$item->height() - $ibH - $mTop;
+                        $finalY = $cursorY + ($lineH - $ibH - $mBot2);
+                    } else {
+                        $finalY += (int)$boxStack[count($boxStack) - 1]['vShift'];
+                    }
                 }
 
                 $result[] = new PhysicalFragment(
@@ -534,6 +563,16 @@ class InlineAlgorithm extends LayoutAlgorithm
         }
 
         return ['items' => $result, 'nextY' => $startY + $cursorY];
+    }
+
+    /** 子树含文本探测（盒 rect 双模型判据：递归，文本可在孙层） */
+    private static function subtreeHasText(PhysicalFragment $f): bool
+    {
+        if ((string)$f->displayText !== '' || strlen((string)($f->content ?? '')) > 0) return true;
+        foreach ($f->children as $k) {
+            if (self::subtreeHasText($k)) return true;
+        }
+        return false;
     }
 
     /**
