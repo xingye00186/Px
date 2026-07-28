@@ -477,6 +477,15 @@ class InlineAlgorithm extends LayoutAlgorithm
                     $bx = $minX - $bPadL - $bbL;
                     $by = $firstKidBaseline - $ascEm - $bPadT;
                     $bw = ($maxX + $bPadR + $bbR) - $bx;
+                    // <q> UA 引号外扩：双侧各自从 item 宽反推（open 从 openItem、
+                    // close 从当前 close item，与 buildInlineItems 同源含嵌套分级），
+                    // 盒 rect 包含 ::before/::after 引号 glyph（B q 宽含引号实锤）。
+                    if ($bTag === 'q') {
+                        $qwOpen = max(0, (int)$openItem->width - $bPadL - $bbL);
+                        $qwClose = max(0, (int)$item->width - $bPadR - $bbR);
+                        $bx -= $qwOpen;
+                        $bw += $qwOpen + $qwClose;
+                    }
                     $bh = ($lastKidBaseline + $descEm + $bPadB) - $by;
                     $result[] = new PhysicalFragment(
                         (int)$bx, (int)$by, (int)$bw, (int)$bh,
@@ -685,7 +694,7 @@ class InlineAlgorithm extends LayoutAlgorithm
      * @param PhysicalFragment[] $frags
      * @param InlineItem[] $out 输出序列（引用累积）
      */
-    private static function buildInlineItems(array $frags, array &$out): void
+    private static function buildInlineItems(array $frags, array &$out, int $qDepth = 0): void
     {
         foreach ($frags as $cr) {
             $cStyle = $cr->style;
@@ -707,6 +716,18 @@ class InlineAlgorithm extends LayoutAlgorithm
                 $padR = (int)($cStyle?->padding?->right->toPx() ?? 0);
                 $bL = (int)($cStyle?->getBorderLeftWidth() ?? 0);
                 $bR = (int)($cStyle?->getBorderRightWidth() ?? 0);
+                // <q> UA 自动引号（Blink html.css q::before{content:open-quote}/
+                // ::after{content:close-quote}，CSS2 §12.3.2）：引号 glyph 宽计入
+                // 盒 open/close 边缘。B 真值反演 @fs16：open 恒 16=1em（含嵌套），
+                // close 一级 16、嵌套二级 8=0.5em（单引号 glyph 窄）。
+                $openQW = 0;
+                $closeQW = 0;
+                if ((string)($cr->type ?? '') === 'q') {
+                    $qfs = (int)($cStyle?->getFontSize() ?? 16);
+                    if ($qfs <= 0) $qfs = 16;
+                    $openQW = $qfs;
+                    $closeQW = $qDepth === 0 ? $qfs : intdiv($qfs, 2);
+                }
                 // 盒自身 strut（同 root strut 公式；line-height 三态，-1=normal）
                 $bfs = (int)($cStyle?->getFontSize() ?? 16);
                 if ($bfs <= 0) $bfs = 16;
@@ -716,9 +737,9 @@ class InlineAlgorithm extends LayoutAlgorithm
                 if ($blh < 0) $blh = $fa + $fd;
                 $hlN = $blh - ($fa + $fd);
                 $hl = intdiv($hlN >= 0 ? $hlN + 1 : $hlN - 1, 2);
-                $out[] = new InlineItem(InlineItem::TYPE_OPEN_TAG, $padL + $bL, $fa + $hl, $fd + $hl, $cr, '', $cStyle, $mLeft, 0);
-                self::buildInlineItems($cr->children, $out);
-                $out[] = new InlineItem(InlineItem::TYPE_CLOSE_TAG, $padR + $bR, 0, 0, $cr, '', $cStyle, 0, $mRight);
+                $out[] = new InlineItem(InlineItem::TYPE_OPEN_TAG, $padL + $bL + $openQW, $fa + $hl, $fd + $hl, $cr, '', $cStyle, $mLeft, 0);
+                self::buildInlineItems($cr->children, $out, $qDepth + ((string)($cr->type ?? '') === 'q' ? 1 : 0));
+                $out[] = new InlineItem(InlineItem::TYPE_CLOSE_TAG, $padR + $bR + $closeQW, 0, 0, $cr, '', $cStyle, 0, $mRight);
                 continue;
             }
 
