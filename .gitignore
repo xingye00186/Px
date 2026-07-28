@@ -106,3 +106,7 @@ tests/perf/bench_*.json
 tests/perf/compare_*.php
 tests/perf/analyze_*.php
 tests/perf/noise_*.php
+
+_build_corrupted_bak/
+_build_*.log
+_aot_watchdog.log
