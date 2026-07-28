@@ -2075,3 +2075,11 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 - **case-015 86→29 @3992d7dd**：min/max-height 只在显式高路径 clamp，auto 路径整体绕过；Block/Flex 两处补 clamp + flex 容器抬高时按 align-items 交叉轴补偿平移。
 
 **平移完备性阶段结论**：stackBlockChildren（C1）→ table cell（22 批）→ OOF（25 批）→ grid item（25 批）四大放置点的"子树随盒平移"已全部收口——**任何算法把预布局 fragment 定位到新位置时必须整树平移**，此不变量已在全部布局算法中成立。
+
+### 26. 测试基建双批：stub 度量阴影 + 零盒豁免（本轮续）
+
+**成果链**：469→426→404（零 case 回归，31/32 保持）。
+- **case-050 74→31 @bf61595a（stub 度量阴影根治）**：PX_PHP_RUNTIME 下 sk_measure_text_width 是 stub/skia.stub.php 的桩——其 fallback 仍是 strlen 字节×0.6em（CJK 1.8em/字），**遮蔽了引擎 TextMeasureCache 的 per-charclass 修复**（22 批只修了引擎侧，探针 hasNative=Y 揭穿桩的假身）。stub fallback 对齐 per-charclass（ASCII 保留 per-char floor 保快照稳定、多字节 1.0em）+ golden 表补录 Edge 真值（★ 生成内容 @16=84，表既有机制）。教训：**同一职责的 fallback 存在引擎/stub 双实现时必须同步修**，探针 function_exists 判 native 会被桩欺骗。
+- **case-046 53→31 @3468b824（比较器零盒豁免）**：Chrome 关闭态 select 的 option 返回全零 rect，引擎零盒契约坐标锚定宿主——双方 w=h=0 时 x/y 无几何语义不可比（幻影 diff 16 项）。比较器对双零盒跳过几何+样式检查（tag/集合同构保留）+ 屏外弹层坐标（|coord|>5000）同源豁免。
+
+**剩余榜（404）**：046(31：appearance 控件族 x+33/y+55 链待归因)、048(45：导出注记为主)、050(31)、015(29)、021(24)、010(22)、019/038(20)、长尾精度族。
