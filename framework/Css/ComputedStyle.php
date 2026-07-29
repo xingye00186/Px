@@ -793,6 +793,11 @@ class ComputedStyle
                 }
             }
         }
+        // C3b currentColor（int 字段路径）：border-color: currentColor 经 parseHexColor
+        // 返回 CURRENT_COLOR_SENTINEL；此处替换为已解析的元素自身 color（fg 在上方
+        // L373 已解析，早于 border）。否则 sentinel 泄漏为垃圾色 0xFF0C0C0C。
+        $ccArgb = $this->color->argb;
+        if ($bc === CssColor::CURRENT_COLOR_SENTINEL) { $bc = $ccArgb; }
         $this->borderColor = $bc;
         // per-side color：defaults 含 borderTopColor=0 四边键使 `?? $bc` 永不触发
         //（A 类默认值陷阱第三例，与 borderWidth int/CssRect 同族）——简写提取的
@@ -820,12 +825,16 @@ class ComputedStyle
             return 0;
         };
         $btc = self::safeInt($d['borderTopColor'] ?? 0);
+        if ($btc === CssColor::CURRENT_COLOR_SENTINEL) { $btc = $ccArgb; }
         $this->borderTopColor = $btc !== 0 ? $btc : (self::safeInt($sideColorFromShort('border-top', 'borderTop') ?: $bc));
         $brc = self::safeInt($d['borderRightColor'] ?? 0);
+        if ($brc === CssColor::CURRENT_COLOR_SENTINEL) { $brc = $ccArgb; }
         $this->borderRightColor = $brc !== 0 ? $brc : (self::safeInt($sideColorFromShort('border-right', 'borderRight') ?: $bc));
         $bbc = self::safeInt($d['borderBottomColor'] ?? 0);
+        if ($bbc === CssColor::CURRENT_COLOR_SENTINEL) { $bbc = $ccArgb; }
         $this->borderBottomColor = $bbc !== 0 ? $bbc : (self::safeInt($sideColorFromShort('border-bottom', 'borderBottom') ?: $bc));
         $blc = self::safeInt($d['borderLeftColor'] ?? 0);
+        if ($blc === CssColor::CURRENT_COLOR_SENTINEL) { $blc = $ccArgb; }
         $this->borderLeftColor = $blc !== 0 ? $blc : (self::safeInt($sideColorFromShort('border-left', 'borderLeft') ?: $bc));
 
         // border style (handle CssKeyword objects from parseIdent)

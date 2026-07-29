@@ -57,5 +57,13 @@ test('普通 bg 不受 currentColor 逻辑影响', function () {
     assert_eq($cs->backgroundColor->toBgr(), $green & 0xFFFFFF, 'bg 保持绿');
 });
 
+test('border-color: currentColor 解析为元素自身 color（int 字段路径）', function () {
+    $red = CssValueParser::parseHexColor('#FF0000');
+    $p = \Px\Css\CssMappings::parseStyleBlock('.bc { color: #FF0000; border-color: currentColor; }');
+    $cs = new ComputedStyle($p['bc'], [], 'div');
+    assert_eq($cs->getBorderColor(), $red, 'borderColor = fg red（sentinel 不泄漏）');
+    assert_true($cs->getBorderColor() !== CssColor::CURRENT_COLOR_SENTINEL, 'borderColor 非 sentinel');
+});
+
 $exitCode = print_summary();
 exit($exitCode);
