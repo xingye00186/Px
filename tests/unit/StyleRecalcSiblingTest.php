@@ -56,12 +56,13 @@ test('通用兄弟 ~ 组合子运行时应用', function () {
     assert_eq($bg[2], 65280, '.a ~ .t 命中（隔兄弟）→ t bg=#00FF00');
 });
 
-test('相邻兄弟非紧邻不误命中（已知缺口，C2.6）', function () {
-    // C2.4 已修复“馈入真实前序兄弟”（test 1/2 謁）；但 + 的严格紧邻
-    // 语义在运行时消费链仍过匹配隔兄弟（matchComplexSelector 直测
-    // 返 false，但管线经 StylePool/消费路径仍命中）——属 C2.6 StylePool
-    // key 及规则 ID 级消费重构范畴，本批不展开。保留本用例作待办钉（SKIP）。
-    echo "  [SKIP-C2.6] + 紧邻精度待 StylePool key/规则 ID 级消费重构（C2.6）\n";
+test('相邻兄弟非紧邻不误命中（已知残留）', function () {
+    // C2.4 馈入真实兄弟（test 1/2 謁组合子已活）；C2.6 兄弟指纹已
+    // 入 StylePool key。但 + 严格紧邻负例仍过匹配：实测馈入消费链
+    // 的前序兄弟为 ['sa'] 而非 ['sa','sm']（中间兄弟在某消费路径被丢），
+    // 根因比 key/兄弟馈入更深（matchComplexSelector 直测返 false），待
+    // C2.6 完整规则 ID 级消费重构根治。保留作待办钉（SKIP）。
+    echo "  [SKIP-C2.6] + 紧邻精度待完整规则 ID 级消费重构（C2.6）\n";
     return;
     $bg = recalcChildBg(
         '.sb { background:#000000; }' . "\n" . '.sa + .sb { background:#FF0000; }',

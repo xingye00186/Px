@@ -63,7 +63,10 @@ class InlineStyleParser
             $parentCS,
             $elementType,
             StylePool::fingerprintInline($inlineStyle),
-            $className
+            $className,
+            // C2.6（key 部分）：兄弟指纹入 key，修兄弟组合子跨元素
+            // 缓存碰撞（C2.4 残留；只影响含前序兄弟的运行时通道）。
+            empty($precedingSiblingClasses) ? '' : implode(',', $precedingSiblingClasses)
         );
     }
 

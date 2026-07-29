@@ -57,11 +57,16 @@ class StylePool
         ?ComputedStyle $parentCS,
         string $elementType,
         string $inlineStyleFp,
-        string $className
+        string $className,
+        string $siblingFp = ''
     ): ComputedStyle {
         // O(1) key 构建（父身份 O(1)、inline 已在上游指纹化）
+        // C2.6（key 部分）：叠加兄弟指纹——同 className/type/inline/parent 但
+        // 前序兄弟不同的元素不再碰撞（修 C2.4 残留：兄弟组合子
+        // 结果因旧 key 不区分而误命中缓存）。
         $parentId = $parentCS !== null ? (string)\spl_object_id($parentCS) : '0';
-        $key = $className . '|' . $elementType . '|' . $inlineStyleFp . '|' . $parentId;
+        $key = $className . '|' . $elementType . '|' . $inlineStyleFp . '|' . $parentId
+            . ($siblingFp !== '' ? '|' . $siblingFp : '');
 
         // 命中 → 移到 LRU 头部
         if (isset(self::$pool[$key])) {
