@@ -370,9 +370,17 @@ class ComputedStyle
         $this->rowGap = $this->resolveCssLength('rowGap', $d) ?? $this->rowGap;
         $this->flexBasis = $this->resolveCssLength('flexBasis', $d) ?? $this->flexBasis;
 
-        // ── 颜色 ──
-        $bgVal = $this->resolveColor('bg', $d); if ($bgVal !== null) $this->backgroundColor = $bgVal;
-        $fgVal = $this->resolveColor('fg', $d); if ($fgVal !== null) $this->color = $fgVal;
+        // ── 颜色（先 fg 后 bg：currentColor 依赖已解析的 color，CSS Color L4 §6.2）──
+        $fgVal = $this->resolveColor('fg', $d);
+        if ($fgVal !== null) {
+            // color: currentColor 为罕见自循环（无独立继承色可取）→ 回落默认黑。
+            $this->color = $fgVal->isCurrentColor ? CssColor::fromArgb(0) : $fgVal;
+        }
+        $bgVal = $this->resolveColor('bg', $d);
+        if ($bgVal !== null) {
+            // currentColor → 元素自身 color（已在上方解析）。
+            $this->backgroundColor = $bgVal->isCurrentColor ? $this->color : $bgVal;
+        }
 
         // ── 关键字 ──
         $this->display = $this->resolveKeyword('display', $d, 'block');

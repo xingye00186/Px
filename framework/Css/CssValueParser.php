@@ -128,6 +128,11 @@ class CssValueParser
         $value = trim($value);
         // CSS named colors
         $lower = strtolower($value);
+        // C3b currentColor（CSS Color L4 §6.2）：返回无碰撞哨兵，由 CssColor::fromArgb
+        // 识别为 currentColor sentinel，ComputedStyle 解析时替换为元素自身 color。
+        if ($lower === 'currentcolor') {
+            return CssColor::CURRENT_COLOR_SENTINEL;
+        }
         if (isset(self::NAMED_COLORS[$lower])) {
             // NAMED_COLORS 以规范 RGB 存储，转为 Px 内部 BGR。
             return self::rgbToBgr(self::NAMED_COLORS[$lower]);
