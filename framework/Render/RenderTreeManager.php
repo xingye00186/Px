@@ -897,6 +897,18 @@ class RenderTreeManager
                     $vnode->type
                 );
             }
+            // C2.8：烘焙伪类（:hover/:focus/:active）——生产活通道。
+            // mergeClassStylesIntoNode 将命中伪类规则的 raw decls 烘焙到
+            // props['__pseudoStyles'][state]；此处解析为 resolved props（与运行时
+            // resolveClassStyles 产出的 hover/focus/active 键同契约，PaintPipeline 消费）。
+            // 烘焙为生产真值，覆盖/补充 extractPseudoStyles（生产恒空）。
+            $bakedPseudo = $vnode->props['__pseudoStyles'] ?? null;
+            if (is_array($bakedPseudo)) {
+                foreach (['hover', 'focus', 'active'] as $state) {
+                    if (!isset($bakedPseudo[$state]) || !is_string($bakedPseudo[$state]) || $bakedPseudo[$state] === '') continue;
+                    $pseudoStyles[$state] = \Px\Css\InlineStyleParser::parseInlineStyle($bakedPseudo[$state]);
+                }
+            }
             $resolvedStyle = $computedStyle->toExportArray();
 
             // 合并 HTML align 属性到 textAlign（CSS text-align 优先）—走 StylePool::withOverride 池化派生

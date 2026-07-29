@@ -115,6 +115,26 @@ function parseCssClassesForMerge(string $css): array
     if (count($pseudoEls) > 0) {
         $result['__pseudo_els__'] = $pseudoEls;
     }
+    // 提取状态伪类规则（:hover/:focus/:active，C2.8 生产复活）：
+    // 审计 §2.3——烘焙通道此前不处理伪类，运行时注册表生产恒空，致
+    // 生产 <style> 里的 .btn:hover{} 完全不生效。Px 机制（有意偏差，C2.8）：
+    // Paint 期 pseudoStyles 叠加（仅绘制类属性生效，不触发 relayout）。本处提取
+    // .class:state{decls} 为 raw 串（mergeClassStylesIntoNode 烘焙到 VNode，RTM 解析入
+    // RenderNode::$pseudoStyles）。不走已死的 ThemeProvider 注册表。
+    $pseudoClasses = [];
+    if (preg_match_all('#\.([a-zA-Z0-9_-]+):(hover|focus|active)\s*\{([^}]*)\}#s', $css, $pcs, PREG_SET_ORDER)) {
+        foreach ($pcs as $pc) {
+            $body = trim(preg_replace('/\s+/', ' ', $pc[3]));
+            $body = rtrim($body, '; ');
+            if ($body === '') continue;
+            // 同 class 同 state 多条按源序追加（后来者居上）
+            $pseudoClasses[$pc[1]][$pc[2]] = isset($pseudoClasses[$pc[1]][$pc[2]])
+                ? ($pseudoClasses[$pc[1]][$pc[2]] . ';' . $body) : $body;
+        }
+    }
+    if (count($pseudoClasses) > 0) {
+        $result['__pseudo_class__'] = $pseudoClasses;
+    }
     return $result;
 }
 
@@ -295,6 +315,28 @@ function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassL
             $parts[] = (string)$b['payload'];
         }
         $node->props['style'] = implode(';', $parts);
+    }
+
+    // Step 3.6: :hover/:focus/:active 状态伪类烘焙（C2.8 生产复活）：
+    // 命中自身 class 的伪类规则，raw decls 按 state 烘焙到 VNode props
+    // ['__pseudoStyles'][state]（RTM 解析入 RenderNode::$pseudoStyles）。Px 有意偏差：
+    // Paint 期叠加（仅绘制类属性，不触发 relayout）。同类同 state 多命中按
+    // ownClasses 序追加（后写胜）。
+    if (isset($rawStyles['__pseudo_class__']) && !$isComponentPlaceholder && count($ownClasses) > 0) {
+        $bakedPseudo = [];
+        foreach ($ownClasses as $ocP) {
+            $pcRules = $rawStyles['__pseudo_class__'][$ocP] ?? null;
+            if ($pcRules === null) continue;
+            foreach (['hover', 'focus', 'active'] as $state) {
+                if (!isset($pcRules[$state]) || $pcRules[$state] === '') continue;
+                $bakedPseudo[$state] = isset($bakedPseudo[$state])
+                    ? ($bakedPseudo[$state] . ';' . $pcRules[$state]) : $pcRules[$state];
+            }
+        }
+        if (count($bakedPseudo) > 0) {
+            if ($node->props === null) { $node->props = []; }
+            $node->props['__pseudoStyles'] = $bakedPseudo;
+        }
     }
 
     // Step 3.5: ::before/::after 伪元素合成（CSS Pseudo-Elements L4 §4）：
