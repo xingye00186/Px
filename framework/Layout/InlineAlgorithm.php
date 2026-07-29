@@ -460,7 +460,8 @@ class InlineAlgorithm extends LayoutAlgorithm
                         if (self::subtreeHasText($k)) { $hasTextKid = true; break; }
                     }
                     $bTag = strtolower((string)($bFrag?->type ?? ''));
-                    $isMonoUa = ($bTag === 'code' || $bTag === 'kbd' || $bTag === 'samp' || $bTag === 'tt' || $bTag === 'pre');
+                    // C1.2：monospace 名单归 UAStyles 单源（度量逻辑留本层）。
+                    $isMonoUa = \Px\Css\UAStyles::isMonospaceType($bTag);
                     if ($hasTextKid || $isMonoUa) {
                         $ascEm = intdiv($bfs2 * 1088 + 681, 1363);
                         $descEm = $bfs2 - $ascEm;

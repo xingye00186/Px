@@ -196,11 +196,9 @@ class ComputedStyle
     // 权威单源（public）：BlockAlgorithm 等布局侧引用此常量。此前三处各自
     // 维护且本表为短版（缺 q/kbd/mark 等）→ q 默认 display 误判 block
     //（case-050 E 716×25 vs Blink inline 48×24）。
-    public const INLINE_TYPES = [
-        'span', '#text', 'text', 'b', 'strong', 'em', 'i', 'code', 'a', 'label', 'br',
-        'abbr', 'cite', 'dfn', 'kbd', 'mark', 'q', 'samp', 'small', 'sub',
-        'sup', 'time', 'var', 'u', 's',
-    ];
+    // 权威单源已迁 UAStyles::INLINE_TYPES（C1.2 UA 单源收编）；此处转发
+    // 保既有引用（BlockAlgorithm 等）兼容。
+    public const INLINE_TYPES = UAStyles::INLINE_TYPES;
 
     /**
      * @param array $declarations 样式声明（解析后的 key=>value 数组）
@@ -242,7 +240,7 @@ class ComputedStyle
         // 宽/样式不继承（tbody 无自身 border 仍报父色，048 B tbody
         // blc=#a5d6a7/#ffcc80 vs E 恒黑实锤；父色由 toExportArray 出口
         // 闸门补真值道供给）。
-        if (in_array($elementType, ['tbody', 'thead', 'tfoot', 'tr', 'td', 'th'], true)
+        if (in_array($elementType, UAStyles::TABLE_BORDER_COLOR_INHERIT_TYPES, true)
             && !isset($declarations['borderColor']) && !isset($declarations['border'])
             && !isset($declarations['borderTopColor']) && !isset($declarations['borderLeftColor'])
             && isset($parentDeclarations['borderColor'])) {
@@ -256,44 +254,17 @@ class ComputedStyle
         $this->frozen = true;
     }
 
-    // ── 表格族 UA display 映射（对标 Blink UA stylesheet html.css §15.3.2）──
-    // 此前表格族全部默认 block → TableAlgorithm 永不触发（td 块级垂直
-    // 堆叠，case-048 x 偏移 361 族）。
-    public const TABLE_DISPLAY_MAP = [
-        'table'    => 'table',
-        'caption'  => 'table-caption',
-        'colgroup' => 'table-column-group',
-        'col'      => 'table-column',
-        'thead'    => 'table-header-group',
-        'tbody'    => 'table-row-group',
-        'tfoot'    => 'table-footer-group',
-        'tr'       => 'table-row',
-        'td'       => 'table-cell',
-        'th'       => 'table-cell',
-    ];
+    // ── 表格族 UA display 映射：单源已迁 UAStyles::TABLE_DISPLAY_MAP（C1.2）──
+    public const TABLE_DISPLAY_MAP = UAStyles::TABLE_DISPLAY_MAP;
 
     private static function getDefaultsArray(string $elementType): array
     {
-        // 表单控件 UA 特例（对标 Blink UA html.css）：替换/控件类元素
-        // 均为 inline-block 盒（input/textarea/button/progress/meter/select）；
-        // <option>/<optgroup> 子树不产生常规布局盒——零盒化在布局层
-        //（LayoutOrchestrator）处理而非 display:none
-        //（none 会被导出层丢弃破坏元素集合同构：浏览器导出 0 盒）。
-        if ($elementType === 'select' || $elementType === 'input' || $elementType === 'textarea'
-            || $elementType === 'button' || $elementType === 'progress' || $elementType === 'meter') {
-            $defaultDisplay = 'inline-block';
-        } else {
-            $defaultDisplay = self::TABLE_DISPLAY_MAP[$elementType]
-                ?? (in_array($elementType, self::INLINE_TYPES, true) ? 'inline' : 'block');
-        }
-        // Chrome UA 表单控件样式注记（html.css/LayoutTheme，按元素选择器
-        // 注入——L24 门捕教训：div[display:inline-block] 不适用）：
-        // bg=white、align-items:center、overflow:clip（046 B 真值实锤）。
-        $isFormControl = ($elementType === 'select' || $elementType === 'input'
-            || $elementType === 'textarea' || $elementType === 'button');
-        // overflow:clip 仅 input/textarea（Chrome UA：select/button 为 visible，
-            // 046 elem[59] select B=visible 实锤）。
-        $isClipControl = ($elementType === 'input' || $elementType === 'textarea');
+        // C1.2：元素级 UA 特例全部改读 UAStyles 单源（对应 Blink html.css /
+        // DefaultStyleSheets）；本函数只保留纯默认值拼装，不再自持元素名单。
+        // <option>/<optgroup> 零盒化属盒生成，仍在 LayoutOrchestrator（分层不变）。
+        $defaultDisplay = UAStyles::defaultDisplay($elementType);
+        $isFormControl = UAStyles::isFormControl($elementType);
+        $isClipControl = UAStyles::isClipControl($elementType);
         return [
             'width' => CssLength::px(0),
             'height' => CssLength::px(0),
@@ -323,9 +294,9 @@ class ComputedStyle
             'justifySelf' => new CssKeyword('auto'),
             'whiteSpace' => new CssKeyword('normal'),
             'wordBreak' => new CssKeyword('normal'),
-            // caption UA 居中（Blink html.css caption{text-align:center}，
-            // case-048 B 真值 caption 内容居中实锤）；显式声明/继承链照常覆盖。
-            'textAlign' => new CssKeyword($elementType === 'caption' ? 'center' : 'start'),
+            // caption UA 居中（UAStyles::defaultTextAlign，html.css 单源）；
+            // 显式声明/继承链照常覆盖。
+            'textAlign' => new CssKeyword(UAStyles::defaultTextAlign($elementType)),
             'verticalAlign' => new CssKeyword('baseline'),
             'visibility' => new CssKeyword('visible'),
             'cursor' => new CssKeyword('auto'),

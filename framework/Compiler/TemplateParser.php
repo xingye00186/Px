@@ -883,22 +883,14 @@ class TemplateParser
 
         $props = $this->convertElementAttrs($attrs, $tok->line, $tag);
 
-        // Apply default UA styles for HTML elements (CSS standard defaults)
-        static $defaultStyles = [
-            'b'       => 'font-weight:700',
-            'strong'  => 'font-weight:700',
-            'em'      => 'font-style:italic',
-            'i'       => 'font-style:italic',
-            'u'       => 'text-decoration:underline',
-            'code'    => 'font-family:Consolas,monospace',
-            'small'   => 'font-size:smaller',
-            'mark'    => 'background:#ffff00',
-        ];
-        if (isset($defaultStyles[$tag])) {
+        // Apply default UA styles for HTML elements
+        // C1.2：收编入 UAStyles 单源（对应 Blink html.css），消灭本地散点。
+        $uaStyle = \Px\Css\UAStyles::inlineTagStyle($tag);
+        if ($uaStyle !== null) {
             if (isset($props['style']) && $props['style'] !== '') {
-                $props['style'] .= ';' . $defaultStyles[$tag];
+                $props['style'] .= ';' . $uaStyle;
             } else {
-                $props['style'] = $defaultStyles[$tag];
+                $props['style'] = $uaStyle;
             }
         }
 
