@@ -207,6 +207,20 @@ class CssValueParser
             }
             return $bgr;
         }
+        // C3b hsl() 现代空格分隔语法（CSS Color L4 §7）：hsl(120 100% 50%)、
+        // hsl(120 100% 50% / 0.5)、hsl(120 100% 50% / 50%)。旧实现仅认逗号语法。
+        if (preg_match('/hsla?\s*\(\s*([\d.]+)\s*(?:deg)?\s+([\d.]+)%\s+([\d.]+)%\s*(?:\/\s*([\d.]+)(%?)\s*)?\)/i', $value, $m)) {
+            $rgb = self::hslToRgb((float)$m[1], (float)$m[2] / 100.0, (float)$m[3] / 100.0);
+            $bgr = self::rgbToBgr($rgb);
+            if (isset($m[4]) && $m[4] !== '') {
+                $a = ($m[5] === '%') ? ((float)$m[4] / 100.0) : (float)$m[4];
+                if ($a < 1.0) {
+                    $aByte = (int)round(max(0.0, $a) * 255.0);
+                    return ($aByte << 24) | $bgr;
+                }
+            }
+            return $bgr;
+        }
         return self::hexToBgr($value);
     }
 

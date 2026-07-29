@@ -46,5 +46,14 @@ test('hsla alpha=1 与 hsl 等价（opaque 高字节 0）', function () {
     assert_eq(ph('hsla(120, 100%, 50%, 1)'), ph('hsl(120, 100%, 50%)'), 'alpha=1 opaque');
 });
 
+test('hsl 现代空格分隔语法（CSS Color L4 §7）', function () {
+    assert_eq(ph('hsl(120 100% 50%)'), ph('hsl(120, 100%, 50%)'), '空格 === 逗号（绿）');
+    // / alpha 数字与百分比等价
+    assert_eq(ph('hsl(120 100% 50% / 50%)'), ph('hsl(120 100% 50% / 0.5)'), '/50% === /0.5');
+    $c = ph('hsl(120 100% 50% / 0.5)');
+    assert_eq(($c >> 24) & 0xFF, 128, 'alpha 0.5 → 高字节 128');
+    assert_eq($c & 0xFFFFFF, ph('hsl(120, 100%, 50%)') & 0xFFFFFF, '低 24 位 = 绿 BGR');
+});
+
 $exitCode = print_summary();
 exit($exitCode);
