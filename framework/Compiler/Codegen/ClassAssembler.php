@@ -39,6 +39,8 @@ class ClassAssembler
         $defaultConstruct      = $p['defaultConstruct'] ?? '';
         $className             = $p['className'] ?? 'UnknownComponent';
         $baseName              = $p['baseName'] ?? 'unknown';
+        // C2.3：编译期规则存储（StyleSheetContents/RuleData）方法体（可空）。
+        $styleSheetContentsCode = $p['styleSheetContentsCode'] ?? '';
 
         return <<<PHP
 <?php
@@ -57,6 +59,7 @@ class {$className} extends ReactiveComponent
 {
 {$reactiveStorageCode}
 {$classBody}
+{$styleSheetContentsCode}
 {$dynamicPropsDeclaration}
 {$staticNodeDeclCode}
 

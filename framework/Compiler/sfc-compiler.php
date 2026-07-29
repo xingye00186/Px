@@ -1313,6 +1313,11 @@ function compileOneComponent(
         'defaultConstruct' => $defaultConstruct,
         'className' => $className,
         'baseName' => $baseName,
+        // C2.3：编译期规则存储（StyleSheetContents/RuleData）——SelectorParser 产
+        // 复合链 AST 随规则烘入 gen 常量（运行时暂不消费，零行为变化）。
+        'styleSheetContentsCode' => \Px\Css\StyleSheetCodegen::emitMethod(
+            \Px\Css\StyleSheetContents::build($styles, $baseName)
+        ),
     ]);
 
     $classPath = $outDir . DIRECTORY_SEPARATOR . $className . '.php';

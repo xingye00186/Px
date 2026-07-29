@@ -148,6 +148,48 @@ test('纯文本不使用 $this->', function () {
 });
 
 // ============================================================
+// C2.3 StyleSheetContents / RuleData codegen
+// ============================================================
+echo "\n--- C2.3 StyleSheetContents codegen ---\n";
+
+test('StyleSheetContents::build 产 RuleData（selector/ast/specificity/order/scopeId）', function () {
+    $css = '.a { color: red; } .b .c { width: 10px; } #id { height: 5px; }';
+    $rules = \Px\Css\StyleSheetContents::build($css, 'MyComp');
+    assert_eq(count($rules), 3, '3 条规则');
+    assert_eq($rules[0]['selector'], '.a', 'rule0 selector');
+    assert_eq($rules[0]['specificity'], [0, 0, 1, 0], '.a specificity');
+    assert_eq($rules[0]['scopeId'], 'MyComp', 'scopeId 烘入');
+    assert_eq($rules[0]['order'], 0, 'order 递增');
+    assert_eq($rules[2]['specificity'], [0, 1, 0, 0], '#id specificity');
+    assert_true(is_array($rules[1]['ast']) && count($rules[1]['ast'][0]['compounds']) === 2,
+        '.b .c 复合链 AST 含 2 compounds');
+});
+
+test('StyleSheetContents 剥离 @-规则', function () {
+    $css = '@keyframes spin { from { opacity: 0; } to { opacity: 1; } } .x { color: blue; }';
+    $rules = \Px\Css\StyleSheetContents::build($css, 'C');
+    assert_eq(count($rules), 1, '@keyframes 块不入规则表');
+    assert_eq($rules[0]['selector'], '.x', '仅普通规则保留');
+});
+
+test('StyleSheetCodegen::emit 产 AOT 友好 PHP 字面量（可 eval 回环）', function () {
+    $rules = \Px\Css\StyleSheetContents::build('.a { color: red; }', 'C');
+    $literal = \Px\Css\StyleSheetCodegen::emit($rules);
+    $roundtrip = eval('return ' . $literal . ';');
+    assert_eq(count($roundtrip), 1, '字面量 eval 回环 1 条');
+    assert_eq($roundtrip[0]['selector'], '.a', '回环 selector 一致');
+    assert_eq($roundtrip[0]['specificity'], [0, 0, 1, 0], '回环 specificity 一致');
+});
+
+test('StyleSheetCodegen::emitMethod 产 styleSheetContents() 方法体', function () {
+    $code = \Px\Css\StyleSheetCodegen::emitMethod(
+        \Px\Css\StyleSheetContents::build('.a { color: red; }', 'C')
+    );
+    assert_contains($code, 'public static function styleSheetContents(): array', '含方法签名');
+    assert_contains($code, "'selector' => '.a'", '含规则字面量');
+});
+
+// ============================================================
 // Summary
 // ============================================================
 exit(print_summary());
