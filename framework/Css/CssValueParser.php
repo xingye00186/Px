@@ -155,7 +155,46 @@ class CssValueParser
             }
             return $bgr;
         }
+        // C3b.4 hsl()/hsla()（CSS Color Module L4 §7）：HSL→RGB→Px BGR。
+        // 旧实现完全不支持 hsl → 生产渲染为黑/透明。
+        if (preg_match('/hsla?\s*\(\s*([\d.]+)\s*(?:deg)?\s*,\s*([\d.]+)\s*%\s*,\s*([\d.]+)\s*%\s*(?:,\s*([\d.]+)\s*)?\)/i', $value, $m)) {
+            $rgb = self::hslToRgb((float)$m[1], (float)$m[2] / 100.0, (float)$m[3] / 100.0);
+            $bgr = self::rgbToBgr($rgb);
+            if (isset($m[4]) && $m[4] !== '') {
+                $a = (float)$m[4];
+                if ($a < 1.0) {
+                    $aByte = (int)round(max(0.0, $a) * 255.0);
+                    return ($aByte << 24) | $bgr;
+                }
+            }
+            return $bgr;
+        }
         return self::hexToBgr($value);
+    }
+
+    /**
+     * HSL → RGB (0xRRGGBB)。CSS Color Module L4 §7.1。
+     * @param float $h 色相（度） @param float $s 饱和度 [0,1] @param float $l 亮度 [0,1]
+     */
+    private static function hslToRgb(float $h, float $s, float $l): int
+    {
+        $h = fmod($h, 360.0);
+        if ($h < 0) $h += 360.0;
+        $s = max(0.0, min(1.0, $s));
+        $l = max(0.0, min(1.0, $l));
+        $c = (1.0 - abs(2.0 * $l - 1.0)) * $s;
+        $x = $c * (1.0 - abs(fmod($h / 60.0, 2.0) - 1.0));
+        $mm = $l - $c / 2.0;
+        if ($h < 60)       { $r1 = $c; $g1 = $x; $b1 = 0.0; }
+        elseif ($h < 120)  { $r1 = $x; $g1 = $c; $b1 = 0.0; }
+        elseif ($h < 180)  { $r1 = 0.0; $g1 = $c; $b1 = $x; }
+        elseif ($h < 240)  { $r1 = 0.0; $g1 = $x; $b1 = $c; }
+        elseif ($h < 300)  { $r1 = $x; $g1 = 0.0; $b1 = $c; }
+        else               { $r1 = $c; $g1 = 0.0; $b1 = $x; }
+        $r = (int)round(($r1 + $mm) * 255.0);
+        $g = (int)round(($g1 + $mm) * 255.0);
+        $b = (int)round(($b1 + $mm) * 255.0);
+        return ($r << 16) | ($g << 8) | $b;
     }
 
     public static function parsePixels(string $value): CssLength
