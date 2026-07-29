@@ -143,6 +143,22 @@ class CssValueParser
             }
             return 0;
         }
+        // C3b rgb()/rgba() 百分比参数（CSS Color L4 §5）：rgb(100%, 0%, 0%)。
+        // 旧正则仅认整数参数 → 百分比形式渲染为黑。pct→round(p/100*255)。
+        if (preg_match('/rgba?\s*\(\s*([\d.]+)%\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*([\d.]+)\s*)?\)/i', $value, $m)) {
+            $r = (int)round(max(0.0, min(100.0, (float)$m[1])) / 100.0 * 255.0);
+            $g = (int)round(max(0.0, min(100.0, (float)$m[2])) / 100.0 * 255.0);
+            $b = (int)round(max(0.0, min(100.0, (float)$m[3])) / 100.0 * 255.0);
+            $bgr = ($b << 16) | ($g << 8) | $r;
+            if (isset($m[4]) && $m[4] !== '') {
+                $a = (float)$m[4];
+                if ($a < 1.0) {
+                    $aByte = (int)round(max(0.0, $a) * 255.0);
+                    return ($aByte << 24) | $bgr;
+                }
+            }
+            return $bgr;
+        }
         if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)/i', $value, $m)) {
             $r = (int)$m[1];
             $g = (int)$m[2];
