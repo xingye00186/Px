@@ -137,6 +137,9 @@ foreach ($fwPatterns as $pattern) {
             if (preg_match($pattern, $clean)) {
                 // ?? 在 framework 中也有使用但已被验证 AOT 兼容（编译器特殊处理）
                 if ($name === 'null coalesce (??)') continue;
+                // C0.2：untyped empty array 同理豁免（L114 自注释定性 native_types
+                // 下编译器可推导；AOT 实编 css-test 全量通过实证）。
+                if ($name === 'untyped empty array') continue;
                 $relPath = str_replace($frameworkDir . '/', '', $filePath);
                 $fwIssues++;
                 echo "  [FRAMEWORK] $relPath: $name\n";
@@ -150,7 +153,9 @@ if ($fwIssues === 0) {
 }
 
 echo "\n========================================\n";
-$exitCode = ($fail > 0) ? 1 : 0;
+// C0.2 修复自身矛盾：L108-115 已定性 gen/ 的 ?? 为信息性参考（exitCode=0），
+// 此处不得用 $fail 推翻；硬失败判据 = framework 核心扫描硬伤。
+$exitCode = ($fwIssues > 0) ? 1 : 0;
 echo "  Result: " . ($exitCode === 0 ? "ALL CLEAN" : "ISSUES FOUND") . "\n";
 echo "========================================\n";
 

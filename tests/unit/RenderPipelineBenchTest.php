@@ -531,6 +531,10 @@ echo "\n========== 微基准 4: 约束签名 (P2-1) ==========\n";
 describe('约束签名', function () use (&$results) {
 
     test('1000次 equals() vs 字符串序列化', function () use (&$results) {
+        // C0.2 退役：ConstraintSpace::getBfcOffsetX/Y 已随 BFC 重构灭失，
+        // 本微基准比较的签名方案也已定形，保留代码供考古。
+        echo "  [SKIP] 约束签名微基准（getBfcOffsetX API 灭失）\n";
+        return;
         $spaces = [];
         for ($i = 0; $i < 1000; $i++) {
             $spaces[] = new \Px\Layout\ConstraintSpace(

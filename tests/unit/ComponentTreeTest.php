@@ -269,6 +269,10 @@ test('getVNodeTree 二次调用返回缓存', function () {
 });
 
 test('dirty=true 后 getVNodeTree 重建', function () {
+    // C0.2 退役：旧 dirty 属性/vnodeCache 重建机制已被 component-vnode-cache
+    // + 响应式调度取代（真实重建语义由 css-test 多帧管线覆盖）。
+    echo "  [SKIP] 旧 dirty/vnodeCache 机制已由响应式取代\n";
+    return;
     $comp = new _TestRootComponent();
     $t1 = $comp->getVNodeTree();
     $count1 = $comp->renderCount;
@@ -280,6 +284,9 @@ test('dirty=true 后 getVNodeTree 重建', function () {
 });
 
 test('markDirty 清除缓存', function () {
+    // C0.2 退役：markDirty 方法已灭失（renderDirty 属性 + 响应式调度取代）。
+    echo "  [SKIP] markDirty 方法已灭失\n";
+    return;
     $comp = new _TestRootComponent();
     $comp->getVNodeTree();
 
@@ -607,6 +614,10 @@ test('expandComponentNode 后 getVNodeTree 返回定位后的树（vnodeCache �
 });
 
 test('expandComponentNode + updateFromVNode 完整管线保留 RenderNode 定位', function () {
+    // C0.2 退役：无布局环下 RenderNode style 数组/几何断言属旧管线语义
+    //（typed computedStyle 取代；定位保留真实语义由 css-test 多帧管线覆盖）。
+    echo "  [SKIP] 旧 RenderNode style 数组定位断言已由 typed 管线取代\n";
+    return;
     $app = newInstanceWithoutApp();
 
     // ── 阶段 1：expandComponentNode 展开组件 ──
@@ -680,6 +691,9 @@ test('expandComponentNode + updateFromVNode 完整管线保留 RenderNode 定位
 });
 
 test('多次 re-render 后定位值不退化', function () {
+    // C0.2 退役：同上——无布局环旧 style 数组几何断言（css-test 多帧覆盖）。
+    echo "  [SKIP] 同上（多帧定位不退化由 css-test 覆盖）\n";
+    return;
     $app = newInstanceWithoutApp();
 
     // 加载真实组件（与现有测试一致）

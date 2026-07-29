@@ -99,9 +99,10 @@ test('连续相同 v-if 子节点合并在同一 if 块', function () {
     $ifCount = substr_count($code, 'if ($this->showDialog)');
     assert_eq($ifCount, 1, '连续相同 v-if 应只有一个 if 块');
     
-    // 应有 3 个 $c[] =
+    // C0.2 更新：现编译器为 v-if 生成 else 占位 push（对齐 Vue3 anchor
+    // 稳定索引，patch 子序不漂移）：3 真分支 + 3 占位 = 6。
     $pushCount = substr_count($code, '$c[] =');
-    assert_eq($pushCount, 3, '应有 3 个 $c[] = (共 3 个子节点)');
+    assert_eq($pushCount, 6, '应有 6 个 $c[] = (3 真分支 + 3 else 占位)');
 });
 
 test('不同 v-if 条件生成独立 if 块', function () {
@@ -157,8 +158,8 @@ test('静态子节点 + v-if 子节点混合', function () {
     assert_contains($code, '(function()', '混合场景应使用闭包');
     // 静态节点无条件加入
     assert_contains($code, 'if ($this->showBody)', '条件节点应有 if');
-    // 应有 2 个 $c[] =
-    assert_eq(substr_count($code, '$c[] ='), 2, '应有 2 个 push');
+    // C0.2 更新：静态 1 + v-if 真分支 1 + else 占位 1 = 3（anchor 稳定索引）。
+    assert_eq(substr_count($code, '$c[] ='), 3, '应有 3 个 push（含 else 占位）');
 });
 
 echo "\n--- 5. v-if 条件为 false 时不创建 VNode ---\n";

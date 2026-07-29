@@ -136,6 +136,12 @@ foreach ($tests as $test) {
         $caseFailed = (int)$m[2] - $casePassed;
     } elseif (preg_match('/(\d+) passed,\s*0 failed/', $output ?? '', $m)) {
         $casePassed = (int)$m[1];
+    } elseif ((str_contains($output ?? '', '全部通过') || str_contains($output ?? '', 'All tests passed')
+        || str_contains($output ?? '', 'ALL CLEAN') || str_contains($output ?? '', '基线:'))
+        && !str_contains($output ?? '', 'Fatal error') && !str_contains($output ?? '', '[FAIL]')) {
+        // C0.2：自定义摘要格式脚本（无 N/M 计数行："全部通过 ✓"/"ALL CLEAN"/
+        // bench 基线摘要）——无此分支时 casePassed=0 被误判失败。
+        $casePassed = 1;
     } elseif ($output === null || str_contains($output ?? '', 'Fatal error')) {
         $caseFailed = 1;
     }
