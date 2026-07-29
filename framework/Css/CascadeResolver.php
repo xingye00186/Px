@@ -92,6 +92,42 @@ final class CascadeResolver
     }
 
     /**
+     * 层叠排序（块级，C1.3 接线入口）：对"声明块"列表按层叠序稳定排序
+     *（低→高），供串接/顺序覆盖消费。值级烘焙时代两通道（编译期
+     * mergeClassStylesIntoNode 串拼 / 运行时 resolveClassStyles 键覆盖）均以
+     * "后写者胜"消费块序，排序决策单点化即层叠序统一；属性级去重
+     *（resolve()）待 C2.5 规则 ID 级烘焙接管。
+     *
+     * @param array $blocks 每项：['payload'=>mixed, 'origin'=>, 'important'=>, 'specificity'=>, 'order'=>]
+     * @return array 按层叠序（低→高）排列的原块列表
+     */
+    public static function sortDeclarationBlocks(array $blocks): array
+    {
+        $keyed = [];
+        foreach ($blocks as $i => $b) {
+            $keyed[] = [
+                'block' => $b,
+                'slot'  => self::slotOf((string)($b['origin'] ?? self::ORIGIN_AUTHOR), (bool)($b['important'] ?? false)),
+                'spec'  => is_array($b['specificity'] ?? null) ? $b['specificity'] : [0, 0, 0, 0],
+                'order' => (int)($b['order'] ?? $i),
+                'seq'   => $i, // 稳定性：全同则保输入序
+            ];
+        }
+        usort($keyed, static function (array $a, array $b): int {
+            if ($a['slot'] !== $b['slot']) return $a['slot'] <=> $b['slot'];
+            $sc = self::compareSpecificity($a['spec'], $b['spec']);
+            if ($sc !== 0) return $sc;
+            if ($a['order'] !== $b['order']) return $a['order'] <=> $b['order'];
+            return $a['seq'] <=> $b['seq'];
+        });
+        $out = [];
+        foreach ($keyed as $k) {
+            $out[] = $k['block'];
+        }
+        return $out;
+    }
+
+    /**
      * candidate 是否击败 current（成为新胜出者）。
      * 比较序：slot（origin+importance）> specificity > 源顺序（后者胜）。
      */

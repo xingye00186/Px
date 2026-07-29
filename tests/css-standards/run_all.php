@@ -67,6 +67,7 @@ $scripts = [
     'Level-29-Float'                 => 'test_float.php',
     'Level-30-Margin-Collapse'       => 'test_margin_collapse.php',
     'Level-31-Flex-Shorthand'        => 'test_flex_shorthand.php',
+    'Level-32-Cascade'               => 'test_cascade.php',
 ];
 
 $analyzeMode = false;

@@ -261,15 +261,39 @@ function mergeClassStylesIntoNode($node, array $rawStyles, array $ancestorClassL
         }
     }
 
-    // Step 3: 合并（* + tag + class + inline，具有正确的层叠优先级）
+    // Step 3: 合并（* + tag + class + inline + !important）——C1.3：层叠序决策
+    // 移交 CascadeResolver::sortDeclarationBlocks 单点（六槽位序 + 同槽 specificity
+    // + 源顺序），本函数只负责构造带元数据的声明块；串接消费保持
+    // "后写者胜"（值级烘焙形态，属性级去重待 C2.5 规则 ID 级接管）。
     if ($universalDecls !== '' || $tagDecls !== '' || !empty($classNormalDecls) || !empty($classImportantDecls)) {
         $existing = $node->props['style'] ?? '';
+        $blocks = [];
+        if ($universalDecls !== '') {
+            $blocks[] = ['payload' => $universalDecls, 'origin' => \Px\Css\CascadeResolver::ORIGIN_AUTHOR,
+                'important' => false, 'specificity' => [0, 0, 0, 0], 'order' => 0];
+        }
+        if ($tagDecls !== '') {
+            $blocks[] = ['payload' => $tagDecls, 'origin' => \Px\Css\CascadeResolver::ORIGIN_AUTHOR,
+                'important' => false, 'specificity' => [0, 0, 0, 1], 'order' => 1];
+        }
+        if (!empty($classNormalDecls)) {
+            // 块内已按特异性升序串好（简单类→tag-subject→class-subject→id）
+            $blocks[] = ['payload' => implode(';', $classNormalDecls), 'origin' => \Px\Css\CascadeResolver::ORIGIN_AUTHOR,
+                'important' => false, 'specificity' => [0, 0, 1, 0], 'order' => 2];
+        }
+        if ($existing !== '') {
+            $blocks[] = ['payload' => $existing, 'origin' => \Px\Css\CascadeResolver::ORIGIN_INLINE,
+                'important' => false, 'specificity' => [0, 0, 0, 0], 'order' => 3];
+        }
+        if (!empty($classImportantDecls)) {
+            $blocks[] = ['payload' => implode(';', $classImportantDecls), 'origin' => \Px\Css\CascadeResolver::ORIGIN_AUTHOR,
+                'important' => true, 'specificity' => [0, 0, 1, 0], 'order' => 4];
+        }
+        $sorted = \Px\Css\CascadeResolver::sortDeclarationBlocks($blocks);
         $parts = [];
-        if ($universalDecls !== '') $parts[] = $universalDecls;
-        if ($tagDecls !== '') $parts[] = $tagDecls;
-        if (!empty($classNormalDecls)) $parts[] = implode(';', $classNormalDecls);
-        if ($existing !== '') $parts[] = $existing;
-        if (!empty($classImportantDecls)) $parts[] = implode(';', $classImportantDecls);
+        foreach ($sorted as $b) {
+            $parts[] = (string)$b['payload'];
+        }
         $node->props['style'] = implode(';', $parts);
     }
 

@@ -81,8 +81,21 @@ class StyleResolver
         }
 
         $raw = [];
+        // C1.3：!important 不再混入值串（此前 (?:!important)? 在 [^;]+ 贪婪吞噬后
+        // 永不匹配，值带 " !important" 尾巴流入解析器）；按 CascadeResolver 槽位
+        // 语义，important 声明后写胜同名 normal（值级烘焙形态：两遍收集）。
+        $rawImportant = [];
         foreach ($m as $decl) {
-            $raw[strtolower(trim($decl[1]))] = trim($decl[2]);
+            $prop = strtolower(trim($decl[1]));
+            $val = trim($decl[2]);
+            if (preg_match('/^(.*?)\s*!\s*important\s*$/i', $val, $im)) {
+                $rawImportant[$prop] = trim($im[1]);
+            } else {
+                $raw[$prop] = $val;
+            }
+        }
+        foreach ($rawImportant as $prop => $val) {
+            $raw[$prop] = $val;
         }
 
         // CSS variable resolution
@@ -223,33 +236,44 @@ class StyleResolver
         $classNames = $className !== '' ? explode(' ', $className) : [];
         $merged = [];
 
-        // 应用通用选择器 *（所有元素的最低基线样式）
+        // C1.3：*/tag/简单类三层的层叠序决策移交 CascadeResolver（与编译期
+        // mergeClassStylesIntoNode 同源单点，消灭两套注释声明的层叠序）；
+        // 块 payload = 样式数组，排序后按序键覆盖（后写者胜）。
+        $blocks = [];
+        $blockOrder = 0;
         foreach ($allRegistered as $compStyles) {
             if (isset($compStyles['*'])) {
-                foreach ($compStyles['*'] as $k => $v) {
-                    $merged[$k] = $v;
-                }
+                $blocks[] = ['payload' => $compStyles['*'], 'origin' => CascadeResolver::ORIGIN_AUTHOR,
+                    'important' => false, 'specificity' => [0, 0, 0, 0], 'order' => $blockOrder++];
             }
-            // 应用 tag 选择器样式（如 body, html, p 等）
+            // tag 选择器（如 body, html, p 等）
             if (isset($compStyles[$elementType])) {
-                foreach ($compStyles[$elementType] as $k => $v) {
-                    $merged[$k] = $v;
-                }
+                $blocks[] = ['payload' => $compStyles[$elementType], 'origin' => CascadeResolver::ORIGIN_AUTHOR,
+                    'important' => false, 'specificity' => [0, 0, 0, 1], 'order' => $blockOrder++];
             }
             // 注意：复合选择器 type subject（.first <comb> tag）不在运行时通道消费。
             // ThemeProvider 注册表无组件 scope，subject 为裸 tag 时会跨组件波及所有
             // 同名元素（同名类规则互污染）；该语义由编译期
             // mergeClassStylesIntoNode（有 scope 隔离）单通道实现。
         }
+        foreach ($classNames as $cnB) {
+            if ($cnB === '') continue;
+            foreach ($allRegistered as $compStyles) {
+                if (isset($compStyles[$cnB])) {
+                    $blocks[] = ['payload' => $compStyles[$cnB], 'origin' => CascadeResolver::ORIGIN_AUTHOR,
+                        'important' => false, 'specificity' => [0, 0, 1, 0], 'order' => $blockOrder++];
+                }
+            }
+        }
+        foreach (CascadeResolver::sortDeclarationBlocks($blocks) as $b) {
+            foreach ($b['payload'] as $k => $v) {
+                $merged[$k] = $v;
+            }
+        }
 
         foreach ($classNames as $cn) {
             if ($cn === '') continue;
             foreach ($allRegistered as $compStyles) {
-                if (isset($compStyles[$cn])) {
-                    foreach ($compStyles[$cn] as $k => $v) {
-                        $merged[$k] = $v;
-                    }
-                }
                 // Pseudo-class variants
                 foreach (['hover', 'focus', 'active'] as $pseudo) {
                     $key = $cn . '__' . $pseudo;

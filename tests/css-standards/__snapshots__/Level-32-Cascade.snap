@@ -1,0 +1,23 @@
+@generated 2026-07-29 13:22:58
+=== Test: UA 底线：input 默认 bg 白底 ===
+OK
+---
+
+=== Test: author 覆盖 UA：input background:#eee 胜 UA 白底 ===
+OK
+---
+
+=== Test: caption UA 居中与 author 覆盖 ===
+OK
+---
+
+=== Test: !important 覆盖 inline normal（顺序无关） ===
+OK
+---
+
+=== Test: 同权后者胜（块序稳定） ===
+OK
+---
+
+=== Test: 六槽位序 smoke（UA!important 最高） ===
+OK
