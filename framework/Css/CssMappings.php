@@ -1534,14 +1534,14 @@ class CssMappings
      * @param array  $parentSiblings  Array of preceding sibling class strings (for + and ~)
      * @return bool True if the selector matches
      */
-    public static function matchComplexSelector(string $combinator, string $firstClass, string $secondClass, string $parentClassStr, string $childClassStr, array $parentSiblings = []): bool
+    public static function matchComplexSelector(string $combinator, string $firstClass, string $secondClass, string $parentClassStr, string $childClassStr, array $parentSiblings = [], array $ancestorClassLists = []): bool
     {
         $childClasses = explode(' ', $childClassStr);
         // The second class must match the child element
         if (!in_array($secondClass, $childClasses, true)) {
             return false;
         }
-        return self::matchComplexFirstSide($combinator, $firstClass, $parentClassStr, $parentSiblings);
+        return self::matchComplexFirstSide($combinator, $firstClass, $parentClassStr, $parentSiblings, $ancestorClassLists);
     }
 
     /**
@@ -1549,13 +1549,24 @@ class CssMappings
      * （class subject 走 matchComplexSelector，type subject 直接比对 elementType）。
      * 单通道：两类 subject 共用同一 combinator 语义（CSS Selectors L3）。
      */
-    public static function matchComplexFirstSide(string $combinator, string $firstClass, string $parentClassStr, array $parentSiblings = []): bool
+    public static function matchComplexFirstSide(string $combinator, string $firstClass, string $parentClassStr, array $parentSiblings = [], array $ancestorClassLists = []): bool
     {
         $parentClasses = explode(' ', $parentClassStr);
 
         switch ($combinator) {
             case ' ':
-                // Descendant: parent must contain the first class
+                // Descendant（CSS Selectors L3 §6.6.1）：firstClass 在**任意祖先**中，
+                // 非仅直接父。C2.5 根因治本：旧实现只查 parentClassStr（直接
+                // 父）与编译期 MiscHelper（遍历 ancestorClassLists）语义不一致——跨中
+                // 间元素的后代选择器运行时从不匹配（探针实锤子孙 80 vs 应 160）。
+                // 优先用完整祖先链；缺祖先链（旧调用方）时回落直接父。
+                if (!empty($ancestorClassLists)) {
+                    foreach ($ancestorClassLists as $aList) {
+                        $ac = is_array($aList) ? $aList : explode(' ', (string)$aList);
+                        if (in_array($firstClass, $ac, true)) return true;
+                    }
+                    return false;
+                }
                 return in_array($firstClass, $parentClasses, true);
 
             case '>':

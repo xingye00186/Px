@@ -16,7 +16,7 @@ use Px\Css\InlineStyleParser;
  */
 class StyleRecalcPass
 {
-    public function recalc(VNode $root, ?ComputedStyle $parentCS = null, string $parentClassStr = '', array $precedingSiblingClasses = []): void
+    public function recalc(VNode $root, ?ComputedStyle $parentCS = null, string $parentClassStr = '', array $precedingSiblingClasses = [], array $ancestorClassLists = []): void
     {
         if ($root->isComponent) {
             // Component 节点不直接渲染，展开后由子组件管理
@@ -52,7 +52,10 @@ class StyleRecalcPass
             // C2.4：传真实前序兄弟 class（修§1.3.3 运行时兄弟组合子 +/~
             // 恒传空失效）；由父级子循环按文档序累积传入。
             precedingSiblingClasses: $precedingSiblingClasses,
-            pseudoStyles: $pseudoStyles
+            pseudoStyles: $pseudoStyles,
+            // C2.5：传完整祖先 class 链（根→直接父），使后代组合子跨中间
+            // 元素匹配任意祖先（与编译期 MiscHelper 语义一致，CSS Selectors L3）。
+            ancestorClassLists: $ancestorClassLists
         );
 
         $root->computedStyle = $computedStyle;
@@ -60,10 +63,15 @@ class StyleRecalcPass
         $children = is_array($root->children) ? $root->children : [];
         // 前序兄弟 class 串累积（文档序）：供子层运行时兄弟组合子匹配。
         $siblingAcc = [];
+        // 子层祖先链 = 当前链 + 本节点自身 class（根→直接父）。
+        $childAncestors = $ancestorClassLists;
+        if ($className !== '') {
+            $childAncestors[] = $className;
+        }
         foreach ($children as $child) {
             if ($child instanceof VNode) {
                 // 递归直传父 ComputedStyle 对象（O(1) 身份），不再传 toExportArray()
-                $this->recalc($child, $computedStyle, $className, $siblingAcc);
+                $this->recalc($child, $computedStyle, $className, $siblingAcc, $childAncestors);
                 $cc = $child->props['class'] ?? '';
                 if (is_string($cc) && $cc !== '') {
                     $siblingAcc[] = $cc;

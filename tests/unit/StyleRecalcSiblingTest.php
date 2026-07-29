@@ -69,5 +69,25 @@ test('相邻兄弟非紧邻不误命中（成对根因治本）', function () {
     assert_eq($bg[2], 0, '非紧邻 → sb 保持默认 bg=0（+ 仅匹配紧邻前兄弟）');
 });
 
+test('后代选择器跨中间元素匹配任意祖先（C2.5）', function () {
+    // CSS Selectors L3 §6.6.1：后代组合子匹配**任意祖先**。旧运行时
+    // matchComplexFirstSide 只查直接父（parentClassStr），与编译期 MiscHelper
+    // （遍历祖先链）语义不一致——跨中间元素的后代选择器运行时
+    // 从不匹配。修复：StyleRecalcPass 贯通完整祖先 class 链。
+    ThemeProvider::registerClassStyles('__desc3', [
+        'gc' => ['width' => 80],
+        '__complex__0' => ['firstClass' => 'gp', 'combinator' => ' ', 'secondClass' => 'gc',
+            'props' => ['width' => 160], 'specificity' => [0, 0, 2, 0]],
+    ]);
+    $tree = VNode::h('div', ['class' => 'gp'], [
+        VNode::h('div', ['class' => 'gmid'], [
+            VNode::h('div', ['class' => 'gc'], 'x'),
+        ]),
+    ]);
+    (new StyleRecalcPass())->recalc($tree);
+    $gc = $tree->children[0]->children[0];
+    assert_eq((int)$gc->computedStyle->width->toPx(), 160, '.gp .gc 跨 .gmid 匹配祖先 → 160');
+});
+
 $exitCode = print_summary();
 exit($exitCode);

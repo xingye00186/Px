@@ -39,7 +39,8 @@ class InlineStyleParser
         string $elementType = 'div',
         string $parentClassStr = '',
         array $precedingSiblingClasses = [],
-        array &$pseudoStyles = []
+        array &$pseudoStyles = [],
+        array $ancestorClassLists = []
     ): ComputedStyle {
         // 防御：空 string → []（编译期未覆盖的空 style 路径）
         if (!is_array($inlineStyle)) {
@@ -48,7 +49,7 @@ class InlineStyleParser
         // 1. 内联样式已经是编译期数组，直接使用
 
         // 2. 合并 CSS class 样式 + tag 选择器样式（CSS 层叠：class 是 base，inline 覆盖）
-        $classDeclarations = self::resolveClassStyles($className, $parentClassStr, $precedingSiblingClasses, $pseudoStyles, $elementType);
+        $classDeclarations = self::resolveClassStyles($className, $parentClassStr, $precedingSiblingClasses, $pseudoStyles, $elementType, $ancestorClassLists);
         $declarations = $classDeclarations;
         foreach ($inlineStyle as $k => $v) {
             $declarations[$k] = $v;
@@ -233,7 +234,8 @@ class InlineStyleParser
         string $parentClassStr,
         array $precedingSiblingClasses,
         array &$pseudoStyles,
-        string $elementType = 'div'
+        string $elementType = 'div',
+        array $ancestorClassLists = []
     ): array {
         $allRegistered = ThemeProvider::getAllClassStyles();
         $classNames = $className !== '' ? explode(' ', $className) : [];
@@ -311,7 +313,8 @@ class InlineStyleParser
                                 $styleValue['secondClass'],
                                 $parentClassStr,
                                 $className,
-                                $precedingSiblingClasses
+                                $precedingSiblingClasses,
+                                $ancestorClassLists
                             );
                             if ($matches) {
                                 foreach ($styleValue['props'] as $k => $v) {
