@@ -56,17 +56,12 @@ test('通用兄弟 ~ 组合子运行时应用', function () {
     assert_eq($bg[2], 65280, '.a ~ .t 命中（隔兄弟）→ t bg=#00FF00');
 });
 
-test('相邻兄弟非紧邻不误命中（根因已定位，待 C2.5 成对治本）', function () {
-    // 根因（已插桩实锤）：parseStyleBlock 首遍类 pass 与 tag pass 旧正则
-    // 从复合选择器 `.sa + .sb{}` 截出 subject `.sb`/`sb` 当裸类/裸标签
-    // 规则，无条件覆盖真实 `.sb{bg:0}` → + 过匹配隔兄弟。
-    // 但该 subject-leak 是载荷性：后代/子选择器的视觉结果（Level-25
-    // `.ancestor .child`→160）正依赖它而非真实运行时复合匹配（后者在此
-    // 管线未接线）。单独移 leak 会把 descendant 160→80 变成净回归。
-    // 治本前提卡点：运行时复合选择器匹配必须先/同时接线（属 C2.5
-    // 规则 ID 级消费），parseStyleBlock 纯单类/纯标签过滤与之成对落地。
-    echo "  [SKIP-C2.5] + 紧邻精度待 parseStyleBlock 纯选择器过滤 + 运行时复合匹配成对接线（C2.5）\n";
-    return;
+test('相邻兄弟非紧邻不误命中（成对根因治本）', function () {
+    // 成对治本（皆已插桩实锤）：
+    //  (1) parseStyleBlock 首遍类/tag pass 改整规则捕获 + 纯选择器过滤，
+    //      消除复合选择器 subject 泄漏到裸类/裸标签桶（+ 不再无条件命中）；
+    //  (2) 后代组合子 '' → ' ' 规范化，使真实运行时复合匹配生效。
+    // .sa + .sb 要求紧邻；中间隔 .sm 时不应命中。
     $bg = recalcChildBg(
         '.sb { background:#000000; }' . "\n" . '.sa + .sb { background:#FF0000; }',
         ['sa', 'sm', 'sb']

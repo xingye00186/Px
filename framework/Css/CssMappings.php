@@ -1105,8 +1105,20 @@ class CssMappings
 
         // --- First pass: Parse simple class rules ---
         // Match .className { ... }
-        if (!preg_match_all('#\.([a-zA-Z0-9_-]+)\s*\{([^}]*)\}#s', $styleCss, $rules, PREG_SET_ORDER)) {
-            // Even if no normal rules, still check for pseudo-class and complex rules
+        // C2.5 根因治本（严格对齐 Blink）：旧正则 `\.(\w+)\s*\{` 会从复合
+        // 选择器 `.sa + .sb{}` 截出 subject `.sb{}` 当裸类规则，无条件覆盖
+        // 真实 `.sb{}`（同理 `div.foo{}` 降为裸 `.foo`）——概念错乱。Blink
+        // 中选择器作整体解析，subject 绝不降级为裸类。改为整规则捕获
+        // + 纯单类过滤（复合/后代/tag/id/伪类各归其对应 pass；后代/子
+        // 选择器的真实匹配由运行时 __complex__ + matchComplexSelector 产出）。
+        $rules = [];
+        if (preg_match_all('#([^{}]*)\{([^}]*)\}#s', $styleCss, $allRules, PREG_SET_ORDER)) {
+            foreach ($allRules as $ar) {
+                $sel = trim($ar[1]);
+                if (preg_match('/^\.([a-zA-Z0-9_-]+)$/', $sel, $sm)) {
+                    $rules[] = [$ar[0], $sm[1], $ar[2]];
+                }
+            }
         }
 
         // --- Also parse universal selector rules: *, html, body ---
@@ -1189,7 +1201,21 @@ class CssMappings
 
         // --- Pass 1.5: Parse universal/tag selectors (*, html, body, etc.) ---
         // Store as '*' for universal base styles
-        if (preg_match_all('#([a-zA-Z*]+)\s*\{([^}]*)\}#s', $styleCss, $tagRules, PREG_SET_ORDER)) {
+        // C2.5 根因治本：旧正则 `([a-zA-Z*]+)\s*\{` 仅捕获字母段，`.sb{` 的
+        // `sb` 被当裸标签 tag 'sb'（str_starts_with($sel,'.') 守卫失效，因 `.`
+        // 未入捕获），与 class key 同表碰撞。改为整规则捕获 + 纯标签过滤
+        // （Blink：标签选择器与类选择器是不同选择器类型）。
+        $tagRules = [];
+        if (preg_match_all('#([^{}]*)\{([^}]*)\}#s', $styleCss, $allTagRules, PREG_SET_ORDER)) {
+            foreach ($allTagRules as $ar) {
+                $sel = trim($ar[1]);
+                // 纯单标签（div/p/span 等；*/html/body 已由 universalRules 处理）
+                if (preg_match('/^[a-zA-Z][a-zA-Z0-9]*$/', $sel)) {
+                    $tagRules[] = [$ar[0], $sel, $ar[2]];
+                }
+            }
+        }
+        if (!empty($tagRules)) {
             foreach ($tagRules as $rule) {
                 $selector = $rule[1];
                 // Skip class-based rules (already parsed above) and pseudo-rules
@@ -1311,7 +1337,12 @@ class CssMappings
         if (preg_match_all('#\.([a-zA-Z0-9_-]+)\s*([>+~ ])\s*\.([a-zA-Z0-9_-]+)\s*\{([^}]*)\}#s', $styleCss, $complexRules, PREG_SET_ORDER)) {
             foreach ($complexRules as $rule) {
                 $firstClass = $rule[1];
+                // C2.5 根因治本：后代组合子是空白，正则捕获为单个空格，
+                // trim() 后变空串——而 matchComplexFirstSide 的 case ' ' 永不匹配空串，
+                // 致后代选择器运行时从不匹配（旧 subject-leak 掩盖了此 bug）。
+                // 对齐 Blink：后代组合子规范化为 ' '。
                 $combinator = trim($rule[2]);
+                if ($combinator === '') { $combinator = ' '; }
                 $secondClass = $rule[3];
                 $body = $rule[4];
                 $props = [];
