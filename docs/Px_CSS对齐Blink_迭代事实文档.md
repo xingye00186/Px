@@ -1,11 +1,12 @@
 # Px CSS 对齐 Blink — 迭代事实文档（范围 · 边际 · 测试 · ThemeProvider 处置）
 
-> 锚点：HEAD `ba5852a0`（2026-07-31 前后）。前置文档：《Px_LayoutNG_架构审计报告_对标Blink.md》§二十（第六次核验 ~80%）。
+> 锚点：HEAD `ba5852a0`（2026-07-29）。前置文档：《Px_LayoutNG_架构审计报告_对标Blink.md》§二十（第六次核验 ~80%）。
 > 本文档性质：**迭代事实与范围契约**——每阶段做什么、明确不做什么（边际）、用哪些现有测试、补哪些新测试、退出标准是什么。所有现状论断均有代码行号证据。
 > 修订 r1：融合外部评审结论——烘焙策略由"值级"升级为"规则 ID 级"（§C2.5）、alpha 修复拆为独立前置小批 C3a、反向索引提前至 C2 定形、硬伤清单补 `:class` 烘焙门双输事实（§1.3.6）。评审中的错误机制描述（hexToBgr 截断说、StylePool 命中仍遍历说、class 被消化说）已逐条证伪，不采纳。
 > 修订 r2（Blink 对齐严格核查）：纠正 q 引号→LayoutTheme 错误嫁接（q 规则属 html.css UA 表，深度解析属 LayoutQuote，与 LayoutTheme 无关）；cascade 槽位补全 inline style 与动画 origin；标注 :hover 应用机制偏差（Px Paint 期叠加 vs Blink 全量 recalc）；补继承对齐条目；新增 §八术语对照表（Px 命名 ↔ Blink 对应物 ↔ 差异）防名同物异。
 > 修订 r3（命名占用清退，强制）：凡 Px 术语占用 Blink 名称但语义不同的，一律改用与 Blink 语义一致的命名——规划术语"RuleSet"（规则存储）已全文更名 `StyleSheetContents`（条目 `RuleData`），`RuleSet` 名称让渡给倒排索引（与 Blink bucketing 职能一致）；现存类 `StyleResolver` 列入 C1 更名整改（C1.6）。详见 §8.1。
 > 修订 r4（核查清单复核补漏）：var() 替换期由 used-value 更正为 **computed-value 期**（CSS Variables L1 §3，C3b.3）；UA 散点计数"5+ 处"更正为 **4 处实体散点**（BlockAlgorithm L16 仅为 INLINE_TYPES 单源引用点，非散点，§1.3.1）。
+> 修订 r5（C0.1 代码现状勘误，评估核对 13 项后）：① 单测行"27 文件 常绿"为重大失真——实为 63 文件、run_all 11/58（47 失败=旧命名空间僵尸，C0.2 甄别批前置处置）；② mergeClassStylesIntoNode 位置 sfc-compiler L1020 → MiscHelper.php L130；③ 锚点日期 07-31 → 07-29；④ css-test 水位 60 → 49（055 滚动条批 @038acaae）。
 
 ---
 
@@ -27,15 +28,15 @@
 | 层 | 位置 | 规模 | 当前水位 | 性质 |
 |---|---|---|---|---|
 | css-standards 快照 | `tests/css-standards/` | 31 个 Level + template-tests | **330/330**，gates 31/32（template-tests 既有失败） | 引擎自断言（Blink 真值护栏过的快照），秒级，主回归网 |
-| css-test 真值对照 | `apps/css-test/test_case/` | 55 case | **40/55 通过**，全量 diff 60，PHP-RT ≡ AOT（54/55 点等） | 浏览器三方对照（E vs B），case 驱动主战场 |
-| 单元测试 | `tests/unit/` | 27 文件 | 常绿 | CSS 直接相关：CssMappingsTest、CssMappingsBorderTest、CssValueParserTest、RenderingPipelineTest、RenderTreeManagerTest、RenderPipelineFixTest、MemoryStressTest、PxTest/ThemeProviderTest |
+| css-test 真值对照 | `apps/css-test/test_case/` | 55 case | **40/55 通过**，全量 diff 49（r5 勘正：原 60，已被 055 滚动条批 @038acaae 超越），PHP-RT ≡ AOT（54/55 点等） | 浏览器三方对照（E vs B），case 驱动主战场 |
+| 单元测试 | `tests/unit/` | 63 文件 | **run_all 11/58（47 失败 = 旧命名空间僵尸测试，非引擎回归；r5 勘正原"27 文件 常绿"，C0.2 甄别批处置）** | CSS 直接相关：CssMappingsTest、CssMappingsBorderTest、CssValueParserTest、RenderingPipelineTest、RenderTreeManagerTest、RenderPipelineFixTest、MemoryStressTest、PxTest/ThemeProviderTest |
 | 性能基准 | `apps/reactive-bench/` | — | style_recalc ~175μs/帧地板 | PerfCounter 计数（style_pool_hit/miss 已埋点） |
 
 ### 1.2 双通道消费矩阵（谁在喂、谁在读）
 
 | 通道 | 写入方 | 读取方 | 生产状态 |
 |---|---|---|---|
-| 编译期烘焙 | `mergeClassStylesIntoNode`（sfc-compiler L1020） | VNode 内联样式 → 全布局管线 | **生产唯一活通道** |
+| 编译期烘焙 | `mergeClassStylesIntoNode`（framework/Compiler/Helpers/MiscHelper.php L130，r5 勘正原误标 sfc-compiler L1020） | VNode 内联样式 → 全布局管线 | **生产唯一活通道** |
 | 运行时注册表 | `ThemeProvider::registerClassStyles` | `StyleResolver::resolveClassStyles` / `extractPseudoStyles` | **生产恒空**：gen 文件零调用（grep `apps/**/gen` 0 命中）；Application L482-483 注释自证"编译时 class→style 合并已完成，无需运行时注册" |
 
 ### 1.3 关键既成事实（迭代动机）
