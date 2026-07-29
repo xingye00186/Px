@@ -89,5 +89,38 @@ test('后代选择器跨中间元素匹配任意祖先（C2.5）', function () {
     assert_eq((int)$gc->computedStyle->width->toPx(), 160, '.gp .gc 跨 .gmid 匹配祖先 → 160');
 });
 
+test('child > 严格仅直接父（不匹配祖父）', function () {
+    // CSS Selectors L3 §6.6.2：子组合子仅匹配直接父（与后代 ' ' 区分）。
+    ThemeProvider::registerClassStyles('__child_strict', [
+        'cc' => ['width' => 80],
+        '__complex__0' => ['firstClass' => 'cp', 'combinator' => '>', 'secondClass' => 'cc',
+            'props' => ['width' => 160], 'specificity' => [0, 0, 2, 0]],
+    ]);
+    // 跨中间：cp > cmid > cc，> 不应命中
+    $across = VNode::h('div', ['class' => 'cp'], [VNode::h('div', ['class' => 'cmid'], [VNode::h('div', ['class' => 'cc'], 'x')])]);
+    (new StyleRecalcPass())->recalc($across);
+    assert_eq((int)$across->children[0]->children[0]->computedStyle->width->toPx(), 80, '.cp > .cc 跨 .cmid 不命中 → 80');
+    // 直接父：cp > cc，应命中
+    $direct = VNode::h('div', ['class' => 'cp'], [VNode::h('div', ['class' => 'cc'], 'x')]);
+    (new StyleRecalcPass())->recalc($direct);
+    assert_eq((int)$direct->children[0]->computedStyle->width->toPx(), 160, '.cp > .cc 直接父 → 160');
+});
+
+test('通用兄弟 ~ 跨中间兄弟匹配', function () {
+    // CSS Selectors L3 §6.6.4：通用兄弟匹配任意前序兄弟。
+    ThemeProvider::registerClassStyles('__gen_sib', [
+        'gt' => ['width' => 80],
+        '__complex__0' => ['firstClass' => 'ga', 'combinator' => '~', 'secondClass' => 'gt',
+            'props' => ['width' => 160], 'specificity' => [0, 0, 2, 0]],
+    ]);
+    $tree = VNode::h('div', ['class' => 'wrap'], [
+        VNode::h('div', ['class' => 'ga'], 'x'),
+        VNode::h('div', ['class' => 'gm'], 'x'),
+        VNode::h('div', ['class' => 'gt'], 'x'),
+    ]);
+    (new StyleRecalcPass())->recalc($tree);
+    assert_eq((int)$tree->children[2]->computedStyle->width->toPx(), 160, '.ga ~ .gt 跨 .gm 匹配 → 160');
+});
+
 $exitCode = print_summary();
 exit($exitCode);
