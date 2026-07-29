@@ -39,5 +39,12 @@ test('逗号语法与 hex 不回归', function () {
     assert_eq(phm('#FF0000') & 0xFFFFFF, phm('rgb(255,0,0)') & 0xFFFFFF, 'hex 不回归');
 });
 
+test('整数通道越界 clamp 到 [0,255]（CSS Color L4）', function () {
+    // 旧实现未 clamp：rgb(300,0,0) 溢出到相邻字节产生垃圾色。
+    assert_eq(phm('rgb(300, 0, 0)'), phm('rgb(255,0,0)'), 'r=300 clamp→255（红）');
+    assert_eq(phm('rgb(999, 999, 999)'), phm('rgb(255,255,255)'), '999 clamp→白');
+    assert_eq(phm('rgb(0 300 0)'), phm('rgb(0,255,0)'), '空格语法 g=300 clamp→绿');
+});
+
 $exitCode = print_summary();
 exit($exitCode);

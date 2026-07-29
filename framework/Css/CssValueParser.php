@@ -163,9 +163,9 @@ class CssValueParser
         // rgb(255 0 0 / 0.5)、rgb(255 0 0 / 50%)。旧实现仅认逗号语法 →
         // 空格语法渲染为黑。alpha 支持数字与百分比。
         if (preg_match('/rgba?\s*\(\s*(\d+)\s+(\d+)\s+(\d+)\s*(?:\/\s*([\d.]+)(%?)\s*)?\)/i', $value, $m)) {
-            $r = (int)$m[1];
-            $g = (int)$m[2];
-            $b = (int)$m[3];
+            $r = max(0, min(255, (int)$m[1]));
+            $g = max(0, min(255, (int)$m[2]));
+            $b = max(0, min(255, (int)$m[3]));
             $bgr = ($b << 16) | ($g << 8) | $r;
             if (isset($m[4]) && $m[4] !== '') {
                 $a = ($m[5] === '%') ? ((float)$m[4] / 100.0) : (float)$m[4];
@@ -177,9 +177,9 @@ class CssValueParser
             return $bgr;
         }
         if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)/i', $value, $m)) {
-            $r = (int)$m[1];
-            $g = (int)$m[2];
-            $b = (int)$m[3];
+            $r = max(0, min(255, (int)$m[1]));
+            $g = max(0, min(255, (int)$m[2]));
+            $b = max(0, min(255, (int)$m[3]));
             $bgr = ($b << 16) | ($g << 8) | $r;
             // C3a.2：第 4 捕获组 alpha（CSS Color 4）→ 打包入高 8 位。
             // 约定：alpha ∈ [0,1) 存字节 round(a*255)（<255）；alpha>=1/缺省
