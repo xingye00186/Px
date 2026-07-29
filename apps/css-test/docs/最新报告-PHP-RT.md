@@ -1,10 +1,10 @@
 # CSS Test Sandbox — 测试报告
 
-**运行时间**: 2026-07-29 20:37:39 | **总耗时**: 52.6s
+**运行时间**: 2026-07-29 20:54:20 | **总耗时**: 52.4s
 
 | 用例 | 构建 | 布局 | 多帧 | 浏览器 | 元素对比 | Phase L | Phase G | 差异 | 截图 | 结果 | 耗时 |
 |------|------|------|------|--------|----------|---------|---------|------|------|------|------|
-| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 39.8s |
+| case-001-wrapper-x | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 39.5s |
 | case-002-auto-height | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff 🔴1 | ⏭️ | ❌ 失败 | 0.2s |
 | case-003-basic-block | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
 | case-004-flex-layout | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
@@ -14,7 +14,7 @@
 | case-008-box-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-009-outline | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-010-display-none | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
-| case-011-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff | ⏭️ | ❌ 失败 | 0.1s |
+| case-011-position-absolute | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-012-position-relative | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
 | case-013-z-index | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-014-overflow-hidden | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 2diff | ⏭️ | ❌ 失败 | 0.2s |
@@ -32,9 +32,9 @@
 | case-026-font-style | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.1s |
 | case-027-scroll-diagnostic | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.7s |
 | case-028-scroll-block | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.7s |
-| case-029-scroll-flex-col | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.8s |
+| case-029-scroll-flex-col | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.9s |
 | case-030-scroll-flex-row | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.4s |
-| case-031-scroll-grid | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.8s |
+| case-031-scroll-grid | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.7s |
 | case-032-scroll-relative | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.7s |
 | case-033-text-shadow | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
 | case-034-letter-spacing | ⏭️ | ✅ | ⏭️ | ✅ | ✅ | ✅ | ✅ | ✅ | ⏭️ | ✅ 通过 | 0.2s |
@@ -59,19 +59,13 @@
 | case-053-intrinsic-sizing | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.1s |
 | case-054-inline-block-nest | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 3diff 🔴1 | ⏭️ | ❌ 失败 | 0.1s |
 | case-055-sticky-multi | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.1s |
-| case-058-rgba-alpha | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 9diff 🔴1 | ⏭️ | ❌ 失败 | 0.1s |
+| case-058-rgba-alpha | ⏭️ | ✅ | ⏭️ | ✅ | ❌ | ✅ | ✅ | 1diff 🔴1 | ⏭️ | ❌ 失败 | 0.1s |
 
-**汇总**: 40 ✅ / 16 ❌ / 56 总计 (总耗时: 52.6s)
+**汇总**: 41 ✅ / 15 ❌ / 56 总计 (总耗时: 52.4s)
 
 ## 回归判定
 
-> 🔴 **检测到回归** — 与上一次运行相比，以下指标恶化:
->
-> - pass rate 72.7->71.4
-> - prop background-color diff 1->7
-> - prop border-left-color diff 0->2
->
-> ⚠️ 建议: 检查本次变更是否引入了预期外的行为改变。
+> ✅ **无回归** — 与上一次运行相比，各项指标均未恶化。
 
 ## 样式属性统计
 
@@ -81,7 +75,6 @@
 | height | 100% | 8524/8528 |
 | margin-right | 100% | 8526/8528 |
 | margin-left | 100% | 8526/8528 |
-| border-left-color | 100% | 8526/8528 |
 | overflow-x | 100% | 8527/8528 |
 | overflow-y | 100% | 8527/8528 |
 | color | 100% | 8528/8528 |
@@ -97,11 +90,12 @@
 | font-weight | 100% | 8528/8528 |
 | opacity | 100% | 8528/8528 |
 | border-left-width | 100% | 8528/8528 |
+| border-left-color | 100% | 8528/8528 |
 | line-height | 100% | 8527/8527 |
 | text-align | 100% | 8521/8521 |
 | border-radius | 100% | 8317/8317 |
 | display | 100% | 8276/8276 |
-| background-color | 99.9% | 8123/8130 |
+| background-color | 100% | 8130/8130 |
 | font-size | 100% | 7486/7486 |
 | align-items | 100% | 62/62 |
 | justify-content | 100% | 52/52 |
@@ -152,7 +146,7 @@
 | case-008-box-shadow | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-009-outline | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-010-display-none | 0 | 0 | 0 | 0 | 0 | 0 |
-| case-011-position-absolute | 0 | 0 | 0 | 1 | 0 | 0 |
+| case-011-position-absolute | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-012-position-relative | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-013-z-index | 0 | 0 | 0 | 0 | 0 | 0 |
 | case-014-overflow-hidden | 0 | 0 | 0 | 2 | 0 | 0 |
@@ -197,5 +191,5 @@
 | case-053-intrinsic-sizing | 0 | **1** | 0 | 0 | 0 | 0 |
 | case-054-inline-block-nest | 0 | **1** | **2** | 0 | 0 | 0 |
 | case-055-sticky-multi | 0 | **1** | 0 | 0 | 0 | 0 |
-| case-058-rgba-alpha | 0 | **1** | 0 | 8 | 0 | 0 |
+| case-058-rgba-alpha | 0 | **1** | 0 | 0 | 0 | 0 |
 

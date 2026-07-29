@@ -639,6 +639,24 @@ class LayoutNormalizer
     }
 
     /**
+     * C3a.3：alpha 字节（1-254）→ Chrome getComputedStyle 风格最短往返小数串。
+     * 依次尝试 1/2/3 位小数，取首个满足 round(d*255)==byte 的最少位数表示
+     *（如 0x0F→0.06、0x66→0.4、0x44→0.267），与 Chrome 序列化完全一致。
+     */
+    private static function alphaByteToDecimal(int $byte): string
+    {
+        for ($places = 1; $places <= 3; $places++) {
+            $d = round($byte / 255.0, $places);
+            if ((int)round($d * 255.0) === $byte) {
+                // 去尾零（rtrim）：0.40 → 0.4；保留至少一位小数
+                $s = rtrim(rtrim(number_format($d, $places, '.', ''), '0'), '.');
+                return $s === '' ? '0' : $s;
+            }
+        }
+        return (string)round($byte / 255.0, 3);
+    }
+
+    /**
      * 规范化样式值。
      * 处理：bg=-1 跳过、fg 整数转 rgb、bold 转 font-weight 值等。
      */
@@ -670,6 +688,14 @@ class LayoutNormalizer
             $r = $value & 0xFF;
             $g = ($value >> 8) & 0xFF;
             $b = ($value >> 16) & 0xFF;
+            // C3a.3：高 8 位 = alpha（<255 半透明）；opaque（高字节 0）走 rgb()。
+            // alpha 序列化对齐 Chrome getComputedStyle：最短往返小数（1-3 位，
+            // round(d*255)==byte 的最少位数表示），如 0x0F→0.06、0x44→0.267。
+            $a = ($value >> 24) & 0xFF;
+            if ($a > 0 && $a < 255) {
+                $af = self::alphaByteToDecimal($a);
+                return "rgba($r, $g, $b, $af)";
+            }
             return "rgb($r, $g, $b)";
         }
 

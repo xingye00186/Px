@@ -757,6 +757,14 @@ class ComputedStyle
             } elseif (preg_match('/#([0-9a-fA-F]{3,8})\b/', $bShortC, $bcm2)) {
                 $cl = CssValueParser::parseHexColor('#' . $bcm2[1]);
                 $bc = is_numeric($cl) ? (int)$cl : $bc;
+            } else {
+                // C3a.3：原始 CSS 简写（'4px solid rgba(...)'）——gen 不烘焙为
+                // pipe，上面两正则均不匹配 rgba shorthand → 走 parseBorder 取色
+                //（保 alpha 高字节）。
+                $pipe = CssValueParser::parseBorder($bShortC);
+                if (preg_match('/^\d+\|(\d+)\|\w+$/', $pipe, $pm)) {
+                    $bc = (int)$pm[1];
+                }
             }
         }
         $this->borderColor = $bc;
@@ -776,6 +784,11 @@ class ComputedStyle
                 if (preg_match('/#([0-9a-fA-F]{3,8})\b/', $v, $m)) {
                     $cl = CssValueParser::parseHexColor('#' . $m[1]);
                     return is_numeric($cl) ? (int)$cl : 0;
+                }
+                // C3a.3：原始 CSS per-side 简写（'4px solid rgba(...)'）→ parseBorder
+                $pipe = CssValueParser::parseBorder($v);
+                if (preg_match('/^\d+\|(\d+)\|\w+$/', $pipe, $m)) {
+                    return (int)$m[1];
                 }
             }
             return 0;
@@ -1021,7 +1034,10 @@ class ComputedStyle
                 } elseif ($v instanceof CssKeyword) {
                     $result[$k] = $v->value;
                 } elseif ($v instanceof CssColor) {
-                    $result[$k] = $v->toBgr();
+                    // C3a.3：导出 full argb（保 alpha 高字节）而非 toBgr()；opaque
+                    // 色高字节为 0 与 toBgr() 等价（向后兼容），半透明色携 alpha
+                    // 供 Normalizer 输出 rgba（GDI/Skia 渲染仍走 toBgr()，不受影响）。
+                    $result[$k] = $v->argb;
                 } elseif ($v instanceof CssFlex) {
                     $result[$k] = $v->grow . ' ' . $v->shrink . ' ' . $v->basis->toPx();
                 } elseif ($v instanceof CssRect) {

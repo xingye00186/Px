@@ -946,7 +946,9 @@ class Application
             } elseif ($v instanceof \Px\Css\CssLength) {
                 $result[$k] = $v->toPx();
             } elseif ($v instanceof \Px\Css\CssColor) {
-                $result[$k] = $v->toBgr();
+                // C3a.3：导出 full argb（保 alpha 高字节）；opaque 色高字节 0 与
+                // toBgr() 等价（向后兼容），半透明色携 alpha 供 Normalizer 输出 rgba。
+                $result[$k] = $v->argb;
             } elseif ($v instanceof \Px\Css\CssFlex) {
                 $result[$k] = $v->grow . ' ' . $v->shrink . ' ' . $v->basis->toPx();
             } elseif ($v instanceof \Px\Css\CssRect) {

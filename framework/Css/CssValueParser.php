@@ -202,21 +202,32 @@ class CssValueParser
     {
         $v = trim($value);
         if ($v === '' || $v === 'none') return '';
-        $parts = preg_split('/\s+/', $v);
+        // C3a.3：先整串提色（rgba(...) 含内部逗号，空格分割会碎化；
+        // #RRGGBBAA 亦需），用 parseHexColor 保 alpha，而非 hexToBgr（不含 rgba）。
+        $colorInt = 0;
+        $vNoColor = $v;
+        if (preg_match('/rgba?\s*\([^)]*\)/i', $v, $cm)) {
+            $colorInt = self::parseHexColor($cm[0]);
+            $vNoColor = str_replace($cm[0], '', $v);
+        } elseif (preg_match('/#[0-9a-fA-F]{3,8}\b/', $v, $cm)) {
+            $colorInt = self::parseHexColor($cm[0]);
+            $vNoColor = str_replace($cm[0], '', $v);
+        }
+        $parts = preg_split('/\s+/', trim($vNoColor));
         $width = 0;
-        $color = '#000000';
         $style = 'solid';
         $styleKeywords = ['none','hidden','dotted','dashed','solid','double','groove','ridge','inset','outset'];
         foreach ($parts as $p) {
+            if ($p === '') continue;
             if (preg_match('/^\d+/', $p)) {
                 $width = (int)$p;
-            } elseif (preg_match('/^#/', $p)) {
-                $color = $p;
             } elseif (in_array(strtolower($p), $styleKeywords, true)) {
                 $style = strtolower($p);
+            } elseif (isset(self::NAMED_COLORS[strtolower($p)])) {
+                $colorInt = self::NAMED_COLORS[strtolower($p)];
             }
         }
-        return $width . '|' . self::hexToBgr($color) . '|' . $style;
+        return $width . '|' . $colorInt . '|' . $style;
     }
 
    public static function parseBoxShadow(string $value): string
