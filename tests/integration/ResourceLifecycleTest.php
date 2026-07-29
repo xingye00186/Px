@@ -63,7 +63,7 @@ $app->mount($comp);
 
 $hashes = [];
 for ($i = 0; $i < 50; $i++) {
-    $comp->markDirty();
+    $comp->renderDirty = true;
     $rmRender->invoke($app);
     $root = $app->getRenderTreeManager()->getRootRenderNode();
     if ($root !== null) {
@@ -93,7 +93,7 @@ $root2 = $app2->getRenderTreeManager()->getRootRenderNode();
 $childCount1 = $root2 !== null ? count($root2->children) : -1;
 
 for ($i = 0; $i < 20; $i++) {
-    $comp2->markDirty();
+    $comp2->renderDirty = true;
     $rm2->invoke($app2);
 }
 $root2b = $app2->getRenderTreeManager()->getRootRenderNode();

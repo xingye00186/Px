@@ -125,7 +125,7 @@ check('JSON saved to ref/', file_exists("$refDir/px_test_engine_layout.json"));
 echo "\n--- Step 4: Multi-frame Stability ---\n";
 $frame1 = $serializer->toArray($root);
 for ($i = 0; $i < 5; $i++) {
-    $comp->markDirty();
+    $comp->renderDirty = true;
     $rmRender->invoke($app);
 }
 $frame5 = $serializer->toArray($root);

@@ -136,7 +136,7 @@ class _BenchComponent extends \Px\Component\ReactiveComponent
     /** 公开的脏标记触发 */
     public function invalidate(): void
     {
-        $this->markDirty();
+        $this->renderDirty = true;
     }}
 
 // ── 工具：运行一帧完整管线 ────────────────────────────

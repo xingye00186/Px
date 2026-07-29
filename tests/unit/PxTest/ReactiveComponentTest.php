@@ -57,7 +57,7 @@ check('Second getVNodeTree returns same (cached)', $vnode2 === $vnode1);
 check('Second get does NOT re-render', $comp->callCount['render'] === 1);
 
 // markDirty 后失效缓存
-$comp->markDirty();
+$comp->renderDirty = true;
 check('markDirty called', $comp->callCount['markDirty'] === 1);
 
 $vnode3 = $comp->getVNodeTree();
@@ -116,7 +116,7 @@ check('VNode v1 root type = #root', $v1->type === '#root');
 
 // 更改 mockVNode 模拟状态变化
 $comp4->mockVNode = VNodeBuilder::span('v2')->build();
-$comp4->markDirty();
+$comp4->renderDirty = true;
 
 $v2 = $comp4->getVNodeTree();
 check('After state change, root still #root', $v2->type === '#root');

@@ -49,7 +49,7 @@ $app->mount($comp);
 // 200 次渲染
 $samples = [];
 for ($i = 0; $i < 200; $i++) {
-    $comp->markDirty();
+    $comp->renderDirty = true;
     $rmRender->invoke($app);
     if ($i % 50 === 0) {
         $samples[$i] = memory_get_peak_usage(true);

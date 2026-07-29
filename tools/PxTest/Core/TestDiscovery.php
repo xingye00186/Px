@@ -139,6 +139,9 @@ class TestDiscovery
         foreach ($iterator as $file) {
             if (!$file->isFile()) continue;
             if ($file->getExtension() !== 'php') continue;
+            // C0.2: _retired/ 目录存放已退役僵尸测试（旧 API 灭失、覆盖已由
+            // css-standards 接管），不参与发现；保留文件供考古。
+            if (str_contains(str_replace('\\', '/', $file->getPath()), '/_retired')) continue;
             if ($this->isExcluded($file->getFilename())) continue;
             if (!$this->isTestFile($file->getFilename())) continue;
 

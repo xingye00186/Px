@@ -83,7 +83,7 @@ $comp->mockVNode = VNodeBuilder::div()
     ->prop('animation', 'slide 0.5s')
     ->childText('Updated')
     ->build();
-$comp->markDirty();
+$comp->renderDirty = true;
 for ($i = 0; $i < 5; $i++) {
     $platform->tickAnimation();
     $rmRender->invoke($app);

@@ -89,7 +89,7 @@ check('Click on scroll area does not crash', true);
 
 // ═══ 5. markDirty + scroll ═══
 echo "\n--- 5. markDirty + scroll ---\n";
-$comp->markDirty();
+$comp->renderDirty = true;
 EventSimulator::injectWheel($platform, 100, 75, -120);
 $rmRender->invoke($app);
 $rmRender->invoke($app);

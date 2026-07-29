@@ -127,7 +127,10 @@ $root5 = $rtm->getRootRenderNode();
 $container = $root5->children[0] ?? null;
 check('Nested style render succeeds', $container !== null);
 if ($container !== null) {
-    $hasFontSize = isset($container->style['fontSize']);
+    // C0.2 现代化：RenderNode->style 数组已被 typed ComputedStyle 取代，
+    // fontSize 断言改读 computedStyle（探针实锤 style 数组恒空）。
+    $hasFontSize = $container->computedStyle !== null
+        && (int)$container->computedStyle->getFontSize() > 0;
     check('Container fontSize parsed', $hasFontSize);
 }
 

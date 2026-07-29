@@ -115,7 +115,7 @@ describe('findMatchingRenderNode 候选池', function () {
             public function getBindValue(string $k): string { return ''; }
             public function onMount(): void {}
             public function dispatchClick(string $h, ?string $a = null): void {}
-            public function invalidate(): void { $this->markDirty(); }
+            public function invalidate(): void { $this->renderDirty = true; }
         };
 
         // 第 1 帧: [A, B, C]
@@ -218,7 +218,7 @@ describe('paint 遍历基线', function () use ($frames, &$results) {
             public function setBindValue(string $k, string $v): void {}
             public function getBindValue(string $k): string { return ''; }
             public function onMount(): void {}
-            public function invalidate(): void { $this->markDirty(); }
+            public function invalidate(): void { $this->renderDirty = true; }
             public function dispatchClick(string $h, ?string $a = null): void {}
         };
 
@@ -277,7 +277,7 @@ describe('布局约束变化', function () use ($frames, &$results) {
             public function setBindValue(string $k, string $v): void {}
             public function getBindValue(string $k): string { return ''; }
             public function onMount(): void {}
-            public function invalidate(): void { $this->markDirty(); }
+            public function invalidate(): void { $this->renderDirty = true; }
             public function dispatchClick(string $h, ?string $a = null): void {}
         };
 
@@ -355,7 +355,7 @@ describe('paintDirty 跳过', function () use ($frames, &$results) {
             public function getBindValue(string $k): string { return ''; }
             public function onMount(): void {}
             public function dispatchClick(string $h, ?string $a = null): void {}
-            public function invalidate(): void { $this->markDirty(); }
+            public function invalidate(): void { $this->renderDirty = true; }
         };
 
         $sched = new Scheduler();
@@ -421,7 +421,7 @@ describe('候选池', function () use (&$results) {
             public function getBindValue(string $k): string { return ''; }
             public function onMount(): void {}
             public function dispatchClick(string $h, ?string $a = null): void {}
-            public function invalidate(): void { $this->markDirty(); }
+            public function invalidate(): void { $this->renderDirty = true; }
         };
         $comp->setScheduler(new Scheduler());
 
@@ -489,7 +489,7 @@ describe('LayoutBoundary', function () use ($frames, &$results) {
             public function getBindValue(string $k): string { return ''; }
             public function onMount(): void {}
             public function dispatchClick(string $h, ?string $a = null): void {}
-            public function invalidate(): void { $this->markDirty(); }
+            public function invalidate(): void { $this->renderDirty = true; }
         };
 
         $sched = new Scheduler();
@@ -602,7 +602,7 @@ describe('offsetOnly', function () use ($frames, &$results) {
             public function getBindValue(string $k): string { return ''; }
             public function onMount(): void {}
             public function dispatchClick(string $h, ?string $a = null): void {}
-            public function invalidate(): void { $this->markDirty(); }
+            public function invalidate(): void { $this->renderDirty = true; }
         };
         $sched = new Scheduler();
         $comp->setScheduler($sched);

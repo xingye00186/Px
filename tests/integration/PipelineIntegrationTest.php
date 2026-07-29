@@ -63,7 +63,7 @@ if ($root !== null) {
 // ═══ 2. 多帧稳定性 ═══
 echo "\n--- 2. Multi-frame Stability ---\n";
 // 多帧稳定性由 test_pipeline MultiFrameStep 覆盖
-$comp->markDirty();
+$comp->renderDirty = true;
 $rmRender->invoke($app);
 
 
@@ -111,7 +111,7 @@ $comp3->mockVNode = VNodeBuilder::div()
     ->style(['width' => '300px'])
     ->childText('After')
     ->build();
-$comp3->markDirty();
+$comp3->renderDirty = true;
 $rmRender->invoke($app);
 
 $root4 = $rtm->getRootRenderNode();

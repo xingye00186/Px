@@ -79,7 +79,7 @@ check('Large tree root exists', $root !== null);
 echo "\n--- 3. Multi-frame stability ---\n";
 $start = microtime(true);
 for ($i = 0; $i < 10; $i++) {
-    $comp->markDirty();
+    $comp->renderDirty = true;
     $rmRender->invoke($app);
 }
 $multiTime = round((microtime(true) - $start) * 1000, 1);

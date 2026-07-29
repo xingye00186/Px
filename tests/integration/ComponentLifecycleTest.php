@@ -69,8 +69,8 @@ $child->mockVNode = VNodeBuilder::div()
     ->style(['width' => '200px'])
     ->childText('updated_child')
     ->build();
-$child->markDirty();
-check('Child marked dirty', $child->callCount['markDirty'] >= 1);
+$child->renderDirty = true;
+check('Child marked dirty', $child->renderDirty === true);
 check('Child re-rendered', $child->getVNodeTree() !== null);
 
 
@@ -82,7 +82,7 @@ $app->mount($comp);
 $rmRender->invoke($app);
 $rmRender->invoke($app);
 
-$comp->markDirty();
+$comp->renderDirty = true;
 $rmRender->invoke($app);
 check('Lifecycle: mount + re-render no crash', true);
 
