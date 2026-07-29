@@ -25,7 +25,6 @@ use Px\Render\RenderNode;
 use Px\Render\RenderTreeManager;
 use Px\Dom\VNode;
 use Px\Theme\ThemeProvider;
-use Px\Theme\ThemeData;
 
 // ══════════════════════════════════════════════════════════
 // 1. PhysicalFragmentBuilder 元数据传播
@@ -72,7 +71,8 @@ describe('PhysicalFragmentBuilder', function () {
 describe('StyleResolver::extractPseudoStyles', function () {
 
     test('从已注册主题提取 hover/focus/active/before/after 定义', function () {
-        ThemeProvider::inject(ThemeData::light());
+        // C1.5：ThemeProvider::inject / ThemeData 已随主题族删除（生产僵尸）；
+        // 注册表无需主题注入即可工作。
         ThemeProvider::registerClassStyles('__test_extract', [
             'my-btn' => ['bg' => 0x333333],
             'my-btn__hover' => ['bg' => 0x555555],

@@ -116,7 +116,6 @@ class _InstMockPlatform implements Platform
 }
 
 use Px\Theme\ThemeProvider;
-use Px\Theme\ThemeData;
 
 echo "==========================================================\n";
 echo " Grid 深度仪器化诊断\n";
@@ -124,7 +123,6 @@ echo "==========================================================\n\n";
 
 // 初始化主题
 $baseTheme = ThemeData::light();
-ThemeProvider::inject($baseTheme);
 
 // 创建自定义 Application 子类以使用 instrumented RTM
 $instApp = new class(new _InstMockPlatform(), new Scheduler()) extends Application {

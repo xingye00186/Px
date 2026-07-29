@@ -27,7 +27,6 @@ require_once __DIR__ . '/../../../apps/bilibili/gen/VcButtonComponent.php';
 require_once __DIR__ . '/../../../apps/bilibili/gen/VcAvatarComponent.php';
 
 use Px\Theme\ThemeProvider;
-use Px\Theme\ThemeData;
 
 echo "==========================================================\n";
 echo " Grid 全链路诊断 (App 级别)\n";
@@ -35,7 +34,6 @@ echo "==========================================================\n\n";
 
 // 初始化主题系统
 $baseTheme = ThemeData::light();
-ThemeProvider::inject($baseTheme);
 
 class FakeApp {
     public $nextComponentId = 1;

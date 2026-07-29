@@ -5,67 +5,21 @@ namespace Px\Theme;
 
 use native_types;
 
-use Px\Theme\ThemeData;
-
 /**
- * 全局主题提供器，单例模式。
+ * 编译后 class styles 注册表（C1.5 瘦身）。
  *
- * 支持局部子树覆盖（模拟 Flutter 的 Theme.of(context)）：
- *   forSubtree() 压入新主题 → 在该组件渲染期间所有节点可见此主题
- *   restore() 恢复上一级主题
+ * 原 Flutter 式主题族（ThemeData/ColorScheme/forSubtree 子树覆盖栈）为
+ * 生产僵尸（零消费者，见审计 §2.1），C1.5 随 ThemeData 族 9 文件一并删除，
+ * 本类瘦身为纯 classStyleRegistry。运行时 class→style 注册通道在生产
+ * 恒空（编译期烘焙已完成），仅测试侧（Level-25 + 单测）作被测物；
+ * C2.9 由 StyleSheetContents 注册 API 取代后本文件整体删除。
  *
- * 同时管理编译后的 class styles 注册表。
+ * 命名注记（§8.1）：ThemeProvider 名称在 Blink 无占用冲突，C2.9 删除前保留。
  */
 class ThemeProvider
 {
-    private static ?ThemeData $rootTheme = null;
-    private static array $themeStack = [];
     /** @var array<string, array> ComponentClassName → ['classKey' => [...props...]] */
     private static array $classStyleRegistry = [];
-
-    /**
-     * 注入（覆盖）根主题。
-     */
-    public static function inject(ThemeData $theme): void
-    {
-        self::$rootTheme = $theme;
-    }
-
-    /**
-     * 获取当前上下文中的主题。
-     * 始终返回有效 ThemeData（未注入时默认浅色主题）。
-     */
-    public static function of(): ThemeData
-    {
-        if (count(self::$themeStack) > 0) {
-            return self::$themeStack[count(self::$themeStack) - 1];
-        }
-        if (self::$rootTheme === null) {
-            self::$rootTheme = ThemeData::light();
-        }
-        return self::$rootTheme;
-    }
-
-    /**
-     * 为子树创建主题覆盖。
-     * 调用后当前主题变为 $subtreeTheme（其 parent 指向旧主题）。
-     * 完成后必须调用 restore() 恢复。
-     */
-    public static function forSubtree(ThemeData $subtreeTheme): void
-    {
-        $subtreeTheme->setParent(self::of());
-        self::$themeStack[] = $subtreeTheme;
-    }
-
-    /**
-     * 恢复上一级主题。
-     */
-    public static function restore(): void
-    {
-        if (count(self::$themeStack) > 0) {
-            array_pop(self::$themeStack);
-        }
-    }
 
     /**
      * 注册编译后的 class styles。

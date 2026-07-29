@@ -28,9 +28,6 @@ use Px\Paint\ImageManager;
 use Px\Render\RenderTreeManager;
 use Px\Component\Contracts\ReactiveComponentInterface;
 use Px\Component\ReactiveComponent;
-use Px\Theme\ThemeData;
-use Px\Theme\ThemeProvider;
-use Px\Theme\PlatformAdapter;
 use Px\Core\Config;
 
 
@@ -473,14 +470,10 @@ class Application
 
         $this->initRenderer();
 
-        // 初始化主题系统
-        $baseTheme = ThemeData::light();
-        $platformStyling = PlatformAdapter::create(APP_PLATFORM, $baseTheme);
-        $finalTheme = $platformStyling->apply($baseTheme);
-        ThemeProvider::inject($finalTheme);
-
+        // C1.5：主题注入段删除——ThemeData 族为生产僵尸（注入后零读取，
+        // 审计 §2.1），ThemeData/PlatformAdapter/PlatformStyling 等 9 文件同批删除。
         // 编译时 class→style 合并已完成，无需运行时注册
-        // （getClassStyles() 已从 gen 文件中移除）
+        //（getClassStyles() 已从 gen 文件中移除）。
 
         $this->rootComponent->mount();
         

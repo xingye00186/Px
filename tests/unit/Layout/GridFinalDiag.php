@@ -76,7 +76,6 @@ class _GridDiagMockPlatform implements Platform
 }
 
 use Px\Theme\ThemeProvider;
-use Px\Theme\ThemeData;
 
 echo "==========================================================\n";
 echo " Grid 最终诊断 — Application 级别\n";
@@ -84,7 +83,6 @@ echo "==========================================================\n\n";
 
 // 初始化主题
 $baseTheme = ThemeData::light();
-ThemeProvider::inject($baseTheme);
 
 // 创建应用（使用 mock platform）
 $platform = new _GridDiagMockPlatform();

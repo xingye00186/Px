@@ -12,7 +12,6 @@ use Px\Css\StyleResolver;
 use Px\Core\Config;
 use Px\Component\Contracts\ReactiveComponentInterface;
 use Px\Component\ReactiveComponent;
-use Px\Theme\ThemeProvider;
 
 /**
  * RenderTreeManager — VNode → RenderNode 转换管理
