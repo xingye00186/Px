@@ -187,6 +187,13 @@ class ComputedStyle
         'letterSpacing', 'wordSpacing', 'fontVariant',
         'fontStretch',
         'borderCollapse', 'borderSpacing', 'captionSide',
+        // C1.4 逐键补全（Blink css_properties inherited 标志对照，
+        // 逐键过 330 快照验证）：
+        'textTransform',
+        'listStyleType',
+        'listStylePosition',
+        'overflowWrap',
+        'wordWrap',
     ];
 
     // ── 默认字体大小 ──
