@@ -2336,3 +2336,20 @@ PHP `int` → `float` 会影响 AOT 参数类型推导。建议：
 **结果**：050 y=5 族 12 项全清（13→1，余 1 = q 盒高 29 vs 24 精度：union 反推 asc/desc 与引号 glyph 高交互，储备）；全量 72→60 零 case 回归；31/32。
 
 **剩余榜（60，累计 4500→60 = -98.7%）**：048(17) table 几何精度；055(12)+044(6) 滚动条族；019(7 CB 宽度精度)；054(3)、002/005/007/014/046(各2)、011/050/051/052/053(各1) 尾差。25/55 case ≤1 diff。
+
+### 44. AOT 编译验证收结（2026-07-29）
+
+**批次**：s1 待办兑现——用户在场编译 AOT 全链验证（31/32 gates 前置已过）
+
+**结果（三层验证全过）**：
+1. **编译**：build.bat css-test 全量成功（仅既有 native_types 边界提示 + C4129 警告，零 error）；因机器高负载耗时约 55 分钟。
+2. **AOT 全量**：55 case 40/55 passed（97.2s）——15 个有差 case 与 PHP-RT 榜完全同构（AOT 榜与 CLI 榜一致）。
+3. **compare_php_aot**：**54/55 identical**；唯一分叉 case-050 geo=43 = 恒定 x-19 平移族（px-157+ 文本行起点），定性为**既有 CLI-AOT 文本度量例外**（stub GoldenTextWidth vs Skia 真度量 19px 测宽差，台账既录）——本轮 q 引号/emphasis 两批在双模式下逐点一致（px-222/px-80 精确相等实锤），零新增分叉。
+
+**历史 AOT HANG 疑云终局解**（q1/q3/r1 归因链修正）：
+- 本次复现"挂死"的两个真因均非引擎：① 手测参数误用 `--headless-dump-layout`（正确协议 `--case=X --headless --dump-layout`）→ exe 走 GUI 开窗等消息循环；② 管线 BuildStep 因手动 build.bat 不写 `.build_hash` 判源过期 → 内嵌重启 40+ 分钟全量编译（表象=管线挂）。补写 hash 后单 case 3.08s 通过。
+- **纪律**：手动 build.bat 后须同步补写 `.build_hash`（BuildStep::computeHash 同算法），否则管线内嵌重建；exe 直测必须用管线同款参数协议。
+
+**看门狗清理核实**：@1919639b 的 flushInlineBuffer 看门狗已在此前批次移除（grep 零命中），s1 移除项闭。
+
+**现场**：AOT 报告（最新报告.md 40/55）入库；工作树干净；HEAD 推送 origin/dev。
