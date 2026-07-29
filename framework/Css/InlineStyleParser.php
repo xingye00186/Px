@@ -336,6 +336,12 @@ class InlineStyleParser
      */
     private static function dispatchParser(string $parser, string $value): mixed
     {
+        // C4 全局 CSS 关键字（同 CssMappings::dispatchParser）：保留关键字串
+        // 穿透，由 ComputedStyle 合并段按级联语义解析。
+        $lv = strtolower(trim($value));
+        if ($lv === 'inherit' || $lv === 'initial' || $lv === 'unset' || $lv === 'revert') {
+            return $lv;
+        }
         $method = substr($parser, (int)strrpos($parser, '::') + 2);
         return match ($method) {
             'parseHexColor' => CssValueParser::parseHexColor($value),

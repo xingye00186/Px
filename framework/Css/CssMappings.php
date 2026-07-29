@@ -675,6 +675,14 @@ class CssMappings
      */
     private static function dispatchParser(string $parser, string $value): mixed
     {
+        // C4 全局 CSS 关键字（CSS Cascade L4 §7.6）：inherit/initial/unset/revert
+        // 适用于任意属性，不走具体类型解析器（否则 color/length 被误
+        // 转为 0，color:inherit→黑有害）——保留关键字串穿透，由 ComputedStyle
+        // 合并段按级联语义解析（inherit→父值、initial→默认等）。
+        $lv = strtolower(trim($value));
+        if ($lv === 'inherit' || $lv === 'initial' || $lv === 'unset' || $lv === 'revert') {
+            return $lv;
+        }
         // —?"Px\\Rendering\\CssValueParser::parseHexColor" 提取方法—?parseHexColor
         $method = substr($parser, (int)strrpos($parser, '::') + 2);
         return match($method) {

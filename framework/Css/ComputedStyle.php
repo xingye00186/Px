@@ -257,8 +257,48 @@ class ComputedStyle
             }
         }
 
+        // C4 全局关键字级联解析（inherit/initial/unset/revert）——必须在
+        // applyDeclarations（typed 解析）前，将关键字串替换为具体值。
+        self::resolveGlobalKeywords($merged, $declarations, $parentDeclarations, $elementType);
+
         $this->applyDeclarations($merged);
         $this->frozen = true;
+    }
+
+    /**
+     * C4 全局 CSS 关键字级联解析（CSS Cascade L4 §7.6）。
+     * dispatchParser 已让 inherit/initial/unset/revert 以字符串穿透到声明；
+     * 本方法在 typed 解析前将其替换为具体值：
+     *   inherit                    → 父值（无父值→初始值）
+     *   initial / revert           → 初始值（Px 默认）
+     *   unset                      → 继承属性同 inherit，否则同 initial
+     * @param array $merged by-ref 待解析声明 @param array $decls 原声明
+     * @param array $parentDecls 父声明 @param string $elementType
+     */
+    private static function resolveGlobalKeywords(array &$merged, array $decls, array $parentDecls, string $elementType): void
+    {
+        $defaults = null;
+        foreach ($decls as $key => $rawv) {
+            if (!is_string($rawv)) continue;
+            $kw = strtolower(trim($rawv));
+            if ($kw !== 'inherit' && $kw !== 'initial' && $kw !== 'unset' && $kw !== 'revert') continue;
+            $isInherited = in_array($key, self::INHERITED_KEYS, true);
+            if ($kw === 'inherit' || ($kw === 'unset' && $isInherited)) {
+                // 继承：取父值；父值也是关键字串或缺失 → 回落初始值
+                $pv = $parentDecls[$key] ?? null;
+                if ($pv !== null && !(is_string($pv) && in_array(strtolower(trim($pv)), ['inherit', 'initial', 'unset', 'revert'], true))) {
+                    $merged[$key] = $pv;
+                    continue;
+                }
+            }
+            // initial / revert / unset(非继承) / inherit-无父值 → 初始值
+            if ($defaults === null) $defaults = self::getDefaultsArray($elementType);
+            if (array_key_exists($key, $defaults)) {
+                $merged[$key] = $defaults[$key];
+            } else {
+                unset($merged[$key]); // 无显式默认 → 交由字段默认
+            }
+        }
     }
 
     // ── 表格族 UA display 映射：单源已迁 UAStyles::TABLE_DISPLAY_MAP（C1.2）──
