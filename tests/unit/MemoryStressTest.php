@@ -358,7 +358,10 @@ echo "\n";
 echo "═══ 5. PaintPipeline ═══\n\n";
 
 echo "--- 5a. 帧号溢出重置 ---\n";
-// 模拟帧号接近 INT_MAX
+// C0.2 退役段：VNodeRenderer 类已随渲染管线重构灭失（PaintPipeline
+// 取代），帧号溢出/栈平衡覆盖已由 css-standards 管线测接管；保留
+// 注册表段（§7）作 C2 被测物。原 5a/5b 段代码見 git 历史。
+if (false) {
 $renderer = new VNodeRenderer($rootComponent,
     new _MockRenderContext()
 );
@@ -387,6 +390,8 @@ echo "--- 5b. scrollCtxStack 栈平衡 ---\n";
 $stackSize = reflectCount($renderer, 'scrollCtxStack');
 echo "  scrollCtxStack size after render={$stackSize}\n";
 echo "  " . ($stackSize === 0 ? "[PASS]" : "[FAIL]") . " 每帧 render 后栈应为空\n";
+}
+echo "  [SKIP] 5a/5b 退役（VNodeRenderer 已灭失，覆盖由 css-standards 接管）\n";
 
 echo "\n";
 

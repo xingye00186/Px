@@ -19,6 +19,16 @@ use Px\Css\CssMappings;
 use Px\Css\CssValueParser;
 use Px\Css\StyleResolver;
 
+// C0.2 现代化：typed 值→标量（同 CssMappingsTest）
+if (!function_exists('_px')) {
+    function _px(mixed $v): mixed
+    {
+        if ($v instanceof \Px\Css\CssLength) return $v->isAuto() ? 'auto' : (int)$v->toPx();
+        if ($v instanceof \Px\Css\CssKeyword) return $v->value;
+        return $v;
+    }
+}
+
 echo "========================================\n";
 echo " CssMappings 边框属性解析测试\n";
 echo "========================================\n\n";
@@ -29,7 +39,7 @@ echo "========================================\n\n";
 echo "--- 1. parseBorder() border 简写解析 ---\n";
 
 test('1px solid #d9d9d9 解析为 width|color', function () {
-    $result = CssMappings::parseBorder('1px solid #d9d9d9');
+    $result = CssValueParser::parseBorder('1px solid #d9d9d9');
     // expect "1|<bgr_color>"
     assert(strpos($result, '1|') === 0, "应以 '1|' 开头，实际: $result");
     $parts = explode('|', $result);
@@ -38,7 +48,7 @@ test('1px solid #d9d9d9 解析为 width|color', function () {
 });
 
 test('2px solid #FF0000 宽度为 2', function () {
-    $result = CssMappings::parseBorder('2px solid #FF0000');
+    $result = CssValueParser::parseBorder('2px solid #FF0000');
     $parts = explode('|', $result);
     assert_eq((int)$parts[0], 2, 'border width 应为 2');
     // #FF0000 → BGR = 0x0000FF = 255
@@ -46,12 +56,12 @@ test('2px solid #FF0000 宽度为 2', function () {
 });
 
 test('空字符串和 none 返回空字符串', function () {
-    assert_eq(CssMappings::parseBorder(''), '', '空字符串应返回空');
-    assert_eq(CssMappings::parseBorder('none'), '', "'none' 应返回空");
+    assert_eq(CssValueParser::parseBorder(''), '', '空字符串应返回空');
+    assert_eq(CssValueParser::parseBorder('none'), '', "'none' 应返回空");
 });
 
 test('只有宽度无颜色时颜色默认为 #000000', function () {
-    $result = CssMappings::parseBorder('3px solid');
+    $result = CssValueParser::parseBorder('3px solid');
     $parts = explode('|', $result);
     assert_eq((int)$parts[0], 3, '宽度应为 3');
     assert_eq((int)$parts[1], 0, '无颜色时默认 BGR 应为 0');
@@ -64,26 +74,27 @@ echo "\n--- 2. parseInlineStyle() 内联 border 解析 ---\n";
 
 test('border-width: 2px; border-color: #FF0000', function () {
     $result = StyleResolver::parseInlineStyle('border-width:2px;border-color:#FF0000');
-    assert_eq($result['borderWidth'] ?? 0, 2, 'borderWidth 应为 2');
-    assert_eq($result['borderColor'] ?? 0, 255, 'borderColor BGR 应为 255');
+    assert_eq(_px($result['borderWidth'] ?? 0), 2, 'borderWidth 应为 2');
+    assert_eq(_px($result['borderColor'] ?? 0), 255, 'borderColor BGR 应为 255');
 });
 
 test('border-width: 0px 解析为 borderWidth=0', function () {
     $result = StyleResolver::parseInlineStyle('border-width:0px');
-    assert_eq($result['borderWidth'] ?? -1, 0, 'borderWidth 应为 0');
+    assert_eq(_px($result['borderWidth'] ?? -1), 0, 'borderWidth 应为 0');
 });
 
-test('border 简写在内联样式中展开为 borderWidth 和 borderColor', function () {
+test('border 简写在内联样式中展开为 borderWidth 与管道串色分量', function () {
     $result = StyleResolver::parseInlineStyle('border:1px solid #333333');
-    // #333333 → BGR: R=0x33=51, G=0x33=51, B=0x33=51 → BGR = (51<<16)|(51<<8)|51 = 3355443+13056+51 = 3368550... 
-    // Actually: B=0x33=51 → 51<<16 = 3342336, G=0x33=51 → 51<<8 = 13056, R=0x33=51 = 51 → total = 3355443
-    assert_eq($result['borderWidth'] ?? 0, 1, 'borderWidth 应为 1');
-    assert_true(isset($result['borderColor']), '应解析出 borderColor');
+    // #333333 → BGR = (51<<16)|(51<<8)|51 = 3355443
+    assert_eq(_px($result['borderWidth'] ?? 0), 1, 'borderWidth 应为 1');
+    // C0.2 现代化：色分量在 border 管道串（ComputedStyle 构造器提取），
+    // parseInlineStyle 不再直设通用 borderColor。
+    assert_contains((string)($result['border'] ?? ''), '|3355443|', '管道串含 #333333 BGR 色分量');
 });
 
 test('同时使用 border 简写和独立 border-width 时独立属性覆盖', function () {
     $result = StyleResolver::parseInlineStyle('border:2px solid #FF0000;border-width:4px');
-    assert_eq($result['borderWidth'] ?? 0, 4, '独立 border-width 应覆盖简写值');
+    assert_eq(_px($result['borderWidth'] ?? 0), 4, '独立 border-width 应覆盖简写值');
 });
 
 // ============================================================
@@ -97,9 +108,13 @@ test('style 块中 border 简写解析', function () {
     $result = CssMappings::parseStyleBlock($css, $warnings);
 
     assert(isset($result['btn']), "应解析出 'btn' 类");
-    assert_eq($result['btn']['borderWidth'] ?? 0, 1, 'btn borderWidth 应为 1');
-    assert(isset($result['btn']['borderColor']), 'btn 应解析出 borderColor');
-    assert_eq($result['btn']['bg'] ?? 0, CssMappings::parseHexColor('#333333'), 'bg 应为 #333333 的 BGR');
+    // C0.2 现代化：styleBlock 产出 border 管道串（'1|<bgr>|solid'），
+    // 宽/色由 ComputedStyle 构造器从管道串提取，不再直设标量键。
+    $pipe = (string)($result['btn']['border'] ?? '');
+    assert(str_starts_with($pipe, '1|'), 'btn border 管道串宽应为 1，实际: ' . $pipe);
+    // #d9d9d9 → BGR = (0xD9<<16)|(0xD9<<8)|0xD9 = 14277081
+    assert_contains($pipe, '|14277081|', 'btn border 管道串含 #d9d9d9 BGR 色分量');
+    assert_eq($result['btn']['bg'] ?? 0, CssValueParser::parseHexColor('#333333'), 'bg 应为 #333333 的 BGR');
 });
 
 test('style 块中 border-width 独立属性', function () {
@@ -108,7 +123,7 @@ test('style 块中 border-width 独立属性', function () {
     $result = CssMappings::parseStyleBlock($css, $warnings);
 
     assert(isset($result['card']), "应解析出 'card' 类");
-    assert_eq($result['card']['borderWidth'] ?? 0, 3, 'card borderWidth 应为 3');
+    assert_eq(_px($result['card']['borderWidth'] ?? 0), 3, 'card borderWidth 应为 3');
 });
 
 test('style 块无 border 时 borderWidth 默认为 0', function () {
@@ -117,7 +132,7 @@ test('style 块无 border 时 borderWidth 默认为 0', function () {
     $result = CssMappings::parseStyleBlock($css, $warnings);
 
     assert(isset($result['plain']), "应解析出 'plain' 类");
-    assert_eq($result['plain']['borderWidth'] ?? 0, 0, '无 border CSS 时 borderWidth 应为 0');
+    assert_eq(_px($result['plain']['borderWidth'] ?? 0), 0, '无 border CSS 时 borderWidth 应为 0');
 });
 
 // ============================================================

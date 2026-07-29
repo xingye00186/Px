@@ -53,6 +53,26 @@ if (!function_exists('str_ends_with')) {
 // ---- PSR-4 Autoloader ----
 require_once dirname(__DIR__) . '/bootstrap/autoload.php';
 
+// ---- 旧命名空间兼容别名层（C0.2 僵尸甄别批）----
+// 模块重构前的测试引用 Px\Rendering\* / Px\ReactiveComponent 等旧名；
+// 惰性钩子在旧名被请求时 class_alias 到新名（仅测试环境，生产/AOT 不载入）。
+// 无新名对应物的旧 API（如 Tools\PercentResolver）不入表 → 对应测试属 B 类退役。
+spl_autoload_register(static function (string $class): void {
+    static $legacyMap = [
+        'Px\\ReactiveComponent'             => 'Px\\Component\\ReactiveComponent',
+        'Px\\Rendering\\LayoutOrchestrator' => 'Px\\Layout\\LayoutOrchestrator',
+        'Px\\Rendering\\RenderContext'      => 'Px\\Paint\\RenderContext',
+        'Px\\Rendering\\GdiRenderContext'   => 'Px\\Paint\\GdiRenderContext',
+        'Px\\Rendering\\RenderTreeManager'  => 'Px\\Render\\RenderTreeManager',
+        'Px\\Rendering\\VNode'              => 'Px\\Dom\\VNode',
+        'Px\\Rendering\\RenderNode'         => 'Px\\Render\\RenderNode',
+        'Px\\Rendering\\CssMappings'        => 'Px\\Css\\CssMappings',
+    ];
+    if (isset($legacyMap[$class]) && class_exists($legacyMap[$class])) {
+        class_alias($legacyMap[$class], $class);
+    }
+}, prepend: false);
+
 // ---- Stub 文件（C++ 原生函数声明，非类，不参与 PSR-4）----
 $stubDir = dirname(__DIR__, 2) . '/stub';
 if (file_exists($stubDir . '/vue_calc.stub.php')) {
