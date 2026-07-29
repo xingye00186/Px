@@ -17,13 +17,21 @@ function parseCssClassesForMerge(string $css): array
     // 污染所有节点 style（含 <component> 占位 → 透传路径覆盖子组件根样式）。
     $css = preg_replace('#/\*.*?\*/#s', '', $css);
     $result = [];
-    if (preg_match_all('#\.([a-zA-Z0-9_-]+)\s*\{([^}]*)\}#s', $css, $rules, PREG_SET_ORDER)) {
-        foreach ($rules as $rule) {
-            $className = $rule[1];
-            $body = trim($rule[2]);
+    // C2.5 根因治本（生产烘焙通道，严格对齐 Blink）：旧正则 `\.(\w+)\s*\{`
+    // 会从复合选择器 `.sa + .sb{}` 截出 subject `.sb{}` 当裸类规则，既
+    // 无条件覆盖真实 `.sb{}`（丢真值）又绕过 __complex_rules__ 的 + 门控
+    //（过匹配隔兄弟）——探针实锤生产 sb baked 成红。同理 `div.foo{}` 降
+    // 为裸 `.foo`。Blink 中选择器作整体解析，subject 绝不降级为裸类。
+    // 改为整规则捕获 + 纯单类过滤（复合/后代/子/兄弟各归
+    // __complex_rules__，由 mergeClassStylesIntoNode 按组合子语义门控）。
+    if (preg_match_all('#([^{}]*)\{([^}]*)\}#s', $css, $allRules, PREG_SET_ORDER)) {
+        foreach ($allRules as $ar) {
+            $sel = trim($ar[1]);
+            if (!preg_match('/^\.([a-zA-Z0-9_-]+)$/', $sel, $sm)) continue;
+            $body = trim($ar[2]);
             $body = preg_replace('/\s+/', ' ', $body);
             $body = rtrim($body, ';');
-            $result[$className] = $body;
+            $result[$sm[1]] = $body;
         }
     }
     // 提取 * 通用选择器规则
