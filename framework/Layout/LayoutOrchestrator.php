@@ -451,6 +451,16 @@ class LayoutOrchestrator
 
         $cbW = max(0, (int)($parentSpace->getContentWidth() ?? 0) - $deductW);
         $cbH = max(0, (int)($parentSpace->getContentHeight() ?? 0) - $deductH);
+        // 经典竖向滚动条占宽（Windows classic 15px，CSS-Overflow-3 §3.3
+        // scrollbar gutter 属 content 区扣除；Blink LayoutScrollbarPart）：
+        // 父 overflow-y 为 scroll/auto 且有显式高（定高容器内容溢出场景，
+        // 055 B 容器 content 733=748-15、内层/居中 x 全链 15px 实锤）时
+        // 子约束宽扣 15。auto 不溢出误扣风险由全量实证兼顾。
+        $ovY = (string)($parentStyle?->overflowY?->value ?? 'visible');
+        if (($ovY === 'scroll' || $ovY === 'auto')
+            && ($parentStyle?->height?->toPx() ?? 0) > 0 && !($parentStyle?->height?->isPercent() ?? false)) {
+            $cbW = max(0, $cbW - 15);
+        }
         $offX = (int)((int)($parentSpace->getParentContentX() ?? 0) + $padL + $bL);
         $offY = (int)((int)($parentSpace->getParentContentY() ?? 0) + $padT + $bT);
 

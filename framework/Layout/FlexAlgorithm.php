@@ -125,7 +125,12 @@ class FlexAlgorithm extends LayoutAlgorithm
         if ($s->width !== null && $s->width->isPercent()) {
             $w = $s->width->resolveInContext($parentW);
         } else if ($w <= 0) {
-            $w = $parentW;
+            // 块级 auto-fill（CSS 2.2 §10.3.3）：used 宽 = 约束宽 − 自身横向
+            // margins（与 buildChildSpace §28 同源；Flex 容器路径此前漏扣，
+            // 055 px-10 margin:8 → E 733 vs B 717 实锤）。
+            $fml = (int)($s->margin?->left->toPx() ?? 0);
+            $fmr = (int)($s->margin?->right->toPx() ?? 0);
+            $w = max(0, $parentW - $fml - $fmr);
         }
         // For flex items whose actual width is set by parent flex (inputFragment),
         // use the actual width instead of the constraint space parentW

@@ -1,4 +1,4 @@
-@generated 2026-07-27 09:42:54
+@generated 2026-07-29 11:03:55
 === Test: overflow:hidden 子元素超出容器 ===
 Frame #1 events=0 detail=normal
 div (0,0 200x100) ov=hidden
@@ -51,10 +51,10 @@ Frame #1 events=0 detail=normal
 div (0,0 400x200) scroll ch=270 cw=400 maxScroll=70 st=0 sl=0 ov=auto
   div (0,0 400x60) text="Header"
   div (0,60 400x150) scroll ch=200 cw=400 maxScroll=50 st=0 sl=0 ov=auto
-    div (0,60 400x50) text="Inner 1"
-    div (0,110 400x50) text="Inner 2"
-    div (0,160 400x50) text="Inner 3"
-    div (0,210 400x50) text="Inner 4"
+    div (0,60 385x50) text="Inner 1"
+    div (0,110 385x50) text="Inner 2"
+    div (0,160 385x50) text="Inner 3"
+    div (0,210 385x50) text="Inner 4"
   div (0,210 400x60) text="Footer"
 
 ---
