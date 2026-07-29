@@ -12,10 +12,10 @@ use Px\Dom\VNode;
  *     2. CssShorthandExpander::expandAll（简写展开：padding→4方向、border、overflow、gap 等）
  *     3. CssMappings::canonicalStyleKey（key 归一化：kebab→camelCase）
  *
- *   与 StyleResolver 运行时共用同一套展开逻辑（CssShorthandExpander），保证：
+ *   与 InlineStyleParser 运行时共用同一套展开逻辑（CssShorthandExpander），保证：
  *     - 编译期产出 = 运行时解析产出（行为一致性）
  *     - 新增 codegen 路径无需记得调展开（此 Transform 保底覆盖）
- *     - 一套代码，两处调用（SFC 编译期 + StyleResolver 运行时）
+ *     - 一套代码，两处调用（SFC 编译期 + InlineStyleParser 运行时）
  *
  * 对标 Blink: CSSParser 内部强制展开所有简写，下游拿到的永远是 longhand。
  *
@@ -41,7 +41,7 @@ class StyleTransform implements TransformInterface
         if (isset($props['style'])) {
             if (is_string($props['style']) && $props['style'] !== '') {
                 $style = $props['style'];
-                // PHP 表达式（$ 或 ( 开头）保持不变——运行时由 StyleResolver 处理
+                // PHP 表达式（$ 或 ( 开头）保持不变——运行时由 InlineStyleParser 处理
                 if ($style[0] !== '$' && $style[0] !== '(') {
                     $converted = $this->compileStaticStyle($style);
                     if ($converted !== null) {
@@ -99,8 +99,8 @@ class StyleTransform implements TransformInterface
         }
         if (empty($raw)) return null;
 
-        // 强制关卡：与 StyleResolver 运行时共用同一套展开逻辑
-        // flex 简写展开已启用（§9.2，与 StyleResolver 开关同步）
+        // 强制关卡：与 InlineStyleParser 运行时共用同一套展开逻辑
+        // flex 简写展开已启用（§9.2，与 InlineStyleParser 开关同步）
         $raw = \Px\Css\CssShorthandExpander::expandAll($raw, true);
 
         $pairs = [];

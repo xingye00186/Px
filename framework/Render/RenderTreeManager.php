@@ -7,7 +7,7 @@ use Px\Css\ComputedStyle;
 
 use native_types;
 use Px\Dom\VNode;
-use Px\Css\StyleResolver;
+use Px\Css\InlineStyleParser;
 
 use Px\Core\Config;
 use Px\Component\Contracts\ReactiveComponentInterface;
@@ -709,7 +709,7 @@ class RenderTreeManager
                     $placeholderStyle = $vnode->props['style'] ?? [];
                     if (!empty($placeholderStyle)) {
                         $parsedDecls = is_string($placeholderStyle)
-                            ? \Px\Css\StyleResolver::parseInlineStyle($placeholderStyle)
+                            ? \Px\Css\InlineStyleParser::parseInlineStyle($placeholderStyle)
                             : $placeholderStyle;
                         // 检测 style 是否实际变化，避免不必要的 layoutDirty
                         $currentArr = $oldRootRN->computedStyle?->toExportArray() ?? [];
@@ -794,7 +794,7 @@ class RenderTreeManager
 
                     if ($targetRN !== null) {
                         $parsedDecls = is_string($placeholderStyle)
-                            ? \Px\Css\StyleResolver::parseInlineStyle($placeholderStyle)
+                            ? \Px\Css\InlineStyleParser::parseInlineStyle($placeholderStyle)
                             : $placeholderStyle;
                         // 父组件 style 透传到子组件根——Vue 3 语义是**层叠覆盖**（子根 style 为基准，
                         // 父 style 覆盖），必须用 withOverride（与 :style 动态合并同源语义）。此前误用
@@ -874,11 +874,11 @@ class RenderTreeManager
                 $inlineStyleForResolve = is_array($rawInlineStyle)
                     ? $rawInlineStyle
                     : (is_string($rawInlineStyle) && $rawInlineStyle !== ''
-                        ? \Px\Css\StyleResolver::parseInlineStyle($rawInlineStyle)
+                        ? \Px\Css\InlineStyleParser::parseInlineStyle($rawInlineStyle)
                         : []);
-                // 降级路径下构造一次性临时父 CS（仅供 StyleResolver 接口），不入池避免污染
+                // 降级路径下构造一次性临时父 CS（仅供 InlineStyleParser 接口），不入池避免污染
                 $tempParentCS = !empty($parentStyle) ? new ComputedStyle($parentStyle) : null;
-                $computedStyle = StyleResolver::resolve(
+                $computedStyle = InlineStyleParser::resolve(
                     inlineStyle: $inlineStyleForResolve,
                     className: $vnode->props['class'] ?? '',
                     parentCS: $tempParentCS,
@@ -892,7 +892,7 @@ class RenderTreeManager
             // 补充 pseudoStyles：StyleRecalcPass 已运行时从 theme 提取伪类/伪元素定义
             // （resolveClassStyles 通过 by-ref 填充，但 StyleRecalcPass 运行后不会进入降级分支）
             if (empty($pseudoStyles)) {
-                $pseudoStyles = \Px\Css\StyleResolver::extractPseudoStyles(
+                $pseudoStyles = \Px\Css\InlineStyleParser::extractPseudoStyles(
                     $vnode->props['class'] ?? '',
                     $vnode->type
                 );

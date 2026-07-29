@@ -7,7 +7,7 @@ use native_types;
 use Px\Theme\ThemeProvider;
 
 /**
- * StyleResolver — 样式解析器
+ * InlineStyleParser — 样式解析器
  *
  * 职责分离：
  *   parseInlineStyle() — 解析内联样式字符串为声明数组（供合并后传入 ComputedStyle 构造器）
@@ -15,7 +15,7 @@ use Px\Theme\ThemeProvider;
  *
  * Phase 2 新增。
  */
-class StyleResolver
+class InlineStyleParser
 {
     /** @var array 已注册的 class styles */
     private static array $classStylesCache = [];

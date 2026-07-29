@@ -335,7 +335,7 @@ class OOFLayoutAlgorithm extends LayoutAlgorithm
         $autoOffsetX = 0;
         $autoOffsetY = 0;
         if ($cs->margin !== null) {
-            // margin:auto 存储为 marginXxxAuto 标志（StyleResolver 独立路径），
+            // margin:auto 存储为 marginXxxAuto 标志（InlineStyleParser 独立路径），
             // CssLength::isAuto() 对 margin 恒为 false（已知陷阱，与 grid auto-margin 同源修复）
             $mLAuto = (bool)($cs->getRaw('marginLeftAuto') ?? false) || $cs->margin->left->isAuto();
             $mRAuto = (bool)($cs->getRaw('marginRightAuto') ?? false) || $cs->margin->right->isAuto();

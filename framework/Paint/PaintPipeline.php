@@ -191,7 +191,7 @@ class PaintPipeline
         if (isset($frag->pseudoStyles['__hoverStyle']) && is_array($frag->pseudoStyles['__hoverStyle'])) $states[] = '__hoverStyle';
         if (isset($frag->pseudoStyles['__focusStyle']) && is_array($frag->pseudoStyles['__focusStyle'])) $states[] = '__focusStyle';
         if (isset($frag->pseudoStyles['__activeStyle']) && is_array($frag->pseudoStyles['__activeStyle'])) $states[] = '__activeStyle';
-        // 兼容 StyleResolver::resolveClassStyles 路径（key 为 hover/focus/active 不带 __）
+        // 兼容 InlineStyleParser::resolveClassStyles 路径（key 为 hover/focus/active 不带 __）
         if (isset($frag->pseudoStyles['hover']) && is_array($frag->pseudoStyles['hover'])) $states[] = 'hover';
         if (isset($frag->pseudoStyles['focus']) && is_array($frag->pseudoStyles['focus'])) $states[] = 'focus';
         if (isset($frag->pseudoStyles['active']) && is_array($frag->pseudoStyles['active'])) $states[] = 'active';
@@ -1296,7 +1296,7 @@ class PaintPipeline
         if ($node->active) $states[] = '__activeStyle';
         foreach ($states as $stateKey) {
             $applied = false;
-            // 路径 A: 从 $node->pseudoStyles 读取（StyleResolver::resolveClassStyles 产出，key 为 'hover'）
+            // 路径 A: 从 $node->pseudoStyles 读取（InlineStyleParser::resolveClassStyles 产出，key 为 'hover'）
             $lookup = ['__hoverStyle' => 'hover', '__focusStyle' => 'focus', '__activeStyle' => 'active'];
             $pseudoKey = $lookup[$stateKey] ?? null;
             if ($pseudoKey !== null && isset($node->pseudoStyles[$pseudoKey]) && is_array($node->pseudoStyles[$pseudoKey])) {

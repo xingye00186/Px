@@ -924,7 +924,7 @@ class BlockAlgorithm extends LayoutAlgorithm
             $rawMR = $childStyle?->getRaw('marginRight');
             $marginLeftAuto = ($rawML !== null && (is_object($rawML) ? ($rawML->isAuto ?? false) : ($rawML === 'auto')));
             $marginRightAuto = ($rawMR !== null && (is_object($rawMR) ? ($rawMR->isAuto ?? false) : ($rawMR === 'auto')));
-            // 也检查 StyleResolver 计算的 auto 标志
+            // 也检查 InlineStyleParser 计算的 auto 标志
             if (!$marginLeftAuto) { $marginLeftAuto = (bool)($childStyle?->getRaw('marginLeftAuto') ?? false); }
             if (!$marginRightAuto) { $marginRightAuto = (bool)($childStyle?->getRaw('marginRightAuto') ?? false); }
             // 简写回落（'10px auto 0' 等：per-side raw 为 NULL，插桩实锤 106 条）：

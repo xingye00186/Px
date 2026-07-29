@@ -145,7 +145,7 @@ class StylePool
 
     /**
      * inline style 数组指纹（O(k), k≈10）
-     * 上游调用点少（仅 StyleResolver 主入口 + RTM 降级路径），可接受 O(k) 成本。
+     * 上游调用点少（仅 InlineStyleParser 主入口 + RTM 降级路径），可接受 O(k) 成本。
      */
     public static function fingerprintInline(array $inlineStyle): string
     {

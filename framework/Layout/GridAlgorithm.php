@@ -364,7 +364,7 @@ class GridAlgorithm extends LayoutAlgorithm
                 }
             }
             // 对标 Blink（CSS Grid §10.1）：auto margin 先于 box alignment 吸收 grid area 剩余空间
-            // margin:auto 存储为 marginXxxAuto 标志（StyleResolver 独立路径，非 CssLength::auto）
+            // margin:auto 存储为 marginXxxAuto 标志（InlineStyleParser 独立路径，非 CssLength::auto）
             $marginAutoH = (bool)($gri->style?->getRaw('marginLeftAuto') ?? false) && (bool)($gri->style?->getRaw('marginRightAuto') ?? false);
             $marginAutoV = (bool)($gri->style?->getRaw('marginTopAuto') ?? false) && (bool)($gri->style?->getRaw('marginBottomAuto') ?? false);
             // 当子项有显式宽度且小于轨道时，应用 justify-self / auto margin

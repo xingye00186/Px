@@ -7,7 +7,7 @@ use native_types;
 
 use Px\Dom\VNode;
 
-use Px\Css\StyleResolver;
+use Px\Css\InlineStyleParser;
 
 /**
  * StyleRecalcPass — 独立样式重算通行证
@@ -28,7 +28,7 @@ class StyleRecalcPass
         // 编译期数组化路径（SFC 组件）已是数组，直接使用。与 RenderTreeManager
         // 处理 placeholder style 的 is_string ? parseInlineStyle : ... 逻辑一致。
         if (is_string($inlineStyle)) {
-            $inlineStyle = $inlineStyle !== '' ? StyleResolver::parseInlineStyle($inlineStyle) : [];
+            $inlineStyle = $inlineStyle !== '' ? InlineStyleParser::parseInlineStyle($inlineStyle) : [];
         } elseif (!is_array($inlineStyle)) {
             $inlineStyle = [];
         }
@@ -43,7 +43,7 @@ class StyleRecalcPass
         }
 
         $pseudoStyles = [];
-        $computedStyle = StyleResolver::resolve(
+        $computedStyle = InlineStyleParser::resolve(
             inlineStyle: $inlineStyle,
             className: $className,
             parentCS: $parentCS,

@@ -20,7 +20,7 @@ require_once __DIR__ . '/../framework/Compiler/sfc-compiler.php';
 // Namespaced classes
 use Px\Css\CssMappings;
 use Px\Css\CssValueParser;
-use Px\Css\StyleResolver;
+use Px\Css\InlineStyleParser;
 use Px\Compiler\AotValidator;
 
 $passed = 0;
@@ -110,7 +110,7 @@ test('PROPERTY_MAP: supports 8+ CSS properties', function () {
 });
 
 test('parseInlineStyle: parses width/height/left/top', function () {
-    $result = StyleResolver::parseInlineStyle('width: 100px; height: 50px; left: 10px; top: 20px;');
+    $result = InlineStyleParser::parseInlineStyle('width: 100px; height: 50px; left: 10px; top: 20px;');
     assert($result['width'] === '100px', "width should be 100px, got {$result['width']}");
     assert($result['height'] === '50px', "height should be 50px, got {$result['height']}");
     assert($result['left'] === '10px', "left should be 10px, got {$result['left']}");
@@ -118,14 +118,14 @@ test('parseInlineStyle: parses width/height/left/top', function () {
 });
 
 test('parseInlineStyle: parses display and flex properties', function () {
-    $result = StyleResolver::parseInlineStyle('display: flex; flex-direction: column; justify-content: center;');
+    $result = InlineStyleParser::parseInlineStyle('display: flex; flex-direction: column; justify-content: center;');
     assert($result['display'] === 'flex', "display should be flex");
     assert($result['flex-direction'] === 'column', "flex-direction should be column");
     assert($result['justify-content'] === 'center', "justify-content should be center");
 });
 
 test('parseInlineStyle: parses grid-template-columns', function () {
-    $result = StyleResolver::parseInlineStyle('grid-template-columns: repeat(4, 80px);');
+    $result = InlineStyleParser::parseInlineStyle('grid-template-columns: repeat(4, 80px);');
     assert(isset($result['grid-template-columns']), "grid-template-columns should be set");
 });
 
@@ -161,7 +161,7 @@ test('Parser: parses flex container with CSS style', function () {
     assert($root->childCount() === 1, "Expected 1 child");
     
     $flex = $root->children[0];
-        $style = StyleResolver::parseInlineStyle($flex->getProp('style'));
+        $style = InlineStyleParser::parseInlineStyle($flex->getProp('style'));
     assert($style['display'] === 'flex', "display should be flex");
     assert($style['flex-direction'] === 'column', "flex-direction should be column");
 });

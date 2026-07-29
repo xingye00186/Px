@@ -3,7 +3,7 @@
 namespace Px\Dom;
 use Px\Component\Contracts\ReactiveComponentInterface;
 use Px\Css\StyleRecalcPass;
-use Px\Css\StyleResolver;
+use Px\Css\InlineStyleParser;
 use Px\Render\RenderTreeManager;
 
 use native_types;
@@ -83,7 +83,7 @@ class VNode
 
     /**
      * 由 StyleRecalcPass 填充的计算后样式（Phase 0.5 引入）。
-     * 后续 RenderTreeManager 直接从此读取，不再内联调用 StyleResolver。
+     * 后续 RenderTreeManager 直接从此读取，不再内联调用 InlineStyleParser。
      */
     public ?ComputedStyle $computedStyle = null;
 

@@ -4,7 +4,7 @@
  *
  * 覆盖关键修复的 5 个场景：
  *   1. PhysicalFragmentBuilder 元数据传播
- *   2. StyleResolver::extractPseudoStyles() 伪类提取
+ *   2. InlineStyleParser::extractPseudoStyles() 伪类提取
  *   3. Dirty bit 级联：markStyleDirty 跨帧保留
  *   4. OOFLayoutAlgorithm Fragment 元数据完整性
  *   5. extractPseudoOverrides 双路径读取
@@ -19,7 +19,7 @@ require_once __DIR__ . '/test-framework.php';
 use Px\Layout\PhysicalFragment;
 use Px\Layout\PhysicalFragmentBuilder;
 use Px\Layout\OOFLayoutAlgorithm;
-use Px\Css\StyleResolver;
+use Px\Css\InlineStyleParser;
 use Px\Css\ComputedStyle;
 use Px\Render\RenderNode;
 use Px\Render\RenderTreeManager;
@@ -66,9 +66,9 @@ describe('PhysicalFragmentBuilder', function () {
 });
 
 // ══════════════════════════════════════════════════════════
-// 2. StyleResolver::extractPseudoStyles()
+// 2. InlineStyleParser::extractPseudoStyles()
 // ══════════════════════════════════════════════════════════
-describe('StyleResolver::extractPseudoStyles', function () {
+describe('InlineStyleParser::extractPseudoStyles', function () {
 
     test('从已注册主题提取 hover/focus/active/before/after 定义', function () {
         // C1.5：ThemeProvider::inject / ThemeData 已随主题族删除（生产僵尸）；
@@ -79,7 +79,7 @@ describe('StyleResolver::extractPseudoStyles', function () {
             'my-btn__before' => ['content' => '►'],
         ]);
 
-        $result = StyleResolver::extractPseudoStyles('my-btn', 'div');
+        $result = InlineStyleParser::extractPseudoStyles('my-btn', 'div');
         assert(isset($result['hover']), 'hover 应被提取');
         assert(($result['hover']['bg'] ?? 0) === 0x555555, "hover bg 应为 0x555555, 实际=" . dechex($result['hover']['bg'] ?? 0));
         assert(isset($result['before']), 'before 应被提取');
@@ -90,7 +90,7 @@ describe('StyleResolver::extractPseudoStyles', function () {
     });
 
     test('空 class 返回空数组', function () {
-        $result = StyleResolver::extractPseudoStyles('');
+        $result = InlineStyleParser::extractPseudoStyles('');
         assert(empty($result), '空 className 应返回空');
     });
 

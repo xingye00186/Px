@@ -19,7 +19,7 @@ require_once __DIR__ . '/../CssTestBase.php';
 use Px\Css\CascadeResolver;
 use Px\Css\ComputedStyle;
 use Px\Css\CssColor;
-use Px\Css\StyleResolver;
+use Px\Css\InlineStyleParser;
 
 $tests = [];
 
@@ -51,9 +51,9 @@ $tests['caption UA 居中与 author 覆盖'] = function () {
 
 // ─── Test 4: inline !important 覆盖 normal（两方向）───
 $tests['!important 覆盖 inline normal（顺序无关）'] = function () {
-    $r1 = StyleResolver::parseInlineStyle('width:100px;width:50px !important');
+    $r1 = InlineStyleParser::parseInlineStyle('width:100px;width:50px !important');
     assert_eq((int)$r1['width']->toPx(), 50, 'important 后置胜 normal');
-    $r2 = StyleResolver::parseInlineStyle('width:50px !important;width:100px');
+    $r2 = InlineStyleParser::parseInlineStyle('width:50px !important;width:100px');
     assert_eq((int)$r2['width']->toPx(), 50, 'important 前置仍胜后续 normal');
     return 'OK';
 };

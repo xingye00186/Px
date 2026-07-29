@@ -67,7 +67,7 @@ use Px\Render\RenderNode;
 use Px\Render\RenderTreeManager;
 use Px\Layout\LayoutOrchestrator;
 use Px\Css\ComputedStyle;
-use Px\Css\StyleResolver;
+use Px\Css\InlineStyleParser;
 use Px\Css\StyleRecalcPass;
 use Px\Paint\PaintPipeline;
 use Px\Paint\RenderContext;

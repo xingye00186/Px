@@ -630,7 +630,7 @@ class CssMappings
      */
     
 
-    /** @return array 供外部（—?StyleResolver）使用的 PROPERTY_MAP */
+    /** @return array 供外部（—?InlineStyleParser）使用的 PROPERTY_MAP */
     public static function getPropertyMap(): array
     {
         return self::PROPERTY_MAP;
@@ -648,7 +648,7 @@ class CssMappings
      * 与 parseStyleBlock/parseInlineStyle 产出一致：
      *   - 优先查 PROPERTY_MAP/INLINE_PROPERTY_MAP 的 'key'（含 'background-color'→'bg'、
      *     'color'→'fg' 等特殊映射）
-     *   - 未命中则 kebab→camelCase（与 StyleResolver::kebabToCamelCase 一致）
+     *   - 未命中则 kebab→camelCase（与 InlineStyleParser::kebabToCamelCase 一致）
      *
      * 供编译期 style 数组化（convertStaticStyle/tryConvertStyleToArray）调用，
      * 使 SFC 产出的 style 数组 key 与 parseStyleBlock/parseInlineStyle 统一为 camelCase，
@@ -660,7 +660,7 @@ class CssMappings
         if ($map !== null && isset($map['key'])) {
             return $map['key'];
         }
-        // 未映射属性：kebab → camelCase（与 StyleResolver::kebabToCamelCase 一致）
+        // 未映射属性：kebab → camelCase（与 InlineStyleParser::kebabToCamelCase 一致）
         $parts = explode('-', $cssProp);
         $result = array_shift($parts);
         foreach ($parts as $part) {

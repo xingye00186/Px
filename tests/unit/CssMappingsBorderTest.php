@@ -17,7 +17,7 @@ require_once __DIR__ . '/bootstrap.php';
 
 use Px\Css\CssMappings;
 use Px\Css\CssValueParser;
-use Px\Css\StyleResolver;
+use Px\Css\InlineStyleParser;
 
 // C0.2 现代化：typed 值→标量（同 CssMappingsTest）
 if (!function_exists('_px')) {
@@ -73,18 +73,18 @@ test('只有宽度无颜色时颜色默认为 #000000', function () {
 echo "\n--- 2. parseInlineStyle() 内联 border 解析 ---\n";
 
 test('border-width: 2px; border-color: #FF0000', function () {
-    $result = StyleResolver::parseInlineStyle('border-width:2px;border-color:#FF0000');
+    $result = InlineStyleParser::parseInlineStyle('border-width:2px;border-color:#FF0000');
     assert_eq(_px($result['borderWidth'] ?? 0), 2, 'borderWidth 应为 2');
     assert_eq(_px($result['borderColor'] ?? 0), 255, 'borderColor BGR 应为 255');
 });
 
 test('border-width: 0px 解析为 borderWidth=0', function () {
-    $result = StyleResolver::parseInlineStyle('border-width:0px');
+    $result = InlineStyleParser::parseInlineStyle('border-width:0px');
     assert_eq(_px($result['borderWidth'] ?? -1), 0, 'borderWidth 应为 0');
 });
 
 test('border 简写在内联样式中展开为 borderWidth 与管道串色分量', function () {
-    $result = StyleResolver::parseInlineStyle('border:1px solid #333333');
+    $result = InlineStyleParser::parseInlineStyle('border:1px solid #333333');
     // #333333 → BGR = (51<<16)|(51<<8)|51 = 3355443
     assert_eq(_px($result['borderWidth'] ?? 0), 1, 'borderWidth 应为 1');
     // C0.2 现代化：色分量在 border 管道串（ComputedStyle 构造器提取），
@@ -93,7 +93,7 @@ test('border 简写在内联样式中展开为 borderWidth 与管道串色分量
 });
 
 test('同时使用 border 简写和独立 border-width 时独立属性覆盖', function () {
-    $result = StyleResolver::parseInlineStyle('border:2px solid #FF0000;border-width:4px');
+    $result = InlineStyleParser::parseInlineStyle('border:2px solid #FF0000;border-width:4px');
     assert_eq(_px($result['borderWidth'] ?? 0), 4, '独立 border-width 应覆盖简写值');
 });
 

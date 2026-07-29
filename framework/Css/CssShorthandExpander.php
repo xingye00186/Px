@@ -3,10 +3,10 @@
 namespace Px\Css;
 
 /**
- * CssShorthandExpander — CSS 简写属性统一展开（SFC 编译器 + StyleResolver 运行时共用）
+ * CssShorthandExpander — CSS 简写属性统一展开（SFC 编译器 + InlineStyleParser 运行时共用）
  *
  * 对标 Blink: style resolution 阶段展开所有简写为 longhand。
- * SFC 编译器在构建期调用（零运行时开销），StyleResolver 在运行时对动态样式调用。
+ * SFC 编译器在构建期调用（零运行时开销），InlineStyleParser 在运行时对动态样式调用。
  *
  * 覆盖：
  *   - padding / margin → 4 方向
@@ -74,7 +74,7 @@ class CssShorthandExpander
     {
         foreach (['padding', 'margin'] as $prop) {
             if (!isset($raw[$prop]) || $raw[$prop] === '') continue;
-            // margin 含 auto 不展开——margin:auto 有独立的特殊处理路径（StyleResolver marginAutoFlags）
+            // margin 含 auto 不展开——margin:auto 有独立的特殊处理路径（InlineStyleParser marginAutoFlags）
             if ($prop === 'margin' && stripos($raw[$prop], 'auto') !== false) continue;
             $parts = preg_split('/\s+/', trim($raw[$prop]));
             $count = count($parts);

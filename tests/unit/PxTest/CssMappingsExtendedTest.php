@@ -8,7 +8,7 @@ require_once __DIR__ . '/../bootstrap.php';
 
 use Px\Css\CssMappings;
 use Px\Css\CssValueParser;
-use Px\Css\StyleResolver;
+use Px\Css\InlineStyleParser;
 
 echo "========================================\n";
 echo "  CssMappings — Extended Tests\n";
@@ -42,7 +42,7 @@ check('parseIdent none', CssValueParser::parseIdentRaw('none') === 'none');
 
 // Inline style parsing
 echo "\n--- 4. Inline style ---\n";
-$s = StyleResolver::parseInlineStyle('width:100px;display:flex;gap:10px;background:#fff');
+$s = InlineStyleParser::parseInlineStyle('width:100px;display:flex;gap:10px;background:#fff');
 check('parseInlineStyle width', ($s['width'] ?? null) === '100px' || isset($s['width']));
 check('parseInlineStyle display', ($s['display'] ?? null) === 'flex' || isset($s['display']));
 check('parseInlineStyle is array', is_array($s));
