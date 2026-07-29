@@ -15,6 +15,7 @@ require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/framework/Compiler/sfc-compiler.php';
 
 use Px\Dom\VNode;
+use Px\Render\RenderTreeManager;
 
 echo "========================================\n";
 echo " :hover 生产复活烘焙链（C2.8）\n";
@@ -59,6 +60,48 @@ test('多 class 命中的伪类按序合并', function () {
     $h = $node->props['__pseudoStyles']['hover'] ?? '';
     assert_contains($h, '#FF0000', '含 .a:hover');
     assert_contains($h, '#00FF00', '含 .b:hover');
+});
+
+test('端到端：烘焙 :hover 经 RTM 解析入 RenderNode::pseudoStyles（resolved props）', function () {
+    // 强验证完整链：VNode props['__pseudoStyles'] (raw) → StyleRecalcPass
+    // → RTM.updateFromVNode → RenderNode::pseudoStyles['hover'] (resolved bg=int)。
+    $rtm = new RenderTreeManager();
+    $comp = new class extends \Px\Component\ReactiveComponent {
+        public function render(): VNode {
+            $btn = VNode::h('button', ['class' => 'btn', 'style' => 'background:#333333;'], 'Click');
+            // 模拟 mergeClassStylesIntoNode 已烘焙的 raw 伪类串
+            $btn->props['__pseudoStyles'] = ['hover' => 'background:#FF0000'];
+            return VNode::h('#root', [], [$btn]);
+        }
+        public function setBindValue(string $k, string $v): void {}
+        public function getBindValue(string $k): string { return ''; }
+        public function onMount(): void {}
+        public function dispatchClick(string $h, ?string $a = null): void {}
+    };
+    $vnode = $comp->getVNodeTree();
+    (new \Px\Css\StyleRecalcPass())->recalc($vnode);
+    $rtm->updateFromVNode($vnode, null, $comp, ['app' => $comp], null, 'app');
+    $root = $rtm->getRootRenderNode();
+    assert_true($root !== null, 'root RenderNode 存在');
+    // 找到 button RenderNode（深优遍历）
+    $findBtn = function ($rn) use (&$findBtn) {
+        if ($rn === null) return null;
+        if (($rn->type ?? '') === 'button') return $rn;
+        foreach (($rn->children ?? []) as $c) {
+            $r = $findBtn($c);
+            if ($r !== null) return $r;
+        }
+        return null;
+    };
+    $btnRN = $findBtn($root);
+    assert_true($btnRN !== null, 'button RenderNode 存在');
+    // resolved props：hover 的 bg 应等于直接解析同一声明的值（证链产出
+    // 与直接 parseInlineStyle 等价的 resolved 值，不硬编码 BGR 色模型）。
+    $expected = \Px\Css\InlineStyleParser::parseInlineStyle('background:#FF0000')['bg'] ?? null;
+    $hoverBg = $btnRN->pseudoStyles['hover']['bg'] ?? null;
+    assert_true($hoverBg !== null, 'RenderNode.pseudoStyles[hover][bg] 存在');
+    assert_true($expected !== null, '基准解析值存在');
+    assert_eq((int)$hoverBg, (int)$expected, 'hover bg 与直接解析 #FF0000 等价（resolved）');
 });
 
 $exitCode = print_summary();
