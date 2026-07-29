@@ -159,6 +159,23 @@ class CssValueParser
             }
             return $bgr;
         }
+        // C3b rgb() 现代空格分隔语法（CSS Color L4 §5）：rgb(255 0 0)、
+        // rgb(255 0 0 / 0.5)、rgb(255 0 0 / 50%)。旧实现仅认逗号语法 →
+        // 空格语法渲染为黑。alpha 支持数字与百分比。
+        if (preg_match('/rgba?\s*\(\s*(\d+)\s+(\d+)\s+(\d+)\s*(?:\/\s*([\d.]+)(%?)\s*)?\)/i', $value, $m)) {
+            $r = (int)$m[1];
+            $g = (int)$m[2];
+            $b = (int)$m[3];
+            $bgr = ($b << 16) | ($g << 8) | $r;
+            if (isset($m[4]) && $m[4] !== '') {
+                $a = ($m[5] === '%') ? ((float)$m[4] / 100.0) : (float)$m[4];
+                if ($a < 1.0) {
+                    $aByte = (int)round(max(0.0, $a) * 255.0);
+                    return ($aByte << 24) | $bgr;
+                }
+            }
+            return $bgr;
+        }
         if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)/i', $value, $m)) {
             $r = (int)$m[1];
             $g = (int)$m[2];
