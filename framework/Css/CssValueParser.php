@@ -820,67 +820,139 @@ class CssValueParser
         }
         $expr = trim($m[1]);
 
-        // Pattern 1: calc(<percent>% [+-] <px>px)
-        if (preg_match('/^(\d+(?:\.\d+)?)%\s*([+\-])\s*(\d+(?:\.\d+)?)px$/i', $expr, $m)) {
-            $pct = (float)$m[1];
-            $offset = (float)$m[3];
-            if ($m[2] === '-') $offset = -$offset;
-            return ['percent' => $pct, 'px' => (int)$offset];
+        // C3b.2 根因治本（对齐 Blink / CSS Values L3 §9）：旧实现为硬编码
+        // 正则模式（仅 ~4 种固定 2 操作数形式），不支持多操作数、
+        // 优先级、括号、数在单位后（`16px * 2`）——非表达式树抽象。
+        // 改为真实递归下降求值器：tokenize + 优先级（* / 高于 + -）
+        // + 括号 + 任意操作数。值建模为线性组合 {num, px, pct}。
+        $tokens = self::tokenizeCalc($expr);
+        if ($tokens === null) return $value; // 不支持字符/单位（如 vw/em）→ 原串回落
+        $pos = 0;
+        $r = self::parseCalcSum($tokens, $pos);
+        if ($r === null || $pos !== count($tokens)) return $value; // 解析错误/尾部残留
+        // 映射回消费契约 {percent, px}；无单位的纯数宽容作 px。
+        $pxFinal = $r['px'] + $r['num'];
+        if (abs($r['pct']) > 1e-9) {
+            return ['percent' => $r['pct'], 'px' => (int)round($pxFinal)];
         }
+        return ['percent' => null, 'px' => (int)round($pxFinal)];
+    }
 
-        // Pattern 2: calc(<px>px [+-] <percent>%)
-        if (preg_match('/^(\d+(?:\.\d+)?)px\s*([+\-])\s*(\d+(?:\.\d+)?)%$/i', $expr, $m)) {
-            $pct = (float)$m[3];
-            $offset = (float)$m[1];
-            if ($m[2] === '-') $pct = -$pct;
-            return ['percent' => $pct, 'px' => (int)$offset];
-        }
-
-        // Pattern 3: calc(<percent>% [+-] <percent>%)
-        if (preg_match('/^(\d+(?:\.\d+)?)%\s*([+\-])\s*(\d+(?:\.\d+)?)%$/i', $expr, $m)) {
-            $pct1 = (float)$m[1];
-            $pct2 = (float)$m[3];
-            if ($m[2] === '-') $pct2 = -$pct2;
-            return ['percent' => $pct1 + $pct2, 'px' => 0];
-        }
-
-        // Pattern 4: calc(<px>px [+-] <px>px)
-        if (preg_match('/^(\d+(?:\.\d+)?)px\s*([+\-])\s*(\d+(?:\.\d+)?)px$/i', $expr, $m)) {
-            $px1 = (float)$m[1];
-            $px2 = (float)$m[3];
-            if ($m[2] === '-') $px2 = -$px2;
-            return ['percent' => null, 'px' => (int)($px1 + $px2)];
-        }
-
-        // Pattern 5: calc(<value> * <number>)
-        if (preg_match('/^(\d+(?:\.\d+)?)(px|)%\s*\*\s*(\d+(?:\.\d+)?)$/i', $expr, $m)) {
-            $val = (float)$m[1];
-            $mult = (float)$m[3];
-            $unit = $m[2];
-            if ($unit === '') {
-                // Unitless * number → px
-                return ['percent' => null, 'px' => (int)($val * $mult)];
+    /**
+     * calc() 词法分析：拆为 number(可带 px/% 单位)、运算符、括号 token。
+     * 遇不支持单位（vw/vh/em 等，下游仅消费 px/%）或非法字符返 null。
+     * @return array|null token 数组，或 null（不可解析 → 调用方回落原串）
+     */
+    private static function tokenizeCalc(string $expr): ?array
+    {
+        $tokens = [];
+        $i = 0;
+        $n = strlen($expr);
+        while ($i < $n) {
+            $c = $expr[$i];
+            if (ctype_space($c)) { $i++; continue; }
+            if ($c === '+' || $c === '-' || $c === '*' || $c === '/' || $c === '(' || $c === ')') {
+                $tokens[] = ['t' => $c];
+                $i++;
+                continue;
             }
-            return ['percent' => null, 'px' => (int)($val * $mult)];
+            if (ctype_digit($c) || $c === '.') {
+                $j = $i;
+                while ($j < $n && (ctype_digit($expr[$j]) || $expr[$j] === '.')) $j++;
+                $numStr = substr($expr, $i, $j - $i);
+                $unit = '';
+                if ($j < $n && $expr[$j] === '%') {
+                    $unit = '%';
+                    $j++;
+                } elseif ($j < $n && ctype_alpha($expr[$j])) {
+                    $k = $j;
+                    while ($k < $n && ctype_alpha($expr[$k])) $k++;
+                    $u = strtolower(substr($expr, $j, $k - $j));
+                    if ($u === 'px') { $unit = 'px'; } else { return null; } // 不支持单位
+                    $j = $k;
+                }
+                $tokens[] = ['t' => 'num', 'num' => (float)$numStr, 'unit' => $unit];
+                $i = $j;
+                continue;
+            }
+            return null; // 非法字符
         }
+        return $tokens;
+    }
 
-        // Pattern 6: calc(<number> * <value>)
-        if (preg_match('/^(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)(px|)%?$/i', $expr, $m)) {
-            $val = (float)$m[1];
-            $mult = (float)$m[2];
-            return ['percent' => null, 'px' => (int)($val * $mult)];
+    /** 和/差：term (('+'|'-') term)*  —— 最低优先级 */
+    private static function parseCalcSum(array $tokens, int &$pos): ?array
+    {
+        $left = self::parseCalcProduct($tokens, $pos);
+        if ($left === null) return null;
+        while ($pos < count($tokens) && ($tokens[$pos]['t'] === '+' || $tokens[$pos]['t'] === '-')) {
+            $op = $tokens[$pos]['t'];
+            $pos++;
+            $right = self::parseCalcProduct($tokens, $pos);
+            if ($right === null) return null;
+            $sign = ($op === '-') ? -1.0 : 1.0;
+            $left = [
+                'num' => $left['num'] + $sign * $right['num'],
+                'px'  => $left['px'] + $sign * $right['px'],
+                'pct' => $left['pct'] + $sign * $right['pct'],
+            ];
         }
+        return $left;
+    }
 
-        // Pattern 7: calc(<px>px / <number>)
-        if (preg_match('/^(\d+(?:\.\d+)?)px\s*\/\s*(\d+(?:\.\d+)?)$/i', $expr, $m)) {
-            $px = (float)$m[1];
-            $div = (float)$m[2];
-            if ($div === 0.0) return ['percent' => null, 'px' => 0];
-            return ['percent' => null, 'px' => (int)($px / $div)];
+    /** 积/商：factor (('*'|'/') factor)*  —— 高优先级；length*length / 除以 length 为非法 */
+    private static function parseCalcProduct(array $tokens, int &$pos): ?array
+    {
+        $left = self::parseCalcFactor($tokens, $pos);
+        if ($left === null) return null;
+        while ($pos < count($tokens) && ($tokens[$pos]['t'] === '*' || $tokens[$pos]['t'] === '/')) {
+            $op = $tokens[$pos]['t'];
+            $pos++;
+            $right = self::parseCalcFactor($tokens, $pos);
+            if ($right === null) return null;
+            $aPure = (abs($left['px']) < 1e-9 && abs($left['pct']) < 1e-9);
+            $bPure = (abs($right['px']) < 1e-9 && abs($right['pct']) < 1e-9);
+            if ($op === '*') {
+                if ($bPure)      $left = self::scaleCalc($left, $right['num']);
+                elseif ($aPure)  $left = self::scaleCalc($right, $left['num']);
+                else             return null; // length * length 非法
+            } else { // '/'
+                if (!$bPure || abs($right['num']) < 1e-9) return null; // 除以 length 或 0 非法
+                $left = self::scaleCalc($left, 1.0 / $right['num']);
+            }
         }
+        return $left;
+    }
 
-        // Unrecognized calc pattern — return as string
-        return $value;
+    /** 因子：number | dimension | '(' sum ')' */
+    private static function parseCalcFactor(array $tokens, int &$pos): ?array
+    {
+        if ($pos >= count($tokens)) return null;
+        $tok = $tokens[$pos];
+        if ($tok['t'] === '(') {
+            $pos++;
+            $v = self::parseCalcSum($tokens, $pos);
+            if ($v === null) return null;
+            if ($pos >= count($tokens) || $tokens[$pos]['t'] !== ')') return null;
+            $pos++;
+            return $v;
+        }
+        if ($tok['t'] === 'num') {
+            $pos++;
+            $u = $tok['unit'];
+            return [
+                'num' => ($u === '' ? $tok['num'] : 0.0),
+                'px'  => ($u === 'px' ? $tok['num'] : 0.0),
+                'pct' => ($u === '%' ? $tok['num'] : 0.0),
+            ];
+        }
+        return null; // 操作符/右括号开头 → 解析错误
+    }
+
+    /** 线性缩放（乘/除数字） */
+    private static function scaleCalc(array $v, float $k): array
+    {
+        return ['num' => $v['num'] * $k, 'px' => $v['px'] * $k, 'pct' => $v['pct'] * $k];
     }
 
     /**
