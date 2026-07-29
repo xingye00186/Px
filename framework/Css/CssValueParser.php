@@ -27,6 +27,20 @@ class CssValueParser
         if (strlen($hex) === 3) {
             $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
+        // C3a.2：#RGBA（4 位）/ #RRGGBBAA（8 位）——消灭"strlen!==6 返 0 变黑"；
+        // alpha 字节打包入高 8 位（<255；255 → 高字节 0 opaque 向后兼容）。
+        if (strlen($hex) === 4) {
+            // #RGBA → 展开为 #RRGGBBAA
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2] . $hex[3] . $hex[3];
+        }
+        if (strlen($hex) === 8 && ctype_xdigit($hex)) {
+            $r = hexdec(substr($hex, 0, 2));
+            $g = hexdec(substr($hex, 2, 2));
+            $b = hexdec(substr($hex, 4, 2));
+            $a = hexdec(substr($hex, 6, 2));
+            $bgr = ($b << 16) | ($g << 8) | $r;
+            return $a < 255 ? (($a << 24) | $bgr) : $bgr;
+        }
         if (strlen($hex) !== 6 || !ctype_xdigit($hex)) {
             return 0;
         }
@@ -98,11 +112,22 @@ class CssValueParser
             }
             return 0;
         }
-        if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i', $value, $m)) {
+        if (preg_match('/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)/i', $value, $m)) {
             $r = (int)$m[1];
             $g = (int)$m[2];
             $b = (int)$m[3];
-            return ($b << 16) | ($g << 8) | $r;
+            $bgr = ($b << 16) | ($g << 8) | $r;
+            // C3a.2：第 4 捕获组 alpha（CSS Color 4）→ 打包入高 8 位。
+            // 约定：alpha ∈ [0,1) 存字节 round(a*255)（<255）；alpha>=1/缺省
+            // → 高字节 0（opaque，与现有不透明色向后兼容）。
+            if (isset($m[4]) && $m[4] !== '') {
+                $a = (float)$m[4];
+                if ($a < 1.0) {
+                    $aByte = (int)round(max(0.0, $a) * 255.0);
+                    return ($aByte << 24) | $bgr;
+                }
+            }
+            return $bgr;
         }
         return self::hexToBgr($value);
     }

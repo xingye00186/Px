@@ -174,5 +174,57 @@ test('"1.5rem" 解析为 rem 单位', function () {
     assert_eq($result['unit'], 'rem', 'unit=rem');
 });
 
+// =============================================================
+// C3a.2 rgba/hex alpha 矩阵（文档 §1.3.4 三断点治本）
+// alpha 打包入高 8 位；255/缺省 → 高字节 0（opaque 向后兼容）
+// =============================================================
+echo "\n--- C3a.2 alpha 保真 ---\n";
+
+function _alphaByte(int $v): int { return ($v >> 24) & 0xFF; }
+function _rgb(int $v): array { return [$v & 0xFF, ($v >> 8) & 0xFF, ($v >> 16) & 0xFF]; }
+
+test('#FF000080 不再返 0（消灭变黑）', function () {
+    $v = CssValueParser::parseHexColor('#FF000080');
+    assert_true($v !== 0, '非零');
+    assert_eq(_rgb($v), [255, 0, 0], 'RGB=255,0,0');
+    assert_eq(_alphaByte($v), 128, 'alpha byte=0x80=128');
+});
+
+test('#RRGGBBAA (#FB729966) alpha 字节提取', function () {
+    $v = CssValueParser::parseHexColor('#FB729966');
+    assert_eq(_rgb($v), [251, 114, 153], 'RGB=251,114,153');
+    assert_eq(_alphaByte($v), 102, 'alpha byte=0x66=102');
+});
+
+test('#RGBA (#FB74) 展开为 #FFBB77 + alpha 0x44', function () {
+    $v = CssValueParser::parseHexColor('#FB74');
+    assert_eq(_rgb($v), [255, 187, 119], 'RGB=255,187,119 (双字符展开)');
+    assert_eq(_alphaByte($v), 68, 'alpha byte=0x44=68');
+});
+
+test('rgba() 第 4 捕获组 alpha', function () {
+    $v = CssValueParser::parseHexColor('rgba(251,114,153,0.4)');
+    assert_eq(_rgb($v), [251, 114, 153], 'RGB=251,114,153');
+    assert_eq(_alphaByte($v), 102, 'alpha=round(0.4*255)=102');
+});
+
+test('rgba() 与同值 #RRGGBBAA int 完全相等', function () {
+    assert_eq(CssValueParser::parseHexColor('rgba(251,114,153,0.4)'),
+        CssValueParser::parseHexColor('#FB729966'), 'rgba(...,0.4) === #FB729966');
+});
+
+test('rgba(0,0,0,0.06) 带空格 alpha', function () {
+    $v = CssValueParser::parseHexColor('rgba(0, 0, 0, 0.06)');
+    assert_eq(_rgb($v), [0, 0, 0], 'RGB=0,0,0');
+    assert_eq(_alphaByte($v), 15, 'alpha=round(0.06*255)=15');
+});
+
+test('不透明色向后兼容（高字节为 0）', function () {
+    assert_eq(CssValueParser::parseHexColor('#FB7299'), 0x9972FB, '#FB7299 = BGR 0x9972FB（无 alpha 位）');
+    assert_eq(_alphaByte(CssValueParser::parseHexColor('#333')), 0, '#333 opaque 高字节 0');
+    assert_eq(_alphaByte(CssValueParser::parseHexColor('rgb(10,20,30)')), 0, 'rgb() opaque 高字节 0');
+    assert_eq(_alphaByte(CssValueParser::parseHexColor('#FF0000FF')), 0, 'alpha=255 → 高字节 0 opaque');
+});
+
 $exitCode = print_summary();
 exit($exitCode);

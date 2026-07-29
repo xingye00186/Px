@@ -170,27 +170,28 @@ test('box-shadow:多阴影语法 第一个阴影被正确提取', function () {
     assert_contains($result, '0|2|8|', 'first shadow h=0, v=2, blur=8');
 });
 
-// ── rgba alpha → opacity 注入（C3a 红靶：当前 alpha 被丢弃，文档 §1.3.4；
-// C3a.2 解析批落地后恢复下列三断言——见 git 历史原期望值 0.4/0.8/0.06）──
-echo "  [SKIP-C3a] rgba alpha 注入三断言（alpha 丢弃现状 = C3a 立项根据，修复后恢复）\n";
-if (false) {
-test('rgba() alpha 被注入为 opacity', function () {
+// ── rgba alpha → 颜色高字节（C3a.2 治本：alpha 存于颜色 int 高 8 位，
+// 非旧的独立 opacity 注入；对齐 CSS Color 4 / Chrome getComputedStyle rgba）──
+function _bgAlpha(int $v): int { return ($v >> 24) & 0xFF; }
+
+test('rgba() alpha 存入 bg 高字节', function () {
     $result = StyleResolver::parseInlineStyle('background:rgba(251,114,153,0.4)');
-    assert_eq($result['opacity'] ?? 1.0, 0.4, 'opacity injected from rgba alpha');
-    // #FB7299 in BGR = (0x99 << 16) | (0x72 << 8) | 0xFB = 10056443
-    assert_eq($result['bg'] ?? 0, 0x9972FB, 'BGR color correct');
+    // #FB7299 in BGR = 0x9972FB；alpha 0x66=102 入高 8 位
+    assert_eq(($result['bg'] ?? 0) & 0xFFFFFF, 0x9972FB, 'BGR color correct');
+    assert_eq(_bgAlpha($result['bg'] ?? 0), 102, 'alpha byte=round(0.4*255)=102');
 });
 
-test('显式 opacity:0.8 优先于 rgba() alpha', function () {
+test('显式 opacity:0.8 与 rgba alpha 独立共存', function () {
     $result = StyleResolver::parseInlineStyle('background:rgba(251,114,153,0.4);opacity:0.8');
-    assert_eq($result['opacity'] ?? 1.0, 0.8, 'explicit opacity takes priority');
+    // C3a.2：color-alpha 与 element-opacity 是两个独立通道（对齐 Blink）
+    assert_eq($result['opacity'] ?? 1.0, 0.8, 'explicit opacity preserved');
+    assert_eq(_bgAlpha($result['bg'] ?? 0), 102, 'bg alpha byte still 102');
 });
 
-test('rgba(0,0,0,0.06) 带空格的 alpha 注入为 opacity=0.06', function () {
+test('rgba(0,0,0,0.06) 带空格 alpha 入高字节', function () {
     $result = StyleResolver::parseInlineStyle('background:rgba(0, 0, 0, 0.06)');
-    assert_eq($result['opacity'] ?? 1.0, 0.06, 'opacity = 0.06 with spaces');
+    assert_eq(_bgAlpha($result['bg'] ?? 0), 15, 'alpha byte=round(0.06*255)=15');
 });
-}
 
 // =============================================================
 // 6. Transform
@@ -279,9 +280,10 @@ test('background:#FB7299 url("img.png") center/cover no-repeat 全简写', funct
 
 test('background:rgba(251,114,153,0.4) url("img.png") 含 rgba 颜色', function () {
     $result = StyleResolver::parseInlineStyle('background:rgba(251,114,153,0.4) url("img.png")');
-    assert_eq($result['bg'] ?? 0, 0x9972FB, 'rgba bg color parsed');
+    // C3a.2：bg 高字节现含 alpha，比较取低 24 位 BGR
+    assert_eq(($result['bg'] ?? 0) & 0xFFFFFF, 0x9972FB, 'rgba bg color parsed');
     assert_eq($result['backgroundImage'] ?? '', 'img.png', 'backgroundImage extracted');
-    // C3a 红靶：alpha→opacity 注入断言暂移除（见上方 SKIP-C3a 段）
+    assert_eq((($result['bg'] ?? 0) >> 24) & 0xFF, 102, 'bg alpha byte=102');
 });
 
 test('background:url("img.png") #FB7299 颜色在 url 之后', function () {
