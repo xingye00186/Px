@@ -53,7 +53,8 @@ class StyleRecalcPass
         // 注：**仍递归子层**——子节点可能自行脏。整棵子树跳过需在 patch 期
         // 向上传播 childStyleDirty（Blink ChildNeedsStyleRecalc），属后续增量。
         $ctxSig = self::styleCtxSig($parentClassStr, $precedingSiblingClasses, $ancestorClassLists, $elemIndex);
-        $clean = $root->computedStyle !== null
+        $clean = self::$incrementalEnabled
+            && $root->computedStyle !== null
             && !$root->styleDirty
             && $root->styleParentCS === $parentCS
             && $root->styleCtxSig === $ctxSig;
@@ -61,6 +62,16 @@ class StyleRecalcPass
             \Px\Core\PerfCounter::inc('style_recalc_node_skip');
             $computedStyle = $root->computedStyle;
         } else {
+            // 观测点：分条件归因 clean 未命中的原因（对标 Blink 的 recalc 统计）。
+            if ($root->computedStyle === null) {
+                \Px\Core\PerfCounter::inc('style_recalc_miss_nostyle');
+            } elseif ($root->styleDirty) {
+                \Px\Core\PerfCounter::inc('style_recalc_miss_dirty');
+            } elseif ($root->styleParentCS !== $parentCS) {
+                \Px\Core\PerfCounter::inc('style_recalc_miss_parentcs');
+            } else {
+                \Px\Core\PerfCounter::inc('style_recalc_miss_ctxsig');
+            }
 
         // C2.5-full：构建 SelectorChecker 元素上下文（仅引擎活跃时，避免
         // 生产无用开销）。引擎空 → 空上下文 → resolve 不走引擎分支。
@@ -150,6 +161,12 @@ class StyleRecalcPass
      * 对标 Blink Element 选择器匹配所需数据要素：tag/id/classes/attrs/
      * index（1-based 元素序，供 nth-child）/ancestors（根→直接父）/prevSiblings。
      */
+    /**
+     * C4.1：增量样式重算开关。默认开（已经单测钉/三层验证）；置 false 可
+     * 强制全量重算，用于 A/B 测量与回归二分定位。
+     */
+    public static bool $incrementalEnabled = true;
+
     /**
      * C4.1：外部上下文指纹——除节点自身 props 之外、一切能影响本节点及其
      * 子树计算样式的输入。父 ComputedStyle 不入指纹（已由身份比较覆盖）。

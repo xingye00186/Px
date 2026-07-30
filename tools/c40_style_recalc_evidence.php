@@ -23,6 +23,9 @@ $frames = isset($argv[1]) ? max(10, (int)$argv[1]) : 200;
 $useIndex = in_array('--index', $argv, true);
 // --hoist：静态子树提升（生产 gen 形态），使 C4.1 子树跳过可处发。
 $useHoist = in_array('--hoist', $argv, true);
+// --noskip：关闭 C4.1 增量重算（强制全量），用于严格 A/B。
+$noSkip = in_array('--noskip', $argv, true);
+\Px\Css\StyleRecalcPass::$incrementalEnabled = !$noSkip;
 
 if (!defined('APP_PLATFORM')) define('APP_PLATFORM', 'win32');
 if (!defined('WINDOW_WIDTH')) define('WINDOW_WIDTH', 1440);
@@ -57,19 +60,18 @@ final class C40Comp extends \Px\Component\ReactiveComponent
     {
         $cells = [];
         for ($i = 0; $i < 200; $i++) {
+            // 生产形态：v-for 产出 **keyed** 子节点，patchChildrenArray 走 key 匹配
+            // 而复用旧实例。无 key 子节点的复用需 dynamicChildren（block root），
+            // 手写 VNode 不满足——旧版本因此每帧全新建，不具生产代表性。
+            $cls = ($i === 7) ? ('cell ' . $this->toggle) : 'cell';
+            $cell = VNode::hKey('div', ['class' => $cls], 'c' . $i, 'k' . $i);
+            // patchFlags 必须如实标记：默认 0 = PATCH_NONE 使 patchProps **整段跳过**
+            // props 更新（手写 VNode 的陷阱，使 class 切换静默失效）。gen 为动态
+            // class 绑定发 PATCH_CLASS；静态节点保持 PATCH_NONE（即提升语义）。
             if ($i === 7) {
-                // 动态节点：每帧新建（class 真实切换）
-                $cells[] = VNode::h('div', ['class' => 'cell ' . $this->toggle], 'c7');
-                continue;
+                $cell = $cell->withPatchFlags(VNode::PATCH_CLASS);
             }
-            if ($this->hoist) {
-                if (!isset($this->staticCells[$i])) {
-                    $this->staticCells[$i] = VNode::h('div', ['class' => 'cell'], 'c' . $i);
-                }
-                $cells[] = $this->staticCells[$i];
-            } else {
-                $cells[] = VNode::h('div', ['class' => 'cell'], 'c' . $i);
-            }
+            $cells[] = $cell;
         }
         $row = VNode::h('div', ['class' => 'row wrap'], $cells);
         return VNode::h('#root', [], $row);
@@ -120,6 +122,33 @@ if (empty($snap)) {
     exit(2);
 }
 
+// ── 切换生效自检（必须）──
+// 本脚本已三次因不同原因静默不切换（renderDirty 非脏标入口、无 key 子
+// 不复用、patchFlags 默认 PATCH_NONE 跳过 props），导致测量无意义。此处直接
+// 验证目标节点的背景色在两个状态间确实不同，否则终止。
+function toggleBgOf(object $app, int $idx): int
+{
+    $pt = new ReflectionProperty($app, 'activeVNodeTree');
+    $pt->setAccessible(true);
+    $tree = $pt->getValue($app);
+    $row = $tree->children;
+    if (is_array($row)) { $row = $row[0]; }
+    $kids = is_array($row->children) ? $row->children : [];
+    $n = $kids[$idx] ?? null;
+    if (!($n instanceof VNode) || $n->computedStyle === null) return -1;
+    return $n->computedStyle->backgroundColor->toBgr();
+}
+$comp->toggle = 'active'; $mUpdate->invoke($comp); $mRender->invoke($app);
+$bgActive = toggleBgOf($app, 7);
+$comp->toggle = 'idle';   $mUpdate->invoke($comp); $mRender->invoke($app);
+$bgIdle = toggleBgOf($app, 7);
+if ($bgActive === $bgIdle) {
+    echo "ABORT：class 切换未生效（active bg=$bgActive == idle bg=$bgIdle）——";
+    echo "测量不成立，不得据此结论\n";
+    exit(3);
+}
+echo "toggle self-check      : OK (active bg=$bgActive != idle bg=$bgIdle)\n";
+
 $hits   = (int)($snap['style_pool_hit']['count'] ?? 0);
 $misses = (int)($snap['style_pool_miss']['count'] ?? 0);
 $total = $hits + $misses;
@@ -138,7 +167,12 @@ echo "========================================\n";
 echo "frames                 : $frames\n";
 echo "C2.7 index             : " . ($useIndex ? 'ON' : 'OFF (default)') . "\n";
 echo "static hoisting        : " . ($useHoist ? 'ON (production gen form)' : 'OFF') . "\n";
+echo "C4.1 incremental       : " . ($noSkip ? 'OFF (--noskip)' : 'ON') . "\n";
 echo "node skips             : " . (int)($snap['style_recalc_node_skip']['count'] ?? 0) . "\n";
+echo "  miss: no prev style  : " . (int)($snap['style_recalc_miss_nostyle']['count'] ?? 0) . "\n";
+echo "  miss: styleDirty     : " . (int)($snap['style_recalc_miss_dirty']['count'] ?? 0) . "\n";
+echo "  miss: parentCS ident : " . (int)($snap['style_recalc_miss_parentcs']['count'] ?? 0) . "\n";
+echo "  miss: ctxSig         : " . (int)($snap['style_recalc_miss_ctxsig']['count'] ?? 0) . "\n";
 echo "nodes/frame            : 200 cells (+row +#root)\n";
 echo "engine rules           : " . StyleEngine::ruleCount() . "\n";
 echo "style_pool_hit         : $hits\n";
