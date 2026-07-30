@@ -83,5 +83,15 @@ test('margin/padding px 路径不回归', function () {
     assert_eq((int)$d->computedStyle->padding->top->toPx(), 4, 'padding:4px 不变');
 });
 
+test('border 简写 em 宽度经元素 fontSize 转 px（生产烘焙路径）', function () {
+    // 链：parseBorder 保留 '0.5em' token 入 pipe → borderFallback 以级联后
+    // fontSize 解析。旧链 (int)'0.5em'→0 实锤丢宽。
+    [$b] = treeOf('.rootc { font-size: 20px; } .b { border: 0.5em solid #FF0000; }', ['b']);
+    assert_eq((int)$b->computedStyle->borderWidth->top->toPx(), 10, 'border:0.5em × font20 = 10px');
+    // px border 不回归
+    [$e] = treeOf('.rootc { } .e { border: 2px solid #00FF00; }', ['e']);
+    assert_eq((int)$e->computedStyle->borderWidth->top->toPx(), 2, 'border:2px 不变');
+});
+
 $exitCode = print_summary();
 exit($exitCode);

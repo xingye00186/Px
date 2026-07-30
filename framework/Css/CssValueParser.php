@@ -336,7 +336,12 @@ class CssValueParser
         $styleKeywords = ['none','hidden','dotted','dashed','solid','double','groove','ridge','inset','outset'];
         foreach ($parts as $p) {
             if ($p === '') continue;
-            if (preg_match('/^\d+/', $p)) {
+            if (preg_match('/^(\d+(?:\.\d+)?)(em|rem)$/i', $p, $wm)) {
+                // C4 em/rem 宽度：保留 token 入 pipe（无 font 上下文，由
+                // ComputedStyle::borderFallback 以元素级联后 fontSize 解析）。
+                // 旧 (int)'0.5em'→0 实锤丢宽。
+                $width = $wm[1] . strtolower($wm[2]);
+            } elseif (preg_match('/^\d+/', $p)) {
                 $width = (int)$p;
             } elseif (in_array(strtolower($p), $styleKeywords, true)) {
                 $style = strtolower($p);

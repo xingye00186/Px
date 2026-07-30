@@ -784,11 +784,17 @@ class ComputedStyle
             && (float)$bwRaw->top->toPx() === 0.0 && (float)$bwRaw->right->toPx() === 0.0
             && (float)$bwRaw->bottom->toPx() === 0.0 && (float)$bwRaw->left->toPx() === 0.0;
         // CSS border/border-bottom/border-top/border-left/border-right 简写未展开时提取宽度
+        // C4 em/rem 级联感知：旧实现 (int)$m[1] 对 '0.5em' → 0（单位被忽略
+        // 且小数截断，探针实锤 border:0.5em → 0 应 10）。em 用元素级联后
+        // fontSize（已先行），rem 用根 16；px/无单位保持原截断语义不变。
         $borderFallback = function(string $key, string $camelKey = '') use ($d): int {
             $v = $d[$key] ?? ($camelKey !== '' ? ($d[$camelKey] ?? null) : null);
-            if (is_string($v) && preg_match('/^(\d+(\.\d+)?(px|pt|em|rem|%)?)\b/', trim($v), $m)) {
-                $r = (int)$m[1];
-                return $r;
+            if (is_string($v) && preg_match('/^(\d+(?:\.\d+)?)(px|pt|em|rem|%)?\b/', trim($v), $m)) {
+                $num = (float)$m[1];
+                $unit = $m[2] ?? '';
+                if ($unit === 'em')  return (int)round($num * $this->fontSize);
+                if ($unit === 'rem') return (int)round($num * self::DEFAULT_FONT_SIZE);
+                return (int)$num;
             }
             return 0;
         };
@@ -827,7 +833,7 @@ class ComputedStyle
         $bc = self::safeInt($d['borderColor'] ?? 0);
         if ($bc === 0 && isset($d['border']) && is_string($d['border'])) {
             $bShortC = $d['border'];
-            if (preg_match('/^\d+\|(\d+)\|\w+$/', $bShortC, $bcm)) {
+            if (preg_match('/^[\d.]+(?:em|rem)?\|(\d+)\|\w+$/', $bShortC, $bcm)) {
                 $bc = (int)$bcm[1]; // 管道编码 width|color|style
             } elseif (preg_match('/#([0-9a-fA-F]{3,8})\b/', $bShortC, $bcm2)) {
                 $cl = CssValueParser::parseHexColor('#' . $bcm2[1]);
@@ -837,7 +843,7 @@ class ComputedStyle
                 // pipe，上面两正则均不匹配 rgba shorthand → 走 parseBorder 取色
                 //（保 alpha 高字节）。
                 $pipe = CssValueParser::parseBorder($bShortC);
-                if (preg_match('/^\d+\|(\d+)\|\w+$/', $pipe, $pm)) {
+                if (preg_match('/^[\d.]+(?:em|rem)?\|(\d+)\|\w+$/', $pipe, $pm)) {
                     $bc = (int)$pm[1];
                 }
             }
@@ -858,7 +864,7 @@ class ComputedStyle
         $sideColorFromShort = function(string $key, string $camelKey) use ($d): int {
             $v = $d[$key] ?? ($d[$camelKey] ?? null);
             if (is_string($v)) {
-                if (preg_match('/^\d+\|(\d+)\|\w+$/', $v, $m)) {
+                if (preg_match('/^[\d.]+(?:em|rem)?\|(\d+)\|\w+$/', $v, $m)) {
                     return (int)$m[1]; // 管道编码 width|color|style
                 }
                 if (preg_match('/#([0-9a-fA-F]{3,8})\b/', $v, $m)) {
@@ -867,7 +873,7 @@ class ComputedStyle
                 }
                 // C3a.3：原始 CSS per-side 简写（'4px solid rgba(...)'）→ parseBorder
                 $pipe = CssValueParser::parseBorder($v);
-                if (preg_match('/^\d+\|(\d+)\|\w+$/', $pipe, $m)) {
+                if (preg_match('/^[\d.]+(?:em|rem)?\|(\d+)\|\w+$/', $pipe, $m)) {
                     return (int)$m[1];
                 }
             }
