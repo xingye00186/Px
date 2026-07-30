@@ -16,7 +16,7 @@ use Px\Css\InlineStyleParser;
  */
 class StyleRecalcPass
 {
-    public function recalc(VNode $root, ?ComputedStyle $parentCS = null, string $parentClassStr = '', array $precedingSiblingClasses = [], array $ancestorCtx = [], array $prevSiblingCtx = [], int $elemIndex = 1): void
+    public function recalc(VNode $root, ?ComputedStyle $parentCS = null, array $precedingSiblingClasses = [], array $ancestorCtx = [], array $prevSiblingCtx = [], int $elemIndex = 1): void
     {
         if ($root->isComponent) {
             // Component 节点不直接渲染，展开后由子组件管理
@@ -91,7 +91,6 @@ class StyleRecalcPass
             className: $className,
             parentCS: $parentCS,
             elementType: $root->type,
-            parentClassStr: $parentClassStr,
             // C2.4：传真实前序兄弟 class（修§1.3.3 运行时兄弟组合子 +/~
             // 恒传空失效）；由父级子循环按文档序累积传入。
             precedingSiblingClasses: $precedingSiblingClasses,
@@ -155,7 +154,7 @@ class StyleRecalcPass
                 // C4.1：写入父链（供下帧 patch 期脏位向上传播）。
                 $child->styleParentNode = $root;
                 // 递归直传父 ComputedStyle 对象（O(1) 身份），不再传 toExportArray()
-                $this->recalc($child, $computedStyle, $className, $siblingAcc, $childAncCtx, $sibCtxAcc, $childIdx);
+                $this->recalc($child, $computedStyle, $siblingAcc, $childAncCtx, $sibCtxAcc, $childIdx);
                 $cc = $child->props['class'] ?? '';
                 if ($trackSiblings && is_string($cc) && $cc !== '') {
                     $siblingAcc[] = $cc;

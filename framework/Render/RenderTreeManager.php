@@ -883,7 +883,6 @@ class RenderTreeManager
                     className: $vnode->props['class'] ?? '',
                     parentCS: $tempParentCS,
                     elementType: $vnode->type,
-                    parentClassStr: $parentClassStr,
                     precedingSiblingClasses: [],
                     pseudoStyles: $pseudoStyles
                 );

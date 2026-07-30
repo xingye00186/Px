@@ -35,7 +35,6 @@ class InlineStyleParser
         string $className = '',
         ?ComputedStyle $parentCS = null,
         string $elementType = 'div',
-        string $parentClassStr = '',
         array $precedingSiblingClasses = [],
         array &$pseudoStyles = [],
         array $elementCtx = []
@@ -94,6 +93,10 @@ class InlineStyleParser
                 StyleEngine::generation(),
                 $elementCtx['classes'] ?? [], $elementCtx['tag'] ?? '',
                 $elementCtx['id'] ?? '',
+                // 新门控发现（第 4 例同族）：上轮只给**祖先/兄弟**加了 attrs，
+                // 却漏了**元素自身**的 attrs → `.probe[data-k=v]` 与 `.probe` 碰撞
+                // （门控报 “同一实例（池键碰撞）”）。
+                StyleEngine::usesAttrRules() ? ($elementCtx['attrs'] ?? []) : null,
                 $elementCtx['index'] ?? 0, $ancFp, $sibFp,
             ]));
         }
