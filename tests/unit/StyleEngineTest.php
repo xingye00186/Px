@@ -190,5 +190,21 @@ test('pseudoStylesFor 尊重组合子与结构条件', function () {
     StyleEngine::reset();
 });
 
+test('端到端：引擎 hover 叠加经 StyleRecalcPass 持久化到 VNode（非丢弃）', function () {
+    // 此前 resolve() 的 by-ref pseudoStyles 在 StyleRecalcPass 内为局部变量而被
+    // 丢弃，RTM 只能回落注册表重算（生产恒空）——即引擎叠加在正常
+    // 路径不可达。修复：VNode::$pseudoStyles 持久化 + RTM 优先消费。
+    StyleEngine::reset();
+    StyleEngine::registerCss('.eb { background:#000000; } .eb:hover { background:#FF0000; }');
+    $node = \Px\Dom\VNode::h('div', ['class' => 'eb', 'style' => ''], 'x');
+    (new \Px\Css\StyleRecalcPass())->recalc($node);
+    assert_true(!empty($node->pseudoStyles), 'VNode.pseudoStyles 已持久化（不再丢弃）');
+    assert_true(isset($node->pseudoStyles['hover']), 'hover 叠加存在');
+    assert_true((int)($node->pseudoStyles['hover']['bg'] ?? -1) !== 0, 'hover 叠加携带红背景');
+    // 基态仍为黑
+    assert_eq($node->computedStyle->backgroundColor->toBgr(), 0, '基态 bg 仍为黑');
+    StyleEngine::reset();
+});
+
 $exitCode = print_summary();
 exit($exitCode);

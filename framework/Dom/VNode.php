@@ -87,6 +87,15 @@ class VNode
      */
     public ?ComputedStyle $computedStyle = null;
 
+    /**
+     * C2.9：StyleRecalcPass 预计算的伪类/伪元素叠加声明
+     *（state => (property => value)，供 RenderTreeManager → RenderNode::$pseudoStyles
+     * → PaintPipeline 消费）。与 $computedStyle 同为“样式重算通行证预算写入”
+     * 约定；此前 resolve() 的 by-ref pseudoStyles 在 StyleRecalcPass 内为局部
+     * 变量而被丢弃，RTM 只能回落注册表重算（生产恒空）。
+     */
+    public array $pseudoStyles = [];
+
     // ===== Vue 3 patchFlag 兼容（编译器级动态绑定标记）=====
 
     /** 无动态绑定（完全静态） */

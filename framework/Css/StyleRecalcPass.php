@@ -67,6 +67,11 @@ class StyleRecalcPass
         );
 
         $root->computedStyle = $computedStyle;
+        // C2.9：持久化伪类叠加（引擎/注册表产出）——此前为局部变量而丢弃，
+        // 致 RTM 只能回落注册表重算（生产恒空）。与 computedStyle 同约定。
+        if (!empty($pseudoStyles)) {
+            $root->pseudoStyles = $pseudoStyles;
+        }
 
         $children = is_array($root->children) ? $root->children : [];
         // 前序兄弟 class 串累积（文档序）：供子层运行时兄弟组合子匹配。

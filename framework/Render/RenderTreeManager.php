@@ -891,6 +891,12 @@ class RenderTreeManager
             }
             // 补充 pseudoStyles：StyleRecalcPass 已运行时从 theme 提取伪类/伪元素定义
             // （resolveClassStyles 通过 by-ref 填充，但 StyleRecalcPass 运行后不会进入降级分支）
+            // 补充 pseudoStyles：优先用 StyleRecalcPass 预算写入 VNode 的结果
+            // （C2.9：引擎/注册表产出，与 computedStyle 同预算约定）；否则回落
+            // 注册表提取（生产恒空，C2.9 删除 ThemeProvider 时本回落一并移除）。
+            if (empty($pseudoStyles) && !empty($vnode->pseudoStyles)) {
+                $pseudoStyles = $vnode->pseudoStyles;
+            }
             if (empty($pseudoStyles)) {
                 $pseudoStyles = \Px\Css\InlineStyleParser::extractPseudoStyles(
                     $vnode->props['class'] ?? '',
