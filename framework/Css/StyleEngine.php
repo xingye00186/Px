@@ -15,23 +15,30 @@ namespace Px\Css;
  *
  * AOT 友好：纯静态数组、无闭包、无动态调用。
  *
- * AOT 兼容注记（计划风险项 3，取证结论 + 诚实边界，勿逆转）：
- * 本类（及 SelectorChecker / CascadeResolver / StyleSheetContents /
- * SelectorParser）**不得**添加 `use native_types;`。
- * aot-checker 会就“Application.php uses native_types 但导入的 StyleEngine 不
- * 用”发 WARN，但实跑 AOT 编译已证实：为这些类加上 native_types 会使
- * swoole 编译器在求值**数组型类常量**时硬失败（PHP Fatal）：
- *   Call to private method TypePhp\Translator::evaluate() from scope
- *   PhpParser\ConstExprEvaluator  (getClassConstValue → evaluateArray)
- * 而不加时翻译阶段不再崩溃。该 WARN 对本类为误报：全为静态方法/静态
- * 属性，不存在外部实例属性访问，故无 php::Variant → C2440 风险。
+ * AOT 兼容注记（计划风险项 3：**未满足**，事实如下，勿误读）：
  *
- * 边界（未完成验证，勿当作已过）：基线构建虽返回 0 并打印
- * “AOT succeeded”，却**未产出任何新 exe**（全仓近一日无 .exe 更新；
- * apps/css-test/bin/css_test.exe 为更早日期的旧产物）。build.bat L488 在
- * %FRAMEWORK_ROOT%\%OUTPUT_EXE%（仓库根）检查产物而未命中。因此：
- *   已证：加 native_types 会硬失败；不加时翻译阶段可过。
- *   未证：完整 exe 产出与 compare_php_aot 分布对比（C2 退出标准最后一项）。
+ * 当前 HEAD 对 apps/css-test 的 AOT 编译**失败**：翻译器在类注册阶段
+ * 硬失败（PHP Fatal）：
+ *   Call to private method TypePhp\Translator::evaluate() from scope
+ *   PhpParser\ConstExprEvaluator
+ *   （ClassInfo::getRegistration → ConstInfo::getDeclaration →
+ *     getClassConstValue → evaluateArray）
+ * 崩溃紧随 `convert: framework\Css\ComputedStyle.php` 之后。
+ * build.bat 的 “AOT succeeded but exe not found” 仅为该 Fatal 中断翻译的
+ * **下游效应**（编译器仍返回 0），不是独立问题。
+ *
+ * 已推翻的错误归因（勿重蹈）：曾以为该崩溃由为本类等添加
+ * `use native_types;` 引入。实际基线（**无** native_types 改动）同样崩溃，
+ * 故那次二分**无效**，该结论不成立。native_types 是否安全仍未知。
+ *
+ * 已知约束（供后续定位）：
+ *   - 数组型类常量本身不是原因：CssMappings::PROPERTY_MAP、UAStyles::*、
+ *     ComputedStyle::INHERITED_KEYS/EXPORT_KEYS 等均为既有且历史上可编译。
+ *   - apps/css-test/bin/css_test.exe 存在且日期为 2026-07-29，即回归窗口有界。
+ *   - 崩溃路径涉 getClassConstValue，提示某数组常量内引用了**另一类的
+ *     常量**（跨类 const 引用），定位时应优先排查此类引用。
+ *
+ * 因此 compare_php_aot 分布对比（C2 退出标准最后一项）仍未可执行。
  */
 final class StyleEngine
 {
