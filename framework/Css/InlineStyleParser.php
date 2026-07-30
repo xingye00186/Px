@@ -60,6 +60,14 @@ class InlineStyleParser
             foreach (StyleEngine::declarationsFor($elementCtx) as $k => $v) {
                 $declarations[$k] = $v;
             }
+            // C2.9 前提：状态伪类叠加声明由引擎产出（取代注册表
+            // extractPseudoStyles）。进入 by-ref pseudoStyles，供 Paint 期叠加；
+            // 不覆盖已有 state（烘焙/注册表优先，双通道并行期安全）。
+            foreach (StyleEngine::pseudoStylesFor($elementCtx) as $st => $decls) {
+                if (!isset($pseudoStyles[$st])) {
+                    $pseudoStyles[$st] = $decls;
+                }
+            }
             // 引擎声明依赖完整元素上下文（ancestors/nth/兄弟），超出既有
             // key 维度 → 上下文指纹入 key，避免跨元素池碰撞。（AOT：无闭包）
             $ancClasses = [];

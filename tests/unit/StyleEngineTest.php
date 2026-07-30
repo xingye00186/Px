@@ -160,5 +160,35 @@ test('结构伪类按真实 index 判定（与状态伪类区分）', function (
     StyleEngine::reset();
 });
 
+test('pseudoStylesFor：状态伪类叠加声明（取代注册表 extractPseudoStyles，C2.9 前提）', function () {
+    StyleEngine::reset();
+    StyleEngine::register(StyleSheetContents::build(
+        '.btn { background:#000000; } .btn:hover { background:#FF0000; } .btn:focus { color:#00FF00; }'
+    ));
+    $ps = StyleEngine::pseudoStylesFor(elem(['classes' => ['btn']]));
+    assert_true(isset($ps['hover']), 'hover 叠加存在');
+    assert_true(isset($ps['focus']), 'focus 叠加存在');
+    assert_true(!isset($ps['active']), '未声明的 active 不产出');
+    assert_true((int)($ps['hover']['bg'] ?? -1) !== 0, 'hover 叠加携带红背景');
+    // 基态仍不被污染
+    $base = StyleEngine::declarationsFor(elem(['classes' => ['btn']]));
+    assert_eq((int)($base['bg'] ?? -1), 0, '基态 bg 仍为黑');
+    // 其余条件仍须真实成立：类不符不产出
+    $none = StyleEngine::pseudoStylesFor(elem(['classes' => ['other']]));
+    assert_eq(count($none), 0, '类不符 → 无叠加');
+    StyleEngine::reset();
+});
+
+test('pseudoStylesFor 尊重组合子与结构条件', function () {
+    StyleEngine::reset();
+    StyleEngine::register(StyleSheetContents::build('.p .b:hover { background:#FF0000; }'));
+    $p = elem(['classes' => ['p']]);
+    $hit = StyleEngine::pseudoStylesFor(elem(['classes' => ['b'], 'ancestors' => [$p]]));
+    assert_true(isset($hit['hover']), '祖先成立 → hover 叠加产出');
+    $miss = StyleEngine::pseudoStylesFor(elem(['classes' => ['b']]));
+    assert_eq(count($miss), 0, '祖先不成立 → 无叠加（组合子仍真实判定）');
+    StyleEngine::reset();
+});
+
 $exitCode = print_summary();
 exit($exitCode);

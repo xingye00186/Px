@@ -100,4 +100,68 @@ final class StyleEngine
         }
         return $merged;
     }
+
+    /** 状态伪类集（与 SelectorChecker 同源语义；仅这些参与 Paint 期叠加） */
+    private const OVERLAY_STATES = ['hover', 'focus', 'active'];
+
+    /**
+     * 元素的状态伪类叠加声明（对标 Blink：:hover 等仅在状态成立时参与）。
+     *
+     * declarationsFor 产出**基态**声明（状态伪类被拒绝，C2.5 安全修正）；
+     * 本方法单独产出 state => 声明映射，供 Paint 期 pseudoStyles 叠加
+     *（Px 模型，C2.8）。判定方式：若规则 subject compound 带状态伪类，
+     * 则向探针元素注入该状态后重测匹配（其余条件仍须真实成立）。
+     *
+     * 定位：取代 ThemeProvider 注册表的 extractPseudoStyles（C2.9 前提）。
+     *
+     * @return array<string, array> state => (property => value)
+     */
+    public static function pseudoStylesFor(array $element): array
+    {
+        $byState = [];
+        foreach (self::$rules as $rule) {
+            foreach (($rule['ast'] ?? []) as $complex) {
+                if (!is_array($complex)) continue;
+                $compounds = $complex['compounds'] ?? [];
+                $n = count($compounds);
+                if ($n === 0) continue;
+                $subject = $compounds[$n - 1];
+                $states = [];
+                foreach (($subject['pseudoClasses'] ?? []) as $pc) {
+                    $nm = $pc['name'] ?? '';
+                    if (in_array($nm, self::OVERLAY_STATES, true)) {
+                        $states[] = $nm;
+                    }
+                }
+                if (empty($states)) continue; // 非状态规则 → 基态通道已处理
+                // 注入状态后重测：其余条件（类/tag/组合子/结构伪类）仍须真实成立
+                $probe = $element;
+                $existing = isset($probe['states']) && is_array($probe['states']) ? $probe['states'] : [];
+                $probe['states'] = array_values(array_unique(array_merge($existing, $states)));
+                if (!SelectorChecker::matches($complex, $probe)) continue;
+                foreach ($states as $st) {
+                    if (!isset($byState[$st])) $byState[$st] = [];
+                    $byState[$st][] = [
+                        'payload'     => (string)($rule['declarations'] ?? ''),
+                        'origin'      => CascadeResolver::ORIGIN_AUTHOR,
+                        'important'   => false,
+                        'specificity' => $rule['specificity'] ?? [0, 0, 0, 0],
+                        'order'       => (int)($rule['order'] ?? 0),
+                    ];
+                }
+                break; // 同规则已命中，不重复计入
+            }
+        }
+        $out = [];
+        foreach ($byState as $st => $blocks) {
+            $merged = [];
+            foreach (CascadeResolver::sortDeclarationBlocks($blocks) as $b) {
+                foreach (InlineStyleParser::parseInlineStyle((string)$b['payload']) as $k => $v) {
+                    $merged[$k] = $v;
+                }
+            }
+            if (!empty($merged)) $out[$st] = $merged;
+        }
+        return $out;
+    }
 }
