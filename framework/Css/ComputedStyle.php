@@ -696,6 +696,15 @@ class ComputedStyle
         // computed value 期 em→px，fontSize 已先行解析）：em 用元素自身
         // fontSize，rem 用根（默认 16）。此前 toPx() 对 em 裸返 value
         //（'width:2em'→2px 实锤）。%/vw/vh/calc 留布局期（需容器/视口）。
+        return $this->resolveEmRem($len);
+    }
+
+    /**
+     * C4 em/rem → px 单源转换（resolveCssLength 与 margin/padding 边共用）。
+     * em 用元素自身级联后 fontSize，rem 用根（默认 16）；其余单位原样。
+     */
+    private function resolveEmRem(CssLength $len): CssLength
+    {
         if ($len->unit === 'em') {
             return CssLength::px((float)round($len->value * $this->fontSize));
         }
@@ -746,20 +755,22 @@ class ComputedStyle
         $padRect = $padRaw instanceof \Px\Css\CssRect ? $padRaw : self::rectFromShorthand($padRaw);
         $defaultPx = CssLength::px(0);
         $this->padding = new CssRect(
-            $this->cssLengthFromDecl($d, 'paddingTop', $padRect?->top ?? $defaultPx),
-            $this->cssLengthFromDecl($d, 'paddingRight', $padRect?->right ?? $defaultPx),
-            $this->cssLengthFromDecl($d, 'paddingBottom', $padRect?->bottom ?? $defaultPx),
-            $this->cssLengthFromDecl($d, 'paddingLeft', $padRect?->left ?? $defaultPx),
+            $this->resolveEmRem($this->cssLengthFromDecl($d, 'paddingTop', $padRect?->top ?? $defaultPx)),
+            $this->resolveEmRem($this->cssLengthFromDecl($d, 'paddingRight', $padRect?->right ?? $defaultPx)),
+            $this->resolveEmRem($this->cssLengthFromDecl($d, 'paddingBottom', $padRect?->bottom ?? $defaultPx)),
+            $this->resolveEmRem($this->cssLengthFromDecl($d, 'paddingLeft', $padRect?->left ?? $defaultPx)),
         );
 
         // margin — same fallback from shorthand `margin` CssRect（含字符串/数值展开，CSS §8.3）
+        // C4：边值经 resolveEmRem（em 用元素级联后 fontSize，探针实锤此前
+        // em 边保留单位至布局 toPx() 裸返 → 1em 成 1px）。
         $marginRaw = $d['margin'] ?? null;
         $marginRect = $marginRaw instanceof \Px\Css\CssRect ? $marginRaw : self::rectFromShorthand($marginRaw);
         $this->margin = new CssRect(
-            $this->cssLengthFromDecl($d, 'marginTop', $marginRect?->top ?? $defaultPx),
-            $this->cssLengthFromDecl($d, 'marginRight', $marginRect?->right ?? $defaultPx),
-            $this->cssLengthFromDecl($d, 'marginBottom', $marginRect?->bottom ?? $defaultPx),
-            $this->cssLengthFromDecl($d, 'marginLeft', $marginRect?->left ?? $defaultPx),
+            $this->resolveEmRem($this->cssLengthFromDecl($d, 'marginTop', $marginRect?->top ?? $defaultPx)),
+            $this->resolveEmRem($this->cssLengthFromDecl($d, 'marginRight', $marginRect?->right ?? $defaultPx)),
+            $this->resolveEmRem($this->cssLengthFromDecl($d, 'marginBottom', $marginRect?->bottom ?? $defaultPx)),
+            $this->resolveEmRem($this->cssLengthFromDecl($d, 'marginLeft', $marginRect?->left ?? $defaultPx)),
         );
 
         // border-width

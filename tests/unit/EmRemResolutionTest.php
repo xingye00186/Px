@@ -69,5 +69,19 @@ test('own em 相对自身 fontSize（同元素 font-size + em 宽）', function 
     assert_eq((int)$cs->width->toPx(), 40, '自身 font 20 → width:2em = 40');
 });
 
+test('margin/padding 的 em 经元素 fontSize 转 px（生产烘焙路径）', function () {
+    [$b] = treeOf('.rootc { font-size: 20px; } .b { margin: 1em; padding: 0.5em; }', ['b']);
+    $cs = $b->computedStyle;
+    assert_eq((int)$cs->margin->top->toPx(), 20, 'margin:1em × 继承font 20 = 20px');
+    assert_eq($cs->margin->top->unit, 'px', 'margin 边已转 px（单位不泄至布局）');
+    assert_eq((int)$cs->padding->top->toPx(), 10, 'padding:0.5em = 10px');
+});
+
+test('margin/padding px 路径不回归', function () {
+    [$d] = treeOf('.rootc { } .d { margin: 8px; padding: 4px; }', ['d']);
+    assert_eq((int)$d->computedStyle->margin->top->toPx(), 8, 'margin:8px 不变');
+    assert_eq((int)$d->computedStyle->padding->top->toPx(), 4, 'padding:4px 不变');
+});
+
 $exitCode = print_summary();
 exit($exitCode);
