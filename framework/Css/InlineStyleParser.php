@@ -148,8 +148,12 @@ class InlineStyleParser
                 $raw[$prop] = $val;
             }
         }
-        foreach ($rawImportant as $prop => $val) {
-            $raw[$prop] = $val;
+        // AOT native_types 约束：上方 $prop = strtolower(trim(...)) 已将 $prop 推断为
+        // php::Str，而 foreach 的**键变量**为 php::Var → 复用同名变量会报
+        // “Cannot assign value to variable $prop of type php::Str with type php::Var”
+        // 并中断 AOT 编译（实跑实锤）。故此处用独立变量名。
+        foreach ($rawImportant as $impProp => $impVal) {
+            $raw[$impProp] = $impVal;
         }
 
         // CSS variable resolution

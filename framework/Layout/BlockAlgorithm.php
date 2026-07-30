@@ -13,9 +13,13 @@ use Px\Css\CssLength;
  */
 class BlockAlgorithm extends LayoutAlgorithm
 {
-    // UA inline 元素集单源化：权威在 ComputedStyle::INLINE_TYPES（对标 Blink UA
+    // UA inline 元素集单源：直指 UAStyles::INLINE_TYPES。
+    // 不得写成 `const X = OtherClass::ARRAY_CONST` 形式的**转发别名**：swoole
+    // 编译器在类注册期求值该类常量时硬失败（Call to private method
+    // TypePhp\Translator::evaluate from scope PhpParser\ConstExprEvaluator，
+    // 经 ConstInfo::getDeclaration → getClassConstValue → evaluateArray），
+    // 使整个 AOT 编译中断。详见 UAStyles 类头注记。
     // stylesheet）——此前三处各自维护短长不一致（q/kbd/mark 等误判 block）。
-    private const INLINE_TYPES = \Px\Css\ComputedStyle::INLINE_TYPES;
 
     /**
      * 最近一次 stackBlockChildren 的 IFC 流末端（行盒下沿绝对 y）。
@@ -27,7 +31,7 @@ class BlockAlgorithm extends LayoutAlgorithm
 
     private static function isInlineType(string $type): bool
     {
-        return in_array($type, self::INLINE_TYPES, true);
+        return in_array($type, \Px\Css\UAStyles::INLINE_TYPES, true);
     }
 
     /** multicol 内层单列流标志：防 layoutMultiColumn → layout 无限递归 */

@@ -205,7 +205,9 @@ class ComputedStyle
     //（case-050 E 716×25 vs Blink inline 48×24）。
     // 权威单源已迁 UAStyles::INLINE_TYPES（C1.2 UA 单源收编）；此处转发
     // 保既有引用（BlockAlgorithm 等）兼容。
-    public const INLINE_TYPES = UAStyles::INLINE_TYPES;
+    // C1.2 后置修正：原有 `const INLINE_TYPES = UAStyles::INLINE_TYPES;` 转发别名
+    // 已删除——它使 swoole 编译器在类注册期硬失败，中断整个 AOT 编译
+    //（详见 UAStyles 类头）。调用方请直接用 UAStyles::INLINE_TYPES。
 
     /**
      * @param array $declarations 样式声明（解析后的 key=>value 数组）
@@ -308,7 +310,7 @@ class ComputedStyle
     }
 
     // ── 表格族 UA display 映射：单源已迁 UAStyles::TABLE_DISPLAY_MAP（C1.2）──
-    public const TABLE_DISPLAY_MAP = UAStyles::TABLE_DISPLAY_MAP;
+    // 同上：转发别名已删，请直接用 UAStyles::TABLE_DISPLAY_MAP。
 
     private static function getDefaultsArray(string $elementType): array
     {
