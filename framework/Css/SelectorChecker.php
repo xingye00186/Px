@@ -156,9 +156,18 @@ final class SelectorChecker
                 $inner = $parsed[0]['compounds'][0] ?? null;
                 if ($inner === null) return true;
                 return !self::matchCompound($inner, $element);
-            case 'hover': case 'focus': case 'active':
-                // 状态伪类：静态匹配阶段视为匹配（运行时叠加，C2.8）
-                return true;
+            case 'hover': case 'focus': case 'active': case 'visited':
+            case 'focus-visible': case 'focus-within': case 'target':
+            case 'checked': case 'disabled': case 'enabled':
+                // 状态伪类（Blink：仅当元素处于该状态时匹配）。
+                // 根因治本：旧实现硬编码 return true（"静态阶段视为匹配"）——
+                // 引擎未接线时无害，但 C2.5 生产激活后使 `.btn:hover{}` 的
+                // 声明无条件应用于基态（探针实锤 bg 红 255 应黑 0）。
+                // 正确语义：按元素上下文 states 判定；无 states 则不匹配。
+                // 与 Px 模型一致：hover 由 Paint 期 pseudoStyles 叠加（C2.8）而非
+                // 基态级联参与。
+                $states = $element['states'] ?? [];
+                return is_array($states) && in_array($name, $states, true);
         }
         return false; // 未知伪类不匹配
     }

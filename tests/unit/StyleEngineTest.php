@@ -135,5 +135,30 @@ test('registerComponentRules：组件规则注册 + 幂等 + 无方法安全（C
     StyleEngine::reset();
 });
 
+test('状态伪类不污染基态（:hover 拒绝而非忽略）', function () {
+    // 根因：SelectorChecker 旧实现对 hover/focus/active 硬编码 return true，
+    // 引擎生产激活后使 `.btn:hover{}` 声明无条件应用于基态。
+    StyleEngine::reset();
+    StyleEngine::register(StyleSheetContents::build('.btn { background:#000000; } .btn:hover { background:#FF0000; }'));
+    $base = StyleEngine::declarationsFor(elem(['classes' => ['btn']]));
+    assert_eq((int)($base['bg'] ?? -1), 0, '基态 bg = 黑 0（hover 声明不泄入基态）');
+    // states 携带 hover 时才匹配（语义完备，不是一刀切）
+    $hov = StyleEngine::declarationsFor(elem(['classes' => ['btn'], 'states' => ['hover']]));
+    assert_true((int)($hov['bg'] ?? -1) !== 0, 'states=[hover] 时 hover 规则生效');
+    // 其余状态伪类同理
+    StyleEngine::reset();
+    StyleEngine::register(StyleSheetContents::build('.f:focus { background:#00FF00; }'));
+    assert_eq(count(StyleEngine::declarationsFor(elem(['classes' => ['f']]))), 0, ':focus 无状态不匹配');
+    StyleEngine::reset();
+});
+
+test('结构伪类按真实 index 判定（与状态伪类区分）', function () {
+    StyleEngine::reset();
+    StyleEngine::register(StyleSheetContents::build('.it:first-child { background:#FF0000; }'));
+    assert_true(isset(StyleEngine::declarationsFor(elem(['classes' => ['it'], 'index' => 1]))['bg']), 'index 1 命中 first-child');
+    assert_true(!isset(StyleEngine::declarationsFor(elem(['classes' => ['it'], 'index' => 2]))['bg']), 'index 2 不命中');
+    StyleEngine::reset();
+});
+
 $exitCode = print_summary();
 exit($exitCode);
