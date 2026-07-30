@@ -51,6 +51,7 @@ final class StyleEngine
                 self::$rules[] = $r;
                 self::collectFeatures($r);
                 self::bucketRule($idx, $r);
+                self::$generation++;
             }
         }
     }
@@ -157,6 +158,7 @@ final class StyleEngine
      */
     private static bool $usesSiblingRules = false;
     private static bool $usesAncestorRules = false;
+    private static bool $usesAttrRules = false;
 
     private static function collectFeatures(array $rule): void
     {
@@ -169,11 +171,26 @@ final class StyleEngine
                     self::$usesAncestorRules = true;
                 }
             }
+            // C4.1：属性选择器使**任意** prop 变动都可能改变匹配，脏位快照
+            // 不能只看 class/style。
+            foreach (($complex['compounds'] ?? []) as $cp) {
+                if (is_array($cp) && !empty($cp['attrs'])) {
+                    self::$usesAttrRules = true;
+                }
+            }
         }
     }
 
     public static function usesSiblingRules(): bool { return self::$usesSiblingRules; }
     public static function usesAncestorRules(): bool { return self::$usesAncestorRules; }
+    public static function usesAttrRules(): bool { return self::$usesAttrRules; }
+
+    /**
+     * 规则表代次：每次 register/reset 递增。C4.1 的子树跳过缓存将其纳入
+     * 上下文指纹，以保证“运行中新注册组件规则”能令旧缓存失效。
+     */
+    private static int $generation = 0;
+    public static function generation(): int { return self::$generation; }
 
     public static function reset(): void
     {
@@ -181,11 +198,13 @@ final class StyleEngine
         self::$registeredClasses = [];
         self::$usesSiblingRules = false;
         self::$usesAncestorRules = false;
+        self::$usesAttrRules = false;
         self::$idBuckets = [];
         self::$classBuckets = [];
         self::$tagBuckets = [];
         self::$universalBucket = [];
         self::$selectorMatchCount = 0;
+        self::$generation++;
     }
 
     /**

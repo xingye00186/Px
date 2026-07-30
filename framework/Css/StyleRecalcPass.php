@@ -43,6 +43,25 @@ class StyleRecalcPass
         }
 
         $pseudoStyles = [];
+        // ── C4.1 逐节点 clean 跳过（对标 Blink NeedsStyleRecalc）──
+        // 四重条件均成立时，本节点计算样式必与上帧一致，可跳过
+        // resolve（含 elementCtx 构建、引擎匹配、指纹与 StylePool 查）：
+        //   1. 已有上帧结果（computedStyle 非 null）
+        //   2. 样式相关 props 未变（!styleDirty，patchProps 精确置位）
+        //   3. 父 ComputedStyle **身份**相同（StylePool 内驻：同值即同对象）
+        //   4. 外部上下文指纹相同（含规则表代次）
+        // 注：**仍递归子层**——子节点可能自行脏。整棵子树跳过需在 patch 期
+        // 向上传播 childStyleDirty（Blink ChildNeedsStyleRecalc），属后续增量。
+        $ctxSig = self::styleCtxSig($parentClassStr, $precedingSiblingClasses, $ancestorClassLists, $elemIndex);
+        $clean = $root->computedStyle !== null
+            && !$root->styleDirty
+            && $root->styleParentCS === $parentCS
+            && $root->styleCtxSig === $ctxSig;
+        if ($clean) {
+            \Px\Core\PerfCounter::inc('style_recalc_node_skip');
+            $computedStyle = $root->computedStyle;
+        } else {
+
         // C2.5-full：构建 SelectorChecker 元素上下文（仅引擎活跃时，避免
         // 生产无用开销）。引擎空 → 空上下文 → resolve 不走引擎分支。
         $elementCtx = [];
@@ -66,7 +85,13 @@ class StyleRecalcPass
             elementCtx: $elementCtx
         );
 
+        }   // end else（非 clean 分支）
+
         $root->computedStyle = $computedStyle;
+        // C4.1：记录本次据以计算的外部输入，并清除脏位。
+        $root->styleParentCS = $parentCS;
+        $root->styleCtxSig = $ctxSig;
+        $root->styleDirty = false;
         // C2.9：持久化伪类叠加（引擎/注册表产出）——此前为局部变量而丢弃，
         // 致 RTM 只能回落注册表重算（生产恒空）。与 computedStyle 同约定。
         if (!empty($pseudoStyles)) {
@@ -125,6 +150,35 @@ class StyleRecalcPass
      * 对标 Blink Element 选择器匹配所需数据要素：tag/id/classes/attrs/
      * index（1-based 元素序，供 nth-child）/ancestors（根→直接父）/prevSiblings。
      */
+    /**
+     * C4.1：外部上下文指纹——除节点自身 props 之外、一切能影响本节点及其
+     * 子树计算样式的输入。父 ComputedStyle 不入指纹（已由身份比较覆盖）。
+     *
+     * 规则表代次必须入指纹：运行中新注册组件会改变匹配结果，旧缓存
+     * 必须失效（否则子树跳过会保留陈旧样式）。
+     */
+    private static function styleCtxSig(
+        string $parentClassStr,
+        array $precedingSiblingClasses,
+        array $ancestorClassLists,
+        int $elemIndex
+    ): string {
+        $sig = StyleEngine::generation() . '|' . $parentClassStr . '|' . $elemIndex . '|';
+        foreach ($precedingSiblingClasses as $s) {
+            $sig .= $s . ',';
+        }
+        $sig .= '|';
+        foreach ($ancestorClassLists as $a) {
+            if (is_array($a)) {
+                foreach ($a as $ac) { $sig .= $ac . '.'; }
+            } else {
+                $sig .= (string)$a;
+            }
+            $sig .= ';';
+        }
+        return $sig;
+    }
+
     private static function buildElementCtx(VNode $node, string $className, array $ancestorCtx, array $prevSiblingCtx, int $index): array
     {
         $classes = [];

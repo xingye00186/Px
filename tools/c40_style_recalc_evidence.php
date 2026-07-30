@@ -19,6 +19,10 @@ use Px\Core\Application;
 use Px\Core\Scheduler;
 
 $frames = isset($argv[1]) ? max(10, (int)$argv[1]) : 200;
+// --index：开启 C2.7 倒排索引（默认关），用于量化索引在真实管线中的贡献。
+$useIndex = in_array('--index', $argv, true);
+// --hoist：静态子树提升（生产 gen 形态），使 C4.1 子树跳过可处发。
+$useHoist = in_array('--hoist', $argv, true);
 
 if (!defined('APP_PLATFORM')) define('APP_PLATFORM', 'win32');
 if (!defined('WINDOW_WIDTH')) define('WINDOW_WIDTH', 1440);
@@ -36,17 +40,36 @@ StyleEngine::registerCss(
     . ' .cell:hover { background:#0000FF; }'
 );
 
-/** 组件：固定 200 节点，仅索引 7 的节点 class 切换。 */
+/**
+ * 组件：固定 200 节点，仅索引 7 的节点 class 切换。
+ * --hoist：复现生产形态——编译器将**静态子树**提升为 static 缓存
+ * （gen 的 static $__sN ??= VNode::h(...)），跳帧为同一实例。不开则每帧
+ * 全新建（手写 VNode 形态）。C4.1 子树跳过只对前者生效。
+ */
 final class C40Comp extends \Px\Component\ReactiveComponent
 {
     public string $toggle = 'idle';
+    public bool $hoist = false;
+    /** @var array<int, VNode> 提升的静态 cell（模拟 gen static $__sN） */
+    private array $staticCells = [];
     public function __construct($sch) { parent::__construct('C40'); $this->setScheduler($sch); }
     public function render(): VNode
     {
         $cells = [];
         for ($i = 0; $i < 200; $i++) {
-            $cls = ($i === 7) ? ('cell ' . $this->toggle) : 'cell';
-            $cells[] = VNode::h('div', ['class' => $cls], 'c' . $i);
+            if ($i === 7) {
+                // 动态节点：每帧新建（class 真实切换）
+                $cells[] = VNode::h('div', ['class' => 'cell ' . $this->toggle], 'c7');
+                continue;
+            }
+            if ($this->hoist) {
+                if (!isset($this->staticCells[$i])) {
+                    $this->staticCells[$i] = VNode::h('div', ['class' => 'cell'], 'c' . $i);
+                }
+                $cells[] = $this->staticCells[$i];
+            } else {
+                $cells[] = VNode::h('div', ['class' => 'cell'], 'c' . $i);
+            }
         }
         $row = VNode::h('div', ['class' => 'row wrap'], $cells);
         return VNode::h('#root', [], $row);
@@ -60,10 +83,13 @@ $platform = new StubPlatform(1440, 900);
 $sch = new Scheduler();
 $app = new Application($platform, $sch);
 $comp = new C40Comp($sch);
+$comp->hoist = $useHoist;
 
 $mMount = new ReflectionMethod($app, 'mount'); $mMount->setAccessible(true);
 $mMount->invoke($app, $comp);
 $mRender = new ReflectionMethod($app, 'render'); $mRender->setAccessible(true);
+
+StyleEngine::setIndexEnabled($useIndex);
 
 // 预热两帧（首帧建池，避免冷启动污染稳态测量）
 $mRender->invoke($app);
@@ -75,10 +101,14 @@ $mRender->invoke($app);
 // 循环结束后再取一次即为稳态增量（无需手工相减）。
 PerfCounter::snapshot();   // 清零预热期计数
 
+$mUpdate = new ReflectionMethod($comp, 'performUpdate'); $mUpdate->setAccessible(true);
+
 $recalcTotal = 0.0;
 for ($f = 0; $f < $frames; $f++) {
     $comp->toggle = ($f % 2 === 0) ? 'active' : 'idle';
-    $comp->renderDirty = true;
+    // performUpdate 才是真正的脏标记入口（置 $this->dirty，getVNodeTree 据此
+    // 失效缓存）。旧本仅置 renderDirty → 缓存树直返 → class 切换从未发生。
+    $mUpdate->invoke($comp);
     $t = microtime(true);
     $mRender->invoke($app);
     $recalcTotal += (microtime(true) - $t);
@@ -106,6 +136,9 @@ echo "========================================\n";
 echo " C4.0 取证 — 单节点 class 切换\n";
 echo "========================================\n";
 echo "frames                 : $frames\n";
+echo "C2.7 index             : " . ($useIndex ? 'ON' : 'OFF (default)') . "\n";
+echo "static hoisting        : " . ($useHoist ? 'ON (production gen form)' : 'OFF') . "\n";
+echo "node skips             : " . (int)($snap['style_recalc_node_skip']['count'] ?? 0) . "\n";
 echo "nodes/frame            : 200 cells (+row +#root)\n";
 echo "engine rules           : " . StyleEngine::ruleCount() . "\n";
 echo "style_pool_hit         : $hits\n";

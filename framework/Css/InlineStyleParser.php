@@ -77,6 +77,11 @@ class InlineStyleParser
                 $sibClasses[] = $sib['classes'] ?? [];
             }
             $engineFp = md5(serialize([
+                // C4.1：**规则表代次**必须入池指纹——否则运行中新注册规则
+                //（懒挂载/动态组件）后，相同元素上下文会命中已内驻的旧
+                // ComputedStyle，产出**陈旧样式**（单测钉实锤：新增 div.cc 规则
+                // 后仍得 30 而非 60）。
+                StyleEngine::generation(),
                 $elementCtx['classes'] ?? [], $elementCtx['tag'] ?? '',
                 $elementCtx['index'] ?? 0, $ancClasses, $sibClasses,
             ]));

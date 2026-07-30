@@ -309,6 +309,11 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
      */
     private function patchProps(VNode $old, VNode $new): void
     {
+        // C4.1：样式脏位（对标 Blink NeedsStyleRecalc）。VNode 实例跳帧复用且
+        // props **原地改写**（getVNodeTree 将 patch 结果写回 $oldCache），故
+        // “同实例 + 外部输入未变”**不足以**判定样式未变。在此集中比对
+        // 样式相关 props 的前后快照，精确置脏（优于逐个改写点插标）。
+        $styleSigBefore = self::styleRelevantPropsSig($old);
         // patchFlag 选择性更新 props
         $flags = $old->patchFlags;
         if ($flags === VNode::PATCH_NONE) {
@@ -357,6 +362,39 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
                 }
             }
         }
+        // C4.1：样式相关 props 发生变化 → 置脏（不清脏：未变时保留已有脏
+        // 状态，由 StyleRecalcPass 重算后统一清除）。
+        if (self::styleRelevantPropsSig($old) !== $styleSigBefore) {
+            $old->styleDirty = true;
+        }
+    }
+
+    /**
+     * C4.1：样式相关 props 快照。仅含能影响计算样式的键（class/style 及其
+     * 动态形式）；其余 props（事件/bind/普通属性）不参与样式计算。
+     * 注：属性选择器（[attr=v]）使任意属性都可能影响匹配，故引擎含
+     * 属性选择器时不能只看 class/style——由 usesAttrRules 保守处理。
+     */
+    private static function styleRelevantPropsSig(VNode $n): string
+    {
+        $p = $n->props;
+        if (!is_array($p)) return '';
+        if (\Px\Css\StyleEngine::usesAttrRules()) {
+            // 存在属性选择器：任何 props 变动均可能改变匹配 → 全量入快照。
+            $acc = '';
+            foreach ($p as $k => $v) {
+                if (is_scalar($v) || $v === null) { $acc .= $k . '=' . (string)$v . ';'; }
+            }
+            return $acc;
+        }
+        $cls = $p['class'] ?? '';
+        $dcls = $p[':class'] ?? '';
+        $st = $p['style'] ?? '';
+        $dst = $p[':style'] ?? '';
+        return (is_scalar($cls) ? (string)$cls : json_encode($cls)) . '|'
+            . (is_scalar($dcls) ? (string)$dcls : json_encode($dcls)) . '|'
+            . (is_scalar($st) ? (string)$st : json_encode($st)) . '|'
+            . (is_scalar($dst) ? (string)$dst : json_encode($dst));
     }
 
     /**

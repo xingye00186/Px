@@ -96,6 +96,28 @@ class VNode
      */
     public array $pseudoStyles = [];
 
+    /**
+     * C4.1 增量样式重算自验证缓存（对标 Blink NeedsStyleRecalc /
+     * ChildNeedsStyleRecalc 的“无需重算则不下降”语义）。
+     *
+     * Px 与 Blink 的差异：VNode 每帧重建，不存在持久 DOM 可挂脏位。但
+     * 编译器会**提升静态子树**（gen 的 static $__sN 缓存），该类节点跳
+     * 帧为同一实例且 props 恒定——此时只需确认外部输入（父 ComputedStyle
+     * 身份 + 上下文指纹 + 规则表代次）未变，即可跳过**整棵子树**。
+     * styleParentCS 存上次据以计算的父 ComputedStyle（身份比较，O(1)）。
+     */
+    public ?ComputedStyle $styleParentCS = null;
+
+    /** C4.1：上次重算时的外部上下文指纹（父 class 串/兄弟/祖先/序/规则代次）。 */
+    public string $styleCtxSig = '';
+
+    /**
+     * C4.1 样式脏位（对标 Blink NeedsStyleRecalc）。新建节点默认脏（必算）；
+     * patchProps 在样式相关 props 发生变化时置脏（实例跳帧复用且 props
+     * 原地改写，故仅靠实例身份无法判定）；StyleRecalcPass 重算后清除。
+     */
+    public bool $styleDirty = true;
+
     // ===== Vue 3 patchFlag 兼容（编译器级动态绑定标记）=====
 
     /** 无动态绑定（完全静态） */

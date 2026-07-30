@@ -292,5 +292,42 @@ test('C2.7 倒排索引：多类/祖先/兄弟组合子不漏命中', function (
     StyleEngine::reset();
 });
 
+test('C4.1 脏位正确性：同实例 + class 原地改写必重算（不得错跳）', function () {
+    // VNode 实例跳帧复用且 props 原地改写，故“同实例 + 外部输入未变”
+        // 不足以判定样式未变。本钉验证改写 class 后必需重算。
+    StyleEngine::reset();
+    StyleEngine::registerCss('.aa { width:10px; } .bb { width:20px; }');
+    $n = \Px\Dom\VNode::h('div', ['class' => 'aa', 'style' => ''], 'x');
+    $pass = new \Px\Css\StyleRecalcPass();
+    $pass->recalc($n);
+    assert_eq((int)$n->computedStyle->width->toPx(), 10, '首算 .aa → 10');
+    assert_true(!$n->styleDirty, '重算后脏位已清');
+
+    // 模拟 patch 原地改写 class 但**未**置脏（旧不健全实现的情形）
+    $n->props['class'] = 'bb';
+    $pass->recalc($n);
+    assert_eq((int)$n->computedStyle->width->toPx(), 10, '未置脏时按设计跳过（仍为 10）');
+
+    // 正确路径：patchProps 会置脏 → 重算得新值
+    $n->styleDirty = true;
+    $pass->recalc($n);
+    assert_eq((int)$n->computedStyle->width->toPx(), 20, '置脏后重算 .bb → 20');
+    StyleEngine::reset();
+});
+
+test('C4.1 规则表代次：新注册规则必令旧缓存失效', function () {
+    StyleEngine::reset();
+    StyleEngine::registerCss('.cc { width:30px; }');
+    $n = \Px\Dom\VNode::h('div', ['class' => 'cc', 'style' => ''], 'x');
+    $pass = new \Px\Css\StyleRecalcPass();
+    $pass->recalc($n);
+    assert_eq((int)$n->computedStyle->width->toPx(), 30, '首算 → 30');
+    // 运行中新注册更高优先规则；节点未置脏，依靠代次使缓存失效
+    StyleEngine::registerCss('div.cc { width:60px; }');
+    $pass->recalc($n);
+    assert_eq((int)$n->computedStyle->width->toPx(), 60, '代次变更 → 重算得 60');
+    StyleEngine::reset();
+});
+
 $exitCode = print_summary();
 exit($exitCode);
