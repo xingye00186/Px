@@ -66,14 +66,25 @@ class InlineStyleParser
                 }
             }
             // 引擎声明依赖完整元素上下文（ancestors/nth/兄弟），超出既有
-            // key 维度 → 上下文指纹入 key，避免跨元素池碰撞。（AOT：无闭包）
-            $ancClasses = [];
+            // key 维度 → 上下文指纹入 key，避免跳元素池碰撞。（AOT：无闭包）
+            //
+            // 根因治本：旧版只取祖先/兄弟的 **classes**，而 SelectorChecker 对祖先
+            // 与兄弟递归跑完整 matchCompound，会读 tag / id / index（nth-child）。
+            // 于是 `span + .t` 与 `div + .t` 在同一池键下碰撞 → 兄弟仅 tag 变化时
+            // 返回**陈旧池条目**（单测红钉实锤：兄弟 span→div 后仍得 55 而非 11，
+            // 且彼时节点确已重算——是池掩盖了重算结果）。
+            // 修正：指纹必须覆盖匹配器能读到的全部维度。
+            $ancFp = [];
             foreach (($elementCtx['ancestors'] ?? []) as $anc) {
-                $ancClasses[] = $anc['classes'] ?? [];
+                $ancFp[] = [$anc['tag'] ?? '', $anc['id'] ?? '',
+                    $anc['index'] ?? 0, $anc['classes'] ?? [],
+                    StyleEngine::usesAttrRules() ? ($anc['attrs'] ?? []) : null];
             }
-            $sibClasses = [];
+            $sibFp = [];
             foreach (($elementCtx['prevSiblings'] ?? []) as $sib) {
-                $sibClasses[] = $sib['classes'] ?? [];
+                $sibFp[] = [$sib['tag'] ?? '', $sib['id'] ?? '',
+                    $sib['index'] ?? 0, $sib['classes'] ?? [],
+                    StyleEngine::usesAttrRules() ? ($sib['attrs'] ?? []) : null];
             }
             $engineFp = md5(serialize([
                 // C4.1：**规则表代次**必须入池指纹——否则运行中新注册规则
@@ -82,7 +93,8 @@ class InlineStyleParser
                 // 后仍得 30 而非 60）。
                 StyleEngine::generation(),
                 $elementCtx['classes'] ?? [], $elementCtx['tag'] ?? '',
-                $elementCtx['index'] ?? 0, $ancClasses, $sibClasses,
+                $elementCtx['id'] ?? '',
+                $elementCtx['index'] ?? 0, $ancFp, $sibFp,
             ]));
         }
         foreach ($inlineStyle as $k => $v) {

@@ -53,14 +53,17 @@ class StyleRecalcPass
         // 注：**仍递归子层**——子节点可能自行脏。整棵子树跳过需在 patch 期
         // 向上传播 childNeedsStyleRecalc（Blink ChildNeedsStyleRecalc），属后续增量。
         $ctxGen = StyleEngine::generation();
-        $ctxSibSig = self::siblingSig($precedingSiblingClasses);
+        // C4.1 修正：兄弟签名必须源自**引擎实际消费的** prevSiblings ctx
+        //（tag|id|classes）。旧版仅用 class 串，故前序兄弟**仅 tag/id 变化**时
+        // 签名不变 → 后续兄弟被误判 clean → 陈旧样式（单测红钉实锤：
+        // `span + .t` 下兄弟 span→div 后仍留 55 而非 11）。
+        $ctxSibSig = self::siblingSig($prevSiblingCtx);
         $clean = self::$incrementalEnabled
             && $root->computedStyle !== null
             && !$root->needsStyleRecalc
             && $root->styleParentCS === $parentCS
             && $root->styleCtxGen === $ctxGen
             && $root->styleCtxIndex === $elemIndex
-            && $root->styleCtxParentClass === $parentClassStr
             && $root->styleCtxSibSig === $ctxSibSig;
         if ($clean) {
             \Px\Core\PerfCounter::inc('style_recalc_node_skip');
@@ -104,7 +107,6 @@ class StyleRecalcPass
         $root->styleParentCS = $parentCS;
         $root->styleCtxGen = $ctxGen;
         $root->styleCtxIndex = $elemIndex;
-        $root->styleCtxParentClass = $parentClassStr;
         $root->styleCtxSibSig = $ctxSibSig;
         $root->needsStyleRecalc = false;
         // C2.9：持久化伪类叠加（引擎/注册表产出）——此前为局部变量而丢弃，
@@ -199,12 +201,15 @@ class StyleRecalcPass
      * ThemeProvider 删除；CssMappings::matchComplexSelector 今仅被测试调用）。
      * 不影响结果的输入不得入缓存有效性比对，故一并移除。
      */
-    private static function siblingSig(array $precedingSiblingClasses): string
+    private static function siblingSig(array $prevSiblingCtx): string
     {
-        if (empty($precedingSiblingClasses)) return '';
+        if (empty($prevSiblingCtx)) return '';
         $sig = '';
-        foreach ($precedingSiblingClasses as $s) {
-            $sig .= $s . ',';
+        foreach ($prevSiblingCtx as $s) {
+            if (!is_array($s)) continue;
+            $sig .= ($s['tag'] ?? '') . '#' . ($s['id'] ?? '') . '.';
+            foreach (($s['classes'] ?? []) as $c) { $sig .= $c . ','; }
+            $sig .= ';';
         }
         return $sig;
     }

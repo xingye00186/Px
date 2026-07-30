@@ -357,5 +357,32 @@ test('C4.1 子树跳过：clean 且后代无脏时不递归（对标 ChildNeedsS
     StyleEngine::reset();
 });
 
+test('C4.1 clean 判定必须覆盖前序兄弟的 tag/id（不只 class）', function () {
+    // 引擎按兄弟的 tag/id/class 匹配（prevSiblings ctx），而 clean 判定的
+    // 兄弟签名若仅源自 class，则前序兄弟**仅 tag 变化**时签名不变 →
+    // 后续兄弟被误判 clean → 陈旧样式。
+    StyleEngine::reset();
+    StyleEngine::registerCss('.t { width:11px; } span + .t { width:55px; }');
+    $mk = function (string $tag, string $cls) {
+        return \Px\Dom\VNode::h($tag, ['class' => $cls, 'style' => ''], 'x');
+    };
+    $prev = $mk('span', 'p');
+    $t    = $mk('div', 't');
+    $wrap = \Px\Dom\VNode::h('div', ['class' => 'wrap', 'style' => ''], [$prev, $t]);
+    $pass = new \Px\Css\StyleRecalcPass();
+    $pass->recalc($wrap);
+    assert_eq((int)$t->computedStyle->width->toPx(), 55, 'span + .t 命中 → 55');
+
+    // 模拟 patch：type 不匹配 → 替换为新实例（class 不变，仅 tag 变），
+    // 并如 patchChildrenArray 那样将结构变更置脏到父。$t 自身未脏。
+    $wrap->children = [$mk('div', 'p'), $t];
+    $wrap->needsStyleRecalc = true;
+    $wrap->childNeedsStyleRecalc = true;
+    $pass->recalc($wrap);
+    assert_eq((int)$t->computedStyle->width->toPx(), 11,
+        '兄弟 tag 变为 div 后 span + .t 不再命中 → 必重算得 11');
+    StyleEngine::reset();
+});
+
 $exitCode = print_summary();
 exit($exitCode);
