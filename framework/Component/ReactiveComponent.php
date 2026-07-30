@@ -232,8 +232,13 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
         //   PATCH_UNKEYED_LIST → index+type 匹配（patchChildrenArray 里的无 key fallback）
         //   PATCH_STABLE_LIST  → 顶畬按顺序 patch（本次同上）
         if ($old->type === '#list') {
-            $oldCh = is_array($old->children) ? $old->children : [];
-            $newCh = is_array($new->children) ? $new->children : [];
+            // 归一化单源：单 VNode 子也须参与子树 diff（旧 is_array 守卫下
+            // VNode::h(t, p, $child) 形态的子树被当空 → 差异漏判）。
+            // 根因治本：单 VNode 子（VNode::h(t, p, $child)）也须参与子树 diff，
+            // 旧 is_array 守卫下该形态被当空 → 差异漏判。数组路径保持直接复用
+            //（写时复制零分配；childrenToArray 会为字符串子合成新 #text VNode）。
+            $oldCh = is_array($old->children) ? $old->children : VNode::childrenToArray($old->children);
+            $newCh = is_array($new->children) ? $new->children : VNode::childrenToArray($new->children);
             // #list unkeyed / stable 下，应保证 index+type 匹配也能 patch（不受
             // B-Phase 2 selective 限制——因为 #list 编译期保证了 child type均一致）
             $aggressive = ($new->patchFlags & (VNode::PATCH_UNKEYED_LIST | VNode::PATCH_STABLE_LIST)) !== 0;

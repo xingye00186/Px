@@ -988,9 +988,11 @@ class RenderTreeManager
                 $renderNode->pseudoStyles = $pseudoStyles;
                 $renderNode->isLayoutBoundary = $isLayoutBoundary;
 
-                $vnodeChildren = is_array($vnode->children)
-                    ? VNode::childrenToArray($vnode->children)
-                    : [];
+                // 归一化单源：VNode::childrenToArray 已处理 null / 单 VNode / #list 展平 /
+                // #comment 过滤 / 数组。旧 `is_array(...) ? childrenToArray(...) : []`
+                // 前置守卫**抵消了归一化**：单 VNode 子（VNode::h(t, p, $child)）会得
+                // []，整棵子树被静默跳过。
+                $vnodeChildren = VNode::childrenToArray($vnode->children);
                 $isLeaf = count($vnodeChildren) === 0;
                 $hasExplicitTop = array_key_exists('top', $resolvedStyle);
 
@@ -1403,7 +1405,7 @@ class RenderTreeManager
             $this->scrollManager->setScrollLeft($rn, (int) $component->getBindValue($scrollLeftBindKey));
         }
         // 叶子节点 content bind
-        $childVNodes = is_array($vn->children) ? VNode::childrenToArray($vn->children) : [];
+        $childVNodes = VNode::childrenToArray($vn->children);
         if (empty($childVNodes) && $vn->props !== null) {
             $bindKey = $vn->props[':bind'] ?? $vn->props['bind'] ?? '';
             if ($bindKey !== '') {
