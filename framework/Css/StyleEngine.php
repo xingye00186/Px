@@ -48,14 +48,44 @@ final class StyleEngine
         foreach ($ruleDataList as $r) {
             if (is_array($r)) {
                 self::$rules[] = $r;
+                self::collectFeatures($r);
             }
         }
     }
+
+    /**
+     * 规则特征汇总（对标 Blink RuleFeatureSet）。只有当确存在相应组合子
+     * 的规则时，样式重算才需维护对应的元素上下文账本：
+     * - usesSiblingRules：`+` / `~` —— 需前序兄弟上下文（原本无条件累积，
+     *   对 n 个兄弟为 O(n²) 内存，500 兄弟实测峰值 8MB→18MB）。
+     * - usesAncestorRules：` ` / `>` —— 需祖先链（O(depth)，成本可控）。
+     */
+    private static bool $usesSiblingRules = false;
+    private static bool $usesAncestorRules = false;
+
+    private static function collectFeatures(array $rule): void
+    {
+        foreach (($rule['ast'] ?? []) as $complex) {
+            if (!is_array($complex)) continue;
+            foreach (($complex['combinators'] ?? []) as $comb) {
+                if ($comb === '+' || $comb === '~') {
+                    self::$usesSiblingRules = true;
+                } elseif ($comb === ' ' || $comb === '>') {
+                    self::$usesAncestorRules = true;
+                }
+            }
+        }
+    }
+
+    public static function usesSiblingRules(): bool { return self::$usesSiblingRules; }
+    public static function usesAncestorRules(): bool { return self::$usesAncestorRules; }
 
     public static function reset(): void
     {
         self::$rules = [];
         self::$registeredClasses = [];
+        self::$usesSiblingRules = false;
+        self::$usesAncestorRules = false;
     }
 
     /**

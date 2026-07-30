@@ -206,5 +206,33 @@ test('端到端：引擎 hover 叠加经 StyleRecalcPass 持久化到 VNode（�
     StyleEngine::reset();
 });
 
+test('规则特征门控 usesSiblingRules / usesAncestorRules（对标 RuleFeatureSet）', function () {
+    StyleEngine::reset();
+    assert_true(!StyleEngine::usesSiblingRules(), '空引擎无兄弟特征');
+    assert_true(!StyleEngine::usesAncestorRules(), '空引擎无祖先特征');
+    StyleEngine::registerCss('.a { width:10px; }');
+    assert_true(!StyleEngine::usesSiblingRules(), '单类规则不置兄弟特征');
+    StyleEngine::registerCss('.p .c { width:20px; }');
+    assert_true(StyleEngine::usesAncestorRules(), '后代规则置祖先特征');
+    assert_true(!StyleEngine::usesSiblingRules(), '后代规则不置兄弟特征');
+    StyleEngine::registerCss('.x + .y { width:30px; }');
+    assert_true(StyleEngine::usesSiblingRules(), '相邻兄弟规则置兄弟特征');
+    StyleEngine::reset();
+    assert_true(!StyleEngine::usesSiblingRules(), 'reset 清特征');
+});
+
+test('单 VNode 子的子树不再被样式重算静默跳过', function () {
+    // VNode::h(t, p, $child) 的 children 是 object 非数组；旧
+    // `is_array(...) ? ... : []` 守卫使整棵子树 computedStyle 恒 null。
+    StyleEngine::reset();
+    StyleEngine::registerCss('.deep { width:123px; }');
+    $leaf = \Px\Dom\VNode::h('div', ['class' => 'deep', 'style' => ''], 'x');
+    $wrap = \Px\Dom\VNode::h('#root', [], $leaf);   // 单 VNode 子
+    (new \Px\Css\StyleRecalcPass())->recalc($wrap);
+    assert_true($leaf->computedStyle !== null, '单子形态下子树已被遇到');
+    assert_eq((int)$leaf->computedStyle->width->toPx(), 123, '.deep 规则已应用 → 123');
+    StyleEngine::reset();
+});
+
 $exitCode = print_summary();
 exit($exitCode);
