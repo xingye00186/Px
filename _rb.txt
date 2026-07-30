@@ -1,0 +1,1151 @@
+﻿
+========================================
+  Non-interactive Build
+  App: reactive-bench
+  Framework: F:\work\Px
+  Compiler: F:\work\swoole_compiler
+========================================
+
+[CONFIG] EXE: reactive_bench.exe
+[CONFIG] SFC: App.vue -> gen\AppComponent.php + gen\ComponentFactory.php
+
+========================================
+  Step 0: MSVC compile environment
+========================================
+
+[INIT] Calling vcvarsall.bat x64...
+  Path: C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat
+  [OK] cl.exe available
+
+========================================
+  Step 0.5: AOT static check
+========================================
+
+========================================
+  AOT Checker - AOT 鍏煎鎬ф鏌ュ伐鍏?========================================
+
+宸叉壂鎻?117 涓枃浠?
+WARNINGS (30):
+------------------------------------------------------------
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Animation\AnimationManager.php:209
+         Rule: aot_variable_function
+         Code: $easeFn(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Animation\KeyframeResolver.php:265
+         Rule: aot_variable_function
+         Code: $easeFn(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Component\ReactiveComponent.php:489
+         Rule: aot_variable_function
+         Code: $callback(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\CascadeResolver.php:76
+         Rule: aot_usort_callback
+         Code: usort(
+         AOT: usort + 鍥炶皟璧?ZendVM dispatch锛屾敼鍐欐墜鍐欐帓搴?
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:775
+         Rule: aot_variable_function
+         Code: $borderFallback(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:776
+         Rule: aot_variable_function
+         Code: $borderFallback(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:790
+         Rule: aot_variable_function
+         Code: $borderFallback(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:791
+         Rule: aot_variable_function
+         Code: $borderFallback(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:792
+         Rule: aot_variable_function
+         Code: $borderFallback(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:793
+         Rule: aot_variable_function
+         Code: $borderFallback(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:858
+         Rule: aot_variable_function
+         Code: $sideColorFromShort(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:861
+         Rule: aot_variable_function
+         Code: $sideColorFromShort(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:864
+         Rule: aot_variable_function
+         Code: $sideColorFromShort(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:867
+         Rule: aot_variable_function
+         Code: $sideColorFromShort(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:901
+         Rule: aot_variable_function
+         Code: $sideStyleFromShort(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:904
+         Rule: aot_variable_function
+         Code: $sideStyleFromShort(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:907
+         Rule: aot_variable_function
+         Code: $sideStyleFromShort(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\ComputedStyle.php:910
+         Rule: aot_variable_function
+         Code: $sideStyleFromShort(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\CssValueParser.php:747
+         Rule: aot_preg_replace_callback
+         Code: preg_replace_callback(
+         AOT: preg_replace_callback + closure 璧?ZendVM dispatch锛岀敤 preg_match + str_replace 鏇夸唬
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Css\StyleSheetCodegen.php:78
+         Rule: aot_array_callback
+         Code: array_map(
+         AOT: 鏁扮粍閬嶅巻鍑芥暟 + 鍥炶皟璧?ZendVM dispatch锛屾敼鐢ㄦ墜鍐?foreach
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Reactive\DependencyTracker.php:45
+         Rule: aot_variable_function
+         Code: $fn(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Render\RenderTreeManager.php:521
+         Rule: aot_variable_function
+         Code: $cb(
+         AOT: $fn() 璋冪敤 鈥?闂寘鍚堟硶锛岀‘淇濆彉閲忕被鍨嬫槸 Closure 鑰岄潪瀛楃涓插嚱鏁板悕
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Render\RenderTreeManager.php:505
+         Rule: aot_array_callback
+         Code: array_filter(
+         AOT: 鏁扮粍閬嶅巻鍑芥暟 + 鍥炶皟璧?ZendVM dispatch锛屾敼鐢ㄦ墜鍐?foreach
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Core\Application.php:0
+         Rule: native_types_chain
+         Code: use Px\Css\StyleEngine
+         AOT: 'F:\work\Px\apps\reactive-bench/../../framework\Core\Application.php' uses native_types, but imported class 'StyleEngine' (Px\Css\StyleEngine) does not. Accessing its properties will return php::Variant, causing C2440 errors. Add 'use native_types;' to Css/StyleEngine.php
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Core\Application.php:0
+         Rule: native_types_chain
+         Code: use Px\Core\Diag
+         AOT: 'F:\work\Px\apps\reactive-bench/../../framework\Core\Application.php' uses native_types, but imported class 'Diag' (Px\Core\Diag) does not. Accessing its properties will return php::Variant, causing C2440 errors. Add 'use native_types;' to Core/Diag.php
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Layout\GridAlgorithm.php:0
+         Rule: native_types_chain
+         Code: use Px\Layout\Grid\GridPlacer
+         AOT: 'F:\work\Px\apps\reactive-bench/../../framework\Layout\GridAlgorithm.php' uses native_types, but imported class 'GridPlacer' (Px\Layout\Grid\GridPlacer) does not. Accessing its properties will return php::Variant, causing C2440 errors. Add 'use native_types;' to Grid/GridPlacer.php
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Layout\GridAlgorithm.php:0
+         Rule: native_types_chain
+         Code: use Px\Layout\Grid\GridTracker
+         AOT: 'F:\work\Px\apps\reactive-bench/../../framework\Layout\GridAlgorithm.php' uses native_types, but imported class 'GridTracker' (Px\Layout\Grid\GridTracker) does not. Accessing its properties will return php::Variant, causing C2440 errors. Add 'use native_types;' to Grid/GridTracker.php
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Layout\LayoutOrchestrator.php:0
+         Rule: native_types_chain
+         Code: use Px\Core\Diag
+         AOT: 'F:\work\Px\apps\reactive-bench/../../framework\Layout\LayoutOrchestrator.php' uses native_types, but imported class 'Diag' (Px\Core\Diag) does not. Accessing its properties will return php::Variant, causing C2440 errors. Add 'use native_types;' to Core/Diag.php
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Paint\PaintPipeline.php:0
+         Rule: native_types_chain
+         Code: use Px\Css\CssValueParser
+         AOT: 'F:\work\Px\apps\reactive-bench/../../framework\Paint\PaintPipeline.php' uses native_types, but imported class 'CssValueParser' (Px\Css\CssValueParser) does not. Accessing its properties will return php::Variant, causing C2440 errors. Add 'use native_types;' to Css/CssValueParser.php
+
+  [WARN] F:\work\Px\apps\reactive-bench/../../framework\Paint\PaintPipeline.php:0
+         Rule: native_types_chain
+         Code: use Px\Layout\TextOverflowProcessor
+         AOT: 'F:\work\Px\apps\reactive-bench/../../framework\Paint\PaintPipeline.php' uses native_types, but imported class 'TextOverflowProcessor' (Px\Layout\TextOverflowProcessor) does not. Accessing its properties will return php::Variant, causing C2440 errors. Add 'use native_types;' to Layout/TextOverflowProcessor.php
+
+
+鍏卞彂鐜?0 涓敊璇? 30 涓鍛?  [OK] AOT static check passed
+
+========================================
+  Step 0.75: Clear compilation cache
+========================================
+
+  [SKIP] Disabled by project.yml (Px_clear_compilation_cache=false)
+
+
+========================================
+  Step 1: SFC compile (Vue -> .gen.php)
+========================================
+  Input: App.vue
+  Output: gen\App.gen.php
+          gen\AppLayout_gen.php
+
+SFC Compiler v9: apps\reactive-bench\App.vue (registry: 4 components)
+
+--- Phase 1: Compiling child components (on-demand) ---
+  [CACHE] Framework file changed: sfc-compiler.php, invalidating dep-cache
+  Compiling: F:\work\Px\apps\reactive-bench\components\DeepTreeNode.vue 鈫?DeepTreeNodeComponent
+  Generated:  F:\work\Px\apps\reactive-bench\gen\DeepTreeNodeComponent.php (6322 bytes)
+  Compiled 2 components (out of 4 available)
+--- Phase 1 complete ---
+
+  Compiling: apps\reactive-bench\App.vue 鈫?AppComponent
+  Template: 11419 bytes
+  Script:   12669 bytes
+  Style:    0 bytes
+  Classes:  0 parsed
+  Handlers: 4
+  BindKeys: 20
+  V-For Loops: 11
+
+AOT Validation: PASSED (0 errors, 0 warnings)
+  Generated:  F:\work\Px\apps\reactive-bench\gen\AppComponent.php (73342 bytes)
+  Generated:  F:\work\Px\apps\reactive-bench\gen\ComponentFactory.php (929 bytes)
+  [OK] SFC compile succeeded
+
+========================================
+  Step 1.5: AOT check generated code
+========================================
+
+========================================
+  AOT Checker - AOT 鍏煎鎬ф鏌ュ伐鍏?========================================
+
+宸叉壂鎻?3 涓枃浠?
+[OK] 鏈娴嬪埌 AOT 鍏煎鎬ч棶棰?  [OK] AOT check on generated code passed
+
+========================================
+  Step 1.5.5: Dependency analysis
+========================================
+
+[INFO] Project root: F:/work/Px
+[INFO] App dir:      F:/work/Px/apps/reactive-bench
+[INFO] Entry:        F:/work/Px/apps/reactive-bench/main.php
+.\build.bat : PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$r
+eturnType in F:\work\Px\tools\dependency\analyzer.php on line 188
+所在位置 行:1 字符: 17
++  cd f:\work\Px; .\build.bat reactive-bench 2>&1 | Out-File _rb.txt -E ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  U...php on line 188 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+PHP Warning:  Undefined property: PhpParser\Node\PropertyHook::$returnType in F
+:\work\Px\tools\dependency\analyzer.php on line 188
+[OK] Dependencies written to F:/work/Px/apps/reactive-bench/dep.json
+     PHP files: 110
+     C++ files: 7
+[OK] Generated: F:/work/Px/apps/reactive-bench/project.dep.yml
+     PHP files in sources: 110
+     C++ files in sources: 7
+  [OK] Using project.dep.yml
+
+========================================
+  Step 2: AOT compile (PHP -> exe)
+========================================
+  Config: apps\reactive-bench\project.yml
+  Output: F:\work\Px\reactive_bench.exe
+
+  Cleaning old vc*.pdb from previous builds ...
+  [OK] Old PDB files cleaned
+Initialized platform/backend: Windows + MSVC (cl)
+prepare: apps\reactive-bench\gen\AppComponent.php
+prepare: apps\reactive-bench\gen\ComponentFactory.php
+prepare: apps\reactive-bench\gen\DeepTreeNodeComponent.php
+prepare: apps\reactive-bench\main.php
+prepare: framework\Animation\AnimationManager.php
+prepare: framework\Animation\EasingFunctions.php
+prepare: framework\Animation\Interpolator.php
+prepare: framework\Component\BaseComponent.php
+prepare: framework\Component\Contracts\ComponentInterface.php
+prepare: framework\Component\Contracts\ReactiveComponentInterface.php
+prepare: framework\Component\ReactiveComponent.php
+prepare: framework\Core\Application.php
+prepare: framework\Core\Config.php
+prepare: framework\Core\Diag.php
+prepare: framework\Core\PerfCounter.php
+prepare: framework\Core\Scheduler.php
+prepare: framework\Core\ScrollManager.php
+prepare: framework\Css\CascadeResolver.php
+prepare: framework\Css\ComputedStyle.php
+prepare: framework\Css\CssColor.php
+prepare: framework\Css\CssFlex.php
+prepare: framework\Css\CssKeyword.php
+prepare: framework\Css\CssLength.php
+prepare: framework\Css\CssMappings.php
+prepare: framework\Css\CssRect.php
+prepare: framework\Css\CssShorthandExpander.php
+prepare: framework\Css\CssTokenizer.php
+prepare: framework\Css\CssValue.php
+prepare: framework\Css\CssValueParser.php
+prepare: framework\Css\InlineStyleParser.php
+prepare: framework\Css\SelectorChecker.php
+prepare: framework\Css\SelectorParser.php
+prepare: framework\Css\StyleEngine.php
+prepare: framework\Css\StylePool.php
+prepare: framework\Css\StyleRecalcPass.php
+prepare: framework\Css\StyleSheetContents.php
+prepare: framework\Css\UAStyles.php
+prepare: framework\Dom\VNode.php
+prepare: framework\Layout\BlockAlgorithm.php
+prepare: framework\Layout\ChildLayoutProvider.php
+prepare: framework\Layout\ConstraintSpace.php
+prepare: framework\Layout\ConstraintSpaceBuilder.php
+prepare: framework\Layout\ExclusionSpace.php
+prepare: framework\Layout\Flex\FlexItem.php
+prepare: framework\Layout\Flex\FlexLineBreaker.php
+prepare: framework\Layout\FlexAlgorithm.php
+prepare: framework\Layout\Grid\GridItem.php
+prepare: framework\Layout\Grid\GridPlacer.php
+prepare: framework\Layout\Grid\GridTrack.php
+prepare: framework\Layout\Grid\GridTracker.php
+prepare: framework\Layout\GridAlgorithm.php
+prepare: framework\Layout\InlineAlgorithm.php
+prepare: framework\Layout\InlineItem.php
+prepare: framework\Layout\LayoutAlgorithm.php
+prepare: framework\Layout\LayoutOrchestrator.php
+prepare: framework\Layout\LayoutResult.php
+prepare: framework\Layout\LineBox.php
+prepare: framework\Layout\LineBreaker.php
+prepare: framework\Layout\LruNode.php
+prepare: framework\Layout\MarginStrut.php
+prepare: framework\Layout\MinMaxSizes.php
+prepare: framework\Layout\OOFLayoutAlgorithm.php
+prepare: framework\Layout\PhysicalFragment.php
+prepare: framework\Layout\PhysicalFragmentBuilder.php
+prepare: framework\Layout\TableAlgorithm.php
+prepare: framework\Layout\TextMeasureCache.php
+prepare: framework\Layout\TextOverflowProcessor.php
+prepare: framework\Paint\Backend\BackendCapability.php
+prepare: framework\Paint\Backend\BackendInitException.php
+prepare: framework\Paint\Backend\BackendRegistry.php
+prepare: framework\Paint\Backend\GdiDirect2DBackend.php
+prepare: framework\Paint\Backend\GdiLegacyBackend.php
+prepare: framework\Paint\Backend\IRenderBackend.php
+prepare: framework\Paint\Backend\RenderBackendFailedException.php
+prepare: framework\Paint\Backend\ResilientRenderContext.php
+prepare: framework\Paint\Backend\RuntimeBackendSelector.php
+prepare: framework\Paint\Backend\SkiaCpuBackend.php
+prepare: framework\Paint\Backend\SkiaGaneshD3D11Backend.php
+prepare: framework\Paint\Backend\SkiaGaneshWGLBackend.php
+prepare: framework\Paint\Backend\SkiaGraphiteDawnBackend.php
+prepare: framework\Paint\GdiRenderContext.php
+prepare: framework\Paint\ImageManager.php
+prepare: framework\Paint\InteractionState.php
+prepare: framework\Paint\PaintPipeline.php
+prepare: framework\Paint\RenderContext.php
+prepare: framework\Paint\SkiaRenderContext.php
+prepare: framework\Platform\KeyboardEvent.php
+prepare: framework\Platform\MouseEvent.php
+prepare: framework\Platform\Platform.php
+prepare: framework\Platform\PlatformEvent.php
+prepare: framework\Platform\PlatformFactory.php
+prepare: framework\Platform\Win32Platform.php
+prepare: framework\Platform\WinMsg.php
+prepare: framework\Platform\WindowEvent.php
+prepare: framework\Reactive\DependencyTracker.php
+prepare: framework\Reactive\DependentsMap.php
+prepare: framework\Reactive\Effect.php
+prepare: framework\Reactive\Notifier.php
+prepare: framework\Render\RenderNode.php
+prepare: framework\Render\RenderTreeManager.php
+prepare: framework\Render\ScrollState.php
+prepare: framework\Text\DWriteTextBackend.php
+prepare: framework\Text\GdiTextBackend.php
+prepare: framework\Text\ITextBackend.php
+prepare: framework\Text\ResilientTextBackendProxy.php
+prepare: framework\Text\SkiaTextBackend.php
+prepare: framework\Text\TextBackendRegistry.php
+prepare: framework\Text\TextBackendSelector.php
+prepare: stub\skia.stub.php
+prepare: stub\vue_calc.stub.php
+prepare completed: 117 source files in total
+convert: framework\Component\Contracts\ComponentInterface.php
+generate arginfo file: framework\Component\Contracts\ComponentInterface.php
+convert: framework\Component\BaseComponent.php
+generate arginfo file: framework\Component\BaseComponent.php
+convert: framework\Component\Contracts\ReactiveComponentInterface.php
+generate arginfo file: framework\Component\Contracts\ReactiveComponentInterface.php
+convert: framework\Component\ReactiveComponent.php
+generate arginfo file: framework\Component\ReactiveComponent.php
+convert: apps\reactive-bench\gen\AppComponent.php
+generate arginfo file: apps\reactive-bench\gen\AppComponent.php
+convert: apps\reactive-bench\gen\ComponentFactory.php
+generate arginfo file: apps\reactive-bench\gen\ComponentFactory.php
+convert: apps\reactive-bench\gen\DeepTreeNodeComponent.php
+generate arginfo file: apps\reactive-bench\gen\DeepTreeNodeComponent.php
+convert: apps\reactive-bench\main.php
+generate arginfo file: apps\reactive-bench\main.php
+convert: framework\Animation\AnimationManager.php
+generate arginfo file: framework\Animation\AnimationManager.php
+convert: framework\Animation\EasingFunctions.php
+generate arginfo file: framework\Animation\EasingFunctions.php
+convert: framework\Animation\Interpolator.php
+generate arginfo file: framework\Animation\Interpolator.php
+convert: framework\Core\Application.php
+generate arginfo file: framework\Core\Application.php
+convert: framework\Core\Config.php
+generate arginfo file: framework\Core\Config.php
+convert: framework\Core\Diag.php
+generate arginfo file: framework\Core\Diag.php
+convert: framework\Core\PerfCounter.php
+generate arginfo file: framework\Core\PerfCounter.php
+convert: framework\Core\Scheduler.php
+generate arginfo file: framework\Core\Scheduler.php
+convert: framework\Core\ScrollManager.php
+generate arginfo file: framework\Core\ScrollManager.php
+convert: framework\Css\CascadeResolver.php
+generate arginfo file: framework\Css\CascadeResolver.php
+convert: framework\Css\ComputedStyle.php
+generate arginfo file: framework\Css\ComputedStyle.php
+convert: framework\Css\CssValue.php
+generate arginfo file: framework\Css\CssValue.php
+convert: framework\Css\CssColor.php
+generate arginfo file: framework\Css\CssColor.php
+convert: framework\Css\CssFlex.php
+generate arginfo file: framework\Css\CssFlex.php
+convert: framework\Css\CssKeyword.php
+generate arginfo file: framework\Css\CssKeyword.php
+convert: framework\Css\CssLength.php
+generate arginfo file: framework\Css\CssLength.php
+convert: framework\Css\CssMappings.php
+generate arginfo file: framework\Css\CssMappings.php
+convert: framework\Css\CssRect.php
+generate arginfo file: framework\Css\CssRect.php
+convert: framework\Css\CssShorthandExpander.php
+generate arginfo file: framework\Css\CssShorthandExpander.php
+convert: framework\Css\CssTokenizer.php
+generate arginfo file: framework\Css\CssTokenizer.php
+convert: framework\Css\CssValueParser.php
+generate arginfo file: framework\Css\CssValueParser.php
+convert: framework\Css\InlineStyleParser.php
+generate arginfo file: framework\Css\InlineStyleParser.php
+convert: framework\Css\SelectorChecker.php
+generate arginfo file: framework\Css\SelectorChecker.php
+convert: framework\Css\SelectorParser.php
+generate arginfo file: framework\Css\SelectorParser.php
+convert: framework\Css\StyleEngine.php
+generate arginfo file: framework\Css\StyleEngine.php
+convert: framework\Css\StylePool.php
+generate arginfo file: framework\Css\StylePool.php
+convert: framework\Css\StyleRecalcPass.php
+generate arginfo file: framework\Css\StyleRecalcPass.php
+convert: framework\Css\StyleSheetContents.php
+generate arginfo file: framework\Css\StyleSheetContents.php
+convert: framework\Css\UAStyles.php
+generate arginfo file: framework\Css\UAStyles.php
+convert: framework\Dom\VNode.php
+generate arginfo file: framework\Dom\VNode.php
+convert: framework\Layout\LayoutAlgorithm.php
+generate arginfo file: framework\Layout\LayoutAlgorithm.php
+convert: framework\Layout\BlockAlgorithm.php
+generate arginfo file: framework\Layout\BlockAlgorithm.php
+convert: framework\Layout\ChildLayoutProvider.php
+generate arginfo file: framework\Layout\ChildLayoutProvider.php
+convert: framework\Layout\ConstraintSpace.php
+generate arginfo file: framework\Layout\ConstraintSpace.php
+convert: framework\Layout\ConstraintSpaceBuilder.php
+generate arginfo file: framework\Layout\ConstraintSpaceBuilder.php
+convert: framework\Layout\ExclusionSpace.php
+generate arginfo file: framework\Layout\ExclusionSpace.php
+convert: framework\Layout\Flex\FlexItem.php
+generate arginfo file: framework\Layout\Flex\FlexItem.php
+convert: framework\Layout\Flex\FlexLineBreaker.php
+generate arginfo file: framework\Layout\Flex\FlexLineBreaker.php
+convert: framework\Layout\FlexAlgorithm.php
+generate arginfo file: framework\Layout\FlexAlgorithm.php
+convert: framework\Layout\Grid\GridItem.php
+generate arginfo file: framework\Layout\Grid\GridItem.php
+convert: framework\Layout\Grid\GridPlacer.php
+generate arginfo file: framework\Layout\Grid\GridPlacer.php
+convert: framework\Layout\Grid\GridTrack.php
+generate arginfo file: framework\Layout\Grid\GridTrack.php
+convert: framework\Layout\Grid\GridTracker.php
+generate arginfo file: framework\Layout\Grid\GridTracker.php
+convert: framework\Layout\GridAlgorithm.php
+generate arginfo file: framework\Layout\GridAlgorithm.php
+convert: framework\Layout\InlineAlgorithm.php
+generate arginfo file: framework\Layout\InlineAlgorithm.php
+convert: framework\Layout\InlineItem.php
+generate arginfo file: framework\Layout\InlineItem.php
+convert: framework\Layout\LayoutOrchestrator.php
+generate arginfo file: framework\Layout\LayoutOrchestrator.php
+convert: framework\Layout\LayoutResult.php
+generate arginfo file: framework\Layout\LayoutResult.php
+convert: framework\Layout\LineBox.php
+generate arginfo file: framework\Layout\LineBox.php
+convert: framework\Layout\LineBreaker.php
+generate arginfo file: framework\Layout\LineBreaker.php
+convert: framework\Layout\LruNode.php
+generate arginfo file: framework\Layout\LruNode.php
+convert: framework\Layout\MarginStrut.php
+generate arginfo file: framework\Layout\MarginStrut.php
+convert: framework\Layout\MinMaxSizes.php
+generate arginfo file: framework\Layout\MinMaxSizes.php
+convert: framework\Layout\OOFLayoutAlgorithm.php
+generate arginfo file: framework\Layout\OOFLayoutAlgorithm.php
+convert: framework\Layout\PhysicalFragment.php
+generate arginfo file: framework\Layout\PhysicalFragment.php
+convert: framework\Layout\PhysicalFragmentBuilder.php
+generate arginfo file: framework\Layout\PhysicalFragmentBuilder.php
+convert: framework\Layout\TableAlgorithm.php
+generate arginfo file: framework\Layout\TableAlgorithm.php
+convert: framework\Layout\TextMeasureCache.php
+generate arginfo file: framework\Layout\TextMeasureCache.php
+convert: framework\Layout\TextOverflowProcessor.php
+generate arginfo file: framework\Layout\TextOverflowProcessor.php
+convert: framework\Paint\Backend\BackendCapability.php
+generate arginfo file: framework\Paint\Backend\BackendCapability.php
+convert: framework\Paint\Backend\BackendInitException.php
+generate arginfo file: framework\Paint\Backend\BackendInitException.php
+convert: framework\Paint\Backend\BackendRegistry.php
+generate arginfo file: framework\Paint\Backend\BackendRegistry.php
+convert: framework\Paint\Backend\IRenderBackend.php
+generate arginfo file: framework\Paint\Backend\IRenderBackend.php
+convert: framework\Paint\Backend\GdiDirect2DBackend.php
+generate arginfo file: framework\Paint\Backend\GdiDirect2DBackend.php
+convert: framework\Paint\Backend\GdiLegacyBackend.php
+generate arginfo file: framework\Paint\Backend\GdiLegacyBackend.php
+convert: framework\Paint\Backend\RenderBackendFailedException.php
+generate arginfo file: framework\Paint\Backend\RenderBackendFailedException.php
+convert: framework\Paint\RenderContext.php
+generate arginfo file: framework\Paint\RenderContext.php
+convert: framework\Paint\Backend\ResilientRenderContext.php
+generate arginfo file: framework\Paint\Backend\ResilientRenderContext.php
+convert: framework\Paint\Backend\RuntimeBackendSelector.php
+generate arginfo file: framework\Paint\Backend\RuntimeBackendSelector.php
+convert: framework\Paint\Backend\SkiaCpuBackend.php
+generate arginfo file: framework\Paint\Backend\SkiaCpuBackend.php
+convert: framework\Paint\Backend\SkiaGaneshD3D11Backend.php
+generate arginfo file: framework\Paint\Backend\SkiaGaneshD3D11Backend.php
+convert: framework\Paint\Backend\SkiaGaneshWGLBackend.php
+generate arginfo file: framework\Paint\Backend\SkiaGaneshWGLBackend.php
+convert: framework\Paint\Backend\SkiaGraphiteDawnBackend.php
+generate arginfo file: framework\Paint\Backend\SkiaGraphiteDawnBackend.php
+convert: framework\Paint\GdiRenderContext.php
+generate arginfo file: framework\Paint\GdiRenderContext.php
+convert: framework\Paint\ImageManager.php
+generate arginfo file: framework\Paint\ImageManager.php
+convert: framework\Paint\InteractionState.php
+generate arginfo file: framework\Paint\InteractionState.php
+convert: framework\Paint\PaintPipeline.php
+generate arginfo file: framework\Paint\PaintPipeline.php
+convert: framework\Paint\SkiaRenderContext.php
+generate arginfo file: framework\Paint\SkiaRenderContext.php
+convert: framework\Platform\PlatformEvent.php
+generate arginfo file: framework\Platform\PlatformEvent.php
+convert: framework\Platform\KeyboardEvent.php
+generate arginfo file: framework\Platform\KeyboardEvent.php
+convert: framework\Platform\MouseEvent.php
+generate arginfo file: framework\Platform\MouseEvent.php
+convert: framework\Platform\Platform.php
+generate arginfo file: framework\Platform\Platform.php
+convert: framework\Platform\PlatformFactory.php
+generate arginfo file: framework\Platform\PlatformFactory.php
+convert: framework\Platform\Win32Platform.php
+generate arginfo file: framework\Platform\Win32Platform.php
+convert: framework\Platform\WinMsg.php
+generate arginfo file: framework\Platform\WinMsg.php
+convert: framework\Platform\WindowEvent.php
+generate arginfo file: framework\Platform\WindowEvent.php
+convert: framework\Reactive\DependencyTracker.php
+generate arginfo file: framework\Reactive\DependencyTracker.php
+convert: framework\Reactive\DependentsMap.php
+generate arginfo file: framework\Reactive\DependentsMap.php
+convert: framework\Reactive\Effect.php
+generate arginfo file: framework\Reactive\Effect.php
+convert: framework\Reactive\Notifier.php
+generate arginfo file: framework\Reactive\Notifier.php
+convert: framework\Render\RenderNode.php
+generate arginfo file: framework\Render\RenderNode.php
+convert: framework\Render\RenderTreeManager.php
+generate arginfo file: framework\Render\RenderTreeManager.php
+convert: framework\Render\ScrollState.php
+generate arginfo file: framework\Render\ScrollState.php
+convert: framework\Text\ITextBackend.php
+generate arginfo file: framework\Text\ITextBackend.php
+convert: framework\Text\DWriteTextBackend.php
+generate arginfo file: framework\Text\DWriteTextBackend.php
+convert: framework\Text\GdiTextBackend.php
+generate arginfo file: framework\Text\GdiTextBackend.php
+convert: framework\Text\ResilientTextBackendProxy.php
+generate arginfo file: framework\Text\ResilientTextBackendProxy.php
+convert: framework\Text\SkiaTextBackend.php
+generate arginfo file: framework\Text\SkiaTextBackend.php
+convert: framework\Text\TextBackendRegistry.php
+generate arginfo file: framework\Text\TextBackendRegistry.php
+convert: framework\Text\TextBackendSelector.php
+generate arginfo file: framework\Text\TextBackendSelector.php
+convert: stub\skia.stub.php
+generate arginfo file: stub\skia.stub.php
+convert: stub\vue_calc.stub.php
+generate arginfo file: stub\vue_calc.stub.php
+Starting compilation for 122 files
+ComponentInterface.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Component\Contracts\ComponentInterface.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Component\Contracts\ComponentInterface.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+BaseComponent.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Component\BaseComponent.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Component\BaseComponent.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ReactiveComponentInterface.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Component\Contracts\ReactiveComponentInterface.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Component\Contracts\ReactiveComponentInterface.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ReactiveComponent.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Component\ReactiveComponent.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Component\ReactiveComponent.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+AppComponent.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\gen\AppComponent.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\gen\AppComponent.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ComponentFactory.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\gen\ComponentFactory.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\gen\ComponentFactory.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+DeepTreeNodeComponent.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\gen\DeepTreeNodeComponent.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\gen\DeepTreeNodeComponent.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+main.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\\main.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\main.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+AnimationManager.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Animation\AnimationManager.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Animation\AnimationManager.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+EasingFunctions.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Animation\EasingFunctions.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Animation\EasingFunctions.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+Interpolator.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Animation\Interpolator.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Animation\Interpolator.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+Application.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\Application.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\Application.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+Config.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\Config.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\Config.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+Diag.cc
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\Diag.cc(24): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\Diag.cc(24): warning C4129: “D：: 不可识别的字符转义序列
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\Diag.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\Diag.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+PerfCounter.cc
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\PerfCounter.cc(31): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\PerfCounter.cc(31): warning C4129: “P：: 不可识别的字符转义序列
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\PerfCounter.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\PerfCounter.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+Scheduler.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\Scheduler.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\Scheduler.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ScrollManager.cc
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc(245): warning C4129: “R：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc(245): warning C4129: “S：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc(250): warning C4129: “R：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc(250): warning C4129: “S：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc(255): warning C4129: “R：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc(255): warning C4129: “S：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc(260): warning C4129: “R：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc(260): warning C4129: “S：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc(265): warning C4129: “R：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc(265): warning C4129: “S：: 不可识别的字符转义序列
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Core\ScrollManager.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CascadeResolver.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CascadeResolver.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CascadeResolver.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ComputedStyle.cc
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(454): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(994): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(1040): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(1049): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(1478): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(1514): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(1531): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(1548): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(1587): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(1762): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(2804): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(2824): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(2844): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(2864): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(3101): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(3129): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(3157): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc(3185): warning C4129: “C：: 不可识别的字符转义序列
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\ComputedStyle.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CssValue.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssValue.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssValue.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CssColor.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssColor.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssColor.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CssFlex.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssFlex.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssFlex.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CssKeyword.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssKeyword.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssKeyword.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CssLength.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssLength.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssLength.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CssMappings.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssMappings.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssMappings.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CssRect.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssRect.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssRect.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CssShorthandExpander.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssShorthandExpander.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssShorthandExpander.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CssTokenizer.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssTokenizer.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssTokenizer.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+CssValueParser.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssValueParser.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\CssValueParser.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+InlineStyleParser.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\InlineStyleParser.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\InlineStyleParser.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+SelectorChecker.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\SelectorChecker.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\SelectorChecker.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+SelectorParser.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\SelectorParser.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\SelectorParser.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+StyleEngine.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\StyleEngine.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\StyleEngine.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+StylePool.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\StylePool.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\StylePool.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+StyleRecalcPass.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\StyleRecalcPass.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\StyleRecalcPass.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+StyleSheetContents.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\StyleSheetContents.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\StyleSheetContents.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+UAStyles.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\UAStyles.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Css\UAStyles.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+VNode.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Dom\VNode.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Dom\VNode.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+LayoutAlgorithm.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LayoutAlgorithm.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LayoutAlgorithm.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+BlockAlgorithm.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\BlockAlgorithm.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\BlockAlgorithm.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ChildLayoutProvider.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ChildLayoutProvider.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ChildLayoutProvider.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ConstraintSpace.cc
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpace.cc(525): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpace.cc(525): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpace.cc(529): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpace.cc(529): warning C4129: “C：: 不可识别的字符转义序列
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpace.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpace.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ConstraintSpaceBuilder.cc
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(85): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(85): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(93): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(93): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(101): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(101): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(109): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(109): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(264): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(264): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(268): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(268): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(291): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(291): warning C4129: “C：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(295): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc(295): warning C4129: “C：: 不可识别的字符转义序列
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ConstraintSpaceBuilder.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ExclusionSpace.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ExclusionSpace.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\ExclusionSpace.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+FlexItem.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Flex\FlexItem.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Flex\FlexItem.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+FlexLineBreaker.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Flex\FlexLineBreaker.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Flex\FlexLineBreaker.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+FlexAlgorithm.cc
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2389): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2389): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2462): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2462): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2475): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2475): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2607): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2607): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2664): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2664): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2932): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2932): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2938): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2938): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2943): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2943): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2948): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2948): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2954): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2954): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2960): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2960): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2967): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2967): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2973): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2973): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2978): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2978): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2983): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2983): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2989): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2989): warning C4129: “F：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2995): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc(2995): warning C4129: “F：: 不可识别的字符转义序列
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\FlexAlgorithm.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+GridItem.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Grid\GridItem.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Grid\GridItem.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+GridPlacer.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Grid\GridPlacer.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Grid\GridPlacer.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+GridTrack.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Grid\GridTrack.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Grid\GridTrack.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+GridTracker.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Grid\GridTracker.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\Grid\GridTracker.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+GridAlgorithm.cc
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1279): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1279): warning C4129: “G：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1310): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1310): warning C4129: “G：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1556): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1556): warning C4129: “G：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1564): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1564): warning C4129: “G：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1781): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1781): warning C4129: “G：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1785): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1785): warning C4129: “G：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1807): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1807): warning C4129: “G：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1820): warning C4129: “L：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc(1820): warning C4129: “G：: 不可识别的字符转义序列
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\GridAlgorithm.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+InlineAlgorithm.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\InlineAlgorithm.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\InlineAlgorithm.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+InlineItem.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\InlineItem.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\InlineItem.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+LayoutOrchestrator.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LayoutOrchestrator.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LayoutOrchestrator.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+LayoutResult.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LayoutResult.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LayoutResult.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+LineBox.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LineBox.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LineBox.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+LineBreaker.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LineBreaker.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LineBreaker.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+LruNode.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LruNode.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\LruNode.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+MarginStrut.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\MarginStrut.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\MarginStrut.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+MinMaxSizes.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\MinMaxSizes.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\MinMaxSizes.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+OOFLayoutAlgorithm.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\OOFLayoutAlgorithm.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\OOFLayoutAlgorithm.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+PhysicalFragment.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\PhysicalFragment.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\PhysicalFragment.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+PhysicalFragmentBuilder.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\PhysicalFragmentBuilder.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\PhysicalFragmentBuilder.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+TableAlgorithm.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\TableAlgorithm.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\TableAlgorithm.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+TextMeasureCache.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\TextMeasureCache.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\TextMeasureCache.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+TextOverflowProcessor.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\TextOverflowProcessor.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Layout\TextOverflowProcessor.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+BackendCapability.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\BackendCapability.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\BackendCapability.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+BackendInitException.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\BackendInitException.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\BackendInitException.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+BackendRegistry.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\BackendRegistry.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\BackendRegistry.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+IRenderBackend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\IRenderBackend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\IRenderBackend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+GdiDirect2DBackend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\GdiDirect2DBackend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\GdiDirect2DBackend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+GdiLegacyBackend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\GdiLegacyBackend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\GdiLegacyBackend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+RenderBackendFailedException.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\RenderBackendFailedException.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\RenderBackendFailedException.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+RenderContext.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\RenderContext.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\RenderContext.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ResilientRenderContext.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\ResilientRenderContext.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\ResilientRenderContext.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+RuntimeBackendSelector.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\RuntimeBackendSelector.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\RuntimeBackendSelector.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+SkiaCpuBackend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\SkiaCpuBackend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\SkiaCpuBackend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+SkiaGaneshD3D11Backend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\SkiaGaneshD3D11Backend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\SkiaGaneshD3D11Backend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+SkiaGaneshWGLBackend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\SkiaGaneshWGLBackend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\SkiaGaneshWGLBackend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+SkiaGraphiteDawnBackend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\SkiaGraphiteDawnBackend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\Backend\SkiaGraphiteDawnBackend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+GdiRenderContext.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\GdiRenderContext.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\GdiRenderContext.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ImageManager.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\ImageManager.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\ImageManager.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+InteractionState.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\InteractionState.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\InteractionState.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+PaintPipeline.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\PaintPipeline.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\PaintPipeline.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+SkiaRenderContext.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\SkiaRenderContext.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Paint\SkiaRenderContext.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+PlatformEvent.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\PlatformEvent.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\PlatformEvent.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+KeyboardEvent.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\KeyboardEvent.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\KeyboardEvent.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+MouseEvent.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\MouseEvent.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\MouseEvent.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+Platform.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\Platform.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\Platform.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+PlatformFactory.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\PlatformFactory.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\PlatformFactory.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+Win32Platform.cc
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\Win32Platform.cc(209): warning C4129: “P：: 不可识别的字符转义序列
+F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\Win32Platform.cc(209): warning C4129: “W：: 不可识别的字符转义序列
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\Win32Platform.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\Win32Platform.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+WinMsg.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\WinMsg.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\WinMsg.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+WindowEvent.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\WindowEvent.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Platform\WindowEvent.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+DependencyTracker.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Reactive\DependencyTracker.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Reactive\DependencyTracker.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+DependentsMap.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Reactive\DependentsMap.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Reactive\DependentsMap.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+Effect.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Reactive\Effect.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Reactive\Effect.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+Notifier.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Reactive\Notifier.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Reactive\Notifier.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+RenderNode.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Render\RenderNode.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Render\RenderNode.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+RenderTreeManager.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Render\RenderTreeManager.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Render\RenderTreeManager.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ScrollState.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Render\ScrollState.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Render\ScrollState.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ITextBackend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\ITextBackend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\ITextBackend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+DWriteTextBackend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\DWriteTextBackend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\DWriteTextBackend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+GdiTextBackend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\GdiTextBackend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\GdiTextBackend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+ResilientTextBackendProxy.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\ResilientTextBackendProxy.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\ResilientTextBackendProxy.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+SkiaTextBackend.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\SkiaTextBackend.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\SkiaTextBackend.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+TextBackendRegistry.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\TextBackendRegistry.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\TextBackendRegistry.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+TextBackendSelector.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\TextBackendSelector.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\framework\Text\TextBackendSelector.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+skia.stub.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\stub\skia.stub.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\stub\skia.stub.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+vue_calc.stub.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench\stub\vue_calc.stub.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\stub\vue_calc.stub.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+skia_core.cc
+cl /c "F:\work\Px\cpp\skia_core.cc" /Fo"F:\work\Px\cpp\skia_core.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+skia_dinkumware_stubs.cc
+cl /c "F:\work\Px\cpp\skia_dinkumware_stubs.cc" /Fo"F:\work\Px\cpp\skia_dinkumware_stubs.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+skia_font.cc
+cl /c "F:\work\Px\cpp\skia_font.cc" /Fo"F:\work\Px\cpp\skia_font.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+skia_image.cc
+F:\work\Px\cpp\skia_image.cc(66): warning C4312: “reinterpret_cast”: 从“int”转换到更大的“Gdiplus::Image *”
+F:\work\Px\cpp\skia_image.cc(81): warning C4312: “reinterpret_cast”: 从“int”转换到更大的“Gdiplus::Image *”
+F:\work\Px\cpp\skia_image.cc(93): warning C4312: “reinterpret_cast”: 从“int”转换到更大的“Gdiplus::Image *”
+F:\work\Px\cpp\skia_image.cc(105): warning C4312: “reinterpret_cast”: 从“int”转换到更大的“Gdiplus::Image *”
+cl /c "F:\work\Px\cpp\skia_image.cc" /Fo"F:\work\Px\cpp\skia_image.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+skia_render.cc
+cl /c "F:\work\Px\cpp\skia_render.cc" /Fo"F:\work\Px\cpp\skia_render.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+skia_text.cc
+cl /c "F:\work\Px\cpp\skia_text.cc" /Fo"F:\work\Px\cpp\skia_text.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+vue_calc.cc
+F:\work\Px\cpp\vue_calc.cc(473): warning C4312: “reinterpret_cast”: 从“int”转换到更大的“Gdiplus::Image *”
+F:\work\Px\cpp\vue_calc.cc(482): warning C4312: “reinterpret_cast”: 从“int”转换到更大的“Gdiplus::Image *”
+cl /c "F:\work\Px\cpp\vue_calc.cc" /Fo"F:\work\Px\cpp\vue_calc.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+extension-reactive_bench.cc
+cl /c "F:\work\Px\apps\reactive-bench\build\reactive-bench/extension-reactive_bench.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\extension-reactive_bench.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+typephp_fiber_generator.cc
+cl /c "F:\work\swoole_compiler\phpx/src/misc/typephp_fiber_generator.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\phpx-misc\reactive_bench\typephp_fiber_generator.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+typephp_main.cc
+cl /c "F:\work\swoole_compiler\phpx/src/misc/typephp_main.cc" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\phpx-misc\reactive_bench\typephp_main.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4242 /wd4146 /wd4820 /wd4464 /wd4365 /wd4127 /wd4668 /wd4626 /wd5027 /wd5219 /wd5220 /wd4100 /wd5039 /wd4101 /wd4102 /wd4800 /wd5045 /wd5264 /wd5246 /wd4388 /wd4623 /wd4611 /wd4574 /EHsc /std:c++17 /MD /utf-8 /nologo
+php_cli_process_title.c
+cl /c /TC "F:\work\swoole_compiler\phpx/src/misc/php_cli_process_title.c" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\phpx-misc\reactive_bench\php_cli_process_title.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4146 /nologo
+ps_title.c
+cl /c /TC "F:\work\swoole_compiler\phpx/src/misc/ps_title.c" /Fo"F:\work\Px\apps\reactive-bench\build\reactive-bench\phpx-misc\reactive_bench\ps_title.obj" /I "F:\work\swoole_compiler\phpx\include" /I "F:\work\Px\apps\reactive-bench\build\reactive-bench\include" /I "F:\work\swoole_compiler\phpx\src\misc" /I "F:\work\swoole_compiler\SDK\include" /I "F:\work\swoole_compiler\SDK\include\main" /I "F:\work\swoole_compiler\SDK\include\Zend" /I "F:\work\swoole_compiler\SDK\include\TSRM" /I "F:\work\swoole_compiler\SDK\include\ext" /DZEND_WIN32 /DPHP_WIN32 /DZEND_DEBUG=0 /DZTS /Od /Zi /W3 /wd4244 /wd4146 /nologo
+Successfully compiled 122 files
+link "@.\reactive_bench.exe.rsp" /OUT:"reactive_bench.exe" /LIBPATH:"F:\work\swoole_compiler\phpx\lib" /LIBPATH:"F:\work\swoole_compiler\SDK\lib" /DEBUG /NODEFAULTLIB:LIBCMT /nologo "F:\work\swoole_compiler\phpx\lib\phpx.lib" "F:\work\swoole_compiler\SDK\lib\php8ts.lib" "F:\work\swoole_compiler\SDK\lib\php8embed.lib" "user32.lib" "gdi32.lib" "kernel32.lib" "gmp.lib" "gmpxx.lib" "mpfr.lib" "libmpdec-4.0.1.dll.lib" "libmpdec++-4.0.1.dll.lib"
+php8embed.lib(php_embed.obj) : warning LNK4204: “F:\work\Px\vc140.pdb”缺少引用模块的调试信息；正在链接对象，如同没有调试信息一样
+  正在创建库 reactive_bench.lib 和对象 reactive_bench.exp
+Build successful: reactive_bench.exe
+  [OK] AOT compile succeeded (reactive_bench.exe)
+
+========================================
+  Step 3: Package (exe + DLLs -> bin/)
+========================================
+
+  Copying reactive_bench.exe ...
+  Copying php8ts.dll ...
+  Copying phpx.dll ...
+  Copying fonts ...
+    fonts\NotoSansSC-Black.ttf
+    fonts\NotoSansSC-Bold.ttf
+    fonts\NotoSansSC-ExtraBold.ttf
+    fonts\NotoSansSC-ExtraLight.ttf
+    fonts\NotoSansSC-Light.ttf
+    fonts\NotoSansSC-Medium.ttf
+    fonts\NotoSansSC-Regular.ttf
+    fonts\NotoSansSC-SemiBold.ttf
+    fonts\NotoSansSC-Thin.ttf
+
+  Package contents:
+  ----------------------------------------
+    blink_test.json   725 bytes
+    php8ts.dll   11578368 bytes
+    phpx.dll   3770368 bytes
+    reactive_bench.exe   15160832 bytes
+    reactive_bench_before.exe   11433984 bytes
+  ----------------------------------------
+
+========================================
+  Step 4: Cleanup framework root
+========================================
+
+  Cleaning .exe files ...
+  Cleaning .exp files ...
+  Cleaning .lib files ...
+  Cleaning .pdb files ...
+  Cleaning .ilk files ...
+  Cleaning MSVC .pdb files ...
+  Cleaning temp files ...
+  [OK] Cleanup completed
+
+========================================
+  Build succeeded
+========================================
+
+  Output dir: F:\work\Px\apps\reactive-bench\bin\
+  Run: F:\work\Px\apps\reactive-bench\bin\reactive_bench.exe
+========================================
