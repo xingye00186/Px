@@ -47,15 +47,15 @@ class StyleRecalcPass
         // 四重条件均成立时，本节点计算样式必与上帧一致，可跳过
         // resolve（含 elementCtx 构建、引擎匹配、指纹与 StylePool 查）：
         //   1. 已有上帧结果（computedStyle 非 null）
-        //   2. 样式相关 props 未变（!styleDirty，patchProps 精确置位）
+        //   2. 样式相关 props 未变（!needsStyleRecalc，patchProps 精确置位）
         //   3. 父 ComputedStyle **身份**相同（StylePool 内驻：同值即同对象）
         //   4. 外部上下文指纹相同（含规则表代次）
         // 注：**仍递归子层**——子节点可能自行脏。整棵子树跳过需在 patch 期
-        // 向上传播 childStyleDirty（Blink ChildNeedsStyleRecalc），属后续增量。
+        // 向上传播 childNeedsStyleRecalc（Blink ChildNeedsStyleRecalc），属后续增量。
         $ctxSig = self::styleCtxSig($parentClassStr, $precedingSiblingClasses, $ancestorClassLists, $elemIndex);
         $clean = self::$incrementalEnabled
             && $root->computedStyle !== null
-            && !$root->styleDirty
+            && !$root->needsStyleRecalc
             && $root->styleParentCS === $parentCS
             && $root->styleCtxSig === $ctxSig;
         if ($clean) {
@@ -65,7 +65,7 @@ class StyleRecalcPass
             // 观测点：分条件归因 clean 未命中的原因（对标 Blink 的 recalc 统计）。
             if ($root->computedStyle === null) {
                 \Px\Core\PerfCounter::inc('style_recalc_miss_nostyle');
-            } elseif ($root->styleDirty) {
+            } elseif ($root->needsStyleRecalc) {
                 \Px\Core\PerfCounter::inc('style_recalc_miss_dirty');
             } elseif ($root->styleParentCS !== $parentCS) {
                 \Px\Core\PerfCounter::inc('style_recalc_miss_parentcs');
@@ -102,7 +102,7 @@ class StyleRecalcPass
         // C4.1：记录本次据以计算的外部输入，并清除脏位。
         $root->styleParentCS = $parentCS;
         $root->styleCtxSig = $ctxSig;
-        $root->styleDirty = false;
+        $root->needsStyleRecalc = false;
         // C2.9：持久化伪类叠加（引擎/注册表产出）——此前为局部变量而丢弃，
         // 致 RTM 只能回落注册表重算（生产恒空）。与 computedStyle 同约定。
         if (!empty($pseudoStyles)) {
@@ -115,9 +115,9 @@ class StyleRecalcPass
         // elementCtx 故被掩盖；C2.5 引擎化后 elementCtx 缺失 → 规则不应用）。
         // 数组路径仍直接复用（写时复制零分配，且不合成多余 #text VNode）。
         // ── C4.1 子树跳过（对标 Blink ChildNeedsStyleRecalc）──
-        // 本节点 clean 且后代无脏 → 整棵子树无需递归。childStyleDirty 由
+        // 本节点 clean 且后代无脏 → 整棵子树无需递归。childNeedsStyleRecalc 由
         // patchProps/结构变更时沿父链置位，重算后清除，故为保守且准确。
-        if ($clean && !$root->childStyleDirty) {
+        if ($clean && !$root->childNeedsStyleRecalc) {
             \Px\Core\PerfCounter::inc('style_recalc_subtree_skip');
             return;
         }
@@ -166,7 +166,7 @@ class StyleRecalcPass
         }
         // C4.1：本层已完成全部后代递归，子树脏位清除（下帧由 patch 期
         // 沿父链重新置位）。
-        $root->childStyleDirty = false;
+        $root->childNeedsStyleRecalc = false;
     }
 
     /**

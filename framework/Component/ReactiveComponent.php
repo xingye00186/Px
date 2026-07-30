@@ -301,7 +301,7 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
             // C4.1：结构变更（引入新实例/数量变化）影响子层样式与元素序
             //（nth-child 等）→ 置脏并向上传播。
             if (self::childrenIdentityChanged($prevKids, $old->children)) {
-                self::markStyleDirtyUp($old);
+                self::markNeedsStyleRecalcUp($old);
             }
         } else {
             // 简单类型（string/null）或类型不一致：直接替换
@@ -317,11 +317,28 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
     {
         // C4.1：样式脏位（对标 Blink NeedsStyleRecalc）。VNode 实例跳帧复用且
         // props **原地改写**（getVNodeTree 将 patch 结果写回 $oldCache），故
-        // “同实例 + 外部输入未变”**不足以**判定样式未变。在此集中比对
-        // 样式相关 props 的前后快照，精确置脏（优于逐个改写点插标）。
-        $styleSigBefore = self::styleRelevantPropsSig($old);
-        // patchFlag 选择性更新 props
+        // “同实例 + 外部输入未变”**不足以**判定样式未变。
+        //
+        // 优化：签名比对只在**props 可能被改写且可能影响样式**时才做。
+        // 编译器已用 patchFlags 声明了“哪里是动态的”，无需重新推导：
+        //   - PATCH_NONE：本方法不改 props → 签名必相等 → 计算注定无效
+        //     （gen 应用中静态子树占多数，旧写法在此处纯浪费）
+        //   - CLASS/STYLE/STRUCT：直接改写 class/style 或整体替换 props → 必查
+        //   - 仅 EVENT/PROPS/TEXT：不碰 class/style；但引擎含**属性选择器**时
+        //     任意 prop 变动均可改变匹配 → 仍需查
         $flags = $old->patchFlags;
+        $needSigCheck = ($flags !== VNode::PATCH_NONE) && (
+            ($flags & (VNode::PATCH_CLASS | VNode::PATCH_STYLE | VNode::PATCH_STRUCT)) !== 0
+            || \Px\Css\StyleEngine::usesAttrRules()
+        );
+        $styleSigBefore = '';
+        if ($needSigCheck) {
+            \Px\Core\PerfCounter::inc('style_sig_check');
+            $styleSigBefore = self::styleRelevantPropsSig($old);
+        } else {
+            \Px\Core\PerfCounter::inc('style_sig_skip');
+        }
+        // patchFlag 选择性更新 props
         if ($flags === VNode::PATCH_NONE) {
             // 完全静态：跳过 props 更新
         } elseif (($flags & VNode::PATCH_STRUCT) !== 0 || $flags === VNode::PATCH_ALL) {
@@ -368,26 +385,26 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
                 }
             }
         }
-        // C4.1：样式相关 props 发生变化 → 置脏并**向上传播** childStyleDirty
+        // C4.1：样式相关 props 发生变化 → 置脏并**向上传播** childNeedsStyleRecalc
         //（不清脏：未变时保留已有脏状态，由 StyleRecalcPass 重算后统一清除）。
-        if (self::styleRelevantPropsSig($old) !== $styleSigBefore) {
-            self::markStyleDirtyUp($old);
+        if ($needSigCheck && self::styleRelevantPropsSig($old) !== $styleSigBefore) {
+            self::markNeedsStyleRecalcUp($old);
         }
     }
 
     /**
-     * C4.1：置节点脏并沿父链置 childStyleDirty（对标 Blink 的
+     * C4.1：置节点脏并沿父链置 childNeedsStyleRecalc（对标 Blink 的
      * SetNeedsStyleRecalc + MarkAncestorsWithChildNeedsStyleRecalc）。
      * 不提前终止：即使某层已为 true，也不保证其以上已被标记（上帧重算会
      * 清除各层）；以深度上限防循环引用。
      */
-    private static function markStyleDirtyUp(VNode $n): void
+    private static function markNeedsStyleRecalcUp(VNode $n): void
     {
-        $n->styleDirty = true;
+        $n->needsStyleRecalc = true;
         $p = $n->styleParentNode;
         $guard = 0;
         while ($p !== null && $guard < 4096) {
-            $p->childStyleDirty = true;
+            $p->childNeedsStyleRecalc = true;
             $p = $p->styleParentNode;
             $guard++;
         }

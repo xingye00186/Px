@@ -116,13 +116,13 @@ class VNode
      * patchProps 在样式相关 props 发生变化时置脏（实例跳帧复用且 props
      * 原地改写，故仅靠实例身份无法判定）；StyleRecalcPass 重算后清除。
      */
-    public bool $styleDirty = true;
+    public bool $needsStyleRecalc = true;
 
     /**
      * C4.1 子树脏位（对标 Blink ChildNeedsStyleRecalc）：后代中存在需重算节点。
-     * clean 且 !childStyleDirty 时，StyleRecalcPass 可跳过**整棵子树**递归。
+     * clean 且 !childNeedsStyleRecalc 时，StyleRecalcPass 可跳过**整棵子树**递归。
      */
-    public bool $childStyleDirty = true;
+    public bool $childNeedsStyleRecalc = true;
 
     /**
      * C4.1：上次重算时的父节点（由 StyleRecalcPass 写入）。实例跳帧复用使

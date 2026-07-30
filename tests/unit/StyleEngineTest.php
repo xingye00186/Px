@@ -301,7 +301,7 @@ test('C4.1 脏位正确性：同实例 + class 原地改写必重算（不得错
     $pass = new \Px\Css\StyleRecalcPass();
     $pass->recalc($n);
     assert_eq((int)$n->computedStyle->width->toPx(), 10, '首算 .aa → 10');
-    assert_true(!$n->styleDirty, '重算后脏位已清');
+    assert_true(!$n->needsStyleRecalc, '重算后脏位已清');
 
     // 模拟 patch 原地改写 class 但**未**置脏（旧不健全实现的情形）
     $n->props['class'] = 'bb';
@@ -309,7 +309,7 @@ test('C4.1 脏位正确性：同实例 + class 原地改写必重算（不得错
     assert_eq((int)$n->computedStyle->width->toPx(), 10, '未置脏时按设计跳过（仍为 10）');
 
     // 正确路径：patchProps 会置脏 → 重算得新值
-    $n->styleDirty = true;
+    $n->needsStyleRecalc = true;
     $pass->recalc($n);
     assert_eq((int)$n->computedStyle->width->toPx(), 20, '置脏后重算 .bb → 20');
     StyleEngine::reset();
@@ -340,8 +340,8 @@ test('C4.1 子树跳过：clean 且后代无脏时不递归（对标 ChildNeedsS
     $pass = new \Px\Css\StyleRecalcPass();
     $pass->recalc($top);
     assert_eq((int)$leaf->computedStyle->width->toPx(), 40, '首算叶子 .dd → 40');
-    assert_true(!$top->childStyleDirty, '重算后顶层 childStyleDirty 已清');
-    assert_true(!$mid->childStyleDirty, '重算后中层 childStyleDirty 已清');
+    assert_true(!$top->childNeedsStyleRecalc, '重算后顶层 childNeedsStyleRecalc 已清');
+    assert_true(!$mid->childNeedsStyleRecalc, '重算后中层 childNeedsStyleRecalc 已清');
 
     // 深层改写但不置脏——子树应被整体跳过，叶子保持 40
     $leaf->props['class'] = 'ee';
@@ -349,9 +349,9 @@ test('C4.1 子树跳过：clean 且后代无脏时不递归（对标 ChildNeedsS
     assert_eq((int)$leaf->computedStyle->width->toPx(), 40, '子树跳过 → 叶子仍 40');
 
     // 置脏并沿父链传播（同 patchProps 行为）→ 必重算
-    $leaf->styleDirty = true;
-    $mid->childStyleDirty = true;
-    $top->childStyleDirty = true;
+    $leaf->needsStyleRecalc = true;
+    $mid->childNeedsStyleRecalc = true;
+    $top->childNeedsStyleRecalc = true;
     $pass->recalc($top);
     assert_eq((int)$leaf->computedStyle->width->toPx(), 70, '传播脏位后 → 叶子重算得 70');
     StyleEngine::reset();
