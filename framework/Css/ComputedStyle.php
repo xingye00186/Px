@@ -257,6 +257,12 @@ class ComputedStyle
             }
         }
 
+        // C4 em/rem 级联感知：父 fontSize（font-size:em/% 相对父，CSS Values L3 §5.1.1）。
+        // parentDeclarations 携带父已解析值（int）；缺失回落默认 16。
+        $pfs = $parentDeclarations['fontSize'] ?? null;
+        $this->emParentFontSize = is_numeric($pfs) ? (int)$pfs
+            : ($pfs instanceof CssLength ? $pfs->toPx() : self::DEFAULT_FONT_SIZE);
+
         // C4 全局关键字级联解析（inherit/initial/unset/revert）——必须在
         // applyDeclarations（typed 解析）前，将关键字串替换为具体值。
         self::resolveGlobalKeywords($merged, $declarations, $parentDeclarations, $elementType);
@@ -393,11 +399,47 @@ class ComputedStyle
         ];
     }
 
+    // C4 em 解析基准：父元素 fontSize（构造时从 parentDeclarations 提取）。
+    // 仅供 font-size 自身的 em/% 解析；其余属性的 em 用元素自身 fontSize。
+    private int $emParentFontSize = self::DEFAULT_FONT_SIZE;
+
     /**
      * 从声明数组应用值。
      */
     private function applyDeclarations(array $d): void
     {
+        // ── fontSize 先行（C4 em/rem 级联感知，Blink computed-value 序）：
+        // 其余长度属性的 em 依赖元素自身 fontSize，必须最先解析。
+        // font-size 自身：em/% 相对父 fontSize，rem 相对根（默认 16）。
+        // 此前：fontSize 在长度之后解析（序错）且 toPx() 对 em 裸返
+        //（'2em'→2px 实锤）——单位丢失。
+        if (isset($d['fontSize'])) {
+            $fs = $d['fontSize'];
+            $fsLen = null;
+            if ($fs instanceof CssLength) {
+                $fsLen = $fs;
+            } elseif (is_numeric($fs)) {
+                $this->fontSize = (int)$fs;
+            } elseif (is_string($fs) && $fs !== '') {
+                $fsLen = CssLength::fromString($fs);
+            } else {
+                $this->fontSize = self::DEFAULT_FONT_SIZE;
+            }
+            if ($fsLen !== null) {
+                if ($fsLen->unit === 'em') {
+                    $this->fontSize = (int)round($fsLen->value * $this->emParentFontSize);
+                } elseif ($fsLen->unit === '%') {
+                    $this->fontSize = (int)round($fsLen->value * $this->emParentFontSize / 100.0);
+                } elseif ($fsLen->unit === 'rem') {
+                    $this->fontSize = (int)round($fsLen->value * self::DEFAULT_FONT_SIZE);
+                } else {
+                    $this->fontSize = $fsLen->toPx();
+                }
+            }
+        } else {
+            $this->fontSize = self::DEFAULT_FONT_SIZE;
+        }
+
         // ── CssLength 属性 ──
         $this->width = $this->resolveCssLength('width', $d) ?? $this->width;
         $this->height = $this->resolveCssLength('height', $d) ?? $this->height;
@@ -483,23 +525,7 @@ class ComputedStyle
         $this->applyPaddingMarginBorder($d);
 
         // ── 数值属性 ──
-        // fontSize 分支必须穷尽（readonly 静默跳过 = 半初始化对象，后续 getFontSize()
-        // 致命——与下方 lineHeight 历史缺陷同型）：字符串形态（'18px'，未经
-        // PROPERTY_MAP 预解析的声明）走 CssLength::fromString 解析而非丢弃。
-        if (isset($d['fontSize'])) {
-            $fs = $d['fontSize'];
-            if ($fs instanceof CssLength) {
-                $this->fontSize = $fs->toPx();
-            } elseif (is_numeric($fs)) {
-                $this->fontSize = (int)$fs;
-            } elseif (is_string($fs) && $fs !== '') {
-                $this->fontSize = (int)CssLength::fromString($fs)->toPx();
-            } else {
-                $this->fontSize = self::DEFAULT_FONT_SIZE;
-            }
-        } else {
-            $this->fontSize = self::DEFAULT_FONT_SIZE;
-        }
+        // fontSize 已在本方法顶部先行解析（C4 em/rem 级联感知）。
         // lineHeight: used value 解析（对标 Blink ComputedLineHeight）：
         //   '24px' → 24；'1.5'（number，×fontSize）→ round(1.5*fs)；'' (normal) → -1 哨兵。
         // 哨兵必须 -1 非 0：显式 line-height:0 与 normal 必须可区分（Blink 三态
@@ -660,11 +686,23 @@ class ComputedStyle
         // 优先 camelCase，fallback kebab-case
         $v = $d[$key] ?? $d[self::camelToKebab($key)] ?? null;
         if ($v === null) return null;
-        if ($v instanceof CssLength) return $v;
-        if ($v instanceof CssKeyword) return CssLength::fromString($v->value);
-        if (is_numeric($v)) return CssLength::px((float)$v);
-        if (is_string($v) && $v !== '') return CssLength::fromString($v);
-        return null;
+        $len = null;
+        if ($v instanceof CssLength) $len = $v;
+        elseif ($v instanceof CssKeyword) $len = CssLength::fromString($v->value);
+        elseif (is_numeric($v)) $len = CssLength::px((float)$v);
+        elseif (is_string($v) && $v !== '') $len = CssLength::fromString($v);
+        if ($len === null) return null;
+        // C4 em/rem computed-value 解析（CSS Values L3 §5.1.1，Blink：
+        // computed value 期 em→px，fontSize 已先行解析）：em 用元素自身
+        // fontSize，rem 用根（默认 16）。此前 toPx() 对 em 裸返 value
+        //（'width:2em'→2px 实锤）。%/vw/vh/calc 留布局期（需容器/视口）。
+        if ($len->unit === 'em') {
+            return CssLength::px((float)round($len->value * $this->fontSize));
+        }
+        if ($len->unit === 'rem') {
+            return CssLength::px((float)round($len->value * self::DEFAULT_FONT_SIZE));
+        }
+        return $len;
     }
 
     private function resolveColor(string $key, array $d): ?CssColor
