@@ -21,16 +21,18 @@ require_once __DIR__ . '/../CssTestBase.php';
 
 use Px\Dom\VNode;
 use Px\Css\CssMappings;
-use Px\Theme\ThemeProvider;
+use Px\Css\StyleEngine;
 
 $tests = [];
 
 // ── Test 1: 后代选择器（祖先 后代）匹配 ──
 $tests['后代选择器 .ancestor .child 匹配'] = function () {
-    ThemeProvider::registerClassStyles('test-selectors', CssMappings::parseStyleBlock(
+    // C2.9：由 ThemeProvider 注册表迁至 StyleEngine（真实 CSS 串，与 gen 同源）。
+    StyleEngine::reset();
+    StyleEngine::registerCss(
         '.child { width:80px; height:30px; }' . "\n" .
         '.ancestor .child { width:160px; }'
-    ));
+    );
     $result = run_minimal_pipeline(
         VNode::h('div', ['class' => 'ancestor', 'style' => 'width:200px;height:100px'], [
             VNode::h('div', ['class' => 'child', 'style' => 'height:30px'], 'Descendant'),
@@ -42,10 +44,11 @@ $tests['后代选择器 .ancestor .child 匹配'] = function () {
 
 // ── Test 2: 子代选择器（父 > 子）匹配 ──
 $tests['子代选择器 .parent > .direct-child 匹配'] = function () {
-    ThemeProvider::registerClassStyles('test-child-selector', CssMappings::parseStyleBlock(
+    StyleEngine::reset();
+    StyleEngine::registerCss(
         '.direct-child { height: 25px; }' . "\n" .
         '.parent > .direct-child { background:#FF0000; }'
-    ));
+    );
     $result = run_minimal_pipeline(
         VNode::h('div', ['class' => 'parent', 'style' => 'width:200px;height:100px'], [
             VNode::h('div', ['class' => 'direct-child', 'style' => 'height:25px'], 'Direct'),
@@ -57,10 +60,11 @@ $tests['子代选择器 .parent > .direct-child 匹配'] = function () {
 
 // ── Test 3: 特异性 class > element ──
 $tests['特异性 class选择器 > 元素选择器'] = function () {
-    ThemeProvider::registerClassStyles('test-specificity', CssMappings::parseStyleBlock(
+    StyleEngine::reset();
+    StyleEngine::registerCss(
         'div { width:50px; height:20px; }' . "\n" .
         '.specific { width:120px; height:40px; }'
-    ));
+    );
     $result = run_minimal_pipeline(
         VNode::h('div', ['class' => 'specific', 'style' => 'height:40px'], 'Specific')
     );

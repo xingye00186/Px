@@ -17,7 +17,6 @@ require_once __DIR__ . '/bootstrap.php';
 use Px\Dom\VNode;
 use Px\Render\RenderNode;
 use Px\Render\RenderTreeManager;
-use Px\Theme\ThemeProvider;
 
 // ─────────────────────────────────────────────
 // 辅助组件类

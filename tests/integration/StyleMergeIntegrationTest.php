@@ -14,7 +14,6 @@ use PxTest\Mock\MockComponent;
 use PxTest\Builder\VNodeBuilder;
 use Px\Core\Application;
 use Px\Core\Scheduler;
-use Px\Theme\ThemeProvider;
 use Px\Dom\VNode;
 
 if (!defined('APP_PLATFORM')) define('APP_PLATFORM', 'win32');

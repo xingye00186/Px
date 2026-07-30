@@ -24,7 +24,6 @@ use Px\Css\ComputedStyle;
 use Px\Render\RenderNode;
 use Px\Render\RenderTreeManager;
 use Px\Dom\VNode;
-use Px\Theme\ThemeProvider;
 
 // ══════════════════════════════════════════════════════════
 // 1. PhysicalFragmentBuilder 元数据传播

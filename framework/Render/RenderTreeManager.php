@@ -891,17 +891,11 @@ class RenderTreeManager
             }
             // 补充 pseudoStyles：StyleRecalcPass 已运行时从 theme 提取伪类/伪元素定义
             // （resolveClassStyles 通过 by-ref 填充，但 StyleRecalcPass 运行后不会进入降级分支）
-            // 补充 pseudoStyles：优先用 StyleRecalcPass 预算写入 VNode 的结果
-            // （C2.9：引擎/注册表产出，与 computedStyle 同预算约定）；否则回落
-            // 注册表提取（生产恒空，C2.9 删除 ThemeProvider 时本回落一并移除）。
+            // pseudoStyles 来源：StyleRecalcPass 预算写入 VNode（C2.9：引擎产出，
+            // 与 computedStyle 同预算约定）。旧 extractPseudoStyles 注册表回落已随
+            // ThemeProvider 删除（生产恒空，无功能依赖）。
             if (empty($pseudoStyles) && !empty($vnode->pseudoStyles)) {
                 $pseudoStyles = $vnode->pseudoStyles;
-            }
-            if (empty($pseudoStyles)) {
-                $pseudoStyles = \Px\Css\InlineStyleParser::extractPseudoStyles(
-                    $vnode->props['class'] ?? '',
-                    $vnode->type
-                );
             }
             // C2.8：烘焙伪类（:hover/:focus/:active）——生产活通道。
             // mergeClassStylesIntoNode 将命中伪类规则的 raw decls 烘焙到

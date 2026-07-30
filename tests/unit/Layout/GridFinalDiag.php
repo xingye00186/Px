@@ -75,7 +75,7 @@ class _GridDiagMockPlatform implements Platform
     public function shouldClose(): bool { return $this->shouldClose; }
 }
 
-use Px\Theme\ThemeProvider;
+use Px\Css\StyleEngine;
 
 echo "==========================================================\n";
 echo " Grid 最终诊断 — Application 级别\n";
@@ -104,7 +104,9 @@ foreach ($allComponents as $cls) {
     if (method_exists($inst, 'getClassStyles')) {
         $cs = $inst->getClassStyles();
         if (!empty($cs)) {
-            ThemeProvider::registerClassStyles($cls, $cs);
+            // C2.9：由注册表迁至 StyleEngine（读组件 styleSheetContents，
+            // 与 Application::registerComponent 生产同径）。
+            StyleEngine::registerComponentRules($inst);
         }
     }
 }

@@ -115,7 +115,7 @@ class _InstMockPlatform implements Platform
     public function shouldClose(): bool { return $this->shouldClose; }
 }
 
-use Px\Theme\ThemeProvider;
+use Px\Css\StyleEngine;
 
 echo "==========================================================\n";
 echo " Grid 深度仪器化诊断\n";
@@ -176,7 +176,8 @@ foreach ($allComponents as $cls) {
     if (method_exists($inst, 'getClassStyles')) {
         $cs = $inst->getClassStyles();
         if (!empty($cs)) {
-            ThemeProvider::registerClassStyles($cls, $cs);
+            // C2.9：由注册表迁至 StyleEngine（生产同径）。
+            StyleEngine::registerComponentRules($inst);
         }
     }
 }

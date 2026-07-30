@@ -4,8 +4,6 @@ namespace Px\Css;
 
 use native_types;
 
-use Px\Theme\ThemeProvider;
-
 /**
  * InlineStyleParser — 样式解析器
  *
@@ -50,11 +48,11 @@ class InlineStyleParser
         // 1. 内联样式已经是编译期数组，直接使用
 
         // 2. 合并 CSS class 样式 + tag 选择器样式（CSS 层叠：class 是 base，inline 覆盖）
-        $classDeclarations = self::resolveClassStyles($className, $parentClassStr, $precedingSiblingClasses, $pseudoStyles, $elementType, $ancestorClassLists);
-        $declarations = $classDeclarations;
-        // C2.5-full 门控接线：StyleEngine（gen StyleSheetContents 规则引擎）。
-        // 引擎空（生产未注册）= 零行为变化；非空时全 AST 匹配的声明在
-        // registry 类声明之后、inline 之前合并（同为 author class 层）。
+        // 2. CSS class 样式：由 StyleEngine（gen StyleSheetContents 规则引擎）产出。
+        // C2.9：旧 resolveClassStyles 读 ThemeProvider 注册表（生产恒空）已删除；
+        // 两者等价性经 tools/c25_equivalence_gate.php 验证（425 元素/6344 属性
+        // MISMATCH 0）。引擎空（未注册）= 空声明，行为同旧注册表恒空。
+        $declarations = [];
         $engineFp = '';
         if (!empty($elementCtx) && StyleEngine::ruleCount() > 0) {
             foreach (StyleEngine::declarationsFor($elementCtx) as $k => $v) {
@@ -259,109 +257,6 @@ class InlineStyleParser
         return $style;
     }
 
-    /**
-     * CSS class 样式解析。
-     */
-    private static function resolveClassStyles(
-        string $className,
-        string $parentClassStr,
-        array $precedingSiblingClasses,
-        array &$pseudoStyles,
-        string $elementType = 'div',
-        array $ancestorClassLists = []
-    ): array {
-        $allRegistered = ThemeProvider::getAllClassStyles();
-        $classNames = $className !== '' ? explode(' ', $className) : [];
-        $merged = [];
-
-        // C1.3：*/tag/简单类三层的层叠序决策移交 CascadeResolver（与编译期
-        // mergeClassStylesIntoNode 同源单点，消灭两套注释声明的层叠序）；
-        // 块 payload = 样式数组，排序后按序键覆盖（后写者胜）。
-        $blocks = [];
-        $blockOrder = 0;
-        foreach ($allRegistered as $compStyles) {
-            if (isset($compStyles['*'])) {
-                $blocks[] = ['payload' => $compStyles['*'], 'origin' => CascadeResolver::ORIGIN_AUTHOR,
-                    'important' => false, 'specificity' => [0, 0, 0, 0], 'order' => $blockOrder++];
-            }
-            // tag 选择器（如 body, html, p 等）
-            if (isset($compStyles[$elementType])) {
-                $blocks[] = ['payload' => $compStyles[$elementType], 'origin' => CascadeResolver::ORIGIN_AUTHOR,
-                    'important' => false, 'specificity' => [0, 0, 0, 1], 'order' => $blockOrder++];
-            }
-            // 注意：复合选择器 type subject（.first <comb> tag）不在运行时通道消费。
-            // ThemeProvider 注册表无组件 scope，subject 为裸 tag 时会跨组件波及所有
-            // 同名元素（同名类规则互污染）；该语义由编译期
-            // mergeClassStylesIntoNode（有 scope 隔离）单通道实现。
-        }
-        foreach ($classNames as $cnB) {
-            if ($cnB === '') continue;
-            foreach ($allRegistered as $compStyles) {
-                if (isset($compStyles[$cnB])) {
-                    $blocks[] = ['payload' => $compStyles[$cnB], 'origin' => CascadeResolver::ORIGIN_AUTHOR,
-                        'important' => false, 'specificity' => [0, 0, 1, 0], 'order' => $blockOrder++];
-                }
-            }
-        }
-        foreach (CascadeResolver::sortDeclarationBlocks($blocks) as $b) {
-            foreach ($b['payload'] as $k => $v) {
-                $merged[$k] = $v;
-            }
-        }
-
-        foreach ($classNames as $cn) {
-            if ($cn === '') continue;
-            foreach ($allRegistered as $compStyles) {
-                // Pseudo-class variants
-                foreach (['hover', 'focus', 'active'] as $pseudo) {
-                    $key = $cn . '__' . $pseudo;
-                    if (isset($compStyles[$key])) {
-                        if (!isset($pseudoStyles[$pseudo])) {
-                            $pseudoStyles[$pseudo] = [];
-                        }
-                        foreach ($compStyles[$key] as $k => $v) {
-                            $pseudoStyles[$pseudo][$k] = $v;
-                        }
-                    }
-                }
-                // ::before / ::after
-                foreach (['before', 'after'] as $pel) {
-                    $key = $cn . '__' . $pel;
-                    if (isset($compStyles[$key])) {
-                        if (!isset($pseudoStyles[$pel])) {
-                            $pseudoStyles[$pel] = [];
-                        }
-                        foreach ($compStyles[$key] as $k => $v) {
-                            $pseudoStyles[$pel][$k] = $v;
-                        }
-                    }
-                }
-                // Complex selectors（class subject：secondClass 非空；type subject 已在前置循环处理）
-                foreach ($compStyles as $styleKey => $styleValue) {
-                    if (str_starts_with((string)$styleKey, '__complex__') && is_array($styleValue)) {
-                        if ($styleValue['secondClass'] !== '' && $styleValue['secondClass'] === $cn) {
-                            $matches = CssMappings::matchComplexSelector(
-                                $styleValue['combinator'],
-                                $styleValue['firstClass'],
-                                $styleValue['secondClass'],
-                                $parentClassStr,
-                                $className,
-                                $precedingSiblingClasses,
-                                $ancestorClassLists
-                            );
-                            if ($matches) {
-                                foreach ($styleValue['props'] as $k => $v) {
-                                    $merged[$k] = $v;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return $merged;
-    }
 
     /**
      * AOT 兼容的 parser dispatcher。
@@ -451,47 +346,4 @@ class InlineStyleParser
         return $result;
     }
 
-    /**
-     * 提取伪类/伪元素样式定义（不执行完整样式解析）。
-     * 供 updateFromVNode 在 StyleRecalcPass 已运行场景下补充 pseudoStyles 数据。
-     *
-     * @param string $className CSS class 名称
-     * @param string $elementType 元素类型
-     * @return array key 为 'hover'/'focus'/'active'/'before'/'after'
-     */
-    public static function extractPseudoStyles(string $className, string $elementType = 'div'): array
-    {
-        $pseudoStyles = [];
-        if ($className === '') return $pseudoStyles;
-        $allRegistered = ThemeProvider::getAllClassStyles();
-        $classNames = explode(' ', $className);
-        foreach ($classNames as $cn) {
-            if ($cn === '') continue;
-            foreach ($allRegistered as $compStyles) {
-                foreach (['hover', 'focus', 'active'] as $pseudo) {
-                    $key = $cn . '__' . $pseudo;
-                    if (isset($compStyles[$key])) {
-                        if (!isset($pseudoStyles[$pseudo])) {
-                            $pseudoStyles[$pseudo] = [];
-                        }
-                        foreach ($compStyles[$key] as $k => $v) {
-                            $pseudoStyles[$pseudo][$k] = $v;
-                        }
-                    }
-                }
-                foreach (['before', 'after'] as $pel) {
-                    $key = $cn . '__' . $pel;
-                    if (isset($compStyles[$key])) {
-                        if (!isset($pseudoStyles[$pel])) {
-                            $pseudoStyles[$pel] = [];
-                        }
-                        foreach ($compStyles[$key] as $k => $v) {
-                            $pseudoStyles[$pel][$k] = $v;
-                        }
-                    }
-                }
-            }
-        }
-        return $pseudoStyles;
-    }
 }

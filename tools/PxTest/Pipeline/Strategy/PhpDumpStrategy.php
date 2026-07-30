@@ -102,7 +102,6 @@ class PhpDumpStrategy implements DumpStrategy
             $fwDir . '/Styling/Theme/ComponentTheme.php',
             $fwDir . '/Styling/Theme/TextTheme.php',
             $fwDir . '/Styling/Theme/ThemeData.php',
-            $fwDir . '/Styling/Provider/ThemeProvider.php',
             $fwDir . '/Styling/Adapter/PlatformStyling.php',
             $fwDir . '/Styling/Adapter/Win32Styling.php',
             $fwDir . '/Styling/Adapter/MacOSStyling.php',

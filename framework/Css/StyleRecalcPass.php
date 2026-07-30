@@ -99,11 +99,8 @@ class StyleRecalcPass
         // class 串，而它进入 StylePool key 的兄弟指纹：第 k 个子指纹含前 k-1 个
         // class，故 n 个同类兄弟产生 n 个**互异**池条目且指纹长 O(n) —— O(n²)
         // 字符串内存，且丧失本该全部命中的池复用。
-        // 注册表（ThemeProvider，C2.9 待删）非空时保守地维持旧行为，因其
-        // __complex__ 兄弟规则同样消费 precedingSiblingClasses（生产恒空，
-        // 故生产路径得快路径）。
-        $trackSiblings = StyleEngine::usesSiblingRules()
-            || !empty(\Px\Theme\ThemeProvider::getAllClassStyles());
+        // C2.9：ThemeProvider 注册表已删除，此处为纯特征门控。
+        $trackSiblings = StyleEngine::usesSiblingRules();
         $childIdx = 1;
         foreach ($children as $child) {
             if ($child instanceof VNode) {

@@ -14,7 +14,7 @@
  *   4. ScrollManager      — 拖拽状态残留
  *   5. PaintPipeline      — 帧号溢出 + 栈平衡
  *   6. ReactiveComponent  — 事件处理器泄漏
- *   7. ThemeProvider      — 全局注册表增长
+ *   7. StyleEngine        — 全局规则存量增长
  *
  * Usage: php tests/unit/MemoryStressTest.php
  */
@@ -24,7 +24,6 @@ require_once __DIR__ . '/bootstrap.php';
 use Px\Dom\VNode;
 use Px\Render\RenderNode;
 use Px\Render\RenderTreeManager;
-use Px\Theme\ThemeProvider;
 use Px\Core\Scheduler;
 use Px\Core\Application;
 use Px\Core\ScrollManager;
@@ -459,21 +458,21 @@ echo "  After manual clear: componentInstance=" . ($vn6d->componentInstance === 
 echo "\n";
 
 // =============================================
-// 7. ThemeProvider
+// 7. StyleEngine 规则存量（C2.9：取代 ThemeProvider 注册表）
 // =============================================
-echo "═══ 7. ThemeProvider ═══\n\n";
+echo "═══ 7. StyleEngine ═══\n\n";
 
-echo "--- 7a. classStyleRegistry 只增不减 ---\n";
-$tBefore = count(ThemeProvider::getAllClassStyles());
+echo "--- 7a. 规则存量只增不减（除 reset） ---\n";
+$tBefore = \Px\Css\StyleEngine::ruleCount();
 for ($i = 0; $i < 100; $i++) {
-    ThemeProvider::registerClassStyles("DynamicComp_{$i}", [
-        "s{$i}" => ['bg' => $i],
-    ]);
+    \Px\Css\StyleEngine::registerCss(".s{$i} { background:#0000{$i}0; }");
 }
-$tAfter = count(ThemeProvider::getAllClassStyles());
+$tAfter = \Px\Css\StyleEngine::ruleCount();
 $tGrowth = $tAfter - $tBefore;
 echo "  Growth: {$tBefore} → {$tAfter} (+{$tGrowth})\n";
-echo "  ⚠ 注册表永不清零 —— 动态组件场景持续增长\n";
+echo "  ⚠ 规则存量仅 reset() 回收 —— 动态组件场景持续增长\n";
+\Px\Css\StyleEngine::reset();
+echo "  reset 后: " . \Px\Css\StyleEngine::ruleCount() . "\n";
 
 echo "\n";
 
@@ -582,10 +581,8 @@ echo "\n============================================\n";
 echo " 测试完成\n";
 echo "============================================\n";
 
-// 清理 ThemeProvider 状态（影响其他测试）
-$resetProp = new \ReflectionProperty(ThemeProvider::class, 'classStyleRegistry');
-$resetProp->setAccessible(true);
-$resetProp->setValue(null, []);
+// 清理 StyleEngine 状态（影响其他测试）——C2.9：无需反射，公开 reset()
+\Px\Css\StyleEngine::reset();
 
 // =============================================
 // 10. Component Positioning (layoutOffset)

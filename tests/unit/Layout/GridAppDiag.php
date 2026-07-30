@@ -26,7 +26,7 @@ require_once __DIR__ . '/../../../apps/bilibili/gen/VcInputComponent.php';
 require_once __DIR__ . '/../../../apps/bilibili/gen/VcButtonComponent.php';
 require_once __DIR__ . '/../../../apps/bilibili/gen/VcAvatarComponent.php';
 
-use Px\Theme\ThemeProvider;
+use Px\Css\StyleEngine;
 
 echo "==========================================================\n";
 echo " Grid 全链路诊断 (App 级别)\n";
@@ -266,7 +266,8 @@ $app->registerComponent('app', $rootComponent);
 
 // 注册 class styles
 if (method_exists($rootComponent, 'getClassStyles')) {
-    ThemeProvider::registerClassStyles(get_class($rootComponent), $rootComponent->getClassStyles());
+    // C2.9：由注册表迁至 StyleEngine（生产同径）。
+    StyleEngine::registerComponentRules($rootComponent);
 }
 
 echo "--- Step 2: 帧1 — rebuildVNodeTree ---\n";
