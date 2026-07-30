@@ -16,7 +16,7 @@ use Px\Css\InlineStyleParser;
  */
 class StyleRecalcPass
 {
-    public function recalc(VNode $root, ?ComputedStyle $parentCS = null, string $parentClassStr = '', array $precedingSiblingClasses = [], array $ancestorClassLists = []): void
+    public function recalc(VNode $root, ?ComputedStyle $parentCS = null, string $parentClassStr = '', array $precedingSiblingClasses = [], array $ancestorClassLists = [], array $ancestorCtx = [], array $prevSiblingCtx = [], int $elemIndex = 1): void
     {
         if ($root->isComponent) {
             // Component 节点不直接渲染，展开后由子组件管理
@@ -43,6 +43,12 @@ class StyleRecalcPass
         }
 
         $pseudoStyles = [];
+        // C2.5-full：构建 SelectorChecker 元素上下文（仅引擎活跃时，避免
+        // 生产无用开销）。引擎空 → 空上下文 → resolve 不走引擎分支。
+        $elementCtx = [];
+        if (StyleEngine::ruleCount() > 0) {
+            $elementCtx = self::buildElementCtx($root, $className, $ancestorCtx, $prevSiblingCtx, $elemIndex);
+        }
         $computedStyle = InlineStyleParser::resolve(
             inlineStyle: $inlineStyle,
             className: $className,
@@ -55,7 +61,9 @@ class StyleRecalcPass
             pseudoStyles: $pseudoStyles,
             // C2.5：传完整祖先 class 链（根→直接父），使后代组合子跨中间
             // 元素匹配任意祖先（与编译期 MiscHelper 语义一致，CSS Selectors L3）。
-            ancestorClassLists: $ancestorClassLists
+            ancestorClassLists: $ancestorClassLists,
+            // C2.5-full：StyleEngine 全 AST 匹配所需元素上下文。
+            elementCtx: $elementCtx
         );
 
         $root->computedStyle = $computedStyle;
@@ -68,15 +76,60 @@ class StyleRecalcPass
         if ($className !== '') {
             $childAncestors[] = $className;
         }
+        // C2.5-full：子层元素上下文链（根→直接父）+ 兄弟上下文累积 + 元素序。
+        $childAncCtx = $ancestorCtx;
+        if (!empty($elementCtx)) {
+            $childAncCtx[] = $elementCtx;
+        }
+        $sibCtxAcc = [];
+        $childIdx = 1;
         foreach ($children as $child) {
             if ($child instanceof VNode) {
                 // 递归直传父 ComputedStyle 对象（O(1) 身份），不再传 toExportArray()
-                $this->recalc($child, $computedStyle, $className, $siblingAcc, $childAncestors);
+                $this->recalc($child, $computedStyle, $className, $siblingAcc, $childAncestors, $childAncCtx, $sibCtxAcc, $childIdx);
                 $cc = $child->props['class'] ?? '';
                 if (is_string($cc) && $cc !== '') {
                     $siblingAcc[] = $cc;
                 }
+                if (!empty($elementCtx) && $child->type !== '#text') {
+                    $sibCtxAcc[] = self::buildElementCtx($child, is_string($cc) ? $cc : '', $childAncCtx, [], $childIdx);
+                }
+                if ($child->type !== '#text') {
+                    $childIdx++;
+                }
             }
         }
+    }
+
+    /**
+     * C2.5-full：由 VNode 构建 SelectorChecker 元素上下文（纯数组，AOT 友好）。
+     * 对标 Blink Element 选择器匹配所需数据要素：tag/id/classes/attrs/
+     * index（1-based 元素序，供 nth-child）/ancestors（根→直接父）/prevSiblings。
+     */
+    private static function buildElementCtx(VNode $node, string $className, array $ancestorCtx, array $prevSiblingCtx, int $index): array
+    {
+        $classes = [];
+        if ($className !== '') {
+            foreach (explode(' ', $className) as $c) {
+                if ($c !== '') $classes[] = $c;
+            }
+        }
+        $attrs = [];
+        $props = is_array($node->props) ? $node->props : [];
+        foreach ($props as $pk => $pv) {
+            if ($pk === 'style' || $pk === 'class') continue;
+            if (is_string($pv) || is_int($pv) || is_float($pv)) {
+                $attrs[(string)$pk] = (string)$pv;
+            }
+        }
+        return [
+            'tag'          => $node->type,
+            'id'           => isset($props['id']) && is_string($props['id']) ? $props['id'] : null,
+            'classes'      => $classes,
+            'attrs'        => $attrs,
+            'index'        => $index,
+            'ancestors'    => $ancestorCtx,
+            'prevSiblings' => $prevSiblingCtx,
+        ];
     }
 }

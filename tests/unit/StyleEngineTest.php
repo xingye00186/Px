@@ -83,5 +83,31 @@ test('真实 gen RuleData 消费（css-test Case001）', function () {
     assert_true(isset($d['marginBottom']) || isset($d['margin-bottom']) || isset($d['margin']), 'test-header 命中 margin 族声明');
 });
 
+test('端到端接线：StyleRecalcPass 消费 StyleEngine（非死代码）', function () {
+    // 引擎空 → 零行为变化（生产态）
+    StyleEngine::reset();
+    $t1 = \Px\Dom\VNode::h('div', ['class' => 'eng-x', 'style' => ''], 'x');
+    (new \Px\Css\StyleRecalcPass())->recalc($t1);
+    $w0 = (int)$t1->computedStyle->width->toPx();
+
+    // 引擎注册后 → 声明生效
+    StyleEngine::register(StyleSheetContents::build('.eng-x { width: 123px; }'));
+    $t2 = \Px\Dom\VNode::h('div', ['class' => 'eng-x', 'style' => ''], 'x');
+    (new \Px\Css\StyleRecalcPass())->recalc($t2);
+    assert_eq((int)$t2->computedStyle->width->toPx(), 123, '引擎规则经 StyleRecalcPass 生效 → 123');
+    assert_true($w0 !== 123, '引擎空时不生效（零行为变化保证）');
+
+    // 后代组合子经真实 VNode 树上下文
+    StyleEngine::reset();
+    StyleEngine::register(StyleSheetContents::build('.eng-p .eng-c { width: 77px; }'));
+    $child = \Px\Dom\VNode::h('div', ['class' => 'eng-c', 'style' => ''], 'x');
+    $tree = \Px\Dom\VNode::h('div', ['class' => 'eng-p'], [
+        \Px\Dom\VNode::h('div', ['class' => 'eng-mid'], [$child]),
+    ]);
+    (new \Px\Css\StyleRecalcPass())->recalc($tree);
+    assert_eq((int)$child->computedStyle->width->toPx(), 77, '.eng-p .eng-c 跨中间层经元素上下文匹配');
+    StyleEngine::reset();
+});
+
 $exitCode = print_summary();
 exit($exitCode);

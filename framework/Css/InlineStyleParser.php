@@ -40,7 +40,8 @@ class InlineStyleParser
         string $parentClassStr = '',
         array $precedingSiblingClasses = [],
         array &$pseudoStyles = [],
-        array $ancestorClassLists = []
+        array $ancestorClassLists = [],
+        array $elementCtx = []
     ): ComputedStyle {
         // 防御：空 string → []（编译期未覆盖的空 style 路径）
         if (!is_array($inlineStyle)) {
@@ -51,6 +52,29 @@ class InlineStyleParser
         // 2. 合并 CSS class 样式 + tag 选择器样式（CSS 层叠：class 是 base，inline 覆盖）
         $classDeclarations = self::resolveClassStyles($className, $parentClassStr, $precedingSiblingClasses, $pseudoStyles, $elementType, $ancestorClassLists);
         $declarations = $classDeclarations;
+        // C2.5-full 门控接线：StyleEngine（gen StyleSheetContents 规则引擎）。
+        // 引擎空（生产未注册）= 零行为变化；非空时全 AST 匹配的声明在
+        // registry 类声明之后、inline 之前合并（同为 author class 层）。
+        $engineFp = '';
+        if (!empty($elementCtx) && StyleEngine::ruleCount() > 0) {
+            foreach (StyleEngine::declarationsFor($elementCtx) as $k => $v) {
+                $declarations[$k] = $v;
+            }
+            // 引擎声明依赖完整元素上下文（ancestors/nth/兄弟），超出既有
+            // key 维度 → 上下文指纹入 key，避免跨元素池碰撞。（AOT：无闭包）
+            $ancClasses = [];
+            foreach (($elementCtx['ancestors'] ?? []) as $anc) {
+                $ancClasses[] = $anc['classes'] ?? [];
+            }
+            $sibClasses = [];
+            foreach (($elementCtx['prevSiblings'] ?? []) as $sib) {
+                $sibClasses[] = $sib['classes'] ?? [];
+            }
+            $engineFp = md5(serialize([
+                $elementCtx['classes'] ?? [], $elementCtx['tag'] ?? '',
+                $elementCtx['index'] ?? 0, $ancClasses, $sibClasses,
+            ]));
+        }
         foreach ($inlineStyle as $k => $v) {
             $declarations[$k] = $v;
         }
@@ -67,7 +91,8 @@ class InlineStyleParser
             $className,
             // C2.6（key 部分）：兄弟指纹入 key，修兄弟组合子跨元素
             // 缓存碰撞（C2.4 残留；只影响含前序兄弟的运行时通道）。
-            empty($precedingSiblingClasses) ? '' : implode(',', $precedingSiblingClasses)
+            // C2.5：引擎活跃时附加上下文指纹（引擎空时 '' 不改既有 key）。
+            (empty($precedingSiblingClasses) ? '' : implode(',', $precedingSiblingClasses)) . $engineFp
         );
     }
 
