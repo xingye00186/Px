@@ -38,6 +38,31 @@ class AotChecker
             'message' => 'AOT: 可变变量 $$var（AOT 不支持）',
         ],
 
+        // 1a. 跳类常量转发别名：const X = OtherClass::CONST;
+        // 实跑实锤（@47a54402）：swoole 编译器在类注册期求值该类常量时硬失败
+        //   Call to private method TypePhp\Translator::evaluate() from scope
+        //   PhpParser\ConstExprEvaluator
+        //   （ClassInfo::getRegistration → ConstInfo::getDeclaration →
+        //     getClassConstValue → evaluateArray）
+        // 且**中断整个 AOT 编译**。单源应让调用方直指权威类，而非加一层转发。
+        'aot_const_forward_alias' => [
+            'severity' => 'ERROR',
+            'pattern' => '/const\s+[A-Z_][A-Z0-9_]*\s*=\s*\\\\?[A-Za-z_][A-Za-z0-9_\\\\]*::[A-Z_][A-Z0-9_]*\s*;/',
+            'message' => 'AOT: 类常量转发别名 const X = OtherClass::CONST 使编译器类注册期硬失败（该删除别名，调用方直指权威类）',
+        ],
+
+        // 1b. switch 内 continue（含 continue N）
+        // 实跑实锤：编译器要求每个 case 以 return/break/exit/throw 结尾，报
+        //   "switch case must end with return/break/exit/throw, Stmt_Continue given"
+        // 注意：`continue 2` 目标是外层循环，**break 不等价**，需改写为 if 链。
+        // （本规则为残余风险提示：continue N 仅在 switch 内时才是硬错，
+        //   嵌套循环内合法，故定为 WARNING 由人工判定上下文。）
+        'aot_switch_continue' => [
+            'severity' => 'WARNING',
+            'pattern' => '/continue\s+[0-9]+\s*;/',
+            'message' => 'AOT: continue N 若位于 switch 内则编译硬失败（case 必须以 return/break/exit/throw 结尾）；嵌套循环内合法，请核实上下文',
+        ],
+
         // 2. 动态属性访问 ->$var (包括嵌套链)
         'aot_variable_property' => [
             'severity' => 'ERROR',
