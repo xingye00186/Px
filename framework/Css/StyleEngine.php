@@ -58,6 +58,16 @@ final class StyleEngine
         self::$registeredClasses = [];
     }
 
+    /**
+     * 从 CSS 串注册规则（测试/动态场景便捷入口）。
+     * 与 gen 同一构建器 StyleSheetContents::build，避免测试与生产两套形态。
+     * C2.9：取代 ThemeProvider::registerClassStyles（注册表格式注入）。
+     */
+    public static function registerCss(string $css, string $scopeId = ''): void
+    {
+        self::register(StyleSheetContents::build($css, $scopeId));
+    }
+
     public static function ruleCount(): int
     {
         return count(self::$rules);

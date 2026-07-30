@@ -134,6 +134,17 @@ final class SelectorChecker
         foreach ($compound['pseudoClasses'] as $pc) {
             if (!self::matchPseudoClass($pc, $element)) return false;
         }
+        // 伪元素（::before/::after 等，CSS Pseudo-Elements L4）：规则的 subject 是
+        // 生成的匿名盒，**不作用于原始元素**。根因治本：旧 matchCompound
+        // 只查 pseudoClasses 而忽略 pseudoEls，引擎激活后使 `.b::before{}` 的
+        // 声明（含 content）无条件流入基态（探针实锤 bg 255 应 0）——与
+        // :hover 同类过匹配。元素上下文可携 pseudoEl 标记表示自身就是
+        // 该伪元素盒（编译期合成的 span 子，C2.8/伪元素烘焙）。
+        $pseudoEls = $compound['pseudoEls'] ?? [];
+        if (!empty($pseudoEls)) {
+            $selfPe = $element['pseudoEl'] ?? null;
+            if ($selfPe === null || !in_array($selfPe, $pseudoEls, true)) return false;
+        }
         return true;
     }
 

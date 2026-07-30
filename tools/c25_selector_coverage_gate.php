@@ -111,6 +111,13 @@ expectMatch(".sa ~ .t $M", ctx(['classes' => ['t'], 'prevSiblings' => [$sm]]), f
 expectMatch(".gp .mid > .c $M", ctx(['classes' => ['c'], 'ancestors' => [$gp, $mid]]), true, '三级链正例');
 expectMatch(".gp .mid > .c $M", ctx(['classes' => ['c'], 'ancestors' => [$mid, $gp]]), false, '三级链序错负例');
 
+// ── 8. 伪元素（CSS Pseudo-Elements L4：规则不作用于原始元素）──
+expectMatch(".b::before $M", ctx(['classes' => ['b']]), false, '::before 不匹配原始元素');
+expectMatch(".b::after $M",  ctx(['classes' => ['b']]), false, '::after 不匹配原始元素');
+expectMatch(".b::before $M", ctx(['classes' => ['b'], 'pseudoEl' => 'before']), true,  '::before 匹配该伪元素盒');
+expectMatch(".b::before $M", ctx(['classes' => ['b'], 'pseudoEl' => 'after']),  false, '::before 不匹配 after 盒');
+expectMatch(".b $M", ctx(['classes' => ['b'], 'pseudoEl' => 'before']), true, '无伪元素选择器仍匹配伪元素盒（继承基类）');
+
 echo "========================================\n";
 echo " C2.5-full 选择器覆盖矩阵门控\n";
 echo "========================================\n";
