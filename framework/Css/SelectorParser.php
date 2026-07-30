@@ -89,7 +89,12 @@ final class SelectorParser
                 $i++; continue;
             }
             // 解析一个 compound
-            [$compound, $i] = self::parseCompound($tokens, $i, $n);
+            // 同族（见下方 parseAttr/readParenArg 注记）：列表解构不得直接写
+            // 已推断为 int 的 $i。编译器先在 486/574 处中断，故本行未被报出，
+            // 但属同一缺陷，一并治本。
+            $cpRes = self::parseCompound($tokens, $i, $n);
+            $compound = $cpRes[0];
+            $i = (int)$cpRes[1];
             if (!empty($compounds)) {
                 $combinators[] = $pendingCombinator ?? ' ';
             }
@@ -136,7 +141,13 @@ final class SelectorParser
                 continue;
             }
             if ($type === CssTokenizer::T_LBRACKET) {
-                [$attr, $i] = self::parseAttr($tokens, $i + 1, $n);
+                // AOT native_types：列表解构的元素为 php::Variant，直接赋给已推断为
+                // int 的 $i 会报 C2440（实跑实锤：SelectorParser.cc:486
+                // "error C2440: 无法从 php::Variant 转换"）。改为先接整个返回值，
+                // 再逐项取出并对 int 项显式 (int) 强转。
+                $attrRes = self::parseAttr($tokens, $i + 1, $n);
+                $attr = $attrRes[0];
+                $i = (int)$attrRes[1];
                 if ($attr !== null) $compound['attrs'][] = $attr;
                 continue;
             }
@@ -153,7 +164,10 @@ final class SelectorParser
                     $pcName = strtolower($tokens[$i]['value']); $i++;
                     $arg = null;
                     if ($i < $n && $tokens[$i]['type'] === CssTokenizer::T_LPAREN) {
-                        [$arg, $i] = self::readParenArg($tokens, $i + 1, $n);
+                        // 同上（SelectorParser.cc:574）：避免列表解构直接写 int 变量。
+                        $argRes = self::readParenArg($tokens, $i + 1, $n);
+                        $arg = $argRes[0];
+                        $i = (int)$argRes[1];
                     }
                     $compound['pseudoClasses'][] = ['name' => $pcName, 'arg' => $arg];
                 }
