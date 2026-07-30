@@ -169,6 +169,7 @@ echo "C2.7 index             : " . ($useIndex ? 'ON' : 'OFF (default)') . "\n";
 echo "static hoisting        : " . ($useHoist ? 'ON (production gen form)' : 'OFF') . "\n";
 echo "C4.1 incremental       : " . ($noSkip ? 'OFF (--noskip)' : 'ON') . "\n";
 echo "node skips             : " . (int)($snap['style_recalc_node_skip']['count'] ?? 0) . "\n";
+echo "subtree skips          : " . (int)($snap['style_recalc_subtree_skip']['count'] ?? 0) . "\n";
 echo "  miss: no prev style  : " . (int)($snap['style_recalc_miss_nostyle']['count'] ?? 0) . "\n";
 echo "  miss: styleDirty     : " . (int)($snap['style_recalc_miss_dirty']['count'] ?? 0) . "\n";
 echo "  miss: parentCS ident : " . (int)($snap['style_recalc_miss_parentcs']['count'] ?? 0) . "\n";

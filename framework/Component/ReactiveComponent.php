@@ -296,7 +296,13 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
             $this->patchVNodeTree($old->children, $new->children);
         } elseif (is_array($old->children) && is_array($new->children)) {
             // 多子节点：按 key 匹配 patch
+            $prevKids = $old->children;
             $old->children = $this->patchChildrenArray($old->children, $new->children);
+            // C4.1：结构变更（引入新实例/数量变化）影响子层样式与元素序
+            //（nth-child 等）→ 置脏并向上传播。
+            if (self::childrenIdentityChanged($prevKids, $old->children)) {
+                self::markStyleDirtyUp($old);
+            }
         } else {
             // 简单类型（string/null）或类型不一致：直接替换
             $old->children = $new->children;
@@ -362,11 +368,44 @@ abstract class ReactiveComponent extends BaseComponent implements ComponentInter
                 }
             }
         }
-        // C4.1：样式相关 props 发生变化 → 置脏（不清脏：未变时保留已有脏
-        // 状态，由 StyleRecalcPass 重算后统一清除）。
+        // C4.1：样式相关 props 发生变化 → 置脏并**向上传播** childStyleDirty
+        //（不清脏：未变时保留已有脏状态，由 StyleRecalcPass 重算后统一清除）。
         if (self::styleRelevantPropsSig($old) !== $styleSigBefore) {
-            $old->styleDirty = true;
+            self::markStyleDirtyUp($old);
         }
+    }
+
+    /**
+     * C4.1：置节点脏并沿父链置 childStyleDirty（对标 Blink 的
+     * SetNeedsStyleRecalc + MarkAncestorsWithChildNeedsStyleRecalc）。
+     * 不提前终止：即使某层已为 true，也不保证其以上已被标记（上帧重算会
+     * 清除各层）；以深度上限防循环引用。
+     */
+    private static function markStyleDirtyUp(VNode $n): void
+    {
+        $n->styleDirty = true;
+        $p = $n->styleParentNode;
+        $guard = 0;
+        while ($p !== null && $guard < 4096) {
+            $p->childStyleDirty = true;
+            $p = $p->styleParentNode;
+            $guard++;
+        }
+    }
+
+    /**
+     * C4.1：子节点数组是否发生**实例级**变更（长度或逐位身份不同）。
+     * 仅比身份与长度，O(n) 且无分配；patch 后复用旧实例时返回 false。
+     */
+    private static function childrenIdentityChanged(array $before, array $after): bool
+    {
+        if (count($before) !== count($after)) return true;
+        $i = 0;
+        foreach ($after as $node) {
+            if (!array_key_exists($i, $before) || $before[$i] !== $node) return true;
+            $i++;
+        }
+        return false;
     }
 
     /**

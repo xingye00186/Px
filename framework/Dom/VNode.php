@@ -118,6 +118,19 @@ class VNode
      */
     public bool $styleDirty = true;
 
+    /**
+     * C4.1 子树脏位（对标 Blink ChildNeedsStyleRecalc）：后代中存在需重算节点。
+     * clean 且 !childStyleDirty 时，StyleRecalcPass 可跳过**整棵子树**递归。
+     */
+    public bool $childStyleDirty = true;
+
+    /**
+     * C4.1：上次重算时的父节点（由 StyleRecalcPass 写入）。实例跳帧复用使
+     * 该链在下一帧 patch 期仍有效，供脏位向上传播（patch 自顶向下递归，
+     * 无现成父指针）。
+     */
+    public ?VNode $styleParentNode = null;
+
     // ===== Vue 3 patchFlag 兼容（编译器级动态绑定标记）=====
 
     /** 无动态绑定（完全静态） */

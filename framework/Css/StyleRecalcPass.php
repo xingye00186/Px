@@ -114,6 +114,14 @@ class StyleRecalcPass
         // 静默跳过，computedStyle 恒 null，RTM 只能回落（旧注册表无需
         // elementCtx 故被掩盖；C2.5 引擎化后 elementCtx 缺失 → 规则不应用）。
         // 数组路径仍直接复用（写时复制零分配，且不合成多余 #text VNode）。
+        // ── C4.1 子树跳过（对标 Blink ChildNeedsStyleRecalc）──
+        // 本节点 clean 且后代无脏 → 整棵子树无需递归。childStyleDirty 由
+        // patchProps/结构变更时沿父链置位，重算后清除，故为保守且准确。
+        if ($clean && !$root->childStyleDirty) {
+            \Px\Core\PerfCounter::inc('style_recalc_subtree_skip');
+            return;
+        }
+
         $children = is_array($root->children)
             ? $root->children
             : VNode::childrenToArray($root->children);
@@ -140,6 +148,8 @@ class StyleRecalcPass
         $childIdx = 1;
         foreach ($children as $child) {
             if ($child instanceof VNode) {
+                // C4.1：写入父链（供下帧 patch 期脏位向上传播）。
+                $child->styleParentNode = $root;
                 // 递归直传父 ComputedStyle 对象（O(1) 身份），不再传 toExportArray()
                 $this->recalc($child, $computedStyle, $className, $siblingAcc, $childAncestors, $childAncCtx, $sibCtxAcc, $childIdx);
                 $cc = $child->props['class'] ?? '';
@@ -154,6 +164,9 @@ class StyleRecalcPass
                 }
             }
         }
+        // C4.1：本层已完成全部后代递归，子树脏位清除（下帧由 patch 期
+        // 沿父链重新置位）。
+        $root->childStyleDirty = false;
     }
 
     /**

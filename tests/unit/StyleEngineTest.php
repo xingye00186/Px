@@ -329,5 +329,33 @@ test('C4.1 规则表代次：新注册规则必令旧缓存失效', function () 
     StyleEngine::reset();
 });
 
+test('C4.1 子树跳过：clean 且后代无脏时不递归（对标 ChildNeedsStyleRecalc）', function () {
+    // 行为型验证（不依赖 PerfCounter）：子树被跳过时，即使深层子节点的
+    // class 被原地改写且**未置脏**，其样式也不会被重算。
+    StyleEngine::reset();
+    StyleEngine::registerCss('.dd { width:40px; } .ee { width:70px; }');
+    $leaf = \Px\Dom\VNode::h('div', ['class' => 'dd', 'style' => ''], 'x');
+    $mid  = \Px\Dom\VNode::h('div', ['class' => 'mid', 'style' => ''], [$leaf]);
+    $top  = \Px\Dom\VNode::h('div', ['class' => 'top', 'style' => ''], [$mid]);
+    $pass = new \Px\Css\StyleRecalcPass();
+    $pass->recalc($top);
+    assert_eq((int)$leaf->computedStyle->width->toPx(), 40, '首算叶子 .dd → 40');
+    assert_true(!$top->childStyleDirty, '重算后顶层 childStyleDirty 已清');
+    assert_true(!$mid->childStyleDirty, '重算后中层 childStyleDirty 已清');
+
+    // 深层改写但不置脏——子树应被整体跳过，叶子保持 40
+    $leaf->props['class'] = 'ee';
+    $pass->recalc($top);
+    assert_eq((int)$leaf->computedStyle->width->toPx(), 40, '子树跳过 → 叶子仍 40');
+
+    // 置脏并沿父链传播（同 patchProps 行为）→ 必重算
+    $leaf->styleDirty = true;
+    $mid->childStyleDirty = true;
+    $top->childStyleDirty = true;
+    $pass->recalc($top);
+    assert_eq((int)$leaf->computedStyle->width->toPx(), 70, '传播脏位后 → 叶子重算得 70');
+    StyleEngine::reset();
+});
+
 $exitCode = print_summary();
 exit($exitCode);
