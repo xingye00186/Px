@@ -38,7 +38,6 @@ class InlineStyleParser
         string $parentClassStr = '',
         array $precedingSiblingClasses = [],
         array &$pseudoStyles = [],
-        array $ancestorClassLists = [],
         array $elementCtx = []
     ): ComputedStyle {
         // 防御：空 string → []（编译期未覆盖的空 style 路径）

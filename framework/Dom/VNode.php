@@ -108,8 +108,11 @@ class VNode
      */
     public ?ComputedStyle $styleParentCS = null;
 
-    /** C4.1：上次重算时的外部上下文指纹（父 class 串/兄弟/祖先/序/规则代次）。 */
-    public string $styleCtxSig = '';
+    /** C4.1：上次重算时的外部上下文——**分项存储**以避免每帧建字符串。 */
+    public int $styleCtxGen = -1;          // StyleEngine 规则表代次
+    public string $styleCtxParentClass = '';
+    public int $styleCtxIndex = 0;         // 1-based 元素序（nth-child）
+    public string $styleCtxSibSig = '';    // 前序兄弟（仅兄弟组合子规则存在时非空）
 
     /**
      * C4.1 样式脏位（对标 Blink NeedsStyleRecalc）。新建节点默认脏（必算）；

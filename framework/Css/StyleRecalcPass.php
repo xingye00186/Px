@@ -16,7 +16,7 @@ use Px\Css\InlineStyleParser;
  */
 class StyleRecalcPass
 {
-    public function recalc(VNode $root, ?ComputedStyle $parentCS = null, string $parentClassStr = '', array $precedingSiblingClasses = [], array $ancestorClassLists = [], array $ancestorCtx = [], array $prevSiblingCtx = [], int $elemIndex = 1): void
+    public function recalc(VNode $root, ?ComputedStyle $parentCS = null, string $parentClassStr = '', array $precedingSiblingClasses = [], array $ancestorCtx = [], array $prevSiblingCtx = [], int $elemIndex = 1): void
     {
         if ($root->isComponent) {
             // Component 节点不直接渲染，展开后由子组件管理
@@ -52,12 +52,16 @@ class StyleRecalcPass
         //   4. 外部上下文指纹相同（含规则表代次）
         // 注：**仍递归子层**——子节点可能自行脏。整棵子树跳过需在 patch 期
         // 向上传播 childNeedsStyleRecalc（Blink ChildNeedsStyleRecalc），属后续增量。
-        $ctxSig = self::styleCtxSig($parentClassStr, $precedingSiblingClasses, $ancestorClassLists, $elemIndex);
+        $ctxGen = StyleEngine::generation();
+        $ctxSibSig = self::siblingSig($precedingSiblingClasses);
         $clean = self::$incrementalEnabled
             && $root->computedStyle !== null
             && !$root->needsStyleRecalc
             && $root->styleParentCS === $parentCS
-            && $root->styleCtxSig === $ctxSig;
+            && $root->styleCtxGen === $ctxGen
+            && $root->styleCtxIndex === $elemIndex
+            && $root->styleCtxParentClass === $parentClassStr
+            && $root->styleCtxSibSig === $ctxSibSig;
         if ($clean) {
             \Px\Core\PerfCounter::inc('style_recalc_node_skip');
             $computedStyle = $root->computedStyle;
@@ -89,10 +93,7 @@ class StyleRecalcPass
             // 恒传空失效）；由父级子循环按文档序累积传入。
             precedingSiblingClasses: $precedingSiblingClasses,
             pseudoStyles: $pseudoStyles,
-            // C2.5：传完整祖先 class 链（根→直接父），使后代组合子跨中间
-            // 元素匹配任意祖先（与编译期 MiscHelper 语义一致，CSS Selectors L3）。
-            ancestorClassLists: $ancestorClassLists,
-            // C2.5-full：StyleEngine 全 AST 匹配所需元素上下文。
+            // C2.5-full：StyleEngine 全 AST 匹配所需元素上下文（祖先/兄弟均在其中）。
             elementCtx: $elementCtx
         );
 
@@ -101,7 +102,10 @@ class StyleRecalcPass
         $root->computedStyle = $computedStyle;
         // C4.1：记录本次据以计算的外部输入，并清除脏位。
         $root->styleParentCS = $parentCS;
-        $root->styleCtxSig = $ctxSig;
+        $root->styleCtxGen = $ctxGen;
+        $root->styleCtxIndex = $elemIndex;
+        $root->styleCtxParentClass = $parentClassStr;
+        $root->styleCtxSibSig = $ctxSibSig;
         $root->needsStyleRecalc = false;
         // C2.9：持久化伪类叠加（引擎/注册表产出）——此前为局部变量而丢弃，
         // 致 RTM 只能回落注册表重算（生产恒空）。与 computedStyle 同约定。
@@ -127,14 +131,12 @@ class StyleRecalcPass
             : VNode::childrenToArray($root->children);
         // 前序兄弟 class 串累积（文档序）：供子层运行时兄弟组合子匹配。
         $siblingAcc = [];
-        // 子层祖先链 = 当前链 + 本节点自身 class（根→直接父）。
-        $childAncestors = $ancestorClassLists;
-        if ($className !== '') {
-            $childAncestors[] = $className;
-        }
         // C2.5-full：子层元素上下文链（根→直接父）+ 兄弟上下文累积 + 元素序。
-        $childAncCtx = $ancestorCtx;
-        if (!empty($elementCtx)) {
+        // 特征门控：祖先链仅在确有后代/子组合子规则时才被 SelectorChecker
+        // 消费（matchAncestors），否则每节点拷一份 O(depth) 数组纯属浪费。
+        $trackAncestors = StyleEngine::usesAncestorRules();
+        $childAncCtx = $trackAncestors ? $ancestorCtx : [];
+        if ($trackAncestors && !empty($elementCtx)) {
             $childAncCtx[] = $elementCtx;
         }
         $sibCtxAcc = [];
@@ -151,7 +153,7 @@ class StyleRecalcPass
                 // C4.1：写入父链（供下帧 patch 期脏位向上传播）。
                 $child->styleParentNode = $root;
                 // 递归直传父 ComputedStyle 对象（O(1) 身份），不再传 toExportArray()
-                $this->recalc($child, $computedStyle, $className, $siblingAcc, $childAncestors, $childAncCtx, $sibCtxAcc, $childIdx);
+                $this->recalc($child, $computedStyle, $className, $siblingAcc, $childAncCtx, $sibCtxAcc, $childIdx);
                 $cc = $child->props['class'] ?? '';
                 if ($trackSiblings && is_string($cc) && $cc !== '') {
                     $siblingAcc[] = $cc;
@@ -181,30 +183,28 @@ class StyleRecalcPass
     public static bool $incrementalEnabled = true;
 
     /**
-     * C4.1：外部上下文指纹——除节点自身 props 之外、一切能影响本节点及其
-     * 子树计算样式的输入。父 ComputedStyle 不入指纹（已由身份比较覆盖）。
+     * C4.1：外部上下文比对——除节点自身 props 之外、一切能影响本节点及其
+     * 子树计算样式的输入。父 ComputedStyle 不入比对（已由身份比较覆盖）。
      *
-     * 规则表代次必须入指纹：运行中新注册组件会改变匹配结果，旧缓存
+     * 优化：旧版每节点每帧**构建一个字符串**（拼接 + 双层循环），而 clean
+     * 节点占绝大多数——那是校验路径上的主要开销。现改为**字段逐项比对**：
+     * 标量部分（规则代次/父 class 串/元素序）直接比；变长部分（前序兄弟）
+     * 仅在确有兄弟组合子规则时才存在，否则恒为空 → 常见路径零分配。
+     *
+     * 规则表代次必须入比：运行中新注册组件会改变匹配结果，旧缓存
      * 必须失效（否则子树跳过会保留陈旧样式）。
+     *
+     * C2.9 残留清理：原本还比对 $ancestorClassLists（祖先 class 串链），但该
+     * 数据在 resolve() 中**从未被消费**（其唯一消费者 resolveClassStyles 已随
+     * ThemeProvider 删除；CssMappings::matchComplexSelector 今仅被测试调用）。
+     * 不影响结果的输入不得入缓存有效性比对，故一并移除。
      */
-    private static function styleCtxSig(
-        string $parentClassStr,
-        array $precedingSiblingClasses,
-        array $ancestorClassLists,
-        int $elemIndex
-    ): string {
-        $sig = StyleEngine::generation() . '|' . $parentClassStr . '|' . $elemIndex . '|';
+    private static function siblingSig(array $precedingSiblingClasses): string
+    {
+        if (empty($precedingSiblingClasses)) return '';
+        $sig = '';
         foreach ($precedingSiblingClasses as $s) {
             $sig .= $s . ',';
-        }
-        $sig .= '|';
-        foreach ($ancestorClassLists as $a) {
-            if (is_array($a)) {
-                foreach ($a as $ac) { $sig .= $ac . '.'; }
-            } else {
-                $sig .= (string)$a;
-            }
-            $sig .= ';';
         }
         return $sig;
     }
