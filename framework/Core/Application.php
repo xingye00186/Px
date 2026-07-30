@@ -20,6 +20,7 @@ use Px\Render\RenderNode;
 use Px\Paint\PaintPipeline;
 use Px\Layout\LayoutOrchestrator;
 use Px\Css\StyleRecalcPass;
+use Px\Css\StyleEngine;
 use Px\Layout\PhysicalFragment;
 use Px\Core\Diag;
 use Px\Paint\InteractionState;
@@ -371,6 +372,12 @@ class Application
     public function registerComponent(string $groupId, ReactiveComponentInterface $component): void
     {
         $this->componentByGroupId[$groupId] = $component;
+        // C2.5-full 生产激活：注册组件的编译期规则存储（StyleSheetContents）
+        // 到 StyleEngine。registerComponent 是根+子组件的单一汇聚点。
+        // 等价门控已过（tools/c25_equivalence_gate.php：56 cases / 6344 属性 /
+        // MISMATCH 0）；引擎声明与烘焙同值，叠加后幂等。
+        // 双通道并行期：烘焙仍为基底，引擎额外提供结构伪类等超集能力。
+        StyleEngine::registerComponentRules($component);
     }
 
     /**

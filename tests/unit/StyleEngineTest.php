@@ -109,5 +109,31 @@ test('端到端接线：StyleRecalcPass 消费 StyleEngine（非死代码）', f
     StyleEngine::reset();
 });
 
+test('registerComponentRules：组件规则注册 + 幂等 + 无方法安全（C2.5 生产激活入口）', function () {
+    $genFile = dirname(__DIR__, 2) . '/apps/css-test/gen/Case001WrapperXComponent.php';
+    if (!file_exists($genFile)) { echo "  [SKIP] gen 不存在\n"; return; }
+    require_once $genFile;
+    StyleEngine::reset();
+    assert_eq(StyleEngine::ruleCount(), 0, '初始空');
+    $comp = new \Case001WrapperXComponent();
+    StyleEngine::registerComponentRules($comp);
+    $n = StyleEngine::ruleCount();
+    assert_true($n > 0, '组件规则已注册（>0）');
+    // 幂等：同类再注不膨胀（v-for 多实例保护）
+    StyleEngine::registerComponentRules($comp);
+    assert_eq(StyleEngine::ruleCount(), $n, '同类幂等，规则不重复膨胀');
+    // 无 styleSheetContents 的组件不崩不变
+    $plain = new class extends \Px\Component\ReactiveComponent {
+        public function render(): \Px\Dom\VNode { return \Px\Dom\VNode::h('div', [], 'x'); }
+        public function setBindValue(string $k, string $v): void {}
+        public function getBindValue(string $k): string { return ''; }
+        public function onMount(): void {}
+        public function dispatchClick(string $h, ?string $a = null): void {}
+    };
+    StyleEngine::registerComponentRules($plain);
+    assert_eq(StyleEngine::ruleCount(), $n, '无 styleSheetContents 组件安全无变');
+    StyleEngine::reset();
+});
+
 $exitCode = print_summary();
 exit($exitCode);

@@ -17,8 +17,28 @@ namespace Px\Css;
  */
 final class StyleEngine
 {
-    /** @var array<int, array> RuleData 列表（跨组件聚合，注册序） */
+    /** @var array<int, array> RuleData 列表（多组件聚合，注册序） */
     private static array $rules = [];
+    
+    /** @var array<string, bool> 已注册组件类（幂等去重：同类多实例只注一次） */
+    private static array $registeredClasses = [];
+    
+    /**
+     * 注册组件的编译期规则存储（gen: static styleSheetContents()）。
+     * C2.5-full 生产激活入口；同类幂等（v-for 多实例不重复膨胀）。
+     * AOT 安全：method_exists 静态检查 + 静态调用，无动态属性访问。
+     */
+    public static function registerComponentRules(object $component): void
+    {
+        $cls = get_class($component);
+        if (isset(self::$registeredClasses[$cls])) return;
+        self::$registeredClasses[$cls] = true;
+        if (!method_exists($cls, 'styleSheetContents')) return;
+        $rules = $cls::styleSheetContents();
+        if (is_array($rules)) {
+            self::register($rules);
+        }
+    }
 
     /**
      * 注册一个组件的 StyleSheetContents 规则（gen: Component::styleSheetContents()）。
@@ -35,6 +55,7 @@ final class StyleEngine
     public static function reset(): void
     {
         self::$rules = [];
+        self::$registeredClasses = [];
     }
 
     public static function ruleCount(): int
