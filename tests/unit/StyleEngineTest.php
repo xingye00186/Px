@@ -234,5 +234,63 @@ test('单 VNode 子的子树不再被样式重算静默跳过', function () {
     StyleEngine::reset();
 });
 
+test('C2.7 倒排索引：开/关结果一致且候选数下降（对标 Blink RuleSet）', function () {
+    StyleEngine::reset();
+    assert_true(!StyleEngine::isIndexEnabled(), '索引默认关闭（计划要求）');
+    // 4 条不相关规则 + 1 条命中规则；元素仅属 .hit 桶 + universal
+    StyleEngine::registerCss(
+        '.miss1 { width:10px; } .miss2 { width:20px; } #nope { width:30px; }'
+        . ' section { width:40px; } .hit { width:99px; }'
+    );
+    $el = ['tag' => 'div', 'id' => null, 'classes' => ['hit'], 'attrs' => [],
+        'index' => 1, 'ancestors' => [], 'prevSiblings' => [], 'states' => []];
+
+    StyleEngine::setIndexEnabled(false);
+    StyleEngine::resetSelectorMatchCount();
+    $off = StyleEngine::declarationsFor($el);
+    $cOff = StyleEngine::selectorMatchCount();
+
+    StyleEngine::setIndexEnabled(true);
+    StyleEngine::resetSelectorMatchCount();
+    $on = StyleEngine::declarationsFor($el);
+    $cOn = StyleEngine::selectorMatchCount();
+    StyleEngine::setIndexEnabled(false);
+
+    assert_eq(json_encode($off), json_encode($on), '开/关声明完全一致');
+    assert_true($cOn < $cOff, "候选数下降（off=$cOff on=$cOn）");
+    assert_eq($cOn, 1, '仅 .hit 桶内 1 个候选被测');
+    StyleEngine::reset();
+});
+
+test('C2.7 倒排索引：多类/祖先/兄弟组合子不漏命中', function () {
+    // classBuckets 仅用 subject compound 首类作键，需验证多类选择器与
+    // 组合子规则（subject 仍为最右 compound）在索引下不被漏筛。
+    StyleEngine::reset();
+    StyleEngine::registerCss(
+        '.a.b { width:11px; } .anc .t { height:22px; } .prev + .t { top:33px; }'
+    );
+    $mk = function (array $o): array {
+        return array_merge(['tag' => 'div', 'id' => null, 'classes' => [], 'attrs' => [],
+            'index' => 1, 'ancestors' => [], 'prevSiblings' => [], 'states' => []], $o);
+    };
+    $anc = $mk(['classes' => ['anc']]);
+    $prev = $mk(['classes' => ['prev']]);
+    $els = [
+        $mk(['classes' => ['b', 'a']]),                                  // 多类（序反）
+        $mk(['classes' => ['t'], 'ancestors' => [$anc]]),                 // 后代
+        $mk(['classes' => ['t'], 'prevSiblings' => [$prev], 'index' => 2]), // 相邻兄弟
+    ];
+    foreach ($els as $i => $el) {
+        StyleEngine::setIndexEnabled(false);
+        $off = StyleEngine::declarationsFor($el);
+        StyleEngine::setIndexEnabled(true);
+        $on = StyleEngine::declarationsFor($el);
+        StyleEngine::setIndexEnabled(false);
+        assert_eq(json_encode($off), json_encode($on), "元素#$i 开/关一致");
+        assert_true(!empty($on), "元素#$i 索引下仍命中（不漏筛）");
+    }
+    StyleEngine::reset();
+});
+
 $exitCode = print_summary();
 exit($exitCode);

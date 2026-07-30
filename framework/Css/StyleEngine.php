@@ -47,10 +47,105 @@ final class StyleEngine
     {
         foreach ($ruleDataList as $r) {
             if (is_array($r)) {
+                $idx = count(self::$rules);
                 self::$rules[] = $r;
                 self::collectFeatures($r);
+                self::bucketRule($idx, $r);
             }
         }
+    }
+
+    // ───── C2.7 RuleSet 倒排索引（对标 Blink RuleSet 分桶）─────
+    //
+    // Blink 按 subject（最右）compound 的最具区分度特征分桶：
+    // id → idRules、class → classRules、tag → tagRules、其余 → universalRules。
+    // 匹配时仅枚举元素自身 id/classes/tag 对应的桶 + universal，将
+    // O(全部规则) 降为 O(相关桶)。
+    // 按计划：**默认关闭**，由 $indexEnabled 开关门控；开启与否必须产出
+    // 完全一致的声明（索引仅做候选预筛，真实判定仍由 SelectorChecker）。
+    private static array $idBuckets = [];
+    private static array $classBuckets = [];
+    private static array $tagBuckets = [];
+    private static array $universalBucket = [];
+    private static bool $indexEnabled = false;
+    private static int $selectorMatchCount = 0;
+
+    /** 开关门控（默认关）。 */
+    public static function setIndexEnabled(bool $on): void { self::$indexEnabled = $on; }
+    public static function isIndexEnabled(): bool { return self::$indexEnabled; }
+
+    /** 观测点：累计送入 SelectorChecker 的候选复杂选择器数。 */
+    public static function selectorMatchCount(): int { return self::$selectorMatchCount; }
+    public static function resetSelectorMatchCount(): void { self::$selectorMatchCount = 0; }
+
+    /**
+     * 按 subject compound 将规则归桶。一条规则可含多个选择器（逗号列表），
+     * 任一选择器命中即规则命中，故每个选择器各自归桶（同一 ruleIdx 可
+     * 出现于多桶，枚举后去重）。
+     */
+    private static function bucketRule(int $ruleIdx, array $rule): void
+    {
+        foreach (($rule['ast'] ?? []) as $complex) {
+            if (!is_array($complex)) continue;
+            $compounds = $complex['compounds'] ?? [];
+            if (!is_array($compounds) || empty($compounds)) {
+                self::$universalBucket[] = $ruleIdx;
+                continue;
+            }
+            $subject = $compounds[count($compounds) - 1];
+            if (!is_array($subject)) {
+                self::$universalBucket[] = $ruleIdx;
+                continue;
+            }
+            $id = $subject['id'] ?? null;
+            if (is_string($id) && $id !== '') {
+                self::$idBuckets[$id][] = $ruleIdx;
+                continue;
+            }
+            $classes = $subject['classes'] ?? [];
+            if (is_array($classes) && !empty($classes)) {
+                // Blink 选任一类作桶键（其余类由 SelectorChecker 复校）。
+                self::$classBuckets[(string)$classes[0]][] = $ruleIdx;
+                continue;
+            }
+            $tag = $subject['tag'] ?? null;
+            if (is_string($tag) && $tag !== '' && $tag !== '*') {
+                self::$tagBuckets[$tag][] = $ruleIdx;
+                continue;
+            }
+            self::$universalBucket[] = $ruleIdx;
+        }
+    }
+
+    /**
+     * 候选规则下标（升序，保持注册序以不扰动层叠）。
+     * 开关关时返回全量下标（线性扫描，与索引开启结果必须一致）。
+     */
+    private static function candidateRuleIndices(array $element): array
+    {
+        $n = count(self::$rules);
+        if (!self::$indexEnabled) {
+            return range(0, $n - 1);
+        }
+        $seen = [];
+        foreach (self::$universalBucket as $i) { $seen[$i] = true; }
+        $id = $element['id'] ?? null;
+        if (is_string($id) && $id !== '' && isset(self::$idBuckets[$id])) {
+            foreach (self::$idBuckets[$id] as $i) { $seen[$i] = true; }
+        }
+        foreach (($element['classes'] ?? []) as $c) {
+            $ck = (string)$c;
+            if (isset(self::$classBuckets[$ck])) {
+                foreach (self::$classBuckets[$ck] as $i) { $seen[$i] = true; }
+            }
+        }
+        $tag = $element['tag'] ?? null;
+        if (is_string($tag) && $tag !== '' && isset(self::$tagBuckets[$tag])) {
+            foreach (self::$tagBuckets[$tag] as $i) { $seen[$i] = true; }
+        }
+        $out = array_keys($seen);
+        sort($out);
+        return $out;
     }
 
     /**
@@ -86,6 +181,11 @@ final class StyleEngine
         self::$registeredClasses = [];
         self::$usesSiblingRules = false;
         self::$usesAncestorRules = false;
+        self::$idBuckets = [];
+        self::$classBuckets = [];
+        self::$tagBuckets = [];
+        self::$universalBucket = [];
+        self::$selectorMatchCount = 0;
     }
 
     /**
@@ -113,12 +213,18 @@ final class StyleEngine
     public static function declarationsFor(array $element): array
     {
         $blocks = [];
-        foreach (self::$rules as $rule) {
+        // C2.7：候选枚举（索引开时仅相关桶，关时全量）。升序下标保持
+        // 注册序，故 order 与线性扫描一致，层叠结果不变。
+        foreach (self::candidateRuleIndices($element) as $ri) {
+            $rule = self::$rules[$ri];
             $matched = false;
             foreach (($rule['ast'] ?? []) as $complex) {
-                if (is_array($complex) && SelectorChecker::matches($complex, $element)) {
-                    $matched = true;
-                    break;
+                if (is_array($complex)) {
+                    self::$selectorMatchCount++;
+                    if (SelectorChecker::matches($complex, $element)) {
+                        $matched = true;
+                        break;
+                    }
                 }
             }
             if (!$matched) continue;
@@ -159,7 +265,9 @@ final class StyleEngine
     public static function pseudoStylesFor(array $element): array
     {
         $byState = [];
-        foreach (self::$rules as $rule) {
+        // C2.7：同走候选枚举（索引开关不影响结果）。
+        foreach (self::candidateRuleIndices($element) as $ri) {
+            $rule = self::$rules[$ri];
             foreach (($rule['ast'] ?? []) as $complex) {
                 if (!is_array($complex)) continue;
                 $compounds = $complex['compounds'] ?? [];
