@@ -15,16 +15,23 @@ namespace Px\Css;
  *
  * AOT 友好：纯静态数组、无闭包、无动态调用。
  *
- * AOT 兼容注记（计划风险项 3 取证结论，勿逆转）：
+ * AOT 兼容注记（计划风险项 3，取证结论 + 诚实边界，勿逆转）：
  * 本类（及 SelectorChecker / CascadeResolver / StyleSheetContents /
  * SelectorParser）**不得**添加 `use native_types;`。
  * aot-checker 会就“Application.php uses native_types 但导入的 StyleEngine 不
  * 用”发 WARN，但实跑 AOT 编译已证实：为这些类加上 native_types 会使
- * swoole 编译器在求值**数组型类常量**时内部崩溃：
+ * swoole 编译器在求值**数组型类常量**时硬失败（PHP Fatal）：
  *   Call to private method TypePhp\Translator::evaluate() from scope
  *   PhpParser\ConstExprEvaluator  (getClassConstValue → evaluateArray)
- * 而不加时基线编译输出“AOT succeeded”。该 WARN 对本类为误报：全为
- * 静态方法/静态属性，不存在外部实例属性访问，故无 php::Variant → C2440 风险。
+ * 而不加时翻译阶段不再崩溃。该 WARN 对本类为误报：全为静态方法/静态
+ * 属性，不存在外部实例属性访问，故无 php::Variant → C2440 风险。
+ *
+ * 边界（未完成验证，勿当作已过）：基线构建虽返回 0 并打印
+ * “AOT succeeded”，却**未产出任何新 exe**（全仓近一日无 .exe 更新；
+ * apps/css-test/bin/css_test.exe 为更早日期的旧产物）。build.bat L488 在
+ * %FRAMEWORK_ROOT%\%OUTPUT_EXE%（仓库根）检查产物而未命中。因此：
+ *   已证：加 native_types 会硬失败；不加时翻译阶段可过。
+ *   未证：完整 exe 产出与 compare_php_aot 分布对比（C2 退出标准最后一项）。
  */
 final class StyleEngine
 {
