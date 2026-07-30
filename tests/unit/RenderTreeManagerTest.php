@@ -306,13 +306,14 @@ echo "[PASS] 组件定位：layoutOffset 机制从 #component 传递到 RenderNo
 // ─────────────────────────────────────────────
 // 10. CSS class 样式合并
 // ─────────────────────────────────────────────
-ThemeProvider::registerClassStyles('TestComponentA', [
-    'btn-primary' => ['bg' => 0x0000FF, 'fg' => 0xFFFFFF, 'width' => 100, 'height' => 40],
-    'btn-small' => ['width' => 60, 'height' => 30],
-]);
-ThemeProvider::registerClassStyles('TestComponentB', [
-    'btn-danger' => ['bg' => 0x0000FF, 'fg' => 0xFFFFFF],
-]);
+// C2.9：由 ThemeProvider 注册表迁至 StyleEngine（真实 CSS 串，与 gen 同源）。
+// bg/fg 按 BGR：0x0000FF 对应 CSS #FF0000（红）；0xFFFFFF 即白。
+\Px\Css\StyleEngine::reset();
+\Px\Css\StyleEngine::registerCss(
+    '.btn-primary { background:#FF0000; color:#FFFFFF; width:100px; height:40px; }'
+    . ' .btn-small { width:60px; height:30px; }'
+    . ' .btn-danger { background:#FF0000; color:#FFFFFF; }'
+);
 
 $manager10 = new RenderTreeManager();
 
@@ -361,11 +362,8 @@ assert($rn10e->style['bg'] === 0x0000FF, 'btn-danger 的 bg 应被正确查找�
 assert($rn10e->style['fg'] === 0xFFFFFF, 'btn-danger 的 fg 应被正确查找（跨组件）');
 echo "[PASS] 跨组件 class 样式全局搜索正确\n";
 
-// 10.6 多个 class 名合并
-ThemeProvider::registerClassStyles('TestComponentC', [
-    'rounded' => ['borderRadius' => 8],
-    'shadow' => ['shadow' => 1],
-]);
+// 10.6 多个 class 名合并（C2.9：追加 CSS 规则，不 reset 以保留已注类）
+\Px\Css\StyleEngine::registerCss('.rounded { border-radius:8px; }');
 $vnode10f = VNode::h('div', ['class' => 'btn-primary rounded shadow'], 'Styled');
 $rn10f = $manager10->updateFromVNode($vnode10f, null, $rootComponent, $componentByGroupId, null, 'app');
 assert($rn10f !== null, '转换应成功');

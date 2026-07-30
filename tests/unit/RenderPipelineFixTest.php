@@ -68,30 +68,38 @@ describe('PhysicalFragmentBuilder', function () {
 // ══════════════════════════════════════════════════════════
 // 2. InlineStyleParser::extractPseudoStyles()
 // ══════════════════════════════════════════════════════════
-describe('InlineStyleParser::extractPseudoStyles', function () {
+describe('StyleEngine::pseudoStylesFor（取代 extractPseudoStyles，C2.9）', function () {
 
-    test('从已注册主题提取 hover/focus/active/before/after 定义', function () {
-        // C1.5：ThemeProvider::inject / ThemeData 已随主题族删除（生产僵尸）；
-        // 注册表无需主题注入即可工作。
-        ThemeProvider::registerClassStyles('__test_extract', [
-            'my-btn' => ['bg' => 0x333333],
-            'my-btn__hover' => ['bg' => 0x555555],
-            'my-btn__before' => ['content' => '►'],
-        ]);
-
-        $result = InlineStyleParser::extractPseudoStyles('my-btn', 'div');
+    test('从已注册规则提取 hover 叠加，未声明状态不产出', function () {
+        // C2.9：由 ThemeProvider 注册表（class__hover 键形态）迁至 StyleEngine
+        // （真实 CSS 串 → StyleSheetContents → SelectorChecker）。伪元素 ::before
+        // 不再经 pseudoStyles 通道：生产由编译期合成真 span 子承担（C2.8）。
+        \Px\Css\StyleEngine::reset();
+        \Px\Css\StyleEngine::registerCss('.my-btn { background:#333333; } .my-btn:hover { background:#555555; }');
+        $el = [
+            'tag' => 'div', 'id' => null, 'classes' => ['my-btn'], 'attrs' => [],
+            'index' => 1, 'ancestors' => [], 'prevSiblings' => [], 'states' => [],
+        ];
+        $result = \Px\Css\StyleEngine::pseudoStylesFor($el);
         assert(isset($result['hover']), 'hover 应被提取');
-        assert(($result['hover']['bg'] ?? 0) === 0x555555, "hover bg 应为 0x555555, 实际=" . dechex($result['hover']['bg'] ?? 0));
-        assert(isset($result['before']), 'before 应被提取');
-        assert(($result['before']['content'] ?? '') === '►', 'before content 应保留');
+        assert(($result['hover']['bg'] ?? -1) === 0x555555, "hover bg 应为 0x555555, 实际=" . dechex($result['hover']['bg'] ?? 0));
         assert(empty($result['focus']), '未定义的 focus 应为空');
         assert(empty($result['active']), '未定义的 active 应为空');
-        assert(empty($result['after']), '未定义的 after 应为空');
+        // 基态不被 hover 污染
+        $base = \Px\Css\StyleEngine::declarationsFor($el);
+        assert(($base['bg'] ?? -1) === 0x333333, '基态 bg 应为 0x333333');
+        \Px\Css\StyleEngine::reset();
     });
 
-    test('空 class 返回空数组', function () {
-        $result = InlineStyleParser::extractPseudoStyles('');
-        assert(empty($result), '空 className 应返回空');
+    test('无匹配类时无叠加', function () {
+        \Px\Css\StyleEngine::reset();
+        \Px\Css\StyleEngine::registerCss('.my-btn:hover { background:#555555; }');
+        $result = \Px\Css\StyleEngine::pseudoStylesFor([
+            'tag' => 'div', 'id' => null, 'classes' => ['other'], 'attrs' => [],
+            'index' => 1, 'ancestors' => [], 'prevSiblings' => [], 'states' => [],
+        ]);
+        assert(empty($result), '类不符 → 无叠加');
+        \Px\Css\StyleEngine::reset();
     });
 
 });
