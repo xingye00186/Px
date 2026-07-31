@@ -51,7 +51,15 @@ class KeyframeResolver
      */
     public static function parseAndRegister(string $css): void
     {
+        // 解析并注册到本类的 $keyframesRegistry（同时继续注册到
+        // CssAnimationParser，保持双影存储兼容旧代码）。
         CssAnimationParser::parseAndRegisterKeyframes($css);
+        // 同步：CssAnimationParser::$keyframes → self::$keyframesRegistry
+        foreach (CssAnimationParser::getAllKeyframes() as $name => $frames) {
+            if (!isset(self::$keyframesRegistry[$name])) {
+                self::$keyframesRegistry[$name] = $frames;
+            }
+        }
     }
 
     /**

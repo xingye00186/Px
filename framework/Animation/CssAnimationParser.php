@@ -46,6 +46,12 @@ class CssAnimationParser
         self::$keyframes[$name] = $keyframes;
     }
 
+    /** 获取所有已注册的 @keyframes（供 KeyframeResolver 同步）。 */
+    public static function getAllKeyframes(): array
+    {
+        return self::$keyframes;
+    }
+
     /**
      * 获取已注册的 @keyframes。
      */
@@ -75,8 +81,8 @@ class CssAnimationParser
      */
     public static function parseAndRegisterKeyframes(string $css): void
     {
-        // 匹配 @keyframes name { ... }
-        if (!preg_match_all('/@keyframes\s+([a-zA-Z0-9_-]+)\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}/s', $css, $matches, PREG_SET_ORDER)) {
+        // 匹配 @keyframes name { ... }（支持一层嵌套大括号）
+        if (!preg_match_all('/@keyframes\s+([a-zA-Z0-9_-]+)\s*\{((?:[^{}]*|\{[^{}]*\})*)\}/s', $css, $matches, PREG_SET_ORDER)) {
             return;
         }
 
@@ -200,6 +206,23 @@ class CssAnimationParser
     public static function getAnimationRules(string $className): array
     {
         return self::$animationRules[$className] ?? [];
+    }
+
+    /**
+     * 从节点 class 属性查找第一个命中的 animation 规则。
+     * 返回 parsed 规则数组（含 name/duration/timing/delay/count）或 null。
+     */
+    public static function getAnimationRulesForClasses(string $classAttr): ?array
+    {
+        if ($classAttr === '') return null;
+        $classes = preg_split('/\s+/', trim($classAttr));
+        for ($i = count($classes) - 1; $i >= 0; $i--) {
+            $rules = self::$animationRules[$classes[$i]] ?? null;
+            if ($rules !== null && ($rules['name'] ?? '') !== '') {
+                return $rules;
+            }
+        }
+        return null;
     }
 
     // ============================================================

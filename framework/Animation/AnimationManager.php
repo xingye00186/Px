@@ -287,6 +287,9 @@ class AnimationManager
         if (count($doneFloaters) > 0) {
             $this->floaters = array_values($this->floaters);
         }
+
+        // 推进 @keyframes 动画（KeyframeResolver 独立系统，共享 nodeMap）
+        KeyframeResolver::tick($deltaMs, $this->nodeMap);
     }
 
     /**

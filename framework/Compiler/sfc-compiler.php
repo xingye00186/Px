@@ -988,7 +988,26 @@ function compileOneComponent(
         foreach ($styleWarnings as $w) {
             echo "  [WARN] CSS: $w\n";
         }
-        // Parse @keyframes
+    }
+
+    // B3: 提取 @keyframes 完整块 + 生成运行时注册代码
+    $keyframesCssBlock = '';
+    if (preg_match_all('/@keyframes\s+[a-zA-Z0-9_-]+\s*\{(?:[^{}]*|\{[^{}]*\})*\}/s', $styles, $kfBlockMatches)) {
+        $keyframesCssBlock = implode("\n", $kfBlockMatches[0]);
+    }
+    // 提取 transition 规则（B2 运行时缓存注册）
+    $transitionCssBlock = '';
+    if (preg_match_all('/\.[a-zA-Z0-9_-]+\s*\{[^}]*transition[^}]*\}/s', $styles, $trBlockMatches)) {
+        $transitionCssBlock = implode("\n", $trBlockMatches[0]);
+    }
+    // animation 规则提取（同样插入 onMount 注册）
+    $animationCssBlock = '';
+    if (preg_match_all('/\.[a-zA-Z0-9_-]+\s*\{[^}]*animation[^}]*\}/s', $styles, $anBlockMatches)) {
+        $animationCssBlock = implode("\n", $anBlockMatches[0]);
+    }
+
+    if ($verbose) {
+        // Parse @keyframes names for verbose output
         $keyframesFound = [];
         if (preg_match_all('/@keyframes\s+([a-zA-Z0-9_-]+)/', $styles, $kfMatches)) {
             $keyframesFound = $kfMatches[1];
@@ -1283,7 +1302,17 @@ function compileOneComponent(
             $defaultConstruct = "    public function __construct(?string \$componentId = null)\n    {\n        parent::__construct(\$componentId ?? '{$baseName}');\n    }\n";
         }
         if (!str_contains($classBody, 'function onMount')) {
-            $defaultOnMount = "    public function onMount(): void\n    {\n    }\n\n";
+            // B3: 将 @keyframes + transition + animation CSS 注册调用嵌入 onMount
+            $animRegCalls = '';
+            if ($keyframesCssBlock !== '') {
+                $escaped = addcslashes($keyframesCssBlock, "'\\");
+                $animRegCalls .= "        \\Px\\Animation\\KeyframeResolver::parseAndRegister('$escaped');\n";
+            }
+            if ($transitionCssBlock !== '') {
+                $escaped = addcslashes($transitionCssBlock, "'\\");
+                $animRegCalls .= "        \\Px\\Animation\\CssAnimationParser::parseStyleBlockTransitions('$escaped');\n";
+            }
+            $defaultOnMount = "    public function onMount(): void\n    {\n$animRegCalls    }\n\n";
         }
         if (!$hasReactive && !str_contains($classBody, 'function onUnmount')) {
             $defaultOnUnmount = "    public function onUnmount(): void\n    {\n    }\n";

@@ -973,6 +973,21 @@ class RenderTreeManager
                 if ($ovX === 'auto' || $ovX === 'scroll' || $ovY === 'auto' || $ovY === 'scroll') {
                     $this->scrollManager?->setScrollContainer($renderNode, true);
                 }
+                // B3: 新建节点检测 animation 规则 → 启动 @keyframes
+                $nodeClass = (string)($vnode->props['class'] ?? '');
+                if ($nodeClass !== '') {
+                    $animRules = \Px\Animation\CssAnimationParser::getAnimationRulesForClasses($nodeClass);
+                    if ($animRules !== null) {
+                        \Px\Animation\KeyframeResolver::startAnimation(
+                            $renderNode,
+                            $animRules['name'] ?? '',
+                            $animRules['duration'] ?? 300,
+                            $animRules['timing'] ?? 'ease',
+                            $animRules['delay'] ?? 0,
+                            $animRules['count'] ?? 1
+                        );
+                    }
+                }
             } else {
                 $oldVNode = $renderNode->sourceVNode;
 
