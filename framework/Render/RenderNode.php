@@ -17,7 +17,7 @@ use Px\Core\Config;
  * - renderOffsetX/renderOffsetY → PaintPipeline 局部
  * - textRenderInfo → PaintPipeline 局部
  * - lastPaintFrame → PaintPipeline SplObjectStorage
- * - animatedStyle/isAnimating/lastX/lastY → AnimationManager
+ * - lastX/lastY → TransitionGroupComponent FLIP（未接线，当前零写入者）
  */
 class RenderNode
 {
@@ -26,6 +26,14 @@ class RenderNode
     public array $pseudoStyles = [];
     public mixed $content = null;
     public ?string $key = null;
+
+    // ── 动画叠加层（AnimationManager / KeyframeResolver 每帧写入）──
+    // P1.3 动画通电时补声明：此前两处写入均为未声明的动态属性（AOT 禁止模式，
+    // 因动画子系统从未通电而未暴露）。property => 插值后的值；null = 无活跃动画。
+    // 消费侧（Paint 叠加）归 P2.4 CSS Transition 自动插值。
+    public ?array $animatedStyle = null;
+    /** 是否有活跃动画（AnimationManager 维护） */
+    public bool $isAnimating = false;
 
     // ── 三级脏位 ──
     public bool $styleDirty = true;   // 仅视觉样式变化（颜色/背景/字体等，不触发布局）

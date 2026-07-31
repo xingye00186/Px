@@ -270,6 +270,25 @@ P0.3b 原计划 P1.3 做 `init(): RenderSurface` 接口重构。经代码实证�
 - GridFinalDiag / GridInstrumentationDiag 既有失败（依赖未构建的 apps/bilibili/gen，L24 require 即崩），与本批无关；
 - exe 健康先验为启动级验证（窗口/CPU/存活），未做交互级点击验证；css-test AOT 模式（--skip-build 新 exe）未重跑，PHP-RT 41/56 已作为本批判据。
 
+### P1.3 执行记录 — 第二批：动画通电（2026-07-31 实测）
+
+> **范围**：用户选定的「两批制」第二批——证明动画子系统端到端可运行。生产默认仍关（Px_animation_enabled 选启）。
+
+**通电前发现的前置债务（已治本）**：`AnimationManager`/`KeyframeResolver` 写入的 `RenderNode::$animatedStyle`/`$isAnimating` 是**未声明的动态属性**（RenderNode 头注释声称归属已移交但代码仍在写节点——未完成的重构），属 AOT 禁止模式，因子系统从未通电而从未暴露。本批在 RenderNode 补字段声明。另实证：`animatedStyle` 当前**零读取者**（Paint/Layout 不消费），`lastX/lastY`（TransitionGroupComponent FLIP）零写入者——消费侧接线归 P2.4。
+
+| 验收项 | 结果 |
+|---|---|
+| 通电集成测试 AnimationPowerOnTest（FrameScheduler→tick→插值→animatedStyle→完成清理，含颜色插值/重复注册替换/关闭等价） | ✅ **5/5** |
+| css-standards Level | ✅ **336/336**（零回归） |
+| PlatformTest / FrameSchedulerTest / ApplicationEventTest | ✅ 14/14 · 8/8 · 5/5 |
+| aot-checker | ✅ 0 error · 31 warn（持平） |
+| ★ AOT 编译（RenderNode 为 native_types 热类，字段新增需实编） | ✅ **Build succeeded**，无 C2440/C2446 |
+| exe 健康先验 | ✅ 前台会话 hwnd=17042852，CPU 0.125s 后持平，无秒退 |
+
+**排查插曲（已归因为环境假象，记入经验库）**：沙箱（sandbox.exe 包装）内启动新 exe 呈现 CPU=0/hwnd=0 假挂死，一度疑似回归；按既有「假挂死三步判定法」换非沙箱前台复测立即恢复——无窗口站环境下 Skia/Win32 后端初始化阻塞，与代码无关（隐藏窗口启动同族的第二触发形态）。
+
+**未证边界**：通电证明停在数据层（animatedStyle 正确写入与清理）；像素层可见的动画需 Paint 侧消费 animatedStyle（P2.4 CSS Transition 自动插值），当前开启开关也不会改变任何几何/像素（零消费者）——这也是 336 门天然不受影响的结构性原因。
+
 ---
 
 ## 3. Phase 2：桌面端完善（2-3 个月）
