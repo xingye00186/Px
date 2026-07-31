@@ -90,8 +90,8 @@ class _LTMockPlatform implements Platform
         $this->renderContext = new _LTMockRenderContext();
     }
 
-    public function init(string $title, int $width, int $height): RenderContext {
-        return $this->renderContext;
+    public function init(string $title, int $width, int $height): void {
+        // P1.3 Surface 解耦：平台只造表面
     }
     public function shutdown(): void {}
     public function shouldClose(): bool { return false; }

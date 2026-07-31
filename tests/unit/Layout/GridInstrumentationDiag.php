@@ -103,8 +103,8 @@ class _InstMockRenderContext extends RenderContext
 class _InstMockPlatform implements Platform
 {
     public bool $shouldClose = false;
-    public function init(string $title, int $width, int $height): RenderContext {
-        return new _InstMockRenderContext();
+    public function init(string $title, int $width, int $height): void {
+        // P1.3 Surface 解耦：平台只造表面
     }
     public function shutdown(): void {}
     public function pollEvents(): array { return []; }

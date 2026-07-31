@@ -94,8 +94,8 @@ class _MockPlatform implements Platform
         $this->renderContext = new _MockRenderContext();
     }
 
-    public function init(string $title, int $width, int $height): RenderContext {
-        return $this->renderContext;
+    public function init(string $title, int $width, int $height): void {
+        // P1.3 Surface 解耦：平台只造表面
     }
     public function shutdown(): void {}
     public function getSurface(): \Px\Platform\RenderSurface { return new \Px\Platform\RenderSurface(0, 1440, 900, 1000); }

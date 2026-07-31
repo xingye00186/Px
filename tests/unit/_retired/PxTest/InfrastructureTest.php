@@ -47,9 +47,10 @@ echo "--- Mock Platform ---\n";
 $platform = new MockPlatform(800, 600);
 $rc = $platform->renderContext;
 
-// 验证初始化
-check('Platform init returns MockRenderContext',
-    $platform->init('Test', 800, 600) === $rc);
+// 验证初始化（P1.3 Surface 解耦：init 不再返回上下文，字段直接可用）
+$platform->init('Test', 800, 600);
+check('Platform exposes MockRenderContext field',
+    $rc instanceof \PxTest\Mock\MockRenderContext);
 
 // 验证帧重置
 $rc->drawText(10, 20, 'Hello', 14, 0x000000, 0, 'Arial');

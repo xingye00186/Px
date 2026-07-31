@@ -15,6 +15,7 @@ use Px\Platform\RedrawEvent;
 use Px\Platform\PlatformFactory;
 use Px\Paint\Backend\ResilientRenderContext;
 use Px\Paint\Backend\RuntimeBackendSelector;
+use Px\Paint\Backend\CapturingRenderContext;
 use Px\Text\TextBackendRegistry;
 use Px\Text\ResilientTextBackendProxy;
 use Px\Dom\VNode;
@@ -101,6 +102,9 @@ class Application
     private bool $isRendering = false;
 
     private ScrollManager $scrollManager;
+
+    /** 帧调度器：帧计时 + 动画驱动（P1.3）。动画默认关闭，行为等价。 */
+    private FrameScheduler $frameScheduler;
 
     private static ?self $instance = null;
 
@@ -222,6 +226,8 @@ class Application
         );
         // 注入 ScrollManager 到 RenderTreeManager（scroll bind 路由）
         $this->renderTreeManager->setScrollManager($this->scrollManager);
+        // 帧调度器：动画默认关闭，mount() 时按 project.yml 的 Px_animation_enabled 调整
+        $this->frameScheduler = new FrameScheduler();
         // PaintPipeline 依赖 RenderContext，在 initRenderer() 中初始化
     }
 
@@ -410,28 +416,39 @@ class Application
         return $this->selectedBackendName;
     }
 
+    /** 帧调度器访问器（供测试与外部切换动画开关）。 */
+    public function getFrameScheduler(): FrameScheduler
+    {
+        return $this->frameScheduler;
+    }
+
     private function initRenderer(): void
     {
         $w = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : Config::get('window_width', 1280);
         $h = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : Config::get('window_height', 720);
 
-        // Stage 1: 让 platform 创建窗口 + 默认 RenderContext
+        // Stage 1: Embedder 只造表面（P1.3 Surface 解耦，对标 Flutter）。
+        // 渲染上下文不再由平台生产：下方由框架侧从 RenderSurface 构造，
+        // 光栅产物归引擎所有（测试经 getPaintPipeline()->getRenderContext() 读回）。
         $title = defined('WINDOW_TITLE') ? WINDOW_TITLE : Config::get('debug_window_title', 'Px');
-        $defaultCtx = $this->platform->init($title, $w, $h);
+        $this->platform->init($title, $w, $h);
+        $surface = $this->platform->getSurface();
+        $hwnd = $surface->getHandle();
 
-        // 无 C++ 绑定（PHP-only 测试）：使用 defaultCtx，跳过后端选择
+        // PHP-only（无 C++ 绑定）：框架侧构造捕获后端（对应 Flutter 软件渲染路径）。
+        // 注：CLI 下 stub 定义了 vue_begin_paint，故本分支在 stub 环境不触发，
+        // CLI 测试继续走 Stage 2（与改造前行为等价，element 捕获仍为空）。
+        // 激活 CLI 捕获需同批再生成 336 基线（当前全为 "(no elements)"），
+        // 属独立批次（见计划文档 P1.3 第二段未证边界）。
         if (!function_exists('vue_begin_paint')) {
-            $this->paintPipeline = new PaintPipeline($this->rootComponent, $defaultCtx);
-            error_log('[DIAG] initRenderer: test mode, using defaultCtx');
+            $this->paintPipeline = new PaintPipeline($this->rootComponent, new CapturingRenderContext());
+            error_log('[DIAG] initRenderer: offscreen test mode, using CapturingRenderContext');
             return;
         }
-
-        unset($defaultCtx);  // 显式释放默认 RC，让 RuntimeBackendSelector 创建最优后端
 
         // Stage 2: 用 RuntimeBackendSelector 探测 + 选择最优后端
         // headless 模式同样走后端选择（handle=0 时 skia-cpu 使用内存离屏 surface）
         // 原生句柄经 RenderSurface 中转，Framework 层不直接接触 HWND 概念
-        $hwnd = $this->platform->getSurface()->getHandle();
         $selector  = new RuntimeBackendSelector();
         try {
             $backend = $selector->select($hwnd, $w, $h);
@@ -452,6 +469,12 @@ class Application
         $this->paintPipeline = new PaintPipeline($this->rootComponent, $renderCtx);
     }
 
+    /** 绘制管线访问器（测试从引擎侧读回光栅产物；对标 Flutter — 光栅器属 engine）。 */
+    public function getPaintPipeline(): ?PaintPipeline
+    {
+        return $this->paintPipeline;
+    }
+
     public function mount(ReactiveComponentInterface $root, string $appDir = ''): self
     {
         $this->rootComponent = $root;
@@ -468,6 +491,9 @@ class Application
         if ($appDir !== '') {
             Config::init($appDir);
         }
+
+        // 帧调度器动画开关：project.yml 的 Px_animation_enabled（默认关闭 → 行为等价）
+        $this->frameScheduler->setAnimationEnabled(Config::get('animation_enabled', false) === true);
 
         // 初始化文本后端（渲染层管理：TextBackendRegistry）
         TextBackendRegistry::initialize();
@@ -487,15 +513,25 @@ class Application
 
         $this->rootComponent->mount();
         
-        // 设置动画/定时渲染定时器（1 秒间隔，用于 carousel 等定时功能）
-        // 优化：仅当根组件定义了 onTimerTick 时才触发 requestRender，
-        // 避免静态页面空转渲染浪费 CPU（快照分析显示 49 帧完全相同）
+        // 设置动画/定时渲染定时器。
+        // 动画开启（Px_animation_enabled=true）→ 按帧间隔（≈16ms）驱动 AnimationManager；
+        // 动画关闭（默认）→ 保持 1 秒间隔仅用于 onTimerTick（carousel 等），行为等价。
+        // 优化：静态页面（无 onTimerTick 且无活跃动画）不触发 requestRender，避免空转渲染。
+        $timerInterval = $this->frameScheduler->isAnimationEnabled()
+            ? $this->frameScheduler->getFrameIntervalMs()
+            : 1000;
         $this->platform->setAnimationTimer(function () {
+            // 帧驱动动画（默认关闭；关闭时 tick() 为空操作，此分支惰性）
+            if ($this->frameScheduler->isAnimationEnabled()) {
+                if ($this->frameScheduler->tick()) {
+                    $this->requestRender();
+                }
+            }
             if ($this->rootComponent !== null && method_exists($this->rootComponent, 'onTimerTick')) {
                 $this->rootComponent->onTimerTick();
                 $this->requestRender();
             }
-        }, 1000);
+        }, $timerInterval);
 
         return $this;
     }
@@ -1187,7 +1223,8 @@ class Application
 
                 $hasMacro = $this->scheduler->runOneMacrotask();
 
-                if (!$hasMacro && !$this->renderRequested && count($rawEvents) === 0) {
+                if (!$hasMacro && !$this->renderRequested && count($rawEvents) === 0
+                    && !$this->frameScheduler->hasActiveAnimations()) {
                     usleep(1000);
                 }
 

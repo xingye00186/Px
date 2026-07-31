@@ -21,7 +21,6 @@ require_once __DIR__ . '/bootstrap.php';
 use Px\Core\Scheduler;
 use Px\Core\Application;
 use Px\Platform\Platform;
-use Px\Paint\RenderContext;
 
 // ---- 额外需要的框架文件（不在 bootstrap.php 中） ----
 $fw = dirname(__DIR__, 2) . '/framework';
@@ -42,17 +41,9 @@ class StubPlatform implements Platform
         $this->height = $h;
     }
 
-    public function init(string $title, int $width, int $height): RenderContext
+    public function init(string $title, int $width, int $height): void
     {
-        return new class extends RenderContext
-        {
-            public function beginFrame(): void {}
-            public function endFrame(): void {}
-            public function drawElement(array $el): void {}
-            public function fillRect(int $x, int $y, int $w, int $h, int $color): void {}
-            public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold, string $fontFamily = ''): void {}
-            public function drawButton(int $x, int $y, int $w, int $h, int $bg, int $border): void {}
-        };
+        // P1.3 Surface 解耦：平台只造表面；渲染上下文由框架侧构造
     }
 
     public function getSurface(): \Px\Platform\RenderSurface

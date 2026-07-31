@@ -6,12 +6,13 @@ use Px\Platform\Platform;
 use Px\Platform\RenderSurface;
 use Px\Platform\ViewMetrics;
 use Px\Platform\LifecycleEvent;
-use Px\Paint\RenderContext;
 
 /**
  * 可捕获 RenderContext 操作和注入事件的测试平台。
  *
  * 替代现有的 StubPlatform 和 _CssCapturePlatform，统一测试用平台抽象。
+ * P1.3 Surface 解耦后 init() 不再返回 RenderContext；$renderContext 字段
+ * 保留供直接驱动 MockRenderContext 的旧测试使用（非 Application 管线）。
  */
 class MockPlatform implements Platform
 {
@@ -35,11 +36,11 @@ class MockPlatform implements Platform
         $this->renderContext = new MockRenderContext();
     }
 
-    public function init(string $title, int $width, int $height): RenderContext
+    public function init(string $title, int $width, int $height): void
     {
         $this->width = $width;
         $this->height = $height;
-        return $this->renderContext;
+        // P1.3 Surface 解耦：平台只造表面，不再返回渲染上下文
     }
 
     public function getSurface(): RenderSurface

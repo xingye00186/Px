@@ -4,15 +4,13 @@ namespace Px\Platform;
 
 use native_types;
 
-use Px\Paint\RenderContext;
-use Px\Paint\GdiRenderContext;
-use Px\Paint\SkiaRenderContext;
-
 /**
  * Win32Platform — Windows Embedder
  *
  * 职责：把 Win32 的一切（HWND / WM_* 消息）翻译为 Framework 层的统一抽象。
  * Framework 层不得看到任何 Win32 概念（终极融合铁律 1）。
+ * 渲染上下文不在此创建（P1.3 Surface 解耦）：由框架侧
+ * RuntimeBackendSelector 从 getSurface() 构造。
  *
  *   WM_LBUTTONDOWN/UP/MOUSEMOVE/MOUSEWHEEL → PointerEvent(kind:'mouse')
  *   WM_KEYDOWN/KEYUP/CHAR                  → KeyEvent
@@ -46,7 +44,7 @@ class Win32Platform implements Platform
         WinMsg::WM_CLOSE       => ['window', 'close'],
     ];
 
-    public function init(string $title, int $width, int $height): RenderContext
+    public function init(string $title, int $width, int $height): void
     {
         // headless 模式：不创建窗口，hwnd 保持 0（Skia 用内存 DC 离屏渲染）
         if (!\Px\Core\Application::$HEADLESS) {
@@ -56,11 +54,9 @@ class Win32Platform implements Platform
         $this->surfaceWidth  = $width;
         $this->surfaceHeight = $height;
         vue_hide_console();
-        // APP_RENDERER='skia' 则用 Skia 路径，默认 GDI（零侵入）
-        if (defined('APP_RENDERER') && APP_RENDERER === 'skia') {
-            return new SkiaRenderContext($this->hwnd, $width, $height);
-        }
-        return new GdiRenderContext($this->hwnd);
+        // 渲染上下文不在此创建：框架侧从 getSurface() 构造（P1.3）。
+        // 旧实现在此返回的 Gdi/SkiaRenderContext 在生产路径恒被
+        // Application::initRenderer 立即丢弃（unset），属无效构造。
     }
 
     public function getSurface(): RenderSurface

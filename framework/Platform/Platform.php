@@ -2,8 +2,6 @@
 
 namespace Px\Platform;
 
-use Px\Paint\RenderContext;
-
 /**
  * Platform — 平台抽象接口（Embedder 边界）
  *
@@ -14,19 +12,26 @@ use Px\Paint\RenderContext;
  *   输入消息 → PointerEvent / KeyEvent
  *   窗口状态 → LifecycleEvent / MetricsEvent / RedrawEvent
  *
+ * 对标 Flutter Embedder：Embedder 只负责造表面 + 事件/度量/生命周期翻译，
+ * **不生产渲染上下文**——RenderContext 由框架侧（RuntimeBackendSelector /
+ * CapturingRenderContext）从 RenderSurface 构造，光栅产物归引擎所有。
+ * 因此本接口对 Px\Paint\* 零依赖。
+ *
  * 实现者：Win32Platform（当前）、AndroidEmbedder / IOSEmbedder（Phase 3/4）。
  */
 interface Platform
 {
     /**
-     * 初始化平台：创建窗口/表面、显示、创建渲染上下文。
+     * 初始化平台：创建窗口/表面并显示。
+     *
+     * 只造表面，不造渲染上下文（P1.3 Surface 解耦）：
+     * 渲染上下文由框架侧从 getSurface() 构造。
      *
      * @param string $title  窗口标题（移动端忽略）
      * @param int    $width  窗口宽度
      * @param int    $height 窗口高度
-     * @return RenderContext 渲染上下文
      */
-    public function init(string $title, int $width, int $height): RenderContext;
+    public function init(string $title, int $width, int $height): void;
 
     /**
      * 获取渲染表面（在 init 之后调用有效）。

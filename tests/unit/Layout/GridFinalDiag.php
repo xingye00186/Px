@@ -63,8 +63,8 @@ class _GridDiagMockPlatform implements Platform
     public function __construct() {
         $this->renderContext = new _GridDiagMockRenderContext();
     }
-    public function init(string $title, int $width, int $height): RenderContext {
-        return new _GridDiagMockRenderContext();
+    public function init(string $title, int $width, int $height): void {
+        // P1.3 Surface 解耦：平台只造表面
     }
     public function shutdown(): void {}
     public function pollEvents(): array { return []; }

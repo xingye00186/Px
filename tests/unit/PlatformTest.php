@@ -50,13 +50,13 @@ class _MockPlatform implements Platform
     /** @var PlatformEvent[] */
     public array $events = [];
 
-    public function init(string $title, int $width, int $height): RenderContext
+    public function init(string $title, int $width, int $height): void
     {
         $this->initCalled = true;
         $this->title = $title;
         $this->width = $width;
         $this->height = $height;
-        return new _PlatformMockRenderContext();
+        // P1.3 Surface 解耦：平台只造表面，渲染上下文由框架侧构造
     }
 
     public function shutdown(): void
@@ -100,15 +100,17 @@ test('MockPlatform 实现 Platform 接口', function () {
     assert_true($platform instanceof Platform, 'MockPlatform 必须实现 Platform 接口');
 });
 
-test('init() 返回 RenderContext', function () {
+test('init() 只造表面，不返回渲染上下文（P1.3 Surface 解耦）', function () {
     $platform = new _MockPlatform();
-    $ctx = $platform->init('Test App', 800, 600);
+    $platform->init('Test App', 800, 600);
 
     assert_true($platform->initCalled, 'init 应被调用');
     assert_eq($platform->title, 'Test App', 'title 应为 Test App');
     assert_eq($platform->width, 800, 'width 应为 800');
     assert_eq($platform->height, 600, 'height 应为 600');
-    assert_true($ctx instanceof RenderContext, 'init() 应返回 RenderContext 实例');
+    // 对标 Flutter Embedder：init 后表面可用，上下文归引擎
+    $refl = new \ReflectionMethod(Platform::class, 'init');
+    assert_eq((string)$refl->getReturnType(), 'void', 'init() 应声明 void（Embedder 不生产 RenderContext）');
 });
 
 test('shutdown() 清理资源', function () {
@@ -181,15 +183,19 @@ test('KeyEvent 有 keyCode / char / modifiers', function () {
 echo "\n--- 3. DIP 验证：Application 依赖 Platform 抽象 ---\n";
 
 test('Application 通过 Platform 接口使用平台 (不持有 hwnd)', function () {
-    // 核心验证：Application 不应持有 hwnd 引用
+    // 核心验证：Platform 接口对 Px\Paint\* 零依赖（P1.3 Surface 解耦）——
+    // Embedder 只产出 RenderSurface，渲染上下文由框架侧从表面构造。
     $platform = new _MockPlatform();
+    $platform->init('DIP Test', 640, 480);
 
-    // init() 封装了 hwnd，返回 RenderContext
-    $ctx = $platform->init('DIP Test', 640, 480);
-
-    // 验证：Application 层面没有访问 hwnd 的方式
-    assert_true($ctx instanceof RenderContext, 'Application 只看到 RenderContext');
-    // hwnd 完全封装在 Platform 实现内部
+    $surface = $platform->getSurface();
+    assert_true($surface instanceof RenderSurface, 'Application 只看到 RenderSurface');
+    // hwnd 完全封装在 Platform 实现内部；接口无任何方法返回 RenderContext
+    $refl = new \ReflectionClass(Platform::class);
+    foreach ($refl->getMethods() as $m) {
+        $rt = (string)($m->getReturnType() ?? '');
+        assert_false(str_contains($rt, 'RenderContext'), "Platform::{$m->getName()} 不得返回 RenderContext（光栅产物归引擎）");
+    }
 });
 
 test('Platform 应提供 getSurface 方法 (RuntimeBackendSelector 需要句柄)', function () {

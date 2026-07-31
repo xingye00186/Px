@@ -178,34 +178,20 @@ function run_css_tests(string $suiteName, string $snapFile, array $tests): void
     }
 }
 
-// ── Capturing RenderContext for rendering element verification ──
-
-class _CssCaptureRenderContext extends \Px\Paint\RenderContext
-{
-    public array $drawnElements = [];
-
-    public function beginFrame(): void { $this->drawnElements = []; }
-    public function endFrame(): void {}
-    public function drawElement(array $el): void { $this->drawnElements[] = $el; }
-    public function fillRect(int $x, int $y, int $w, int $h, int $color): void {}
-    public function drawText(int $x, int $y, string $text, int $fontSize, int $color, int $bold, string $fontFamily = ''): void {}
-    public function drawButton(int $x, int $y, int $w, int $h, int $bg, int $border): void {}
-}
+// ── Surface-only 测试平台（P1.3 Surface 解耦：光栅产物归引擎，平台不再持有 RenderContext）──
 
 class _CssCapturePlatform implements \Px\Platform\Platform
 {
-    public _CssCaptureRenderContext $renderContext;
     private int $width;
     private int $height;
 
     public function __construct(int $w, int $h) {
         $this->width = $w;
         $this->height = $h;
-        $this->renderContext = new _CssCaptureRenderContext();
     }
 
-    public function init(string $title, int $width, int $height): \Px\Paint\RenderContext {
-        return $this->renderContext;
+    public function init(string $title, int $width, int $height): void {
+        // 只造表面（离屏 handle=0）；捕获上下文由框架侧 CapturingRenderContext 提供
     }
     public function getSurface(): \Px\Platform\RenderSurface {
         return new \Px\Platform\RenderSurface(0, $this->width, $this->height, 1000);
@@ -312,8 +298,10 @@ function run_render_pipeline(\Px\Dom\VNode $vnode, int $width = 1440, int $heigh
     $rootNode = $rtm->getRootRenderNode();
     $layoutDump = $rootNode !== null ? $rtm->dumpRenderTree($rootNode, 1, []) : '';
 
-    // Render elements dump
-    $elements = $platform->renderContext->drawnElements;
+    // Render elements dump（P1.3：从引擎侧读回光栅产物，对标 Flutter — 光栅器属 engine）
+    $ctx = $app->getPaintPipeline()->getRenderContext();
+    $elements = $ctx instanceof \Px\Paint\Backend\CapturingRenderContext
+        ? $ctx->getDrawnElements() : [];
     $elementLines = [];
     foreach ($elements as $i => $el) {
         $elementLines[] = '  [' . $i . '] ' . format_render_element($el);
