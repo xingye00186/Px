@@ -1,0 +1,70 @@
+perf(bench): full-pipeline analysis vs 4 historical baselines — regression is REAL, not drift
+
+Ran the AOT exe at cycles=50 per docs/bench-guide.md and analysed against FOUR
+archived baselines. New tool tests/perf/bench_analyze.php reports steady_fps
+verdicts, triangulation, per-stage per-FRAME cost (total/renders, which removes
+the cycles-mismatch trap), stage share of full_render, and the heaviest cases.
+
+VERDICT — steady_fps (guide §2: +/-5% noise, drop >5% is a real regression):
+
+  case              CURRENT   envcheck  menulist2  pseudogen  phase4
+  LiveDashboard       236.3    -41.5%!!   -43.7%!!   -45.5%!!  -43.6%!!
+  TextHeavy           226.7    -18.2%!!   -23.3%!!   -26.0%!!  -22.8%!!
+  StaticTemplate      420.6    -16.2%!!   -15.0%!!   -23.3%!!  -15.5%!!
+  ChatStream          467.1    -12.5%!!   -13.0%!!   -20.8%!!  -14.2%!!
+  HoverGrid           537.3     +0.3%      -4.4%     -14.3%!!   -8.2%!!
+  FormDashboard       707.1     -2.2%      -2.6%     -13.7%!!   -5.9%!!
+  SimpleCounter       673.1     +6.3%++    -4.8%     -15.4%!!   -8.1%!!
+  MixedWorkload       712.2     +1.2%      +2.2%      -9.2%!!   -1.6%
+  DynamicList         605.7     +3.1%      +0.4%      -9.0%!!   -2.2%
+  DeepTree            830.5     +7.1%++    +9.8%++    -4.4%     +5.4%++
+  ManyProps           789.0     +7.2%++    +9.2%++    -2.7%     +5.1%++
+
+TRIANGULATION (guide §4): spread is 43-54 percentage points against every
+baseline, i.e. the shift is DIVERGENT, not uniform. So the environment-drift
+hypothesis is rejected — this points at specific code paths. Four independent
+baselines agree, which rules out a bad single baseline.
+
+PIPELINE COST (us/frame, averaged over 11 cases; 98.8% attributed):
+
+  stage:layout              888.8   40.9%
+  stage:vnode_tree          680.1   31.3%
+  stage:paint               407.2   18.7%
+  stage:style_recalc        117.0    5.4%
+  stage:update_from_vnode    54.2    2.5%
+  stage:full_render        2172.5
+
+BOTTLENECKS, per case:
+
+1. TextHeavy (fps 226.7, 4418 us/frame): vnode_tree 2891 us = 65% of the frame,
+   while style_recalc is only 10.4 us. This is NOT the C4.1 work — it is VNode
+   construction/text measurement. Counters show node_skip=51 subtree_skip=51,
+   i.e. one skip per frame: nothing is being reused.
+
+2. LiveDashboard (fps 236.3, 4356 us/frame): the only case where style_recalc is
+   heavy at 1065 us (24% of frame), alongside vnode_tree 1541 us. Counters:
+   miss_nostyle=2432 vs node_skip=3201 — 43% of nodes have NO previous-frame
+   result to reuse, so the cache cannot pay off. pool_hit=2503 / miss=30 proves
+   the pool itself is fine; the misses are structural (fresh instances), not
+   cache-key failures.
+
+3. StaticTemplate (fps 420.6, 2360 us/frame): vnode_tree 1004.7 us dominates
+   despite the name suggesting static content — static subtrees are being
+   rebuilt every frame.
+
+ROOT CAUSE HYPOTHESIS (not yet proven): all three point at the same thing -
+VNode instances are not reused across frames, so both vnode_tree (rebuild) and
+style_recalc (no previous result) pay full cost. patchChildrenArray only reuses
+UNKEYED children when both sides are block roots with dynamicChildren, and only
+keyed children otherwise. Until reuse improves, the C4.1 cache has nothing to
+hit. Note vnode_tree (31.3%) is a LARGER share than style_recalc (5.4%), so
+the reuse gap is the primary target, not the recalc path.
+
+HONEST LIMITS: this run reused the working tree, whereas the archived
+AOT-comparison spec requires a fresh isolated directory per side. Numbers are
+indicative. Also the baselines predate several intervening batches, so the
+regression is attributable to "everything since 07-27", not to one commit -
+bisecting is the next step.
+
+Archived: tests/perf/bench_head_0731.json (cycles=50).
+New: tests/perf/bench_analyze.php.
