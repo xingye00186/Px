@@ -1363,8 +1363,14 @@ class RenderTreeManager
             }
 
             // 卸载未消耗的旧节点
+            // 排除已被组件跳过路径（line 701-706）重新挂接到 $parent->children 的
+            // 组件根 RenderNode：type 域不匹配（旧 RN 'div' vs 新 VNode '#component'）
+            // 使其在 keyed/position 匹配中均落空、$consumed 为空，但组件未 dirty 时
+            // updateFromVNode 已把它挂回 parent。若在此销毁会清空其 children/
+            // computedStyle/cachedFragment → 次帧起整树坍缩为 0×0（多帧稳定性铁律破坏）。
             for ($k = $i; $k <= $e1; $k++) {
-                if (!in_array($k, $consumed, true)) {
+                if (!in_array($k, $consumed, true)
+                    && !in_array($oldChildren[$k], $parent->children, true)) {
                     $this->destroyRenderNodeTree($oldChildren[$k], false);
                 }
             }
@@ -1414,13 +1420,147 @@ class RenderTreeManager
     /**
      * 在 RenderNode 树上执行命中测试。
      * 返回命中的最上层可交互元素（有 @click 的 RenderNode）。
+     *
+     * 几何权威源（对标 Blink：HitTest 走 PhysicalFragment 树）：
+     * 优先走绘制同源的 Fragment 树（setPaintedFragmentTree 注入）——
+     * RenderNode::cachedFragment 在双槽 MRU 下可能驻留 measure 槽
+     *（未定位 intrinsic 尺寸，如 (0,0 10x21)），据它命中会整树脱靶；
+     * 无 Fragment 树时回退旧路径（兼容未经 render 的测试场景）。
      */
     public function hitTest(int $x, int $y): ?RenderNode
     {
+        $this->lastHitFragment = null;
+        if ($this->paintedFragmentTree !== null) {
+            return $this->hitTestFragmentRecursive($x, $y, $this->paintedFragmentTree);
+        }
         if ($this->rootRenderNode === null) {
             return null;
         }
         return $this->hitTestRecursive($x, $y, $this->rootRenderNode);
+    }
+
+    /** 绘制同源 Fragment 树（Application 在每次 layout 后注入） */
+    private ?\Px\Layout\PhysicalFragment $paintedFragmentTree = null;
+
+    /** 最近一次 hitTest 命中的 Fragment（供 ClickEffects 取真实几何） */
+    private ?\Px\Layout\PhysicalFragment $lastHitFragment = null;
+
+    public function setPaintedFragmentTree(?\Px\Layout\PhysicalFragment $root): void
+    {
+        $this->paintedFragmentTree = $root;
+    }
+
+    public function getLastHitFragment(): ?\Px\Layout\PhysicalFragment
+    {
+        return $this->lastHitFragment;
+    }
+
+    /**
+     * Fragment 树命中测试（与 hitTestRecursive 语义逐项对齐：
+     * pointer-events / overflow clip / 滚动坐标转换 / layer 序 / transform 偏移）。
+     */
+    private function hitTestFragmentRecursive(int $x, int $y, \Px\Layout\PhysicalFragment $frag): ?RenderNode
+    {
+        $style = $frag->style;
+        if (($style?->pointerEvents?->value ?? '') === 'none') {
+            return null;
+        }
+
+        $nodeX = (int)$frag->x;
+        $nodeY = (int)$frag->y;
+        $nodeW = (int)$frag->w;
+        $nodeH = (int)$frag->h;
+
+        $overflow = $style?->overflow?->value ?? 'visible';
+        $overflowX = $style?->overflowX?->value ?? $overflow;
+        $overflowY = $style?->overflowY?->value ?? $overflow;
+        $isClipContainer = ($overflowX === 'hidden' || $overflowX === 'scroll' || $overflowX === 'auto'
+            || $overflowY === 'hidden' || $overflowY === 'scroll' || $overflowY === 'auto');
+        if ($isClipContainer && $nodeW > 0 && $nodeH > 0) {
+            if ($x < $nodeX || $x > $nodeX + $nodeW || $y < $nodeY || $y > $nodeY + $nodeH) {
+                return null;
+            }
+        }
+
+        $childX = $x;
+        $childY = $y;
+        if ($frag->isScrollContainer) {
+            $childX += (int)$frag->scrollLeft;
+            $childY += (int)$frag->scrollTop;
+        }
+
+        // 子 Fragment 命中：纯 foreach（PaintPipeline 同形态，本 exe 每帧像素验证）。
+        // 层序等价实现：遍历全部子项，保留 layer 最高、同 layer 文档序最后
+        //（= 绘制在最上层）的命中——与旧版 layer 递减 + 倒序早退语义一致。
+        // 不用嵌套数组分组/krsort/索引访问（该形态在 AOT 下静默断裂）。
+        $best = null;
+        $bestLayer = -1;
+        $bestFrag = null;
+        foreach ($frag->children as $childFrag) {
+            $found = $this->hitTestFragmentRecursive($childX, $childY, $childFrag);
+            if ($found !== null) {
+                $cl = (int)$childFrag->layer;
+                if ($cl >= $bestLayer) {
+                    $best = $found;
+                    $bestLayer = $cl;
+                    $bestFrag = $this->lastHitFragment;
+                }
+            }
+        }
+        if ($best !== null) {
+            $this->lastHitFragment = $bestFrag;
+            return $best;
+        }
+
+        $hitOffX = 0;
+        $hitOffY = 0;
+        $xform = $style?->transform ?? '';
+        if (is_array($xform)) {
+            $hitOffX = (int)($xform['translateX'] ?? 0);
+            $hitOffY = (int)($xform['translateY'] ?? 0);
+        }
+
+        $node = $frag->sourceNode;
+        if ($node !== null && $node->sourceVNode !== null
+            && isset($node->sourceVNode->props['@click'])
+            && $x >= $nodeX + $hitOffX && $x <= $nodeX + $nodeW + $hitOffX
+            && $y >= $nodeY + $hitOffY && $y <= $nodeY + $nodeH + $hitOffY) {
+            $this->lastHitFragment = $frag;
+            return $node;
+        }
+
+        return null;
+    }
+
+    /**
+     * 按 bind 键定位绘制同源 Fragment（如 {{ display }} 文本节点）。
+     * 供 ClickEffects 飞升目标取真实屏幕几何。
+     */
+    public function findFragmentByBind(string $bindKey): ?\Px\Layout\PhysicalFragment
+    {
+        if ($this->paintedFragmentTree === null || $bindKey === '') {
+            return null;
+        }
+        return $this->findFragmentByBindRecursive($this->paintedFragmentTree, $bindKey);
+    }
+
+    private function findFragmentByBindRecursive(\Px\Layout\PhysicalFragment $frag, string $bindKey): ?\Px\Layout\PhysicalFragment
+    {
+        $node = $frag->sourceNode;
+        if ($node !== null && $node->sourceVNode !== null && $node->sourceVNode->props !== null) {
+            $bind = (string)($node->sourceVNode->props[':bind'] ?? $node->sourceVNode->props['bind'] ?? '');
+            if ($bind === $bindKey) {
+                return $frag;
+            }
+        }
+        // 纯 foreach（PaintPipeline 同形态，AOT 已验证）
+        foreach ($frag->children as $childFrag) {
+            $found = $this->findFragmentByBindRecursive($childFrag, $bindKey);
+            if ($found !== null) {
+                return $found;
+            }
+        }
+        return null;
     }
 
     private function hitTestRecursive(int $x, int $y, RenderNode $node): ?RenderNode
