@@ -1491,7 +1491,8 @@ class Application
                         continue;
                     }
                     $click = (string)$hitNode->sourceVNode->props['@click'];
-                    if ($click !== 'inputDigit') {
+                    $targetHandler = (string)Config::get('anim_autotest_handler', 'inputDigit');
+                    if ($click !== $targetHandler) {
                         continue;
                     }
                     $oid = spl_object_id($hitNode);
@@ -1548,6 +1549,11 @@ class Application
             $report['max_interval_us'] = $intervals[$ic - 1];
             $report['avg_fps'] = $avg > 0 ? intdiv(1000000, $avg) : 0;
         }
+        // 根组件状态快照（验证点击是否真正改变了 UI 状态）
+        if ($this->rootComponent !== null) {
+            $report['state_display'] = $this->rootComponent->getBindValue('display');
+        }
+        $report['buttons_found'] = (int)count($this->animAutotestBtnXs);
         $dir = Config::getOutputDir();
         if (!is_dir($dir)) {
             @mkdir($dir, 0777, true);

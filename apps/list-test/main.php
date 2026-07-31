@@ -13,7 +13,7 @@ function main(): int
 
     $root = ComponentFactory::create(AppComponent::class);
     $app = Application::create();
-    $app->mount($root)->run();
+    $app->mount($root, __DIR__)->run();
 
     return 0;
 }

@@ -16,4 +16,11 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/Compiler
+  - ../../framework/Compiler
+
+# 动画 + autotest
+Px_animation_enabled: true
+Px_anim_autotest: true
+Px_anim_autotest_handler: deleteItem
+Px_anim_click_effects: false
+
