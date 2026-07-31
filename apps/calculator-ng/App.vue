@@ -10,8 +10,8 @@
     <basic-pad style="margin-left:11px;margin-top:2px;flex-shrink:0" :acLabel="acLabel" />
     <!-- History header -->
     <history-panel style="margin-left:11px;flex-shrink:0" :arrow="arrowText" />
-    <!-- History list / spacer -->
-    <div v-if="showHistory" style="margin-left:11px;margin-right:11px;flex:1;background:#2C2C2E">
+    <!-- B4: history-panel 用 slide 类名设计（Transition 组件 enter/leave 动画演示） -->
+    <div v-if="showHistory" class="history-panel slide-enter-active" style="margin-left:11px;margin-right:11px;flex:1;background:#2C2C2E">
       <template v-for="item in historyItems" :key="item.id">
         <div style="height:24px;cursor:pointer;display:flex;align-items:center;padding-left:8px" @click="loadHistoryItem" click-arg="item.id">
           <span style="font-size:12px;color:#FFFFFF">{{ item.text }}</span>
@@ -570,4 +570,28 @@
 
 <style>
 .bg-app { background: #1C1C1E; }
+
+/* B2: CSS transition 自动触发 — 按钮 hover 时背景色平滑过渡 */
+.btn-number { transition: background-color 0.2s ease; }
+.btn-operator { transition: background-color 0.15s ease-out; }
+.btn-func { transition: opacity 0.2s ease; }
+
+/* B3: @keyframes — 显示器数字更新时的脉冲动画 */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+.display-pulse { animation: pulse 0.3s ease; }
+
+/* E4: 几何属性动画 — 历史面板展开/收起的高度过渡 */
+.history-panel { transition: height 0.3s ease-in-out; }
+
+/* B4: Transition 组件的 enter/leave 类名 */
+.slide-enter-from { opacity: 0; height: 0; }
+.slide-enter-active { transition: all 0.3s ease; }
+.slide-enter-to { opacity: 1; }
+.slide-leave-from { opacity: 1; }
+.slide-leave-active { transition: all 0.2s ease; }
+.slide-leave-to { opacity: 0; height: 0; }
 </style>

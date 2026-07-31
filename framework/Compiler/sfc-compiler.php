@@ -1305,11 +1305,12 @@ function compileOneComponent(
             // B3: 将 @keyframes + transition + animation CSS 注册调用嵌入 onMount
             $animRegCalls = '';
             if ($keyframesCssBlock !== '') {
-                $escaped = addcslashes($keyframesCssBlock, "'\\");
+                // 单行化（PHP 单引号不支持嵌入换行）+ 转义单引号
+                $escaped = addcslashes(preg_replace('/\s+/', ' ', $keyframesCssBlock), "'\\");
                 $animRegCalls .= "        \\Px\\Animation\\KeyframeResolver::parseAndRegister('$escaped');\n";
             }
             if ($transitionCssBlock !== '') {
-                $escaped = addcslashes($transitionCssBlock, "'\\");
+                $escaped = addcslashes(preg_replace('/\s+/', ' ', $transitionCssBlock), "'\\");
                 $animRegCalls .= "        \\Px\\Animation\\CssAnimationParser::parseStyleBlockTransitions('$escaped');\n";
             }
             $defaultOnMount = "    public function onMount(): void\n    {\n$animRegCalls    }\n\n";
