@@ -85,6 +85,19 @@ class PaintPipeline
                 $this->render_ctx->drawElement($el);
             }
         }
+        // overlay 浮动层（对标 Flutter Overlay）：飞升文本在所有 layer 之后绘制，
+        // 不进 Fragment 树，几何由 AnimationManager 逐帧插值。
+        $floaters = \Px\Animation\AnimationManager::getInstance()->getFloaters();
+        foreach ($floaters as $fRaw) {
+            $f = objval($fRaw, \Px\Animation\FloatingText::class);
+            if ($f->currentX < 0 || $f->currentY < 0) continue;
+            $this->render_ctx->drawElement([
+                'type' => 'text', 'text' => $f->text,
+                'x' => $f->currentX, 'y' => $f->currentY,
+                'color' => $f->colorBgr, 'fontSize' => $f->fontSize,
+                'bold' => 1, 'layer' => $maxLayer + 1,
+            ]);
+        }
         $this->render_ctx->endFrame();
         \Px\Core\PerfCounter::end('render_collect');
     }
@@ -115,12 +128,15 @@ class PaintPipeline
             return;
         }
 
-        // 路径 B: paintDirty 子树跳过 — 非缓存、非滚动容器的洁净子树无需遍历
-        if (!$node->paintDirty && !$frag->isScrollContainer && !$isCacheable) {
-            $layer = $frag->layer;
-            if ($layer > $maxLayer) $maxLayer = $layer;
-            return;
-        }
+        // 路径 B: 洁净子树跳过（仅增量渲染后端有效）。
+        // 当前 GDI/Skia-cpu 为全量重绘后端——每帧 beginFrame 清屏 + endFrame swap，
+        // 未产出的元素不会出现在画面上。路径 B 的"像素仍在 framebuffer"假设不成立。
+        // 暂时禁用，待 P2.5 脏矩形后端实现后按后端能力门控启用。
+        // if (!$node->paintDirty && !$frag->isScrollContainer && !$isCacheable) {
+        //     $layer = $frag->layer;
+        //     if ($layer > $maxLayer) $maxLayer = $layer;
+        //     return;
+        // }
 
         // 路径 C: 正常收集（脏节点或缓存首次建立）
         $wasPaintDirty = $node->paintDirty;
@@ -128,6 +144,50 @@ class PaintPipeline
 
         $el = $this->fragmentToElement($frag);
         if ($el !== null) {
+            // 动画叠加层统一消费点（B1：视觉属性，不回流布局）。
+            // 几何属性（width/height）归 E4：需进 effective ComputedStyle + layoutDirty。
+            if ($node->isAnimating && $node->animatedStyle !== null && isset($el['type'])) {
+                $as = $node->animatedStyle;
+                // ─ glow 通道：直接设置元素的 shadow 字段（治本：GdiRenderContext
+                // 已修复为消费 $el['shadowAlpha']，rect 和 button 同样走
+                // vue_alpha_fill_rect 渲染光晕）─
+                $glowAlpha = (int)($as['glowAlpha'] ?? 0);
+                if ($glowAlpha > 0) {
+                    // 内发光(inset shadow)：画在按钮背景之上、文字之下，
+                    // 不会被按钮自身 opaque 背景覆盖——治本解决“光晕不可见”。
+                    // SkiaRenderContext button 分支已添加 inset shadow 支持。
+                    $el['shadowX'] = 0;
+                    $el['shadowY'] = 0;
+                    $el['shadowBlur'] = 18;
+                    $el['shadowColor'] = (int)($as['glowColor'] ?? 0x00FFFF);
+                    $el['shadowAlpha'] = $glowAlpha / 1000.0;
+                    $el['shadowInset'] = true;
+                }
+                // ─ translate 视觉平移（effectiveX = x + translateX，不改 Fragment）─
+                $tdx = (int)($as['translateX'] ?? 0);
+                $tdy = (int)($as['translateY'] ?? 0);
+                if ($tdx !== 0 || $tdy !== 0) {
+                    $el['x'] = (int)($el['x'] ?? 0) + $tdx;
+                    $el['y'] = (int)($el['y'] ?? 0) + $tdy;
+                    if (isset($el['labelX'])) $el['labelX'] = (int)$el['labelX'] + $tdx;
+                    if (isset($el['labelY'])) $el['labelY'] = (int)$el['labelY'] + $tdy;
+                }
+                // ─ 颜色插值（backgroundColor/color，BGR 整数）─
+                if (isset($as['backgroundColor'])) {
+                    if ($el['type'] === 'button') {
+                        $el['bg'] = (int)$as['backgroundColor'];
+                    } elseif (isset($el['color'])) {
+                        $el['color'] = (int)$as['backgroundColor'];
+                    }
+                }
+                if (isset($as['color'])) {
+                    if ($el['type'] === 'button') {
+                        $el['fg'] = (int)$as['color'];
+                    } elseif ($el['type'] === 'text') {
+                        $el['color'] = (int)$as['color'];
+                    }
+                }
+            }
             $layer = $frag->layer;
             if ($layer > $maxLayer) $maxLayer = $layer;
             if (!isset($elementsByLayer[$layer])) {

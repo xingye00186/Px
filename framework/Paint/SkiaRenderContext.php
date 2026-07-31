@@ -349,6 +349,33 @@ class SkiaRenderContext extends RenderContext
                         );
                     }
                 }
+                // ── Inset shadow for button（对标 rect 分支：画在背景之上、文字之下）──
+                // 治本：光晕用 inset shadow 实现，不会被按钮自身背景覆盖也不需超出边界。
+                $hasInsetShadow = $shadowInset && ($shadowBlur > 0 || $shadowX !== 0 || $shadowY !== 0);
+                if ($hasInsetShadow) {
+                    $pad = $shadowBlur * 2 + 10;
+                    $ix = $el['x'] ?? 0;
+                    $iy = $el['y'] ?? 0;
+                    $iw = $el['w'] ?? 0;
+                    $ih = $el['h'] ?? 0;
+                    $rr = $el['borderRadius'] ?? 0;
+                    if ($rr > 0) {
+                        sk_push_clip_rrect($ix, $iy, $iw, $ih, $rr);
+                    } else {
+                        sk_push_clip($ix, $iy, $iw, $ih);
+                    }
+                    sk_shadow_round_rect(
+                        $ix - $pad + $shadowX,
+                        $iy - $pad + $shadowY,
+                        $iw + $pad * 2,
+                        $ih + $pad * 2,
+                        $rr,
+                        $shadowBlur + $pad,
+                        $shadowColor,
+                        (float)$shadowAlpha
+                    );
+                    sk_pop_clip();
+                }
                 if (isset($el['label']) && $el['label'] !== '') {
                     $this->drawText(
                         $el['labelX'] ?? 0,

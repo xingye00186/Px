@@ -31,6 +31,9 @@ class AnimationManager
     /** @var Animation[] 活跃动画实例 */
     private array $animations = [];
 
+    /** @var FloatingText[] overlay 浮动文本（飞升动画）；不绑定 RenderNode */
+    private array $floaters = [];
+
     /** @var RenderNode[] nodeId → RenderNode 映射（用于快速查找） */
     private array $nodeMap = [];
 
@@ -152,6 +155,24 @@ class AnimationManager
     }
 
     /**
+     * 注册一个 overlay 浮动文本（如点击数字飞升）。
+     * 不绑定 RenderNode，由 PaintPipeline 在所有 layer 之后绘制。
+     */
+    public function addFloatingText(FloatingText $item): void
+    {
+        if (count($this->floaters) >= self::MAX_ANIMATIONS) {
+            return;
+        }
+        $this->floaters[] = $item;
+    }
+
+    /** @return FloatingText[] 当前活跃浮动项（PaintPipeline 消费） */
+    public function getFloaters(): array
+    {
+        return $this->floaters;
+    }
+
+    /**
      * 取消节点上指定属性的动画。
      */
     public function cancelTransition(RenderNode $node, string $property): void
@@ -210,7 +231,9 @@ class AnimationManager
     {
         $completedKeys = [];
 
-        foreach ($this->animations as $key => $anim) {
+        foreach ($this->animations as $key => $animRaw) {
+            // AOT：对象数组元素需 objval 显式标注后才能安全访问属性/方法
+            $anim = objval($animRaw, Animation::class);
             $anim->elapsed += $deltaMs;
 
             // 计算进度
@@ -239,6 +262,30 @@ class AnimationManager
         }
         if (count($completedKeys) > 0) {
             $this->animations = array_values($this->animations);
+        }
+
+        // 推进 overlay 浮动项（坐标/alpha 整数插值，完成即移除）
+        $doneFloaters = [];
+        foreach ($this->floaters as $fk => $fRaw) {
+            $f = objval($fRaw, FloatingText::class);
+            $f->elapsed += $deltaMs;
+            $fp = $f->elapsed / $f->durationMs;
+            if ($fp > 1.0) {
+                $fp = 1.0;
+            }
+            $ft = $this->applyEasing($fp, $f->easing);
+            $f->currentX = Interpolator::lerpInt($f->fromX, $f->toX, $ft);
+            $f->currentY = Interpolator::lerpInt($f->fromY, $f->toY, $ft);
+            $f->alphaPermille = Interpolator::lerpInt(1000, 0, $ft);
+            if ($fp >= 1.0) {
+                $doneFloaters[] = $fk;
+            }
+        }
+        foreach ($doneFloaters as $fk) {
+            unset($this->floaters[$fk]);
+        }
+        if (count($doneFloaters) > 0) {
+            $this->floaters = array_values($this->floaters);
         }
     }
 
@@ -277,6 +324,14 @@ class AnimationManager
         }
 
         $node->isAnimating = true;
+        // paint-only 失效：沿父链置 paintDirty，使 directRender 的
+        // 路径 B（洁净子树跳过）不会跳过动画中节点。
+        // 不用 markStyleDirty（它会强制 layoutDirty=false，有副作用）。
+        $n = $node;
+        while ($n !== null) {
+            $n->paintDirty = true;
+            $n = $n->parent;
+        }
     }
 
     /**
@@ -342,6 +397,27 @@ class AnimationManager
                     ),
                 ];
 
+            // 光晕通道（非 CSS 属性，引擎自定义）：由 PaintPipeline
+            // fragmentToElement 统一入口叠加到 shadow 族字段。
+            // glowAlpha 为千分比整数（1000=不透明），守整数确定性契约。
+            case 'glowAlpha':
+                return [
+                    'glowAlpha' => Interpolator::lerpInt(
+                        (int)$anim->fromValue,
+                        (int)$anim->toValue,
+                        $t
+                    ),
+                ];
+
+            case 'glowColor':
+                return [
+                    'glowColor' => Interpolator::interpolateColor(
+                        (int)$anim->fromValue,
+                        (int)$anim->toValue,
+                        $t
+                    ),
+                ];
+
             default:
                 return [];
         }
@@ -374,6 +450,13 @@ class AnimationManager
                 $node->isAnimating = false;
             }
         }
+
+        // 终帧失效：动画结束后节点需重绘一次恢复基线外观
+        $n = $node;
+        while ($n !== null) {
+            $n->paintDirty = true;
+            $n = $n->parent;
+        }
     }
 
     // ============================================================
@@ -389,11 +472,11 @@ class AnimationManager
     }
 
     /**
-     * 获取当前活跃动画数量。
+     * 获取当前活跃动画数量（含 overlay 浮动项）。
      */
     public function getActiveCount(): int
     {
-        return count($this->animations);
+        return count($this->animations) + count($this->floaters);
     }
 }
 

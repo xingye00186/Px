@@ -100,6 +100,22 @@ class FrameScheduler
     }
 
     /**
+     * 下一动画帧是否到期（不推进时钟）。
+     *
+     * 供 run() 事件循环自节拍：Win32 WM_TIMER 分辨率 ~15.6ms 且低优先级
+     * 消息会被合并，物理上无法稳定 60FPS；改由主循环以此判定 + tick()
+     * 驱动动画帧（对标 Flutter 单 Ticker 模型）。
+     */
+    public function frameDue(): bool
+    {
+        if ($this->lastFrameTime < 0) {
+            return true;
+        }
+        $elapsedMs = (int)((microtime(true) - $this->lastFrameTime) * 1000.0);
+        return $elapsedMs >= $this->frameIntervalMs;
+    }
+
+    /**
      * 当前是否有活跃动画（不推进时钟，供事件循环判定是否继续请求渲染）。
      */
     public function hasActiveAnimations(): bool

@@ -56,8 +56,10 @@ class GdiRenderContext extends RenderContext
                 $shadowBlur = $el['shadowBlur'] ?? 0;
                 $shadowInset = $el['shadowInset'] ?? false;
                 if (!$shadowInset && ($shadowX !== 0 || $shadowY !== 0 || $shadowBlur > 0)) {
-                    $shadowAlpha = 0.5 * (1.0 / (1.0 + $shadowBlur * 0.05));
-                    $shadowAlpha = max(0.05, min(0.5, $shadowAlpha));
+                    // 优先使用元素上显式传入的 shadowAlpha（动画系统设置），
+                    // 无显式值时回退旧公式（CSS box-shadow 兼容）。
+                    $shadowAlpha = $el['shadowAlpha'] ?? (0.5 * (1.0 / (1.0 + $shadowBlur * 0.05)));
+                    $shadowAlpha = max(0.05, min(1.0, (float)$shadowAlpha));
                     vue_alpha_fill_rect(
                         $this->hdc,
                         ($el['x'] ?? 0) + $shadowX,
@@ -239,8 +241,8 @@ class GdiRenderContext extends RenderContext
                 $shadowBlur = $el['shadowBlur'] ?? 0;
                 $shadowInset = $el['shadowInset'] ?? false;
                 if (!$shadowInset && ($shadowX !== 0 || $shadowY !== 0 || $shadowBlur > 0)) {
-                    $shadowAlpha = 0.5 * (1.0 / (1.0 + $shadowBlur * 0.05));
-                    $shadowAlpha = max(0.05, min(0.5, $shadowAlpha));
+                    $shadowAlpha = $el['shadowAlpha'] ?? (0.5 * (1.0 / (1.0 + $shadowBlur * 0.05)));
+                    $shadowAlpha = max(0.05, min(1.0, (float)$shadowAlpha));
                     vue_alpha_fill_rect(
                         $this->hdc,
                         ($el['x'] ?? 0) + $shadowX,

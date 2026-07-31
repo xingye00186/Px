@@ -30,6 +30,7 @@ use Px\Paint\InteractionState;
 use Px\Css\CssMappings;
 use Px\Paint\ImageManager;
 use Px\Render\RenderTreeManager;
+use Px\Animation\ClickEffects;
 use Px\Component\Contracts\ReactiveComponentInterface;
 use Px\Component\ReactiveComponent;
 use Px\Core\Config;
@@ -105,6 +106,17 @@ class Application
 
     /** 帧调度器：帧计时 + 动画驱动（P1.3）。动画默认关闭，行为等价。 */
     private FrameScheduler $frameScheduler;
+
+    // ── 动画压测模式（Px_anim_autotest）：10Hz 合成点击 + 逐帧时间戳日志 ──
+    private bool $animAutotestActive = false;
+    private int $animAutotestClicks = 0;
+    private int $animAutotestNextAtUs = 0;
+    /** @var int[] 动画帧墙钟时间戳（μs） */
+    private array $animFrameLog = [];
+    /** @var int[] inputDigit 按钮中心 X（与 Ys 平行；经 hitTest 网格扫描发现） */
+    private array $animAutotestBtnXs = [];
+    /** @var int[] inputDigit 按钮中心 Y */
+    private array $animAutotestBtnYs = [];
 
     private static ?self $instance = null;
 
@@ -334,6 +346,18 @@ class Application
                     $arg = $sourceVNode->props['click-arg'] ?? null;
                     $target = $this->resolveComponentByGroupId($renderNode->groupId);
                     $target->dispatchClick($handler, $arg);
+                    // 点击特效（Px_anim_click_effects，依赖动画总开关）：
+                    // 彩虹光晕渐隐 + 标签飞升到 fly-to 目标（如 display）
+                    if ($this->frameScheduler->isAnimationEnabled()
+                        && Config::get('anim_click_effects', false) === true) {
+                        ClickEffects::trigger(
+                            $renderNode,
+                            $this->renderTreeManager->getLastHitFragment(),
+                            $this->renderTreeManager->findFragmentByBind(
+                                (string)Config::get('anim_fly_to_bind', '')
+                            )
+                        );
+                    }
                 }
             }
         }
@@ -513,25 +537,17 @@ class Application
 
         $this->rootComponent->mount();
         
-        // 设置动画/定时渲染定时器。
-        // 动画开启（Px_animation_enabled=true）→ 按帧间隔（≈16ms）驱动 AnimationManager；
-        // 动画关闭（默认）→ 保持 1 秒间隔仅用于 onTimerTick（carousel 等），行为等价。
-        // 优化：静态页面（无 onTimerTick 且无活跃动画）不触发 requestRender，避免空转渲染。
-        $timerInterval = $this->frameScheduler->isAnimationEnabled()
-            ? $this->frameScheduler->getFrameIntervalMs()
-            : 1000;
+        // 定时器仅供 onTimerTick（carousel 等秒级功能）。
+        // 动画帧不走 WM_TIMER（分辨率 ~15.6ms + 消息合并，到不了稳定 60FPS），
+        // 由 run() 主循环 FrameScheduler 自节拍驱动（对标 Flutter Ticker）。
+        // 优化：仅当根组件定义了 onTimerTick 时才触发 requestRender，
+        // 避免静态页面空转渲染浪费 CPU。
         $this->platform->setAnimationTimer(function () {
-            // 帧驱动动画（默认关闭；关闭时 tick() 为空操作，此分支惰性）
-            if ($this->frameScheduler->isAnimationEnabled()) {
-                if ($this->frameScheduler->tick()) {
-                    $this->requestRender();
-                }
-            }
             if ($this->rootComponent !== null && method_exists($this->rootComponent, 'onTimerTick')) {
                 $this->rootComponent->onTimerTick();
                 $this->requestRender();
             }
-        }, $timerInterval);
+        }, 1000);
 
         return $this;
     }
@@ -858,6 +874,8 @@ class Application
         }
 
         $fragmentTree = $this->layoutOrchestrator->layout($root);
+        // 命中测试几何同源（动画帧/滚动帧同样刷新）
+        $this->renderTreeManager->setPaintedFragmentTree($fragmentTree);
 
         if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] directRender AFTER');
@@ -1104,6 +1122,8 @@ class Application
         \Px\Core\PerfCounter::start('stage:layout');
         $fragmentTree = $this->layoutOrchestrator->layout($rootRenderNode);
         $this->lastFragmentTree = $fragmentTree;
+        // 命中测试几何同源（对标 Blink：HitTest 走 PhysicalFragment 树）
+        $this->renderTreeManager->setPaintedFragmentTree($fragmentTree);
         \Px\Core\PerfCounter::end('stage:layout');
 
         if (Config::get('debug_diag_enabled', false)) {
@@ -1191,6 +1211,15 @@ class Application
     {
         $this->doFirstRender();
 
+        // 动画压测模式：需动画总开关 + Px_anim_autotest 同时开启
+        $this->animAutotestActive = $this->frameScheduler->isAnimationEnabled()
+            && Config::get('anim_autotest', false) === true;
+        if ($this->animAutotestActive) {
+            // 首击延迟 500ms，让首帧/缓存稳定
+            $this->animAutotestNextAtUs = (int)(microtime(true) * 1000000) + 500000;
+            error_log('[ANIM-AUTOTEST] armed: 30 clicks @10Hz');
+        }
+
         while ($this->running) {
             try {
                 $rawEvents = $this->platform->pollEvents();
@@ -1222,6 +1251,24 @@ class Application
                 }
 
                 $hasMacro = $this->scheduler->runOneMacrotask();
+
+                // 动画帧自节拍（对标 Flutter Ticker）：WM_TIMER 到不了稳定 60FPS，
+                // 由主循环以 frameDue 判定驱动；tick 推进插值后 directRender
+                //（跳过 VNode 重建，帧成本 ≈ layout+paint ≈ 1-3ms）。
+                if ($this->frameScheduler->isAnimationEnabled()
+                    && $this->frameScheduler->hasActiveAnimations()
+                    && $this->frameScheduler->frameDue()) {
+                    $this->frameScheduler->tick();
+                    $this->directRender();
+                    if ($this->animAutotestActive) {
+                        $this->animFrameLog[] = (int)(microtime(true) * 1000000);
+                    }
+                }
+
+                // 动画压测：10Hz 合成点击（走完整 hitTest+dispatch 链）
+                if ($this->animAutotestActive) {
+                    $this->animAutotestStep();
+                }
 
                 if (!$hasMacro && !$this->renderRequested && count($rawEvents) === 0
                     && !$this->frameScheduler->hasActiveAnimations()) {
@@ -1287,5 +1334,109 @@ class Application
             }
         }
         return null;
+    }
+
+    // ── 动画压测（Px_anim_autotest）────────────────
+
+    /**
+     * 10Hz 合成点击步进：30 次后排空动画写 FPS 报告。
+     * 合成 PointerEvent 走完整 handlePointerEvent 链（含 hitTest），
+     * 仅跳过 OS 消息队列翻译层（成本 <0.1ms，不影响结论）。
+     */
+    private function animAutotestStep(): void
+    {
+        $nowUs = (int)(microtime(true) * 1000000);
+        if ($this->animAutotestClicks >= 30) {
+            // 排空：等全部动画结束再写报告并关闭压测
+            if (!$this->frameScheduler->hasActiveAnimations()) {
+                $this->animAutotestWriteReport();
+                $this->animAutotestActive = false;
+            }
+            return;
+        }
+        if ($nowUs < $this->animAutotestNextAtUs) {
+            return;
+        }
+        $btnCount = (int)count($this->animAutotestBtnXs);
+        if ($btnCount === 0) {
+            // hitTest 网格扫描（纯生产路径，与真实点击同链路）：
+            // 步长 24px 扫全窗，命中 @click=inputDigit 的坐标入表，
+            // 按命中节点去重（spl_object_id）。
+            $w = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 340;
+            $h = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 660;
+            $seen = [];
+            for ($sy = 12; $sy < $h; $sy += 24) {
+                for ($sx = 12; $sx < $w; $sx += 24) {
+                    $hitNode = $this->renderTreeManager->hitTest($sx, $sy);
+                    if ($hitNode === null || $hitNode->sourceVNode === null) {
+                        continue;
+                    }
+                    if (!isset($hitNode->sourceVNode->props['@click'])) {
+                        continue;
+                    }
+                    $click = (string)$hitNode->sourceVNode->props['@click'];
+                    if ($click !== 'inputDigit') {
+                        continue;
+                    }
+                    $oid = spl_object_id($hitNode);
+                    if (isset($seen[$oid])) {
+                        continue;
+                    }
+                    $seen[$oid] = true;
+                    $this->animAutotestBtnXs[] = $sx;
+                    $this->animAutotestBtnYs[] = $sy;
+                }
+            }
+            $btnCount = (int)count($this->animAutotestBtnXs);
+            if ($btnCount === 0) {
+                // 避免每循环刷屏：改为 500ms 后重试
+                $this->animAutotestNextAtUs = $nowUs + 500000;
+                return;
+            }
+        }
+        $idx = $this->animAutotestClicks % $btnCount;
+        $cx = $this->animAutotestBtnXs[$idx];
+        $cy = $this->animAutotestBtnYs[$idx];
+        $this->handlePointerEvent(new PointerEvent('down', $cx, $cy));
+        $this->handlePointerEvent(new PointerEvent('up', $cx, $cy));
+        $this->animAutotestClicks++;
+        $this->animAutotestNextAtUs = $nowUs + 100000; // 10Hz
+    }
+
+    /**
+     * 逐帧间隔统计（μs）：avg / p95 / max + 换算 FPS，写
+     * {appDir}/debug/anim_fps.json 并同时 error_log（exe 日志可直接 grep）。
+     */
+    private function animAutotestWriteReport(): void
+    {
+        $n = (int)count($this->animFrameLog);
+        $intervals = [];
+        for ($i = 1; $i < $n; $i++) {
+            $intervals[] = $this->animFrameLog[$i] - $this->animFrameLog[$i - 1];
+        }
+        $report = ['frames' => $n, 'clicks' => $this->animAutotestClicks];
+        $ic = (int)count($intervals);
+        if ($ic > 0) {
+            sort($intervals);
+            $sum = 0;
+            foreach ($intervals as $iv) {
+                $sum += $iv;
+            }
+            $avg = intdiv($sum, $ic);
+            $p95Idx = intdiv($ic * 95, 100);
+            if ($p95Idx >= $ic) {
+                $p95Idx = $ic - 1;
+            }
+            $report['avg_interval_us'] = $avg;
+            $report['p95_interval_us'] = $intervals[$p95Idx];
+            $report['max_interval_us'] = $intervals[$ic - 1];
+            $report['avg_fps'] = $avg > 0 ? intdiv(1000000, $avg) : 0;
+        }
+        $dir = Config::getOutputDir();
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+        @file_put_contents($dir . '/anim_fps.json', json_encode($report));
+        error_log('[ANIM-AUTOTEST] report: ' . json_encode($report));
     }
 }
