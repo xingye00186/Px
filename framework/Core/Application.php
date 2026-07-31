@@ -110,6 +110,18 @@ class Application
     /** T3: 已注册的 TransitionGroup 实例（render 后通知 FLIP） */
     private array $transitionGroups = [];
 
+    // ── M5.3 手势系统状态 ──
+    /** 拖拽状态：'idle'|'pending'|'dragging' */
+    private string $gestureState = 'idle';
+    private int $gestureDownX = 0;
+    private int $gestureDownY = 0;
+    private ?RenderNode $gestureTarget = null;
+    /** longpress 定时器 ID（用 microtime 判定） */
+    private int $gestureLongpressAtUs = 0;
+    private bool $gestureLongpressFired = false;
+    private const DRAG_THRESHOLD = 5;
+    private const LONGPRESS_MS = 500;
+
     // ── 动画压测模式（Px_anim_autotest）：10Hz 合成点击 + 逐帧时间戳日志 ──
     private bool $animAutotestActive = false;
     private int $animAutotestClicks = 0;
@@ -263,12 +275,51 @@ class Application
 
         // ── 指针滚轮：驱动滚动容器 ────────────
         if ($event->getAction() === 'wheel') {
+            // M5.3 pinch: Shift+滚轮模拟缩放
+            if ($event->isShiftDown()) {
+                $delta = $event->getScrollDelta();
+                $scale = $delta > 0 ? 1100 : 900; // 千分比(1000=1.0x)
+                $hitNode = $this->renderTreeManager->hitTest($event->getX(), $event->getY());
+                if ($hitNode !== null && $hitNode->sourceVNode !== null
+                    && isset($hitNode->sourceVNode->props['@pinch'])) {
+                    $handler = (string)$hitNode->sourceVNode->props['@pinch'];
+                    $target = $this->resolveComponentByGroupId($hitNode->groupId);
+                    $target->dispatchClick($handler, (string)$scale);
+                }
+                return;
+            }
             $this->scrollManager->handleScrollWheel($event);
             return;
         }
 
-        // ── 指针移动：滚动条拖拽 + 光标 hover + :hover 样式 ──
-        if ($event->getAction() === 'move') {
+        // ── 指针移动：M5.3 拖拽检测 + 滚动条拖拽 + 光标 hover + :hover 样式 ──
+        if ($action === 'move') {
+            // M5.3: 拖拽状态机
+            if ($this->gestureState === 'pending') {
+                $dx = abs($event->getX() - $this->gestureDownX);
+                $dy = abs($event->getY() - $this->gestureDownY);
+                if ($dx >= self::DRAG_THRESHOLD || $dy >= self::DRAG_THRESHOLD) {
+                    $this->gestureState = 'dragging';
+                    $this->gestureLongpressAtUs = 0; // 取消 longpress
+                    // dispatch @dragstart
+                    if ($this->gestureTarget !== null && $this->gestureTarget->sourceVNode !== null
+                        && isset($this->gestureTarget->sourceVNode->props['@dragstart'])) {
+                        $handler = (string)$this->gestureTarget->sourceVNode->props['@dragstart'];
+                        $target = $this->resolveComponentByGroupId($this->gestureTarget->groupId);
+                        $target->dispatchClick($handler, $this->gestureDownX . ',' . $this->gestureDownY);
+                    }
+                }
+            }
+            if ($this->gestureState === 'dragging') {
+                // dispatch @drag
+                if ($this->gestureTarget !== null && $this->gestureTarget->sourceVNode !== null
+                    && isset($this->gestureTarget->sourceVNode->props['@drag'])) {
+                    $handler = (string)$this->gestureTarget->sourceVNode->props['@drag'];
+                    $target = $this->resolveComponentByGroupId($this->gestureTarget->groupId);
+                    $target->dispatchClick($handler, $event->getX() . ',' . $event->getY());
+                }
+                return;
+            }
             // 先处理滚动条拖拽
             $this->scrollManager->handleScrollbarDrag($event->getX(), $event->getY());
 
@@ -317,14 +368,35 @@ class Application
             return;
         }
 
-        // ── 指针抬起：结束拖拽，持久化滚动位置 ──
-        if ($event->getAction() === 'up') {
+        // ── 指针抬起：结束拖拽/longpress，持久化滚动位置 ──
+        if ($action === 'up') {
+            if ($this->gestureState === 'dragging') {
+                // dispatch @dragend
+                if ($this->gestureTarget !== null && $this->gestureTarget->sourceVNode !== null
+                    && isset($this->gestureTarget->sourceVNode->props['@dragend'])) {
+                    $handler = (string)$this->gestureTarget->sourceVNode->props['@dragend'];
+                    $target = $this->resolveComponentByGroupId($this->gestureTarget->groupId);
+                    $target->dispatchClick($handler, $event->getX() . ',' . $event->getY());
+                }
+                $this->gestureState = 'idle';
+                $this->gestureTarget = null;
+                return;
+            }
+            $this->gestureState = 'idle';
+            $this->gestureLongpressAtUs = 0;
+            $this->gestureTarget = null;
             $this->scrollManager->handleMouseUp();
             return;
         }
 
-        // ── 指针按下：优先检测滚动条，其次 @click ──
-        if ($event->getAction() === 'down') {
+        // ── 指针按下：M5.3 手势起始 + 优先检测滚动条，其次 @click ──
+        if ($action === 'down') {
+            // M5.3: 记录按下位置，启动手势待定状态
+            $this->gestureDownX = $event->getX();
+            $this->gestureDownY = $event->getY();
+            $this->gestureState = 'pending';
+            $this->gestureLongpressFired = false;
+            $this->gestureLongpressAtUs = (int)(microtime(true) * 1000000) + self::LONGPRESS_MS * 1000;
             $rootNode = $this->renderTreeManager->getRootRenderNode();
             if ($rootNode !== null) {
                 $sbResult = $this->scrollManager->hitTestScrollbar($event->getX(), $event->getY(), $rootNode);
@@ -342,6 +414,7 @@ class Application
             // hitTest 返回 RenderNode，通过 sourceVNode 访问 props
             // groupId 直接使用 RenderNode.groupId（由 updateFromVNode 设置，不再读取 VNode.groupId）
             $renderNode = $this->renderTreeManager->hitTest($event->getX(), $event->getY());
+            $this->gestureTarget = $renderNode; // M5.3: 手势目标
             if ($renderNode !== null) {
                 $sourceVNode = $renderNode->sourceVNode;
                 if ($sourceVNode !== null && isset($sourceVNode->props['@click'])) {
@@ -1296,6 +1369,21 @@ class Application
                 // 动画压测：10Hz 合成点击（走完整 hitTest+dispatch 链）
                 if ($this->animAutotestActive) {
                     $this->animAutotestStep();
+                }
+
+                // M5.3 longpress 检测（500ms 无移动无抬起触发）
+                if ($this->gestureState === 'pending' && $this->gestureLongpressAtUs > 0
+                    && !$this->gestureLongpressFired) {
+                    $nowUs = (int)(microtime(true) * 1000000);
+                    if ($nowUs >= $this->gestureLongpressAtUs) {
+                        $this->gestureLongpressFired = true;
+                        if ($this->gestureTarget !== null && $this->gestureTarget->sourceVNode !== null
+                            && isset($this->gestureTarget->sourceVNode->props['@longpress'])) {
+                            $handler = (string)$this->gestureTarget->sourceVNode->props['@longpress'];
+                            $target = $this->resolveComponentByGroupId($this->gestureTarget->groupId);
+                            $target->dispatchClick($handler, null);
+                        }
+                    }
                 }
 
                 if (!$hasMacro && !$this->renderRequested && count($rawEvents) === 0
