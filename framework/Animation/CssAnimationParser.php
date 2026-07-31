@@ -137,6 +137,27 @@ class CssAnimationParser
     }
 
     /**
+     * 从 RenderNode 的 class 属性查找匹配的 transition 规则。
+     * 返回第一个命中的规则集（对标 CSS：就近原则，后声明优先）。
+     * 用于 B2 自动触发：updateFromVNode diff 检测后查询节点是否应产生过渡。
+     *
+     * @return array{property:string,duration:int,timing:string,delay:int}[]
+     */
+    public static function getTransitionRulesForClasses(string $classAttr): array
+    {
+        if ($classAttr === '') return [];
+        $classes = preg_split('/\s+/', trim($classAttr));
+        // 倒序遍历（后声明优先，对标 CSS specificity 同权时源序后则胜）
+        for ($i = count($classes) - 1; $i >= 0; $i--) {
+            $rules = self::$transitionRules[$classes[$i]] ?? null;
+            if ($rules !== null && count($rules) > 0) {
+                return $rules;
+            }
+        }
+        return [];
+    }
+
+    /**
      * 解析 <style> 块中的所有 transition 规则。
      *
      * @param string $styleCss <style> 块内容

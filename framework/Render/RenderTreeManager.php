@@ -975,6 +975,20 @@ class RenderTreeManager
                 }
             } else {
                 $oldVNode = $renderNode->sourceVNode;
+
+                // ── B2: CSS transition 自动触发 ──
+                // 在写入新 ComputedStyle 之前，对比新旧可过渡属性值；
+                // 命中节点的 transition 规则则注册动画。
+                // 对标 Blink：StyleCascade 变化后检查 transition 属性。
+                $oldCS = $renderNode->computedStyle;
+                if ($oldCS !== null && $computedStyle !== null && !$renderNode->isAnimating) {
+                    $classAttr = (string)($vnode->props['class'] ?? '');
+                    $tRules = \Px\Animation\CssAnimationParser::getTransitionRulesForClasses($classAttr);
+                    if (count($tRules) > 0) {
+                        $this->checkTransitionTrigger($renderNode, $oldCS, $computedStyle, $tRules);
+                    }
+                }
+
                 $renderNode->computedStyle = $computedStyle;
                 $renderNode->sourceVNode = $vnode;
                 $renderNode->groupId = $groupId;
@@ -1192,6 +1206,95 @@ class RenderTreeManager
     }
 
     // ── 命中测试 ──────────────────────────
+
+    // ── B2: CSS transition 自动触发检测 ────────────────────
+
+    /**
+     * 对比新旧 ComputedStyle 的可过渡属性，命中 transition 规则则注册动画。
+     * 对标 Blink CSSTransitionData::CheckTransitions。
+     */
+    private function checkTransitionTrigger(
+        RenderNode $node,
+        \Px\Css\ComputedStyle $oldCS,
+        \Px\Css\ComputedStyle $newCS,
+        array $tRules
+    ): void {
+        $mgr = \Px\Animation\AnimationManager::getInstance();
+
+        foreach ($tRules as $rule) {
+            $prop = $rule['property'] ?? 'all';
+            $duration = $rule['duration'] ?? 300;
+            $timing = $rule['timing'] ?? 'ease';
+            if ($duration <= 0) continue;
+
+            // property='all' → 检查所有可过渡属性（camelCase，对齐 ComputedStyle 字段名）
+            $propsToCheck = ($prop === 'all')
+                ? ['opacity','backgroundColor','color','width','height','left','top']
+                : [$this->cssPropertyToCamel($prop)];
+
+            foreach ($propsToCheck as $p) {
+                // 直接读 ComputedStyle 字段（绕开 toExportArray 的序列化问题）
+                $from = $this->readTransitionValue($p, $oldCS);
+                $to   = $this->readTransitionValue($p, $newCS);
+                if ($from === $to) continue;
+
+                $mgr->addTransition($node, $p, $from, $to, $duration, $timing);
+            }
+        }
+    }
+
+    /**
+     * 从 ComputedStyle 直接读取可过渡属性的整数值（绕开 toExportArray）。
+     * 颜色 → BGR int；尺寸/位置 → px int；opacity → 千分比(0..1000)。
+     */
+    private function readTransitionValue(string $prop, \Px\Css\ComputedStyle $cs): int
+    {
+        switch ($prop) {
+            case 'backgroundColor':
+                return $cs->backgroundColor?->toBgr() ?? 0;
+            case 'color':
+                return $cs->color?->toBgr() ?? 0;
+            case 'opacity':
+                $raw = $cs->opacity ?? 1.0;
+                return (int)((float)(is_object($raw) ? ($raw->value ?? 1.0) : $raw) * 1000);
+            case 'width':
+                return (int)($cs->width?->toPx() ?? 0);
+            case 'height':
+                return (int)($cs->height?->toPx() ?? 0);
+            case 'left':
+                return (int)($cs->left?->toPx() ?? 0);
+            case 'top':
+                return (int)($cs->top?->toPx() ?? 0);
+            default:
+                return 0;
+        }
+    }
+
+    /**
+     * CSS kebab-case/lowercased 属性名转 camelCase（对齐 toExportArray 键）。
+     * 'backgroundcolor' → 'backgroundColor'; 'background-color' → 'backgroundColor';
+     * 'opacity' → 'opacity'。
+     */
+    private function cssPropertyToCamel(string $prop): string
+    {
+        // 先处理常见的 lowercased 无连字符缩写（parseTransition strtolower 产出）
+        static $map = [
+            'backgroundcolor' => 'backgroundColor',
+            'bordercolor' => 'borderColor',
+            'fontsize' => 'fontSize',
+            'lineheight' => 'lineHeight',
+            'minwidth' => 'minWidth',
+            'maxwidth' => 'maxWidth',
+            'minheight' => 'minHeight',
+            'maxheight' => 'maxHeight',
+        ];
+        if (isset($map[$prop])) return $map[$prop];
+        // kebab-case: background-color → backgroundColor
+        if (str_contains($prop, '-')) {
+            return lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $prop))));
+        }
+        return $prop;
+    }
 
     /**
      * Dirty 传播：子节点脏了父链全标记。
