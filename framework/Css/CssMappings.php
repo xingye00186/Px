@@ -588,7 +588,7 @@ class CssMappings
 
     /**
      * Parse "h|v|blur|spread|color" box-shadow string to offset array.
-     * Extracted to eliminate 3x duplicate in VNodeRenderer.
+     * Extracted to eliminate 3x duplicate in PaintPipeline.
      *
      * @return array{h:int, v:int, color:int}
      */

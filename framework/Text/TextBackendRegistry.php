@@ -21,7 +21,7 @@ class TextBackendRegistry
 
     /**
      * 初始化文本后端：创建选择器 → probe 候选 → 激活第一个可用的。
-     * 由渲染层负责调用（如 ResilientTextBackendProxy 构造或 VNodeRenderer 初始化）。
+     * 由渲染层负责调用（如 ResilientTextBackendProxy 构造或 PaintPipeline 初始化）。
      * C++ 绑定不可用时（测试环境）静默跳过。
      */
     public static function initialize(): void

@@ -10,7 +10,7 @@ use Px\Render\RenderNode;
 /**
  * PhysicalFragment — 不可变几何输出（对标 Blink NGPhysicalBoxFragment）
  *
- * 布局结果的唯一权威源。VNodeRenderer 消费此对象而非 RenderNode。
+ * 布局结果的唯一权威源。PaintPipeline 消费此对象而非 RenderNode。
  * 所有字段 readonly，构造后不可变。
  *
  * 自包含：每个 Fragment 持有自己的 ComputedStyle 快照，

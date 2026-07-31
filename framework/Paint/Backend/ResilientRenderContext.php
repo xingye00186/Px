@@ -8,7 +8,7 @@ use Px\Paint\RenderContext;
 /**
  * ResilientRenderContext — 故障降级代理
  *
- * 包裹一个 RenderContext，对 VNodeRenderer 透明。
+ * 包裹一个 RenderContext，对 PaintPipeline 透明。
  *
  * 工作原理：
  *  - 默认所有方法委派给 delegate
@@ -16,7 +16,7 @@ use Px\Paint\RenderContext;
  *  - 同一后端连续失败 N 次 → 触发降级（selectNext）
  *  - 降级后用新 delegate 重试当前调用
  *
- * 这样上层（VNodeRenderer）完全无感知：
+ * 这样上层（PaintPipeline）完全无感知：
  *  - 启动时由 RuntimeBackendSelector 选第一个可用的
  *  - 运行时挂掉时自动切到下一个
  *  - 用户无感，UI 不崩

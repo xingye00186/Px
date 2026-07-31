@@ -8,14 +8,14 @@ use Px\Paint\RenderContext;
 /**
  * ResilientTextBackendProxy — 文本引擎故障降级代理
  *
- * 包裹一个 RenderContext，对 VNodeRenderer 透明。
+ * 包裹一个 RenderContext，对 PaintPipeline 透明。
  *
  * 工作原理：
  *  - 非 drawText 方法直接委派给 delegate
  *  - drawText 调用捕获错误，连续失败 N 次 → 触发降级
  *  - 降级后用新引擎重试当前调用
  *
- * 这样上层（VNodeRenderer）完全无感知：
+ * 这样上层（PaintPipeline）完全无感知：
  *  - 启动时由 TextBackendSelector 选第一个可用的
  *  - 运行时引擎故障时自动切换到下一个
  */

@@ -13,7 +13,7 @@ use Px\Paint\RenderContext;
  * 后端选择流程：
  *  1. probe() — 运行时检测本机是否支持（无副作用）
  *  2. initialize() — 真正创建资源（可能创建窗口/设备/上下文）
- *  3. getContext() — 拿到 RenderContext 给 VNodeRenderer 用
+ *  3. getContext() — 拿到 RenderContext 给 PaintPipeline 用
  *  4. shutdown() — 释放资源
  *
  * 阶段四起新增 D3D11 / WGL / Dawn 后端，阶段一二三 GDI/SkiaCPU 已可用。
@@ -55,7 +55,7 @@ interface IRenderBackend
     public function initialize(int $hwnd, int $w, int $h): void;
 
     /**
-     * 拿到 RenderContext（VNodeRenderer 用它绘制）
+     * 拿到 RenderContext（PaintPipeline 用它绘制）
      */
     public function getContext(): RenderContext;
 

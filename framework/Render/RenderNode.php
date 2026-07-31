@@ -14,9 +14,9 @@ use Px\Core\Config;
  * RenderNode — 渲染专用节点
  *
  * 已移除字段归属：
- * - renderOffsetX/renderOffsetY → VNodeRenderer 局部
- * - textRenderInfo → VNodeRenderer 局部
- * - lastPaintFrame → VNodeRenderer SplObjectStorage
+ * - renderOffsetX/renderOffsetY → PaintPipeline 局部
+ * - textRenderInfo → PaintPipeline 局部
+ * - lastPaintFrame → PaintPipeline SplObjectStorage
  * - animatedStyle/isAnimating/lastX/lastY → AnimationManager
  */
 class RenderNode

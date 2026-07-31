@@ -1290,7 +1290,7 @@ class PaintPipeline
         if ($cs === null) return [];
         $overrides = [];
         $states = [];
-        // 从 RenderNode 声明的交互状态读取（由 Application::handleMouseEvent 维护）
+        // 从 RenderNode 声明的交互状态读取（由 Application::handlePointerEvent 维护）
         if ($node->hovered) $states[] = '__hoverStyle';
         if ($node->focused) $states[] = '__focusStyle';
         if ($node->active) $states[] = '__activeStyle';

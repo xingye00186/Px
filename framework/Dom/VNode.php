@@ -15,7 +15,7 @@ use Px\Css\ComputedStyle;
  * 全链路统一数据结构:
  *   - 编译期: template-parser 产出 VNode 树 (AST)
  *   - 运行时: 组件 render() 返回 VNode 树
- *   - 渲染器: VNodeRenderer 遍历 VNode 树生成 GDI 调用
+ *   - 渲染层: RenderTreeManager 将 VNode 树转为 RenderNode 树，PaintPipeline 遍历 Fragment 树绘制
  *
  * 与 Vue 3 VNode 的对齐:
  *   - type:  标签名 ('div','span','button','input','#text','#root') 或组件类名
