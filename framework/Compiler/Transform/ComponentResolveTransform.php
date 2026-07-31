@@ -61,6 +61,12 @@ class ComponentResolveTransform implements TransformInterface
                 continue;
             }
 
+            // T1: 跳过被 Transition v-if/v-else 处理标记移除的节点
+            if (isset($child->props['__transitionRemoved'])) {
+                unset($child->props['__transitionRemoved']);
+                continue;
+            }
+
             // Dynamic component: <component :is="expr" /> — Vue 3 style
             if ($child->type === 'component' && isset($child->props[':is'])) {
                 $isExpr = $child->props[':is'];
@@ -94,6 +100,43 @@ class ComponentResolveTransform implements TransformInterface
                         $bindProps[$k] = 'static:' . $v;
                     } elseif (str_starts_with($k, ':')) {
                         $bindProps[substr($k, 1)] = $v;
+                    }
+                }
+                // T1 治本：子节点含 v-if 时，提取条件作为 :show prop，
+                // 移除子节点的 v-if。同时找紧跟的 v-else 兄弟节点，
+                // 将其 v-else 转为显式 v-if="!(条件)"（解耦 else 依赖，
+                // 避免 codegen 产出孤立 else）。
+                $showCondition = '';
+                if (is_array($child->children)) {
+                    foreach ($child->children as $grandChild) {
+                        if ($grandChild instanceof \Px\Dom\VNode
+                            && isset($grandChild->props['v-if'])) {
+                            $showCondition = (string)$grandChild->props['v-if'];
+                            $bindProps['show'] = $showCondition;
+                            unset($grandChild->props['v-if']);
+                            break;
+                        }
+                    }
+                } elseif ($child->children instanceof \Px\Dom\VNode
+                    && isset($child->children->props['v-if'])) {
+                    $showCondition = (string)$child->children->props['v-if'];
+                    $bindProps['show'] = $showCondition;
+                    unset($child->children->props['v-if']);
+                }
+                // 找紧跟 Transition 的 v-else 兄弟节点并标记移除（Transition 接管
+                // 显/隐逻辑，v-else 分支不再需要；保留会产出孤立 else）。
+                // 通过在 VNode 上打 __transitionRemoved 标记，foreach 循环中跳过。
+                if ($showCondition !== '') {
+                    $found = false;
+                    foreach ($node->children as $sibling) {
+                        if ($found && $sibling instanceof \Px\Dom\VNode
+                            && isset($sibling->props['v-else'])) {
+                            $sibling->props['__transitionRemoved'] = '1';
+                            break;
+                        }
+                        if ($sibling === $child) {
+                            $found = true;
+                        }
                     }
                 }
                 $child->componentProps = count($bindProps) > 0 ? $bindProps : null;

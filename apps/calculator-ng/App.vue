@@ -10,14 +10,16 @@
     <basic-pad style="margin-left:11px;margin-top:2px;flex-shrink:0" :acLabel="acLabel" />
     <!-- History header -->
     <history-panel style="margin-left:11px;flex-shrink:0" :arrow="arrowText" />
-    <!-- B4: history-panel 用 slide 类名设计（Transition 组件 enter/leave 动画演示） -->
-    <div v-if="showHistory" class="history-panel slide-enter-active" style="margin-left:11px;margin-right:11px;flex:1;background:#2C2C2E">
-      <template v-for="item in historyItems" :key="item.id">
-        <div style="height:24px;cursor:pointer;display:flex;align-items:center;padding-left:8px" @click="loadHistoryItem" click-arg="item.id">
-          <span style="font-size:12px;color:#FFFFFF">{{ item.text }}</span>
-        </div>
-      </template>
-    </div>
+    <!-- B4: Transition 组件包裹历史面板（enter/leave 动画） -->
+    <Transition name="slide">
+      <div v-if="showHistory" class="history-panel" style="margin-left:11px;margin-right:11px;flex:1;background:#2C2C2E">
+        <template v-for="item in historyItems" :key="item.id">
+          <div style="height:24px;cursor:pointer;display:flex;align-items:center;padding-left:8px" @click="loadHistoryItem" click-arg="item.id">
+            <span style="font-size:12px;color:#FFFFFF">{{ item.text }}</span>
+          </div>
+        </template>
+      </div>
+    </Transition>
     <div v-else style="flex:1"></div>
   </div>
 </template>
