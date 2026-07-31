@@ -343,3 +343,88 @@ git commit -m "fix(scope): <根因一句话> (CSS x.y.z / Blink 对标物). <通
 ---
 
 *台账追加规则：每个大批次完成后在 `Px_LayoutNG_架构审计报告_对标Blink.md` §十九追加一行（日期|成果|bench|剩余），并同步记忆（task_summary_experience）。本指南仅在方法论/清单结构变化时修订。*
+
+---
+
+## 11. 验证基础设施的自我校验（2026-07-31 沉淀）
+
+> 本节全部条目来自实测踩坑，每条都曾使我得出**错误结论**并浪费整轮预算。
+> 核心一句话：**凡结论依赖工具输出，必先证明工具在测它声称测的东西。**
+
+### 11.1 「工具没坏，是数据脏 / 是判据错」优先假设
+
+| 症状 | 我的错误结论 | 真实根因 |
+|---|---|---|
+| `bench_compare` 全部 MISSING | 工具坏了 | exe 输出前有 backend 日志行 → `json_decode` 得 null。**归档前须剥前导** |
+| 等价门控 PASS 但 0 case | 门控通过 | 语料路径写成不存在的 `cases/`（实为 `test_case/`）→ **空跑假通过** |
+| aot-checker 新规则不报 | 规则生效、代码干净 | 正则在 PHP 单引号串里少一层反斜杠转义 → **规则从不触发** |
+| css-test AOT `Passed: 0/56` | 比对层只比了 2 个元素 | `total=2` 是**差异数**；真因是编排器把「依赖未注册」当失败（见 11.3） |
+
+**纪律**：新增门控/规则/解析器后，**必须用一个刻意构造的正例证明它会失败**，再用负例证明它不误报。只跑一次「PASS」不构成证据。
+
+### 11.2 bench 判据与轮次（详见 `docs/bench-guide.md`）
+
+- **`steady_fps` 是唯一判据**（±5% 噪声，降 >5% 为真实回归）。`avg_ms` 对轻量 case 是噪声——我曾用它报「退化 +46.9%」又用它报「无退化 −1.2%」，两次都不足为凭。
+- **`stage:*` 的 `total` 是累计值**，跨 cycles 比较会与 `avg_ms` 给出**相反**结论。要么同 cycles，要么改用**每帧均摊**（`total / renders`）。
+- **基线要选最近的**：我曾拿 07-22 旧 exe 作基线得出「无退归」，换成最近的 07-27 数据后同一份数据显示真实回归。
+- **三角验证**：偏移**均匀** >±2% → 环境漂移；偏移**分化**（spread 数十个百分点）→ 指向具体代码路径。
+
+### 11.3 管线编排：「依赖未注册」≠「依赖失败」
+
+`PipelineOrchestrator` 的依赖检查曾把两种情形混为一谈：
+
+```php
+if (!isset($completed[$req])) { $depsOk = false; break; }   // 旧：一律当作"待执行"
+```
+
+- **a) 尚未执行** → 本轮跳过，下一轮拓扑迭代再试（正确）
+- **b) 步骤根本未注册**（`--skip-build` 或 PHP-runtime 模式下不加 `BuildStep`）→ 永远不会出现，轮次耗尽后被当成失败
+
+后果：`--skip-build` 下 `MultiFrameStep`（`requires: ['build']`）对**全 56 case** 报 0ms err → **`Passed: 0/56`**，而 PHP-runtime 模式同位置显示 ⬛跳过并判通过。**同一份代码在两种模式下结论相反**，且报告里只有一个 ❌ 没有任何原因。
+
+修正：编排器预建**已注册步骤名集合**，区分「待执行」与「未注册」，后者按跳过处理。修复后 **0/56 → 41/56**，而 `compare_php_aot` 保持 55/56（证明这纯属编排缺陷，与引擎无关）。
+
+**推广纪律**：任何「全体失败」的结果，先怀疑**验证设施**而非被测对象——真实回归极少同时命中 100% 用例。
+
+### 11.4 AOT 只在实跑时暴露，且每次只暴露一个
+
+`use native_types;` 在 CLI 下是**空操作**，故整类缺陷对测试套件完全不可见。本会话靠实跑逐个揪出 4 类（每类都要一轮 ~40 分钟构建）：
+
+| 缺陷 | 症状 | 治本 |
+|---|---|---|
+| **跨类常量转发别名** `const X = Other::CONST` | 类注册期硬失败 `Call to private method Translator::evaluate`（经 `getClassConstValue → evaluateArray`），**中断整个编译** | 删别名，调用方直指权威类 |
+| **switch 内 `continue N`** | `switch case must end with return/break/exit/throw, Stmt_Continue given` | 改写为 if 链（`break` **不等价**，`continue 2` 目标是外层循环）|
+| **`php::Str` 变量复用作 foreach 键** | `Cannot assign value to variable of type php::Str with type php::Var` | 改用独立变量名 |
+| **列表解构写入 int 变量** `[$a, $i] = f()` | `error C2440: 无法从 php::Variant 转换` | 先接返回值，再逐项取出并 `(int)` 强转 |
+
+前两类已编码进 `tools/aot-checker.php`（`aot_const_forward_alias` / `aot_switch_continue`）。第三、四类需类型推断，正则会大量误报，**有意未编码**。
+
+**关键提速**：管线在 AOT 模式下**每次重跑完整构建**（30+ 分钟），用 **`--skip-build`** 后全量 56 case 仅 **63 秒**。这一个参数的价值超过我两轮预算。
+
+### 11.5 缓存键覆盖维度必须 ≥ 消费者读取维度
+
+本会话四次踩同一族：**上层修复被下层缓存掩盖**，表现为「改了却不生效」。
+
+| # | 漏覆盖 | 后果 |
+|---|---|---|
+| 1 | 伪类叠加未持久化到 VNode | 引擎产出到不了 RenderNode |
+| 2 | 规则表代次未入 StylePool key | 运行中注册规则后返回陈旧 ComputedStyle |
+| 3 | 祖先/兄弟 tag·id·index 未入 key | `span + .t` 与 `div + .t` 碰撞 |
+| 4 | **元素自身 attrs** 未入 key | `.probe[data-k=v]` 与 `.probe` 碰撞 |
+
+第 4 例由新建的 `tools/style_pool_key_coverage_gate.php` **首跑即自动发现**（枚举匹配器可读的 16 个维度，逐一变动并断言池不误共享；报告"同一实例"即池键碰撞的铁证）。**此类 bug 应由门控点名，而非每次人肉追两层。**
+
+### 11.6 性能优化的方向判断
+
+分阶段归因（每帧均摊，11 case 均值）：
+
+```
+stage:layout        40.9%
+stage:vnode_tree    31.3%   ← 复用缺口
+stage:paint         18.7%
+stage:style_recalc   5.4%   ← 我连续几轮优化的对象
+```
+
+**我把力气花在占比 5.4% 的路径上。** 三个最重 case（TextHeavy / LiveDashboard / StaticTemplate）都指向同一件事：**VNode 实例未跨帧复用** → `vnode_tree` 重建 + `style_recalc` 无上帧结果可用，两头付全额。`patchChildrenArray` 仅在双方均为带 `dynamicChildren` 的 block root 时复用无 key 子节点。
+
+**纪律**：优化前先做分阶段归因，按占比选靶。另：若 before 侧某 stage 耗时**异常地小**，先怀疑旧代码**根本没做这项工作**（如被 `is_array(children)` 守卫静默跳过整棵子树），此时「回归」是修 bug 后暴露的应付成本，处置方向是**让缓存能命中**而非回滚。

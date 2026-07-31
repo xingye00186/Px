@@ -24,14 +24,29 @@ class MultiFrameStep implements PipelineStepInterface
     public function execute(CaseContext $ctx): StepResult
     {
         $start = microtime(true);
+        // 诊断：管线内曾出现 0ms + exit!=0（exe 根本未被执行），而相同命令
+        // 手工经 exec() 跑得 exit=0。差异只剩 $exePath 来源，故先校验它。
+        if (!is_file($this->exePath)) {
+            return StepResult::err('multiframe',
+                'exe not found: ' . $this->exePath, (microtime(true) - $start) * 1000);
+        }
         $cmd = sprintf('"%s" --case=%s --headless --frame=%d --dump-layout 2>&1',
             $this->exePath, $this->caseName, $this->frames);
 
         exec($cmd, $output, $exitCode);
         $elapsed = (microtime(true) - $start) * 1000;
 
-        return $exitCode === 0
-            ? StepResult::ok('multiframe', $elapsed)
-            : StepResult::err('multiframe', "exit=$exitCode", $elapsed);
+        if ($exitCode !== 0) {
+            // 诊断：仅报 exit=N 无法定位原因（本步骤曾使全 56 case 均判 FAIL
+            // 而无任何线索）。将 exe 尾部输出带入错误详情。
+            $tail = array_slice($output, -5);
+            $detail = "exit=$exitCode";
+            foreach ($tail as $ln) {
+                $ln = trim((string)$ln);
+                if ($ln !== '') { $detail .= ' | ' . mb_substr($ln, 0, 120); }
+            }
+            return StepResult::err('multiframe', $detail, $elapsed);
+        }
+        return StepResult::ok('multiframe', $elapsed);
     }
 }

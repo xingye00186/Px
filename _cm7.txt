@@ -1,0 +1,52 @@
+fix(pxtest): "dependency not registered" must not be treated as failure — 0/56 was infrastructure, not regression
+
+ROOT CAUSE of the css-test AOT "Passed: 0 / 56". PipelineOrchestrator's
+dependency check conflated two different situations:
+
+    if (!isset($completed[$req])) { $depsOk = false; break; }
+
+  a) the dependency has not run YET -> skip this round, retry on the next
+     topological pass (correct, and the intended meaning)
+  b) the dependency was never REGISTERED at all -> it will never appear, so
+     after the rounds are exhausted the step is left incomplete and ends up
+     counted as a failure
+
+Case (b) happens on every --skip-build run and in PHP-runtime mode, because
+PipelineBuilder does not add BuildStep in either. MultiFrameStep declares
+requires: ['build'], so it reported a 0ms error for ALL 56 cases, giving
+Passed: 0/56 — while PHP-runtime mode showed the same column as skipped and
+passed. Same code, opposite verdicts, and the report carried one bare cross
+with no reason attached.
+
+Fixed by precomputing the set of registered step names and distinguishing
+"pending" from "not in pipeline", treating the latter as skipped. Result:
+0/56 -> 41/56, while compare_php_aot stays at 55/56 identical, which proves
+this was purely an orchestration defect with no engine involvement. The
+remaining 15 failures are pre-existing browser-comparison diffs, the same
+family PHP-runtime mode reports as 49/56.
+
+Also corrected my own misreading en route: I had reported "the comparator only
+compared 2 elements". The variable is $totalDiffs — total=2 means TWO DIFFS,
+not two elements. The comparator was fine.
+
+MultiFrameStep now includes the exe's tail output in its error detail, because
+a bare "exit=N" gave no clue while this was being diagnosed, and it validates
+the exe path up front.
+
+Guide updated: docs/Px_LayoutNG_Blink对齐迭代总指南.md section 11 records the
+hard-won lessons from this whole session, all of which cost me a full budget
+turn each:
+  11.1 tool-not-broken-data-dirty: four cases where a green/silent tool was
+       lying (log preamble breaking json_decode, a gate scanning a
+       non-existent corpus path and vacuously passing, a regex missing one
+       backslash level so a checker rule never fired)
+  11.2 bench verdicts: steady_fps only, avg_ms is noise, stage totals are
+       cumulative and cycles must match, pick the MOST RECENT baseline
+  11.3 this orchestration defect, generalized: any "everything failed" result
+       should implicate the verification harness first
+  11.4 the four AOT defect classes found only by really running the compiler,
+       and --skip-build cutting a 30+ minute loop to 63 seconds
+  11.5 cache-key coverage must be >= what consumers read (four stale-style
+       bugs of one family; the new gate caught the fourth on its first run)
+  11.6 direction: layout 40.9% / vnode_tree 31.3% / paint 18.7% /
+       style_recalc 5.4% — I had been optimizing the 5.4% path
