@@ -207,7 +207,13 @@ class _CssCapturePlatform implements \Px\Platform\Platform
     public function init(string $title, int $width, int $height): \Px\Paint\RenderContext {
         return $this->renderContext;
     }
-    public function getHwnd(): int { return 0; }
+    public function getSurface(): \Px\Platform\RenderSurface {
+        return new \Px\Platform\RenderSurface(0, $this->width, $this->height, 1000);
+    }
+    public function getMetrics(): \Px\Platform\ViewMetrics {
+        return new \Px\Platform\ViewMetrics($this->width, $this->height, 1000, 0, 0, 0, 0, 'stub');
+    }
+    public function getLifecycleState(): string { return \Px\Platform\LifecycleEvent::STATE_ACTIVE; }
     public function shutdown(): void {}
     public function shouldClose(): bool { return false; }
     public function pollEvents(): array { return []; }

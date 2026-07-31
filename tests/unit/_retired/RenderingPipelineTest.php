@@ -18,7 +18,7 @@ require_once __DIR__ . '/bootstrap.php';
 use Px\Core\Scheduler;
 use Px\Core\Application;
 use Px\Platform\Platform;
-use Px\Platform\MouseEvent;
+use Px\Platform\PointerEvent;
 use Px\Paint\RenderContext;
 use Px\Paint\PaintPipeline;
 use Px\Render\RenderNode;
@@ -98,7 +98,9 @@ class _MockPlatform implements Platform
         return $this->renderContext;
     }
     public function shutdown(): void {}
-    public function getHwnd(): int { return 0; }
+    public function getSurface(): \Px\Platform\RenderSurface { return new \Px\Platform\RenderSurface(0, 1440, 900, 1000); }
+    public function getMetrics(): \Px\Platform\ViewMetrics { return new \Px\Platform\ViewMetrics(1440, 900, 1000, 0, 0, 0, 0, 'mock'); }
+    public function getLifecycleState(): string { return \Px\Platform\LifecycleEvent::STATE_ACTIVE; }
     public function shouldClose(): bool { return false; }
     public function pollEvents(): array { return []; }
     public function setAnimationTimer(callable $callback, int $intervalMs = 16): void {}
@@ -163,9 +165,9 @@ function invokeDoFirstRender(Application $app): void
     $m->invoke($app);
 }
 
-function invokeHandleMouseEvent(Application $app, $event): void
+function invokeHandlePointerEvent(Application $app, $event): void
 {
-    $m = new \ReflectionMethod(Application::class, 'handleMouseEvent');
+    $m = new \ReflectionMethod(Application::class, 'handlePointerEvent');
     $m->setAccessible(true);
     $m->invoke($app, $event);
 }
@@ -264,8 +266,8 @@ function clickAndRender(Application $app, RenderNode $node): void
     // 点击节点中心
     $cx = $node->x + (int)($node->w / 2);
     $cy = $node->y + (int)($node->h / 2);
-    $event = new MouseEvent('down', $cx, $cy);
-    invokeHandleMouseEvent($app, $event);
+    $event = new PointerEvent('down', $cx, $cy);
+    invokeHandlePointerEvent($app, $event);
     // 刷新微任务（markDirty → requestRender）
     $app->getScheduler()->flushMicrotasks();
     // 渲染

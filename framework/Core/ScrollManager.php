@@ -10,6 +10,7 @@ use Px\Render\ScrollState;
 use Px\Component\Contracts\ReactiveComponentInterface;
 use Px\Component\ReactiveComponent;
 use Px\Core\PerfCounter;
+use Px\Platform\PointerEvent;
 
 /**
  * ScrollManager — 滚动交互服务（RenderNode 版）
@@ -169,10 +170,10 @@ class ScrollManager
     // ── 滚轮事件 ─────────────────────────────
 
     /**
-     * 鼠标滚轮事件 — 更新最近祖先滚动容器的 scroll 位置。
+     * 指针滚轮事件 — 更新最近祖先滚动容器的 scroll 位置。
      * Shift 按下时走横向滚动，否则走竖向滚动。
      */
-    public function handleScrollWheel($event): void
+    public function handleScrollWheel(PointerEvent $event): void
     {
         PerfCounter::start('scroll_process');
         try {
@@ -184,7 +185,7 @@ class ScrollManager
                 return;
             }
 
-            $delta = $event->getDelta();
+            $delta = $event->getScrollDelta();
             $scrollAmount = (int)($delta / 3);
 
             if ($event->isShiftDown()) {

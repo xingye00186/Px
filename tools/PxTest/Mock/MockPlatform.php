@@ -3,6 +3,9 @@
 namespace PxTest\Mock;
 
 use Px\Platform\Platform;
+use Px\Platform\RenderSurface;
+use Px\Platform\ViewMetrics;
+use Px\Platform\LifecycleEvent;
 use Px\Paint\RenderContext;
 
 /**
@@ -39,9 +42,22 @@ class MockPlatform implements Platform
         return $this->renderContext;
     }
 
-    public function getHwnd(): int
+    public function getSurface(): RenderSurface
     {
-        return 0; // 无实际窗口句柄
+        // handle=0：无实际窗口（离屏）
+        return new RenderSurface(0, $this->width, $this->height, 1000);
+    }
+
+    public function getMetrics(): ViewMetrics
+    {
+        return new ViewMetrics($this->width, $this->height, 1000, 0, 0, 0, 0, 'mock');
+    }
+
+    public function getLifecycleState(): string
+    {
+        return $this->shouldClose
+            ? LifecycleEvent::STATE_DETACHED
+            : LifecycleEvent::STATE_ACTIVE;
     }
 
     public function shutdown(): void {}

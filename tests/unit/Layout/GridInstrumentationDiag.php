@@ -111,7 +111,9 @@ class _InstMockPlatform implements Platform
     public function setTimer(callable $callback, int $ms): void {}
     public function setAnimationTimer(callable $callback, int $intervalMs = 16): void {}
     public function setCursor(string $type): void {}
-    public function getHwnd(): int { return 0; }
+    public function getSurface(): \Px\Platform\RenderSurface { return new \Px\Platform\RenderSurface(0, 1440, 900, 1000); }
+    public function getMetrics(): \Px\Platform\ViewMetrics { return new \Px\Platform\ViewMetrics(1440, 900, 1000, 0, 0, 0, 0, 'mock'); }
+    public function getLifecycleState(): string { return $this->shouldClose ? \Px\Platform\LifecycleEvent::STATE_DETACHED : \Px\Platform\LifecycleEvent::STATE_ACTIVE; }
     public function shouldClose(): bool { return $this->shouldClose; }
 }
 

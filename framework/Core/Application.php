@@ -7,9 +7,11 @@ use native_types;
 
 use Px\Platform\Platform;
 use Px\Platform\PlatformEvent;
-use Px\Platform\MouseEvent;
-use Px\Platform\KeyboardEvent;
-use Px\Platform\WindowEvent;
+use Px\Platform\PointerEvent;
+use Px\Platform\KeyEvent;
+use Px\Platform\LifecycleEvent;
+use Px\Platform\MetricsEvent;
+use Px\Platform\RedrawEvent;
 use Px\Platform\PlatformFactory;
 use Px\Paint\Backend\ResilientRenderContext;
 use Px\Paint\Backend\RuntimeBackendSelector;
@@ -230,7 +232,7 @@ class Application
         $this->renderRequested = true;
     }
 
-    private function handleMouseEvent(MouseEvent $event): void
+    private function handlePointerEvent(PointerEvent $event): void
     {
         if ($this->activeVNodeTree === null) {
             return;
@@ -238,13 +240,13 @@ class Application
 
         $action = $event->getAction();
 
-        // ── 鼠标滚轮：驱动滚动容器 ────────────
+        // ── 指针滚轮：驱动滚动容器 ────────────
         if ($event->getAction() === 'wheel') {
             $this->scrollManager->handleScrollWheel($event);
             return;
         }
 
-        // ── 鼠标拖动：滚动条拖拽 + 光标 hover + :hover 样式 ──
+        // ── 指针移动：滚动条拖拽 + 光标 hover + :hover 样式 ──
         if ($event->getAction() === 'move') {
             // 先处理滚动条拖拽
             $this->scrollManager->handleScrollbarDrag($event->getX(), $event->getY());
@@ -294,13 +296,13 @@ class Application
             return;
         }
 
-        // ── 鼠标释放：结束拖拽，持久化滚动位置 ──
+        // ── 指针抬起：结束拖拽，持久化滚动位置 ──
         if ($event->getAction() === 'up') {
             $this->scrollManager->handleMouseUp();
             return;
         }
 
-        // ── 鼠标按下：优先检测滚动条，其次 @click ──
+        // ── 指针按下：优先检测滚动条，其次 @click ──
         if ($event->getAction() === 'down') {
             $rootNode = $this->renderTreeManager->getRootRenderNode();
             if ($rootNode !== null) {
@@ -331,7 +333,7 @@ class Application
         }
     }
 
-    private function handleKeyboardEvent(KeyboardEvent $event): void
+    private function handleKeyEvent(KeyEvent $event): void
     {
         if ($this->activeVNodeTree === null) {
             return;
@@ -427,8 +429,9 @@ class Application
         unset($defaultCtx);  // 显式释放默认 RC，让 RuntimeBackendSelector 创建最优后端
 
         // Stage 2: 用 RuntimeBackendSelector 探测 + 选择最优后端
-        // headless 模式同样走后端选择（hwnd=0 时 skia-cpu 使用内存离屏 surface）
-        $hwnd = $this->platform->getHwnd();
+        // headless 模式同样走后端选择（handle=0 时 skia-cpu 使用内存离屏 surface）
+        // 原生句柄经 RenderSurface 中转，Framework 层不直接接触 HWND 概念
+        $hwnd = $this->platform->getSurface()->getHandle();
         $selector  = new RuntimeBackendSelector();
         try {
             $backend = $selector->select($hwnd, $w, $h);
@@ -1156,14 +1159,22 @@ class Application
             try {
                 $rawEvents = $this->platform->pollEvents();
                 foreach ($rawEvents as $ev) {
-                    if ($ev instanceof MouseEvent) {
-                        $this->handleMouseEvent($ev);
-                    } elseif ($ev instanceof KeyboardEvent) {
-                        $this->handleKeyboardEvent($ev);
-                    } elseif ($ev instanceof WindowEvent && $ev->action === 'paint') {
-                        // WM_PAINT：窗口需要重绘，触发渲染
-                        error_log('[DIAG] WM_PAINT event received, triggering render');
+                    if ($ev instanceof PointerEvent) {
+                        $this->handlePointerEvent($ev);
+                    } elseif ($ev instanceof KeyEvent) {
+                        $this->handleKeyEvent($ev);
+                    } elseif ($ev instanceof RedrawEvent) {
+                        // 表面内容失效（Win32 WM_PAINT）：触发重绘
+                        error_log('[DIAG] RedrawEvent received, triggering render');
                         $this->requestRender();
+                    } elseif ($ev instanceof MetricsEvent) {
+                        // 视图度量变化（尺寸/DPR/安全区域）：重绘以重算布局
+                        $this->requestRender();
+                    } elseif ($ev instanceof LifecycleEvent) {
+                        // 宿主销毁：终止事件循环（其余状态桌面端不产出）
+                        if ($ev->isDetached()) {
+                            $this->running = false;
+                        }
                     }
                 }
 

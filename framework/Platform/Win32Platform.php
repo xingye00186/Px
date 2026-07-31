@@ -8,6 +8,18 @@ use Px\Paint\RenderContext;
 use Px\Paint\GdiRenderContext;
 use Px\Paint\SkiaRenderContext;
 
+/**
+ * Win32Platform — Windows Embedder
+ *
+ * 职责：把 Win32 的一切（HWND / WM_* 消息）翻译为 Framework 层的统一抽象。
+ * Framework 层不得看到任何 Win32 概念（终极融合铁律 1）。
+ *
+ *   WM_LBUTTONDOWN/UP/MOUSEMOVE/MOUSEWHEEL → PointerEvent(kind:'mouse')
+ *   WM_KEYDOWN/KEYUP/CHAR                  → KeyEvent
+ *   WM_SIZE                                → MetricsEvent
+ *   WM_PAINT                               → RedrawEvent
+ *   WM_CLOSE                               → LifecycleEvent('detached')
+ */
 class Win32Platform implements Platform
 {
     private int $hwnd = 0;
@@ -15,6 +27,11 @@ class Win32Platform implements Platform
     /** @var callable|null */
     private ?\Closure $animationCallback = null;
     private bool $animationTimerSet = false;
+
+    private int $surfaceWidth = 0;
+    private int $surfaceHeight = 0;
+    /** 生命周期状态：WM_CLOSE 后置 detached */
+    private string $lifecycleState = LifecycleEvent::STATE_ACTIVE;
 
     private array $eventMap = [
         WinMsg::WM_LBUTTONDOWN => ['mouse', 'down'],
@@ -36,6 +53,8 @@ class Win32Platform implements Platform
             $this->hwnd = vue_window_create($title, $width, $height);
             vue_window_show($this->hwnd, WinMsg::SW_SHOW);
         }
+        $this->surfaceWidth  = $width;
+        $this->surfaceHeight = $height;
         vue_hide_console();
         // APP_RENDERER='skia' 则用 Skia 路径，默认 GDI（零侵入）
         if (defined('APP_RENDERER') && APP_RENDERER === 'skia') {
@@ -44,9 +63,40 @@ class Win32Platform implements Platform
         return new GdiRenderContext($this->hwnd);
     }
 
-    public function getHwnd(): int
+    public function getSurface(): RenderSurface
     {
-        return $this->hwnd;
+        return new RenderSurface($this->hwnd, $this->surfaceWidth, $this->surfaceHeight, $this->currentDprPermille());
+    }
+
+    public function getMetrics(): ViewMetrics
+    {
+        // 桌面端安全区域恒 0（无刘海屏/手势条）
+        return new ViewMetrics(
+            $this->surfaceWidth,
+            $this->surfaceHeight,
+            $this->currentDprPermille(),
+            0, 0, 0, 0,
+            'win32'
+        );
+    }
+
+    public function getLifecycleState(): string
+    {
+        if ($this->lifecycleState !== LifecycleEvent::STATE_DETACHED && vue_quit_requested()) {
+            $this->lifecycleState = LifecycleEvent::STATE_DETACHED;
+        }
+        return $this->lifecycleState;
+    }
+
+    /**
+     * 当前 DPR 的千分比。
+     *
+     * 未接 Per-Monitor DPI 前恒返 1000（1.0x）—— 不猜测。
+     * 真实 DPI 查询需 C++ 侧新增 vue_get_dpi 绑定，归属 P4.4（DpiManager）。
+     */
+    private function currentDprPermille(): int
+    {
+        return 1000;
     }
 
     public function shutdown(): void
@@ -63,7 +113,7 @@ class Win32Platform implements Platform
 
     public function shouldClose(): bool
     {
-        return vue_quit_requested();
+        return $this->getLifecycleState() === LifecycleEvent::STATE_DETACHED;
     }
 
     /**
@@ -94,7 +144,7 @@ class Win32Platform implements Platform
         }
     }
 
-    /** @return PlatformEvent[] */
+    /** @return PlatformEvent[] PointerEvent / KeyEvent / MetricsEvent / RedrawEvent / LifecycleEvent */
     public function pollEvents(): array
     {
         $events = [];
@@ -130,22 +180,39 @@ class Win32Platform implements Platform
                 }
                 // 从 wParam LOWORD 提取修饰键（MK_SHIFT = 0x0004）
                 $shiftDown = (($wParam & 0xFFFF) & 0x0004) !== 0;
-                $events[] = new MouseEvent($action, $x, $y, 0, $delta, $shiftDown);
+                // 鼠标 → 统一指针：kind='mouse'、pointerId=0、无压感（pressure=1000）
+                $events[] = new PointerEvent($action, $x, $y, 0, $delta, $shiftDown, 'mouse', 0, 1000);
             } elseif ($cat === 'keyboard') {
                 $char    = ($msgType === WinMsg::WM_CHAR)
                     ? chr($wParam & 0xFF) : '';
-                $events[] = new KeyboardEvent($action, $wParam, $char);
+                $events[] = new KeyEvent($action, $wParam, $char, $this->currentModifiers());
             } elseif ($cat === 'window' && $action === 'resize') {
                 $width   = $lParam & 0xFFFF;
                 $height  = ($lParam >> 16) & 0xFFFF;
-                $events[] = new WindowEvent('resize', $width, $height);
+                $this->surfaceWidth  = $width;
+                $this->surfaceHeight = $height;
+                $events[] = new MetricsEvent($this->getMetrics());
             } elseif ($cat === 'window' && $action === 'paint') {
-                $events[] = new WindowEvent('paint');
+                $events[] = new RedrawEvent();
             } elseif ($action === 'close') {
-                $events[] = new WindowEvent('close');
+                $this->lifecycleState = LifecycleEvent::STATE_DETACHED;
+                $events[] = new LifecycleEvent(LifecycleEvent::STATE_DETACHED);
             }
         }
 
         return $events;
+    }
+
+    /**
+     * 当前修饰键位掩码（KeyEvent::MOD_*）。
+     *
+     * WM_KEYDOWN/CHAR 的 wParam/lParam 不携带修饰键位，需查当前键盘状态。
+     * C++ 侧尚未提供 GetKeyState 绑定，故恒返 0（不猜测）—— 修饰键的
+     * 真实接入归属 P2.1（快捷键系统）。当前无消费者：没有任何代码读
+     * KeyEvent::$modifiers，此字段为 Phase 2 预置的抽象位。
+     */
+    private function currentModifiers(): int
+    {
+        return 0;
     }
 }

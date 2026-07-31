@@ -2,60 +2,67 @@
 
 namespace PxTest\Mock;
 
-use Px\Platform\MouseEvent;
-use Px\Platform\KeyboardEvent;
+use Px\Platform\PointerEvent;
+use Px\Platform\KeyEvent;
 use Px\Platform\PlatformEvent;
 
 /**
- * 事件模拟器 — 构造 MouseEvent/KeyboardEvent 的工厂方法。
+ * 事件模拟器 — 构造 PointerEvent/KeyEvent 的工厂方法。
  *
  * 使用方式:
- *   EventSimulator::mouseClick(100, 200)       → MouseEvent
- *   EventSimulator::mouseWheel(100, 200, -120) → MouseEvent (滚轮)
- *   EventSimulator::keyPress('a', 65)          → KeyboardEvent
+ *   EventSimulator::mouseClick(100, 200)       → PointerEvent (kind='mouse')
+ *   EventSimulator::mouseWheel(100, 200, -120) → PointerEvent (滚轮)
+ *   EventSimulator::keyPress('a', 65)          → KeyEvent
+ *   EventSimulator::touchTap(100, 200)         → PointerEvent (kind='touch')
  */
 class EventSimulator
 {
     /** 模拟鼠标左键点击 */
-    public static function mouseClick(int $x, int $y): MouseEvent
+    public static function mouseClick(int $x, int $y): PointerEvent
     {
-        return new MouseEvent('down', $x, $y, 0, 0);
+        return new PointerEvent('down', $x, $y, 0, 0);
     }
 
     /** 模拟鼠标右键点击 */
-    public static function mouseRightClick(int $x, int $y): MouseEvent
+    public static function mouseRightClick(int $x, int $y): PointerEvent
     {
-        return new MouseEvent('down', $x, $y, 1, 0);
+        return new PointerEvent('down', $x, $y, 1, 0);
     }
 
     /** 模拟鼠标移动 */
-    public static function mouseMove(int $x, int $y): MouseEvent
+    public static function mouseMove(int $x, int $y): PointerEvent
     {
-        return new MouseEvent('move', $x, $y, 0, 0);
+        return new PointerEvent('move', $x, $y, 0, 0);
     }
 
     /** 模拟鼠标滚轮 */
-    public static function mouseWheel(int $x, int $y, int $delta): MouseEvent
+    public static function mouseWheel(int $x, int $y, int $delta): PointerEvent
     {
-        return new MouseEvent('wheel', $x, $y, 0, $delta);
+        return new PointerEvent('wheel', $x, $y, 0, $delta);
+    }
+
+    /** 模拟触屏点击（移动端路径；Framework 层应与鼠标同行为） */
+    public static function touchTap(int $x, int $y, int $pointerId = 0): PointerEvent
+    {
+        return new PointerEvent('down', $x, $y, 0, 0, false, 'touch', $pointerId, 1000);
     }
 
     /** 模拟键盘按下 */
-    public static function keyPress(string $char, int $keyCode): KeyboardEvent
+    public static function keyPress(string $char, int $keyCode): KeyEvent
     {
-        return new KeyboardEvent('down', $keyCode, $char);
+        return new KeyEvent('down', $keyCode, $char);
     }
 
     /** 模拟键盘松开 */
-    public static function keyRelease(string $char, int $keyCode): KeyboardEvent
+    public static function keyRelease(string $char, int $keyCode): KeyEvent
     {
-        return new KeyboardEvent('up', $keyCode, $char);
+        return new KeyEvent('up', $keyCode, $char);
     }
 
     /** 模拟 Enter 键 */
-    public static function enterKey(): KeyboardEvent
+    public static function enterKey(): KeyEvent
     {
-        return new KeyboardEvent('down', 13, "\r");
+        return new KeyEvent('down', 13, "\r");
     }
 
     /**
