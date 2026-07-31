@@ -74,6 +74,42 @@ class ComponentResolveTransform implements TransformInterface
                 continue;
             }
 
+            // B4: 内建动画组件（Transition / TransitionGroup）——
+            // 不查 components/ 目录，直接编译为框架内建组件工厂调用。
+            $builtinMap = [
+                'Transition' => 'TransitionComponent',
+                'transition' => 'TransitionComponent',
+                'TransitionGroup' => 'TransitionGroupComponent',
+                'transition-group' => 'TransitionGroupComponent',
+            ];
+            if (isset($builtinMap[$child->type])) {
+                $childComponentName = $builtinMap[$child->type];
+                $child->type = '#component';
+                $child->isComponent = true;
+                $child->componentClass = $childComponentName;
+                // props: name/appear/duration/mode 作为 bind props
+                $bindProps = [];
+                foreach ($child->props as $k => $v) {
+                    if ($k === 'name' || $k === 'appear' || $k === 'duration' || $k === 'mode' || $k === 'tag') {
+                        $bindProps[$k] = 'static:' . $v;
+                    } elseif (str_starts_with($k, ':')) {
+                        $bindProps[substr($k, 1)] = $v;
+                    }
+                }
+                $child->componentProps = count($bindProps) > 0 ? $bindProps : null;
+                // slot 子内容保留为 children（TransitionComponent 的 render 消费）
+                $this->childComponents[] = [
+                    'tagName' => $child->type,
+                    'componentClass' => $childComponentName,
+                    'offsetX' => 0, 'offsetY' => 0,
+                    'bindProps' => $bindProps,
+                    'clickHandlers' => [],
+                    'keyHandlers' => [],
+                ];
+                $resolvedChildren[] = $child;
+                continue;
+            }
+
             // Check for component ref (has __componentFile prop)
             $compFile = $child->props['__componentFile'] ?? '';
             if ($compFile === '') {

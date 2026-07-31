@@ -613,7 +613,12 @@ class Application
         $className = $node->componentClass;
         if ($className === null) return $node;
 
-        $instance = \ComponentFactory::create($className);
+        // B4: 内建动画组件不走 ComponentFactory（它们是框架类，非 gen 产出）
+        $instance = match ($className) {
+            'TransitionComponent' => new \Px\Animation\TransitionComponent('Transition'),
+            'TransitionGroupComponent' => new \Px\Animation\TransitionGroupComponent('TransitionGroup'),
+            default => \ComponentFactory::create($className),
+        };
         $instance->setScheduler($this->scheduler);
         $instance->setRenderCallback($this->handleRenderRequest(...));
         $instance->setParent($owner);

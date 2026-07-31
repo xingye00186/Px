@@ -115,11 +115,13 @@ class TransitionGroupComponent extends ReactiveComponent
      */
     public function recordPosition(RenderNode $node, string $key): void
     {
+        // 从绘制权威 Fragment 读几何（RenderNode 无 x/y/w/h 字段）
+        $frag = $node->cachedFragment;
         $this->childPositions[$key] = [
-            'x' => $node->x,
-            'y' => $node->y,
-            'w' => $node->w,
-            'h' => $node->h,
+            'x' => $frag !== null ? (int)$frag->x : 0,
+            'y' => $frag !== null ? (int)$frag->y : 0,
+            'w' => $frag !== null ? (int)$frag->w : 0,
+            'h' => $frag !== null ? (int)$frag->h : 0,
         ];
     }
 
