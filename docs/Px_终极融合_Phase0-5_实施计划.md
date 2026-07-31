@@ -295,6 +295,16 @@ P0.3b 原计划 P1.3 做 `init(): RenderSurface` 接口重构。经代码实证�
 
 P2.1 原生 OS 集成（文件对话框/托盘/多窗口）→ P2.2 HTTP 客户端（WinHttp）→ **P2.3 手势系统**（GestureRecognizer + 编译器 `@tap/@swipe/@pinch`，依赖 P0.2 的 PointerEvent）→ P2.4 CSS Transition 自动插值 → P2.5 脏区域 Paint（依赖 P1.3）
 
+### P2.4 与「calculator 动画验收目标」的对账（2026-07-31）
+
+动画对齐总路线（B 系列，见当日分析）：B1 消费侧 → B2 CSS transition 自动触发（=P2.4 本体）→ B3 @keyframes 编译 → B4 Transition/TransitionGroup+FLIP → B5 cascade SLOT_ANIMATION。
+
+calculator 点击动画目标（光晕+飞升+60FPS）与原序列的关系：
+- **是 B1 的首个垂直切片**：打通驱动→插值→消费→像素全链的窄通道（仅视觉属性）；消费点落在 `fragmentToElement` **统一入口**（非 makeXxx 局部特判），demo 即 B1 正式第一块砖，不返工；
+- **帧驱动自节拍是 P1.3 通电的收尾**：WM_TIMER 分辨率 ~15.6ms + 消息合并，物理上到不了稳定 60FPS，改为 run() 循环内 FrameScheduler 自节拍 + directRender；
+- **overlay 浮动层是新增基建**（对标 Flutter Overlay）：飞升元素不进 RenderNode/Fragment 树（Fragment readonly，飞行物本不应扰动布局）；将来 B4 FLIP、Teleport、toast 可复用；
+- **明确不覆盖**（任务账目不变）：B2 CSS transition 自动触发（demo 用显式 API，不经 `transition:` 属性）、B1 几何属性动画（width/height→layoutDirty）、B3/B4/B5 均保留原序列。
+
 ---
 
 ## 4. ⛔ Phase 3 前置闸门：ARM64 POC（1-2 周，全盘单点否决项）

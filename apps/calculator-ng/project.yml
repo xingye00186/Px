@@ -14,9 +14,18 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/Compiler
+  - ../../framework/Compiler
+
+
 
 # ========================================================================
 # Runtime debug config (read by framework/Core/Config.php via Px_debug_ prefix)
 # ========================================================================
-Px_debug_diag_enabled: true
+Px_debug_diag_enabled: false
+
+# 动画系统（P1.3/B1 垂直切片验收）
+Px_animation_enabled: true
+Px_anim_click_effects: true
+Px_anim_fly_to_bind: display
+# 压测：启动后 10Hz 合成点击 30 次，逐帧日志写 debug/anim_fps.json（自解除）
+Px_anim_autotest: true
