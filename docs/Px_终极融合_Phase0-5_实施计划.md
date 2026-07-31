@@ -223,6 +223,53 @@ L431 $this->platform->getHwnd()  → $this->platform->getSurface()->getHandle()
 **Phase 1 附带债务清偿**（Phase 0 期间发现，成本低）：
 `tools/PxTest/Pipeline/Strategy/PhpDumpStrategy.php` 的 `$coreFiles` 清单**整体失效**——引用 `framework/Rendering/*`、`framework/Styling/*`、`framework/interfaces/*` 等早已不存在的路径，被 `file_exists` 静默吞掉，实为空操作。属总指南 §11.2「验证设施会说谎」典型形态，须在 P1 内清理。
 
+### P1.3 执行记录 — 第一批（2026-07-31 实测，骨架完成，AOT 待编译）
+
+> **范围决策**（用户选定「两批:先骨架后通电」）：第一批交付 FrameScheduler 并把长期死掉的 Animation 子系统接上帧驱动源，**动画默认关闭以保证行为等价**；动画逐项通电留第二批。
+
+**改动清单**：新增 `framework/Core/FrameScheduler.php`（136 行）+ `tests/unit/FrameSchedulerTest.php`（8 测试）；修改 `framework/Core/Application.php`（字段 / 构造 / mount 定时器 / run 空闲判定 / initRenderer 注释澄清 / accessor）。
+
+| 项 | 结果 |
+|---|---|
+| FrameScheduler：帧计时（首帧=帧间隔，后续=墙钟差且推进时钟）+ 动画驱动（默认关空操作） | ✅ 单测 8/8 |
+| Application 接线：`Px_animation_enabled` 控制开关；关闭时定时器保持 1000ms + onTimerTick，**行为等价** | ✅ |
+| run() 空闲睡眠增加 `!hasActiveAnimations()` 条件（动画关时恒真 → 等价） | ✅ |
+| 回归：css-standards Level | ✅ **336/336**（零回归） |
+| 回归：PlatformTest / ApplicationEventTest | ✅ **14/14 · 5/5** |
+| aot-checker（`--skip direct_cpp_call`） | ✅ **0 error · 31 warn**（+1 warn = FrameScheduler→AnimationManager 的 `native_types_chain`，属既有 30 条同类良性模式：仅调用 typed 方法、无属性访问，Phase 0 已证不触发 C2440） |
+| ★ AOT 编译 + exe 健康先验 | ✅ **Build succeeded**（与第二段同批，14:42；FrameScheduler 进入 prepare/convert/arginfo，无 C2440/C2446）；exe 健康：hwnd=16649614，CPU 0.172s 后持平（消息循环空转，FrameScheduler 接线未引入忙循环），无秒退 |
+
+**Surface 解耦决策 — 接口变更降级（已被第二段推翻）**：
+P0.3b 原计划 P1.3 做 `init(): RenderSurface` 接口重构。经代码实证（`initRenderer` L429 `unset($defaultCtx)` + `run_render_pipeline` 回读 `_CssCapturePlatform::$renderContext`）判定**降级为不做接口变更**，理由：① 生产路径已解耦——init() 返回 ctx 一次性丢弃，渲染上下文由 `RuntimeBackendSelector` 从 `getSurface()->getHandle()` 重建；② 残留的 `init(): RenderContext` 是**测试设施的上下文注入点**（PaintPipeline 绘入、测试回读），非 Win32 概念泄漏；③ 改为返回 RenderSurface 需给 8 个实现新增 `getDefaultContext()` 类方法，是把 surface+context 在另一方法**重新耦合**的纯 churn，且危及 336 门。改为在 `initRenderer` Stage 1 加**零风险注释**显式标注该边界。
+
+**第二批（动画通电）预置**：`FrameScheduler::setAnimationEnabled(true)` + 定时器切 16ms 后，`AnimationManager::tick()` 即获得帧驱动源；需逐项验证对 css-standards / css-test 的几何影响（独立批次，二分宽度干净）。
+
+### P1.3 执行记录 — 第二段：Surface 真解耦（2026-07-31 实测，严格 Flutter 对齐）
+
+> **背景**：第一段曾将 `init(): RenderSurface` 接口变更降级为注释澄清。用户要求**严格对齐 Flutter 架构**后推翻降级——原降级理由建立在「捕获上下文留平台侧」前提上，而 Flutter 模型要求光栅产物归 engine、Embedder 不生产渲染上下文。
+
+**目标达成**：`Platform::init(): void`（只造表面）；Platform 接口对 `Px\Paint\*` **零依赖**（use 已移除）；全仓 `init(...): RenderContext` 签名零残留；新平台 Embedder（Android/iOS）只需产出 RenderSurface。
+
+**改动清单**：新增 `framework/Paint/Backend/CapturingRenderContext.php`（从 _CssCaptureRenderContext 提升为框架侧软件捕获后端，捕获语义逐字一致）；修改 Platform / Win32Platform（init 不再造 Gdi/SkiaRenderContext，该构造在生产路径恒被丢弃，属无效构造）/ Application（initRenderer 统一为 init→getSurface→框架侧造 context；新增 getPaintPipeline()）/ 8 个测试平台桩（init 改 void）/ CssTestBase（element 读回改为引擎侧 getPaintPipeline()->getRenderContext()）/ PlatformTest（init 契约测试改写：断言 void + 接口无任何方法返回 RenderContext）/ InfrastructureTest（retired，init 返回断言改字段断言）。
+
+| 验收项 | 结果 |
+|---|---|
+| css-standards Level | ✅ **336/336**（零回归） |
+| PlatformTest / ApplicationEventTest / FrameSchedulerTest | ✅ **14/14 · 5/5 · 8/8** |
+| StyleMergeIntegrationTest / LayoutResolverTest | ✅ **7/7 · 6/6** |
+| css-test PHP-RT | ✅ **41/56 · 15 失败**（与 Phase 0 计数逐项相等） |
+| php -l 全量 framework+tools+tests | ✅ 0 失败（3 条 fixture 既有 native_types 警告，非错误） |
+| aot-checker | ✅ **0 error · 31 warn**（与第一段持平，无新增） |
+| `git grep 'init(...): RenderContext'` / `_CssCaptureRenderContext` | ✅ 零命中 |
+| ★ AOT 编译 + exe 健康先验 | ✅ **Build succeeded**（14:42，缓存已清 Step 0.75，全步骤实跑；FrameScheduler / CapturingRenderContext 均进入 prepare/convert/arginfo；无 C2440/C2446，AOT Validation PASSED 0 errors；既有 Diag.cc C4129 警告与本批无关）。exe 健康先验：窗口已建（hwnd=16649614），CPU 0.172s 后双采样持平（非忙循环、非启动阻塞），无秒退（非 0xC0000142）——Win32Platform::init 不再构造 Gdi/SkiaRenderContext 的副作用消失已经实编验证无影响 |
+
+**本段重大发现（验证设施会说谎，又一例）**：旧 initRenderer 的“测试分支”（`!function_exists('vue_begin_paint')`）**从未触发**——CLI 下 `tests/unit/bootstrap.php` 加载的 stub 定义了 `vue_begin_paint`，336 门实际一直走 Stage 2（skia-cpu 离屏），`_CssCapturePlatform` 的 element 捕获是**死设施**，全部基线的 element 段均为 `(no elements)`。本批保持该行为不变（捕获分支仅在真·无绑定环境触发）以保基线零漂移。
+
+**未证边界（诚实标注）**：
+- 激活 CLI element 捕获（让 stub 环境也走 CapturingRenderContext）需同批再生成 336 基线的 element 段，属独立批次；
+- GridFinalDiag / GridInstrumentationDiag 既有失败（依赖未构建的 apps/bilibili/gen，L24 require 即崩），与本批无关；
+- exe 健康先验为启动级验证（窗口/CPU/存活），未做交互级点击验证；css-test AOT 模式（--skip-build 新 exe）未重跑，PHP-RT 41/56 已作为本批判据。
+
 ---
 
 ## 3. Phase 2：桌面端完善（2-3 个月）
