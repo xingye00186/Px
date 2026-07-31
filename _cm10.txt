@@ -1,0 +1,79 @@
+docs(guide): mine the full quest transcript for original lessons — adds the project's highest-frequency defect family
+
+Answering both parts of the user's question.
+
+PART 1, coverage check. The four items asked about were already present:
+  - scenario playbooks -> section 6, P1..P5
+  - CSS test conventions -> section 6.5
+  - fast diagnosis tooling -> section 3 plus section 10, and the new tools
+    (bench_analyze, style_pool_key_coverage_gate, aot-checker, compare_php_aot,
+    --skip-build) all appear
+  - cleanup flow -> step 7 of the section 2 loop
+So nothing was missing there.
+
+PART 2, transcript mining. Read the quest transcript (1.29MB / 2089 messages)
+front-to-back rather than relying on my summary, and it turned out something
+much more important WAS missing: the defect family this project hits most
+often, which had never been written down.
+
+The user's ORIGINAL task definition already specified the nine-step loop:
+probe -> ground truth -> three-way compare -> fix -> full run + snapshots ->
+bench -> commit -> cleanup -> ledger + memory. Section 2 matches it.
+
+New 11.7 CLASS-A DEFAULT-VALUE TRAP, six archived instances. The default is
+neither null nor 0, so `?? fallback` or `=== 0` short-circuits forever and the
+fallback branch never runs. The property chain is complete and the code reads
+fine, yet the feature is entirely dead:
+  overflowY defaults to 'visible' -> overflow:hidden silently bypasses the BFC
+    check in all three places
+  getLineHeight() returns 0 -> the fs*1.2 fallback never fires
+  borderWidth defaults to a CssRect(0,0,0,0) OBJECT -> `=== 0` is always false,
+    so the border shorthand fallback is a dead end (the object variant)
+  CssLength::isAuto() returns false -> margin:auto dead
+  margin shorthand per-side raw is NULL -> chain present, detection layer broken
+  column-gap unset is normal=1em -> needs getRaw() to tell unset from 0
+Includes the check to run before writing any `??` or `=== 0`, plus the derived
+contract that sentinels must never reach the declaration layer (the lineHeight
+-1 sentinel leaked and was read as a number declaration, computing -16px, and
+PHP and AOT then diverged on the negative value).
+
+New 11.8 COMPARATOR AND GROUND-TRUTH SELF-BLINDNESS: three cases where the two
+sides were not the same source while the report kept printing numbers —
+first-element misalignment putting the index-based comparator off by one in
+48/55 cases, unbalanced braces in 40/55 case stylesheets inflating every total
+ever recorded, and six .vue assets missing the universal reset making them
+structurally incomparable. Note the .vue files are gitignored pipeline output,
+so hand-patching gets overwritten and the fix has to land in the generator.
+Mandatory rule: verify first-element pxId, depth and counts before trusting any
+diff. Plus the CRLF snapshot trap across machines.
+
+New 11.9 BUILD AND AOT RE-VERIFICATION: builds must be serial (shared build/
+means PDB write locks and a silently corrupted exe; overlapping cleanup and
+early writes produce 0xC0000142 with no linker error in the log), verify exe
+health with a 30-second bare run before spending 25 minutes on a hung pipeline,
+/STACK:8388608 for AOT stack frames, and the most expensive lesson of all —
+re-verify AOT every 3-4 engine batches, because 13 batches of backlog left a
+hang that needed 50 minutes per bisection step.
+
+New 11.10 TEST-SUITE BLIND SPOTS: css-standards was 330/330 green while
+css-test found a dozen real defects, because the two suites cover structurally
+different dimensions (inline style versus full sfc-compiler cascade, hand-written
+assertions versus browser ground truth). A green suite is not evidence of no
+defects, only of no defects in what it covers.
+
+Section 12 restructured into 12.1 alignment/root-cause, 12.2 evidence and
+attribution, 12.3 verification and delivery, now 21 rules. Notable additions
+mined from the transcript: abstraction ORDER is a contract (width/height must be
+derived before right/bottom); single-sourcing (per-call-site edge math is where
+deductions get lost; one subtree-translate path only); baked and runtime are
+parallel style channels so a working runtime chain does NOT imply the baked mode
+works; after three rounds of contradictory reasoning, instrument instead;
+instrument to find which execution path the DECLARATION travels before adding
+branches (vertical-align on a containing inline box, not the atomic); check the
+actual argument at call sites, not the signature default; verify semantics via
+generated output because php -l is not enough and "save failed" is sometimes a
+real loss; isolate one variable at a time when many cases regress together; use
+ground truth where the spec gives no exact value; and when the budget runs out,
+freeze the evidence, clean up, and name the debt rather than pretending closure.
+
+488 -> 575 lines.
