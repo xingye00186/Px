@@ -485,6 +485,19 @@ class AnimationManager
     }
 
     /**
+     * T4: 仅把节点加入 nodeMap（供 KeyframeResolver::tick 查找），
+     * 不创建 Animation 实例。解决仅有 @keyframes 动画的节点不在
+     * nodeMap 中的问题。
+     */
+    public function registerNodeForKeyframe(RenderNode $node): void
+    {
+        $nodeId = $this->getNodeId($node);
+        if (!isset($this->nodeMap[$nodeId])) {
+            $this->nodeMap[$nodeId] = $node;
+        }
+    }
+
+    /**
      * 获取当前活跃动画数量（含 overlay 浮动项）。
      */
     public function getActiveCount(): int

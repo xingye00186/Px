@@ -118,6 +118,12 @@ class KeyframeResolver
         );
 
         self::$activeAnimations[$id] = $animation;
+
+        // T4 治本：把节点注册到 AnimationManager 的 nodeMap，
+        // 否则 tick 时 $nodeMap[$anim->nodeId] 为 null（仅有 @keyframes
+        // 动画的节点不会经 transition 路径被加入）。
+        AnimationManager::getInstance()->registerNodeForKeyframe($node);
+
         return $id;
     }
 
