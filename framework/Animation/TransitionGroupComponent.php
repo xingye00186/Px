@@ -126,11 +126,54 @@ class TransitionGroupComponent extends ReactiveComponent
     }
 
     /**
-     * 执行 FLIP 动画。
-     * 在 RenderTreeManager::onUpdated 中调用。
-     *
-     * @param RenderNode $node        当前渲染节点
-     * @param array $prevPositions    上次的子节点位置（lastX/lastY）
+     * T3: layout 完成后由 Application 调用——对比旧 childPositions
+     * 与新 Fragment 几何，对变化项注册 FLIP translateX/Y 动画。
+     */
+    public function afterLayout(): void
+    {
+        if (!$this->flipEnabled) {
+            return;
+        }
+        $rootRN = $this->getRootRenderNode();
+        if ($rootRN === null) {
+            return;
+        }
+        $oldPositions = $this->childPositions;
+        // 快照当前几何
+        $this->childPositions = [];
+        foreach ($rootRN->children as $child) {
+            $key = $child->key;
+            if ($key === null) continue;
+            $frag = $child->cachedFragment;
+            $this->childPositions[$key] = [
+                'x' => $frag !== null ? (int)$frag->x : 0,
+                'y' => $frag !== null ? (int)$frag->y : 0,
+                'w' => $frag !== null ? (int)$frag->w : 0,
+                'h' => $frag !== null ? (int)$frag->h : 0,
+            ];
+        }
+        // 对比并注册 FLIP
+        if (empty($oldPositions)) {
+            return; // 首帧无对比基线
+        }
+        $mgr = AnimationManager::getInstance();
+        foreach ($rootRN->children as $child) {
+            $key = $child->key;
+            if ($key === null) continue;
+            $old = $oldPositions[$key] ?? null;
+            $cur = $this->childPositions[$key] ?? null;
+            if ($old === null || $cur === null) continue;
+            $dx = (int)$old['x'] - (int)$cur['x'];
+            $dy = (int)$old['y'] - (int)$cur['y'];
+            if ($dx === 0 && $dy === 0) continue;
+            // 反向 translate → 过渡归零（FLIP 的 Invert+Play）
+            $mgr->addTransition($child, 'translateX', $dx, 0, $this->flipDuration, $this->flipEasing);
+            $mgr->addTransition($child, 'translateY', $dy, 0, $this->flipDuration, $this->flipEasing);
+        }
+    }
+
+    /**
+     * 执行 FLIP 动画（旧接口，保留兼容）。
      */
     public function performFlip(RenderNode $node, array $prevPositions): void
     {

@@ -107,6 +107,9 @@ class Application
     /** 帧调度器：帧计时 + 动画驱动（P1.3）。动画默认关闭，行为等价。 */
     private FrameScheduler $frameScheduler;
 
+    /** T3: 已注册的 TransitionGroup 实例（render 后通知 FLIP） */
+    private array $transitionGroups = [];
+
     // ── 动画压测模式（Px_anim_autotest）：10Hz 合成点击 + 逐帧时间戳日志 ──
     private bool $animAutotestActive = false;
     private int $animAutotestClicks = 0;
@@ -497,6 +500,21 @@ class Application
     public function getPaintPipeline(): ?PaintPipeline
     {
         return $this->paintPipeline;
+    }
+
+    /** T3: 注册 TransitionGroup 实例（组件 mount 时调用）。 */
+    public function registerTransitionGroup(\Px\Animation\TransitionGroupComponent $tg): void
+    {
+        $this->transitionGroups[] = $tg;
+    }
+
+    /** T3: 注销 TransitionGroup（组件 unmount 时调用）。 */
+    public function unregisterTransitionGroup(\Px\Animation\TransitionGroupComponent $tg): void
+    {
+        $idx = array_search($tg, $this->transitionGroups, true);
+        if ($idx !== false) {
+            array_splice($this->transitionGroups, $idx, 1);
+        }
     }
 
     public function mount(ReactiveComponentInterface $root, string $appDir = ''): self
@@ -1130,6 +1148,11 @@ class Application
         // 命中测试几何同源（对标 Blink：HitTest 走 PhysicalFragment 树）
         $this->renderTreeManager->setPaintedFragmentTree($fragmentTree);
         \Px\Core\PerfCounter::end('stage:layout');
+
+        // T3: 通知已注册的 TransitionGroup 做 FLIP 坐标对比
+        foreach ($this->transitionGroups as $tg) {
+            $tg->afterLayout();
+        }
 
         if (Config::get('debug_diag_enabled', false)) {
             $this->logScrollContainerStates('[DIAG] render AFTER');
