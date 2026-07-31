@@ -24,11 +24,12 @@
 </template>
 
 <script lang="php">
-class AppComponent extends ReactiveComponent
-{
+    #[Reactive]
     public string $listTitle = "Todo List";
+    #[Reactive]
     public string $addBtnText = "Add Item";
 
+    #[Reactive]
     public array $todoItems = [
         ['id' => '1', 'text' => 'Task 1'],
         ['id' => '2', 'text' => 'Task 2'],
@@ -37,23 +38,22 @@ class AppComponent extends ReactiveComponent
 
     public function deleteItem(string $id): void
     {
-        foreach ($this->todoItems as $i => $item) {
-            if ($item['id'] === $id) {
-                unset($this->todoItems[$i]);
-                $this->todoItems = array_values($this->todoItems);
-                break;
+        $newItems = [];
+        foreach ($this->todoItems as $item) {
+            if ($item['id'] !== $id) {
+                $newItems[] = $item;
             }
         }
-        $this->dirty = true;
+        $this->todoItems = $newItems;
     }
 
     public function addItem(): void
     {
         $newId = (string)(count($this->todoItems) + 1);
-        $this->todoItems[] = ['id' => $newId, 'text' => 'Task #' . $newId];
-        $this->dirty = true;
+        $items = $this->todoItems;
+        $items[] = ['id' => $newId, 'text' => 'Task #' . $newId];
+        $this->todoItems = $items;
     }
-}
 </script>
 
 <style>
