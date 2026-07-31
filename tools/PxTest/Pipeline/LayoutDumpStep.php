@@ -17,11 +17,15 @@ class LayoutDumpStep implements PipelineStepInterface
     }
 
     public function name(): string { return 'dump_layout'; }
-    public function requires(): array { return ['build']; }
+    public function requires(): array { return []; }   // 资源前置（exe 存在）在 execute 内自检，不依赖 build **步骤**
 
     public function execute(CaseContext $ctx): StepResult
     {
         $start = microtime(true);
+        if (!is_file($this->exePath)) {
+            return StepResult::err('dump_layout', 'exe not found: ' . $this->exePath,
+                (microtime(true) - $start) * 1000);
+        }
         $cmd = sprintf('"%s" --case=%s --headless --dump-layout 2>&1',
             $this->exePath, $this->caseName);
 

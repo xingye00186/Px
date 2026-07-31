@@ -1,0 +1,35 @@
+fix(pxtest): requires() must express DATA dependency, not resource precondition
+
+User challenged my previous fix: MultiFrameStep declaring requires: ['build']
+"is wrong and illogical". Correct — and it exposed that my fix was only
+treating the symptom.
+
+THE CONCEPT CONFUSION: three steps (MultiFrameStep, LayoutDumpStep,
+ScreenshotStep) each hold an $exePath and declared requires: ['build']. Their
+real precondition is "the exe file exists", not "the build STEP ran
+successfully in this pipeline". Those are different things, and PipelineBuilder
+deliberately omits BuildStep under --skip-build and in PHP-runtime mode.
+
+Consequences of conflating them:
+  - before any fix: 0ms err for all 56 cases -> Passed: 0/56
+  - after my previous fix alone (unregistered dep -> skip): the three steps were
+    SILENTLY SKIPPED even though the exe was present and multi-frame stability /
+    layout dump / screenshot comparison should all have run. Capability lost
+    without a trace - arguably worse than the loud failure, because the report
+    then looks clean.
+
+ROOT FIX: requires() now expresses only in-pipeline DATA dependency and
+ordering; resource preconditions are self-checked inside execute(). The three
+steps return [] and each verifies is_file($exePath) up front, so under
+--skip-build they run normally. Verified per-case: dump_layout 313.4ms and
+multiframe 659.5ms, i.e. really executing, versus 0ms before.
+
+Kept from the previous commit: the orchestrator distinction between "dependency
+pending" and "dependency not in pipeline". That remains correct for genuine
+data dependencies - ElementCompareStep requires browser_ref, LayoutValidationStep
+requires dump_layout - where an absent upstream means there is nothing to
+consume and skipping is right.
+
+Full run: 41/56 (unchanged), elapsed 61s -> 95s, which is the honest cost of
+three steps that now actually execute. compare_php_aot stays 55/56 identical.
+unit 45/45.

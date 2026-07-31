@@ -45,11 +45,15 @@ class ScreenshotStep implements PipelineStepInterface
     }
 
     public function name(): string { return 'screenshot_compare'; }
-    public function requires(): array { return ['build']; }
+    public function requires(): array { return []; }   // 同上：资源前置在 execute 内自检
 
     public function execute(CaseContext $ctx): StepResult
     {
         $start = microtime(true);
+        if (!is_file($this->exePath)) {
+            return StepResult::err('screenshot', 'exe not found: ' . $this->exePath,
+                (microtime(true) - $start) * 1000);
+        }
 
         // 从上下文读取当前 case 名（全量运行时每个 case 独立设置），覆盖构造时默认值
         $ctxCase = $ctx->get('case_name');

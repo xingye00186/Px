@@ -19,7 +19,17 @@ class MultiFrameStep implements PipelineStepInterface
     }
 
     public function name(): string { return 'multiframe'; }
-    public function requires(): array { return ['build']; }
+
+    /**
+     * 本步骤的真实前置是**exe 文件存在**，而非“build 步骤在本次管线中成功执行”。
+     * 旧声明 requires: ['build'] 把**资源前置**误当成**步骤依赖**，后果：
+     *   - 无修正时：--skip-build 下全 56 case 报 0ms err → Passed: 0/56
+     *   - 仅修 orchestrator（未注册依赖→跳过）：本步骤被**静默跳过**，
+     *     而 exe 明明存在、多帧稳定性检查本应运行 → 能力无声丢失。
+     * 治本：requires 仅用于管线内**数据依赖与执行顺序**；资源前置在
+     * execute() 内自检。于是 --skip-build 时本步骤照常运行。
+     */
+    public function requires(): array { return []; }
 
     public function execute(CaseContext $ctx): StepResult
     {
