@@ -45,6 +45,7 @@
             }
         }
         $this->todoItems = $newItems;
+        $this->markRenderDirty();
     }
 
     public function addItem(): void
@@ -53,6 +54,7 @@
         $items = $this->todoItems;
         $items[] = ['id' => $newId, 'text' => 'Task #' . $newId];
         $this->todoItems = $items;
+        $this->markRenderDirty();
     }
 </script>
 

@@ -23,4 +23,5 @@ Px_animation_enabled: true
 Px_anim_autotest: true
 Px_anim_autotest_handler: deleteItem
 Px_anim_click_effects: false
+Px_debug_diag_enabled: false
 
