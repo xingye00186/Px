@@ -83,6 +83,39 @@ class ConstraintSpace
     public function getParentContentY(): int { return $this->parentContentY; }
     public function getContentWidth(): int { return $this->contentWidth; }
     public function getContentHeight(): int { return $this->contentHeight; }
+
+    /**
+     * E4: 几何动画尺寸覆写——返回一个新 ConstraintSpace，
+     * contentWidth/Height 被动画值替换，其余不变。
+     */
+    public function withOverrideSize(?int $w, ?int $h): self
+    {
+        return new self(
+            $w ?? $this->containerWidth,
+            $h ?? $this->containerHeight,
+            $this->parentContentX,
+            $this->parentContentY,
+            $w ?? $this->contentWidth,
+            $h ?? $this->contentHeight,
+            $this->percentageWidth,
+            $this->percentageHeight,
+            $this->paddingTop,
+            $this->paddingRight,
+            $this->paddingBottom,
+            $this->paddingLeft,
+            $this->borderTop,
+            $this->borderRight,
+            $this->borderBottom,
+            $this->borderLeft,
+            $this->forceRelayoutChildren,
+            $this->isIntrinsicMeasurement,
+            $this->spaceType,
+            $this->determinedPercentageWidth,
+            $this->determinedPercentageHeight,
+            $this->isFixedBlockSize,
+            $this->isFormattingContextRoot,
+        );
+    }
     public function getPercentageWidth(): ?int { return $this->percentageWidth; }
     public function getPercentageHeight(): ?int { return $this->percentageHeight; }
     public function getDeterminedPercentageWidth(): ?int { return $this->determinedPercentageWidth; }

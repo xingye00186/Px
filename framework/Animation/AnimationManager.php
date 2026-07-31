@@ -327,13 +327,23 @@ class AnimationManager
         }
 
         $node->isAnimating = true;
-        // paint-only 失效：沿父链置 paintDirty，使 directRender 的
-        // 路径 B（洁净子树跳过）不会跳过动画中节点。
-        // 不用 markStyleDirty（它会强制 layoutDirty=false，有副作用）。
+        // paint-only 失效：沿父链置 paintDirty，使 directRender 不跳过动画中节点。
         $n = $node;
         while ($n !== null) {
             $n->paintDirty = true;
             $n = $n->parent;
+        }
+        // E4: 几何属性动画额外标记 layoutDirty（对标 Blink：
+        // width/height 变化需触发 relayout）。
+        foreach ($blended as $prop => $_) {
+            if ($prop === 'width' || $prop === 'height'
+                || $prop === 'minWidth' || $prop === 'maxWidth'
+                || $prop === 'minHeight' || $prop === 'maxHeight') {
+                $node->layoutDirty = true;
+                $node->cachedFragment = null;
+                $node->cachedConstraintSpace = null;
+                break;
+            }
         }
     }
 

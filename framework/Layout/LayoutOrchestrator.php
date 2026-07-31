@@ -264,6 +264,18 @@ class LayoutOrchestrator
         \Px\Core\PerfCounter::end('algo:setup');
 
         \Px\Core\PerfCounter::start('algo:' . $algoName);
+        // E4: 几何属性动画叠加 — animatedStyle 中的 width/height 覆写约束空间，
+        // 保证布局算法看到的是动画后的尺寸，Fragment 产出正确几何。
+        if ($node->isAnimating && $node->animatedStyle !== null) {
+            $animW = $node->animatedStyle['width'] ?? null;
+            $animH = $node->animatedStyle['height'] ?? null;
+            if ($animW !== null || $animH !== null) {
+                $space = $space->withOverrideSize(
+                    $animW !== null ? (int)$animW : null,
+                    $animH !== null ? (int)$animH : null
+                );
+            }
+        }
         // 调 layoutResult() 获得完整 LayoutResult；当前仅消费 fragment，
         // endMarginStrut/oofDescendants/intrinsicBlockSize 副产物消费链待打通（清单 5.3）。
         $algoResult = $algo->layoutResult($space, $style, $textContent, $node->children, $cached);
