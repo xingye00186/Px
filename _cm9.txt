@@ -1,0 +1,62 @@
+docs(guide): make the master guide self-sufficient for a cold start on a new machine
+
+User's stated goal: from a brand-new session on a brand-new machine, the guide
+alone should drive the automated iteration loop — the pitfalls to avoid per
+scenario, the process that works, and the principles to follow. My previous
+edit only captured THIS session, so historical experience was retrieved from
+memory and merged in.
+
+Section 11 rewritten from "this session's lessons" into a scenario-indexed
+catalogue whose ORDER IS THE DIAGNOSTIC PRIORITY — rule out the environment,
+then suspect the harness, and only then attribute to code:
+
+  11.1 Environment and toolchain, the first stop
+       - GUI exe launch protocol: never Start-Process -WindowStyle Hidden; no
+         window station means the Skia/Win32 backend blocks with CPU=0 and
+         looks hung. This was once misdiagnosed as a machine-level lockscreen
+         problem, and reversed twice.
+       - Three-step SHAPE determination before any attribution: watchdog fired?
+         CPU delta (spinning = infinite loop, ~0 = blocked at startup)? blocked
+         at startup means look at build artifacts, not PHP.
+       - Missing .build_hash makes the pipeline silently rebuild for tens of
+         minutes, which presents as a hang.
+       - exe argument protocol; a typo drops into the GUI branch and opens a
+         window.
+       - Build-artifact contamination spreads: cleaning one app is useless,
+         build/ must be wiped entirely.
+       - PowerShell/sandbox traps: $var eaten by php -r, no &&, no heredoc,
+         github:443 blocked, mojibake in the terminal.
+  11.2 The harness lies: four cases of a green/silent tool being wrong, plus
+       the requires() defect from this session generalized.
+  11.3 AOT-only: the five defect classes, native_types being a no-op under CLI
+       so the whole family is invisible to the test suite, --skip-build, and
+       minimal-reproduction as the true-positive standard.
+  11.4 Cache staleness: key coverage must be >= what consumers read; four
+       same-family bugs; inputs that do not affect the result must not
+       participate in validity.
+  11.5 Performance measurement: steady_fps only, cycles must match, pick recent
+       baselines, triangulate, isolate directories, and choose the target by
+       stage share. Plus distinguishing "cost newly exposed" from "cost newly
+       added".
+  11.6 CSS semantics, where concept confusion concentrates: unconditional
+       used-value override keyed on display not tag, box-sizing being a no-op
+       for width:auto, zero-box versus display:none, getBoundingClientRect
+       always border-box, two wrongs cancelling out, and the VNode single-child
+       object form.
+
+New section 12 states the ten non-negotiable disciplines: four-dimension Blink
+alignment, root-cause-only, minimal reproduction, three-tier verification,
+bench on hot paths, smallest-STRUCTURE-first, dead code is debt, small commits,
+prove the tool before trusting it, and honest boundaries.
+
+Section 1 (cold-start checklist) updated with what this session established:
+the css-test AOT full run requires --skip-build (95s versus 30+ minutes),
+compare_php_aot is the CLI-vs-AOT gate at 55/56, build.bat's real cost is
+30-40 minutes and is skippable when a recent exe exists, and a warning that an
+outdated baseline yields a false "no regression" verdict so several recent
+baselines must be compared. Also added a "read this first" pointer to 11/12.
+
+Section 7 (technical quick-reference: BGR colours, authoritative dump source,
+overflow shorthand) is complementary and left intact.
+
+345 -> 488 lines.

@@ -30,14 +30,24 @@ $files = Get-ChildItem tests\css-standards\Level-*\test_*.php; $total=0;$pass=0
 foreach ($f in $files) { $out = php -d extension_dir=$extDir $f.FullName 2>&1 | Select-String "Results:" | Select-Object -First 1; if ($out -match "Results: (\d+)/(\d+)") { $pass+=[int]$Matches[1]; $total+=[int]$Matches[2] } }
 "BASELINE: $pass/$total"   # 必须 = 330/330，否则先排查环境
 # ② 验证 AOT 编译链
-.\build.bat reactive-bench   # 预期 "Build succeeded"
+.\build.bat reactive-bench   # 预期 "Build succeeded"；首次 30~40 分钟，若 bin 下已有较新 exe 可跳过本步
 # ③ 验证 bench 基线（与 tests/perf/bench_phase4_complete.json 对比，预期 ±3% 内）
 $env:PX_PERF="1"; apps\reactive-bench\bin\reactive_bench.exe --cases-list --cycles=50 --perf --headless --dump-metrics=tests\perf\bench_session_start.json
 ```
 
+```powershell
+# ④ 验证 css-test AOT 全量管线（**必须加 --skip-build**，否则每次重跑完整构建 30+ 分钟）
+cd apps\css-test; php test_pipeline.php --skip-build      # 全量 56 case ≈ 95s
+cd ..\..; php tools\PxTest\compare_php_aot.php            # CLI≡AOT 一致性，当前 55/56 identical
+```
+
 **环境要求**：PHP CLI（ext 目录随 php.exe）、MSVC + Swoole Compiler（build.bat 内置路径见 `config.yml`）、Chromium 浏览器（真值测量用 browser 子代理打开 `file:///` HTML）。
 
-**bench 基准文件**：`tests/perf/bench_phase4_complete.json` 是全周期统一对比基线，**不要替换它**；新读数另存新文件对比。
+**bench 基准文件**：`tests/perf/bench_phase4_complete.json` 是长期归档基线，**不要替换它**；新读数一律另存新文件。
+判据与工具见 `docs/bench-guide.md`；分析用 `php tests/perf/bench_analyze.php <新读数> <基线...>`（自动做 steady_fps 判定 + 三角验证 + 分阶段每帧均摊归因）。
+**注意基线年代**：拿过期基线会得出「无回归」的假结论——务必同时对**多份**近期基线比对（见 §11.5）。
+
+**先读哪里**：陷阱按场景索引在 **§11**（环境 → 验证设施 → AOT → 缓存 → 性能 → CSS 语义，顺序即排查优先级）；不可协商的原则在 **§12**。技术细节速查在 §7。。
 
 ---
 
@@ -346,85 +356,133 @@ git commit -m "fix(scope): <根因一句话> (CSS x.y.z / Blink 对标物). <通
 
 ---
 
-## 11. 验证基础设施的自我校验（2026-07-31 沉淀）
+## 11. 迭代陷阱全集（按场景索引 · 每条均为实测踩坑）
 
-> 本节全部条目来自实测踩坑，每条都曾使我得出**错误结论**并浪费整轮预算。
-> 核心一句话：**凡结论依赖工具输出，必先证明工具在测它声称测的东西。**
+> **总纲**：先排除环境，再怀疑设施，最后才归因代码。
+> 每一条都曾使人得出**错误结论**并浪费整轮排查；顺序即排查优先级。
 
-### 11.1 「工具没坏，是数据脏 / 是判据错」优先假设
+### 11.1 环境与工具链（排查第一站）
 
-| 症状 | 我的错误结论 | 真实根因 |
+**GUI exe 启动协议**（曾被误诊为「锁屏环境级阻塞」，两轮反转）
+- **绝不**用 `Start-Process -WindowStyle Hidden` 启动 Px GUI exe：无窗口站导致 Skia/Win32 后端初始化阻塞，进程存活但 **CPU=0**，呈"挂死"假象
+- 正确方式：前台 `& .\exe`、PHP `exec()`、或 `test_case/*.bat`（有控制台会话）
+- 隐藏窗口下 CPU=0 ⇒ **后端初始化阻塞**，既非死循环也非环境不可用
+
+**「挂死」三步形态判定法**（先定形态，再谈归因）
+1. **看门狗触发否**（循环内计数超阈值落盘）→ 触发 = 循环/递归爆炸；不触发 ≠ 代码无问题
+2. **CPU 时间采样**（两次 `Get-Process .CPU` 看 delta）→ 满转 = 死循环；**delta≈0 = 启动即阻塞**
+3. 启动即阻塞 → **先查 build 产物污染与启动依赖**，而非 PHP 代码
+> 教训：在「以为在跑布局」的错误前提上做路径收窄推断，会浪费多轮。**形态判定必须先于路径归因。**
+
+**`.build_hash` 缺失 = 管线静默重编数十分钟**
+- 手动跑 `build.bat` 后**必须补写** app 目录下 `.build_hash`（算法同 `BuildStep::computeHash`：`framework/**/*.php` + `apps/<app>/**/*.{vue,php}` + `cpp/*.{cc,h}` + `stub/*.php` + `config.yml` 逐文件 md5 串接再 md5）
+- 否则 `BuildStep` 判源过期 → 内嵌全量编译 → **表象为管线挂死**
+- **或直接用 `--skip-build`**（见 11.3）
+
+**exe 参数协议**：`--case=<name> --headless --dump-layout`
+- 参数拼错（如连字符连写）会走 GUI 分支开窗进消息循环 → 表象为 exe 挂死（有 MainWindowHandle、CPU 停滞）
+
+**build 产物污染的传染链**
+- 双 build 衔接期并发（前者清理 `.ilk/.pdb` 与后者写入重叠）损坏 `build/` 下共享中间产物 → 症状可为 `0xC0000142`（DLL init 失败秒退）**或启动阻塞**
+- 此后所有增量 build 复用坏产物 → **清理单个 app 无效，必须全清 `build/`**（重命名隔离保取证 + 从零重建）
+- 并发构建需三项齐备：`project.yml` 的 `build-dir: build/<app>`、build.bat 的 taskkill 加开关、清理目标按 app 分目录（**目前仅第 1 项就绪，不支持真并发**）
+
+**PowerShell / sandbox**
+- `php -r "..."` 中的 `$var` 会被 PowerShell 吞掉 → **一律写脚本文件再执行**
+- 命令分隔用 `;`，`&&` 不可用；不可混用 CMD 命令（`rmdir` 等被策略拦截）
+- heredoc（`<<'EOF'`）不可用 → 长提交消息写入临时文件后 `git commit -F`
+- sandbox 拦截 `github.com:443`；且偶发拦截循环内连续 `php`/`git` 调用 → 拆单次重试
+- 中文输出在终端常乱码 → 判定用 ASCII 标记或 hex，勿凭肉眼符号
+
+### 11.2 验证设施会说谎（第二站）
+
+**「工具没坏，是数据脏 / 判据错」优先假设**
+
+| 症状 | 错误结论 | 真实根因 |
 |---|---|---|
-| `bench_compare` 全部 MISSING | 工具坏了 | exe 输出前有 backend 日志行 → `json_decode` 得 null。**归档前须剥前导** |
-| 等价门控 PASS 但 0 case | 门控通过 | 语料路径写成不存在的 `cases/`（实为 `test_case/`）→ **空跑假通过** |
-| aot-checker 新规则不报 | 规则生效、代码干净 | 正则在 PHP 单引号串里少一层反斜杠转义 → **规则从不触发** |
-| css-test AOT `Passed: 0/56` | 比对层只比了 2 个元素 | `total=2` 是**差异数**；真因是编排器把「依赖未注册」当失败（见 11.3） |
+| `bench_compare` 全部 MISSING | 工具坏了 | exe 输出前有 backend 日志 → `json_decode` 得 null。**归档前剥前导** |
+| 等价门控 PASS 但 0 case | 门控通过 | 语料路径写成不存在的目录 → **空跑假通过** |
+| checker 新规则不报 | 规则生效、代码干净 | 正则在 PHP 单引号串里少一层反斜杠 → **规则从不触发** |
+| 全量 `Passed: 0/56` | 引擎全面回归 | 编排器把「依赖未注册」当失败（见下）|
 
-**纪律**：新增门控/规则/解析器后，**必须用一个刻意构造的正例证明它会失败**，再用负例证明它不误报。只跑一次「PASS」不构成证据。
+**纪律**：新增门控/规则/解析器后，**必须用刻意构造的正例证明它会失败**，再用负例证明它不误报。只跑出一次 PASS 不构成证据。
 
-### 11.2 bench 判据与轮次（详见 `docs/bench-guide.md`）
+**`requires()` 表达数据依赖，不表达资源前置**
+- `MultiFrameStep` / `LayoutDumpStep` / `ScreenshotStep` 曾声明 `requires: ['build']`，而它们真实前置是**exe 文件存在**，不是"build 步骤在本次管线中成功"
+- `--skip-build` 与 PHP-runtime 模式下 `BuildStep` **根本不加入管线** → 三步骤全 case 报 0ms err → `Passed: 0/56`
+- 只修编排器（未注册依赖→跳过）是**治标**：三步骤被**静默跳过**，多帧稳定性/布局导出/截图检查无声丢失——**报告看起来还更干净了，更危险**
+- 治本：`requires()` 仅表管线内数据依赖与顺序；资源前置在 `execute()` 内 `is_file()` 自检
 
-- **`steady_fps` 是唯一判据**（±5% 噪声，降 >5% 为真实回归）。`avg_ms` 对轻量 case 是噪声——我曾用它报「退化 +46.9%」又用它报「无退化 −1.2%」，两次都不足为凭。
-- **`stage:*` 的 `total` 是累计值**，跨 cycles 比较会与 `avg_ms` 给出**相反**结论。要么同 cycles，要么改用**每帧均摊**（`total / renders`）。
-- **基线要选最近的**：我曾拿 07-22 旧 exe 作基线得出「无退归」，换成最近的 07-27 数据后同一份数据显示真实回归。
-- **三角验证**：偏移**均匀** >±2% → 环境漂移；偏移**分化**（spread 数十个百分点）→ 指向具体代码路径。
+**任何「全体失败」先怀疑验证设施**——真实回归极少同时命中 100% 用例。
 
-### 11.3 管线编排：「依赖未注册」≠「依赖失败」
+### 11.3 AOT 专属陷阱（第三站）
 
-`PipelineOrchestrator` 的依赖检查曾把两种情形混为一谈：
-
-```php
-if (!isset($completed[$req])) { $depsOk = false; break; }   // 旧：一律当作"待执行"
-```
-
-- **a) 尚未执行** → 本轮跳过，下一轮拓扑迭代再试（正确）
-- **b) 步骤根本未注册**（`--skip-build` 或 PHP-runtime 模式下不加 `BuildStep`）→ 永远不会出现，轮次耗尽后被当成失败
-
-后果：`--skip-build` 下 `MultiFrameStep`（`requires: ['build']`）对**全 56 case** 报 0ms err → **`Passed: 0/56`**，而 PHP-runtime 模式同位置显示 ⬛跳过并判通过。**同一份代码在两种模式下结论相反**，且报告里只有一个 ❌ 没有任何原因。
-
-修正：编排器预建**已注册步骤名集合**，区分「待执行」与「未注册」，后者按跳过处理。修复后 **0/56 → 41/56**，而 `compare_php_aot` 保持 55/56（证明这纯属编排缺陷，与引擎无关）。
-
-**推广纪律**：任何「全体失败」的结果，先怀疑**验证设施**而非被测对象——真实回归极少同时命中 100% 用例。
-
-### 11.4 AOT 只在实跑时暴露，且每次只暴露一个
-
-`use native_types;` 在 CLI 下是**空操作**，故整类缺陷对测试套件完全不可见。本会话靠实跑逐个揪出 4 类（每类都要一轮 ~40 分钟构建）：
+`use native_types;` 在 CLI 下是**空操作**，故整类缺陷对测试套件**完全不可见**，只有实跑编译器才暴露，且**每次只暴露一个**（每轮 ~40 分钟）：
 
 | 缺陷 | 症状 | 治本 |
 |---|---|---|
-| **跨类常量转发别名** `const X = Other::CONST` | 类注册期硬失败 `Call to private method Translator::evaluate`（经 `getClassConstValue → evaluateArray`），**中断整个编译** | 删别名，调用方直指权威类 |
-| **switch 内 `continue N`** | `switch case must end with return/break/exit/throw, Stmt_Continue given` | 改写为 if 链（`break` **不等价**，`continue 2` 目标是外层循环）|
+| **跨类常量转发别名** `const X = Other::CONST` | 类注册期硬失败 `Call to private method Translator::evaluate`（`getClassConstValue → evaluateArray`），**中断整个编译** | 删别名，调用方直指权威类 |
+| **switch 内 `continue N`** | `switch case must end with return/break/exit/throw, Stmt_Continue given` | 改写 if 链（`break` **不等价**，`continue 2` 目标是外层循环）|
 | **`php::Str` 变量复用作 foreach 键** | `Cannot assign value to variable of type php::Str with type php::Var` | 改用独立变量名 |
 | **列表解构写入 int 变量** `[$a, $i] = f()` | `error C2440: 无法从 php::Variant 转换` | 先接返回值，再逐项取出并 `(int)` 强转 |
+| **数组访问/max/min 赋给 int** | C2440/C2446 | 外层加 `(int)` |
 
 前两类已编码进 `tools/aot-checker.php`（`aot_const_forward_alias` / `aot_switch_continue`）。第三、四类需类型推断，正则会大量误报，**有意未编码**。
 
-**关键提速**：管线在 AOT 模式下**每次重跑完整构建**（30+ 分钟），用 **`--skip-build`** 后全量 56 case 仅 **63 秒**。这一个参数的价值超过我两轮预算。
+**关键提速**：管线在 AOT 模式下**每次重跑完整构建**（30+ 分钟）；`--skip-build` 后全量 56 case 仅 **63 秒**。
 
-### 11.5 缓存键覆盖维度必须 ≥ 消费者读取维度
+**最小复现是真阳性判定标准**：若最小复现通过，则此前基于大规模项目现象提出的根因（如"跨类 readonly 访问异常""命名参数丢弃"）应视为**假阳性**，转向 C++ 编译输出与实际执行路径实证。
 
-本会话四次踩同一族：**上层修复被下层缓存掩盖**，表现为「改了却不生效」。
+**AOT 验证时段**：依赖 GUI exe 的验证需前台会话；无人值守时段只做 CLI 侧工作（布局迭代/归因/静态核查）。
+
+### 11.4 缓存与陈旧（改了却不生效）
+
+**缓存键覆盖的维度必须 ≥ 消费者读取的维度。** 同族四例，症状均为「上层修复被下层缓存掩盖」：
 
 | # | 漏覆盖 | 后果 |
 |---|---|---|
 | 1 | 伪类叠加未持久化到 VNode | 引擎产出到不了 RenderNode |
 | 2 | 规则表代次未入 StylePool key | 运行中注册规则后返回陈旧 ComputedStyle |
 | 3 | 祖先/兄弟 tag·id·index 未入 key | `span + .t` 与 `div + .t` 碰撞 |
-| 4 | **元素自身 attrs** 未入 key | `.probe[data-k=v]` 与 `.probe` 碰撞 |
+| 4 | 元素自身 attrs 未入 key | `.probe[data-k=v]` 与 `.probe` 碰撞 |
 
-第 4 例由新建的 `tools/style_pool_key_coverage_gate.php` **首跑即自动发现**（枚举匹配器可读的 16 个维度，逐一变动并断言池不误共享；报告"同一实例"即池键碰撞的铁证）。**此类 bug 应由门控点名，而非每次人肉追两层。**
+第 4 例由 `tools/style_pool_key_coverage_gate.php` **首跑即自动发现**（枚举匹配器可读的 16 维度，逐一变动并断言池不误共享；报"同一实例"即键碰撞铁证）。**此类 bug 应由门控点名，不应每次人肉追两层。**
 
-### 11.6 性能优化的方向判断
+**不影响结果的输入，不得参与缓存有效性判定**（C2.9 遗留的 `ancestorClassLists` 曾只声明不读，却每节点每帧付 O(depth) 拷贝并进入指纹）。
 
-分阶段归因（每帧均摊，11 case 均值）：
+### 11.5 性能测量（判据与轮次）
 
-```
-stage:layout        40.9%
-stage:vnode_tree    31.3%   ← 复用缺口
-stage:paint         18.7%
-stage:style_recalc   5.4%   ← 我连续几轮优化的对象
-```
+详见 `docs/bench-guide.md`。要点：
 
-**我把力气花在占比 5.4% 的路径上。** 三个最重 case（TextHeavy / LiveDashboard / StaticTemplate）都指向同一件事：**VNode 实例未跨帧复用** → `vnode_tree` 重建 + `style_recalc` 无上帧结果可用，两头付全额。`patchChildrenArray` 仅在双方均为带 `dynamicChildren` 的 block root 时复用无 key 子节点。
+- **`steady_fps` 是唯一判据**（±5% 噪声，降 >5% 为真实回归）。`avg_ms` 对轻量 case 是噪声——曾用它先报「退化 +46.9%」又报「无退化 −1.2%」，**两次都不足为凭**
+- **`stage:*` 的 `total` 是累计值**，跨 cycles 比较会与 `avg_ms` 给出**相反**结论 → 同 cycles，或改用**每帧均摊**（`total / renders`）
+- **基线要选最近的**：拿过期 exe 作基线会得出「无回归」的假结论
+- **三角验证**：偏移**均匀** >±2% → 环境漂移（默认假设）；偏移**分化**（spread 数十个百分点）→ 指向具体代码路径
+- **环境隔离**：改造前后应各自在**全新目录**（`git worktree`）构建运行；复用工作目录的数字仅具指示性
+- **按占比选靶**：先做分阶段归因。实测 `layout 40.9% / vnode_tree 31.3% / paint 18.7% / style_recalc 5.4%`——曾连续几轮优化占比 5.4% 的路径
 
-**纪律**：优化前先做分阶段归因，按占比选靶。另：若 before 侧某 stage 耗时**异常地小**，先怀疑旧代码**根本没做这项工作**（如被 `is_array(children)` 守卫静默跳过整棵子树），此时「回归」是修 bug 后暴露的应付成本，处置方向是**让缓存能命中**而非回滚。
+**「暴露成本」vs「新增成本」**：若 before 侧某 stage 耗时**异常地小**（如 `style_recalc` 仅 685μs），先怀疑旧代码**根本没做这项工作**（被 `is_array(children)` 守卫静默跳过整棵子树）。此时"回归"是修 bug 后暴露的应付成本，处置方向是**让缓存能命中**，而非回滚修复。
+
+### 11.6 CSS 语义陷阱（概念错乱高发区）
+
+- **used-value 归一化必须无条件覆盖**：「仅缺失/'0px' 时补 used」的惰性策略使声明维度与浏览器 `getComputedStyle` used px 不同源乱比（跨 17 case 共同根因）。正解：非替换 `display:inline` 恒 `'auto'`，其余盒恒以 used px 覆盖；**判据必须用 `display` 而非 `tag`**（tag 判 inline 使 inline-block span 误判，MISMATCH 爆炸），且须置于 display 补全/flex-blockify **之后**
+- **`box-sizing` 对 `width:auto` 无效**：CSS 2.2 §10.3.3 的 used 值等式使 border-box 尺寸恒 = 包含块 − margins。曾把 CSS-UI-3 §4.5（只重新解释**显式** width 声明）错嫁接到 auto → 容器比浏览器窄 2×(padding+border)
+- **zero-box ≠ `display:none`**：zero-box 保元素集同构（索引比较器必需）；`display:none` 破坏它
+- **`getBoundingClientRect` 恒 border-box**：勿把 content 宽当 rect 宽固化进断言
+- **两错抵消**：基础错误（如宽度）会与下游公式形成互相掩盖。根因修正后，**其上调参的公式须全部重检**——早前被否决的方案可能反而正确
+- **VNode 单子形态**：`VNode::h(t, p, $child)` 的 `children` 是 **object 非数组**；`VNode::childrenToArray()` 才是权威归一化器（处理 null / 单 VNode / `#list` 展平 / `#comment` 过滤）。用 `is_array()` 前置守卫会**抵消它**，使整棵子树被静默跳过
+
+---
+
+## 12. 治本纪律（不可协商）
+
+1. **四维对齐 Blink**：数据要素（值类型/关键字语义）、算法（specificity/级联）、流程（解析→计算→应用顺序）、抽象层次（parser/ComputedStyle/RenderTree 分层职责）。杜绝**概念错乱**（如把 CSS Cascade 当 JS 继承）与**错误嫁接**（把 Blink 某分支逻辑套到不匹配的 Px 抽象层）
+2. **治本不治标**：定位根本原因并修源头。禁止 patch 输出、禁止 disable case、禁止调参掩盖
+3. **最小复现定真伪**：大规模现象提出的根因，须经最小复现确认；最小复现通过则视为假阳性
+4. **三层验证**：① PHP Runtime 快回归（快反馈）② AOT + 浏览器逐元素对比（归档与 Blink 对齐）③ php-rt-test 全量（上线前）
+5. **热路径必跑 bench**：凡引擎热路径改动且预期有性能影响，必须执行 reactive-bench 并汇总报告
+6. **STRUCTURE 优先级**：多个 STRUCTURE≠0 时，选**值最小**者作起点（非 worst case），使根因定位与验证路径最短
+7. **死代码即债务**：从未被消费的方法/变量/参数必须删除——它制造概念错乱（后人误以为有消费者而不敢动）。审计法：grep 全局引用，确认零消费后删
+8. **小步提交**：每个 commit 只做一件事，便于 bisect
+9. **验证前先证明工具**：凡结论依赖工具输出，先证明工具在测它声称测的东西
+10. **诚实边界**：未验证的部分明确标注「未证」；纠错时明确写出「此前结论错在哪」。提交消息即审计记录
