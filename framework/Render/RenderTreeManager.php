@@ -30,7 +30,7 @@ use Px\Component\ReactiveComponent;
  */
 class RenderTreeManager
 {
-    /** @var array<callable> RenderNode 销毁回调（Application 注册用于清理 ScrollManager/InteractionState） */
+    /** @var array<callable> RenderNode 销毁回调（Application 注册用于清理 ScrollManager） */
     private array $destroyCallbacks = [];
 
     /** ScrollManager 引用（scroll bind 路由目标） */
@@ -44,7 +44,7 @@ class RenderTreeManager
 
     /**
      * 注册 RenderNode 销毁回调。当节点被 destroyRenderNodeTree 销毁时触发。
-     * 用于清理 ScrollManager、InteractionState 等外部状态映射中的 orphan 条目。
+     * 用于清理 ScrollManager 等外部状态映射中的 orphan 条目。
      */
     public function onDestroyNode(callable $callback): void
     {
@@ -586,7 +586,7 @@ class RenderTreeManager
         // 3. 取消 AnimationManager 中的动画
         \Px\Animation\AnimationManager::getInstance()->cancelAllTransitions($rn);
 
-        // 3.5 调用所有销毁回调（清理 ScrollManager/InteractionState 等外部映射）
+                // 3.5 调用所有销毁回调（清理 ScrollManager 等外部映射）
         foreach ($this->destroyCallbacks as $cb) {
             $cb($rn);
         }

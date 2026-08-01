@@ -897,9 +897,9 @@ class FlexAlgorithm extends LayoutAlgorithm
                 $bw = (int)($chs->getBorderLeftWidth() ?? 0) + (int)($chs->getBorderRightWidth() ?? 0);
                 $contentW = max(1, $itemW - $padL - $padR - $bw);
             }
-            $origW = $orig !== null ? (int)$orig->getW() : 0;
-            $useOrig = ($origW > 0 && abs($origW - $itemW) <= 5);
-            $children = $useOrig ? ($orig->children ?? []) : ($orig?->children ?? []);
+            // 旧 useOrig 5px 阈值两分支同值（无行为分叉）——死代码删除
+            //（Pass 2 已用 !== 精确守卫，对标 Blink NGFlexLayoutAlgorithm）
+            $children = $orig?->children ?? [];
             // 翻译子 Fragment 坐标：flex 重定位后，子项绝对坐标需同步偏移
             $dx = $orig !== null ? ((int)$fi->x - (int)$orig->getX()) : 0;
             $dy = $orig !== null ? ((int)$fi->y - (int)$orig->getY()) : 0;

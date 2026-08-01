@@ -26,7 +26,6 @@ use Px\Css\StyleRecalcPass;
 use Px\Css\StyleEngine;
 use Px\Layout\PhysicalFragment;
 use Px\Core\Diag;
-use Px\Paint\InteractionState;
 use Px\Css\CssMappings;
 use Px\Paint\ImageManager;
 use Px\Render\RenderTreeManager;
@@ -72,29 +71,6 @@ class Application
 
     /** 当前 hover 的 RenderNode（用于 :hover 样式切换） */
     private ?RenderNode $hoveredNode = null;
-
-    // ── InteractionState 映射 ───────────────────────
-    /** @var array<string, InteractionState> */
-    private array $interactionStates = [];
-
-    public function removeInteractionState(RenderNode $node): void
-    {
-        unset($this->interactionStates[spl_object_id($node)]);
-    }
-
-    private function getInteractionState(RenderNode $node): InteractionState
-    {
-        $key = spl_object_id($node);
-        if (!isset($this->interactionStates[$key])) {
-            $this->interactionStates[$key] = new InteractionState();
-        }
-        return $this->interactionStates[$key];
-    }
-
-    public function getInteractionStateForNode(RenderNode $node): InteractionState
-    {
-        return $this->getInteractionState($node);
-    }
 
     /** @var array<string, ReactiveComponentInterface> VNode.groupId → Component instance */
     private array $componentByGroupId = [];
@@ -613,9 +589,9 @@ class Application
         // 初始化文本后端（渲染层管理：TextBackendRegistry）
         TextBackendRegistry::initialize();
 
-        // 注册 RenderNode 销毁回调（统一清理 ScrollManager/InteractionState orphan 条目）
+        // 注册 RenderNode 销毁回调（统一清理 ScrollManager orphan 条目；
+        // InteractionState 已删除——RenderNode.hovered 为单一权威源，无外部映射）
         $this->renderTreeManager->onDestroyNode(function (RenderNode $rn): void {
-            $this->removeInteractionState($rn);
             $this->scrollManager->removeScrollState($rn);
         });
 

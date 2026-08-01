@@ -2,6 +2,7 @@
 
 > **版本**：2026-07-27 ｜ **状态基线**：css-standards **330/330 (100%)** + css-test 双模式 **CLI≡AOT 55/55**，CLI 全量总 diff **4519**（周期 14814→4519 -70%），git dev @ `04da119f`
 > **新增纪律**：① 引擎数值代码禁用 round()/浮点中间值，一律整数确定性算术（双模式一致性契约）；② 哨兵值只存 typed 属性禁入声明流；③ build 必须串行（并行 PDB 互毁）；④ bench 异常用 HEAD 对照实验判环境漂移；⑤ 每引擎批次后 compare_php_aot 复验双模式守恒量。
+> **验证降频纪律（2026-08-01）**：css-test AOT 全量复验单轮 ~50min 过长，迭代期不再逐批跑；**CLI 模式（css-standards 全量 + css-test CLI）为主要验证门**；AOT 侧以 ★bench 编译运行无误（Build succeeded + bench 全 case 跑通）为最低验证。compare_php_aot 仅在大批次边界或 CLI 无法覆盖的 AOT 专属风险（use native_types 类）时执行。
 > **待办清单权威源**：`LayoutNG_待解决问题清单.md`（五次核验，28 项有效）；本指南 §9 是其**执行排序视图**（批次化 + 验收标准），两者冲突时以清单真实性核验为准。
 > **本文档定位**：跨机器/跨会话续作的**唯一入口**。融合并取代以下 5 份文档的"导航职责"（原文档保留作深度参考）：
 >
@@ -267,6 +268,32 @@ cd ..\..; php tools\PxTest\compare_php_aot.php            # CLI≡AOT 一致性�
 “basis=0 绕过保护”双回滚机制本体根除；dump 端 fg 标注解包 CssKeyword。新 Level-31 套件 6/6，
 run_all 补全 29-31。330/330，SFC 基线 PASSED，bench 方差带（新工具 tests/perf/bench_compare.php）。
 
+**响应式链路 + 布局跳过路径修复批次（2026-08-01 本机，@24c9f9c1+98f2083c，台账待追加）**：
+- 根因 1：Scheduler 双实例（Effect 排单例队列 vs Application new 实例）→ 依赖追踪微任务永不
+  执行 → 响应式更新静默失效；修复：Effect 改用组件持有 Scheduler（BaseComponent 补 getScheduler）
+- 根因 2：patchKeyedChildren head/tail sync 仅比较 props，children 数量变化（v-for 增删）与
+  computedStyle 变化（含继承链，StylePool 池化 parentId 入 key）不感知 → RN 树/样式不更新；
+  修复：跳过条件补 children 数量 + computedStyle 引用双门控；卸载路径显式 markLayoutDirty
+- 根因 3：组件跳过路径仅更新根 RN 透传样式，内部子树继承不同步；修复：styleChanged 提前
+  检测并强制走正常渲染路径（对标 Blink ChildNeedsStyleRecalc）
+- 勾销验证：T1 5.1/5.2 已修；Layout/ 无 round()（整数确定性算术成立）；getRaw kebab fallback
+  与 TextMeasureCache 存在（文档 Phase 0 声明复核）
+- 文档核查结论：迭代文档《Px 框架 LayoutNG 最终对齐设计》引用 bc18b9d6 已过时（HEAD
+  4a5cd962）；styleVersion 声明不实（全仓库 0 匹配）；hovered 迁移方向与代码单源冲突（取消）
+
+**性能修复批次：layoutDirty 永不消费（2026-08-01 本机，@cf19be7a，台账待追加）**：
+- 根因：布局算法从不清除 layoutDirty（grep 0 匹配）→ 首帧新建节点 layoutDirty=true 永久
+  残留 → 动态 case（每帧增删经 markLayoutDirty 传播容器脏）下所有子项每次完整重布局
+- 修复（对标 Blink SetNeedsLayout 布局后清除 + ChildNeedsLayout=false）：mainLayout 布局
+  成功后消费脏位；head/tail sync 跳过时清除脏位；移除根强制重布局（传播链完整后不需要）；
+  countVNodes 零分配计数替代 childrenToArray（防大列表 O(N²)）
+- 重要认知：**7/31 及更早的动态 case bench 读数是“假帧”**——Effect 微任务当时是死的
+  （Scheduler 双实例 bug），动态更新根本不渲染，主循环空转测出虚高 fps。修复后读数是
+  真实渲染成本（§11.5“暴露成本”：处置方向是让缓存命中，而非回滚修复）
+- bench：静态 case 大幅改善（SimpleCounter +68%、DeepTree +128%）；动态 case 缓存命中
+  恢复（hits 0→504）：DynamicList 21→125fps、TextHeavy 24→95fps；剩余成本（容器重布局
+  +文本测量）由真按需（批次 5）/E1（批次 7）继续优化。新基线：bench_p0_fixed.json
+
 **全量审计文档（2026-07-24）状态覆盖**：其 §2 算法差距、§5 破损代码、G1-G10 能力项**均已完成**；仅存 §8 下述待推进项。
 
 **css-test 双模式对齐与真值迭代周期（2026-07-26，6 批次 11 commits，台账 §十九两条目）**：
@@ -285,10 +312,13 @@ run_all 补全 29-31。330/330，SFC 基线 PASSED，bench 方差带（新工具
 
 ### T1：正确性破损修复（P0，立即）
 
+> ✅ 勾销（2026-08-01 复核 @98f2083c）：5.2 scroll bind 已修（RTM 已全面改走
+> ScrollManager 路由）；5.1 MAX_RELAYOUT_ITERATIONS 已删（grep 0 匹配）。
+
 | 项 | 内容 | 验收 |
 |---|---|---|
-| **5.2** | scroll bind 破损：RTM L963/L1378/L1382 写 RenderNode 已删字段（动态属性死路）→ 改 ScrollManager::setScrollTop/Left；PP L1256-1258 fallback 读已删字段 → null cachedFragment 直接 0 | multi-scroll app 滚动绑定实测 + 330 门 + bench |
-| **5.1** | MAX_RELAYOUT_ITERATIONS 死代码删除；顺手：expandAll 默认参数收敛（2.11 尾工）、L268 误导注释修正 | 纯清理，330 门 |
+| ~~**5.2**~~ | ~~scroll bind 破损~~（已修，勾销） | — |
+| ~~**5.1**~~ | ~~MAX_RELAYOUT_ITERATIONS 死代码删除~~（已删，勾销） | — |
 
 ### T2：css-test 真值迭代延续（通道已就绪，~94s/轮）
 

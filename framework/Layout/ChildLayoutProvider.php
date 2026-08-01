@@ -122,22 +122,6 @@ class ChildLayoutProvider
         return $result;
     }
 
-    /**
-     * 预布局所有子项（兼容模式：供尚未迁移到按需布局的算法使用）。
-     * 等价于旧 Phase B，但通过 Provider 统一管理缓存。
-     *
-     * @return PhysicalFragment[]
-     */
-    public function layoutAllChildren(): array
-    {
-        $children = $this->parentNode->children;
-        $result = [];
-        for ($i = 0; $i < count($children); $i++) {
-            $result[] = $this->layoutChild($children[$i]);
-        }
-        return $result;
-    }
-
     private function findChildIndex(RenderNode $child): int
     {
         $children = $this->parentNode->children;
