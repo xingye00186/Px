@@ -36,9 +36,16 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/compiler
-  - ../../framework/aot-checker.php
+  - ../../framework/Compiler
+# 可选：每次构建前清理编译缓存
+# Px_clear_compilation_cache: true
+# 可选：并发构建隔离（各 app 独立 build 子目录，避免共享 build/ 互相污染）
+# build-dir: build/my_app
+# Skia 渲染（APP_RENDERER='skia'）需额外 cxx-flags/ld-flags，见 apps/skia-poc/project.yml
 ```
+5. `build.bat my_app` 构建（必要时 `--run` 直接运行）
+
+> SFC 编译产出：`gen/<Name>Component.php` + `gen/ComponentFactory.php`，由 build.bat Step 1 自动完成。
 
 ## 9.2 添加带 bind 的属性
 
@@ -121,8 +128,9 @@ public function handleAction(string $id): void {
 ## 9.10 调试技巧
 
 - **检查 VNode 树**：在 `render()` 返回前 `var_dump`
-- **检查布局**：查看 `LayoutResolver::resolve()` 返回的 `scrollContainers`
-- **检查渲染元素**：在 `collectElements` 中查看 `$elementsByLayer`
+- **检查布局**：查看 `LayoutOrchestrator` 布局结果（`Application::dumpFragmentTreeForTest()` 输出 Fragment 树为权威源）
+- **检查渲染元素**：在 `PaintPipeline::collectElementsFromFragment` 中查看 `$elementsByLayer`
+- **布局/测试迭代会话**：先读 [Px_LayoutNG_Blink对齐迭代总指南.md](../Px_LayoutNG_Blink对齐迭代总指南.md)（权威入口）
 
 ## 9.11 在模板使用 `$` 前缀变量
 

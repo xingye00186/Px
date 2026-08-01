@@ -16,7 +16,7 @@ Application::initRenderer()
     │   ├─ 第一个 probe+initialize 成功的 → 选定
     │   └─ 全部失败 → 抛 \RuntimeException
     └─ Stage 3: 包裹 ResilientRenderContext（运行时自动降级代理）
-        └─ VNodeRenderer 通过此代理调用绘制原语
+        └─ PaintPipeline 通过此代理调用绘制原语
 ```
 
 ## 后端列表
@@ -85,7 +85,7 @@ throw \RuntimeException('No render backend available')
 
 ## ResilientRenderContext（故障降级代理）
 
-- 继承 RenderContext，对 VNodeRenderer 透明
+- 继承 RenderContext，对 PaintPipeline 透明
 - delegate 抛 `RenderBackendFailedException` 时计数
 - **同一后端连续失败 3 次** → 触发降级
 - 降级后用新 delegate 重试当前调用
@@ -96,7 +96,7 @@ throw \RuntimeException('No render backend available')
 |------|------|------|
 | 阶段一（POC） | GDI-Legacy | ✅ 已通过 |
 | 阶段二（GDI 兼容层） | GDI-Legacy | ✅ 已通过 |
-| 阶段三（真 Skia） | Skia-CPU | ✅ spike 通过 |
+| 阶段三（真 Skia） | Skia-CPU | ✅ spike 通过（skia_poc 应用验证） |
 | 阶段四五（GPU） | D3D11/WGL/Dawn/D2D | 待实现 |
 
 ## 已知问题
@@ -121,6 +121,8 @@ throw \RuntimeException('No render backend available')
 | `stub/skia.stub.php` | stub 声明 |
 | `framework/Paint/RenderContext.php` | 抽象基类 |
 | `framework/Paint/GdiRenderContext.php` | GDI 实现 |
+| `framework/Paint/SkiaRenderContext.php` | Skia 实现 |
+| `framework/Paint/PaintPipeline.php` | 树遍历 → 收集元素 → drawElement |
 
 ---
 

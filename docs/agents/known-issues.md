@@ -18,7 +18,7 @@
 
 ## 10.4 Bind 值同步延迟
 
-LayoutResolver clamp 后，组件 bind 值保持旧值。下次 render 先恢复旧值再被重新 clamp。需要 `setBindValueSilent` 方法。
+LayoutOrchestrator clamp 后，组件 bind 值保持旧值。下次 render 先恢复旧值再被重新 clamp。需要 `setBindValueSilent` 方法。
 
 ## 10.5 未实现的功能
 
@@ -27,53 +27,41 @@ LayoutResolver clamp 后，组件 bind 值保持旧值。下次 render 先恢复
 - 窗口 resize 动态重布局
 - 文字输入及 IME 支持
 
-## 10.6 近期已实现的功能（2026-06~2026-06-08）
+## 10.6 近期已实现的功能
+
+> 权威完整台账见 [Px_LayoutNG_架构审计报告_对标Blink.md](../Px_LayoutNG_架构审计报告_对标Blink.md) §十九；待办清单见 [LayoutNG_待解决问题清单.md](../LayoutNG_待解决问题清单.md)。
+
+### 布局（LayoutNG 对标 Blink，2026-07 批次）
 
 | 功能 | 描述 |
 |------|------|
-| `display: inline-flex` | LayoutResolver 新增 inline-flex 支持 |
-| `border-radius` | CSS 属性解析 + 渲染管道传递 |
-| `object-fit` | CSS 属性解析 |
-| `img` 元素 CSS 标准 | box-shadow/border/alt 回退 |
-| Grid `width: auto` | block-level grid 容器自动计算 |
-| Flex `height: auto` | 自动尺寸计算修复 |
-| `shiftDescendantsY/X` | 子节点偏移翻倍 bug 修复 |
-| Grid 自动高度 | 从内容计算格子自动高度 |
-| Config 配置管理类 | project.yml Px_debug_* 解析 |
-| RenderTreeManager | VNode→RenderNode 转换/差异追踪/命中测试 |
-| SFC 编译器 `$` 前缀 | `$word` → `$this->word` |
-| LayoutResolver 策略模式 | 拆分为 6 个策略类 |
-| CSS `box-sizing` | content-box/border-box 支持 |
-| CSS `line-height` | 行高计算支持 |
-| 文本节点 auto-height | 自动高度计算 |
-| `background` 简写展开 | 多值 background 简写 |
-| `rgba()` alpha → opacity | alpha 通道自动提取 |
-| CSS `linear-gradient` | background 渐变解析 |
-| `pointer-events: none` | 跳过命中测试 |
-| `transform` 命中测试 | translate 偏移后命中测试适配 |
-| layer 层叠顺序 | 按 z-index 层叠命中测试 |
-| `font-family` 管道 | 字体回退链 |
-| `position: sticky` | sticky 堆叠 + 水平 + visual 坐标 |
-| 滚动条 CSS 样式化 | scrollbar-width/color/radius |
-| VNode 不可变性 | 克隆保护 + 组件树展开克隆 |
-| `onMount`/`onUnmount` 去抽象化 | 可选覆写 |
-| `flex-shrink` min-width | 正确重新分配 |
-| Backend 渲染后端系统 | 6 后端候选 + 故障降级 |
-| RenderNode 分离 | VNode→RenderNode 分离 |
-| ImageManager | 图片缓存管理器 |
-| PerfCounter | 轻量级性能计数器 |
-| ResilientRenderContext | 故障降级代理 |
-| flex-shrink 整数除零保护 | while 循环立即终止 |
-| 原生响应式系统 | #[Reactive] 属性标记 + DependencyTracker + Effect |
-| Text 多后端架构 | GDI/Skia/DWrite 文本后端 + 故障降级 |
-| Theme 主题系统 | 跨平台样式（Win32/macOS/Linux） |
-| LayoutNG 对标 Blink | ConstraintSpace/PhysicalFragment/MarginStrut |
-| Compiler 管道化 | Codegen/Transform/Helpers 子模块 |
-| Diag 诊断日志 | 统一诊断日志系统 |
+| LayoutNG 重构 | ConstraintSpace/PhysicalFragment/MarginStrut/MinMaxSizes/InlineItem/LineBox/LineBreaker/ExclusionSpace |
+| Flex 完整语义 | §9.4.3 definite、fit-content 交叉轴、hypothetical main size clamp、gap 扣除 |
+| Grid 完整语义 | align-content stretch 守卫、auto-margin、轨道计算 |
+| margin 折叠 | preMarginStrut 穿透 + endMarginStrut 对称（Level-30 真值） |
+| float/clear | ExclusionSpace 排除空间（Level-29 真值） |
+| 滚动条占宽 | 定高滚动容器子约束扣 15px scrollbar gutter |
+
+### 样式系统（2026-07 重构）
+
+| 功能 | 描述 |
+|------|------|
+| StyleEngine 体系 | 替代已删 ThemeProvider 注册表；CascadeResolver/InlineStyleParser/SelectorParser/SelectorChecker/StyleSheetCodegen |
+| box-sizing 语义统一 | 显式 width/height 扣除 padding；同 box 语义 clamp |
+| 文本高度双路径统一 | flex/block 行高+padding+border 同公式 |
+| text-align IFC | ApplyTextAlign + 编译期复合选择器 |
+
+### 渲染（Skia）
+
+| 功能 | 描述 |
+|------|------|
+| SkiaRenderContext | 12 路 drawElement 1:1 移植 GDI 版本（阶段二） |
+| Backend 渲染后端系统 | 6 后端候选 + RuntimeBackendSelector + ResilientRenderContext |
+| 文本多后端 | GDI/Skia/DWrite + ResilientTextBackendProxy |
 
 ## 10.7 Flex-shrink 迭代收缩整数截断无限循环
 
-**根因**：`FlexLayoutStrategy::resolveFlexLayout()` 中 `(int)(remainingOverflow × shrinkWeight / totalSw)` 对所有活跃项产生 0 时无限循环。
+**根因**：`FlexAlgorithm` 的 flex 布局中 `(int)(remainingOverflow × shrinkWeight / totalSw)` 对所有活跃项产生 0 时无限循环。
 
 **触发条件**：剩余溢出量很小、多个子项有相近 shrink 权重。
 
@@ -83,16 +71,16 @@ LayoutResolver clamp 后，组件 bind 值保持旧值。下次 render 先恢复
 
 | 文件 | 风险 | 状态 |
 |------|------|------|
-| `FlexLayoutStrategy.php:513` | **高**：`(int)` 截断导致 0 进度 | **已修复** |
+| `FlexAlgorithm.php` | **高**：`(int)` 截断导致 0 进度 | **已修复** |
 | `Scheduler.php:51` | 低 | 无需修改 |
-| `AbsolutePositioning.php:168` | 安全 | 无需修改 |
+| `OOFLayoutAlgorithm.php` | 安全 | 无需修改 |
 | `RenderTreeManager.php:567` | 安全 | 无需修改 |
 | `RenderNode.php:158` | 安全 | 无需修改 |
 | 其他 for/foreach | 安全 | 无需修改 |
 
 ## 10.8 Auto-height 绝对定位子节点正反馈循环（已修复 2026-06-10）
 
-**根因**：`BlockLayoutStrategy` auto-height 遍历子节点取 `maxBottom` 时未排除 `position:absolute/fixed`，违反 CSS 2.2 §10.6.3。
+**根因**：`BlockAlgorithm` auto-height 遍历子节点取 `maxBottom` 时未排除 `position:absolute/fixed`，违反 CSS 2.2 §10.6.3。
 
 **正反馈链**：
 1. Frame 1: absolute 子节点尚未定位 → auto-height 正确

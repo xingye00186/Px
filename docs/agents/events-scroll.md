@@ -111,8 +111,8 @@ public string $scrollLeft = "0";  // 水平滚动位置（仅水平容器需要�
 ### 6.4 核心机制
 
 1. **Bind 同步**：`resolveVNodeBindings` 在每次 rebuild 时将组件 `scrollTop`/`scrollLeft` 值写入 `VNode`
-2. **布局偏移**：LayoutResolver 用 `childOffsetY = node.y - scrollTop` 和 `childOffsetX = node.x - scrollLeft` 定位子节点
-3. **自动 clamp**：auto-stack 后若 `scrollTop > maxScroll`，LayoutResolver 自动修正并重定位子节点
+2. **布局偏移**：LayoutOrchestrator 用 `childOffsetY = node.y - scrollTop` 和 `childOffsetX = node.x - scrollLeft` 定位子节点
+3. **自动 clamp**：auto-stack 后若 `scrollTop > maxScroll`，LayoutOrchestrator 自动修正并重定位子节点
 4. **拖拽优化**：拖拽过程中使用 `directRender`，跳过 VNode 树重建
 5. **水平滚动检测**：`overflow-x:auto` / `overflow-x:scroll` 或 `overflow:auto` 继承两轴
 

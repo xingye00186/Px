@@ -8,7 +8,7 @@
 
 ```
 framework/
-├── Animation/          动画系统（AnimationManager/CssAnimationParser/EasingFunctions/Interpolator/KeyframeResolver/TransitionComponent/TransitionController/TransitionGroupComponent）
+├── Animation/          动画系统（AnimationManager/CssAnimationParser/EasingFunctions/Interpolator/KeyframeResolver/TransitionComponent/TransitionController/TransitionGroupComponent/ClickEffects/FloatingText）
 ├── Component/          组件系统
 │   ├── Contracts/      ComponentInterface/ReactiveComponentInterface
 │   ├── BaseComponent.php        组件基类（生命期 + 父子层级）
@@ -20,49 +20,61 @@ framework/
 │   ├── ComponentRegistry.php    组件注册器
 │   ├── AotValidator.php         AOT 兼容性验证器
 │   ├── CompilerPipeline.php     编译管道协调
-│   ├── Codegen/                 代码生成器（5 个文件）
-│   ├── Helpers/                 编译器辅助（5 个文件）
-│   ├── Transform/               AST 变换（6 个文件）
-│   └── expression/              表达式解析器（6 个文件）
+│   ├── Codegen/                 代码生成器
+│   ├── Helpers/                 编译器辅助
+│   ├── Transform/               AST 变换
+│   └── expression/              表达式解析器
 ├── Core/               核心
 │   ├── Application.php     事件路由、组件注册、VNode 树展开、bind 解析
 │   ├── ScrollManager.php   滚动服务
 │   ├── Scheduler.php       微任务/宏任务调度器
+│   ├── FrameScheduler.php  帧调度器
 │   ├── Config.php          配置管理类
 │   ├── Diag.php            诊断日志系统
 │   └── PerfCounter.php     性能计数器（PX_PERF=1 启用）
-├── Css/                样式系统
+├── Css/                样式系统（StyleEngine 体系，替代已删 Theme 注册表）
 │   ├── ComputedStyle.php    计算样式
+│   ├── StyleEngine.php      Style 引擎（层叠/继承/伪类解析入口）
+│   ├── CascadeResolver.php  层叠解析器
+│   ├── InlineStyleParser.php 内联样式解析
+│   ├── SelectorParser.php   选择器解析
+│   ├── SelectorChecker.php  选择器匹配
+│   ├── StyleSheetCodegen.php/Contents.php  样式表代码生成/内容
+│   ├── UAStyles.php         User-Agent 默认样式
 │   ├── CssColor.php         颜色值类型
 │   ├── CssFlex.php          Flex 值类型
 │   ├── CssKeyword.php       关键字值类型
 │   ├── CssLength.php        长度值类型
 │   ├── CssMappings.php      CSS 属性 → GDI 属性映射
 │   ├── CssRect.php          矩形值类型
+│   ├── CssShorthandExpander.php 简写属性展开
+│   ├── CssTokenizer.php     CSS 词法
 │   ├── CssValue.php         CSS 值对象
 │   ├── CssValueParser.php   CSS 值解析器
 │   ├── StylePool.php        样式池（共享不可变样式）
-│   ├── StyleRecalcPass.php  样式重算
-│   └── StyleResolver.php    样式解析器
+│   └── StyleRecalcPass.php  样式重算
 ├── DevTools/           VNodeDevTools
 ├── Dom/                VNode.php（虚拟 DOM 节点）
 ├── Layout/             布局引擎（LayoutNG 对标 Blink）
-│   ├── LayoutOrchestrator.php       布局编排器入口
-│   ├── LayoutAlgorithm.php          布局算法基类
-│   ├── LayoutInputNode.php          布局输入节点
+│   ├── LayoutOrchestrator.php      布局编排器入口（buildChildSpace 等）
+│   ├── LayoutAlgorithm.php         布局算法基类
+│   ├── LayoutInputNode.php         布局输入节点
 │   ├── LayoutResult.php             布局结果
 │   ├── ConstraintSpace.php          约束空间
 │   ├── ConstraintSpaceBuilder.php   约束空间构建器
 │   ├── PhysicalFragment.php         物理片段（不可变输出）
 │   ├── PhysicalFragmentBuilder.php  片段构建器
 │   ├── MarginStrut.php              外边距折叠支撑
+│   ├── MinMaxSizes.php              最小/最大内容尺寸
 │   ├── ChildLayoutProvider.php      子布局提供者
 │   ├── TextMeasureCache.php         文本测量缓存
 │   ├── LruNode.php                  LRU 缓存节点
 │   ├── BlockAlgorithm.php           Block 布局
 │   ├── FlexAlgorithm.php            Flex 布局
 │   ├── GridAlgorithm.php            Grid 布局
-│   ├── InlineAlgorithm.php          Inline 布局
+│   ├── InlineAlgorithm.php          Inline 布局（IFC）
+│   ├── InlineItem.php/LineBox.php/LineBreaker.php  IFC 行盒/断行
+│   ├── ExclusionSpace.php           float/clear 排除空间
 │   ├── OOFLayoutAlgorithm.php       OOF 定位
 │   ├── TableAlgorithm.php           Table 布局
 │   ├── TextOverflowProcessor.php    文本溢出处理
@@ -70,8 +82,8 @@ framework/
 │   └── Grid/（GridItem/GridPlacer/GridTrack/GridTracker）
 ├── Paint/              绘制层
 │   ├── Backend/            渲染后端系统（6 个候选 + 故障降级）
+│   ├── PaintPipeline.php   树遍历 → 收集元素 → 按 layer → RenderContext
 │   ├── GdiRenderContext.php/SkiaRenderContext.php/RenderContext.php
-│   ├── VNodeRenderer.php   树遍历 → 收集元素 → 按 layer → RenderContext
 │   ├── ImageManager.php    图片缓存管理器
 │   └── InteractionState.php
 ├── Platform/           跨平台抽象
@@ -79,11 +91,9 @@ framework/
 │   ├── Win32Platform.php    Win32 消息循环 + 事件解码
 │   ├── PlatformEvent.php    事件基类
 │   ├── PlatformFactory.php  平台工厂
-│   ├── MouseEvent.php       鼠标事件
-│   ├── KeyboardEvent.php    键盘事件
-│   ├── WindowEvent.php      窗口事件
-│   ├── IoEvent.php          IO 事件
-│   ├── TimerEvent.php       定时器事件
+│   ├── PointerEvent.php/KeyEvent.php 指针/键盘事件
+│   ├── RedrawEvent.php/MetricsEvent.php/LifecycleEvent.php  重绘/度量/生命周期事件
+│   ├── ViewMetrics.php/RenderSurface.php  视口度量/渲染表面
 │   └── WinMsg.php           Win32 消息常量
 ├── Reactive/           原生响应式系统（#[Reactive] 属性标记）
 │   ├── DependencyTracker.php   依赖追踪器（track/notify + Effect 栈）
@@ -100,18 +110,9 @@ framework/
 │   ├── SkiaTextBackend.php           Skia 文本后端
 │   ├── DWriteTextBackend.php         DirectWrite 文本后端
 │   └── ResilientTextBackendProxy.php 故障降级代理
-└── Theme/              主题系统
-    ├── ThemeProvider.php      主题提供者
-    ├── ThemeData.php          主题数据
-    ├── ColorScheme.php        配色方案
-    ├── ComponentTheme.php     组件主题
-    ├── TextTheme.php          文本主题
-    ├── PlatformAdapter.php    平台适配器
-    ├── PlatformStyling.php    平台样式基类
-    ├── Win32Styling.php       Windows 样式
-    ├── MacOSStyling.php       macOS 样式
-    └── LinuxStyling.php       Linux 样式
 ```
+
+> **Theme/ 已删除**：`ThemeProvider/ThemeData/ColorScheme/PlatformAdapter/PlatformStyling` 等 9 文件为生产僵尸（注入后零读取），已同批删除，功能并入 `Css/StyleEngine.php` 体系。
 
 ---
 
@@ -152,14 +153,14 @@ Application::handleMouseEvent / handleKeyboardEvent
          │   ├─ 脏标记传播 + positioningAncestor 缓存失效
          │   └─ 保留动画状态（animatedStyle/isAnimating）
          │
-         ├─ LayoutResolver::resolve（委派策略类）
-         │   ├─ AbsolutePositioning / BlockLayoutStrategy / FlexLayoutStrategy / GridLayoutStrategy
+         ├─ LayoutOrchestrator::resolve（委派策略类）
+         │   ├─ BlockAlgorithm / FlexAlgorithm / GridAlgorithm / InlineAlgorithm / OOFLayoutAlgorithm
          │   ├─ 解析 CSS styles → 按 display 模式计算 x/y/w/h
          │   ├─ auto-stack 垂直排列子节点
          │   └─ clamp scrollTop + 子节点重定位
          │
-         └─ VNodeRenderer::render（遍历 RenderNode 树）
-             ├─ collectElements（按 layer 分组，scroll/overflow:hidden 生成 clip-push/clip-pop）
+         └─ PaintPipeline::render（遍历 Fragment 树）
+             ├─ collectElementsFromFragment（按 layer 分组，scroll/overflow:hidden 生成 clip-push/clip-pop）
              └─ RenderContext::drawElement（通过 Backend 系统委派给具体实现）
 ```
 
@@ -172,12 +173,12 @@ Application::handleMouseEvent / handleKeyboardEvent
 | Component | 声明状态 + 绑定描述 | 不参与坐标计算 |
 | Application | 事件路由 + bind 解析 | 不参与布局计算 |
 | RenderTreeManager | VNode → RenderNode 转换 | 不参与坐标计算 |
-| LayoutResolver | 所有坐标计算 + 委派策略类 | 不参与渲染绘制 |
-| VNodeRenderer | 收集元素 + clip 裁切 | 不修改坐标 |
+| LayoutOrchestrator | 所有坐标计算 + 委派策略类 | 不参与渲染绘制 |
+| PaintPipeline | 收集元素 + clip 裁切 | 不修改坐标 |
 | RenderContext | 渲染原语（GDI/Skia/其他） | 不参与布局计算 |
 | Backend | 运行时后端选择 + 故障降级 | 不参与布局计算 |
 
-> **核心原则**：VNode 的 x/y 坐标由 LayoutResolver 一家说了算。Application 只通过 bind 机制（`:scroll-top`）间接影响布局，不直接操作坐标。
+> **核心原则**：Fragment 的 x/y 坐标由 LayoutOrchestrator 一家说了算。Application 只通过 bind 机制（`:scroll-top`）间接影响布局，不直接操作坐标。
 
 ---
 
@@ -248,7 +249,7 @@ $this->on($child, 'itemSelected', function($payload) { ... });
 
 ### RenderNode（framework/Render/RenderNode.php）
 
-**RenderNode 是渲染专用节点**，持有布局结果和渲染数据，与 VNode 分离。
+**RenderNode 是渲染专用节点**，持有布局结果和渲染数据，与 VNode 分离。实际渲染消费 `cachedFragment`（PhysicalFragment）几何。
 
 **关键字段**：
 ```php
@@ -256,7 +257,7 @@ string $type;              // 'div'|'span'|'button'|'input'|'text'
 array $style;              // 已解析的 GDI 可用样式
 mixed $content;            // 文本内容或子节点数组
 ?string $key;              // v-for key
-int $x, $y, $w, $h;       // 绝对坐标（由 LayoutResolver 填入）
+int $x, $y, $w, $h;       // 绝对坐标（由 LayoutOrchestrator 填入）
 int $layer;                // z-order
 bool $isScrollContainer;
 int $scrollTop, $scrollLeft;
@@ -269,6 +270,7 @@ bool $layoutDirty;         // true → 需要重新计算布局
 ?VNode $sourceVNode;
 array $children;
 ?string $groupId;
+?PhysicalFragment $cachedFragment;   // 布局产物，Paint 消费的几何源
 ```
 
 **关键方法**：`markLayoutDirty()`, `markSubtreeDirty()`, `needsPaint()`, `addChild()`, `clearChildren()`
@@ -309,8 +311,8 @@ directRender(): void    // 跳过 VNode 树重建，仅重新 layout + render
 **渲染流程**：
 ```
 VNode 树重建 → RenderTreeManager::updateFromVNode
-→ LayoutResolver::resolve（RenderNode 坐标计算）
-→ VNodeRenderer::render（RenderNode 树 → Backend 委派的 RenderContext 调用）
+→ LayoutOrchestrator::resolve（Fragment 树坐标计算）
+→ PaintPipeline::render（Fragment 树 → Backend 委派的 RenderContext 调用）
 ```
 
 **Backend 初始化流程**（Application::initRenderer()）：
@@ -321,7 +323,7 @@ VNode 树重建 → RenderTreeManager::updateFromVNode
    - 存在 → 继续 Step 3
 3. RuntimeBackendSelector 遍历 6 个候选后端（按优先级）
 4. 包一层 ResilientRenderContext（连续失败 N 次自动降级）
-5. 创建 VNodeRenderer(renderCtx) 开始工作
+5. 创建 PaintPipeline(renderCtx) 开始工作
 ```
 
 **后端候选列表**（按优先级降序）：

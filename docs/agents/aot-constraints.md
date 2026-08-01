@@ -2,6 +2,8 @@
 
 > **何时加载**：编写或修改 AOT 兼容代码时加载此文档。特别是涉及 `use native_types` 文件、闭包、动态调用时必读。
 
+> **补充权威源**：[Px_LayoutNG_Blink对齐迭代总指南.md](../Px_LayoutNG_Blink对齐迭代总指南.md) §11.3「AOT 专属陷阱」+ §12.2「取证与归因」。
+
 ---
 
 ## 7.1 禁止的 PHP 模式
@@ -30,7 +32,7 @@
 D:\swoole_compiler\php.exe -l framework/Core/Application.php
 
 # AOT 静态检查（build.bat Step 0.5 自动运行）
-D:\swoole_compiler\php.exe framework/aot-checker.php --project apps/list-test --skip direct_cpp_call
+D:\swoole_compiler\php.exe tools/aot-checker.php --project apps/list-test --skip direct_cpp_call
 ```
 
 ## 7.4 闭包使用限制
@@ -171,3 +173,20 @@ public array $sidebarItems = [['id' => 's1', 'title' => '视频1']];
 - 非 v-for 变量（如 `$sz`）：SFC 编译器自动转换为 `$this->word`
 
 涉及文件：`framework/compiler/expression/ConcatenationExpression.php`
+
+---
+
+## 7.9 已编码进 aot-checker 的规则（tools/aot-checker.php）
+
+`use native_types;` 在 CLI 下是空操作，整类缺陷对测试套件完全不可见，只有实跑编译器才暴露。以下规则已编码进 `tools/aot-checker.php`：
+
+| 缺陷 | 症状 | 治本 |
+|------|------|------|
+| **跨类常量转发别名** `const X = Other::CONST` | 类注册期硬失败 `Call to private method Translator::evaluate`，中断整个编译 | 删别名，调用方直指权威类 |
+| **switch 内 `continue N`** | `switch case must end with return/break/exit/throw, Stmt_Continue given` | 改写 if 链（`break` 不等价，`continue 2` 目标是外层循环） |
+
+其余已知 AOT 专属缺陷（需类型推断，正则无法可靠检出，**有意未编码**）：
+
+- `php::Str` 变量复用作 foreach 键 → 改用独立变量名
+- 列表解构写入 int 变量 `[$a, $i] = f()` → 先接返回值再逐项 `(int)` 强转
+- 数组访问/max/min 赋给 int → 外层加 `(int)`（见 §7.5）
