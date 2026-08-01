@@ -573,8 +573,10 @@ class PaintPipeline
             $rawFontStretch = $cs?->getRaw('fontStretch');
             $fontStretchVal = $pseudoOverrides['fontStretch'] ?? ($rawFontStretch ? (is_string($rawFontStretch) ? $rawFontStretch : ($cs?->fontStretch ?? 'normal')) : 'normal');
             $fontStretchExtra = self::applyFontStretch($fontStretchVal);
-            $rawLetterSpacing = $cs?->getRaw('letterSpacing');
-            $letterSpacing = $pseudoOverrides['letterSpacing'] ?? ($rawLetterSpacing ? (is_numeric($rawLetterSpacing) ? (int)$rawLetterSpacing : 0) : 0);
+            // letterSpacing：用已解析的类型化属性（$cs->letterSpacing 是 string，如 '2px'/'normal'/''）
+            // getRaw 返回原始字符串，is_numeric('2px')=false 会丢弃像素值。parsePixelsRaw 正确解析。
+            $lsRaw = $pseudoOverrides['letterSpacing'] ?? ($cs?->letterSpacing ?? '');
+            $letterSpacing = ($lsRaw !== '' && $lsRaw !== 'normal') ? CssValueParser::parsePixelsRaw((string)$lsRaw) : 0;
             if ($fontStretchExtra !== 0) {
                 $letterSpacing += $fontStretchExtra;
             }
@@ -717,7 +719,7 @@ class PaintPipeline
                         'decorationColor' => ($cs?->textDecorationColor ?: self::safeDecoVal($cs?->getRaw('textDecorationColor'), (string)$textColor)),
                         'decorationStyle' => ($cs?->textDecorationStyle ?: self::safeDecoVal($cs?->getRaw('textDecorationStyle'), 'solid')),
                         'decorationThickness' => ($cs?->textDecorationThickness ?: self::safeDecoVal($cs?->getRaw('textDecorationThickness'), 0)),
-                        'underlineOffset' => $cs?->getRaw('underlineOffset') ?? 0,
+                        'underlineOffset' => CssValueParser::parsePixelsRaw((string)($cs?->getRaw('textUnderlineOffset') ?? '')),
                         'textWidth' => $segW,
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
                         'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
@@ -775,7 +777,7 @@ class PaintPipeline
                         'decorationColor' => ($cs?->textDecorationColor ?: self::safeDecoVal($cs?->getRaw('textDecorationColor'), (string)$textColor)),
                         'decorationStyle' => ($cs?->textDecorationStyle ?: self::safeDecoVal($cs?->getRaw('textDecorationStyle'), 'solid')),
                         'decorationThickness' => ($cs?->textDecorationThickness ?: self::safeDecoVal($cs?->getRaw('textDecorationThickness'), 0)),
-                        'underlineOffset' => $cs?->getRaw('textUnderlineOffset') ?? 0,
+                        'underlineOffset' => CssValueParser::parsePixelsRaw((string)($cs?->getRaw('textUnderlineOffset') ?? '')),
                         'textWidth' => self::measureTextWidth($seg, $fontSize, $isBold),
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
                         'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
@@ -792,7 +794,7 @@ class PaintPipeline
                         'decorationColor' => ($cs?->textDecorationColor ?: self::safeDecoVal($cs?->getRaw('textDecorationColor'), (string)$textColor)),
                         'decorationStyle' => ($cs?->textDecorationStyle ?: self::safeDecoVal($cs?->getRaw('textDecorationStyle'), 'solid')),
                         'decorationThickness' => ($cs?->textDecorationThickness ?: self::safeDecoVal($cs?->getRaw('textDecorationThickness'), 0)),
-                        'underlineOffset' => $cs?->getRaw('underlineOffset') ?? 0,
+                        'underlineOffset' => CssValueParser::parsePixelsRaw((string)($cs?->getRaw('textUnderlineOffset') ?? '')),
                         'textWidth' => self::measureTextWidth($text, $fontSize, $isBold),
                         'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
                         'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
@@ -872,17 +874,16 @@ class PaintPipeline
         $pseudoOverrides = self::extractPseudoOverrides($node);
         $cs = $node->computedStyle;
         $fontSize = $cs?->fontSize ?? 14;
-        $rawColor = $cs?->getRaw('fg') ?? $cs?->getRaw('color') ?? null;
-        $color = null;
-        if ($rawColor !== null) {
-            $color = $rawColor instanceof CssColor ? $rawColor->toBgr() : (is_int($rawColor) ? $rawColor : null);
-        }
+        // 颜色：优先用已解析的 CssColor 属性（$cs->color），而非 getRaw('fg')
+        // getRaw 返回原始字符串（如 '#1E88E5'），非 CssColor/int，会导致类型检查
+        // 失败回落黑色（#000000）。与 makeDivElement 的 $cs?->color?->toBgr() 对齐。
+        $color = $pseudoOverrides['fg'] ?? $pseudoOverrides['color'] ?? ($cs?->color?->toBgr() ?? null);
         if ($color === null) {
             $p = $node->parent;
             while ($p !== null) {
-                $pc = $p->computedStyle?->getRaw('fg') ?? null;
+                $pc = $p->computedStyle?->color ?? null;
                 if ($pc !== null) {
-                    $color = $pc instanceof CssColor ? $pc->toBgr() : (is_int($pc) ? $pc : null);
+                    $color = $pc->toBgr();
                     break;
                 }
                 $p = $p->parent;
@@ -936,8 +937,9 @@ class PaintPipeline
         $rawFontStretch = $cs?->getRaw('fontStretch') ?? null;
         $fontStretchVal = $rawFontStretch ? (is_string($rawFontStretch) ? $rawFontStretch : ($cs?->fontStretch ?? 'normal')) : 'normal';
         $fontStretchExtra = self::applyFontStretch($fontStretchVal);
-        $rawLetterSpacing = $cs?->getRaw('letterSpacing') ?? null;
-        $letterSpacing = $rawLetterSpacing ? (is_numeric($rawLetterSpacing) ? (int)$rawLetterSpacing : 0) : 0;
+        // letterSpacing：同 makeDivElement，用类型化属性 + parsePixelsRaw 解析
+        $lsRaw = $cs?->letterSpacing ?? '';
+        $letterSpacing = ($lsRaw !== '' && $lsRaw !== 'normal') ? CssValueParser::parsePixelsRaw($lsRaw) : 0;
         if ($fontStretchExtra !== 0) {
             $letterSpacing += $fontStretchExtra;
         }
@@ -996,7 +998,7 @@ class PaintPipeline
                     'decorationColor' => $cs?->textDecorationColor ?: (string)$color,
                     'decorationStyle' => $cs?->textDecorationStyle ?? 'solid',
                     'decorationThickness' => $cs?->textDecorationThickness ?? 0,
-                    'underlineOffset' => $cs?->getRaw('textUnderlineOffset') ?? 0,
+                    'underlineOffset' => CssValueParser::parsePixelsRaw((string)($cs?->getRaw('textUnderlineOffset') ?? '')),
                     'textWidth' => self::measureTextWidth($seg, $fontSize, (bool)$bold),
                     'textShadowX' => $tsX, 'textShadowY' => $tsY, 'textShadowBlur' => $tsBlur,
                     'textShadowColor' => $tsColor, 'textShadowAlpha' => $tsAlpha,
@@ -1024,7 +1026,7 @@ class PaintPipeline
         $decorationColor = $cs?->textDecorationColor ?: (string)$color;
         $decorationStyle = $cs?->textDecorationStyle ?? 'solid';
         $decorationThickness = $cs?->textDecorationThickness ?? 0;
-        $underlineOffset = $cs?->getRaw('textUnderlineOffset') ?? 0;
+        $underlineOffset = CssValueParser::parsePixelsRaw((string)($cs?->getRaw('textUnderlineOffset') ?? ''));
         return [
             'type' => 'text', 'text' => $text,
             'x' => $x, 'y' => $y + $vaY,
