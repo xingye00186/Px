@@ -14,4 +14,15 @@ sources:
   - ../../stub
   - ../../cpp
 ignore:
-  - ../../framework/Compiler
+  - ../../framework/Compiler
+
+# 并发构建隔离：tpc 的 --build-dir 默认是 <root>/build，多个 app 同时编译会
+# 写同一目录而互相污染 C++ 中间产物。按 app 分目录后各自独立。
+# （tpc v0.4.0 --help: "--build-dir <dir>  Specify build directory for generated
+#  C++ code (default: <root>/build)"）
+# 注：本项只解决**产物目录冲突**。真并发还需 build.bat 侧两个改动：
+#   (a) L5-7 taskkill cl.exe/link.exe/mspdbsrv.exe 会杀掉并发构建的编译进程；
+#   (b) L297+ rmdir /s /q "%FRAMEWORK_ROOT%\build" 清空**共享** build 根（由
+#       config.yml 的 Px_clear_compilation_cache 门控），会抹除另一构建的产物。
+# 两者均为 .bat 改动，不得在构建运行中修改（cmd.exe 逐行读取 .bat）。
+build-dir: build/multi-scroll
