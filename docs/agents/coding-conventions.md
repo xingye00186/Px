@@ -71,3 +71,16 @@
 30. **dump 权威源是 Fragment 树**：断言只对 `Application::dumpFragmentTreeForTest()` 输出；勿用 dumpRenderTree（缺 grid 放置）
 31. **真值测量**：`_gt_*.html` 必须 `body{margin:0}`；float/margin 场景容器 `overflow:hidden` 建 BFC
 32. **build 必须串行**：并行 build 共享 build/ 目录互毁；AOT 复验每 3~4 引擎批一次
+
+---
+
+## 十五、AOT 架构与踩坑规则（2026-08 起新增）
+
+> 通用踩坑案例库见 [lessons.md](lessons.md)（按症状关键词检索）。以下为已沉淀的硬规则。
+
+33. **公共 API 不得内置编译期专用逻辑**：被 AOT 编译的 framework 文件（Css/、Layout/、Paint/ 等，非 `framework/Compiler/`）是运行期与编译期共用入口。编译期才需要的诊断/警告/校验逻辑必须放 `framework/Compiler/` 侧，不得塞进公共 API——否则 `use native_types` 下 array-of-array 遍历等模式触发 C2440，且此类缺陷 CLI 测试不可见，只有实际构建才暴露（案例 L1）
+34. **背景色判定用 `isTransparent`**：未声明背景的元素其 `backgroundColor` 默认 `CssColor::transparent()`（argb=0），`toBgr()` 返回 0 非 null。判定"有无背景"必须用 `$csBg->isTransparent`，勿用 `toBgr() !== null`（否则透明当黑色，画出黑块，案例 L3）
+35. **box-sizing 语义**：content-box 的 `width` = 内容盒宽，子约束 = width（**不**扣 padding）；仅 border-box 需扣 padding+border（CSS-UI-3 §4.5，案例 L4）。改布局前先查 `tests/css-standards/Level-27-Box-Sizing-Units/`
+36. **php-parser 遍历 FunctionLike 用接口方法**：`getReturnType()` 而非 `$node->returnType` 属性——PHP 8.4 PropertyHook 节点实现 FunctionLike 但无 returnType 属性（案例 L2）
+
+> **沉淀纪律**：每次问题修复，若根因模式可复用，追加到 [lessons.md](lessons.md) 并在此补规则编号。

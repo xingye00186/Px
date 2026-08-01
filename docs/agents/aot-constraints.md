@@ -190,3 +190,21 @@ public array $sidebarItems = [['id' => 's1', 'title' => '视频1']];
 - `php::Str` 变量复用作 foreach 键 → 改用独立变量名
 - 列表解构写入 int 变量 `[$a, $i] = f()` → 先接返回值再逐项 `(int)` 强转
 - 数组访问/max/min 赋给 int → 外层加 `(int)`（见 §7.5）
+
+---
+
+## 7.10 公共 API 架构约束（AOT 编译期/运行期边界）
+
+**规则**：被 AOT 编译的 framework 公共 API（Css/、Layout/、Paint/ 等，非 `framework/Compiler/`）是运行期与编译期共用入口。**编译期专用逻辑（诊断/警告/校验）必须放 `framework/Compiler/` 侧**，不得内置进公共 API。
+
+**为什么**（案例见 [lessons.md](lessons.md) L1）：
+- 公共 API 里 array-of-array 聚合 + foreach 解构在 `use native_types` 下触发 `C2440: Cannot assign value to variable $x of type php::Array with type php::Var`
+- 此类缺陷 CLI 测试完全不可见（`use native_types` 在 CLI 是空操作），**只有实际 build 才暴露，且每轮 ~30 分钟**
+- 例：`CssMappings::parseStyleBlock()` 曾内置"类无 background/color 警告"，需聚合数组遍历 → C2440；且单规则无法判断 CSS 层叠后可见性（跨组件 scoped/内联/动画类全误报）→ 已删除
+
+**修复模式**：
+1. 编译期警告/校验逻辑 → 提取到 `framework/Compiler/Helpers/`（不参与 AOT）
+2. 公共 API 保持纯解析/纯计算，无 `&$warnings` 引用参数、无编译期诊断
+3. 若公共 API 确需收集诊断，用返回值而非引用参数（避免 array-of-array 遍历）
+
+**php-parser 遍历**（tools/ 侧）：FunctionLike 节点用 `getReturnType()` 接口方法，勿用 `$node->returnType` 属性（PHP 8.4 PropertyHook 无该属性，案例 L2）。
