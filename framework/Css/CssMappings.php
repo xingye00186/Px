@@ -1098,10 +1098,9 @@ class CssMappings
      * Complex selectors are stored as "__complex__{index}" with metadata.
      * 
      * @param string $styleCss  Raw content of <style>...</style>
-     * @param array  $warnings  Output: collects parse warnings
      * @return array  [className => [outputKey => value], ...]
      */
-    public static function parseStyleBlock(string $styleCss, array &$warnings = []): array
+    public static function parseStyleBlock(string $styleCss): array
     {
         // CSS Syntax §4（对标 Blink CSSTokenizer）：注释在 tokenize 阶段移除，
         // 否则注释文案中的 `* { ... }` / `.foo { ... }` 会被拓为幽灵规则。
@@ -1161,15 +1160,6 @@ class CssMappings
                         $value = CssValueParser::resolveCSSVariables($value, $variables);
                     }
                     $props[$map['key']] = self::dispatchParser($map['parser'], $value);
-                }
-            }
-
-            // If neither background nor color was specified, log a warning
-            // Skip for universal selectors —?they apply to all elements and
-            // don't need explicit styling.
-            if (!isset($props['bg']) && !isset($props['fg'])) {
-                if (!in_array($className, ['*', 'html', 'body'], true)) {
-                    $warnings[] = "CSS class '$className': no background or color property (will render as transparent)";
                 }
             }
 

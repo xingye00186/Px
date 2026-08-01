@@ -977,17 +977,13 @@ function compileOneComponent(
     }
 
     // Parse styles
-    $styleWarnings = [];
-    $classStyles = \Px\Css\CssMappings::parseStyleBlock($styles, $styleWarnings);
+    $classStyles = \Px\Css\CssMappings::parseStyleBlock($styles);
 
     // Parse raw CSS for compile-time class style merge
     $rawClassStyles = \parseCssClassesForMerge($styles);
 
     if ($verbose) {
         echo "  Classes:  " . count($classStyles) . " parsed\n";
-        foreach ($styleWarnings as $w) {
-            echo "  [WARN] CSS: $w\n";
-        }
     }
 
     // B3: 提取 @keyframes 完整块 + 生成运行时注册代码

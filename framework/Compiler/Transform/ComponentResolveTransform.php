@@ -177,12 +177,8 @@ class ComponentResolveTransform implements TransformInterface
                 $childStyles = $m[1];
             }
 
-            // Validate child styles (warnings only, no longer merge into parent scope)
-            $childStyleWarnings = [];
-            \Px\Css\CssMappings::parseStyleBlock($childStyles, $childStyleWarnings);
-            foreach ($childStyleWarnings as $w) {
-                $this->warnings[] = "Component <{$tagName}> CSS: $w";
-            }
+            // 校验子组件样式（解析即可，不再生成可见性警告）
+            \Px\Css\CssMappings::parseStyleBlock($childStyles);
 
             // Parse child template to find text interpolations for auto-binding
             $childTemplate = '';
