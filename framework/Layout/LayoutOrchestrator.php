@@ -119,10 +119,14 @@ class LayoutOrchestrator
         foreach ($node->children as $ch) {
             if ($ch instanceof RenderNode) $kids[] = $this->zeroBoxSubtree($ch);
         }
-        return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0,
-            $node->computedStyle, $kids, $node,
-            0, 0, false,
-            $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles);
+        return (new PhysicalFragmentBuilder())
+            ->children($kids)
+            ->style($node->computedStyle)
+            ->sourceNode($node)
+            ->type($node->type)->content($node->content)
+            ->dataset($this->extractDataset($node))
+            ->pseudoStyles($node->pseudoStyles)
+            ->build();
     }
 
     /**
@@ -153,16 +157,15 @@ class LayoutOrchestrator
                 if ($node->styleDirty) {
                     // 仅样式变化：复用缓存的 Fragment 子树，替换根节点样式快照
                     $old = $node->cachedFragment;
-                    $newFrag = new \Px\Layout\PhysicalFragment(
-                        $old->x, $old->y, $old->w, $old->h,
-                        $old->visualW, $old->visualH, $old->layer,
-                        $old->contentWidth, $old->contentHeight,
-                        $node->computedStyle,          // 新样式快照
-                        $old->children,                // 复用完整子 Fragment 树
-                        $node,
-                        $old->scrollTop, $old->scrollLeft, $old->isScrollContainer,
-                        $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
-                    );
+                    $newFrag = (new PhysicalFragmentBuilder())
+                        ->from($old)
+                        ->style($node->computedStyle)          // 新样式快照
+                        ->sourceNode($node)
+                        ->type($node->type)->content($node->content)
+                        ->dataset($this->extractDataset($node))
+                        ->pseudoStyles($node->pseudoStyles)
+                        ->textWidth(0)->displayText('')->baseline(0)
+                        ->build();
                     $node->cachedFragment = $newFrag;   // 更新缓存为新 Fragment
                     $node->styleDirty = false;           // 消费脏位
                     \Px\Core\PerfCounter::inc('layout_hit_style');
@@ -246,8 +249,13 @@ class LayoutOrchestrator
         $isOOF = ($position === 'absolute' || $position === 'fixed');
 
         if ($display === 'none') {
-            return new PhysicalFragment(0, 0, 0, 0, 0, 0, 0, 0, 0, $style, array(), $node, 0, 0, false,
-                $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles);
+            return (new PhysicalFragmentBuilder())
+                ->style($style)
+                ->sourceNode($node)
+                ->type($node->type)->content($node->content)
+                ->dataset($this->extractDataset($node))
+                ->pseudoStyles($node->pseudoStyles)
+                ->build();
         }
 
         // 正常流：选择 Algorithm 执行布局
@@ -295,14 +303,11 @@ class LayoutOrchestrator
         if ($textContent !== '' && ($algoFrag->getW() > 0 || $algoFrag->getH() > 0)
             && ($algoFrag->type ?? '') === '' && ($algoFrag->content ?? null) === null
         ) {
-            $algoFrag = new \Px\Layout\PhysicalFragment(
-                $algoFrag->x, $algoFrag->y, $algoFrag->w, $algoFrag->h,
-                $algoFrag->visualW, $algoFrag->visualH, $algoFrag->layer,
-                $algoFrag->contentWidth, $algoFrag->contentHeight,
-                $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
-                $algoFrag->scrollTop, $algoFrag->scrollLeft, $algoFrag->isScrollContainer,
-                $node->type, $textContent, $algoFrag->dataset, $algoFrag->pseudoStyles
-            );
+            $algoFrag = (new PhysicalFragmentBuilder())
+                ->from($algoFrag)
+                ->type($node->type)->content($textContent)
+                ->textWidth(0)->displayText('')->baseline(0)
+                ->build();
         }
 
         // P2/P3: Phase C 已删除——算法通过 layoutChild() 按需布局，无需外部重布局补丁
@@ -329,14 +334,14 @@ class LayoutOrchestrator
             $newW = !$hasExplW ? $uaW : $fw;
             $newH = (!$hasExplH && $fh < $uaH) ? $uaH : $fh;
             if (($newW !== $fw || $newH !== $fh) && $uaW > 0) {
-                $algoFrag = new \Px\Layout\PhysicalFragment(
-                    $algoFrag->x, $algoFrag->y, (int)$newW, (int)$newH,
-                    (int)$newW, (int)$newH, $algoFrag->layer,
-                    (int)$newW, (int)$newH,
-                    $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
-                    $algoFrag->scrollTop, $algoFrag->scrollLeft, $algoFrag->isScrollContainer,
-                    $algoFrag->type !== '' ? $algoFrag->type : $ntType, $algoFrag->content, $algoFrag->dataset, $algoFrag->pseudoStyles
-                );
+                $algoFrag = (new PhysicalFragmentBuilder())
+                    ->from($algoFrag)
+                    ->w((int)$newW)->h((int)$newH)
+                    ->vw((int)$newW)->vh((int)$newH)
+                    ->cw((int)$newW)->ch((int)$newH)
+                    ->type($algoFrag->type !== '' ? $algoFrag->type : $ntType)
+                    ->textWidth(0)->displayText('')->baseline(0)
+                    ->build();
             }
         }
 
@@ -375,24 +380,27 @@ class LayoutOrchestrator
             else if ($yClips) $contentH = $containerH;
         }
         if ($nodeLayer > $algoFrag->getLayer()) {
-            $algoFrag = new \Px\Layout\PhysicalFragment(
-                (int)$algoFrag->getX(), (int)$algoFrag->getY(), (int)$algoFrag->getW(), (int)$algoFrag->getH(),
-                (int)$algoFrag->getVisualW(), (int)$algoFrag->getVisualH(), (int)$nodeLayer,
-                $contentW, $contentH,
-                $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
-                (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $isScroll,
-                $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
-            );
+            $algoFrag = (new PhysicalFragmentBuilder())
+                ->from($algoFrag)
+                ->layer((int)$nodeLayer)
+                ->cw($contentW)->ch($contentH)
+                ->isScrollContainer($isScroll)
+                ->type($node->type)->content($node->content)
+                ->dataset($this->extractDataset($node))
+                ->pseudoStyles($node->pseudoStyles)
+                ->textWidth(0)->displayText('')->baseline(0)
+                ->build();
         } else {
             // 无 layover 变化时，仍需要打标元数据
-            $algoFrag = new \Px\Layout\PhysicalFragment(
-                (int)$algoFrag->getX(), (int)$algoFrag->getY(), (int)$algoFrag->getW(), (int)$algoFrag->getH(),
-                (int)$algoFrag->getVisualW(), (int)$algoFrag->getVisualH(), (int)$algoFrag->getLayer(),
-                $contentW, $contentH,
-                $algoFrag->style, $algoFrag->children, $algoFrag->sourceNode,
-                (int)$algoFrag->getScrollTop(), (int)$algoFrag->getScrollLeft(), $isScroll,
-                $node->type, $node->content, $this->extractDataset($node), $node->pseudoStyles
-            );
+            $algoFrag = (new PhysicalFragmentBuilder())
+                ->from($algoFrag)
+                ->cw($contentW)->ch($contentH)
+                ->isScrollContainer($isScroll)
+                ->type($node->type)->content($node->content)
+                ->dataset($this->extractDataset($node))
+                ->pseudoStyles($node->pseudoStyles)
+                ->textWidth(0)->displayText('')->baseline(0)
+                ->build();
         }
         // 缓存完整 Fragment 树 + 约束空间（对标 Blink NGBlockNode，双槽 MRU：
         // 旧主槽下沉槽 2，新结果入主槽——两阶段交替约束不再互相驱逐）
