@@ -400,8 +400,9 @@
     public function stToggle(string $id): void
     {
         $items = $this->stItems;
-        foreach ($items as &$it) {
-            if ($it['id'] === $id) { $it['active'] = !$it['active']; break; }
+        // 索引遍历——避免 foreach by-ref（AOT 编译下按引用写回失效）
+        foreach ($items as $i => $it) {
+            if ($it['id'] === $id) { $items[$i]['active'] = !$items[$i]['active']; break; }
         }
         $this->stItems = $items;
     }
