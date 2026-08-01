@@ -1340,6 +1340,41 @@ class RenderTreeManager
     }
 
     /**
+     * 轻量 VNode 子计数（零分配）——head/tail sync 跳过门控专用。
+     * 语义与 VNode::childrenToArray 展平结果一致（#list 展平、#comment
+     * 过滤、非空字符串子计入），但不构造数组——大列表下避免每节点
+     * O(N) 分配导致的 O(N²) 热路径爆炸（bench 实证：DynamicList/
+     * HoverGrid 等大 case layout 27ms+ 退化）。
+     */
+    private static function countVNodes(mixed $children): int
+    {
+        if ($children === null) {
+            return 0;
+        }
+        if ($children instanceof VNode) {
+            return $children->type === '#list'
+                ? self::countVNodes($children->children)
+                : 1;
+        }
+        if (is_array($children)) {
+            $n = 0;
+            foreach ($children as $c) {
+                if ($c instanceof VNode) {
+                    if ($c->type === '#list') {
+                        $n += self::countVNodes($c->children);
+                    } elseif ($c->type !== '#comment') {
+                        $n++;
+                    }
+                } elseif ($c !== null && $c !== false && (string)$c !== '') {
+                    $n++;
+                }
+            }
+            return $n;
+        }
+        return (string)$children !== '' ? 1 : 0;
+    }
+
+    /**
      * Vue 3 patchKeyedChildren 适配 — 增量 children 更新
      *
      * 替代 clearChildren + rebuild + O(N×M) 线性 key 扫描。
@@ -1385,13 +1420,19 @@ class RenderTreeManager
                 && $oldRN->key === $newVN->key
                 && !$parentStyleChanged
                 && $oldRN->sourceVNode !== null
-                && count($oldRN->children) === count(VNode::childrenToArray($newVN->children))
+                && count($oldRN->children) === self::countVNodes($newVN->children)
                 && $oldRN->computedStyle === $newVN->computedStyle
                 && $this->areVNodesEqual($newVN, $oldRN->sourceVNode)) {
                 // ✅ 完全跳过 — 不构建 ComputedStyle、不递归 children
                 // 注：computedStyle 引用比较依赖 StylePool intern 池化——相同
                 // 样式（含相同继承链 parentId）返回同一对象；继承链变化时子
                 // 样式重新 intern 为新对象 → 引用不同 → 不跳过 → 走正常同步路径
+                // 跳过 = 节点完全未变（对标 Blink ChildNeedsLayout=false）→ 必须
+                // 清除脏位，否则首帧新建节点的 layoutDirty=true 残留导致布局
+                // 每帧全量 miss（bench 实证 hits=0、动态 case -95%）。
+                $oldRN->layoutDirty = false;
+                $oldRN->paintDirty = false;
+                $oldRN->styleDirty = false;
                 $oldRN->parent = $parent;
                 $parent->children[] = $oldRN;
                 $oldRN->sourceVNode = $newVN;
@@ -1415,9 +1456,13 @@ class RenderTreeManager
                 && $oldRN->key === $newVN->key
                 && !$parentStyleChanged
                 && $oldRN->sourceVNode !== null
-                && count($oldRN->children) === count(VNode::childrenToArray($newVN->children))
+                && count($oldRN->children) === self::countVNodes($newVN->children)
                 && $oldRN->computedStyle === $newVN->computedStyle
                 && $this->areVNodesEqual($newVN, $oldRN->sourceVNode)) {
+                // 跳过 = 节点完全未变 → 清除脏位（同 head sync，防 layoutDirty 残留）
+                $oldRN->layoutDirty = false;
+                $oldRN->paintDirty = false;
+                $oldRN->styleDirty = false;
                 array_unshift($tailSynced, $oldRN);
                 $oldRN->sourceVNode = $newVN;
                 $this->syncBindValues($oldRN, $newVN, $component);

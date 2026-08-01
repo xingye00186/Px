@@ -70,6 +70,9 @@ class LayoutOrchestrator
         \Px\Core\PerfCounter::start('stage:layout');
         // 根容器尺寸来自视口（WINDOW_WIDTH/WINDOW_HEIGHT），而非 RenderNode 属性
         Diag::log(1, 'layout:enter', ['rootType' => $root->type, 'children' => count($root->children)]);
+        // 注：根不强制重布局——传播链完整（updateFromVNode 洁净判定/markLayoutDirty
+        // 卸载标记/propagateLayoutDirty 自底向上），任何子变化都会标根脏；根缓存命中
+        // 仅发生在整树洁净时（对标 Blink LayoutRoot 缓存 + ChildNeedsLayout 传播）。
         $rootW = defined('WINDOW_WIDTH') ? WINDOW_WIDTH : 1600;
         $rootH = defined('WINDOW_HEIGHT') ? WINDOW_HEIGHT : 800;
         // 使用 ConstraintSpaceBuilder (§12.3)：取代 21 位置参数构造函数，新增字段不需改调用点
@@ -397,6 +400,13 @@ class LayoutOrchestrator
         $node->cachedConstraintSpace2 = $node->cachedConstraintSpace;
         $node->cachedFragment = $algoFrag;
         $node->cachedConstraintSpace = $space;
+
+        // 布局成功 → 消费脏位（对标 Blink SetNeedsLayout 布局后清除）：
+        // 不清除则首帧新建节点 layoutDirty=true 永久残留 → 动态 case（每帧
+        // 增删经 markLayoutDirty 传播容器脏）下所有子项每次完整重布局
+        // （bench 实证 hits=0、动态 case -95%）。paintDirty 保留供重绘。
+        $node->layoutDirty = false;
+        $node->styleDirty = false;
 
         \Px\Core\PerfCounter::end('algo:teardown');
 
