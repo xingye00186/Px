@@ -70,7 +70,14 @@ class Effect
         $this->pending = true;
 
         $componentRef = $this->component;
-        Scheduler::getInstance()->addMicrotask(function () use ($componentRef): void {
+        // 必须使用组件持有的 Scheduler（Application 注入的实例）而非全局单例：
+        // Application 主循环持有 new Scheduler() 实例，单例与它是两个不同队列，
+        // 微任务排入单例队列永远不会被主循环 flush → 响应式更新静默失效。
+        $scheduler = $componentRef !== null ? $componentRef->getScheduler() : null;
+        if ($scheduler === null) {
+            $scheduler = Scheduler::getInstance();
+        }
+        $scheduler->addMicrotask(function () use ($componentRef): void {
             $this->pending = false;
 
             if ($componentRef === null) {

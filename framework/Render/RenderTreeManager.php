@@ -698,47 +698,40 @@ class RenderTreeManager
                 // 注意：用 renderDirty 而非 dirty——dirty 在 getVNodeTree() 中已被清除
                 $wasRenderDirty = $instance->isRenderDirty();
                 $instance->clearRenderDirty();
-                if (!$wasRenderDirty && $oldRootRN !== null) {
+
+                // 父驱动透传 style 变化检测（提前到跳过判定之前）：
+                // 透传样式变化时（含可继承属性如 color），内部子树需重新继承——
+                // 而组件未 dirty 时内部 VNode 树是缓存对象、computedStyle 也是旧的，
+                // 仅更新根 RN 会导致内部元素视觉不一致。故 styleChanged 时强制
+                // 走正常渲染路径（组件重建 VNode + StyleRecalcPass 重算继承）。
+                $styleChanged = false;
+                $placeholderStyle = $vnode->props['style'] ?? [];
+                if (!empty($placeholderStyle) && $oldRootRN !== null) {
+                    $parsedDecls = is_string($placeholderStyle)
+                        ? \Px\Css\InlineStyleParser::parseInlineStyle($placeholderStyle)
+                        : $placeholderStyle;
+                    $currentArr = $oldRootRN->computedStyle?->toExportArray() ?? [];
+                    foreach ($parsedDecls as $sk => $sv) {
+                        if (($currentArr[$sk] ?? null) !== $sv) {
+                            $styleChanged = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!$wasRenderDirty && !$styleChanged && $oldRootRN !== null) {
                     // 1. 重新挂接到父节点（每帧 parent->children 被清空重建）
                     $oldRootRN->parent = $parent;
                     if ($parent !== null) {
                         $parent->children[] = $oldRootRN;
                     }
 
-                    // 2. 父驱动 style 透传（仅当 placeholder style 变化时更新）
-                    $placeholderStyle = $vnode->props['style'] ?? [];
-                    if (!empty($placeholderStyle)) {
-                        $parsedDecls = is_string($placeholderStyle)
-                            ? \Px\Css\InlineStyleParser::parseInlineStyle($placeholderStyle)
-                            : $placeholderStyle;
-                        // 检测 style 是否实际变化，避免不必要的 layoutDirty
-                        $currentArr = $oldRootRN->computedStyle?->toExportArray() ?? [];
-                        $styleChanged = false;
-                        foreach ($parsedDecls as $sk => $sv) {
-                            if (($currentArr[$sk] ?? null) !== $sv) {
-                                $styleChanged = true;
-                                break;
-                            }
-                        }
-                        if ($styleChanged) {
-                            // 组件 style 透传合并——Vue 3 语义是**层叠覆盖**（子根 style 为基准，父 style 覆盖），
-                            // 必须用 withOverride（与 :style 动态合并同源语义）。此前误用 intern(旧cs作父)
-                            // 把层叠错嫁接为 CSS 继承——非继承属性（width/padding/border 等）全部丢失。
-                            $oldRootRN->computedStyle = \Px\Css\StylePool::withOverride(
-                                $oldRootRN->computedStyle ?? \Px\Css\StylePool::empty(),
-                                $parsedDecls,
-                                $oldRootRN->type
-                            );
-                            $oldRootRN->layoutDirty = true;
-                        }
-                    }
-
-                    // 3. 注册 groupId（仅根节点，内部节点已在首帧注册且 groupId 不变）
+                    // 2. 注册 groupId（仅根节点，内部节点已在首帧注册且 groupId 不变）
                     if ($oldRootRN->groupId !== null) {
                         $this->groupIdToRenderNodeMap[$oldRootRN->groupId][] = $oldRootRN;
                     }
 
-                    // 4. 同步 scroll bind 值（路由至 ScrollManager，不写 RenderNode）
+                    // 3. 同步 scroll bind 值（路由至 ScrollManager，不写 RenderNode）
                     $component = $componentByGroupId[$childGroupId] ?? $root;
                     $scrollBindKey = $vnode->props[':scroll-top'] ?? '';
                     if ($scrollBindKey !== '' && $this->scrollManager !== null) {
@@ -852,10 +845,17 @@ class RenderTreeManager
                 }
 
                 if ($candidates !== null) {
+                    $unmountedRootAny = false;
                     foreach ($candidates as $oldRN) {
                         if (!in_array($oldRN, $consumedCandidates, true)) {
+                            $unmountedRootAny = true;
                             $this->destroyRenderNodeTree($oldRN);
                         }
+                    }
+                    // 顶层卸载同源问题：已卸载节点不在树中无法传播，显式标记根
+                    // 避免 #root 洁净早退复用含已卸载子树的旧 cachedFragment
+                    if ($unmountedRootAny && $result !== null) {
+                        $result->markLayoutDirty(true);
                     }
                 }
 
@@ -1385,8 +1385,13 @@ class RenderTreeManager
                 && $oldRN->key === $newVN->key
                 && !$parentStyleChanged
                 && $oldRN->sourceVNode !== null
+                && count($oldRN->children) === count(VNode::childrenToArray($newVN->children))
+                && $oldRN->computedStyle === $newVN->computedStyle
                 && $this->areVNodesEqual($newVN, $oldRN->sourceVNode)) {
                 // ✅ 完全跳过 — 不构建 ComputedStyle、不递归 children
+                // 注：computedStyle 引用比较依赖 StylePool intern 池化——相同
+                // 样式（含相同继承链 parentId）返回同一对象；继承链变化时子
+                // 样式重新 intern 为新对象 → 引用不同 → 不跳过 → 走正常同步路径
                 $oldRN->parent = $parent;
                 $parent->children[] = $oldRN;
                 $oldRN->sourceVNode = $newVN;
@@ -1410,6 +1415,8 @@ class RenderTreeManager
                 && $oldRN->key === $newVN->key
                 && !$parentStyleChanged
                 && $oldRN->sourceVNode !== null
+                && count($oldRN->children) === count(VNode::childrenToArray($newVN->children))
+                && $oldRN->computedStyle === $newVN->computedStyle
                 && $this->areVNodesEqual($newVN, $oldRN->sourceVNode)) {
                 array_unshift($tailSynced, $oldRN);
                 $oldRN->sourceVNode = $newVN;
@@ -1423,6 +1430,8 @@ class RenderTreeManager
         }
 
         // Phase 3: Mount — 旧节点全消耗，挂载剩余新节点
+        // 注：挂载路径无需显式标记父——新节点 layoutDirty=true 且在树中，
+        // 由 propagateLayoutDirty 自底向上传播（对标 Blink SetNeedsLayout）。
         if ($i > $e1) {
             for (; $i <= $e2; $i++) {
                 $this->updateFromVNode(
@@ -1432,7 +1441,11 @@ class RenderTreeManager
             }
         }
         // Phase 4: Unmount — 新节点全消耗，卸载剩余旧节点
+        // 关键：被卸载节点已不在树中，propagateLayoutDirty 无法传播 → 必须显式
+        // 标记父节点 layoutDirty，否则父洁净早退复用旧 cachedFragment（含已卸载
+        // 子树），v-for 删除项后画面停留上一帧（list-test 点击无效根因）。
         elseif ($i > $e2) {
+            $parent->markLayoutDirty(true);
             for (; $i <= $e1; $i++) {
                 $this->destroyRenderNodeTree($oldChildren[$i], false);
             }
@@ -1486,11 +1499,17 @@ class RenderTreeManager
             // 使其在 keyed/position 匹配中均落空、$consumed 为空，但组件未 dirty 时
             // updateFromVNode 已把它挂回 parent。若在此销毁会清空其 children/
             // computedStyle/cachedFragment → 次帧起整树坍缩为 0×0（多帧稳定性铁律破坏）。
+            $unmountedAny = false;
             for ($k = $i; $k <= $e1; $k++) {
                 if (!in_array($k, $consumed, true)
                     && !in_array($oldChildren[$k], $parent->children, true)) {
+                    $unmountedAny = true;
                     $this->destroyRenderNodeTree($oldChildren[$k], false);
                 }
+            }
+            // 卸载路径同上：显式标记父，避免洁净早退复用含已卸载子树的旧缓存
+            if ($unmountedAny) {
+                $parent->markLayoutDirty(true);
             }
         }
 

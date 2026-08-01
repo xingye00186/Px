@@ -54,6 +54,11 @@ abstract class BaseComponent implements ComponentInterface
         $this->scheduler = $scheduler;
     }
 
+    public function getScheduler(): ?Scheduler
+    {
+        return $this->scheduler;
+    }
+
     abstract public function onMount(): void;
     abstract public function onUnmount(): void;
 
