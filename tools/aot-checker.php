@@ -161,6 +161,17 @@ class AotChecker
             'message' => 'AOT: preg_replace_callback + closure 走 ZendVM dispatch，用 preg_match + str_replace 替代',
         ],
 
+        // 16. foreach 按引用遍历 — AOT 转译后写回失效（实跑实锤 @L5）
+        // tpc.exe v0.4.3 对 `foreach ($obj->arr as &$v) { $v = ...; }` 转译后
+        // 修改不写回原数组（最小复现：编译后原数组不变，CLI 正常）。
+        // 典型受害：patchComponentTree 展开组件 → 全树 instance=null → 整窗空白。
+        // 必须改为索引遍历 + 整体赋值（$arr[$i] = ...; $obj->arr = $arr;）。
+        'aot_foreach_byref' => [
+            'severity' => 'ERROR',
+            'pattern' => '/foreach\s*\([^)]*as\s*&\$\w+/',
+            'message' => 'AOT: foreach 按引用遍历（foreach ($arr as &$v)）AOT 转译后写回失效（L37），改用索引遍历 + 整体赋值',
+        ],
+
         // ========== 资源所有权规则 ==========
 
         'hwnd_in_app' => [
@@ -274,6 +285,7 @@ class AotChecker
                 echo "  aot_dynamic_variable, aot_variable_property, aot_variable_method,\n";
                 echo "  aot_variable_function, aot_extract, aot_yield, aot_eval_include,\n";
                 echo "  aot_magic_methods, aot_null_byte, aot_call_user_func,\n";
+                echo "  aot_foreach_byref (foreach 按引用遍历，AOT 写回失效),\n";
                 echo "  hwnd_in_app, hwnd_in_renderer, hdc_in_renderer,\n";
                 echo "  hdc_param_in_methods, direct_cpp_call,\n";
                 echo "  native_types_chain (跨文件 use native_types 链式推导检查)\n";
