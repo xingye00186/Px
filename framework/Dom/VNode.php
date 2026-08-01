@@ -82,6 +82,39 @@ class VNode
     public ?array $layoutOffset = null;
 
     /**
+     * 编译器写入的根节点宽高（仅 #root 节点使用）。
+     * 由 TemplateParser::parseRoot() 从 <app width=... height=...> 提取后写入。
+     */
+    public int $w = 0;
+    public int $h = 0;
+
+    // ===== 编译器标注字段（Compiler Transform / Codegen 阶段使用）=====
+
+    /** v-show 条件表达式（sfc-compiler codegen 阶段写入并消费） */
+    public ?string $__vShowCond = null;
+
+    /** v-show 原始 style 值（sfc-compiler codegen 阶段写入并消费） */
+    public string $__vShowOrigStyle = '';
+
+    /** PatchFlagTransform 计算的动态绑定位掩码，codegen 读取后生成 withPatchFlags() 调用 */
+    public int $__patchFlags = 0;
+
+    /** StaticHoistTransform 分配的静态节点标识（如 '__s0'） */
+    public ?string $__staticId = null;
+
+    /** StaticHoistTransform 标记：该节点是否为可提升的完全静态子树 */
+    public bool $__isStatic = false;
+
+    /** StaticHoistTransform 分配的类级别静态变量名（codegen 生成 self::$__sN 引用） */
+    public ?string $__staticVarName = null;
+
+    /** CollectorHelper 写入的 v-for render helper 方法名（如 'render_0'） */
+    public ?string $vForHelper = null;
+
+    /** CollectorHelper 写入的 v-for 父级循环变量名（嵌套 v-for 场景） */
+    public ?string $vForParentItem = null;
+
+    /**
      * 由 StyleRecalcPass 填充的计算后样式（Phase 0.5 引入）。
      * 后续 RenderTreeManager 直接从此读取，不再内联调用 InlineStyleParser。
      */
