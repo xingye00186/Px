@@ -451,7 +451,14 @@ class PaintPipeline
         }
         if ($w <= 0) $w = 80;
         if ($h <= 0) $h = 32;
-        $rawBg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr();
+        $rawBg = $pseudoOverrides['bg'] ?? null;
+        $csBg = $cs?->backgroundColor;
+        // 透明背景（默认值 CssColor::transparent()，argb=0）视为"无背景"，
+        // 不得 fallback 为 toBgr()=0 的黑色（否则未声明背景的 div 画出黑块）。
+        // 显式 background:#000000 的 isTransparent=false，仍正常取 0。
+        if ($rawBg === null && $csBg !== null && !$csBg->isTransparent) {
+            $rawBg = $csBg->toBgr();
+        }
         // 回退：从伪类覆盖中读取 bg（当 backgroundColor 为空时备用）
         if (($rawBg === null || $rawBg === 0) && isset($pseudoOverrides['bg'])) {
             $rawBg = $pseudoOverrides['bg'];
@@ -1051,7 +1058,10 @@ class PaintPipeline
             $w = $w <= 0 ? 80 : $w;
             $h = $h <= 0 ? 32 : $h;
         }
-        $bg     = $cs?->backgroundColor?->toBgr() ?? 0x4488CC;
+        $csBg = $cs?->backgroundColor;
+        // 透明背景（默认 transparent）时用按钮默认色 0x4488CC；toBgr() 对透明返回 0，
+        // `0 ?? 默认` 不会触发（?? 只判 null），故需先判 isTransparent。
+        $bg = ($csBg !== null && !$csBg->isTransparent) ? $csBg->toBgr() : 0x4488CC;
         $fg     = $cs?->color?->toBgr() ?? 0xFFFFFF;
         $borderWidth = $cs?->borderWidth?->top?->toPx() ?? 0;
         $borderTopWidth = $cs?->borderTopWidth ?? $borderWidth;
@@ -1126,7 +1136,11 @@ class PaintPipeline
         if ($src !== '' && !$noSize) {
             $imageHandle = ImageManager::loadImage($src);
         }
-        $bg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr() ?? 0xCCCCCC;
+        $bg = $pseudoOverrides['bg'] ?? null;
+        if ($bg === null) {
+            $imgCsBg = $cs?->backgroundColor;
+            $bg = ($imgCsBg !== null && !$imgCsBg->isTransparent) ? $imgCsBg->toBgr() : 0xCCCCCC;
+        }
         $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;
         $borderRadiusX = 0;
         $borderRadiusY = 0;
@@ -1267,7 +1281,9 @@ class PaintPipeline
     private function makeInputElement(RenderNode $node, array $props, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $cs = $node->computedStyle;
-        $bg       = $cs?->backgroundColor?->toBgr() ?? 0x1E1E1E;
+        $csBg = $cs?->backgroundColor;
+        // 透明背景取输入框默认色 0x1E1E1E（toBgr() 对透明返回 0，?? 不触发）
+        $bg = ($csBg !== null && !$csBg->isTransparent) ? $csBg->toBgr() : 0x1E1E1E;
         $fg       = $cs?->color?->toBgr() ?? 0xFFFFFF;
         $fontSize = $cs?->fontSize ?? 14;
         $borderRadius = $cs?->borderRadius ?? 0;
@@ -1294,7 +1310,12 @@ class PaintPipeline
     private function makeScrollContainerElement(RenderNode $node, array $pseudoOverrides, int $x, int $y, int $w, int $h, int $layer): ?array
     {
         $cs = $node->computedStyle;
-        $bg = $pseudoOverrides['bg'] ?? $cs?->backgroundColor?->toBgr() ?? 0x2D2D2D;
+        $rawBg = $pseudoOverrides['bg'] ?? null;
+        if ($rawBg === null) {
+            $scCsBg = $cs?->backgroundColor;
+            $rawBg = ($scCsBg !== null && !$scCsBg->isTransparent) ? $scCsBg->toBgr() : 0x2D2D2D;
+        }
+        $bg = $rawBg;
         $borderRadius = $pseudoOverrides['borderRadius'] ?? $cs?->borderRadius ?? 0;
         $borderRadiusX = $pseudoOverrides['borderRadiusX'] ?? 0;
         $borderRadiusY = $pseudoOverrides['borderRadiusY'] ?? 0;

@@ -479,11 +479,15 @@ class LayoutOrchestrator
         // 当父元素有显式 CSS width 时，用它计算子约束空间（优先于约束空间传递的值）
         // 测试卡片 width:800px 的场景：ConstraintSpace contentWidth=1510（来自祖父容器），
         // 但卡片实际仅 800px，子元素应该用 800px 而非 1510 作为约束。
+        // content-box 下显式 width = border-box 尺寸（Px 渲染模型），
+        // 子元素可用区域需扣除父 padding（否则子约束宽 = 显式宽 > 实际内容区，
+        // 导致 flex 子项溢出父背景——skia-poc 按钮间隙黑色实锤）。
         $parentExplicitW = $parentStyle?->width?->toPx();
         // toPx() returns raw value for percent too (e.g. 100% -> 100). Exclude percent.
         $isPct = $parentStyle?->width?->isPercent() ?? false;
         if ($parentExplicitW !== null && $parentExplicitW > 0 && !$isPct) {
-            $cbW = max(0, (int)$parentExplicitW - $deductW);
+            $explicitDeductW = $padL + $padR + (($boxSizing === 'border-box') ? $bL + $bR : 0);
+            $cbW = max(0, (int)$parentExplicitW - $explicitDeductW);
         } else {
             // 父 auto 宽（块级 auto-fill，CSS 2.2 §10.3.3）：父 used content 宽
             // = 约束宽 − 父自身 margins——此前子约束直传祖先宽，父被
@@ -496,10 +500,12 @@ class LayoutOrchestrator
             }
         }
         // 同理：父元素有显式 CSS height 时，用它计算子约束空间高度
+        // content-box 下同样需扣除父 padding（与 width 对齐）
         $parentExplicitH = $parentStyle?->height?->toPx();
         $isPctH = $parentStyle?->height?->isPercent() ?? false;
         if ($parentExplicitH !== null && $parentExplicitH > 0 && !$isPctH) {
-            $cbH = max(0, (int)$parentExplicitH - $deductH);
+            $explicitDeductH = $padT + $padB + (($boxSizing === 'border-box') ? $bT + $bB : 0);
+            $cbH = max(0, (int)$parentExplicitH - $explicitDeductH);
         }
 
         $childStyle = $child->computedStyle;
