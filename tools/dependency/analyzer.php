@@ -185,8 +185,13 @@ class DependencyVisitor extends NodeVisitorAbstract
             $this->addClassesFromType($node->type);
         }
         // 方法/闭包返回类型: function foo(): ClassName / ?ClassName / ClassName1|ClassName2
-        if (($node instanceof Node\FunctionLike) && $node->returnType !== null) {
-            $this->addClassesFromType($node->returnType);
+        // 用 getReturnType() 而非 $node->returnType 属性：PHP 8.4 PropertyHook
+        // 节点实现 FunctionLike 但无 returnType 属性（仅 getReturnType() 方法）。
+        if ($node instanceof Node\FunctionLike) {
+            $retType = $node->getReturnType();
+            if ($retType !== null) {
+                $this->addClassesFromType($retType);
+            }
         }
         // 类型化属性: public ClassName|?ClassName $prop
         if ($node instanceof Node\Stmt\Property && $node->type !== null) {
