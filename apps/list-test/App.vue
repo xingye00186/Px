@@ -45,7 +45,9 @@
             }
         }
         $this->todoItems = $newItems;
-        $this->markRenderDirty();
+        $this->dirty = true;
+        $this->renderDirty = true;
+        \Px\Core\Application::getInstance()->requestRender();
     }
 
     public function addItem(): void
@@ -54,7 +56,9 @@
         $items = $this->todoItems;
         $items[] = ['id' => $newId, 'text' => 'Task #' . $newId];
         $this->todoItems = $items;
-        $this->markRenderDirty();
+        $this->dirty = true;
+        $this->renderDirty = true;
+        \Px\Core\Application::getInstance()->requestRender();
     }
 </script>
 
