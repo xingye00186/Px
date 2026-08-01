@@ -204,10 +204,11 @@ class TransitionComponent extends ReactiveComponent
 
     public function onUnmount(): void
     {
-        // 取消所有动画
-        AnimationManager::getInstance()->cancelAllTransitions(
-            $this->controller->node
-        );
+        // 取消所有动画（controller->node 仅在动画运行时才关联，可能为 null）
+        $node = $this->controller->node;
+        if ($node !== null) {
+            AnimationManager::getInstance()->cancelAllTransitions($node);
+        }
     }
 
     public function onUpdated(): void

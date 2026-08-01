@@ -361,9 +361,10 @@ class PaintPipeline
                 return mb_strtolower($text, 'UTF-8');
             case 'capitalize':
                 $words = explode(' ', $text);
-                foreach ($words as &$w) {
+                // 索引遍历——避免 foreach by-ref（AOT 编译下按引用写回失效）
+                foreach ($words as $i => $w) {
                     if ($w !== '') {
-                        $w = mb_strtoupper(mb_substr($w, 0, 1, 'UTF-8'), 'UTF-8')
+                        $words[$i] = mb_strtoupper(mb_substr($w, 0, 1, 'UTF-8'), 'UTF-8')
                            . mb_substr($w, 1, null, 'UTF-8');
                     }
                 }

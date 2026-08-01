@@ -793,21 +793,23 @@ class Application
             ? VNode::childrenToArray($oldNode->children)
             : [];
 
-        // 使用引用遍历直接修改原 children 数组，避免临时数组 + 线性查找
+        // 使用索引遍历修改 children 数组元素——避免 foreach by-ref
+        // （AOT 编译下按引用遍历写回失效，组件展开结果会丢失）
         if (is_array($newNode->children)) {
             $oldIdx = 0;
-            foreach ($newNode->children as &$child) {
+            $newChildren = $newNode->children;
+            foreach ($newChildren as $childIdx => $child) {
                 if (!($child instanceof VNode)) {
                     continue;
                 }
                 $oldMatch = $oldIdx < count($oldChildren) ? $oldChildren[$oldIdx] : null;
                 $replacement = $this->patchComponentTree($child, $owner, $oldMatch);
                 if ($replacement !== null && $replacement !== $child) {
-                    $child = $replacement;
+                    $newChildren[$childIdx] = $replacement;
                 }
                 $oldIdx++;
             }
-            unset($child);
+            $newNode->children = $newChildren;
         } elseif ($newNode->children instanceof VNode) {
             // Single VNode child（非数组情况）
             $oldMatch = !empty($oldChildren) ? $oldChildren[0] : null;
