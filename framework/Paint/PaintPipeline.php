@@ -356,16 +356,16 @@ class PaintPipeline
     {
         switch ($transform) {
             case 'uppercase':
-                return mb_strtoupper($text, 'UTF-8');
+                return \Px\Text\Utf8::upper($text);
             case 'lowercase':
-                return mb_strtolower($text, 'UTF-8');
+                return \Px\Text\Utf8::lower($text);
             case 'capitalize':
                 $words = explode(' ', $text);
                 // 索引遍历——避免 foreach by-ref（AOT 编译下按引用写回失效）
                 foreach ($words as $i => $w) {
                     if ($w !== '') {
-                        $words[$i] = mb_strtoupper(mb_substr($w, 0, 1, 'UTF-8'), 'UTF-8')
-                           . mb_substr($w, 1, null, 'UTF-8');
+                        $words[$i] = \Px\Text\Utf8::upper(\Px\Text\Utf8::firstChar($w))
+                           . \Px\Text\Utf8::restAfterFirst($w);
                     }
                 }
                 return implode(' ', $words);
@@ -381,11 +381,7 @@ class PaintPipeline
         }
         $result = ['text' => $text, 'fontSize' => $fontSize];
         if ($variant === 'small-caps' || $variant === 'all-small-caps') {
-            if (function_exists('mb_strtoupper')) {
-                $result['text'] = mb_strtoupper($text, 'UTF-8');
-            } else {
-                $result['text'] = strtoupper($text);
-            }
+            $result['text'] = \Px\Text\Utf8::upper($text);
             $result['fontSize'] = max(6, (int)($fontSize * 0.7));
         }
         return $result;

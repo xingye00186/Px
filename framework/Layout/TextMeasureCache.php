@@ -55,7 +55,8 @@ class TextMeasureCache
             // ~80%：case-050 伪元素 CJK 宽 E144 vs B≈84，x=60 族实锤）。
             $asciiOnly = preg_replace('/[\x80-\xFF]+/', '', $text);
             $asciiLen = strlen($asciiOnly !== null ? $asciiOnly : $text);
-            $multiLen = max(0, mb_strlen($text, 'UTF-8') - $asciiLen);
+            // 非 ASCII 码点数（替代 mb_strlen——AOT 运行时无 mbstring）
+            $multiLen = \Px\Text\Utf8::multiCharCount($text);
             return (int)(($asciiLen * $fontSize * 0.6 + $multiLen * $fontSize) * $boldFactor);
         }
 

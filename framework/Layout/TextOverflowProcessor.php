@@ -69,7 +69,11 @@ class TextOverflowProcessor
             $lastLine = $lines[$lineClamp - 1];
             // Ellipsis
             if ($textOverflow === 'ellipsis') {
-                $lastLine = mb_substr($lastLine, 0, max(1, mb_strlen($lastLine) - 1)) . "\xE2\x80\xA6";
+                // 去末字符（UTF-8 安全，替代 mb_substr——AOT 运行时无 mbstring）；
+                // 至少保留 1 个字符（原 max(1, len-1) 保护语义）
+                $chopped = \Px\Text\Utf8::chopLast($lastLine);
+                $lastLine = ($chopped === '' && $lastLine !== '') ? $lastLine : $chopped;
+                $lastLine .= "\xE2\x80\xA6";
                 $lines[$lineClamp - 1] = $lastLine;
             }
         }
@@ -77,7 +81,9 @@ class TextOverflowProcessor
         // Ellipsis for single-line
         if ($lineClamp <= 0 && $textOverflow === 'ellipsis' && count($lines) > 1) {
             $lines = array_slice($lines, 0, 1);
-            $lines[0] = mb_substr($lines[0], 0, max(1, mb_strlen($lines[0]) - 1)) . "\xE2\x80\xA6";
+            $chopped = \Px\Text\Utf8::chopLast($lines[0]);
+            $lines[0] = ($chopped === '' && $lines[0] !== '') ? $lines[0] : $chopped;
+            $lines[0] .= "\xE2\x80\xA6";
         }
 
         $resultText = implode("\n", $lines);
