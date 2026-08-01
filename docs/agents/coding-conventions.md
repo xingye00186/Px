@@ -58,6 +58,7 @@
 24. **修改 RenderContext 抽象方法**：同步更新所有后端实现
 25. **新增后端**：实现 `IRenderBackend` → 注册 `BackendRegistry::CANDIDATES` → 处理 `PX_RENDERER` 映射
 26. **迭代分布循环无进度保护**：while/for 中 `(int)` 截断计算须检查 `if ($progress <= 0) break;`
+27. **AOT 禁止 foreach 按引用遍历**（L37）：被 AOT 编译的代码（framework 非 Compiler 目录）禁止 `foreach ($arr as &$v)` 修改数组元素——tpc.exe 转译后按引用写回失效；用索引遍历 + 整体赋值（`$arr[$i] = ...; $obj->prop = $arr;`）
 
 ---
 
